@@ -328,6 +328,8 @@ public class YarnConfiguration extends Configuration {
       ZK_STATE_STORE_PREFIX + "acl";
   public static final String DEFAULT_ZK_RM_STATE_STORE_ACL =
       "world:anyone:rwcda";
+  public static final String ZK_RM_STATE_STORE_ROOT_NODE_ACL =
+      ZK_STATE_STORE_PREFIX + "root-node.acl";
 
   /** The maximum number of completed applications RM keeps. */ 
   public static final String RM_MAX_COMPLETED_APPLICATIONS =

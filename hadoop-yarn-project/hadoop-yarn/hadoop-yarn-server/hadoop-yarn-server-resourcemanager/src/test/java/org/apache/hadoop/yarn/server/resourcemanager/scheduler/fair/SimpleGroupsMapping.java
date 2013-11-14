@@ -15,35 +15,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs;
+
+package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
+
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
 
-import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.security.GroupMappingServiceProvider;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-
-/**
- * Used for injecting faults in DFSClient and DFSOutputStream tests.
- * Calls into this are a no-op in production code. 
- */
-@VisibleForTesting
-@InterfaceAudience.Private
-public class DFSClientFaultInjector {
-  public static DFSClientFaultInjector instance = new DFSClientFaultInjector();
-
-  public static DFSClientFaultInjector get() {
-    return instance;
+public class SimpleGroupsMapping implements GroupMappingServiceProvider {
+  
+  @Override
+  public List<String> getGroups(String user) {
+    return Arrays.asList(user + "group");
   }
 
-  public boolean corruptPacket() {
-    return false;
+  @Override
+  public void cacheGroupsRefresh() throws IOException {
+    throw new UnsupportedOperationException();
   }
 
-  public boolean uncorruptPacket() {
-    return false;
+  @Override
+  public void cacheGroupsAdd(List<String> groups) throws IOException {
+    throw new UnsupportedOperationException();
   }
 
-  public boolean failPacket() {
-    return false;
-  }
 }

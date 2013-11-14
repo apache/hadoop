@@ -13,6 +13,9 @@ Trunk (Unreleased)
 
     HDFS-3125. Add JournalService to enable Journal Daemon. (suresh)
 
+    HDFS-5444. Choose default web UI based on browser capabilities. (Haohui Mai
+    via jing9)
+
   IMPROVEMENTS
 
     HDFS-4665. Move TestNetworkTopologyWithNodeGroup to common.
@@ -193,6 +196,8 @@ Trunk (Unreleased)
     HDFS-5450. Better API for getting the cached blocks locations. (wang)
 
     HDFS-5485. Add command-line support for modifyDirective. (cmccabe)
+
+    HDFS-5366. recaching improvements (cmccabe)
 
   OPTIMIZATIONS
     HDFS-5349. DNA_CACHE and DNA_UNCACHE should be by blockId only. (cmccabe)
@@ -475,6 +480,20 @@ Release 2.3.0 - UNRELEASED
     HDFS-5495. Remove further JUnit3 usages from HDFS.
     (Jarek Jarcec Cecho via wang)
 
+    HDFS-5325. Remove WebHdfsFileSystem#ConnRunner. (Haohui Mai via jing9) 
+
+    HDFS-5488. Clean up TestHftpURLTimeout. (Haohui Mai via jing9)
+
+    HDFS-5440. Extract the logic of handling delegation tokens in HftpFileSystem 
+    to the TokenAspect class. (Haohui Mai via jing9)
+
+    HDFS-5487. Introduce unit test for TokenAspect. (Haohui Mai via jing9)
+
+    HDFS-4995. Make getContentSummary less expensive. (kihwal)
+
+    HDFS-5506. Use URLConnectionFactory in DelegationTokenFetcher. (Haohui Mai
+    via jing9)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn)
@@ -529,12 +548,19 @@ Release 2.3.0 - UNRELEASED
     HDFS-5476. Snapshot: clean the blocks/files/directories under a renamed 
     file/directory while deletion. (jing9)
 
-    HDFS-5325. Remove WebHdfsFileSystem#ConnRunner. (Haohui Mai via jing9) 
-
-    HDFS-5488. Clean up TestHftpURLTimeout. (Haohui Mai via jing9)
-
     HDFS-5425. Renaming underconstruction file with snapshots can make NN failure on 
     restart. (jing9 and Vinay)
+
+    HDFS-5474. Deletesnapshot can make Namenode in safemode on NN restarts. 
+    (Sathish via jing9)
+
+    HDFS-5075. httpfs-config.sh calls out incorrect env script name
+    (Timothy St. Clair via stevel)
+
+    HDFS-5504. In HA mode, OP_DELETE_SNAPSHOT is not decrementing the safemode threshold, 
+    leads to NN safemode. (Vinay via jing9)
+
+    HDFS-5438. Flaws in block report processing can cause data loss. (kihwal)
 
 Release 2.2.1 - UNRELEASED
 

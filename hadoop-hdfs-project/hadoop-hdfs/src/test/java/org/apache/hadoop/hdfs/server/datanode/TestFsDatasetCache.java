@@ -28,8 +28,10 @@ import static org.mockito.Mockito.doReturn;
 
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.nio.MappedByteBuffer;
+import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -49,7 +51,6 @@ import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetCache.PageRounder;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.MappableBlock;
-import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.MappableBlock.Mlocker;
 import org.apache.hadoop.hdfs.server.namenode.FSImage;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.BlockIdCommand;
@@ -60,6 +61,7 @@ import org.apache.hadoop.hdfs.server.protocol.HeartbeatResponse;
 import org.apache.hadoop.hdfs.server.protocol.NNHAStatusHeartbeat;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.io.nativeio.NativeIO;
+import org.apache.hadoop.io.nativeio.NativeIO.POSIX.CacheManipulator;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.MetricsAsserts;
@@ -87,8 +89,7 @@ public class TestFsDatasetCache {
   private static FsDatasetSpi<?> fsd;
   private static DatanodeProtocolClientSideTranslatorPB spyNN;
   private static PageRounder rounder = new PageRounder();
-
-  private Mlocker mlocker;
+  private static CacheManipulator prevCacheManipulator;
 
   @Before
   public void setUp() throws Exception {
@@ -96,6 +97,8 @@ public class TestFsDatasetCache {
     assumeTrue(NativeIO.getMemlockLimit() >= CACHE_CAPACITY);
     conf = new HdfsConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_CACHING_ENABLED_KEY, true);
+    conf.setLong(DFSConfigKeys.DFS_NAMENODE_PATH_BASED_CACHE_RETRY_INTERVAL_MS,
+        500);
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
     conf.setLong(DFSConfigKeys.DFS_DATANODE_MAX_LOCKED_MEMORY_KEY,
         CACHE_CAPACITY);
@@ -113,8 +116,19 @@ public class TestFsDatasetCache {
     fsd = dn.getFSDataset();
 
     spyNN = DataNodeTestUtils.spyOnBposToNN(dn, nn);
-    // Save the current mlocker and replace it at the end of the test
-    mlocker = MappableBlock.mlocker;
+
+    prevCacheManipulator = NativeIO.POSIX.cacheManipulator;
+
+    // Save the current CacheManipulator and replace it at the end of the test
+    // Stub out mlock calls to avoid failing when not enough memory is lockable
+    // by the operating system.
+    NativeIO.POSIX.cacheManipulator = new CacheManipulator() {
+      @Override
+      public void mlock(String identifier,
+          ByteBuffer mmap, long length) throws IOException {
+        LOG.info("mlocking " + identifier);
+      }
+    };
   }
 
   @After
@@ -125,8 +139,8 @@ public class TestFsDatasetCache {
     if (cluster != null) {
       cluster.shutdown();
     }
-    // Restore the original mlocker
-    MappableBlock.mlocker = mlocker;
+    // Restore the original CacheManipulator
+    NativeIO.POSIX.cacheManipulator = prevCacheManipulator;
   }
 
   private static void setHeartbeatResponse(DatanodeCommand[] cmds)
@@ -214,8 +228,7 @@ public class TestFsDatasetCache {
     return expected;
   }
 
-  @Test(timeout=600000)
-  public void testCacheAndUncacheBlock() throws Exception {
+  private void testCacheAndUncacheBlock() throws Exception {
     LOG.info("beginning testCacheAndUncacheBlock");
     final int NUM_BLOCKS = 5;
 
@@ -266,6 +279,42 @@ public class TestFsDatasetCache {
       numUncacheCommands = cmds;
     }
     LOG.info("finishing testCacheAndUncacheBlock");
+  }
+
+  @Test(timeout=600000)
+  public void testCacheAndUncacheBlockSimple() throws Exception {
+    testCacheAndUncacheBlock();
+  }
+
+  /**
+   * Run testCacheAndUncacheBlock with some failures injected into the mlock
+   * call.  This tests the ability of the NameNode to resend commands.
+   */
+  @Test(timeout=600000)
+  public void testCacheAndUncacheBlockWithRetries() throws Exception {
+    CacheManipulator prevCacheManipulator = NativeIO.POSIX.cacheManipulator;
+    
+    try {
+      NativeIO.POSIX.cacheManipulator = new CacheManipulator() {
+        private final Set<String> seenIdentifiers = new HashSet<String>();
+        
+        @Override
+        public void mlock(String identifier,
+            ByteBuffer mmap, long length) throws IOException {
+          if (seenIdentifiers.contains(identifier)) {
+            // mlock succeeds the second time.
+            LOG.info("mlocking " + identifier);
+            return;
+          }
+          seenIdentifiers.add(identifier);
+          throw new IOException("injecting IOException during mlock of " +
+              identifier);
+        }
+      };
+      testCacheAndUncacheBlock();
+    } finally {
+      NativeIO.POSIX.cacheManipulator = prevCacheManipulator;
+    }
   }
 
   @Test(timeout=600000)
@@ -357,10 +406,11 @@ public class TestFsDatasetCache {
     assertEquals("Unexpected cache capacity", CACHE_CAPACITY, cacheCapacity);
     assertEquals("Unexpected amount of cache used", current, cacheUsed);
 
-    MappableBlock.mlocker = new MappableBlock.Mlocker() {
+    NativeIO.POSIX.cacheManipulator = new NativeIO.POSIX.CacheManipulator() {
       @Override
-      public void mlock(MappedByteBuffer mmap, long length) throws IOException {
-        LOG.info("An mlock operation is starting.");
+      public void mlock(String identifier,
+          ByteBuffer mmap, long length) throws IOException {
+        LOG.info("An mlock operation is starting on " + identifier);
         try {
           Thread.sleep(3000);
         } catch (InterruptedException e) {

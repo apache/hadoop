@@ -24,7 +24,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.hadoop.util.ZKUtil;
 import org.apache.hadoop.util.ZKUtil.BadAclFormatException;
 import org.apache.hadoop.util.ZKUtil.ZKAuthInfo;
 import org.apache.zookeeper.ZooDefs.Perms;
@@ -73,6 +72,14 @@ public class TestZKUtil {
     } catch (BadAclFormatException e) {
       assertEquals(expectedErr, e.getMessage());
     }
+  }
+
+  @Test
+  public void testRemoveSpecificPerms() {
+    int perms = Perms.ALL;
+    int remove = Perms.CREATE;
+    int newPerms = ZKUtil.removeSpecificPerms(perms, remove);
+    assertEquals("Removal failed", 0, newPerms & Perms.CREATE);
   }
 
   @Test

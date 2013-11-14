@@ -114,7 +114,17 @@ public class NativeIO {
     public static interface CacheTracker {
       public void fadvise(String identifier, long offset, long len, int flags);
     }
-    
+
+    public static CacheManipulator cacheManipulator = new CacheManipulator();
+
+    @VisibleForTesting
+    public static class CacheManipulator {
+      public void mlock(String identifier, ByteBuffer buffer,
+          long len) throws IOException {
+        POSIX.mlock(buffer, len);
+      }
+    }
+
     static {
       if (NativeCodeLoader.isNativeCodeLoaded()) {
         try {
@@ -249,7 +259,7 @@ public class NativeIO {
      * 
      * @throws NativeIOException
      */
-    public static void mlock(ByteBuffer buffer, long len)
+    static void mlock(ByteBuffer buffer, long len)
         throws IOException {
       assertCodeLoaded();
       if (!buffer.isDirect()) {

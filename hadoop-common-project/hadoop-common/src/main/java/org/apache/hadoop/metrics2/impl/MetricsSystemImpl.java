@@ -38,7 +38,7 @@ import static com.google.common.base.Preconditions.*;
 import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.commons.math.util.MathUtils;
+import org.apache.commons.math3.util.ArithmeticUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.metrics2.MetricsInfo;
 import org.apache.hadoop.metrics2.MetricsCollector;
@@ -457,7 +457,7 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
       MetricsConfig conf = entry.getValue();
       int sinkPeriod = conf.getInt(PERIOD_KEY, PERIOD_DEFAULT);
       confPeriod = confPeriod == 0 ? sinkPeriod
-                                   : MathUtils.gcd(confPeriod, sinkPeriod);
+                                   : ArithmeticUtils.gcd(confPeriod, sinkPeriod);
       String clsName = conf.getClassName("");
       if (clsName == null) continue;  // sink can be registered later on
       String sinkName = entry.getKey();

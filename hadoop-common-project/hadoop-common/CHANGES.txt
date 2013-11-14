@@ -284,7 +284,7 @@ Trunk (Unreleased)
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
 
-    HADOOP-8589 ViewFs tests fail when tests and home dirs are nested (sanjay Radia)
+    HADOOP-8589. ViewFs tests fail when tests and home dirs are nested (sanjay Radia)
 
 Release 2.3.0 - UNRELEASED
 
@@ -375,6 +375,14 @@ Release 2.3.0 - UNRELEASED
     HADOOP-10064. Upgrade to maven antrun plugin version 1.7 (Arpit Agarwal via
     jeagles)
 
+    HADOOP-9594. Update apache commons math dependency (Timothy St. Clair via
+    stevel)
+
+    HADOOP-10095. In CodecPool, synchronize pool and codecList separately in
+    order to reduce lock contention.  (Nicolas Liochon via szetszwo)
+
+    HADOOP-10067. Missing POM dependency on jsr305 (Robert Rati via stevel)
+
   OPTIMIZATIONS
 
     HADOOP-9748. Reduce blocking on UGI.ensureInitialized (daryn)
@@ -426,6 +434,9 @@ Release 2.3.0 - UNRELEASED
     HADOOP-10093. hadoop-env.cmd sets HADOOP_CLIENT_OPTS with a max heap size
     that is too small. (Shanyu Zhao via cnauroth)
 
+    HADOOP-10094. NPE in GenericOptionsParser#preProcessForWindows().
+    (Enis Soztutar via cnauroth)
+
 Release 2.2.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -475,6 +486,8 @@ Release 2.2.1 - UNRELEASED
     HADOOP-9660. [WINDOWS] Powershell / cmd parses -Dkey=value from command line
     as [-Dkey, value] which breaks GenericsOptionParser.
     (Enis Soztutar via cnauroth)
+
+    HADOOP-10078. KerberosAuthenticator always does SPNEGO. (rkanter via tucu)
 
 Release 2.2.0 - 2013-10-13
 
@@ -2297,6 +2310,10 @@ Release 0.23.10 - UNRELEASED
     HADOOP-8704. add request logging to jetty/httpserver (jeagles)
 
   OPTIMIZATIONS
+
+    HADOOP-9956. RPC listener inefficiently assigns connections to readers (daryn)
+
+    HADOOP-9955. RPC idle connection closing is extremely inefficient (daryn)
 
   BUG FIXES
 

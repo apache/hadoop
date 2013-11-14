@@ -72,6 +72,20 @@ public class ZKUtil {
   }
 
   /**
+   * Helper method to remove a subset of permissions (remove) from a
+   * given set (perms).
+   * @param perms The permissions flag to remove from. Should be an OR of a
+   *              some combination of {@link ZooDefs.Perms}
+   * @param remove The permissions to be removed. Should be an OR of a
+   *              some combination of {@link ZooDefs.Perms}
+   * @return A permissions flag that is an OR of {@link ZooDefs.Perms}
+   * present in perms and not present in remove
+   */
+  public static int removeSpecificPerms(int perms, int remove) {
+    return perms ^ remove;
+  }
+
+  /**
    * Parse comma separated list of ACL entries to secure generated nodes, e.g.
    * <code>sasl:hdfs/host1@MY.DOMAIN:cdrwa,sasl:hdfs/host2@MY.DOMAIN:cdrwa</code>
    *

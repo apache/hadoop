@@ -279,7 +279,11 @@
     <description>Host:Port of the ZooKeeper server where RM state will 
     be stored. This must be supplied when using
     org.apache.hadoop.yarn.server.resourcemanager.recovery.ZKRMStateStore
-    as the value for yarn.resourcemanager.store.class</description>
+    as the value for yarn.resourcemanager.store.class. ZKRMStateStore
+    is implicitly fenced, meaning a single ResourceManager is
+    able to use the store at any point in time. More details on this, along
+    with setting up appropriate ACLs is discussed under the description for
+    yarn.resourcemanager.zk.state-store.root-node.acl.</description>
     <name>yarn.resourcemanager.zk.state-store.address</name>
     <!--value>127.0.0.1:2181</value-->
   </property>
@@ -318,6 +322,31 @@
     as the value for yarn.resourcemanager.store.class</description>
     <name>yarn.resourcemanager.zk.state-store.acl</name>
     <value>world:anyone:rwcda</value>
+  </property>
+
+  <property>
+    <description>
+      ACLs to be used for the root znode when using ZKRMStateStore in a HA
+      scenario for fencing.
+
+      ZKRMStateStore supports implicit fencing to allow a single
+      ResourceManager write-access to the store. For fencing, the
+      ResourceManagers in the cluster share read-write-admin privileges on the
+      root node, but the Active ResourceManager claims exclusive create-delete
+      permissions.
+
+      By default, when this property is not set, we use the ACLs from
+      yarn.resourcemanager.zk.state-store.acl for shared admin access and
+      rm-address:cluster-timestamp for username-based exclusive create-delete
+      access.
+
+      This property allows users to set ACLs of their choice instead of using
+      the default mechanism. For fencing to work, the ACLs should be
+      carefully set differently on each ResourceManger such that all the
+      ResourceManagers have shared admin access and the Active ResourceManger
+      takes over (exclusively) the create-delete access.
+    </description>
+    <name>yarn.resourcemanager.zk.state-store.root-node.acl</name>
   </property>
 
   <property>

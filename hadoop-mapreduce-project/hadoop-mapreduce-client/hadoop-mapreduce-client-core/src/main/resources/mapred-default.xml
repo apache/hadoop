@@ -1011,6 +1011,13 @@
 </property>
 
 <property>
+  <name>yarn.app.mapreduce.client-am.ipc.max-retries-on-timeouts</name>
+  <value>3</value>
+  <description>The number of client retries on socket timeouts to the AM - before
+    reconnecting to the RM to fetch Application Status.</description>
+</property>
+
+<property>
   <name>yarn.app.mapreduce.client.max-retries</name>
   <value>3</value>
   <description>The number of client retries to the RM/HS before

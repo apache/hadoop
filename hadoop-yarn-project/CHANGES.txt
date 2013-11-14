@@ -40,6 +40,9 @@ Release 2.3.0 - UNRELEASED
     YARN-311. RM/scheduler support for dynamic resource configuration.
     (Junping Du via llu)
 
+    YARN-1392. Allow sophisticated app-to-queue placement policies in the Fair
+    Scheduler (Sandy Ryza)
+
   IMPROVEMENTS
 
     YARN-7. Support CPU resource for DistributedShell. (Junping Du via llu)
@@ -94,6 +97,9 @@ Release 2.3.0 - UNRELEASED
     YARN-1387. RMWebServices should use ClientRMService for filtering
     applications (Karthik Kambatla via Sandy Ryza)
 
+    YARN-1222. Make improvements in ZKRMStateStore for fencing (Karthik
+    Kambatla via bikas)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -126,6 +132,9 @@ Release 2.3.0 - UNRELEASED
 
     YARN-1400. yarn.cmd uses HADOOP_RESOURCEMANAGER_OPTS. Should be
     YARN_RESOURCEMANAGER_OPTS. (Raja Aluri via cnauroth)
+
+    YARN-1401. With zero sleep-delay-before-sigkill.ms, no signal is ever sent
+    (Gera Shegalov via Sandy Ryza)
 
 Release 2.2.1 - UNRELEASED
 

@@ -1009,7 +1009,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       nnEditLogRoller.start();
 
       cacheManager.activate();
-      blockManager.getDatanodeManager().setSendCachingCommands(true);
+      blockManager.getDatanodeManager().setShouldSendCachingCommands(true);
     } finally {
       writeUnlock();
       startingActiveService = false;
@@ -1060,7 +1060,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         dir.fsImage.updateLastAppliedTxIdFromWritten();
       }
       cacheManager.deactivate();
-      blockManager.getDatanodeManager().setSendCachingCommands(false);
+      blockManager.getDatanodeManager().setShouldSendCachingCommands(false);
     } finally {
       writeUnlock();
     }
@@ -1295,6 +1295,14 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   @Override
   public boolean hasReadOrWriteLock() {
     return hasReadLock() || hasWriteLock();
+  }
+
+  public int getReadHoldCount() {
+    return this.fsLock.getReadHoldCount();
+  }
+
+  public int getWriteHoldCount() {
+    return this.fsLock.getWriteHoldCount();
   }
 
   NamespaceInfo getNamespaceInfo() {
@@ -3305,6 +3313,18 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       return;
     }
     
+    removeBlocksAndUpdateSafemodeTotal(blocks);
+  }
+
+  /**
+   * Removes the blocks from blocksmap and updates the safemode blocks total
+   * 
+   * @param blocks
+   *          An instance of {@link BlocksMapUpdateInfo} which contains a list
+   *          of blocks that need to be removed from blocksMap
+   */
+  void removeBlocksAndUpdateSafemodeTotal(BlocksMapUpdateInfo blocks) {
+    assert hasWriteLock();
     // In the case that we are a Standby tailing edits from the
     // active while in safe-mode, we need to track the total number
     // of blocks and safe blocks in the system.
@@ -3325,9 +3345,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
     if (trackBlockCounts) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Adjusting safe-mode totals for deletion of " + src + ":" +
-            "decreasing safeBlocks by " + numRemovedSafe +
-            ", totalBlocks by " + numRemovedComplete);
+        LOG.debug("Adjusting safe-mode totals for deletion."
+            + "decreasing safeBlocks by " + numRemovedSafe
+            + ", totalBlocks by " + numRemovedComplete);
       }
       adjustSafeModeBlockTotals(-numRemovedSafe, -numRemovedComplete);
     }
@@ -5883,8 +5903,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
 
     // Update old block with the new generation stamp and new length
-    blockinfo.setGenerationStamp(newBlock.getGenerationStamp());
     blockinfo.setNumBytes(newBlock.getNumBytes());
+    blockinfo.setGenerationStampAndVerifyReplicas(newBlock.getGenerationStamp());
 
     // find the DatanodeDescriptor objects
     final DatanodeStorageInfo[] storages = blockManager.getDatanodeManager()
@@ -6953,6 +6973,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       return; // Return previous response
     }
     boolean success = false;
+    BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -6961,7 +6982,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         checkOwner(pc, snapshotRoot);
       }
 
-      BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
       List<INode> removedINodes = new ChunkedArrayList<INode>();
       dir.writeLock();
       try {
@@ -6972,8 +6992,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         dir.writeUnlock();
       }
       removedINodes.clear();
-      this.removeBlocks(collectedBlocks);
-      collectedBlocks.clear();
       getEditLog().logDeleteSnapshot(snapshotRoot, snapshotName,
           cacheEntry != null);
       success = true;
@@ -6982,7 +7000,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       RetryCache.setState(cacheEntry, success);
     }
     getEditLog().logSync();
-    
+
+    removeBlocks(collectedBlocks);
+    collectedBlocks.clear();
+
     if (auditLog.isInfoEnabled() && isExternalInvocation()) {
       String rootPath = Snapshot.getSnapshotPath(snapshotRoot, snapshotName);
       logAuditEvent(true, "deleteSnapshot", rootPath, null, null);

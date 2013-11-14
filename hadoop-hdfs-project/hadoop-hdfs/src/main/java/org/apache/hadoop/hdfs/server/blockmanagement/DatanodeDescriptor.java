@@ -170,6 +170,21 @@ public class DatanodeDescriptor extends DatanodeInfo {
     return pendingUncached;
   }
 
+  /**
+   * The time when the last batch of caching directives was sent, in
+   * monotonic milliseconds.
+   */
+  private long lastCachingDirectiveSentTimeMs;
+
+  /**
+   * Head of the list of blocks on the datanode
+   */
+  private volatile BlockInfo blockList = null;
+  /**
+   * Number of blocks on the datanode
+   */
+  private int numBlocks = 0;
+
   // isAlive == heartbeats.contains(this)
   // This is an optimization, because contains takes O(n) time on Arraylist
   public boolean isAlive = false;
@@ -660,6 +675,22 @@ public class DatanodeDescriptor extends DatanodeInfo {
       }
       return storage;
     }
+  }
+
+  /**
+   * @return   The time at which we last sent caching directives to this 
+   *           DataNode, in monotonic milliseconds.
+   */
+  public long getLastCachingDirectiveSentTimeMs() {
+    return this.lastCachingDirectiveSentTimeMs;
+  }
+
+  /**
+   * @param time  The time at which we last sent caching directives to this 
+   *              DataNode, in monotonic milliseconds.
+   */
+  public void setLastCachingDirectiveSentTimeMs(long time) {
+    this.lastCachingDirectiveSentTimeMs = time;
   }
 }
 

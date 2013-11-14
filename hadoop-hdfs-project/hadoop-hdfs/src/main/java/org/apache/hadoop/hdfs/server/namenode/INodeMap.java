@@ -107,7 +107,8 @@ public class INodeMap {
       }
       
       @Override
-      public Content.Counts computeContentSummary(Content.Counts counts) {
+      public ContentSummaryComputationContext computeContentSummary(
+          ContentSummaryComputationContext summary) {
         return null;
       }
       
