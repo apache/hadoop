@@ -93,6 +93,10 @@ public class TestCorruptFilesJsp  {
         in.close();
       }
 
+      try {
+        Thread.sleep(3000); // Wait for block reports. They shouldn't matter.
+      } catch (InterruptedException ie) {}
+
       // verify if all corrupt files were reported to NN
       badFiles = namenode.getNamesystem().listCorruptFileBlocks("/", null);
       assertTrue("Expecting 3 corrupt files, but got " + badFiles.size(),

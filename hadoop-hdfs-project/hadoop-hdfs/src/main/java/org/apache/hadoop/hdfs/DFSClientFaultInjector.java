@@ -42,4 +42,8 @@ public class DFSClientFaultInjector {
   public boolean uncorruptPacket() {
     return false;
   }
+
+  public boolean failPacket() {
+    return false;
+  }
 }

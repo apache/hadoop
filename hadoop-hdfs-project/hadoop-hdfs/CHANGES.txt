@@ -182,6 +182,8 @@ Release 2.3.0 - UNRELEASED
     HDFS-5504. In HA mode, OP_DELETE_SNAPSHOT is not decrementing the safemode threshold, 
     leads to NN safemode. (Vinay via jing9)
 
+    HDFS-5438. Flaws in block report processing can cause data loss. (kihwal)
+
 Release 2.2.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

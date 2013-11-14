@@ -26,9 +26,13 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.namenode.LeaseExpiredException;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.io.IOUtils;
 import org.junit.Assert;
 import org.junit.Test;
+
+import org.mockito.Mockito;
+import org.mockito.stubbing.Answer;
 
 /**
  * This tests pipeline recovery related client protocol works correct or not.
@@ -110,6 +114,57 @@ public class TestClientProtocolForPipelineRecovery {
       }
     } finally {
       cluster.shutdown();
+    }
+  }
+
+  /** Test whether corrupt replicas are detected correctly during pipeline
+   * recoveries.
+   */
+  @Test
+  public void testPipelineRecoveryForLastBlock() throws IOException {
+    DFSClientFaultInjector faultInjector
+        = Mockito.mock(DFSClientFaultInjector.class);
+    DFSClientFaultInjector oldInjector = DFSClientFaultInjector.instance;
+    DFSClientFaultInjector.instance = faultInjector;
+    Configuration conf = new HdfsConfiguration();
+
+    conf.setInt(DFSConfigKeys.DFS_CLIENT_BLOCK_WRITE_LOCATEFOLLOWINGBLOCK_RETRIES_KEY, 3);
+    MiniDFSCluster cluster = null;
+
+    try {
+      int numDataNodes = 3;
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDataNodes).build();
+      cluster.waitActive();
+      FileSystem fileSys = cluster.getFileSystem();
+
+      Path file = new Path("dataprotocol1.dat");
+      Mockito.when(faultInjector.failPacket()).thenReturn(true);
+      try {
+        DFSTestUtil.createFile(fileSys, file, 1L, (short)numDataNodes, 0L);
+      } catch (IOException e) {
+        // completeFile() should fail.
+        Assert.assertTrue(e.getMessage().startsWith("Unable to close file"));
+        return;
+      }
+
+      // At this point, NN let data corruption to happen. 
+      // Before failing test, try reading the file. It should fail.
+      FSDataInputStream in = fileSys.open(file);
+      try {
+        int c = in.read();
+        // Test will fail with BlockMissingException if NN does not update the
+        // replica state based on the latest report.
+      } catch (org.apache.hadoop.hdfs.BlockMissingException bme) {
+        Assert.fail("Block is missing because the file was closed with"
+            + " corrupt replicas.");
+      }
+      Assert.fail("The file was closed with corrupt replicas, but read still"
+          + " works!");
+    } finally {
+      DFSClientFaultInjector.instance = oldInjector;
+      if (cluster != null) {
+        cluster.shutdown();
+      }
     }
   }
 }
