@@ -176,6 +176,8 @@ Release 2.3.0 - UNRELEASED
     MAPREDUCE-5624 Move grizzly-test and junit dependencies to test scope
     (Ted Yu via stevel)
 
+    MAPREDUCE-5481. Enable uber jobs to have multiple reducers (Sandy Ryza)
+
   OPTIMIZATIONS
 
     MAPREDUCE-5484. YarnChild unnecessarily loads job conf twice (Sandy Ryza)
