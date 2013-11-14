@@ -143,6 +143,9 @@ Release 2.3.0 - UNRELEASED
     HADOOP-10093. hadoop-env.cmd sets HADOOP_CLIENT_OPTS with a max heap size
     that is too small. (Shanyu Zhao via cnauroth)
 
+    HADOOP-10094. NPE in GenericOptionsParser#preProcessForWindows().
+    (Enis Soztutar via cnauroth)
+
 Release 2.2.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
