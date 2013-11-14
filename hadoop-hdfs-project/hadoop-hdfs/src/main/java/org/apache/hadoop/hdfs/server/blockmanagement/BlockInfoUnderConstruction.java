@@ -206,6 +206,29 @@ public class BlockInfoUnderConstruction extends BlockInfo {
   }
 
   /**
+   * Process the recorded replicas. When about to commit or finish the
+   * pipeline recovery sort out bad replicas.
+   * @param genStamp  The final generation stamp for the block.
+   */
+  public void setGenerationStampAndVerifyReplicas(long genStamp) {
+    if (replicas == null)
+      return;
+
+    // Remove the replicas with wrong gen stamp.
+    // The replica list is unchanged.
+    for (ReplicaUnderConstruction r : replicas) {
+      if (genStamp != r.getGenerationStamp()) {
+        r.getExpectedLocation().removeBlock(this);
+        NameNode.blockStateChangeLog.info("BLOCK* Removing stale replica "
+            + "from location: " + r);
+      }
+    }
+
+    // Set the generation stamp for the block.
+    setGenerationStamp(genStamp);
+  }
+
+  /**
    * Commit block's length and generation stamp as reported by the client.
    * Set block state to {@link BlockUCState#COMMITTED}.
    * @param block - contains client reported block length and generation 
@@ -250,9 +273,13 @@ public class BlockInfoUnderConstruction extends BlockInfo {
   void addReplicaIfNotPresent(DatanodeDescriptor dn,
                      Block block,
                      ReplicaState rState) {
-    for(ReplicaUnderConstruction r : replicas)
-      if(r.getExpectedLocation() == dn)
+    for (ReplicaUnderConstruction r : replicas) {
+      if (r.getExpectedLocation() == dn) {
+        // Record the gen stamp from the report
+        r.setGenerationStamp(block.getGenerationStamp());
         return;
+      }
+    }
     replicas.add(new ReplicaUnderConstruction(block, dn, rState));
   }
 

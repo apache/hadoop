@@ -58,6 +58,8 @@ Release 0.23.10 - UNRELEASED
     HDFS-3970. Fix bug causing rollback of HDFS upgrade to result in bad
     VERSION file. (Vinay and Andrew Wang via atm)
 
+    HDFS-5438. Flaws in block report processing can cause data loss. (kihwal)
+
 Release 0.23.9 - 2013-07-08
 
   INCOMPATIBLE CHANGES
