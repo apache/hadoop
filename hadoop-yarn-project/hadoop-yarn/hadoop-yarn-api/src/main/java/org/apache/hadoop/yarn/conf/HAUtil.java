@@ -193,8 +193,8 @@ public class HAUtil {
     return addSuffix(prefix, getRMHAId(conf));
   }
 
-  private static String getConfValueForRMInstance(String prefix,
-                                                  Configuration conf) {
+  public static String getConfValueForRMInstance(String prefix,
+                                                 Configuration conf) {
     String confKey = getConfKeyForRMInstance(prefix, conf);
     String retVal = conf.getTrimmed(confKey);
     if (LOG.isTraceEnabled()) {
@@ -205,8 +205,8 @@ public class HAUtil {
     return retVal;
   }
 
-  static String getConfValueForRMInstance(String prefix, String defaultValue,
-                                          Configuration conf) {
+  public static String getConfValueForRMInstance(
+      String prefix, String defaultValue, Configuration conf) {
     String value = getConfValueForRMInstance(prefix, conf);
     return (value == null) ? defaultValue : value;
   }

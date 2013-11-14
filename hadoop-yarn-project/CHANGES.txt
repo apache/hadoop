@@ -76,6 +76,9 @@ Release 2.3.0 - UNRELEASED
     YARN-1387. RMWebServices should use ClientRMService for filtering
     applications (Karthik Kambatla via Sandy Ryza)
 
+    YARN-1222. Make improvements in ZKRMStateStore for fencing (Karthik
+    Kambatla via bikas)
+
   OPTIMIZATIONS
 
   BUG FIXES

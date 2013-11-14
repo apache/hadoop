@@ -56,6 +56,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.NullRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStoreFactory;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStoreOperationFailedEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStoreOperationFailedEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Recoverable;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
@@ -163,6 +165,10 @@ public class ResourceManager extends CompositeService implements Recoverable {
   public ResourceManager() {
     super("ResourceManager");
   }
+
+  public RMHAProtocolService getHAService() {
+    return this.haService;
+  }
   
   public RMContext getRMContext() {
     return this.rmContext;
@@ -214,6 +220,11 @@ public class ResourceManager extends CompositeService implements Recoverable {
   
   protected EventHandler<SchedulerEvent> createSchedulerEventDispatcher() {
     return new SchedulerEventDispatcher(this.scheduler);
+  }
+
+  protected RMStateStoreOperationFailedEventDispatcher
+  createRMStateStoreOperationFailedEventDispatcher() {
+    return new RMStateStoreOperationFailedEventDispatcher(haService);
   }
 
   protected Dispatcher createDispatcher() {
@@ -339,6 +350,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
       try {
         rmStore.init(conf);
         rmStore.setRMDispatcher(rmDispatcher);
+        rmDispatcher.register(RMStateStoreOperationFailedEventType.class,
+            createRMStateStoreOperationFailedEventDispatcher());
       } catch (Exception e) {
         // the Exception from stateStore.init() needs to be handled for
         // HA and we need to give up master status if we got fenced
@@ -629,6 +642,46 @@ public class ResourceManager extends CompositeService implements Recoverable {
       } catch (InterruptedException e) {
         throw new YarnRuntimeException(e);
       }
+    }
+  }
+
+  @Private
+  public static class RMStateStoreOperationFailedEventDispatcher implements
+      EventHandler<RMStateStoreOperationFailedEvent> {
+    private final RMHAProtocolService haService;
+
+    public RMStateStoreOperationFailedEventDispatcher(
+        RMHAProtocolService haService) {
+      this.haService = haService;
+    }
+
+    @Override
+    public void handle(RMStateStoreOperationFailedEvent event) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Received a " +
+            RMStateStoreOperationFailedEvent.class.getName() + " of type " +
+            event.getType().name());
+      }
+      if (event.getType() == RMStateStoreOperationFailedEventType.FENCED) {
+        LOG.info("RMStateStore has been fenced");
+        synchronized(haService) {
+          if (haService.haEnabled) {
+            try {
+              // Transition to standby and reinit active services
+              LOG.info("Transitioning RM to Standby mode");
+              haService.transitionToStandby(true);
+              return;
+            } catch (Exception e) {
+              LOG.error("Failed to transition RM to Standby mode.");
+            }
+          }
+        }
+      }
+
+      LOG.error("Shutting down RM on receiving a " +
+          RMStateStoreOperationFailedEvent.class.getName() + " of type " +
+          event.getType().name());
+      ExitUtil.terminate(1, event.getCause());
     }
   }
 
