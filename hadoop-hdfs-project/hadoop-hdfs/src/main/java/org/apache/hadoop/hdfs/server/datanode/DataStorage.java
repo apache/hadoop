@@ -291,9 +291,10 @@ public class DataStorage extends Storage {
     props.setProperty("layoutVersion", String.valueOf(layoutVersion));
     props.setProperty("storageID", sd.getStorageUuid());
 
+    String datanodeUuid = getDatanodeUuid();
     if (LayoutVersion.supports(Feature.ADD_DATANODE_AND_STORAGE_UUIDS,
           layoutVersion) && datanodeUuid != null) {
-      props.setProperty("datanodeUuid", getDatanodeUuid());
+      props.setProperty("datanodeUuid", datanodeUuid);
     }
 
     // Set NamespaceID in version before federation

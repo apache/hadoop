@@ -104,3 +104,6 @@ IMPROVEMENTS:
     HDFS-5501. Fix pendingReceivedRequests tracking in BPServiceActor. (Arpit
     Agarwal)
 
+    HDFS-5510. Fix a findbug warning in DataStorage.java on HDFS-2832 branch.
+    (Junping Du via Arpit Agarwal)
+
