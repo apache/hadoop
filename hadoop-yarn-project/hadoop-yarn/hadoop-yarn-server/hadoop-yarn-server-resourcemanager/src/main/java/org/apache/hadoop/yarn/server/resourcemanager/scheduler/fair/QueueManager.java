@@ -25,6 +25,7 @@ import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -50,6 +51,8 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.w3c.dom.Text;
 import org.xml.sax.SAXException;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * Maintains a list of queues as well as scheduling parameters for each queue,
@@ -87,6 +90,8 @@ public class QueueManager {
   private FSParentQueue rootQueue;
 
   private volatile QueueManagerInfo info = new QueueManagerInfo();
+  @VisibleForTesting
+  volatile QueuePlacementPolicy placementPolicy;
   
   private long lastReloadAttempt; // Last time we tried to reload the queues file
   private long lastSuccessfulReload; // Last time we successfully reloaded queues
@@ -107,12 +112,36 @@ public class QueueManager {
     queues.put(rootQueue.getName(), rootQueue);
     
     this.allocFile = conf.getAllocationFile();
+    placementPolicy = new QueuePlacementPolicy(getSimplePlacementRules(),
+        new HashSet<String>(), conf);
     
     reloadAllocs();
     lastSuccessfulReload = scheduler.getClock().getTime();
     lastReloadAttempt = scheduler.getClock().getTime();
     // Create the default queue
     getLeafQueue(YarnConfiguration.DEFAULT_QUEUE_NAME, true);
+  }
+  
+  public void updatePlacementPolicy(FairSchedulerConfiguration conf) {
+    
+  }
+  
+  /**
+   * Construct simple queue placement policy from allow-undeclared-pools and
+   * user-as-default-queue.
+   */
+  private List<QueuePlacementRule> getSimplePlacementRules() {
+    boolean create = scheduler.getConf().getAllowUndeclaredPools();
+    boolean userAsDefaultQueue = scheduler.getConf().getUserAsDefaultQueue();
+    List<QueuePlacementRule> rules = new ArrayList<QueuePlacementRule>();
+    rules.add(new QueuePlacementRule.Specified().initialize(create, null));
+    if (userAsDefaultQueue) {
+      rules.add(new QueuePlacementRule.User().initialize(create, null));
+    }
+    if (!userAsDefaultQueue || !create) {
+      rules.add(new QueuePlacementRule.Default().initialize(true, null));
+    }
+    return rules;
   }
   
   /**
@@ -226,6 +255,10 @@ public class QueueManager {
       return queues.containsKey(name);
     }
   }
+  
+  public QueuePlacementPolicy getPlacementPolicy() {
+    return placementPolicy;
+  }
 
   /**
    * Reload allocations file if it hasn't been loaded in a while
@@ -290,6 +323,8 @@ public class QueueManager {
     long fairSharePreemptionTimeout = Long.MAX_VALUE;
     long defaultMinSharePreemptionTimeout = Long.MAX_VALUE;
     SchedulingPolicy defaultSchedPolicy = SchedulingPolicy.getDefault();
+    
+    QueuePlacementPolicy newPlacementPolicy = null;
 
     // Remember all queue names so we can display them on web UI, etc.
     List<String> queueNamesInAllocFile = new ArrayList<String>();
@@ -306,6 +341,7 @@ public class QueueManager {
           "file: top-level element not <allocations>");
     NodeList elements = root.getChildNodes();
     List<Element> queueElements = new ArrayList<Element>();
+    Element placementPolicyElement = null;
     for (int i = 0; i < elements.getLength(); i++) {
       Node node = elements.item(i);
       if (node instanceof Element) {
@@ -348,6 +384,8 @@ public class QueueManager {
           String text = ((Text)element.getFirstChild()).getData().trim();
           SchedulingPolicy.setDefault(text);
           defaultSchedPolicy = SchedulingPolicy.getDefault();
+        } else if ("queuePlacementPolicy".equals(element.getTagName())) {
+          placementPolicyElement = element;
         } else {
           LOG.warn("Bad element in allocations file: " + element.getTagName());
         }
@@ -369,6 +407,15 @@ public class QueueManager {
           userMaxApps, queueWeights, queuePolicies, minSharePreemptionTimeouts,
           queueAcls, queueNamesInAllocFile);
     }
+    
+    // Load placement policy and pass it configured queues
+    if (placementPolicyElement != null) {
+      newPlacementPolicy = QueuePlacementPolicy.fromXml(placementPolicyElement,
+          new HashSet<String>(queueNamesInAllocFile), scheduler.getConf());
+    } else {
+      newPlacementPolicy = new QueuePlacementPolicy(getSimplePlacementRules(),
+          new HashSet<String>(queueNamesInAllocFile), scheduler.getConf());
+    }
 
     // Commit the reload; also create any queue defined in the alloc file
     // if it does not already exist, so it can be displayed on the web UI.
@@ -377,6 +424,7 @@ public class QueueManager {
           queueMaxApps, userMaxApps, queueWeights, userMaxAppsDefault,
           queueMaxAppsDefault, defaultSchedPolicy, minSharePreemptionTimeouts,
           queueAcls, fairSharePreemptionTimeout, defaultMinSharePreemptionTimeout);
+      placementPolicy = newPlacementPolicy;
       
       // Make sure all queues exist
       for (String name: queueNamesInAllocFile) {

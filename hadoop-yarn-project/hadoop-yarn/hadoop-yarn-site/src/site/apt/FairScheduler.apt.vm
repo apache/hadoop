@@ -101,6 +101,16 @@ Hadoop MapReduce Next Generation - Fair Scheduler
   Fair Scheduler. Among them, is the use of a custom policies governing 
   priority “boosting” over  certain apps. 
 
+* {Automatically placing applications in queues}
+
+  The Fair Scheduler allows administrators to configure policies that
+  automatically place submitted applications into appropriate queues. Placement
+  can depend on the user and groups of the submitter and the requested queue
+  passed by the application. A policy consists of a set of rules that are applied
+  sequentially to classify an incoming application. Each rule either places the
+  app into a queue, rejects it, or continues on to the next rule. Refer to the
+  allocation file format below for how to configure these policies.
+
 * {Installation}
 
   To use the Fair Scheduler first assign the appropriate scheduler class in 
@@ -138,7 +148,8 @@ Properties that can be placed in yarn-site.xml
     * Whether to use the username associated with the allocation as the default 
       queue name, in the event that a queue name is not specified. If this is set 
       to "false" or unset, all jobs have a shared default queue, named "default".
-      Defaults to true.
+      Defaults to true.  If a queue placement policy is given in the allocations
+      file, this property is ignored.
 
  * <<<yarn.scheduler.fair.preemption>>>
 
@@ -179,6 +190,16 @@ Properties that can be placed in yarn-site.xml
       which, as a fraction of the cluster size, is the number of scheduling
       opportunities to pass up. The default value of -1.0 means don't pass up any
       scheduling opportunities.
+
+ * <<<yarn.scheduler.fair.allow-undeclared-pools>>>
+
+    * If this is true, new queues can be created at application submission time,
+      whether because they are specified as the application's queue by the
+      submitter or because they are placed there by the user-as-default-queue
+      property. If this is false, any time an app would be placed in a queue that
+      is not specified in the allocations file, it is placed in the "default" queue
+      instead. Defaults to true. If a queue placement policy is given in the
+      allocations file, this property is ignored.
 
 Allocation file format
 
@@ -248,7 +269,60 @@ Allocation file format
    policy for queues; overriden by the schedulingPolicy element in each queue
    if specified. Defaults to "fair".
 
+ * <<A queuePlacementPolicy element>>, which contains a list of rule elements
+   that tell the scheduler how to place incoming apps into queues. Rules
+   are applied in the order that they are listed. Rules may take arguments. All
+   rules accept the "create" argument, which indicates whether the rule can create
+   a new queue. "Create" defaults to true; if set to false and the rule would
+   place the app in a queue that is not configured in the allocations file, we
+   continue on to the next rule. The last rule must be one that can never issue a
+   continue.  Valid rules are:
+
+     * specified: the app is placed into the queue it requested.  If the app
+       requested no queue, i.e. it specified "default", we continue.
+
+     * user: the app is placed into a queue with the name of the user who
+       submitted it.
+
+     * primaryGroup: the app is placed into a queue with the name of the
+       primary group of the user who submitted it.
+
+     * default: the app is placed into the queue named "default".
+
+     * reject: the app is rejected.
+
   An example allocation file is given here:
+
+---
+<?xml version="1.0"?>
+<allocations>
+  <queue name="sample_queue">
+    <minResources>10000 mb,0vcores</minResources>
+    <maxResources>90000 mb,0vcores</maxResources>
+    <maxRunningApps>50</maxRunningApps>
+    <weight>2.0</weight>
+    <schedulingPolicy>fair</schedulingPolicy>
+    <queue name="sample_sub_queue">
+      <aclSubmitApps>charlie</aclSubmitApps>
+      <minResources>5000 mb,0vcores</minResources>
+    </queue>
+  </queue>
+  
+  <user name="sample_user">
+    <maxRunningApps>30</maxRunningApps>
+  </user>
+  <userMaxAppsDefault>5</userMaxAppsDefault>
+  
+  <queuePlacementPolicy>
+    <specified />
+    <primarygroup create="false" />
+    <default />
+  </queuePlacementPolicy>
+</allocations>
+---
+
+  Note that for backwards compatibility with the original FairScheduler, "queue" elements can instead be named as "pool" elements.
+
 
 Queue Access Control Lists (ACLs)
 
@@ -268,28 +342,6 @@ Queue Access Control Lists (ACLs)
   To start restricting access, change the root queue's ACLs to something other
   than "*". 
 
----
-<?xml version="1.0"?>
-<allocations>
-  <queue name="sample_queue">
-    <minResources>10000 mb,0vcores</minResources>
-    <maxResources>90000 mb,0vcores</maxResources>
-    <maxRunningApps>50</maxRunningApps>
-    <weight>2.0</weight>
-    <schedulingPolicy>fair</schedulingPolicy>
-    <queue name="sample_sub_queue">
-      <aclSubmitApps>charlie</aclSubmitApps>
-      <minResources>5000 mb,0vcores</minResources>
-    </queue>
-  </queue>
-  <user name="sample_user">
-    <maxRunningApps>30</maxRunningApps>
-  </user>
-  <userMaxAppsDefault>5</userMaxAppsDefault>
-</allocations>
----
-
-  Note that for backwards compatibility with the original FairScheduler, "queue" elements can instead be named as "pool" elements.
   
 * {Administration}
 
