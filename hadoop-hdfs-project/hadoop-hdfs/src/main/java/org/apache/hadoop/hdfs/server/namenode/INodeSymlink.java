@@ -68,8 +68,8 @@ public class INodeSymlink extends INode {
   }
 
   @Override
-  long[] computeContentSummary(long[] summary) {
-    summary[1]++; // Increment the file count
+  ContentSummaryComputationContext computeContentSummary(ContentSummaryComputationContext summary) {
+    summary.updateCounts(0, 1, 0, 0); // Increment the file count
     return summary;
   }
 

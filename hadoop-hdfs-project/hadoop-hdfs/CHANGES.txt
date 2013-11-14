@@ -22,6 +22,8 @@ Release 0.23.10 - UNRELEASED
     HDFS-5346. Avoid unnecessary call to getNumLiveDataNodes() for each block
     during IBR processing (Ravi Prakash via kihwal)
 
+    HDFS-4995. Make getContentSummary less expensive. (kihwal)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn via

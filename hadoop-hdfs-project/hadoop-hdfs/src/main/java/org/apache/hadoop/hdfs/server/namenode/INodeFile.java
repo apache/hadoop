@@ -169,10 +169,10 @@ public class INodeFile extends INode {
   }
 
   /** {@inheritDoc} */
-  long[] computeContentSummary(long[] summary) {
-    summary[0] += computeFileSize(true);
-    summary[1]++;
-    summary[3] += diskspaceConsumed();
+  ContentSummaryComputationContext computeContentSummary(
+     ContentSummaryComputationContext summary) {
+    summary.updateCounts(computeFileSize(true), 1, 0,
+        diskspaceConsumed());
     return summary;
   }
 

@@ -190,17 +190,26 @@ public abstract class INode implements Comparable<byte[]>, FSInodeInfo {
    */
   abstract int collectSubtreeBlocksAndClear(List<Block> v);
 
-  /** Compute {@link ContentSummary}. */
+  /** Compute {@link ContentSummary}. Blocking computation. */
   public final ContentSummary computeContentSummary() {
-    long[] a = computeContentSummary(new long[]{0,0,0,0});
+    return computeAndConvertContentSummary(
+        new ContentSummaryComputationContext());
+  }
+
+  /** Compute {@link ContentSummary} */
+  public final ContentSummary computeAndConvertContentSummary(
+      ContentSummaryComputationContext summary) {
+    long[] a = computeContentSummary(summary).getCounts();
     return new ContentSummary(a[0], a[1], a[2], getNsQuota(), 
                               a[3], getDsQuota());
   }
   /**
-   * @return an array of three longs. 
+   * @return ContentSummaryComputationContext containing
+   * content counts.
    * 0: length, 1: file count, 2: directory count 3: disk space
    */
-  abstract long[] computeContentSummary(long[] summary);
+  abstract ContentSummaryComputationContext computeContentSummary(
+      ContentSummaryComputationContext summary);
   
   /**
    * Get the quota set for this inode
