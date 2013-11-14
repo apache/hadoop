@@ -22,6 +22,8 @@ Release 0.23.10 - UNRELEASED
 
     HADOOP-9956. RPC listener inefficiently assigns connections to readers (daryn)
 
+    HADOOP-9955. RPC idle connection closing is extremely inefficient (daryn)
+
   BUG FIXES
 
     HADOOP-9757. Har metadata cache can grow without limit (Cristina Abad via daryn)

@@ -39,6 +39,8 @@ import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.net.SocketFactory;
 
@@ -48,7 +50,9 @@ import static org.mockito.Mockito.*;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.junit.Assume;
+import org.junit.Before;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -61,7 +65,7 @@ public class TestIPC {
   public static final Log LOG =
     LogFactory.getLog(TestIPC.class);
   
-  final private static Configuration conf = new Configuration();
+  private static Configuration conf;
   final static private int PING_INTERVAL = 1000;
   final static private int MIN_SLEEP_TIME = 1000;
 
@@ -71,7 +75,9 @@ public class TestIPC {
    **/
   static boolean WRITABLE_FAULTS_ENABLED = true;
   
-  static {
+  @Before
+  public void setupConf() {
+    conf = new Configuration();
     Client.setPingInterval(conf, PING_INTERVAL);
   }
 
@@ -83,6 +89,10 @@ public class TestIPC {
   private static final File FD_DIR = new File("/proc/self/fd");
 
   private static class TestServer extends Server {
+    // Tests can set callListener to run a piece of code each time the server
+    // receives a call.  This code executes on the server thread, so it has
+    // visibility of that thread's thread-local storage.
+    private Runnable callListener;
     private boolean sleep;
     private Class<? extends Writable> responseClass;
 
@@ -107,6 +117,9 @@ public class TestIPC {
         try {
           Thread.sleep(RANDOM.nextInt(PING_INTERVAL) + MIN_SLEEP_TIME);
         } catch (InterruptedException e) {}
+      }
+      if (callListener != null) {
+        callListener.run();
       }
       if (responseClass != null) {
         try {
@@ -567,6 +580,112 @@ public class TestIPC {
     }
   }
 
+  @Test(timeout=30000)
+  public void testConnectionIdleTimeouts() throws Exception {
+    final int maxIdle = 1000;
+    final int cleanupInterval = maxIdle*3/4; // stagger cleanups
+    final int killMax = 3;
+    final int clients = 1 + killMax*2; // 1 to block, 2 batches to kill
+    
+    conf.setInt(CommonConfigurationKeysPublic.IPC_CLIENT_CONNECTION_MAXIDLETIME_KEY, maxIdle);
+    conf.setInt(CommonConfigurationKeysPublic.IPC_CLIENT_IDLETHRESHOLD_KEY, 0);
+    conf.setInt(CommonConfigurationKeysPublic.IPC_CLIENT_KILL_MAX_KEY, killMax);
+    conf.setInt(CommonConfigurationKeys.IPC_CLIENT_CONNECTION_IDLESCANINTERVAL_KEY, cleanupInterval);
+    
+    final CyclicBarrier firstCallBarrier = new CyclicBarrier(2);
+    final CyclicBarrier callBarrier = new CyclicBarrier(clients);
+    final CountDownLatch allCallLatch = new CountDownLatch(clients);
+    final AtomicBoolean error = new AtomicBoolean();
+    
+    final TestServer server = new TestServer(clients, false);
+    Thread[] threads = new Thread[clients];
+    try {
+      server.callListener = new Runnable(){
+        AtomicBoolean first = new AtomicBoolean(true);
+        @Override
+        public void run() {
+          try {
+            allCallLatch.countDown();
+            // block first call
+            if (first.compareAndSet(true, false)) {
+              firstCallBarrier.await();
+            } else {
+              callBarrier.await();
+            }
+          } catch (Throwable t) {
+            LOG.error(t);
+            error.set(true); 
+          } 
+        }
+      };
+      server.start();
+
+      // start client
+      final CountDownLatch callReturned = new CountDownLatch(clients-1);
+      final InetSocketAddress addr = NetUtils.getConnectAddress(server);
+      final Configuration clientConf = new Configuration();
+      clientConf.setInt(CommonConfigurationKeysPublic.IPC_CLIENT_CONNECTION_MAXIDLETIME_KEY, 10000);
+      for (int i=0; i < clients; i++) {
+        threads[i] = new Thread(new Runnable(){
+          @Override
+          public void run() {
+            Client client = new Client(LongWritable.class, clientConf);
+            try {
+              client.call(new LongWritable(Thread.currentThread().getId()),
+                  addr, null, null, 0, clientConf);
+              callReturned.countDown();
+              Thread.sleep(10000);
+            } catch (IOException e) {
+              LOG.error(e);
+            } catch (InterruptedException e) {
+            }
+          }
+        });
+        threads[i].start();
+      }
+      
+      // all calls blocked in handler so all connections made
+      allCallLatch.await();
+      assertFalse(error.get());
+      assertEquals(clients, server.getNumOpenConnections());
+      
+      // wake up blocked calls and wait for client call to return, no
+      // connections should have closed
+      callBarrier.await();
+      callReturned.await();
+      assertEquals(clients, server.getNumOpenConnections());
+      
+      // server won't close till maxIdle*2, so give scanning thread time to
+      // be almost ready to close idle connection.  after which it should
+      // close max connections on every cleanupInterval
+      Thread.sleep(maxIdle*2-cleanupInterval);
+      for (int i=clients; i > 1; i -= killMax) {
+        Thread.sleep(cleanupInterval);
+        assertFalse(error.get());
+        assertEquals(i, server.getNumOpenConnections());
+      }
+
+      // connection for the first blocked call should still be open
+      Thread.sleep(cleanupInterval);
+      assertFalse(error.get());
+      assertEquals(1, server.getNumOpenConnections());
+     
+      // wake up call and ensure connection times out
+      firstCallBarrier.await();
+      Thread.sleep(maxIdle*2);
+      assertFalse(error.get());
+      assertEquals(0, server.getNumOpenConnections());
+    } finally {
+      for (Thread t : threads) {
+        if (t != null) {
+          t.interrupt();
+          t.join();
+        }
+        server.stop();
+      }
+    }
+  }
+  
   /**
    * Check that reader queueing works
    * @throws BrokenBarrierException 
