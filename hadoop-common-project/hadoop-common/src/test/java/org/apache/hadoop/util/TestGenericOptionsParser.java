@@ -282,4 +282,12 @@ public class TestGenericOptionsParser extends TestCase {
       Arrays.toString(remainingArgs) + Arrays.toString(expectedRemainingArgs),
       expectedRemainingArgs, remainingArgs);
   }
+
+  /** Test passing null as args. Some classes still call
+   * Tool interface from java passing null.
+   */
+  public void testNullArgs() throws IOException {
+    GenericOptionsParser parser = new GenericOptionsParser(conf, null);
+    parser.getRemainingArgs();
+  }
 }

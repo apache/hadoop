@@ -431,6 +431,9 @@ public class GenericOptionsParser {
     if (!Shell.WINDOWS) {
       return args;
     }
+    if (args == null) {
+      return null;
+    }
     List<String> newArgs = new ArrayList<String>(args.length);
     for (int i=0; i < args.length; i++) {
       String prop = null;
