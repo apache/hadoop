@@ -38,6 +38,7 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
@@ -47,7 +48,10 @@ import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectoryWithQuota;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.namenode.Quota;
+import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot.DirectoryDiffList;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.io.IOUtils;
@@ -948,5 +952,55 @@ public class TestSnapshotDeletion {
         argv2[0] + ": Incorrect number of arguments."));
     psOut.close();
     out.close();
+  }
+
+  /*
+   * OP_DELETE_SNAPSHOT edits op was not decrementing the safemode threshold on
+   * restart in HA mode. HDFS-5504
+   */
+  @Test(timeout = 60000)
+  public void testHANNRestartAfterSnapshotDeletion() throws Exception {
+    hdfs.close();
+    cluster.shutdown();
+    conf = new Configuration();
+    cluster = new MiniDFSCluster.Builder(conf)
+        .nnTopology(MiniDFSNNTopology.simpleHATopology()).numDataNodes(1)
+        .build();
+    cluster.transitionToActive(0);
+    // stop the standby namenode
+    NameNode snn = cluster.getNameNode(1);
+    snn.stop();
+
+    hdfs = (DistributedFileSystem) HATestUtil
+        .configureFailoverFs(cluster, conf);
+    Path dir = new Path("/dir");
+    Path subDir = new Path(dir, "sub");
+    hdfs.mkdirs(dir);
+    hdfs.allowSnapshot(dir);
+    for (int i = 0; i < 5; i++) {
+      DFSTestUtil.createFile(hdfs, new Path(subDir, "" + i), 100, (short) 1,
+          1024L);
+    }
+
+    // take snapshot
+    hdfs.createSnapshot(dir, "s0");
+
+    // delete the subdir
+    hdfs.delete(subDir, true);
+
+    // roll the edit log
+    NameNode ann = cluster.getNameNode(0);
+    ann.getRpcServer().rollEditLog();
+
+    hdfs.deleteSnapshot(dir, "s0");
+    // wait for the blocks deletion at namenode
+    Thread.sleep(2000);
+
+    NameNodeAdapter.abortEditLogs(ann);
+    cluster.restartNameNode(0, false);
+    cluster.transitionToActive(0);
+
+    // wait till the cluster becomes active
+    cluster.waitClusterUp();
   }
 }

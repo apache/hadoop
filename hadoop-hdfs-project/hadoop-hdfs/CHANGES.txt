@@ -172,6 +172,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-5075. httpfs-config.sh calls out incorrect env script name
     (Timothy St. Clair via stevel)
 
+    HDFS-5504. In HA mode, OP_DELETE_SNAPSHOT is not decrementing the safemode threshold, 
+    leads to NN safemode. (Vinay via jing9)
+
 Release 2.2.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
