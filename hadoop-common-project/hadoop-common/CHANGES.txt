@@ -146,6 +146,8 @@ Release 2.3.0 - UNRELEASED
     HADOOP-10094. NPE in GenericOptionsParser#preProcessForWindows().
     (Enis Soztutar via cnauroth)
 
+    HADOOP-10100. MiniKDC shouldn't use apacheds-all artifact. (rkanter via tucu)
+
 Release 2.2.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
