@@ -36,8 +36,18 @@ import java.util.*;
 @InterfaceAudience.Private
 public class CorruptReplicasMap{
 
-  private SortedMap<Block, Collection<DatanodeDescriptor>> corruptReplicasMap =
-    new TreeMap<Block, Collection<DatanodeDescriptor>>();
+  /** The corruption reason code */
+  public static enum Reason {
+    NONE,                // not specified.
+    ANY,                 // wildcard reason
+    GENSTAMP_MISMATCH,   // mismatch in generation stamps
+    SIZE_MISMATCH,       // mismatch in sizes
+    INVALID_STATE,       // invalid state
+    CORRUPTION_REPORTED  // client or datanode reported the corruption
+  }
+
+  private SortedMap<Block, Map<DatanodeDescriptor, Reason>> corruptReplicasMap =
+    new TreeMap<Block, Map<DatanodeDescriptor, Reason>>();
   
   /**
    * Mark the block belonging to datanode as corrupt.
@@ -48,9 +58,22 @@ public class CorruptReplicasMap{
    */
   public void addToCorruptReplicasMap(Block blk, DatanodeDescriptor dn,
       String reason) {
-    Collection<DatanodeDescriptor> nodes = getNodes(blk);
+    addToCorruptReplicasMap(blk, dn, reason, Reason.NONE);
+  }
+
+  /**
+   * Mark the block belonging to datanode as corrupt.
+   *
+   * @param blk Block to be added to CorruptReplicasMap
+   * @param dn DatanodeDescriptor which holds the corrupt replica
+   * @param reason a textual reason (for logging purposes)
+   * @param reasonCode the enum representation of the reason
+   */
+  public void addToCorruptReplicasMap(Block blk, DatanodeDescriptor dn,
+      String reason, Reason reasonCode) {
+    Map <DatanodeDescriptor, Reason> nodes = corruptReplicasMap.get(blk);
     if (nodes == null) {
-      nodes = new TreeSet<DatanodeDescriptor>();
+      nodes = new HashMap<DatanodeDescriptor, Reason>();
       corruptReplicasMap.put(blk, nodes);
     }
     
@@ -61,8 +84,7 @@ public class CorruptReplicasMap{
       reasonText = "";
     }
     
-    if (!nodes.contains(dn)) {
-      nodes.add(dn);
+    if (!nodes.keySet().contains(dn)) {
       NameNode.blockStateChangeLog.info("BLOCK NameSystem.addToCorruptReplicasMap: "+
                                    blk.getBlockName() +
                                    " added as corrupt on " + dn +
@@ -76,6 +98,8 @@ public class CorruptReplicasMap{
                                    " by " + Server.getRemoteIp() +
                                    reasonText);
     }
+    // Add the node or update the reason.
+    nodes.put(dn, reasonCode);
   }
 
   /**
@@ -97,10 +121,24 @@ public class CorruptReplicasMap{
              false if the replica is not in the map
    */ 
   boolean removeFromCorruptReplicasMap(Block blk, DatanodeDescriptor datanode) {
-    Collection<DatanodeDescriptor> datanodes = corruptReplicasMap.get(blk);
+    return removeFromCorruptReplicasMap(blk, datanode, Reason.ANY);
+  }
+
+  boolean removeFromCorruptReplicasMap(Block blk, DatanodeDescriptor datanode,
+      Reason reason) {
+    Map <DatanodeDescriptor, Reason> datanodes = corruptReplicasMap.get(blk);
+    boolean removed = false;
     if (datanodes==null)
       return false;
-    if (datanodes.remove(datanode)) { // remove the replicas
+
+    // if reasons can be compared but don't match, return false.
+    Reason storedReason = datanodes.get(datanode);
+    if (reason != Reason.ANY && storedReason != null &&
+        reason != storedReason) {
+      return false;
+    }
+
+    if (datanodes.remove(datanode) != null) { // remove the replicas
       if (datanodes.isEmpty()) {
         // remove the block if there is no more corrupted replicas
         corruptReplicasMap.remove(blk);
@@ -118,7 +156,10 @@ public class CorruptReplicasMap{
    * @return collection of nodes. Null if does not exists
    */
   Collection<DatanodeDescriptor> getNodes(Block blk) {
-    return corruptReplicasMap.get(blk);
+    Map <DatanodeDescriptor, Reason> nodes = corruptReplicasMap.get(blk);
+    if (nodes == null)
+      return null;
+    return nodes.keySet();
   }
 
   /**
