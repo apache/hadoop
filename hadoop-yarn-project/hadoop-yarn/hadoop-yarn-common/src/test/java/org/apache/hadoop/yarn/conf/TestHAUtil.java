@@ -28,7 +28,9 @@ import org.junit.Test;
 import java.util.Collection;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 public class TestHAUtil {
@@ -51,7 +53,7 @@ public class TestHAUtil {
     conf.set(YarnConfiguration.RM_HA_IDS, RM_NODE_IDS_UNTRIMMED);
     conf.set(YarnConfiguration.RM_HA_ID, RM1_NODE_ID_UNTRIMMED);
 
-    for (String confKey : HAUtil.RPC_ADDRESS_CONF_KEYS) {
+    for (String confKey : YarnConfiguration.RM_RPC_ADDRESS_CONF_KEYS) {
       // configuration key itself cannot contains space/tab/return chars.
       conf.set(HAUtil.addSuffix(confKey, RM1_NODE_ID), RM1_ADDRESS_UNTRIMMED);
       conf.set(HAUtil.addSuffix(confKey, RM2_NODE_ID), RM2_ADDRESS);
@@ -92,7 +94,7 @@ public class TestHAUtil {
       StringUtils.getStringCollection(RM_NODE_IDS), HAUtil.getRMHAIds(conf));
     assertEquals("Should be saved as Trimmed string",
       RM1_NODE_ID, HAUtil.getRMHAId(conf));
-    for (String confKey : HAUtil.RPC_ADDRESS_CONF_KEYS) {
+    for (String confKey : YarnConfiguration.RM_RPC_ADDRESS_CONF_KEYS) {
       assertEquals("RPC address not set for " + confKey,
         RM1_ADDRESS, conf.get(confKey));
     }
@@ -111,7 +113,7 @@ public class TestHAUtil {
     conf.clear();
     conf.set(YarnConfiguration.RM_HA_ID, RM_INVALID_NODE_ID);
     conf.set(YarnConfiguration.RM_HA_IDS, RM_INVALID_NODE_ID);
-    for (String confKey : HAUtil.RPC_ADDRESS_CONF_KEYS) {
+    for (String confKey : YarnConfiguration.RM_RPC_ADDRESS_CONF_KEYS) {
       // simulate xml with invalid node id
       conf.set(confKey + RM_INVALID_NODE_ID, RM_INVALID_NODE_ID);
     }
@@ -126,7 +128,7 @@ public class TestHAUtil {
     }
 
     conf.clear();
-    // simulate the case HAUtil.RPC_ADDRESS_CONF_KEYS are not set
+    // simulate the case HAUtil.RM_RPC_ADDRESS_CONF_KEYS are not set
     conf.set(YarnConfiguration.RM_HA_ID, RM1_NODE_ID);
     conf.set(YarnConfiguration.RM_HA_IDS, RM1_NODE_ID);
     try {
@@ -145,7 +147,7 @@ public class TestHAUtil {
     conf.clear();
     conf.set(YarnConfiguration.RM_HA_IDS, RM2_NODE_ID + "," + RM3_NODE_ID);
     conf.set(YarnConfiguration.RM_HA_ID, RM1_NODE_ID_UNTRIMMED);
-    for (String confKey : HAUtil.RPC_ADDRESS_CONF_KEYS) {
+    for (String confKey : YarnConfiguration.RM_RPC_ADDRESS_CONF_KEYS) {
       conf.set(HAUtil.addSuffix(confKey, RM1_NODE_ID), RM1_ADDRESS_UNTRIMMED);
       conf.set(HAUtil.addSuffix(confKey, RM2_NODE_ID), RM2_ADDRESS);
     }
@@ -157,5 +159,15 @@ public class TestHAUtil {
         HAUtil.getRMHAIdNeedToBeIncludedMessage("[rm2, rm3]", RM1_NODE_ID),
         e.getMessage());
     }
+  }
+
+  @Test
+  public void testGetConfKeyForRMInstance() {
+    assertTrue("RM instance id is not suffixed",
+        HAUtil.getConfKeyForRMInstance(YarnConfiguration.RM_ADDRESS, conf)
+            .contains(HAUtil.getRMHAId(conf)));
+    assertFalse("RM instance id is suffixed",
+        HAUtil.getConfKeyForRMInstance(YarnConfiguration.NM_ADDRESS, conf)
+            .contains(HAUtil.getRMHAId(conf)));
   }
 }
