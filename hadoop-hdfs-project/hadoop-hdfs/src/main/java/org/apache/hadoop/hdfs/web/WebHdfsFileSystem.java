@@ -119,38 +119,11 @@ public class WebHdfsFileSystem extends FileSystem
 
   /** Delegation token kind */
   public static final Text TOKEN_KIND = new Text("WEBHDFS delegation");
-  /** Token selector */
-  public static final DTSelecorByKind DT_SELECTOR
-      = new DTSelecorByKind(TOKEN_KIND);
-
-  private DelegationTokenRenewer dtRenewer = null;
-  @VisibleForTesting
-  DelegationTokenRenewer.RenewAction<?> action;
-
-  @Override
-  public URI getCanonicalUri() {
-    return super.getCanonicalUri();
-  }
-
-  @VisibleForTesting
-  protected synchronized void addRenewAction(final WebHdfsFileSystem webhdfs) {
-    if (dtRenewer == null) {
-      dtRenewer = DelegationTokenRenewer.getInstance();
-    }
-
-    action = dtRenewer.addRenewAction(webhdfs);
-  }
-
-  /** Is WebHDFS enabled in conf? */
-  public static boolean isEnabled(final Configuration conf, final Log log) {
-    final boolean b = conf.getBoolean(DFSConfigKeys.DFS_WEBHDFS_ENABLED_KEY,
-        DFSConfigKeys.DFS_WEBHDFS_ENABLED_DEFAULT);
-    return b;
-  }
+  protected TokenAspect<WebHdfsFileSystem> tokenAspect = new TokenAspect<WebHdfsFileSystem>(
+      this, TOKEN_KIND);
 
   private UserGroupInformation ugi;
   private URI uri;
-  private boolean hasInitedToken;
   private Token<?> delegationToken;
   private RetryPolicy retryPolicy = null;
   private Path workingDir;
@@ -213,39 +186,25 @@ public class WebHdfsFileSystem extends FileSystem
     this.workingDir = getHomeDirectory();
 
     if (UserGroupInformation.isSecurityEnabled()) {
-      initDelegationToken();
+      tokenAspect.initDelegationToken(ugi);
     }
   }
 
-  protected void initDelegationToken() throws IOException {
-    // look for webhdfs token, then try hdfs
-    Token<?> token = selectDelegationToken(ugi);
-    if (token != null) {
-      LOG.debug("Found existing DT for " + token.getService());        
-      setDelegationToken(token);
-      hasInitedToken = true;
-    }
+  @Override
+  public URI getCanonicalUri() {
+    return super.getCanonicalUri();
+  }
+
+  /** Is WebHDFS enabled in conf? */
+  public static boolean isEnabled(final Configuration conf, final Log log) {
+    final boolean b = conf.getBoolean(DFSConfigKeys.DFS_WEBHDFS_ENABLED_KEY,
+        DFSConfigKeys.DFS_WEBHDFS_ENABLED_DEFAULT);
+    return b;
   }
 
   protected synchronized Token<?> getDelegationToken() throws IOException {
-    // we haven't inited yet, or we used to have a token but it expired
-    if (!hasInitedToken || (action != null && !action.isValid())) {
-      //since we don't already have a token, go get one
-      Token<?> token = getDelegationToken(null);
-      // security might be disabled
-      if (token != null) {
-        setDelegationToken(token);
-        addRenewAction(this);
-        LOG.debug("Created new DT for " + token.getService());
-      }
-      hasInitedToken = true;
-    }
+    tokenAspect.ensureTokenInitialized();
     return delegationToken;
-  }
-
-  protected Token<DelegationTokenIdentifier> selectDelegationToken(
-      UserGroupInformation ugi) {
-    return DT_SELECTOR.selectToken(getCanonicalUri(), ugi.getTokens(), getConf());
   }
 
   @Override
@@ -371,7 +330,7 @@ public class WebHdfsFileSystem extends FileSystem
   private synchronized void resetStateToFailOver() {
     currentNNAddrIndex = (currentNNAddrIndex + 1) % nnAddrs.length;
     delegationToken = null;
-    hasInitedToken = false;
+    tokenAspect.reset();
   }
 
   /**
@@ -882,9 +841,7 @@ public class WebHdfsFileSystem extends FileSystem
   @Override
   public void close() throws IOException {
     super.close();
-    if (dtRenewer != null) {
-      dtRenewer.removeRenewAction(this); // blocks
-    }
+    tokenAspect.removeRenewAction();
   }
 
   class OffsetUrlOpener extends ByteRangeInputStream.URLOpener {

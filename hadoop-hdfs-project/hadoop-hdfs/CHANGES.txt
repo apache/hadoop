@@ -119,6 +119,8 @@ Release 2.3.0 - UNRELEASED
     HDFS-5506. Use URLConnectionFactory in DelegationTokenFetcher. (Haohui Mai
     via jing9)
 
+    HDFS-5489. Use TokenAspect in WebHDFSFileSystem. (Haohui Mai via jing9)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn)
