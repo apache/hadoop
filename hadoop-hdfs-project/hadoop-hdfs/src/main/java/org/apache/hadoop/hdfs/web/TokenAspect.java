@@ -144,6 +144,10 @@ final class TokenAspect<T extends FileSystem & Renewable> {
     }
   }
 
+  public synchronized void reset() {
+    hasInitedToken = false;
+  }
+
   synchronized void initDelegationToken(UserGroupInformation ugi) {
     Token<?> token = selectDelegationToken(ugi);
     if (token != null) {

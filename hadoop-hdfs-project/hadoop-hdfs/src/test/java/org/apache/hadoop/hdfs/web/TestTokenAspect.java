@@ -19,13 +19,19 @@
 package org.apache.hadoop.hdfs.web;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import java.io.FileNotFoundException;
@@ -35,6 +41,7 @@ import java.net.URISyntaxException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.DelegationTokenRenewer;
+import org.apache.hadoop.fs.DelegationTokenRenewer.RenewAction;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -163,15 +170,44 @@ public class TestTokenAspect {
     }
   }
 
+  private static RenewAction<?> getActionFromTokenAspect(
+      TokenAspect<DummyFs> tokenAspect) {
+    return (RenewAction<?>) Whitebox.getInternalState(tokenAspect, "action");
+  }
+
   @Test
-  public void testGetRemoteToken() throws IOException, URISyntaxException {
+  public void testCachedInitialization() throws IOException, URISyntaxException {
     Configuration conf = new Configuration();
-    UserGroupInformation.setConfiguration(conf);
     DummyFs fs = spy(new DummyFs());
     Token<TokenIdentifier> token = new Token<TokenIdentifier>(new byte[0],
         new byte[0], DummyFs.TOKEN_KIND, new Text("127.0.0.1:1234"));
 
     doReturn(token).when(fs).getDelegationToken(anyString());
+    doReturn(token).when(fs).getRenewToken();
+
+    fs.emulateSecurityEnabled = true;
+    fs.initialize(new URI("dummyfs://127.0.0.1:1234"), conf);
+
+    fs.tokenAspect.ensureTokenInitialized();
+    verify(fs, times(1)).getDelegationToken(null);
+    verify(fs, times(1)).setDelegationToken(token);
+
+    // For the second iteration, the token should be cached.
+    fs.tokenAspect.ensureTokenInitialized();
+    verify(fs, times(1)).getDelegationToken(null);
+    verify(fs, times(1)).setDelegationToken(token);
+  }
+
+  @Test
+  public void testGetRemoteToken() throws IOException, URISyntaxException {
+    Configuration conf = new Configuration();
+    DummyFs fs = spy(new DummyFs());
+    Token<TokenIdentifier> token = new Token<TokenIdentifier>(new byte[0],
+        new byte[0], DummyFs.TOKEN_KIND, new Text("127.0.0.1:1234"));
+
+    doReturn(token).when(fs).getDelegationToken(anyString());
+    doReturn(token).when(fs).getRenewToken();
+
     fs.initialize(new URI("dummyfs://127.0.0.1:1234"), conf);
 
     fs.tokenAspect.ensureTokenInitialized();
@@ -186,7 +222,6 @@ public class TestTokenAspect {
   public void testGetRemoteTokenFailure() throws IOException,
       URISyntaxException {
     Configuration conf = new Configuration();
-    UserGroupInformation.setConfiguration(conf);
     DummyFs fs = spy(new DummyFs());
     IOException e = new IOException();
     doThrow(e).when(fs).getDelegationToken(anyString());
@@ -203,7 +238,6 @@ public class TestTokenAspect {
   @Test
   public void testInitWithNoTokens() throws IOException, URISyntaxException {
     Configuration conf = new Configuration();
-    UserGroupInformation.setConfiguration(conf);
     DummyFs fs = spy(new DummyFs());
     doReturn(null).when(fs).getDelegationToken(anyString());
     fs.initialize(new URI("dummyfs://127.0.0.1:1234"), conf);
@@ -218,7 +252,6 @@ public class TestTokenAspect {
   @Test
   public void testInitWithUGIToken() throws IOException, URISyntaxException {
     Configuration conf = new Configuration();
-    UserGroupInformation.setConfiguration(conf);
     DummyFs fs = spy(new DummyFs());
     doReturn(null).when(fs).getDelegationToken(anyString());
 
@@ -242,6 +275,51 @@ public class TestTokenAspect {
   }
 
   @Test
+  public void testRenewal() throws Exception {
+    Configuration conf = new Configuration();
+    Token<?> token1 = mock(Token.class);
+    Token<?> token2 = mock(Token.class);
+    final long renewCycle = 100;
+    DelegationTokenRenewer.renewCycle = renewCycle;
+
+    UserGroupInformation ugi = UserGroupInformation.createUserForTesting("foo",
+        new String[] { "bar" });
+    DummyFs fs = spy(new DummyFs());
+
+    doReturn(token1).doReturn(token2).when(fs).getDelegationToken(null);
+    doReturn(token1).when(fs).getRenewToken();
+    // cause token renewer to abandon the token
+    doThrow(new IOException("renew failed")).when(token1).renew(conf);
+    doThrow(new IOException("get failed")).when(fs).addDelegationTokens(null,
+        null);
+
+    TokenAspect<DummyFs> tokenAspect = new TokenAspect<DummyFs>(fs,
+        DummyFs.TOKEN_KIND);
+    fs.initialize(new URI("dummyfs://127.0.0.1:1234"), conf);
+    tokenAspect.initDelegationToken(ugi);
+
+    // trigger token acquisition
+    tokenAspect.ensureTokenInitialized();
+    DelegationTokenRenewer.RenewAction<?> action = getActionFromTokenAspect(tokenAspect);
+    verify(fs).setDelegationToken(token1);
+    assertTrue(action.isValid());
+
+    // upon renewal, token will go bad based on above stubbing
+    Thread.sleep(renewCycle * 2);
+    assertSame(action, getActionFromTokenAspect(tokenAspect));
+    assertFalse(action.isValid());
+
+    // now that token is invalid, should get a new one
+    tokenAspect.ensureTokenInitialized();
+    verify(fs, times(2)).getDelegationToken(anyString());
+    verify(fs).setDelegationToken(token2);
+    assertNotSame(action, getActionFromTokenAspect(tokenAspect));
+
+    action = getActionFromTokenAspect(tokenAspect);
+    assertTrue(action.isValid());
+  }
+
+  @Test
   public void testTokenSelectionPreferences() throws IOException,
       URISyntaxException {
     Configuration conf = new Configuration();
@@ -252,7 +330,6 @@ public class TestTokenAspect {
         DummyFs.TOKEN_KIND);
     UserGroupInformation ugi = UserGroupInformation.createUserForTesting("foo",
         new String[] { "bar" });
-    UserGroupInformation.setConfiguration(conf);
 
     // use ip-based tokens
     SecurityUtilTestHelper.setTokenServiceUseIp(true);
