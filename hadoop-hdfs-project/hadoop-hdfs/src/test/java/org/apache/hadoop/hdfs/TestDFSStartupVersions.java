@@ -237,7 +237,7 @@ public class TestDFSStartupVersions {
    *         this iterations version 3-tuple
    * </pre>
    */
-  @Test
+  @Test (timeout=300000)
   public void testVersions() throws Exception {
     UpgradeUtilities.initialize();
     Configuration conf = UpgradeUtilities.initializeStorageStateConf(1, 

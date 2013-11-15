@@ -97,8 +97,8 @@ public class DataStorage extends Storage {
   public synchronized String getDatanodeUuid() {
     return datanodeUuid;
   }
-  
-  synchronized void setDatanodeUuid(String newDatanodeUuid) {
+
+  public synchronized void setDatanodeUuid(String newDatanodeUuid) {
     this.datanodeUuid = newDatanodeUuid;
   }
 
@@ -292,8 +292,7 @@ public class DataStorage extends Storage {
     props.setProperty("storageID", sd.getStorageUuid());
 
     String datanodeUuid = getDatanodeUuid();
-    if (LayoutVersion.supports(Feature.ADD_DATANODE_AND_STORAGE_UUIDS,
-          layoutVersion) && datanodeUuid != null) {
+    if (datanodeUuid != null) {
       props.setProperty("datanodeUuid", datanodeUuid);
     }
 

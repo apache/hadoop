@@ -106,4 +106,6 @@ IMPROVEMENTS:
 
     HDFS-5510. Fix a findbug warning in DataStorage.java on HDFS-2832 branch.
     (Junping Du via Arpit Agarwal)
+ 
+    HDFS-5515. Fix TestDFSStartupVersions for HDFS-2832. (Arpit Agarwal)
 
