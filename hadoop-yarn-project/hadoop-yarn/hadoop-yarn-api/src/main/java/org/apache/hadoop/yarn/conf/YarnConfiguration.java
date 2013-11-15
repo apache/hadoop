@@ -20,6 +20,8 @@ package org.apache.hadoop.yarn.conf;
 
 import java.net.InetSocketAddress;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
@@ -294,6 +296,17 @@ public class YarnConfiguration extends Configuration {
       RM_HA_PREFIX + "admin.client.thread-count";
   public static final int DEFAULT_RM_HA_ADMIN_CLIENT_THREAD_COUNT = 1;
   // end @Private
+
+  public static final List<String> RM_RPC_ADDRESS_CONF_KEYS =
+      Collections.unmodifiableList(Arrays.asList(
+          RM_ADDRESS,
+          RM_SCHEDULER_ADDRESS,
+          RM_ADMIN_ADDRESS,
+          RM_RESOURCE_TRACKER_ADDRESS,
+          RM_WEBAPP_ADDRESS,
+          RM_WEBAPP_HTTPS_ADDRESS,
+          // TODO Remove after YARN-1318
+          RM_HA_ADMIN_ADDRESS));
 
   ////////////////////////////////
   // RM state store configs
@@ -924,7 +937,7 @@ public class YarnConfiguration extends Configuration {
   public InetSocketAddress getSocketAddr(
       String name, String defaultAddress, int defaultPort) {
     String address;
-    if (HAUtil.isHAEnabled(this)) {
+    if (HAUtil.isHAEnabled(this) && RM_RPC_ADDRESS_CONF_KEYS.contains(name)) {
       address = HAUtil.getConfValueForRMInstance(name, defaultAddress, this);
     } else {
       address = get(name, defaultAddress);

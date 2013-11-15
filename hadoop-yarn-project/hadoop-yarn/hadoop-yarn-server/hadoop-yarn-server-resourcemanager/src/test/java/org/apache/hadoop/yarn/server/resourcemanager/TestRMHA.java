@@ -51,7 +51,7 @@ public class TestRMHA {
     Configuration conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
     conf.set(YarnConfiguration.RM_HA_IDS, RM1_NODE_ID);
-    for (String confKey : HAUtil.RPC_ADDRESS_CONF_KEYS) {
+    for (String confKey : YarnConfiguration.RM_RPC_ADDRESS_CONF_KEYS) {
       conf.set(HAUtil.addSuffix(confKey, RM1_NODE_ID), RM1_ADDRESS);
     }
     conf.set(YarnConfiguration.RM_HA_ID, RM1_NODE_ID);

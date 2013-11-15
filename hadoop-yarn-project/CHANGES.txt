@@ -118,6 +118,9 @@ Release 2.3.0 - UNRELEASED
     YARN-1401. With zero sleep-delay-before-sigkill.ms, no signal is ever sent
     (Gera Shegalov via Sandy Ryza)
 
+    YARN-1411. HA config shouldn't affect NodeManager RPC addresses (Karthik
+    Kambatla via bikas)
+
 Release 2.2.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
