@@ -119,7 +119,12 @@ public class NameNodeHttpServer {
     httpServer.setAttribute(JspHelper.CURRENT_CONF, conf);
     setupServlets(httpServer, conf);
     httpServer.start();
-    httpAddress = new InetSocketAddress(bindAddress.getAddress(), httpServer.getPort());
+    httpAddress = new InetSocketAddress(bindAddress.getAddress(),
+        httpServer.getPort());
+    if (certSSL) {
+      httpsAddress = new InetSocketAddress(bindAddress.getAddress(),
+          httpServer.getConnectorPort(1));
+    }
   }
   
   private Map<String, String> getAuthFilterParams(Configuration conf)
