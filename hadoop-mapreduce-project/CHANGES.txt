@@ -1421,6 +1421,9 @@ Release 0.23.10 - UNRELEASED
 
     MAPREDUCE-5587. TestTextOutputFormat fails on JDK7 (jeagles)
 
+    MAPREDUCE-5373. TestFetchFailure.testFetchFailureMultipleReduces could fail
+    intermittently (jeagles)
+
 Release 0.23.9 - 2013-07-08
 
   INCOMPATIBLE CHANGES
