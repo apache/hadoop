@@ -793,6 +793,10 @@ public class NameNode implements NameNodeStatusMXBean {
     return httpServer.getHttpAddress();
   }
 
+  public InetSocketAddress getHttpsAddress() {
+    return httpServer.getHttpsAddress();
+  }
+
   /**
    * Verify that configured directories exist, then
    * Interactively confirm that formatting is desired 

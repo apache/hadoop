@@ -186,6 +186,8 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-5438. Flaws in block report processing can cause data loss. (kihwal)
 
+    HDFS-5502. Fix HTTPS support in HsftpFileSystem. (Haohui Mai via jing9)
+
 Release 2.2.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

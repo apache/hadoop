@@ -18,31 +18,14 @@
 
 package org.apache.hadoop.hdfs.web;
 
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.net.HttpURLConnection;
-import java.net.InetSocketAddress;
-import java.net.URI;
-import java.net.URL;
-import java.security.KeyStore;
-import java.security.cert.X509Certificate;
-
-import javax.net.ssl.HostnameVerifier;
-import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.KeyManager;
-import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSession;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.TrustManagerFactory;
-import javax.net.ssl.X509TrustManager;
+import java.security.GeneralSecurityException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.apache.hadoop.util.Time;
+import org.apache.hadoop.io.Text;
 
 /**
  * An implementation of a protocol for accessing filesystems over HTTPS. The
@@ -55,9 +38,8 @@ import org.apache.hadoop.util.Time;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class HsftpFileSystem extends HftpFileSystem {
-
-  private static final long MM_SECONDS_PER_DAY = 1000 * 60 * 60 * 24;
-  private volatile int ExpWarnDays = 0;
+  public static final Text TOKEN_KIND = new Text("HSFTP delegation");
+  public static final String SCHEME = "hsftp";
 
   /**
    * Return the protocol scheme for the FileSystem.
@@ -67,7 +49,7 @@ public class HsftpFileSystem extends HftpFileSystem {
    */
   @Override
   public String getScheme() {
-    return "hsftp";
+    return SCHEME;
   }
 
   /**
@@ -79,66 +61,17 @@ public class HsftpFileSystem extends HftpFileSystem {
   }
 
   @Override
-  public void initialize(URI name, Configuration conf) throws IOException {
-    super.initialize(name, conf);
-    setupSsl(conf);
-    ExpWarnDays = conf.getInt("ssl.expiration.warn.days", 30);
-  }
+  protected void initConnectionFactoryAndTokenAspect(Configuration conf) throws IOException {
+    tokenAspect = new TokenAspect<HftpFileSystem>(this, TOKEN_KIND);
 
-  /**
-   * Set up SSL resources
-   *
-   * @throws IOException
-   */
-  private static void setupSsl(Configuration conf) throws IOException {
-    Configuration sslConf = new HdfsConfiguration(false);
-    sslConf.addResource(conf.get(DFSConfigKeys.DFS_CLIENT_HTTPS_KEYSTORE_RESOURCE_KEY,
-                             DFSConfigKeys.DFS_CLIENT_HTTPS_KEYSTORE_RESOURCE_DEFAULT));
-    FileInputStream fis = null;
+    connectionFactory = new URLConnectionFactory(
+        URLConnectionFactory.DEFAULT_SOCKET_TIMEOUT);
     try {
-      SSLContext sc = SSLContext.getInstance("SSL");
-      KeyManager[] kms = null;
-      TrustManager[] tms = null;
-      if (sslConf.get("ssl.client.keystore.location") != null) {
-        // initialize default key manager with keystore file and pass
-        KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
-        KeyStore ks = KeyStore.getInstance(sslConf.get(
-            "ssl.client.keystore.type", "JKS"));
-        char[] ksPass = sslConf.get("ssl.client.keystore.password", "changeit")
-            .toCharArray();
-        fis = new FileInputStream(sslConf.get("ssl.client.keystore.location",
-            "keystore.jks"));
-        ks.load(fis, ksPass);
-        kmf.init(ks, sslConf.get("ssl.client.keystore.keypassword", "changeit")
-            .toCharArray());
-        kms = kmf.getKeyManagers();
-        fis.close();
-        fis = null;
-      }
-      // initialize default trust manager with truststore file and pass
-      if (sslConf.getBoolean("ssl.client.do.not.authenticate.server", false)) {
-        // by pass trustmanager validation
-        tms = new DummyTrustManager[] { new DummyTrustManager() };
-      } else {
-        TrustManagerFactory tmf = TrustManagerFactory.getInstance("PKIX");
-        KeyStore ts = KeyStore.getInstance(sslConf.get(
-            "ssl.client.truststore.type", "JKS"));
-        char[] tsPass = sslConf.get("ssl.client.truststore.password",
-            "changeit").toCharArray();
-        fis = new FileInputStream(sslConf.get("ssl.client.truststore.location",
-            "truststore.jks"));
-        ts.load(fis, tsPass);
-        tmf.init(ts);
-        tms = tmf.getTrustManagers();
-      }
-      sc.init(kms, tms, new java.security.SecureRandom());
-      HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
-    } catch (Exception e) {
-      throw new IOException("Could not initialize SSLContext", e);
-    } finally {
-      if (fis != null) {
-        fis.close();
-      }
+      connectionFactory.setConnConfigurator(URLConnectionFactory
+          .newSslConnConfigurator(URLConnectionFactory.DEFAULT_SOCKET_TIMEOUT,
+              conf));
+    } catch (GeneralSecurityException e) {
+      throw new IOException(e);
     }
   }
 
@@ -147,70 +80,4 @@ public class HsftpFileSystem extends HftpFileSystem {
     return getConf().getInt(DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_KEY,
                             DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_DEFAULT);
   }
-
-  @Override
-  protected HttpURLConnection openConnection(String path, String query)
-      throws IOException {
-    query = addDelegationTokenParam(query);
-    final URL url = new URL(getUnderlyingProtocol(), nnUri.getHost(),
-        nnUri.getPort(), path + '?' + query);
-    HttpsURLConnection conn;
-    conn = (HttpsURLConnection)connectionFactory.openConnection(url);
-    // bypass hostname verification
-    conn.setHostnameVerifier(new DummyHostnameVerifier());
-    conn.setRequestMethod("GET");
-    conn.connect();
-
-    // check cert expiration date
-    final int warnDays = ExpWarnDays;
-    if (warnDays > 0) { // make sure only check once
-      ExpWarnDays = 0;
-      long expTimeThreshold = warnDays * MM_SECONDS_PER_DAY + Time.now();
-      X509Certificate[] clientCerts = (X509Certificate[]) conn
-          .getLocalCertificates();
-      if (clientCerts != null) {
-        for (X509Certificate cert : clientCerts) {
-          long expTime = cert.getNotAfter().getTime();
-          if (expTime < expTimeThreshold) {
-            StringBuilder sb = new StringBuilder();
-            sb.append("\n Client certificate "
-                + cert.getSubjectX500Principal().getName());
-            int dayOffSet = (int) ((expTime - Time.now()) / MM_SECONDS_PER_DAY);
-            sb.append(" have " + dayOffSet + " days to expire");
-            LOG.warn(sb.toString());
-          }
-        }
-      }
-    }
-    return (HttpURLConnection) conn;
-  }
-
-  /**
-   * Dummy hostname verifier that is used to bypass hostname checking
-   */
-  protected static class DummyHostnameVerifier implements HostnameVerifier {
-    @Override
-    public boolean verify(String hostname, SSLSession session) {
-      return true;
-    }
-  }
-
-  /**
-   * Dummy trustmanager that is used to trust all server certificates
-   */
-  protected static class DummyTrustManager implements X509TrustManager {
-    @Override
-    public void checkClientTrusted(X509Certificate[] chain, String authType) {
-    }
-
-    @Override
-    public void checkServerTrusted(X509Certificate[] chain, String authType) {
-    }
-
-    @Override
-    public X509Certificate[] getAcceptedIssuers() {
-      return null;
-    }
-  }
-
 }
