@@ -220,6 +220,9 @@ Release 2.3.0 - UNRELEASED
     MAPREDUCE-5616. MR Client-AppMaster RPC max retries on socket timeout is too
     high. (cnauroth)
 
+    MAPREDUCE-5625. TestFixedLengthInputFormat fails in jdk7 environment
+    (Mariappan Asokan via jeagles)
+
 Release 2.2.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
