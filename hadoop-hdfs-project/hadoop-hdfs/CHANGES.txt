@@ -285,6 +285,9 @@ Release 2.2.1 - UNRELEASED
     HDFS-5469. Add configuration property for the sub-directroy export path
     (brandonli)
 
+    HDFS-5519. COMMIT handler should update the commit status after sync
+    (brandonli)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES

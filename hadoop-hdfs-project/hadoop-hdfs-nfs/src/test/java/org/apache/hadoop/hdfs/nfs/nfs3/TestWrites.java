@@ -150,10 +150,16 @@ public class TestWrites {
     // Test request with non zero commit offset
     ctx.setActiveStatusForTest(true);
     Mockito.when(fos.getPos()).thenReturn((long) 10);
+    COMMIT_STATUS status = ctx.checkCommitInternal(5, null, 1, attr);
+    Assert.assertTrue(status == COMMIT_STATUS.COMMIT_DO_SYNC);
+    // Do_SYNC state will be updated to FINISHED after data sync
     ret = ctx.checkCommit(dfsClient, 5, null, 1, attr);
-    Assert.assertTrue(ret == COMMIT_STATUS.COMMIT_DO_SYNC);
+    Assert.assertTrue(ret == COMMIT_STATUS.COMMIT_FINISHED);
+    
+    status = ctx.checkCommitInternal(10, null, 1, attr);
+    Assert.assertTrue(status == COMMIT_STATUS.COMMIT_DO_SYNC);
     ret = ctx.checkCommit(dfsClient, 10, null, 1, attr);
-    Assert.assertTrue(ret == COMMIT_STATUS.COMMIT_DO_SYNC);
+    Assert.assertTrue(ret == COMMIT_STATUS.COMMIT_FINISHED);
 
     ConcurrentNavigableMap<Long, CommitCtx> commits = ctx
         .getPendingCommitsForTest();
