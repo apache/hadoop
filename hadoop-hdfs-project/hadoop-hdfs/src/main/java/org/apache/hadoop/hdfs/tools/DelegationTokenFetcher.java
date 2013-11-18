@@ -221,6 +221,8 @@ public class DelegationTokenFetcher {
           .append(renewer);
     }
 
+    boolean isHttps = nnUri.getScheme().equals("https");
+
     HttpURLConnection conn = null;
     DataInputStream dis = null;
     InetSocketAddress serviceAddr = NetUtils.createSocketAddr(nnUri
@@ -237,7 +239,7 @@ public class DelegationTokenFetcher {
       dis = new DataInputStream(in);
       ts.readFields(dis);
       for (Token<?> token : ts.getAllTokens()) {
-        token.setKind(HftpFileSystem.TOKEN_KIND);
+        token.setKind(isHttps ? HsftpFileSystem.TOKEN_KIND : HftpFileSystem.TOKEN_KIND);
         SecurityUtil.setTokenService(token, serviceAddr);
       }
       return ts;

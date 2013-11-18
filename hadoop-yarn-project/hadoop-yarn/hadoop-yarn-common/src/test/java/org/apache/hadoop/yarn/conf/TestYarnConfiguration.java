@@ -23,6 +23,12 @@ import junit.framework.Assert;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.junit.Test;
 
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 public class TestYarnConfiguration {
 
   @Test
@@ -52,4 +58,21 @@ public class TestYarnConfiguration {
         "http://rmtesting:24543", rmWebUrl);
   }
 
+  @Test
+  public void testGetSocketAddressForNMWithHA() {
+    YarnConfiguration conf = new YarnConfiguration();
+
+    // Set NM address
+    conf.set(YarnConfiguration.NM_ADDRESS, "0.0.0.0:1234");
+
+    // Set HA
+    conf.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
+    conf.set(YarnConfiguration.RM_HA_ID, "rm1");
+    assertTrue(HAUtil.isHAEnabled(conf));
+
+    InetSocketAddress addr = conf.getSocketAddr(YarnConfiguration.NM_ADDRESS,
+        YarnConfiguration.DEFAULT_NM_ADDRESS,
+        YarnConfiguration.DEFAULT_NM_PORT);
+    assertEquals(1234, addr.getPort());
+  }
 }

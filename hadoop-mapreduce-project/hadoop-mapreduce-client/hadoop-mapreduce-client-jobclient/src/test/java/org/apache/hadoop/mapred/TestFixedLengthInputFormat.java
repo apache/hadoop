@@ -99,8 +99,7 @@ public class TestFixedLengthInputFormat {
     Path file = new Path(workDir, new String("testFormat.txt"));
     createFile(file, null, 10, 10);
     // Set the fixed length record length config property 
-    Configuration testConf = new Configuration(defaultConf);
-    JobConf job = new JobConf(testConf);
+    JobConf job = new JobConf(defaultConf);
     FileInputFormat.setInputPaths(job, workDir);
     FixedLengthInputFormat format = new FixedLengthInputFormat();
     format.configure(job);
@@ -127,8 +126,7 @@ public class TestFixedLengthInputFormat {
     Path file = new Path(workDir, new String("testFormat.txt"));
     createFile(file, null, 10, 10);
     // Set the fixed length record length config property 
-    Configuration testConf = new Configuration(defaultConf);
-    JobConf job = new JobConf(testConf);
+    JobConf job = new JobConf(defaultConf);
     FileInputFormat.setInputPaths(job, workDir);
     FixedLengthInputFormat format = new FixedLengthInputFormat();
     format.setRecordLength(job, 0);
@@ -156,8 +154,7 @@ public class TestFixedLengthInputFormat {
     Path file = new Path(workDir, new String("testFormat.txt"));
     createFile(file, null, 10, 10);
     // Set the fixed length record length config property 
-    Configuration testConf = new Configuration(defaultConf);
-    JobConf job = new JobConf(testConf);
+    JobConf job = new JobConf(defaultConf);
     FileInputFormat.setInputPaths(job, workDir);
     FixedLengthInputFormat format = new FixedLengthInputFormat();
     format.setRecordLength(job, -10);
@@ -206,8 +203,8 @@ public class TestFixedLengthInputFormat {
     writeFile(localFs, new Path(workDir, "part2.txt.gz"), gzip,
         "ten  nine eightsevensix  five four threetwo  one  ");
     FixedLengthInputFormat format = new FixedLengthInputFormat();
-    format.setRecordLength(defaultConf, 5);
     JobConf job = new JobConf(defaultConf);
+    format.setRecordLength(job, 5);
     FileInputFormat.setInputPaths(job, workDir);
     ReflectionUtils.setConf(gzip, job);
     format.configure(job);
@@ -290,9 +287,9 @@ public class TestFixedLengthInputFormat {
       ArrayList<String> recordList
           = createFile(file, codec, recordLength, totalRecords);
       assertTrue(localFs.exists(file));
-      // Set the fixed length record length config property 
-      Configuration testConf = new Configuration(defaultConf);
-      FixedLengthInputFormat.setRecordLength(testConf, recordLength);
+      // Create the job and set the fixed length record length config property 
+      JobConf job = new JobConf(defaultConf);
+      FixedLengthInputFormat.setRecordLength(job, recordLength);
 
       int numSplits = 1;
       // Arbitrarily set number of splits.
@@ -313,8 +310,7 @@ public class TestFixedLengthInputFormat {
         LOG.info("Number of splits set to: " + numSplits);
       }
 
-      // Create the job, and setup the input path
-      JobConf job = new JobConf(testConf);
+      // Setup the input path
       FileInputFormat.setInputPaths(job, workDir);
       // Try splitting the file in a variety of sizes
       FixedLengthInputFormat format = new FixedLengthInputFormat();
@@ -390,8 +386,8 @@ public class TestFixedLengthInputFormat {
     writeFile(localFs, new Path(workDir, fileName.toString()), codec,
         "one  two  threefour five six  seveneightnine ten");
     FixedLengthInputFormat format = new FixedLengthInputFormat();
-    format.setRecordLength(defaultConf, 5);
     JobConf job = new JobConf(defaultConf);
+    format.setRecordLength(job, 5);
     FileInputFormat.setInputPaths(job, workDir);
     if (codec != null) {
       ReflectionUtils.setConf(codec, job);

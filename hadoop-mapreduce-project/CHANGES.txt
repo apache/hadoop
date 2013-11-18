@@ -220,6 +220,9 @@ Release 2.3.0 - UNRELEASED
     MAPREDUCE-5616. MR Client-AppMaster RPC max retries on socket timeout is too
     high. (cnauroth)
 
+    MAPREDUCE-5625. TestFixedLengthInputFormat fails in jdk7 environment
+    (Mariappan Asokan via jeagles)
+
 Release 2.2.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -1545,6 +1548,9 @@ Release 0.23.10 - UNRELEASED
     run from hadoop-tools/hadoop-distcp directory (jeagles)
 
     MAPREDUCE-5587. TestTextOutputFormat fails on JDK7 (jeagles)
+
+    MAPREDUCE-5373. TestFetchFailure.testFetchFailureMultipleReduces could fail
+    intermittently (jeagles)
 
 Release 0.23.9 - 2013-07-08
 

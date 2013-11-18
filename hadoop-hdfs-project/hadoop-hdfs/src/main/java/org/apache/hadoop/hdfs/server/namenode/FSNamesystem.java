@@ -1290,11 +1290,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
   @Override
   public boolean hasReadLock() {
-    return this.fsLock.getReadHoldCount() > 0;
-  }
-  @Override
-  public boolean hasReadOrWriteLock() {
-    return hasReadLock() || hasWriteLock();
+    return this.fsLock.getReadHoldCount() > 0 || hasWriteLock();
   }
 
   public int getReadHoldCount() {
@@ -2038,7 +2034,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   private void verifyParentDir(String src) throws FileNotFoundException,
       ParentNotDirectoryException, UnresolvedLinkException {
-    assert hasReadOrWriteLock();
+    assert hasReadLock();
     Path parent = new Path(src).getParent();
     if (parent != null) {
       final INode parentNode = dir.getINode(parent.toString());
@@ -2646,7 +2642,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                                 ExtendedBlock previous,
                                 LocatedBlock[] onRetryBlock)
           throws IOException  {
-    assert hasReadOrWriteLock();
+    assert hasReadLock();
 
     checkBlock(previous);
     onRetryBlock[0] = null;
@@ -2838,7 +2834,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   private INodeFileUnderConstruction checkLease(String src, long fileId,
       String holder, INode inode) throws LeaseExpiredException,
       FileNotFoundException {
-    assert hasReadOrWriteLock();
+    assert hasReadLock();
     if (inode == null || !inode.isFile()) {
       Lease lease = leaseManager.getLease(holder);
       throw new LeaseExpiredException(
@@ -3796,7 +3792,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   
   @Override
   public boolean isInSnapshot(BlockInfoUnderConstruction blockUC) {
-    assert hasReadOrWriteLock();
+    assert hasReadLock();
     final BlockCollection bc = blockUC.getBlockCollection();
     if (bc == null || !(bc instanceof INodeFileUnderConstruction)) {
       return false;

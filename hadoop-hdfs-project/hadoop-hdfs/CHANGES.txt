@@ -494,6 +494,8 @@ Release 2.3.0 - UNRELEASED
     HDFS-5506. Use URLConnectionFactory in DelegationTokenFetcher. (Haohui Mai
     via jing9)
 
+    HDFS-5489. Use TokenAspect in WebHDFSFileSystem. (Haohui Mai via jing9)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn)
@@ -561,6 +563,8 @@ Release 2.3.0 - UNRELEASED
     leads to NN safemode. (Vinay via jing9)
 
     HDFS-5438. Flaws in block report processing can cause data loss. (kihwal)
+
+    HDFS-5502. Fix HTTPS support in HsftpFileSystem. (Haohui Mai via jing9)
 
 Release 2.2.1 - UNRELEASED
 
@@ -658,6 +662,12 @@ Release 2.2.1 - UNRELEASED
 
     HDFS-5469. Add configuration property for the sub-directroy export path
     (brandonli)
+
+    HDFS-5519. COMMIT handler should update the commit status after sync
+    (brandonli)
+
+    HDFS-5372. In FSNamesystem, hasReadLock() returns false if the current thread 
+    holds the write lock (VinayaKumar B via umamahesh)
 
 Release 2.2.0 - 2013-10-13
 
