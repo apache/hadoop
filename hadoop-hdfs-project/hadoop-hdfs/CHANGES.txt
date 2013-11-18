@@ -98,6 +98,9 @@ Release 2.2.1 - UNRELEASED
     HDFS-5469. Add configuration property for the sub-directroy export path
     (brandonli)
 
+    HDFS-5372. In FSNamesystem, hasReadLock() returns false if the current 
+    thread holds the write lock (Vinaykumar B via umamahesh)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
