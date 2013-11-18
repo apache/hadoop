@@ -49,6 +49,9 @@ Release 0.23.10 - UNRELEASED
     YARN-1386. NodeManager mistakenly loses resources and relocalizes them
     (Jason Lowe via jeagles)
 
+    YARN-1419. TestFifoScheduler.testAppAttemptMetrics fails intermittently
+    under jdk7 (Jonathan Eagles via jlowe)
+
 Release 0.23.9 - 2013-07-08
 
   INCOMPATIBLE CHANGES
