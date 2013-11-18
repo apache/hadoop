@@ -141,6 +141,8 @@ public class TestFifoScheduler {
 
     FifoScheduler schedular = new FifoScheduler();
     schedular.reinitialize(new Configuration(), rmContext);
+    QueueMetrics metrics = schedular.getRootQueueMetrics();
+    int beforeAppsSubmitted = metrics.getAppsSubmitted();
 
     ApplicationId appId = BuilderUtils.newApplicationId(200, 1);
     ApplicationAttemptId appAttemptId = BuilderUtils.newApplicationAttemptId(
@@ -155,8 +157,8 @@ public class TestFifoScheduler {
     event = new AppAddedSchedulerEvent(appAttemptId, "queue", "user");
     schedular.handle(event);
 
-    QueueMetrics metrics = schedular.getRootQueueMetrics();
-    Assert.assertEquals(1, metrics.getAppsSubmitted());
+    int afterAppsSubmitted = metrics.getAppsSubmitted();
+    Assert.assertEquals(1, afterAppsSubmitted - beforeAppsSubmitted);
   }
 
   @Test(timeout=2000)
