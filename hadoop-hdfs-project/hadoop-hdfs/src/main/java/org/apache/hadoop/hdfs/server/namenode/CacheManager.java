@@ -237,13 +237,13 @@ public final class CacheManager {
   }
 
   public TreeMap<Long, PathBasedCacheEntry> getEntriesById() {
-    assert namesystem.hasReadOrWriteLock();
+    assert namesystem.hasReadLock();
     return entriesById;
   }
   
   @VisibleForTesting
   public GSet<CachedBlock, CachedBlock> getCachedBlocks() {
-    assert namesystem.hasReadOrWriteLock();
+    assert namesystem.hasReadLock();
     return cachedBlocks;
   }
 
@@ -450,7 +450,7 @@ public final class CacheManager {
         listPathBasedCacheDirectives(long prevId,
             PathBasedCacheDirective filter,
             FSPermissionChecker pc) throws IOException {
-    assert namesystem.hasReadOrWriteLock();
+    assert namesystem.hasReadLock();
     final int NUM_PRE_ALLOCATED_ENTRIES = 16;
     String filterPath = null;
     if (filter.getId() != null) {
@@ -607,7 +607,7 @@ public final class CacheManager {
 
   public BatchedListEntries<CachePoolInfo>
       listCachePools(FSPermissionChecker pc, String prevKey) {
-    assert namesystem.hasReadOrWriteLock();
+    assert namesystem.hasReadLock();
     final int NUM_PRE_ALLOCATED_ENTRIES = 16;
     ArrayList<CachePoolInfo> results = 
         new ArrayList<CachePoolInfo>(NUM_PRE_ALLOCATED_ENTRIES);

@@ -666,6 +666,9 @@ Release 2.2.1 - UNRELEASED
     HDFS-5519. COMMIT handler should update the commit status after sync
     (brandonli)
 
+    HDFS-5372. In FSNamesystem, hasReadLock() returns false if the current thread 
+    holds the write lock (VinayaKumar B via umamahesh)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
