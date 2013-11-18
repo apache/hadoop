@@ -728,6 +728,7 @@ class OpenFileCtx {
       try {
         // Sync file data and length
         fos.hsync(EnumSet.of(SyncFlag.UPDATE_LENGTH));
+        ret = COMMIT_STATUS.COMMIT_FINISHED; // Remove COMMIT_DO_SYNC status 
         // Nothing to do for metadata since attr related change is pass-through
       } catch (ClosedChannelException cce) {
         if (pendingWrites.isEmpty()) {
@@ -749,7 +750,8 @@ class OpenFileCtx {
    * return one commit status: COMMIT_FINISHED, COMMIT_WAIT,
    * COMMIT_INACTIVE_CTX, COMMIT_INACTIVE_WITH_PENDING_WRITE, COMMIT_ERROR
    */
-  private synchronized COMMIT_STATUS checkCommitInternal(long commitOffset,
+  @VisibleForTesting
+  synchronized COMMIT_STATUS checkCommitInternal(long commitOffset,
       Channel channel, int xid, Nfs3FileAttributes preOpAttr) {
     if (!activeState) {
       if (pendingWrites.isEmpty()) {
