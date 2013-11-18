@@ -200,6 +200,9 @@ Release 2.2.1 - UNRELEASED
 
     HADOOP-10078. KerberosAuthenticator always does SPNEGO. (rkanter via tucu)
 
+    HADOOP-10110. hadoop-auth has a build break due to missing dependency.
+    (Chuan Liu via arp)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
