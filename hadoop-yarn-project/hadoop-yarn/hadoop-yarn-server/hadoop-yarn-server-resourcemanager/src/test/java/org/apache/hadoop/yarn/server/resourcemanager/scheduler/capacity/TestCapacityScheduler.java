@@ -345,7 +345,7 @@ public class TestCapacityScheduler {
     cs.reinitialize(conf, new RMContextImpl(null, null, null, null, null,
       null, new RMContainerTokenSecretManager(conf),
       new NMTokenSecretManagerInRM(conf),
-      new ClientToAMTokenSecretManagerInRM()));
+      new ClientToAMTokenSecretManagerInRM(), null));
     checkQueueCapacities(cs, A_CAPACITY, B_CAPACITY);
 
     conf.setCapacity(A, 80f);
@@ -444,7 +444,7 @@ public class TestCapacityScheduler {
     cs.reinitialize(conf, new RMContextImpl(null, null, null, null, null,
       null, new RMContainerTokenSecretManager(conf),
       new NMTokenSecretManagerInRM(conf),
-      new ClientToAMTokenSecretManagerInRM()));
+      new ClientToAMTokenSecretManagerInRM(), null));
   }
 
   @Test
@@ -457,7 +457,7 @@ public class TestCapacityScheduler {
     cs.reinitialize(csConf, new RMContextImpl(null, null, null, null,
       null, null, new RMContainerTokenSecretManager(csConf),
       new NMTokenSecretManagerInRM(csConf),
-      new ClientToAMTokenSecretManagerInRM()));
+      new ClientToAMTokenSecretManagerInRM(), null));
 
     RMNode n1 = MockNodes.newNodeInfo(0, MockNodes.newResource(4 * GB), 1);
     RMNode n2 = MockNodes.newNodeInfo(0, MockNodes.newResource(2 * GB), 2);
@@ -484,7 +484,7 @@ public class TestCapacityScheduler {
     cs.reinitialize(conf, new RMContextImpl(null, null, null, null, null,
       null, new RMContainerTokenSecretManager(conf),
       new NMTokenSecretManagerInRM(conf),
-      new ClientToAMTokenSecretManagerInRM()));
+      new ClientToAMTokenSecretManagerInRM(), null));
     checkQueueCapacities(cs, A_CAPACITY, B_CAPACITY);
 
     // Add a new queue b4

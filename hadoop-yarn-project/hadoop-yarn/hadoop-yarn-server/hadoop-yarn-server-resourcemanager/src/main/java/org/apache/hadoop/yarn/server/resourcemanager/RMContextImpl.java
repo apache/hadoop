@@ -25,6 +25,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.server.resourcemanager.ahs.RMApplicationHistoryWriter;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.NullRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -34,8 +35,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.security.AMRMTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer;
-import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
+import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMDelegationTokenSecretManager;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -64,6 +65,7 @@ public class RMContextImpl implements RMContext {
   private final ClientToAMTokenSecretManagerInRM clientToAMTokenSecretManager;
   private ClientRMService clientRMService;
   private RMDelegationTokenSecretManager rmDelegationTokenSecretManager;
+  private RMApplicationHistoryWriter rmApplicationHistoryWriter;
 
   public RMContextImpl(Dispatcher rmDispatcher,
       RMStateStore store,
@@ -74,7 +76,8 @@ public class RMContextImpl implements RMContext {
       AMRMTokenSecretManager amRMTokenSecretManager,
       RMContainerTokenSecretManager containerTokenSecretManager,
       NMTokenSecretManagerInRM nmTokenSecretManager,
-      ClientToAMTokenSecretManagerInRM clientToAMTokenSecretManager) {
+      ClientToAMTokenSecretManagerInRM clientToAMTokenSecretManager,
+      RMApplicationHistoryWriter rmApplicationHistoryWriter) {
     this.rmDispatcher = rmDispatcher;
     this.stateStore = store;
     this.containerAllocationExpirer = containerAllocationExpirer;
@@ -85,6 +88,7 @@ public class RMContextImpl implements RMContext {
     this.containerTokenSecretManager = containerTokenSecretManager;
     this.nmTokenSecretManager = nmTokenSecretManager;
     this.clientToAMTokenSecretManager = clientToAMTokenSecretManager;
+    this.rmApplicationHistoryWriter = rmApplicationHistoryWriter;
   }
 
   @VisibleForTesting
@@ -97,11 +101,12 @@ public class RMContextImpl implements RMContext {
       AMRMTokenSecretManager appTokenSecretManager,
       RMContainerTokenSecretManager containerTokenSecretManager,
       NMTokenSecretManagerInRM nmTokenSecretManager,
-      ClientToAMTokenSecretManagerInRM clientToAMTokenSecretManager) {
-    this(rmDispatcher, null, containerAllocationExpirer, amLivelinessMonitor, 
-          amFinishingMonitor, delegationTokenRenewer, appTokenSecretManager, 
-          containerTokenSecretManager, nmTokenSecretManager,
-          clientToAMTokenSecretManager);
+      ClientToAMTokenSecretManagerInRM clientToAMTokenSecretManager,
+      RMApplicationHistoryWriter rmApplicationHistoryWriter) {
+    this(rmDispatcher, null, containerAllocationExpirer, amLivelinessMonitor,
+        amFinishingMonitor, delegationTokenRenewer, appTokenSecretManager,
+        containerTokenSecretManager, nmTokenSecretManager,
+        clientToAMTokenSecretManager, rmApplicationHistoryWriter);
     RMStateStore nullStore = new NullRMStateStore();
     nullStore.setRMDispatcher(rmDispatcher);
     try {
@@ -202,4 +207,16 @@ public class RMContextImpl implements RMContext {
       RMDelegationTokenSecretManager delegationTokenSecretManager) {
     this.rmDelegationTokenSecretManager = delegationTokenSecretManager;
   }
+
+  @Override
+  public RMApplicationHistoryWriter getRMApplicationHistoryWriter() {
+    return rmApplicationHistoryWriter;
+  }
+
+  @Override
+  public void setRMApplicationHistoryWriter(
+      RMApplicationHistoryWriter rmApplicationHistoryWriter) {
+    this.rmApplicationHistoryWriter = rmApplicationHistoryWriter;
+  }
+
 }

@@ -32,6 +32,7 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
@@ -178,4 +179,21 @@ public interface RMAppAttempt extends EventHandler<RMAppAttemptEvent> {
    * @return the start time of the application.
    */
   long getStartTime();
+
+  /**
+   * The current state of the {@link RMAppAttempt}.
+   * 
+   * @return the current state {@link RMAppAttemptState} for this application
+   *         attempt.
+   */
+  RMAppAttemptState getState();
+
+  /**
+   * Create the external user-facing state of the attempt of ApplicationMaster
+   * from the current state of the {@link RMAppAttempt}.
+   * 
+   * @return the external user-facing state of the attempt ApplicationMaster.
+   */
+  YarnApplicationAttemptState createApplicationAttemptState();
+
 }

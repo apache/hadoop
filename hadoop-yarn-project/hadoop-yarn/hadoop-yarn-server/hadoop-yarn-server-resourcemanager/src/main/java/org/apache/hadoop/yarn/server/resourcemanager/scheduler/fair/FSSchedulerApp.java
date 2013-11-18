@@ -272,9 +272,8 @@ public class FSSchedulerApp extends SchedulerApplication {
     
     // Create RMContainer
     RMContainer rmContainer = new RMContainerImpl(container, 
-        getApplicationAttemptId(), node.getNodeID(), rmContext
-        .getDispatcher().getEventHandler(), rmContext
-        .getContainerAllocationExpirer(), appSchedulingInfo.getUser());
+        getApplicationAttemptId(), node.getNodeID(),
+        appSchedulingInfo.getUser(), rmContext);
 
     // Add it to allContainers list.
     newlyAllocatedContainers.add(rmContainer);

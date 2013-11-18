@@ -302,6 +302,8 @@ public class RMAppImpl implements RMApp, Recoverable {
     this.writeLock = lock.writeLock();
 
     this.stateMachine = stateMachineFactory.make(this);
+
+    rmContext.getRMApplicationHistoryWriter().applicationStarted(this);
   }
 
   @Override
@@ -944,6 +946,11 @@ public class RMAppImpl implements RMApp, Recoverable {
       app.handler.handle(
           new RMAppManagerEvent(app.applicationId,
           RMAppManagerEventType.APP_COMPLETED));
+
+      // TODO: We need to fix for the problem that RMApp enters the final state
+      // after RMAppAttempt in the killing case
+      app.rmContext.getRMApplicationHistoryWriter()
+          .applicationFinished(app);
     };
   }
 
