@@ -817,7 +817,7 @@ public class BlockManager {
       final boolean isFileUnderConstruction, final long offset,
       final long length, final boolean needBlockToken, final boolean inSnapshot)
       throws IOException {
-    assert namesystem.hasReadOrWriteLock();
+    assert namesystem.hasReadLock();
     if (blocks == null) {
       return null;
     } else if (blocks.length == 0) {
