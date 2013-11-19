@@ -89,6 +89,10 @@ Release 2.3.0 - UNRELEASED
     ensuring that previous AM exited or after expiry time. (Omkar Vinit Joshi via
     vinodkv)
 
+    YARN-674. Fixed ResourceManager to renew DelegationTokens on submission
+    asynchronously to work around potential slowness in state-store. (Omkar Vinit
+    Joshi via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
