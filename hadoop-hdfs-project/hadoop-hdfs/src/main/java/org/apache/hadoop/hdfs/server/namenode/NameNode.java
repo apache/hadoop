@@ -28,6 +28,9 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+
+import javax.management.ObjectName;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -263,6 +266,7 @@ public class NameNode implements NameNodeStatusMXBean {
   private NameNodeRpcServer rpcServer;
 
   private JvmPauseMonitor pauseMonitor;
+  private ObjectName nameNodeStatusBeanName;
   
   /** Format a new filesystem.  Destroys any filesystem that may already
    * exist at this location.  **/
@@ -741,6 +745,10 @@ public class NameNode implements NameNodeStatusMXBean {
       }
       if (namesystem != null) {
         namesystem.shutdown();
+      }
+      if (nameNodeStatusBeanName != null) {
+        MBeans.unregister(nameNodeStatusBeanName);
+        nameNodeStatusBeanName = null;
       }
     }
   }
@@ -1407,7 +1415,7 @@ public class NameNode implements NameNodeStatusMXBean {
    * Register NameNodeStatusMXBean
    */
   private void registerNNSMXBean() {
-    MBeans.register("NameNode", "NameNodeStatus", this);
+    nameNodeStatusBeanName = MBeans.register("NameNode", "NameNodeStatus", this);
   }
 
   @Override // NameNodeStatusMXBean
