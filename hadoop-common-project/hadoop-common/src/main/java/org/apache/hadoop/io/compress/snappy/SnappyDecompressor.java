@@ -25,6 +25,7 @@ import java.nio.ByteBuffer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.compress.Decompressor;
+import org.apache.hadoop.io.compress.DirectDecompressor;
 import org.apache.hadoop.util.NativeCodeLoader;
 
 /**
@@ -282,4 +283,75 @@ public class SnappyDecompressor implements Decompressor {
   private native static void initIDs();
 
   private native int decompressBytesDirect();
+  
+  int decompressDirect(ByteBuffer src, ByteBuffer dst) throws IOException {
+    assert (this instanceof SnappyDirectDecompressor);
+    
+    ByteBuffer presliced = dst;
+    if (dst.position() > 0) {
+      presliced = dst;
+      dst = dst.slice();
+    }
+
+    Buffer originalCompressed = compressedDirectBuf;
+    Buffer originalUncompressed = uncompressedDirectBuf;
+    int originalBufferSize = directBufferSize;
+    compressedDirectBuf = src.slice();
+    compressedDirectBufLen = src.remaining();
+    uncompressedDirectBuf = dst;
+    directBufferSize = dst.remaining();
+    int n = 0;
+    try {
+      n = decompressBytesDirect();
+      presliced.position(presliced.position() + n);
+      // SNAPPY always consumes the whole buffer or throws an exception
+      src.position(src.limit());
+      finished = true;
+    } finally {
+      compressedDirectBuf = originalCompressed;
+      uncompressedDirectBuf = originalUncompressed;
+      compressedDirectBufLen = 0;
+      directBufferSize = originalBufferSize;
+    }
+    return n;
+  }
+  
+  public static class SnappyDirectDecompressor extends SnappyDecompressor implements
+      DirectDecompressor {
+    
+    @Override
+    public boolean finished() {
+      return (endOfInput && super.finished());
+    }
+
+    @Override
+    public void reset() {
+      super.reset();
+      endOfInput = true;
+    }
+
+    private boolean endOfInput;
+
+    @Override
+    public synchronized void decompress(ByteBuffer src, ByteBuffer dst)
+        throws IOException {
+      assert dst.isDirect() : "dst.isDirect()";
+      assert src.isDirect() : "src.isDirect()";
+      assert dst.remaining() > 0 : "dst.remaining() > 0";
+      this.decompressDirect(src, dst);
+      endOfInput = !src.hasRemaining();
+    }
+
+    @Override
+    public synchronized void setDictionary(byte[] b, int off, int len) {
+      throw new UnsupportedOperationException(
+          "byte[] arrays are not supported for DirectDecompressor");
+    }
+
+    @Override
+    public synchronized int decompress(byte[] b, int off, int len) {
+      throw new UnsupportedOperationException(
+          "byte[] arrays are not supported for DirectDecompressor");
+    }
+  }
 }

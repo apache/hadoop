@@ -23,6 +23,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.compress.Compressor;
 import org.apache.hadoop.io.compress.Decompressor;
+import org.apache.hadoop.io.compress.DirectDecompressor;
 import org.apache.hadoop.io.compress.zlib.ZlibCompressor.CompressionLevel;
 import org.apache.hadoop.io.compress.zlib.ZlibCompressor.CompressionStrategy;
 import org.apache.hadoop.util.NativeCodeLoader;
@@ -115,6 +116,17 @@ public class ZlibFactory {
   public static Decompressor getZlibDecompressor(Configuration conf) {
     return (isNativeZlibLoaded(conf)) ? 
       new ZlibDecompressor() : new BuiltInZlibInflater(); 
+  }
+  
+  /**
+   * Return the appropriate implementation of the zlib direct decompressor. 
+   * 
+   * @param conf configuration
+   * @return the appropriate implementation of the zlib decompressor.
+   */
+  public static DirectDecompressor getZlibDirectDecompressor(Configuration conf) {
+    return (isNativeZlibLoaded(conf)) ? 
+      new ZlibDecompressor.ZlibDirectDecompressor() : null; 
   }
 
   public static void setCompressionStrategy(Configuration conf,

@@ -25,6 +25,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.compress.DefaultCodec;
 import org.apache.hadoop.io.compress.zlib.*;
+import org.apache.hadoop.io.compress.zlib.ZlibDecompressor.ZlibDirectDecompressor;
+
 import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
 
 /**
@@ -217,6 +219,13 @@ public class GzipCodec extends DefaultCodec {
     return ZlibFactory.isNativeZlibLoaded(conf)
       ? GzipZlibDecompressor.class
       : BuiltInGzipDecompressor.class;
+  }
+    
+  @Override
+  public DirectDecompressor createDirectDecompressor() {
+    return ZlibFactory.isNativeZlibLoaded(conf) 
+        ? new ZlibDecompressor.ZlibDirectDecompressor(
+          ZlibDecompressor.CompressionHeader.AUTODETECT_GZIP_ZLIB, 0) : null;
   }
 
   @Override
