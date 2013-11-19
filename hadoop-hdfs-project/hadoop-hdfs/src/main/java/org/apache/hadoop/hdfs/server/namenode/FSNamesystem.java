@@ -5891,18 +5891,39 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   /**
    * Serializes leases. 
    */
-  void saveFilesUnderConstruction(DataOutputStream out) throws IOException {
+  void saveFilesUnderConstruction(DataOutputStream out,
+      Map<Long, INodeFileUnderConstruction> snapshotUCMap) throws IOException {
     // This is run by an inferior thread of saveNamespace, which holds a read
     // lock on our behalf. If we took the read lock here, we could block
     // for fairness if a writer is waiting on the lock.
     synchronized (leaseManager) {
       Map<String, INodeFileUnderConstruction> nodes =
           leaseManager.getINodesUnderConstruction();
-      out.writeInt(nodes.size()); // write the size    
+      for (Map.Entry<String, INodeFileUnderConstruction> entry
+          : nodes.entrySet()) {
+        // TODO: for HDFS-5428, because of rename operations, some
+        // under-construction files that are
+        // in the current fs directory can also be captured in the
+        // snapshotUCMap. We should remove them from the snapshotUCMap.
+        snapshotUCMap.remove(entry.getValue().getId());
+      }
+      
+      out.writeInt(nodes.size() + snapshotUCMap.size()); // write the size    
       for (Map.Entry<String, INodeFileUnderConstruction> entry
            : nodes.entrySet()) {
         FSImageSerialization.writeINodeUnderConstruction(
             out, entry.getValue(), entry.getKey());
+      }
+      for (Map.Entry<Long, INodeFileUnderConstruction> entry
+          : snapshotUCMap.entrySet()) {
+        // for those snapshot INodeFileUC, we use "/.reserved/.inodes/<inodeid>"
+        // as their paths
+        StringBuilder b = new StringBuilder();
+        b.append(FSDirectory.DOT_RESERVED_PATH_PREFIX)
+            .append(Path.SEPARATOR).append(FSDirectory.DOT_INODES_STRING)
+            .append(Path.SEPARATOR).append(entry.getValue().getId());
+        FSImageSerialization.writeINodeUnderConstruction(
+            out, entry.getValue(), b.toString());
       }
     }
   }

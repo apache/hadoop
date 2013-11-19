@@ -204,7 +204,24 @@ public class INodeDirectory extends INodeWithAdditionalFields
     clear();
     return newDir;
   }
-
+  
+  /**
+   * Used when load fileUC from fsimage. The file to be replaced is actually 
+   * only in snapshot, thus may not be contained in the children list. 
+   * See HDFS-5428 for details.
+   */
+  public void replaceChildFileInSnapshot(INodeFile oldChild,
+      final INodeFile newChild) {
+    if (children != null) {
+      final int i = searchChildren(newChild.getLocalNameBytes());
+      if (i >= 0 && children.get(i).getId() == oldChild.getId()) {
+        // no need to consider reference node here, since we already do the 
+        // replacement in FSImageFormat.Loader#loadFilesUnderConstruction
+        children.set(i, newChild);
+      }
+    }
+  }
+  
   /** Replace the given child with a new child. */
   public void replaceChild(INode oldChild, final INode newChild,
       final INodeMap inodeMap) {
