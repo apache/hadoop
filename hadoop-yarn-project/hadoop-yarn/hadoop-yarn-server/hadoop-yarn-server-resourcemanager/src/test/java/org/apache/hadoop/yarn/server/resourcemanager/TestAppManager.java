@@ -172,7 +172,7 @@ public class TestAppManager{
         ApplicationSubmissionContext submissionContext, String user)
             throws YarnException {
       super.submitApplication(submissionContext, System.currentTimeMillis(),
-          false, user);
+          user, false, null);
     }
   }
 
