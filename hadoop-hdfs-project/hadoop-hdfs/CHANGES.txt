@@ -378,6 +378,9 @@ Trunk (Unreleased)
     HDFS-5520. loading cache path directives from edit log doesn't update
     nextEntryId (cmccabe)
 
+    HDFS-5512. CacheAdmin -listPools fails with NPE when user lacks permissions
+    to view all pools (awang via cmccabe)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

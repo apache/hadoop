@@ -741,14 +741,15 @@ public class CacheAdmin extends Configured implements Tool {
         RemoteIterator<CachePoolInfo> iter = dfs.listCachePools();
         while (iter.hasNext()) {
           CachePoolInfo info = iter.next();
+          String[] row = new String[5];
           if (name == null || info.getPoolName().equals(name)) {
-            listing.addRow(new String[] {
-                info.getPoolName(),
-                info.getOwnerName(),
-                info.getGroupName(),
-                info.getMode().toString(),
-                info.getWeight().toString(),
-            });
+            row[0] = info.getPoolName();
+            row[1] = info.getOwnerName();
+            row[2] = info.getGroupName();
+            row[3] = info.getMode() != null ? info.getMode().toString() : null;
+            row[4] =
+                info.getWeight() != null ? info.getWeight().toString() : null;
+            listing.addRow(row);
             ++numResults;
             if (name != null) {
               break;
