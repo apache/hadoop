@@ -54,6 +54,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * This class manages the list of applications for the resource manager. 
  */
@@ -163,6 +165,11 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
         LOG.info(createAppSummary(app));
       }
     }
+  }
+
+  @VisibleForTesting
+  public void logApplicationSummary(ApplicationId appId) {
+    ApplicationSummary.logAppSummary(rmContext.getRMApps().get(appId));
   }
 
   protected synchronized void setCompletedAppsMax(int max) {
@@ -351,8 +358,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
       case APP_COMPLETED: 
       {
         finishApplication(applicationId);
-        ApplicationSummary.logAppSummary(
-            rmContext.getRMApps().get(applicationId));
+        logApplicationSummary(applicationId);
         checkAppNumCompletedLimit(); 
       } 
       break;

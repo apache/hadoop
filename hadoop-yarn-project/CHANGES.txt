@@ -82,6 +82,9 @@ Release 2.3.0 - UNRELEASED
     YARN-1222. Make improvements in ZKRMStateStore for fencing (Karthik
     Kambatla via bikas)
 
+    YARN-709. Added tests to verify validity of delegation tokens and logging of
+    appsummary after RM restart. (Jian He via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES

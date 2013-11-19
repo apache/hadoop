@@ -421,6 +421,10 @@ public class MockRM extends ResourceManager {
     return this.clientToAMSecretManager;
   }
 
+  public RMAppManager getRMAppManager() {
+    return this.rmAppManager;
+  }
+
   @Override
   protected void startWepApp() {
     // override to disable webapp
