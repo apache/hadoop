@@ -23,6 +23,7 @@ import java.nio.Buffer;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.io.compress.Decompressor;
+import org.apache.hadoop.io.compress.DirectDecompressor;
 import org.apache.hadoop.util.NativeCodeLoader;
 
 /**
@@ -31,7 +32,7 @@ import org.apache.hadoop.util.NativeCodeLoader;
  * http://www.zlib.net/
  * 
  */
-public class ZlibDecompressor implements Decompressor {
+public class ZlibDecompressor implements Decompressor,DirectDecompressor {
   private static final int DEFAULT_DIRECT_BUFFER_SIZE = 64*1024;
   
   // HACK - Use this as a global lock in the JNI layer
@@ -280,6 +281,7 @@ public class ZlibDecompressor implements Decompressor {
     uncompressedDirectBuf.limit(directBufferSize);
     uncompressedDirectBuf.position(directBufferSize);
     userBufOff = userBufLen = 0;
+    userBuf = null;
   }
 
   @Override
@@ -299,6 +301,108 @@ public class ZlibDecompressor implements Decompressor {
     if (stream == 0)
       throw new NullPointerException();
   }
+    
+  private int put(ByteBuffer dst, ByteBuffer src) {
+    // this will lop off data from src[pos:limit] into dst[pos:limit], using the
+    // min() of both remaining()
+    int l1 = src.remaining();
+    int l2 = dst.remaining();
+    int pos1 = src.position();
+    int pos2 = dst.position();
+    int len = Math.min(l1, l2);
+
+    if (len == 0) {
+      return 0;
+    }
+
+    ByteBuffer slice = src.slice();
+    slice.limit(len);
+    dst.put(slice);
+    src.position(pos1 + len);
+    return len;
+  }
+
+  public int decompress(ByteBuffer dst, ByteBuffer src) throws IOException {
+    assert dst.remaining() > 0 : "dst.remaining == 0";
+    int n = 0;
+    
+    /* fast path for clean state and direct buffers */
+    if((src != null && src.isDirect()) && dst.isDirect() && userBuf == null) {
+      /*
+       * TODO: fix these assumptions in inflateDirect(), eventually by allowing
+       * it to read position()/limit() directly
+       */
+      boolean cleanDst = (dst.position() == 0 && dst.remaining() == dst.capacity() && dst.remaining() >= directBufferSize);
+      boolean cleanState = (compressedDirectBufLen == 0 && uncompressedDirectBuf.remaining() == 0);
+      /* use the buffers directly */
+      if(cleanDst && cleanState) {
+        Buffer originalCompressed = compressedDirectBuf;
+        Buffer originalUncompressed = uncompressedDirectBuf;
+        int originalBufferSize = directBufferSize;
+        compressedDirectBuf = src;
+        compressedDirectBufOff = src.position();
+        compressedDirectBufLen = src.remaining();
+        uncompressedDirectBuf = dst;
+        directBufferSize = dst.remaining();
+        // Compress data
+        n = inflateBytesDirect();
+        dst.position(n);
+        if(compressedDirectBufLen > 0) {
+          src.position(compressedDirectBufOff);
+        } else {
+          src.position(src.limit());
+        }
+        compressedDirectBuf = originalCompressed;
+        uncompressedDirectBuf = originalUncompressed;        
+        compressedDirectBufOff = 0;
+        compressedDirectBufLen = 0;
+        directBufferSize = originalBufferSize;
+        return n;
+      }
+    }
+    
+    // Check if there is compressed data
+    if (uncompressedDirectBuf.remaining() > 0) {
+      n = put(dst, (ByteBuffer) uncompressedDirectBuf);
+    }
+
+    if (dst.remaining() == 0) {
+      return n;
+    } else {
+      if (needsInput()) {
+        // this does not update buffers if we have no userBuf
+        if (userBufLen <= 0) {
+          compressedDirectBufOff = 0;
+          compressedDirectBufLen = 0;
+          compressedDirectBuf.rewind().limit(directBufferSize);
+        }
+        if (src != null) {
+          assert src.remaining() > 0 : "src.remaining() == 0";
+        }
+      }
+
+      // if we have drained userBuf, read from src (ideally, do not mix buffer
+      // modes, but sometimes you can)
+      if (userBufLen == 0 && src != null && src.remaining() > 0) {
+        compressedDirectBufLen += put(((ByteBuffer) compressedDirectBuf), src);
+      }
+      
+      // Re-initialize the zlib's output direct buffer
+      uncompressedDirectBuf.rewind();
+      uncompressedDirectBuf.limit(directBufferSize);
+
+      // Compress data
+      int more = inflateBytesDirect();
+
+      uncompressedDirectBuf.limit(more);
+
+      // Get atmost 'len' bytes
+      int fill = put(dst, ((ByteBuffer) uncompressedDirectBuf));
+      return n + fill;
+    }
+  }
+
+  
   
   private native static void initIDs();
   private native static long init(int windowBits);

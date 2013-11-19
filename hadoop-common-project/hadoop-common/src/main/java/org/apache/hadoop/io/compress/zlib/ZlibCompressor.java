@@ -24,6 +24,7 @@ import java.nio.ByteBuffer;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.compress.Compressor;
+import org.apache.hadoop.io.compress.DirectCompressor;
 import org.apache.hadoop.util.NativeCodeLoader;
 
 import org.apache.commons.logging.Log;
@@ -35,7 +36,7 @@ import org.apache.commons.logging.LogFactory;
  * http://www.zlib.net/
  * 
  */
-public class ZlibCompressor implements Compressor {
+public class ZlibCompressor implements Compressor,DirectCompressor {
 
   private static final Log LOG = LogFactory.getLog(ZlibCompressor.class);
 
@@ -420,6 +421,7 @@ public class ZlibCompressor implements Compressor {
     compressedDirectBuf.limit(directBufferSize);
     compressedDirectBuf.position(directBufferSize);
     userBufOff = userBufLen = 0;
+    userBuf = null;
   }
   
   @Override
@@ -433,6 +435,110 @@ public class ZlibCompressor implements Compressor {
   private void checkStream() {
     if (stream == 0)
       throw new NullPointerException();
+  }
+  
+  private int put(ByteBuffer dst, ByteBuffer src) {
+    // this will lop off data from src[pos:limit] into dst[pos:limit]
+    int l1 = src.remaining();
+    int l2 = dst.remaining();
+    int pos1 = src.position();
+    int pos2 = dst.position();
+    int len = Math.min(l1, l2);
+
+    if (len == 0) {
+      return 0;
+    }
+
+    ByteBuffer slice = src.slice();
+    slice.limit(len);
+    dst.put(slice);
+    src.position(pos1 + len);
+    return len;
+  }
+
+  public int compress(ByteBuffer dst, ByteBuffer src) throws IOException {
+    assert dst.remaining() > 0 : "dst.remaining() == 0";
+    int n = 0;
+    
+    /* fast path for clean state and direct buffers */
+    /* TODO: reset should free userBuf? */
+    if((src != null && src.isDirect()) && dst.isDirect() && userBuf == null) {
+      /*
+       * TODO: fix these assumptions in inflateDirect(), eventually by allowing
+       * it to read position()/limit() directly
+       */
+      boolean cleanDst = (dst.position() == 0 && dst.remaining() == dst.capacity() && dst.capacity() >= directBufferSize);
+      boolean cleanState = (keepUncompressedBuf == false && uncompressedDirectBufLen == 0 && compressedDirectBuf.remaining() == 0);
+      /* use the buffers directly */
+      if(cleanDst && cleanState) {
+        Buffer originalCompressed = compressedDirectBuf;
+        Buffer originalUncompressed = uncompressedDirectBuf;
+        int originalBufferSize = directBufferSize;
+        uncompressedDirectBuf = src;
+        uncompressedDirectBufOff = src.position();
+        uncompressedDirectBufLen = src.remaining();
+        compressedDirectBuf = dst;
+        directBufferSize = dst.remaining();
+        // Compress data
+        n = deflateBytesDirect();
+        // we move dst.position() forward, not limit() 
+        // unlike the local buffer case, which moves it when we put() into the dst
+        dst.position(n);
+        if(uncompressedDirectBufLen > 0) {
+          src.position(uncompressedDirectBufOff);
+        } else {
+          src.position(src.limit());
+        }
+        compressedDirectBuf = originalCompressed;
+        uncompressedDirectBuf = originalUncompressed;
+        uncompressedDirectBufOff = 0;
+        uncompressedDirectBufLen = 0;
+        directBufferSize = originalBufferSize;
+        return n;
+      }
+    }
+    
+    // Check if there is compressed data
+    if (compressedDirectBuf.remaining() > 0) {
+      n = put(dst, (ByteBuffer) compressedDirectBuf);
+    }
+
+    if (dst.remaining() == 0) {
+      return n;
+    } else {
+      needsInput();
+
+      // if we have drained userBuf, read from src (ideally, do not mix buffer
+      // modes, but sometimes you can)
+      if (userBufLen == 0 && src != null && src.remaining() > 0) {
+        put((ByteBuffer) uncompressedDirectBuf, src);
+        uncompressedDirectBufLen = uncompressedDirectBuf.position();
+      }
+
+      // Re-initialize the zlib's output direct buffer
+      compressedDirectBuf.rewind();
+      compressedDirectBuf.limit(directBufferSize);
+
+      // Compress data
+      int more = deflateBytesDirect();
+
+      compressedDirectBuf.limit(more);
+
+      // Check if zlib consumed all input buffer
+      // set keepUncompressedBuf properly
+      if (uncompressedDirectBufLen <= 0) { // zlib consumed all input buffer
+        keepUncompressedBuf = false;
+        uncompressedDirectBuf.clear();
+        uncompressedDirectBufOff = 0;
+        uncompressedDirectBufLen = 0;
+      } else { // zlib did not consume all input buffer
+        keepUncompressedBuf = true;
+      }
+
+      // fill the dst buffer from compressedDirectBuf
+      int fill = put(dst, ((ByteBuffer) compressedDirectBuf));
+      return n + fill;
+    }
   }
   
   private native static void initIDs();
