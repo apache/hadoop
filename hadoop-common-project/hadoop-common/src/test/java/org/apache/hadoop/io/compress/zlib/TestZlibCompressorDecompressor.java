@@ -19,13 +19,8 @@ package org.apache.hadoop.io.compress.zlib;
 
 import static org.junit.Assert.*;
 import static org.junit.Assume.*;
-
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.Console;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.ByteBuffer;
 import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
@@ -38,12 +33,8 @@ import org.apache.hadoop.io.compress.DecompressorStream;
 import org.apache.hadoop.io.compress.CompressDecompressTester.CompressionTestStrategy;
 import org.apache.hadoop.io.compress.zlib.ZlibCompressor.CompressionLevel;
 import org.apache.hadoop.io.compress.zlib.ZlibCompressor.CompressionStrategy;
-import org.apache.log4j.ConsoleAppender;
 import org.junit.Before;
 import org.junit.Test;
-
-import sun.util.logging.resources.logging;
-
 import com.google.common.collect.ImmutableSet;
 
 public class TestZlibCompressorDecompressor {
@@ -156,149 +147,6 @@ public class TestZlibCompressorDecompressor {
       decompressor.reset();
     } catch (IOException ex) {
       fail("testZlibCompressDecompress ex !!!" + ex);
-    }
-  }
-  
-  private void compressDecompressLoop(int rawDataSize, int inSize, int outSize)
-      throws IOException {
-    byte[] rawData = null;
-    rawData = generate(rawDataSize);
-    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    ByteBuffer inBuf = ByteBuffer.allocateDirect(inSize);
-    ByteBuffer outBuf = ByteBuffer.allocateDirect(outSize);
-    ZlibCompressor compressor = new ZlibCompressor();
-    ZlibDecompressor decompressor = new ZlibDecompressor();
-    outBuf.clear();
-    /* compression loop */
-    int off = 0;
-    int len = rawDataSize;
-    int min = Math.min(inBuf.remaining(), len);
-    if (min > 0) {
-      inBuf.put(rawData, off, min);
-    }
-    inBuf.flip();
-    len -= min;
-    off += min;
-    while (!compressor.finished()) {
-      compressor.compress(outBuf, inBuf);
-      if (outBuf.remaining() == 0) {
-        // flush when the buffer is full
-        outBuf.flip();
-        while (outBuf.remaining() > 0) {
-          baos.write(outBuf.get());
-        }
-        outBuf.clear();
-      }
-      if (inBuf != null && inBuf.remaining() == 0) {
-        inBuf.clear();
-        if (len > 0) {
-          min = Math.min(inBuf.remaining(), len);
-          inBuf.put(rawData, off, min);
-          inBuf.flip();
-          len -= min;
-          off += min;
-        } else {
-          inBuf = null;
-          compressor.finish();
-        }
-      }
-    }
-
-    outBuf.flip();
-    if (outBuf.remaining() > 0) {
-      while (outBuf.remaining() > 0) {
-        baos.write(outBuf.get());
-      }
-      outBuf.clear();
-    }
-
-    compressor.end();
-
-    byte[] compressed = baos.toByteArray();
-    ByteBuffer expected = ByteBuffer.wrap(rawData);
-    outBuf.clear();
-    inBuf = ByteBuffer.allocateDirect(inSize);
-    inBuf.clear();
-
-    // zlib always has header
-    if (compressed.length != 0) {
-      off = 0;
-      len = compressed.length;
-      min = Math.min(inBuf.remaining(), len);
-      inBuf.put(compressed, off, min);
-      inBuf.flip();
-      len -= min;
-      off += min;
-      while (!decompressor.finished()) {
-        decompressor.decompress(outBuf, inBuf);
-        if (outBuf.remaining() == 0) {
-          outBuf.flip();
-          while (outBuf.remaining() > 0) {
-            assertEquals(expected.get(), outBuf.get());
-          }
-          outBuf.clear();
-        }
-
-        if (inBuf != null && inBuf.remaining() == 0) {
-          inBuf.clear();
-          if (len > 0) {
-            min = Math.min(inBuf.remaining(), len);
-            inBuf.put(compressed, off, min);
-            inBuf.flip();
-            len -= min;
-            off += min;
-          }
-        }
-      }
-    }
-
-    outBuf.flip();
-    if (outBuf.remaining() > 0) {
-      while (outBuf.remaining() > 0) {
-        assertEquals(expected.get(), outBuf.get());
-      }
-      outBuf.clear();
-    }
-
-    assertEquals(0, expected.remaining());
-  }
-  
-  @Test
-  public void testZlibDirectCompressDecompress() {
-    int[] size = { 4, 16, 4 * 1024, 64 * 1024, 128 * 1024, 256 * 1024,
-        1024 * 1024 };
-    try {
-      // 0-2 bytes results in sizeof(outBuf) > sizeof(inBuf)
-      compressDecompressLoop(0, 4096, 4096);
-      compressDecompressLoop(0, 1, 1);
-      compressDecompressLoop(1, 1, 2);
-      compressDecompressLoop(1, 2, 1);
-      compressDecompressLoop(2, 3, 2);
-
-      for (int i = 0; i < size.length; i++) {
-        compressDecompressLoop(size[i], 4096, 4096);
-        compressDecompressLoop(size[i], 1, 1);
-        compressDecompressLoop(size[i], 1, 2);
-        compressDecompressLoop(size[i], 2, 1);
-        compressDecompressLoop(size[i], 3, 2);
-        compressDecompressLoop(size[i], size[i], 4096);
-        compressDecompressLoop(size[i], size[i] - 1, 4096);
-        compressDecompressLoop(size[i], size[i] + 1, 4096);
-        compressDecompressLoop(size[i], 4096, size[i]);
-        compressDecompressLoop(size[i], 4096, size[i] - 1);
-        compressDecompressLoop(size[i], 4096, size[i] + 1);
-        compressDecompressLoop(size[i], size[i] - 1, size[i] - 1);
-
-        compressDecompressLoop(size[i], size[i] / 2, 4096);
-        compressDecompressLoop(size[i], size[i] / 2 - 1, 4096);
-        compressDecompressLoop(size[i], size[i] / 2 + 1, 4096);
-        compressDecompressLoop(size[i], 4096, size[i] / 2);
-        compressDecompressLoop(size[i], 4096, size[i] / 2 - 1);
-        compressDecompressLoop(size[i], 4096, size[i] / 2 + 1);
-        compressDecompressLoop(size[i], size[i] / 2 - 1, size[i] / 2 - 1);
-      }
-    } catch (IOException ex) {
-      fail("testZlibDirectCompressDecompress ex !!!" + ex);
     }
   }
   

@@ -97,9 +97,6 @@ Release 2.3.0 - UNRELEASED
 
     HADOOP-9748. Reduce blocking on UGI.ensureInitialized (daryn)
 
-    HADOOP-10047. Add a direct-buffer based apis for compression. (Gopal V via
-    acmurthy)
-
   BUG FIXES
 
     HADOOP-9964. Fix deadlocks in TestHttpServer by synchronize
