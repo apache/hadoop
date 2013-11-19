@@ -22,10 +22,24 @@ import java.util.List;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.util.Records;
 
 
-public interface NodeStatus {
+public abstract class NodeStatus {
   
+  public static NodeStatus newInstance(NodeId nodeId, int responseId,
+      List<ContainerStatus> containerStatuses,
+      List<ApplicationId> keepAliveApplications,
+      NodeHealthStatus nodeHealthStatus) {
+    NodeStatus nodeStatus = Records.newRecord(NodeStatus.class);
+    nodeStatus.setResponseId(responseId);
+    nodeStatus.setNodeId(nodeId);
+    nodeStatus.setContainersStatuses(containerStatuses);
+    nodeStatus.setKeepAliveApplications(keepAliveApplications);
+    nodeStatus.setNodeHealthStatus(nodeHealthStatus);
+    return nodeStatus;
+  }
+
   public abstract NodeId getNodeId();
   public abstract int getResponseId();
   
@@ -36,8 +50,8 @@ public interface NodeStatus {
   public abstract List<ApplicationId> getKeepAliveApplications();
   public abstract void setKeepAliveApplications(List<ApplicationId> appIds);
   
-  NodeHealthStatus getNodeHealthStatus();
-  void setNodeHealthStatus(NodeHealthStatus healthStatus);
+  public abstract NodeHealthStatus getNodeHealthStatus();
+  public abstract void setNodeHealthStatus(NodeHealthStatus healthStatus);
 
   public abstract void setNodeId(NodeId nodeId);
   public abstract void setResponseId(int responseId);

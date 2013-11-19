@@ -85,6 +85,10 @@ Release 2.3.0 - UNRELEASED
     YARN-709. Added tests to verify validity of delegation tokens and logging of
     appsummary after RM restart. (Jian He via vinodkv)
 
+    YARN-1210. Changed RM to start new app-attempts on RM restart only after
+    ensuring that previous AM exited or after expiry time. (Omkar Vinit Joshi via
+    vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
