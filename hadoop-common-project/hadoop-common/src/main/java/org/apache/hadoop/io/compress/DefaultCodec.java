@@ -28,11 +28,12 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.compress.zlib.ZlibDecompressor;
 import org.apache.hadoop.io.compress.zlib.ZlibFactory;
 
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class DefaultCodec implements Configurable, CompressionCodec {
+public class DefaultCodec implements Configurable, CompressionCodec, DirectDecompressionCodec {
   private static final Log LOG = LogFactory.getLog(DefaultCodec.class);
   
   Configuration conf;
@@ -102,6 +103,15 @@ public class DefaultCodec implements Configurable, CompressionCodec {
   public Decompressor createDecompressor() {
     return ZlibFactory.getZlibDecompressor(conf);
   }
+  
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public DirectDecompressor createDirectDecompressor() {
+    return ZlibFactory.getZlibDirectDecompressor(conf);
+  }
+  
   
   @Override
   public String getDefaultExtension() {
