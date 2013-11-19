@@ -375,6 +375,9 @@ Trunk (Unreleased)
 
     HDFS-5320. Add datanode caching metrics. (wang)
 
+    HDFS-5520. loading cache path directives from edit log doesn't update
+    nextEntryId (cmccabe)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

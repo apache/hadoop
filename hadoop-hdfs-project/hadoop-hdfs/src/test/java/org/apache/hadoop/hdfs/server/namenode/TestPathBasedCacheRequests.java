@@ -58,6 +58,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.PathBasedCacheDirective;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.CachedBlocksList.Type;
+import org.apache.hadoop.hdfs.server.namenode.EditLogFileOutputStream;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.MappableBlock;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.io.nativeio.NativeIO;
@@ -84,6 +85,10 @@ public class TestPathBasedCacheRequests {
   static private DistributedFileSystem dfs;
   static private NamenodeProtocols proto;
   static private CacheManipulator prevCacheManipulator;
+
+  static {
+    EditLogFileOutputStream.setShouldSkipFsyncForTesting(false);
+  }
 
   @Before
   public void setup() throws Exception {
@@ -510,8 +515,9 @@ public class TestPathBasedCacheRequests {
     // Create some cache entries
     int numEntries = 10;
     String entryPrefix = "/party-";
+    long prevId = -1;
     for (int i=0; i<numEntries; i++) {
-      dfs.addPathBasedCacheDirective(
+      prevId = dfs.addPathBasedCacheDirective(
           new PathBasedCacheDirective.Builder().
             setPath(new Path(entryPrefix + i)).setPool(pool).build());
     }
@@ -549,6 +555,11 @@ public class TestPathBasedCacheRequests {
       assertEquals(pool, cd.getPool());
     }
     assertFalse("Unexpected # of cache directives found", dit.hasNext());
+
+    long nextId = dfs.addPathBasedCacheDirective(
+          new PathBasedCacheDirective.Builder().
+            setPath(new Path("/foobar")).setPool(pool).build());
+    assertEquals(prevId + 1, nextId);
   }
 
   /**
