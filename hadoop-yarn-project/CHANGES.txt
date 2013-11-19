@@ -93,6 +93,9 @@ Release 2.3.0 - UNRELEASED
     asynchronously to work around potential slowness in state-store. (Omkar Vinit
     Joshi via vinodkv)
 
+    YARN-584. In scheduler web UIs, queues unexpand on refresh. (Harshit
+    Daga via Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES
