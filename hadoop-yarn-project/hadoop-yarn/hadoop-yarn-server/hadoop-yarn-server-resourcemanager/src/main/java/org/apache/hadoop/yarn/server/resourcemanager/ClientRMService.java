@@ -318,7 +318,7 @@ public class ClientRMService extends AbstractService implements
     try {
       // call RMAppManager to submit application directly
       rmAppManager.submitApplication(submissionContext,
-          System.currentTimeMillis(), false, user);
+          System.currentTimeMillis(), user, false, null);
 
       LOG.info("Application with id " + applicationId.getId() + 
           " submitted by user " + user);

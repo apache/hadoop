@@ -249,7 +249,7 @@ public final class CacheManager {
 
   private long getNextEntryId() throws IOException {
     assert namesystem.hasWriteLock();
-    if (nextEntryId == Long.MAX_VALUE) {
+    if (nextEntryId >= Long.MAX_VALUE - 1) {
       throw new IOException("No more available IDs.");
     }
     return nextEntryId++;
@@ -357,6 +357,17 @@ public final class CacheManager {
         // We are loading an entry from the edit log.
         // Use the ID from the edit log.
         id = directive.getId();
+        if (id <= 0) {
+          throw new InvalidRequestException("can't add an ID " +
+              "of " + id + ": it is not positive.");
+        }
+        if (id >= Long.MAX_VALUE) {
+          throw new InvalidRequestException("can't add an ID " +
+              "of " + id + ": it is too big.");
+        }
+        if (nextEntryId <= id) {
+          nextEntryId = id + 1;
+        }
       } else {
         // Add a new entry with the next available ID.
         id = getNextEntryId();

@@ -387,6 +387,9 @@ Release 2.3.0 - UNRELEASED
 
     HADOOP-9748. Reduce blocking on UGI.ensureInitialized (daryn)
 
+    HADOOP-10047. Add a direct-buffer based apis for compression. (Gopal V via
+    acmurthy)
+
   BUG FIXES
 
     HADOOP-9964. Fix deadlocks in TestHttpServer by synchronize
@@ -439,6 +442,9 @@ Release 2.3.0 - UNRELEASED
 
     HADOOP-10100. MiniKDC shouldn't use apacheds-all artifact. (rkanter via tucu)
 
+    HADOOP-10107. Server.getNumOpenConnections may throw NPE. (Kihwal Lee via
+    jing9)
+
 Release 2.2.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -490,6 +496,9 @@ Release 2.2.1 - UNRELEASED
     (Enis Soztutar via cnauroth)
 
     HADOOP-10078. KerberosAuthenticator always does SPNEGO. (rkanter via tucu)
+
+    HADOOP-10110. hadoop-auth has a build break due to missing dependency.
+    (Chuan Liu via arp)
 
 Release 2.2.0 - 2013-10-13
 

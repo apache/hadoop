@@ -504,6 +504,11 @@ public class YarnConfiguration extends Configuration {
       RM_PREFIX + "delayed.delegation-token.removal-interval-ms";
   public static final long DEFAULT_RM_DELAYED_DELEGATION_TOKEN_REMOVAL_INTERVAL_MS =
       30000l;
+  
+  /** Delegation Token renewer thread count */
+  public static final String RM_DELEGATION_TOKEN_RENEWER_THREAD_COUNT =
+      RM_PREFIX + "delegation-token-renewer.thread-count";
+  public static final int DEFAULT_RM_DELEGATION_TOKEN_RENEWER_THREAD_COUNT = 50;
 
   /** Whether to enable log aggregation */
   public static final String LOG_AGGREGATION_ENABLED = YARN_PREFIX

@@ -2109,6 +2109,7 @@ public abstract class Server {
     // Start the listener here and let it bind to the port
     listener = new Listener();
     this.port = listener.getAddress().getPort();    
+    connectionManager = new ConnectionManager();
     this.rpcMetrics = RpcMetrics.create(this);
     this.rpcDetailedMetrics = RpcDetailedMetrics.create(this.port);
     this.tcpNoDelay = conf.getBoolean(
@@ -2117,7 +2118,6 @@ public abstract class Server {
 
     // Create the responder here
     responder = new Responder();
-    connectionManager = new ConnectionManager();
     
     if (secretManager != null) {
       SaslRpcServer.init(conf);

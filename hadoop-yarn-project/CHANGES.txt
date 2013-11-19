@@ -100,6 +100,20 @@ Release 2.3.0 - UNRELEASED
     YARN-1222. Make improvements in ZKRMStateStore for fencing (Karthik
     Kambatla via bikas)
 
+    YARN-709. Added tests to verify validity of delegation tokens and logging of
+    appsummary after RM restart. (Jian He via vinodkv)
+
+    YARN-1210. Changed RM to start new app-attempts on RM restart only after
+    ensuring that previous AM exited or after expiry time. (Omkar Vinit Joshi via
+    vinodkv)
+
+    YARN-674. Fixed ResourceManager to renew DelegationTokens on submission
+    asynchronously to work around potential slowness in state-store. (Omkar Vinit
+    Joshi via vinodkv)
+
+    YARN-584. In scheduler web UIs, queues unexpand on refresh. (Harshit
+    Daga via Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -138,6 +152,9 @@ Release 2.3.0 - UNRELEASED
 
     YARN-1411. HA config shouldn't affect NodeManager RPC addresses (Karthik
     Kambatla via bikas)
+
+    YARN-1419. TestFifoScheduler.testAppAttemptMetrics fails intermittently
+    under jdk7 (Jonathan Eagles via jlowe)
 
 Release 2.2.1 - UNRELEASED
 

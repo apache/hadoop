@@ -302,7 +302,7 @@ public class ContainerImpl implements Container {
   private final StateMachine<ContainerState, ContainerEventType, ContainerEvent>
     stateMachine;
 
-  private org.apache.hadoop.yarn.api.records.ContainerState getCurrentState() {
+  public org.apache.hadoop.yarn.api.records.ContainerState getCurrentState() {
     switch (stateMachine.getCurrentState()) {
     case NEW:
     case LOCALIZING:

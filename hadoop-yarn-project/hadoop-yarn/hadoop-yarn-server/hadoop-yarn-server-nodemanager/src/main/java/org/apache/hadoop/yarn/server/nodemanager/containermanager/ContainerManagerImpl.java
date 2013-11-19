@@ -28,6 +28,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -64,6 +65,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.StopContainersResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
+import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.SerializedException;
@@ -371,17 +373,31 @@ public class ContainerManagerImpl extends CompositeService implements
 
     this.handle(new CMgrCompletedContainersEvent(containerIds,
       CMgrCompletedContainersEvent.Reason.ON_NODEMANAGER_RESYNC));
-    while (!containers.isEmpty()) {
-      try {
-        Thread.sleep(1000);
-        nodeStatusUpdater.getNodeStatusAndUpdateContainersInContext();
-      } catch (InterruptedException ex) {
-        LOG.warn("Interrupted while sleeping on container kill on resync", ex);
+
+    /*
+     * We will wait till all the containers change their state to COMPLETE. We
+     * will not remove the container statuses from nm context because these
+     * are used while re-registering node manager with resource manager.
+     */
+    boolean allContainersCompleted = false;
+    while (!containers.isEmpty() && !allContainersCompleted) {
+      allContainersCompleted = true;
+      for (Entry<ContainerId, Container> container : containers.entrySet()) {
+        if (((ContainerImpl) container.getValue()).getCurrentState()
+            != ContainerState.COMPLETE) {
+          allContainersCompleted = false;
+          try {
+            Thread.sleep(1000);
+          } catch (InterruptedException ex) {
+            LOG.warn("Interrupted while sleeping on container kill on resync",
+              ex);
+          }
+          break;
+        }
       }
     }
-
     // All containers killed
-    if (containers.isEmpty()) {
+    if (allContainersCompleted) {
       LOG.info("All containers in DONE state");
     } else {
       LOG.info("Done waiting for containers to be killed. Still alive: " +
