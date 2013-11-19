@@ -19,11 +19,21 @@
 package org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb;
 
 
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+
+import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.impl.pb.ContainerIdPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.ContainerStatusPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.NodeIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ProtoBase;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourcePBImpl;
+import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.ContainerStatusProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.RegisterNodeManagerRequestProto;
@@ -32,13 +42,14 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequ
 
 
     
-public class RegisterNodeManagerRequestPBImpl extends ProtoBase<RegisterNodeManagerRequestProto> implements RegisterNodeManagerRequest {
+public class RegisterNodeManagerRequestPBImpl extends RegisterNodeManagerRequest {
   RegisterNodeManagerRequestProto proto = RegisterNodeManagerRequestProto.getDefaultInstance();
   RegisterNodeManagerRequestProto.Builder builder = null;
   boolean viaProto = false;
   
   private Resource resource = null;
   private NodeId nodeId = null;
+  private List<ContainerStatus> containerStatuses = null;
   
   public RegisterNodeManagerRequestPBImpl() {
     builder = RegisterNodeManagerRequestProto.newBuilder();
@@ -57,6 +68,9 @@ public class RegisterNodeManagerRequestPBImpl extends ProtoBase<RegisterNodeMana
   }
 
   private void mergeLocalToBuilder() {
+    if (this.containerStatuses != null) {
+      addContainerStatusesToProto();
+    }
     if (this.resource != null) {
       builder.setResource(convertToProtoFormat(this.resource));
     }
@@ -140,6 +154,81 @@ public class RegisterNodeManagerRequestPBImpl extends ProtoBase<RegisterNodeMana
   }
 
   @Override
+  public List<ContainerStatus> getContainerStatuses() {
+    initContainerStatuses();
+    return containerStatuses;
+  }
+  
+  private void initContainerStatuses() {
+    if (this.containerStatuses != null) {
+      return;
+    }
+    RegisterNodeManagerRequestProtoOrBuilder p = viaProto ? proto : builder;
+    List<ContainerStatusProto> list = p.getContainerStatusesList();
+    this.containerStatuses = new ArrayList<ContainerStatus>();
+    for (ContainerStatusProto c : list) {
+      this.containerStatuses.add(convertFromProtoFormat(c));
+    }
+  }
+
+  @Override
+  public void setContainerStatuses(List<ContainerStatus> containers) {
+    if (containers == null) {
+      return;
+    }
+    initContainerStatuses();
+    this.containerStatuses.addAll(containers);
+  }
+  
+  private void addContainerStatusesToProto() {
+    maybeInitBuilder();
+    builder.clearContainerStatuses();
+    if (containerStatuses == null) {
+      return;
+    }
+    Iterable<ContainerStatusProto> it = new Iterable<ContainerStatusProto>() {
+      
+      @Override
+      public Iterator<ContainerStatusProto> iterator() {
+        return new Iterator<ContainerStatusProto>() {
+          Iterator<ContainerStatus> iter = containerStatuses.iterator();
+          
+          @Override
+          public boolean hasNext() {
+            return iter.hasNext();
+          }
+          
+          @Override
+          public ContainerStatusProto next() {
+            return convertToProtoFormat(iter.next());  
+          }
+          
+          @Override
+          public void remove() {
+            throw new UnsupportedOperationException();
+          }
+        };
+      }
+    };
+    builder.addAllContainerStatuses(it);
+  }
+  
+  @Override
+  public int hashCode() {
+    return getProto().hashCode();
+  }
+  
+  @Override
+  public boolean equals(Object other) {
+    if (other == null)
+      return false;
+    if (other.getClass().isAssignableFrom(this.getClass())) {
+      return this.getProto().equals(this.getClass().cast(other).getProto());
+    }
+    return false;
+  }
+  
+  @Override
   public String getNMVersion() {
     RegisterNodeManagerRequestProtoOrBuilder p = viaProto ? proto : builder;
     if (!p.hasNmVersion()) {
@@ -170,6 +259,11 @@ public class RegisterNodeManagerRequestPBImpl extends ProtoBase<RegisterNodeMana
     return ((ResourcePBImpl)t).getProto();
   }
 
-
-
-}  
+  private ContainerStatusPBImpl convertFromProtoFormat(ContainerStatusProto c) {
+    return new ContainerStatusPBImpl(c);
+  }
+  
+  private ContainerStatusProto convertToProtoFormat(ContainerStatus c) {
+    return ((ContainerStatusPBImpl)c).getProto();
+  }
+}

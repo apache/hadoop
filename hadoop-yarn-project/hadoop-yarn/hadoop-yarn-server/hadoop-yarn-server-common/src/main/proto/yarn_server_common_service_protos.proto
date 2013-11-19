@@ -30,6 +30,7 @@ message RegisterNodeManagerRequestProto {
   optional int32 http_port = 3;
   optional ResourceProto resource = 4;
   optional string nm_version = 5;
+  repeated ContainerStatusProto containerStatuses = 6;
 }
 
 message RegisterNodeManagerResponseProto {

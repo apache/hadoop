@@ -132,8 +132,8 @@ public class RMAppImpl implements RMApp, Recoverable {
     .addTransition(RMAppState.NEW, RMAppState.NEW_SAVING,
         RMAppEventType.START, new RMAppSavingTransition())
     .addTransition(RMAppState.NEW, EnumSet.of(RMAppState.SUBMITTED,
-            RMAppState.FINISHED, RMAppState.FAILED, RMAppState.KILLED,
-            RMAppState.FINAL_SAVING),
+            RMAppState.RUNNING, RMAppState.FINISHED, RMAppState.FAILED,
+            RMAppState.KILLED, RMAppState.FINAL_SAVING),
         RMAppEventType.RECOVER, new RMAppRecoveredTransition())
     .addTransition(RMAppState.NEW, RMAppState.FINAL_SAVING, RMAppEventType.KILL,
         new FinalSavingTransition(
@@ -611,11 +611,11 @@ public class RMAppImpl implements RMApp, Recoverable {
     this.diagnostics.append(appState.getDiagnostics());
     this.storedFinishTime = appState.getFinishTime();
     this.startTime = appState.getStartTime();
+
     for(int i=0; i<appState.getAttemptCount(); ++i) {
       // create attempt
       createNewAttempt(false);
-      // recover attempt
-      ((RMAppAttemptImpl) currentAttempt).recover(state);
+      ((RMAppAttemptImpl)this.currentAttempt).recover(state);
     }
   }
 
@@ -656,30 +656,35 @@ public class RMAppImpl implements RMApp, Recoverable {
     };
   }
 
+  @SuppressWarnings("unchecked")
   private static final class RMAppRecoveredTransition implements
       MultipleArcTransition<RMAppImpl, RMAppEvent, RMAppState> {
+    
     @Override
     public RMAppState transition(RMAppImpl app, RMAppEvent event) {
 
-      if (app.recoveredFinalState != null) {
-        FINAL_TRANSITION.transition(app, event);
-        return app.recoveredFinalState;
+      if (app.attempts.isEmpty()) {
+        // Saved application was not running any attempts.
+        app.createNewAttempt(true);
+        return RMAppState.SUBMITTED;        
+      } else {
+        /*
+         * If last attempt recovered final state is null .. it means attempt
+         * was started but AM container may or may not have started / finished.
+         * Therefore we should wait for it to finish.
+         */
+        for (RMAppAttempt attempt : app.getAppAttempts().values()) {
+          app.dispatcher.getEventHandler().handle(
+              new RMAppAttemptEvent(attempt.getAppAttemptId(),
+                  RMAppAttemptEventType.RECOVER));
+        }        
+        if (app.recoveredFinalState != null) {
+          FINAL_TRANSITION.transition(app, event);
+          return app.recoveredFinalState;
+        } else {
+          return RMAppState.RUNNING;
+        }
       }
-      // Directly call AttemptFailedTransition, since now we deem that an
-      // application fails because of RM restart as a normal AM failure.
-
-      // Do not recover unmanaged applications since current recovery 
-      // mechanism of restarting attempts does not work for them.
-      // This will need to be changed in work preserving recovery in which 
-      // RM will re-connect with the running AM's instead of restarting them
-
-      // In work-preserve restart, if attemptCount == maxAttempts, the job still
-      // needs to be recovered because the last attempt may still be running.
-
-      // As part of YARN-1210, we may return ACCECPTED state waiting for AM to
-      // reregister or fail and remove the following code.
-      return new AttemptFailedTransition(RMAppState.SUBMITTED).transition(app,
-        event);
     }
   }
 
@@ -1016,5 +1021,11 @@ public class RMAppImpl implements RMApp, Recoverable {
     default:
       throw new YarnRuntimeException("Unknown state passed!");
     }
+  }
+  
+  public static boolean isAppInFinalState(RMApp rmApp) {
+    RMAppState appState = rmApp.getState();
+    return appState == RMAppState.FAILED || appState == RMAppState.FINISHED
+        || appState == RMAppState.KILLED;
   }
 }

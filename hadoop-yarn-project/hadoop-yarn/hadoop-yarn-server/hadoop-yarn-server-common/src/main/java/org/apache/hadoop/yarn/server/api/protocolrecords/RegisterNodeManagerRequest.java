@@ -18,17 +18,37 @@
 
 package org.apache.hadoop.yarn.server.api.protocolrecords;
 
+import java.util.List;
+
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.util.Records;
 
-public interface RegisterNodeManagerRequest {
-  NodeId getNodeId();
-  int getHttpPort();
-  Resource getResource();
-  String getNMVersion();
+public abstract class RegisterNodeManagerRequest {
   
-  void setNodeId(NodeId nodeId);
-  void setHttpPort(int port);
-  void setResource(Resource resource);
-  void setNMVersion(String version);
+  public static RegisterNodeManagerRequest newInstance(NodeId nodeId,
+      int httpPort, Resource resource, String nodeManagerVersionId,
+      List<ContainerStatus> containerStatuses) {
+    RegisterNodeManagerRequest request =
+        Records.newRecord(RegisterNodeManagerRequest.class);
+    request.setHttpPort(httpPort);
+    request.setResource(resource);
+    request.setNodeId(nodeId);
+    request.setNMVersion(nodeManagerVersionId);
+    request.setContainerStatuses(containerStatuses);
+    return request;
+  }
+  
+  public abstract NodeId getNodeId();
+  public abstract int getHttpPort();
+  public abstract Resource getResource();
+  public abstract String getNMVersion();
+  public abstract List<ContainerStatus> getContainerStatuses();
+  
+  public abstract void setNodeId(NodeId nodeId);
+  public abstract void setHttpPort(int port);
+  public abstract void setResource(Resource resource);
+  public abstract void setNMVersion(String version);
+  public abstract void setContainerStatuses(List<ContainerStatus> containerStatuses);
 }
