@@ -442,6 +442,7 @@ public class TestListCorruptFileBlocks {
     
   /**
    * Test if NN.listCorruptFiles() returns the right number of results.
+   * The corrupt blocks are detected by the BlockPoolSliceScanner.
    * Also, test that DFS.listCorruptFileBlocks can make multiple successive
    * calls.
    */
@@ -450,7 +451,6 @@ public class TestListCorruptFileBlocks {
     MiniDFSCluster cluster = null;
     try {
       Configuration conf = new HdfsConfiguration();
-      conf.setInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY, 15); // datanode scans directories
       conf.setInt(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 3 * 1000); // datanode sends block reports
       cluster = new MiniDFSCluster.Builder(conf).build();
       FileSystem fs = cluster.getFileSystem();
@@ -490,6 +490,13 @@ public class TestListCorruptFileBlocks {
           }
         }
       }
+
+      // Occasionally the BlockPoolSliceScanner can run before we have removed
+      // the blocks. Restart the Datanode to trigger the scanner into running
+      // once more.
+      LOG.info("Restarting Datanode to trigger BlockPoolSliceScanner");
+      cluster.restartDataNodes();
+      cluster.waitActive();
 
       badFiles = 
         namenode.getNamesystem().listCorruptFileBlocks("/srcdat2", null);

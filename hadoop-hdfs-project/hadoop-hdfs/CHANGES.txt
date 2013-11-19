@@ -123,6 +123,8 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-5393. Serve bootstrap and jQuery locally. (Haohui Mai via jing9)
 
+    HDFS-5073. TestListCorruptFileBlocks fails intermittently. (Arpit Agarwal)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn)
