@@ -5517,6 +5517,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
   
   private ObjectName mbeanName;
+  private ObjectName mxbeanName;
 
   /**
    * Register the FSNamesystem MBean using the name
@@ -5540,6 +5541,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   void shutdown() {
     if (mbeanName != null) {
       MBeans.unregister(mbeanName);
+      mbeanName = null;
+    }
+    if (mxbeanName != null) {
+      MBeans.unregister(mxbeanName);
+      mxbeanName = null;
     }
     if (dir != null) {
       dir.shutdown();
@@ -6353,7 +6359,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * Register NameNodeMXBean
    */
   private void registerMXBean() {
-    MBeans.register("NameNode", "NameNodeInfo", this);
+    mxbeanName = MBeans.register("NameNode", "NameNodeInfo", this);
   }
 
   /**

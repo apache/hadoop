@@ -24,6 +24,8 @@ import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.Map;
 
+import javax.management.ObjectName;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -61,6 +63,7 @@ public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
   private JournalNodeRpcServer rpcServer;
   private JournalNodeHttpServer httpServer;
   private Map<String, Journal> journalsById = Maps.newHashMap();
+  private ObjectName journalNodeInfoBeanName;
 
   private File localDir;
 
@@ -181,6 +184,11 @@ public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
     for (Journal j : journalsById.values()) {
       IOUtils.cleanup(LOG, j);
     }
+
+    if (journalNodeInfoBeanName != null) {
+      MBeans.unregister(journalNodeInfoBeanName);
+      journalNodeInfoBeanName = null;
+    }
   }
 
   /**
@@ -256,7 +264,7 @@ public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
    * Register JournalNodeMXBean
    */
   private void registerJNMXBean() {
-    MBeans.register("JournalNode", "JournalNodeInfo", this);
+    journalNodeInfoBeanName = MBeans.register("JournalNode", "JournalNodeInfo", this);
   }
   
   private class ErrorReporter implements StorageErrorReporter {
