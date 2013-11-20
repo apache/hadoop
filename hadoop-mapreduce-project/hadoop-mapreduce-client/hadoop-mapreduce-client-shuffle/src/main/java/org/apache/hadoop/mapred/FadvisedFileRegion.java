@@ -79,7 +79,7 @@ public class FadvisedFileRegion extends DefaultFileRegion {
   public void transferSuccessful() {
     if (manageOsCache && getCount() > 0) {
       try {
-        NativeIO.POSIX.posixFadviseIfPossible(identifier,
+        NativeIO.POSIX.getCacheManipulator().posixFadviseIfPossible(identifier,
            fd, getPosition(), getCount(),
            NativeIO.POSIX.POSIX_FADV_DONTNEED);
       } catch (Throwable t) {

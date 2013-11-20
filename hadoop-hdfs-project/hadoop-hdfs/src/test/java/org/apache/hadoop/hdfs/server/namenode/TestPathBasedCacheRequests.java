@@ -61,12 +61,12 @@ import org.apache.hadoop.hdfs.server.namenode.EditLogFileOutputStream;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.io.nativeio.NativeIO.POSIX.CacheManipulator;
+import org.apache.hadoop.io.nativeio.NativeIO.POSIX.NoMlockCacheManipulator;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.GSet;
 import org.junit.After;
-import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -98,18 +98,8 @@ public class TestPathBasedCacheRequests {
     cluster.waitActive();
     dfs = cluster.getFileSystem();
     proto = cluster.getNameNodeRpc();
-    prevCacheManipulator = NativeIO.POSIX.cacheManipulator;
-
-    // Save the current CacheManipulator and replace it at the end of the test
-    // Stub out mlock calls to avoid failing when not enough memory is lockable
-    // by the operating system.
-    NativeIO.POSIX.cacheManipulator = new CacheManipulator() {
-      @Override
-      public void mlock(String identifier,
-          ByteBuffer mmap, long length) throws IOException {
-        LOG.info("mlocking " + identifier);
-      }
-    };
+    prevCacheManipulator = NativeIO.POSIX.getCacheManipulator();
+    NativeIO.POSIX.setCacheManipulator(new NoMlockCacheManipulator());
   }
 
   @After
@@ -118,7 +108,7 @@ public class TestPathBasedCacheRequests {
       cluster.shutdown();
     }
     // Restore the original CacheManipulator
-    NativeIO.POSIX.cacheManipulator = prevCacheManipulator;
+    NativeIO.POSIX.setCacheManipulator(prevCacheManipulator);
   }
 
   @Test(timeout=60000)
@@ -654,20 +644,6 @@ public class TestPathBasedCacheRequests {
   // Most Linux installs will allow non-root users to lock 64KB.
   private static final long CACHE_CAPACITY = 64 * 1024 / NUM_DATANODES;
 
-  /**
-   * Return true if we can test DN caching.
-   */
-  private static boolean canTestDatanodeCaching() {
-    if (!NativeIO.isAvailable()) {
-      // Need NativeIO in order to cache blocks on the DN.
-      return false;
-    }
-    if (NativeIO.getMemlockLimit() < CACHE_CAPACITY) {
-      return false;
-    }
-    return true;
-  }
-
   private static HdfsConfiguration createCachingConf() {
     HdfsConfiguration conf = new HdfsConfiguration();
     conf.setLong(DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
@@ -681,7 +657,6 @@ public class TestPathBasedCacheRequests {
 
   @Test(timeout=120000)
   public void testWaitForCachedReplicas() throws Exception {
-    Assume.assumeTrue(canTestDatanodeCaching());
     HdfsConfiguration conf = createCachingConf();
     FileSystemTestHelper helper = new FileSystemTestHelper();
     MiniDFSCluster cluster =
@@ -739,7 +714,6 @@ public class TestPathBasedCacheRequests {
   @Test(timeout=120000)
   public void testAddingPathBasedCacheDirectivesWhenCachingIsDisabled()
       throws Exception {
-    Assume.assumeTrue(canTestDatanodeCaching());
     HdfsConfiguration conf = createCachingConf();
     conf.setBoolean(DFS_NAMENODE_CACHING_ENABLED_KEY, false);
     MiniDFSCluster cluster =
@@ -787,7 +761,6 @@ public class TestPathBasedCacheRequests {
 
   @Test(timeout=120000)
   public void testWaitForCachedReplicasInDirectory() throws Exception {
-    Assume.assumeTrue(canTestDatanodeCaching());
     HdfsConfiguration conf = createCachingConf();
     MiniDFSCluster cluster =
       new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATANODES).build();
@@ -839,7 +812,6 @@ public class TestPathBasedCacheRequests {
    */
   @Test(timeout=120000)
   public void testReplicationFactor() throws Exception {
-    Assume.assumeTrue(canTestDatanodeCaching());
     HdfsConfiguration conf = createCachingConf();
     MiniDFSCluster cluster =
       new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATANODES).build();

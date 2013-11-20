@@ -199,6 +199,9 @@ Trunk (Unreleased)
 
     HDFS-5366. recaching improvements (cmccabe)
 
+    HDFS-5511. improve CacheManipulator interface to allow better unit testing
+    (cmccabe)
+
   OPTIMIZATIONS
     HDFS-5349. DNA_CACHE and DNA_UNCACHE should be by blockId only. (cmccabe)
 

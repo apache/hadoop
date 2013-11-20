@@ -163,7 +163,8 @@ public class FsDatasetCache {
   private final UsedBytesCount usedBytesCount;
 
   public static class PageRounder {
-    private final long osPageSize = NativeIO.getOperatingSystemPageSize();
+    private final long osPageSize =
+        NativeIO.POSIX.getCacheManipulator().getOperatingSystemPageSize();
 
     /**
      * Round up a number to the operating system page size.

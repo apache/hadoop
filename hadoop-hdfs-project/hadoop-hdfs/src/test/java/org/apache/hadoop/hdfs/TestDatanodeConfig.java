@@ -113,7 +113,8 @@ public class TestDatanodeConfig {
   @Test(timeout=60000)
   public void testMemlockLimit() throws Exception {
     assumeTrue(NativeIO.isAvailable());
-    final long memlockLimit = NativeIO.getMemlockLimit();
+    final long memlockLimit =
+        NativeIO.POSIX.getCacheManipulator().getMemlockLimit();
 
     // Can't increase the memlock limit past the maximum.
     assumeTrue(memlockLimit != Long.MAX_VALUE);

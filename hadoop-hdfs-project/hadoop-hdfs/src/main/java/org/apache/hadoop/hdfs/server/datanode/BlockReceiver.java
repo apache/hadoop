@@ -657,8 +657,9 @@ class BlockReceiver implements Closeable {
         //                     
         long dropPos = lastCacheManagementOffset - CACHE_DROP_LAG_BYTES;
         if (dropPos > 0 && dropCacheBehindWrites) {
-          NativeIO.POSIX.posixFadviseIfPossible(block.getBlockName(),
-              outFd, 0, dropPos, NativeIO.POSIX.POSIX_FADV_DONTNEED);
+          NativeIO.POSIX.getCacheManipulator().posixFadviseIfPossible(
+              block.getBlockName(), outFd, 0, dropPos,
+              NativeIO.POSIX.POSIX_FADV_DONTNEED);
         }
         lastCacheManagementOffset = offsetInBlock;
       }
