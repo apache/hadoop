@@ -39,14 +39,9 @@
 
     var base = dust.makeBase(helpers);
 
-    var TEMPLATES = [ { 'name': 'dfshealth', 'url': 'dfshealth.dust.html' } ];
-
-    load_templates(dust, TEMPLATES, function() {
-      dust.render('dfshealth', base.push(data), function(err, out) {
-        $('#panel').html(out);
-      });
-    }, function () {
-      show_err_msg('Failed to load the page.');
+    dust.loadSource(dust.compile($('#tmpl-dfshealth').html(), 'dfshealth'));
+    dust.render('dfshealth', base.push(data), function(err, out) {
+      $('#panel').html(out);
     });
   }
 
