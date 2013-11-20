@@ -138,6 +138,10 @@ Release 2.3.0 - UNRELEASED
     YARN-1419. TestFifoScheduler.testAppAttemptMetrics fails intermittently
     under jdk7 (Jonathan Eagles via jlowe)
 
+    YARN-744. Race condition in ApplicationMasterService.allocate .. It might
+    process same allocate request twice resulting in additional containers
+    getting allocated. (Omkar Vinit Joshi via bikas)
+
 Release 2.2.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
