@@ -30,9 +30,9 @@ import org.apache.hadoop.classification.InterfaceAudience;
  * Example:
  * 
  * NAME   OWNER   GROUP   MODE       WEIGHT
- * pool1  andrew  andrew  rwxr-xr-x  100
- * pool2  andrew  andrew  rwxr-xr-x  100
- * pool3  andrew  andrew  rwxr-xr-x  100
+ * pool1  andrew  andrew  rwxr-xr-x     100
+ * pool2  andrew  andrew  rwxr-xr-x     100
+ * pool3  andrew  andrew  rwxr-xr-x     100
  * 
  */
 @InterfaceAudience.Private

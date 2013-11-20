@@ -368,6 +368,9 @@ message PathBasedCacheDirectiveInfoProto {
   optional string path = 2;
   optional uint32 replication = 3;
   optional string pool = 4;
+  optional int64 bytesNeeded = 5;
+  optional int64 bytesCached = 6;
+  optional int64 filesAffected = 7;
 }
 
 message AddPathBasedCacheDirectiveRequestProto {

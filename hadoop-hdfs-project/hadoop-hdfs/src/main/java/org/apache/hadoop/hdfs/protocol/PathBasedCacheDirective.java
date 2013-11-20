@@ -37,6 +37,9 @@ public class PathBasedCacheDirective {
     private Path path;
     private Short replication;
     private String pool;
+    private Long bytesNeeded;
+    private Long bytesCached;
+    private Long filesAffected;
 
     /**
      * Builds a new PathBasedCacheDirective populated with the set properties.
@@ -44,7 +47,8 @@ public class PathBasedCacheDirective {
      * @return New PathBasedCacheDirective.
      */
     public PathBasedCacheDirective build() {
-      return new PathBasedCacheDirective(id, path, replication, pool);
+      return new PathBasedCacheDirective(id, path, replication, pool,
+                    bytesNeeded, bytesCached, filesAffected);
     }
 
     /**
@@ -62,6 +66,9 @@ public class PathBasedCacheDirective {
       this.path = directive.getPath();
       this.replication = directive.getReplication();
       this.pool = directive.getPool();
+      this.bytesNeeded = directive.bytesNeeded;
+      this.bytesCached = directive.bytesCached;
+      this.filesAffected = directive.filesAffected;
     }
 
     /**
@@ -98,6 +105,39 @@ public class PathBasedCacheDirective {
     }
 
     /**
+     * Sets the bytes needed by this directive.
+     * 
+     * @param bytesNeeded The bytes needed.
+     * @return This builder, for call chaining.
+     */
+    public Builder setBytesNeeded(Long bytesNeeded) {
+      this.bytesNeeded = bytesNeeded;
+      return this;
+    }
+
+    /**
+     * Sets the bytes cached by this directive.
+     * 
+     * @param bytesCached The bytes cached.
+     * @return This builder, for call chaining.
+     */
+    public Builder setBytesCached(Long bytesCached) {
+      this.bytesCached = bytesCached;
+      return this;
+    }
+
+    /**
+     * Sets the files affected by this directive.
+     * 
+     * @param filesAffected The files affected.
+     * @return This builder, for call chaining.
+     */
+    public Builder setFilesAffected(Long filesAffected) {
+      this.filesAffected = filesAffected;
+      return this;
+    }
+    
+    /**
      * Sets the pool used in this request.
      * 
      * @param pool The pool used in this request.
@@ -113,12 +153,19 @@ public class PathBasedCacheDirective {
   private final Path path;
   private final Short replication;
   private final String pool;
+  private final Long bytesNeeded;
+  private final Long bytesCached;
+  private final Long filesAffected;
 
-  PathBasedCacheDirective(Long id, Path path, Short replication, String pool) {
+  PathBasedCacheDirective(Long id, Path path, Short replication, String pool,
+      Long bytesNeeded, Long bytesCached, Long filesAffected) {
     this.id = id;
     this.path = path;
     this.replication = replication;
     this.pool = pool;
+    this.bytesNeeded = bytesNeeded;
+    this.bytesCached = bytesCached;
+    this.filesAffected = filesAffected;
   }
 
   /**
@@ -147,6 +194,27 @@ public class PathBasedCacheDirective {
    */
   public String getPool() {
     return pool;
+  }
+  
+  /**
+   * @return The bytes needed.
+   */
+  public Long getBytesNeeded() {
+    return bytesNeeded;
+  }
+
+  /**
+   * @return The bytes cached.
+   */
+  public Long getBytesCached() {
+    return bytesCached;
+  }
+
+  /**
+   * @return The files affected.
+   */
+  public Long getFilesAffected() {
+    return filesAffected;
   }
 
   @Override
@@ -193,6 +261,18 @@ public class PathBasedCacheDirective {
     }
     if (pool != null) {
       builder.append(prefix).append("pool: ").append(pool);
+      prefix = ",";
+    }
+    if (bytesNeeded != null) {
+      builder.append(prefix).append("bytesNeeded: ").append(bytesNeeded);
+      prefix = ",";
+    }
+    if (bytesCached != null) {
+      builder.append(prefix).append("bytesCached: ").append(bytesCached);
+      prefix = ",";
+    }
+    if (filesAffected != null) {
+      builder.append(prefix).append("filesAffected: ").append(filesAffected);
       prefix = ",";
     }
     builder.append("}");

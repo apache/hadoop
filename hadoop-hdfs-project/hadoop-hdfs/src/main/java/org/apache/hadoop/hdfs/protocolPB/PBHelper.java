@@ -1583,6 +1583,15 @@ public class PBHelper {
     if (directive.getPool() != null) {
       builder.setPool(directive.getPool());
     }
+    if (directive.getBytesNeeded() != null) {
+      builder.setBytesNeeded(directive.getBytesNeeded());
+    }
+    if (directive.getBytesCached() != null) {
+      builder.setBytesCached(directive.getBytesCached());
+    }
+    if (directive.getFilesAffected() != null) {
+      builder.setFilesAffected(directive.getFilesAffected());
+    }
     return builder.build();
   }
 
@@ -1602,6 +1611,15 @@ public class PBHelper {
     }
     if (proto.hasPool()) {
       builder.setPool(proto.getPool());
+    }
+    if (proto.hasBytesNeeded()) {
+      builder.setBytesNeeded(proto.getBytesNeeded());
+    }
+    if (proto.hasBytesCached()) {
+      builder.setBytesCached(proto.getBytesCached());
+    }
+    if (proto.hasFilesAffected()) {
+      builder.setFilesAffected(proto.getFilesAffected());
     }
     return builder.build();
   }

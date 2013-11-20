@@ -56,6 +56,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.PathBasedCacheDirective;
+import org.apache.hadoop.hdfs.server.blockmanagement.CacheReplicationMonitor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.CachedBlocksList.Type;
 import org.apache.hadoop.hdfs.server.namenode.EditLogFileOutputStream;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
@@ -66,7 +67,10 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.GSet;
+import org.apache.log4j.Level;
+import org.apache.log4j.LogManager;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -100,6 +104,7 @@ public class TestPathBasedCacheRequests {
     proto = cluster.getNameNodeRpc();
     prevCacheManipulator = NativeIO.POSIX.getCacheManipulator();
     NativeIO.POSIX.setCacheManipulator(new NoMlockCacheManipulator());
+    LogManager.getLogger(CacheReplicationMonitor.class).setLevel(Level.TRACE);
   }
 
   @After
@@ -796,10 +801,65 @@ public class TestPathBasedCacheRequests {
               build());
       waitForCachedBlocks(namenode, 4, 8,
           "testWaitForCachedReplicasInDirectory:1");
+      // Verify that listDirectives gives the stats we want.
+      RemoteIterator<PathBasedCacheDirective> iter =
+        dfs.listPathBasedCacheDirectives(new PathBasedCacheDirective.Builder().
+            setPath(new Path("/foo")).
+            build());
+      PathBasedCacheDirective directive = iter.next();
+      Assert.assertEquals(Long.valueOf(2),
+          directive.getFilesAffected());
+      Assert.assertEquals(Long.valueOf(
+          2 * numBlocksPerFile * BLOCK_SIZE * 2),
+          directive.getBytesNeeded());
+      Assert.assertEquals(Long.valueOf(
+          2 * numBlocksPerFile * BLOCK_SIZE * 2),
+          directive.getBytesCached());
+      
+      long id2 = dfs.addPathBasedCacheDirective(
+            new PathBasedCacheDirective.Builder().
+              setPath(new Path("/foo/bar")).
+              setReplication((short)4).
+              setPool(pool).
+              build());
+      // wait for an additional 2 cached replicas to come up
+      waitForCachedBlocks(namenode, 4, 10,
+          "testWaitForCachedReplicasInDirectory:2");
+      // the directory directive's stats are unchanged
+      iter = dfs.listPathBasedCacheDirectives(
+          new PathBasedCacheDirective.Builder().
+            setPath(new Path("/foo")).
+            build());
+      directive = iter.next();
+      Assert.assertEquals(Long.valueOf(2),
+          directive.getFilesAffected());
+      Assert.assertEquals(Long.valueOf(
+          2 * numBlocksPerFile * BLOCK_SIZE * 2),
+          directive.getBytesNeeded());
+      Assert.assertEquals(Long.valueOf(
+          2 * numBlocksPerFile * BLOCK_SIZE * 2),
+          directive.getBytesCached());
+      // verify /foo/bar's stats
+      iter = dfs.listPathBasedCacheDirectives(
+          new PathBasedCacheDirective.Builder().
+            setPath(new Path("/foo/bar")).
+            build());
+      directive = iter.next();
+      Assert.assertEquals(Long.valueOf(1),
+          directive.getFilesAffected());
+      Assert.assertEquals(Long.valueOf(
+          4 * numBlocksPerFile * BLOCK_SIZE),
+          directive.getBytesNeeded());
+      // only 3 because the file only has 3 replicas, not 4 as requested.
+      Assert.assertEquals(Long.valueOf(
+          3 * numBlocksPerFile * BLOCK_SIZE),
+          directive.getBytesCached());
+      
       // remove and watch numCached go to 0
       dfs.removePathBasedCacheDirective(id);
+      dfs.removePathBasedCacheDirective(id2);
       waitForCachedBlocks(namenode, 0, 0,
-          "testWaitForCachedReplicasInDirectory:2");
+          "testWaitForCachedReplicasInDirectory:3");
     } finally {
       cluster.shutdown();
     }

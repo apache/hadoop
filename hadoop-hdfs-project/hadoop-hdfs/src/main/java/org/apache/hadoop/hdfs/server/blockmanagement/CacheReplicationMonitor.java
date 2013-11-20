@@ -198,11 +198,6 @@ public class CacheReplicationMonitor extends Thread implements Closeable {
     namesystem.writeLock();
     try {
       rescanPathBasedCacheEntries();
-    } finally {
-      namesystem.writeUnlock();
-    }
-    namesystem.writeLock();
-    try {
       rescanCachedBlockMap();
       blockManager.getDatanodeManager().resetLastCachingDirectiveSentTime();
     } finally {
@@ -220,6 +215,9 @@ public class CacheReplicationMonitor extends Thread implements Closeable {
     FSDirectory fsDir = namesystem.getFSDirectory();
     for (PathBasedCacheEntry pce : cacheManager.getEntriesById().values()) {
       scannedDirectives++;
+      pce.clearBytesNeeded();
+      pce.clearBytesCached();
+      pce.clearFilesAffected();
       String path = pce.getPath();
       INode node;
       try {
@@ -258,12 +256,18 @@ public class CacheReplicationMonitor extends Thread implements Closeable {
    * @param file      The file.
    */
   private void rescanFile(PathBasedCacheEntry pce, INodeFile file) {
+    pce.incrementFilesAffected();
     BlockInfo[] blockInfos = file.getBlocks();
+    long cachedTotal = 0;
+    long neededTotal = 0;
     for (BlockInfo blockInfo : blockInfos) {
       if (!blockInfo.getBlockUCState().equals(BlockUCState.COMPLETE)) {
         // We don't try to cache blocks that are under construction.
         continue;
       }
+      long neededByBlock = 
+         pce.getReplication() * blockInfo.getNumBytes();
+      neededTotal += neededByBlock;
       Block block = new Block(blockInfo.getBlockId());
       CachedBlock ncblock = new CachedBlock(block.getBlockId(),
           pce.getReplication(), mark);
@@ -271,6 +275,18 @@ public class CacheReplicationMonitor extends Thread implements Closeable {
       if (ocblock == null) {
         cachedBlocks.put(ncblock);
       } else {
+        // Update bytesUsed using the current replication levels.
+        // Assumptions: we assume that all the blocks are the same length
+        // on each datanode.  We can assume this because we're only caching
+        // blocks in state COMMITTED.
+        // Note that if two directives are caching the same block(s), they will
+        // both get them added to their bytesCached.
+        List<DatanodeDescriptor> cachedOn =
+            ocblock.getDatanodes(Type.CACHED);
+        long cachedByBlock = Math.min(cachedOn.size(), pce.getReplication()) *
+            blockInfo.getNumBytes();
+        cachedTotal += cachedByBlock;
+
         if (mark != ocblock.getMark()) {
           // Mark hasn't been set in this scan, so update replication and mark.
           ocblock.setReplicationAndMark(pce.getReplication(), mark);
@@ -281,6 +297,12 @@ public class CacheReplicationMonitor extends Thread implements Closeable {
               pce.getReplication(), ocblock.getReplication()), mark);
         }
       }
+    }
+    pce.addBytesNeeded(neededTotal);
+    pce.addBytesCached(cachedTotal);
+    if (LOG.isTraceEnabled()) {
+      LOG.debug("Directive " + pce.getEntryId() + " is caching " +
+          file.getFullPathName() + ": " + cachedTotal + "/" + neededTotal);
     }
   }
 

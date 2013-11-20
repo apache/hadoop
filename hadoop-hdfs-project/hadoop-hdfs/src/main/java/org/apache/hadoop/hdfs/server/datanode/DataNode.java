@@ -207,6 +207,7 @@ public class DataNode extends Configured
   private SecureResources secureResources = null;
   private AbstractList<File> dataDirs;
   private Configuration conf;
+  private final long maxNumberOfBlocksToLog;
 
   private final List<String> usersWithLocalPathAccess;
   private boolean connectToDnViaHostname;
@@ -231,6 +232,8 @@ public class DataNode extends Configured
            final AbstractList<File> dataDirs,
            final SecureResources resources) throws IOException {
     super(conf);
+    this.maxNumberOfBlocksToLog = conf.getLong(DFS_MAX_NUM_BLOCKS_TO_LOG_KEY,
+        DFS_MAX_NUM_BLOCKS_TO_LOG_DEFAULT);
 
     this.usersWithLocalPathAccess = Arrays.asList(
         conf.getTrimmedStrings(DFSConfigKeys.DFS_BLOCK_LOCAL_PATH_ACCESS_USER_KEY));
@@ -1029,6 +1032,10 @@ public class DataNode extends Configured
               + "authorization. The user " + currentUser
               + " is not allowed to call getBlockLocalPathInfo");
     }
+  }
+
+  public long getMaxNumberOfBlocksToLog() {
+    return maxNumberOfBlocksToLog;
   }
 
   @Override

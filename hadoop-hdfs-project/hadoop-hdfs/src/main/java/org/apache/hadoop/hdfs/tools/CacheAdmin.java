@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.tools;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -394,7 +395,7 @@ public class CacheAdmin extends Configured implements Tool {
 
     @Override
     public String getShortUsage() {
-      return "[" + getName() + " [-path <path>] [-pool <pool>]]\n";
+      return "[" + getName() + " [-stats] [-path <path>] [-pool <pool>]]\n";
     }
 
     @Override
@@ -406,6 +407,7 @@ public class CacheAdmin extends Configured implements Tool {
           "in a cache pool that we don't have read access for, it " + 
           "will not be listed.");
       listing.addRow("<pool>", "List only path cache directives in that pool.");
+      listing.addRow("-stats", "List path-based cache directive statistics.");
       return getShortUsage() + "\n" +
         "List PathBasedCache directives.\n\n" +
         listing.toString();
@@ -423,28 +425,40 @@ public class CacheAdmin extends Configured implements Tool {
       if (poolFilter != null) {
         builder.setPool(poolFilter);
       }
+      boolean printStats = StringUtils.popOption("-stats", args);
       if (!args.isEmpty()) {
         System.err.println("Can't understand argument: " + args.get(0));
         return 1;
       }
-      TableListing tableListing = new TableListing.Builder().
-          addField("ID", Justification.LEFT).
+      TableListing.Builder tableBuilder = new TableListing.Builder().
+          addField("ID", Justification.RIGHT).
           addField("POOL", Justification.LEFT).
-          addField("REPLICATION", Justification.LEFT).
-          addField("PATH", Justification.LEFT).
-          build();
+          addField("REPLICATION", Justification.RIGHT).
+          addField("PATH", Justification.LEFT);
+      if (printStats) {
+        tableBuilder.addField("NEEDED", Justification.RIGHT).
+                    addField("CACHED", Justification.RIGHT).
+                    addField("FILES", Justification.RIGHT);
+      }
+      TableListing tableListing = tableBuilder.build();
+
       DistributedFileSystem dfs = getDFS(conf);
       RemoteIterator<PathBasedCacheDirective> iter =
           dfs.listPathBasedCacheDirectives(builder.build());
       int numEntries = 0;
       while (iter.hasNext()) {
         PathBasedCacheDirective directive = iter.next();
-        String row[] = new String[] {
-            "" + directive.getId(), directive.getPool(),
-            "" + directive.getReplication(),
-            directive.getPath().toUri().getPath(),
-        };
-        tableListing.addRow(row);
+        List<String> row = new LinkedList<String>();
+        row.add("" + directive.getId());
+        row.add(directive.getPool());
+        row.add("" + directive.getReplication());
+        row.add(directive.getPath().toUri().getPath());
+        if (printStats) {
+          row.add("" + directive.getBytesNeeded());
+          row.add("" + directive.getBytesCached());
+          row.add("" + directive.getFilesAffected());
+        }
+        tableListing.addRow(row.toArray(new String[0]));
         numEntries++;
       }
       System.out.print(String.format("Found %d entr%s\n",
@@ -734,7 +748,7 @@ public class CacheAdmin extends Configured implements Tool {
           addField("OWNER", Justification.LEFT).
           addField("GROUP", Justification.LEFT).
           addField("MODE", Justification.LEFT).
-          addField("WEIGHT", Justification.LEFT).
+          addField("WEIGHT", Justification.RIGHT).
           build();
       int numResults = 0;
       try {

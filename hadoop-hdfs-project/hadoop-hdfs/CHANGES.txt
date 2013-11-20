@@ -204,6 +204,9 @@ Trunk (Unreleased)
 
     HDFS-5525. Inline dust templates for new Web UI. (Haohui Mai via jing9)
 
+    HDFS-5451. Add byte and file statistics to PathBasedCacheEntry.
+    (Colin Patrick McCabe via Andrew Wang)
+
   OPTIMIZATIONS
     HDFS-5349. DNA_CACHE and DNA_UNCACHE should be by blockId only. (cmccabe)
 
