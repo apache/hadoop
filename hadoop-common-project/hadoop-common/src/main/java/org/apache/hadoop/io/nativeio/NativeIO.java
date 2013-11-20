@@ -98,9 +98,6 @@ public class NativeIO {
 
     private static final Log LOG = LogFactory.getLog(NativeIO.class);
 
-    @VisibleForTesting
-    public static CacheTracker cacheTracker = null;
-    
     private static boolean nativeLoaded = false;
     private static boolean fadvisePossible = true;
     private static boolean syncFileRangePossible = true;
@@ -111,17 +108,60 @@ public class NativeIO {
 
     private static long cacheTimeout = -1;
 
-    public static interface CacheTracker {
-      public void fadvise(String identifier, long offset, long len, int flags);
+    private static CacheManipulator cacheManipulator = new CacheManipulator();
+
+    public static CacheManipulator getCacheManipulator() {
+      return cacheManipulator;
     }
 
-    public static CacheManipulator cacheManipulator = new CacheManipulator();
+    public static void setCacheManipulator(CacheManipulator cacheManipulator) {
+      POSIX.cacheManipulator = cacheManipulator;
+    }
 
+    /**
+     * Used to manipulate the operating system cache.
+     */
     @VisibleForTesting
     public static class CacheManipulator {
       public void mlock(String identifier, ByteBuffer buffer,
           long len) throws IOException {
         POSIX.mlock(buffer, len);
+      }
+
+      public long getMemlockLimit() {
+        return NativeIO.getMemlockLimit();
+      }
+
+      public long getOperatingSystemPageSize() {
+        return NativeIO.getOperatingSystemPageSize();
+      }
+
+      public void posixFadviseIfPossible(String identifier,
+        FileDescriptor fd, long offset, long len, int flags)
+            throws NativeIOException {
+        NativeIO.POSIX.posixFadviseIfPossible(identifier, fd, offset,
+            len, flags);
+      }
+    }
+
+    /**
+     * A CacheManipulator used for testing which does not actually call mlock.
+     * This allows many tests to be run even when the operating system does not
+     * allow mlock, or only allows limited mlocking.
+     */
+    @VisibleForTesting
+    public static class NoMlockCacheManipulator extends CacheManipulator {
+      public void mlock(String identifier, ByteBuffer buffer,
+          long len) throws IOException {
+        LOG.info("mlocking " + identifier);
+      }
+
+      public long getMemlockLimit() {
+        return 1125899906842624L;
+      }
+
+      public long getOperatingSystemPageSize() {
+        return 4096;
       }
     }
 
@@ -207,12 +247,9 @@ public class NativeIO {
      *
      * @throws NativeIOException if there is an error with the syscall
      */
-    public static void posixFadviseIfPossible(String identifier,
+    static void posixFadviseIfPossible(String identifier,
         FileDescriptor fd, long offset, long len, int flags)
         throws NativeIOException {
-      if (cacheTracker != null) {
-        cacheTracker.fadvise(identifier, offset, len, flags);
-      }
       if (nativeLoaded && fadvisePossible) {
         try {
           posix_fadvise(fd, offset, len, flags);
@@ -566,7 +603,7 @@ public class NativeIO {
    *         Long.MAX_VALUE if there is no limit;
    *         The number of bytes that can be locked into memory otherwise.
    */
-  public static long getMemlockLimit() {
+  static long getMemlockLimit() {
     return isAvailable() ? getMemlockLimit0() : 0;
   }
 
@@ -575,7 +612,7 @@ public class NativeIO {
   /**
    * @return the operating system's page size.
    */
-  public static long getOperatingSystemPageSize() {
+  static long getOperatingSystemPageSize() {
     try {
       Field f = Unsafe.class.getDeclaredField("theUnsafe");
       f.setAccessible(true);

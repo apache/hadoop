@@ -30,10 +30,10 @@ import java.util.concurrent.ConcurrentMap;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.FairSchedulerInfo;
@@ -77,13 +77,13 @@ public class FairSchedulerAppsBlock extends HtmlBlock {
             th(".progress", "Progress").
             th(".ui", "Tracking UI")._()._().
         tbody();
-    Collection<RMAppState> reqAppStates = null;
+    Collection<YarnApplicationState> reqAppStates = null;
     String reqStateString = $(APP_STATE);
     if (reqStateString != null && !reqStateString.isEmpty()) {
       String[] appStateStrings = reqStateString.split(",");
-      reqAppStates = new HashSet<RMAppState>(appStateStrings.length);
+      reqAppStates = new HashSet<YarnApplicationState>(appStateStrings.length);
       for(String stateString : appStateStrings) {
-        reqAppStates.add(RMAppState.valueOf(stateString));
+        reqAppStates.add(YarnApplicationState.valueOf(stateString));
       }
     }
     StringBuilder appsTableData = new StringBuilder("[\n");

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,49 +23,37 @@ import java.nio.ByteBuffer;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
-
+/**
+ * Specification of a direct ByteBuffer 'de-compressor'. 
+ */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public interface DirectDecompressor extends Decompressor {
-  /**
-   * Example usage
+public interface DirectDecompressor {
+  /*
+   * This exposes a direct interface for record decompression with direct byte
+   * buffers.
    * 
-   * <pre>{@code
-   * private void decompress(DirectDecompressor decomp, ByteBufferProducer in, ByteBufferConsumer out) throws IOException {
-   *    ByteBuffer outBB = ByteBuffer.allocate(64*1024);
-   *    outBB.clear();
-   *    // returns inBB.remaining() &gt; 0 || inBB == null 
-   *    // if you do a inBB.put(), remember to do a inBB.flip()
-   *    ByteBuffer inBB = in.get();
-   *    if(inBB == null) {
-   *      // no data at all?
-   *    }
-   *    while(!decomp.finished()) {
-   *      decomp.decompress(outBB, inBB);
-   *      if(outBB.remaining() == 0) {
-   *        // flush when the buffer is full
-   *        outBB.flip();
-   *        // has to consume the buffer, because it is reused
-   *        out.put(outBB);
-   *        outBB.clear();
-   *      }
-   *      if(inBB != null &amp;&amp; inBB.remaining() == 0) {
-   *        // inBB = null for EOF
-   *        inBB = in.get();
-   *      }
-   *    }
-   *    
-   *    if(outBB.position() &gt; 0) {
-   *      outBB.flip();
-   *      out.put(outBB);
-   *      outBB.clear();
-   *    }
-   *  }
-   * }</pre>
-   * @param dst Destination {@link ByteBuffer} for storing the results into. Requires dst.remaining() to be > 0
-   * @param src Source {@link ByteBuffer} for reading from. This can be null or src.remaining() > 0
-   * @return bytes stored into dst (dst.postion += more)
-   * @throws IOException if compression fails   
+   * The decompress() function need not always consume the buffers provided,
+   * it will need to be called multiple times to decompress an entire buffer 
+   * and the object will hold the compression context internally.
+   * 
+   * Codecs such as {@link SnappyCodec} may or may not support partial
+   * decompression of buffers and will need enough space in the destination
+   * buffer to decompress an entire block.
+   * 
+   * The operation is modelled around dst.put(src);
+   * 
+   * The end result will move src.position() by the bytes-read and
+   * dst.position() by the bytes-written. It should not modify the src.limit()
+   * or dst.limit() to maintain consistency of operation between codecs.
+   * 
+   * @param src Source direct {@link ByteBuffer} for reading from. Requires src
+   * != null and src.remaining() > 0
+   * 
+   * @param dst Destination direct {@link ByteBuffer} for storing the results
+   * into. Requires dst != null and dst.remaining() to be > 0
+   * 
+   * @throws IOException if compression fails
    */
-	public int decompress(ByteBuffer dst, ByteBuffer src) throws IOException;
+  public void decompress(ByteBuffer src, ByteBuffer dst) throws IOException;
 }

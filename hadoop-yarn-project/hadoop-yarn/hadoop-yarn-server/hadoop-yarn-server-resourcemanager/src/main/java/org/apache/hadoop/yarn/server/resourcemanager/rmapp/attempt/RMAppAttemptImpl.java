@@ -53,6 +53,7 @@ import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
@@ -653,7 +654,14 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
   public ApplicationResourceUsageReport getApplicationResourceUsageReport() {
     this.readLock.lock();
     try {
-      return scheduler.getAppResourceUsageReport(this.getAppAttemptId());
+      ApplicationResourceUsageReport report =
+          scheduler.getAppResourceUsageReport(this.getAppAttemptId());
+      if (report == null) {
+        Resource none = Resource.newInstance(0, 0);
+        report = ApplicationResourceUsageReport.newInstance(0, 0, none, none,
+            none);
+      }
+      return report;
     } finally {
       this.readLock.unlock();
     }

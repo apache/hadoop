@@ -199,6 +199,9 @@ Trunk (Unreleased)
 
     HDFS-5366. recaching improvements (cmccabe)
 
+    HDFS-5511. improve CacheManipulator interface to allow better unit testing
+    (cmccabe)
+
   OPTIMIZATIONS
     HDFS-5349. DNA_CACHE and DNA_UNCACHE should be by blockId only. (cmccabe)
 
@@ -379,7 +382,9 @@ Trunk (Unreleased)
     nextEntryId (cmccabe)
 
     HDFS-5512. CacheAdmin -listPools fails with NPE when user lacks permissions
-    to view all pools (awang via cmccabe)
+    to view all pools (wang via cmccabe)
+
+    HDFS-5513. CacheAdmin commands fail when using . as the path. (wang)
 
 Release 2.3.0 - UNRELEASED
 
@@ -505,6 +510,8 @@ Release 2.3.0 - UNRELEASED
     HDFS-5393. Serve bootstrap and jQuery locally. (Haohui Mai via jing9)
 
     HDFS-5073. TestListCorruptFileBlocks fails intermittently. (Arpit Agarwal)
+
+    HDFS-1386. TestJMXGet fails in jdk7 (jeagles)
 
   OPTIMIZATIONS
 

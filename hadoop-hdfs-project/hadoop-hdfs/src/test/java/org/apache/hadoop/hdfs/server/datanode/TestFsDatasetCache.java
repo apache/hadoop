@@ -63,6 +63,7 @@ import org.apache.hadoop.hdfs.server.protocol.NNHAStatusHeartbeat;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.io.nativeio.NativeIO.POSIX.CacheManipulator;
+import org.apache.hadoop.io.nativeio.NativeIO.POSIX.NoMlockCacheManipulator;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.MetricsAsserts;
@@ -99,7 +100,6 @@ public class TestFsDatasetCache {
   @Before
   public void setUp() throws Exception {
     assumeTrue(!Path.WINDOWS);
-    assumeTrue(NativeIO.getMemlockLimit() >= CACHE_CAPACITY);
     conf = new HdfsConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_CACHING_ENABLED_KEY, true);
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_PATH_BASED_CACHE_RETRY_INTERVAL_MS,
@@ -122,18 +122,8 @@ public class TestFsDatasetCache {
 
     spyNN = DataNodeTestUtils.spyOnBposToNN(dn, nn);
 
-    prevCacheManipulator = NativeIO.POSIX.cacheManipulator;
-
-    // Save the current CacheManipulator and replace it at the end of the test
-    // Stub out mlock calls to avoid failing when not enough memory is lockable
-    // by the operating system.
-    NativeIO.POSIX.cacheManipulator = new CacheManipulator() {
-      @Override
-      public void mlock(String identifier,
-          ByteBuffer mmap, long length) throws IOException {
-        LOG.info("mlocking " + identifier);
-      }
-    };
+    prevCacheManipulator = NativeIO.POSIX.getCacheManipulator();
+    NativeIO.POSIX.setCacheManipulator(new NoMlockCacheManipulator());
   }
 
   @After
@@ -145,7 +135,7 @@ public class TestFsDatasetCache {
       cluster.shutdown();
     }
     // Restore the original CacheManipulator
-    NativeIO.POSIX.cacheManipulator = prevCacheManipulator;
+    NativeIO.POSIX.setCacheManipulator(prevCacheManipulator);
   }
 
   private static void setHeartbeatResponse(DatanodeCommand[] cmds)
@@ -222,7 +212,8 @@ public class TestFsDatasetCache {
           if (tries++ > 10) {
             LOG.info("verifyExpectedCacheUsage: expected " +
                 expected + ", got " + curDnCacheUsed + "; " +
-                "memlock limit = " + NativeIO.getMemlockLimit() +
+                "memlock limit = " +
+                NativeIO.POSIX.getCacheManipulator().getMemlockLimit() +
                 ".  Waiting...");
           }
           return false;
@@ -297,39 +288,30 @@ public class TestFsDatasetCache {
    */
   @Test(timeout=600000)
   public void testCacheAndUncacheBlockWithRetries() throws Exception {
-    CacheManipulator prevCacheManipulator = NativeIO.POSIX.cacheManipulator;
-    
-    try {
-      NativeIO.POSIX.cacheManipulator = new CacheManipulator() {
-        private final Set<String> seenIdentifiers = new HashSet<String>();
-        
-        @Override
-        public void mlock(String identifier,
-            ByteBuffer mmap, long length) throws IOException {
-          if (seenIdentifiers.contains(identifier)) {
-            // mlock succeeds the second time.
-            LOG.info("mlocking " + identifier);
-            return;
-          }
-          seenIdentifiers.add(identifier);
-          throw new IOException("injecting IOException during mlock of " +
-              identifier);
+    // We don't have to save the previous cacheManipulator
+    // because it will be reinstalled by the @After function.
+    NativeIO.POSIX.setCacheManipulator(new NoMlockCacheManipulator() {
+      private final Set<String> seenIdentifiers = new HashSet<String>();
+      
+      @Override
+      public void mlock(String identifier,
+          ByteBuffer mmap, long length) throws IOException {
+        if (seenIdentifiers.contains(identifier)) {
+          // mlock succeeds the second time.
+          LOG.info("mlocking " + identifier);
+          return;
         }
-      };
-      testCacheAndUncacheBlock();
-    } finally {
-      NativeIO.POSIX.cacheManipulator = prevCacheManipulator;
-    }
+        seenIdentifiers.add(identifier);
+        throw new IOException("injecting IOException during mlock of " +
+            identifier);
+      }
+    });
+    testCacheAndUncacheBlock();
   }
 
   @Test(timeout=600000)
   public void testFilesExceedMaxLockedMemory() throws Exception {
     LOG.info("beginning testFilesExceedMaxLockedMemory");
-
-    // We don't want to deal with page rounding issues, so skip this
-    // test if page size is weird
-    long osPageSize = NativeIO.getOperatingSystemPageSize();
-    assumeTrue(osPageSize == 4096); 
 
     // Create some test files that will exceed total cache capacity
     final int numFiles = 5;
@@ -411,7 +393,7 @@ public class TestFsDatasetCache {
     assertEquals("Unexpected cache capacity", CACHE_CAPACITY, cacheCapacity);
     assertEquals("Unexpected amount of cache used", current, cacheUsed);
 
-    NativeIO.POSIX.cacheManipulator = new NativeIO.POSIX.CacheManipulator() {
+    NativeIO.POSIX.setCacheManipulator(new NoMlockCacheManipulator() {
       @Override
       public void mlock(String identifier,
           ByteBuffer mmap, long length) throws IOException {
@@ -422,7 +404,7 @@ public class TestFsDatasetCache {
           Assert.fail();
         }
       }
-    };
+    });
     // Starting caching each block in succession.  The usedBytes amount
     // should increase, even though caching doesn't complete on any of them.
     for (int i=0; i<NUM_BLOCKS; i++) {

@@ -82,7 +82,7 @@ public class MappableBlock implements Closeable {
         throw new IOException("Block InputStream has no FileChannel.");
       }
       mmap = blockChannel.map(MapMode.READ_ONLY, 0, length);
-      NativeIO.POSIX.cacheManipulator.mlock(blockFileName, mmap, length);
+      NativeIO.POSIX.getCacheManipulator().mlock(blockFileName, mmap, length);
       verifyChecksum(length, metaIn, blockChannel, blockFileName);
       mappableBlock = new MappableBlock(mmap, length);
     } finally {

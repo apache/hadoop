@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hdfs.protocol;
 
-import java.net.URI;
-
 import org.apache.commons.lang.builder.EqualsBuilder;
 import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -61,9 +59,7 @@ public class PathBasedCacheDirective {
      */
     public Builder(PathBasedCacheDirective directive) {
       this.id = directive.getId();
-      // deep-copy URI
-      URI uri = directive.getPath().toUri();
-      this.path = new Path(uri.getScheme(), uri.getAuthority(), uri.getPath());
+      this.path = directive.getPath();
       this.replication = directive.getReplication();
       this.pool = directive.getPool();
     }
