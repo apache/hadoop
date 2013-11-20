@@ -303,6 +303,9 @@ Release 2.2.1 - UNRELEASED
     HDFS-4516. Client crash after block allocation and NN switch before lease recovery for 
     the same file can cause readers to fail forever (VinaayKumar B via umamahesh)
 
+    HDFS-5014. Process register commands with out holding BPOfferService lock. 
+    (Vinaykumar B via umamahesh)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
