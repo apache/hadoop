@@ -168,8 +168,8 @@ public abstract class MockAsm extends MockApps {
     final long start = 123456 + i * 1000;
     final long finish = 234567 + i * 1000;
     final String type = YarnConfiguration.DEFAULT_APPLICATION_TYPE;
-    RMAppState[] allStates = RMAppState.values();
-    final RMAppState state = allStates[i % allStates.length];
+    YarnApplicationState[] allStates = YarnApplicationState.values();
+    final YarnApplicationState state = allStates[i % allStates.length];
     final int maxAppAttempts = i % 1000;
     return new ApplicationBase() {
       @Override
@@ -210,7 +210,7 @@ public abstract class MockAsm extends MockApps {
         return null;
       }
       @Override
-      public RMAppState getState() {
+      public YarnApplicationState createApplicationState() {
         return state;
       }
       @Override
