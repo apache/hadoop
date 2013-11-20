@@ -98,14 +98,17 @@ Release 2.2.1 - UNRELEASED
     HDFS-5469. Add configuration property for the sub-directroy export path
     (brandonli)
 
-    HDFS-5372. In FSNamesystem, hasReadLock() returns false if the current 
-    thread holds the write lock (Vinaykumar B via umamahesh)
-
     HADOOP-10109.  Fix test failure in TestOfflineEditsViewer introduced by
     HADOOP-10052 (cmccabe)
 
     HDFS-5519. COMMIT handler should update the commit status after sync
     (brandonli)
+
+    HDFS-5372. In FSNamesystem, hasReadLock() returns false if the current 
+    thread holds the write lock (Vinaykumar B via umamahesh)
+
+    HDFS-4516. Client crash after block allocation and NN switch before lease recovery for 
+    the same file can cause readers to fail forever (VinaayKumar B via umamahesh)
 
 Release 2.2.0 - 2013-10-13
 
