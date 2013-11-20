@@ -556,7 +556,7 @@ public class TestDFSUtil {
     Configuration conf = createWebHDFSHAConfiguration(LOGICAL_HOST_NAME, NS1_NN1_ADDR, NS1_NN2_ADDR);
 
     Map<String, Map<String, InetSocketAddress>> map =
-        DFSUtil.getHaNnHttpAddresses(conf);
+        DFSUtil.getHaNnWebHdfsAddresses(conf, "webhdfs");
 
     assertEquals(NS1_NN1_ADDR, map.get("ns1").get("nn1").toString());
     assertEquals(NS1_NN2_ADDR, map.get("ns1").get("nn2").toString());
@@ -574,7 +574,7 @@ public class TestDFSUtil {
     Configuration conf = createWebHDFSHAConfiguration(LOGICAL_HOST_NAME, NS1_NN1_ADDR, NS1_NN2_ADDR);
     URI uri = new URI("webhdfs://ns1");
     assertTrue(HAUtil.isLogicalUri(conf, uri));
-    InetSocketAddress[] addrs = DFSUtil.resolve(uri, DEFAULT_PORT, conf);
+    InetSocketAddress[] addrs = DFSUtil.resolveWebHdfsUri(uri, conf);
     assertArrayEquals(new InetSocketAddress[] {
       new InetSocketAddress(NS1_NN1_HOST, DEFAULT_PORT),
       new InetSocketAddress(NS1_NN2_HOST, DEFAULT_PORT),
