@@ -76,9 +76,8 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocolPB.ClientDatanodeProtocolTranslatorPB;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.io.retry.RetryPolicies;
-import org.apache.hadoop.io.retry.RetryPolicy;
-import org.apache.hadoop.io.retry.RetryProxy;
+import org.apache.hadoop.hdfs.web.SWebHdfsFileSystem;
+import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
@@ -605,12 +604,19 @@ public class DFSUtil {
    * Returns list of InetSocketAddress corresponding to HA NN HTTP addresses from
    * the configuration.
    *
-   * @param conf configuration
    * @return list of InetSocketAddresses
    */
-  public static Map<String, Map<String, InetSocketAddress>> getHaNnHttpAddresses(
-      Configuration conf) {
-    return getAddresses(conf, null, DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY);
+  public static Map<String, Map<String, InetSocketAddress>> getHaNnWebHdfsAddresses(
+      Configuration conf, String scheme) {
+    if (WebHdfsFileSystem.SCHEME.equals(scheme)) {
+      return getAddresses(conf, null,
+          DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY);
+    } else if (SWebHdfsFileSystem.SCHEME.equals(scheme)) {
+      return getAddresses(conf, null,
+          DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY);
+    } else {
+      throw new IllegalArgumentException("Unsupported scheme: " + scheme);
+    }
   }
 
   /**
@@ -619,18 +625,28 @@ public class DFSUtil {
    * cluster, the resolver further resolves the logical name (i.e., the authority
    * in the URL) into real namenode addresses.
    */
-  public static InetSocketAddress[] resolve(URI uri, int schemeDefaultPort,
-      Configuration conf) throws IOException {
+  public static InetSocketAddress[] resolveWebHdfsUri(URI uri, Configuration conf)
+      throws IOException {
+    int defaultPort;
+    String scheme = uri.getScheme();
+    if (WebHdfsFileSystem.SCHEME.equals(scheme)) {
+      defaultPort = DFSConfigKeys.DFS_NAMENODE_HTTP_PORT_DEFAULT;
+    } else if (SWebHdfsFileSystem.SCHEME.equals(scheme)) {
+      defaultPort = DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_DEFAULT;
+    } else {
+      throw new IllegalArgumentException("Unsupported scheme: " + scheme);
+    }
+
     ArrayList<InetSocketAddress> ret = new ArrayList<InetSocketAddress>();
 
     if (!HAUtil.isLogicalUri(conf, uri)) {
       InetSocketAddress addr = NetUtils.createSocketAddr(uri.getAuthority(),
-          schemeDefaultPort);
+          defaultPort);
       ret.add(addr);
 
     } else {
       Map<String, Map<String, InetSocketAddress>> addresses = DFSUtil
-          .getHaNnHttpAddresses(conf);
+          .getHaNnWebHdfsAddresses(conf, scheme);
 
       for (Map<String, InetSocketAddress> addrs : addresses.values()) {
         for (InetSocketAddress addr : addrs.values()) {

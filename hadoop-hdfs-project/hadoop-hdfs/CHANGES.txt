@@ -23,6 +23,8 @@ Release 2.3.0 - UNRELEASED
     HDFS-5382. Implement the UI of browsing filesystems in HTML 5 page. (Haohui
     Mai via jing9)
 
+    HDFS-3987. Support webhdfs over HTTPS. (Haohui Mai via jing9)
+
   IMPROVEMENTS
 
     HDFS-5267. Remove volatile from LightWeightHashSet. (Junping Du via llu)

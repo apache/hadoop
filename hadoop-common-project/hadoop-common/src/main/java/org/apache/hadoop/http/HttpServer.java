@@ -471,7 +471,9 @@ public class HttpServer implements FilterContainer {
       if (conf.getBoolean(
           CommonConfigurationKeys.HADOOP_JETTY_LOGS_SERVE_ALIASES,
           CommonConfigurationKeys.DEFAULT_HADOOP_JETTY_LOGS_SERVE_ALIASES)) {
-        logContext.getInitParams().put(
+        @SuppressWarnings("unchecked")
+        Map<String, String> params = logContext.getInitParams();
+        params.put(
             "org.mortbay.jetty.servlet.Default.aliases", "true");
       }
       logContext.setDisplayName("logs");

@@ -65,6 +65,7 @@ public class TestHttpsFileSystem {
     cluster.getFileSystem().create(new Path("/test")).close();
     InetSocketAddress addr = cluster.getNameNode().getHttpsAddress();
     nnAddr = addr.getHostName() + ":" + addr.getPort();
+    conf.set(DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY, nnAddr);
   }
 
   @AfterClass
@@ -78,6 +79,17 @@ public class TestHttpsFileSystem {
   public void testHsftpFileSystem() throws Exception {
     FileSystem fs = FileSystem.get(new URI("hsftp://" + nnAddr), conf);
     Assert.assertTrue(fs.exists(new Path("/test")));
+    fs.close();
+  }
+
+  @Test
+  public void testSWebHdfsFileSystem() throws Exception {
+    FileSystem fs = WebHdfsTestUtil.getWebHdfsFileSystem(conf, "swebhdfs");
+    final Path f = new Path("/testswebhdfs");
+    FSDataOutputStream os = fs.create(f);
+    os.write(23);
+    os.close();
+    Assert.assertTrue(fs.exists(f));
     fs.close();
   }
 }
