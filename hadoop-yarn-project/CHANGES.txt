@@ -138,6 +138,9 @@ Release 2.3.0 - UNRELEASED
     YARN-1419. TestFifoScheduler.testAppAttemptMetrics fails intermittently
     under jdk7 (Jonathan Eagles via jlowe)
 
+    YARN-1407. RM Web UI and REST APIs should uniformly use
+    YarnApplicationState (Sandy Ryza)
+
 Release 2.2.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

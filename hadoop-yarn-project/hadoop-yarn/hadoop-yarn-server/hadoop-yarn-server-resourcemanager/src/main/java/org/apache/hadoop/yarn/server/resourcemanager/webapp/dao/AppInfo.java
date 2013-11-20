@@ -30,6 +30,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
@@ -58,7 +59,7 @@ public class AppInfo {
   protected String user;
   protected String name;
   protected String queue;
-  protected RMAppState state;
+  protected YarnApplicationState state;
   protected FinalApplicationStatus finalStatus;
   protected float progress;
   protected String trackingUI;
@@ -88,12 +89,12 @@ public class AppInfo {
 
     if (app != null) {
       String trackingUrl = app.getTrackingUrl();
-      this.state = app.getState();
+      this.state = app.createApplicationState();
       this.trackingUrlIsNotReady = trackingUrl == null || trackingUrl.isEmpty()
-          || RMAppState.NEW == this.state
-          || RMAppState.NEW_SAVING == this.state
-          || RMAppState.SUBMITTED == this.state
-          || RMAppState.ACCEPTED == this.state;
+          || YarnApplicationState.NEW == this.state
+          || YarnApplicationState.NEW_SAVING == this.state
+          || YarnApplicationState.SUBMITTED == this.state
+          || YarnApplicationState.ACCEPTED == this.state;
       this.trackingUI = this.trackingUrlIsNotReady ? "UNASSIGNED" : (app
           .getFinishTime() == 0 ? "ApplicationMaster" : "History");
       if (!trackingUrlIsNotReady) {
