@@ -31,9 +31,8 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
-import java.nio.MappedByteBuffer;
-import java.security.PrivilegedExceptionAction;
 import java.nio.ByteBuffer;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -59,7 +58,6 @@ import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.PathBasedCacheDirective;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.CachedBlocksList.Type;
 import org.apache.hadoop.hdfs.server.namenode.EditLogFileOutputStream;
-import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.MappableBlock;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.io.nativeio.NativeIO.POSIX.CacheManipulator;
@@ -482,6 +480,15 @@ public class TestPathBasedCacheRequests {
     dfs.removePathBasedCacheDirective(relativeId);
     iter = dfs.listPathBasedCacheDirectives(null);
     assertFalse(iter.hasNext());
+
+    // Verify that PBCDs with path "." work correctly
+    PathBasedCacheDirective directive =
+        new PathBasedCacheDirective.Builder().setPath(new Path("."))
+            .setPool("pool1").build();
+    long id = dfs.addPathBasedCacheDirective(directive);
+    dfs.modifyPathBasedCacheDirective(new PathBasedCacheDirective.Builder(
+        directive).setId(id).setReplication((short)2).build());
+    dfs.removePathBasedCacheDirective(id);
   }
 
   @Test(timeout=60000)

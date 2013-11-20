@@ -379,7 +379,9 @@ Trunk (Unreleased)
     nextEntryId (cmccabe)
 
     HDFS-5512. CacheAdmin -listPools fails with NPE when user lacks permissions
-    to view all pools (awang via cmccabe)
+    to view all pools (wang via cmccabe)
+
+    HDFS-5513. CacheAdmin commands fail when using . as the path. (wang)
 
 Release 2.3.0 - UNRELEASED
 
