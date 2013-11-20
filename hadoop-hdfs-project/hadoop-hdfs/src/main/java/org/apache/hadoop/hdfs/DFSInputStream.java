@@ -290,6 +290,11 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
       final LocatedBlock last = locatedBlocks.getLastLocatedBlock();
       if (last != null) {
         if (last.getLocations().length == 0) {
+          if (last.getBlockSize() == 0) {
+            // if the length is zero, then no data has been written to
+            // datanode. So no need to wait for the locations.
+            return 0;
+          }
           return -1;
         }
         final long len = readBlockLength(last);

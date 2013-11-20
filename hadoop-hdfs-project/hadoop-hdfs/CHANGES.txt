@@ -202,6 +202,8 @@ Trunk (Unreleased)
     HDFS-5511. improve CacheManipulator interface to allow better unit testing
     (cmccabe)
 
+    HDFS-5525. Inline dust templates for new Web UI. (Haohui Mai via jing9)
+
   OPTIMIZATIONS
     HDFS-5349. DNA_CACHE and DNA_UNCACHE should be by blockId only. (cmccabe)
 
@@ -688,6 +690,12 @@ Release 2.2.1 - UNRELEASED
 
     HDFS-5372. In FSNamesystem, hasReadLock() returns false if the current thread 
     holds the write lock (VinayaKumar B via umamahesh)
+
+    HDFS-4516. Client crash after block allocation and NN switch before lease recovery for 
+    the same file can cause readers to fail forever (VinaayKumar B via umamahesh)
+
+    HDFS-5014. Process register commands with out holding BPOfferService lock. 
+    (Vinaykumar B via umamahesh)
 
 Release 2.2.0 - 2013-10-13
 
