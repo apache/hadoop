@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.container;
 
-import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -687,6 +686,10 @@ public class ContainerImpl implements Container {
     public void transition(ContainerImpl container, ContainerEvent event) {
       ContainerExitEvent exitEvent = (ContainerExitEvent) event;
       container.exitCode = exitEvent.getExitCode();
+      if (exitEvent.getDiagnosticInfo() != null) {
+        container.diagnostics.append(exitEvent.getDiagnosticInfo())
+          .append('\n');
+      }
 
       // TODO: Add containerWorkDir to the deletion service.
       // TODO: Add containerOuputDir to the deletion service.
@@ -806,6 +809,10 @@ public class ContainerImpl implements Container {
     public void transition(ContainerImpl container, ContainerEvent event) {
       ContainerExitEvent exitEvent = (ContainerExitEvent) event;
       container.exitCode = exitEvent.getExitCode();
+      if (exitEvent.getDiagnosticInfo() != null) {
+        container.diagnostics.append(exitEvent.getDiagnosticInfo())
+          .append('\n');
+      }
 
       // The process/process-grp is killed. Decrement reference counts and
       // cleanup resources

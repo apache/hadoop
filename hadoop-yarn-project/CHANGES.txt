@@ -146,6 +146,9 @@ Release 2.3.0 - UNRELEASED
     current attempt instead of the attempt passed as argument (Omkar Vinit
     Joshi via bikas)
 
+    YARN-1053. Diagnostic message from ContainerExitEvent is ignored in
+    ContainerImpl (Omkar Vinit Joshi via bikas)
+
 Release 2.2.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
