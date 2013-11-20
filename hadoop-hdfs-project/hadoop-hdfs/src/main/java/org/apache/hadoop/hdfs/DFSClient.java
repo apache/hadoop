@@ -2331,6 +2331,11 @@ public class DFSClient implements java.io.Closeable {
       throw re.unwrapRemoteException(AccessControlException.class);
     }
   }
+
+  @VisibleForTesting
+  ExtendedBlock getPreviousBlock(String file) {
+    return filesBeingWritten.get(file).getBlock();
+  }
   
   /**
    * enable/disable restore failed storage.

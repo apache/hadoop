@@ -1717,8 +1717,9 @@ public class DFSOutputStream extends FSOutputSummer
       } // end synchronized
 
       waitForAckedSeqno(toWaitFor);
-      
-      if (updateLength) {
+
+      // update the block length first time irrespective of flag
+      if (updateLength || persistBlocks.get()) {
         synchronized (this) {
           if (streamer != null && streamer.block != null) {
             lastBlockLength = streamer.block.getNumBytes();
@@ -1983,5 +1984,15 @@ public class DFSOutputStream extends FSOutputSummer
   @Override
   public void setDropBehind(Boolean dropBehind) throws IOException {
     this.cachingStrategy.setDropBehind(dropBehind);
+  }
+
+  @VisibleForTesting
+  ExtendedBlock getBlock() {
+    return streamer.getBlock();
+  }
+
+  @VisibleForTesting
+  long getFileId() {
+    return fileId;
   }
 }

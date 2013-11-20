@@ -300,6 +300,9 @@ Release 2.2.1 - UNRELEASED
     HDFS-5372. In FSNamesystem, hasReadLock() returns false if the current 
     thread holds the write lock (Vinaykumar B via umamahesh)
 
+    HDFS-4516. Client crash after block allocation and NN switch before lease recovery for 
+    the same file can cause readers to fail forever (VinaayKumar B via umamahesh)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES

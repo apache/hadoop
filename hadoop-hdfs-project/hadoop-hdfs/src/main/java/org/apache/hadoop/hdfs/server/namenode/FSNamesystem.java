@@ -3684,6 +3684,19 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       if (uc.getNumExpectedLocations() == 0) {
         uc.setExpectedLocations(blockManager.getNodes(lastBlock));
       }
+
+      if (uc.getNumExpectedLocations() == 0 && uc.getNumBytes() == 0) {
+        // There is no datanode reported to this block.
+        // may be client have crashed before writing data to pipeline.
+        // This blocks doesn't need any recovery.
+        // We can remove this block and close the file.
+        pendingFile.removeLastBlock(lastBlock);
+        finalizeINodeFileUnderConstruction(src, pendingFile,
+            iip.getLatestSnapshot());
+        NameNode.stateChangeLog.warn("BLOCK* internalReleaseLease: "
+            + "Removed empty last block and closed file.");
+        return true;
+      }
       // start recovery of the last block for this file
       long blockRecoveryId = nextGenerationStamp(isLegacyBlock(uc));
       lease = reassignLease(lease, src, recoveryLeaseHolder, pendingFile);
