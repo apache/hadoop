@@ -142,6 +142,10 @@ Release 2.3.0 - UNRELEASED
     process same allocate request twice resulting in additional containers
     getting allocated. (Omkar Vinit Joshi via bikas)
 
+    YARN-1425. TestRMRestart fails because MockRM.waitForState(AttemptId) uses
+    current attempt instead of the attempt passed as argument (Omkar Vinit
+    Joshi via bikas)
+
 Release 2.2.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

@@ -487,6 +487,8 @@ public class TestRMRestart {
     Assert.assertEquals(2, rmApp.getAppAttempts().size());
     // am1 attempt should be in FAILED state where as am2 attempt should be in
     // LAUNCHED state
+    rm2.waitForState(am1.getApplicationAttemptId(), RMAppAttemptState.FAILED);
+    rm2.waitForState(am2.getApplicationAttemptId(), RMAppAttemptState.LAUNCHED);
     Assert.assertEquals(RMAppAttemptState.FAILED,
         rmApp.getAppAttempts().get(am1.getApplicationAttemptId())
             .getAppAttemptState());
@@ -524,14 +526,17 @@ public class TestRMRestart {
     Assert.assertEquals(3, rmApp.getAppAttempts().size());
     // am1 and am2 attempts should be in FAILED state where as am3 should be
     // in LAUNCHED state
+    rm3.waitForState(am1.getApplicationAttemptId(), RMAppAttemptState.FAILED);
+    rm3.waitForState(am2.getApplicationAttemptId(), RMAppAttemptState.FAILED);
+    ApplicationAttemptId latestAppAttemptId =
+        rmApp.getCurrentAppAttempt().getAppAttemptId();
+    rm3.waitForState(latestAppAttemptId, RMAppAttemptState.LAUNCHED);
     Assert.assertEquals(RMAppAttemptState.FAILED,
         rmApp.getAppAttempts().get(am1.getApplicationAttemptId())
             .getAppAttemptState());
     Assert.assertEquals(RMAppAttemptState.FAILED,
         rmApp.getAppAttempts().get(am2.getApplicationAttemptId())
             .getAppAttemptState());
-    ApplicationAttemptId latestAppAttemptId =
-        rmApp.getCurrentAppAttempt().getAppAttemptId();
     Assert.assertEquals(RMAppAttemptState.LAUNCHED,rmApp.getAppAttempts()
         .get(latestAppAttemptId).getAppAttemptState());
     
@@ -562,6 +567,7 @@ public class TestRMRestart {
     rm4.waitForState(rmApp.getApplicationId(), RMAppState.ACCEPTED);
     Assert.assertEquals(4, rmApp.getAppAttempts().size());
     Assert.assertEquals(RMAppState.ACCEPTED, rmApp.getState());
+    rm4.waitForState(latestAppAttemptId, RMAppAttemptState.SCHEDULED);
     Assert.assertEquals(RMAppAttemptState.SCHEDULED, rmApp.getAppAttempts()
         .get(latestAppAttemptId).getAppAttemptState());
     
@@ -571,6 +577,8 @@ public class TestRMRestart {
     rm4.waitForState(app2.getApplicationId(), RMAppState.ACCEPTED);
     Assert.assertEquals(RMAppState.ACCEPTED, app2.getState());
     Assert.assertEquals(1, app2.getAppAttempts().size());
+    rm4.waitForState(app2.getCurrentAppAttempt().getAppAttemptId(),
+        RMAppAttemptState.SCHEDULED);
     Assert.assertEquals(RMAppAttemptState.SCHEDULED, app2
         .getCurrentAppAttempt().getAppAttemptState());
 
