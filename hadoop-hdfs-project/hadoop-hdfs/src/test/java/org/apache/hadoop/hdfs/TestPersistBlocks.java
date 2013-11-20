@@ -193,7 +193,7 @@ public class TestPersistBlocks {
       // This would mean that blocks were successfully persisted to the log
       FileStatus status = fs.getFileStatus(FILE_PATH);
       assertTrue("Length incorrect: " + status.getLen(),
-          status.getLen() != len - BLOCK_SIZE);
+          status.getLen() == len - BLOCK_SIZE);
 
       // Verify the data showed up from before restart, sans abandoned block.
       FSDataInputStream readStream = fs.open(FILE_PATH);
