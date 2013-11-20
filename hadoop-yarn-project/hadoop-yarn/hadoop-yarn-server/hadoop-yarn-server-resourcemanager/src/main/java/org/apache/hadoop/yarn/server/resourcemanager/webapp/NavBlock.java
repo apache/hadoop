@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.DIV;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.LI;
@@ -38,7 +38,7 @@ public class NavBlock extends HtmlBlock {
           li().a(url("apps"), "Applications").
             ul();
     subAppsList.li()._();
-    for (RMAppState state : RMAppState.values()) {
+    for (YarnApplicationState state : YarnApplicationState.values()) {
       subAppsList.
               li().a(url("apps", state.toString()), state.toString())._();
     }
