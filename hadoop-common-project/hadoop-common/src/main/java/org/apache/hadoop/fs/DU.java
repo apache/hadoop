@@ -47,17 +47,32 @@ public class DU extends Shell {
    * @throws IOException if we fail to refresh the disk usage
    */
   public DU(File path, long interval) throws IOException {
+    this(path, interval, -1L);
+  }
+  
+  /**
+   * Keeps track of disk usage.
+   * @param path the path to check disk usage in
+   * @param interval refresh the disk usage at this interval
+   * @param initialUsed use this value until next refresh
+   * @throws IOException if we fail to refresh the disk usage
+   */
+  public DU(File path, long interval, long initialUsed) throws IOException { 
     super(0);
-    
+
     //we set the Shell interval to 0 so it will always run our command
     //and use this one to set the thread sleep interval
     this.refreshInterval = interval;
     this.dirPath = path.getCanonicalPath();
-    
-    //populate the used variable
-    run();
+
+    //populate the used variable if the initial value is not specified.
+    if (initialUsed < 0) {
+      run();
+    } else {
+      this.used.set(initialUsed);
+    }
   }
-  
+
   /**
    * Keeps track of disk usage.
    * @param path the path to check disk usage in
@@ -65,9 +80,23 @@ public class DU extends Shell {
    * @throws IOException if we fail to refresh the disk usage
    */
   public DU(File path, Configuration conf) throws IOException {
-    this(path, conf.getLong(CommonConfigurationKeys.FS_DU_INTERVAL_KEY,
-                CommonConfigurationKeys.FS_DU_INTERVAL_DEFAULT));
+    this(path, conf, -1L);
   }
+
+  /**
+   * Keeps track of disk usage.
+   * @param path the path to check disk usage in
+   * @param conf configuration object
+   * @param initialUsed use it until the next refresh.
+   * @throws IOException if we fail to refresh the disk usage
+   */
+  public DU(File path, Configuration conf, long initialUsed)
+      throws IOException {
+    this(path, conf.getLong(CommonConfigurationKeys.FS_DU_INTERVAL_KEY,
+                CommonConfigurationKeys.FS_DU_INTERVAL_DEFAULT), initialUsed);
+  }
+    
+  
 
   /**
    * This thread refreshes the "used" variable.
