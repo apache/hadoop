@@ -38,6 +38,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpServer;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobContext;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
@@ -160,8 +161,13 @@ public class TestJobEndNotifier extends JobEndNotifier {
   //Check retries happen as intended
   @Test
   public void testNotifyRetries() throws InterruptedException {
-    Configuration conf = new Configuration();
+    JobConf conf = new JobConf();
+    conf.set(MRJobConfig.MR_JOB_END_RETRY_ATTEMPTS, "0");
+    conf.set(MRJobConfig.MR_JOB_END_NOTIFICATION_MAX_ATTEMPTS, "1");
     conf.set(MRJobConfig.MR_JOB_END_NOTIFICATION_URL, "http://nonexistent");
+    conf.set(MRJobConfig.MR_JOB_END_RETRY_INTERVAL, "5000");
+    conf.set(MRJobConfig.MR_JOB_END_NOTIFICATION_MAX_RETRY_INTERVAL, "5000");
+
     JobReport jobReport = mock(JobReport.class);
  
     long startTime = System.currentTimeMillis();
@@ -170,7 +176,7 @@ public class TestJobEndNotifier extends JobEndNotifier {
     this.notify(jobReport);
     long endTime = System.currentTimeMillis();
     Assert.assertEquals("Only 1 try was expected but was : "
-      + this.notificationCount, this.notificationCount, 1);
+      + this.notificationCount, 1, this.notificationCount);
     Assert.assertTrue("Should have taken more than 5 seconds it took "
       + (endTime - startTime), endTime - startTime > 5000);
 
@@ -185,7 +191,7 @@ public class TestJobEndNotifier extends JobEndNotifier {
     this.notify(jobReport);
     endTime = System.currentTimeMillis();
     Assert.assertEquals("Only 3 retries were expected but was : "
-      + this.notificationCount, this.notificationCount, 3);
+      + this.notificationCount, 3, this.notificationCount);
     Assert.assertTrue("Should have taken more than 9 seconds it took "
       + (endTime - startTime), endTime - startTime > 9000);
 
@@ -198,14 +204,14 @@ public class TestJobEndNotifier extends JobEndNotifier {
     MRApp app = spy(new MRAppWithCustomContainerAllocator(
         2, 2, true, this.getClass().getName(), true, 2, true));
     doNothing().when(app).sysexit();
-    Configuration conf = new Configuration();
+    JobConf conf = new JobConf();
     conf.set(JobContext.MR_JOB_END_NOTIFICATION_URL,
         JobEndServlet.baseUrl + "jobend?jobid=$jobId&status=$jobStatus");
     JobImpl job = (JobImpl)app.submit(conf);
     app.waitForInternalState(job, JobStateInternal.SUCCEEDED);
     // Unregistration succeeds: successfullyUnregistered is set
     app.shutDownJob();
-    Assert.assertEquals(true, app.isLastAMRetry());
+    Assert.assertTrue(app.isLastAMRetry());
     Assert.assertEquals(1, JobEndServlet.calledTimes);
     Assert.assertEquals("jobid=" + job.getID() + "&status=SUCCEEDED",
         JobEndServlet.requestUri.getQuery());
@@ -221,7 +227,7 @@ public class TestJobEndNotifier extends JobEndNotifier {
     MRApp app = spy(new MRAppWithCustomContainerAllocator(2, 2, false,
         this.getClass().getName(), true, 1, false));
     doNothing().when(app).sysexit();
-    Configuration conf = new Configuration();
+    JobConf conf = new JobConf();
     conf.set(JobContext.MR_JOB_END_NOTIFICATION_URL,
         JobEndServlet.baseUrl + "jobend?jobid=$jobId&status=$jobStatus");
     JobImpl job = (JobImpl)app.submit(conf);
@@ -234,10 +240,10 @@ public class TestJobEndNotifier extends JobEndNotifier {
     app.shutDownJob();
     // Not the last AM attempt. So user should that the job is still running.
     app.waitForState(job, JobState.RUNNING);
-    Assert.assertEquals(false, app.isLastAMRetry());
+    Assert.assertFalse(app.isLastAMRetry());
     Assert.assertEquals(0, JobEndServlet.calledTimes);
-    Assert.assertEquals(null, JobEndServlet.requestUri);
-    Assert.assertEquals(null, JobEndServlet.foundJobState);
+    Assert.assertNull(JobEndServlet.requestUri);
+    Assert.assertNull(JobEndServlet.foundJobState);
     server.stop();
   }
 
@@ -248,7 +254,7 @@ public class TestJobEndNotifier extends JobEndNotifier {
     MRApp app = spy(new MRAppWithCustomContainerAllocator(2, 2, false,
         this.getClass().getName(), true, 2, false));
     doNothing().when(app).sysexit();
-    Configuration conf = new Configuration();
+    JobConf conf = new JobConf();
     conf.set(JobContext.MR_JOB_END_NOTIFICATION_URL,
         JobEndServlet.baseUrl + "jobend?jobid=$jobId&status=$jobStatus");
     JobImpl job = (JobImpl)app.submit(conf);
@@ -259,7 +265,7 @@ public class TestJobEndNotifier extends JobEndNotifier {
     // Now shutdown. User should see FAILED state.
     // Unregistration fails: isLastAMRetry is recalculated, this is
     app.shutDownJob();
-    Assert.assertEquals(true, app.isLastAMRetry());
+    Assert.assertTrue(app.isLastAMRetry());
     Assert.assertEquals(1, JobEndServlet.calledTimes);
     Assert.assertEquals("jobid=" + job.getID() + "&status=FAILED",
         JobEndServlet.requestUri.getQuery());

@@ -86,6 +86,9 @@ Release 2.3.0 - UNRELEASED
     MAPREDUCE-5625. TestFixedLengthInputFormat fails in jdk7 environment
     (Mariappan Asokan via jeagles)
 
+    MAPREDUCE-5631. TestJobEndNotifier.testNotifyRetries fails with Should
+    have taken more than 5 seconds in jdk7 (Jonathan Eagles via jlowe)
+
 Release 2.2.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
