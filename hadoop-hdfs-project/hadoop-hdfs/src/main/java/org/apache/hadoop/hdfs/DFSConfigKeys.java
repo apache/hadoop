@@ -156,7 +156,7 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String  DFS_NAMENODE_REPLICATION_STREAMS_HARD_LIMIT_KEY = "dfs.namenode.replication.max-streams-hard-limit";
   public static final int     DFS_NAMENODE_REPLICATION_STREAMS_HARD_LIMIT_DEFAULT = 4;
   public static final String  DFS_WEBHDFS_ENABLED_KEY = "dfs.webhdfs.enabled";
-  public static final boolean DFS_WEBHDFS_ENABLED_DEFAULT = false;
+  public static final boolean DFS_WEBHDFS_ENABLED_DEFAULT = true;
   public static final String  DFS_PERMISSIONS_ENABLED_KEY = "dfs.permissions.enabled";
   public static final boolean DFS_PERMISSIONS_ENABLED_DEFAULT = true;
   public static final String  DFS_PERSIST_BLOCKS_KEY = "dfs.persist.blocks";

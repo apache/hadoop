@@ -1179,7 +1179,7 @@
 
 <property>
   <name>dfs.webhdfs.enabled</name>
-  <value>false</value>
+  <value>true</value>
   <description>
     Enable WebHDFS (REST API) in Namenodes and Datanodes.
   </description>

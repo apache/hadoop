@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.TestDFSClientRetries;
 import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMethods;
@@ -258,5 +259,17 @@ public class TestWebHDFS {
     } finally {
       cluster.shutdown();
     }
+  }
+
+  /**
+   * WebHdfs should be enabled by default after HDFS-5532
+   * 
+   * @throws Exception
+   */
+  @Test
+  public void testWebHdfsEnabledByDefault() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    Assert.assertTrue(conf.getBoolean(DFSConfigKeys.DFS_WEBHDFS_ENABLED_KEY,
+        false));
   }
 }

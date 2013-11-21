@@ -129,6 +129,9 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-1386. TestJMXGet fails in jdk7 (jeagles)
 
+    HDFS-5532. Enable the webhdfs by default to support new HDFS web UI. (Vinay
+    via jing9)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn)
