@@ -183,10 +183,13 @@ abstract public class FSOutputSummer extends OutputStream {
   }
 
   static byte[] int2byte(int integer, byte[] bytes) {
-    bytes[0] = (byte)((integer >>> 24) & 0xFF);
-    bytes[1] = (byte)((integer >>> 16) & 0xFF);
-    bytes[2] = (byte)((integer >>>  8) & 0xFF);
-    bytes[3] = (byte)((integer >>>  0) & 0xFF);
+    if (bytes.length != 0) {
+      bytes[0] = (byte) ((integer >>> 24) & 0xFF);
+      bytes[1] = (byte) ((integer >>> 16) & 0xFF);
+      bytes[2] = (byte) ((integer >>> 8) & 0xFF);
+      bytes[3] = (byte) ((integer >>> 0) & 0xFF);
+      return bytes;
+    }
     return bytes;
   }
 
