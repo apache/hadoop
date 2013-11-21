@@ -397,6 +397,9 @@ Trunk (Unreleased)
 
     HDFS-5513. CacheAdmin commands fail when using . as the path. (wang)
 
+    HDFS-5543. Fix narrow race condition in TestPathBasedCacheRequests
+    (cmccabe)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
