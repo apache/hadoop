@@ -30,7 +30,7 @@ import com.google.common.base.Preconditions;
  * This is an implementation class, not part of the public API.
  */
 @InterfaceAudience.Private
-public final class PathBasedCacheEntry {
+public final class CacheDirective {
   private final long entryId;
   private final String path;
   private final short replication;
@@ -39,7 +39,7 @@ public final class PathBasedCacheEntry {
   private long bytesCached;
   private long filesAffected;
 
-  public PathBasedCacheEntry(long entryId, String path,
+  public CacheDirective(long entryId, String path,
       short replication, CachePool pool) {
     Preconditions.checkArgument(entryId > 0);
     this.entryId = entryId;
@@ -70,16 +70,25 @@ public final class PathBasedCacheEntry {
     return replication;
   }
 
-  public PathBasedCacheDirective toDirective() {
-    return new PathBasedCacheDirective.Builder().
+  public CacheDirectiveInfo toDirective() {
+    return new CacheDirectiveInfo.Builder().
         setId(entryId).
         setPath(new Path(path)).
         setReplication(replication).
         setPool(pool.getPoolName()).
+        build();
+  }
+
+  public CacheDirectiveStats toStats() {
+    return new CacheDirectiveStats.Builder().
         setBytesNeeded(bytesNeeded).
         setBytesCached(bytesCached).
         setFilesAffected(filesAffected).
         build();
+  }
+
+  public CacheDirectiveEntry toEntry() {
+    return new CacheDirectiveEntry(toDirective(), toStats());
   }
   
   @Override
@@ -103,7 +112,7 @@ public final class PathBasedCacheEntry {
     if (o.getClass() != this.getClass()) {
       return false;
     }
-    PathBasedCacheEntry other = (PathBasedCacheEntry)o;
+    CacheDirective other = (CacheDirective)o;
     return entryId == other.entryId;
   }
 

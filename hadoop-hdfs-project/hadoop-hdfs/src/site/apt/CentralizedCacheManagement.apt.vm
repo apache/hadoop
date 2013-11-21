@@ -118,7 +118,7 @@ Centralized Cache Management in HDFS
 
   Usage: <<<hdfs cacheadmin -addDirective -path <path> -replication <replication> -pool <pool-name> >>>
 
-  Add a new PathBasedCache directive.
+  Add a new cache directive.
 
 *--+--+
 \<path\> | A path to cache. The path can be a directory or a file.
@@ -135,7 +135,7 @@ Centralized Cache Management in HDFS
   Remove a cache directive.
 
 *--+--+
-\<id\> | The id of the cache directive to remove.  You must have write permission on the pool of the directive in order to remove it.  To see a list of PathBasedCache directive IDs, use the -listDirectives command.
+\<id\> | The id of the cache directive to remove.  You must have write permission on the pool of the directive in order to remove it.  To see a list of cachedirective IDs, use the -listDirectives command.
 *--+--+
 
 *** {removeDirectives}
@@ -152,10 +152,10 @@ Centralized Cache Management in HDFS
 
   Usage: <<<hdfs cacheadmin -listDirectives [-path <path>] [-pool <pool>] >>>
 
-  List PathBasedCache directives.
+  List cache directives.
 
 *--+--+
-\<path\> | List only PathBasedCache directives with this path. Note that if there is a PathBasedCache directive for <path> in a cache pool that we don't have read access for, it will not be listed.
+\<path\> | List only cache directives with this path. Note that if there is a cache directive for <path> in a cache pool that we don't have read access for, it will not be listed.
 *--+--+
 \<pool\> | List only path cache directives in that pool.
 *--+--+

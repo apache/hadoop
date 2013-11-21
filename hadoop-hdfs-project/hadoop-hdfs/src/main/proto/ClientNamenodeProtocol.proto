@@ -363,49 +363,53 @@ message IsFileClosedResponseProto {
   required bool result = 1;
 }
 
-message PathBasedCacheDirectiveInfoProto {
+message CacheDirectiveInfoProto {
   optional int64 id = 1;
   optional string path = 2;
   optional uint32 replication = 3;
   optional string pool = 4;
-  optional int64 bytesNeeded = 5;
-  optional int64 bytesCached = 6;
-  optional int64 filesAffected = 7;
 }
 
-message AddPathBasedCacheDirectiveRequestProto {
-  required PathBasedCacheDirectiveInfoProto info = 1;
+message CacheDirectiveStatsProto {
+  required int64 bytesNeeded = 1;
+  required int64 bytesCached = 2;
+  required int64 filesAffected = 3;
 }
 
-message AddPathBasedCacheDirectiveResponseProto {
+message AddCacheDirectiveRequestProto {
+  required CacheDirectiveInfoProto info = 1;
+}
+
+message AddCacheDirectiveResponseProto {
   required int64 id = 1;
 }
 
-message ModifyPathBasedCacheDirectiveRequestProto {
-  required PathBasedCacheDirectiveInfoProto info = 1;
+message ModifyCacheDirectiveRequestProto {
+  required CacheDirectiveInfoProto info = 1;
 }
 
-message ModifyPathBasedCacheDirectiveResponseProto {
+message ModifyCacheDirectiveResponseProto {
 }
 
-message RemovePathBasedCacheDirectiveRequestProto {
+message RemoveCacheDirectiveRequestProto {
   required int64 id = 1;
 }
 
-message RemovePathBasedCacheDirectiveResponseProto {
+message RemoveCacheDirectiveResponseProto {
 }
 
-message ListPathBasedCacheDirectivesRequestProto {
+message ListCacheDirectivesRequestProto {
   required int64 prevId = 1;
-  required PathBasedCacheDirectiveInfoProto filter = 2;
+  required CacheDirectiveInfoProto filter = 2;
 }
 
-message ListPathBasedCacheDirectivesElementProto {
-  required PathBasedCacheDirectiveInfoProto info = 1;
+message CacheDirectiveEntryProto {
+  required CacheDirectiveInfoProto info = 1;
+  required CacheDirectiveStatsProto stats = 2;
 }
 
-message ListPathBasedCacheDirectivesResponseProto {
-  repeated ListPathBasedCacheDirectivesElementProto elements = 1;
+message ListCacheDirectivesResponseProto {
+  repeated CacheDirectiveEntryProto elements = 1;
   required bool hasMore = 2;
 }
 
@@ -632,14 +636,14 @@ service ClientNamenodeProtocol {
       returns(ListCorruptFileBlocksResponseProto);
   rpc metaSave(MetaSaveRequestProto) returns(MetaSaveResponseProto);
   rpc getFileInfo(GetFileInfoRequestProto) returns(GetFileInfoResponseProto);
-  rpc addPathBasedCacheDirective(AddPathBasedCacheDirectiveRequestProto)
-      returns (AddPathBasedCacheDirectiveResponseProto);
-  rpc modifyPathBasedCacheDirective(ModifyPathBasedCacheDirectiveRequestProto)
-      returns (ModifyPathBasedCacheDirectiveResponseProto);
-  rpc removePathBasedCacheDirective(RemovePathBasedCacheDirectiveRequestProto)
-      returns (RemovePathBasedCacheDirectiveResponseProto);
-  rpc listPathBasedCacheDirectives(ListPathBasedCacheDirectivesRequestProto)
-      returns (ListPathBasedCacheDirectivesResponseProto);
+  rpc addCacheDirective(AddCacheDirectiveRequestProto)
+      returns (AddCacheDirectiveResponseProto);
+  rpc modifyCacheDirective(ModifyCacheDirectiveRequestProto)
+      returns (ModifyCacheDirectiveResponseProto);
+  rpc removeCacheDirective(RemoveCacheDirectiveRequestProto)
+      returns (RemoveCacheDirectiveResponseProto);
+  rpc listCacheDirectives(ListCacheDirectivesRequestProto)
+      returns (ListCacheDirectivesResponseProto);
   rpc addCachePool(AddCachePoolRequestProto)
       returns(AddCachePoolResponseProto);
   rpc modifyCachePool(ModifyCachePoolRequestProto)

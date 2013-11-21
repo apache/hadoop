@@ -28,27 +28,23 @@ import org.apache.hadoop.fs.Path;
  */
 @InterfaceStability.Evolving
 @InterfaceAudience.Public
-public class PathBasedCacheDirective {
+public class CacheDirectiveInfo {
   /**
-   * A builder for creating new PathBasedCacheDirective instances.
+   * A builder for creating new CacheDirectiveInfo instances.
    */
   public static class Builder {
     private Long id;
     private Path path;
     private Short replication;
     private String pool;
-    private Long bytesNeeded;
-    private Long bytesCached;
-    private Long filesAffected;
 
     /**
-     * Builds a new PathBasedCacheDirective populated with the set properties.
+     * Builds a new CacheDirectiveInfo populated with the set properties.
      * 
-     * @return New PathBasedCacheDirective.
+     * @return New CacheDirectiveInfo.
      */
-    public PathBasedCacheDirective build() {
-      return new PathBasedCacheDirective(id, path, replication, pool,
-                    bytesNeeded, bytesCached, filesAffected);
+    public CacheDirectiveInfo build() {
+      return new CacheDirectiveInfo(id, path, replication, pool);
     }
 
     /**
@@ -59,16 +55,13 @@ public class PathBasedCacheDirective {
 
     /**
      * Creates a builder with all elements set to the same values as the
-     * given PathBasedCacheDirective.
+     * given CacheDirectiveInfo.
      */
-    public Builder(PathBasedCacheDirective directive) {
+    public Builder(CacheDirectiveInfo directive) {
       this.id = directive.getId();
       this.path = directive.getPath();
       this.replication = directive.getReplication();
       this.pool = directive.getPool();
-      this.bytesNeeded = directive.bytesNeeded;
-      this.bytesCached = directive.bytesCached;
-      this.filesAffected = directive.filesAffected;
     }
 
     /**
@@ -105,39 +98,6 @@ public class PathBasedCacheDirective {
     }
 
     /**
-     * Sets the bytes needed by this directive.
-     * 
-     * @param bytesNeeded The bytes needed.
-     * @return This builder, for call chaining.
-     */
-    public Builder setBytesNeeded(Long bytesNeeded) {
-      this.bytesNeeded = bytesNeeded;
-      return this;
-    }
-
-    /**
-     * Sets the bytes cached by this directive.
-     * 
-     * @param bytesCached The bytes cached.
-     * @return This builder, for call chaining.
-     */
-    public Builder setBytesCached(Long bytesCached) {
-      this.bytesCached = bytesCached;
-      return this;
-    }
-
-    /**
-     * Sets the files affected by this directive.
-     * 
-     * @param filesAffected The files affected.
-     * @return This builder, for call chaining.
-     */
-    public Builder setFilesAffected(Long filesAffected) {
-      this.filesAffected = filesAffected;
-      return this;
-    }
-    
-    /**
      * Sets the pool used in this request.
      * 
      * @param pool The pool used in this request.
@@ -153,19 +113,12 @@ public class PathBasedCacheDirective {
   private final Path path;
   private final Short replication;
   private final String pool;
-  private final Long bytesNeeded;
-  private final Long bytesCached;
-  private final Long filesAffected;
 
-  PathBasedCacheDirective(Long id, Path path, Short replication, String pool,
-      Long bytesNeeded, Long bytesCached, Long filesAffected) {
+  CacheDirectiveInfo(Long id, Path path, Short replication, String pool) {
     this.id = id;
     this.path = path;
     this.replication = replication;
     this.pool = pool;
-    this.bytesNeeded = bytesNeeded;
-    this.bytesCached = bytesCached;
-    this.filesAffected = filesAffected;
   }
 
   /**
@@ -196,27 +149,6 @@ public class PathBasedCacheDirective {
     return pool;
   }
   
-  /**
-   * @return The bytes needed.
-   */
-  public Long getBytesNeeded() {
-    return bytesNeeded;
-  }
-
-  /**
-   * @return The bytes cached.
-   */
-  public Long getBytesCached() {
-    return bytesCached;
-  }
-
-  /**
-   * @return The files affected.
-   */
-  public Long getFilesAffected() {
-    return filesAffected;
-  }
-
   @Override
   public boolean equals(Object o) {
     if (o == null) {
@@ -225,7 +157,7 @@ public class PathBasedCacheDirective {
     if (getClass() != o.getClass()) {
       return false;
     }
-    PathBasedCacheDirective other = (PathBasedCacheDirective)o;
+    CacheDirectiveInfo other = (CacheDirectiveInfo)o;
     return new EqualsBuilder().append(getId(), other.getId()).
         append(getPath(), other.getPath()).
         append(getReplication(), other.getReplication()).
@@ -261,18 +193,6 @@ public class PathBasedCacheDirective {
     }
     if (pool != null) {
       builder.append(prefix).append("pool: ").append(pool);
-      prefix = ",";
-    }
-    if (bytesNeeded != null) {
-      builder.append(prefix).append("bytesNeeded: ").append(bytesNeeded);
-      prefix = ",";
-    }
-    if (bytesCached != null) {
-      builder.append(prefix).append("bytesCached: ").append(bytesCached);
-      prefix = ",";
-    }
-    if (filesAffected != null) {
-      builder.append(prefix).append("filesAffected: ").append(filesAffected);
       prefix = ",";
     }
     builder.append("}");

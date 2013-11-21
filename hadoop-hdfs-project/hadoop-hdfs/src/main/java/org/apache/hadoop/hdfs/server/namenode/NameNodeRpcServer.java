@@ -61,7 +61,8 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HDFSPolicyProvider;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
-import org.apache.hadoop.hdfs.protocol.PathBasedCacheDirective;
+import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
+import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -1233,52 +1234,52 @@ class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override
-  public long addPathBasedCacheDirective(
-      PathBasedCacheDirective path) throws IOException {
-    return namesystem.addPathBasedCacheDirective(path);
+  public long addCacheDirective(
+      CacheDirectiveInfo path) throws IOException {
+    return namesystem.addCacheDirective(path);
   }
 
   @Override
-  public void modifyPathBasedCacheDirective(
-      PathBasedCacheDirective directive) throws IOException {
-    namesystem.modifyPathBasedCacheDirective(directive);
+  public void modifyCacheDirective(
+      CacheDirectiveInfo directive) throws IOException {
+    namesystem.modifyCacheDirective(directive);
   }
 
   @Override
-  public void removePathBasedCacheDirective(long id) throws IOException {
-    namesystem.removePathBasedCacheDirective(id);
+  public void removeCacheDirective(long id) throws IOException {
+    namesystem.removeCacheDirective(id);
   }
 
-  private class ServerSidePathBasedCacheEntriesIterator
-      extends BatchedRemoteIterator<Long, PathBasedCacheDirective> {
+  private class ServerSideCacheEntriesIterator 
+      extends BatchedRemoteIterator<Long, CacheDirectiveEntry> {
 
-    private final PathBasedCacheDirective filter;
+    private final CacheDirectiveInfo filter;
     
-    public ServerSidePathBasedCacheEntriesIterator(Long firstKey, 
-        PathBasedCacheDirective filter) {
+    public ServerSideCacheEntriesIterator (Long firstKey, 
+        CacheDirectiveInfo filter) {
       super(firstKey);
       this.filter = filter;
     }
 
     @Override
-    public BatchedEntries<PathBasedCacheDirective> makeRequest(
+    public BatchedEntries<CacheDirectiveEntry> makeRequest(
         Long nextKey) throws IOException {
-      return namesystem.listPathBasedCacheDirectives(nextKey, filter);
+      return namesystem.listCacheDirectives(nextKey, filter);
     }
 
     @Override
-    public Long elementToPrevKey(PathBasedCacheDirective entry) {
-      return entry.getId();
+    public Long elementToPrevKey(CacheDirectiveEntry entry) {
+      return entry.getInfo().getId();
     }
   }
   
   @Override
-  public RemoteIterator<PathBasedCacheDirective> listPathBasedCacheDirectives(long prevId,
-      PathBasedCacheDirective filter) throws IOException {
+  public RemoteIterator<CacheDirectiveEntry> listCacheDirectives(long prevId,
+      CacheDirectiveInfo filter) throws IOException {
     if (filter == null) {
-      filter = new PathBasedCacheDirective.Builder().build();
+      filter = new CacheDirectiveInfo.Builder().build();
     }
-    return new ServerSidePathBasedCacheEntriesIterator(prevId, filter);
+    return new ServerSideCacheEntriesIterator(prevId, filter);
   }
 
   @Override

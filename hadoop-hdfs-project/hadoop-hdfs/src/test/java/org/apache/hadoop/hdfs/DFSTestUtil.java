@@ -998,20 +998,20 @@ public class DFSTestUtil {
     // OP_MODIFY_CACHE_POOL
     filesystem.modifyCachePool(new CachePoolInfo("pool1").setWeight(99));
     // OP_ADD_PATH_BASED_CACHE_DIRECTIVE
-    long id = filesystem.addPathBasedCacheDirective(
-        new PathBasedCacheDirective.Builder().
+    long id = filesystem.addCacheDirective(
+        new CacheDirectiveInfo.Builder().
             setPath(new Path("/path")).
             setReplication((short)1).
             setPool("pool1").
             build());
     // OP_MODIFY_PATH_BASED_CACHE_DIRECTIVE
-    filesystem.modifyPathBasedCacheDirective(
-        new PathBasedCacheDirective.Builder().
+    filesystem.modifyCacheDirective(
+        new CacheDirectiveInfo.Builder().
             setId(id).
             setReplication((short)2).
             build());
     // OP_REMOVE_PATH_BASED_CACHE_DIRECTIVE
-    filesystem.removePathBasedCacheDirective(id);
+    filesystem.removeCacheDirective(id);
     // OP_REMOVE_CACHE_POOL
     filesystem.removeCachePool("pool1");
   }

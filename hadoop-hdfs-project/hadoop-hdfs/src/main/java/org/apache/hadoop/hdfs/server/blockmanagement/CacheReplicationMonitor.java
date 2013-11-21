@@ -32,7 +32,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.protocol.PathBasedCacheEntry;
+import org.apache.hadoop.hdfs.protocol.CacheDirective;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.CachedBlocksList.Type;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.namenode.CacheManager;
@@ -197,7 +197,7 @@ public class CacheReplicationMonitor extends Thread implements Closeable {
     scannedBlocks = 0;
     namesystem.writeLock();
     try {
-      rescanPathBasedCacheEntries();
+      rescanCacheDirectives();
       rescanCachedBlockMap();
       blockManager.getDatanodeManager().resetLastCachingDirectiveSentTime();
     } finally {
@@ -206,14 +206,14 @@ public class CacheReplicationMonitor extends Thread implements Closeable {
   }
 
   /**
-   * Scan all PathBasedCacheEntries.  Use the information to figure out
+   * Scan all CacheDirectives.  Use the information to figure out
    * what cache replication factor each block should have.
    *
    * @param mark       Whether the current scan is setting or clearing the mark
    */
-  private void rescanPathBasedCacheEntries() {
+  private void rescanCacheDirectives() {
     FSDirectory fsDir = namesystem.getFSDirectory();
-    for (PathBasedCacheEntry pce : cacheManager.getEntriesById().values()) {
+    for (CacheDirective pce : cacheManager.getEntriesById().values()) {
       scannedDirectives++;
       pce.clearBytesNeeded();
       pce.clearBytesCached();
@@ -250,12 +250,12 @@ public class CacheReplicationMonitor extends Thread implements Closeable {
   }
   
   /**
-   * Apply a PathBasedCacheEntry to a file.
+   * Apply a CacheDirective to a file.
    *
-   * @param pce       The PathBasedCacheEntry to apply.
+   * @param pce       The CacheDirective to apply.
    * @param file      The file.
    */
-  private void rescanFile(PathBasedCacheEntry pce, INodeFile file) {
+  private void rescanFile(CacheDirective pce, INodeFile file) {
     pce.incrementFilesAffected();
     BlockInfo[] blockInfos = file.getBlocks();
     long cachedTotal = 0;
@@ -292,7 +292,7 @@ public class CacheReplicationMonitor extends Thread implements Closeable {
           ocblock.setReplicationAndMark(pce.getReplication(), mark);
         } else {
           // Mark already set in this scan.  Set replication to highest value in
-          // any PathBasedCacheEntry that covers this file.
+          // any CacheDirective that covers this file.
           ocblock.setReplicationAndMark((short)Math.max(
               pce.getReplication(), ocblock.getReplication()), mark);
         }

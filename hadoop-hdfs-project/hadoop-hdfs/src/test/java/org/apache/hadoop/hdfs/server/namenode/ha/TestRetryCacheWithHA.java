@@ -61,7 +61,8 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
-import org.apache.hadoop.hdfs.protocol.PathBasedCacheDirective;
+import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
+import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
@@ -736,14 +737,14 @@ public class TestRetryCacheWithHA {
     }
   }
   
-  /** addPathBasedCacheDirective */
-  class AddPathBasedCacheDirectiveOp extends AtMostOnceOp {
-    private PathBasedCacheDirective directive;
+  /** addCacheDirective */
+  class AddCacheDirectiveInfoOp extends AtMostOnceOp {
+    private CacheDirectiveInfo directive;
     private Long result;
 
-    AddPathBasedCacheDirectiveOp(DFSClient client,
-        PathBasedCacheDirective directive) {
-      super("addPathBasedCacheDirective", client);
+    AddCacheDirectiveInfoOp(DFSClient client,
+        CacheDirectiveInfo directive) {
+      super("addCacheDirective", client);
       this.directive = directive;
     }
 
@@ -754,15 +755,15 @@ public class TestRetryCacheWithHA {
 
     @Override
     void invoke() throws Exception {
-      result = client.addPathBasedCacheDirective(directive);
+      result = client.addCacheDirective(directive);
     }
 
     @Override
     boolean checkNamenodeBeforeReturn() throws Exception {
       for (int i = 0; i < CHECKTIMES; i++) {
-        RemoteIterator<PathBasedCacheDirective> iter =
-            dfs.listPathBasedCacheDirectives(
-                new PathBasedCacheDirective.Builder().
+        RemoteIterator<CacheDirectiveEntry> iter =
+            dfs.listCacheDirectives(
+                new CacheDirectiveInfo.Builder().
                     setPool(directive.getPool()).
                     setPath(directive.getPath()).
                     build());
@@ -780,15 +781,15 @@ public class TestRetryCacheWithHA {
     }
   }
 
-  /** modifyPathBasedCacheDirective */
-  class ModifyPathBasedCacheDirectiveOp extends AtMostOnceOp {
-    private final PathBasedCacheDirective directive;
+  /** modifyCacheDirective */
+  class ModifyCacheDirectiveInfoOp extends AtMostOnceOp {
+    private final CacheDirectiveInfo directive;
     private final short newReplication;
     private long id;
 
-    ModifyPathBasedCacheDirectiveOp(DFSClient client,
-        PathBasedCacheDirective directive, short newReplication) {
-      super("modifyPathBasedCacheDirective", client);
+    ModifyCacheDirectiveInfoOp(DFSClient client,
+        CacheDirectiveInfo directive, short newReplication) {
+      super("modifyCacheDirective", client);
       this.directive = directive;
       this.newReplication = newReplication;
     }
@@ -796,13 +797,13 @@ public class TestRetryCacheWithHA {
     @Override
     void prepare() throws Exception {
       dfs.addCachePool(new CachePoolInfo(directive.getPool()));
-      id = client.addPathBasedCacheDirective(directive);
+      id = client.addCacheDirective(directive);
     }
 
     @Override
     void invoke() throws Exception {
-      client.modifyPathBasedCacheDirective(
-          new PathBasedCacheDirective.Builder().
+      client.modifyCacheDirective(
+          new CacheDirectiveInfo.Builder().
               setId(id).
               setReplication(newReplication).
               build());
@@ -811,14 +812,14 @@ public class TestRetryCacheWithHA {
     @Override
     boolean checkNamenodeBeforeReturn() throws Exception {
       for (int i = 0; i < CHECKTIMES; i++) {
-        RemoteIterator<PathBasedCacheDirective> iter =
-            dfs.listPathBasedCacheDirectives(
-                new PathBasedCacheDirective.Builder().
+        RemoteIterator<CacheDirectiveEntry> iter =
+            dfs.listCacheDirectives(
+                new CacheDirectiveInfo.Builder().
                     setPool(directive.getPool()).
                     setPath(directive.getPath()).
                     build());
         while (iter.hasNext()) {
-          PathBasedCacheDirective result = iter.next();
+          CacheDirectiveInfo result = iter.next().getInfo();
           if ((result.getId() == id) &&
               (result.getReplication().shortValue() == newReplication)) {
             return true;
@@ -835,15 +836,15 @@ public class TestRetryCacheWithHA {
     }
   }
 
-  /** removePathBasedCacheDirective */
-  class RemovePathBasedCacheDirectiveOp extends AtMostOnceOp {
-    private PathBasedCacheDirective directive;
+  /** removeCacheDirective */
+  class RemoveCacheDirectiveInfoOp extends AtMostOnceOp {
+    private CacheDirectiveInfo directive;
     private long id;
 
-    RemovePathBasedCacheDirectiveOp(DFSClient client, String pool,
+    RemoveCacheDirectiveInfoOp(DFSClient client, String pool,
         String path) {
-      super("removePathBasedCacheDirective", client);
-      this.directive = new PathBasedCacheDirective.Builder().
+      super("removeCacheDirective", client);
+      this.directive = new CacheDirectiveInfo.Builder().
           setPool(pool).
           setPath(new Path(path)).
           build();
@@ -852,20 +853,20 @@ public class TestRetryCacheWithHA {
     @Override
     void prepare() throws Exception {
       dfs.addCachePool(new CachePoolInfo(directive.getPool()));
-      id = dfs.addPathBasedCacheDirective(directive);
+      id = dfs.addCacheDirective(directive);
     }
 
     @Override
     void invoke() throws Exception {
-      client.removePathBasedCacheDirective(id);
+      client.removeCacheDirective(id);
     }
 
     @Override
     boolean checkNamenodeBeforeReturn() throws Exception {
       for (int i = 0; i < CHECKTIMES; i++) {
-        RemoteIterator<PathBasedCacheDirective> iter =
-            dfs.listPathBasedCacheDirectives(
-                new PathBasedCacheDirective.Builder().
+        RemoteIterator<CacheDirectiveEntry> iter =
+            dfs.listCacheDirectives(
+                new CacheDirectiveInfo.Builder().
                   setPool(directive.getPool()).
                   setPath(directive.getPath()).
                   build());
@@ -1071,10 +1072,10 @@ public class TestRetryCacheWithHA {
   }
   
   @Test (timeout=60000)
-  public void testAddPathBasedCacheDirective() throws Exception {
+  public void testAddCacheDirectiveInfo() throws Exception {
     DFSClient client = genClientWithDummyHandler();
-    AtMostOnceOp op = new AddPathBasedCacheDirectiveOp(client, 
-        new PathBasedCacheDirective.Builder().
+    AtMostOnceOp op = new AddCacheDirectiveInfoOp(client, 
+        new CacheDirectiveInfo.Builder().
             setPool("pool").
             setPath(new Path("/path")).
             build());
@@ -1082,10 +1083,10 @@ public class TestRetryCacheWithHA {
   }
 
   @Test (timeout=60000)
-  public void testModifyPathBasedCacheDirective() throws Exception {
+  public void testModifyCacheDirectiveInfo() throws Exception {
     DFSClient client = genClientWithDummyHandler();
-    AtMostOnceOp op = new ModifyPathBasedCacheDirectiveOp(client, 
-        new PathBasedCacheDirective.Builder().
+    AtMostOnceOp op = new ModifyCacheDirectiveInfoOp(client, 
+        new CacheDirectiveInfo.Builder().
             setPool("pool").
             setPath(new Path("/path")).
             setReplication((short)1).build(),
@@ -1094,9 +1095,9 @@ public class TestRetryCacheWithHA {
   }
 
   @Test (timeout=60000)
-  public void testRemovePathBasedCacheDescriptor() throws Exception {
+  public void testRemoveCacheDescriptor() throws Exception {
     DFSClient client = genClientWithDummyHandler();
-    AtMostOnceOp op = new RemovePathBasedCacheDirectiveOp(client, "pool",
+    AtMostOnceOp op = new RemoveCacheDirectiveInfoOp(client, "pool",
         "/path");
     testClientRetryWithFailover(op);
   }

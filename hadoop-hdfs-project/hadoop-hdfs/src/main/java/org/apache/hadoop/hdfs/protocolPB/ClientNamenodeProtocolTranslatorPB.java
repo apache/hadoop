@@ -32,11 +32,11 @@ import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
+import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
@@ -51,14 +51,13 @@ import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
-import org.apache.hadoop.hdfs.protocol.PathBasedCacheDirective;
+import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AbandonBlockRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AddBlockRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AddCachePoolRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AddPathBasedCacheDirectiveRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AddPathBasedCacheDirectiveResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AddCacheDirectiveRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AllowSnapshotRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AppendRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AppendResponseProto;
@@ -100,16 +99,16 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListCa
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListCachePoolsResponseElementProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListCachePoolsResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListCorruptFileBlocksRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListPathBasedCacheDirectivesRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListPathBasedCacheDirectivesResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListCacheDirectivesRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListCacheDirectivesResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.MetaSaveRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.MkdirsRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ModifyCachePoolRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ModifyPathBasedCacheDirectiveRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ModifyCacheDirectiveRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RecoverLeaseRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RefreshNodesRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RemoveCachePoolRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RemovePathBasedCacheDirectiveRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RemoveCacheDirectiveRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.Rename2RequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RenameRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RenameSnapshotRequestProto;
@@ -146,7 +145,6 @@ import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenRespons
 import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenRequestProto;
 import org.apache.hadoop.security.token.Token;
 
-import com.google.common.primitives.Shorts;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.ServiceException;
 
@@ -1003,11 +1001,11 @@ public class ClientNamenodeProtocolTranslatorPB implements
   }
 
   @Override
-  public long addPathBasedCacheDirective(
-      PathBasedCacheDirective directive) throws IOException {
+  public long addCacheDirective(
+      CacheDirectiveInfo directive) throws IOException {
     try {
-      return rpcProxy.addPathBasedCacheDirective(null, 
-              AddPathBasedCacheDirectiveRequestProto.newBuilder().
+      return rpcProxy.addCacheDirective(null, 
+              AddCacheDirectiveRequestProto.newBuilder().
                   setInfo(PBHelper.convert(directive)).build()).getId();
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
@@ -1015,11 +1013,11 @@ public class ClientNamenodeProtocolTranslatorPB implements
   }
 
   @Override
-  public void modifyPathBasedCacheDirective(
-      PathBasedCacheDirective directive) throws IOException {
+  public void modifyCacheDirective(
+      CacheDirectiveInfo directive) throws IOException {
     try {
-      rpcProxy.modifyPathBasedCacheDirective(null,
-          ModifyPathBasedCacheDirectiveRequestProto.newBuilder().
+      rpcProxy.modifyCacheDirective(null,
+          ModifyCacheDirectiveRequestProto.newBuilder().
               setInfo(PBHelper.convert(directive)).build());
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
@@ -1027,29 +1025,29 @@ public class ClientNamenodeProtocolTranslatorPB implements
   }
 
   @Override
-  public void removePathBasedCacheDirective(long id)
+  public void removeCacheDirective(long id)
       throws IOException {
     try {
-      rpcProxy.removePathBasedCacheDirective(null,
-          RemovePathBasedCacheDirectiveRequestProto.newBuilder().
+      rpcProxy.removeCacheDirective(null,
+          RemoveCacheDirectiveRequestProto.newBuilder().
               setId(id).build());
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
   }
 
-  private static class BatchedPathBasedCacheEntries
-      implements BatchedEntries<PathBasedCacheDirective> {
-    private ListPathBasedCacheDirectivesResponseProto response;
+  private static class BatchedCacheEntries
+      implements BatchedEntries<CacheDirectiveEntry> {
+    private ListCacheDirectivesResponseProto response;
 
-    BatchedPathBasedCacheEntries(
-        ListPathBasedCacheDirectivesResponseProto response) {
+    BatchedCacheEntries(
+        ListCacheDirectivesResponseProto response) {
       this.response = response;
     }
 
     @Override
-    public PathBasedCacheDirective get(int i) {
-      return PBHelper.convert(response.getElements(i).getInfo());
+    public CacheDirectiveEntry get(int i) {
+      return PBHelper.convert(response.getElements(i));
     }
 
     @Override
@@ -1063,46 +1061,46 @@ public class ClientNamenodeProtocolTranslatorPB implements
     }
   }
 
-  private class PathBasedCacheEntriesIterator
-      extends BatchedRemoteIterator<Long, PathBasedCacheDirective> {
-    private final PathBasedCacheDirective filter;
+  private class CacheEntriesIterator
+    extends BatchedRemoteIterator<Long, CacheDirectiveEntry> {
+      private final CacheDirectiveInfo filter;
 
-    public PathBasedCacheEntriesIterator(long prevKey,
-        PathBasedCacheDirective filter) {
+    public CacheEntriesIterator(long prevKey,
+        CacheDirectiveInfo filter) {
       super(prevKey);
       this.filter = filter;
     }
 
     @Override
-    public BatchedEntries<PathBasedCacheDirective> makeRequest(
+    public BatchedEntries<CacheDirectiveEntry> makeRequest(
         Long nextKey) throws IOException {
-      ListPathBasedCacheDirectivesResponseProto response;
+      ListCacheDirectivesResponseProto response;
       try {
-        response = rpcProxy.listPathBasedCacheDirectives(null,
-            ListPathBasedCacheDirectivesRequestProto.newBuilder().
+        response = rpcProxy.listCacheDirectives(null,
+            ListCacheDirectivesRequestProto.newBuilder().
                 setPrevId(nextKey).
                 setFilter(PBHelper.convert(filter)).
                 build());
       } catch (ServiceException e) {
         throw ProtobufHelper.getRemoteException(e);
       }
-      return new BatchedPathBasedCacheEntries(response);
+      return new BatchedCacheEntries(response);
     }
 
     @Override
-    public Long elementToPrevKey(PathBasedCacheDirective element) {
-      return element.getId();
+    public Long elementToPrevKey(CacheDirectiveEntry element) {
+      return element.getInfo().getId();
     }
   }
 
   @Override
-  public RemoteIterator<PathBasedCacheDirective>
-      listPathBasedCacheDirectives(long prevId,
-          PathBasedCacheDirective filter) throws IOException {
+  public RemoteIterator<CacheDirectiveEntry>
+      listCacheDirectives(long prevId,
+          CacheDirectiveInfo filter) throws IOException {
     if (filter == null) {
-      filter = new PathBasedCacheDirective.Builder().build();
+      filter = new CacheDirectiveInfo.Builder().build();
     }
-    return new PathBasedCacheEntriesIterator(prevId, filter);
+    return new CacheEntriesIterator(prevId, filter);
   }
 
   @Override
@@ -1140,11 +1138,11 @@ public class ClientNamenodeProtocolTranslatorPB implements
     }
   }
 
-  private static class BatchedPathDirectiveEntries
-      implements BatchedEntries<CachePoolInfo> {
-    private final ListCachePoolsResponseProto proto;
+  private static class BatchedCachePoolInfo
+    implements BatchedEntries<CachePoolInfo> {
+      private final ListCachePoolsResponseProto proto;
     
-    public BatchedPathDirectiveEntries(ListCachePoolsResponseProto proto) {
+    public BatchedCachePoolInfo(ListCachePoolsResponseProto proto) {
       this.proto = proto;
     }
       
@@ -1176,7 +1174,7 @@ public class ClientNamenodeProtocolTranslatorPB implements
     public BatchedEntries<CachePoolInfo> makeRequest(String prevKey)
         throws IOException {
       try {
-        return new BatchedPathDirectiveEntries(
+        return new BatchedCachePoolInfo(
             rpcProxy.listCachePools(null, 
               ListCachePoolsRequestProto.newBuilder().
                 setPrevPoolName(prevKey).build()));

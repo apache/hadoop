@@ -36,12 +36,14 @@ import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.proto.HAServiceProtocolProtos;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
+import org.apache.hadoop.hdfs.protocol.CacheDirectiveStats;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.hadoop.hdfs.protocol.PathBasedCacheDirective;
+import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
@@ -56,12 +58,14 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CacheDirectiveEntryProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CacheDirectiveStatsProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CachePoolInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CreateFlagProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.DatanodeReportTypeProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsStatsResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.SafeModeActionProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.PathBasedCacheDirectiveInfoProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CacheDirectiveInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BalancerBandwidthCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockIdCommandProto;
@@ -1567,38 +1571,29 @@ public class PBHelper {
     return DataChecksum.Type.valueOf(type.getNumber());
   }
 
-  public static PathBasedCacheDirectiveInfoProto convert
-      (PathBasedCacheDirective directive) {
-    PathBasedCacheDirectiveInfoProto.Builder builder = 
-        PathBasedCacheDirectiveInfoProto.newBuilder();
-    if (directive.getId() != null) {
-      builder.setId(directive.getId());
+  public static CacheDirectiveInfoProto convert
+      (CacheDirectiveInfo info) {
+    CacheDirectiveInfoProto.Builder builder = 
+        CacheDirectiveInfoProto.newBuilder();
+    if (info.getId() != null) {
+      builder.setId(info.getId());
     }
-    if (directive.getPath() != null) {
-      builder.setPath(directive.getPath().toUri().getPath());
+    if (info.getPath() != null) {
+      builder.setPath(info.getPath().toUri().getPath());
     }
-    if (directive.getReplication() != null) {
-      builder.setReplication(directive.getReplication());
+    if (info.getReplication() != null) {
+      builder.setReplication(info.getReplication());
     }
-    if (directive.getPool() != null) {
-      builder.setPool(directive.getPool());
-    }
-    if (directive.getBytesNeeded() != null) {
-      builder.setBytesNeeded(directive.getBytesNeeded());
-    }
-    if (directive.getBytesCached() != null) {
-      builder.setBytesCached(directive.getBytesCached());
-    }
-    if (directive.getFilesAffected() != null) {
-      builder.setFilesAffected(directive.getFilesAffected());
+    if (info.getPool() != null) {
+      builder.setPool(info.getPool());
     }
     return builder.build();
   }
 
-  public static PathBasedCacheDirective convert
-      (PathBasedCacheDirectiveInfoProto proto) {
-    PathBasedCacheDirective.Builder builder =
-        new PathBasedCacheDirective.Builder();
+  public static CacheDirectiveInfo convert
+      (CacheDirectiveInfoProto proto) {
+    CacheDirectiveInfo.Builder builder =
+        new CacheDirectiveInfo.Builder();
     if (proto.hasId()) {
       builder.setId(proto.getId());
     }
@@ -1612,18 +1607,40 @@ public class PBHelper {
     if (proto.hasPool()) {
       builder.setPool(proto.getPool());
     }
-    if (proto.hasBytesNeeded()) {
-      builder.setBytesNeeded(proto.getBytesNeeded());
-    }
-    if (proto.hasBytesCached()) {
-      builder.setBytesCached(proto.getBytesCached());
-    }
-    if (proto.hasFilesAffected()) {
-      builder.setFilesAffected(proto.getFilesAffected());
-    }
     return builder.build();
   }
   
+  public static CacheDirectiveStatsProto convert(CacheDirectiveStats stats) {
+    CacheDirectiveStatsProto.Builder builder = 
+        CacheDirectiveStatsProto.newBuilder();
+    builder.setBytesNeeded(stats.getBytesNeeded());
+    builder.setBytesCached(stats.getBytesCached());
+    builder.setFilesAffected(stats.getFilesAffected());
+    return builder.build();
+  }
+  
+  public static CacheDirectiveStats convert(CacheDirectiveStatsProto proto) {
+    CacheDirectiveStats.Builder builder = new CacheDirectiveStats.Builder();
+    builder.setBytesNeeded(proto.getBytesNeeded());
+    builder.setBytesCached(proto.getBytesCached());
+    builder.setFilesAffected(proto.getFilesAffected());
+    return builder.build();
+  }
+
+  public static CacheDirectiveEntryProto convert(CacheDirectiveEntry entry) {
+    CacheDirectiveEntryProto.Builder builder = 
+        CacheDirectiveEntryProto.newBuilder();
+    builder.setInfo(PBHelper.convert(entry.getInfo()));
+    builder.setStats(PBHelper.convert(entry.getStats()));
+    return builder.build();
+  }
+  
+  public static CacheDirectiveEntry convert(CacheDirectiveEntryProto proto) {
+    CacheDirectiveInfo info = PBHelper.convert(proto.getInfo());
+    CacheDirectiveStats stats = PBHelper.convert(proto.getStats());
+    return new CacheDirectiveEntry(info, stats);
+  }
+
   public static CachePoolInfoProto convert(CachePoolInfo info) {
     CachePoolInfoProto.Builder builder = CachePoolInfoProto.newBuilder();
     builder.setPoolName(info.getPoolName());
