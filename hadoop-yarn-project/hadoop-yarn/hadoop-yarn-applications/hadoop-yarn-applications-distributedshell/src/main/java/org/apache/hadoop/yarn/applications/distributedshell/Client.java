@@ -134,7 +134,6 @@ public class Client {
 
   // Shell command to be executed 
   private String shellCommand = ""; 
-  private final String shellCommandPath = "shellCommands";
   // Location of shell script 
   private String shellScriptPath = ""; 
   // Args to be passed to the shell command
@@ -166,6 +165,7 @@ public class Client {
   // Command line options
   private Options opts;
 
+  private final String shellCommandPath = "shellCommands";
   /**
    * @param args Command line arguments 
    */
@@ -501,14 +501,12 @@ public class Client {
         IOUtils.closeQuietly(ostream);
       }
       FileStatus scFileStatus = fs.getFileStatus(shellCommandDst);
-      LocalResource scRsrc = Records.newRecord(LocalResource.class);
-      scRsrc.setType(LocalResourceType.FILE);
-      scRsrc.setVisibility(LocalResourceVisibility.APPLICATION);
-      scRsrc.setResource(ConverterUtils.getYarnUrlFromURI(shellCommandDst
-          .toUri()));
-      scRsrc.setTimestamp(scFileStatus.getModificationTime());
-      scRsrc.setSize(scFileStatus.getLen());
-      localResources.put("shellCommands", scRsrc);
+      LocalResource scRsrc =
+          LocalResource.newInstance(
+              ConverterUtils.getYarnUrlFromURI(shellCommandDst.toUri()),
+              LocalResourceType.FILE, LocalResourceVisibility.APPLICATION,
+              scFileStatus.getLen(), scFileStatus.getModificationTime());
+      localResources.put(shellCommandPath, scRsrc);
     }
     // Set local resource info into app master container launch context
     amContainer.setLocalResources(localResources);
@@ -569,9 +567,6 @@ public class Client {
     vargs.add("--num_containers " + String.valueOf(numContainers));
     vargs.add("--priority " + String.valueOf(shellCmdPriority));
 
-    if (!shellCommand.isEmpty()) {
-      vargs.add("--shell_command " + shellCommandPath + "");
-    }
     if (!shellArgs.isEmpty()) {
       vargs.add("--shell_args " + shellArgs + "");
     }

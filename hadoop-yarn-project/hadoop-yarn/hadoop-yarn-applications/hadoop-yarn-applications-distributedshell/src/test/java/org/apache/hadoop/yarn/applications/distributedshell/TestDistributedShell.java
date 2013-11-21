@@ -175,13 +175,14 @@ public class TestDistributedShell {
 
   @Test(timeout=90000)
   public void testDSShellWithCommands() throws Exception {
+
     String[] args = {
         "--jar",
         APPMASTER_JAR,
         "--num_containers",
         "2",
         "--shell_command",
-        "echo HADOOP YARN MAPREDUCE|wc -w",
+        "\"echo output_ignored;echo output_expected\"",
         "--master_memory",
         "512",
         "--master_vcores",
@@ -201,8 +202,8 @@ public class TestDistributedShell {
     boolean result = client.run();
     LOG.info("Client run completed. Result=" + result);
     List<String> expectedContent = new ArrayList<String>();
-    expectedContent.add("3");
-    verifyContainerLog(2, expectedContent);
+    expectedContent.add("output_expected");
+    verifyContainerLog(2, expectedContent, false, "");
   }
 
   @Test(timeout=90000)
@@ -368,8 +369,8 @@ public class TestDistributedShell {
     Assert.assertTrue(client.run());
   }
 
-  private void
-      verifyContainerLog(int containerNum, List<String> expectedContent) {
+  private int verifyContainerLog(int containerNum,
+      List<String> expectedContent, boolean count, String expectedWord) {
     File logFolder =
         new File(yarnCluster.getNodeManager(0).getConfig()
             .get(YarnConfiguration.NM_LOG_DIRS,
@@ -387,9 +388,10 @@ public class TestDistributedShell {
     File[] containerFiles =
         listOfFiles[currentContainerLogFileIndex].listFiles();
 
+    int numOfWords = 0;
     for (int i = 0; i < containerFiles.length; i++) {
       for (File output : containerFiles[i].listFiles()) {
-        if (output.getName().trim().equalsIgnoreCase("stdout")) {
+        if (output.getName().trim().contains("stdout")) {
           BufferedReader br = null;
           try {
 
@@ -398,9 +400,15 @@ public class TestDistributedShell {
             br = new BufferedReader(new FileReader(output));
             int numOfline = 0;
             while ((sCurrentLine = br.readLine()) != null) {
-              Assert.assertEquals("The current is" + sCurrentLine,
-                  expectedContent.get(numOfline), sCurrentLine.trim());
-              numOfline++;
+              if (count) {
+                if (sCurrentLine.contains(expectedWord)) {
+                  numOfWords++;
+                }
+              } else if (output.getName().trim().equals("stdout")){
+                Assert.assertEquals("The current is" + sCurrentLine,
+                    expectedContent.get(numOfline), sCurrentLine.trim());
+                numOfline++;
+              }
             }
 
           } catch (IOException e) {
@@ -416,6 +424,7 @@ public class TestDistributedShell {
         }
       }
     }
+    return numOfWords;
   }
 
 }
