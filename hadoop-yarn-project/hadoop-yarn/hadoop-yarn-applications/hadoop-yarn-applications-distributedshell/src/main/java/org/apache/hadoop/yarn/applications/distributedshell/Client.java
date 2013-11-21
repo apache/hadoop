@@ -32,14 +32,17 @@ import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -131,6 +134,7 @@ public class Client {
 
   // Shell command to be executed 
   private String shellCommand = ""; 
+  private final String shellCommandPath = "shellCommands";
   // Location of shell script 
   private String shellScriptPath = ""; 
   // Args to be passed to the shell command
@@ -483,6 +487,29 @@ public class Client {
       hdfsShellScriptTimestamp = shellFileStatus.getModificationTime();
     }
 
+    if (!shellCommand.isEmpty()) {
+      String shellCommandSuffix =
+          appName + "/" + appId.getId() + "/" + shellCommandPath;
+      Path shellCommandDst =
+          new Path(fs.getHomeDirectory(), shellCommandSuffix);
+      FSDataOutputStream ostream = null;
+      try {
+        ostream = FileSystem
+            .create(fs, shellCommandDst, new FsPermission((short) 0710));
+        ostream.writeUTF(shellCommand);
+      } finally {
+        IOUtils.closeQuietly(ostream);
+      }
+      FileStatus scFileStatus = fs.getFileStatus(shellCommandDst);
+      LocalResource scRsrc = Records.newRecord(LocalResource.class);
+      scRsrc.setType(LocalResourceType.FILE);
+      scRsrc.setVisibility(LocalResourceVisibility.APPLICATION);
+      scRsrc.setResource(ConverterUtils.getYarnUrlFromURI(shellCommandDst
+          .toUri()));
+      scRsrc.setTimestamp(scFileStatus.getModificationTime());
+      scRsrc.setSize(scFileStatus.getLen());
+      localResources.put("shellCommands", scRsrc);
+    }
     // Set local resource info into app master container launch context
     amContainer.setLocalResources(localResources);
 
@@ -541,8 +568,9 @@ public class Client {
     vargs.add("--container_vcores " + String.valueOf(containerVirtualCores));
     vargs.add("--num_containers " + String.valueOf(numContainers));
     vargs.add("--priority " + String.valueOf(shellCmdPriority));
+
     if (!shellCommand.isEmpty()) {
-      vargs.add("--shell_command " + shellCommand + "");
+      vargs.add("--shell_command " + shellCommandPath + "");
     }
     if (!shellArgs.isEmpty()) {
       vargs.add("--shell_args " + shellArgs + "");

@@ -96,6 +96,9 @@ Release 2.3.0 - UNRELEASED
     YARN-584. In scheduler web UIs, queues unexpand on refresh. (Harshit
     Daga via Sandy Ryza)
 
+    YARN-1303. Fixed DistributedShell to not fail with multiple commands separated
+    by a semi-colon as shell-command. (Xuan Gong via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES

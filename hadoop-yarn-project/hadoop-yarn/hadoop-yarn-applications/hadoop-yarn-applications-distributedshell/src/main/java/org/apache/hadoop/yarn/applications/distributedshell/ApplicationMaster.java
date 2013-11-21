@@ -19,8 +19,9 @@
 package org.apache.hadoop.yarn.applications.distributedshell;
 
 import java.io.BufferedReader;
+import java.io.DataInputStream;
+import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.StringReader;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -376,7 +377,16 @@ public class ApplicationMaster {
       throw new IllegalArgumentException(
           "No shell command specified to be executed by application master");
     }
-    shellCommand = cliParser.getOptionValue("shell_command");
+    String shellCommandPath = cliParser.getOptionValue("shell_command");
+    FileInputStream fs = null;
+    DataInputStream ds = null;
+    try {
+      ds = new DataInputStream(new FileInputStream(shellCommandPath));
+      shellCommand = ds.readUTF();
+    } finally {
+      org.apache.commons.io.IOUtils.closeQuietly(ds);
+      org.apache.commons.io.IOUtils.closeQuietly(fs);
+    }
 
     if (cliParser.hasOption("shell_args")) {
       shellArgs = cliParser.getOptionValue("shell_args");
