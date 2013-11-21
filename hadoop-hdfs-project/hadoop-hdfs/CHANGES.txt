@@ -311,6 +311,8 @@ Release 2.2.1 - UNRELEASED
     HDFS-5014. Process register commands with out holding BPOfferService lock. 
     (Vinaykumar B via umamahesh)
 
+    HDFS-5288. Close idle connections in portmap (Haohui Mai via brandonli)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
