@@ -204,6 +204,15 @@ Trunk (Unreleased)
 
     HDFS-5525. Inline dust templates for new Web UI. (Haohui Mai via jing9)
 
+    HDFS-5451. Add byte and file statistics to PathBasedCacheEntry.
+    (Colin Patrick McCabe via Andrew Wang)
+
+    HDFS-5531. Combine the getNsQuota() and getDsQuota() methods in INode.
+    (szetszwo)
+
+    HDFS-5473. Consistent naming of user-visible caching classes and methods
+    (cmccabe)
+
   OPTIMIZATIONS
     HDFS-5349. DNA_CACHE and DNA_UNCACHE should be by blockId only. (cmccabe)
 
@@ -411,6 +420,8 @@ Release 2.3.0 - UNRELEASED
     HDFS-5382. Implement the UI of browsing filesystems in HTML 5 page. (Haohui
     Mai via jing9)
 
+    HDFS-3987. Support webhdfs over HTTPS. (Haohui Mai via jing9)
+
   IMPROVEMENTS
 
     HDFS-5267. Remove volatile from LightWeightHashSet. (Junping Du via llu)
@@ -514,6 +525,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-5073. TestListCorruptFileBlocks fails intermittently. (Arpit Agarwal)
 
     HDFS-1386. TestJMXGet fails in jdk7 (jeagles)
+
+    HDFS-5532. Enable the webhdfs by default to support new HDFS web UI. (Vinay
+    via jing9)
 
   OPTIMIZATIONS
 

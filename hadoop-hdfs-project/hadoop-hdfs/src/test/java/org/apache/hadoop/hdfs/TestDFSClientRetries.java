@@ -73,6 +73,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NotReplicatedYetException;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
+import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.hdfs.web.WebHdfsTestUtil;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.IOUtils;
@@ -886,8 +887,8 @@ public class TestDFSClientRetries {
     try {
       cluster.waitActive();
       final DistributedFileSystem dfs = cluster.getFileSystem();
-      final FileSystem fs = isWebHDFS?
-          WebHdfsTestUtil.getWebHdfsFileSystem(conf): dfs;
+      final FileSystem fs = isWebHDFS ? WebHdfsTestUtil.getWebHdfsFileSystem(
+          conf, WebHdfsFileSystem.SCHEME) : dfs;
       final URI uri = dfs.getUri();
       assertTrue(HdfsUtils.isHealthy(uri));
 
@@ -1091,7 +1092,7 @@ public class TestDFSClientRetries {
     final UserGroupInformation ugi = UserGroupInformation.createUserForTesting(
         username, new String[]{"supergroup"});
 
-    return isWebHDFS? WebHdfsTestUtil.getWebHdfsFileSystemAs(ugi, conf)
+    return isWebHDFS? WebHdfsTestUtil.getWebHdfsFileSystemAs(ugi, conf, WebHdfsFileSystem.SCHEME)
         : DFSTestUtil.getFileSystemAs(ugi, conf);
   }
 

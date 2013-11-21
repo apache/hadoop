@@ -554,7 +554,7 @@ public abstract class FSImageTestUtil {
    * get NameSpace quota.
    */
   public static long getNSQuota(FSNamesystem ns) {
-    return ns.dir.rootDir.getNsQuota();
+    return ns.dir.rootDir.getQuotaCounts().get(Quota.NAMESPACE);
   }
   
   public static void assertNNFilesMatch(MiniDFSCluster cluster) throws Exception {

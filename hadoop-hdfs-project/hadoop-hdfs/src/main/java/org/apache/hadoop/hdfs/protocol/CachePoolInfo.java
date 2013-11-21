@@ -46,7 +46,7 @@ import org.xml.sax.SAXException;
  * This class is used in RPCs to create and modify cache pools.
  * It is serializable and can be stored in the edit log.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class CachePoolInfo {
   public static final Log LOG = LogFactory.getLog(CachePoolInfo.class);

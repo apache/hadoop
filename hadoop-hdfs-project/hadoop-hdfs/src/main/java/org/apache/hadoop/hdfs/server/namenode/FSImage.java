@@ -777,18 +777,22 @@ public class FSImage implements Closeable {
       
     if (dir.isQuotaSet()) {
       // check if quota is violated. It indicates a software bug.
+      final Quota.Counts q = dir.getQuotaCounts();
+
       final long namespace = counts.get(Quota.NAMESPACE) - parentNamespace;
-      if (Quota.isViolated(dir.getNsQuota(), namespace)) {
+      final long nsQuota = q.get(Quota.NAMESPACE);
+      if (Quota.isViolated(nsQuota, namespace)) {
         LOG.error("BUG: Namespace quota violation in image for "
             + dir.getFullPathName()
-            + " quota = " + dir.getNsQuota() + " < consumed = " + namespace);
+            + " quota = " + nsQuota + " < consumed = " + namespace);
       }
 
       final long diskspace = counts.get(Quota.DISKSPACE) - parentDiskspace;
-      if (Quota.isViolated(dir.getDsQuota(), diskspace)) {
+      final long dsQuota = q.get(Quota.DISKSPACE);
+      if (Quota.isViolated(dsQuota, diskspace)) {
         LOG.error("BUG: Diskspace quota violation in image for "
             + dir.getFullPathName()
-            + " quota = " + dir.getDsQuota() + " < consumed = " + diskspace);
+            + " quota = " + dsQuota + " < consumed = " + diskspace);
       }
 
       ((INodeDirectoryWithQuota)dir).setSpaceConsumed(namespace, diskspace);

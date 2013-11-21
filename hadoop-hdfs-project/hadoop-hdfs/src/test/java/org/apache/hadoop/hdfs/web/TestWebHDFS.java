@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.TestDFSClientRetries;
 import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMethods;
@@ -101,7 +102,7 @@ public class TestWebHDFS {
     try {
       cluster.waitActive();
 
-      final FileSystem fs = WebHdfsTestUtil.getWebHdfsFileSystem(conf);
+      final FileSystem fs = WebHdfsTestUtil.getWebHdfsFileSystem(conf, WebHdfsFileSystem.SCHEME);
       final Path dir = new Path("/test/largeFile");
       Assert.assertTrue(fs.mkdirs(dir));
 
@@ -229,9 +230,9 @@ public class TestWebHDFS {
         new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
     try {
       cluster.waitActive();
-      WebHdfsTestUtil.getWebHdfsFileSystem(conf).setPermission(
-          new Path("/"),
-          new FsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL));
+      WebHdfsTestUtil.getWebHdfsFileSystem(conf, WebHdfsFileSystem.SCHEME)
+          .setPermission(new Path("/"),
+              new FsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL));
 
       // trick the NN into not believing it's not the superuser so we can
       // tell if the correct user is used by listStatus
@@ -243,8 +244,9 @@ public class TestWebHDFS {
         .doAs(new PrivilegedExceptionAction<Void>() {
           @Override
           public Void run() throws IOException, URISyntaxException {
-            FileSystem fs = WebHdfsTestUtil.getWebHdfsFileSystem(conf);
-            Path d = new Path("/my-dir");
+              FileSystem fs = WebHdfsTestUtil.getWebHdfsFileSystem(conf,
+                  WebHdfsFileSystem.SCHEME);
+              Path d = new Path("/my-dir");
             Assert.assertTrue(fs.mkdirs(d));
             for (int i=0; i < listLimit*3; i++) {
               Path p = new Path(d, "file-"+i);
@@ -257,5 +259,17 @@ public class TestWebHDFS {
     } finally {
       cluster.shutdown();
     }
+  }
+
+  /**
+   * WebHdfs should be enabled by default after HDFS-5532
+   * 
+   * @throws Exception
+   */
+  @Test
+  public void testWebHdfsEnabledByDefault() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    Assert.assertTrue(conf.getBoolean(DFSConfigKeys.DFS_WEBHDFS_ENABLED_KEY,
+        false));
   }
 }

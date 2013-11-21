@@ -383,6 +383,11 @@ Release 2.3.0 - UNRELEASED
 
     HADOOP-10067. Missing POM dependency on jsr305 (Robert Rati via stevel)
 
+    HADOOP-10103. update commons-lang to 2.6 (Akira AJISAKA via stevel)
+
+    HADOOP-10111. Allow DU to be initialized with an initial value (Kihwal Lee
+    via jeagles)
+
   OPTIMIZATIONS
 
     HADOOP-9748. Reduce blocking on UGI.ensureInitialized (daryn)
@@ -499,6 +504,9 @@ Release 2.2.1 - UNRELEASED
 
     HADOOP-10110. hadoop-auth has a build break due to missing dependency.
     (Chuan Liu via arp)
+
+    HADOOP-9114. After defined the dfs.checksum.type as the NULL, write file and hflush will 
+    through java.lang.ArrayIndexOutOfBoundsException (Sathish via umamahesh)
 
 Release 2.2.0 - 2013-10-13
 

@@ -86,7 +86,7 @@ import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
-import org.apache.hadoop.hdfs.protocol.PathBasedCacheDirective;
+import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.util.XMLUtils;
 import org.apache.hadoop.hdfs.util.XMLUtils.InvalidXmlException;
@@ -166,11 +166,11 @@ public abstract class FSEditLogOp {
       inst.put(OP_SET_GENSTAMP_V2, new SetGenstampV2Op());
       inst.put(OP_ALLOCATE_BLOCK_ID, new AllocateBlockIdOp());
       inst.put(OP_ADD_PATH_BASED_CACHE_DIRECTIVE,
-          new AddPathBasedCacheDirectiveOp());
+          new AddCacheDirectiveInfoOp());
       inst.put(OP_MODIFY_PATH_BASED_CACHE_DIRECTIVE,
-          new ModifyPathBasedCacheDirectiveOp());
+          new ModifyCacheDirectiveInfoOp());
       inst.put(OP_REMOVE_PATH_BASED_CACHE_DIRECTIVE,
-          new RemovePathBasedCacheDirectiveOp());
+          new RemoveCacheDirectiveInfoOp());
       inst.put(OP_ADD_CACHE_POOL, new AddCachePoolOp());
       inst.put(OP_MODIFY_CACHE_POOL, new ModifyCachePoolOp());
       inst.put(OP_REMOVE_CACHE_POOL, new RemoveCachePoolOp());
@@ -2868,22 +2868,22 @@ public abstract class FSEditLogOp {
 
   /**
    * {@literal @AtMostOnce} for
-   * {@link ClientProtocol#addPathBasedCacheDirective}
+   * {@link ClientProtocol#addCacheDirective}
    */
-  static class AddPathBasedCacheDirectiveOp extends FSEditLogOp {
-    PathBasedCacheDirective directive;
+  static class AddCacheDirectiveInfoOp extends FSEditLogOp {
+    CacheDirectiveInfo directive;
 
-    public AddPathBasedCacheDirectiveOp() {
+    public AddCacheDirectiveInfoOp() {
       super(OP_ADD_PATH_BASED_CACHE_DIRECTIVE);
     }
 
-    static AddPathBasedCacheDirectiveOp getInstance(OpInstanceCache cache) {
-      return (AddPathBasedCacheDirectiveOp) cache
+    static AddCacheDirectiveInfoOp getInstance(OpInstanceCache cache) {
+      return (AddCacheDirectiveInfoOp) cache
           .get(OP_ADD_PATH_BASED_CACHE_DIRECTIVE);
     }
 
-    public AddPathBasedCacheDirectiveOp setDirective(
-        PathBasedCacheDirective directive) {
+    public AddCacheDirectiveInfoOp setDirective(
+        CacheDirectiveInfo directive) {
       this.directive = directive;
       assert(directive.getId() != null);
       assert(directive.getPath() != null);
@@ -2898,7 +2898,7 @@ public abstract class FSEditLogOp {
       String path = FSImageSerialization.readString(in);
       short replication = FSImageSerialization.readShort(in);
       String pool = FSImageSerialization.readString(in);
-      directive = new PathBasedCacheDirective.Builder().
+      directive = new CacheDirectiveInfo.Builder().
           setId(id).
           setPath(new Path(path)).
           setReplication(replication).
@@ -2930,7 +2930,7 @@ public abstract class FSEditLogOp {
 
     @Override
     void fromXml(Stanza st) throws InvalidXmlException {
-      directive = new PathBasedCacheDirective.Builder().
+      directive = new CacheDirectiveInfo.Builder().
           setId(Long.parseLong(st.getValue("ID"))).
           setPath(new Path(st.getValue("PATH"))).
           setReplication(Short.parseShort(st.getValue("REPLICATION"))).
@@ -2942,7 +2942,7 @@ public abstract class FSEditLogOp {
     @Override
     public String toString() {
       StringBuilder builder = new StringBuilder();
-      builder.append("AddPathBasedCacheDirective [");
+      builder.append("AddCacheDirectiveInfo [");
       builder.append("id=" + directive.getId() + ",");
       builder.append("path=" + directive.getPath().toUri().getPath() + ",");
       builder.append("replication=" + directive.getReplication() + ",");
@@ -2955,22 +2955,22 @@ public abstract class FSEditLogOp {
 
   /**
    * {@literal @AtMostOnce} for
-   * {@link ClientProtocol#modifyPathBasedCacheDirective}
+   * {@link ClientProtocol#modifyCacheDirective}
    */
-  static class ModifyPathBasedCacheDirectiveOp extends FSEditLogOp {
-    PathBasedCacheDirective directive;
+  static class ModifyCacheDirectiveInfoOp extends FSEditLogOp {
+    CacheDirectiveInfo directive;
 
-    public ModifyPathBasedCacheDirectiveOp() {
+    public ModifyCacheDirectiveInfoOp() {
       super(OP_MODIFY_PATH_BASED_CACHE_DIRECTIVE);
     }
 
-    static ModifyPathBasedCacheDirectiveOp getInstance(OpInstanceCache cache) {
-      return (ModifyPathBasedCacheDirectiveOp) cache
+    static ModifyCacheDirectiveInfoOp getInstance(OpInstanceCache cache) {
+      return (ModifyCacheDirectiveInfoOp) cache
           .get(OP_MODIFY_PATH_BASED_CACHE_DIRECTIVE);
     }
 
-    public ModifyPathBasedCacheDirectiveOp setDirective(
-        PathBasedCacheDirective directive) {
+    public ModifyCacheDirectiveInfoOp setDirective(
+        CacheDirectiveInfo directive) {
       this.directive = directive;
       assert(directive.getId() != null);
       return this;
@@ -2978,8 +2978,8 @@ public abstract class FSEditLogOp {
 
     @Override
     void readFields(DataInputStream in, int logVersion) throws IOException {
-      PathBasedCacheDirective.Builder builder =
-          new PathBasedCacheDirective.Builder();
+      CacheDirectiveInfo.Builder builder =
+          new CacheDirectiveInfo.Builder();
       builder.setId(FSImageSerialization.readLong(in));
       byte flags = in.readByte();
       if ((flags & 0x1) != 0) {
@@ -2993,7 +2993,7 @@ public abstract class FSEditLogOp {
       }
       if ((flags & ~0x7) != 0) {
         throw new IOException("unknown flags set in " +
-            "ModifyPathBasedCacheDirectiveOp: " + flags);
+            "ModifyCacheDirectiveInfoOp: " + flags);
       }
       this.directive = builder.build();
       readRpcIds(in, logVersion);
@@ -3041,8 +3041,8 @@ public abstract class FSEditLogOp {
 
     @Override
     void fromXml(Stanza st) throws InvalidXmlException {
-      PathBasedCacheDirective.Builder builder =
-          new PathBasedCacheDirective.Builder();
+      CacheDirectiveInfo.Builder builder =
+          new CacheDirectiveInfo.Builder();
       builder.setId(Long.parseLong(st.getValue("ID")));
       String path = st.getValueOrNull("PATH");
       if (path != null) {
@@ -3063,7 +3063,7 @@ public abstract class FSEditLogOp {
     @Override
     public String toString() {
       StringBuilder builder = new StringBuilder();
-      builder.append("ModifyPathBasedCacheDirectiveOp[");
+      builder.append("ModifyCacheDirectiveInfoOp[");
       builder.append("id=").append(directive.getId());
       if (directive.getPath() != null) {
         builder.append(",").append("path=").append(directive.getPath());
@@ -3083,21 +3083,21 @@ public abstract class FSEditLogOp {
 
   /**
    * {@literal @AtMostOnce} for
-   * {@link ClientProtocol#removePathBasedCacheDirective}
+   * {@link ClientProtocol#removeCacheDirective}
    */
-  static class RemovePathBasedCacheDirectiveOp extends FSEditLogOp {
+  static class RemoveCacheDirectiveInfoOp extends FSEditLogOp {
     long id;
 
-    public RemovePathBasedCacheDirectiveOp() {
+    public RemoveCacheDirectiveInfoOp() {
       super(OP_REMOVE_PATH_BASED_CACHE_DIRECTIVE);
     }
 
-    static RemovePathBasedCacheDirectiveOp getInstance(OpInstanceCache cache) {
-      return (RemovePathBasedCacheDirectiveOp) cache
+    static RemoveCacheDirectiveInfoOp getInstance(OpInstanceCache cache) {
+      return (RemoveCacheDirectiveInfoOp) cache
           .get(OP_REMOVE_PATH_BASED_CACHE_DIRECTIVE);
     }
 
-    public RemovePathBasedCacheDirectiveOp setId(long id) {
+    public RemoveCacheDirectiveInfoOp setId(long id) {
       this.id = id;
       return this;
     }
@@ -3129,7 +3129,7 @@ public abstract class FSEditLogOp {
     @Override
     public String toString() {
       StringBuilder builder = new StringBuilder();
-      builder.append("RemovePathBasedCacheDirective [");
+      builder.append("RemoveCacheDirectiveInfo [");
       builder.append("id=" + Long.toString(id));
       appendRpcIdsToString(builder, rpcClientId, rpcCallId);
       builder.append("]");

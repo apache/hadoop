@@ -18,35 +18,32 @@
 
 package org.apache.hadoop.hdfs.web;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.SocketAddress;
 import java.net.SocketTimeoutException;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.List;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 /**
  * This test suite checks that WebHdfsFileSystem sets connection timeouts and
@@ -77,7 +74,7 @@ public class TestWebHdfsTimeouts {
     serverSocket = new ServerSocket(0, CONNECTION_BACKLOG);
     nnHttpAddress = new InetSocketAddress("localhost", serverSocket.getLocalPort());
     conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "localhost:" + serverSocket.getLocalPort());
-    fs = WebHdfsTestUtil.getWebHdfsFileSystem(conf);
+    fs = WebHdfsTestUtil.getWebHdfsFileSystem(conf, WebHdfsFileSystem.SCHEME);
     fs.connectionFactory = connectionFactory;
     clients = new ArrayList<SocketChannel>();
     serverThread = null;

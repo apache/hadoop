@@ -19,8 +19,10 @@
 package org.apache.hadoop.yarn.applications.distributedshell;
 
 import java.io.BufferedReader;
+import java.io.DataInputStream;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.StringReader;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -218,6 +220,8 @@ public class ApplicationMaster {
   // Hardcoded path to shell script in launch container's local env
   private final String ExecShellStringPath = "ExecShellScript.sh";
 
+  private final String shellCommandPath = "shellCommands";
+
   private volatile boolean done;
   private volatile boolean success;
 
@@ -300,8 +304,6 @@ public class ApplicationMaster {
     Options opts = new Options();
     opts.addOption("app_attempt_id", true,
         "App Attempt ID. Not to be used unless for testing purposes");
-    opts.addOption("shell_command", true,
-        "Shell command to be executed by the Application Master");
     opts.addOption("shell_script", true,
         "Location of the shell script to be executed");
     opts.addOption("shell_args", true, "Command line args for the shell script");
@@ -372,11 +374,20 @@ public class ApplicationMaster {
         + appAttemptID.getApplicationId().getClusterTimestamp()
         + ", attemptId=" + appAttemptID.getAttemptId());
 
-    if (!cliParser.hasOption("shell_command")) {
+    File shellCommandFile = new File(shellCommandPath);
+    if (!shellCommandFile.exists()) {
       throw new IllegalArgumentException(
           "No shell command specified to be executed by application master");
     }
-    shellCommand = cliParser.getOptionValue("shell_command");
+    FileInputStream fs = null;
+    DataInputStream ds = null;
+    try {
+      ds = new DataInputStream(new FileInputStream(shellCommandFile));
+      shellCommand = ds.readUTF();
+    } finally {
+      org.apache.commons.io.IOUtils.closeQuietly(ds);
+      org.apache.commons.io.IOUtils.closeQuietly(fs);
+    }
 
     if (cliParser.hasOption("shell_args")) {
       shellArgs = cliParser.getOptionValue("shell_args");

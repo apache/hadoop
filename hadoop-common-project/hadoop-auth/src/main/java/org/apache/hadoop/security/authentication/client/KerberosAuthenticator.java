@@ -196,7 +196,13 @@ public class KerberosAuthenticator implements Authenticator {
         doSpnegoSequence(token);
       } else {
         LOG.debug("Using fallback authenticator sequence.");
-        getFallBackAuthenticator().authenticate(url, token);
+        Authenticator auth = getFallBackAuthenticator();
+        // Make sure that the fall back authenticator have the same
+        // ConnectionConfigurator, since the method might be overridden.
+        // Otherwise the fall back authenticator might not have the information
+        // to make the connection (e.g., SSL certificates)
+        auth.setConnectionConfigurator(connConfigurator);
+        auth.authenticate(url, token);
       }
     }
   }

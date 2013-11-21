@@ -114,6 +114,9 @@ Release 2.3.0 - UNRELEASED
     YARN-584. In scheduler web UIs, queues unexpand on refresh. (Harshit
     Daga via Sandy Ryza)
 
+    YARN-1303. Fixed DistributedShell to not fail with multiple commands separated
+    by a semi-colon as shell-command. (Xuan Gong via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -159,6 +162,13 @@ Release 2.3.0 - UNRELEASED
     YARN-744. Race condition in ApplicationMasterService.allocate .. It might
     process same allocate request twice resulting in additional containers
     getting allocated. (Omkar Vinit Joshi via bikas)
+
+    YARN-1425. TestRMRestart fails because MockRM.waitForState(AttemptId) uses
+    current attempt instead of the attempt passed as argument (Omkar Vinit
+    Joshi via bikas)
+
+    YARN-1053. Diagnostic message from ContainerExitEvent is ignored in
+    ContainerImpl (Omkar Vinit Joshi via bikas)
 
 Release 2.2.1 - UNRELEASED
 

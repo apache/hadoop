@@ -28,9 +28,9 @@ import org.apache.hadoop.fs.Path;
  */
 @InterfaceStability.Evolving
 @InterfaceAudience.Public
-public class PathBasedCacheDirective {
+public class CacheDirectiveInfo {
   /**
-   * A builder for creating new PathBasedCacheDirective instances.
+   * A builder for creating new CacheDirectiveInfo instances.
    */
   public static class Builder {
     private Long id;
@@ -39,12 +39,12 @@ public class PathBasedCacheDirective {
     private String pool;
 
     /**
-     * Builds a new PathBasedCacheDirective populated with the set properties.
+     * Builds a new CacheDirectiveInfo populated with the set properties.
      * 
-     * @return New PathBasedCacheDirective.
+     * @return New CacheDirectiveInfo.
      */
-    public PathBasedCacheDirective build() {
-      return new PathBasedCacheDirective(id, path, replication, pool);
+    public CacheDirectiveInfo build() {
+      return new CacheDirectiveInfo(id, path, replication, pool);
     }
 
     /**
@@ -55,9 +55,9 @@ public class PathBasedCacheDirective {
 
     /**
      * Creates a builder with all elements set to the same values as the
-     * given PathBasedCacheDirective.
+     * given CacheDirectiveInfo.
      */
-    public Builder(PathBasedCacheDirective directive) {
+    public Builder(CacheDirectiveInfo directive) {
       this.id = directive.getId();
       this.path = directive.getPath();
       this.replication = directive.getReplication();
@@ -114,7 +114,7 @@ public class PathBasedCacheDirective {
   private final Short replication;
   private final String pool;
 
-  PathBasedCacheDirective(Long id, Path path, Short replication, String pool) {
+  CacheDirectiveInfo(Long id, Path path, Short replication, String pool) {
     this.id = id;
     this.path = path;
     this.replication = replication;
@@ -148,7 +148,7 @@ public class PathBasedCacheDirective {
   public String getPool() {
     return pool;
   }
-
+  
   @Override
   public boolean equals(Object o) {
     if (o == null) {
@@ -157,7 +157,7 @@ public class PathBasedCacheDirective {
     if (getClass() != o.getClass()) {
       return false;
     }
-    PathBasedCacheDirective other = (PathBasedCacheDirective)o;
+    CacheDirectiveInfo other = (CacheDirectiveInfo)o;
     return new EqualsBuilder().append(getId(), other.getId()).
         append(getPath(), other.getPath()).
         append(getReplication(), other.getReplication()).

@@ -612,8 +612,7 @@ public class INodeDirectory extends INodeWithAdditionalFields
   @Override
   public boolean metadataEquals(INodeDirectoryAttributes other) {
     return other != null
-        && getNsQuota() == other.getNsQuota()
-        && getDsQuota() == other.getDsQuota()
+        && getQuotaCounts().equals(other.getQuotaCounts())
         && getPermissionLong() == other.getPermissionLong();
   }
   

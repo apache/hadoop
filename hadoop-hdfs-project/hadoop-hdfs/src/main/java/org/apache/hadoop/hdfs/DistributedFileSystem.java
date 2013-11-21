@@ -57,6 +57,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.client.HdfsAdmin;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
+import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
@@ -67,7 +68,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
-import org.apache.hadoop.hdfs.protocol.PathBasedCacheDirective;
+import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
@@ -1584,78 +1585,88 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   /**
-   * Add a new PathBasedCacheDirective.
+   * Add a new CacheDirective.
    * 
-   * @param directive A directive to add.
+   * @param info Information about a directive to add.
    * @return the ID of the directive that was created.
    * @throws IOException if the directive could not be added
    */
-  public long addPathBasedCacheDirective(
-      PathBasedCacheDirective directive) throws IOException {
-    Preconditions.checkNotNull(directive.getPath());
-    Path path = new Path(getPathName(fixRelativePart(directive.getPath()))).
+  public long addCacheDirective(
+      CacheDirectiveInfo info) throws IOException {
+    Preconditions.checkNotNull(info.getPath());
+    Path path = new Path(getPathName(fixRelativePart(info.getPath()))).
         makeQualified(getUri(), getWorkingDirectory());
-    return dfs.addPathBasedCacheDirective(
-        new PathBasedCacheDirective.Builder(directive).
+    return dfs.addCacheDirective(
+        new CacheDirectiveInfo.Builder(info).
             setPath(path).
             build());
   }
   
-  public void modifyPathBasedCacheDirective(
-      PathBasedCacheDirective directive) throws IOException {
-    if (directive.getPath() != null) {
-      directive = new PathBasedCacheDirective.Builder(directive).
-          setPath(new Path(getPathName(fixRelativePart(directive.getPath()))).
+  /**
+   * Modify a CacheDirective.
+   * 
+   * @param info Information about the directive to modify.
+   *             You must set the ID to indicate which CacheDirective you want
+   *             to modify.
+   * @throws IOException if the directive could not be modified
+   */
+  public void modifyCacheDirective(
+      CacheDirectiveInfo info) throws IOException {
+    if (info.getPath() != null) {
+      info = new CacheDirectiveInfo.Builder(info).
+          setPath(new Path(getPathName(fixRelativePart(info.getPath()))).
               makeQualified(getUri(), getWorkingDirectory())).build();
     }
-    dfs.modifyPathBasedCacheDirective(directive);
+    dfs.modifyCacheDirective(info);
   }
 
   /**
-   * Remove a PathBasedCacheDirective.
+   * Remove a CacheDirectiveInfo.
    * 
-   * @param id identifier of the PathBasedCacheDirective to remove
+   * @param id identifier of the CacheDirectiveInfo to remove
    * @throws IOException if the directive could not be removed
    */
-  public void removePathBasedCacheDirective(long id)
+  public void removeCacheDirective(long id)
       throws IOException {
-    dfs.removePathBasedCacheDirective(id);
+    dfs.removeCacheDirective(id);
   }
   
   /**
-   * List the set of cached paths of a cache pool. Incrementally fetches results
-   * from the server.
+   * List cache directives.  Incrementally fetches results from the server.
    * 
    * @param filter Filter parameters to use when listing the directives, null to
    *               list all directives visible to us.
-   * @return A RemoteIterator which returns PathBasedCacheDirective objects.
+   * @return A RemoteIterator which returns CacheDirectiveInfo objects.
    */
-  public RemoteIterator<PathBasedCacheDirective> listPathBasedCacheDirectives(
-      PathBasedCacheDirective filter) throws IOException {
+  public RemoteIterator<CacheDirectiveEntry> listCacheDirectives(
+      CacheDirectiveInfo filter) throws IOException {
     if (filter == null) {
-      filter = new PathBasedCacheDirective.Builder().build();
+      filter = new CacheDirectiveInfo.Builder().build();
     }
     if (filter.getPath() != null) {
-      filter = new PathBasedCacheDirective.Builder(filter).
+      filter = new CacheDirectiveInfo.Builder(filter).
           setPath(new Path(getPathName(fixRelativePart(filter.getPath())))).
           build();
     }
-    final RemoteIterator<PathBasedCacheDirective> iter =
-        dfs.listPathBasedCacheDirectives(filter);
-    return new RemoteIterator<PathBasedCacheDirective>() {
+    final RemoteIterator<CacheDirectiveEntry> iter =
+        dfs.listCacheDirectives(filter);
+    return new RemoteIterator<CacheDirectiveEntry>() {
       @Override
       public boolean hasNext() throws IOException {
         return iter.hasNext();
       }
 
       @Override
-      public PathBasedCacheDirective next() throws IOException {
+      public CacheDirectiveEntry next() throws IOException {
         // Although the paths we get back from the NameNode should always be
         // absolute, we call makeQualified to add the scheme and authority of
         // this DistributedFilesystem.
-        PathBasedCacheDirective desc = iter.next();
-        Path p = desc.getPath().makeQualified(getUri(), getWorkingDirectory());
-        return new PathBasedCacheDirective.Builder(desc).setPath(p).build();
+        CacheDirectiveEntry desc = iter.next();
+        CacheDirectiveInfo info = desc.getInfo();
+        Path p = info.getPath().makeQualified(getUri(), getWorkingDirectory());
+        return new CacheDirectiveEntry(
+            new CacheDirectiveInfo.Builder(info).setPath(p).build(),
+            desc.getStats());
       }
     };
   }

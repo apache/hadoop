@@ -18,12 +18,15 @@
 
 package org.apache.hadoop.yarn.applications.distributedshell;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -168,6 +171,39 @@ public class TestDistributedShell {
     LOG.info("Client run completed. Result=" + result);
     Assert.assertTrue(result.get());
 
+  }
+
+  @Test(timeout=90000)
+  public void testDSShellWithCommands() throws Exception {
+
+    String[] args = {
+        "--jar",
+        APPMASTER_JAR,
+        "--num_containers",
+        "2",
+        "--shell_command",
+        "\"echo output_ignored;echo output_expected\"",
+        "--master_memory",
+        "512",
+        "--master_vcores",
+        "2",
+        "--container_memory",
+        "128",
+        "--container_vcores",
+        "1"
+    };
+
+    LOG.info("Initializing DS Client");
+    final Client client =
+        new Client(new Configuration(yarnCluster.getConfig()));
+    boolean initSuccess = client.init(args);
+    Assert.assertTrue(initSuccess);
+    LOG.info("Running DS Client");
+    boolean result = client.run();
+    LOG.info("Client run completed. Result=" + result);
+    List<String> expectedContent = new ArrayList<String>();
+    expectedContent.add("output_expected");
+    verifyContainerLog(2, expectedContent, false, "");
   }
 
   @Test(timeout=90000)
@@ -332,5 +368,64 @@ public class TestDistributedShell {
     LOG.info("Running DS Client");
     Assert.assertTrue(client.run());
   }
+
+  private int verifyContainerLog(int containerNum,
+      List<String> expectedContent, boolean count, String expectedWord) {
+    File logFolder =
+        new File(yarnCluster.getNodeManager(0).getConfig()
+            .get(YarnConfiguration.NM_LOG_DIRS,
+                YarnConfiguration.DEFAULT_NM_LOG_DIRS));
+
+    File[] listOfFiles = logFolder.listFiles();
+    int currentContainerLogFileIndex = -1;
+    for (int i = listOfFiles.length - 1; i >= 0; i--) {
+      if (listOfFiles[i].listFiles().length == containerNum + 1) {
+        currentContainerLogFileIndex = i;
+        break;
+      }
+    }
+    Assert.assertTrue(currentContainerLogFileIndex != -1);
+    File[] containerFiles =
+        listOfFiles[currentContainerLogFileIndex].listFiles();
+
+    int numOfWords = 0;
+    for (int i = 0; i < containerFiles.length; i++) {
+      for (File output : containerFiles[i].listFiles()) {
+        if (output.getName().trim().contains("stdout")) {
+          BufferedReader br = null;
+          try {
+
+            String sCurrentLine;
+
+            br = new BufferedReader(new FileReader(output));
+            int numOfline = 0;
+            while ((sCurrentLine = br.readLine()) != null) {
+              if (count) {
+                if (sCurrentLine.contains(expectedWord)) {
+                  numOfWords++;
+                }
+              } else if (output.getName().trim().equals("stdout")){
+                Assert.assertEquals("The current is" + sCurrentLine,
+                    expectedContent.get(numOfline), sCurrentLine.trim());
+                numOfline++;
+              }
+            }
+
+          } catch (IOException e) {
+            e.printStackTrace();
+          } finally {
+            try {
+              if (br != null)
+                br.close();
+            } catch (IOException ex) {
+              ex.printStackTrace();
+            }
+          }
+        }
+      }
+    }
+    return numOfWords;
+  }
+
 }
 

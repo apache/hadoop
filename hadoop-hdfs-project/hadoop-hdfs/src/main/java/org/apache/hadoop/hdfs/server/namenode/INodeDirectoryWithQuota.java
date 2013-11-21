@@ -44,7 +44,7 @@ public class INodeDirectoryWithQuota extends INodeDirectory {
    * @param dsQuota Diskspace quota to be assigned to this indoe
    * @param other The other inode from which all other properties are copied
    */
-  public INodeDirectoryWithQuota(INodeDirectory other, boolean adopt,
+  INodeDirectoryWithQuota(INodeDirectory other, boolean adopt,
       long nsQuota, long dsQuota) {
     super(other, adopt);
     final Quota.Counts counts = other.computeQuotaUsage();
@@ -54,6 +54,11 @@ public class INodeDirectoryWithQuota extends INodeDirectory {
     this.dsQuota = dsQuota;
   }
   
+  public INodeDirectoryWithQuota(INodeDirectory other, boolean adopt,
+      Quota.Counts quota) {
+    this(other, adopt, quota.get(Quota.NAMESPACE), quota.get(Quota.DISKSPACE));
+  }
+
   /** constructor with no quota verification */
   INodeDirectoryWithQuota(long id, byte[] name, PermissionStatus permissions,
       long modificationTime, long nsQuota, long dsQuota) {
@@ -67,20 +72,9 @@ public class INodeDirectoryWithQuota extends INodeDirectory {
     super(id, name, permissions, 0L);
   }
   
-  /** Get this directory's namespace quota
-   * @return this directory's namespace quota
-   */
   @Override
-  public long getNsQuota() {
-    return nsQuota;
-  }
-  
-  /** Get this directory's diskspace quota
-   * @return this directory's diskspace quota
-   */
-  @Override
-  public long getDsQuota() {
-    return dsQuota;
+  public Quota.Counts getQuotaCounts() {
+    return Quota.Counts.newInstance(nsQuota, dsQuota);
   }
   
   /** Set this directory's quota
@@ -120,7 +114,7 @@ public class INodeDirectoryWithQuota extends INodeDirectory {
   }
   
   private void checkDiskspace(final long computed) {
-    if (-1 != getDsQuota() && diskspace != computed) {
+    if (-1 != getQuotaCounts().get(Quota.DISKSPACE) && diskspace != computed) {
       NameNode.LOG.error("BUG: Inconsistent diskspace for directory "
           + getFullPathName() + ". Cached = " + diskspace
           + " != Computed = " + computed);

@@ -89,7 +89,7 @@ abstract public class TestSymlinkHdfs extends SymlinkBaseTest {
     conf.setBoolean(DFSConfigKeys.DFS_WEBHDFS_ENABLED_KEY, true);
     conf.set(FsPermission.UMASK_LABEL, "000");
     cluster = new MiniDFSCluster.Builder(conf).build();
-    webhdfs = WebHdfsTestUtil.getWebHdfsFileSystem(conf);
+    webhdfs = WebHdfsTestUtil.getWebHdfsFileSystem(conf, WebHdfsFileSystem.SCHEME);
     dfs = cluster.getFileSystem();
   }
 

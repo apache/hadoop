@@ -30,13 +30,16 @@ import com.google.common.base.Preconditions;
  * This is an implementation class, not part of the public API.
  */
 @InterfaceAudience.Private
-public final class PathBasedCacheEntry {
+public final class CacheDirective {
   private final long entryId;
   private final String path;
   private final short replication;
   private final CachePool pool;
+  private long bytesNeeded;
+  private long bytesCached;
+  private long filesAffected;
 
-  public PathBasedCacheEntry(long entryId, String path,
+  public CacheDirective(long entryId, String path,
       short replication, CachePool pool) {
     Preconditions.checkArgument(entryId > 0);
     this.entryId = entryId;
@@ -46,6 +49,9 @@ public final class PathBasedCacheEntry {
     this.replication = replication;
     Preconditions.checkNotNull(path);
     this.pool = pool;
+    this.bytesNeeded = 0;
+    this.bytesCached = 0;
+    this.filesAffected = 0;
   }
 
   public long getEntryId() {
@@ -64,13 +70,25 @@ public final class PathBasedCacheEntry {
     return replication;
   }
 
-  public PathBasedCacheDirective toDirective() {
-    return new PathBasedCacheDirective.Builder().
+  public CacheDirectiveInfo toDirective() {
+    return new CacheDirectiveInfo.Builder().
         setId(entryId).
         setPath(new Path(path)).
         setReplication(replication).
         setPool(pool.getPoolName()).
         build();
+  }
+
+  public CacheDirectiveStats toStats() {
+    return new CacheDirectiveStats.Builder().
+        setBytesNeeded(bytesNeeded).
+        setBytesCached(bytesCached).
+        setFilesAffected(filesAffected).
+        build();
+  }
+
+  public CacheDirectiveEntry toEntry() {
+    return new CacheDirectiveEntry(toDirective(), toStats());
   }
   
   @Override
@@ -80,6 +98,9 @@ public final class PathBasedCacheEntry {
       append(", path:").append(path).
       append(", replication:").append(replication).
       append(", pool:").append(pool).
+      append(", bytesNeeded:").append(bytesNeeded).
+      append(", bytesCached:").append(bytesCached).
+      append(", filesAffected:").append(filesAffected).
       append(" }");
     return builder.toString();
   }
@@ -91,12 +112,48 @@ public final class PathBasedCacheEntry {
     if (o.getClass() != this.getClass()) {
       return false;
     }
-    PathBasedCacheEntry other = (PathBasedCacheEntry)o;
+    CacheDirective other = (CacheDirective)o;
     return entryId == other.entryId;
   }
 
   @Override
   public int hashCode() {
     return new HashCodeBuilder().append(entryId).toHashCode();
+  }
+
+  public long getBytesNeeded() {
+    return bytesNeeded;
+  }
+
+  public void clearBytesNeeded() {
+    this.bytesNeeded = 0;
+  }
+
+  public void addBytesNeeded(long toAdd) {
+    this.bytesNeeded += toAdd;
+  }
+
+  public long getBytesCached() {
+    return bytesCached;
+  }
+
+  public void clearBytesCached() {
+    this.bytesCached = 0;
+  }
+
+  public void addBytesCached(long toAdd) {
+    this.bytesCached += toAdd;
+  }
+
+  public long getFilesAffected() {
+    return filesAffected;
+  }
+
+  public void clearFilesAffected() {
+    this.filesAffected = 0;
+  }
+
+  public void incrementFilesAffected() {
+    this.filesAffected++;
   }
 };

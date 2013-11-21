@@ -116,4 +116,19 @@ public class TestDU extends TestCase {
     long duSize = du.getUsed();
     assertTrue(String.valueOf(duSize), duSize >= 0L);
   }
+
+  public void testDUSetInitialValue() throws IOException {
+    File file = new File(DU_DIR, "dataX");
+    createFile(file, 8192);
+    DU du = new DU(file, 3000, 1024);
+    du.start();
+    assertTrue("Initial usage setting not honored", du.getUsed() == 1024);
+
+    // wait until the first du runs.
+    try {
+      Thread.sleep(5000);
+    } catch (InterruptedException ie) {}
+
+    assertTrue("Usage didn't get updated", du.getUsed() == 8192);
+  }
 }

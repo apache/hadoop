@@ -27,9 +27,7 @@ import com.google.common.base.Preconditions;
  */
 @InterfaceAudience.Private
 public interface INodeDirectoryAttributes extends INodeAttributes {
-  public long getNsQuota();
-
-  public long getDsQuota();
+  public Quota.Counts getQuotaCounts();
 
   public boolean metadataEquals(INodeDirectoryAttributes other);
   
@@ -46,20 +44,14 @@ public interface INodeDirectoryAttributes extends INodeAttributes {
     }
 
     @Override
-    public long getNsQuota() {
-      return -1;
-    }
-
-    @Override
-    public long getDsQuota() {
-      return -1;
+    public Quota.Counts getQuotaCounts() {
+      return Quota.Counts.newInstance(-1, -1);
     }
 
     @Override
     public boolean metadataEquals(INodeDirectoryAttributes other) {
       return other != null
-          && getNsQuota() == other.getNsQuota()
-          && getDsQuota() == other.getDsQuota()
+          && this.getQuotaCounts().equals(other.getQuotaCounts())
           && getPermissionLong() == other.getPermissionLong();
     }
   }
@@ -67,6 +59,7 @@ public interface INodeDirectoryAttributes extends INodeAttributes {
   public static class CopyWithQuota extends INodeDirectoryAttributes.SnapshotCopy {
     private final long nsQuota;
     private final long dsQuota;
+
 
     public CopyWithQuota(byte[] name, PermissionStatus permissions,
         long modificationTime, long nsQuota, long dsQuota) {
@@ -78,18 +71,14 @@ public interface INodeDirectoryAttributes extends INodeAttributes {
     public CopyWithQuota(INodeDirectory dir) {
       super(dir);
       Preconditions.checkArgument(dir.isQuotaSet());
-      this.nsQuota = dir.getNsQuota();
-      this.dsQuota = dir.getDsQuota();
+      final Quota.Counts q = dir.getQuotaCounts();
+      this.nsQuota = q.get(Quota.NAMESPACE);
+      this.dsQuota = q.get(Quota.DISKSPACE);
     }
     
     @Override
-    public final long getNsQuota() {
-      return nsQuota;
-    }
-
-    @Override
-    public final long getDsQuota() {
-      return dsQuota;
+    public Quota.Counts getQuotaCounts() {
+      return Quota.Counts.newInstance(nsQuota, dsQuota);
     }
   }
 }
