@@ -211,6 +211,9 @@ Release 2.2.1 - UNRELEASED
     HADOOP-10110. hadoop-auth has a build break due to missing dependency.
     (Chuan Liu via arp)
 
+    HADOOP-9114. After defined the dfs.checksum.type as the NULL, write file and hflush will 
+    through java.lang.ArrayIndexOutOfBoundsException (Sathish via umamahesh)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
