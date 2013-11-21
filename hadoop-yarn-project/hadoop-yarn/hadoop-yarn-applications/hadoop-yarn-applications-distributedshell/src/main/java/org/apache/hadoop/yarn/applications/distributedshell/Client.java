@@ -166,6 +166,9 @@ public class Client {
   private Options opts;
 
   private final String shellCommandPath = "shellCommands";
+  // Hardcoded path to custom log_properties
+  private final String log4jPath = "log4j.properties";
+
   /**
    * @param args Command line arguments 
    */
@@ -257,7 +260,16 @@ public class Client {
 
     if (args.length == 0) {
       throw new IllegalArgumentException("No args specified for client to initialize");
-    }		
+    }
+
+    if (cliParser.hasOption("log_properties")) {
+      String log4jPath = cliParser.getOptionValue("log_properties");
+      try {
+        Log4jPropertyHelper.updateLog4jConfiguration(Client.class, log4jPath);
+      } catch (Exception e) {
+        LOG.warn("Can not set up custom log4j properties. " + e);
+      }
+    }
 
     if (cliParser.hasOption("help")) {
       printUsage();
@@ -455,16 +467,16 @@ public class Client {
     // Set the log4j properties if needed 
     if (!log4jPropFile.isEmpty()) {
       Path log4jSrc = new Path(log4jPropFile);
-      Path log4jDst = new Path(fs.getHomeDirectory(), "log4j.props");
+      String log4jPathSuffix = appName + "/" + appId.getId() + "/" + log4jPath;
+      Path log4jDst = new Path(fs.getHomeDirectory(), log4jPathSuffix);
       fs.copyFromLocalFile(false, true, log4jSrc, log4jDst);
       FileStatus log4jFileStatus = fs.getFileStatus(log4jDst);
-      LocalResource log4jRsrc = Records.newRecord(LocalResource.class);
-      log4jRsrc.setType(LocalResourceType.FILE);
-      log4jRsrc.setVisibility(LocalResourceVisibility.APPLICATION);	   
-      log4jRsrc.setResource(ConverterUtils.getYarnUrlFromURI(log4jDst.toUri()));
-      log4jRsrc.setTimestamp(log4jFileStatus.getModificationTime());
-      log4jRsrc.setSize(log4jFileStatus.getLen());
-      localResources.put("log4j.properties", log4jRsrc);
+      LocalResource log4jRsrc =
+          LocalResource.newInstance(
+              ConverterUtils.getYarnUrlFromURI(log4jDst.toUri()),
+              LocalResourceType.FILE, LocalResourceVisibility.APPLICATION,
+              log4jFileStatus.getLen(), log4jFileStatus.getModificationTime());
+      localResources.put(log4jPath, log4jRsrc);
     }			
 
     // The shell script has to be made available on the final container(s)

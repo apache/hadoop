@@ -220,6 +220,9 @@ public class ApplicationMaster {
   // Hardcoded path to shell script in launch container's local env
   private final String ExecShellStringPath = "ExecShellScript.sh";
 
+  // Hardcoded path to custom log_properties
+  private final String log4jPath = "log4j.properties";
+
   private final String shellCommandPath = "shellCommands";
 
   private volatile boolean done;
@@ -325,6 +328,16 @@ public class ApplicationMaster {
       printUsage(opts);
       throw new IllegalArgumentException(
           "No args specified for application master to initialize");
+    }
+
+    //Check whether customer log4j.properties file exists
+    File customerLog4jFile = new File(log4jPath);
+    if (customerLog4jFile.exists()) {
+      try {
+        Log4jPropertyHelper.updateLog4jConfiguration(ApplicationMaster.class, log4jPath);
+      } catch (Exception e) {
+        LOG.warn("Can not set up custom log4j properties. " + e);
+      }
     }
 
     if (cliParser.hasOption("help")) {
