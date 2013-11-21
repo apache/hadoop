@@ -109,5 +109,9 @@ IMPROVEMENTS:
  
     HDFS-5515. Fix TestDFSStartupVersions for HDFS-2832. (Arpit Agarwal)
 
-    HDFS-5527. Fix TestUnderReplicatedBlocks on branch HDFS-2832. (Arpit Agarwal)
+    HDFS-5527. Fix TestUnderReplicatedBlocks on branch HDFS-2832. (Arpit
+    Agarwal)
+
+    HDFS-5547. Fix build break after merge from trunk to HDFS-2832. (Arpit
+    Agarwal)
 
