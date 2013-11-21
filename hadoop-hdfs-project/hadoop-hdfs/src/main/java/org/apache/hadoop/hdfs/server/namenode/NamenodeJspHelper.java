@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryMXBean;
 import java.lang.management.MemoryUsage;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URLEncoder;
@@ -62,7 +61,6 @@ import org.apache.hadoop.hdfs.server.namenode.startupprogress.Status;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.Step;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.StepType;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
-import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -1092,7 +1090,7 @@ class NamenodeJspHelper {
           doc.endTag();
 
           doc.startTag("ds_quota");
-          doc.pcdata(""+inode.getDsQuota());
+          doc.pcdata(""+inode.getQuotaCounts().get(Quota.DISKSPACE));
           doc.endTag();
 
           doc.startTag("permission_status");

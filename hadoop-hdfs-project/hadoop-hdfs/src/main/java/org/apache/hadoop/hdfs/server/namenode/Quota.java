@@ -41,7 +41,7 @@ public enum Quota {
     }
     
     Counts() {
-      super(Quota.values());
+      super(Quota.class);
     }
   }
 
