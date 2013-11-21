@@ -152,6 +152,9 @@ Release 2.3.0 - UNRELEASED
     YARN-1053. Diagnostic message from ContainerExitEvent is ignored in
     ContainerImpl (Omkar Vinit Joshi via bikas)
 
+    YARN-1320. Fixed Distributed Shell application to respect custom log4j
+    properties file. (Xuan Gong via vinodkv)
+
 Release 2.2.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

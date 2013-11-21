@@ -25,6 +25,7 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.PrintWriter;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
@@ -174,6 +175,68 @@ public class TestDistributedShell {
   }
 
   @Test(timeout=90000)
+  public void testDSShellWithCustomLogPropertyFile() throws Exception {
+    final File basedir =
+        new File("target", TestDistributedShell.class.getName());
+    final File tmpDir = new File(basedir, "tmpDir");
+    tmpDir.mkdirs();
+    final File customLogProperty = new File(tmpDir, "custom_log4j.properties");
+    if (customLogProperty.exists()) {
+      customLogProperty.delete();
+    }
+    if(!customLogProperty.createNewFile()) {
+      Assert.fail("Can not create custom log4j property file.");
+    }
+    PrintWriter fileWriter = new PrintWriter(customLogProperty);
+    // set the output to DEBUG level
+    fileWriter.write("log4j.rootLogger=debug,stdout");
+    fileWriter.close();
+    String[] args = {
+        "--jar",
+        APPMASTER_JAR,
+        "--num_containers",
+        "3",
+        "--shell_command",
+        "echo",
+        "--shell_args",
+        "HADOOP",
+        "--log_properties",
+        customLogProperty.getAbsolutePath(),
+        "--master_memory",
+        "512",
+        "--master_vcores",
+        "2",
+        "--container_memory",
+        "128",
+        "--container_vcores",
+        "1"
+    };
+
+    //Before run the DS, the default the log level is INFO
+    final Log LOG_Client =
+        LogFactory.getLog(Client.class);
+    Assert.assertTrue(LOG_Client.isInfoEnabled());
+    Assert.assertFalse(LOG_Client.isDebugEnabled());
+    final Log LOG_AM = LogFactory.getLog(ApplicationMaster.class);
+    Assert.assertTrue(LOG_AM.isInfoEnabled());
+    Assert.assertFalse(LOG_AM.isDebugEnabled());
+
+    LOG.info("Initializing DS Client");
+    final Client client =
+        new Client(new Configuration(yarnCluster.getConfig()));
+    boolean initSuccess = client.init(args);
+    Assert.assertTrue(initSuccess);
+    LOG.info("Running DS Client");
+    boolean result = client.run();
+    LOG.info("Client run completed. Result=" + result);
+    Assert.assertTrue(verifyContainerLog(3, null, true, "DEBUG") > 10);
+    //After DS is finished, the log level should be DEBUG
+    Assert.assertTrue(LOG_Client.isInfoEnabled());
+    Assert.assertTrue(LOG_Client.isDebugEnabled());
+    Assert.assertTrue(LOG_AM.isInfoEnabled());
+    Assert.assertTrue(LOG_AM.isDebugEnabled());
+  }
+
   public void testDSShellWithCommands() throws Exception {
 
     String[] args = {
