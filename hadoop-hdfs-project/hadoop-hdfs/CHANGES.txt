@@ -222,6 +222,8 @@ Release 2.2.1 - UNRELEASED
 
     HDFS-5344. Make LsSnapshottableDir as Tool interface implementation. (Sathish via umamahesh)
 
+    HDFS-5544. Adding Test case For Checking dfs.checksum type as NULL value. (Sathish via umamahesh)
+
   OPTIMIZATIONS
 
   BUG FIXES
