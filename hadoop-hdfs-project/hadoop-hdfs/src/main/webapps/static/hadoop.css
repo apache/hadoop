@@ -188,3 +188,8 @@ div.security {
 #startupprogress span {
   font-weight: bold;
 }
+
+.panel-success > .panel-heading {
+  color: #fff !important;
+  background-color: #5FA33E !important;
+}

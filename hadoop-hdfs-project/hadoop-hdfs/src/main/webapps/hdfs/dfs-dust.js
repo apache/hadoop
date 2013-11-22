@@ -60,32 +60,6 @@
   $.extend(dust.filters, filters);
 
   /**
-   * Load templates from external sources in sequential orders, and
-   * compile them. The loading order is important to resolve dependency.
-   *
-   * The code compile the templates on the client sides, which should be
-   * precompiled once we introduce the infrastructure in the building
-   * system.
-   *
-   * templates is an array of tuples in the format of {url, name}.
-   */
-  function load_templates(dust, templates, success_cb, error_cb) {
-    if (templates.length === 0) {
-      success_cb();
-      return;
-    }
-
-    var t = templates.shift();
-    $.get(t.url, function (tmpl) {
-      var c = dust.compile(tmpl, t.name);
-      dust.loadSource(c);
-      load_templates(dust, templates, success_cb, error_cb);
-    }).error(function (jqxhr, text, err) {
-      error_cb(t.url, jqxhr, text, err);
-    });
-  }
-
-  /**
    * Load a sequence of JSON.
    *
    * beans is an array of tuples in the format of {url, name}.
@@ -110,7 +84,6 @@
     });
   }
 
-  exports.load_templates = load_templates;
   exports.load_json = load_json;
 
 }($, dust, window));
