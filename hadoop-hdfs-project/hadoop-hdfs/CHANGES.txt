@@ -25,6 +25,9 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-3987. Support webhdfs over HTTPS. (Haohui Mai via jing9)
 
+    HDFS-5444. Choose default web UI based on browser capabilities. (Haohui Mai
+    via jing9)
+
   IMPROVEMENTS
 
     HDFS-5267. Remove volatile from LightWeightHashSet. (Junping Du via llu)
