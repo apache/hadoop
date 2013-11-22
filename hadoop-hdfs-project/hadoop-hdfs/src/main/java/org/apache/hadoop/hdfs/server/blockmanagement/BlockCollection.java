@@ -64,4 +64,21 @@ public interface BlockCollection {
    * Get the name of the collection.
    */
   public String getName();
+
+  /**
+   * Set the block at the given index.
+   */
+  public void setBlock(int index, BlockInfo blk);
+
+  /**
+   * Convert the last block of the collection to an under-construction block
+   * and set the locations.
+   */
+  public BlockInfoUnderConstruction setLastBlock(BlockInfo lastBlock,
+      DatanodeDescriptor[] locations) throws IOException;
+
+  /**
+   * @return whether the block collection is under construction.
+   */
+  public boolean isUnderConstruction();
 }

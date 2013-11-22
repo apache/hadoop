@@ -21,7 +21,6 @@ import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
-import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeFileAttributes;
@@ -45,15 +44,6 @@ public class INodeFileWithSnapshot extends INodeFile
   public INodeFileWithSnapshot(INodeFile f, FileDiffList diffs) {
     super(f);
     this.diffs = diffs != null? diffs: new FileDiffList();
-  }
-
-  @Override
-  public INodeFileUnderConstructionWithSnapshot toUnderConstruction(
-      final String clientName,
-      final String clientMachine,
-      final DatanodeDescriptor clientNode) {
-    return new INodeFileUnderConstructionWithSnapshot(this,
-        clientName, clientMachine, clientNode, getDiffs());
   }
 
   @Override

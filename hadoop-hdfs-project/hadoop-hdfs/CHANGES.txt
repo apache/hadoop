@@ -213,6 +213,10 @@ Trunk (Unreleased)
     HDFS-5473. Consistent naming of user-visible caching classes and methods
     (cmccabe)
 
+    HDFS-5285. Flatten INodeFile hierarchy: Replace INodeFileUnderConstruction
+    and INodeFileUnderConstructionWithSnapshot with FileUnderContructionFeature.
+    (jing9 via szetszwo)
+
   OPTIMIZATIONS
     HDFS-5349. DNA_CACHE and DNA_UNCACHE should be by blockId only. (cmccabe)
 

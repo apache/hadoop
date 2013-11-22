@@ -1113,10 +1113,11 @@ public class TestReplicationPolicy {
     assertTheChosenBlocks(chosenBlocks, 1, 0, 0, 0, 0);
 
     final BlockInfo info = new BlockInfo(block1, 1);
-    final MutableBlockCollection mbc = mock(MutableBlockCollection.class);
+    final BlockCollection mbc = mock(BlockCollection.class);
     when(mbc.getLastBlock()).thenReturn(info);
     when(mbc.getPreferredBlockSize()).thenReturn(block1.getNumBytes() + 1);
     when(mbc.getBlockReplication()).thenReturn((short)1);
+    when(mbc.isUnderConstruction()).thenReturn(true);
     ContentSummary cs = mock(ContentSummary.class);
     when(cs.getLength()).thenReturn((long)1);
     when(mbc.computeContentSummary()).thenReturn(cs);

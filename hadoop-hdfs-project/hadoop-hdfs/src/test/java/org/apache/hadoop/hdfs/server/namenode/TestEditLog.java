@@ -63,6 +63,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
@@ -152,9 +153,10 @@ public class TestEditLog {
       FSEditLog editLog = namesystem.getEditLog();
 
       for (int i = 0; i < numTransactions; i++) {
-        INodeFileUnderConstruction inode = new INodeFileUnderConstruction(
-            namesystem.allocateNewInodeId(), p, replication, blockSize, 0, "",
-            "", null);
+        INodeFile inode = new INodeFile(namesystem.allocateNewInodeId(), null,
+            p, 0L, 0L, BlockInfo.EMPTY_ARRAY, replication, blockSize);
+        inode.toUnderConstruction("", "", null);
+
         editLog.logOpenFile("/filename" + (startIndex + i), inode, false);
         editLog.logCloseFile("/filename" + (startIndex + i), inode);
         editLog.logSync();

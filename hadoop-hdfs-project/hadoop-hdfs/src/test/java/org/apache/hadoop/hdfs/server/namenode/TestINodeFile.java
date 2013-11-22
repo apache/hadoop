@@ -29,6 +29,8 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
+import junit.framework.Assert;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -59,6 +61,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
+import org.apache.hadoop.util.Time;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -282,14 +285,6 @@ public class TestINodeFile {
         assertTrue(fnfe.getMessage().contains("File does not exist"));
       }
 
-      //cast to INodeFileUnderConstruction, should fail
-      try {
-        INodeFileUnderConstruction.valueOf(from, path);
-        fail();
-      } catch(FileNotFoundException fnfe) {
-        assertTrue(fnfe.getMessage().contains("File does not exist"));
-      }
-
       //cast to INodeDirectory, should fail
       try {
         INodeDirectory.valueOf(from, path);
@@ -306,14 +301,6 @@ public class TestINodeFile {
       final INodeFile f = INodeFile.valueOf(from, path);
       assertTrue(f == from);
 
-      //cast to INodeFileUnderConstruction, should fail
-      try {
-        INodeFileUnderConstruction.valueOf(from, path);
-        fail();
-      } catch(IOException ioe) {
-        assertTrue(ioe.getMessage().contains("File is not under construction"));
-      }
-
       //cast to INodeDirectory, should fail
       try {
         INodeDirectory.valueOf(from, path);
@@ -324,18 +311,13 @@ public class TestINodeFile {
     }
 
     {//cast from INodeFileUnderConstruction
-      final INode from = new INodeFileUnderConstruction(
-          INodeId.GRANDFATHER_INODE_ID, perm, replication, 0L, 0L, "client",
-          "machine", null);
+      final INode from = new INodeFile(
+          INodeId.GRANDFATHER_INODE_ID, null, perm, 0L, 0L, null, replication, 1024L);
+      from.asFile().toUnderConstruction("client", "machine", null);
     
       //cast to INodeFile, should success
       final INodeFile f = INodeFile.valueOf(from, path);
       assertTrue(f == from);
-
-      //cast to INodeFileUnderConstruction, should success
-      final INodeFileUnderConstruction u = INodeFileUnderConstruction.valueOf(
-          from, path);
-      assertTrue(u == from);
 
       //cast to INodeDirectory, should fail
       try {
@@ -353,14 +335,6 @@ public class TestINodeFile {
       //cast to INodeFile, should fail
       try {
         INodeFile.valueOf(from, path);
-        fail();
-      } catch(FileNotFoundException fnfe) {
-        assertTrue(fnfe.getMessage().contains("Path is not a file"));
-      }
-
-      //cast to INodeFileUnderConstruction, should fail
-      try {
-        INodeFileUnderConstruction.valueOf(from, path);
         fail();
       } catch(FileNotFoundException fnfe) {
         assertTrue(fnfe.getMessage().contains("Path is not a file"));
@@ -1014,5 +988,25 @@ public class TestINodeFile {
         cluster.shutdown();
       }
     }
+  }
+
+  @Test
+  public void testFileUnderConstruction() {
+    replication = 3;
+    final INodeFile file = new INodeFile(INodeId.GRANDFATHER_INODE_ID, null,
+        perm, 0L, 0L, null, replication, 1024L);
+    assertFalse(file.isUnderConstruction());
+
+    final String clientName = "client";
+    final String clientMachine = "machine";
+    file.toUnderConstruction(clientName, clientMachine, null);
+    assertTrue(file.isUnderConstruction());
+    FileUnderConstructionFeature uc = file.getFileUnderConstructionFeature();
+    assertEquals(clientName, uc.getClientName());
+    assertEquals(clientMachine, uc.getClientMachine());
+    Assert.assertNull(uc.getClientNode());
+
+    file.toCompleteFile(Time.now());
+    assertFalse(file.isUnderConstruction());
   }
 }

@@ -20,15 +20,18 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockCollection;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshot.FileDiff;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshot.FileDiffList;
@@ -43,6 +46,22 @@ import com.google.common.base.Preconditions;
 @InterfaceAudience.Private
 public class INodeFile extends INodeWithAdditionalFields
     implements INodeFileAttributes, BlockCollection {
+  /**
+   * A feature contains specific information for a type of INodeFile. E.g.,
+   * we can have separate features for Under-Construction and Snapshot.
+   */
+  public static abstract class Feature {
+    private Feature nextFeature;
+
+    public Feature getNextFeature() {
+      return nextFeature;
+    }
+
+    public void setNextFeature(Feature next) {
+      this.nextFeature = next;
+    }
+  }
+
   /** The same as valueOf(inode, path, false). */
   public static INodeFile valueOf(INode inode, String path
       ) throws FileNotFoundException {
@@ -104,8 +123,11 @@ public class INodeFile extends INodeWithAdditionalFields
 
   private BlockInfo[] blocks;
 
-  INodeFile(long id, byte[] name, PermissionStatus permissions, long mtime, long atime,
-      BlockInfo[] blklist, short replication, long preferredBlockSize) {
+  private Feature headFeature;
+
+  INodeFile(long id, byte[] name, PermissionStatus permissions, long mtime,
+      long atime, BlockInfo[] blklist, short replication,
+      long preferredBlockSize) {
     super(id, name, permissions, mtime, atime);
     header = HeaderFormat.combineReplication(header, replication);
     header = HeaderFormat.combinePreferredBlockSize(header, preferredBlockSize);
@@ -116,6 +138,48 @@ public class INodeFile extends INodeWithAdditionalFields
     super(that);
     this.header = that.header;
     this.blocks = that.blocks;
+    this.headFeature = that.headFeature;
+  }
+
+  /**
+   * If the inode contains a {@link FileUnderConstructionFeature}, return it;
+   * otherwise, return null.
+   */
+  public final FileUnderConstructionFeature getFileUnderConstructionFeature() {
+    for (Feature f = this.headFeature; f != null; f = f.nextFeature) {
+      if (f instanceof FileUnderConstructionFeature) {
+        return (FileUnderConstructionFeature) f;
+      }
+    }
+    return null;
+  }
+
+  /** Is this file under construction? */
+  @Override // BlockCollection
+  public boolean isUnderConstruction() {
+    return getFileUnderConstructionFeature() != null;
+  }
+
+  void addFeature(Feature f) {
+    f.nextFeature = headFeature;
+    headFeature = f;
+  }
+
+  void removeFeature(Feature f) {
+    if (f == headFeature) {
+      headFeature = headFeature.nextFeature;
+      return;
+    } else if (headFeature != null) {
+      Feature prev = headFeature;
+      Feature curr = headFeature.nextFeature;
+      for (; curr != null && curr != f; prev = curr, curr = curr.nextFeature)
+        ;
+      if (curr != null) {
+        prev.nextFeature = curr.nextFeature;
+        return;
+      }
+    }
+    throw new IllegalStateException("Feature " + f + " not found.");
   }
 
   /** @return true unconditionally. */
@@ -130,21 +194,87 @@ public class INodeFile extends INodeWithAdditionalFields
     return this;
   }
 
-  /** Is this file under construction? */
-  public boolean isUnderConstruction() {
-    return false;
-  }
+  /* Start of Under-Construction Feature */
 
   /** Convert this file to an {@link INodeFileUnderConstruction}. */
-  public INodeFileUnderConstruction toUnderConstruction(
-      String clientName,
-      String clientMachine,
+  public INodeFile toUnderConstruction(String clientName, String clientMachine,
       DatanodeDescriptor clientNode) {
     Preconditions.checkState(!isUnderConstruction(),
         "file is already an INodeFileUnderConstruction");
-    return new INodeFileUnderConstruction(this,
-        clientName, clientMachine, clientNode); 
+    FileUnderConstructionFeature uc = new FileUnderConstructionFeature(
+        clientName, clientMachine, clientNode);
+    addFeature(uc);
+    return this;
   }
+
+  /**
+   * Convert the file to a complete file, i.e., to remove the Under-Construction
+   * feature.
+   */
+  public INodeFile toCompleteFile(long mtime) {
+    FileUnderConstructionFeature uc = getFileUnderConstructionFeature();
+    if (uc != null) {
+      assertAllBlocksComplete();
+      removeFeature(uc);
+      this.setModificationTime(mtime);
+    }
+    return this;
+  }
+
+  /** Assert all blocks are complete. */
+  private void assertAllBlocksComplete() {
+    if (blocks == null) {
+      return;
+    }
+    for (int i = 0; i < blocks.length; i++) {
+      Preconditions.checkState(blocks[i].isComplete(), "Failed to finalize"
+          + " %s %s since blocks[%s] is non-complete, where blocks=%s.",
+          getClass().getSimpleName(), this, i, Arrays.asList(blocks));
+    }
+  }
+
+  @Override //BlockCollection
+  public void setBlock(int index, BlockInfo blk) {
+    this.blocks[index] = blk;
+  }
+
+  @Override // BlockCollection
+  public BlockInfoUnderConstruction setLastBlock(BlockInfo lastBlock,
+      DatanodeDescriptor[] locations) throws IOException {
+    Preconditions.checkState(isUnderConstruction());
+
+    if (numBlocks() == 0) {
+      throw new IOException("Failed to set last block: File is empty.");
+    }
+    BlockInfoUnderConstruction ucBlock =
+      lastBlock.convertToBlockUnderConstruction(
+          BlockUCState.UNDER_CONSTRUCTION, locations);
+    ucBlock.setBlockCollection(this);
+    setBlock(numBlocks() - 1, ucBlock);
+    return ucBlock;
+  }
+
+  /**
+   * Remove a block from the block list. This block should be
+   * the last one on the list.
+   */
+  boolean removeLastBlock(Block oldblock) {
+    if (blocks == null || blocks.length == 0) {
+      return false;
+    }
+    int size_1 = blocks.length - 1;
+    if (!blocks[size_1].equals(oldblock)) {
+      return false;
+    }
+
+    //copy to a new list
+    BlockInfo[] newlist = new BlockInfo[size_1];
+    System.arraycopy(blocks, 0, newlist, 0, size_1);
+    setBlocks(newlist);
+    return true;
+  }
+
+  /* End of Under-Construction Feature */
 
   @Override
   public INodeFileAttributes getSnapshotINode(final Snapshot snapshot) {
@@ -266,11 +396,6 @@ public class INodeFile extends INodeWithAdditionalFields
     }
   }
 
-  /** Set the block of the file at the given index. */
-  public void setBlock(int idx, BlockInfo blk) {
-    this.blocks[idx] = blk;
-  }
-
   /** Set the blocks. */
   public void setBlocks(BlockInfo[] blocks) {
     this.blocks = blocks;
@@ -286,6 +411,11 @@ public class INodeFile extends INodeWithAdditionalFields
       // this only happens when deleting the current file
       computeQuotaUsage(counts, false);
       destroyAndCollectBlocks(collectedBlocks, removedINodes);
+    } else if (snapshot == null && prior != null) {
+      FileUnderConstructionFeature uc = getFileUnderConstructionFeature();
+      if (uc != null) {
+        uc.cleanZeroSizeBlock(this, collectedBlocks);
+      }
     }
     return counts;
   }

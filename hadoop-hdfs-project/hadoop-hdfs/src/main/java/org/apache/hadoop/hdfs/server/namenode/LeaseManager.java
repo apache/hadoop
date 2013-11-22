@@ -182,9 +182,11 @@ public class LeaseManager {
   /**
    * Finds the pathname for the specified pendingFile
    */
-  public synchronized String findPath(INodeFileUnderConstruction pendingFile)
+  public synchronized String findPath(INodeFile pendingFile)
       throws IOException {
-    Lease lease = getLease(pendingFile.getClientName());
+    FileUnderConstructionFeature uc = pendingFile.getFileUnderConstructionFeature();
+    Preconditions.checkArgument(uc != null);
+    Lease lease = getLease(uc.getClientName());
     if (lease != null) {
       String src = lease.findPath(pendingFile);
       if (src != null) {
@@ -253,7 +255,7 @@ public class LeaseManager {
     /**
      * @return the path associated with the pendingFile and null if not found.
      */
-    private String findPath(INodeFileUnderConstruction pendingFile) {
+    private String findPath(INodeFile pendingFile) {
       try {
         for (String src : paths) {
           INode node = fsnamesystem.dir.getINode(src);
@@ -433,14 +435,14 @@ public class LeaseManager {
    * @return list of inodes
    * @throws UnresolvedLinkException
    */
-  Map<String, INodeFileUnderConstruction> getINodesUnderConstruction() {
-    Map<String, INodeFileUnderConstruction> inodes =
-        new TreeMap<String, INodeFileUnderConstruction>();
+  Map<String, INodeFile> getINodesUnderConstruction() {
+    Map<String, INodeFile> inodes = new TreeMap<String, INodeFile>();
     for (String p : sortedLeasesByPath.keySet()) {
       // verify that path exists in namespace
       try {
-        INode node = fsnamesystem.dir.getINode(p);
-        inodes.put(p, INodeFileUnderConstruction.valueOf(node, p));
+        INodeFile node = INodeFile.valueOf(fsnamesystem.dir.getINode(p), p);
+        Preconditions.checkState(node.isUnderConstruction());
+        inodes.put(p, node);
       } catch (IOException ioe) {
         LOG.error(ioe);
       }

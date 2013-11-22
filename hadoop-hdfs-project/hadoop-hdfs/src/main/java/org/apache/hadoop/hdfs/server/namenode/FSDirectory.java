@@ -276,13 +276,9 @@ public class FSDirectory implements Closeable {
    * @throws UnresolvedLinkException
    * @throws SnapshotAccessControlException 
    */
-  INodeFileUnderConstruction addFile(String path, 
-                PermissionStatus permissions,
-                short replication,
-                long preferredBlockSize,
-                String clientName,
-                String clientMachine,
-                DatanodeDescriptor clientNode)
+  INodeFile addFile(String path, PermissionStatus permissions,
+      short replication, long preferredBlockSize, String clientName,
+      String clientMachine, DatanodeDescriptor clientNode)
     throws FileAlreadyExistsException, QuotaExceededException,
       UnresolvedLinkException, SnapshotAccessControlException {
     waitForReady();
@@ -300,11 +296,11 @@ public class FSDirectory implements Closeable {
     if (!mkdirs(parent.toString(), permissions, true, modTime)) {
       return null;
     }
-    INodeFileUnderConstruction newNode = new INodeFileUnderConstruction(
-                                 namesystem.allocateNewInodeId(),
-                                 permissions,replication,
-                                 preferredBlockSize, modTime, clientName, 
-                                 clientMachine, clientNode);
+    INodeFile newNode = new INodeFile(namesystem.allocateNewInodeId(), null,
+        permissions, modTime, modTime, BlockInfo.EMPTY_ARRAY, replication,
+        preferredBlockSize);
+    newNode.toUnderConstruction(clientName, clientMachine, clientNode);
+
     boolean added = false;
     writeLock();
     try {
@@ -336,8 +332,11 @@ public class FSDirectory implements Closeable {
     final INodeFile newNode;
     assert hasWriteLock();
     if (underConstruction) {
-      newNode = new INodeFileUnderConstruction(id, permissions, replication,
-          preferredBlockSize, modificationTime, clientName, clientMachine, null);
+      newNode = new INodeFile(id, null, permissions, modificationTime,
+          modificationTime, BlockInfo.EMPTY_ARRAY, replication,
+          preferredBlockSize);
+      newNode.toUnderConstruction(clientName, clientMachine, null);
+
     } else {
       newNode = new INodeFile(id, null, permissions, modificationTime, atime,
           BlockInfo.EMPTY_ARRAY, replication, preferredBlockSize);
@@ -366,8 +365,8 @@ public class FSDirectory implements Closeable {
 
     writeLock();
     try {
-      final INodeFileUnderConstruction fileINode = 
-          INodeFileUnderConstruction.valueOf(inodesInPath.getLastINode(), path);
+      final INodeFile fileINode = inodesInPath.getLastINode().asFile();
+      Preconditions.checkState(fileINode.isUnderConstruction());
 
       // check quota limits and updated space consumed
       updateCount(inodesInPath, 0, fileINode.getBlockDiskspace(), true);
@@ -397,8 +396,8 @@ public class FSDirectory implements Closeable {
   /**
    * Persist the block list for the inode.
    */
-  void persistBlocks(String path, INodeFileUnderConstruction file,
-      boolean logRetryCache) {
+  void persistBlocks(String path, INodeFile file, boolean logRetryCache) {
+    Preconditions.checkArgument(file.isUnderConstruction());
     waitForReady();
 
     writeLock();
@@ -437,8 +436,9 @@ public class FSDirectory implements Closeable {
    * Remove a block from the file.
    * @return Whether the block exists in the corresponding file
    */
-  boolean removeBlock(String path, INodeFileUnderConstruction fileNode,
-                      Block block) throws IOException {
+  boolean removeBlock(String path, INodeFile fileNode, Block block)
+      throws IOException {
+    Preconditions.checkArgument(fileNode.isUnderConstruction());
     waitForReady();
 
     writeLock();
@@ -450,7 +450,8 @@ public class FSDirectory implements Closeable {
   }
   
   boolean unprotectedRemoveBlock(String path,
-      INodeFileUnderConstruction fileNode, Block block) throws IOException {
+      INodeFile fileNode, Block block) throws IOException {
+    Preconditions.checkArgument(fileNode.isUnderConstruction());
     // modify file-> block and blocksMap
     boolean removed = fileNode.removeLastBlock(block);
     if (!removed) {
@@ -1474,38 +1475,6 @@ public class FSDirectory implements Closeable {
       for (INode child : targetDir.getChildrenList(null)) {
         checkSnapshot(child, snapshottableDirs);
       }
-    }
-  }
-
-  /**
-   * Replaces the specified INodeFile with the specified one.
-   */
-  void replaceINodeFile(String path, INodeFile oldnode,
-      INodeFile newnode) throws IOException {
-    writeLock();
-    try {
-      unprotectedReplaceINodeFile(path, oldnode, newnode);
-    } finally {
-      writeUnlock();
-    }
-  }
-
-  /** Replace an INodeFile and record modification for the latest snapshot. */
-  void unprotectedReplaceINodeFile(final String path, final INodeFile oldnode,
-      final INodeFile newnode) {
-    Preconditions.checkState(hasWriteLock());
-
-    oldnode.getParent().replaceChild(oldnode, newnode, inodeMap);
-    oldnode.clear();
-
-    /* Currently oldnode and newnode are assumed to contain the same
-     * blocks. Otherwise, blocks need to be removed from the blocksMap.
-     */
-    int index = 0;
-    for (BlockInfo b : newnode.getBlocks()) {
-      BlockInfo info = getBlockManager().addBlockCollection(b, newnode);
-      newnode.setBlock(index, info); // inode refers to the block in BlocksMap
-      index++;
     }
   }
 
