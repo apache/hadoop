@@ -198,8 +198,8 @@ class PendingReplicationBlocks {
       }
     }
 
-    void decrementReplicas(DatanodeDescriptor target) {
-      targets.remove(target);
+    void decrementReplicas(DatanodeDescriptor dn) {
+      targets.remove(dn);
     }
 
     int getNumReplicas() {

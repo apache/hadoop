@@ -21,6 +21,8 @@ package org.apache.hadoop.hdfs.protocol;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * This class represents the primary identifier for a Datanode.
  * Datanodes are identified by how they can be contacted (hostname
@@ -45,9 +47,11 @@ public class DatanodeID implements Comparable<DatanodeID> {
   private int infoSecurePort; // info server port
   private int ipcPort;       // IPC server port
 
-  // UUID identifying a given datanode. For upgraded Datanodes this is the
-  // same as the StorageID that was previously used by this Datanode. For
-  // newly formatted Datanodes it is a UUID.
+  /**
+   * UUID identifying a given datanode. For upgraded Datanodes this is the
+   * same as the StorageID that was previously used by this Datanode. 
+   * For newly formatted Datanodes it is a UUID.
+   */
   private String datanodeUuid = null;
 
   public DatanodeID(DatanodeID from) {
@@ -99,7 +103,8 @@ public class DatanodeID implements Comparable<DatanodeID> {
     return datanodeUuid;
   }
 
-  public void setDatanodeUuid(String datanodeUuid) {
+  @VisibleForTesting
+  public void setDatanodeUuidForTesting(String datanodeUuid) {
     this.datanodeUuid = datanodeUuid;
   }
 

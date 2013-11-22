@@ -614,7 +614,7 @@ public class PBHelper {
     }
     final String[] storageIDs = b.getStorageIDs();
     if (storageIDs != null) {
-      builder.addAllStorageIDs(Arrays.asList(b.getStorageIDs()));
+      builder.addAllStorageIDs(Arrays.asList(storageIDs));
     }
 
     return builder.setB(PBHelper.convert(b.getBlock()))
@@ -630,22 +630,23 @@ public class PBHelper {
       targets[i] = PBHelper.convert(locs.get(i));
     }
 
-    List<StorageTypeProto> storageTypesList = proto.getStorageTypesList();
-    StorageType[] storageTypes = new StorageType[locs.size()];
-
-
-    // The media should correspond to targets 1:1. If not then
-    // ignore the media information (left as default).
-    if ((storageTypesList != null) &&
-        (storageTypesList.size() == locs.size())) {
-      for (int i = 0; i < storageTypesList.size(); ++i) {
-        storageTypes[i] = PBHelper.convertType(storageTypesList.get(i));
-      }
+    final int storageTypesCount = proto.getStorageTypesCount();
+    final StorageType[] storageTypes;
+    if (storageTypesCount == 0) {
+      storageTypes = null;
+    } else {
+      Preconditions.checkState(storageTypesCount == locs.size());
+      storageTypes = convertStorageTypeProtos(proto.getStorageTypesList());
     }
 
     final int storageIDsCount = proto.getStorageIDsCount();
-    final String[] storageIDs = storageIDsCount == 0? null
-        : proto.getStorageIDsList().toArray(new String[storageIDsCount]);
+    final String[] storageIDs;
+    if (storageIDsCount == 0) {
+      storageIDs = null;
+    } else {
+      Preconditions.checkState(storageIDsCount == locs.size());
+      storageIDs = proto.getStorageIDsList().toArray(new String[storageIDsCount]);
+    }
 
     // Set values from the isCached list, re-using references from loc
     List<DatanodeInfo> cachedLocs = new ArrayList<DatanodeInfo>(locs.size());
@@ -1498,23 +1499,15 @@ public class PBHelper {
     case SSD:
       return StorageTypeProto.SSD;
     default:
-      Preconditions.checkState(
-          false,
-          "Failed to update StorageTypeProto with new StorageType " +
-              type.toString());
-      return StorageTypeProto.DISK;
+      throw new IllegalStateException(
+          "BUG: StorageType not found, type=" + type);
     }
   }
 
   public static DatanodeStorage convert(DatanodeStorageProto s) {
-    if (s.hasStorageType()) {
-      return new DatanodeStorage(s.getStorageUuid(),
-                                 PBHelper.convertState(s.getState()),
-                                 PBHelper.convertType(s.getStorageType()));
-    } else {
-      return new DatanodeStorage(s.getStorageUuid(),
-                                 PBHelper.convertState(s.getState()));
-    }
+    return new DatanodeStorage(s.getStorageUuid(),
+                               PBHelper.convertState(s.getState()),
+                               PBHelper.convertType(s.getStorageType()));
   }
 
   private static State convertState(StorageState state) {
@@ -1534,8 +1527,18 @@ public class PBHelper {
       case SSD:
         return StorageType.SSD;
       default:
-        return StorageType.DEFAULT;
+        throw new IllegalStateException(
+            "BUG: StorageTypeProto not found, type=" + type);
     }
+  }
+
+  private static StorageType[] convertStorageTypeProtos(
+      List<StorageTypeProto> storageTypesList) {
+    final StorageType[] storageTypes = new StorageType[storageTypesList.size()];
+    for (int i = 0; i < storageTypes.length; ++i) {
+      storageTypes[i] = PBHelper.convertType(storageTypesList.get(i));
+    }
+    return storageTypes;
   }
 
   public static StorageReportProto convert(StorageReport r) {

@@ -17,12 +17,33 @@
  */
 package org.apache.hadoop.hdfs.server.common;
 
-import com.google.common.base.Strings;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import java.io.IOException;
+import java.io.StringReader;
+import java.net.InetSocketAddress;
+import java.text.MessageFormat;
+import java.util.ArrayList;
+
+import javax.servlet.ServletContext;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.jsp.JspWriter;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeHttpServer;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
@@ -48,20 +69,7 @@ import org.mockito.stubbing.Answer;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
-import javax.servlet.ServletContext;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.jsp.JspWriter;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
-import java.io.IOException;
-import java.io.StringReader;
-import java.net.InetSocketAddress;
-import java.text.MessageFormat;
-import java.util.ArrayList;
-
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
+import com.google.common.base.Strings;
 
 
 public class TestJspHelper {
@@ -459,8 +467,8 @@ public class TestJspHelper {
     DatanodeDescriptor dnDesc2 = new DatanodeDescriptor(dnId2, "rack2");
 
     // Update the DatanodeDescriptors with their attached storages.
-    dnDesc1.updateStorage(new DatanodeStorage("dnStorage1"));
-    dnDesc2.updateStorage(new DatanodeStorage("dnStorage2"));
+    BlockManagerTestUtil.updateStorage(dnDesc1, new DatanodeStorage("dnStorage1"));
+    BlockManagerTestUtil.updateStorage(dnDesc2, new DatanodeStorage("dnStorage2"));
 
     StorageReport[] report1 = new StorageReport[] {
         new StorageReport("dnStorage1", false, 1024, 100, 924, 100)

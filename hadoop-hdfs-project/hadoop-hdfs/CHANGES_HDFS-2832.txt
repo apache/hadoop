@@ -115,3 +115,6 @@ IMPROVEMENTS:
     HDFS-5547. Fix build break after merge from trunk to HDFS-2832. (Arpit
     Agarwal)
 
+    HDFS-5542. Fix TODO and clean up the code in HDFS-2832. (Contributed by
+    szetszwo)
+

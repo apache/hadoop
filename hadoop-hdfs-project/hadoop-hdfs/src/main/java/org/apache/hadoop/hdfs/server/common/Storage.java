@@ -237,8 +237,7 @@ public abstract class Storage extends StorageInfo {
     final StorageDirType dirType; // storage dir type
     FileLock lock;                // storage lock
 
-    //TODO HDFS-2832: Consider moving this out of StorageDirectory.
-    String storageUuid = null;      // Storage directory identifier.
+    private String storageUuid = null;      // Storage directory identifier.
     
     public StorageDirectory(File dir) {
       // default dirType is null

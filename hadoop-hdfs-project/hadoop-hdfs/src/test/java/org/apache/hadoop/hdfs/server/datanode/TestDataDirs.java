@@ -19,7 +19,6 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import java.io.*;
-import java.net.URI;
 import java.util.*;
 
 import org.apache.hadoop.conf.Configuration;
@@ -40,7 +39,7 @@ public class TestDataDirs {
   @Test (timeout = 30000)
   public void testDataDirParsing() throws Throwable {
     Configuration conf = new Configuration();
-    ArrayList<StorageLocation> locations;
+    List<StorageLocation> locations;
     File dir0 = new File("/dir0");
     File dir1 = new File("/dir1");
     File dir2 = new File("/dir2");
@@ -50,7 +49,7 @@ public class TestDataDirs {
     // type is not case-sensitive
     String locations1 = "[disk]/dir0,[DISK]/dir1,[sSd]/dir2,[disK]/dir3";
     conf.set(DFS_DATANODE_DATA_DIR_KEY, locations1);
-    locations = new ArrayList<StorageLocation>(DataNode.getStorageLocations(conf));
+    locations = DataNode.getStorageLocations(conf);
     assertThat(locations.size(), is(4));
     assertThat(locations.get(0).getStorageType(), is(StorageType.DISK));
     assertThat(locations.get(0).getUri(), is(dir0.toURI()));
@@ -61,23 +60,21 @@ public class TestDataDirs {
     assertThat(locations.get(3).getStorageType(), is(StorageType.DISK));
     assertThat(locations.get(3).getUri(), is(dir3.toURI()));
 
-    // Verify that an unrecognized storage type is ignored.
+    // Verify that an unrecognized storage type result in an exception.
     String locations2 = "[BadMediaType]/dir0,[ssd]/dir1,[disk]/dir2";
     conf.set(DFS_DATANODE_DATA_DIR_KEY, locations2);
-    locations = new ArrayList<StorageLocation>(DataNode.getStorageLocations(conf));
-    assertThat(locations.size(), is(3));
-    assertThat(locations.get(0).getStorageType(), is(StorageType.DISK));
-    assertThat(locations.get(0).getUri(), is(dir0.toURI()));
-    assertThat(locations.get(1).getStorageType(), is(StorageType.SSD));
-    assertThat(locations.get(1).getUri(), is(dir1.toURI()));
-    assertThat(locations.get(2).getStorageType(), is(StorageType.DISK));
-    assertThat(locations.get(2).getUri(), is(dir2.toURI()));
+    try {
+      locations = DataNode.getStorageLocations(conf);
+      fail();
+    } catch(IllegalArgumentException iae) {
+      DataNode.LOG.info("The exception is expected.", iae);
+    }
 
     // Assert that a string with no storage type specified is
     // correctly parsed and the default storage type is picked up.
     String locations3 = "/dir0,/dir1";
     conf.set(DFS_DATANODE_DATA_DIR_KEY, locations3);
-    locations = new ArrayList<StorageLocation>(DataNode.getStorageLocations(conf));
+    locations = DataNode.getStorageLocations(conf);
     assertThat(locations.size(), is(2));
     assertThat(locations.get(0).getStorageType(), is(StorageType.DISK));
     assertThat(locations.get(0).getUri(), is(dir0.toURI()));
@@ -94,11 +91,11 @@ public class TestDataDirs {
     LocalFileSystem fs = mock(LocalFileSystem.class);
     AbstractList<StorageLocation> locations = new ArrayList<StorageLocation>();
 
-    locations.add(new StorageLocation(new URI("file:/p1/")));
-    locations.add(new StorageLocation(new URI("file:/p2/")));
-    locations.add(new StorageLocation(new URI("file:/p3/")));
+    locations.add(StorageLocation.parse("file:/p1/"));
+    locations.add(StorageLocation.parse("file:/p2/"));
+    locations.add(StorageLocation.parse("file:/p3/"));
 
-    ArrayList<StorageLocation> checkedLocations =
+    List<StorageLocation> checkedLocations =
         DataNode.checkStorageLocations(locations, fs, diskChecker);
     assertEquals("number of valid data dirs", 1, checkedLocations.size());
     String validDir = checkedLocations.iterator().next().getFile().getPath();

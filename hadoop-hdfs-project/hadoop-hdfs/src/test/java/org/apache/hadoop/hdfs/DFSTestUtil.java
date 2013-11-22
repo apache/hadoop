@@ -853,8 +853,8 @@ public class DFSTestUtil {
   public static DatanodeStorageInfo createDatanodeStorageInfo(
       String storageID, String ip, String rack) {
     final DatanodeStorage storage = new DatanodeStorage(storageID);
-    return new DatanodeStorageInfo(
-        BlockManagerTestUtil.getDatanodeDescriptor(ip, rack, storage), storage);
+    final DatanodeDescriptor dn = BlockManagerTestUtil.getDatanodeDescriptor(ip, rack, storage);
+    return BlockManagerTestUtil.newDatanodeStorageInfo(dn, storage);
   }
   public static DatanodeDescriptor[] toDatanodeDescriptor(
       DatanodeStorageInfo[] storages) {

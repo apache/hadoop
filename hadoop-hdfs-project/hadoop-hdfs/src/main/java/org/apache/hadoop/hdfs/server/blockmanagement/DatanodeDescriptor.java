@@ -41,8 +41,6 @@ import org.apache.hadoop.hdfs.util.LightWeightHashSet;
 import org.apache.hadoop.util.IntrusiveCollection;
 import org.apache.hadoop.util.Time;
 
-import com.google.common.annotations.VisibleForTesting;
-
 /**
  * This class extends the DatanodeInfo class with ephemeral information (eg
  * health, capacity, what blocks are associated with the Datanode) that is
@@ -175,15 +173,6 @@ public class DatanodeDescriptor extends DatanodeInfo {
    * monotonic milliseconds.
    */
   private long lastCachingDirectiveSentTimeMs;
-
-  /**
-   * Head of the list of blocks on the datanode
-   */
-  private volatile BlockInfo blockList = null;
-  /**
-   * Number of blocks on the datanode
-   */
-  private int numBlocks = 0;
 
   // isAlive == heartbeats.contains(this)
   // This is an optimization, because contains takes O(n) time on Arraylist
@@ -661,8 +650,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
     return sb.toString();
   }
 
-  @VisibleForTesting
-  public DatanodeStorageInfo updateStorage(DatanodeStorage s) {
+  DatanodeStorageInfo updateStorage(DatanodeStorage s) {
     synchronized (storageMap) {
       DatanodeStorageInfo storage = storageMap.get(s.getStorageID());
       if (storage == null) {
@@ -670,8 +658,6 @@ public class DatanodeDescriptor extends DatanodeInfo {
                  " for DN " + getXferAddr());
         storage = new DatanodeStorageInfo(this, s);
         storageMap.put(s.getStorageID(), storage);
-      } else {
-        storage.setState(s.getState());
       }
       return storage;
     }

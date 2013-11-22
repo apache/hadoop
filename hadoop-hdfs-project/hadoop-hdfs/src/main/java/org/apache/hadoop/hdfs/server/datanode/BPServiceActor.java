@@ -251,10 +251,7 @@ class BPServiceActor implements Runnable {
     DatanodeInfo[] dnArr = { new DatanodeInfo(bpRegistration) };
     String[] uuids = { storageUuid };
     StorageType[] types = { storageType };
-    // TODO: Corrupt flag is set to false for compatibility. We can probably
-    // set it to true here.
-    LocatedBlock[] blocks = {
-        new LocatedBlock(block, dnArr, uuids, types) };
+    LocatedBlock[] blocks = { new LocatedBlock(block, dnArr, uuids, types) };
     
     try {
       bpNamenode.reportBadBlocks(blocks);  

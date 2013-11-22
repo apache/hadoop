@@ -115,7 +115,7 @@ class BlocksMap {
 
   /**
    * Searches for the block in the BlocksMap and 
-   * returns {@link Iterable} that iterates through the nodes the block belongs to.
+   * returns {@link Iterable} of the storages the block belongs to.
    */
   Iterable<DatanodeStorageInfo> getStorages(Block b) {
     return getStorages(blocks.get(b));
@@ -123,7 +123,7 @@ class BlocksMap {
 
   /**
    * For a block that has already been retrieved from the BlocksMap
-   * returns {@link Iterable} that iterates through the nodes the block belongs to.
+   * returns {@link Iterable} of the storages the block belongs to.
    */
   Iterable<DatanodeStorageInfo> getStorages(final BlockInfo storedBlock) {
     return new Iterable<DatanodeStorageInfo>() {

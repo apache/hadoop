@@ -123,10 +123,6 @@ public class LocatedBlock {
     return locs;
   }
 
-  public void setStorageTypes(StorageType[] storageTypes) {
-    this.storageTypes = storageTypes;
-  }
-
   public StorageType[] getStorageTypes() {
     return storageTypes;
   }

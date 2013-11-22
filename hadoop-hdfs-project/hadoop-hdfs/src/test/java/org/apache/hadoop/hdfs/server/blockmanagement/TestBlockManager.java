@@ -103,7 +103,7 @@ public class TestBlockManager {
     // construct network topology
     for (DatanodeDescriptor dn : nodesToAdd) {
       cluster.add(dn);
-      dn.getStorageInfos()[0].setUtilization(
+      dn.getStorageInfos()[0].setUtilizationForTesting(
           2 * HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
           2 * HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L);
       dn.updateHeartbeat(
@@ -295,7 +295,7 @@ public class TestBlockManager {
     // the third off-rack replica.
     DatanodeDescriptor rackCNode =
       DFSTestUtil.getDatanodeDescriptor("7.7.7.7", "/rackC");
-    rackCNode.updateStorage(new DatanodeStorage(DatanodeStorage.newStorageID()));
+    rackCNode.updateStorage(new DatanodeStorage(DatanodeStorage.generateUuid()));
     addNodes(ImmutableList.of(rackCNode));
     try {
       DatanodeStorageInfo[] pipeline2 = scheduleSingleReplication(blockInfo);
@@ -531,7 +531,7 @@ public class TestBlockManager {
     DatanodeStorageInfo ds = node.getStorageInfos()[0];
 
     // TODO: Needs to be fixed. DatanodeUuid is not storageID.
-    node.setDatanodeUuid(ds.getStorageID());
+    node.setDatanodeUuidForTesting(ds.getStorageID());
 
     node.isAlive = true;
 
@@ -577,7 +577,7 @@ public class TestBlockManager {
     DatanodeStorageInfo ds = node.getStorageInfos()[0];
 
     // TODO: Needs to be fixed. DatanodeUuid is not storageID.
-    node.setDatanodeUuid(ds.getStorageID());
+    node.setDatanodeUuidForTesting(ds.getStorageID());
 
     node.isAlive = true;
 

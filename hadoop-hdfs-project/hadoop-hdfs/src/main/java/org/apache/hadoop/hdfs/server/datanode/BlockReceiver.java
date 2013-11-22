@@ -255,8 +255,8 @@ class BlockReceiver implements Closeable {
   /** Return the datanode object. */
   DataNode getDataNode() {return datanode;}
 
-  public Replica getReplicaInfo() {
-    return replicaInfo;
+  String getStorageUuid() {
+    return replicaInfo.getStorageUuid();
   }
 
   /**

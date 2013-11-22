@@ -63,7 +63,7 @@ public class TestHeartbeatHandling {
       final DatanodeRegistration nodeReg =
         DataNodeTestUtils.getDNRegistrationForBP(cluster.getDataNodes().get(0), poolId);
       final DatanodeDescriptor dd = NameNodeAdapter.getDatanode(namesystem, nodeReg);
-      final String storageID = DatanodeStorage.newStorageID();
+      final String storageID = DatanodeStorage.generateUuid();
       dd.updateStorage(new DatanodeStorage(storageID));
 
       final int REMAINING_BLOCKS = 1;
@@ -146,15 +146,15 @@ public class TestHeartbeatHandling {
       final DatanodeRegistration nodeReg1 =
         DataNodeTestUtils.getDNRegistrationForBP(cluster.getDataNodes().get(0), poolId);
       final DatanodeDescriptor dd1 = NameNodeAdapter.getDatanode(namesystem, nodeReg1);
-      dd1.updateStorage(new DatanodeStorage(DatanodeStorage.newStorageID()));
+      dd1.updateStorage(new DatanodeStorage(DatanodeStorage.generateUuid()));
       final DatanodeRegistration nodeReg2 =
         DataNodeTestUtils.getDNRegistrationForBP(cluster.getDataNodes().get(1), poolId);
       final DatanodeDescriptor dd2 = NameNodeAdapter.getDatanode(namesystem, nodeReg2);
-      dd2.updateStorage(new DatanodeStorage(DatanodeStorage.newStorageID()));
+      dd2.updateStorage(new DatanodeStorage(DatanodeStorage.generateUuid()));
       final DatanodeRegistration nodeReg3 = 
         DataNodeTestUtils.getDNRegistrationForBP(cluster.getDataNodes().get(2), poolId);
       final DatanodeDescriptor dd3 = NameNodeAdapter.getDatanode(namesystem, nodeReg3);
-      dd3.updateStorage(new DatanodeStorage(DatanodeStorage.newStorageID()));
+      dd3.updateStorage(new DatanodeStorage(DatanodeStorage.generateUuid()));
 
       try {
         namesystem.writeLock();

@@ -55,7 +55,7 @@ message DatanodeStorageProto {
 
   required string storageUuid = 1;
   optional StorageState state = 2 [default = NORMAL];
-  optional StorageTypeProto storageType = 3;
+  optional StorageTypeProto storageType = 3 [default = DISK];
 }
 
 /**

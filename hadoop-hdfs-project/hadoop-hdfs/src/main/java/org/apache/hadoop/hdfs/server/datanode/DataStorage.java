@@ -105,7 +105,7 @@ public class DataStorage extends Storage {
   /** Create an ID for this storage. */
   public synchronized void createStorageID(StorageDirectory sd) {
     if (sd.getStorageUuid() == null) {
-      sd.setStorageUuid(DatanodeStorage.newStorageID());
+      sd.setStorageUuid(DatanodeStorage.generateUuid());
     }
   }
   
@@ -215,8 +215,8 @@ public class DataStorage extends Storage {
 
     // Create list of storage directories for the block pool
     Collection<File> bpDataDirs = new ArrayList<File>();
-    for(Iterator<StorageLocation> it = dataDirs.iterator(); it.hasNext();) {
-      File dnRoot = it.next().getFile();
+    for(StorageLocation dir : dataDirs) {
+      File dnRoot = dir.getFile();
       File bpRoot = BlockPoolSliceStorage.getBpRoot(bpID, new File(dnRoot,
           STORAGE_DIR_CURRENT));
       bpDataDirs.add(bpRoot);
@@ -269,7 +269,7 @@ public class DataStorage extends Storage {
 
     if (sd.getStorageUuid() == null) {
       // Assign a new Storage UUID.
-      sd.setStorageUuid(UUID.randomUUID().toString());
+      sd.setStorageUuid(DatanodeStorage.generateUuid());
     }
 
     writeProperties(sd);
@@ -305,8 +305,7 @@ public class DataStorage extends Storage {
   /*
    * Read ClusterID, StorageID, StorageType, CTime from 
    * DataStorage VERSION file and verify them.
-   * Always called just after reading the properties from the VERSION
-   * file.
+   * Always called just after reading the properties from the VERSION file.
    */
   @Override
   protected void setFieldsFromProperties(Properties props, StorageDirectory sd)

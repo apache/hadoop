@@ -24,22 +24,12 @@ import org.apache.hadoop.classification.InterfaceStability;
 /**
  * Defines the types of supported storage media. The default storage
  * medium is assumed to be DISK.
- *
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceStability.Unstable
 public enum StorageType {
-  DISK(1),
-  SSD(2);
+  DISK,
+  SSD;
+
   public static StorageType DEFAULT = DISK;
-
-  private final int storageType;
-
-  StorageType(int medium) {
-    storageType = medium;
-  }
-
-  public int getStorageType() {
-    return this.storageType;
-  }
 }

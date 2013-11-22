@@ -23,7 +23,6 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -219,11 +218,16 @@ public class BlockManagerTestUtil {
     bm.getDatanodeManager().getHeartbeatManager().heartbeatCheck();
   }
   
+  public static DatanodeStorageInfo updateStorage(DatanodeDescriptor dn,
+      DatanodeStorage s) {
+    return dn.updateStorage(s);
+  }
+
   public static DatanodeDescriptor getLocalDatanodeDescriptor(
       boolean initializeStorage) {
     DatanodeDescriptor dn = new DatanodeDescriptor(DFSTestUtil.getLocalDatanodeID());
     if (initializeStorage) {
-      dn.updateStorage(new DatanodeStorage(DatanodeStorage.newStorageID()));
+      dn.updateStorage(new DatanodeStorage(DatanodeStorage.generateUuid()));
     }
     return dn;
   }
@@ -231,7 +235,7 @@ public class BlockManagerTestUtil {
   public static DatanodeDescriptor getDatanodeDescriptor(String ipAddr,
       String rackLocation, boolean initializeStorage) {
     return getDatanodeDescriptor(ipAddr, rackLocation,
-        initializeStorage? new DatanodeStorage(DatanodeStorage.newStorageID()): null);
+        initializeStorage? new DatanodeStorage(DatanodeStorage.generateUuid()): null);
   }
 
   public static DatanodeDescriptor getDatanodeDescriptor(String ipAddr,
@@ -244,6 +248,10 @@ public class BlockManagerTestUtil {
       return dn;
   }
 
+  public static DatanodeStorageInfo newDatanodeStorageInfo(
+      DatanodeDescriptor dn, DatanodeStorage s) {
+    return new DatanodeStorageInfo(dn, s);
+  }
 
   public static StorageReport[] getStorageReportsForDatanode(
       DatanodeDescriptor dnd) {

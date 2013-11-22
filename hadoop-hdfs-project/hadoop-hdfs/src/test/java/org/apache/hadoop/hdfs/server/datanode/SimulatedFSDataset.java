@@ -324,7 +324,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   private static class SimulatedStorage {
     private Map<String, SimulatedBPStorage> map = 
       new HashMap<String, SimulatedBPStorage>();
-    private final String storageUuid = "SimulatedStroage-" + DatanodeStorage.newStorageID();
+    private final String storageUuid = "SimulatedStroage-" + DatanodeStorage.generateUuid();
 
     private final long capacity;  // in bytes
     
@@ -470,8 +470,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
     }
   }
 
-  @Override
-  public synchronized BlockListAsLongs getBlockReport(String bpid) {
+  synchronized BlockListAsLongs getBlockReport(String bpid) {
     final List<Block> blocks = new ArrayList<Block>();
     final Map<Block, BInfo> map = blockMap.get(bpid);
     if (map != null) {
@@ -684,7 +683,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   }
 
   @Override // FsDatasetSpi
-  public Replica recoverClose(ExtendedBlock b, long newGS, long expectedBlockLen)
+  public String recoverClose(ExtendedBlock b, long newGS, long expectedBlockLen)
       throws IOException {
     final Map<Block, BInfo> map = getMap(b.getBlockPoolId());
     BInfo binfo = map.get(b.getLocalBlock());
@@ -698,7 +697,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
     map.remove(b.getLocalBlock());
     binfo.theBlock.setGenerationStamp(newGS);
     map.put(binfo.theBlock, binfo);
-    return binfo;
+    return binfo.getStorageUuid();
   }
   
   @Override // FsDatasetSpi

@@ -76,7 +76,7 @@ public class TestBlockInfo {
     }
     assertEquals("There should be MAX_BLOCK blockInfo's", MAX_BLOCKS, len);
 
-    headIndex = dd.getHead().findStorageInfo(dd);
+    headIndex = dd.getBlockListHeadForTesting().findStorageInfo(dd);
 
     LOG.info("Moving each block to the head of the list...");
     for (int i = 0; i < MAX_BLOCKS; i++) {
@@ -84,23 +84,23 @@ public class TestBlockInfo {
       headIndex = dd.moveBlockToHead(blockInfoList.get(i), curIndex, headIndex);
       // the moved element must be at the head of the list
       assertEquals("Block should be at the head of the list now.",
-          blockInfoList.get(i), dd.getHead());
+          blockInfoList.get(i), dd.getBlockListHeadForTesting());
     }
 
     // move head of the list to the head - this should not change the list
     LOG.info("Moving head to the head...");
 
-    BlockInfo temp = dd.getHead();
+    BlockInfo temp = dd.getBlockListHeadForTesting();
     curIndex = 0;
     headIndex = 0;
     dd.moveBlockToHead(temp, curIndex, headIndex);
     assertEquals(
         "Moving head to the head of the list shopuld not change the list",
-        temp, dd.getHead());
+        temp, dd.getBlockListHeadForTesting());
 
     // check all elements of the list against the original blockInfoList
     LOG.info("Checking elements of the list...");
-    temp = dd.getHead();
+    temp = dd.getBlockListHeadForTesting();
     assertNotNull("Head should not be null", temp);
     int c = MAX_BLOCKS - 1;
     while (temp != null) {
@@ -110,7 +110,7 @@ public class TestBlockInfo {
     }
 
     LOG.info("Moving random blocks to the head of the list...");
-    headIndex = dd.getHead().findStorageInfo(dd);
+    headIndex = dd.getBlockListHeadForTesting().findStorageInfo(dd);
     Random rand = new Random();
     for (int i = 0; i < MAX_BLOCKS; i++) {
       int j = rand.nextInt(MAX_BLOCKS);
@@ -118,7 +118,7 @@ public class TestBlockInfo {
       headIndex = dd.moveBlockToHead(blockInfoList.get(j), curIndex, headIndex);
       // the moved element must be at the head of the list
       assertEquals("Block should be at the head of the list now.",
-          blockInfoList.get(j), dd.getHead());
+          blockInfoList.get(j), dd.getBlockListHeadForTesting());
     }
   }
 }

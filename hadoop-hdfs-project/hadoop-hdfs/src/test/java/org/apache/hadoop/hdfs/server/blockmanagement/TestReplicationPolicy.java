@@ -93,7 +93,7 @@ public class TestReplicationPolicy {
   private static void updateHeartbeatWithUsage(DatanodeDescriptor dn,
     long capacity, long dfsUsed, long remaining, long blockPoolUsed,
     long dnCacheCapacity, long dnCacheUsed, int xceiverCount, int volFailures) {
-    dn.getStorageInfos()[0].setUtilization(
+    dn.getStorageInfos()[0].setUtilizationForTesting(
         capacity, dfsUsed, remaining, blockPoolUsed);
     dn.updateHeartbeat(
         BlockManagerTestUtil.getStorageReportsForDatanode(dn),

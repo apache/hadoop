@@ -99,7 +99,7 @@ public class DatanodeStorageInfo {
   private final DatanodeDescriptor dn;
   private final String storageID;
   private final StorageType storageType;
-  private State state;
+  private final State state;
 
   private long capacity;
   private long dfsUsed;
@@ -128,7 +128,7 @@ public class DatanodeStorageInfo {
    */
   private boolean blockContentsStale = true;
 
-  public DatanodeStorageInfo(DatanodeDescriptor dn, DatanodeStorage s) {
+  DatanodeStorageInfo(DatanodeDescriptor dn, DatanodeStorage s) {
     this.dn = dn;
     this.storageID = s.getStorageID();
     this.storageType = s.getStorageType();
@@ -165,7 +165,7 @@ public class DatanodeStorageInfo {
   }
 
   @VisibleForTesting
-  public void setUtilization(long capacity, long dfsUsed,
+  public void setUtilizationForTesting(long capacity, long dfsUsed,
                       long remaining, long blockPoolUsed) {
     this.capacity = capacity;
     this.dfsUsed = dfsUsed;
@@ -173,41 +173,35 @@ public class DatanodeStorageInfo {
     this.blockPoolUsed = blockPoolUsed;
   }
   
-  public void setState(State s) {
-    this.state = s;
-    
-    // TODO: if goes to failed state cleanup the block list
-  }
-  
-  public State getState() {
+  State getState() {
     return this.state;
   }
   
-  public String getStorageID() {
+  String getStorageID() {
     return storageID;
   }
 
-  public StorageType getStorageType() {
+  StorageType getStorageType() {
     return storageType;
   }
 
-  public long getCapacity() {
+  long getCapacity() {
     return capacity;
   }
 
-  public long getDfsUsed() {
+  long getDfsUsed() {
     return dfsUsed;
   }
 
-  public long getRemaining() {
+  long getRemaining() {
     return remaining;
   }
 
-  public long getBlockPoolUsed() {
+  long getBlockPoolUsed() {
     return blockPoolUsed;
   }
 
-  public boolean addBlock(BlockInfo b) {
+  boolean addBlock(BlockInfo b) {
     if(!b.addStorage(this))
       return false;
     // add to the head of the data-node list
@@ -216,7 +210,7 @@ public class DatanodeStorageInfo {
     return true;
   }
 
-  public boolean removeBlock(BlockInfo b) {
+  boolean removeBlock(BlockInfo b) {
     blockList = b.listRemove(blockList, this);
     if (b.removeStorage(this)) {
       numBlocks--;
@@ -226,7 +220,7 @@ public class DatanodeStorageInfo {
     }
   }
 
-  public int numBlocks() {
+  int numBlocks() {
     return numBlocks;
   }
   
@@ -249,11 +243,11 @@ public class DatanodeStorageInfo {
    * @return the head of the blockList
    */
   @VisibleForTesting
-  protected BlockInfo getHead(){
+  BlockInfo getBlockListHeadForTesting(){
     return blockList;
   }
 
-  public void updateState(StorageReport r) {
+  void updateState(StorageReport r) {
     capacity = r.getCapacity();
     dfsUsed = r.getDfsUsed();
     remaining = r.getRemaining();

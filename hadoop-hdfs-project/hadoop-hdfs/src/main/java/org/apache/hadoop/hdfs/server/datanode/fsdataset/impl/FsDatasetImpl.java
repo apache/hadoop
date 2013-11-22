@@ -197,8 +197,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   private final int validVolsRequired;
 
   // TODO HDFS-2832: Consider removing duplicated block info from these
-  //                 two maps. This might require some refactoring
-  //                 rewrite of FsDatasetImpl.
+  // two maps and move the perVolumeReplicaMap to FsVolumeImpl.
+  // This might require some refactoring.
   final ReplicaMap volumeMap;
 
   // Map from StorageID to ReplicaMap.
@@ -726,7 +726,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   }
 
   @Override // FsDatasetSpi
-  public Replica recoverClose(ExtendedBlock b, long newGS,
+  public String recoverClose(ExtendedBlock b, long newGS,
       long expectedBlockLen) throws IOException {
     LOG.info("Recover failed close " + b);
     // check replica's state
@@ -737,7 +737,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     if (replicaInfo.getState() == ReplicaState.RBW) {
       finalizeReplica(b.getBlockPoolId(), replicaInfo);
     }
-    return replicaInfo;
+    return replicaInfo.getStorageUuid();
   }
   
   /**
@@ -1083,14 +1083,6 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     return cacheManager.getCachedBlocks(bpid);
   }
 
-  /**
-   * Generates a block report from the in-memory block map.
-   */
-  @Override // FsDatasetSpi
-  public BlockListAsLongs getBlockReport(String bpid) {
-    return getBlockReportWithReplicaMap(bpid, volumeMap);
-  }
-
   @Override
   public Map<String, BlockListAsLongs> getBlockReports(String bpid) {
     Map<String, BlockListAsLongs> blockReportMap =
@@ -1114,7 +1106,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         new ArrayList<FinalizedReplica>(volumeMap.size(bpid));
     for (ReplicaInfo b : volumeMap.replicas(bpid)) {
       if(b.getState() == ReplicaState.FINALIZED) {
-        finalized.add(new FinalizedReplica(b));
+        finalized.add(new FinalizedReplica((FinalizedReplica)b));
       }
     }
     return finalized;

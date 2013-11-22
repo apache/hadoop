@@ -242,9 +242,10 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
    * @param b block
    * @param newGS the new generation stamp for the replica
    * @param expectedBlockLen the number of bytes the replica is expected to have
+   * @return the storage uuid of the replica.
    * @throws IOException
    */
-  public Replica recoverClose(ExtendedBlock b, long newGS, long expectedBlockLen
+  public String recoverClose(ExtendedBlock b, long newGS, long expectedBlockLen
       ) throws IOException;
   
   /**
@@ -263,15 +264,6 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
    * @throws IOException
    */
   public void unfinalizeBlock(ExtendedBlock b) throws IOException;
-
-  /**
-   * TODO HDFS-2832: Deprecate this when we fix tests.
-   * Returns the block report - the full list of blocks stored under a 
-   * block pool
-   * @param bpid Block Pool Id
-   * @return - the block report - the full list of blocks stored
-   */
-  public BlockListAsLongs getBlockReport(String bpid);
 
   /**
    * Returns one block report per volume.

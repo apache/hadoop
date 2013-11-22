@@ -53,7 +53,7 @@ class FsVolumeList {
    * @param blockSize free space needed on the volume
    * @return next volume to store the block in.
    */
-  // TODO this will be replaced by getting volume from StorageID directly later.
+  // TODO should choose volume with storage type
   synchronized FsVolumeImpl getNextVolume(long blockSize) throws IOException {
     return blockChooser.chooseVolume(volumes, blockSize);
   }

@@ -119,9 +119,7 @@ class ReplicaMap {
   }
 
   /**
-   * Add all entries from the given replica map into the local replica
-   * map.
-   * @param
+   * Add all entries from the given replica map into the local replica map.
    */
   void addAll(ReplicaMap other) {
     map.putAll(other.map);

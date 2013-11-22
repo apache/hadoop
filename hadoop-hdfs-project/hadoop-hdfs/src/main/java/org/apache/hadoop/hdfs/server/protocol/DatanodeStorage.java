@@ -36,17 +36,12 @@ public class DatanodeStorage {
   private final StorageType storageType;
 
   /**
-   * Create a storage with {@link State#NORMAL} and
-   * {@link org.apache.hadoop.hdfs.StorageType#DEFAULT}.
+   * Create a storage with {@link State#NORMAL} and {@link StorageType#DEFAULT}.
    *
    * @param storageID
    */
   public DatanodeStorage(String storageID) {
     this(storageID, State.NORMAL, StorageType.DEFAULT);
-  }
-
-  public DatanodeStorage(String sid, State s) {
-    this(sid, s, StorageType.DEFAULT);
   }
 
   public DatanodeStorage(String sid, State s, StorageType sm) {
@@ -69,11 +64,11 @@ public class DatanodeStorage {
 
   /**
    * Generate new storage ID. The format of this string can be changed
-   * in the future without requiring that old SotrageIDs be updated.
+   * in the future without requiring that old storage IDs be updated.
    *
    * @return unique storage ID
    */
-  public static String newStorageID() {
+  public static String generateUuid() {
     return "DS-" + UUID.randomUUID();
   }
 }

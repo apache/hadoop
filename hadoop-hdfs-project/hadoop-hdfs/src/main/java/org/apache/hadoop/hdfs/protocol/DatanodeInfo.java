@@ -124,13 +124,13 @@ public class DatanodeInfo extends DatanodeID implements Node {
 
   /** Constructor */
   public DatanodeInfo(final String ipAddr, final String hostName,
-      final String DatanodeUuid, final int xferPort, final int infoPort,
+      final String datanodeUuid, final int xferPort, final int infoPort,
       final int infoSecurePort, final int ipcPort,
       final long capacity, final long dfsUsed, final long remaining,
       final long blockPoolUsed, final long cacheCapacity, final long cacheUsed,
       final long lastUpdate, final int xceiverCount,
       final String networkLocation, final AdminStates adminState) {
-    super(ipAddr, hostName, DatanodeUuid, xferPort, infoPort,
+    super(ipAddr, hostName, datanodeUuid, xferPort, infoPort,
             infoSecurePort, ipcPort);
     this.capacity = capacity;
     this.dfsUsed = dfsUsed;
