@@ -55,7 +55,6 @@ import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshot.FileDiffList;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileUnderConstructionWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotFSImageFormat;
@@ -659,13 +658,10 @@ public class FSImageFormat {
       // file
       
       // read blocks
-      BlockInfo[] blocks = null;
-      if (numBlocks >= 0) {
-        blocks = new BlockInfo[numBlocks];
-        for (int j = 0; j < numBlocks; j++) {
-          blocks[j] = new BlockInfo(replication);
-          blocks[j].readFields(in);
-        }
+      BlockInfo[] blocks = new BlockInfo[numBlocks];
+      for (int j = 0; j < numBlocks; j++) {
+        blocks[j] = new BlockInfo(replication);
+        blocks[j].readFields(in);
       }
 
       String clientName = "";
@@ -700,10 +696,9 @@ public class FSImageFormat {
       final INodeFile file = new INodeFile(inodeId, localName, permissions,
           modificationTime, atime, blocks, replication, blockSize);
       if (underConstruction) {
-        INodeFileUnderConstruction fileUC = new INodeFileUnderConstruction(
-            file, clientName, clientMachine, null);
-        return fileDiffs == null ? fileUC :
-          new INodeFileUnderConstructionWithSnapshot(fileUC, fileDiffs);
+        file.toUnderConstruction(clientName, clientMachine, null);
+        return fileDiffs == null ? file : new INodeFileWithSnapshot(file,
+            fileDiffs);
       } else {
         return fileDiffs == null ? file : 
           new INodeFileWithSnapshot(file, fileDiffs);
@@ -829,8 +824,8 @@ public class FSImageFormat {
       LOG.info("Number of files under construction = " + size);
 
       for (int i = 0; i < size; i++) {
-        INodeFileUnderConstruction cons = FSImageSerialization
-            .readINodeUnderConstruction(in, namesystem, getLayoutVersion());
+        INodeFile cons = FSImageSerialization.readINodeUnderConstruction(in,
+            namesystem, getLayoutVersion());
         counter.increment();
 
         // verify that file exists in namespace
@@ -848,33 +843,21 @@ public class FSImageFormat {
           final INodesInPath iip = fsDir.getLastINodeInPath(path);
           oldnode = INodeFile.valueOf(iip.getINode(0), path);
         }
-        
-        cons.setLocalName(oldnode.getLocalNameBytes());
-        INodeReference parentRef = oldnode.getParentReference();
-        if (parentRef != null) {
-          cons.setParentReference(parentRef);
-        } else {
-          cons.setParent(oldnode.getParent());
-        }
 
-        if (oldnode instanceof INodeFileWithSnapshot) {
-          cons = new INodeFileUnderConstructionWithSnapshot(cons,
-              ((INodeFileWithSnapshot) oldnode).getDiffs());
+        FileUnderConstructionFeature uc = cons.getFileUnderConstructionFeature();
+        oldnode.toUnderConstruction(uc.getClientName(), uc.getClientMachine(),
+            uc.getClientNode());
+        if (oldnode.numBlocks() > 0) {
+          BlockInfo ucBlock = cons.getLastBlock();
+          // we do not replace the inode, just replace the last block of oldnode
+          BlockInfo info = namesystem.getBlockManager().addBlockCollection(
+              ucBlock, oldnode);
+          oldnode.setBlock(oldnode.numBlocks() - 1, info);
         }
 
         if (!inSnapshot) {
-          fsDir.replaceINodeFile(path, oldnode, cons);
-          namesystem.leaseManager.addLease(cons.getClientName(), path);
-        } else {
-          if (parentRef != null) {
-            // replace oldnode with cons
-            parentRef.setReferredINode(cons);
-          } else {
-            // replace old node in its parent's children list and deleted list
-            oldnode.getParent().replaceChildFileInSnapshot(oldnode, cons);
-            namesystem.dir.addToInodeMap(cons);
-            updateBlocksMap(cons);
-          }
+          namesystem.leaseManager.addLease(cons
+              .getFileUnderConstructionFeature().getClientName(), path);
         }
       }
     }
@@ -955,8 +938,8 @@ public class FSImageFormat {
     private MD5Hash savedDigest;
     private final ReferenceMap referenceMap = new ReferenceMap();
     
-    private final Map<Long, INodeFileUnderConstruction> snapshotUCMap = 
-        new HashMap<Long, INodeFileUnderConstruction>();
+    private final Map<Long, INodeFile> snapshotUCMap =
+        new HashMap<Long, INodeFile>();
 
     /** @throws IllegalStateException if the instance has not yet saved an image */
     private void checkSaved() {
@@ -1096,8 +1079,7 @@ public class FSImageFormat {
           dirNum++;
         } else if (inSnapshot && child.isFile()
             && child.asFile().isUnderConstruction()) {
-          this.snapshotUCMap.put(child.getId(),
-              (INodeFileUnderConstruction) child.asFile());
+          this.snapshotUCMap.put(child.getId(), child.asFile());
         }
         if (i++ % 50 == 0) {
           context.checkCancelled();

@@ -38,7 +38,6 @@ import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectoryAttributes;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectoryWithQuota;
-import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeMap;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference;
 import org.apache.hadoop.hdfs.server.namenode.Quota;
@@ -591,14 +590,6 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
       }
     }
     return removed;
-  }
-  
-  @Override
-  public void replaceChildFileInSnapshot(final INodeFile oldChild,
-      final INodeFile newChild) {
-    super.replaceChildFileInSnapshot(oldChild, newChild);
-    diffs.replaceChild(ListType.DELETED, oldChild, newChild);
-    diffs.replaceChild(ListType.CREATED, oldChild, newChild);
   }
   
   @Override

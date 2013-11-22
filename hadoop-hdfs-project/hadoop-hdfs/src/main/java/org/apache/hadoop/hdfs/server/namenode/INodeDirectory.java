@@ -34,7 +34,6 @@ import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithCount;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileUnderConstructionWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
@@ -205,23 +204,6 @@ public class INodeDirectory extends INodeWithAdditionalFields
     return newDir;
   }
   
-  /**
-   * Used when load fileUC from fsimage. The file to be replaced is actually 
-   * only in snapshot, thus may not be contained in the children list. 
-   * See HDFS-5428 for details.
-   */
-  public void replaceChildFileInSnapshot(INodeFile oldChild,
-      final INodeFile newChild) {
-    if (children != null) {
-      final int i = searchChildren(newChild.getLocalNameBytes());
-      if (i >= 0 && children.get(i).getId() == oldChild.getId()) {
-        // no need to consider reference node here, since we already do the 
-        // replacement in FSImageFormat.Loader#loadFilesUnderConstruction
-        children.set(i, newChild);
-      }
-    }
-  }
-  
   /** Replace the given child with a new child. */
   public void replaceChild(INode oldChild, final INode newChild,
       final INodeMap inodeMap) {
@@ -287,17 +269,6 @@ public class INodeDirectory extends INodeWithAdditionalFields
     Preconditions.checkArgument(!(child instanceof INodeFileWithSnapshot),
         "Child file is already an INodeFileWithSnapshot, child=" + child);
     final INodeFileWithSnapshot newChild = new INodeFileWithSnapshot(child);
-    replaceChildFile(child, newChild, inodeMap);
-    return newChild;
-  }
-
-  /** Replace a child {@link INodeFile} with an {@link INodeFileUnderConstructionWithSnapshot}. */
-  INodeFileUnderConstructionWithSnapshot replaceChild4INodeFileUcWithSnapshot(
-      final INodeFileUnderConstruction child, final INodeMap inodeMap) {
-    Preconditions.checkArgument(!(child instanceof INodeFileUnderConstructionWithSnapshot),
-        "Child file is already an INodeFileUnderConstructionWithSnapshot, child=" + child);
-    final INodeFileUnderConstructionWithSnapshot newChild
-        = new INodeFileUnderConstructionWithSnapshot(child, null);
     replaceChildFile(child, newChild, inodeMap);
     return newChild;
   }

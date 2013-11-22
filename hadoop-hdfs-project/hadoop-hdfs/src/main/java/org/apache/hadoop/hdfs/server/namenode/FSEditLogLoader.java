@@ -85,6 +85,7 @@ import org.apache.hadoop.hdfs.util.ChunkedArrayList;
 import org.apache.hadoop.hdfs.util.Holder;
 
 import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
 
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -369,15 +370,15 @@ public class FSEditLogLoader {
       }
 
       final INodesInPath iip = fsDir.getLastINodeInPath(addCloseOp.path);
-      final INodeFile oldFile = INodeFile.valueOf(iip.getINode(0), addCloseOp.path);
+      final INodeFile file = INodeFile.valueOf(iip.getINode(0), addCloseOp.path);
 
       // Update the salient file attributes.
-      oldFile.setAccessTime(addCloseOp.atime, null, fsDir.getINodeMap());
-      oldFile.setModificationTime(addCloseOp.mtime, null, fsDir.getINodeMap());
-      updateBlocks(fsDir, addCloseOp, oldFile);
+      file.setAccessTime(addCloseOp.atime, null, fsDir.getINodeMap());
+      file.setModificationTime(addCloseOp.mtime, null, fsDir.getINodeMap());
+      updateBlocks(fsDir, addCloseOp, file);
 
       // Now close the file
-      if (!oldFile.isUnderConstruction() &&
+      if (!file.isUnderConstruction() &&
           logVersion <= LayoutVersion.BUGFIX_HDFS_2991_VERSION) {
         // There was a bug (HDFS-2991) in hadoop < 0.23.1 where OP_CLOSE
         // could show up twice in a row. But after that version, this
@@ -387,11 +388,9 @@ public class FSEditLogLoader {
       }
       // One might expect that you could use removeLease(holder, path) here,
       // but OP_CLOSE doesn't serialize the holder. So, remove by path.
-      if (oldFile.isUnderConstruction()) {
-        INodeFileUnderConstruction ucFile = (INodeFileUnderConstruction) oldFile;
+      if (file.isUnderConstruction()) {
         fsNamesys.leaseManager.removeLeaseWithPrefixPath(addCloseOp.path);
-        INodeFile newFile = ucFile.toINodeFile(ucFile.getModificationTime());
-        fsDir.unprotectedReplaceINodeFile(addCloseOp.path, ucFile, newFile);
+        file.toCompleteFile(file.getModificationTime());
       }
       break;
     }
@@ -564,9 +563,8 @@ public class FSEditLogLoader {
 
       Lease lease = fsNamesys.leaseManager.getLease(
           reassignLeaseOp.leaseHolder);
-      INodeFileUnderConstruction pendingFile =
-          INodeFileUnderConstruction.valueOf( 
-              fsDir.getINode(reassignLeaseOp.path), reassignLeaseOp.path);
+      INodeFile pendingFile = fsDir.getINode(reassignLeaseOp.path).asFile();
+      Preconditions.checkState(pendingFile.isUnderConstruction());
       fsNamesys.reassignLeaseInternal(lease,
           reassignLeaseOp.path, reassignLeaseOp.newHolder, pendingFile);
       break;
@@ -751,9 +749,8 @@ public class FSEditLogLoader {
       if (oldBlock instanceof BlockInfoUnderConstruction &&
           (!isLastBlock || op.shouldCompleteLastBlock())) {
         changeMade = true;
-        fsNamesys.getBlockManager().forceCompleteBlock(
-            (INodeFileUnderConstruction)file,
-            (BlockInfoUnderConstruction)oldBlock);
+        fsNamesys.getBlockManager().forceCompleteBlock(file,
+            (BlockInfoUnderConstruction) oldBlock);
       }
       if (changeMade) {
         // The state or gen-stamp of the block has changed. So, we may be
@@ -774,8 +771,7 @@ public class FSEditLogLoader {
             + path);
       }
       Block oldBlock = oldBlocks[oldBlocks.length - 1];
-      boolean removed = fsDir.unprotectedRemoveBlock(path,
-          (INodeFileUnderConstruction) file, oldBlock);
+      boolean removed = fsDir.unprotectedRemoveBlock(path, file, oldBlock);
       if (!removed && !(op instanceof UpdateBlocksOp)) {
         throw new IOException("Trying to delete non-existant block " + oldBlock);
       }

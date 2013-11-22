@@ -99,7 +99,7 @@ class DFSClientCache {
     this.config = config;
     this.clientCache = CacheBuilder.newBuilder()
         .maximumSize(clientCache)
-        .removalListener(clientRemovealListener())
+        .removalListener(clientRemovalListener())
         .build(clientLoader());
 
     this.inputstreamCache = CacheBuilder.newBuilder()
@@ -127,7 +127,7 @@ class DFSClientCache {
     };
   }
 
-  private RemovalListener<String, DFSClient> clientRemovealListener() {
+  private RemovalListener<String, DFSClient> clientRemovalListener() {
     return new RemovalListener<String, DFSClient>() {
       @Override
       public void onRemoval(RemovalNotification<String, DFSClient> notification) {

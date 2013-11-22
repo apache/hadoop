@@ -13,9 +13,6 @@ Trunk (Unreleased)
 
     HDFS-3125. Add JournalService to enable Journal Daemon. (suresh)
 
-    HDFS-5444. Choose default web UI based on browser capabilities. (Haohui Mai
-    via jing9)
-
   IMPROVEMENTS
 
     HDFS-4665. Move TestNetworkTopologyWithNodeGroup to common.
@@ -202,8 +199,6 @@ Trunk (Unreleased)
     HDFS-5511. improve CacheManipulator interface to allow better unit testing
     (cmccabe)
 
-    HDFS-5525. Inline dust templates for new Web UI. (Haohui Mai via jing9)
-
     HDFS-5451. Add byte and file statistics to PathBasedCacheEntry.
     (Colin Patrick McCabe via Andrew Wang)
 
@@ -212,6 +207,10 @@ Trunk (Unreleased)
 
     HDFS-5473. Consistent naming of user-visible caching classes and methods
     (cmccabe)
+
+    HDFS-5285. Flatten INodeFile hierarchy: Replace INodeFileUnderConstruction
+    and INodeFileUnderConstructionWithSnapshot with FileUnderContructionFeature.
+    (jing9 via szetszwo)
 
   OPTIMIZATIONS
     HDFS-5349. DNA_CACHE and DNA_UNCACHE should be by blockId only. (cmccabe)
@@ -397,6 +396,9 @@ Trunk (Unreleased)
 
     HDFS-5513. CacheAdmin commands fail when using . as the path. (wang)
 
+    HDFS-5543. Fix narrow race condition in TestPathBasedCacheRequests
+    (cmccabe)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -421,6 +423,9 @@ Release 2.3.0 - UNRELEASED
     Mai via jing9)
 
     HDFS-3987. Support webhdfs over HTTPS. (Haohui Mai via jing9)
+
+    HDFS-5444. Choose default web UI based on browser capabilities. (Haohui Mai
+    via jing9)
 
   IMPROVEMENTS
 
@@ -528,6 +533,8 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-5532. Enable the webhdfs by default to support new HDFS web UI. (Vinay
     via jing9)
+    
+    HDFS-5525. Inline dust templates for new Web UI. (Haohui Mai via jing9)
 
   OPTIMIZATIONS
 
@@ -602,6 +609,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-5428. Under construction files deletion after snapshot+checkpoint+nn restart 
     leads nn safemode. (jing9)
 
+    HDFS-5552. Fix wrong information of "Cluster summay" in dfshealth.html.
+    (Haohui Mai via jing9)
+
 Release 2.2.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -621,6 +631,8 @@ Release 2.2.1 - UNRELEASED
     McCabe)
 
     HDFS-5344. Make LsSnapshottableDir as Tool interface implementation. (Sathish via umamahesh)
+
+    HDFS-5544. Adding Test case For Checking dfs.checksum type as NULL value. (Sathish via umamahesh)
 
   OPTIMIZATIONS
 
@@ -710,6 +722,10 @@ Release 2.2.1 - UNRELEASED
 
     HDFS-5014. Process register commands with out holding BPOfferService lock. 
     (Vinaykumar B via umamahesh)
+
+    HDFS-5288. Close idle connections in portmap (Haohui Mai via brandonli)
+
+    HDFS-5407. Fix typos in DFSClientCache (Haohui Mai via brandonli)
 
 Release 2.2.0 - 2013-10-13
 

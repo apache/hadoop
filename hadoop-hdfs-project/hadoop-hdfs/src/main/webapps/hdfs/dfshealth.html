@@ -101,7 +101,7 @@
 
     <p>
       {#fs}
-      {TotalLoad} files and directories, {BlocksTotal} blocks = {FilesTotal} total filesystem object(s).
+      {FilesTotal} files and directories, {BlocksTotal} blocks = {@math key="{FilesTotal}" method="add" operand="{BlocksTotal}"/} total filesystem object(s).
       {#helper_fs_max_objects/}
       {/fs}
     </p>
