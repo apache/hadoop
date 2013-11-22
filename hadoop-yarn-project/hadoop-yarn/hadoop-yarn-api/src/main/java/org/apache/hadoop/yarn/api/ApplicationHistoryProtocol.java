@@ -202,7 +202,7 @@ public interface ApplicationHistoryProtocol {
    */
   @Public
   @Unstable
-  public GetContainerReportResponse getContainer(
+  public GetContainerReportResponse getContainerReport(
       GetContainerReportRequest request) throws YarnException, IOException;
 
   /**
