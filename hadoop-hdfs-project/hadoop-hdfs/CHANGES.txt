@@ -13,9 +13,6 @@ Trunk (Unreleased)
 
     HDFS-3125. Add JournalService to enable Journal Daemon. (suresh)
 
-    HDFS-5444. Choose default web UI based on browser capabilities. (Haohui Mai
-    via jing9)
-
   IMPROVEMENTS
 
     HDFS-4665. Move TestNetworkTopologyWithNodeGroup to common.
@@ -201,8 +198,6 @@ Trunk (Unreleased)
 
     HDFS-5511. improve CacheManipulator interface to allow better unit testing
     (cmccabe)
-
-    HDFS-5525. Inline dust templates for new Web UI. (Haohui Mai via jing9)
 
     HDFS-5451. Add byte and file statistics to PathBasedCacheEntry.
     (Colin Patrick McCabe via Andrew Wang)
@@ -429,6 +424,9 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-3987. Support webhdfs over HTTPS. (Haohui Mai via jing9)
 
+    HDFS-5444. Choose default web UI based on browser capabilities. (Haohui Mai
+    via jing9)
+
   IMPROVEMENTS
 
     HDFS-5267. Remove volatile from LightWeightHashSet. (Junping Du via llu)
@@ -535,6 +533,8 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-5532. Enable the webhdfs by default to support new HDFS web UI. (Vinay
     via jing9)
+    
+    HDFS-5525. Inline dust templates for new Web UI. (Haohui Mai via jing9)
 
   OPTIMIZATIONS
 
