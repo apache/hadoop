@@ -135,4 +135,25 @@ public class TestFSOutputSummer {
       cluster.shutdown();
     }
   }
+  
+  @Test
+  public void TestDFSCheckSumType() throws Exception{
+    Configuration conf = new HdfsConfiguration();
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
+    conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, BYTES_PER_CHECKSUM);
+    conf.set(DFSConfigKeys.DFS_CHECKSUM_TYPE_KEY, "NULL");
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+                                               .numDataNodes(NUM_OF_DATANODES)
+                                               .build();
+    fileSys = cluster.getFileSystem();
+    try {
+      Path file = new Path("try.dat");
+      Random rand = new Random(seed);
+      rand.nextBytes(expected);
+      writeFile1(file);
+    } finally {
+      fileSys.close();
+      cluster.shutdown();
+    }
+  }
 }
