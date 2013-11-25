@@ -210,6 +210,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-5552. Fix wrong information of "Cluster summay" in dfshealth.html.
     (Haohui Mai via jing9)
 
+    HDFS-5533. Symlink delete/create should be treated as DELETE/CREATE in snapshot diff 
+    report. (Binglin Chang via jing9)
+
 Release 2.2.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

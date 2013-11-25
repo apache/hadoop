@@ -92,12 +92,15 @@ public class TestSnapshotDiffReport {
     Path file11 = new Path(modifyDir, "file11");
     Path file12 = new Path(modifyDir, "file12");
     Path file13 = new Path(modifyDir, "file13");
+    Path link13 = new Path(modifyDir, "link13");
     Path file14 = new Path(modifyDir, "file14");
     Path file15 = new Path(modifyDir, "file15");
     DFSTestUtil.createFile(hdfs, file10, BLOCKSIZE, REPLICATION_1, seed);
     DFSTestUtil.createFile(hdfs, file11, BLOCKSIZE, REPLICATION_1, seed);
     DFSTestUtil.createFile(hdfs, file12, BLOCKSIZE, REPLICATION_1, seed);
     DFSTestUtil.createFile(hdfs, file13, BLOCKSIZE, REPLICATION_1, seed);
+    // create link13
+    hdfs.createSymlink(file13, link13, false);
     // create snapshot
     for (Path snapshotDir : snapshotDirs) {
       hdfs.allowSnapshot(snapshotDir);
@@ -110,6 +113,8 @@ public class TestSnapshotDiffReport {
     hdfs.setReplication(file12, REPLICATION);
     // modify file13
     hdfs.setReplication(file13, REPLICATION);
+    // delete link13
+    hdfs.delete(link13, false);
     // create file14
     DFSTestUtil.createFile(hdfs, file14, BLOCKSIZE, REPLICATION, seed);
     // create file15
@@ -126,6 +131,8 @@ public class TestSnapshotDiffReport {
     hdfs.delete(file12, true);
     // modify file13
     hdfs.setReplication(file13, (short) (REPLICATION - 2));
+    // create link13 again
+    hdfs.createSymlink(file13, link13, false);
     // delete file14
     hdfs.delete(file14, true);
     // modify file15
@@ -222,7 +229,9 @@ public class TestSnapshotDiffReport {
         new DiffReportEntry(DiffType.DELETE, DFSUtil.string2Bytes("file12")),
         new DiffReportEntry(DiffType.DELETE, DFSUtil.string2Bytes("file11")),
         new DiffReportEntry(DiffType.CREATE, DFSUtil.string2Bytes("file11")),
-        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("file13")));
+        new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("file13")),
+        new DiffReportEntry(DiffType.DELETE, DFSUtil.string2Bytes("link13")),
+        new DiffReportEntry(DiffType.CREATE, DFSUtil.string2Bytes("link13")));
 
     verifyDiffReport(sub1, "s0", "s5", 
         new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
@@ -232,6 +241,8 @@ public class TestSnapshotDiffReport {
         new DiffReportEntry(DiffType.DELETE, DFSUtil.string2Bytes("file11")),
         new DiffReportEntry(DiffType.CREATE, DFSUtil.string2Bytes("file11")),
         new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("file13")),
+        new DiffReportEntry(DiffType.DELETE, DFSUtil.string2Bytes("link13")),
+        new DiffReportEntry(DiffType.CREATE, DFSUtil.string2Bytes("link13")),
         new DiffReportEntry(DiffType.MODIFY,
             DFSUtil.string2Bytes("subsub1/subsubsub1")),
         new DiffReportEntry(DiffType.CREATE,
@@ -240,6 +251,8 @@ public class TestSnapshotDiffReport {
             DFSUtil.string2Bytes("subsub1/subsubsub1/file11")),
         new DiffReportEntry(DiffType.CREATE,
             DFSUtil.string2Bytes("subsub1/subsubsub1/file13")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("subsub1/subsubsub1/link13")),
         new DiffReportEntry(DiffType.CREATE,
             DFSUtil.string2Bytes("subsub1/subsubsub1/file15")));
     
@@ -253,6 +266,8 @@ public class TestSnapshotDiffReport {
             DFSUtil.string2Bytes("subsub1/subsubsub1/file11")),
         new DiffReportEntry(DiffType.CREATE,
             DFSUtil.string2Bytes("subsub1/subsubsub1/file13")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("subsub1/subsubsub1/link13")),
         new DiffReportEntry(DiffType.CREATE,
             DFSUtil.string2Bytes("subsub1/subsubsub1/file15")));
     
@@ -270,7 +285,11 @@ public class TestSnapshotDiffReport {
         new DiffReportEntry(DiffType.CREATE,
             DFSUtil.string2Bytes("subsub1/subsubsub1/file11")),
         new DiffReportEntry(DiffType.MODIFY,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/file13")));
+            DFSUtil.string2Bytes("subsub1/subsubsub1/file13")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("subsub1/subsubsub1/link13")),
+        new DiffReportEntry(DiffType.DELETE,
+            DFSUtil.string2Bytes("subsub1/subsubsub1/link13")));
   }
   
   /**
@@ -300,7 +319,11 @@ public class TestSnapshotDiffReport {
         new DiffReportEntry(DiffType.CREATE,
             DFSUtil.string2Bytes("subsub1/subsubsub1/file11")),
         new DiffReportEntry(DiffType.MODIFY,
-            DFSUtil.string2Bytes("subsub1/subsubsub1/file13")));
+            DFSUtil.string2Bytes("subsub1/subsubsub1/file13")),
+        new DiffReportEntry(DiffType.CREATE,
+            DFSUtil.string2Bytes("subsub1/subsubsub1/link13")),
+        new DiffReportEntry(DiffType.DELETE,
+            DFSUtil.string2Bytes("subsub1/subsubsub1/link13")));
     // check diff report between s0 and the current status
     verifyDiffReport(sub1, "s0", "", 
         new DiffReportEntry(DiffType.MODIFY, DFSUtil.string2Bytes("")),
