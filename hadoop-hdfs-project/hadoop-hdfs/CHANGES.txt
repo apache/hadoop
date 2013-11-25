@@ -60,6 +60,8 @@ Release 0.23.10 - UNRELEASED
 
     HDFS-5438. Flaws in block report processing can cause data loss. (kihwal)
 
+    HDFS-5526. Datanode cannot roll back to previous layout version (kihwal)
+
 Release 0.23.9 - 2013-07-08
 
   INCOMPATIBLE CHANGES
