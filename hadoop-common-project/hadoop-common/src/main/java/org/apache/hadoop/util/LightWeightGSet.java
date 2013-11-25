@@ -348,8 +348,11 @@ public class LightWeightGSet<K, E extends K> implements GSet<K, E> {
 
     LOG.info("Computing capacity for map " + mapName);
     LOG.info("VM type       = " + vmBit + "-bit");
-    LOG.info(percentage + "% max memory = "
-        + StringUtils.TraditionalBinaryPrefix.long2String(maxMemory, "B", 1));
+    LOG.info(percentage + "% max memory "
+        + StringUtils.TraditionalBinaryPrefix.long2String(maxMemory, "B", 1)
+        + " = "
+        + StringUtils.TraditionalBinaryPrefix.long2String((long) percentMemory,
+            "B", 1));
     LOG.info("capacity      = 2^" + exponent + " = " + c + " entries");
     return c;
   }

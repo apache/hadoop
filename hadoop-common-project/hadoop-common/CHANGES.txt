@@ -388,6 +388,8 @@ Release 2.3.0 - UNRELEASED
     HADOOP-10111. Allow DU to be initialized with an initial value (Kihwal Lee
     via jeagles)
 
+    HADOOP-10126. LightWeightGSet log message is confusing. (Vinay via suresh)
+
   OPTIMIZATIONS
 
     HADOOP-9748. Reduce blocking on UGI.ensureInitialized (daryn)
