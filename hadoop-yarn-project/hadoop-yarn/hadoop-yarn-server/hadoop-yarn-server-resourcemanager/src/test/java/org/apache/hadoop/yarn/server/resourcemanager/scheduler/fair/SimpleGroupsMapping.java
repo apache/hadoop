@@ -28,7 +28,7 @@ public class SimpleGroupsMapping implements GroupMappingServiceProvider {
   
   @Override
   public List<String> getGroups(String user) {
-    return Arrays.asList(user + "group");
+    return Arrays.asList(user + "group", user + "subgroup1", user + "subgroup2");
   }
 
   @Override

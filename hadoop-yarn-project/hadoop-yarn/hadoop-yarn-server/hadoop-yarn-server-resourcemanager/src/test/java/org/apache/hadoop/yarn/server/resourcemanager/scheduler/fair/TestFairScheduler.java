@@ -682,8 +682,10 @@ public class TestFairScheduler {
     rules.add(new QueuePlacementRule.Specified().initialize(true, null));
     rules.add(new QueuePlacementRule.User().initialize(false, null));
     rules.add(new QueuePlacementRule.PrimaryGroup().initialize(false, null));
+    rules.add(new QueuePlacementRule.SecondaryGroupExistingQueue().initialize(false, null));
     rules.add(new QueuePlacementRule.Default().initialize(true, null));
-    Set<String> queues = Sets.newHashSet("root.user1", "root.user3group");
+    Set<String> queues = Sets.newHashSet("root.user1", "root.user3group", 
+        "root.user4subgroup1", "root.user4subgroup2" , "root.user5subgroup2");
     scheduler.getQueueManager().placementPolicy = new QueuePlacementPolicy(
         rules, queues, conf);
     appId = createSchedulingRequest(1024, "somequeue", "user1");
@@ -692,6 +694,10 @@ public class TestFairScheduler {
     assertEquals("root.user1", apps.get(appId).getQueueName());
     appId = createSchedulingRequest(1024, "default", "user3");
     assertEquals("root.user3group", apps.get(appId).getQueueName());
+    appId = createSchedulingRequest(1024, "default", "user4");
+    assertEquals("root.user4subgroup1", apps.get(appId).getQueueName());
+    appId = createSchedulingRequest(1024, "default", "user5");
+    assertEquals("root.user5subgroup2", apps.get(appId).getQueueName());
     appId = createSchedulingRequest(1024, "default", "otheruser");
     assertEquals("root.default", apps.get(appId).getQueueName());
     
