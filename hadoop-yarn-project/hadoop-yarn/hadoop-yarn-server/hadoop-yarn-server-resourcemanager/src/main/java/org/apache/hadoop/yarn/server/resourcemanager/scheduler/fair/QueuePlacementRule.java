@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.security.Groups;
@@ -58,7 +59,7 @@ public abstract class QueuePlacementRule {
    */
   public String assignAppToQueue(String requestedQueue, String user,
       Groups groups, Collection<String> configuredQueues) throws IOException {
-    String queue = getQueueForApp(requestedQueue, user, groups);
+    String queue = getQueueForApp(requestedQueue, user, groups, configuredQueues);
     if (create || configuredQueues.contains(queue)) {
       return queue;
     } else {
@@ -103,7 +104,7 @@ public abstract class QueuePlacementRule {
    *    continue to the next rule.
    */
   protected abstract String getQueueForApp(String requestedQueue, String user,
-      Groups groups) throws IOException;
+      Groups groups, Collection<String> configuredQueues) throws IOException;
 
   /**
    * Places apps in queues by username of the submitter
@@ -111,7 +112,7 @@ public abstract class QueuePlacementRule {
   public static class User extends QueuePlacementRule {
     @Override
     protected String getQueueForApp(String requestedQueue,
-        String user, Groups groups) {
+        String user, Groups groups, Collection<String> configuredQueues) {
       return "root." + user;
     }
     
@@ -127,10 +128,38 @@ public abstract class QueuePlacementRule {
   public static class PrimaryGroup extends QueuePlacementRule {
     @Override
     protected String getQueueForApp(String requestedQueue,
-        String user, Groups groups) throws IOException {
+        String user, Groups groups, 
+        Collection<String> configuredQueues) throws IOException {
       return "root." + groups.getGroups(user).get(0);
     }
     
+    @Override
+    public boolean isTerminal() {
+      return create;
+    }
+  }
+  
+  /**
+   * Places apps in queues by secondary group of the submitter
+   * 
+   * Match will be made on first secondary group that exist in
+   * queues
+   */
+  public static class SecondaryGroupExistingQueue extends QueuePlacementRule {
+    @Override
+    protected String getQueueForApp(String requestedQueue,
+        String user, Groups groups, 
+        Collection<String> configuredQueues) throws IOException {
+      List<String> groupNames = groups.getGroups(user);
+      for (int i = 1; i < groupNames.size(); i++) {
+        if (configuredQueues.contains("root." + groupNames.get(i))) {
+          return "root." + groupNames.get(i);
+        }
+      }
+      
+      return "";
+    }
+        
     @Override
     public boolean isTerminal() {
       return create;
@@ -143,7 +172,7 @@ public abstract class QueuePlacementRule {
   public static class Specified extends QueuePlacementRule {
     @Override
     protected String getQueueForApp(String requestedQueue,
-        String user, Groups groups) {
+        String user, Groups groups, Collection<String> configuredQueues) {
       if (requestedQueue.equals(YarnConfiguration.DEFAULT_QUEUE_NAME)) {
         return "";
       } else {
@@ -166,7 +195,7 @@ public abstract class QueuePlacementRule {
   public static class Default extends QueuePlacementRule {
     @Override
     protected String getQueueForApp(String requestedQueue, String user,
-        Groups groups) {
+        Groups groups, Collection<String> configuredQueues) {
       return "root." + YarnConfiguration.DEFAULT_QUEUE_NAME;
     }
     
@@ -188,7 +217,7 @@ public abstract class QueuePlacementRule {
     
     @Override
     protected String getQueueForApp(String requestedQueue, String user,
-        Groups groups) {
+        Groups groups, Collection<String> configuredQueues) {
       throw new UnsupportedOperationException();
     }
     

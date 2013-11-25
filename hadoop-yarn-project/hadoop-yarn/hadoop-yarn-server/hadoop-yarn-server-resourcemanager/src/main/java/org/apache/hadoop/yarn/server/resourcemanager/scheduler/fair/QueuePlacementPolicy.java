@@ -39,6 +39,8 @@ public class QueuePlacementPolicy {
         new HashMap<String, Class<? extends QueuePlacementRule>>();
     map.put("user", QueuePlacementRule.User.class);
     map.put("primaryGroup", QueuePlacementRule.PrimaryGroup.class);
+    map.put("secondaryGroupExistingQueue",
+        QueuePlacementRule.SecondaryGroupExistingQueue.class);
     map.put("specified", QueuePlacementRule.Specified.class);
     map.put("default", QueuePlacementRule.Default.class);
     map.put("reject", QueuePlacementRule.Reject.class);
