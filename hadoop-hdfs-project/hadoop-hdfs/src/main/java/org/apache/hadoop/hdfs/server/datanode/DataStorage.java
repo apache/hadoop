@@ -299,7 +299,16 @@ public class DataStorage extends Storage {
   @Override
   protected void setFieldsFromProperties(Properties props, StorageDirectory sd)
       throws IOException {
-    setLayoutVersion(props, sd);
+    setFieldsFromProperties(props, sd, false, 0);
+  }
+
+  private void setFieldsFromProperties(Properties props, StorageDirectory sd,
+      boolean overrideLayoutVersion, int toLayoutVersion) throws IOException {
+    if (overrideLayoutVersion) {
+      this.layoutVersion = toLayoutVersion;
+    } else {
+      setLayoutVersion(props, sd);
+    }
     setcTime(props, sd);
     setStorageType(props, sd);
     setClusterId(props, layoutVersion, sd);
@@ -347,13 +356,20 @@ public class DataStorage extends Storage {
     return true;
   }
   
+  /** Read VERSION file for rollback */
+  void readProperties(StorageDirectory sd, int rollbackLayoutVersion)
+      throws IOException {
+    Properties props = readPropertiesFile(sd.getVersionFile());
+    setFieldsFromProperties(props, sd, true, rollbackLayoutVersion);
+  }
+
   /**
    * Analize which and whether a transition of the fs state is required
    * and perform it if necessary.
    * 
-   * Rollback if previousLV >= LAYOUT_VERSION && prevCTime <= namenode.cTime
-   * Upgrade if this.LV > LAYOUT_VERSION || this.cTime < namenode.cTime
-   * Regular startup if this.LV = LAYOUT_VERSION && this.cTime = namenode.cTime
+   * Rollback if the rollback startup option was specified.
+   * Upgrade if this.LV > LAYOUT_VERSION
+   * Regular startup if this.LV = LAYOUT_VERSION
    * 
    * @param datanode Datanode to which this storage belongs to
    * @param sd  storage directory
@@ -393,25 +409,28 @@ public class DataStorage extends Storage {
           + nsInfo.getClusterID() + "; datanode clusterID = " + getClusterID());
     }
     
-    // regular start up
-    if (this.layoutVersion == HdfsConstants.LAYOUT_VERSION 
-        && this.cTime == nsInfo.getCTime())
+    // After addition of the federation feature, ctime check is only 
+    // meaningful at BlockPoolSliceStorage level. 
+
+    // regular start up. 
+    if (this.layoutVersion == HdfsConstants.LAYOUT_VERSION)
       return; // regular startup
     
     // do upgrade
-    if (this.layoutVersion > HdfsConstants.LAYOUT_VERSION
-        || this.cTime < nsInfo.getCTime()) {
+    if (this.layoutVersion > HdfsConstants.LAYOUT_VERSION) {
       doUpgrade(sd, nsInfo);  // upgrade
       return;
     }
     
-    // layoutVersion == LAYOUT_VERSION && this.cTime > nsInfo.cTime
-    // must shutdown
-    throw new IOException("Datanode state: LV = " + this.getLayoutVersion() 
-                          + " CTime = " + this.getCTime() 
-                          + " is newer than the namespace state: LV = "
-                          + nsInfo.getLayoutVersion() 
-                          + " CTime = " + nsInfo.getCTime());
+    // layoutVersion < LAYOUT_VERSION. I.e. stored layout version is newer
+    // than the version supported by datanode. This should have been caught
+    // in readProperties(), even if rollback was not carried out or somehow
+    // failed.
+    throw new IOException("BUG: The stored LV = " + this.getLayoutVersion()
+                          + " is newer than the supported LV = "
+                          + HdfsConstants.LAYOUT_VERSION
+                          + " or name node LV = "
+                          + nsInfo.getLayoutVersion());
   }
 
   /**
@@ -437,8 +456,13 @@ public class DataStorage extends Storage {
    * @throws IOException on error
    */
   void doUpgrade(StorageDirectory sd, NamespaceInfo nsInfo) throws IOException {
+    // If the existing on-disk layout version supportes federation, simply
+    // update its layout version.
     if (LayoutVersion.supports(Feature.FEDERATION, layoutVersion)) {
-      clusterID = nsInfo.getClusterID();
+      // The VERSION file is already read in. Override the layoutVersion 
+      // field and overwrite the file.
+      LOG.info("Updating layout version from " + layoutVersion + " to "
+          + nsInfo.getLayoutVersion() + " for storage " + sd.getRoot());
       layoutVersion = nsInfo.getLayoutVersion();
       writeProperties(sd);
       return;
@@ -523,15 +547,32 @@ public class DataStorage extends Storage {
    * <li> Remove removed.tmp </li>
    * </ol>
    * 
-   * Do nothing, if previous directory does not exist.
+   * If previous directory does not exist and the current version supports
+   * federation, perform a simple rollback of layout version. This does not
+   * involve saving/restoration of actual data.
    */
   void doRollback( StorageDirectory sd,
                    NamespaceInfo nsInfo
                    ) throws IOException {
     File prevDir = sd.getPreviousDir();
-    // regular startup if previous dir does not exist
-    if (!prevDir.exists())
+    // This is a regular startup or a post-federation rollback
+    if (!prevDir.exists()) {
+      // The current datanode version supports federation and the layout
+      // version from namenode matches what the datanode supports. An invalid
+      // rollback may happen if namenode didn't rollback and datanode is
+      // running a wrong version.  But this will be detected in block pool
+      // level and the invalid VERSION content will be overwritten when
+      // the error is corrected and rollback is retried.
+      if (LayoutVersion.supports(Feature.FEDERATION,
+          HdfsConstants.LAYOUT_VERSION) && 
+          HdfsConstants.LAYOUT_VERSION == nsInfo.getLayoutVersion()) {
+        readProperties(sd, nsInfo.getLayoutVersion());
+        writeProperties(sd);
+        LOG.info("Layout version rolled back to " +
+            nsInfo.getLayoutVersion() + " for storage " + sd.getRoot());
+      }
       return;
+    }
     DataStorage prevInfo = new DataStorage();
     prevInfo.readPreviousVersionProperties(sd);
 
