@@ -16,13 +16,35 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.applicationhistoryservice;
+package org.apache.hadoop.yarn.server.applicationhistoryservice.webapp;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.yarn.server.api.ApplicationContext;
+import org.apache.hadoop.yarn.webapp.Controller;
 
-@InterfaceAudience.Public
-@InterfaceStability.Unstable
-public interface ApplicationHistoryManager extends ApplicationContext {
+import com.google.inject.Inject;
+
+
+public class AHSController extends Controller {
+
+  @Inject
+  AHSController(RequestContext ctx) {
+    super(ctx);
+  }
+
+  @Override
+  public void index() {
+    setTitle("Application History");
+  }
+
+  public void app() {
+    render(AppPage.class);
+  }
+
+  public void appattempt() {
+    render(AppAttemptPage.class);
+  }
+
+  public void container() {
+    render(ContainerPage.class);
+  }
+
 }

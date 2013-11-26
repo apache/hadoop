@@ -16,13 +16,24 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.applicationhistoryservice;
+package org.apache.hadoop.yarn.server.applicationhistoryservice.webapp;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import javax.ws.rs.Path;
+
 import org.apache.hadoop.yarn.server.api.ApplicationContext;
 
-@InterfaceAudience.Public
-@InterfaceStability.Unstable
-public interface ApplicationHistoryManager extends ApplicationContext {
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
+
+@Singleton
+@Path("/ws/v1/applicationhistory")
+public class AHSWebServices {
+
+  private ApplicationContext appContext;
+
+  @Inject
+  public AHSWebServices(ApplicationContext appContext) {
+    this.appContext = appContext;
+  }
+
 }

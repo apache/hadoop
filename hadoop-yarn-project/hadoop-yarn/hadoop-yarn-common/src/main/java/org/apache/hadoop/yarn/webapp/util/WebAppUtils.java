@@ -144,6 +144,16 @@ public class WebAppUtils {
         YarnConfiguration.DEFAULT_NM_WEBAPP_ADDRESS);
     }
   }
+
+  public static String getAHSWebAppURLWithoutScheme(Configuration conf) {
+    if (HttpConfig.isSecure()) {
+      return conf.get(YarnConfiguration.AHS_WEBAPP_HTTPS_ADDRESS,
+        YarnConfiguration.DEFAULT_AHS_WEBAPP_HTTPS_ADDRESS);
+    } else {
+      return conf.get(YarnConfiguration.AHS_WEBAPP_ADDRESS,
+        YarnConfiguration.DEFAULT_AHS_WEBAPP_ADDRESS);
+    }
+  }
   
   /**
    * if url has scheme then it will be returned as it is else it will return
