@@ -405,6 +405,9 @@ Trunk (Unreleased)
     HDFS-5543. Fix narrow race condition in TestPathBasedCacheRequests
     (cmccabe)
 
+    HDFS-5565. CacheAdmin help should match against non-dashed commands
+    (wang via cmccabe)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

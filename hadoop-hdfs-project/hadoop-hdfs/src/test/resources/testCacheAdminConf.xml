@@ -387,7 +387,7 @@
     <test>
       <description>Testing the help usage</description>
       <test-commands>
-        <cache-admin-command>-help -addPool</cache-admin-command>
+        <cache-admin-command>-help addPool</cache-admin-command>
       </test-commands>
       <cleanup-commands>
       </cleanup-commands>

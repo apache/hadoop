@@ -822,14 +822,15 @@ public class CacheAdmin extends Configured implements Tool {
         return 0;
       }
       String commandName = args.get(0);
-      Command command = determineCommand(commandName);
+      // prepend a dash to match against the command names
+      Command command = determineCommand("-"+commandName);
       if (command == null) {
         System.err.print("Sorry, I don't know the command '" +
           commandName + "'.\n");
-        System.err.print("Valid command names are:\n");
+        System.err.print("Valid help command names are:\n");
         String separator = "";
         for (Command c : COMMANDS) {
-          System.err.print(separator + c.getName());
+          System.err.print(separator + c.getName().substring(1));
           separator = ", ";
         }
         System.err.print("\n");
