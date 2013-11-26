@@ -26,24 +26,27 @@ import java.io.IOException;
 
 import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 /**
  * Test the EditLogFileOutputStream
  */
 public class TestEditLogFileOutputStream {
-  private final static File TEST_DIR = PathUtils.getTestDir(TestEditLogFileOutputStream.class);
-  private static final File TEST_EDITS =
-      new File(TEST_DIR, "testEditLogFileOutput.log");
-  final static int MIN_PREALLOCATION_LENGTH =
-      EditLogFileOutputStream.MIN_PREALLOCATION_LENGTH;
+  private final static File TEST_DIR = PathUtils
+      .getTestDir(TestEditLogFileOutputStream.class);
+  private static final File TEST_EDITS = new File(TEST_DIR,
+      "testEditLogFileOutput.log");
+  final static int MIN_PREALLOCATION_LENGTH = EditLogFileOutputStream.MIN_PREALLOCATION_LENGTH;
 
   private Configuration conf;
 
-  static {
+  @BeforeClass
+  public static void disableFsync() {
     // No need to fsync for the purposes of tests. This makes
     // the tests run much faster.
     EditLogFileOutputStream.setShouldSkipFsyncForTesting(true);
@@ -52,7 +55,8 @@ public class TestEditLogFileOutputStream {
   @Before
   @After
   public void deleteEditsFile() {
-    if (TEST_EDITS.exists()) TEST_EDITS.delete();
+    if (TEST_EDITS.exists())
+      TEST_EDITS.delete();
   }
 
   @Before
@@ -66,17 +70,17 @@ public class TestEditLogFileOutputStream {
     elos.flushAndSync(true);
     assertEquals(expectedLength, elos.getFile().length());
   }
-  
+
   /**
-   * Tests writing to the EditLogFileOutputStream.  Due to preallocation, the
+   * Tests writing to the EditLogFileOutputStream. Due to preallocation, the
    * length of the edit log will usually be longer than its valid contents.
    */
   @Test
   public void testRawWrites() throws IOException {
-    EditLogFileOutputStream elos = new EditLogFileOutputStream(conf, TEST_EDITS,
-      0);
+    EditLogFileOutputStream elos = new EditLogFileOutputStream(conf,
+        TEST_EDITS, 0);
     try {
-      byte[] small = new byte[] {1,2,3,4,5,8,7};
+      byte[] small = new byte[] { 1, 2, 3, 4, 5, 8, 7 };
       elos.create();
       // The first (small) write we make extends the file by 1 MB due to
       // preallocation.
@@ -101,7 +105,8 @@ public class TestEditLogFileOutputStream {
       }
       flushAndCheckLength(elos, 4 * MIN_PREALLOCATION_LENGTH);
     } finally {
-      if (elos != null) elos.close();
+      if (elos != null)
+        elos.close();
     }
   }
 
@@ -112,8 +117,8 @@ public class TestEditLogFileOutputStream {
   @Test
   public void testEditLogFileOutputStreamCloseAbort() throws IOException {
     // abort after a close should just ignore
-    EditLogFileOutputStream editLogStream =
-      new EditLogFileOutputStream(conf, TEST_EDITS, 0);
+    EditLogFileOutputStream editLogStream = new EditLogFileOutputStream(conf,
+        TEST_EDITS, 0);
     editLogStream.close();
     editLogStream.abort();
   }
@@ -125,8 +130,8 @@ public class TestEditLogFileOutputStream {
   @Test
   public void testEditLogFileOutputStreamCloseClose() throws IOException {
     // close after a close should result in an IOE
-    EditLogFileOutputStream editLogStream =
-      new EditLogFileOutputStream(conf, TEST_EDITS, 0);
+    EditLogFileOutputStream editLogStream = new EditLogFileOutputStream(conf,
+        TEST_EDITS, 0);
     editLogStream.close();
     try {
       editLogStream.close();
@@ -135,7 +140,7 @@ public class TestEditLogFileOutputStream {
       assertTrue(msg, msg.contains("Trying to use aborted output stream"));
     }
   }
-  
+
   /**
    * Tests EditLogFileOutputStream doesn't throw NullPointerException on being
    * abort/abort sequence. See HDFS-2011.
@@ -143,9 +148,13 @@ public class TestEditLogFileOutputStream {
   @Test
   public void testEditLogFileOutputStreamAbortAbort() throws IOException {
     // abort after a close should just ignore
-    EditLogFileOutputStream editLogStream =
-      new EditLogFileOutputStream(conf, TEST_EDITS, 0);
-    editLogStream.abort();
-    editLogStream.abort();
+    EditLogFileOutputStream editLogStream = null;
+    try {
+      editLogStream = new EditLogFileOutputStream(conf, TEST_EDITS, 0);
+      editLogStream.abort();
+      editLogStream.abort();
+    } finally {
+      IOUtils.cleanup(null, editLogStream);
+    }
   }
 }

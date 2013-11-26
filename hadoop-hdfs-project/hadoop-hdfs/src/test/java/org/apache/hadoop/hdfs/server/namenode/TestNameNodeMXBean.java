@@ -46,7 +46,7 @@ public class TestNameNodeMXBean {
    */
   private static final double DELTA = 0.000001;
 
-  @SuppressWarnings({ "unchecked", "deprecation" })
+  @SuppressWarnings({ "unchecked" })
   @Test
   public void testNameNodeMXBeanInfo() throws Exception {
     Configuration conf = new Configuration();
@@ -152,7 +152,7 @@ public class TestNameNodeMXBean {
       assertEquals(0, statusMap.get("failed").size());
       
       // This will cause the first dir to fail.
-      File failedNameDir = new File(nameDirUris.toArray(new URI[0])[0]);
+      File failedNameDir = new File(nameDirUris.iterator().next());
       assertEquals(0, FileUtil.chmod(
         new File(failedNameDir, "current").getAbsolutePath(), "000"));
       cluster.getNameNodeRpc().rollEditLog();
