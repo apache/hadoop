@@ -102,6 +102,9 @@ Release 2.3.0 - UNRELEASED
     YARN-1423. Support queue placement by secondary group in the Fair Scheduler
     (Ted Malaska via Sandy Ryza)
 
+    YARN-1314. Fixed DistributedShell to not fail with multiple arguments for a
+    shell command separated by spaces. (Xuan Gong via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES

@@ -224,6 +224,7 @@ public class ApplicationMaster {
   private final String log4jPath = "log4j.properties";
 
   private final String shellCommandPath = "shellCommands";
+  private final String shellArgsPath = "shellArgs";
 
   private volatile boolean done;
   private volatile boolean success;
@@ -309,7 +310,6 @@ public class ApplicationMaster {
         "App Attempt ID. Not to be used unless for testing purposes");
     opts.addOption("shell_script", true,
         "Location of the shell script to be executed");
-    opts.addOption("shell_args", true, "Command line args for the shell script");
     opts.addOption("shell_env", true,
         "Environment for shell script. Specified as env_key=env_val pairs");
     opts.addOption("container_memory", true,
@@ -331,10 +331,10 @@ public class ApplicationMaster {
     }
 
     //Check whether customer log4j.properties file exists
-    File customerLog4jFile = new File(log4jPath);
-    if (customerLog4jFile.exists()) {
+    if (fileExist(log4jPath)) {
       try {
-        Log4jPropertyHelper.updateLog4jConfiguration(ApplicationMaster.class, log4jPath);
+        Log4jPropertyHelper.updateLog4jConfiguration(ApplicationMaster.class,
+            log4jPath);
       } catch (Exception e) {
         LOG.warn("Can not set up custom log4j properties. " + e);
       }
@@ -387,24 +387,16 @@ public class ApplicationMaster {
         + appAttemptID.getApplicationId().getClusterTimestamp()
         + ", attemptId=" + appAttemptID.getAttemptId());
 
-    File shellCommandFile = new File(shellCommandPath);
-    if (!shellCommandFile.exists()) {
+    if (!fileExist(shellCommandPath)) {
       throw new IllegalArgumentException(
           "No shell command specified to be executed by application master");
     }
-    FileInputStream fs = null;
-    DataInputStream ds = null;
-    try {
-      ds = new DataInputStream(new FileInputStream(shellCommandFile));
-      shellCommand = ds.readUTF();
-    } finally {
-      org.apache.commons.io.IOUtils.closeQuietly(ds);
-      org.apache.commons.io.IOUtils.closeQuietly(fs);
+    shellCommand = readContent(shellCommandPath);
+
+    if (fileExist(shellArgsPath)) {
+      shellArgs = readContent(shellArgsPath);
     }
 
-    if (cliParser.hasOption("shell_args")) {
-      shellArgs = cliParser.getOptionValue("shell_args");
-    }
     if (cliParser.hasOption("shell_env")) {
       String shellEnvs[] = cliParser.getOptionValues("shell_env");
       for (String env : shellEnvs) {
@@ -921,5 +913,19 @@ public class ApplicationMaster {
         pri);
     LOG.info("Requested container ask: " + request.toString());
     return request;
+  }
+
+  private boolean fileExist(String filePath) {
+    return new File(filePath).exists();
+  }
+
+  private String readContent(String filePath) throws IOException {
+    DataInputStream ds = null;
+    try {
+      ds = new DataInputStream(new FileInputStream(filePath));
+      return ds.readUTF();
+    } finally {
+      org.apache.commons.io.IOUtils.closeQuietly(ds);
+    }
   }
 }
