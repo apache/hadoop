@@ -22,7 +22,6 @@ import org.apache.hadoop.oncrpc.RpcUtil;
 import org.apache.hadoop.oncrpc.XDR;
 import org.apache.hadoop.oncrpc.security.CredentialsNone;
 import org.apache.hadoop.oncrpc.security.VerifierNone;
-import org.apache.hadoop.portmap.PortmapInterface.Procedure;
 
 /**
  * Helper utility for building portmap request
@@ -37,7 +36,7 @@ public class PortmapRequest {
     RpcCall call = RpcCall.getInstance(
         RpcUtil.getNewXid(String.valueOf(RpcProgramPortmap.PROGRAM)),
         RpcProgramPortmap.PROGRAM, RpcProgramPortmap.VERSION,
-        Procedure.PMAPPROC_SET.getValue(), new CredentialsNone(),
+        RpcProgramPortmap.PMAPPROC_SET, new CredentialsNone(),
         new VerifierNone());
     call.write(request);
     return mapping.serialize(request);
