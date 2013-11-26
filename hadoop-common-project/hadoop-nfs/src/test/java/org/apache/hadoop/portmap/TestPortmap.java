@@ -23,7 +23,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.util.HashMap;
+import java.util.Map;
 
 import junit.framework.Assert;
 
@@ -80,7 +80,7 @@ public class TestPortmap {
     XDR req = new XDR();
     RpcCall.getInstance(++xid, RpcProgramPortmap.PROGRAM,
         RpcProgramPortmap.VERSION,
-        PortmapInterface.Procedure.PMAPPROC_SET.getValue(),
+        RpcProgramPortmap.PMAPPROC_SET,
         new CredentialsNone(), new VerifierNone()).write(req);
 
     PortmapMapping sent = new PortmapMapping(90000, 1,
@@ -101,7 +101,7 @@ public class TestPortmap {
     Thread.sleep(100);
     boolean found = false;
     @SuppressWarnings("unchecked")
-    HashMap<String, PortmapMapping> map = (HashMap<String, PortmapMapping>) Whitebox
+    Map<String, PortmapMapping> map = (Map<String, PortmapMapping>) Whitebox
         .getInternalState(pm.getHandler(), "map");
 
     for (PortmapMapping m : map.values()) {
