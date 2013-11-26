@@ -406,6 +406,15 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
    */
   public void addSpaceConsumed(long nsDelta, long dsDelta, boolean verify) 
       throws QuotaExceededException {
+    addSpaceConsumed2Parent(nsDelta, dsDelta, verify);
+  }
+
+  /**
+   * Check and add namespace/diskspace consumed to itself and the ancestors.
+   * @throws QuotaExceededException if quote is violated.
+   */
+  void addSpaceConsumed2Parent(long nsDelta, long dsDelta, boolean verify) 
+      throws QuotaExceededException {
     if (parent != null) {
       parent.addSpaceConsumed(nsDelta, dsDelta, verify);
     }
@@ -742,6 +751,53 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
      */
     public void clear() {
       toDeleteList.clear();
+    }
+  }
+
+  /** INode feature such as {@link FileUnderConstructionFeature}
+   *  and {@link DirectoryWithQuotaFeature}.
+   */
+  interface Feature<F extends Feature<F>> {
+    /** @return the next feature. */
+    public F getNextFeature();
+
+    /** Set the next feature. */
+    public void setNextFeature(F next);
+
+    /** Utility methods such as addFeature and removeFeature. */
+    static class Util {
+      /**
+       * Add a feature to the linked list.
+       * @return the new head.
+       */
+      static <F extends Feature<F>> F addFeature(F feature, F head) {
+        feature.setNextFeature(head);
+        return feature;
+      }
+
+      /**
+       * Remove a feature from the linked list.
+       * @return the new head.
+       */
+      static <F extends Feature<F>> F removeFeature(F feature, F head) {
+        if (feature == head) {
+          final F newHead = head.getNextFeature();
+          head.setNextFeature(null);
+          return newHead;
+        } else if (head != null) {
+          F prev = head;
+          F curr = head.getNextFeature();
+          for (; curr != null && curr != feature;
+              prev = curr, curr = curr.getNextFeature())
+            ;
+          if (curr != null) {
+            prev.setNextFeature(curr.getNextFeature());
+            curr.setNextFeature(null);
+            return head;
+          }
+        }
+        throw new IllegalStateException("Feature " + feature + " not found.");
+      }
     }
   }
 }

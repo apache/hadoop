@@ -215,6 +215,9 @@ Trunk (Unreleased)
     HDFS-5538. URLConnectionFactory should pick up the SSL related configuration 
     by default. (Haohui Mai via jing9)
 
+    HDFS-5286. Flatten INodeDirectory hierarchy: Replace INodeDirectoryWithQuota
+    with DirectoryWithQuotaFeature.  (szetszwo)
+
   OPTIMIZATIONS
     HDFS-5349. DNA_CACHE and DNA_UNCACHE should be by blockId only. (cmccabe)
 

@@ -37,7 +37,6 @@ import org.apache.hadoop.hdfs.server.namenode.FSImageSerialization;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectoryAttributes;
-import org.apache.hadoop.hdfs.server.namenode.INodeDirectoryWithQuota;
 import org.apache.hadoop.hdfs.server.namenode.INodeMap;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference;
 import org.apache.hadoop.hdfs.server.namenode.Quota;
@@ -55,7 +54,7 @@ import com.google.common.base.Preconditions;
  * storing snapshot data. When there are modifications to the directory, the old
  * data is stored in the latest snapshot, if there is any.
  */
-public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
+public class INodeDirectoryWithSnapshot extends INodeDirectory {
   /**
    * The difference between the current state and a previous snapshot
    * of the children list of an INodeDirectory.
@@ -486,7 +485,7 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
 
   INodeDirectoryWithSnapshot(INodeDirectory that, boolean adopt,
       DirectoryDiffList diffs) {
-    super(that, adopt, that.getQuotaCounts());
+    super(that, adopt, true);
     this.diffs = diffs != null? diffs: new DirectoryDiffList();
   }
 
@@ -771,8 +770,8 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
         removedINodes, priorDeleted, countDiffChange));
     
     if (isQuotaSet()) {
-      this.addSpaceConsumed2Cache(-counts.get(Quota.NAMESPACE),
-          -counts.get(Quota.DISKSPACE));
+      getDirectoryWithQuotaFeature().addSpaceConsumed2Cache(
+          -counts.get(Quota.NAMESPACE), -counts.get(Quota.DISKSPACE));
     }
     return counts;
   }
