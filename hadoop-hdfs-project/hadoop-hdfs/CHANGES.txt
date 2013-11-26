@@ -137,6 +137,9 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-5525. Inline dust templates for new Web UI. (Haohui Mai via jing9)
 
+    HDFS-5561. FSNameSystem#getNameJournalStatus() in JMX should return plain 
+    text instead of HTML. (Haohui Mai via jing9)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn)

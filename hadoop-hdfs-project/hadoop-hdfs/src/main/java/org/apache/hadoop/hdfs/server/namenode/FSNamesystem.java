@@ -6603,7 +6603,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         } else if (openForWrite) {
           EditLogOutputStream elos = jas.getCurrentStream();
           if (elos != null) {
-            jasMap.put("stream", elos.generateHtmlReport());
+            jasMap.put("stream", elos.generateReport());
           } else {
             jasMap.put("stream", "not currently writing");
           }

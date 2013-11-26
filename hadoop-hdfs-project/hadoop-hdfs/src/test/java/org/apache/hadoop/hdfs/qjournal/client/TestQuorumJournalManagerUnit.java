@@ -25,6 +25,8 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.List;
 
+import junit.framework.Assert;
+
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.qjournal.client.AsyncLogger;
@@ -124,7 +126,7 @@ public class TestQuorumJournalManagerUnit {
       .when(spyLoggers.get(2)).startLogSegment(Mockito.anyLong());
     qjm.startLogSegment(1);
   }
-  
+
   @Test
   public void testQuorumOfLoggersFail() throws Exception {
     futureReturns(null).when(spyLoggers.get(0)).startLogSegment(Mockito.anyLong());
@@ -140,6 +142,16 @@ public class TestQuorumJournalManagerUnit {
     }
   }
   
+  @Test
+  public void testQuorumOutputStreamReport() throws Exception {
+    futureReturns(null).when(spyLoggers.get(0)).startLogSegment(Mockito.anyLong());
+    futureReturns(null).when(spyLoggers.get(1)).startLogSegment(Mockito.anyLong());
+    futureReturns(null).when(spyLoggers.get(2)).startLogSegment(Mockito.anyLong());
+    QuorumOutputStream os = (QuorumOutputStream) qjm.startLogSegment(1);
+    String report = os.generateReport();
+    Assert.assertFalse("Report should be plain text", report.contains("<"));
+  }
+
   @Test
   public void testWriteEdits() throws Exception {
     EditLogOutputStream stm = createLogSegment();
