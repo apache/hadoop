@@ -46,6 +46,7 @@ import org.apache.hadoop.hdfs.server.namenode.JournalSet;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
+import org.apache.hadoop.hdfs.web.URLConnectionFactory;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.StringUtils;
 
@@ -87,6 +88,7 @@ public class QuorumJournalManager implements JournalManager {
   private final AsyncLoggerSet loggers;
 
   private int outputBufferCapacity = 512 * 1024;
+  private final URLConnectionFactory connectionFactory;
   
   public QuorumJournalManager(Configuration conf,
       URI uri, NamespaceInfo nsInfo) throws IOException {
@@ -102,6 +104,8 @@ public class QuorumJournalManager implements JournalManager {
     this.uri = uri;
     this.nsInfo = nsInfo;
     this.loggers = new AsyncLoggerSet(createLoggers(loggerFactory));
+    this.connectionFactory = URLConnectionFactory
+        .newDefaultURLConnectionFactory(conf);
 
     // Configure timeouts.
     this.startSegmentTimeoutMs = conf.getInt(
@@ -475,8 +479,8 @@ public class QuorumJournalManager implements JournalManager {
         URL url = logger.buildURLToFetchLogs(remoteLog.getStartTxId());
 
         EditLogInputStream elis = EditLogFileInputStream.fromUrl(
-            url, remoteLog.getStartTxId(), remoteLog.getEndTxId(),
-            remoteLog.isInProgress());
+            connectionFactory, url, remoteLog.getStartTxId(),
+            remoteLog.getEndTxId(), remoteLog.isInProgress());
         allStreams.add(elis);
       }
     }

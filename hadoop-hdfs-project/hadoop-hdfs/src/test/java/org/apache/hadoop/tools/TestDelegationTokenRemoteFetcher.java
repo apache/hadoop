@@ -83,7 +83,7 @@ public class TestDelegationTokenRemoteFetcher {
 
   private static final String EXP_DATE = "124123512361236";
   private static final String tokenFile = "http.file.dta";
-  private static final URLConnectionFactory connectionFactory = URLConnectionFactory.DEFAULT_CONNECTION_FACTORY;
+  private static final URLConnectionFactory connectionFactory = URLConnectionFactory.DEFAULT_SYSTEM_CONNECTION_FACTORY;
 
   private int httpPort;
   private URI serviceUrl;

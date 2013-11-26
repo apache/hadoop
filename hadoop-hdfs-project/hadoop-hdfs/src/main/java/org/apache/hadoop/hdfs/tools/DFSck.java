@@ -36,9 +36,10 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.namenode.NamenodeFsck;
+import org.apache.hadoop.hdfs.web.URLConnectionFactory;
 import org.apache.hadoop.http.HttpConfig;
-import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -94,6 +95,8 @@ public class DFSck extends Configured implements Tool {
   
   private final UserGroupInformation ugi;
   private final PrintStream out;
+  private final URLConnectionFactory connectionFactory;
+  private final boolean isSpnegoEnabled;
 
   /**
    * Filesystem checker.
@@ -107,6 +110,9 @@ public class DFSck extends Configured implements Tool {
     super(conf);
     this.ugi = UserGroupInformation.getCurrentUser();
     this.out = out;
+    this.connectionFactory = URLConnectionFactory
+        .newDefaultURLConnectionFactory(conf);
+    this.isSpnegoEnabled = UserGroupInformation.isSecurityEnabled();
   }
 
   /**
@@ -158,7 +164,12 @@ public class DFSck extends Configured implements Tool {
         url.append("&startblockafter=").append(String.valueOf(cookie));
       }
       URL path = new URL(url.toString());
-      URLConnection connection = SecurityUtil.openSecureHttpConnection(path);
+      URLConnection connection;
+      try {
+        connection = connectionFactory.openConnection(path, isSpnegoEnabled);
+      } catch (AuthenticationException e) {
+        throw new IOException(e);
+      }
       InputStream stream = connection.getInputStream();
       BufferedReader input = new BufferedReader(new InputStreamReader(
           stream, "UTF-8"));
@@ -278,7 +289,12 @@ public class DFSck extends Configured implements Tool {
       return listCorruptFileBlocks(dir, url.toString());
     }
     URL path = new URL(url.toString());
-    URLConnection connection = SecurityUtil.openSecureHttpConnection(path);
+    URLConnection connection;
+    try {
+      connection = connectionFactory.openConnection(path, isSpnegoEnabled);
+    } catch (AuthenticationException e) {
+      throw new IOException(e);
+    }
     InputStream stream = connection.getInputStream();
     BufferedReader input = new BufferedReader(new InputStreamReader(
                                               stream, "UTF-8"));
