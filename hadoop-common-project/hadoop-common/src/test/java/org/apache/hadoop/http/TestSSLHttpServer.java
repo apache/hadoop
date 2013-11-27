@@ -17,23 +17,25 @@
  */
 package org.apache.hadoop.http;
 
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.InputStream;
+import java.net.URI;
+import java.net.URL;
+
+import javax.net.ssl.HttpsURLConnection;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.security.ssl.SSLFactory;
-import org.junit.After;
-import org.junit.Before;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
-
-import javax.net.ssl.HttpsURLConnection;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.InputStream;
-import java.io.Writer;
-import java.net.URL;
 
 /**
  * This testcase issues SSL certificates configures the HttpServer to serve
@@ -41,81 +43,75 @@ import java.net.URL;
  * corresponding HTTPS URL.
  */
 public class TestSSLHttpServer extends HttpServerFunctionalTest {
-  private static final String CONFIG_SITE_XML = "sslhttpserver-site.xml";
+  private static final String BASEDIR = System.getProperty("test.build.dir",
+      "target/test-dir") + "/" + TestSSLHttpServer.class.getSimpleName();
 
-  private static final String BASEDIR =
-      System.getProperty("test.build.dir", "target/test-dir") + "/" +
-      TestSSLHttpServer.class.getSimpleName();
-
-  static final Log LOG = LogFactory.getLog(TestSSLHttpServer.class);
+  private static final Log LOG = LogFactory.getLog(TestSSLHttpServer.class);
+  private static Configuration conf;
   private static HttpServer server;
   private static URL baseUrl;
+  private static String keystoresDir;
+  private static String sslConfDir;
+  private static SSLFactory clientSslFactory;
 
+  @BeforeClass
+  public static void setup() throws Exception {
+    conf = new Configuration();
+    conf.setInt(HttpServer.HTTP_MAX_THREADS, 10);
 
-  @Before
-  public void setup() throws Exception {
-    HttpConfig.setPolicy(HttpConfig.Policy.HTTPS_ONLY);
     File base = new File(BASEDIR);
     FileUtil.fullyDelete(base);
     base.mkdirs();
-    String classpathDir =
-        KeyStoreTestUtil.getClasspathDir(TestSSLHttpServer.class);
-    Configuration conf = new Configuration();
-    String keystoresDir = new File(BASEDIR).getAbsolutePath();
-    String sslConfsDir =
-        KeyStoreTestUtil.getClasspathDir(TestSSLHttpServer.class);
-    KeyStoreTestUtil.setupSSLConfig(keystoresDir, sslConfsDir, conf, false);
-    conf.setBoolean(CommonConfigurationKeysPublic.HADOOP_SSL_ENABLED_KEY, true);
+    keystoresDir = new File(BASEDIR).getAbsolutePath();
+    sslConfDir = KeyStoreTestUtil.getClasspathDir(TestSSLHttpServer.class);
 
-    //we do this trick because the MR AppMaster is started in another VM and
-    //the HttpServer configuration is not loaded from the job.xml but from the
-    //site.xml files in the classpath
-    Writer writer = new FileWriter(new File(classpathDir, CONFIG_SITE_XML));
-    conf.writeXml(writer);
-    writer.close();
+    KeyStoreTestUtil.setupSSLConfig(keystoresDir, sslConfDir, conf, false);
+    Configuration sslConf = new Configuration(false);
+    sslConf.addResource("ssl-server.xml");
+    sslConf.addResource("ssl-client.xml");
 
-    conf.setInt(HttpServer.HTTP_MAX_THREADS, 10);
-    conf.addResource(CONFIG_SITE_XML);
-    server = createServer("test", conf);
+    clientSslFactory = new SSLFactory(SSLFactory.Mode.CLIENT, sslConf);
+    clientSslFactory.init();
+
+    server = new HttpServer.Builder()
+        .setName("test")
+        .addEndpoint(new URI("https://localhost"))
+        .setConf(conf)
+        .keyPassword(sslConf.get("ssl.server.keystore.keypassword"))
+        .keyStore(sslConf.get("ssl.server.keystore.location"),
+            sslConf.get("ssl.server.keystore.password"),
+            sslConf.get("ssl.server.keystore.type", "jks"))
+        .trustStore(sslConf.get("ssl.server.truststore.location"),
+            sslConf.get("ssl.server.truststore.password"),
+            sslConf.get("ssl.server.truststore.type", "jks")).build();
     server.addServlet("echo", "/echo", TestHttpServer.EchoServlet.class);
     server.start();
-    baseUrl = new URL("https://localhost:" + server.getPort() + "/");
-    LOG.info("HTTP server started: "+ baseUrl);
+    baseUrl = new URL("https://"
+        + NetUtils.getHostPortString(server.getConnectorAddress(0)));
+    LOG.info("HTTP server started: " + baseUrl);
   }
 
-  @After
-  public void cleanup() throws Exception {
+  @AfterClass
+  public static void cleanup() throws Exception {
     server.stop();
-    String classpathDir =
-        KeyStoreTestUtil.getClasspathDir(TestSSLHttpServer.class);
-    new File(classpathDir, CONFIG_SITE_XML).delete();
-    HttpConfig.setPolicy(HttpConfig.Policy.HTTP_ONLY);
+    FileUtil.fullyDelete(new File(BASEDIR));
+    KeyStoreTestUtil.cleanupSSLConfig(keystoresDir, sslConfDir);
+    clientSslFactory.destroy();
   }
-  
 
   @Test
   public void testEcho() throws Exception {
-    assertEquals("a:b\nc:d\n", 
-        readOut(new URL(baseUrl, "/echo?a=b&c=d")));
-    assertEquals("a:b\nc&lt;:d\ne:&gt;\n", 
-        readOut(new URL(baseUrl, "/echo?a=b&c<=d&e=>")));
+    assertEquals("a:b\nc:d\n", readOut(new URL(baseUrl, "/echo?a=b&c=d")));
+    assertEquals("a:b\nc&lt;:d\ne:&gt;\n", readOut(new URL(baseUrl,
+        "/echo?a=b&c<=d&e=>")));
   }
 
   private static String readOut(URL url) throws Exception {
-    StringBuilder out = new StringBuilder();
     HttpsURLConnection conn = (HttpsURLConnection) url.openConnection();
-    Configuration conf = new Configuration();
-    conf.addResource(CONFIG_SITE_XML);
-    SSLFactory sslf = new SSLFactory(SSLFactory.Mode.CLIENT, conf);
-    sslf.init();
-    conn.setSSLSocketFactory(sslf.createSSLSocketFactory());
+    conn.setSSLSocketFactory(clientSslFactory.createSSLSocketFactory());
     InputStream in = conn.getInputStream();
-    byte[] buffer = new byte[64 * 1024];
-    int len = in.read(buffer);
-    while (len > 0) {
-      out.append(new String(buffer, 0, len));
-      len = in.read(buffer);
-    }
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    IOUtils.copyBytes(in, out, 1024);
     return out.toString();
   }
 

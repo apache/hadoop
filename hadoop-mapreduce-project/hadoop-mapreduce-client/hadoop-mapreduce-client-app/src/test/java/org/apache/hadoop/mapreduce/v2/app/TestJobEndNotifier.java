@@ -278,13 +278,15 @@ public class TestJobEndNotifier extends JobEndNotifier {
     new File(System.getProperty(
         "build.webapps", "build/webapps") + "/test").mkdirs();
     HttpServer server = new HttpServer.Builder().setName("test")
-        .setBindAddress("0.0.0.0").setPort(0).setFindPort(true).build();
+        .addEndpoint(URI.create("http://localhost:0"))
+        .setFindPort(true).build();
     server.addServlet("jobend", "/jobend", JobEndServlet.class);
     server.start();
 
     JobEndServlet.calledTimes = 0;
     JobEndServlet.requestUri = null;
-    JobEndServlet.baseUrl = "http://localhost:" + server.getPort() + "/";
+    JobEndServlet.baseUrl = "http://localhost:"
+        + server.getConnectorAddress(0).getPort() + "/";
     JobEndServlet.foundJobState = null;
     return server;
   }

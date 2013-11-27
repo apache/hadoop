@@ -221,6 +221,9 @@ Trunk (Unreleased)
     HDFS-5556. Add some more NameNode cache statistics, cache pool stats
     (cmccabe)
 
+    HDFS-5545. Allow specifying endpoints for listeners in HttpServer. (Haohui
+    Mai via jing9)
+
   OPTIMIZATIONS
     HDFS-5349. DNA_CACHE and DNA_UNCACHE should be by blockId only. (cmccabe)
 

@@ -19,13 +19,16 @@
 
 package org.apache.hadoop.http;
 
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.junit.Assert;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.http.HttpServer.Builder;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
 import java.net.URL;
 import java.net.MalformedURLException;
 
@@ -120,8 +123,9 @@ public class HttpServerFunctionalTest extends Assert {
   public static HttpServer createServer(String host, int port)
       throws IOException {
     prepareTestWebapp();
-    return new HttpServer.Builder().setName(TEST).setBindAddress(host)
-        .setPort(port).setFindPort(true).build();
+    return new HttpServer.Builder().setName(TEST)
+        .addEndpoint(URI.create("http://" + host + ":" + port))
+        .setFindPort(true).build();
   }
 
   /**
@@ -131,8 +135,7 @@ public class HttpServerFunctionalTest extends Assert {
    * @throws IOException if it could not be created
    */
   public static HttpServer createServer(String webapp) throws IOException {
-    return new HttpServer.Builder().setName(webapp).setBindAddress("0.0.0.0")
-        .setPort(0).setFindPort(true).build();
+    return localServerBuilder(webapp).setFindPort(true).build();
   }
   /**
    * Create an HttpServer instance for the given webapp
@@ -143,14 +146,17 @@ public class HttpServerFunctionalTest extends Assert {
    */
   public static HttpServer createServer(String webapp, Configuration conf)
       throws IOException {
-    return new HttpServer.Builder().setName(webapp).setBindAddress("0.0.0.0")
-        .setPort(0).setFindPort(true).setConf(conf).build();
+    return localServerBuilder(webapp).setFindPort(true).setConf(conf).build();
   }
 
   public static HttpServer createServer(String webapp, Configuration conf, AccessControlList adminsAcl)
       throws IOException {
-    return new HttpServer.Builder().setName(webapp).setBindAddress("0.0.0.0")
-        .setPort(0).setFindPort(true).setConf(conf).setACL(adminsAcl).build();
+    return localServerBuilder(webapp).setFindPort(true).setConf(conf).setACL(adminsAcl).build();
+  }
+
+  private static Builder localServerBuilder(String webapp) {
+    return new HttpServer.Builder().setName(webapp).addEndpoint(
+        URI.create("http://localhost:0"));
   }
   
   /**
@@ -163,8 +169,7 @@ public class HttpServerFunctionalTest extends Assert {
    */
   public static HttpServer createServer(String webapp, Configuration conf,
       String[] pathSpecs) throws IOException {
-    return new HttpServer.Builder().setName(webapp).setBindAddress("0.0.0.0")
-        .setPort(0).setFindPort(true).setConf(conf).setPathSpec(pathSpecs).build();
+    return localServerBuilder(webapp).setFindPort(true).setConf(conf).setPathSpec(pathSpecs).build();
   }
 
   /**
@@ -201,8 +206,8 @@ public class HttpServerFunctionalTest extends Assert {
   public static URL getServerURL(HttpServer server)
       throws MalformedURLException {
     assertNotNull("No server", server);
-    int port = server.getPort();
-    return new URL("http://localhost:" + port + "/");
+    return new URL("http://"
+        + NetUtils.getHostPortString(server.getConnectorAddress(0)));
   }
 
   /**

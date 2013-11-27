@@ -30,6 +30,7 @@ import java.io.FilenameFilter;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
@@ -214,7 +215,7 @@ public class SecondaryNameNode implements Runnable {
   
   /**
    * Initialize SecondaryNameNode.
-   * @param commandLineOpts 
+   * @param commandLineOpts
    */
   private void initialize(final Configuration conf,
       CommandLineOpts commandLineOpts) throws IOException {
@@ -256,8 +257,15 @@ public class SecondaryNameNode implements Runnable {
 
     // initialize the webserver for uploading files.
     int tmpInfoPort = infoSocAddr.getPort();
+    URI httpEndpoint;
+    try {
+      httpEndpoint = new URI("http://" + NetUtils.getHostPortString(infoSocAddr));
+    } catch (URISyntaxException e) {
+      throw new IOException(e);
+    }
+
     infoServer = new HttpServer.Builder().setName("secondary")
-        .setBindAddress(infoBindAddress).setPort(tmpInfoPort)
+        .addEndpoint(httpEndpoint)
         .setFindPort(tmpInfoPort == 0).setConf(conf).setACL(
             new AccessControlList(conf.get(DFS_ADMIN, " ")))
         .setSecurityEnabled(UserGroupInformation.isSecurityEnabled())
@@ -275,7 +283,7 @@ public class SecondaryNameNode implements Runnable {
     LOG.info("Web server init done");
 
     // The web-server port can be ephemeral... ensure we have the correct info
-    infoPort = infoServer.getPort();
+    infoPort = infoServer.getConnectorAddress(0).getPort();
 
     conf.set(DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY, infoBindAddress + ":" + infoPort);
     LOG.info("Secondary Web-server up at: " + infoBindAddress + ":" + infoPort);
