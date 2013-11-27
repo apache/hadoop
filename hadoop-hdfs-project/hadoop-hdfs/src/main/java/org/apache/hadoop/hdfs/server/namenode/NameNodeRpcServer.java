@@ -64,6 +64,7 @@ import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
+import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
 import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -1298,26 +1299,26 @@ class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   private class ServerSideCachePoolIterator 
-      extends BatchedRemoteIterator<String, CachePoolInfo> {
+      extends BatchedRemoteIterator<String, CachePoolEntry> {
 
     public ServerSideCachePoolIterator(String prevKey) {
       super(prevKey);
     }
 
     @Override
-    public BatchedEntries<CachePoolInfo> makeRequest(String prevKey)
+    public BatchedEntries<CachePoolEntry> makeRequest(String prevKey)
         throws IOException {
       return namesystem.listCachePools(prevKey);
     }
 
     @Override
-    public String elementToPrevKey(CachePoolInfo element) {
-      return element.getPoolName();
+    public String elementToPrevKey(CachePoolEntry entry) {
+      return entry.getInfo().getPoolName();
     }
   }
 
   @Override
-  public RemoteIterator<CachePoolInfo> listCachePools(String prevKey)
+  public RemoteIterator<CachePoolEntry> listCachePools(String prevKey)
       throws IOException {
     return new ServerSideCachePoolIterator(prevKey);
   }

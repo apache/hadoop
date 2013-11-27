@@ -292,12 +292,12 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
 
   @Override // FSDatasetMBean
   public long getCacheUsed() {
-    return cacheManager.getDnCacheUsed();
+    return cacheManager.getCacheUsed();
   }
 
   @Override // FSDatasetMBean
   public long getCacheCapacity() {
-    return cacheManager.getDnCacheCapacity();
+    return cacheManager.getCacheCapacity();
   }
 
   @Override // FSDatasetMBean
@@ -308,6 +308,11 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   @Override // FSDatasetMBean
   public long getNumBlocksFailedToUncache() {
     return cacheManager.getNumBlocksFailedToUncache();
+  }
+
+  @Override // FSDatasetMBean
+  public long getNumBlocksCached() {
+    return cacheManager.getNumBlocksCached();
   }
 
   /**

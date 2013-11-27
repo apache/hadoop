@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveStats;
+import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.server.namenode.CachePool;
@@ -755,9 +756,10 @@ public class CacheAdmin extends Configured implements Tool {
           build();
       int numResults = 0;
       try {
-        RemoteIterator<CachePoolInfo> iter = dfs.listCachePools();
+        RemoteIterator<CachePoolEntry> iter = dfs.listCachePools();
         while (iter.hasNext()) {
-          CachePoolInfo info = iter.next();
+          CachePoolEntry entry = iter.next();
+          CachePoolInfo info = entry.getInfo();
           String[] row = new String[5];
           if (name == null || info.getPoolName().equals(name)) {
             row[0] = info.getPoolName();

@@ -145,6 +145,8 @@ public class FsDatasetCache {
    */
   private final HashMap<Key, Value> mappableBlockMap = new HashMap<Key, Value>();
 
+  private final AtomicLong numBlocksCached = new AtomicLong(0);
+
   private final FsDatasetImpl dataset;
 
   private final ThreadPoolExecutor uncachingExecutor;
@@ -417,6 +419,7 @@ public class FsDatasetCache {
           LOG.debug("Successfully cached block " + key.id + " in " + key.bpid +
               ".  We are now caching " + newUsedBytes + " bytes in total.");
         }
+        numBlocksCached.addAndGet(1);
         success = true;
       } finally {
         if (!success) {
@@ -465,6 +468,7 @@ public class FsDatasetCache {
       }
       long newUsedBytes =
           usedBytesCount.release(value.mappableBlock.getLength());
+      numBlocksCached.addAndGet(-1);
       if (LOG.isDebugEnabled()) {
         LOG.debug("Uncaching of block " + key.id + " in " + key.bpid +
             " completed.  usedBytes = " + newUsedBytes);
@@ -477,14 +481,14 @@ public class FsDatasetCache {
   /**
    * Get the approximate amount of cache space used.
    */
-  public long getDnCacheUsed() {
+  public long getCacheUsed() {
     return usedBytesCount.get();
   }
 
   /**
    * Get the maximum amount of bytes we can cache.  This is a constant.
    */
-  public long getDnCacheCapacity() {
+  public long getCacheCapacity() {
     return maxBytes;
   }
 
@@ -496,4 +500,7 @@ public class FsDatasetCache {
     return numBlocksFailedToUncache.get();
   }
 
+  public long getNumBlocksCached() {
+    return numBlocksCached.get();
+  }
 }

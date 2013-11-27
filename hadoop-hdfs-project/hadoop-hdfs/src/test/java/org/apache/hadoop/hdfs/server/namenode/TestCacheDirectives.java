@@ -55,6 +55,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveStats;
+import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.CacheReplicationMonitor;
@@ -263,8 +264,8 @@ public class TestCacheDirectives {
         setOwnerName(ownerName).setGroupName(groupName).
         setMode(mode).setWeight(weight));
     
-    RemoteIterator<CachePoolInfo> iter = dfs.listCachePools();
-    CachePoolInfo info = iter.next();
+    RemoteIterator<CachePoolEntry> iter = dfs.listCachePools();
+    CachePoolInfo info = iter.next().getInfo();
     assertEquals(poolName, info.getPoolName());
     assertEquals(ownerName, info.getOwnerName());
     assertEquals(groupName, info.getGroupName());
@@ -278,7 +279,7 @@ public class TestCacheDirectives {
         setMode(mode).setWeight(weight));
 
     iter = dfs.listCachePools();
-    info = iter.next();
+    info = iter.next().getInfo();
     assertEquals(poolName, info.getPoolName());
     assertEquals(ownerName, info.getOwnerName());
     assertEquals(groupName, info.getGroupName());
@@ -507,9 +508,9 @@ public class TestCacheDirectives {
         .setGroupName(groupName)
         .setMode(mode)
         .setWeight(weight));
-    RemoteIterator<CachePoolInfo> pit = dfs.listCachePools();
+    RemoteIterator<CachePoolEntry> pit = dfs.listCachePools();
     assertTrue("No cache pools found", pit.hasNext());
-    CachePoolInfo info = pit.next();
+    CachePoolInfo info = pit.next().getInfo();
     assertEquals(pool, info.getPoolName());
     assertEquals(groupName, info.getGroupName());
     assertEquals(mode, info.getMode());
@@ -542,7 +543,7 @@ public class TestCacheDirectives {
     // Check that state came back up
     pit = dfs.listCachePools();
     assertTrue("No cache pools found", pit.hasNext());
-    info = pit.next();
+    info = pit.next().getInfo();
     assertEquals(pool, info.getPoolName());
     assertEquals(pool, info.getPoolName());
     assertEquals(groupName, info.getGroupName());
@@ -713,7 +714,16 @@ public class TestCacheDirectives {
     try {
       cluster.waitActive();
       DistributedFileSystem dfs = cluster.getFileSystem();
-      NameNode namenode = cluster.getNameNode();
+      final NameNode namenode = cluster.getNameNode();
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override
+        public Boolean get() {
+          return ((namenode.getNamesystem().getCacheCapacity() ==
+              (NUM_DATANODES * CACHE_CAPACITY)) &&
+                (namenode.getNamesystem().getCacheUsed() == 0));
+        }
+      }, 500, 60000);
+
       NamenodeProtocols nnRpc = namenode.getRpcServer();
       Path rootDir = helper.getDefaultWorkingDirectory(dfs);
       // Create the pool
@@ -967,8 +977,8 @@ public class TestCacheDirectives {
     dfs.addCachePool(new CachePoolInfo(poolName)
         .setMode(new FsPermission((short)0700)));
     // Should only see partial info
-    RemoteIterator<CachePoolInfo> it = myDfs.listCachePools();
-    CachePoolInfo info = it.next();
+    RemoteIterator<CachePoolEntry> it = myDfs.listCachePools();
+    CachePoolInfo info = it.next().getInfo();
     assertFalse(it.hasNext());
     assertEquals("Expected pool name", poolName, info.getPoolName());
     assertNull("Unexpected owner name", info.getOwnerName());
@@ -981,7 +991,7 @@ public class TestCacheDirectives {
         .setWeight(99));
     // Should see full info
     it = myDfs.listCachePools();
-    info = it.next();
+    info = it.next().getInfo();
     assertFalse(it.hasNext());
     assertEquals("Expected pool name", poolName, info.getPoolName());
     assertEquals("Mismatched owner name", myUser.getShortUserName(),

@@ -101,6 +101,16 @@ public interface NameNodeMXBean {
    * @return the percentage of the remaining space on the cluster
    */
   public float getPercentRemaining();
+
+  /**
+   * Returns the amount of cache used by the datanode (in bytes).
+   */
+  public long getCacheUsed();
+
+  /**
+   * Returns the total cache capacity of the datanode (in bytes).
+   */
+  public long getCacheCapacity();
   
   /**
    * Get the total space used by the block pools of this namenode

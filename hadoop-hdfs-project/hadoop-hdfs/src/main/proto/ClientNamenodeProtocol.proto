@@ -421,6 +421,12 @@ message CachePoolInfoProto {
   optional int32 weight = 5;
 }
 
+message CachePoolStatsProto {
+  required int64 bytesNeeded = 1;
+  required int64 bytesCached = 2;
+  required int64 filesAffected = 3;
+}
+
 message AddCachePoolRequestProto {
   required CachePoolInfoProto info = 1;
 }
@@ -447,12 +453,13 @@ message ListCachePoolsRequestProto {
 }
 
 message ListCachePoolsResponseProto {
-  repeated ListCachePoolsResponseElementProto elements = 1;
+  repeated CachePoolEntryProto entries = 1;
   required bool hasMore = 2;
 }
 
-message ListCachePoolsResponseElementProto {
+message CachePoolEntryProto {
   required CachePoolInfoProto info = 1;
+  required CachePoolStatsProto stats = 2;
 }
 
 message GetFileLinkInfoRequestProto {

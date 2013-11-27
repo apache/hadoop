@@ -109,6 +109,7 @@ import org.apache.hadoop.hdfs.client.ClientMmapManager;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
+import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
@@ -2358,7 +2359,7 @@ public class DFSClient implements java.io.Closeable {
     }
   }
 
-  public RemoteIterator<CachePoolInfo> listCachePools() throws IOException {
+  public RemoteIterator<CachePoolEntry> listCachePools() throws IOException {
     checkOpen();
     try {
       return namenode.listCachePools("");

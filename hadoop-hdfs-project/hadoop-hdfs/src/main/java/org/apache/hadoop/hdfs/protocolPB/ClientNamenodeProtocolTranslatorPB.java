@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
+import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
 import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
@@ -61,6 +62,7 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AddCac
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AllowSnapshotRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AppendRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AppendResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CachePoolEntryProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CompleteRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ConcatRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CreateRequestProto;
@@ -96,7 +98,6 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSna
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSnapshottableDirListingResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.IsFileClosedRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListCachePoolsRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListCachePoolsResponseElementProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListCachePoolsResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListCorruptFileBlocksRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListCacheDirectivesRequestProto;
@@ -1138,23 +1139,23 @@ public class ClientNamenodeProtocolTranslatorPB implements
     }
   }
 
-  private static class BatchedCachePoolInfo
-    implements BatchedEntries<CachePoolInfo> {
+  private static class BatchedCachePoolEntries
+    implements BatchedEntries<CachePoolEntry> {
       private final ListCachePoolsResponseProto proto;
     
-    public BatchedCachePoolInfo(ListCachePoolsResponseProto proto) {
+    public BatchedCachePoolEntries(ListCachePoolsResponseProto proto) {
       this.proto = proto;
     }
       
     @Override
-    public CachePoolInfo get(int i) {
-      ListCachePoolsResponseElementProto elem = proto.getElements(i);
-      return PBHelper.convert(elem.getInfo());
+    public CachePoolEntry get(int i) {
+      CachePoolEntryProto elem = proto.getEntries(i);
+      return PBHelper.convert(elem);
     }
 
     @Override
     public int size() {
-      return proto.getElementsCount();
+      return proto.getEntriesCount();
     }
     
     @Override
@@ -1162,19 +1163,19 @@ public class ClientNamenodeProtocolTranslatorPB implements
       return proto.getHasMore();
     }
   }
-  
+
   private class CachePoolIterator 
-      extends BatchedRemoteIterator<String, CachePoolInfo> {
+      extends BatchedRemoteIterator<String, CachePoolEntry> {
 
     public CachePoolIterator(String prevKey) {
       super(prevKey);
     }
 
     @Override
-    public BatchedEntries<CachePoolInfo> makeRequest(String prevKey)
+    public BatchedEntries<CachePoolEntry> makeRequest(String prevKey)
         throws IOException {
       try {
-        return new BatchedCachePoolInfo(
+        return new BatchedCachePoolEntries(
             rpcProxy.listCachePools(null, 
               ListCachePoolsRequestProto.newBuilder().
                 setPrevPoolName(prevKey).build()));
@@ -1184,13 +1185,13 @@ public class ClientNamenodeProtocolTranslatorPB implements
     }
 
     @Override
-    public String elementToPrevKey(CachePoolInfo element) {
-      return element.getPoolName();
+    public String elementToPrevKey(CachePoolEntry entry) {
+      return entry.getInfo().getPoolName();
     }
   }
 
   @Override
-  public RemoteIterator<CachePoolInfo> listCachePools(String prevKey)
+  public RemoteIterator<CachePoolEntry> listCachePools(String prevKey)
       throws IOException {
     return new CachePoolIterator(prevKey);
   }

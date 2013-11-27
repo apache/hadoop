@@ -54,6 +54,7 @@ import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream.SyncFlag;
+import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -904,7 +905,7 @@ public class TestRetryCacheWithHA {
     @Override
     boolean checkNamenodeBeforeReturn() throws Exception {
       for (int i = 0; i < CHECKTIMES; i++) {
-        RemoteIterator<CachePoolInfo> iter = dfs.listCachePools();
+        RemoteIterator<CachePoolEntry> iter = dfs.listCachePools();
         if (iter.hasNext()) {
           return true;
         }
@@ -941,8 +942,8 @@ public class TestRetryCacheWithHA {
     @Override
     boolean checkNamenodeBeforeReturn() throws Exception {
       for (int i = 0; i < CHECKTIMES; i++) {
-        RemoteIterator<CachePoolInfo> iter = dfs.listCachePools();
-        if (iter.hasNext() && iter.next().getWeight() == 99) {
+        RemoteIterator<CachePoolEntry> iter = dfs.listCachePools();
+        if (iter.hasNext() && iter.next().getInfo().getWeight() == 99) {
           return true;
         }
         Thread.sleep(1000);
@@ -978,7 +979,7 @@ public class TestRetryCacheWithHA {
     @Override
     boolean checkNamenodeBeforeReturn() throws Exception {
       for (int i = 0; i < CHECKTIMES; i++) {
-        RemoteIterator<CachePoolInfo> iter = dfs.listCachePools();
+        RemoteIterator<CachePoolEntry> iter = dfs.listCachePools();
         if (!iter.hasNext()) {
           return true;
         }

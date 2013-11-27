@@ -15,111 +15,73 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.hadoop.hdfs.protocol;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
- * Describes a path-based cache directive.
+ * CachePoolStats describes cache pool statistics.
  */
-@InterfaceStability.Evolving
 @InterfaceAudience.Public
-public class CacheDirectiveStats {
+@InterfaceStability.Evolving
+public class CachePoolStats {
   public static class Builder {
     private long bytesNeeded;
     private long bytesCached;
     private long filesAffected;
 
-    /**
-     * Builds a new CacheDirectiveStats populated with the set properties.
-     * 
-     * @return New CacheDirectiveStats.
-     */
-    public CacheDirectiveStats build() {
-      return new CacheDirectiveStats(bytesNeeded, bytesCached, filesAffected);
-    }
-
-    /**
-     * Creates an empty builder.
-     */
     public Builder() {
     }
 
-    /**
-     * Sets the bytes needed by this directive.
-     * 
-     * @param bytesNeeded The bytes needed.
-     * @return This builder, for call chaining.
-     */
-    public Builder setBytesNeeded(Long bytesNeeded) {
+    public Builder setBytesNeeded(long bytesNeeded) {
       this.bytesNeeded = bytesNeeded;
       return this;
     }
 
-    /**
-     * Sets the bytes cached by this directive.
-     * 
-     * @param bytesCached The bytes cached.
-     * @return This builder, for call chaining.
-     */
-    public Builder setBytesCached(Long bytesCached) {
+    public Builder setBytesCached(long bytesCached) {
       this.bytesCached = bytesCached;
       return this;
     }
 
-    /**
-     * Sets the files affected by this directive.
-     * 
-     * @param filesAffected The files affected.
-     * @return This builder, for call chaining.
-     */
-    public Builder setFilesAffected(Long filesAffected) {
+    public Builder setFilesAffected(long filesAffected) {
       this.filesAffected = filesAffected;
       return this;
     }
-  }
+
+    public CachePoolStats build() {
+      return new CachePoolStats(bytesNeeded, bytesCached, filesAffected);
+    }
+  };
 
   private final long bytesNeeded;
   private final long bytesCached;
   private final long filesAffected;
 
-  private CacheDirectiveStats(long bytesNeeded, long bytesCached,
-      long filesAffected) {
+  private CachePoolStats(long bytesNeeded, long bytesCached, long filesAffected) {
     this.bytesNeeded = bytesNeeded;
     this.bytesCached = bytesCached;
     this.filesAffected = filesAffected;
   }
 
-  /**
-   * @return The bytes needed.
-   */
   public long getBytesNeeded() {
     return bytesNeeded;
   }
 
-  /**
-   * @return The bytes cached.
-   */
   public long getBytesCached() {
-    return bytesCached;
+    return bytesNeeded;
   }
 
-  /**
-   * @return The files affected.
-   */
   public long getFilesAffected() {
     return filesAffected;
   }
 
-  @Override
   public String toString() {
-    StringBuilder builder = new StringBuilder();
-    builder.append("{");
-    builder.append("bytesNeeded: ").append(bytesNeeded);
-    builder.append(", ").append("bytesCached: ").append(bytesCached);
-    builder.append(", ").append("filesAffected: ").append(filesAffected);
-    builder.append("}");
-    return builder.toString();
+    return new StringBuilder().append("{").
+      append("bytesNeeded:").append(bytesNeeded).
+      append(", bytesCached:").append(bytesCached).
+      append(", filesAffected:").append(filesAffected).
+      append("}").toString();
   }
-};
+}

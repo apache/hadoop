@@ -21,6 +21,8 @@ import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.server.namenode.CachePool;
+import org.apache.hadoop.util.IntrusiveCollection;
+import org.apache.hadoop.util.IntrusiveCollection.Element;
 
 import com.google.common.base.Preconditions;
 
@@ -30,32 +32,32 @@ import com.google.common.base.Preconditions;
  * This is an implementation class, not part of the public API.
  */
 @InterfaceAudience.Private
-public final class CacheDirective {
-  private final long entryId;
+public final class CacheDirective implements IntrusiveCollection.Element {
+  private final long id;
   private final String path;
   private final short replication;
-  private final CachePool pool;
+  private CachePool pool;
   private long bytesNeeded;
   private long bytesCached;
   private long filesAffected;
+  private Element prev;
+  private Element next;
 
-  public CacheDirective(long entryId, String path,
-      short replication, CachePool pool) {
-    Preconditions.checkArgument(entryId > 0);
-    this.entryId = entryId;
+  public CacheDirective(long id, String path,
+      short replication) {
+    Preconditions.checkArgument(id > 0);
+    this.id = id;
     Preconditions.checkArgument(replication > 0);
     this.path = path;
-    Preconditions.checkNotNull(pool);
     this.replication = replication;
     Preconditions.checkNotNull(path);
-    this.pool = pool;
     this.bytesNeeded = 0;
     this.bytesCached = 0;
     this.filesAffected = 0;
   }
 
-  public long getEntryId() {
-    return entryId;
+  public long getId() {
+    return id;
   }
 
   public String getPath() {
@@ -70,9 +72,9 @@ public final class CacheDirective {
     return replication;
   }
 
-  public CacheDirectiveInfo toDirective() {
+  public CacheDirectiveInfo toInfo() {
     return new CacheDirectiveInfo.Builder().
-        setId(entryId).
+        setId(id).
         setPath(new Path(path)).
         setReplication(replication).
         setPool(pool.getPoolName()).
@@ -88,13 +90,13 @@ public final class CacheDirective {
   }
 
   public CacheDirectiveEntry toEntry() {
-    return new CacheDirectiveEntry(toDirective(), toStats());
+    return new CacheDirectiveEntry(toInfo(), toStats());
   }
   
   @Override
   public String toString() {
     StringBuilder builder = new StringBuilder();
-    builder.append("{ entryId:").append(entryId).
+    builder.append("{ id:").append(id).
       append(", path:").append(path).
       append(", replication:").append(replication).
       append(", pool:").append(pool).
@@ -113,12 +115,12 @@ public final class CacheDirective {
       return false;
     }
     CacheDirective other = (CacheDirective)o;
-    return entryId == other.entryId;
+    return id == other.id;
   }
 
   @Override
   public int hashCode() {
-    return new HashCodeBuilder().append(entryId).toHashCode();
+    return new HashCodeBuilder().append(id).toHashCode();
   }
 
   public long getBytesNeeded() {
@@ -155,5 +157,56 @@ public final class CacheDirective {
 
   public void incrementFilesAffected() {
     this.filesAffected++;
+  }
+
+  @SuppressWarnings("unchecked")
+  @Override // IntrusiveCollection.Element
+  public void insertInternal(IntrusiveCollection<? extends Element> list,
+      Element prev, Element next) {
+    assert this.pool == null;
+    this.pool = ((CachePool.DirectiveList)list).getCachePool();
+    this.prev = prev;
+    this.next = next;
+  }
+
+  @Override // IntrusiveCollection.Element
+  public void setPrev(IntrusiveCollection<? extends Element> list, Element prev) {
+    assert list == pool.getDirectiveList();
+    this.prev = prev;
+  }
+
+  @Override // IntrusiveCollection.Element
+  public void setNext(IntrusiveCollection<? extends Element> list, Element next) {
+    assert list == pool.getDirectiveList();
+    this.next = next;
+  }
+
+  @Override // IntrusiveCollection.Element
+  public void removeInternal(IntrusiveCollection<? extends Element> list) {
+    assert list == pool.getDirectiveList();
+    this.pool = null;
+    this.prev = null;
+    this.next = null;
+  }
+
+  @Override // IntrusiveCollection.Element
+  public Element getPrev(IntrusiveCollection<? extends Element> list) {
+    if (list != pool.getDirectiveList()) {
+      return null;
+    }
+    return this.prev;
+  }
+
+  @Override // IntrusiveCollection.Element
+  public Element getNext(IntrusiveCollection<? extends Element> list) {
+    if (list != pool.getDirectiveList()) {
+      return null;
+    }
+    return this.next;
+  }
+
+  @Override // IntrusiveCollection.Element
+  public boolean isInList(IntrusiveCollection<? extends Element> list) {
+    return pool == null ? false : list == pool.getDirectiveList();
   }
 };

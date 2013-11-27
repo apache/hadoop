@@ -164,6 +164,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
@@ -6430,6 +6431,16 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   @Override // NameNodeMXBean
+  public long getCacheCapacity() {
+    return datanodeStatistics.getCacheCapacity();
+  }
+
+  @Override // NameNodeMXBean
+  public long getCacheUsed() {
+    return datanodeStatistics.getCacheUsed();
+  }
+
+  @Override // NameNodeMXBean
   public long getTotalBlocks() {
     return getBlocksTotal();
   }
@@ -7285,11 +7296,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     getEditLog().logSync();
   }
 
-  public BatchedListEntries<CachePoolInfo> listCachePools(String prevKey)
+  public BatchedListEntries<CachePoolEntry> listCachePools(String prevKey)
       throws IOException {
     final FSPermissionChecker pc =
         isPermissionEnabled ? getPermissionChecker() : null;
-    BatchedListEntries<CachePoolInfo> results;
+    BatchedListEntries<CachePoolEntry> results;
     checkOperation(OperationCategory.READ);
     boolean success = false;
     readLock();
