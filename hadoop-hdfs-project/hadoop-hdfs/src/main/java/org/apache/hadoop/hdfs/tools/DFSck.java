@@ -82,15 +82,23 @@ public class DFSck extends Configured implements Tool {
       + "\t-delete\tdelete corrupted files\n"
       + "\t-files\tprint out files being checked\n"
       + "\t-openforwrite\tprint out files opened for write\n"
+      + "\t-includeSnapshots\tinclude snapshot data if the given path"
+      + " indicates a snapshottable directory or there are "
+      + "snapshottable directories under it\n"
       + "\t-list-corruptfileblocks\tprint out list of missing "
       + "blocks and files they belong to\n"
       + "\t-blocks\tprint out block report\n"
       + "\t-locations\tprint out locations for every block\n"
-      + "\t-racks\tprint out network topology for data-node locations\n"
-      + "\t\tBy default fsck ignores files opened for write, "
+      + "\t-racks\tprint out network topology for data-node locations\n\n"
+      + "Please Note:\n"
+      + "\t1. By default fsck ignores files opened for write, "
       + "use -openforwrite to report such files. They are usually "
       + " tagged CORRUPT or HEALTHY depending on their block "
-      + "allocation status";
+      + "allocation status\n"
+      + "\t2. Option -includeSnapshots should not be used for comparing stats,"
+      + " should be used only for HEALTH check, as this may contain duplicates"
+      + " if the same file present in both original fs tree "
+      + "and inside snapshots.";
   
   private final UserGroupInformation ugi;
   private final PrintStream out;
@@ -255,6 +263,8 @@ public class DFSck extends Configured implements Tool {
       else if (args[idx].equals("-list-corruptfileblocks")) {
         url.append("&listcorruptfileblocks=1");
         doListCorruptFileBlocks = true;
+      } else if (args[idx].equals("-includeSnapshots")) {
+        url.append("&includeSnapshots=1");
       } else if (!args[idx].startsWith("-")) {
         if (null == dir) {
           dir = args[idx];

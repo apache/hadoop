@@ -238,6 +238,8 @@ Release 2.2.1 - UNRELEASED
 
     HDFS-5544. Adding Test case For Checking dfs.checksum type as NULL value. (Sathish via umamahesh)
 
+    HDFS-5568. Support includeSnapshots option with Fsck command. (Vinayakumar B via umamahesh)
+
   OPTIMIZATIONS
 
   BUG FIXES
