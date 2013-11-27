@@ -36,6 +36,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.hdfs.BlockReader;
 import org.apache.hadoop.hdfs.BlockReaderFactory;
@@ -46,9 +47,11 @@ import org.apache.hadoop.hdfs.net.TcpPeerServer;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicy;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementStatus;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
@@ -139,6 +142,7 @@ public class NamenodeFsck {
 
   private final Configuration conf;
   private final PrintWriter out;
+  private List<String> snapshottableDirs = null;
 
   /**
    * Filesystem checker.
@@ -178,6 +182,8 @@ public class NamenodeFsck {
       }
       else if (key.equals("startblockafter")) {
         this.currentCookie[0] = pmap.get("startblockafter")[0];
+      } else if (key.equals("includeSnapshots")) {
+        this.snapshottableDirs = new ArrayList<String>();
       }
     }
   }
@@ -193,6 +199,16 @@ public class NamenodeFsck {
       LOG.info(msg);
       out.println(msg);
       namenode.getNamesystem().logFsckEvent(path, remoteAddress);
+
+      if (snapshottableDirs != null) {
+        SnapshottableDirectoryStatus[] snapshotDirs = namenode.getRpcServer()
+            .getSnapshottableDirListing();
+        if (snapshotDirs != null) {
+          for (SnapshottableDirectoryStatus dir : snapshotDirs) {
+            snapshottableDirs.add(dir.getFullPath().toString());
+          }
+        }
+      }
 
       final HdfsFileStatus file = namenode.getRpcServer().getFileInfo(path);
       if (file != null) {
@@ -272,6 +288,14 @@ public class NamenodeFsck {
     boolean isOpen = false;
 
     if (file.isDir()) {
+      if (snapshottableDirs != null && snapshottableDirs.contains(path)) {
+        String snapshotPath = (path.endsWith(Path.SEPARATOR) ? path : path
+            + Path.SEPARATOR)
+            + HdfsConstants.DOT_SNAPSHOT_DIR;
+        HdfsFileStatus snapshotFileInfo = namenode.getRpcServer().getFileInfo(
+            snapshotPath);
+        check(snapshotPath, snapshotFileInfo, res);
+      }
       byte[] lastReturnedName = HdfsFileStatus.EMPTY_NAME;
       DirectoryListing thisListing;
       if (showFiles) {

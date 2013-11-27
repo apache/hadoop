@@ -1058,4 +1058,31 @@ public class TestFsck {
       if (cluster != null) { cluster.shutdown(); }
     }
   }
+
+  /**
+   * Test for including the snapshot files in fsck report
+   */
+  @Test
+  public void testFsckForSnapshotFiles() throws Exception {
+    final Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1)
+        .build();
+    try {
+      String runFsck = runFsck(conf, 0, true, "/", "-includeSnapshots",
+          "-files");
+      assertTrue(runFsck.contains("HEALTHY"));
+      final String fileName = "/srcdat";
+      DistributedFileSystem hdfs = cluster.getFileSystem();
+      Path file1 = new Path(fileName);
+      DFSTestUtil.createFile(hdfs, file1, 1024, (short) 1, 1000L);
+      hdfs.allowSnapshot(new Path("/"));
+      hdfs.createSnapshot(new Path("/"), "mySnapShot");
+      runFsck = runFsck(conf, 0, true, "/", "-includeSnapshots", "-files");
+      assertTrue(runFsck.contains("/.snapshot/mySnapShot/srcdat"));
+      runFsck = runFsck(conf, 0, true, "/", "-files");
+      assertFalse(runFsck.contains("mySnapShot"));
+    } finally {
+      cluster.shutdown();
+    }
+  }
 }
