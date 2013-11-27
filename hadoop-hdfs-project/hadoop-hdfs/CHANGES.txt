@@ -337,6 +337,9 @@ Release 2.2.1 - UNRELEASED
 
     HDFS-5577. NFS user guide update (brandonli)
 
+    HDFS-5563. NFS gateway should commit the buffered data when read request comes
+    after write to the same file (brandonli)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES

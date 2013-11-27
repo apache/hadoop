@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs.nfs.nfs3;
 
 import java.io.IOException;
-import java.util.concurrent.ConcurrentMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -41,11 +40,9 @@ import org.apache.hadoop.nfs.nfs3.response.WRITE3Response;
 import org.apache.hadoop.nfs.nfs3.response.WccData;
 import org.apache.hadoop.oncrpc.XDR;
 import org.apache.hadoop.oncrpc.security.VerifierNone;
-import org.apache.hadoop.util.Daemon;
 import org.jboss.netty.channel.Channel;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.Maps;
 
 /**
  * Manage the writes and responds asynchronously.
@@ -207,6 +204,51 @@ public class WriteManager {
     return;
   }
 
+  // Do a possible commit before read request in case there is buffered data
+  // inside DFSClient which has been flushed but not synced.
+  int commitBeforeRead(DFSClient dfsClient, FileHandle fileHandle,
+      long commitOffset) {
+    int status;
+    OpenFileCtx openFileCtx = fileContextCache.get(fileHandle);
+
+    if (openFileCtx == null) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("No opened stream for fileId:" + fileHandle.getFileId()
+            + " commitOffset=" + commitOffset
+            + ". Return success in this case.");
+      }
+      status = Nfs3Status.NFS3_OK;
+
+    } else {
+      COMMIT_STATUS ret = openFileCtx.checkCommit(dfsClient, commitOffset,
+          null, 0, null, true);
+      switch (ret) {
+      case COMMIT_FINISHED:
+      case COMMIT_INACTIVE_CTX:
+        status = Nfs3Status.NFS3_OK;
+        break;
+      case COMMIT_INACTIVE_WITH_PENDING_WRITE:
+      case COMMIT_ERROR:
+        status = Nfs3Status.NFS3ERR_IO;
+        break;
+      case COMMIT_WAIT:
+        /**
+         * This should happen rarely in some possible cases, such as read
+         * request arrives before DFSClient is able to quickly flush data to DN,
+         * or Prerequisite writes is not available. Won't wait since we don't
+         * want to block read.
+         */     
+        status = Nfs3Status.NFS3ERR_JUKEBOX;
+        break;
+      default:
+        LOG.error("Should not get commit return code:" + ret.name());
+        throw new RuntimeException("Should not get commit return code:"
+            + ret.name());
+      }
+    }
+    return status;
+  }
+  
   void handleCommit(DFSClient dfsClient, FileHandle fileHandle,
       long commitOffset, Channel channel, int xid, Nfs3FileAttributes preOpAttr) {
     int status;
@@ -219,9 +261,8 @@ public class WriteManager {
       
     } else {
       COMMIT_STATUS ret = openFileCtx.checkCommit(dfsClient, commitOffset,
-          channel, xid, preOpAttr);
+          channel, xid, preOpAttr, false);
       switch (ret) {
-      case COMMIT_DO_SYNC:
       case COMMIT_FINISHED:
       case COMMIT_INACTIVE_CTX:
         status = Nfs3Status.NFS3_OK;
@@ -234,6 +275,7 @@ public class WriteManager {
         // Do nothing. Commit is async now.
         return;
       default:
+        LOG.error("Should not get commit return code:" + ret.name());
         throw new RuntimeException("Should not get commit return code:"
             + ret.name());
       }
