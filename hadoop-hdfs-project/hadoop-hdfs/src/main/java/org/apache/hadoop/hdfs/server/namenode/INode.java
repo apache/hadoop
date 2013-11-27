@@ -35,7 +35,6 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.DstReference;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithName;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.util.ChunkedArrayList;
@@ -315,7 +314,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
    * 1.2.2 Else do nothing with the current INode. Recursively clean its 
    * children.
    * 
-   * 1.3 The current inode is a {@link FileWithSnapshot}.
+   * 1.3 The current inode is a file with snapshot.
    * Call recordModification(..) to capture the current states.
    * Mark the INode as deleted.
    * 
@@ -328,7 +327,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
    * 2. When deleting a snapshot.
    * 2.1 To clean {@link INodeFile}: do nothing.
    * 2.2 To clean {@link INodeDirectory}: recursively clean its children.
-   * 2.3 To clean {@link FileWithSnapshot}: delete the corresponding snapshot in
+   * 2.3 To clean INodeFile with snapshot: delete the corresponding snapshot in
    * its diff list.
    * 2.4 To clean {@link INodeDirectoryWithSnapshot}: delete the corresponding 
    * snapshot in its diff list. Recursively clean its children.

@@ -224,6 +224,8 @@ Trunk (Unreleased)
     HDFS-5545. Allow specifying endpoints for listeners in HttpServer. (Haohui
     Mai via jing9)
 
+    HDFS-5537. Remove FileWithSnapshot interface.  (jing9 via szetszwo)
+
   OPTIMIZATIONS
     HDFS-5349. DNA_CACHE and DNA_UNCACHE should be by blockId only. (cmccabe)
 

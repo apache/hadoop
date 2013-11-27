@@ -432,8 +432,8 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
           parentPath.remove(parentPath.size() - 1);
         }
       }
-    } else if (node.isFile() && node.asFile() instanceof FileWithSnapshot) {
-      FileWithSnapshot file = (FileWithSnapshot) node.asFile();
+    } else if (node.isFile() && node.asFile() instanceof INodeFileWithSnapshot) {
+      INodeFileWithSnapshot file = (INodeFileWithSnapshot) node.asFile();
       Snapshot earlierSnapshot = diffReport.isFromEarlier() ? diffReport.from
           : diffReport.to;
       Snapshot laterSnapshot = diffReport.isFromEarlier() ? diffReport.to
@@ -441,7 +441,7 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
       boolean change = file.getDiffs().changedBetweenSnapshots(earlierSnapshot,
           laterSnapshot);
       if (change) {
-        diffReport.addFileDiff(file.asINodeFile(), relativePath);
+        diffReport.addFileDiff(file, relativePath);
       }
     }
   }
