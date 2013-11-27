@@ -44,6 +44,8 @@ import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.ClientRMService;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.RMStateVersion;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.RMStateVersionPBImpl;
 import org.apache.zookeeper.ZooKeeper;
 import org.junit.Test;
 
@@ -54,7 +56,7 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
   class TestZKRMStateStoreTester implements RMStateStoreHelper {
 
     ZooKeeper client;
-    ZKRMStateStore store;
+    TestZKRMStateStoreInternal store;
 
     class TestZKRMStateStoreInternal extends ZKRMStateStore {
 
@@ -68,6 +70,14 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
       @Override
       public ZooKeeper getNewZooKeeper() throws IOException {
         return client;
+      }
+
+      public String getVersionNode() {
+        return znodeWorkingPath + "/" + ROOT_ZNODE_NAME + "/" + VERSION_NODE;
+      }
+
+      public RMStateVersion getCurrentVersion() {
+        return CURRENT_VERSION_INFO;
       }
     }
 
@@ -86,6 +96,17 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
       List<String> nodes = client.getChildren(store.znodeWorkingPath, false);
       return nodes.size() == 1;
     }
+
+    @Override
+    public void writeVersion(RMStateVersion version) throws Exception {
+      client.setData(store.getVersionNode(), ((RMStateVersionPBImpl) version)
+        .getProto().toByteArray(), -1);
+    }
+
+    @Override
+    public RMStateVersion getCurrentVersion() throws Exception {
+      return store.getCurrentVersion();
+    }
   }
 
   @Test
@@ -93,6 +114,7 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     TestZKRMStateStoreTester zkTester = new TestZKRMStateStoreTester();
     testRMAppStateStore(zkTester);
     testRMDTSecretManagerStateStore(zkTester);
+    testCheckVersion(zkTester);
   }
 
   private Configuration createHARMConf(

@@ -43,18 +43,18 @@ import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPBImpl;
-
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.RMStateVersion;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationAttemptStateDataPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationStateDataPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppNewSavedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppRemovedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppNewSavedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppUpdateSavedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
@@ -78,6 +78,7 @@ public abstract class RMStateStore extends AbstractService {
   protected static final String DELEGATION_TOKEN_PREFIX = "RMDelegationToken_";
   protected static final String DELEGATION_TOKEN_SEQUENCE_NUMBER_PREFIX =
       "RMDTSequenceNumber_";
+  protected static final String VERSION_NODE = "RMVersionNode";
 
   public static final Log LOG = LogFactory.getLog(RMStateStore.class);
 
@@ -304,7 +305,54 @@ public abstract class RMStateStore extends AbstractService {
    * after this
    */
   protected abstract void closeInternal() throws Exception;
-  
+
+  /**
+   * 1) Versioning scheme: major.minor. For e.g. 1.0, 1.1, 1.2...1.25, 2.0 etc.
+   * 2) Any incompatible change of state-store is a major upgrade, and any
+   *    compatible change of state-store is a minor upgrade.
+   * 3) If theres's no version, treat it as 1.0.
+   * 4) Within a minor upgrade, say 1.1 to 1.2:
+   *    overwrite the version info and proceed as normal.
+   * 5) Within a major upgrade, say 1.2 to 2.0:
+   *    throw exception and indicate user to use a separate upgrade tool to
+   *    upgrade RM state.
+   */
+  public void checkVersion() throws Exception {
+    RMStateVersion loadedVersion = loadVersion();
+    LOG.info("Loaded RM state version info " + loadedVersion);
+    if (loadedVersion != null && loadedVersion.equals(getCurrentVersion())) {
+      return;
+    }
+    // if there is no version info, treat it as 1.0;
+    if (loadedVersion == null) {
+      loadedVersion = RMStateVersion.newInstance(1, 0);
+    }
+    if (loadedVersion.isCompatibleTo(getCurrentVersion())) {
+      LOG.info("Storing RM state version info " + getCurrentVersion());
+      storeVersion();
+    } else {
+      throw new RMStateVersionIncompatibleException(
+        "Expecting RM state version " + getCurrentVersion()
+            + ", but loading version " + loadedVersion);
+    }
+  }
+
+  /**
+   * Derived class use this method to load the version information from state
+   * store.
+   */
+  protected abstract RMStateVersion loadVersion() throws Exception;
+
+  /**
+   * Derived class use this method to store the version information.
+   */
+  protected abstract void storeVersion() throws Exception;
+
+  /**
+   * Get the current version of the underlying state store.
+   */
+  protected abstract RMStateVersion getCurrentVersion();
+
   /**
    * Blocking API
    * The derived class must recover state from the store and return a new 
