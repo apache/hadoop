@@ -178,6 +178,9 @@ Release 2.2.1 - UNRELEASED
     HADOOP-9623. Update jets3t dependency to 0.9.0 (Amandeep Khurana via Colin
     Patrick McCabe)
 
+    HADOOP-10132. RPC#stopProxy() should log the class of proxy when IllegalArgumentException 
+    is encountered (Ted yu via umamahesh)
+
   OPTIMIZATIONS
 
   BUG FIXES
