@@ -58,6 +58,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.Appli
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.ApplicationState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMDTSecretManagerState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.RMStateVersion;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
@@ -106,6 +107,8 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
   interface RMStateStoreHelper {
     RMStateStore getRMStateStore() throws Exception;
     boolean isFinalStateValid() throws Exception;
+    void writeVersion(RMStateVersion version) throws Exception;
+    RMStateVersion getCurrentVersion() throws Exception;
   }
 
   void waitNotify(TestDispatcher dispatcher) {
@@ -378,5 +381,38 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
         new Token<AMRMTokenIdentifier>(appTokenId, appTokenMgr);
     appToken.setService(new Text("appToken service"));
     return appToken;
+  }
+
+  public void testCheckVersion(RMStateStoreHelper stateStoreHelper)
+      throws Exception {
+    RMStateStore store = stateStoreHelper.getRMStateStore();
+    store.setRMDispatcher(new TestDispatcher());
+
+    // default version
+    RMStateVersion defaultVersion = stateStoreHelper.getCurrentVersion();
+    store.checkVersion();
+    Assert.assertEquals(defaultVersion, store.loadVersion());
+
+    // compatible version
+    RMStateVersion compatibleVersion =
+        RMStateVersion.newInstance(defaultVersion.getMajorVersion(),
+          defaultVersion.getMinorVersion() + 2);
+    stateStoreHelper.writeVersion(compatibleVersion);
+    Assert.assertEquals(compatibleVersion, store.loadVersion());
+    store.checkVersion();
+    // overwrite the compatible version
+    Assert.assertEquals(defaultVersion, store.loadVersion());
+
+    // incompatible version
+    RMStateVersion incompatibleVersion =
+        RMStateVersion.newInstance(defaultVersion.getMajorVersion() + 2,
+          defaultVersion.getMinorVersion());
+    stateStoreHelper.writeVersion(incompatibleVersion);
+    try {
+      store.checkVersion();
+      Assert.fail("Invalid version, should fail.");
+    } catch (Throwable t) {
+      Assert.assertTrue(t instanceof RMStateVersionIncompatibleException);
+    }
   }
 }

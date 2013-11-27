@@ -32,6 +32,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.RMStateVersion;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationAttemptStateDataPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationStateDataPBImpl;
 import org.apache.hadoop.yarn.util.ConverterUtils;
@@ -43,12 +44,15 @@ import com.google.common.annotations.VisibleForTesting;
 public class MemoryRMStateStore extends RMStateStore {
   
   RMState state = new RMState();
-  
   @VisibleForTesting
   public RMState getState() {
     return state;
   }
-  
+
+  @Override
+  public void checkVersion() throws Exception {
+  }
+
   @Override
   public synchronized RMState loadState() throws Exception {
     // return a copy of the state to allow for modification of the real state
@@ -223,5 +227,19 @@ public class MemoryRMStateStore extends RMStateStore {
     Set<DelegationKey> rmDTMasterKeyState =
         state.rmSecretManagerState.getMasterKeyState();
     rmDTMasterKeyState.remove(delegationKey);
+  }
+
+  @Override
+  protected RMStateVersion loadVersion() throws Exception {
+    return null;
+  }
+
+  @Override
+  protected void storeVersion() throws Exception {
+  }
+
+  @Override
+  protected RMStateVersion getCurrentVersion() {
+    return null;
   }
 }

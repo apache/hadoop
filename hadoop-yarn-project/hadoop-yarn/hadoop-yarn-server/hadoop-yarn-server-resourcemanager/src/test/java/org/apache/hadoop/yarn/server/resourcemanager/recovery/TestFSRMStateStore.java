@@ -32,6 +32,8 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.RMStateVersion;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.RMStateVersionPBImpl;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.junit.Test;
 
@@ -42,7 +44,7 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
   class TestFSRMStateStoreTester implements RMStateStoreHelper {
 
     Path workingDirPathURI;
-    FileSystemRMStateStore store;
+    TestFileSystemRMStore store;
     MiniDFSCluster cluster;
 
     class TestFileSystemRMStore extends FileSystemRMStateStore {
@@ -53,6 +55,14 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
         assertTrue(workingDirPathURI.equals(fsWorkingPath));
         start();
         Assert.assertNotNull(fs);
+      }
+
+      public Path getVersionNode() {
+        return new Path(new Path(workingDirPathURI, ROOT_DIR_NAME), VERSION_NODE);
+      }
+
+      public RMStateVersion getCurrentVersion() {
+        return CURRENT_VERSION_INFO;
       }
     }
 
@@ -80,6 +90,17 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
       FileSystem fs = cluster.getFileSystem();
       FileStatus[] files = fs.listStatus(workingDirPathURI);
       return files.length == 1;
+    }
+
+    @Override
+    public void writeVersion(RMStateVersion version) throws Exception {
+      store.updateFile(store.getVersionNode(), ((RMStateVersionPBImpl) version)
+        .getProto().toByteArray());
+    }
+
+    @Override
+    public RMStateVersion getCurrentVersion() throws Exception {
+      return store.getCurrentVersion();
     }
   }
 
@@ -113,6 +134,7 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
       Assert.assertFalse(fileSystemRMStateStore.fsWorkingPath
           .getFileSystem(conf).exists(tempAppAttemptFile));
       testRMDTSecretManagerStateStore(fsTester);
+      testCheckVersion(fsTester);
     } finally {
       cluster.shutdown();
     }

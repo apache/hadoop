@@ -105,6 +105,9 @@ Release 2.3.0 - UNRELEASED
     YARN-1314. Fixed DistributedShell to not fail with multiple arguments for a
     shell command separated by spaces. (Xuan Gong via vinodkv)
 
+    YARN-1239. Modified ResourceManager state-store implementations to start
+    storing version numbers. (Jian He via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
