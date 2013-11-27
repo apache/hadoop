@@ -335,6 +335,8 @@ Release 2.2.1 - UNRELEASED
 
     HDFS-5548. Use ConcurrentHashMap in portmap (Haohui Mai via brandonli)
 
+    HDFS-5577. NFS user guide update (brandonli)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
