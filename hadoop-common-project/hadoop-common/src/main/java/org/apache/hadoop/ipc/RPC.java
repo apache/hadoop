@@ -634,7 +634,7 @@ public class RPC {
     } catch (IOException e) {
       LOG.error("Closing proxy or invocation handler caused exception", e);
     } catch (IllegalArgumentException e) {
-      LOG.error("RPC.stopProxy called on non proxy.", e);
+      LOG.error("RPC.stopProxy called on non proxy: class=" + proxy.getClass().getName(), e);
     }
     
     // If you see this error on a mock object in a unit test you're
