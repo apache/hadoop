@@ -18,9 +18,8 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_ADD;
+import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_ADD_CACHE_DIRECTIVE;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_ADD_CACHE_POOL;
-import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_ADD_PATH_BASED_CACHE_DIRECTIVE;
-import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_MODIFY_PATH_BASED_CACHE_DIRECTIVE;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_ALLOCATE_BLOCK_ID;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_ALLOW_SNAPSHOT;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_CANCEL_DELEGATION_TOKEN;
@@ -35,10 +34,11 @@ import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_END_LOG
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_GET_DELEGATION_TOKEN;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_INVALID;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_MKDIR;
+import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_MODIFY_CACHE_DIRECTIVE;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_MODIFY_CACHE_POOL;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_REASSIGN_LEASE;
+import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_REMOVE_CACHE_DIRECTIVE;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_REMOVE_CACHE_POOL;
-import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_REMOVE_PATH_BASED_CACHE_DIRECTIVE;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_RENAME;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_RENAME_OLD;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_RENAME_SNAPSHOT;
@@ -64,6 +64,7 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.zip.CheckedInputStream;
@@ -81,12 +82,12 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DeprecatedUTF8;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
-import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.util.XMLUtils;
 import org.apache.hadoop.hdfs.util.XMLUtils.InvalidXmlException;
@@ -109,7 +110,6 @@ import org.xml.sax.helpers.AttributesImpl;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
 
 /**
  * Helper classes for reading the ops from an InputStream.
@@ -165,11 +165,11 @@ public abstract class FSEditLogOp {
       inst.put(OP_RENAME_SNAPSHOT, new RenameSnapshotOp());
       inst.put(OP_SET_GENSTAMP_V2, new SetGenstampV2Op());
       inst.put(OP_ALLOCATE_BLOCK_ID, new AllocateBlockIdOp());
-      inst.put(OP_ADD_PATH_BASED_CACHE_DIRECTIVE,
+      inst.put(OP_ADD_CACHE_DIRECTIVE,
           new AddCacheDirectiveInfoOp());
-      inst.put(OP_MODIFY_PATH_BASED_CACHE_DIRECTIVE,
+      inst.put(OP_MODIFY_CACHE_DIRECTIVE,
           new ModifyCacheDirectiveInfoOp());
-      inst.put(OP_REMOVE_PATH_BASED_CACHE_DIRECTIVE,
+      inst.put(OP_REMOVE_CACHE_DIRECTIVE,
           new RemoveCacheDirectiveInfoOp());
       inst.put(OP_ADD_CACHE_POOL, new AddCachePoolOp());
       inst.put(OP_MODIFY_CACHE_POOL, new ModifyCachePoolOp());
@@ -2874,12 +2874,12 @@ public abstract class FSEditLogOp {
     CacheDirectiveInfo directive;
 
     public AddCacheDirectiveInfoOp() {
-      super(OP_ADD_PATH_BASED_CACHE_DIRECTIVE);
+      super(OP_ADD_CACHE_DIRECTIVE);
     }
 
     static AddCacheDirectiveInfoOp getInstance(OpInstanceCache cache) {
       return (AddCacheDirectiveInfoOp) cache
-          .get(OP_ADD_PATH_BASED_CACHE_DIRECTIVE);
+          .get(OP_ADD_CACHE_DIRECTIVE);
     }
 
     public AddCacheDirectiveInfoOp setDirective(
@@ -2889,6 +2889,7 @@ public abstract class FSEditLogOp {
       assert(directive.getPath() != null);
       assert(directive.getReplication() != null);
       assert(directive.getPool() != null);
+      assert(directive.getExpiration() != null);
       return this;
     }
 
@@ -2898,11 +2899,13 @@ public abstract class FSEditLogOp {
       String path = FSImageSerialization.readString(in);
       short replication = FSImageSerialization.readShort(in);
       String pool = FSImageSerialization.readString(in);
+      long expiryTime = FSImageSerialization.readLong(in);
       directive = new CacheDirectiveInfo.Builder().
           setId(id).
           setPath(new Path(path)).
           setReplication(replication).
           setPool(pool).
+          setExpiration(CacheDirectiveInfo.Expiration.newAbsolute(expiryTime)).
           build();
       readRpcIds(in, logVersion);
     }
@@ -2913,6 +2916,8 @@ public abstract class FSEditLogOp {
       FSImageSerialization.writeString(directive.getPath().toUri().getPath(), out);
       FSImageSerialization.writeShort(directive.getReplication(), out);
       FSImageSerialization.writeString(directive.getPool(), out);
+      FSImageSerialization.writeLong(
+          directive.getExpiration().getMillis(), out);
       writeRpcIds(rpcClientId, rpcCallId, out);
     }
 
@@ -2925,6 +2930,8 @@ public abstract class FSEditLogOp {
       XMLUtils.addSaxString(contentHandler, "REPLICATION",
           Short.toString(directive.getReplication()));
       XMLUtils.addSaxString(contentHandler, "POOL", directive.getPool());
+      XMLUtils.addSaxString(contentHandler, "EXPIRATION",
+          "" + directive.getExpiration().getMillis());
       appendRpcIdsToXml(contentHandler, rpcClientId, rpcCallId);
     }
 
@@ -2935,6 +2942,8 @@ public abstract class FSEditLogOp {
           setPath(new Path(st.getValue("PATH"))).
           setReplication(Short.parseShort(st.getValue("REPLICATION"))).
           setPool(st.getValue("POOL")).
+          setExpiration(CacheDirectiveInfo.Expiration.newAbsolute(
+              Long.parseLong(st.getValue("EXPIRATION")))).
           build();
       readRpcIdsFromXml(st);
     }
@@ -2946,7 +2955,8 @@ public abstract class FSEditLogOp {
       builder.append("id=" + directive.getId() + ",");
       builder.append("path=" + directive.getPath().toUri().getPath() + ",");
       builder.append("replication=" + directive.getReplication() + ",");
-      builder.append("pool=" + directive.getPool());
+      builder.append("pool=" + directive.getPool() + ",");
+      builder.append("expiration=" + directive.getExpiration().getMillis());
       appendRpcIdsToString(builder, rpcClientId, rpcCallId);
       builder.append("]");
       return builder.toString();
@@ -2961,12 +2971,12 @@ public abstract class FSEditLogOp {
     CacheDirectiveInfo directive;
 
     public ModifyCacheDirectiveInfoOp() {
-      super(OP_MODIFY_PATH_BASED_CACHE_DIRECTIVE);
+      super(OP_MODIFY_CACHE_DIRECTIVE);
     }
 
     static ModifyCacheDirectiveInfoOp getInstance(OpInstanceCache cache) {
       return (ModifyCacheDirectiveInfoOp) cache
-          .get(OP_MODIFY_PATH_BASED_CACHE_DIRECTIVE);
+          .get(OP_MODIFY_CACHE_DIRECTIVE);
     }
 
     public ModifyCacheDirectiveInfoOp setDirective(
@@ -2991,7 +3001,12 @@ public abstract class FSEditLogOp {
       if ((flags & 0x4) != 0) {
         builder.setPool(FSImageSerialization.readString(in));
       }
-      if ((flags & ~0x7) != 0) {
+      if ((flags & 0x8) != 0) {
+        builder.setExpiration(
+            CacheDirectiveInfo.Expiration.newAbsolute(
+                FSImageSerialization.readLong(in)));
+      }
+      if ((flags & ~0xF) != 0) {
         throw new IOException("unknown flags set in " +
             "ModifyCacheDirectiveInfoOp: " + flags);
       }
@@ -3005,7 +3020,8 @@ public abstract class FSEditLogOp {
       byte flags = (byte)(
           ((directive.getPath() != null) ? 0x1 : 0) |
           ((directive.getReplication() != null) ? 0x2 : 0) |
-          ((directive.getPool() != null) ? 0x4 : 0)
+          ((directive.getPool() != null) ? 0x4 : 0) |
+          ((directive.getExpiration() != null) ? 0x8 : 0)
         );
       out.writeByte(flags);
       if (directive.getPath() != null) {
@@ -3017,6 +3033,10 @@ public abstract class FSEditLogOp {
       }
       if (directive.getPool() != null) {
         FSImageSerialization.writeString(directive.getPool(), out);
+      }
+      if (directive.getExpiration() != null) {
+        FSImageSerialization.writeLong(directive.getExpiration().getMillis(),
+            out);
       }
       writeRpcIds(rpcClientId, rpcCallId, out);
     }
@@ -3035,6 +3055,10 @@ public abstract class FSEditLogOp {
       }
       if (directive.getPool() != null) {
         XMLUtils.addSaxString(contentHandler, "POOL", directive.getPool());
+      }
+      if (directive.getExpiration() != null) {
+        XMLUtils.addSaxString(contentHandler, "EXPIRATION",
+            "" + directive.getExpiration().getMillis());
       }
       appendRpcIdsToXml(contentHandler, rpcClientId, rpcCallId);
     }
@@ -3056,6 +3080,11 @@ public abstract class FSEditLogOp {
       if (pool != null) {
         builder.setPool(pool);
       }
+      String expiryTime = st.getValueOrNull("EXPIRATION");
+      if (expiryTime != null) {
+        builder.setExpiration(CacheDirectiveInfo.Expiration.newAbsolute(
+            Long.parseLong(expiryTime)));
+      }
       this.directive = builder.build();
       readRpcIdsFromXml(st);
     }
@@ -3075,6 +3104,10 @@ public abstract class FSEditLogOp {
       if (directive.getPool() != null) {
         builder.append(",").append("pool=").append(directive.getPool());
       }
+      if (directive.getExpiration() != null) {
+        builder.append(",").append("expiration=").
+            append(directive.getExpiration().getMillis());
+      }
       appendRpcIdsToString(builder, rpcClientId, rpcCallId);
       builder.append("]");
       return builder.toString();
@@ -3089,12 +3122,12 @@ public abstract class FSEditLogOp {
     long id;
 
     public RemoveCacheDirectiveInfoOp() {
-      super(OP_REMOVE_PATH_BASED_CACHE_DIRECTIVE);
+      super(OP_REMOVE_CACHE_DIRECTIVE);
     }
 
     static RemoveCacheDirectiveInfoOp getInstance(OpInstanceCache cache) {
       return (RemoveCacheDirectiveInfoOp) cache
-          .get(OP_REMOVE_PATH_BASED_CACHE_DIRECTIVE);
+          .get(OP_REMOVE_CACHE_DIRECTIVE);
     }
 
     public RemoveCacheDirectiveInfoOp setId(long id) {
@@ -3162,7 +3195,7 @@ public abstract class FSEditLogOp {
 
     @Override
     public void writeFields(DataOutputStream out) throws IOException {
-      info .writeTo(out);
+      info.writeTo(out);
       writeRpcIds(rpcClientId, rpcCallId, out);
     }
 

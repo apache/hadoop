@@ -226,6 +226,8 @@ Trunk (Unreleased)
 
     HDFS-5537. Remove FileWithSnapshot interface.  (jing9 via szetszwo)
 
+    HDFS-5430. Support TTL on CacheDirectives. (wang)
+
   OPTIMIZATIONS
     HDFS-5349. DNA_CACHE and DNA_UNCACHE should be by blockId only. (cmccabe)
 

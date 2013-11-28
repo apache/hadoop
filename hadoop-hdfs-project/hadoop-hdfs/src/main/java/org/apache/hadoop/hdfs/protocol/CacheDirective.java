@@ -17,9 +17,14 @@
  */
 package org.apache.hadoop.hdfs.protocol;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
+import java.util.Date;
+
 import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.namenode.CachePool;
 import org.apache.hadoop.util.IntrusiveCollection;
 import org.apache.hadoop.util.IntrusiveCollection.Element;
@@ -27,7 +32,7 @@ import org.apache.hadoop.util.IntrusiveCollection.Element;
 import com.google.common.base.Preconditions;
 
 /**
- * Represents an entry in the PathBasedCache on the NameNode.
+ * Namenode class that tracks state related to a cached path.
  *
  * This is an implementation class, not part of the public API.
  */
@@ -37,6 +42,8 @@ public final class CacheDirective implements IntrusiveCollection.Element {
   private final String path;
   private final short replication;
   private CachePool pool;
+  private final long expiryTime;
+
   private long bytesNeeded;
   private long bytesCached;
   private long filesAffected;
@@ -44,13 +51,13 @@ public final class CacheDirective implements IntrusiveCollection.Element {
   private Element next;
 
   public CacheDirective(long id, String path,
-      short replication) {
+      short replication, long expiryTime) {
     Preconditions.checkArgument(id > 0);
     this.id = id;
+    this.path = checkNotNull(path);
     Preconditions.checkArgument(replication > 0);
-    this.path = path;
     this.replication = replication;
-    Preconditions.checkNotNull(path);
+    this.expiryTime = expiryTime;
     this.bytesNeeded = 0;
     this.bytesCached = 0;
     this.filesAffected = 0;
@@ -64,20 +71,40 @@ public final class CacheDirective implements IntrusiveCollection.Element {
     return path;
   }
 
-  public CachePool getPool() {
-    return pool;
-  }
-
   public short getReplication() {
     return replication;
   }
 
+  public CachePool getPool() {
+    return pool;
+  }
+
+  /**
+   * @return When this directive expires, in milliseconds since Unix epoch
+   */
+  public long getExpiryTime() {
+    return expiryTime;
+  }
+
+  /**
+   * @return When this directive expires, as an ISO-8601 formatted string.
+   */
+  public String getExpiryTimeString() {
+    return DFSUtil.dateToIso8601String(new Date(expiryTime));
+  }
+
+  /**
+   * Returns a {@link CacheDirectiveInfo} based on this CacheDirective.
+   * <p>
+   * This always sets an absolute expiry time, never a relative TTL.
+   */
   public CacheDirectiveInfo toInfo() {
     return new CacheDirectiveInfo.Builder().
         setId(id).
         setPath(new Path(path)).
         setReplication(replication).
         setPool(pool.getPoolName()).
+        setExpiration(CacheDirectiveInfo.Expiration.newAbsolute(expiryTime)).
         build();
   }
 
@@ -86,6 +113,7 @@ public final class CacheDirective implements IntrusiveCollection.Element {
         setBytesNeeded(bytesNeeded).
         setBytesCached(bytesCached).
         setFilesAffected(filesAffected).
+        setHasExpired(new Date().getTime() > expiryTime).
         build();
   }
 
@@ -100,6 +128,7 @@ public final class CacheDirective implements IntrusiveCollection.Element {
       append(", path:").append(path).
       append(", replication:").append(replication).
       append(", pool:").append(pool).
+      append(", expiryTime: ").append(getExpiryTimeString()).
       append(", bytesNeeded:").append(bytesNeeded).
       append(", bytesCached:").append(bytesCached).
       append(", filesAffected:").append(filesAffected).

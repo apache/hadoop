@@ -33,10 +33,12 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.apache.commons.lang.time.DateUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -54,13 +56,13 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
+import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveStats;
 import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
-import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
+import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo.Expiration;
 import org.apache.hadoop.hdfs.server.blockmanagement.CacheReplicationMonitor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.CachedBlocksList.Type;
-import org.apache.hadoop.hdfs.server.namenode.EditLogFileOutputStream;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.io.nativeio.NativeIO.POSIX.CacheManipulator;
@@ -521,10 +523,14 @@ public class TestCacheDirectives {
     int numEntries = 10;
     String entryPrefix = "/party-";
     long prevId = -1;
+    final Date expiry = new Date();
     for (int i=0; i<numEntries; i++) {
       prevId = dfs.addCacheDirective(
           new CacheDirectiveInfo.Builder().
-            setPath(new Path(entryPrefix + i)).setPool(pool).build());
+            setPath(new Path(entryPrefix + i)).setPool(pool).
+            setExpiration(
+                CacheDirectiveInfo.Expiration.newAbsolute(expiry.getTime())).
+            build());
     }
     RemoteIterator<CacheDirectiveEntry> dit
         = dfs.listCacheDirectives(null);
@@ -558,6 +564,7 @@ public class TestCacheDirectives {
       assertEquals(i+1, cd.getId().longValue());
       assertEquals(entryPrefix + i, cd.getPath().toUri().getPath());
       assertEquals(pool, cd.getPool());
+      assertEquals(expiry.getTime(), cd.getExpiration().getMillis());
     }
     assertFalse("Unexpected # of cache directives found", dit.hasNext());
 
@@ -1000,5 +1007,59 @@ public class TestCacheDirectives {
     assertEquals("Mismatched mode", (short) 0700,
         info.getMode().toShort());
     assertEquals("Mismatched weight", 99, (int)info.getWeight());
+  }
+
+  @Test(timeout=60000)
+  public void testExpiry() throws Exception {
+    HdfsConfiguration conf = createCachingConf();
+    MiniDFSCluster cluster =
+      new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATANODES).build();
+    try {
+      DistributedFileSystem dfs = cluster.getFileSystem();
+      String pool = "pool1";
+      dfs.addCachePool(new CachePoolInfo(pool));
+      Path p = new Path("/mypath");
+      DFSTestUtil.createFile(dfs, p, BLOCK_SIZE*2, (short)2, 0x999);
+      // Expire after test timeout
+      Date start = new Date();
+      Date expiry = DateUtils.addSeconds(start, 120);
+      final long id = dfs.addCacheDirective(new CacheDirectiveInfo.Builder()
+          .setPath(p)
+          .setPool(pool)
+          .setExpiration(CacheDirectiveInfo.Expiration.newAbsolute(expiry))
+          .setReplication((short)2)
+          .build());
+      waitForCachedBlocks(cluster.getNameNode(), 2, 4, "testExpiry:1");
+      // Change it to expire sooner
+      dfs.modifyCacheDirective(new CacheDirectiveInfo.Builder().setId(id)
+          .setExpiration(Expiration.newRelative(0)).build());
+      waitForCachedBlocks(cluster.getNameNode(), 0, 0, "testExpiry:2");
+      RemoteIterator<CacheDirectiveEntry> it = dfs.listCacheDirectives(null);
+      CacheDirectiveEntry ent = it.next();
+      assertFalse(it.hasNext());
+      Date entryExpiry = new Date(ent.getInfo().getExpiration().getMillis());
+      assertTrue("Directive should have expired",
+          entryExpiry.before(new Date()));
+      // Change it back to expire later
+      dfs.modifyCacheDirective(new CacheDirectiveInfo.Builder().setId(id)
+          .setExpiration(Expiration.newRelative(120000)).build());
+      waitForCachedBlocks(cluster.getNameNode(), 2, 4, "testExpiry:3");
+      it = dfs.listCacheDirectives(null);
+      ent = it.next();
+      assertFalse(it.hasNext());
+      entryExpiry = new Date(ent.getInfo().getExpiration().getMillis());
+      assertTrue("Directive should not have expired",
+          entryExpiry.after(new Date()));
+      // Verify that setting a negative TTL throws an error
+      try {
+        dfs.modifyCacheDirective(new CacheDirectiveInfo.Builder().setId(id)
+            .setExpiration(Expiration.newRelative(-1)).build());
+      } catch (InvalidRequestException e) {
+        GenericTestUtils
+            .assertExceptionContains("Cannot set a negative expiration", e);
+      }
+    } finally {
+      cluster.shutdown();
+    }
   }
 }

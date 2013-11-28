@@ -38,12 +38,15 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.SecureRandom;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
@@ -1425,5 +1428,65 @@ public class DFSUtil {
         .trustStore(sslConf.get("ssl.server.truststore.location"),
             sslConf.get("ssl.server.truststore.password"),
             sslConf.get("ssl.server.truststore.type", "jks"));
+  }
+
+  /**
+   * Converts a Date into an ISO-8601 formatted datetime string.
+   */
+  public static String dateToIso8601String(Date date) {
+    SimpleDateFormat df =
+        new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ", Locale.ENGLISH);
+    return df.format(date);
+  }
+
+  /**
+   * Converts a time duration in milliseconds into DDD:HH:MM:SS format.
+   */
+  public static String durationToString(long durationMs) {
+    Preconditions.checkArgument(durationMs >= 0, "Invalid negative duration");
+    // Chop off the milliseconds
+    long durationSec = durationMs / 1000;
+    final int secondsPerMinute = 60;
+    final int secondsPerHour = 60*60;
+    final int secondsPerDay = 60*60*24;
+    final long days = durationSec / secondsPerDay;
+    durationSec -= days * secondsPerDay;
+    final long hours = durationSec / secondsPerHour;
+    durationSec -= hours * secondsPerHour;
+    final long minutes = durationSec / secondsPerMinute;
+    durationSec -= minutes * secondsPerMinute;
+    final long seconds = durationSec;
+    return String.format("%03d:%02d:%02d:%02d", days, hours, minutes, seconds);
+  }
+
+  /**
+   * Converts a relative time string into a duration in milliseconds.
+   */
+  public static long parseRelativeTime(String relTime) throws IOException {
+    if (relTime.length() < 2) {
+      throw new IOException("Unable to parse relative time value of " + relTime
+          + ": too short");
+    }
+    String ttlString = relTime.substring(0, relTime.length()-1);
+    int ttl;
+    try {
+      ttl = Integer.parseInt(ttlString);
+    } catch (NumberFormatException e) {
+      throw new IOException("Unable to parse relative time value of " + relTime
+          + ": " + ttlString + " is not a number");
+    }
+    if (relTime.endsWith("s")) {
+      // pass
+    } else if (relTime.endsWith("m")) {
+      ttl *= 60;
+    } else if (relTime.endsWith("h")) {
+      ttl *= 60*60;
+    } else if (relTime.endsWith("d")) {
+      ttl *= 60*60*24;
+    } else {
+      throw new IOException("Unable to parse relative time value of " + relTime
+          + ": unknown time unit " + relTime.charAt(relTime.length() - 1));
+    }
+    return ttl*1000;
   }
 }

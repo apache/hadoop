@@ -953,7 +953,11 @@ public class FSEditLog implements LogsPurgeable {
         .setSnapshotRoot(path);
     logEdit(op);
   }
-  
+
+  /**
+   * Log a CacheDirectiveInfo returned from
+   * {@link CacheManager#addDirective(CacheDirectiveInfo, FSPermissionChecker)}
+   */
   void logAddCacheDirectiveInfo(CacheDirectiveInfo directive,
       boolean toLogRpcIds) {
     AddCacheDirectiveInfoOp op =

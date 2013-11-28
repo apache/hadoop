@@ -17,12 +17,12 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CACHING_ENABLED_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CACHING_ENABLED_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LIST_CACHE_DIRECTIVES_NUM_RESPONSES;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LIST_CACHE_DIRECTIVES_NUM_RESPONSES_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LIST_CACHE_POOLS_NUM_RESPONSES;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LIST_CACHE_POOLS_NUM_RESPONSES_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LIST_CACHE_DIRECTIVES_NUM_RESPONSES;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CACHING_ENABLED_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CACHING_ENABLED_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LIST_CACHE_DIRECTIVES_NUM_RESPONSES_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_PATH_BASED_CACHE_REFRESH_INTERVAL_MS;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_PATH_BASED_CACHE_REFRESH_INTERVAL_MS_DEFAULT;
 
@@ -43,18 +43,18 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.InvalidRequestException;
 import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedListEntries;
+import org.apache.hadoop.fs.InvalidRequestException;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.CacheDirective;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
+import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
-import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
-import org.apache.hadoop.hdfs.protocol.CacheDirective;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.CacheReplicationMonitor;
@@ -249,7 +249,7 @@ public final class CacheManager {
     return cachedBlocks;
   }
 
-  private long getNextEntryId() throws IOException {
+  private long getNextDirectiveId() throws IOException {
     assert namesystem.hasWriteLock();
     if (nextDirectiveId >= Long.MAX_VALUE - 1) {
       throw new IOException("No more available IDs.");
@@ -302,6 +302,34 @@ public final class CacheManager {
   }
 
   /**
+   * Calculates the absolute expiry time of the directive from the
+   * {@link CacheDirectiveInfo.Expiration}. This converts a relative Expiration
+   * into an absolute time based on the local clock.
+   * 
+   * @param directive from which to get the expiry time
+   * @param defaultValue to use if Expiration is not set
+   * @return Absolute expiry time in milliseconds since Unix epoch
+   * @throws InvalidRequestException if the Expiration is invalid
+   */
+  private static long validateExpiryTime(CacheDirectiveInfo directive,
+      long defaultValue) throws InvalidRequestException {
+    long expiryTime;
+    CacheDirectiveInfo.Expiration expiration = directive.getExpiration();
+    if (expiration != null) {
+      if (expiration.getMillis() < 0) {
+        throw new InvalidRequestException("Cannot set a negative expiration: "
+            + expiration.getMillis());
+      }
+      // Converts a relative duration into an absolute time based on the local
+      // clock
+      expiryTime = expiration.getAbsoluteMillis();
+    } else {
+      expiryTime = defaultValue;
+    }
+    return expiryTime;
+  }
+
+  /**
    * Get a CacheDirective by ID, validating the ID and that the directive
    * exists.
    */
@@ -346,6 +374,26 @@ public final class CacheManager {
     directives.add(directive);
   }
 
+  /**
+   * To be called only from the edit log loading code
+   */
+  CacheDirectiveInfo addDirectiveFromEditLog(CacheDirectiveInfo directive)
+      throws InvalidRequestException {
+    long id = directive.getId();
+    CacheDirective entry =
+        new CacheDirective(
+            directive.getId(),
+            directive.getPath().toUri().getPath(),
+            directive.getReplication(),
+            directive.getExpiration().getAbsoluteMillis());
+    CachePool pool = cachePools.get(directive.getPool());
+    addInternal(entry, pool);
+    if (nextDirectiveId <= id) {
+      nextDirectiveId = id + 1;
+    }
+    return entry.toInfo();
+  }
+
   public CacheDirectiveInfo addDirective(
       CacheDirectiveInfo info, FSPermissionChecker pc)
       throws IOException {
@@ -356,27 +404,12 @@ public final class CacheManager {
       checkWritePermission(pc, pool);
       String path = validatePath(info);
       short replication = validateReplication(info, (short)1);
-      long id;
-      if (info.getId() != null) {
-        // We are loading a directive from the edit log.
-        // Use the ID from the edit log.
-        id = info.getId();
-        if (id <= 0) {
-          throw new InvalidRequestException("can't add an ID " +
-              "of " + id + ": it is not positive.");
-        }
-        if (id >= Long.MAX_VALUE) {
-          throw new InvalidRequestException("can't add an ID " +
-              "of " + id + ": it is too big.");
-        }
-        if (nextDirectiveId <= id) {
-          nextDirectiveId = id + 1;
-        }
-      } else {
-        // Add a new directive with the next available ID.
-        id = getNextEntryId();
-      }
-      directive = new CacheDirective(id, path, replication);
+      long expiryTime = validateExpiryTime(info,
+          CacheDirectiveInfo.Expiration.EXPIRY_NEVER);
+      // All validation passed
+      // Add a new entry with the next available ID.
+      long id = getNextDirectiveId();
+      directive = new CacheDirective(id, path, replication, expiryTime);
       addInternal(directive, pool);
     } catch (IOException e) {
       LOG.warn("addDirective of " + info + " failed: ", e);
@@ -407,10 +440,13 @@ public final class CacheManager {
       if (info.getPath() != null) {
         path = validatePath(info);
       }
+
       short replication = prevEntry.getReplication();
-      if (info.getReplication() != null) {
-        replication = validateReplication(info, replication);
-      }
+      replication = validateReplication(info, replication);
+
+      long expiryTime = prevEntry.getExpiryTime();
+      expiryTime = validateExpiryTime(info, expiryTime);
+
       CachePool pool = prevEntry.getPool();
       if (info.getPool() != null) {
         pool = getCachePool(validatePoolName(info));
@@ -418,7 +454,7 @@ public final class CacheManager {
       }
       removeInternal(prevEntry);
       CacheDirective newEntry =
-          new CacheDirective(id, path, replication);
+          new CacheDirective(id, path, replication, expiryTime);
       addInternal(newEntry, pool);
     } catch (IOException e) {
       LOG.warn("modifyDirective of " + idString + " failed: ", e);
@@ -788,6 +824,7 @@ public final class CacheManager {
       Text.writeString(out, directive.getPath());
       out.writeShort(directive.getReplication());
       Text.writeString(out, directive.getPool().getPoolName());
+      out.writeLong(directive.getExpiryTime());
       counter.increment();
     }
     prog.endStep(Phase.SAVING_CHECKPOINT, step);
@@ -826,6 +863,7 @@ public final class CacheManager {
       String path = Text.readString(in);
       short replication = in.readShort();
       String poolName = Text.readString(in);
+      long expiryTime = in.readLong();
       // Get pool reference by looking it up in the map
       CachePool pool = cachePools.get(poolName);
       if (pool == null) {
@@ -833,7 +871,7 @@ public final class CacheManager {
             ", which does not exist.");
       }
       CacheDirective directive =
-          new CacheDirective(directiveId, path, replication);
+          new CacheDirective(directiveId, path, replication, expiryTime);
       boolean addedDirective = pool.getDirectiveList().add(directive);
       assert addedDirective;
       if (directivesById.put(directive.getId(), directive) != null) {

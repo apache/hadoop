@@ -29,12 +29,13 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
+import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveStats;
 import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
-import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.server.namenode.CachePool;
 import org.apache.hadoop.hdfs.tools.TableListing.Justification;
 import org.apache.hadoop.ipc.RemoteException;
@@ -132,7 +133,8 @@ public class CacheAdmin extends Configured implements Tool {
     @Override
     public String getShortUsage() {
       return "[" + getName() +
-          " -path <path> -replication <replication> -pool <pool-name>]\n";
+          " -path <path> -pool <pool-name> " +
+          "[-replication <replication>] [-ttl <time-to-live>]]\n";
     }
 
     @Override
@@ -140,11 +142,15 @@ public class CacheAdmin extends Configured implements Tool {
       TableListing listing = getOptionDescriptionListing();
       listing.addRow("<path>", "A path to cache. The path can be " +
           "a directory or a file.");
-      listing.addRow("<replication>", "The cache replication factor to use. " +
-          "Defaults to 1.");
       listing.addRow("<pool-name>", "The pool to which the directive will be " +
           "added. You must have write permission on the cache pool "
           + "in order to add new directives.");
+      listing.addRow("<replication>", "The cache replication factor to use. " +
+          "Defaults to 1.");
+      listing.addRow("<time-to-live>", "How long the directive is " +
+          "valid. Can be specified in minutes, hours, and days via e.g. " +
+          "30m, 4h, 2d. Valid units are [smhd]." +
+          " If unspecified, the directive never expires.");
       return getShortUsage() + "\n" +
         "Add a new cache directive.\n\n" +
         listing.toString();
@@ -152,33 +158,48 @@ public class CacheAdmin extends Configured implements Tool {
 
     @Override
     public int run(Configuration conf, List<String> args) throws IOException {
+      CacheDirectiveInfo.Builder builder = new CacheDirectiveInfo.Builder();
+
       String path = StringUtils.popOptionWithArgument("-path", args);
       if (path == null) {
         System.err.println("You must specify a path with -path.");
         return 1;
       }
-      short replication = 1;
-      String replicationString =
-          StringUtils.popOptionWithArgument("-replication", args);
-      if (replicationString != null) {
-        replication = Short.parseShort(replicationString);
-      }
+      builder.setPath(new Path(path));
+
       String poolName = StringUtils.popOptionWithArgument("-pool", args);
       if (poolName == null) {
         System.err.println("You must specify a pool name with -pool.");
         return 1;
       }
+      builder.setPool(poolName);
+
+      String replicationString =
+          StringUtils.popOptionWithArgument("-replication", args);
+      if (replicationString != null) {
+        Short replication = Short.parseShort(replicationString);
+        builder.setReplication(replication);
+      }
+
+      String ttlString = StringUtils.popOptionWithArgument("-ttl", args);
+      if (ttlString != null) {
+        try {
+          long ttl = DFSUtil.parseRelativeTime(ttlString);
+          builder.setExpiration(CacheDirectiveInfo.Expiration.newRelative(ttl));
+        } catch (IOException e) {
+          System.err.println(
+              "Error while parsing ttl value: " + e.getMessage());
+          return 1;
+        }
+      }
+
       if (!args.isEmpty()) {
         System.err.println("Can't understand argument: " + args.get(0));
         return 1;
       }
         
       DistributedFileSystem dfs = getDFS(conf);
-      CacheDirectiveInfo directive = new CacheDirectiveInfo.Builder().
-          setPath(new Path(path)).
-          setReplication(replication).
-          setPool(poolName).
-          build();
+      CacheDirectiveInfo directive = builder.build();
       try {
         long id = dfs.addCacheDirective(directive);
         System.out.println("Added cache directive " + id);
@@ -261,7 +282,7 @@ public class CacheAdmin extends Configured implements Tool {
     public String getShortUsage() {
       return "[" + getName() +
           " -id <id> [-path <path>] [-replication <replication>] " +
-          "[-pool <pool-name>] ]\n";
+          "[-pool <pool-name>] [-ttl <time-to-live>]]\n";
     }
 
     @Override
@@ -275,6 +296,10 @@ public class CacheAdmin extends Configured implements Tool {
       listing.addRow("<pool-name>", "The pool to which the directive will be " +
           "added. You must have write permission on the cache pool "
           + "in order to move a directive into it. (optional)");
+      listing.addRow("<time-to-live>", "How long the directive is " +
+          "valid. Can be specified in minutes, hours, and days via e.g. " +
+          "30m, 4h, 2d. Valid units are [smhd]." +
+          " If unspecified, the directive never expires.");
       return getShortUsage() + "\n" +
         "Modify a cache directive.\n\n" +
         listing.toString();
@@ -306,6 +331,19 @@ public class CacheAdmin extends Configured implements Tool {
         StringUtils.popOptionWithArgument("-pool", args);
       if (poolName != null) {
         builder.setPool(poolName);
+        modified = true;
+      }
+      String ttlString = StringUtils.popOptionWithArgument("-ttl", args);
+      if (ttlString != null) {
+        long ttl;
+        try {
+          ttl = DFSUtil.parseRelativeTime(ttlString);
+        } catch (IOException e) {
+          System.err.println(
+              "Error while parsing ttl value: " + e.getMessage());
+          return 1;
+        }
+        builder.setExpiration(CacheDirectiveInfo.Expiration.newRelative(ttl));
         modified = true;
       }
       if (!args.isEmpty()) {
@@ -435,7 +473,8 @@ public class CacheAdmin extends Configured implements Tool {
       TableListing.Builder tableBuilder = new TableListing.Builder().
           addField("ID", Justification.RIGHT).
           addField("POOL", Justification.LEFT).
-          addField("REPLICATION", Justification.RIGHT).
+          addField("REPL", Justification.RIGHT).
+          addField("EXPIRY", Justification.LEFT).
           addField("PATH", Justification.LEFT);
       if (printStats) {
         tableBuilder.addField("NEEDED", Justification.RIGHT).
@@ -456,6 +495,14 @@ public class CacheAdmin extends Configured implements Tool {
         row.add("" + directive.getId());
         row.add(directive.getPool());
         row.add("" + directive.getReplication());
+        String expiry;
+        if (directive.getExpiration().getMillis() ==
+            CacheDirectiveInfo.Expiration.EXPIRY_NEVER) {
+          expiry = "never";
+        } else {
+          expiry = directive.getExpiration().toString();
+        }
+        row.add(expiry);
         row.add(directive.getPath().toUri().getPath());
         if (printStats) {
           row.add("" + stats.getBytesNeeded());

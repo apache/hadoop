@@ -30,6 +30,7 @@ public class CacheDirectiveStats {
     private long bytesNeeded;
     private long bytesCached;
     private long filesAffected;
+    private boolean hasExpired;
 
     /**
      * Builds a new CacheDirectiveStats populated with the set properties.
@@ -37,7 +38,8 @@ public class CacheDirectiveStats {
      * @return New CacheDirectiveStats.
      */
     public CacheDirectiveStats build() {
-      return new CacheDirectiveStats(bytesNeeded, bytesCached, filesAffected);
+      return new CacheDirectiveStats(bytesNeeded, bytesCached, filesAffected,
+          hasExpired);
     }
 
     /**
@@ -52,7 +54,7 @@ public class CacheDirectiveStats {
      * @param bytesNeeded The bytes needed.
      * @return This builder, for call chaining.
      */
-    public Builder setBytesNeeded(Long bytesNeeded) {
+    public Builder setBytesNeeded(long bytesNeeded) {
       this.bytesNeeded = bytesNeeded;
       return this;
     }
@@ -63,7 +65,7 @@ public class CacheDirectiveStats {
      * @param bytesCached The bytes cached.
      * @return This builder, for call chaining.
      */
-    public Builder setBytesCached(Long bytesCached) {
+    public Builder setBytesCached(long bytesCached) {
       this.bytesCached = bytesCached;
       return this;
     }
@@ -74,8 +76,19 @@ public class CacheDirectiveStats {
      * @param filesAffected The files affected.
      * @return This builder, for call chaining.
      */
-    public Builder setFilesAffected(Long filesAffected) {
+    public Builder setFilesAffected(long filesAffected) {
       this.filesAffected = filesAffected;
+      return this;
+    }
+
+    /**
+     * Sets whether this directive has expired.
+     * 
+     * @param hasExpired if this directive has expired
+     * @return This builder, for call chaining.
+     */
+    public Builder setHasExpired(boolean hasExpired) {
+      this.hasExpired = hasExpired;
       return this;
     }
   }
@@ -83,12 +96,14 @@ public class CacheDirectiveStats {
   private final long bytesNeeded;
   private final long bytesCached;
   private final long filesAffected;
+  private final boolean hasExpired;
 
   private CacheDirectiveStats(long bytesNeeded, long bytesCached,
-      long filesAffected) {
+      long filesAffected, boolean hasExpired) {
     this.bytesNeeded = bytesNeeded;
     this.bytesCached = bytesCached;
     this.filesAffected = filesAffected;
+    this.hasExpired = hasExpired;
   }
 
   /**
@@ -112,6 +127,13 @@ public class CacheDirectiveStats {
     return filesAffected;
   }
 
+  /**
+   * @return Whether this directive has expired.
+   */
+  public boolean hasExpired() {
+    return hasExpired;
+  }
+
   @Override
   public String toString() {
     StringBuilder builder = new StringBuilder();
@@ -119,6 +141,7 @@ public class CacheDirectiveStats {
     builder.append("bytesNeeded: ").append(bytesNeeded);
     builder.append(", ").append("bytesCached: ").append(bytesCached);
     builder.append(", ").append("filesAffected: ").append(filesAffected);
+    builder.append(", ").append("hasExpired: ").append(hasExpired);
     builder.append("}");
     return builder.toString();
   }

@@ -636,17 +636,17 @@ public class FSEditLogLoader {
       fsNamesys.setLastAllocatedBlockId(allocateBlockIdOp.blockId);
       break;
     }
-    case OP_ADD_PATH_BASED_CACHE_DIRECTIVE: {
+    case OP_ADD_CACHE_DIRECTIVE: {
       AddCacheDirectiveInfoOp addOp = (AddCacheDirectiveInfoOp) op;
       CacheDirectiveInfo result = fsNamesys.
-          getCacheManager().addDirective(addOp.directive, null);
+          getCacheManager().addDirectiveFromEditLog(addOp.directive);
       if (toAddRetryCache) {
         Long id = result.getId();
         fsNamesys.addCacheEntryWithPayload(op.rpcClientId, op.rpcCallId, id);
       }
       break;
     }
-    case OP_MODIFY_PATH_BASED_CACHE_DIRECTIVE: {
+    case OP_MODIFY_CACHE_DIRECTIVE: {
       ModifyCacheDirectiveInfoOp modifyOp =
           (ModifyCacheDirectiveInfoOp) op;
       fsNamesys.getCacheManager().modifyDirective(
@@ -656,7 +656,7 @@ public class FSEditLogLoader {
       }
       break;
     }
-    case OP_REMOVE_PATH_BASED_CACHE_DIRECTIVE: {
+    case OP_REMOVE_CACHE_DIRECTIVE: {
       RemoveCacheDirectiveInfoOp removeOp =
           (RemoveCacheDirectiveInfoOp) op;
       fsNamesys.getCacheManager().removeDirective(removeOp.id, null);
