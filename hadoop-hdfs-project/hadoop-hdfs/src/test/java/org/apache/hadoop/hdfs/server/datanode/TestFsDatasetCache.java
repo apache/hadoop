@@ -113,6 +113,9 @@ public class TestFsDatasetCache {
     conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_CACHING_ENABLED_KEY, true);
 
+    prevCacheManipulator = NativeIO.POSIX.getCacheManipulator();
+    NativeIO.POSIX.setCacheManipulator(new NoMlockCacheManipulator());
+
     cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(1).build();
     cluster.waitActive();
@@ -125,8 +128,6 @@ public class TestFsDatasetCache {
 
     spyNN = DataNodeTestUtils.spyOnBposToNN(dn, nn);
 
-    prevCacheManipulator = NativeIO.POSIX.getCacheManipulator();
-    NativeIO.POSIX.setCacheManipulator(new NoMlockCacheManipulator());
   }
 
   @After

@@ -142,6 +142,10 @@ public class NativeIO {
         NativeIO.POSIX.posixFadviseIfPossible(identifier, fd, offset,
             len, flags);
       }
+
+      public boolean verifyCanMlock() {
+        return NativeIO.isAvailable();
+      }
     }
 
     /**
@@ -162,6 +166,10 @@ public class NativeIO {
 
       public long getOperatingSystemPageSize() {
         return 4096;
+      }
+
+      public boolean verifyCanMlock() {
+        return true;
       }
     }
 

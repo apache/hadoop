@@ -673,7 +673,7 @@ public class DataNode extends Configured
     this.dnConf = new DNConf(conf);
 
     if (dnConf.maxLockedMemory > 0) {
-      if (!NativeIO.isAvailable()) {
+      if (!NativeIO.POSIX.getCacheManipulator().verifyCanMlock()) {
         throw new RuntimeException(String.format(
             "Cannot start datanode because the configured max locked memory" +
             " size (%s) is greater than zero and native code is not available.",

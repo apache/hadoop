@@ -416,6 +416,9 @@ Trunk (Unreleased)
     HDFS-5565. CacheAdmin help should match against non-dashed commands
     (wang via cmccabe)
 
+    HDFS-5562. TestCacheDirectives and TestFsDatasetCache should stub out
+    native mlock. (Colin McCabe and Akira Ajisaka via wang)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
