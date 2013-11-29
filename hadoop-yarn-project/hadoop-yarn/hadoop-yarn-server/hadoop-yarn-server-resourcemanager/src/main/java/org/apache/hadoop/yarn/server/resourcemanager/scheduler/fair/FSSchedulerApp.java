@@ -44,7 +44,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerFini
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplication;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
@@ -62,7 +61,7 @@ public class FSSchedulerApp extends SchedulerApplication {
   final Map<RMContainer, Long> preemptionMap = new HashMap<RMContainer, Long>();
   
   public FSSchedulerApp(ApplicationAttemptId applicationAttemptId, 
-      String user, Queue queue, ActiveUsersManager activeUsersManager,
+      String user, FSLeafQueue queue, ActiveUsersManager activeUsersManager,
       RMContext rmContext) {
     super(applicationAttemptId, user, queue, activeUsersManager, rmContext);
   }
@@ -326,5 +325,10 @@ public class FSSchedulerApp extends SchedulerApplication {
 
   public Set<RMContainer> getPreemptionContainers() {
     return preemptionMap.keySet();
+  }
+  
+  @Override
+  public FSLeafQueue getQueue() {
+    return (FSLeafQueue)super.getQueue();
   }
 }

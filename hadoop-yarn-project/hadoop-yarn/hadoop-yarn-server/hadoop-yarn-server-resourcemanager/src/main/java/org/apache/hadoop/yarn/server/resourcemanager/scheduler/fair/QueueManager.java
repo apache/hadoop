@@ -89,7 +89,8 @@ public class QueueManager {
   private final Map<String, FSQueue> queues = new HashMap<String, FSQueue>();
   private FSParentQueue rootQueue;
 
-  private volatile QueueManagerInfo info = new QueueManagerInfo();
+  @VisibleForTesting
+  volatile QueueManagerInfo info = new QueueManagerInfo();
   @VisibleForTesting
   volatile QueuePlacementPolicy placementPolicy;
   

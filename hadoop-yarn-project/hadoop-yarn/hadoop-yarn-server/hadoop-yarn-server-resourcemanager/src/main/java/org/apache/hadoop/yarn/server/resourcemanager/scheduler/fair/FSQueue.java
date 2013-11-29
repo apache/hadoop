@@ -72,6 +72,10 @@ public abstract class FSQueue extends Schedulable implements Queue {
   public SchedulingPolicy getPolicy() {
     return policy;
   }
+  
+  public FSParentQueue getParent() {
+    return parent;
+  }
 
   protected void throwPolicyDoesnotApplyException(SchedulingPolicy policy)
       throws AllocationConfigurationException {
@@ -164,6 +168,12 @@ public abstract class FSQueue extends Schedulable implements Queue {
    */
   public abstract Collection<FSQueue> getChildQueues();
 
+  /**
+   * Return the number of apps for which containers can be allocated.
+   * Includes apps in subqueues.
+   */
+  public abstract int getNumRunnableApps();
+  
   /**
    * Helper method to check if the queue should attempt assigning resources
    * 

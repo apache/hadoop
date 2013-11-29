@@ -100,7 +100,7 @@ import com.google.common.collect.Sets;
 
 public class TestFairScheduler {
 
-  private class MockClock implements Clock {
+  static class MockClock implements Clock {
     private long time = 0;
     @Override
     public long getTime() {
@@ -613,9 +613,9 @@ public class TestFairScheduler {
         appAttemptId, "default", "user1");
     scheduler.handle(appAddedEvent);
     assertEquals(1, scheduler.getQueueManager().getLeafQueue("user1", true)
-        .getAppSchedulables().size());
+        .getRunnableAppSchedulables().size());
     assertEquals(0, scheduler.getQueueManager().getLeafQueue("default", true)
-        .getAppSchedulables().size());
+        .getRunnableAppSchedulables().size());
     assertEquals("root.user1", rmApp.getQueue());
 
     conf.set(FairSchedulerConfiguration.USER_AS_DEFAULT_QUEUE, "false");
@@ -625,11 +625,11 @@ public class TestFairScheduler {
         createAppAttemptId(2, 1), "default", "user2");
     scheduler.handle(appAddedEvent2);
     assertEquals(1, scheduler.getQueueManager().getLeafQueue("user1", true)
-        .getAppSchedulables().size());
+        .getRunnableAppSchedulables().size());
     assertEquals(1, scheduler.getQueueManager().getLeafQueue("default", true)
-        .getAppSchedulables().size());
+        .getRunnableAppSchedulables().size());
     assertEquals(0, scheduler.getQueueManager().getLeafQueue("user2", true)
-        .getAppSchedulables().size());
+        .getRunnableAppSchedulables().size());
   }
 
   @Test
@@ -821,7 +821,7 @@ public class TestFairScheduler {
 
     // That queue should have one app
     assertEquals(1, scheduler.getQueueManager().getLeafQueue("user1", true)
-        .getAppSchedulables().size());
+        .getRunnableAppSchedulables().size());
 
     AppRemovedSchedulerEvent appRemovedEvent1 = new AppRemovedSchedulerEvent(
         createAppAttemptId(1, 1), RMAppAttemptState.FINISHED);
@@ -831,7 +831,7 @@ public class TestFairScheduler {
 
     // Queue should have no apps
     assertEquals(0, scheduler.getQueueManager().getLeafQueue("user1", true)
-        .getAppSchedulables().size());
+        .getRunnableAppSchedulables().size());
   }
 
   @Test
@@ -2400,7 +2400,158 @@ public class TestFairScheduler {
   public void testConcurrentAccessOnApplications() throws Exception {
     FairScheduler fs = new FairScheduler();
     TestCapacityScheduler.verifyConcurrentAccessOnApplications(
-        fs.applications, FSSchedulerApp.class);
+        fs.applications, FSSchedulerApp.class, FSLeafQueue.class);
+  }
+  
+  
+  private void verifyAppRunnable(ApplicationAttemptId attId, boolean runnable) {
+    FSSchedulerApp app = scheduler.applications.get(attId);
+    FSLeafQueue queue = app.getQueue();
+    Collection<AppSchedulable> runnableApps =
+        queue.getRunnableAppSchedulables();
+    Collection<AppSchedulable> nonRunnableApps =
+        queue.getNonRunnableAppSchedulables();
+    assertEquals(runnable, runnableApps.contains(app.getAppSchedulable()));
+    assertEquals(!runnable, nonRunnableApps.contains(app.getAppSchedulable()));
+  }
+  
+  private void verifyQueueNumRunnable(String queueName, int numRunnableInQueue,
+      int numNonRunnableInQueue) {
+    FSLeafQueue queue = scheduler.getQueueManager().getLeafQueue(queueName, false);
+    assertEquals(numRunnableInQueue,
+        queue.getRunnableAppSchedulables().size());
+    assertEquals(numNonRunnableInQueue,
+        queue.getNonRunnableAppSchedulables().size());
+  }
+  
+  @Test
+  public void testUserAndQueueMaxRunningApps() throws Exception {
+    Configuration conf = createConfiguration();
+    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("<queue name=\"queue1\">");
+    out.println("<maxRunningApps>2</maxRunningApps>");
+    out.println("</queue>");
+    out.println("<user name=\"user1\">");
+    out.println("<maxRunningApps>1</maxRunningApps>");
+    out.println("</user>");
+    out.println("</allocations>");
+    out.close();
+    
+    QueueManager queueManager = scheduler.getQueueManager();
+    queueManager.initialize();
+    
+    // exceeds no limits
+    ApplicationAttemptId attId1 = createSchedulingRequest(1024, "queue1", "user1");
+    verifyAppRunnable(attId1, true);
+    verifyQueueNumRunnable("queue1", 1, 0);
+    // exceeds user limit
+    ApplicationAttemptId attId2 = createSchedulingRequest(1024, "queue2", "user1");
+    verifyAppRunnable(attId2, false);
+    verifyQueueNumRunnable("queue2", 0, 1);
+    // exceeds no limits
+    ApplicationAttemptId attId3 = createSchedulingRequest(1024, "queue1", "user2");
+    verifyAppRunnable(attId3, true);
+    verifyQueueNumRunnable("queue1", 2, 0);
+    // exceeds queue limit
+    ApplicationAttemptId attId4 = createSchedulingRequest(1024, "queue1", "user2");
+    verifyAppRunnable(attId4, false);
+    verifyQueueNumRunnable("queue1", 2, 1);
+    
+    // Remove app 1 and both app 2 and app 4 should becomes runnable in its place
+    AppRemovedSchedulerEvent appRemovedEvent1 = new AppRemovedSchedulerEvent(
+        attId1, RMAppAttemptState.FINISHED);
+    scheduler.handle(appRemovedEvent1);
+    verifyAppRunnable(attId2, true);
+    verifyQueueNumRunnable("queue2", 1, 0);
+    verifyAppRunnable(attId4, true);
+    verifyQueueNumRunnable("queue1", 2, 0);
+    
+    // A new app to queue1 should not be runnable
+    ApplicationAttemptId attId5 = createSchedulingRequest(1024, "queue1", "user2");
+    verifyAppRunnable(attId5, false);
+    verifyQueueNumRunnable("queue1", 2, 1);
+  }
+  
+  @Test
+  public void testMaxRunningAppsHierarchicalQueues() throws Exception {
+    Configuration conf = createConfiguration();
+    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+    MockClock clock = new MockClock();
+    scheduler.setClock(clock);
+
+    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("<queue name=\"queue1\">");
+    out.println("  <maxRunningApps>3</maxRunningApps>");
+    out.println("  <queue name=\"sub1\"></queue>");
+    out.println("  <queue name=\"sub2\"></queue>");
+    out.println("  <queue name=\"sub3\">");
+    out.println("    <maxRunningApps>1</maxRunningApps>");
+    out.println("  </queue>");
+    out.println("</queue>");
+    out.println("</allocations>");
+    out.close();
+    
+    QueueManager queueManager = scheduler.getQueueManager();
+    queueManager.initialize();
+    
+    // exceeds no limits
+    ApplicationAttemptId attId1 = createSchedulingRequest(1024, "queue1.sub1", "user1");
+    verifyAppRunnable(attId1, true);
+    verifyQueueNumRunnable("queue1.sub1", 1, 0);
+    clock.tick(10);
+    // exceeds no limits
+    ApplicationAttemptId attId2 = createSchedulingRequest(1024, "queue1.sub3", "user1");
+    verifyAppRunnable(attId2, true);
+    verifyQueueNumRunnable("queue1.sub3", 1, 0);
+    clock.tick(10);
+    // exceeds no limits
+    ApplicationAttemptId attId3 = createSchedulingRequest(1024, "queue1.sub2", "user1");
+    verifyAppRunnable(attId3, true);
+    verifyQueueNumRunnable("queue1.sub2", 1, 0);
+    clock.tick(10);
+    // exceeds queue1 limit
+    ApplicationAttemptId attId4 = createSchedulingRequest(1024, "queue1.sub2", "user1");
+    verifyAppRunnable(attId4, false);
+    verifyQueueNumRunnable("queue1.sub2", 1, 1);
+    clock.tick(10);
+    // exceeds sub3 limit
+    ApplicationAttemptId attId5 = createSchedulingRequest(1024, "queue1.sub3", "user1");
+    verifyAppRunnable(attId5, false);
+    verifyQueueNumRunnable("queue1.sub3", 1, 1);
+    clock.tick(10);
+    
+    // Even though the app was removed from sub3, the app from sub2 gets to go
+    // because it came in first
+    AppRemovedSchedulerEvent appRemovedEvent1 = new AppRemovedSchedulerEvent(
+        attId2, RMAppAttemptState.FINISHED);
+    scheduler.handle(appRemovedEvent1);
+    verifyAppRunnable(attId4, true);
+    verifyQueueNumRunnable("queue1.sub2", 2, 0);
+    verifyAppRunnable(attId5, false);
+    verifyQueueNumRunnable("queue1.sub3", 0, 1);
+
+    // Now test removal of a non-runnable app
+    AppRemovedSchedulerEvent appRemovedEvent2 = new AppRemovedSchedulerEvent(
+        attId5, RMAppAttemptState.KILLED);
+    scheduler.handle(appRemovedEvent2);
+    assertEquals(0, scheduler.maxRunningEnforcer.usersNonRunnableApps
+        .get("user1").size());
+    // verify app gone in queue accounting
+    verifyQueueNumRunnable("queue1.sub3", 0, 0);
+    // verify it doesn't become runnable when there would be space for it
+    AppRemovedSchedulerEvent appRemovedEvent3 = new AppRemovedSchedulerEvent(
+        attId4, RMAppAttemptState.FINISHED);
+    scheduler.handle(appRemovedEvent3);
+    verifyQueueNumRunnable("queue1.sub2", 1, 0);
+    verifyQueueNumRunnable("queue1.sub3", 0, 0);
   }
 
   @Test (timeout = 10000)
@@ -2499,23 +2650,23 @@ public class TestFairScheduler {
     
     // Should get put into jerry
     createSchedulingRequest(1024, "jerry", "someuser");
-    assertEquals(1, jerryQueue.getAppSchedulables().size());
+    assertEquals(1, jerryQueue.getRunnableAppSchedulables().size());
 
     // Should get forced into default
     createSchedulingRequest(1024, "newqueue", "someuser");
-    assertEquals(1, jerryQueue.getAppSchedulables().size());
-    assertEquals(1, defaultQueue.getAppSchedulables().size());
+    assertEquals(1, jerryQueue.getRunnableAppSchedulables().size());
+    assertEquals(1, defaultQueue.getRunnableAppSchedulables().size());
     
     // Would get put into someuser because of user-as-default-queue, but should
     // be forced into default
     createSchedulingRequest(1024, "default", "someuser");
-    assertEquals(1, jerryQueue.getAppSchedulables().size());
-    assertEquals(2, defaultQueue.getAppSchedulables().size());
+    assertEquals(1, jerryQueue.getRunnableAppSchedulables().size());
+    assertEquals(2, defaultQueue.getRunnableAppSchedulables().size());
     
     // Should get put into jerry because of user-as-default-queue
     createSchedulingRequest(1024, "default", "jerry");
-    assertEquals(2, jerryQueue.getAppSchedulables().size());
-    assertEquals(2, defaultQueue.getAppSchedulables().size());
+    assertEquals(2, jerryQueue.getRunnableAppSchedulables().size());
+    assertEquals(2, defaultQueue.getRunnableAppSchedulables().size());
   }
 
   @SuppressWarnings("resource")

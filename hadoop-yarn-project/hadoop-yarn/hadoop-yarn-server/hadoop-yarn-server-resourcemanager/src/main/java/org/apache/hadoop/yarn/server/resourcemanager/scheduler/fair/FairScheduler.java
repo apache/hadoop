@@ -190,9 +190,13 @@ public class FairScheduler implements ResourceScheduler {
                                     // heartbeat
   protected int maxAssign; // Max containers to assign per heartbeat
 
+  @VisibleForTesting
+  final MaxRunningAppsEnforcer maxRunningEnforcer;
+  
   public FairScheduler() {
     clock = new SystemClock();
     queueMgr = new QueueManager(this);
+    maxRunningEnforcer = new MaxRunningAppsEnforcer(queueMgr);
   }
 
   private void validateConf(Configuration conf) {
@@ -272,7 +276,6 @@ public class FairScheduler implements ResourceScheduler {
    */
   protected synchronized void update() {
     queueMgr.reloadAllocsIfNecessary(); // Relaod alloc file
-    updateRunnability(); // Set job runnability based on user/queue limits
     updatePreemptionVariables(); // Determine if any queues merit preemption
 
     FSQueue rootQueue = queueMgr.getRootQueue();
@@ -377,7 +380,7 @@ public class FairScheduler implements ResourceScheduler {
     for (FSLeafQueue sched : scheds) {
       if (Resources.greaterThan(RESOURCE_CALCULATOR, clusterCapacity,
           sched.getResourceUsage(), sched.getFairShare())) {
-        for (AppSchedulable as : sched.getAppSchedulables()) {
+        for (AppSchedulable as : sched.getRunnableAppSchedulables()) {
           for (RMContainer c : as.getApp().getLiveContainers()) {
             runningContainers.add(c);
             apps.put(c, as.getApp());
@@ -505,63 +508,23 @@ public class FairScheduler implements ResourceScheduler {
     return resToPreempt;
   }
 
-  /**
-   * This updates the runnability of all apps based on whether or not any
-   * users/queues have exceeded their capacity.
-   */
-  private void updateRunnability() {
-    List<AppSchedulable> apps = new ArrayList<AppSchedulable>();
-
-    // Start by marking everything as not runnable
-    for (FSLeafQueue leafQueue : queueMgr.getLeafQueues()) {
-      for (AppSchedulable a : leafQueue.getAppSchedulables()) {
-        a.setRunnable(false);
-        apps.add(a);
-      }
-    }
-    // Create a list of sorted jobs in order of start time and priority
-    Collections.sort(apps, new FifoAppComparator());
-    // Mark jobs as runnable in order of start time and priority, until
-    // user or queue limits have been reached.
-    Map<String, Integer> userApps = new HashMap<String, Integer>();
-    Map<String, Integer> queueApps = new HashMap<String, Integer>();
-
-    for (AppSchedulable app : apps) {
-      String user = app.getApp().getUser();
-      String queue = app.getApp().getQueueName();
-      int userCount = userApps.containsKey(user) ? userApps.get(user) : 0;
-      int queueCount = queueApps.containsKey(queue) ? queueApps.get(queue) : 0;
-      if (userCount < queueMgr.getUserMaxApps(user) &&
-          queueCount < queueMgr.getQueueMaxApps(queue)) {
-        userApps.put(user, userCount + 1);
-        queueApps.put(queue, queueCount + 1);
-        app.setRunnable(true);
-      }
-    }
-  }
-
   public RMContainerTokenSecretManager getContainerTokenSecretManager() {
     return rmContext.getContainerTokenSecretManager();
   }
 
   // synchronized for sizeBasedWeight
   public synchronized ResourceWeights getAppWeight(AppSchedulable app) {
-    if (!app.getRunnable()) {
-      // Job won't launch tasks, but don't return 0 to avoid division errors
-      return ResourceWeights.NEUTRAL;
-    } else {
-      double weight = 1.0;
-      if (sizeBasedWeight) {
-        // Set weight based on current memory demand
-        weight = Math.log1p(app.getDemand().getMemory()) / Math.log(2);
-      }
-      weight *= app.getPriority().getPriority();
-      if (weightAdjuster != null) {
-        // Run weight through the user-supplied weightAdjuster
-        weight = weightAdjuster.adjustWeight(app, weight);
-      }
-      return new ResourceWeights((float)weight);
+    double weight = 1.0;
+    if (sizeBasedWeight) {
+      // Set weight based on current memory demand
+      weight = Math.log1p(app.getDemand().getMemory()) / Math.log(2);
     }
+    weight *= app.getPriority().getPriority();
+    if (weightAdjuster != null) {
+      // Run weight through the user-supplied weightAdjuster
+      weight = weightAdjuster.adjustWeight(app, weight);
+    }
+    return new ResourceWeights((float)weight);
   }
 
   @Override
@@ -662,7 +625,14 @@ public class FairScheduler implements ResourceScheduler {
       return;
     }
 
-    queue.addApp(schedulerApp);
+    boolean runnable = maxRunningEnforcer.canAppBeRunnable(queue, user);
+    queue.addApp(schedulerApp, runnable);
+    if (runnable) {
+      maxRunningEnforcer.trackRunnableApp(schedulerApp);
+    } else {
+      maxRunningEnforcer.trackNonRunnableApp(schedulerApp);
+    }
+    
     queue.getMetrics().submitApp(user, applicationAttemptId.getAttemptId());
 
     applications.put(applicationAttemptId, schedulerApp);
@@ -736,8 +706,14 @@ public class FairScheduler implements ResourceScheduler {
     // Inform the queue
     FSLeafQueue queue = queueMgr.getLeafQueue(application.getQueue()
         .getQueueName(), false);
-    queue.removeApp(application);
+    boolean wasRunnable = queue.removeApp(application);
 
+    if (wasRunnable) {
+      maxRunningEnforcer.updateRunnabilityOnAppRemoval(application);
+    } else {
+      maxRunningEnforcer.untrackNonRunnableApp(application);
+    }
+    
     // Remove from our data-structure
     applications.remove(applicationAttemptId);
   }
