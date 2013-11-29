@@ -56,6 +56,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.Task;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppReport;
@@ -518,7 +519,7 @@ public class TestFifoScheduler {
   public void testConcurrentAccessOnApplications() throws Exception {
     FifoScheduler fs = new FifoScheduler();
     TestCapacityScheduler.verifyConcurrentAccessOnApplications(
-        fs.applications, FiCaSchedulerApp.class);
+        fs.applications, FiCaSchedulerApp.class, Queue.class);
   }
 
   @SuppressWarnings("resource")

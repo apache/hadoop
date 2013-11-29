@@ -51,7 +51,6 @@ public class AppSchedulable extends Schedulable {
   private FairScheduler scheduler;
   private FSSchedulerApp app;
   private Resource demand = Resources.createResource(0);
-  private boolean runnable = false; // everyone starts as not runnable
   private long startTime;
   private static RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
   private static final Log LOG = LogFactory.getLog(AppSchedulable.class);
@@ -61,7 +60,7 @@ public class AppSchedulable extends Schedulable {
   public AppSchedulable(FairScheduler scheduler, FSSchedulerApp app, FSLeafQueue queue) {
     this.scheduler = scheduler;
     this.app = app;
-    this.startTime = System.currentTimeMillis();
+    this.startTime = scheduler.getClock().getTime();
     this.queue = queue;
     this.containerTokenSecretManager = scheduler.
     		getContainerTokenSecretManager();
@@ -136,18 +135,6 @@ public class AppSchedulable extends Schedulable {
     Priority p = recordFactory.newRecordInstance(Priority.class);
     p.setPriority(1);
     return p;
-  }
-
-  /**
-   * Is this application runnable? Runnable means that the user and queue
-   * application counts are within configured quotas.
-   */
-  public boolean getRunnable() {
-    return runnable;
-  }
-
-  public void setRunnable(boolean runnable) {
-    this.runnable = runnable;
   }
 
   /**
@@ -281,9 +268,6 @@ public class AppSchedulable extends Schedulable {
         unreserve(priority, node);
         return Resources.none();
       }
-    } else {
-      // If this app is over quota, don't schedule anything
-      if (!(getRunnable())) { return Resources.none(); }
     }
 
     Collection<Priority> prioritiesToTry = (reserved) ? 

@@ -43,6 +43,7 @@ public class FSParentQueue extends FSQueue {
       new ArrayList<FSQueue>();
   private final QueueManager queueMgr;
   private Resource demand = Resources.createResource(0);
+  private int runnableApps;
   
   public FSParentQueue(String name, QueueManager queueMgr, FairScheduler scheduler,
       FSParentQueue parent) {
@@ -170,5 +171,18 @@ public class FSParentQueue extends FSQueue {
       throwPolicyDoesnotApplyException(policy);
     }
     super.policy = policy;
+  }
+  
+  public void incrementRunnableApps() {
+    runnableApps++;
+  }
+  
+  public void decrementRunnableApps() {
+    runnableApps--;
+  }
+
+  @Override
+  public int getNumRunnableApps() {
+    return runnableApps;
   }
 }

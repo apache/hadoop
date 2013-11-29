@@ -596,23 +596,24 @@ public class TestCapacityScheduler {
     public void testConcurrentAccessOnApplications() throws Exception {
       CapacityScheduler cs = new CapacityScheduler();
       verifyConcurrentAccessOnApplications(
-          cs.applications, FiCaSchedulerApp.class);
+          cs.applications, FiCaSchedulerApp.class, Queue.class);
     }
 
-    public static <T extends SchedulerApplication>
+    public static <T extends SchedulerApplication, Q extends Queue>
         void verifyConcurrentAccessOnApplications(
-            final Map<ApplicationAttemptId, T> applications, Class<T> clazz)
+            final Map<ApplicationAttemptId, T> applications, Class<T> appClazz,
+            final Class<Q> queueClazz)
                 throws Exception {
       final int size = 10000;
       final ApplicationId appId = ApplicationId.newInstance(0, 0);
-      final Constructor<T> ctor = clazz.getDeclaredConstructor(
-          ApplicationAttemptId.class, String.class, Queue.class,
+      final Constructor<T> ctor = appClazz.getDeclaredConstructor(
+          ApplicationAttemptId.class, String.class, queueClazz,
           ActiveUsersManager.class, RMContext.class);
 
       ApplicationAttemptId appAttemptId0
           = ApplicationAttemptId.newInstance(appId, 0);
       applications.put(appAttemptId0, ctor.newInstance(
-              appAttemptId0, null, mock(Queue.class), null, null));
+              appAttemptId0, null, mock(queueClazz), null, null));
       assertNotNull(applications.get(appAttemptId0));
 
       // Imitating the thread of scheduler that will add and remove apps
@@ -627,7 +628,7 @@ public class TestCapacityScheduler {
                 = ApplicationAttemptId.newInstance(appId, i);
             try {
               applications.put(appAttemptId, ctor.newInstance(
-                  appAttemptId, null, mock(Queue.class), null, null));
+                  appAttemptId, null, mock(queueClazz), null, null));
             } catch (Exception e) {
               failed.set(true);
               finished.set(true);

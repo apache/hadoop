@@ -108,6 +108,9 @@ Release 2.3.0 - UNRELEASED
     YARN-1239. Modified ResourceManager state-store implementations to start
     storing version numbers. (Jian He via vinodkv)
 
+    YARN-1241. In Fair Scheduler, maxRunningApps does not work for non-leaf
+    queues. (Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES
