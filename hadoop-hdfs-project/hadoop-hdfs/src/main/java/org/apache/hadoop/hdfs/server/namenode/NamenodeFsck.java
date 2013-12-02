@@ -144,6 +144,8 @@ public class NamenodeFsck {
   private final PrintWriter out;
   private List<String> snapshottableDirs = null;
 
+  private BlockPlacementPolicy bpPolicy;
+
   /**
    * Filesystem checker.
    * @param conf configuration (namenode config)
@@ -166,6 +168,8 @@ public class NamenodeFsck {
     this.totalDatanodes = totalDatanodes;
     this.minReplication = minReplication;
     this.remoteAddress = remoteAddress;
+    this.bpPolicy = BlockPlacementPolicy.getInstance(conf, null,
+        networktopology);
 
     for (Iterator<String> it = pmap.keySet().iterator(); it.hasNext();) {
       String key = it.next();
@@ -399,9 +403,8 @@ public class NamenodeFsck {
                     locs.length + " replica(s).");
       }
       // verify block placement policy
-      BlockPlacementStatus blockPlacementStatus = 
-          BlockPlacementPolicy.getInstance(conf, null, networktopology).
-              verifyBlockPlacement(path, lBlk, targetFileReplication);
+      BlockPlacementStatus blockPlacementStatus = bpPolicy
+          .verifyBlockPlacement(path, lBlk, targetFileReplication);
       if (!blockPlacementStatus.isPlacementPolicySatisfied()) {
         res.numMisReplicatedBlocks++;
         misReplicatedPerFile++;

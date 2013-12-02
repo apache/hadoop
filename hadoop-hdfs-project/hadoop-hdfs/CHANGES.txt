@@ -240,6 +240,9 @@ Release 2.2.1 - UNRELEASED
 
     HDFS-5568. Support includeSnapshots option with Fsck command. (Vinayakumar B via umamahesh)
 
+    HDFS-5581. NameNodeFsck should use only one instance of
+    BlockPlacementPolicy. (vinay via cmccabe)
+
   OPTIMIZATIONS
 
   BUG FIXES
