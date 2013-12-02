@@ -1387,6 +1387,9 @@ Release 0.23.10 - UNRELEASED
 
   IMPROVEMENTS
 
+    MAPREDUCE-5640. Rename TestLineRecordReader in jobclient module (Jason Lowe
+    via jeagles)
+
   OPTIMIZATIONS
 
     MAPREDUCE-1981. Improve getSplits performance by using listLocatedStatus
