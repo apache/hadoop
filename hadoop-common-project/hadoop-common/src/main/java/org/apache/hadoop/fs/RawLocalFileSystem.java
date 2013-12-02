@@ -82,39 +82,6 @@ public class RawLocalFileSystem extends FileSystem {
     setConf(conf);
   }
   
-  class TrackingFileInputStream extends FileInputStream {
-    public TrackingFileInputStream(File f) throws IOException {
-      super(f);
-    }
-    
-    @Override
-    public int read() throws IOException {
-      int result = super.read();
-      if (result != -1) {
-        statistics.incrementBytesRead(1);
-      }
-      return result;
-    }
-    
-    @Override
-    public int read(byte[] data) throws IOException {
-      int result = super.read(data);
-      if (result != -1) {
-        statistics.incrementBytesRead(result);
-      }
-      return result;
-    }
-    
-    @Override
-    public int read(byte[] data, int offset, int length) throws IOException {
-      int result = super.read(data, offset, length);
-      if (result != -1) {
-        statistics.incrementBytesRead(result);
-      }
-      return result;
-    }
-  }
-
   /*******************************************************
    * For open()'s FSInputStream.
    *******************************************************/
@@ -123,7 +90,7 @@ public class RawLocalFileSystem extends FileSystem {
     private long position;
 
     public LocalFSFileInputStream(Path f) throws IOException {
-      this.fis = new TrackingFileInputStream(pathToFile(f));
+      fis = new FileInputStream(pathToFile(f));
     }
     
     @Override
@@ -158,6 +125,7 @@ public class RawLocalFileSystem extends FileSystem {
         int value = fis.read();
         if (value >= 0) {
           this.position++;
+          statistics.incrementBytesRead(1);
         }
         return value;
       } catch (IOException e) {                 // unexpected exception
@@ -171,6 +139,7 @@ public class RawLocalFileSystem extends FileSystem {
         int value = fis.read(b, off, len);
         if (value > 0) {
           this.position += value;
+          statistics.incrementBytesRead(value);
         }
         return value;
       } catch (IOException e) {                 // unexpected exception
@@ -183,7 +152,11 @@ public class RawLocalFileSystem extends FileSystem {
       throws IOException {
       ByteBuffer bb = ByteBuffer.wrap(b, off, len);
       try {
-        return fis.getChannel().read(bb, position);
+        int value = fis.getChannel().read(bb, position);
+        if (value > 0) {
+          statistics.incrementBytesRead(value);
+        }
+        return value;
       } catch (IOException e) {
         throw new FSError(e);
       }
