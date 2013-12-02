@@ -225,6 +225,9 @@ Release 2.2.1 - UNRELEASED
     HADOOP-9114. After defined the dfs.checksum.type as the NULL, write file and hflush will 
     through java.lang.ArrayIndexOutOfBoundsException (Sathish via umamahesh)
 
+    HADOOP-10130. RawLocalFS::LocalFSFileInputStream.pread does not track
+    FS::Statistics (Binglin Chang via Colin Patrick McCabe)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES

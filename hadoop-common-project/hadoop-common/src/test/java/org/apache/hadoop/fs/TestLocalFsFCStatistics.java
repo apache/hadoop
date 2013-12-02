@@ -47,7 +47,8 @@ public class TestLocalFsFCStatistics extends FCStatisticsBaseTest {
 
   @Override
   protected void verifyReadBytes(Statistics stats) {
-    Assert.assertEquals(blockSize, stats.getBytesRead());
+    // one blockSize for read, one for pread
+    Assert.assertEquals(2*blockSize, stats.getBytesRead());
   }
 
   @Override
