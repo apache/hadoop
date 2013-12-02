@@ -129,7 +129,8 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     for (String rpcAddress : YarnConfiguration.RM_RPC_ADDRESS_CONF_KEYS) {
       conf.set(HAUtil.addSuffix(rpcAddress, rmId), "localhost:0");
     }
-    conf.set(YarnConfiguration.RM_HA_ADMIN_ADDRESS, "localhost:" + adminPort);
+    conf.set(HAUtil.addSuffix(YarnConfiguration.RM_ADMIN_ADDRESS, rmId),
+        "localhost:" + adminPort);
     return conf;
   }
 
@@ -143,23 +144,23 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     ResourceManager rm1 = new ResourceManager();
     rm1.init(conf1);
     rm1.start();
-    rm1.getHAService().transitionToActive(req);
+    rm1.getRMContext().getRMAdminService().transitionToActive(req);
     assertEquals("RM with ZKStore didn't start",
         Service.STATE.STARTED, rm1.getServiceState());
     assertEquals("RM should be Active",
         HAServiceProtocol.HAServiceState.ACTIVE,
-        rm1.getHAService().getServiceStatus().getState());
+        rm1.getRMContext().getRMAdminService().getServiceStatus().getState());
 
     Configuration conf2 = createHARMConf("rm1,rm2", "rm2", 5678);
     ResourceManager rm2 = new ResourceManager();
     rm2.init(conf2);
     rm2.start();
-    rm2.getHAService().transitionToActive(req);
+    rm2.getRMContext().getRMAdminService().transitionToActive(req);
     assertEquals("RM with ZKStore didn't start",
         Service.STATE.STARTED, rm2.getServiceState());
     assertEquals("RM should be Active",
         HAServiceProtocol.HAServiceState.ACTIVE,
-        rm2.getHAService().getServiceStatus().getState());
+        rm2.getRMContext().getRMAdminService().getServiceStatus().getState());
 
     // Submitting an application to RM1 to trigger a state store operation.
     // RM1 should realize that it got fenced and is not the Active RM anymore.
@@ -181,16 +182,16 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     rmService.submitApplication(SubmitApplicationRequest.newInstance(asc));
 
     for (int i = 0; i < 30; i++) {
-      if (HAServiceProtocol.HAServiceState.ACTIVE == rm1.getHAService()
-          .getServiceStatus().getState()) {
+      if (HAServiceProtocol.HAServiceState.ACTIVE ==
+          rm1.getRMContext().getRMAdminService().getServiceStatus().getState()) {
         Thread.sleep(100);
       }
     }
     assertEquals("RM should have been fenced",
         HAServiceProtocol.HAServiceState.STANDBY,
-        rm1.getHAService().getServiceStatus().getState());
+        rm1.getRMContext().getRMAdminService().getServiceStatus().getState());
     assertEquals("RM should be Active",
         HAServiceProtocol.HAServiceState.ACTIVE,
-        rm2.getHAService().getServiceStatus().getState());
+        rm2.getRMContext().getRMAdminService().getServiceStatus().getState());
   }
 }
