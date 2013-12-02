@@ -78,4 +78,9 @@
   <name>nfs3.mountd.port</name>
   <value>4272</value>
 </property>
+
+<property>
+  <name>test.SymlinkEnabledForTesting</name>
+  <value>true</value>
+</property>
 </configuration>

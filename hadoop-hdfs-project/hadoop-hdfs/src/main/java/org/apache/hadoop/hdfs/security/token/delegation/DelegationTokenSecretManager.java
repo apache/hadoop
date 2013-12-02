@@ -37,7 +37,6 @@ import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress.Co
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.Step;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.StepType;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
@@ -114,24 +113,6 @@ public class DelegationTokenSecretManager
       throw wrappedStandby;
     }
     return super.retrievePassword(identifier);
-  }
-  
-  @Override
-  public byte[] retriableRetrievePassword(DelegationTokenIdentifier identifier)
-      throws InvalidToken, StandbyException, RetriableException, IOException {
-    namesystem.checkOperation(OperationCategory.READ);
-    try {
-      return super.retrievePassword(identifier);
-    } catch (InvalidToken it) {
-      if (namesystem.inTransitionToActive()) {
-        // if the namesystem is currently in the middle of transition to 
-        // active state, let client retry since the corresponding editlog may 
-        // have not been applied yet
-        throw new RetriableException(it);
-      } else {
-        throw it;
-      }
-    }
   }
   
   /**

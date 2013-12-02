@@ -23,7 +23,6 @@ import java.util.concurrent.Executors;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.jboss.netty.bootstrap.ConnectionlessBootstrap;
-import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.channel.socket.DatagramChannelFactory;
@@ -40,7 +39,6 @@ public class SimpleUdpServer {
   protected final int port;
   protected final SimpleChannelUpstreamHandler rpcProgram;
   protected final int workerCount;
-  protected int boundPort = -1; // Will be set after server starts
 
   public SimpleUdpServer(int port, SimpleChannelUpstreamHandler program, int workerCount) {
     this.port = port;
@@ -63,16 +61,9 @@ public class SimpleUdpServer {
     b.setOption("receiveBufferSize", RECEIVE_BUFFER_SIZE);
     
     // Listen to the UDP port
-    Channel ch = b.bind(new InetSocketAddress(port));
-    InetSocketAddress socketAddr = (InetSocketAddress) ch.getLocalAddress();
-    boundPort = socketAddr.getPort();
-    
-    LOG.info("Started listening to UDP requests at port " + boundPort + " for "
-        + rpcProgram + " with workerCount " + workerCount);
-  }
+    b.bind(new InetSocketAddress(port));
 
-  // boundPort will be set only after server starts
-  public int getBoundPort() {
-    return this.boundPort;
+    LOG.info("Started listening to UDP requests at port " + port + " for "
+        + rpcProgram + " with workerCount " + workerCount);
   }
 }

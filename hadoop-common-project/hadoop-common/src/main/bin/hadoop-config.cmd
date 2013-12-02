@@ -146,6 +146,18 @@ if exist %HADOOP_COMMON_HOME%\%HADOOP_COMMON_LIB_JARS_DIR% (
 set CLASSPATH=!CLASSPATH!;%HADOOP_COMMON_HOME%\%HADOOP_COMMON_DIR%\*
 
 @rem
+@rem add user-specified CLASSPATH last
+@rem
+
+if defined HADOOP_CLASSPATH (
+  if defined HADOOP_USER_CLASSPATH_FIRST (
+    set CLASSPATH=%HADOOP_CLASSPATH%;%CLASSPATH%;
+  ) else (
+    set CLASSPATH=%CLASSPATH%;%HADOOP_CLASSPATH%;
+  )
+)
+
+@rem
 @rem default log directory % file
 @rem
 
@@ -275,18 +287,6 @@ if not "%HADOOP_MAPRED_HOME%\%MAPRED_DIR%" == "%HADOOP_YARN_HOME%\%YARN_DIR%" (
   )
 
   set CLASSPATH=!CLASSPATH!;%HADOOP_MAPRED_HOME%\%MAPRED_DIR%\*
-)
-
-@rem
-@rem add user-specified CLASSPATH last
-@rem
-
-if defined HADOOP_CLASSPATH (
-  if defined HADOOP_USER_CLASSPATH_FIRST (
-    set CLASSPATH=%HADOOP_CLASSPATH%;%CLASSPATH%;
-  ) else (
-    set CLASSPATH=%CLASSPATH%;%HADOOP_CLASSPATH%;
-  )
 )
 
 :eof

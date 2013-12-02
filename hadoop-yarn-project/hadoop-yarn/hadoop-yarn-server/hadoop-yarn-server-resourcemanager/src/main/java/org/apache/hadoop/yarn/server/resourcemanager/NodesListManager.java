@@ -160,14 +160,17 @@ public class NodesListManager extends AbstractService implements
       if (unusableRMNodesConcurrentSet.contains(eventNode)) {
         LOG.debug(eventNode + " reported usable");
         unusableRMNodesConcurrentSet.remove(eventNode);
-      }
-      for (RMApp app : rmContext.getRMApps().values()) {
-        this.rmContext
-            .getDispatcher()
-            .getEventHandler()
-            .handle(
-                new RMAppNodeUpdateEvent(app.getApplicationId(), eventNode,
-                    RMAppNodeUpdateType.NODE_USABLE));
+        for (RMApp app : rmContext.getRMApps().values()) {
+          this.rmContext
+              .getDispatcher()
+              .getEventHandler()
+              .handle(
+                  new RMAppNodeUpdateEvent(app.getApplicationId(), eventNode,
+                      RMAppNodeUpdateType.NODE_USABLE));
+        }
+      } else {
+        LOG.warn(eventNode
+            + " reported usable without first reporting unusable");
       }
       break;
     default:

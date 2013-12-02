@@ -32,8 +32,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.util.ThreadUtil;
 
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 
 
@@ -43,25 +41,10 @@ import org.junit.Test;
  */
 public class TestDFSClientExcludedNodes {
 
-  private MiniDFSCluster cluster;
-  private Configuration conf;
-
-  @Before
-  public void setUp() {
-    cluster = null;
-    conf = new HdfsConfiguration();
-  }
-
-  @After
-  public void tearDown() {
-    if (cluster != null) {
-      cluster.shutdown();
-    }
-  }
-
-  @Test(timeout=60000)
+  @Test(timeout=10000)
   public void testExcludedNodes() throws IOException {
-    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
     FileSystem fs = cluster.getFileSystem();
     Path filePath = new Path("/testExcludedNodes");
 
@@ -84,16 +67,17 @@ public class TestDFSClientExcludedNodes {
     }
   }
 
-  @Test(timeout=60000)
+  @Test(timeout=10000)
   public void testExcludedNodesForgiveness() throws IOException {
-    // Forgive nodes in under 2.5s for this test case.
+    Configuration conf = new HdfsConfiguration();
+    // Forgive nodes in under 1s for this test case.
     conf.setLong(
         DFSConfigKeys.DFS_CLIENT_WRITE_EXCLUDE_NODES_CACHE_EXPIRY_INTERVAL,
-        2500);
+        1000);
     // We'll be using a 512 bytes block size just for tests
     // so making sure the checksum bytes too match it.
     conf.setInt("io.bytes.per.checksum", 512);
-    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
     List<DataNodeProperties> props = cluster.dataNodes;
     FileSystem fs = cluster.getFileSystem();
     Path filePath = new Path("/testForgivingExcludedNodes");
@@ -128,11 +112,11 @@ public class TestDFSClientExcludedNodes {
     Assert.assertEquals(true, cluster.restartDataNode(two, true));
     cluster.waitActive();
 
-    // Sleep for 5s, to let the excluded nodes be expired
+    // Sleep for 2s, to let the excluded nodes be expired
     // from the excludes list (i.e. forgiven after the configured wait period).
-    // [Sleeping just in case the restart of the DNs completed < 5s cause
+    // [Sleeping just in case the restart of the DNs completed < 2s cause
     // otherwise, we'll end up quickly excluding those again.]
-    ThreadUtil.sleepAtLeastIgnoreInterrupts(5000);
+    ThreadUtil.sleepAtLeastIgnoreInterrupts(2000);
 
     // Terminate the last good DN, to assert that there's no
     // single-DN-available scenario, caused by not forgiving the other

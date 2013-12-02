@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.portmap;
 
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.HashMap;
+import java.util.Map.Entry;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -32,101 +34,75 @@ import org.apache.hadoop.oncrpc.security.VerifierNone;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelStateEvent;
-import org.jboss.netty.channel.ExceptionEvent;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.group.ChannelGroup;
-import org.jboss.netty.handler.timeout.IdleState;
-import org.jboss.netty.handler.timeout.IdleStateAwareChannelUpstreamHandler;
-import org.jboss.netty.handler.timeout.IdleStateEvent;
 
-final class RpcProgramPortmap extends IdleStateAwareChannelUpstreamHandler {
-  static final int PROGRAM = 100000;
-  static final int VERSION = 2;
-
-  static final int PMAPPROC_NULL = 0;
-  static final int PMAPPROC_SET = 1;
-  static final int PMAPPROC_UNSET = 2;
-  static final int PMAPPROC_GETPORT = 3;
-  static final int PMAPPROC_DUMP = 4;
-  static final int PMAPPROC_GETVERSADDR = 9;
-
+/**
+ * An rpcbind request handler.
+ */
+public class RpcProgramPortmap extends RpcProgram implements PortmapInterface {
+  public static final int PROGRAM = 100000;
+  public static final int VERSION = 2;
+  
   private static final Log LOG = LogFactory.getLog(RpcProgramPortmap.class);
 
-  private final ConcurrentHashMap<String, PortmapMapping> map = new ConcurrentHashMap<String, PortmapMapping>();
+  /** Map synchronized usis monitor lock of this instance */
+  private final HashMap<String, PortmapMapping> map;
 
-  /** ChannelGroup that remembers all active channels for gracefully shutdown. */
-  private final ChannelGroup allChannels;
-
-  RpcProgramPortmap(ChannelGroup allChannels) {
-    this.allChannels = allChannels;
-    PortmapMapping m = new PortmapMapping(PROGRAM, VERSION,
-        PortmapMapping.TRANSPORT_TCP, RpcProgram.RPCB_PORT);
-    PortmapMapping m1 = new PortmapMapping(PROGRAM, VERSION,
-        PortmapMapping.TRANSPORT_UDP, RpcProgram.RPCB_PORT);
-    map.put(PortmapMapping.key(m), m);
-    map.put(PortmapMapping.key(m1), m1);
+  public RpcProgramPortmap() {
+    super("portmap", "localhost", RPCB_PORT, PROGRAM, VERSION, VERSION);
+    map = new HashMap<String, PortmapMapping>(256);
   }
 
-  /**
-   * This procedure does no work. By convention, procedure zero of any protocol
-   * takes no parameters and returns no results.
-   */
-  private XDR nullOp(int xid, XDR in, XDR out) {
+  /** Dump all the register RPC services */
+  private synchronized void dumpRpcServices() {
+    Set<Entry<String, PortmapMapping>> entrySet = map.entrySet();
+    for (Entry<String, PortmapMapping> entry : entrySet) {
+      LOG.info("Service: " + entry.getKey() + " portmapping: "
+          + entry.getValue());
+    }
+  }
+  
+  @Override
+  public XDR nullOp(int xid, XDR in, XDR out) {
     return PortmapResponse.voidReply(out, xid);
   }
 
-  /**
-   * When a program first becomes available on a machine, it registers itself
-   * with the port mapper program on the same machine. The program passes its
-   * program number "prog", version number "vers", transport protocol number
-   * "prot", and the port "port" on which it awaits service request. The
-   * procedure returns a boolean reply whose value is "TRUE" if the procedure
-   * successfully established the mapping and "FALSE" otherwise. The procedure
-   * refuses to establish a mapping if one already exists for the tuple
-   * "(prog, vers, prot)".
-   */
-  private XDR set(int xid, XDR in, XDR out) {
+  @Override
+  public XDR set(int xid, XDR in, XDR out) {
     PortmapMapping mapping = PortmapRequest.mapping(in);
     String key = PortmapMapping.key(mapping);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Portmap set key=" + key);
     }
 
-    map.put(key, mapping);
-    return PortmapResponse.intReply(out, xid, mapping.getPort());
+    PortmapMapping value = null;
+    synchronized(this) {
+      map.put(key, mapping);
+      dumpRpcServices();
+      value = map.get(key);
+    }  
+    return PortmapResponse.intReply(out, xid, value.getPort());
   }
 
-  /**
-   * When a program becomes unavailable, it should unregister itself with the
-   * port mapper program on the same machine. The parameters and results have
-   * meanings identical to those of "PMAPPROC_SET". The protocol and port number
-   * fields of the argument are ignored.
-   */
-  private XDR unset(int xid, XDR in, XDR out) {
+  @Override
+  public synchronized XDR unset(int xid, XDR in, XDR out) {
     PortmapMapping mapping = PortmapRequest.mapping(in);
-    String key = PortmapMapping.key(mapping);
-
-    if (LOG.isDebugEnabled())
-      LOG.debug("Portmap remove key=" + key);
-
-    map.remove(key);
+    synchronized(this) {
+      map.remove(PortmapMapping.key(mapping));
+    }
     return PortmapResponse.booleanReply(out, xid, true);
   }
 
-  /**
-   * Given a program number "prog", version number "vers", and transport
-   * protocol number "prot", this procedure returns the port number on which the
-   * program is awaiting call requests. A port value of zeros means the program
-   * has not been registered. The "port" field of the argument is ignored.
-   */
-  private XDR getport(int xid, XDR in, XDR out) {
+  @Override
+  public synchronized XDR getport(int xid, XDR in, XDR out) {
     PortmapMapping mapping = PortmapRequest.mapping(in);
     String key = PortmapMapping.key(mapping);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Portmap GETPORT key=" + key + " " + mapping);
     }
-    PortmapMapping value = map.get(key);
+    PortmapMapping value = null;
+    synchronized(this) {
+      value = map.get(key);
+    }
     int res = 0;
     if (value != null) {
       res = value.getPort();
@@ -139,39 +115,45 @@ final class RpcProgramPortmap extends IdleStateAwareChannelUpstreamHandler {
     return PortmapResponse.intReply(out, xid, res);
   }
 
-  /**
-   * This procedure enumerates all entries in the port mapper's database. The
-   * procedure takes no parameters and returns a list of program, version,
-   * protocol, and port values.
-   */
-  private XDR dump(int xid, XDR in, XDR out) {
-    PortmapMapping[] pmapList = map.values().toArray(new PortmapMapping[0]);
+  @Override
+  public synchronized XDR dump(int xid, XDR in, XDR out) {
+    PortmapMapping[] pmapList = null;
+    synchronized(this) {
+      pmapList = new PortmapMapping[map.values().size()];
+      map.values().toArray(pmapList);
+    }
     return PortmapResponse.pmapList(out, xid, pmapList);
   }
 
   @Override
-  public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)
-      throws Exception {
+  public void register(PortmapMapping mapping) {
+    String key = PortmapMapping.key(mapping);
+    synchronized(this) {
+      map.put(key, mapping);
+    }
+  }
 
-    RpcInfo info = (RpcInfo) e.getMessage();
+  @Override
+  public void handleInternal(ChannelHandlerContext ctx, RpcInfo info) {
     RpcCall rpcCall = (RpcCall) info.header();
-    final int portmapProc = rpcCall.getProcedure();
+    final Procedure portmapProc = Procedure.fromValue(rpcCall.getProcedure());
     int xid = rpcCall.getXid();
-    XDR in = new XDR(info.data().toByteBuffer().asReadOnlyBuffer(),
-        XDR.State.READING);
+    byte[] data = new byte[info.data().readableBytes()];
+    info.data().readBytes(data);
+    XDR in = new XDR(data);
     XDR out = new XDR();
 
-    if (portmapProc == PMAPPROC_NULL) {
+    if (portmapProc == Procedure.PMAPPROC_NULL) {
       out = nullOp(xid, in, out);
-    } else if (portmapProc == PMAPPROC_SET) {
+    } else if (portmapProc == Procedure.PMAPPROC_SET) {
       out = set(xid, in, out);
-    } else if (portmapProc == PMAPPROC_UNSET) {
+    } else if (portmapProc == Procedure.PMAPPROC_UNSET) {
       out = unset(xid, in, out);
-    } else if (portmapProc == PMAPPROC_DUMP) {
+    } else if (portmapProc == Procedure.PMAPPROC_DUMP) {
       out = dump(xid, in, out);
-    } else if (portmapProc == PMAPPROC_GETPORT) {
+    } else if (portmapProc == Procedure.PMAPPROC_GETPORT) {
       out = getport(xid, in, out);
-    } else if (portmapProc == PMAPPROC_GETVERSADDR) {
+    } else if (portmapProc == Procedure.PMAPPROC_GETVERSADDR) {
       out = getport(xid, in, out);
     } else {
       LOG.info("PortmapHandler unknown rpc procedure=" + portmapProc);
@@ -180,29 +162,13 @@ final class RpcProgramPortmap extends IdleStateAwareChannelUpstreamHandler {
       reply.write(out);
     }
 
-    ChannelBuffer buf = ChannelBuffers.wrappedBuffer(out.asReadOnlyWrap()
-        .buffer());
+    ChannelBuffer buf = ChannelBuffers.wrappedBuffer(out.asReadOnlyWrap().buffer());
     RpcResponse rsp = new RpcResponse(buf, info.remoteAddress());
     RpcUtil.sendRpcResponse(ctx, rsp);
   }
-
+  
   @Override
-  public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent e)
-      throws Exception {
-    allChannels.add(e.getChannel());
-  }
-
-  @Override
-  public void channelIdle(ChannelHandlerContext ctx, IdleStateEvent e)
-      throws Exception {
-    if (e.getState() == IdleState.ALL_IDLE) {
-      e.getChannel().close();
-    }
-  }
-
-  @Override
-  public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
-    LOG.warn("Encountered ", e.getCause());
-    e.getChannel().close();
+  protected boolean isIdempotent(RpcCall call) {
+    return false;
   }
 }

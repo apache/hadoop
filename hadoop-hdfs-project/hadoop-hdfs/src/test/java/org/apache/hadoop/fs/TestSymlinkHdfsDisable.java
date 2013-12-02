@@ -29,12 +29,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
 
-@SuppressWarnings("deprecation")
 public class TestSymlinkHdfsDisable {
-  // Re-enable symlinks for tests, see HADOOP-10020 and HADOOP-10052
-  static {
-    FileSystem.enableSymlinks();
-  }
 
   @Test(timeout=60000)
   public void testSymlinkHdfsDisable() throws Exception {
@@ -47,8 +42,7 @@ public class TestSymlinkHdfsDisable {
     DistributedFileSystem dfs = cluster.getFileSystem();
     FileContext fc = FileContext.getFileContext(cluster.getURI(0), conf);
     // Create test files/links
-    FileContextTestHelper helper = new FileContextTestHelper(
-        "/tmp/TestSymlinkHdfsDisable");
+    FileContextTestHelper helper = new FileContextTestHelper();
     Path root = helper.getTestRootPath(fc);
     Path target = new Path(root, "target");
     Path link = new Path(root, "link");

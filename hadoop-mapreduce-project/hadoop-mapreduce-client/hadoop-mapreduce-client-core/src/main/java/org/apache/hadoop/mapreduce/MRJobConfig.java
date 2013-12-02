@@ -133,13 +133,6 @@ public interface MRJobConfig {
 
   public static final String MAPREDUCE_JOB_CLASSLOADER = "mapreduce.job.classloader";
 
-  /**
-   * A comma-separated list of services that function as ShuffleProvider aux-services
-   * (in addition to the built-in ShuffleHandler).
-   * These services can serve shuffle requests from reducetasks.
-   */
-  public static final String MAPREDUCE_JOB_SHUFFLE_PROVIDER_SERVICES = "mapreduce.job.shuffle.provider.services";
-
   public static final String MAPREDUCE_JOB_CLASSLOADER_SYSTEM_CLASSES = "mapreduce.job.classloader.system.classes";
 
   public static final String IO_SORT_FACTOR = "mapreduce.task.io.sort.factor";
@@ -570,10 +563,8 @@ public interface MRJobConfig {
   public static final String MAPRED_ADMIN_USER_ENV =
       "mapreduce.admin.user.env";
 
-  public final String DEFAULT_MAPRED_ADMIN_USER_ENV = 
-      Shell.WINDOWS ? 
-          "PATH=%PATH%;%HADOOP_COMMON_HOME%\\bin":
-          "LD_LIBRARY_PATH=$HADOOP_COMMON_HOME/lib/native";
+  public static final String DEFAULT_MAPRED_ADMIN_USER_ENV =
+      "LD_LIBRARY_PATH=$HADOOP_COMMON_HOME/lib/native";
 
   public static final String WORKDIR = "work";
 

@@ -18,6 +18,8 @@
 package org.apache.hadoop.hdfs.nfs.mount;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mount.MountdBase;
@@ -30,14 +32,23 @@ import org.apache.hadoop.mount.MountdBase;
  * handle for requested directory and returns it to the client.
  */
 public class Mountd extends MountdBase {
+  /**
+   * Constructor
+   * @param exports
+   * @throws IOException 
+   */
+  public Mountd(List<String> exports) throws IOException {
+    super(exports, new RpcProgramMountd(exports));
+  }
 
-  public Mountd(Configuration config) throws IOException {
-    super(new RpcProgramMountd(config));
+  public Mountd(List<String> exports, Configuration config) throws IOException {
+    super(exports, new RpcProgramMountd(exports, config));
   }
   
   public static void main(String[] args) throws IOException {
-    Configuration config = new Configuration();
-    Mountd mountd = new Mountd(config);
+    List<String> exports = new ArrayList<String>();
+    exports.add("/");
+    Mountd mountd = new Mountd(exports);
     mountd.start(true);
   }
 }

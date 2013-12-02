@@ -138,6 +138,7 @@ public abstract class AuthenticatorTestCase extends TestCase {
       TestConnectionConfigurator connConf = new TestConnectionConfigurator();
       AuthenticatedURL aUrl = new AuthenticatedURL(authenticator, connConf);
       HttpURLConnection conn = aUrl.openConnection(url, token);
+      Assert.assertTrue(token.isSet());
       Assert.assertTrue(connConf.invoked);
       String tokenStr = token.toString();
       if (doPost) {

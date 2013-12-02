@@ -626,13 +626,6 @@ public class TestAMRMClient {
     try {
       // start am rm client
       amClient = AMRMClient.<ContainerRequest>createAMRMClient();
-
-      //setting an instance NMTokenCache
-      amClient.setNMTokenCache(new NMTokenCache());
-      //asserting we are not using the singleton instance cache
-      Assert.assertNotSame(NMTokenCache.getSingleton(), 
-          amClient.getNMTokenCache());
-
       amClient.init(conf);
       amClient.start();
 
@@ -688,8 +681,8 @@ public class TestAMRMClient {
     int iterationsLeft = 3;
     Set<ContainerId> releases = new TreeSet<ContainerId>();
     
-    amClient.getNMTokenCache().clearCache();
-    Assert.assertEquals(0, amClient.getNMTokenCache().numberOfTokensInCache());
+    NMTokenCache.clearCache();
+    Assert.assertEquals(0, NMTokenCache.numberOfNMTokensInCache());
     HashMap<String, Token> receivedNMTokens = new HashMap<String, Token>();
     
     while (allocatedContainerCount < containersRequestedAny

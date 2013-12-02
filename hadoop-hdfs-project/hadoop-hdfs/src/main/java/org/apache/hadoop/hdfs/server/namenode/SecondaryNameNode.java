@@ -155,7 +155,7 @@ public class SecondaryNameNode implements Runnable {
   }
 
   @VisibleForTesting
-  public FSNamesystem getFSNamesystem() {
+  FSNamesystem getFSNamesystem() {
     return namesystem;
   }
   
@@ -493,8 +493,7 @@ public class SecondaryNameNode implements Runnable {
    * Create a new checkpoint
    * @return if the image is fetched from primary or not
    */
-  @VisibleForTesting
-  public boolean doCheckpoint() throws IOException {
+  boolean doCheckpoint() throws IOException {
     checkpointImage.ensureCurrentDirExists();
     NNStorage dstStorage = checkpointImage.getStorage();
     

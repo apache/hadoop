@@ -68,7 +68,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaS
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
@@ -112,8 +111,6 @@ public class TestCapacityScheduler {
     conf.setClass(YarnConfiguration.RM_SCHEDULER, 
         CapacityScheduler.class, ResourceScheduler.class);
     resourceManager.init(conf);
-    resourceManager.getRMContainerTokenSecretManager().rollMasterKey();
-    resourceManager.getRMNMTokenSecretManager().rollMasterKey();
     ((AsyncDispatcher)resourceManager.getRMContext().getDispatcher()).start();
   }
 
@@ -159,18 +156,13 @@ public class TestCapacityScheduler {
       registerNode(String hostName, int containerManagerPort, int httpPort,
           String rackName, Resource capability)
           throws IOException, YarnException {
-    org.apache.hadoop.yarn.server.resourcemanager.NodeManager nm =
-        new org.apache.hadoop.yarn.server.resourcemanager.NodeManager(
-            hostName, containerManagerPort, httpPort, rackName, capability,
-            resourceManager);
-    NodeAddedSchedulerEvent nodeAddEvent1 = 
-        new NodeAddedSchedulerEvent(resourceManager.getRMContext()
-            .getRMNodes().get(nm.getNodeId()));
-    resourceManager.getResourceScheduler().handle(nodeAddEvent1);
-    return nm;
-  }
+    return new org.apache.hadoop.yarn.server.resourcemanager.NodeManager(
+        hostName, containerManagerPort, httpPort, rackName, capability,
+        resourceManager.getResourceTrackerService(), resourceManager
+            .getRMContext());
+  }  
 
-  @Test
+//  @Test
   public void testCapacityScheduler() throws Exception {
 
     LOG.info("--- START: testCapacityScheduler ---");
@@ -180,12 +172,14 @@ public class TestCapacityScheduler {
     org.apache.hadoop.yarn.server.resourcemanager.NodeManager nm_0 = 
       registerNode(host_0, 1234, 2345, NetworkTopology.DEFAULT_RACK, 
           Resources.createResource(4 * GB, 1));
+    nm_0.heartbeat();
     
     // Register node2
     String host_1 = "host_1";
     org.apache.hadoop.yarn.server.resourcemanager.NodeManager nm_1 = 
       registerNode(host_1, 1234, 2345, NetworkTopology.DEFAULT_RACK, 
           Resources.createResource(2 * GB, 1));
+    nm_1.heartbeat();
 
     // ResourceRequest priorities
     Priority priority_0 = 
@@ -233,19 +227,18 @@ public class TestCapacityScheduler {
 
     // Send a heartbeat to kick the tires on the Scheduler
     LOG.info("Kick!");
-    
-    // task_0_0 and task_1_0 allocated, used=4G
-    nodeUpdate(nm_0);
-    
-    // nothing allocated
-    nodeUpdate(nm_1);
-    
+    nm_0.heartbeat();             // task_0_0 and task_1_0 allocated, used=4G
+    nm_1.heartbeat();             // nothing allocated
+
     // Get allocations from the scheduler
     application_0.schedule();     // task_0_0 
     checkApplicationResourceUsage(1 * GB, application_0);
 
     application_1.schedule();     // task_1_0
     checkApplicationResourceUsage(3 * GB, application_1);
+    
+    nm_0.heartbeat();
+    nm_1.heartbeat();
     
     checkNodeResourceUsage(4*GB, nm_0);  // task_0_0 (1G) and task_1_0 (3G)
     checkNodeResourceUsage(0*GB, nm_1);  // no tasks, 2G available
@@ -266,12 +259,10 @@ public class TestCapacityScheduler {
 
     // Send a heartbeat to kick the tires on the Scheduler
     LOG.info("Sending hb from " + nm_0.getHostName());
-    // nothing new, used=4G
-    nodeUpdate(nm_0);
+    nm_0.heartbeat();                   // nothing new, used=4G
     
     LOG.info("Sending hb from " + nm_1.getHostName());
-    // task_0_1 is prefer as locality, used=2G
-    nodeUpdate(nm_1);
+    nm_1.heartbeat();                   // task_0_3, used=2G
     
     // Get allocations from the scheduler
     LOG.info("Trying to allocate...");
@@ -281,21 +272,12 @@ public class TestCapacityScheduler {
     application_1.schedule();
     checkApplicationResourceUsage(5 * GB, application_1);
     
-    nodeUpdate(nm_0);
-    nodeUpdate(nm_1);
-    
+    nm_0.heartbeat();
+    nm_1.heartbeat();
     checkNodeResourceUsage(4*GB, nm_0);
     checkNodeResourceUsage(2*GB, nm_1);
 
     LOG.info("--- END: testCapacityScheduler ---");
-  }
-
-  private void nodeUpdate(
-      org.apache.hadoop.yarn.server.resourcemanager.NodeManager nm) {
-    RMNode node = resourceManager.getRMContext().getRMNodes().get(nm.getNodeId());
-    // Send a heartbeat to kick the tires on the Scheduler
-    NodeUpdateSchedulerEvent nodeUpdate = new NodeUpdateSchedulerEvent(node);
-    resourceManager.getResourceScheduler().handle(nodeUpdate);
   }
   
   private void setupQueueConfiguration(CapacitySchedulerConfiguration conf) {

@@ -31,4 +31,8 @@
     <value>0</value>
   </property>
 
+ <property>
+   <name>test.SymlinkEnabledForTesting</name>
+   <value>true</value>
+ </property>
 </configuration>

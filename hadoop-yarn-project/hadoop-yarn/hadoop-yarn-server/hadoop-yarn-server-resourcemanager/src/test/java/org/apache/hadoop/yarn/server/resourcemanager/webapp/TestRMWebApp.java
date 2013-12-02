@@ -32,7 +32,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
-import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
@@ -40,6 +39,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.MockAsm;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
@@ -93,14 +93,12 @@ public class TestRMWebApp {
       }
     });
     RmView rmViewInstance = injector.getInstance(RmView.class);
-    rmViewInstance.set(YarnWebParams.APP_STATE,
-        YarnApplicationState.RUNNING.toString());
+    rmViewInstance.set(YarnWebParams.APP_STATE, RMAppState.RUNNING.toString());
     rmViewInstance.render();
     WebAppTests.flushOutput(injector);
 
     rmViewInstance.set(YarnWebParams.APP_STATE, StringHelper.cjoin(
-        YarnApplicationState.ACCEPTED.toString(),
-        YarnApplicationState.RUNNING.toString()));
+        RMAppState.ACCEPTED.toString(), RMAppState.RUNNING.toString()));
     rmViewInstance.render();
     WebAppTests.flushOutput(injector);
   }

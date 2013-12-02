@@ -1,88 +1,5 @@
 Hadoop YARN Change Log
 
-Release 2.2.1 - UNRELEASED
-
-  INCOMPATIBLE CHANGES
-
-  NEW FEATURES
-
-  IMPROVEMENTS
-
-    YARN-305. Fair scheduler logs too many "Node offered to app" messages.
-    (Lohit Vijayarenu via Sandy Ryza)
-
-    YARN-1258. Allow configuring the Fair Scheduler root queue (Sandy Ryza)
-
-    YARN-1288. Make Fair Scheduler ACLs more user friendly (Sandy Ryza)
-
-    YARN-1315. TestQueueACLs should also test FairScheduler (Sandy Ryza)
-
-    YARN-1335. Move duplicate code from FSSchedulerApp and FiCaSchedulerApp
-    into SchedulerApplication (Sandy Ryza)
-
-    YARN-1333. Support blacklisting in the Fair Scheduler (Tsuyoshi Ozawa via
-    Sandy Ryza)
-
-    YARN-1109. Demote NodeManager "Sending out status for container" logs to
-    debug (haosdent via Sandy Ryza)
-
-    YARN-1321. Changed NMTokenCache to support both singleton and an instance
-    usage. (Alejandro Abdelnur via vinodkv) 
-
-    YARN-1388. Fair Scheduler page always displays blank fair share (Liyin Liang
-    via Sandy Ryza)
-
-  OPTIMIZATIONS
-
-  BUG FIXES
-
-    YARN-1284. LCE: Race condition leaves dangling cgroups entries for killed
-    containers. (Alejandro Abdelnur via Sandy Ryza)
-
-    YARN-1283. Fixed RM to give a fully-qualified proxy URL for an application
-    so that clients don't need to do scheme-mangling. (Omkar Vinit Joshi via
-    vinodkv)
-
-    YARN-879. Fixed tests w.r.t o.a.h.y.server.resourcemanager.Application.
-    (Junping Du via devaraj)
-
-    YARN-1265. Fair Scheduler chokes on unhealthy node reconnect (Sandy Ryza)
-
-    YARN-1044. used/min/max resources do not display info in the scheduler page
-    (Sangjin Lee via Sandy Ryza)
-
-    YARN-1259. In Fair Scheduler web UI, queue num pending and num active apps
-    switched. (Robert Kanter via Sandy Ryza)
-
-    YARN-1295. In UnixLocalWrapperScriptBuilder, using bash -c can cause Text
-    file busy errors (Sandy Ryza)
-
-    YARN-1331. yarn.cmd exits with NoClassDefFoundError trying to run rmadmin or
-    logs. (cnauroth)
-
-    YARN-1330. Fair Scheduler: defaultQueueSchedulingPolicy does not take effect
-    (Sandy Ryza)
-    
-    YARN-1022. Unnecessary INFO logs in AMRMClientAsync (haosdent via bikas)
-    
-    YARN-1349. yarn.cmd does not support passthrough to any arbitrary class.
-    (cnauroth)
-    
-    YARN-1357. TestContainerLaunch.testContainerEnvVariables fails on Windows.
-    (Chuan Liu via cnauroth)
-
-    YARN-1358. TestYarnCLI fails on Windows due to line endings. (Chuan Liu via
-    cnauroth)
-
-    YARN-1343. NodeManagers additions/restarts are not reported as node updates 
-    in AllocateResponse responses to AMs. (tucu)
-
-    YARN-1381. Same relaxLocality appears twice in exception message of
-    AMRMClientImpl#checkLocalityRelaxationConflict() (Ted Yu via Sandy Ryza)
-
-    YARN-1407. RM Web UI and REST APIs should uniformly use
-    YarnApplicationState (Sandy Ryza)
-
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
@@ -1484,22 +1401,7 @@ Release 2.0.2-alpha - 2012-09-07
     YARN-138. Ensure default values for minimum/maximum container sizes is
     sane. (harsh & sseth via acmurthy)
 
-Release 0.23.10 - UNRELEASED
-
-  INCOMPATIBLE CHANGES
-
-  NEW FEATURES
-
-  IMPROVEMENTS
-
-  OPTIMIZATIONS
-
-  BUG FIXES
-
-    YARN-1386. NodeManager mistakenly loses resources and relocalizes them
-    (Jason Lowe via jeagles)
-
-Release 0.23.9 - 2013-07-08
+Release 0.23.9 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 

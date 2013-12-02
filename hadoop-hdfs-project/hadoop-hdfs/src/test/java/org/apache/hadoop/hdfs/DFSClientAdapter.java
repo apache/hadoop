@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs;
 import java.io.IOException;
 
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
-import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 
 public class DFSClientAdapter {
@@ -43,22 +42,5 @@ public class DFSClientAdapter {
   public static LocatedBlocks callGetBlockLocations(ClientProtocol namenode,
       String src, long start, long length) throws IOException {
     return DFSClient.callGetBlockLocations(namenode, src, start, length);
-  }
-
-  public static ClientProtocol getNamenode(DFSClient client) throws IOException {
-    return client.namenode;
-  }
-
-  public static DFSClient getClient(DistributedFileSystem dfs)
-      throws IOException {
-    return dfs.dfs;
-  }
-
-  public static ExtendedBlock getPreviousBlock(DFSClient client, String file) {
-    return client.getPreviousBlock(file);
-  }
-
-  public static long getFileId(DFSOutputStream out) {
-    return out.getFileId();
   }
 }

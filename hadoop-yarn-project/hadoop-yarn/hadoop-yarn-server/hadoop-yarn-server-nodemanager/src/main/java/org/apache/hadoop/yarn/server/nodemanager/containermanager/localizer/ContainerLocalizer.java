@@ -46,7 +46,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -83,8 +82,6 @@ public class ContainerLocalizer {
   public static final String WORKDIR = "work";
   private static final String APPCACHE_CTXT_FMT = "%s.app.cache.dirs";
   private static final String USERCACHE_CTXT_FMT = "%s.user.cache.dirs";
-  private static final FsPermission FILECACHE_PERMS =
-      new FsPermission((short)0710);
 
   private final String user;
   private final String appId;
@@ -366,23 +363,16 @@ public class ContainerLocalizer {
       // $x/usercache/$user/filecache
       Path userFileCacheDir = new Path(base, FILECACHE);
       usersFileCacheDirs[i] = userFileCacheDir.toString();
-      createDir(lfs, userFileCacheDir, FILECACHE_PERMS, false);
+      lfs.mkdir(userFileCacheDir, null, false);
       // $x/usercache/$user/appcache/$appId
       Path appBase = new Path(base, new Path(APPCACHE, appId));
       // $x/usercache/$user/appcache/$appId/filecache
       Path appFileCacheDir = new Path(appBase, FILECACHE);
       appsFileCacheDirs[i] = appFileCacheDir.toString();
-      createDir(lfs, appFileCacheDir, FILECACHE_PERMS, false);
+      lfs.mkdir(appFileCacheDir, null, false);
     }
     conf.setStrings(String.format(APPCACHE_CTXT_FMT, appId), appsFileCacheDirs);
     conf.setStrings(String.format(USERCACHE_CTXT_FMT, user), usersFileCacheDirs);
   }
 
-  private static void createDir(FileContext lfs, Path dirPath,
-      FsPermission perms, boolean createParent) throws IOException {
-    lfs.mkdir(dirPath, perms, createParent);
-    if (!perms.equals(perms.applyUMask(lfs.getUMask()))) {
-      lfs.setPermission(dirPath, perms);
-    }
-  }
 }

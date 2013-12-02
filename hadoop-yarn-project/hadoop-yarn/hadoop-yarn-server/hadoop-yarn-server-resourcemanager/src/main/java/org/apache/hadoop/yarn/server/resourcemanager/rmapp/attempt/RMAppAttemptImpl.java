@@ -381,7 +381,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     this.readLock = lock.readLock();
     this.writeLock = lock.writeLock();
 
-    this.proxiedTrackingUrl = generateProxyUriWithScheme(null);
+    this.proxiedTrackingUrl = generateProxyUriWithoutScheme();
     
     this.stateMachine = stateMachineFactory.make(this);
     this.user = user;
@@ -470,7 +470,11 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     }    
   }
   
-  private String generateProxyUriWithScheme(
+  private String generateProxyUriWithoutScheme() {
+    return generateProxyUriWithoutScheme(null);
+  }
+  
+  private String generateProxyUriWithoutScheme(
       final String trackingUriWithoutScheme) {
     this.readLock.lock();
     try {
@@ -480,7 +484,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       URI proxyUri = ProxyUriUtils.getUriFromAMUrl(proxy);
       URI result = ProxyUriUtils.getProxyUri(trackingUri, proxyUri,
           applicationAttemptId.getApplicationId());
-      return result.toASCIIString();
+      //We need to strip off the scheme to have it match what was there before
+      return result.toASCIIString().substring(HttpConfig.getSchemePrefix().length());
     } catch (URISyntaxException e) {
       LOG.warn("Could not proxify "+trackingUriWithoutScheme,e);
       return trackingUriWithoutScheme;
@@ -1001,7 +1006,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       appAttempt.origTrackingUrl =
           sanitizeTrackingUrl(registrationEvent.getTrackingurl());
       appAttempt.proxiedTrackingUrl = 
-        appAttempt.generateProxyUriWithScheme(appAttempt.origTrackingUrl);
+        appAttempt.generateProxyUriWithoutScheme(appAttempt.origTrackingUrl);
 
       // Let the app know
       appAttempt.eventHandler.handle(new RMAppEvent(appAttempt
@@ -1137,7 +1142,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       appAttempt.origTrackingUrl =
           sanitizeTrackingUrl(unregisterEvent.getTrackingUrl());
       appAttempt.proxiedTrackingUrl = 
-        appAttempt.generateProxyUriWithScheme(appAttempt.origTrackingUrl);
+        appAttempt.generateProxyUriWithoutScheme(appAttempt.origTrackingUrl);
       appAttempt.finalStatus = unregisterEvent.getFinalApplicationStatus();
 
       // Tell the app

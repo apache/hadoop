@@ -28,7 +28,6 @@ import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -73,7 +72,6 @@ class BPServiceActor implements Runnable {
   
   static final Log LOG = DataNode.LOG;
   final InetSocketAddress nnAddr;
-  HAServiceState state;
 
   BPOfferService bpos;
   
@@ -536,7 +534,6 @@ class BPServiceActor implements Runnable {
             // that we should actually process.
             bpos.updateActorStatesFromHeartbeat(
                 this, resp.getNameNodeHaState());
-            state = resp.getNameNodeHaState().getState();
 
             long startProcessCommands = now();
             if (!processCommand(resp.getCommands()))

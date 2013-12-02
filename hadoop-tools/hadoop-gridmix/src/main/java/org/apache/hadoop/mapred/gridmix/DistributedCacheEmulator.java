@@ -23,7 +23,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.conf.Configuration.DeprecationDelta;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -119,12 +118,10 @@ class DistributedCacheEmulator {
   {
     // Need to handle deprecation of these MapReduce-internal configuration
     // properties as MapReduce doesn't handle their deprecation.
-    Configuration.addDeprecations(new DeprecationDelta[] {
-      new DeprecationDelta("mapred.cache.files.filesizes",
-          MRJobConfig.CACHE_FILES_SIZES),
-      new DeprecationDelta("mapred.cache.files.visibilities",
-          MRJobConfig.CACHE_FILE_VISIBILITIES)
-    });
+    Configuration.addDeprecation("mapred.cache.files.filesizes",
+        new String[] {MRJobConfig.CACHE_FILES_SIZES});
+    Configuration.addDeprecation("mapred.cache.files.visibilities",
+        new String[] {MRJobConfig.CACHE_FILE_VISIBILITIES});
   }
 
   /**

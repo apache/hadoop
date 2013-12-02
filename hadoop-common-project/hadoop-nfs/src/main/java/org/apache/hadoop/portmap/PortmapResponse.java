@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.portmap;
 
+import java.util.Arrays;
+import java.util.Collection;
+
 import org.apache.hadoop.oncrpc.RpcAcceptedReply;
 import org.apache.hadoop.oncrpc.XDR;
 import org.apache.hadoop.oncrpc.security.VerifierNone;
@@ -42,13 +45,18 @@ public class PortmapResponse {
     return xdr;
   }
 
-  public static XDR pmapList(XDR xdr, int xid, PortmapMapping[] list) {
+  public static XDR pmapList(XDR xdr, int xid, Collection<PortmapMapping> list) {
     RpcAcceptedReply.getAcceptInstance(xid, new VerifierNone()).write(xdr);
     for (PortmapMapping mapping : list) {
+      System.out.println(mapping);
       xdr.writeBoolean(true); // Value follows
       mapping.serialize(xdr);
     }
     xdr.writeBoolean(false); // No value follows
     return xdr;
+  }
+  
+  public static XDR pmapList(XDR xdr, int xid, PortmapMapping[] list) {
+    return pmapList(xdr, xid, Arrays.asList(list));
   }
 }

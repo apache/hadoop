@@ -27,7 +27,6 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <limits.h>
 
 static pthread_mutex_t gTempdirLock = PTHREAD_MUTEX_INITIALIZER;
 

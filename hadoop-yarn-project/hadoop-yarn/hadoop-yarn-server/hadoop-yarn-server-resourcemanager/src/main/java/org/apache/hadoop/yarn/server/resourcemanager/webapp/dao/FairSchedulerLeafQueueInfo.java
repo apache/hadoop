@@ -50,10 +50,10 @@ public class FairSchedulerLeafQueueInfo extends FairSchedulerQueueInfo {
   }
   
   public int getNumActiveApplications() {
-    return numActiveApps;
+    return numPendingApps;
   }
   
   public int getNumPendingApplications() {
-    return numPendingApps;
+    return numActiveApps;
   }
 }

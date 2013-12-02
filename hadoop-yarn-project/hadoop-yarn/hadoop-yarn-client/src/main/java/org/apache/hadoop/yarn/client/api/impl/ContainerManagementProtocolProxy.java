@@ -56,16 +56,9 @@ public class ContainerManagementProtocolProxy {
   private final LinkedHashMap<String, ContainerManagementProtocolProxyData> cmProxy;
   private final Configuration conf;
   private final YarnRPC rpc;
-  private NMTokenCache nmTokenCache;
   
   public ContainerManagementProtocolProxy(Configuration conf) {
-    this(conf, NMTokenCache.getSingleton());
-  }
-
-  public ContainerManagementProtocolProxy(Configuration conf,
-      NMTokenCache nmTokenCache) {
     this.conf = conf;
-    this.nmTokenCache = nmTokenCache;
 
     maxConnectedNMs =
         conf.getInt(YarnConfiguration.NM_CLIENT_MAX_NM_PROXIES,
@@ -93,7 +86,7 @@ public class ContainerManagementProtocolProxy {
 
     while (proxy != null
         && !proxy.token.getIdentifier().equals(
-            nmTokenCache.getToken(containerManagerBindAddr).getIdentifier())) {
+            NMTokenCache.getNMToken(containerManagerBindAddr).getIdentifier())) {
       LOG.info("Refreshing proxy as NMToken got updated for node : "
           + containerManagerBindAddr);
       // Token is updated. check if anyone has already tried closing it.
@@ -116,7 +109,7 @@ public class ContainerManagementProtocolProxy {
     if (proxy == null) {
       proxy =
           new ContainerManagementProtocolProxyData(rpc, containerManagerBindAddr,
-              containerId, nmTokenCache.getToken(containerManagerBindAddr));
+              containerId, NMTokenCache.getNMToken(containerManagerBindAddr));
       if (cmProxy.size() > maxConnectedNMs) {
         // Number of existing proxy exceed the limit.
         String cmAddr = cmProxy.keySet().iterator().next();

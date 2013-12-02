@@ -35,17 +35,11 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes;
 import org.apache.hadoop.hdfs.server.namenode.OfflineEditsViewerHelper;
 import org.apache.hadoop.hdfs.tools.offlineEditsViewer.OfflineEditsViewer.Flags;
-import org.apache.hadoop.fs.FileSystem;
 import org.junit.Before;
 import org.junit.Test;
 
 public class TestOfflineEditsViewer {
   private static final Log LOG = LogFactory.getLog(TestOfflineEditsViewer.class);
-
-  // Re-enable symlinks for tests, see HADOOP-10020 and HADOOP-10052
-  static {
-    FileSystem.enableSymlinks();
-  }
 
   private static final Map<FSEditLogOpCodes, Boolean> obsoleteOpCodes =
     new HashMap<FSEditLogOpCodes, Boolean>();

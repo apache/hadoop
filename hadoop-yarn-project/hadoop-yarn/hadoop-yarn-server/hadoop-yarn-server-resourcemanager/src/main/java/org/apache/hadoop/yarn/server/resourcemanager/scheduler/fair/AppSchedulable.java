@@ -268,9 +268,7 @@ public class AppSchedulable extends Schedulable {
   }
 
   private Resource assignContainer(FSSchedulerNode node, boolean reserved) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Node offered to app: " + getName() + " reserved: " + reserved);
-    }
+    LOG.info("Node offered to app: " + getName() + " reserved: " + reserved);
 
     if (reserved) {
       RMContainer rmContainer = node.getReservedContainer();

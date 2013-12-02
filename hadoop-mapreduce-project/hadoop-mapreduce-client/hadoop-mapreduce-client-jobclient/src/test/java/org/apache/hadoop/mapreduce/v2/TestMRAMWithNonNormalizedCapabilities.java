@@ -67,7 +67,7 @@ public class TestMRAMWithNonNormalizedCapabilities {
     }
 
     if (mrCluster == null) {
-      mrCluster = new MiniMRYarnCluster(getClass().getSimpleName());
+      mrCluster = new MiniMRYarnCluster(getClass().getName());
       mrCluster.init(new Configuration());
       mrCluster.start();
     }

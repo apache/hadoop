@@ -84,16 +84,11 @@ abstract class CommandWithDestination extends FsCommand {
    */
   protected void getLocalDestination(LinkedList<String> args)
   throws IOException {
-    String pathString = (args.size() < 2) ? Path.CUR_DIR : args.removeLast();
     try {
+      String pathString = (args.size() < 2) ? Path.CUR_DIR : args.removeLast();
       dst = new PathData(new URI(pathString), getConf());
     } catch (URISyntaxException e) {
-      if (Path.WINDOWS) {
-        // Unlike URI, PathData knows how to parse Windows drive-letter paths.
-        dst = new PathData(pathString, getConf());
-      } else {
-        throw new IOException("unexpected URISyntaxException", e);
-      }
+      throw new IOException("unexpected URISyntaxException", e);
     }
   }
 

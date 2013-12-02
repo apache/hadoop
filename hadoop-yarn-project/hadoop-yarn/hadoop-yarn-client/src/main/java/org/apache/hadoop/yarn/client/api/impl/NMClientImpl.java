@@ -130,10 +130,7 @@ public class NMClientImpl extends NMClient {
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
     super.serviceInit(conf);
-    if (getNMTokenCache() == null) {
-      throw new IllegalStateException("NMTokenCache has not been set");
-    }
-    cmProxy = new ContainerManagementProtocolProxy(conf, getNMTokenCache());
+    cmProxy = new ContainerManagementProtocolProxy(conf);
   }
   
   @Override

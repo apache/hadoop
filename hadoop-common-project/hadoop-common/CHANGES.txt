@@ -1,72 +1,5 @@
 Hadoop Change Log
 
-Release 2.2.1 - UNRELEASED
-
-  INCOMPATIBLE CHANGES
-
-  NEW FEATURES
-
-  IMPROVEMENTS
-
-    HADOOP-10046. Print a log message when SSL is enabled.
-    (David S. Wang via wang)
-
-    HADOOP-10079. log a warning message if group resolution takes too long.
-    (cmccabe)
-
-    HADOOP-9623. Update jets3t dependency to 0.9.0 (Amandeep Khurana via Colin
-    Patrick McCabe)
-
-    HADOOP-10132. RPC#stopProxy() should log the class of proxy when IllegalArgumentException 
-    is encountered (Ted yu via umamahesh)
-
-  OPTIMIZATIONS
-
-  BUG FIXES
-
-    HADOOP-10028. Malformed ssl-server.xml.example. (Haohui Mai via jing9)
-
-    HADOOP-10030. FsShell -put/copyFromLocal should support Windows local path.
-    (Chuan Liu via cnauroth)
-
-    HADOOP-10031. FsShell -get/copyToLocal/moveFromLocal should support Windows
-    local path. (Chuan Liu via cnauroth)
-
-    HADOOP-10039. Add Hive to the list of projects using 
-    AbstractDelegationTokenSecretManager. (Haohui Mai via jing9)
-
-    HADOOP-10040. hadoop.cmd in UNIX format and would not run by default on
-    Windows. (cnauroth)
-
-    HADOOP-10055. FileSystemShell.apt.vm doc has typo "numRepicas".
-    (Akira Ajisaka via cnauroth)
-
-    HADOOP-10052. Temporarily disable client-side symlink resolution
-    (branch-2.2 only change). (wang)
-
-    HADOOP-10072. TestNfsExports#testMultiMatchers fails due to non-deterministic
-    timing around cache expiry check. (cnauroth)
-
-    HADOOP-9898. Set SO_KEEPALIVE on all our sockets. (todd via wang)
-
-    HADOOP-9478. Fix race conditions during the initialization of Configuration
-    related to deprecatedKeyMap (cmccabe)
-
-    HADOOP-9660. [WINDOWS] Powershell / cmd parses -Dkey=value from command line
-    as [-Dkey, value] which breaks GenericsOptionParser.
-    (Enis Soztutar via cnauroth)
-
-    HADOOP-10078. KerberosAuthenticator always does SPNEGO. (rkanter via tucu)
-
-    HADOOP-10110. hadoop-auth has a build break due to missing dependency.
-    (Chuan Liu via arp)
-
-    HADOOP-9114. After defined the dfs.checksum.type as the NULL, write file and hflush will 
-    through java.lang.ArrayIndexOutOfBoundsException (Sathish via umamahesh)
-
-    HADOOP-10130. RawLocalFS::LocalFSFileInputStream.pread does not track
-    FS::Statistics (Binglin Chang via Colin Patrick McCabe)
-
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
@@ -244,9 +177,6 @@ Release 2.1.1-beta - 2013-09-23
 
     HADOOP-9977. Hadoop services won't start with different keypass and
     keystorepass when https is enabled. (cnauroth)
-
-    HADOOP-10005. No need to check INFO severity level is enabled or not.
-    (Jackie Chang via suresh)
 
 Release 2.1.0-beta - 2013-08-22
 

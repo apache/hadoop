@@ -122,9 +122,11 @@ public class DebugJobProducer implements JobStoryProducer {
       // Add/remove excess
       recs[0] += totalrecs - tot_recs;
       bytes[0] += totalbytes - tot_bytes;
-      LOG.info(
-        "DIST: " + Arrays.toString(recs) + " " + tot_recs + "/" + totalrecs +
-          " " + Arrays.toString(bytes) + " " + tot_bytes + "/" + totalbytes);
+      if (LOG.isInfoEnabled()) {
+        LOG.info(
+          "DIST: " + Arrays.toString(recs) + " " + tot_recs + "/" + totalrecs +
+            " " + Arrays.toString(bytes) + " " + tot_bytes + "/" + totalbytes);
+      }
     }
 
     private static final AtomicInteger seq = new AtomicInteger(0);

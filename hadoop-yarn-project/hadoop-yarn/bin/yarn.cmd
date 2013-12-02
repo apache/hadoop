@@ -133,21 +133,7 @@ if "%1" == "--config" (
   set CLASSPATH=%CLASSPATH%;%HADOOP_YARN_HOME%\%YARN_DIR%\*
   set CLASSPATH=%CLASSPATH%;%HADOOP_YARN_HOME%\%YARN_LIB_JARS_DIR%\*
 
-  if %yarn-command% == classpath (
-    @echo %CLASSPATH%
-    goto :eof
-  )
-
-  set yarncommands=resourcemanager nodemanager proxyserver rmadmin version jar application node logs daemonlog
-  for %%i in ( %yarncommands% ) do (
-    if %yarn-command% == %%i set yarncommand=true
-  )
-  if defined yarncommand (
-    call :%yarn-command%
-  ) else (
-    set CLASSPATH=%CLASSPATH%;%CD%
-    set CLASS=%yarn-command%
-  )
+  call :%yarn-command% %yarn-command-arguments%
 
   if defined JAVA_LIBRARY_PATH (
     set YARN_OPTS=%YARN_OPTS% -Djava.library.path=%JAVA_LIBRARY_PATH%
@@ -163,7 +149,7 @@ goto :eof
   goto :eof
 
 :rmadmin
-  set CLASS=org.apache.hadoop.yarn.client.cli.RMAdminCLI
+  set CLASS=org.apache.hadoop.yarn.server.resourcemanager.tools.RMAdmin
   set YARN_OPTS=%YARN_OPTS% %YARN_CLIENT_OPTS%
   goto :eof
 
@@ -214,7 +200,7 @@ goto :eof
   goto :eof
 
 :logs
-  set CLASS=org.apache.hadoop.yarn.client.cli.LogsCLI
+  set CLASS=org.apache.hadoop.yarn.logaggregation.LogDumper
   set YARN_OPTS=%YARN_OPTS% %YARN_CLIENT_OPTS%
   goto :eof
 
@@ -251,6 +237,7 @@ goto :eof
   @echo        where COMMAND is one of:
   @echo   resourcemanager      run the ResourceManager
   @echo   nodemanager          run a nodemanager on each slave
+  @echo   historyserver        run job history servers as a standalone daemon
   @echo   rmadmin              admin tools
   @echo   version              print the version
   @echo   jar ^<jar^>          run a jar file

@@ -75,6 +75,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTest {
     float absoluteMaxCapacity;
     float absoluteUsedCapacity;
     int numApplications;
+    String usedResources;
     String queueName;
     String state;
   }
@@ -282,6 +283,8 @@ public class TestRMWebServicesCapacitySched extends JerseyTest {
       WebServicesTestUtils.getXmlFloat(qElem, "absoluteUsedCapacity");
     qi.numApplications =
         WebServicesTestUtils.getXmlInt(qElem, "numApplications");
+    qi.usedResources =
+        WebServicesTestUtils.getXmlString(qElem, "usedResources");
     qi.queueName = WebServicesTestUtils.getXmlString(qElem, "queueName");
     qi.state = WebServicesTestUtils.getXmlString(qElem, "state");
     verifySubQueueGeneric(q, qi, parentAbsCapacity, parentAbsMaxCapacity);
@@ -357,10 +360,10 @@ public class TestRMWebServicesCapacitySched extends JerseyTest {
   private void verifySubQueue(JSONObject info, String q, 
       float parentAbsCapacity, float parentAbsMaxCapacity)
       throws JSONException, Exception {
-    int numExpectedElements = 11;
+    int numExpectedElements = 12;
     boolean isParentQueue = true;
     if (!info.has("queues")) {
-      numExpectedElements = 21;
+      numExpectedElements = 22;
       isParentQueue = false;
     }
     assertEquals("incorrect number of elements", numExpectedElements, info.length());
@@ -373,6 +376,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTest {
     qi.absoluteMaxCapacity = (float) info.getDouble("absoluteMaxCapacity");
     qi.absoluteUsedCapacity = (float) info.getDouble("absoluteUsedCapacity");
     qi.numApplications = info.getInt("numApplications");
+    qi.usedResources = info.getString("usedResources");
     qi.queueName = info.getString("queueName");
     qi.state = info.getString("state");
 
@@ -427,6 +431,8 @@ public class TestRMWebServicesCapacitySched extends JerseyTest {
     assertEquals("absoluteUsedCapacity doesn't match",
         0, info.absoluteUsedCapacity, 1e-3f);
     assertEquals("numApplications doesn't match", 0, info.numApplications);
+    assertTrue("usedResources doesn't match ",
+        info.usedResources.matches("<memory:0, vCores:0>"));
     assertTrue("queueName doesn't match, got: " + info.queueName
         + " expected: " + q, qshortName.matches(info.queueName));
     assertTrue("state doesn't match",

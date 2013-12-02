@@ -45,13 +45,11 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.Server.Connection;
-import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.token.SecretManager;
-import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 
 /**
  * A utility class for dealing with SASL on RPC server
@@ -269,15 +267,13 @@ public class SaslRpcServer {
       this.connection = connection;
     }
 
-    private char[] getPassword(TokenIdentifier tokenid) throws InvalidToken,
-        StandbyException, RetriableException, IOException {
-      return encodePassword(secretManager.retriableRetrievePassword(tokenid));
+    private char[] getPassword(TokenIdentifier tokenid) throws InvalidToken {
+      return encodePassword(secretManager.retrievePassword(tokenid));
     }
 
     @Override
     public void handle(Callback[] callbacks) throws InvalidToken,
-        UnsupportedCallbackException, StandbyException, RetriableException,
-        IOException {
+        UnsupportedCallbackException {
       NameCallback nc = null;
       PasswordCallback pc = null;
       AuthorizeCallback ac = null;
@@ -296,8 +292,7 @@ public class SaslRpcServer {
         }
       }
       if (pc != null) {
-        TokenIdentifier tokenIdentifier = getIdentifier(nc.getDefaultName(),
-            secretManager);
+        TokenIdentifier tokenIdentifier = getIdentifier(nc.getDefaultName(), secretManager);
         char[] password = getPassword(tokenIdentifier);
         UserGroupInformation user = null;
         user = tokenIdentifier.getUser(); // may throw exception

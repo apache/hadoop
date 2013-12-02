@@ -61,10 +61,9 @@ public class TestDatanodeJsp {
     
     InetSocketAddress nnIpcAddress = cluster.getNameNode().getNameNodeAddress();
     InetSocketAddress nnHttpAddress = cluster.getNameNode().getHttpAddress();
-    String base = JspHelper.Url.url("http", cluster.getDataNodes().get(0)
-        .getDatanodeId());
-
-    URL url = new URL(base + "/"
+    int dnInfoPort = cluster.getDataNodes().get(0).getInfoPort();
+    
+    URL url = new URL("http://localhost:" + dnInfoPort + "/"
         + "browseDirectory.jsp" + JspHelper.getUrlParam("dir", 
             URLEncoder.encode(testPath.toString(), "UTF-8"), true)
         + JspHelper.getUrlParam("namenodeInfoPort", Integer
@@ -87,10 +86,6 @@ public class TestDatanodeJsp {
     // check whether able to 'Go Back to File View' after tailing the file
     regex = "<a.+href=\"(.+?)\">Go\\s*Back\\s*to\\s*File\\s*View\\<\\/a\\>";
     assertFileContents(regex, "Go Back to File View");
-
-    regex = "<a href=\"///" + nnHttpAddress.getHostName() + ":" +
-      nnHttpAddress.getPort() + "/dfshealth.jsp\">Go back to DFS home</a>";
-    assertTrue("page should generate DFS home scheme without explicit scheme", viewFilePage.contains(regex));
   }
   
   private static void assertFileContents(String regex, String text)
@@ -171,7 +166,6 @@ public class TestDatanodeJsp {
     Mockito.doReturn(NetUtils.getHostPortString(NameNode.getAddress(CONF)))
         .when(reqMock).getParameter("nnaddr");
     Mockito.doReturn(testFile.toString()).when(reqMock).getPathInfo();
-    Mockito.doReturn("http").when(reqMock).getScheme();
   }
 
   static Path writeFile(FileSystem fs, Path f) throws IOException {

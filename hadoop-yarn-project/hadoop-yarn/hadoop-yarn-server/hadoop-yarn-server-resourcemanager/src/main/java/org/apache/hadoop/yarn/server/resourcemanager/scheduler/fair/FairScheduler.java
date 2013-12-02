@@ -759,10 +759,6 @@ public class FairScheduler implements ResourceScheduler {
 
   private synchronized void removeNode(RMNode rmNode) {
     FSSchedulerNode node = nodes.get(rmNode.getNodeID());
-    // This can occur when an UNHEALTHY node reconnects
-    if (node == null) {
-      return;
-    }
     Resources.subtractFrom(clusterCapacity, rmNode.getTotalCapability());
     updateRootQueueMetrics();
 
@@ -853,8 +849,6 @@ public class FairScheduler implements ResourceScheduler {
       for (RMContainer container : application.getPreemptionContainers()) {
         preemptionContainerIds.add(container.getContainerId());
       }
-
-      application.updateBlacklist(blacklistAdditions, blacklistRemovals);
       
       return new Allocation(application.pullNewlyAllocatedContainers(),
           application.getHeadroom(), preemptionContainerIds);

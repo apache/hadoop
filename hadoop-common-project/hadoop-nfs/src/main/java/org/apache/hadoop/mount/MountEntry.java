@@ -21,9 +21,9 @@ package org.apache.hadoop.mount;
  * Represents a mount entry.
  */
 public class MountEntry {
-  /** Host corresponding to the mount entry */
+  /** Host correspoinding to the mount entry */
   private final String host;
-  /** Path corresponding to the mount entry */
+  /** Path correspoinding to the mount entry */
   private final String path;
 
   public MountEntry(String host, String path) {
@@ -31,11 +31,11 @@ public class MountEntry {
     this.path = path;
   }
 
-  public String getHost() {
+  public String host() {
     return this.host;
   }
 
-  public String getPath() {
+  public String path() {
     return this.path;
   }
 
@@ -49,7 +49,7 @@ public class MountEntry {
     }
 
     MountEntry m = (MountEntry) o;
-    return getHost().equals(m.getHost()) && getPath().equals(m.getPath());
+    return host().equals(m.host()) && path().equals(m.path());
   }
 
   @Override

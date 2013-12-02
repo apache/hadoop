@@ -68,7 +68,7 @@ class SnapshotCommands extends FsCommand {
         throw new IllegalArgumentException("<snapshotDir> is missing.");
       } 
       if (args.size() > 2) {
-        throw new IllegalArgumentException("Too many arguments.");
+        throw new IllegalArgumentException("Too many arguements.");
       }
       if (args.size() == 2) {
         snapshotName = args.removeLast();
@@ -110,7 +110,7 @@ class SnapshotCommands extends FsCommand {
     @Override
     protected void processOptions(LinkedList<String> args) throws IOException {
       if (args.size() != 2) {
-        throw new IllegalArgumentException("Incorrect number of arguments.");
+        throw new IOException("args number not 2: " + args.size());
       }
       snapshotName = args.removeLast();
     }
@@ -150,7 +150,7 @@ class SnapshotCommands extends FsCommand {
     @Override
     protected void processOptions(LinkedList<String> args) throws IOException {
       if (args.size() != 3) {
-        throw new IllegalArgumentException("Incorrect number of arguments.");
+        throw new IOException("args number not 3: " + args.size());
       }
       newName = args.removeLast();
       oldName = args.removeLast();

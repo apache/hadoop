@@ -29,7 +29,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.conf.Configuration.DeprecationDelta;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
@@ -72,12 +71,11 @@ public class Logalyzer {
     "logalizer.logcomparator.column.separator";
   
   static {
-    Configuration.addDeprecations(new DeprecationDelta[] {
-      new DeprecationDelta("mapred.reducer.sort", SORT_COLUMNS),
-      new DeprecationDelta("mapred.reducer.separator", COLUMN_SEPARATOR)
-    });
+    Configuration.addDeprecation("mapred.reducer.sort", 
+      new String[] {SORT_COLUMNS});
+    Configuration.addDeprecation("mapred.reducer.separator", 
+      new String[] {COLUMN_SEPARATOR});
   }
-
   /** A {@link Mapper} that extracts text matching a regular expression. */
   public static class LogRegexMapper<K extends WritableComparable>
     extends MapReduceBase

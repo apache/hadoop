@@ -42,7 +42,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3.INode.FileType;
 import org.jets3t.service.S3Service;
 import org.jets3t.service.S3ServiceException;
-import org.jets3t.service.ServiceException;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import org.jets3t.service.model.S3Bucket;
 import org.jets3t.service.model.S3Object;
@@ -61,8 +60,8 @@ class Jets3tFileSystemStore implements FileSystemStore {
   private static final String FILE_SYSTEM_VERSION_NAME = "fs-version";
   private static final String FILE_SYSTEM_VERSION_VALUE = "1";
   
-  private static final Map<String, Object> METADATA =
-    new HashMap<String, Object>();
+  private static final Map<String, String> METADATA =
+    new HashMap<String, String>();
   
   static {
     METADATA.put(FILE_SYSTEM_NAME, FILE_SYSTEM_VALUE);
@@ -160,7 +159,7 @@ class Jets3tFileSystemStore implements FileSystemStore {
       throws IOException {
     
     try {
-      S3Object object = s3Service.getObject(bucket.getName(), key);
+      S3Object object = s3Service.getObject(bucket, key);
       if (checkMetadata) {
         checkMetadata(object);
       }
@@ -173,9 +172,6 @@ class Jets3tFileSystemStore implements FileSystemStore {
         throw (IOException) e.getCause();
       }
       throw new S3Exception(e);
-    } catch (ServiceException e) {
-      handleServiceException(e);
-      return null;
     }
   }
 
@@ -192,9 +188,6 @@ class Jets3tFileSystemStore implements FileSystemStore {
         throw (IOException) e.getCause();
       }
       throw new S3Exception(e);
-    } catch (ServiceException e) {
-      handleServiceException(e);
-      return null;
     }
   }
 
@@ -271,7 +264,7 @@ class Jets3tFileSystemStore implements FileSystemStore {
       if (!prefix.endsWith(PATH_DELIMITER)) {
         prefix += PATH_DELIMITER;
       }
-      S3Object[] objects = s3Service.listObjects(bucket.getName(), prefix, PATH_DELIMITER);
+      S3Object[] objects = s3Service.listObjects(bucket, prefix, PATH_DELIMITER);
       Set<Path> prefixes = new TreeSet<Path>();
       for (int i = 0; i < objects.length; i++) {
         prefixes.add(keyToPath(objects[i].getKey()));
@@ -293,7 +286,7 @@ class Jets3tFileSystemStore implements FileSystemStore {
       if (!prefix.endsWith(PATH_DELIMITER)) {
         prefix += PATH_DELIMITER;
       }
-      S3Object[] objects = s3Service.listObjects(bucket.getName(), prefix, null);
+      S3Object[] objects = s3Service.listObjects(bucket, prefix, null);
       Set<Path> prefixes = new TreeSet<Path>();
       for (int i = 0; i < objects.length; i++) {
         prefixes.add(keyToPath(objects[i].getKey()));
@@ -376,7 +369,7 @@ class Jets3tFileSystemStore implements FileSystemStore {
   @Override
   public void purge() throws IOException {
     try {
-      S3Object[] objects = s3Service.listObjects(bucket.getName());
+      S3Object[] objects = s3Service.listObjects(bucket);
       for (int i = 0; i < objects.length; i++) {
         s3Service.deleteObject(bucket, objects[i].getKey());
       }
@@ -393,7 +386,7 @@ class Jets3tFileSystemStore implements FileSystemStore {
     StringBuilder sb = new StringBuilder("S3 Filesystem, ");
     sb.append(bucket.getName()).append("\n");
     try {
-      S3Object[] objects = s3Service.listObjects(bucket.getName(), PATH_DELIMITER, null);
+      S3Object[] objects = s3Service.listObjects(bucket, PATH_DELIMITER, null);
       for (int i = 0; i < objects.length; i++) {
         Path path = keyToPath(objects[i].getKey());
         sb.append(path).append("\n");
@@ -414,16 +407,5 @@ class Jets3tFileSystemStore implements FileSystemStore {
     }
     System.out.println(sb);
   }
-
-  private void handleServiceException(ServiceException e) throws IOException {
-      if (e.getCause() instanceof IOException) {
-        throw (IOException) e.getCause();
-      }
-      else {
-        if(LOG.isDebugEnabled()) {
-          LOG.debug("Got ServiceException with Error code: " + e.getErrorCode() + ";and Error message: " + e.getErrorMessage());
-        }
-      }
-    }
 
 }

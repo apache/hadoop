@@ -21,8 +21,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 import static org.apache.hadoop.yarn.util.StringHelper.join;
 import static org.apache.hadoop.yarn.webapp.YarnWebParams.QUEUE_NAME;
 
-import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
@@ -62,11 +62,12 @@ public class RmController extends Controller {
   public void scheduler() {
     // limit applications to those in states relevant to scheduling
     set(YarnWebParams.APP_STATE, StringHelper.cjoin(
-        YarnApplicationState.NEW.toString(),
-        YarnApplicationState.NEW_SAVING.toString(),
-        YarnApplicationState.SUBMITTED.toString(),
-        YarnApplicationState.ACCEPTED.toString(),
-        YarnApplicationState.RUNNING.toString()));
+        RMAppState.NEW.toString(),
+        RMAppState.NEW_SAVING.toString(),
+        RMAppState.SUBMITTED.toString(),
+        RMAppState.ACCEPTED.toString(),
+        RMAppState.RUNNING.toString(),
+        RMAppState.FINISHING.toString()));
 
     ResourceManager rm = getInstance(ResourceManager.class);
     ResourceScheduler rs = rm.getResourceScheduler();

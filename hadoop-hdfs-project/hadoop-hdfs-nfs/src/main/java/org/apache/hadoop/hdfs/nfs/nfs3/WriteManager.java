@@ -18,6 +18,9 @@
 package org.apache.hadoop.hdfs.nfs.nfs3;
 
 import java.io.IOException;
+import java.util.Iterator;
+import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -25,24 +28,22 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
-import org.apache.hadoop.hdfs.nfs.nfs3.OpenFileCtx.COMMIT_STATUS;
-import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
-import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.nfs.NfsFileType;
 import org.apache.hadoop.nfs.nfs3.FileHandle;
 import org.apache.hadoop.nfs.nfs3.IdUserGroup;
 import org.apache.hadoop.nfs.nfs3.Nfs3Constant;
+import org.apache.hadoop.nfs.nfs3.Nfs3Constant.WriteStableHow;
 import org.apache.hadoop.nfs.nfs3.Nfs3FileAttributes;
 import org.apache.hadoop.nfs.nfs3.Nfs3Status;
 import org.apache.hadoop.nfs.nfs3.request.WRITE3Request;
-import org.apache.hadoop.nfs.nfs3.response.COMMIT3Response;
 import org.apache.hadoop.nfs.nfs3.response.WRITE3Response;
 import org.apache.hadoop.nfs.nfs3.response.WccData;
 import org.apache.hadoop.oncrpc.XDR;
 import org.apache.hadoop.oncrpc.security.VerifierNone;
+import org.apache.hadoop.util.Daemon;
 import org.jboss.netty.channel.Channel;
 
-import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Maps;
 
 /**
  * Manage the writes and responds asynchronously.
@@ -52,70 +53,69 @@ public class WriteManager {
 
   private final Configuration config;
   private final IdUserGroup iug;
- 
+  private final ConcurrentMap<FileHandle, OpenFileCtx> openFileMap = Maps
+      .newConcurrentMap();
+
   private AsyncDataService asyncDataService;
   private boolean asyncDataServiceStarted = false;
 
-  private final int maxStreams;
-
+  private final StreamMonitor streamMonitor;
+  
   /**
    * The time limit to wait for accumulate reordered sequential writes to the
    * same file before the write is considered done.
    */
   private long streamTimeout;
-
-  private final OpenFileCtxCache fileContextCache;
-
-  static public class MultipleCachedStreamException extends IOException {
-    private static final long serialVersionUID = 1L;
-
-    public MultipleCachedStreamException(String msg) {
-      super(msg);
+  
+  public static final long DEFAULT_STREAM_TIMEOUT = 10 * 60 * 1000; //10 minutes
+  public static final long MINIMIUM_STREAM_TIMEOUT = 10 * 1000; //10 seconds
+  
+  void addOpenFileStream(FileHandle h, OpenFileCtx ctx) {
+    openFileMap.put(h, ctx);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("After add the new stream " + h.getFileId()
+          + ", the stream number:" + openFileMap.size());
     }
   }
 
-  boolean addOpenFileStream(FileHandle h, OpenFileCtx ctx) {
-    return fileContextCache.put(h, ctx);
-  }
-  
   WriteManager(IdUserGroup iug, final Configuration config) {
     this.iug = iug;
     this.config = config;
-    streamTimeout = config.getLong(Nfs3Constant.OUTPUT_STREAM_TIMEOUT,
-        Nfs3Constant.OUTPUT_STREAM_TIMEOUT_DEFAULT);
+    
+    streamTimeout = config.getLong("dfs.nfs3.stream.timeout",
+        DEFAULT_STREAM_TIMEOUT);
     LOG.info("Stream timeout is " + streamTimeout + "ms.");
-    if (streamTimeout < Nfs3Constant.OUTPUT_STREAM_TIMEOUT_MIN_DEFAULT) {
+    if (streamTimeout < MINIMIUM_STREAM_TIMEOUT) {
       LOG.info("Reset stream timeout to minimum value "
-          + Nfs3Constant.OUTPUT_STREAM_TIMEOUT_MIN_DEFAULT + "ms.");
-      streamTimeout = Nfs3Constant.OUTPUT_STREAM_TIMEOUT_MIN_DEFAULT;
+          + MINIMIUM_STREAM_TIMEOUT + "ms.");
+      streamTimeout = MINIMIUM_STREAM_TIMEOUT;
     }
-    maxStreams = config.getInt(Nfs3Constant.MAX_OPEN_FILES,
-        Nfs3Constant.MAX_OPEN_FILES_DEFAULT);
-    LOG.info("Maximum open streams is "+ maxStreams);
-    this.fileContextCache = new OpenFileCtxCache(config, streamTimeout);
+    
+    this.streamMonitor = new StreamMonitor();
   }
 
-  void startAsyncDataSerivce() {
-    if (asyncDataServiceStarted) {
-      return;
-    }
-    fileContextCache.start();
+  private void startAsyncDataSerivce() {
+    streamMonitor.start();
     this.asyncDataService = new AsyncDataService();
     asyncDataServiceStarted = true;
   }
 
-  void shutdownAsyncDataService() {
-    if (!asyncDataServiceStarted) {
-      return;
-    }
-    asyncDataServiceStarted = false;
+  private void shutdownAsyncDataService() {
     asyncDataService.shutdown();
-    fileContextCache.shutdown();
+    asyncDataServiceStarted = false;
+    streamMonitor.interrupt();
   }
 
   void handleWrite(DFSClient dfsClient, WRITE3Request request, Channel channel,
       int xid, Nfs3FileAttributes preOpAttr) throws IOException {
+    // First write request starts the async data service
+    if (!asyncDataServiceStarted) {
+      startAsyncDataSerivce();
+    }
+
+    long offset = request.getOffset();
     int count = request.getCount();
+    WriteStableHow stableHow = request.getStableHow();
     byte[] data = request.getData().array();
     if (data.length < count) {
       WRITE3Response response = new WRITE3Response(Nfs3Status.NFS3ERR_INVAL);
@@ -126,12 +126,13 @@ public class WriteManager {
 
     FileHandle handle = request.getHandle();
     if (LOG.isDebugEnabled()) {
-      LOG.debug("handleWrite " + request);
+      LOG.debug("handleWrite fileId: " + handle.getFileId() + " offset: "
+          + offset + " length:" + count + " stableHow:" + stableHow.getValue());
     }
 
     // Check if there is a stream to write
     FileHandle fileHandle = request.getHandle();
-    OpenFileCtx openFileCtx = fileContextCache.get(fileHandle);
+    OpenFileCtx openFileCtx = openFileMap.get(fileHandle);
     if (openFileCtx == null) {
       LOG.info("No opened stream for fileId:" + fileHandle.getFileId());
 
@@ -146,15 +147,6 @@ public class WriteManager {
         fos = dfsClient.append(fileIdPath, bufferSize, null, null);
 
         latestAttr = Nfs3Utils.getFileAttr(dfsClient, fileIdPath, iug);
-      } catch (RemoteException e) {
-        IOException io = e.unwrapRemoteException();
-        if (io instanceof AlreadyBeingCreatedException) {
-          LOG.warn("Can't append file:" + fileIdPath
-              + ". Possibly the file is being closed. Drop the request:"
-              + request + ", wait for the client to retry...");
-          return;
-        }
-        throw e;
       } catch (IOException e) {
         LOG.error("Can't apapend to file:" + fileIdPath + ", error:" + e);
         if (fos != null) {
@@ -174,127 +166,81 @@ public class WriteManager {
       String writeDumpDir = config.get(Nfs3Constant.FILE_DUMP_DIR_KEY,
           Nfs3Constant.FILE_DUMP_DIR_DEFAULT);
       openFileCtx = new OpenFileCtx(fos, latestAttr, writeDumpDir + "/"
-          + fileHandle.getFileId(), dfsClient, iug);
-
-      if (!addOpenFileStream(fileHandle, openFileCtx)) {
-        LOG.info("Can't add new stream. Close it. Tell client to retry.");
-        try {
-          fos.close();
-        } catch (IOException e) {
-          LOG.error("Can't close stream for fileId:" + handle.getFileId());
-        }
-        // Notify client to retry
-        WccData fileWcc = new WccData(latestAttr.getWccAttr(), latestAttr);
-        WRITE3Response response = new WRITE3Response(Nfs3Status.NFS3ERR_JUKEBOX,
-            fileWcc, 0, request.getStableHow(), Nfs3Constant.WRITE_COMMIT_VERF);
-        Nfs3Utils.writeChannel(channel,
-            response.writeHeaderAndResponse(new XDR(), xid, new VerifierNone()),
-            xid);
-        return;
-      }
-
+          + fileHandle.getFileId());
+      addOpenFileStream(fileHandle, openFileCtx);
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Opened stream for appending file:" + fileHandle.getFileId());
+        LOG.debug("opened stream for file:" + fileHandle.getFileId());
       }
     }
 
     // Add write into the async job queue
     openFileCtx.receivedNewWrite(dfsClient, request, channel, xid,
         asyncDataService, iug);
+    // Block stable write
+    if (request.getStableHow() != WriteStableHow.UNSTABLE) {
+      if (handleCommit(fileHandle, offset + count)) {
+        Nfs3FileAttributes postOpAttr = getFileAttr(dfsClient, handle, iug);
+        WccData fileWcc = new WccData(Nfs3Utils.getWccAttr(preOpAttr),
+            postOpAttr);
+        WRITE3Response response = new WRITE3Response(Nfs3Status.NFS3_OK,
+            fileWcc, count, request.getStableHow(),
+            Nfs3Constant.WRITE_COMMIT_VERF);
+        Nfs3Utils.writeChannel(channel, response.writeHeaderAndResponse(
+            new XDR(), xid, new VerifierNone()), xid);
+      } else {
+        WRITE3Response response = new WRITE3Response(Nfs3Status.NFS3ERR_IO);
+        Nfs3Utils.writeChannel(channel, response.writeHeaderAndResponse(
+            new XDR(), xid, new VerifierNone()), xid);
+      }
+    }
+
     return;
   }
 
-  // Do a possible commit before read request in case there is buffered data
-  // inside DFSClient which has been flushed but not synced.
-  int commitBeforeRead(DFSClient dfsClient, FileHandle fileHandle,
-      long commitOffset) {
-    int status;
-    OpenFileCtx openFileCtx = fileContextCache.get(fileHandle);
-
-    if (openFileCtx == null) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("No opened stream for fileId:" + fileHandle.getFileId()
-            + " commitOffset=" + commitOffset
-            + ". Return success in this case.");
-      }
-      status = Nfs3Status.NFS3_OK;
-
-    } else {
-      COMMIT_STATUS ret = openFileCtx.checkCommit(dfsClient, commitOffset,
-          null, 0, null, true);
-      switch (ret) {
-      case COMMIT_FINISHED:
-      case COMMIT_INACTIVE_CTX:
-        status = Nfs3Status.NFS3_OK;
-        break;
-      case COMMIT_INACTIVE_WITH_PENDING_WRITE:
-      case COMMIT_ERROR:
-        status = Nfs3Status.NFS3ERR_IO;
-        break;
-      case COMMIT_WAIT:
-        /**
-         * This should happen rarely in some possible cases, such as read
-         * request arrives before DFSClient is able to quickly flush data to DN,
-         * or Prerequisite writes is not available. Won't wait since we don't
-         * want to block read.
-         */     
-        status = Nfs3Status.NFS3ERR_JUKEBOX;
-        break;
-      default:
-        LOG.error("Should not get commit return code:" + ret.name());
-        throw new RuntimeException("Should not get commit return code:"
-            + ret.name());
-      }
-    }
-    return status;
-  }
-  
-  void handleCommit(DFSClient dfsClient, FileHandle fileHandle,
-      long commitOffset, Channel channel, int xid, Nfs3FileAttributes preOpAttr) {
-    int status;
-    OpenFileCtx openFileCtx = fileContextCache.get(fileHandle);
-
+  boolean handleCommit(FileHandle fileHandle, long commitOffset) {
+    OpenFileCtx openFileCtx = openFileMap.get(fileHandle);
     if (openFileCtx == null) {
       LOG.info("No opened stream for fileId:" + fileHandle.getFileId()
-          + " commitOffset=" + commitOffset + ". Return success in this case.");
-      status = Nfs3Status.NFS3_OK;
-      
-    } else {
-      COMMIT_STATUS ret = openFileCtx.checkCommit(dfsClient, commitOffset,
-          channel, xid, preOpAttr, false);
-      switch (ret) {
-      case COMMIT_FINISHED:
-      case COMMIT_INACTIVE_CTX:
-        status = Nfs3Status.NFS3_OK;
-        break;
-      case COMMIT_INACTIVE_WITH_PENDING_WRITE:
-      case COMMIT_ERROR:
-        status = Nfs3Status.NFS3ERR_IO;
-        break;
-      case COMMIT_WAIT:
-        // Do nothing. Commit is async now.
-        return;
-      default:
-        LOG.error("Should not get commit return code:" + ret.name());
-        throw new RuntimeException("Should not get commit return code:"
-            + ret.name());
+          + " commitOffset=" + commitOffset);
+      return true;
+    }
+    long timeout = 30 * 1000; // 30 seconds
+    long startCommit = System.currentTimeMillis();
+    while (true) {
+      int ret = openFileCtx.checkCommit(commitOffset);
+      if (ret == OpenFileCtx.COMMIT_FINISHED) {
+        // Committed
+        return true;
+      } else if (ret == OpenFileCtx.COMMIT_INACTIVE_CTX) {
+        LOG.info("Inactive stream, fileId=" + fileHandle.getFileId()
+            + " commitOffset=" + commitOffset);
+        return true;
+      } else if (ret == OpenFileCtx.COMMIT_INACTIVE_WITH_PENDING_WRITE) {
+        LOG.info("Inactive stream with pending writes, fileId="
+            + fileHandle.getFileId() + " commitOffset=" + commitOffset);
+        return false;
       }
-    }
-    
-    // Send out the response
-    Nfs3FileAttributes postOpAttr = null;
-    try {
-      String fileIdPath = Nfs3Utils.getFileIdPath(preOpAttr.getFileid());
-      postOpAttr = Nfs3Utils.getFileAttr(dfsClient, fileIdPath, iug);
-    } catch (IOException e1) {
-      LOG.info("Can't get postOpAttr for fileId: " + preOpAttr.getFileid());
-    }
-    WccData fileWcc = new WccData(Nfs3Utils.getWccAttr(preOpAttr), postOpAttr);
-    COMMIT3Response response = new COMMIT3Response(status, fileWcc,
-        Nfs3Constant.WRITE_COMMIT_VERF);
-    Nfs3Utils.writeChannelCommit(channel,
-        response.writeHeaderAndResponse(new XDR(), xid, new VerifierNone()),
-        xid);
+      assert (ret == OpenFileCtx.COMMIT_WAIT || ret == OpenFileCtx.COMMIT_ERROR);
+      if (ret == OpenFileCtx.COMMIT_ERROR) {
+        return false;
+      }
+      
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Not committed yet, wait., fileId=" + fileHandle.getFileId()
+            + " commitOffset=" + commitOffset);
+      }
+      if (System.currentTimeMillis() - startCommit > timeout) {
+        // Commit took too long, return error
+        return false;
+      }
+      try {
+        Thread.sleep(100);
+      } catch (InterruptedException e) {
+        LOG.info("Commit is interrupted, fileId=" + fileHandle.getFileId()
+            + " commitOffset=" + commitOffset);
+        return false;
+      }
+    }// while
   }
 
   /**
@@ -305,7 +251,7 @@ public class WriteManager {
     String fileIdPath = Nfs3Utils.getFileIdPath(fileHandle);
     Nfs3FileAttributes attr = Nfs3Utils.getFileAttr(client, fileIdPath, iug);
     if (attr != null) {
-      OpenFileCtx openFileCtx = fileContextCache.get(fileHandle);
+      OpenFileCtx openFileCtx = openFileMap.get(fileHandle);
       if (openFileCtx != null) {
         attr.setSize(openFileCtx.getNextOffset());
         attr.setUsed(openFileCtx.getNextOffset());
@@ -320,8 +266,8 @@ public class WriteManager {
     Nfs3FileAttributes attr = Nfs3Utils.getFileAttr(client, fileIdPath, iug);
 
     if ((attr != null) && (attr.getType() == NfsFileType.NFSREG.toValue())) {
-      OpenFileCtx openFileCtx = fileContextCache.get(new FileHandle(attr
-          .getFileId()));
+      OpenFileCtx openFileCtx = openFileMap
+          .get(new FileHandle(attr.getFileId()));
 
       if (openFileCtx != null) {
         attr.setSize(openFileCtx.getNextOffset());
@@ -330,9 +276,51 @@ public class WriteManager {
     }
     return attr;
   }
+  
+  /**
+   * StreamMonitor wakes up periodically to find and closes idle streams.
+   */
+  class StreamMonitor extends Daemon {
+    private int rotation = 5 * 1000; // 5 seconds
+    private long lastWakeupTime = 0;
 
-  @VisibleForTesting
-  OpenFileCtxCache getOpenFileCtxCache() {
-    return this.fileContextCache;
+    @Override
+    public void run() {
+      while (true) {
+        Iterator<Entry<FileHandle, OpenFileCtx>> it = openFileMap.entrySet()
+            .iterator();
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("openFileMap size:" + openFileMap.size());
+        }
+        while (it.hasNext()) {
+          Entry<FileHandle, OpenFileCtx> pairs = it.next();
+          OpenFileCtx ctx = pairs.getValue();
+          if (ctx.streamCleanup((pairs.getKey()).getFileId(), streamTimeout)) {
+            it.remove();
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("After remove stream " + pairs.getKey().getFileId()
+                  + ", the stream number:" + openFileMap.size());
+            }
+          }
+        }
+
+        // Check if it can sleep
+        try {
+          long workedTime = System.currentTimeMillis() - lastWakeupTime;
+          if (workedTime < rotation) {
+            if (LOG.isTraceEnabled()) {
+              LOG.trace("StreamMonitor can still have a sleep:"
+                  + ((rotation - workedTime) / 1000));
+            }
+            Thread.sleep(rotation - workedTime);
+          }
+          lastWakeupTime = System.currentTimeMillis();
+
+        } catch (InterruptedException e) {
+          LOG.info("StreamMonitor got interrupted");
+          return;
+        }
+      }
+    }
   }
 }

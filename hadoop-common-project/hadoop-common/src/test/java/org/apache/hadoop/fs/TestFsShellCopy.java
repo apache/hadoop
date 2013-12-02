@@ -19,9 +19,7 @@
 package org.apache.hadoop.fs;
 
 import static org.junit.Assert.*;
-import static org.junit.Assume.assumeTrue;
 
-import java.io.File;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
@@ -108,7 +106,7 @@ public class TestFsShellCopy {
     Path targetDir = new Path(testRoot, "target");    
     Path filePath = new Path(testRoot, new Path("srcFile"));
     lfs.create(filePath).close();
-    checkPut(filePath, targetDir, false);
+    checkPut(filePath, targetDir);
   }
 
   @Test
@@ -121,42 +119,10 @@ public class TestFsShellCopy {
     Path dirPath = new Path(testRoot, new Path("srcDir"));
     lfs.mkdirs(dirPath);
     lfs.create(new Path(dirPath, "srcFile")).close();
-    checkPut(dirPath, targetDir, false);
+    checkPut(dirPath, targetDir);
   }
-
-  @Test
-  public void testCopyFileFromWindowsLocalPath() throws Exception {
-    assumeTrue(Path.WINDOWS);
-    String windowsTestRootPath = (new File(testRootDir.toUri().getPath()
-        .toString())).getAbsolutePath();
-    Path testRoot = new Path(windowsTestRootPath, "testPutFile");
-    lfs.delete(testRoot, true);
-    lfs.mkdirs(testRoot);
-
-    Path targetDir = new Path(testRoot, "target");
-    Path filePath = new Path(testRoot, new Path("srcFile"));
-    lfs.create(filePath).close();
-    checkPut(filePath, targetDir, true);
-  }
-
-  @Test
-  public void testCopyDirFromWindowsLocalPath() throws Exception {
-    assumeTrue(Path.WINDOWS);
-    String windowsTestRootPath = (new File(testRootDir.toUri().getPath()
-        .toString())).getAbsolutePath();
-    Path testRoot = new Path(windowsTestRootPath, "testPutDir");
-    lfs.delete(testRoot, true);
-    lfs.mkdirs(testRoot);
-
-    Path targetDir = new Path(testRoot, "target");
-    Path dirPath = new Path(testRoot, new Path("srcDir"));
-    lfs.mkdirs(dirPath);
-    lfs.create(new Path(dirPath, "srcFile")).close();
-    checkPut(dirPath, targetDir, true);
-  }
-
   
-  private void checkPut(Path srcPath, Path targetDir, boolean useWindowsPath)
+  private void checkPut(Path srcPath, Path targetDir)
   throws Exception {
     lfs.delete(targetDir, true);
     lfs.mkdirs(targetDir);    
@@ -168,37 +134,37 @@ public class TestFsShellCopy {
     
     // copy to new file, then again
     prepPut(dstPath, false, false);
-    checkPut(0, srcPath, dstPath, useWindowsPath);
+    checkPut(0, srcPath, dstPath);
     if (lfs.isFile(srcPath)) {
-      checkPut(1, srcPath, dstPath, useWindowsPath);
+      checkPut(1, srcPath, dstPath);
     } else { // directory works because it copies into the dir
       // clear contents so the check won't think there are extra paths
       prepPut(dstPath, true, true);
-      checkPut(0, srcPath, dstPath, useWindowsPath);
+      checkPut(0, srcPath, dstPath);
     }
 
     // copy to non-existent subdir
     prepPut(childPath, false, false);
-    checkPut(1, srcPath, dstPath, useWindowsPath);
+    checkPut(1, srcPath, dstPath);
 
     // copy into dir, then with another name
     prepPut(dstPath, true, true);
-    checkPut(0, srcPath, dstPath, useWindowsPath);
+    checkPut(0, srcPath, dstPath);
     prepPut(childPath, true, true);
-    checkPut(0, srcPath, childPath, useWindowsPath);
+    checkPut(0, srcPath, childPath);
 
     // try to put to pwd with existing dir
     prepPut(targetDir, true, true);
-    checkPut(0, srcPath, null, useWindowsPath);
+    checkPut(0, srcPath, null);
     prepPut(targetDir, true, true);
-    checkPut(0, srcPath, new Path("."), useWindowsPath);
+    checkPut(0, srcPath, new Path("."));
 
     // try to put to pwd with non-existent cwd
     prepPut(dstPath, false, true);
     lfs.setWorkingDirectory(dstPath);
-    checkPut(1, srcPath, null, useWindowsPath);
+    checkPut(1, srcPath, null);
     prepPut(dstPath, false, true);
-    checkPut(1, srcPath, new Path("."), useWindowsPath);
+    checkPut(1, srcPath, new Path("."));
   }
 
   private void prepPut(Path dst, boolean create,
@@ -217,17 +183,12 @@ public class TestFsShellCopy {
     }
   }
   
-  private void checkPut(int exitCode, Path src, Path dest,
-      boolean useWindowsPath) throws Exception {
+  private void checkPut(int exitCode, Path src, Path dest) throws Exception {
     String argv[] = null;
-    String srcPath = src.toString();
-    if (useWindowsPath) {
-      srcPath = (new File(srcPath)).getAbsolutePath();
-    }
     if (dest != null) {
-      argv = new String[]{ "-put", srcPath, pathAsString(dest) };
+      argv = new String[]{ "-put", src.toString(), pathAsString(dest) };
     } else {
-      argv = new String[]{ "-put", srcPath };
+      argv = new String[]{ "-put", src.toString() };
       dest = new Path(Path.CUR_DIR);
     }
     
@@ -455,34 +416,6 @@ public class TestFsShellCopy {
         "-moveFromLocal", srcDir.toString(), targetDir.toString() });
     assertEquals(1, exit);
     assertTrue(lfs.exists(srcDir));
-  }
-  
-  @Test
-  public void testMoveFromWindowsLocalPath() throws Exception {
-    assumeTrue(Path.WINDOWS);
-    Path testRoot = new Path(testRootDir, "testPutFile");
-    lfs.delete(testRoot, true);
-    lfs.mkdirs(testRoot);
-
-    Path target = new Path(testRoot, "target");
-    Path srcFile = new Path(testRoot, new Path("srcFile"));
-    lfs.createNewFile(srcFile);
-
-    String winSrcFile = (new File(srcFile.toUri().getPath()
-        .toString())).getAbsolutePath();
-    shellRun(0, "-moveFromLocal", winSrcFile, target.toString());
-    assertFalse(lfs.exists(srcFile));
-    assertTrue(lfs.exists(target));
-    assertTrue(lfs.isFile(target));
-  }
-
-  @Test
-  public void testGetWindowsLocalPath() throws Exception {
-    assumeTrue(Path.WINDOWS);
-    String winDstFile = (new File(dstPath.toUri().getPath()
-        .toString())).getAbsolutePath();
-    shellRun(0, "-get", srcPath.toString(), winDstFile);
-    checkPath(dstPath, false);
   }
   
   private void createFile(Path ... paths) throws IOException {

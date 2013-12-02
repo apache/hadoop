@@ -28,14 +28,12 @@ import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
-import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Times;
-import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 @XmlRootElement(name = "app")
 @XmlAccessorType(XmlAccessType.FIELD)
@@ -57,7 +55,7 @@ public class AppInfo {
   protected String user;
   protected String name;
   protected String queue;
-  protected YarnApplicationState state;
+  protected RMAppState state;
   protected FinalApplicationStatus finalStatus;
   protected float progress;
   protected String trackingUI;
@@ -84,22 +82,19 @@ public class AppInfo {
 
     if (app != null) {
       String trackingUrl = app.getTrackingUrl();
-      this.state = app.createApplicationState();
+      this.state = app.getState();
       this.trackingUrlIsNotReady = trackingUrl == null || trackingUrl.isEmpty()
-          || YarnApplicationState.NEW == this.state
-          || YarnApplicationState.NEW_SAVING == this.state
-          || YarnApplicationState.SUBMITTED == this.state
-          || YarnApplicationState.ACCEPTED == this.state;
+          || RMAppState.NEW == this.state
+          || RMAppState.NEW_SAVING == this.state
+          || RMAppState.SUBMITTED == this.state
+          || RMAppState.ACCEPTED == this.state;
       this.trackingUI = this.trackingUrlIsNotReady ? "UNASSIGNED" : (app
           .getFinishTime() == 0 ? "ApplicationMaster" : "History");
       if (!trackingUrlIsNotReady) {
-        this.trackingUrl =
-            WebAppUtils.getURLWithScheme(HttpConfig.getSchemePrefix(),
-                trackingUrl);
-        this.trackingUrlPretty = this.trackingUrl;
-      } else {
-        this.trackingUrlPretty = "UNASSIGNED";
+        this.trackingUrl = join(HttpConfig.getSchemePrefix(), trackingUrl);
       }
+      this.trackingUrlPretty = trackingUrlIsNotReady ? "UNASSIGNED" : join(
+          HttpConfig.getSchemePrefix(), trackingUrl);
       this.applicationId = app.getApplicationId();
       this.applicationType = app.getApplicationType();
       this.appIdNum = String.valueOf(app.getApplicationId().getId());

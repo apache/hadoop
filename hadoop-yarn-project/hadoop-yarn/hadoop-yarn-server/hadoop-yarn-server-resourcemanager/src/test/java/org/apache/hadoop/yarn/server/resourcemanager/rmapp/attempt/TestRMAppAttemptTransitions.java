@@ -41,6 +41,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
@@ -276,7 +277,8 @@ public class TestRMAppAttemptTransitions {
       URI proxyUri = ProxyUriUtils.getUriFromAMUrl(proxy);
       URI result = ProxyUriUtils.getProxyUri(trackingUri, proxyUri,
           appAttempt.getAppAttemptId().getApplicationId());
-      url = result.toASCIIString();
+      url = result.toASCIIString().substring(
+          HttpConfig.getSchemePrefix().length());
     } catch (URISyntaxException ex) {
       Assert.fail();
     }

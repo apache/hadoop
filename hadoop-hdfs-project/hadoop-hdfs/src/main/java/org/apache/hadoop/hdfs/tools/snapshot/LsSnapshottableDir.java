@@ -21,12 +21,9 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
-import org.apache.hadoop.util.Tool;
-import org.apache.hadoop.util.ToolRunner;
 
 /**
  * A tool used to list all snapshottable directories that are owned by the 
@@ -34,23 +31,23 @@ import org.apache.hadoop.util.ToolRunner;
  * is a super user.
  */
 @InterfaceAudience.Private
-public class LsSnapshottableDir extends Configured implements Tool {
-  @Override
-  public int run(String[] argv) throws Exception {
+public class LsSnapshottableDir {
+  public static void main(String[] argv) throws IOException {
     String description = "LsSnapshottableDir: \n" +
         "\tGet the list of snapshottable directories that are owned by the current user.\n" +
         "\tReturn all the snapshottable directories if the current user is a super user.\n";
 
     if(argv.length != 0) {
       System.err.println("Usage: \n" + description);
-      return 1;
+      System.exit(1);
     }
     
-    FileSystem fs = FileSystem.get(getConf());
+    Configuration conf = new Configuration();
+    FileSystem fs = FileSystem.get(conf);
     if (! (fs instanceof DistributedFileSystem)) {
       System.err.println(
           "LsSnapshottableDir can only be used in DistributedFileSystem");
-      return 1;
+      System.exit(1);
     }
     DistributedFileSystem dfs = (DistributedFileSystem) fs;
     
@@ -60,12 +57,7 @@ public class LsSnapshottableDir extends Configured implements Tool {
     } catch (IOException e) {
       String[] content = e.getLocalizedMessage().split("\n");
       System.err.println("lsSnapshottableDir: " + content[0]);
-      return 1;
     }
-    return 0;
   }
-  public static void main(String[] argv) throws Exception {
-    int rc = ToolRunner.run(new LsSnapshottableDir(), argv);
-    System.exit(rc);
-  }
+
 }

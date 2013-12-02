@@ -919,11 +919,6 @@ public class HistoryFileManager extends AbstractService {
     fileInfo.delete();
   }
 
-  List<FileStatus> getHistoryDirsForCleaning(long cutoff) throws IOException {
-      return JobHistoryUtils.
-        getHistoryDirsForCleaning(doneDirFc, doneDirPrefixPath, cutoff);
-  }
-
   /**
    * Clean up older history files.
    * 
@@ -932,9 +927,12 @@ public class HistoryFileManager extends AbstractService {
    */
   @SuppressWarnings("unchecked")
   void clean() throws IOException {
+    // TODO this should be replaced by something that knows about the directory
+    // structure and will put less of a load on HDFS.
     long cutoff = System.currentTimeMillis() - maxHistoryAge;
     boolean halted = false;
-    List<FileStatus> serialDirList = getHistoryDirsForCleaning(cutoff);
+    // TODO Delete YYYY/MM/DD directories.
+    List<FileStatus> serialDirList = findTimestampedDirectories();
     // Sort in ascending order. Relies on YYYY/MM/DD/Serial
     Collections.sort(serialDirList);
     for (FileStatus serialDir : serialDirList) {

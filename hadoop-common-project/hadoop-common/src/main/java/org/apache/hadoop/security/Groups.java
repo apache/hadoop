@@ -50,7 +50,6 @@ public class Groups {
   private final Map<String, CachedGroups> userToGroupsMap = 
     new ConcurrentHashMap<String, CachedGroups>();
   private final long cacheTimeout;
-  private final long warningDeltaMs;
 
   public Groups(Configuration conf) {
     impl = 
@@ -61,16 +60,11 @@ public class Groups {
           conf);
     
     cacheTimeout = 
-      conf.getLong(CommonConfigurationKeys.HADOOP_SECURITY_GROUPS_CACHE_SECS, 
-          CommonConfigurationKeys.HADOOP_SECURITY_GROUPS_CACHE_SECS_DEFAULT) * 1000;
-    warningDeltaMs =
-      conf.getLong(CommonConfigurationKeys.HADOOP_SECURITY_GROUPS_CACHE_WARN_AFTER_MS,
-        CommonConfigurationKeys.HADOOP_SECURITY_GROUPS_CACHE_WARN_AFTER_MS_DEFAULT);
+      conf.getLong(CommonConfigurationKeys.HADOOP_SECURITY_GROUPS_CACHE_SECS, 5*60) * 1000;
     
     if(LOG.isDebugEnabled())
       LOG.debug("Group mapping impl=" + impl.getClass().getName() + 
-          "; cacheTimeout=" + cacheTimeout + "; warningDeltaMs=" +
-          warningDeltaMs);
+          "; cacheTimeout=" + cacheTimeout);
   }
   
   /**
@@ -82,24 +76,17 @@ public class Groups {
   public List<String> getGroups(String user) throws IOException {
     // Return cached value if available
     CachedGroups groups = userToGroupsMap.get(user);
-    long startMs = Time.monotonicNow();
+    long now = Time.now();
     // if cache has a value and it hasn't expired
-    if (groups != null && (groups.getTimestamp() + cacheTimeout > startMs)) {
+    if (groups != null && (groups.getTimestamp() + cacheTimeout > now)) {
       if(LOG.isDebugEnabled()) {
         LOG.debug("Returning cached groups for '" + user + "'");
       }
       return groups.getGroups();
     }
-
+    
     // Create and cache user's groups
-    List<String> groupList = impl.getGroups(user);
-    long endMs = Time.monotonicNow();
-    long deltaMs = endMs - startMs ;
-    if (deltaMs > warningDeltaMs) {
-      LOG.warn("Potential performance problem: getGroups(user=" + user +") " +
-          "took " + deltaMs + " milliseconds.");
-    }
-    groups = new CachedGroups(groupList, endMs);
+    groups = new CachedGroups(impl.getGroups(user));
     if (groups.getGroups().isEmpty()) {
       throw new IOException("No groups found for user " + user);
     }
@@ -146,9 +133,9 @@ public class Groups {
     /**
      * Create and initialize group cache
      */
-    CachedGroups(List<String> groups, long timestamp) {
+    CachedGroups(List<String> groups) {
       this.groups = groups;
-      this.timestamp = timestamp;
+      this.timestamp = Time.now();
     }
 
     /**

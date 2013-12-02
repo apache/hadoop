@@ -1310,13 +1310,15 @@ public class DataNode extends Configured
     
     int numTargets = xferTargets.length;
     if (numTargets > 0) {
-      StringBuilder xfersBuilder = new StringBuilder();
-      for (int i = 0; i < numTargets; i++) {
-        xfersBuilder.append(xferTargets[i]);
-        xfersBuilder.append(" ");
+      if (LOG.isInfoEnabled()) {
+        StringBuilder xfersBuilder = new StringBuilder();
+        for (int i = 0; i < numTargets; i++) {
+          xfersBuilder.append(xferTargets[i]);
+          xfersBuilder.append(" ");
+        }
+        LOG.info(bpReg + " Starting thread to transfer " + 
+                 block + " to " + xfersBuilder);                       
       }
-      LOG.info(bpReg + " Starting thread to transfer " + 
-               block + " to " + xfersBuilder);                       
 
       new Daemon(new DataTransfer(xferTargets, block,
           BlockConstructionStage.PIPELINE_SETUP_CREATE, "")).start();
@@ -1745,7 +1747,7 @@ public class DataNode extends Configured
       } catch (IOException ioe) {
         LOG.warn("Invalid " + DFS_DATANODE_DATA_DIR_KEY + " "
             + dir + " : ", ioe);
-        invalidDirs.append("\"").append(dirURI.getPath()).append("\" ");
+        invalidDirs.append("\"").append(dir.getCanonicalPath()).append("\" ");
       }
     }
     if (dirs.size() == 0) {
