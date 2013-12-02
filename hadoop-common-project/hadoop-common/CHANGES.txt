@@ -161,6 +161,9 @@ Release 2.3.0 - UNRELEASED
     HADOOP-10107. Server.getNumOpenConnections may throw NPE. (Kihwal Lee via
     jing9)
 
+    HADOOP-10135 writes to swift fs over partition size leave temp files and
+    empty output file (David Dobbins via stevel)
+
 Release 2.2.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
