@@ -1,6 +1,6 @@
 Hadoop YARN Change Log
 
-Release 2.3.0 - UNRELEASED
+Release 2.4.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
@@ -170,7 +170,7 @@ Release 2.3.0 - UNRELEASED
     YARN-1416. Fixed a few invalid transitions in RMApp, RMAppAttempt and in some
     tests. (Jian He via vinodkv)
 
-Release 2.2.1 - UNRELEASED
+Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 

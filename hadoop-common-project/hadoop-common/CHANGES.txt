@@ -1,6 +1,6 @@
 Hadoop Change Log
 
-Release 2.3.0 - UNRELEASED
+Release 2.4.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
@@ -164,7 +164,7 @@ Release 2.3.0 - UNRELEASED
     HADOOP-10135 writes to swift fs over partition size leave temp files and
     empty output file (David Dobbins via stevel)
 
-Release 2.2.1 - UNRELEASED
+Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
