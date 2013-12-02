@@ -235,6 +235,8 @@ public class BlockInfoUnderConstruction extends BlockInfo {
    * @param genStamp  The final generation stamp for the block.
    */
   public void setGenerationStampAndVerifyReplicas(long genStamp) {
+    // Set the generation stamp for the block.
+    setGenerationStamp(genStamp);
     if (replicas == null)
       return;
 
@@ -244,12 +246,9 @@ public class BlockInfoUnderConstruction extends BlockInfo {
       if (genStamp != r.getGenerationStamp()) {
         r.getExpectedLocation().removeBlock(this);
         NameNode.blockStateChangeLog.info("BLOCK* Removing stale replica "
-            + "from location: " + r);
+            + "from location: " + r.getExpectedLocation());
       }
     }
-
-    // Set the generation stamp for the block.
-    setGenerationStamp(genStamp);
   }
 
   /**
@@ -264,6 +263,8 @@ public class BlockInfoUnderConstruction extends BlockInfo {
           + block.getBlockId() + ", expected id = " + getBlockId());
     blockUCState = BlockUCState.COMMITTED;
     this.set(getBlockId(), block.getNumBytes(), block.getGenerationStamp());
+    // Sort out invalid replicas.
+    setGenerationStampAndVerifyReplicas(block.getGenerationStamp());
   }
 
   /**

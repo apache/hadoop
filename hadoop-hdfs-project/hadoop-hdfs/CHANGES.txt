@@ -3695,6 +3695,9 @@ Release 0.23.10 - UNRELEASED
 
     HDFS-5526. Datanode cannot roll back to previous layout version (kihwal)
 
+    HDFS-5557. Write pipeline recovery for the last packet in the block may
+    cause rejection of valid replicas. (kihwal)
+
 Release 0.23.9 - 2013-07-08
 
   INCOMPATIBLE CHANGES

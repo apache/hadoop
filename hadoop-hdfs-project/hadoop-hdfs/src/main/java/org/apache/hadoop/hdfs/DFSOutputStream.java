@@ -840,7 +840,6 @@ public class DFSOutputStream extends FSOutputSummer
           // We also need to set lastAckedSeqno to the end-of-block Packet's seqno, so that
           // a client waiting on close() will be aware that the flush finished.
           synchronized (dataQueue) {
-            assert dataQueue.size() == 1;
             Packet endOfBlockPacket = dataQueue.remove();  // remove the end of block packet
             assert endOfBlockPacket.lastPacketInBlock;
             assert lastAckedSeqno == endOfBlockPacket.seqno - 1;
@@ -1044,7 +1043,7 @@ public class DFSOutputStream extends FSOutputSummer
         
         // set up the pipeline again with the remaining nodes
         if (failPacket) { // for testing
-          success = createBlockOutputStream(nodes, newGS-1, isRecovery);
+          success = createBlockOutputStream(nodes, newGS, isRecovery);
           failPacket = false;
           try {
             // Give DNs time to send in bad reports. In real situations,
