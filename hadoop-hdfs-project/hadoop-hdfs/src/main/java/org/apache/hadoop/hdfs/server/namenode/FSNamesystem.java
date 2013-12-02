@@ -1529,15 +1529,15 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
       INodeFileUnderConstruction pendingFile  = checkLease(src, clientName);
 
-      // commit the last block and complete it if it has minimum replicas
-      commitOrCompleteLastBlock(pendingFile, ExtendedBlock.getLocalBlock(previous));
-
-      //
-      // If we fail this, bad things happen!
-      //
+      // Make sure the penultimate block is complete before completing 
+      // the last block and adding another block
       if (!checkFileProgress(pendingFile, false)) {
         throw new NotReplicatedYetException("Not replicated yet:" + src);
       }
+
+      // commit the last block and complete it if it has minimum replicas
+      commitOrCompleteLastBlock(pendingFile, ExtendedBlock.getLocalBlock(previous));
+
       fileLength = pendingFile.computeContentSummary().getLength();
       blockSize = pendingFile.getPreferredBlockSize();
       clientNode = pendingFile.getClientNode();
@@ -1728,6 +1728,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
 
     INodeFileUnderConstruction pendingFile = checkLease(src, holder);
+     // Check the state of the penultimate block. It should be completed
+     // before attempting to complete the last one.
+     if (!checkFileProgress(pendingFile, false)) {
+       return false;
+     }
     // commit the last block and complete it if it has minimum replicas
     commitOrCompleteLastBlock(pendingFile, last);
 
@@ -1806,7 +1811,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         //
         BlockInfo b = v.getPenultimateBlock();
         if (b != null && !b.isComplete()) {
-          LOG.info("BLOCK* NameSystem.checkFileProgress: "
+          LOG.warn("BLOCK* NameSystem.checkFileProgress: "
               + "block " + b + " has not reached minimal replication "
               + blockManager.minReplication);
           return false;
