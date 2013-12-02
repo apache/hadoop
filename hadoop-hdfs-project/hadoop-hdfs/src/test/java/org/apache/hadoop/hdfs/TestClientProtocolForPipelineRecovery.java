@@ -139,16 +139,10 @@ public class TestClientProtocolForPipelineRecovery {
 
       Path file = new Path("dataprotocol1.dat");
       Mockito.when(faultInjector.failPacket()).thenReturn(true);
-      try {
-        DFSTestUtil.createFile(fileSys, file, 1L, (short)numDataNodes, 0L);
-      } catch (IOException e) {
-        // completeFile() should fail.
-        Assert.assertTrue(e.getMessage().startsWith("Unable to close file"));
-        return;
-      }
+      DFSTestUtil.createFile(fileSys, file, 68000000L, (short)numDataNodes, 0L);
 
-      // At this point, NN let data corruption to happen. 
-      // Before failing test, try reading the file. It should fail.
+      // At this point, NN should have accepted only valid replicas.
+      // Read should succeed.
       FSDataInputStream in = fileSys.open(file);
       try {
         int c = in.read();
@@ -158,8 +152,6 @@ public class TestClientProtocolForPipelineRecovery {
         Assert.fail("Block is missing because the file was closed with"
             + " corrupt replicas.");
       }
-      Assert.fail("The file was closed with corrupt replicas, but read still"
-          + " works!");
     } finally {
       DFSClientFaultInjector.instance = oldInjector;
       if (cluster != null) {
