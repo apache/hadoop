@@ -32,9 +32,9 @@ public class RMHAServiceTarget extends HAServiceTarget {
   public RMHAServiceTarget(YarnConfiguration conf)
       throws IOException {
     haAdminServiceAddress = conf.getSocketAddr(
-        YarnConfiguration.RM_HA_ADMIN_ADDRESS,
-        YarnConfiguration.DEFAULT_RM_HA_ADMIN_ADDRESS,
-        YarnConfiguration.DEFAULT_RM_HA_ADMIN_PORT);
+        YarnConfiguration.RM_ADMIN_ADDRESS,
+        YarnConfiguration.DEFAULT_RM_ADMIN_ADDRESS,
+        YarnConfiguration.DEFAULT_RM_ADMIN_PORT);
   }
 
   @Override

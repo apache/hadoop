@@ -111,6 +111,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1241. In Fair Scheduler, maxRunningApps does not work for non-leaf
     queues. (Sandy Ryza)
 
+    YARN-1318. Promoted AdminService to an Always-On service and merged it into
+    RMHAProtocolService. (Karthik Kambatla via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES

@@ -179,12 +179,13 @@ public class TestRMAppTransitions {
     AMLivelinessMonitor amFinishingMonitor = mock(AMLivelinessMonitor.class);
     store = mock(RMStateStore.class);
     this.rmContext =
-        new RMContextImpl(rmDispatcher, store,
+        new RMContextImpl(rmDispatcher,
           containerAllocationExpirer, amLivelinessMonitor, amFinishingMonitor,
           null, new AMRMTokenSecretManager(conf),
           new RMContainerTokenSecretManager(conf),
           new NMTokenSecretManagerInRM(conf),
           new ClientToAMTokenSecretManagerInRM());
+    ((RMContextImpl)rmContext).setStateStore(store);
 
     rmDispatcher.register(RMAppAttemptEventType.class,
         new TestApplicationAttemptEventDispatcher(this.rmContext));

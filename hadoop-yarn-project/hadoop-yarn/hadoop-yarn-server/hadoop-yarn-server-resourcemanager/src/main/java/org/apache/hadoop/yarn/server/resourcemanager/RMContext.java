@@ -28,6 +28,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.AMRMTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer;
@@ -64,12 +65,22 @@ public interface RMContext {
   
   NMTokenSecretManagerInRM getNMTokenSecretManager();
 
+  ResourceScheduler getScheduler();
+
+  NodesListManager getNodesListManager();
+
   ClientToAMTokenSecretManagerInRM getClientToAMTokenSecretManager();
-  
-  void setClientRMService(ClientRMService clientRMService);
-  
+
+  AdminService getRMAdminService();
+
   ClientRMService getClientRMService();
-  
+
+  ApplicationMasterService getApplicationMasterService();
+
+  ResourceTrackerService getResourceTrackerService();
+
+  void setClientRMService(ClientRMService clientRMService);
+
   RMDelegationTokenSecretManager getRMDelegationTokenSecretManager();
 
   void setRMDelegationTokenSecretManager(
