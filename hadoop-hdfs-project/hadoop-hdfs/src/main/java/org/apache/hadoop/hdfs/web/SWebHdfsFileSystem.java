@@ -17,10 +17,6 @@
  */
 package org.apache.hadoop.hdfs.web;
 
-import java.io.IOException;
-import java.security.GeneralSecurityException;
-
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.io.Text;
 
@@ -42,20 +38,6 @@ public class SWebHdfsFileSystem extends WebHdfsFileSystem {
   @Override
   protected synchronized void initializeTokenAspect() {
     tokenAspect = new TokenAspect<WebHdfsFileSystem>(this, TOKEN_KIND);
-  }
-
-  @Override
-  protected void initializeConnectionFactory(Configuration conf)
-      throws IOException {
-    connectionFactory = new URLConnectionFactory(
-        URLConnectionFactory.DEFAULT_SOCKET_TIMEOUT);
-    try {
-      connectionFactory.setConnConfigurator(URLConnectionFactory
-          .newSslConnConfigurator(URLConnectionFactory.DEFAULT_SOCKET_TIMEOUT,
-              conf));
-    } catch (GeneralSecurityException e) {
-      throw new IOException(e);
-    }
   }
 
   @Override

@@ -22,19 +22,14 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
-import java.net.URL;
-import java.net.URLConnection;
 import java.net.UnknownHostException;
-import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.ServiceLoader;
-import java.util.Set;
 
-import javax.security.auth.Subject;
 import javax.security.auth.kerberos.KerberosPrincipal;
 import javax.security.auth.kerberos.KerberosTicket;
 
@@ -44,21 +39,18 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
-import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
-import org.apache.hadoop.security.authentication.client.AuthenticationException;
-import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenInfo;
 
-import com.google.common.annotations.VisibleForTesting;
 
 //this will need to be replaced someday when there is a suitable replacement
 import sun.net.dns.ResolverConfiguration;
 import sun.net.util.IPAddressUtil;
+
+import com.google.common.annotations.VisibleForTesting;
 
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
@@ -73,24 +65,14 @@ public class SecurityUtil {
   @VisibleForTesting
   static HostResolver hostResolver;
 
-  private static SSLFactory sslFactory;
-
   static {
     Configuration conf = new Configuration();
     boolean useIp = conf.getBoolean(
-      CommonConfigurationKeys.HADOOP_SECURITY_TOKEN_SERVICE_USE_IP,
-      CommonConfigurationKeys.HADOOP_SECURITY_TOKEN_SERVICE_USE_IP_DEFAULT);
+        CommonConfigurationKeys.HADOOP_SECURITY_TOKEN_SERVICE_USE_IP,
+        CommonConfigurationKeys.HADOOP_SECURITY_TOKEN_SERVICE_USE_IP_DEFAULT);
     setTokenServiceUseIp(useIp);
-    if (HttpConfig.isSecure()) {
-      sslFactory = new SSLFactory(SSLFactory.Mode.CLIENT, conf);
-      try {
-        sslFactory.init();
-      } catch (Exception ex) {
-        throw new RuntimeException(ex);
-      }
-    }
   }
-  
+
   /**
    * For use only by tests and initialization
    */
@@ -100,29 +82,6 @@ public class SecurityUtil {
     hostResolver = !useIpForTokenService
         ? new QualifiedHostResolver()
         : new StandardHostResolver();
-  }
-  
-  /**
-   * Find the original TGT within the current subject's credentials. Cross-realm
-   * TGT's of the form "krbtgt/TWO.COM@ONE.COM" may be present.
-   * 
-   * @return The TGT from the current subject
-   * @throws IOException
-   *           if TGT can't be found
-   */
-  private static KerberosTicket getTgtFromSubject() throws IOException {
-    Subject current = Subject.getSubject(AccessController.getContext());
-    if (current == null) {
-      throw new IOException(
-          "Can't get TGT from current Subject, because it is null");
-    }
-    Set<KerberosTicket> tickets = current
-        .getPrivateCredentials(KerberosTicket.class);
-    for (KerberosTicket t : tickets) {
-      if (isOriginalTGT(t))
-        return t;
-    }
-    throw new IOException("Failed to find TGT from current Subject:"+current);
   }
   
   /**
@@ -489,30 +448,6 @@ public class SecurityUtil {
       return ugi.doAs(action);
     } catch (InterruptedException ie) {
       throw new IOException(ie);
-    }
-  }
-
-  /**
-   * Open a (if need be) secure connection to a URL in a secure environment
-   * that is using SPNEGO to authenticate its URLs. All Namenode and Secondary
-   * Namenode URLs that are protected via SPNEGO should be accessed via this
-   * method.
-   *
-   * @param url to authenticate via SPNEGO.
-   * @return A connection that has been authenticated via SPNEGO
-   * @throws IOException If unable to authenticate via SPNEGO
-   */
-  public static URLConnection openSecureHttpConnection(URL url) throws IOException {
-    if (!HttpConfig.isSecure() && !UserGroupInformation.isSecurityEnabled()) {
-      return url.openConnection();
-    }
-
-    AuthenticatedURL.Token token = new AuthenticatedURL.Token();
-    try {
-      return new AuthenticatedURL(null, sslFactory).openConnection(url, token);
-    } catch (AuthenticationException e) {
-      throw new IOException("Exception trying to open authenticated connection to "
-              + url, e);
     }
   }
 

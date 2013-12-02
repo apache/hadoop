@@ -89,6 +89,11 @@ public interface FSDatasetMBean {
   public long getCacheCapacity();
 
   /**
+   * Returns the number of blocks cached.
+   */
+  public long getNumBlocksCached();
+
+  /**
    * Returns the number of blocks that the datanode was unable to cache
    */
   public long getNumBlocksFailedToCache();

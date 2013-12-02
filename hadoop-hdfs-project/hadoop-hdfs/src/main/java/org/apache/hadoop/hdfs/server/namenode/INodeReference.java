@@ -26,8 +26,8 @@ import java.util.List;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 
 import com.google.common.base.Preconditions;
@@ -102,8 +102,8 @@ public abstract class INodeReference extends INode {
     }
     if (wn != null) {
       INode referred = wc.getReferredINode();
-      if (referred instanceof FileWithSnapshot) {
-        return ((FileWithSnapshot) referred).getDiffs().getPrior(
+      if (referred instanceof INodeFileWithSnapshot) {
+        return ((INodeFileWithSnapshot) referred).getDiffs().getPrior(
             wn.lastSnapshotId);
       } else if (referred instanceof INodeDirectoryWithSnapshot) { 
         return ((INodeDirectoryWithSnapshot) referred).getDiffs().getPrior(
@@ -547,8 +547,8 @@ public abstract class INodeReference extends INode {
     private Snapshot getSelfSnapshot() {
       INode referred = getReferredINode().asReference().getReferredINode();
       Snapshot snapshot = null;
-      if (referred instanceof FileWithSnapshot) {
-        snapshot = ((FileWithSnapshot) referred).getDiffs().getPrior(
+      if (referred instanceof INodeFileWithSnapshot) {
+        snapshot = ((INodeFileWithSnapshot) referred).getDiffs().getPrior(
             lastSnapshotId);
       } else if (referred instanceof INodeDirectoryWithSnapshot) {
         snapshot = ((INodeDirectoryWithSnapshot) referred).getDiffs().getPrior(
@@ -637,10 +637,10 @@ public abstract class INodeReference extends INode {
         Snapshot snapshot = getSelfSnapshot(prior);
         
         INode referred = getReferredINode().asReference().getReferredINode();
-        if (referred instanceof FileWithSnapshot) {
+        if (referred instanceof INodeFileWithSnapshot) {
           // if referred is a file, it must be a FileWithSnapshot since we did
           // recordModification before the rename
-          FileWithSnapshot sfile = (FileWithSnapshot) referred;
+          INodeFileWithSnapshot sfile = (INodeFileWithSnapshot) referred;
           // make sure we mark the file as deleted
           sfile.deleteCurrentFile();
           try {
@@ -671,8 +671,8 @@ public abstract class INodeReference extends INode {
       WithCount wc = (WithCount) getReferredINode().asReference();
       INode referred = wc.getReferredINode();
       Snapshot lastSnapshot = null;
-      if (referred instanceof FileWithSnapshot) {
-        lastSnapshot = ((FileWithSnapshot) referred).getDiffs()
+      if (referred instanceof INodeFileWithSnapshot) {
+        lastSnapshot = ((INodeFileWithSnapshot) referred).getDiffs()
             .getLastSnapshot(); 
       } else if (referred instanceof INodeDirectoryWithSnapshot) {
         lastSnapshot = ((INodeDirectoryWithSnapshot) referred)

@@ -72,6 +72,18 @@ public class TestSwiftObjectPath implements SwiftTestConstants {
   }
 
   @Test(timeout = SWIFT_TEST_TIMEOUT)
+  public void testHandleUrlAsPath() throws Exception {
+    final String hostPart = "swift://container.service1";
+    final String pathPart = "/home/user/files/file1";
+    final String uriString = hostPart + pathPart;
+
+    final SwiftObjectPath expected = new SwiftObjectPath(uriString, pathPart);
+    final SwiftObjectPath actual = new SwiftObjectPath(uriString, uriString);
+
+    assertEquals(expected, actual);
+  }
+
+  @Test(timeout = SWIFT_TEST_TIMEOUT)
   public void testParseAuthenticatedUrl() throws Exception {
     final String pathString = "swift://container.service1/v2/AUTH_00345h34l93459y4/home/tom/documents/finance.docx";
     final URI uri = new URI(pathString);

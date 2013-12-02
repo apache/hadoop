@@ -335,7 +335,7 @@ class NamenodeJspHelper {
         } else if (openForWrite) {
           EditLogOutputStream elos = jas.getCurrentStream();
           if (elos != null) {
-            out.println(elos.generateHtmlReport());
+            out.println(elos.generateReport());
           } else {
             out.println("not currently writing");
           }

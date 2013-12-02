@@ -37,7 +37,6 @@ import org.apache.hadoop.hdfs.server.namenode.FSImageSerialization;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectoryAttributes;
-import org.apache.hadoop.hdfs.server.namenode.INodeDirectoryWithQuota;
 import org.apache.hadoop.hdfs.server.namenode.INodeMap;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference;
 import org.apache.hadoop.hdfs.server.namenode.Quota;
@@ -55,7 +54,7 @@ import com.google.common.base.Preconditions;
  * storing snapshot data. When there are modifications to the directory, the old
  * data is stored in the latest snapshot, if there is any.
  */
-public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
+public class INodeDirectoryWithSnapshot extends INodeDirectory {
   /**
    * The difference between the current state and a previous snapshot
    * of the children list of an INodeDirectory.
@@ -185,14 +184,10 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
         INode dnode = deleted.get(d);
         if (cnode.compareTo(dnode.getLocalNameBytes()) == 0) {
           fullPath[fullPath.length - 1] = cnode.getLocalNameBytes();
-          if (cnode.isSymlink() && dnode.isSymlink()) {
-            dList.add(new DiffReportEntry(DiffType.MODIFY, fullPath));
-          } else {
-            // must be the case: delete first and then create an inode with the
-            // same name
-            cList.add(new DiffReportEntry(DiffType.CREATE, fullPath));
-            dList.add(new DiffReportEntry(DiffType.DELETE, fullPath));
-          }
+          // must be the case: delete first and then create an inode with the
+          // same name
+          cList.add(new DiffReportEntry(DiffType.CREATE, fullPath));
+          dList.add(new DiffReportEntry(DiffType.DELETE, fullPath));
           c++;
           d++;
         } else if (cnode.compareTo(dnode.getLocalNameBytes()) < 0) {
@@ -490,7 +485,7 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
 
   INodeDirectoryWithSnapshot(INodeDirectory that, boolean adopt,
       DirectoryDiffList diffs) {
-    super(that, adopt, that.getQuotaCounts());
+    super(that, adopt, true);
     this.diffs = diffs != null? diffs: new DirectoryDiffList();
   }
 
@@ -775,8 +770,8 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
         removedINodes, priorDeleted, countDiffChange));
     
     if (isQuotaSet()) {
-      this.addSpaceConsumed2Cache(-counts.get(Quota.NAMESPACE),
-          -counts.get(Quota.DISKSPACE));
+      getDirectoryWithQuotaFeature().addSpaceConsumed2Cache(
+          -counts.get(Quota.NAMESPACE), -counts.get(Quota.DISKSPACE));
     }
     return counts;
   }
@@ -809,10 +804,10 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
         // For DstReference node, since the node is not in the created list of
         // prior, we should treat it as regular file/dir
       } else if (topNode.isFile()
-          && topNode.asFile() instanceof FileWithSnapshot) {
-        FileWithSnapshot fs = (FileWithSnapshot) topNode.asFile();
-        counts.add(fs.getDiffs().deleteSnapshotDiff(post, prior,
-            topNode.asFile(), collectedBlocks, removedINodes, countDiffChange));
+          && topNode.asFile() instanceof INodeFileWithSnapshot) {
+        INodeFileWithSnapshot fs = (INodeFileWithSnapshot) topNode.asFile();
+        counts.add(fs.getDiffs().deleteSnapshotDiff(post, prior, fs,
+            collectedBlocks, removedINodes, countDiffChange));
       } else if (topNode.isDirectory()) {
         INodeDirectory dir = topNode.asDirectory();
         ChildrenDiff priorChildrenDiff = null;

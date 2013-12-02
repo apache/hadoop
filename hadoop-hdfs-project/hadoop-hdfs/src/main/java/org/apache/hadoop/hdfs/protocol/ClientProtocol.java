@@ -1179,6 +1179,6 @@ public interface ClientProtocol {
    * @return A RemoteIterator which returns CachePool objects.
    */
   @Idempotent
-  public RemoteIterator<CachePoolInfo> listCachePools(String prevPool)
+  public RemoteIterator<CachePoolEntry> listCachePools(String prevPool)
       throws IOException;
 }

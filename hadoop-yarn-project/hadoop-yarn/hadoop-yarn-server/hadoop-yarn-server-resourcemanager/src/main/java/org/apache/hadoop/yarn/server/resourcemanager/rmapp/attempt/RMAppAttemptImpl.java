@@ -334,6 +334,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
             // Saving in scheduler
               RMAppAttemptEventType.CONTAINER_ALLOCATED,
               RMAppAttemptEventType.CONTAINER_ACQUIRED,
+              RMAppAttemptEventType.ATTEMPT_NEW_SAVED,
               RMAppAttemptEventType.KILL))
 
       // Transitions from FAILED State

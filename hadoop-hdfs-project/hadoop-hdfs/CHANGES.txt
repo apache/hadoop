@@ -212,6 +212,22 @@ Trunk (Unreleased)
     and INodeFileUnderConstructionWithSnapshot with FileUnderContructionFeature.
     (jing9 via szetszwo)
 
+    HDFS-5538. URLConnectionFactory should pick up the SSL related configuration 
+    by default. (Haohui Mai via jing9)
+
+    HDFS-5286. Flatten INodeDirectory hierarchy: Replace INodeDirectoryWithQuota
+    with DirectoryWithQuotaFeature.  (szetszwo)
+
+    HDFS-5556. Add some more NameNode cache statistics, cache pool stats
+    (cmccabe)
+
+    HDFS-5545. Allow specifying endpoints for listeners in HttpServer. (Haohui
+    Mai via jing9)
+
+    HDFS-5537. Remove FileWithSnapshot interface.  (jing9 via szetszwo)
+
+    HDFS-5430. Support TTL on CacheDirectives. (wang)
+
   OPTIMIZATIONS
     HDFS-5349. DNA_CACHE and DNA_UNCACHE should be by blockId only. (cmccabe)
 
@@ -399,6 +415,12 @@ Trunk (Unreleased)
     HDFS-5543. Fix narrow race condition in TestPathBasedCacheRequests
     (cmccabe)
 
+    HDFS-5565. CacheAdmin help should match against non-dashed commands
+    (wang via cmccabe)
+
+    HDFS-5562. TestCacheDirectives and TestFsDatasetCache should stub out
+    native mlock. (Colin McCabe and Akira Ajisaka via wang)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -536,6 +558,12 @@ Release 2.3.0 - UNRELEASED
     
     HDFS-5525. Inline dust templates for new Web UI. (Haohui Mai via jing9)
 
+    HDFS-5561. FSNameSystem#getNameJournalStatus() in JMX should return plain 
+    text instead of HTML. (Haohui Mai via jing9)
+
+    HDFS-5581. NameNodeFsck should use only one instance of
+    BlockPlacementPolicy. (vinay via cmccabe)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn)
@@ -612,6 +640,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-5552. Fix wrong information of "Cluster summay" in dfshealth.html.
     (Haohui Mai via jing9)
 
+    HDFS-5533. Symlink delete/create should be treated as DELETE/CREATE in snapshot diff 
+    report. (Binglin Chang via jing9)
+
 Release 2.2.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -633,6 +664,8 @@ Release 2.2.1 - UNRELEASED
     HDFS-5344. Make LsSnapshottableDir as Tool interface implementation. (Sathish via umamahesh)
 
     HDFS-5544. Adding Test case For Checking dfs.checksum type as NULL value. (Sathish via umamahesh)
+
+    HDFS-5568. Support includeSnapshots option with Fsck command. (Vinayakumar B via umamahesh)
 
   OPTIMIZATIONS
 
@@ -726,6 +759,13 @@ Release 2.2.1 - UNRELEASED
     HDFS-5288. Close idle connections in portmap (Haohui Mai via brandonli)
 
     HDFS-5407. Fix typos in DFSClientCache (Haohui Mai via brandonli)
+
+    HDFS-5548. Use ConcurrentHashMap in portmap (Haohui Mai via brandonli)
+
+    HDFS-5577. NFS user guide update (brandonli)
+
+    HDFS-5563. NFS gateway should commit the buffered data when read request comes
+    after write to the same file (brandonli)
 
 Release 2.2.0 - 2013-10-13
 
@@ -4017,6 +4057,8 @@ Release 0.23.10 - UNRELEASED
 
     HDFS-4329. DFSShell issues with directories with spaces in name (Cristina
     L. Abad via jeagles)
+
+    HDFS-5526. Datanode cannot roll back to previous layout version (kihwal)
 
 Release 0.23.9 - 2013-07-08
 

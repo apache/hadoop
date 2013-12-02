@@ -23,6 +23,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_JOURNALNODE_INTERNAL_SPNE
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
 
 import javax.servlet.ServletContext;
 
@@ -69,8 +71,15 @@ public class JournalNodeHttpServer {
         bindAddr.getHostName()));
 
     int tmpInfoPort = bindAddr.getPort();
+    URI httpEndpoint;
+    try {
+      httpEndpoint = new URI("http://" + NetUtils.getHostPortString(bindAddr));
+    } catch (URISyntaxException e) {
+      throw new IOException(e);
+    }
+
     httpServer = new HttpServer.Builder().setName("journal")
-        .setBindAddress(bindAddr.getHostName()).setPort(tmpInfoPort)
+        .addEndpoint(httpEndpoint)
         .setFindPort(tmpInfoPort == 0).setConf(conf).setACL(
             new AccessControlList(conf.get(DFS_ADMIN, " ")))
         .setSecurityEnabled(UserGroupInformation.isSecurityEnabled())
@@ -85,7 +94,7 @@ public class JournalNodeHttpServer {
     httpServer.start();
 
     // The web-server port can be ephemeral... ensure we have the correct info
-    infoPort = httpServer.getPort();
+    infoPort = httpServer.getConnectorAddress(0).getPort();
 
     LOG.info("Journal Web-server up at: " + bindAddr + ":" + infoPort);
   }
@@ -104,7 +113,7 @@ public class JournalNodeHttpServer {
    * Return the actual address bound to by the running server.
    */
   public InetSocketAddress getAddress() {
-    InetSocketAddress addr = httpServer.getListenerAddress();
+    InetSocketAddress addr = httpServer.getConnectorAddress(0);
     assert addr.getPort() != 0;
     return addr;
   }

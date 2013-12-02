@@ -103,12 +103,13 @@ public class TestJobEndNotifier extends TestCase {
     new File(System.getProperty("build.webapps", "build/webapps") + "/test"
         ).mkdirs();
     server = new HttpServer.Builder().setName("test")
-        .setBindAddress("0.0.0.0").setPort(0).setFindPort(true).build();
+        .addEndpoint(URI.create("http://localhost:0"))
+        .setFindPort(true).build();
     server.addServlet("delay", "/delay", DelayServlet.class);
     server.addServlet("jobend", "/jobend", JobEndServlet.class);
     server.addServlet("fail", "/fail", FailServlet.class);
     server.start();
-    int port = server.getPort();
+    int port = server.getConnectorAddress(0).getPort();
     baseUrl = new URL("http://localhost:" + port + "/");
 
     JobEndServlet.calledTimes = 0;

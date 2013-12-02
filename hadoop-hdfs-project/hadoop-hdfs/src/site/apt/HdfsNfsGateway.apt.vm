@@ -53,11 +53,12 @@ HDFS NFS Gateway
    * If the client mounts the export with access time update allowed, make sure the following 
     property is not disabled in the configuration file. Only NameNode needs to restart after 
     this property is changed. On some Unix systems, the user can disable access time update
-    by mounting the export with "noatime".
+    by mounting the export with "noatime". If the export is mounted with "noatime", the user 
+    doesn't need to change the following property and thus no need to restart namenode.
 
 ----
 <property>
-  <name>dfs.access.time.precision</name>
+  <name>dfs.namenode.accesstime.precision</name>
   <value>3600000</value>
   <description>The access time for HDFS file is precise upto this value. 
     The default value is 1 hour. Setting a value of 0 disables

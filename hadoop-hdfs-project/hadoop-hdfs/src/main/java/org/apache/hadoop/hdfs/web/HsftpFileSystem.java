@@ -19,7 +19,6 @@
 package org.apache.hadoop.hdfs.web;
 
 import java.io.IOException;
-import java.security.GeneralSecurityException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -61,18 +60,8 @@ public class HsftpFileSystem extends HftpFileSystem {
   }
 
   @Override
-  protected void initConnectionFactoryAndTokenAspect(Configuration conf) throws IOException {
+  protected void initTokenAspect(Configuration conf) throws IOException {
     tokenAspect = new TokenAspect<HftpFileSystem>(this, TOKEN_KIND);
-
-    connectionFactory = new URLConnectionFactory(
-        URLConnectionFactory.DEFAULT_SOCKET_TIMEOUT);
-    try {
-      connectionFactory.setConnConfigurator(URLConnectionFactory
-          .newSslConnConfigurator(URLConnectionFactory.DEFAULT_SOCKET_TIMEOUT,
-              conf));
-    } catch (GeneralSecurityException e) {
-      throw new IOException(e);
-    }
   }
 
   @Override

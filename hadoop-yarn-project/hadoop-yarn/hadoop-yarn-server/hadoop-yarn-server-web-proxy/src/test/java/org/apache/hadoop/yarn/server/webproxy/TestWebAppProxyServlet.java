@@ -29,6 +29,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpCookie;
 import java.net.HttpURLConnection;
+import java.net.URI;
 import java.net.URL;
 import java.util.List;
 import java.util.Map;
@@ -126,7 +127,7 @@ public class TestWebAppProxyServlet {
     proxy.init(configuration);
     proxy.start();
     
-    int proxyPort = proxy.proxy.proxyServer.getPort();
+    int proxyPort = proxy.proxy.proxyServer.getConnectorAddress(0).getPort();
     AppReportFetcherForTest appReportFetcher = proxy.proxy.appReportFetcher;
 
     // wrong url
@@ -285,8 +286,7 @@ public class TestWebAppProxyServlet {
             YarnConfiguration.DEFAULT_YARN_ADMIN_ACL));
         proxyServer = new HttpServer.Builder()
             .setName("proxy")
-            .setBindAddress(bindAddress)
-            .setPort(0)
+            .addEndpoint(URI.create("http://" + bindAddress + ":0"))
             .setFindPort(true)
             .setConf(conf)
             .setACL(acl)
@@ -306,7 +306,7 @@ public class TestWebAppProxyServlet {
         proxyServer.setAttribute(PROXY_HOST_ATTRIBUTE, proxyHost);
         proxyServer.start();
         System.out.println("Proxy server is started at port " + 
-            proxyServer.getPort());
+            proxyServer.getConnectorAddress(0).getPort());
       } catch (Exception e) {
         LOG.fatal("Could not start proxy web server", e);
         throw new YarnRuntimeException("Could not start proxy web server", e);

@@ -58,6 +58,7 @@ import org.apache.hadoop.hdfs.client.HdfsAdmin;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
+import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
@@ -1713,12 +1714,12 @@ public class DistributedFileSystem extends FileSystem {
   /**
    * List all cache pools.
    *
-   * @return A remote iterator from which you can get CachePoolInfo objects.
+   * @return A remote iterator from which you can get CachePoolEntry objects.
    *          Requests will be made as needed.
    * @throws IOException
    *          If there was an error listing cache pools.
    */
-  public RemoteIterator<CachePoolInfo> listCachePools() throws IOException {
+  public RemoteIterator<CachePoolEntry> listCachePools() throws IOException {
     return dfs.listCachePools();
   }
 }

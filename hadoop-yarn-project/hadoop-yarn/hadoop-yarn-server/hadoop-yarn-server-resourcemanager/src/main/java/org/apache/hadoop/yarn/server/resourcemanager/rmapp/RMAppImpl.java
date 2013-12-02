@@ -130,7 +130,7 @@ public class RMAppImpl implements RMApp, Recoverable {
     .addTransition(RMAppState.NEW, RMAppState.NEW,
         RMAppEventType.NODE_UPDATE, new RMAppNodeUpdateTransition())
     .addTransition(RMAppState.NEW, RMAppState.NEW_SAVING,
-        RMAppEventType.START, new RMAppSavingTransition())
+        RMAppEventType.START, new RMAppNewlySavingTransition())
     .addTransition(RMAppState.NEW, EnumSet.of(RMAppState.SUBMITTED,
             RMAppState.RUNNING, RMAppState.FINISHED, RMAppState.FAILED,
             RMAppState.KILLED, RMAppState.FINAL_SAVING),
@@ -215,7 +215,8 @@ public class RMAppImpl implements RMApp, Recoverable {
         new AttemptFinishedAtFinalSavingTransition())
     // ignorable transitions
     .addTransition(RMAppState.FINAL_SAVING, RMAppState.FINAL_SAVING,
-        EnumSet.of(RMAppEventType.NODE_UPDATE, RMAppEventType.KILL))
+        EnumSet.of(RMAppEventType.NODE_UPDATE, RMAppEventType.KILL,
+          RMAppEventType.APP_NEW_SAVED))
 
      // Transitions from FINISHING state
     .addTransition(RMAppState.FINISHING, RMAppState.FINISHED,
@@ -760,7 +761,7 @@ public class RMAppImpl implements RMApp, Recoverable {
     return msg;
   }
 
-  private static final class RMAppSavingTransition extends RMAppTransition {
+  private static final class RMAppNewlySavingTransition extends RMAppTransition {
     @Override
     public void transition(RMAppImpl app, RMAppEvent event) {
 

@@ -26,9 +26,13 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.protocol.CacheDirective;
+import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
+import org.apache.hadoop.hdfs.protocol.CachePoolStats;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.IntrusiveCollection;
 
 import com.google.common.base.Preconditions;
 
@@ -68,6 +72,22 @@ public final class CachePool {
   private FsPermission mode;
   
   private int weight;
+
+  public final static class DirectiveList
+      extends IntrusiveCollection<CacheDirective> {
+    private CachePool cachePool;
+
+    private DirectiveList(CachePool cachePool) {
+      this.cachePool = cachePool;
+    }
+
+    public CachePool getCachePool() {
+      return cachePool;
+    }
+  }
+
+  @Nonnull
+  private final DirectiveList directiveList = new DirectiveList(this);
 
   /**
    * Create a new cache pool based on a CachePoolInfo object and the defaults.
@@ -171,7 +191,7 @@ public final class CachePool {
    * @return
    *          Cache pool information.
    */
-  private CachePoolInfo getInfo(boolean fullInfo) {
+  CachePoolInfo getInfo(boolean fullInfo) {
     CachePoolInfo info = new CachePoolInfo(poolName);
     if (!fullInfo) {
       return info;
@@ -183,15 +203,28 @@ public final class CachePool {
   }
 
   /**
+   * Get statistics about this CachePool.
+   *
+   * @return   Cache pool statistics.
+   */
+  private CachePoolStats getStats() {
+    return new CachePoolStats.Builder().
+        setBytesNeeded(0).
+        setBytesCached(0).
+        setFilesAffected(0).
+        build();
+  }
+
+  /**
    * Returns a CachePoolInfo describing this CachePool based on the permissions
    * of the calling user. Unprivileged users will see only minimal descriptive
    * information about the pool.
    * 
    * @param pc Permission checker to be used to validate the user's permissions,
    *          or null
-   * @return CachePoolInfo describing this CachePool
+   * @return CachePoolEntry describing this CachePool
    */
-  public CachePoolInfo getInfo(FSPermissionChecker pc) {
+  public CachePoolEntry getEntry(FSPermissionChecker pc) {
     boolean hasPermission = true;
     if (pc != null) {
       try {
@@ -200,7 +233,8 @@ public final class CachePool {
         hasPermission = false;
       }
     }
-    return getInfo(hasPermission);
+    return new CachePoolEntry(getInfo(hasPermission), 
+        hasPermission ? getStats() : new CachePoolStats.Builder().build());
   }
 
   public String toString() {
@@ -211,5 +245,9 @@ public final class CachePool {
         append(", mode:").append(mode).
         append(", weight:").append(weight).
         append(" }").toString();
+  }
+
+  public DirectiveList getDirectiveList() {
+    return directiveList;
   }
 }

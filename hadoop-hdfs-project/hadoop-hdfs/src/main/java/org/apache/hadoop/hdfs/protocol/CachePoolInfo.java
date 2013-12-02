@@ -30,6 +30,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.InvalidRequestException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp;
@@ -150,7 +151,10 @@ public class CachePoolInfo {
 
   public static void validate(CachePoolInfo info) throws IOException {
     if (info == null) {
-      throw new IOException("CachePoolInfo is null");
+      throw new InvalidRequestException("CachePoolInfo is null");
+    }
+    if ((info.getWeight() != null) && (info.getWeight() < 0)) {
+      throw new InvalidRequestException("CachePool weight is negative.");
     }
     validateName(info.poolName);
   }

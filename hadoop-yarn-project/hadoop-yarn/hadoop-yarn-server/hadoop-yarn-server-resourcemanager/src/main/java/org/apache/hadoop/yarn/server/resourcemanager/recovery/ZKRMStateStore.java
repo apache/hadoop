@@ -33,7 +33,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.io.DataInputByteBuffer;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
@@ -41,16 +40,18 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ZKUtil;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.client.RMHAServiceTarget;
 import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.ApplicationAttemptStateDataProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.ApplicationStateDataProto;
+import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.RMStateVersionProto;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.RMStateVersion;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationAttemptStateDataPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationStateDataPBImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.RMStateVersionPBImpl;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
@@ -64,9 +65,9 @@ import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Id;
 import org.apache.zookeeper.data.Stat;
+import org.apache.zookeeper.server.auth.DigestAuthenticationProvider;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.zookeeper.server.auth.DigestAuthenticationProvider;
 
 @Private
 @Unstable
@@ -74,7 +75,9 @@ public class ZKRMStateStore extends RMStateStore {
 
   public static final Log LOG = LogFactory.getLog(ZKRMStateStore.class);
 
-  private static final String ROOT_ZNODE_NAME = "ZKRMStateRoot";
+  protected static final String ROOT_ZNODE_NAME = "ZKRMStateRoot";
+  protected static final RMStateVersion CURRENT_VERSION_INFO = RMStateVersion
+      .newInstance(1, 0);
   private int numRetries;
 
   private String zkHostPort = null;
@@ -299,6 +302,36 @@ public class ZKRMStateStore extends RMStateStore {
   @Override
   protected synchronized void closeInternal() throws Exception {
     closeZkClients();
+  }
+
+  @Override
+  protected RMStateVersion getCurrentVersion() {
+    return CURRENT_VERSION_INFO;
+  }
+
+  @Override
+  protected synchronized void storeVersion() throws Exception {
+    String versionNodePath = getNodePath(zkRootNodePath, VERSION_NODE);
+    byte[] data =
+        ((RMStateVersionPBImpl) CURRENT_VERSION_INFO).getProto().toByteArray();
+    if (zkClient.exists(versionNodePath, true) != null) {
+      setDataWithRetries(versionNodePath, data, -1);
+    } else {
+      createWithRetries(versionNodePath, data, zkAcl, CreateMode.PERSISTENT);
+    }
+  }
+
+  @Override
+  protected synchronized RMStateVersion loadVersion() throws Exception {
+    String versionNodePath = getNodePath(zkRootNodePath, VERSION_NODE);
+
+    if (zkClient.exists(versionNodePath, true) != null) {
+      byte[] data = getDataWithRetries(versionNodePath, true);
+      RMStateVersion version =
+          new RMStateVersionPBImpl(RMStateVersionProto.parseFrom(data));
+      return version;
+    }
+    return null;
   }
 
   @Override

@@ -23,6 +23,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -44,6 +45,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.MockApps;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -57,6 +59,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.event.InlineDispatcher;
+import org.apache.hadoop.yarn.security.client.ClientToAMTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
@@ -74,9 +77,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAt
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerAllocatedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerFinishedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptLaunchFailedEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptNewSavedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptRegistrationEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptRejectedEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptNewSavedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptUnregistrationEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptUpdateSavedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
@@ -1066,6 +1069,38 @@ public class TestRMAppAttemptTransitions {
     sendAttemptUpdateSavedEvent(applicationAttempt);
     testAppAttemptFinishedState(amContainer, finalStatus, trackingUrl,
       diagnostics, 0, false);
+  }
+
+  // this is to test user can get client tokens only after the client token
+  // master key is saved in the state store and also registered in
+  // ClientTokenSecretManager
+  @Test
+  public void testGetClientToken() throws Exception {
+    assumeTrue(isSecurityEnabled);
+    Container amContainer = allocateApplicationAttempt();
+
+    // before attempt is launched, can not get ClientToken
+    Token<ClientToAMTokenIdentifier> token =
+        applicationAttempt.createClientToken(null);
+    Assert.assertNull(token);
+    token = applicationAttempt.createClientToken("clientuser");
+    Assert.assertNull(token);
+
+    launchApplicationAttempt(amContainer);
+    // after attempt is launched , can get ClientToken
+    token = applicationAttempt.createClientToken(null);
+    Assert.assertNull(token);
+    token = applicationAttempt.createClientToken("clientuser");
+    Assert.assertNotNull(token);
+
+    applicationAttempt.handle(new RMAppAttemptEvent(applicationAttempt
+      .getAppAttemptId(), RMAppAttemptEventType.KILL));
+    sendAttemptUpdateSavedEvent(applicationAttempt);
+    // after attempt is killed, can not get Client Token
+    token = applicationAttempt.createClientToken(null);
+    Assert.assertNull(token);
+    token = applicationAttempt.createClientToken("clientuser");
+    Assert.assertNull(token);
   }
 
   private void verifyTokenCount(ApplicationAttemptId appAttemptId, int count) {

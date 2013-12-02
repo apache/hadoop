@@ -352,6 +352,11 @@
       <Method name="getReplication" />
       <Bug pattern="ICAST_QUESTIONABLE_UNSIGNED_RIGHT_SHIFT" />
     </Match>
+    <Match>
+      <Class name="org.apache.hadoop.hdfs.protocol.CacheDirective" />
+      <Method name="insertInternal" />
+      <Bug pattern="BC_UNCONFIRMED_CAST" />
+    </Match>
     <!-- These two are used for shutting down and kicking the CRMon, do not need strong sync -->
     <Match>
       <Class name="org.apache.hadoop.hdfs.server.blockmanagement.CacheReplicationMonitor" />

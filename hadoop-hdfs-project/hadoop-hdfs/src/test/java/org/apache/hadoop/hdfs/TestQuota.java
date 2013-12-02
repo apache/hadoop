@@ -368,10 +368,7 @@ public class TestQuota {
     // be identical.
     conf.setInt(DFSConfigKeys.DFS_CONTENT_SUMMARY_LIMIT_KEY, 2);
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
-    final FileSystem fs = cluster.getFileSystem();
-    assertTrue("Not a HDFS: "+fs.getUri(),
-                fs instanceof DistributedFileSystem);
-    final DistributedFileSystem dfs = (DistributedFileSystem)fs;
+    final DistributedFileSystem dfs = cluster.getFileSystem();
     
     try {
       // 1: create directory /nqdir0/qdir1/qdir20/nqdir30

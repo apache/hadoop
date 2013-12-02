@@ -117,6 +117,18 @@ Release 2.3.0 - UNRELEASED
     YARN-1303. Fixed DistributedShell to not fail with multiple commands separated
     by a semi-colon as shell-command. (Xuan Gong via vinodkv)
 
+    YARN-1423. Support queue placement by secondary group in the Fair Scheduler
+    (Ted Malaska via Sandy Ryza)
+
+    YARN-1314. Fixed DistributedShell to not fail with multiple arguments for a
+    shell command separated by spaces. (Xuan Gong via vinodkv)
+
+    YARN-1239. Modified ResourceManager state-store implementations to start
+    storing version numbers. (Jian He via vinodkv)
+
+    YARN-1241. In Fair Scheduler, maxRunningApps does not work for non-leaf
+    queues. (Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -172,6 +184,9 @@ Release 2.3.0 - UNRELEASED
 
     YARN-1320. Fixed Distributed Shell application to respect custom log4j
     properties file. (Xuan Gong via vinodkv)
+
+    YARN-1416. Fixed a few invalid transitions in RMApp, RMAppAttempt and in some
+    tests. (Jian He via vinodkv)
 
 Release 2.2.1 - UNRELEASED
 

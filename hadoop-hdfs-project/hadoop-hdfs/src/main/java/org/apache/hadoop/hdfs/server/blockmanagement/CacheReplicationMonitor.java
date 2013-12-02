@@ -22,6 +22,7 @@ import static org.apache.hadoop.util.ExitUtil.terminate;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -208,17 +209,27 @@ public class CacheReplicationMonitor extends Thread implements Closeable {
   /**
    * Scan all CacheDirectives.  Use the information to figure out
    * what cache replication factor each block should have.
-   *
-   * @param mark       Whether the current scan is setting or clearing the mark
    */
   private void rescanCacheDirectives() {
     FSDirectory fsDir = namesystem.getFSDirectory();
-    for (CacheDirective pce : cacheManager.getEntriesById().values()) {
+    final long now = new Date().getTime();
+    for (CacheDirective directive : cacheManager.getEntriesById().values()) {
+      // Reset the directive
+      directive.clearBytesNeeded();
+      directive.clearBytesCached();
+      directive.clearFilesAffected();
+      // Skip processing this entry if it has expired
+      LOG.info("Directive expiry is at " + directive.getExpiryTime());
+      if (directive.getExpiryTime() > 0 && directive.getExpiryTime() <= now) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Skipping directive id " + directive.getId()
+              + " because it has expired (" + directive.getExpiryTime() + ">="
+              + now);
+        }
+        continue;
+      }
       scannedDirectives++;
-      pce.clearBytesNeeded();
-      pce.clearBytesCached();
-      pce.clearFilesAffected();
-      String path = pce.getPath();
+      String path = directive.getPath();
       INode node;
       try {
         node = fsDir.getINode(path);
@@ -235,11 +246,11 @@ public class CacheReplicationMonitor extends Thread implements Closeable {
         ReadOnlyList<INode> children = dir.getChildrenList(null);
         for (INode child : children) {
           if (child.isFile()) {
-            rescanFile(pce, child.asFile());
+            rescanFile(directive, child.asFile());
           }
         }
       } else if (node.isFile()) {
-        rescanFile(pce, node.asFile());
+        rescanFile(directive, node.asFile());
       } else {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Ignoring non-directory, non-file inode " + node +
@@ -301,7 +312,7 @@ public class CacheReplicationMonitor extends Thread implements Closeable {
     pce.addBytesNeeded(neededTotal);
     pce.addBytesCached(cachedTotal);
     if (LOG.isTraceEnabled()) {
-      LOG.debug("Directive " + pce.getEntryId() + " is caching " +
+      LOG.debug("Directive " + pce.getId() + " is caching " +
           file.getFullPathName() + ": " + cachedTotal + "/" + neededTotal);
     }
   }

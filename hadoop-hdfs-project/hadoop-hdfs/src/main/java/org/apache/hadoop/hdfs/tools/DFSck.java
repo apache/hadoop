@@ -36,9 +36,10 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.namenode.NamenodeFsck;
+import org.apache.hadoop.hdfs.web.URLConnectionFactory;
 import org.apache.hadoop.http.HttpConfig;
-import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -82,18 +83,28 @@ public class DFSck extends Configured implements Tool {
       + "\t-delete\tdelete corrupted files\n"
       + "\t-files\tprint out files being checked\n"
       + "\t-openforwrite\tprint out files opened for write\n"
+      + "\t-includeSnapshots\tinclude snapshot data if the given path"
+      + " indicates a snapshottable directory or there are "
+      + "snapshottable directories under it\n"
       + "\t-list-corruptfileblocks\tprint out list of missing "
       + "blocks and files they belong to\n"
       + "\t-blocks\tprint out block report\n"
       + "\t-locations\tprint out locations for every block\n"
-      + "\t-racks\tprint out network topology for data-node locations\n"
-      + "\t\tBy default fsck ignores files opened for write, "
+      + "\t-racks\tprint out network topology for data-node locations\n\n"
+      + "Please Note:\n"
+      + "\t1. By default fsck ignores files opened for write, "
       + "use -openforwrite to report such files. They are usually "
       + " tagged CORRUPT or HEALTHY depending on their block "
-      + "allocation status";
+      + "allocation status\n"
+      + "\t2. Option -includeSnapshots should not be used for comparing stats,"
+      + " should be used only for HEALTH check, as this may contain duplicates"
+      + " if the same file present in both original fs tree "
+      + "and inside snapshots.";
   
   private final UserGroupInformation ugi;
   private final PrintStream out;
+  private final URLConnectionFactory connectionFactory;
+  private final boolean isSpnegoEnabled;
 
   /**
    * Filesystem checker.
@@ -107,6 +118,9 @@ public class DFSck extends Configured implements Tool {
     super(conf);
     this.ugi = UserGroupInformation.getCurrentUser();
     this.out = out;
+    this.connectionFactory = URLConnectionFactory
+        .newDefaultURLConnectionFactory(conf);
+    this.isSpnegoEnabled = UserGroupInformation.isSecurityEnabled();
   }
 
   /**
@@ -158,7 +172,12 @@ public class DFSck extends Configured implements Tool {
         url.append("&startblockafter=").append(String.valueOf(cookie));
       }
       URL path = new URL(url.toString());
-      URLConnection connection = SecurityUtil.openSecureHttpConnection(path);
+      URLConnection connection;
+      try {
+        connection = connectionFactory.openConnection(path, isSpnegoEnabled);
+      } catch (AuthenticationException e) {
+        throw new IOException(e);
+      }
       InputStream stream = connection.getInputStream();
       BufferedReader input = new BufferedReader(new InputStreamReader(
           stream, "UTF-8"));
@@ -255,6 +274,8 @@ public class DFSck extends Configured implements Tool {
       else if (args[idx].equals("-list-corruptfileblocks")) {
         url.append("&listcorruptfileblocks=1");
         doListCorruptFileBlocks = true;
+      } else if (args[idx].equals("-includeSnapshots")) {
+        url.append("&includeSnapshots=1");
       } else if (!args[idx].startsWith("-")) {
         if (null == dir) {
           dir = args[idx];
@@ -278,7 +299,12 @@ public class DFSck extends Configured implements Tool {
       return listCorruptFileBlocks(dir, url.toString());
     }
     URL path = new URL(url.toString());
-    URLConnection connection = SecurityUtil.openSecureHttpConnection(path);
+    URLConnection connection;
+    try {
+      connection = connectionFactory.openConnection(path, isSpnegoEnabled);
+    } catch (AuthenticationException e) {
+      throw new IOException(e);
+    }
     InputStream stream = connection.getInputStream();
     BufferedReader input = new BufferedReader(new InputStreamReader(
                                               stream, "UTF-8"));

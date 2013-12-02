@@ -388,6 +388,8 @@ Release 2.3.0 - UNRELEASED
     HADOOP-10111. Allow DU to be initialized with an initial value (Kihwal Lee
     via jeagles)
 
+    HADOOP-10126. LightWeightGSet log message is confusing. (Vinay via suresh)
+
   OPTIMIZATIONS
 
     HADOOP-9748. Reduce blocking on UGI.ensureInitialized (daryn)
@@ -450,6 +452,9 @@ Release 2.3.0 - UNRELEASED
     HADOOP-10107. Server.getNumOpenConnections may throw NPE. (Kihwal Lee via
     jing9)
 
+    HADOOP-10135 writes to swift fs over partition size leave temp files and
+    empty output file (David Dobbins via stevel)
+
 Release 2.2.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -466,6 +471,9 @@ Release 2.2.1 - UNRELEASED
 
     HADOOP-9623 Update jets3t dependency to 0.9.0.  (Amandeep Khurana via Colin
     Patrick McCabe)
+
+    HADOOP-10132. RPC#stopProxy() should log the class of proxy when IllegalArgumentException 
+    is encountered (Ted yu via umamahesh)
 
   OPTIMIZATIONS
 
@@ -507,6 +515,9 @@ Release 2.2.1 - UNRELEASED
 
     HADOOP-9114. After defined the dfs.checksum.type as the NULL, write file and hflush will 
     through java.lang.ArrayIndexOutOfBoundsException (Sathish via umamahesh)
+
+    HADOOP-10130. RawLocalFS::LocalFSFileInputStream.pread does not track
+    FS::Statistics (Binglin Chang via Colin Patrick McCabe)
 
 Release 2.2.0 - 2013-10-13
 

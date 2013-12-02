@@ -287,6 +287,10 @@ Allocation file format
      * primaryGroup: the app is placed into a queue with the name of the
        primary group of the user who submitted it.
 
+     * secondaryGroupExistingQueue: the app is placed into a queue with a name
+       that matches a secondary group of the user who submitted it. The first
+       secondary group that matches a configured queue will be selected.
+
      * default: the app is placed into the queue named "default".
 
      * reject: the app is rejected.

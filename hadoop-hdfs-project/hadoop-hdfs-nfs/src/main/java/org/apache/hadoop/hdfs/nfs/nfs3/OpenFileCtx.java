@@ -708,15 +708,28 @@ class OpenFileCtx {
     }
     return response;
   }
-
+  
+  /**
+   * Check the commit status with the given offset
+   * @param commitOffset the offset to commit
+   * @param channel the channel to return response
+   * @param xid the xid of the commit request
+   * @param preOpAttr the preOp attribute
+   * @param fromRead whether the commit is triggered from read request
+   * @return one commit status: COMMIT_FINISHED, COMMIT_WAIT,
+   * COMMIT_INACTIVE_CTX, COMMIT_INACTIVE_WITH_PENDING_WRITE, COMMIT_ERROR
+   */
   public COMMIT_STATUS checkCommit(DFSClient dfsClient, long commitOffset,
-      Channel channel, int xid, Nfs3FileAttributes preOpAttr) {
-    // Keep stream active
-    updateLastAccessTime();
+      Channel channel, int xid, Nfs3FileAttributes preOpAttr, boolean fromRead) {
+    if (!fromRead) {
+      Preconditions.checkState(channel != null && preOpAttr != null);
+      // Keep stream active
+      updateLastAccessTime();
+    }
     Preconditions.checkState(commitOffset >= 0);
 
     COMMIT_STATUS ret = checkCommitInternal(commitOffset, channel, xid,
-        preOpAttr);
+        preOpAttr, fromRead);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Got commit status: " + ret.name());
     }
@@ -743,14 +756,10 @@ class OpenFileCtx {
     }
     return ret;
   }
-
-  /**
-   * return one commit status: COMMIT_FINISHED, COMMIT_WAIT,
-   * COMMIT_INACTIVE_CTX, COMMIT_INACTIVE_WITH_PENDING_WRITE, COMMIT_ERROR
-   */
+  
   @VisibleForTesting
   synchronized COMMIT_STATUS checkCommitInternal(long commitOffset,
-      Channel channel, int xid, Nfs3FileAttributes preOpAttr) {
+      Channel channel, int xid, Nfs3FileAttributes preOpAttr, boolean fromRead) {
     if (!activeState) {
       if (pendingWrites.isEmpty()) {
         return COMMIT_STATUS.COMMIT_INACTIVE_CTX;
@@ -767,9 +776,11 @@ class OpenFileCtx {
 
     if (commitOffset > 0) {
       if (commitOffset > flushed) {
-        CommitCtx commitCtx = new CommitCtx(commitOffset, channel, xid,
-            preOpAttr);
-        pendingCommits.put(commitOffset, commitCtx);
+        if (!fromRead) {
+          CommitCtx commitCtx = new CommitCtx(commitOffset, channel, xid,
+              preOpAttr);
+          pendingCommits.put(commitOffset, commitCtx);
+        }
         return COMMIT_STATUS.COMMIT_WAIT;
       } else {
         return COMMIT_STATUS.COMMIT_DO_SYNC;
@@ -784,11 +795,13 @@ class OpenFileCtx {
       // do a sync here though the output stream might be closed.
       return COMMIT_STATUS.COMMIT_FINISHED;
     } else {
-      // Insert commit
-      long maxOffset = key.getKey().getMax() - 1;
-      Preconditions.checkState(maxOffset > 0);
-      CommitCtx commitCtx = new CommitCtx(maxOffset, channel, xid, preOpAttr);
-      pendingCommits.put(maxOffset, commitCtx);
+      if (!fromRead) {
+        // Insert commit
+        long maxOffset = key.getKey().getMax() - 1;
+        Preconditions.checkState(maxOffset > 0);
+        CommitCtx commitCtx = new CommitCtx(maxOffset, channel, xid, preOpAttr);
+        pendingCommits.put(maxOffset, commitCtx);
+      }
       return COMMIT_STATUS.COMMIT_WAIT;
     }
   }

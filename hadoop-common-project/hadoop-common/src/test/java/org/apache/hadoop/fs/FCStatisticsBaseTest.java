@@ -91,6 +91,7 @@ public abstract class FCStatisticsBaseTest {
     FSDataInputStream fstr = fc.open(filePath);
     byte[] buf = new byte[blockSize];
     int bytesRead = fstr.read(buf, 0, blockSize);
+    fstr.read(0, buf, 0, blockSize);
     Assert.assertEquals(blockSize, bytesRead);
     verifyReadBytes(stats);
     verifyWrittenBytes(stats);

@@ -211,9 +211,9 @@ public class TestINodeFile {
       // Call FSDirectory#unprotectedSetQuota which calls
       // INodeDirectory#replaceChild
       dfs.setQuota(dir, Long.MAX_VALUE - 1, replication * fileLen * 10);
-      INode dirNode = fsdir.getINode(dir.toString());
+      INodeDirectory dirNode = getDir(fsdir, dir);
       assertEquals(dir.toString(), dirNode.getFullPathName());
-      assertTrue(dirNode instanceof INodeDirectoryWithQuota);
+      assertTrue(dirNode.isWithQuota());
       
       final Path newDir = new Path("/newdir");
       final Path newFile = new Path(newDir, "file");
@@ -871,6 +871,12 @@ public class TestINodeFile {
     }
   }
   
+  private static INodeDirectory getDir(final FSDirectory fsdir, final Path dir)
+      throws IOException {
+    final String dirStr = dir.toString();
+    return INodeDirectory.valueOf(fsdir.getINode(dirStr), dirStr);
+  }
+
   /**
    * Test whether the inode in inodeMap has been replaced after regular inode
    * replacement
@@ -887,21 +893,20 @@ public class TestINodeFile {
 
       final Path dir = new Path("/dir");
       hdfs.mkdirs(dir);
-      INode dirNode = fsdir.getINode(dir.toString());
+      INodeDirectory dirNode = getDir(fsdir, dir);
       INode dirNodeFromNode = fsdir.getInode(dirNode.getId());
       assertSame(dirNode, dirNodeFromNode);
 
       // set quota to dir, which leads to node replacement
       hdfs.setQuota(dir, Long.MAX_VALUE - 1, Long.MAX_VALUE - 1);
-      dirNode = fsdir.getINode(dir.toString());
-      assertTrue(dirNode instanceof INodeDirectoryWithQuota);
+      dirNode = getDir(fsdir, dir);
+      assertTrue(dirNode.isWithQuota());
       // the inode in inodeMap should also be replaced
       dirNodeFromNode = fsdir.getInode(dirNode.getId());
       assertSame(dirNode, dirNodeFromNode);
 
       hdfs.setQuota(dir, -1, -1);
-      dirNode = fsdir.getINode(dir.toString());
-      assertTrue(dirNode instanceof INodeDirectory);
+      dirNode = getDir(fsdir, dir);
       // the inode in inodeMap should also be replaced
       dirNodeFromNode = fsdir.getInode(dirNode.getId());
       assertSame(dirNode, dirNodeFromNode);

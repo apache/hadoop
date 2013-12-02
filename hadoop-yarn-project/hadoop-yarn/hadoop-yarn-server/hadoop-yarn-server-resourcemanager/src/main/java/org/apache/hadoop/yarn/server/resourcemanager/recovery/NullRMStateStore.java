@@ -23,6 +23,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.RMStateVersion;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationAttemptStateDataPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationStateDataPBImpl;
 
@@ -99,6 +100,27 @@ public class NullRMStateStore extends RMStateStore {
   @Override
   protected void updateApplicationAttemptStateInternal(String attemptId,
       ApplicationAttemptStateDataPBImpl attemptStateData) throws Exception {
+  }
+
+  @Override
+  public void checkVersion() throws Exception {
     // Do nothing
+  }
+
+  @Override
+  protected RMStateVersion loadVersion() throws Exception {
+    // Do nothing
+    return null;
+  }
+
+  @Override
+  protected void storeVersion() throws Exception {
+    // Do nothing
+  }
+
+  @Override
+  protected RMStateVersion getCurrentVersion() {
+    // Do nothing
+    return null;
   }
 }

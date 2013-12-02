@@ -569,7 +569,7 @@ public class IPCLoggerChannel implements AsyncLogger {
   }
 
   @Override
-  public synchronized void appendHtmlReport(StringBuilder sb) {
+  public synchronized void appendReport(StringBuilder sb) {
     sb.append("Written txid ").append(highestAckedTxId);
     long behind = getLagTxns();
     if (behind > 0) {

@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -41,6 +42,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.authentication.client.ConnectionConfigurator;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -66,7 +68,14 @@ public class TestWebHdfsTimeouts {
   private InetSocketAddress nnHttpAddress;
   private ServerSocket serverSocket;
   private Thread serverThread;
-  private URLConnectionFactory connectionFactory = new URLConnectionFactory(SHORT_SOCKET_TIMEOUT);
+  private URLConnectionFactory connectionFactory = new URLConnectionFactory(new ConnectionConfigurator() {
+    @Override
+    public HttpURLConnection configure(HttpURLConnection conn) throws IOException {
+      conn.setReadTimeout(SHORT_SOCKET_TIMEOUT);
+      conn.setConnectTimeout(SHORT_SOCKET_TIMEOUT);
+      return conn;
+    }
+  });
 
   @Before
   public void setUp() throws Exception {
@@ -82,7 +91,6 @@ public class TestWebHdfsTimeouts {
 
   @After
   public void tearDown() throws Exception {
-    fs.connectionFactory = URLConnectionFactory.DEFAULT_CONNECTION_FACTORY;
     IOUtils.cleanup(LOG, clients.toArray(new SocketChannel[clients.size()]));
     IOUtils.cleanup(LOG, fs);
     if (serverSocket != null) {
@@ -242,7 +250,7 @@ public class TestWebHdfsTimeouts {
    */
   private void startSingleTemporaryRedirectResponseThread(
       final boolean consumeConnectionBacklog) {
-    fs.connectionFactory = URLConnectionFactory.DEFAULT_CONNECTION_FACTORY;
+    fs.connectionFactory = URLConnectionFactory.DEFAULT_SYSTEM_CONNECTION_FACTORY;
     serverThread = new Thread() {
       @Override
       public void run() {

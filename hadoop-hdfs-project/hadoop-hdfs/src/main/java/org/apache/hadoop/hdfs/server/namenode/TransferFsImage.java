@@ -35,7 +35,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.http.HttpConfig;
-import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -46,6 +47,7 @@ import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
+import org.apache.hadoop.hdfs.web.URLConnectionFactory;
 import org.apache.hadoop.io.MD5Hash;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -62,6 +64,15 @@ public class TransferFsImage {
   public final static String MD5_HEADER = "X-MD5-Digest";
   @VisibleForTesting
   static int timeout = 0;
+  private static URLConnectionFactory connectionFactory;
+  private static boolean isSpnegoEnabled;
+
+  static {
+    Configuration conf = new Configuration();
+    connectionFactory = URLConnectionFactory
+        .newDefaultURLConnectionFactory(conf);
+    isSpnegoEnabled = UserGroupInformation.isSecurityEnabled();
+  }
 
   private static final Log LOG = LogFactory.getLog(TransferFsImage.class);
   
@@ -250,8 +261,13 @@ public class TransferFsImage {
   public static MD5Hash doGetUrl(URL url, List<File> localPaths,
       Storage dstStorage, boolean getChecksum) throws IOException {
     long startTime = Time.monotonicNow();
-    HttpURLConnection connection = (HttpURLConnection)
-      SecurityUtil.openSecureHttpConnection(url);
+    HttpURLConnection connection;
+    try {
+      connection = (HttpURLConnection)
+        connectionFactory.openConnection(url, isSpnegoEnabled);
+    } catch (AuthenticationException e) {
+      throw new IOException(e);
+    }
 
     if (timeout <= 0) {
       Configuration conf = new HdfsConfiguration();

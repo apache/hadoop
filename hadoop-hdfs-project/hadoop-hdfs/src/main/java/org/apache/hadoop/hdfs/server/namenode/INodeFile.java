@@ -29,10 +29,8 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.blockmanagement.*;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshot;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshot.FileDiff;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshot.FileDiffList;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshot.Util;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.FileDiff;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.FileDiffList;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 
@@ -47,13 +45,15 @@ public class INodeFile extends INodeWithAdditionalFields
    * A feature contains specific information for a type of INodeFile. E.g.,
    * we can have separate features for Under-Construction and Snapshot.
    */
-  public static abstract class Feature {
+  public static abstract class Feature implements INode.Feature<Feature> {
     private Feature nextFeature;
 
+    @Override
     public Feature getNextFeature() {
       return nextFeature;
     }
 
+    @Override
     public void setNextFeature(Feature next) {
       this.nextFeature = next;
     }
@@ -157,26 +157,12 @@ public class INodeFile extends INodeWithAdditionalFields
     return getFileUnderConstructionFeature() != null;
   }
 
-  void addFeature(Feature f) {
-    f.nextFeature = headFeature;
-    headFeature = f;
+  private void addFeature(Feature f) {
+    headFeature = INode.Feature.Util.addFeature(f, headFeature);
   }
 
-  void removeFeature(Feature f) {
-    if (f == headFeature) {
-      headFeature = headFeature.nextFeature;
-      return;
-    } else if (headFeature != null) {
-      Feature prev = headFeature;
-      Feature curr = headFeature.nextFeature;
-      for (; curr != null && curr != f; prev = curr, curr = curr.nextFeature)
-        ;
-      if (curr != null) {
-        prev.nextFeature = curr.nextFeature;
-        return;
-      }
-    }
-    throw new IllegalStateException("Feature " + f + " not found.");
+  private void removeFeature(Feature f) {
+    headFeature = INode.Feature.Util.removeFeature(f, headFeature);
   }
 
   /** @return true unconditionally. */
@@ -194,10 +180,10 @@ public class INodeFile extends INodeWithAdditionalFields
   /* Start of Under-Construction Feature */
 
   /** Convert this file to an {@link INodeFileUnderConstruction}. */
-  public INodeFile toUnderConstruction(String clientName, String clientMachine,
+  INodeFile toUnderConstruction(String clientName, String clientMachine,
       DatanodeDescriptor clientNode) {
     Preconditions.checkState(!isUnderConstruction(),
-        "file is already an INodeFileUnderConstruction");
+        "file is already under construction");
     FileUnderConstructionFeature uc = new FileUnderConstructionFeature(
         clientName, clientMachine, clientNode);
     addFeature(uc);
@@ -209,6 +195,8 @@ public class INodeFile extends INodeWithAdditionalFields
    * feature.
    */
   public INodeFile toCompleteFile(long mtime) {
+    Preconditions.checkState(isUnderConstruction(),
+        "file is no longer under construction");
     FileUnderConstructionFeature uc = getFileUnderConstructionFeature();
     if (uc != null) {
       assertAllBlocksComplete();
@@ -230,15 +218,16 @@ public class INodeFile extends INodeWithAdditionalFields
     }
   }
 
-  @Override //BlockCollection
+  @Override // BlockCollection
   public void setBlock(int index, BlockInfo blk) {
     this.blocks[index] = blk;
   }
 
-  @Override // BlockCollection
+  @Override // BlockCollection, the file should be under construction
   public BlockInfoUnderConstruction setLastBlock(BlockInfo lastBlock,
       DatanodeStorageInfo[] locations) throws IOException {
-    Preconditions.checkState(isUnderConstruction());
+    Preconditions.checkState(isUnderConstruction(),
+        "file is no longer under construction");
 
     if (numBlocks() == 0) {
       throw new IOException("Failed to set last block: File is empty.");
@@ -256,6 +245,8 @@ public class INodeFile extends INodeWithAdditionalFields
    * the last one on the list.
    */
   boolean removeLastBlock(Block oldblock) {
+    Preconditions.checkState(isUnderConstruction(),
+        "file is no longer under construction");
     if (blocks == null || blocks.length == 0) {
       return false;
     }
@@ -307,10 +298,8 @@ public class INodeFile extends INodeWithAdditionalFields
   }
 
   @Override
-  public final short getBlockReplication() {
-    return this instanceof FileWithSnapshot?
-        Util.getBlockReplication((FileWithSnapshot)this)
-        : getFileReplication(null);
+  public short getBlockReplication() {
+    return getFileReplication(null);
   }
 
   /** Set the replication factor of this file. */
@@ -430,8 +419,8 @@ public class INodeFile extends INodeWithAdditionalFields
     clear();
     removedINodes.add(this);
     
-    if (this instanceof FileWithSnapshot) {
-      ((FileWithSnapshot) this).getDiffs().clear();
+    if (this instanceof INodeFileWithSnapshot) {
+      ((INodeFileWithSnapshot) this).getDiffs().clear();
     }
   }
   
@@ -446,8 +435,8 @@ public class INodeFile extends INodeWithAdditionalFields
       boolean useCache, int lastSnapshotId) {
     long nsDelta = 1;
     final long dsDelta;
-    if (this instanceof FileWithSnapshot) {
-      FileDiffList fileDiffList = ((FileWithSnapshot) this).getDiffs();
+    if (this instanceof INodeFileWithSnapshot) {
+      FileDiffList fileDiffList = ((INodeFileWithSnapshot) this).getDiffs();
       Snapshot last = fileDiffList.getLastSnapshot();
       List<FileDiff> diffs = fileDiffList.asList();
 
@@ -479,8 +468,8 @@ public class INodeFile extends INodeWithAdditionalFields
   private void computeContentSummary4Snapshot(final Content.Counts counts) {
     // file length and diskspace only counted for the latest state of the file
     // i.e. either the current state or the last snapshot
-    if (this instanceof FileWithSnapshot) {
-      final FileWithSnapshot withSnapshot = (FileWithSnapshot)this;
+    if (this instanceof INodeFileWithSnapshot) {
+      final INodeFileWithSnapshot withSnapshot = (INodeFileWithSnapshot) this;
       final FileDiffList diffs = withSnapshot.getDiffs();
       final int n = diffs.asList().size();
       counts.add(Content.FILE, n);
@@ -496,8 +485,8 @@ public class INodeFile extends INodeWithAdditionalFields
   }
 
   private void computeContentSummary4Current(final Content.Counts counts) {
-    if (this instanceof FileWithSnapshot
-        && ((FileWithSnapshot)this).isCurrentFileDeleted()) {
+    if (this instanceof INodeFileWithSnapshot
+        && ((INodeFileWithSnapshot) this).isCurrentFileDeleted()) {
       return;
     }
 
@@ -516,8 +505,9 @@ public class INodeFile extends INodeWithAdditionalFields
    * otherwise, get the file size from the given snapshot.
    */
   public final long computeFileSize(Snapshot snapshot) {
-    if (snapshot != null && this instanceof FileWithSnapshot) {
-      final FileDiff d = ((FileWithSnapshot)this).getDiffs().getDiff(snapshot);
+    if (snapshot != null && this instanceof INodeFileWithSnapshot) {
+      final FileDiff d = ((INodeFileWithSnapshot) this).getDiffs().getDiff(
+          snapshot);
       if (d != null) {
         return d.getFileSize();
       }

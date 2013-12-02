@@ -69,7 +69,7 @@ public class WebServer extends AbstractService {
             .withHttpSpnegoKeytabKey(
               YarnConfiguration.NM_WEBAPP_SPNEGO_KEYTAB_FILE_KEY)
             .start(this.nmWebApp);
-      this.port = this.webApp.httpServer().getPort();
+      this.port = this.webApp.httpServer().getConnectorAddress(0).getPort();
     } catch (Exception e) {
       String msg = "NMWebapps failed to start.";
       LOG.error(msg, e);

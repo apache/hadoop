@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
+import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
@@ -51,6 +52,8 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AllowS
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AllowSnapshotResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AppendRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AppendResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CachePoolEntryProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CachePoolInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CompleteRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CompleteResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ConcatRequestProto;
@@ -103,7 +106,6 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSna
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.IsFileClosedRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.IsFileClosedResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListCachePoolsRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListCachePoolsResponseElementProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListCachePoolsResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListCorruptFileBlocksRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListCorruptFileBlocksResponseProto;
@@ -1141,18 +1143,15 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   public ListCachePoolsResponseProto listCachePools(RpcController controller,
       ListCachePoolsRequestProto request) throws ServiceException {
     try {
-      RemoteIterator<CachePoolInfo> iter =
+      RemoteIterator<CachePoolEntry> iter =
         server.listCachePools(request.getPrevPoolName());
       ListCachePoolsResponseProto.Builder responseBuilder =
         ListCachePoolsResponseProto.newBuilder();
       String prevPoolName = null;
       while (iter.hasNext()) {
-        CachePoolInfo pool = iter.next();
-        ListCachePoolsResponseElementProto.Builder elemBuilder = 
-            ListCachePoolsResponseElementProto.newBuilder();
-        elemBuilder.setInfo(PBHelper.convert(pool));
-        responseBuilder.addElements(elemBuilder.build());
-        prevPoolName = pool.getPoolName();
+        CachePoolEntry entry = iter.next();
+        responseBuilder.addEntries(PBHelper.convert(entry));
+        prevPoolName = entry.getInfo().getPoolName();
       }
       // fill in hasNext
       if (prevPoolName == null) {
