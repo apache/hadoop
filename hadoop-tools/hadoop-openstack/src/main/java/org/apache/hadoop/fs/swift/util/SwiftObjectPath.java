@@ -51,8 +51,12 @@ public final class SwiftObjectPath {
    */
   public SwiftObjectPath(String container, String object) {
 
+    if (object == null) {
+      throw new IllegalArgumentException("object name can't be null");
+    }
+
     this.container = container;
-    this.object = object;
+    this.object = URI.create(object).getPath();
     uriPath = buildUriPath();
   }
 
