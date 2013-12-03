@@ -19,6 +19,9 @@
 package org.apache.hadoop.yarn.server.resourcemanager.recovery;
 
 import static org.junit.Assert.assertTrue;
+
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import junit.framework.Assert;
 
 import org.apache.commons.logging.Log;
@@ -33,7 +36,9 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.RMStateVersion;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationStateDataPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.RMStateVersionPBImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.junit.Test;
 
@@ -81,6 +86,8 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
       YarnConfiguration conf = new YarnConfiguration();
       conf.set(YarnConfiguration.FS_RM_STATE_STORE_URI,
           workingDirPathURI.toString());
+      conf.set(YarnConfiguration.FS_RM_STATE_STORE_RETRY_POLICY_SPEC,
+        "100,6000");
       this.store = new TestFileSystemRMStore(conf);
       return store;
     }
@@ -135,6 +142,48 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
           .getFileSystem(conf).exists(tempAppAttemptFile));
       testRMDTSecretManagerStateStore(fsTester);
       testCheckVersion(fsTester);
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  @Test (timeout = 30000)
+  public void testFSRMStateStoreClientRetry() throws Exception {
+    HdfsConfiguration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
+    cluster.waitActive();
+    try {
+      TestFSRMStateStoreTester fsTester = new TestFSRMStateStoreTester(cluster);
+      final RMStateStore store = fsTester.getRMStateStore();
+      store.setRMDispatcher(new TestDispatcher());
+      final AtomicBoolean assertionFailedInThread = new AtomicBoolean(false);
+      cluster.shutdownNameNodes();
+
+      Thread clientThread = new Thread() {
+        @Override
+        public void run() {
+          try {
+            store.storeApplicationStateInternal("application1",
+              (ApplicationStateDataPBImpl) ApplicationStateDataPBImpl
+                .newApplicationStateData(111, 111, "user", null,
+                  RMAppState.ACCEPTED, "diagnostics", 333));
+          } catch (Exception e) {
+            // TODO 0 datanode exception will not be retried by dfs client, fix
+            // that separately.
+            if (!e.getMessage().contains("could only be replicated" +
+                " to 0 nodes instead of minReplication (=1)")) {
+              assertionFailedInThread.set(true);
+            }
+            e.printStackTrace();
+          }
+        }
+      };
+      Thread.sleep(2000);
+      clientThread.start();
+      cluster.restartNameNode();
+      clientThread.join();
+      Assert.assertFalse(assertionFailedInThread.get());
     } finally {
       cluster.shutdown();
     }

@@ -94,7 +94,14 @@ public class FileSystemRMStateStore extends RMStateStore {
     // create filesystem only now, as part of service-start. By this time, RM is
     // authenticated with kerberos so we are good to create a file-system
     // handle.
-    fs = fsWorkingPath.getFileSystem(getConfig());
+    Configuration conf = new Configuration(getConfig());
+    conf.setBoolean("dfs.client.retry.policy.enabled", true);
+    String retryPolicy =
+        conf.get(YarnConfiguration.FS_RM_STATE_STORE_RETRY_POLICY_SPEC,
+          YarnConfiguration.DEFAULT_FS_RM_STATE_STORE_RETRY_POLICY_SPEC);
+    conf.set("dfs.client.retry.policy.spec", retryPolicy);
+
+    fs = fsWorkingPath.getFileSystem(conf);
     fs.mkdirs(rmDTSecretManagerRoot);
     fs.mkdirs(rmAppRoot);
   }

@@ -37,6 +37,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -112,6 +113,37 @@ public class TestZKRMStateStoreZKClientConnections extends
       this.store = new TestZKRMStateStore(conf, workingZnode);
       return this.store;
     }
+  }
+
+  @Test (timeout = 20000)
+  public void testZKClientRetry() throws Exception {
+    TestZKClient zkClientTester = new TestZKClient();
+    final String path = "/test";
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.setInt(YarnConfiguration.ZK_RM_STATE_STORE_TIMEOUT_MS, 100);
+    conf.setLong(YarnConfiguration.ZK_RM_STATE_STORE_RETRY_INTERVAL_MS, 100);
+    final ZKRMStateStore store =
+        (ZKRMStateStore) zkClientTester.getRMStateStore(conf);
+    TestDispatcher dispatcher = new TestDispatcher();
+    store.setRMDispatcher(dispatcher);
+    final AtomicBoolean assertionFailedInThread = new AtomicBoolean(false);
+
+    stopServer();
+    Thread clientThread = new Thread() {
+      @Override
+      public void run() {
+        try {
+          store.getDataWithRetries(path, true);
+        } catch (Exception e) {
+          e.printStackTrace();
+          assertionFailedInThread.set(true);
+        }
+      }
+    };
+    Thread.sleep(2000);
+    startServer();
+    clientThread.join();
+    Assert.assertFalse(assertionFailedInThread.get());
   }
 
   @Test(timeout = 20000)
