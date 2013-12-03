@@ -305,4 +305,9 @@
     <Bug pattern="NM_CLASS_NOT_EXCEPTION" />
   </Match>
 
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.resourcemanager.recovery.ZKRMStateStore" />
+    <Bug pattern="IS2_INCONSISTENT_SYNC" />
+  </Match>
+
 </FindBugsFilter>

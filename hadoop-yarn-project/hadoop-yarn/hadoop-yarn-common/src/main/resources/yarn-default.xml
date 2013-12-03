@@ -283,8 +283,8 @@
     is implicitly fenced, meaning a single ResourceManager is
     able to use the store at any point in time. More details on this, along
     with setting up appropriate ACLs is discussed under the description for
-    yarn.resourcemanager.zk.state-store.root-node.acl.</description>
-    <name>yarn.resourcemanager.zk.state-store.address</name>
+    yarn.resourcemanager.zk-state-store.root-node.acl.</description>
+    <name>yarn.resourcemanager.zk-state-store.address</name>
     <!--value>127.0.0.1:2181</value-->
   </property>
 
@@ -293,8 +293,15 @@
     ZooKeeper. This may be supplied when using
     org.apache.hadoop.yarn.server.resourcemanager.recovery.ZKRMStateStore
     as the value for yarn.resourcemanager.store.class</description>
-    <name>yarn.resourcemanager.zk.state-store.num-retries</name>
-    <value>3</value>
+    <name>yarn.resourcemanager.zk-state-store.num-retries</name>
+    <value>500</value>
+  </property>
+
+  <property>
+    <description>Retry interval in milliseconds when ZKRMStateStore tries to
+    connect to ZooKeeper.</description>
+    <name>yarn.resourcemanager.zk-state-store.retry-interval-ms</name>
+    <value>2000</value>
   </property>
 
   <property>
@@ -302,16 +309,20 @@
     stored. This must be supplied when using
     org.apache.hadoop.yarn.server.resourcemanager.recovery.ZKRMStateStore
     as the value for yarn.resourcemanager.store.class</description>
-    <name>yarn.resourcemanager.zk.state-store.parent-path</name>
+    <name>yarn.resourcemanager.zk-state-store.parent-path</name>
     <value>/rmstore</value>
   </property>
 
   <property>
-    <description>Timeout when connecting to ZooKeeper.
+    <description>ZooKeeper session timeout in milliseconds. Session expiration
+    is managed by the ZooKeeper cluster itself, not by the client. This value is
+    used by the cluster to determine when the client's session expires.
+    Expirations happens when the cluster does not hear from the client within
+    the specified session timeout period (i.e. no heartbeat).
     This may be supplied when using
     org.apache.hadoop.yarn.server.resourcemanager.recovery.ZKRMStateStore
     as the value for yarn.resourcemanager.store.class</description>
-    <name>yarn.resourcemanager.zk.state-store.timeout.ms</name>
+    <name>yarn.resourcemanager.zk-state-store.timeout-ms</name>
     <value>60000</value>
   </property>
 
@@ -320,7 +331,7 @@
     This may be supplied when using
     org.apache.hadoop.yarn.server.resourcemanager.recovery.ZKRMStateStore
     as the value for yarn.resourcemanager.store.class</description>
-    <name>yarn.resourcemanager.zk.state-store.acl</name>
+    <name>yarn.resourcemanager.zk-state-store.acl</name>
     <value>world:anyone:rwcda</value>
   </property>
 
@@ -336,7 +347,7 @@
       permissions.
 
       By default, when this property is not set, we use the ACLs from
-      yarn.resourcemanager.zk.state-store.acl for shared admin access and
+      yarn.resourcemanager.zk-state-store.acl for shared admin access and
       rm-address:cluster-timestamp for username-based exclusive create-delete
       access.
 
@@ -346,7 +357,7 @@
       ResourceManagers have shared admin access and the Active ResourceManger
       takes over (exclusively) the create-delete access.
     </description>
-    <name>yarn.resourcemanager.zk.state-store.root-node.acl</name>
+    <name>yarn.resourcemanager.zk-state-store.root-node.acl</name>
   </property>
 
   <property>
@@ -357,6 +368,16 @@
     <name>yarn.resourcemanager.fs.state-store.uri</name>
     <value>${hadoop.tmp.dir}/yarn/system/rmstore</value>
     <!--value>hdfs://localhost:9000/rmstore</value-->
+  </property>
+
+  <property>
+    <description>hdfs client retry policy specification. hdfs client retry
+    is always enabled. Specified in pairs of sleep-time and number-of-retries
+    and (t0, n0), (t1, n1), ..., the first n0 retries sleep t0 milliseconds on
+    average, the following n1 retries sleep t1 milliseconds on average, and so on.
+    </description>
+    <name>yarn.resourcemanager.fs.state-store.retry-policy-spec</name>
+    <value>2000, 500</value>
   </property>
 
   <property>

@@ -173,6 +173,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1416. Fixed a few invalid transitions in RMApp, RMAppAttempt and in some
     tests. (Jian He via vinodkv)
 
+    YARN-895. Changed RM state-store to not crash immediately if RM restarts while
+    the state-store is down. (Jian He via vinodkv)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
