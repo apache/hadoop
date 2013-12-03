@@ -225,16 +225,16 @@ public class TestFixedLengthInputFormat {
   public void testGzipWithTwoInputs() throws Exception {
     CompressionCodec gzip = new GzipCodec();
     localFs.delete(workDir, true);
-    // Create files with fixed length records with 5 byte long records.
-    writeFile(localFs, new Path(workDir, "part1.txt.gz"), gzip, 
-        "one  two  threefour five six  seveneightnine ten  ");
-    writeFile(localFs, new Path(workDir, "part2.txt.gz"), gzip,
-        "ten  nine eightsevensix  five four threetwo  one  ");
     Job job = Job.getInstance(defaultConf);
     FixedLengthInputFormat format = new FixedLengthInputFormat();
     format.setRecordLength(job.getConfiguration(), 5);
     ReflectionUtils.setConf(gzip, job.getConfiguration());
     FileInputFormat.setInputPaths(job, workDir);
+    // Create files with fixed length records with 5 byte long records.
+    writeFile(localFs, new Path(workDir, "part1.txt.gz"), gzip, 
+        "one  two  threefour five six  seveneightnine ten  ");
+    writeFile(localFs, new Path(workDir, "part2.txt.gz"), gzip,
+        "ten  nine eightsevensix  five four threetwo  one  ");
     List<InputSplit> splits = format.getSplits(job);
     assertEquals("compressed splits == 2", 2, splits.size());
     FileSplit tmp = (FileSplit) splits.get(0);
@@ -310,12 +310,16 @@ public class TestFixedLengthInputFormat {
       int fileSize = (totalRecords * recordLength);
       LOG.info("totalRecords=" + totalRecords + " recordLength="
           + recordLength);
+      // Create the job 
+      Job job = Job.getInstance(defaultConf);
+      if (codec != null) {
+        ReflectionUtils.setConf(codec, job.getConfiguration());
+      }
       // Create the test file
       ArrayList<String> recordList =
           createFile(file, codec, recordLength, totalRecords);
       assertTrue(localFs.exists(file));
-      // Create the job and set the fixed length record length config property 
-      Job job = Job.getInstance(defaultConf);
+      //set the fixed length record length config property for the job
       FixedLengthInputFormat.setRecordLength(job.getConfiguration(),
           recordLength);
 
