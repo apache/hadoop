@@ -114,6 +114,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1318. Promoted AdminService to an Always-On service and merged it into
     RMHAProtocolService. (Karthik Kambatla via vinodkv)
 
+    YARN-1332. In TestAMRMClient, replace assertTrue with assertEquals where
+    possible (Sebastian Wong via Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES
