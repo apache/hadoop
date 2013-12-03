@@ -228,6 +228,9 @@ Release 2.3.0 - UNRELEASED
     HADOOP-10130. RawLocalFS::LocalFSFileInputStream.pread does not track
     FS::Statistics (Binglin Chang via Colin Patrick McCabe)
 
+    HDFS-5560. Trash configuration log statements prints incorrect units.
+    (Josh Elser via Andrew Wang)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
