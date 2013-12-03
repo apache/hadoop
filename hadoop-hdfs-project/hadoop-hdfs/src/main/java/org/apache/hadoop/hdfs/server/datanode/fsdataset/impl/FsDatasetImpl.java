@@ -78,6 +78,7 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.RoundRobinVolumeChoosing
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.VolumeChoosingPolicy;
 import org.apache.hadoop.hdfs.server.datanode.metrics.FSDatasetMBean;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.io.nativeio.NativeIO;
@@ -1089,14 +1090,14 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   }
 
   @Override
-  public Map<String, BlockListAsLongs> getBlockReports(String bpid) {
-    Map<String, BlockListAsLongs> blockReportMap =
-        new HashMap<String, BlockListAsLongs>();
+  public Map<DatanodeStorage, BlockListAsLongs> getBlockReports(String bpid) {
+    Map<DatanodeStorage, BlockListAsLongs> blockReportMap =
+        new HashMap<DatanodeStorage, BlockListAsLongs>();
 
     for (FsVolumeImpl v : getVolumes()) {
       ReplicaMap rMap = perVolumeReplicaMap.get(v.getStorageID());
       BlockListAsLongs blockList = getBlockReportWithReplicaMap(bpid, rMap);
-      blockReportMap.put(v.getStorageID(), blockList);
+      blockReportMap.put(v.toDatanodeStorage(), blockList);
     }
 
     return blockReportMap;

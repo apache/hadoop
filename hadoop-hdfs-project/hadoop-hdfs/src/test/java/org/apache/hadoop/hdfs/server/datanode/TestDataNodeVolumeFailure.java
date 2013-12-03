@@ -154,7 +154,7 @@ public class TestDataNodeVolumeFailure {
     String bpid = cluster.getNamesystem().getBlockPoolId();
     DatanodeRegistration dnR = dn.getDNRegistrationForBP(bpid);
     
-    Map<String, BlockListAsLongs> perVolumeBlockLists =
+    Map<DatanodeStorage, BlockListAsLongs> perVolumeBlockLists =
         dn.getFSDataset().getBlockReports(bpid);
 
     // Send block report
@@ -162,10 +162,9 @@ public class TestDataNodeVolumeFailure {
         new StorageBlockReport[perVolumeBlockLists.size()];
 
     int reportIndex = 0;
-    for(Map.Entry<String, BlockListAsLongs> kvPair : perVolumeBlockLists.entrySet()) {
-        String storageID = kvPair.getKey();
+    for(Map.Entry<DatanodeStorage, BlockListAsLongs> kvPair : perVolumeBlockLists.entrySet()) {
+        DatanodeStorage dnStorage = kvPair.getKey();
         BlockListAsLongs blockList = kvPair.getValue();
-        DatanodeStorage dnStorage = new DatanodeStorage(storageID);
         reports[reportIndex++] =
             new StorageBlockReport(dnStorage, blockList.getBlockListAsLongs());
     }

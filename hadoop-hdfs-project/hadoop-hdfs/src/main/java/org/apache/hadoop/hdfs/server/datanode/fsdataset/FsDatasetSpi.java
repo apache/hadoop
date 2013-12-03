@@ -40,6 +40,7 @@ import org.apache.hadoop.hdfs.server.datanode.ReplicaInPipelineInterface;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetFactory;
 import org.apache.hadoop.hdfs.server.datanode.metrics.FSDatasetMBean;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
@@ -268,9 +269,9 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
   /**
    * Returns one block report per volume.
    * @param bpid Block Pool Id
-   * @return - a map of StorageID to block report for the volume.
+   * @return - a map of DatanodeStorage to block report for the volume.
    */
-  public Map<String, BlockListAsLongs> getBlockReports(String bpid);
+  public Map<DatanodeStorage, BlockListAsLongs> getBlockReports(String bpid);
 
   /**
    * Returns the cache report - the full list of cached block IDs of a

@@ -38,6 +38,7 @@ import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.datanode.DataStorage;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -332,5 +333,10 @@ class FsVolumeImpl implements FsVolumeSpi {
   public StorageType getStorageType() {
     return storageType;
   }
+  
+  DatanodeStorage toDatanodeStorage() {
+    return new DatanodeStorage(storageID, DatanodeStorage.State.NORMAL, storageType);
+  }
+
 }
 

@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -484,12 +485,9 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   }
 
   @Override
-  public synchronized Map<String, BlockListAsLongs> getBlockReports(
+  public synchronized Map<DatanodeStorage, BlockListAsLongs> getBlockReports(
       String bpid) {
-    Map<String, BlockListAsLongs> reports =
-        new HashMap<String, BlockListAsLongs>();
-    reports.put(storage.storageUuid, getBlockReport(bpid));
-    return reports;
+    return Collections.singletonMap(new DatanodeStorage(storage.storageUuid), getBlockReport(bpid));
   }
 
   @Override // FsDatasetSpi

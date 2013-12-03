@@ -120,3 +120,6 @@ IMPROVEMENTS:
 
     HDFS-5559. Fix TestDatanodeConfig in HDFS-2832. (Contributed by szetszwo)
 
+    HDFS-5484. StorageType and State in DatanodeStorageInfo in NameNode is
+    not accurate. (Eric Sirianni via Arpit Agarwal)
+

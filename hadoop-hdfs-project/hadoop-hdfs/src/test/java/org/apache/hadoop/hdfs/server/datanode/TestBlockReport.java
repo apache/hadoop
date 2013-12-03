@@ -120,7 +120,7 @@ public class TestBlockReport {
   private static StorageBlockReport[] getBlockReports(
       DataNode dn, String bpid, boolean corruptOneBlockGs,
       boolean corruptOneBlockLen) {
-    Map<String, BlockListAsLongs> perVolumeBlockLists =
+    Map<DatanodeStorage, BlockListAsLongs> perVolumeBlockLists =
         dn.getFSDataset().getBlockReports(bpid);
 
     // Send block report
@@ -130,8 +130,8 @@ public class TestBlockReport {
     boolean corruptedLen = false;
 
     int reportIndex = 0;
-    for(Map.Entry<String, BlockListAsLongs> kvPair : perVolumeBlockLists.entrySet()) {
-      String storageID = kvPair.getKey();
+    for(Map.Entry<DatanodeStorage, BlockListAsLongs> kvPair : perVolumeBlockLists.entrySet()) {
+      DatanodeStorage dnStorage = kvPair.getKey();
       BlockListAsLongs blockList = kvPair.getValue();
 
       // Walk the list of blocks until we find one each to corrupt the
@@ -150,8 +150,6 @@ public class TestBlockReport {
         }
       }
 
-      // Dummy DatanodeStorage object just for sending the block report.
-      DatanodeStorage dnStorage = new DatanodeStorage(storageID);
       reports[reportIndex++] =
           new StorageBlockReport(dnStorage, blockList.getBlockListAsLongs());
     }

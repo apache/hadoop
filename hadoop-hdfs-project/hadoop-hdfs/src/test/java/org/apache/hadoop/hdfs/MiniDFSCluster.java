@@ -88,6 +88,7 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.hdfs.web.HftpFileSystem;
@@ -1970,7 +1971,7 @@ public class MiniDFSCluster {
    * @param dataNodeIndex - data node whose block report is desired - the index is same as for getDataNodes()
    * @return the block report for the specified data node
    */
-  public Map<String, BlockListAsLongs> getBlockReport(String bpid, int dataNodeIndex) {
+  public Map<DatanodeStorage, BlockListAsLongs> getBlockReport(String bpid, int dataNodeIndex) {
     if (dataNodeIndex < 0 || dataNodeIndex > dataNodes.size()) {
       throw new IndexOutOfBoundsException();
     }
@@ -1984,10 +1985,10 @@ public class MiniDFSCluster {
    * @return block reports from all data nodes
    *    BlockListAsLongs is indexed in the same order as the list of datanodes returned by getDataNodes()
    */
-  public List<Map<String, BlockListAsLongs>> getAllBlockReports(String bpid) {
+  public List<Map<DatanodeStorage, BlockListAsLongs>> getAllBlockReports(String bpid) {
     int numDataNodes = dataNodes.size();
-    final List<Map<String, BlockListAsLongs>> result
-        = new ArrayList<Map<String, BlockListAsLongs>>(numDataNodes);
+    final List<Map<DatanodeStorage, BlockListAsLongs>> result
+        = new ArrayList<Map<DatanodeStorage, BlockListAsLongs>>(numDataNodes);
     for (int i = 0; i < numDataNodes; ++i) {
       result.add(getBlockReport(bpid, i));
     }
