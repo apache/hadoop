@@ -39,14 +39,6 @@ struct jsonException {
   const char *message;
 };
 
-static void dotsToSlashes(char *str)
-{
-    for (; *str != '\0'; str++) {
-        if (*str == '.')
-            *str = '/';
-    }
-}
-
 /** Print out the JSON exception information */
 static int printJsonExceptionV(struct jsonException *exc, int noPrintFlags,
                                const char *fmt, va_list ap)
@@ -62,7 +54,6 @@ static int printJsonExceptionV(struct jsonException *exc, int noPrintFlags,
         fprintf(stderr, "printJsonExceptionV: internal out of memory error\n");
         return EINTERNAL;
     }
-    dotsToSlashes(javaClassName);
     getExceptionInfo(javaClassName, noPrintFlags, &excErrno, &shouldPrint);
     free(javaClassName);
     

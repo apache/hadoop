@@ -343,6 +343,8 @@ Release 2.3.0 - UNRELEASED
     HDFS-5563. NFS gateway should commit the buffered data when read request comes
     after write to the same file (brandonli)
 
+    HDFS-4997. libhdfs doesn't return correct error codes in most cases (cmccabe)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
