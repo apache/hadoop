@@ -2894,6 +2894,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
       throw lee;
     }
+    // Check the state of the penultimate block. It should be completed
+    // before attempting to complete the last one.
+    if (!checkFileProgress(pendingFile, false)) {
+      return false;
+    }
+
     // commit the last block and complete it if it has minimum replicas
     commitOrCompleteLastBlock(pendingFile, last);
 
@@ -2963,7 +2969,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         //
         BlockInfo b = v.getPenultimateBlock();
         if (b != null && !b.isComplete()) {
-          LOG.info("BLOCK* checkFileProgress: " + b
+          LOG.warn("BLOCK* checkFileProgress: " + b
               + " has not reached minimal replication "
               + blockManager.minReplication);
           return false;

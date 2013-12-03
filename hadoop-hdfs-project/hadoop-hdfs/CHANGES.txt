@@ -3698,6 +3698,9 @@ Release 0.23.10 - UNRELEASED
     HDFS-5557. Write pipeline recovery for the last packet in the block may
     cause rejection of valid replicas. (kihwal)
 
+    HDFS-5558. LeaseManager monitor thread can crash if the last block is
+    complete but another block is not. (kihwal)
+
 Release 0.23.9 - 2013-07-08
 
   INCOMPATIBLE CHANGES
