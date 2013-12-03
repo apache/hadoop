@@ -611,6 +611,14 @@
 </property>
 
 <property>
+  <name>ipc.client.connect.retry.interval</name>
+  <value>1000</value>
+  <description>Indicates the number of milliseconds a client will wait for
+    before retrying to establish a server connection.
+  </description>
+</property>
+
+<property>
   <name>ipc.client.connect.timeout</name>
   <value>20000</value>
   <description>Indicates the number of milliseconds a client will wait for the 
