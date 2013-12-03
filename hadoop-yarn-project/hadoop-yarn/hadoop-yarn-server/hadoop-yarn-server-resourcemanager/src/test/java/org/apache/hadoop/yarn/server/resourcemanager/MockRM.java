@@ -307,16 +307,6 @@ public class MockRM extends ResourceManager {
   }
 
   @Override
-  protected RMHAProtocolService createRMHAProtocolService() {
-    return new RMHAProtocolService(this) {
-      @Override
-      protected void startHAAdminServer() {
-        // do nothing
-      }
-    };
-  }
-
-  @Override
   protected ClientRMService createClientRMService() {
     return new ClientRMService(getRMContext(), getResourceScheduler(),
         rmAppManager, applicationACLsManager, queueACLsManager,
@@ -391,19 +381,15 @@ public class MockRM extends ResourceManager {
   }
 
   @Override
-  protected AdminService createAdminService(ClientRMService clientRMService,
-      ApplicationMasterService applicationMasterService,
-      ResourceTrackerService resourceTrackerService) {
-    return new AdminService(getConfig(), scheduler, getRMContext(),
-        this.nodesListManager, clientRMService, applicationMasterService,
-        resourceTrackerService) {
+  protected AdminService createAdminService() {
+    return new AdminService(this, getRMContext()) {
       @Override
-      protected void serviceStart() {
+      protected void startServer() {
         // override to not start rpc handler
       }
 
       @Override
-      protected void serviceStop() {
+      protected void stopServer() {
         // don't do anything
       }
     };

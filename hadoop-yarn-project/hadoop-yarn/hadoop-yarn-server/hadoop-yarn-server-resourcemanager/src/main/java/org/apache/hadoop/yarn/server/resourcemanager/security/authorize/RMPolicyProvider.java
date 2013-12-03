@@ -35,7 +35,7 @@ import org.apache.hadoop.yarn.server.api.ResourceTrackerPB;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class RMPolicyProvider extends PolicyProvider {
-  
+
   private static final Service[] resourceManagerServices = 
       new Service[] {
     new Service(
@@ -53,9 +53,6 @@ public class RMPolicyProvider extends PolicyProvider {
     new Service(
         YarnConfiguration.YARN_SECURITY_SERVICE_AUTHORIZATION_CONTAINER_MANAGEMENT_PROTOCOL, 
         ContainerManagementProtocolPB.class),
-    new Service(
-        YarnConfiguration.YARN_SECURITY_SERVICE_AUTHORIZATION_HA_SERVICE_PROTOCOL,
-        HAServiceProtocol.class),
   };
 
   @Override

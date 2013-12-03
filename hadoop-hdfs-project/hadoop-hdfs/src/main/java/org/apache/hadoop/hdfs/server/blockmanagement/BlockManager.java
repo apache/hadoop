@@ -1555,13 +1555,15 @@ public class BlockManager {
    * Besides the block in question, it provides the ReplicaState
    * reported by the datanode in the block report. 
    */
-  private static class StatefulBlockInfo {
+  static class StatefulBlockInfo {
     final BlockInfoUnderConstruction storedBlock;
+    final Block reportedBlock;
     final ReplicaState reportedState;
     
     StatefulBlockInfo(BlockInfoUnderConstruction storedBlock, 
-        ReplicaState reportedState) {
+        Block reportedBlock, ReplicaState reportedState) {
       this.storedBlock = storedBlock;
+      this.reportedBlock = reportedBlock;
       this.reportedState = reportedState;
     }
   }
@@ -1719,8 +1721,7 @@ public class BlockManager {
 
     // Process the blocks on each queue
     for (StatefulBlockInfo b : toUC) { 
-      addStoredBlockUnderConstruction(b.storedBlock, node,
-          storage.getStorageID(), b.reportedState);
+      addStoredBlockUnderConstruction(b, node, storage.getStorageID());
     }
     for (Block b : toRemove) {
       removeStoredBlock(b, node);
@@ -1950,7 +1951,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
 
     if (isBlockUnderConstruction(storedBlock, ucState, reportedState)) {
       toUC.add(new StatefulBlockInfo(
-          (BlockInfoUnderConstruction)storedBlock, reportedState));
+          (BlockInfoUnderConstruction)storedBlock, block, reportedState));
       return storedBlock;
     }
 
@@ -2120,18 +2121,18 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
       return false;
     }
   }
-  
-  void addStoredBlockUnderConstruction(
-      BlockInfoUnderConstruction block, 
-      DatanodeDescriptor node, String storageID, 
-      ReplicaState reportedState) 
-  throws IOException {
-    block.addReplicaIfNotPresent(node.getStorageInfo(storageID), block, reportedState);
-    if (reportedState == ReplicaState.FINALIZED && block.findDatanode(node) < 0) {
+
+  void addStoredBlockUnderConstruction(StatefulBlockInfo ucBlock,
+      DatanodeDescriptor node, String storageID) throws IOException {
+    BlockInfoUnderConstruction block = ucBlock.storedBlock;
+    block.addReplicaIfNotPresent(node.getStorageInfo(storageID),
+        ucBlock.reportedBlock, ucBlock.reportedState);
+
+    if (ucBlock.reportedState == ReplicaState.FINALIZED && block.findDatanode(node) < 0) {
       addStoredBlock(block, node, storageID, null, true);
     }
-  }
-  
+  } 
+
   /**
    * Faster version of
    * {@link #addStoredBlock(BlockInfo, DatanodeDescriptor, String, DatanodeDescriptor, boolean)}
@@ -2702,7 +2703,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
       : "The block should be only in one of the lists.";
 
     for (StatefulBlockInfo b : toUC) { 
-      addStoredBlockUnderConstruction(b.storedBlock, node, storageID, b.reportedState);
+      addStoredBlockUnderConstruction(b, node, storageID);
     }
     long numBlocksLogged = 0;
     for (BlockInfo b : toAdd) {

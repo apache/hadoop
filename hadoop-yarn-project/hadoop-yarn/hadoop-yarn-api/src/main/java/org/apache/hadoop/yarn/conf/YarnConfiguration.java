@@ -285,18 +285,6 @@ public class YarnConfiguration extends Configuration {
   public static final String RM_HA_IDS = RM_HA_PREFIX + "rm-ids";
   public static final String RM_HA_ID = RM_HA_PREFIX + "id";
 
-  @org.apache.hadoop.classification.InterfaceAudience.Private
-  // TODO Remove after YARN-1318
-  public static final String RM_HA_ADMIN_ADDRESS =
-      RM_HA_PREFIX + "admin.address";
-  public static final int DEFAULT_RM_HA_ADMIN_PORT = 8034;
-  public static String DEFAULT_RM_HA_ADMIN_ADDRESS =
-      "0.0.0.0:" + DEFAULT_RM_HA_ADMIN_PORT;
-  public static final String RM_HA_ADMIN_CLIENT_THREAD_COUNT =
-      RM_HA_PREFIX + "admin.client.thread-count";
-  public static final int DEFAULT_RM_HA_ADMIN_CLIENT_THREAD_COUNT = 1;
-  // end @Private
-
   public static final List<String> RM_RPC_ADDRESS_CONF_KEYS =
       Collections.unmodifiableList(Arrays.asList(
           RM_ADDRESS,
@@ -304,9 +292,7 @@ public class YarnConfiguration extends Configuration {
           RM_ADMIN_ADDRESS,
           RM_RESOURCE_TRACKER_ADDRESS,
           RM_WEBAPP_ADDRESS,
-          RM_WEBAPP_HTTPS_ADDRESS,
-          // TODO Remove after YARN-1318
-          RM_HA_ADMIN_ADDRESS));
+          RM_WEBAPP_HTTPS_ADDRESS));
 
   ////////////////////////////////
   // RM state store configs
@@ -786,11 +772,6 @@ public class YarnConfiguration extends Configuration {
   public static final String 
   YARN_SECURITY_SERVICE_AUTHORIZATION_RESOURCE_LOCALIZER =
       "security.resourcelocalizer.protocol.acl";
-  @org.apache.hadoop.classification.InterfaceAudience.Private
-  // TODO Remove after YARN-1318
-  public static final String
-  YARN_SECURITY_SERVICE_AUTHORIZATION_HA_SERVICE_PROTOCOL =
-      CommonConfigurationKeys.SECURITY_HA_SERVICE_PROTOCOL_ACL;
 
   /** No. of milliseconds to wait between sending a SIGTERM and SIGKILL
    * to a running container */

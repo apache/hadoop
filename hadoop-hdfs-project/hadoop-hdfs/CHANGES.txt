@@ -421,7 +421,7 @@ Trunk (Unreleased)
     HDFS-5562. TestCacheDirectives and TestFsDatasetCache should stub out
     native mlock. (Colin McCabe and Akira Ajisaka via wang)
 
-Release 2.3.0 - UNRELEASED
+Release 2.4.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
@@ -643,7 +643,7 @@ Release 2.3.0 - UNRELEASED
     HDFS-5533. Symlink delete/create should be treated as DELETE/CREATE in snapshot diff 
     report. (Binglin Chang via jing9)
 
-Release 2.2.1 - UNRELEASED
+Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
@@ -4059,6 +4059,12 @@ Release 0.23.10 - UNRELEASED
     L. Abad via jeagles)
 
     HDFS-5526. Datanode cannot roll back to previous layout version (kihwal)
+
+    HDFS-5557. Write pipeline recovery for the last packet in the block may
+    cause rejection of valid replicas. (kihwal)
+
+    HDFS-5558. LeaseManager monitor thread can crash if the last block is
+    complete but another block is not. (kihwal)
 
 Release 0.23.9 - 2013-07-08
 

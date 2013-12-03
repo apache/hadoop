@@ -53,6 +53,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager.StatefulBlockInfo;
 import org.apache.hadoop.hdfs.server.namenode.FSClusterStats;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
@@ -1119,8 +1120,9 @@ public class TestReplicationPolicy {
 
     // Adding this block will increase its current replication, and that will
     // remove it from the queue.
-    bm.addStoredBlockUnderConstruction(info,
-        TestReplicationPolicy.dataNodes[0], "STORAGE", ReplicaState.FINALIZED);
+    bm.addStoredBlockUnderConstruction(new StatefulBlockInfo(info, info,
+              ReplicaState.FINALIZED), TestReplicationPolicy.dataNodes[0],
+            "STORAGE");
 
     // Choose 1 block from UnderReplicatedBlocks. Then it should pick 1 block
     // from QUEUE_VERY_UNDER_REPLICATED.

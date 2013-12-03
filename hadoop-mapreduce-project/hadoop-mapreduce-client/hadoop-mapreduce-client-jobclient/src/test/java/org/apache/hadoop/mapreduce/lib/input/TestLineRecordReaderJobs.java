@@ -18,11 +18,11 @@
 
 package org.apache.hadoop.mapreduce.lib.input;
 
+import static org.junit.Assert.assertEquals;
+
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
-
-import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -34,7 +34,7 @@ import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.junit.Test;
 
-public class TestLineRecordReader extends TestCase {
+public class TestLineRecordReaderJobs {
 
   private static Path workDir = new Path(new Path(System.getProperty(
       "test.build.data", "."), "data"), "TestTextInputFormat");
@@ -79,7 +79,7 @@ public class TestLineRecordReader extends TestCase {
   public void createAndRunJob(Configuration conf) throws IOException,
       InterruptedException, ClassNotFoundException {
     Job job = Job.getInstance(conf);
-    job.setJarByClass(TestLineRecordReader.class);
+    job.setJarByClass(TestLineRecordReaderJobs.class);
     job.setMapperClass(Mapper.class);
     job.setReducerClass(Reducer.class);
     FileInputFormat.addInputPath(job, inputDir);
@@ -107,7 +107,7 @@ public class TestLineRecordReader extends TestCase {
     createInputFile(conf);
     createAndRunJob(conf);
     String expected = "0\tabc\ndef\n9\tghi\njkl\n";
-    this.assertEquals(expected, readOutputFile(conf));
+    assertEquals(expected, readOutputFile(conf));
   }
 
   /**
@@ -129,7 +129,7 @@ public class TestLineRecordReader extends TestCase {
     createInputFile(conf);
     createAndRunJob(conf);
     String expected = "0\tabc\n4\tdef\t\n9\tghi\n13\tjkl\n";
-    this.assertEquals(expected, readOutputFile(conf));
+    assertEquals(expected, readOutputFile(conf));
   }
 
 }

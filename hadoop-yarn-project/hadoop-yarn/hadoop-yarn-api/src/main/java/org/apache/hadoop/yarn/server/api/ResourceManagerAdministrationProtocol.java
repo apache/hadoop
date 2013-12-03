@@ -24,6 +24,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.tools.GetUserMappingsProtocol;
+import org.apache.hadoop.yarn.exceptions.RMNotYetActiveException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsResponse;
@@ -45,25 +46,25 @@ public interface ResourceManagerAdministrationProtocol extends GetUserMappingsPr
   @Public
   @Stable
   public RefreshQueuesResponse refreshQueues(RefreshQueuesRequest request) 
-  throws YarnException, IOException;
+  throws RMNotYetActiveException, YarnException, IOException;
 
   @Public
   @Stable
   public RefreshNodesResponse refreshNodes(RefreshNodesRequest request)
-  throws YarnException, IOException;
+  throws RMNotYetActiveException, YarnException, IOException;
 
   @Public
   @Stable
   public RefreshSuperUserGroupsConfigurationResponse 
   refreshSuperUserGroupsConfiguration(
       RefreshSuperUserGroupsConfigurationRequest request)
-  throws YarnException, IOException;
+  throws RMNotYetActiveException, YarnException, IOException;
 
   @Public
   @Stable
   public RefreshUserToGroupsMappingsResponse refreshUserToGroupsMappings(
       RefreshUserToGroupsMappingsRequest request)
-  throws YarnException, IOException;
+  throws RMNotYetActiveException, YarnException, IOException;
 
   @Public
   @Stable
