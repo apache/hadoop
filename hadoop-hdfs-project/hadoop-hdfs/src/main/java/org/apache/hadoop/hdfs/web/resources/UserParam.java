@@ -17,8 +17,12 @@
  */
 package org.apache.hadoop.hdfs.web.resources;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
-
+import static org.apache.hadoop.hdfs.web.WebHdfsConfigKeys.USER_PATTERN_KEY;
+import static org.apache.hadoop.hdfs.web.WebHdfsConfigKeys.USER_PATTERN_DEFAULT;
+import com.google.common.annotations.VisibleForTesting;
+ 
 import java.text.MessageFormat;
 import java.util.regex.Pattern;
 
@@ -29,8 +33,29 @@ public class UserParam extends StringParam {
   /** Default parameter value. */
   public static final String DEFAULT = "";
 
-  private static final Domain DOMAIN = new Domain(NAME,
-    Pattern.compile("^[A-Za-z_][A-Za-z0-9._-]*[$]?$"));
+  private static String userPattern = null;
+  private static Domain domain = null;
+
+  static {
+      setUserPattern(USER_PATTERN_DEFAULT);
+  }
+
+  @VisibleForTesting
+  public static String getUserPattern() {
+    return userPattern;
+  }
+
+  @VisibleForTesting
+  public static void setUserPattern(String pattern) {
+    userPattern = pattern;
+    Pattern pt = Pattern.compile(userPattern);
+    domain = new Domain(NAME, pt);
+  }
+
+  public static void setUserPattern(Configuration conf) {
+    String pattern = conf.get(USER_PATTERN_KEY, USER_PATTERN_DEFAULT);
+    setUserPattern(pattern);
+  }
 
   private static String validateLength(String str) {
     if (str == null) {
@@ -50,7 +75,7 @@ public class UserParam extends StringParam {
    * @param str a string representation of the parameter value.
    */
   public UserParam(final String str) {
-    super(DOMAIN, str == null || str.equals(DEFAULT)? null : validateLength(str));
+    super(domain, str == null || str.equals(DEFAULT)? null : validateLength(str));
   }
 
   /**
