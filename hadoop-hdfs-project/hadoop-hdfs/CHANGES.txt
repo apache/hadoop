@@ -345,6 +345,9 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-4997. libhdfs doesn't return correct error codes in most cases (cmccabe)
 
+    HDFS-4983. Numeric usernames do not work with WebHDFS FS.
+    (Yongjun Zhang via wang)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES

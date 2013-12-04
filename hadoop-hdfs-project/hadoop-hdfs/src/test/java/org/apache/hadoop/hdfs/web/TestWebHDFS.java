@@ -38,6 +38,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.TestDFSClientRetries;
 import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMethods;
+import org.apache.hadoop.hdfs.web.WebHdfsConfigKeys;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.log4j.Level;
 import org.junit.Assert;
@@ -253,6 +254,34 @@ public class TestWebHDFS {
               Assert.assertTrue(fs.createNewFile(p));
             }
             Assert.assertEquals(listLimit*3, fs.listStatus(d).length);
+            return null;
+          }
+        });
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  @Test(timeout=300000)
+  public void testNumericalUserName() throws Exception {
+    final Configuration conf = WebHdfsTestUtil.createConf();
+    conf.set(WebHdfsConfigKeys.USER_PATTERN_KEY, "^[A-Za-z0-9_][A-Za-z0-9._-]*[$]?$");
+    final MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+    try {
+      cluster.waitActive();
+      WebHdfsTestUtil.getWebHdfsFileSystem(conf, WebHdfsFileSystem.SCHEME)
+          .setPermission(new Path("/"),
+              new FsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL));
+
+      UserGroupInformation.createUserForTesting("123", new String[]{"my-group"})
+        .doAs(new PrivilegedExceptionAction<Void>() {
+          @Override
+          public Void run() throws IOException, URISyntaxException {
+            FileSystem fs = WebHdfsTestUtil.getWebHdfsFileSystem(conf,
+                WebHdfsFileSystem.SCHEME);
+            Path d = new Path("/my-dir");
+            Assert.assertTrue(fs.mkdirs(d));
             return null;
           }
         });
