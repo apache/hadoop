@@ -109,8 +109,10 @@ import org.apache.hadoop.hdfs.client.ClientMmapManager;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
+import org.apache.hadoop.hdfs.protocol.CacheDirectiveIterator;
 import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
+import org.apache.hadoop.hdfs.protocol.CachePoolIterator;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
 import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
@@ -2324,12 +2326,7 @@ public class DFSClient implements java.io.Closeable {
   
   public RemoteIterator<CacheDirectiveEntry> listCacheDirectives(
       CacheDirectiveInfo filter) throws IOException {
-    checkOpen();
-    try {
-      return namenode.listCacheDirectives(0, filter);
-    } catch (RemoteException re) {
-      throw re.unwrapRemoteException();
-    }
+    return new CacheDirectiveIterator(namenode, filter);
   }
 
   public void addCachePool(CachePoolInfo info) throws IOException {
@@ -2360,12 +2357,7 @@ public class DFSClient implements java.io.Closeable {
   }
 
   public RemoteIterator<CachePoolEntry> listCachePools() throws IOException {
-    checkOpen();
-    try {
-      return namenode.listCachePools("");
-    } catch (RemoteException re) {
-      throw re.unwrapRemoteException();
-    }
+    return new CachePoolIterator(namenode);
   }
 
   /**

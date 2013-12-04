@@ -421,6 +421,9 @@ Trunk (Unreleased)
     HDFS-5562. TestCacheDirectives and TestFsDatasetCache should stub out
     native mlock. (Colin McCabe and Akira Ajisaka via wang)
 
+    HDFS-5555. CacheAdmin commands fail when first listed NameNode is in
+    Standby (jxiang via cmccabe)
+
 Release 2.4.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

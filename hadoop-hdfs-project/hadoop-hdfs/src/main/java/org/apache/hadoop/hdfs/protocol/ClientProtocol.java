@@ -28,9 +28,9 @@ import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.fs.Options;
+import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedEntries;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
-import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -1134,10 +1134,10 @@ public interface ClientProtocol {
    *               listCacheDirectives.
    * @param filter Parameters to use to filter the list results, 
    *               or null to display all directives visible to us.
-   * @return A RemoteIterator which returns CacheDirectiveInfo objects.
+   * @return A batch of CacheDirectiveEntry objects.
    */
   @Idempotent
-  public RemoteIterator<CacheDirectiveEntry> listCacheDirectives(
+  public BatchedEntries<CacheDirectiveEntry> listCacheDirectives(
       long prevId, CacheDirectiveInfo filter) throws IOException;
 
   /**
@@ -1175,9 +1175,9 @@ public interface ClientProtocol {
    * 
    * @param prevPool name of the last pool listed, or the empty string if this is
    *          the first invocation of listCachePools
-   * @return A RemoteIterator which returns CachePool objects.
+   * @return A batch of CachePoolEntry objects.
    */
   @Idempotent
-  public RemoteIterator<CachePoolEntry> listCachePools(String prevPool)
+  public BatchedEntries<CachePoolEntry> listCachePools(String prevPool)
       throws IOException;
 }

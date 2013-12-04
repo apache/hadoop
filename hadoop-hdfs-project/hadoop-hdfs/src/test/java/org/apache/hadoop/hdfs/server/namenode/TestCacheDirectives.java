@@ -57,6 +57,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
+import org.apache.hadoop.hdfs.protocol.CacheDirectiveIterator;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveStats;
 import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
@@ -763,7 +764,7 @@ public class TestCacheDirectives {
       }
       // Uncache and check each path in sequence
       RemoteIterator<CacheDirectiveEntry> entries =
-          nnRpc.listCacheDirectives(0, null);
+        new CacheDirectiveIterator(nnRpc, null);
       for (int i=0; i<numFiles; i++) {
         CacheDirectiveEntry entry = entries.next();
         nnRpc.removeCacheDirective(entry.getInfo().getId());
