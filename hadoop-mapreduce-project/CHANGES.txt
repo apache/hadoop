@@ -92,6 +92,8 @@ Release 2.4.0 - UNRELEASED
     MAPREDUCE-5645. TestFixedLengthInputFormat fails with native libs (Mit
     Desai via jeagles)
 
+    MAPREDUCE-5632. TestRMContainerAllocator#testUpdatedNodes fails (jeagles)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
