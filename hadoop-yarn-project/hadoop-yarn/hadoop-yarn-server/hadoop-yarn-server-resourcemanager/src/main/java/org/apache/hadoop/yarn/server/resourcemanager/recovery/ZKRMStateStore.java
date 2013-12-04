@@ -82,6 +82,7 @@ public class ZKRMStateStore extends RMStateStore {
 
   private String zkHostPort = null;
   private int zkSessionTimeout;
+  private long zkRetryInterval;
   private List<ACL> zkAcl;
   private String zkRootNodePath;
   private String rmDTSecretManagerRoot;
@@ -161,6 +162,9 @@ public class ZKRMStateStore extends RMStateStore {
     zkSessionTimeout =
         conf.getInt(YarnConfiguration.ZK_RM_STATE_STORE_TIMEOUT_MS,
             YarnConfiguration.DEFAULT_ZK_RM_STATE_STORE_TIMEOUT_MS);
+    zkRetryInterval =
+        conf.getLong(YarnConfiguration.ZK_RM_STATE_STORE_RETRY_INTERVAL_MS,
+          YarnConfiguration.DEFAULT_ZK_RM_STATE_STORE_RETRY_INTERVAL_MS);
     // Parse authentication from configuration.
     String zkAclConf =
         conf.get(YarnConfiguration.ZK_RM_STATE_STORE_ACL,
@@ -810,6 +814,9 @@ public class ZKRMStateStore extends RMStateStore {
           }
         } catch (KeeperException ke) {
           if (shouldRetry(ke.code()) && ++retry < numRetries) {
+            LOG.info("Waiting for zookeeper to be connected, retry no. + "
+                + retry);
+            Thread.sleep(zkRetryInterval);
             continue;
           }
           throw ke;

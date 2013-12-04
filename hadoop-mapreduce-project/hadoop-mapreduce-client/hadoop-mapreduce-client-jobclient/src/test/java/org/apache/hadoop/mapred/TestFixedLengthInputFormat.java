@@ -197,17 +197,17 @@ public class TestFixedLengthInputFormat {
   public void testGzipWithTwoInputs() throws IOException {
     CompressionCodec gzip = new GzipCodec();
     localFs.delete(workDir, true);
-    // Create files with fixed length records with 5 byte long records.
-    writeFile(localFs, new Path(workDir, "part1.txt.gz"), gzip, 
-        "one  two  threefour five six  seveneightnine ten  ");
-    writeFile(localFs, new Path(workDir, "part2.txt.gz"), gzip,
-        "ten  nine eightsevensix  five four threetwo  one  ");
     FixedLengthInputFormat format = new FixedLengthInputFormat();
     JobConf job = new JobConf(defaultConf);
     format.setRecordLength(job, 5);
     FileInputFormat.setInputPaths(job, workDir);
     ReflectionUtils.setConf(gzip, job);
     format.configure(job);
+    // Create files with fixed length records with 5 byte long records.
+    writeFile(localFs, new Path(workDir, "part1.txt.gz"), gzip, 
+        "one  two  threefour five six  seveneightnine ten  ");
+    writeFile(localFs, new Path(workDir, "part2.txt.gz"), gzip,
+        "ten  nine eightsevensix  five four threetwo  one  ");
     InputSplit[] splits = format.getSplits(job, 100);
     assertEquals("compressed splits == 2", 2, splits.length);
     FileSplit tmp = (FileSplit) splits[0];
@@ -283,12 +283,16 @@ public class TestFixedLengthInputFormat {
       int fileSize = (totalRecords * recordLength);
       LOG.info("totalRecords=" + totalRecords + " recordLength="
           + recordLength);
+      // Create the job 
+      JobConf job = new JobConf(defaultConf);
+      if (codec != null) {
+        ReflectionUtils.setConf(codec, job);
+      }
       // Create the test file
       ArrayList<String> recordList
           = createFile(file, codec, recordLength, totalRecords);
       assertTrue(localFs.exists(file));
-      // Create the job and set the fixed length record length config property 
-      JobConf job = new JobConf(defaultConf);
+      //set the fixed length record length config property for the job
       FixedLengthInputFormat.setRecordLength(job, recordLength);
 
       int numSplits = 1;
@@ -383,8 +387,6 @@ public class TestFixedLengthInputFormat {
     if (codec != null) {
       fileName.append(".gz");
     }
-    writeFile(localFs, new Path(workDir, fileName.toString()), codec,
-        "one  two  threefour five six  seveneightnine ten");
     FixedLengthInputFormat format = new FixedLengthInputFormat();
     JobConf job = new JobConf(defaultConf);
     format.setRecordLength(job, 5);
@@ -393,6 +395,8 @@ public class TestFixedLengthInputFormat {
       ReflectionUtils.setConf(codec, job);
     }
     format.configure(job);
+    writeFile(localFs, new Path(workDir, fileName.toString()), codec,
+            "one  two  threefour five six  seveneightnine ten");
     InputSplit[] splits = format.getSplits(job, 100);
     if (codec != null) {
       assertEquals("compressed splits == 1", 1, splits.length);

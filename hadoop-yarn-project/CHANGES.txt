@@ -132,6 +132,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1318. Promoted AdminService to an Always-On service and merged it into
     RMHAProtocolService. (Karthik Kambatla via vinodkv)
 
+    YARN-1332. In TestAMRMClient, replace assertTrue with assertEquals where
+    possible (Sebastian Wong via Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -190,6 +193,12 @@ Release 2.4.0 - UNRELEASED
 
     YARN-1416. Fixed a few invalid transitions in RMApp, RMAppAttempt and in some
     tests. (Jian He via vinodkv)
+
+    YARN-895. Changed RM state-store to not crash immediately if RM restarts while
+    the state-store is down. (Jian He via vinodkv)
+
+    YARN-1454. Fixed test failure issue with TestRMRestart. (Karthik Kambatla
+    via vinodkv)
 
 Release 2.3.0 - UNRELEASED
 
