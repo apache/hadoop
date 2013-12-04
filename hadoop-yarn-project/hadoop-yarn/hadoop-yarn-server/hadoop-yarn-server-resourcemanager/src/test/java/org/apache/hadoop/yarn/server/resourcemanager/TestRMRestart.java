@@ -1247,6 +1247,8 @@ public class TestRMRestart {
     // renewDate before renewing
     Long renewDateBeforeRenew = allTokensRM2.get(dtId1);
     try{
+      // Sleep for one millisecond to make sure renewDataAfterRenew is greater
+      Thread.sleep(1);
       // renew recovered token
       rm2.getRMDTSecretManager().renewToken(token1, "renewer1");
     } catch(Exception e) {
