@@ -103,6 +103,8 @@ Release 2.4.0 - UNRELEASED
     HADOOP-10127. Add ipc.client.connect.retry.interval to control the frequency
     of connection retries (Karthik Kambatla via Sandy Ryza)
 
+    HADOOP-10102. Update commons IO from 2.1 to 2.4 (Akira Ajisaka via stevel)
+
   OPTIMIZATIONS
 
     HADOOP-9748. Reduce blocking on UGI.ensureInitialized (daryn)
