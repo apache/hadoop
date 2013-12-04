@@ -20,31 +20,30 @@ package org.apache.hadoop.yarn.exceptions;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
-import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
+import org.apache.hadoop.yarn.api.ApplicationHistoryProtocol;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportRequest;
 
 /**
  * This exception is thrown on
- * {@link ApplicationClientProtocol#getApplicationReport
- * (GetApplicationReportRequest)} API
- * when the Application doesn't exist in RM and AHS
+ * {@link ApplicationHistoryProtocol#getApplicationAttemptReport
+ * (GetApplicationAttemptReportRequest)}
+ * API when the Application Attempt doesn't exist in Application History Server
  */
 @Public
 @Unstable
-public class ApplicationNotFoundException extends YarnException{
+public class ApplicationAttemptNotFoundException extends YarnException {
 
-  private static final long serialVersionUID = 8694408L;
+  private static final long serialVersionUID = 8694508L;
 
-  public ApplicationNotFoundException(Throwable cause) {
+  public ApplicationAttemptNotFoundException(Throwable cause) {
     super(cause);
   }
 
-  public ApplicationNotFoundException(String message) {
+  public ApplicationAttemptNotFoundException(String message) {
     super(message);
   }
 
-  public ApplicationNotFoundException(String message,
-      Throwable cause) {
+  public ApplicationAttemptNotFoundException(String message, Throwable cause) {
     super(message, cause);
   }
 }
