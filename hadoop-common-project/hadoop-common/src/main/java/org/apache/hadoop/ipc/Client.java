@@ -894,6 +894,7 @@ public class Client {
         // cleanup calls
         cleanupCalls();
       }
+      closeConnection();
       if (LOG.isDebugEnabled())
         LOG.debug(getName() + ": closed");
     }
