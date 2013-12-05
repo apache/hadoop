@@ -143,6 +143,10 @@ Release 2.3.0 - UNRELEASED
     MAPREDUCE-5451. MR uses LD_LIBRARY_PATH which doesn't mean anything in
     Windows. (Yingda Chen via cnauroth)
 
+    MAPREDUCE-5409. MRAppMaster throws InvalidStateTransitonException: Invalid
+    event: TA_TOO_MANY_FETCH_FAILURE at KILLED for TaskAttemptImpl (Gera
+    Shegalov via jlowe)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
