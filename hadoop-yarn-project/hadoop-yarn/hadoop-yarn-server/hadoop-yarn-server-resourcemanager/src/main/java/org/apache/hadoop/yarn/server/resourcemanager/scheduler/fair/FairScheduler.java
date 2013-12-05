@@ -192,11 +192,16 @@ public class FairScheduler implements ResourceScheduler {
 
   @VisibleForTesting
   final MaxRunningAppsEnforcer maxRunningEnforcer;
+
+  private AllocationFileLoaderService allocsLoader;
+  @VisibleForTesting
+  AllocationConfiguration allocConf;
   
   public FairScheduler() {
     clock = new SystemClock();
+    allocsLoader = new AllocationFileLoaderService();
     queueMgr = new QueueManager(this);
-    maxRunningEnforcer = new MaxRunningAppsEnforcer(queueMgr);
+    maxRunningEnforcer = new MaxRunningAppsEnforcer(this);
   }
 
   private void validateConf(Configuration conf) {
@@ -275,7 +280,6 @@ public class FairScheduler implements ResourceScheduler {
    * required resources per job.
    */
   protected synchronized void update() {
-    queueMgr.reloadAllocsIfNecessary(); // Relaod alloc file
     updatePreemptionVariables(); // Determine if any queues merit preemption
 
     FSQueue rootQueue = queueMgr.getRootQueue();
@@ -480,8 +484,8 @@ public class FairScheduler implements ResourceScheduler {
    */
   protected Resource resToPreempt(FSLeafQueue sched, long curTime) {
     String queue = sched.getName();
-    long minShareTimeout = queueMgr.getMinSharePreemptionTimeout(queue);
-    long fairShareTimeout = queueMgr.getFairSharePreemptionTimeout();
+    long minShareTimeout = allocConf.getMinSharePreemptionTimeout(queue);
+    long fairShareTimeout = allocConf.getFairSharePreemptionTimeout();
     Resource resDueToMinShare = Resources.none();
     Resource resDueToFairShare = Resources.none();
     if (curTime - sched.getLastTimeAtMinShare() > minShareTimeout) {
@@ -650,8 +654,8 @@ public class FairScheduler implements ResourceScheduler {
   FSLeafQueue assignToQueue(RMApp rmApp, String queueName, String user) {
     FSLeafQueue queue = null;
     try {
-      QueuePlacementPolicy policy = queueMgr.getPlacementPolicy();
-      queueName = policy.assignAppToQueue(queueName, user);
+      QueuePlacementPolicy placementPolicy = allocConf.getPlacementPolicy();
+      queueName = placementPolicy.assignAppToQueue(queueName, user);
       if (queueName == null) {
         return null;
       }
@@ -1128,27 +1132,27 @@ public class FairScheduler implements ResourceScheduler {
   @Override
   public synchronized void reinitialize(Configuration conf, RMContext rmContext)
       throws IOException {
-    this.conf = new FairSchedulerConfiguration(conf);
-    validateConf(this.conf);
-    minimumAllocation = this.conf.getMinimumAllocation();
-    maximumAllocation = this.conf.getMaximumAllocation();
-    incrAllocation = this.conf.getIncrementAllocation();
-    continuousSchedulingEnabled = this.conf.isContinuousSchedulingEnabled();
-    continuousSchedulingSleepMs =
-            this.conf.getContinuousSchedulingSleepMs();
-    nodeLocalityThreshold = this.conf.getLocalityThresholdNode();
-    rackLocalityThreshold = this.conf.getLocalityThresholdRack();
-    nodeLocalityDelayMs = this.conf.getLocalityDelayNodeMs();
-    rackLocalityDelayMs = this.conf.getLocalityDelayRackMs();
-    preemptionEnabled = this.conf.getPreemptionEnabled();
-    assignMultiple = this.conf.getAssignMultiple();
-    maxAssign = this.conf.getMaxAssign();
-    sizeBasedWeight = this.conf.getSizeBasedWeight();
-    preemptionInterval = this.conf.getPreemptionInterval();
-    waitTimeBeforeKill = this.conf.getWaitTimeBeforeKill();
-    usePortForNodeName = this.conf.getUsePortForNodeName();
-    
     if (!initialized) {
+      this.conf = new FairSchedulerConfiguration(conf);
+      validateConf(this.conf);
+      minimumAllocation = this.conf.getMinimumAllocation();
+      maximumAllocation = this.conf.getMaximumAllocation();
+      incrAllocation = this.conf.getIncrementAllocation();
+      continuousSchedulingEnabled = this.conf.isContinuousSchedulingEnabled();
+      continuousSchedulingSleepMs =
+              this.conf.getContinuousSchedulingSleepMs();
+      nodeLocalityThreshold = this.conf.getLocalityThresholdNode();
+      rackLocalityThreshold = this.conf.getLocalityThresholdRack();
+      nodeLocalityDelayMs = this.conf.getLocalityDelayNodeMs();
+      rackLocalityDelayMs = this.conf.getLocalityDelayRackMs();
+      preemptionEnabled = this.conf.getPreemptionEnabled();
+      assignMultiple = this.conf.getAssignMultiple();
+      maxAssign = this.conf.getMaxAssign();
+      sizeBasedWeight = this.conf.getSizeBasedWeight();
+      preemptionInterval = this.conf.getPreemptionInterval();
+      waitTimeBeforeKill = this.conf.getWaitTimeBeforeKill();
+      usePortForNodeName = this.conf.getUsePortForNodeName();
+      
       rootMetrics = FSQueueMetrics.forQueue("root", null, true, conf);
       this.rmContext = rmContext;
       this.eventLog = new FairSchedulerEventLog();
@@ -1156,8 +1160,9 @@ public class FairScheduler implements ResourceScheduler {
 
       initialized = true;
 
+      allocConf = new AllocationConfiguration(conf);
       try {
-        queueMgr.initialize();
+        queueMgr.initialize(conf);
       } catch (Exception e) {
         throw new IOException("Failed to start FairScheduler", e);
       }
@@ -1181,11 +1186,23 @@ public class FairScheduler implements ResourceScheduler {
         schedulingThread.setDaemon(true);
         schedulingThread.start();
       }
-    } else {
+      
+      allocsLoader.init(conf);
+      allocsLoader.setReloadListener(new AllocationReloadListener());
+      // If we fail to load allocations file on initialize, we want to fail
+      // immediately.  After a successful load, exceptions on future reloads
+      // will just result in leaving things as they are.
       try {
-        queueMgr.reloadAllocs();
+        allocsLoader.reloadAllocations();
       } catch (Exception e) {
         throw new IOException("Failed to initialize FairScheduler", e);
+      }
+      allocsLoader.start();
+    } else {
+      try {
+        allocsLoader.reloadAllocations();
+      } catch (Exception e) {
+        LOG.error("Failed to reload allocations file", e);
       }
     }
   }
@@ -1229,6 +1246,25 @@ public class FairScheduler implements ResourceScheduler {
       return false;
     }
     return queue.hasAccess(acl, callerUGI);
+  }
+  
+  public AllocationConfiguration getAllocationConfiguration() {
+    return allocConf;
+  }
+  
+  private class AllocationReloadListener implements
+      AllocationFileLoaderService.Listener {
+
+    @Override
+    public void onReload(AllocationConfiguration queueInfo) {
+      // Commit the reload; also create any queue defined in the alloc file
+      // if it does not already exist, so it can be displayed on the web UI.
+      synchronized (FairScheduler.this) {
+        allocConf = queueInfo;
+        allocConf.getDefaultSchedulingPolicy().initialize(clusterCapacity);
+        queueMgr.updateAllocationConfiguration(allocConf);
+      }
+    }
   }
 
 }

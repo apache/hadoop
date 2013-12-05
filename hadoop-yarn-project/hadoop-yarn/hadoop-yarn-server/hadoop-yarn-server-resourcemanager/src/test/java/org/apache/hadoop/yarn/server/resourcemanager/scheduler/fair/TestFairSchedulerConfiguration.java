@@ -61,14 +61,4 @@ public class TestFairSchedulerConfiguration {
     parseResourceConfigValue("1o24vc0res");
   }
   
-  @Test
-  public void testGetAllocationFileFromClasspath() {
-    FairSchedulerConfiguration conf = new FairSchedulerConfiguration(
-        new Configuration());
-    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE,
-        "test-fair-scheduler.xml");
-    File allocationFile = conf.getAllocationFile();
-    Assert.assertEquals("test-fair-scheduler.xml", allocationFile.getName());
-    Assert.assertTrue(allocationFile.exists());
-  }
 }
