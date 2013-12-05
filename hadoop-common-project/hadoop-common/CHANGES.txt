@@ -2074,6 +2074,20 @@ Release 2.0.0-alpha - 05-23-2012
     HADOOP-7606. Upgrade Jackson to version 1.7.1 to match the version required
     by Jersey (Alejandro Abdelnur via atm)
 
+Release 0.23.11 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+    
+  IMPROVEMENTS
+    
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    HADOOP-10129. Distcp may succeed when it fails (daryn)
+
 Release 0.23.10 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -2094,8 +2108,6 @@ Release 0.23.10 - UNRELEASED
     HADOOP-9955. RPC idle connection closing is extremely inefficient (daryn)
 
   BUG FIXES
-
-    HADOOP-10129. Distcp may succeed when it fails (daryn)
 
 Release 0.23.9 - 2013-07-08
 
