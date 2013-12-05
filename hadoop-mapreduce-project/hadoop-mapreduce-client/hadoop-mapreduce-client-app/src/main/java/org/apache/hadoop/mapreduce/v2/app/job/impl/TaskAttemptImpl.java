@@ -192,6 +192,21 @@ public abstract class TaskAttemptImpl implements
     DIAGNOSTIC_INFORMATION_UPDATE_TRANSITION 
       = new DiagnosticInformationUpdater();
 
+  private static final EnumSet<TaskAttemptEventType>
+    FAILED_KILLED_STATE_IGNORED_EVENTS = EnumSet.of(
+      TaskAttemptEventType.TA_KILL,
+      TaskAttemptEventType.TA_ASSIGNED,
+      TaskAttemptEventType.TA_CONTAINER_COMPLETED,
+      TaskAttemptEventType.TA_UPDATE,
+      // Container launch events can arrive late
+      TaskAttemptEventType.TA_CONTAINER_LAUNCHED,
+      TaskAttemptEventType.TA_CONTAINER_LAUNCH_FAILED,
+      TaskAttemptEventType.TA_CONTAINER_CLEANED,
+      TaskAttemptEventType.TA_COMMIT_PENDING,
+      TaskAttemptEventType.TA_DONE,
+      TaskAttemptEventType.TA_FAILMSG,
+      TaskAttemptEventType.TA_TOO_MANY_FETCH_FAILURE);
+
   private static final StateMachineFactory
         <TaskAttemptImpl, TaskAttemptStateInternal, TaskAttemptEventType, TaskAttemptEvent>
         stateMachineFactory
@@ -452,18 +467,7 @@ public abstract class TaskAttemptImpl implements
        DIAGNOSTIC_INFORMATION_UPDATE_TRANSITION)
      // Ignore-able events for FAILED state
      .addTransition(TaskAttemptStateInternal.FAILED, TaskAttemptStateInternal.FAILED,
-         EnumSet.of(TaskAttemptEventType.TA_KILL,
-             TaskAttemptEventType.TA_ASSIGNED,
-             TaskAttemptEventType.TA_CONTAINER_COMPLETED,
-             TaskAttemptEventType.TA_UPDATE,
-             // Container launch events can arrive late
-             TaskAttemptEventType.TA_CONTAINER_LAUNCHED,
-             TaskAttemptEventType.TA_CONTAINER_LAUNCH_FAILED,
-             TaskAttemptEventType.TA_CONTAINER_CLEANED,
-             TaskAttemptEventType.TA_COMMIT_PENDING,
-             TaskAttemptEventType.TA_DONE,
-             TaskAttemptEventType.TA_FAILMSG,
-             TaskAttemptEventType.TA_TOO_MANY_FETCH_FAILURE))
+       FAILED_KILLED_STATE_IGNORED_EVENTS)
 
      // Transitions from KILLED state
      .addTransition(TaskAttemptStateInternal.KILLED, TaskAttemptStateInternal.KILLED,
@@ -471,17 +475,7 @@ public abstract class TaskAttemptImpl implements
          DIAGNOSTIC_INFORMATION_UPDATE_TRANSITION)
      // Ignore-able events for KILLED state
      .addTransition(TaskAttemptStateInternal.KILLED, TaskAttemptStateInternal.KILLED,
-         EnumSet.of(TaskAttemptEventType.TA_KILL,
-             TaskAttemptEventType.TA_ASSIGNED,
-             TaskAttemptEventType.TA_CONTAINER_COMPLETED,
-             TaskAttemptEventType.TA_UPDATE,
-             // Container launch events can arrive late
-             TaskAttemptEventType.TA_CONTAINER_LAUNCHED,
-             TaskAttemptEventType.TA_CONTAINER_LAUNCH_FAILED,
-             TaskAttemptEventType.TA_CONTAINER_CLEANED,
-             TaskAttemptEventType.TA_COMMIT_PENDING,
-             TaskAttemptEventType.TA_DONE,
-             TaskAttemptEventType.TA_FAILMSG))
+       FAILED_KILLED_STATE_IGNORED_EVENTS)
 
      // create the topology tables
      .installTopology();
