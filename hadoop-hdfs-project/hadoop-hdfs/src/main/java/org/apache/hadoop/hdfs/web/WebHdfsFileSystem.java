@@ -167,8 +167,6 @@ public class WebHdfsFileSystem extends FileSystem
       ) throws IOException {
     super.initialize(uri, conf);
     setConf(conf);
-    /** set user pattern based on configuration file */
-    UserParam.setUserPattern(conf);
     initializeTokenAspect();
     initializeConnectionFactory(conf);
 
