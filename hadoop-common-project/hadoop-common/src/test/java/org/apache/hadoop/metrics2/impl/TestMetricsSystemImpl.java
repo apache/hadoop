@@ -85,6 +85,7 @@ public class TestMetricsSystemImpl {
   }
 
   @Test public void testInitFirstVerifyStopInvokedImmediately() throws Exception {
+    DefaultMetricsSystem.shutdown();
     new ConfigBuilder().add("*.period", 8)
         //.add("test.sink.plugin.urls", getPluginUrlsAsString())
         .add("test.sink.test.class", TestSink.class.getName())
