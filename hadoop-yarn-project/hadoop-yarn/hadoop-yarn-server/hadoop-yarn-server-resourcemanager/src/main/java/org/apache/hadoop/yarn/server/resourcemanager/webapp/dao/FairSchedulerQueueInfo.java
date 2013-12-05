@@ -29,10 +29,10 @@ import javax.xml.bind.annotation.XmlSeeAlso;
 import javax.xml.bind.annotation.XmlTransient;
 
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.AllocationConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSLeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.QueueManager;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 @XmlRootElement
@@ -65,7 +65,7 @@ public class FairSchedulerQueueInfo {
   }
   
   public FairSchedulerQueueInfo(FSQueue queue, FairScheduler scheduler) {
-    QueueManager manager = scheduler.getQueueManager();
+    AllocationConfiguration allocConf = scheduler.getAllocationConfiguration();
     
     queueName = queue.getName();
     schedulingPolicy = queue.getPolicy().getName();
@@ -87,7 +87,7 @@ public class FairSchedulerQueueInfo {
     fractionMemMinShare = (float)minResources.getMemory() / clusterResources.getMemory();
     fractionMemMaxShare = (float)maxResources.getMemory() / clusterResources.getMemory();
     
-    maxApps = manager.getQueueMaxApps(queueName);
+    maxApps = allocConf.getQueueMaxApps(queueName);
     
     Collection<FSQueue> children = queue.getChildQueues();
     childQueues = new ArrayList<FairSchedulerQueueInfo>();

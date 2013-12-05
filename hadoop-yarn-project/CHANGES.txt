@@ -117,6 +117,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1332. In TestAMRMClient, replace assertTrue with assertEquals where
     possible (Sebastian Wong via Sandy Ryza)
 
+    YARN-1403. Separate out configuration loading from QueueManager in the Fair
+    Scheduler (Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES

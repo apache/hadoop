@@ -35,7 +35,7 @@ public abstract class SchedulingPolicy {
   private static final ConcurrentHashMap<Class<? extends SchedulingPolicy>, SchedulingPolicy> instances =
       new ConcurrentHashMap<Class<? extends SchedulingPolicy>, SchedulingPolicy>();
 
-  private static SchedulingPolicy DEFAULT_POLICY =
+  public static final SchedulingPolicy DEFAULT_POLICY =
       getInstance(FairSharePolicy.class);
   
   public static final byte DEPTH_LEAF = (byte) 1;
@@ -43,15 +43,6 @@ public abstract class SchedulingPolicy {
   public static final byte DEPTH_ROOT = (byte) 4;
   public static final byte DEPTH_PARENT = (byte) 6; // Root and Intermediate
   public static final byte DEPTH_ANY = (byte) 7;
-
-  public static SchedulingPolicy getDefault() {
-    return DEFAULT_POLICY;
-  }
-
-  public static void setDefault(String className)
-      throws AllocationConfigurationException {
-    DEFAULT_POLICY = parse(className);
-  }
 
   /**
    * Returns a {@link SchedulingPolicy} instance corresponding to the passed clazz

@@ -41,14 +41,12 @@ public class FSParentQueue extends FSQueue {
 
   private final List<FSQueue> childQueues = 
       new ArrayList<FSQueue>();
-  private final QueueManager queueMgr;
   private Resource demand = Resources.createResource(0);
   private int runnableApps;
   
-  public FSParentQueue(String name, QueueManager queueMgr, FairScheduler scheduler,
+  public FSParentQueue(String name, FairScheduler scheduler,
       FSParentQueue parent) {
-    super(name, queueMgr, scheduler, parent);
-    this.queueMgr = queueMgr;
+    super(name, scheduler, parent);
   }
   
   public void addChildQueue(FSQueue child) {
@@ -82,7 +80,8 @@ public class FSParentQueue extends FSQueue {
   public void updateDemand() {
     // Compute demand by iterating through apps in the queue
     // Limit demand to maxResources
-    Resource maxRes = queueMgr.getMaxResources(getName());
+    Resource maxRes = scheduler.getAllocationConfiguration()
+        .getMaxResources(getName());
     demand = Resources.createResource(0);
     for (FSQueue childQueue : childQueues) {
       childQueue.updateDemand();
@@ -164,8 +163,8 @@ public class FSParentQueue extends FSQueue {
   public void setPolicy(SchedulingPolicy policy)
       throws AllocationConfigurationException {
     boolean allowed =
-        SchedulingPolicy.isApplicableTo(policy, (this == queueMgr
-            .getRootQueue()) ? SchedulingPolicy.DEPTH_ROOT
+        SchedulingPolicy.isApplicableTo(policy, (parent == null)
+            ? SchedulingPolicy.DEPTH_ROOT
             : SchedulingPolicy.DEPTH_INTERMEDIATE);
     if (!allowed) {
       throwPolicyDoesnotApplyException(policy);
