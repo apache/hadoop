@@ -715,6 +715,8 @@ public class DataNode extends Configured
           ulimit));
       }
     }
+    LOG.info("Starting DataNode with maxLockedMemory = " +
+        dnConf.maxLockedMemory);
 
     storage = new DataStorage();
     

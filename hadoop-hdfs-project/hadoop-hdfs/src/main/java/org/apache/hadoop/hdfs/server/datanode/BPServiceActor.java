@@ -458,7 +458,7 @@ class BPServiceActor implements Runnable {
       long createCost = createTime - startTime;
       long sendCost = sendTime - createTime;
       dn.getMetrics().addCacheReport(sendCost);
-      LOG.info("CacheReport of " + blockIds.size()
+      LOG.debug("CacheReport of " + blockIds.size()
           + " block(s) took " + createCost + " msec to generate and "
           + sendCost + " msecs for RPC and NN processing");
     }

@@ -427,6 +427,8 @@ Trunk (Unreleased)
     HDFS-5555. CacheAdmin commands fail when first listed NameNode is in
     Standby (jxiang via cmccabe)
 
+    HDFS-5626. dfsadmin -report shows incorrect cache values. (cmccabe)
+
 Release 2.4.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
