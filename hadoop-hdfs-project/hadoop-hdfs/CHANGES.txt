@@ -345,6 +345,9 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-4997. libhdfs doesn't return correct error codes in most cases (cmccabe)
 
+    HDFS-5587. add debug information when NFS fails to start with duplicate user
+    or group names (brandonli)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
