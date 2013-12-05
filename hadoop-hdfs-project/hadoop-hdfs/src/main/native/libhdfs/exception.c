@@ -35,36 +35,55 @@ struct ExceptionInfo {
 
 static const struct ExceptionInfo gExceptionInfo[] = {
     {
-        .name = "java/io/FileNotFoundException",
+        .name = "java.io.FileNotFoundException",
         .noPrintFlag = NOPRINT_EXC_FILE_NOT_FOUND,
         .excErrno = ENOENT,
     },
     {
-        .name = "org/apache/hadoop/security/AccessControlException",
+        .name = "org.apache.hadoop.security.AccessControlException",
         .noPrintFlag = NOPRINT_EXC_ACCESS_CONTROL,
         .excErrno = EACCES,
     },
     {
-        .name = "org/apache/hadoop/fs/UnresolvedLinkException",
+        .name = "org.apache.hadoop.fs.UnresolvedLinkException",
         .noPrintFlag = NOPRINT_EXC_UNRESOLVED_LINK,
         .excErrno = ENOLINK,
     },
     {
-        .name = "org/apache/hadoop/fs/ParentNotDirectoryException",
+        .name = "org.apache.hadoop.fs.ParentNotDirectoryException",
         .noPrintFlag = NOPRINT_EXC_PARENT_NOT_DIRECTORY,
         .excErrno = ENOTDIR,
     },
     {
-        .name = "java/lang/IllegalArgumentException",
+        .name = "java.lang.IllegalArgumentException",
         .noPrintFlag = NOPRINT_EXC_ILLEGAL_ARGUMENT,
         .excErrno = EINVAL,
     },
     {
-        .name = "java/lang/OutOfMemoryError",
+        .name = "java.lang.OutOfMemoryError",
         .noPrintFlag = 0,
         .excErrno = ENOMEM,
     },
-    
+    {
+        .name = "org.apache.hadoop.hdfs.server.namenode.SafeModeException",
+        .noPrintFlag = 0,
+        .excErrno = EROFS,
+    },
+    {
+        .name = "org.apache.hadoop.fs.FileAlreadyExistsException",
+        .noPrintFlag = 0,
+        .excErrno = EEXIST,
+    },
+    {
+        .name = "org.apache.hadoop.hdfs.protocol.QuotaExceededException",
+        .noPrintFlag = 0,
+        .excErrno = EDQUOT,
+    },
+    {
+        .name = "org.apache.hadoop.hdfs.server.namenode.LeaseExpiredException",
+        .noPrintFlag = 0,
+        .excErrno = ESTALE,
+    },
 };
 
 void getExceptionInfo(const char *excName, int noPrintFlags,
