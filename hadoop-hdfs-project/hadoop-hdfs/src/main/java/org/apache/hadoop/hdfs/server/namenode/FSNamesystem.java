@@ -446,7 +446,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   private final long accessTimePrecision;
 
   /** Lock to protect FSNamesystem. */
-  private ReentrantReadWriteLock fsLock;
+  private FSNamesystemLock fsLock;
 
   /**
    * Used when this NN is in standby state to read from the shared edit log.
@@ -629,7 +629,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       throws IOException {
     boolean fair = conf.getBoolean("dfs.namenode.fslock.fair", true);
     LOG.info("fsLock is fair:" + fair);
-    fsLock = new ReentrantReadWriteLock(fair);
+    fsLock = new FSNamesystemLock(fair);
     try {
       resourceRecheckInterval = conf.getLong(
           DFS_NAMENODE_RESOURCE_CHECK_INTERVAL_KEY,
@@ -6724,12 +6724,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   
   @VisibleForTesting
   void setFsLockForTests(ReentrantReadWriteLock lock) {
-    this.fsLock = lock;
+    this.fsLock.coarseLock = lock;
   }
   
   @VisibleForTesting
   ReentrantReadWriteLock getFsLockForTests() {
-    return fsLock;
+    return fsLock.coarseLock;
   }
 
   @VisibleForTesting

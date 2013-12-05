@@ -28,6 +28,8 @@ Release 2.4.0 - UNRELEASED
     HDFS-5444. Choose default web UI based on browser capabilities. (Haohui Mai
     via jing9)
 
+    HDFS-5514. FSNamesystem's fsLock should allow custom implementation (daryn)
+
   IMPROVEMENTS
 
     HDFS-5267. Remove volatile from LightWeightHashSet. (Junping Du via llu)
