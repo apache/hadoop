@@ -158,4 +158,40 @@ public class TestFSNamesystem {
     fsNamesystem = new FSNamesystem(conf, fsImage);
     assertFalse(fsNamesystem.getFsLockForTests().isFair());
   }  
+  
+  @Test
+  public void testFSNamesystemLockCompatibility() {
+    FSNamesystemLock rwLock = new FSNamesystemLock(true);
+
+    assertEquals(0, rwLock.getReadHoldCount());
+    rwLock.readLock().lock();
+    assertEquals(1, rwLock.getReadHoldCount());
+
+    rwLock.readLock().lock();
+    assertEquals(2, rwLock.getReadHoldCount());
+
+    rwLock.readLock().unlock();
+    assertEquals(1, rwLock.getReadHoldCount());
+
+    rwLock.readLock().unlock();
+    assertEquals(0, rwLock.getReadHoldCount());
+
+    assertFalse(rwLock.isWriteLockedByCurrentThread());
+    assertEquals(0, rwLock.getWriteHoldCount());
+    rwLock.writeLock().lock();
+    assertTrue(rwLock.isWriteLockedByCurrentThread());
+    assertEquals(1, rwLock.getWriteHoldCount());
+    
+    rwLock.writeLock().lock();
+    assertTrue(rwLock.isWriteLockedByCurrentThread());
+    assertEquals(2, rwLock.getWriteHoldCount());
+
+    rwLock.writeLock().unlock();
+    assertTrue(rwLock.isWriteLockedByCurrentThread());
+    assertEquals(1, rwLock.getWriteHoldCount());
+
+    rwLock.writeLock().unlock();
+    assertFalse(rwLock.isWriteLockedByCurrentThread());
+    assertEquals(0, rwLock.getWriteHoldCount());
+  }
 }
