@@ -43,6 +43,8 @@ Release 0.23.10 - 2013-12-09
     HADOOP-10091. Job with a har archive as input fails on 0.23 (Jason Dere
     and Jason Lowe via jlowe)
 
+    HADOOP-10129. Distcp may succeed when it fails (daryn)
+
 Release 0.23.9 - 2013-07-08
 
   INCOMPATIBLE CHANGES
