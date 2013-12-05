@@ -31,6 +31,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -238,9 +239,20 @@ public final class CacheManager {
     return active;
   }
 
-  public TreeMap<Long, CacheDirective> getEntriesById() {
+  /**
+   * @return Unmodifiable view of the collection of CachePools.
+   */
+  public Collection<CachePool> getCachePools() {
     assert namesystem.hasReadLock();
-    return directivesById;
+    return Collections.unmodifiableCollection(cachePools.values());
+  }
+
+  /**
+   * @return Unmodifiable view of the collection of CacheDirectives.
+   */
+  public Collection<CacheDirective> getCacheDirectives() {
+    assert namesystem.hasReadLock();
+    return Collections.unmodifiableCollection(directivesById.values());
   }
   
   @VisibleForTesting

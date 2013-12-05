@@ -46,7 +46,9 @@ public final class CacheDirective implements IntrusiveCollection.Element {
 
   private long bytesNeeded;
   private long bytesCached;
-  private long filesAffected;
+  private long filesNeeded;
+  private long filesCached;
+
   private Element prev;
   private Element next;
 
@@ -58,9 +60,6 @@ public final class CacheDirective implements IntrusiveCollection.Element {
     Preconditions.checkArgument(replication > 0);
     this.replication = replication;
     this.expiryTime = expiryTime;
-    this.bytesNeeded = 0;
-    this.bytesCached = 0;
-    this.filesAffected = 0;
   }
 
   public long getId() {
@@ -112,7 +111,8 @@ public final class CacheDirective implements IntrusiveCollection.Element {
     return new CacheDirectiveStats.Builder().
         setBytesNeeded(bytesNeeded).
         setBytesCached(bytesCached).
-        setFilesAffected(filesAffected).
+        setFilesNeeded(filesNeeded).
+        setFilesCached(filesCached).
         setHasExpired(new Date().getTime() > expiryTime).
         build();
   }
@@ -131,7 +131,8 @@ public final class CacheDirective implements IntrusiveCollection.Element {
       append(", expiryTime: ").append(getExpiryTimeString()).
       append(", bytesNeeded:").append(bytesNeeded).
       append(", bytesCached:").append(bytesCached).
-      append(", filesAffected:").append(filesAffected).
+      append(", filesNeeded:").append(filesNeeded).
+      append(", filesCached:").append(filesCached).
       append(" }");
     return builder.toString();
   }
@@ -152,41 +153,59 @@ public final class CacheDirective implements IntrusiveCollection.Element {
     return new HashCodeBuilder().append(id).toHashCode();
   }
 
+  //
+  // Stats related getters and setters
+  //
+
+  /**
+   * Resets the byte and file statistics being tracked by this CacheDirective.
+   */
+  public void resetStatistics() {
+    bytesNeeded = 0;
+    bytesCached = 0;
+    filesNeeded = 0;
+    filesCached = 0;
+  }
+
   public long getBytesNeeded() {
     return bytesNeeded;
   }
 
-  public void clearBytesNeeded() {
-    this.bytesNeeded = 0;
-  }
-
-  public void addBytesNeeded(long toAdd) {
-    this.bytesNeeded += toAdd;
+  public void addBytesNeeded(long bytes) {
+    this.bytesNeeded += bytes;
+    pool.addBytesNeeded(bytes);
   }
 
   public long getBytesCached() {
     return bytesCached;
   }
 
-  public void clearBytesCached() {
-    this.bytesCached = 0;
+  public void addBytesCached(long bytes) {
+    this.bytesCached += bytes;
+    pool.addBytesCached(bytes);
   }
 
-  public void addBytesCached(long toAdd) {
-    this.bytesCached += toAdd;
+  public long getFilesNeeded() {
+    return filesNeeded;
   }
 
-  public long getFilesAffected() {
-    return filesAffected;
+  public void addFilesNeeded(long files) {
+    this.filesNeeded += files;
+    pool.addFilesNeeded(files);
   }
 
-  public void clearFilesAffected() {
-    this.filesAffected = 0;
+  public long getFilesCached() {
+    return filesCached;
   }
 
-  public void incrementFilesAffected() {
-    this.filesAffected++;
+  public void addFilesCached(long files) {
+    this.filesCached += files;
+    pool.addFilesCached(files);
   }
+
+  //
+  // IntrusiveCollection.Element implementation
+  //
 
   @SuppressWarnings("unchecked")
   @Override // IntrusiveCollection.Element

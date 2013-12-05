@@ -24,12 +24,9 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FsServerDefaults;
+import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedEntries;
 import org.apache.hadoop.fs.Options.Rename;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.RemoteIterator;
-import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
-import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
@@ -52,8 +49,6 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AllowS
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AllowSnapshotResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AppendRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AppendResponseProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CachePoolEntryProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CachePoolInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CompleteRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CompleteResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ConcatRequestProto;
@@ -109,7 +104,6 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListCa
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListCachePoolsResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListCorruptFileBlocksRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListCorruptFileBlocksResponseProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CacheDirectiveEntryProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListCacheDirectivesRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListCacheDirectivesResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.MetaSaveRequestProto;
@@ -176,9 +170,7 @@ import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenRespons
 import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenRequestProto;
 import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenResponseProto;
 import org.apache.hadoop.security.token.Token;
-import org.apache.commons.lang.StringUtils;
 
-import com.google.common.primitives.Shorts;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 
@@ -1084,21 +1076,13 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
     try {
       CacheDirectiveInfo filter =
           PBHelper.convert(request.getFilter());
-      RemoteIterator<CacheDirectiveEntry> iter =
-         server.listCacheDirectives(request.getPrevId(), filter);
+      BatchedEntries<CacheDirectiveEntry> entries =
+        server.listCacheDirectives(request.getPrevId(), filter);
       ListCacheDirectivesResponseProto.Builder builder =
           ListCacheDirectivesResponseProto.newBuilder();
-      long prevId = 0;
-      while (iter.hasNext()) {
-        CacheDirectiveEntry entry = iter.next();
-        builder.addElements(PBHelper.convert(entry));
-        prevId = entry.getInfo().getId();
-      }
-      if (prevId == 0) {
-        builder.setHasMore(false);
-      } else {
-        iter = server.listCacheDirectives(prevId, filter);
-        builder.setHasMore(iter.hasNext());
+      builder.setHasMore(entries.hasMore());
+      for (int i=0, n=entries.size(); i<n; i++) {
+        builder.addElements(PBHelper.convert(entries.get(i)));
       }
       return builder.build();
     } catch (IOException e) {
@@ -1143,22 +1127,13 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   public ListCachePoolsResponseProto listCachePools(RpcController controller,
       ListCachePoolsRequestProto request) throws ServiceException {
     try {
-      RemoteIterator<CachePoolEntry> iter =
+      BatchedEntries<CachePoolEntry> entries =
         server.listCachePools(request.getPrevPoolName());
       ListCachePoolsResponseProto.Builder responseBuilder =
         ListCachePoolsResponseProto.newBuilder();
-      String prevPoolName = null;
-      while (iter.hasNext()) {
-        CachePoolEntry entry = iter.next();
-        responseBuilder.addEntries(PBHelper.convert(entry));
-        prevPoolName = entry.getInfo().getPoolName();
-      }
-      // fill in hasNext
-      if (prevPoolName == null) {
-        responseBuilder.setHasMore(false);
-      } else {
-        iter = server.listCachePools(prevPoolName);
-        responseBuilder.setHasMore(iter.hasNext());
+      responseBuilder.setHasMore(entries.hasMore());
+      for (int i=0, n=entries.size(); i<n; i++) {
+        responseBuilder.addEntries(PBHelper.convert(entries.get(i)));
       }
       return responseBuilder.build();
     } catch (IOException e) {

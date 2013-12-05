@@ -46,19 +46,15 @@ public class FSLeafQueue extends FSQueue {
   private final List<AppSchedulable> nonRunnableAppScheds =
       new ArrayList<AppSchedulable>();
   
-  private final FairScheduler scheduler;
-  private final QueueManager queueMgr;
   private Resource demand = Resources.createResource(0);
   
   // Variables used for preemption
   private long lastTimeAtMinShare;
   private long lastTimeAtHalfFairShare;
   
-  public FSLeafQueue(String name, QueueManager queueMgr, FairScheduler scheduler,
+  public FSLeafQueue(String name, FairScheduler scheduler,
       FSParentQueue parent) {
-    super(name, queueMgr, scheduler, parent);
-    this.scheduler = scheduler;
-    this.queueMgr = queueMgr;
+    super(name, scheduler, parent);
     this.lastTimeAtMinShare = scheduler.getClock().getTime();
     this.lastTimeAtHalfFairShare = scheduler.getClock().getTime();
   }
@@ -145,7 +141,8 @@ public class FSLeafQueue extends FSQueue {
   public void updateDemand() {
     // Compute demand by iterating through apps in the queue
     // Limit demand to maxResources
-    Resource maxRes = queueMgr.getMaxResources(getName());
+    Resource maxRes = scheduler.getAllocationConfiguration()
+        .getMaxResources(getName());
     demand = Resources.createResource(0);
     for (AppSchedulable sched : runnableAppScheds) {
       if (Resources.equals(demand, maxRes)) {

@@ -101,6 +101,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoSchedule
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.SystemClock;
 import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 @SuppressWarnings("unchecked")
@@ -110,6 +111,12 @@ public class TestRMContainerAllocator {
       .getLog(TestRMContainerAllocator.class);
   static final RecordFactory recordFactory = RecordFactoryProvider
       .getRecordFactory(null);
+
+  @Before
+  public void setup() {
+    MyContainerAllocator.getJobUpdatedNodeEvents().clear();
+    MyContainerAllocator.getTaskAttemptKillEvents().clear();
+  }
 
   @After
   public void tearDown() {
@@ -770,6 +777,9 @@ public class TestRMContainerAllocator {
 
     nm1.nodeHeartbeat(true);
     dispatcher.await();
+    Assert.assertEquals(1, allocator.getJobUpdatedNodeEvents().size());
+    Assert.assertEquals(3, allocator.getJobUpdatedNodeEvents().get(0).getUpdatedNodes().size());
+    allocator.getJobUpdatedNodeEvents().clear();
     // get the assignment
     assigned = allocator.schedule();
     dispatcher.await();
@@ -1501,11 +1511,11 @@ public class TestRMContainerAllocator {
       return result;
     }
     
-    List<TaskAttemptKillEvent> getTaskAttemptKillEvents() {
+    static List<TaskAttemptKillEvent> getTaskAttemptKillEvents() {
       return taskAttemptKillEvents;
     }
     
-    List<JobUpdatedNodesEvent> getJobUpdatedNodeEvents() {
+    static List<JobUpdatedNodesEvent> getJobUpdatedNodeEvents() {
       return jobUpdatedNodeEvents;
     }
 

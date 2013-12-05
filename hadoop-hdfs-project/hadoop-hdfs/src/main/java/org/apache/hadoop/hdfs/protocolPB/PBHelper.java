@@ -1753,7 +1753,8 @@ public class PBHelper {
         CacheDirectiveStatsProto.newBuilder();
     builder.setBytesNeeded(stats.getBytesNeeded());
     builder.setBytesCached(stats.getBytesCached());
-    builder.setFilesAffected(stats.getFilesAffected());
+    builder.setFilesNeeded(stats.getFilesNeeded());
+    builder.setFilesCached(stats.getFilesCached());
     builder.setHasExpired(stats.hasExpired());
     return builder.build();
   }
@@ -1762,7 +1763,8 @@ public class PBHelper {
     CacheDirectiveStats.Builder builder = new CacheDirectiveStats.Builder();
     builder.setBytesNeeded(proto.getBytesNeeded());
     builder.setBytesCached(proto.getBytesCached());
-    builder.setFilesAffected(proto.getFilesAffected());
+    builder.setFilesNeeded(proto.getFilesNeeded());
+    builder.setFilesCached(proto.getFilesCached());
     builder.setHasExpired(proto.getHasExpired());
     return builder.build();
   }
@@ -1822,7 +1824,8 @@ public class PBHelper {
     CachePoolStatsProto.Builder builder = CachePoolStatsProto.newBuilder();
     builder.setBytesNeeded(stats.getBytesNeeded());
     builder.setBytesCached(stats.getBytesCached());
-    builder.setFilesAffected(stats.getFilesAffected());
+    builder.setFilesNeeded(stats.getFilesNeeded());
+    builder.setFilesCached(stats.getFilesCached());
     return builder.build();
   }
 
@@ -1830,7 +1833,8 @@ public class PBHelper {
     CachePoolStats.Builder builder = new CachePoolStats.Builder();
     builder.setBytesNeeded(proto.getBytesNeeded());
     builder.setBytesCached(proto.getBytesCached());
-    builder.setFilesAffected(proto.getFilesAffected());
+    builder.setFilesNeeded(proto.getFilesNeeded());
+    builder.setFilesCached(proto.getFilesCached());
     return builder.build();
   }
 

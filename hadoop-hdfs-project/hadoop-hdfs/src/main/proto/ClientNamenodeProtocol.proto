@@ -380,8 +380,9 @@ message CacheDirectiveInfoExpirationProto {
 message CacheDirectiveStatsProto {
   required int64 bytesNeeded = 1;
   required int64 bytesCached = 2;
-  required int64 filesAffected = 3;
-  required bool hasExpired = 4;
+  required int64 filesNeeded = 3;
+  required int64 filesCached = 4;
+  required bool hasExpired = 5;
 }
 
 message AddCacheDirectiveRequestProto {
@@ -432,7 +433,8 @@ message CachePoolInfoProto {
 message CachePoolStatsProto {
   required int64 bytesNeeded = 1;
   required int64 bytesCached = 2;
-  required int64 filesAffected = 3;
+  required int64 filesNeeded = 3;
+  required int64 filesCached = 4;
 }
 
 message AddCachePoolRequestProto {

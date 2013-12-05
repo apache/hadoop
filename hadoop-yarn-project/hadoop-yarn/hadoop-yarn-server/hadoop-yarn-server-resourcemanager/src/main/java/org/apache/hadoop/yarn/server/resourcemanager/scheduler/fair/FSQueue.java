@@ -39,20 +39,17 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 @Unstable
 public abstract class FSQueue extends Schedulable implements Queue {
   private final String name;
-  private final QueueManager queueMgr;
-  private final FairScheduler scheduler;
+  protected final FairScheduler scheduler;
   private final FSQueueMetrics metrics;
   
   protected final FSParentQueue parent;
   protected final RecordFactory recordFactory =
       RecordFactoryProvider.getRecordFactory(null);
   
-  protected SchedulingPolicy policy = SchedulingPolicy.getDefault();
+  protected SchedulingPolicy policy = SchedulingPolicy.DEFAULT_POLICY;
 
-  public FSQueue(String name, QueueManager queueMgr, 
-      FairScheduler scheduler, FSParentQueue parent) {
+  public FSQueue(String name, FairScheduler scheduler, FSParentQueue parent) {
     this.name = name;
-    this.queueMgr = queueMgr;
     this.scheduler = scheduler;
     this.metrics = FSQueueMetrics.forQueue(getName(), parent, true, scheduler.getConf());
     metrics.setMinShare(getMinShare());
@@ -88,17 +85,17 @@ public abstract class FSQueue extends Schedulable implements Queue {
 
   @Override
   public ResourceWeights getWeights() {
-    return queueMgr.getQueueWeight(getName());
+    return scheduler.getAllocationConfiguration().getQueueWeight(getName());
   }
   
   @Override
   public Resource getMinShare() {
-    return queueMgr.getMinResources(getName());
+    return scheduler.getAllocationConfiguration().getMinResources(getName());
   }
   
   @Override
   public Resource getMaxShare() {
-    return queueMgr.getMaxResources(getName());
+    return scheduler.getAllocationConfiguration().getMaxResources(getName());
   }
 
   @Override
@@ -148,13 +145,7 @@ public abstract class FSQueue extends Schedulable implements Queue {
   }
   
   public boolean hasAccess(QueueACL acl, UserGroupInformation user) {
-    // Check if the leaf-queue allows access
-    if (queueMgr.getQueueAcl(getName(), acl).isUserAllowed(user)) {
-      return true;
-    }
-
-    // Check if parent-queue allows access
-    return parent != null && parent.hasAccess(acl, user);
+    return scheduler.getAllocationConfiguration().hasAccess(name, acl, user);
   }
   
   /**
@@ -181,7 +172,7 @@ public abstract class FSQueue extends Schedulable implements Queue {
    */
   protected boolean assignContainerPreCheck(FSSchedulerNode node) {
     if (!Resources.fitsIn(getResourceUsage(),
-        queueMgr.getMaxResources(getName()))
+        scheduler.getAllocationConfiguration().getMaxResources(getName()))
         || node.getReservedContainer() != null) {
       return false;
     }

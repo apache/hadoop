@@ -36,7 +36,6 @@ import java.util.Set;
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.BatchedRemoteIterator;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
@@ -46,8 +45,8 @@ import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.UnresolvedLinkException;
+import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedEntries;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.ha.HAServiceStatus;
@@ -1254,36 +1253,13 @@ class NameNodeRpcServer implements NamenodeProtocols {
     namesystem.removeCacheDirective(id);
   }
 
-  private class ServerSideCacheEntriesIterator 
-      extends BatchedRemoteIterator<Long, CacheDirectiveEntry> {
-
-    private final CacheDirectiveInfo filter;
-    
-    public ServerSideCacheEntriesIterator (Long firstKey, 
-        CacheDirectiveInfo filter) {
-      super(firstKey);
-      this.filter = filter;
-    }
-
-    @Override
-    public BatchedEntries<CacheDirectiveEntry> makeRequest(
-        Long nextKey) throws IOException {
-      return namesystem.listCacheDirectives(nextKey, filter);
-    }
-
-    @Override
-    public Long elementToPrevKey(CacheDirectiveEntry entry) {
-      return entry.getInfo().getId();
-    }
-  }
-  
   @Override
-  public RemoteIterator<CacheDirectiveEntry> listCacheDirectives(long prevId,
+  public BatchedEntries<CacheDirectiveEntry> listCacheDirectives(long prevId,
       CacheDirectiveInfo filter) throws IOException {
     if (filter == null) {
       filter = new CacheDirectiveInfo.Builder().build();
     }
-    return new ServerSideCacheEntriesIterator(prevId, filter);
+    return namesystem.listCacheDirectives(prevId, filter);
   }
 
   @Override
@@ -1301,29 +1277,10 @@ class NameNodeRpcServer implements NamenodeProtocols {
     namesystem.removeCachePool(cachePoolName);
   }
 
-  private class ServerSideCachePoolIterator 
-      extends BatchedRemoteIterator<String, CachePoolEntry> {
-
-    public ServerSideCachePoolIterator(String prevKey) {
-      super(prevKey);
-    }
-
-    @Override
-    public BatchedEntries<CachePoolEntry> makeRequest(String prevKey)
-        throws IOException {
-      return namesystem.listCachePools(prevKey);
-    }
-
-    @Override
-    public String elementToPrevKey(CachePoolEntry entry) {
-      return entry.getInfo().getPoolName();
-    }
-  }
-
   @Override
-  public RemoteIterator<CachePoolEntry> listCachePools(String prevKey)
+  public BatchedEntries<CachePoolEntry> listCachePools(String prevKey)
       throws IOException {
-    return new ServerSideCachePoolIterator(prevKey);
+    return namesystem.listCachePools(prevKey != null ? prevKey : "");
   }
 }
 

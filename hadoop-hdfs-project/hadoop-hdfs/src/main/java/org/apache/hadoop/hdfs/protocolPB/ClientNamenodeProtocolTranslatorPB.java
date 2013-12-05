@@ -24,7 +24,6 @@ import java.util.Arrays;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.BatchedRemoteIterator;
 import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedEntries;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
@@ -32,7 +31,6 @@ import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
-import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
@@ -1065,46 +1063,23 @@ public class ClientNamenodeProtocolTranslatorPB implements
     }
   }
 
-  private class CacheEntriesIterator
-    extends BatchedRemoteIterator<Long, CacheDirectiveEntry> {
-      private final CacheDirectiveInfo filter;
-
-    public CacheEntriesIterator(long prevKey,
-        CacheDirectiveInfo filter) {
-      super(prevKey);
-      this.filter = filter;
-    }
-
-    @Override
-    public BatchedEntries<CacheDirectiveEntry> makeRequest(
-        Long nextKey) throws IOException {
-      ListCacheDirectivesResponseProto response;
-      try {
-        response = rpcProxy.listCacheDirectives(null,
-            ListCacheDirectivesRequestProto.newBuilder().
-                setPrevId(nextKey).
-                setFilter(PBHelper.convert(filter)).
-                build());
-      } catch (ServiceException e) {
-        throw ProtobufHelper.getRemoteException(e);
-      }
-      return new BatchedCacheEntries(response);
-    }
-
-    @Override
-    public Long elementToPrevKey(CacheDirectiveEntry element) {
-      return element.getInfo().getId();
-    }
-  }
-
   @Override
-  public RemoteIterator<CacheDirectiveEntry>
+  public BatchedEntries<CacheDirectiveEntry>
       listCacheDirectives(long prevId,
           CacheDirectiveInfo filter) throws IOException {
     if (filter == null) {
       filter = new CacheDirectiveInfo.Builder().build();
     }
-    return new CacheEntriesIterator(prevId, filter);
+    try {
+      return new BatchedCacheEntries(
+        rpcProxy.listCacheDirectives(null,
+          ListCacheDirectivesRequestProto.newBuilder().
+            setPrevId(prevId).
+            setFilter(PBHelper.convert(filter)).
+            build()));
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
   }
 
   @Override
@@ -1167,35 +1142,16 @@ public class ClientNamenodeProtocolTranslatorPB implements
     }
   }
 
-  private class CachePoolIterator 
-      extends BatchedRemoteIterator<String, CachePoolEntry> {
-
-    public CachePoolIterator(String prevKey) {
-      super(prevKey);
-    }
-
-    @Override
-    public BatchedEntries<CachePoolEntry> makeRequest(String prevKey)
-        throws IOException {
-      try {
-        return new BatchedCachePoolEntries(
-            rpcProxy.listCachePools(null, 
-              ListCachePoolsRequestProto.newBuilder().
-                setPrevPoolName(prevKey).build()));
-      } catch (ServiceException e) {
-        throw ProtobufHelper.getRemoteException(e);
-      }
-    }
-
-    @Override
-    public String elementToPrevKey(CachePoolEntry entry) {
-      return entry.getInfo().getPoolName();
-    }
-  }
-
   @Override
-  public RemoteIterator<CachePoolEntry> listCachePools(String prevKey)
+  public BatchedEntries<CachePoolEntry> listCachePools(String prevKey)
       throws IOException {
-    return new CachePoolIterator(prevKey);
+    try {
+      return new BatchedCachePoolEntries(
+        rpcProxy.listCachePools(null,
+          ListCachePoolsRequestProto.newBuilder().
+            setPrevPoolName(prevKey).build()));
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
   }
 }

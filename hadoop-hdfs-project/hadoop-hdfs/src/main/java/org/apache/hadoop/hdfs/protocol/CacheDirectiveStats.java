@@ -29,7 +29,8 @@ public class CacheDirectiveStats {
   public static class Builder {
     private long bytesNeeded;
     private long bytesCached;
-    private long filesAffected;
+    private long filesNeeded;
+    private long filesCached;
     private boolean hasExpired;
 
     /**
@@ -38,8 +39,8 @@ public class CacheDirectiveStats {
      * @return New CacheDirectiveStats.
      */
     public CacheDirectiveStats build() {
-      return new CacheDirectiveStats(bytesNeeded, bytesCached, filesAffected,
-          hasExpired);
+      return new CacheDirectiveStats(bytesNeeded, bytesCached, filesNeeded,
+          filesCached, hasExpired);
     }
 
     /**
@@ -71,13 +72,23 @@ public class CacheDirectiveStats {
     }
 
     /**
-     * Sets the files affected by this directive.
-     * 
-     * @param filesAffected The files affected.
+     * Sets the files needed by this directive.
+     * @param filesNeeded The number of files needed
      * @return This builder, for call chaining.
      */
-    public Builder setFilesAffected(long filesAffected) {
-      this.filesAffected = filesAffected;
+    public Builder setFilesNeeded(long filesNeeded) {
+      this.filesNeeded = filesNeeded;
+      return this;
+    }
+
+    /**
+     * Sets the files cached by this directive.
+     * 
+     * @param filesCached The number of files cached.
+     * @return This builder, for call chaining.
+     */
+    public Builder setFilesCached(long filesCached) {
+      this.filesCached = filesCached;
       return this;
     }
 
@@ -95,14 +106,16 @@ public class CacheDirectiveStats {
 
   private final long bytesNeeded;
   private final long bytesCached;
-  private final long filesAffected;
+  private final long filesNeeded;
+  private final long filesCached;
   private final boolean hasExpired;
 
   private CacheDirectiveStats(long bytesNeeded, long bytesCached,
-      long filesAffected, boolean hasExpired) {
+      long filesNeeded, long filesCached, boolean hasExpired) {
     this.bytesNeeded = bytesNeeded;
     this.bytesCached = bytesCached;
-    this.filesAffected = filesAffected;
+    this.filesNeeded = filesNeeded;
+    this.filesCached = filesCached;
     this.hasExpired = hasExpired;
   }
 
@@ -121,10 +134,17 @@ public class CacheDirectiveStats {
   }
 
   /**
-   * @return The files affected.
+   * @return The number of files needed.
    */
-  public long getFilesAffected() {
-    return filesAffected;
+  public long getFilesNeeded() {
+    return filesNeeded;
+  }
+
+  /**
+   * @return The number of files cached.
+   */
+  public long getFilesCached() {
+    return filesCached;
   }
 
   /**
@@ -140,7 +160,8 @@ public class CacheDirectiveStats {
     builder.append("{");
     builder.append("bytesNeeded: ").append(bytesNeeded);
     builder.append(", ").append("bytesCached: ").append(bytesCached);
-    builder.append(", ").append("filesAffected: ").append(filesAffected);
+    builder.append(", ").append("filesNeeded: ").append(filesNeeded);
+    builder.append(", ").append("filesCached: ").append(filesCached);
     builder.append(", ").append("hasExpired: ").append(hasExpired);
     builder.append("}");
     return builder.toString();

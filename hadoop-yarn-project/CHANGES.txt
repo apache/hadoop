@@ -43,6 +43,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1392. Allow sophisticated app-to-queue placement policies in the Fair
     Scheduler (Sandy Ryza)
 
+    YARN-1447. Common PB type definitions for container resizing. (Wangda Tan
+    via Sandy Ryza)
+
   IMPROVEMENTS
 
     YARN-7. Support CPU resource for DistributedShell. (Junping Du via llu)
@@ -134,6 +137,9 @@ Release 2.4.0 - UNRELEASED
 
     YARN-1332. In TestAMRMClient, replace assertTrue with assertEquals where
     possible (Sebastian Wong via Sandy Ryza)
+
+    YARN-1403. Separate out configuration loading from QueueManager in the Fair
+    Scheduler (Sandy Ryza)
 
   OPTIMIZATIONS
 

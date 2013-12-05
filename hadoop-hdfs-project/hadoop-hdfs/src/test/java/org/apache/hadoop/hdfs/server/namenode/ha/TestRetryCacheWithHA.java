@@ -29,6 +29,7 @@ import java.net.URI;
 import java.net.UnknownHostException;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Random;
@@ -86,6 +87,7 @@ public class TestRetryCacheWithHA {
   private static final int BlockSize = 1024;
   private static final short DataNodes = 3;
   private static final int CHECKTIMES = 10;
+  private static final int ResponseSize = 3;
   
   private MiniDFSCluster cluster;
   private DistributedFileSystem dfs;
@@ -120,6 +122,8 @@ public class TestRetryCacheWithHA {
   @Before
   public void setup() throws Exception {
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BlockSize);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_LIST_CACHE_DIRECTIVES_NUM_RESPONSES, ResponseSize);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_LIST_CACHE_POOLS_NUM_RESPONSES, ResponseSize);
     cluster = new MiniDFSCluster.Builder(conf)
         .nnTopology(MiniDFSNNTopology.simpleHATopology())
         .numDataNodes(DataNodes).build();
@@ -1175,5 +1179,93 @@ public class TestRetryCacheWithHA {
       LOG.info("Got the result of " + op.name + ": "
           + results.get(op.name));
     }
+  }
+
+  /**
+   * Add a list of cache pools, list cache pools,
+   * switch active NN, and list cache pools again.
+   */
+  @Test (timeout=60000)
+  public void testListCachePools() throws Exception {
+    final int poolCount = 7;
+    HashSet<String> poolNames = new HashSet<String>(poolCount);
+    for (int i=0; i<poolCount; i++) {
+      String poolName = "testListCachePools-" + i;
+      dfs.addCachePool(new CachePoolInfo(poolName));
+      poolNames.add(poolName);
+    }
+    listCachePools(poolNames, 0);
+
+    cluster.transitionToStandby(0);
+    cluster.transitionToActive(1);
+    cluster.waitActive(1);
+    listCachePools(poolNames, 1);
+  }
+
+  /**
+   * Add a list of cache directives, list cache directives,
+   * switch active NN, and list cache directives again.
+   */
+  @Test (timeout=60000)
+  public void testListCacheDirectives() throws Exception {
+    final int poolCount = 7;
+    HashSet<String> poolNames = new HashSet<String>(poolCount);
+    Path path = new Path("/p");
+    for (int i=0; i<poolCount; i++) {
+      String poolName = "testListCacheDirectives-" + i;
+      CacheDirectiveInfo directiveInfo =
+        new CacheDirectiveInfo.Builder().setPool(poolName).setPath(path).build();
+      dfs.addCachePool(new CachePoolInfo(poolName));
+      dfs.addCacheDirective(directiveInfo);
+      poolNames.add(poolName);
+    }
+    listCacheDirectives(poolNames, 0);
+
+    cluster.transitionToStandby(0);
+    cluster.transitionToActive(1);
+    cluster.waitActive(1);
+    listCacheDirectives(poolNames, 1);
+  }
+
+  @SuppressWarnings("unchecked")
+  private void listCachePools(
+      HashSet<String> poolNames, int active) throws Exception {
+    HashSet<String> tmpNames = (HashSet<String>)poolNames.clone();
+    RemoteIterator<CachePoolEntry> pools = dfs.listCachePools();
+    int poolCount = poolNames.size();
+    for (int i=0; i<poolCount; i++) {
+      CachePoolEntry pool = pools.next();
+      String pollName = pool.getInfo().getPoolName();
+      assertTrue("The pool name should be expected", tmpNames.remove(pollName));
+      if (i % 2 == 0) {
+        int standby = active;
+        active = (standby == 0) ? 1 : 0;
+        cluster.transitionToStandby(standby);
+        cluster.transitionToActive(active);
+        cluster.waitActive(active);
+      }
+    }
+    assertTrue("All pools must be found", tmpNames.isEmpty());
+  }
+
+  @SuppressWarnings("unchecked")
+  private void listCacheDirectives(
+      HashSet<String> poolNames, int active) throws Exception {
+    HashSet<String> tmpNames = (HashSet<String>)poolNames.clone();
+    RemoteIterator<CacheDirectiveEntry> directives = dfs.listCacheDirectives(null);
+    int poolCount = poolNames.size();
+    for (int i=0; i<poolCount; i++) {
+      CacheDirectiveEntry directive = directives.next();
+      String pollName = directive.getInfo().getPool();
+      assertTrue("The pool name should be expected", tmpNames.remove(pollName));
+      if (i % 2 == 0) {
+        int standby = active;
+        active = (standby == 0) ? 1 : 0;
+        cluster.transitionToStandby(standby);
+        cluster.transitionToActive(active);
+        cluster.waitActive(active);
+      }
+    }
+    assertTrue("All pools must be found", tmpNames.isEmpty());
   }
 }

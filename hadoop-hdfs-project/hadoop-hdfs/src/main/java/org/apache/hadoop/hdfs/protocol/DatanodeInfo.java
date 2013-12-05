@@ -315,9 +315,9 @@ public class DatanodeInfo extends DatanodeID implements Node {
     buffer.append("DFS Remaining: " +r+ " ("+StringUtils.byteDesc(r)+")"+"\n");
     buffer.append("DFS Used%: "+percent2String(usedPercent) + "\n");
     buffer.append("DFS Remaining%: "+percent2String(remainingPercent) + "\n");
-    buffer.append("Configured Cache Capacity: "+c+" ("+StringUtils.byteDesc(cc)+")"+"\n");
-    buffer.append("Cache Used: "+cu+" ("+StringUtils.byteDesc(u)+")"+"\n");
-    buffer.append("Cache Remaining: " +cr+ " ("+StringUtils.byteDesc(r)+")"+"\n");
+    buffer.append("Configured Cache Capacity: "+cc+" ("+StringUtils.byteDesc(cc)+")"+"\n");
+    buffer.append("Cache Used: "+cu+" ("+StringUtils.byteDesc(cu)+")"+"\n");
+    buffer.append("Cache Remaining: " +cr+ " ("+StringUtils.byteDesc(cr)+")"+"\n");
     buffer.append("Cache Used%: "+percent2String(cacheUsedPercent) + "\n");
     buffer.append("Cache Remaining%: "+percent2String(cacheRemainingPercent) + "\n");
 

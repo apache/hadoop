@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.tools;
 
+import static org.mockito.Mockito.*;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
@@ -36,6 +38,7 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.AfterClass;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.List;
@@ -281,5 +284,30 @@ public class TestCopyListing extends SimpleCopyListing {
       TestDistCpUtils.delete(fs, testRootString);
       IOUtils.closeStream(reader);
     }
+  }
+  
+  @Test
+  public void testFailOnCloseError() throws IOException {
+    File inFile = File.createTempFile("TestCopyListingIn", null);
+    inFile.deleteOnExit();
+    File outFile = File.createTempFile("TestCopyListingOut", null);
+    outFile.deleteOnExit();
+    List<Path> srcs = new ArrayList<Path>();
+    srcs.add(new Path(inFile.toURI()));
+    
+    Exception expectedEx = new IOException("boom");
+    SequenceFile.Writer writer = mock(SequenceFile.Writer.class);
+    doThrow(expectedEx).when(writer).close();
+    
+    SimpleCopyListing listing = new SimpleCopyListing(getConf(), CREDENTIALS);
+    DistCpOptions options = new DistCpOptions(srcs, new Path(outFile.toURI()));
+    Exception actualEx = null;
+    try {
+      listing.doBuildListing(writer, options);
+    } catch (Exception e) {
+      actualEx = e;
+    }
+    Assert.assertNotNull("close writer didn't fail", actualEx);
+    Assert.assertEquals(expectedEx, actualEx);
   }
 }
