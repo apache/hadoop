@@ -39,7 +39,6 @@ import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMetho
 import org.apache.hadoop.hdfs.web.AuthFilter;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.hdfs.web.resources.Param;
-import org.apache.hadoop.hdfs.web.resources.UserParam;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.net.NetUtils;
@@ -74,10 +73,7 @@ public class NameNodeHttpServer {
 
   private void initWebHdfs(Configuration conf) throws IOException {
     if (WebHdfsFileSystem.isEnabled(conf, HttpServer.LOG)) {
-      // set user pattern based on configuration file
-      UserParam.setUserPattern(conf);
-
-      // add SPNEGO authentication filter for webhdfs
+      //add SPNEGO authentication filter for webhdfs
       final String name = "SPNEGO";
       final String classname = AuthFilter.class.getName();
       final String pathSpec = WebHdfsFileSystem.PATH_PREFIX + "/*";
