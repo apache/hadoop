@@ -37,6 +37,7 @@ import org.apache.hadoop.hdfs.protocol.CacheDirective;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.CachedBlocksList.Type;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.namenode.CacheManager;
+import org.apache.hadoop.hdfs.server.namenode.CachePool;
 import org.apache.hadoop.hdfs.server.namenode.CachedBlock;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
@@ -198,11 +199,21 @@ public class CacheReplicationMonitor extends Thread implements Closeable {
     scannedBlocks = 0;
     namesystem.writeLock();
     try {
+      resetStatistics();
       rescanCacheDirectives();
       rescanCachedBlockMap();
       blockManager.getDatanodeManager().resetLastCachingDirectiveSentTime();
     } finally {
       namesystem.writeUnlock();
+    }
+  }
+
+  private void resetStatistics() {
+    for (CachePool pool: cacheManager.getCachePools()) {
+      pool.resetStatistics();
+    }
+    for (CacheDirective directive: cacheManager.getCacheDirectives()) {
+      directive.resetStatistics();
     }
   }
 
@@ -213,11 +224,9 @@ public class CacheReplicationMonitor extends Thread implements Closeable {
   private void rescanCacheDirectives() {
     FSDirectory fsDir = namesystem.getFSDirectory();
     final long now = new Date().getTime();
-    for (CacheDirective directive : cacheManager.getEntriesById().values()) {
-      // Reset the directive
-      directive.clearBytesNeeded();
-      directive.clearBytesCached();
-      directive.clearFilesAffected();
+    for (CacheDirective directive : cacheManager.getCacheDirectives()) {
+      // Reset the directive's statistics
+      directive.resetStatistics();
       // Skip processing this entry if it has expired
       LOG.info("Directive expiry is at " + directive.getExpiryTime());
       if (directive.getExpiryTime() > 0 && directive.getExpiryTime() <= now) {
@@ -262,26 +271,34 @@ public class CacheReplicationMonitor extends Thread implements Closeable {
   
   /**
    * Apply a CacheDirective to a file.
-   *
-   * @param pce       The CacheDirective to apply.
-   * @param file      The file.
+   * 
+   * @param directive The CacheDirective to apply.
+   * @param file The file.
    */
-  private void rescanFile(CacheDirective pce, INodeFile file) {
-    pce.incrementFilesAffected();
+  private void rescanFile(CacheDirective directive, INodeFile file) {
     BlockInfo[] blockInfos = file.getBlocks();
-    long cachedTotal = 0;
+
+    // Increment the "needed" statistics
+    directive.addFilesNeeded(1);
     long neededTotal = 0;
+    for (BlockInfo blockInfo : blockInfos) {
+      long neededByBlock = 
+          directive.getReplication() * blockInfo.getNumBytes();
+       neededTotal += neededByBlock;
+    }
+    directive.addBytesNeeded(neededTotal);
+
+    // TODO: Enforce per-pool quotas
+
+    long cachedTotal = 0;
     for (BlockInfo blockInfo : blockInfos) {
       if (!blockInfo.getBlockUCState().equals(BlockUCState.COMPLETE)) {
         // We don't try to cache blocks that are under construction.
         continue;
       }
-      long neededByBlock = 
-         pce.getReplication() * blockInfo.getNumBytes();
-      neededTotal += neededByBlock;
       Block block = new Block(blockInfo.getBlockId());
       CachedBlock ncblock = new CachedBlock(block.getBlockId(),
-          pce.getReplication(), mark);
+          directive.getReplication(), mark);
       CachedBlock ocblock = cachedBlocks.get(ncblock);
       if (ocblock == null) {
         cachedBlocks.put(ncblock);
@@ -294,26 +311,30 @@ public class CacheReplicationMonitor extends Thread implements Closeable {
         // both get them added to their bytesCached.
         List<DatanodeDescriptor> cachedOn =
             ocblock.getDatanodes(Type.CACHED);
-        long cachedByBlock = Math.min(cachedOn.size(), pce.getReplication()) *
-            blockInfo.getNumBytes();
+        long cachedByBlock = Math.min(cachedOn.size(),
+            directive.getReplication()) * blockInfo.getNumBytes();
         cachedTotal += cachedByBlock;
 
         if (mark != ocblock.getMark()) {
           // Mark hasn't been set in this scan, so update replication and mark.
-          ocblock.setReplicationAndMark(pce.getReplication(), mark);
+          ocblock.setReplicationAndMark(directive.getReplication(), mark);
         } else {
           // Mark already set in this scan.  Set replication to highest value in
           // any CacheDirective that covers this file.
           ocblock.setReplicationAndMark((short)Math.max(
-              pce.getReplication(), ocblock.getReplication()), mark);
+              directive.getReplication(), ocblock.getReplication()), mark);
         }
       }
     }
-    pce.addBytesNeeded(neededTotal);
-    pce.addBytesCached(cachedTotal);
+    // Increment the "cached" statistics
+    directive.addBytesCached(cachedTotal);
+    if (cachedTotal == neededTotal) {
+      directive.addFilesCached(1);
+    }
     if (LOG.isTraceEnabled()) {
-      LOG.debug("Directive " + pce.getId() + " is caching " +
-          file.getFullPathName() + ": " + cachedTotal + "/" + neededTotal);
+      LOG.trace("Directive " + directive.getId() + " is caching " +
+          file.getFullPathName() + ": " + cachedTotal + "/" + neededTotal +
+          " bytes");
     }
   }
 

@@ -231,6 +231,8 @@ Trunk (Unreleased)
     HDFS-5536. Implement HTTP policy for Namenode and DataNode. (Haohui Mai via
     jing9)
 
+    HDFS-5630. Hook up cache directive and pool usage statistics. (wang)
+
   OPTIMIZATIONS
     HDFS-5349. DNA_CACHE and DNA_UNCACHE should be by blockId only. (cmccabe)
 

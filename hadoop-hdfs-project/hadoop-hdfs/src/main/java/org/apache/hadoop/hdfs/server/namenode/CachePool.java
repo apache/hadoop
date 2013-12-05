@@ -70,8 +70,13 @@ public final class CachePool {
    */
   @Nonnull
   private FsPermission mode;
-  
+
   private int weight;
+
+  private long bytesNeeded;
+  private long bytesCached;
+  private long filesNeeded;
+  private long filesCached;
 
   public final static class DirectiveList
       extends IntrusiveCollection<CacheDirective> {
@@ -203,15 +208,58 @@ public final class CachePool {
   }
 
   /**
+   * Resets statistics related to this CachePool
+   */
+  public void resetStatistics() {
+    bytesNeeded = 0;
+    bytesCached = 0;
+    filesNeeded = 0;
+    filesCached = 0;
+  }
+
+  public void addBytesNeeded(long bytes) {
+    bytesNeeded += bytes;
+  }
+
+  public void addBytesCached(long bytes) {
+    bytesCached += bytes;
+  }
+
+  public void addFilesNeeded(long files) {
+    filesNeeded += files;
+  }
+
+  public void addFilesCached(long files) {
+    filesCached += files;
+  }
+
+  public long getBytesNeeded() {
+    return bytesNeeded;
+  }
+
+  public long getBytesCached() {
+    return bytesCached;
+  }
+
+  public long getFilesNeeded() {
+    return filesNeeded;
+  }
+
+  public long getFilesCached() {
+    return filesCached;
+  }
+
+  /**
    * Get statistics about this CachePool.
    *
    * @return   Cache pool statistics.
    */
   private CachePoolStats getStats() {
     return new CachePoolStats.Builder().
-        setBytesNeeded(0).
-        setBytesCached(0).
-        setFilesAffected(0).
+        setBytesNeeded(bytesNeeded).
+        setBytesCached(bytesCached).
+        setFilesNeeded(filesNeeded).
+        setFilesCached(filesCached).
         build();
   }
 
