@@ -169,6 +169,8 @@ Release 2.4.0 - UNRELEASED
     HADOOP-10135 writes to swift fs over partition size leave temp files and
     empty output file (David Dobbins via stevel)
 
+    HADOOP-10129. Distcp may succeed when it fails (daryn)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -2089,6 +2091,8 @@ Release 0.23.10 - UNRELEASED
     HADOOP-9955. RPC idle connection closing is extremely inefficient (daryn)
 
   BUG FIXES
+
+    HADOOP-10129. Distcp may succeed when it fails (daryn)
 
 Release 0.23.9 - 2013-07-08
 
