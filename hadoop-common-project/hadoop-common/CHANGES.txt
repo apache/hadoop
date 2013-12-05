@@ -238,6 +238,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-5560. Trash configuration log statements prints incorrect units.
     (Josh Elser via Andrew Wang)
 
+    HADOOP-10081. Client.setupIOStreams can leak socket resources on exception
+    or error (Tsuyoshi OZAWA via jlowe)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
