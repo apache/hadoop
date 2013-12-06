@@ -125,6 +125,8 @@ Release 2.4.0 - UNRELEASED
 
     YARN-1181. Augment MiniYARNCluster to support HA mode (Karthik Kambatla)
 
+    YARN-546. Allow disabling the Fair Scheduler event log (Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES
