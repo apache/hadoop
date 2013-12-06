@@ -51,11 +51,11 @@ public class TestFSLeafQueue {
     scheduler.reinitialize(conf, resourceManager.getRMContext());
     
     String queueName = "root.queue1";
-    QueueManager mockMgr = mock(QueueManager.class);
-    when(mockMgr.getMaxResources(queueName)).thenReturn(maxResource);
-    when(mockMgr.getMinResources(queueName)).thenReturn(Resources.none());
+    scheduler.allocConf = mock(AllocationConfiguration.class);
+    when(scheduler.allocConf.getMaxResources(queueName)).thenReturn(maxResource);
+    when(scheduler.allocConf.getMinResources(queueName)).thenReturn(Resources.none());
 
-    schedulable = new FSLeafQueue(queueName, mockMgr, scheduler, null);
+    schedulable = new FSLeafQueue(queueName, scheduler, null);
   }
 
   @Test

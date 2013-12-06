@@ -301,22 +301,30 @@ public class YarnConfiguration extends Configuration {
   public static final String RM_STORE = RM_PREFIX + "store.class";
   
   /** URI for FileSystemRMStateStore */
-  public static final String FS_RM_STATE_STORE_URI =
-                                           RM_PREFIX + "fs.state-store.uri";
+  public static final String FS_RM_STATE_STORE_URI = RM_PREFIX
+      + "fs.state-store.uri";
+  public static final String FS_RM_STATE_STORE_RETRY_POLICY_SPEC = RM_PREFIX
+      + "fs.state-store.retry-policy-spec";
+  public static final String DEFAULT_FS_RM_STATE_STORE_RETRY_POLICY_SPEC =
+      "2000, 500";
   /**
    * Comma separated host:port pairs, each corresponding to a ZK server for
    * ZKRMStateStore
    */
   public static final String ZK_STATE_STORE_PREFIX =
-      RM_PREFIX + "zk.state-store.";
+      RM_PREFIX + "zk-state-store.";
   public static final String ZK_RM_STATE_STORE_NUM_RETRIES =
       ZK_STATE_STORE_PREFIX + "num-retries";
-  public static final int DEFAULT_ZK_RM_STATE_STORE_NUM_RETRIES = 3;
+  public static final int DEFAULT_ZK_RM_STATE_STORE_NUM_RETRIES = 500;
+  /** retry interval when connecting to zookeeper*/
+  public static final String ZK_RM_STATE_STORE_RETRY_INTERVAL_MS =
+      ZK_STATE_STORE_PREFIX + "retry-interval-ms";
+  public static final long DEFAULT_ZK_RM_STATE_STORE_RETRY_INTERVAL_MS = 2000;
   public static final String ZK_RM_STATE_STORE_ADDRESS =
       ZK_STATE_STORE_PREFIX + "address";
   /** Timeout in millisec for ZK server connection for ZKRMStateStore */
   public static final String ZK_RM_STATE_STORE_TIMEOUT_MS =
-      ZK_STATE_STORE_PREFIX + "timeout.ms";
+      ZK_STATE_STORE_PREFIX + "timeout-ms";
   public static final int DEFAULT_ZK_RM_STATE_STORE_TIMEOUT_MS = 60000;
   /** Parent znode path under which ZKRMStateStore will create znodes */
   public static final String ZK_RM_STATE_STORE_PARENT_PATH =

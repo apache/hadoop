@@ -36,6 +36,7 @@ import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveStats;
 import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
+import org.apache.hadoop.hdfs.protocol.CachePoolStats;
 import org.apache.hadoop.hdfs.server.namenode.CachePool;
 import org.apache.hadoop.hdfs.tools.TableListing.Justification;
 import org.apache.hadoop.ipc.RemoteException;
@@ -477,9 +478,10 @@ public class CacheAdmin extends Configured implements Tool {
           addField("EXPIRY", Justification.LEFT).
           addField("PATH", Justification.LEFT);
       if (printStats) {
-        tableBuilder.addField("NEEDED", Justification.RIGHT).
-                    addField("CACHED", Justification.RIGHT).
-                    addField("FILES", Justification.RIGHT);
+        tableBuilder.addField("BYTES_NEEDED", Justification.RIGHT).
+                    addField("BYTES_CACHED", Justification.RIGHT).
+                    addField("FILES_NEEDED", Justification.RIGHT).
+                    addField("FILES_CACHED", Justification.RIGHT);
       }
       TableListing tableListing = tableBuilder.build();
 
@@ -507,7 +509,8 @@ public class CacheAdmin extends Configured implements Tool {
         if (printStats) {
           row.add("" + stats.getBytesNeeded());
           row.add("" + stats.getBytesCached());
-          row.add("" + stats.getFilesAffected());
+          row.add("" + stats.getFilesNeeded());
+          row.add("" + stats.getFilesCached());
         }
         tableListing.addRow(row.toArray(new String[0]));
         numEntries++;
@@ -769,13 +772,14 @@ public class CacheAdmin extends Configured implements Tool {
 
     @Override
     public String getShortUsage() {
-      return "[" + getName() + " [name]]\n";
+      return "[" + getName() + " [-stats] [<name>]]\n";
     }
 
     @Override
     public String getLongUsage() {
       TableListing listing = getOptionDescriptionListing();
-      listing.addRow("[name]", "If specified, list only the named cache pool.");
+      listing.addRow("-stats", "Display additional cache pool statistics.");
+      listing.addRow("<name>", "If specified, list only the named cache pool.");
 
       return getShortUsage() + "\n" +
           WordUtils.wrap("Display information about one or more cache pools, " +
@@ -787,6 +791,7 @@ public class CacheAdmin extends Configured implements Tool {
     @Override
     public int run(Configuration conf, List<String> args) throws IOException {
       String name = StringUtils.popFirstNonOption(args);
+      final boolean printStats = StringUtils.popOption("-stats", args);
       if (!args.isEmpty()) {
         System.err.print("Can't understand arguments: " +
           Joiner.on(" ").join(args) + "\n");
@@ -794,28 +799,42 @@ public class CacheAdmin extends Configured implements Tool {
         return 1;
       }
       DistributedFileSystem dfs = getDFS(conf);
-      TableListing listing = new TableListing.Builder().
+      TableListing.Builder builder = new TableListing.Builder().
           addField("NAME", Justification.LEFT).
           addField("OWNER", Justification.LEFT).
           addField("GROUP", Justification.LEFT).
           addField("MODE", Justification.LEFT).
-          addField("WEIGHT", Justification.RIGHT).
-          build();
+          addField("WEIGHT", Justification.RIGHT);
+      if (printStats) {
+        builder.
+            addField("BYTES_NEEDED", Justification.RIGHT).
+            addField("BYTES_CACHED", Justification.RIGHT).
+            addField("FILES_NEEDED", Justification.RIGHT).
+            addField("FILES_CACHED", Justification.RIGHT);
+      }
+      TableListing listing = builder.build();
       int numResults = 0;
       try {
         RemoteIterator<CachePoolEntry> iter = dfs.listCachePools();
         while (iter.hasNext()) {
           CachePoolEntry entry = iter.next();
           CachePoolInfo info = entry.getInfo();
-          String[] row = new String[5];
+          LinkedList<String> row = new LinkedList<String>();
           if (name == null || info.getPoolName().equals(name)) {
-            row[0] = info.getPoolName();
-            row[1] = info.getOwnerName();
-            row[2] = info.getGroupName();
-            row[3] = info.getMode() != null ? info.getMode().toString() : null;
-            row[4] =
-                info.getWeight() != null ? info.getWeight().toString() : null;
-            listing.addRow(row);
+            row.add(info.getPoolName());
+            row.add(info.getOwnerName());
+            row.add(info.getGroupName());
+            row.add(info.getMode() != null ? info.getMode().toString() : null);
+            row.add(
+                info.getWeight() != null ? info.getWeight().toString() : null);
+            if (printStats) {
+              CachePoolStats stats = entry.getStats();
+              row.add(Long.toString(stats.getBytesNeeded()));
+              row.add(Long.toString(stats.getBytesCached()));
+              row.add(Long.toString(stats.getFilesNeeded()));
+              row.add(Long.toString(stats.getFilesCached()));
+            }
+            listing.addRow(row.toArray(new String[] {}));
             ++numResults;
             if (name != null) {
               break;

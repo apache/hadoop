@@ -32,6 +32,8 @@ import org.apache.hadoop.tools.util.DistCpUtils;
 import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.security.Credentials;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import java.io.*;
 import java.util.Stack;
 
@@ -107,12 +109,13 @@ public class SimpleCopyListing extends CopyListing {
   /** {@inheritDoc} */
   @Override
   public void doBuildListing(Path pathToListingFile, DistCpOptions options) throws IOException {
-
-    SequenceFile.Writer fileListWriter = null;
-
+    doBuildListing(getWriter(pathToListingFile), options);
+  }
+  
+  @VisibleForTesting
+  public void doBuildListing(SequenceFile.Writer fileListWriter,
+      DistCpOptions options) throws IOException {
     try {
-      fileListWriter = getWriter(pathToListingFile);
-
       for (Path path: options.getSourcePaths()) {
         FileSystem sourceFS = path.getFileSystem(getConf());
         path = makeQualified(path);
@@ -143,8 +146,10 @@ public class SimpleCopyListing extends CopyListing {
               localFile, options);
         }
       }
+      fileListWriter.close();
+      fileListWriter = null;
     } finally {
-      IOUtils.closeStream(fileListWriter);
+      IOUtils.cleanup(LOG, fileListWriter);
     }
   }
 

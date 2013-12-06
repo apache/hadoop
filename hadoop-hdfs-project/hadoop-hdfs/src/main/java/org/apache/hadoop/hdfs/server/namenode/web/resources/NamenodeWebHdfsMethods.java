@@ -245,8 +245,12 @@ public class NamenodeWebHdfsMethods {
         + Param.toSortedString("&", parameters);
     final String uripath = WebHdfsFileSystem.PATH_PREFIX + path;
 
-    final URI uri = new URI("http", null, dn.getHostName(), dn.getInfoPort(),
-        uripath, query, null);
+    final String scheme = request.getScheme();
+    int port = "http".equals(scheme) ? dn.getInfoPort() : dn
+        .getInfoSecurePort();
+    final URI uri = new URI(scheme, null, dn.getHostName(), port, uripath,
+        query, null);
+
     if (LOG.isTraceEnabled()) {
       LOG.trace("redirectURI=" + uri);
     }

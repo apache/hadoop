@@ -226,6 +226,11 @@ Release 2.4.0 - UNRELEASED
     MAPREDUCE-5631. TestJobEndNotifier.testNotifyRetries fails with Should
     have taken more than 5 seconds in jdk7 (Jonathan Eagles via jlowe)
 
+    MAPREDUCE-5645. TestFixedLengthInputFormat fails with native libs (Mit
+    Desai via jeagles)
+
+    MAPREDUCE-5632. TestRMContainerAllocator#testUpdatedNodes fails (jeagles)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -274,6 +279,10 @@ Release 2.3.0 - UNRELEASED
 
     MAPREDUCE-5451. MR uses LD_LIBRARY_PATH which doesn't mean anything in
     Windows. (Yingda Chen via cnauroth)
+
+    MAPREDUCE-5409. MRAppMaster throws InvalidStateTransitonException: Invalid
+    event: TA_TOO_MANY_FETCH_FAILURE at KILLED for TaskAttemptImpl (Gera
+    Shegalov via jlowe)
 
 Release 2.2.0 - 2013-10-13
 

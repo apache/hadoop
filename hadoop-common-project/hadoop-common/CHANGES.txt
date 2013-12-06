@@ -390,6 +390,11 @@ Release 2.4.0 - UNRELEASED
 
     HADOOP-10126. LightWeightGSet log message is confusing. (Vinay via suresh)
 
+    HADOOP-10127. Add ipc.client.connect.retry.interval to control the frequency
+    of connection retries (Karthik Kambatla via Sandy Ryza)
+
+    HADOOP-10102. Update commons IO from 2.1 to 2.4 (Akira Ajisaka via stevel)
+
   OPTIMIZATIONS
 
     HADOOP-9748. Reduce blocking on UGI.ensureInitialized (daryn)
@@ -455,6 +460,11 @@ Release 2.4.0 - UNRELEASED
     HADOOP-10135 writes to swift fs over partition size leave temp files and
     empty output file (David Dobbins via stevel)
 
+    HADOOP-10129. Distcp may succeed when it fails (daryn)
+
+    HADOOP-10058. TestMetricsSystemImpl#testInitFirstVerifyStopInvokedImmediately
+    fails on trunk (Chen He via jeagles)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -518,6 +528,12 @@ Release 2.3.0 - UNRELEASED
 
     HADOOP-10130. RawLocalFS::LocalFSFileInputStream.pread does not track
     FS::Statistics (Binglin Chang via Colin Patrick McCabe)
+
+    HDFS-5560. Trash configuration log statements prints incorrect units.
+    (Josh Elser via Andrew Wang)
+
+    HADOOP-10081. Client.setupIOStreams can leak socket resources on exception
+    or error (Tsuyoshi OZAWA via jlowe)
 
 Release 2.2.0 - 2013-10-13
 
@@ -2325,6 +2341,20 @@ Release 2.0.0-alpha - 05-23-2012
 
     HADOOP-7606. Upgrade Jackson to version 1.7.1 to match the version required
     by Jersey (Alejandro Abdelnur via atm)
+
+Release 0.23.11 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+    
+  IMPROVEMENTS
+    
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    HADOOP-10129. Distcp may succeed when it fails (daryn)
 
 Release 0.23.10 - UNRELEASED
 

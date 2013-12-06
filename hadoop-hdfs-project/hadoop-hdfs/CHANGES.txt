@@ -228,6 +228,11 @@ Trunk (Unreleased)
 
     HDFS-5430. Support TTL on CacheDirectives. (wang)
 
+    HDFS-5536. Implement HTTP policy for Namenode and DataNode. (Haohui Mai via
+    jing9)
+
+    HDFS-5630. Hook up cache directive and pool usage statistics. (wang)
+
   OPTIMIZATIONS
     HDFS-5349. DNA_CACHE and DNA_UNCACHE should be by blockId only. (cmccabe)
 
@@ -421,6 +426,11 @@ Trunk (Unreleased)
     HDFS-5562. TestCacheDirectives and TestFsDatasetCache should stub out
     native mlock. (Colin McCabe and Akira Ajisaka via wang)
 
+    HDFS-5555. CacheAdmin commands fail when first listed NameNode is in
+    Standby (jxiang via cmccabe)
+
+    HDFS-5626. dfsadmin -report shows incorrect cache values. (cmccabe)
+
 Release 2.4.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -448,6 +458,8 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-5444. Choose default web UI based on browser capabilities. (Haohui Mai
     via jing9)
+
+    HDFS-5514. FSNamesystem's fsLock should allow custom implementation (daryn)
 
   IMPROVEMENTS
 
@@ -563,6 +575,8 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-5581. NameNodeFsck should use only one instance of
     BlockPlacementPolicy. (vinay via cmccabe)
+
+    HDFS-5633. Improve OfflineImageViewer to use less memory. (jing9)
 
   OPTIMIZATIONS
 
@@ -766,6 +780,14 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-5563. NFS gateway should commit the buffered data when read request comes
     after write to the same file (brandonli)
+
+    HDFS-4997. libhdfs doesn't return correct error codes in most cases (cmccabe)
+
+    HDFS-5587. add debug information when NFS fails to start with duplicate user
+    or group names (brandonli)
+
+    HDFS-5590. Block ID and generation stamp may be reused when persistBlocks is 
+    set to false. (jing9)
 
 Release 2.2.0 - 2013-10-13
 
@@ -4062,6 +4084,9 @@ Release 0.23.10 - UNRELEASED
 
     HDFS-5557. Write pipeline recovery for the last packet in the block may
     cause rejection of valid replicas. (kihwal)
+
+    HDFS-5558. LeaseManager monitor thread can crash if the last block is
+    complete but another block is not. (kihwal)
 
 Release 0.23.9 - 2013-07-08
 

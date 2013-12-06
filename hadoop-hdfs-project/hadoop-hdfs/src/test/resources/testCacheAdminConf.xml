@@ -399,5 +399,63 @@
       </comparators>
     </test>
 
+    <test> <!--Tested -->
+      <description>Testing listing cache pool statistics</description>
+      <test-commands>
+        <cache-admin-command>-addPool foo -owner bob -group bob -mode 0664</cache-admin-command>
+        <cache-admin-command>-addPool bar -owner alice -group alicegroup -mode 0755</cache-admin-command>
+        <cache-admin-command>-listPools -stats</cache-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <cache-admin-command>-removePool foo</cache-admin-command>
+        <cache-admin-command>-removePool bar</cache-admin-command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Found 2 results.</expected-output>
+        </comparator>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>bar   alice  alicegroup  rwxr-xr-x      100             0             0             0             0</expected-output>
+        </comparator>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>foo   bob    bob         rw-rw-r--      100             0             0             0             0</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!--Tested -->
+      <description>Testing listing cache directive statistics</description>
+      <test-commands>
+        <cache-admin-command>-addPool pool1</cache-admin-command>
+        <cache-admin-command>-addDirective -path /foo -pool pool1 -ttl 2d</cache-admin-command>
+        <cache-admin-command>-addDirective -path /bar -pool pool1 -ttl 24h</cache-admin-command>
+        <cache-admin-command>-addDirective -path /baz -replication 2 -pool pool1 -ttl 60m</cache-admin-command>
+        <cache-admin-command>-listDirectives -pool pool1 -stats</cache-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <cache-admin-command>-removePool pool1</cache-admin-command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Found 3 entries</expected-output>
+        </comparator>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>/foo              0             0             0             0</expected-output>
+        </comparator>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>/bar              0             0             0             0</expected-output>
+        </comparator>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>/baz              0             0             0             0</expected-output>
+        </comparator>
+      </comparators>
+    </test>
   </tests>
 </configuration>

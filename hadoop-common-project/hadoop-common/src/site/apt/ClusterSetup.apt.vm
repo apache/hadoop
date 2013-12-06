@@ -754,6 +754,10 @@ KVNO Timestamp         Principal
 | | | Enable HDFS block access tokens for secure operations. |
 *-------------------------+-------------------------+------------------------+
 | <<<dfs.https.enable>>> | <true> | |
+| | | This value is deprecated. Use dfs.http.policy |
+*-------------------------+-------------------------+------------------------+
+| <<<dfs.http.policy>>> | <HTTP_ONLY> or <HTTPS_ONLY> or <HTTP_AND_HTTPS> | |
+| | | HTTPS_ONLY turns off http access |
 *-------------------------+-------------------------+------------------------+
 | <<<dfs.namenode.https-address>>> | <nn_host_fqdn:50470> | |
 *-------------------------+-------------------------+------------------------+

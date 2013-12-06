@@ -30,7 +30,8 @@ public class CachePoolStats {
   public static class Builder {
     private long bytesNeeded;
     private long bytesCached;
-    private long filesAffected;
+    private long filesNeeded;
+    private long filesCached;
 
     public Builder() {
     }
@@ -45,24 +46,33 @@ public class CachePoolStats {
       return this;
     }
 
-    public Builder setFilesAffected(long filesAffected) {
-      this.filesAffected = filesAffected;
+    public Builder setFilesNeeded(long filesNeeded) {
+      this.filesNeeded = filesNeeded;
+      return this;
+    }
+
+    public Builder setFilesCached(long filesCached) {
+      this.filesCached = filesCached;
       return this;
     }
 
     public CachePoolStats build() {
-      return new CachePoolStats(bytesNeeded, bytesCached, filesAffected);
+      return new CachePoolStats(bytesNeeded, bytesCached, filesNeeded,
+          filesCached);
     }
   };
 
   private final long bytesNeeded;
   private final long bytesCached;
-  private final long filesAffected;
+  private final long filesNeeded;
+  private final long filesCached;
 
-  private CachePoolStats(long bytesNeeded, long bytesCached, long filesAffected) {
+  private CachePoolStats(long bytesNeeded, long bytesCached, long filesNeeded,
+      long filesCached) {
     this.bytesNeeded = bytesNeeded;
     this.bytesCached = bytesCached;
-    this.filesAffected = filesAffected;
+    this.filesNeeded = filesNeeded;
+    this.filesCached = filesCached;
   }
 
   public long getBytesNeeded() {
@@ -70,18 +80,23 @@ public class CachePoolStats {
   }
 
   public long getBytesCached() {
-    return bytesNeeded;
+    return bytesCached;
   }
 
-  public long getFilesAffected() {
-    return filesAffected;
+  public long getFilesNeeded() {
+    return filesNeeded;
+  }
+
+  public long getFilesCached() {
+    return filesCached;
   }
 
   public String toString() {
     return new StringBuilder().append("{").
       append("bytesNeeded:").append(bytesNeeded).
       append(", bytesCached:").append(bytesCached).
-      append(", filesAffected:").append(filesAffected).
+      append(", filesNeeded:").append(filesNeeded).
+      append(", filesCached:").append(filesCached).
       append("}").toString();
   }
 }

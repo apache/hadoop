@@ -434,7 +434,6 @@ public class TestBackupNode {
   public void testCanReadData() throws IOException {
     Path file1 = new Path("/fileToRead.dat");
     Configuration conf = new HdfsConfiguration();
-    conf.setBoolean(DFSConfigKeys.DFS_PERSIST_BLOCKS_KEY, true);
     MiniDFSCluster cluster = null;
     FileSystem fileSys = null;
     BackupNode backup = null;

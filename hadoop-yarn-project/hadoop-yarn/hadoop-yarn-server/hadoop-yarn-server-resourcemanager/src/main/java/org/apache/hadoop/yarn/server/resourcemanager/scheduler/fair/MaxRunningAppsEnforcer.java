@@ -33,15 +33,15 @@ import com.google.common.collect.ListMultimap;
  * constraints
  */
 public class MaxRunningAppsEnforcer {
-  private final QueueManager queueMgr;
+  private final FairScheduler scheduler;
 
   // Tracks the number of running applications by user.
   private final Map<String, Integer> usersNumRunnableApps;
   @VisibleForTesting
   final ListMultimap<String, AppSchedulable> usersNonRunnableApps;
 
-  public MaxRunningAppsEnforcer(QueueManager queueMgr) {
-    this.queueMgr = queueMgr;
+  public MaxRunningAppsEnforcer(FairScheduler scheduler) {
+    this.scheduler = scheduler;
     this.usersNumRunnableApps = new HashMap<String, Integer>();
     this.usersNonRunnableApps = ArrayListMultimap.create();
   }
@@ -51,16 +51,17 @@ public class MaxRunningAppsEnforcer {
    * maxRunningApps limits.
    */
   public boolean canAppBeRunnable(FSQueue queue, String user) {
+    AllocationConfiguration allocConf = scheduler.getAllocationConfiguration();
     Integer userNumRunnable = usersNumRunnableApps.get(user);
     if (userNumRunnable == null) {
       userNumRunnable = 0;
     }
-    if (userNumRunnable >= queueMgr.getUserMaxApps(user)) {
+    if (userNumRunnable >= allocConf.getUserMaxApps(user)) {
       return false;
     }
     // Check queue and all parent queues
     while (queue != null) {
-      int queueMaxApps = queueMgr.getQueueMaxApps(queue.getName());
+      int queueMaxApps = allocConf.getQueueMaxApps(queue.getName());
       if (queue.getNumRunnableApps() >= queueMaxApps) {
         return false;
       }
@@ -107,6 +108,8 @@ public class MaxRunningAppsEnforcer {
    * highest queue that went from having no slack to having slack.
    */
   public void updateRunnabilityOnAppRemoval(FSSchedulerApp app) {
+    AllocationConfiguration allocConf = scheduler.getAllocationConfiguration();
+    
     // Update usersRunnableApps
     String user = app.getUser();
     int newUserNumRunning = usersNumRunnableApps.get(user) - 1;
@@ -127,10 +130,10 @@ public class MaxRunningAppsEnforcer {
     // that was at its maxRunningApps before the removal.
     FSLeafQueue queue = app.getQueue();
     FSQueue highestQueueWithAppsNowRunnable = (queue.getNumRunnableApps() ==
-        queueMgr.getQueueMaxApps(queue.getName()) - 1) ? queue : null;
+        allocConf.getQueueMaxApps(queue.getName()) - 1) ? queue : null;
     FSParentQueue parent = queue.getParent();
     while (parent != null) {
-      if (parent.getNumRunnableApps() == queueMgr.getQueueMaxApps(parent
+      if (parent.getNumRunnableApps() == allocConf.getQueueMaxApps(parent
           .getName())) {
         highestQueueWithAppsNowRunnable = parent;
       }
@@ -149,7 +152,7 @@ public class MaxRunningAppsEnforcer {
       gatherPossiblyRunnableAppLists(highestQueueWithAppsNowRunnable,
           appsNowMaybeRunnable);
     }
-    if (newUserNumRunning == queueMgr.getUserMaxApps(user) - 1) {
+    if (newUserNumRunning == allocConf.getUserMaxApps(user) - 1) {
       List<AppSchedulable> userWaitingApps = usersNonRunnableApps.get(user);
       if (userWaitingApps != null) {
         appsNowMaybeRunnable.add(userWaitingApps);
@@ -200,7 +203,8 @@ public class MaxRunningAppsEnforcer {
    */
   private void gatherPossiblyRunnableAppLists(FSQueue queue,
       List<List<AppSchedulable>> appLists) {
-    if (queue.getNumRunnableApps() < queueMgr.getQueueMaxApps(queue.getName())) {
+    if (queue.getNumRunnableApps() < scheduler.getAllocationConfiguration()
+        .getQueueMaxApps(queue.getName())) {
       if (queue instanceof FSLeafQueue) {
         appLists.add(((FSLeafQueue)queue).getNonRunnableAppSchedulables());
       } else {

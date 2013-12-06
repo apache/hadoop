@@ -39,18 +39,21 @@ public class TestMaxRunningAppsEnforcer {
   
   @Before
   public void setup() throws Exception {
+    Configuration conf = new Configuration();
     clock = new TestFairScheduler.MockClock();
     FairScheduler scheduler = mock(FairScheduler.class);
     when(scheduler.getConf()).thenReturn(
-        new FairSchedulerConfiguration(new Configuration()));
+        new FairSchedulerConfiguration(conf));
     when(scheduler.getClock()).thenReturn(clock);
+    AllocationConfiguration allocConf = new AllocationConfiguration(
+        conf);
+    when(scheduler.getAllocationConfiguration()).thenReturn(allocConf);
     
     queueManager = new QueueManager(scheduler);
-    queueManager.initialize();
-    
-    queueMaxApps = queueManager.info.queueMaxApps;
-    userMaxApps = queueManager.info.userMaxApps;
-    maxAppsEnforcer = new MaxRunningAppsEnforcer(queueManager);
+    queueManager.initialize(conf);
+    queueMaxApps = allocConf.queueMaxApps;
+    userMaxApps = allocConf.userMaxApps;
+    maxAppsEnforcer = new MaxRunningAppsEnforcer(scheduler);
     appNum = 0;
   }
   

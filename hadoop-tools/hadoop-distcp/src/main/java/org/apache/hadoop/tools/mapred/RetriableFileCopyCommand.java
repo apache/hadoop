@@ -30,6 +30,8 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import java.io.*;
 import java.util.EnumSet;
 
@@ -176,7 +178,8 @@ public class RetriableFileCopyCommand extends RetriableCommand {
     return new Path(root, ".distcp.tmp." + context.getTaskAttemptID().toString());
   }
 
-  private long copyBytes(FileStatus sourceFileStatus, OutputStream outStream,
+  @VisibleForTesting
+  long copyBytes(FileStatus sourceFileStatus, OutputStream outStream,
                          int bufferSize, Mapper.Context context)
       throws IOException {
     Path source = sourceFileStatus.getPath();
@@ -193,6 +196,8 @@ public class RetriableFileCopyCommand extends RetriableCommand {
         updateContextStatus(totalBytesRead, context, sourceFileStatus);
         bytesRead = inStream.read(buf);
       }
+      outStream.close();
+      outStream = null;
     } finally {
       IOUtils.cleanup(LOG, outStream, inStream);
     }

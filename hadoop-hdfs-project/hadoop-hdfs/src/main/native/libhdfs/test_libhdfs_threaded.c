@@ -48,7 +48,8 @@ struct tlhThreadInfo {
     pthread_t thread;
 };
 
-static int hdfsSingleNameNodeConnect(struct NativeMiniDfsCluster *cl, hdfsFS *fs)
+static int hdfsSingleNameNodeConnect(struct NativeMiniDfsCluster *cl, hdfsFS *fs,
+                                     const char *username)
 {
     int ret, port;
     hdfsFS hdfs;
@@ -70,6 +71,9 @@ static int hdfsSingleNameNodeConnect(struct NativeMiniDfsCluster *cl, hdfsFS *fs
                           TO_STR(TLH_DEFAULT_BLOCK_SIZE));
     hdfsBuilderConfSetStr(bld, "dfs.blocksize",
                           TO_STR(TLH_DEFAULT_BLOCK_SIZE));
+    if (username) {
+        hdfsBuilderSetUserName(bld, username);
+    }
     hdfs = hdfsBuilderConnect(bld);
     if (!hdfs) {
         ret = -errno;
@@ -110,36 +114,58 @@ static int doTestGetDefaultBlockSize(hdfsFS fs, const char *path)
     return 0;
 }
 
-static int doTestHdfsOperations(struct tlhThreadInfo *ti, hdfsFS fs)
+struct tlhPaths {
+    char prefix[256];
+    char file1[256];
+    char file2[256];
+};
+
+static int setupPaths(const struct tlhThreadInfo *ti, struct tlhPaths *paths)
 {
-    char prefix[256], tmp[256];
+    memset(paths, sizeof(*paths), 0);
+    if (snprintf(paths->prefix, sizeof(paths->prefix), "/tlhData%04d",
+                 ti->threadIdx) >= sizeof(paths->prefix)) {
+        return ENAMETOOLONG;
+    }
+    if (snprintf(paths->file1, sizeof(paths->file1), "%s/file1",
+                 paths->prefix) >= sizeof(paths->file1)) {
+        return ENAMETOOLONG;
+    }
+    if (snprintf(paths->file2, sizeof(paths->file2), "%s/file2",
+                 paths->prefix) >= sizeof(paths->file2)) {
+        return ENAMETOOLONG;
+    }
+    return 0;
+}
+
+static int doTestHdfsOperations(struct tlhThreadInfo *ti, hdfsFS fs,
+                                const struct tlhPaths *paths)
+{
+    char tmp[4096];
     hdfsFile file;
     int ret, expected;
     hdfsFileInfo *fileInfo;
     struct hdfsReadStatistics *readStats = NULL;
 
-    snprintf(prefix, sizeof(prefix), "/tlhData%04d", ti->threadIdx);
-
-    if (hdfsExists(fs, prefix) == 0) {
-        EXPECT_ZERO(hdfsDelete(fs, prefix, 1));
+    if (hdfsExists(fs, paths->prefix) == 0) {
+        EXPECT_ZERO(hdfsDelete(fs, paths->prefix, 1));
     }
-    EXPECT_ZERO(hdfsCreateDirectory(fs, prefix));
-    snprintf(tmp, sizeof(tmp), "%s/file", prefix);
+    EXPECT_ZERO(hdfsCreateDirectory(fs, paths->prefix));
 
-    EXPECT_ZERO(doTestGetDefaultBlockSize(fs, prefix));
+    EXPECT_ZERO(doTestGetDefaultBlockSize(fs, paths->prefix));
 
     /* There should not be any file to open for reading. */
-    EXPECT_NULL(hdfsOpenFile(fs, tmp, O_RDONLY, 0, 0, 0));
+    EXPECT_NULL(hdfsOpenFile(fs, paths->file1, O_RDONLY, 0, 0, 0));
 
     /* hdfsOpenFile should not accept mode = 3 */
-    EXPECT_NULL(hdfsOpenFile(fs, tmp, 3, 0, 0, 0));
+    EXPECT_NULL(hdfsOpenFile(fs, paths->file1, 3, 0, 0, 0));
 
-    file = hdfsOpenFile(fs, tmp, O_WRONLY, 0, 0, 0);
+    file = hdfsOpenFile(fs, paths->file1, O_WRONLY, 0, 0, 0);
     EXPECT_NONNULL(file);
 
     /* TODO: implement writeFully and use it here */
-    expected = strlen(prefix);
-    ret = hdfsWrite(fs, file, prefix, expected);
+    expected = strlen(paths->prefix);
+    ret = hdfsWrite(fs, file, paths->prefix, expected);
     if (ret < 0) {
         ret = errno;
         fprintf(stderr, "hdfsWrite failed and set errno %d\n", ret);
@@ -155,7 +181,7 @@ static int doTestHdfsOperations(struct tlhThreadInfo *ti, hdfsFS fs)
     EXPECT_ZERO(hdfsCloseFile(fs, file));
 
     /* Let's re-open the file for reading */
-    file = hdfsOpenFile(fs, tmp, O_RDONLY, 0, 0, 0);
+    file = hdfsOpenFile(fs, paths->file1, O_RDONLY, 0, 0, 0);
     EXPECT_NONNULL(file);
 
     EXPECT_ZERO(hdfsFileGetReadStatistics(file, &readStats));
@@ -180,60 +206,67 @@ static int doTestHdfsOperations(struct tlhThreadInfo *ti, hdfsFS fs)
     errno = 0;
     EXPECT_INT_EQ(expected, readStats->totalBytesRead);
     hdfsFileFreeReadStatistics(readStats);
-    EXPECT_ZERO(memcmp(prefix, tmp, expected));
+    EXPECT_ZERO(memcmp(paths->prefix, tmp, expected));
     EXPECT_ZERO(hdfsCloseFile(fs, file));
 
     // TODO: Non-recursive delete should fail?
     //EXPECT_NONZERO(hdfsDelete(fs, prefix, 0));
+    EXPECT_ZERO(hdfsCopy(fs, paths->file1, fs, paths->file2));
 
-    snprintf(tmp, sizeof(tmp), "%s/file", prefix);
-    EXPECT_ZERO(hdfsChown(fs, tmp, NULL, NULL));
-    EXPECT_ZERO(hdfsChown(fs, tmp, NULL, "doop"));
-    fileInfo = hdfsGetPathInfo(fs, tmp);
+    EXPECT_ZERO(hdfsChown(fs, paths->file2, NULL, NULL));
+    EXPECT_ZERO(hdfsChown(fs, paths->file2, NULL, "doop"));
+    fileInfo = hdfsGetPathInfo(fs, paths->file2);
     EXPECT_NONNULL(fileInfo);
     EXPECT_ZERO(strcmp("doop", fileInfo->mGroup));
     hdfsFreeFileInfo(fileInfo, 1);
 
-    EXPECT_ZERO(hdfsChown(fs, tmp, "ha", "doop2"));
-    fileInfo = hdfsGetPathInfo(fs, tmp);
+    EXPECT_ZERO(hdfsChown(fs, paths->file2, "ha", "doop2"));
+    fileInfo = hdfsGetPathInfo(fs, paths->file2);
     EXPECT_NONNULL(fileInfo);
     EXPECT_ZERO(strcmp("ha", fileInfo->mOwner));
     EXPECT_ZERO(strcmp("doop2", fileInfo->mGroup));
     hdfsFreeFileInfo(fileInfo, 1);
 
-    EXPECT_ZERO(hdfsChown(fs, tmp, "ha2", NULL));
-    fileInfo = hdfsGetPathInfo(fs, tmp);
+    EXPECT_ZERO(hdfsChown(fs, paths->file2, "ha2", NULL));
+    fileInfo = hdfsGetPathInfo(fs, paths->file2);
     EXPECT_NONNULL(fileInfo);
     EXPECT_ZERO(strcmp("ha2", fileInfo->mOwner));
     EXPECT_ZERO(strcmp("doop2", fileInfo->mGroup));
     hdfsFreeFileInfo(fileInfo, 1);
 
-    EXPECT_ZERO(hdfsDelete(fs, prefix, 1));
+    snprintf(tmp, sizeof(tmp), "%s/nonexistent-file-name", paths->prefix);
+    EXPECT_NEGATIVE_ONE_WITH_ERRNO(hdfsChown(fs, tmp, "ha3", NULL), ENOENT);
+    return 0;
+}
+
+static int testHdfsOperationsImpl(struct tlhThreadInfo *ti)
+{
+    hdfsFS fs = NULL;
+    struct tlhPaths paths;
+
+    fprintf(stderr, "testHdfsOperations(threadIdx=%d): starting\n",
+        ti->threadIdx);
+    EXPECT_ZERO(hdfsSingleNameNodeConnect(tlhCluster, &fs, NULL));
+    EXPECT_ZERO(setupPaths(ti, &paths));
+    // test some operations
+    EXPECT_ZERO(doTestHdfsOperations(ti, fs, &paths));
+    EXPECT_ZERO(hdfsDisconnect(fs));
+    // reconnect as user "foo" and verify that we get permission errors
+    EXPECT_ZERO(hdfsSingleNameNodeConnect(tlhCluster, &fs, "foo"));
+    EXPECT_NEGATIVE_ONE_WITH_ERRNO(hdfsChown(fs, paths.file1, "ha3", NULL), EACCES);
+    EXPECT_ZERO(hdfsDisconnect(fs));
+    // reconnect to do the final delete.
+    EXPECT_ZERO(hdfsSingleNameNodeConnect(tlhCluster, &fs, NULL));
+    EXPECT_ZERO(hdfsDelete(fs, paths.prefix, 1));
+    EXPECT_ZERO(hdfsDisconnect(fs));
     return 0;
 }
 
 static void *testHdfsOperations(void *v)
 {
     struct tlhThreadInfo *ti = (struct tlhThreadInfo*)v;
-    hdfsFS fs = NULL;
-    int ret;
-
-    fprintf(stderr, "testHdfsOperations(threadIdx=%d): starting\n",
-        ti->threadIdx);
-    ret = hdfsSingleNameNodeConnect(tlhCluster, &fs);
-    if (ret) {
-        fprintf(stderr, "testHdfsOperations(threadIdx=%d): "
-            "hdfsSingleNameNodeConnect failed with error %d.\n",
-            ti->threadIdx, ret);
-        ti->success = EIO;
-        return NULL;
-    }
-    ti->success = doTestHdfsOperations(ti, fs);
-    if (hdfsDisconnect(fs)) {
-        ret = errno;
-        fprintf(stderr, "hdfsDisconnect error %d\n", ret);
-        ti->success = ret;
-    }
+    int ret = testHdfsOperationsImpl(ti);
+    ti->success = ret;
     return NULL;
 }
 

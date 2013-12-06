@@ -43,6 +43,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1392. Allow sophisticated app-to-queue placement policies in the Fair
     Scheduler (Sandy Ryza)
 
+    YARN-1447. Common PB type definitions for container resizing. (Wangda Tan
+    via Sandy Ryza)
+
   IMPROVEMENTS
 
     YARN-7. Support CPU resource for DistributedShell. (Junping Du via llu)
@@ -132,6 +135,16 @@ Release 2.4.0 - UNRELEASED
     YARN-1318. Promoted AdminService to an Always-On service and merged it into
     RMHAProtocolService. (Karthik Kambatla via vinodkv)
 
+    YARN-1332. In TestAMRMClient, replace assertTrue with assertEquals where
+    possible (Sebastian Wong via Sandy Ryza)
+
+    YARN-1403. Separate out configuration loading from QueueManager in the Fair
+    Scheduler (Sandy Ryza)
+
+    YARN-1181. Augment MiniYARNCluster to support HA mode (Karthik Kambatla)
+
+    YARN-546. Allow disabling the Fair Scheduler event log (Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -190,6 +203,12 @@ Release 2.4.0 - UNRELEASED
 
     YARN-1416. Fixed a few invalid transitions in RMApp, RMAppAttempt and in some
     tests. (Jian He via vinodkv)
+
+    YARN-895. Changed RM state-store to not crash immediately if RM restarts while
+    the state-store is down. (Jian He via vinodkv)
+
+    YARN-1454. Fixed test failure issue with TestRMRestart. (Karthik Kambatla
+    via vinodkv)
 
 Release 2.3.0 - UNRELEASED
 
@@ -276,6 +295,9 @@ Release 2.3.0 - UNRELEASED
 
     YARN-1407. RM Web UI and REST APIs should uniformly use
     YarnApplicationState (Sandy Ryza)
+
+    YARN-1438. Ensure container diagnostics includes exception from container
+    launch. (stevel via acmurthy)
 
 Release 2.2.0 - 2013-10-13
 
