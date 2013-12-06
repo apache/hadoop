@@ -123,6 +123,8 @@ Release 2.4.0 - UNRELEASED
     YARN-1403. Separate out configuration loading from QueueManager in the Fair
     Scheduler (Sandy Ryza)
 
+    YARN-1181. Augment MiniYARNCluster to support HA mode (Karthik Kambatla)
+
   OPTIMIZATIONS
 
   BUG FIXES
