@@ -145,6 +145,8 @@ Release 2.4.0 - UNRELEASED
     HDFS-5581. NameNodeFsck should use only one instance of
     BlockPlacementPolicy. (vinay via cmccabe)
 
+    HDFS-5633. Improve OfflineImageViewer to use less memory. (jing9)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn)

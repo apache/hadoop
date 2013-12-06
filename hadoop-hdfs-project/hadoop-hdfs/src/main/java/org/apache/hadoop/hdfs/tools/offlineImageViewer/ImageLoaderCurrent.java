@@ -129,7 +129,7 @@ class ImageLoaderCurrent implements ImageLoader {
       -40, -41, -42, -43, -44, -45, -46, -47 };
   private int imageVersion = 0;
   
-  private final Map<Long, String> subtreeMap = new HashMap<Long, String>();
+  private final Map<Long, Boolean> subtreeMap = new HashMap<Long, Boolean>();
   private final Map<Long, String> dirNodeMap = new HashMap<Long, String>();
 
   /* (non-Javadoc)
@@ -462,11 +462,15 @@ class ImageLoaderCurrent implements ImageLoader {
     // 1. load dir node id
     long inodeId = in.readLong();
     
-    String dirName = dirNodeMap.get(inodeId);
-    String oldValue = subtreeMap.put(inodeId, dirName);
-    if (oldValue != null) { // the subtree has been visited
-      return;
-    }
+    String dirName = dirNodeMap.remove(inodeId);
+    Boolean visitedRef = subtreeMap.get(inodeId);
+    if (visitedRef != null) {
+      if (visitedRef.booleanValue()) { // the subtree has been visited
+        return;
+      } else { // first time to visit
+        subtreeMap.put(inodeId, true);
+      }
+    } // else the dir is not linked by a RefNode, thus cannot be revisited
     
     // 2. load possible snapshots
     processSnapshots(in, v, dirName);
@@ -657,6 +661,8 @@ class ImageLoaderCurrent implements ImageLoader {
     
     if (numBlocks >= 0) { // File
       if (supportSnapshot) {
+        // make sure subtreeMap only contains entry for directory
+        subtreeMap.remove(inodeId);
         // process file diffs
         processFileDiffList(in, v, parentName);
         if (isSnapshotCopy) {
@@ -700,6 +706,11 @@ class ImageLoaderCurrent implements ImageLoader {
       
       final boolean firstReferred = in.readBoolean();
       if (firstReferred) {
+        // if a subtree is linked by multiple "parents", the corresponding dir
+        // must be referred by a reference node. we put the reference node into
+        // the subtreeMap here and let its value be false. when we later visit
+        // the subtree for the first time, we change the value to true.
+        subtreeMap.put(inodeId, false);
         v.visitEnclosingElement(ImageElement.SNAPSHOT_REF_INODE);
         processINode(in, v, skipBlocks, parentName, isSnapshotCopy);
         v.leaveEnclosingElement();  // referred inode    
