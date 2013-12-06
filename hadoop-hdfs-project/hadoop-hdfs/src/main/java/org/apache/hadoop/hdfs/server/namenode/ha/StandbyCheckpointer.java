@@ -20,7 +20,8 @@ package org.apache.hadoop.hdfs.server.namenode.ha;
 import static org.apache.hadoop.util.Time.now;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
+import java.net.URI;
+import java.net.URL;
 import java.security.PrivilegedAction;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -43,7 +44,6 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.SaveNamespaceCancelledException;
 import org.apache.hadoop.hdfs.server.namenode.TransferFsImage;
 import org.apache.hadoop.hdfs.util.Canceler;
-import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 
@@ -66,8 +66,8 @@ public class StandbyCheckpointer {
   private long lastCheckpointTime;
   private final CheckpointerThread thread;
   private final ThreadFactory uploadThreadFactory;
-  private String activeNNAddress;
-  private InetSocketAddress myNNAddress;
+  private URL activeNNAddress;
+  private URL myNNAddress;
 
   private Object cancelLock = new Object();
   private Canceler canceler;
@@ -94,7 +94,7 @@ public class StandbyCheckpointer {
    */
   private void setNameNodeAddresses(Configuration conf) throws IOException {
     // Look up our own address.
-    String myAddrString = getHttpAddress(conf);
+    myNNAddress = getHttpAddress(conf);
 
     // Look up the active node's address
     Configuration confForActive = HAUtil.getConfForOtherNode(conf);
@@ -103,32 +103,22 @@ public class StandbyCheckpointer {
     // Sanity-check.
     Preconditions.checkArgument(checkAddress(activeNNAddress),
         "Bad address for active NN: %s", activeNNAddress);
-    Preconditions.checkArgument(checkAddress(myAddrString),
-        "Bad address for standby NN: %s", myAddrString);
-    myNNAddress = NetUtils.createSocketAddr(myAddrString);
+    Preconditions.checkArgument(checkAddress(myNNAddress),
+        "Bad address for standby NN: %s", myNNAddress);
   }
   
-  private String getHttpAddress(Configuration conf) throws IOException {
-    String configuredAddr = DFSUtil.getInfoServer(null, conf, false);
-    
-    // Use the hostname from the RPC address as a default, in case
-    // the HTTP address is configured to 0.0.0.0.
-    String hostnameFromRpc = NameNode.getServiceAddress(
-        conf, true).getHostName();
-    try {
-      return DFSUtil.substituteForWildcardAddress(
-          configuredAddr, hostnameFromRpc);
-    } catch (IOException e) {
-      throw new IllegalArgumentException(e);
-    }
+  private URL getHttpAddress(Configuration conf) throws IOException {
+    final String scheme = DFSUtil.getHttpClientScheme(conf);
+    String defaultHost = NameNode.getServiceAddress(conf, true).getHostName();
+    URI addr = DFSUtil.getInfoServerWithDefaultHost(defaultHost, conf, scheme);
+    return addr.toURL();
   }
   
   /**
    * Ensure that the given address is valid and has a port
    * specified.
    */
-  private boolean checkAddress(String addrStr) {
-    InetSocketAddress addr = NetUtils.createSocketAddr(addrStr);
+  private static boolean checkAddress(URL addr) {
     return addr.getPort() != 0;
   }
 
@@ -344,7 +334,7 @@ public class StandbyCheckpointer {
   }
 
   @VisibleForTesting
-  String getActiveNNAddress() {
+  URL getActiveNNAddress() {
     return activeNNAddress;
   }
 }

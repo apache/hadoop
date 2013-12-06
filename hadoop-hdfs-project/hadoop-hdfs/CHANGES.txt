@@ -233,6 +233,9 @@ Trunk (Unreleased)
 
     HDFS-5630. Hook up cache directive and pool usage statistics. (wang)
 
+    HDFS-5312. Generate HTTP / HTTPS URL in DFSUtil#getInfoServer() based on the 
+    configured http policy. (Haohui Mai via jing9)
+
   OPTIMIZATIONS
     HDFS-5349. DNA_CACHE and DNA_UNCACHE should be by blockId only. (cmccabe)
 
