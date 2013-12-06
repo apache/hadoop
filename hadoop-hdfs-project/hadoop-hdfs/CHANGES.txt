@@ -352,6 +352,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-5587. add debug information when NFS fails to start with duplicate user
     or group names (brandonli)
 
+    HDFS-5590. Block ID and generation stamp may be reused when persistBlocks is 
+    set to false. (jing9)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
