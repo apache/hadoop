@@ -192,6 +192,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1454. Fixed test failure issue with TestRMRestart. (Karthik Kambatla
     via vinodkv)
 
+    YARN-1450. Fixed test failure in TestUnmanagedAMLauncher by removing its
+    dependency on distributed-shell. (Binglin Chang via vinodkv)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
