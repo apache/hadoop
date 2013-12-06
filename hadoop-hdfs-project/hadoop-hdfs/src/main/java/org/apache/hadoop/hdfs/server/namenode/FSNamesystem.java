@@ -79,8 +79,6 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PERMISSIONS_ENABLED_DEFAU
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PERMISSIONS_SUPERUSERGROUP_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PERMISSIONS_SUPERUSERGROUP_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PERSIST_BLOCKS_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PERSIST_BLOCKS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SUPPORT_APPEND_DEFAULT;
@@ -336,7 +334,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   static final int DEFAULT_MAX_CORRUPT_FILEBLOCKS_RETURNED = 100;
   static int BLOCK_DELETION_INCREMENT = 1000;
   private final boolean isPermissionEnabled;
-  private final boolean persistBlocks;
   private final UserGroupInformation fsOwner;
   private final String fsOwnerShortUserName;
   private final String supergroup;
@@ -637,13 +634,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       LOG.info("supergroup          = " + supergroup);
       LOG.info("isPermissionEnabled = " + isPermissionEnabled);
 
-      final boolean persistBlocks = conf.getBoolean(DFS_PERSIST_BLOCKS_KEY,
-                                                    DFS_PERSIST_BLOCKS_DEFAULT);
       // block allocation has to be persisted in HA using a shared edits directory
       // so that the standby has up-to-date namespace information
       String nameserviceId = DFSUtil.getNamenodeNameServiceId(conf);
       this.haEnabled = HAUtil.isHAEnabled(conf, nameserviceId);  
-      this.persistBlocks = persistBlocks || (haEnabled && HAUtil.usesSharedEditsDir(conf));
       
       // Sanity check the HA-related config.
       if (nameserviceId != null) {
@@ -2570,9 +2564,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     } finally {
       writeUnlock();
     }
-    if (persistBlocks) {
-      getEditLog().logSync();
-    }
+    getEditLog().logSync();
 
     // Return located block
     return makeLocatedBlock(newBlock, targets, offset);
@@ -2763,9 +2755,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     } finally {
       writeUnlock();
     }
-    if (persistBlocks) {
-      getEditLog().logSync();
-    }
+    getEditLog().logSync();
 
     return true;
   }
