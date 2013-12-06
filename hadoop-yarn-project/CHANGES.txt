@@ -279,6 +279,9 @@ Release 2.3.0 - UNRELEASED
     YARN-1407. RM Web UI and REST APIs should uniformly use
     YarnApplicationState (Sandy Ryza)
 
+    YARN-1438. Ensure container diagnostics includes exception from container
+    launch. (stevel via acmurthy)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES

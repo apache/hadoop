@@ -213,7 +213,8 @@ public class DefaultContainerExecutor extends ContainerExecutor {
         LOG.warn("Exception from container-launch with container ID: "
             + containerId + " and exit code: " + exitCode , e);
         logOutput(shExec.getOutput());
-        String diagnostics = "Exception from container-launch: \n"
+        String diagnostics = "Exception from container-launch: "
+            + e + "\n"
             + StringUtils.stringifyException(e) + "\n" + shExec.getOutput();
         container.handle(new ContainerDiagnosticsUpdateEvent(containerId,
             diagnostics));
