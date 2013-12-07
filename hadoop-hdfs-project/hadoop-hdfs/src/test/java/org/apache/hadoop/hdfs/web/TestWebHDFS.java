@@ -261,6 +261,34 @@ public class TestWebHDFS {
     }
   }
 
+  @Test(timeout=300000)
+  public void testNumericalUserName() throws Exception {
+    final Configuration conf = WebHdfsTestUtil.createConf();
+    conf.set(DFSConfigKeys.DFS_WEBHDFS_USER_PATTERN_KEY, "^[A-Za-z0-9_][A-Za-z0-9._-]*[$]?$");
+    final MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+    try {
+      cluster.waitActive();
+      WebHdfsTestUtil.getWebHdfsFileSystem(conf, WebHdfsFileSystem.SCHEME)
+          .setPermission(new Path("/"),
+              new FsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL));
+
+      UserGroupInformation.createUserForTesting("123", new String[]{"my-group"})
+        .doAs(new PrivilegedExceptionAction<Void>() {
+          @Override
+          public Void run() throws IOException, URISyntaxException {
+            FileSystem fs = WebHdfsTestUtil.getWebHdfsFileSystem(conf,
+                WebHdfsFileSystem.SCHEME);
+            Path d = new Path("/my-dir");
+            Assert.assertTrue(fs.mkdirs(d));
+            return null;
+          }
+        });
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
   /**
    * WebHdfs should be enabled by default after HDFS-5532
    * 

@@ -285,4 +285,19 @@ public class TestParam {
       Assert.assertEquals(expected, computed.getValue());
     }
   }
+
+  @Test
+  public void testUserNameOkAfterResettingPattern() {
+    UserParam.Domain oldDomain = UserParam.getUserPatternDomain();
+
+    String newPattern = "^[A-Za-z0-9_][A-Za-z0-9._-]*[$]?$";
+    UserParam.setUserPattern(newPattern);
+
+    UserParam userParam = new UserParam("1x");
+    assertNotNull(userParam.getValue());
+    userParam = new UserParam("123");
+    assertNotNull(userParam.getValue());
+
+    UserParam.setUserPatternDomain(oldDomain);
+  }
 }
