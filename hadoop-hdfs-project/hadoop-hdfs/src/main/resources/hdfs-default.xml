@@ -1484,4 +1484,12 @@
   </description>
 </property>
 
+<property>
+  <name>dfs.webhdfs.user.provider.user.pattern</name>
+  <value>^[A-Za-z_][A-Za-z0-9._-]*[$]?$</value>
+  <description>
+    Valid pattern for user and group names for webhdfs, it must be a valid java regex.
+  </description>
+</property>
+
 </configuration>
