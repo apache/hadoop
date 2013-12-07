@@ -325,10 +325,24 @@ public class StringUtils {
    * @return an <code>ArrayList</code> of string values
    */
   public static Collection<String> getStringCollection(String str){
+    String delim = ",";
+    return getStringCollection(str, delim);
+  }
+
+  /**
+   * Returns a collection of strings.
+   * 
+   * @param str
+   *          String to parse
+   * @param delim
+   *          delimiter to separate the values
+   * @return Collection of parsed elements.
+   */
+  public static Collection<String> getStringCollection(String str, String delim) {
     List<String> values = new ArrayList<String>();
     if (str == null)
       return values;
-    StringTokenizer tokenizer = new StringTokenizer (str,",");
+    StringTokenizer tokenizer = new StringTokenizer(str, delim);
     values = new ArrayList<String>();
     while (tokenizer.hasMoreTokens()) {
       values.add(tokenizer.nextToken());

@@ -196,6 +196,9 @@ Release 2.3.0 - UNRELEASED
 
   OPTIMIZATIONS
 
+    HADOOP-10142. Avoid groups lookup for unprivileged users such as "dr.who"
+    (vinay via cmccabe)
+
   BUG FIXES
 
     HADOOP-10028. Malformed ssl-server.xml.example. (Haohui Mai via jing9)

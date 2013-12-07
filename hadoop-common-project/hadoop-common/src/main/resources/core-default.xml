@@ -1256,4 +1256,18 @@
       Specify the port number used by Hadoop mount daemon.
   </description>
 </property>
+
+<property>
+  <name>hadoop.user.group.static.mapping.overrides</name>
+  <value>dr.who=;</value>
+  <description>
+    Static mapping of user to groups. This will override the groups if
+    available in the system for the specified user. In otherwords, groups
+    look-up will not happen for these users, instead groups mapped in this
+    configuration will be used.
+    Mapping should be in this format.
+    user1=group1,group2;user2=;user3=group2;
+    Default, "dr.who=;" will consider "dr.who" as user without groups.
+  </description>
+</property>
 </configuration>
