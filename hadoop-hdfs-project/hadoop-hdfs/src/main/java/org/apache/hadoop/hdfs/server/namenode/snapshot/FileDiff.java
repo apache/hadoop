@@ -33,7 +33,7 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotFSImageFormat.Ref
  * The difference of an {@link INodeFile} between two snapshots.
  */
 public class FileDiff extends
-    AbstractINodeDiff<INodeFileWithSnapshot, INodeFileAttributes, FileDiff> {
+    AbstractINodeDiff<INodeFile, INodeFileAttributes, FileDiff> {
 
   /** The file size at snapshot creation time. */
   private final long fileSize;
@@ -56,11 +56,12 @@ public class FileDiff extends
   }
   
   @Override
-  Quota.Counts combinePosteriorAndCollectBlocks(
-      INodeFileWithSnapshot currentINode, FileDiff posterior,
-      BlocksMapUpdateInfo collectedBlocks, final List<INode> removedINodes) {
-    return currentINode.updateQuotaAndCollectBlocks(posterior, collectedBlocks,
-        removedINodes);
+  Quota.Counts combinePosteriorAndCollectBlocks(INodeFile currentINode,
+      FileDiff posterior, BlocksMapUpdateInfo collectedBlocks,
+      final List<INode> removedINodes) {
+    return currentINode.getFileWithSnapshotFeature()
+        .updateQuotaAndCollectBlocks(currentINode, posterior, collectedBlocks,
+            removedINodes);
   }
   
   @Override
@@ -84,9 +85,10 @@ public class FileDiff extends
   }
 
   @Override
-  Quota.Counts destroyDiffAndCollectBlocks(INodeFileWithSnapshot currentINode,
+  Quota.Counts destroyDiffAndCollectBlocks(INodeFile currentINode,
       BlocksMapUpdateInfo collectedBlocks, final List<INode> removedINodes) {
-    return currentINode.updateQuotaAndCollectBlocks(this, collectedBlocks,
-        removedINodes);
+    return currentINode.getFileWithSnapshotFeature()
+        .updateQuotaAndCollectBlocks(currentINode, this, collectedBlocks,
+            removedINodes);
   }
 }

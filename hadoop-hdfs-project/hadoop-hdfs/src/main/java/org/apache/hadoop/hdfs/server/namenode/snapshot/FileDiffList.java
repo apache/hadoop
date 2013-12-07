@@ -17,19 +17,20 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
+import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeFileAttributes;
 
 /** A list of FileDiffs for storing snapshot data. */
 public class FileDiffList extends
-    AbstractINodeDiffList<INodeFileWithSnapshot, INodeFileAttributes, FileDiff> {
+    AbstractINodeDiffList<INodeFile, INodeFileAttributes, FileDiff> {
   
   @Override
-  FileDiff createDiff(Snapshot snapshot, INodeFileWithSnapshot file) {
+  FileDiff createDiff(Snapshot snapshot, INodeFile file) {
     return new FileDiff(snapshot, file);
   }
   
   @Override
-  INodeFileAttributes createSnapshotCopy(INodeFileWithSnapshot currentINode) {
+  INodeFileAttributes createSnapshotCopy(INodeFile currentINode) {
     return new INodeFileAttributes.SnapshotCopy(currentINode);
   }
 }

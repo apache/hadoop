@@ -37,6 +37,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSImageSerialization;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectoryAttributes;
+import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeMap;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference;
 import org.apache.hadoop.hdfs.server.namenode.Quota;
@@ -803,10 +804,9 @@ public class INodeDirectoryWithSnapshot extends INodeDirectory {
         }
         // For DstReference node, since the node is not in the created list of
         // prior, we should treat it as regular file/dir
-      } else if (topNode.isFile()
-          && topNode.asFile() instanceof INodeFileWithSnapshot) {
-        INodeFileWithSnapshot fs = (INodeFileWithSnapshot) topNode.asFile();
-        counts.add(fs.getDiffs().deleteSnapshotDiff(post, prior, fs,
+      } else if (topNode.isFile() && topNode.asFile().isWithSnapshot()) {
+        INodeFile file = topNode.asFile();
+        counts.add(file.getDiffs().deleteSnapshotDiff(post, prior, file,
             collectedBlocks, removedINodes, countDiffChange));
       } else if (topNode.isDirectory()) {
         INodeDirectory dir = topNode.asDirectory();

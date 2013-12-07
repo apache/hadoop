@@ -34,9 +34,9 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
-import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffReportEntry;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffType;
+import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.server.namenode.Content;
 import org.apache.hadoop.hdfs.server.namenode.ContentSummaryComputationContext;
 import org.apache.hadoop.hdfs.server.namenode.INode;
@@ -432,8 +432,8 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
           parentPath.remove(parentPath.size() - 1);
         }
       }
-    } else if (node.isFile() && node.asFile() instanceof INodeFileWithSnapshot) {
-      INodeFileWithSnapshot file = (INodeFileWithSnapshot) node.asFile();
+    } else if (node.isFile() && node.asFile().isWithSnapshot()) {
+      INodeFile file = node.asFile();
       Snapshot earlierSnapshot = diffReport.isFromEarlier() ? diffReport.from
           : diffReport.to;
       Snapshot laterSnapshot = diffReport.isFromEarlier() ? diffReport.to

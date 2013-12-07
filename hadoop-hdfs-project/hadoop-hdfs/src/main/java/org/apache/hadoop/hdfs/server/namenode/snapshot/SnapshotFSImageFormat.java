@@ -97,8 +97,7 @@ public class SnapshotFSImageFormat {
   
   public static void saveFileDiffList(final INodeFile file,
       final DataOutput out) throws IOException {
-    saveINodeDiffs(file instanceof INodeFileWithSnapshot?
-        ((INodeFileWithSnapshot) file).getDiffs(): null, out, null);
+    saveINodeDiffs(file.getDiffs(), out, null);
   }
 
   public static FileDiffList loadFileDiffList(DataInput in,
