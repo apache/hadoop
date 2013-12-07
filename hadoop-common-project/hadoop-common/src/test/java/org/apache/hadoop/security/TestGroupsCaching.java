@@ -19,14 +19,17 @@ package org.apache.hadoop.security;
 
 import java.io.IOException;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
+import org.junit.Before;
 import org.junit.Test;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
 
 import org.apache.commons.logging.Log;
@@ -40,10 +43,12 @@ import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
 
 public class TestGroupsCaching {
   public static final Log LOG = LogFactory.getLog(TestGroupsCaching.class);
-  private static Configuration conf = new Configuration();
   private static String[] myGroups = {"grp1", "grp2"};
+  private Configuration conf;
 
-  static {
+  @Before
+  public void setup() {
+    conf = new Configuration();
     conf.setClass(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
       FakeGroupMapping.class,
       ShellBasedUnixGroupsMapping.class);
@@ -88,7 +93,7 @@ public class TestGroupsCaching {
   }
 
   @Test
-  public void TestGroupsCaching() throws Exception {
+  public void testGroupsCaching() throws Exception {
     Groups groups = new Groups(conf);
     groups.cacheGroupsAdd(Arrays.asList(myGroups));
     groups.refresh();
@@ -116,5 +121,46 @@ public class TestGroupsCaching {
     // this shouldn't be cached. remove from the black list and retry.
     FakeGroupMapping.clearBlackList();
     assertTrue(groups.getGroups("user1").size() == 2);
+  }
+
+  public static class FakeunPrivilegedGroupMapping extends FakeGroupMapping {
+    private static boolean invoked = false;
+    @Override
+    public List<String> getGroups(String user) throws IOException {
+      invoked = true;
+      return super.getGroups(user);
+    }
+  }
+
+  /*
+   * Group lookup should not happen for static users
+   */
+  @Test
+  public void testGroupLookupForStaticUsers() throws Exception {
+    conf.setClass(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
+        FakeunPrivilegedGroupMapping.class, ShellBasedUnixGroupsMapping.class);
+    conf.set(CommonConfigurationKeys.HADOOP_USER_GROUP_STATIC_OVERRIDES, "me=;user1=group1;user2=group1,group2");
+    Groups groups = new Groups(conf);
+    List<String> userGroups = groups.getGroups("me");
+    assertTrue("non-empty groups for static user", userGroups.isEmpty());
+    assertFalse("group lookup done for static user",
+        FakeunPrivilegedGroupMapping.invoked);
+    
+    List<String> expected = new ArrayList<String>();
+    expected.add("group1");
+
+    FakeunPrivilegedGroupMapping.invoked = false;
+    userGroups = groups.getGroups("user1");
+    assertTrue("groups not correct", expected.equals(userGroups));
+    assertFalse("group lookup done for unprivileged user",
+        FakeunPrivilegedGroupMapping.invoked);
+
+    expected.add("group2");
+    FakeunPrivilegedGroupMapping.invoked = false;
+    userGroups = groups.getGroups("user2");
+    assertTrue("groups not correct", expected.equals(userGroups));
+    assertFalse("group lookup done for unprivileged user",
+        FakeunPrivilegedGroupMapping.invoked);
+
   }
 }
