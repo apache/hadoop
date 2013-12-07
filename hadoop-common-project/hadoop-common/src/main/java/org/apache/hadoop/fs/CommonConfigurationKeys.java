@@ -204,6 +204,14 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   public static final String DEFAULT_HADOOP_HTTP_STATIC_USER =
     "dr.who";
 
+  /**
+   * User->groups static mapping to override the groups lookup
+   */
+  public static final String HADOOP_USER_GROUP_STATIC_OVERRIDES = 
+      "hadoop.user.group.static.mapping.overrides";
+  public static final String HADOOP_USER_GROUP_STATIC_OVERRIDES_DEFAULT =
+      "dr.who=;";
+
   /** Enable/Disable aliases serving from jetty */
   public static final String HADOOP_JETTY_LOGS_SERVE_ALIASES =
     "hadoop.jetty.logs.serve.aliases";
