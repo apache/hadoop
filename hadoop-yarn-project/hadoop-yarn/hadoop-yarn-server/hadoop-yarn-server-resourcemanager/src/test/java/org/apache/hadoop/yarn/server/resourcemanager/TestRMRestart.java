@@ -34,7 +34,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -46,7 +45,7 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
-import org.apache.hadoop.util.ExitUtil;
+import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
@@ -68,9 +67,6 @@ import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.event.AsyncDispatcher;
-import org.apache.hadoop.yarn.event.Dispatcher;
-import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
@@ -94,7 +90,6 @@ import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.mortbay.log.Log;
 
 public class TestRMRestart {
 
@@ -107,7 +102,6 @@ public class TestRMRestart {
   public void setup() throws UnknownHostException {
     Logger rootLogger = LogManager.getRootLogger();
     rootLogger.setLevel(Level.DEBUG);
-    ExitUtil.disableSystemExit();
     conf = new YarnConfiguration();
     UserGroupInformation.setConfiguration(conf);
     conf.set(YarnConfiguration.RECOVERY_ENABLED, "true");
@@ -1475,6 +1469,29 @@ public class TestRMRestart {
 
     rm1.stop();
     rm2.stop();
+  }
+
+  // This is to test RM does not get hang on shutdown.
+  @Test (timeout = 10000)
+  public void testRMShutdown() throws Exception {
+    MemoryRMStateStore memStore = new MemoryRMStateStore() {
+      @Override
+      public synchronized void checkVersion()
+          throws Exception {
+        throw new Exception("Invalid version.");
+      }
+    };
+    // start RM
+    memStore.init(conf);
+    MockRM rm1 = null;
+    try {
+      rm1 = new MockRM(conf, memStore);
+      rm1.start();
+      Assert.fail();
+    } catch (Exception e) {
+      Assert.assertTrue(e.getMessage().contains("Invalid version."));
+    }
+    Assert.assertTrue(rm1.getServiceState() == STATE.STOPPED);
   }
 
   public static class TestSecurityMockRM extends MockRM {
