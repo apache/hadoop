@@ -201,6 +201,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1450. Fixed test failure in TestUnmanagedAMLauncher by removing its
     dependency on distributed-shell. (Binglin Chang via vinodkv)
 
+    YARN-1405. Fixed ResourceManager to not hang when init/start fails with an
+    exception w.r.t state-store. (Jian He via vinodkv)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

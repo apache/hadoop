@@ -362,7 +362,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
         // the Exception from stateStore.init() needs to be handled for
         // HA and we need to give up master status if we got fenced
         LOG.error("Failed to init state store", e);
-        ExitUtil.terminate(1, e);
+        throw e;
       }
       rmContext.setStateStore(rmStore);
 
@@ -470,7 +470,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
           // the Exception from loadState() needs to be handled for
           // HA and we need to give up master status if we got fenced
           LOG.error("Failed to load/recover state", e);
-          ExitUtil.terminate(1, e);
+          throw e;
         }
       }
 
