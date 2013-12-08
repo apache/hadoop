@@ -651,5 +651,35 @@ public class TestCapacityScheduler {
       }
       assertFalse(failed.get());
     }
+    
+    @Test
+    public void testGetAppsInQueue() throws Exception {
+      Application application_0 = new Application("user_0", "a1", resourceManager);
+      application_0.submit();
+      
+      Application application_1 = new Application("user_0", "a2", resourceManager);
+      application_1.submit();
+      
+      Application application_2 = new Application("user_0", "b2", resourceManager);
+      application_2.submit();
+      
+      ResourceScheduler scheduler = resourceManager.getResourceScheduler();
+      
+      List<ApplicationAttemptId> appsInA1 = scheduler.getAppsInQueue("a1");
+      assertEquals(1, appsInA1.size());
+      
+      List<ApplicationAttemptId> appsInA = scheduler.getAppsInQueue("a");
+      assertTrue(appsInA.contains(application_0.getApplicationAttemptId()));
+      assertTrue(appsInA.contains(application_1.getApplicationAttemptId()));
+      assertEquals(2, appsInA.size());
+
+      List<ApplicationAttemptId> appsInRoot = scheduler.getAppsInQueue("root");
+      assertTrue(appsInRoot.contains(application_0.getApplicationAttemptId()));
+      assertTrue(appsInRoot.contains(application_1.getApplicationAttemptId()));
+      assertTrue(appsInRoot.contains(application_2.getApplicationAttemptId()));
+      assertEquals(3, appsInRoot.size());
+      
+      Assert.assertNull(scheduler.getAppsInQueue("nonexistentqueue"));
+    }
 
 }

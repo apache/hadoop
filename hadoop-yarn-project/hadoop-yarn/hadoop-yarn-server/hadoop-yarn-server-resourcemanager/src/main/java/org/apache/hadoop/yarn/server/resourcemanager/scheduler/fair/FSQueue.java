@@ -24,6 +24,7 @@ import java.util.Collection;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
@@ -158,7 +159,14 @@ public abstract class FSQueue extends Schedulable implements Queue {
    * Gets the children of this queue, if any.
    */
   public abstract Collection<FSQueue> getChildQueues();
-
+  
+  /**
+   * Adds all applications in the queue and its subqueues to the given collection.
+   * @param apps the collection to add the applications to
+   */
+  public abstract void collectSchedulerApplications(
+      Collection<ApplicationAttemptId> apps);
+  
   /**
    * Return the number of apps for which containers can be allocated.
    * Includes apps in subqueues.

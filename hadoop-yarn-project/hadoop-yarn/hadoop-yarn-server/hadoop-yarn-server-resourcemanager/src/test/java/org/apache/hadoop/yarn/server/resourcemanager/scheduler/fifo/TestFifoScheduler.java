@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -554,6 +555,24 @@ public class TestFifoScheduler {
         Collections.singletonList(host));
     Assert.assertFalse(fs.getApplication(appAttemptId).isBlacklisted(host));
     rm.stop();
+  }
+  
+  @Test
+  public void testGetAppsInQueue() throws Exception {
+    Application application_0 = new Application("user_0", resourceManager);
+    application_0.submit();
+    
+    Application application_1 = new Application("user_0", resourceManager);
+    application_1.submit();
+    
+    ResourceScheduler scheduler = resourceManager.getResourceScheduler();
+    
+    List<ApplicationAttemptId> appsInDefault = scheduler.getAppsInQueue("default");
+    assertTrue(appsInDefault.contains(application_0.getApplicationAttemptId()));
+    assertTrue(appsInDefault.contains(application_1.getApplicationAttemptId()));
+    assertEquals(2, appsInDefault.size());
+    
+    Assert.assertNull(scheduler.getAppsInQueue("someotherqueue"));
   }
 
   private void checkApplicationResourceUsage(int expected, 

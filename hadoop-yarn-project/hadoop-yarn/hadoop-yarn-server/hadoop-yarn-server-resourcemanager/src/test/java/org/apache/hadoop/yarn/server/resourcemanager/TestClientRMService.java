@@ -30,9 +30,12 @@ import static org.mockito.Mockito.spy;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedExceptionAction;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.ConcurrentHashMap;
@@ -105,6 +108,9 @@ public class TestClientRMService {
   private String appType = "MockApp";
 
   private static RMDelegationTokenSecretManager dtsm;
+  
+  private final static String QUEUE_1 = "Q-1";
+  private final static String QUEUE_2 = "Q-2";
   
   @BeforeClass
   public static void setupSecretManager() throws IOException {
@@ -438,7 +444,7 @@ public class TestClientRMService {
             mockAclsManager, mockQueueACLsManager, null);
 
     // Initialize appnames and queues
-    String[] queues = {"Q-1", "Q-2"};
+    String[] queues = {QUEUE_1, QUEUE_2};
     String[] appNames =
         {MockApps.newAppName(), MockApps.newAppName(), MockApps.newAppName()};
     ApplicationId[] appIds =
@@ -596,6 +602,8 @@ public class TestClientRMService {
     ConcurrentHashMap<ApplicationId, RMApp> apps = getRMApps(rmContext,
         yarnScheduler);
     when(rmContext.getRMApps()).thenReturn(apps);
+    when(yarnScheduler.getAppsInQueue(eq("testqueue"))).thenReturn(
+        getSchedulerApps(apps));
   }
 
   private ConcurrentHashMap<ApplicationId, RMApp> getRMApps(
@@ -614,9 +622,22 @@ public class TestClientRMService {
         config, "testqueue"));
     return apps;
   }
+  
+  private List<ApplicationAttemptId> getSchedulerApps(
+      Map<ApplicationId, RMApp> apps) {
+    List<ApplicationAttemptId> schedApps = new ArrayList<ApplicationAttemptId>();
+    // Return app IDs for the apps in testqueue (as defined in getRMApps)
+    schedApps.add(ApplicationAttemptId.newInstance(getApplicationId(1), 0));
+    schedApps.add(ApplicationAttemptId.newInstance(getApplicationId(3), 0));
+    return schedApps;
+  }
 
-  private ApplicationId getApplicationId(int id) {
+  private static ApplicationId getApplicationId(int id) {
     return ApplicationId.newInstance(123456, id);
+  }
+  
+  private static ApplicationAttemptId getApplicationAttemptId(int id) {
+    return ApplicationAttemptId.newInstance(getApplicationId(id), 1);
   }
 
   private RMAppImpl getRMApp(RMContext rmContext, YarnScheduler yarnScheduler,
@@ -641,6 +662,10 @@ public class TestClientRMService {
     when(yarnScheduler.getMaximumResourceCapability()).thenReturn(
         Resources.createResource(
             YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB));
+    when(yarnScheduler.getAppsInQueue(QUEUE_1)).thenReturn(
+        Arrays.asList(getApplicationAttemptId(101), getApplicationAttemptId(102)));
+    when(yarnScheduler.getAppsInQueue(QUEUE_2)).thenReturn(
+        Arrays.asList(getApplicationAttemptId(103)));
     return yarnScheduler;
   }
 }
