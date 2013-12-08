@@ -358,6 +358,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-5590. Block ID and generation stamp may be reused when persistBlocks is 
     set to false. (jing9)
 
+    HDFS-5353. Short circuit reads fail when dfs.encrypt.data.transfer is 
+    enabled. (Colin Patrick McCabe via jing9)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
