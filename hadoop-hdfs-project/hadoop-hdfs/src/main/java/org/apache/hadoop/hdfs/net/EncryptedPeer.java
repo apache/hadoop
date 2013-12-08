@@ -139,4 +139,9 @@ public class EncryptedPeer implements Peer {
   public DomainSocket getDomainSocket() {
     return enclosedPeer.getDomainSocket();
   }
+
+  @Override
+  public boolean hasSecureChannel() {
+    return true;
+  }
 }

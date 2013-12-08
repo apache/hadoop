@@ -114,4 +114,19 @@ public class DomainPeer implements Peer {
   public DomainSocket getDomainSocket() {
     return socket;
   }
+
+  @Override
+  public boolean hasSecureChannel() {
+    //
+    // Communication over domain sockets is assumed to be secure, since it
+    // doesn't pass over any network.  We also carefully control the privileges
+    // that can be used on the domain socket inode and its parent directories.
+    // See #{java.org.apache.hadoop.net.unix.DomainSocket#validateSocketPathSecurity0}
+    // for details.
+    //
+    // So unless you are running as root or the hdfs superuser, you cannot
+    // launch a man-in-the-middle attach on UNIX domain socket traffic.
+    //
+    return true;
+  }
 }

@@ -162,7 +162,7 @@ class DataXceiver extends Receiver implements Runnable {
     try {
       peer.setWriteTimeout(datanode.getDnConf().socketWriteTimeout);
       InputStream input = socketIn;
-      if (dnConf.encryptDataTransfer) {
+      if ((!peer.hasSecureChannel()) && dnConf.encryptDataTransfer) {
         IOStreamPair encryptedStreams = null;
         try {
           encryptedStreams = DataTransferEncryptor.getEncryptedStreams(socketOut,
