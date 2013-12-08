@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -849,6 +850,20 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
   public synchronized boolean checkAccess(UserGroupInformation callerUGI,
       QueueACL acl, String queueName) {
     return DEFAULT_QUEUE.hasAccess(acl, callerUGI);
+  }
+  
+  @Override
+  public synchronized List<ApplicationAttemptId> getAppsInQueue(String queueName) {
+    if (queueName.equals(DEFAULT_QUEUE.getQueueName())) {
+      List<ApplicationAttemptId> apps = new ArrayList<ApplicationAttemptId>(
+          applications.size());
+      for (FiCaSchedulerApp app : applications.values()) {
+        apps.add(app.getApplicationAttemptId());
+      }
+      return apps;
+    } else {
+      return null;
+    }
   }
 
 }

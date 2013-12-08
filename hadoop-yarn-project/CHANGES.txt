@@ -127,6 +127,9 @@ Release 2.4.0 - UNRELEASED
 
     YARN-546. Allow disabling the Fair Scheduler event log (Sandy Ryza)
 
+    YARN-807. When querying apps by queue, iterating over all apps is
+    inefficient and limiting (Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES

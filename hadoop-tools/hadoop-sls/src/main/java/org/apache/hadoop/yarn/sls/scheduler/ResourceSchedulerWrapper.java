@@ -867,5 +867,10 @@ public class ResourceSchedulerWrapper implements ResourceScheduler,
       ApplicationAttemptId appAttemptId) {
     return scheduler.getAppResourceUsageReport(appAttemptId);
   }
+
+  @Override
+  public List<ApplicationAttemptId> getAppsInQueue(String queue) {
+    return scheduler.getAppsInQueue(queue);
+  }
 }
 
