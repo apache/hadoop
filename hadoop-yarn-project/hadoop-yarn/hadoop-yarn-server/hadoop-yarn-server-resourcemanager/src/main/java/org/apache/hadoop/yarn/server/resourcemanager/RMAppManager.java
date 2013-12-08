@@ -65,7 +65,9 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
 
   private static final Log LOG = LogFactory.getLog(RMAppManager.class);
 
-  private int completedAppsMax = YarnConfiguration.DEFAULT_RM_MAX_COMPLETED_APPLICATIONS;
+  private int maxCompletedAppsInMemory;
+  private int maxCompletedAppsInStateStore;
+  protected int completedAppsInStateStore = 0;
   private LinkedList<ApplicationId> completedApps = new LinkedList<ApplicationId>();
 
   private final RMContext rmContext;
@@ -82,9 +84,16 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     this.masterService = masterService;
     this.applicationACLsManager = applicationACLsManager;
     this.conf = conf;
-    setCompletedAppsMax(conf.getInt(
+    this.maxCompletedAppsInMemory = conf.getInt(
         YarnConfiguration.RM_MAX_COMPLETED_APPLICATIONS,
-        YarnConfiguration.DEFAULT_RM_MAX_COMPLETED_APPLICATIONS));
+        YarnConfiguration.DEFAULT_RM_MAX_COMPLETED_APPLICATIONS);
+    this.maxCompletedAppsInStateStore =
+        conf.getInt(
+          YarnConfiguration.RM_STATE_STORE_MAX_COMPLETED_APPLICATIONS,
+          YarnConfiguration.DEFAULT_RM_STATE_STORE_MAX_COMPLETED_APPLICATIONS);
+    if (this.maxCompletedAppsInStateStore > this.maxCompletedAppsInMemory) {
+      this.maxCompletedAppsInStateStore = this.maxCompletedAppsInMemory;
+    }
   }
 
   /**
@@ -173,10 +182,6 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     ApplicationSummary.logAppSummary(rmContext.getRMApps().get(appId));
   }
 
-  protected synchronized void setCompletedAppsMax(int max) {
-    this.completedAppsMax = max;
-  }
-
   protected synchronized int getCompletedAppsListSize() {
     return this.completedApps.size(); 
   }
@@ -190,7 +195,8 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
         rmContext.getDelegationTokenRenewer().applicationFinished(applicationId);
       }
       
-      completedApps.add(applicationId);  
+      completedApps.add(applicationId);
+      completedAppsInStateStore++;
       writeAuditLog(applicationId);
     }
   }
@@ -229,15 +235,31 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
    * check to see if hit the limit for max # completed apps kept
    */
   protected synchronized void checkAppNumCompletedLimit() {
-    while (completedApps.size() > this.completedAppsMax) {
-      ApplicationId removeId = completedApps.remove();  
-      LOG.info("Application should be expired, max # apps"
-          + " met. Removing app: " + removeId); 
+    // check apps kept in state store.
+    while (completedAppsInStateStore > this.maxCompletedAppsInStateStore) {
+      ApplicationId removeId =
+          completedApps.get(completedApps.size() - completedAppsInStateStore);
+      RMApp removeApp = rmContext.getRMApps().get(removeId);
+      LOG.info("Max number of completed apps kept in state store met:"
+          + " maxCompletedAppsInStateStore = " + maxCompletedAppsInStateStore
+          + ", removing app " + removeApp.getApplicationId()
+          + " from state store.");
+      rmContext.getStateStore().removeApplication(removeApp);
+      completedAppsInStateStore--;
+    }
+
+    // check apps kept in memorty.
+    while (completedApps.size() > this.maxCompletedAppsInMemory) {
+      ApplicationId removeId = completedApps.remove();
+      LOG.info("Application should be expired, max number of completed apps"
+          + " kept in memory met: maxCompletedAppsInMemory = "
+          + this.maxCompletedAppsInMemory + ", removing app " + removeId
+          + " from memory: ");
       rmContext.getRMApps().remove(removeId);
       this.applicationACLsManager.removeApplication(removeId);
     }
   }
-  
+
   @SuppressWarnings("unchecked")
   protected void submitApplication(
       ApplicationSubmissionContext submissionContext, long submitTime,
@@ -380,8 +402,6 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     Map<ApplicationId, ApplicationState> appStates = state.getApplicationState();
     LOG.info("Recovering " + appStates.size() + " applications");
     for (ApplicationState appState : appStates.values()) {
-      LOG.info("Recovering application " + appState.getAppId());
-      
       submitApplication(appState.getApplicationSubmissionContext(),
         appState.getSubmitTime(), appState.getUser(), true, state);
     }

@@ -342,7 +342,16 @@ public class YarnConfiguration extends Configuration {
   public static final String RM_MAX_COMPLETED_APPLICATIONS =
     RM_PREFIX + "max-completed-applications";
   public static final int DEFAULT_RM_MAX_COMPLETED_APPLICATIONS = 10000;
-  
+
+  /**
+   * The maximum number of completed applications RM state store keeps, by
+   * default equals to DEFAULT_RM_MAX_COMPLETED_APPLICATIONS
+   */
+  public static final String RM_STATE_STORE_MAX_COMPLETED_APPLICATIONS =
+      RM_PREFIX + "state-store.max-completed-applications";
+  public static final int DEFAULT_RM_STATE_STORE_MAX_COMPLETED_APPLICATIONS =
+      DEFAULT_RM_MAX_COMPLETED_APPLICATIONS;
+
   /** Default application name */
   public static final String DEFAULT_APPLICATION_NAME = "N/A";
 
