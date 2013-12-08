@@ -171,8 +171,8 @@ public class MemoryRMStateStore extends RMStateStore {
   }
 
   @Override
-  public synchronized void removeApplicationState(ApplicationState appState) 
-                                                            throws Exception {
+  public synchronized void removeApplicationStateInternal(
+      ApplicationState appState) throws Exception {
     ApplicationId appId = appState.getAppId();
     ApplicationState removed = state.appState.remove(appId);
     if (removed == null) {

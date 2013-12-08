@@ -130,6 +130,9 @@ Release 2.4.0 - UNRELEASED
     YARN-807. When querying apps by queue, iterating over all apps is
     inefficient and limiting (Sandy Ryza)
 
+    YARN-1378. Implemented a cleaner of old finished applications from the RM
+    state-store. (Jian He via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES

@@ -53,7 +53,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.Ap
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationStateDataPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppNewSavedEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppRemovedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppUpdateSavedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
@@ -519,6 +518,7 @@ public abstract class RMStateStore extends AbstractService {
    * This does not block the dispatcher threads
    * There is no notification of completion for this operation.
    */
+  @SuppressWarnings("unchecked")
   public synchronized void removeApplication(RMApp app) {
     ApplicationState appState = new ApplicationState(
             app.getSubmitTime(), app.getStartTime(),
@@ -532,14 +532,6 @@ public abstract class RMStateStore extends AbstractService {
       appState.attempts.put(attemptState.getAttemptId(), attemptState);
     }
     
-    removeApplication(appState);
-  }
-  
-  @SuppressWarnings("unchecked")
-  /**
-   * Non-Blocking API
-   */
-  public synchronized void removeApplication(ApplicationState appState) {
     dispatcher.getEventHandler().handle(new RMStateStoreRemoveAppEvent(appState));
   }
 
@@ -548,8 +540,8 @@ public abstract class RMStateStore extends AbstractService {
    * Derived classes must implement this method to remove the state of an 
    * application and its attempts
    */
-  protected abstract void removeApplicationState(ApplicationState appState) 
-                                                             throws Exception;
+  protected abstract void removeApplicationStateInternal(
+      ApplicationState appState) throws Exception;
 
   // TODO: This should eventually become cluster-Id + "AM_RM_TOKEN_SERVICE". See
   // YARN-986 
@@ -666,11 +658,9 @@ public abstract class RMStateStore extends AbstractService {
       ApplicationState appState =
           ((RMStateStoreRemoveAppEvent) event).getAppState();
       ApplicationId appId = appState.getAppId();
-      Exception removedException = null;
       LOG.info("Removing info for app: " + appId);
       try {
-        removeApplicationState(appState);
-        notifyDoneRemovingApplcation(appId, removedException);
+        removeApplicationStateInternal(appState);
       } catch (Exception e) {
         LOG.error("Error removing app: " + appId, e);
         notifyStoreOperationFailed(e);
@@ -736,17 +726,6 @@ public abstract class RMStateStore extends AbstractService {
       Exception updatedException) {
     rmDispatcher.getEventHandler().handle(
       new RMAppAttemptUpdateSavedEvent(attemptId, updatedException));
-  }
-
-  @SuppressWarnings("unchecked")
-  /**
-   * This is to notify RMApp that this application has been removed from
-   * RMStateStore
-   */
-  private void notifyDoneRemovingApplcation(ApplicationId appId,
-      Exception removedException) {
-    rmDispatcher.getEventHandler().handle(
-      new RMAppRemovedEvent(appId, removedException));
   }
 
   /**

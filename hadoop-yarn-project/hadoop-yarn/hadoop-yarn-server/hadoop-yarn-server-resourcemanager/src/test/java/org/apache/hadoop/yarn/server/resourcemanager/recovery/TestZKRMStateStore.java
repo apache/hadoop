@@ -46,7 +46,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.ClientRMService;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.RMStateVersion;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.RMStateVersionPBImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.zookeeper.ZooKeeper;
+import org.apache.zookeeper.data.Stat;
 import org.junit.Test;
 
 public class TestZKRMStateStore extends RMStateStoreTestBase {
@@ -57,6 +59,7 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
 
     ZooKeeper client;
     TestZKRMStateStoreInternal store;
+    String workingZnode;
 
     class TestZKRMStateStoreInternal extends ZKRMStateStore {
 
@@ -79,11 +82,16 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
       public RMStateVersion getCurrentVersion() {
         return CURRENT_VERSION_INFO;
       }
+
+      public String getAppNode(String appId) {
+        return workingZnode + "/" + ROOT_ZNODE_NAME + "/" + RM_APP_ROOT + "/"
+            + appId;
+      }
     }
 
     public RMStateStore getRMStateStore() throws Exception {
-      String workingZnode = "/Test";
-      Configuration conf = new YarnConfiguration();
+      YarnConfiguration conf = new YarnConfiguration();
+      workingZnode = "/Test";
       conf.set(YarnConfiguration.ZK_RM_STATE_STORE_ADDRESS, hostPort);
       conf.set(YarnConfiguration.ZK_RM_STATE_STORE_PARENT_PATH, workingZnode);
       this.client = createClient();
@@ -107,14 +115,22 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     public RMStateVersion getCurrentVersion() throws Exception {
       return store.getCurrentVersion();
     }
+
+    public boolean appExists(RMApp app) throws Exception {
+      Stat node =
+          client.exists(store.getAppNode(app.getApplicationId().toString()),
+            false);
+      return node !=null;
+    }
   }
 
-  @Test
+  @Test (timeout = 60000)
   public void testZKRMStateStoreRealZK() throws Exception {
     TestZKRMStateStoreTester zkTester = new TestZKRMStateStoreTester();
     testRMAppStateStore(zkTester);
     testRMDTSecretManagerStateStore(zkTester);
     testCheckVersion(zkTester);
+    testAppDeletion(zkTester);
   }
 
   private Configuration createHARMConf(

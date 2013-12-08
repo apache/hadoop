@@ -80,6 +80,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.ApplicationAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.ApplicationState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationAttemptStateDataPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStoreEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
@@ -423,6 +424,8 @@ public class TestRMRestart {
         rm2.getRMContext().getRMApps().get(app0.getApplicationId());
     Assert.assertEquals(RMAppAttemptState.FAILED, recoveredApp
       .getAppAttempts().get(am0.getApplicationAttemptId()).getAppAttemptState());
+    rm1.stop();
+    rm2.stop();
   }
 
   @Test
@@ -629,6 +632,8 @@ public class TestRMRestart {
       .contains("Failing the application."));
     // failed diagnostics from attempt is lost because the diagnostics from
     // attempt is not yet available by the time app is saving the app state.
+    rm1.stop();
+    rm2.stop();
   }
 
   @Test
@@ -675,6 +680,48 @@ public class TestRMRestart {
     ApplicationReport appReport = verifyAppReportAfterRMRestart(app0, rm2);
     Assert.assertEquals(app0.getDiagnostics().toString(),
       appReport.getDiagnostics());
+    rm1.stop();
+    rm2.stop();
+  }
+
+  @Test
+  public void testRMRestartKilledAppWithNoAttempts() throws Exception {
+    MemoryRMStateStore memStore = new MemoryRMStateStore() {
+      @Override
+      public synchronized void storeApplicationAttemptStateInternal(
+          String attemptIdStr,
+          ApplicationAttemptStateDataPBImpl attemptStateData) throws Exception {
+        // ignore attempt saving request.
+      }
+
+      @Override
+      public synchronized void updateApplicationAttemptStateInternal(
+          String attemptIdStr,
+          ApplicationAttemptStateDataPBImpl attemptStateData) throws Exception {
+        // ignore attempt saving request.
+      }
+    };
+    memStore.init(conf);
+
+    // start RM
+    MockRM rm1 = new MockRM(conf, memStore);
+    rm1.start();
+    // create app
+    RMApp app0 =
+        rm1.submitApp(200, "name", "user",
+          new HashMap<ApplicationAccessType, String>(), false, "default", -1,
+          null, "MAPREDUCE", false);
+    // kill the app.
+    rm1.killApp(app0.getApplicationId());
+    rm1.waitForState(app0.getApplicationId(), RMAppState.KILLED);
+
+    // restart rm
+    MockRM rm2 = new MockRM(conf, memStore);
+    rm2.start();
+    RMApp loadedApp0 =
+        rm2.getRMContext().getRMApps().get(app0.getApplicationId());
+    rm2.waitForState(loadedApp0.getApplicationId(), RMAppState.KILLED);
+    Assert.assertTrue(loadedApp0.getAppAttempts().size() == 0);
   }
 
   @Test
@@ -724,6 +771,9 @@ public class TestRMRestart {
     Assert.assertEquals(FinalApplicationStatus.SUCCEEDED,
       appReport.getFinalApplicationStatus());
     Assert.assertEquals("trackingUrl", appReport.getOriginalTrackingUrl());
+
+    rm1.stop();
+    rm2.stop();
   }
 
   @Test
@@ -817,6 +867,9 @@ public class TestRMRestart {
     // check application summary is logged for the completed apps after RM restart.
     verify(rm2.getRMAppManager(), times(3)).logApplicationSummary(
       isA(ApplicationId.class));
+
+    rm1.stop();
+    rm2.stop();
   }
 
   private MockAM launchAM(RMApp app, MockRM rm, MockNM nm)
@@ -1376,6 +1429,52 @@ public class TestRMRestart {
         .getApplicationId());
     }
     Assert.assertTrue(rmAppState.size() == NUM_APPS);
+  }
+
+  @Test
+  public void testFinishedAppRemovalAfterRMRestart() throws Exception {
+    MemoryRMStateStore memStore = new MemoryRMStateStore();
+    conf.setInt(YarnConfiguration.RM_MAX_COMPLETED_APPLICATIONS, 1);
+    memStore.init(conf);
+    RMState rmState = memStore.getState();
+
+    // start RM
+    MockRM rm1 = new MockRM(conf, memStore);
+    rm1.start();
+    MockNM nm1 =
+        new MockNM("127.0.0.1:1234", 15120, rm1.getResourceTrackerService());
+    nm1.registerNode();
+
+    // create an app and finish the app.
+    RMApp app0 = rm1.submitApp(200);
+    MockAM am0 = launchAM(app0, rm1, nm1);
+    finishApplicationMaster(app0, rm1, nm1, am0);
+
+    MockRM rm2 = new MockRM(conf, memStore);
+    rm2.start();
+    nm1.setResourceTrackerService(rm2.getResourceTrackerService());
+    nm1 = rm2.registerNode("127.0.0.1:1234", 15120);
+
+    Map<ApplicationId, ApplicationState> rmAppState =
+        rmState.getApplicationState();
+
+    // app0 exits in both state store and rmContext
+    Assert.assertEquals(RMAppState.FINISHED,
+      rmAppState.get(app0.getApplicationId()).getState());
+    rm2.waitForState(app0.getApplicationId(), RMAppState.FINISHED);
+
+    // create one more app and finish the app.
+    RMApp app1 = rm2.submitApp(200);
+    MockAM am1 = launchAM(app1, rm2, nm1);
+    finishApplicationMaster(app1, rm2, nm1, am1);
+
+    // the first app0 get kicked out from both rmContext and state store
+    Assert.assertNull(rm2.getRMContext().getRMApps()
+      .get(app0.getApplicationId()));
+    Assert.assertNull(rmAppState.get(app0.getApplicationId()));
+
+    rm1.stop();
+    rm2.stop();
   }
 
   public static class TestSecurityMockRM extends MockRM {
