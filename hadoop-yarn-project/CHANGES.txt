@@ -12,6 +12,9 @@ Release 0.23.11 - UNRELEASED
 
   BUG FIXES
 
+    YARN-1053. Diagnostic message from ContainerExitEvent is ignored in
+    ContainerImpl (Omkar Vinit Joshi via jlowe)
+
 Release 0.23.10 - 2013-12-09
 
   INCOMPATIBLE CHANGES

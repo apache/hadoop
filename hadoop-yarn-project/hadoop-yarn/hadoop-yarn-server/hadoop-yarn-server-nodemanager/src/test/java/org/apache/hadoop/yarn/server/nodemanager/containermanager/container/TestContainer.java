@@ -46,6 +46,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
@@ -697,9 +698,13 @@ public class TestContainer {
     }
 
     public void containerFailed(int exitCode) {
+      String diagnosticMsg = "Container completed with exit code " + exitCode;
       c.handle(new ContainerExitEvent(cId,
           ContainerEventType.CONTAINER_EXITED_WITH_FAILURE, exitCode,
-          "Container completed with exit code " + exitCode));
+          diagnosticMsg));
+      ContainerStatus containerStatus = c.cloneAndGetContainerStatus();
+      assert containerStatus.getDiagnostics().contains(diagnosticMsg);
+      assert containerStatus.getExitStatus() == exitCode;
       drainDispatcherEvents();
     }
 
@@ -710,9 +715,13 @@ public class TestContainer {
 
     public void containerKilledOnRequest() {
       int exitCode = ExitCode.FORCE_KILLED.getExitCode();
+      String diagnosticMsg = "Container completed with exit code " + exitCode;
       c.handle(new ContainerExitEvent(cId,
           ContainerEventType.CONTAINER_KILLED_ON_REQUEST, exitCode,
-          "Container completed with exit code " + exitCode));
+          diagnosticMsg));
+      ContainerStatus containerStatus = c.cloneAndGetContainerStatus();
+      assert containerStatus.getDiagnostics().contains(diagnosticMsg);
+      assert containerStatus.getExitStatus() == exitCode; 
       drainDispatcherEvents();
     }
     
