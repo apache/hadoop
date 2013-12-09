@@ -94,6 +94,9 @@ Release 2.4.0 - UNRELEASED
 
     MAPREDUCE-5632. TestRMContainerAllocator#testUpdatedNodes fails (jeagles)
 
+    MAPREDUCE-5656. bzip2 codec can drop records when reading data in splits
+    (jlowe)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
