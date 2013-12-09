@@ -26,6 +26,7 @@ import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -109,6 +110,7 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
     boolean isFinalStateValid() throws Exception;
     void writeVersion(RMStateVersion version) throws Exception;
     RMStateVersion getCurrentVersion() throws Exception;
+    boolean appExists(RMApp app) throws Exception;
   }
 
   void waitNotify(TestDispatcher dispatcher) {
@@ -128,7 +130,7 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
     dispatcher.notified = false;
   }
 
-  void storeApp(RMStateStore store, ApplicationId appId, long submitTime,
+  RMApp storeApp(RMStateStore store, ApplicationId appId, long submitTime,
       long startTime) throws Exception {
     ApplicationSubmissionContext context =
         new ApplicationSubmissionContextPBImpl();
@@ -141,6 +143,7 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
     when(mockApp.getApplicationSubmissionContext()).thenReturn(context);
     when(mockApp.getUser()).thenReturn("test");
     store.storeNewApplication(mockApp);
+    return mockApp;
   }
 
   ContainerId storeAttempt(RMStateStore store, ApplicationAttemptId attemptId,
@@ -370,6 +373,7 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
     Assert.assertEquals(keySet, secretManagerState.getMasterKeyState());
     Assert.assertEquals(sequenceNumber,
         secretManagerState.getDTSequenceNumber());
+    store.close();
   }
 
   private Token<AMRMTokenIdentifier> generateAMRMToken(
@@ -413,6 +417,45 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
       Assert.fail("Invalid version, should fail.");
     } catch (Throwable t) {
       Assert.assertTrue(t instanceof RMStateVersionIncompatibleException);
+    }
+  }
+
+  public void testAppDeletion(RMStateStoreHelper stateStoreHelper)
+      throws Exception {
+    RMStateStore store = stateStoreHelper.getRMStateStore();
+    store.setRMDispatcher(new TestDispatcher());
+    // create and store apps
+    ArrayList<RMApp> appList = new ArrayList<RMApp>();
+    int NUM_APPS = 5;
+    for (int i = 0; i < NUM_APPS; i++) {
+      ApplicationId appId = ApplicationId.newInstance(1383183338, i);
+      RMApp app = storeApp(store, appId, 123456789, 987654321);
+      appList.add(app);
+    }
+
+    Assert.assertEquals(NUM_APPS, appList.size());
+    for (RMApp app : appList) {
+      // wait for app to be stored.
+      while (true) {
+        if (stateStoreHelper.appExists(app)) {
+          break;
+        } else {
+          Thread.sleep(100);
+        }
+      }
+    }
+
+    for (RMApp app : appList) {
+      // remove the app
+      store.removeApplication(app);
+      // wait for app to be removed.
+      while (true) {
+        if (!stateStoreHelper.appExists(app)) {
+          break;
+        } else {
+          Thread.sleep(100);
+        }
+      }
     }
   }
 }

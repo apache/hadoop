@@ -79,6 +79,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestCapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplication;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
@@ -2489,5 +2490,41 @@ public class TestFairScheduler {
     scheduler.handle(updateEvent);
     assertEquals("Incorrect number of containers allocated", 1, app
         .getLiveContainers().size());
+  }
+  
+  @Test
+  public void testGetAppsInQueue() throws Exception {
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    ApplicationAttemptId appAttId1 =
+        createSchedulingRequest(1024, 1, "queue1.subqueue1", "user1");
+    ApplicationAttemptId appAttId2 =
+        createSchedulingRequest(1024, 1, "queue1.subqueue2", "user1");
+    ApplicationAttemptId appAttId3 =
+        createSchedulingRequest(1024, 1, "default", "user1");
+    
+    List<ApplicationAttemptId> apps =
+        scheduler.getAppsInQueue("queue1.subqueue1");
+    assertEquals(1, apps.size());
+    assertEquals(appAttId1, apps.get(0));
+    // with and without root prefix should work
+    apps = scheduler.getAppsInQueue("root.queue1.subqueue1");
+    assertEquals(1, apps.size());
+    assertEquals(appAttId1, apps.get(0));
+    
+    apps = scheduler.getAppsInQueue("user1");
+    assertEquals(1, apps.size());
+    assertEquals(appAttId3, apps.get(0));
+    // with and without root prefix should work
+    apps = scheduler.getAppsInQueue("root.user1");
+    assertEquals(1, apps.size());
+    assertEquals(appAttId3, apps.get(0));
+
+    // apps in subqueues should be included
+    apps = scheduler.getAppsInQueue("queue1");
+    Assert.assertEquals(2, apps.size());
+    Set<ApplicationAttemptId> appAttIds = Sets.newHashSet(apps.get(0), apps.get(1));
+    assertTrue(appAttIds.contains(appAttId1));
+    assertTrue(appAttIds.contains(appAttId2));
   }
 }

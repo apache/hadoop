@@ -120,7 +120,7 @@ public class TestZKRMStateStoreZKClientConnections extends
     TestZKClient zkClientTester = new TestZKClient();
     final String path = "/test";
     YarnConfiguration conf = new YarnConfiguration();
-    conf.setInt(YarnConfiguration.ZK_RM_STATE_STORE_TIMEOUT_MS, 100);
+    conf.setInt(YarnConfiguration.ZK_RM_STATE_STORE_TIMEOUT_MS, 1000);
     conf.setLong(YarnConfiguration.ZK_RM_STATE_STORE_RETRY_INTERVAL_MS, 100);
     final ZKRMStateStore store =
         (ZKRMStateStore) zkClientTester.getRMStateStore(conf);

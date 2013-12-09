@@ -233,6 +233,12 @@ Trunk (Unreleased)
 
     HDFS-5630. Hook up cache directive and pool usage statistics. (wang)
 
+    HDFS-5312. Generate HTTP / HTTPS URL in DFSUtil#getInfoServer() based on the 
+    configured http policy. (Haohui Mai via jing9)
+
+    HDFS-5554. Flatten INodeFile hierarchy: Replace INodeFileWithSnapshot with
+    FileWithSnapshotFeature.  (jing9 via szetszwo)
+
   OPTIMIZATIONS
     HDFS-5349. DNA_CACHE and DNA_UNCACHE should be by blockId only. (cmccabe)
 
@@ -576,6 +582,11 @@ Release 2.4.0 - UNRELEASED
     HDFS-5581. NameNodeFsck should use only one instance of
     BlockPlacementPolicy. (vinay via cmccabe)
 
+    HDFS-5633. Improve OfflineImageViewer to use less memory. (jing9)
+
+    HDFS-4983. Numeric usernames do not work with WebHDFS FS. (Yongjun Zhang via
+    jing9)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn)
@@ -783,6 +794,12 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-5587. add debug information when NFS fails to start with duplicate user
     or group names (brandonli)
+
+    HDFS-5590. Block ID and generation stamp may be reused when persistBlocks is 
+    set to false. (jing9)
+
+    HDFS-5353. Short circuit reads fail when dfs.encrypt.data.transfer is 
+    enabled. (Colin Patrick McCabe via jing9)
 
 Release 2.2.0 - 2013-10-13
 

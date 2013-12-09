@@ -53,6 +53,11 @@ public class FairSchedulerConfiguration extends Configuration {
 
   public static final String ALLOCATION_FILE = CONF_PREFIX + "allocation.file";
   protected static final String DEFAULT_ALLOCATION_FILE = "fair-scheduler.xml";
+  
+  /** Whether to enable the Fair Scheduler event log */
+  public static final String EVENT_LOG_ENABLED = CONF_PREFIX + "event-log-enabled";
+  public static final boolean DEFAULT_EVENT_LOG_ENABLED = false;
+
   protected static final String EVENT_LOG_DIR = "eventlog.dir";
 
   /** Whether pools can be created that were not specified in the FS configuration file
@@ -192,6 +197,10 @@ public class FairSchedulerConfiguration extends Configuration {
     return getBoolean(SIZE_BASED_WEIGHT, DEFAULT_SIZE_BASED_WEIGHT);
   }
 
+  public boolean isEventLogEnabled() {
+    return getBoolean(EVENT_LOG_ENABLED, DEFAULT_EVENT_LOG_ENABLED);
+  }
+  
   public String getEventlogDir() {
     return get(EVENT_LOG_DIR, new File(System.getProperty("hadoop.log.dir",
     		"/tmp/")).getAbsolutePath() + File.separator + "fairscheduler");

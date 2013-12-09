@@ -63,7 +63,7 @@ public class NullRMStateStore extends RMStateStore {
   }
 
   @Override
-  protected void removeApplicationState(ApplicationState appState)
+  protected void removeApplicationStateInternal(ApplicationState appState)
       throws Exception {
     // Do nothing
   }

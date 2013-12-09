@@ -176,7 +176,7 @@ public class TestINodeFileUnderConstructionWithSnapshot {
     dirNode = (INodeDirectorySnapshottable) fsdir.getINode(dir.toString());
     last = dirNode.getDiffs().getLast();
     Snapshot s1 = last.snapshot;
-    assertTrue(fileNode instanceof INodeFileWithSnapshot);
+    assertTrue(fileNode.isWithSnapshot());
     assertEquals(BLOCKSIZE * 3, fileNode.computeFileSize(s1));
     
     // 4. modify file --> append without closing stream --> take snapshot -->

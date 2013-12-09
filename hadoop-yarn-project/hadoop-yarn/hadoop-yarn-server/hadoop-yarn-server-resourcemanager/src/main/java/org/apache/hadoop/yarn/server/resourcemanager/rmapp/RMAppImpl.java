@@ -660,32 +660,34 @@ public class RMAppImpl implements RMApp, Recoverable {
   @SuppressWarnings("unchecked")
   private static final class RMAppRecoveredTransition implements
       MultipleArcTransition<RMAppImpl, RMAppEvent, RMAppState> {
-    
+
     @Override
     public RMAppState transition(RMAppImpl app, RMAppEvent event) {
-
-      if (app.attempts.isEmpty()) {
-        // Saved application was not running any attempts.
-        app.createNewAttempt(true);
-        return RMAppState.SUBMITTED;        
-      } else {
-        /*
-         * If last attempt recovered final state is null .. it means attempt
-         * was started but AM container may or may not have started / finished.
-         * Therefore we should wait for it to finish.
-         */
-        for (RMAppAttempt attempt : app.getAppAttempts().values()) {
-          app.dispatcher.getEventHandler().handle(
-              new RMAppAttemptEvent(attempt.getAppAttemptId(),
-                  RMAppAttemptEventType.RECOVER));
-        }        
-        if (app.recoveredFinalState != null) {
-          FINAL_TRANSITION.transition(app, event);
-          return app.recoveredFinalState;
-        } else {
-          return RMAppState.RUNNING;
-        }
+      /*
+       * If last attempt recovered final state is null .. it means attempt was
+       * started but AM container may or may not have started / finished.
+       * Therefore we should wait for it to finish.
+       */
+      for (RMAppAttempt attempt : app.getAppAttempts().values()) {
+        app.dispatcher.getEventHandler().handle(
+          new RMAppAttemptEvent(attempt.getAppAttemptId(),
+            RMAppAttemptEventType.RECOVER));
       }
+
+      // The app has completed.
+      if (app.recoveredFinalState != null) {
+        FINAL_TRANSITION.transition(app, event);
+        return app.recoveredFinalState;
+      }
+
+      // No existent attempts means the attempt associated with this app was not
+      // started or started but not yet saved。
+      if (app.attempts.isEmpty()) {
+        app.createNewAttempt(true);
+        return RMAppState.SUBMITTED;
+      }
+
+      return RMAppState.RUNNING;
     }
   }
 

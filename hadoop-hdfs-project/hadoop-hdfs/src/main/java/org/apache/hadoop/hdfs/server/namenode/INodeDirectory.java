@@ -34,7 +34,6 @@ import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithCount;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 
@@ -321,23 +320,6 @@ public class INodeDirectory extends INodeWithAdditionalFields
         withCount, oldChild.getLocalNameBytes(), latest.getId());
     replaceChild(oldChild, ref, null);
     return ref;
-  }
-  
-  private void replaceChildFile(final INodeFile oldChild,
-      final INodeFile newChild, final INodeMap inodeMap) {
-    replaceChild(oldChild, newChild, inodeMap);
-    oldChild.clear();
-    newChild.updateBlockCollection();
-  }
-
-  /** Replace a child {@link INodeFile} with an {@link INodeFileWithSnapshot}. */
-  INodeFileWithSnapshot replaceChild4INodeFileWithSnapshot(
-      final INodeFile child, final INodeMap inodeMap) {
-    Preconditions.checkArgument(!(child instanceof INodeFileWithSnapshot),
-        "Child file is already an INodeFileWithSnapshot, child=" + child);
-    final INodeFileWithSnapshot newChild = new INodeFileWithSnapshot(child);
-    replaceChildFile(child, newChild, inodeMap);
-    return newChild;
   }
 
   @Override

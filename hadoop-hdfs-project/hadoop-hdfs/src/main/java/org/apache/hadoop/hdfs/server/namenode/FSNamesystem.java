@@ -79,8 +79,6 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PERMISSIONS_ENABLED_DEFAU
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PERMISSIONS_SUPERUSERGROUP_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PERMISSIONS_SUPERUSERGROUP_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PERSIST_BLOCKS_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PERSIST_BLOCKS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SUPPORT_APPEND_DEFAULT;
@@ -154,6 +152,8 @@ import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
+import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
+import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -165,8 +165,6 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
-import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
-import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
@@ -198,7 +196,6 @@ import org.apache.hadoop.hdfs.server.namenode.metrics.FSNamesystemMBean;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable.SnapshotDiffInfo;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotManager;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.Phase;
@@ -360,7 +357,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   static final int DEFAULT_MAX_CORRUPT_FILEBLOCKS_RETURNED = 100;
   static int BLOCK_DELETION_INCREMENT = 1000;
   private final boolean isPermissionEnabled;
-  private final boolean persistBlocks;
   private final UserGroupInformation fsOwner;
   private final String fsOwnerShortUserName;
   private final String supergroup;
@@ -665,13 +661,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       LOG.info("supergroup          = " + supergroup);
       LOG.info("isPermissionEnabled = " + isPermissionEnabled);
 
-      final boolean persistBlocks = conf.getBoolean(DFS_PERSIST_BLOCKS_KEY,
-                                                    DFS_PERSIST_BLOCKS_DEFAULT);
       // block allocation has to be persisted in HA using a shared edits directory
       // so that the standby has up-to-date namespace information
       String nameserviceId = DFSUtil.getNamenodeNameServiceId(conf);
       this.haEnabled = HAUtil.isHAEnabled(conf, nameserviceId);  
-      this.persistBlocks = persistBlocks || (haEnabled && HAUtil.usesSharedEditsDir(conf));
       
       // Sanity check the HA-related config.
       if (nameserviceId != null) {
@@ -1766,7 +1759,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       throw new HadoopIllegalArgumentException("concat: target file "
           + target + " is empty");
     }
-    if (trgInode instanceof INodeFileWithSnapshot) {
+    if (trgInode.isWithSnapshot()) {
       throw new HadoopIllegalArgumentException("concat: target file "
           + target + " is in a snapshot");
     }
@@ -2630,9 +2623,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     } finally {
       writeUnlock();
     }
-    if (persistBlocks) {
-      getEditLog().logSync();
-    }
+    getEditLog().logSync();
 
     // Return located block
     return makeLocatedBlock(newBlock, targets, offset);
@@ -2818,9 +2809,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     } finally {
       writeUnlock();
     }
-    if (persistBlocks) {
-      getEditLog().logSync();
-    }
+    getEditLog().logSync();
 
     return true;
   }

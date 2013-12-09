@@ -277,10 +277,10 @@ public class TestSnapshotDeletion {
     TestSnapshotBlocksMap.assertBlockCollection(new Path(snapshotNoChangeDir,
         noChangeFileSCopy.getLocalName()).toString(), 1, fsdir, blockmanager);
     
-    INodeFileWithSnapshot metaChangeFile2SCopy = 
-        (INodeFileWithSnapshot) children.get(0);
+    INodeFile metaChangeFile2SCopy = children.get(0).asFile();
     assertEquals(metaChangeFile2.getName(), metaChangeFile2SCopy.getLocalName());
-    assertEquals(INodeFileWithSnapshot.class, metaChangeFile2SCopy.getClass());
+    assertTrue(metaChangeFile2SCopy.isWithSnapshot());
+    assertFalse(metaChangeFile2SCopy.isUnderConstruction());
     TestSnapshotBlocksMap.assertBlockCollection(new Path(snapshotNoChangeDir,
         metaChangeFile2SCopy.getLocalName()).toString(), 1, fsdir, blockmanager);
     
@@ -338,8 +338,9 @@ public class TestSnapshotDeletion {
     INode child = children.get(0);
     assertEquals(child.getLocalName(), metaChangeFile1.getName());
     // check snapshot copy of metaChangeFile1
-    assertEquals(INodeFileWithSnapshot.class, child.getClass());
-    INodeFileWithSnapshot metaChangeFile1SCopy = (INodeFileWithSnapshot) child;
+    INodeFile metaChangeFile1SCopy = child.asFile();
+    assertTrue(metaChangeFile1SCopy.isWithSnapshot());
+    assertFalse(metaChangeFile1SCopy.isUnderConstruction());
     assertEquals(REPLICATION_1,
         metaChangeFile1SCopy.getFileReplication(null));
     assertEquals(REPLICATION_1,

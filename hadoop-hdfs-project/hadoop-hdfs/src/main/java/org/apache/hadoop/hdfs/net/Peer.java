@@ -112,4 +112,12 @@ public interface Peer extends Closeable {
    *                       peer, or null if there is none.
    */
   public DomainSocket getDomainSocket();
+  
+  /**
+   * Return true if the channel is secure.
+   *
+   * @return               True if our channel to this peer is not
+   *                       susceptible to man-in-the-middle attacks.
+   */
+  public boolean hasSecureChannel();
 }

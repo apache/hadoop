@@ -141,6 +141,16 @@ Release 2.4.0 - UNRELEASED
     YARN-1403. Separate out configuration loading from QueueManager in the Fair
     Scheduler (Sandy Ryza)
 
+    YARN-1181. Augment MiniYARNCluster to support HA mode (Karthik Kambatla)
+
+    YARN-546. Allow disabling the Fair Scheduler event log (Sandy Ryza)
+
+    YARN-807. When querying apps by queue, iterating over all apps is
+    inefficient and limiting (Sandy Ryza)
+
+    YARN-1378. Implemented a cleaner of old finished applications from the RM
+    state-store. (Jian He via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -205,6 +215,12 @@ Release 2.4.0 - UNRELEASED
 
     YARN-1454. Fixed test failure issue with TestRMRestart. (Karthik Kambatla
     via vinodkv)
+
+    YARN-1450. Fixed test failure in TestUnmanagedAMLauncher by removing its
+    dependency on distributed-shell. (Binglin Chang via vinodkv)
+
+    YARN-1405. Fixed ResourceManager to not hang when init/start fails with an
+    exception w.r.t state-store. (Jian He via vinodkv)
 
 Release 2.3.0 - UNRELEASED
 
@@ -291,6 +307,9 @@ Release 2.3.0 - UNRELEASED
 
     YARN-1407. RM Web UI and REST APIs should uniformly use
     YarnApplicationState (Sandy Ryza)
+
+    YARN-1438. Ensure container diagnostics includes exception from container
+    launch. (stevel via acmurthy)
 
 Release 2.2.0 - 2013-10-13
 

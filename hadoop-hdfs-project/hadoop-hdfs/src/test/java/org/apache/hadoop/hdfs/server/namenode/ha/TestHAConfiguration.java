@@ -24,6 +24,7 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.URL;
 import java.util.Collection;
 
 import org.apache.hadoop.conf.Configuration;
@@ -86,7 +87,8 @@ public class TestHAConfiguration {
     // 0.0.0.0, it should substitute the address from the RPC configuration
     // above.
     StandbyCheckpointer checkpointer = new StandbyCheckpointer(conf, fsn);
-    assertEquals("1.2.3.2:" + DFSConfigKeys.DFS_NAMENODE_HTTP_PORT_DEFAULT,
+    assertEquals(new URL("http", "1.2.3.2",
+        DFSConfigKeys.DFS_NAMENODE_HTTP_PORT_DEFAULT, ""),
         checkpointer.getActiveNNAddress());
   }
   

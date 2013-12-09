@@ -392,7 +392,9 @@ public class ZKRMStateStore extends RMStateStore {
       byte[] childData = getDataWithRetries(childNodePath, true);
       if (childNodeName.startsWith(ApplicationId.appIdStrPrefix)) {
         // application
-        LOG.info("Loading application from znode: " + childNodeName);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Loading application from znode: " + childNodeName);
+        }
         ApplicationId appId = ConverterUtils.toApplicationId(childNodeName);
         ApplicationStateDataPBImpl appStateData =
             new ApplicationStateDataPBImpl(
@@ -412,7 +414,9 @@ public class ZKRMStateStore extends RMStateStore {
       } else if (childNodeName
           .startsWith(ApplicationAttemptId.appAttemptIdStrPrefix)) {
         // attempt
-        LOG.info("Loading application attempt from znode: " + childNodeName);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Loading application attempt from znode: " + childNodeName);
+        }
         ApplicationAttemptId attemptId =
             ConverterUtils.toApplicationAttemptId(childNodeName);
         ApplicationAttemptStateDataPBImpl attemptStateData =
@@ -456,10 +460,10 @@ public class ZKRMStateStore extends RMStateStore {
         LOG.info("Application node not found for attempt: "
             + attemptState.getAttemptId());
         deleteWithRetries(
-            getNodePath(rmAppRoot, attemptState.getAttemptId().toString()),
-            0);
+            getNodePath(rmAppRoot, attemptState.getAttemptId().toString()), -1);
       }
     }
+    LOG.info("Done Loading applications from ZK state store");
   }
 
   @Override
@@ -517,16 +521,16 @@ public class ZKRMStateStore extends RMStateStore {
   }
 
   @Override
-  public synchronized void removeApplicationState(ApplicationState appState)
+  public synchronized void removeApplicationStateInternal(ApplicationState appState)
       throws Exception {
     String appId = appState.getAppId().toString();
     String nodeRemovePath = getNodePath(rmAppRoot, appId);
     ArrayList<Op> opList = new ArrayList<Op>();
-    opList.add(Op.delete(nodeRemovePath, 0));
+    opList.add(Op.delete(nodeRemovePath, -1));
 
     for (ApplicationAttemptId attemptId : appState.attempts.keySet()) {
       String attemptRemovePath = getNodePath(rmAppRoot, attemptId.toString());
-      opList.add(Op.delete(attemptRemovePath, 0));
+      opList.add(Op.delete(attemptRemovePath, -1));
     }
     if (LOG.isDebugEnabled()) {
       LOG.debug("Removing info for app: " + appId + " at: " + nodeRemovePath
@@ -569,7 +573,7 @@ public class ZKRMStateStore extends RMStateStore {
     }
 
     if (dtSequenceNumberPath != null) {
-      opList.add(Op.delete(dtSequenceNumberPath, 0));
+      opList.add(Op.delete(dtSequenceNumberPath, -1));
     }
     opList.add(Op.create(latestSequenceNumberPath, null, zkAcl,
         CreateMode.PERSISTENT));
@@ -587,7 +591,7 @@ public class ZKRMStateStore extends RMStateStore {
       LOG.debug("Removing RMDelegationToken_"
           + rmDTIdentifier.getSequenceNumber());
     }
-    deleteWithRetries(nodeRemovePath, 0);
+    deleteWithRetries(nodeRemovePath, -1);
   }
 
   @Override
@@ -619,7 +623,7 @@ public class ZKRMStateStore extends RMStateStore {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Removing RMDelegationKey_" + delegationKey.getKeyId());
     }
-    deleteWithRetries(nodeRemovePath, 0);
+    deleteWithRetries(nodeRemovePath, -1);
   }
 
   // ZK related code

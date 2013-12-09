@@ -140,6 +140,11 @@ public class TestPeerCache {
     public int hashCode() {
       return dnId.hashCode() ^ (hasDomain ? 1 : 0);
     }
+
+    @Override
+    public boolean hasSecureChannel() {
+      return false;
+    }
   }
 
   @Test
