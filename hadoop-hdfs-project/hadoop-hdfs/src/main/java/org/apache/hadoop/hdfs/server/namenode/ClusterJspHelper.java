@@ -21,6 +21,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.InetSocketAddress;
+import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
@@ -41,7 +42,6 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DFSUtil.ConfiguredNNAddress;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
-import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.util.StringUtils;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -272,12 +272,13 @@ class ClusterJspHelper {
   static class NamenodeMXBeanHelper {
     private static final ObjectMapper mapper = new ObjectMapper();
     private final String host;
-    private final String httpAddress;
+    private final URI httpAddress;
     
     NamenodeMXBeanHelper(InetSocketAddress addr, Configuration conf)
         throws IOException, MalformedObjectNameException {
       this.host = addr.getHostName();
-      this.httpAddress = DFSUtil.getInfoServer(addr, conf, false);
+      this.httpAddress = DFSUtil.getInfoServer(addr, conf,
+          DFSUtil.getHttpClientScheme(conf));
     }
     
     /** Get the map corresponding to the JSON string */
@@ -356,7 +357,7 @@ class ClusterJspHelper {
       nn.blocksCount = getProperty(props, "TotalBlocks").getLongValue();
       nn.missingBlocksCount = getProperty(props, "NumberOfMissingBlocks")
           .getLongValue();
-      nn.httpAddress = httpAddress;
+      nn.httpAddress = httpAddress.toURL();
       getLiveNodeCount(getProperty(props, "LiveNodes").getValueAsText(), nn);
       getDeadNodeCount(getProperty(props, "DeadNodes").getValueAsText(), nn);
       nn.softwareVersion = getProperty(props, "SoftwareVersion").getTextValue();
@@ -591,12 +592,14 @@ class ClusterJspHelper {
         toXmlItemBlock(doc, "Blocks", Long.toString(nn.blocksCount));
         toXmlItemBlock(doc, "Missing Blocks",
             Long.toString(nn.missingBlocksCount));
-        toXmlItemBlockWithLink(doc, nn.liveDatanodeCount + " (" +
-          nn.liveDecomCount + ")", nn.httpAddress+"/dfsnodelist.jsp?whatNodes=LIVE",
-          "Live Datanode (Decommissioned)");
-        toXmlItemBlockWithLink(doc, nn.deadDatanodeCount + " (" +
-          nn.deadDecomCount + ")", nn.httpAddress+"/dfsnodelist.jsp?whatNodes=DEAD"
-          , "Dead Datanode (Decommissioned)");
+        toXmlItemBlockWithLink(doc, nn.liveDatanodeCount + " ("
+            + nn.liveDecomCount + ")", new URL(nn.httpAddress,
+            "/dfsnodelist.jsp?whatNodes=LIVE"),
+            "Live Datanode (Decommissioned)");
+        toXmlItemBlockWithLink(doc, nn.deadDatanodeCount + " ("
+            + nn.deadDecomCount + ")", new URL(nn.httpAddress,
+            "/dfsnodelist.jsp?whatNodes=DEAD"),
+            "Dead Datanode (Decommissioned)");
         toXmlItemBlock(doc, "Software Version", nn.softwareVersion);
         doc.endTag(); // node
       }
@@ -625,7 +628,7 @@ class ClusterJspHelper {
     int liveDecomCount = 0;
     int deadDatanodeCount = 0;
     int deadDecomCount = 0;
-    String httpAddress = null;
+    URL httpAddress = null;
     String softwareVersion = "";
   }
 
@@ -763,7 +766,8 @@ class ClusterJspHelper {
                 .equals(DecommissionStates.UNKNOWN.toString()))) {
           doc.startTag("node");
           // dn
-          toXmlItemBlockWithLink(doc, dnhost, (dnhost+":"+httpPort),"DataNode");
+          toXmlItemBlockWithLink(doc, dnhost, new URL("http", dnhost, httpPort,
+              ""), "DataNode");
 
           // overall status first
           toXmlItemBlock(doc, OVERALL_STATUS, overallStatus);
@@ -823,11 +827,11 @@ class ClusterJspHelper {
    * link="http://hostname:50070" />
    */
   private static void toXmlItemBlockWithLink(XMLOutputter doc, String value,
-      String url, String label) throws IOException {
+      URL url, String label) throws IOException {
     doc.startTag("item");
     doc.attribute("label", label);
     doc.attribute("value", value);
-    doc.attribute("link", "///" + url);
+    doc.attribute("link", url.toString());
     doc.endTag(); // item
   }
 
@@ -885,7 +889,7 @@ class ClusterJspHelper {
     return out.toString();
   }
 
-  private static String queryMbean(String httpAddress, Configuration conf) 
+  private static String queryMbean(URI httpAddress, Configuration conf)
     throws IOException {
     /**
      * Although the other namenode might support HTTPS, it is fundamentally
@@ -896,7 +900,7 @@ class ClusterJspHelper {
      *
      * As a result, we just hard code the connection as an HTTP connection.
      */
-    URL url = new URL("http://" + httpAddress + JMX_QRY);
+    URL url = new URL(httpAddress.toURL(), JMX_QRY);
     return readOutput(url);
   }
   /**

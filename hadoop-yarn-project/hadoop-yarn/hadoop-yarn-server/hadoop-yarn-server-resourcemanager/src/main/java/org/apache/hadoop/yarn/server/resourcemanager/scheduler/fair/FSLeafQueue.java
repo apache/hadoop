@@ -29,11 +29,13 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplication;
 
 @Private
 @Unstable
@@ -104,6 +106,17 @@ public class FSLeafQueue extends FSQueue {
   
   public List<AppSchedulable> getNonRunnableAppSchedulables() {
     return nonRunnableAppScheds;
+  }
+  
+  @Override
+  public void collectSchedulerApplications(
+      Collection<ApplicationAttemptId> apps) {
+    for (AppSchedulable appSched : runnableAppScheds) {
+      apps.add(appSched.getApp().getApplicationAttemptId());
+    }
+    for (AppSchedulable appSched : nonRunnableAppScheds) {
+      apps.add(appSched.getApp().getApplicationAttemptId());
+    }
   }
 
   @Override

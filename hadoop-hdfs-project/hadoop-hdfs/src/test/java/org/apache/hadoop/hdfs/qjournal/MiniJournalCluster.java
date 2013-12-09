@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.qjournal.server.JournalNode;
+import org.apache.hadoop.net.NetUtils;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
@@ -66,11 +67,21 @@ public class MiniJournalCluster {
     }
   }
 
+  private static final class JNInfo {
+    private JournalNode node;
+    private InetSocketAddress ipcAddr;
+    private String httpServerURI;
+
+    private JNInfo(JournalNode node) {
+      this.node = node;
+      this.ipcAddr = node.getBoundIpcAddress();
+      this.httpServerURI = node.getHttpServerURI();
+    }
+  }
+
   private static final Log LOG = LogFactory.getLog(MiniJournalCluster.class);
   private File baseDir;
-  private JournalNode nodes[];
-  private InetSocketAddress ipcAddrs[];
-  private InetSocketAddress httpAddrs[];
+  private JNInfo nodes[];
   
   private MiniJournalCluster(Builder b) throws IOException {
     LOG.info("Starting MiniJournalCluster with " +
@@ -81,22 +92,19 @@ public class MiniJournalCluster {
     } else {
       this.baseDir = new File(MiniDFSCluster.getBaseDirectory());
     }
-    
-    nodes = new JournalNode[b.numJournalNodes];
-    ipcAddrs = new InetSocketAddress[b.numJournalNodes];
-    httpAddrs = new InetSocketAddress[b.numJournalNodes];
+
+    nodes = new JNInfo[b.numJournalNodes];
+
     for (int i = 0; i < b.numJournalNodes; i++) {
       if (b.format) {
         File dir = getStorageDir(i);
         LOG.debug("Fully deleting JN directory " + dir);
         FileUtil.fullyDelete(dir);
       }
-      nodes[i] = new JournalNode();
-      nodes[i].setConf(createConfForNode(b, i));
-      nodes[i].start();
-
-      ipcAddrs[i] = nodes[i].getBoundIpcAddress();
-      httpAddrs[i] = nodes[i].getBoundHttpAddress();
+      JournalNode jn = new JournalNode();
+      jn.setConf(createConfForNode(b, i));
+      jn.start();
+      nodes[i] = new JNInfo(jn);
     }
   }
 
@@ -106,8 +114,8 @@ public class MiniJournalCluster {
    */
   public URI getQuorumJournalURI(String jid) {
     List<String> addrs = Lists.newArrayList();
-    for (InetSocketAddress addr : ipcAddrs) {
-      addrs.add("127.0.0.1:" + addr.getPort());
+    for (JNInfo info : nodes) {
+      addrs.add("127.0.0.1:" + info.ipcAddr.getPort());
     }
     String addrsVal = Joiner.on(";").join(addrs);
     LOG.debug("Setting logger addresses to: " + addrsVal);
@@ -122,8 +130,8 @@ public class MiniJournalCluster {
    * Start the JournalNodes in the cluster.
    */
   public void start() throws IOException {
-    for (JournalNode jn : nodes) {
-      jn.start();
+    for (JNInfo info : nodes) {
+      info.node.start();
     }
   }
 
@@ -133,12 +141,12 @@ public class MiniJournalCluster {
    */
   public void shutdown() throws IOException {
     boolean failed = false;
-    for (JournalNode jn : nodes) {
+    for (JNInfo info : nodes) {
       try {
-        jn.stopAndJoin(0);
+        info.node.stopAndJoin(0);
       } catch (Exception e) {
         failed = true;
-        LOG.warn("Unable to stop journal node " + jn, e);
+        LOG.warn("Unable to stop journal node " + info.node, e);
       }
     }
     if (failed) {
@@ -150,8 +158,8 @@ public class MiniJournalCluster {
     Configuration conf = new Configuration(b.conf);
     File logDir = getStorageDir(idx);
     conf.set(DFSConfigKeys.DFS_JOURNALNODE_EDITS_DIR_KEY, logDir.toString());
-    conf.set(DFSConfigKeys.DFS_JOURNALNODE_RPC_ADDRESS_KEY, "0.0.0.0:0");
-    conf.set(DFSConfigKeys.DFS_JOURNALNODE_HTTP_ADDRESS_KEY, "0.0.0.0:0");
+    conf.set(DFSConfigKeys.DFS_JOURNALNODE_RPC_ADDRESS_KEY, "localhost:0");
+    conf.set(DFSConfigKeys.DFS_JOURNALNODE_HTTP_ADDRESS_KEY, "localhost:0");
     return conf;
   }
 
@@ -164,23 +172,33 @@ public class MiniJournalCluster {
   }
 
   public JournalNode getJournalNode(int i) {
-    return nodes[i];
+    return nodes[i].node;
   }
   
   public void restartJournalNode(int i) throws InterruptedException, IOException {
-    Configuration conf = new Configuration(nodes[i].getConf());
-    if (nodes[i].isStarted()) {
-      nodes[i].stopAndJoin(0);
+    JNInfo info = nodes[i];
+    JournalNode jn = info.node;
+    Configuration conf = new Configuration(jn.getConf());
+    if (jn.isStarted()) {
+      jn.stopAndJoin(0);
     }
     
-    conf.set(DFSConfigKeys.DFS_JOURNALNODE_RPC_ADDRESS_KEY, "127.0.0.1:" +
-        ipcAddrs[i].getPort());
-    conf.set(DFSConfigKeys.DFS_JOURNALNODE_HTTP_ADDRESS_KEY, "127.0.0.1:" +
-        httpAddrs[i].getPort());
-    
-    nodes[i] = new JournalNode();
-    nodes[i].setConf(conf);
-    nodes[i].start();
+    conf.set(DFSConfigKeys.DFS_JOURNALNODE_RPC_ADDRESS_KEY,
+        NetUtils.getHostPortString(info.ipcAddr));
+
+    final String uri = info.httpServerURI;
+    if (uri.startsWith("http://")) {
+      conf.set(DFSConfigKeys.DFS_JOURNALNODE_HTTP_ADDRESS_KEY,
+          uri.substring(("http://".length())));
+    } else if (info.httpServerURI.startsWith("https://")) {
+      conf.set(DFSConfigKeys.DFS_JOURNALNODE_HTTPS_ADDRESS_KEY,
+          uri.substring(("https://".length())));
+    }
+
+    JournalNode newJN = new JournalNode();
+    newJN.setConf(conf);
+    newJN.start();
+    info.node = newJN;
   }
 
   public int getQuorumSize() {

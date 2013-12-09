@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
@@ -160,4 +161,13 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
    */
   boolean checkAccess(UserGroupInformation callerUGI,
       QueueACL acl, String queueName);
+  
+  /**
+   * Gets the apps under a given queue
+   * @param queueName the name of the queue.
+   * @return a collection of app attempt ids in the given queue.
+   */
+  @LimitedPrivate("yarn")
+  @Stable
+  public List<ApplicationAttemptId> getAppsInQueue(String queueName);
 }

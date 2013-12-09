@@ -167,7 +167,9 @@ public class FileSystemRMStateStore extends RMStateStore {
               readFile(childNodeStatus.getPath(), childNodeStatus.getLen());
           if (childNodeName.startsWith(ApplicationId.appIdStrPrefix)) {
             // application
-            LOG.info("Loading application from node: " + childNodeName);
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Loading application from node: " + childNodeName);
+            }
             ApplicationId appId = ConverterUtils.toApplicationId(childNodeName);
             ApplicationStateDataPBImpl appStateData =
                 new ApplicationStateDataPBImpl(
@@ -185,7 +187,10 @@ public class FileSystemRMStateStore extends RMStateStore {
           } else if (childNodeName
             .startsWith(ApplicationAttemptId.appAttemptIdStrPrefix)) {
             // attempt
-            LOG.info("Loading application attempt from node: " + childNodeName);
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Loading application attempt from node: "
+                  + childNodeName);
+            }
             ApplicationAttemptId attemptId =
                 ConverterUtils.toApplicationAttemptId(childNodeName);
             ApplicationAttemptStateDataPBImpl attemptStateData =
@@ -225,6 +230,7 @@ public class FileSystemRMStateStore extends RMStateStore {
         assert appState != null;
         appState.attempts.put(attemptState.getAttemptId(), attemptState);
       }
+      LOG.info("Done Loading applications from FS state store");
     } catch (Exception e) {
       LOG.error("Failed to load state.", e);
       throw e;
@@ -362,7 +368,7 @@ public class FileSystemRMStateStore extends RMStateStore {
   }
 
   @Override
-  public synchronized void removeApplicationState(ApplicationState appState)
+  public synchronized void removeApplicationStateInternal(ApplicationState appState)
       throws Exception {
     String appId = appState.getAppId().toString();
     Path nodeRemovePath = getAppDir(rmAppRoot, appId);

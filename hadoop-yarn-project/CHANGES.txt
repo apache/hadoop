@@ -46,6 +46,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1447. Common PB type definitions for container resizing. (Wangda Tan
     via Sandy Ryza)
 
+    YARN-1448. AM-RM protocol changes to support container resizing (Wangda Tan
+    via Sandy Ryza)
+
   IMPROVEMENTS
 
     YARN-7. Support CPU resource for DistributedShell. (Junping Du via llu)
@@ -145,6 +148,12 @@ Release 2.4.0 - UNRELEASED
 
     YARN-546. Allow disabling the Fair Scheduler event log (Sandy Ryza)
 
+    YARN-807. When querying apps by queue, iterating over all apps is
+    inefficient and limiting (Sandy Ryza)
+
+    YARN-1378. Implemented a cleaner of old finished applications from the RM
+    state-store. (Jian He via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -209,6 +218,12 @@ Release 2.4.0 - UNRELEASED
 
     YARN-1454. Fixed test failure issue with TestRMRestart. (Karthik Kambatla
     via vinodkv)
+
+    YARN-1450. Fixed test failure in TestUnmanagedAMLauncher by removing its
+    dependency on distributed-shell. (Binglin Chang via vinodkv)
+
+    YARN-1405. Fixed ResourceManager to not hang when init/start fails with an
+    exception w.r.t state-store. (Jian He via vinodkv)
 
 Release 2.3.0 - UNRELEASED
 

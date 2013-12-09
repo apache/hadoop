@@ -128,4 +128,9 @@ class NioInetPeer implements Peer {
   public DomainSocket getDomainSocket() {
     return null;
   }
+
+  @Override
+  public boolean hasSecureChannel() {
+    return false;
+  }
 }

@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -167,7 +168,8 @@ public class TestSnapshotBlocksMap {
       Assert.assertSame(INodeFile.class, f1.getClass());
       hdfs.setReplication(file1, (short)2);
       f1 = assertBlockCollection(file1.toString(), 2, fsdir, blockmanager);
-      Assert.assertSame(INodeFileWithSnapshot.class, f1.getClass());
+      assertTrue(f1.isWithSnapshot());
+      assertFalse(f1.isUnderConstruction());
     }
     
     // Check the block information for file0

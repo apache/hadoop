@@ -23,6 +23,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.net.URL;
 import java.security.PrivilegedAction;
 import java.util.Collection;
 import java.util.List;
@@ -69,7 +70,7 @@ public class BootstrapStandby implements Tool, Configurable {
   private String nnId;
   private String otherNNId;
 
-  private String otherHttpAddr;
+  private URL otherHttpAddr;
   private InetSocketAddress otherIpcAddr;
   private Collection<URI> dirsToFormat;
   private List<URI> editUrisToFormat;
@@ -179,6 +180,7 @@ public class BootstrapStandby implements Tool, Configurable {
     // Check with the user before blowing away data.
     if (!Storage.confirmFormat(storage.dirIterable(null),
             force, interactive)) {
+      storage.close();
       return ERR_CODE_ALREADY_FORMATTED;
     }
     
@@ -203,7 +205,7 @@ public class BootstrapStandby implements Tool, Configurable {
 
     // Download that checkpoint into our storage directories.
     MD5Hash hash = TransferFsImage.downloadImageToStorage(
-        otherHttpAddr.toString(), imageTxId,
+        otherHttpAddr, imageTxId,
         storage, true);
     image.saveDigestAndRenameCheckpointImage(imageTxId, hash);
     return 0;
@@ -276,11 +278,10 @@ public class BootstrapStandby implements Tool, Configurable {
         "Could not determine valid IPC address for other NameNode (%s)" +
         ", got: %s", otherNNId, otherIpcAddr);
 
-    otherHttpAddr = DFSUtil.getInfoServer(null, otherNode, false);
-    otherHttpAddr = DFSUtil.substituteForWildcardAddress(otherHttpAddr,
-        otherIpcAddr.getHostName());
-    
-    
+    final String scheme = DFSUtil.getHttpClientScheme(conf);
+    otherHttpAddr = DFSUtil.getInfoServerWithDefaultHost(
+        otherIpcAddr.getHostName(), otherNode, scheme).toURL();
+
     dirsToFormat = FSNamesystem.getNamespaceDirs(conf);
     editUrisToFormat = FSNamesystem.getNamespaceEditsDirs(
         conf, false);

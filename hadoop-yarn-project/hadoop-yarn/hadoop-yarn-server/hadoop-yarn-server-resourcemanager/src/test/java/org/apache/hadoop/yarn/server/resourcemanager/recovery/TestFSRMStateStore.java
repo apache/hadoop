@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.recovery;
 
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import junit.framework.Assert;
@@ -38,6 +39,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.RMStateVersion;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationStateDataPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.RMStateVersionPBImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.junit.Test;
@@ -68,6 +70,13 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
 
       public RMStateVersion getCurrentVersion() {
         return CURRENT_VERSION_INFO;
+      }
+
+      public Path getAppDir(String appId) {
+        Path rootDir = new Path(workingDirPathURI, ROOT_DIR_NAME);
+        Path appRootDir = new Path(rootDir, RM_APP_ROOT);
+        Path appDir = new Path(appRootDir, appId);
+        return appDir;
       }
     }
 
@@ -109,9 +118,16 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
     public RMStateVersion getCurrentVersion() throws Exception {
       return store.getCurrentVersion();
     }
+
+    public boolean appExists(RMApp app) throws IOException {
+      FileSystem fs = cluster.getFileSystem();
+      Path nodePath =
+          store.getAppDir(app.getApplicationId().toString());
+      return fs.exists(nodePath);
+    }
   }
 
-  @Test
+  @Test(timeout = 60000)
   public void testFSRMStateStore() throws Exception {
     HdfsConfiguration conf = new HdfsConfiguration();
     MiniDFSCluster cluster =
@@ -126,11 +142,8 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
       String appAttemptIdStr3 = "appattempt_1352994193343_0001_000003";
       ApplicationAttemptId attemptId3 =
           ConverterUtils.toApplicationAttemptId(appAttemptIdStr3);
-      Path rootDir =
-          new Path(fileSystemRMStateStore.fsWorkingPath, "FSRMStateRoot");
-      Path appRootDir = new Path(rootDir, "RMAppRoot");
       Path appDir =
-          new Path(appRootDir, attemptId3.getApplicationId().toString());
+          fsTester.store.getAppDir(attemptId3.getApplicationId().toString());
       Path tempAppAttemptFile =
           new Path(appDir, attemptId3.toString() + ".tmp");
       fsOut = fileSystemRMStateStore.fs.create(tempAppAttemptFile, false);
@@ -138,10 +151,11 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
       fsOut.close();
 
       testRMAppStateStore(fsTester);
-      Assert.assertFalse(fileSystemRMStateStore.fsWorkingPath
+      Assert.assertFalse(fsTester.workingDirPathURI
           .getFileSystem(conf).exists(tempAppAttemptFile));
       testRMDTSecretManagerStateStore(fsTester);
       testCheckVersion(fsTester);
+      testAppDeletion(fsTester);
     } finally {
       cluster.shutdown();
     }

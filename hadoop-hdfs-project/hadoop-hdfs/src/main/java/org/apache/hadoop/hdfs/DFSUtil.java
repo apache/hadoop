@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ADMIN;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_HTTPS_NEED_AUTH_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_HTTPS_NEED_AUTH_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX;
@@ -89,9 +90,11 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
@@ -958,39 +961,71 @@ public class DFSUtil {
    * given namenode rpc address.
    * @param conf
    * @param namenodeAddr - namenode RPC address
-   * @param httpsAddress -If true, and if security is enabled, returns server 
-   *                      https address. If false, returns server http address.
+   * @param scheme - the scheme (http / https)
    * @return server http or https address
    * @throws IOException 
    */
-  public static String getInfoServer(InetSocketAddress namenodeAddr,
-      Configuration conf, boolean httpsAddress) throws IOException {
-    boolean securityOn = UserGroupInformation.isSecurityEnabled();
-    String httpAddressKey = (securityOn && httpsAddress) ? 
-        DFS_NAMENODE_HTTPS_ADDRESS_KEY : DFS_NAMENODE_HTTP_ADDRESS_KEY;
-    String httpAddressDefault = (securityOn && httpsAddress) ? 
-        DFS_NAMENODE_HTTPS_ADDRESS_DEFAULT : DFS_NAMENODE_HTTP_ADDRESS_DEFAULT;
-      
-    String suffixes[];
+  public static URI getInfoServer(InetSocketAddress namenodeAddr,
+      Configuration conf, String scheme) throws IOException {
+    String[] suffixes = null;
     if (namenodeAddr != null) {
       // if non-default namenode, try reverse look up 
       // the nameServiceID if it is available
       suffixes = getSuffixIDs(conf, namenodeAddr,
           DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY,
           DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY);
-    } else {
-      suffixes = new String[2];
     }
-    String configuredInfoAddr = getSuffixedConf(conf, httpAddressKey,
-        httpAddressDefault, suffixes);
+
+    String authority;
+    if ("http".equals(scheme)) {
+      authority = getSuffixedConf(conf, DFS_NAMENODE_HTTP_ADDRESS_KEY,
+          DFS_NAMENODE_HTTP_ADDRESS_DEFAULT, suffixes);
+    } else if ("https".equals(scheme)) {
+      authority = getSuffixedConf(conf, DFS_NAMENODE_HTTPS_ADDRESS_KEY,
+          DFS_NAMENODE_HTTPS_ADDRESS_DEFAULT, suffixes);
+    } else {
+      throw new IllegalArgumentException("Invalid scheme:" + scheme);
+    }
+
     if (namenodeAddr != null) {
-      return substituteForWildcardAddress(configuredInfoAddr,
+      authority = substituteForWildcardAddress(authority,
           namenodeAddr.getHostName());
-    } else {
-      return configuredInfoAddr;
     }
+    return URI.create(scheme + "://" + authority);
   }
-  
+
+  /**
+   * Lookup the HTTP / HTTPS address of the namenode, and replace its hostname
+   * with defaultHost when it found out that the address is a wildcard / local
+   * address.
+   *
+   * @param defaultHost
+   *          The default host name of the namenode.
+   * @param conf
+   *          The configuration
+   * @param scheme
+   *          HTTP or HTTPS
+   * @throws IOException
+   */
+  public static URI getInfoServerWithDefaultHost(String defaultHost,
+      Configuration conf, final String scheme) throws IOException {
+    URI configuredAddr = getInfoServer(null, conf, scheme);
+    String authority = substituteForWildcardAddress(
+        configuredAddr.getAuthority(), defaultHost);
+    return URI.create(scheme + "://" + authority);
+  }
+
+  /**
+   * Determine whether HTTP or HTTPS should be used to connect to the remote
+   * server. Currently the client only connects to the server via HTTPS if the
+   * policy is set to HTTPS_ONLY.
+   *
+   * @return the scheme (HTTP / HTTPS)
+   */
+  public static String getHttpClientScheme(Configuration conf) {
+    HttpConfig.Policy policy = DFSUtil.getHttpPolicy(conf);
+    return policy == HttpConfig.Policy.HTTPS_ONLY ? "https" : "http";
+  }
 
   /**
    * Substitute a default host in the case that an address has been configured
@@ -1004,8 +1039,9 @@ public class DFSUtil {
    * @return the substituted address
    * @throws IOException if it is a wildcard address and security is enabled
    */
-  public static String substituteForWildcardAddress(String configuredAddress,
-      String defaultHost) throws IOException {
+  @VisibleForTesting
+  static String substituteForWildcardAddress(String configuredAddress,
+    String defaultHost) throws IOException {
     InetSocketAddress sockAddr = NetUtils.createSocketAddr(configuredAddress);
     InetSocketAddress defaultSockAddr = NetUtils.createSocketAddr(defaultHost
         + ":0");
@@ -1538,5 +1574,68 @@ public class DFSUtil {
           + ": unknown time unit " + relTime.charAt(relTime.length() - 1));
     }
     return ttl*1000;
+  }
+
+  /**
+   * Load HTTPS-related configuration.
+   */
+  public static Configuration loadSslConfiguration(Configuration conf) {
+    Configuration sslConf = new Configuration(false);
+
+    sslConf.addResource(conf.get(
+        DFSConfigKeys.DFS_SERVER_HTTPS_KEYSTORE_RESOURCE_KEY,
+        DFSConfigKeys.DFS_SERVER_HTTPS_KEYSTORE_RESOURCE_DEFAULT));
+
+    boolean requireClientAuth = conf.getBoolean(DFS_CLIENT_HTTPS_NEED_AUTH_KEY,
+        DFS_CLIENT_HTTPS_NEED_AUTH_DEFAULT);
+    sslConf.setBoolean(DFS_CLIENT_HTTPS_NEED_AUTH_KEY, requireClientAuth);
+    return sslConf;
+  }
+
+  /**
+   * Return a HttpServer.Builder that the journalnode / namenode / secondary
+   * namenode can use to initialize their HTTP / HTTPS server.
+   *
+   */
+  public static HttpServer.Builder httpServerTemplateForNNAndJN(
+      Configuration conf, final InetSocketAddress httpAddr,
+      final InetSocketAddress httpsAddr, String name, String spnegoUserNameKey,
+      String spnegoKeytabFileKey) throws IOException {
+    HttpConfig.Policy policy = getHttpPolicy(conf);
+
+    HttpServer.Builder builder = new HttpServer.Builder().setName(name)
+        .setConf(conf).setACL(new AccessControlList(conf.get(DFS_ADMIN, " ")))
+        .setSecurityEnabled(UserGroupInformation.isSecurityEnabled())
+        .setUsernameConfKey(spnegoUserNameKey)
+        .setKeytabConfKey(getSpnegoKeytabKey(conf, spnegoKeytabFileKey));
+
+    // initialize the webserver for uploading/downloading files.
+    LOG.info("Starting web server as: "
+        + SecurityUtil.getServerPrincipal(conf.get(spnegoUserNameKey),
+            httpAddr.getHostName()));
+
+    if (policy.isHttpEnabled()) {
+      if (httpAddr.getPort() == 0) {
+        builder.setFindPort(true);
+      }
+
+      URI uri = URI.create("http://" + NetUtils.getHostPortString(httpAddr));
+      builder.addEndpoint(uri);
+      LOG.info("Starting Web-server for " + name + " at: " + uri);
+    }
+
+    if (policy.isHttpsEnabled() && httpsAddr != null) {
+      Configuration sslConf = loadSslConfiguration(conf);
+      loadSslConfToHttpServerBuilder(builder, sslConf);
+
+      if (httpsAddr.getPort() == 0) {
+        builder.setFindPort(true);
+      }
+
+      URI uri = URI.create("https://" + NetUtils.getHostPortString(httpsAddr));
+      builder.addEndpoint(uri);
+      LOG.info("Starting Web-server for " + name + " at: " + uri);
+    }
+    return builder;
   }
 }
