@@ -27,12 +27,15 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerResourceIncreaseRequest;
 import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerIdPBImpl;
+import org.apache.hadoop.yarn.api.records.impl.pb.ContainerResourceIncreaseRequestPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourceBlacklistRequestPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourceRequestPBImpl;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.ContainerResourceIncreaseRequestProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceBlacklistRequestProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.AllocateRequestProto;
@@ -49,8 +52,8 @@ public class AllocateRequestPBImpl extends AllocateRequest {
 
   private List<ResourceRequest> ask = null;
   private List<ContainerId> release = null;
+  private List<ContainerResourceIncreaseRequest> increaseRequests = null;
   private ResourceBlacklistRequest blacklistRequest = null;
-  
   
   public AllocateRequestPBImpl() {
     builder = AllocateRequestProto.newBuilder();
@@ -62,7 +65,7 @@ public class AllocateRequestPBImpl extends AllocateRequest {
   }
   
   public AllocateRequestProto getProto() {
-      mergeLocalToProto();
+    mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;
@@ -94,6 +97,9 @@ public class AllocateRequestPBImpl extends AllocateRequest {
     }
     if (this.release != null) {
       addReleasesToProto();
+    }
+    if (this.increaseRequests != null) {
+      addIncreaseRequestsToProto();
     }
     if (this.blacklistRequest != null) {
       builder.setBlacklistRequest(convertToProtoFormat(this.blacklistRequest));
@@ -153,6 +159,23 @@ public class AllocateRequestPBImpl extends AllocateRequest {
     initAsks();
     this.ask.clear();
     this.ask.addAll(resourceRequests);
+  }
+  
+  @Override
+  public List<ContainerResourceIncreaseRequest> getIncreaseRequests() {
+    initIncreaseRequests();
+    return this.increaseRequests;
+  }
+
+  @Override
+  public void setIncreaseRequests(
+      List<ContainerResourceIncreaseRequest> increaseRequests) {
+    if (increaseRequests == null) {
+      return;
+    }
+    initIncreaseRequests();
+    this.increaseRequests.clear();
+    this.increaseRequests.addAll(increaseRequests);
   }
   
   @Override
@@ -223,6 +246,57 @@ public class AllocateRequestPBImpl extends AllocateRequest {
     };
     builder.addAllAsk(iterable);
   }
+  
+  private void initIncreaseRequests() {
+    if (this.increaseRequests != null) {
+      return;
+    }
+    AllocateRequestProtoOrBuilder p = viaProto ? proto : builder;
+    List<ContainerResourceIncreaseRequestProto> list =
+        p.getIncreaseRequestList();
+    this.increaseRequests = new ArrayList<ContainerResourceIncreaseRequest>();
+
+    for (ContainerResourceIncreaseRequestProto c : list) {
+      this.increaseRequests.add(convertFromProtoFormat(c));
+    }
+  }
+  
+  private void addIncreaseRequestsToProto() {
+    maybeInitBuilder();
+    builder.clearIncreaseRequest();
+    if (increaseRequests == null) {
+      return;
+    }
+    Iterable<ContainerResourceIncreaseRequestProto> iterable =
+        new Iterable<ContainerResourceIncreaseRequestProto>() {
+          @Override
+          public Iterator<ContainerResourceIncreaseRequestProto> iterator() {
+            return new Iterator<ContainerResourceIncreaseRequestProto>() {
+
+              Iterator<ContainerResourceIncreaseRequest> iter =
+                  increaseRequests.iterator();
+
+              @Override
+              public boolean hasNext() {
+                return iter.hasNext();
+              }
+
+              @Override
+              public ContainerResourceIncreaseRequestProto next() {
+                return convertToProtoFormat(iter.next());
+              }
+
+              @Override
+              public void remove() {
+                throw new UnsupportedOperationException();
+              }
+            };
+
+          }
+        };
+    builder.addAllIncreaseRequest(iterable);
+  }
+  
   @Override
   public List<ContainerId> getReleaseList() {
     initReleases();
@@ -292,6 +366,16 @@ public class AllocateRequestPBImpl extends AllocateRequest {
   private ResourceRequestProto convertToProtoFormat(ResourceRequest t) {
     return ((ResourceRequestPBImpl)t).getProto();
   }
+  
+  private ContainerResourceIncreaseRequestPBImpl convertFromProtoFormat(
+      ContainerResourceIncreaseRequestProto p) {
+    return new ContainerResourceIncreaseRequestPBImpl(p);
+  }
+
+  private ContainerResourceIncreaseRequestProto convertToProtoFormat(
+      ContainerResourceIncreaseRequest t) {
+    return ((ContainerResourceIncreaseRequestPBImpl) t).getProto();
+  }
 
   private ContainerIdPBImpl convertFromProtoFormat(ContainerIdProto p) {
     return new ContainerIdPBImpl(p);
@@ -308,6 +392,4 @@ public class AllocateRequestPBImpl extends AllocateRequest {
   private ResourceBlacklistRequestProto convertToProtoFormat(ResourceBlacklistRequest t) {
     return ((ResourceBlacklistRequestPBImpl)t).getProto();
   }
-
-
 }  
