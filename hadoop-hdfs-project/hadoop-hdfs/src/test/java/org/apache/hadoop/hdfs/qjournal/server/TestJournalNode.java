@@ -25,7 +25,6 @@ import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.net.HttpURLConnection;
-import java.net.InetSocketAddress;
 import java.net.URL;
 import java.util.concurrent.ExecutionException;
 
@@ -163,10 +162,7 @@ public class TestJournalNode {
   
   @Test(timeout=100000)
   public void testHttpServer() throws Exception {
-    InetSocketAddress addr = jn.getBoundHttpAddress();
-    assertTrue(addr.getPort() > 0);
-    
-    String urlRoot = "http://localhost:" + addr.getPort();
+    String urlRoot = jn.getHttpServerURI();
     
     // Check default servlets.
     String pageContents = DFSTestUtil.urlGet(new URL(urlRoot + "/jmx"));
