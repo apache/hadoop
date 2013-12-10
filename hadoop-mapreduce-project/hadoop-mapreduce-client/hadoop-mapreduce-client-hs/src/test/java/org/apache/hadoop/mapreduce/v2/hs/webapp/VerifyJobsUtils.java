@@ -33,7 +33,7 @@ import org.codehaus.jettison.json.JSONObject;
 public class VerifyJobsUtils {
 
   public static void verifyHsJobPartial(JSONObject info, Job job) throws JSONException {
-    assertEquals("incorrect number of elements", 11, info.length());
+    assertEquals("incorrect number of elements", 12, info.length());
 
     // everyone access fields
     verifyHsJobGeneric(job, info.getString("id"), info.getString("user"),
@@ -45,7 +45,7 @@ public class VerifyJobsUtils {
   }
   
   public static void verifyHsJob(JSONObject info, Job job) throws JSONException {
-    assertEquals("incorrect number of elements", 24, info.length());
+    assertEquals("incorrect number of elements", 25, info.length());
 
     // everyone access fields
     verifyHsJobGeneric(job, info.getString("id"), info.getString("user"),

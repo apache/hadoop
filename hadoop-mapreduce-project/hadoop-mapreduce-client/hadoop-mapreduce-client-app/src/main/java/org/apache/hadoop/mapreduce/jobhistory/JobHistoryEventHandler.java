@@ -520,6 +520,11 @@ public class JobHistoryEventHandler extends AbstractService
         mi.getJobIndexInfo().setSubmitTime(jobSubmittedEvent.getSubmitTime());
         mi.getJobIndexInfo().setQueueName(jobSubmittedEvent.getJobQueueName());
       }
+      //initialize the launchTime in the JobIndexInfo of MetaInfo
+      if(event.getHistoryEvent().getEventType() == EventType.JOB_INITED ){
+        JobInitedEvent jie = (JobInitedEvent) event.getHistoryEvent();
+        mi.getJobIndexInfo().setJobStartTime(jie.getLaunchTime());
+      }
 
       // If this is JobFinishedEvent, close the writer and setup the job-index
       if (event.getHistoryEvent().getEventType() == EventType.JOB_FINISHED) {
