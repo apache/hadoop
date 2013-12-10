@@ -182,6 +182,9 @@ public class WebHdfsFileSystem extends FileSystem
       ) throws IOException {
     super.initialize(uri, conf);
     setConf(conf);
+    /** set user pattern based on configuration file */
+    UserParam.setUserPattern(conf.get(DFSConfigKeys.DFS_WEBHDFS_USER_PATTERN_KEY, DFSConfigKeys.DFS_WEBHDFS_USER_PATTERN_DEFAULT));
+
     ugi = UserGroupInformation.getCurrentUser();
     try {
       this.uri = new URI(uri.getScheme(), uri.getAuthority(), null, null, null);
