@@ -41,6 +41,9 @@ Release 2.4.0 - UNRELEASED
 
     MAPREDUCE-5481. Enable uber jobs to have multiple reducers (Sandy Ryza)
 
+    MAPREDUCE-5052. Job History UI and web services confusing job start time and
+    job submit time (Chen He via jeagles)
+
   OPTIMIZATIONS
 
     MAPREDUCE-5484. YarnChild unnecessarily loads job conf twice (Sandy Ryza)
