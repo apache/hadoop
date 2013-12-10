@@ -64,7 +64,7 @@ public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
   private JournalNodeHttpServer httpServer;
   private Map<String, Journal> journalsById = Maps.newHashMap();
   private ObjectName journalNodeInfoBeanName;
-
+  private String httpServerURI;
   private File localDir;
 
   static {
@@ -140,6 +140,8 @@ public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
     httpServer = new JournalNodeHttpServer(conf, this);
     httpServer.start();
 
+    httpServerURI = httpServer.getServerURI().toString();
+
     rpcServer = new JournalNodeRpcServer(conf, this);
     rpcServer.start();
   }
@@ -155,11 +157,14 @@ public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
     return rpcServer.getAddress();
   }
   
-
+  @Deprecated
   public InetSocketAddress getBoundHttpAddress() {
     return httpServer.getAddress();
   }
 
+  public String getHttpServerURI() {
+    return httpServerURI;
+  }
 
   /**
    * Stop the daemon with the given status code

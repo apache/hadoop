@@ -201,6 +201,7 @@ History Server REST API's.
    "jobs" : {
       "job" : [
          {
+            "submitTime" : 1326381344449,
             "state" : "SUCCEEDED",
             "user" : "user1",
             "reducesTotal" : 1,
@@ -214,6 +215,7 @@ History Server REST API's.
             "finishTime" : 1326381356010
          },
          {
+            "submitTime" : 1326381446500
             "state" : "SUCCEEDED",
             "user" : "user1",
             "reducesTotal" : 1,
@@ -255,6 +257,7 @@ History Server REST API's.
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <jobs>
   <job>
+    <submitTime>1326381344449</submitTime>
     <startTime>1326381344489</startTime>
     <finishTime>1326381356010</finishTime>
     <id>job_1326381300833_1_1</id>
@@ -268,6 +271,7 @@ History Server REST API's.
     <reducesCompleted>1</reducesCompleted>
   </job>
   <job>
+    <submitTime>1326381446500</submitTime>
     <startTime>1326381446529</startTime>
     <finishTime>1326381582106</finishTime>
     <id>job_1326381300833_2_2</id>
@@ -321,6 +325,8 @@ History Server REST API's.
 | state | string | the job state - valid values are:  NEW, INITED, RUNNING, SUCCEEDED, FAILED, KILL_WAIT, KILLED, ERROR|
 *---------------+--------------+-------------------------------+
 | diagnostics | string | A diagnostic message |
+*---------------+--------------+-------------------------------+
+| submitTime | long | The time the job submitted (in ms since epoch)|
 *---------------+--------------+-------------------------------+
 | startTime | long | The time the job started (in ms since epoch)|
 *---------------+--------------+-------------------------------+
@@ -393,6 +399,7 @@ History Server REST API's.
 +---+
 {
    "job" : {
+      "submitTime":  1326381446500,
       "avgReduceTime" : 124961,
       "failedReduceAttempts" : 0,
       "state" : "SUCCEEDED",
@@ -453,6 +460,7 @@ History Server REST API's.
 +---+
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <job>
+  <submitTime>1326381446500</submitTime>
   <startTime>1326381446529</startTime>
   <finishTime>1326381582106</finishTime>
   <id>job_1326381300833_2_2</id>
@@ -2664,4 +2672,3 @@ History Server REST API's.
   </taskAttemptCounterGroup>
 </jobTaskAttemptCounters>
 +---+
-
