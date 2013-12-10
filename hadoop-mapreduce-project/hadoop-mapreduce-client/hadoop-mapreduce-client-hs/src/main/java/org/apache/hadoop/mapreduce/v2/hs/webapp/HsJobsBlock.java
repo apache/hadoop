@@ -55,6 +55,7 @@ public class HsJobsBlock extends HtmlBlock {
       table("#jobs").
         thead().
           tr().
+            th("Submit Time").
             th("Start Time").
             th("Finish Time").
             th(".id", "Job ID").
@@ -74,6 +75,7 @@ public class HsJobsBlock extends HtmlBlock {
     for (Job j : appContext.getAllJobs().values()) {
       JobInfo job = new JobInfo(j);
       jobsTableData.append("[\"")
+      .append(dateFormat.format(new Date(job.getSubmitTime()))).append("\",\"")
       .append(dateFormat.format(new Date(job.getStartTime()))).append("\",\"")
       .append(dateFormat.format(new Date(job.getFinishTime()))).append("\",\"")
       .append("<a href='").append(url("job", job.getId())).append("'>")
@@ -101,6 +103,7 @@ public class HsJobsBlock extends HtmlBlock {
     tbody._().
     tfoot().
       tr().
+        th().input("search_init").$type(InputType.text).$name("submit_time").$value("Submit Time")._()._().
         th().input("search_init").$type(InputType.text).$name("start_time").$value("Start Time")._()._().
         th().input("search_init").$type(InputType.text).$name("finish_time").$value("Finish Time")._()._().
         th().input("search_init").$type(InputType.text).$name("start_time").$value("Job ID")._()._().

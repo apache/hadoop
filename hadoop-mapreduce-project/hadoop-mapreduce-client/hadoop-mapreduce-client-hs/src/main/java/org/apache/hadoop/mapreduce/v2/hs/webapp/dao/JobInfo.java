@@ -44,6 +44,7 @@ import org.apache.hadoop.security.authorize.AccessControlList;
 @XmlAccessorType(XmlAccessType.FIELD)
 public class JobInfo {
 
+  protected long submitTime;
   protected long startTime;
   protected long finishTime;
   protected String id;
@@ -85,6 +86,7 @@ public class JobInfo {
     this.mapsCompleted = job.getCompletedMaps();
     this.reducesTotal = job.getTotalReduces();
     this.reducesCompleted = job.getCompletedReduces();
+    this.submitTime = report.getSubmitTime();
     this.startTime = report.getStartTime();
     this.finishTime = report.getFinishTime();
     this.name = job.getName().toString();
@@ -214,6 +216,10 @@ public class JobInfo {
 
   public String getId() {
     return this.id;
+  }
+
+  public long getSubmitTime() {
+      return this.submitTime;
   }
 
   public long getStartTime() {

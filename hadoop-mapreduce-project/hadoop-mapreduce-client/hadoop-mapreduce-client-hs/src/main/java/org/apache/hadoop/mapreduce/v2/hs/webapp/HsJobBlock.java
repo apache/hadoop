@@ -84,6 +84,7 @@ public class HsJobBlock extends HtmlBlock {
         _("Queue:", job.getQueueName()).
         _("State:", job.getState()).
         _("Uberized:", job.isUber()).
+        _("Submitted:", new Date(job.getSubmitTime())).
         _("Started:", new Date(job.getStartTime())).
         _("Finished:", new Date(job.getFinishTime())).
         _("Elapsed:", StringUtils.formatTime(
