@@ -20,14 +20,22 @@ package org.apache.hadoop.fs.viewfs;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.AclEntry;
+import org.apache.hadoop.fs.permission.AclReadFlag;
+import org.apache.hadoop.fs.permission.AclWriteFlag;
+import org.apache.hadoop.fs.viewfs.TestChRootedFileSystem.MockFileSystem;
 import org.junit.*;
 import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
 
 /**
  * Verify that viewfs propagates certain methods to the underlying fs 
@@ -57,6 +65,15 @@ public class TestViewFileSystemDelegation { //extends ViewFileSystemTestSetup {
     return fs;
   }
 
+  private static FileSystem setupMockFileSystem(Configuration conf, URI uri)
+      throws Exception {
+    String scheme = uri.getScheme();
+    conf.set("fs." + scheme + ".impl", MockFileSystem.class.getName());
+    FileSystem fs = FileSystem.get(uri, conf);
+    ConfigUtil.addLink(conf, "/mounts/" + scheme, uri);
+    return ((MockFileSystem)fs).getRawFileSystem();
+  }
+
   @Test
   public void testSanity() {
     assertEquals("fs1:/", fs1.getUri().toString());
@@ -67,6 +84,57 @@ public class TestViewFileSystemDelegation { //extends ViewFileSystemTestSetup {
   public void testVerifyChecksum() throws Exception {
     checkVerifyChecksum(false);
     checkVerifyChecksum(true);
+  }
+
+  /**
+   * Tests that ViewFileSystem dispatches calls for every ACL method through the
+   * mount table to the correct underlying FileSystem with all Path arguments
+   * translated as required.
+   */
+  @Test
+  public void testAclMethods() throws Exception {
+    Configuration conf = ViewFileSystemTestSetup.createConfig();
+    FileSystem mockFs1 = setupMockFileSystem(conf, new URI("mockfs1:/"));
+    FileSystem mockFs2 = setupMockFileSystem(conf, new URI("mockfs2:/"));
+    FileSystem viewFs = FileSystem.get(FsConstants.VIEWFS_URI, conf);
+
+    Path viewFsPath1 = new Path("/mounts/mockfs1/a/b/c");
+    Path mockFsPath1 = new Path("/a/b/c");
+    Path viewFsPath2 = new Path("/mounts/mockfs2/d/e/f");
+    Path mockFsPath2 = new Path("/d/e/f");
+    List<AclEntry> entries = Collections.emptyList();
+    EnumSet<AclWriteFlag> writeFlags = EnumSet.noneOf(AclWriteFlag.class);
+    EnumSet<AclReadFlag> readFlags = EnumSet.noneOf(AclReadFlag.class);
+
+    viewFs.modifyAclEntries(viewFsPath1, entries, writeFlags);
+    verify(mockFs1).modifyAclEntries(mockFsPath1, entries, writeFlags);
+    viewFs.modifyAclEntries(viewFsPath2, entries, writeFlags);
+    verify(mockFs2).modifyAclEntries(mockFsPath2, entries, writeFlags);
+
+    viewFs.removeAclEntries(viewFsPath1, entries, writeFlags);
+    verify(mockFs1).removeAclEntries(mockFsPath1, entries, writeFlags);
+    viewFs.removeAclEntries(viewFsPath2, entries, writeFlags);
+    verify(mockFs2).removeAclEntries(mockFsPath2, entries, writeFlags);
+
+    viewFs.removeDefaultAcl(viewFsPath1, writeFlags);
+    verify(mockFs1).removeDefaultAcl(mockFsPath1, writeFlags);
+    viewFs.removeDefaultAcl(viewFsPath2, writeFlags);
+    verify(mockFs2).removeDefaultAcl(mockFsPath2, writeFlags);
+
+    viewFs.removeAcl(viewFsPath1, writeFlags);
+    verify(mockFs1).removeAcl(mockFsPath1, writeFlags);
+    viewFs.removeAcl(viewFsPath2, writeFlags);
+    verify(mockFs2).removeAcl(mockFsPath2, writeFlags);
+
+    viewFs.setAcl(viewFsPath1, entries, writeFlags);
+    verify(mockFs1).setAcl(mockFsPath1, entries, writeFlags);
+    viewFs.setAcl(viewFsPath2, entries, writeFlags);
+    verify(mockFs2).setAcl(mockFsPath2, entries, writeFlags);
+
+    viewFs.listAclStatus(viewFsPath1, readFlags);
+    verify(mockFs1).listAclStatus(mockFsPath1, readFlags);
+    viewFs.listAclStatus(viewFsPath2, readFlags);
+    verify(mockFs2).listAclStatus(mockFsPath2, readFlags);
   }
 
   void checkVerifyChecksum(boolean flag) {

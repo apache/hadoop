@@ -7,6 +7,7 @@ HDFS-4685 (Unreleased)
   NEW FEATURES
 
   IMPROVEMENTS
+    HDFS-5594. FileSystem API for ACLs. (cnauroth)
 
   OPTIMIZATIONS
 

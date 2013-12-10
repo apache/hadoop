@@ -21,52 +21,22 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
- * File system actions, e.g. read, write, etc.
+ * Specifies the scope or intended usage of an ACL entry.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Stable
-public enum FsAction {
-  // POSIX style
-  NONE("---"),
-  EXECUTE("--x"),
-  WRITE("-w-"),
-  WRITE_EXECUTE("-wx"),
-  READ("r--"),
-  READ_EXECUTE("r-x"),
-  READ_WRITE("rw-"),
-  ALL("rwx");
-
-  /** Retain reference to value array. */
-  private final static FsAction[] vals = values();
-
-  /** Symbolic representation */
-  public final String SYMBOL;
-
-  private FsAction(String s) {
-    SYMBOL = s;
-  }
+@InterfaceStability.Evolving
+public enum AclEntryScope {
+  /**
+   * An ACL entry that is inspected during permission checks to enforce
+   * permissions.
+   */
+  ACCESS,
 
   /**
-   * Return true if this action implies that action.
-   * @param that
+   * An ACL entry to be applied to a directory's children that do not otherwise
+   * have their own ACL defined.  Unlike an access ACL entry, a default ACL
+   * entry is not inspected as part of permission enforcement on the directory
+   * that owns it.
    */
-  public boolean implies(FsAction that) {
-    if (that != null) {
-      return (ordinal() & that.ordinal()) == that.ordinal();
-    }
-    return false;
-  }
-
-  /** AND operation. */
-  public FsAction and(FsAction that) {
-    return vals[ordinal() & that.ordinal()];
-  }
-  /** OR operation. */
-  public FsAction or(FsAction that) {
-    return vals[ordinal() | that.ordinal()];
-  }
-  /** NOT operation. */
-  public FsAction not() {
-    return vals[7 - ordinal()];
-  }
+  DEFAULT
 }

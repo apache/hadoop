@@ -47,7 +47,12 @@ import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
+import org.apache.hadoop.fs.permission.AclEntry;
+import org.apache.hadoop.fs.permission.AclReadFlag;
+import org.apache.hadoop.fs.permission.AclStatus;
+import org.apache.hadoop.fs.permission.AclWriteFlag;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.viewfs.InodeTree.INode;
 import org.apache.hadoop.fs.viewfs.InodeTree.INodeLink;
@@ -471,6 +476,54 @@ public class ViewFileSystem extends FileSystem {
     InodeTree.ResolveResult<FileSystem> res = 
       fsState.resolve(getUriPath(f), true);
     res.targetFileSystem.setTimes(res.remainingPath, mtime, atime); 
+  }
+
+  @Override
+  public void modifyAclEntries(Path path, List<AclEntry> aclSpec,
+      EnumSet<AclWriteFlag> flags) throws IOException {
+    InodeTree.ResolveResult<FileSystem> res =
+      fsState.resolve(getUriPath(path), true);
+    res.targetFileSystem.modifyAclEntries(res.remainingPath, aclSpec, flags);
+  }
+
+  @Override
+  public void removeAclEntries(Path path, List<AclEntry> aclSpec,
+      EnumSet<AclWriteFlag> flags) throws IOException {
+    InodeTree.ResolveResult<FileSystem> res =
+      fsState.resolve(getUriPath(path), true);
+    res.targetFileSystem.removeAclEntries(res.remainingPath, aclSpec, flags);
+  }
+
+  @Override
+  public void removeDefaultAcl(Path path, EnumSet<AclWriteFlag> flags)
+      throws IOException {
+    InodeTree.ResolveResult<FileSystem> res =
+      fsState.resolve(getUriPath(path), true);
+    res.targetFileSystem.removeDefaultAcl(res.remainingPath, flags);
+  }
+
+  @Override
+  public void removeAcl(Path path, EnumSet<AclWriteFlag> flags)
+      throws IOException {
+    InodeTree.ResolveResult<FileSystem> res =
+      fsState.resolve(getUriPath(path), true);
+    res.targetFileSystem.removeAcl(res.remainingPath, flags);
+  }
+
+  @Override
+  public void setAcl(Path path, List<AclEntry> aclSpec,
+      EnumSet<AclWriteFlag> flags) throws IOException {
+    InodeTree.ResolveResult<FileSystem> res =
+      fsState.resolve(getUriPath(path), true);
+    res.targetFileSystem.setAcl(res.remainingPath, aclSpec, flags);
+  }
+
+  @Override
+  public RemoteIterator<AclStatus> listAclStatus(Path path,
+      EnumSet<AclReadFlag> flags) throws IOException {
+    InodeTree.ResolveResult<FileSystem> res =
+      fsState.resolve(getUriPath(path), true);
+    return res.targetFileSystem.listAclStatus(res.remainingPath, flags);
   }
 
   @Override
