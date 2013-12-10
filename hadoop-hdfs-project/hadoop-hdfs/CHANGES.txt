@@ -147,9 +147,6 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-5633. Improve OfflineImageViewer to use less memory. (jing9)
 
-    HDFS-4983. Numeric usernames do not work with WebHDFS FS. (Yongjun Zhang via
-    jing9)
-
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn)
@@ -249,6 +246,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-5544. Adding Test case For Checking dfs.checksum type as NULL value. (Sathish via umamahesh)
 
     HDFS-5568. Support includeSnapshots option with Fsck command. (Vinayakumar B via umamahesh)
+
+    HDFS-4983. Numeric usernames do not work with WebHDFS FS. (Yongjun Zhang via
+    jing9)
 
   OPTIMIZATIONS
 
