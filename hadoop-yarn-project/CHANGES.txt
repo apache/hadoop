@@ -136,6 +136,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1378. Implemented a cleaner of old finished applications from the RM
     state-store. (Jian He via vinodkv)
 
+    YARN-1481. Move internal services logic from AdminService to ResourceManager.
+    (vinodkv via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES

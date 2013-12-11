@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 
 import java.util.concurrent.ConcurrentMap;
 
+import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.event.Dispatcher;
@@ -42,7 +43,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.RMDelegationTokenS
 public interface RMContext {
 
   Dispatcher getDispatcher();
-  
+
+  boolean isHAEnabled();
+
+  HAServiceState getHAServiceState();
+
   RMStateStore getStateStore();
 
   ConcurrentMap<ApplicationId, RMApp> getRMApps();
