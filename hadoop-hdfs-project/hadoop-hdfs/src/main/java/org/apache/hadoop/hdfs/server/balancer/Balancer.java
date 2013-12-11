@@ -292,26 +292,27 @@ public class Balancer {
      */
     private boolean chooseProxySource() {
       final DatanodeInfo targetDN = target.getDatanode();
-      boolean find = false;
-      for (BalancerDatanode loc : block.getLocations()) {
-        // check if there is replica which is on the same rack with the target
-        if (cluster.isOnSameRack(loc.getDatanode(), targetDN) && addTo(loc)) {
-          find = true;
-          // if cluster is not nodegroup aware or the proxy is on the same 
-          // nodegroup with target, then we already find the nearest proxy
-          if (!cluster.isNodeGroupAware() 
-              || cluster.isOnSameNodeGroup(loc.getDatanode(), targetDN)) {
+      // if node group is supported, first try add nodes in the same node group
+      if (cluster.isNodeGroupAware()) {
+        for (BalancerDatanode loc : block.getLocations()) {
+          if (cluster.isOnSameNodeGroup(loc.getDatanode(), targetDN) && addTo(loc)) {
             return true;
           }
         }
-        
-        if (!find) {
-          // find out a non-busy replica out of rack of target
-          find = addTo(loc);
+      }
+      // check if there is replica which is on the same rack with the target
+      for (BalancerDatanode loc : block.getLocations()) {
+        if (cluster.isOnSameRack(loc.getDatanode(), targetDN) && addTo(loc)) {
+          return true;
         }
       }
-      
-      return find;
+      // find out a non-busy replica
+      for (BalancerDatanode loc : block.getLocations()) {
+        if (addTo(loc)) {
+          return true;
+        }
+      }
+      return false;
     }
     
     // add a BalancerDatanode as proxy source for specific block movement
