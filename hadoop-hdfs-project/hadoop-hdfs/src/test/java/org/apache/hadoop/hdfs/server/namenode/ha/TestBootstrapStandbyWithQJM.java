@@ -17,24 +17,18 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_FAILOVER_PROXY_PROVIDER_KEY_PREFIX;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
-import java.net.URI;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.qjournal.MiniJournalCluster;
+import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -44,51 +38,23 @@ import com.google.common.collect.ImmutableList;
 /**
  * Test BootstrapStandby when QJM is used for shared edits. 
  */
-public class TestBootstrapStandbyWithQJM {
-  
-  private static final String NAMESERVICE = "ns1";
-  private static final String NN1 = "nn1";
-  private static final String NN2 = "nn2";
-  private static final int NUM_JN = 3;
-  private static final int NN1_IPC_PORT = 10000;
-  private static final int NN1_INFO_PORT = 10001;
-  private static final int NN2_IPC_PORT = 10002;
-  private static final int NN2_INFO_PORT = 10003;
-  
+public class TestBootstrapStandbyWithQJM {  
+  private MiniQJMHACluster miniQjmHaCluster;
   private MiniDFSCluster cluster;
   private MiniJournalCluster jCluster;
   
   @Before
   public void setup() throws Exception {
-    // start 3 journal nodes
-    jCluster = new MiniJournalCluster.Builder(new Configuration()).format(true)
-        .numJournalNodes(NUM_JN).build();
-    URI journalURI = jCluster.getQuorumJournalURI(NAMESERVICE);
-    
-    // start cluster with 2 NameNodes
-    MiniDFSNNTopology topology = new MiniDFSNNTopology()
-        .addNameservice(new MiniDFSNNTopology.NSConf(NAMESERVICE).addNN(
-            new MiniDFSNNTopology.NNConf("nn1").setIpcPort(NN1_IPC_PORT)
-                .setHttpPort(NN1_INFO_PORT)).addNN(
-            new MiniDFSNNTopology.NNConf("nn2").setIpcPort(NN2_IPC_PORT)
-                .setHttpPort(NN2_INFO_PORT)));
-    
-    Configuration conf = initHAConf(journalURI);
-    cluster = new MiniDFSCluster.Builder(conf).nnTopology(topology)
-        .numDataNodes(1).manageNameDfsSharedDirs(false).build();
-    cluster.waitActive();
-    
-    Configuration confNN0 = new Configuration(conf);
-    cluster.shutdown();
-    // initialize the journal nodes
-    confNN0.set(DFSConfigKeys.DFS_HA_NAMENODE_ID_KEY, "nn1");
-    NameNode.initializeSharedEdits(confNN0, true);
-    
-    // restart the cluster
-    cluster = new MiniDFSCluster.Builder(conf).format(false)
-        .nnTopology(topology).numDataNodes(1).manageNameDfsSharedDirs(false)
-        .build();
-    cluster.waitActive();
+    Configuration conf = new Configuration();
+    // Turn off IPC client caching, so that the suite can handle
+    // the restart of the daemons between test cases.
+    conf.setInt(
+        CommonConfigurationKeysPublic.IPC_CLIENT_CONNECTION_MAXIDLETIME_KEY,
+        0);
+
+    miniQjmHaCluster = new MiniQJMHACluster.Builder(conf).build();
+    cluster = miniQjmHaCluster.getDfsCluster();
+    jCluster = miniQjmHaCluster.getJournalCluster();
     
     // make nn0 active
     cluster.transitionToActive(0);
@@ -109,27 +75,6 @@ public class TestBootstrapStandbyWithQJM {
     }
   }
   
-  private Configuration initHAConf(URI journalURI) {
-    Configuration conf = new Configuration();
-    conf.set(DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY,
-        journalURI.toString());
-    
-    String address1 = "127.0.0.1:" + NN1_IPC_PORT;
-    String address2 = "127.0.0.1:" + NN2_IPC_PORT;
-    conf.set(DFSUtil.addKeySuffixes(DFS_NAMENODE_RPC_ADDRESS_KEY,
-        NAMESERVICE, NN1), address1);
-    conf.set(DFSUtil.addKeySuffixes(DFS_NAMENODE_RPC_ADDRESS_KEY,
-        NAMESERVICE, NN2), address2);
-    conf.set(DFSConfigKeys.DFS_NAMESERVICES, NAMESERVICE);
-    conf.set(DFSUtil.addKeySuffixes(DFS_HA_NAMENODES_KEY_PREFIX, NAMESERVICE),
-        NN1 + "," + NN2);
-    conf.set(DFS_CLIENT_FAILOVER_PROXY_PROVIDER_KEY_PREFIX + "." + NAMESERVICE,
-        ConfiguredFailoverProxyProvider.class.getName());
-    conf.set("fs.defaultFS", "hdfs://" + NAMESERVICE);
-    
-    return conf;
-  }
-
   /** BootstrapStandby when the existing NN is standby */
   @Test
   public void testBootstrapStandbyWithStandbyNN() throws Exception {
