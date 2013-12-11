@@ -347,4 +347,49 @@ public class TestSnapshotBlocksMap {
     assertEquals(1, blks.length);
     assertEquals(BLOCKSIZE, blks[0].getNumBytes());
   }
+  
+  /**
+   * 1. rename under-construction file with 0-sized blocks after snapshot.
+   * 2. delete the renamed directory.
+   * make sure we delete the 0-sized block.
+   * see HDFS-5476.
+   */
+  @Test
+  public void testDeletionWithZeroSizeBlock3() throws Exception {
+    final Path foo = new Path("/foo");
+    final Path subDir = new Path(foo, "sub");
+    final Path bar = new Path(subDir, "bar");
+    DFSTestUtil.createFile(hdfs, bar, BLOCKSIZE, REPLICATION, 0L);
+
+    hdfs.append(bar);
+
+    INodeFile barNode = fsdir.getINode4Write(bar.toString()).asFile();
+    BlockInfo[] blks = barNode.getBlocks();
+    assertEquals(1, blks.length);
+    ExtendedBlock previous = new ExtendedBlock(fsn.getBlockPoolId(), blks[0]);
+    cluster.getNameNodeRpc()
+        .addBlock(bar.toString(), hdfs.getClient().getClientName(), previous,
+            null, barNode.getId(), null);
+
+    SnapshotTestHelper.createSnapshot(hdfs, foo, "s1");
+
+    // rename bar
+    final Path bar2 = new Path(subDir, "bar2");
+    hdfs.rename(bar, bar2);
+    
+    INodeFile bar2Node = fsdir.getINode4Write(bar2.toString()).asFile();
+    blks = bar2Node.getBlocks();
+    assertEquals(2, blks.length);
+    assertEquals(BLOCKSIZE, blks[0].getNumBytes());
+    assertEquals(0, blks[1].getNumBytes());
+
+    // delete subDir
+    hdfs.delete(subDir, true);
+    
+    final Path sbar = SnapshotTestHelper.getSnapshotPath(foo, "s1", "sub/bar");
+    barNode = fsdir.getINode(sbar.toString()).asFile();
+    blks = barNode.getBlocks();
+    assertEquals(1, blks.length);
+    assertEquals(BLOCKSIZE, blks[0].getNumBytes());
+  }
 }
