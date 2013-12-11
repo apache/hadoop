@@ -370,6 +370,8 @@ Release 2.3.0 - UNRELEASED
     HDFS-5074. Allow starting up from an fsimage checkpoint in the middle of a
     segment. (Todd Lipcon via atm)
 
+    HDFS-4201. NPE in BPServiceActor#sendHeartBeat. (jxiang via cmccabe)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
