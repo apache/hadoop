@@ -141,6 +141,9 @@ Release 2.4.0 - UNRELEASED
 
     YARN-1491. Upgrade JUnit3 TestCase to JUnit 4 (Chen He via jeagles)
 
+    YARN-408. Change CapacityScheduler to not disable delay-scheduling by default.
+    (Mayank Bansal via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES

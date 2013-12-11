@@ -22,6 +22,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
+import javax.security.auth.login.Configuration;
+
 import junit.framework.Assert;
 
 import org.apache.commons.logging.Log;
@@ -88,7 +90,9 @@ public class TestRM {
   public void testAppOnMultiNode() throws Exception {
     Logger rootLogger = LogManager.getRootLogger();
     rootLogger.setLevel(Level.DEBUG);
-    MockRM rm = new MockRM();
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.set("yarn.scheduler.capacity.node-locality-delay", "-1");
+    MockRM rm = new MockRM(conf);
     rm.start();
     MockNM nm1 = rm.registerNode("h1:1234", 5120);
     MockNM nm2 = rm.registerNode("h2:5678", 10240);
