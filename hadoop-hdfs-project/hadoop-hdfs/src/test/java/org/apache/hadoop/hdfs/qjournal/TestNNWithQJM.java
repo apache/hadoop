@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs.qjournal;
 
 import static org.junit.Assert.*;
-import static org.junit.Assume.*;
 
 import java.io.File;
 import java.io.IOException;

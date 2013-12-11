@@ -281,7 +281,7 @@ public class FSEditLog implements LogsPurgeable {
     // Safety check: we should never start a segment if there are
     // newer txids readable.
     List<EditLogInputStream> streams = new ArrayList<EditLogInputStream>();
-    journalSet.selectInputStreams(streams, segmentTxId, true, true);
+    journalSet.selectInputStreams(streams, segmentTxId, true);
     if (!streams.isEmpty()) {
       String error = String.format("Cannot start writing at txid %s " +
         "when there is a stream available for read: %s",
@@ -982,7 +982,7 @@ public class FSEditLog implements LogsPurgeable {
    */
   public synchronized RemoteEditLogManifest getEditLogManifest(long fromTxId)
       throws IOException {
-    return journalSet.getEditLogManifest(fromTxId, true);
+    return journalSet.getEditLogManifest(fromTxId);
   }
  
   /**
@@ -1233,21 +1233,13 @@ public class FSEditLog implements LogsPurgeable {
   
   @Override
   public void selectInputStreams(Collection<EditLogInputStream> streams,
-      long fromTxId, boolean inProgressOk, boolean forReading) throws IOException {
-    journalSet.selectInputStreams(streams, fromTxId, inProgressOk, forReading);
+      long fromTxId, boolean inProgressOk) throws IOException {
+    journalSet.selectInputStreams(streams, fromTxId, inProgressOk);
   }
 
   public Collection<EditLogInputStream> selectInputStreams(
       long fromTxId, long toAtLeastTxId) throws IOException {
     return selectInputStreams(fromTxId, toAtLeastTxId, null, true);
-  }
-
-  /** Select a list of input streams to load */
-  public Collection<EditLogInputStream> selectInputStreams(
-      long fromTxId, long toAtLeastTxId, MetaRecoveryContext recovery,
-      boolean inProgressOk) throws IOException {
-    return selectInputStreams(fromTxId, toAtLeastTxId, recovery, inProgressOk,
-        true);
   }
   
   /**
@@ -1256,13 +1248,12 @@ public class FSEditLog implements LogsPurgeable {
    * @param fromTxId first transaction in the selected streams
    * @param toAtLeast the selected streams must contain this transaction
    * @param inProgessOk set to true if in-progress streams are OK
-   * @param forReading whether or not to use the streams to load the edit log
    */
   public synchronized Collection<EditLogInputStream> selectInputStreams(
       long fromTxId, long toAtLeastTxId, MetaRecoveryContext recovery,
-      boolean inProgressOk, boolean forReading) throws IOException {
+      boolean inProgressOk) throws IOException {
     List<EditLogInputStream> streams = new ArrayList<EditLogInputStream>();
-    selectInputStreams(streams, fromTxId, inProgressOk, forReading);
+    selectInputStreams(streams, fromTxId, inProgressOk);
 
     try {
       checkForGaps(streams, fromTxId, toAtLeastTxId, inProgressOk);

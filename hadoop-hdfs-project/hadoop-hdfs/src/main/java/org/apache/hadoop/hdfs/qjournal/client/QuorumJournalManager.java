@@ -445,18 +445,13 @@ public class QuorumJournalManager implements JournalManager {
   public void close() throws IOException {
     loggers.close();
   }
-  
-  public void selectInputStreams(Collection<EditLogInputStream> streams,
-      long fromTxnId, boolean inProgressOk) throws IOException {
-    selectInputStreams(streams, fromTxnId, inProgressOk, true);
-  }
 
   @Override
   public void selectInputStreams(Collection<EditLogInputStream> streams,
-      long fromTxnId, boolean inProgressOk, boolean forReading) throws IOException {
+      long fromTxnId, boolean inProgressOk) throws IOException {
 
     QuorumCall<AsyncLogger, RemoteEditLogManifest> q =
-        loggers.getEditLogManifest(fromTxnId, forReading, inProgressOk);
+        loggers.getEditLogManifest(fromTxnId, inProgressOk);
     Map<AsyncLogger, RemoteEditLogManifest> resps =
         loggers.waitForWriteQuorum(q, selectInputStreamsTimeoutMs,
             "selectInputStreams");

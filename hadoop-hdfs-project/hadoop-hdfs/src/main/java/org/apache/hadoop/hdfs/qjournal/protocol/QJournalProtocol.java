@@ -123,14 +123,12 @@ public interface QJournalProtocol {
   /**
    * @param jid the journal from which to enumerate edits
    * @param sinceTxId the first transaction which the client cares about
-   * @param forReading whether or not the caller intends to read from the edit
-   *        logs
    * @param inProgressOk whether or not to check the in-progress edit log 
    *        segment       
    * @return a list of edit log segments since the given transaction ID.
    */
   public GetEditLogManifestResponseProto getEditLogManifest(String jid,
-      long sinceTxId, boolean forReading, boolean inProgressOk)
+      long sinceTxId, boolean inProgressOk)
       throws IOException;
   
   /**

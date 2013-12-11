@@ -821,7 +821,7 @@ public class SecondaryNameNode implements Runnable {
 
       @Override
       public void selectInputStreams(Collection<EditLogInputStream> streams,
-          long fromTxId, boolean inProgressOk, boolean forReading) {
+          long fromTxId, boolean inProgressOk) {
         Iterator<StorageDirectory> iter = storage.dirIterator();
         while (iter.hasNext()) {
           StorageDirectory dir = iter.next();
