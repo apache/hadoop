@@ -147,6 +147,9 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-5633. Improve OfflineImageViewer to use less memory. (jing9)
 
+    HDFS-5023. TestSnapshotPathINodes.testAllowSnapshot is failing with jdk7
+    (Mit Desai via jeagles)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn)
