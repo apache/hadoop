@@ -251,6 +251,8 @@ Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
 
+    HADOOP-10020. Disable symlinks temporarily (cmccabe)
+
   NEW FEATURES
 
   IMPROVEMENTS

@@ -62,6 +62,10 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 public class TestINodeFile {
+  // Re-enable symlinks for tests, see HADOOP-10020 and HADOOP-10052
+  static {
+    FileSystem.enableSymlinks();
+  }
   public static final Log LOG = LogFactory.getLog(TestINodeFile.class);
 
   static final short BLOCKBITS = 48;

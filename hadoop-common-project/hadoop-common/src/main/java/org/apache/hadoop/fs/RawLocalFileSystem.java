@@ -651,9 +651,13 @@ public class RawLocalFileSystem extends FileSystem {
     return true;
   }
 
+  @SuppressWarnings("deprecation")
   @Override
   public void createSymlink(Path target, Path link, boolean createParent)
       throws IOException {
+    if (!FileSystem.areSymlinksEnabled()) {
+      throw new UnsupportedOperationException("Symlinks not supported");
+    }
     final String targetScheme = target.toUri().getScheme();
     if (targetScheme != null && !"file".equals(targetScheme)) {
       throw new IOException("Unable to create symlink to non-local file "+

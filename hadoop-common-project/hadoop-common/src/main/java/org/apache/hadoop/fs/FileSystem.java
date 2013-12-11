@@ -2935,4 +2935,19 @@ public abstract class FileSystem extends Configured implements Closeable {
                          ": " + pair.getValue());
     }
   }
+
+  // Symlinks are temporarily disabled - see HADOOP-10020 and HADOOP-10052
+  private static boolean symlinksEnabled = false;
+
+  private static Configuration conf = null;
+
+  @VisibleForTesting
+  public static boolean areSymlinksEnabled() {
+    return symlinksEnabled;
+  }
+
+  @VisibleForTesting
+  public static void enableSymlinks() {
+    symlinksEnabled = true;
+  }
 }

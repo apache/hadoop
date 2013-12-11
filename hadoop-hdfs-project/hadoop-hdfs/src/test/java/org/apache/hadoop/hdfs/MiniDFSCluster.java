@@ -603,6 +603,9 @@ public class MiniDFSCluster {
   throws IOException {
     ExitUtil.disableSystemExit();
 
+    // Re-enable symlinks for tests, see HADOOP-10020 and HADOOP-10052
+    FileSystem.enableSymlinks();
+
     synchronized (MiniDFSCluster.class) {
       instanceId = instanceCount++;
     }
