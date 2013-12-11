@@ -1066,6 +1066,9 @@ public class TestLeafQueue {
     assertEquals(2*GB, a.getMetrics().getAllocatedMB());
 
     // node_1 heartbeats in and gets the DEFAULT_RACK request for app_1
+    // We do not need locality delay here
+    doReturn(-1).when(a).getNodeLocalityDelay();
+    
     a.assignContainers(clusterResource, node_1);
     assertEquals(10*GB, a.getUsedResources().getMemory());
     assertEquals(2*GB, app_0.getCurrentConsumption().getMemory());
@@ -1649,7 +1652,7 @@ public class TestLeafQueue {
     LeafQueue e = stubLeafQueue((LeafQueue)queues.get(E));
 
     // before reinitialization
-    assertEquals(0, e.getNodeLocalityDelay());
+    assertEquals(40, e.getNodeLocalityDelay());
 
     csConf.setInt(CapacitySchedulerConfiguration
         .NODE_LOCALITY_DELAY, 60);
@@ -1932,10 +1935,10 @@ public class TestLeafQueue {
 
     // Now, should allocate since RR(rack_1) = relax: true
     a.assignContainers(clusterResource, node_1_1);
-    verify(app_0).allocate(eq(NodeType.RACK_LOCAL), eq(node_1_1), 
+    verify(app_0,never()).allocate(eq(NodeType.RACK_LOCAL), eq(node_1_1), 
         any(Priority.class), any(ResourceRequest.class), any(Container.class));
     assertEquals(0, app_0.getSchedulingOpportunities(priority)); 
-    assertEquals(0, app_0.getTotalRequiredResources(priority));
+    assertEquals(1, app_0.getTotalRequiredResources(priority));
 
     // Now sanity-check node_local
     app_0_requests_0.add(
