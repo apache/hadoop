@@ -82,6 +82,14 @@ public class CommonConfigurationKeys {
       "hadoop.skip.worker.version.check";
   public static final boolean HADOOP_SKIP_VERSION_CHECK_DEFAULT = false;
 
+  /**
+   * User->groups static mapping to override the groups lookup
+   */
+  public static final String HADOOP_USER_GROUP_STATIC_OVERRIDES = 
+      "hadoop.user.group.static.mapping.overrides";
+  public static final String HADOOP_USER_GROUP_STATIC_OVERRIDES_DEFAULT =
+      "dr.who=;";
+
   /** Enable/Disable aliases serving from jetty */
   public static final String HADOOP_JETTY_LOGS_SERVE_ALIASES =
     "hadoop.jetty.logs.serve.aliases";
