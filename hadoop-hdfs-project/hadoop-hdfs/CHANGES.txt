@@ -173,9 +173,6 @@ Release 2.4.0 - UNRELEASED
     HDFS-5352. Server#initLog() doesn't close InputStream in httpfs. (Ted Yu via
     jing9)
 
-    HDFS-5283. Under construction blocks only inside snapshots should not be
-    counted in safemode threshhold.  (Vinay via szetszwo)
-
     HDFS-4376. Fix race conditions in Balancer.  (Junping Du via szetszwo)
 
     HDFS-5375. hdfs.cmd does not expose several snapshot commands. (cnauroth)
@@ -336,6 +333,9 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-5353. Short circuit reads fail when dfs.encrypt.data.transfer is 
     enabled. (Colin Patrick McCabe via jing9)
+
+    HDFS-5283. Under construction blocks only inside snapshots should not be
+    counted in safemode threshhold.  (Vinay via szetszwo)
 
     HDFS-5257. addBlock() retry should return LocatedBlock with locations else client 
     will get AIOBE. (Vinay via jing9)
