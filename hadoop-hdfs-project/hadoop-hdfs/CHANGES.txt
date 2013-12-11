@@ -133,6 +133,9 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-4997. libhdfs doesn't return correct error codes in most cases (cmccabe)
 
+    HDFS-5587. add debug information when NFS fails to start with duplicate user
+    or group names (brandonli)
+
     HDFS-5590. Block ID and generation stamp may be reused when persistBlocks is 
     set to false. (jing9)
 
