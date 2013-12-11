@@ -199,9 +199,6 @@ Release 2.4.0 - UNRELEASED
     HDFS-5533. Symlink delete/create should be treated as DELETE/CREATE in snapshot diff 
     report. (Binglin Chang via jing9)
 
-    HDFS-5074. Allow starting up from an fsimage checkpoint in the middle of a
-    segment. (Todd Lipcon via atm)
-
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -363,6 +360,9 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-5428. Under construction files deletion after snapshot+checkpoint+nn restart 
     leads nn safemode. (jing9)
+
+    HDFS-5074. Allow starting up from an fsimage checkpoint in the middle of a
+    segment. (Todd Lipcon via atm)
 
 Release 2.2.0 - 2013-10-13
 
