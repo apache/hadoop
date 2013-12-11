@@ -23,16 +23,16 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Random;
 
-import junit.framework.TestCase;
 
 import org.apache.hadoop.fs.Path;
 import org.junit.Test;
+import static org.junit.Assert.assertEquals;
 
 /**
  * A JUnit test to test {@link LinuxResourceCalculatorPlugin}
  * Create the fake /proc/ information and verify the parsing and calculation
  */
-public class TestLinuxResourceCalculatorPlugin extends TestCase {
+public class TestLinuxResourceCalculatorPlugin {
   /**
    * LinuxResourceCalculatorPlugin with a fake timer
    */
@@ -145,7 +145,7 @@ public class TestLinuxResourceCalculatorPlugin extends TestCase {
    * @throws IOException
    */
   @Test
-  public void testParsingProcStatAndCpuFile() throws IOException {
+  public void parsingProcStatAndCpuFile() throws IOException {
     // Write fake /proc/cpuinfo file.
     long numProcessors = 8;
     long cpuFrequencyKHz = 2392781;
@@ -171,7 +171,7 @@ public class TestLinuxResourceCalculatorPlugin extends TestCase {
     updateStatFile(uTime, nTime, sTime);
     assertEquals(plugin.getCumulativeCpuTime(),
                  FAKE_JIFFY_LENGTH * (uTime + nTime + sTime));
-    assertEquals(plugin.getCpuUsage(), (float)(LinuxResourceCalculatorPlugin.UNAVAILABLE));
+    assertEquals(plugin.getCpuUsage(), (float)(LinuxResourceCalculatorPlugin.UNAVAILABLE),0.0);
     
     // Advance the time and sample again to test the CPU usage calculation
     uTime += 100L;
@@ -179,13 +179,13 @@ public class TestLinuxResourceCalculatorPlugin extends TestCase {
     updateStatFile(uTime, nTime, sTime);
     assertEquals(plugin.getCumulativeCpuTime(),
                  FAKE_JIFFY_LENGTH * (uTime + nTime + sTime));
-    assertEquals(plugin.getCpuUsage(), 6.25F);
+    assertEquals(plugin.getCpuUsage(), 6.25F, 0.0);
     
     // Advance the time and sample again. This time, we call getCpuUsage() only.
     uTime += 600L;
     plugin.advanceTime(300L);
     updateStatFile(uTime, nTime, sTime);
-    assertEquals(plugin.getCpuUsage(), 25F);
+    assertEquals(plugin.getCpuUsage(), 25F, 0.0);
     
     // Advance very short period of time (one jiffy length).
     // In this case, CPU usage should not be updated.
@@ -194,7 +194,7 @@ public class TestLinuxResourceCalculatorPlugin extends TestCase {
     updateStatFile(uTime, nTime, sTime);
     assertEquals(plugin.getCumulativeCpuTime(),
                  FAKE_JIFFY_LENGTH * (uTime + nTime + sTime));
-    assertEquals(plugin.getCpuUsage(), 25F); // CPU usage is not updated.
+    assertEquals(plugin.getCpuUsage(), 25F, 0.0); // CPU usage is not updated.
   }
   
   /**
@@ -212,7 +212,7 @@ public class TestLinuxResourceCalculatorPlugin extends TestCase {
    * @throws IOException
    */
   @Test
-  public void testParsingProcMemFile() throws IOException {
+  public void parsingProcMemFile() throws IOException {
     long memTotal = 4058864L;
     long memFree = 99632L;
     long inactive = 567732L;

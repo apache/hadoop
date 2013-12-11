@@ -139,6 +139,8 @@ Release 2.4.0 - UNRELEASED
     YARN-1481. Move internal services logic from AdminService to ResourceManager.
     (vinodkv via kasha)
 
+    YARN-1491. Upgrade JUnit3 TestCase to JUnit 4 (Chen He via jeagles)
+
   OPTIMIZATIONS
 
   BUG FIXES
