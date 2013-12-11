@@ -122,13 +122,43 @@ int hadoop_user_info_fetch(struct hadoop_user_info *uinfo,
   }
 }
 
+static int put_primary_gid_first(struct hadoop_user_info *uinfo)
+{
+  int i, num_gids = uinfo->num_gids;
+  gid_t first_gid;
+  gid_t gid;
+  gid_t primary = uinfo->pwd.pw_gid;
+
+  if (num_gids < 1) {
+    // There are no gids, but we expected at least one.
+    return EINVAL;
+  }
+  first_gid = uinfo->gids[0];
+  if (first_gid == primary) {
+    // First gid is already the primary.
+    return 0;
+  }
+  for (i = 1; i < num_gids; i++) {
+    gid = uinfo->gids[i];
+    if (gid == primary) {
+      // swap first gid and this gid.
+      uinfo->gids[0] = gid;
+      uinfo->gids[i] = first_gid;
+      return 0;
+    }
+  }
+  // Did not find the primary gid in the list.
+  return EINVAL;
+}
+
 int hadoop_user_info_getgroups(struct hadoop_user_info *uinfo)
 {
   int ret, ngroups;
   gid_t *ngids;
 
   if (!uinfo->pwd.pw_name) {
-    return EINVAL; // invalid user info
+    // invalid user info
+    return EINVAL;
   }
   uinfo->num_gids = 0;
   if (!uinfo->gids) {
@@ -141,8 +171,12 @@ int hadoop_user_info_getgroups(struct hadoop_user_info *uinfo)
   ngroups = uinfo->gids_size;
   ret = getgrouplist(uinfo->pwd.pw_name, uinfo->pwd.pw_gid, 
                          uinfo->gids, &ngroups);
-  if (ret != -1) {
+  if (ret > 0) {
     uinfo->num_gids = ngroups;
+    ret = put_primary_gid_first(uinfo);
+    if (ret) {
+      return ret;
+    }
     return 0;
   }
   ngids = realloc(uinfo->gids, sizeof(uinfo->gids[0]) * ngroups);
@@ -153,11 +187,12 @@ int hadoop_user_info_getgroups(struct hadoop_user_info *uinfo)
   uinfo->gids_size = ngroups;
   ret = getgrouplist(uinfo->pwd.pw_name, uinfo->pwd.pw_gid, 
                          uinfo->gids, &ngroups);
-  if (ret != -1) {
-    uinfo->num_gids = ngroups;
-    return 0;
+  if (ret < 0) {
+    return EIO;
   }
-  return EIO;
+  uinfo->num_gids = ngroups;
+  ret = put_primary_gid_first(uinfo);
+  return ret;
 }
 
 #ifdef USER_TESTING
