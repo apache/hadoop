@@ -261,13 +261,13 @@ class AsyncLoggerSet {
   }
 
   public QuorumCall<AsyncLogger, RemoteEditLogManifest> getEditLogManifest(
-      long fromTxnId, boolean forReading, boolean inProgressOk) {
+      long fromTxnId, boolean inProgressOk) {
     Map<AsyncLogger,
         ListenableFuture<RemoteEditLogManifest>> calls
         = Maps.newHashMap();
     for (AsyncLogger logger : loggers) {
       ListenableFuture<RemoteEditLogManifest> future =
-          logger.getEditLogManifest(fromTxnId, forReading, inProgressOk);
+          logger.getEditLogManifest(fromTxnId, inProgressOk);
       calls.put(logger, future);
     }
     return QuorumCall.create(calls);

@@ -226,7 +226,7 @@ public class BootstrapStandby implements Tool, Configurable {
     try {
       Collection<EditLogInputStream> streams =
         image.getEditLog().selectInputStreams(
-          firstTxIdInLogs, curTxIdOnOtherNode, null, true, false);
+          firstTxIdInLogs, curTxIdOnOtherNode, null, true);
       for (EditLogInputStream stream : streams) {
         IOUtils.closeStream(stream);
       }

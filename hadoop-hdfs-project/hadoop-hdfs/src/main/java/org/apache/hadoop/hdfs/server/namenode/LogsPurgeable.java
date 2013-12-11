@@ -42,13 +42,11 @@ interface LogsPurgeable {
    * 
    * @param fromTxId the first transaction id we want to read
    * @param inProgressOk whether or not in-progress streams should be returned
-   * @param forReading whether or not the caller intends to read from the edit logs
-   *
    * @return a list of streams
    * @throws IOException if the underlying storage has an error or is otherwise
    * inaccessible
    */
   void selectInputStreams(Collection<EditLogInputStream> streams,
-      long fromTxId, boolean inProgressOk, boolean forReading) throws IOException;
+      long fromTxId, boolean inProgressOk) throws IOException;
   
 }

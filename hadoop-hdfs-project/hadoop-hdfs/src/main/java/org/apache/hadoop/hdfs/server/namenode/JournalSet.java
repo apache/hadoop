@@ -234,12 +234,10 @@ public class JournalSet implements JournalManager {
    *                         may not be sorted-- this is up to the caller.
    * @param fromTxId         The transaction ID to start looking for streams at
    * @param inProgressOk     Should we consider unfinalized streams?
-   * @param forReading       Whether or not the caller intends to read from
-   *                         the returned streams.
    */
   @Override
   public void selectInputStreams(Collection<EditLogInputStream> streams,
-      long fromTxId, boolean inProgressOk, boolean forReading) throws IOException {
+      long fromTxId, boolean inProgressOk) throws IOException {
     final PriorityQueue<EditLogInputStream> allStreams = 
         new PriorityQueue<EditLogInputStream>(64,
             EDIT_LOG_INPUT_STREAM_COMPARATOR);
@@ -249,8 +247,7 @@ public class JournalSet implements JournalManager {
         continue;
       }
       try {
-        jas.getManager().selectInputStreams(allStreams, fromTxId, inProgressOk,
-            forReading);
+        jas.getManager().selectInputStreams(allStreams, fromTxId, inProgressOk);
       } catch (IOException ioe) {
         LOG.warn("Unable to determine input streams from " + jas.getManager() +
             ". Skipping.", ioe);
@@ -583,20 +580,20 @@ public class JournalSet implements JournalManager {
   
   /**
    * Return a manifest of what finalized edit logs are available. All available
-   * edit logs are returned starting from the transaction id passed.
+   * edit logs are returned starting from the transaction id passed. If
+   * 'fromTxId' falls in the middle of a log, that log is returned as well.
    * 
    * @param fromTxId Starting transaction id to read the logs.
    * @return RemoteEditLogManifest object.
    */
-  public synchronized RemoteEditLogManifest getEditLogManifest(long fromTxId,
-      boolean forReading) {
+  public synchronized RemoteEditLogManifest getEditLogManifest(long fromTxId) {
     // Collect RemoteEditLogs available from each FileJournalManager
     List<RemoteEditLog> allLogs = Lists.newArrayList();
     for (JournalAndStream j : journals) {
       if (j.getManager() instanceof FileJournalManager) {
         FileJournalManager fjm = (FileJournalManager)j.getManager();
         try {
-          allLogs.addAll(fjm.getRemoteEditLogs(fromTxId, forReading, false));
+          allLogs.addAll(fjm.getRemoteEditLogs(fromTxId, false));
         } catch (Throwable t) {
           LOG.warn("Cannot list edit logs in " + fjm, t);
         }

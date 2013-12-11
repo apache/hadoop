@@ -1480,8 +1480,9 @@ public class MiniDFSCluster {
    */
   public synchronized void restartNameNodes() throws IOException {
     for (int i = 0; i < nameNodes.length; i++) {
-      restartNameNode(i);
+      restartNameNode(i, false);
     }
+    waitActive();
   }
   
   /**

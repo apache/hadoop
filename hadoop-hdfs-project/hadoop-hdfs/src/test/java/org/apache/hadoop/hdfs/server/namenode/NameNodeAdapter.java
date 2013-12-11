@@ -37,6 +37,7 @@ import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.MkdirOp;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem.SafeModeInfo;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
+import org.apache.hadoop.hdfs.server.namenode.ha.EditLogTailer;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.HeartbeatResponse;
 import org.apache.hadoop.ipc.Server;
@@ -177,6 +178,16 @@ public class NameNodeAdapter {
     FSImage spy = Mockito.spy(nn1.getNamesystem().dir.fsImage);
     nn1.getNamesystem().dir.fsImage = spy;
     return spy;
+  }
+  
+  public static FSEditLog spyOnEditLog(NameNode nn) {
+    FSEditLog spyEditLog = spy(nn.getNamesystem().getFSImage().getEditLog());
+    nn.getFSImage().setEditLogForTesting(spyEditLog);
+    EditLogTailer tailer = nn.getNamesystem().getEditLogTailer();
+    if (tailer != null) {
+      tailer.setEditLog(spyEditLog);
+    }
+    return spyEditLog;
   }
   
   public static JournalSet spyOnJournalSet(NameNode nn) {
