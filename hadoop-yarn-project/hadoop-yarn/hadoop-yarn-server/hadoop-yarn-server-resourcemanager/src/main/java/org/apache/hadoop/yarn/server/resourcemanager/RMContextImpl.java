@@ -21,6 +21,8 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import org.apache.hadoop.ha.HAServiceProtocol;
+import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -35,8 +37,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler
 import org.apache.hadoop.yarn.server.resourcemanager.security.AMRMTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer;
-import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
+import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMDelegationTokenSecretManager;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -54,6 +56,10 @@ public class RMContextImpl implements RMContext {
   private final ConcurrentMap<String, RMNode> inactiveNodes
     = new ConcurrentHashMap<String, RMNode>();
 
+  private boolean isHAEnabled;
+  private HAServiceState haServiceState =
+      HAServiceProtocol.HAServiceState.INITIALIZING;
+  
   private AMLivelinessMonitor amLivelinessMonitor;
   private AMLivelinessMonitor amFinishingMonitor;
   private RMStateStore stateStore = null;
@@ -211,6 +217,16 @@ public class RMContextImpl implements RMContext {
     return resourceTrackerService;
   }
 
+  void setHAEnabled(boolean isHAEnabled) {
+    this.isHAEnabled = isHAEnabled;
+  }
+
+  void setHAServiceState(HAServiceState haServiceState) {
+    synchronized (haServiceState) {
+      this.haServiceState = haServiceState;
+    }
+  }
+
   void setDispatcher(Dispatcher dispatcher) {
     this.rmDispatcher = dispatcher;
   }
@@ -289,5 +305,17 @@ public class RMContextImpl implements RMContext {
   void setResourceTrackerService(
       ResourceTrackerService resourceTrackerService) {
     this.resourceTrackerService = resourceTrackerService;
+  }
+
+  @Override
+  public boolean isHAEnabled() {
+    return isHAEnabled;
+  }
+
+  @Override
+  public HAServiceState getHAServiceState() {
+    synchronized (haServiceState) {
+      return haServiceState;
+    }
   }
 }

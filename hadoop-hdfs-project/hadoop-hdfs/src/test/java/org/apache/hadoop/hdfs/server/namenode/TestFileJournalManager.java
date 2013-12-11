@@ -82,7 +82,7 @@ public class TestFileJournalManager {
     final PriorityQueue<EditLogInputStream> allStreams = 
         new PriorityQueue<EditLogInputStream>(64,
             JournalSet.EDIT_LOG_INPUT_STREAM_COMPARATOR);
-    jm.selectInputStreams(allStreams, fromTxId, inProgressOk, true);
+    jm.selectInputStreams(allStreams, fromTxId, inProgressOk);
     EditLogInputStream elis = null;
     try {
       while ((elis = allStreams.poll()) != null) {
@@ -378,14 +378,8 @@ public class TestFileJournalManager {
     FileJournalManager fjm = new FileJournalManager(conf, sd, null);
     assertEquals("[1,100],[101,200],[1001,1100]", getLogsAsString(fjm, 1));
     assertEquals("[101,200],[1001,1100]", getLogsAsString(fjm, 101));
+    assertEquals("[101,200],[1001,1100]", getLogsAsString(fjm, 150));
     assertEquals("[1001,1100]", getLogsAsString(fjm, 201));
-    try {
-      assertEquals("[]", getLogsAsString(fjm, 150));
-      fail("Did not throw when asking for a txn in the middle of a log");
-    } catch (IllegalStateException ioe) {
-      GenericTestUtils.assertExceptionContains(
-          "150 which is in the middle", ioe);
-    }
     assertEquals("Asking for a newer log than exists should return empty list",
         "", getLogsAsString(fjm, 9999));
   }
@@ -404,7 +398,7 @@ public class TestFileJournalManager {
     final PriorityQueue<EditLogInputStream> allStreams = 
         new PriorityQueue<EditLogInputStream>(64,
             JournalSet.EDIT_LOG_INPUT_STREAM_COMPARATOR);
-    jm.selectInputStreams(allStreams, txId, inProgressOk, true);
+    jm.selectInputStreams(allStreams, txId, inProgressOk);
     EditLogInputStream elis = null, ret;
     try {
       while ((elis = allStreams.poll()) != null) {
@@ -482,6 +476,6 @@ public class TestFileJournalManager {
 
   private static String getLogsAsString(
       FileJournalManager fjm, long firstTxId) throws IOException {
-    return Joiner.on(",").join(fjm.getRemoteEditLogs(firstTxId, true, false));
+    return Joiner.on(",").join(fjm.getRemoteEditLogs(firstTxId, false));
   }
 }

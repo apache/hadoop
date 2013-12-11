@@ -916,7 +916,7 @@ public class TestQuorumJournalManager {
         NNStorage.getFinalizedEditsFileName(41, 50));
     
     ArrayList<EditLogInputStream> streams = new ArrayList<EditLogInputStream>();
-    qjm.selectInputStreams(streams, 25, false, false);
+    qjm.selectInputStreams(streams, 25, false);
     
     verifyEdits(streams, 25, 50);
   }

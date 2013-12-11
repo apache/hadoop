@@ -165,7 +165,7 @@ public class EditLogTailer {
   }
   
   @VisibleForTesting
-  void setEditLog(FSEditLog editLog) {
+  public void setEditLog(FSEditLog editLog) {
     this.editLog = editLog;
   }
   
