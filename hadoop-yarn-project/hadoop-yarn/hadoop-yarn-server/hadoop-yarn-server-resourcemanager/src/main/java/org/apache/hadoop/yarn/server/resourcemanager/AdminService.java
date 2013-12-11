@@ -21,8 +21,6 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.protobuf.BlockingService;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -43,7 +41,6 @@ import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.service.AbstractService;
-import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.RMNotYetActiveException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -66,6 +63,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshUserToGroupsMapp
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshUserToGroupsMappingsResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.security.authorize.RMPolicyProvider;
 
+import com.google.protobuf.BlockingService;
+
 public class AdminService extends AbstractService implements
     HAServiceProtocol, ResourceManagerAdministrationProtocol {
 
@@ -73,10 +72,6 @@ public class AdminService extends AbstractService implements
 
   private final RMContext rmContext;
   private final ResourceManager rm;
-  @VisibleForTesting
-  protected HAServiceProtocol.HAServiceState
-      haState = HAServiceProtocol.HAServiceState.INITIALIZING;
-  boolean haEnabled;
 
   private Server server;
   private InetSocketAddress masterServiceAddress;
@@ -93,13 +88,6 @@ public class AdminService extends AbstractService implements
 
   @Override
   public synchronized void serviceInit(Configuration conf) throws Exception {
-    haEnabled = HAUtil.isHAEnabled(conf);
-    if (haEnabled) {
-      HAUtil.verifyAndSetConfiguration(conf);
-      rm.setConf(conf);
-    }
-    rm.createAndInitActiveServices();
-
     masterServiceAddress = conf.getSocketAddr(
         YarnConfiguration.RM_ADMIN_ADDRESS,
         YarnConfiguration.DEFAULT_RM_ADMIN_ADDRESS,
@@ -112,11 +100,6 @@ public class AdminService extends AbstractService implements
 
   @Override
   protected synchronized void serviceStart() throws Exception {
-    if (haEnabled) {
-      transitionToStandby(true);
-    } else {
-      transitionToActive();
-    }
     startServer();
     super.serviceStart();
   }
@@ -124,8 +107,6 @@ public class AdminService extends AbstractService implements
   @Override
   protected synchronized void serviceStop() throws Exception {
     stopServer();
-    transitionToStandby(false);
-    haState = HAServiceState.STOPPING;
     super.serviceStop();
   }
 
@@ -145,7 +126,7 @@ public class AdminService extends AbstractService implements
       refreshServiceAcls(conf, new RMPolicyProvider());
     }
 
-    if (haEnabled) {
+    if (rmContext.isHAEnabled()) {
       RPC.setProtocolEngine(conf, HAServiceProtocolPB.class,
           ProtobufRpcEngine.class);
 
@@ -182,39 +163,27 @@ public class AdminService extends AbstractService implements
   }
 
   private synchronized boolean isRMActive() {
-    return HAServiceState.ACTIVE == haState;
+    return HAServiceState.ACTIVE == rmContext.getHAServiceState();
   }
 
   @Override
   public synchronized void monitorHealth()
       throws IOException {
     checkAccess("monitorHealth");
-    if (haState == HAServiceProtocol.HAServiceState.ACTIVE && !rm.areActiveServicesRunning()) {
+    if (isRMActive() && !rm.areActiveServicesRunning()) {
       throw new HealthCheckFailedException(
           "Active ResourceManager services are not running!");
     }
   }
 
-  synchronized void transitionToActive() throws Exception {
-    if (haState == HAServiceProtocol.HAServiceState.ACTIVE) {
-      LOG.info("Already in active state");
-      return;
-    }
-
-    LOG.info("Transitioning to active");
-    rm.startActiveServices();
-    haState = HAServiceProtocol.HAServiceState.ACTIVE;
-    LOG.info("Transitioned to active");
-  }
-
   @Override
-  public synchronized void transitionToActive(HAServiceProtocol.StateChangeRequestInfo reqInfo)
-      throws IOException {
+  public synchronized void transitionToActive(
+      HAServiceProtocol.StateChangeRequestInfo reqInfo) throws IOException {
     UserGroupInformation user = checkAccess("transitionToActive");
     // TODO (YARN-1177): When automatic failover is enabled,
     // check if transition should be allowed for this request
     try {
-      transitionToActive();
+      rm.transitionToActive();
       RMAuditLogger.logSuccess(user.getShortUserName(),
           "transitionToActive", "RMHAProtocolService");
     } catch (Exception e) {
@@ -226,32 +195,14 @@ public class AdminService extends AbstractService implements
     }
   }
 
-  synchronized void transitionToStandby(boolean initialize)
-      throws Exception {
-    if (haState == HAServiceProtocol.HAServiceState.STANDBY) {
-      LOG.info("Already in standby state");
-      return;
-    }
-
-    LOG.info("Transitioning to standby");
-    if (haState == HAServiceProtocol.HAServiceState.ACTIVE) {
-      rm.stopActiveServices();
-      if (initialize) {
-        rm.createAndInitActiveServices();
-      }
-    }
-    haState = HAServiceProtocol.HAServiceState.STANDBY;
-    LOG.info("Transitioned to standby");
-  }
-
   @Override
-  public synchronized void transitionToStandby(HAServiceProtocol.StateChangeRequestInfo reqInfo)
-      throws IOException {
+  public synchronized void transitionToStandby(
+      HAServiceProtocol.StateChangeRequestInfo reqInfo) throws IOException {
     UserGroupInformation user = checkAccess("transitionToStandby");
     // TODO (YARN-1177): When automatic failover is enabled,
     // check if transition should be allowed for this request
     try {
-      transitionToStandby(true);
+      rm.transitionToStandby(true);
       RMAuditLogger.logSuccess(user.getShortUserName(),
           "transitionToStandby", "RMHAProtocolService");
     } catch (Exception e) {
@@ -266,15 +217,15 @@ public class AdminService extends AbstractService implements
   @Override
   public synchronized HAServiceStatus getServiceStatus() throws IOException {
     checkAccess("getServiceState");
+    HAServiceState haState = rmContext.getHAServiceState();
     HAServiceStatus ret = new HAServiceStatus(haState);
-    if (haState == HAServiceProtocol.HAServiceState.ACTIVE || haState ==
-        HAServiceProtocol.HAServiceState.STANDBY) {
+    if (isRMActive() || haState == HAServiceProtocol.HAServiceState.STANDBY) {
       ret.setReadyToBecomeActive();
     } else {
       ret.setNotReadyToBecomeActive("State is " + haState);
     }
     return ret;
-  }
+  } 
 
   @Override
   public RefreshQueuesResponse refreshQueues(RefreshQueuesRequest request)
