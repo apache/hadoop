@@ -17,33 +17,26 @@
  */
 package org.apache.hadoop.fs.permission;
 
-import com.google.common.base.Objects;
+import java.util.Collections;
+import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.Path;
+
+import com.google.common.base.Objects;
+import com.google.common.collect.Lists;
 
 /**
- * An AclStatus represents an association of a specific file {@link Path} with
- * an {@link Acl}.  AclStatus instances are immutable.  Use a {@link Builder} to
- * create a new instance.
+ * An AclStatus contains the ACL information of a specific file. AclStatus
+ * instances are immutable. Use a {@link Builder} to create a new instance.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class AclStatus {
-  private final Path file;
   private final String owner;
   private final String group;
-  private final Acl acl;
-
-  /**
-   * Returns the file associated to this ACL.
-   *
-   * @return Path file associated to this ACL
-   */
-  public Path getFile() {
-    return file;
-  }
+  private final boolean stickyBit;
+  private final Iterable<AclEntry> entries;
 
   /**
    * Returns the file owner.
@@ -64,12 +57,21 @@ public class AclStatus {
   }
 
   /**
-   * Returns the ACL.
-   *
-   * @return Acl the ACL
+   * Returns the sticky bit.
+   * 
+   * @return boolean sticky bit
    */
-  public Acl getAcl() {
-    return acl;
+  public boolean isStickyBit() {
+    return stickyBit;
+  }
+
+  /**
+   * Returns the list of all ACL entries, ordered by their natural ordering.
+   *
+   * @return Iterable<AclEntry> unmodifiable ordered list of all ACL entries
+   */
+  public Iterable<AclEntry> getEntries() {
+    return entries;
   }
 
   @Override
@@ -81,24 +83,26 @@ public class AclStatus {
       return false;
     }
     AclStatus other = (AclStatus)o;
-    return Objects.equal(file, other.file) &&
-      Objects.equal(owner, other.owner) &&
-      Objects.equal(group, other.group) &&
-      Objects.equal(acl, other.acl);
+    return Objects.equal(owner, other.owner)
+        && Objects.equal(group, other.group)
+        && stickyBit == other.stickyBit
+        && Objects.equal(entries, other.entries);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hashCode(file, owner, group, acl);
+    return Objects.hashCode(owner, group, stickyBit, entries);
   }
 
   @Override
   public String toString() {
     return new StringBuilder()
-      .append("file: ").append(file)
-      .append(", owner: ").append(owner)
+      .append("owner: ").append(owner)
       .append(", group: ").append(group)
-      .append(", acl: {").append(acl).append('}')
+      .append(", acl: {")
+      .append("entries: ").append(entries)
+      .append(", stickyBit: ").append(stickyBit)
+      .append('}')
       .toString();
   }
 
@@ -106,21 +110,10 @@ public class AclStatus {
    * Builder for creating new Acl instances.
    */
   public static class Builder {
-    private Path file;
     private String owner;
     private String group;
-    private Acl acl;
-
-    /**
-     * Sets the file associated to this ACL.
-     *
-     * @param file Path file associated to this ACL
-     * @return Builder this builder, for call chaining
-     */
-    public Builder setFile(Path file) {
-      this.file = file;
-      return this;
-    }
+    private boolean stickyBit;
+    private List<AclEntry> entries = Lists.newArrayList();
 
     /**
      * Sets the file owner.
@@ -128,7 +121,7 @@ public class AclStatus {
      * @param owner String file owner
      * @return Builder this builder, for call chaining
      */
-    public Builder setOwner(String owner) {
+    public Builder owner(String owner) {
       this.owner = owner;
       return this;
     }
@@ -139,29 +132,54 @@ public class AclStatus {
      * @param group String file group
      * @return Builder this builder, for call chaining
      */
-    public Builder setGroup(String group) {
+    public Builder group(String group) {
       this.group = group;
       return this;
     }
 
     /**
-     * Sets the ACL.
+     * Adds an ACL entry.
      *
-     * @param acl Acl the ACL
+     * @param e AclEntry entry to add
      * @return Builder this builder, for call chaining
      */
-    public Builder setAcl(Acl acl) {
-      this.acl = acl;
+    public Builder addEntry(AclEntry e) {
+      this.entries.add(e);
       return this;
     }
 
     /**
-     * Builds a new Acl populated with the set properties.
+     * Adds a list of ACL entries.
      *
-     * @return Acl new Acl
+     * @param entries AclEntry entries to add
+     * @return Builder this builder, for call chaining
+     */
+    public Builder addEntries(Iterable<AclEntry> entries) {
+      for (AclEntry e : entries)
+        this.entries.add(e);
+      return this;
+    }
+
+    /**
+     * Sets sticky bit. If this method is not called, then the builder assumes
+     * false.
+     *
+     * @param stickyBit
+     *          boolean sticky bit
+     * @return Builder this builder, for call chaining
+     */
+    public Builder stickyBit(boolean stickyBit) {
+      this.stickyBit = stickyBit;
+      return this;
+    }
+
+    /**
+     * Builds a new AclStatus populated with the set properties.
+     *
+     * @return AclStatus new AclStatus
      */
     public AclStatus build() {
-      return new AclStatus(file, owner, group, acl);
+      return new AclStatus(owner, group, stickyBit, entries);
     }
   }
 
@@ -171,12 +189,16 @@ public class AclStatus {
    * @param file Path file associated to this ACL
    * @param owner String file owner
    * @param group String file group
-   * @param acl Acl the ACL
+   * @param stickyBit the sticky bit
+   * @param entries the ACL entries
    */
-  private AclStatus(Path file, String owner, String group, Acl acl) {
-    this.file = file;
+  private AclStatus(String owner, String group, boolean stickyBit,
+      Iterable<AclEntry> entries) {
     this.owner = owner;
     this.group = group;
-    this.acl = acl;
+    this.stickyBit = stickyBit;
+    List<AclEntry> entriesCopy = Lists.newArrayList(entries);
+    Collections.sort(entriesCopy);
+    this.entries = entriesCopy;
   }
 }

@@ -9,6 +9,9 @@ HDFS-4685 (Unreleased)
   IMPROVEMENTS
     HDFS-5594. FileSystem API for ACLs. (cnauroth)
 
+    HDFS-5650. Remove AclReadFlag and AclWriteFlag in FileSystem API.
+    (Haohui Mai via cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES

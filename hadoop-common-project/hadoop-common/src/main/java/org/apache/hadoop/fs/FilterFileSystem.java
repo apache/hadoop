@@ -22,14 +22,12 @@ import java.io.*;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.EnumSet;
-import java.util.List;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.AclEntry;
-import org.apache.hadoop.fs.permission.AclReadFlag;
 import org.apache.hadoop.fs.permission.AclStatus;
-import org.apache.hadoop.fs.permission.AclWriteFlag;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
@@ -514,38 +512,34 @@ public class FilterFileSystem extends FileSystem {
   }
 
   @Override
-  public void modifyAclEntries(Path path, List<AclEntry> aclSpec,
-      EnumSet<AclWriteFlag> flags) throws IOException {
-    fs.modifyAclEntries(path, aclSpec, flags);
+  public void modifyAclEntries(Path path, Iterable<AclEntry> aclSpec) throws IOException {
+    fs.modifyAclEntries(path, aclSpec);
   }
 
   @Override
-  public void removeAclEntries(Path path, List<AclEntry> aclSpec,
-      EnumSet<AclWriteFlag> flags) throws IOException {
-    fs.removeAclEntries(path, aclSpec, flags);
+  public void removeAclEntries(Path path, Iterable<AclEntry> aclSpec) throws IOException {
+    fs.removeAclEntries(path, aclSpec);
   }
 
   @Override
-  public void removeDefaultAcl(Path path, EnumSet<AclWriteFlag> flags)
+  public void removeDefaultAcl(Path path)
       throws IOException {
-    fs.removeDefaultAcl(path, flags);
+    fs.removeDefaultAcl(path);
   }
 
   @Override
-  public void removeAcl(Path path, EnumSet<AclWriteFlag> flags)
+  public void removeAcl(Path path)
       throws IOException {
-    fs.removeAcl(path, flags);
+    fs.removeAcl(path);
   }
 
   @Override
-  public void setAcl(Path path, List<AclEntry> aclSpec,
-      EnumSet<AclWriteFlag> flags) throws IOException {
-    fs.setAcl(path, aclSpec, flags);
+  public void setAcl(Path path, Iterable<AclEntry> aclSpec) throws IOException {
+    fs.setAcl(path, aclSpec);
   }
 
   @Override
-  public RemoteIterator<AclStatus> listAclStatus(Path path,
-      EnumSet<AclReadFlag> flags) throws IOException {
-    return fs.listAclStatus(path, flags);
+  public AclStatus getAclStatus(Path path) throws IOException {
+    return fs.getAclStatus(path);
   }
 }

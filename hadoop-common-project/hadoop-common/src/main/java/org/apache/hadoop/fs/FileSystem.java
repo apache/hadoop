@@ -49,9 +49,7 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.permission.AclEntry;
-import org.apache.hadoop.fs.permission.AclReadFlag;
 import org.apache.hadoop.fs.permission.AclStatus;
-import org.apache.hadoop.fs.permission.AclWriteFlag;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.io.Text;
@@ -2278,11 +2276,9 @@ public abstract class FileSystem extends Configured implements Closeable {
    *
    * @param path Path to modify
    * @param aclSpec List<AclEntry> describing modifications
-   * @param flags EnumSet<AclWriteFlag> containing flags (such as recursive)
    * @throws IOException if an ACL could not be modified
    */
-  public void modifyAclEntries(Path path, List<AclEntry> aclSpec,
-      EnumSet<AclWriteFlag> flags) throws IOException {
+  public void modifyAclEntries(Path path, Iterable<AclEntry> aclSpec) throws IOException {
     throw new UnsupportedOperationException(getClass().getSimpleName()
         + " doesn't support modifyAclEntries");
   }
@@ -2293,11 +2289,9 @@ public abstract class FileSystem extends Configured implements Closeable {
    *
    * @param path Path to modify
    * @param aclSpec List<AclEntry> describing entries to remove
-   * @param flags EnumSet<AclWriteFlag> containing flags (such as recursive)
    * @throws IOException if an ACL could not be modified
    */
-  public void removeAclEntries(Path path, List<AclEntry> aclSpec,
-      EnumSet<AclWriteFlag> flags) throws IOException {
+  public void removeAclEntries(Path path, Iterable<AclEntry> aclSpec) throws IOException {
     throw new UnsupportedOperationException(getClass().getSimpleName()
         + " doesn't support removeAclEntries");
   }
@@ -2306,10 +2300,9 @@ public abstract class FileSystem extends Configured implements Closeable {
    * Removes all default ACL entries from files and directories.
    *
    * @param path Path to modify
-   * @param flags EnumSet<AclWriteFlag> containing flags (such as recursive)
    * @throws IOException if an ACL could not be modified
    */
-  public void removeDefaultAcl(Path path, EnumSet<AclWriteFlag> flags)
+  public void removeDefaultAcl(Path path)
       throws IOException {
     throw new UnsupportedOperationException(getClass().getSimpleName()
         + " doesn't support removeDefaultAcl");
@@ -2321,10 +2314,9 @@ public abstract class FileSystem extends Configured implements Closeable {
    * bits.
    *
    * @param path Path to modify
-   * @param flags EnumSet<AclWriteFlag> containing flags (such as recursive)
    * @throws IOException if an ACL could not be removed
    */
-  public void removeAcl(Path path, EnumSet<AclWriteFlag> flags)
+  public void removeAcl(Path path)
       throws IOException {
     throw new UnsupportedOperationException(getClass().getSimpleName()
         + " doesn't support removeAcl");
@@ -2337,11 +2329,9 @@ public abstract class FileSystem extends Configured implements Closeable {
    * @param path Path to modify
    * @param aclSpec List<AclEntry> describing modifications, must include entries
    *   for user, group, and others for compatibility with permission bits.
-   * @param flags EnumSet<AclWriteFlag> containing flags (such as recursive)
    * @throws IOException if an ACL could not be modified
    */
-  public void setAcl(Path path, List<AclEntry> aclSpec,
-      EnumSet<AclWriteFlag> flags) throws IOException {
+  public void setAcl(Path path, Iterable<AclEntry> aclSpec) throws IOException {
     throw new UnsupportedOperationException(getClass().getSimpleName()
         + " doesn't support setAcl");
   }
@@ -2350,14 +2340,12 @@ public abstract class FileSystem extends Configured implements Closeable {
    * Gets the ACLs of files and directories.
    *
    * @param path Path to get
-   * @param flags EnumSet<AclReadFlag> containing flags (such as recursive)
    * @return RemoteIterator<AclStatus> which returns each AclStatus
    * @throws IOException if an ACL could not be read
    */
-  public RemoteIterator<AclStatus> listAclStatus(Path path,
-      EnumSet<AclReadFlag> flags) throws IOException {
+  public AclStatus getAclStatus(Path path) throws IOException {
     throw new UnsupportedOperationException(getClass().getSimpleName()
-        + " doesn't support listAclStatus");
+        + " doesn't support getAclStatus");
   }
 
   // making it volatile to be able to do a double checked locking

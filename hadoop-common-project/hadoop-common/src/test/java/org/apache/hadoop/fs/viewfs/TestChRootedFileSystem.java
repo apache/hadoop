@@ -21,7 +21,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Collections;
-import java.util.EnumSet;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
@@ -33,8 +32,6 @@ import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.AclEntry;
-import org.apache.hadoop.fs.permission.AclReadFlag;
-import org.apache.hadoop.fs.permission.AclWriteFlag;
 import org.apache.hadoop.fs.viewfs.ChRootedFileSystem;
 import org.junit.After;
 import org.junit.Assert;
@@ -378,26 +375,24 @@ public class TestChRootedFileSystem {
     Path chrootPath = new Path("/c");
     Path rawPath = new Path("/a/b/c");
     List<AclEntry> entries = Collections.emptyList();
-    EnumSet<AclWriteFlag> writeFlags = EnumSet.noneOf(AclWriteFlag.class);
-    EnumSet<AclReadFlag> readFlags = EnumSet.noneOf(AclReadFlag.class);
 
-    chrootFs.modifyAclEntries(chrootPath, entries, writeFlags);
-    verify(mockFs).modifyAclEntries(rawPath, entries, writeFlags);
+    chrootFs.modifyAclEntries(chrootPath, entries);
+    verify(mockFs).modifyAclEntries(rawPath, entries);
 
-    chrootFs.removeAclEntries(chrootPath, entries, writeFlags);
-    verify(mockFs).removeAclEntries(rawPath, entries, writeFlags);
+    chrootFs.removeAclEntries(chrootPath, entries);
+    verify(mockFs).removeAclEntries(rawPath, entries);
 
-    chrootFs.removeDefaultAcl(chrootPath, writeFlags);
-    verify(mockFs).removeDefaultAcl(rawPath, writeFlags);
+    chrootFs.removeDefaultAcl(chrootPath);
+    verify(mockFs).removeDefaultAcl(rawPath);
 
-    chrootFs.removeAcl(chrootPath, writeFlags);
-    verify(mockFs).removeAcl(rawPath, writeFlags);
+    chrootFs.removeAcl(chrootPath);
+    verify(mockFs).removeAcl(rawPath);
 
-    chrootFs.setAcl(chrootPath, entries, writeFlags);
-    verify(mockFs).setAcl(rawPath, entries, writeFlags);
+    chrootFs.setAcl(chrootPath, entries);
+    verify(mockFs).setAcl(rawPath, entries);
 
-    chrootFs.listAclStatus(chrootPath, readFlags);
-    verify(mockFs).listAclStatus(rawPath, readFlags);
+    chrootFs.getAclStatus(chrootPath);
+    verify(mockFs).getAclStatus(rawPath);
   }
 
   static class MockFileSystem extends FilterFileSystem {

@@ -21,7 +21,6 @@ package org.apache.hadoop.fs.viewfs;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Collections;
-import java.util.EnumSet;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -30,8 +29,6 @@ import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.AclEntry;
-import org.apache.hadoop.fs.permission.AclReadFlag;
-import org.apache.hadoop.fs.permission.AclWriteFlag;
 import org.apache.hadoop.fs.viewfs.TestChRootedFileSystem.MockFileSystem;
 import org.junit.*;
 import static org.junit.Assert.*;
@@ -103,38 +100,36 @@ public class TestViewFileSystemDelegation { //extends ViewFileSystemTestSetup {
     Path viewFsPath2 = new Path("/mounts/mockfs2/d/e/f");
     Path mockFsPath2 = new Path("/d/e/f");
     List<AclEntry> entries = Collections.emptyList();
-    EnumSet<AclWriteFlag> writeFlags = EnumSet.noneOf(AclWriteFlag.class);
-    EnumSet<AclReadFlag> readFlags = EnumSet.noneOf(AclReadFlag.class);
 
-    viewFs.modifyAclEntries(viewFsPath1, entries, writeFlags);
-    verify(mockFs1).modifyAclEntries(mockFsPath1, entries, writeFlags);
-    viewFs.modifyAclEntries(viewFsPath2, entries, writeFlags);
-    verify(mockFs2).modifyAclEntries(mockFsPath2, entries, writeFlags);
+    viewFs.modifyAclEntries(viewFsPath1, entries);
+    verify(mockFs1).modifyAclEntries(mockFsPath1, entries);
+    viewFs.modifyAclEntries(viewFsPath2, entries);
+    verify(mockFs2).modifyAclEntries(mockFsPath2, entries);
 
-    viewFs.removeAclEntries(viewFsPath1, entries, writeFlags);
-    verify(mockFs1).removeAclEntries(mockFsPath1, entries, writeFlags);
-    viewFs.removeAclEntries(viewFsPath2, entries, writeFlags);
-    verify(mockFs2).removeAclEntries(mockFsPath2, entries, writeFlags);
+    viewFs.removeAclEntries(viewFsPath1, entries);
+    verify(mockFs1).removeAclEntries(mockFsPath1, entries);
+    viewFs.removeAclEntries(viewFsPath2, entries);
+    verify(mockFs2).removeAclEntries(mockFsPath2, entries);
 
-    viewFs.removeDefaultAcl(viewFsPath1, writeFlags);
-    verify(mockFs1).removeDefaultAcl(mockFsPath1, writeFlags);
-    viewFs.removeDefaultAcl(viewFsPath2, writeFlags);
-    verify(mockFs2).removeDefaultAcl(mockFsPath2, writeFlags);
+    viewFs.removeDefaultAcl(viewFsPath1);
+    verify(mockFs1).removeDefaultAcl(mockFsPath1);
+    viewFs.removeDefaultAcl(viewFsPath2);
+    verify(mockFs2).removeDefaultAcl(mockFsPath2);
 
-    viewFs.removeAcl(viewFsPath1, writeFlags);
-    verify(mockFs1).removeAcl(mockFsPath1, writeFlags);
-    viewFs.removeAcl(viewFsPath2, writeFlags);
-    verify(mockFs2).removeAcl(mockFsPath2, writeFlags);
+    viewFs.removeAcl(viewFsPath1);
+    verify(mockFs1).removeAcl(mockFsPath1);
+    viewFs.removeAcl(viewFsPath2);
+    verify(mockFs2).removeAcl(mockFsPath2);
 
-    viewFs.setAcl(viewFsPath1, entries, writeFlags);
-    verify(mockFs1).setAcl(mockFsPath1, entries, writeFlags);
-    viewFs.setAcl(viewFsPath2, entries, writeFlags);
-    verify(mockFs2).setAcl(mockFsPath2, entries, writeFlags);
+    viewFs.setAcl(viewFsPath1, entries);
+    verify(mockFs1).setAcl(mockFsPath1, entries);
+    viewFs.setAcl(viewFsPath2, entries);
+    verify(mockFs2).setAcl(mockFsPath2, entries);
 
-    viewFs.listAclStatus(viewFsPath1, readFlags);
-    verify(mockFs1).listAclStatus(mockFsPath1, readFlags);
-    viewFs.listAclStatus(viewFsPath2, readFlags);
-    verify(mockFs2).listAclStatus(mockFsPath2, readFlags);
+    viewFs.getAclStatus(viewFsPath1);
+    verify(mockFs1).getAclStatus(mockFsPath1);
+    viewFs.getAclStatus(viewFsPath2);
+    verify(mockFs2).getAclStatus(mockFsPath2);
   }
 
   void checkVerifyChecksum(boolean flag) {

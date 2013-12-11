@@ -21,20 +21,21 @@ import static org.junit.Assert.*;
 
 import java.util.List;
 
+import org.junit.BeforeClass;
 import org.junit.Test;
 
-import org.apache.hadoop.fs.Path;
+import com.google.common.collect.Lists;
 
 /**
  * Tests covering basic functionality of the ACL objects.
  */
 public class TestAcl {
-  private static final Acl ACL1, ACL2, ACL3, ACL4;
-  private static final AclEntry ENTRY1, ENTRY2, ENTRY3, ENTRY4, ENTRY5, ENTRY6,
+  private static AclEntry ENTRY1, ENTRY2, ENTRY3, ENTRY4, ENTRY5, ENTRY6,
     ENTRY7, ENTRY8, ENTRY9, ENTRY10, ENTRY11, ENTRY12, ENTRY13;
-  private static final AclStatus STATUS1, STATUS2, STATUS3;
+  private static AclStatus STATUS1, STATUS2, STATUS3, STATUS4;
 
-  static {
+  @BeforeClass
+  public static void setUp() {
     // named user
     AclEntry.Builder aclEntryBuilder = new AclEntry.Builder()
       .setType(AclEntryType.USER)
@@ -107,31 +108,21 @@ public class TestAcl {
       .setScope(AclEntryScope.DEFAULT)
       .build();
 
-    Acl.Builder aclBuilder = new Acl.Builder()
+    AclStatus.Builder aclStatusBuilder = new AclStatus.Builder()
+      .owner("owner1")
+      .group("group1")
       .addEntry(ENTRY1)
       .addEntry(ENTRY3)
       .addEntry(ENTRY4);
-    ACL1 = aclBuilder.build();
-    ACL2 = aclBuilder.build();
-    ACL3 = new Acl.Builder()
-      .setStickyBit(true)
-      .build();
-
-    AclStatus.Builder aclStatusBuilder = new AclStatus.Builder()
-      .setFile(new Path("file1"))
-      .setOwner("owner1")
-      .setGroup("group1")
-      .setAcl(ACL1);
     STATUS1 = aclStatusBuilder.build();
     STATUS2 = aclStatusBuilder.build();
     STATUS3 = new AclStatus.Builder()
-      .setFile(new Path("file2"))
-      .setOwner("owner2")
-      .setGroup("group2")
-      .setAcl(ACL3)
+      .owner("owner2")
+      .group("group2")
+      .stickyBit(true)
       .build();
 
-    ACL4 = new Acl.Builder()
+    STATUS4 = new AclStatus.Builder()
       .addEntry(ENTRY1)
       .addEntry(ENTRY3)
       .addEntry(ENTRY4)
@@ -145,39 +136,6 @@ public class TestAcl {
       .addEntry(ENTRY12)
       .addEntry(ENTRY13)
       .build();
-  }
-
-  @Test
-  public void testAclEquals() {
-    assertNotSame(ACL1, ACL2);
-    assertNotSame(ACL1, ACL3);
-    assertNotSame(ACL2, ACL3);
-    assertEquals(ACL1, ACL1);
-    assertEquals(ACL2, ACL2);
-    assertEquals(ACL1, ACL2);
-    assertEquals(ACL2, ACL1);
-    assertFalse(ACL1.equals(ACL3));
-    assertFalse(ACL2.equals(ACL3));
-    assertFalse(ACL1.equals(null));
-    assertFalse(ACL1.equals(new Object()));
-  }
-
-  @Test
-  public void testAclHashCode() {
-    assertEquals(ACL1.hashCode(), ACL2.hashCode());
-    assertFalse(ACL1.hashCode() == ACL3.hashCode());
-  }
-
-  @Test
-  public void testAclEntriesImmutable() {
-    AclEntry entry = new AclEntry.Builder().build();
-    List<AclEntry> entries = ACL1.getEntries();
-    try {
-      entries.add(entry);
-      fail("expected adding ACL entry to fail");
-    } catch (UnsupportedOperationException e) {
-      // expected
-    }
   }
 
   @Test
@@ -223,7 +181,7 @@ public class TestAcl {
       ENTRY10, // default mask
       ENTRY4   // default other
     };
-    List<AclEntry> actual = ACL4.getEntries();
+    List<AclEntry> actual = Lists.newArrayList(STATUS4.getEntries());
     assertNotNull(actual);
     assertEquals(expected.length, actual.size());
     for (int i = 0; i < expected.length; ++i) {
@@ -267,25 +225,19 @@ public class TestAcl {
 
   @Test
   public void testToString() {
-    assertEquals(
-      "entries: [user:user1:rwx, group:group2:rw-, default:other::---], stickyBit: false",
-      ACL1.toString());
-    assertEquals(
-      "entries: [user:user1:rwx, group:group2:rw-, default:other::---], stickyBit: false",
-      ACL2.toString());
-    assertEquals("entries: [], stickyBit: true", ACL3.toString());
     assertEquals("user:user1:rwx", ENTRY1.toString());
     assertEquals("user:user1:rwx", ENTRY2.toString());
     assertEquals("group:group2:rw-", ENTRY3.toString());
     assertEquals("default:other::---", ENTRY4.toString());
+
     assertEquals(
-      "file: file1, owner: owner1, group: group1, acl: {entries: [user:user1:rwx, group:group2:rw-, default:other::---], stickyBit: false}",
+      "owner: owner1, group: group1, acl: {entries: [user:user1:rwx, group:group2:rw-, default:other::---], stickyBit: false}",
       STATUS1.toString());
     assertEquals(
-      "file: file1, owner: owner1, group: group1, acl: {entries: [user:user1:rwx, group:group2:rw-, default:other::---], stickyBit: false}",
+      "owner: owner1, group: group1, acl: {entries: [user:user1:rwx, group:group2:rw-, default:other::---], stickyBit: false}",
       STATUS2.toString());
     assertEquals(
-      "file: file2, owner: owner2, group: group2, acl: {entries: [], stickyBit: true}",
+      "owner: owner2, group: group2, acl: {entries: [], stickyBit: true}",
       STATUS3.toString());
   }
 }
