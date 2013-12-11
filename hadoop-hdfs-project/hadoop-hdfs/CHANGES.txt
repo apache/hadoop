@@ -142,6 +142,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-5353. Short circuit reads fail when dfs.encrypt.data.transfer is 
     enabled. (Colin Patrick McCabe via jing9)
 
+    HDFS-5257. addBlock() retry should return LocatedBlock with locations else client 
+    will get AIOBE. (Vinay via jing9)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
