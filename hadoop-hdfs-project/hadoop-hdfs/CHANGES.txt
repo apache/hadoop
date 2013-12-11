@@ -186,36 +186,12 @@ Release 2.4.0 - UNRELEASED
     HDFS-5400.  DFS_CLIENT_MMAP_CACHE_THREAD_RUNS_PER_TIMEOUT constant is set
     to the wrong value.  (Colin Patrick McCabe)
 
-    HDFS-5257. addBlock() retry should return LocatedBlock with locations else client 
-    will get AIOBE. (Vinay via jing9)
-
-    HDFS-5427. Not able to read deleted files from snapshot directly under 
-    snapshottable dir after checkpoint and NN restart. (Vinay via jing9)
-
-    HDFS-5443. Delete 0-sized block when deleting an under-construction file that 
-    is included in snapshot. (jing9)
-
-    HDFS-5476. Snapshot: clean the blocks/files/directories under a renamed 
-    file/directory while deletion. (jing9)
-
-    HDFS-5425. Renaming underconstruction file with snapshots can make NN failure on 
-    restart. (jing9 and Vinay)
-
-    HDFS-5474. Deletesnapshot can make Namenode in safemode on NN restarts. 
-    (Sathish via jing9)
-
     HDFS-5075. httpfs-config.sh calls out incorrect env script name
     (Timothy St. Clair via stevel)
-
-    HDFS-5504. In HA mode, OP_DELETE_SNAPSHOT is not decrementing the safemode threshold, 
-    leads to NN safemode. (Vinay via jing9)
 
     HDFS-5438. Flaws in block report processing can cause data loss. (kihwal)
 
     HDFS-5502. Fix HTTPS support in HsftpFileSystem. (Haohui Mai via jing9)
-
-    HDFS-5428. Under construction files deletion after snapshot+checkpoint+nn restart 
-    leads nn safemode. (jing9)
 
     HDFS-5552. Fix wrong information of "Cluster summay" in dfshealth.html.
     (Haohui Mai via jing9)
@@ -360,6 +336,30 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-5353. Short circuit reads fail when dfs.encrypt.data.transfer is 
     enabled. (Colin Patrick McCabe via jing9)
+
+    HDFS-5257. addBlock() retry should return LocatedBlock with locations else client 
+    will get AIOBE. (Vinay via jing9)
+
+    HDFS-5427. Not able to read deleted files from snapshot directly under 
+    snapshottable dir after checkpoint and NN restart. (Vinay via jing9)
+
+    HDFS-5443. Delete 0-sized block when deleting an under-construction file that 
+    is included in snapshot. (jing9)
+
+    HDFS-5476. Snapshot: clean the blocks/files/directories under a renamed 
+    file/directory while deletion. (jing9)
+
+    HDFS-5425. Renaming underconstruction file with snapshots can make NN failure on 
+    restart. (jing9 and Vinay)
+
+    HDFS-5474. Deletesnapshot can make Namenode in safemode on NN restarts. 
+    (Sathish via jing9)
+
+    HDFS-5504. In HA mode, OP_DELETE_SNAPSHOT is not decrementing the safemode threshold, 
+    leads to NN safemode. (Vinay via jing9)
+
+    HDFS-5428. Under construction files deletion after snapshot+checkpoint+nn restart 
+    leads nn safemode. (jing9)
 
 Release 2.2.0 - 2013-10-13
 
