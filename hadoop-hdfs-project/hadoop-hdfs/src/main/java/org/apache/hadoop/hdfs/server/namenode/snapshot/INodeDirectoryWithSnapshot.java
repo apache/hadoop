@@ -37,6 +37,7 @@ import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectoryAttributes;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectoryWithQuota;
+import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeMap;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference;
 import org.apache.hadoop.hdfs.server.namenode.Quota;
@@ -74,7 +75,7 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
         final INode oldChild, final INode newChild) {
       final List<INode> list = getList(type); 
       final int i = search(list, oldChild.getLocalNameBytes());
-      if (i < 0) {
+      if (i < 0 || list.get(i).getId() != oldChild.getId()) {
         return false;
       }
 
@@ -589,6 +590,14 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
       }
     }
     return removed;
+  }
+  
+  @Override
+  public void replaceChildFileInSnapshot(final INodeFile oldChild,
+      final INodeFile newChild) {
+    super.replaceChildFileInSnapshot(oldChild, newChild);
+    diffs.replaceChild(ListType.DELETED, oldChild, newChild);
+    diffs.replaceChild(ListType.CREATED, oldChild, newChild);
   }
   
   @Override
