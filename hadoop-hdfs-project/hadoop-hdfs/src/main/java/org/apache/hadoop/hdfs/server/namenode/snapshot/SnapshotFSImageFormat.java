@@ -203,6 +203,9 @@ public class SnapshotFSImageFormat {
       // useful, but set the parent here to be consistent with the original 
       // fsdir tree.
       deleted.setParent(parent);
+      if (deleted.isFile()) {
+        loader.updateBlocksMap(deleted.asFile());
+      }
     }
     return deletedList;
   }
