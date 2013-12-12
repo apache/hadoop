@@ -32,7 +32,9 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class TestStat extends FileSystemTestHelper {
-
+  static{
+    FileSystem.enableSymlinks();
+  }
   private static Stat stat;
 
   @BeforeClass
