@@ -46,13 +46,17 @@ public class TestRMHA {
   private static final String RM1_ADDRESS = "0.0.0.0:0";
   private static final String RM1_NODE_ID = "rm1";
 
+  private static final String RM2_ADDRESS = "1.1.1.1:1";
+  private static final String RM2_NODE_ID = "rm2";
+
   @Before
   public void setUp() throws Exception {
     Configuration conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
-    conf.set(YarnConfiguration.RM_HA_IDS, RM1_NODE_ID);
-    for (String confKey : YarnConfiguration.RM_RPC_ADDRESS_CONF_KEYS) {
+    conf.set(YarnConfiguration.RM_HA_IDS, RM1_NODE_ID + "," + RM2_NODE_ID);
+    for (String confKey : YarnConfiguration.RM_SERVICES_ADDRESS_CONF_KEYS) {
       conf.set(HAUtil.addSuffix(confKey, RM1_NODE_ID), RM1_ADDRESS);
+      conf.set(HAUtil.addSuffix(confKey, RM2_NODE_ID), RM2_ADDRESS);
     }
     conf.set(YarnConfiguration.RM_HA_ID, RM1_NODE_ID);
 

@@ -23,11 +23,13 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
@@ -285,14 +287,15 @@ public class YarnConfiguration extends Configuration {
   public static final String RM_HA_IDS = RM_HA_PREFIX + "rm-ids";
   public static final String RM_HA_ID = RM_HA_PREFIX + "id";
 
-  public static final List<String> RM_RPC_ADDRESS_CONF_KEYS =
+  @Private
+  public static final List<String> RM_SERVICES_ADDRESS_CONF_KEYS =
       Collections.unmodifiableList(Arrays.asList(
           RM_ADDRESS,
           RM_SCHEDULER_ADDRESS,
           RM_ADMIN_ADDRESS,
           RM_RESOURCE_TRACKER_ADDRESS,
-          RM_WEBAPP_ADDRESS,
-          RM_WEBAPP_HTTPS_ADDRESS));
+          HttpConfig.isSecure() ? RM_WEBAPP_HTTPS_ADDRESS
+              : RM_WEBAPP_ADDRESS));
 
   ////////////////////////////////
   // RM state store configs
@@ -940,7 +943,7 @@ public class YarnConfiguration extends Configuration {
   public InetSocketAddress getSocketAddr(
       String name, String defaultAddress, int defaultPort) {
     String address;
-    if (HAUtil.isHAEnabled(this) && RM_RPC_ADDRESS_CONF_KEYS.contains(name)) {
+    if (HAUtil.isHAEnabled(this) && RM_SERVICES_ADDRESS_CONF_KEYS.contains(name)) {
       address = HAUtil.getConfValueForRMInstance(name, defaultAddress, this);
     } else {
       address = get(name, defaultAddress);

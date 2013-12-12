@@ -144,6 +144,9 @@ Release 2.4.0 - UNRELEASED
     YARN-408. Change CapacityScheduler to not disable delay-scheduling by default.
     (Mayank Bansal via vinodkv)
 
+    YARN-1325. Modified RM HA configuration validation to also ensure that
+    multiple RMs are configured. (Xuan Gong via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
