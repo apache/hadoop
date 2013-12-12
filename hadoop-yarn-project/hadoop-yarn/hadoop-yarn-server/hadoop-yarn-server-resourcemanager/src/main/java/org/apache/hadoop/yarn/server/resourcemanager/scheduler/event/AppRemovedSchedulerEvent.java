@@ -21,15 +21,14 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.event;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 
-public class AppAttemptRemovedSchedulerEvent extends SchedulerEvent {
+public class AppRemovedSchedulerEvent extends SchedulerEvent {
 
   private final ApplicationAttemptId applicationAttemptId;
   private final RMAppAttemptState finalAttemptState;
 
-  public AppAttemptRemovedSchedulerEvent(
-      ApplicationAttemptId applicationAttemptId,
+  public AppRemovedSchedulerEvent(ApplicationAttemptId applicationAttemptId,
       RMAppAttemptState finalAttemptState) {
-    super(SchedulerEventType.APP_ATTEMPT_REMOVED);
+    super(SchedulerEventType.APP_REMOVED);
     this.applicationAttemptId = applicationAttemptId;
     this.finalAttemptState = finalAttemptState;
   }

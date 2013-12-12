@@ -75,8 +75,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppRepor
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplication;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptAddedSchedulerEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptRemovedSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ContainerExpiredSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
@@ -591,7 +591,7 @@ public class FairScheduler implements ResourceScheduler {
    * user. This will accept a new app even if the user or queue is above
    * configured limits, but the app will not be marked as runnable.
    */
-  protected synchronized void addApplicationAttempt(
+  protected synchronized void addApplication(
       ApplicationAttemptId applicationAttemptId, String queueName, String user) {
     if (queueName == null || queueName.isEmpty()) {
       String message = "Reject application " + applicationAttemptId +
@@ -674,7 +674,7 @@ public class FairScheduler implements ResourceScheduler {
     return queue;
   }
 
-  private synchronized void removeApplicationAttempt(
+  private synchronized void removeApplication(
       ApplicationAttemptId applicationAttemptId,
       RMAppAttemptState rmAppAttemptFinalState) {
     LOG.info("Application " + applicationAttemptId + " is done." +
@@ -1090,24 +1090,22 @@ public class FairScheduler implements ResourceScheduler {
       NodeUpdateSchedulerEvent nodeUpdatedEvent = (NodeUpdateSchedulerEvent)event;
       nodeUpdate(nodeUpdatedEvent.getRMNode());
       break;
-    case APP_ATTEMPT_ADDED:
-      if (!(event instanceof AppAttemptAddedSchedulerEvent)) {
+    case APP_ADDED:
+      if (!(event instanceof AppAddedSchedulerEvent)) {
         throw new RuntimeException("Unexpected event type: " + event);
       }
-      AppAttemptAddedSchedulerEvent appAttemptAddedEvent =
-          (AppAttemptAddedSchedulerEvent) event;
-      String queue = appAttemptAddedEvent.getQueue();
-      addApplicationAttempt(appAttemptAddedEvent.getApplicationAttemptId(),
-        queue, appAttemptAddedEvent.getUser());
+      AppAddedSchedulerEvent appAddedEvent = (AppAddedSchedulerEvent)event;
+      String queue = appAddedEvent.getQueue();
+      addApplication(appAddedEvent.getApplicationAttemptId(), queue,
+          appAddedEvent.getUser());
       break;
-    case APP_ATTEMPT_REMOVED:
-      if (!(event instanceof AppAttemptRemovedSchedulerEvent)) {
+    case APP_REMOVED:
+      if (!(event instanceof AppRemovedSchedulerEvent)) {
         throw new RuntimeException("Unexpected event type: " + event);
       }
-      AppAttemptRemovedSchedulerEvent appAttemptRemovedEvent =
-          (AppAttemptRemovedSchedulerEvent) event;
-      removeApplicationAttempt(appAttemptRemovedEvent.getApplicationAttemptID(),
-        appAttemptRemovedEvent.getFinalAttemptState());
+      AppRemovedSchedulerEvent appRemovedEvent = (AppRemovedSchedulerEvent)event;
+      removeApplication(appRemovedEvent.getApplicationAttemptID(),
+          appRemovedEvent.getFinalAttemptState());
       break;
     case CONTAINER_EXPIRED:
       if (!(event instanceof ContainerExpiredSchedulerEvent)) {

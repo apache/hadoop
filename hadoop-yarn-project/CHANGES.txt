@@ -147,9 +147,6 @@ Release 2.4.0 - UNRELEASED
     YARN-1325. Modified RM HA configuration validation to also ensure that
     multiple RMs are configured. (Xuan Gong via vinodkv)
 
-    YARN-1311. Fixed app specific scheduler-events' names to be app-attempt
-    based. (vinodkv via jianhe)
-
   OPTIMIZATIONS
 
   BUG FIXES
