@@ -150,6 +150,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-5023. TestSnapshotPathINodes.testAllowSnapshot is failing with jdk7
     (Mit Desai via jeagles)
 
+    HDFS-5637. Try to refeatchToken while local read InvalidToken occurred.
+    (Liang Xie via junping_du)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn)
