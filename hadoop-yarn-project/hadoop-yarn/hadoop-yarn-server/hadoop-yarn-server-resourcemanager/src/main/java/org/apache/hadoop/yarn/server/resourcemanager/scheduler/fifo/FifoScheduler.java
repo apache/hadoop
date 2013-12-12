@@ -21,7 +21,6 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -67,11 +66,20 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEven
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanContainerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.UpdatedContainerInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.*;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppReport;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptAddedSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ContainerExpiredSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
@@ -340,7 +348,7 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
     return nodes.get(nodeId);
   }
   
-  private synchronized void addApplication(ApplicationAttemptId appAttemptId,
+  private synchronized void addApplicationAttempt(ApplicationAttemptId appAttemptId,
       String user) {
     // TODO: Fix store
     FiCaSchedulerApp schedulerApp = 
@@ -355,7 +363,7 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
             RMAppAttemptEventType.APP_ACCEPTED));
   }
 
-  private synchronized void doneApplication(
+  private synchronized void doneApplicationAttempt(
       ApplicationAttemptId applicationAttemptId,
       RMAppAttemptState rmAppAttemptFinalState)
       throws IOException {
@@ -689,22 +697,25 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
       nodeUpdate(nodeUpdatedEvent.getRMNode());
     }
     break;
-    case APP_ADDED:
+    case APP_ATTEMPT_ADDED:
     {
-      AppAddedSchedulerEvent appAddedEvent = (AppAddedSchedulerEvent) event;
-      addApplication(appAddedEvent.getApplicationAttemptId(), appAddedEvent
-          .getUser());
+      AppAttemptAddedSchedulerEvent appAttemptAddedEvent =
+          (AppAttemptAddedSchedulerEvent) event;
+      addApplicationAttempt(appAttemptAddedEvent.getApplicationAttemptId(),
+        appAttemptAddedEvent.getUser());
     }
     break;
-    case APP_REMOVED:
+    case APP_ATTEMPT_REMOVED:
     {
-      AppRemovedSchedulerEvent appRemovedEvent = (AppRemovedSchedulerEvent)event;
+      AppAttemptRemovedSchedulerEvent appAttemptRemovedEvent =
+          (AppAttemptRemovedSchedulerEvent) event;
       try {
-        doneApplication(appRemovedEvent.getApplicationAttemptID(),
-            appRemovedEvent.getFinalAttemptState());
+        doneApplicationAttempt(
+          appAttemptRemovedEvent.getApplicationAttemptID(),
+          appAttemptRemovedEvent.getFinalAttemptState());
       } catch(IOException ie) {
         LOG.error("Unable to remove application "
-            + appRemovedEvent.getApplicationAttemptID(), ie);
+            + appAttemptRemovedEvent.getApplicationAttemptID(), ie);
       }
     }
     break;

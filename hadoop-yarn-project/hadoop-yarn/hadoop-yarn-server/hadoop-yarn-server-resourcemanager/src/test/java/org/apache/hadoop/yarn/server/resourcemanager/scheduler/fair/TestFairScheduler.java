@@ -19,10 +19,10 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
 
 import java.io.File;
@@ -33,11 +33,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Set;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.xml.parsers.ParserConfigurationException;
 
@@ -54,10 +54,10 @@ import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPBImpl;
-import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -79,9 +79,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestCapacityScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplication;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptAddedSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
@@ -256,7 +255,7 @@ public class TestFairScheduler {
   private ApplicationAttemptId createSchedulingRequest(int memory, int vcores,
       String queueId, String userId, int numContainers, int priority) {
     ApplicationAttemptId id = createAppAttemptId(this.APP_ID++, this.ATTEMPT_ID++);
-    scheduler.addApplication(id, queueId, userId);
+    scheduler.addApplicationAttempt(id, queueId, userId);
     List<ResourceRequest> ask = new ArrayList<ResourceRequest>();
     ResourceRequest request = createResourceRequest(memory, vcores, ResourceRequest.ANY,
         priority, numContainers, true);
@@ -619,8 +618,8 @@ public class TestFairScheduler {
             null, null, null, false, false, 0, null, null), null, null, 0, null);
     appsMap.put(appAttemptId.getApplicationId(), rmApp);
     
-    AppAddedSchedulerEvent appAddedEvent = new AppAddedSchedulerEvent(
-        appAttemptId, "default", "user1");
+    AppAttemptAddedSchedulerEvent appAddedEvent =
+        new AppAttemptAddedSchedulerEvent(appAttemptId, "default", "user1");
     scheduler.handle(appAddedEvent);
     assertEquals(1, scheduler.getQueueManager().getLeafQueue("user1", true)
         .getRunnableAppSchedulables().size());
@@ -641,8 +640,8 @@ public class TestFairScheduler {
             null, null, null, false, false, 0, null, null), null, null, 0, null);
     appsMap.put(appAttemptId.getApplicationId(), rmApp);
     
-    AppAddedSchedulerEvent appAddedEvent2 = new AppAddedSchedulerEvent(
-        appAttemptId, "default", "user2");
+    AppAttemptAddedSchedulerEvent appAddedEvent2 =
+        new AppAttemptAddedSchedulerEvent(appAttemptId, "default", "user2");
     scheduler.handle(appAddedEvent2);
     assertEquals(0, scheduler.getQueueManager().getLeafQueue("user1", true)
         .getRunnableAppSchedulables().size());
@@ -661,8 +660,8 @@ public class TestFairScheduler {
 
     // submit app with empty queue
     ApplicationAttemptId appAttemptId = createAppAttemptId(1, 1);
-    AppAddedSchedulerEvent appAddedEvent = new AppAddedSchedulerEvent(
-            appAttemptId, "", "user1");
+    AppAttemptAddedSchedulerEvent appAddedEvent =
+        new AppAttemptAddedSchedulerEvent(appAttemptId, "", "user1");
     scheduler.handle(appAddedEvent);
 
     // submission rejected
@@ -787,11 +786,11 @@ public class TestFairScheduler {
     scheduler.reinitialize(conf, resourceManager.getRMContext());
 
     ApplicationAttemptId id11 = createAppAttemptId(1, 1);
-    scheduler.addApplication(id11, "root.queue1", "user1");
+    scheduler.addApplicationAttempt(id11, "root.queue1", "user1");
     ApplicationAttemptId id21 = createAppAttemptId(2, 1);
-    scheduler.addApplication(id21, "root.queue2", "user1");
+    scheduler.addApplicationAttempt(id21, "root.queue2", "user1");
     ApplicationAttemptId id22 = createAppAttemptId(2, 2);
-    scheduler.addApplication(id22, "root.queue2", "user1");
+    scheduler.addApplicationAttempt(id22, "root.queue2", "user1");
 
     int minReqSize = 
         FairSchedulerConfiguration.DEFAULT_RM_SCHEDULER_INCREMENT_ALLOCATION_MB;
@@ -833,8 +832,9 @@ public class TestFairScheduler {
   public void testAppAdditionAndRemoval() throws Exception {
     scheduler.reinitialize(conf, resourceManager.getRMContext());
 
-    AppAddedSchedulerEvent appAddedEvent1 = new AppAddedSchedulerEvent(
-        createAppAttemptId(1, 1), "default", "user1");
+    AppAttemptAddedSchedulerEvent appAddedEvent1 =
+        new AppAttemptAddedSchedulerEvent(createAppAttemptId(1, 1), "default",
+          "user1");
     scheduler.handle(appAddedEvent1);
 
     // Scheduler should have two queues (the default and the one created for user1)
@@ -844,7 +844,7 @@ public class TestFairScheduler {
     assertEquals(1, scheduler.getQueueManager().getLeafQueue("user1", true)
         .getRunnableAppSchedulables().size());
 
-    AppRemovedSchedulerEvent appRemovedEvent1 = new AppRemovedSchedulerEvent(
+    AppAttemptRemovedSchedulerEvent appRemovedEvent1 = new AppAttemptRemovedSchedulerEvent(
         createAppAttemptId(1, 1), RMAppAttemptState.FINISHED);
 
     // Now remove app
@@ -1526,7 +1526,7 @@ public class TestFairScheduler {
     scheduler.handle(nodeEvent2);
     
     ApplicationAttemptId appId = createAppAttemptId(this.APP_ID++, this.ATTEMPT_ID++);
-    scheduler.addApplication(appId, "queue1", "user1");
+    scheduler.addApplicationAttempt(appId, "queue1", "user1");
     
     // 1 request with 2 nodes on the same rack. another request with 1 node on
     // a different rack
@@ -1764,7 +1764,7 @@ public class TestFairScheduler {
 
     ApplicationAttemptId attId =
         ApplicationAttemptId.newInstance(applicationId, this.ATTEMPT_ID++);
-    scheduler.addApplication(attId, queue, user);
+    scheduler.addApplicationAttempt(attId, queue, user);
 
     numTries = 0;
     while (application.getFinishTime() == 0 && numTries < MAX_TRIES) {
@@ -2238,8 +2238,8 @@ public class TestFairScheduler {
     verifyQueueNumRunnable("queue1", 2, 1);
     
     // Remove app 1 and both app 2 and app 4 should becomes runnable in its place
-    AppRemovedSchedulerEvent appRemovedEvent1 = new AppRemovedSchedulerEvent(
-        attId1, RMAppAttemptState.FINISHED);
+    AppAttemptRemovedSchedulerEvent appRemovedEvent1 =
+        new AppAttemptRemovedSchedulerEvent(attId1, RMAppAttemptState.FINISHED);
     scheduler.handle(appRemovedEvent1);
     verifyAppRunnable(attId2, true);
     verifyQueueNumRunnable("queue2", 1, 0);
@@ -2302,8 +2302,8 @@ public class TestFairScheduler {
     
     // Even though the app was removed from sub3, the app from sub2 gets to go
     // because it came in first
-    AppRemovedSchedulerEvent appRemovedEvent1 = new AppRemovedSchedulerEvent(
-        attId2, RMAppAttemptState.FINISHED);
+    AppAttemptRemovedSchedulerEvent appRemovedEvent1 =
+        new AppAttemptRemovedSchedulerEvent(attId2, RMAppAttemptState.FINISHED);
     scheduler.handle(appRemovedEvent1);
     verifyAppRunnable(attId4, true);
     verifyQueueNumRunnable("queue1.sub2", 2, 0);
@@ -2311,16 +2311,16 @@ public class TestFairScheduler {
     verifyQueueNumRunnable("queue1.sub3", 0, 1);
 
     // Now test removal of a non-runnable app
-    AppRemovedSchedulerEvent appRemovedEvent2 = new AppRemovedSchedulerEvent(
-        attId5, RMAppAttemptState.KILLED);
+    AppAttemptRemovedSchedulerEvent appRemovedEvent2 =
+        new AppAttemptRemovedSchedulerEvent(attId5, RMAppAttemptState.KILLED);
     scheduler.handle(appRemovedEvent2);
     assertEquals(0, scheduler.maxRunningEnforcer.usersNonRunnableApps
         .get("user1").size());
     // verify app gone in queue accounting
     verifyQueueNumRunnable("queue1.sub3", 0, 0);
     // verify it doesn't become runnable when there would be space for it
-    AppRemovedSchedulerEvent appRemovedEvent3 = new AppRemovedSchedulerEvent(
-        attId4, RMAppAttemptState.FINISHED);
+    AppAttemptRemovedSchedulerEvent appRemovedEvent3 =
+        new AppAttemptRemovedSchedulerEvent(attId4, RMAppAttemptState.FINISHED);
     scheduler.handle(appRemovedEvent3);
     verifyQueueNumRunnable("queue1.sub2", 1, 0);
     verifyQueueNumRunnable("queue1.sub3", 0, 0);
@@ -2356,7 +2356,7 @@ public class TestFairScheduler {
     // send application request
     ApplicationAttemptId appAttemptId =
             createAppAttemptId(this.APP_ID++, this.ATTEMPT_ID++);
-    fs.addApplication(appAttemptId, "queue11", "user11");
+    fs.addApplicationAttempt(appAttemptId, "queue11", "user11");
     List<ResourceRequest> ask = new ArrayList<ResourceRequest>();
     ResourceRequest request =
             createResourceRequest(1024, 1, ResourceRequest.ANY, 1, 1, true);

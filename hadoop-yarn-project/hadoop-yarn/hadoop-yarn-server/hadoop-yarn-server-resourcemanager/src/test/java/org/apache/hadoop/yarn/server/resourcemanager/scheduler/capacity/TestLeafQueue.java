@@ -63,7 +63,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
@@ -348,7 +348,7 @@ public class TestLeafQueue {
     a.submitApplication(app_0, user_0, B);
     
     when(cs.getApplication(appAttemptId_0)).thenReturn(app_0);
-    AppRemovedSchedulerEvent event = new AppRemovedSchedulerEvent(
+    AppAttemptRemovedSchedulerEvent event = new AppAttemptRemovedSchedulerEvent(
         appAttemptId_0, RMAppAttemptState.FAILED);
     cs.handle(event);
     
@@ -366,7 +366,7 @@ public class TestLeafQueue {
     assertEquals(1, a.getMetrics().getAppsPending());
     
     when(cs.getApplication(appAttemptId_1)).thenReturn(app_0);
-    event = new AppRemovedSchedulerEvent(appAttemptId_0,
+    event = new AppAttemptRemovedSchedulerEvent(appAttemptId_0,
         RMAppAttemptState.FINISHED);
     cs.handle(event);
     
