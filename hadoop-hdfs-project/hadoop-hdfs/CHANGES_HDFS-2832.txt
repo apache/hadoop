@@ -123,3 +123,5 @@ IMPROVEMENTS:
     HDFS-5484. StorageType and State in DatanodeStorageInfo in NameNode is
     not accurate. (Eric Sirianni via Arpit Agarwal)
 
+    HDFS-5648. Get rid of FsDatasetImpl#perVolumeReplicaMap. (Arpit Agarwal)
+

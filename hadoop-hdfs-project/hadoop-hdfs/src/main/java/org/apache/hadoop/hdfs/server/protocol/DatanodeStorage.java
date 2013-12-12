@@ -71,4 +71,23 @@ public class DatanodeStorage {
   public static String generateUuid() {
     return "DS-" + UUID.randomUUID();
   }
+
+  @Override
+  public boolean equals(Object other){
+    if (other == this) {
+      return true;
+    }
+
+    if ((other == null) ||
+        !(other instanceof DatanodeStorage)) {
+      return false;
+    }
+    DatanodeStorage otherStorage = (DatanodeStorage) other;
+    return otherStorage.getStorageID().compareTo(getStorageID()) == 0;
+  }
+
+  @Override
+  public int hashCode() {
+    return getStorageID().hashCode();
+  }
 }

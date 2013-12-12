@@ -90,14 +90,9 @@ class FsVolumeList {
     return remaining;
   }
     
-  void initializeReplicaMaps(Map<String, ReplicaMap> perVolumeReplicaMap,
-                             ReplicaMap globalReplicaMap,
-                             Object mutex) throws IOException {
+  void initializeReplicaMaps(ReplicaMap globalReplicaMap) throws IOException {
     for (FsVolumeImpl v : volumes) {
-      ReplicaMap rMap = new ReplicaMap(mutex);
-      v.getVolumeMap(rMap);
-      perVolumeReplicaMap.put(v.getStorageID(), rMap);
-      globalReplicaMap.addAll(rMap);
+      v.getVolumeMap(globalReplicaMap);
     }
   }
   
