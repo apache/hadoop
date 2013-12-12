@@ -474,16 +474,18 @@ public class ViewFileSystem extends FileSystem {
   }
 
   @Override
-  public void modifyAclEntries(Path path, Iterable<AclEntry> aclSpec) throws IOException {
-    InodeTree.ResolveResult<FileSystem> res =
-      fsState.resolve(getUriPath(path), true);
+  public void modifyAclEntries(Path path, List<AclEntry> aclSpec)
+      throws IOException {
+    InodeTree.ResolveResult<FileSystem> res = fsState.resolve(getUriPath(path),
+        true);
     res.targetFileSystem.modifyAclEntries(res.remainingPath, aclSpec);
   }
 
   @Override
-  public void removeAclEntries(Path path, Iterable<AclEntry> aclSpec) throws IOException {
-    InodeTree.ResolveResult<FileSystem> res =
-      fsState.resolve(getUriPath(path), true);
+  public void removeAclEntries(Path path, List<AclEntry> aclSpec)
+      throws IOException {
+    InodeTree.ResolveResult<FileSystem> res = fsState.resolve(getUriPath(path),
+        true);
     res.targetFileSystem.removeAclEntries(res.remainingPath, aclSpec);
   }
 
@@ -504,7 +506,7 @@ public class ViewFileSystem extends FileSystem {
   }
 
   @Override
-  public void setAcl(Path path, Iterable<AclEntry> aclSpec) throws IOException {
+  public void setAcl(Path path, List<AclEntry> aclSpec) throws IOException {
     InodeTree.ResolveResult<FileSystem> res =
       fsState.resolve(getUriPath(path), true);
     res.targetFileSystem.setAcl(res.remainingPath, aclSpec);

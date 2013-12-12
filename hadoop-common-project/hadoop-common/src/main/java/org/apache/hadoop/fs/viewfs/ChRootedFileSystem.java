@@ -20,6 +20,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.util.EnumSet;
+import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -279,31 +280,31 @@ class ChRootedFileSystem extends FilterFileSystem {
       throws IOException {
     super.setTimes(fullPath(f), mtime, atime);
   }
-  
+
   @Override
-  public void modifyAclEntries(Path path, Iterable<AclEntry> aclSpec) throws IOException {
+  public void modifyAclEntries(Path path, List<AclEntry> aclSpec)
+      throws IOException {
     super.modifyAclEntries(fullPath(path), aclSpec);
   }
 
   @Override
-  public void removeAclEntries(Path path, Iterable<AclEntry> aclSpec) throws IOException {
+  public void removeAclEntries(Path path, List<AclEntry> aclSpec)
+      throws IOException {
     super.removeAclEntries(fullPath(path), aclSpec);
   }
 
   @Override
-  public void removeDefaultAcl(Path path)
-      throws IOException {
+  public void removeDefaultAcl(Path path) throws IOException {
     super.removeDefaultAcl(fullPath(path));
   }
 
   @Override
-  public void removeAcl(Path path)
-      throws IOException {
+  public void removeAcl(Path path) throws IOException {
     super.removeAcl(fullPath(path));
   }
 
   @Override
-  public void setAcl(Path path, Iterable<AclEntry> aclSpec) throws IOException {
+  public void setAcl(Path path, List<AclEntry> aclSpec) throws IOException {
     super.setAcl(fullPath(path), aclSpec);
   }
 

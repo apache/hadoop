@@ -35,6 +35,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.EnumSet;
 import java.util.Iterator;
+import java.util.List;
 
 import static org.apache.hadoop.fs.Options.ChecksumOpt;
 import static org.apache.hadoop.fs.Options.CreateOpts;
@@ -167,11 +168,19 @@ public class TestHarFileSystem {
         String snapshotNewName) throws IOException;
     public void deleteSnapshot(Path path, String snapshotName)
         throws IOException;
-    public void modifyAclEntries(Path path, Iterable<AclEntry> aclSpec) throws IOException;
-    public void removeAclEntries(Path path, Iterable<AclEntry> aclSpec) throws IOException;
+
+    public void modifyAclEntries(Path path, List<AclEntry> aclSpec)
+        throws IOException;
+
+    public void removeAclEntries(Path path, List<AclEntry> aclSpec)
+        throws IOException;
+
     public void removeDefaultAcl(Path path) throws IOException;
+
     public void removeAcl(Path path) throws IOException;
-    public void setAcl(Path path, Iterable<AclEntry> aclSpec) throws IOException;
+
+    public void setAcl(Path path, List<AclEntry> aclSpec) throws IOException;
+
     public AclStatus getAclStatus(Path path) throws IOException;
   }
 

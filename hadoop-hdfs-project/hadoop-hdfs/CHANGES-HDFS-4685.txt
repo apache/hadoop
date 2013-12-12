@@ -12,6 +12,8 @@ HDFS-4685 (Unreleased)
     HDFS-5650. Remove AclReadFlag and AclWriteFlag in FileSystem API.
     (Haohui Mai via cnauroth)
 
+    HDFS-5596. Implement RPC stubs. (Haohui Mai via cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES

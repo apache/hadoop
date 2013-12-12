@@ -36,7 +36,7 @@ public class AclStatus {
   private final String owner;
   private final String group;
   private final boolean stickyBit;
-  private final Iterable<AclEntry> entries;
+  private final List<AclEntry> entries;
 
   /**
    * Returns the file owner.
@@ -68,9 +68,9 @@ public class AclStatus {
   /**
    * Returns the list of all ACL entries, ordered by their natural ordering.
    *
-   * @return Iterable<AclEntry> unmodifiable ordered list of all ACL entries
+   * @return List<AclEntry> unmodifiable ordered list of all ACL entries
    */
-  public Iterable<AclEntry> getEntries() {
+  public List<AclEntry> getEntries() {
     return entries;
   }
 

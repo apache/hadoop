@@ -2278,7 +2278,8 @@ public abstract class FileSystem extends Configured implements Closeable {
    * @param aclSpec List<AclEntry> describing modifications
    * @throws IOException if an ACL could not be modified
    */
-  public void modifyAclEntries(Path path, Iterable<AclEntry> aclSpec) throws IOException {
+  public void modifyAclEntries(Path path, List<AclEntry> aclSpec)
+      throws IOException {
     throw new UnsupportedOperationException(getClass().getSimpleName()
         + " doesn't support modifyAclEntries");
   }
@@ -2291,7 +2292,8 @@ public abstract class FileSystem extends Configured implements Closeable {
    * @param aclSpec List<AclEntry> describing entries to remove
    * @throws IOException if an ACL could not be modified
    */
-  public void removeAclEntries(Path path, Iterable<AclEntry> aclSpec) throws IOException {
+  public void removeAclEntries(Path path, List<AclEntry> aclSpec)
+      throws IOException {
     throw new UnsupportedOperationException(getClass().getSimpleName()
         + " doesn't support removeAclEntries");
   }
@@ -2331,7 +2333,7 @@ public abstract class FileSystem extends Configured implements Closeable {
    *   for user, group, and others for compatibility with permission bits.
    * @throws IOException if an ACL could not be modified
    */
-  public void setAcl(Path path, Iterable<AclEntry> aclSpec) throws IOException {
+  public void setAcl(Path path, List<AclEntry> aclSpec) throws IOException {
     throw new UnsupportedOperationException(getClass().getSimpleName()
         + " doesn't support setAcl");
   }

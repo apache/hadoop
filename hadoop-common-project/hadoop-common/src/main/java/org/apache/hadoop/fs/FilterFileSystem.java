@@ -22,6 +22,7 @@ import java.io.*;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.EnumSet;
+import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -512,29 +513,29 @@ public class FilterFileSystem extends FileSystem {
   }
 
   @Override
-  public void modifyAclEntries(Path path, Iterable<AclEntry> aclSpec) throws IOException {
+  public void modifyAclEntries(Path path, List<AclEntry> aclSpec)
+      throws IOException {
     fs.modifyAclEntries(path, aclSpec);
   }
 
   @Override
-  public void removeAclEntries(Path path, Iterable<AclEntry> aclSpec) throws IOException {
+  public void removeAclEntries(Path path, List<AclEntry> aclSpec)
+      throws IOException {
     fs.removeAclEntries(path, aclSpec);
   }
 
   @Override
-  public void removeDefaultAcl(Path path)
-      throws IOException {
+  public void removeDefaultAcl(Path path) throws IOException {
     fs.removeDefaultAcl(path);
   }
 
   @Override
-  public void removeAcl(Path path)
-      throws IOException {
+  public void removeAcl(Path path) throws IOException {
     fs.removeAcl(path);
   }
 
   @Override
-  public void setAcl(Path path, Iterable<AclEntry> aclSpec) throws IOException {
+  public void setAcl(Path path, List<AclEntry> aclSpec) throws IOException {
     fs.setAcl(path, aclSpec);
   }
 

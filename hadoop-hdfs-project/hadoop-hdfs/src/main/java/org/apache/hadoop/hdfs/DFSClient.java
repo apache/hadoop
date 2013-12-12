@@ -104,6 +104,8 @@ import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.VolumeId;
+import org.apache.hadoop.fs.permission.AclEntry;
+import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.client.ClientMmapManager;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
@@ -2628,5 +2630,83 @@ public class DFSClient implements java.io.Closeable {
   @VisibleForTesting
   public ClientMmapManager getMmapManager() {
     return mmapManager;
+  }
+
+  void modifyAclEntries(String src, List<AclEntry> aclSpec)
+      throws IOException {
+    checkOpen();
+    try {
+      namenode.modifyAclEntries(src, aclSpec);
+    } catch(RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class,
+                                     FileNotFoundException.class,
+                                     SafeModeException.class,
+                                     UnresolvedPathException.class,
+                                     SnapshotAccessControlException.class);
+    }
+  }
+
+  void removeAclEntries(String src, List<AclEntry> aclSpec)
+      throws IOException {
+    checkOpen();
+    try {
+      namenode.removeAclEntries(src, aclSpec);
+    } catch(RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class,
+                                     FileNotFoundException.class,
+                                     SafeModeException.class,
+                                     UnresolvedPathException.class,
+                                     SnapshotAccessControlException.class);
+    }
+  }
+
+  void removeDefaultAcl(String src) throws IOException {
+    checkOpen();
+    try {
+      namenode.removeDefaultAcl(src);
+    } catch(RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class,
+                                     FileNotFoundException.class,
+                                     SafeModeException.class,
+                                     UnresolvedPathException.class,
+                                     SnapshotAccessControlException.class);
+    }
+  }
+
+  void removeAcl(String src) throws IOException {
+    checkOpen();
+    try {
+      namenode.removeAcl(src);
+    } catch(RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class,
+                                     FileNotFoundException.class,
+                                     SafeModeException.class,
+                                     UnresolvedPathException.class,
+                                     SnapshotAccessControlException.class);
+    }
+  }
+
+  void setAcl(String src, List<AclEntry> aclSpec) throws IOException {
+    checkOpen();
+    try {
+      namenode.setAcl(src, aclSpec);
+    } catch(RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class,
+                                     FileNotFoundException.class,
+                                     SafeModeException.class,
+                                     UnresolvedPathException.class,
+                                     SnapshotAccessControlException.class);
+    }
+  }
+
+  AclStatus getAclStatus(String src) throws IOException {
+    checkOpen();
+    try {
+      return namenode.getAclStatus(src);
+    } catch(RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class,
+                                     FileNotFoundException.class,
+                                     UnresolvedPathException.class);
+    }
   }
 }

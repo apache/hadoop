@@ -138,6 +138,8 @@ import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnresolvedLinkException;
+import org.apache.hadoop.fs.permission.AclEntry;
+import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
@@ -7310,6 +7312,30 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
     }
     return results;
+  }
+
+  void modifyAclEntries(String src, Iterable<AclEntry> aclSpec) {
+    throw new UnsupportedOperationException("Unimplemented");
+  }
+
+  void removeAclEntries(String src, Iterable<AclEntry> aclSpec) {
+    throw new UnsupportedOperationException("Unimplemented");
+  }
+
+  void removeDefaultAcl(String src) {
+    throw new UnsupportedOperationException("Unimplemented");
+  }
+
+  void removeAcl(String src) {
+    throw new UnsupportedOperationException("Unimplemented");
+  }
+
+  void setAcl(String src, Iterable<AclEntry> aclSpec) {
+    throw new UnsupportedOperationException("Unimplemented");
+  }
+
+  AclStatus getAclStatus(String src) {
+    throw new UnsupportedOperationException("Unimplemented");
   }
 
   /**

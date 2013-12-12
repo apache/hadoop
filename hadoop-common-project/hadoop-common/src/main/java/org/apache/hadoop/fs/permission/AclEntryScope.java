@@ -38,5 +38,5 @@ public enum AclEntryScope {
    * entry is not inspected as part of permission enforcement on the directory
    * that owns it.
    */
-  DEFAULT
+  DEFAULT;
 }

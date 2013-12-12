@@ -54,5 +54,5 @@ public enum AclEntryType {
    * An ACL entry that applies to all other users that were not covered by one
    * of the more specific ACL entry types.
    */
-  OTHER
+  OTHER;
 }
