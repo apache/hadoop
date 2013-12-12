@@ -282,6 +282,9 @@ Trunk (Unreleased)
 
     HADOOP-10044 Improve the javadoc of rpc code (sanjay Radia)
 
+    HADOOP-8753. LocalDirAllocator throws "ArithmeticException: / by zero" when
+    there is no available space on configured local dir. (Benoy Antony via hitesh)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
