@@ -300,6 +300,8 @@ public class TypeConverter {
             .getCleanupProgress(), fromYarn(jobreport.getJobState()),
         jobPriority, jobreport.getUser(), jobreport.getJobName(), jobreport
             .getJobFile(), trackingUrl, jobreport.isUber());
+    jobStatus.setStartTime(jobreport.getStartTime());
+    jobStatus.setFinishTime(jobreport.getFinishTime());
     jobStatus.setFailureInfo(jobreport.getDiagnostics());
     return jobStatus;
   }
@@ -441,6 +443,7 @@ public class TypeConverter {
       );
     jobStatus.setSchedulingInfo(trackingUrl); // Set AM tracking url
     jobStatus.setStartTime(application.getStartTime());
+    jobStatus.setFinishTime(application.getFinishTime());
     jobStatus.setFailureInfo(application.getDiagnostics());
     jobStatus.setNeededMem(application.getApplicationResourceUsageReport().getNeededResources().getMemory());
     jobStatus.setNumReservedSlots(application.getApplicationResourceUsageReport().getNumReservedContainers());
