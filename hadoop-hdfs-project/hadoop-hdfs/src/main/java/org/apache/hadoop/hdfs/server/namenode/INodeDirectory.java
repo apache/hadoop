@@ -45,20 +45,6 @@ import com.google.common.base.Preconditions;
  */
 public class INodeDirectory extends INodeWithAdditionalFields
     implements INodeDirectoryAttributes {
-  /** Directory related features such as quota and snapshots. */
-  public static abstract class Feature implements INode.Feature<Feature> {
-    private Feature nextFeature;
-
-    @Override
-    public Feature getNextFeature() {
-      return nextFeature;
-    }
-
-    @Override
-    public void setNextFeature(Feature next) {
-      this.nextFeature = next;
-    }
-  }
 
   /** Cast INode to INodeDirectory. */
   public static INodeDirectory valueOf(INode inode, Object path
@@ -78,9 +64,6 @@ public class INodeDirectory extends INodeWithAdditionalFields
 
   private List<INode> children = null;
   
-  /** A linked list of {@link Feature}s. */
-  private Feature headFeature = null;
-
   /** constructor */
   public INodeDirectory(long id, byte[] name, PermissionStatus permissions,
       long mtime) {
@@ -102,7 +85,7 @@ public class INodeDirectory extends INodeWithAdditionalFields
       }
     }
     if (copyFeatures) {
-      this.headFeature = other.headFeature;
+      this.features = other.features;
     }
   }
 
@@ -160,7 +143,7 @@ public class INodeDirectory extends INodeWithAdditionalFields
    * otherwise, return null.
    */
   public final DirectoryWithQuotaFeature getDirectoryWithQuotaFeature() {
-    for(Feature f = headFeature; f != null; f = f.nextFeature) {
+    for (Feature f : features) {
       if (f instanceof DirectoryWithQuotaFeature) {
         return (DirectoryWithQuotaFeature)f;
       }
@@ -180,14 +163,6 @@ public class INodeDirectory extends INodeWithAdditionalFields
         nsQuota, dsQuota);
     addFeature(quota);
     return quota;
-  }
-
-  private void addFeature(Feature f) {
-    headFeature = INode.Feature.Util.addFeature(f, headFeature);
-  }
-
-  private void removeFeature(Feature f) {
-    headFeature = INode.Feature.Util.removeFeature(f, headFeature);
   }
 
   private int searchChildren(byte[] name) {
