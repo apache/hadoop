@@ -178,6 +178,9 @@ Release 2.4.0 - UNRELEASED
     TestFileContextResolveAfs and TestStat in branch-2 (Mit Desai via Colin
     Patrick McCabe)
 
+    HADOOP-8753. LocalDirAllocator throws "ArithmeticException: / by zero" when
+    there is no available space on configured local dir. (Benoy Antony via hitesh)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
