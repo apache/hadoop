@@ -76,7 +76,7 @@ public class TestDatanodeManager {
           it.next();
         }
         DatanodeRegistration toRemove = it.next().getValue();
-        Log.info("Removing node " + toRemove.getStorageID() + " ip " +
+        Log.info("Removing node " + toRemove.getDatanodeUuid() + " ip " +
         toRemove.getXferAddr() + " version : " + toRemove.getSoftwareVersion());
 
         //Remove that random node
@@ -90,7 +90,7 @@ public class TestDatanodeManager {
         String storageID = "someStorageID" + rng.nextInt(5000);
 
         DatanodeRegistration dr = Mockito.mock(DatanodeRegistration.class);
-        Mockito.when(dr.getStorageID()).thenReturn(storageID);
+        Mockito.when(dr.getDatanodeUuid()).thenReturn(storageID);
 
         //If this storageID had already been registered before
         if(sIdToDnReg.containsKey(storageID)) {
@@ -110,7 +110,7 @@ public class TestDatanodeManager {
         Mockito.when(dr.getSoftwareVersion()).thenReturn(
           "version" + rng.nextInt(5));
 
-        Log.info("Registering node storageID: " + dr.getStorageID() +
+        Log.info("Registering node storageID: " + dr.getDatanodeUuid() +
           ", version: " + dr.getSoftwareVersion() + ", IP address: "
           + dr.getXferAddr());
 

@@ -24,7 +24,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
-import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.junit.Test;
 
@@ -47,7 +47,7 @@ public class TestCommitBlockSynchronization {
       throws IOException {
     Configuration conf = new Configuration();
     FSImage image = new FSImage(conf);
-    DatanodeDescriptor[] targets = new DatanodeDescriptor[0];
+    final DatanodeStorageInfo[] targets = {};
 
     FSNamesystem namesystem = new FSNamesystem(conf, image);
     FSNamesystem namesystemSpy = spy(namesystem);

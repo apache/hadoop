@@ -50,7 +50,10 @@ message ExtendedBlockProto {
 message DatanodeIDProto {
   required string ipAddr = 1;    // IP address
   required string hostName = 2;  // hostname
-  required string storageID = 3; // unique storage id
+  required string datanodeUuid = 3;     // UUID assigned to the Datanode. For
+                                        // upgraded clusters this is the same
+                                        // as the original StorageID of the
+                                        // Datanode.
   required uint32 xferPort = 4;  // data streaming port
   required uint32 infoPort = 5;  // datanode http port
   required uint32 ipcPort = 6;   // ipc server port
@@ -116,6 +119,20 @@ message FsPermissionProto {
   required uint32 perm = 1;       // Actually a short - only 16bits used
 }
 
+/**
+ * Types of recognized storage media.
+ */
+enum StorageTypeProto {
+  DISK = 1;
+  SSD = 2;
+}
+
+/**
+ * A list of storage IDs. 
+ */
+message StorageUuidsProto {
+  repeated string storageUuids = 1;
+}
 
 /**
  * A LocatedBlock gives information about a block and its location.
@@ -130,6 +147,8 @@ message LocatedBlockProto {
 
   required hadoop.common.TokenProto blockToken = 5;
   repeated bool isCached = 6 [packed=true]; // if a location in locs is cached
+  repeated StorageTypeProto storageTypes = 7;
+  repeated string storageIDs = 8;
 }
 
 message DataEncryptionKeyProto {
@@ -336,7 +355,8 @@ message BlockProto {
  */
 message BlockWithLocationsProto {
   required BlockProto block = 1;   // Block
-  repeated string storageIDs = 2;  // Datanodes with replicas of the block
+  repeated string datanodeUuids = 2; // Datanodes with replicas of the block
+  repeated string storageUuids = 3;  // Storages with replicas of the block
 }
 
 /**
@@ -438,4 +458,5 @@ message SnapshotInfoProto {
   required string createTime = 6;
   // TODO: do we need access time?
 }
+
 

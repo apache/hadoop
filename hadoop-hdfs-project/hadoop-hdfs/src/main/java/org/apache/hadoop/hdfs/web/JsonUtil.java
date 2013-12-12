@@ -276,10 +276,11 @@ public class JsonUtil {
       return null;
     }
 
+    // TODO: Fix storageID
     final Map<String, Object> m = new TreeMap<String, Object>();
     m.put("ipAddr", datanodeinfo.getIpAddr());
     m.put("hostName", datanodeinfo.getHostName());
-    m.put("storageID", datanodeinfo.getStorageID());
+    m.put("storageID", datanodeinfo.getDatanodeUuid());
     m.put("xferPort", datanodeinfo.getXferPort());
     m.put("infoPort", datanodeinfo.getInfoPort());
     m.put("infoSecurePort", datanodeinfo.getInfoSecurePort());
@@ -329,6 +330,7 @@ public class JsonUtil {
       return null;
     }
 
+    // TODO: Fix storageID
     return new DatanodeInfo(
         (String)m.get("ipAddr"),
         (String)m.get("hostName"),
@@ -412,7 +414,7 @@ public class JsonUtil {
         (Object[])m.get("cachedLocations"));
 
     final LocatedBlock locatedblock = new LocatedBlock(b, locations,
-        startOffset, isCorrupt, cachedLocations);
+        null, null, startOffset, isCorrupt, cachedLocations);
     locatedblock.setBlockToken(toBlockToken((Map<?, ?>)m.get("blockToken")));
     return locatedblock;
   }

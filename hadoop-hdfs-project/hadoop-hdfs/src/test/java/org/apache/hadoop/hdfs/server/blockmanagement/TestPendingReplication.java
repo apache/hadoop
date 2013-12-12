@@ -43,8 +43,6 @@ import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo.BlockStat
 import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
 import org.junit.Test;
 
-import com.google.common.base.Preconditions;
-
 /**
  * This class tests the internals of PendingReplicationBlocks.java,
  * as well as how PendingReplicationBlocks acts in BlockManager
@@ -54,22 +52,7 @@ public class TestPendingReplication {
   private static final int DFS_REPLICATION_INTERVAL = 1;
   // Number of datanodes in the cluster
   private static final int DATANODE_COUNT = 5;
-  
-  private DatanodeDescriptor genDatanodeId(int seed) {
-    seed = seed % 256;
-    String ip = seed + "." + seed + "." + seed + "." + seed;
-    return DFSTestUtil.getDatanodeDescriptor(ip, null);
-  }
 
-  private DatanodeDescriptor[] genDatanodes(int number) {
-    Preconditions.checkArgument(number >= 0);
-    DatanodeDescriptor[] nodes = new DatanodeDescriptor[number];
-    for (int i = 0; i < number; i++) {
-      nodes[i] = genDatanodeId(i);
-    }
-    return nodes;
-  }
-  
   @Test
   public void testPendingReplication() {
     PendingReplicationBlocks pendingReplications;
@@ -79,9 +62,13 @@ public class TestPendingReplication {
     //
     // Add 10 blocks to pendingReplications.
     //
-    for (int i = 0; i < 10; i++) {
+    DatanodeStorageInfo[] storages = DFSTestUtil.createDatanodeStorageInfos(10);
+    for (int i = 0; i < storages.length; i++) {
       Block block = new Block(i, i, 0);
-      pendingReplications.increment(block, genDatanodes(i));
+      DatanodeStorageInfo[] targets = new DatanodeStorageInfo[i];
+      System.arraycopy(storages, 0, targets, 0, i);
+      pendingReplications.increment(block,
+          DatanodeStorageInfo.toDatanodeDescriptors(targets));
     }
     assertEquals("Size of pendingReplications ",
                  10, pendingReplications.size());
@@ -91,16 +78,18 @@ public class TestPendingReplication {
     // remove one item and reinsert it
     //
     Block blk = new Block(8, 8, 0);
-    pendingReplications.decrement(blk, genDatanodeId(7)); // removes one replica
+    pendingReplications.decrement(blk, storages[7].getDatanodeDescriptor()); // removes one replica
     assertEquals("pendingReplications.getNumReplicas ",
                  7, pendingReplications.getNumReplicas(blk));
 
     for (int i = 0; i < 7; i++) {
       // removes all replicas
-      pendingReplications.decrement(blk, genDatanodeId(i));
+      pendingReplications.decrement(blk, storages[i].getDatanodeDescriptor());
     }
     assertTrue(pendingReplications.size() == 9);
-    pendingReplications.increment(blk, genDatanodes(8));
+    pendingReplications.increment(blk,
+        DatanodeStorageInfo.toDatanodeDescriptors(
+            DFSTestUtil.createDatanodeStorageInfos(8)));
     assertTrue(pendingReplications.size() == 10);
 
     //
@@ -128,7 +117,9 @@ public class TestPendingReplication {
 
     for (int i = 10; i < 15; i++) {
       Block block = new Block(i, i, 0);
-      pendingReplications.increment(block, genDatanodes(i));
+      pendingReplications.increment(block,
+          DatanodeStorageInfo.toDatanodeDescriptors(
+              DFSTestUtil.createDatanodeStorageInfos(i)));
     }
     assertTrue(pendingReplications.size() == 15);
 
@@ -210,7 +201,7 @@ public class TestPendingReplication {
           DatanodeRegistration dnR = datanodes.get(i).getDNRegistrationForBP(
               poolId);
           StorageReceivedDeletedBlocks[] report = { 
-              new StorageReceivedDeletedBlocks(dnR.getStorageID(),
+              new StorageReceivedDeletedBlocks("Fake-storage-ID-Ignored",
               new ReceivedDeletedBlockInfo[] { new ReceivedDeletedBlockInfo(
                   blocks[0], BlockStatus.RECEIVED_BLOCK, "") }) };
           cluster.getNameNodeRpc().blockReceivedAndDeleted(dnR, poolId, report);
@@ -227,7 +218,7 @@ public class TestPendingReplication {
           DatanodeRegistration dnR = datanodes.get(i).getDNRegistrationForBP(
               poolId);
           StorageReceivedDeletedBlocks[] report = 
-            { new StorageReceivedDeletedBlocks(dnR.getStorageID(),
+            { new StorageReceivedDeletedBlocks("Fake-storage-ID-Ignored",
               new ReceivedDeletedBlockInfo[] { new ReceivedDeletedBlockInfo(
                   blocks[0], BlockStatus.RECEIVED_BLOCK, "") }) };
           cluster.getNameNodeRpc().blockReceivedAndDeleted(dnR, poolId, report);
@@ -291,9 +282,9 @@ public class TestPendingReplication {
       cluster.getNamesystem().writeLock();
       try {
         bm.findAndMarkBlockAsCorrupt(block.getBlock(), block.getLocations()[0],
-            "TEST");
+            "STORAGE_ID", "TEST");
         bm.findAndMarkBlockAsCorrupt(block.getBlock(), block.getLocations()[1],
-            "TEST");
+            "STORAGE_ID", "TEST");
       } finally {
         cluster.getNamesystem().writeUnlock();
       }

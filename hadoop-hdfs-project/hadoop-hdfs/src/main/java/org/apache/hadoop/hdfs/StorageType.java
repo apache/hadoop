@@ -15,24 +15,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import java.io.IOException;
+package org.apache.hadoop.hdfs;
 
-/** 
- * This interface is used by the block manager to expose a
- * few characteristics of a collection of Block/BlockUnderConstruction.
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
+/**
+ * Defines the types of supported storage media. The default storage
+ * medium is assumed to be DISK.
  */
-public interface MutableBlockCollection extends BlockCollection {
-  /**
-   * Set the block at the given index.
-   */
-  public void setBlock(int index, BlockInfo blk);
+@InterfaceAudience.Public
+@InterfaceStability.Unstable
+public enum StorageType {
+  DISK,
+  SSD;
 
-  /**
-   * Convert the last block of the collection to an under-construction block
-   * and set the locations.
-   */
-  public BlockInfoUnderConstruction setLastBlock(BlockInfo lastBlock,
-      DatanodeStorageInfo[] storages) throws IOException;
+  public static StorageType DEFAULT = DISK;
 }
