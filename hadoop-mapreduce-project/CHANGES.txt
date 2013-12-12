@@ -153,6 +153,9 @@ Release 2.3.0 - UNRELEASED
     event: TA_TOO_MANY_FETCH_FAILURE at KILLED for TaskAttemptImpl (Gera
     Shegalov via jlowe)
 
+    MAPREDUCE-5674. Missing start and finish time in mapred.JobStatus.
+    (Chuan Liu via cnauroth)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
