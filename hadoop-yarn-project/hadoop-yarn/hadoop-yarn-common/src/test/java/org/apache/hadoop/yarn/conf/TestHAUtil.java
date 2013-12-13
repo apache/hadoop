@@ -39,6 +39,7 @@ public class TestHAUtil {
   private static final String RM1_ADDRESS_UNTRIMMED = "  \t\t\n 1.2.3.4:8021  \n\t ";
   private static final String RM1_ADDRESS = RM1_ADDRESS_UNTRIMMED.trim();
   private static final String RM2_ADDRESS = "localhost:8022";
+  private static final String RM3_ADDRESS = "localhost:8033";
   private static final String RM1_NODE_ID_UNTRIMMED = "rm1 ";
   private static final String RM1_NODE_ID = RM1_NODE_ID_UNTRIMMED.trim();
   private static final String RM2_NODE_ID = "rm2";
@@ -113,8 +114,13 @@ public class TestHAUtil {
     }
 
     conf.clear();
-    conf.set(YarnConfiguration.RM_HA_IDS, RM_INVALID_NODE_ID + ","
-        + RM1_NODE_ID);
+    // simulate the case YarnConfiguration.RM_HA_ID is not set
+    conf.set(YarnConfiguration.RM_HA_IDS, RM1_NODE_ID + ","
+        + RM2_NODE_ID);
+    for (String confKey : YarnConfiguration.RM_SERVICES_ADDRESS_CONF_KEYS) {
+      conf.set(HAUtil.addSuffix(confKey, RM1_NODE_ID), RM1_ADDRESS);
+      conf.set(HAUtil.addSuffix(confKey, RM2_NODE_ID), RM2_ADDRESS);
+    }
     try {
       HAUtil.verifyAndSetConfiguration(conf);
     } catch (YarnRuntimeException e) {
@@ -165,6 +171,7 @@ public class TestHAUtil {
     for (String confKey : YarnConfiguration.RM_SERVICES_ADDRESS_CONF_KEYS) {
       conf.set(HAUtil.addSuffix(confKey, RM1_NODE_ID), RM1_ADDRESS_UNTRIMMED);
       conf.set(HAUtil.addSuffix(confKey, RM2_NODE_ID), RM2_ADDRESS);
+      conf.set(HAUtil.addSuffix(confKey, RM3_NODE_ID), RM3_ADDRESS);
     }
     try {
       HAUtil.verifyAndSetConfiguration(conf);

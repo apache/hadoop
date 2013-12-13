@@ -58,13 +58,17 @@ public class HAUtil {
    */
   public static void verifyAndSetConfiguration(Configuration conf)
     throws YarnRuntimeException {
-    verifyAndSetRMHAIds(conf);
-    verifyAndSetRMHAId(conf);
+    verifyAndSetRMHAIdsList(conf);
+    verifyAndSetCurrentRMHAId(conf);
     verifyAndSetAllServiceAddresses(conf);
   }
 
-
-  private static void verifyAndSetRMHAIds(Configuration conf) {
+  /**
+   * Verify configuration that there are at least two RM-ids
+   * and RPC addresses are specified for each RM-id.
+   * Then set the RM-ids.
+   */
+  private static void verifyAndSetRMHAIdsList(Configuration conf) {
     Collection<String> ids =
       conf.getTrimmedStringCollection(YarnConfiguration.RM_HA_IDS);
     if (ids.size() < 2) {
@@ -76,6 +80,24 @@ public class HAUtil {
 
     StringBuilder setValue = new StringBuilder();
     for (String id: ids) {
+      // verify the RM service addresses configurations for every RMIds
+      for (String prefix : YarnConfiguration.RM_SERVICES_ADDRESS_CONF_KEYS) {
+        String confKey = null;
+        try {
+          confKey = addSuffix(prefix, id);
+          if (conf.getTrimmed(confKey) == null) {
+            throwBadConfigurationException(getNeedToSetValueMessage(confKey));
+          }
+        } catch (IllegalArgumentException iae) {
+          String errmsg = iae.getMessage();
+          if (confKey == null) {
+            // Error at addSuffix
+            errmsg = getInvalidValueMessage(YarnConfiguration.RM_HA_ID,
+              getRMHAId(conf));
+          }
+          throwBadConfigurationException(errmsg);
+        }
+      }
       setValue.append(id);
       setValue.append(",");
     }
@@ -83,7 +105,7 @@ public class HAUtil {
       setValue.substring(0, setValue.length() - 1));
   }
 
-  private static void verifyAndSetRMHAId(Configuration conf) {
+  private static void verifyAndSetCurrentRMHAId(Configuration conf) {
     String rmId = conf.getTrimmed(YarnConfiguration.RM_HA_ID);
     if (rmId == null) {
       throwBadConfigurationException(
