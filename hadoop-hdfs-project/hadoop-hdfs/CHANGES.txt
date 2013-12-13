@@ -153,6 +153,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-5637. Try to refeatchToken while local read InvalidToken occurred.
     (Liang Xie via junping_du)
 
+    HDFS-5652. Refactor invalid block token exception handling in DFSInputStream.
+    (Liang Xie via junping_du)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn)
