@@ -57,7 +57,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.Task.State;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptAddedSchedulerEvent;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
@@ -166,7 +166,7 @@ public class Application {
     resourceManager.getClientRMService().submitApplication(request);
     
     // Notify scheduler
-    AppAddedSchedulerEvent appAddedEvent1 = new AppAddedSchedulerEvent(
+    AppAttemptAddedSchedulerEvent appAddedEvent1 = new AppAttemptAddedSchedulerEvent(
             this.applicationAttemptId, this.queue, this.user);
     scheduler.handle(appAddedEvent1);
   }
