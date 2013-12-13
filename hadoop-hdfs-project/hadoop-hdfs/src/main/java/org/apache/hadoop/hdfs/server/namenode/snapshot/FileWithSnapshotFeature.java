@@ -32,7 +32,7 @@ import org.apache.hadoop.hdfs.server.namenode.Quota;
  * Feature for file with snapshot-related information.
  */
 @InterfaceAudience.Private
-public class FileWithSnapshotFeature extends INodeFile.Feature {
+public class FileWithSnapshotFeature implements INode.Feature {
   private final FileDiffList diffs;
   private boolean isCurrentFileDeleted = false;
   

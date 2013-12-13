@@ -16,34 +16,20 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.scheduler.event;
+package org.apache.hadoop.hdfs;
 
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
-public class AppAddedSchedulerEvent extends SchedulerEvent {
+/**
+ * Defines the types of supported storage media. The default storage
+ * medium is assumed to be DISK.
+ */
+@InterfaceAudience.Public
+@InterfaceStability.Unstable
+public enum StorageType {
+  DISK,
+  SSD;
 
-  private final ApplicationAttemptId applicationAttemptId;
-  private final String queue;
-  private final String user;
-
-  public AppAddedSchedulerEvent(ApplicationAttemptId applicationAttemptId,
-      String queue, String user) {
-    super(SchedulerEventType.APP_ADDED);
-    this.applicationAttemptId = applicationAttemptId;
-    this.queue = queue;
-    this.user = user;
-  }
-
-  public ApplicationAttemptId getApplicationAttemptId() {
-    return applicationAttemptId;
-  }
-
-  public String getQueue() {
-    return queue;
-  }
-
-  public String getUser() {
-    return user;
-  }
-
+  public static StorageType DEFAULT = DISK;
 }

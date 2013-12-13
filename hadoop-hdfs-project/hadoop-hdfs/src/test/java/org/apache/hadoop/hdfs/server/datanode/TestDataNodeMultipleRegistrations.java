@@ -163,7 +163,7 @@ public class TestDataNodeMultipleRegistrations {
 
       for (BPOfferService bpos : dn.getAllBpOs()) {
         LOG.info("reg: bpid=" + "; name=" + bpos.bpRegistration + "; sid="
-            + bpos.bpRegistration.getStorageID() + "; nna=" +
+            + bpos.bpRegistration.getDatanodeUuid() + "; nna=" +
             getNNSocketAddress(bpos));
       }
 

@@ -95,6 +95,9 @@ public abstract class INodeWithAdditionalFields extends INode
 
   /** For implementing {@link LinkedElement}. */
   private LinkedElement next = null;
+  /** An array {@link Feature}s. */
+  private static final Feature[] EMPTY_FEATURE = new Feature[0];
+  protected Feature[] features = EMPTY_FEATURE;
 
   private INodeWithAdditionalFields(INode parent, long id, byte[] name,
       long permission, long modificationTime, long accessTime) {
@@ -261,5 +264,46 @@ public abstract class INodeWithAdditionalFields extends INode
   @Override
   public final void setAccessTime(long accessTime) {
     this.accessTime = accessTime;
+  }
+
+  protected void addFeature(Feature f) {
+    int size = features.length;
+    Feature[] arr = new Feature[size + 1];
+    if (size != 0) {
+      System.arraycopy(features, 0, arr, 0, size);
+    }
+    arr[size] = f;
+    features = arr;
+  }
+
+  protected void removeFeature(Feature f) {
+    int size = features.length;
+    Preconditions.checkState(size > 0, "Feature "
+        + f.getClass().getSimpleName() + " not found.");
+
+    if (size == 1) {
+      Preconditions.checkState(features[0] == f, "Feature "
+          + f.getClass().getSimpleName() + " not found.");
+      features = EMPTY_FEATURE;
+      return;
+    }
+
+    Feature[] arr = new Feature[size - 1];
+    int j = 0;
+    boolean overflow = false;
+    for (Feature f1 : features) {
+      if (f1 != f) {
+        if (j == size - 1) {
+          overflow = true;
+          break;
+        } else {
+          arr[j++] = f1;
+        }
+      }
+    }
+
+    Preconditions.checkState(!overflow && j == size - 1, "Feature "
+        + f.getClass().getSimpleName() + " not found.");
+    features = arr;
   }
 }

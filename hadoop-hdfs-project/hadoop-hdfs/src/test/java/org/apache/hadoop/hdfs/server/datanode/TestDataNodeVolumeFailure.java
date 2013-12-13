@@ -42,11 +42,13 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.net.TcpPeerServer;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
@@ -151,13 +153,23 @@ public class TestDataNodeVolumeFailure {
     DataNode dn = cluster.getDataNodes().get(1); //corresponds to dir data3
     String bpid = cluster.getNamesystem().getBlockPoolId();
     DatanodeRegistration dnR = dn.getDNRegistrationForBP(bpid);
-    final StorageBlockReport[] report = {
-        new StorageBlockReport(
-            new DatanodeStorage(dnR.getStorageID()),
-            DataNodeTestUtils.getFSDataset(dn).getBlockReport(bpid
-                ).getBlockListAsLongs())
-    };
-    cluster.getNameNodeRpc().blockReport(dnR, bpid, report);
+    
+    Map<DatanodeStorage, BlockListAsLongs> perVolumeBlockLists =
+        dn.getFSDataset().getBlockReports(bpid);
+
+    // Send block report
+    StorageBlockReport[] reports =
+        new StorageBlockReport[perVolumeBlockLists.size()];
+
+    int reportIndex = 0;
+    for(Map.Entry<DatanodeStorage, BlockListAsLongs> kvPair : perVolumeBlockLists.entrySet()) {
+        DatanodeStorage dnStorage = kvPair.getKey();
+        BlockListAsLongs blockList = kvPair.getValue();
+        reports[reportIndex++] =
+            new StorageBlockReport(dnStorage, blockList.getBlockListAsLongs());
+    }
+    
+    cluster.getNameNodeRpc().blockReport(dnR, bpid, reports);
 
     // verify number of blocks and files...
     verify(filename, filesize);

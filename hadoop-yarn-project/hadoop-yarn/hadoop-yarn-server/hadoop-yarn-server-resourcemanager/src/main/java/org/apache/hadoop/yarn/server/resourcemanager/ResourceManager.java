@@ -27,6 +27,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ha.HAServiceProtocol;
+import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.http.HttpConfig.Policy;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
@@ -43,6 +45,7 @@ import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
@@ -188,6 +191,12 @@ public class ResourceManager extends CompositeService implements Recoverable {
     addService(adminService);
     rmContext.setRMAdminService(adminService);
 
+    this.rmContext.setHAEnabled(HAUtil.isHAEnabled(conf));
+    if (this.rmContext.isHAEnabled()) {
+      HAUtil.verifyAndSetConfiguration(conf);
+    }
+    createAndInitActiveServices();
+
     super.serviceInit(conf);
   }
   
@@ -217,9 +226,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
   }
 
   protected RMStateStoreOperationFailedEventDispatcher
-  createRMStateStoreOperationFailedEventDispatcher() {
-    return new RMStateStoreOperationFailedEventDispatcher(
-        rmContext.getRMAdminService());
+      createRMStateStoreOperationFailedEventDispatcher() {
+    return new RMStateStoreOperationFailedEventDispatcher(rmContext, this);
   }
 
   protected Dispatcher createDispatcher() {
@@ -655,11 +663,14 @@ public class ResourceManager extends CompositeService implements Recoverable {
   @Private
   public static class RMStateStoreOperationFailedEventDispatcher implements
       EventHandler<RMStateStoreOperationFailedEvent> {
-    private final AdminService adminService;
 
-    public RMStateStoreOperationFailedEventDispatcher(
-        AdminService adminService) {
-      this.adminService = adminService;
+    private final RMContext rmContext;
+    private final ResourceManager rm;
+
+    public RMStateStoreOperationFailedEventDispatcher(RMContext rmContext,
+        ResourceManager resourceManager) {
+      this.rmContext = rmContext;
+      this.rm = resourceManager;
     }
 
     @Override
@@ -671,16 +682,14 @@ public class ResourceManager extends CompositeService implements Recoverable {
       }
       if (event.getType() == RMStateStoreOperationFailedEventType.FENCED) {
         LOG.info("RMStateStore has been fenced");
-        synchronized(adminService) {
-          if (adminService.haEnabled) {
-            try {
-              // Transition to standby and reinit active services
-              LOG.info("Transitioning RM to Standby mode");
-              adminService.transitionToStandby(true);
-              return;
-            } catch (Exception e) {
-              LOG.error("Failed to transition RM to Standby mode.");
-            }
+        if (rmContext.isHAEnabled()) {
+          try {
+            // Transition to standby and reinit active services
+            LOG.info("Transitioning RM to Standby mode");
+            rm.transitionToStandby(true);
+            return;
+          } catch (Exception e) {
+            LOG.error("Failed to transition RM to Standby mode.");
           }
         }
       }
@@ -826,10 +835,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
     webApp = builder.start(new RMWebApp(this));
   }
 
-  void setConf(Configuration configuration) {
-    conf = configuration;
-  }
-
   /**
    * Helper method to create and init {@link #activeServices}. This creates an
    * instance of {@link RMActiveServices} and initializes it.
@@ -870,6 +875,39 @@ public class ResourceManager extends CompositeService implements Recoverable {
     return activeServices != null && activeServices.isInState(STATE.STARTED);
   }
 
+  synchronized void transitionToActive() throws Exception {
+    if (rmContext.getHAServiceState() ==
+        HAServiceProtocol.HAServiceState.ACTIVE) {
+      LOG.info("Already in active state");
+      return;
+    }
+
+    LOG.info("Transitioning to active state");
+    startActiveServices();
+    rmContext.setHAServiceState(HAServiceProtocol.HAServiceState.ACTIVE);
+    LOG.info("Transitioned to active state");
+  }
+
+  synchronized void transitionToStandby(boolean initialize)
+      throws Exception {
+    if (rmContext.getHAServiceState() ==
+        HAServiceProtocol.HAServiceState.STANDBY) {
+      LOG.info("Already in standby state");
+      return;
+    }
+
+    LOG.info("Transitioning to standby state");
+    if (rmContext.getHAServiceState() ==
+        HAServiceProtocol.HAServiceState.ACTIVE) {
+      stopActiveServices();
+      if (initialize) {
+        createAndInitActiveServices();
+      }
+    }
+    rmContext.setHAServiceState(HAServiceProtocol.HAServiceState.STANDBY);
+    LOG.info("Transitioned to standby state");
+  }
+
   @Override
   protected void serviceStart() throws Exception {
     try {
@@ -877,6 +915,13 @@ public class ResourceManager extends CompositeService implements Recoverable {
     } catch(IOException ie) {
       throw new YarnRuntimeException("Failed to login", ie);
     }
+
+    if (this.rmContext.isHAEnabled()) {
+      transitionToStandby(true);
+    } else {
+      transitionToActive();
+    }
+
     super.serviceStart();
   }
   
@@ -888,6 +933,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
   @Override
   protected void serviceStop() throws Exception {
     super.serviceStop();
+    transitionToStandby(false);
+    rmContext.setHAServiceState(HAServiceState.STOPPING);
   }
   
   protected ResourceTrackerService createResourceTrackerService() {

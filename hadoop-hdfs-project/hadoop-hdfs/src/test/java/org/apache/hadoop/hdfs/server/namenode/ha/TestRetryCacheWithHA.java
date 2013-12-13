@@ -715,9 +715,10 @@ public class TestRetryCacheWithHA {
       DatanodeInfo[] newNodes = new DatanodeInfo[2];
       newNodes[0] = nodes[0];
       newNodes[1] = nodes[1];
+      String[] storageIDs = {"s0", "s1"};
       
       client.getNamenode().updatePipeline(client.getClientName(), oldBlock,
-          newBlock, newNodes);
+          newBlock, newNodes, storageIDs);
       out.close();
     }
 
@@ -727,10 +728,10 @@ public class TestRetryCacheWithHA {
           .getINode4Write(file).asFile();
       BlockInfoUnderConstruction blkUC = 
           (BlockInfoUnderConstruction) (fileNode.getBlocks())[1];
-      int datanodeNum = blkUC.getExpectedLocations().length;
+      int datanodeNum = blkUC.getExpectedStorageLocations().length;
       for (int i = 0; i < CHECKTIMES && datanodeNum != 2; i++) {
         Thread.sleep(1000);
-        datanodeNum = blkUC.getExpectedLocations().length;
+        datanodeNum = blkUC.getExpectedStorageLocations().length;
       }
       return datanodeNum == 2;
     }

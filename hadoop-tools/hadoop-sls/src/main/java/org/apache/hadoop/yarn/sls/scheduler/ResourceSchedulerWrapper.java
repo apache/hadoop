@@ -17,67 +17,6 @@
  */
 package org.apache.hadoop.yarn.sls.scheduler;
 
-import org.apache.hadoop.util.ShutdownHookManager;
-import org.apache.hadoop.yarn.sls.SLSRunner;
-import org.apache.hadoop.yarn.sls.conf.SLSConfiguration;
-import org.apache.hadoop.yarn.sls.web.SLSWebApp;
-import com.codahale.metrics.Counter;
-import com.codahale.metrics.CsvReporter;
-import com.codahale.metrics.Gauge;
-import com.codahale.metrics.Histogram;
-import com.codahale.metrics.MetricRegistry;
-import com.codahale.metrics.SlidingWindowReservoir;
-import com.codahale.metrics.Timer;
-
-import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.conf.Configurable;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.ReflectionUtils;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
-import org.apache.hadoop.yarn.api.records.Container;
-import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
-import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.ContainerStatus;
-import org.apache.hadoop.yarn.api.records.NodeId;
-import org.apache.hadoop.yarn.api.records.QueueInfo;
-import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
-import org.apache.hadoop.yarn.api.records.QueueACL;
-import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.api.records.ResourceRequest;
-import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
-import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
-import org.apache.hadoop.yarn.server.resourcemanager.rmnode
-        .UpdatedContainerInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler
-        .ResourceScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler
-        .SchedulerAppReport;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler
-        .SchedulerNodeReport;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
-        .CapacityScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event
-        .AppAddedSchedulerEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event
-        .AppRemovedSchedulerEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event
-        .NodeUpdateSchedulerEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event
-        .SchedulerEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event
-        .SchedulerEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair
-        .FairScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo
-        .FifoScheduler;
-import org.apache.hadoop.yarn.util.resource.Resources;
-import org.apache.log4j.Logger;
-
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
@@ -96,6 +35,55 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+
+import org.apache.hadoop.conf.Configurable;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.ShutdownHookManager;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
+import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
+import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.QueueACL;
+import org.apache.hadoop.yarn.api.records.QueueInfo;
+import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.UpdatedContainerInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppReport;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptAddedSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptRemovedSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
+import org.apache.hadoop.yarn.sls.SLSRunner;
+import org.apache.hadoop.yarn.sls.conf.SLSConfiguration;
+import org.apache.hadoop.yarn.sls.web.SLSWebApp;
+import org.apache.hadoop.yarn.util.resource.Resources;
+import org.apache.log4j.Logger;
+
+import com.codahale.metrics.Counter;
+import com.codahale.metrics.CsvReporter;
+import com.codahale.metrics.Gauge;
+import com.codahale.metrics.Histogram;
+import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.SlidingWindowReservoir;
+import com.codahale.metrics.Timer;
 
 public class ResourceSchedulerWrapper implements ResourceScheduler,
         Configurable {
@@ -246,11 +234,11 @@ public class ResourceSchedulerWrapper implements ResourceScheduler,
                 (NodeUpdateSchedulerEvent)schedulerEvent);
         schedulerEvent = eventWrapper;
         updateQueueWithNodeUpdate(eventWrapper);
-      } else if (schedulerEvent.getType() == SchedulerEventType.APP_REMOVED
-              && schedulerEvent instanceof AppRemovedSchedulerEvent) {
+      } else if (schedulerEvent.getType() == SchedulerEventType.APP_ATTEMPT_REMOVED
+          && schedulerEvent instanceof AppAttemptRemovedSchedulerEvent) {
         // check if having AM Container, update resource usage information
-        AppRemovedSchedulerEvent appRemoveEvent =
-                (AppRemovedSchedulerEvent) schedulerEvent;
+        AppAttemptRemovedSchedulerEvent appRemoveEvent =
+            (AppAttemptRemovedSchedulerEvent) schedulerEvent;
         ApplicationAttemptId appAttemptId =
                 appRemoveEvent.getApplicationAttemptID();
         String queue = appQueueMap.get(appAttemptId);
@@ -275,18 +263,18 @@ public class ResourceSchedulerWrapper implements ResourceScheduler,
       schedulerHandleCounter.inc();
       schedulerHandleCounterMap.get(schedulerEvent.getType()).inc();
 
-      if (schedulerEvent.getType() == SchedulerEventType.APP_REMOVED
-              && schedulerEvent instanceof AppRemovedSchedulerEvent) {
+      if (schedulerEvent.getType() == SchedulerEventType.APP_ATTEMPT_REMOVED
+          && schedulerEvent instanceof AppAttemptRemovedSchedulerEvent) {
         SLSRunner.decreaseRemainingApps();
-        AppRemovedSchedulerEvent appRemoveEvent =
-                (AppRemovedSchedulerEvent) schedulerEvent;
+        AppAttemptRemovedSchedulerEvent appRemoveEvent =
+                (AppAttemptRemovedSchedulerEvent) schedulerEvent;
         ApplicationAttemptId appAttemptId =
                 appRemoveEvent.getApplicationAttemptID();
         appQueueMap.remove(appRemoveEvent.getApplicationAttemptID());
-      } else if (schedulerEvent.getType() == SchedulerEventType.APP_ADDED
-              && schedulerEvent instanceof AppAddedSchedulerEvent) {
-        AppAddedSchedulerEvent appAddEvent =
-                (AppAddedSchedulerEvent) schedulerEvent;
+      } else if (schedulerEvent.getType() == SchedulerEventType.APP_ATTEMPT_ADDED
+          && schedulerEvent instanceof AppAttemptAddedSchedulerEvent) {
+        AppAttemptAddedSchedulerEvent appAddEvent =
+                (AppAttemptAddedSchedulerEvent) schedulerEvent;
         String queueName = appAddEvent.getQueue();
         appQueueMap.put(appAddEvent.getApplicationAttemptId(), queueName);
       }

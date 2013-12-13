@@ -19,25 +19,31 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.event;
 
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 
-public class AppRemovedSchedulerEvent extends SchedulerEvent {
+public class AppAttemptAddedSchedulerEvent extends SchedulerEvent {
 
   private final ApplicationAttemptId applicationAttemptId;
-  private final RMAppAttemptState finalAttemptState;
+  private final String queue;
+  private final String user;
 
-  public AppRemovedSchedulerEvent(ApplicationAttemptId applicationAttemptId,
-      RMAppAttemptState finalAttemptState) {
-    super(SchedulerEventType.APP_REMOVED);
+  public AppAttemptAddedSchedulerEvent(
+      ApplicationAttemptId applicationAttemptId, String queue, String user) {
+    super(SchedulerEventType.APP_ATTEMPT_ADDED);
     this.applicationAttemptId = applicationAttemptId;
-    this.finalAttemptState = finalAttemptState;
+    this.queue = queue;
+    this.user = user;
   }
 
-  public ApplicationAttemptId getApplicationAttemptID() {
-    return this.applicationAttemptId;
+  public ApplicationAttemptId getApplicationAttemptId() {
+    return applicationAttemptId;
   }
 
-  public RMAppAttemptState getFinalAttemptState() {
-    return this.finalAttemptState;
+  public String getQueue() {
+    return queue;
   }
+
+  public String getUser() {
+    return user;
+  }
+
 }

@@ -65,7 +65,7 @@ message UpdateReplicaUnderRecoveryRequestProto {
  * Response returns updated block information
  */
 message UpdateReplicaUnderRecoveryResponseProto {
-  required string storageID = 1; // ID of the storage that stores replica
+  optional string storageUuid = 1; // ID of the storage that stores replica
 }
 
 /**

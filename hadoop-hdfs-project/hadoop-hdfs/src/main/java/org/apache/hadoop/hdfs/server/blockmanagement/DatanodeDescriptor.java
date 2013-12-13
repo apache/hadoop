@@ -18,22 +18,28 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Queue;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.server.namenode.CachedBlock;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
+import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.util.LightWeightHashSet;
 import org.apache.hadoop.util.IntrusiveCollection;
 import org.apache.hadoop.util.Time;
-
-import com.google.common.annotations.VisibleForTesting;
 
 /**
  * This class extends the DatanodeInfo class with ephemeral information (eg
@@ -43,6 +49,7 @@ import com.google.common.annotations.VisibleForTesting;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class DatanodeDescriptor extends DatanodeInfo {
+  public static final Log LOG = LogFactory.getLog(DatanodeDescriptor.class);
   public static final DatanodeDescriptor[] EMPTY_ARRAY = {};
 
   // Stores status of decommissioning.
@@ -54,9 +61,9 @@ public class DatanodeDescriptor extends DatanodeInfo {
   @InterfaceStability.Evolving
   public static class BlockTargetPair {
     public final Block block;
-    public final DatanodeDescriptor[] targets;    
+    public final DatanodeStorageInfo[] targets;    
 
-    BlockTargetPair(Block block, DatanodeDescriptor[] targets) {
+    BlockTargetPair(Block block, DatanodeStorageInfo[] targets) {
       this.block = block;
       this.targets = targets;
     }
@@ -98,6 +105,9 @@ public class DatanodeDescriptor extends DatanodeInfo {
       blockq.clear();
     }
   }
+
+  private final Map<String, DatanodeStorageInfo> storageMap = 
+      new HashMap<String, DatanodeStorageInfo>();
 
   /**
    * A list of CachedBlock objects on this datanode.
@@ -164,37 +174,11 @@ public class DatanodeDescriptor extends DatanodeInfo {
    */
   private long lastCachingDirectiveSentTimeMs;
 
-  /**
-   * Head of the list of blocks on the datanode
-   */
-  private volatile BlockInfo blockList = null;
-  /**
-   * Number of blocks on the datanode
-   */
-  private int numBlocks = 0;
-
   // isAlive == heartbeats.contains(this)
   // This is an optimization, because contains takes O(n) time on Arraylist
   public boolean isAlive = false;
   public boolean needKeyUpdate = false;
 
-  /**
-   * Set to false on any NN failover, and reset to true
-   * whenever a block report is received.
-   */
-  private boolean heartbeatedSinceFailover = false;
-  
-  /**
-   * At startup or at any failover, the DNs in the cluster may
-   * have pending block deletions from a previous incarnation
-   * of the NameNode. Thus, we consider their block contents
-   * stale until we have received a block report. When a DN
-   * is considered stale, any replicas on it are transitively
-   * considered stale. If any block has at least one stale replica,
-   * then no invalidations will be processed for this block.
-   * See HDFS-1972.
-   */
-  private boolean blockContentsStale = true;
   
   // A system administrator can tune the balancer bandwidth parameter
   // (dfs.balance.bandwidthPerSec) dynamically by calling
@@ -213,7 +197,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
   private LightWeightHashSet<Block> invalidateBlocks = new LightWeightHashSet<Block>();
 
   /* Variables for maintaining number of blocks scheduled to be written to
-   * this datanode. This count is approximate and might be slightly bigger
+   * this storage. This count is approximate and might be slightly bigger
    * in case of errors (e.g. datanode does not report if an error occurs
    * while writing the block).
    */
@@ -222,9 +206,6 @@ public class DatanodeDescriptor extends DatanodeInfo {
   private long lastBlocksScheduledRollTime = 0;
   private static final int BLOCKS_SCHEDULED_ROLL_INTERVAL = 600*1000; //10min
   private int volumeFailures = 0;
-  
-  /** Set to false after processing first block report */
-  private boolean firstBlockReport = true;
   
   /** 
    * When set to true, the node is not in include list and is not allowed
@@ -237,7 +218,8 @@ public class DatanodeDescriptor extends DatanodeInfo {
    * @param nodeID id of the data node
    */
   public DatanodeDescriptor(DatanodeID nodeID) {
-    this(nodeID, 0L, 0L, 0L, 0L, 0L, 0L, 0, 0);
+    super(nodeID);
+    updateHeartbeat(StorageReport.EMPTY_ARRAY, 0L, 0L, 0, 0);
   }
 
   /**
@@ -247,104 +229,60 @@ public class DatanodeDescriptor extends DatanodeInfo {
    */
   public DatanodeDescriptor(DatanodeID nodeID, 
                             String networkLocation) {
-    this(nodeID, networkLocation, 0L, 0L, 0L, 0L, 0L, 0L, 0, 0);
-  }
-  
-  /**
-   * DatanodeDescriptor constructor
-   * @param nodeID id of the data node
-   * @param capacity capacity of the data node
-   * @param dfsUsed space used by the data node
-   * @param remaining remaining capacity of the data node
-   * @param bpused space used by the block pool corresponding to this namenode
-   * @param cacheCapacity cache capacity of the data node
-   * @param cacheUsed cache used on the data node
-   * @param xceiverCount # of data transfers at the data node
-   */
-  public DatanodeDescriptor(DatanodeID nodeID, 
-                            long capacity,
-                            long dfsUsed,
-                            long remaining,
-                            long bpused,
-                            long cacheCapacity,
-                            long cacheUsed,
-                            int xceiverCount,
-                            int failedVolumes) {
-    super(nodeID);
-    updateHeartbeat(capacity, dfsUsed, remaining, bpused, cacheCapacity,
-        cacheUsed, xceiverCount, failedVolumes);
-  }
-
-  /**
-   * DatanodeDescriptor constructor
-   * @param nodeID id of the data node
-   * @param networkLocation location of the data node in network
-   * @param capacity capacity of the data node, including space used by non-dfs
-   * @param dfsUsed the used space by dfs datanode
-   * @param remaining remaining capacity of the data node
-   * @param bpused space used by the block pool corresponding to this namenode
-   * @param cacheCapacity cache capacity of the data node
-   * @param cacheUsed cache used on the data node
-   * @param xceiverCount # of data transfers at the data node
-   */
-  public DatanodeDescriptor(DatanodeID nodeID,
-                            String networkLocation,
-                            long capacity,
-                            long dfsUsed,
-                            long remaining,
-                            long bpused,
-                            long cacheCapacity,
-                            long cacheUsed,
-                            int xceiverCount,
-                            int failedVolumes) {
     super(nodeID, networkLocation);
-    updateHeartbeat(capacity, dfsUsed, remaining, bpused, cacheCapacity,
-        cacheUsed, xceiverCount, failedVolumes);
+    updateHeartbeat(StorageReport.EMPTY_ARRAY, 0L, 0L, 0, 0);
   }
 
   /**
-   * Add datanode to the block.
-   * Add block to the head of the list of blocks belonging to the data-node.
+   * Add data-node to the block. Add block to the head of the list of blocks
+   * belonging to the data-node.
    */
-  public boolean addBlock(BlockInfo b) {
-    if(!b.addNode(this))
-      return false;
-    // add to the head of the data-node list
-    blockList = b.listInsert(blockList, this);
-    numBlocks++;
-    return true;
+  public boolean addBlock(String storageID, BlockInfo b) {
+    DatanodeStorageInfo s = getStorageInfo(storageID);
+    if (s != null) {
+      return s.addBlock(b);
+    }
+    return false;
   }
-  
-  /**
-   * Remove block from the list of blocks belonging to the data-node.
-   * Remove datanode from the block.
-   */
-  public boolean removeBlock(BlockInfo b) {
-    blockList = b.listRemove(blockList, this);
-    if ( b.removeNode(this) ) {
-      numBlocks--;
-      return true;
-    } else {
-      return false;
+
+  DatanodeStorageInfo getStorageInfo(String storageID) {
+    synchronized (storageMap) {
+      return storageMap.get(storageID);
+    }
+  }
+  DatanodeStorageInfo[] getStorageInfos() {
+    synchronized (storageMap) {
+      final Collection<DatanodeStorageInfo> storages = storageMap.values();
+      return storages.toArray(new DatanodeStorageInfo[storages.size()]);
     }
   }
 
   /**
-   * Move block to the head of the list of blocks belonging to the data-node.
-   * @return the index of the head of the blockList
+   * Remove block from the list of blocks belonging to the data-node. Remove
+   * data-node from the block.
    */
-  int moveBlockToHead(BlockInfo b, int curIndex, int headIndex) {
-    blockList = b.moveBlockToHead(blockList, this, curIndex, headIndex);
-    return curIndex;
+  boolean removeBlock(BlockInfo b) {
+    int index = b.findStorageInfo(this);
+    // if block exists on this datanode
+    if (index >= 0) {
+      DatanodeStorageInfo s = b.getStorageInfo(index);
+      if (s != null) {
+        return s.removeBlock(b);
+      }
+    }
+    return false;
   }
-
+  
   /**
-   * Used for testing only
-   * @return the head of the blockList
+   * Remove block from the list of blocks belonging to the data-node. Remove
+   * data-node from the block.
    */
-  @VisibleForTesting
-  protected BlockInfo getHead(){
-    return blockList;
+  boolean removeBlock(String storageID, BlockInfo b) {
+    DatanodeStorageInfo s = getStorageInfo(storageID);
+    if (s != null) {
+      return s.removeBlock(b);
+    }
+    return false;
   }
 
   /**
@@ -355,9 +293,12 @@ public class DatanodeDescriptor extends DatanodeInfo {
    * @return the new block
    */
   public BlockInfo replaceBlock(BlockInfo oldBlock, BlockInfo newBlock) {
-    boolean done = removeBlock(oldBlock);
+    int index = oldBlock.findStorageInfo(this);
+    DatanodeStorageInfo s = oldBlock.getStorageInfo(index);
+    boolean done = s.removeBlock(oldBlock);
     assert done : "Old block should belong to the data-node when replacing";
-    done = addBlock(newBlock);
+
+    done = s.addBlock(newBlock);
     assert done : "New block should not belong to the data-node when replacing";
     return newBlock;
   }
@@ -368,7 +309,6 @@ public class DatanodeDescriptor extends DatanodeInfo {
     setBlockPoolUsed(0);
     setDfsUsed(0);
     setXceiverCount(0);
-    this.blockList = null;
     this.invalidateBlocks.clear();
     this.volumeFailures = 0;
     // pendingCached, cached, and pendingUncached are protected by the
@@ -392,66 +332,97 @@ public class DatanodeDescriptor extends DatanodeInfo {
   }
 
   public int numBlocks() {
-    return numBlocks;
+    int blocks = 0;
+    for (DatanodeStorageInfo entry : getStorageInfos()) {
+      blocks += entry.numBlocks();
+    }
+    return blocks;
   }
 
   /**
    * Updates stats from datanode heartbeat.
    */
-  public void updateHeartbeat(long capacity, long dfsUsed, long remaining,
-      long blockPoolUsed, long cacheCapacity, long cacheUsed, int xceiverCount,
-      int volFailures) {
-    setCapacity(capacity);
-    setRemaining(remaining);
-    setBlockPoolUsed(blockPoolUsed);
-    setDfsUsed(dfsUsed);
+  public void updateHeartbeat(StorageReport[] reports, long cacheCapacity,
+      long cacheUsed, int xceiverCount, int volFailures) {
+    long totalCapacity = 0;
+    long totalRemaining = 0;
+    long totalBlockPoolUsed = 0;
+    long totalDfsUsed = 0;
+
     setCacheCapacity(cacheCapacity);
     setCacheUsed(cacheUsed);
     setXceiverCount(xceiverCount);
     setLastUpdate(Time.now());    
     this.volumeFailures = volFailures;
-    this.heartbeatedSinceFailover = true;
+    for (StorageReport report : reports) {
+      DatanodeStorageInfo storage = storageMap.get(report.getStorageID());
+      if (storage == null) {
+        // This is seen during cluster initialization when the heartbeat
+        // is received before the initial block reports from each storage.
+        storage = updateStorage(new DatanodeStorage(report.getStorageID()));
+      }
+      storage.receivedHeartbeat(report);
+      totalCapacity += report.getCapacity();
+      totalRemaining += report.getRemaining();
+      totalBlockPoolUsed += report.getBlockPoolUsed();
+      totalDfsUsed += report.getDfsUsed();
+    }
     rollBlocksScheduled(getLastUpdate());
+
+    // Update total metrics for the node.
+    setCapacity(totalCapacity);
+    setRemaining(totalRemaining);
+    setBlockPoolUsed(totalBlockPoolUsed);
+    setDfsUsed(totalDfsUsed);
   }
 
-  /**
-   * Iterates over the list of blocks belonging to the datanode.
-   */
-  public static class BlockIterator implements Iterator<BlockInfo> {
-    private BlockInfo current;
-    private DatanodeDescriptor node;
-      
-    BlockIterator(BlockInfo head, DatanodeDescriptor dn) {
-      this.current = head;
-      this.node = dn;
+  private static class BlockIterator implements Iterator<BlockInfo> {
+    private int index = 0;
+    private final List<Iterator<BlockInfo>> iterators;
+    
+    private BlockIterator(final DatanodeStorageInfo... storages) {
+      List<Iterator<BlockInfo>> iterators = new ArrayList<Iterator<BlockInfo>>();
+      for (DatanodeStorageInfo e : storages) {
+        iterators.add(e.getBlockIterator());
+      }
+      this.iterators = Collections.unmodifiableList(iterators);
     }
 
     @Override
     public boolean hasNext() {
-      return current != null;
+      update();
+      return !iterators.isEmpty() && iterators.get(index).hasNext();
     }
 
     @Override
     public BlockInfo next() {
-      BlockInfo res = current;
-      current = current.getNext(current.findDatanode(node));
-      return res;
+      update();
+      return iterators.get(index).next();
     }
-
+    
     @Override
-    public void remove()  {
-      throw new UnsupportedOperationException("Sorry. can't remove.");
+    public void remove() {
+      throw new UnsupportedOperationException("Remove unsupported.");
+    }
+    
+    private void update() {
+      while(index < iterators.size() - 1 && !iterators.get(index).hasNext()) {
+        index++;
+      }
     }
   }
 
-  public Iterator<BlockInfo> getBlockIterator() {
-    return new BlockIterator(this.blockList, this);
+  Iterator<BlockInfo> getBlockIterator() {
+    return new BlockIterator(getStorageInfos());
+  }
+  Iterator<BlockInfo> getBlockIterator(final String storageID) {
+    return new BlockIterator(getStorageInfo(storageID));
   }
 
   /**
    * Store block replication work.
    */
-  void addBlockToBeReplicated(Block block, DatanodeDescriptor[] targets) {
+  void addBlockToBeReplicated(Block block, DatanodeStorageInfo[] targets) {
     assert(block != null && targets != null && targets.length > 0);
     replicateBlocks.offer(new BlockTargetPair(block, targets));
   }
@@ -526,18 +497,14 @@ public class DatanodeDescriptor extends DatanodeInfo {
   public int getBlocksScheduled() {
     return currApproxBlocksScheduled + prevApproxBlocksScheduled;
   }
-  
-  /**
-   * Increments counter for number of blocks scheduled. 
-   */
-  public void incBlocksScheduled() {
+
+  /** Increment the number of blocks scheduled. */
+  void incrementBlocksScheduled() {
     currApproxBlocksScheduled++;
   }
   
-  /**
-   * Decrements counter for number of blocks scheduled.
-   */
-  void decBlocksScheduled() {
+  /** Decrement the number of blocks scheduled. */
+  void decrementBlocksScheduled() {
     if (prevApproxBlocksScheduled > 0) {
       prevApproxBlocksScheduled--;
     } else if (currApproxBlocksScheduled > 0) {
@@ -546,12 +513,9 @@ public class DatanodeDescriptor extends DatanodeInfo {
     // its ok if both counters are zero.
   }
   
-  /**
-   * Adjusts curr and prev number of blocks scheduled every few minutes.
-   */
+  /** Adjusts curr and prev number of blocks scheduled every few minutes. */
   private void rollBlocksScheduled(long now) {
-    if ((now - lastBlocksScheduledRollTime) > 
-        BLOCKS_SCHEDULED_ROLL_INTERVAL) {
+    if (now - lastBlocksScheduledRollTime > BLOCKS_SCHEDULED_ROLL_INTERVAL) {
       prevApproxBlocksScheduled = currApproxBlocksScheduled;
       currApproxBlocksScheduled = 0;
       lastBlocksScheduledRollTime = now;
@@ -647,7 +611,11 @@ public class DatanodeDescriptor extends DatanodeInfo {
   @Override
   public void updateRegInfo(DatanodeID nodeReg) {
     super.updateRegInfo(nodeReg);
-    firstBlockReport = true; // must re-process IBR after re-registration
+    
+    // must re-process IBR after re-registration
+    for(DatanodeStorageInfo storage : getStorageInfos()) {
+      storage.setBlockReportCount(0);
+    }
   }
 
   /**
@@ -662,26 +630,6 @@ public class DatanodeDescriptor extends DatanodeInfo {
    */
   public void setBalancerBandwidth(long bandwidth) {
     this.bandwidth = bandwidth;
-  }
-
-  public boolean areBlockContentsStale() {
-    return blockContentsStale;
-  }
-
-  public void markStaleAfterFailover() {
-    heartbeatedSinceFailover = false;
-    blockContentsStale = true;
-  }
-
-  public void receivedBlockReport() {
-    if (heartbeatedSinceFailover) {
-      blockContentsStale = false;
-    }
-    firstBlockReport = false;
-  }
-  
-  boolean isFirstBlockReport() {
-    return firstBlockReport;
   }
 
   @Override
@@ -702,6 +650,19 @@ public class DatanodeDescriptor extends DatanodeInfo {
     return sb.toString();
   }
 
+  DatanodeStorageInfo updateStorage(DatanodeStorage s) {
+    synchronized (storageMap) {
+      DatanodeStorageInfo storage = storageMap.get(s.getStorageID());
+      if (storage == null) {
+        LOG.info("Adding new storage ID " + s.getStorageID() +
+                 " for DN " + getXferAddr());
+        storage = new DatanodeStorageInfo(this, s);
+        storageMap.put(s.getStorageID(), storage);
+      }
+      return storage;
+    }
+  }
+
   /**
    * @return   The time at which we last sent caching directives to this 
    *           DataNode, in monotonic milliseconds.
@@ -718,3 +679,4 @@ public class DatanodeDescriptor extends DatanodeInfo {
     this.lastCachingDirectiveSentTimeMs = time;
   }
 }
+

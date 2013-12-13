@@ -60,19 +60,18 @@ public class HAUtil {
     throws YarnRuntimeException {
     verifyAndSetRMHAIds(conf);
     verifyAndSetRMHAId(conf);
-    verifyAndSetAllRpcAddresses(conf);
+    verifyAndSetAllServiceAddresses(conf);
   }
 
 
   private static void verifyAndSetRMHAIds(Configuration conf) {
     Collection<String> ids =
       conf.getTrimmedStringCollection(YarnConfiguration.RM_HA_IDS);
-    if (ids.size() <= 0) {
+    if (ids.size() < 2) {
       throwBadConfigurationException(
         getInvalidValueMessage(YarnConfiguration.RM_HA_IDS,
-          conf.get(YarnConfiguration.RM_HA_IDS)));
-    } else if (ids.size() == 1) {
-      LOG.warn(getRMHAIdsWarningMessage(ids.toString()));
+          conf.get(YarnConfiguration.RM_HA_IDS) +
+          "\nHA mode requires atleast two RMs"));
     }
 
     StringBuilder setValue = new StringBuilder();
@@ -123,8 +122,8 @@ public class HAUtil {
     }
   }
 
-  public static void verifyAndSetAllRpcAddresses(Configuration conf) {
-    for (String confKey : YarnConfiguration.RM_RPC_ADDRESS_CONF_KEYS) {
+  public static void verifyAndSetAllServiceAddresses(Configuration conf) {
+    for (String confKey : YarnConfiguration.RM_SERVICES_ADDRESS_CONF_KEYS) {
      verifyAndSetConfValue(confKey, conf);
     }
   }
@@ -176,7 +175,7 @@ public class HAUtil {
   @InterfaceAudience.Private
   @VisibleForTesting
   static String getConfKeyForRMInstance(String prefix, Configuration conf) {
-    return YarnConfiguration.RM_RPC_ADDRESS_CONF_KEYS.contains(prefix)
+    return YarnConfiguration.RM_SERVICES_ADDRESS_CONF_KEYS.contains(prefix)
         ? addSuffix(prefix, getRMHAId(conf))
         : prefix;
   }

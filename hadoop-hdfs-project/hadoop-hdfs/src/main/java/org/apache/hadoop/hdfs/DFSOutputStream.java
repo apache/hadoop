@@ -312,6 +312,7 @@ public class DFSOutputStream extends FSOutputSummer
     private DataInputStream blockReplyStream;
     private ResponseProcessor response = null;
     private volatile DatanodeInfo[] nodes = null; // list of targets for current block
+    private volatile String[] storageIDs = null;
     private LoadingCache<DatanodeInfo, DatanodeInfo> excludedNodes =
         CacheBuilder.newBuilder()
         .expireAfterWrite(
@@ -402,7 +403,7 @@ public class DFSOutputStream extends FSOutputSummer
       }
 
       // setup pipeline to append to the last block XXX retries??
-      nodes = lastBlock.getLocations();
+      setPipeline(lastBlock);
       errorIndex = -1;   // no errors yet.
       if (nodes.length < 1) {
         throw new IOException("Unable to retrieve blocks locations " +
@@ -410,6 +411,14 @@ public class DFSOutputStream extends FSOutputSummer
             "of file " + src);
 
       }
+    }
+    
+    private void setPipeline(LocatedBlock lb) {
+      setPipeline(lb.getLocations(), lb.getStorageIDs());
+    }
+    private void setPipeline(DatanodeInfo[] nodes, String[] storageIDs) {
+      this.nodes = nodes;
+      this.storageIDs = storageIDs;
     }
 
     private void setFavoredNodes(String[] favoredNodes) {
@@ -434,7 +443,7 @@ public class DFSOutputStream extends FSOutputSummer
       this.setName("DataStreamer for file " + src);
       closeResponder();
       closeStream();
-      nodes = null;
+      setPipeline(null, null);
       stage = BlockConstructionStage.PIPELINE_SETUP_CREATE;
     }
     
@@ -503,7 +512,7 @@ public class DFSOutputStream extends FSOutputSummer
             if(DFSClient.LOG.isDebugEnabled()) {
               DFSClient.LOG.debug("Allocating new block");
             }
-            nodes = nextBlockOutputStream();
+            setPipeline(nextBlockOutputStream());
             initDataStreaming();
           } else if (stage == BlockConstructionStage.PIPELINE_SETUP_APPEND) {
             if(DFSClient.LOG.isDebugEnabled()) {
@@ -917,9 +926,10 @@ public class DFSOutputStream extends FSOutputSummer
       //get a new datanode
       final DatanodeInfo[] original = nodes;
       final LocatedBlock lb = dfsClient.namenode.getAdditionalDatanode(
-          src, block, nodes, failed.toArray(new DatanodeInfo[failed.size()]),
+          src, block, nodes, storageIDs,
+          failed.toArray(new DatanodeInfo[failed.size()]),
           1, dfsClient.clientName);
-      nodes = lb.getLocations();
+      setPipeline(lb);
 
       //find the new datanode
       final int d = findNewDatanode(original);
@@ -1019,7 +1029,14 @@ public class DFSOutputStream extends FSOutputSummer
           System.arraycopy(nodes, 0, newnodes, 0, errorIndex);
           System.arraycopy(nodes, errorIndex+1, newnodes, errorIndex,
               newnodes.length-errorIndex);
-          nodes = newnodes;
+
+          final String[] newStorageIDs = new String[newnodes.length];
+          System.arraycopy(storageIDs, 0, newStorageIDs, 0, errorIndex);
+          System.arraycopy(storageIDs, errorIndex+1, newStorageIDs, errorIndex,
+              newStorageIDs.length-errorIndex);
+          
+          setPipeline(newnodes, newStorageIDs);
+
           hasError = false;
           lastException.set(null);
           errorIndex = -1;
@@ -1055,7 +1072,8 @@ public class DFSOutputStream extends FSOutputSummer
         // update pipeline at the namenode
         ExtendedBlock newBlock = new ExtendedBlock(
             block.getBlockPoolId(), block.getBlockId(), block.getNumBytes(), newGS);
-        dfsClient.namenode.updatePipeline(dfsClient.clientName, block, newBlock, nodes);
+        dfsClient.namenode.updatePipeline(dfsClient.clientName, block, newBlock,
+            nodes, storageIDs);
         // update client side generation stamp
         block = newBlock;
       }
@@ -1068,7 +1086,7 @@ public class DFSOutputStream extends FSOutputSummer
      * Must get block ID and the IDs of the destinations from the namenode.
      * Returns the list of target datanodes.
      */
-    private DatanodeInfo[] nextBlockOutputStream() throws IOException {
+    private LocatedBlock nextBlockOutputStream() throws IOException {
       LocatedBlock lb = null;
       DatanodeInfo[] nodes = null;
       int count = dfsClient.getConf().nBlockWriteRetry;
@@ -1110,7 +1128,7 @@ public class DFSOutputStream extends FSOutputSummer
       if (!success) {
         throw new IOException("Unable to create new block.");
       }
-      return nodes;
+      return lb;
     }
 
     // connects to the first datanode in the pipeline

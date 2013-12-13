@@ -32,11 +32,13 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.MkdirOp;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem.SafeModeInfo;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
+import org.apache.hadoop.hdfs.server.namenode.ha.EditLogTailer;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.HeartbeatResponse;
 import org.apache.hadoop.ipc.Server;
@@ -110,8 +112,8 @@ public class NameNodeAdapter {
 
   public static HeartbeatResponse sendHeartBeat(DatanodeRegistration nodeReg,
       DatanodeDescriptor dd, FSNamesystem namesystem) throws IOException {
-    return namesystem.handleHeartbeat(nodeReg, dd.getCapacity(), 
-        dd.getDfsUsed(), dd.getRemaining(), dd.getBlockPoolUsed(),
+    return namesystem.handleHeartbeat(nodeReg,
+        BlockManagerTestUtil.getStorageReportsForDatanode(dd),
         dd.getCacheCapacity(), dd.getCacheRemaining(), 0, 0, 0);
   }
 
@@ -180,6 +182,16 @@ public class NameNodeAdapter {
     return spy;
   }
   
+  public static FSEditLog spyOnEditLog(NameNode nn) {
+    FSEditLog spyEditLog = spy(nn.getNamesystem().getFSImage().getEditLog());
+    nn.getFSImage().setEditLogForTesting(spyEditLog);
+    EditLogTailer tailer = nn.getNamesystem().getEditLogTailer();
+    if (tailer != null) {
+      tailer.setEditLog(spyEditLog);
+    }
+    return spyEditLog;
+  }
+  
   public static JournalSet spyOnJournalSet(NameNode nn) {
     FSEditLog editLog = nn.getFSImage().getEditLog();
     JournalSet js = Mockito.spy(editLog.getJournalSet());
@@ -232,3 +244,4 @@ public class NameNodeAdapter {
     return NNStorage.getInProgressEditsFile(sd, startTxId);
   }
 }
+

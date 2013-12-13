@@ -27,6 +27,8 @@ import junit.framework.Assert;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.JobStatus.State;
+import org.apache.hadoop.mapreduce.v2.api.records.JobId;
+import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
@@ -71,6 +73,7 @@ public class TestTypeConverter {
   @Test
   public void testFromYarn() throws Exception {
     int appStartTime = 612354;
+    int appFinishTime = 612355;
     YarnApplicationState state = YarnApplicationState.RUNNING;
     ApplicationId applicationId = ApplicationId.newInstance(0, 0);
     ApplicationReport applicationReport = Records
@@ -78,6 +81,7 @@ public class TestTypeConverter {
     applicationReport.setApplicationId(applicationId);
     applicationReport.setYarnApplicationState(state);
     applicationReport.setStartTime(appStartTime);
+    applicationReport.setFinishTime(appFinishTime);
     applicationReport.setUser("TestTypeConverter-user");
     ApplicationResourceUsageReport appUsageRpt = Records
         .newRecord(ApplicationResourceUsageReport.class);
@@ -91,6 +95,7 @@ public class TestTypeConverter {
     applicationReport.setApplicationResourceUsageReport(appUsageRpt);
     JobStatus jobStatus = TypeConverter.fromYarn(applicationReport, "dummy-jobfile");
     Assert.assertEquals(appStartTime, jobStatus.getStartTime());
+    Assert.assertEquals(appFinishTime, jobStatus.getFinishTime());    
     Assert.assertEquals(state.toString(), jobStatus.getState().toString());
   }
 
@@ -172,4 +177,25 @@ public class TestTypeConverter {
     Assert.assertEquals("QueueInfo children weren't properly converted",
       returned.getQueueChildren().size(), 1);
   }
+
+  @Test
+  public void testFromYarnJobReport() throws Exception {
+    int jobStartTime = 612354;
+    int jobFinishTime = 612355;
+    JobState state = JobState.RUNNING;
+    JobId jobId = Records.newRecord(JobId.class);
+    JobReport jobReport = Records.newRecord(JobReport.class);
+    ApplicationId applicationId = ApplicationId.newInstance(0, 0);
+    jobId.setAppId(applicationId);
+    jobId.setId(0);    
+    jobReport.setJobId(jobId);
+    jobReport.setJobState(state);
+    jobReport.setStartTime(jobStartTime);
+    jobReport.setFinishTime(jobFinishTime);
+    jobReport.setUser("TestTypeConverter-user");    
+    JobStatus jobStatus = TypeConverter.fromYarn(jobReport, "dummy-jobfile");
+    Assert.assertEquals(jobStartTime, jobStatus.getStartTime());
+    Assert.assertEquals(jobFinishTime, jobStatus.getFinishTime());    
+    Assert.assertEquals(state.toString(), jobStatus.getState().toString());
+  }  
 }

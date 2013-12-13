@@ -311,7 +311,7 @@ public class TestSimulatedFSDataset {
   }
   
   private SimulatedFSDataset getSimulatedFSDataset() {
-    SimulatedFSDataset fsdataset = new SimulatedFSDataset(null, null, conf); 
+    SimulatedFSDataset fsdataset = new SimulatedFSDataset(null, conf);
     fsdataset.addBlockPool(bpid, conf);
     return fsdataset;
   }

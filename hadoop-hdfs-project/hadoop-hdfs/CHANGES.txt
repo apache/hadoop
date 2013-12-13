@@ -13,6 +13,10 @@ Trunk (Unreleased)
 
     HDFS-3125. Add JournalService to enable Journal Daemon. (suresh)
 
+    HDFS-2832. Heterogeneous Storages support in HDFS phase 1 - treat DataNode
+    as a collection of storages (see breakdown of tasks below for features and
+    contributors).
+
   IMPROVEMENTS
 
     HDFS-4665. Move TestNetworkTopologyWithNodeGroup to common.
@@ -242,6 +246,9 @@ Trunk (Unreleased)
     HDFS-5629. Support HTTPS in JournalNode and SecondaryNameNode. 
     (Haohui Mai via jing9)
 
+    HDFS-5647. Merge INodeDirectory.Feature and INodeFile.Feature. (Haohui Mai
+    via jing9)
+
   OPTIMIZATIONS
     HDFS-5349. DNA_CACHE and DNA_UNCACHE should be by blockId only. (cmccabe)
 
@@ -440,6 +447,131 @@ Trunk (Unreleased)
 
     HDFS-5626. dfsadmin -report shows incorrect cache values. (cmccabe)
 
+  BREAKDOWN OF HDFS-2832 SUBTASKS AND RELATED JIRAS
+
+    HDFS-4985. Add storage type to the protocol and expose it in block report
+    and block locations. (Arpit Agarwal)
+
+    HDFS-5115. Make StorageID a UUID. (Arpit Agarwal)
+
+    HDFS-5000. DataNode configuration should allow specifying storage type.
+    (Arpit Agarwal)
+
+    HDFS-4987. Namenode changes to track multiple storages per datanode.
+    (szetszwo)
+
+    HDFS-5154. Fix TestBlockManager and TestDatanodeDescriptor after HDFS-4987.
+    (Junping Du via szetszwo)
+
+    HDFS-5009. Include storage information in the LocatedBlock.  (szetszwo)
+
+    HDFS-5134. Move blockContentsStale, heartbeatedSinceFailover and
+    firstBlockReport from DatanodeDescriptor to DatanodeStorageInfo; and
+    fix a synchronization problem in DatanodeStorageInfo.  (szetszwo)
+
+    HDFS-5157. Add StorageType to FsVolume.  (Junping Du via szetszwo)
+
+    HDFS-4990. Change BlockPlacementPolicy to choose storages instead of
+    datanodes.  (szetszwo)
+
+    HDFS-5232. Protocol changes to transmit StorageUuid. (Arpit Agarwal)
+
+    HDFS-5233. Use Datanode UUID to identify Datanodes. (Arpit Agarwal)
+
+    HDFS-5222. Move block schedule information from DatanodeDescriptor to
+    DatanodeStorageInfo.  (szetszwo)
+
+    HDFS-4988. Datanode must support all the volumes as individual storages.
+    (Arpit Agarwal)
+
+    HDFS-5377. Heartbeats from Datandode should include one storage report
+    per storage directory. (Arpit Agarwal)
+
+    HDFS-5398. NameNode changes to process storage reports per storage
+    directory. (Arpit Agarwal)
+
+    HDFS-5390. Send one incremental block report per storage directory.
+    (Arpit Agarwal)
+
+    HDFS-5401. Fix NPE in Directory Scanner. (Arpit Agarwal)
+
+    HDFS-5417. Fix storage IDs in PBHelper and UpgradeUtilities.  (szetszwo)
+
+    HDFS-5214. Fix NPEs in BlockManager and DirectoryScanner. (Arpit Agarwal)
+
+    HDFS-5435. File append fails to initialize storageIDs. (Junping Du via
+    Arpit Agarwal)
+
+    HDFS-5437. Fix TestBlockReport and TestBPOfferService failures. (Arpit
+    Agarwal)
+
+    HDFS-5447. Fix TestJspHelper. (Arpit Agarwal)
+
+    HDFS-5452. Fix TestReplicationPolicy and TestBlocksScheduledCounter.
+
+    HDFS-5448. Datanode should generate its ID on first registration. (Arpit
+    Agarwal)
+
+    HDFS-5448. Fix break caused by previous checkin for HDFS-5448. (Arpit
+    Agarwal)
+
+    HDFS-5455. NN should update storageMap on first heartbeat. (Arpit Agarwal)
+
+    HDFS-5457. Fix TestDatanodeRegistration, TestFsck and TestAddBlockRetry.
+    (Contributed by szetszwo)
+
+    HDFS-5466. Update storage IDs when the pipeline is updated. (Contributed
+    by szetszwo)
+
+    HDFS-5439. Fix TestPendingReplication. (Contributed by Junping Du, Arpit
+    Agarwal)
+
+    HDFS-5470. Add back trunk's reportDiff algorithm to the branch.
+    (Contributed by szetszwo)
+
+    HDFS-5472. Fix TestDatanodeManager, TestSafeMode and
+    TestNNThroughputBenchmark (Contributed by szetszwo)
+
+    HDFS-5475. NN incorrectly tracks more than one replica per DN. (Arpit
+    Agarwal)
+
+    HDFS-5481. Fix TestDataNodeVolumeFailure in branch HDFS-2832. (Contributed
+    by Junping Du)
+
+    HDFS-5480. Update Balancer for HDFS-2832. (Contributed by szetszwo)
+
+    HDFS-5486. Fix TestNameNodeMetrics for HDFS-2832. (Arpit Agarwal)
+
+    HDFS-5491. Update editsStored for HDFS-2832. (Arpit Agarwal)
+
+    HDFS-5494. Fix findbugs warnings for HDFS-2832. (Arpit Agarwal)
+
+    HDFS-5508. Fix compilation error after merge. (Contributed by szetszwo)
+
+    HDFS-5501. Fix pendingReceivedRequests tracking in BPServiceActor. (Arpit
+    Agarwal)
+
+    HDFS-5510. Fix a findbug warning in DataStorage.java on HDFS-2832 branch.
+    (Junping Du via Arpit Agarwal)
+ 
+    HDFS-5515. Fix TestDFSStartupVersions for HDFS-2832. (Arpit Agarwal)
+
+    HDFS-5527. Fix TestUnderReplicatedBlocks on branch HDFS-2832. (Arpit
+    Agarwal)
+
+    HDFS-5547. Fix build break after merge from trunk to HDFS-2832. (Arpit
+    Agarwal)
+
+    HDFS-5542. Fix TODO and clean up the code in HDFS-2832. (Contributed by
+    szetszwo)
+
+    HDFS-5559. Fix TestDatanodeConfig in HDFS-2832. (Contributed by szetszwo)
+
+    HDFS-5484. StorageType and State in DatanodeStorageInfo in NameNode is
+    not accurate. (Eric Sirianni via Arpit Agarwal)
+
+    HDFS-5648. Get rid of FsDatasetImpl#perVolumeReplicaMap. (Arpit Agarwal)
+
 Release 2.4.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -587,6 +719,15 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-5633. Improve OfflineImageViewer to use less memory. (jing9)
 
+    HDFS-5023. TestSnapshotPathINodes.testAllowSnapshot is failing with jdk7
+    (Mit Desai via jeagles)
+
+    HDFS-5637. Try to refeatchToken while local read InvalidToken occurred.
+    (Liang Xie via junping_du)
+
+    HDFS-5652. Refactor invalid block token exception handling in DFSInputStream.
+    (Liang Xie via junping_du)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn)
@@ -616,9 +757,6 @@ Release 2.4.0 - UNRELEASED
     HDFS-5352. Server#initLog() doesn't close InputStream in httpfs. (Ted Yu via
     jing9)
 
-    HDFS-5283. Under construction blocks only inside snapshots should not be
-    counted in safemode threshhold.  (Vinay via szetszwo)
-
     HDFS-4376. Fix race conditions in Balancer.  (Junping Du via szetszwo)
 
     HDFS-5375. hdfs.cmd does not expose several snapshot commands. (cnauroth)
@@ -629,42 +767,21 @@ Release 2.4.0 - UNRELEASED
     HDFS-5400.  DFS_CLIENT_MMAP_CACHE_THREAD_RUNS_PER_TIMEOUT constant is set
     to the wrong value.  (Colin Patrick McCabe)
 
-    HDFS-5257. addBlock() retry should return LocatedBlock with locations else client 
-    will get AIOBE. (Vinay via jing9)
-
-    HDFS-5427. Not able to read deleted files from snapshot directly under 
-    snapshottable dir after checkpoint and NN restart. (Vinay via jing9)
-
-    HDFS-5443. Delete 0-sized block when deleting an under-construction file that 
-    is included in snapshot. (jing9)
-
-    HDFS-5476. Snapshot: clean the blocks/files/directories under a renamed 
-    file/directory while deletion. (jing9)
-
-    HDFS-5425. Renaming underconstruction file with snapshots can make NN failure on 
-    restart. (jing9 and Vinay)
-
-    HDFS-5474. Deletesnapshot can make Namenode in safemode on NN restarts. 
-    (Sathish via jing9)
-
     HDFS-5075. httpfs-config.sh calls out incorrect env script name
     (Timothy St. Clair via stevel)
-
-    HDFS-5504. In HA mode, OP_DELETE_SNAPSHOT is not decrementing the safemode threshold, 
-    leads to NN safemode. (Vinay via jing9)
 
     HDFS-5438. Flaws in block report processing can cause data loss. (kihwal)
 
     HDFS-5502. Fix HTTPS support in HsftpFileSystem. (Haohui Mai via jing9)
-
-    HDFS-5428. Under construction files deletion after snapshot+checkpoint+nn restart 
-    leads nn safemode. (jing9)
 
     HDFS-5552. Fix wrong information of "Cluster summay" in dfshealth.html.
     (Haohui Mai via jing9)
 
     HDFS-5533. Symlink delete/create should be treated as DELETE/CREATE in snapshot diff 
     report. (Binglin Chang via jing9)
+
+    HDFS-5580. Fix infinite loop in Balancer.waitForMoveCompletion.
+    (Binglin Chang via junping_du)
 
 Release 2.3.0 - UNRELEASED
 
@@ -803,6 +920,38 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-5353. Short circuit reads fail when dfs.encrypt.data.transfer is 
     enabled. (Colin Patrick McCabe via jing9)
+
+    HDFS-5283. Under construction blocks only inside snapshots should not be
+    counted in safemode threshhold.  (Vinay via szetszwo)
+
+    HDFS-5257. addBlock() retry should return LocatedBlock with locations else client 
+    will get AIOBE. (Vinay via jing9)
+
+    HDFS-5427. Not able to read deleted files from snapshot directly under 
+    snapshottable dir after checkpoint and NN restart. (Vinay via jing9)
+
+    HDFS-5443. Delete 0-sized block when deleting an under-construction file that 
+    is included in snapshot. (jing9)
+
+    HDFS-5476. Snapshot: clean the blocks/files/directories under a renamed 
+    file/directory while deletion. (jing9)
+
+    HDFS-5425. Renaming underconstruction file with snapshots can make NN failure on 
+    restart. (jing9 and Vinay)
+
+    HDFS-5474. Deletesnapshot can make Namenode in safemode on NN restarts. 
+    (Sathish via jing9)
+
+    HDFS-5504. In HA mode, OP_DELETE_SNAPSHOT is not decrementing the safemode threshold, 
+    leads to NN safemode. (Vinay via jing9)
+
+    HDFS-5428. Under construction files deletion after snapshot+checkpoint+nn restart 
+    leads nn safemode. (jing9)
+
+    HDFS-5074. Allow starting up from an fsimage checkpoint in the middle of a
+    segment. (Todd Lipcon via atm)
+
+    HDFS-4201. NPE in BPServiceActor#sendHeartBeat. (jxiang via cmccabe)
 
 Release 2.2.0 - 2013-10-13
 

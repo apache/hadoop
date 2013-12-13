@@ -280,6 +280,11 @@ Trunk (Unreleased)
     HDFS-5471. CacheAdmin -listPools fails when user lacks permissions to view
     all pools (Andrew Wang via Colin Patrick McCabe)
 
+    HADOOP-10044 Improve the javadoc of rpc code (sanjay Radia)
+
+    HADOOP-8753. LocalDirAllocator throws "ArithmeticException: / by zero" when
+    there is no available space on configured local dir. (Benoy Antony via hitesh)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
@@ -537,6 +542,9 @@ Release 2.3.0 - UNRELEASED
 
     HADOOP-10081. Client.setupIOStreams can leak socket resources on exception
     or error (Tsuyoshi OZAWA via jlowe)
+
+    HADOOP-10087. UserGroupInformation.getGroupNames() fails to return primary
+    group first when JniBasedUnixGroupsMappingWithFallback is used (cmccabe)
 
 Release 2.2.0 - 2013-10-13
 

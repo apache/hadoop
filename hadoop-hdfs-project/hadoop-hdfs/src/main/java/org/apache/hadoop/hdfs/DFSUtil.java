@@ -145,6 +145,23 @@ public class DFSUtil {
     return SECURE_RANDOM.get();
   }
 
+  /** Shuffle the elements in the given array. */
+  public static <T> T[] shuffle(final T[] array) {
+    if (array != null && array.length > 0) {
+      final Random random = getRandom();
+      for (int n = array.length; n > 1; ) {
+        final int randomIndex = random.nextInt(n);
+        n--;
+        if (n != randomIndex) {
+          final T tmp = array[randomIndex];
+          array[randomIndex] = array[n];
+          array[n] = tmp;
+        }
+      }
+    }
+    return array;
+  }
+
   /**
    * Compartor for sorting DataNodeInfo[] based on decommissioned states.
    * Decommissioned nodes are moved to the end of the array on sorting with

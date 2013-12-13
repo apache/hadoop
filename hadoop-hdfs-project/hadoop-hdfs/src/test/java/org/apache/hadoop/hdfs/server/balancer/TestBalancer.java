@@ -31,6 +31,7 @@ import java.util.concurrent.TimeoutException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -50,6 +51,7 @@ import org.apache.hadoop.hdfs.server.balancer.Balancer.Cli;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Tool;
+import org.apache.log4j.Level;
 import org.junit.Test;
 
 /**
@@ -58,7 +60,10 @@ import org.junit.Test;
 public class TestBalancer {
   private static final Log LOG = LogFactory.getLog(
   "org.apache.hadoop.hdfs.TestBalancer");
-  
+  static {
+    ((Log4JLogger)Balancer.LOG).getLogger().setLevel(Level.ALL);
+  }
+
   final static long CAPACITY = 500L;
   final static String RACK0 = "/rack0";
   final static String RACK1 = "/rack1";
@@ -292,6 +297,16 @@ public class TestBalancer {
     } while (!balanced);
   }
 
+  String long2String(long[] array) {
+    if (array.length == 0) {
+      return "<empty>";
+    }
+    StringBuilder b = new StringBuilder("[").append(array[0]);
+    for(int i = 1; i < array.length; i++) {
+      b.append(", ").append(array[i]);
+    }
+    return b.append("]").toString();
+  }
   /** This test start a cluster with specified number of nodes, 
    * and fills it to be 30% full (with a single file replicated identically
    * to all datanodes);
@@ -308,6 +323,11 @@ public class TestBalancer {
    */
   private void doTest(Configuration conf, long[] capacities, String[] racks, 
       long newCapacity, String newRack, boolean useTool) throws Exception {
+    LOG.info("capacities = " +  long2String(capacities)); 
+    LOG.info("racks      = " +  Arrays.asList(racks)); 
+    LOG.info("newCapacity= " +  newCapacity); 
+    LOG.info("newRack    = " +  newRack); 
+    LOG.info("useTool    = " +  useTool); 
     assertEquals(capacities.length, racks.length);
     int numOfDatanodes = capacities.length;
     cluster = new MiniDFSCluster.Builder(conf)

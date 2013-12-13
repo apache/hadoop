@@ -630,15 +630,12 @@ class Journal implements Closeable {
    * @see QJournalProtocol#getEditLogManifest(String, long)
    */
   public RemoteEditLogManifest getEditLogManifest(long sinceTxId,
-      boolean forReading, boolean inProgressOk) throws IOException {
+      boolean inProgressOk) throws IOException {
     // No need to checkRequest() here - anyone may ask for the list
     // of segments.
     checkFormatted();
     
-    // if this is for reading, ignore the in-progress editlog segment
-    inProgressOk = forReading ? false : inProgressOk;
-    List<RemoteEditLog> logs = fjm.getRemoteEditLogs(sinceTxId, forReading,
-        inProgressOk);
+    List<RemoteEditLog> logs = fjm.getRemoteEditLogs(sinceTxId, inProgressOk);
     
     if (inProgressOk) {
       RemoteEditLog log = null;

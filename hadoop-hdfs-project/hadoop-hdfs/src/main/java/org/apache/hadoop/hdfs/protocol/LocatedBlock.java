@@ -21,7 +21,9 @@ import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.security.token.Token;
 
 import com.google.common.base.Preconditions;
@@ -40,6 +42,10 @@ public class LocatedBlock {
   private ExtendedBlock b;
   private long offset;  // offset of the first byte of the block in the file
   private DatanodeInfo[] locs;
+  /** Storage ID for each replica */
+  private String[] storageIDs;
+  // Storage type for each replica, if reported.
+  private StorageType[] storageTypes;
   // corrupt flag is true if all of the replicas of a block are corrupt.
   // else false. If block has few corrupt replicas, they are filtered and 
   // their locations are not part of this object
@@ -54,20 +60,34 @@ public class LocatedBlock {
   private static final DatanodeInfo[] EMPTY_LOCS = new DatanodeInfo[0];
 
   public LocatedBlock(ExtendedBlock b, DatanodeInfo[] locs) {
-    this(b, locs, -1); // startOffset is unknown
-  }
-
-  public LocatedBlock(ExtendedBlock b, DatanodeInfo[] locs, long startOffset) {
-    this(b, locs, startOffset, false);
+    this(b, locs, -1, false); // startOffset is unknown
   }
 
   public LocatedBlock(ExtendedBlock b, DatanodeInfo[] locs, long startOffset, 
                       boolean corrupt) {
-    this(b, locs, startOffset, corrupt, EMPTY_LOCS);
+    this(b, locs, null, null, startOffset, corrupt, EMPTY_LOCS);
   }
 
-  public LocatedBlock(ExtendedBlock b, DatanodeInfo[] locs, long startOffset,
-      boolean corrupt, DatanodeInfo[] cachedLocs) {
+  public LocatedBlock(ExtendedBlock b, DatanodeStorageInfo[] storages) {
+    this(b, storages, -1, false); // startOffset is unknown
+  }
+
+  public LocatedBlock(ExtendedBlock b, DatanodeInfo[] locs,
+                      String[] storageIDs, StorageType[] storageTypes) {
+    this(b, locs, storageIDs, storageTypes, -1, false, EMPTY_LOCS);
+  }
+
+  public LocatedBlock(ExtendedBlock b, DatanodeStorageInfo[] storages,
+      long startOffset, boolean corrupt) {
+    this(b, DatanodeStorageInfo.toDatanodeInfos(storages),
+        DatanodeStorageInfo.toStorageIDs(storages),
+        DatanodeStorageInfo.toStorageTypes(storages),
+        startOffset, corrupt, EMPTY_LOCS); // startOffset is unknown
+  }
+
+  public LocatedBlock(ExtendedBlock b, DatanodeInfo[] locs, String[] storageIDs,
+                      StorageType[] storageTypes, long startOffset,
+                      boolean corrupt, DatanodeInfo[] cachedLocs) {
     this.b = b;
     this.offset = startOffset;
     this.corrupt = corrupt;
@@ -76,6 +96,8 @@ public class LocatedBlock {
     } else {
       this.locs = locs;
     }
+    this.storageIDs = storageIDs;
+    this.storageTypes = storageTypes;
     Preconditions.checkArgument(cachedLocs != null,
         "cachedLocs should not be null, use a different constructor");
     if (cachedLocs.length == 0) {
@@ -100,7 +122,15 @@ public class LocatedBlock {
   public DatanodeInfo[] getLocations() {
     return locs;
   }
+
+  public StorageType[] getStorageTypes() {
+    return storageTypes;
+  }
   
+  public String[] getStorageIDs() {
+    return storageIDs;
+  }
+
   public long getStartOffset() {
     return offset;
   }
@@ -161,3 +191,4 @@ public class LocatedBlock {
         + "}";
   }
 }
+
