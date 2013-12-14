@@ -25,7 +25,6 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
-import org.apache.hadoop.hdfs.server.namenode.INodeFileAttributes;
 import org.apache.hadoop.hdfs.server.namenode.Quota;
 
 /**
@@ -57,10 +56,6 @@ public class FileWithSnapshotFeature implements INode.Feature {
     isCurrentFileDeleted = true;
   }
 
-  public INodeFileAttributes getSnapshotINode(INodeFile f, Snapshot snapshot) {
-    return diffs.getSnapshotINode(snapshot, f);
-  }
-
   public FileDiffList getDiffs() {
     return diffs;
   }
@@ -90,7 +85,7 @@ public class FileWithSnapshotFeature implements INode.Feature {
     if (snapshot == null) {
       // delete the current file while the file has snapshot feature
       if (!isCurrentFileDeleted()) {
-        file.recordModification(prior, null);
+        file.recordModification(prior);
         deleteCurrentFile();
       }
       collectBlocksAndClear(file, collectedBlocks, removedINodes);

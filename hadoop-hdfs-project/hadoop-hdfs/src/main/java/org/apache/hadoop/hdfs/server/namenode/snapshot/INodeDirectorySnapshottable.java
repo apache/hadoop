@@ -44,6 +44,8 @@ import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeMap;
 import org.apache.hadoop.hdfs.server.namenode.Quota;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature.ChildrenDiff;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature.DirectoryDiff;
 import org.apache.hadoop.hdfs.util.Diff.ListType;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.util.Time;
@@ -58,7 +60,7 @@ import com.google.common.primitives.SignedBytes;
  * by the namesystem and FSDirectory locks.
  */
 @InterfaceAudience.Private
-public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
+public class INodeDirectorySnapshottable extends INodeDirectory {
   /** Limit the number of snapshot per snapshottable directory. */
   static final int SNAPSHOT_LIMIT = 1 << 16;
 
@@ -115,8 +117,8 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
      * the two snapshots, while its associated value is a {@link ChildrenDiff}
      * storing the changes (creation/deletion) happened to the children (files).
      */
-    private final Map<INodeDirectoryWithSnapshot, ChildrenDiff> dirDiffMap = 
-        new HashMap<INodeDirectoryWithSnapshot, ChildrenDiff>();
+    private final Map<INodeDirectory, ChildrenDiff> dirDiffMap = 
+        new HashMap<INodeDirectory, ChildrenDiff>();
     
     SnapshotDiffInfo(INodeDirectorySnapshottable snapshotRoot, Snapshot start,
         Snapshot end) {
@@ -126,8 +128,8 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
     }
     
     /** Add a dir-diff pair */
-    private void addDirDiff(INodeDirectoryWithSnapshot dir,
-        byte[][] relativePath, ChildrenDiff diff) {
+    private void addDirDiff(INodeDirectory dir, byte[][] relativePath,
+        ChildrenDiff diff) {
       dirDiffMap.put(dir, diff);
       diffMap.put(dir, relativePath);
     }
@@ -154,8 +156,7 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
         if (node.isDirectory()) {
           ChildrenDiff dirDiff = dirDiffMap.get(node);
           List<DiffReportEntry> subList = dirDiff.generateReport(
-              diffMap.get(node), (INodeDirectoryWithSnapshot) node,
-              isFromEarlier());
+              diffMap.get(node), isFromEarlier());
           diffReportList.addAll(subList);
         }
       }
@@ -183,8 +184,11 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
   private int snapshotQuota = SNAPSHOT_LIMIT;
 
   public INodeDirectorySnapshottable(INodeDirectory dir) {
-    super(dir, true, dir instanceof INodeDirectoryWithSnapshot ? 
-        ((INodeDirectoryWithSnapshot) dir).getDiffs(): null);
+    super(dir, true, true);
+    // add snapshot feature if the original directory does not have it
+    if (!isWithSnapshot()) {
+      addSnapshotFeature(null);
+    }
   }
   
   /** @return the number of existing snapshots. */
@@ -298,8 +302,8 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
     snapshotsByNames.add(-i - 1, s);
 
     //set modification time
-    updateModificationTime(Time.now(), null, null);
-    s.getRoot().setModificationTime(getModificationTime(), null, null);
+    updateModificationTime(Time.now(), null);
+    s.getRoot().setModificationTime(getModificationTime(), null);
     return s;
   }
   
@@ -413,12 +417,12 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
     byte[][] relativePath = parentPath.toArray(new byte[parentPath.size()][]);
     if (node.isDirectory()) {
       INodeDirectory dir = node.asDirectory();
-      if (dir instanceof INodeDirectoryWithSnapshot) {
-        INodeDirectoryWithSnapshot sdir = (INodeDirectoryWithSnapshot) dir;
-        boolean change = sdir.computeDiffBetweenSnapshots(
-            diffReport.from, diffReport.to, diff);
+      DirectoryWithSnapshotFeature sf = dir.getDirectoryWithSnapshotFeature();
+      if (sf != null) {
+        boolean change = sf.computeDiffBetweenSnapshots(diffReport.from,
+            diffReport.to, diff, dir);
         if (change) {
-          diffReport.addDirDiff(sdir, relativePath, diff);
+          diffReport.addDirDiff(dir, relativePath, diff);
         }
       }
       ReadOnlyList<INode> children = dir.getChildrenList(diffReport
@@ -453,13 +457,15 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
   INodeDirectory replaceSelf(final Snapshot latest, final INodeMap inodeMap)
       throws QuotaExceededException {
     if (latest == null) {
-      Preconditions.checkState(getLastSnapshot() == null,
+      Preconditions.checkState(
+          getDirectoryWithSnapshotFeature().getLastSnapshot() == null,
           "latest == null but getLastSnapshot() != null, this=%s", this);
-      return replaceSelf4INodeDirectory(inodeMap);
-    } else {
-      return replaceSelf4INodeDirectoryWithSnapshot(inodeMap)
-          .recordModification(latest, null);
     }
+    INodeDirectory dir = replaceSelf4INodeDirectory(inodeMap);
+    if (latest != null) {
+      dir.recordModification(latest);
+    }
+    return dir;
   }
 
   @Override

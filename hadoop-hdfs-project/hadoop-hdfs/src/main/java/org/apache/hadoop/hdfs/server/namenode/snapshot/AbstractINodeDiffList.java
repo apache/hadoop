@@ -25,8 +25,8 @@ import java.util.List;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.namenode.INode;
-import org.apache.hadoop.hdfs.server.namenode.INodeAttributes;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
+import org.apache.hadoop.hdfs.server.namenode.INodeAttributes;
 import org.apache.hadoop.hdfs.server.namenode.Quota;
 
 /**
@@ -271,7 +271,7 @@ abstract class AbstractINodeDiffList<N extends INode,
    *         Note that the current inode is returned if there is no change
    *         between the given snapshot and the current state. 
    */
-  A getSnapshotINode(final Snapshot snapshot, final A currentINode) {
+  public A getSnapshotINode(final Snapshot snapshot, final A currentINode) {
     final D diff = getDiff(snapshot);
     final A inode = diff == null? null: diff.getSnapshotINode();
     return inode == null? currentINode: inode;
@@ -306,7 +306,7 @@ abstract class AbstractINodeDiffList<N extends INode,
         if (snapshotCopy == null) {
           snapshotCopy = createSnapshotCopy(currentINode);
         }
-        diff.saveSnapshotCopy(snapshotCopy, currentINode);
+        diff.saveSnapshotCopy(snapshotCopy);
       }
     }
   }

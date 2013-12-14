@@ -35,7 +35,6 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.DstReference;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithName;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.util.ChunkedArrayList;
 import org.apache.hadoop.hdfs.util.Diff;
@@ -96,9 +95,9 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
   abstract void setUser(String user);
 
   /** Set user */
-  final INode setUser(String user, Snapshot latest, INodeMap inodeMap)
+  final INode setUser(String user, Snapshot latest)
       throws QuotaExceededException {
-    final INode nodeToUpdate = recordModification(latest, inodeMap);
+    final INode nodeToUpdate = recordModification(latest);
     nodeToUpdate.setUser(user);
     return nodeToUpdate;
   }
@@ -120,9 +119,9 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
   abstract void setGroup(String group);
 
   /** Set group */
-  final INode setGroup(String group, Snapshot latest, INodeMap inodeMap)
+  final INode setGroup(String group, Snapshot latest)
       throws QuotaExceededException {
-    final INode nodeToUpdate = recordModification(latest, inodeMap);
+    final INode nodeToUpdate = recordModification(latest);
     nodeToUpdate.setGroup(group);
     return nodeToUpdate;
   }
@@ -145,9 +144,9 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
   abstract void setPermission(FsPermission permission);
 
   /** Set the {@link FsPermission} of this {@link INode} */
-  INode setPermission(FsPermission permission, Snapshot latest,
-      INodeMap inodeMap) throws QuotaExceededException {
-    final INode nodeToUpdate = recordModification(latest, inodeMap);
+  INode setPermission(FsPermission permission, Snapshot latest) 
+      throws QuotaExceededException {
+    final INode nodeToUpdate = recordModification(latest);
     nodeToUpdate.setPermission(permission);
     return nodeToUpdate;
   }
@@ -231,14 +230,12 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
    *
    * @param latest the latest snapshot that has been taken.
    *        Note that it is null if no snapshots have been taken.
-   * @param inodeMap while recording modification, the inode or its parent may 
-   *                 get replaced, and the inodeMap needs to be updated.
    * @return The current inode, which usually is the same object of this inode.
    *         However, in some cases, this inode may be replaced with a new inode
    *         for maintaining snapshots. The current inode is then the new inode.
    */
-  abstract INode recordModification(final Snapshot latest,
-      final INodeMap inodeMap) throws QuotaExceededException;
+  abstract INode recordModification(final Snapshot latest)
+      throws QuotaExceededException;
 
   /** Check whether it's a reference. */
   public boolean isReference() {
@@ -318,7 +315,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
    * Call recordModification(..) to capture the current states.
    * Mark the INode as deleted.
    * 
-   * 1.4 The current inode is a {@link INodeDirectoryWithSnapshot}.
+   * 1.4 The current inode is an {@link INodeDirectory} with snapshot feature.
    * Call recordModification(..) to capture the current states. 
    * Destroy files/directories created after the latest snapshot 
    * (i.e., the inodes stored in the created list of the latest snapshot).
@@ -329,7 +326,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
    * 2.2 To clean {@link INodeDirectory}: recursively clean its children.
    * 2.3 To clean INodeFile with snapshot: delete the corresponding snapshot in
    * its diff list.
-   * 2.4 To clean {@link INodeDirectoryWithSnapshot}: delete the corresponding 
+   * 2.4 To clean {@link INodeDirectory} with snapshot: delete the corresponding 
    * snapshot in its diff list. Recursively clean its children.
    * </pre>
    * 
@@ -575,16 +572,16 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
   }
 
   /** Update modification time if it is larger than the current value. */
-  public abstract INode updateModificationTime(long mtime, Snapshot latest,
-      INodeMap inodeMap) throws QuotaExceededException;
+  public abstract INode updateModificationTime(long mtime, Snapshot latest) 
+      throws QuotaExceededException;
 
   /** Set the last modification time of inode. */
   public abstract void setModificationTime(long modificationTime);
 
   /** Set the last modification time of inode. */
   public final INode setModificationTime(long modificationTime,
-      Snapshot latest, INodeMap inodeMap) throws QuotaExceededException {
-    final INode nodeToUpdate = recordModification(latest, inodeMap);
+      Snapshot latest) throws QuotaExceededException {
+    final INode nodeToUpdate = recordModification(latest);
     nodeToUpdate.setModificationTime(modificationTime);
     return nodeToUpdate;
   }
@@ -611,9 +608,9 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
   /**
    * Set last access time of inode.
    */
-  public final INode setAccessTime(long accessTime, Snapshot latest,
-      INodeMap inodeMap) throws QuotaExceededException {
-    final INode nodeToUpdate = recordModification(latest, inodeMap);
+  public final INode setAccessTime(long accessTime, Snapshot latest)
+      throws QuotaExceededException {
+    final INode nodeToUpdate = recordModification(latest);
     nodeToUpdate.setAccessTime(accessTime);
     return nodeToUpdate;
   }
@@ -753,8 +750,9 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
     }
   }
 
-  /** INode feature such as {@link FileUnderConstructionFeature}
-   *  and {@link DirectoryWithQuotaFeature}.
+  /** 
+   * INode feature such as {@link FileUnderConstructionFeature}
+   * and {@link DirectoryWithQuotaFeature}.
    */
   public interface Feature {
   }
