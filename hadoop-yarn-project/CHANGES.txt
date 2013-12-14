@@ -154,6 +154,9 @@ Release 2.4.0 - UNRELEASED
     service-address configuration are configured for every RM. (Xuan Gong via
     vinodkv)
 
+    YARN-1435. Modified Distributed Shell to accept either the command or the
+    custom script. (Xuan Gong via zjshen)
+
   OPTIMIZATIONS
 
   BUG FIXES

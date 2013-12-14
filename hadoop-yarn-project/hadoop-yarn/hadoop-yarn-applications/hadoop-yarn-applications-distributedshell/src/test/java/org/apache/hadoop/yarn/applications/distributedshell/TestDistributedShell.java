@@ -304,6 +304,54 @@ public class TestDistributedShell {
   }
 
   @Test(timeout=90000)
+  public void testDSShellWithShellScript() throws Exception {
+    final File basedir =
+        new File("target", TestDistributedShell.class.getName());
+    final File tmpDir = new File(basedir, "tmpDir");
+    tmpDir.mkdirs();
+    final File customShellScript = new File(tmpDir, "custom_script.sh");
+    if (customShellScript.exists()) {
+      customShellScript.delete();
+    }
+    if (!customShellScript.createNewFile()) {
+      Assert.fail("Can not create custom shell script file.");
+    }
+    PrintWriter fileWriter = new PrintWriter(customShellScript);
+    // set the output to DEBUG level
+    fileWriter.write("echo testDSShellWithShellScript");
+    fileWriter.close();
+    System.out.println(customShellScript.getAbsolutePath());
+    String[] args = {
+        "--jar",
+        APPMASTER_JAR,
+        "--num_containers",
+        "1",
+        "--shell_script",
+        customShellScript.getAbsolutePath(),
+        "--master_memory",
+        "512",
+        "--master_vcores",
+        "2",
+        "--container_memory",
+        "128",
+        "--container_vcores",
+        "1"
+    };
+
+    LOG.info("Initializing DS Client");
+    final Client client =
+        new Client(new Configuration(yarnCluster.getConfig()));
+    boolean initSuccess = client.init(args);
+    Assert.assertTrue(initSuccess);
+    LOG.info("Running DS Client");
+    boolean result = client.run();
+    LOG.info("Client run completed. Result=" + result);
+    List<String> expectedContent = new ArrayList<String>();
+    expectedContent.add("testDSShellWithShellScript");
+    verifyContainerLog(1, expectedContent, false, "");
+  }
+
+  @Test(timeout=90000)
   public void testDSShellWithInvalidArgs() throws Exception {
     Client client = new Client(new Configuration(yarnCluster.getConfig()));
 
@@ -399,6 +447,58 @@ public class TestDistributedShell {
       Assert.assertTrue("The throw exception is not expected",
           e.getMessage().contains("Invalid virtual cores specified"));
     }
+
+    LOG.info("Initializing DS Client with --shell_command and --shell_script");
+    try {
+      String[] args = {
+          "--jar",
+          APPMASTER_JAR,
+          "--num_containers",
+          "2",
+          "--shell_command",
+          Shell.WINDOWS ? "dir" : "ls",
+          "--master_memory",
+          "512",
+          "--master_vcores",
+          "2",
+          "--container_memory",
+          "128",
+          "--container_vcores",
+          "1",
+          "--shell_script",
+          "test.sh"
+      };
+      client.init(args);
+      Assert.fail("Exception is expected");
+    } catch (IllegalArgumentException e) {
+      Assert.assertTrue("The throw exception is not expected",
+          e.getMessage().contains("Can not specify shell_command option " +
+          "and shell_script option at the same time"));
+    }
+
+    LOG.info("Initializing DS Client without --shell_command and --shell_script");
+    try {
+      String[] args = {
+          "--jar",
+          APPMASTER_JAR,
+          "--num_containers",
+          "2",
+          "--master_memory",
+          "512",
+          "--master_vcores",
+          "2",
+          "--container_memory",
+          "128",
+          "--container_vcores",
+          "1"
+      };
+      client.init(args);
+      Assert.fail("Exception is expected");
+    } catch (IllegalArgumentException e) {
+      Assert.assertTrue("The throw exception is not expected",
+          e.getMessage().contains("No shell command or shell script specified " +
+          "to be executed by application master"));
+    }
   }
 
   protected static void waitForNMToRegister(NodeManager nm)
@@ -490,10 +590,10 @@ public class TestDistributedShell {
       for (File output : containerFiles[i].listFiles()) {
         if (output.getName().trim().contains("stdout")) {
           BufferedReader br = null;
+          List<String> stdOutContent = new ArrayList<String>();
           try {
 
             String sCurrentLine;
-
             br = new BufferedReader(new FileReader(output));
             int numOfline = 0;
             while ((sCurrentLine = br.readLine()) != null) {
@@ -502,12 +602,25 @@ public class TestDistributedShell {
                   numOfWords++;
                 }
               } else if (output.getName().trim().equals("stdout")){
-                Assert.assertEquals("The current is" + sCurrentLine,
-                    expectedContent.get(numOfline), sCurrentLine.trim());
-                numOfline++;
+                if (! Shell.WINDOWS) {
+                  Assert.assertEquals("The current is" + sCurrentLine,
+                      expectedContent.get(numOfline), sCurrentLine.trim());
+                  numOfline++;
+                } else {
+                  stdOutContent.add(sCurrentLine.trim());
+                }
               }
             }
-
+            /* By executing bat script using cmd /c,
+             * it will output all contents from bat script first
+             * It is hard for us to do check line by line
+             * Simply check whether output from bat file contains
+             * all the expected messages
+             */
+            if (Shell.WINDOWS && !count
+                && output.getName().trim().equals("stdout")) {
+              Assert.assertTrue(stdOutContent.containsAll(expectedContent));
+            }
           } catch (IOException e) {
             e.printStackTrace();
           } finally {
@@ -523,6 +636,5 @@ public class TestDistributedShell {
     }
     return numOfWords;
   }
-
 }
 
