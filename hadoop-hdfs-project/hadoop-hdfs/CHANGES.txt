@@ -381,6 +381,8 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-4201. NPE in BPServiceActor#sendHeartBeat. (jxiang via cmccabe)
 
+    HDFS-5666. Fix inconsistent synchronization in BPOfferService (jxiang via cmccabe)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
