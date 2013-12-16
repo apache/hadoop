@@ -153,6 +153,10 @@ public final class DirectoryWithQuotaFeature implements INode.Feature {
     verifyNamespaceQuota(nsDelta);
     verifyDiskspaceQuota(dsDelta);
   }
+  
+  boolean isQuotaSet() {
+    return nsQuota >= 0 || dsQuota >= 0;
+  }
 
   private String namespaceString() {
     return "namespace: " + (nsQuota < 0? "-": namespace + "/" + nsQuota);

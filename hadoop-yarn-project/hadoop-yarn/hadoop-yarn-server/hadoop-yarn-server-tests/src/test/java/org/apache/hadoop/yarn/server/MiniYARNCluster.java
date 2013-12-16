@@ -296,7 +296,9 @@ public class MiniYARNCluster extends CompositeService {
       String hostname = MiniYARNCluster.getHostname();
       conf.set(YarnConfiguration.RM_HA_ID, rmId);
       for (String confKey : YarnConfiguration.RM_SERVICES_ADDRESS_CONF_KEYS) {
-        conf.set(HAUtil.addSuffix(confKey, rmId), hostname + ":0");
+        for (String id : HAUtil.getRMHAIds(conf)) {
+          conf.set(HAUtil.addSuffix(confKey, id), hostname + ":0");
+        }
       }
     }
 

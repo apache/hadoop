@@ -178,7 +178,7 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
         localAppLogDirs);
 
     if (this.writer != null) {
-      this.writer.closeWriter();
+      this.writer.close();
       LOG.info("Finished aggregate log-file for app " + this.applicationId);
     }
 

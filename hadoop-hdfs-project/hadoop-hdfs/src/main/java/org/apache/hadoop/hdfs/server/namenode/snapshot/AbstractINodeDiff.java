@@ -98,7 +98,7 @@ abstract class AbstractINodeDiff<N extends INode,
   }
 
   /** Save the INode state to the snapshot if it is not done already. */
-  void saveSnapshotCopy(A snapshotCopy, N currentINode) {
+  void saveSnapshotCopy(A snapshotCopy) {
     Preconditions.checkState(snapshotINode == null, "Expected snapshotINode to be null");
     snapshotINode = snapshotCopy;
   }

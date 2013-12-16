@@ -249,8 +249,15 @@ Trunk (Unreleased)
     HDFS-5647. Merge INodeDirectory.Feature and INodeFile.Feature. (Haohui Mai
     via jing9)
 
+    HDFS-5632. Flatten INodeDirectory hierarchy: Replace
+    INodeDirectoryWithSnapshot with DirectoryWithSnapshotFeature.
+    (jing9 via szetszwo)
+
   OPTIMIZATIONS
     HDFS-5349. DNA_CACHE and DNA_UNCACHE should be by blockId only. (cmccabe)
+
+    HDFS-5665. Remove the unnecessary writeLock while initializing CacheManager
+    in FsNameSystem Ctor. (Uma Maheswara Rao G via Andrew Wang)
 
   BUG FIXES
     HADOOP-9635 Fix potential Stack Overflow in DomainSocket.c (V. Karthik Kumar
@@ -446,6 +453,12 @@ Trunk (Unreleased)
     Standby (jxiang via cmccabe)
 
     HDFS-5626. dfsadmin -report shows incorrect cache values. (cmccabe)
+
+    HDFS-5406. Send incremental block reports for all storages in a
+    single call. (Arpit Agarwal)
+
+    HDFS-5454. DataNode UUID should be assigned prior to FsDataset
+    initialization. (Arpit Agarwal)
 
   BREAKDOWN OF HDFS-2832 SUBTASKS AND RELATED JIRAS
 
@@ -810,6 +823,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-4983. Numeric usernames do not work with WebHDFS FS. (Yongjun Zhang via
     jing9)
 
+    HDFS-5592. statechangeLog of completeFile should be logged only in case of success. 
+    (Vinayakumar via umamahesh)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -952,6 +968,8 @@ Release 2.3.0 - UNRELEASED
     segment. (Todd Lipcon via atm)
 
     HDFS-4201. NPE in BPServiceActor#sendHeartBeat. (jxiang via cmccabe)
+
+    HDFS-5666. Fix inconsistent synchronization in BPOfferService (jxiang via cmccabe)
 
 Release 2.2.0 - 2013-10-13
 

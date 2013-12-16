@@ -26,8 +26,8 @@ import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 
 import com.google.common.base.Preconditions;
@@ -132,11 +132,11 @@ public class INodesInPath {
       final boolean isRef = curNode.isReference();
       final boolean isDir = curNode.isDirectory();
       final INodeDirectory dir = isDir? curNode.asDirectory(): null;  
-      if (!isRef && isDir && dir instanceof INodeDirectoryWithSnapshot) {
+      if (!isRef && isDir && dir.isWithSnapshot()) {
         //if the path is a non-snapshot path, update the latest snapshot.
         if (!existing.isSnapshot()) {
-          existing.updateLatestSnapshot(
-              ((INodeDirectoryWithSnapshot)dir).getLastSnapshot());
+          existing.updateLatestSnapshot(dir.getDirectoryWithSnapshotFeature()
+              .getLastSnapshot());
         }
       } else if (isRef && isDir && !lastComp) {
         // If the curNode is a reference node, need to check its dstSnapshot:
@@ -155,10 +155,10 @@ public class INodesInPath {
           if (latest == null ||  // no snapshot in dst tree of rename
               dstSnapshotId >= latest.getId()) { // the above scenario 
             Snapshot lastSnapshot = null;
-            if (curNode.isDirectory()
-                && curNode.asDirectory() instanceof INodeDirectoryWithSnapshot) {
-              lastSnapshot = ((INodeDirectoryWithSnapshot) curNode
-                  .asDirectory()).getLastSnapshot();
+            DirectoryWithSnapshotFeature sf = null;
+            if (curNode.isDirectory() && 
+                (sf = curNode.asDirectory().getDirectoryWithSnapshotFeature()) != null) {
+              lastSnapshot = sf.getLastSnapshot();
             }
             existing.setSnapshot(lastSnapshot);
           }
