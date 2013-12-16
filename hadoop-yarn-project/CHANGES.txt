@@ -231,6 +231,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1505. Fixed Webapplication proxy server to not hardcode its bind
     address. (Xuan Gong via vinodkv)
 
+    YARN-1145. Fixed a potential file-handle leak in the web interface for
+    displaying aggregated logs. (Rohith Sharma via vinodkv)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
