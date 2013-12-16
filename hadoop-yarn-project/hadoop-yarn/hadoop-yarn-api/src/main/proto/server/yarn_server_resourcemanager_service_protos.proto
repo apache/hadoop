@@ -68,6 +68,13 @@ message GetGroupsForUserResponseProto {
   repeated string groups = 1;
 }
 
+message UpdateNodeResourceRequestProto {
+  repeated NodeResourceMapProto node_resource_map = 1;
+}
+
+message UpdateNodeResourceResponseProto {
+}
+
 ////////////////////////////////////////////////////////////////////////
 ////// RM recovery related records /////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////
