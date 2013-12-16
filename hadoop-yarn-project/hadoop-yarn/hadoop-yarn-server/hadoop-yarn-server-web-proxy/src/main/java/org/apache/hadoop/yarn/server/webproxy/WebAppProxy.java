@@ -33,6 +33,8 @@ import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 
+import com.google.common.annotations.VisibleForTesting;
+
 public class WebAppProxy extends AbstractService {
   public static final String FETCHER_ATTRIBUTE= "AppUrlFetcher";
   public static final String IS_SECURITY_ENABLED_ATTRIBUTE = "IsSecurityEnabled";
@@ -124,5 +126,10 @@ public class WebAppProxy extends AbstractService {
       } catch (InterruptedException e) {
       }
     }
+  }
+
+  @VisibleForTesting
+  String getBindAddress() {
+    return bindAddress + ":" + port;
   }
 }

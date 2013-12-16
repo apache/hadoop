@@ -183,8 +183,10 @@ public class TestWebAppProxyServlet {
   @Test(timeout=5000)
   public void testWebAppProxyServerMainMethod() throws Exception {
     WebAppProxyServer mainServer = null;
+    Configuration conf = new YarnConfiguration();
+    conf.set(YarnConfiguration.PROXY_ADDRESS, "localhost:9099");
     try {
-      mainServer  = WebAppProxyServer.startServer();
+      mainServer  = WebAppProxyServer.startServer(conf);
       int counter = 20;
 
       URL wrongUrl = new URL("http://localhost:9099/proxy/app");
