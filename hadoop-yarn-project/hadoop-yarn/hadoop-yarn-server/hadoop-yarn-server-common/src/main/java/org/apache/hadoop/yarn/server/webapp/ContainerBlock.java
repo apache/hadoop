@@ -91,8 +91,8 @@ public class ContainerBlock extends HtmlBlock {
             container.getFinishedTime()))).
     _("Resource:", container.getAllocatedMB() + " Memory, " +
         container.getAllocatedVCores() + " VCores").
-    _("Logs:", container.getLogUrl() == null ?
-        "#" : root_url(container.getLogUrl()), container.getLogUrl()).
+    _("Logs:", container.getLogUrl() == null ? "#" : root_url(container.getLogUrl()),
+        container.getLogUrl() == null ? "N/A" : container.getLogUrl()).
     _("Diagnostics:", container.getDiagnosticsInfo());
 
     html._(InfoBlock.class);

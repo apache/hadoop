@@ -44,6 +44,10 @@ import com.google.inject.Injector;
 
 public class TestAHSWebApp extends ApplicationHistoryStoreTestUtils {
 
+  public TestAHSWebApp(ApplicationHistoryStore store) {
+    this.store = store;
+  }
+
   @Before
   public void setup() {
     store = new MemoryApplicationHistoryStore();
@@ -138,10 +142,10 @@ public class TestAHSWebApp extends ApplicationHistoryStoreTestUtils {
     WebAppTests.flushOutput(injector);
   }
 
-  private ApplicationHistoryManager mockApplicationHistoryManager(
+  ApplicationHistoryManager mockApplicationHistoryManager(
       int numApps, int numAppAttempts, int numContainers) throws Exception {
     ApplicationHistoryManager ahManager =
-        new MockApplicationHistoryManagerImpl();
+        new MockApplicationHistoryManagerImpl(store);
     for (int i = 1; i <= numApps; ++i) {
       ApplicationId appId = ApplicationId.newInstance(0, i);
       writeApplicationStartData(appId);
@@ -161,10 +165,10 @@ public class TestAHSWebApp extends ApplicationHistoryStoreTestUtils {
     return ahManager;
   }
 
-  private class MockApplicationHistoryManagerImpl extends
+  class MockApplicationHistoryManagerImpl extends
       ApplicationHistoryManagerImpl {
 
-    public MockApplicationHistoryManagerImpl() {
+    public MockApplicationHistoryManagerImpl(ApplicationHistoryStore store) {
       super();
       init(new YarnConfiguration());
       start();
