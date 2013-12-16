@@ -181,6 +181,8 @@ Release 2.4.0 - UNRELEASED
     HADOOP-8753. LocalDirAllocator throws "ArithmeticException: / by zero" when
     there is no available space on configured local dir. (Benoy Antony via hitesh)
 
+    HADOOP-10106. Incorrect thread name in RPC log messages. (Ming Ma via jing9)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
