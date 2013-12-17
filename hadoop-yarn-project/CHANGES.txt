@@ -15,6 +15,9 @@ Release 0.23.11 - UNRELEASED
     YARN-1053. Diagnostic message from ContainerExitEvent is ignored in
     ContainerImpl (Omkar Vinit Joshi via jlowe)
 
+    YARN-1145. Fixed a potential file-handle leak in the web interface for
+    displaying aggregated logs. (Rohith Sharma via jlowe)
+
 Release 0.23.10 - 2013-12-09
 
   INCOMPATIBLE CHANGES

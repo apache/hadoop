@@ -100,7 +100,7 @@ public class TestAggregatedLogFormat {
             testContainerId);
 
     logWriter.append(logKey, logValue);
-    logWriter.closeWriter();
+    logWriter.close();
 
     // make sure permission are correct on the file
     FileStatus fsStatus =  fs.getFileStatus(remoteAppLogFile);
