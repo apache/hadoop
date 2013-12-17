@@ -385,8 +385,13 @@ message CacheDirectiveStatsProto {
   required bool hasExpired = 5;
 }
 
+enum CacheFlagProto {
+  FORCE = 0x01;    // Ignore pool resource limits
+}
+
 message AddCacheDirectiveRequestProto {
   required CacheDirectiveInfoProto info = 1;
+  optional uint32 cacheFlags = 2;  // bits set using CacheFlag
 }
 
 message AddCacheDirectiveResponseProto {
@@ -395,6 +400,7 @@ message AddCacheDirectiveResponseProto {
 
 message ModifyCacheDirectiveRequestProto {
   required CacheDirectiveInfoProto info = 1;
+  optional uint32 cacheFlags = 2;  // bits set using CacheFlag
 }
 
 message ModifyCacheDirectiveResponseProto {
@@ -427,14 +433,15 @@ message CachePoolInfoProto {
   optional string ownerName = 2;
   optional string groupName = 3;
   optional int32 mode = 4;
-  optional int32 weight = 5;
+  optional int64 limit = 5;
 }
 
 message CachePoolStatsProto {
   required int64 bytesNeeded = 1;
   required int64 bytesCached = 2;
-  required int64 filesNeeded = 3;
-  required int64 filesCached = 4;
+  required int64 bytesOverlimit = 3;
+  required int64 filesNeeded = 4;
+  required int64 filesCached = 5;
 }
 
 message AddCachePoolRequestProto {
