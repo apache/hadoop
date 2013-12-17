@@ -92,6 +92,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
@@ -952,39 +953,71 @@ public class DFSUtil {
    * given namenode rpc address.
    * @param conf
    * @param namenodeAddr - namenode RPC address
-   * @param httpsAddress -If true, and if security is enabled, returns server 
-   *                      https address. If false, returns server http address.
+   * @param scheme - the scheme (http / https)
    * @return server http or https address
    * @throws IOException 
    */
-  public static String getInfoServer(InetSocketAddress namenodeAddr,
-      Configuration conf, boolean httpsAddress) throws IOException {
-    boolean securityOn = UserGroupInformation.isSecurityEnabled();
-    String httpAddressKey = (securityOn && httpsAddress) ? 
-        DFS_NAMENODE_HTTPS_ADDRESS_KEY : DFS_NAMENODE_HTTP_ADDRESS_KEY;
-    String httpAddressDefault = (securityOn && httpsAddress) ? 
-        DFS_NAMENODE_HTTPS_ADDRESS_DEFAULT : DFS_NAMENODE_HTTP_ADDRESS_DEFAULT;
-      
-    String suffixes[];
+  public static URI getInfoServer(InetSocketAddress namenodeAddr,
+      Configuration conf, String scheme) throws IOException {
+    String[] suffixes = null;
     if (namenodeAddr != null) {
       // if non-default namenode, try reverse look up 
       // the nameServiceID if it is available
       suffixes = getSuffixIDs(conf, namenodeAddr,
           DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY,
           DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY);
-    } else {
-      suffixes = new String[2];
     }
-    String configuredInfoAddr = getSuffixedConf(conf, httpAddressKey,
-        httpAddressDefault, suffixes);
+
+    String authority;
+    if ("http".equals(scheme)) {
+      authority = getSuffixedConf(conf, DFS_NAMENODE_HTTP_ADDRESS_KEY,
+          DFS_NAMENODE_HTTP_ADDRESS_DEFAULT, suffixes);
+    } else if ("https".equals(scheme)) {
+      authority = getSuffixedConf(conf, DFS_NAMENODE_HTTPS_ADDRESS_KEY,
+          DFS_NAMENODE_HTTPS_ADDRESS_DEFAULT, suffixes);
+    } else {
+      throw new IllegalArgumentException("Invalid scheme:" + scheme);
+    }
+
     if (namenodeAddr != null) {
-      return substituteForWildcardAddress(configuredInfoAddr,
+      authority = substituteForWildcardAddress(authority,
           namenodeAddr.getHostName());
-    } else {
-      return configuredInfoAddr;
     }
+    return URI.create(scheme + "://" + authority);
   }
-  
+
+  /**
+   * Lookup the HTTP / HTTPS address of the namenode, and replace its hostname
+   * with defaultHost when it found out that the address is a wildcard / local
+   * address.
+   *
+   * @param defaultHost
+   *          The default host name of the namenode.
+   * @param conf
+   *          The configuration
+   * @param scheme
+   *          HTTP or HTTPS
+   * @throws IOException
+   */
+  public static URI getInfoServerWithDefaultHost(String defaultHost,
+      Configuration conf, final String scheme) throws IOException {
+    URI configuredAddr = getInfoServer(null, conf, scheme);
+    String authority = substituteForWildcardAddress(
+        configuredAddr.getAuthority(), defaultHost);
+    return URI.create(scheme + "://" + authority);
+  }
+
+  /**
+   * Determine whether HTTP or HTTPS should be used to connect to the remote
+   * server. Currently the client only connects to the server via HTTPS if the
+   * policy is set to HTTPS_ONLY.
+   *
+   * @return the scheme (HTTP / HTTPS)
+   */
+  public static String getHttpClientScheme(Configuration conf) {
+    HttpConfig.Policy policy = DFSUtil.getHttpPolicy(conf);
+    return policy == HttpConfig.Policy.HTTPS_ONLY ? "https" : "http";
+  }
 
   /**
    * Substitute a default host in the case that an address has been configured
@@ -998,8 +1031,9 @@ public class DFSUtil {
    * @return the substituted address
    * @throws IOException if it is a wildcard address and security is enabled
    */
-  public static String substituteForWildcardAddress(String configuredAddress,
-      String defaultHost) throws IOException {
+  @VisibleForTesting
+  static String substituteForWildcardAddress(String configuredAddress,
+    String defaultHost) throws IOException {
     InetSocketAddress sockAddr = NetUtils.createSocketAddr(configuredAddress);
     InetSocketAddress defaultSockAddr = NetUtils.createSocketAddr(defaultHost
         + ":0");

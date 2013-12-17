@@ -24,11 +24,14 @@ import static org.apache.hadoop.util.Time.now;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.protocol.CheckpointCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeCommand;
@@ -61,6 +64,7 @@ class Checkpointer extends Daemon {
   private String infoBindAddress;
 
   private CheckpointConf checkpointConf;
+  private final Configuration conf;
 
   private BackupImage getFSImage() {
     return (BackupImage)backupNode.getFSImage();
@@ -74,6 +78,7 @@ class Checkpointer extends Daemon {
    * Create a connection to the primary namenode.
    */
   Checkpointer(Configuration conf, BackupNode bnNode)  throws IOException {
+    this.conf = conf;
     this.backupNode = bnNode;
     try {
       initialize(conf);
@@ -274,10 +279,15 @@ class Checkpointer extends Daemon {
         + " New Image Size: " + imageSize);
   }
 
-  private InetSocketAddress getImageListenAddress() {
+  private URL getImageListenAddress() {
     InetSocketAddress httpSocAddr = backupNode.getHttpAddress();
     int httpPort = httpSocAddr.getPort();
-    return new InetSocketAddress(infoBindAddress, httpPort);
+    try {
+      return new URL(DFSUtil.getHttpClientScheme(conf) + "://" + infoBindAddress + ":" + httpPort);
+    } catch (MalformedURLException e) {
+      // Unreachable
+      throw new RuntimeException(e);
+    }
   }
 
   static void rollForwardByApplyingLogs(

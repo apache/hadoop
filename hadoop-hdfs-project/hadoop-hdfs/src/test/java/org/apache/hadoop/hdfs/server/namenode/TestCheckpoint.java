@@ -37,6 +37,7 @@ import java.io.RandomAccessFile;
 import java.lang.management.ManagementFactory;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -76,7 +77,6 @@ import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.DelayAnswer;
@@ -236,6 +236,7 @@ public class TestCheckpoint {
     assertTrue("Removed directory wasn't what was expected",
                listRsd.size() > 0 && listRsd.get(listRsd.size() - 1).getRoot().
                toString().indexOf("storageDirToCheck") != -1);
+    nnStorage.close();
   }
 
   /*
@@ -1963,8 +1964,9 @@ public class TestCheckpoint {
           .format(true).build();
       
       NamenodeProtocols nn = cluster.getNameNodeRpc();
-      String fsName = NetUtils.getHostPortString(
-          cluster.getNameNode().getHttpAddress());
+      URL fsName = DFSUtil.getInfoServer(
+          cluster.getNameNode().getServiceRpcAddress(), conf,
+          DFSUtil.getHttpClientScheme(conf)).toURL();
 
       // Make a finalized log on the server side. 
       nn.rollEditLog();
@@ -1996,8 +1998,7 @@ public class TestCheckpoint {
       }
 
       try {
-        InetSocketAddress fakeAddr = new InetSocketAddress(1);
-        TransferFsImage.uploadImageFromStorage(fsName, fakeAddr, dstImage, 0);
+        TransferFsImage.uploadImageFromStorage(fsName, new URL("http://localhost:1234"), dstImage, 0);
         fail("Storage info was not verified");
       } catch (IOException ioe) {
         String msg = StringUtils.stringifyException(ioe);

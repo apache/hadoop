@@ -23,6 +23,7 @@ import java.security.PrivilegedExceptionAction;
 import java.util.*;
 import java.io.*;
 import java.net.InetSocketAddress;
+import java.net.URL;
 
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
@@ -33,10 +34,8 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -90,8 +89,8 @@ public class GetImageServlet extends HttpServlet {
       ServletContext context = getServletContext();
       final FSImage nnImage = NameNodeHttpServer.getFsImageFromContext(context);
       final GetImageParams parsedParams = new GetImageParams(request, response);
-      final Configuration conf = 
-        (Configuration)getServletContext().getAttribute(JspHelper.CURRENT_CONF);
+      final Configuration conf = (Configuration) context
+          .getAttribute(JspHelper.CURRENT_CONF);
       final NameNodeMetrics metrics = NameNode.getNameNodeMetrics();
       
       if (UserGroupInformation.isSecurityEnabled() && 
@@ -180,7 +179,7 @@ public class GetImageServlet extends HttpServlet {
               // issue a HTTP get request to download the new fsimage 
               MD5Hash downloadImageDigest =
                 TransferFsImage.downloadImageToStorage(
-                        parsedParams.getInfoServer(), txid,
+                        parsedParams.getInfoServer(conf), txid,
                         nnImage.getStorage(), true);
               nnImage.saveDigestAndRenameCheckpointImage(txid, downloadImageDigest);
 
@@ -331,7 +330,9 @@ public class GetImageServlet extends HttpServlet {
   }
   
   static String getParamStringToPutImage(long txid,
-      InetSocketAddress imageListenAddress, Storage storage) {
+      URL url, Storage storage) {
+    InetSocketAddress imageListenAddress = NetUtils.createSocketAddr(url
+        .getAuthority());
     String machine = !imageListenAddress.isUnresolved()
         && imageListenAddress.getAddress().isAnyLocalAddress() ? null
         : imageListenAddress.getHostName();
@@ -441,11 +442,11 @@ public class GetImageServlet extends HttpServlet {
       return isPutImage;
     }
     
-    String getInfoServer() throws IOException{
+    URL getInfoServer(Configuration conf) throws IOException {
       if (machineName == null || remoteport == 0) {
-        throw new IOException ("MachineName and port undefined");
+        throw new IOException("MachineName and port undefined");
       }
-      return machineName + ":" + remoteport;
+      return new URL(DFSUtil.getHttpClientScheme(conf), machineName, remoteport, "");
     }
     
     boolean shouldFetchLatest() {

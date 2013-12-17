@@ -29,7 +29,9 @@ import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.MalformedURLException;
 import java.net.URI;
+import java.net.URL;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
@@ -111,7 +113,7 @@ public class SecondaryNameNode implements Runnable {
   private final long starttime = Time.now();
   private volatile long lastCheckpointTime = 0;
 
-  private String fsName;
+  private URL fsName;
   private CheckpointStorage checkpointImage;
 
   private NamenodeProtocol namenode;
@@ -404,7 +406,7 @@ public class SecondaryNameNode implements Runnable {
    * @throws IOException
    */
   static boolean downloadCheckpointFiles(
-      final String nnHostPort,
+      final URL nnHostPort,
       final FSImage dstImage,
       final CheckpointSignature sig,
       final RemoteEditLogManifest manifest
@@ -467,25 +469,33 @@ public class SecondaryNameNode implements Runnable {
   /**
    * Returns the Jetty server that the Namenode is listening on.
    */
-  private String getInfoServer() throws IOException {
+  private URL getInfoServer() throws IOException {
     URI fsName = FileSystem.getDefaultUri(conf);
     if (!HdfsConstants.HDFS_URI_SCHEME.equalsIgnoreCase(fsName.getScheme())) {
       throw new IOException("This is not a DFS");
     }
 
-    String configuredAddress = DFSUtil.getInfoServer(null, conf, false);
-    String address = DFSUtil.substituteForWildcardAddress(configuredAddress,
-        fsName.getHost());
-    LOG.debug("Will connect to NameNode at HTTP address: " + address);
-    return address;
+    final String scheme = DFSUtil.getHttpClientScheme(conf);
+    URI address = DFSUtil.getInfoServerWithDefaultHost(fsName.getHost(), conf,
+        scheme);
+    LOG.debug("Will connect to NameNode at " + address);
+    return address.toURL();
   }
   
   /**
    * Return the host:port of where this SecondaryNameNode is listening
    * for image transfers
    */
-  private InetSocketAddress getImageListenAddress() {
-    return new InetSocketAddress(infoBindAddress, infoPort);
+  private URL getImageListenAddress() {
+    StringBuilder sb = new StringBuilder()
+        .append(DFSUtil.getHttpClientScheme(conf)).append("://")
+        .append(infoBindAddress).append(":").append(infoPort);
+    try {
+      return new URL(sb.toString());
+    } catch (MalformedURLException e) {
+      // Unreachable
+      throw new RuntimeException(e);
+    }
   }
 
   /**

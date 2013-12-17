@@ -168,6 +168,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-5536. Implement HTTP policy for Namenode and DataNode. (Haohui Mai via
     jing9)
 
+    HDFS-5312. Generate HTTP / HTTPS URL in DFSUtil#getInfoServer() based on the 
+    configured http policy. (Haohui Mai via jing9)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn)
