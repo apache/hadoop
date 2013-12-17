@@ -256,6 +256,9 @@ Trunk (Unreleased)
     HDFS-5431. Support cachepool-based limit management in path-based caching
     (awang via cmccabe)
 
+    HDFS-5634. Allow BlockReaderLocal to switch between checksumming and not
+    (cmccabe)
+
   OPTIMIZATIONS
     HDFS-5349. DNA_CACHE and DNA_UNCACHE should be by blockId only. (cmccabe)
 

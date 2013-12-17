@@ -58,6 +58,7 @@ import org.apache.hadoop.util.VersionInfo;
 
 import java.io.*;
 import java.net.*;
+import java.nio.ByteBuffer;
 import java.security.PrivilegedExceptionAction;
 import java.util.*;
 import java.util.concurrent.TimeoutException;
@@ -1058,5 +1059,11 @@ public class DFSTestUtil {
 
   public static void abortStream(DFSOutputStream out) throws IOException {
     out.abort();
+  }
+
+  public static byte[] asArray(ByteBuffer buf) {
+    byte arr[] = new byte[buf.remaining()];
+    buf.duplicate().get(arr);
+    return arr;
   }
 }
