@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.apache.hadoop.util.Time.now;
+
 import java.security.PrivilegedExceptionAction;
 import java.util.*;
 import java.io.*;
@@ -42,6 +44,7 @@ import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
+import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
@@ -89,6 +92,7 @@ public class GetImageServlet extends HttpServlet {
       final GetImageParams parsedParams = new GetImageParams(request, response);
       final Configuration conf = 
         (Configuration)getServletContext().getAttribute(JspHelper.CURRENT_CONF);
+      final NameNodeMetrics metrics = NameNode.getNameNodeMetrics();
       
       if (UserGroupInformation.isSecurityEnabled() && 
           !isValidRequestor(context, request.getUserPrincipal().getName(), conf)) {
@@ -129,14 +133,26 @@ public class GetImageServlet extends HttpServlet {
               throw new IOException(errorMessage);
             }
             CheckpointFaultInjector.getInstance().beforeGetImageSetsHeaders();
+            long start = now();
             serveFile(imageFile);
+
+            if (metrics != null) { // Metrics non-null only when used inside name node
+              long elapsed = now() - start;
+              metrics.addGetImage(elapsed);
+            }
           } else if (parsedParams.isGetEdit()) {
             long startTxId = parsedParams.getStartTxId();
             long endTxId = parsedParams.getEndTxId();
             
             File editFile = nnImage.getStorage()
                 .findFinalizedEditsFile(startTxId, endTxId);
+            long start = now();
             serveFile(editFile);
+
+            if (metrics != null) { // Metrics non-null only when used inside name node
+              long elapsed = now() - start;
+              metrics.addGetEdit(elapsed);
+            }
           } else if (parsedParams.isPutImage()) {
             final long txid = parsedParams.getTxId();
 
@@ -160,12 +176,18 @@ public class GetImageServlet extends HttpServlet {
                 UserGroupInformation.getCurrentUser().checkTGTAndReloginFromKeytab();
               }
               
+              long start = now();
               // issue a HTTP get request to download the new fsimage 
               MD5Hash downloadImageDigest =
                 TransferFsImage.downloadImageToStorage(
                         parsedParams.getInfoServer(), txid,
                         nnImage.getStorage(), true);
               nnImage.saveDigestAndRenameCheckpointImage(txid, downloadImageDigest);
+
+              if (metrics != null) { // Metrics non-null only when used inside name node
+                long elapsed = now() - start;
+                metrics.addPutImage(elapsed);
+              }
               
               // Now that we have a new checkpoint, we might be able to
               // remove some old ones.

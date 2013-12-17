@@ -156,6 +156,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-5652. Refactor invalid block token exception handling in DFSInputStream.
     (Liang Xie via junping_du)
 
+    HDFS-5350. Name Node should report fsimage transfer time as a metric.
+    (Jimmy Xiang via wang)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn)
