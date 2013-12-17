@@ -103,6 +103,9 @@ Release 2.4.0 - UNRELEASED
     MAPREDUCE-5623. TestJobCleanup fails because of RejectedExecutionException
     and NPE. (jlowe)
 
+    MAPREDUCE-5679. TestJobHistoryParsing has race condition (Liyin Liang via
+    jlowe)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
