@@ -34,6 +34,9 @@ Release 2.4.0 - UNRELEASED
     YARN-312. Introduced ResourceManagerAdministrationProtocol changes to support
     changing resources on node. (Junping Du via vinodkv)
 
+    YARN-1028. Added FailoverProxyProvider capability to ResourceManager to help
+    with RM failover. (Karthik Kambatla via vinodkv)
+
   IMPROVEMENTS
 
     YARN-7. Support CPU resource for DistributedShell. (Junping Du via llu)

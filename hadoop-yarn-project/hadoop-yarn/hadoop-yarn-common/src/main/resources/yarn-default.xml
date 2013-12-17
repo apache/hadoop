@@ -425,6 +425,61 @@
   </property>
 
   <property>
+    <description>When HA is enabled, the class to be used by Clients, AMs and
+      NMs to failover to the Active RM. It should extend
+      org.apache.hadoop.yarn.client.RMFailoverProxyProvider</description>
+    <name>yarn.client.failover-proxy-provider</name>
+    <value>org.apache.hadoop.yarn.client.ConfiguredRMFailoverProxyProvider</value>
+  </property>
+
+  <property>
+    <description>When HA is enabled, the max number of times
+      FailoverProxyProvider should attempt failover. When set,
+      this overrides the yarn.resourcemanager.connect.max-wait.ms. When
+      not set, this is inferred from
+      yarn.resourcemanager.connect.max-wait.ms.</description>
+    <name>yarn.client.failover-max-attempts</name>
+    <!--value>15</value-->
+  </property>
+
+  <property>
+    <description>When HA is enabled, the sleep base (in milliseconds) to be
+      used for calculating the exponential delay between failovers. When set,
+      this overrides the yarn.resourcemanager.connect.* settings. When
+      not set, yarn.resourcemanager.connect.retry-interval.ms is used instead.
+    </description>
+    <name>yarn.client.failover-sleep-base-ms</name>
+    <!--value>500</value-->
+  </property>
+
+  <property>
+    <description>When HA is enabled, the maximum sleep time (in milliseconds)
+      between failovers. When set, this overrides the
+      yarn.resourcemanager.connect.* settings. When not set,
+      yarn.resourcemanager.connect.retry-interval.ms is used instead.</description>
+    <name>yarn.client.failover-sleep-max-ms</name>
+    <!--value>15000</value-->
+  </property>
+
+  <property>
+    <description>When HA is enabled, the number of retries per
+      attempt to connect to a ResourceManager. In other words,
+      it is the ipc.client.connect.max.retries to be used during
+      failover attempts</description>
+    <name>yarn.client.failover-retries</name>
+    <value>0</value>
+  </property>
+
+  <property>
+    <description>When HA is enabled, the number of retries per
+      attempt to connect to a ResourceManager on socket timeouts. In other
+      words, it is the ipc.client.connect.max.retries.on.timeouts to be used
+      during failover attempts</description>
+    <name>yarn.client.failover-retries-on-socket-timeouts</name>
+    <value>0</value>
+  </property>
+
+  <property>
     <description>The maximum number of completed applications RM keeps. </description>
     <name>yarn.resourcemanager.max-completed-applications</name>
     <value>10000</value>

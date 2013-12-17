@@ -310,4 +310,12 @@
     <Bug pattern="IS2_INCONSISTENT_SYNC" />
   </Match>
 
+  <!-- Ignore INSTANCE not being final as it is created in sub-classes -->
+  <Match>
+    <Class name="org.apache.hadoop.yarn.client.RMProxy" />
+    <Field name="INSTANCE" />
+    <Bug pattern="MS_SHOULD_BE_FINAL"/>
+  </Match>
+
+
 </FindBugsFilter>

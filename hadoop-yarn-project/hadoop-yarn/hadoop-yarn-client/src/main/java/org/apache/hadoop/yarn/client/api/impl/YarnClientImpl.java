@@ -19,7 +19,6 @@
 package org.apache.hadoop.yarn.client.api.impl;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
@@ -79,7 +78,6 @@ public class YarnClientImpl extends YarnClient {
   private static final Log LOG = LogFactory.getLog(YarnClientImpl.class);
 
   protected ApplicationClientProtocol rmClient;
-  protected InetSocketAddress rmAddress;
   protected long submitPollIntervalMillis;
   private long asyncApiPollIntervalMillis;
 
@@ -89,15 +87,9 @@ public class YarnClientImpl extends YarnClient {
     super(YarnClientImpl.class.getName());
   }
 
-  private static InetSocketAddress getRmAddress(Configuration conf) {
-    return conf.getSocketAddr(YarnConfiguration.RM_ADDRESS,
-      YarnConfiguration.DEFAULT_RM_ADDRESS, YarnConfiguration.DEFAULT_RM_PORT);
-  }
-
   @SuppressWarnings("deprecation")
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
-    this.rmAddress = getRmAddress(conf);
     asyncApiPollIntervalMillis =
         conf.getLong(YarnConfiguration.YARN_CLIENT_APPLICATION_CLIENT_PROTOCOL_POLL_INTERVAL_MS,
           YarnConfiguration.DEFAULT_YARN_CLIENT_APPLICATION_CLIENT_PROTOCOL_POLL_INTERVAL_MS);
@@ -180,9 +172,7 @@ public class YarnClientImpl extends YarnClient {
       }
     }
 
-
-    LOG.info("Submitted application " + applicationId + " to ResourceManager"
-        + " at " + rmAddress);
+    LOG.info("Submitted application " + applicationId);
     return applicationId;
   }
 
