@@ -15,39 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.mapreduce.checkpoint;
 
-package org.apache.hadoop.mapreduce;
-
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-
-// Per-job counters
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
-public enum JobCounter {
-  NUM_FAILED_MAPS, 
-  NUM_FAILED_REDUCES,
-  NUM_KILLED_MAPS,
-  NUM_KILLED_REDUCES,
-  TOTAL_LAUNCHED_MAPS,
-  TOTAL_LAUNCHED_REDUCES,
-  OTHER_LOCAL_MAPS,
-  DATA_LOCAL_MAPS,
-  RACK_LOCAL_MAPS,
-  @Deprecated
-  SLOTS_MILLIS_MAPS,
-  @Deprecated
-  SLOTS_MILLIS_REDUCES,
-  @Deprecated
-  FALLOW_SLOTS_MILLIS_MAPS,
-  @Deprecated
-  FALLOW_SLOTS_MILLIS_REDUCES,
-  TOTAL_LAUNCHED_UBERTASKS,
-  NUM_UBER_SUBMAPS,
-  NUM_UBER_SUBREDUCES,
-  NUM_FAILED_UBERTASKS,
-  TASKS_REQ_PREEMPT,
-  CHECKPOINTS,
+public enum EnumCounter {
+  INPUTKEY,
+  INPUTVALUE,
+  OUTPUTRECORDS,
   CHECKPOINT_BYTES,
-  CHECKPOINT_TIME
+  CHECKPOINT_MS
 }

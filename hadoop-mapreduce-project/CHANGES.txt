@@ -74,6 +74,9 @@ Trunk (Unreleased)
     MAPREDUCE-5197. Add a service for checkpointing task state.
     (Carlo Curino via cdouglas)
 
+    MAPREDUCE-5189. Add policies and wiring to respond to preemption requests
+    from YARN. (Carlo Curino via cdouglas)
+
   BUG FIXES
 
     MAPREDUCE-4272. SortedRanges.Range#compareTo is not spec compliant.
