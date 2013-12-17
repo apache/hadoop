@@ -27,7 +27,6 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.net.NetUtils;
@@ -882,14 +881,22 @@ public class YarnConfiguration extends Configuration {
   ////////////////////////////////
 
   /**
+   * Use YARN_CLIENT_APPLICATION_CLIENT_PROTOCOL_POLL_INTERVAL_MS instead.
    * The interval of the yarn client's querying application state after
    * application submission. The unit is millisecond.
    */
+  @Deprecated
   public static final String YARN_CLIENT_APP_SUBMISSION_POLL_INTERVAL_MS =
       YARN_PREFIX + "client.app-submission.poll-interval";
-  public static final long DEFAULT_YARN_CLIENT_APP_SUBMISSION_POLL_INTERVAL_MS =
-      1000;
 
+  /**
+   * The interval that the yarn client library uses to poll the completion
+   * status of the asynchronous API of application client protocol.
+   */
+  public static final String YARN_CLIENT_APPLICATION_CLIENT_PROTOCOL_POLL_INTERVAL_MS =
+      YARN_PREFIX + "client.application-client-protocol.poll-interval-ms";
+  public static final long DEFAULT_YARN_CLIENT_APPLICATION_CLIENT_PROTOCOL_POLL_INTERVAL_MS =
+      200;
   /**
    * Max number of threads in NMClientAsync to process container management
    * events

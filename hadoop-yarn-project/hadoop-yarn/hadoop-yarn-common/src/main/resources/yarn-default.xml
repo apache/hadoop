@@ -945,10 +945,10 @@
 
   <!-- Other configuration -->
   <property>
-    <description>The interval of the yarn client's querying application state
-    after application submission. The unit is millisecond.</description>
-    <name>yarn.client.app-submission.poll-interval</name>
-    <value>1000</value>
+    <description>The interval that the yarn client library uses to poll the
+    completion status of the asynchronous API of application client protocol.
+    </description>
+    <name>yarn.client.application-client-protocol.poll-interval-ms</name>
+    <value>200</value>
   </property>
-
 </configuration>
