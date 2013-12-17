@@ -30,7 +30,6 @@ import java.io.FilenameFilter;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
@@ -257,12 +256,7 @@ public class SecondaryNameNode implements Runnable {
 
     // initialize the webserver for uploading files.
     int tmpInfoPort = infoSocAddr.getPort();
-    URI httpEndpoint;
-    try {
-      httpEndpoint = new URI("http://" + NetUtils.getHostPortString(infoSocAddr));
-    } catch (URISyntaxException e) {
-      throw new IOException(e);
-    }
+    URI httpEndpoint = URI.create("http://" + NetUtils.getHostPortString(infoSocAddr));
 
     infoServer = new HttpServer.Builder().setName("secondary")
         .addEndpoint(httpEndpoint)
@@ -273,6 +267,7 @@ public class SecondaryNameNode implements Runnable {
             DFSConfigKeys.DFS_SECONDARY_NAMENODE_INTERNAL_SPNEGO_USER_NAME_KEY)
         .setKeytabConfKey(DFSUtil.getSpnegoKeytabKey(conf,
             DFSConfigKeys.DFS_SECONDARY_NAMENODE_KEYTAB_FILE_KEY)).build();
+
     infoServer.setAttribute("secondary.name.node", this);
     infoServer.setAttribute("name.system.image", checkpointImage);
     infoServer.setAttribute(JspHelper.CURRENT_CONF, conf);

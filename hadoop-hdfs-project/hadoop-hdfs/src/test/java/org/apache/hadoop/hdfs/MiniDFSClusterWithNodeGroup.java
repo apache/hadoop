@@ -158,9 +158,8 @@ public class MiniDFSClusterWithNodeGroup extends MiniDFSCluster {
       
       SecureResources secureResources = null;
       if (UserGroupInformation.isSecurityEnabled()) {
-        SSLFactory sslFactory = new SSLFactory(SSLFactory.Mode.SERVER, dnConf);
         try {
-          secureResources = SecureDataNodeStarter.getSecureResources(sslFactory, dnConf);
+          secureResources = SecureDataNodeStarter.getSecureResources(dnConf);
         } catch (Exception ex) {
           ex.printStackTrace();
         }

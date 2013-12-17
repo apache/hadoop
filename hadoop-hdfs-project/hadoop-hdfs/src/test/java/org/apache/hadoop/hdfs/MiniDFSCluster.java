@@ -33,6 +33,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HOSTS;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_DIR_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SAFEMODE_EXTENSION_KEY;
@@ -901,12 +902,17 @@ public class MiniDFSCluster {
     
     // After the NN has started, set back the bound ports into
     // the conf
-    conf.set(DFSUtil.addKeySuffixes(
-        DFS_NAMENODE_RPC_ADDRESS_KEY, nameserviceId, nnId),
-        nn.getNameNodeAddressHostPortString());
-    conf.set(DFSUtil.addKeySuffixes(
-        DFS_NAMENODE_HTTP_ADDRESS_KEY, nameserviceId, nnId), NetUtils
-        .getHostPortString(nn.getHttpAddress()));
+    conf.set(DFSUtil.addKeySuffixes(DFS_NAMENODE_RPC_ADDRESS_KEY,
+        nameserviceId, nnId), nn.getNameNodeAddressHostPortString());
+    if (nn.getHttpAddress() != null) {
+      conf.set(DFSUtil.addKeySuffixes(DFS_NAMENODE_HTTP_ADDRESS_KEY,
+          nameserviceId, nnId), NetUtils.getHostPortString(nn.getHttpAddress()));
+    }
+    if (nn.getHttpsAddress() != null) {
+      conf.set(DFSUtil.addKeySuffixes(DFS_NAMENODE_HTTPS_ADDRESS_KEY,
+          nameserviceId, nnId), NetUtils.getHostPortString(nn.getHttpsAddress()));
+    }
+
     DFSUtil.setGenericConf(conf, nameserviceId, nnId,
         DFS_NAMENODE_HTTP_ADDRESS_KEY);
     nameNodes[nnIndex] = new NameNodeInfo(nn, nameserviceId, nnId,
@@ -1182,9 +1188,8 @@ public class MiniDFSCluster {
 
       SecureResources secureResources = null;
       if (UserGroupInformation.isSecurityEnabled()) {
-        SSLFactory sslFactory = new SSLFactory(SSLFactory.Mode.SERVER, dnConf);
         try {
-          secureResources = SecureDataNodeStarter.getSecureResources(sslFactory, dnConf);
+          secureResources = SecureDataNodeStarter.getSecureResources(dnConf);
         } catch (Exception ex) {
           ex.printStackTrace();
         }

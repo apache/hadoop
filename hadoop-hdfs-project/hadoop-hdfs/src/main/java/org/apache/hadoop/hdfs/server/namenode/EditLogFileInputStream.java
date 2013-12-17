@@ -118,7 +118,7 @@ public class EditLogFileInputStream extends EditLogInputStream {
    */
   public static EditLogInputStream fromUrl(
       URLConnectionFactory connectionFactory, URL url, long startTxId,
- long endTxId, boolean inProgress) {
+      long endTxId, boolean inProgress) {
     return new EditLogFileInputStream(new URLLog(connectionFactory, url),
         startTxId, endTxId, inProgress);
   }

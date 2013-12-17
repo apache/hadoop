@@ -122,11 +122,6 @@ public class BackupNode extends NameNode {
     String addr = conf.get(BN_HTTP_ADDRESS_NAME_KEY, BN_HTTP_ADDRESS_DEFAULT);
     return NetUtils.createSocketAddr(addr);
   }
-  
-  @Override // NameNode
-  protected void setHttpServerAddress(Configuration conf){
-    conf.set(BN_HTTP_ADDRESS_NAME_KEY, NetUtils.getHostPortString(getHttpAddress()));
-  }
 
   @Override // NameNode
   protected void loadNamesystem(Configuration conf) throws IOException {
@@ -163,6 +158,10 @@ public class BackupNode extends NameNode {
     registerWith(nsInfo);
     // Checkpoint daemon should start after the rpc server started
     runCheckpointDaemon(conf);
+    InetSocketAddress addr = getHttpAddress();
+    if (addr != null) {
+      conf.set(BN_HTTP_ADDRESS_NAME_KEY, NetUtils.getHostPortString(getHttpAddress()));
+    }
   }
 
   @Override

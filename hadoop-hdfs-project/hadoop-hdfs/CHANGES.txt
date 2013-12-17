@@ -165,6 +165,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-5545. Allow specifying endpoints for listeners in HttpServer. (Haohui
     Mai via jing9)
 
+    HDFS-5536. Implement HTTP policy for Namenode and DataNode. (Haohui Mai via
+    jing9)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn)

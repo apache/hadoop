@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hdfs;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_HTTPS_NEED_AUTH_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_HTTPS_NEED_AUTH_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NAMENODE_ID_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_BACKUP_ADDRESS_KEY;
@@ -64,6 +66,7 @@ import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
@@ -78,6 +81,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.web.SWebHdfsFileSystem;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
+import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
@@ -1409,12 +1413,58 @@ public class DFSUtil {
         defaultKey : DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_KEYTAB_KEY;
   }
 
-  public static HttpServer.Builder loadSslConfToHttpServerBuilder(
-      HttpServer.Builder builder, Configuration sslConf) {
+  /**
+   * Get http policy. Http Policy is chosen as follows:
+   * <ol>
+   * <li>If hadoop.ssl.enabled is set, http endpoints are not started. Only
+   * https endpoints are started on configured https ports</li>
+   * <li>This configuration is overridden by dfs.https.enable configuration, if
+   * it is set to true. In that case, both http and https endpoints are stared.</li>
+   * <li>All the above configurations are overridden by dfs.http.policy
+   * configuration. With this configuration you can set http-only, https-only
+   * and http-and-https endpoints.</li>
+   * </ol>
+   * See hdfs-default.xml documentation for more details on each of the above
+   * configuration settings.
+   */
+  public static HttpConfig.Policy getHttpPolicy(Configuration conf) {
+    String httpPolicy = conf.get(DFSConfigKeys.DFS_HTTP_POLICY_KEY,
+        DFSConfigKeys.DFS_HTTP_POLICY_DEFAULT);
+
+    HttpConfig.Policy policy = HttpConfig.Policy.fromString(httpPolicy);
+
+    if (policy == HttpConfig.Policy.HTTP_ONLY) {
+      boolean httpsEnabled = conf.getBoolean(
+          DFSConfigKeys.DFS_HTTPS_ENABLE_KEY,
+          DFSConfigKeys.DFS_HTTPS_ENABLE_DEFAULT);
+
+      boolean hadoopSslEnabled = conf.getBoolean(
+          CommonConfigurationKeys.HADOOP_SSL_ENABLED_KEY,
+          CommonConfigurationKeys.HADOOP_SSL_ENABLED_DEFAULT);
+
+      if (hadoopSslEnabled) {
+        LOG.warn(CommonConfigurationKeys.HADOOP_SSL_ENABLED_KEY
+            + " is deprecated. Please use "
+            + DFSConfigKeys.DFS_HTTPS_ENABLE_KEY + ".");
+        policy = HttpConfig.Policy.HTTPS_ONLY;
+      } else if (httpsEnabled) {
+        LOG.warn(DFSConfigKeys.DFS_HTTPS_ENABLE_KEY
+            + " is deprecated. Please use "
+            + DFSConfigKeys.DFS_HTTPS_ENABLE_KEY + ".");
+        policy = HttpConfig.Policy.HTTP_AND_HTTPS;
+      }
+    }
+
+    conf.set(DFSConfigKeys.DFS_HTTP_POLICY_KEY, policy.name());
+    return policy;
+  }
+
+  public static HttpServer.Builder loadSslConfToHttpServerBuilder(HttpServer.Builder builder,
+      Configuration sslConf) {
     return builder
         .needsClientAuth(
-            sslConf.getBoolean(DFSConfigKeys.DFS_CLIENT_HTTPS_NEED_AUTH_KEY,
-                DFSConfigKeys.DFS_CLIENT_HTTPS_NEED_AUTH_DEFAULT))
+            sslConf.getBoolean(DFS_CLIENT_HTTPS_NEED_AUTH_KEY,
+                DFS_CLIENT_HTTPS_NEED_AUTH_DEFAULT))
         .keyPassword(sslConf.get("ssl.server.keystore.keypassword"))
         .keyStore(sslConf.get("ssl.server.keystore.location"),
             sslConf.get("ssl.server.keystore.password"),

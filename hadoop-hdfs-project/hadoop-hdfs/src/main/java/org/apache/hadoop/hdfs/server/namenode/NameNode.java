@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_KEY;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
@@ -432,16 +436,10 @@ public class NameNode implements NameNodeStatusMXBean {
     return getHttpAddress(conf);
   }
 
-  /** @return the NameNode HTTP address set in the conf. */
+  /** @return the NameNode HTTP address. */
   public static InetSocketAddress getHttpAddress(Configuration conf) {
     return  NetUtils.createSocketAddr(
         conf.get(DFS_NAMENODE_HTTP_ADDRESS_KEY, DFS_NAMENODE_HTTP_ADDRESS_DEFAULT));
-  }
-  
-  protected void setHttpServerAddress(Configuration conf) {
-    String hostPort = NetUtils.getHostPortString(getHttpAddress());
-    conf.set(DFS_NAMENODE_HTTP_ADDRESS_KEY, hostPort);
-    LOG.info("Web-server up at: " + hostPort);
   }
 
   protected void loadNamesystem(Configuration conf) throws IOException {
@@ -492,7 +490,6 @@ public class NameNode implements NameNodeStatusMXBean {
 
     if (NamenodeRole.NAMENODE == role) {
       startHttpServer(conf);
-      validateConfigurationSettingsOrAbort(conf);
     }
     loadNamesystem(conf);
 
@@ -500,8 +497,6 @@ public class NameNode implements NameNodeStatusMXBean {
     if (NamenodeRole.NAMENODE == role) {
       httpServer.setNameNodeAddress(getNameNodeAddress());
       httpServer.setFSImage(getFSImage());
-    } else {
-      validateConfigurationSettingsOrAbort(conf);
     }
     
     pauseMonitor = new JvmPauseMonitor(conf);
@@ -517,45 +512,6 @@ public class NameNode implements NameNodeStatusMXBean {
   protected NameNodeRpcServer createRpcServer(Configuration conf)
       throws IOException {
     return new NameNodeRpcServer(conf, this);
-  }
-
-  /**
-   * Verifies that the final Configuration Settings look ok for the NameNode to
-   * properly start up
-   * Things to check for include:
-   * - HTTP Server Port does not equal the RPC Server Port
-   * @param conf
-   * @throws IOException
-   */
-  protected void validateConfigurationSettings(final Configuration conf) 
-      throws IOException {
-    // check to make sure the web port and rpc port do not match 
-    if(getHttpServerAddress(conf).getPort() 
-        == getRpcServerAddress(conf).getPort()) {
-      String errMsg = "dfs.namenode.rpc-address " +
-          "("+ getRpcServerAddress(conf) + ") and " +
-          "dfs.namenode.http-address ("+ getHttpServerAddress(conf) + ") " +
-          "configuration keys are bound to the same port, unable to start " +
-          "NameNode. Port: " + getRpcServerAddress(conf).getPort();
-      throw new IOException(errMsg);
-    } 
-  }
-
-  /**
-   * Validate NameNode configuration.  Log a fatal error and abort if
-   * configuration is invalid.
-   * 
-   * @param conf Configuration to validate
-   * @throws IOException thrown if conf is invalid
-   */
-  private void validateConfigurationSettingsOrAbort(Configuration conf)
-      throws IOException {
-    try {
-      validateConfigurationSettings(conf);
-    } catch (IOException e) {
-      LOG.fatal(e.toString());
-      throw e;
-    }
   }
 
   /** Start the services common to active and standby states */
@@ -636,7 +592,6 @@ public class NameNode implements NameNodeStatusMXBean {
     httpServer = new NameNodeHttpServer(conf, this, getHttpServerAddress(conf));
     httpServer.start();
     httpServer.setStartupProgress(startupProgress);
-    setHttpServerAddress(conf);
   }
   
   private void stopHttpServer() {
@@ -658,7 +613,7 @@ public class NameNode implements NameNodeStatusMXBean {
    * <li>{@link StartupOption#CHECKPOINT CHECKPOINT} - start checkpoint node</li>
    * <li>{@link StartupOption#UPGRADE UPGRADE} - start the cluster  
    * upgrade and create a snapshot of the current file system state</li> 
-   * <li>{@link StartupOption#RECOVERY RECOVERY} - recover name node
+   * <li>{@link StartupOption#RECOVER RECOVERY} - recover name node
    * metadata</li>
    * <li>{@link StartupOption#ROLLBACK ROLLBACK} - roll the  
    *            cluster back to the previous state</li>
