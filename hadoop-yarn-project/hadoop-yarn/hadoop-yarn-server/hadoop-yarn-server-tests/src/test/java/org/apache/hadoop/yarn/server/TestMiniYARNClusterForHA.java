@@ -33,6 +33,7 @@ import java.io.IOException;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 public class TestMiniYARNClusterForHA {
@@ -56,16 +57,7 @@ public class TestMiniYARNClusterForHA {
 
   @Test
   public void testClusterWorks() throws YarnException, InterruptedException {
-    ResourceManager rm = cluster.getResourceManager(0);
-    GetClusterMetricsRequest req = GetClusterMetricsRequest.newInstance();
-
-    for (int i = 0; i < 600; i++) {
-      if (1 == rm.getClientRMService().getClusterMetrics(req)
-          .getClusterMetrics().getNumNodeManagers()) {
-        return;
-      }
-      Thread.sleep(100);
-    }
-    fail("NodeManager never registered with the RM");
+    assertTrue("NMs fail to connect to the RM",
+        cluster.waitForNodeManagersToConnect(5000));
   }
 }

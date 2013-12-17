@@ -296,6 +296,31 @@ public class YarnConfiguration extends Configuration {
           HttpConfig.isSecure() ? RM_WEBAPP_HTTPS_ADDRESS
               : RM_WEBAPP_ADDRESS));
 
+  public static final String CLIENT_FAILOVER_PREFIX =
+      YARN_PREFIX + "client.failover-";
+  public static final String CLIENT_FAILOVER_PROXY_PROVIDER =
+      CLIENT_FAILOVER_PREFIX + "proxy-provider";
+  public static final String DEFAULT_CLIENT_FAILOVER_PROXY_PROVIDER =
+      "org.apache.hadoop.yarn.client.ConfiguredRMFailoverProxyProvider";
+
+  public static final String CLIENT_FAILOVER_MAX_ATTEMPTS =
+      CLIENT_FAILOVER_PREFIX + "max-attempts";
+
+  public static final String CLIENT_FAILOVER_SLEEPTIME_BASE_MS =
+      CLIENT_FAILOVER_PREFIX + "sleep-base-ms";
+
+  public static final String CLIENT_FAILOVER_SLEEPTIME_MAX_MS =
+      CLIENT_FAILOVER_PREFIX + "sleep-max-ms";
+
+  public static final String CLIENT_FAILOVER_RETRIES =
+      CLIENT_FAILOVER_PREFIX + "retries";
+  public static final int DEFAULT_CLIENT_FAILOVER_RETRIES = 0;
+
+  public static final String CLIENT_FAILOVER_RETRIES_ON_SOCKET_TIMEOUTS =
+      CLIENT_FAILOVER_PREFIX + "retries-on-socket-timeouts";
+  public static final int
+      DEFAULT_CLIENT_FAILOVER_RETRIES_ON_SOCKET_TIMEOUTS = 0;
+
   ////////////////////////////////
   // RM state store configs
   ////////////////////////////////
@@ -850,22 +875,31 @@ public class YarnConfiguration extends Configuration {
   public static final String IS_MINI_YARN_CLUSTER = YARN_PREFIX
       + "is.minicluster";
 
+  public static final String YARN_MC_PREFIX = YARN_PREFIX + "minicluster.";
+
   /** Whether to use fixed ports with the minicluster. */
-  public static final String YARN_MINICLUSTER_FIXED_PORTS = YARN_PREFIX
-      + "minicluster.fixed.ports";
+  public static final String YARN_MINICLUSTER_FIXED_PORTS =
+      YARN_MC_PREFIX + "fixed.ports";
 
   /**
    * Default is false to be able to run tests concurrently without port
    * conflicts.
    */
-  public static boolean DEFAULT_YARN_MINICLUSTER_FIXED_PORTS = false;
+  public static final boolean DEFAULT_YARN_MINICLUSTER_FIXED_PORTS = false;
+
+  /**
+   * Whether the NM should use RPC to connect to the RM. Default is false.
+   * Can be set to true only when using fixed ports.
+   */
+  public static final String YARN_MINICLUSTER_USE_RPC = YARN_MC_PREFIX + "use-rpc";
+  public static final boolean DEFAULT_YARN_MINICLUSTER_USE_RPC = false;
 
   /**
    * Whether users are explicitly trying to control resource monitoring
    * configuration for the MiniYARNCluster. Disabled by default.
    */
   public static final String YARN_MINICLUSTER_CONTROL_RESOURCE_MONITORING =
-      YARN_PREFIX + "minicluster.control-resource-monitoring";
+      YARN_MC_PREFIX + "control-resource-monitoring";
   public static final boolean
       DEFAULT_YARN_MINICLUSTER_CONTROL_RESOURCE_MONITORING = false;
 
