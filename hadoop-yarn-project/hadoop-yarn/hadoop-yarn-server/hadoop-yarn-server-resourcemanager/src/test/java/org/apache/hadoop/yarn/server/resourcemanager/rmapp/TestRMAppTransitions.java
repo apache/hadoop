@@ -301,12 +301,9 @@ public class TestRMAppTransitions {
 
   private void assertAppAndAttemptKilled(RMApp application)
       throws InterruptedException {
+    sendAttemptUpdateSavedEvent(application);
     sendAppUpdateSavedEvent(application);
     assertKilled(application);
-    // send attempt final state saved event.
-    application.getCurrentAppAttempt().handle(
-      new RMAppAttemptUpdateSavedEvent(application.getCurrentAppAttempt()
-        .getAppAttemptId(), null));
     Assert.assertEquals(RMAppAttemptState.KILLED, application
       .getCurrentAppAttempt().getAppAttemptState());
     assertAppFinalStateSaved(application);
@@ -327,6 +324,12 @@ public class TestRMAppTransitions {
         new RMAppUpdateSavedEvent(application.getApplicationId(), null);
     application.handle(event);
     rmDispatcher.await();
+  }
+
+  private void sendAttemptUpdateSavedEvent(RMApp application) {
+    application.getCurrentAppAttempt().handle(
+      new RMAppAttemptUpdateSavedEvent(application.getCurrentAppAttempt()
+        .getAppAttemptId(), null));
   }
 
   protected RMApp testCreateAppNewSaving(
@@ -624,11 +627,12 @@ public class TestRMAppTransitions {
     rmDispatcher.await();
 
     // Ignore Attempt_Finished if we were supposed to go to Finished.
-    assertAppState(RMAppState.FINAL_SAVING, application);
+    assertAppState(RMAppState.KILLING, application);
     RMAppEvent finishEvent =
         new RMAppFinishedAttemptEvent(application.getApplicationId(), null);
     application.handle(finishEvent);
-    assertAppState(RMAppState.FINAL_SAVING, application);
+    assertAppState(RMAppState.KILLING, application);
+    sendAttemptUpdateSavedEvent(application);
     sendAppUpdateSavedEvent(application);
     assertKilled(application);
   }
@@ -686,8 +690,8 @@ public class TestRMAppTransitions {
   }
 
   @Test
-  public void testAppFinishingKill() throws IOException {
-    LOG.info("--- START: testAppFinishedFinished ---");
+  public void testAppAtFinishingIgnoreKill() throws IOException {
+    LOG.info("--- START: testAppAtFinishingIgnoreKill ---");
 
     RMApp application = testCreateAppFinishing(null);
     // FINISHING => FINISHED event RMAppEventType.KILL
@@ -695,7 +699,7 @@ public class TestRMAppTransitions {
         new RMAppEvent(application.getApplicationId(), RMAppEventType.KILL);
     application.handle(event);
     rmDispatcher.await();
-    assertAppState(RMAppState.FINISHED, application);
+    assertAppState(RMAppState.FINISHING, application);
   }
 
   // While App is at FINAL_SAVING, Attempt_Finished event may come before
@@ -780,6 +784,7 @@ public class TestRMAppTransitions {
         new RMAppEvent(application.getApplicationId(), RMAppEventType.KILL);
     application.handle(event);
     rmDispatcher.await();
+    sendAttemptUpdateSavedEvent(application);
     sendAppUpdateSavedEvent(application);
     assertTimesAtFinish(application);
     assertAppState(RMAppState.KILLED, application);
@@ -801,14 +806,6 @@ public class TestRMAppTransitions {
     assertTimesAtFinish(application);
     assertAppState(RMAppState.KILLED, application);
 
-    // KILLED => KILLED event RMAppEventType.ATTEMPT_KILLED
-    event = 
-        new RMAppEvent(application.getApplicationId(), 
-            RMAppEventType.ATTEMPT_KILLED);
-    application.handle(event);
-    rmDispatcher.await();
-    assertTimesAtFinish(application);
-    assertAppState(RMAppState.KILLED, application);
 
     // KILLED => KILLED event RMAppEventType.KILL
     event = new RMAppEvent(application.getApplicationId(), RMAppEventType.KILL);

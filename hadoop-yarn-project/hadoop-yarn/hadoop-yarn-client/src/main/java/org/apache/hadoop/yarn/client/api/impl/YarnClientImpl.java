@@ -48,6 +48,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
@@ -79,7 +80,8 @@ public class YarnClientImpl extends YarnClient {
 
   protected ApplicationClientProtocol rmClient;
   protected InetSocketAddress rmAddress;
-  protected long statePollIntervalMillis;
+  protected long submitPollIntervalMillis;
+  private long asyncApiPollIntervalMillis;
 
   private static final String ROOT = "root";
 
@@ -92,12 +94,20 @@ public class YarnClientImpl extends YarnClient {
       YarnConfiguration.DEFAULT_RM_ADDRESS, YarnConfiguration.DEFAULT_RM_PORT);
   }
 
+  @SuppressWarnings("deprecation")
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
     this.rmAddress = getRmAddress(conf);
-    statePollIntervalMillis = conf.getLong(
+    asyncApiPollIntervalMillis =
+        conf.getLong(YarnConfiguration.YARN_CLIENT_APPLICATION_CLIENT_PROTOCOL_POLL_INTERVAL_MS,
+          YarnConfiguration.DEFAULT_YARN_CLIENT_APPLICATION_CLIENT_PROTOCOL_POLL_INTERVAL_MS);
+    submitPollIntervalMillis = asyncApiPollIntervalMillis;
+    if (conf.get(YarnConfiguration.YARN_CLIENT_APP_SUBMISSION_POLL_INTERVAL_MS)
+        != null) {
+      submitPollIntervalMillis = conf.getLong(
         YarnConfiguration.YARN_CLIENT_APP_SUBMISSION_POLL_INTERVAL_MS,
-        YarnConfiguration.DEFAULT_YARN_CLIENT_APP_SUBMISSION_POLL_INTERVAL_MS);
+        YarnConfiguration.DEFAULT_YARN_CLIENT_APPLICATION_CLIENT_PROTOCOL_POLL_INTERVAL_MS);
+    }
     super.serviceInit(conf);
   }
 
@@ -165,7 +175,7 @@ public class YarnClientImpl extends YarnClient {
             " is still in " + state);
       }
       try {
-        Thread.sleep(statePollIntervalMillis);
+        Thread.sleep(submitPollIntervalMillis);
       } catch (InterruptedException ie) {
       }
     }
@@ -179,11 +189,29 @@ public class YarnClientImpl extends YarnClient {
   @Override
   public void killApplication(ApplicationId applicationId)
       throws YarnException, IOException {
-    LOG.info("Killing application " + applicationId);
     KillApplicationRequest request =
         Records.newRecord(KillApplicationRequest.class);
     request.setApplicationId(applicationId);
-    rmClient.forceKillApplication(request);
+
+    try {
+      int pollCount = 0;
+      while (true) {
+        KillApplicationResponse response =
+            rmClient.forceKillApplication(request);
+        if (response.getIsKillCompleted()) {
+          break;
+        }
+        if (++pollCount % 10 == 0) {
+          LOG.info("Watiting for application " + applicationId
+              + " to be killed.");
+        }
+        Thread.sleep(asyncApiPollIntervalMillis);
+      }
+    } catch (InterruptedException e) {
+      LOG.error("Interrupted while waiting for application " + applicationId
+          + " to be killed.");
+    }
+    LOG.info("Killed application " + applicationId);
   }
 
   @Override
