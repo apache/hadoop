@@ -237,6 +237,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1145. Fixed a potential file-handle leak in the web interface for
     displaying aggregated logs. (Rohith Sharma via vinodkv)
 
+    YARN-1451. TestResourceManager relies on the scheduler assigning multiple
+    containers in a single node update. (Sandy Ryza via kasha)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
