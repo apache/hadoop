@@ -34,10 +34,7 @@ public final class TestURLConnectionFactory {
   public void testConnConfiguratior() throws IOException {
     final URL u = new URL("http://localhost");
     final List<HttpURLConnection> conns = Lists.newArrayList();
-    URLConnectionFactory fc = new URLConnectionFactory(
-        URLConnectionFactory.DEFAULT_SOCKET_TIMEOUT);
-
-    fc.setConnConfigurator(new ConnectionConfigurator() {
+    URLConnectionFactory fc = new URLConnectionFactory(new ConnectionConfigurator() {
       @Override
       public HttpURLConnection configure(HttpURLConnection conn)
           throws IOException {

@@ -113,7 +113,7 @@ public class WebHdfsFileSystem extends FileSystem
   public static final String PATH_PREFIX = "/" + SCHEME + "/v" + VERSION;
 
   /** Default connection factory may be overridden in tests to use smaller timeout values */
-  URLConnectionFactory connectionFactory = URLConnectionFactory.DEFAULT_CONNECTION_FACTORY;
+  protected URLConnectionFactory connectionFactory;
 
   /** Delegation token kind */
   public static final Text TOKEN_KIND = new Text("WEBHDFS delegation");
@@ -153,15 +153,6 @@ public class WebHdfsFileSystem extends FileSystem
     tokenAspect = new TokenAspect<WebHdfsFileSystem>(this, TOKEN_KIND);
   }
 
-  /**
-   * Initialize connectionFactory. This function is intended to
-   * be overridden by SWebHdfsFileSystem.
-   */
-  protected void initializeConnectionFactory(Configuration conf)
-      throws IOException {
-    connectionFactory = URLConnectionFactory.DEFAULT_CONNECTION_FACTORY;
-  }
-
   @Override
   public synchronized void initialize(URI uri, Configuration conf
       ) throws IOException {
@@ -169,8 +160,9 @@ public class WebHdfsFileSystem extends FileSystem
     setConf(conf);
     /** set user pattern based on configuration file */
     UserParam.setUserPattern(conf.get(DFSConfigKeys.DFS_WEBHDFS_USER_PATTERN_KEY, DFSConfigKeys.DFS_WEBHDFS_USER_PATTERN_DEFAULT));
+    connectionFactory = URLConnectionFactory
+        .newDefaultURLConnectionFactory(conf);
     initializeTokenAspect();
-    initializeConnectionFactory(conf);
 
     ugi = UserGroupInformation.getCurrentUser();
 

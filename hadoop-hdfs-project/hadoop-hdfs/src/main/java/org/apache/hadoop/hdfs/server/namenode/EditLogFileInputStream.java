@@ -36,9 +36,12 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.namenode.TransferFsImage.HttpGetFailedException;
+import org.apache.hadoop.hdfs.web.URLConnectionFactory;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authentication.client.AuthenticationException;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -101,15 +104,22 @@ public class EditLogFileInputStream extends EditLogInputStream {
   /**
    * Open an EditLogInputStream for the given URL.
    *
-   * @param url the url hosting the log
-   * @param startTxId the expected starting txid
-   * @param endTxId the expected ending txid
-   * @param inProgress whether the log is in-progress
+   * @param connectionFactory
+   *          the URLConnectionFactory used to create the connection.
+   * @param url
+   *          the url hosting the log
+   * @param startTxId
+   *          the expected starting txid
+   * @param endTxId
+   *          the expected ending txid
+   * @param inProgress
+   *          whether the log is in-progress
    * @return a stream from which edits may be read
    */
-  public static EditLogInputStream fromUrl(URL url, long startTxId,
-      long endTxId, boolean inProgress) {
-    return new EditLogFileInputStream(new URLLog(url),
+  public static EditLogInputStream fromUrl(
+      URLConnectionFactory connectionFactory, URL url, long startTxId,
+ long endTxId, boolean inProgress) {
+    return new EditLogFileInputStream(new URLLog(connectionFactory, url),
         startTxId, endTxId, inProgress);
   }
   
@@ -366,8 +376,12 @@ public class EditLogFileInputStream extends EditLogInputStream {
     private long advertisedSize = -1;
 
     private final static String CONTENT_LENGTH = "Content-Length";
+    private final URLConnectionFactory connectionFactory;
+    private final boolean isSpnegoEnabled;
 
-    public URLLog(URL url) {
+    public URLLog(URLConnectionFactory connectionFactory, URL url) {
+      this.connectionFactory = connectionFactory;
+      this.isSpnegoEnabled = UserGroupInformation.isSecurityEnabled();
       this.url = url;
     }
 
@@ -377,8 +391,13 @@ public class EditLogFileInputStream extends EditLogInputStream {
           new PrivilegedExceptionAction<InputStream>() {
             @Override
             public InputStream run() throws IOException {
-              HttpURLConnection connection = (HttpURLConnection)
-                  SecurityUtil.openSecureHttpConnection(url);
+              HttpURLConnection connection;
+              try {
+                connection = (HttpURLConnection)
+                    connectionFactory.openConnection(url, isSpnegoEnabled);
+              } catch (AuthenticationException e) {
+                throw new IOException(e);
+              }
               
               if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
                 throw new HttpGetFailedException(

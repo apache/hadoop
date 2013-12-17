@@ -159,6 +159,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-5350. Name Node should report fsimage transfer time as a metric.
     (Jimmy Xiang via wang)
 
+    HDFS-5538. URLConnectionFactory should pick up the SSL related configuration 
+    by default. (Haohui Mai via jing9)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn)

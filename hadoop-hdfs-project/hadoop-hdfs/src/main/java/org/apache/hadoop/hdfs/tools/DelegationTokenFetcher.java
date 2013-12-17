@@ -145,7 +145,7 @@ public class DelegationTokenFetcher {
     // default to using the local file system
     FileSystem local = FileSystem.getLocal(conf);
     final Path tokenFile = new Path(local.getWorkingDirectory(), remaining[0]);
-    final URLConnectionFactory connectionFactory = URLConnectionFactory.DEFAULT_CONNECTION_FACTORY;
+    final URLConnectionFactory connectionFactory = URLConnectionFactory.DEFAULT_SYSTEM_CONNECTION_FACTORY;
 
     // Login the current user
     UserGroupInformation.getCurrentUser().doAs(
