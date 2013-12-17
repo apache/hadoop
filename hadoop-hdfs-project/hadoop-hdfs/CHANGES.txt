@@ -171,6 +171,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-5312. Generate HTTP / HTTPS URL in DFSUtil#getInfoServer() based on the 
     configured http policy. (Haohui Mai via jing9)
 
+    HDFS-5629. Support HTTPS in JournalNode and SecondaryNameNode. 
+    (Haohui Mai via jing9)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn)

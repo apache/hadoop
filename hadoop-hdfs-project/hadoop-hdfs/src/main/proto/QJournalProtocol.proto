@@ -142,7 +142,9 @@ message GetJournalStateRequestProto {
 
 message GetJournalStateResponseProto {
   required uint64 lastPromisedEpoch = 1;
+  // Deprecated by fromURL
   required uint32 httpPort = 2;
+  optional string fromURL = 3;
 }
 
 /**
@@ -182,7 +184,9 @@ message GetEditLogManifestRequestProto {
 
 message GetEditLogManifestResponseProto {
   required RemoteEditLogManifestProto manifest = 1; 
+  // Deprecated by fromURL
   required uint32 httpPort = 2;
+  optional string fromURL = 3;
 
   // TODO: we should add nsinfo somewhere
   // to verify that it matches up with our expectation

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ADMIN;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_HTTPS_NEED_AUTH_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_HTTPS_NEED_AUTH_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX;
@@ -89,6 +90,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -1506,5 +1508,68 @@ public class DFSUtil {
         .trustStore(sslConf.get("ssl.server.truststore.location"),
             sslConf.get("ssl.server.truststore.password"),
             sslConf.get("ssl.server.truststore.type", "jks"));
+  }
+
+  /**
+   * Load HTTPS-related configuration.
+   */
+  public static Configuration loadSslConfiguration(Configuration conf) {
+    Configuration sslConf = new Configuration(false);
+
+    sslConf.addResource(conf.get(
+        DFSConfigKeys.DFS_SERVER_HTTPS_KEYSTORE_RESOURCE_KEY,
+        DFSConfigKeys.DFS_SERVER_HTTPS_KEYSTORE_RESOURCE_DEFAULT));
+
+    boolean requireClientAuth = conf.getBoolean(DFS_CLIENT_HTTPS_NEED_AUTH_KEY,
+        DFS_CLIENT_HTTPS_NEED_AUTH_DEFAULT);
+    sslConf.setBoolean(DFS_CLIENT_HTTPS_NEED_AUTH_KEY, requireClientAuth);
+    return sslConf;
+  }
+
+  /**
+   * Return a HttpServer.Builder that the journalnode / namenode / secondary
+   * namenode can use to initialize their HTTP / HTTPS server.
+   *
+   */
+  public static HttpServer.Builder httpServerTemplateForNNAndJN(
+      Configuration conf, final InetSocketAddress httpAddr,
+      final InetSocketAddress httpsAddr, String name, String spnegoUserNameKey,
+      String spnegoKeytabFileKey) throws IOException {
+    HttpConfig.Policy policy = getHttpPolicy(conf);
+
+    HttpServer.Builder builder = new HttpServer.Builder().setName(name)
+        .setConf(conf).setACL(new AccessControlList(conf.get(DFS_ADMIN, " ")))
+        .setSecurityEnabled(UserGroupInformation.isSecurityEnabled())
+        .setUsernameConfKey(spnegoUserNameKey)
+        .setKeytabConfKey(getSpnegoKeytabKey(conf, spnegoKeytabFileKey));
+
+    // initialize the webserver for uploading/downloading files.
+    LOG.info("Starting web server as: "
+        + SecurityUtil.getServerPrincipal(conf.get(spnegoUserNameKey),
+            httpAddr.getHostName()));
+
+    if (policy.isHttpEnabled()) {
+      if (httpAddr.getPort() == 0) {
+        builder.setFindPort(true);
+      }
+
+      URI uri = URI.create("http://" + NetUtils.getHostPortString(httpAddr));
+      builder.addEndpoint(uri);
+      LOG.info("Starting Web-server for " + name + " at: " + uri);
+    }
+
+    if (policy.isHttpsEnabled() && httpsAddr != null) {
+      Configuration sslConf = loadSslConfiguration(conf);
+      loadSslConfToHttpServerBuilder(builder, sslConf);
+
+      if (httpsAddr.getPort() == 0) {
+        builder.setFindPort(true);
+      }
+
+      URI uri = URI.create("https://" + NetUtils.getHostPortString(httpsAddr));
+      builder.addEndpoint(uri);
+      LOG.info("Starting Web-server for " + name + " at: " + uri);
+    }
+    return builder;
   }
 }

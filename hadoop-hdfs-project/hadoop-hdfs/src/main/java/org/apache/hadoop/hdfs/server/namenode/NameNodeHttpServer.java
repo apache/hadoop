@@ -17,13 +17,9 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ADMIN;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_HTTPS_NEED_AUTH_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_HTTPS_NEED_AUTH_KEY;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -45,7 +41,6 @@ import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.authorize.AccessControlList;
 
 /**
  * Encapsulates the HTTP server started by the NameNode. 
@@ -101,51 +96,16 @@ public class NameNodeHttpServer {
     HttpConfig.Policy policy = DFSUtil.getHttpPolicy(conf);
     final String infoHost = bindAddress.getHostName();
 
-    HttpServer.Builder builder = new HttpServer.Builder()
-        .setName("hdfs")
-        .setConf(conf)
-        .setACL(new AccessControlList(conf.get(DFS_ADMIN, " ")))
-        .setSecurityEnabled(UserGroupInformation.isSecurityEnabled())
-        .setUsernameConfKey(
-            DFSConfigKeys.DFS_NAMENODE_INTERNAL_SPNEGO_USER_NAME_KEY)
-        .setKeytabConfKey(
-            DFSUtil.getSpnegoKeytabKey(conf,
-                DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY));
+    final InetSocketAddress httpAddr = bindAddress;
+    final String httpsAddrString = conf.get(
+        DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY,
+        DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_DEFAULT);
+    InetSocketAddress httpsAddr = NetUtils.createSocketAddr(httpsAddrString);
 
-    if (policy.isHttpEnabled()) {
-      int port = bindAddress.getPort();
-      if (port == 0) {
-        builder.setFindPort(true);
-      }
-      builder.addEndpoint(URI.create("http://" + infoHost + ":" + port));
-    }
-
-    if (policy.isHttpsEnabled()) {
-      final String httpsAddrString = conf.get(
-          DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY,
-          DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_DEFAULT);
-      InetSocketAddress addr = NetUtils.createSocketAddr(httpsAddrString);
-
-      Configuration sslConf = new Configuration(false);
-
-      sslConf.addResource(conf.get(
-          DFSConfigKeys.DFS_SERVER_HTTPS_KEYSTORE_RESOURCE_KEY,
-          DFSConfigKeys.DFS_SERVER_HTTPS_KEYSTORE_RESOURCE_DEFAULT));
-
-      sslConf.addResource(conf.get(
-          DFSConfigKeys.DFS_SERVER_HTTPS_KEYSTORE_RESOURCE_KEY,
-          DFSConfigKeys.DFS_SERVER_HTTPS_KEYSTORE_RESOURCE_DEFAULT));
-      sslConf.setBoolean(DFS_CLIENT_HTTPS_NEED_AUTH_KEY, conf.getBoolean(
-          DFS_CLIENT_HTTPS_NEED_AUTH_KEY, DFS_CLIENT_HTTPS_NEED_AUTH_DEFAULT));
-      DFSUtil.loadSslConfToHttpServerBuilder(builder, sslConf);
-
-      if (addr.getPort() == 0) {
-        builder.setFindPort(true);
-      }
-
-      builder.addEndpoint(URI.create("https://"
-          + NetUtils.getHostPortString(addr)));
-    }
+    HttpServer.Builder builder = DFSUtil.httpServerTemplateForNNAndJN(conf,
+        httpAddr, httpsAddr, "hdfs",
+        DFSConfigKeys.DFS_NAMENODE_INTERNAL_SPNEGO_USER_NAME_KEY,
+        DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY);
 
     httpServer = builder.build();
 

@@ -17,19 +17,12 @@
  */
 package org.apache.hadoop.hdfs.qjournal.server;
 
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ADMIN;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_JOURNALNODE_KEYTAB_FILE_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_JOURNALNODE_INTERNAL_SPNEGO_USER_NAME_KEY;
-
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
-import java.net.URISyntaxException;
 
 import javax.servlet.ServletContext;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -37,22 +30,15 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.authorize.AccessControlList;
-import org.apache.hadoop.security.SecurityUtil;
-import org.apache.hadoop.security.UserGroupInformation;
 
 /**
  * Encapsulates the HTTP server started by the Journal Service.
  */
 @InterfaceAudience.Private
 public class JournalNodeHttpServer {
-  public static final Log LOG = LogFactory.getLog(
-      JournalNodeHttpServer.class);
-
   public static final String JN_ATTRIBUTE_KEY = "localjournal";
 
   private HttpServer httpServer;
-  private int infoPort;
   private JournalNode localJournalNode;
 
   private final Configuration conf;
@@ -63,40 +49,24 @@ public class JournalNodeHttpServer {
   }
 
   void start() throws IOException {
-    final InetSocketAddress bindAddr = getAddress(conf);
+    final InetSocketAddress httpAddr = getAddress(conf);
 
-    // initialize the webserver for uploading/downloading files.
-    LOG.info("Starting web server as: "+ SecurityUtil.getServerPrincipal(conf
-        .get(DFS_JOURNALNODE_INTERNAL_SPNEGO_USER_NAME_KEY),
-        bindAddr.getHostName()));
+    final String httpsAddrString = conf.get(
+        DFSConfigKeys.DFS_JOURNALNODE_HTTPS_ADDRESS_KEY,
+        DFSConfigKeys.DFS_JOURNALNODE_HTTPS_ADDRESS_DEFAULT);
+    InetSocketAddress httpsAddr = NetUtils.createSocketAddr(httpsAddrString);
 
-    int tmpInfoPort = bindAddr.getPort();
-    URI httpEndpoint;
-    try {
-      httpEndpoint = new URI("http://" + NetUtils.getHostPortString(bindAddr));
-    } catch (URISyntaxException e) {
-      throw new IOException(e);
-    }
+    HttpServer.Builder builder = DFSUtil.httpServerTemplateForNNAndJN(conf,
+        httpAddr, httpsAddr, "journal",
+        DFSConfigKeys.DFS_JOURNALNODE_INTERNAL_SPNEGO_USER_NAME_KEY,
+        DFSConfigKeys.DFS_JOURNALNODE_KEYTAB_FILE_KEY);
 
-    httpServer = new HttpServer.Builder().setName("journal")
-        .addEndpoint(httpEndpoint)
-        .setFindPort(tmpInfoPort == 0).setConf(conf).setACL(
-            new AccessControlList(conf.get(DFS_ADMIN, " ")))
-        .setSecurityEnabled(UserGroupInformation.isSecurityEnabled())
-        .setUsernameConfKey(
-            DFS_JOURNALNODE_INTERNAL_SPNEGO_USER_NAME_KEY)
-        .setKeytabConfKey(DFSUtil.getSpnegoKeytabKey(conf,
-            DFS_JOURNALNODE_KEYTAB_FILE_KEY)).build();
+    httpServer = builder.build();
     httpServer.setAttribute(JN_ATTRIBUTE_KEY, localJournalNode);
     httpServer.setAttribute(JspHelper.CURRENT_CONF, conf);
     httpServer.addInternalServlet("getJournal", "/getJournal",
         GetJournalEditServlet.class, true);
     httpServer.start();
-
-    // The web-server port can be ephemeral... ensure we have the correct info
-    infoPort = httpServer.getConnectorAddress(0).getPort();
-
-    LOG.info("Journal Web-server up at: " + bindAddr + ":" + infoPort);
   }
 
   void stop() throws IOException {
@@ -112,10 +82,23 @@ public class JournalNodeHttpServer {
   /**
    * Return the actual address bound to by the running server.
    */
+  @Deprecated
   public InetSocketAddress getAddress() {
     InetSocketAddress addr = httpServer.getConnectorAddress(0);
     assert addr.getPort() != 0;
     return addr;
+  }
+
+  /**
+   * Return the URI that locates the HTTP server.
+   */
+  URI getServerURI() {
+    // getHttpClientScheme() only returns https for HTTPS_ONLY policy. This
+    // matches the behavior that the first connector is a HTTPS connector only
+    // for HTTPS_ONLY policy.
+    InetSocketAddress addr = httpServer.getConnectorAddress(0);
+    return URI.create(DFSUtil.getHttpClientScheme(conf) + "://"
+        + NetUtils.getHostPortString(addr));
   }
 
   private static InetSocketAddress getAddress(Configuration conf) {
