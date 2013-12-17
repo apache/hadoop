@@ -162,6 +162,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-5538. URLConnectionFactory should pick up the SSL related configuration 
     by default. (Haohui Mai via jing9)
 
+    HDFS-5545. Allow specifying endpoints for listeners in HttpServer. (Haohui
+    Mai via jing9)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn)

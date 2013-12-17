@@ -20,7 +20,7 @@ package org.apache.hadoop.http;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.HttpURLConnection;
-import java.net.InetSocketAddress;
+import java.net.URI;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.Enumeration;
@@ -53,6 +53,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.http.HttpServer.QuotingInputFilter.RequestQuoter;
 import org.apache.hadoop.http.resource.JerseyResource;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -61,6 +62,8 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.Mockito;
+import org.mockito.internal.util.reflection.Whitebox;
+import org.mortbay.jetty.Connector;
 import org.mortbay.util.ajax.JSON;
 
 public class TestHttpServer extends HttpServerFunctionalTest {
@@ -362,11 +365,10 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     MyGroupsProvider.mapping.put("userB", Arrays.asList("groupB"));
 
     HttpServer myServer = new HttpServer.Builder().setName("test")
-        .setBindAddress("0.0.0.0").setPort(0).setFindPort(true).build();
+        .addEndpoint(new URI("http://localhost:0")).setFindPort(true).build();
     myServer.setAttribute(HttpServer.CONF_CONTEXT_ATTRIBUTE, conf);
     myServer.start();
-    int port = myServer.getPort();
-    String serverURL = "http://localhost:" + port + "/";
+    String serverURL = "http://" + NetUtils.getHostPortString(myServer.getConnectorAddress(0)) + "/";
     for (String servlet : new String[] { "conf", "logs", "stacks",
         "logLevel", "metrics" }) {
       for (String user : new String[] { "userA", "userB" }) {
@@ -404,12 +406,13 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     MyGroupsProvider.mapping.put("userE", Arrays.asList("groupE"));
 
     HttpServer myServer = new HttpServer.Builder().setName("test")
-        .setBindAddress("0.0.0.0").setPort(0).setFindPort(true).setConf(conf)
+        .addEndpoint(new URI("http://localhost:0")).setFindPort(true).setConf(conf)
         .setACL(new AccessControlList("userA,userB groupC,groupD")).build();
     myServer.setAttribute(HttpServer.CONF_CONTEXT_ATTRIBUTE, conf);
     myServer.start();
-    int port = myServer.getPort();
-    String serverURL = "http://localhost:" + port + "/";
+
+    String serverURL = "http://"
+        + NetUtils.getHostPortString(myServer.getConnectorAddress(0)) + "/";
     for (String servlet : new String[] { "conf", "logs", "stacks",
         "logLevel", "metrics" }) {
       for (String user : new String[] { "userA", "userB", "userC", "userD" }) {
@@ -520,20 +523,20 @@ public class TestHttpServer extends HttpServerFunctionalTest {
   }
 
   @Test public void testBindAddress() throws Exception {
-    checkBindAddress("0.0.0.0", 0, false).stop();
+    checkBindAddress("localhost", 0, false).stop();
     // hang onto this one for a bit more testing
     HttpServer myServer = checkBindAddress("localhost", 0, false);
     HttpServer myServer2 = null;
     try { 
-      int port = myServer.getListenerAddress().getPort();
+      int port = myServer.getConnectorAddress(0).getPort();
       // it's already in use, true = expect a higher port
       myServer2 = checkBindAddress("localhost", port, true);
       // try to reuse the port
-      port = myServer2.getListenerAddress().getPort();
+      port = myServer2.getConnectorAddress(0).getPort();
       myServer2.stop();
-      assertEquals(-1, myServer2.getPort()); // not bound
-      myServer2.openListener();
-      assertEquals(port, myServer2.getPort()); // expect same port
+      assertNull(myServer2.getConnectorAddress(0)); // not bound
+      myServer2.openListeners();
+      assertEquals(port, myServer2.getConnectorAddress(0).getPort()); // expect same port
     } finally {
       myServer.stop();
       if (myServer2 != null) {
@@ -547,21 +550,24 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     HttpServer server = createServer(host, port);
     try {
       // not bound, ephemeral should return requested port (0 for ephemeral)
-      InetSocketAddress addr = server.getListenerAddress();
-      assertEquals(port, addr.getPort());
-      // verify hostname is what was given
-      server.openListener();
-      addr = server.getListenerAddress();
-      assertEquals(host, addr.getHostName());
+      List<?> listeners = (List<?>) Whitebox.getInternalState(server,
+          "listeners");
+      Connector listener = (Connector) Whitebox.getInternalState(
+          listeners.get(0), "listener");
 
-      int boundPort = addr.getPort();
+      assertEquals(port, listener.getPort());
+      // verify hostname is what was given
+      server.openListeners();
+      assertEquals(host, server.getConnectorAddress(0).getHostName());
+
+      int boundPort = server.getConnectorAddress(0).getPort();
       if (port == 0) {
         assertTrue(boundPort != 0); // ephemeral should now return bound port
       } else if (findPort) {
         assertTrue(boundPort > port);
         // allow a little wiggle room to prevent random test failures if
         // some consecutive ports are already in use
-        assertTrue(addr.getPort() - port < 8);
+        assertTrue(boundPort - port < 8);
       }
     } catch (Exception e) {
       server.stop();

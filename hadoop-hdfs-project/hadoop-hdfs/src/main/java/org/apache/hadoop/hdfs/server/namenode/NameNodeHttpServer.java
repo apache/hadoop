@@ -21,6 +21,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ADMIN;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -70,18 +71,38 @@ public class NameNodeHttpServer {
     this.bindAddress = bindAddress;
   }
   
-  public void start() throws IOException {
+  void start() throws IOException {
     final String infoHost = bindAddress.getHostName();
     int infoPort = bindAddress.getPort();
-    httpServer = new HttpServer.Builder().setName("hdfs")
-        .setBindAddress(infoHost).setPort(infoPort)
+    HttpServer.Builder builder = new HttpServer.Builder().setName("hdfs")
+        .addEndpoint(URI.create(("http://" + NetUtils.getHostPortString(bindAddress))))
         .setFindPort(infoPort == 0).setConf(conf).setACL(
             new AccessControlList(conf.get(DFS_ADMIN, " ")))
         .setSecurityEnabled(UserGroupInformation.isSecurityEnabled())
         .setUsernameConfKey(
             DFSConfigKeys.DFS_NAMENODE_INTERNAL_SPNEGO_USER_NAME_KEY)
         .setKeytabConfKey(DFSUtil.getSpnegoKeytabKey(conf,
-            DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY)).build();
+            DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY));
+
+    boolean certSSL = conf.getBoolean(DFSConfigKeys.DFS_HTTPS_ENABLE_KEY, false);
+    if (certSSL) {
+      httpsAddress = NetUtils.createSocketAddr(conf.get(
+          DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY,
+          DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_DEFAULT));
+
+      builder.addEndpoint(URI.create("https://"
+          + NetUtils.getHostPortString(httpsAddress)));
+      Configuration sslConf = new Configuration(false);
+      sslConf.setBoolean(DFSConfigKeys.DFS_CLIENT_HTTPS_NEED_AUTH_KEY, conf
+          .getBoolean(DFSConfigKeys.DFS_CLIENT_HTTPS_NEED_AUTH_KEY,
+              DFSConfigKeys.DFS_CLIENT_HTTPS_NEED_AUTH_DEFAULT));
+      sslConf.addResource(conf.get(
+          DFSConfigKeys.DFS_SERVER_HTTPS_KEYSTORE_RESOURCE_KEY,
+          DFSConfigKeys.DFS_SERVER_HTTPS_KEYSTORE_RESOURCE_DEFAULT));
+      DFSUtil.loadSslConfToHttpServerBuilder(builder, sslConf);
+    }
+
+    httpServer = builder.build();
     if (WebHdfsFileSystem.isEnabled(conf, HttpServer.LOG)) {
       // set user pattern based on configuration file
       UserParam.setUserPattern(conf.get(DFSConfigKeys.DFS_WEBHDFS_USER_PATTERN_KEY, DFSConfigKeys.DFS_WEBHDFS_USER_PATTERN_DEFAULT));
@@ -91,7 +112,7 @@ public class NameNodeHttpServer {
       final String classname = AuthFilter.class.getName();
       final String pathSpec = WebHdfsFileSystem.PATH_PREFIX + "/*";
       Map<String, String> params = getAuthFilterParams(conf);
-      httpServer.defineFilter(httpServer.getWebAppContext(), name, classname, params,
+      HttpServer.defineFilter(httpServer.getWebAppContext(), name, classname, params,
           new String[]{pathSpec});
       HttpServer.LOG.info("Added filter '" + name + "' (class=" + classname + ")");
 
@@ -101,33 +122,18 @@ public class NameNodeHttpServer {
           + ";" + Param.class.getPackage().getName(), pathSpec);
       }
 
-    boolean certSSL = conf.getBoolean(DFSConfigKeys.DFS_HTTPS_ENABLE_KEY, false);
+    httpServer.setAttribute(NAMENODE_ATTRIBUTE_KEY, nn);
+    httpServer.setAttribute(JspHelper.CURRENT_CONF, conf);
+    setupServlets(httpServer, conf);
+    httpServer.start();
+    httpAddress = httpServer.getConnectorAddress(0);
     if (certSSL) {
-      boolean needClientAuth = conf.getBoolean("dfs.https.need.client.auth", false);
-      httpsAddress = NetUtils.createSocketAddr(conf.get(
-          DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY,
-          DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_DEFAULT));
-
-      Configuration sslConf = new Configuration(false);
-      sslConf.addResource(conf.get(
-          DFSConfigKeys.DFS_SERVER_HTTPS_KEYSTORE_RESOURCE_KEY,
-          DFSConfigKeys.DFS_SERVER_HTTPS_KEYSTORE_RESOURCE_DEFAULT));
-      httpServer.addSslListener(httpsAddress, sslConf, needClientAuth);
+      httpsAddress = httpServer.getConnectorAddress(1);
       // assume same ssl port for all datanodes
       InetSocketAddress datanodeSslPort = NetUtils.createSocketAddr(conf.get(
         DFSConfigKeys.DFS_DATANODE_HTTPS_ADDRESS_KEY, infoHost + ":" + 50475));
       httpServer.setAttribute(DFSConfigKeys.DFS_DATANODE_HTTPS_PORT_KEY, datanodeSslPort
         .getPort());
-    }
-    httpServer.setAttribute(NAMENODE_ATTRIBUTE_KEY, nn);
-    httpServer.setAttribute(JspHelper.CURRENT_CONF, conf);
-    setupServlets(httpServer, conf);
-    httpServer.start();
-    httpAddress = new InetSocketAddress(bindAddress.getAddress(),
-        httpServer.getPort());
-    if (certSSL) {
-      httpsAddress = new InetSocketAddress(bindAddress.getAddress(),
-          httpServer.getConnectorPort(1));
     }
   }
   

@@ -36,6 +36,7 @@ import javax.servlet.http.HttpServletRequest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.net.NetUtils;
 import org.junit.Test;
 
 public class TestPathFilter extends HttpServerFunctionalTest {
@@ -126,7 +127,8 @@ public class TestPathFilter extends HttpServerFunctionalTest {
 
     // access the urls and verify our paths specs got added to the 
     // filters
-    final String prefix = "http://localhost:" + http.getPort();
+    final String prefix = "http://"
+        + NetUtils.getHostPortString(http.getConnectorAddress(0));
     try {
       for(int i = 0; i < filteredUrls.length; i++) {
         access(prefix + filteredUrls[i]);

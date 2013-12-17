@@ -35,6 +35,7 @@ import javax.servlet.http.HttpServletRequest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
 
@@ -125,7 +126,8 @@ public class TestServletFilter extends HttpServerFunctionalTest {
     }
 
     //access the urls as the sequence
-    final String prefix = "http://localhost:" + http.getPort();
+    final String prefix = "http://"
+        + NetUtils.getHostPortString(http.getConnectorAddress(0));
     try {
       for(int i = 0; i < sequence.length; i++) {
         access(prefix + urls[sequence[i]]);
@@ -185,8 +187,9 @@ public class TestServletFilter extends HttpServerFunctionalTest {
       throws Exception {
     Configuration conf = new Configuration();
     HttpServer http = createTestServer(conf);
-    http.defineFilter(http.webAppContext, "ErrorFilter", ErrorFilter.class
-        .getName(), null, null);
+    HttpServer.defineFilter(http.webAppContext,
+        "ErrorFilter", ErrorFilter.class.getName(),
+        null, null);
     try {
       http.start();
       fail("expecting exception");

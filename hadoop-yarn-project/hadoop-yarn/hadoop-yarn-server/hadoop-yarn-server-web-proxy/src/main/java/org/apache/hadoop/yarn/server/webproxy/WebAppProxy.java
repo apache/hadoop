@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.webproxy;
 
 import java.io.IOException;
+import java.net.URI;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -30,7 +31,6 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
-
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -91,7 +91,8 @@ public class WebAppProxy extends AbstractService {
   protected void serviceStart() throws Exception {
     try {
       proxyServer = new HttpServer.Builder().setName("proxy")
-          .setBindAddress(bindAddress).setPort(port).setFindPort(port == 0)
+          .addEndpoint(URI.create("http://" + bindAddress + ":" + port))
+          .setFindPort(port == 0)
           .setConf(getConfig()).setACL(acl).build();
       proxyServer.addServlet(ProxyUriUtils.PROXY_SERVLET_NAME, 
           ProxyUriUtils.PROXY_PATH_SPEC, WebAppProxyServlet.class);
