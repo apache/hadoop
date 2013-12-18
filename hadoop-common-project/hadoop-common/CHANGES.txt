@@ -107,6 +107,8 @@ Release 2.4.0 - UNRELEASED
 
     HADOOP-10168. fix javadoc of ReflectionUtils#copy. (Thejas Nair via suresh)
 
+    HADOOP-10164. Allow UGI to login with a known Subject (bobby)
+
   OPTIMIZATIONS
 
     HADOOP-9748. Reduce blocking on UGI.ensureInitialized (daryn)
