@@ -263,6 +263,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-5592. statechangeLog of completeFile should be logged only in case of success. 
     (Vinayakumar via umamahesh)
 
+    HDFS-5662. Can't decommission a DataNode due to file's replication factor
+    larger than the rest of the cluster size. (brandonli)
+
   OPTIMIZATIONS
 
   BUG FIXES
