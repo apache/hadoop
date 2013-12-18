@@ -178,6 +178,9 @@ Release 2.4.0 - UNRELEASED
     FSEditLogOp; change FSEditLogOpCodes.fromByte(..) to be more efficient; and
     change Some fields in FSEditLog to final.  (szetszwo)
 
+    HDFS-5634. Allow BlockReaderLocal to switch between checksumming and not
+    (cmccabe)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn)
@@ -230,8 +233,7 @@ Release 2.4.0 - UNRELEASED
     HDFS-5580. Fix infinite loop in Balancer.waitForMoveCompletion.
     (Binglin Chang via junping_du)
 
-    HDFS-5634. Allow BlockReaderLocal to switch between checksumming and not
-    (cmccabe)
+    HDFS-5676. fix inconsistent synchronization of CachingStrategy (cmccabe)
 
 Release 2.3.0 - UNRELEASED
 
