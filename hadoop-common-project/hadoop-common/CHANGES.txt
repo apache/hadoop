@@ -188,6 +188,8 @@ Release 2.4.0 - UNRELEASED
     HADOOP-9611 mvn-rpmbuild against google-guice > 3.0 yields missing cglib
     dependency (Timothy St. Clair via stevel)
 
+    HADOOP-10171. TestRPC fails intermittently on jkd7 (Mit Desai via jeagles)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

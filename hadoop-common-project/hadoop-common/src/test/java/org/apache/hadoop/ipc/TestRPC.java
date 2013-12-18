@@ -864,6 +864,8 @@ public class TestRPC {
       }
       // clear interrupt status for future tests
       Thread.interrupted();
+    } finally {
+      server.stop();
     }
   }
   
@@ -929,6 +931,7 @@ public class TestRPC {
     
     // should not cause any other thread to get an error
     assertTrue("rpc got exception " + error.get(), error.get() == null);
+    server.stop();
   }
 
   @Test
@@ -950,6 +953,7 @@ public class TestRPC {
       proxy.sleep(pingInterval*4);
     } finally {
       if (proxy != null) RPC.stopProxy(proxy);
+      server.stop();
     }
   }
 
