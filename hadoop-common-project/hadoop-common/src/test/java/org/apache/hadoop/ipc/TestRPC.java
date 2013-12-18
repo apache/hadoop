@@ -957,6 +957,7 @@ public class TestRPC {
       proxy.sleep(pingInterval*4);
     } finally {
       if (proxy != null) RPC.stopProxy(proxy);
+      server.stop();
     }
   }
 
