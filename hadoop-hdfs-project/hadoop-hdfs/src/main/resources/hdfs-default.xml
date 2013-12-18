@@ -1394,11 +1394,14 @@
   <name>dfs.client.cache.readahead</name>
   <value></value>
   <description>
-    Just like dfs.datanode.readahead.bytes, this setting causes the datanode to
+    When using remote reads, this setting causes the datanode to
     read ahead in the block file using posix_fadvise, potentially decreasing
     I/O wait times.  Unlike dfs.datanode.readahead.bytes, this is a client-side
     setting rather than a setting for the entire datanode.  If present, this
     setting will override the DataNode default.
+
+    When using local reads, this setting determines how much readahead we do in
+    BlockReaderLocal.
 
     If the native libraries are not available to the DataNode, this
     configuration has no effect.
