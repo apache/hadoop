@@ -10,6 +10,8 @@ Release 0.23.11 - UNRELEASED
 
     HADOOP-10148. backport hadoop-10107 to branch-0.23 (Chen He via jeagles)
 
+    HADOOP-10164. Allow UGI to login with a known Subject (bobby)
+
   OPTIMIZATIONS
     
   BUG FIXES

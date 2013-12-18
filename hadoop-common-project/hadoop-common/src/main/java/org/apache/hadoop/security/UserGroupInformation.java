@@ -435,7 +435,7 @@ public class UserGroupInformation {
     
     private static final AppConfigurationEntry[] SIMPLE_CONF = 
       new AppConfigurationEntry[]{OS_SPECIFIC_LOGIN, HADOOP_LOGIN};
-
+    
     private static final AppConfigurationEntry[] USER_KERBEROS_CONF =
       new AppConfigurationEntry[]{OS_SPECIFIC_LOGIN, USER_KERBEROS_LOGIN,
                                   HADOOP_LOGIN};
@@ -525,49 +525,65 @@ public class UserGroupInformation {
   public synchronized 
   static UserGroupInformation getLoginUser() throws IOException {
     if (loginUser == null) {
-      try {
-        Subject subject = new Subject();
-        LoginContext login;
-        if (isSecurityEnabled()) {
-          login = newLoginContext(HadoopConfiguration.USER_KERBEROS_CONFIG_NAME,
-              subject);
-        } else {
-          login = newLoginContext(HadoopConfiguration.SIMPLE_CONFIG_NAME, 
-              subject);
-        }
-        login.login();
-        UserGroupInformation realUser = new UserGroupInformation(subject);
-        realUser.setLogin(login);
-        realUser.setAuthenticationMethod(isSecurityEnabled() ?
-                                         AuthenticationMethod.KERBEROS :
-                                         AuthenticationMethod.SIMPLE);
-        realUser = new UserGroupInformation(login.getSubject());
-        // If the HADOOP_PROXY_USER environment variable or property
-        // is specified, create a proxy user as the logged in user.
-        String proxyUser = System.getenv(HADOOP_PROXY_USER);
-        if (proxyUser == null) {
-          proxyUser = System.getProperty(HADOOP_PROXY_USER);
-        }
-        setLoginUser(proxyUser == null ? realUser : createProxyUser(proxyUser, realUser));
-
-        String fileLocation = System.getenv(HADOOP_TOKEN_FILE_LOCATION);
-        if (fileLocation != null) {
-          // Load the token storage file and put all of the tokens into the
-          // user. Don't use the FileSystem API for reading since it has a lock
-          // cycle (HADOOP-9212).
-          Credentials cred = Credentials.readTokenStorageFile(
-              new File(fileLocation), conf);
-          loginUser.addCredentials(cred);
-        }
-        loginUser.spawnAutoRenewalThreadForUserCreds();
-      } catch (LoginException le) {
-        throw new IOException("failure to login", le);
-      }
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("UGI loginUser:"+loginUser);
-      }
+      loginUserFromSubject(null);
     }
     return loginUser;
+  }
+  
+  /**
+   * Log in a user using the given subject
+   * @parma subject the subject to use when logging in a user, or null to 
+   * create a new subject.
+   * @throws IOException if login fails
+   */
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
+  public synchronized 
+  static void loginUserFromSubject(Subject subject) throws IOException {
+    ensureInitialized();
+    try {
+      if (subject == null) {
+        subject = new Subject();
+      }
+      LoginContext login;
+      if (isSecurityEnabled()) {
+        login = newLoginContext(HadoopConfiguration.USER_KERBEROS_CONFIG_NAME,
+            subject);
+      } else {
+        login = newLoginContext(HadoopConfiguration.SIMPLE_CONFIG_NAME, 
+            subject);
+      }
+      login.login();
+      UserGroupInformation realUser = new UserGroupInformation(subject);
+      realUser.setLogin(login);
+      realUser.setAuthenticationMethod(isSecurityEnabled() ?
+                                       AuthenticationMethod.KERBEROS :
+                                       AuthenticationMethod.SIMPLE);
+      realUser = new UserGroupInformation(login.getSubject());
+      // If the HADOOP_PROXY_USER environment variable or property
+      // is specified, create a proxy user as the logged in user.
+      String proxyUser = System.getenv(HADOOP_PROXY_USER);
+      if (proxyUser == null) {
+        proxyUser = System.getProperty(HADOOP_PROXY_USER);
+      }
+      setLoginUser(proxyUser == null ? realUser : createProxyUser(proxyUser, realUser));
+
+      String fileLocation = System.getenv(HADOOP_TOKEN_FILE_LOCATION);
+      if (fileLocation != null) {
+        // Load the token storage file and put all of the tokens into the
+        // user. Don't use the FileSystem API for reading since it has a lock
+        // cycle (HADOOP-9212).
+        Credentials cred = Credentials.readTokenStorageFile(
+            new File(fileLocation), conf);
+        loginUser.addCredentials(cred);
+      }
+      loginUser.spawnAutoRenewalThreadForUserCreds();
+    } catch (LoginException le) {
+      throw new IOException("failure to login", le);
+    }
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("UGI loginUser:"+loginUser);
+    } 
   }
 
   @InterfaceAudience.Private
