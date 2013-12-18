@@ -106,6 +106,9 @@ Release 2.4.0 - UNRELEASED
     MAPREDUCE-5679. TestJobHistoryParsing has race condition (Liyin Liang via
     jlowe)
 
+    MAPREDUCE-5687. Fixed failure in TestYARNRunner caused by YARN-1446. (Jian He
+    via vinodkv)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
