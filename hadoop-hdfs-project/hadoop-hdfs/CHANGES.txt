@@ -28,6 +28,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-4983. Numeric usernames do not work with WebHDFS FS. (Yongjun Zhang via
     jing9)
 
+    HDFS-5662. Can't decommission a DataNode due to file's replication factor
+    larger than the rest of the cluster size. (brandonli)
+
   OPTIMIZATIONS
 
   BUG FIXES
