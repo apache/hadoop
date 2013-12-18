@@ -112,6 +112,11 @@
       <artifactId>guice</artifactId>
     </dependency>
     <dependency>
+        <groupId>cglib</groupId>
+        <artifactId>cglib</artifactId>
+        <scope>provided</scope>
+    </dependency>
+    <dependency>
       <groupId>com.sun.jersey.jersey-test-framework</groupId>
       <artifactId>jersey-test-framework-core</artifactId>
       <scope>test</scope>

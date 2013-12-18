@@ -185,6 +185,9 @@ Release 2.4.0 - UNRELEASED
 
     HADOOP-10106. Incorrect thread name in RPC log messages. (Ming Ma via jing9)
 
+    HADOOP-9611 mvn-rpmbuild against google-guice > 3.0 yields missing cglib
+    dependency (Timothy St. Clair via stevel)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
