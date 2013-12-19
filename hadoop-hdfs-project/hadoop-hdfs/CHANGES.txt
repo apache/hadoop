@@ -415,6 +415,9 @@ Release 2.3.0 - UNRELEASED
     
     HDFS-5657. race condition causes writeback state error in NFS gateway (brandonli)
 
+    HDFS-5661. Browsing FileSystem via web ui, should use datanode's fqdn instead of ip 
+    address. (Benoy Antony via jing9)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
