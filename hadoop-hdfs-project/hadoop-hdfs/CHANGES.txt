@@ -181,6 +181,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-5634. Allow BlockReaderLocal to switch between checksumming and not
     (cmccabe)
 
+    HDFS-5663 make the retry time and interval value configurable in openInfo()
+    (Liang Xie via stack)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn)
