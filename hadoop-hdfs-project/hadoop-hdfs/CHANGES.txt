@@ -184,6 +184,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-5663 make the retry time and interval value configurable in openInfo()
     (Liang Xie via stack)
 
+    HDFS-5540. Fix intermittent failure in TestBlocksWithNotEnoughRacks.
+    (Binglin Chang via junping_du)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn)

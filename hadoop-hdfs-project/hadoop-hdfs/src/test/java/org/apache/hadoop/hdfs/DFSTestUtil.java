@@ -364,9 +364,15 @@ public class DFSTestUtil {
         // Swallow exceptions
       }
       System.out.println("Waiting for "+corruptRepls+" corrupt replicas");
-      repls = ns.getBlockManager().numCorruptReplicas(b.getLocalBlock());
       count++;
-      Thread.sleep(1000);
+      // check more often so corrupt block reports are not easily missed
+      for (int i = 0; i < 10; i++) {
+        repls = ns.getBlockManager().numCorruptReplicas(b.getLocalBlock());
+        Thread.sleep(100);
+        if (repls == corruptRepls) {
+          break;
+        }
+      }
     }
     if (count == ATTEMPTS) {
       throw new TimeoutException("Timed out waiting for corrupt replicas."
