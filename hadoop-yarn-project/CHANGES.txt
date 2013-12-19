@@ -166,6 +166,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1446. Changed client API to retry killing application till RM
     acknowledges so as to account for RM crashes/failover. (Jian He via vinodkv)
 
+    YARN-1307. Redesign znode structure for Zookeeper based RM state-store for
+    better organization and scalability. (Tsuyoshi OZAWA via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES

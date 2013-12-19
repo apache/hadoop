@@ -287,11 +287,12 @@ public class FileSystemRMStateStore extends RMStateStore {
   }
 
   @Override
-  public synchronized void storeApplicationStateInternal(String appId,
+  public synchronized void storeApplicationStateInternal(ApplicationId appId,
       ApplicationStateDataPBImpl appStateDataPB) throws Exception {
-    Path appDirPath = getAppDir(rmAppRoot, appId);
+    String appIdStr = appId.toString();
+    Path appDirPath = getAppDir(rmAppRoot, appIdStr);
     fs.mkdirs(appDirPath);
-    Path nodeCreatePath = getNodePath(appDirPath, appId);
+    Path nodeCreatePath = getNodePath(appDirPath, appIdStr);
 
     LOG.info("Storing info for app: " + appId + " at: " + nodeCreatePath);
     byte[] appStateData = appStateDataPB.getProto().toByteArray();
@@ -306,10 +307,11 @@ public class FileSystemRMStateStore extends RMStateStore {
   }
 
   @Override
-  public synchronized void updateApplicationStateInternal(String appId,
+  public synchronized void updateApplicationStateInternal(ApplicationId appId,
       ApplicationStateDataPBImpl appStateDataPB) throws Exception {
-    Path appDirPath = getAppDir(rmAppRoot, appId);
-    Path nodeCreatePath = getNodePath(appDirPath, appId);
+    String appIdStr = appId.toString();
+    Path appDirPath = getAppDir(rmAppRoot, appIdStr);
+    Path nodeCreatePath = getNodePath(appDirPath, appIdStr);
 
     LOG.info("Updating info for app: " + appId + " at: " + nodeCreatePath);
     byte[] appStateData = appStateDataPB.getProto().toByteArray();
@@ -325,14 +327,13 @@ public class FileSystemRMStateStore extends RMStateStore {
 
   @Override
   public synchronized void storeApplicationAttemptStateInternal(
-      String attemptId, ApplicationAttemptStateDataPBImpl attemptStateDataPB)
+      ApplicationAttemptId appAttemptId,
+      ApplicationAttemptStateDataPBImpl attemptStateDataPB)
       throws Exception {
-    ApplicationAttemptId appAttemptId =
-        ConverterUtils.toApplicationAttemptId(attemptId);
     Path appDirPath =
         getAppDir(rmAppRoot, appAttemptId.getApplicationId().toString());
-    Path nodeCreatePath = getNodePath(appDirPath, attemptId);
-    LOG.info("Storing info for attempt: " + attemptId + " at: "
+    Path nodeCreatePath = getNodePath(appDirPath, appAttemptId.toString());
+    LOG.info("Storing info for attempt: " + appAttemptId + " at: "
         + nodeCreatePath);
     byte[] attemptStateData = attemptStateDataPB.getProto().toByteArray();
     try {
@@ -340,21 +341,20 @@ public class FileSystemRMStateStore extends RMStateStore {
       // based on whether we have lost the right to write to FS
       writeFile(nodeCreatePath, attemptStateData);
     } catch (Exception e) {
-      LOG.info("Error storing info for attempt: " + attemptId, e);
+      LOG.info("Error storing info for attempt: " + appAttemptId, e);
       throw e;
     }
   }
 
   @Override
   public synchronized void updateApplicationAttemptStateInternal(
-      String attemptId, ApplicationAttemptStateDataPBImpl attemptStateDataPB)
+      ApplicationAttemptId appAttemptId,
+      ApplicationAttemptStateDataPBImpl attemptStateDataPB)
       throws Exception {
-    ApplicationAttemptId appAttemptId =
-        ConverterUtils.toApplicationAttemptId(attemptId);
     Path appDirPath =
         getAppDir(rmAppRoot, appAttemptId.getApplicationId().toString());
-    Path nodeCreatePath = getNodePath(appDirPath, attemptId);
-    LOG.info("Updating info for attempt: " + attemptId + " at: "
+    Path nodeCreatePath = getNodePath(appDirPath, appAttemptId.toString());
+    LOG.info("Updating info for attempt: " + appAttemptId + " at: "
         + nodeCreatePath);
     byte[] attemptStateData = attemptStateDataPB.getProto().toByteArray();
     try {
@@ -362,7 +362,7 @@ public class FileSystemRMStateStore extends RMStateStore {
       // based on whether we have lost the right to write to FS
       updateFile(nodeCreatePath, attemptStateData);
     } catch (Exception e) {
-      LOG.info("Error updating info for attempt: " + attemptId, e);
+      LOG.info("Error updating info for attempt: " + appAttemptId, e);
       throw e;
     }
   }

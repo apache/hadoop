@@ -683,14 +683,14 @@ public class TestRMRestart {
     MemoryRMStateStore memStore = new MemoryRMStateStore() {
       @Override
       public synchronized void storeApplicationAttemptStateInternal(
-          String attemptIdStr,
+          ApplicationAttemptId attemptId,
           ApplicationAttemptStateDataPBImpl attemptStateData) throws Exception {
         // ignore attempt saving request.
       }
 
       @Override
       public synchronized void updateApplicationAttemptStateInternal(
-          String attemptIdStr,
+          ApplicationAttemptId attemptId,
           ApplicationAttemptStateDataPBImpl attemptStateData) throws Exception {
         // ignore attempt saving request.
       }
@@ -1540,7 +1540,7 @@ public class TestRMRestart {
     public int updateAttempt = 0;
 
     @Override
-    public void updateApplicationStateInternal(String appId,
+    public void updateApplicationStateInternal(ApplicationId appId,
         ApplicationStateDataPBImpl appStateData) throws Exception {
       updateApp = ++count;
       super.updateApplicationStateInternal(appId, appStateData);
@@ -1548,11 +1548,12 @@ public class TestRMRestart {
 
     @Override
     public synchronized void
-        updateApplicationAttemptStateInternal(String attemptIdStr,
+        updateApplicationAttemptStateInternal(
+            ApplicationAttemptId attemptId,
             ApplicationAttemptStateDataPBImpl attemptStateData)
             throws Exception {
       updateAttempt = ++count;
-      super.updateApplicationAttemptStateInternal(attemptIdStr,
+      super.updateApplicationAttemptStateInternal(attemptId,
         attemptStateData);
     }
   }
