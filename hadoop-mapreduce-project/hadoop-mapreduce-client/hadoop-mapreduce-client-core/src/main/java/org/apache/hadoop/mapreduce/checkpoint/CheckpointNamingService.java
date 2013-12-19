@@ -15,35 +15,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.mapreduce.checkpoint;
 
-package org.apache.hadoop.yarn.server.resourcemanager.scheduler.event;
+/**
+ * This class represent a naming service for checkpoints.
+ */
+public interface CheckpointNamingService {
 
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-
-public class AppAddedSchedulerEvent extends SchedulerEvent {
-
-  private final ApplicationAttemptId applicationAttemptId;
-  private final String queue;
-  private final String user;
-
-  public AppAddedSchedulerEvent(ApplicationAttemptId applicationAttemptId,
-      String queue, String user) {
-    super(SchedulerEventType.APP_ADDED);
-    this.applicationAttemptId = applicationAttemptId;
-    this.queue = queue;
-    this.user = user;
-  }
-
-  public ApplicationAttemptId getApplicationAttemptId() {
-    return applicationAttemptId;
-  }
-
-  public String getQueue() {
-    return queue;
-  }
-
-  public String getUser() {
-    return user;
-  }
+  /**
+   * Generate a new checkpoint Name
+   * @return the checkpoint name
+   */
+  public String getNewName();
 
 }

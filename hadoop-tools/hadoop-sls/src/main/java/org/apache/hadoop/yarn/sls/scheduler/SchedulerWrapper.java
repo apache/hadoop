@@ -15,29 +15,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.yarn.sls.scheduler;
 
-package org.apache.hadoop.yarn.server.resourcemanager.scheduler.event;
+import java.util.Set;
 
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 
-public class AppRemovedSchedulerEvent extends SchedulerEvent {
+import com.codahale.metrics.MetricRegistry;
 
-  private final ApplicationAttemptId applicationAttemptId;
-  private final RMAppAttemptState finalAttemptState;
+public interface SchedulerWrapper {
 
-  public AppRemovedSchedulerEvent(ApplicationAttemptId applicationAttemptId,
-      RMAppAttemptState finalAttemptState) {
-    super(SchedulerEventType.APP_REMOVED);
-    this.applicationAttemptId = applicationAttemptId;
-    this.finalAttemptState = finalAttemptState;
-  }
+	public MetricRegistry getMetrics();
+	public SchedulerMetrics getSchedulerMetrics();
+	public Set<String> getQueueSet();
+	public void setQueueSet(Set<String> queues);
+	public Set<String> getTrackedAppSet();
+	public void setTrackedAppSet(Set<String> apps);
+	public void addTrackedApp(ApplicationAttemptId appAttemptId,
+              String oldAppId);
+	public void removeTrackedApp(ApplicationAttemptId appAttemptId,
+                 String oldAppId);
+	public void addAMRuntime(ApplicationId appId,
+              long traceStartTimeMS, long traceEndTimeMS,
+              long simulateStartTimeMS, long simulateEndTimeMS);
 
-  public ApplicationAttemptId getApplicationAttemptID() {
-    return this.applicationAttemptId;
-  }
-
-  public RMAppAttemptState getFinalAttemptState() {
-    return this.finalAttemptState;
-  }
 }

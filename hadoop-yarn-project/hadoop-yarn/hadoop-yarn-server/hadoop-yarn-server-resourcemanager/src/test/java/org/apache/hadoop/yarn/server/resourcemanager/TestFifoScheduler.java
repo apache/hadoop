@@ -44,7 +44,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
@@ -297,8 +297,8 @@ public class TestFifoScheduler {
     ApplicationId appId1 = BuilderUtils.newApplicationId(100, 1);
     ApplicationAttemptId appAttemptId1 = BuilderUtils.newApplicationAttemptId(
         appId1, 1);
-    SchedulerEvent event1 = new AppAddedSchedulerEvent(appAttemptId1, "queue",
-        "user");
+    SchedulerEvent event1 =
+        new AppAttemptAddedSchedulerEvent(appAttemptId1, "queue", "user");
     fs.handle(event1);
 
     List<ContainerId> emptyId = new ArrayList<ContainerId>();
@@ -388,15 +388,15 @@ public class TestFifoScheduler {
     ApplicationId appId1 = BuilderUtils.newApplicationId(100, 1);
     ApplicationAttemptId appAttemptId1 = BuilderUtils.newApplicationAttemptId(
         appId1, 1);
-    SchedulerEvent event1 = new AppAddedSchedulerEvent(appAttemptId1, "queue",
-        "user");
+    SchedulerEvent event1 =
+        new AppAttemptAddedSchedulerEvent(appAttemptId1, "queue", "user");
     fs.handle(event1);
 
     ApplicationId appId2 = BuilderUtils.newApplicationId(200, 2);
     ApplicationAttemptId appAttemptId2 = BuilderUtils.newApplicationAttemptId(
         appId2, 1);
-    SchedulerEvent event2 = new AppAddedSchedulerEvent(appAttemptId2, "queue",
-        "user");
+    SchedulerEvent event2 =
+        new AppAttemptAddedSchedulerEvent(appAttemptId2, "queue", "user");
     fs.handle(event2);
 
     List<ContainerId> emptyId = new ArrayList<ContainerId>();

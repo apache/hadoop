@@ -33,6 +33,7 @@ import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
@@ -277,12 +278,10 @@ public class MockRM extends ResourceManager {
         node.getState());
   }
 
-  public void killApp(ApplicationId appId) throws Exception {
+  public KillApplicationResponse killApp(ApplicationId appId) throws Exception {
     ApplicationClientProtocol client = getClientRMService();
-    KillApplicationRequest req = Records
-        .newRecord(KillApplicationRequest.class);
-    req.setApplicationId(appId);
-    client.forceKillApplication(req);
+    KillApplicationRequest req = KillApplicationRequest.newInstance(appId);
+    return client.forceKillApplication(req);
   }
 
   // from AMLauncher

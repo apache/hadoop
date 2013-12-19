@@ -54,6 +54,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationResponse;
 import org.apache.hadoop.yarn.api.records.AMCommand;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -76,8 +77,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.ApplicationAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.ApplicationState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationAttemptStateDataPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStoreEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationAttemptStateDataPBImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationStateDataPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
@@ -414,10 +416,8 @@ public class TestRMRestart {
     MockRM rm2 = new MockRM(conf, memStore);
     rm2.start();
     // assert the previous AM state is loaded back on RM recovery.
-    RMApp recoveredApp =
-        rm2.getRMContext().getRMApps().get(app0.getApplicationId());
-    Assert.assertEquals(RMAppAttemptState.FAILED, recoveredApp
-      .getAppAttempts().get(am0.getApplicationAttemptId()).getAppAttemptState());
+
+    rm2.waitForState(am0.getApplicationAttemptId(), RMAppAttemptState.FAILED);
     rm1.stop();
     rm2.stop();
   }
@@ -964,8 +964,8 @@ public class TestRMRestart {
     Assert.assertEquals(BuilderUtils.newContainerId(attemptId1, 1), 
                         attemptState.getMasterContainer().getId());
 
-    // Setting AMLivelinessMonitor interval to be 10 Secs. 
-    conf.setInt(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS, 10000);
+    // Setting AMLivelinessMonitor interval to be 3 Secs.
+    conf.setInt(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS, 3000);
     // start new RM   
     MockRM rm2 = new MockRM(conf, memStore);
     rm2.start();
@@ -1492,6 +1492,69 @@ public class TestRMRestart {
       Assert.assertTrue(e.getMessage().contains("Invalid version."));
     }
     Assert.assertTrue(rm1.getServiceState() == STATE.STOPPED);
+  }
+
+  // This is to test Killing application should be able to wait until app
+  // reaches killed state and also check that attempt state is saved before app
+  // state is saved.
+  @Test
+  public void testClientRetryOnKillingApplication() throws Exception {
+    MemoryRMStateStore memStore = new TestMemoryRMStateStore();
+    memStore.init(conf);
+
+    // start RM
+    MockRM rm1 = new MockRM(conf, memStore);
+    rm1.start();
+    MockNM nm1 =
+        new MockNM("127.0.0.1:1234", 15120, rm1.getResourceTrackerService());
+    nm1.registerNode();
+
+    RMApp app1 =
+        rm1.submitApp(200, "name", "user", null, false, "default", 1, null,
+          "myType");
+    MockAM am1 = launchAM(app1, rm1, nm1);
+
+    KillApplicationResponse response;
+    int count = 0;
+    while (true) {
+      response = rm1.killApp(app1.getApplicationId());
+      if (response.getIsKillCompleted()) {
+        break;
+      }
+      Thread.sleep(100);
+      count++;
+    }
+    // we expect at least 2 calls for killApp as the first killApp always return
+    // false.
+    Assert.assertTrue(count >= 1);
+
+    rm1.waitForState(am1.getApplicationAttemptId(), RMAppAttemptState.KILLED);
+    rm1.waitForState(app1.getApplicationId(), RMAppState.KILLED);
+    Assert.assertEquals(1, ((TestMemoryRMStateStore) memStore).updateAttempt);
+    Assert.assertEquals(2, ((TestMemoryRMStateStore) memStore).updateApp);
+  }
+
+  public class TestMemoryRMStateStore extends MemoryRMStateStore {
+    int count = 0;
+    public int updateApp = 0;
+    public int updateAttempt = 0;
+
+    @Override
+    public void updateApplicationStateInternal(String appId,
+        ApplicationStateDataPBImpl appStateData) throws Exception {
+      updateApp = ++count;
+      super.updateApplicationStateInternal(appId, appStateData);
+    }
+
+    @Override
+    public synchronized void
+        updateApplicationAttemptStateInternal(String attemptIdStr,
+            ApplicationAttemptStateDataPBImpl attemptStateData)
+            throws Exception {
+      updateAttempt = ++count;
+      super.updateApplicationAttemptStateInternal(attemptIdStr,
+        attemptStateData);
+    }
   }
 
   public static class TestSecurityMockRM extends MockRM {

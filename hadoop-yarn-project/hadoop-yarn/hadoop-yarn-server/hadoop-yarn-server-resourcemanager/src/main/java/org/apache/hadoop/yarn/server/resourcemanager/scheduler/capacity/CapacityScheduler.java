@@ -71,8 +71,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeRepo
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptAddedSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ContainerExpiredSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
@@ -417,7 +417,7 @@ public class CapacityScheduler
   }
   
   private synchronized void
-      addApplication(ApplicationAttemptId applicationAttemptId,
+      addApplicationAttempt(ApplicationAttemptId applicationAttemptId,
           String queueName, String user) {
 
     // Sanity checks
@@ -466,7 +466,7 @@ public class CapacityScheduler
             RMAppAttemptEventType.APP_ACCEPTED));
   }
 
-  private synchronized void doneApplication(
+  private synchronized void doneApplicationAttempt(
       ApplicationAttemptId applicationAttemptId,
       RMAppAttemptState rmAppAttemptFinalState) {
     LOG.info("Application " + applicationAttemptId + " is done." +
@@ -740,18 +740,20 @@ public class CapacityScheduler
       nodeUpdate(nodeUpdatedEvent.getRMNode());
     }
     break;
-    case APP_ADDED:
+    case APP_ATTEMPT_ADDED:
     {
-      AppAddedSchedulerEvent appAddedEvent = (AppAddedSchedulerEvent)event;
-      addApplication(appAddedEvent.getApplicationAttemptId(), appAddedEvent
-          .getQueue(), appAddedEvent.getUser());
+      AppAttemptAddedSchedulerEvent appAttemptAddedEvent =
+          (AppAttemptAddedSchedulerEvent) event;
+      addApplicationAttempt(appAttemptAddedEvent.getApplicationAttemptId(),
+        appAttemptAddedEvent.getQueue(), appAttemptAddedEvent.getUser());
     }
     break;
-    case APP_REMOVED:
+    case APP_ATTEMPT_REMOVED:
     {
-      AppRemovedSchedulerEvent appRemovedEvent = (AppRemovedSchedulerEvent)event;
-      doneApplication(appRemovedEvent.getApplicationAttemptID(),
-          appRemovedEvent.getFinalAttemptState());
+      AppAttemptRemovedSchedulerEvent appAttemptRemovedEvent =
+          (AppAttemptRemovedSchedulerEvent) event;
+      doneApplicationAttempt(appAttemptRemovedEvent.getApplicationAttemptID(),
+        appAttemptRemovedEvent.getFinalAttemptState());
     }
     break;
     case CONTAINER_EXPIRED:

@@ -62,4 +62,10 @@ public abstract class ResourceOption {
   
   protected abstract void build();
   
+  @Override
+  public String toString() {
+    return "Resource:" + getResource().toString() 
+        + ", overCommitTimeout:" + getOverCommitTimeout();
+  }
+  
 }

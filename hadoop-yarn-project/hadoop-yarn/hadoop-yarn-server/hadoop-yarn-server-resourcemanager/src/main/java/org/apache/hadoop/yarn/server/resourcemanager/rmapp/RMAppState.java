@@ -28,5 +28,6 @@ public enum RMAppState {
   FINISHING,
   FINISHED,
   FAILED,
+  KILLING,
   KILLED
 }

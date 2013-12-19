@@ -23,11 +23,12 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
@@ -285,14 +286,40 @@ public class YarnConfiguration extends Configuration {
   public static final String RM_HA_IDS = RM_HA_PREFIX + "rm-ids";
   public static final String RM_HA_ID = RM_HA_PREFIX + "id";
 
-  public static final List<String> RM_RPC_ADDRESS_CONF_KEYS =
+  @Private
+  public static final List<String> RM_SERVICES_ADDRESS_CONF_KEYS =
       Collections.unmodifiableList(Arrays.asList(
           RM_ADDRESS,
           RM_SCHEDULER_ADDRESS,
           RM_ADMIN_ADDRESS,
           RM_RESOURCE_TRACKER_ADDRESS,
-          RM_WEBAPP_ADDRESS,
-          RM_WEBAPP_HTTPS_ADDRESS));
+          HttpConfig.isSecure() ? RM_WEBAPP_HTTPS_ADDRESS
+              : RM_WEBAPP_ADDRESS));
+
+  public static final String CLIENT_FAILOVER_PREFIX =
+      YARN_PREFIX + "client.failover-";
+  public static final String CLIENT_FAILOVER_PROXY_PROVIDER =
+      CLIENT_FAILOVER_PREFIX + "proxy-provider";
+  public static final String DEFAULT_CLIENT_FAILOVER_PROXY_PROVIDER =
+      "org.apache.hadoop.yarn.client.ConfiguredRMFailoverProxyProvider";
+
+  public static final String CLIENT_FAILOVER_MAX_ATTEMPTS =
+      CLIENT_FAILOVER_PREFIX + "max-attempts";
+
+  public static final String CLIENT_FAILOVER_SLEEPTIME_BASE_MS =
+      CLIENT_FAILOVER_PREFIX + "sleep-base-ms";
+
+  public static final String CLIENT_FAILOVER_SLEEPTIME_MAX_MS =
+      CLIENT_FAILOVER_PREFIX + "sleep-max-ms";
+
+  public static final String CLIENT_FAILOVER_RETRIES =
+      CLIENT_FAILOVER_PREFIX + "retries";
+  public static final int DEFAULT_CLIENT_FAILOVER_RETRIES = 0;
+
+  public static final String CLIENT_FAILOVER_RETRIES_ON_SOCKET_TIMEOUTS =
+      CLIENT_FAILOVER_PREFIX + "retries-on-socket-timeouts";
+  public static final int
+      DEFAULT_CLIENT_FAILOVER_RETRIES_ON_SOCKET_TIMEOUTS = 0;
 
   ////////////////////////////////
   // RM state store configs
@@ -848,22 +875,31 @@ public class YarnConfiguration extends Configuration {
   public static final String IS_MINI_YARN_CLUSTER = YARN_PREFIX
       + "is.minicluster";
 
+  public static final String YARN_MC_PREFIX = YARN_PREFIX + "minicluster.";
+
   /** Whether to use fixed ports with the minicluster. */
-  public static final String YARN_MINICLUSTER_FIXED_PORTS = YARN_PREFIX
-      + "minicluster.fixed.ports";
+  public static final String YARN_MINICLUSTER_FIXED_PORTS =
+      YARN_MC_PREFIX + "fixed.ports";
 
   /**
    * Default is false to be able to run tests concurrently without port
    * conflicts.
    */
-  public static boolean DEFAULT_YARN_MINICLUSTER_FIXED_PORTS = false;
+  public static final boolean DEFAULT_YARN_MINICLUSTER_FIXED_PORTS = false;
+
+  /**
+   * Whether the NM should use RPC to connect to the RM. Default is false.
+   * Can be set to true only when using fixed ports.
+   */
+  public static final String YARN_MINICLUSTER_USE_RPC = YARN_MC_PREFIX + "use-rpc";
+  public static final boolean DEFAULT_YARN_MINICLUSTER_USE_RPC = false;
 
   /**
    * Whether users are explicitly trying to control resource monitoring
    * configuration for the MiniYARNCluster. Disabled by default.
    */
   public static final String YARN_MINICLUSTER_CONTROL_RESOURCE_MONITORING =
-      YARN_PREFIX + "minicluster.control-resource-monitoring";
+      YARN_MC_PREFIX + "control-resource-monitoring";
   public static final boolean
       DEFAULT_YARN_MINICLUSTER_CONTROL_RESOURCE_MONITORING = false;
 
@@ -879,14 +915,22 @@ public class YarnConfiguration extends Configuration {
   ////////////////////////////////
 
   /**
+   * Use YARN_CLIENT_APPLICATION_CLIENT_PROTOCOL_POLL_INTERVAL_MS instead.
    * The interval of the yarn client's querying application state after
    * application submission. The unit is millisecond.
    */
+  @Deprecated
   public static final String YARN_CLIENT_APP_SUBMISSION_POLL_INTERVAL_MS =
       YARN_PREFIX + "client.app-submission.poll-interval";
-  public static final long DEFAULT_YARN_CLIENT_APP_SUBMISSION_POLL_INTERVAL_MS =
-      1000;
 
+  /**
+   * The interval that the yarn client library uses to poll the completion
+   * status of the asynchronous API of application client protocol.
+   */
+  public static final String YARN_CLIENT_APPLICATION_CLIENT_PROTOCOL_POLL_INTERVAL_MS =
+      YARN_PREFIX + "client.application-client-protocol.poll-interval-ms";
+  public static final long DEFAULT_YARN_CLIENT_APPLICATION_CLIENT_PROTOCOL_POLL_INTERVAL_MS =
+      200;
   /**
    * Max number of threads in NMClientAsync to process container management
    * events
@@ -940,7 +984,7 @@ public class YarnConfiguration extends Configuration {
   public InetSocketAddress getSocketAddr(
       String name, String defaultAddress, int defaultPort) {
     String address;
-    if (HAUtil.isHAEnabled(this) && RM_RPC_ADDRESS_CONF_KEYS.contains(name)) {
+    if (HAUtil.isHAEnabled(this) && RM_SERVICES_ADDRESS_CONF_KEYS.contains(name)) {
       address = HAUtil.getConfValueForRMInstance(name, defaultAddress, this);
     } else {
       address = get(name, defaultAddress);

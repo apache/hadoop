@@ -87,8 +87,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAt
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptUpdateSavedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptAddedSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.server.webproxy.ProxyUriUtils;
@@ -361,6 +361,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
               RMAppAttemptEventType.UNREGISTERED,
               RMAppAttemptEventType.STATUS_UPDATE,
               RMAppAttemptEventType.CONTAINER_ALLOCATED,
+            // ignore Kill as we have already saved the final Finished state in
+            // state store.
               RMAppAttemptEventType.KILL))
 
       // Transitions from FINISHED State
@@ -742,9 +744,9 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
           new Token<AMRMTokenIdentifier>(id,
             appAttempt.rmContext.getAMRMTokenSecretManager());
 
-      // Add the application to the scheduler
+      // Add the applicationAttempt to the scheduler
       appAttempt.eventHandler.handle(
-          new AppAddedSchedulerEvent(appAttempt.applicationAttemptId,
+          new AppAttemptAddedSchedulerEvent(appAttempt.applicationAttemptId,
               appAttempt.submissionContext.getQueue(), appAttempt.user));
     }
   }
@@ -1055,8 +1057,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       }
 
       appAttempt.eventHandler.handle(appEvent);
-      appAttempt.eventHandler.handle(new AppRemovedSchedulerEvent(appAttemptId,
-        finalAttemptState));
+      appAttempt.eventHandler.handle(new AppAttemptRemovedSchedulerEvent(
+        appAttemptId, finalAttemptState));
 
       appAttempt.removeCredentials(appAttempt);
     }
