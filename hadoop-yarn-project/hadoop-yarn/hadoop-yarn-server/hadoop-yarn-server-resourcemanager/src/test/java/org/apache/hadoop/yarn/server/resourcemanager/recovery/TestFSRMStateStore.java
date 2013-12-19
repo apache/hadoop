@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.RMStateVersion;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationStateDataPBImpl;
@@ -178,10 +179,11 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
         @Override
         public void run() {
           try {
-            store.storeApplicationStateInternal("application1",
-              (ApplicationStateDataPBImpl) ApplicationStateDataPBImpl
-                .newApplicationStateData(111, 111, "user", null,
-                  RMAppState.ACCEPTED, "diagnostics", 333));
+            store.storeApplicationStateInternal(
+                ApplicationId.newInstance(100L, 1),
+                (ApplicationStateDataPBImpl) ApplicationStateDataPBImpl
+                    .newApplicationStateData(111, 111, "user", null,
+                        RMAppState.ACCEPTED, "diagnostics", 333));
           } catch (Exception e) {
             // TODO 0 datanode exception will not be retried by dfs client, fix
             // that separately.
