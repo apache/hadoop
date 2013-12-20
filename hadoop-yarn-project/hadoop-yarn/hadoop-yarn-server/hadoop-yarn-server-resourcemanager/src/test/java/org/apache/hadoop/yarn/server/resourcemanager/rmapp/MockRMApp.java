@@ -218,7 +218,7 @@ public class MockRMApp implements RMApp {
   }
 
   @Override
-  public boolean isAppSafeToUnregister() {
+  public boolean isAppSafeToTerminate() {
     return true;
   }
 

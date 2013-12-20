@@ -20,6 +20,11 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -41,6 +46,8 @@ import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.RMNotYetActiveException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -61,6 +68,9 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshSuperUserGroupsC
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshSuperUserGroupsConfigurationResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshUserToGroupsMappingsRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshUserToGroupsMappingsResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceResponse;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.security.authorize.RMPolicyProvider;
 
 import com.google.protobuf.BlockingService;
@@ -377,4 +387,45 @@ public class AdminService extends AbstractService implements
   public String[] getGroupsForUser(String user) throws IOException {
     return UserGroupInformation.createRemoteUser(user).getGroupNames();
   }
+  
+  @Override
+  public UpdateNodeResourceResponse updateNodeResource(
+      UpdateNodeResourceRequest request) throws YarnException, IOException {
+    Map<NodeId, ResourceOption> nodeResourceMap = request.getNodeResourceMap();
+    Set<NodeId> nodeIds = nodeResourceMap.keySet();
+    // verify nodes are all valid first. 
+    // if any invalid nodes, throw exception instead of partially updating
+    // valid nodes.
+    for (NodeId nodeId : nodeIds) {
+      RMNode node = this.rmContext.getRMNodes().get(nodeId);
+      if (node == null) {
+        LOG.error("Resource update get failed on all nodes due to change "
+            + "resource on an unrecognized node: " + nodeId);
+        throw RPCUtil.getRemoteException(
+            "Resource update get failed on all nodes due to change resource "
+                + "on an unrecognized node: " + nodeId);
+      }
+    }
+    
+    // do resource update on each node.
+    // Notice: it is still possible to have invalid NodeIDs as nodes decommission
+    // may happen just at the same time. This time, only log and skip absent
+    // nodes without throwing any exceptions.
+    for (Map.Entry<NodeId, ResourceOption> entry : nodeResourceMap.entrySet()) {
+      ResourceOption newResourceOption = entry.getValue();
+      NodeId nodeId = entry.getKey();
+      RMNode node = this.rmContext.getRMNodes().get(nodeId);
+      if (node == null) {
+        LOG.warn("Resource update get failed on an unrecognized node: " + nodeId);
+      } else {
+        node.setResourceOption(newResourceOption);
+        LOG.info("Update resource successfully on node(" + node.getNodeID()
+            +") with resource(" + newResourceOption.toString() + ")");
+      }
+    }
+    UpdateNodeResourceResponse response = recordFactory.newRecordInstance(
+          UpdateNodeResourceResponse.class);
+      return response;
+  }
+  
 }

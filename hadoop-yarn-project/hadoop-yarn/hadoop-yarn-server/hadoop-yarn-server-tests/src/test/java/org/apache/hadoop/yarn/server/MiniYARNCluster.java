@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.Collection;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -38,6 +39,7 @@ import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
+import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -65,6 +67,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAt
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptUnregistrationEvent;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
+import static org.junit.Assert.fail;
+
 /**
  * Embedded Yarn minicluster for testcases that need to interact with a cluster.
  * <p/>
@@ -91,9 +95,11 @@ public class MiniYARNCluster extends CompositeService {
 
   private NodeManager[] nodeManagers;
   private ResourceManager[] resourceManagers;
+  private String[] rmIds;
 
-  private ResourceManagerWrapper resourceManagerWrapper;
-  
+  private boolean useFixedPorts;
+  private boolean useRpc = false;
+
   private ConcurrentMap<ApplicationAttemptId, Long> appMasters =
       new ConcurrentHashMap<ApplicationAttemptId, Long>(16, 0.75f, 2);
   
@@ -163,15 +169,7 @@ public class MiniYARNCluster extends CompositeService {
     }
 
     resourceManagers = new ResourceManager[numResourceManagers];
-    for (int i = 0; i < numResourceManagers; i++) {
-      resourceManagers[i] = new ResourceManager();
-      addService(new ResourceManagerWrapper(i));
-    }
-    nodeManagers = new CustomNodeManager[numNodeManagers];
-    for(int index = 0; index < numNodeManagers; index++) {
-      addService(new NodeManagerWrapper(index));
-      nodeManagers[index] = new CustomNodeManager();
-    }
+    nodeManagers = new NodeManager[numNodeManagers];
   }
 
   /**
@@ -185,20 +183,45 @@ public class MiniYARNCluster extends CompositeService {
     this(testName, 1, numNodeManagers, numLocalDirs, numLogDirs);
   }
 
-    @Override
+  @Override
   public void serviceInit(Configuration conf) throws Exception {
+    useFixedPorts = conf.getBoolean(
+        YarnConfiguration.YARN_MINICLUSTER_FIXED_PORTS,
+        YarnConfiguration.DEFAULT_YARN_MINICLUSTER_FIXED_PORTS);
+    useRpc = conf.getBoolean(YarnConfiguration.YARN_MINICLUSTER_USE_RPC,
+        YarnConfiguration.DEFAULT_YARN_MINICLUSTER_USE_RPC);
+
+    if (useRpc && !useFixedPorts) {
+      throw new YarnRuntimeException("Invalid configuration!" +
+          " Minicluster can use rpc only when configured to use fixed ports");
+    }
+
     if (resourceManagers.length > 1) {
       conf.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
-
-      StringBuilder rmIds = new StringBuilder();
-      for (int i = 0; i < resourceManagers.length; i++) {
-        if (i != 0) {
-          rmIds.append(",");
+      if (conf.get(YarnConfiguration.RM_HA_IDS) == null) {
+        StringBuilder rmIds = new StringBuilder();
+        for (int i = 0; i < resourceManagers.length; i++) {
+          if (i != 0) {
+            rmIds.append(",");
+          }
+          rmIds.append("rm" + i);
         }
-        rmIds.append("rm" + i);
+        conf.set(YarnConfiguration.RM_HA_IDS, rmIds.toString());
       }
-      conf.set(YarnConfiguration.RM_HA_IDS, rmIds.toString());
+      Collection<String> rmIdsCollection = HAUtil.getRMHAIds(conf);
+      rmIds = rmIdsCollection.toArray(new String[rmIdsCollection.size()]);
     }
+
+    for (int i = 0; i < resourceManagers.length; i++) {
+      resourceManagers[i] = new ResourceManager();
+      addService(new ResourceManagerWrapper(i));
+    }
+    for(int index = 0; index < nodeManagers.length; index++) {
+      nodeManagers[index] =
+          useRpc ? new CustomNodeManager() : new ShortCircuitedNodeManager();
+      addService(new NodeManagerWrapper(index));
+    }
+
     super.serviceInit(
         conf instanceof YarnConfiguration ? conf : new YarnConfiguration(conf));
   }
@@ -213,11 +236,12 @@ public class MiniYARNCluster extends CompositeService {
    *
    * In an non-HA cluster, return the index of the only RM.
    *
-   * @return index of the active RM
+   * @return index of the active RM or -1 if none of them transition to
+   * active even after 5 seconds of waiting
    */
   @InterfaceAudience.Private
   @VisibleForTesting
-  int getActiveRMIndex() {
+  public int getActiveRMIndex() {
     if (resourceManagers.length == 1) {
       return 0;
     }
@@ -292,9 +316,7 @@ public class MiniYARNCluster extends CompositeService {
     }
 
     private void setHARMConfiguration(Configuration conf) {
-      String rmId = "rm" + index;
       String hostname = MiniYARNCluster.getHostname();
-      conf.set(YarnConfiguration.RM_HA_ID, rmId);
       for (String confKey : YarnConfiguration.RM_SERVICES_ADDRESS_CONF_KEYS) {
         for (String id : HAUtil.getRMHAIds(conf)) {
           conf.set(HAUtil.addSuffix(confKey, id), hostname + ":0");
@@ -306,14 +328,16 @@ public class MiniYARNCluster extends CompositeService {
     protected synchronized void serviceInit(Configuration conf)
         throws Exception {
       conf.setBoolean(YarnConfiguration.IS_MINI_YARN_CLUSTER, true);
-      if (!conf.getBoolean(
-          YarnConfiguration.YARN_MINICLUSTER_FIXED_PORTS,
-          YarnConfiguration.DEFAULT_YARN_MINICLUSTER_FIXED_PORTS)) {
+
+      if (!useFixedPorts) {
         if (HAUtil.isHAEnabled(conf)) {
           setHARMConfiguration(conf);
         } else {
           setNonHARMConfiguration(conf);
         }
+      }
+      if (HAUtil.isHAEnabled(conf)) {
+        conf.set(YarnConfiguration.RM_HA_ID, rmIds[index]);
       }
       resourceManagers[index].init(conf);
       resourceManagers[index].getRMContext().getDispatcher().register
@@ -500,7 +524,9 @@ public class MiniYARNCluster extends CompositeService {
     protected void doSecureLogin() throws IOException {
       // Don't try to login using keytab in the testcase.
     }
+  }
 
+  private class ShortCircuitedNodeManager extends CustomNodeManager {
     @Override
     protected NodeStatusUpdater createNodeStatusUpdater(Context context,
         Dispatcher dispatcher, NodeHealthCheckerService healthChecker) {
@@ -552,5 +578,29 @@ public class MiniYARNCluster extends CompositeService {
         protected void stopRMProxy() { }
       };
     }
+  }
+
+  /**
+   * Wait for all the NodeManagers to connect to the ResourceManager.
+   *
+   * @param timeout Time to wait (sleeps in 100 ms intervals) in milliseconds.
+   * @return true if all NodeManagers connect to the (Active)
+   * ResourceManager, false otherwise.
+   * @throws YarnException
+   * @throws InterruptedException
+   */
+  public boolean waitForNodeManagersToConnect(long timeout)
+      throws YarnException, InterruptedException {
+    ResourceManager rm = getResourceManager();
+    GetClusterMetricsRequest req = GetClusterMetricsRequest.newInstance();
+
+    for (int i = 0; i < timeout / 100; i++) {
+      if (nodeManagers.length == rm.getClientRMService().getClusterMetrics(req)
+          .getClusterMetrics().getNumNodeManagers()) {
+        return true;
+      }
+      Thread.sleep(100);
+    }
+    return false;
   }
 }

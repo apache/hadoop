@@ -304,7 +304,7 @@ public class TestClientRedirect {
     @Override
     public KillApplicationResponse forceKillApplication(
         KillApplicationRequest request) throws IOException {
-      return recordFactory.newRecordInstance(KillApplicationResponse.class);
+      return KillApplicationResponse.newInstance(true);
     }
 
     @Override

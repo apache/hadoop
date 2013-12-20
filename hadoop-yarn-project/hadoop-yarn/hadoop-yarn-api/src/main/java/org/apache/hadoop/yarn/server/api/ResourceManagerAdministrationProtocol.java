@@ -22,8 +22,11 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.tools.GetUserMappingsProtocol;
+import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.exceptions.RMNotYetActiveException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsRequest;
@@ -38,6 +41,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshSuperUserGroupsC
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshSuperUserGroupsConfigurationResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshUserToGroupsMappingsRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshUserToGroupsMappingsResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceResponse;
 
 @Private
 @Stable
@@ -76,5 +81,25 @@ public interface ResourceManagerAdministrationProtocol extends GetUserMappingsPr
   @Stable
   public RefreshServiceAclsResponse refreshServiceAcls(
       RefreshServiceAclsRequest request)
+  throws YarnException, IOException;
+  
+  /**
+   * <p>The interface used by admin to update nodes' resources to the
+   * <code>ResourceManager</code> </p>.
+   * 
+   * <p>The admin client is required to provide details such as a map from 
+   * {@link NodeId} to {@link ResourceOption} required to update resources on 
+   * a list of <code>RMNode</code> in <code>ResourceManager</code> etc.
+   * via the {@link UpdateNodeResourceRequest}.</p>
+   * 
+   * @param request request to update resource for a node in cluster.
+   * @return (empty) response on accepting update.
+   * @throws YarnException
+   * @throws IOException
+   */
+  @Public
+  @Evolving
+  public UpdateNodeResourceResponse updateNodeResource(
+      UpdateNodeResourceRequest request) 
   throws YarnException, IOException;
 }

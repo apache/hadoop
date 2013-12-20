@@ -116,6 +116,7 @@ message KillApplicationRequestProto {
 }
 
 message KillApplicationResponseProto {
+  optional bool is_kill_completed = 1 [default = false];
 }
 
 message GetClusterMetricsRequestProto {

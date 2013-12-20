@@ -85,8 +85,8 @@ import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.SlidingWindowReservoir;
 import com.codahale.metrics.Timer;
 
-public class ResourceSchedulerWrapper implements ResourceScheduler,
-        Configurable {
+public class ResourceSchedulerWrapper implements
+        SchedulerWrapper,ResourceScheduler,Configurable {
   private static final String EOL = System.getProperty("line.separator");
   private static final int SAMPLING_SIZE = 60;
   private ScheduledExecutorService pool;
@@ -150,9 +150,8 @@ public class ResourceSchedulerWrapper implements ResourceScheduler,
   public void setConf(Configuration conf) {
     this.conf = conf;
     // set scheduler
-    Class<? extends ResourceScheduler> klass =
-            conf.getClass(SLSConfiguration.RM_SCHEDULER, null,
-                    ResourceScheduler.class);
+    Class<? extends ResourceScheduler> klass = conf.getClass(
+        SLSConfiguration.RM_SCHEDULER, null, ResourceScheduler.class);
 
     scheduler = ReflectionUtils.newInstance(klass, conf);
     // start metrics
@@ -861,4 +860,3 @@ public class ResourceSchedulerWrapper implements ResourceScheduler,
     return scheduler.getAppsInQueue(queue);
   }
 }
-

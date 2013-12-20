@@ -133,6 +133,10 @@
       <artifactId>guice</artifactId>
     </dependency>
     <dependency>
+        <groupId>cglib</groupId>
+        <artifactId>cglib</artifactId>
+    </dependency>
+    <dependency>
       <groupId>com.sun.jersey</groupId>
       <artifactId>jersey-server</artifactId>
     </dependency>
