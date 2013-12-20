@@ -47,6 +47,9 @@ Release 2.4.0 - UNRELEASED
     MAPREDUCE-5692. Add explicit diagnostics when a task attempt is killed due
     to speculative execution (Gera Shegalov via Sandy Ryza)
 
+    MAPREDUCE-5550. Task Status message (reporter.setStatus) not shown in UI
+    with Hadoop 2.0 (Gera Shegalov via Sandy Ryza)
+
   OPTIMIZATIONS
 
     MAPREDUCE-5484. YarnChild unnecessarily loads job conf twice (Sandy Ryza)

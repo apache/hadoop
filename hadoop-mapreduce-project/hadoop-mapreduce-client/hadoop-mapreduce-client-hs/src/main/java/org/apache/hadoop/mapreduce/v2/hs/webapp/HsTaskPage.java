@@ -34,6 +34,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.mapreduce.v2.app.webapp.App;
+import org.apache.hadoop.mapreduce.v2.app.webapp.dao.TaskAttemptInfo;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.mapreduce.v2.util.MRWebAppUtil;
 import org.apache.hadoop.yarn.util.Times;
@@ -89,6 +90,7 @@ public class HsTaskPage extends HsView {
       headRow.
             th(".id", "Attempt").
             th(".state", "State").
+            th(".status", "Status").
             th(".node", "Node").
             th(".logs", "Logs").
             th(".tsh", "Start Time");
@@ -113,15 +115,16 @@ public class HsTaskPage extends HsView {
        // DataTables to display
        StringBuilder attemptsTableData = new StringBuilder("[\n");
 
-       for (TaskAttempt ta : getTaskAttempts()) {
-        String taid = MRApps.toString(ta.getID());
+       for (TaskAttempt attempt : getTaskAttempts()) {
+        final TaskAttemptInfo ta = new TaskAttemptInfo(attempt, false);
+        String taid = ta.getId();
 
-        String nodeHttpAddr = ta.getNodeHttpAddress();
-        String containerIdString = ta.getAssignedContainerID().toString();
-        String nodeIdString = ta.getAssignedContainerMgrAddress();
-        String nodeRackName = ta.getNodeRackName();
+        String nodeHttpAddr = ta.getNode();
+        String containerIdString = ta.getAssignedContainerIdStr();
+        String nodeIdString = attempt.getAssignedContainerMgrAddress();
+        String nodeRackName = ta.getRack();
 
-        long attemptStartTime = ta.getLaunchTime();
+        long attemptStartTime = ta.getStartTime();
         long shuffleFinishTime = -1;
         long sortFinishTime = -1;
         long attemptFinishTime = ta.getFinishTime();
@@ -129,8 +132,8 @@ public class HsTaskPage extends HsView {
         long elapsedSortTime = -1;
         long elapsedReduceTime = -1;
         if(type == TaskType.REDUCE) {
-          shuffleFinishTime = ta.getShuffleFinishTime();
-          sortFinishTime = ta.getSortFinishTime();
+          shuffleFinishTime = attempt.getShuffleFinishTime();
+          sortFinishTime = attempt.getSortFinishTime();
           elapsedShuffleTime =
               Times.elapsed(attemptStartTime, shuffleFinishTime, false);
           elapsedSortTime =
@@ -140,11 +143,13 @@ public class HsTaskPage extends HsView {
         }
         long attemptElapsed =
             Times.elapsed(attemptStartTime, attemptFinishTime, false);
-        int sortId = ta.getID().getId() + (ta.getID().getTaskId().getId() * 10000);
+        int sortId = attempt.getID().getId()
+                   + (attempt.getID().getTaskId().getId() * 10000);
 
         attemptsTableData.append("[\"")
         .append(sortId + " ").append(taid).append("\",\"")
-        .append(ta.getState().toString()).append("\",\"")
+        .append(ta.getState()).append("\",\"")
+        .append(ta.getStatus()).append("\",\"")
 
         .append("<a class='nodelink' href='" + MRWebAppUtil.getYARNWebappScheme() + nodeHttpAddr + "'>")
         .append(nodeRackName + "/" + nodeHttpAddr + "</a>\",\"")
@@ -167,8 +172,9 @@ public class HsTaskPage extends HsView {
           .append(elapsedReduceTime).append("\",\"");
         }
           attemptsTableData.append(attemptElapsed).append("\",\"")
-          .append(StringEscapeUtils.escapeJavaScript(StringEscapeUtils.escapeHtml(
-           Joiner.on('\n').join(ta.getDiagnostics())))).append("\"],\n");
+          .append(StringEscapeUtils.escapeJavaScript(
+              StringEscapeUtils.escapeHtml(ta.getNote())))
+          .append("\"],\n");
       }
        //Remove the last comma and close off the array of arrays
        if(attemptsTableData.charAt(attemptsTableData.length() - 2) == ',') {
@@ -184,6 +190,8 @@ public class HsTaskPage extends HsView {
               $name("attempt_name").$value("Attempt")._()._().
           th().input("search_init").$type(InputType.text).
               $name("attempt_state").$value("State")._()._().
+          th().input("search_init").$type(InputType.text).
+              $name("attempt_status").$value("Status")._()._().
           th().input("search_init").$type(InputType.text).
               $name("attempt_node").$value("Node")._()._().
           th().input("search_init").$type(InputType.text).
@@ -283,19 +291,19 @@ public class HsTaskPage extends HsView {
       .append("\n,aoColumnDefs:[\n")
 
       //logs column should not filterable (it includes container ID which may pollute searches)
-      .append("\n{'aTargets': [ 3 ]")
+      .append("\n{'aTargets': [ 4 ]")
       .append(", 'bSearchable': false }")
 
       .append("\n, {'sType':'numeric', 'aTargets': [ 0 ]")
       .append(", 'mRender': parseHadoopAttemptID }")
 
-      .append("\n, {'sType':'numeric', 'aTargets': [ 4, 5")
+      .append("\n, {'sType':'numeric', 'aTargets': [ 5, 6")
       //Column numbers are different for maps and reduces
-      .append(type == TaskType.REDUCE ? ", 6, 7" : "")
+      .append(type == TaskType.REDUCE ? ", 7, 8" : "")
       .append(" ], 'mRender': renderHadoopDate }")
 
       .append("\n, {'sType':'numeric', 'aTargets': [")
-      .append(type == TaskType.REDUCE ? "8, 9, 10, 11" : "6")
+      .append(type == TaskType.REDUCE ? "9, 10, 11, 12" : "7")
       .append(" ], 'mRender': renderHadoopElapsedTime }]")
 
       // Sort by id upon page load

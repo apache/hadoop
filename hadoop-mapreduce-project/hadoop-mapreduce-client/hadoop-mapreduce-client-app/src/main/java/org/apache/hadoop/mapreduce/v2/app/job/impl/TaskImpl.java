@@ -376,11 +376,15 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
     TaskReport report = recordFactory.newRecordInstance(TaskReport.class);
     readLock.lock();
     try {
+      TaskAttempt bestAttempt = selectBestAttempt();
       report.setTaskId(taskId);
       report.setStartTime(getLaunchTime());
       report.setFinishTime(getFinishTime());
       report.setTaskState(getState());
-      report.setProgress(getProgress());
+      report.setProgress(bestAttempt == null ? 0f : bestAttempt.getProgress());
+      report.setStatus(bestAttempt == null
+          ? ""
+          : bestAttempt.getReport().getStateString());
 
       for (TaskAttempt attempt : attempts.values()) {
         if (TaskAttemptState.RUNNING.equals(attempt.getState())) {
@@ -400,7 +404,9 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
 
       // Add a copy of counters as the last step so that their lifetime on heap
       // is as small as possible.
-      report.setCounters(TypeConverter.toYarn(getCounters()));
+      report.setCounters(TypeConverter.toYarn(bestAttempt == null
+          ? TaskAttemptImpl.EMPTY_COUNTERS
+          : bestAttempt.getCounters()));
 
       return report;
     } finally {
