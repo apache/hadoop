@@ -109,6 +109,9 @@ Release 2.4.0 - UNRELEASED
 
     HADOOP-10164. Allow UGI to login with a known Subject (bobby)
 
+    HADOOP-10169. Remove the unnecessary synchronized in JvmMetrics class.
+    (Liang Xie via jing9) 
+
   OPTIMIZATIONS
 
     HADOOP-9748. Reduce blocking on UGI.ensureInitialized (daryn)
