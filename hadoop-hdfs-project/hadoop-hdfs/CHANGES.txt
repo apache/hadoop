@@ -243,6 +243,9 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-5676. fix inconsistent synchronization of CachingStrategy (cmccabe)
 
+    HDFS-5691. Fix typo in ShortCircuitLocalRead document.
+    (Akira Ajisaka via suresh)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
