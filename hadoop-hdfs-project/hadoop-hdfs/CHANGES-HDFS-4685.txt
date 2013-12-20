@@ -14,6 +14,8 @@ HDFS-4685 (Unreleased)
 
     HDFS-5596. Implement RPC stubs. (Haohui Mai via cnauroth)
 
+    HDFS-5685. Implement ACL as a INode feature. (Haohui Mai via cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES

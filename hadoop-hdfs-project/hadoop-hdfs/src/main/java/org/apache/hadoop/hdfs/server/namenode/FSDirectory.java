@@ -39,6 +39,8 @@ import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIsNotDirectoryException;
 import org.apache.hadoop.fs.UnresolvedLinkException;
+import org.apache.hadoop.fs.permission.AclEntry;
+import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
@@ -75,6 +77,7 @@ import org.apache.hadoop.hdfs.util.ReadOnlyList;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 
 /*************************************************
  * FSDirectory stores the filesystem directory state.
@@ -2633,7 +2636,65 @@ public class FSDirectory implements Closeable {
         target);
     return addINode(path, symlink) ? symlink : null;
   }
-  
+
+  void removeAcl(String src) throws IOException {
+    writeLock();
+    try {
+      final INodeWithAdditionalFields node = resolveINodeWithAdditionalField(src);
+      AclFeature f = node.getAclFeature();
+      if (f != null)
+        node.removeAclFeature();
+    } finally {
+      writeUnlock();
+    }
+  }
+
+  void setAcl(String src, Iterable<AclEntry> aclSpec) throws IOException {
+    writeLock();
+    try {
+      final INodeWithAdditionalFields node = resolveINodeWithAdditionalField(src);
+      AclFeature f = node.getAclFeature();
+      if (f == null) {
+        f = new AclFeature();
+        node.addAclFeature(f);
+      }
+      f.setEntries(Lists.newArrayList(aclSpec));
+    } finally {
+      writeUnlock();
+    }
+  }
+
+  AclStatus getAclStatus(String src) throws IOException {
+    readLock();
+    try {
+      final INodeWithAdditionalFields node = resolveINodeWithAdditionalField(src);
+      AclFeature f = node.getAclFeature();
+
+      AclStatus.Builder builder = new AclStatus.Builder()
+          .owner(node.getUserName()).group(node.getGroupName())
+          .stickyBit(node.getFsPermission().getStickyBit());
+      if (f != null) {
+        builder.addEntries(f.getEntries());
+      }
+      return builder.build();
+    } finally {
+      readUnlock();
+    }
+  }
+
+  private INodeWithAdditionalFields resolveINodeWithAdditionalField(String src)
+      throws UnresolvedLinkException, SnapshotAccessControlException,
+      FileNotFoundException {
+    String srcs = normalizePath(src);
+    final INodesInPath iip = rootDir.getINodesInPath4Write(srcs, true);
+    INode inode = iip.getLastINode();
+    if (!(inode instanceof INodeWithAdditionalFields))
+      throw new FileNotFoundException("cannot find " + src);
+
+    final INodeWithAdditionalFields node = (INodeWithAdditionalFields) inode;
+    return node;
+  }
+
   /**
    * Caches frequently used file names to reuse file name objects and
    * reduce heap size.

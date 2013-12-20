@@ -7314,16 +7314,39 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     throw new UnsupportedOperationException("Unimplemented");
   }
 
-  void removeAcl(String src) {
-    throw new UnsupportedOperationException("Unimplemented");
+  void removeAcl(String src) throws IOException {
+    checkOperation(OperationCategory.WRITE);
+    writeLock();
+    try {
+      checkOperation(OperationCategory.WRITE);
+      checkNameNodeSafeMode("Cannot remove acl on " + src);
+      dir.removeAcl(src);
+    } finally {
+      writeUnlock();
+    }
   }
 
-  void setAcl(String src, Iterable<AclEntry> aclSpec) {
-    throw new UnsupportedOperationException("Unimplemented");
+  void setAcl(String src, Iterable<AclEntry> aclSpec) throws IOException {
+    checkOperation(OperationCategory.WRITE);
+    writeLock();
+    try {
+      checkOperation(OperationCategory.WRITE);
+      checkNameNodeSafeMode("Cannot set acl on " + src);
+      dir.setAcl(src, aclSpec);
+    } finally {
+      writeUnlock();
+    }
   }
 
-  AclStatus getAclStatus(String src) {
-    throw new UnsupportedOperationException("Unimplemented");
+  AclStatus getAclStatus(String src) throws IOException {
+    checkOperation(OperationCategory.READ);
+    readLock();
+    try {
+      checkOperation(OperationCategory.READ);
+      return dir.getAclStatus(src);
+    } finally {
+      readUnlock();
+    }
   }
 
   /**
