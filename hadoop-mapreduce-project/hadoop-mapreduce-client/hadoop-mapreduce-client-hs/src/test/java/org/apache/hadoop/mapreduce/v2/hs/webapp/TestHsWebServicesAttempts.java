@@ -444,9 +444,9 @@ public class TestHsWebServicesAttempts extends JerseyTest {
   public void verifyHsTaskAttempt(JSONObject info, TaskAttempt att,
       TaskType ttype) throws JSONException {
     if (ttype == TaskType.REDUCE) {
-      assertEquals("incorrect number of elements", 16, info.length());
+      assertEquals("incorrect number of elements", 17, info.length());
     } else {
-      assertEquals("incorrect number of elements", 11, info.length());
+      assertEquals("incorrect number of elements", 12, info.length());
     }
 
     verifyTaskAttemptGeneric(att, ttype, info.getString("id"),
@@ -551,11 +551,11 @@ public class TestHsWebServicesAttempts extends JerseyTest {
     assertEquals("mergeFinishTime wrong", ta.getSortFinishTime(),
         mergeFinishTime);
     assertEquals("elapsedShuffleTime wrong",
-        ta.getLaunchTime() - ta.getShuffleFinishTime(), elapsedShuffleTime);
+        ta.getShuffleFinishTime() - ta.getLaunchTime(), elapsedShuffleTime);
     assertEquals("elapsedMergeTime wrong",
-        ta.getShuffleFinishTime() - ta.getSortFinishTime(), elapsedMergeTime);
+        ta.getSortFinishTime() - ta.getShuffleFinishTime(), elapsedMergeTime);
     assertEquals("elapsedReduceTime wrong",
-        ta.getSortFinishTime() - ta.getFinishTime(), elapsedReduceTime);
+        ta.getFinishTime() - ta.getSortFinishTime(), elapsedReduceTime);
   }
 
   @Test

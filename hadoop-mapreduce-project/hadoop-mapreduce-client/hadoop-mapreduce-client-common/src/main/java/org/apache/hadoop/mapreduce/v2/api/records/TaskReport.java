@@ -24,10 +24,10 @@ public interface TaskReport {
   public abstract TaskId getTaskId();
   public abstract TaskState getTaskState();
   public abstract float getProgress();
+  public abstract String getStatus();
   public abstract long getStartTime();
   public abstract long getFinishTime();
   public abstract Counters getCounters();
-  
   public abstract List<TaskAttemptId> getRunningAttemptsList();
   public abstract TaskAttemptId getRunningAttempt(int index);
   public abstract int getRunningAttemptsCount();
@@ -42,6 +42,7 @@ public interface TaskReport {
   public abstract void setTaskId(TaskId taskId);
   public abstract void setTaskState(TaskState taskState);
   public abstract void setProgress(float progress);
+  public abstract void setStatus(String status);
   public abstract void setStartTime(long startTime);
   public abstract void setFinishTime(long finishTime);
   public abstract void setCounters(Counters counters);
