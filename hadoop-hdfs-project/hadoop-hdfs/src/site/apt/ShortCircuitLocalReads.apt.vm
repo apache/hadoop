@@ -73,7 +73,7 @@ HDFS Short-Circuit Local Reads
 
   This configuration parameter turns on short-circuit local reads.
 
-  * dfs.client.read.shortcircuit.skip.checkusm
+  * dfs.client.read.shortcircuit.skip.checksum
 
   If this configuration parameter is set, short-circuit local reads will skip
   checksums.  This is normally not recommended, but it may be useful for
