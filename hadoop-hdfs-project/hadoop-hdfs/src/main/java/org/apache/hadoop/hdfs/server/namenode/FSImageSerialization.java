@@ -587,18 +587,22 @@ public class FSImageSerialization {
     final String groupName = info.getGroupName();
     final Long limit = info.getLimit();
     final FsPermission mode = info.getMode();
+    final Long maxRelativeExpiry = info.getMaxRelativeExpiryMs();
 
-    boolean hasOwner, hasGroup, hasMode, hasLimit;
+    boolean hasOwner, hasGroup, hasMode, hasLimit, hasMaxRelativeExpiry;
     hasOwner = ownerName != null;
     hasGroup = groupName != null;
     hasMode = mode != null;
     hasLimit = limit != null;
+    hasMaxRelativeExpiry = maxRelativeExpiry != null;
 
     int flags =
         (hasOwner ? 0x1 : 0) |
         (hasGroup ? 0x2 : 0) |
         (hasMode  ? 0x4 : 0) |
-        (hasLimit ? 0x8 : 0);
+        (hasLimit ? 0x8 : 0) |
+        (hasMaxRelativeExpiry ? 0x10 : 0);
+
     writeInt(flags, out);
 
     if (hasOwner) {
@@ -612,6 +616,9 @@ public class FSImageSerialization {
     }
     if (hasLimit) {
       writeLong(limit, out);
+    }
+    if (hasMaxRelativeExpiry) {
+      writeLong(maxRelativeExpiry, out);
     }
   }
 
@@ -632,7 +639,10 @@ public class FSImageSerialization {
     if ((flags & 0x8) != 0) {
       info.setLimit(readLong(in));
     }
-    if ((flags & ~0xF) != 0) {
+    if ((flags & 0x10) != 0) {
+      info.setMaxRelativeExpiryMs(readLong(in));
+    }
+    if ((flags & ~0x1F) != 0) {
       throw new IOException("Unknown flag in CachePoolInfo: " + flags);
     }
     return info;
@@ -646,6 +656,7 @@ public class FSImageSerialization {
     final String groupName = info.getGroupName();
     final Long limit = info.getLimit();
     final FsPermission mode = info.getMode();
+    final Long maxRelativeExpiry = info.getMaxRelativeExpiryMs();
 
     if (ownerName != null) {
       XMLUtils.addSaxString(contentHandler, "OWNERNAME", ownerName);
@@ -659,6 +670,10 @@ public class FSImageSerialization {
     if (limit != null) {
       XMLUtils.addSaxString(contentHandler, "LIMIT",
           Long.toString(limit));
+    }
+    if (maxRelativeExpiry != null) {
+      XMLUtils.addSaxString(contentHandler, "MAXRELATIVEEXPIRY",
+          Long.toString(maxRelativeExpiry));
     }
   }
 
@@ -677,6 +692,10 @@ public class FSImageSerialization {
     }
     if (st.hasChildren("LIMIT")) {
       info.setLimit(Long.parseLong(st.getValue("LIMIT")));
+    }
+    if (st.hasChildren("MAXRELATIVEEXPIRY")) {
+      info.setMaxRelativeExpiryMs(
+          Long.parseLong(st.getValue("MAXRELATIVEEXPIRY")));
     }
     return info;
   }

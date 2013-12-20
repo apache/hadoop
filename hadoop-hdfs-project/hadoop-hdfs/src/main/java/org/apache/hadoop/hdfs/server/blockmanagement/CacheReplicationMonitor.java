@@ -365,7 +365,7 @@ public class CacheReplicationMonitor extends Thread implements Closeable {
       if (directive.getExpiryTime() > 0 && directive.getExpiryTime() <= now) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Skipping directive id " + directive.getId()
-              + " because it has expired (" + directive.getExpiryTime() + ">="
+              + " because it has expired (" + directive.getExpiryTime() + "<="
               + now + ")");
         }
         continue;

@@ -23,6 +23,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_LOCKED_MEMOR
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CACHING_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_PATH_BASED_CACHE_REFRESH_INTERVAL_MS;
+import static org.apache.hadoop.hdfs.protocol.CachePoolInfo.RELATIVE_EXPIRY_NEVER;
+import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -136,6 +138,8 @@ public class TestCacheDirectives {
     prevCacheManipulator = NativeIO.POSIX.getCacheManipulator();
     NativeIO.POSIX.setCacheManipulator(new NoMlockCacheManipulator());
     LogManager.getLogger(CacheReplicationMonitor.class.getName()).setLevel(
+        Level.TRACE);
+    LogManager.getLogger(CacheManager.class.getName()).setLevel(
         Level.TRACE);
   }
 
@@ -1188,5 +1192,186 @@ public class TestCacheDirectives {
     dfs.addCacheDirective(
         new CacheDirectiveInfo.Builder().setPool(inadequate.getPoolName())
             .setPath(path1).build(), EnumSet.of(CacheFlag.FORCE));
+  }
+
+  @Test(timeout=30000)
+  public void testMaxRelativeExpiry() throws Exception {
+    // Test that negative and really big max expirations can't be set during add
+    try {
+      dfs.addCachePool(new CachePoolInfo("failpool").setMaxRelativeExpiryMs(-1l));
+      fail("Added a pool with a negative max expiry.");
+    } catch (InvalidRequestException e) {
+      GenericTestUtils.assertExceptionContains("negative", e);
+    }
+    try {
+      dfs.addCachePool(new CachePoolInfo("failpool")
+          .setMaxRelativeExpiryMs(Long.MAX_VALUE - 1));
+      fail("Added a pool with too big of a max expiry.");
+    } catch (InvalidRequestException e) {
+      GenericTestUtils.assertExceptionContains("too big", e);
+    }
+    // Test that setting a max relative expiry on a pool works
+    CachePoolInfo coolPool = new CachePoolInfo("coolPool");
+    final long poolExpiration = 1000 * 60 * 10l;
+    dfs.addCachePool(coolPool.setMaxRelativeExpiryMs(poolExpiration));
+    RemoteIterator<CachePoolEntry> poolIt = dfs.listCachePools();
+    CachePoolInfo listPool = poolIt.next().getInfo();
+    assertFalse("Should only be one pool", poolIt.hasNext());
+    assertEquals("Expected max relative expiry to match set value",
+        poolExpiration, listPool.getMaxRelativeExpiryMs().longValue());
+    // Test that negative and really big max expirations can't be modified
+    try {
+      dfs.addCachePool(coolPool.setMaxRelativeExpiryMs(-1l));
+      fail("Added a pool with a negative max expiry.");
+    } catch (InvalidRequestException e) {
+      assertExceptionContains("negative", e);
+    }
+    try {
+      dfs.modifyCachePool(coolPool
+          .setMaxRelativeExpiryMs(CachePoolInfo.RELATIVE_EXPIRY_NEVER+1));
+      fail("Added a pool with too big of a max expiry.");
+    } catch (InvalidRequestException e) {
+      assertExceptionContains("too big", e);
+    }
+    // Test that adding a directives without an expiration uses the pool's max
+    CacheDirectiveInfo defaultExpiry = new CacheDirectiveInfo.Builder()
+        .setPath(new Path("/blah"))
+        .setPool(coolPool.getPoolName())
+        .build();
+    dfs.addCacheDirective(defaultExpiry);
+    RemoteIterator<CacheDirectiveEntry> dirIt =
+        dfs.listCacheDirectives(defaultExpiry);
+    CacheDirectiveInfo listInfo = dirIt.next().getInfo();
+    assertFalse("Should only have one entry in listing", dirIt.hasNext());
+    long listExpiration = listInfo.getExpiration().getAbsoluteMillis()
+        - new Date().getTime();
+    assertTrue("Directive expiry should be approximately the pool's max expiry",
+        Math.abs(listExpiration - poolExpiration) < 10*1000);
+    // Test that the max is enforced on add for relative and absolute
+    CacheDirectiveInfo.Builder builder = new CacheDirectiveInfo.Builder()
+        .setPath(new Path("/lolcat"))
+        .setPool(coolPool.getPoolName());
+    try {
+      dfs.addCacheDirective(builder
+          .setExpiration(Expiration.newRelative(poolExpiration+1))
+          .build());
+      fail("Added a directive that exceeds pool's max relative expiration");
+    } catch (InvalidRequestException e) {
+      assertExceptionContains("exceeds the max relative expiration", e);
+    }
+    try {
+      dfs.addCacheDirective(builder
+          .setExpiration(Expiration.newAbsolute(
+              new Date().getTime() + poolExpiration + (10*1000)))
+          .build());
+      fail("Added a directive that exceeds pool's max relative expiration");
+    } catch (InvalidRequestException e) {
+      assertExceptionContains("exceeds the max relative expiration", e);
+    }
+    // Test that max is enforced on modify for relative and absolute Expirations
+    try {
+      dfs.modifyCacheDirective(new CacheDirectiveInfo.Builder(defaultExpiry)
+          .setId(listInfo.getId())
+          .setExpiration(Expiration.newRelative(poolExpiration+1))
+          .build());
+      fail("Modified a directive to exceed pool's max relative expiration");
+    } catch (InvalidRequestException e) {
+      assertExceptionContains("exceeds the max relative expiration", e);
+    }
+    try {
+      dfs.modifyCacheDirective(new CacheDirectiveInfo.Builder(defaultExpiry)
+          .setId(listInfo.getId())
+          .setExpiration(Expiration.newAbsolute(
+              new Date().getTime() + poolExpiration + (10*1000)))
+          .build());
+      fail("Modified a directive to exceed pool's max relative expiration");
+    } catch (InvalidRequestException e) {
+      assertExceptionContains("exceeds the max relative expiration", e);
+    }
+    // Test some giant limit values with add
+    try {
+      dfs.addCacheDirective(builder
+          .setExpiration(Expiration.newRelative(
+              Long.MAX_VALUE))
+          .build());
+      fail("Added a directive with a gigantic max value");
+    } catch (IllegalArgumentException e) {
+      assertExceptionContains("is too far in the future", e);
+    }
+    try {
+      dfs.addCacheDirective(builder
+          .setExpiration(Expiration.newAbsolute(
+              Long.MAX_VALUE))
+          .build());
+      fail("Added a directive with a gigantic max value");
+    } catch (InvalidRequestException e) {
+      assertExceptionContains("is too far in the future", e);
+    }
+    // Test some giant limit values with modify
+    try {
+      dfs.modifyCacheDirective(new CacheDirectiveInfo.Builder(defaultExpiry)
+          .setId(listInfo.getId())
+          .setExpiration(Expiration.NEVER)
+          .build());
+      fail("Modified a directive to exceed pool's max relative expiration");
+    } catch (InvalidRequestException e) {
+      assertExceptionContains("exceeds the max relative expiration", e);
+    }
+    try {
+      dfs.modifyCacheDirective(new CacheDirectiveInfo.Builder(defaultExpiry)
+          .setId(listInfo.getId())
+          .setExpiration(Expiration.newAbsolute(
+              Long.MAX_VALUE))
+          .build());
+      fail("Modified a directive to exceed pool's max relative expiration");
+    } catch (InvalidRequestException e) {
+      assertExceptionContains("is too far in the future", e);
+    }
+    // Test that the max is enforced on modify correctly when changing pools
+    CachePoolInfo destPool = new CachePoolInfo("destPool");
+    dfs.addCachePool(destPool.setMaxRelativeExpiryMs(poolExpiration / 2));
+    try {
+      dfs.modifyCacheDirective(new CacheDirectiveInfo.Builder(defaultExpiry)
+          .setId(listInfo.getId())
+          .setPool(destPool.getPoolName())
+          .build());
+      fail("Modified a directive to a pool with a lower max expiration");
+    } catch (InvalidRequestException e) {
+      assertExceptionContains("exceeds the max relative expiration", e);
+    }
+    dfs.modifyCacheDirective(new CacheDirectiveInfo.Builder(defaultExpiry)
+        .setId(listInfo.getId())
+        .setPool(destPool.getPoolName())
+        .setExpiration(Expiration.newRelative(poolExpiration / 2))
+        .build());
+    dirIt = dfs.listCacheDirectives(new CacheDirectiveInfo.Builder()
+        .setPool(destPool.getPoolName())
+        .build());
+    listInfo = dirIt.next().getInfo();
+    listExpiration = listInfo.getExpiration().getAbsoluteMillis()
+        - new Date().getTime();
+    assertTrue("Unexpected relative expiry " + listExpiration
+        + " expected approximately " + poolExpiration/2,
+        Math.abs(poolExpiration/2 - listExpiration) < 10*1000);
+    // Test that cache pool and directive expiry can be modified back to never
+    dfs.modifyCachePool(destPool
+        .setMaxRelativeExpiryMs(CachePoolInfo.RELATIVE_EXPIRY_NEVER));
+    poolIt = dfs.listCachePools();
+    listPool = poolIt.next().getInfo();
+    while (!listPool.getPoolName().equals(destPool.getPoolName())) {
+      listPool = poolIt.next().getInfo();
+    }
+    assertEquals("Expected max relative expiry to match set value",
+        CachePoolInfo.RELATIVE_EXPIRY_NEVER,
+        listPool.getMaxRelativeExpiryMs().longValue());
+    dfs.modifyCacheDirective(new CacheDirectiveInfo.Builder()
+        .setId(listInfo.getId())
+        .setExpiration(Expiration.newRelative(RELATIVE_EXPIRY_NEVER))
+        .build());
+    // Test modifying close to the limit
+    dfs.modifyCacheDirective(new CacheDirectiveInfo.Builder()
+        .setId(listInfo.getId())
+        .setExpiration(Expiration.newRelative(RELATIVE_EXPIRY_NEVER - 1))
+        .build());
   }
 }
