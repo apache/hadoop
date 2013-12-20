@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce.v2;
 
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Random;
@@ -106,17 +107,21 @@ public class TestSpeculativeExecutionWithMRApp {
 
     int maxTimeWait = 10;
     boolean successfullySpeculated = false;
+    TaskAttempt[] ta = null;
     while (maxTimeWait > 0 && !successfullySpeculated) {
       if (taskToBeSpeculated.getAttempts().size() != 2) {
         Thread.sleep(1000);
         clock.setTime(System.currentTimeMillis() + 20000);
       } else {
         successfullySpeculated = true;
+        // finish 1st TA, 2nd will be killed
+        ta = makeFirstAttemptWin(appEventHandler, taskToBeSpeculated);
       }
       maxTimeWait--;
     }
     Assert
       .assertTrue("Couldn't speculate successfully", successfullySpeculated);
+    verifySpeculationMessage(app, ta);
   }
 
   @Test(timeout = 60000)
@@ -197,16 +202,47 @@ public class TestSpeculativeExecutionWithMRApp {
 
     int maxTimeWait = 5;
     boolean successfullySpeculated = false;
+    TaskAttempt[] ta = null;
     while (maxTimeWait > 0 && !successfullySpeculated) {
       if (speculatedTask.getAttempts().size() != 2) {
         Thread.sleep(1000);
       } else {
         successfullySpeculated = true;
+        ta = makeFirstAttemptWin(appEventHandler, speculatedTask);
       }
       maxTimeWait--;
     }
     Assert
       .assertTrue("Couldn't speculate successfully", successfullySpeculated);
+    verifySpeculationMessage(app, ta);
+  }
+
+  private static TaskAttempt[] makeFirstAttemptWin(
+      EventHandler appEventHandler, Task speculatedTask) {
+
+    // finish 1st TA, 2nd will be killed
+    Collection<TaskAttempt> attempts = speculatedTask.getAttempts().values();
+    TaskAttempt[] ta = new TaskAttempt[attempts.size()];
+    attempts.toArray(ta);
+    appEventHandler.handle(
+        new TaskAttemptEvent(ta[0].getID(), TaskAttemptEventType.TA_DONE));
+    appEventHandler.handle(new TaskAttemptEvent(ta[0].getID(),
+        TaskAttemptEventType.TA_CONTAINER_CLEANED));
+    return ta;
+  }
+
+  private static void verifySpeculationMessage(MRApp app, TaskAttempt[] ta)
+      throws Exception {
+    app.waitForState(ta[0], TaskAttemptState.SUCCEEDED);
+    app.waitForState(ta[1], TaskAttemptState.KILLED);
+    boolean foundSpecMsg = false;
+    for (String msg : ta[1].getDiagnostics()) {
+      if (msg.contains("Speculation")) {
+        foundSpecMsg = true;
+        break;
+      }
+    }
+    Assert.assertTrue("No speculation diagnostics!", foundSpecMsg);
   }
 
   private TaskAttemptStatus createTaskAttemptStatus(TaskAttemptId id,
