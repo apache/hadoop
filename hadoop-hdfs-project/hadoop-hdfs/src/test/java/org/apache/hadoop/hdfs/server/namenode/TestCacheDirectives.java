@@ -98,6 +98,7 @@ public class TestCacheDirectives {
   static private CacheManipulator prevCacheManipulator;
 
   static {
+    NativeIO.POSIX.setCacheManipulator(new NoMlockCacheManipulator());
     EditLogFileOutputStream.setShouldSkipFsyncForTesting(false);
   }
 
