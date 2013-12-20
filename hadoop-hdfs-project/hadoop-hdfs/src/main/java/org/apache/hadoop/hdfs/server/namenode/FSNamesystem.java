@@ -3976,13 +3976,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   void renewLease(String holder) throws IOException {
     checkOperation(OperationCategory.WRITE);
-    writeLock();
+    readLock();
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot renew lease for " + holder);
       leaseManager.renewLease(holder);
     } finally {
-      writeUnlock();
+      readUnlock();
     }
   }
 
