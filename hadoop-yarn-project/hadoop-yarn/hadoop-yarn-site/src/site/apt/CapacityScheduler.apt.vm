@@ -220,7 +220,7 @@ Hadoop MapReduce Next Generation - Capacity Scheduler
 | | application, no single user can use more than 33% of the queue resources. |
 | | With 4 or more users, no user can use more than 25% of the queues |
 | | resources. A value of 100 implies no user limits are imposed. The default |
-| | is 100.|
+| | is 100. Value is specified as a integer.|
 *--------------------------------------+--------------------------------------+
 | <<<yarn.scheduler.capacity.<queue-path>.user-limit-factor>>> |   | 
 | | The multiple of the queue capacity which can be configured to allow a | 
@@ -249,6 +249,7 @@ Hadoop MapReduce Next Generation - Capacity Scheduler
 | | be rejected. Default is 10000. This can be set for all queues with |
 | | <<<yarn.scheduler.capacity.maximum-applications>>> and can also be overridden on a  |
 | | per queue basis by setting <<<yarn.scheduler.capacity.<queue-path>.maximum-applications>>>. |
+| | Integer value expected.|
 *--------------------------------------+--------------------------------------+
 | <<<yarn.scheduler.capacity.maximum-am-resource-percent>>> / |
 | <<<yarn.scheduler.capacity.<queue-path>.maximum-am-resource-percent>>> | |
@@ -276,7 +277,7 @@ Hadoop MapReduce Next Generation - Capacity Scheduler
 | | Thus, if the <root> queue is <<<STOPPED>>> no applications can be | 
 | | submitted to the entire cluster. |
 | | Existing applications continue to completion, thus the queue can be 
-| | <drained> gracefully. | 
+| | <drained> gracefully. Value is specified as Enumeration. |
 *--------------------------------------+--------------------------------------+
 | <<<yarn.scheduler.capacity.root.<queue-path>.acl_submit_applications>>> | |
 | | The <ACL> which controls who can <submit> applications to the given queue. |
