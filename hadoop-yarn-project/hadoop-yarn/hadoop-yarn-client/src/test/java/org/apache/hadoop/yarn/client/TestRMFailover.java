@@ -86,9 +86,7 @@ public class TestRMFailover {
     setRpcAddressForRM(RM1_NODE_ID, RM1_PORT_BASE);
     setRpcAddressForRM(RM2_NODE_ID, RM2_PORT_BASE);
 
-    conf.setInt(YarnConfiguration.CLIENT_FAILOVER_MAX_ATTEMPTS, 100);
     conf.setLong(YarnConfiguration.CLIENT_FAILOVER_SLEEPTIME_BASE_MS, 100L);
-    conf.setLong(YarnConfiguration.CLIENT_FAILOVER_SLEEPTIME_MAX_MS, 1000L);
     conf.setBoolean(YarnConfiguration.YARN_MINICLUSTER_FIXED_PORTS, true);
     conf.setBoolean(YarnConfiguration.YARN_MINICLUSTER_USE_RPC, true);
 
