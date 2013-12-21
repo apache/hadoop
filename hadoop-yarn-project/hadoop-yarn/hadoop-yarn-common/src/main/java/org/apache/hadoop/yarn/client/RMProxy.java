@@ -225,19 +225,17 @@ public class RMProxy<T> {
       int maxFailoverAttempts = conf.getInt(
           YarnConfiguration.CLIENT_FAILOVER_MAX_ATTEMPTS, -1);
 
-      RetryPolicy basePolicy = RetryPolicies.TRY_ONCE_THEN_FAIL;
       if (maxFailoverAttempts == -1) {
         if (waitForEver) {
-          basePolicy = RetryPolicies.FAILOVER_FOREVER;
+          maxFailoverAttempts = Integer.MAX_VALUE;
         } else {
-          basePolicy = new FailoverUptoMaximumTimePolicy(
-              System.currentTimeMillis() + rmConnectWaitMS);
+          maxFailoverAttempts = (int) (rmConnectWaitMS / failoverSleepBaseMs);
         }
-        maxFailoverAttempts = 0;
       }
 
-      return RetryPolicies.failoverOnNetworkException(basePolicy,
-          maxFailoverAttempts, failoverSleepBaseMs, failoverSleepMaxMs);
+      return RetryPolicies.failoverOnNetworkException(
+          RetryPolicies.TRY_ONCE_THEN_FAIL, maxFailoverAttempts,
+          failoverSleepBaseMs, failoverSleepMaxMs);
     }
 
     if (waitForEver) {

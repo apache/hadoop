@@ -71,13 +71,6 @@ public class RetryPolicies {
 
   /**
    * <p>
-   * Keep failing over forever
-   * </p>
-   */
-  public static final RetryPolicy FAILOVER_FOREVER = new FailoverForever();
-
-  /**
-   * <p>
    * Keep trying a limited number of times, waiting a fixed time between attempts,
    * and then fail by re-throwing the exception.
    * </p>
@@ -171,14 +164,6 @@ public class RetryPolicies {
     public RetryAction shouldRetry(Exception e, int retries, int failovers,
         boolean isIdempotentOrAtMostOnce) throws Exception {
       return RetryAction.RETRY;
-    }
-  }
-
-  static class FailoverForever implements RetryPolicy {
-    @Override
-    public RetryAction shouldRetry(Exception e, int retries, int failovers,
-        boolean isIdempotentOrAtMostOnce) throws Exception {
-      return RetryAction.FAILOVER_AND_RETRY;
     }
   }
   
