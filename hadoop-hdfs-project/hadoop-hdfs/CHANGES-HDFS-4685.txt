@@ -16,6 +16,8 @@ HDFS-4685 (Unreleased)
 
     HDFS-5685. Implement ACL as a INode feature. (Haohui Mai via cnauroth)
 
+    HDFS-5618. NameNode: persist ACLs in fsimage. (Haohui Mai via cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES

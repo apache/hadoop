@@ -21,6 +21,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -34,6 +35,8 @@ import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
+import org.apache.hadoop.hdfs.protocol.proto.AclProtos.AclFsImageProto;
+import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
@@ -204,6 +207,7 @@ public class FSImageSerialization {
     }
 
     writePermissionStatus(file, out);
+    writeAclFeature(file, out);
   }
 
   /** Serialize an {@link INodeFileAttributes}. */
@@ -249,8 +253,9 @@ public class FSImageSerialization {
     }
     
     writePermissionStatus(node, out);
+    writeAclFeature(node, out);
   }
-  
+
   /**
    * Serialize a {@link INodeDirectory}
    * @param a The node to write
@@ -282,7 +287,19 @@ public class FSImageSerialization {
     Text.writeString(out, node.getSymlinkString());
     writePermissionStatus(node, out);
   }
-  
+
+  private static void writeAclFeature(INodeWithAdditionalFields node,
+      DataOutput out) throws IOException {
+    AclFsImageProto.Builder b = AclFsImageProto.newBuilder();
+    OutputStream os = (OutputStream) out;
+
+    AclFeature feature = node.getAclFeature();
+    if (feature != null)
+      b.addAllEntries(PBHelper.convertAclEntryProto(feature.getEntries()));
+
+    b.build().writeDelimitedTo(os);
+  }
+
   /** Serialize a {@link INodeReference} node */
   private static void writeINodeReference(INodeReference ref, DataOutput out,
       boolean writeUnderConstruction, ReferenceMap referenceMap

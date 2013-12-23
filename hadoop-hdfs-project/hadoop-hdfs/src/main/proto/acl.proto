@@ -60,6 +60,10 @@ message AclStatusProto {
   repeated AclEntryProto entries = 4;
 }
 
+message AclFsImageProto {
+  repeated AclEntryProto entries = 1;
+}
+
 message ModifyAclEntriesRequestProto {
   required string src            = 1;
   repeated AclEntryProto aclSpec = 2;
