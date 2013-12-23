@@ -305,12 +305,13 @@ public class HttpServer implements FilterContainer {
         }
       }
 
-      if (endpoints.size() == 0) {
+      if (endpoints.size() == 0 && connector == null) {
         throw new HadoopIllegalArgumentException("No endpoints specified");
       }
 
       if (hostName == null) {
-        hostName = endpoints.get(0).getHost();
+        hostName = endpoints.size() == 0 ? connector.getHost() : endpoints.get(
+            0).getHost();
       }
       
       if (this.conf == null) {

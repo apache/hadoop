@@ -246,6 +246,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-5691. Fix typo in ShortCircuitLocalRead document.
     (Akira Ajisaka via suresh)
 
+    HDFS-5690. DataNode fails to start in secure mode when dfs.http.policy equals to 
+    HTTP_ONLY. (Haohui Mai via jing9)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
