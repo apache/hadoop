@@ -258,6 +258,22 @@ public class TestHarFileSystemBasics {
                  0, expectedFileNames.size());
   }
 
+  @Test
+  public void testMakeQualifiedPath() throws Exception {
+    // Construct a valid har file system path with authority that
+    // contains userinfo and port. The userinfo and port are useless
+    // in local fs uri. They are only used to verify har file system
+    // can correctly preserve the information for the underlying file system.
+    String harPathWithUserinfo = "har://file-user:passwd@localhost:80"
+        + harPath.toUri().getPath().toString();
+    Path path = new Path(harPathWithUserinfo);
+    Path qualifiedPath = path.getFileSystem(conf).makeQualified(path);
+    assertTrue(String.format(
+        "The qualified path (%s) did not match the expected path (%s).",
+        qualifiedPath.toString(), harPathWithUserinfo),
+        qualifiedPath.toString().equals(harPathWithUserinfo));
+  }
+
   // ========== Negative:
 
   @Test

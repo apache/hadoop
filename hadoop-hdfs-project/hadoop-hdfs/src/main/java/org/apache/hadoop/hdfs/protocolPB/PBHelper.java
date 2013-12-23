@@ -1839,6 +1839,9 @@ public class PBHelper {
     if (info.getLimit() != null) {
       builder.setLimit(info.getLimit());
     }
+    if (info.getMaxRelativeExpiryMs() != null) {
+      builder.setMaxRelativeExpiry(info.getMaxRelativeExpiryMs());
+    }
     return builder.build();
   }
 
@@ -1857,6 +1860,9 @@ public class PBHelper {
     }
     if (proto.hasLimit())  {
       info.setLimit(proto.getLimit());
+    }
+    if (proto.hasMaxRelativeExpiry()) {
+      info.setMaxRelativeExpiryMs(proto.getMaxRelativeExpiry());
     }
     return info;
   }

@@ -241,6 +241,8 @@ Trunk (Unreleased)
     HDFS-5431. Support cachepool-based limit management in path-based caching
     (awang via cmccabe)
 
+    HDFS-5636. Enforce a max TTL per cache pool. (awang via cmccabe)
+
   OPTIMIZATIONS
     HDFS-5349. DNA_CACHE and DNA_UNCACHE should be by blockId only. (cmccabe)
 
@@ -763,12 +765,17 @@ Release 2.4.0 - UNRELEASED
     HDFS-5540. Fix intermittent failure in TestBlocksWithNotEnoughRacks.
     (Binglin Chang via junping_du)
 
+    HDFS-2933. Improve DataNode Web UI Index Page. (Vivek Ganesan via
+    Arpit Agarwal)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn)
 
     HDFS-5341. Reduce fsdataset lock duration during directory scanning.
     (Qus-Jiawei via kihwal)
+
+    HDFS-5681. renewLease should not hold fsn write lock. (daryn via Kihwal)
 
   BUG FIXES
 
@@ -819,6 +826,12 @@ Release 2.4.0 - UNRELEASED
     (Binglin Chang via junping_du)
 
     HDFS-5676. fix inconsistent synchronization of CachingStrategy (cmccabe)
+
+    HDFS-5691. Fix typo in ShortCircuitLocalRead document.
+    (Akira Ajisaka via suresh)
+
+    HDFS-5690. DataNode fails to start in secure mode when dfs.http.policy equals to 
+    HTTP_ONLY. (Haohui Mai via jing9)
 
 Release 2.3.0 - UNRELEASED
 
@@ -1131,9 +1144,6 @@ Release 2.1.1-beta - 2013-09-23
 
     HDFS-5047. Supress logging of full stack trace of quota and lease
     exceptions. (Robert Parker via kihwal)
-
-    HDFS-2933. Improve DataNode Web UI Index Page. (Vivek Ganesan via
-    Arpit Agarwal)
 
     HDFS-5111. Remove duplicated error message for snapshot commands when 
     processing invalid arguments. (jing9)

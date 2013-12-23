@@ -52,6 +52,14 @@ public final class CacheDirective implements IntrusiveCollection.Element {
   private Element prev;
   private Element next;
 
+  public CacheDirective(CacheDirectiveInfo info) {
+    this(
+        info.getId(),
+        info.getPath().toUri().getPath(),
+        info.getReplication(),
+        info.getExpiration().getAbsoluteMillis());
+  }
+
   public CacheDirective(long id, String path,
       short replication, long expiryTime) {
     Preconditions.checkArgument(id > 0);

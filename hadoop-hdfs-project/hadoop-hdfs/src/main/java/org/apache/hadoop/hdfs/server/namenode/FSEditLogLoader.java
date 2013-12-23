@@ -652,8 +652,8 @@ public class FSEditLogLoader {
     case OP_MODIFY_CACHE_DIRECTIVE: {
       ModifyCacheDirectiveInfoOp modifyOp =
           (ModifyCacheDirectiveInfoOp) op;
-      fsNamesys.getCacheManager().modifyDirective(
-          modifyOp.directive, null, EnumSet.of(CacheFlag.FORCE));
+      fsNamesys.getCacheManager().modifyDirectiveFromEditLog(
+          modifyOp.directive);
       if (toAddRetryCache) {
         fsNamesys.addCacheEntry(op.rpcClientId, op.rpcCallId);
       }

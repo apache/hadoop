@@ -26,6 +26,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSUtil;
 
+import com.google.common.base.Preconditions;
+
 /**
  * Describes a path-based cache directive.
  */
@@ -138,11 +140,22 @@ public class CacheDirectiveInfo {
    */
   public static class Expiration {
 
-    /** Denotes a CacheDirectiveInfo that never expires **/
-    public static final int EXPIRY_NEVER = -1;
+    /**
+     * The maximum value we accept for a relative expiry.
+     */
+    public static final long MAX_RELATIVE_EXPIRY_MS =
+        Long.MAX_VALUE / 4; // This helps prevent weird overflow bugs
+
+    /**
+     * An relative Expiration that never expires.
+     */
+    public static final Expiration NEVER = newRelative(MAX_RELATIVE_EXPIRY_MS);
 
     /**
      * Create a new relative Expiration.
+     * <p>
+     * Use {@link Expiration#NEVER} to indicate an Expiration that never
+     * expires.
      * 
      * @param ms how long until the CacheDirective expires, in milliseconds
      * @return A relative Expiration
@@ -153,6 +166,9 @@ public class CacheDirectiveInfo {
 
     /**
      * Create a new absolute Expiration.
+     * <p>
+     * Use {@link Expiration#NEVER} to indicate an Expiration that never
+     * expires.
      * 
      * @param date when the CacheDirective expires
      * @return An absolute Expiration
@@ -163,6 +179,9 @@ public class CacheDirectiveInfo {
 
     /**
      * Create a new absolute Expiration.
+     * <p>
+     * Use {@link Expiration#NEVER} to indicate an Expiration that never
+     * expires.
      * 
      * @param ms when the CacheDirective expires, in milliseconds since the Unix
      *          epoch.
@@ -176,6 +195,10 @@ public class CacheDirectiveInfo {
     private final boolean isRelative;
 
     private Expiration(long ms, boolean isRelative) {
+      if (isRelative) {
+        Preconditions.checkArgument(ms <= MAX_RELATIVE_EXPIRY_MS,
+            "Expiration time is too far in the future!");
+      }
       this.ms = ms;
       this.isRelative = isRelative;
     }

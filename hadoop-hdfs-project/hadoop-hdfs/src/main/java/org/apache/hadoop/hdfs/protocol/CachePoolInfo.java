@@ -30,6 +30,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.InvalidRequestException;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo.Expiration;
 
 /**
  * CachePoolInfo describes a cache pool.
@@ -41,6 +42,20 @@ import org.apache.hadoop.fs.permission.FsPermission;
 @InterfaceStability.Evolving
 public class CachePoolInfo {
   public static final Log LOG = LogFactory.getLog(CachePoolInfo.class);
+
+  /**
+   * Indicates that the pool does not have a maximum relative expiry.
+   */
+  public static final long RELATIVE_EXPIRY_NEVER =
+      Expiration.MAX_RELATIVE_EXPIRY_MS;
+  /**
+   * Default max relative expiry for cache pools.
+   */
+  public static final long DEFAULT_MAX_RELATIVE_EXPIRY =
+      RELATIVE_EXPIRY_NEVER;
+
+  public static final long LIMIT_UNLIMITED = Long.MAX_VALUE;
+  public static final long DEFAULT_LIMIT = LIMIT_UNLIMITED;
 
   final String poolName;
 
@@ -56,14 +71,24 @@ public class CachePoolInfo {
   @Nullable
   Long limit;
 
+  @Nullable
+  Long maxRelativeExpiryMs;
+
   public CachePoolInfo(String poolName) {
     this.poolName = poolName;
   }
-  
+
+  /**
+   * @return Name of the pool.
+   */
   public String getPoolName() {
     return poolName;
   }
 
+  /**
+   * @return The owner of the pool. Along with the group and mode, determines
+   *         who has access to view and modify the pool.
+   */
   public String getOwnerName() {
     return ownerName;
   }
@@ -73,6 +98,10 @@ public class CachePoolInfo {
     return this;
   }
 
+  /**
+   * @return The group of the pool. Along with the owner and mode, determines
+   *         who has access to view and modify the pool.
+   */
   public String getGroupName() {
     return groupName;
   }
@@ -81,7 +110,11 @@ public class CachePoolInfo {
     this.groupName = groupName;
     return this;
   }
-  
+
+  /**
+   * @return Unix-style permissions of the pool. Along with the owner and group,
+   *         determines who has access to view and modify the pool.
+   */
   public FsPermission getMode() {
     return mode;
   }
@@ -91,12 +124,36 @@ public class CachePoolInfo {
     return this;
   }
 
+  /**
+   * @return The maximum aggregate number of bytes that can be cached by
+   *         directives in this pool.
+   */
   public Long getLimit() {
     return limit;
   }
 
   public CachePoolInfo setLimit(Long bytes) {
     this.limit = bytes;
+    return this;
+  }
+
+  /**
+   * @return The maximum relative expiration of directives of this pool in
+   *         milliseconds
+   */
+  public Long getMaxRelativeExpiryMs() {
+    return maxRelativeExpiryMs;
+  }
+
+  /**
+   * Set the maximum relative expiration of directives of this pool in
+   * milliseconds.
+   * 
+   * @param ms in milliseconds
+   * @return This builder, for call chaining.
+   */
+  public CachePoolInfo setMaxRelativeExpiryMs(Long ms) {
+    this.maxRelativeExpiryMs = ms;
     return this;
   }
 
@@ -108,6 +165,7 @@ public class CachePoolInfo {
       append(", mode:").append((mode == null) ? "null" :
           String.format("0%03o", mode.toShort())).
       append(", limit:").append(limit).
+      append(", maxRelativeExpiryMs:").append(maxRelativeExpiryMs).
       append("}").toString();
   }
   
@@ -125,6 +183,7 @@ public class CachePoolInfo {
         append(groupName, other.groupName).
         append(mode, other.mode).
         append(limit, other.limit).
+        append(maxRelativeExpiryMs, other.maxRelativeExpiryMs).
         isEquals();
   }
 
@@ -136,6 +195,7 @@ public class CachePoolInfo {
         append(groupName).
         append(mode).
         append(limit).
+        append(maxRelativeExpiryMs).
         hashCode();
   }
 
@@ -145,6 +205,15 @@ public class CachePoolInfo {
     }
     if ((info.getLimit() != null) && (info.getLimit() < 0)) {
       throw new InvalidRequestException("Limit is negative.");
+    }
+    if (info.getMaxRelativeExpiryMs() != null) {
+      long maxRelativeExpiryMs = info.getMaxRelativeExpiryMs();
+      if (maxRelativeExpiryMs < 0l) {
+        throw new InvalidRequestException("Max relative expiry is negative.");
+      }
+      if (maxRelativeExpiryMs > Expiration.MAX_RELATIVE_EXPIRY_MS) {
+        throw new InvalidRequestException("Max relative expiry is too big.");
+      }
     }
     validateName(info.poolName);
   }

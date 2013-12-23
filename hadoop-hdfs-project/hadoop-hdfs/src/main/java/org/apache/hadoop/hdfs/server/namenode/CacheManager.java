@@ -32,6 +32,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -55,6 +56,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.CacheDirective;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
+import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo.Expiration;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveStats;
 import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
@@ -322,27 +324,48 @@ public final class CacheManager {
    * {@link CacheDirectiveInfo.Expiration}. This converts a relative Expiration
    * into an absolute time based on the local clock.
    * 
-   * @param directive from which to get the expiry time
-   * @param defaultValue to use if Expiration is not set
-   * @return Absolute expiry time in milliseconds since Unix epoch
-   * @throws InvalidRequestException if the Expiration is invalid
+   * @param info to validate.
+   * @param maxRelativeExpiryTime of the info's pool.
+   * @return the expiration time, or the pool's max absolute expiration if the
+   *         info's expiration was not set.
+   * @throws InvalidRequestException if the info's Expiration is invalid.
    */
-  private static long validateExpiryTime(CacheDirectiveInfo directive,
-      long defaultValue) throws InvalidRequestException {
-    long expiryTime;
-    CacheDirectiveInfo.Expiration expiration = directive.getExpiration();
-    if (expiration != null) {
-      if (expiration.getMillis() < 0) {
-        throw new InvalidRequestException("Cannot set a negative expiration: "
-            + expiration.getMillis());
-      }
-      // Converts a relative duration into an absolute time based on the local
-      // clock
-      expiryTime = expiration.getAbsoluteMillis();
-    } else {
-      expiryTime = defaultValue;
+  private static long validateExpiryTime(CacheDirectiveInfo info,
+      long maxRelativeExpiryTime) throws InvalidRequestException {
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Validating directive " + info
+          + " pool maxRelativeExpiryTime " + maxRelativeExpiryTime);
     }
-    return expiryTime;
+    final long now = new Date().getTime();
+    final long maxAbsoluteExpiryTime = now + maxRelativeExpiryTime;
+    if (info == null || info.getExpiration() == null) {
+      return maxAbsoluteExpiryTime;
+    }
+    Expiration expiry = info.getExpiration();
+    if (expiry.getMillis() < 0l) {
+      throw new InvalidRequestException("Cannot set a negative expiration: "
+          + expiry.getMillis());
+    }
+    long relExpiryTime, absExpiryTime;
+    if (expiry.isRelative()) {
+      relExpiryTime = expiry.getMillis();
+      absExpiryTime = now + relExpiryTime;
+    } else {
+      absExpiryTime = expiry.getMillis();
+      relExpiryTime = absExpiryTime - now;
+    }
+    // Need to cap the expiry so we don't overflow a long when doing math
+    if (relExpiryTime > Expiration.MAX_RELATIVE_EXPIRY_MS) {
+      throw new InvalidRequestException("Expiration "
+          + expiry.toString() + " is too far in the future!");
+    }
+    // Fail if the requested expiry is greater than the max
+    if (relExpiryTime > maxRelativeExpiryTime) {
+      throw new InvalidRequestException("Expiration " + expiry.toString()
+          + " exceeds the max relative expiration time of "
+          + maxRelativeExpiryTime + " ms.");
+    }
+    return absExpiryTime;
   }
 
   /**
@@ -357,6 +380,9 @@ public final class CacheManager {
   private void checkLimit(CachePool pool, String path,
       short replication) throws InvalidRequestException {
     CacheDirectiveStats stats = computeNeeded(path, replication);
+    if (pool.getLimit() == CachePoolInfo.LIMIT_UNLIMITED) {
+      return;
+    }
     if (pool.getBytesNeeded() + (stats.getBytesNeeded() * replication) > pool
         .getLimit()) {
       throw new InvalidRequestException("Caching path " + path + " of size "
@@ -461,17 +487,13 @@ public final class CacheManager {
   }
 
   /**
-   * To be called only from the edit log loading code
+   * Adds a directive, skipping most error checking. This should only be called
+   * internally in special scenarios like edit log replay.
    */
   CacheDirectiveInfo addDirectiveFromEditLog(CacheDirectiveInfo directive)
       throws InvalidRequestException {
     long id = directive.getId();
-    CacheDirective entry =
-        new CacheDirective(
-            directive.getId(),
-            directive.getPath().toUri().getPath(),
-            directive.getReplication(),
-            directive.getExpiration().getAbsoluteMillis());
+    CacheDirective entry = new CacheDirective(directive);
     CachePool pool = cachePools.get(directive.getPool());
     addInternal(entry, pool);
     if (nextDirectiveId <= id) {
@@ -490,8 +512,7 @@ public final class CacheManager {
       checkWritePermission(pc, pool);
       String path = validatePath(info);
       short replication = validateReplication(info, (short)1);
-      long expiryTime = validateExpiryTime(info,
-          CacheDirectiveInfo.Expiration.EXPIRY_NEVER);
+      long expiryTime = validateExpiryTime(info, pool.getMaxRelativeExpiryMs());
       // Do quota validation if required
       if (!flags.contains(CacheFlag.FORCE)) {
         // Can't kick and wait if caching is disabled
@@ -513,6 +534,56 @@ public final class CacheManager {
     return directive.toInfo();
   }
 
+  /**
+   * Factory method that makes a new CacheDirectiveInfo by applying fields in a
+   * CacheDirectiveInfo to an existing CacheDirective.
+   * 
+   * @param info with some or all fields set.
+   * @param defaults directive providing default values for unset fields in
+   *          info.
+   * 
+   * @return new CacheDirectiveInfo of the info applied to the defaults.
+   */
+  private static CacheDirectiveInfo createFromInfoAndDefaults(
+      CacheDirectiveInfo info, CacheDirective defaults) {
+    // Initialize the builder with the default values
+    CacheDirectiveInfo.Builder builder =
+        new CacheDirectiveInfo.Builder(defaults.toInfo());
+    // Replace default with new value if present
+    if (info.getPath() != null) {
+      builder.setPath(info.getPath());
+    }
+    if (info.getReplication() != null) {
+      builder.setReplication(info.getReplication());
+    }
+    if (info.getPool() != null) {
+      builder.setPool(info.getPool());
+    }
+    if (info.getExpiration() != null) {
+      builder.setExpiration(info.getExpiration());
+    }
+    return builder.build();
+  }
+
+  /**
+   * Modifies a directive, skipping most error checking. This is for careful
+   * internal use only. modifyDirective can be non-deterministic since its error
+   * checking depends on current system time, which poses a problem for edit log
+   * replay.
+   */
+  void modifyDirectiveFromEditLog(CacheDirectiveInfo info)
+      throws InvalidRequestException {
+    // Check for invalid IDs.
+    Long id = info.getId();
+    if (id == null) {
+      throw new InvalidRequestException("Must supply an ID.");
+    }
+    CacheDirective prevEntry = getById(id);
+    CacheDirectiveInfo newInfo = createFromInfoAndDefaults(info, prevEntry);
+    removeInternal(prevEntry);
+    addInternal(new CacheDirective(newInfo), getCachePool(newInfo.getPool()));
+  }
+
   public void modifyDirective(CacheDirectiveInfo info,
       FSPermissionChecker pc, EnumSet<CacheFlag> flags) throws IOException {
     assert namesystem.hasWriteLock();
@@ -527,33 +598,38 @@ public final class CacheManager {
       }
       CacheDirective prevEntry = getById(id);
       checkWritePermission(pc, prevEntry.getPool());
-      String path = prevEntry.getPath();
-      if (info.getPath() != null) {
-        path = validatePath(info);
-      }
 
-      short replication = prevEntry.getReplication();
-      replication = validateReplication(info, replication);
+      // Fill in defaults
+      CacheDirectiveInfo infoWithDefaults =
+          createFromInfoAndDefaults(info, prevEntry);
+      CacheDirectiveInfo.Builder builder =
+          new CacheDirectiveInfo.Builder(infoWithDefaults);
 
-      long expiryTime = prevEntry.getExpiryTime();
-      expiryTime = validateExpiryTime(info, expiryTime);
-
-      CachePool pool = prevEntry.getPool();
-      if (info.getPool() != null) {
-        pool = getCachePool(validatePoolName(info));
-        checkWritePermission(pc, pool);
+      // Do validation
+      validatePath(infoWithDefaults);
+      validateReplication(infoWithDefaults, (short)-1);
+      // Need to test the pool being set here to avoid rejecting a modify for a
+      // directive that's already been forced into a pool
+      CachePool srcPool = prevEntry.getPool();
+      CachePool destPool = getCachePool(validatePoolName(infoWithDefaults));
+      if (!srcPool.getPoolName().equals(destPool.getPoolName())) {
+        checkWritePermission(pc, destPool);
         if (!flags.contains(CacheFlag.FORCE)) {
-          // Can't kick and wait if caching is disabled
-          if (monitor != null) {
-            monitor.waitForRescan();
-          }
-          checkLimit(pool, path, replication);
+          checkLimit(destPool, infoWithDefaults.getPath().toUri().getPath(),
+              infoWithDefaults.getReplication());
         }
       }
+      // Verify the expiration against the destination pool
+      validateExpiryTime(infoWithDefaults, destPool.getMaxRelativeExpiryMs());
+
+      // Indicate changes to the CRM
+      if (monitor != null) {
+        monitor.setNeedsRescan();
+      }
+
+      // Validation passed
       removeInternal(prevEntry);
-      CacheDirective newEntry =
-          new CacheDirective(id, path, replication, expiryTime);
-      addInternal(newEntry, pool);
+      addInternal(new CacheDirective(builder.build()), destPool);
     } catch (IOException e) {
       LOG.warn("modifyDirective of " + idString + " failed: ", e);
       throw e;
@@ -562,7 +638,7 @@ public final class CacheManager {
         info+ ".");
   }
 
-  public void removeInternal(CacheDirective directive)
+  private void removeInternal(CacheDirective directive)
       throws InvalidRequestException {
     assert namesystem.hasWriteLock();
     // Remove the corresponding entry in directivesByPath.
@@ -733,6 +809,13 @@ public final class CacheManager {
         if (monitor != null) {
           monitor.setNeedsRescan();
         }
+      }
+      if (info.getMaxRelativeExpiryMs() != null) {
+        final Long maxRelativeExpiry = info.getMaxRelativeExpiryMs();
+        pool.setMaxRelativeExpiryMs(maxRelativeExpiry);
+        bld.append(prefix).append("set maxRelativeExpiry to "
+            + maxRelativeExpiry);
+        prefix = "; ";
       }
       if (prefix.isEmpty()) {
         bld.append("no changes.");

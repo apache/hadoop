@@ -25,6 +25,7 @@ import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlSeeAlso;
 import javax.xml.bind.annotation.XmlTransient;
 
+import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptReport;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
@@ -45,6 +46,7 @@ public class TaskAttemptInfo {
   protected String id;
   protected String rack;
   protected TaskAttemptState state;
+  protected String status;
   protected String nodeHttpAddress;
   protected String diagnostics;
   protected String type;
@@ -61,29 +63,23 @@ public class TaskAttemptInfo {
   }
 
   public TaskAttemptInfo(TaskAttempt ta, TaskType type, Boolean isRunning) {
+    final TaskAttemptReport report = ta.getReport();
     this.type = type.toString();
     this.id = MRApps.toString(ta.getID());
     this.nodeHttpAddress = ta.getNodeHttpAddress();
-    this.startTime = ta.getLaunchTime();
-    this.finishTime = ta.getFinishTime();
-    this.assignedContainerId = ConverterUtils.toString(ta
-        .getAssignedContainerID());
-    this.assignedContainer = ta.getAssignedContainerID();
-    this.progress = ta.getProgress() * 100;
-    this.state = ta.getState();
+    this.startTime = report.getStartTime();
+    this.finishTime = report.getFinishTime();
+    this.assignedContainerId = ConverterUtils.toString(report.getContainerId());
+    this.assignedContainer = report.getContainerId();
+    this.progress = report.getProgress() * 100;
+    this.status = report.getStateString();
+    this.state = report.getTaskAttemptState();
     this.elapsedTime = Times
         .elapsed(this.startTime, this.finishTime, isRunning);
     if (this.elapsedTime == -1) {
       this.elapsedTime = 0;
     }
-    List<String> diagnostics = ta.getDiagnostics();
-    if (diagnostics != null && !diagnostics.isEmpty()) {
-      StringBuffer b = new StringBuffer();
-      for (String diag : diagnostics) {
-        b.append(diag);
-      }
-      this.diagnostics = b.toString();
-    }
+    this.diagnostics = report.getDiagnosticInfo();
     this.rack = ta.getNodeRackName();
   }
 
@@ -97,6 +93,10 @@ public class TaskAttemptInfo {
 
   public String getState() {
     return this.state.toString();
+  }
+
+  public String getStatus() {
+    return status;
   }
 
   public String getId() {
