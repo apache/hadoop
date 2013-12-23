@@ -273,6 +273,9 @@ Release 2.3.0 - UNRELEASED
     HADOOP-10087. UserGroupInformation.getGroupNames() fails to return primary
     group first when JniBasedUnixGroupsMappingWithFallback is used (cmccabe)
 
+    HADOOP-10175. Har files system authority should preserve userinfo.
+    (Chuan Liu via cnauroth)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
