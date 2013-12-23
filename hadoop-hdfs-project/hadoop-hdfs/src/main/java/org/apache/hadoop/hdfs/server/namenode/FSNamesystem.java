@@ -7327,7 +7327,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
   }
 
-  void setAcl(String src, Iterable<AclEntry> aclSpec) throws IOException {
+  void setAcl(String src, List<AclEntry> aclSpec) throws IOException {
     checkOperation(OperationCategory.WRITE);
     writeLock();
     try {

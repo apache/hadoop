@@ -77,7 +77,6 @@ import org.apache.hadoop.hdfs.util.ReadOnlyList;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 
 /*************************************************
  * FSDirectory stores the filesystem directory state.
@@ -2640,28 +2639,50 @@ public class FSDirectory implements Closeable {
   void removeAcl(String src) throws IOException {
     writeLock();
     try {
-      final INodeWithAdditionalFields node = resolveINodeWithAdditionalField(src);
-      AclFeature f = node.getAclFeature();
-      if (f != null)
-        node.removeAclFeature();
+      unprotectedRemoveAcl(src);
+      fsImage.getEditLog().logSetAcl(src, AclFeature.EMPTY_ENTRY_LIST);
     } finally {
       writeUnlock();
     }
   }
 
-  void setAcl(String src, Iterable<AclEntry> aclSpec) throws IOException {
+  private void unprotectedRemoveAcl(String src) throws UnresolvedLinkException,
+      SnapshotAccessControlException, FileNotFoundException {
+    assert hasWriteLock();
+    final INodeWithAdditionalFields node = resolveINodeWithAdditionalField(src);
+    AclFeature f = node.getAclFeature();
+    if (f != null)
+      node.removeAclFeature();
+  }
+
+  void setAcl(String src, List<AclEntry> aclSpec) throws IOException {
     writeLock();
     try {
-      final INodeWithAdditionalFields node = resolveINodeWithAdditionalField(src);
-      AclFeature f = node.getAclFeature();
-      if (f == null) {
-        f = new AclFeature();
-        node.addAclFeature(f);
-      }
-      f.setEntries(Lists.newArrayList(aclSpec));
+      unprotectedSetAcl(src, aclSpec);
+      fsImage.getEditLog().logSetAcl(src, aclSpec);
     } finally {
       writeUnlock();
     }
+  }
+
+  void unprotectedSetAcl(String src, List<AclEntry> aclSpec)
+      throws UnresolvedLinkException, SnapshotAccessControlException,
+      FileNotFoundException {
+    assert hasWriteLock();
+    final INodeWithAdditionalFields node = resolveINodeWithAdditionalField(src);
+    AclFeature f = node.getAclFeature();
+
+    if (aclSpec.size() == 0) {
+      if (f != null)
+        node.removeAclFeature();
+      return;
+    }
+
+    if (f == null) {
+      f = new AclFeature();
+      node.addAclFeature(f);
+    }
+    f.setEntries(aclSpec);
   }
 
   AclStatus getAclStatus(String src) throws IOException {

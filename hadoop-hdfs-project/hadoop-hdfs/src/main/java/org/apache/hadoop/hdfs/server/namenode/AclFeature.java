@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -28,6 +29,8 @@ import org.apache.hadoop.fs.permission.AclEntry;
  */
 @InterfaceAudience.Private
 public class AclFeature implements INode.Feature {
+  public static final List<AclEntry> EMPTY_ENTRY_LIST = Collections.emptyList();
+
   private List<AclEntry> entries;
 
   public List<AclEntry> getEntries() {

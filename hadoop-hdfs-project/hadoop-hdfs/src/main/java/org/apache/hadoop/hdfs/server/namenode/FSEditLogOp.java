@@ -43,6 +43,7 @@ import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_RENAME;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_RENAME_OLD;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_RENAME_SNAPSHOT;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_RENEW_DELEGATION_TOKEN;
+import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_SET_ACL;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_SET_GENSTAMP_V1;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_SET_GENSTAMP_V2;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_SET_NS_QUOTA;
@@ -75,6 +76,10 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.Options.Rename;
+import org.apache.hadoop.fs.permission.AclEntry;
+import org.apache.hadoop.fs.permission.AclEntryScope;
+import org.apache.hadoop.fs.permission.AclEntryType;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -86,6 +91,8 @@ import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
+import org.apache.hadoop.hdfs.protocol.proto.AclProtos.AclEditLogProto;
+import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.util.XMLUtils;
 import org.apache.hadoop.hdfs.util.XMLUtils.InvalidXmlException;
@@ -108,6 +115,8 @@ import org.xml.sax.helpers.AttributesImpl;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 
 /**
  * Helper classes for reading the ops from an InputStream.
@@ -166,12 +175,23 @@ public abstract class FSEditLogOp {
       inst.put(OP_ADD_CACHE_POOL, new AddCachePoolOp());
       inst.put(OP_MODIFY_CACHE_POOL, new ModifyCachePoolOp());
       inst.put(OP_REMOVE_CACHE_POOL, new RemoveCachePoolOp());
+      inst.put(OP_SET_ACL, new SetAclOp());
     }
     
     public FSEditLogOp get(FSEditLogOpCodes opcode) {
       return inst.get(opcode);
     }
   }
+
+  private static ImmutableMap<String, FsAction> fsActionMap() {
+    ImmutableMap.Builder<String, FsAction> b = ImmutableMap.builder();
+    for (FsAction v : FsAction.values())
+      b.put(v.SYMBOL, v);
+    return b.build();
+  }
+
+  private static final ImmutableMap<String, FsAction> FSACTION_SYMBOL_MAP
+    = fsActionMap();
 
   /**
    * Constructor for an EditLog Op. EditLog ops cannot be constructed
@@ -3232,6 +3252,65 @@ public abstract class FSEditLogOp {
     }
   }
 
+  static class SetAclOp extends FSEditLogOp {
+    List<AclEntry> aclEntries = Lists.newArrayList();
+    String src;
+
+    private SetAclOp() {
+      super(OP_SET_ACL);
+    }
+
+    static SetAclOp getInstance() {
+      return new SetAclOp();
+    }
+
+    @Override
+    void readFields(DataInputStream in, int logVersion) throws IOException {
+      AclEditLogProto p = AclEditLogProto.parseDelimitedFrom((DataInputStream)in);
+      src = p.getSrc();
+      aclEntries = PBHelper.convertAclEntry(p.getEntriesList());
+    }
+
+    @Override
+    public void writeFields(DataOutputStream out) throws IOException {
+      AclEditLogProto.Builder b = AclEditLogProto.newBuilder();
+      if (src != null)
+        b.setSrc(src);
+      b.addAllEntries(PBHelper.convertAclEntryProto(aclEntries));
+      b.build().writeDelimitedTo(out);
+    }
+
+    @Override
+    protected void toXml(ContentHandler contentHandler) throws SAXException {
+      XMLUtils.addSaxString(contentHandler, "SRC", src);
+      for (AclEntry e : aclEntries) {
+        contentHandler.startElement("", "", "ENTRY", new AttributesImpl());
+        XMLUtils.addSaxString(contentHandler, "SCOPE", e.getScope().name());
+        XMLUtils.addSaxString(contentHandler, "TYPE", e.getType().name());
+        XMLUtils.addSaxString(contentHandler, "NAME", e.getName());
+        fsActionToXml(contentHandler, e.getPermission());
+        contentHandler.endElement("", "", "ENTRY");
+      }
+    }
+
+    @Override
+    void fromXml(Stanza st) throws InvalidXmlException {
+      src = st.getValue("SRC");
+      if (!st.hasChildren("ENTRY"))
+        return;
+
+      List<Stanza> stanzas = st.getChildren("ENTRY");
+      for (Stanza s : stanzas) {
+        AclEntry e = new AclEntry.Builder()
+            .setScope(AclEntryScope.valueOf(s.getValue("SCOPE")))
+            .setType(AclEntryType.valueOf(s.getValue("TYPE")))
+            .setName(s.getValue("NAME"))
+            .setPermission(fsActionFromXml(s)).build();
+        aclEntries.add(e);
+      }
+    }
+  }
+
   static private short readShort(DataInputStream in) throws IOException {
     return Short.parseShort(FSImageSerialization.readString(in));
   }
@@ -3640,5 +3719,17 @@ public abstract class FSEditLogOp {
       throws InvalidXmlException {
     short mode = Short.valueOf(st.getValue("MODE"));
     return new FsPermission(mode);
+  }
+
+  private static void fsActionToXml(ContentHandler contentHandler, FsAction v)
+      throws SAXException {
+    XMLUtils.addSaxString(contentHandler, "PERM", v.SYMBOL);
+  }
+
+  private static FsAction fsActionFromXml(Stanza st) throws InvalidXmlException {
+    FsAction v = FSACTION_SYMBOL_MAP.get(st.getValue("PERM"));
+    if (v == null)
+      throw new InvalidXmlException("Invalid value for FsAction");
+    return v;
   }
 }

@@ -18,6 +18,9 @@ HDFS-4685 (Unreleased)
 
     HDFS-5618. NameNode: persist ACLs in fsimage. (Haohui Mai via cnauroth)
 
+    HDFS-5619. NameNode: record ACL modifications to edit log.
+    (Haohui Mai via cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES
