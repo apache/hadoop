@@ -1567,7 +1567,7 @@ public class TestRMRestart {
     @Override
     protected ClientRMService createClientRMService() {
       return new ClientRMService(getRMContext(), getResourceScheduler(),
-          rmAppManager, applicationACLsManager, null, rmDTSecretManager){
+          rmAppManager, applicationACLsManager, null, getRMDTSecretManager()){
         @Override
         protected void serviceStart() throws Exception {
           // do nothing

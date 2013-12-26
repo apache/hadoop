@@ -81,7 +81,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.security.AMRMTokenSecretManager;
-import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer;
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.QueueACLsManager;
@@ -134,13 +133,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
    * in Active state.
    */
   protected RMActiveServices activeServices;
-  protected ClientToAMTokenSecretManagerInRM clientToAMSecretManager;
-
-  protected RMContainerTokenSecretManager containerTokenSecretManager;
-  protected NMTokenSecretManagerInRM nmTokenSecretManager;
-
-  protected AMRMTokenSecretManager amRmTokenSecretManager;
-
+  protected RMSecretManagerService rmSecretManagerService;
   private Dispatcher rmDispatcher;
 
   protected ResourceScheduler scheduler;
@@ -154,7 +147,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
   protected RMAppManager rmAppManager;
   protected ApplicationACLsManager applicationACLsManager;
   protected QueueACLsManager queueACLsManager;
-  protected RMDelegationTokenSecretManager rmDTSecretManager;
   private DelegationTokenRenewer delegationTokenRenewer;
   private WebApp webApp;
   protected ResourceTrackerService resourceTracker;
@@ -211,16 +203,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
     rmContext.setStateStore(rmStore);
   }
 
-  protected RMContainerTokenSecretManager createContainerTokenSecretManager(
-      Configuration conf) {
-    return new RMContainerTokenSecretManager(conf);
-  }
-
-  protected NMTokenSecretManagerInRM createNMTokenSecretManager(
-      Configuration conf) {
-    return new NMTokenSecretManagerInRM(conf);
-  }
-  
   protected EventHandler<SchedulerEvent> createSchedulerEventDispatcher() {
     return new SchedulerEventDispatcher(this.scheduler);
   }
@@ -232,11 +214,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
   protected Dispatcher createDispatcher() {
     return new AsyncDispatcher();
-  }
-
-  protected AMRMTokenSecretManager createAMRMTokenSecretManager(
-      Configuration conf) {
-    return new AMRMTokenSecretManager(conf);
   }
 
   protected ResourceScheduler createScheduler() {
@@ -324,11 +301,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
       addIfService(rmDispatcher);
       rmContext.setDispatcher(rmDispatcher);
 
-      clientToAMSecretManager = new ClientToAMTokenSecretManagerInRM();
-      rmContext.setClientToAMTokenSecretManager(clientToAMSecretManager);
-
-      amRmTokenSecretManager = createAMRMTokenSecretManager(conf);
-      rmContext.setAMRMTokenSecretManager(amRmTokenSecretManager);
+      rmSecretManagerService = createRMSecretManagerService();
+      addService(rmSecretManagerService);
 
       containerAllocationExpirer = new ContainerAllocationExpirer(rmDispatcher);
       addService(containerAllocationExpirer);
@@ -341,12 +315,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
       AMLivelinessMonitor amFinishingMonitor = createAMLivelinessMonitor();
       addService(amFinishingMonitor);
       rmContext.setAMFinishingMonitor(amFinishingMonitor);
-
-      containerTokenSecretManager = createContainerTokenSecretManager(conf);
-      rmContext.setContainerTokenSecretManager(containerTokenSecretManager);
-
-      nmTokenSecretManager = createNMTokenSecretManager(conf);
-      rmContext.setNMTokenSecretManager(nmTokenSecretManager);
 
       boolean isRecoveryEnabled = conf.getBoolean(
           YarnConfiguration.RECOVERY_ENABLED,
@@ -435,8 +403,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
       rmAppManager = createRMAppManager();
       // Register event handler for RMAppManagerEvents
       rmDispatcher.register(RMAppManagerEventType.class, rmAppManager);
-      rmDTSecretManager = createRMDelegationTokenSecretManager(rmContext);
-      rmContext.setRMDelegationTokenSecretManager(rmDTSecretManager);
 
       clientRM = createClientRMService();
       rmContext.setClientRMService(clientRM);
@@ -460,10 +426,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
     @Override
     protected void serviceStart() throws Exception {
-      amRmTokenSecretManager.start();
-      containerTokenSecretManager.start();
-      nmTokenSecretManager.start();
-
       RMStateStore rmStore = rmContext.getStateStore();
       // The state store needs to start irrespective of recoveryEnabled as apps
       // need events to move to further states.
@@ -481,13 +443,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
           throw e;
         }
       }
-
       startWepApp();
-      try {
-        rmDTSecretManager.startThreads();
-      } catch(IOException ie) {
-        throw new YarnRuntimeException("Failed to start secret manager threads", ie);
-      }
 
       if (getConfig().getBoolean(YarnConfiguration.IS_MINI_YARN_CLUSTER, false)) {
         int port = webApp.port();
@@ -502,19 +458,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
       if (webApp != null) {
         webApp.stop();
       }
-      if (rmDTSecretManager != null) {
-        rmDTSecretManager.stopThreads();
-      }
 
-      if (amRmTokenSecretManager != null) {
-        amRmTokenSecretManager.stop();
-      }
-      if (containerTokenSecretManager != null) {
-        containerTokenSecretManager.stop();
-      }
-      if(nmTokenSecretManager != null) {
-        nmTokenSecretManager.stop();
-      }
 
       DefaultMetricsSystem.shutdown();
 
@@ -939,30 +883,15 @@ public class ResourceManager extends CompositeService implements Recoverable {
   
   protected ResourceTrackerService createResourceTrackerService() {
     return new ResourceTrackerService(this.rmContext, this.nodesListManager,
-        this.nmLivelinessMonitor, this.containerTokenSecretManager,
-        this.nmTokenSecretManager);
-  }
-
-  protected RMDelegationTokenSecretManager
-               createRMDelegationTokenSecretManager(RMContext rmContext) {
-    long secretKeyInterval = 
-        conf.getLong(YarnConfiguration.DELEGATION_KEY_UPDATE_INTERVAL_KEY, 
-            YarnConfiguration.DELEGATION_KEY_UPDATE_INTERVAL_DEFAULT);
-    long tokenMaxLifetime =
-        conf.getLong(YarnConfiguration.DELEGATION_TOKEN_MAX_LIFETIME_KEY,
-            YarnConfiguration.DELEGATION_TOKEN_MAX_LIFETIME_DEFAULT);
-    long tokenRenewInterval =
-        conf.getLong(YarnConfiguration.DELEGATION_TOKEN_RENEW_INTERVAL_KEY, 
-            YarnConfiguration.DELEGATION_TOKEN_RENEW_INTERVAL_DEFAULT);
-
-    return new RMDelegationTokenSecretManager(secretKeyInterval, 
-        tokenMaxLifetime, tokenRenewInterval, 3600000, rmContext);
+        this.nmLivelinessMonitor,
+        this.rmContext.getContainerTokenSecretManager(),
+        this.rmContext.getNMTokenSecretManager());
   }
 
   protected ClientRMService createClientRMService() {
     return new ClientRMService(this.rmContext, scheduler, this.rmAppManager,
         this.applicationACLsManager, this.queueACLsManager,
-        this.rmDTSecretManager);
+        getRMDTSecretManager());
   }
 
   protected ApplicationMasterService createApplicationMasterService() {
@@ -971,6 +900,10 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
   protected AdminService createAdminService() {
     return new AdminService(this, rmContext);
+  }
+
+  protected RMSecretManagerService createRMSecretManagerService() {
+    return new RMSecretManagerService(conf, rmContext);
   }
 
   @Private
@@ -1013,23 +946,28 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
   @Private
   public RMContainerTokenSecretManager getRMContainerTokenSecretManager() {
-    return this.containerTokenSecretManager;
+    return this.rmContext.getContainerTokenSecretManager();
   }
 
   @Private
   public NMTokenSecretManagerInRM getRMNMTokenSecretManager() {
-    return this.nmTokenSecretManager;
+    return this.rmContext.getNMTokenSecretManager();
   }
   
   @Private
   public AMRMTokenSecretManager getAMRMTokenSecretManager(){
-    return this.amRmTokenSecretManager;
+    return this.rmContext.getAMRMTokenSecretManager();
+  }
+
+  @Private
+  public RMDelegationTokenSecretManager getRMDTSecretManager(){
+    return this.rmContext.getRMDelegationTokenSecretManager();
   }
 
   @Override
   public void recover(RMState state) throws Exception {
     // recover RMdelegationTokenSecretManager
-    rmDTSecretManager.recover(state);
+    getRMDTSecretManager().recover(state);
 
     // recover applications
     rmAppManager.recover(state);
