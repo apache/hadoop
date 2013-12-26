@@ -169,6 +169,8 @@ Release 2.4.0 - UNRELEASED
     YARN-1307. Redesign znode structure for Zookeeper based RM state-store for
     better organization and scalability. (Tsuyoshi OZAWA via vinodkv)
 
+    YARN-1172. Convert SecretManagers in RM to services (Tsuyoshi OZAWA via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES
