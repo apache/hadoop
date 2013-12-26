@@ -251,6 +251,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1451. TestResourceManager relies on the scheduler assigning multiple
     containers in a single node update. (Sandy Ryza via kasha)
 
+    YARN-1527. Fix yarn rmadmin command to print the correct usage info.
+    (Akira AJISAKA via jianhe)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
