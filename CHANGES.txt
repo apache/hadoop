@@ -77,6 +77,9 @@ Release 1.3.0 - unreleased
     MAPREDUCE-5512. TaskTracker hung after failed reconnect to the JobTracker.
     (ivanmi)
 
+    HADOOP-10090. Jobtracker metrics not updated properly after execution of
+    a mapreduce job (ivanmi)
+
 Release 1.2.1 - Unreleased 
 
   INCOMPATIBLE CHANGES
