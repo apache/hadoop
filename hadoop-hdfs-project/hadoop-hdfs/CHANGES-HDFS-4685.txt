@@ -21,6 +21,9 @@ HDFS-4685 (Unreleased)
     HDFS-5619. NameNode: record ACL modifications to edit log.
     (Haohui Mai via cnauroth)
 
+    HADOOP-10187. FsShell CLI: add getfacl and setfacl with minimal support for
+    getting and setting ACLs. (Vinay via cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES

@@ -69,4 +69,21 @@ public enum FsAction {
   public FsAction not() {
     return vals[7 - ordinal()];
   }
+
+  /**
+   * Get the FsAction enum for String representation of permissions
+   * 
+   * @param permission
+   *          3-character string representation of permission. ex: rwx
+   * @return Returns FsAction enum if the corresponding FsAction exists for permission.
+   *         Otherwise returns null
+   */
+  public static FsAction getFsAction(String permission) {
+    for (FsAction fsAction : vals) {
+      if (fsAction.SYMBOL.equals(permission)) {
+        return fsAction;
+      }
+    }
+    return null;
+  }
 }
