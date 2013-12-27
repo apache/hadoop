@@ -24,10 +24,10 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.tools.GetUserMappingsProtocol;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.ResourceOption;
-import org.apache.hadoop.yarn.exceptions.RMNotYetActiveException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsResponse;
@@ -51,25 +51,25 @@ public interface ResourceManagerAdministrationProtocol extends GetUserMappingsPr
   @Public
   @Stable
   public RefreshQueuesResponse refreshQueues(RefreshQueuesRequest request) 
-  throws RMNotYetActiveException, YarnException, IOException;
+  throws StandbyException, YarnException, IOException;
 
   @Public
   @Stable
   public RefreshNodesResponse refreshNodes(RefreshNodesRequest request)
-  throws RMNotYetActiveException, YarnException, IOException;
+  throws StandbyException, YarnException, IOException;
 
   @Public
   @Stable
   public RefreshSuperUserGroupsConfigurationResponse 
   refreshSuperUserGroupsConfiguration(
       RefreshSuperUserGroupsConfigurationRequest request)
-  throws RMNotYetActiveException, YarnException, IOException;
+  throws StandbyException, YarnException, IOException;
 
   @Public
   @Stable
   public RefreshUserToGroupsMappingsResponse refreshUserToGroupsMappings(
       RefreshUserToGroupsMappingsRequest request)
-  throws RMNotYetActiveException, YarnException, IOException;
+  throws StandbyException, YarnException, IOException;
 
   @Public
   @Stable
