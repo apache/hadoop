@@ -174,7 +174,7 @@ public class AdminService extends AbstractService implements
     }
   }
 
-  private synchronized boolean isRMActive() {
+  private boolean isRMActive() {
     return HAServiceState.ACTIVE == rmContext.getHAServiceState();
   }
 
