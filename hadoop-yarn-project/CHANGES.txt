@@ -171,6 +171,8 @@ Release 2.4.0 - UNRELEASED
 
     YARN-1172. Convert SecretManagers in RM to services (Tsuyoshi OZAWA via kasha)
 
+    YARN-1523. Use StandbyException instead of RMNotYetReadyException (kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES

@@ -40,6 +40,7 @@ import org.apache.hadoop.ha.protocolPB.HAServiceProtocolServerSideTranslatorPB;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RPC.Server;
+import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
@@ -49,7 +50,6 @@ import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.RMNotYetActiveException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -82,6 +82,7 @@ public class AdminService extends AbstractService implements
 
   private final RMContext rmContext;
   private final ResourceManager rm;
+  private String rmId;
 
   private Server server;
   private InetSocketAddress masterServiceAddress;
@@ -105,6 +106,7 @@ public class AdminService extends AbstractService implements
     adminAcl = new AccessControlList(conf.get(
         YarnConfiguration.YARN_ADMIN_ACL,
         YarnConfiguration.DEFAULT_YARN_ADMIN_ACL));
+    rmId = conf.get(YarnConfiguration.RM_HA_ID);
     super.serviceInit(conf);
   }
 
@@ -176,6 +178,10 @@ public class AdminService extends AbstractService implements
     return HAServiceState.ACTIVE == rmContext.getHAServiceState();
   }
 
+  private void throwStandbyException() throws StandbyException {
+    throw new StandbyException("ResourceManager " + rmId + " is not Active!");
+  }
+
   @Override
   public synchronized void monitorHealth()
       throws IOException {
@@ -239,14 +245,14 @@ public class AdminService extends AbstractService implements
 
   @Override
   public RefreshQueuesResponse refreshQueues(RefreshQueuesRequest request)
-      throws YarnException {
+      throws YarnException, StandbyException {
     UserGroupInformation user = checkAcls("refreshQueues");
 
     if (!isRMActive()) {
       RMAuditLogger.logFailure(user.getShortUserName(), "refreshQueues",
           adminAcl.toString(), "AdminService",
           "ResourceManager is not active. Can not refresh queues.");
-      throw new RMNotYetActiveException();
+      throwStandbyException();
     }
 
     try {
@@ -265,14 +271,14 @@ public class AdminService extends AbstractService implements
 
   @Override
   public RefreshNodesResponse refreshNodes(RefreshNodesRequest request)
-      throws YarnException {
+      throws YarnException, StandbyException {
     UserGroupInformation user = checkAcls("refreshNodes");
 
     if (!isRMActive()) {
       RMAuditLogger.logFailure(user.getShortUserName(), "refreshNodes",
           adminAcl.toString(), "AdminService",
           "ResourceManager is not active. Can not refresh nodes.");
-      throw new RMNotYetActiveException();
+      throwStandbyException();
     }
 
     try {
@@ -291,7 +297,7 @@ public class AdminService extends AbstractService implements
   @Override
   public RefreshSuperUserGroupsConfigurationResponse refreshSuperUserGroupsConfiguration(
       RefreshSuperUserGroupsConfigurationRequest request)
-      throws YarnException {
+      throws YarnException, StandbyException {
     UserGroupInformation user = checkAcls("refreshSuperUserGroupsConfiguration");
 
     // TODO (YARN-1459): Revisit handling super-user-groups on Standby RM
@@ -300,7 +306,7 @@ public class AdminService extends AbstractService implements
           "refreshSuperUserGroupsConfiguration",
           adminAcl.toString(), "AdminService",
           "ResourceManager is not active. Can not refresh super-user-groups.");
-      throw new RMNotYetActiveException();
+      throwStandbyException();
     }
 
     ProxyUsers.refreshSuperUserGroupsConfiguration(new Configuration());
@@ -313,7 +319,8 @@ public class AdminService extends AbstractService implements
 
   @Override
   public RefreshUserToGroupsMappingsResponse refreshUserToGroupsMappings(
-      RefreshUserToGroupsMappingsRequest request) throws YarnException {
+      RefreshUserToGroupsMappingsRequest request)
+      throws YarnException, StandbyException {
     UserGroupInformation user = checkAcls("refreshUserToGroupsMappings");
 
     // TODO (YARN-1459): Revisit handling user-groups on Standby RM
@@ -322,7 +329,7 @@ public class AdminService extends AbstractService implements
           "refreshUserToGroupsMapping",
           adminAcl.toString(), "AdminService",
           "ResourceManager is not active. Can not refresh user-groups.");
-      throw new RMNotYetActiveException();
+      throwStandbyException();
     }
 
     Groups.getUserToGroupsMappingService().refresh();
