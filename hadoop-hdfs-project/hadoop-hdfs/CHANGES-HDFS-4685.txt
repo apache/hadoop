@@ -24,6 +24,8 @@ HDFS-4685 (Unreleased)
     HADOOP-10187. FsShell CLI: add getfacl and setfacl with minimal support for
     getting and setting ACLs. (Vinay via cnauroth)
 
+    HADOOP-10192. FileSystem#getAclStatus has incorrect JavaDocs. (cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES

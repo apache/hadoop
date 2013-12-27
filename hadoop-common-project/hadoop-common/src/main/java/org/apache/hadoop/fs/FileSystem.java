@@ -2339,10 +2339,10 @@ public abstract class FileSystem extends Configured implements Closeable {
   }
 
   /**
-   * Gets the ACLs of files and directories.
+   * Gets the ACL of a file or directory.
    *
    * @param path Path to get
-   * @return RemoteIterator<AclStatus> which returns each AclStatus
+   * @return AclStatus describing the ACL of the file or directory
    * @throws IOException if an ACL could not be read
    */
   public AclStatus getAclStatus(Path path) throws IOException {
