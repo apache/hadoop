@@ -139,7 +139,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
 
   private float progress = 0;
   private String host = "N/A";
-  private int rpcPort;
+  private int rpcPort = -1;
   private String originalTrackingUrl = "N/A";
   private String proxiedTrackingUrl = "N/A";
   private long startTime = 0;
@@ -524,6 +524,11 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
         WebAppUtils.getResolvedRMWebAppURLWithoutScheme(conf),
         "cluster", "app", getAppAttemptId().getApplicationId());
     proxiedTrackingUrl = originalTrackingUrl;
+  }
+
+  private void invalidateAMHostAndPort() {
+    this.host = "N/A";
+    this.rpcPort = -1;
   }
 
   // This is only used for RMStateStore. Normal operation must invoke the secret
@@ -1033,6 +1038,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
         {
           // don't leave the tracking URL pointing to a non-existent AM
           appAttempt.setTrackingUrlToRMAppPage();
+          appAttempt.invalidateAMHostAndPort();
           appEvent =
               new RMAppFailedAttemptEvent(applicationId,
                   RMAppEventType.ATTEMPT_KILLED,
@@ -1043,6 +1049,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
         {
           // don't leave the tracking URL pointing to a non-existent AM
           appAttempt.setTrackingUrlToRMAppPage();
+          appAttempt.invalidateAMHostAndPort();
           appEvent =
               new RMAppFailedAttemptEvent(applicationId,
                   RMAppEventType.ATTEMPT_FAILED,
@@ -1059,7 +1066,6 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       appAttempt.eventHandler.handle(appEvent);
       appAttempt.eventHandler.handle(new AppAttemptRemovedSchedulerEvent(
         appAttemptId, finalAttemptState));
-
       appAttempt.removeCredentials(appAttempt);
     }
   }
