@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server;
 
 import static org.junit.Assert.fail;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedAction;
@@ -34,6 +35,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.minikdc.KerberosSecurityTestcase;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
@@ -66,20 +68,39 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManag
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
 @RunWith(Parameterized.class)
-public class TestContainerManagerSecurity {
+public class TestContainerManagerSecurity extends KerberosSecurityTestcase {
 
   static Log LOG = LogFactory.getLog(TestContainerManagerSecurity.class);
   static final RecordFactory recordFactory = RecordFactoryProvider
       .getRecordFactory(null);
   private static MiniYARNCluster yarnCluster;
+  private static final File testRootDir = new File("target",
+    TestContainerManagerSecurity.class.getName() + "-root");
+  private static File httpSpnegoKeytabFile = new File(testRootDir,
+    "httpSpnegoKeytabFile.keytab");
+  private static String httpSpnegoPrincipal = "HTTP/localhost@EXAMPLE.COM";
 
   private Configuration conf;
+
+  @Before
+  public void setUp() throws Exception {
+    testRootDir.mkdirs();
+    httpSpnegoKeytabFile.deleteOnExit();
+    getKdc().createPrincipal(httpSpnegoKeytabFile, httpSpnegoPrincipal);
+  }
+ 
+  @After
+  public void tearDown() {
+    testRootDir.delete();
+  }
 
   @Parameters
   public static Collection<Object[]> configs() {
@@ -89,8 +110,18 @@ public class TestContainerManagerSecurity {
     
     Configuration configurationWithSecurity = new Configuration();
     configurationWithSecurity.set(
-        CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
-        "kerberos");
+      CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION, "kerberos");
+    configurationWithSecurity.set(
+      YarnConfiguration.RM_WEBAPP_SPNEGO_USER_NAME_KEY, httpSpnegoPrincipal);
+    configurationWithSecurity.set(
+      YarnConfiguration.RM_WEBAPP_SPNEGO_KEYTAB_FILE_KEY,
+      httpSpnegoKeytabFile.getAbsolutePath());
+    configurationWithSecurity.set(
+      YarnConfiguration.NM_WEBAPP_SPNEGO_USER_NAME_KEY, httpSpnegoPrincipal);
+    configurationWithSecurity.set(
+      YarnConfiguration.NM_WEBAPP_SPNEGO_KEYTAB_FILE_KEY,
+      httpSpnegoKeytabFile.getAbsolutePath());
+
     return Arrays.asList(new Object[][] { { configurationWithoutSecurity },
         { configurationWithSecurity } });
   }

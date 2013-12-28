@@ -26,7 +26,6 @@ import java.util.Collection;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -67,7 +66,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAt
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptUnregistrationEvent;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
-import static org.junit.Assert.fail;
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * Embedded Yarn minicluster for testcases that need to interact with a cluster.
@@ -213,7 +212,12 @@ public class MiniYARNCluster extends CompositeService {
     }
 
     for (int i = 0; i < resourceManagers.length; i++) {
-      resourceManagers[i] = new ResourceManager();
+      resourceManagers[i] = new ResourceManager() {
+        @Override
+        protected void doSecureLogin() throws IOException {
+          // Don't try to login using keytab in the testcases.
+        }
+      };
       addService(new ResourceManagerWrapper(i));
     }
     for(int index = 0; index < nodeManagers.length; index++) {
