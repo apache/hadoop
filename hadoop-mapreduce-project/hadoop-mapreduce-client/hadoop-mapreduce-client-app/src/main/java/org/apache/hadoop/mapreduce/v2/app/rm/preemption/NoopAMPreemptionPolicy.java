@@ -17,10 +17,9 @@
 */
 package org.apache.hadoop.mapreduce.v2.app.rm.preemption;
 
-import org.apache.hadoop.mapred.TaskAttemptID;
-import org.apache.hadoop.mapred.TaskID;
 import org.apache.hadoop.mapreduce.checkpoint.TaskCheckpointID;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.yarn.api.records.PreemptionMessage;
 
@@ -50,17 +49,17 @@ public class NoopAMPreemptionPolicy implements AMPreemptionPolicy {
   }
 
   @Override
-  public void reportSuccessfulPreemption(TaskAttemptID taskAttemptID) {
+  public void reportSuccessfulPreemption(TaskAttemptId taskAttemptID) {
     // ignore
   }
 
   @Override
-  public TaskCheckpointID getCheckpointID(TaskID taskId) {
+  public TaskCheckpointID getCheckpointID(TaskId taskId) {
     return null;
   }
 
   @Override
-  public void setCheckpointID(TaskID taskId, TaskCheckpointID cid) {
+  public void setCheckpointID(TaskId taskId, TaskCheckpointID cid) {
     // ignore
   }
 

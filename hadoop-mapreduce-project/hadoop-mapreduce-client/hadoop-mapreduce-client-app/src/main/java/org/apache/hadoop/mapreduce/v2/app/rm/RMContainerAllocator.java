@@ -347,7 +347,7 @@ public class RMContainerAllocator extends RMContainerRequestor
       }
       
     } else if (
-        event.getType() == ContainerAllocator.EventType.CONTAINER_DEALLOCATE) {
+      event.getType() == ContainerAllocator.EventType.CONTAINER_DEALLOCATE) {
   
       LOG.info("Processing the event " + event.toString());
 

@@ -34,37 +34,31 @@ import org.apache.hadoop.mapred.Counters;
  * cost of checkpoints and other counters. This is sent by the task to the AM
  * to be stored and provided to the next execution of the same task.
  */
-public class TaskCheckpointID implements CheckpointID{
+public class TaskCheckpointID implements CheckpointID {
 
-  FSCheckpointID rawId;
-  private List<Path> partialOutput;
-  private Counters counters;
+  final FSCheckpointID rawId;
+  private final List<Path> partialOutput;
+  private final Counters counters;
 
   public TaskCheckpointID() {
-    this.rawId = new FSCheckpointID();
-    this.partialOutput = new ArrayList<Path>();
+    this(new FSCheckpointID(), new ArrayList<Path>(), new Counters());
   }
 
   public TaskCheckpointID(FSCheckpointID rawId, List<Path> partialOutput,
           Counters counters) {
     this.rawId = rawId;
     this.counters = counters;
-    if(partialOutput == null)
-      this.partialOutput = new ArrayList<Path>();
-    else
-      this.partialOutput = partialOutput;
+    this.partialOutput = null == partialOutput
+      ? new ArrayList<Path>()
+      : partialOutput;
   }
 
   @Override
   public void write(DataOutput out) throws IOException {
     counters.write(out);
-    if (partialOutput == null) {
-      WritableUtils.writeVLong(out, 0L);
-    } else {
-      WritableUtils.writeVLong(out, partialOutput.size());
-      for(Path p:partialOutput){
-        Text.writeString(out, p.toString());
-      }
+    WritableUtils.writeVLong(out, partialOutput.size());
+    for (Path p : partialOutput) {
+      Text.writeString(out, p.toString());
     }
     rawId.write(out);
   }
@@ -74,21 +68,22 @@ public class TaskCheckpointID implements CheckpointID{
     partialOutput.clear();
     counters.readFields(in);
     long numPout = WritableUtils.readVLong(in);
-    for(int i=0;i<numPout;i++)
+    for (int i = 0; i < numPout; i++) {
       partialOutput.add(new Path(Text.readString(in)));
+    }
     rawId.readFields(in);
   }
 
   @Override
-  public boolean equals(Object other){
+  public boolean equals(Object other) {
     if (other instanceof TaskCheckpointID){
-      return this.rawId.equals(((TaskCheckpointID)other).rawId) &&
-             this.counters.equals(((TaskCheckpointID) other).counters) &&
-             this.partialOutput.containsAll(((TaskCheckpointID) other).partialOutput) &&
-             ((TaskCheckpointID) other).partialOutput.containsAll(this.partialOutput);
-    } else {
-      return false;
+      TaskCheckpointID o = (TaskCheckpointID) other;
+      return rawId.equals(o.rawId) &&
+             counters.equals(o.counters) &&
+             partialOutput.containsAll(o.partialOutput) &&
+             o.partialOutput.containsAll(partialOutput);
     }
+    return false;
   }
 
   @Override
@@ -110,7 +105,7 @@ public class TaskCheckpointID implements CheckpointID{
     return counters.findCounter(EnumCounter.CHECKPOINT_MS).getValue();
   }
 
-  public String toString(){
+  public String toString() {
     return rawId.toString() + " counters:" + counters;
 
   }
