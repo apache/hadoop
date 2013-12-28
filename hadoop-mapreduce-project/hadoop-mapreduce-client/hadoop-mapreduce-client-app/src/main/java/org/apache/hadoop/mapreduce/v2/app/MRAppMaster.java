@@ -137,6 +137,7 @@ import org.apache.hadoop.yarn.security.client.ClientToAMTokenSecretManager;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.SystemClock;
+import org.apache.log4j.LogManager;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -1375,6 +1376,8 @@ public class MRAppMaster extends CompositeService {
     } catch (Throwable t) {
       LOG.fatal("Error starting MRAppMaster", t);
       System.exit(1);
+    } finally {
+      LogManager.shutdown();
     }
   }
 

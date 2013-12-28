@@ -115,6 +115,9 @@ Release 2.4.0 - UNRELEASED
     MAPREDUCE-5687. Fixed failure in TestYARNRunner caused by YARN-1446. (Jian He
     via vinodkv)
 
+    MAPREDUCE-5694. Fixed MR AppMaster to shutdown the LogManager so as to avoid
+    losing syslog in some conditions. (Mohammad Kamrul Islam via vinodkv)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
