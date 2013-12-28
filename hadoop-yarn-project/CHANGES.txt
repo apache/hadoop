@@ -173,6 +173,9 @@ Release 2.4.0 - UNRELEASED
 
     YARN-1523. Use StandbyException instead of RMNotYetReadyException (kasha)
 
+    YARN-1541. Changed ResourceManager to invalidate ApplicationMaster host/port
+    information once an AM crashes. (Jian He via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES

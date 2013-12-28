@@ -806,6 +806,7 @@ public class TestRMAppAttemptTransitions {
         applicationAttempt.getAppAttemptId().getApplicationId());
     assertEquals(rmAppPageUrl, applicationAttempt.getOriginalTrackingUrl());
     assertEquals(rmAppPageUrl, applicationAttempt.getTrackingUrl());
+    verifyAMHostAndPortInvalidated();
   }
 
   @Test
@@ -841,6 +842,7 @@ public class TestRMAppAttemptTransitions {
     assertEquals(rmAppPageUrl, applicationAttempt.getOriginalTrackingUrl());
     assertEquals(rmAppPageUrl, applicationAttempt.getTrackingUrl());
     verifyTokenCount(applicationAttempt.getAppAttemptId(), 1);
+    verifyAMHostAndPortInvalidated();
   }
 
   @Test(timeout=10000)
@@ -878,6 +880,7 @@ public class TestRMAppAttemptTransitions {
     assertEquals(rmAppPageUrl, applicationAttempt.getOriginalTrackingUrl());
     assertEquals(rmAppPageUrl, applicationAttempt.getTrackingUrl());
     verifyTokenCount(applicationAttempt.getAppAttemptId(), 1);
+    verifyAMHostAndPortInvalidated();
   }
 
   @Test 
@@ -1124,5 +1127,10 @@ public class TestRMAppAttemptTransitions {
   private void verifyAttemptFinalStateSaved() {
     verify(store, times(1)).updateApplicationAttemptState(
       any(ApplicationAttemptState.class));
+  }
+
+  private void verifyAMHostAndPortInvalidated() {
+    assertEquals("N/A", applicationAttempt.getHost());
+    assertEquals(-1, applicationAttempt.getRpcPort());
   }
 }
