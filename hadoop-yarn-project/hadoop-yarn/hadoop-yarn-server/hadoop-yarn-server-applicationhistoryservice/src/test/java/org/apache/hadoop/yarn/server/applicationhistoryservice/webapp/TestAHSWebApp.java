@@ -44,10 +44,10 @@ import com.google.inject.Injector;
 
 public class TestAHSWebApp extends ApplicationHistoryStoreTestUtils {
 
-  public TestAHSWebApp(ApplicationHistoryStore store) {
+  public void setApplicationHistoryStore(ApplicationHistoryStore store) {
     this.store = store;
   }
-
+  
   @Before
   public void setup() {
     store = new MemoryApplicationHistoryStore();

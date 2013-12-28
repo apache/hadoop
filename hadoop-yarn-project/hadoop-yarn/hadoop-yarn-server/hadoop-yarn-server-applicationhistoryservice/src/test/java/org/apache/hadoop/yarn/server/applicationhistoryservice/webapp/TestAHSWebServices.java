@@ -90,7 +90,8 @@ public class TestAHSWebServices extends JerseyTest {
   private ApplicationHistoryManager mockApplicationHistoryManager()
       throws Exception {
     ApplicationHistoryStore store = new MemoryApplicationHistoryStore();
-    TestAHSWebApp testAHSWebApp = new TestAHSWebApp(store);
+    TestAHSWebApp testAHSWebApp = new TestAHSWebApp();
+    testAHSWebApp.setApplicationHistoryStore(store);
     ApplicationHistoryManager ahManager =
         testAHSWebApp.mockApplicationHistoryManager(5, 5, 5);
     return ahManager;
