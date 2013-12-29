@@ -31,6 +31,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-5662. Can't decommission a DataNode due to file's replication factor
     larger than the rest of the cluster size. (brandonli)
 
+    HDFS-5068. Convert NNThroughputBenchmark to a Tool to allow generic options.
+    (shv)
+
   OPTIMIZATIONS
 
   BUG FIXES
