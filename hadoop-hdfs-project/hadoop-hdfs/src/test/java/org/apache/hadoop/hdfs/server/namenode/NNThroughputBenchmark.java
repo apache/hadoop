@@ -586,6 +586,98 @@ public class NNThroughputBenchmark implements Tool {
   }
 
   /**
+   * Directory creation statistics.
+   *
+   * Each thread creates the same (+ or -1) number of directories.
+   * Directory names are pre-generated during initialization.
+   */
+  class MkdirsStats extends OperationStatsBase {
+    // Operation types
+    static final String OP_MKDIRS_NAME = "mkdirs";
+    static final String OP_MKDIRS_USAGE = "-op mkdirs [-threads T] [-dirs N] " +
+        "[-dirsPerDir P]";
+
+    protected FileNameGenerator nameGenerator;
+    protected String[][] dirPaths;
+
+    MkdirsStats(List<String> args) {
+      super();
+      parseArguments(args);
+    }
+
+    @Override
+    String getOpName() {
+      return OP_MKDIRS_NAME;
+    }
+
+    @Override
+    void parseArguments(List<String> args) {
+      boolean ignoreUnrelatedOptions = verifyOpArgument(args);
+      int nrDirsPerDir = 2;
+      for (int i = 2; i < args.size(); i++) {       // parse command line
+        if(args.get(i).equals("-dirs")) {
+          if(i+1 == args.size())  printUsage();
+          numOpsRequired = Integer.parseInt(args.get(++i));
+        } else if(args.get(i).equals("-threads")) {
+          if(i+1 == args.size())  printUsage();
+          numThreads = Integer.parseInt(args.get(++i));
+        } else if(args.get(i).equals("-dirsPerDir")) {
+          if(i+1 == args.size())  printUsage();
+          nrDirsPerDir = Integer.parseInt(args.get(++i));
+        } else if(!ignoreUnrelatedOptions)
+          printUsage();
+      }
+      nameGenerator = new FileNameGenerator(getBaseDir(), nrDirsPerDir);
+    }
+
+    @Override
+    void generateInputs(int[] opsPerThread) throws IOException {
+      assert opsPerThread.length == numThreads : "Error opsPerThread.length";
+      nameNodeProto.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE,
+          false);
+      LOG.info("Generate " + numOpsRequired + " inputs for " + getOpName());
+      dirPaths = new String[numThreads][];
+      for(int idx=0; idx < numThreads; idx++) {
+        int threadOps = opsPerThread[idx];
+        dirPaths[idx] = new String[threadOps];
+        for(int jdx=0; jdx < threadOps; jdx++)
+          dirPaths[idx][jdx] = nameGenerator.
+              getNextFileName("ThroughputBench");
+      }
+    }
+
+    /**
+     * returns client name
+     */
+    @Override
+    String getExecutionArgument(int daemonId) {
+      return getClientName(daemonId);
+    }
+
+    /**
+     * Do mkdirs operation.
+     */
+    @Override
+    long executeOp(int daemonId, int inputIdx, String clientName)
+        throws IOException {
+      long start = Time.now();
+      nameNodeProto.mkdirs(dirPaths[daemonId][inputIdx],
+          FsPermission.getDefault(), true);
+      long end = Time.now();
+      return end-start;
+    }
+
+    @Override
+    void printResults() {
+      LOG.info("--- " + getOpName() + " inputs ---");
+      LOG.info("nrDirs = " + numOpsRequired);
+      LOG.info("nrThreads = " + numThreads);
+      LOG.info("nrDirsPerDir = " + nameGenerator.getFilesPerDirectory());
+      printStats();
+    }
+  }
+
+  /**
    * Open file statistics.
    * 
    * Measure how many open calls (getBlockLocations()) 
@@ -1260,6 +1352,7 @@ public class NNThroughputBenchmark implements Tool {
     System.err.println("Usage: NNThroughputBenchmark"
         + "\n\t"    + OperationStatsBase.OP_ALL_USAGE
         + " | \n\t" + CreateFileStats.OP_CREATE_USAGE
+        + " | \n\t" + MkdirsStats.OP_MKDIRS_USAGE
         + " | \n\t" + OpenFileStats.OP_OPEN_USAGE
         + " | \n\t" + DeleteFileStats.OP_DELETE_USAGE
         + " | \n\t" + FileStatusStats.OP_FILE_STATUS_USAGE
@@ -1307,6 +1400,10 @@ public class NNThroughputBenchmark implements Tool {
     try {
       if(runAll || CreateFileStats.OP_CREATE_NAME.equals(type)) {
         opStat = new CreateFileStats(args);
+        ops.add(opStat);
+      }
+      if(runAll || MkdirsStats.OP_MKDIRS_NAME.equals(type)) {
+        opStat = new MkdirsStats(args);
         ops.add(opStat);
       }
       if(runAll || OpenFileStats.OP_OPEN_NAME.equals(type)) {
