@@ -34,6 +34,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-5068. Convert NNThroughputBenchmark to a Tool to allow generic options.
     (shv)
 
+    HDFS-5675. Add Mkdirs operation to NNThroughputBenchmark.
+    (Plamen Jeliazkov via shv)
+
   OPTIMIZATIONS
 
   BUG FIXES
