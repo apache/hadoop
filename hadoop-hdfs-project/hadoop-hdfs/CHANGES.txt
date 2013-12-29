@@ -618,9 +618,6 @@ Release 2.4.0 - UNRELEASED
     HDFS-5004. Add additional JMX bean for NameNode status data
     (Trevor Lorimer via cos)
 
-    HDFS-5068. Convert NNThroughputBenchmark to a Tool to allow generic options.
-    (shv)
-
     HDFS-4994. Audit log getContentSummary() calls. (Robert Parker via kihwal)
 
     HDFS-5144. Document time unit to NameNodeMetrics. (Akira Ajisaka via
@@ -865,6 +862,12 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-5662. Can't decommission a DataNode due to file's replication factor
     larger than the rest of the cluster size. (brandonli)
+
+    HDFS-5068. Convert NNThroughputBenchmark to a Tool to allow generic options.
+    (shv)
+
+    HDFS-5675. Add Mkdirs operation to NNThroughputBenchmark.
+    (Plamen Jeliazkov via shv)
 
   OPTIMIZATIONS
 
