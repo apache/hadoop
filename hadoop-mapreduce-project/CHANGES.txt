@@ -118,6 +118,9 @@ Release 2.4.0 - UNRELEASED
     MAPREDUCE-5694. Fixed MR AppMaster to shutdown the LogManager so as to avoid
     losing syslog in some conditions. (Mohammad Kamrul Islam via vinodkv)
 
+    MAPREDUCE-5685. Fixed a bug with JobContext getCacheFiles API inside the
+    WrappedReducer class. (Yi Song via vinodkv)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
