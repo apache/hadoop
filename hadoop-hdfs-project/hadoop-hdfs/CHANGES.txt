@@ -435,6 +435,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-5661. Browsing FileSystem via web ui, should use datanode's fqdn instead of ip 
     address. (Benoy Antony via jing9)
 
+    HDFS-5582. hdfs getconf -excludeFile or -includeFile always failed (sathish
+    via cmccabe)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
