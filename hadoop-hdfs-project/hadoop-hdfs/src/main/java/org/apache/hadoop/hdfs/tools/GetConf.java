@@ -29,6 +29,7 @@ import java.util.Map;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.DFSUtil.ConfiguredNNAddress;
@@ -85,9 +86,9 @@ public class GetConf extends Configured implements Tool {
       map.put(BACKUP.getName().toLowerCase(), 
           new BackupNodesCommandHandler());
       map.put(INCLUDE_FILE.getName().toLowerCase(), 
-          new CommandHandler("DFSConfigKeys.DFS_HOSTS"));
+          new CommandHandler(DFSConfigKeys.DFS_HOSTS));
       map.put(EXCLUDE_FILE.getName().toLowerCase(),
-          new CommandHandler("DFSConfigKeys.DFS_HOSTS_EXCLUDE"));
+          new CommandHandler(DFSConfigKeys.DFS_HOSTS_EXCLUDE));
       map.put(NNRPCADDRESSES.getName().toLowerCase(),
           new NNRpcAddressesCommandHandler());
       map.put(CONFKEY.getName().toLowerCase(),
