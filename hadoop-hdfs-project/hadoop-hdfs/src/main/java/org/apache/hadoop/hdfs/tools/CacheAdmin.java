@@ -578,7 +578,7 @@ public class CacheAdmin extends Configured implements Tool {
     public String getShortUsage() {
       return "[" + NAME + " <name> [-owner <owner>] " +
           "[-group <group>] [-mode <mode>] [-limit <limit>] " +
-          "[-maxttl <maxTtl>]\n";
+          "[-maxTtl <maxTtl>]\n";
     }
 
     @Override

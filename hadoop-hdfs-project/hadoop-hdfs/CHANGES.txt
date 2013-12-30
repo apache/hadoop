@@ -453,6 +453,9 @@ Trunk (Unreleased)
     HDFS-5679. TestCacheDirectives should handle the case where native code
     is not available. (wang)
 
+    HDFS-5701. Fix the CacheAdmin -addPool -maxTtl option name.
+    (Stephen Chu via wang)
+
   BREAKDOWN OF HDFS-2832 SUBTASKS AND RELATED JIRAS
 
     HDFS-4985. Add storage type to the protocol and expose it in block report
