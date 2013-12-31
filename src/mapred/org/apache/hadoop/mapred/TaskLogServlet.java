@@ -96,7 +96,7 @@ public class TaskLogServlet extends HttpServlet {
       }
       taskLogReader.close();
       if( !plainText ) {
-        out.write("</pre></td></tr></table><hr><br>\n".getBytes());
+        out.write("</pre><hr><br>\n".getBytes());
       }
     } catch (IOException ioe) {
       if (filter == TaskLog.LogName.DEBUGOUT) {
