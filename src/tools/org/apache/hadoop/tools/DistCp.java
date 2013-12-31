@@ -1275,7 +1275,7 @@ public class DistCp implements Tool {
     //write dst lsr results
     final Path dstlsr = new Path(jobdir, "_distcp_dst_lsr");
     final SequenceFile.Writer writer = SequenceFile.createWriter(jobfs, jobconf,
-        dstlsr, Text.class, FileStatus.class,
+        dstlsr, Text.class, dstroot.getClass(),
         SequenceFile.CompressionType.NONE);
     try {
       //do lsr to get all file statuses in dstroot
