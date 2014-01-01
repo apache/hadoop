@@ -69,6 +69,7 @@ import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo.Expiration;
 import org.apache.hadoop.hdfs.protocol.CachePoolStats;
 import org.apache.hadoop.hdfs.server.blockmanagement.CacheReplicationMonitor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.CachedBlocksList.Type;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.io.nativeio.NativeIO.POSIX.CacheManipulator;
@@ -796,7 +797,15 @@ public class TestCacheDirectives {
       }
     }, 500, 60000);
 
+    // Send a cache report referring to a bogus block.  It is important that
+    // the NameNode be robust against this.
     NamenodeProtocols nnRpc = namenode.getRpcServer();
+    DataNode dn0 = cluster.getDataNodes().get(0);
+    String bpid = cluster.getNamesystem().getBlockPoolId();
+    LinkedList<Long> bogusBlockIds = new LinkedList<Long> ();
+    bogusBlockIds.add(999999L);
+    nnRpc.cacheReport(dn0.getDNRegistrationForBP(bpid), bpid, bogusBlockIds);
+
     Path rootDir = helper.getDefaultWorkingDirectory(dfs);
     // Create the pool
     final String pool = "friendlyPool";

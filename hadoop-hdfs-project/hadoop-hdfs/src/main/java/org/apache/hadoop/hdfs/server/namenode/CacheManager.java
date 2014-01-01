@@ -62,7 +62,6 @@ import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.CacheReplicationMonitor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
@@ -940,39 +939,28 @@ public final class CacheManager {
       final List<Long> blockIds) {
     CachedBlocksList cached = datanode.getCached();
     cached.clear();
+    CachedBlocksList cachedList = datanode.getCached();
+    CachedBlocksList pendingCachedList = datanode.getPendingCached();
     for (Iterator<Long> iter = blockIds.iterator(); iter.hasNext(); ) {
-      Block block = new Block(iter.next());
-      BlockInfo blockInfo = blockManager.getStoredBlock(block);
-      if (!blockInfo.isComplete()) {
-        LOG.warn("Ignoring block id " + block.getBlockId() + ", because " +
-            "it is in not complete yet.  It is in state " + 
-            blockInfo.getBlockUCState());
-        continue;
-      }
-      Collection<DatanodeDescriptor> corruptReplicas =
-          blockManager.getCorruptReplicas(blockInfo);
-      if ((corruptReplicas != null) && corruptReplicas.contains(datanode)) {
-        // The NameNode will eventually remove or update the corrupt block.
-        // Until then, we pretend that it isn't cached.
-        LOG.warn("Ignoring cached replica on " + datanode + " of " + block +
-            " because it is corrupt.");
-        continue;
-      }
+      long blockId = iter.next();
       CachedBlock cachedBlock =
-          new CachedBlock(block.getBlockId(), (short)0, false);
+          new CachedBlock(blockId, (short)0, false);
       CachedBlock prevCachedBlock = cachedBlocks.get(cachedBlock);
-      // Use the existing CachedBlock if it's present; otherwise,
-      // insert a new one.
+      // Add the block ID from the cache report to the cachedBlocks map
+      // if it's not already there.
       if (prevCachedBlock != null) {
         cachedBlock = prevCachedBlock;
       } else {
         cachedBlocks.put(cachedBlock);
       }
-      if (!cachedBlock.isPresent(datanode.getCached())) {
-        datanode.getCached().add(cachedBlock);
+      // Add the block to the datanode's implicit cached block list
+      // if it's not already there.  Similarly, remove it from the pending
+      // cached block list if it exists there.
+      if (!cachedBlock.isPresent(cachedList)) {
+        cachedList.add(cachedBlock);
       }
-      if (cachedBlock.isPresent(datanode.getPendingCached())) {
-        datanode.getPendingCached().remove(cachedBlock);
+      if (cachedBlock.isPresent(pendingCachedList)) {
+        pendingCachedList.remove(cachedBlock);
       }
     }
   }

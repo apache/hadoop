@@ -244,12 +244,14 @@ Trunk (Unreleased)
     HDFS-5636. Enforce a max TTL per cache pool. (awang via cmccabe)
 
   OPTIMIZATIONS
+
     HDFS-5349. DNA_CACHE and DNA_UNCACHE should be by blockId only. (cmccabe)
 
     HDFS-5665. Remove the unnecessary writeLock while initializing CacheManager
     in FsNameSystem Ctor. (Uma Maheswara Rao G via Andrew Wang)
 
   BUG FIXES
+
     HADOOP-9635 Fix potential Stack Overflow in DomainSocket.c (V. Karthik Kumar
                 via cmccabe)
 
@@ -455,6 +457,10 @@ Trunk (Unreleased)
 
     HDFS-5701. Fix the CacheAdmin -addPool -maxTtl option name.
     (Stephen Chu via wang)
+
+    HDFS-5708. The CacheManager throws a NPE in the DataNode logs when
+    processing cache reports that refer to a block not known to the
+    BlockManager. (cmccabe via wang)
 
   BREAKDOWN OF HDFS-2832 SUBTASKS AND RELATED JIRAS
 
