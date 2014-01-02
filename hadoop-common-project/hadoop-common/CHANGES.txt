@@ -108,6 +108,9 @@ Trunk (Unreleased)
     HADOOP-10141. Create KeyProvider API to separate encryption key storage
     from the applications. (omalley)
 
+    HADOOP-19198. DomainSocket: add support for socketpair.
+    (Colin Patrick McCabe via wang)
+
   BUG FIXES
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.

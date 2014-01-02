@@ -420,7 +420,8 @@ public class TestDomainSocket {
    * @throws IOException
    */
   void testClientServer1(final Class<? extends WriteStrategy> writeStrategyClass,
-      final Class<? extends ReadStrategy> readStrategyClass) throws Exception {
+      final Class<? extends ReadStrategy> readStrategyClass,
+      final DomainSocket preConnectedSockets[]) throws Exception {
     final String TEST_PATH = new File(sockDir.getDir(),
         "test_sock_client_server1").getAbsolutePath();
     final byte clientMsg1[] = new byte[] { 0x1, 0x2, 0x3, 0x4, 0x5, 0x6 };
@@ -428,13 +429,15 @@ public class TestDomainSocket {
     final byte clientMsg2 = 0x45;
     final ArrayBlockingQueue<Throwable> threadResults =
         new ArrayBlockingQueue<Throwable>(2);
-    final DomainSocket serv = DomainSocket.bindAndListen(TEST_PATH);
+    final DomainSocket serv = (preConnectedSockets != null) ?
+      null : DomainSocket.bindAndListen(TEST_PATH);
     Thread serverThread = new Thread() {
       public void run(){
         // Run server
         DomainSocket conn = null;
         try {
-          conn = serv.accept();
+          conn = preConnectedSockets != null ?
+                    preConnectedSockets[0] : serv.accept();
           byte in1[] = new byte[clientMsg1.length];
           ReadStrategy reader = readStrategyClass.newInstance();
           reader.init(conn);
@@ -459,7 +462,8 @@ public class TestDomainSocket {
     Thread clientThread = new Thread() {
       public void run(){
         try {
-          DomainSocket client = DomainSocket.connect(TEST_PATH);
+          DomainSocket client = preConnectedSockets != null ?
+                preConnectedSockets[1] : DomainSocket.connect(TEST_PATH);
           WriteStrategy writer = writeStrategyClass.newInstance();
           writer.init(client);
           writer.write(clientMsg1);
@@ -487,25 +491,45 @@ public class TestDomainSocket {
     }
     serverThread.join(120000);
     clientThread.join(120000);
-    serv.close();
+    if (serv != null) {
+      serv.close();
+    }
   }
 
   @Test(timeout=180000)
   public void testClientServerOutStreamInStream() throws Exception {
     testClientServer1(OutputStreamWriteStrategy.class,
-        InputStreamReadStrategy.class);
+        InputStreamReadStrategy.class, null);
+  }
+
+  @Test(timeout=180000)
+  public void testClientServerOutStreamInStreamWithSocketpair() throws Exception {
+    testClientServer1(OutputStreamWriteStrategy.class,
+        InputStreamReadStrategy.class, DomainSocket.socketpair());
   }
 
   @Test(timeout=180000)
   public void testClientServerOutStreamInDbb() throws Exception {
     testClientServer1(OutputStreamWriteStrategy.class,
-        DirectByteBufferReadStrategy.class);
+        DirectByteBufferReadStrategy.class, null);
+  }
+
+  @Test(timeout=180000)
+  public void testClientServerOutStreamInDbbWithSocketpair() throws Exception {
+    testClientServer1(OutputStreamWriteStrategy.class,
+        DirectByteBufferReadStrategy.class, DomainSocket.socketpair());
   }
 
   @Test(timeout=180000)
   public void testClientServerOutStreamInAbb() throws Exception {
     testClientServer1(OutputStreamWriteStrategy.class,
-        ArrayBackedByteBufferReadStrategy.class);
+        ArrayBackedByteBufferReadStrategy.class, null);
+  }
+
+  @Test(timeout=180000)
+  public void testClientServerOutStreamInAbbWithSocketpair() throws Exception {
+    testClientServer1(OutputStreamWriteStrategy.class,
+        ArrayBackedByteBufferReadStrategy.class, DomainSocket.socketpair());
   }
 
   static private class PassedFile {

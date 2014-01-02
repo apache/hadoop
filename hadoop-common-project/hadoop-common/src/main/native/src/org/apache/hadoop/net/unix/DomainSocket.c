@@ -364,6 +364,50 @@ JNIEnv *env, jclass clazz, jstring path)
   return fd;
 }
 
+#define SOCKETPAIR_ARRAY_LEN 2
+
+JNIEXPORT jarray JNICALL
+Java_org_apache_hadoop_net_unix_DomainSocket_socketpair0(
+JNIEnv *env, jclass clazz)
+{
+  jarray arr = NULL;
+  int idx, err, fds[SOCKETPAIR_ARRAY_LEN] = { -1, -1 };
+  jthrowable jthr = NULL;
+
+  arr = (*env)->NewIntArray(env, SOCKETPAIR_ARRAY_LEN);
+  jthr = (*env)->ExceptionOccurred(env);
+  if (jthr) {
+    (*env)->ExceptionClear(env);
+    goto done;
+  }
+  if (socketpair(PF_UNIX, SOCK_STREAM, 0, fds) < 0) {
+    err = errno;
+    jthr = newSocketException(env, err,
+            "socketpair(2) error: %s", terror(err));
+    goto done;
+  }
+  (*env)->SetIntArrayRegion(env, arr, 0, SOCKETPAIR_ARRAY_LEN, fds);
+  jthr = (*env)->ExceptionOccurred(env);
+  if (jthr) {
+    (*env)->ExceptionClear(env);
+    goto done;
+  }
+
+done:
+  if (jthr) {
+    (*env)->DeleteLocalRef(env, arr);
+    arr = NULL;
+    for (idx = 0; idx < SOCKETPAIR_ARRAY_LEN; idx++) {
+      if (fds[idx] >= 0) {
+        close(fds[idx]);
+        fds[idx] = -1;
+      }
+    }
+    (*env)->Throw(env, jthr);
+  }
+  return arr;
+}
+
 JNIEXPORT jint JNICALL
 Java_org_apache_hadoop_net_unix_DomainSocket_accept0(
 JNIEnv *env, jclass clazz, jint fd)
