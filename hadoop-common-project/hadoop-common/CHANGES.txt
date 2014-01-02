@@ -121,6 +121,9 @@ Release 2.4.0 - UNRELEASED
 
     HADOOP-10172. Cache SASL server factories (daryn)
 
+    HADOOP-10173. Remove UGI from DIGEST-MD5 SASL server creation (daryn via
+    kihwal)
+
   BUG FIXES
 
     HADOOP-9964. Fix deadlocks in TestHttpServer by synchronize
