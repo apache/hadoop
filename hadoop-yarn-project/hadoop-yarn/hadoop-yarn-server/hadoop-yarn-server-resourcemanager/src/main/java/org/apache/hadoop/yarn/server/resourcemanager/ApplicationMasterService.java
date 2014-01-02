@@ -292,8 +292,21 @@ public class ApplicationMasterService extends AbstractService implements
       
       this.amLivelinessMonitor.receivedPing(applicationAttemptId);
 
-      if (rmContext.getRMApps().get(applicationAttemptId.getApplicationId())
-          .isAppSafeToTerminate()) {
+      RMApp rmApp =
+          rmContext.getRMApps().get(applicationAttemptId.getApplicationId());
+
+      if (rmApp.getApplicationSubmissionContext().getUnmanagedAM()) {
+        // No recovery supported yet for unmanaged AM. Send the unregister event
+        // and (falsely) acknowledge state-store write immediately.
+        rmContext.getDispatcher().getEventHandler().handle(
+          new RMAppAttemptUnregistrationEvent(applicationAttemptId, request
+              .getTrackingUrl(), request.getFinalApplicationStatus(), request
+              .getDiagnostics()));
+        return FinishApplicationMasterResponse.newInstance(true);
+      }
+
+      // Not an unmanaged-AM.
+      if (rmApp.isAppSafeToTerminate()) {
         return FinishApplicationMasterResponse.newInstance(true);
       } else {
         // keep sending the unregister event as RM may crash in the meanwhile.
