@@ -64,7 +64,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManage
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplication;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.TestSchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
@@ -555,9 +558,12 @@ public class TestCapacityScheduler {
     ApplicationId appId = BuilderUtils.newApplicationId(100, 1);
     ApplicationAttemptId appAttemptId = BuilderUtils.newApplicationAttemptId(
         appId, 1);
-    SchedulerEvent event =
-        new AppAttemptAddedSchedulerEvent(appAttemptId, "default", "user");
-    cs.handle(event);
+    SchedulerEvent addAppEvent =
+        new AppAddedSchedulerEvent(appId, "default", "user");
+    cs.handle(addAppEvent);
+    SchedulerEvent addAttemptEvent =
+        new AppAttemptAddedSchedulerEvent(appAttemptId);
+    cs.handle(addAttemptEvent);
 
     // Verify the blacklist can be updated independent of requesting containers
     cs.allocate(appAttemptId, Collections.<ResourceRequest>emptyList(),
@@ -596,10 +602,10 @@ public class TestCapacityScheduler {
     public void testConcurrentAccessOnApplications() throws Exception {
       CapacityScheduler cs = new CapacityScheduler();
       verifyConcurrentAccessOnApplications(
-          cs.applications, FiCaSchedulerApp.class, Queue.class);
+          cs.appAttempts, FiCaSchedulerApp.class, Queue.class);
     }
 
-    public static <T extends SchedulerApplication, Q extends Queue>
+    public static <T extends SchedulerApplicationAttempt, Q extends Queue>
         void verifyConcurrentAccessOnApplications(
             final Map<ApplicationAttemptId, T> applications, Class<T> appClazz,
             final Class<Q> queueClazz)
@@ -682,4 +688,21 @@ public class TestCapacityScheduler {
       Assert.assertNull(scheduler.getAppsInQueue("nonexistentqueue"));
     }
 
-}
+  @Test
+  public void testAddAndRemoveAppFromCapacityScheduler() throws Exception {
+
+    AsyncDispatcher rmDispatcher = new AsyncDispatcher();
+    CapacityScheduler cs = new CapacityScheduler();
+    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+    setupQueueConfiguration(conf);
+    cs.reinitialize(conf, new RMContextImpl(rmDispatcher, null, null, null,
+      null, null, new RMContainerTokenSecretManager(conf),
+      new NMTokenSecretManagerInRM(conf),
+      new ClientToAMTokenSecretManagerInRM()));
+
+    SchedulerApplication app =
+        TestSchedulerUtils.verifyAppAddedAndRemovedFromScheduler(
+          cs.applications, cs, "a1");
+    Assert.assertEquals("a1", app.getQueue().getQueueName());
+  }
+ }

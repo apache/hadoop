@@ -18,21 +18,32 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.event;
 
-public enum SchedulerEventType {
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 
-  // Source: Node
-  NODE_ADDED,
-  NODE_REMOVED,
-  NODE_UPDATE,
+public class AppAddedSchedulerEvent extends SchedulerEvent {
 
-  // Source: RMApp
-  APP_ADDED,
-  APP_REMOVED,
+  private final ApplicationId applicationId;
+  private final String queue;
+  private final String user;
 
-  // Source: RMAppAttempt
-  APP_ATTEMPT_ADDED,
-  APP_ATTEMPT_REMOVED,
+  public AppAddedSchedulerEvent(
+      ApplicationId applicationId, String queue, String user) {
+    super(SchedulerEventType.APP_ADDED);
+    this.applicationId = applicationId;
+    this.queue = queue;
+    this.user = user;
+  }
 
-  // Source: ContainerAllocationExpirer
-  CONTAINER_EXPIRED
+  public ApplicationId getApplicationId() {
+    return applicationId;
+  }
+
+  public String getQueue() {
+    return queue;
+  }
+
+  public String getUser() {
+    return user;
+  }
+
 }
