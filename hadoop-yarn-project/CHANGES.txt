@@ -262,6 +262,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1522. Fixed a race condition in the test TestApplicationCleanup that was
     causing it to randomly fail. (Liyin Liang via vinodkv)
 
+    YARN-1549. Fixed a bug in ResourceManager's ApplicationMasterService that
+    was causing unamanged AMs to not finish correctly. (haosdent via vinodkv)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
