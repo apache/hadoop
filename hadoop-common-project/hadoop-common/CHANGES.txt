@@ -197,6 +197,9 @@ Release 2.4.0 - UNRELEASED
 
     HADOOP-10171. TestRPC fails intermittently on jkd7 (Mit Desai via jeagles)
 
+    HADOOP-10147  HDFS-5678 Upgrade to commons-logging 1.1.3 to avoid potential
+    deadlock in MiniDFSCluster (stevel)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
