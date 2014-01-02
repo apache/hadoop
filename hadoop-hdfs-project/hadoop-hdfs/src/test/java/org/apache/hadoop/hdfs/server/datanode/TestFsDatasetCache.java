@@ -36,6 +36,7 @@ import java.util.Set;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.HdfsBlockLocation;
 import org.apache.hadoop.fs.Path;
@@ -82,7 +83,11 @@ public class TestFsDatasetCache {
 
   // Most Linux installs allow a default of 64KB locked memory
   private static final long CACHE_CAPACITY = 64 * 1024;
-  private static final long BLOCK_SIZE = 4096;
+  // mlock always locks the entire page. So we don't need to deal with this
+  // rounding, use the OS page size for the block size.
+  private static final long PAGE_SIZE =
+      NativeIO.POSIX.getCacheManipulator().getOperatingSystemPageSize();
+  private static final long BLOCK_SIZE = PAGE_SIZE;
 
   private static Configuration conf;
   private static MiniDFSCluster cluster = null;
@@ -450,5 +455,28 @@ public class TestFsDatasetCache {
         return fsd.getNumBlocksFailedToUncache() > 0;
       }
     }, 100, 10000);
+  }
+
+  @Test(timeout=60000)
+  public void testPageRounder() throws Exception {
+    // Write a small file
+    Path fileName = new Path("/testPageRounder");
+    final int smallBlocks = 512; // This should be smaller than the page size
+    assertTrue("Page size should be greater than smallBlocks!",
+        PAGE_SIZE > smallBlocks);
+    final int numBlocks = 5;
+    final int fileLen = smallBlocks * numBlocks;
+    FSDataOutputStream out =
+        fs.create(fileName, false, 4096, (short)1, smallBlocks);
+    out.write(new byte[fileLen]);
+    out.close();
+    HdfsBlockLocation[] locs = (HdfsBlockLocation[])fs.getFileBlockLocations(
+        fileName, 0, fileLen);
+    // Cache the file and check the sizes match the page size
+    setHeartbeatResponse(cacheBlocks(locs));
+    verifyExpectedCacheUsage(PAGE_SIZE * numBlocks, numBlocks);
+    // Uncache and check that it decrements by the page size too
+    setHeartbeatResponse(uncacheBlocks(locs));
+    verifyExpectedCacheUsage(0, 0);
   }
 }

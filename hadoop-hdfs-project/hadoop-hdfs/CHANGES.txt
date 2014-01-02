@@ -462,6 +462,9 @@ Trunk (Unreleased)
     processing cache reports that refer to a block not known to the
     BlockManager. (cmccabe via wang)
 
+    HDFS-5659. dfsadmin -report doesn't output cache information properly.
+    (wang)
+
   BREAKDOWN OF HDFS-2832 SUBTASKS AND RELATED JIRAS
 
     HDFS-4985. Add storage type to the protocol and expose it in block report

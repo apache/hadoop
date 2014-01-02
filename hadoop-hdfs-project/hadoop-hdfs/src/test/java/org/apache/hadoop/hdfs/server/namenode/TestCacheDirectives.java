@@ -65,7 +65,9 @@ import org.apache.hadoop.hdfs.protocol.CacheDirectiveIterator;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveStats;
 import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo.Expiration;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.CachePoolStats;
 import org.apache.hadoop.hdfs.server.blockmanagement.CacheReplicationMonitor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.CachedBlocksList.Type;
@@ -105,7 +107,7 @@ public class TestCacheDirectives {
     EditLogFileOutputStream.setShouldSkipFsyncForTesting(false);
   }
 
-  private static final long BLOCK_SIZE = 512;
+  private static final long BLOCK_SIZE = 4096;
   private static final int NUM_DATANODES = 4;
   // Most Linux installs will allow non-root users to lock 64KB.
   // In this test though, we stub out mlock so this doesn't matter.
@@ -835,6 +837,24 @@ public class TestCacheDirectives {
       waitForCachedBlocks(namenode, expected, expected,
           "testWaitForCachedReplicas:1");
     }
+
+    // Check that the datanodes have the right cache values
+    DatanodeInfo[] live = dfs.getDataNodeStats(DatanodeReportType.LIVE);
+    assertEquals("Unexpected number of live nodes", NUM_DATANODES, live.length);
+    long totalUsed = 0;
+    for (DatanodeInfo dn : live) {
+      final long cacheCapacity = dn.getCacheCapacity();
+      final long cacheUsed = dn.getCacheUsed();
+      final long cacheRemaining = dn.getCacheRemaining();
+      assertEquals("Unexpected cache capacity", CACHE_CAPACITY, cacheCapacity);
+      assertEquals("Capacity not equal to used + remaining",
+          cacheCapacity, cacheUsed + cacheRemaining);
+      assertEquals("Remaining not equal to capacity - used",
+          cacheCapacity - cacheUsed, cacheRemaining);
+      totalUsed += cacheUsed;
+    }
+    assertEquals(expected*BLOCK_SIZE, totalUsed);
+
     // Uncache and check each path in sequence
     RemoteIterator<CacheDirectiveEntry> entries =
       new CacheDirectiveIterator(nnRpc, null);
@@ -974,7 +994,6 @@ public class TestCacheDirectives {
         (4+3) * numBlocksPerFile * BLOCK_SIZE,
         3, 2,
         poolInfo, "testWaitForCachedReplicasInDirectory:2:pool");
-
     // remove and watch numCached go to 0
     dfs.removeCacheDirective(id);
     dfs.removeCacheDirective(id2);
