@@ -304,7 +304,7 @@ public class TestApplicationLimits {
     int APPLICATION_ID = 0;
     // Submit first application
     FiCaSchedulerApp app_0 = getMockApplication(APPLICATION_ID++, user_0);
-    queue.submitApplication(app_0, user_0, A);
+    queue.submitApplicationAttempt(app_0, user_0);
     assertEquals(1, queue.getNumActiveApplications());
     assertEquals(0, queue.getNumPendingApplications());
     assertEquals(1, queue.getNumActiveApplications(user_0));
@@ -312,7 +312,7 @@ public class TestApplicationLimits {
 
     // Submit second application
     FiCaSchedulerApp app_1 = getMockApplication(APPLICATION_ID++, user_0);
-    queue.submitApplication(app_1, user_0, A);
+    queue.submitApplicationAttempt(app_1, user_0);
     assertEquals(2, queue.getNumActiveApplications());
     assertEquals(0, queue.getNumPendingApplications());
     assertEquals(2, queue.getNumActiveApplications(user_0));
@@ -320,14 +320,14 @@ public class TestApplicationLimits {
     
     // Submit third application, should remain pending
     FiCaSchedulerApp app_2 = getMockApplication(APPLICATION_ID++, user_0);
-    queue.submitApplication(app_2, user_0, A);
+    queue.submitApplicationAttempt(app_2, user_0);
     assertEquals(2, queue.getNumActiveApplications());
     assertEquals(1, queue.getNumPendingApplications());
     assertEquals(2, queue.getNumActiveApplications(user_0));
     assertEquals(1, queue.getNumPendingApplications(user_0));
     
     // Finish one application, app_2 should be activated
-    queue.finishApplication(app_0, A);
+    queue.finishApplicationAttempt(app_0, A);
     assertEquals(2, queue.getNumActiveApplications());
     assertEquals(0, queue.getNumPendingApplications());
     assertEquals(2, queue.getNumActiveApplications(user_0));
@@ -335,7 +335,7 @@ public class TestApplicationLimits {
     
     // Submit another one for user_0
     FiCaSchedulerApp app_3 = getMockApplication(APPLICATION_ID++, user_0);
-    queue.submitApplication(app_3, user_0, A);
+    queue.submitApplicationAttempt(app_3, user_0);
     assertEquals(2, queue.getNumActiveApplications());
     assertEquals(1, queue.getNumPendingApplications());
     assertEquals(2, queue.getNumActiveApplications(user_0));
@@ -346,7 +346,7 @@ public class TestApplicationLimits {
     
     // Submit first app for user_1
     FiCaSchedulerApp app_4 = getMockApplication(APPLICATION_ID++, user_1);
-    queue.submitApplication(app_4, user_1, A);
+    queue.submitApplicationAttempt(app_4, user_1);
     assertEquals(3, queue.getNumActiveApplications());
     assertEquals(1, queue.getNumPendingApplications());
     assertEquals(2, queue.getNumActiveApplications(user_0));
@@ -356,7 +356,7 @@ public class TestApplicationLimits {
 
     // Submit second app for user_1, should block due to queue-limit
     FiCaSchedulerApp app_5 = getMockApplication(APPLICATION_ID++, user_1);
-    queue.submitApplication(app_5, user_1, A);
+    queue.submitApplicationAttempt(app_5, user_1);
     assertEquals(3, queue.getNumActiveApplications());
     assertEquals(2, queue.getNumPendingApplications());
     assertEquals(2, queue.getNumActiveApplications(user_0));
@@ -365,7 +365,7 @@ public class TestApplicationLimits {
     assertEquals(1, queue.getNumPendingApplications(user_1));
 
     // Now finish one app of user_1 so app_5 should be activated
-    queue.finishApplication(app_4, A);
+    queue.finishApplicationAttempt(app_4, A);
     assertEquals(3, queue.getNumActiveApplications());
     assertEquals(1, queue.getNumPendingApplications());
     assertEquals(2, queue.getNumActiveApplications(user_0));
@@ -385,7 +385,7 @@ public class TestApplicationLimits {
 
     // Submit first application
     FiCaSchedulerApp app_0 = getMockApplication(APPLICATION_ID++, user_0);
-    queue.submitApplication(app_0, user_0, A);
+    queue.submitApplicationAttempt(app_0, user_0);
     assertEquals(1, queue.getNumActiveApplications());
     assertEquals(0, queue.getNumPendingApplications());
     assertEquals(1, queue.getNumActiveApplications(user_0));
@@ -394,7 +394,7 @@ public class TestApplicationLimits {
 
     // Submit second application
     FiCaSchedulerApp app_1 = getMockApplication(APPLICATION_ID++, user_0);
-    queue.submitApplication(app_1, user_0, A);
+    queue.submitApplicationAttempt(app_1, user_0);
     assertEquals(2, queue.getNumActiveApplications());
     assertEquals(0, queue.getNumPendingApplications());
     assertEquals(2, queue.getNumActiveApplications(user_0));
@@ -403,7 +403,7 @@ public class TestApplicationLimits {
 
     // Submit third application, should remain pending
     FiCaSchedulerApp app_2 = getMockApplication(APPLICATION_ID++, user_0);
-    queue.submitApplication(app_2, user_0, A);
+    queue.submitApplicationAttempt(app_2, user_0);
     assertEquals(2, queue.getNumActiveApplications());
     assertEquals(1, queue.getNumPendingApplications());
     assertEquals(2, queue.getNumActiveApplications(user_0));
@@ -412,7 +412,7 @@ public class TestApplicationLimits {
 
     // Submit fourth application, should remain pending
     FiCaSchedulerApp app_3 = getMockApplication(APPLICATION_ID++, user_0);
-    queue.submitApplication(app_3, user_0, A);
+    queue.submitApplicationAttempt(app_3, user_0);
     assertEquals(2, queue.getNumActiveApplications());
     assertEquals(2, queue.getNumPendingApplications());
     assertEquals(2, queue.getNumActiveApplications(user_0));
@@ -420,7 +420,7 @@ public class TestApplicationLimits {
     assertTrue(queue.pendingApplications.contains(app_3));
 
     // Kill 3rd pending application
-    queue.finishApplication(app_2, A);
+    queue.finishApplicationAttempt(app_2, A);
     assertEquals(2, queue.getNumActiveApplications());
     assertEquals(1, queue.getNumPendingApplications());
     assertEquals(2, queue.getNumActiveApplications(user_0));
@@ -429,7 +429,7 @@ public class TestApplicationLimits {
     assertFalse(queue.activeApplications.contains(app_2));
 
     // Finish 1st application, app_3 should become active
-    queue.finishApplication(app_0, A);
+    queue.finishApplicationAttempt(app_0, A);
     assertEquals(2, queue.getNumActiveApplications());
     assertEquals(0, queue.getNumPendingApplications());
     assertEquals(2, queue.getNumActiveApplications(user_0));
@@ -439,7 +439,7 @@ public class TestApplicationLimits {
     assertFalse(queue.activeApplications.contains(app_0));
 
     // Finish 2nd application
-    queue.finishApplication(app_1, A);
+    queue.finishApplicationAttempt(app_1, A);
     assertEquals(1, queue.getNumActiveApplications());
     assertEquals(0, queue.getNumPendingApplications());
     assertEquals(1, queue.getNumActiveApplications(user_0));
@@ -447,7 +447,7 @@ public class TestApplicationLimits {
     assertFalse(queue.activeApplications.contains(app_1));
 
     // Finish 4th application
-    queue.finishApplication(app_3, A);
+    queue.finishApplicationAttempt(app_3, A);
     assertEquals(0, queue.getNumActiveApplications());
     assertEquals(0, queue.getNumPendingApplications());
     assertEquals(0, queue.getNumActiveApplications(user_0));
@@ -507,7 +507,7 @@ public class TestApplicationLimits {
     FiCaSchedulerApp app_0_0 = 
         spy(new FiCaSchedulerApp(appAttemptId_0_0, user_0, queue, 
             queue.getActiveUsersManager(), rmContext));
-    queue.submitApplication(app_0_0, user_0, A);
+    queue.submitApplicationAttempt(app_0_0, user_0);
 
     List<ResourceRequest> app_0_0_requests = new ArrayList<ResourceRequest>();
     app_0_0_requests.add(
@@ -526,7 +526,7 @@ public class TestApplicationLimits {
     FiCaSchedulerApp app_0_1 = 
         spy(new FiCaSchedulerApp(appAttemptId_0_1, user_0, queue, 
             queue.getActiveUsersManager(), rmContext));
-    queue.submitApplication(app_0_1, user_0, A);
+    queue.submitApplicationAttempt(app_0_1, user_0);
     
     List<ResourceRequest> app_0_1_requests = new ArrayList<ResourceRequest>();
     app_0_1_requests.add(
@@ -545,7 +545,7 @@ public class TestApplicationLimits {
     FiCaSchedulerApp app_1_0 = 
         spy(new FiCaSchedulerApp(appAttemptId_1_0, user_1, queue, 
             queue.getActiveUsersManager(), rmContext));
-    queue.submitApplication(app_1_0, user_1, A);
+    queue.submitApplicationAttempt(app_1_0, user_1);
 
     List<ResourceRequest> app_1_0_requests = new ArrayList<ResourceRequest>();
     app_1_0_requests.add(

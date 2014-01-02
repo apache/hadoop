@@ -36,6 +36,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -53,10 +54,13 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppRejectedEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptRejectedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
@@ -65,14 +69,16 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.UpdatedContainerInfo
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.PreemptableResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplication;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptRemovedSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ContainerExpiredSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
@@ -185,7 +191,11 @@ public class CapacityScheduler
   private Resource maximumAllocation;
 
   @VisibleForTesting
-  protected Map<ApplicationAttemptId, FiCaSchedulerApp> applications = 
+  protected Map<ApplicationId, SchedulerApplication> applications =
+      new ConcurrentHashMap<ApplicationId, SchedulerApplication>();
+
+  @VisibleForTesting
+  protected Map<ApplicationAttemptId, FiCaSchedulerApp> appAttempts = 
       new ConcurrentHashMap<ApplicationAttemptId, FiCaSchedulerApp>();
 
   private boolean initialized = false;
@@ -415,61 +425,84 @@ public class CapacityScheduler
   synchronized CSQueue getQueue(String queueName) {
     return queues.get(queueName);
   }
-  
-  private synchronized void
-      addApplicationAttempt(ApplicationAttemptId applicationAttemptId,
-          String queueName, String user) {
 
-    // Sanity checks
+  private synchronized void addApplication(ApplicationId applicationId,
+      String queueName, String user) {
+    // santiy checks.
     CSQueue queue = getQueue(queueName);
     if (queue == null) {
-      String message = "Application " + applicationAttemptId + 
+      String message = "Application " + applicationId + 
       " submitted by user " + user + " to unknown queue: " + queueName;
-      this.rmContext.getDispatcher().getEventHandler().handle(
-          new RMAppAttemptRejectedEvent(applicationAttemptId, message));
+      this.rmContext.getDispatcher().getEventHandler()
+          .handle(new RMAppRejectedEvent(applicationId, message));
       return;
     }
     if (!(queue instanceof LeafQueue)) {
-      String message = "Application " + applicationAttemptId + 
+      String message = "Application " + applicationId + 
           " submitted by user " + user + " to non-leaf queue: " + queueName;
-      this.rmContext.getDispatcher().getEventHandler().handle(
-          new RMAppAttemptRejectedEvent(applicationAttemptId, message));
+      this.rmContext.getDispatcher().getEventHandler()
+          .handle(new RMAppRejectedEvent(applicationId, message));
       return;
     }
-
-    // TODO: Fix store
-    FiCaSchedulerApp SchedulerApp = 
-        new FiCaSchedulerApp(applicationAttemptId, user, queue, 
-            queue.getActiveUsersManager(), rmContext);
-
     // Submit to the queue
     try {
-      queue.submitApplication(SchedulerApp, user, queueName);
+      queue.submitApplication(applicationId, user, queueName);
     } catch (AccessControlException ace) {
-      LOG.info("Failed to submit application " + applicationAttemptId + 
-          " to queue " + queueName + " from user " + user, ace);
-      this.rmContext.getDispatcher().getEventHandler().handle(
-          new RMAppAttemptRejectedEvent(applicationAttemptId, 
-              ace.toString()));
+      LOG.info("Failed to submit application " + applicationId + " to queue "
+          + queueName + " from user " + user, ace);
+      this.rmContext.getDispatcher().getEventHandler()
+          .handle(new RMAppRejectedEvent(applicationId, ace.toString()));
       return;
     }
+    SchedulerApplication application =
+        new SchedulerApplication(queue, user);
+    applications.put(applicationId, application);
+    LOG.info("Accepted application " + applicationId + " from user: " + user
+        + ", in queue: " + queueName);
+    rmContext.getDispatcher().getEventHandler()
+        .handle(new RMAppEvent(applicationId, RMAppEventType.APP_ACCEPTED));
+  }
 
-    applications.put(applicationAttemptId, SchedulerApp);
+  private synchronized void addApplicationAttempt(
+      ApplicationAttemptId applicationAttemptId) {
+    SchedulerApplication application =
+        applications.get(applicationAttemptId.getApplicationId());
+    CSQueue queue = (CSQueue) application.getQueue();
 
-    LOG.info("Application Submission: " + applicationAttemptId + 
-        ", user: " + user +
-        " queue: " + queue +
-        ", currently active: " + applications.size());
-
+    FiCaSchedulerApp SchedulerApp =
+        new FiCaSchedulerApp(applicationAttemptId, application.getUser(),
+          queue, queue.getActiveUsersManager(), rmContext);
+    appAttempts.put(applicationAttemptId, SchedulerApp);
+    queue.submitApplicationAttempt(SchedulerApp, application.getUser());
+    LOG.info("Added Application Attempt " + applicationAttemptId
+        + " to scheduler from user " + application.getUser() + " in queue "
+        + queue.getQueueName());
     rmContext.getDispatcher().getEventHandler().handle(
-        new RMAppAttemptEvent(applicationAttemptId,
-            RMAppAttemptEventType.APP_ACCEPTED));
+      new RMAppAttemptEvent(applicationAttemptId,
+          RMAppAttemptEventType.ATTEMPT_ADDED));
+  }
+
+  private synchronized void doneApplication(ApplicationId applicationId,
+      RMAppState finalState) {
+    SchedulerApplication application = applications.get(applicationId);
+    if (application == null){
+      // The AppRemovedSchedulerEvent maybe sent on recovery for completed apps.
+      return;
+    }
+    CSQueue queue = (CSQueue) application.getQueue();
+    if (!(queue instanceof LeafQueue)) {
+      LOG.error("Cannot finish application " + "from non-leaf queue: "
+          + queue.getQueueName());
+    } else {
+      queue.finishApplication(applicationId, application.getUser());
+    }
+    applications.remove(applicationId);
   }
 
   private synchronized void doneApplicationAttempt(
       ApplicationAttemptId applicationAttemptId,
       RMAppAttemptState rmAppAttemptFinalState) {
-    LOG.info("Application " + applicationAttemptId + " is done." +
+    LOG.info("Application Attempt " + applicationAttemptId + " is done." +
     		" finalState=" + rmAppAttemptFinalState);
     
     FiCaSchedulerApp application = getApplication(applicationAttemptId);
@@ -509,11 +542,11 @@ public class CapacityScheduler
       LOG.error("Cannot finish application " + "from non-leaf queue: "
           + queueName);
     } else {
-      queue.finishApplication(application, queue.getQueueName());
+      queue.finishApplicationAttempt(application, queue.getQueueName());
     }
     
     // Remove from our data-structure
-    applications.remove(applicationAttemptId);
+    appAttempts.remove(applicationAttemptId);
   }
 
   private static final Allocation EMPTY_ALLOCATION = 
@@ -740,12 +773,25 @@ public class CapacityScheduler
       nodeUpdate(nodeUpdatedEvent.getRMNode());
     }
     break;
+    case APP_ADDED:
+    {
+      AppAddedSchedulerEvent appAddedEvent = (AppAddedSchedulerEvent) event;
+      addApplication(appAddedEvent.getApplicationId(),
+        appAddedEvent.getQueue(), appAddedEvent.getUser());
+    }
+    break;
+    case APP_REMOVED:
+    {
+      AppRemovedSchedulerEvent appRemovedEvent = (AppRemovedSchedulerEvent)event;
+      doneApplication(appRemovedEvent.getApplicationID(),
+        appRemovedEvent.getFinalState());
+    }
+    break;
     case APP_ATTEMPT_ADDED:
     {
       AppAttemptAddedSchedulerEvent appAttemptAddedEvent =
           (AppAttemptAddedSchedulerEvent) event;
-      addApplicationAttempt(appAttemptAddedEvent.getApplicationAttemptId(),
-        appAttemptAddedEvent.getQueue(), appAttemptAddedEvent.getUser());
+      addApplicationAttempt(appAttemptAddedEvent.getApplicationAttemptId());
     }
     break;
     case APP_ATTEMPT_REMOVED:
@@ -854,7 +900,7 @@ public class CapacityScheduler
 
   @Lock(Lock.NoLock.class)
   FiCaSchedulerApp getApplication(ApplicationAttemptId applicationAttemptId) {
-    return applications.get(applicationAttemptId);
+    return appAttempts.get(applicationAttemptId);
   }
 
   @Override
@@ -912,7 +958,7 @@ public class CapacityScheduler
       LOG.debug("PREEMPT_CONTAINER: application:" + aid.toString() +
           " container: " + cont.toString());
     }
-    FiCaSchedulerApp app = applications.get(aid);
+    FiCaSchedulerApp app = appAttempts.get(aid);
     if (app != null) {
       app.addPreemptContainer(cont.getContainerId());
     }

@@ -283,10 +283,13 @@ public class SLSCapacityScheduler extends CapacityScheduler implements
 	        appQueueMap.remove(appRemoveEvent.getApplicationAttemptID());
 	      } else if (schedulerEvent.getType() == SchedulerEventType.APP_ATTEMPT_ADDED
 	          && schedulerEvent instanceof AppAttemptAddedSchedulerEvent) {
-	        AppAttemptAddedSchedulerEvent appAddEvent =
-	                (AppAttemptAddedSchedulerEvent) schedulerEvent;
-	        String queueName = appAddEvent.getQueue();
-	        appQueueMap.put(appAddEvent.getApplicationAttemptId(), queueName);
+          AppAttemptAddedSchedulerEvent appAddEvent =
+              (AppAttemptAddedSchedulerEvent) schedulerEvent;
+          SchedulerApplication app =
+              applications.get(appAddEvent.getApplicationAttemptId()
+                .getApplicationId());
+          appQueueMap.put(appAddEvent.getApplicationAttemptId(), app.getQueue()
+              .getQueueName());
 	      }
 	    }
   }

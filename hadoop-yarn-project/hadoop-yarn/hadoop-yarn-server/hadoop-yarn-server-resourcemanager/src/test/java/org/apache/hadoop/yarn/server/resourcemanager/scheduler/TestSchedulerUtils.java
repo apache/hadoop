@@ -51,6 +51,7 @@ import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourceRequestPBImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.InvalidResourceBlacklistRequestException;
 import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
@@ -58,8 +59,12 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.TestAMAuthorization.MockRMWithAMS;
 import org.apache.hadoop.yarn.server.resourcemanager.TestAMAuthorization.MyContainerManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
@@ -377,5 +382,25 @@ public class TestSchedulerUtils {
         ContainerId.newInstance(ApplicationAttemptId.newInstance(
           ApplicationId.newInstance(System.currentTimeMillis(), 1), 1), 1), "x");
     Assert.assertEquals(ContainerExitStatus.PREEMPTED, cd.getExitStatus());
+  }
+
+  public static <T> SchedulerApplication verifyAppAddedAndRemovedFromScheduler(
+      final Map<ApplicationId, SchedulerApplication> applications,
+      EventHandler<SchedulerEvent> handler, String queueName) throws Exception {
+    ApplicationId appId =
+        ApplicationId.newInstance(System.currentTimeMillis(), 1);
+    AppAddedSchedulerEvent appAddedEvent =
+        new AppAddedSchedulerEvent(appId, queueName, "user");
+    handler.handle(appAddedEvent);
+    SchedulerApplication app = applications.get(appId);
+    // verify application is added.
+    Assert.assertNotNull(app);
+    Assert.assertEquals("user", app.getUser());
+
+    AppRemovedSchedulerEvent appRemoveEvent =
+        new AppRemovedSchedulerEvent(appId, RMAppState.FINISHED);
+    handler.handle(appRemoveEvent);
+    Assert.assertNull(applications.get(appId));
+    return app;
   }
 }

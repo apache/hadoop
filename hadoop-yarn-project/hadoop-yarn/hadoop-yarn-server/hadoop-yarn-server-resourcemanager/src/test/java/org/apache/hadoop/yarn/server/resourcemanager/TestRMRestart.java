@@ -248,7 +248,7 @@ public class TestRMRestart {
     // verify correct number of attempts and other data
     RMApp loadedApp1 = rm2.getRMContext().getRMApps().get(app1.getApplicationId());
     Assert.assertNotNull(loadedApp1);
-    //Assert.assertEquals(1, loadedApp1.getAppAttempts().size());
+    Assert.assertEquals(1, loadedApp1.getAppAttempts().size());
     Assert.assertEquals(app1.getApplicationSubmissionContext()
         .getApplicationId(), loadedApp1.getApplicationSubmissionContext()
         .getApplicationId());
@@ -261,7 +261,7 @@ public class TestRMRestart {
         .getApplicationId());
     
     // verify state machine kicked into expected states
-    rm2.waitForState(loadedApp1.getApplicationId(), RMAppState.RUNNING);
+    rm2.waitForState(loadedApp1.getApplicationId(), RMAppState.ACCEPTED);
     rm2.waitForState(loadedApp2.getApplicationId(), RMAppState.ACCEPTED);
     
     // verify attempts for apps
@@ -299,7 +299,11 @@ public class TestRMRestart {
     nm2.registerNode();
     
     rm2.waitForState(loadedApp1.getApplicationId(), RMAppState.ACCEPTED);
-    Assert.assertEquals(2, loadedApp1.getAppAttempts().size());    
+    // wait for the 2nd attempt to be started.
+    int timeoutSecs = 0;
+    while (loadedApp1.getAppAttempts().size() != 2 && timeoutSecs++ < 40) {;
+      Thread.sleep(200);
+    }
 
     // verify no more reboot response sent
     hbResponse = nm1.nodeHeartbeat(true);
@@ -476,10 +480,10 @@ public class TestRMRestart {
     Assert.assertEquals(NodeAction.RESYNC, res.getNodeAction());
     
     RMApp rmApp = rm2.getRMContext().getRMApps().get(app1.getApplicationId());
-    // application should be in running state
-    rm2.waitForState(app1.getApplicationId(), RMAppState.RUNNING);
+    // application should be in ACCEPTED state
+    rm2.waitForState(app1.getApplicationId(), RMAppState.ACCEPTED);
     
-    Assert.assertEquals(RMAppState.RUNNING, rmApp.getState());
+    Assert.assertEquals(RMAppState.ACCEPTED, rmApp.getState());
     // new attempt should not be started
     Assert.assertEquals(2, rmApp.getAppAttempts().size());
     // am1 attempt should be in FAILED state where as am2 attempt should be in
@@ -516,9 +520,9 @@ public class TestRMRestart {
     nm1.setResourceTrackerService(rm3.getResourceTrackerService());
     
     rmApp = rm3.getRMContext().getRMApps().get(app1.getApplicationId());
-    // application should be in running state
-    rm3.waitForState(app1.getApplicationId(), RMAppState.RUNNING);
-    Assert.assertEquals(rmApp.getState(), RMAppState.RUNNING);
+    // application should be in ACCEPTED state
+    rm3.waitForState(app1.getApplicationId(), RMAppState.ACCEPTED);
+    Assert.assertEquals(rmApp.getState(), RMAppState.ACCEPTED);
     // new attempt should not be started
     Assert.assertEquals(3, rmApp.getAppAttempts().size());
     // am1 and am2 attempts should be in FAILED state where as am3 should be
@@ -562,6 +566,11 @@ public class TestRMRestart {
     
     rmApp = rm4.getRMContext().getRMApps().get(app1.getApplicationId());
     rm4.waitForState(rmApp.getApplicationId(), RMAppState.ACCEPTED);
+    // wait for the attempt to be created.
+    int timeoutSecs = 0;
+    while (rmApp.getAppAttempts().size() != 2 && timeoutSecs++ < 40) {
+      Thread.sleep(200);
+    }
     Assert.assertEquals(4, rmApp.getAppAttempts().size());
     Assert.assertEquals(RMAppState.ACCEPTED, rmApp.getState());
     rm4.waitForState(latestAppAttemptId, RMAppAttemptState.SCHEDULED);
