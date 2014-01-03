@@ -137,7 +137,7 @@ public class WrappedReducer<KEYIN, VALUEIN, KEYOUT, VALUEOUT>
 
     @Override
     public URI[] getCacheFiles() throws IOException {
-      return reduceContext.getCacheArchives();
+      return reduceContext.getCacheFiles();
     }
 
     @Override

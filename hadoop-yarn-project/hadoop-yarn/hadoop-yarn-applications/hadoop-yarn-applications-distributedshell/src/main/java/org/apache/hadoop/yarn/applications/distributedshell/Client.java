@@ -49,6 +49,7 @@ import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
@@ -167,11 +168,14 @@ public class Client {
   // Command line options
   private Options opts;
 
-  private final String shellCommandPath = "shellCommands";
-  private final String shellArgsPath = "shellArgs";
-  private final String appMasterJarPath = "AppMaster.jar";
+  private static final String shellCommandPath = "shellCommands";
+  private static final String shellArgsPath = "shellArgs";
+  private static final String appMasterJarPath = "AppMaster.jar";
   // Hardcoded path to custom log_properties
-  private final String log4jPath = "log4j.properties";
+  private static final String log4jPath = "log4j.properties";
+
+  private static final String linuxShellPath = "ExecShellScript.sh";
+  private static final String windowBatPath = "ExecBatScript.bat";
 
   /**
    * @param args Command line arguments 
@@ -225,8 +229,11 @@ public class Client {
     opts.addOption("master_memory", true, "Amount of memory in MB to be requested to run the application master");
     opts.addOption("master_vcores", true, "Amount of virtual cores to be requested to run the application master");
     opts.addOption("jar", true, "Jar file containing the application master");
-    opts.addOption("shell_command", true, "Shell command to be executed by the Application Master");
-    opts.addOption("shell_script", true, "Location of the shell script to be executed");
+    opts.addOption("shell_command", true, "Shell command to be executed by " +
+        "the Application Master. Can only specify either --shell_command " +
+        "or --shell_script");
+    opts.addOption("shell_script", true, "Location of the shell script to be " +
+        "executed. Can only specify either --shell_command or --shell_script");
     opts.addOption("shell_args", true, "Command line args for the shell script." +
         "Multiple args can be separated by empty space.");
     opts.getOption("shell_args").setArgs(Option.UNLIMITED_VALUES);
@@ -308,12 +315,15 @@ public class Client {
 
     appMasterJar = cliParser.getOptionValue("jar");
 
-    if (!cliParser.hasOption("shell_command")) {
-      throw new IllegalArgumentException("No shell command specified to be executed by application master");
-    }
-    shellCommand = cliParser.getOptionValue("shell_command");
-
-    if (cliParser.hasOption("shell_script")) {
+    if (!cliParser.hasOption("shell_command") && !cliParser.hasOption("shell_script")) {
+      throw new IllegalArgumentException(
+          "No shell command or shell script specified to be executed by application master");
+    } else if (cliParser.hasOption("shell_command") && cliParser.hasOption("shell_script")) {
+      throw new IllegalArgumentException("Can not specify shell_command option " +
+          "and shell_script option at the same time");
+    } else if (cliParser.hasOption("shell_command")) {
+      shellCommand = cliParser.getOptionValue("shell_command");
+    } else {
       shellScriptPath = cliParser.getOptionValue("shell_script");
     }
     if (cliParser.hasOption("shell_args")) {
@@ -466,8 +476,11 @@ public class Client {
     long hdfsShellScriptTimestamp = 0;
     if (!shellScriptPath.isEmpty()) {
       Path shellSrc = new Path(shellScriptPath);
-      String shellPathSuffix = appName + "/" + appId.getId() + "/ExecShellScript.sh";
-      Path shellDst = new Path(fs.getHomeDirectory(), shellPathSuffix);
+      String shellPathSuffix =
+          appName + "/" + appId.getId() + "/"
+              + (Shell.WINDOWS ? windowBatPath : linuxShellPath);
+      Path shellDst =
+          new Path(fs.getHomeDirectory(), shellPathSuffix);
       fs.copyFromLocalFile(false, true, shellSrc, shellDst);
       hdfsShellScriptLocation = shellDst.toUri().toString(); 
       FileStatus shellFileStatus = fs.getFileStatus(shellDst);

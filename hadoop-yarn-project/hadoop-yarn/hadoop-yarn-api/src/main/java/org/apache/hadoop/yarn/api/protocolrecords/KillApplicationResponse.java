@@ -26,10 +26,21 @@ import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
- * <p>The response sent by the <code>ResourceManager</code> to the client
- * aborting a submitted application.</p>
- *
- * <p>Currently it's empty.</p>
+ * <p>
+ * The response sent by the <code>ResourceManager</code> to the client aborting
+ * a submitted application.
+ * </p>
+ * <p>
+ * The response, includes:
+ * <ul>
+ * <li>A flag which indicates that the process of killing the application is
+ * completed or not.</li>
+ * </ul>
+ * Note: user is recommended to wait until this flag becomes true, otherwise if
+ * the <code>ResourceManager</code> crashes before the process of killing the
+ * application is completed, the <code>ResourceManager</code> may retry this
+ * application on recovery.
+ * </p>
  * 
  * @see ApplicationClientProtocol#forceKillApplication(KillApplicationRequest)
  */
@@ -38,9 +49,24 @@ import org.apache.hadoop.yarn.util.Records;
 public abstract class KillApplicationResponse {
   @Private
   @Unstable
-  public static KillApplicationResponse newInstance() {
+  public static KillApplicationResponse newInstance(boolean isKillCompleted) {
     KillApplicationResponse response =
         Records.newRecord(KillApplicationResponse.class);
+    response.setIsKillCompleted(isKillCompleted);
     return response;
   }
+
+  /**
+   * Get the flag which indicates that the process of killing application is completed or not.
+   */
+  @Public
+  @Stable
+  public abstract boolean getIsKillCompleted();
+
+  /**
+   * Set the flag which indicates that the process of killing application is completed or not.
+   */
+  @Private
+  @Unstable
+  public abstract void setIsKillCompleted(boolean isKillCompleted);
 }

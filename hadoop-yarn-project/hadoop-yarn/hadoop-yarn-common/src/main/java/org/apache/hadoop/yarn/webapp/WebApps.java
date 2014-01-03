@@ -225,8 +225,8 @@ public class WebApps {
         boolean hasSpnegoConf = spnegoPrincipalKey != null
             && spnegoKeytabKey != null;
         if (hasSpnegoConf) {
-          builder.setUsernameConfKey(conf.get(spnegoPrincipalKey))
-              .setKeytabConfKey(conf.get(spnegoKeytabKey))
+          builder.setUsernameConfKey(spnegoPrincipalKey)
+              .setKeytabConfKey(spnegoKeytabKey)
               .setSecurityEnabled(UserGroupInformation.isSecurityEnabled());
         }
         HttpServer server = builder.build();

@@ -137,7 +137,9 @@ public class TestSaslRPC {
     LOG.info("Testing QOP:"+expectedQop);
     LOG.info("---------------------------------");
     conf = new Configuration();
-    conf.set(HADOOP_SECURITY_AUTHENTICATION, KERBEROS.toString());
+    // the specific tests for kerberos will enable kerberos.  forcing it
+    // for all tests will cause tests to fail if the user has a TGT
+    conf.set(HADOOP_SECURITY_AUTHENTICATION, SIMPLE.toString());
     conf.set("hadoop.rpc.protection", expectedQop.name().toLowerCase());
     UserGroupInformation.setConfiguration(conf);
     enableSecretManager = null;

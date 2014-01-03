@@ -234,6 +234,12 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
     attempts.put(attemptIdRemoved, mockRemovedAttempt);
     store.removeApplication(mockRemovedApp);
 
+    // remove application directory recursively.
+    storeApp(store, appIdRemoved, submitTime, startTime);
+    storeAttempt(store, attemptIdRemoved,
+        "container_1352994193343_0002_01_000001", null, null, dispatcher);
+    store.removeApplication(mockRemovedApp);
+
     // let things settle down
     Thread.sleep(1000);
     store.close();
@@ -373,7 +379,30 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
     Assert.assertEquals(keySet, secretManagerState.getMasterKeyState());
     Assert.assertEquals(sequenceNumber,
         secretManagerState.getDTSequenceNumber());
+
+    // check to delete delegationKey
+    store.removeRMDTMasterKey(key);
+    keySet.clear();
+    RMDTSecretManagerState noKeySecretManagerState =
+        store.loadState().getRMDTSecretManagerState();
+    Assert.assertEquals(token1, noKeySecretManagerState.getTokenState());
+    Assert.assertEquals(keySet, noKeySecretManagerState.getMasterKeyState());
+    Assert.assertEquals(sequenceNumber,
+        noKeySecretManagerState.getDTSequenceNumber());
+
+    // check to delete delegationToken
+    store.removeRMDelegationToken(dtId1, sequenceNumber);
+    RMDTSecretManagerState noKeyAndTokenSecretManagerState =
+        store.loadState().getRMDTSecretManagerState();
+    token1.clear();
+    Assert.assertEquals(token1,
+        noKeyAndTokenSecretManagerState.getTokenState());
+    Assert.assertEquals(keySet,
+        noKeyAndTokenSecretManagerState.getMasterKeyState());
+    Assert.assertEquals(sequenceNumber,
+        noKeySecretManagerState.getDTSequenceNumber());
     store.close();
+
   }
 
   private Token<AMRMTokenIdentifier> generateAMRMToken(

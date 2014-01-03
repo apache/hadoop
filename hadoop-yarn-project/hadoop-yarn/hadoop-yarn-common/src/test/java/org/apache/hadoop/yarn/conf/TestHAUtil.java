@@ -39,6 +39,7 @@ public class TestHAUtil {
   private static final String RM1_ADDRESS_UNTRIMMED = "  \t\t\n 1.2.3.4:8021  \n\t ";
   private static final String RM1_ADDRESS = RM1_ADDRESS_UNTRIMMED.trim();
   private static final String RM2_ADDRESS = "localhost:8022";
+  private static final String RM3_ADDRESS = "localhost:8033";
   private static final String RM1_NODE_ID_UNTRIMMED = "rm1 ";
   private static final String RM1_NODE_ID = RM1_NODE_ID_UNTRIMMED.trim();
   private static final String RM2_NODE_ID = "rm2";
@@ -53,7 +54,7 @@ public class TestHAUtil {
     conf.set(YarnConfiguration.RM_HA_IDS, RM_NODE_IDS_UNTRIMMED);
     conf.set(YarnConfiguration.RM_HA_ID, RM1_NODE_ID_UNTRIMMED);
 
-    for (String confKey : YarnConfiguration.RM_RPC_ADDRESS_CONF_KEYS) {
+    for (String confKey : YarnConfiguration.RM_SERVICES_ADDRESS_CONF_KEYS) {
       // configuration key itself cannot contains space/tab/return chars.
       conf.set(HAUtil.addSuffix(confKey, RM1_NODE_ID), RM1_ADDRESS_UNTRIMMED);
       conf.set(HAUtil.addSuffix(confKey, RM2_NODE_ID), RM2_ADDRESS);
@@ -94,13 +95,32 @@ public class TestHAUtil {
       StringUtils.getStringCollection(RM_NODE_IDS), HAUtil.getRMHAIds(conf));
     assertEquals("Should be saved as Trimmed string",
       RM1_NODE_ID, HAUtil.getRMHAId(conf));
-    for (String confKey : YarnConfiguration.RM_RPC_ADDRESS_CONF_KEYS) {
+    for (String confKey : YarnConfiguration.RM_SERVICES_ADDRESS_CONF_KEYS) {
       assertEquals("RPC address not set for " + confKey,
         RM1_ADDRESS, conf.get(confKey));
     }
 
     conf.clear();
-    conf.set(YarnConfiguration.RM_HA_IDS, RM_INVALID_NODE_ID);
+    conf.set(YarnConfiguration.RM_HA_IDS, RM1_NODE_ID);
+    try {
+      HAUtil.verifyAndSetConfiguration(conf);
+    } catch (YarnRuntimeException e) {
+      assertEquals("YarnRuntimeException by verifyAndSetRMHAIds()",
+        HAUtil.BAD_CONFIG_MESSAGE_PREFIX +
+          HAUtil.getInvalidValueMessage(YarnConfiguration.RM_HA_IDS,
+              conf.get(YarnConfiguration.RM_HA_IDS) +
+              "\nHA mode requires atleast two RMs"),
+        e.getMessage());
+    }
+
+    conf.clear();
+    // simulate the case YarnConfiguration.RM_HA_ID is not set
+    conf.set(YarnConfiguration.RM_HA_IDS, RM1_NODE_ID + ","
+        + RM2_NODE_ID);
+    for (String confKey : YarnConfiguration.RM_SERVICES_ADDRESS_CONF_KEYS) {
+      conf.set(HAUtil.addSuffix(confKey, RM1_NODE_ID), RM1_ADDRESS);
+      conf.set(HAUtil.addSuffix(confKey, RM2_NODE_ID), RM2_ADDRESS);
+    }
     try {
       HAUtil.verifyAndSetConfiguration(conf);
     } catch (YarnRuntimeException e) {
@@ -112,8 +132,9 @@ public class TestHAUtil {
 
     conf.clear();
     conf.set(YarnConfiguration.RM_HA_ID, RM_INVALID_NODE_ID);
-    conf.set(YarnConfiguration.RM_HA_IDS, RM_INVALID_NODE_ID);
-    for (String confKey : YarnConfiguration.RM_RPC_ADDRESS_CONF_KEYS) {
+    conf.set(YarnConfiguration.RM_HA_IDS, RM_INVALID_NODE_ID + ","
+        + RM1_NODE_ID);
+    for (String confKey : YarnConfiguration.RM_SERVICES_ADDRESS_CONF_KEYS) {
       // simulate xml with invalid node id
       conf.set(confKey + RM_INVALID_NODE_ID, RM_INVALID_NODE_ID);
     }
@@ -130,7 +151,7 @@ public class TestHAUtil {
     conf.clear();
     // simulate the case HAUtil.RM_RPC_ADDRESS_CONF_KEYS are not set
     conf.set(YarnConfiguration.RM_HA_ID, RM1_NODE_ID);
-    conf.set(YarnConfiguration.RM_HA_IDS, RM1_NODE_ID);
+    conf.set(YarnConfiguration.RM_HA_IDS, RM1_NODE_ID + "," + RM2_NODE_ID);
     try {
       HAUtil.verifyAndSetConfiguration(conf);
       fail("Should throw YarnRuntimeException. by Configuration#set()");
@@ -147,9 +168,10 @@ public class TestHAUtil {
     conf.clear();
     conf.set(YarnConfiguration.RM_HA_IDS, RM2_NODE_ID + "," + RM3_NODE_ID);
     conf.set(YarnConfiguration.RM_HA_ID, RM1_NODE_ID_UNTRIMMED);
-    for (String confKey : YarnConfiguration.RM_RPC_ADDRESS_CONF_KEYS) {
+    for (String confKey : YarnConfiguration.RM_SERVICES_ADDRESS_CONF_KEYS) {
       conf.set(HAUtil.addSuffix(confKey, RM1_NODE_ID), RM1_ADDRESS_UNTRIMMED);
       conf.set(HAUtil.addSuffix(confKey, RM2_NODE_ID), RM2_ADDRESS);
+      conf.set(HAUtil.addSuffix(confKey, RM3_NODE_ID), RM3_ADDRESS);
     }
     try {
       HAUtil.verifyAndSetConfiguration(conf);

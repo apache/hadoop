@@ -187,7 +187,7 @@ class BlockPoolSliceScanner {
         + hours + " hours for block pool " + bpid);
 
     // get the list of blocks and arrange them in random order
-    List<Block> arr = dataset.getFinalizedBlocks(blockPoolId);
+    List<FinalizedReplica> arr = dataset.getFinalizedBlocks(blockPoolId);
     Collections.shuffle(arr);
     
     long scanTime = -1;

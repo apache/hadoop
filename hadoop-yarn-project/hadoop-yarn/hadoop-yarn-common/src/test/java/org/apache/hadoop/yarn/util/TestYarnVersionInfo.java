@@ -18,23 +18,23 @@
 
 package org.apache.hadoop.yarn.util;
 
-import junit.framework.TestCase;
 import java.io.IOException;
 
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.junit.Test;
-
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNotNull;
 /**
  * A JUnit test to test {@link YarnVersionInfo}
  */
-public class TestYarnVersionInfo extends TestCase {
+public class TestYarnVersionInfo {
   
   /**
    * Test the yarn version info routines.
    * @throws IOException
    */
   @Test
-  public void testVersionInfoGenerated() throws IOException {
+  public void versionInfoGenerated() throws IOException {
 
     // can't easily know what the correct values are going to be so just
     // make sure they aren't Unknown

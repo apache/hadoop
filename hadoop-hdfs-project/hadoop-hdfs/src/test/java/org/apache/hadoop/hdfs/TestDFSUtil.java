@@ -62,7 +62,6 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Shell;
 import org.junit.Assume;
 import org.junit.Before;
@@ -730,16 +729,15 @@ public class TestDFSUtil {
 
   @Test(timeout=1000)
   public void testDurationToString() throws Exception {
-    assertEquals("000:00:00:00", DFSUtil.durationToString(0));
-    try {
-      DFSUtil.durationToString(-199);
-    } catch (IllegalArgumentException e) {
-      GenericTestUtils.assertExceptionContains("Invalid negative duration", e);
-    }
-    assertEquals("001:01:01:01",
+    assertEquals("000:00:00:00.000", DFSUtil.durationToString(0));
+    assertEquals("001:01:01:01.000",
         DFSUtil.durationToString(((24*60*60)+(60*60)+(60)+1)*1000));
-    assertEquals("000:23:59:59",
-        DFSUtil.durationToString(((23*60*60)+(59*60)+(59))*1000));
+    assertEquals("000:23:59:59.999",
+        DFSUtil.durationToString(((23*60*60)+(59*60)+(59))*1000+999));
+    assertEquals("-001:01:01:01.000",
+        DFSUtil.durationToString(-((24*60*60)+(60*60)+(60)+1)*1000));
+    assertEquals("-000:23:59:59.574",
+        DFSUtil.durationToString(-(((23*60*60)+(59*60)+(59))*1000+574)));
   }
 
   @Test(timeout=5000)
@@ -763,7 +761,7 @@ public class TestDFSUtil {
     assertEquals(61*60*1000, DFSUtil.parseRelativeTime("61m"));
     assertEquals(0, DFSUtil.parseRelativeTime("0s"));
     assertEquals(25*60*60*1000, DFSUtil.parseRelativeTime("25h"));
-    assertEquals(4*24*60*60*1000, DFSUtil.parseRelativeTime("4d"));
-    assertEquals(999*24*60*60*1000, DFSUtil.parseRelativeTime("999d"));
+    assertEquals(4*24*60*60*1000l, DFSUtil.parseRelativeTime("4d"));
+    assertEquals(999*24*60*60*1000l, DFSUtil.parseRelativeTime("999d"));
   }
 }

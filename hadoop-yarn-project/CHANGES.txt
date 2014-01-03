@@ -49,6 +49,12 @@ Release 2.4.0 - UNRELEASED
     YARN-1448. AM-RM protocol changes to support container resizing (Wangda Tan
     via Sandy Ryza)
 
+    YARN-312. Introduced ResourceManagerAdministrationProtocol changes to support
+    changing resources on node. (Junping Du via vinodkv)
+
+    YARN-1028. Added FailoverProxyProvider capability to ResourceManager to help
+    with RM failover. (Karthik Kambatla via vinodkv)
+
   IMPROVEMENTS
 
     YARN-7. Support CPU resource for DistributedShell. (Junping Du via llu)
@@ -154,6 +160,43 @@ Release 2.4.0 - UNRELEASED
     YARN-1378. Implemented a cleaner of old finished applications from the RM
     state-store. (Jian He via vinodkv)
 
+    YARN-1481. Move internal services logic from AdminService to ResourceManager.
+    (vinodkv via kasha)
+
+    YARN-1491. Upgrade JUnit3 TestCase to JUnit 4 (Chen He via jeagles)
+
+    YARN-408. Change CapacityScheduler to not disable delay-scheduling by default.
+    (Mayank Bansal via vinodkv)
+
+    YARN-1325. Modified RM HA configuration validation to also ensure that
+    multiple RMs are configured. (Xuan Gong via vinodkv)
+
+    YARN-1311. Fixed app specific scheduler-events' names to be app-attempt
+    based. (vinodkv via jianhe)
+
+    YARN-1485. Modified RM HA configuration validation to also ensure that
+    service-address configuration are configured for every RM. (Xuan Gong via
+    vinodkv)
+
+    YARN-1435. Modified Distributed Shell to accept either the command or the
+    custom script. (Xuan Gong via zjshen)
+
+    YARN-1446. Changed client API to retry killing application till RM
+    acknowledges so as to account for RM crashes/failover. (Jian He via vinodkv)
+
+    YARN-1307. Redesign znode structure for Zookeeper based RM state-store for
+    better organization and scalability. (Tsuyoshi OZAWA via vinodkv)
+
+    YARN-1172. Convert SecretManagers in RM to services (Tsuyoshi OZAWA via kasha)
+
+    YARN-1523. Use StandbyException instead of RMNotYetReadyException (kasha)
+
+    YARN-1541. Changed ResourceManager to invalidate ApplicationMaster host/port
+    information once an AM crashes. (Jian He via vinodkv)
+
+    YARN-1493. Changed ResourceManager and Scheduler interfacing to recognize
+    app-attempts separately from apps. (Jian He via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -224,6 +267,24 @@ Release 2.4.0 - UNRELEASED
 
     YARN-1405. Fixed ResourceManager to not hang when init/start fails with an
     exception w.r.t state-store. (Jian He via vinodkv)
+
+    YARN-1505. Fixed Webapplication proxy server to not hardcode its bind
+    address. (Xuan Gong via vinodkv)
+
+    YARN-1145. Fixed a potential file-handle leak in the web interface for
+    displaying aggregated logs. (Rohith Sharma via vinodkv)
+
+    YARN-1451. TestResourceManager relies on the scheduler assigning multiple
+    containers in a single node update. (Sandy Ryza via kasha)
+
+    YARN-1527. Fix yarn rmadmin command to print the correct usage info.
+    (Akira AJISAKA via jianhe)
+
+    YARN-1522. Fixed a race condition in the test TestApplicationCleanup that was
+    causing it to randomly fail. (Liyin Liang via vinodkv)
+
+    YARN-1549. Fixed a bug in ResourceManager's ApplicationMasterService that
+    was causing unamanged AMs to not finish correctly. (haosdent via vinodkv)
 
 Release 2.3.0 - UNRELEASED
 
@@ -430,6 +491,9 @@ Release 2.2.0 - 2013-10-13
 
     YARN-1278. Fixed NodeManager to not delete local resources for apps on resync
     command from RM - a bug caused by YARN-1149. (Hitesh Shah via vinodkv)
+
+    YARN-1463. Tests should avoid starting http-server where possible or creates 
+    spnego keytab/principals (vinodkv via kasha)
 
 Release 2.1.1-beta - 2013-09-23
 
@@ -1714,7 +1778,22 @@ Release 2.0.2-alpha - 2012-09-07
     YARN-138. Ensure default values for minimum/maximum container sizes is
     sane. (harsh & sseth via acmurthy)
 
-Release 0.23.10 - UNRELEASED
+Release 0.23.11 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    YARN-1180. Update capacity scheduler docs to include types on the configs
+    (Chen He via jeagles)
+
+Release 0.23.10 - 2013-12-09
 
   INCOMPATIBLE CHANGES
 

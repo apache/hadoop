@@ -53,6 +53,7 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.SecureIOUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.file.tfile.TFile;
@@ -294,7 +295,7 @@ public class AggregatedLogFormat {
       out.close();
     }
 
-    public void closeWriter() {
+    public void close() {
       try {
         this.writer.close();
       } catch (IOException e) {
@@ -569,9 +570,8 @@ public class AggregatedLogFormat {
       out.println("");
     }
 
-    public void close() throws IOException {
-      this.scanner.close();
-      this.fsDataIStream.close();
+    public void close() {
+      IOUtils.cleanup(LOG, scanner, reader, fsDataIStream);
     }
   }
 

@@ -928,8 +928,10 @@ public class StringUtils {
    * @param args  List of arguments.
    * @return      null if the option was not found; the value of the 
    *              option otherwise.
+   * @throws IllegalArgumentException if the option's argument is not present
    */
-  public static String popOptionWithArgument(String name, List<String> args) {
+  public static String popOptionWithArgument(String name, List<String> args)
+      throws IllegalArgumentException {
     String val = null;
     for (Iterator<String> iter = args.iterator(); iter.hasNext(); ) {
       String cur = iter.next();
@@ -939,7 +941,7 @@ public class StringUtils {
       } else if (cur.equals(name)) {
         iter.remove();
         if (!iter.hasNext()) {
-          throw new RuntimeException("option " + name + " requires 1 " +
+          throw new IllegalArgumentException("option " + name + " requires 1 " +
               "argument.");
         }
         val = iter.next();

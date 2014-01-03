@@ -68,7 +68,7 @@ public class RetryPolicies {
    * </p>
    */
   public static final RetryPolicy RETRY_FOREVER = new RetryForever();
-  
+
   /**
    * <p>
    * Keep trying a limited number of times, waiting a fixed time between attempts,

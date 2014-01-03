@@ -16,22 +16,20 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event;
+package org.apache.hadoop.hdfs;
 
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
-public class RMAppAttemptRejectedEvent extends RMAppAttemptEvent {
+/**
+ * Defines the types of supported storage media. The default storage
+ * medium is assumed to be DISK.
+ */
+@InterfaceAudience.Public
+@InterfaceStability.Unstable
+public enum StorageType {
+  DISK,
+  SSD;
 
-  private final String message;
-
-  public RMAppAttemptRejectedEvent(ApplicationAttemptId appAttemptId, String message) {
-    super(appAttemptId, RMAppAttemptEventType.APP_REJECTED);
-    this.message = message;
-  }
-
-  public String getMessage() {
-    return this.message;
-  }
+  public static StorageType DEFAULT = DISK;
 }

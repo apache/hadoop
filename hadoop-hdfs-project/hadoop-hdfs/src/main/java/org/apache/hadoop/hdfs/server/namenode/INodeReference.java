@@ -26,7 +26,7 @@ import java.util.List;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 
 import com.google.common.base.Preconditions;
@@ -103,9 +103,12 @@ public abstract class INodeReference extends INode {
       INode referred = wc.getReferredINode();
       if (referred.isFile() && referred.asFile().isWithSnapshot()) {
         return referred.asFile().getDiffs().getPrior(wn.lastSnapshotId);
-      } else if (referred instanceof INodeDirectoryWithSnapshot) { 
-        return ((INodeDirectoryWithSnapshot) referred).getDiffs().getPrior(
-            wn.lastSnapshotId);
+      } else if (referred.isDirectory()) {
+        DirectoryWithSnapshotFeature sf = referred.asDirectory()
+            .getDirectoryWithSnapshotFeature();
+        if (sf != null) {
+          return sf.getDiffs().getPrior(wn.lastSnapshotId);
+        }
       }
     }
     return null;
@@ -231,9 +234,9 @@ public abstract class INodeReference extends INode {
   }
   
   @Override
-  public final INode updateModificationTime(long mtime, Snapshot latest,
-      INodeMap inodeMap) throws QuotaExceededException {
-    return referred.updateModificationTime(mtime, latest, inodeMap);
+  public final INode updateModificationTime(long mtime, Snapshot latest) 
+      throws QuotaExceededException {
+    return referred.updateModificationTime(mtime, latest);
   }
   
   @Override
@@ -252,9 +255,9 @@ public abstract class INodeReference extends INode {
   }
 
   @Override
-  final INode recordModification(Snapshot latest, final INodeMap inodeMap)
+  final INode recordModification(Snapshot latest)
       throws QuotaExceededException {
-    referred.recordModification(latest, inodeMap);
+    referred.recordModification(latest);
     // reference is never replaced 
     return this;
   }
@@ -547,9 +550,12 @@ public abstract class INodeReference extends INode {
       Snapshot snapshot = null;
       if (referred.isFile() && referred.asFile().isWithSnapshot()) {
         snapshot = referred.asFile().getDiffs().getPrior(lastSnapshotId);
-      } else if (referred instanceof INodeDirectoryWithSnapshot) {
-        snapshot = ((INodeDirectoryWithSnapshot) referred).getDiffs().getPrior(
-            lastSnapshotId);
+      } else if (referred.isDirectory()) {
+        DirectoryWithSnapshotFeature sf = referred.asDirectory()
+            .getDirectoryWithSnapshotFeature();
+        if (sf != null) {
+          snapshot = sf.getDiffs().getPrior(lastSnapshotId);
+        }
       }
       return snapshot;
     }
@@ -634,10 +640,11 @@ public abstract class INodeReference extends INode {
         Snapshot snapshot = getSelfSnapshot(prior);
         
         INode referred = getReferredINode().asReference().getReferredINode();
-        if (referred.isFile() && referred.asFile().isWithSnapshot()) {
-          // if referred is a file, it must be a file with Snapshot since we did
+        if (referred.isFile()) {
+          // if referred is a file, it must be a file with snapshot since we did
           // recordModification before the rename
           INodeFile file = referred.asFile();
+          Preconditions.checkState(file.isWithSnapshot());
           // make sure we mark the file as deleted
           file.getFileWithSnapshotFeature().deleteCurrentFile();
           try {
@@ -649,14 +656,14 @@ public abstract class INodeReference extends INode {
           } catch (QuotaExceededException e) {
             LOG.error("should not exceed quota while snapshot deletion", e);
           }
-        } else if (referred instanceof INodeDirectoryWithSnapshot) {
+        } else if (referred.isDirectory()) {
           // similarly, if referred is a directory, it must be an
-          // INodeDirectoryWithSnapshot
-          INodeDirectoryWithSnapshot sdir = 
-              (INodeDirectoryWithSnapshot) referred;
+          // INodeDirectory with snapshot
+          INodeDirectory dir = referred.asDirectory();
+          Preconditions.checkState(dir.isWithSnapshot());
           try {
-            INodeDirectoryWithSnapshot.destroyDstSubtree(sdir, snapshot, prior,
-                collectedBlocks, removedINodes);
+            DirectoryWithSnapshotFeature.destroyDstSubtree(dir, snapshot,
+                prior, collectedBlocks, removedINodes);
           } catch (QuotaExceededException e) {
             LOG.error("should not exceed quota while snapshot deletion", e);
           }
@@ -670,9 +677,12 @@ public abstract class INodeReference extends INode {
       Snapshot lastSnapshot = null;
       if (referred.isFile() && referred.asFile().isWithSnapshot()) {
         lastSnapshot = referred.asFile().getDiffs().getLastSnapshot();
-      } else if (referred instanceof INodeDirectoryWithSnapshot) {
-        lastSnapshot = ((INodeDirectoryWithSnapshot) referred)
-            .getLastSnapshot();
+      } else if (referred.isDirectory()) {
+        DirectoryWithSnapshotFeature sf = referred.asDirectory()
+            .getDirectoryWithSnapshotFeature();
+        if (sf != null) {
+          lastSnapshot = sf.getLastSnapshot();
+        }
       }
       if (lastSnapshot != null && !lastSnapshot.equals(prior)) {
         return lastSnapshot;

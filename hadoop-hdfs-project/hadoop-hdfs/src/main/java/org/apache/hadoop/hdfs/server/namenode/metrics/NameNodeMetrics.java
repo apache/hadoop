@@ -71,6 +71,8 @@ public class NameNodeMetrics {
   MutableCounterLong listSnapshottableDirOps;
   @Metric("Number of snapshotDiffReport operations")
   MutableCounterLong snapshotDiffReportOps;
+  @Metric("Number of blockReceivedAndDeleted calls")
+  MutableCounterLong blockReceivedAndDeletedOps;
 
   @Metric("Journal transactions") MutableRate transactions;
   @Metric("Journal syncs") MutableRate syncs;
@@ -86,6 +88,13 @@ public class NameNodeMetrics {
   MutableGaugeInt safeModeTime;
   @Metric("Time loading FS Image at startup in msec")
   MutableGaugeInt fsImageLoadTime;
+
+  @Metric("GetImageServlet getEdit")
+  MutableRate getEdit;
+  @Metric("GetImageServlet getImage")
+  MutableRate getImage;
+  @Metric("GetImageServlet putImage")
+  MutableRate putImage;
 
   NameNodeMetrics(String processName, String sessionId, int[] intervals) {
     registry.tag(ProcessName, processName).tag(SessionId, sessionId);
@@ -209,6 +218,10 @@ public class NameNodeMetrics {
     snapshotDiffReportOps.incr();
   }
   
+  public void incrBlockReceivedAndDeletedOps() {
+    blockReceivedAndDeletedOps.incr();
+  }
+
   public void addTransaction(long latency) {
     transactions.add(latency);
   }
@@ -244,5 +257,17 @@ public class NameNodeMetrics {
 
   public void setSafeModeTime(long elapsed) {
     safeModeTime.set((int) elapsed);
+  }
+
+  public void addGetEdit(long latency) {
+    getEdit.add(latency);
+  }
+
+  public void addGetImage(long latency) {
+    getImage.add(latency);
+  }
+
+  public void addPutImage(long latency) {
+    putImage.add(latency);
   }
 }

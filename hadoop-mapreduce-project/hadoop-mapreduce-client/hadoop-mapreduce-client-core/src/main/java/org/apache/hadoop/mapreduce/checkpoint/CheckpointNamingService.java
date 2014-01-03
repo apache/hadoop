@@ -15,22 +15,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.apache.hadoop.yarn.exceptions;
-
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+package org.apache.hadoop.mapreduce.checkpoint;
 
 /**
- * Exception to be thrown when an Active-Only operation is attempted on a
- * ResourceManager that is not Active.
+ * This class represent a naming service for checkpoints.
  */
-@InterfaceAudience.Private
-@InterfaceStability.Evolving
-public class RMNotYetActiveException extends YarnException {
-  private static final long serialVersionUID = 1L;
+public interface CheckpointNamingService {
 
-  public RMNotYetActiveException() {
-    super("ResourceManager is not yet Active!");
-  }
+  /**
+   * Generate a new checkpoint Name
+   * @return the checkpoint name
+   */
+  public String getNewName();
+
 }

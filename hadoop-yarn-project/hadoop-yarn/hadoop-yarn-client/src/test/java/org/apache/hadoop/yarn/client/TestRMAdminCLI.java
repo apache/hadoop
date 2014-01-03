@@ -241,37 +241,37 @@ public class TestRMAdminCLI {
               "commands if none"));
 
       testError(new String[] { "-help", "-refreshQueues" },
-          "Usage: java RMAdmin [-refreshQueues]", dataErr, 0);
+          "Usage: yarn rmadmin [-refreshQueues]", dataErr, 0);
       testError(new String[] { "-help", "-refreshNodes" },
-          "Usage: java RMAdmin [-refreshNodes]", dataErr, 0);
+          "Usage: yarn rmadmin [-refreshNodes]", dataErr, 0);
       testError(new String[] { "-help", "-refreshUserToGroupsMappings" },
-          "Usage: java RMAdmin [-refreshUserToGroupsMappings]", dataErr, 0);
+          "Usage: yarn rmadmin [-refreshUserToGroupsMappings]", dataErr, 0);
       testError(
           new String[] { "-help", "-refreshSuperUserGroupsConfiguration" },
-          "Usage: java RMAdmin [-refreshSuperUserGroupsConfiguration]",
+          "Usage: yarn rmadmin [-refreshSuperUserGroupsConfiguration]",
           dataErr, 0);
       testError(new String[] { "-help", "-refreshAdminAcls" },
-          "Usage: java RMAdmin [-refreshAdminAcls]", dataErr, 0);
+          "Usage: yarn rmadmin [-refreshAdminAcls]", dataErr, 0);
       testError(new String[] { "-help", "-refreshServiceAcl" },
-          "Usage: java RMAdmin [-refreshServiceAcl]", dataErr, 0);
+          "Usage: yarn rmadmin [-refreshServiceAcl]", dataErr, 0);
       testError(new String[] { "-help", "-getGroups" },
-          "Usage: java RMAdmin [-getGroups [username]]", dataErr, 0);
+          "Usage: yarn rmadmin [-getGroups [username]]", dataErr, 0);
       testError(new String[] { "-help", "-transitionToActive" },
-          "Usage: java RMAdmin [-transitionToActive <serviceId>]", dataErr, 0);
+          "Usage: yarn rmadmin [-transitionToActive <serviceId>]", dataErr, 0);
       testError(new String[] { "-help", "-transitionToStandby" },
-          "Usage: java RMAdmin [-transitionToStandby <serviceId>]", dataErr, 0);
+          "Usage: yarn rmadmin [-transitionToStandby <serviceId>]", dataErr, 0);
       testError(new String[] { "-help", "-getServiceState" },
-          "Usage: java RMAdmin [-getServiceState <serviceId>]", dataErr, 0);
+          "Usage: yarn rmadmin [-getServiceState <serviceId>]", dataErr, 0);
       testError(new String[] { "-help", "-checkHealth" },
-          "Usage: java RMAdmin [-checkHealth <serviceId>]", dataErr, 0);
+          "Usage: yarn rmadmin [-checkHealth <serviceId>]", dataErr, 0);
       testError(new String[] { "-help", "-failover" },
-          "Usage: java RMAdmin " +
+          "Usage: yarn rmadmin " +
               "[-failover [--forcefence] [--forceactive] " +
               "<serviceId> <serviceId>]",
           dataErr, 0);
 
       testError(new String[] { "-help", "-badParameter" },
-          "Usage: java RMAdmin", dataErr, 0);
+          "Usage: yarn rmadmin", dataErr, 0);
       testError(new String[] { "-badParameter" },
           "badParameter: Unknown command", dataErr, -1); 
     } finally {

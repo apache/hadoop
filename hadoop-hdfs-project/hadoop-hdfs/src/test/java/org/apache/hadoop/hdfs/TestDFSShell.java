@@ -23,6 +23,7 @@ import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.Scanner;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -35,8 +36,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.SequenceFile;
@@ -1392,11 +1395,14 @@ public class TestDFSShell {
     List<File> files = new ArrayList<File>();
     List<DataNode> datanodes = cluster.getDataNodes();
     String poolId = cluster.getNamesystem().getBlockPoolId();
-    Iterable<Block>[] blocks = cluster.getAllBlockReports(poolId);
-    for(int i = 0; i < blocks.length; i++) {
+    List<Map<DatanodeStorage, BlockListAsLongs>> blocks = cluster.getAllBlockReports(poolId);
+    for(int i = 0; i < blocks.size(); i++) {
       DataNode dn = datanodes.get(i);
-      for(Block b : blocks[i]) {
-        files.add(DataNodeTestUtils.getFile(dn, poolId, b.getBlockId()));
+      Map<DatanodeStorage, BlockListAsLongs> map = blocks.get(i);
+      for(Map.Entry<DatanodeStorage, BlockListAsLongs> e : map.entrySet()) {
+        for(Block b : e.getValue()) {
+          files.add(DataNodeTestUtils.getFile(dn, poolId, b.getBlockId()));
+        }
       }        
     }
     return files;

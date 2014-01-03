@@ -25,7 +25,7 @@ import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 /**
  * Quota feature for {@link INodeDirectory}. 
  */
-public final class DirectoryWithQuotaFeature extends INodeDirectory.Feature {
+public final class DirectoryWithQuotaFeature implements INode.Feature {
   public static final long DEFAULT_NAMESPACE_QUOTA = Long.MAX_VALUE;
   public static final long DEFAULT_DISKSPACE_QUOTA = HdfsConstants.QUOTA_RESET;
 
@@ -152,6 +152,10 @@ public final class DirectoryWithQuotaFeature extends INodeDirectory.Feature {
   void verifyQuota(long nsDelta, long dsDelta) throws QuotaExceededException {
     verifyNamespaceQuota(nsDelta);
     verifyDiskspaceQuota(dsDelta);
+  }
+  
+  boolean isQuotaSet() {
+    return nsQuota >= 0 || dsQuota >= 0;
   }
 
   private String namespaceString() {

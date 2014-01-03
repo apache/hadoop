@@ -49,6 +49,7 @@ public class TaskReportPBImpl extends ProtoBase<TaskReportProto> implements Task
   private List<TaskAttemptId> runningAttempts = null;
   private TaskAttemptId successfulAttemptId = null;
   private List<String> diagnostics = null;
+  private String status;
   
   
   public TaskReportPBImpl() {
@@ -172,10 +173,21 @@ public class TaskReportPBImpl extends ProtoBase<TaskReportProto> implements Task
   }
 
   @Override
+  public String getStatus() {
+    return status;
+  }
+
+  @Override
   public void setProgress(float progress) {
     maybeInitBuilder();
     builder.setProgress((progress));
   }
+
+  @Override
+  public void setStatus(String status) {
+    this.status = status;
+  }
+
   @Override
   public TaskState getTaskState() {
     TaskReportProtoOrBuilder p = viaProto ? proto : builder;

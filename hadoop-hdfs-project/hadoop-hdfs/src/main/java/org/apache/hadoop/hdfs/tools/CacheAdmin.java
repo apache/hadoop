@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.tools;
 
 import java.io.IOException;
+import java.util.EnumSet;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -25,6 +26,7 @@ import org.apache.commons.lang.WordUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.CacheFlag;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
@@ -33,14 +35,12 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
+import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo.Expiration;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveStats;
 import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.CachePoolStats;
-import org.apache.hadoop.hdfs.server.namenode.CachePool;
 import org.apache.hadoop.hdfs.tools.TableListing.Justification;
-import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 
@@ -84,7 +84,12 @@ public class CacheAdmin extends Configured implements Tool {
     for (int j = 1; j < args.length; j++) {
       argsList.add(args[j]);
     }
-    return command.run(getConf(), argsList);
+    try {
+      return command.run(getConf(), argsList);
+    } catch (IllegalArgumentException e) {
+      System.err.println(prettifyException(e));
+      return -1;
+    }
   }
 
   public static void main(String[] argsArray) throws IOException {
@@ -118,6 +123,37 @@ public class CacheAdmin extends Configured implements Tool {
     return listing;
   }
 
+  /**
+   * Parses a time-to-live value from a string
+   * @return The ttl in milliseconds
+   * @throws IOException if it could not be parsed
+   */
+  private static Long parseTtlString(String maxTtlString) throws IOException {
+    Long maxTtl = null;
+    if (maxTtlString != null) {
+      if (maxTtlString.equalsIgnoreCase("never")) {
+        maxTtl = CachePoolInfo.RELATIVE_EXPIRY_NEVER;
+      } else {
+        maxTtl = DFSUtil.parseRelativeTime(maxTtlString);
+      }
+    }
+    return maxTtl;
+  }
+
+  private static Expiration parseExpirationString(String ttlString)
+      throws IOException {
+    Expiration ex = null;
+    if (ttlString != null) {
+      if (ttlString.equalsIgnoreCase("never")) {
+        ex = CacheDirectiveInfo.Expiration.NEVER;
+      } else {
+        long ttl = DFSUtil.parseRelativeTime(ttlString);
+        ex = CacheDirectiveInfo.Expiration.newRelative(ttl);
+      }
+    }
+    return ex;
+  }
+
   interface Command {
     String getName();
     String getShortUsage();
@@ -135,6 +171,7 @@ public class CacheAdmin extends Configured implements Tool {
     public String getShortUsage() {
       return "[" + getName() +
           " -path <path> -pool <pool-name> " +
+          "[-force] " +
           "[-replication <replication>] [-ttl <time-to-live>]]\n";
     }
 
@@ -146,11 +183,14 @@ public class CacheAdmin extends Configured implements Tool {
       listing.addRow("<pool-name>", "The pool to which the directive will be " +
           "added. You must have write permission on the cache pool "
           + "in order to add new directives.");
+      listing.addRow("-force",
+          "Skips checking of cache pool resource limits.");
       listing.addRow("<replication>", "The cache replication factor to use. " +
           "Defaults to 1.");
       listing.addRow("<time-to-live>", "How long the directive is " +
-          "valid. Can be specified in minutes, hours, and days via e.g. " +
+          "valid. Can be specified in minutes, hours, and days, e.g. " +
           "30m, 4h, 2d. Valid units are [smhd]." +
+          " \"never\" indicates a directive that never expires." +
           " If unspecified, the directive never expires.");
       return getShortUsage() + "\n" +
         "Add a new cache directive.\n\n" +
@@ -174,7 +214,7 @@ public class CacheAdmin extends Configured implements Tool {
         return 1;
       }
       builder.setPool(poolName);
-
+      boolean force = StringUtils.popOption("-force", args);
       String replicationString =
           StringUtils.popOptionWithArgument("-replication", args);
       if (replicationString != null) {
@@ -183,15 +223,15 @@ public class CacheAdmin extends Configured implements Tool {
       }
 
       String ttlString = StringUtils.popOptionWithArgument("-ttl", args);
-      if (ttlString != null) {
-        try {
-          long ttl = DFSUtil.parseRelativeTime(ttlString);
-          builder.setExpiration(CacheDirectiveInfo.Expiration.newRelative(ttl));
-        } catch (IOException e) {
-          System.err.println(
-              "Error while parsing ttl value: " + e.getMessage());
-          return 1;
+      try {
+        Expiration ex = parseExpirationString(ttlString);
+        if (ex != null) {
+          builder.setExpiration(ex);
         }
+      } catch (IOException e) {
+        System.err.println(
+            "Error while parsing ttl value: " + e.getMessage());
+        return 1;
       }
 
       if (!args.isEmpty()) {
@@ -201,8 +241,12 @@ public class CacheAdmin extends Configured implements Tool {
         
       DistributedFileSystem dfs = getDFS(conf);
       CacheDirectiveInfo directive = builder.build();
+      EnumSet<CacheFlag> flags = EnumSet.noneOf(CacheFlag.class);
+      if (force) {
+        flags.add(CacheFlag.FORCE);
+      }
       try {
-        long id = dfs.addCacheDirective(directive);
+        long id = dfs.addCacheDirective(directive, flags);
         System.out.println("Added cache directive " + id);
       } catch (IOException e) {
         System.err.println(prettifyException(e));
@@ -282,7 +326,7 @@ public class CacheAdmin extends Configured implements Tool {
     @Override
     public String getShortUsage() {
       return "[" + getName() +
-          " -id <id> [-path <path>] [-replication <replication>] " +
+          " -id <id> [-path <path>] [-force] [-replication <replication>] " +
           "[-pool <pool-name>] [-ttl <time-to-live>]]\n";
     }
 
@@ -292,15 +336,17 @@ public class CacheAdmin extends Configured implements Tool {
       listing.addRow("<id>", "The ID of the directive to modify (required)");
       listing.addRow("<path>", "A path to cache. The path can be " +
           "a directory or a file. (optional)");
+      listing.addRow("-force",
+          "Skips checking of cache pool resource limits.");
       listing.addRow("<replication>", "The cache replication factor to use. " +
           "(optional)");
       listing.addRow("<pool-name>", "The pool to which the directive will be " +
           "added. You must have write permission on the cache pool "
           + "in order to move a directive into it. (optional)");
       listing.addRow("<time-to-live>", "How long the directive is " +
-          "valid. Can be specified in minutes, hours, and days via e.g. " +
+          "valid. Can be specified in minutes, hours, and days, e.g. " +
           "30m, 4h, 2d. Valid units are [smhd]." +
-          " If unspecified, the directive never expires.");
+          " \"never\" indicates a directive that never expires.");
       return getShortUsage() + "\n" +
         "Modify a cache directive.\n\n" +
         listing.toString();
@@ -322,6 +368,7 @@ public class CacheAdmin extends Configured implements Tool {
         builder.setPath(new Path(path));
         modified = true;
       }
+      boolean force = StringUtils.popOption("-force", args);
       String replicationString =
         StringUtils.popOptionWithArgument("-replication", args);
       if (replicationString != null) {
@@ -335,17 +382,16 @@ public class CacheAdmin extends Configured implements Tool {
         modified = true;
       }
       String ttlString = StringUtils.popOptionWithArgument("-ttl", args);
-      if (ttlString != null) {
-        long ttl;
-        try {
-          ttl = DFSUtil.parseRelativeTime(ttlString);
-        } catch (IOException e) {
-          System.err.println(
-              "Error while parsing ttl value: " + e.getMessage());
-          return 1;
+      try {
+        Expiration ex = parseExpirationString(ttlString);
+        if (ex != null) {
+          builder.setExpiration(ex);
+          modified = true;
         }
-        builder.setExpiration(CacheDirectiveInfo.Expiration.newRelative(ttl));
-        modified = true;
+      } catch (IOException e) {
+        System.err.println(
+            "Error while parsing ttl value: " + e.getMessage());
+        return 1;
       }
       if (!args.isEmpty()) {
         System.err.println("Can't understand argument: " + args.get(0));
@@ -357,8 +403,12 @@ public class CacheAdmin extends Configured implements Tool {
         return 1;
       }
       DistributedFileSystem dfs = getDFS(conf);
+      EnumSet<CacheFlag> flags = EnumSet.noneOf(CacheFlag.class);
+      if (force) {
+        flags.add(CacheFlag.FORCE);
+      }
       try {
-        dfs.modifyCacheDirective(builder.build());
+        dfs.modifyCacheDirective(builder.build(), flags);
         System.out.println("Modified cache directive " + idString);
       } catch (IOException e) {
         System.err.println(prettifyException(e));
@@ -403,22 +453,27 @@ public class CacheAdmin extends Configured implements Tool {
         System.err.println("Usage is " + getShortUsage());
         return 1;
       }
-      DistributedFileSystem dfs = getDFS(conf);
-      RemoteIterator<CacheDirectiveEntry> iter =
-          dfs.listCacheDirectives(
-              new CacheDirectiveInfo.Builder().
-                  setPath(new Path(path)).build());
       int exitCode = 0;
-      while (iter.hasNext()) {
-        CacheDirectiveEntry entry = iter.next();
-        try {
-          dfs.removeCacheDirective(entry.getInfo().getId());
-          System.out.println("Removed cache directive " +
-              entry.getInfo().getId());
-        } catch (IOException e) {
-          System.err.println(prettifyException(e));
-          exitCode = 2;
+      try {
+        DistributedFileSystem dfs = getDFS(conf);
+        RemoteIterator<CacheDirectiveEntry> iter =
+            dfs.listCacheDirectives(
+                new CacheDirectiveInfo.Builder().
+                    setPath(new Path(path)).build());
+        while (iter.hasNext()) {
+          CacheDirectiveEntry entry = iter.next();
+          try {
+            dfs.removeCacheDirective(entry.getInfo().getId());
+            System.out.println("Removed cache directive " +
+                entry.getInfo().getId());
+          } catch (IOException e) {
+            System.err.println(prettifyException(e));
+            exitCode = 2;
+          }
         }
+      } catch (IOException e) {
+        System.err.println(prettifyException(e));
+        exitCode = 2;
       }
       if (exitCode == 0) {
         System.out.println("Removed every cache directive with path " +
@@ -484,41 +539,46 @@ public class CacheAdmin extends Configured implements Tool {
                     addField("FILES_CACHED", Justification.RIGHT);
       }
       TableListing tableListing = tableBuilder.build();
-
-      DistributedFileSystem dfs = getDFS(conf);
-      RemoteIterator<CacheDirectiveEntry> iter =
-          dfs.listCacheDirectives(builder.build());
-      int numEntries = 0;
-      while (iter.hasNext()) {
-        CacheDirectiveEntry entry = iter.next();
-        CacheDirectiveInfo directive = entry.getInfo();
-        CacheDirectiveStats stats = entry.getStats();
-        List<String> row = new LinkedList<String>();
-        row.add("" + directive.getId());
-        row.add(directive.getPool());
-        row.add("" + directive.getReplication());
-        String expiry;
-        if (directive.getExpiration().getMillis() ==
-            CacheDirectiveInfo.Expiration.EXPIRY_NEVER) {
-          expiry = "never";
-        } else {
-          expiry = directive.getExpiration().toString();
+      try {
+        DistributedFileSystem dfs = getDFS(conf);
+        RemoteIterator<CacheDirectiveEntry> iter =
+            dfs.listCacheDirectives(builder.build());
+        int numEntries = 0;
+        while (iter.hasNext()) {
+          CacheDirectiveEntry entry = iter.next();
+          CacheDirectiveInfo directive = entry.getInfo();
+          CacheDirectiveStats stats = entry.getStats();
+          List<String> row = new LinkedList<String>();
+          row.add("" + directive.getId());
+          row.add(directive.getPool());
+          row.add("" + directive.getReplication());
+          String expiry;
+          // This is effectively never, round for nice printing
+          if (directive.getExpiration().getMillis() >
+              Expiration.MAX_RELATIVE_EXPIRY_MS / 2) {
+            expiry = "never";
+          } else {
+            expiry = directive.getExpiration().toString();
+          }
+          row.add(expiry);
+          row.add(directive.getPath().toUri().getPath());
+          if (printStats) {
+            row.add("" + stats.getBytesNeeded());
+            row.add("" + stats.getBytesCached());
+            row.add("" + stats.getFilesNeeded());
+            row.add("" + stats.getFilesCached());
+          }
+          tableListing.addRow(row.toArray(new String[0]));
+          numEntries++;
         }
-        row.add(expiry);
-        row.add(directive.getPath().toUri().getPath());
-        if (printStats) {
-          row.add("" + stats.getBytesNeeded());
-          row.add("" + stats.getBytesCached());
-          row.add("" + stats.getFilesNeeded());
-          row.add("" + stats.getFilesCached());
+        System.out.print(String.format("Found %d entr%s\n",
+            numEntries, numEntries == 1 ? "y" : "ies"));
+        if (numEntries > 0) {
+          System.out.print(tableListing);
         }
-        tableListing.addRow(row.toArray(new String[0]));
-        numEntries++;
-      }
-      System.out.print(String.format("Found %d entr%s\n",
-          numEntries, numEntries == 1 ? "y" : "ies"));
-      if (numEntries > 0) {
-        System.out.print(tableListing);
+      } catch (IOException e) {
+        System.err.println(prettifyException(e));
+        return 2;
       }
       return 0;
     }
@@ -536,7 +596,8 @@ public class CacheAdmin extends Configured implements Tool {
     @Override
     public String getShortUsage() {
       return "[" + NAME + " <name> [-owner <owner>] " +
-          "[-group <group>] [-mode <mode>] [-weight <weight>]]\n";
+          "[-group <group>] [-mode <mode>] [-limit <limit>] " +
+          "[-maxTtl <maxTtl>]\n";
     }
 
     @Override
@@ -551,12 +612,15 @@ public class CacheAdmin extends Configured implements Tool {
       listing.addRow("<mode>", "UNIX-style permissions for the pool. " +
           "Permissions are specified in octal, e.g. 0755. " +
           "By default, this is set to " + String.format("0%03o",
-          FsPermission.getCachePoolDefault().toShort()));
-      listing.addRow("<weight>", "Weight of the pool. " +
-          "This is a relative measure of the importance of the pool used " +
-          "during cache resource management. By default, it is set to " +
-          CachePool.DEFAULT_WEIGHT);
-
+          FsPermission.getCachePoolDefault().toShort()) + ".");
+      listing.addRow("<limit>", "The maximum number of bytes that can be " +
+          "cached by directives in this pool, in aggregate. By default, " +
+          "no limit is set.");
+      listing.addRow("<maxTtl>", "The maximum allowed time-to-live for " +
+          "directives being added to the pool. This can be specified in " +
+          "seconds, minutes, hours, and days, e.g. 120s, 30m, 4h, 2d. " +
+          "Valid units are [smhd]. By default, no maximum is set. " +
+          "This can also be manually specified by \"never\".");
       return getShortUsage() + "\n" +
           "Add a new cache pool.\n\n" + 
           listing.toString();
@@ -564,34 +628,44 @@ public class CacheAdmin extends Configured implements Tool {
 
     @Override
     public int run(Configuration conf, List<String> args) throws IOException {
-      String owner = StringUtils.popOptionWithArgument("-owner", args);
-      if (owner == null) {
-        owner = UserGroupInformation.getCurrentUser().getShortUserName();
-      }
-      String group = StringUtils.popOptionWithArgument("-group", args);
-      if (group == null) {
-        group = UserGroupInformation.getCurrentUser().getGroupNames()[0];
-      }
-      String modeString = StringUtils.popOptionWithArgument("-mode", args);
-      int mode;
-      if (modeString == null) {
-        mode = FsPermission.getCachePoolDefault().toShort();
-      } else {
-        mode = Integer.parseInt(modeString, 8);
-      }
-      String weightString = StringUtils.popOptionWithArgument("-weight", args);
-      int weight;
-      if (weightString == null) {
-        weight = CachePool.DEFAULT_WEIGHT;
-      } else {
-        weight = Integer.parseInt(weightString);
-      }
       String name = StringUtils.popFirstNonOption(args);
       if (name == null) {
         System.err.println("You must specify a name when creating a " +
             "cache pool.");
         return 1;
       }
+      CachePoolInfo info = new CachePoolInfo(name);
+
+      String owner = StringUtils.popOptionWithArgument("-owner", args);
+      if (owner != null) {
+        info.setOwnerName(owner);
+      }
+      String group = StringUtils.popOptionWithArgument("-group", args);
+      if (group != null) {
+        info.setGroupName(group);
+      }
+      String modeString = StringUtils.popOptionWithArgument("-mode", args);
+      if (modeString != null) {
+        short mode = Short.parseShort(modeString, 8);
+        info.setMode(new FsPermission(mode));
+      }
+      String limitString = StringUtils.popOptionWithArgument("-limit", args);
+      if (limitString != null) {
+        long limit = Long.parseLong(limitString);
+        info.setLimit(limit);
+      }
+      String maxTtlString = StringUtils.popOptionWithArgument("-maxTtl", args);
+      try {
+        Long maxTtl = parseTtlString(maxTtlString);
+        if (maxTtl != null) {
+          info.setMaxRelativeExpiryMs(maxTtl);
+        }
+      } catch (IOException e) {
+        System.err.println(
+            "Error while parsing maxTtl value: " + e.getMessage());
+        return 1;
+      }
+
       if (!args.isEmpty()) {
         System.err.print("Can't understand arguments: " +
           Joiner.on(" ").join(args) + "\n");
@@ -599,15 +673,11 @@ public class CacheAdmin extends Configured implements Tool {
         return 1;
       }
       DistributedFileSystem dfs = getDFS(conf);
-      CachePoolInfo info = new CachePoolInfo(name).
-          setOwnerName(owner).
-          setGroupName(group).
-          setMode(new FsPermission((short)mode)).
-          setWeight(weight);
       try {
         dfs.addCachePool(info);
       } catch (IOException e) {
-        throw new RemoteException(e.getClass().getName(), e.getMessage());
+        System.err.println(prettifyException(e));
+        return 2;
       }
       System.out.println("Successfully added cache pool " + name + ".");
       return 0;
@@ -624,7 +694,8 @@ public class CacheAdmin extends Configured implements Tool {
     @Override
     public String getShortUsage() {
       return "[" + getName() + " <name> [-owner <owner>] " +
-          "[-group <group>] [-mode <mode>] [-weight <weight>]]\n";
+          "[-group <group>] [-mode <mode>] [-limit <limit>] " +
+          "[-maxTtl <maxTtl>]]\n";
     }
 
     @Override
@@ -635,11 +706,14 @@ public class CacheAdmin extends Configured implements Tool {
       listing.addRow("<owner>", "Username of the owner of the pool");
       listing.addRow("<group>", "Groupname of the group of the pool.");
       listing.addRow("<mode>", "Unix-style permissions of the pool in octal.");
-      listing.addRow("<weight>", "Weight of the pool.");
+      listing.addRow("<limit>", "Maximum number of bytes that can be cached " +
+          "by this pool.");
+      listing.addRow("<maxTtl>", "The maximum allowed time-to-live for " +
+          "directives being added to the pool.");
 
       return getShortUsage() + "\n" +
           WordUtils.wrap("Modifies the metadata of an existing cache pool. " +
-          "See usage of " + AddCachePoolCommand.NAME + " for more details",
+          "See usage of " + AddCachePoolCommand.NAME + " for more details.",
           MAX_LINE_WIDTH) + "\n\n" +
           listing.toString();
     }
@@ -651,9 +725,18 @@ public class CacheAdmin extends Configured implements Tool {
       String modeString = StringUtils.popOptionWithArgument("-mode", args);
       Integer mode = (modeString == null) ?
           null : Integer.parseInt(modeString, 8);
-      String weightString = StringUtils.popOptionWithArgument("-weight", args);
-      Integer weight = (weightString == null) ?
-          null : Integer.parseInt(weightString);
+      String limitString = StringUtils.popOptionWithArgument("-limit", args);
+      Long limit = (limitString == null) ?
+          null : Long.parseLong(limitString);
+      String maxTtlString = StringUtils.popOptionWithArgument("-maxTtl", args);
+      Long maxTtl = null;
+      try {
+        maxTtl = parseTtlString(maxTtlString);
+      } catch (IOException e) {
+        System.err.println(
+            "Error while parsing maxTtl value: " + e.getMessage());
+        return 1;
+      }
       String name = StringUtils.popFirstNonOption(args);
       if (name == null) {
         System.err.println("You must specify a name when creating a " +
@@ -680,8 +763,12 @@ public class CacheAdmin extends Configured implements Tool {
         info.setMode(new FsPermission(mode.shortValue()));
         changed = true;
       }
-      if (weight != null) {
-        info.setWeight(weight);
+      if (limit != null) {
+        info.setLimit(limit);
+        changed = true;
+      }
+      if (maxTtl != null) {
+        info.setMaxRelativeExpiryMs(maxTtl);
         changed = true;
       }
       if (!changed) {
@@ -693,7 +780,8 @@ public class CacheAdmin extends Configured implements Tool {
       try {
         dfs.modifyCachePool(info);
       } catch (IOException e) {
-        throw new RemoteException(e.getClass().getName(), e.getMessage());
+        System.err.println(prettifyException(e));
+        return 2;
       }
       System.out.print("Successfully modified cache pool " + name);
       String prefix = " to have ";
@@ -709,9 +797,12 @@ public class CacheAdmin extends Configured implements Tool {
         System.out.print(prefix + "mode " + new FsPermission(mode.shortValue()));
         prefix = " and ";
       }
-      if (weight != null) {
-        System.out.print(prefix + "weight " + weight);
+      if (limit != null) {
+        System.out.print(prefix + "limit " + limit);
         prefix = " and ";
+      }
+      if (maxTtl != null) {
+        System.out.print(prefix + "max time-to-live " + maxTtlString);
       }
       System.out.print("\n");
       return 0;
@@ -756,7 +847,8 @@ public class CacheAdmin extends Configured implements Tool {
       try {
         dfs.removeCachePool(name);
       } catch (IOException e) {
-        throw new RemoteException(e.getClass().getName(), e.getMessage());
+        System.err.println(prettifyException(e));
+        return 2;
       }
       System.out.println("Successfully removed cache pool " + name + ".");
       return 0;
@@ -804,11 +896,13 @@ public class CacheAdmin extends Configured implements Tool {
           addField("OWNER", Justification.LEFT).
           addField("GROUP", Justification.LEFT).
           addField("MODE", Justification.LEFT).
-          addField("WEIGHT", Justification.RIGHT);
+          addField("LIMIT", Justification.RIGHT).
+          addField("MAXTTL", Justification.RIGHT);
       if (printStats) {
         builder.
             addField("BYTES_NEEDED", Justification.RIGHT).
             addField("BYTES_CACHED", Justification.RIGHT).
+            addField("BYTES_OVERLIMIT", Justification.RIGHT).
             addField("FILES_NEEDED", Justification.RIGHT).
             addField("FILES_CACHED", Justification.RIGHT);
       }
@@ -825,12 +919,30 @@ public class CacheAdmin extends Configured implements Tool {
             row.add(info.getOwnerName());
             row.add(info.getGroupName());
             row.add(info.getMode() != null ? info.getMode().toString() : null);
-            row.add(
-                info.getWeight() != null ? info.getWeight().toString() : null);
+            Long limit = info.getLimit();
+            String limitString;
+            if (limit != null && limit.equals(CachePoolInfo.LIMIT_UNLIMITED)) {
+              limitString = "unlimited";
+            } else {
+              limitString = "" + limit;
+            }
+            row.add(limitString);
+            Long maxTtl = info.getMaxRelativeExpiryMs();
+            String maxTtlString = null;
+
+            if (maxTtl != null) {
+              if (maxTtl.longValue() == CachePoolInfo.RELATIVE_EXPIRY_NEVER) {
+                maxTtlString  = "never";
+              } else {
+                maxTtlString = DFSUtil.durationToString(maxTtl);
+              }
+            }
+            row.add(maxTtlString);
             if (printStats) {
               CachePoolStats stats = entry.getStats();
               row.add(Long.toString(stats.getBytesNeeded()));
               row.add(Long.toString(stats.getBytesCached()));
+              row.add(Long.toString(stats.getBytesOverlimit()));
               row.add(Long.toString(stats.getFilesNeeded()));
               row.add(Long.toString(stats.getFilesCached()));
             }
@@ -842,7 +954,8 @@ public class CacheAdmin extends Configured implements Tool {
           }
         }
       } catch (IOException e) {
-        throw new RemoteException(e.getClass().getName(), e.getMessage());
+        System.err.println(prettifyException(e));
+        return 2;
       }
       System.out.print(String.format("Found %d result%s.\n", numResults,
           (numResults == 1 ? "" : "s")));

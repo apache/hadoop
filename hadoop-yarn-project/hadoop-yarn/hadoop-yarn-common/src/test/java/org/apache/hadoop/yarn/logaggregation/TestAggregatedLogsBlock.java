@@ -229,7 +229,7 @@ public class TestAggregatedLogsBlock {
 
     writer.append(new AggregatedLogFormat.LogKey("container_0_0001_01_000001"),
         new AggregatedLogFormat.LogValue(rootLogDirs, containerId,UserGroupInformation.getCurrentUser().getShortUserName()));
-    writer.closeWriter();
+    writer.close();
   }
 
   private void writeLogs(String dirName) throws Exception {

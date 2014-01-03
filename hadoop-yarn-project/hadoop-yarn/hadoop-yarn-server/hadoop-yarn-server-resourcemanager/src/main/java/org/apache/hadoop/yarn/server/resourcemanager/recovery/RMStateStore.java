@@ -387,10 +387,10 @@ public abstract class RMStateStore extends AbstractService {
    * Derived classes must implement this method to store the state of an 
    * application.
    */
-  protected abstract void storeApplicationStateInternal(String appId,
+  protected abstract void storeApplicationStateInternal(ApplicationId appId,
       ApplicationStateDataPBImpl appStateData) throws Exception;
 
-  protected abstract void updateApplicationStateInternal(String appId,
+  protected abstract void updateApplicationStateInternal(ApplicationId appId,
       ApplicationStateDataPBImpl appStateData) throws Exception;
   
   @SuppressWarnings("unchecked")
@@ -424,10 +424,12 @@ public abstract class RMStateStore extends AbstractService {
    * Derived classes must implement this method to store the state of an 
    * application attempt
    */
-  protected abstract void storeApplicationAttemptStateInternal(String attemptId,
+  protected abstract void storeApplicationAttemptStateInternal(
+      ApplicationAttemptId attemptId,
       ApplicationAttemptStateDataPBImpl attemptStateData) throws Exception;
 
-  protected abstract void updateApplicationAttemptStateInternal(String attemptId,
+  protected abstract void updateApplicationAttemptStateInternal(
+      ApplicationAttemptId attemptId,
       ApplicationAttemptStateDataPBImpl attemptStateData) throws Exception;
 
   /**
@@ -592,11 +594,11 @@ public abstract class RMStateStore extends AbstractService {
       LOG.info("Storing info for app: " + appId);
       try {
         if (event.getType().equals(RMStateStoreEventType.STORE_APP)) {
-          storeApplicationStateInternal(appId.toString(), appStateData);
+          storeApplicationStateInternal(appId, appStateData);
           notifyDoneStoringApplication(appId, storedException);
         } else {
           assert event.getType().equals(RMStateStoreEventType.UPDATE_APP);
-          updateApplicationStateInternal(appId.toString(), appStateData);
+          updateApplicationStateInternal(appId, appStateData);
           notifyDoneUpdatingApplication(appId, storedException);
         }
       } catch (Exception e) {
@@ -637,15 +639,15 @@ public abstract class RMStateStore extends AbstractService {
           LOG.debug("Storing info for attempt: " + attemptState.getAttemptId());
         }
         if (event.getType().equals(RMStateStoreEventType.STORE_APP_ATTEMPT)) {
-          storeApplicationAttemptStateInternal(attemptState.getAttemptId()
-            .toString(), attemptStateData);
+          storeApplicationAttemptStateInternal(attemptState.getAttemptId(),
+              attemptStateData);
           notifyDoneStoringApplicationAttempt(attemptState.getAttemptId(),
               storedException);
         } else {
           assert event.getType().equals(
             RMStateStoreEventType.UPDATE_APP_ATTEMPT);
-          updateApplicationAttemptStateInternal(attemptState.getAttemptId()
-            .toString(), attemptStateData);
+          updateApplicationAttemptStateInternal(attemptState.getAttemptId(),
+              attemptStateData);
           notifyDoneUpdatingApplicationAttempt(attemptState.getAttemptId(),
               storedException);
         }

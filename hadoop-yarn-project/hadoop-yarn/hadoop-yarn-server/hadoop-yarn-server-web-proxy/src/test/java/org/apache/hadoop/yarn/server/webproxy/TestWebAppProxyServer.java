@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.webproxy;
 
 import static org.junit.Assert.assertEquals;
 
+import org.apache.hadoop.service.Service;
 import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.webproxy.WebAppProxyServer;
@@ -29,11 +30,12 @@ import org.junit.Test;
 
 public class TestWebAppProxyServer {
   private WebAppProxyServer webAppProxy = null;
+  private final String proxyAddress = "0.0.0.0:8888";
 
   @Before
   public void setUp() throws Exception {
     YarnConfiguration conf = new YarnConfiguration();
-    conf.set(YarnConfiguration.PROXY_ADDRESS, "0.0.0.0:8888");
+    conf.set(YarnConfiguration.PROXY_ADDRESS, proxyAddress);
     webAppProxy = new WebAppProxyServer();
     webAppProxy.init(conf);
   }
@@ -47,6 +49,11 @@ public class TestWebAppProxyServer {
   public void testStart() {
     assertEquals(STATE.INITED, webAppProxy.getServiceState());
     webAppProxy.start();
+    for (Service service : webAppProxy.getServices()) {
+      if (service instanceof WebAppProxy) {
+        assertEquals(((WebAppProxy) service).getBindAddress(), proxyAddress);
+      }
+    }
     assertEquals(STATE.STARTED, webAppProxy.getServiceState());
   }
 }

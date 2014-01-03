@@ -1394,11 +1394,14 @@
   <name>dfs.client.cache.readahead</name>
   <value></value>
   <description>
-    Just like dfs.datanode.readahead.bytes, this setting causes the datanode to
+    When using remote reads, this setting causes the datanode to
     read ahead in the block file using posix_fadvise, potentially decreasing
     I/O wait times.  Unlike dfs.datanode.readahead.bytes, this is a client-side
     setting rather than a setting for the entire datanode.  If present, this
     setting will override the DataNode default.
+
+    When using local reads, this setting determines how much readahead we do in
+    BlockReaderLocal.
 
     If the native libraries are not available to the DataNode, this
     configuration has no effect.
@@ -1473,13 +1476,13 @@
 </property>
 
 <property>
-  <name>dfs.namenode.caching.enabled</name>
-  <value>false</value>
+  <name>dfs.namenode.path.based.cache.block.map.allocation.percent</name>
+  <value>0.25</value>
   <description>
-    Set to true to enable block caching.  This flag enables the NameNode to
-    maintain a mapping of cached blocks to DataNodes via processing DataNode
-    cache reports.  Based on these reports and addition and removal of caching
-    directives, the NameNode will schedule caching and uncaching work.
+    The percentage of the Java heap which we will allocate to the cached blocks
+    map.  The cached blocks map is a hash map which uses chained hashing.
+    Smaller maps may be accessed more slowly if the number of cached blocks is
+    large; larger maps will consume more memory.
   </description>
 </property>
 

@@ -37,6 +37,7 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.QueueACL;
@@ -51,7 +52,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEven
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplication;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
@@ -442,7 +442,7 @@ public class ParentQueue implements CSQueue {
   }
 
   @Override
-  public void submitApplication(FiCaSchedulerApp application, String user,
+  public void submitApplication(ApplicationId applicationId, String user,
       String queue) throws AccessControlException {
     
     synchronized (this) {
@@ -455,57 +455,70 @@ public class ParentQueue implements CSQueue {
       if (state != QueueState.RUNNING) {
         throw new AccessControlException("Queue " + getQueuePath() +
             " is STOPPED. Cannot accept submission of application: " +
-            application.getApplicationId());
+            applicationId);
       }
 
-      addApplication(application, user);
+      addApplication(applicationId, user);
     }
     
     // Inform the parent queue
     if (parent != null) {
       try {
-        parent.submitApplication(application, user, queue);
+        parent.submitApplication(applicationId, user, queue);
       } catch (AccessControlException ace) {
         LOG.info("Failed to submit application to parent-queue: " + 
             parent.getQueuePath(), ace);
-        removeApplication(application, user);
+        removeApplication(applicationId, user);
         throw ace;
       }
     }
   }
 
-  private synchronized void addApplication(FiCaSchedulerApp application, 
+
+  @Override
+  public void submitApplicationAttempt(FiCaSchedulerApp application,
+      String userName) {
+    // submit attempt logic.
+  }
+
+  @Override
+  public void finishApplicationAttempt(FiCaSchedulerApp application,
+      String queue) {
+    // finish attempt logic.
+  }
+
+  private synchronized void addApplication(ApplicationId applicationId,
       String user) {
-  
+
     ++numApplications;
 
     LOG.info("Application added -" +
-        " appId: " + application.getApplicationId() + 
+        " appId: " + applicationId + 
         " user: " + user + 
         " leaf-queue of parent: " + getQueueName() + 
         " #applications: " + getNumApplications());
   }
   
   @Override
-  public void finishApplication(FiCaSchedulerApp application, String queue) {
+  public void finishApplication(ApplicationId application, String user) {
     
     synchronized (this) {
-      removeApplication(application, application.getUser());
+      removeApplication(application, user);
     }
     
     // Inform the parent queue
     if (parent != null) {
-      parent.finishApplication(application, queue);
+      parent.finishApplication(application, user);
     }
   }
 
-  public synchronized void removeApplication(FiCaSchedulerApp application, 
+  public synchronized void removeApplication(ApplicationId applicationId, 
       String user) {
     
     --numApplications;
 
     LOG.info("Application removed -" +
-        " appId: " + application.getApplicationId() + 
+        " appId: " + applicationId + 
         " user: " + user + 
         " leaf-queue of parent: " + getQueueName() + 
         " #applications: " + getNumApplications());

@@ -87,6 +87,7 @@ public class SecureDataNodeStarter implements Daemon {
   public static SecureResources getSecureResources(Configuration conf)
       throws Exception {
     HttpConfig.Policy policy = DFSUtil.getHttpPolicy(conf);
+    boolean isSecure = UserGroupInformation.isSecurityEnabled();
 
     // Obtain secure port for data streaming to datanode
     InetSocketAddress streamingAddr  = DataNode.getStreamingAddr(conf);
@@ -104,6 +105,11 @@ public class SecureDataNodeStarter implements Daemon {
           "Unable to bind on specified streaming port in secure "
               + "context. Needed " + streamingAddr.getPort() + ", got "
               + ss.getLocalPort());
+    }
+
+    if (ss.getLocalPort() > 1023 && isSecure) {
+      throw new RuntimeException(
+        "Cannot start secure datanode with unprivileged RPC ports");
     }
 
     System.err.println("Opened streaming server at " + streamingAddr);
@@ -126,9 +132,9 @@ public class SecureDataNodeStarter implements Daemon {
       System.err.println("Successfully obtained privileged resources (streaming port = "
           + ss + " ) (http listener port = " + listener.getConnection() +")");
 
-      if ((ss.getLocalPort() > 1023 || listener.getPort() > 1023) &&
-          UserGroupInformation.isSecurityEnabled()) {
-        throw new RuntimeException("Cannot start secure datanode with unprivileged ports");
+      if (listener.getPort() > 1023 && isSecure) {
+        throw new RuntimeException(
+            "Cannot start secure datanode with unprivileged HTTP ports");
       }
       System.err.println("Opened info server at " + infoSocAddr);
     }

@@ -31,6 +31,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockCollection;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileDiff;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileDiffList;
@@ -44,23 +45,6 @@ import com.google.common.base.Preconditions;
 @InterfaceAudience.Private
 public class INodeFile extends INodeWithAdditionalFields
     implements INodeFileAttributes, BlockCollection {
-  /**
-   * A feature contains specific information for a type of INodeFile. E.g.,
-   * we can have separate features for Under-Construction and Snapshot.
-   */
-  public static abstract class Feature implements INode.Feature<Feature> {
-    private Feature nextFeature;
-
-    @Override
-    public Feature getNextFeature() {
-      return nextFeature;
-    }
-
-    @Override
-    public void setNextFeature(Feature next) {
-      this.nextFeature = next;
-    }
-  }
 
   /** The same as valueOf(inode, path, false). */
   public static INodeFile valueOf(INode inode, String path
@@ -123,8 +107,6 @@ public class INodeFile extends INodeWithAdditionalFields
 
   private BlockInfo[] blocks;
 
-  private Feature headFeature;
-
   INodeFile(long id, byte[] name, PermissionStatus permissions, long mtime,
       long atime, BlockInfo[] blklist, short replication,
       long preferredBlockSize) {
@@ -138,21 +120,13 @@ public class INodeFile extends INodeWithAdditionalFields
     super(that);
     this.header = that.header;
     this.blocks = that.blocks;
-    this.headFeature = that.headFeature;
+    this.features = that.features;
   }
   
   public INodeFile(INodeFile that, FileDiffList diffs) {
     this(that);
     Preconditions.checkArgument(!that.isWithSnapshot());
     this.addSnapshotFeature(diffs);
-  }
-
-  private void addFeature(Feature f) {
-    headFeature = INode.Feature.Util.addFeature(f, headFeature);
-  }
-
-  private void removeFeature(Feature f) {
-    headFeature = INode.Feature.Util.removeFeature(f, headFeature);
   }
 
   /** @return true unconditionally. */
@@ -174,7 +148,7 @@ public class INodeFile extends INodeWithAdditionalFields
    * otherwise, return null.
    */
   public final FileUnderConstructionFeature getFileUnderConstructionFeature() {
-    for (Feature f = this.headFeature; f != null; f = f.nextFeature) {
+    for (Feature f : features) {
       if (f instanceof FileUnderConstructionFeature) {
         return (FileUnderConstructionFeature) f;
       }
@@ -234,7 +208,7 @@ public class INodeFile extends INodeWithAdditionalFields
 
   @Override // BlockCollection, the file should be under construction
   public BlockInfoUnderConstruction setLastBlock(BlockInfo lastBlock,
-      DatanodeDescriptor[] locations) throws IOException {
+      DatanodeStorageInfo[] locations) throws IOException {
     Preconditions.checkState(isUnderConstruction(),
         "file is no longer under construction");
 
@@ -276,6 +250,8 @@ public class INodeFile extends INodeWithAdditionalFields
   /* Start of Snapshot Feature */
 
   private FileWithSnapshotFeature addSnapshotFeature(FileDiffList diffs) {
+    Preconditions.checkState(!isWithSnapshot(), 
+        "File is already with snapshot");
     FileWithSnapshotFeature sf = new FileWithSnapshotFeature(diffs);
     this.addFeature(sf);
     return sf;
@@ -286,7 +262,7 @@ public class INodeFile extends INodeWithAdditionalFields
    * otherwise, return null.
    */
   public final FileWithSnapshotFeature getFileWithSnapshotFeature() {
-    for (Feature f = headFeature; f != null; f = f.nextFeature) {
+    for (Feature f: features) {
       if (f instanceof FileWithSnapshotFeature) {
         return (FileWithSnapshotFeature) f;
       }
@@ -309,25 +285,23 @@ public class INodeFile extends INodeWithAdditionalFields
   public INodeFileAttributes getSnapshotINode(final Snapshot snapshot) {
     FileWithSnapshotFeature sf = this.getFileWithSnapshotFeature();
     if (sf != null) {
-      return sf.getSnapshotINode(this, snapshot);
+      return sf.getDiffs().getSnapshotINode(snapshot, this);
     } else {
       return this;
     }
   }
 
   @Override
-  public INodeFile recordModification(final Snapshot latest,
-      final INodeMap inodeMap) throws QuotaExceededException {
-    if (isInLatestSnapshot(latest)) {
+  public INodeFile recordModification(final Snapshot latest) 
+      throws QuotaExceededException {
+    if (isInLatestSnapshot(latest) && !shouldRecordInSrcSnapshot(latest)) {
       // the file is in snapshot, create a snapshot feature if it does not have
       FileWithSnapshotFeature sf = this.getFileWithSnapshotFeature();
       if (sf == null) {
         sf = addSnapshotFeature(null);
       }
       // record self in the diff list if necessary
-      if (!shouldRecordInSrcSnapshot(latest)) {
-        sf.getDiffs().saveSelf2Snapshot(latest, this, null);
-      }
+      sf.getDiffs().saveSelf2Snapshot(latest, this, null);
     }
     return this;
   }
@@ -379,7 +353,7 @@ public class INodeFile extends INodeWithAdditionalFields
   /** Set the replication factor of this file. */
   public final INodeFile setFileReplication(short replication, Snapshot latest,
       final INodeMap inodeMap) throws QuotaExceededException {
-    final INodeFile nodeToUpdate = recordModification(latest, inodeMap);
+    final INodeFile nodeToUpdate = recordModification(latest);
     nodeToUpdate.setFileReplication(replication);
     return nodeToUpdate;
   }

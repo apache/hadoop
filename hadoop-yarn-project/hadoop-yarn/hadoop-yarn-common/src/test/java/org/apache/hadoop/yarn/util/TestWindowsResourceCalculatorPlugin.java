@@ -18,10 +18,10 @@
 
 package org.apache.hadoop.yarn.util;
 
-import junit.framework.TestCase;
 import org.junit.Test;
+import static org.junit.Assert.assertTrue;
 
-public class TestWindowsResourceCalculatorPlugin extends TestCase {
+public class TestWindowsResourceCalculatorPlugin {
   
   
   class WindowsResourceCalculatorPluginTester extends WindowsResourceCalculatorPlugin {
@@ -33,7 +33,7 @@ public class TestWindowsResourceCalculatorPlugin extends TestCase {
   }
 
   @Test (timeout = 30000)
-  public void testParseSystemInfoString() {
+  public void parseSystemInfoString() {
     WindowsResourceCalculatorPluginTester tester = new WindowsResourceCalculatorPluginTester();
     // info str derived from windows shell command has \r\n termination
     tester.infoStr = "17177038848,8589467648,15232745472,6400417792,1,2805000,6261812\r\n";
@@ -51,7 +51,7 @@ public class TestWindowsResourceCalculatorPlugin extends TestCase {
   }
 
   @Test (timeout = 20000)
-  public void testRefreshAndCpuUsage() throws InterruptedException {
+  public void refreshAndCpuUsage() throws InterruptedException {
     WindowsResourceCalculatorPluginTester tester = new WindowsResourceCalculatorPluginTester();
     // info str derived from windows shell command has \r\n termination
     tester.infoStr = "17177038848,8589467648,15232745472,6400417792,1,2805000,6261812\r\n";
@@ -75,7 +75,7 @@ public class TestWindowsResourceCalculatorPlugin extends TestCase {
   }
 
   @Test (timeout = 20000)
-  public void testErrorInGetSystemInfo() {
+  public void errorInGetSystemInfo() {
     WindowsResourceCalculatorPluginTester tester = new WindowsResourceCalculatorPluginTester();
     // info str derived from windows shell command has \r\n termination
     tester.infoStr = null;

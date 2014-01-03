@@ -50,10 +50,10 @@ public class TasksPage extends AppView {
       .append(", 'mRender': parseHadoopProgress }")
 
 
-      .append("\n, {'sType':'numeric', 'aTargets': [3, 4]")
+      .append("\n, {'sType':'numeric', 'aTargets': [4, 5]")
       .append(", 'mRender': renderHadoopDate }")
 
-      .append("\n, {'sType':'numeric', 'aTargets': [5]")
+      .append("\n, {'sType':'numeric', 'aTargets': [6]")
       .append(", 'mRender': renderHadoopElapsedTime }]")
 
       // Sort by id upon page load

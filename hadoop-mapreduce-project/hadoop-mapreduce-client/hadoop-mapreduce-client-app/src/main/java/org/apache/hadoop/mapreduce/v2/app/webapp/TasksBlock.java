@@ -59,6 +59,7 @@ public class TasksBlock extends HtmlBlock {
           tr().
             th("Task").
             th("Progress").
+            th("Status").
             th("State").
             th("Start Time").
             th("Finish Time").
@@ -81,6 +82,7 @@ public class TasksBlock extends HtmlBlock {
       .append(join(pct, '%')).append("'> ").append("<div class='")
       .append(C_PROGRESSBAR_VALUE).append("' style='")
       .append(join("width:", pct, '%')).append("'> </div> </div>\",\"")
+      .append(info.getStatus()).append("\",\"")
 
       .append(info.getState()).append("\",\"")
       .append(info.getStartTime()).append("\",\"")

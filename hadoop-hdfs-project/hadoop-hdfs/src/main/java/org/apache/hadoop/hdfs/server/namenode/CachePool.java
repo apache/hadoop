@@ -49,8 +49,6 @@ import com.google.common.base.Preconditions;
 public final class CachePool {
   public static final Log LOG = LogFactory.getLog(CachePool.class);
 
-  public static final int DEFAULT_WEIGHT = 100;
-  
   @Nonnull
   private final String poolName;
 
@@ -71,7 +69,16 @@ public final class CachePool {
   @Nonnull
   private FsPermission mode;
 
-  private int weight;
+  /**
+   * Maximum number of bytes that can be cached in this pool.
+   */
+  private long limit;
+
+  /**
+   * Maximum duration that a CacheDirective in this pool remains valid,
+   * in milliseconds.
+   */
+  private long maxRelativeExpiryMs;
 
   private long bytesNeeded;
   private long bytesCached;
@@ -118,10 +125,13 @@ public final class CachePool {
     }
     FsPermission mode = (info.getMode() == null) ? 
         FsPermission.getCachePoolDefault() : info.getMode();
-    Integer weight = (info.getWeight() == null) ?
-        DEFAULT_WEIGHT : info.getWeight();
+    long limit = info.getLimit() == null ?
+        CachePoolInfo.DEFAULT_LIMIT : info.getLimit();
+    long maxRelativeExpiry = info.getMaxRelativeExpiryMs() == null ?
+        CachePoolInfo.DEFAULT_MAX_RELATIVE_EXPIRY :
+        info.getMaxRelativeExpiryMs();
     return new CachePool(info.getPoolName(),
-        ownerName, groupName, mode, weight);
+        ownerName, groupName, mode, limit, maxRelativeExpiry);
   }
 
   /**
@@ -131,11 +141,11 @@ public final class CachePool {
   static CachePool createFromInfo(CachePoolInfo info) {
     return new CachePool(info.getPoolName(),
         info.getOwnerName(), info.getGroupName(),
-        info.getMode(), info.getWeight());
+        info.getMode(), info.getLimit(), info.getMaxRelativeExpiryMs());
   }
 
   CachePool(String poolName, String ownerName, String groupName,
-      FsPermission mode, int weight) {
+      FsPermission mode, long limit, long maxRelativeExpiry) {
     Preconditions.checkNotNull(poolName);
     Preconditions.checkNotNull(ownerName);
     Preconditions.checkNotNull(groupName);
@@ -144,7 +154,8 @@ public final class CachePool {
     this.ownerName = ownerName;
     this.groupName = groupName;
     this.mode = new FsPermission(mode);
-    this.weight = weight;
+    this.limit = limit;
+    this.maxRelativeExpiryMs = maxRelativeExpiry;
   }
 
   public String getPoolName() {
@@ -177,16 +188,25 @@ public final class CachePool {
     this.mode = new FsPermission(mode);
     return this;
   }
-  
-  public int getWeight() {
-    return weight;
+
+  public long getLimit() {
+    return limit;
   }
 
-  public CachePool setWeight(int weight) {
-    this.weight = weight;
+  public CachePool setLimit(long bytes) {
+    this.limit = bytes;
     return this;
   }
-  
+
+  public long getMaxRelativeExpiryMs() {
+    return maxRelativeExpiryMs;
+  }
+
+  public CachePool setMaxRelativeExpiryMs(long expiry) {
+    this.maxRelativeExpiryMs = expiry;
+    return this;
+  }
+
   /**
    * Get either full or partial information about this CachePool.
    *
@@ -204,7 +224,8 @@ public final class CachePool {
     return info.setOwnerName(ownerName).
         setGroupName(groupName).
         setMode(new FsPermission(mode)).
-        setWeight(weight);
+        setLimit(limit).
+        setMaxRelativeExpiryMs(maxRelativeExpiryMs);
   }
 
   /**
@@ -241,6 +262,10 @@ public final class CachePool {
     return bytesCached;
   }
 
+  public long getBytesOverlimit() {
+    return Math.max(bytesNeeded-limit, 0);
+  }
+
   public long getFilesNeeded() {
     return filesNeeded;
   }
@@ -258,6 +283,7 @@ public final class CachePool {
     return new CachePoolStats.Builder().
         setBytesNeeded(bytesNeeded).
         setBytesCached(bytesCached).
+        setBytesOverlimit(getBytesOverlimit()).
         setFilesNeeded(filesNeeded).
         setFilesCached(filesCached).
         build();
@@ -291,7 +317,8 @@ public final class CachePool {
         append(", ownerName:").append(ownerName).
         append(", groupName:").append(groupName).
         append(", mode:").append(mode).
-        append(", weight:").append(weight).
+        append(", limit:").append(limit).
+        append(", maxRelativeExpiryMs:").append(maxRelativeExpiryMs).
         append(" }").toString();
   }
 

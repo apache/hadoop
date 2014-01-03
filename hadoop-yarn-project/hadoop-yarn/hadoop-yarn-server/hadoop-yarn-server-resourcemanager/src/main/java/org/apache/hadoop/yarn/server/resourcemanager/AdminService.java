@@ -20,9 +20,12 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentMap;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.protobuf.BlockingService;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -37,15 +40,16 @@ import org.apache.hadoop.ha.protocolPB.HAServiceProtocolServerSideTranslatorPB;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RPC.Server;
+import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.service.AbstractService;
-import org.apache.hadoop.yarn.conf.HAUtil;
+import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.RMNotYetActiveException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -64,7 +68,12 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshSuperUserGroupsC
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshSuperUserGroupsConfigurationResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshUserToGroupsMappingsRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshUserToGroupsMappingsResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceResponse;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.security.authorize.RMPolicyProvider;
+
+import com.google.protobuf.BlockingService;
 
 public class AdminService extends AbstractService implements
     HAServiceProtocol, ResourceManagerAdministrationProtocol {
@@ -73,10 +82,7 @@ public class AdminService extends AbstractService implements
 
   private final RMContext rmContext;
   private final ResourceManager rm;
-  @VisibleForTesting
-  protected HAServiceProtocol.HAServiceState
-      haState = HAServiceProtocol.HAServiceState.INITIALIZING;
-  boolean haEnabled;
+  private String rmId;
 
   private Server server;
   private InetSocketAddress masterServiceAddress;
@@ -93,13 +99,6 @@ public class AdminService extends AbstractService implements
 
   @Override
   public synchronized void serviceInit(Configuration conf) throws Exception {
-    haEnabled = HAUtil.isHAEnabled(conf);
-    if (haEnabled) {
-      HAUtil.verifyAndSetConfiguration(conf);
-      rm.setConf(conf);
-    }
-    rm.createAndInitActiveServices();
-
     masterServiceAddress = conf.getSocketAddr(
         YarnConfiguration.RM_ADMIN_ADDRESS,
         YarnConfiguration.DEFAULT_RM_ADMIN_ADDRESS,
@@ -107,16 +106,12 @@ public class AdminService extends AbstractService implements
     adminAcl = new AccessControlList(conf.get(
         YarnConfiguration.YARN_ADMIN_ACL,
         YarnConfiguration.DEFAULT_YARN_ADMIN_ACL));
+    rmId = conf.get(YarnConfiguration.RM_HA_ID);
     super.serviceInit(conf);
   }
 
   @Override
   protected synchronized void serviceStart() throws Exception {
-    if (haEnabled) {
-      transitionToStandby(true);
-    } else {
-      transitionToActive();
-    }
     startServer();
     super.serviceStart();
   }
@@ -124,8 +119,6 @@ public class AdminService extends AbstractService implements
   @Override
   protected synchronized void serviceStop() throws Exception {
     stopServer();
-    transitionToStandby(false);
-    haState = HAServiceState.STOPPING;
     super.serviceStop();
   }
 
@@ -145,7 +138,7 @@ public class AdminService extends AbstractService implements
       refreshServiceAcls(conf, new RMPolicyProvider());
     }
 
-    if (haEnabled) {
+    if (rmContext.isHAEnabled()) {
       RPC.setProtocolEngine(conf, HAServiceProtocolPB.class,
           ProtobufRpcEngine.class);
 
@@ -182,39 +175,31 @@ public class AdminService extends AbstractService implements
   }
 
   private synchronized boolean isRMActive() {
-    return HAServiceState.ACTIVE == haState;
+    return HAServiceState.ACTIVE == rmContext.getHAServiceState();
+  }
+
+  private void throwStandbyException() throws StandbyException {
+    throw new StandbyException("ResourceManager " + rmId + " is not Active!");
   }
 
   @Override
   public synchronized void monitorHealth()
       throws IOException {
     checkAccess("monitorHealth");
-    if (haState == HAServiceProtocol.HAServiceState.ACTIVE && !rm.areActiveServicesRunning()) {
+    if (isRMActive() && !rm.areActiveServicesRunning()) {
       throw new HealthCheckFailedException(
           "Active ResourceManager services are not running!");
     }
   }
 
-  synchronized void transitionToActive() throws Exception {
-    if (haState == HAServiceProtocol.HAServiceState.ACTIVE) {
-      LOG.info("Already in active state");
-      return;
-    }
-
-    LOG.info("Transitioning to active");
-    rm.startActiveServices();
-    haState = HAServiceProtocol.HAServiceState.ACTIVE;
-    LOG.info("Transitioned to active");
-  }
-
   @Override
-  public synchronized void transitionToActive(HAServiceProtocol.StateChangeRequestInfo reqInfo)
-      throws IOException {
+  public synchronized void transitionToActive(
+      HAServiceProtocol.StateChangeRequestInfo reqInfo) throws IOException {
     UserGroupInformation user = checkAccess("transitionToActive");
     // TODO (YARN-1177): When automatic failover is enabled,
     // check if transition should be allowed for this request
     try {
-      transitionToActive();
+      rm.transitionToActive();
       RMAuditLogger.logSuccess(user.getShortUserName(),
           "transitionToActive", "RMHAProtocolService");
     } catch (Exception e) {
@@ -226,32 +211,14 @@ public class AdminService extends AbstractService implements
     }
   }
 
-  synchronized void transitionToStandby(boolean initialize)
-      throws Exception {
-    if (haState == HAServiceProtocol.HAServiceState.STANDBY) {
-      LOG.info("Already in standby state");
-      return;
-    }
-
-    LOG.info("Transitioning to standby");
-    if (haState == HAServiceProtocol.HAServiceState.ACTIVE) {
-      rm.stopActiveServices();
-      if (initialize) {
-        rm.createAndInitActiveServices();
-      }
-    }
-    haState = HAServiceProtocol.HAServiceState.STANDBY;
-    LOG.info("Transitioned to standby");
-  }
-
   @Override
-  public synchronized void transitionToStandby(HAServiceProtocol.StateChangeRequestInfo reqInfo)
-      throws IOException {
+  public synchronized void transitionToStandby(
+      HAServiceProtocol.StateChangeRequestInfo reqInfo) throws IOException {
     UserGroupInformation user = checkAccess("transitionToStandby");
     // TODO (YARN-1177): When automatic failover is enabled,
     // check if transition should be allowed for this request
     try {
-      transitionToStandby(true);
+      rm.transitionToStandby(true);
       RMAuditLogger.logSuccess(user.getShortUserName(),
           "transitionToStandby", "RMHAProtocolService");
     } catch (Exception e) {
@@ -266,26 +233,26 @@ public class AdminService extends AbstractService implements
   @Override
   public synchronized HAServiceStatus getServiceStatus() throws IOException {
     checkAccess("getServiceState");
+    HAServiceState haState = rmContext.getHAServiceState();
     HAServiceStatus ret = new HAServiceStatus(haState);
-    if (haState == HAServiceProtocol.HAServiceState.ACTIVE || haState ==
-        HAServiceProtocol.HAServiceState.STANDBY) {
+    if (isRMActive() || haState == HAServiceProtocol.HAServiceState.STANDBY) {
       ret.setReadyToBecomeActive();
     } else {
       ret.setNotReadyToBecomeActive("State is " + haState);
     }
     return ret;
-  }
+  } 
 
   @Override
   public RefreshQueuesResponse refreshQueues(RefreshQueuesRequest request)
-      throws YarnException {
+      throws YarnException, StandbyException {
     UserGroupInformation user = checkAcls("refreshQueues");
 
     if (!isRMActive()) {
       RMAuditLogger.logFailure(user.getShortUserName(), "refreshQueues",
           adminAcl.toString(), "AdminService",
           "ResourceManager is not active. Can not refresh queues.");
-      throw new RMNotYetActiveException();
+      throwStandbyException();
     }
 
     try {
@@ -304,14 +271,14 @@ public class AdminService extends AbstractService implements
 
   @Override
   public RefreshNodesResponse refreshNodes(RefreshNodesRequest request)
-      throws YarnException {
+      throws YarnException, StandbyException {
     UserGroupInformation user = checkAcls("refreshNodes");
 
     if (!isRMActive()) {
       RMAuditLogger.logFailure(user.getShortUserName(), "refreshNodes",
           adminAcl.toString(), "AdminService",
           "ResourceManager is not active. Can not refresh nodes.");
-      throw new RMNotYetActiveException();
+      throwStandbyException();
     }
 
     try {
@@ -330,7 +297,7 @@ public class AdminService extends AbstractService implements
   @Override
   public RefreshSuperUserGroupsConfigurationResponse refreshSuperUserGroupsConfiguration(
       RefreshSuperUserGroupsConfigurationRequest request)
-      throws YarnException {
+      throws YarnException, StandbyException {
     UserGroupInformation user = checkAcls("refreshSuperUserGroupsConfiguration");
 
     // TODO (YARN-1459): Revisit handling super-user-groups on Standby RM
@@ -339,7 +306,7 @@ public class AdminService extends AbstractService implements
           "refreshSuperUserGroupsConfiguration",
           adminAcl.toString(), "AdminService",
           "ResourceManager is not active. Can not refresh super-user-groups.");
-      throw new RMNotYetActiveException();
+      throwStandbyException();
     }
 
     ProxyUsers.refreshSuperUserGroupsConfiguration(new Configuration());
@@ -352,7 +319,8 @@ public class AdminService extends AbstractService implements
 
   @Override
   public RefreshUserToGroupsMappingsResponse refreshUserToGroupsMappings(
-      RefreshUserToGroupsMappingsRequest request) throws YarnException {
+      RefreshUserToGroupsMappingsRequest request)
+      throws YarnException, StandbyException {
     UserGroupInformation user = checkAcls("refreshUserToGroupsMappings");
 
     // TODO (YARN-1459): Revisit handling user-groups on Standby RM
@@ -361,7 +329,7 @@ public class AdminService extends AbstractService implements
           "refreshUserToGroupsMapping",
           adminAcl.toString(), "AdminService",
           "ResourceManager is not active. Can not refresh user-groups.");
-      throw new RMNotYetActiveException();
+      throwStandbyException();
     }
 
     Groups.getUserToGroupsMappingService().refresh();
@@ -426,4 +394,45 @@ public class AdminService extends AbstractService implements
   public String[] getGroupsForUser(String user) throws IOException {
     return UserGroupInformation.createRemoteUser(user).getGroupNames();
   }
+  
+  @Override
+  public UpdateNodeResourceResponse updateNodeResource(
+      UpdateNodeResourceRequest request) throws YarnException, IOException {
+    Map<NodeId, ResourceOption> nodeResourceMap = request.getNodeResourceMap();
+    Set<NodeId> nodeIds = nodeResourceMap.keySet();
+    // verify nodes are all valid first. 
+    // if any invalid nodes, throw exception instead of partially updating
+    // valid nodes.
+    for (NodeId nodeId : nodeIds) {
+      RMNode node = this.rmContext.getRMNodes().get(nodeId);
+      if (node == null) {
+        LOG.error("Resource update get failed on all nodes due to change "
+            + "resource on an unrecognized node: " + nodeId);
+        throw RPCUtil.getRemoteException(
+            "Resource update get failed on all nodes due to change resource "
+                + "on an unrecognized node: " + nodeId);
+      }
+    }
+    
+    // do resource update on each node.
+    // Notice: it is still possible to have invalid NodeIDs as nodes decommission
+    // may happen just at the same time. This time, only log and skip absent
+    // nodes without throwing any exceptions.
+    for (Map.Entry<NodeId, ResourceOption> entry : nodeResourceMap.entrySet()) {
+      ResourceOption newResourceOption = entry.getValue();
+      NodeId nodeId = entry.getKey();
+      RMNode node = this.rmContext.getRMNodes().get(nodeId);
+      if (node == null) {
+        LOG.warn("Resource update get failed on an unrecognized node: " + nodeId);
+      } else {
+        node.setResourceOption(newResourceOption);
+        LOG.info("Update resource successfully on node(" + node.getNodeID()
+            +") with resource(" + newResourceOption.toString() + ")");
+      }
+    }
+    UpdateNodeResourceResponse response = recordFactory.newRecordInstance(
+          UpdateNodeResourceResponse.class);
+      return response;
+  }
+  
 }

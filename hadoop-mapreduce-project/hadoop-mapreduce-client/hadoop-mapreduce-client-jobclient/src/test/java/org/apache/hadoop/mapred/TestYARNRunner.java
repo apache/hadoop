@@ -75,6 +75,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -208,7 +209,7 @@ public class TestYARNRunner extends TestCase {
     };
     /* make sure kill calls finish application master */
     when(clientRMProtocol.forceKillApplication(any(KillApplicationRequest.class)))
-    .thenReturn(null);
+    .thenReturn(KillApplicationResponse.newInstance(true));
     delegate.killApplication(appId);
     verify(clientRMProtocol).forceKillApplication(any(KillApplicationRequest.class));
 

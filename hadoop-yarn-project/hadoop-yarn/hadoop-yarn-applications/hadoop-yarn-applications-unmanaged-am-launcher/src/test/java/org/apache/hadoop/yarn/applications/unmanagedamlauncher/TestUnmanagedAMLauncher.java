@@ -29,12 +29,14 @@ import java.io.OutputStream;
 import java.net.URL;
 
 import junit.framework.Assert;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.client.ClientRMProxy;
@@ -193,8 +195,10 @@ public class TestUnmanagedAMLauncher {
       client.registerApplicationMaster(RegisterApplicationMasterRequest
           .newInstance(NetUtils.getHostname(), -1, ""));
       Thread.sleep(1000);
-      client.finishApplicationMaster(FinishApplicationMasterRequest
-          .newInstance(FinalApplicationStatus.SUCCEEDED, "success", null));
+      FinishApplicationMasterResponse resp =
+          client.finishApplicationMaster(FinishApplicationMasterRequest
+            .newInstance(FinalApplicationStatus.SUCCEEDED, "success", null));
+      assertTrue(resp.getIsUnregistered());
       System.exit(0);
     } else {
       System.exit(1);

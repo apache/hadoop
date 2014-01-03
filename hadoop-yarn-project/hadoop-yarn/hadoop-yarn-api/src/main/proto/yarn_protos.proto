@@ -63,6 +63,11 @@ message ResourceOptionProto {
   optional int32 over_commit_timeout = 2;
 }
 
+message NodeResourceMapProto {
+  optional NodeIdProto node_id = 1;
+  optional ResourceOptionProto resource_option = 2;
+}
+
 message PriorityProto {
   optional int32 priority = 1;
 }

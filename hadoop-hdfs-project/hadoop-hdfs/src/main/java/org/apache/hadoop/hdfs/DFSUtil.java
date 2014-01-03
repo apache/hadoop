@@ -145,6 +145,23 @@ public class DFSUtil {
     return SECURE_RANDOM.get();
   }
 
+  /** Shuffle the elements in the given array. */
+  public static <T> T[] shuffle(final T[] array) {
+    if (array != null && array.length > 0) {
+      final Random random = getRandom();
+      for (int n = array.length; n > 1; ) {
+        final int randomIndex = random.nextInt(n);
+        n--;
+        if (n != randomIndex) {
+          final T tmp = array[randomIndex];
+          array[randomIndex] = array[n];
+          array[n] = tmp;
+        }
+      }
+    }
+    return array;
+  }
+
   /**
    * Compartor for sorting DataNodeInfo[] based on decommissioned states.
    * Decommissioned nodes are moved to the end of the array on sorting with
@@ -1529,7 +1546,11 @@ public class DFSUtil {
    * Converts a time duration in milliseconds into DDD:HH:MM:SS format.
    */
   public static String durationToString(long durationMs) {
-    Preconditions.checkArgument(durationMs >= 0, "Invalid negative duration");
+    boolean negative = false;
+    if (durationMs < 0) {
+      negative = true;
+      durationMs = -durationMs;
+    }
     // Chop off the milliseconds
     long durationSec = durationMs / 1000;
     final int secondsPerMinute = 60;
@@ -1542,7 +1563,12 @@ public class DFSUtil {
     final long minutes = durationSec / secondsPerMinute;
     durationSec -= minutes * secondsPerMinute;
     final long seconds = durationSec;
-    return String.format("%03d:%02d:%02d:%02d", days, hours, minutes, seconds);
+    final long milliseconds = durationMs % 1000;
+    String format = "%03d:%02d:%02d:%02d.%03d";
+    if (negative)  {
+      format = "-" + format;
+    }
+    return String.format(format, days, hours, minutes, seconds, milliseconds);
   }
 
   /**
@@ -1554,9 +1580,9 @@ public class DFSUtil {
           + ": too short");
     }
     String ttlString = relTime.substring(0, relTime.length()-1);
-    int ttl;
+    long ttl;
     try {
-      ttl = Integer.parseInt(ttlString);
+      ttl = Long.parseLong(ttlString);
     } catch (NumberFormatException e) {
       throw new IOException("Unable to parse relative time value of " + relTime
           + ": " + ttlString + " is not a number");

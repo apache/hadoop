@@ -18,24 +18,24 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.event;
 
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 
 public class AppAddedSchedulerEvent extends SchedulerEvent {
 
-  private final ApplicationAttemptId applicationAttemptId;
+  private final ApplicationId applicationId;
   private final String queue;
   private final String user;
 
-  public AppAddedSchedulerEvent(ApplicationAttemptId applicationAttemptId,
-      String queue, String user) {
+  public AppAddedSchedulerEvent(
+      ApplicationId applicationId, String queue, String user) {
     super(SchedulerEventType.APP_ADDED);
-    this.applicationAttemptId = applicationAttemptId;
+    this.applicationId = applicationId;
     this.queue = queue;
     this.user = user;
   }
 
-  public ApplicationAttemptId getApplicationAttemptId() {
-    return applicationAttemptId;
+  public ApplicationId getApplicationId() {
+    return applicationId;
   }
 
   public String getQueue() {

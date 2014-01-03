@@ -25,7 +25,9 @@ import static org.junit.Assert.assertSame;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -102,7 +104,7 @@ public class TestBPOfferService {
     .when(mockDn).getMetrics();
 
     // Set up a simulated dataset with our fake BP
-    mockFSDataset = Mockito.spy(new SimulatedFSDataset(null, null, conf));
+    mockFSDataset = Mockito.spy(new SimulatedFSDataset(null, conf));
     mockFSDataset.addBlockPool(FAKE_BPID, conf);
 
     // Wire the dataset to the DN.
@@ -178,7 +180,7 @@ public class TestBPOfferService {
       waitForBlockReport(mockNN2);
 
       // When we receive a block, it should report it to both NNs
-      bpos.notifyNamenodeReceivedBlock(FAKE_BLOCK, "");
+      bpos.notifyNamenodeReceivedBlock(FAKE_BLOCK, "", "");
 
       ReceivedDeletedBlockInfo[] ret = waitForBlockReceived(FAKE_BLOCK, mockNN1);
       assertEquals(1, ret.length);
@@ -294,6 +296,47 @@ public class TestBPOfferService {
     }
   }
 
+  /**
+   * Test datanode block pool initialization error handling.
+   * Failure in initializing a block pool should not cause NPE.
+   */
+  @Test
+  public void testBPInitErrorHandling() throws Exception {
+    final DataNode mockDn = Mockito.mock(DataNode.class);
+    Mockito.doReturn(true).when(mockDn).shouldRun();
+    Configuration conf = new Configuration();
+    File dnDataDir = new File(
+      new File(TEST_BUILD_DATA, "testBPInitErrorHandling"), "data");
+    conf.set(DFS_DATANODE_DATA_DIR_KEY, dnDataDir.toURI().toString());
+    Mockito.doReturn(conf).when(mockDn).getConf();
+    Mockito.doReturn(new DNConf(conf)).when(mockDn).getDnConf();
+    Mockito.doReturn(DataNodeMetrics.create(conf, "fake dn")).
+      when(mockDn).getMetrics();
+    final AtomicInteger count = new AtomicInteger();
+    Mockito.doAnswer(new Answer<Void>() {
+      @Override
+      public Void answer(InvocationOnMock invocation) throws Throwable {
+        if (count.getAndIncrement() == 0) {
+          throw new IOException("faked initBlockPool exception");
+        }
+        // The initBlockPool is called again. Now mock init is done.
+        Mockito.doReturn(mockFSDataset).when(mockDn).getFSDataset();
+        return null;
+      }
+    }).when(mockDn).initBlockPool(Mockito.any(BPOfferService.class));
+    BPOfferService bpos = setupBPOSForNNs(mockDn, mockNN1, mockNN2);
+    bpos.start();
+    try {
+      waitForInitialization(bpos);
+      List<BPServiceActor> actors = bpos.getBPServiceActors();
+      assertEquals(1, actors.size());
+      BPServiceActor actor = actors.get(0);
+      waitForBlockReport(actor.getNameNodeProxy());
+    } finally {
+      bpos.stop();
+    }
+  }
+
   private void waitForOneToFail(final BPOfferService bpos)
       throws Exception {
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
@@ -310,6 +353,11 @@ public class TestBPOfferService {
    * @throws IOException 
    */
   private BPOfferService setupBPOSForNNs(
+      DatanodeProtocolClientSideTranslatorPB ... nns) throws IOException {
+    return setupBPOSForNNs(mockDn, nns);
+  }
+
+  private BPOfferService setupBPOSForNNs(DataNode mockDn,
       DatanodeProtocolClientSideTranslatorPB ... nns) throws IOException {
     // Set up some fake InetAddresses, then override the connectToNN
     // function to return the corresponding proxies.

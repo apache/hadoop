@@ -23,6 +23,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationResponse;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.KillApplicationResponseProto;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.KillApplicationResponseProtoOrBuilder;
 
 import com.google.protobuf.TextFormat;
 
@@ -66,5 +67,25 @@ public class KillApplicationResponsePBImpl extends KillApplicationResponse {
   @Override
   public String toString() {
     return TextFormat.shortDebugString(getProto());
+  }
+
+  private void maybeInitBuilder() {
+    if (viaProto || builder == null) {
+      builder = KillApplicationResponseProto.newBuilder(proto);
+    }
+    viaProto = false;
+  }
+
+  @Override
+  public boolean getIsKillCompleted() {
+    KillApplicationResponseProtoOrBuilder p =
+        viaProto ? proto : builder;
+    return p.getIsKillCompleted();
+  }
+
+  @Override
+  public void setIsKillCompleted(boolean isKillCompleted) {
+    maybeInitBuilder();
+    builder.setIsKillCompleted(isKillCompleted);
   }
 }  

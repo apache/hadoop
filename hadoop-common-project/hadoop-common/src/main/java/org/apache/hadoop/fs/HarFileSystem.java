@@ -294,6 +294,10 @@ public class HarFileSystem extends FileSystem {
   private String getHarAuth(URI underLyingUri) {
     String auth = underLyingUri.getScheme() + "-";
     if (underLyingUri.getHost() != null) {
+      if (underLyingUri.getUserInfo() != null) {
+        auth += underLyingUri.getUserInfo();
+        auth += "@";
+      }
       auth += underLyingUri.getHost();
       if (underLyingUri.getPort() != -1) {
         auth += ":";
