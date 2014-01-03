@@ -1,0 +1,4 @@
+HDFS-5535 subtasks:
+
+    HDFS-5496. Make replication queue initialization asynchronous. (Vinay via
+    jing9)
