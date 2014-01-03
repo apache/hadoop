@@ -121,6 +121,9 @@ Release 2.4.0 - UNRELEASED
     MAPREDUCE-5685. Fixed a bug with JobContext getCacheFiles API inside the
     WrappedReducer class. (Yi Song via vinodkv)
 
+    MAPREDUCE-5689. MRAppMaster does not preempt reducers when scheduled maps 
+    cannot be fulfilled. (lohit via kasha)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
