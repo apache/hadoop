@@ -287,7 +287,7 @@ public class TestAHSWebServices extends JerseyTest {
         container.getString("assignedNodeId"));
     assertEquals(Priority.newInstance(containerId.getId()).toString(),
         container.getString("priority"));
-    assertEquals("http://localhost:0/", container.getString("logUrl"));
+    assertEquals("http://localhost:0/log", container.getString("logUrl"));
     assertEquals(ContainerState.COMPLETE.toString(),
         container.getString("containerState"));
   }
