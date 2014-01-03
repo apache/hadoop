@@ -243,6 +243,9 @@ Trunk (Unreleased)
 
     HDFS-5636. Enforce a max TTL per cache pool. (awang via cmccabe)
 
+    HDFS-5651. Remove dfs.namenode.caching.enabled and improve CRM locking.
+    (cmccabe via wang)
+
   OPTIMIZATIONS
 
     HDFS-5349. DNA_CACHE and DNA_UNCACHE should be by blockId only. (cmccabe)

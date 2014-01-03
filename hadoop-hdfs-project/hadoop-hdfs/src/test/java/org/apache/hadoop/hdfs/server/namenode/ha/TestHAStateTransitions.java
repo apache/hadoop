@@ -27,6 +27,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URI;
+import java.util.LinkedList;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.logging.Log;
@@ -58,6 +59,8 @@ import org.apache.log4j.Level;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
+
+import com.google.common.util.concurrent.Uninterruptibles;
 
 /**
  * Tests state transition from active->standby, and manual failover
@@ -124,6 +127,17 @@ public class TestHAStateTransitions {
     }
   }
 
+  private void addCrmThreads(MiniDFSCluster cluster,
+      LinkedList<Thread> crmThreads) {
+    for (int nn = 0; nn <= 1; nn++) {
+      Thread thread = cluster.getNameNode(nn).getNamesystem().
+          getCacheManager().getCacheReplicationMonitor();
+      if (thread != null) {
+        crmThreads.add(thread);
+      }
+    }
+  }
+
   /**
    * Test that transitioning a service to the state that it is already
    * in is a nop, specifically, an exception is not thrown.
@@ -131,18 +145,29 @@ public class TestHAStateTransitions {
   @Test
   public void testTransitionToCurrentStateIsANop() throws Exception {
     Configuration conf = new Configuration();
+    conf.setLong(DFSConfigKeys.DFS_NAMENODE_PATH_BASED_CACHE_REFRESH_INTERVAL_MS, 1L);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
       .nnTopology(MiniDFSNNTopology.simpleHATopology())
       .numDataNodes(1)
       .build();
+    LinkedList<Thread> crmThreads = new LinkedList<Thread>();
     try {
       cluster.waitActive();
+      addCrmThreads(cluster, crmThreads);
       cluster.transitionToActive(0);
+      addCrmThreads(cluster, crmThreads);
       cluster.transitionToActive(0);
+      addCrmThreads(cluster, crmThreads);
       cluster.transitionToStandby(0);
+      addCrmThreads(cluster, crmThreads);
       cluster.transitionToStandby(0);
+      addCrmThreads(cluster, crmThreads);
     } finally {
       cluster.shutdown();
+    }
+    // Verify that all cacheReplicationMonitor threads shut down
+    for (Thread thread : crmThreads) {
+      Uninterruptibles.joinUninterruptibly(thread);
     }
   }
 

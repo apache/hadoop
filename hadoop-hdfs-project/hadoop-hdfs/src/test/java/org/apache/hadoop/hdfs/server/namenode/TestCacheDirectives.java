@@ -21,7 +21,6 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CACHEREPORT_INTERVAL_MSEC_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_LOCKED_MEMORY_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CACHING_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_PATH_BASED_CACHE_REFRESH_INTERVAL_MS;
 import static org.apache.hadoop.hdfs.protocol.CachePoolInfo.RELATIVE_EXPIRY_NEVER;
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
@@ -118,7 +117,6 @@ public class TestCacheDirectives {
     conf.setLong(DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
     conf.setLong(DFS_DATANODE_MAX_LOCKED_MEMORY_KEY, CACHE_CAPACITY);
     conf.setLong(DFS_HEARTBEAT_INTERVAL_KEY, 1);
-    conf.setBoolean(DFS_NAMENODE_CACHING_ENABLED_KEY, true);
     conf.setLong(DFS_CACHEREPORT_INTERVAL_MSEC_KEY, 1000);
     conf.setLong(DFS_NAMENODE_PATH_BASED_CACHE_REFRESH_INTERVAL_MS, 1000);
     // set low limits here for testing purposes
@@ -864,55 +862,6 @@ public class TestCacheDirectives {
       expected -= numBlocksPerFile;
       waitForCachedBlocks(namenode, expected, expected,
           "testWaitForCachedReplicas:2");
-    }
-  }
-
-  @Test(timeout=120000)
-  public void testAddingCacheDirectiveInfosWhenCachingIsDisabled()
-      throws Exception {
-    cluster.shutdown();
-    HdfsConfiguration conf = createCachingConf();
-    conf.setBoolean(DFS_NAMENODE_CACHING_ENABLED_KEY, false);
-    MiniDFSCluster cluster =
-      new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATANODES).build();
-
-    try {
-      cluster.waitActive();
-      DistributedFileSystem dfs = cluster.getFileSystem();
-      NameNode namenode = cluster.getNameNode();
-      // Create the pool
-      String pool = "pool1";
-      namenode.getRpcServer().addCachePool(new CachePoolInfo(pool));
-      // Create some test files
-      final int numFiles = 2;
-      final int numBlocksPerFile = 2;
-      final List<String> paths = new ArrayList<String>(numFiles);
-      for (int i=0; i<numFiles; i++) {
-        Path p = new Path("/testCachePaths-" + i);
-        FileSystemTestHelper.createFile(dfs, p, numBlocksPerFile,
-            (int)BLOCK_SIZE);
-        paths.add(p.toUri().getPath());
-      }
-      // Check the initial statistics at the namenode
-      waitForCachedBlocks(namenode, 0, 0,
-          "testAddingCacheDirectiveInfosWhenCachingIsDisabled:0");
-      // Cache and check each path in sequence
-      int expected = 0;
-      for (int i=0; i<numFiles; i++) {
-        CacheDirectiveInfo directive =
-            new CacheDirectiveInfo.Builder().
-              setPath(new Path(paths.get(i))).
-              setPool(pool).
-              build();
-        dfs.addCacheDirective(directive);
-        waitForCachedBlocks(namenode, expected, 0,
-          "testAddingCacheDirectiveInfosWhenCachingIsDisabled:1");
-      }
-      Thread.sleep(20000);
-      waitForCachedBlocks(namenode, expected, 0,
-          "testAddingCacheDirectiveInfosWhenCachingIsDisabled:2");
-    } finally {
-      cluster.shutdown();
     }
   }
 

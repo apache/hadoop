@@ -87,17 +87,17 @@ public class CacheReplicationMonitor extends Thread implements Closeable {
    * The CacheReplicationMonitor (CRM) lock. Used to synchronize starting and
    * waiting for rescan operations.
    */
-  private final ReentrantLock lock = new ReentrantLock();
+  private final ReentrantLock lock;
 
   /**
    * Notifies the scan thread that an immediate rescan is needed.
    */
-  private final Condition doRescan = lock.newCondition();
+  private final Condition doRescan;
 
   /**
    * Notifies waiting threads that a rescan has finished.
    */
-  private final Condition scanFinished = lock.newCondition();
+  private final Condition scanFinished;
 
   /**
    * Whether there are pending CacheManager operations that necessitate a
@@ -122,11 +122,6 @@ public class CacheReplicationMonitor extends Thread implements Closeable {
   private boolean shutdown = false;
 
   /**
-   * The monotonic time at which the current scan started.
-   */
-  private long startTimeMs;
-
-  /**
    * Mark status of the current scan.
    */
   private boolean mark = false;
@@ -142,24 +137,27 @@ public class CacheReplicationMonitor extends Thread implements Closeable {
   private long scannedBlocks;
 
   public CacheReplicationMonitor(FSNamesystem namesystem,
-      CacheManager cacheManager, long intervalMs) {
+      CacheManager cacheManager, long intervalMs, ReentrantLock lock) {
     this.namesystem = namesystem;
     this.blockManager = namesystem.getBlockManager();
     this.cacheManager = cacheManager;
     this.cachedBlocks = cacheManager.getCachedBlocks();
     this.intervalMs = intervalMs;
+    this.lock = lock;
+    this.doRescan = this.lock.newCondition();
+    this.scanFinished = this.lock.newCondition();
   }
 
   @Override
   public void run() {
-    startTimeMs = 0;
+    long startTimeMs = 0;
+    Thread.currentThread().setName("CacheReplicationMonitor(" +
+        System.identityHashCode(this) + ")");
     LOG.info("Starting CacheReplicationMonitor with interval " +
              intervalMs + " milliseconds");
     try {
       long curTimeMs = Time.monotonicNow();
       while (true) {
-        // Not all of the variables accessed here need the CRM lock, but take
-        // it anyway for simplicity
         lock.lock();
         try {
           while (true) {
@@ -180,12 +178,6 @@ public class CacheReplicationMonitor extends Thread implements Closeable {
             doRescan.await(delta, TimeUnit.MILLISECONDS);
             curTimeMs = Time.monotonicNow();
           }
-        } finally {
-          lock.unlock();
-        }
-        // Mark scan as started, clear needsRescan
-        lock.lock();
-        try {
           isScanning = true;
           needsRescan = false;
         } finally {
@@ -195,7 +187,7 @@ public class CacheReplicationMonitor extends Thread implements Closeable {
         mark = !mark;
         rescan();
         curTimeMs = Time.monotonicNow();
-        // Retake the CRM lock to update synchronization-related variables
+        // Update synchronization-related variables.
         lock.lock();
         try {
           isScanning = false;
@@ -208,30 +200,13 @@ public class CacheReplicationMonitor extends Thread implements Closeable {
             scannedBlocks + " block(s) in " + (curTimeMs - startTimeMs) + " " +
             "millisecond(s).");
       }
+    } catch (InterruptedException e) {
+      LOG.info("Shutting down CacheReplicationMonitor.");
+      return;
     } catch (Throwable t) {
       LOG.fatal("Thread exiting", t);
       terminate(1, t);
     }
-  }
-
-  /**
-   * Similar to {@link CacheReplicationMonitor#waitForRescan()}, except it only
-   * waits if there are pending operations that necessitate a rescan as
-   * indicated by {@link #setNeedsRescan()}.
-   * <p>
-   * Note that this call may release the FSN lock, so operations before and
-   * after are not necessarily atomic.
-   */
-  public void waitForRescanIfNeeded() {
-    lock.lock();
-    try {
-      if (!needsRescan) {
-        return;
-      }
-    } finally {
-      lock.unlock();
-    }
-    waitForRescan();
   }
 
   /**
@@ -242,49 +217,27 @@ public class CacheReplicationMonitor extends Thread implements Closeable {
    * Note that this call will release the FSN lock, so operations before and
    * after are not atomic.
    */
-  public void waitForRescan() {
-    // Drop the FSN lock temporarily and retake it after we finish waiting
-    // Need to handle both the read lock and the write lock
-    boolean retakeWriteLock = false;
-    if (namesystem.hasWriteLock()) {
-      namesystem.writeUnlock();
-      retakeWriteLock = true;
-    } else if (namesystem.hasReadLock()) {
-      namesystem.readUnlock();
-    } else {
-      // Expected to have at least one of the locks
-      Preconditions.checkState(false,
-          "Need to be holding either the read or write lock");
+  public void waitForRescanIfNeeded() {
+    Preconditions.checkArgument(!namesystem.hasWriteLock(),
+        "Must not hold the FSN write lock when waiting for a rescan.");
+    Preconditions.checkArgument(lock.isHeldByCurrentThread(),
+        "Must hold the CRM lock when waiting for a rescan.");
+    if (!needsRescan) {
+      return;
     }
-    // try/finally for retaking FSN lock
-    try {
-      lock.lock();
-      // try/finally for releasing CRM lock
+    // If no scan is already ongoing, mark the CRM as dirty and kick
+    if (!isScanning) {
+      doRescan.signal();
+    }
+    // Wait until the scan finishes and the count advances
+    final long startCount = scanCount;
+    while ((!shutdown) && (startCount >= scanCount)) {
       try {
-        // If no scan is already ongoing, mark the CRM as dirty and kick
-        if (!isScanning) {
-          needsRescan = true;
-          doRescan.signal();
-        }
-        // Wait until the scan finishes and the count advances
-        final long startCount = scanCount;
-        while (startCount >= scanCount) {
-          try {
-            scanFinished.await();
-          } catch (InterruptedException e) {
-            LOG.warn("Interrupted while waiting for CacheReplicationMonitor"
-                + " rescan", e);
-            break;
-          }
-        }
-      } finally {
-        lock.unlock();
-      }
-    } finally {
-      if (retakeWriteLock) {
-        namesystem.writeLock();
-      } else {
-        namesystem.readLock();
+        scanFinished.await();
+      } catch (InterruptedException e) {
+        LOG.warn("Interrupted while waiting for CacheReplicationMonitor"
+            + " rescan", e);
+        break;
       }
     }
   }
@@ -294,42 +247,43 @@ public class CacheReplicationMonitor extends Thread implements Closeable {
    * changes that require a rescan.
    */
   public void setNeedsRescan() {
-    lock.lock();
-    try {
-      this.needsRescan = true;
-    } finally {
-      lock.unlock();
-    }
+    Preconditions.checkArgument(lock.isHeldByCurrentThread(),
+        "Must hold the CRM lock when setting the needsRescan bit.");
+    this.needsRescan = true;
   }
 
   /**
-   * Shut down and join the monitor thread.
+   * Shut down the monitor thread.
    */
   @Override
   public void close() throws IOException {
+    Preconditions.checkArgument(namesystem.hasWriteLock());
     lock.lock();
     try {
       if (shutdown) return;
+      // Since we hold both the FSN write lock and the CRM lock here,
+      // we know that the CRM thread cannot be currently modifying
+      // the cache manager state while we're closing it.
+      // Since the CRM thread checks the value of 'shutdown' after waiting
+      // for a lock, we know that the thread will not modify the cache
+      // manager state after this point.
       shutdown = true;
       doRescan.signalAll();
       scanFinished.signalAll();
     } finally {
       lock.unlock();
     }
-    try {
-      if (this.isAlive()) {
-        this.join(60000);
-      }
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-    }
   }
 
-  private void rescan() {
+  private void rescan() throws InterruptedException {
     scannedDirectives = 0;
     scannedBlocks = 0;
     namesystem.writeLock();
     try {
+      if (shutdown) {
+        throw new InterruptedException("CacheReplicationMonitor was " +
+            "shut down.");
+      }
       resetStatistics();
       rescanCacheDirectives();
       rescanCachedBlockMap();
@@ -609,9 +563,6 @@ public class CacheReplicationMonitor extends Thread implements Closeable {
   private void addNewPendingUncached(int neededUncached,
       CachedBlock cachedBlock, List<DatanodeDescriptor> cached,
       List<DatanodeDescriptor> pendingUncached) {
-    if (!cacheManager.isActive()) {
-      return;
-    }
     // Figure out which replicas can be uncached.
     LinkedList<DatanodeDescriptor> possibilities =
         new LinkedList<DatanodeDescriptor>();
@@ -647,9 +598,6 @@ public class CacheReplicationMonitor extends Thread implements Closeable {
   private void addNewPendingCached(int neededCached,
       CachedBlock cachedBlock, List<DatanodeDescriptor> cached,
       List<DatanodeDescriptor> pendingCached) {
-    if (!cacheManager.isActive()) {
-      return;
-    }
     // To figure out which replicas can be cached, we consult the
     // blocksMap.  We don't want to try to cache a corrupt replica, though.
     BlockInfo blockInfo = blockManager.

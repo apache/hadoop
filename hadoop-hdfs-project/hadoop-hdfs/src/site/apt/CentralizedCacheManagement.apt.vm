@@ -242,12 +242,6 @@ Centralized Cache Management in HDFS
 
   Be sure to configure the following:
 
-  * dfs.namenode.caching.enabled
-
-    This must be set to true to enable caching. If this is false, the NameNode
-    will ignore cache reports, and will not ask DataNodes to cache
-    blocks.
-
   * dfs.datanode.max.locked.memory
 
     The DataNode will treat this as the maximum amount of memory it can use for
@@ -280,6 +274,13 @@ Centralized Cache Management in HDFS
     full report of its cache state to the NameNode.
 
     By default, this parameter is set to 10000, which is 10 seconds.
+
+  * dfs.namenode.path.based.cache.block.map.allocation.percent
+
+    The percentage of the Java heap which we will allocate to the cached blocks
+    map.  The cached blocks map is a hash map which uses chained hashing.
+    Smaller maps may be accessed more slowly if the number of cached blocks is
+    large; larger maps will consume more memory.  The default is 0.25 percent.
 
 ** {OS Limits}
 
