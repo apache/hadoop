@@ -184,6 +184,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-5540. Fix intermittent failure in TestBlocksWithNotEnoughRacks.
     (Binglin Chang via junping_du)
 
+    HDFS-5695. Clean up TestOfflineEditsViewer and OfflineEditsViewerHelper.
+    (Haohui Mai via jing9)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn)
