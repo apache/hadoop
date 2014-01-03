@@ -468,6 +468,9 @@ Trunk (Unreleased)
     HDFS-5659. dfsadmin -report doesn't output cache information properly.
     (wang)
 
+    HDFS-5705. TestSecondaryNameNodeUpgrade#testChangeNsIDFails may fail due
+    to ConcurrentModificationException. (Ted Yu via brandonli)
+
   BREAKDOWN OF HDFS-2832 SUBTASKS AND RELATED JIRAS
 
     HDFS-4985. Add storage type to the protocol and expose it in block report
