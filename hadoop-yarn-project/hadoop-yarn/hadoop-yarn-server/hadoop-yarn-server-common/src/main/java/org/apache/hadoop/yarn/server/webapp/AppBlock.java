@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.webapp;
 
 import static org.apache.hadoop.yarn.util.StringHelper.join;
+import static org.apache.hadoop.yarn.util.StringHelper.getPartUrl;
 import static org.apache.hadoop.yarn.webapp.YarnWebParams.APPLICATION_ID;
 
 import java.io.IOException;
@@ -147,7 +148,8 @@ public class AppBlock extends HtmlBlock {
       if (containerReport != null) {
         ContainerInfo container = new ContainerInfo(containerReport);
         startTime = container.getStartedTime();
-        logsLink = container.getLogUrl();
+        logsLink = containerReport.getLogUrl();
+        logsLink = getPartUrl(logsLink,"log");
       }
       String nodeLink = null;
       if (appAttempt.getHost() != null && appAttempt.getRpcPort() >= 0
