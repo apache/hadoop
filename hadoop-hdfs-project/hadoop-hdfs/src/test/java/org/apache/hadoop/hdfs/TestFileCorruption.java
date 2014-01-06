@@ -158,7 +158,7 @@ public class TestFileCorruption {
       ns.writeLock();
       try {
         cluster.getNamesystem().getBlockManager().findAndMarkBlockAsCorrupt(
-            blk, new DatanodeInfo(dnR), "TEST");
+            blk, new DatanodeInfo(dnR), "TEST", "STORAGE_ID");
       } finally {
         ns.writeUnlock();
       }

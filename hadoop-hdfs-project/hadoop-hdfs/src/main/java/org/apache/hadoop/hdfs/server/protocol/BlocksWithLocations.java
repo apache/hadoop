@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.protocol;
 
+import java.util.Arrays;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -34,12 +36,14 @@ public class BlocksWithLocations {
   @InterfaceAudience.Private
   @InterfaceStability.Evolving
   public static class BlockWithLocations {
-    Block block;
-    String storageIDs[];
+    final Block block;
+    final String[] datanodeUuids;
+    final String[] storageIDs;
     
     /** constructor */
-    public BlockWithLocations(Block block, String[] storageIDs) {
+    public BlockWithLocations(Block block, String[] datanodeUuids, String[] storageIDs) {
       this.block = block;
+      this.datanodeUuids = datanodeUuids;
       this.storageIDs = storageIDs;
     }
     
@@ -48,9 +52,29 @@ public class BlocksWithLocations {
       return block;
     }
     
-    /** get the block's locations */
+    /** get the block's datanode locations */
+    public String[] getDatanodeUuids() {
+      return datanodeUuids;
+    }
+
+    /** get the block's storage locations */
     public String[] getStorageIDs() {
       return storageIDs;
+    }
+    
+    @Override
+    public String toString() {
+      final StringBuilder b = new StringBuilder();
+      b.append(block);
+      if (datanodeUuids.length == 0) {
+        return b.append("[]").toString();
+      }
+      
+      b.append(storageIDs[0]).append('@').append(datanodeUuids[0]);
+      for(int i = 1; i < datanodeUuids.length; i++) {
+        b.append(", ").append(storageIDs[i]).append("@").append(datanodeUuids[i]);
+      }
+      return b.append("]").toString();
     }
   }
 

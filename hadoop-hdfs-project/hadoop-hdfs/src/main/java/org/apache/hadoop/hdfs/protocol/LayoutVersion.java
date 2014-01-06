@@ -106,8 +106,10 @@ public class LayoutVersion {
     SEQUENTIAL_BLOCK_ID(-46, "Allocate block IDs sequentially and store " +
         "block IDs in the edits log and image files"),
     EDITLOG_SUPPORT_RETRYCACHE(-47, "Record ClientId and CallId in editlog to " 
-        + "enable rebuilding retry cache in case of HA failover");
-    
+        + "enable rebuilding retry cache in case of HA failover"),
+    ADD_DATANODE_AND_STORAGE_UUIDS(-49, -47, "Replace StorageID with DatanodeUuid."
+        + " Use distinct StorageUuid per storage directory.", false);
+
     final int lv;
     final int ancestorLV;
     final String description;
@@ -247,3 +249,4 @@ public class LayoutVersion {
     throw new AssertionError("All layout versions are reserved.");
   }
 }
+

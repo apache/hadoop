@@ -24,13 +24,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileLock;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -50,6 +44,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Daemon;
@@ -71,8 +66,13 @@ public class DataStorage extends Storage {
   public final static String STORAGE_DIR_FINALIZED = "finalized";
   public final static String STORAGE_DIR_TMP = "tmp";
 
-  /** Unique storage ID. {@see DataNode#createNewStorageId(int)} for details */
-  private String storageID;
+  /**
+   * Datanode UUID that this storage is currently attached to. This
+   *  is the same as the legacy StorageID for datanodes that were
+   *  upgraded from a pre-UUID version. For compatibility with prior
+   *  versions of Datanodes we cannot make this field a UUID.
+   */
+  private String datanodeUuid = null;
 
   // Flag to ensure we only initialize storage once
   private boolean initialized = false;
@@ -84,33 +84,29 @@ public class DataStorage extends Storage {
 
   DataStorage() {
     super(NodeType.DATA_NODE);
-    storageID = "";
   }
   
   public StorageInfo getBPStorage(String bpid) {
     return bpStorageMap.get(bpid);
   }
   
-  public DataStorage(StorageInfo storageInfo, String strgID) {
+  public DataStorage(StorageInfo storageInfo) {
     super(NodeType.DATA_NODE, storageInfo);
-    this.storageID = strgID;
   }
 
-  /** @return storage ID. */
-  public synchronized String getStorageID() {
-    return storageID;
+  public synchronized String getDatanodeUuid() {
+    return datanodeUuid;
   }
-  
-  synchronized void setStorageID(String newStorageID) {
-    this.storageID = newStorageID;
+
+  public synchronized void setDatanodeUuid(String newDatanodeUuid) {
+    this.datanodeUuid = newDatanodeUuid;
   }
 
   /** Create an ID for this storage. */
-  public synchronized void createStorageID(int datanodePort) {
-    if (storageID != null && !storageID.isEmpty()) {
-      return;
+  public synchronized void createStorageID(StorageDirectory sd) {
+    if (sd.getStorageUuid() == null) {
+      sd.setStorageUuid(DatanodeStorage.generateUuid());
     }
-    storageID = DataNode.createNewStorageId(datanodePort);
   }
   
   /**
@@ -128,7 +124,8 @@ public class DataStorage extends Storage {
    * @throws IOException
    */
   synchronized void recoverTransitionRead(DataNode datanode,
-      NamespaceInfo nsInfo, Collection<File> dataDirs, StartupOption startOpt)
+      NamespaceInfo nsInfo, Collection<StorageLocation> dataDirs,
+      StartupOption startOpt)
       throws IOException {
     if (initialized) {
       // DN storage has been initialized, no need to do anything
@@ -144,8 +141,8 @@ public class DataStorage extends Storage {
     // Format and recover.
     this.storageDirs = new ArrayList<StorageDirectory>(dataDirs.size());
     ArrayList<StorageState> dataDirStates = new ArrayList<StorageState>(dataDirs.size());
-    for(Iterator<File> it = dataDirs.iterator(); it.hasNext();) {
-      File dataDir = it.next();
+    for(Iterator<StorageLocation> it = dataDirs.iterator(); it.hasNext();) {
+      File dataDir = it.next().getFile();
       StorageDirectory sd = new StorageDirectory(dataDir);
       StorageState curState;
       try {
@@ -162,7 +159,7 @@ public class DataStorage extends Storage {
         case NOT_FORMATTED: // format
           LOG.info("Storage directory " + dataDir + " is not formatted");
           LOG.info("Formatting ...");
-          format(sd, nsInfo);
+          format(sd, nsInfo, datanode.getDatanodeUuid());
           break;
         default:  // recovery part is common
           sd.doRecover(curState);
@@ -191,10 +188,8 @@ public class DataStorage extends Storage {
       doTransition(datanode, getStorageDir(idx), nsInfo, startOpt);
       assert this.getLayoutVersion() == nsInfo.getLayoutVersion() :
         "Data-node and name-node layout versions must be the same.";
+      createStorageID(getStorageDir(idx));
     }
-    
-    // make sure we have storage id set - if not - generate new one
-    createStorageID(datanode.getXferPort());
     
     // 3. Update all storages. Some of them might have just been formatted.
     this.writeAll();
@@ -214,14 +209,14 @@ public class DataStorage extends Storage {
    * @throws IOException on error
    */
   void recoverTransitionRead(DataNode datanode, String bpID, NamespaceInfo nsInfo,
-      Collection<File> dataDirs, StartupOption startOpt) throws IOException {
+      Collection<StorageLocation> dataDirs, StartupOption startOpt) throws IOException {
     // First ensure datanode level format/snapshot/rollback is completed
     recoverTransitionRead(datanode, nsInfo, dataDirs, startOpt);
-    
+
     // Create list of storage directories for the block pool
     Collection<File> bpDataDirs = new ArrayList<File>();
-    for(Iterator<File> it = dataDirs.iterator(); it.hasNext();) {
-      File dnRoot = it.next();
+    for(StorageLocation dir : dataDirs) {
+      File dnRoot = dir.getFile();
       File bpRoot = BlockPoolSliceStorage.getBpRoot(bpID, new File(dnRoot,
           STORAGE_DIR_CURRENT));
       bpDataDirs.add(bpRoot);
@@ -263,19 +258,28 @@ public class DataStorage extends Storage {
     }
   }
 
-  void format(StorageDirectory sd, NamespaceInfo nsInfo) throws IOException {
+  void format(StorageDirectory sd, NamespaceInfo nsInfo,
+              String datanodeUuid) throws IOException {
     sd.clearDirectory(); // create directory
     this.layoutVersion = HdfsConstants.LAYOUT_VERSION;
     this.clusterID = nsInfo.getClusterID();
     this.namespaceID = nsInfo.getNamespaceID();
     this.cTime = 0;
-    // store storageID as it currently is
+    this.datanodeUuid = datanodeUuid;
+
+    if (sd.getStorageUuid() == null) {
+      // Assign a new Storage UUID.
+      sd.setStorageUuid(DatanodeStorage.generateUuid());
+    }
+
     writeProperties(sd);
   }
 
   /*
    * Set ClusterID, StorageID, StorageType, CTime into
-   * DataStorage VERSION file
+   * DataStorage VERSION file.
+   * Always called just before writing the properties to
+   * the VERSION file.
   */
   @Override
   protected void setPropertiesFromFields(Properties props, 
@@ -285,7 +289,13 @@ public class DataStorage extends Storage {
     props.setProperty("clusterID", clusterID);
     props.setProperty("cTime", String.valueOf(cTime));
     props.setProperty("layoutVersion", String.valueOf(layoutVersion));
-    props.setProperty("storageID", getStorageID());
+    props.setProperty("storageID", sd.getStorageUuid());
+
+    String datanodeUuid = getDatanodeUuid();
+    if (datanodeUuid != null) {
+      props.setProperty("datanodeUuid", datanodeUuid);
+    }
+
     // Set NamespaceID in version before federation
     if (!LayoutVersion.supports(Feature.FEDERATION, layoutVersion)) {
       props.setProperty("namespaceID", String.valueOf(namespaceID));
@@ -295,6 +305,7 @@ public class DataStorage extends Storage {
   /*
    * Read ClusterID, StorageID, StorageType, CTime from 
    * DataStorage VERSION file and verify them.
+   * Always called just after reading the properties from the VERSION file.
    */
   @Override
   protected void setFieldsFromProperties(Properties props, StorageDirectory sd)
@@ -318,20 +329,36 @@ public class DataStorage extends Storage {
       setNamespaceID(props, sd);
     }
     
+
     // valid storage id, storage id may be empty
     String ssid = props.getProperty("storageID");
     if (ssid == null) {
       throw new InconsistentFSStateException(sd.getRoot(), "file "
           + STORAGE_FILE_VERSION + " is invalid.");
     }
-    String sid = getStorageID();
-    if (!(sid.equals("") || ssid.equals("") || sid.equals(ssid))) {
+    String sid = sd.getStorageUuid();
+    if (!(sid == null || sid.equals("") ||
+          ssid.equals("") || sid.equals(ssid))) {
       throw new InconsistentFSStateException(sd.getRoot(),
           "has incompatible storage Id.");
     }
-    
-    if (sid.equals("")) { // update id only if it was empty
-      setStorageID(ssid);
+
+    if (sid == null) { // update id only if it was null
+      sd.setStorageUuid(ssid);
+    }
+
+    // Update the datanode UUID if present.
+    if (props.getProperty("datanodeUuid") != null) {
+      String dnUuid = props.getProperty("datanodeUuid");
+
+      if (getDatanodeUuid() == null) {
+        setDatanodeUuid(dnUuid);
+      } else if (getDatanodeUuid().compareTo(dnUuid) != 0) {
+        throw new InconsistentFSStateException(sd.getRoot(),
+            "Root " + sd.getRoot() + ": DatanodeUuid=" + dnUuid +
+            ", does not match " + getDatanodeUuid() + " from other" +
+            " StorageDirectory.");
+      }
     }
   }
 

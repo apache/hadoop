@@ -31,6 +31,7 @@ import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -50,6 +51,7 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifie
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
@@ -1111,13 +1113,12 @@ class NamenodeJspHelper {
         } 
 
         doc.startTag("replicas");
-        for (final Iterator<DatanodeDescriptor> it = blockManager != null ?
-            blockManager.datanodeIterator(block) :
-            Collections.<DatanodeDescriptor>emptyList().iterator();
-            it.hasNext();) {
+        for(DatanodeStorageInfo storage : (blockManager != null ?
+                blockManager.getStorages(block) :
+                Collections.<DatanodeStorageInfo>emptyList())) {
           doc.startTag("replica");
 
-          DatanodeDescriptor dd = it.next();
+          DatanodeDescriptor dd = storage.getDatanodeDescriptor();
 
           doc.startTag("host_name");
           doc.pcdata(dd.getHostName());

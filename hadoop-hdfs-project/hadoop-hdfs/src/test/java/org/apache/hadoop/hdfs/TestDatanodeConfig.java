@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs;
 import static org.apache.hadoop.hdfs.server.common.Util.fileAsURI;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -79,7 +81,8 @@ public class TestDatanodeConfig {
     DataNode dn = null;
     try {
       dn = DataNode.createDataNode(new String[]{}, conf);
-    } catch(IOException e) {
+      fail();
+    } catch(Exception e) {
       // expecting exception here
     }
     if(dn != null)

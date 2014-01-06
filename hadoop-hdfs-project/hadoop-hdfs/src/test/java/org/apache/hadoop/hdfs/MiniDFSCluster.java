@@ -56,6 +56,7 @@ import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 import org.apache.commons.logging.Log;
@@ -88,6 +89,7 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.hdfs.web.HftpFileSystem;
@@ -124,6 +126,9 @@ public class MiniDFSCluster {
   public static final String HDFS_MINIDFS_BASEDIR = "hdfs.minidfs.basedir";
   public static final String  DFS_NAMENODE_SAFEMODE_EXTENSION_TESTING_KEY
       = DFS_NAMENODE_SAFEMODE_EXTENSION_KEY + ".testing";
+
+  // Changing this value may break some tests that assume it is 2.
+  public static final int DIRS_PER_DATANODE = 2;
 
   static { DefaultMetricsSystem.setMiniClusterMode(true); }
 
@@ -329,9 +334,10 @@ public class MiniDFSCluster {
           builder.nameNodePort, builder.nameNodeHttpPort);
     }
     
-    LOG.info("starting cluster with " + 
-        builder.nnTopology.countNameNodes() + " namenodes.");
-    nameNodes = new NameNodeInfo[builder.nnTopology.countNameNodes()];
+    final int numNameNodes = builder.nnTopology.countNameNodes();
+    LOG.info("starting cluster: numNameNodes=" + numNameNodes
+        + ", numDataNodes=" + builder.numDataNodes);
+    nameNodes = new NameNodeInfo[numNameNodes];
       
     initMiniDFSCluster(builder.conf,
                        builder.numDataNodes,
@@ -1149,15 +1155,16 @@ public class MiniDFSCluster {
       // Set up datanode address
       setupDatanodeAddress(dnConf, setupHostsFile, checkDataNodeAddrConfig);
       if (manageDfsDirs) {
-        File dir1 = getInstanceStorageDir(i, 0);
-        File dir2 = getInstanceStorageDir(i, 1);
-        dir1.mkdirs();
-        dir2.mkdirs();
-        if (!dir1.isDirectory() || !dir2.isDirectory()) { 
-          throw new IOException("Mkdirs failed to create directory for DataNode "
-                                + i + ": " + dir1 + " or " + dir2);
+        StringBuilder sb = new StringBuilder();
+        for (int j = 0; j < DIRS_PER_DATANODE; ++j) {
+          File dir = getInstanceStorageDir(i, j);
+          dir.mkdirs();
+          if (!dir.isDirectory()) {
+            throw new IOException("Mkdirs failed to create directory for DataNode " + dir);
+          }
+          sb.append((j > 0 ? "," : "") + fileAsURI(dir));
         }
-        String dirs = fileAsURI(dir1) + "," + fileAsURI(dir2);
+        String dirs = sb.toString();
         dnConf.set(DFS_DATANODE_DATA_DIR_KEY, dirs);
         conf.set(DFS_DATANODE_DATA_DIR_KEY, dirs);
       }
@@ -1927,12 +1934,14 @@ public class MiniDFSCluster {
     
     // Wait for expected number of datanodes to start
     if (dnInfo.length != numDataNodes) {
+      LOG.info("dnInfo.length != numDataNodes");
       return true;
     }
     
     // if one of the data nodes is not fully started, continue to wait
     for (DataNodeProperties dn : dataNodes) {
       if (!dn.datanode.isDatanodeFullyStarted()) {
+        LOG.info("!dn.datanode.isDatanodeFullyStarted()");
         return true;
       }
     }
@@ -1941,6 +1950,7 @@ public class MiniDFSCluster {
     // using (capacity == 0) as proxy.
     for (DatanodeInfo dn : dnInfo) {
       if (dn.getCapacity() == 0) {
+        LOG.info("dn.getCapacity() == 0");
         return true;
       }
     }
@@ -1948,6 +1958,7 @@ public class MiniDFSCluster {
     // If datanode dataset is not initialized then wait
     for (DataNodeProperties dn : dataNodes) {
       if (DataNodeTestUtils.getFSDataset(dn.datanode) == null) {
+        LOG.info("DataNodeTestUtils.getFSDataset(dn.datanode) == null");
         return true;
       }
     }
@@ -1967,12 +1978,12 @@ public class MiniDFSCluster {
    * @param dataNodeIndex - data node whose block report is desired - the index is same as for getDataNodes()
    * @return the block report for the specified data node
    */
-  public Iterable<Block> getBlockReport(String bpid, int dataNodeIndex) {
+  public Map<DatanodeStorage, BlockListAsLongs> getBlockReport(String bpid, int dataNodeIndex) {
     if (dataNodeIndex < 0 || dataNodeIndex > dataNodes.size()) {
       throw new IndexOutOfBoundsException();
     }
     final DataNode dn = dataNodes.get(dataNodeIndex).datanode;
-    return DataNodeTestUtils.getFSDataset(dn).getBlockReport(bpid);
+    return DataNodeTestUtils.getFSDataset(dn).getBlockReports(bpid);
   }
   
   
@@ -1981,11 +1992,12 @@ public class MiniDFSCluster {
    * @return block reports from all data nodes
    *    BlockListAsLongs is indexed in the same order as the list of datanodes returned by getDataNodes()
    */
-  public Iterable<Block>[] getAllBlockReports(String bpid) {
+  public List<Map<DatanodeStorage, BlockListAsLongs>> getAllBlockReports(String bpid) {
     int numDataNodes = dataNodes.size();
-    Iterable<Block>[] result = new BlockListAsLongs[numDataNodes];
+    final List<Map<DatanodeStorage, BlockListAsLongs>> result
+        = new ArrayList<Map<DatanodeStorage, BlockListAsLongs>>(numDataNodes);
     for (int i = 0; i < numDataNodes; ++i) {
-     result[i] = getBlockReport(bpid, i);
+      result.add(getBlockReport(bpid, i));
     }
     return result;
   }

@@ -52,8 +52,9 @@ message DatanodeStorageProto {
     READ_ONLY = 1;
   }
 
-  required string storageID = 1;    // Unique identifier for the storage
+  required string storageUuid = 1;
   optional StorageState state = 2 [default = NORMAL];
+  optional StorageTypeProto storageType = 3 [default = DISK];
 }
 
 /**
@@ -103,10 +104,12 @@ message BlockCommandProto {
     INVALIDATE = 2; // Invalidate blocks
     SHUTDOWN = 3; // Shutdown the datanode
   }
+
   required Action action = 1;
   required string blockPoolId = 2;
   repeated BlockProto blocks = 3;
   repeated DatanodeInfosProto targets = 4;
+  repeated StorageUuidsProto targetStorageUuids = 5;
 }
 
 /**
@@ -172,7 +175,7 @@ message HeartbeatRequestProto {
 }
 
 message StorageReportProto {
-  required string storageID = 1;
+  required string storageUuid = 1;
   optional bool failed = 2 [ default = false ];
   optional uint64 capacity = 3 [ default = 0 ];
   optional uint64 dfsUsed = 4 [ default = 0 ];
@@ -250,7 +253,7 @@ message ReceivedDeletedBlockInfoProto {
  * List of blocks received and deleted for a storage.
  */
 message StorageReceivedDeletedBlocksProto {
-  required string storageID = 1;
+  required string storageUuid = 1;
   repeated ReceivedDeletedBlockInfoProto blocks = 2;
 }
 

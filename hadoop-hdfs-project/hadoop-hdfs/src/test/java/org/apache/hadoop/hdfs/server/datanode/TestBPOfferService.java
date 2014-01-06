@@ -104,7 +104,7 @@ public class TestBPOfferService {
     .when(mockDn).getMetrics();
 
     // Set up a simulated dataset with our fake BP
-    mockFSDataset = Mockito.spy(new SimulatedFSDataset(null, null, conf));
+    mockFSDataset = Mockito.spy(new SimulatedFSDataset(null, conf));
     mockFSDataset.addBlockPool(FAKE_BPID, conf);
 
     // Wire the dataset to the DN.
@@ -178,7 +178,7 @@ public class TestBPOfferService {
       waitForBlockReport(mockNN2);
 
       // When we receive a block, it should report it to both NNs
-      bpos.notifyNamenodeReceivedBlock(FAKE_BLOCK, "");
+      bpos.notifyNamenodeReceivedBlock(FAKE_BLOCK, "", "");
 
       ReceivedDeletedBlockInfo[] ret = waitForBlockReceived(FAKE_BLOCK, mockNN1);
       assertEquals(1, ret.length);

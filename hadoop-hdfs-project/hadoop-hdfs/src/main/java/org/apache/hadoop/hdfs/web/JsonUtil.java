@@ -276,10 +276,11 @@ public class JsonUtil {
       return null;
     }
 
+    // TODO: Fix storageID
     final Map<String, Object> m = new TreeMap<String, Object>();
     m.put("ipAddr", datanodeinfo.getIpAddr());
     m.put("hostName", datanodeinfo.getHostName());
-    m.put("storageID", datanodeinfo.getStorageID());
+    m.put("storageID", datanodeinfo.getDatanodeUuid());
     m.put("xferPort", datanodeinfo.getXferPort());
     m.put("infoPort", datanodeinfo.getInfoPort());
     m.put("infoSecurePort", datanodeinfo.getInfoSecurePort());
@@ -307,6 +308,7 @@ public class JsonUtil {
       infoSecurePort = 0l; // same as the default value in hdfs.proto
     }
 
+    // TODO: Fix storageID
     return new DatanodeInfo(
         (String)m.get("ipAddr"),
         (String)m.get("hostName"),
@@ -384,7 +386,8 @@ public class JsonUtil {
     final long startOffset = (Long)m.get("startOffset");
     final boolean isCorrupt = (Boolean)m.get("isCorrupt");
 
-    final LocatedBlock locatedblock = new LocatedBlock(b, locations, startOffset, isCorrupt);
+    final LocatedBlock locatedblock = new LocatedBlock(b, locations,
+        null, null, startOffset, isCorrupt);
     locatedblock.setBlockToken(toBlockToken((Map<?, ?>)m.get("blockToken")));
     return locatedblock;
   }

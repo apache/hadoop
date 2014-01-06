@@ -405,14 +405,17 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       throws ServiceException {
     try {
       List<DatanodeInfoProto> existingList = req.getExistingsList();
+      List<String> existingStorageIDsList = req.getExistingStorageUuidsList();
       List<DatanodeInfoProto> excludesList = req.getExcludesList();
-      LocatedBlock result = server.getAdditionalDatanode(
-          req.getSrc(), PBHelper.convert(req.getBlk()),
+      LocatedBlock result = server.getAdditionalDatanode(req.getSrc(),
+          PBHelper.convert(req.getBlk()),
           PBHelper.convert(existingList.toArray(
               new DatanodeInfoProto[existingList.size()])),
+          existingStorageIDsList.toArray(
+              new String[existingStorageIDsList.size()]),
           PBHelper.convert(excludesList.toArray(
               new DatanodeInfoProto[excludesList.size()])), 
-              req.getNumAdditionalNodes(), req.getClientName());
+          req.getNumAdditionalNodes(), req.getClientName());
       return GetAdditionalDatanodeResponseProto.newBuilder().setBlock(
           PBHelper.convert(result))
           .build();
@@ -813,10 +816,12 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       UpdatePipelineRequestProto req) throws ServiceException {
     try {
       List<DatanodeIDProto> newNodes = req.getNewNodesList();
-      server
-          .updatePipeline(req.getClientName(), PBHelper.convert(req
-              .getOldBlock()), PBHelper.convert(req.getNewBlock()), PBHelper
-              .convert(newNodes.toArray(new DatanodeIDProto[newNodes.size()])));
+      List<String> newStorageIDs = req.getStorageIDsList();
+      server.updatePipeline(req.getClientName(),
+          PBHelper.convert(req.getOldBlock()),
+          PBHelper.convert(req.getNewBlock()),
+          PBHelper.convert(newNodes.toArray(new DatanodeIDProto[newNodes.size()])),
+          newStorageIDs.toArray(new String[newStorageIDs.size()]));
       return VOID_UPDATEPIPELINE_RESPONSE;
     } catch (IOException e) {
       throw new ServiceException(e);

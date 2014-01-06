@@ -117,6 +117,13 @@ class ReplicaMap {
       return  m.put(replicaInfo.getBlockId(), replicaInfo);
     }
   }
+
+  /**
+   * Add all entries from the given replica map into the local replica map.
+   */
+  void addAll(ReplicaMap other) {
+    map.putAll(other.map);
+  }
   
   /**
    * Remove the replica's meta information from the map that matches
