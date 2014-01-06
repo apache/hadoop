@@ -16,10 +16,15 @@ package org.apache.hadoop.security.authentication.server;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authentication.client.PseudoAuthenticator;
 
+import org.apache.http.client.utils.URLEncodedUtils;
+import org.apache.http.NameValuePair;
+
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.nio.charset.Charset;
+import java.util.List;
 import java.util.Properties;
 
 /**
@@ -48,6 +53,7 @@ public class PseudoAuthenticationHandler implements AuthenticationHandler {
    */
   public static final String ANONYMOUS_ALLOWED = TYPE + ".anonymous.allowed";
 
+  private static final Charset UTF8_CHARSET = Charset.forName("UTF-8");
   private boolean acceptAnonymous;
 
   /**
@@ -114,6 +120,18 @@ public class PseudoAuthenticationHandler implements AuthenticationHandler {
     return true;
   }
 
+  private String getUserName(HttpServletRequest request) {
+    List<NameValuePair> list = URLEncodedUtils.parse(request.getQueryString(), UTF8_CHARSET);
+    if (list != null) {
+      for (NameValuePair nv : list) {
+        if (PseudoAuthenticator.USER_NAME.equals(nv.getName())) {
+          return nv.getValue();
+        }
+      }
+    }
+    return null;
+  }
+
   /**
    * Authenticates an HTTP client request.
    * <p/>
@@ -139,7 +157,7 @@ public class PseudoAuthenticationHandler implements AuthenticationHandler {
   public AuthenticationToken authenticate(HttpServletRequest request, HttpServletResponse response)
     throws IOException, AuthenticationException {
     AuthenticationToken token;
-    String userName = request.getParameter(PseudoAuthenticator.USER_NAME);
+    String userName = getUserName(request);
     if (userName == null) {
       if (getAcceptAnonymous()) {
         token = AuthenticationToken.ANONYMOUS;

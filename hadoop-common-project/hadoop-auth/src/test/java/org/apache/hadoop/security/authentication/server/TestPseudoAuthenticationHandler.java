@@ -89,7 +89,7 @@ public class TestPseudoAuthenticationHandler extends TestCase {
 
       HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
       HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
-      Mockito.when(request.getParameter(PseudoAuthenticator.USER_NAME)).thenReturn("user");
+      Mockito.when(request.getQueryString()).thenReturn(PseudoAuthenticator.USER_NAME + "=" + "user");
 
       AuthenticationToken token = handler.authenticate(request, response);
 
