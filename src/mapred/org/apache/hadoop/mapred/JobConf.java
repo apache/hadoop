@@ -884,7 +884,7 @@ public class JobConf extends Configuration {
    * grouping keys of inputs to the combiner.
    *
    * @return comparator set by the user for grouping values.
-   * @see #setCombinerKeyGroupingComparator(Class) for details.
+   * @see #setCombinerKeyGroupingComparator(Class) 
    */
   public RawComparator getCombinerKeyGroupingComparator() {
     Class<? extends RawComparator> theClass = getClass(
@@ -969,8 +969,7 @@ public class JobConf extends Configuration {
    * @param theClass the comparator class to be used for grouping keys. 
    *                 It should implement <code>RawComparator</code>.
    * @see #setOutputKeyComparatorClass(Class)
-   * @see {@link #setCombinerKeyGroupingComparator(Class)} for setting a 
-   * comparator for the combiner.
+   * @see #setCombinerKeyGroupingComparator(Class)}
    */
   public void setOutputValueGroupingComparator(
 		  Class<? extends RawComparator> theClass) {
