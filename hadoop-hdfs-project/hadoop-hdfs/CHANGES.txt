@@ -598,6 +598,9 @@ Trunk (Unreleased)
 
     HDFS-5667. Include DatanodeStorage in StorageReport. (Arpit Agarwal)
 
+    HDFS-5589. Namenode loops caching and uncaching when data should be
+    uncached (awang via cmccabe)
+
 Release 2.4.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

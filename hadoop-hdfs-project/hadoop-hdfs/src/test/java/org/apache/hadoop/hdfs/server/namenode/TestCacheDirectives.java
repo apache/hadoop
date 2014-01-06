@@ -57,17 +57,18 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.LogVerificationAppender;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
+import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo.Expiration;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveIterator;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveStats;
 import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
-import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo.Expiration;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.CachePoolStats;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.blockmanagement.CacheReplicationMonitor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.CachedBlocksList.Type;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
@@ -81,6 +82,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.GSet;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
+import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -603,8 +605,8 @@ public class TestCacheDirectives {
    * Wait for the NameNode to have an expected number of cached blocks
    * and replicas.
    * @param nn NameNode
-   * @param expectedCachedBlocks
-   * @param expectedCachedReplicas
+   * @param expectedCachedBlocks if -1, treat as wildcard
+   * @param expectedCachedReplicas if -1, treat as wildcard
    * @throws Exception
    */
   private static void waitForCachedBlocks(NameNode nn,
@@ -633,16 +635,18 @@ public class TestCacheDirectives {
         } finally {
           namesystem.readUnlock();
         }
-        if ((numCachedBlocks == expectedCachedBlocks) && 
-            (numCachedReplicas == expectedCachedReplicas)) {
-          return true;
-        } else {
-          LOG.info(logString + " cached blocks: have " + numCachedBlocks +
-              " / " + expectedCachedBlocks + ".  " +
-              "cached replicas: have " + numCachedReplicas +
-              " / " + expectedCachedReplicas);
-          return false;
+        if (expectedCachedBlocks == -1 ||
+            numCachedBlocks == expectedCachedBlocks) {
+          if (expectedCachedReplicas == -1 ||
+              numCachedReplicas == expectedCachedReplicas) {
+            return true;
+          }
         }
+        LOG.info(logString + " cached blocks: have " + numCachedBlocks +
+            " / " + expectedCachedBlocks + ".  " +
+            "cached replicas: have " + numCachedReplicas +
+            " / " + expectedCachedReplicas);
+        return false;
       }
     }, 500, 60000);
   }
@@ -1350,5 +1354,40 @@ public class TestCacheDirectives {
         .setId(listInfo.getId())
         .setExpiration(Expiration.newRelative(RELATIVE_EXPIRY_NEVER - 1))
         .build());
+  }
+
+  @Test(timeout=60000)
+  public void testExceedsCapacity() throws Exception {
+    // Create a giant file
+    final Path fileName = new Path("/exceeds");
+    final long fileLen = CACHE_CAPACITY * (NUM_DATANODES*2);
+    int numCachedReplicas = (int) ((CACHE_CAPACITY*NUM_DATANODES)/BLOCK_SIZE);
+    DFSTestUtil.createFile(dfs, fileName, fileLen, (short) NUM_DATANODES,
+        0xFADED);
+    // Set up a log appender watcher
+    final LogVerificationAppender appender = new LogVerificationAppender();
+    final Logger logger = Logger.getRootLogger();
+    logger.addAppender(appender);
+    dfs.addCachePool(new CachePoolInfo("pool"));
+    dfs.addCacheDirective(new CacheDirectiveInfo.Builder().setPool("pool")
+        .setPath(fileName).setReplication((short) 1).build());
+    waitForCachedBlocks(namenode, -1, numCachedReplicas,
+        "testExceeds:1");
+    // Check that no DNs saw an excess CACHE message
+    int lines = appender.countLinesWithMessage(
+        "more bytes in the cache: " +
+        DFSConfigKeys.DFS_DATANODE_MAX_LOCKED_MEMORY_KEY);
+    assertEquals("Namenode should not send extra CACHE commands", 0, lines);
+    // Try creating a file with giant-sized blocks that exceed cache capacity
+    dfs.delete(fileName, false);
+    DFSTestUtil.createFile(dfs, fileName, 4096, fileLen, CACHE_CAPACITY * 2,
+        (short) 1, 0xFADED);
+    // Nothing will get cached, so just force sleep for a bit
+    Thread.sleep(4000);
+    // Still should not see any excess commands
+    lines = appender.countLinesWithMessage(
+        "more bytes in the cache: " +
+        DFSConfigKeys.DFS_DATANODE_MAX_LOCKED_MEMORY_KEY);
+    assertEquals("Namenode should not send extra CACHE commands", 0, lines);
   }
 }

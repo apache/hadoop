@@ -43,10 +43,13 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.LogVerificationAppender;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
+import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
@@ -109,8 +112,9 @@ public class TestFsDatasetCache {
   public void setUp() throws Exception {
     assumeTrue(!Path.WINDOWS);
     conf = new HdfsConfiguration();
-    conf.setLong(DFSConfigKeys.DFS_NAMENODE_PATH_BASED_CACHE_RETRY_INTERVAL_MS,
-        500);
+    conf.setLong(
+        DFSConfigKeys.DFS_NAMENODE_PATH_BASED_CACHE_REFRESH_INTERVAL_MS, 100);
+    conf.setLong(DFSConfigKeys.DFS_CACHEREPORT_INTERVAL_MSEC_KEY, 500);
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
     conf.setLong(DFSConfigKeys.DFS_DATANODE_MAX_LOCKED_MEMORY_KEY,
         CACHE_CAPACITY);
@@ -328,7 +332,7 @@ public class TestFsDatasetCache {
 
     // Create some test files that will exceed total cache capacity
     final int numFiles = 5;
-    final long fileSize = 15000;
+    final long fileSize = CACHE_CAPACITY / (numFiles-1);
 
     final Path[] testFiles = new Path[numFiles];
     final HdfsBlockLocation[][] fileLocs = new HdfsBlockLocation[numFiles][];
@@ -476,5 +480,43 @@ public class TestFsDatasetCache {
     // Uncache and check that it decrements by the page size too
     setHeartbeatResponse(uncacheBlocks(locs));
     verifyExpectedCacheUsage(0, 0);
+  }
+
+  @Test(timeout=60000)
+  public void testUncacheQuiesces() throws Exception {
+    // Create a file
+    Path fileName = new Path("/testUncacheQuiesces");
+    int fileLen = 4096;
+    DFSTestUtil.createFile(fs, fileName, fileLen, (short)1, 0xFDFD);
+    // Cache it
+    DistributedFileSystem dfs = cluster.getFileSystem();
+    dfs.addCachePool(new CachePoolInfo("pool"));
+    dfs.addCacheDirective(new CacheDirectiveInfo.Builder()
+        .setPool("pool").setPath(fileName).setReplication((short)3).build());
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        MetricsRecordBuilder dnMetrics = getMetrics(dn.getMetrics().name());
+        long blocksCached =
+            MetricsAsserts.getLongCounter("BlocksCached", dnMetrics);
+        return blocksCached > 0;
+      }
+    }, 1000, 30000);
+    // Uncache it
+    dfs.removeCacheDirective(1);
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        MetricsRecordBuilder dnMetrics = getMetrics(dn.getMetrics().name());
+        long blocksUncached =
+            MetricsAsserts.getLongCounter("BlocksUncached", dnMetrics);
+        return blocksUncached > 0;
+      }
+    }, 1000, 30000);
+    // Make sure that no additional messages were sent
+    Thread.sleep(10000);
+    MetricsRecordBuilder dnMetrics = getMetrics(dn.getMetrics().name());
+    MetricsAsserts.assertCounter("BlocksCached", 1l, dnMetrics);
+    MetricsAsserts.assertCounter("BlocksUncached", 1l, dnMetrics);
   }
 }
