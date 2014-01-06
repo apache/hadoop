@@ -20,8 +20,10 @@ package org.apache.hadoop.crypto.key;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -141,5 +143,33 @@ public class UserProvider extends KeyProvider {
       }
       return null;
     }
+  }
+
+  @Override
+  public List<String> getKeys() throws IOException {
+    List<String> list = new ArrayList<String>();
+    List<Text> keys = credentials.getAllSecretKeys();
+    for (Text key : keys) {
+      if (key.find("@") == -1) {
+        list.add(key.toString());
+      }
+    }
+    return list;
+  }
+
+  @Override
+  public List<KeyVersion> getKeyVersions(String name) throws IOException {
+      List<KeyVersion> list = new ArrayList<KeyVersion>();
+      Metadata km = getMetadata(name);
+      if (km != null) {
+        int latestVersion = km.getVersions();
+        for (int i = 0; i < latestVersion; i++) {
+          KeyVersion v = getKeyVersion(buildVersionName(name, i));
+          if (v != null) {
+            list.add(v);
+          }
+        }
+      }
+      return list;
   }
 }
