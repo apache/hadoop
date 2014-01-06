@@ -288,6 +288,9 @@ Release 2.3.0 - UNRELEASED
     HADOOP-10090. Jobtracker metrics not updated properly after execution
     of a mapreduce job. (ivanmi)
 
+    HADOOP-10193. hadoop-auth's PseudoAuthenticationHandler can consume getInputStream. 
+    (gchanan via tucu)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
