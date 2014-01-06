@@ -167,13 +167,24 @@ public interface JobContext extends MRJobConfig {
    */
   public String getJar();
 
-  /** 
-   * Get the user defined {@link RawComparator} comparator for 
-   * grouping keys of inputs to the reduce.
-   * 
+  /**
+   * Get the user defined {@link RawComparator} comparator for
+   * grouping keys of inputs to the combiner.
+   *
    * @return comparator set by the user for grouping values.
-   * @see Job#setGroupingComparatorClass(Class) for details.  
+   * @see Job#setCombinerKeyGroupingComparatorClass(Class) for details.
    */
+  public RawComparator<?> getCombinerKeyGroupingComparator();
+
+    /**
+     * Get the user defined {@link RawComparator} comparator for
+     * grouping keys of inputs to the reduce.
+     *
+     * @return comparator set by the user for grouping values.
+     * @see Job#setGroupingComparatorClass(Class) for details.
+     * @see {@link #getCombinerKeyGroupingComparator()} for setting a 
+     * comparator for the combiner.
+     */
   public RawComparator<?> getGroupingComparator();
   
   /**
