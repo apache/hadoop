@@ -49,6 +49,9 @@ Release 1.3.0 - unreleased
     MAPREDUCE-5609. Add debug log message when sending job end notification. 
     (rkanter via tucu)
 
+    MAPREDUCE-3310. Custom grouping comparator cannot be set for Combiners 
+    (tucu)
+
   BUG FIXES
 
     HADOOP-9863. Backport HADOOP-8686 to support BigEndian on ppc64. 

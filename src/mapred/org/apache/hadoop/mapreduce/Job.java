@@ -24,7 +24,6 @@ import java.security.PrivilegedExceptionAction;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.RawComparator;
-import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.RunningJob;
@@ -290,11 +289,28 @@ public class Job extends JobContext {
 
   /**
    * Define the comparator that controls which keys are grouped together
+   * for a single call to combiner,
+   * {@link Reducer#reduce(Object, Iterable,
+   * org.apache.hadoop.mapreduce.Reducer.Context)}
+   *
+   * @param cls the raw comparator to use
+   * @throws IllegalStateException if the job is submitted
+   */
+  public void setCombinerKeyGroupingComparatorClass(
+      Class<? extends RawComparator> cls) throws IllegalStateException {
+    ensureState(JobState.DEFINE);
+    conf.setCombinerKeyGroupingComparator(cls);
+  }
+
+  /**
+   * Define the comparator that controls which keys are grouped together
    * for a single call to 
    * {@link Reducer#reduce(Object, Iterable, 
    *                       org.apache.hadoop.mapreduce.Reducer.Context)}
    * @param cls the raw comparator to use
    * @throws IllegalStateException if the job is submitted
+   * @see {@link #setCombinerKeyGroupingComparatorClass(Class)} for setting a 
+   * comparator for the combiner.
    */
   public void setGroupingComparatorClass(Class<? extends RawComparator> cls
                                          ) throws IllegalStateException {
