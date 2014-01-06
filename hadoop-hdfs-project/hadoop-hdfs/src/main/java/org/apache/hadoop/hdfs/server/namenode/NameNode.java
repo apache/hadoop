@@ -482,6 +482,14 @@ public class NameNode implements NameNodeStatusMXBean {
    * @param conf the configuration
    */
   protected void initialize(Configuration conf) throws IOException {
+    if (conf.get(HADOOP_USER_GROUP_METRICS_PERCENTILES_INTERVALS) == null) {
+      String intervals = conf.get(DFS_METRICS_PERCENTILES_INTERVALS_KEY);
+      if (intervals != null) {
+        conf.set(HADOOP_USER_GROUP_METRICS_PERCENTILES_INTERVALS,
+          intervals);
+      }
+    }
+
     UserGroupInformation.setConfiguration(conf);
     loginAsNameNodeUser(conf);
 

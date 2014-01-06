@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.security;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_USER_GROUP_METRICS_PERCENTILES_INTERVALS;
 
 import java.io.File;
 import java.io.IOException;
@@ -56,6 +57,8 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.metrics2.lib.MetricsRegistry;
+import org.apache.hadoop.metrics2.lib.MutableQuantiles;
 import org.apache.hadoop.metrics2.lib.MutableRate;
 import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
 import org.apache.hadoop.security.authentication.util.KerberosUtil;
@@ -90,13 +93,26 @@ public class UserGroupInformation {
    */
   @Metrics(about="User and group related metrics", context="ugi")
   static class UgiMetrics {
+    final MetricsRegistry registry = new MetricsRegistry("UgiMetrics");
+
     @Metric("Rate of successful kerberos logins and latency (milliseconds)")
     MutableRate loginSuccess;
     @Metric("Rate of failed kerberos logins and latency (milliseconds)")
     MutableRate loginFailure;
+    @Metric("GetGroups") MutableRate getGroups;
+    MutableQuantiles[] getGroupsQuantiles;
 
     static UgiMetrics create() {
       return DefaultMetricsSystem.instance().register(new UgiMetrics());
+    }
+
+    void addGetGroups(long latency) {
+      getGroups.add(latency);
+      if (getGroupsQuantiles != null) {
+        for (MutableQuantiles q : getGroupsQuantiles) {
+          q.add(latency);
+        }
+      }
     }
   }
   
@@ -239,6 +255,20 @@ public class UserGroupInformation {
       groups = Groups.getUserToGroupsMappingService(conf);
     }
     UserGroupInformation.conf = conf;
+
+    if (metrics.getGroupsQuantiles == null) {
+      int[] intervals = conf.getInts(HADOOP_USER_GROUP_METRICS_PERCENTILES_INTERVALS);
+      if (intervals != null && intervals.length > 0) {
+        final int length = intervals.length;
+        MutableQuantiles[] getGroupsQuantiles = new MutableQuantiles[length];
+        for (int i = 0; i < length; i++) {
+          getGroupsQuantiles[i] = metrics.registry.newQuantiles(
+            "getGroups" + intervals[i] + "s",
+            "Get groups", "ops", "latency", intervals[i]);
+        }
+        metrics.getGroupsQuantiles = getGroupsQuantiles;
+      }
+    }
   }
 
   /**

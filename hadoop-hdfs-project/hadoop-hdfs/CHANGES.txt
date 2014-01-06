@@ -187,6 +187,8 @@ Release 2.4.0 - UNRELEASED
     HDFS-5695. Clean up TestOfflineEditsViewer and OfflineEditsViewerHelper.
     (Haohui Mai via jing9)
 
+    HDFS-5220. Expose group resolution time as metric (jxiang via cmccabe)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn)

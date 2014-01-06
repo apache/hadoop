@@ -47,6 +47,8 @@ import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
+import org.apache.hadoop.metrics2.MetricsSource;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.test.MetricsAsserts;
 import org.apache.hadoop.util.Time;
 import org.apache.log4j.Level;
@@ -108,6 +110,12 @@ public class TestNameNodeMetrics {
   
   @After
   public void tearDown() throws Exception {
+    MetricsSource source = DefaultMetricsSystem.instance().getSource("UgiMetrics");
+    if (source != null) {
+      // Run only once since the UGI metrics is cleaned up during teardown
+      MetricsRecordBuilder rb = getMetrics(source);
+      assertQuantileGauges("GetGroups1s", rb);
+    }
     cluster.shutdown();
   }
   
