@@ -378,6 +378,13 @@ public class TestYarnClient {
 
       appId = createApp(rmClient, true);
       waitTillAccepted(rmClient, appId);
+      long start = System.currentTimeMillis();
+      while (rmClient.getAMRMToken(appId) == null) {
+        if (System.currentTimeMillis() - start > 20 * 1000) {
+          Assert.fail("AMRM token is null");
+        }
+        Thread.sleep(100);
+      }
       //unmanaged AMs do return AMRM token
       Assert.assertNotNull(rmClient.getAMRMToken(appId));
       
@@ -392,6 +399,13 @@ public class TestYarnClient {
             rmClient.start();
             ApplicationId appId = createApp(rmClient, true);
             waitTillAccepted(rmClient, appId);
+            long start = System.currentTimeMillis();
+            while (rmClient.getAMRMToken(appId) == null) {
+              if (System.currentTimeMillis() - start > 20 * 1000) {
+                Assert.fail("AMRM token is null");
+              }
+              Thread.sleep(100);
+            }
             //unmanaged AMs do return AMRM token
             Assert.assertNotNull(rmClient.getAMRMToken(appId));
             return appId;

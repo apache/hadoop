@@ -271,6 +271,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1559. Race between ServerRMProxy and ClientRMProxy setting 
     RMProxy#INSTANCE. (kasha and vinodkv via kasha)
 
+    YARN-1560. Fixed TestYarnClient#testAMMRTokens failure with null AMRM token.
+    (Ted Yu via jianhe)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
