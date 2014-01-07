@@ -24,6 +24,8 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.URL;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -31,13 +33,18 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.ClientBaseWithFixes;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.proto.HAServiceProtocolProtos;
+import org.apache.hadoop.service.Service.STATE;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
 import org.apache.hadoop.yarn.server.resourcemanager.AdminService;
+import org.apache.hadoop.yarn.server.webproxy.WebAppProxyServer;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -55,6 +62,8 @@ public class TestRMFailover extends ClientBaseWithFixes {
 
   private Configuration conf;
   private MiniYARNCluster cluster;
+  private ApplicationId fakeAppId;
+
 
   private void setConfForRM(String rmId, String prefix, String value) {
     conf.set(HAUtil.addSuffix(prefix, rmId), value);
@@ -77,6 +86,7 @@ public class TestRMFailover extends ClientBaseWithFixes {
 
   @Before
   public void setup() throws IOException {
+    fakeAppId = ApplicationId.newInstance(System.currentTimeMillis(), 0);
     conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
     conf.set(YarnConfiguration.RM_HA_IDS, RM1_NODE_ID + "," + RM2_NODE_ID);
@@ -178,5 +188,68 @@ public class TestRMFailover extends ClientBaseWithFixes {
 
     failover();
     verifyConnections();
+  }
+
+  @Test
+  public void testWebAppProxyInStandAloneMode() throws YarnException,
+      InterruptedException, IOException {
+    WebAppProxyServer webAppProxyServer = new WebAppProxyServer();
+    try {
+      conf.set(YarnConfiguration.PROXY_ADDRESS, "0.0.0.0:9099");
+      cluster.init(conf);
+      cluster.start();
+      getAdminService(0).transitionToActive(req);
+      assertFalse("RM never turned active", -1 == cluster.getActiveRMIndex());
+      verifyConnections();
+      webAppProxyServer.init(conf);
+
+      // Start webAppProxyServer
+      Assert.assertEquals(STATE.INITED, webAppProxyServer.getServiceState());
+      webAppProxyServer.start();
+      Assert.assertEquals(STATE.STARTED, webAppProxyServer.getServiceState());
+
+      URL wrongUrl = new URL("http://0.0.0.0:9099/proxy/" + fakeAppId);
+      HttpURLConnection proxyConn = (HttpURLConnection) wrongUrl
+          .openConnection();
+
+      proxyConn.connect();
+      verifyExpectedException(proxyConn.getResponseMessage());
+
+      explicitFailover();
+      verifyConnections();
+      proxyConn.connect();
+      verifyExpectedException(proxyConn.getResponseMessage());
+    } finally {
+      webAppProxyServer.stop();
+    }
+  }
+
+  @Test
+  public void testEmbeddedWebAppProxy() throws YarnException,
+      InterruptedException, IOException {
+    cluster.init(conf);
+    cluster.start();
+    getAdminService(0).transitionToActive(req);
+    assertFalse("RM never turned active", -1 == cluster.getActiveRMIndex());
+    verifyConnections();
+    URL wrongUrl = new URL("http://0.0.0.0:18088/proxy/" + fakeAppId);
+    HttpURLConnection proxyConn = (HttpURLConnection) wrongUrl
+        .openConnection();
+
+    proxyConn.connect();
+    verifyExpectedException(proxyConn.getResponseMessage());
+
+    explicitFailover();
+    verifyConnections();
+    proxyConn.connect();
+    verifyExpectedException(proxyConn.getResponseMessage());
+  }
+
+  private void verifyExpectedException(String exceptionMessage){
+    assertTrue(exceptionMessage.contains(ApplicationNotFoundException.class
+        .getName()));
+    assertTrue(exceptionMessage
+        .contains("Application with id '" + fakeAppId + "' " +
+            "doesn't exist in RM."));
   }
 }

@@ -147,8 +147,11 @@ public class ResourceManager extends CompositeService implements Recoverable {
   protected QueueACLsManager queueACLsManager;
   private DelegationTokenRenewer delegationTokenRenewer;
   private WebApp webApp;
+  private AppReportFetcher fetcher = null;
   protected ResourceTrackerService resourceTracker;
   private boolean recoveryEnabled;
+
+  private String webAppAddress;
 
   /** End of Active services */
 
@@ -193,6 +196,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
       HAUtil.verifyAndSetConfiguration(conf);
     }
     createAndInitActiveServices();
+
+    webAppAddress = WebAppUtils.getRMWebAppURLWithoutScheme(conf);
 
     super.serviceInit(conf);
   }
@@ -437,22 +442,12 @@ public class ResourceManager extends CompositeService implements Recoverable {
           throw e;
         }
       }
-      startWepApp();
-
-      if (getConfig().getBoolean(YarnConfiguration.IS_MINI_YARN_CLUSTER, false)) {
-        int port = webApp.port();
-        WebAppUtils.setRMWebAppPort(conf, port);
-      }
 
       super.serviceStart();
     }
 
     @Override
     protected void serviceStop() throws Exception {
-      if (webApp != null) {
-        webApp.stop();
-      }
-
 
       DefaultMetricsSystem.shutdown();
 
@@ -752,12 +747,16 @@ public class ResourceManager extends CompositeService implements Recoverable {
                 YarnConfiguration.RM_WEBAPP_SPNEGO_USER_NAME_KEY)
             .withHttpSpnegoKeytabKey(
                 YarnConfiguration.RM_WEBAPP_SPNEGO_KEYTAB_FILE_KEY)
-            .at(WebAppUtils.getRMWebAppURLWithoutScheme(conf)); 
+            .at(webAppAddress);
     String proxyHostAndPort = WebAppUtils.getProxyHostAndPort(conf);
     if(WebAppUtils.getResolvedRMWebAppURLWithoutScheme(conf).
         equals(proxyHostAndPort)) {
-      AppReportFetcher fetcher = new AppReportFetcher(conf, getClientRMService());
-      builder.withServlet(ProxyUriUtils.PROXY_SERVLET_NAME, 
+      if (HAUtil.isHAEnabled(conf)) {
+        fetcher = new AppReportFetcher(conf);
+      } else {
+        fetcher = new AppReportFetcher(conf, getClientRMService());
+      }
+      builder.withServlet(ProxyUriUtils.PROXY_SERVLET_NAME,
           ProxyUriUtils.PROXY_PATH_SPEC, WebAppProxyServlet.class);
       builder.withAttribute(WebAppProxy.FETCHER_ATTRIBUTE, fetcher);
       String[] proxyParts = proxyHostAndPort.split(":");
@@ -854,6 +853,11 @@ public class ResourceManager extends CompositeService implements Recoverable {
       transitionToActive();
     }
 
+    startWepApp();
+    if (getConfig().getBoolean(YarnConfiguration.IS_MINI_YARN_CLUSTER, false)) {
+      int port = webApp.port();
+      WebAppUtils.setRMWebAppPort(conf, port);
+    }
     super.serviceStart();
   }
   
@@ -864,6 +868,12 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
   @Override
   protected void serviceStop() throws Exception {
+    if (webApp != null) {
+      webApp.stop();
+    }
+    if (fetcher != null) {
+      fetcher.stop();
+    }
     super.serviceStop();
     transitionToStandby(false);
     rmContext.setHAServiceState(HAServiceState.STOPPING);
