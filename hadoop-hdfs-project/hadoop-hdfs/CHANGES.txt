@@ -242,6 +242,9 @@ Trunk (Unreleased)
     HDFS-5651. Remove dfs.namenode.caching.enabled and improve CRM locking.
     (cmccabe via wang)
 
+    HDFS-5715. Use Snapshot ID to indicate the corresponding Snapshot for a
+    FileDiff/DirectoryDiff. (jing9)
+
   OPTIMIZATIONS
 
     HDFS-5349. DNA_CACHE and DNA_UNCACHE should be by blockId only. (cmccabe)

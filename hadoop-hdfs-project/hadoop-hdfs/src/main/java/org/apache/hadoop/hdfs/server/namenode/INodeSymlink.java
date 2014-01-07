@@ -45,10 +45,10 @@ public class INodeSymlink extends INodeWithAdditionalFields {
   }
 
   @Override
-  INode recordModification(Snapshot latest) throws QuotaExceededException {
-    if (isInLatestSnapshot(latest)) {
+  INode recordModification(int latestSnapshotId) throws QuotaExceededException {
+    if (isInLatestSnapshot(latestSnapshotId)) {
       INodeDirectory parent = getParent();
-      parent.saveChild2Snapshot(this, latest, new INodeSymlink(this));
+      parent.saveChild2Snapshot(this, latestSnapshotId, new INodeSymlink(this));
     }
     return this;
   }
@@ -74,10 +74,11 @@ public class INodeSymlink extends INodeWithAdditionalFields {
   }
   
   @Override
-  public Quota.Counts cleanSubtree(final Snapshot snapshot, Snapshot prior,
+  public Quota.Counts cleanSubtree(final int snapshotId, int priorSnapshotId,
       final BlocksMapUpdateInfo collectedBlocks,
       final List<INode> removedINodes, final boolean countDiffChange) {
-    if (snapshot == null && prior == null) {
+    if (snapshotId == Snapshot.CURRENT_STATE_ID
+        && priorSnapshotId == Snapshot.NO_SNAPSHOT_ID) {
       destroyAndCollectBlocks(collectedBlocks, removedINodes);
     }
     return Quota.Counts.newInstance(1, 0);
@@ -105,7 +106,7 @@ public class INodeSymlink extends INodeWithAdditionalFields {
 
   @Override
   public void dumpTreeRecursively(PrintWriter out, StringBuilder prefix,
-      final Snapshot snapshot) {
+      final int snapshot) {
     super.dumpTreeRecursively(out, prefix, snapshot);
     out.println();
   }
