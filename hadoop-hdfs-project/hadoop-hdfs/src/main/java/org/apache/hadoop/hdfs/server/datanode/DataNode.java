@@ -791,8 +791,6 @@ public class DataNode extends Configured
       storageInfo = new StorageInfo(nsInfo);
     }
 
-    checkDatanodeUuid();
-
     DatanodeID dnId = new DatanodeID(
         streamingAddr.getAddress().getHostAddress(), hostName, 
         storage.getDatanodeUuid(), getXferPort(), getInfoPort(),
@@ -940,6 +938,9 @@ public class DataNode extends Configured
           + ";bpid=" + bpid + ";lv=" + storage.getLayoutVersion()
           + ";nsInfo=" + nsInfo + ";dnuuid=" + storage.getDatanodeUuid());
     }
+
+    // If this is a newly formatted DataNode then assign a new DatanodeUuid.
+    checkDatanodeUuid();
 
     synchronized(this)  {
       if (data == null) {
