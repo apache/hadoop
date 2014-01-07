@@ -84,7 +84,12 @@ public class CacheAdmin extends Configured implements Tool {
     for (int j = 1; j < args.length; j++) {
       argsList.add(args[j]);
     }
-    return command.run(getConf(), argsList);
+    try {
+      return command.run(getConf(), argsList);
+    } catch (IllegalArgumentException e) {
+      System.err.println(prettifyException(e));
+      return -1;
+    }
   }
 
   public static void main(String[] argsArray) throws IOException {
@@ -135,6 +140,20 @@ public class CacheAdmin extends Configured implements Tool {
     return maxTtl;
   }
 
+  private static Expiration parseExpirationString(String ttlString)
+      throws IOException {
+    Expiration ex = null;
+    if (ttlString != null) {
+      if (ttlString.equalsIgnoreCase("never")) {
+        ex = CacheDirectiveInfo.Expiration.NEVER;
+      } else {
+        long ttl = DFSUtil.parseRelativeTime(ttlString);
+        ex = CacheDirectiveInfo.Expiration.newRelative(ttl);
+      }
+    }
+    return ex;
+  }
+
   interface Command {
     String getName();
     String getShortUsage();
@@ -171,6 +190,7 @@ public class CacheAdmin extends Configured implements Tool {
       listing.addRow("<time-to-live>", "How long the directive is " +
           "valid. Can be specified in minutes, hours, and days, e.g. " +
           "30m, 4h, 2d. Valid units are [smhd]." +
+          " \"never\" indicates a directive that never expires." +
           " If unspecified, the directive never expires.");
       return getShortUsage() + "\n" +
         "Add a new cache directive.\n\n" +
@@ -203,15 +223,15 @@ public class CacheAdmin extends Configured implements Tool {
       }
 
       String ttlString = StringUtils.popOptionWithArgument("-ttl", args);
-      if (ttlString != null) {
-        try {
-          long ttl = DFSUtil.parseRelativeTime(ttlString);
-          builder.setExpiration(CacheDirectiveInfo.Expiration.newRelative(ttl));
-        } catch (IOException e) {
-          System.err.println(
-              "Error while parsing ttl value: " + e.getMessage());
-          return 1;
+      try {
+        Expiration ex = parseExpirationString(ttlString);
+        if (ex != null) {
+          builder.setExpiration(ex);
         }
+      } catch (IOException e) {
+        System.err.println(
+            "Error while parsing ttl value: " + e.getMessage());
+        return 1;
       }
 
       if (!args.isEmpty()) {
@@ -326,7 +346,7 @@ public class CacheAdmin extends Configured implements Tool {
       listing.addRow("<time-to-live>", "How long the directive is " +
           "valid. Can be specified in minutes, hours, and days, e.g. " +
           "30m, 4h, 2d. Valid units are [smhd]." +
-          " If unspecified, the directive never expires.");
+          " \"never\" indicates a directive that never expires.");
       return getShortUsage() + "\n" +
         "Modify a cache directive.\n\n" +
         listing.toString();
@@ -362,17 +382,16 @@ public class CacheAdmin extends Configured implements Tool {
         modified = true;
       }
       String ttlString = StringUtils.popOptionWithArgument("-ttl", args);
-      if (ttlString != null) {
-        long ttl;
-        try {
-          ttl = DFSUtil.parseRelativeTime(ttlString);
-        } catch (IOException e) {
-          System.err.println(
-              "Error while parsing ttl value: " + e.getMessage());
-          return 1;
+      try {
+        Expiration ex = parseExpirationString(ttlString);
+        if (ex != null) {
+          builder.setExpiration(ex);
+          modified = true;
         }
-        builder.setExpiration(CacheDirectiveInfo.Expiration.newRelative(ttl));
-        modified = true;
+      } catch (IOException e) {
+        System.err.println(
+            "Error while parsing ttl value: " + e.getMessage());
+        return 1;
       }
       if (!args.isEmpty()) {
         System.err.println("Can't understand argument: " + args.get(0));
@@ -578,7 +597,7 @@ public class CacheAdmin extends Configured implements Tool {
     public String getShortUsage() {
       return "[" + NAME + " <name> [-owner <owner>] " +
           "[-group <group>] [-mode <mode>] [-limit <limit>] " +
-          "[-maxttl <maxTtl>]\n";
+          "[-maxTtl <maxTtl>]\n";
     }
 
     @Override

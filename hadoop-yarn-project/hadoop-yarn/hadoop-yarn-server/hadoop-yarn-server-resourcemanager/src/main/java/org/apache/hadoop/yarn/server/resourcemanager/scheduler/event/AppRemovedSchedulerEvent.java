@@ -16,21 +16,28 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.exceptions;
+package org.apache.hadoop.yarn.server.resourcemanager.scheduler.event;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 
-/**
- * Exception to be thrown when an Active-Only operation is attempted on a
- * ResourceManager that is not Active.
- */
-@InterfaceAudience.Private
-@InterfaceStability.Evolving
-public class RMNotYetActiveException extends YarnException {
-  private static final long serialVersionUID = 1L;
+public class AppRemovedSchedulerEvent extends SchedulerEvent {
 
-  public RMNotYetActiveException() {
-    super("ResourceManager is not yet Active!");
+  private final ApplicationId applicationId;
+  private final RMAppState finalState;
+
+  public AppRemovedSchedulerEvent(ApplicationId applicationId,
+      RMAppState finalState) {
+    super(SchedulerEventType.APP_REMOVED);
+    this.applicationId = applicationId;
+    this.finalState = finalState;
+  }
+
+  public ApplicationId getApplicationID() {
+    return this.applicationId;
+  }
+
+  public RMAppState getFinalState() {
+    return this.finalState;
   }
 }

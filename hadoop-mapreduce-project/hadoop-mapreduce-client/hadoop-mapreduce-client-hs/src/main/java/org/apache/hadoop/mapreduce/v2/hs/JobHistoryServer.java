@@ -45,6 +45,8 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.logaggregation.AggregatedLogDeletionService;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /******************************************************************
  * {@link JobHistoryServer} is responsible for servicing all job history
  * related requests from client.
@@ -60,10 +62,10 @@ public class JobHistoryServer extends CompositeService {
   public static final long historyServerTimeStamp = System.currentTimeMillis();
 
   private static final Log LOG = LogFactory.getLog(JobHistoryServer.class);
-  private HistoryContext historyContext;
+  protected HistoryContext historyContext;
   private HistoryClientService clientService;
   private JobHistory jobHistoryService;
-  private JHSDelegationTokenSecretManager jhsDTSecretManager;
+  protected JHSDelegationTokenSecretManager jhsDTSecretManager;
   private AggregatedLogDeletionService aggLogDelService;
   private HSAdminServer hsAdminServer;
   private HistoryServerStateStoreService stateStore;
@@ -129,8 +131,7 @@ public class JobHistoryServer extends CompositeService {
     historyContext = (HistoryContext)jobHistoryService;
     stateStore = createStateStore(conf);
     this.jhsDTSecretManager = createJHSSecretManager(conf, stateStore);
-    clientService = new HistoryClientService(historyContext, 
-        this.jhsDTSecretManager);
+    clientService = createHistoryClientService();
     aggLogDelService = new AggregatedLogDeletionService();
     hsAdminServer = new HSAdminServer(aggLogDelService, jobHistoryService);
     addService(stateStore);
@@ -140,6 +141,12 @@ public class JobHistoryServer extends CompositeService {
     addService(aggLogDelService);
     addService(hsAdminServer);
     super.serviceInit(config);
+  }
+
+  @VisibleForTesting
+  protected HistoryClientService createHistoryClientService() {
+    return new HistoryClientService(historyContext, 
+        this.jhsDTSecretManager);
   }
 
   protected JHSDelegationTokenSecretManager createJHSSecretManager(

@@ -21,7 +21,7 @@ package org.apache.hadoop.hdfs.server.protocol;
  * Utilization report for a Datanode storage
  */
 public class StorageReport {
-  private final String storageID;
+  private final DatanodeStorage storage;
   private final boolean failed;
   private final long capacity;
   private final long dfsUsed;
@@ -30,9 +30,9 @@ public class StorageReport {
 
   public static final StorageReport[] EMPTY_ARRAY = {};
   
-  public StorageReport(String sid, boolean failed, long capacity, long dfsUsed,
-      long remaining, long bpUsed) {
-    this.storageID = sid;
+  public StorageReport(DatanodeStorage storage, boolean failed,
+      long capacity, long dfsUsed, long remaining, long bpUsed) {
+    this.storage = storage;
     this.failed = failed;
     this.capacity = capacity;
     this.dfsUsed = dfsUsed;
@@ -40,8 +40,8 @@ public class StorageReport {
     this.blockPoolUsed = bpUsed;
   }
 
-  public String getStorageID() {
-    return storageID;
+  public DatanodeStorage getStorage() {
+    return storage;
   }
 
   public boolean isFailed() {

@@ -39,6 +39,7 @@ import org.apache.hadoop.mapreduce.v2.api.protocolrecords.CancelDelegationTokenR
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetDelegationTokenRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetJobReportRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.RenewDelegationTokenRequest;
+import org.apache.hadoop.mapreduce.v2.hs.HistoryClientService;
 import org.apache.hadoop.mapreduce.v2.hs.HistoryServerStateStoreService;
 import org.apache.hadoop.mapreduce.v2.hs.JHSDelegationTokenSecretManager;
 import org.apache.hadoop.mapreduce.v2.hs.JobHistoryServer;
@@ -93,6 +94,17 @@ public class TestJHSSecurity {
             Configuration conf, HistoryServerStateStoreService store) {
           return new JHSDelegationTokenSecretManager(initialInterval, 
               maxLifetime, renewInterval, 3600000, store);
+        }
+
+        @Override
+        protected HistoryClientService createHistoryClientService() {
+          return new HistoryClientService(historyContext, 
+            this.jhsDTSecretManager) {
+            @Override
+            protected void initializeWebApp(Configuration conf) {
+              // Don't need it, skip.;
+              }
+          };
         }
       };
 //      final JobHistoryServer jobHistoryServer = jhServer;

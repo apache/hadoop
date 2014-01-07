@@ -606,6 +606,98 @@ public class NNThroughputBenchmark implements Tool {
   }
 
   /**
+   * Directory creation statistics.
+   *
+   * Each thread creates the same (+ or -1) number of directories.
+   * Directory names are pre-generated during initialization.
+   */
+  class MkdirsStats extends OperationStatsBase {
+    // Operation types
+    static final String OP_MKDIRS_NAME = "mkdirs";
+    static final String OP_MKDIRS_USAGE = "-op mkdirs [-threads T] [-dirs N] " +
+        "[-dirsPerDir P]";
+
+    protected FileNameGenerator nameGenerator;
+    protected String[][] dirPaths;
+
+    MkdirsStats(List<String> args) {
+      super();
+      parseArguments(args);
+    }
+
+    @Override
+    String getOpName() {
+      return OP_MKDIRS_NAME;
+    }
+
+    @Override
+    void parseArguments(List<String> args) {
+      boolean ignoreUnrelatedOptions = verifyOpArgument(args);
+      int nrDirsPerDir = 2;
+      for (int i = 2; i < args.size(); i++) {       // parse command line
+        if(args.get(i).equals("-dirs")) {
+          if(i+1 == args.size())  printUsage();
+          numOpsRequired = Integer.parseInt(args.get(++i));
+        } else if(args.get(i).equals("-threads")) {
+          if(i+1 == args.size())  printUsage();
+          numThreads = Integer.parseInt(args.get(++i));
+        } else if(args.get(i).equals("-dirsPerDir")) {
+          if(i+1 == args.size())  printUsage();
+          nrDirsPerDir = Integer.parseInt(args.get(++i));
+        } else if(!ignoreUnrelatedOptions)
+          printUsage();
+      }
+      nameGenerator = new FileNameGenerator(getBaseDir(), nrDirsPerDir);
+    }
+
+    @Override
+    void generateInputs(int[] opsPerThread) throws IOException {
+      assert opsPerThread.length == numThreads : "Error opsPerThread.length";
+      nameNodeProto.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE,
+          false);
+      LOG.info("Generate " + numOpsRequired + " inputs for " + getOpName());
+      dirPaths = new String[numThreads][];
+      for(int idx=0; idx < numThreads; idx++) {
+        int threadOps = opsPerThread[idx];
+        dirPaths[idx] = new String[threadOps];
+        for(int jdx=0; jdx < threadOps; jdx++)
+          dirPaths[idx][jdx] = nameGenerator.
+              getNextFileName("ThroughputBench");
+      }
+    }
+
+    /**
+     * returns client name
+     */
+    @Override
+    String getExecutionArgument(int daemonId) {
+      return getClientName(daemonId);
+    }
+
+    /**
+     * Do mkdirs operation.
+     */
+    @Override
+    long executeOp(int daemonId, int inputIdx, String clientName)
+        throws IOException {
+      long start = Time.now();
+      nameNodeProto.mkdirs(dirPaths[daemonId][inputIdx],
+          FsPermission.getDefault(), true);
+      long end = Time.now();
+      return end-start;
+    }
+
+    @Override
+    void printResults() {
+      LOG.info("--- " + getOpName() + " inputs ---");
+      LOG.info("nrDirs = " + numOpsRequired);
+      LOG.info("nrThreads = " + numThreads);
+      LOG.info("nrDirsPerDir = " + nameGenerator.getFilesPerDirectory());
+      printStats();
+    }
+  }
+
+  /**
    * Open file statistics.
    * 
    * Measure how many open calls (getBlockLocations()) 
@@ -846,7 +938,7 @@ public class NNThroughputBenchmark implements Tool {
       // register datanode
       dnRegistration = nameNodeProto.registerDatanode(dnRegistration);
       //first block reports
-      storage = new DatanodeStorage(dnRegistration.getDatanodeUuid());
+      storage = new DatanodeStorage(DatanodeStorage.generateUuid());
       final StorageBlockReport[] reports = {
           new StorageBlockReport(storage,
               new BlockListAsLongs(null, null).getBlockListAsLongs())
@@ -862,8 +954,8 @@ public class NNThroughputBenchmark implements Tool {
     void sendHeartbeat() throws IOException {
       // register datanode
       // TODO:FEDERATION currently a single block pool is supported
-      StorageReport[] rep = { new StorageReport(dnRegistration.getDatanodeUuid(),
-          false, DF_CAPACITY, DF_USED, DF_CAPACITY - DF_USED, DF_USED) };
+      StorageReport[] rep = { new StorageReport(storage, false,
+          DF_CAPACITY, DF_USED, DF_CAPACITY - DF_USED, DF_USED) };
       DatanodeCommand[] cmds = nameNodeProto.sendHeartbeat(dnRegistration, rep,
           0L, 0L, 0, 0, 0).getCommands();
       if(cmds != null) {
@@ -909,7 +1001,7 @@ public class NNThroughputBenchmark implements Tool {
     @SuppressWarnings("unused") // keep it for future blockReceived benchmark
     int replicateBlocks() throws IOException {
       // register datanode
-      StorageReport[] rep = { new StorageReport(dnRegistration.getDatanodeUuid(),
+      StorageReport[] rep = { new StorageReport(storage,
           false, DF_CAPACITY, DF_USED, DF_CAPACITY - DF_USED, DF_USED) };
       DatanodeCommand[] cmds = nameNodeProto.sendHeartbeat(dnRegistration,
           rep, 0L, 0L, 0, 0, 0).getCommands();
@@ -918,7 +1010,8 @@ public class NNThroughputBenchmark implements Tool {
           if (cmd.getAction() == DatanodeProtocol.DNA_TRANSFER) {
             // Send a copy of a block to another datanode
             BlockCommand bcmd = (BlockCommand)cmd;
-            return transferBlocks(bcmd.getBlocks(), bcmd.getTargets());
+            return transferBlocks(bcmd.getBlocks(), bcmd.getTargets(),
+                                  bcmd.getTargetStorageIDs());
           }
         }
       }
@@ -931,12 +1024,14 @@ public class NNThroughputBenchmark implements Tool {
      * that the blocks have been received.
      */
     private int transferBlocks( Block blocks[], 
-                                DatanodeInfo xferTargets[][] 
+                                DatanodeInfo xferTargets[][],
+                                String targetStorageIDs[][]
                               ) throws IOException {
       for(int i = 0; i < blocks.length; i++) {
         DatanodeInfo blockTargets[] = xferTargets[i];
         for(int t = 0; t < blockTargets.length; t++) {
           DatanodeInfo dnInfo = blockTargets[t];
+          String targetStorageID = targetStorageIDs[i][t];
           DatanodeRegistration receivedDNReg;
           receivedDNReg = new DatanodeRegistration(dnInfo,
             new DataStorage(nsInfo),
@@ -946,7 +1041,7 @@ public class NNThroughputBenchmark implements Tool {
                   blocks[i], ReceivedDeletedBlockInfo.BlockStatus.RECEIVED_BLOCK,
                   null) };
           StorageReceivedDeletedBlocks[] report = { new StorageReceivedDeletedBlocks(
-              receivedDNReg.getDatanodeUuid(), rdBlocks) };
+              targetStorageID, rdBlocks) };
           nameNodeProto.blockReceivedAndDeleted(receivedDNReg, nameNode
               .getNamesystem().getBlockPoolId(), report);
         }
@@ -1035,7 +1130,7 @@ public class NNThroughputBenchmark implements Tool {
       }
 
       // create files 
-      LOG.info("Creating " + nrFiles + " with " + blocksPerFile + " blocks each.");
+      LOG.info("Creating " + nrFiles + " files with " + blocksPerFile + " blocks each.");
       FileNameGenerator nameGenerator;
       nameGenerator = new FileNameGenerator(getBaseDir(), 100);
       String clientName = getClientName(007);
@@ -1069,7 +1164,7 @@ public class NNThroughputBenchmark implements Tool {
               loc.getBlock().getLocalBlock(),
               ReceivedDeletedBlockInfo.BlockStatus.RECEIVED_BLOCK, null) };
           StorageReceivedDeletedBlocks[] report = { new StorageReceivedDeletedBlocks(
-              datanodes[dnIdx].dnRegistration.getDatanodeUuid(), rdBlocks) };
+              datanodes[dnIdx].storage.getStorageID(), rdBlocks) };
           nameNodeProto.blockReceivedAndDeleted(datanodes[dnIdx].dnRegistration, loc
               .getBlock().getBlockPoolId(), report);
         }
@@ -1279,6 +1374,7 @@ public class NNThroughputBenchmark implements Tool {
     System.err.println("Usage: NNThroughputBenchmark"
         + "\n\t"    + OperationStatsBase.OP_ALL_USAGE
         + " | \n\t" + CreateFileStats.OP_CREATE_USAGE
+        + " | \n\t" + MkdirsStats.OP_MKDIRS_USAGE
         + " | \n\t" + OpenFileStats.OP_OPEN_USAGE
         + " | \n\t" + DeleteFileStats.OP_DELETE_USAGE
         + " | \n\t" + FileStatusStats.OP_FILE_STATUS_USAGE
@@ -1326,6 +1422,10 @@ public class NNThroughputBenchmark implements Tool {
     try {
       if(runAll || CreateFileStats.OP_CREATE_NAME.equals(type)) {
         opStat = new CreateFileStats(args);
+        ops.add(opStat);
+      }
+      if(runAll || MkdirsStats.OP_MKDIRS_NAME.equals(type)) {
+        opStat = new MkdirsStats(args);
         ops.add(opStat);
       }
       if(runAll || OpenFileStats.OP_OPEN_NAME.equals(type)) {

@@ -13,10 +13,6 @@ Trunk (Unreleased)
 
     HDFS-3125. Add JournalService to enable Journal Daemon. (suresh)
 
-    HDFS-2832. Heterogeneous Storages support in HDFS phase 1 - treat DataNode
-    as a collection of storages (see breakdown of tasks below for features and
-    contributors).
-
   IMPROVEMENTS
 
     HDFS-4665. Move TestNetworkTopologyWithNodeGroup to common.
@@ -243,13 +239,18 @@ Trunk (Unreleased)
 
     HDFS-5636. Enforce a max TTL per cache pool. (awang via cmccabe)
 
+    HDFS-5651. Remove dfs.namenode.caching.enabled and improve CRM locking.
+    (cmccabe via wang)
+
   OPTIMIZATIONS
+
     HDFS-5349. DNA_CACHE and DNA_UNCACHE should be by blockId only. (cmccabe)
 
     HDFS-5665. Remove the unnecessary writeLock while initializing CacheManager
     in FsNameSystem Ctor. (Uma Maheswara Rao G via Andrew Wang)
 
   BUG FIXES
+
     HADOOP-9635 Fix potential Stack Overflow in DomainSocket.c (V. Karthik Kumar
                 via cmccabe)
 
@@ -444,139 +445,27 @@ Trunk (Unreleased)
 
     HDFS-5626. dfsadmin -report shows incorrect cache values. (cmccabe)
 
-    HDFS-5406. Send incremental block reports for all storages in a
-    single call. (Arpit Agarwal)
-
-    HDFS-5454. DataNode UUID should be assigned prior to FsDataset
-    initialization. (Arpit Agarwal)
-
     HDFS-5679. TestCacheDirectives should handle the case where native code
     is not available. (wang)
 
-  BREAKDOWN OF HDFS-2832 SUBTASKS AND RELATED JIRAS
+    HDFS-5701. Fix the CacheAdmin -addPool -maxTtl option name.
+    (Stephen Chu via wang)
 
-    HDFS-4985. Add storage type to the protocol and expose it in block report
-    and block locations. (Arpit Agarwal)
+    HDFS-5708. The CacheManager throws a NPE in the DataNode logs when
+    processing cache reports that refer to a block not known to the
+    BlockManager. (cmccabe via wang)
 
-    HDFS-5115. Make StorageID a UUID. (Arpit Agarwal)
+    HDFS-5659. dfsadmin -report doesn't output cache information properly.
+    (wang)
 
-    HDFS-5000. DataNode configuration should allow specifying storage type.
-    (Arpit Agarwal)
+    HDFS-5705. TestSecondaryNameNodeUpgrade#testChangeNsIDFails may fail due
+    to ConcurrentModificationException. (Ted Yu via brandonli)
 
-    HDFS-4987. Namenode changes to track multiple storages per datanode.
-    (szetszwo)
+    HDFS-5719. FSImage#doRollback() should close prevState before return
+    (Ted Yu via brandonli)
 
-    HDFS-5154. Fix TestBlockManager and TestDatanodeDescriptor after HDFS-4987.
-    (Junping Du via szetszwo)
-
-    HDFS-5009. Include storage information in the LocatedBlock.  (szetszwo)
-
-    HDFS-5134. Move blockContentsStale, heartbeatedSinceFailover and
-    firstBlockReport from DatanodeDescriptor to DatanodeStorageInfo; and
-    fix a synchronization problem in DatanodeStorageInfo.  (szetszwo)
-
-    HDFS-5157. Add StorageType to FsVolume.  (Junping Du via szetszwo)
-
-    HDFS-4990. Change BlockPlacementPolicy to choose storages instead of
-    datanodes.  (szetszwo)
-
-    HDFS-5232. Protocol changes to transmit StorageUuid. (Arpit Agarwal)
-
-    HDFS-5233. Use Datanode UUID to identify Datanodes. (Arpit Agarwal)
-
-    HDFS-5222. Move block schedule information from DatanodeDescriptor to
-    DatanodeStorageInfo.  (szetszwo)
-
-    HDFS-4988. Datanode must support all the volumes as individual storages.
-    (Arpit Agarwal)
-
-    HDFS-5377. Heartbeats from Datandode should include one storage report
-    per storage directory. (Arpit Agarwal)
-
-    HDFS-5398. NameNode changes to process storage reports per storage
-    directory. (Arpit Agarwal)
-
-    HDFS-5390. Send one incremental block report per storage directory.
-    (Arpit Agarwal)
-
-    HDFS-5401. Fix NPE in Directory Scanner. (Arpit Agarwal)
-
-    HDFS-5417. Fix storage IDs in PBHelper and UpgradeUtilities.  (szetszwo)
-
-    HDFS-5214. Fix NPEs in BlockManager and DirectoryScanner. (Arpit Agarwal)
-
-    HDFS-5435. File append fails to initialize storageIDs. (Junping Du via
-    Arpit Agarwal)
-
-    HDFS-5437. Fix TestBlockReport and TestBPOfferService failures. (Arpit
-    Agarwal)
-
-    HDFS-5447. Fix TestJspHelper. (Arpit Agarwal)
-
-    HDFS-5452. Fix TestReplicationPolicy and TestBlocksScheduledCounter.
-
-    HDFS-5448. Datanode should generate its ID on first registration. (Arpit
-    Agarwal)
-
-    HDFS-5448. Fix break caused by previous checkin for HDFS-5448. (Arpit
-    Agarwal)
-
-    HDFS-5455. NN should update storageMap on first heartbeat. (Arpit Agarwal)
-
-    HDFS-5457. Fix TestDatanodeRegistration, TestFsck and TestAddBlockRetry.
-    (Contributed by szetszwo)
-
-    HDFS-5466. Update storage IDs when the pipeline is updated. (Contributed
-    by szetszwo)
-
-    HDFS-5439. Fix TestPendingReplication. (Contributed by Junping Du, Arpit
-    Agarwal)
-
-    HDFS-5470. Add back trunk's reportDiff algorithm to the branch.
-    (Contributed by szetszwo)
-
-    HDFS-5472. Fix TestDatanodeManager, TestSafeMode and
-    TestNNThroughputBenchmark (Contributed by szetszwo)
-
-    HDFS-5475. NN incorrectly tracks more than one replica per DN. (Arpit
-    Agarwal)
-
-    HDFS-5481. Fix TestDataNodeVolumeFailure in branch HDFS-2832. (Contributed
-    by Junping Du)
-
-    HDFS-5480. Update Balancer for HDFS-2832. (Contributed by szetszwo)
-
-    HDFS-5486. Fix TestNameNodeMetrics for HDFS-2832. (Arpit Agarwal)
-
-    HDFS-5491. Update editsStored for HDFS-2832. (Arpit Agarwal)
-
-    HDFS-5494. Fix findbugs warnings for HDFS-2832. (Arpit Agarwal)
-
-    HDFS-5508. Fix compilation error after merge. (Contributed by szetszwo)
-
-    HDFS-5501. Fix pendingReceivedRequests tracking in BPServiceActor. (Arpit
-    Agarwal)
-
-    HDFS-5510. Fix a findbug warning in DataStorage.java on HDFS-2832 branch.
-    (Junping Du via Arpit Agarwal)
- 
-    HDFS-5515. Fix TestDFSStartupVersions for HDFS-2832. (Arpit Agarwal)
-
-    HDFS-5527. Fix TestUnderReplicatedBlocks on branch HDFS-2832. (Arpit
-    Agarwal)
-
-    HDFS-5547. Fix build break after merge from trunk to HDFS-2832. (Arpit
-    Agarwal)
-
-    HDFS-5542. Fix TODO and clean up the code in HDFS-2832. (Contributed by
-    szetszwo)
-
-    HDFS-5559. Fix TestDatanodeConfig in HDFS-2832. (Contributed by szetszwo)
-
-    HDFS-5484. StorageType and State in DatanodeStorageInfo in NameNode is
-    not accurate. (Eric Sirianni via Arpit Agarwal)
-
-    HDFS-5648. Get rid of FsDatasetImpl#perVolumeReplicaMap. (Arpit Agarwal)
+    HDFS-5589. Namenode loops caching and uncaching when data should be
+    uncached (awang via cmccabe)
 
 Release 2.4.0 - UNRELEASED
 
@@ -608,6 +497,10 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-5514. FSNamesystem's fsLock should allow custom implementation (daryn)
 
+    HDFS-2832. Heterogeneous Storages support in HDFS phase 1 - treat DataNode
+    as a collection of storages (see breakdown of tasks below for features and
+    contributors).
+
   IMPROVEMENTS
 
     HDFS-5267. Remove volatile from LightWeightHashSet. (Junping Du via llu)
@@ -617,9 +510,6 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-5004. Add additional JMX bean for NameNode status data
     (Trevor Lorimer via cos)
-
-    HDFS-5068. Convert NNThroughputBenchmark to a Tool to allow generic options.
-    (shv)
 
     HDFS-4994. Audit log getContentSummary() calls. (Robert Parker via kihwal)
 
@@ -768,6 +658,11 @@ Release 2.4.0 - UNRELEASED
     HDFS-2933. Improve DataNode Web UI Index Page. (Vivek Ganesan via
     Arpit Agarwal)
 
+    HDFS-5695. Clean up TestOfflineEditsViewer and OfflineEditsViewerHelper.
+    (Haohui Mai via jing9)
+
+    HDFS-5220. Expose group resolution time as metric (jxiang via cmccabe)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn)
@@ -833,6 +728,139 @@ Release 2.4.0 - UNRELEASED
     HDFS-5690. DataNode fails to start in secure mode when dfs.http.policy equals to 
     HTTP_ONLY. (Haohui Mai via jing9)
 
+  BREAKDOWN OF HDFS-2832 SUBTASKS AND RELATED JIRAS
+
+    HDFS-4985. Add storage type to the protocol and expose it in block report
+    and block locations. (Arpit Agarwal)
+
+    HDFS-5115. Make StorageID a UUID. (Arpit Agarwal)
+
+    HDFS-5000. DataNode configuration should allow specifying storage type.
+    (Arpit Agarwal)
+
+    HDFS-4987. Namenode changes to track multiple storages per datanode.
+    (szetszwo)
+
+    HDFS-5154. Fix TestBlockManager and TestDatanodeDescriptor after HDFS-4987.
+    (Junping Du via szetszwo)
+
+    HDFS-5009. Include storage information in the LocatedBlock.  (szetszwo)
+
+    HDFS-5134. Move blockContentsStale, heartbeatedSinceFailover and
+    firstBlockReport from DatanodeDescriptor to DatanodeStorageInfo; and
+    fix a synchronization problem in DatanodeStorageInfo.  (szetszwo)
+
+    HDFS-5157. Add StorageType to FsVolume.  (Junping Du via szetszwo)
+
+    HDFS-4990. Change BlockPlacementPolicy to choose storages instead of
+    datanodes.  (szetszwo)
+
+    HDFS-5232. Protocol changes to transmit StorageUuid. (Arpit Agarwal)
+
+    HDFS-5233. Use Datanode UUID to identify Datanodes. (Arpit Agarwal)
+
+    HDFS-5222. Move block schedule information from DatanodeDescriptor to
+    DatanodeStorageInfo.  (szetszwo)
+
+    HDFS-4988. Datanode must support all the volumes as individual storages.
+    (Arpit Agarwal)
+
+    HDFS-5377. Heartbeats from Datandode should include one storage report
+    per storage directory. (Arpit Agarwal)
+
+    HDFS-5398. NameNode changes to process storage reports per storage
+    directory. (Arpit Agarwal)
+
+    HDFS-5390. Send one incremental block report per storage directory.
+    (Arpit Agarwal)
+
+    HDFS-5401. Fix NPE in Directory Scanner. (Arpit Agarwal)
+
+    HDFS-5417. Fix storage IDs in PBHelper and UpgradeUtilities.  (szetszwo)
+
+    HDFS-5214. Fix NPEs in BlockManager and DirectoryScanner. (Arpit Agarwal)
+
+    HDFS-5435. File append fails to initialize storageIDs. (Junping Du via
+    Arpit Agarwal)
+
+    HDFS-5437. Fix TestBlockReport and TestBPOfferService failures. (Arpit
+    Agarwal)
+
+    HDFS-5447. Fix TestJspHelper. (Arpit Agarwal)
+
+    HDFS-5452. Fix TestReplicationPolicy and TestBlocksScheduledCounter.
+
+    HDFS-5448. Datanode should generate its ID on first registration. (Arpit
+    Agarwal)
+
+    HDFS-5448. Fix break caused by previous checkin for HDFS-5448. (Arpit
+    Agarwal)
+
+    HDFS-5455. NN should update storageMap on first heartbeat. (Arpit Agarwal)
+
+    HDFS-5457. Fix TestDatanodeRegistration, TestFsck and TestAddBlockRetry.
+    (Contributed by szetszwo)
+
+    HDFS-5466. Update storage IDs when the pipeline is updated. (Contributed
+    by szetszwo)
+
+    HDFS-5439. Fix TestPendingReplication. (Contributed by Junping Du, Arpit
+    Agarwal)
+
+    HDFS-5470. Add back trunk's reportDiff algorithm to the branch.
+    (Contributed by szetszwo)
+
+    HDFS-5472. Fix TestDatanodeManager, TestSafeMode and
+    TestNNThroughputBenchmark (Contributed by szetszwo)
+
+    HDFS-5475. NN incorrectly tracks more than one replica per DN. (Arpit
+    Agarwal)
+
+    HDFS-5481. Fix TestDataNodeVolumeFailure in branch HDFS-2832. (Contributed
+    by Junping Du)
+
+    HDFS-5480. Update Balancer for HDFS-2832. (Contributed by szetszwo)
+
+    HDFS-5486. Fix TestNameNodeMetrics for HDFS-2832. (Arpit Agarwal)
+
+    HDFS-5491. Update editsStored for HDFS-2832. (Arpit Agarwal)
+
+    HDFS-5494. Fix findbugs warnings for HDFS-2832. (Arpit Agarwal)
+
+    HDFS-5508. Fix compilation error after merge. (Contributed by szetszwo)
+
+    HDFS-5501. Fix pendingReceivedRequests tracking in BPServiceActor. (Arpit
+    Agarwal)
+
+    HDFS-5510. Fix a findbug warning in DataStorage.java on HDFS-2832 branch.
+    (Junping Du via Arpit Agarwal)
+ 
+    HDFS-5515. Fix TestDFSStartupVersions for HDFS-2832. (Arpit Agarwal)
+
+    HDFS-5527. Fix TestUnderReplicatedBlocks on branch HDFS-2832. (Arpit
+    Agarwal)
+
+    HDFS-5547. Fix build break after merge from trunk to HDFS-2832. (Arpit
+    Agarwal)
+
+    HDFS-5542. Fix TODO and clean up the code in HDFS-2832. (Contributed by
+    szetszwo)
+
+    HDFS-5559. Fix TestDatanodeConfig in HDFS-2832. (Contributed by szetszwo)
+
+    HDFS-5484. StorageType and State in DatanodeStorageInfo in NameNode is
+    not accurate. (Eric Sirianni via Arpit Agarwal)
+
+    HDFS-5648. Get rid of FsDatasetImpl#perVolumeReplicaMap. (Arpit Agarwal)
+
+    HDFS-5406. Send incremental block reports for all storages in a
+    single call. (Arpit Agarwal)
+
+    HDFS-5454. DataNode UUID should be assigned prior to FsDataset
+    initialization. (Arpit Agarwal)
+
+    HDFS-5667. Include DatanodeStorage in StorageReport. (Arpit Agarwal)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -865,6 +893,12 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-5662. Can't decommission a DataNode due to file's replication factor
     larger than the rest of the cluster size. (brandonli)
+
+    HDFS-5068. Convert NNThroughputBenchmark to a Tool to allow generic options.
+    (shv)
+
+    HDFS-5675. Add Mkdirs operation to NNThroughputBenchmark.
+    (Plamen Jeliazkov via shv)
 
   OPTIMIZATIONS
 
@@ -1015,6 +1049,11 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-5661. Browsing FileSystem via web ui, should use datanode's fqdn instead of ip 
     address. (Benoy Antony via jing9)
+
+    HDFS-5582. hdfs getconf -excludeFile or -includeFile always failed (sathish
+    via cmccabe)
+
+    HDFS-5671. Fix socket leak in DFSInputStream#getBlockReader. (JamesLi via umamahesh) 
 
 Release 2.2.0 - 2013-10-13
 

@@ -21,6 +21,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.crypto.key.KeyProvider.KeyVersion;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -160,6 +161,16 @@ public class TestKeyProviderFactory {
         provider.getCurrentKey("key4").getMaterial());
     assertArrayEquals(key3, provider.getCurrentKey("key3").getMaterial());
     assertEquals("key3@0", provider.getCurrentKey("key3").getVersionName());
+
+    List<String> keys = provider.getKeys();
+    assertTrue("Keys should have been returned.", keys.size() == 2);
+    assertTrue("Returned Keys should have included key3.", keys.contains("key3"));
+    assertTrue("Returned Keys should have included key4.", keys.contains("key4"));
+
+    List<KeyVersion> kvl = provider.getKeyVersions("key3");
+    assertTrue("KeyVersions should have been returned for key3.", kvl.size() == 1);
+    assertTrue("KeyVersions should have included key3@0.", kvl.get(0).getVersionName().equals("key3@0"));
+    assertArrayEquals(key3, kvl.get(0).getMaterial());
   }
 
   @Test

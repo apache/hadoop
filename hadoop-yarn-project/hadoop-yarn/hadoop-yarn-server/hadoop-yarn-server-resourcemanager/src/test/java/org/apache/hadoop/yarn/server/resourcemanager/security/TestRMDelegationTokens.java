@@ -37,6 +37,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.RMSecretManagerService;
 import org.apache.hadoop.yarn.server.resourcemanager.TestRMRestart.TestSecurityMockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
@@ -166,13 +167,21 @@ public class TestRMDelegationTokens {
     }
 
     @Override
-    protected RMDelegationTokenSecretManager
-        createRMDelegationTokenSecretManager(RMContext rmContext) {
-      // KeyUpdateInterval-> 1 seconds
-      // TokenMaxLifetime-> 2 seconds.
-      return new TestRMDelegationTokenSecretManager(1000, 1000, 2000, 1000,
-        rmContext);
+    protected RMSecretManagerService createRMSecretManagerService() {
+      return new RMSecretManagerService(conf, rmContext) {
+
+        @Override
+        protected RMDelegationTokenSecretManager
+        createRMDelegationTokenSecretManager(Configuration conf,
+                                             RMContext rmContext) {
+          // KeyUpdateInterval-> 1 seconds
+          // TokenMaxLifetime-> 2 seconds.
+          return new TestRMDelegationTokenSecretManager(1000, 1000, 2000, 1000,
+              rmContext);
+        }
+      };
     }
+
   }
 
   public class TestRMDelegationTokenSecretManager extends

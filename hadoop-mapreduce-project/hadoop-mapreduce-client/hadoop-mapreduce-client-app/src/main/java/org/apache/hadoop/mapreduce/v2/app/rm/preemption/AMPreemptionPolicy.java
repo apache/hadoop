@@ -19,10 +19,9 @@ package org.apache.hadoop.mapreduce.v2.app.rm.preemption;
 
 import java.util.List;
 
-import org.apache.hadoop.mapred.TaskAttemptID;
-import org.apache.hadoop.mapred.TaskID;
 import org.apache.hadoop.mapreduce.checkpoint.TaskCheckpointID;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -81,7 +80,7 @@ public interface AMPreemptionPolicy {
    * successfully preempted (for bookeeping, counters, etc..)
    * @param attemptID Task attempt that preempted
    */
-  public void reportSuccessfulPreemption(TaskAttemptID attemptID);
+  public void reportSuccessfulPreemption(TaskAttemptId attemptID);
 
   /**
    * Callback informing the policy of containers exiting with a failure. This
@@ -98,20 +97,20 @@ public interface AMPreemptionPolicy {
   public void handleCompletedContainer(TaskAttemptId attemptID);
 
   /**
-   * Method to retrieve the latest checkpoint for a given {@link TaskID}
+   * Method to retrieve the latest checkpoint for a given {@link TaskId}
    * @param taskId TaskID
    * @return CheckpointID associated with this task or null
    */
-  public TaskCheckpointID getCheckpointID(TaskID taskId);
+  public TaskCheckpointID getCheckpointID(TaskId taskId);
 
   /**
    * Method to store the latest {@link
    * org.apache.hadoop.mapreduce.checkpoint.CheckpointID} for a given {@link
-   * TaskID}. Assigning a null is akin to remove all previous checkpoints for
+   * TaskId}. Assigning a null is akin to remove all previous checkpoints for
    * this task.
    * @param taskId TaskID
    * @param cid Checkpoint to assign or <tt>null</tt> to remove it.
    */
-  public void setCheckpointID(TaskID taskId, TaskCheckpointID cid);
+  public void setCheckpointID(TaskId taskId, TaskCheckpointID cid);
 
 }

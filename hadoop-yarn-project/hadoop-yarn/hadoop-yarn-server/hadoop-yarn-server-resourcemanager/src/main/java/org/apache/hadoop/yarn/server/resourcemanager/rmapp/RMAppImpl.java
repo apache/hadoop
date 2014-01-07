@@ -66,6 +66,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptS
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.state.InvalidStateTransitonException;
 import org.apache.hadoop.yarn.state.MultipleArcTransition;
@@ -136,7 +138,7 @@ public class RMAppImpl implements RMApp, Recoverable {
     .addTransition(RMAppState.NEW, RMAppState.NEW_SAVING,
         RMAppEventType.START, new RMAppNewlySavingTransition())
     .addTransition(RMAppState.NEW, EnumSet.of(RMAppState.SUBMITTED,
-            RMAppState.RUNNING, RMAppState.FINISHED, RMAppState.FAILED,
+            RMAppState.ACCEPTED, RMAppState.FINISHED, RMAppState.FAILED,
             RMAppState.KILLED, RMAppState.FINAL_SAVING),
         RMAppEventType.RECOVER, new RMAppRecoveredTransition())
     .addTransition(RMAppState.NEW, RMAppState.FINAL_SAVING, RMAppEventType.KILL,
@@ -151,7 +153,7 @@ public class RMAppImpl implements RMApp, Recoverable {
     .addTransition(RMAppState.NEW_SAVING, RMAppState.NEW_SAVING,
         RMAppEventType.NODE_UPDATE, new RMAppNodeUpdateTransition())
     .addTransition(RMAppState.NEW_SAVING, RMAppState.SUBMITTED,
-        RMAppEventType.APP_NEW_SAVED, new StartAppAttemptTransition())
+        RMAppEventType.APP_NEW_SAVED, new AddApplicationToSchedulerTransition())
     .addTransition(RMAppState.NEW_SAVING, RMAppState.FINAL_SAVING,
         RMAppEventType.KILL,
         new FinalSavingTransition(
@@ -169,9 +171,12 @@ public class RMAppImpl implements RMApp, Recoverable {
         new FinalSavingTransition(
           new AppRejectedTransition(), RMAppState.FAILED))
     .addTransition(RMAppState.SUBMITTED, RMAppState.ACCEPTED,
-        RMAppEventType.APP_ACCEPTED)
-    .addTransition(RMAppState.SUBMITTED, RMAppState.KILLING,
-        RMAppEventType.KILL,new KillAttemptTransition())
+        RMAppEventType.APP_ACCEPTED, new StartAppAttemptTransition())
+    .addTransition(RMAppState.SUBMITTED, RMAppState.FINAL_SAVING,
+        RMAppEventType.KILL,
+        new FinalSavingTransition(
+          new AppKilledTransition(), RMAppState.KILLED))
+
 
      // Transitions from ACCEPTED state
     .addTransition(RMAppState.ACCEPTED, RMAppState.ACCEPTED,
@@ -179,11 +184,22 @@ public class RMAppImpl implements RMApp, Recoverable {
     .addTransition(RMAppState.ACCEPTED, RMAppState.RUNNING,
         RMAppEventType.ATTEMPT_REGISTERED)
     .addTransition(RMAppState.ACCEPTED,
-        EnumSet.of(RMAppState.SUBMITTED, RMAppState.FINAL_SAVING),
+        EnumSet.of(RMAppState.ACCEPTED, RMAppState.FINAL_SAVING),
+        // ACCEPTED state is possible to receive ATTEMPT_FAILED event because
+        // RMAppRecoveredTransition is returning ACCEPTED state directly and
+        // waiting for the previous AM to exit.
         RMAppEventType.ATTEMPT_FAILED,
-        new AttemptFailedTransition(RMAppState.SUBMITTED))
-    .addTransition(RMAppState.ACCEPTED, RMAppState.KILLING,
-        RMAppEventType.KILL,new KillAttemptTransition())
+        new AttemptFailedTransition(RMAppState.ACCEPTED))
+    .addTransition(RMAppState.ACCEPTED, RMAppState.FINAL_SAVING,
+        RMAppEventType.KILL,
+        new FinalSavingTransition(
+          new AppKilledTransition(), RMAppState.KILLED))
+    // ACCECPTED state can once again receive APP_ACCEPTED event, because on
+    // recovery the app returns ACCEPTED state and the app once again go
+    // through the scheduler and triggers one more APP_ACCEPTED event at
+    // ACCEPTED state.
+    .addTransition(RMAppState.ACCEPTED, RMAppState.ACCEPTED,
+        RMAppEventType.APP_ACCEPTED)
 
      // Transitions from RUNNING state
     .addTransition(RMAppState.RUNNING, RMAppState.RUNNING,
@@ -197,9 +213,9 @@ public class RMAppImpl implements RMApp, Recoverable {
       // UnManagedAM directly jumps to finished
         RMAppEventType.ATTEMPT_FINISHED, FINISHED_TRANSITION)
     .addTransition(RMAppState.RUNNING,
-        EnumSet.of(RMAppState.SUBMITTED, RMAppState.FINAL_SAVING),
+        EnumSet.of(RMAppState.ACCEPTED, RMAppState.FINAL_SAVING),
         RMAppEventType.ATTEMPT_FAILED,
-        new AttemptFailedTransition(RMAppState.SUBMITTED))
+        new AttemptFailedTransition(RMAppState.ACCEPTED))
     .addTransition(RMAppState.RUNNING, RMAppState.KILLING,
         RMAppEventType.KILL, new KillAttemptTransition())
 
@@ -641,7 +657,7 @@ public class RMAppImpl implements RMApp, Recoverable {
         ApplicationAttemptId.newInstance(applicationId, attempts.size() + 1);
     RMAppAttempt attempt =
         new RMAppAttemptImpl(appAttemptId, rmContext, scheduler, masterService,
-          submissionContext, conf, user);
+          submissionContext, conf);
     attempts.put(appAttemptId, attempt);
     currentAttempt = attempt;
     if(startAttempt) {
@@ -695,29 +711,46 @@ public class RMAppImpl implements RMApp, Recoverable {
         return app.recoveredFinalState;
       }
 
+      // Notify scheduler about the app on recovery
+      new AddApplicationToSchedulerTransition().transition(app, event);
+
       // No existent attempts means the attempt associated with this app was not
       // started or started but not yet saved.
       if (app.attempts.isEmpty()) {
-        app.createNewAttempt(true);
         return RMAppState.SUBMITTED;
       }
 
-      return RMAppState.RUNNING;
+      // YARN-1507 is saving the application state after the application is
+      // accepted. So after YARN-1507, an app is saved meaning it is accepted.
+      // Thus we return ACCECPTED state on recovery.
+      return RMAppState.ACCEPTED;
+    }
+  }
+
+  private static final class AddApplicationToSchedulerTransition extends
+      RMAppTransition {
+    @SuppressWarnings("unchecked")
+    @Override
+    public void transition(RMAppImpl app, RMAppEvent event) {
+      if (event instanceof RMAppNewSavedEvent) {
+        RMAppNewSavedEvent storeEvent = (RMAppNewSavedEvent) event;
+        // For HA this exception needs to be handled by giving up
+        // master status if we got fenced
+        if (((RMAppNewSavedEvent) event).getStoredException() != null) {
+          LOG.error(
+            "Failed to store application: " + storeEvent.getApplicationId(),
+            storeEvent.getStoredException());
+          ExitUtil.terminate(1, storeEvent.getStoredException());
+        }
+      }
+      app.handler.handle(new AppAddedSchedulerEvent(app.applicationId,
+        app.submissionContext.getQueue(), app.user));
     }
   }
 
   private static final class StartAppAttemptTransition extends RMAppTransition {
     @Override
     public void transition(RMAppImpl app, RMAppEvent event) {
-      RMAppNewSavedEvent storeEvent = (RMAppNewSavedEvent) event;
-      if (storeEvent.getStoredException() != null) {
-        // For HA this exception needs to be handled by giving up
-        // master status if we got fenced
-        LOG.error(
-          "Failed to store application: " + storeEvent.getApplicationId(),
-          storeEvent.getStoredException());
-        ExitUtil.terminate(1, storeEvent.getStoredException());
-      }
       app.createNewAttempt(true);
     };
   }
@@ -965,6 +998,8 @@ public class RMAppImpl implements RMApp, Recoverable {
       if (app.finishTime == 0 ) {
         app.finishTime = System.currentTimeMillis();
       }
+      app.handler.handle(new AppRemovedSchedulerEvent(app.applicationId, app
+        .getState()));
       app.handler.handle(
           new RMAppManagerEvent(app.applicationId,
           RMAppManagerEventType.APP_COMPLETED));
@@ -993,7 +1028,6 @@ public class RMAppImpl implements RMApp, Recoverable {
         return RMAppState.FINAL_SAVING;
       }
     }
-
   }
 
   @Override

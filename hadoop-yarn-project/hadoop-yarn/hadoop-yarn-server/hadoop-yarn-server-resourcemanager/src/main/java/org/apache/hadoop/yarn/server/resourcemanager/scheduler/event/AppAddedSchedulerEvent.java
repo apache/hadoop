@@ -16,22 +16,34 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event;
+package org.apache.hadoop.yarn.server.resourcemanager.scheduler.event;
 
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 
-public class RMAppAttemptRejectedEvent extends RMAppAttemptEvent {
+public class AppAddedSchedulerEvent extends SchedulerEvent {
 
-  private final String message;
+  private final ApplicationId applicationId;
+  private final String queue;
+  private final String user;
 
-  public RMAppAttemptRejectedEvent(ApplicationAttemptId appAttemptId, String message) {
-    super(appAttemptId, RMAppAttemptEventType.APP_REJECTED);
-    this.message = message;
+  public AppAddedSchedulerEvent(
+      ApplicationId applicationId, String queue, String user) {
+    super(SchedulerEventType.APP_ADDED);
+    this.applicationId = applicationId;
+    this.queue = queue;
+    this.user = user;
   }
 
-  public String getMessage() {
-    return this.message;
+  public ApplicationId getApplicationId() {
+    return applicationId;
   }
+
+  public String getQueue() {
+    return queue;
+  }
+
+  public String getUser() {
+    return user;
+  }
+
 }

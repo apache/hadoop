@@ -187,6 +187,16 @@ Release 2.4.0 - UNRELEASED
     YARN-1307. Redesign znode structure for Zookeeper based RM state-store for
     better organization and scalability. (Tsuyoshi OZAWA via vinodkv)
 
+    YARN-1172. Convert SecretManagers in RM to services (Tsuyoshi OZAWA via kasha)
+
+    YARN-1523. Use StandbyException instead of RMNotYetReadyException (kasha)
+
+    YARN-1541. Changed ResourceManager to invalidate ApplicationMaster host/port
+    information once an AM crashes. (Jian He via vinodkv)
+
+    YARN-1493. Changed ResourceManager and Scheduler interfacing to recognize
+    app-attempts separately from apps. (Jian He via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -266,6 +276,21 @@ Release 2.4.0 - UNRELEASED
 
     YARN-1451. TestResourceManager relies on the scheduler assigning multiple
     containers in a single node update. (Sandy Ryza via kasha)
+
+    YARN-1527. Fix yarn rmadmin command to print the correct usage info.
+    (Akira AJISAKA via jianhe)
+
+    YARN-1522. Fixed a race condition in the test TestApplicationCleanup that was
+    causing it to randomly fail. (Liyin Liang via vinodkv)
+
+    YARN-1549. Fixed a bug in ResourceManager's ApplicationMasterService that
+    was causing unamanged AMs to not finish correctly. (haosdent via vinodkv)
+
+    YARN-1559. Race between ServerRMProxy and ClientRMProxy setting 
+    RMProxy#INSTANCE. (kasha and vinodkv via kasha)
+
+    YARN-1560. Fixed TestYarnClient#testAMMRTokens failure with null AMRM token.
+    (Ted Yu via jianhe)
 
 Release 2.3.0 - UNRELEASED
 
@@ -472,6 +497,9 @@ Release 2.2.0 - 2013-10-13
 
     YARN-1278. Fixed NodeManager to not delete local resources for apps on resync
     command from RM - a bug caused by YARN-1149. (Hitesh Shah via vinodkv)
+
+    YARN-1463. Tests should avoid starting http-server where possible or creates 
+    spnego keytab/principals (vinodkv via kasha)
 
 Release 2.1.1-beta - 2013-09-23
 

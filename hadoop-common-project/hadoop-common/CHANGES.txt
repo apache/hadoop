@@ -108,6 +108,8 @@ Trunk (Unreleased)
     HADOOP-10141. Create KeyProvider API to separate encryption key storage
     from the applications. (omalley)
 
+    HADOOP-10201. Add listing to KeyProvider API. (Larry McCay via omalley)
+
   BUG FIXES
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.
@@ -407,6 +409,9 @@ Release 2.4.0 - UNRELEASED
     HADOOP-10169. Remove the unnecessary synchronized in JvmMetrics class.
     (Liang Xie via jing9) 
 
+    HADOOP-10198. DomainSocket: add support for socketpair.
+    (Colin Patrick McCabe via wang)
+
   OPTIMIZATIONS
 
     HADOOP-9748. Reduce blocking on UGI.ensureInitialized (daryn)
@@ -415,6 +420,9 @@ Release 2.4.0 - UNRELEASED
     via acmurthy)
 
     HADOOP-10172. Cache SASL server factories (daryn)
+
+    HADOOP-10173. Remove UGI from DIGEST-MD5 SASL server creation (daryn via
+    kihwal)
 
   BUG FIXES
 
@@ -488,6 +496,9 @@ Release 2.4.0 - UNRELEASED
     dependency (Timothy St. Clair via stevel)
 
     HADOOP-10171. TestRPC fails intermittently on jkd7 (Mit Desai via jeagles)
+
+    HADOOP-10147  HDFS-5678 Upgrade to commons-logging 1.1.3 to avoid potential
+    deadlock in MiniDFSCluster (stevel)
 
 Release 2.3.0 - UNRELEASED
 
@@ -567,6 +578,12 @@ Release 2.3.0 - UNRELEASED
 
     HADOOP-10175. Har files system authority should preserve userinfo.
     (Chuan Liu via cnauroth)
+
+    HADOOP-10090. Jobtracker metrics not updated properly after execution
+    of a mapreduce job. (ivanmi)
+
+    HADOOP-10193. hadoop-auth's PseudoAuthenticationHandler can consume getInputStream. 
+    (gchanan via tucu)
 
 Release 2.2.0 - 2013-10-13
 

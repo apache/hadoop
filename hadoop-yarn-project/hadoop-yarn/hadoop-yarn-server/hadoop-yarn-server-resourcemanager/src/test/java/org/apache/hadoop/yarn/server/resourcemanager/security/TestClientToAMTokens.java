@@ -168,7 +168,7 @@ public class TestClientToAMTokens {
       protected ClientRMService createClientRMService() {
         return new ClientRMService(this.rmContext, scheduler,
           this.rmAppManager, this.applicationACLsManager, this.queueACLsManager,
-          this.rmDTSecretManager);
+          getRMDTSecretManager());
       };
 
       @Override

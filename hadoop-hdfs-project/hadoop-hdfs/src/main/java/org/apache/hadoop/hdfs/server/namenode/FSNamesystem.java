@@ -931,7 +931,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     writeLock();
     try {
       if (blockManager != null) blockManager.close();
-      cacheManager.deactivate();
     } finally {
       writeUnlock();
     }
@@ -1001,7 +1000,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           editLogRollerThreshold, editLogRollerInterval));
       nnEditLogRoller.start();
 
-      cacheManager.activate();
+      cacheManager.startMonitorThread();
       blockManager.getDatanodeManager().setShouldSendCachingCommands(true);
     } finally {
       writeUnlock();
@@ -1052,7 +1051,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         // so that the tailer starts from the right spot.
         dir.fsImage.updateLastAppliedTxIdFromWritten();
       }
-      cacheManager.deactivate();
+      cacheManager.stopMonitorThread();
+      cacheManager.clearDirectiveStats();
+      blockManager.getDatanodeManager().clearPendingCachingCommands();
       blockManager.getDatanodeManager().setShouldSendCachingCommands(false);
     } finally {
       writeUnlock();
@@ -7066,6 +7067,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       return (Long) cacheEntry.getPayload();
     }
     boolean success = false;
+    if (!flags.contains(CacheFlag.FORCE)) {
+      cacheManager.waitForRescanIfNeeded();
+    }
     writeLock();
     Long result = null;
     try {
@@ -7106,6 +7110,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     CacheEntry cacheEntry = RetryCache.waitForCompletion(retryCache);
     if (cacheEntry != null && cacheEntry.isSuccess()) {
       return;
+    }
+    if (!flags.contains(CacheFlag.FORCE)) {
+      cacheManager.waitForRescanIfNeeded();
     }
     writeLock();
     try {
@@ -7166,6 +7173,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     final FSPermissionChecker pc = isPermissionEnabled ?
         getPermissionChecker() : null;
     BatchedListEntries<CacheDirectiveEntry> results;
+    cacheManager.waitForRescanIfNeeded();
     readLock();
     boolean success = false;
     try {
@@ -7289,6 +7297,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     BatchedListEntries<CachePoolEntry> results;
     checkOperation(OperationCategory.READ);
     boolean success = false;
+    cacheManager.waitForRescanIfNeeded();
     readLock();
     try {
       checkOperation(OperationCategory.READ);

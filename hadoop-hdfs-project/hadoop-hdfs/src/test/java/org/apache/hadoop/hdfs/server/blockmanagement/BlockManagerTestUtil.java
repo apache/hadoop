@@ -257,8 +257,10 @@ public class BlockManagerTestUtil {
       DatanodeDescriptor dnd) {
     ArrayList<StorageReport> reports = new ArrayList<StorageReport>();
     for (DatanodeStorageInfo storage : dnd.getStorageInfos()) {
+      DatanodeStorage dns = new DatanodeStorage(
+          storage.getStorageID(), storage.getState(), storage.getStorageType());
       StorageReport report = new StorageReport(
-          storage.getStorageID(), false, storage.getCapacity(),
+          dns ,false, storage.getCapacity(),
           storage.getDfsUsed(), storage.getRemaining(),
           storage.getBlockPoolUsed());
       reports.add(report);

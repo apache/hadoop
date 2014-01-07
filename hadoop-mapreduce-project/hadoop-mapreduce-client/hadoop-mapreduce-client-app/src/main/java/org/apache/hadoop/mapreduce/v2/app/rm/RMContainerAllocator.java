@@ -229,7 +229,8 @@ public class RMContainerAllocator extends RMContainerRequestor
 
     int completedMaps = getJob().getCompletedMaps();
     int completedTasks = completedMaps + getJob().getCompletedReduces();
-    if (lastCompletedTasks != completedTasks) {
+    if ((lastCompletedTasks != completedTasks) ||
+          (scheduledRequests.maps.size() > 0)) {
       lastCompletedTasks = completedTasks;
       recalculateReduceSchedule = true;
     }
@@ -347,7 +348,7 @@ public class RMContainerAllocator extends RMContainerRequestor
       }
       
     } else if (
-        event.getType() == ContainerAllocator.EventType.CONTAINER_DEALLOCATE) {
+      event.getType() == ContainerAllocator.EventType.CONTAINER_DEALLOCATE) {
   
       LOG.info("Processing the event " + event.toString());
 

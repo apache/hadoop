@@ -64,6 +64,10 @@ public class TestRMNMSecretKeys {
       protected Dispatcher createDispatcher() {
         return dispatcher;
       }
+      @Override
+      protected void startWepApp() {
+        // Don't need it, skip.
+      }
     };
     rm.init(conf);
     rm.start();

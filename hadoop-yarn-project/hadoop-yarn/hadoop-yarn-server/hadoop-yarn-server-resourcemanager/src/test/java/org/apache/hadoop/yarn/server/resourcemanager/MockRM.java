@@ -61,7 +61,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
-import org.apache.hadoop.yarn.server.resourcemanager.security.RMDelegationTokenSecretManager;
+import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
+import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
@@ -309,7 +310,7 @@ public class MockRM extends ResourceManager {
   protected ClientRMService createClientRMService() {
     return new ClientRMService(getRMContext(), getResourceScheduler(),
         rmAppManager, applicationACLsManager, queueACLsManager,
-        rmDTSecretManager) {
+        getRMDTSecretManager()) {
       @Override
       protected void serviceStart() {
         // override to not start rpc handler
@@ -325,8 +326,12 @@ public class MockRM extends ResourceManager {
   @Override
   protected ResourceTrackerService createResourceTrackerService() {
     Configuration conf = new Configuration();
-    
+
+    RMContainerTokenSecretManager containerTokenSecretManager =
+        getRMContainerTokenSecretManager();
     containerTokenSecretManager.rollMasterKey();
+    NMTokenSecretManagerInRM nmTokenSecretManager =
+        getRMNMTokenSecretManager();
     nmTokenSecretManager.rollMasterKey();
     return new ResourceTrackerService(getRMContext(), nodesListManager,
         this.nmLivelinessMonitor, containerTokenSecretManager,
@@ -398,12 +403,8 @@ public class MockRM extends ResourceManager {
     return this.nodesListManager;
   }
 
-  public RMDelegationTokenSecretManager getRMDTSecretManager() {
-    return this.rmDTSecretManager;
-  }
-
   public ClientToAMTokenSecretManagerInRM getClientToAMTokenSecretManager() {
-    return this.clientToAMSecretManager;
+    return this.getRMContext().getClientToAMTokenSecretManager();
   }
 
   public RMAppManager getRMAppManager() {

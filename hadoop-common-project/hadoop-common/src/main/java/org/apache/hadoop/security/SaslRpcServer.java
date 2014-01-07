@@ -131,7 +131,7 @@ public class SaslRpcServer {
   public SaslServer create(Connection connection,
                            SecretManager<TokenIdentifier> secretManager
       ) throws IOException, InterruptedException {
-    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+    UserGroupInformation ugi = null;
     final CallbackHandler callback;
     switch (authMethod) {
       case TOKEN: {
@@ -139,6 +139,7 @@ public class SaslRpcServer {
         break;
       }
       case KERBEROS: {
+        ugi = UserGroupInformation.getCurrentUser();
         if (serverId.isEmpty()) {
           throw new AccessControlException(
               "Kerberos principal name does NOT have the expected "
@@ -153,7 +154,9 @@ public class SaslRpcServer {
             "Server does not support SASL " + authMethod);
     }
     
-    SaslServer saslServer = ugi.doAs(
+    final SaslServer saslServer;
+    if (ugi != null) {
+      saslServer = ugi.doAs(
         new PrivilegedExceptionAction<SaslServer>() {
           @Override
           public SaslServer run() throws SaslException  {
@@ -161,6 +164,10 @@ public class SaslRpcServer {
                 SaslRpcServer.SASL_PROPS, callback);
           }
         });
+    } else {
+      saslServer = saslFactory.createSaslServer(mechanism, protocol, serverId,
+          SaslRpcServer.SASL_PROPS, callback);
+    }
     if (saslServer == null) {
       throw new AccessControlException(
           "Unable to find SASL server implementation for " + mechanism);
