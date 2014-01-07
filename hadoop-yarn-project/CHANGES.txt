@@ -280,6 +280,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1409. NonAggregatingLogHandler can throw RejectedExecutionException
     (Tsuyoshi OZAWA via jlowe)
 
+    YARN-1293. Fixed TestContainerLaunch#testInvalidEnvSyntaxDiagnostics failure
+    caused by non-English system locale. (Tsuyoshi OZAWA via jianhe)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
