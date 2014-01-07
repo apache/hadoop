@@ -1091,14 +1091,21 @@ public class DistCp implements Tool {
       (args.srcs.size() == 1 && !dstExists) || update || overwrite;
     int srcCount = 0, cnsyncf = 0, dirsyn = 0;
     long fileCount = 0L, byteCount = 0L, cbsyncs = 0L;
+    final FileStatus jobDirStat = jobfs.getFileStatus(jobDirectory);
     try {
       for(Iterator<Path> srcItr = args.srcs.iterator(); srcItr.hasNext(); ) {
         final Path src = srcItr.next();
         FileSystem srcfs = src.getFileSystem(conf);
         FileStatus srcfilestat = srcfs.getFileStatus(src);
         Path root = special && srcfilestat.isDir()? src: src.getParent();
+        final boolean needToFilterJobDir = srcfs.equals(jobfs);
+
         if (srcfilestat.isDir()) {
-          ++srcCount;
+          if (needToFilterJobDir && (srcfilestat.compareTo(jobDirStat) == 0)) {
+            continue;
+          } else {
+            ++srcCount;
+          }
         }
 
         Stack<FileStatus> pathstack = new Stack<FileStatus>();
@@ -1109,12 +1116,17 @@ public class DistCp implements Tool {
             boolean skipfile = false;
             final FileStatus child = children[i]; 
             final String dst = makeRelative(root, child.getPath());
-            ++srcCount;
 
             if (child.isDir()) {
-              pathstack.push(child);
+              if (needToFilterJobDir && (child.compareTo(jobDirStat) == 0)) {
+                continue;
+              } else {
+                ++srcCount;
+                pathstack.push(child);
+              }
             }
             else {
+              ++srcCount;
               //skip file if the src and the dst files are the same.
               skipfile = update && 
                 sameFile(srcfs, child, dstfs, 
@@ -1272,17 +1284,22 @@ public class DistCp implements Tool {
           + ") is not a directory.");
     }
 
-    //write dst lsr results
+    // write dst lsr results
+    final boolean needToFilterJobDir = dstfs.equals(jobfs); 
+    final FileStatus jobDirStat = jobfs.getFileStatus(jobdir);   
     final Path dstlsr = new Path(jobdir, "_distcp_dst_lsr");
     final SequenceFile.Writer writer = SequenceFile.createWriter(jobfs, jobconf,
         dstlsr, Text.class, dstroot.getClass(),
         SequenceFile.CompressionType.NONE);
     try {
-      //do lsr to get all file statuses in dstroot
+      // do lsr to get all file statuses in dstroot
       final Stack<FileStatus> lsrstack = new Stack<FileStatus>();
       for(lsrstack.push(dstroot); !lsrstack.isEmpty(); ) {
         final FileStatus status = lsrstack.pop();
         if (status.isDir()) {
+          if (needToFilterJobDir && (status.compareTo(jobDirStat) == 0)) {
+            continue;
+          }      
           for(FileStatus child : dstfs.listStatus(status.getPath())) {
             String relative = makeRelative(dstroot.getPath(), child.getPath());
             writer.append(new Text(relative), child);
@@ -1294,20 +1311,21 @@ public class DistCp implements Tool {
       checkAndClose(writer);
     }
 
-    //sort lsr results
+    // sort lsr results
     final Path sortedlsr = new Path(jobdir, "_distcp_dst_lsr_sorted");
     SequenceFile.Sorter sorter = new SequenceFile.Sorter(jobfs,
         new Text.Comparator(), Text.class, FileStatus.class, jobconf);
     sorter.sort(dstlsr, sortedlsr);
 
-    //compare lsr list and dst list  
+    // compare lsr list and dst list
+    final String jobDirStr = jobdir.toString();
     SequenceFile.Reader lsrin = null;
     SequenceFile.Reader dstin = null;
     try {
       lsrin = new SequenceFile.Reader(jobfs, sortedlsr, jobconf);
       dstin = new SequenceFile.Reader(jobfs, dstsorted, jobconf);
 
-      //compare sorted lsr list and sorted dst list
+      // compare sorted lsr list and sorted dst list
       final Text lsrpath = new Text();
       final FileStatus lsrstatus = new FileStatus();
       final Text dstpath = new Text();
@@ -1317,6 +1335,12 @@ public class DistCp implements Tool {
 
       boolean hasnext = dstin.next(dstpath, dstfrom);
       for(; lsrin.next(lsrpath, lsrstatus); ) {
+        //
+        // check if lsrpath is in dst (represented here by dstsorted, which
+        // contains files and dirs to be copied from the source to destination),
+        // delete it if it doesn't exist in dst AND it's not jobDir or jobDir's
+        // ancestor.
+        //
         int dst_cmp_lsr = dstpath.compareTo(lsrpath);
         for(; hasnext && dst_cmp_lsr < 0; ) {
           hasnext = dstin.next(dstpath, dstfrom);
@@ -1324,12 +1348,22 @@ public class DistCp implements Tool {
         }
         
         if (dst_cmp_lsr == 0) {
-          //lsrpath exists in dst, skip it
+          // lsrpath exists in dst, skip it
           hasnext = dstin.next(dstpath, dstfrom);
         }
         else {
-          //lsrpath does not exist, delete it
+          // lsrpath does not exist in dst, delete it if it's not jobDir or
+          // jobDir's ancestor
           String s = new Path(dstroot.getPath(), lsrpath.toString()).toString();
+          if (needToFilterJobDir) {
+            int cmpJobDir = s.compareTo(jobDirStr);
+            if (cmpJobDir > 0) {
+              // do nothing
+            } else if (cmpJobDir == 0 || isAncestorPath(s, jobDirStr)) {
+              continue;
+            }
+          }
+  
           if (shellargs[1] == null || !isAncestorPath(shellargs[1], s)) {
             shellargs[1] = s;
             int r = 0;
