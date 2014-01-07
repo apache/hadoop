@@ -26,6 +26,8 @@ HDFS-4685 (Unreleased)
 
     HADOOP-10192. FileSystem#getAclStatus has incorrect JavaDocs. (cnauroth)
 
+    HDFS-5673. Implement logic for modification of ACLs. (cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES

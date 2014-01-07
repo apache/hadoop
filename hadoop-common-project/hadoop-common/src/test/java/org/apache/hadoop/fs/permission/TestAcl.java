@@ -19,12 +19,8 @@ package org.apache.hadoop.fs.permission;
 
 import static org.junit.Assert.*;
 
-import java.util.List;
-
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import com.google.common.collect.Lists;
 
 /**
  * Tests covering basic functionality of the ACL objects.
@@ -163,35 +159,6 @@ public class TestAcl {
     assertFalse(ENTRY1.hashCode() == ENTRY3.hashCode());
     assertFalse(ENTRY1.hashCode() == ENTRY4.hashCode());
     assertFalse(ENTRY3.hashCode() == ENTRY4.hashCode());
-  }
-
-  @Test
-  public void testEntryNaturalOrdering() {
-    AclEntry expected[] = new AclEntry[] {
-      ENTRY5,  // owner
-      ENTRY1,  // named user
-      ENTRY11, // group
-      ENTRY3,  // named group
-      ENTRY9,  // mask
-      ENTRY7,  // other
-      ENTRY13, // default owner
-      ENTRY8,  // default named user
-      ENTRY12, // default group
-      ENTRY6,  // default named group
-      ENTRY10, // default mask
-      ENTRY4   // default other
-    };
-    List<AclEntry> actual = Lists.newArrayList(STATUS4.getEntries());
-    assertNotNull(actual);
-    assertEquals(expected.length, actual.size());
-    for (int i = 0; i < expected.length; ++i) {
-      AclEntry expectedEntry = expected[i];
-      AclEntry actualEntry = actual.get(i);
-      assertEquals(
-        String.format("At position %d, expected = %s, actual = %s", i,
-          expectedEntry, actualEntry),
-        expectedEntry, actualEntry);
-    }
   }
 
   @Test

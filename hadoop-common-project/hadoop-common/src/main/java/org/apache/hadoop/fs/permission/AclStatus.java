@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.fs.permission;
 
-import java.util.Collections;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -197,8 +196,6 @@ public class AclStatus {
     this.owner = owner;
     this.group = group;
     this.stickyBit = stickyBit;
-    List<AclEntry> entriesCopy = Lists.newArrayList(entries);
-    Collections.sort(entriesCopy);
-    this.entries = entriesCopy;
+    this.entries = Lists.newArrayList(entries);
   }
 }
