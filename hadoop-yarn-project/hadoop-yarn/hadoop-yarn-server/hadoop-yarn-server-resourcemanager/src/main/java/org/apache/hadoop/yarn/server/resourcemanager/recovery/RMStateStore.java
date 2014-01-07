@@ -48,6 +48,8 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
+import org.apache.hadoop.yarn.server.resourcemanager.RMFatalEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.RMFatalEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.RMStateVersion;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationAttemptStateDataPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationStateDataPBImpl;
@@ -679,15 +681,13 @@ public abstract class RMStateStore extends AbstractService {
    * @param failureCause the exception due to which the operation failed
    */
   private void notifyStoreOperationFailed(Exception failureCause) {
-    RMStateStoreOperationFailedEventType type;
+    RMFatalEventType type;
     if (failureCause instanceof StoreFencedException) {
-      type = RMStateStoreOperationFailedEventType.FENCED;
+      type = RMFatalEventType.STATE_STORE_FENCED;
     } else {
-      type = RMStateStoreOperationFailedEventType.FAILED;
+      type = RMFatalEventType.STATE_STORE_OP_FAILED;
     }
-
-    rmDispatcher.getEventHandler().handle(
-        new RMStateStoreOperationFailedEvent(type, failureCause));
+    rmDispatcher.getEventHandler().handle(new RMFatalEvent(type, failureCause));
   }
 
   @SuppressWarnings("unchecked")

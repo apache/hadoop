@@ -51,6 +51,22 @@ public class HAUtil {
         YarnConfiguration.DEFAULT_RM_HA_ENABLED);
   }
 
+  public static boolean isAutomaticFailoverEnabled(Configuration conf) {
+    return conf.getBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED,
+        YarnConfiguration.DEFAULT_AUTO_FAILOVER_ENABLED);
+  }
+
+  public static boolean isAutomaticFailoverEnabledAndEmbedded(
+      Configuration conf) {
+    return isAutomaticFailoverEnabled(conf) &&
+        isAutomaticFailoverEmbedded(conf);
+  }
+
+  public static boolean isAutomaticFailoverEmbedded(Configuration conf) {
+    return conf.getBoolean(YarnConfiguration.AUTO_FAILOVER_EMBEDDED,
+        YarnConfiguration.DEFAULT_AUTO_FAILOVER_EMBEDDED);
+  }
+
   /**
    * Verify configuration for Resource Manager HA.
    * @param conf Configuration
@@ -162,8 +178,7 @@ public class HAUtil {
    * @param conf Configuration. Please use verifyAndSetRMHAId to check.
    * @return RM Id on success
    */
-  @VisibleForTesting
-  static String getRMHAId(Configuration conf) {
+  public static String getRMHAId(Configuration conf) {
     return conf.get(YarnConfiguration.RM_HA_ID);
   }
 

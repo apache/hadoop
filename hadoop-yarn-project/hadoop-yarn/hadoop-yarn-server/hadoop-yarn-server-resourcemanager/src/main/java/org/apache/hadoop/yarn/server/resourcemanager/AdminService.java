@@ -20,11 +20,8 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -41,14 +38,16 @@ import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RPC.Server;
 import org.apache.hadoop.ipc.StandbyException;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.ProxyUsers;
-import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.ResourceOption;
+import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
@@ -75,7 +74,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.authorize.RMPolicy
 
 import com.google.protobuf.BlockingService;
 
-public class AdminService extends AbstractService implements
+public class AdminService extends CompositeService implements
     HAServiceProtocol, ResourceManagerAdministrationProtocol {
 
   private static final Log LOG = LogFactory.getLog(AdminService.class);
@@ -83,6 +82,8 @@ public class AdminService extends AbstractService implements
   private final RMContext rmContext;
   private final ResourceManager rm;
   private String rmId;
+
+  private boolean autoFailoverEnabled;
 
   private Server server;
   private InetSocketAddress masterServiceAddress;
@@ -99,6 +100,15 @@ public class AdminService extends AbstractService implements
 
   @Override
   public synchronized void serviceInit(Configuration conf) throws Exception {
+    if (rmContext.isHAEnabled()) {
+      autoFailoverEnabled = HAUtil.isAutomaticFailoverEnabled(conf);
+      if (autoFailoverEnabled) {
+        if (HAUtil.isAutomaticFailoverEmbedded(conf)) {
+          addIfService(createEmbeddedElectorService());
+        }
+      }
+    }
+
     masterServiceAddress = conf.getSocketAddr(
         YarnConfiguration.RM_ADMIN_ADDRESS,
         YarnConfiguration.DEFAULT_RM_ADMIN_ADDRESS,
@@ -162,6 +172,10 @@ public class AdminService extends AbstractService implements
     }
   }
 
+  protected EmbeddedElectorService createEmbeddedElectorService() {
+    return new EmbeddedElectorService(rmContext);
+  }
+
   private UserGroupInformation checkAccess(String method) throws IOException {
     return RMServerUtils.verifyAccess(adminAcl, method, LOG);
   }
@@ -171,6 +185,43 @@ public class AdminService extends AbstractService implements
       return checkAccess(method);
     } catch (IOException ioe) {
       throw RPCUtil.getRemoteException(ioe);
+    }
+  }
+
+  /**
+   * Check that a request to change this node's HA state is valid.
+   * In particular, verifies that, if auto failover is enabled, non-forced
+   * requests from the HAAdmin CLI are rejected, and vice versa.
+   *
+   * @param req the request to check
+   * @throws AccessControlException if the request is disallowed
+   */
+  private void checkHaStateChange(StateChangeRequestInfo req)
+      throws AccessControlException {
+    switch (req.getSource()) {
+      case REQUEST_BY_USER:
+        if (autoFailoverEnabled) {
+          throw new AccessControlException(
+              "Manual failover for this ResourceManager is disallowed, " +
+                  "because automatic failover is enabled.");
+        }
+        break;
+      case REQUEST_BY_USER_FORCED:
+        if (autoFailoverEnabled) {
+          LOG.warn("Allowing manual failover from " +
+              org.apache.hadoop.ipc.Server.getRemoteAddress() +
+              " even though automatic failover is enabled, because the user " +
+              "specified the force flag");
+        }
+        break;
+      case REQUEST_BY_ZKFC:
+        if (!autoFailoverEnabled) {
+          throw new AccessControlException(
+              "Request from ZK failover controller at " +
+                  org.apache.hadoop.ipc.Server.getRemoteAddress() + " denied " +
+                  "since automatic failover is not enabled");
+        }
+        break;
     }
   }
 
@@ -196,8 +247,7 @@ public class AdminService extends AbstractService implements
   public synchronized void transitionToActive(
       HAServiceProtocol.StateChangeRequestInfo reqInfo) throws IOException {
     UserGroupInformation user = checkAccess("transitionToActive");
-    // TODO (YARN-1177): When automatic failover is enabled,
-    // check if transition should be allowed for this request
+    checkHaStateChange(reqInfo);
     try {
       rm.transitionToActive();
       RMAuditLogger.logSuccess(user.getShortUserName(),
@@ -215,8 +265,7 @@ public class AdminService extends AbstractService implements
   public synchronized void transitionToStandby(
       HAServiceProtocol.StateChangeRequestInfo reqInfo) throws IOException {
     UserGroupInformation user = checkAccess("transitionToStandby");
-    // TODO (YARN-1177): When automatic failover is enabled,
-    // check if transition should be allowed for this request
+    checkHaStateChange(reqInfo);
     try {
       rm.transitionToStandby(true);
       RMAuditLogger.logSuccess(user.getShortUserName(),
@@ -394,7 +443,7 @@ public class AdminService extends AbstractService implements
   public String[] getGroupsForUser(String user) throws IOException {
     return UserGroupInformation.createRemoteUser(user).getGroupNames();
   }
-  
+
   @Override
   public UpdateNodeResourceResponse updateNodeResource(
       UpdateNodeResourceRequest request) throws YarnException, IOException {
