@@ -582,6 +582,9 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-5671. Fix socket leak in DFSInputStream#getBlockReader. (JamesLi via umamahesh) 
 
+    HDFS-5649. Unregister NFS and Mount service when NFS gateway is shutting down.
+    (brandonli)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
