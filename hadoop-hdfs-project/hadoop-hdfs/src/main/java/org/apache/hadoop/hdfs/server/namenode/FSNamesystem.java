@@ -7137,7 +7137,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         getEditLog().logSync();
       }
       if (isAuditEnabled() && isExternalInvocation()) {
-        logAuditEvent(success, "addCacheDirective", null, null, null);
+        logAuditEvent(success, "modifyCacheDirective", null, null, null);
       }
       RetryCache.setState(cacheEntry, success);
     }

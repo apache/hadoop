@@ -470,6 +470,9 @@ Trunk (Unreleased)
     HDFS-5589. Namenode loops caching and uncaching when data should be
     uncached (awang via cmccabe)
 
+    HDFS-5724. modifyCacheDirective logging audit log command wrongly as
+    addCacheDirective (Uma Maheswara Rao G via Colin Patrick McCabe)
+
 Release 2.4.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
