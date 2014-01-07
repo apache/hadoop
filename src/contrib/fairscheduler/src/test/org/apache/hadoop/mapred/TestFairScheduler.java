@@ -25,6 +25,7 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -35,6 +36,7 @@ import java.util.TreeMap;
 import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.mapred.FairScheduler.JobInfo;
 import org.apache.hadoop.mapred.JobInProgress.KillInterruptedException;
 import org.apache.hadoop.mapred.UtilsForTests.FakeClock;
@@ -47,6 +49,7 @@ import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.metrics.spi.NoEmitMetricsContext;
 import org.apache.hadoop.metrics.spi.OutputRecord;
 import org.apache.hadoop.net.Node;
+import org.apache.hadoop.security.GroupMappingServiceProvider;
 import org.mockito.Mockito;
 
 public class TestFairScheduler extends TestCase {
@@ -3083,5 +3086,64 @@ public class TestFairScheduler extends TestCase {
         metrics.getMetric("fairShare").doubleValue(), .001);
     assertEquals(sched.getWeight(),
         metrics.getMetric("weight").doubleValue(), .001);
+  }
+
+  public void testPoolPlacementWithPolicy() throws Exception {
+    
+    Configuration placementPolicyConfig = new Configuration();
+    placementPolicyConfig.setClass("hadoop.security.group.mapping",
+        SimpleGroupsMapping.class, GroupMappingServiceProvider.class);
+    
+    List<PoolPlacementRule> rules = new ArrayList<PoolPlacementRule>();
+    rules.add(new PoolPlacementRule.Specified().initialize(true, null));
+    rules.add(new PoolPlacementRule.User().initialize(false, null));
+    rules.add(new PoolPlacementRule.PrimaryGroup().initialize(false, null));
+    rules.add(new PoolPlacementRule.Default().initialize(true, null));
+    Set<String> pools = new HashSet();
+    pools.add("user1");
+    pools.add("user3group");
+
+    placementPolicyConfig.set("user.name", "user1");
+    PoolManager poolManager = scheduler.getPoolManager();
+
+    poolManager.placementPolicy = new PoolPlacementPolicy(
+        rules, pools, placementPolicyConfig);
+    
+    JobInProgress job1 = submitJob(JobStatus.RUNNING, 2, 1);
+
+    job1.getJobConf().set("user.name", "user1");
+    poolManager.setPool(job1, "somepool");
+    assertEquals("somepool", poolManager.getPoolName(job1));
+
+    poolManager.setPool(job1, "default");
+    assertEquals("user1", poolManager.getPoolName(job1));
+
+    job1.getJobConf().set("user.name", "user3");
+    poolManager.setPool(job1, "default");
+    assertEquals("user3group", poolManager.getPoolName(job1));
+
+    job1.getJobConf().set("user.name", "otheruser");
+    poolManager.setPool(job1, "default");
+    assertEquals("default", poolManager.getPoolName(job1));
+    
+    // test without specified as first rule
+    rules = new ArrayList<PoolPlacementRule>();
+    rules.add(new PoolPlacementRule.User().initialize(false, null));
+    rules.add(new PoolPlacementRule.Specified().initialize(true, null));
+    rules.add(new PoolPlacementRule.Default().initialize(true, null));
+    poolManager.placementPolicy = new PoolPlacementPolicy(
+        rules, pools, conf);
+
+    job1.getJobConf().set("user.name", "user1");
+    poolManager.setPool(job1, "somepool");
+    assertEquals("user1", poolManager.getPoolName(job1));
+
+    job1.getJobConf().set("user.name", "otheruser");
+    poolManager.setPool(job1, "somepool");
+    assertEquals("somepool", poolManager.getPoolName(job1));
+
+    poolManager.setPool(job1, "default");
+    assertEquals("default", poolManager.getPoolName(job1));
+
   }
 }

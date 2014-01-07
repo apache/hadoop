@@ -15,34 +15,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.security;
+
+package org.apache.hadoop.mapred;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 
-/**
- * An interface for the implementation of a user-to-groups mapping service
- * used by {@link Groups}.
- */
-public interface GroupMappingServiceProvider {
+import org.apache.hadoop.security.GroupMappingServiceProvider;
+
+public class SimpleGroupsMapping implements GroupMappingServiceProvider {
   
-  /**
-   * Get all various group memberships of a given user.
-   * Returns EMPTY list in case of non-existing user
-   * @param user User's name
-   * @return group memberships of user
-   * @throws IOException
-   */
-  public List<String> getGroups(String user) throws IOException;
-  /**
-   * Refresh the cache of groups and user mapping
-   * @throws IOException
-   */
-  public void cacheGroupsRefresh() throws IOException;
-  /**
-   * Caches the group user information
-   * @param groups list of groups to add to cache
-   * @throws IOException
-   */
-  public void cacheGroupsAdd(List<String> groups) throws IOException;
+  @Override
+  public List<String> getGroups(String user) {
+    return Arrays.asList(user + "group");
+  }
+
+  @Override
+  public void cacheGroupsRefresh() throws IOException {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void cacheGroupsAdd(List<String> groups) throws IOException {
+    throw new UnsupportedOperationException();
+  }
+
 }

@@ -106,6 +106,8 @@ public class FairScheduler extends TaskScheduler {
    */
   public final static String ALLOW_UNDECLARED_POOLS_KEY =
     "mapred.fairscheduler.allow.undeclared.pools";
+  public static final boolean DEFAULT_ALLOW_UNDECLARED_POOLS = true;
+
   private boolean allowUndeclaredPools = false;
 
   /**
@@ -205,7 +207,8 @@ public class FairScheduler extends TaskScheduler {
           "mapred.fairscheduler.locality.delay.node", defaultDelay);
       rackLocalityDelay = conf.getLong(
           "mapred.fairscheduler.locality.delay.rack", defaultDelay);
-      allowUndeclaredPools = conf.getBoolean(ALLOW_UNDECLARED_POOLS_KEY, true);
+      allowUndeclaredPools = conf.getBoolean(
+          ALLOW_UNDECLARED_POOLS_KEY, DEFAULT_ALLOW_UNDECLARED_POOLS);
       if (defaultDelay == -1 && 
           (nodeLocalityDelay == -1 || rackLocalityDelay == -1)) {
         autoComputeLocalityDelay = true; // Compute from heartbeat interval
