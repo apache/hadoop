@@ -260,8 +260,12 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
       fos.flush();
       fos.close();
 
+      // It is supposed that LANG is set as C.
+      Map<String, String> cmdEnv = new HashMap<String, String>();
+      cmdEnv.put("LANG", "C");
       Shell.ShellCommandExecutor shexc
-      = new Shell.ShellCommandExecutor(new String[]{shellFile.getAbsolutePath()}, tmpDir);
+      = new Shell.ShellCommandExecutor(new String[]{shellFile.getAbsolutePath()},
+        tmpDir, cmdEnv);
       String diagnostics = null;
       try {
         shexc.execute();
