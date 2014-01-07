@@ -22,6 +22,7 @@ import static org.apache.hadoop.util.Time.now;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketTimeoutException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
 
@@ -270,7 +271,8 @@ class BPServiceActor implements Runnable {
   private void reportReceivedDeletedBlocks() throws IOException {
 
     // Generate a list of the pending reports for each storage under the lock
-    Map<String, ReceivedDeletedBlockInfo[]> blockArrays = Maps.newHashMap();
+    ArrayList<StorageReceivedDeletedBlocks> reports =
+        new ArrayList<StorageReceivedDeletedBlocks>(pendingIncrementalBRperStorage.size());
     synchronized (pendingIncrementalBRperStorage) {
       for (Map.Entry<String, PerStoragePendingIncrementalBR> entry :
            pendingIncrementalBRperStorage.entrySet()) {
@@ -283,33 +285,34 @@ class BPServiceActor implements Runnable {
           pendingReceivedRequests =
               (pendingReceivedRequests > rdbi.length ?
                   (pendingReceivedRequests - rdbi.length) : 0);
-          blockArrays.put(storageUuid, rdbi);
+          reports.add(new StorageReceivedDeletedBlocks(storageUuid, rdbi));
         }
       }
     }
 
-    // Send incremental block reports to the Namenode outside the lock
-    for (Map.Entry<String, ReceivedDeletedBlockInfo[]> entry :
-         blockArrays.entrySet()) {
-      final String storageUuid = entry.getKey();
-      final ReceivedDeletedBlockInfo[] rdbi = entry.getValue();
+    if (reports.size() == 0) {
+      // Nothing new to report.
+      return;
+    }
 
-      StorageReceivedDeletedBlocks[] report = { new StorageReceivedDeletedBlocks(
-          storageUuid, rdbi) };
-      boolean success = false;
-      try {
-        bpNamenode.blockReceivedAndDeleted(bpRegistration,
-            bpos.getBlockPoolId(), report);
-        success = true;
-      } finally {
-        if (!success) {
-          synchronized (pendingIncrementalBRperStorage) {
+    // Send incremental block reports to the Namenode outside the lock
+    boolean success = false;
+    try {
+      bpNamenode.blockReceivedAndDeleted(bpRegistration,
+          bpos.getBlockPoolId(),
+          reports.toArray(new StorageReceivedDeletedBlocks[reports.size()]));
+      success = true;
+    } finally {
+      if (!success) {
+        synchronized (pendingIncrementalBRperStorage) {
+          for (StorageReceivedDeletedBlocks report : reports) {
             // If we didn't succeed in sending the report, put all of the
             // blocks back onto our queue, but only in the case where we
             // didn't put something newer in the meantime.
             PerStoragePendingIncrementalBR perStorageMap =
-                pendingIncrementalBRperStorage.get(storageUuid);
-            pendingReceivedRequests += perStorageMap.putMissingBlockInfos(rdbi);
+                pendingIncrementalBRperStorage.get(report.getStorageID());
+            pendingReceivedRequests +=
+                perStorageMap.putMissingBlockInfos(report.getBlocks());
           }
         }
       }
