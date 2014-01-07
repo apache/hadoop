@@ -37,6 +37,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1028. Added FailoverProxyProvider capability to ResourceManager to help
     with RM failover. (Karthik Kambatla via vinodkv)
 
+    YARN-1029. Added embedded leader election in the ResourceManager. (Karthik
+    Kambatla via vinodkv)
+
   IMPROVEMENTS
 
     YARN-7. Support CPU resource for DistributedShell. (Junping Du via llu)

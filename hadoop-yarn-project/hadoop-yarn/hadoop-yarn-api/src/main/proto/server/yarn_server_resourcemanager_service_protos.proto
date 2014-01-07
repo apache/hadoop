@@ -133,3 +133,11 @@ message RMStateVersionProto {
   optional int32 major_version = 1;
   optional int32 minor_version = 2;
 }
+
+//////////////////////////////////////////////////////////////////
+///////////// RM Failover related records ////////////////////////
+//////////////////////////////////////////////////////////////////
+message ActiveRMInfoProto {
+  required string clusterid = 1;
+  required string rmId = 2;
+}

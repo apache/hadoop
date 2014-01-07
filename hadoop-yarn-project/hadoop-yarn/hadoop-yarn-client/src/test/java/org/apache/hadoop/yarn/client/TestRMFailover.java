@@ -28,37 +28,39 @@ import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ha.ClientBaseWithFixes;
 import org.apache.hadoop.ha.HAServiceProtocol;
+import org.apache.hadoop.ha.proto.HAServiceProtocolProtos;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
 import org.apache.hadoop.yarn.server.resourcemanager.AdminService;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
-public class TestRMFailover {
+public class TestRMFailover extends ClientBaseWithFixes {
   private static final Log LOG =
       LogFactory.getLog(TestRMFailover.class.getName());
+  private static final HAServiceProtocol.StateChangeRequestInfo req =
+      new HAServiceProtocol.StateChangeRequestInfo(
+          HAServiceProtocol.RequestSource.REQUEST_BY_USER);
 
   private static final String RM1_NODE_ID = "rm1";
   private static final int RM1_PORT_BASE = 10000;
   private static final String RM2_NODE_ID = "rm2";
   private static final int RM2_PORT_BASE = 20000;
-  private static final HAServiceProtocol.StateChangeRequestInfo req =
-      new HAServiceProtocol.StateChangeRequestInfo(
-          HAServiceProtocol.RequestSource.REQUEST_BY_USER_FORCED);
 
-  private static Configuration conf;
-  private static MiniYARNCluster cluster;
+  private Configuration conf;
+  private MiniYARNCluster cluster;
 
-  private static void setConfForRM(String rmId, String prefix, String value) {
+  private void setConfForRM(String rmId, String prefix, String value) {
     conf.set(HAUtil.addSuffix(prefix, rmId), value);
   }
 
-  private static void setRpcAddressForRM(String rmId, int base) {
+  private void setRpcAddressForRM(String rmId, int base) {
     setConfForRM(rmId, YarnConfiguration.RM_ADDRESS, "0.0.0.0:" +
         (base + YarnConfiguration.DEFAULT_RM_PORT));
     setConfForRM(rmId, YarnConfiguration.RM_SCHEDULER_ADDRESS, "0.0.0.0:" +
@@ -73,13 +75,8 @@ public class TestRMFailover {
         (base + YarnConfiguration.DEFAULT_RM_WEBAPP_HTTPS_PORT));
   }
 
-  private static AdminService getRMAdminService(int index) {
-    return
-        cluster.getResourceManager(index).getRMContext().getRMAdminService();
-  }
-
-  @BeforeClass
-  public static void setup() throws IOException {
+  @Before
+  public void setup() throws IOException {
     conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
     conf.set(YarnConfiguration.RM_HA_IDS, RM1_NODE_ID + "," + RM2_NODE_ID);
@@ -87,27 +84,22 @@ public class TestRMFailover {
     setRpcAddressForRM(RM2_NODE_ID, RM2_PORT_BASE);
 
     conf.setLong(YarnConfiguration.CLIENT_FAILOVER_SLEEPTIME_BASE_MS, 100L);
+
     conf.setBoolean(YarnConfiguration.YARN_MINICLUSTER_FIXED_PORTS, true);
     conf.setBoolean(YarnConfiguration.YARN_MINICLUSTER_USE_RPC, true);
 
     cluster = new MiniYARNCluster(TestRMFailover.class.getName(), 2, 1, 1, 1);
-    cluster.init(conf);
-    cluster.start();
-
-    cluster.getResourceManager(0).getRMContext().getRMAdminService()
-        .transitionToActive(req);
-    assertFalse("RM never turned active", -1 == cluster.getActiveRMIndex());
   }
 
-  @AfterClass
-  public static void teardown() {
+  @After
+  public void teardown() {
     cluster.stop();
   }
 
   private void verifyClientConnection() {
     int numRetries = 3;
     while(numRetries-- > 0) {
-      Configuration conf = new YarnConfiguration(TestRMFailover.conf);
+      Configuration conf = new YarnConfiguration(this.conf);
       YarnClient client = YarnClient.createYarnClient();
       client.init(conf);
       client.start();
@@ -123,31 +115,68 @@ public class TestRMFailover {
     fail("Client couldn't connect to the Active RM");
   }
 
+  private void verifyConnections() throws InterruptedException, YarnException {
+    assertTrue("NMs failed to connect to the RM",
+        cluster.waitForNodeManagersToConnect(20000));
+    verifyClientConnection();
+  }
+
+  private AdminService getAdminService(int index) {
+    return cluster.getResourceManager(index).getRMContext().getRMAdminService();
+  }
+
+  private void explicitFailover() throws IOException {
+    int activeRMIndex = cluster.getActiveRMIndex();
+    int newActiveRMIndex = (activeRMIndex + 1) % 2;
+    getAdminService(activeRMIndex).transitionToStandby(req);
+    getAdminService(newActiveRMIndex).transitionToActive(req);
+    assertEquals("Failover failed", newActiveRMIndex, cluster.getActiveRMIndex());
+  }
+
+  private void failover()
+      throws IOException, InterruptedException, YarnException {
+    int activeRMIndex = cluster.getActiveRMIndex();
+    cluster.stopResourceManager(activeRMIndex);
+    assertEquals("Failover failed",
+        (activeRMIndex + 1) % 2, cluster.getActiveRMIndex());
+    cluster.restartResourceManager(activeRMIndex);
+  }
+
   @Test
   public void testExplicitFailover()
       throws YarnException, InterruptedException, IOException {
-    assertTrue("NMs failed to connect to the RM",
-        cluster.waitForNodeManagersToConnect(5000));
-    verifyClientConnection();
+    conf.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
+    cluster.init(conf);
+    cluster.start();
+    getAdminService(0).transitionToActive(req);
+    assertFalse("RM never turned active", -1 == cluster.getActiveRMIndex());
+    verifyConnections();
 
-    // Failover to the second RM
-    getRMAdminService(0).transitionToStandby(req);
-    getRMAdminService(1).transitionToActive(req);
-    assertEquals("Wrong ResourceManager is active",
-        HAServiceProtocol.HAServiceState.ACTIVE,
-        getRMAdminService(1).getServiceStatus().getState());
-    assertTrue("NMs failed to connect to the RM",
-        cluster.waitForNodeManagersToConnect(5000));
-    verifyClientConnection();
+    explicitFailover();
+    verifyConnections();
 
-    // Failover back to the first RM
-    getRMAdminService(1).transitionToStandby(req);
-    getRMAdminService(0).transitionToActive(req);
-    assertEquals("Wrong ResourceManager is active",
-        HAServiceProtocol.HAServiceState.ACTIVE,
-        getRMAdminService(0).getServiceStatus().getState());
-    assertTrue("NMs failed to connect to the RM",
-        cluster.waitForNodeManagersToConnect(5000));
-    verifyClientConnection();
+    explicitFailover();
+    verifyConnections();
+  }
+
+  @Test
+  public void testAutomaticFailover()
+      throws YarnException, InterruptedException, IOException {
+    conf.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, true);
+    conf.setBoolean(YarnConfiguration.AUTO_FAILOVER_EMBEDDED, true);
+    conf.set(YarnConfiguration.RM_CLUSTER_ID, "yarn-test-cluster");
+    conf.set(YarnConfiguration.RM_ZK_ADDRESS, hostPort);
+    conf.setInt(YarnConfiguration.RM_ZK_TIMEOUT_MS, 2000);
+
+    cluster.init(conf);
+    cluster.start();
+    assertFalse("RM never turned active", -1 == cluster.getActiveRMIndex());
+    verifyConnections();
+
+    failover();
+    verifyConnections();
+
+    failover();
+    verifyConnections();
   }
 }

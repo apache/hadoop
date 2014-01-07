@@ -264,13 +264,20 @@
 
   <property>
     <description>Enable RM to recover state after starting. If true, then 
-    yarn.resourcemanager.store.class must be specified</description>
+      yarn.resourcemanager.store.class must be specified. </description>
     <name>yarn.resourcemanager.recovery.enabled</name>
     <value>false</value>
   </property>
 
   <property>
-    <description>The class to use as the persistent store.</description>
+    <description>The class to use as the persistent store.
+
+      If org.apache.hadoop.yarn.server.resourcemanager.recovery.ZKRMStateStore
+      is used, the store is implicitly fenced; meaning a single ResourceManager
+      is able to use the store at any point in time. More details on this
+      implicit fencing, along with setting up appropriate ACLs is discussed
+      under yarn.resourcemanager.zk-state-store.root-node.acl.
+    </description>
     <name>yarn.resourcemanager.store.class</name>
     <value>org.apache.hadoop.yarn.server.resourcemanager.recovery.FileSystemRMStateStore</value>
   </property>
@@ -291,31 +298,24 @@
   </property>
 
   <property>
-    <description>Host:Port of the ZooKeeper server where RM state will 
-    be stored. This must be supplied when using
-    org.apache.hadoop.yarn.server.resourcemanager.recovery.ZKRMStateStore
-    as the value for yarn.resourcemanager.store.class. ZKRMStateStore
-    is implicitly fenced, meaning a single ResourceManager is
-    able to use the store at any point in time. More details on this, along
-    with setting up appropriate ACLs is discussed under the description for
-    yarn.resourcemanager.zk-state-store.root-node.acl.</description>
-    <name>yarn.resourcemanager.zk-state-store.address</name>
+    <description>Host:Port of the ZooKeeper server to be used by the RM. This
+      must be supplied when using the ZooKeeper based implementation of the
+      RM state store and/or embedded automatic failover in a HA setting.
+    </description>
+    <name>yarn.resourcemanager.zk-address</name>
     <!--value>127.0.0.1:2181</value-->
   </property>
 
   <property>
-    <description>Number of times ZKRMStateStore tries to connect to
-    ZooKeeper. This may be supplied when using
-    org.apache.hadoop.yarn.server.resourcemanager.recovery.ZKRMStateStore
-    as the value for yarn.resourcemanager.store.class</description>
-    <name>yarn.resourcemanager.zk-state-store.num-retries</name>
+    <description>Number of times RM tries to connect to ZooKeeper.</description>
+    <name>yarn.resourcemanager.zk-num-retries</name>
     <value>500</value>
   </property>
 
   <property>
-    <description>Retry interval in milliseconds when ZKRMStateStore tries to
-    connect to ZooKeeper.</description>
-    <name>yarn.resourcemanager.zk-state-store.retry-interval-ms</name>
+    <description>Retry interval in milliseconds when connecting to ZooKeeper.
+    </description>
+    <name>yarn.resourcemanager.zk-retry-interval-ms</name>
     <value>2000</value>
   </property>
 
@@ -333,20 +333,14 @@
     is managed by the ZooKeeper cluster itself, not by the client. This value is
     used by the cluster to determine when the client's session expires.
     Expirations happens when the cluster does not hear from the client within
-    the specified session timeout period (i.e. no heartbeat).
-    This may be supplied when using
-    org.apache.hadoop.yarn.server.resourcemanager.recovery.ZKRMStateStore
-    as the value for yarn.resourcemanager.store.class</description>
-    <name>yarn.resourcemanager.zk-state-store.timeout-ms</name>
+    the specified session timeout period (i.e. no heartbeat).</description>
+    <name>yarn.resourcemanager.zk-timeout-ms</name>
     <value>60000</value>
   </property>
 
   <property>
-    <description>ACL's to be used for ZooKeeper znodes.
-    This may be supplied when using
-    org.apache.hadoop.yarn.server.resourcemanager.recovery.ZKRMStateStore
-    as the value for yarn.resourcemanager.store.class</description>
-    <name>yarn.resourcemanager.zk-state-store.acl</name>
+    <description>ACL's to be used for ZooKeeper znodes.</description>
+    <name>yarn.resourcemanager.zk-acl</name>
     <value>world:anyone:rwcda</value>
   </property>
 
@@ -362,7 +356,7 @@
       permissions.
 
       By default, when this property is not set, we use the ACLs from
-      yarn.resourcemanager.zk-state-store.acl for shared admin access and
+      yarn.resourcemanager.zk-acl for shared admin access and
       rm-address:cluster-timestamp for username-based exclusive create-delete
       access.
 
@@ -406,6 +400,36 @@
       - {rpc-config}.{id}</description>
     <name>yarn.resourcemanager.ha.enabled</name>
     <value>false</value>
+  </property>
+
+  <property>
+    <description>Enable automatic failover.</description>
+    <name>yarn.resourcemanager.ha.automatic-failover.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>Enable embedded automatic failover. The embedded elector
+      relies on the RM state store to handle fencing, and is primarily intended
+      to be used in conjunction with ZKRMStateStore.</description>
+    <name>yarn.resourcemanager.ha.automatic-failover.embedded</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>The base znode path to use for storing leader information,
+      when using ZooKeeper based leader election.</description>
+    <name>yarn.resourcemanager.ha.automatic-failover.zk-base-path</name>
+    <value>/yarn-leader-election</value>
+  </property>
+
+  <property>
+    <description>Name of the cluster. In a HA setting,
+      this is used to ensure the RM participates in leader
+      election fo this cluster and ensures it does not affect
+      other clusters</description>
+    <name>yarn.resourcemanager.cluster-id</name>
+    <!--value>yarn-cluster</value-->
   </property>
 
   <property>

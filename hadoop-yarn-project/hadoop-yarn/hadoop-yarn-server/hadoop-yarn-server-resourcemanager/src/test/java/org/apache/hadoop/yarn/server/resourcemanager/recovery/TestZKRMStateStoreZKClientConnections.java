@@ -107,7 +107,7 @@ public class TestZKRMStateStoreZKClientConnections extends
 
     public RMStateStore getRMStateStore(Configuration conf) throws Exception {
       String workingZnode = "/Test";
-      conf.set(YarnConfiguration.ZK_RM_STATE_STORE_ADDRESS, hostPort);
+      conf.set(YarnConfiguration.RM_ZK_ADDRESS, hostPort);
       conf.set(YarnConfiguration.ZK_RM_STATE_STORE_PARENT_PATH, workingZnode);
       watcher = new TestForwardingWatcher();
       this.store = new TestZKRMStateStore(conf, workingZnode);
@@ -120,8 +120,8 @@ public class TestZKRMStateStoreZKClientConnections extends
     TestZKClient zkClientTester = new TestZKClient();
     final String path = "/test";
     YarnConfiguration conf = new YarnConfiguration();
-    conf.setInt(YarnConfiguration.ZK_RM_STATE_STORE_TIMEOUT_MS, 1000);
-    conf.setLong(YarnConfiguration.ZK_RM_STATE_STORE_RETRY_INTERVAL_MS, 100);
+    conf.setInt(YarnConfiguration.RM_ZK_TIMEOUT_MS, 1000);
+    conf.setLong(YarnConfiguration.RM_ZK_RETRY_INTERVAL_MS, 100);
     final ZKRMStateStore store =
         (ZKRMStateStore) zkClientTester.getRMStateStore(conf);
     TestDispatcher dispatcher = new TestDispatcher();
@@ -153,7 +153,7 @@ public class TestZKRMStateStoreZKClientConnections extends
     TestZKClient zkClientTester = new TestZKClient();
     String path = "/test";
     YarnConfiguration conf = new YarnConfiguration();
-    conf.setInt(YarnConfiguration.ZK_RM_STATE_STORE_TIMEOUT_MS, 100);
+    conf.setInt(YarnConfiguration.RM_ZK_TIMEOUT_MS, 100);
     ZKRMStateStore store =
         (ZKRMStateStore) zkClientTester.getRMStateStore(conf);
     TestDispatcher dispatcher = new TestDispatcher();
@@ -195,7 +195,7 @@ public class TestZKRMStateStoreZKClientConnections extends
     TestZKClient zkClientTester = new TestZKClient();
     String path = "/test";
     YarnConfiguration conf = new YarnConfiguration();
-    conf.setInt(YarnConfiguration.ZK_RM_STATE_STORE_TIMEOUT_MS, 100);
+    conf.setInt(YarnConfiguration.RM_ZK_TIMEOUT_MS, 100);
     ZKRMStateStore store =
         (ZKRMStateStore) zkClientTester.getRMStateStore(conf);
     TestDispatcher dispatcher = new TestDispatcher();
@@ -227,7 +227,7 @@ public class TestZKRMStateStoreZKClientConnections extends
   public void testSetZKAcl() {
     TestZKClient zkClientTester = new TestZKClient();
     YarnConfiguration conf = new YarnConfiguration();
-    conf.set(YarnConfiguration.ZK_RM_STATE_STORE_ACL, "world:anyone:rwca");
+    conf.set(YarnConfiguration.RM_ZK_ACL, "world:anyone:rwca");
     try {
       zkClientTester.store.zkClient.delete(zkClientTester.store
           .znodeWorkingPath, -1);
@@ -240,7 +240,7 @@ public class TestZKRMStateStoreZKClientConnections extends
   public void testInvalidZKAclConfiguration() {
     TestZKClient zkClientTester = new TestZKClient();
     YarnConfiguration conf = new YarnConfiguration();
-    conf.set(YarnConfiguration.ZK_RM_STATE_STORE_ACL, "randomstring&*");
+    conf.set(YarnConfiguration.RM_ZK_ACL, "randomstring&*");
     try {
       zkClientTester.getRMStateStore(conf);
       fail("ZKRMStateStore created with bad ACL");

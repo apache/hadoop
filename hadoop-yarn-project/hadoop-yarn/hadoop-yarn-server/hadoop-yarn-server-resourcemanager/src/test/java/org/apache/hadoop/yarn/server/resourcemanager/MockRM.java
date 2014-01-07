@@ -396,6 +396,11 @@ public class MockRM extends ResourceManager {
       protected void stopServer() {
         // don't do anything
       }
+
+      @Override
+      protected EmbeddedElectorService createEmbeddedElectorService() {
+        return null;
+      }
     };
   }
 
