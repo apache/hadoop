@@ -383,6 +383,9 @@ BREAKDOWN OF HDFS-2832 SUBTASKS AND RELATED JIRAS
     HDFS-5454. DataNode UUID should be assigned prior to FsDataset
     initialization. (Arpit Agarwal)
 
+    HDFS-5406. Send incremental block reports for all storages in a
+    single call. (Arpit Agarwal)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
