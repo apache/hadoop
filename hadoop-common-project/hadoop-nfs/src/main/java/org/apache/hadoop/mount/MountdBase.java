@@ -23,6 +23,7 @@ import org.apache.hadoop.oncrpc.RpcProgram;
 import org.apache.hadoop.oncrpc.SimpleTcpServer;
 import org.apache.hadoop.oncrpc.SimpleUdpServer;
 import org.apache.hadoop.portmap.PortmapMapping;
+import org.apache.hadoop.util.ShutdownHookManager;
 
 /**
  * Main class for starting mountd daemon. This daemon implements the NFS
@@ -71,8 +72,24 @@ abstract public class MountdBase {
     startUDPServer();
     startTCPServer();
     if (register) {
+      ShutdownHookManager.get().addShutdownHook(new Unregister(),
+          SHUTDOWN_HOOK_PRIORITY);
       rpcProgram.register(PortmapMapping.TRANSPORT_UDP, udpBoundPort);
       rpcProgram.register(PortmapMapping.TRANSPORT_TCP, tcpBoundPort);
     }
   }
+  
+  /**
+   * Priority of the mountd shutdown hook.
+   */
+  public static final int SHUTDOWN_HOOK_PRIORITY = 10;
+
+  private class Unregister implements Runnable {
+    @Override
+    public synchronized void run() {
+      rpcProgram.unregister(PortmapMapping.TRANSPORT_UDP, udpBoundPort);
+      rpcProgram.unregister(PortmapMapping.TRANSPORT_TCP, tcpBoundPort);
+    }
+  }
+  
 }
