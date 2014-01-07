@@ -140,6 +140,7 @@ public class MiniDFSCluster {
     private int nameNodeHttpPort = 0;
     private final Configuration conf;
     private int numDataNodes = 1;
+    private StorageType storageType = StorageType.DEFAULT;
     private boolean format = true;
     private boolean manageNameDfsDirs = true;
     private boolean manageNameDfsSharedDirs = true;
@@ -182,6 +183,14 @@ public class MiniDFSCluster {
      */
     public Builder numDataNodes(int val) {
       this.numDataNodes = val;
+      return this;
+    }
+
+    /**
+     * Default: StorageType.DEFAULT
+     */
+    public Builder storageType(StorageType type) {
+      this.storageType = type;
       return this;
     }
 
@@ -341,6 +350,7 @@ public class MiniDFSCluster {
       
     initMiniDFSCluster(builder.conf,
                        builder.numDataNodes,
+                       builder.storageType,
                        builder.format,
                        builder.manageNameDfsDirs,
                        builder.manageNameDfsSharedDirs,
@@ -590,7 +600,7 @@ public class MiniDFSCluster {
                         String[] racks, String hosts[],
                         long[] simulatedCapacities) throws IOException {
     this.nameNodes = new NameNodeInfo[1]; // Single namenode in the cluster
-    initMiniDFSCluster(conf, numDataNodes, format,
+    initMiniDFSCluster(conf, numDataNodes, StorageType.DEFAULT, format,
         manageNameDfsDirs, true, true, manageDataDfsDirs,
         operation, racks, hosts,
         simulatedCapacities, null, true, false,
@@ -599,7 +609,7 @@ public class MiniDFSCluster {
 
   private void initMiniDFSCluster(
       Configuration conf,
-      int numDataNodes, boolean format, boolean manageNameDfsDirs,
+      int numDataNodes, StorageType storageType, boolean format, boolean manageNameDfsDirs,
       boolean manageNameDfsSharedDirs, boolean enableManagedDfsDirsRedundancy,
       boolean manageDataDfsDirs, StartupOption operation, String[] racks,
       String[] hosts, long[] simulatedCapacities, String clusterId,
@@ -671,7 +681,7 @@ public class MiniDFSCluster {
     }
 
     // Start the DataNodes
-    startDataNodes(conf, numDataNodes, manageDataDfsDirs, operation, racks,
+    startDataNodes(conf, numDataNodes, storageType, manageDataDfsDirs, operation, racks,
         hosts, simulatedCapacities, setupHostsFile, checkDataNodeAddrConfig, checkDataNodeHostConfig);
     waitClusterUp();
     //make sure ProxyUsers uses the latest conf
@@ -991,6 +1001,19 @@ public class MiniDFSCluster {
     }
   }
 
+  String makeDataNodeDirs(int dnIndex, StorageType storageType) throws IOException {
+    StringBuilder sb = new StringBuilder();
+    for (int j = 0; j < DIRS_PER_DATANODE; ++j) {
+      File dir = getInstanceStorageDir(dnIndex, j);
+      dir.mkdirs();
+      if (!dir.isDirectory()) {
+        throw new IOException("Mkdirs failed to create directory for DataNode " + dir);
+      }
+      sb.append((j > 0 ? "," : "") + "[" + storageType + "]" + fileAsURI(dir));
+    }
+    return sb.toString();
+  }
+
   /**
    * Modify the config and start up additional DataNodes.  The info port for
    * DataNodes is guaranteed to use a free port.
@@ -1053,7 +1076,7 @@ public class MiniDFSCluster {
                              String[] racks, String[] hosts,
                              long[] simulatedCapacities,
                              boolean setupHostsFile) throws IOException {
-    startDataNodes(conf, numDataNodes, manageDfsDirs, operation, racks, hosts,
+    startDataNodes(conf, numDataNodes, StorageType.DEFAULT, manageDfsDirs, operation, racks, hosts,
         simulatedCapacities, setupHostsFile, false, false);
   }
 
@@ -1067,7 +1090,7 @@ public class MiniDFSCluster {
       long[] simulatedCapacities,
       boolean setupHostsFile,
       boolean checkDataNodeAddrConfig) throws IOException {
-    startDataNodes(conf, numDataNodes, manageDfsDirs, operation, racks, hosts,
+    startDataNodes(conf, numDataNodes, StorageType.DEFAULT, manageDfsDirs, operation, racks, hosts,
         simulatedCapacities, setupHostsFile, checkDataNodeAddrConfig, false);
   }
 
@@ -1099,7 +1122,7 @@ public class MiniDFSCluster {
    * @throws IllegalStateException if NameNode has been shutdown
    */
   public synchronized void startDataNodes(Configuration conf, int numDataNodes,
-      boolean manageDfsDirs, StartupOption operation, 
+      StorageType storageType, boolean manageDfsDirs, StartupOption operation,
       String[] racks, String[] hosts,
       long[] simulatedCapacities,
       boolean setupHostsFile,
@@ -1155,16 +1178,7 @@ public class MiniDFSCluster {
       // Set up datanode address
       setupDatanodeAddress(dnConf, setupHostsFile, checkDataNodeAddrConfig);
       if (manageDfsDirs) {
-        StringBuilder sb = new StringBuilder();
-        for (int j = 0; j < DIRS_PER_DATANODE; ++j) {
-          File dir = getInstanceStorageDir(i, j);
-          dir.mkdirs();
-          if (!dir.isDirectory()) {
-            throw new IOException("Mkdirs failed to create directory for DataNode " + dir);
-          }
-          sb.append((j > 0 ? "," : "") + fileAsURI(dir));
-        }
-        String dirs = sb.toString();
+        String dirs = makeDataNodeDirs(i, storageType);
         dnConf.set(DFS_DATANODE_DATA_DIR_KEY, dirs);
         conf.set(DFS_DATANODE_DATA_DIR_KEY, dirs);
       }

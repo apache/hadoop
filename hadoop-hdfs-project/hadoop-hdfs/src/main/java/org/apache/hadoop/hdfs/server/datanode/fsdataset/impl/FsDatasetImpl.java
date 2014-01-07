@@ -120,7 +120,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       reports = new StorageReport[volumes.volumes.size()];
       int i = 0;
       for (FsVolumeImpl volume : volumes.volumes) {
-        reports[i++] = new StorageReport(volume.getStorageID(),
+        reports[i++] = new StorageReport(volume.toDatanodeStorage(),
                                          false,
                                          volume.getCapacity(),
                                          volume.getDfsUsed(),
@@ -235,12 +235,9 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     final List<FsVolumeImpl> volArray = new ArrayList<FsVolumeImpl>(
         storage.getNumStorageDirs());
     for (int idx = 0; idx < storage.getNumStorageDirs(); idx++) {
-      // TODO: getStorageTypeFromLocations() is only a temporary workaround and 
-      // should be replaced with getting storage type from DataStorage (missing 
-      // storage type now) directly.
       Storage.StorageDirectory sd = storage.getStorageDir(idx);
       final File dir = sd.getCurrentDir();
-      final StorageType storageType = getStorageTypeFromLocations(dataLocations, dir);
+      final StorageType storageType = getStorageTypeFromLocations(dataLocations, sd.getRoot());
       volArray.add(new FsVolumeImpl(this, sd.getStorageUuid(), dir, conf,
           storageType));
       LOG.info("Added volume - " + dir + ", StorageType: " + storageType);

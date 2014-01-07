@@ -468,11 +468,14 @@ public class TestJspHelper {
     BlockManagerTestUtil.updateStorage(dnDesc1, new DatanodeStorage("dnStorage1"));
     BlockManagerTestUtil.updateStorage(dnDesc2, new DatanodeStorage("dnStorage2"));
 
+    DatanodeStorage dns1 = new DatanodeStorage("dnStorage1");
+    DatanodeStorage dns2 = new DatanodeStorage("dnStorage2");
+
     StorageReport[] report1 = new StorageReport[] {
-        new StorageReport("dnStorage1", false, 1024, 100, 924, 100)
+        new StorageReport(dns1, false, 1024, 100, 924, 100)
     };
     StorageReport[] report2 = new StorageReport[] {
-        new StorageReport("dnStorage2", false, 2500, 200, 1848, 200)
+        new StorageReport(dns2, false, 2500, 200, 1848, 200)
     };
     dnDesc1.updateHeartbeat(report1, 10, 2);
     dnDesc2.updateHeartbeat(report2, 20, 1);

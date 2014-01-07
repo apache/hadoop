@@ -268,11 +268,11 @@ public class DatanodeDescriptor extends DatanodeInfo {
     setLastUpdate(Time.now());    
     this.volumeFailures = volFailures;
     for (StorageReport report : reports) {
-      DatanodeStorageInfo storage = storageMap.get(report.getStorageID());
+      DatanodeStorageInfo storage = storageMap.get(report.getStorage().getStorageID());
       if (storage == null) {
         // This is seen during cluster initialization when the heartbeat
         // is received before the initial block reports from each storage.
-        storage = updateStorage(new DatanodeStorage(report.getStorageID()));
+        storage = updateStorage(report.getStorage());
       }
       storage.receivedHeartbeat(report);
       totalCapacity += report.getCapacity();

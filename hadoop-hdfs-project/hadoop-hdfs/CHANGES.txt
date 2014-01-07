@@ -386,6 +386,8 @@ BREAKDOWN OF HDFS-2832 SUBTASKS AND RELATED JIRAS
     HDFS-5406. Send incremental block reports for all storages in a
     single call. (Arpit Agarwal)
 
+    HDFS-5667. Include DatanodeStorage in StorageReport. (Arpit Agarwal)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

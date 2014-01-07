@@ -175,12 +175,13 @@ message HeartbeatRequestProto {
 }
 
 message StorageReportProto {
-  required string storageUuid = 1;
+  required string storageUuid = 1 [ deprecated = true ];
   optional bool failed = 2 [ default = false ];
   optional uint64 capacity = 3 [ default = 0 ];
   optional uint64 dfsUsed = 4 [ default = 0 ];
   optional uint64 remaining = 5 [ default = 0 ];
   optional uint64 blockPoolUsed = 6 [ default = 0 ];
+  optional DatanodeStorageProto storage = 7; // supersedes StorageUuid
 }
 
 /**
