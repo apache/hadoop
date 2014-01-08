@@ -130,8 +130,8 @@ abstract class AbstractINodeDiff<N extends INode,
 
   @Override
   public String toString() {
-    return getClass().getSimpleName() + ": " + snapshotId + " (post="
-        + (posteriorDiff == null? null: posteriorDiff.snapshotId) + ")";
+    return getClass().getSimpleName() + ": " + this.getSnapshotId() + " (post="
+        + (posteriorDiff == null? null: posteriorDiff.getSnapshotId()) + ")";
   }
 
   void writeSnapshot(DataOutput out) throws IOException {

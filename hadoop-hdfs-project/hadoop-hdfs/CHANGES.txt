@@ -473,6 +473,8 @@ Trunk (Unreleased)
     HDFS-5724. modifyCacheDirective logging audit log command wrongly as
     addCacheDirective (Uma Maheswara Rao G via Colin Patrick McCabe)
 
+    HDFS-5726. Fix compilation error in AbstractINodeDiff for JDK7. (jing9)
+
 Release 2.4.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
