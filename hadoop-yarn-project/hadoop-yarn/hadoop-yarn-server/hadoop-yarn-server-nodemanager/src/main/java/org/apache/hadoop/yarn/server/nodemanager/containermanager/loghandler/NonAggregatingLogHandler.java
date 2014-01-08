@@ -23,6 +23,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.RejectedExecutionException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -118,10 +119,17 @@ public class NonAggregatingLogHandler extends AbstractService implements
         LOG.info("Scheduling Log Deletion for application: "
             + appFinishedEvent.getApplicationId() + ", with delay of "
             + this.deleteDelaySeconds + " seconds");
-        sched.schedule(
+        LogDeleterRunnable logDeleter =
             new LogDeleterRunnable(appOwners.remove(appFinishedEvent
-                .getApplicationId()), appFinishedEvent.getApplicationId()),
-            this.deleteDelaySeconds, TimeUnit.SECONDS);
+                  .getApplicationId()), appFinishedEvent.getApplicationId());
+        try {
+          sched.schedule(logDeleter, this.deleteDelaySeconds,
+              TimeUnit.SECONDS);
+        } catch (RejectedExecutionException e) {
+          // Handling this event in local thread before starting threads
+          // or after calling sched.shutdownNow().
+          logDeleter.run();
+        }
         break;
       default:
         ; // Ignore

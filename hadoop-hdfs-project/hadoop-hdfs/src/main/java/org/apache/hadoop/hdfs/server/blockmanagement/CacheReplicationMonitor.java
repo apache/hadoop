@@ -49,6 +49,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.util.GSet;
 import org.apache.hadoop.util.Time;
@@ -339,7 +340,8 @@ public class CacheReplicationMonitor extends Thread implements Closeable {
         }
       } else if (node.isDirectory()) {
         INodeDirectory dir = node.asDirectory();
-        ReadOnlyList<INode> children = dir.getChildrenList(null);
+        ReadOnlyList<INode> children = dir
+            .getChildrenList(Snapshot.CURRENT_STATE_ID);
         for (INode child : children) {
           if (child.isFile()) {
             rescanFile(directive, child.asFile());

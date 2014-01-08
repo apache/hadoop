@@ -23,6 +23,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.oncrpc.RpcProgram;
 import org.apache.hadoop.oncrpc.SimpleTcpServer;
 import org.apache.hadoop.portmap.PortmapMapping;
+import org.apache.hadoop.util.ShutdownHookManager;
 
 /**
  * Nfs server. Supports NFS v3 using {@link RpcProgram}.
@@ -50,6 +51,8 @@ public abstract class Nfs3Base {
     startTCPServer(); // Start TCP server
     
     if (register) {
+      ShutdownHookManager.get().addShutdownHook(new Unregister(),
+          SHUTDOWN_HOOK_PRIORITY);
       rpcProgram.register(PortmapMapping.TRANSPORT_TCP, nfsBoundPort);
     }
   }
@@ -60,5 +63,17 @@ public abstract class Nfs3Base {
     rpcProgram.startDaemons();
     tcpServer.run();
     nfsBoundPort = tcpServer.getBoundPort();
+  }
+  
+  /**
+   * Priority of the nfsd shutdown hook.
+   */
+  public static final int SHUTDOWN_HOOK_PRIORITY = 10;
+
+  private class Unregister implements Runnable {
+    @Override
+    public synchronized void run() {
+      rpcProgram.unregister(PortmapMapping.TRANSPORT_TCP, nfsBoundPort);
+    }
   }
 }

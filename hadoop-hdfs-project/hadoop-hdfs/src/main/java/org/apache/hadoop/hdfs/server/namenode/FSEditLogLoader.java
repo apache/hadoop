@@ -24,14 +24,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
 import java.util.EnumMap;
-import java.util.EnumSet;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.CacheFlag;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -80,6 +78,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.UpdateBlocksOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.UpdateMasterKeyOp;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.Phase;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress.Counter;
@@ -328,7 +327,7 @@ public class FSEditLogLoader {
         // add the op into retry cache if necessary
         if (toAddRetryCache) {
           HdfsFileStatus stat = fsNamesys.dir.createFileStatus(
-              HdfsFileStatus.EMPTY_NAME, newFile, null);
+              HdfsFileStatus.EMPTY_NAME, newFile, Snapshot.CURRENT_STATE_ID);
           fsNamesys.addCacheEntryWithPayload(addCloseOp.rpcClientId,
               addCloseOp.rpcCallId, stat);
         }
@@ -341,7 +340,7 @@ public class FSEditLogLoader {
           }
           LocatedBlock lb = fsNamesys.prepareFileForWrite(addCloseOp.path,
               oldFile, addCloseOp.clientName, addCloseOp.clientMachine, null,
-              false, iip.getLatestSnapshot(), false);
+              false, iip.getLatestSnapshotId(), false);
           newFile = INodeFile.valueOf(fsDir.getINode(addCloseOp.path),
               addCloseOp.path, true);
           
@@ -357,8 +356,8 @@ public class FSEditLogLoader {
       // update the block list.
       
       // Update the salient file attributes.
-      newFile.setAccessTime(addCloseOp.atime, null);
-      newFile.setModificationTime(addCloseOp.mtime, null);
+      newFile.setAccessTime(addCloseOp.atime, Snapshot.CURRENT_STATE_ID);
+      newFile.setModificationTime(addCloseOp.mtime, Snapshot.CURRENT_STATE_ID);
       updateBlocks(fsDir, addCloseOp, newFile);
       break;
     }
@@ -376,8 +375,8 @@ public class FSEditLogLoader {
       final INodeFile file = INodeFile.valueOf(iip.getINode(0), addCloseOp.path);
 
       // Update the salient file attributes.
-      file.setAccessTime(addCloseOp.atime, null);
-      file.setModificationTime(addCloseOp.mtime, null);
+      file.setAccessTime(addCloseOp.atime, Snapshot.CURRENT_STATE_ID);
+      file.setModificationTime(addCloseOp.mtime, Snapshot.CURRENT_STATE_ID);
       updateBlocks(fsDir, addCloseOp, file);
 
       // Now close the file

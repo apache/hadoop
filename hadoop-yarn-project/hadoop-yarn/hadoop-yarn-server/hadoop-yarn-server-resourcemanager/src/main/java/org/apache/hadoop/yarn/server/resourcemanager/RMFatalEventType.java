@@ -15,9 +15,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.server.resourcemanager.recovery;
 
-public enum RMStateStoreOperationFailedEventType {
-  FENCED, // Store operation failed because it was fenced
-  FAILED // Store operation failed for no known reason
+package org.apache.hadoop.yarn.server.resourcemanager;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+
+@InterfaceAudience.Private
+public enum RMFatalEventType {
+  // Source <- Store
+  STATE_STORE_FENCED,
+  STATE_STORE_OP_FAILED,
+
+  // Source <- Embedded Elector
+  EMBEDDED_ELECTOR_FAILED
 }

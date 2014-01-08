@@ -182,34 +182,34 @@ public class ZKRMStateStore extends RMStateStore {
 
   @Override
   public synchronized void initInternal(Configuration conf) throws Exception {
-    zkHostPort = conf.get(YarnConfiguration.ZK_RM_STATE_STORE_ADDRESS);
+    zkHostPort = conf.get(YarnConfiguration.RM_ZK_ADDRESS);
     if (zkHostPort == null) {
       throw new YarnRuntimeException("No server address specified for " +
           "zookeeper state store for Resource Manager recovery. " +
-          YarnConfiguration.ZK_RM_STATE_STORE_ADDRESS + " is not configured.");
+          YarnConfiguration.RM_ZK_ADDRESS + " is not configured.");
     }
     numRetries =
-        conf.getInt(YarnConfiguration.ZK_RM_STATE_STORE_NUM_RETRIES,
-            YarnConfiguration.DEFAULT_ZK_RM_STATE_STORE_NUM_RETRIES);
+        conf.getInt(YarnConfiguration.RM_ZK_NUM_RETRIES,
+            YarnConfiguration.DEFAULT_ZK_RM_NUM_RETRIES);
     znodeWorkingPath =
         conf.get(YarnConfiguration.ZK_RM_STATE_STORE_PARENT_PATH,
             YarnConfiguration.DEFAULT_ZK_RM_STATE_STORE_PARENT_PATH);
     zkSessionTimeout =
-        conf.getInt(YarnConfiguration.ZK_RM_STATE_STORE_TIMEOUT_MS,
-            YarnConfiguration.DEFAULT_ZK_RM_STATE_STORE_TIMEOUT_MS);
+        conf.getInt(YarnConfiguration.RM_ZK_TIMEOUT_MS,
+            YarnConfiguration.DEFAULT_RM_ZK_TIMEOUT_MS);
     zkRetryInterval =
-        conf.getLong(YarnConfiguration.ZK_RM_STATE_STORE_RETRY_INTERVAL_MS,
-          YarnConfiguration.DEFAULT_ZK_RM_STATE_STORE_RETRY_INTERVAL_MS);
+        conf.getLong(YarnConfiguration.RM_ZK_RETRY_INTERVAL_MS,
+          YarnConfiguration.DEFAULT_RM_ZK_RETRY_INTERVAL_MS);
     // Parse authentication from configuration.
     String zkAclConf =
-        conf.get(YarnConfiguration.ZK_RM_STATE_STORE_ACL,
-            YarnConfiguration.DEFAULT_ZK_RM_STATE_STORE_ACL);
+        conf.get(YarnConfiguration.RM_ZK_ACL,
+            YarnConfiguration.DEFAULT_RM_ZK_ACL);
     zkAclConf = ZKUtil.resolveConfIndirection(zkAclConf);
 
     try {
       zkAcl = ZKUtil.parseACLs(zkAclConf);
     } catch (ZKUtil.BadAclFormatException bafe) {
-      LOG.error("Invalid format for " + YarnConfiguration.ZK_RM_STATE_STORE_ACL);
+      LOG.error("Invalid format for " + YarnConfiguration.RM_ZK_ACL);
       throw bafe;
     }
 

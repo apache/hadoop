@@ -117,6 +117,9 @@ public class WebAppProxy extends AbstractService {
         throw new YarnRuntimeException("Error stopping proxy web server",e);
       }
     }
+    if(this.fetcher != null) {
+      this.fetcher.stop();
+    }
     super.serviceStop();
   }
 
