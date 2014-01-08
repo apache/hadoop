@@ -34,3 +34,6 @@ HDFS-4685 (Unreleased)
 
     HDFS-5737. Replacing only the default ACL can fail to copy unspecified base
     entries from the access ACL. (cnauroth)
+
+    HDFS-5739. ACL RPC must allow null name or unspecified permissions in ACL
+    entries. (cnauroth)

@@ -1928,7 +1928,7 @@ public class PBHelper {
   }
 
   private static FsActionProto convert(FsAction v) {
-    return FsActionProto.valueOf(v.ordinal());
+    return FsActionProto.valueOf(v != null ? v.ordinal() : 0);
   }
 
   private static FsAction convert(FsActionProto v) {
@@ -1939,9 +1939,14 @@ public class PBHelper {
       List<AclEntry> aclSpec) {
     ArrayList<AclEntryProto> r = Lists.newArrayListWithCapacity(aclSpec.size());
     for (AclEntry e : aclSpec) {
-      r.add(AclEntryProto.newBuilder().setType(convert(e.getType()))
-          .setName(e.getName()).setPermissions(convert(e.getPermission()))
-          .setScope(convert(e.getScope())).build());
+      AclEntryProto.Builder builder = AclEntryProto.newBuilder();
+      builder.setType(convert(e.getType()));
+      builder.setScope(convert(e.getScope()));
+      builder.setPermissions(convert(e.getPermission()));
+      if (e.getName() != null) {
+        builder.setName(e.getName());
+      }
+      r.add(builder.build());
     }
     return r;
   }
@@ -1949,9 +1954,14 @@ public class PBHelper {
   public static List<AclEntry> convertAclEntry(List<AclEntryProto> aclSpec) {
     ArrayList<AclEntry> r = Lists.newArrayListWithCapacity(aclSpec.size());
     for (AclEntryProto e : aclSpec) {
-      r.add(new AclEntry.Builder().setType(convert(e.getType()))
-          .setName(e.getName()).setPermission(convert(e.getPermissions()))
-          .setScope(convert(e.getScope())).build());
+      AclEntry.Builder builder = new AclEntry.Builder();
+      builder.setType(convert(e.getType()));
+      builder.setScope(convert(e.getScope()));
+      builder.setPermission(convert(e.getPermissions()));
+      if (e.hasName()) {
+        builder.setName(e.getName());
+      }
+      r.add(builder.build());
     }
     return r;
   }

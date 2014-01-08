@@ -50,7 +50,7 @@ message AclEntryProto {
   required AclEntryTypeProto type    = 1;
   required AclEntryScopeProto scope  = 2;
   required FsActionProto permissions = 3;
-  required string name               = 4;
+  optional string name               = 4;
 }
 
 message AclStatusProto {
