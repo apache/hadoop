@@ -62,6 +62,7 @@ import org.apache.hadoop.hdfs.protocol.AclException;
 @InterfaceAudience.Private
 final class AclTransformation {
   private static final int MAX_ENTRIES = 32;
+  private static final int PIVOT_NOT_FOUND = -1;
 
   /**
    * Filters (discards) any existing ACL entries that have the same scope, type
@@ -276,7 +277,7 @@ final class AclTransformation {
     }
     aclBuilder.trimToSize();
     Collections.sort(aclBuilder, ACL_ENTRY_COMPARATOR);
-    AclEntry userEntry = null, groupEntry = null, otherEntry = null;
+    // Full iteration to check for duplicates and invalid named entries.
     AclEntry prevEntry = null;
     for (AclEntry entry: aclBuilder) {
       if (prevEntry != null &&
@@ -289,22 +290,28 @@ final class AclTransformation {
         throw new AclException(
           "Invalid ACL: this entry type must not have a name: " + entry + ".");
       }
-      if (entry.getScope() == ACCESS) {
-        if (entry.getType() == USER && entry.getName() == null) {
-          userEntry = entry;
-        }
-        if (entry.getType() == GROUP && entry.getName() == null) {
-          groupEntry = entry;
-        }
-        if (entry.getType() == OTHER && entry.getName() == null) {
-          otherEntry = entry;
-        }
-      }
       prevEntry = entry;
     }
-    if (userEntry == null || groupEntry == null || otherEntry == null) {
-      throw new AclException(
-        "Invalid ACL: the user, group and other entries are required.");
+    // Search for the required base access entries.  If there is a default ACL,
+    // then do the same check on the default entries.
+    int pivot = calculatePivotOnDefaultEntries(aclBuilder);
+    for (AclEntryType type: EnumSet.of(USER, GROUP, OTHER)) {
+      AclEntry accessEntryKey = new AclEntry.Builder().setScope(ACCESS)
+        .setType(type).build();
+      if (Collections.binarySearch(aclBuilder, accessEntryKey,
+          ACL_ENTRY_COMPARATOR) < 0) {
+        throw new AclException(
+          "Invalid ACL: the user, group and other entries are required.");
+      }
+      if (pivot != PIVOT_NOT_FOUND) {
+        AclEntry defaultEntryKey = new AclEntry.Builder().setScope(DEFAULT)
+          .setType(type).build();
+        if (Collections.binarySearch(aclBuilder, defaultEntryKey,
+            ACL_ENTRY_COMPARATOR) < 0) {
+          throw new AclException(
+            "Invalid default ACL: the user, group and other entries are required.");
+        }
+      }
     }
     return Collections.unmodifiableList(aclBuilder);
   }
@@ -373,20 +380,32 @@ final class AclTransformation {
   }
 
   /**
+   * Returns the pivot point in the list between the access entries and the
+   * default entries.  This is the index of the first element in the list that is
+   * a default entry.
+   *
+   * @param aclBuilder ArrayList<AclEntry> containing entries to build
+   * @return int pivot point, or -1 if list contains no default entries
+   */
+  private static int calculatePivotOnDefaultEntries(List<AclEntry> aclBuilder) {
+    for (int i = 0; i < aclBuilder.size(); ++i) {
+      if (aclBuilder.get(i).getScope() == DEFAULT) {
+        return i;
+      }
+    }
+    return PIVOT_NOT_FOUND;
+  }
+
+  /**
    * Adds unspecified default entries by copying permissions from the
    * corresponding access entries.
    *
    * @param aclBuilder ArrayList<AclEntry> containing entries to build
    */
   private static void copyDefaultsIfNeeded(List<AclEntry> aclBuilder) {
-    int pivot = -1;
-    for (int i = 0; i < aclBuilder.size(); ++i) {
-      if (aclBuilder.get(i).getScope() == DEFAULT) {
-        pivot = i;
-        break;
-      }
-    }
-    if (pivot > -1) {
+    Collections.sort(aclBuilder, ACL_ENTRY_COMPARATOR);
+    int pivot = calculatePivotOnDefaultEntries(aclBuilder);
+    if (pivot != PIVOT_NOT_FOUND) {
       List<AclEntry> accessEntries = aclBuilder.subList(0, pivot);
       List<AclEntry> defaultEntries = aclBuilder.subList(pivot,
         aclBuilder.size());

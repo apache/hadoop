@@ -31,3 +31,6 @@ HDFS-4685 (Unreleased)
   OPTIMIZATIONS
 
   BUG FIXES
+
+    HDFS-5737. Replacing only the default ACL can fail to copy unspecified base
+    entries from the access ACL. (cnauroth)

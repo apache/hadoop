@@ -1058,6 +1058,28 @@ public class TestAclTransformation {
     assertEquals(expected, replaceAclEntries(existing, aclSpec));
   }
 
+  @Test
+  public void testReplaceAclEntriesOnlyDefaults() throws AclException {
+    List<AclEntry> existing = new ImmutableList.Builder<AclEntry>()
+      .add(aclEntry(ACCESS, USER, ALL))
+      .add(aclEntry(ACCESS, GROUP, READ))
+      .add(aclEntry(ACCESS, OTHER, NONE))
+      .build();
+    List<AclEntry> aclSpec = Lists.newArrayList(
+      aclEntry(DEFAULT, USER, "bruce", READ));
+    List<AclEntry> expected = new ImmutableList.Builder<AclEntry>()
+      .add(aclEntry(ACCESS, USER, ALL))
+      .add(aclEntry(ACCESS, GROUP, READ))
+      .add(aclEntry(ACCESS, OTHER, NONE))
+      .add(aclEntry(DEFAULT, USER, ALL))
+      .add(aclEntry(DEFAULT, USER, "bruce", READ))
+      .add(aclEntry(DEFAULT, GROUP, READ))
+      .add(aclEntry(DEFAULT, MASK, READ))
+      .add(aclEntry(DEFAULT, OTHER, NONE))
+      .build();
+    assertEquals(expected, replaceAclEntries(existing, aclSpec));
+  }
+
   @Test(expected=AclException.class)
   public void testReplaceAclEntriesInputTooLarge() throws AclException {
     List<AclEntry> existing = new ImmutableList.Builder<AclEntry>()
