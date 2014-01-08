@@ -115,6 +115,9 @@ Release 2.4.0 - UNRELEASED
     HADOOP-10198. DomainSocket: add support for socketpair.
     (Colin Patrick McCabe via wang)
 
+    HADOOP-10208. Remove duplicate initialization in StringUtils.getStringCollection.
+    (Benoy Antony via jing9)
+
   OPTIMIZATIONS
 
     HADOOP-9748. Reduce blocking on UGI.ensureInitialized (daryn)

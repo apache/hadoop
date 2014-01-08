@@ -343,7 +343,6 @@ public class StringUtils {
     if (str == null)
       return values;
     StringTokenizer tokenizer = new StringTokenizer(str, delim);
-    values = new ArrayList<String>();
     while (tokenizer.hasMoreTokens()) {
       values.add(tokenizer.nextToken());
     }
