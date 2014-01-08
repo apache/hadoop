@@ -156,7 +156,6 @@ public class TestINodeFileUnderConstructionWithSnapshot {
     INodeDirectorySnapshottable dirNode = (INodeDirectorySnapshottable) fsdir
         .getINode(dir.toString());
     DirectoryDiff last = dirNode.getDiffs().getLast();
-    Snapshot s0 = last.snapshot;
     
     // 2. append without closing stream
     out = appendFileWithoutClosing(file, BLOCKSIZE);
@@ -164,7 +163,7 @@ public class TestINodeFileUnderConstructionWithSnapshot {
     
     // re-check nodeInDeleted_S0
     dirNode = (INodeDirectorySnapshottable) fsdir.getINode(dir.toString());
-    assertEquals(BLOCKSIZE * 2, fileNode.computeFileSize(s0));
+    assertEquals(BLOCKSIZE * 2, fileNode.computeFileSize(last.getSnapshotId()));
     
     // 3. take snapshot --> close stream
     hdfs.createSnapshot(dir, "s1");
@@ -175,9 +174,8 @@ public class TestINodeFileUnderConstructionWithSnapshot {
     fileNode = (INodeFile) fsdir.getINode(file.toString());
     dirNode = (INodeDirectorySnapshottable) fsdir.getINode(dir.toString());
     last = dirNode.getDiffs().getLast();
-    Snapshot s1 = last.snapshot;
     assertTrue(fileNode.isWithSnapshot());
-    assertEquals(BLOCKSIZE * 3, fileNode.computeFileSize(s1));
+    assertEquals(BLOCKSIZE * 3, fileNode.computeFileSize(last.getSnapshotId()));
     
     // 4. modify file --> append without closing stream --> take snapshot -->
     // close stream
@@ -187,7 +185,7 @@ public class TestINodeFileUnderConstructionWithSnapshot {
     out.close();
     
     // re-check the size of nodeInDeleted_S1
-    assertEquals(BLOCKSIZE * 3, fileNode.computeFileSize(s1));
+    assertEquals(BLOCKSIZE * 3, fileNode.computeFileSize(last.getSnapshotId()));
   }
   
   /**

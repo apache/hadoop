@@ -123,8 +123,12 @@ public class TestSnapshotPathINodes {
       final Snapshot snapshot, int index) {
     assertEquals(isSnapshot, inodesInPath.isSnapshot());
     assertEquals(index, inodesInPath.getSnapshotRootIndex());
-    assertEquals(isSnapshot? snapshot: null, inodesInPath.getPathSnapshot());
-    assertEquals(isSnapshot? null: snapshot, inodesInPath.getLatestSnapshot());
+    assertEquals(Snapshot.getSnapshotId(isSnapshot ? snapshot : null),
+        inodesInPath.getPathSnapshotId());
+    if (!isSnapshot) {
+      assertEquals(Snapshot.getSnapshotId(snapshot),
+          inodesInPath.getLatestSnapshotId());
+    }
     if (isSnapshot && index >= 0) {
       assertEquals(Snapshot.Root.class, inodesInPath.getINodes()[index].getClass());
     }
@@ -424,7 +428,7 @@ public class TestSnapshotPathINodes {
     // The modification time of the snapshot INode should be the same with the
     // original INode before modification
     assertEquals(modTime,
-        snapshotFileNode.getModificationTime(ssNodesInPath.getPathSnapshot()));
+        snapshotFileNode.getModificationTime(ssNodesInPath.getPathSnapshotId()));
 
     // Check the INode for /TestSnapshot/sub1/file1 again
     names = INode.getPathNames(file1.toString());

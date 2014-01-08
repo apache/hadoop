@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot.CURRENT_STATE_ID;
+import static org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot.NO_SNAPSHOT_ID;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -282,26 +285,27 @@ public class INodeFile extends INodeWithAdditionalFields
   }
 
   @Override
-  public INodeFileAttributes getSnapshotINode(final Snapshot snapshot) {
+  public INodeFileAttributes getSnapshotINode(final int snapshotId) {
     FileWithSnapshotFeature sf = this.getFileWithSnapshotFeature();
     if (sf != null) {
-      return sf.getDiffs().getSnapshotINode(snapshot, this);
+      return sf.getDiffs().getSnapshotINode(snapshotId, this);
     } else {
       return this;
     }
   }
 
   @Override
-  public INodeFile recordModification(final Snapshot latest) 
+  public INodeFile recordModification(final int latestSnapshotId) 
       throws QuotaExceededException {
-    if (isInLatestSnapshot(latest) && !shouldRecordInSrcSnapshot(latest)) {
+    if (isInLatestSnapshot(latestSnapshotId)
+        && !shouldRecordInSrcSnapshot(latestSnapshotId)) {
       // the file is in snapshot, create a snapshot feature if it does not have
       FileWithSnapshotFeature sf = this.getFileWithSnapshotFeature();
       if (sf == null) {
         sf = addSnapshotFeature(null);
       }
       // record self in the diff list if necessary
-      sf.getDiffs().saveSelf2Snapshot(latest, this, null);
+      sf.getDiffs().saveSelf2Snapshot(latestSnapshotId, this, null);
     }
     return this;
   }
@@ -317,23 +321,22 @@ public class INodeFile extends INodeWithAdditionalFields
   /* End of Snapshot Feature */
 
   /** @return the replication factor of the file. */
-  public final short getFileReplication(Snapshot snapshot) {
-    if (snapshot != null) {
+  public final short getFileReplication(int snapshot) {
+    if (snapshot != CURRENT_STATE_ID) {
       return getSnapshotINode(snapshot).getFileReplication();
     }
-
     return HeaderFormat.getReplication(header);
   }
 
   /** The same as getFileReplication(null). */
   @Override // INodeFileAttributes
   public final short getFileReplication() {
-    return getFileReplication(null);
+    return getFileReplication(CURRENT_STATE_ID);
   }
 
   @Override // BlockCollection
   public short getBlockReplication() {
-    short max = getFileReplication(null);
+    short max = getFileReplication(CURRENT_STATE_ID);
     FileWithSnapshotFeature sf = this.getFileWithSnapshotFeature();
     if (sf != null) {
       short maxInSnapshot = sf.getMaxBlockRepInDiffs();
@@ -351,9 +354,10 @@ public class INodeFile extends INodeWithAdditionalFields
   }
 
   /** Set the replication factor of this file. */
-  public final INodeFile setFileReplication(short replication, Snapshot latest,
-      final INodeMap inodeMap) throws QuotaExceededException {
-    final INodeFile nodeToUpdate = recordModification(latest);
+  public final INodeFile setFileReplication(short replication,
+      int latestSnapshotId, final INodeMap inodeMap)
+      throws QuotaExceededException {
+    final INodeFile nodeToUpdate = recordModification(latestSnapshotId);
     nodeToUpdate.setFileReplication(replication);
     return nodeToUpdate;
   }
@@ -431,22 +435,22 @@ public class INodeFile extends INodeWithAdditionalFields
   }
 
   @Override
-  public Quota.Counts cleanSubtree(final Snapshot snapshot, Snapshot prior,
+  public Quota.Counts cleanSubtree(final int snapshot, int priorSnapshotId,
       final BlocksMapUpdateInfo collectedBlocks,
       final List<INode> removedINodes, final boolean countDiffChange)
       throws QuotaExceededException {
     FileWithSnapshotFeature sf = getFileWithSnapshotFeature();
     if (sf != null) {
-      return sf.cleanFile(this, snapshot, prior, collectedBlocks,
+      return sf.cleanFile(this, snapshot, priorSnapshotId, collectedBlocks,
           removedINodes, countDiffChange);
     }
     Quota.Counts counts = Quota.Counts.newInstance();
-    if (snapshot == null && prior == null) {
+    if (snapshot == CURRENT_STATE_ID && priorSnapshotId == NO_SNAPSHOT_ID) {
       // this only happens when deleting the current file and the file is not
       // in any snapshot
       computeQuotaUsage(counts, false);
       destroyAndCollectBlocks(collectedBlocks, removedINodes);
-    } else if (snapshot == null && prior != null) {
+    } else if (snapshot == CURRENT_STATE_ID && priorSnapshotId != NO_SNAPSHOT_ID) {
       // when deleting the current file and the file is in snapshot, we should
       // clean the 0-sized block if the file is UC
       FileUnderConstructionFeature uc = getFileUnderConstructionFeature();
@@ -490,17 +494,18 @@ public class INodeFile extends INodeWithAdditionalFields
     FileWithSnapshotFeature sf = getFileWithSnapshotFeature();
     if (sf != null) {
       FileDiffList fileDiffList = sf.getDiffs();
-      Snapshot last = fileDiffList.getLastSnapshot();
+      int last = fileDiffList.getLastSnapshotId();
       List<FileDiff> diffs = fileDiffList.asList();
 
-      if (lastSnapshotId == Snapshot.INVALID_ID || last == null) {
+      if (lastSnapshotId == Snapshot.CURRENT_STATE_ID
+          || last == Snapshot.CURRENT_STATE_ID) {
         nsDelta += diffs.size();
         dsDelta = diskspaceConsumed();
-      } else if (last.getId() < lastSnapshotId) {
+      } else if (last < lastSnapshotId) {
         dsDelta = computeFileSize(true, false) * getFileReplication();
       } else {      
-        Snapshot s = fileDiffList.getSnapshotById(lastSnapshotId);
-        dsDelta = diskspaceConsumed(s);
+        int sid = fileDiffList.getSnapshotById(lastSnapshotId);
+        dsDelta = diskspaceConsumed(sid);
       }
     } else {
       dsDelta = diskspaceConsumed();
@@ -511,7 +516,7 @@ public class INodeFile extends INodeWithAdditionalFields
   }
 
   @Override
-  public final ContentSummaryComputationContext  computeContentSummary(
+  public final ContentSummaryComputationContext computeContentSummary(
       final ContentSummaryComputationContext summary) {
     computeContentSummary4Snapshot(summary.getCounts());
     computeContentSummary4Current(summary.getCounts());
@@ -550,23 +555,21 @@ public class INodeFile extends INodeWithAdditionalFields
 
   /** The same as computeFileSize(null). */
   public final long computeFileSize() {
-    return computeFileSize(null);
+    return computeFileSize(CURRENT_STATE_ID);
   }
 
   /**
    * Compute file size of the current file if the given snapshot is null;
    * otherwise, get the file size from the given snapshot.
    */
-  public final long computeFileSize(Snapshot snapshot) {
+  public final long computeFileSize(int snapshotId) {
     FileWithSnapshotFeature sf = this.getFileWithSnapshotFeature();
-    if (snapshot != null && sf != null) {
-      final FileDiff d = sf.getDiffs().getDiff(
-          snapshot);
+    if (snapshotId != CURRENT_STATE_ID && sf != null) {
+      final FileDiff d = sf.getDiffs().getDiffById(snapshotId);
       if (d != null) {
         return d.getFileSize();
       }
     }
-
     return computeFileSize(true, false);
   }
 
@@ -617,9 +620,10 @@ public class INodeFile extends INodeWithAdditionalFields
     return computeFileSize(true, true) * getBlockReplication();
   }
 
-  public final long diskspaceConsumed(Snapshot lastSnapshot) {
-    if (lastSnapshot != null) {
-      return computeFileSize(lastSnapshot) * getFileReplication(lastSnapshot);
+  public final long diskspaceConsumed(int lastSnapshotId) {
+    if (lastSnapshotId != CURRENT_STATE_ID) {
+      return computeFileSize(lastSnapshotId)
+          * getFileReplication(lastSnapshotId);
     } else {
       return diskspaceConsumed();
     }
@@ -648,9 +652,9 @@ public class INodeFile extends INodeWithAdditionalFields
   @VisibleForTesting
   @Override
   public void dumpTreeRecursively(PrintWriter out, StringBuilder prefix,
-      final Snapshot snapshot) {
-    super.dumpTreeRecursively(out, prefix, snapshot);
-    out.print(", fileSize=" + computeFileSize(snapshot));
+      final int snapshotId) {
+    super.dumpTreeRecursively(out, prefix, snapshotId);
+    out.print(", fileSize=" + computeFileSize(snapshotId));
     // only compare the first block
     out.print(", blocks=");
     out.print(blocks == null || blocks.length == 0? null: blocks[0]);

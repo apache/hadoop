@@ -21,7 +21,6 @@ package org.apache.hadoop.fs;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.http.lib.StaticUserWebFilter;
-import org.apache.hadoop.security.authorize.Service;
 
 /** 
  * This class contains constants for configuration keys used
@@ -240,4 +239,7 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   /** Default value for IPC_SERVER_CONNECTION_IDLE_SCAN_INTERVAL_KEY */
   public static final int IPC_CLIENT_CONNECTION_IDLESCANINTERVAL_DEFAULT =
       10000;
+
+  public static final String HADOOP_USER_GROUP_METRICS_PERCENTILES_INTERVALS =
+    "hadoop.user.group.metrics.percentiles.intervals";
 }

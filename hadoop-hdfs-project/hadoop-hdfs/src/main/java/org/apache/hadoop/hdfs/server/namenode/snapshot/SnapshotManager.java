@@ -114,7 +114,7 @@ public class SnapshotManager implements SnapshotStats {
       s = (INodeDirectorySnapshottable)d; 
       s.setSnapshotQuota(INodeDirectorySnapshottable.SNAPSHOT_LIMIT);
     } else {
-      s = d.replaceSelf4INodeDirectorySnapshottable(iip.getLatestSnapshot(),
+      s = d.replaceSelf4INodeDirectorySnapshottable(iip.getLatestSnapshotId(),
           fsdir.getINodeMap());
     }
     addSnapshottable(s);
@@ -160,7 +160,7 @@ public class SnapshotManager implements SnapshotStats {
     if (s == fsdir.getRoot()) {
       s.setSnapshotQuota(0); 
     } else {
-      s.replaceSelf(iip.getLatestSnapshot(), fsdir.getINodeMap());
+      s.replaceSelf(iip.getLatestSnapshotId(), fsdir.getINodeMap());
     }
     removeSnapshottable(s);
   }
@@ -324,7 +324,8 @@ public class SnapshotManager implements SnapshotStats {
         SnapshottableDirectoryStatus status = new SnapshottableDirectoryStatus(
             dir.getModificationTime(), dir.getAccessTime(),
             dir.getFsPermission(), dir.getUserName(), dir.getGroupName(),
-            dir.getLocalNameBytes(), dir.getId(), dir.getChildrenNum(null),
+            dir.getLocalNameBytes(), dir.getId(), 
+            dir.getChildrenNum(Snapshot.CURRENT_STATE_ID),
             dir.getNumSnapshots(),
             dir.getSnapshotQuota(), dir.getParent() == null ? 
                 DFSUtil.EMPTY_BYTES : 

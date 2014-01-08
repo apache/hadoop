@@ -28,6 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -153,7 +154,9 @@ public class TestSetQuotaWithSnapshot {
     assertTrue(subNode.asDirectory().isWithSnapshot());
     List<DirectoryDiff> diffList = subNode.asDirectory().getDiffs().asList();
     assertEquals(1, diffList.size());
-    assertEquals("s2", Snapshot.getSnapshotName(diffList.get(0).snapshot));
+    Snapshot s2 = ((INodeDirectorySnapshottable) dirNode).getSnapshot(DFSUtil
+        .string2Bytes("s2"));
+    assertEquals(s2.getId(), diffList.get(0).getSnapshotId());
     List<INode> createdList = diffList.get(0).getChildrenDiff().getList(ListType.CREATED);
     assertEquals(1, createdList.size());
     assertSame(fsdir.getINode4Write(file.toString()), createdList.get(0));

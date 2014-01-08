@@ -150,7 +150,7 @@ public class TestSnapshotReplication {
       assertEquals(expectedBlockRep, ssInode.getBlockReplication());
       // Also check the number derived from INodeFile#getFileReplication
       assertEquals(snapshotRepMap.get(ss).shortValue(),
-          ssInode.getFileReplication(iip.getPathSnapshot()));
+          ssInode.getFileReplication(iip.getPathSnapshotId()));
     }
   }
   

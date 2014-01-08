@@ -167,6 +167,11 @@ class ChainMapContextImpl<KEYIN, VALUEIN, KEYOUT, VALUEOUT> implements
   }
 
   @Override
+  public RawComparator<?> getCombinerKeyGroupingComparator() {
+    return base.getCombinerKeyGroupingComparator();
+  }
+
+  @Override
   public RawComparator<?> getGroupingComparator() {
     return base.getGroupingComparator();
   }
