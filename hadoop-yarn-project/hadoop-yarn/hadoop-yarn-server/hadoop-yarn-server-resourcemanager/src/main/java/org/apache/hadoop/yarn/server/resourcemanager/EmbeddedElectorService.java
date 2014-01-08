@@ -172,7 +172,7 @@ public class EmbeddedElectorService extends AbstractService
       throws IOException {
     return YarnServerResourceManagerServiceProtos.ActiveRMInfoProto
         .newBuilder()
-        .setClusterid(clusterId)
+        .setClusterId(clusterId)
         .setRmId(rmId)
         .build()
         .toByteArray();
@@ -198,10 +198,10 @@ public class EmbeddedElectorService extends AbstractService
     }
 
     // Check if the passed proto corresponds to an RM in the same cluster
-    if (!proto.getClusterid().equals(clusterId)) {
+    if (!proto.getClusterId().equals(clusterId)) {
       LOG.error("Mismatched cluster! The other RM seems " +
           "to be from a different cluster. Current cluster = " + clusterId +
-          "Other RM's cluster = " + proto.getClusterid());
+          "Other RM's cluster = " + proto.getClusterId());
       return false;
     }
     return true;

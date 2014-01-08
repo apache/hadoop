@@ -185,6 +185,8 @@ Release 2.4.0 - UNRELEASED
     YARN-1482. Modified WebApplicationProxy to make it work across ResourceManager
     fail-over. (Xuan Gong via vinodkv)
 
+    YARN-1568. Rename clusterid to clusterId in ActiveRMInfoProto (kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES
