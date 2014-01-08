@@ -138,6 +138,6 @@ message RMStateVersionProto {
 ///////////// RM Failover related records ////////////////////////
 //////////////////////////////////////////////////////////////////
 message ActiveRMInfoProto {
-  required string clusterid = 1;
+  required string clusterId = 1;
   required string rmId = 2;
 }
