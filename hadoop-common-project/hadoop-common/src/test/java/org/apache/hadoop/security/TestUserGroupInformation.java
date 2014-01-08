@@ -737,7 +737,7 @@ public class TestUserGroupInformation {
       long groups) throws InterruptedException {
     MetricsRecordBuilder rb = getMetrics("UgiMetrics");
     if (groups > 0) {
-      assertCounter("GetGroupsNumOps", groups, rb);
+      assertCounterGt("GetGroupsNumOps", groups-1, rb);
       double avg = getDoubleGauge("GetGroupsAvgTime", rb);
       assertTrue(avg >= 0.0);
 
