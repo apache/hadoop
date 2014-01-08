@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketTimeoutException;
+import java.net.URL;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -48,6 +49,7 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.BlockingService;
 
 /**
@@ -78,7 +80,7 @@ public class BackupNode extends NameNode {
   /** Name-node RPC address */
   String nnRpcAddress;
   /** Name-node HTTP address */
-  String nnHttpAddress;
+  URL nnHttpAddress;
   /** Checkpoint manager */
   Checkpointer checkpointManager;
   
@@ -122,11 +124,6 @@ public class BackupNode extends NameNode {
     String addr = conf.get(BN_HTTP_ADDRESS_NAME_KEY, BN_HTTP_ADDRESS_DEFAULT);
     return NetUtils.createSocketAddr(addr);
   }
-  
-  @Override // NameNode
-  protected void setHttpServerAddress(Configuration conf){
-    conf.set(BN_HTTP_ADDRESS_NAME_KEY, NetUtils.getHostPortString(getHttpAddress()));
-  }
 
   @Override // NameNode
   protected void loadNamesystem(Configuration conf) throws IOException {
@@ -163,6 +160,10 @@ public class BackupNode extends NameNode {
     registerWith(nsInfo);
     // Checkpoint daemon should start after the rpc server started
     runCheckpointDaemon(conf);
+    InetSocketAddress addr = getHttpAddress();
+    if (addr != null) {
+      conf.set(BN_HTTP_ADDRESS_NAME_KEY, NetUtils.getHostPortString(getHttpAddress()));
+    }
   }
 
   @Override
@@ -173,6 +174,12 @@ public class BackupNode extends NameNode {
 
   @Override // NameNode
   public void stop() {
+    stop(true);
+  }
+  
+  @VisibleForTesting
+  void stop(boolean reportError) {
+   
     if(checkpointManager != null) {
       // Prevent from starting a new checkpoint.
       // Checkpoints that has already been started may proceed until 
@@ -182,7 +189,10 @@ public class BackupNode extends NameNode {
       // ClosedByInterruptException.
       checkpointManager.shouldRun = false;
     }
-    if(namenode != null && getRegistration() != null) {
+    
+    // reportError is a test hook to simulate backupnode crashing and not
+    // doing a clean exit w.r.t active namenode
+    if (reportError && namenode != null && getRegistration() != null) {
       // Exclude this node from the list of backup streams on the name-node
       try {
         namenode.errorReport(getRegistration(), NamenodeProtocol.FATAL,
@@ -252,7 +262,7 @@ public class BackupNode extends NameNode {
     }
 
     /////////////////////////////////////////////////////
-    // BackupNodeProtocol implementation for backup node.
+    // JournalProtocol implementation for backup node.
     /////////////////////////////////////////////////////
     @Override
     public void startLogSegment(JournalInfo journalInfo, long epoch,
@@ -304,7 +314,8 @@ public class BackupNode extends NameNode {
         NamenodeProtocol.class, UserGroupInformation.getCurrentUser(),
         true).getProxy();
     this.nnRpcAddress = NetUtils.getHostPortString(nnAddress);
-    this.nnHttpAddress = NetUtils.getHostPortString(super.getHttpServerAddress(conf));
+    this.nnHttpAddress = DFSUtil.getInfoServer(nnAddress, conf,
+        DFSUtil.getHttpClientScheme(conf)).toURL();
     // get version and id info from the name-node
     NamespaceInfo nsInfo = null;
     while(!isStopRequested()) {

@@ -156,8 +156,8 @@ public class TestNodeManagerShutdown {
   }
 
   public static void startContainer(NodeManager nm, ContainerId cId,
-      FileContext localFS, File scriptFileDir, File processStartFile) 
-          throws IOException, YarnException {
+      FileContext localFS, File scriptFileDir, File processStartFile)
+      throws IOException, YarnException {
     File scriptFile =
         createUnhaltingScriptFile(cId, scriptFileDir, processStartFile);
     
@@ -166,7 +166,7 @@ public class TestNodeManagerShutdown {
 
     NodeId nodeId = BuilderUtils.newNodeId(InetAddress.getByName("localhost")
         .getCanonicalHostName(), 12345);
- 
+    
     URL localResourceUri =
         ConverterUtils.getYarnUrlFromPath(localFS
             .makeQualified(new Path(scriptFile.getAbsolutePath())));
@@ -252,7 +252,7 @@ public class TestNodeManagerShutdown {
    */
   private static File createUnhaltingScriptFile(ContainerId cId,
       File scriptFileDir, File processStartFile) throws IOException {
-    File scriptFile = new File(scriptFileDir, "scriptFile.sh");
+    File scriptFile = Shell.appendScriptExtension(scriptFileDir, "scriptFile");
     PrintWriter fileWriter = new PrintWriter(scriptFile);
     if (Shell.WINDOWS) {
       fileWriter.println("@echo \"Running testscript for delayed kill\"");

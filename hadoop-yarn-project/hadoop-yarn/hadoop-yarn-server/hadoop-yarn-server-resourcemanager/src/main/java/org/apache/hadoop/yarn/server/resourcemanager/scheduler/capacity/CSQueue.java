@@ -19,12 +19,15 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.QueueACL;
@@ -152,21 +155,32 @@ extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
   
   /**
    * Submit a new application to the queue.
-   * @param application application being submitted
+   * @param applicationId the applicationId of the application being submitted
    * @param user user who submitted the application
    * @param queue queue to which the application is submitted
    */
-  public void submitApplication(FiCaSchedulerApp application, String user, 
-      String queue) 
-  throws AccessControlException;
-  
+  public void submitApplication(ApplicationId applicationId, String user,
+      String queue) throws AccessControlException;
+
+  /**
+   * Submit an application attempt to the queue.
+   */
+  public void submitApplicationAttempt(FiCaSchedulerApp application,
+      String userName);
+
   /**
    * An application submitted to this queue has finished.
-   * @param application
-   * @param queue application queue 
+   * @param applicationId
+   * @param user user who submitted the application
    */
-  public void finishApplication(FiCaSchedulerApp application, String queue);
-  
+  public void finishApplication(ApplicationId applicationId, String user);
+
+  /**
+   * An application attempt submitted to this queue has finished.
+   */
+  public void finishApplicationAttempt(FiCaSchedulerApp application,
+      String queue);
+
   /**
    * Assign containers to applications in the queue or it's children (if any).
    * @param clusterResource the resource of the cluster.
@@ -228,4 +242,10 @@ extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
    */
   public void recoverContainer(Resource clusterResource, FiCaSchedulerApp application, 
       Container container);
+  
+  /**
+   * Adds all applications in the queue and its subqueues to the given collection.
+   * @param apps the collection to add the applications to
+   */
+  public void collectSchedulerApplications(Collection<ApplicationAttemptId> apps);
 }

@@ -51,7 +51,7 @@ public abstract class TaskStatus implements Writable, Cloneable {
   @InterfaceAudience.Private
   @InterfaceStability.Unstable
   public static enum State {RUNNING, SUCCEEDED, FAILED, UNASSIGNED, KILLED, 
-                            COMMIT_PENDING, FAILED_UNCLEAN, KILLED_UNCLEAN}
+                            COMMIT_PENDING, FAILED_UNCLEAN, KILLED_UNCLEAN, PREEMPTED}
     
   private final TaskAttemptID taskid;
   private float progress;

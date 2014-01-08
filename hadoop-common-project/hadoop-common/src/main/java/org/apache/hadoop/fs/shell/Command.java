@@ -19,6 +19,7 @@ package org.apache.hadoop.fs.shell;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.io.PrintStream;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -43,12 +44,12 @@ import org.apache.hadoop.util.StringUtils;
 @InterfaceStability.Evolving
 
 abstract public class Command extends Configured {
-  /** default name of the command */
-  public static String NAME;
-  /** the command's usage switches and arguments format */
-  public static String USAGE;
-  /** the command's long description */
-  public static String DESCRIPTION;
+  /** field name indicating the default name of the command */
+  public static final String COMMAND_NAME_FIELD = "NAME";
+  /** field name indicating the command's usage switches and arguments format */
+  public static final String COMMAND_USAGE_FIELD = "USAGE";
+  /** field name indicating the command's long description */
+  public static final String COMMAND_DESCRIPTION_FIELD = "DESCRIPTION";
     
   protected String[] args;
   protected String name;
@@ -152,6 +153,9 @@ abstract public class Command extends Configured {
       }
       processOptions(args);
       processRawArguments(args);
+    } catch (CommandInterruptException e) {
+      displayError("Interrupted");
+      return 130;
     } catch (IOException e) {
       displayError(e);
     }
@@ -359,6 +363,10 @@ abstract public class Command extends Configured {
   public void displayError(Exception e) {
     // build up a list of exceptions that occurred
     exceptions.add(e);
+    // use runtime so it rips up through the stack and exits out 
+    if (e instanceof InterruptedIOException) {
+      throw new CommandInterruptException();
+    }
     
     String errorMessage = e.getLocalizedMessage();
     if (errorMessage == null) {
@@ -399,7 +407,7 @@ abstract public class Command extends Configured {
    */
   public String getName() {
     return (name == null)
-      ? getCommandField("NAME")
+      ? getCommandField(COMMAND_NAME_FIELD)
       : name.startsWith("-") ? name.substring(1) : name;
   }
 
@@ -417,7 +425,7 @@ abstract public class Command extends Configured {
    */
   public String getUsage() {
     String cmd = "-" + getName();
-    String usage = isDeprecated() ? "" : getCommandField("USAGE");
+    String usage = isDeprecated() ? "" : getCommandField(COMMAND_USAGE_FIELD);
     return usage.isEmpty() ? cmd : cmd + " " + usage; 
   }
 
@@ -428,7 +436,7 @@ abstract public class Command extends Configured {
   public String getDescription() {
     return isDeprecated()
       ? "(DEPRECATED) Same as '" + getReplacementCommand() + "'"
-      : getCommandField("DESCRIPTION");
+      : getCommandField(COMMAND_DESCRIPTION_FIELD);
   }
 
   /**
@@ -464,4 +472,7 @@ abstract public class Command extends Configured {
     }
     return value;
   }
+  
+  @SuppressWarnings("serial")
+  static class CommandInterruptException extends RuntimeException {}
 }

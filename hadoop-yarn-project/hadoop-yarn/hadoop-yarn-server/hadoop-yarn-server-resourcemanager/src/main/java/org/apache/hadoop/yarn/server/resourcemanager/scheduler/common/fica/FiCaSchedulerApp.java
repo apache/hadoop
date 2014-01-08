@@ -47,7 +47,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManage
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplication;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 
@@ -57,7 +57,7 @@ import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
  */
 @Private
 @Unstable
-public class FiCaSchedulerApp extends SchedulerApplication {
+public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
 
   private static final Log LOG = LogFactory.getLog(FiCaSchedulerApp.class);
 
@@ -121,8 +121,9 @@ public class FiCaSchedulerApp extends SchedulerApplication {
     
     // Create RMContainer
     RMContainer rmContainer = new RMContainerImpl(container, this
-        .getApplicationAttemptId(), node.getNodeID(),
-        appSchedulingInfo.getUser(), this.rmContext);
+        .getApplicationAttemptId(), node.getNodeID(), this.rmContext
+        .getDispatcher().getEventHandler(), this.rmContext
+        .getContainerAllocationExpirer());
 
     // Add it to allContainers list.
     newlyAllocatedContainers.add(rmContainer);

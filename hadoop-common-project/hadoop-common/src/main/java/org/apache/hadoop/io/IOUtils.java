@@ -25,6 +25,7 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.WritableByteChannel;
 
 import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -36,6 +37,7 @@ import org.apache.hadoop.conf.Configuration;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class IOUtils {
+  public static final Log LOG = LogFactory.getLog(IOUtils.class);
 
   /**
    * Copies from one stream to another.
@@ -235,7 +237,7 @@ public class IOUtils {
       if (c != null) {
         try {
           c.close();
-        } catch(IOException e) {
+        } catch(Throwable e) {
           if (log != null && log.isDebugEnabled()) {
             log.debug("Exception in closing " + c, e);
           }
@@ -264,6 +266,7 @@ public class IOUtils {
       try {
         sock.close();
       } catch (IOException ignored) {
+        LOG.debug("Ignoring exception while closing socket", ignored);
       }
     }
   }

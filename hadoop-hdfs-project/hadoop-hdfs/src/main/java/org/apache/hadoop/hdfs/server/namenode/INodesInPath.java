@@ -26,8 +26,8 @@ import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 
 import com.google.common.base.Preconditions;
@@ -132,11 +132,11 @@ public class INodesInPath {
       final boolean isRef = curNode.isReference();
       final boolean isDir = curNode.isDirectory();
       final INodeDirectory dir = isDir? curNode.asDirectory(): null;  
-      if (!isRef && isDir && dir instanceof INodeDirectoryWithSnapshot) {
+      if (!isRef && isDir && dir.isWithSnapshot()) {
         //if the path is a non-snapshot path, update the latest snapshot.
         if (!existing.isSnapshot()) {
-          existing.updateLatestSnapshot(
-              ((INodeDirectoryWithSnapshot)dir).getLastSnapshot());
+          existing.updateLatestSnapshotId(dir.getDirectoryWithSnapshotFeature()
+              .getLastSnapshotId());
         }
       } else if (isRef && isDir && !lastComp) {
         // If the curNode is a reference node, need to check its dstSnapshot:
@@ -151,16 +151,17 @@ public class INodesInPath {
         // recordModification method.
         if (!existing.isSnapshot()) {
           int dstSnapshotId = curNode.asReference().getDstSnapshotId();
-          Snapshot latest = existing.getLatestSnapshot();
-          if (latest == null ||  // no snapshot in dst tree of rename
-              dstSnapshotId >= latest.getId()) { // the above scenario 
-            Snapshot lastSnapshot = null;
-            if (curNode.isDirectory()
-                && curNode.asDirectory() instanceof INodeDirectoryWithSnapshot) {
-              lastSnapshot = ((INodeDirectoryWithSnapshot) curNode
-                  .asDirectory()).getLastSnapshot();
+          int latest = existing.getLatestSnapshotId();
+          if (latest == Snapshot.CURRENT_STATE_ID || // no snapshot in dst tree of rename
+              (dstSnapshotId != Snapshot.CURRENT_STATE_ID && 
+                dstSnapshotId >= latest)) { // the above scenario 
+            int lastSnapshot = Snapshot.CURRENT_STATE_ID;
+            DirectoryWithSnapshotFeature sf = null;
+            if (curNode.isDirectory() && 
+                (sf = curNode.asDirectory().getDirectoryWithSnapshotFeature()) != null) {
+              lastSnapshot = sf.getLastSnapshotId();
             }
-            existing.setSnapshot(lastSnapshot);
+            existing.setSnapshotId(lastSnapshot);
           }
         }
       }
@@ -206,14 +207,14 @@ public class INodesInPath {
           curNode = null;
         } else {
           curNode = s.getRoot();
-          existing.setSnapshot(s);
+          existing.setSnapshotId(s.getId());
         }
         if (index >= -1) {
           existing.snapshotRootIndex = existing.numNonNull;
         }
       } else {
         // normal case, and also for resolving file/dir under snapshot root
-        curNode = dir.getChild(childName, existing.getPathSnapshot());
+        curNode = dir.getChild(childName, existing.getPathSnapshotId());
       }
       count++;
       index++;
@@ -245,11 +246,12 @@ public class INodesInPath {
    */
   private int snapshotRootIndex;
   /**
-   * For snapshot paths, it is the reference to the snapshot; or null if the
-   * snapshot does not exist. For non-snapshot paths, it is the reference to
-   * the latest snapshot found in the path; or null if no snapshot is found.
+   * For snapshot paths, it is the id of the snapshot; or 
+   * {@link Snapshot#CURRENT_STATE_ID} if the snapshot does not exist. For 
+   * non-snapshot paths, it is the id of the latest snapshot found in the path;
+   * or {@link Snapshot#CURRENT_STATE_ID} if no snapshot is found.
    */
-  private Snapshot snapshot = null; 
+  private int snapshotId = Snapshot.CURRENT_STATE_ID; 
 
   private INodesInPath(byte[][] path, int number) {
     this.path = path;
@@ -262,29 +264,30 @@ public class INodesInPath {
   }
 
   /**
-   * For non-snapshot paths, return the latest snapshot found in the path.
-   * For snapshot paths, return null.
+   * For non-snapshot paths, return the latest snapshot id found in the path.
    */
-  public Snapshot getLatestSnapshot() {
-    return isSnapshot? null: snapshot;
+  public int getLatestSnapshotId() {
+    Preconditions.checkState(!isSnapshot);
+    return snapshotId;
   }
   
   /**
-   * For snapshot paths, return the snapshot specified in the path.
-   * For non-snapshot paths, return null.
+   * For snapshot paths, return the id of the snapshot specified in the path.
+   * For non-snapshot paths, return {@link Snapshot#CURRENT_STATE_ID}.
    */
-  public Snapshot getPathSnapshot() {
-    return isSnapshot? snapshot: null;
+  public int getPathSnapshotId() {
+    return isSnapshot ? snapshotId : Snapshot.CURRENT_STATE_ID;
   }
 
-  private void setSnapshot(Snapshot s) {
-    snapshot = s;
+  private void setSnapshotId(int sid) {
+    snapshotId = sid;
   }
   
-  private void updateLatestSnapshot(Snapshot s) {
-    if (snapshot == null
-        || (s != null && Snapshot.ID_COMPARATOR.compare(snapshot, s) < 0)) {
-      snapshot = s;
+  private void updateLatestSnapshotId(int sid) {
+    if (snapshotId == Snapshot.CURRENT_STATE_ID
+        || (sid != Snapshot.CURRENT_STATE_ID && Snapshot.ID_INTEGER_COMPARATOR
+            .compare(snapshotId, sid) < 0)) {
+      snapshotId = sid;
     }
   }
 
@@ -386,7 +389,7 @@ public class INodesInPath {
      .append("\n  capacity   = ").append(capacity)
      .append("\n  isSnapshot        = ").append(isSnapshot)
      .append("\n  snapshotRootIndex = ").append(snapshotRootIndex)
-     .append("\n  snapshot          = ").append(snapshot);
+     .append("\n  snapshotId        = ").append(snapshotId);
     return b.toString();
   }
 

@@ -43,6 +43,7 @@ public class GangliaContext31 extends GangliaContext {
   private static final Log LOG = 
     LogFactory.getLog("org.apache.hadoop.util.GangliaContext31");
 
+  @Override
   public void init(String contextName, ContextFactory factory) {
     super.init(contextName, factory);
 
@@ -66,6 +67,7 @@ public class GangliaContext31 extends GangliaContext {
     }
   }
 
+  @Override
   protected void emitMetric(String name, String type,  String value) 
     throws IOException
   {

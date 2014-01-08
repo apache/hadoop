@@ -22,7 +22,10 @@ package org.apache.hadoop.yarn.server.resourcemanager.recovery;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.RMStateVersion;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationAttemptStateDataPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationStateDataPBImpl;
 
@@ -50,19 +53,19 @@ public class NullRMStateStore extends RMStateStore {
   }
 
   @Override
-  protected void storeApplicationStateInternal(String appId,
+  protected void storeApplicationStateInternal(ApplicationId appId,
       ApplicationStateDataPBImpl appStateData) throws Exception {
     // Do nothing
   }
 
   @Override
-  protected void storeApplicationAttemptStateInternal(String attemptId,
+  protected void storeApplicationAttemptStateInternal(ApplicationAttemptId attemptId,
       ApplicationAttemptStateDataPBImpl attemptStateData) throws Exception {
     // Do nothing
   }
 
   @Override
-  protected void removeApplicationState(ApplicationState appState)
+  protected void removeApplicationStateInternal(ApplicationState appState)
       throws Exception {
     // Do nothing
   }
@@ -91,14 +94,35 @@ public class NullRMStateStore extends RMStateStore {
   }
 
   @Override
-  protected void updateApplicationStateInternal(String appId,
+  protected void updateApplicationStateInternal(ApplicationId appId,
       ApplicationStateDataPBImpl appStateData) throws Exception {
     // Do nothing 
   }
 
   @Override
-  protected void updateApplicationAttemptStateInternal(String attemptId,
+  protected void updateApplicationAttemptStateInternal(ApplicationAttemptId attemptId,
       ApplicationAttemptStateDataPBImpl attemptStateData) throws Exception {
+  }
+
+  @Override
+  public void checkVersion() throws Exception {
     // Do nothing
+  }
+
+  @Override
+  protected RMStateVersion loadVersion() throws Exception {
+    // Do nothing
+    return null;
+  }
+
+  @Override
+  protected void storeVersion() throws Exception {
+    // Do nothing
+  }
+
+  @Override
+  protected RMStateVersion getCurrentVersion() {
+    // Do nothing
+    return null;
   }
 }

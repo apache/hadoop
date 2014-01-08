@@ -37,7 +37,11 @@ import org.apache.hadoop.hdfs.util.ReadOnlyList;
 /** Snapshot of a sub-tree in the namesystem. */
 @InterfaceAudience.Private
 public class Snapshot implements Comparable<byte[]> {
-  public static final int INVALID_ID = -1;
+  /**
+   * This id is used to indicate the current state (vs. snapshots)
+   */
+  public static final int CURRENT_STATE_ID = Integer.MAX_VALUE - 1;
+  public static final int NO_SNAPSHOT_ID = -1;
   
   /**
    * The pattern for generating the default snapshot name.
@@ -61,13 +65,17 @@ public class Snapshot implements Comparable<byte[]> {
         .toString();
   }
   
-  /** 
-   * Get the name of the given snapshot. 
+  /**
+   * Get the name of the given snapshot.
    * @param s The given snapshot.
    * @return The name of the snapshot, or an empty string if {@code s} is null
    */
   static String getSnapshotName(Snapshot s) {
     return s != null ? s.getRoot().getLocalName() : "";
+  }
+  
+  public static int getSnapshotId(Snapshot s) {
+    return s == null ? CURRENT_STATE_ID : s.getId();
   }
 
   /**
@@ -78,9 +86,8 @@ public class Snapshot implements Comparable<byte[]> {
       = new Comparator<Snapshot>() {
     @Override
     public int compare(Snapshot left, Snapshot right) {
-      return ID_INTEGER_COMPARATOR.compare(
-          left == null? null: left.getId(),
-          right == null? null: right.getId());
+      return ID_INTEGER_COMPARATOR.compare(Snapshot.getSnapshotId(left),
+          Snapshot.getSnapshotId(right));
     }
   };
 
@@ -92,12 +99,9 @@ public class Snapshot implements Comparable<byte[]> {
       = new Comparator<Integer>() {
     @Override
     public int compare(Integer left, Integer right) {
-      // null means the current state, thus should be the largest
-      if (left == null) {
-        return right == null? 0: 1;
-      } else {
-        return right == null? -1: left - right; 
-      }
+      // Snapshot.CURRENT_STATE_ID means the current state, thus should be the 
+      // largest
+      return left - right;
     }
   };
 
@@ -108,18 +112,17 @@ public class Snapshot implements Comparable<byte[]> {
    * is not null).
    * 
    * @param inode the given inode that the returned snapshot needs to cover
-   * @param anchor the returned snapshot should be taken before this snapshot.
-   * @return the latest snapshot covers the given inode and was taken before the
-   *         the given snapshot (if it is not null).
+   * @param anchor the returned snapshot should be taken before this given id.
+   * @return id of the latest snapshot that covers the given inode and was taken 
+   *         before the the given snapshot (if it is not null).
    */
-  public static Snapshot findLatestSnapshot(INode inode, Snapshot anchor) {
-    Snapshot latest = null;
+  public static int findLatestSnapshot(INode inode, final int anchor) {
+    int latest = NO_SNAPSHOT_ID;
     for(; inode != null; inode = inode.getParent()) {
       if (inode.isDirectory()) {
         final INodeDirectory dir = inode.asDirectory();
-        if (dir instanceof INodeDirectoryWithSnapshot) {
-          latest = ((INodeDirectoryWithSnapshot) dir).getDiffs().updatePrior(
-              anchor, latest);
+        if (dir.isWithSnapshot()) {
+          latest = dir.getDiffs().updatePrior(anchor, latest);
         }
       }
     }
@@ -136,17 +139,17 @@ public class Snapshot implements Comparable<byte[]> {
   /** The root directory of the snapshot. */
   static public class Root extends INodeDirectory {
     Root(INodeDirectory other) {
-      super(other, false);
+      super(other, false, false);
     }
 
     @Override
-    public ReadOnlyList<INode> getChildrenList(Snapshot snapshot) {
-      return getParent().getChildrenList(snapshot);
+    public ReadOnlyList<INode> getChildrenList(int snapshotId) {
+      return getParent().getChildrenList(snapshotId);
     }
 
     @Override
-    public INode getChild(byte[] name, Snapshot snapshot) {
-      return getParent().getChild(name, snapshot);
+    public INode getChild(byte[] name, int snapshotId) {
+      return getParent().getChild(name, snapshotId);
     }
     
     @Override

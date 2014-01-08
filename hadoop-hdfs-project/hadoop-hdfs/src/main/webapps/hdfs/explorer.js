@@ -164,18 +164,12 @@
 
 
   function init() {
-    var templates = [
-      { 'name': 'explorer', 'url': 'explorer.dust.html'},
-      { 'name': 'block-info', 'url': 'explorer-block-info.dust.html'}
-    ];
+    dust.loadSource(dust.compile($('#tmpl-explorer').html(), 'explorer'));
+    dust.loadSource(dust.compile($('#tmpl-block-info').html(), 'block-info'));
 
-    load_templates(dust, templates, function () {
-      var b = function() { browse_directory($('#directory').val()); };
-      $('#btn-nav-directory').click(b);
-      browse_directory('/');
-    }, function (url, jqxhr, text, err) {
-      network_error_handler(url)(jqxhr, text, err);
-    });
+    var b = function() { browse_directory($('#directory').val()); };
+    $('#btn-nav-directory').click(b);
+    browse_directory('/');
   }
 
   init();

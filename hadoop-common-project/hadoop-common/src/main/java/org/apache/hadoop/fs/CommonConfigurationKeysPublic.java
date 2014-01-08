@@ -192,6 +192,11 @@ public class CommonConfigurationKeysPublic {
   /** Default value for IPC_CLIENT_CONNECT_MAX_RETRIES_KEY */
   public static final int     IPC_CLIENT_CONNECT_MAX_RETRIES_DEFAULT = 10;
   /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
+  public static final String  IPC_CLIENT_CONNECT_RETRY_INTERVAL_KEY =
+      "ipc.client.connect.retry.interval";
+  /** Default value for IPC_CLIENT_CONNECT_RETRY_INTERVAL_KEY */
+  public static final int     IPC_CLIENT_CONNECT_RETRY_INTERVAL_DEFAULT = 1000;
+  /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
   public static final String  IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SOCKET_TIMEOUTS_KEY =
     "ipc.client.connect.max.retries.on.timeouts";
   /** Default value for IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SOCKET_TIMEOUTS_KEY */
@@ -266,6 +271,12 @@ public class CommonConfigurationKeysPublic {
   public static final String HADOOP_SSL_ENABLED_KEY = "hadoop.ssl.enabled";
   public static final boolean HADOOP_SSL_ENABLED_DEFAULT = false;
 
+  /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
+  public static final String HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN =
+          "hadoop.kerberos.min.seconds.before.relogin";
+  /** Default value for HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN */
+  public static final int HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN_DEFAULT =
+          60;
 
   // HTTP policies to be used in configuration
   public static final String HTTP_POLICY_HTTP_ONLY = "HTTP_ONLY";

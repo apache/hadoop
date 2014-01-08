@@ -100,26 +100,32 @@ public class TestApplicationCleanup {
     //currently only containers are cleaned via this
     //AM container is cleaned via container launcher
     resp = nm1.nodeHeartbeat(true);
-    List<ContainerId> contsToClean = resp.getContainersToCleanup();
-    List<ApplicationId> apps = resp.getApplicationsToCleanup();
-    int cleanedConts = contsToClean.size();
-    int cleanedApps = apps.size();
+    List<ContainerId> containersToCleanup = resp.getContainersToCleanup();
+    List<ApplicationId> appsToCleanup = resp.getApplicationsToCleanup();
+    int numCleanedContainers = containersToCleanup.size();
+    int numCleanedApps = appsToCleanup.size();
     waitCount = 0;
-    while ((cleanedConts < 2 || cleanedApps < 1) && waitCount++ < 200) {
+    while ((numCleanedContainers < 2 || numCleanedApps < 1)
+        && waitCount++ < 200) {
       LOG.info("Waiting to get cleanup events.. cleanedConts: "
-          + cleanedConts + " cleanedApps: " + cleanedApps);
+          + numCleanedContainers + " cleanedApps: " + numCleanedApps);
       Thread.sleep(100);
       resp = nm1.nodeHeartbeat(true);
-      contsToClean = resp.getContainersToCleanup();
-      apps = resp.getApplicationsToCleanup();
-      cleanedConts += contsToClean.size();
-      cleanedApps += apps.size();
+      List<ContainerId> deltaContainersToCleanup =
+          resp.getContainersToCleanup();
+      List<ApplicationId> deltaAppsToCleanup = resp.getApplicationsToCleanup();
+      // Add the deltas to the global list
+      containersToCleanup.addAll(deltaContainersToCleanup);
+      appsToCleanup.addAll(deltaAppsToCleanup);
+      // Update counts now
+      numCleanedContainers = containersToCleanup.size();
+      numCleanedApps = appsToCleanup.size();
     }
     
-    Assert.assertEquals(1, apps.size());
-    Assert.assertEquals(app.getApplicationId(), apps.get(0));
-    Assert.assertEquals(1, cleanedApps);
-    Assert.assertEquals(2, cleanedConts);
+    Assert.assertEquals(1, appsToCleanup.size());
+    Assert.assertEquals(app.getApplicationId(), appsToCleanup.get(0));
+    Assert.assertEquals(1, numCleanedApps);
+    Assert.assertEquals(2, numCleanedContainers);
 
     rm.stop();
   }

@@ -20,12 +20,15 @@ package org.apache.hadoop.yarn.conf;
 
 import java.net.InetSocketAddress;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
@@ -56,7 +59,7 @@ public class YarnConfiguration extends Configuration {
   public static final String IPC_PREFIX = YARN_PREFIX + "ipc.";
 
   /** Factory to create client IPC classes.*/
-  public static final String IPC_CLIENT_FACTORY_CLASS = 
+  public static final String IPC_CLIENT_FACTORY_CLASS =
     IPC_PREFIX + "client.factory.class";
   public static final String DEFAULT_IPC_CLIENT_FACTORY_CLASS = 
       "org.apache.hadoop.yarn.factories.impl.pb.RpcClientFactoryPBImpl";
@@ -83,6 +86,8 @@ public class YarnConfiguration extends Configuration {
   // Resource Manager Configs
   ////////////////////////////////
   public static final String RM_PREFIX = "yarn.resourcemanager.";
+
+  public static final String RM_CLUSTER_ID = RM_PREFIX + "cluster-id";
 
   /** The address of the applications manager interface in the RM.*/
   public static final String RM_ADDRESS = 
@@ -258,22 +263,6 @@ public class YarnConfiguration extends Configuration {
       RM_PREFIX + "nodemanagers.heartbeat-interval-ms";
   public static final long DEFAULT_RM_NM_HEARTBEAT_INTERVAL_MS = 1000;
 
-  /** The setting that controls whether RM writes history data. */
-  public static final String RM_HISTORY_WRITER_ENABLED = RM_PREFIX
-      + "history-writer.enabled";
-  public static final boolean DEFAULT_RM_HISTORY_WRITER_ENABLED = false;
-
-  /** Number of worker threads that write the history data. */
-  public static final String RM_HISTORY_WRITER_MULTI_THREADED_DISPATCHER_POOL_SIZE =
-      RM_PREFIX + "history-writer.multi-threaded-dispatcher.pool-size";
-  public static final int DEFAULT_RM_HISTORY_WRITER_MULTI_THREADED_DISPATCHER_POOL_SIZE =
-      10;
-
-  /** The implementation class of ApplicationHistoryStore, which is to be used
-   *  by RMApplicationHistoryWriter. */
-  public static final String RM_HISTORY_WRITER_CLASS = RM_PREFIX
-      + "history-writer.class";
-
   //Delegation token related keys
   public static final String  DELEGATION_KEY_UPDATE_INTERVAL_KEY = 
     RM_PREFIX + "delegation.key.update-interval";
@@ -291,6 +280,36 @@ public class YarnConfiguration extends Configuration {
   public static final String RECOVERY_ENABLED = RM_PREFIX + "recovery.enabled";
   public static final boolean DEFAULT_RM_RECOVERY_ENABLED = false;
 
+  /** Zookeeper interaction configs */
+  public static final String RM_ZK_PREFIX = RM_PREFIX + "zk-";
+
+  public static final String RM_ZK_ADDRESS = RM_ZK_PREFIX + "address";
+
+  public static final String RM_ZK_NUM_RETRIES = RM_ZK_PREFIX + "num-retries";
+  public static final int DEFAULT_ZK_RM_NUM_RETRIES = 500;
+
+  public static final String RM_ZK_RETRY_INTERVAL_MS =
+      RM_ZK_PREFIX + "retry-interval-ms";
+  public static final long DEFAULT_RM_ZK_RETRY_INTERVAL_MS = 2000;
+
+  public static final String RM_ZK_TIMEOUT_MS = RM_ZK_PREFIX + "timeout-ms";
+  public static final int DEFAULT_RM_ZK_TIMEOUT_MS = 10000;
+
+  public static final String RM_ZK_ACL = RM_ZK_PREFIX + "acl";
+  public static final String DEFAULT_RM_ZK_ACL = "world:anyone:rwcda";
+
+  public static final String ZK_STATE_STORE_PREFIX =
+      RM_PREFIX + "zk-state-store.";
+
+  /** Parent znode path under which ZKRMStateStore will create znodes */
+  public static final String ZK_RM_STATE_STORE_PARENT_PATH =
+      ZK_STATE_STORE_PREFIX + "parent-path";
+  public static final String DEFAULT_ZK_RM_STATE_STORE_PARENT_PATH = "/rmstore";
+
+  /** Root node ACLs for fencing */
+  public static final String ZK_RM_STATE_STORE_ROOT_NODE_ACL =
+      ZK_STATE_STORE_PREFIX + "root-node.acl";
+
   /** HA related configs */
   public static final String RM_HA_PREFIX = RM_PREFIX + "ha.";
   public static final String RM_HA_ENABLED = RM_HA_PREFIX + "enabled";
@@ -299,17 +318,56 @@ public class YarnConfiguration extends Configuration {
   public static final String RM_HA_IDS = RM_HA_PREFIX + "rm-ids";
   public static final String RM_HA_ID = RM_HA_PREFIX + "id";
 
-  @org.apache.hadoop.classification.InterfaceAudience.Private
-  // TODO Remove after YARN-1318
-  public static final String RM_HA_ADMIN_ADDRESS =
-      RM_HA_PREFIX + "admin.address";
-  public static final int DEFAULT_RM_HA_ADMIN_PORT = 8034;
-  public static String DEFAULT_RM_HA_ADMIN_ADDRESS =
-      "0.0.0.0:" + DEFAULT_RM_HA_ADMIN_PORT;
-  public static final String RM_HA_ADMIN_CLIENT_THREAD_COUNT =
-      RM_HA_PREFIX + "admin.client.thread-count";
-  public static final int DEFAULT_RM_HA_ADMIN_CLIENT_THREAD_COUNT = 1;
-  // end @Private
+  @Private
+  public static final List<String> RM_SERVICES_ADDRESS_CONF_KEYS =
+      Collections.unmodifiableList(Arrays.asList(
+          RM_ADDRESS,
+          RM_SCHEDULER_ADDRESS,
+          RM_ADMIN_ADDRESS,
+          RM_RESOURCE_TRACKER_ADDRESS,
+          HttpConfig.isSecure() ? RM_WEBAPP_HTTPS_ADDRESS
+              : RM_WEBAPP_ADDRESS));
+
+  public static final String AUTO_FAILOVER_PREFIX =
+      RM_HA_PREFIX + "automatic-failover.";
+
+  public static final String AUTO_FAILOVER_ENABLED =
+      AUTO_FAILOVER_PREFIX + "enabled";
+  public static final boolean DEFAULT_AUTO_FAILOVER_ENABLED = false;
+
+  public static final String AUTO_FAILOVER_EMBEDDED =
+      AUTO_FAILOVER_PREFIX + "embedded";
+  public static final boolean DEFAULT_AUTO_FAILOVER_EMBEDDED = false;
+
+  public static final String AUTO_FAILOVER_ZK_BASE_PATH =
+      AUTO_FAILOVER_PREFIX + "zk-base-path";
+  public static final String DEFAULT_AUTO_FAILOVER_ZK_BASE_PATH =
+      "/yarn-leader-election";
+
+  public static final String CLIENT_FAILOVER_PREFIX =
+      YARN_PREFIX + "client.failover-";
+  public static final String CLIENT_FAILOVER_PROXY_PROVIDER =
+      CLIENT_FAILOVER_PREFIX + "proxy-provider";
+  public static final String DEFAULT_CLIENT_FAILOVER_PROXY_PROVIDER =
+      "org.apache.hadoop.yarn.client.ConfiguredRMFailoverProxyProvider";
+
+  public static final String CLIENT_FAILOVER_MAX_ATTEMPTS =
+      CLIENT_FAILOVER_PREFIX + "max-attempts";
+
+  public static final String CLIENT_FAILOVER_SLEEPTIME_BASE_MS =
+      CLIENT_FAILOVER_PREFIX + "sleep-base-ms";
+
+  public static final String CLIENT_FAILOVER_SLEEPTIME_MAX_MS =
+      CLIENT_FAILOVER_PREFIX + "sleep-max-ms";
+
+  public static final String CLIENT_FAILOVER_RETRIES =
+      CLIENT_FAILOVER_PREFIX + "retries";
+  public static final int DEFAULT_CLIENT_FAILOVER_RETRIES = 0;
+
+  public static final String CLIENT_FAILOVER_RETRIES_ON_SOCKET_TIMEOUTS =
+      CLIENT_FAILOVER_PREFIX + "retries-on-socket-timeouts";
+  public static final int
+      DEFAULT_CLIENT_FAILOVER_RETRIES_ON_SOCKET_TIMEOUTS = 0;
 
   ////////////////////////////////
   // RM state store configs
@@ -318,38 +376,27 @@ public class YarnConfiguration extends Configuration {
   public static final String RM_STORE = RM_PREFIX + "store.class";
   
   /** URI for FileSystemRMStateStore */
-  public static final String FS_RM_STATE_STORE_URI =
-                                           RM_PREFIX + "fs.state-store.uri";
-  /**
-   * Comma separated host:port pairs, each corresponding to a ZK server for
-   * ZKRMStateStore
-   */
-  public static final String ZK_STATE_STORE_PREFIX =
-      RM_PREFIX + "zk.state-store.";
-  public static final String ZK_RM_STATE_STORE_NUM_RETRIES =
-      ZK_STATE_STORE_PREFIX + "num-retries";
-  public static final int DEFAULT_ZK_RM_STATE_STORE_NUM_RETRIES = 3;
-  public static final String ZK_RM_STATE_STORE_ADDRESS =
-      ZK_STATE_STORE_PREFIX + "address";
-  /** Timeout in millisec for ZK server connection for ZKRMStateStore */
-  public static final String ZK_RM_STATE_STORE_TIMEOUT_MS =
-      ZK_STATE_STORE_PREFIX + "timeout.ms";
-  public static final int DEFAULT_ZK_RM_STATE_STORE_TIMEOUT_MS = 60000;
-  /** Parent znode path under which ZKRMStateStore will create znodes */
-  public static final String ZK_RM_STATE_STORE_PARENT_PATH =
-      ZK_STATE_STORE_PREFIX + "parent-path";
-  public static final String DEFAULT_ZK_RM_STATE_STORE_PARENT_PATH = "/rmstore";
-  /** ACL for znodes in ZKRMStateStore */
-  public static final String ZK_RM_STATE_STORE_ACL =
-      ZK_STATE_STORE_PREFIX + "acl";
-  public static final String DEFAULT_ZK_RM_STATE_STORE_ACL =
-      "world:anyone:rwcda";
+  public static final String FS_RM_STATE_STORE_URI = RM_PREFIX
+      + "fs.state-store.uri";
+  public static final String FS_RM_STATE_STORE_RETRY_POLICY_SPEC = RM_PREFIX
+      + "fs.state-store.retry-policy-spec";
+  public static final String DEFAULT_FS_RM_STATE_STORE_RETRY_POLICY_SPEC =
+      "2000, 500";
 
   /** The maximum number of completed applications RM keeps. */ 
   public static final String RM_MAX_COMPLETED_APPLICATIONS =
     RM_PREFIX + "max-completed-applications";
   public static final int DEFAULT_RM_MAX_COMPLETED_APPLICATIONS = 10000;
-  
+
+  /**
+   * The maximum number of completed applications RM state store keeps, by
+   * default equals to DEFAULT_RM_MAX_COMPLETED_APPLICATIONS
+   */
+  public static final String RM_STATE_STORE_MAX_COMPLETED_APPLICATIONS =
+      RM_PREFIX + "state-store.max-completed-applications";
+  public static final int DEFAULT_RM_STATE_STORE_MAX_COMPLETED_APPLICATIONS =
+      DEFAULT_RM_MAX_COMPLETED_APPLICATIONS;
+
   /** Default application name */
   public static final String DEFAULT_APPLICATION_NAME = "N/A";
 
@@ -505,6 +552,11 @@ public class YarnConfiguration extends Configuration {
       RM_PREFIX + "delayed.delegation-token.removal-interval-ms";
   public static final long DEFAULT_RM_DELAYED_DELEGATION_TOKEN_REMOVAL_INTERVAL_MS =
       30000l;
+  
+  /** Delegation Token renewer thread count */
+  public static final String RM_DELEGATION_TOKEN_RENEWER_THREAD_COUNT =
+      RM_PREFIX + "delegation-token-renewer.thread-count";
+  public static final int DEFAULT_RM_DELEGATION_TOKEN_RENEWER_THREAD_COUNT = 50;
 
   /** Whether to enable log aggregation */
   public static final String LOG_AGGREGATION_ENABLED = YARN_PREFIX
@@ -782,11 +834,6 @@ public class YarnConfiguration extends Configuration {
   public static final String 
   YARN_SECURITY_SERVICE_AUTHORIZATION_RESOURCE_LOCALIZER =
       "security.resourcelocalizer.protocol.acl";
-  @org.apache.hadoop.classification.InterfaceAudience.Private
-  // TODO Remove after YARN-1318
-  public static final String
-  YARN_SECURITY_SERVICE_AUTHORIZATION_HA_SERVICE_PROTOCOL =
-      CommonConfigurationKeys.SECURITY_HA_SERVICE_PROTOCOL_ACL;
 
   /** No. of milliseconds to wait between sending a SIGTERM and SIGKILL
    * to a running container */
@@ -846,22 +893,31 @@ public class YarnConfiguration extends Configuration {
   public static final String IS_MINI_YARN_CLUSTER = YARN_PREFIX
       + "is.minicluster";
 
+  public static final String YARN_MC_PREFIX = YARN_PREFIX + "minicluster.";
+
   /** Whether to use fixed ports with the minicluster. */
-  public static final String YARN_MINICLUSTER_FIXED_PORTS = YARN_PREFIX
-      + "minicluster.fixed.ports";
+  public static final String YARN_MINICLUSTER_FIXED_PORTS =
+      YARN_MC_PREFIX + "fixed.ports";
 
   /**
    * Default is false to be able to run tests concurrently without port
    * conflicts.
    */
-  public static boolean DEFAULT_YARN_MINICLUSTER_FIXED_PORTS = false;
+  public static final boolean DEFAULT_YARN_MINICLUSTER_FIXED_PORTS = false;
+
+  /**
+   * Whether the NM should use RPC to connect to the RM. Default is false.
+   * Can be set to true only when using fixed ports.
+   */
+  public static final String YARN_MINICLUSTER_USE_RPC = YARN_MC_PREFIX + "use-rpc";
+  public static final boolean DEFAULT_YARN_MINICLUSTER_USE_RPC = false;
 
   /**
    * Whether users are explicitly trying to control resource monitoring
    * configuration for the MiniYARNCluster. Disabled by default.
    */
   public static final String YARN_MINICLUSTER_CONTROL_RESOURCE_MONITORING =
-      YARN_PREFIX + "minicluster.control-resource-monitoring";
+      YARN_MC_PREFIX + "control-resource-monitoring";
   public static final boolean
       DEFAULT_YARN_MINICLUSTER_CONTROL_RESOURCE_MONITORING = false;
 
@@ -873,70 +929,26 @@ public class YarnConfiguration extends Configuration {
       YARN_PREFIX + "app.container.log.filesize";
 
   ////////////////////////////////
-  // AHS Configs
-  ////////////////////////////////
-
-  public static final String AHS_PREFIX = YARN_PREFIX + "ahs.";
-
-  /** URI for FileSystemApplicationHistoryStore */
-  public static final String FS_HISTORY_STORE_URI = AHS_PREFIX + "fs-history-store.uri";
-
-  /** T-file compression types used to compress history data.*/
-  public static final String FS_HISTORY_STORE_COMPRESSION_TYPE = AHS_PREFIX + "fs-history-store.compression-type";
-  public static final String DEFAULT_FS_HISTORY_STORE_COMPRESSION_TYPE = "none";
-
-  /** AHS store class */
-  public static final String AHS_STORE = AHS_PREFIX + "store.class";
-
-  /** host:port address for Application History Server API. */
-  public static final String AHS_ADDRESS = AHS_PREFIX + "address";
-  public static final int DEFAULT_AHS_PORT = 10200;
-  public static final String DEFAULT_AHS_ADDRESS = "0.0.0.0:"
-      + DEFAULT_AHS_PORT;
-
-  /** The number of threads to handle client API requests. */
-  public static final String AHS_CLIENT_THREAD_COUNT = AHS_PREFIX
-      + "client.thread-count";
-  public static final int DEFAULT_AHS_CLIENT_THREAD_COUNT = 10;
-  
-
-  /** The address of the AHS web application.*/
-  public static final String AHS_WEBAPP_ADDRESS = AHS_PREFIX
-      + "webapp.address";
-
-  public static final int DEFAULT_AHS_WEBAPP_PORT = 8188;
-  public static final String DEFAULT_AHS_WEBAPP_ADDRESS = "0.0.0.0:"
-      + DEFAULT_AHS_WEBAPP_PORT;
-
-  /** The https address of the AHS web application.*/
-  public static final String AHS_WEBAPP_HTTPS_ADDRESS = AHS_PREFIX
-      + "webapp.https.address";
-
-  public static final int DEFAULT_AHS_WEBAPP_HTTPS_PORT = 8190;
-  public static final String DEFAULT_AHS_WEBAPP_HTTPS_ADDRESS = "0.0.0.0:"
-      + DEFAULT_AHS_WEBAPP_HTTPS_PORT;
-
-  /**The kerberos principal to be used for spnego filter for AHS.*/
-  public static final String AHS_WEBAPP_SPNEGO_USER_NAME_KEY =
-      AHS_PREFIX + "webapp.spnego-principal";
-
-  /**The kerberos keytab to be used for spnego filter for AHS.*/
-  public static final String AHS_WEBAPP_SPNEGO_KEYTAB_FILE_KEY =
-      AHS_PREFIX + "webapp.spnego-keytab-file";
-
-  ////////////////////////////////
   // Other Configs
   ////////////////////////////////
 
   /**
+   * Use YARN_CLIENT_APPLICATION_CLIENT_PROTOCOL_POLL_INTERVAL_MS instead.
    * The interval of the yarn client's querying application state after
    * application submission. The unit is millisecond.
    */
+  @Deprecated
   public static final String YARN_CLIENT_APP_SUBMISSION_POLL_INTERVAL_MS =
       YARN_PREFIX + "client.app-submission.poll-interval";
-  public static final long DEFAULT_YARN_CLIENT_APP_SUBMISSION_POLL_INTERVAL_MS =
-      1000;
 
+  /**
+   * The interval that the yarn client library uses to poll the completion
+   * status of the asynchronous API of application client protocol.
+   */
+  public static final String YARN_CLIENT_APPLICATION_CLIENT_PROTOCOL_POLL_INTERVAL_MS =
+      YARN_PREFIX + "client.application-client-protocol.poll-interval-ms";
+  public static final long DEFAULT_YARN_CLIENT_APPLICATION_CLIENT_PROTOCOL_POLL_INTERVAL_MS =
+      200;
   /**
    * Max number of threads in NMClientAsync to process container management
    * events
@@ -990,7 +1002,7 @@ public class YarnConfiguration extends Configuration {
   public InetSocketAddress getSocketAddr(
       String name, String defaultAddress, int defaultPort) {
     String address;
-    if (HAUtil.isHAEnabled(this)) {
+    if (HAUtil.isHAEnabled(this) && RM_SERVICES_ADDRESS_CONF_KEYS.contains(name)) {
       address = HAUtil.getConfValueForRMInstance(name, defaultAddress, this);
     } else {
       address = get(name, defaultAddress);

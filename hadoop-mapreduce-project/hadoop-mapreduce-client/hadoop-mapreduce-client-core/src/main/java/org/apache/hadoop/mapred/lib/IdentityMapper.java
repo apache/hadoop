@@ -35,7 +35,7 @@ import org.apache.hadoop.mapred.MapReduceBase;
 public class IdentityMapper<K, V>
     extends MapReduceBase implements Mapper<K, V, K, V> {
 
-  /** The identify function.  Input key/value pair is written directly to
+  /** The identity function.  Input key/value pair is written directly to
    * output.*/
   public void map(K key, V val,
                   OutputCollector<K, V> output, Reporter reporter)

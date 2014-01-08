@@ -40,6 +40,7 @@ public class NullContext extends AbstractMetricsContext {
   /**
    * Do-nothing version of startMonitoring
    */
+  @Override
   @InterfaceAudience.Private
   public void startMonitoring() {
   }
@@ -47,6 +48,7 @@ public class NullContext extends AbstractMetricsContext {
   /**
    * Do-nothing version of emitRecord
    */
+  @Override
   @InterfaceAudience.Private
   protected void emitRecord(String contextName, String recordName,
                             OutputRecord outRec) 
@@ -55,6 +57,7 @@ public class NullContext extends AbstractMetricsContext {
   /**
    * Do-nothing version of update
    */
+  @Override
   @InterfaceAudience.Private
   protected void update(MetricsRecordImpl record) {
   }
@@ -62,6 +65,7 @@ public class NullContext extends AbstractMetricsContext {
   /**
    * Do-nothing version of remove
    */
+  @Override
   @InterfaceAudience.Private
   protected void remove(MetricsRecordImpl record) {
   }

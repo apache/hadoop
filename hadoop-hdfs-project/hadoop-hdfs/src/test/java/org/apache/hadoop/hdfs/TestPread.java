@@ -44,11 +44,9 @@ public class TestPread {
   boolean simulatedStorage = false;
 
   private void writeFile(FileSystem fileSys, Path name) throws IOException {
-    // create and write a file that contains three blocks of data
-    DataOutputStream stm = fileSys.create(name, true, 4096, (short)1,
-                                          blockSize);
     // test empty file open and read
-    stm.close();
+    DFSTestUtil.createFile(fileSys, name, 12 * blockSize, 0,
+        blockSize, (short) 1, seed);
     FSDataInputStream in = fileSys.open(name);
     byte[] buffer = new byte[12 * blockSize];
     in.readFully(0, buffer, 0, 0);
@@ -65,11 +63,8 @@ public class TestPread {
       assertTrue("Cannot delete file", false);
     
     // now create the real file
-    stm = fileSys.create(name, true, 4096, (short)1, blockSize);
-    Random rand = new Random(seed);
-    rand.nextBytes(buffer);
-    stm.write(buffer);
-    stm.close();
+    DFSTestUtil.createFile(fileSys, name, 12 * blockSize, 12 * blockSize,
+        blockSize, (short) 1, seed);
   }
   
   private void checkAndEraseData(byte[] actual, int from, byte[] expected, String message) {

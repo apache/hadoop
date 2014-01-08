@@ -983,8 +983,9 @@ public class HistoryFileManager extends AbstractService {
     return doneDirFc.delete(doneDirFc.makeQualified(serialDir.getPath()), true);
   }
 
+  // for test
   @VisibleForTesting
-  protected void setMaxHistoryAge(long newValue){
+  void setMaxHistoryAge(long newValue){
     maxHistoryAge=newValue;
   } 
 }

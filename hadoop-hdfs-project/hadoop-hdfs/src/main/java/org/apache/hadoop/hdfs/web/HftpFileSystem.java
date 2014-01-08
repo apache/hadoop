@@ -31,7 +31,6 @@ import java.security.PrivilegedExceptionAction;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.TimeZone;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -50,20 +49,17 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
-import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSelector;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.tools.DelegationTokenFetcher;
-import org.apache.hadoop.hdfs.web.ByteRangeInputStream.URLOpener;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.hadoop.security.token.TokenRenewer;
-import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSelector;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ServletUtil;
 import org.xml.sax.Attributes;
@@ -83,12 +79,14 @@ import org.xml.sax.helpers.XMLReaderFactory;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class HftpFileSystem extends FileSystem
-    implements DelegationTokenRenewer.Renewable {
+    implements DelegationTokenRenewer.Renewable, TokenAspect.TokenManagementDelegator {
+  public static final String SCHEME = "hftp";
+
   static {
     HttpURLConnection.setFollowRedirects(true);
   }
 
-  URLConnectionFactory connectionFactory = URLConnectionFactory.DEFAULT_CONNECTION_FACTORY;
+  URLConnectionFactory connectionFactory;
 
   public static final Text TOKEN_KIND = new Text("HFTP delegation");
 
@@ -100,19 +98,13 @@ public class HftpFileSystem extends FileSystem
   public static final String HFTP_TIMEZONE = "UTC";
   public static final String HFTP_DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ssZ";
 
+  protected TokenAspect<HftpFileSystem> tokenAspect;
   private Token<?> delegationToken;
   private Token<?> renewToken;
-  private static final HftpDelegationTokenSelector hftpTokenSelector =
-      new HftpDelegationTokenSelector();
 
-  private DelegationTokenRenewer dtRenewer = null;
-
-  private synchronized void addRenewAction(final HftpFileSystem hftpFs) {
-    if (dtRenewer == null) {
-      dtRenewer = DelegationTokenRenewer.getInstance();
-    }
-
-    dtRenewer.addRenewAction(hftpFs);
+  @Override
+  public URI getCanonicalUri() {
+    return super.getCanonicalUri();
   }
 
   public static final SimpleDateFormat getDateFormat() {
@@ -177,7 +169,16 @@ public class HftpFileSystem extends FileSystem
    */
   @Override
   public String getScheme() {
-    return "hftp";
+    return SCHEME;
+  }
+
+  /**
+   * Initialize connectionFactory and tokenAspect. This function is intended to
+   * be overridden by HsFtpFileSystem.
+   */
+  protected void initTokenAspect(Configuration conf)
+      throws IOException {
+    tokenAspect = new TokenAspect<HftpFileSystem>(this, TOKEN_KIND);
   }
 
   @Override
@@ -185,8 +186,11 @@ public class HftpFileSystem extends FileSystem
   throws IOException {
     super.initialize(name, conf);
     setConf(conf);
+    this.connectionFactory = URLConnectionFactory
+        .newDefaultURLConnectionFactory(conf);
     this.ugi = UserGroupInformation.getCurrentUser();
     this.nnUri = getNamenodeUri(name);
+
     try {
       this.hftpURI = new URI(name.getScheme(), name.getAuthority(),
                              null, null, null);
@@ -194,39 +198,11 @@ public class HftpFileSystem extends FileSystem
       throw new IllegalArgumentException(e);
     }
 
+    initTokenAspect(conf);
     if (UserGroupInformation.isSecurityEnabled()) {
-      initDelegationToken();
+      tokenAspect.initDelegationToken(ugi);
     }
   }
-
-  protected void initDelegationToken() throws IOException {
-    // look for hftp token, then try hdfs
-    Token<?> token = selectDelegationToken(ugi);
-
-    // if we don't already have a token, go get one over https
-    boolean createdToken = false;
-    if (token == null) {
-      token = getDelegationToken(null);
-      createdToken = (token != null);
-    }
-
-    // we already had a token or getDelegationToken() didn't fail.
-    if (token != null) {
-      setDelegationToken(token);
-      if (createdToken) {
-        addRenewAction(this);
-        LOG.debug("Created new DT for " + token.getService());
-      } else {
-        LOG.debug("Found existing DT for " + token.getService());
-      }
-    }
-  }
-
-  protected Token<DelegationTokenIdentifier> selectDelegationToken(
-      UserGroupInformation ugi) {
-    return hftpTokenSelector.selectToken(nnUri, ugi.getTokens(), getConf());
-  }
-
 
   @Override
   public Token<?> getRenewToken() {
@@ -242,16 +218,19 @@ public class HftpFileSystem extends FileSystem
 
   @Override
   public synchronized <T extends TokenIdentifier> void setDelegationToken(Token<T> token) {
+    /**
+     * XXX The kind of the token has been changed by DelegationTokenFetcher. We
+     * use the token for renewal, since the reflection utilities needs the value
+     * of the kind field to correctly renew the token.
+     *
+     * For other operations, however, the client has to send a
+     * HDFS_DELEGATION_KIND token over the wire so that it can talk to Hadoop
+     * 0.20.203 clusters. Later releases fix this problem. See HDFS-5440 for
+     * more details.
+     */
     renewToken = token;
-    // emulate the 203 usage of the tokens
-    // by setting the kind and service as if they were hdfs tokens
     delegationToken = new Token<T>(token);
-    // NOTE: the remote nn must be configured to use hdfs
     delegationToken.setKind(DelegationTokenIdentifier.HDFS_DELEGATION_KIND);
-    // no need to change service because we aren't exactly sure what it
-    // should be.  we can guess, but it might be wrong if the local conf
-    // value is incorrect.  the service is a client side field, so the remote
-    // end does not care about the value
   }
 
   @Override
@@ -263,13 +242,12 @@ public class HftpFileSystem extends FileSystem
       return ugi.doAs(new PrivilegedExceptionAction<Token<?>>() {
         @Override
         public Token<?> run() throws IOException {
-          final String nnHttpUrl = nnUri.toString();
           Credentials c;
           try {
-            c = DelegationTokenFetcher.getDTfromRemote(nnHttpUrl, renewer);
+            c = DelegationTokenFetcher.getDTfromRemote(connectionFactory, nnUri, renewer);
           } catch (IOException e) {
             if (e.getCause() instanceof ConnectException) {
-              LOG.warn("Couldn't connect to " + nnHttpUrl +
+              LOG.warn("Couldn't connect to " + nnUri +
                   ", assuming security is disabled");
               return null;
             }
@@ -350,6 +328,7 @@ public class HftpFileSystem extends FileSystem
     String tokenString = null;
     if (UserGroupInformation.isSecurityEnabled()) {
       synchronized (this) {
+        tokenAspect.ensureTokenInitialized();
         if (delegationToken != null) {
           tokenString = delegationToken.encodeToUrlString();
           return (query + JspHelper.getDelegationTokenUrlParam(tokenString));
@@ -360,7 +339,7 @@ public class HftpFileSystem extends FileSystem
   }
 
   static class RangeHeaderUrlOpener extends ByteRangeInputStream.URLOpener {
-    URLConnectionFactory connectionFactory = URLConnectionFactory.DEFAULT_CONNECTION_FACTORY;
+    URLConnectionFactory connectionFactory = URLConnectionFactory.DEFAULT_SYSTEM_CONNECTION_FACTORY;
 
     RangeHeaderUrlOpener(final URL url) {
       super(url);
@@ -419,9 +398,7 @@ public class HftpFileSystem extends FileSystem
   @Override
   public void close() throws IOException {
     super.close();
-    if (dtRenewer != null) {
-      dtRenewer.removeRenewAction(this); // blocks
-    }
+    tokenAspect.removeRenewAction();
   }
 
   /** Class to parse and store a listing reply from the server. */
@@ -696,67 +673,33 @@ public class HftpFileSystem extends FileSystem
     return cs != null? cs: super.getContentSummary(f);
   }
 
-  @InterfaceAudience.Private
-  public static class TokenManager extends TokenRenewer {
-
-    @Override
-    public boolean handleKind(Text kind) {
-      return kind.equals(TOKEN_KIND);
-    }
-
-    @Override
-    public boolean isManaged(Token<?> token) throws IOException {
-      return true;
-    }
-
-    protected String getUnderlyingProtocol() {
-      return "http";
-    }
-
-    @SuppressWarnings("unchecked")
-    @Override
-    public long renew(Token<?> token,
-                      Configuration conf) throws IOException {
-      // update the kerberos credentials, if they are coming from a keytab
-      UserGroupInformation.getLoginUser().checkTGTAndReloginFromKeytab();
-      InetSocketAddress serviceAddr = SecurityUtil.getTokenServiceAddr(token);
-      return
-        DelegationTokenFetcher.renewDelegationToken
-        (DFSUtil.createUri(getUnderlyingProtocol(), serviceAddr).toString(),
-         (Token<DelegationTokenIdentifier>) token);
-    }
-
-    @SuppressWarnings("unchecked")
-    @Override
-    public void cancel(Token<?> token,
-                       Configuration conf) throws IOException {
-      // update the kerberos credentials, if they are coming from a keytab
-      UserGroupInformation.getLoginUser().checkTGTAndReloginFromKeytab();
-      InetSocketAddress serviceAddr = SecurityUtil.getTokenServiceAddr(token);
-      DelegationTokenFetcher.cancelDelegationToken
-        (DFSUtil.createUri(getUnderlyingProtocol(), serviceAddr).toString(),
-         (Token<DelegationTokenIdentifier>) token);
+  @SuppressWarnings("unchecked")
+  @Override
+  public long renewDelegationToken(Token<?> token) throws IOException {
+    // update the kerberos credentials, if they are coming from a keytab
+    UserGroupInformation.getLoginUser().checkTGTAndReloginFromKeytab();
+    InetSocketAddress serviceAddr = SecurityUtil.getTokenServiceAddr(token);
+    try {
+      return DelegationTokenFetcher.renewDelegationToken(connectionFactory,
+          DFSUtil.createUri(getUnderlyingProtocol(), serviceAddr),
+          (Token<DelegationTokenIdentifier>) token);
+    } catch (AuthenticationException e) {
+      throw new IOException(e);
     }
   }
 
-  private static class HftpDelegationTokenSelector
-  extends AbstractDelegationTokenSelector<DelegationTokenIdentifier> {
-    private static final DelegationTokenSelector hdfsTokenSelector =
-        new DelegationTokenSelector();
-
-    public HftpDelegationTokenSelector() {
-      super(TOKEN_KIND);
-    }
-
-    Token<DelegationTokenIdentifier> selectToken(URI nnUri,
-        Collection<Token<?>> tokens, Configuration conf) {
-      Token<DelegationTokenIdentifier> token =
-          selectToken(SecurityUtil.buildTokenService(nnUri), tokens);
-      if (token == null) {
-        // try to get a HDFS token
-        token = hdfsTokenSelector.selectToken(nnUri, tokens, conf);
-      }
-      return token;
+  @SuppressWarnings("unchecked")
+  @Override
+  public void cancelDelegationToken(Token<?> token) throws IOException {
+    // update the kerberos credentials, if they are coming from a keytab
+    UserGroupInformation.getLoginUser().checkTGTAndReloginFromKeytab();
+    InetSocketAddress serviceAddr = SecurityUtil.getTokenServiceAddr(token);
+    try {
+      DelegationTokenFetcher.cancelDelegationToken(connectionFactory, DFSUtil
+          .createUri(getUnderlyingProtocol(), serviceAddr),
+          (Token<DelegationTokenIdentifier>) token);
+    } catch (AuthenticationException e) {
+      throw new IOException(e);
     }
   }
 }

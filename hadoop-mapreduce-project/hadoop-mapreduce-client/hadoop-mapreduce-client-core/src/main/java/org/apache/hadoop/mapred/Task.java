@@ -187,6 +187,7 @@ abstract public class Task implements Writable, Configurable {
   protected SecretKey tokenSecret;
   protected SecretKey shuffleSecret;
   protected GcTimeUpdater gcUpdater;
+  final AtomicBoolean mustPreempt = new AtomicBoolean(false);
 
   ////////////////////////////////////////////
   // Constructors
@@ -711,6 +712,7 @@ abstract public class Task implements Writable, Configurable {
         }
         try {
           boolean taskFound = true; // whether TT knows about this task
+          AMFeedback amFeedback = null;
           // sleep for a bit
           synchronized(lock) {
             if (taskDone.get()) {
@@ -728,12 +730,14 @@ abstract public class Task implements Writable, Configurable {
             taskStatus.statusUpdate(taskProgress.get(),
                                     taskProgress.toString(), 
                                     counters);
-            taskFound = umbilical.statusUpdate(taskId, taskStatus);
+            amFeedback = umbilical.statusUpdate(taskId, taskStatus);
+            taskFound = amFeedback.getTaskFound();
             taskStatus.clearStatus();
           }
           else {
             // send ping 
-            taskFound = umbilical.ping(taskId);
+            amFeedback = umbilical.statusUpdate(taskId, null);
+            taskFound = amFeedback.getTaskFound();
           }
 
           // if Task Tracker is not aware of our task ID (probably because it died and 
@@ -744,6 +748,17 @@ abstract public class Task implements Writable, Configurable {
             System.exit(66);
           }
 
+          // Set a flag that says we should preempt this is read by
+          // ReduceTasks in places of the execution where it is
+          // safe/easy to preempt
+          boolean lastPreempt = mustPreempt.get();
+          mustPreempt.set(mustPreempt.get() || amFeedback.getPreemption());
+
+          if (lastPreempt ^ mustPreempt.get()) {
+            LOG.info("PREEMPTION TASK: setting mustPreempt to " +
+                mustPreempt.get() + " given " + amFeedback.getPreemption() +
+                " for "+ taskId + " task status: " +taskStatus.getPhase());
+          }
           sendProgress = resetProgressFlag(); 
           remainingRetries = MAX_RETRIES;
         } 
@@ -992,10 +1007,17 @@ abstract public class Task implements Writable, Configurable {
   public void done(TaskUmbilicalProtocol umbilical,
                    TaskReporter reporter
                    ) throws IOException, InterruptedException {
-    LOG.info("Task:" + taskId + " is done."
-             + " And is in the process of committing");
     updateCounters();
-
+    if (taskStatus.getRunState() == TaskStatus.State.PREEMPTED ) {
+      // If we are preempted, do no output promotion; signal done and exit
+      committer.commitTask(taskContext);
+      umbilical.preempted(taskId, taskStatus);
+      taskDone.set(true);
+      reporter.stopCommunicationThread();
+      return;
+    }
+    LOG.info("Task:" + taskId + " is done."
+        + " And is in the process of committing");
     boolean commitRequired = isCommitRequired();
     if (commitRequired) {
       int retries = MAX_RETRIES;
@@ -1054,7 +1076,7 @@ abstract public class Task implements Writable, Configurable {
     int retries = MAX_RETRIES;
     while (true) {
       try {
-        if (!umbilical.statusUpdate(getTaskID(), taskStatus)) {
+        if (!umbilical.statusUpdate(getTaskID(), taskStatus).getTaskFound()) {
           LOG.warn("Parent died.  Exiting "+taskId);
           System.exit(66);
         }
@@ -1098,8 +1120,8 @@ abstract public class Task implements Writable, Configurable {
     if (isMapTask() && conf.getNumReduceTasks() > 0) {
       try {
         Path mapOutput =  mapOutputFile.getOutputFile();
-        FileSystem localFS = FileSystem.getLocal(conf);
-        return localFS.getFileStatus(mapOutput).getLen();
+        FileSystem fs = mapOutput.getFileSystem(conf);
+        return fs.getFileStatus(mapOutput).getLen();
       } catch (IOException e) {
         LOG.warn ("Could not find output size " , e);
       }
@@ -1553,7 +1575,8 @@ abstract public class Task implements Writable, Configurable {
       combinerClass = cls;
       keyClass = (Class<K>) job.getMapOutputKeyClass();
       valueClass = (Class<V>) job.getMapOutputValueClass();
-      comparator = (RawComparator<K>) job.getOutputKeyComparator();
+      comparator = (RawComparator<K>)
+          job.getCombinerKeyGroupingComparator();
     }
 
     @SuppressWarnings("unchecked")
@@ -1602,7 +1625,7 @@ abstract public class Task implements Writable, Configurable {
       this.taskId = taskId;
       keyClass = (Class<K>) context.getMapOutputKeyClass();
       valueClass = (Class<V>) context.getMapOutputValueClass();
-      comparator = (RawComparator<K>) context.getSortComparator();
+      comparator = (RawComparator<K>) context.getCombinerKeyGroupingComparator();
       this.committer = committer;
     }
 

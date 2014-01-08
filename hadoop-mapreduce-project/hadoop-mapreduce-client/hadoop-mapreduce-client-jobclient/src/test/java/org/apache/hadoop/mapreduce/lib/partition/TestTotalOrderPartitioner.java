@@ -21,19 +21,25 @@ package org.apache.hadoop.mapreduce.lib.partition;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 
 import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.io.SequenceFile.CompressionType;
+import org.apache.hadoop.io.serializer.JavaSerialization;
+import org.apache.hadoop.io.serializer.JavaSerializationComparator;
+import org.apache.hadoop.io.serializer.Serialization;
+import org.apache.hadoop.io.serializer.WritableSerialization;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 
 public class TestTotalOrderPartitioner extends TestCase {
@@ -49,6 +55,19 @@ public class TestTotalOrderPartitioner extends TestCase {
     new Text("hijjj"), // 7
     new Text("n"),     // 8
     new Text("yak"),   // 9
+  };
+
+  private static final String[] splitJavaStrings = new String[] {
+    // -inf            // 0
+    new String("aabbb"), // 1
+    new String("babbb"), // 2
+    new String("daddd"), // 3
+    new String("dddee"), // 4
+    new String("ddhee"), // 5
+    new String("dingo"), // 6
+    new String("hijjj"), // 7
+    new String("n"),     // 8
+    new String("yak"),   // 9
   };
 
   static class Check<T> {
@@ -76,19 +95,41 @@ public class TestTotalOrderPartitioner extends TestCase {
     testStrings.add(new Check<Text>(new Text("hi"), 6));
   };
 
-  private static <T extends WritableComparable<?>> Path writePartitionFile(
+  private static final ArrayList<Check<String>> testJavaStrings =
+      new ArrayList<Check<String>>();
+    static {
+      testJavaStrings.add(new Check<String>(new String("aaaaa"), 0));
+      testJavaStrings.add(new Check<String>(new String("aaabb"), 0));
+      testJavaStrings.add(new Check<String>(new String("aabbb"), 1));
+      testJavaStrings.add(new Check<String>(new String("aaaaa"), 0));
+      testJavaStrings.add(new Check<String>(new String("babbb"), 2));
+      testJavaStrings.add(new Check<String>(new String("baabb"), 1));
+      testJavaStrings.add(new Check<String>(new String("yai"), 8));
+      testJavaStrings.add(new Check<String>(new String("yak"), 9));
+      testJavaStrings.add(new Check<String>(new String("z"), 9));
+      testJavaStrings.add(new Check<String>(new String("ddngo"), 5));
+      testJavaStrings.add(new Check<String>(new String("hi"), 6));
+    };
+
+
+  private static <T> Path writePartitionFile(
       String testname, Configuration conf, T[] splits) throws IOException {
     final FileSystem fs = FileSystem.getLocal(conf);
     final Path testdir = new Path(System.getProperty("test.build.data", "/tmp")
-                                 ).makeQualified(fs);
+                                 ).makeQualified(
+                                     fs.getUri(),
+                                     fs.getWorkingDirectory());
     Path p = new Path(testdir, testname + "/_partition.lst");
     TotalOrderPartitioner.setPartitionFile(conf, p);
     conf.setInt(MRJobConfig.NUM_REDUCES, splits.length + 1);
     SequenceFile.Writer w = null;
     try {
-      w = SequenceFile.createWriter(fs, conf, p,
-          splits[0].getClass(), NullWritable.class,
-          SequenceFile.CompressionType.NONE);
+      w = SequenceFile.createWriter(
+          conf,
+          SequenceFile.Writer.file(p),
+          SequenceFile.Writer.keyClass(splits[0].getClass()),
+          SequenceFile.Writer.valueClass(NullWritable.class),
+          SequenceFile.Writer.compression(CompressionType.NONE));
       for (int i = 0; i < splits.length; ++i) {
         w.append(splits[i], NullWritable.get());
       }
@@ -97,6 +138,31 @@ public class TestTotalOrderPartitioner extends TestCase {
         w.close();
     }
     return p;
+  }
+
+  public void testTotalOrderWithCustomSerialization() throws Exception {
+    TotalOrderPartitioner<String, NullWritable> partitioner =
+        new TotalOrderPartitioner<String, NullWritable>();
+    Configuration conf = new Configuration();
+    conf.setStrings(CommonConfigurationKeys.IO_SERIALIZATIONS_KEY,
+        JavaSerialization.class.getName(),
+        WritableSerialization.class.getName());
+    conf.setClass(MRJobConfig.KEY_COMPARATOR,
+        JavaSerializationComparator.class,
+        Comparator.class);
+    Path p = TestTotalOrderPartitioner.<String>writePartitionFile(
+        "totalordercustomserialization", conf, splitJavaStrings);
+    conf.setClass(MRJobConfig.MAP_OUTPUT_KEY_CLASS, String.class, Object.class);
+    try {
+      partitioner.setConf(conf);
+      NullWritable nw = NullWritable.get();
+      for (Check<String> chk : testJavaStrings) {
+        assertEquals(chk.data.toString(), chk.part,
+            partitioner.getPartition(chk.data, nw, splitJavaStrings.length + 1));
+      }
+    } finally {
+      p.getFileSystem(conf).delete(p, true);
+    }
   }
 
   public void testTotalOrderMemCmp() throws Exception {

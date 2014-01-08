@@ -34,8 +34,8 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public interface JournalManager extends Closeable, LogsPurgeable,
-                                        FormatConfirmable {
+public interface JournalManager extends Closeable, FormatConfirmable,
+    LogsPurgeable {
 
   /**
    * Format the underlying storage, removing any previously

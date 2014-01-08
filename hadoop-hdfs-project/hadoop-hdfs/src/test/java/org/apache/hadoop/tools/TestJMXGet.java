@@ -28,7 +28,12 @@ import java.io.IOException;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.io.PrintStream;
+import java.lang.management.ManagementFactory;
 import java.util.Random;
+import java.util.Set;
+
+import javax.management.MBeanServerConnection;
+import javax.management.ObjectName;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -36,6 +41,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.tools.JMXGet;
@@ -56,19 +62,6 @@ public class TestJMXGet {
   static final long seed = 0xAAAAEEFL;
   static final int blockSize = 4096;
   static final int fileSize = 8192;
-
-  private void writeFile(FileSystem fileSys, Path name, int repl)
-  throws IOException {
-    FSDataOutputStream stm = fileSys.create(name, true,
-        fileSys.getConf().getInt(CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096),
-        (short)repl, blockSize);
-    byte[] buffer = new byte[fileSize];
-    Random rand = new Random(seed);
-    rand.nextBytes(buffer);
-    stm.write(buffer);
-    stm.close();
-  }
-
 
   @Before
   public void setUp() throws Exception {
@@ -100,12 +93,12 @@ public class TestJMXGet {
     cluster = new MiniDFSCluster.Builder(config).numDataNodes(numDatanodes).build();
     cluster.waitActive();
 
-    writeFile(cluster.getFileSystem(), new Path("/test1"), 2);
+    DFSTestUtil.createFile(cluster.getFileSystem(), new Path("/test1"),
+        fileSize, fileSize, blockSize, (short) 2, seed);
 
     JMXGet jmx = new JMXGet();
-    //jmx.setService("*"); // list all hadoop services
-    //jmx.init();
-    //jmx = new JMXGet();
+    String serviceName = "NameNode";
+    jmx.setService(serviceName);
     jmx.init(); // default lists namenode mbeans only
     assertTrue("error printAllValues", checkPrintAllValues(jmx));
 
@@ -118,6 +111,10 @@ public class TestJMXGet {
         jmx.getValue("NumOpenConnections")));
 
     cluster.shutdown();
+    MBeanServerConnection mbsc = ManagementFactory.getPlatformMBeanServer();
+    ObjectName query = new ObjectName("Hadoop:service=" + serviceName + ",*");
+    Set<ObjectName> names = mbsc.queryNames(query, null);
+    assertTrue("No beans should be registered for " + serviceName, names.isEmpty());
   }
   
   private static boolean checkPrintAllValues(JMXGet jmx) throws Exception {
@@ -147,16 +144,19 @@ public class TestJMXGet {
     cluster = new MiniDFSCluster.Builder(config).numDataNodes(numDatanodes).build();
     cluster.waitActive();
 
-    writeFile(cluster.getFileSystem(), new Path("/test"), 2);
+    DFSTestUtil.createFile(cluster.getFileSystem(), new Path("/test"),
+        fileSize, fileSize, blockSize, (short) 2, seed);
 
     JMXGet jmx = new JMXGet();
-    //jmx.setService("*"); // list all hadoop services
-    //jmx.init();
-    //jmx = new JMXGet();
-    jmx.setService("DataNode");
+    String serviceName = "DataNode";
+    jmx.setService(serviceName);
     jmx.init();
     assertEquals(fileSize, Integer.parseInt(jmx.getValue("BytesWritten")));
 
     cluster.shutdown();
+    MBeanServerConnection mbsc = ManagementFactory.getPlatformMBeanServer();
+    ObjectName query = new ObjectName("Hadoop:service=" + serviceName + ",*");
+    Set<ObjectName> names = mbsc.queryNames(query, null);
+    assertTrue("No beans should be registered for " + serviceName, names.isEmpty());
   }
 }

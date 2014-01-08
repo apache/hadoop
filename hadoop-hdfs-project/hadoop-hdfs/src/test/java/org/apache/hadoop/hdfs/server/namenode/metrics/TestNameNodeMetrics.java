@@ -47,6 +47,8 @@ import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
+import org.apache.hadoop.metrics2.MetricsSource;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.test.MetricsAsserts;
 import org.apache.hadoop.util.Time;
 import org.apache.log4j.Level;
@@ -108,18 +110,18 @@ public class TestNameNodeMetrics {
   
   @After
   public void tearDown() throws Exception {
+    MetricsSource source = DefaultMetricsSystem.instance().getSource("UgiMetrics");
+    if (source != null) {
+      // Run only once since the UGI metrics is cleaned up during teardown
+      MetricsRecordBuilder rb = getMetrics(source);
+      assertQuantileGauges("GetGroups1s", rb);
+    }
     cluster.shutdown();
   }
   
   /** create a file with a length of <code>fileLen</code> */
   private void createFile(Path file, long fileLen, short replicas) throws IOException {
     DFSTestUtil.createFile(fs, file, fileLen, replicas, rand.nextLong());
-  }
-
-  private void updateMetrics() throws Exception {
-    // Wait for metrics update (corresponds to dfs.namenode.replication.interval
-    // for some block related metrics to get updated)
-    Thread.sleep(1000);
   }
 
   private void readFile(FileSystem fileSys,Path name) throws IOException {
@@ -190,7 +192,6 @@ public class TestNameNodeMetrics {
     createFile(file, 3200, (short)3);
     final long blockCount = 32;
     int blockCapacity = namesystem.getBlockCapacity();
-    updateMetrics();
     assertGauge("BlockCapacity", blockCapacity, getMetrics(NS_METRICS));
 
     MetricsRecordBuilder rb = getMetrics(NN_METRICS);
@@ -199,7 +200,6 @@ public class TestNameNodeMetrics {
     assertCounter("CreateFileOps", 1L, rb);
     assertCounter("FilesCreated", (long)file.depth(), rb);
 
-    updateMetrics();
     long filesTotal = file.depth() + 1; // Add 1 for root
     rb = getMetrics(NS_METRICS);
     assertGauge("FilesTotal", filesTotal, rb);
@@ -224,22 +224,37 @@ public class TestNameNodeMetrics {
     final Path file = getTestPath("testCorruptBlock");
     createFile(file, 100, (short)2);
     
+    // Disable the heartbeats, so that no corrupted replica
+    // can be fixed
+    for (DataNode dn : cluster.getDataNodes()) {
+      DataNodeTestUtils.setHeartbeatsDisabledForTests(dn, true);
+    }
+    
     // Corrupt first replica of the block
     LocatedBlock block = NameNodeAdapter.getBlockLocations(
         cluster.getNameNode(), file.toString(), 0, 1).get(0);
     cluster.getNamesystem().writeLock();
     try {
       bm.findAndMarkBlockAsCorrupt(block.getBlock(), block.getLocations()[0],
-          "TEST");
+          "STORAGE_ID", "TEST");
     } finally {
       cluster.getNamesystem().writeUnlock();
     }
-    updateMetrics();
+    BlockManagerTestUtil.getComputedDatanodeWork(bm);
     MetricsRecordBuilder rb = getMetrics(NS_METRICS);
     assertGauge("CorruptBlocks", 1L, rb);
     assertGauge("PendingReplicationBlocks", 1L, rb);
-    assertGauge("ScheduledReplicationBlocks", 1L, rb);
+    
     fs.delete(file, true);
+    // During the file deletion, both BlockManager#corruptReplicas and
+    // BlockManager#pendingReplications will be updated, i.e., the records
+    // for the blocks of the deleted file will be removed from both
+    // corruptReplicas and pendingReplications. The corresponding
+    // metrics (CorruptBlocks and PendingReplicationBlocks) will only be updated
+    // when BlockManager#computeDatanodeWork is run where the
+    // BlockManager#updateState is called. And in
+    // BlockManager#computeDatanodeWork the metric ScheduledReplicationBlocks
+    // will also be updated.
     rb = waitForDnMetricValue(NS_METRICS, "CorruptBlocks", 0L);
     assertGauge("PendingReplicationBlocks", 0L, rb);
     assertGauge("ScheduledReplicationBlocks", 0L, rb);
@@ -254,7 +269,6 @@ public class TestNameNodeMetrics {
     createFile(file, 100, (short)2);
     long totalBlocks = 1;
     NameNodeAdapter.setReplication(namesystem, file.toString(), (short)1);
-    updateMetrics();
     MetricsRecordBuilder rb = getMetrics(NS_METRICS);
     assertGauge("ExcessBlocks", totalBlocks, rb);
     fs.delete(file, true);
@@ -273,11 +287,11 @@ public class TestNameNodeMetrics {
     cluster.getNamesystem().writeLock();
     try {
       bm.findAndMarkBlockAsCorrupt(block.getBlock(), block.getLocations()[0],
-          "TEST");
+          "STORAGE_ID", "TEST");
     } finally {
       cluster.getNamesystem().writeUnlock();
     }
-    updateMetrics();
+    Thread.sleep(1000); // Wait for block to be marked corrupt
     MetricsRecordBuilder rb = getMetrics(NS_METRICS);
     assertGauge("UnderReplicatedBlocks", 1L, rb);
     assertGauge("MissingBlocks", 1L, rb);
@@ -335,7 +349,6 @@ public class TestNameNodeMetrics {
     Path target = getTestPath("target");
     createFile(target, 100, (short)1);
     fs.rename(src, target, Rename.OVERWRITE);
-    updateMetrics();
     MetricsRecordBuilder rb = getMetrics(NN_METRICS);
     assertCounter("FilesRenamed", 1L, rb);
     assertCounter("FilesDeleted", 1L, rb);
@@ -363,7 +376,6 @@ public class TestNameNodeMetrics {
 
     //Perform create file operation
     createFile(file1_Path,100,(short)2);
-    updateMetrics();
   
     //Create file does not change numGetBlockLocations metric
     //expect numGetBlockLocations = 0 for previous and current interval 
@@ -372,14 +384,12 @@ public class TestNameNodeMetrics {
     // Open and read file operation increments GetBlockLocations
     // Perform read file operation on earlier created file
     readFile(fs, file1_Path);
-    updateMetrics();
     // Verify read file operation has incremented numGetBlockLocations by 1
     assertCounter("GetBlockLocations", 1L, getMetrics(NN_METRICS));
 
     // opening and reading file  twice will increment numGetBlockLocations by 2
     readFile(fs, file1_Path);
     readFile(fs, file1_Path);
-    updateMetrics();
     assertCounter("GetBlockLocations", 3L, getMetrics(NN_METRICS));
   }
   
@@ -397,7 +407,6 @@ public class TestNameNodeMetrics {
     assertGauge("TransactionsSinceLastLogRoll", 1L, getMetrics(NS_METRICS));
     
     fs.mkdirs(new Path(TEST_ROOT_DIR_PATH, "/tmp"));
-    updateMetrics();
     
     assertGauge("LastCheckpointTime", lastCkptTime, getMetrics(NS_METRICS));
     assertGauge("LastWrittenTransactionId", 2L, getMetrics(NS_METRICS));
@@ -405,7 +414,6 @@ public class TestNameNodeMetrics {
     assertGauge("TransactionsSinceLastLogRoll", 2L, getMetrics(NS_METRICS));
     
     cluster.getNameNodeRpc().rollEditLog();
-    updateMetrics();
     
     assertGauge("LastCheckpointTime", lastCkptTime, getMetrics(NS_METRICS));
     assertGauge("LastWrittenTransactionId", 4L, getMetrics(NS_METRICS));
@@ -415,7 +423,6 @@ public class TestNameNodeMetrics {
     cluster.getNameNodeRpc().setSafeMode(SafeModeAction.SAFEMODE_ENTER, false);
     cluster.getNameNodeRpc().saveNamespace();
     cluster.getNameNodeRpc().setSafeMode(SafeModeAction.SAFEMODE_LEAVE, false);
-    updateMetrics();
     
     long newLastCkptTime = MetricsAsserts.getLongGauge("LastCheckpointTime",
         getMetrics(NS_METRICS));
@@ -435,7 +442,8 @@ public class TestNameNodeMetrics {
     // We have one sync when the cluster starts up, just opening the journal
     assertCounter("SyncsNumOps", 1L, rb);
     // Each datanode reports in when the cluster comes up
-    assertCounter("BlockReportNumOps", (long)DATANODE_COUNT, rb);
+    assertCounter("BlockReportNumOps",
+                  (long)DATANODE_COUNT*MiniDFSCluster.DIRS_PER_DATANODE, rb);
     
     // Sleep for an interval+slop to let the percentiles rollover
     Thread.sleep((PERCENTILES_INTERVAL+1)*1000);

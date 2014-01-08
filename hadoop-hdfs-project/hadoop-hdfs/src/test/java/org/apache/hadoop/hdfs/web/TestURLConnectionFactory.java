@@ -22,9 +22,8 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.List;
 
-import junit.framework.Assert;
-
 import org.apache.hadoop.security.authentication.client.ConnectionConfigurator;
+import org.junit.Assert;
 import org.junit.Test;
 
 import com.google.common.collect.Lists;
@@ -35,10 +34,7 @@ public final class TestURLConnectionFactory {
   public void testConnConfiguratior() throws IOException {
     final URL u = new URL("http://localhost");
     final List<HttpURLConnection> conns = Lists.newArrayList();
-    URLConnectionFactory fc = new URLConnectionFactory(
-        URLConnectionFactory.DEFAULT_SOCKET_TIMEOUT);
-
-    fc.setConnConfigurator(new ConnectionConfigurator() {
+    URLConnectionFactory fc = new URLConnectionFactory(new ConnectionConfigurator() {
       @Override
       public HttpURLConnection configure(HttpURLConnection conn)
           throws IOException {

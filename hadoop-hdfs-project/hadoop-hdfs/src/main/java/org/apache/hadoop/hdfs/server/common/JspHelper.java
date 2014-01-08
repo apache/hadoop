@@ -117,6 +117,18 @@ public class JspHelper {
       return 0;
     }
   }
+  
+  /**
+   * convenience method for canonicalizing host name.
+   * @param addr name:port or name 
+   * @return canonicalized host name
+   */
+   public static String canonicalize(String addr) {
+    // default port 1 is supplied to allow addr without port.
+    // the port will be ignored.
+    return NetUtils.createSocketAddr(addr, 1).getAddress()
+           .getCanonicalHostName();
+  }
 
   /**
    * A helper class that generates the correct URL for different schema.
@@ -124,10 +136,11 @@ public class JspHelper {
    */
   public static final class Url {
     public static String authority(String scheme, DatanodeID d) {
+      String fqdn = canonicalize(d.getIpAddr());
       if (scheme.equals("http")) {
-        return d.getInfoAddr();
+        return fqdn + ":" + d.getInfoPort();
       } else if (scheme.equals("https")) {
-        return d.getInfoSecureAddr();
+        return fqdn + ":" + d.getInfoSecurePort();
       } else {
         throw new IllegalArgumentException("Unknown scheme:" + scheme);
       }
@@ -298,6 +311,9 @@ public class JspHelper {
         FIELD_PERCENT_REMAINING = 9,
         FIELD_ADMIN_STATE       = 10,
         FIELD_DECOMMISSIONED    = 11,
+        FIELD_BLOCKPOOL_USED    = 12,
+        FIELD_PERBLOCKPOOL_USED = 13,
+        FIELD_FAILED_VOLUMES    = 14,
         SORT_ORDER_ASC          = 1,
         SORT_ORDER_DSC          = 2;
 
@@ -325,6 +341,12 @@ public class JspHelper {
           sortField = FIELD_ADMIN_STATE;
         } else if (field.equals("decommissioned")) {
           sortField = FIELD_DECOMMISSIONED;
+        } else if (field.equals("bpused")) {
+          sortField = FIELD_BLOCKPOOL_USED;
+        } else if (field.equals("pcbpused")) {
+          sortField = FIELD_PERBLOCKPOOL_USED;
+        } else if (field.equals("volfails")) {
+          sortField = FIELD_FAILED_VOLUMES;
         } else {
           sortField = FIELD_NAME;
         }
@@ -382,6 +404,18 @@ public class JspHelper {
           break;
         case FIELD_NAME: 
           ret = d1.getHostName().compareTo(d2.getHostName());
+          break;
+        case FIELD_BLOCKPOOL_USED:
+          dlong = d1.getBlockPoolUsed() - d2.getBlockPoolUsed();
+          ret = (dlong < 0) ? -1 : ((dlong > 0) ? 1 : 0);
+          break;
+        case FIELD_PERBLOCKPOOL_USED:
+          ddbl = d1.getBlockPoolUsedPercent() - d2.getBlockPoolUsedPercent();
+          ret = (ddbl < 0) ? -1 : ((ddbl > 0) ? 1 : 0);
+          break;
+        case FIELD_FAILED_VOLUMES:
+          int dint = d1.getVolumeFailures() - d2.getVolumeFailures();
+          ret = (dint < 0) ? -1 : ((dint > 0) ? 1 : 0);
           break;
         default:
           throw new IllegalArgumentException("Invalid sortField");

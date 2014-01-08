@@ -25,8 +25,8 @@ import java.util.List;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.namenode.INode;
-import org.apache.hadoop.hdfs.server.namenode.INodeAttributes;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
+import org.apache.hadoop.hdfs.server.namenode.INodeAttributes;
 import org.apache.hadoop.hdfs.server.namenode.Quota;
 
 /**
@@ -53,7 +53,7 @@ abstract class AbstractINodeDiffList<N extends INode,
   }
 
   /** @return an {@link AbstractINodeDiff}. */
-  abstract D createDiff(Snapshot snapshot, N currentINode);
+  abstract D createDiff(int snapshotId, N currentINode);
 
   /** @return a snapshot copy of the current inode. */  
   abstract A createSnapshotCopy(N currentINode);
@@ -63,25 +63,25 @@ abstract class AbstractINodeDiffList<N extends INode,
    * outside. If the diff to remove is not the first one in the diff list, we 
    * need to combine the diff with its previous one.
    * 
-   * @param snapshot The snapshot to be deleted
-   * @param prior The snapshot taken before the to-be-deleted snapshot
+   * @param snapshot The id of the snapshot to be deleted
+   * @param prior The id of the snapshot taken before the to-be-deleted snapshot
    * @param collectedBlocks Used to collect information for blocksMap update
    * @return delta in namespace. 
    */
-  public final Quota.Counts deleteSnapshotDiff(final Snapshot snapshot,
-      Snapshot prior, final N currentINode,
+  public final Quota.Counts deleteSnapshotDiff(final int snapshot,
+      final int prior, final N currentINode,
       final BlocksMapUpdateInfo collectedBlocks,
       final List<INode> removedINodes, boolean countDiffChange) 
       throws QuotaExceededException {
-    int snapshotIndex = Collections.binarySearch(diffs, snapshot.getId());
+    int snapshotIndex = Collections.binarySearch(diffs, snapshot);
     
     Quota.Counts counts = Quota.Counts.newInstance();
     D removed = null;
     if (snapshotIndex == 0) {
-      if (prior != null) {
+      if (prior != Snapshot.NO_SNAPSHOT_ID) { // there is still snapshot before
         // set the snapshot to latestBefore
-        diffs.get(snapshotIndex).setSnapshot(prior);
-      } else {
+        diffs.get(snapshotIndex).setSnapshotId(prior);
+      } else { // there is no snapshot before
         removed = diffs.remove(0);
         if (countDiffChange) {
           counts.add(Quota.NAMESPACE, 1);
@@ -96,8 +96,8 @@ abstract class AbstractINodeDiffList<N extends INode,
       }
     } else if (snapshotIndex > 0) {
       final AbstractINodeDiff<N, A, D> previous = diffs.get(snapshotIndex - 1);
-      if (!previous.getSnapshot().equals(prior)) {
-        diffs.get(snapshotIndex).setSnapshot(prior);
+      if (previous.getSnapshotId() != prior) {
+        diffs.get(snapshotIndex).setSnapshotId(prior);
       } else {
         // combine the to-be-removed diff with its previous diff
         removed = diffs.remove(snapshotIndex);
@@ -120,10 +120,10 @@ abstract class AbstractINodeDiffList<N extends INode,
   }
 
   /** Add an {@link AbstractINodeDiff} for the given snapshot. */
-  final D addDiff(Snapshot latest, N currentINode)
+  final D addDiff(int latestSnapshotId, N currentINode)
       throws QuotaExceededException {
     currentINode.addSpaceConsumed(1, 0, true);
-    return addLast(createDiff(latest, currentINode));
+    return addLast(createDiff(latestSnapshotId, currentINode));
   }
 
   /** Append the diff at the end of the list. */
@@ -149,10 +149,10 @@ abstract class AbstractINodeDiffList<N extends INode,
     return n == 0? null: diffs.get(n - 1);
   }
 
-  /** @return the last snapshot. */
-  public final Snapshot getLastSnapshot() {
+  /** @return the id of the last snapshot. */
+  public final int getLastSnapshotId() {
     final AbstractINodeDiff<N, A, D> last = getLast();
-    return last == null? null: last.getSnapshot();
+    return last == null ? Snapshot.CURRENT_STATE_ID : last.getSnapshotId();
   }
   
   /**
@@ -161,60 +161,49 @@ abstract class AbstractINodeDiffList<N extends INode,
    *                 snapshot id.
    * @param exclusive True means the returned snapshot's id must be < the given
    *                  id, otherwise <=.
-   * @return The latest snapshot before the given snapshot.
+   * @return The id of the latest snapshot before the given snapshot.
    */
-  private final Snapshot getPrior(int anchorId, boolean exclusive) {
-    if (anchorId == Snapshot.INVALID_ID) {
-      return getLastSnapshot();
+  private final int getPrior(int anchorId, boolean exclusive) {
+    if (anchorId == Snapshot.CURRENT_STATE_ID) {
+      return getLastSnapshotId();
     }
     final int i = Collections.binarySearch(diffs, anchorId);
     if (exclusive) { // must be the one before
       if (i == -1 || i == 0) {
-        return null;
+        return Snapshot.NO_SNAPSHOT_ID;
       } else {
         int priorIndex = i > 0 ? i - 1 : -i - 2;
-        return diffs.get(priorIndex).getSnapshot();
+        return diffs.get(priorIndex).getSnapshotId();
       }
     } else { // the one, or the one before if not existing
       if (i >= 0) {
-        return diffs.get(i).getSnapshot();
+        return diffs.get(i).getSnapshotId();
       } else if (i < -1) {
-        return diffs.get(-i - 2).getSnapshot();
+        return diffs.get(-i - 2).getSnapshotId();
       } else { // i == -1
-        return null;
+        return Snapshot.NO_SNAPSHOT_ID;
       }
     }
   }
   
-  public final Snapshot getPrior(int snapshotId) {
+  public final int getPrior(int snapshotId) {
     return getPrior(snapshotId, false);
   }
   
   /**
    * Update the prior snapshot.
    */
-  final Snapshot updatePrior(Snapshot snapshot, Snapshot prior) {
-    int id = snapshot == null ? Snapshot.INVALID_ID : snapshot.getId();
-    Snapshot s = getPrior(id, true);
-    if (s != null && 
-        (prior == null || Snapshot.ID_COMPARATOR.compare(s, prior) > 0)) {
-      return s;
+  final int updatePrior(int snapshot, int prior) {
+    int p = getPrior(snapshot, true);
+    if (p != Snapshot.CURRENT_STATE_ID
+        && Snapshot.ID_INTEGER_COMPARATOR.compare(p, prior) > 0) {
+      return p;
     }
     return prior;
   }
-
-  /**
-   * @return the diff corresponding to the given snapshot.
-   *         When the diff is null, it means that the current state and
-   *         the corresponding snapshot state are the same. 
-   */
-  public final D getDiff(Snapshot snapshot) {
-    return getDiffById(snapshot == null ? 
-        Snapshot.INVALID_ID : snapshot.getId());
-  }
   
-  private final D getDiffById(final int snapshotId) {
-    if (snapshotId == Snapshot.INVALID_ID) {
+  public final D getDiffById(final int snapshotId) {
+    if (snapshotId == Snapshot.CURRENT_STATE_ID) {
       return null;
     }
     final int i = Collections.binarySearch(diffs, snapshotId);
@@ -234,9 +223,9 @@ abstract class AbstractINodeDiffList<N extends INode,
    * Search for the snapshot whose id is 1) no less than the given id, 
    * and 2) most close to the given id.
    */
-  public final Snapshot getSnapshotById(final int snapshotId) {
+  public final int getSnapshotById(final int snapshotId) {
     D diff = getDiffById(snapshotId);
-    return diff == null ? null : diff.getSnapshot();
+    return diff == null ? Snapshot.CURRENT_STATE_ID : diff.getSnapshotId();
   }
   
   /**
@@ -271,8 +260,8 @@ abstract class AbstractINodeDiffList<N extends INode,
    *         Note that the current inode is returned if there is no change
    *         between the given snapshot and the current state. 
    */
-  A getSnapshotINode(final Snapshot snapshot, final A currentINode) {
-    final D diff = getDiff(snapshot);
+  public A getSnapshotINode(final int snapshotId, final A currentINode) {
+    final D diff = getDiffById(snapshotId);
     final A inode = diff == null? null: diff.getSnapshotINode();
     return inode == null? currentINode: inode;
   }
@@ -281,15 +270,16 @@ abstract class AbstractINodeDiffList<N extends INode,
    * Check if the latest snapshot diff exists.  If not, add it.
    * @return the latest snapshot diff, which is never null.
    */
-  final D checkAndAddLatestSnapshotDiff(Snapshot latest, N currentINode)
+  final D checkAndAddLatestSnapshotDiff(int latestSnapshotId, N currentINode)
       throws QuotaExceededException {
     final D last = getLast();
     if (last != null
-        && Snapshot.ID_COMPARATOR.compare(last.getSnapshot(), latest) >= 0) {
+        && Snapshot.ID_INTEGER_COMPARATOR.compare(last.getSnapshotId(),
+            latestSnapshotId) >= 0) {
       return last;
     } else {
       try {
-        return addDiff(latest, currentINode);
+        return addDiff(latestSnapshotId, currentINode);
       } catch(NSQuotaExceededException e) {
         e.setMessagePrefix("Failed to record modification for snapshot");
         throw e;
@@ -298,15 +288,15 @@ abstract class AbstractINodeDiffList<N extends INode,
   }
 
   /** Save the snapshot copy to the latest snapshot. */
-  public void saveSelf2Snapshot(Snapshot latest, N currentINode, A snapshotCopy)
-      throws QuotaExceededException {
-    if (latest != null) {
-      D diff = checkAndAddLatestSnapshotDiff(latest, currentINode);
+  public void saveSelf2Snapshot(int latestSnapshotId, N currentINode,
+      A snapshotCopy) throws QuotaExceededException {
+    if (latestSnapshotId != Snapshot.CURRENT_STATE_ID) {
+      D diff = checkAndAddLatestSnapshotDiff(latestSnapshotId, currentINode);
       if (diff.snapshotINode == null) {
         if (snapshotCopy == null) {
           snapshotCopy = createSnapshotCopy(currentINode);
         }
-        diff.saveSnapshotCopy(snapshotCopy, currentINode);
+        diff.saveSnapshotCopy(snapshotCopy);
       }
     }
   }

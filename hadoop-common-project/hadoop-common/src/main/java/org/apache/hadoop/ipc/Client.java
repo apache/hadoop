@@ -100,6 +100,8 @@ import com.google.protobuf.CodedOutputStream;
  * 
  * @see Server
  */
+@InterfaceAudience.LimitedPrivate(value = { "Common", "HDFS", "MapReduce", "Yarn" })
+@InterfaceStability.Evolving
 public class Client {
   
   public static final Log LOG = LogFactory.getLog(Client.class);
@@ -134,8 +136,6 @@ public class Client {
 
   private final boolean fallbackAllowed;
   private final byte[] clientId;
-  
-  final static int CONNECTION_CONTEXT_CALL_ID = -3;
   
   /**
    * Executor on which IPC calls' parameters are sent.
@@ -1158,6 +1158,7 @@ public class Client {
         // cleanup calls
         cleanupCalls();
       }
+      closeConnection();
       if (LOG.isDebugEnabled())
         LOG.debug(getName() + ": closed");
     }
@@ -1562,8 +1563,13 @@ public class Client {
         final int max = conf.getInt(
             CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY,
             CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_DEFAULT);
+        final int retryInterval = conf.getInt(
+            CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_RETRY_INTERVAL_KEY,
+            CommonConfigurationKeysPublic
+                .IPC_CLIENT_CONNECT_RETRY_INTERVAL_DEFAULT);
+
         connectionRetryPolicy = RetryPolicies.retryUpToMaximumCountWithFixedSleep(
-            max, 1, TimeUnit.SECONDS);
+            max, retryInterval, TimeUnit.MILLISECONDS);
       }
 
       boolean doPing =

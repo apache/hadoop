@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.tools;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.URL;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -47,9 +48,9 @@ import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
+import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.TransferFsImage;
 import org.apache.hadoop.ipc.RPC;
@@ -547,8 +548,10 @@ public class DFSAdmin extends FsShell {
    * @throws IOException
    */
   public int fetchImage(final String[] argv, final int idx) throws IOException {
-    final String infoServer = DFSUtil.getInfoServer(
-        HAUtil.getAddressOfActive(getDFS()), getConf(), false);
+    Configuration conf = getConf();
+    final URL infoServer = DFSUtil.getInfoServer(
+        HAUtil.getAddressOfActive(getDFS()), conf,
+        DFSUtil.getHttpClientScheme(conf)).toURL();
     SecurityUtil.doAsCurrentUser(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {

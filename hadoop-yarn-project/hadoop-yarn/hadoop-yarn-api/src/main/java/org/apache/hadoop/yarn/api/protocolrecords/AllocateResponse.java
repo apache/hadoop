@@ -28,6 +28,8 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.records.AMCommand;
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.ContainerResourceDecrease;
+import org.apache.hadoop.yarn.api.records.ContainerResourceIncrease;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.NodeReport;
@@ -80,6 +82,23 @@ public abstract class AllocateResponse {
     response.setAMCommand(command);
     response.setPreemptionMessage(preempt);
     response.setNMTokens(nmTokens);
+    return response;
+  }
+  
+  @Public
+  @Stable
+  public static AllocateResponse newInstance(int responseId,
+      List<ContainerStatus> completedContainers,
+      List<Container> allocatedContainers, List<NodeReport> updatedNodes,
+      Resource availResources, AMCommand command, int numClusterNodes,
+      PreemptionMessage preempt, List<NMToken> nmTokens,
+      List<ContainerResourceIncrease> increasedContainers,
+      List<ContainerResourceDecrease> decreasedContainers) {
+    AllocateResponse response = newInstance(responseId, completedContainers,
+        allocatedContainers, updatedNodes, availResources, command,
+        numClusterNodes, preempt, nmTokens);
+    response.setIncreasedContainers(increasedContainers);
+    response.setDecreasedContainers(decreasedContainers);
     return response;
   }
 
@@ -221,4 +240,34 @@ public abstract class AllocateResponse {
   @Private
   @Unstable
   public abstract void setNMTokens(List<NMToken> nmTokens);
+  
+  /**
+   * Get the list of newly increased containers by <code>ResourceManager</code>
+   */
+  @Public
+  @Stable
+  public abstract List<ContainerResourceIncrease> getIncreasedContainers();
+
+  /**
+   * Set the list of newly increased containers by <code>ResourceManager</code>
+   */
+  @Private
+  @Unstable
+  public abstract void setIncreasedContainers(
+      List<ContainerResourceIncrease> increasedContainers);
+
+  /**
+   * Get the list of newly decreased containers by <code>NodeManager</code>
+   */
+  @Public
+  @Stable
+  public abstract List<ContainerResourceDecrease> getDecreasedContainers();
+
+  /**
+   * Set the list of newly decreased containers by <code>NodeManager</code>
+   */
+  @Private
+  @Unstable
+  public abstract void setDecreasedContainers(
+      List<ContainerResourceDecrease> decreasedContainers);
 }

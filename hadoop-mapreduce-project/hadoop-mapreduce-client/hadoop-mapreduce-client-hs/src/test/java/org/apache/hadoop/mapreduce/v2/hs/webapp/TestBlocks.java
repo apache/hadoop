@@ -33,6 +33,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptReport;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskReport;
@@ -138,11 +139,31 @@ public class TestBlocks {
     when(attempt.getAssignedContainerMgrAddress()).thenReturn(
             "assignedContainerMgrAddress");
     when(attempt.getNodeRackName()).thenReturn("nodeRackName");
-    when(attempt.getLaunchTime()).thenReturn(100002L);
-    when(attempt.getFinishTime()).thenReturn(100012L);
-    when(attempt.getShuffleFinishTime()).thenReturn(100010L);
-    when(attempt.getSortFinishTime()).thenReturn(100011L);
-    when(attempt.getState()).thenReturn(TaskAttemptState.SUCCEEDED);
+
+    final long taStartTime = 100002L;
+    final long taFinishTime = 100012L;
+    final long taShuffleFinishTime = 100010L;
+    final long taSortFinishTime = 100011L;
+    final TaskAttemptState taState = TaskAttemptState.SUCCEEDED;
+
+    when(attempt.getLaunchTime()).thenReturn(taStartTime);
+    when(attempt.getFinishTime()).thenReturn(taFinishTime);
+    when(attempt.getShuffleFinishTime()).thenReturn(taShuffleFinishTime);
+    when(attempt.getSortFinishTime()).thenReturn(taSortFinishTime);
+    when(attempt.getState()).thenReturn(taState);
+
+    TaskAttemptReport taReport = mock(TaskAttemptReport.class);
+    when(taReport.getStartTime()).thenReturn(taStartTime);
+    when(taReport.getFinishTime()).thenReturn(taFinishTime);
+    when(taReport.getShuffleFinishTime()).thenReturn(taShuffleFinishTime);
+    when(taReport.getSortFinishTime()).thenReturn(taSortFinishTime);
+    when(taReport.getContainerId()).thenReturn(containerId);
+    when(taReport.getProgress()).thenReturn(1.0f);
+    when(taReport.getStateString()).thenReturn("Processed 128/128 records");
+    when(taReport.getTaskAttemptState()).thenReturn(taState);
+    when(taReport.getDiagnosticInfo()).thenReturn("");
+
+    when(attempt.getReport()).thenReturn(taReport);
 
     attempts.put(taId, attempt);
     when(task.getAttempts()).thenReturn(attempts);

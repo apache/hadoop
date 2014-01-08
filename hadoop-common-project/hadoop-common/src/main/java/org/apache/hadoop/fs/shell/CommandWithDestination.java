@@ -243,22 +243,22 @@ abstract class CommandWithDestination extends FsCommand {
     try {
       in = src.fs.open(src.path);
       copyStreamToTarget(in, target);
+      if(preserve) {
+        target.fs.setTimes(
+          target.path,
+          src.stat.getModificationTime(),
+          src.stat.getAccessTime());
+        target.fs.setOwner(
+          target.path,
+          src.stat.getOwner(),
+          src.stat.getGroup());
+        target.fs.setPermission(
+          target.path,
+          src.stat.getPermission());
+      }
     } finally {
       IOUtils.closeStream(in);
     }
-    if(preserve) {
-      target.fs.setTimes(
-        target.path,
-        src.stat.getModificationTime(),
-        src.stat.getAccessTime());
-      target.fs.setOwner(
-        target.path,
-        src.stat.getOwner(),
-        src.stat.getGroup());
-      target.fs.setPermission(
-        target.path,
-        src.stat.getPermission());
-  }
   }
   
   /**

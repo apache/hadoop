@@ -24,7 +24,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
 import org.apache.hadoop.yarn.util.Clock;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -53,7 +52,7 @@ public class TestFSSchedulerApp {
 
   @Test
   public void testDelayScheduling() {
-    Queue queue = Mockito.mock(Queue.class);
+    FSLeafQueue queue = Mockito.mock(FSLeafQueue.class);
     Priority prio = Mockito.mock(Priority.class);
     Mockito.when(prio.getPriority()).thenReturn(1);
     double nodeLocalityThreshold = .5;
@@ -110,7 +109,7 @@ public class TestFSSchedulerApp {
   @Test
   public void testDelaySchedulingForContinuousScheduling()
           throws InterruptedException {
-    Queue queue = Mockito.mock(Queue.class);
+    FSLeafQueue queue = Mockito.mock(FSLeafQueue.class);
     Priority prio = Mockito.mock(Priority.class);
     Mockito.when(prio.getPriority()).thenReturn(1);
 
@@ -170,7 +169,7 @@ public class TestFSSchedulerApp {
    * no tin use), the least restrictive locality level is returned.
    */
   public void testLocalityLevelWithoutDelays() {
-    Queue queue = Mockito.mock(Queue.class);
+    FSLeafQueue queue = Mockito.mock(FSLeafQueue.class);
     Priority prio = Mockito.mock(Priority.class);
     Mockito.when(prio.getPriority()).thenReturn(1);
 

@@ -19,8 +19,6 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.io.PrintWriter;
 import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -80,10 +78,10 @@ class InvalidateBlocks {
    */
   synchronized void add(final Block block, final DatanodeInfo datanode,
       final boolean log) {
-    LightWeightHashSet<Block> set = node2blocks.get(datanode.getStorageID());
+    LightWeightHashSet<Block> set = node2blocks.get(datanode.getDatanodeUuid());
     if (set == null) {
       set = new LightWeightHashSet<Block>();
-      node2blocks.put(datanode.getStorageID(), set);
+      node2blocks.put(datanode.getDatanodeUuid(), set);
     }
     if (set.add(block)) {
       numBlocks++;
@@ -136,26 +134,7 @@ class InvalidateBlocks {
     return new ArrayList<String>(node2blocks.keySet());
   }
 
-  /** Invalidate work for the storage. */
-  int invalidateWork(final String storageId) {
-    final DatanodeDescriptor dn = datanodeManager.getDatanode(storageId);
-    if (dn == null) {
-      remove(storageId);
-      return 0;
-    }
-    final List<Block> toInvalidate = invalidateWork(storageId, dn);
-    if (toInvalidate == null) {
-      return 0;
-    }
-
-    if (NameNode.stateChangeLog.isInfoEnabled()) {
-      NameNode.stateChangeLog.info("BLOCK* " + getClass().getSimpleName()
-          + ": ask " + dn + " to delete " + toInvalidate);
-    }
-    return toInvalidate.size();
-  }
-
-  private synchronized List<Block> invalidateWork(
+  synchronized List<Block> invalidateWork(
       final String storageId, final DatanodeDescriptor dn) {
     final LightWeightHashSet<Block> set = node2blocks.get(storageId);
     if (set == null) {

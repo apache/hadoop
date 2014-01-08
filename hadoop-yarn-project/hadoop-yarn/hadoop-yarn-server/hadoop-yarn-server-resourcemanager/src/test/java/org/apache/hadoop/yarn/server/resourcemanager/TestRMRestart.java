@@ -18,6 +18,11 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import static org.mockito.Matchers.isA;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
@@ -40,7 +45,7 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
-import org.apache.hadoop.util.ExitUtil;
+import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
@@ -49,6 +54,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationResponse;
 import org.apache.hadoop.yarn.api.records.AMCommand;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -57,6 +63,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
@@ -71,6 +78,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.Appli
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.ApplicationState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStoreEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationAttemptStateDataPBImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationStateDataPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
@@ -95,7 +104,6 @@ public class TestRMRestart {
   public void setup() throws UnknownHostException {
     Logger rootLogger = LogManager.getRootLogger();
     rootLogger.setLevel(Level.DEBUG);
-    ExitUtil.disableSystemExit();
     conf = new YarnConfiguration();
     UserGroupInformation.setConfiguration(conf);
     conf.set(YarnConfiguration.RECOVERY_ENABLED, "true");
@@ -104,6 +112,7 @@ public class TestRMRestart {
     Assert.assertTrue(YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS > 1);
   }
 
+  @SuppressWarnings("rawtypes")
   @Test (timeout=180000)
   public void testRMRestart() throws Exception {
     conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
@@ -239,7 +248,7 @@ public class TestRMRestart {
     // verify correct number of attempts and other data
     RMApp loadedApp1 = rm2.getRMContext().getRMApps().get(app1.getApplicationId());
     Assert.assertNotNull(loadedApp1);
-    //Assert.assertEquals(1, loadedApp1.getAppAttempts().size());
+    Assert.assertEquals(1, loadedApp1.getAppAttempts().size());
     Assert.assertEquals(app1.getApplicationSubmissionContext()
         .getApplicationId(), loadedApp1.getApplicationSubmissionContext()
         .getApplicationId());
@@ -255,8 +264,11 @@ public class TestRMRestart {
     rm2.waitForState(loadedApp1.getApplicationId(), RMAppState.ACCEPTED);
     rm2.waitForState(loadedApp2.getApplicationId(), RMAppState.ACCEPTED);
     
-    // verify new attempts created
-    Assert.assertEquals(2, loadedApp1.getAppAttempts().size());
+    // verify attempts for apps
+    // The app for which AM was started will wait for previous am
+    // container finish event to arrive. However for an application for which
+    // no am container was running will start new application attempt.
+    Assert.assertEquals(1, loadedApp1.getAppAttempts().size());
     Assert.assertEquals(1, loadedApp2.getAppAttempts().size());
     
     // verify old AM is not accepted
@@ -274,8 +286,24 @@ public class TestRMRestart {
     Assert.assertEquals(NodeAction.RESYNC, hbResponse.getNodeAction());
     
     // new NM to represent NM re-register
-    nm1 = rm2.registerNode("127.0.0.1:1234", 15120);
-    nm2 = rm2.registerNode("127.0.0.2:5678", 15120);
+    nm1 = new MockNM("127.0.0.1:1234", 15120, rm2.getResourceTrackerService());
+    nm2 = new MockNM("127.0.0.2:5678", 15120, rm2.getResourceTrackerService());
+
+    List<ContainerStatus> containerStatuses = new ArrayList<ContainerStatus>();
+    ContainerStatus containerStatus =
+        BuilderUtils.newContainerStatus(BuilderUtils.newContainerId(loadedApp1
+            .getCurrentAppAttempt().getAppAttemptId(), 1),
+            ContainerState.COMPLETE, "Killed AM container", 143);
+    containerStatuses.add(containerStatus);
+    nm1.registerNode(containerStatuses);
+    nm2.registerNode();
+    
+    rm2.waitForState(loadedApp1.getApplicationId(), RMAppState.ACCEPTED);
+    // wait for the 2nd attempt to be started.
+    int timeoutSecs = 0;
+    while (loadedApp1.getAppAttempts().size() != 2 && timeoutSecs++ < 40) {;
+      Thread.sleep(200);
+    }
 
     // verify no more reboot response sent
     hbResponse = nm1.nodeHeartbeat(true);
@@ -392,10 +420,174 @@ public class TestRMRestart {
     MockRM rm2 = new MockRM(conf, memStore);
     rm2.start();
     // assert the previous AM state is loaded back on RM recovery.
-    RMApp recoveredApp =
-        rm2.getRMContext().getRMApps().get(app0.getApplicationId());
-    Assert.assertEquals(RMAppAttemptState.FAILED, recoveredApp
-      .getAppAttempts().get(am0.getApplicationAttemptId()).getAppAttemptState());
+
+    rm2.waitForState(am0.getApplicationAttemptId(), RMAppAttemptState.FAILED);
+    rm1.stop();
+    rm2.stop();
+  }
+
+  @Test
+  public void testRMRestartWaitForPreviousAMToFinish() throws Exception {
+    // testing 3 cases
+    // After RM restarts
+    // 1) New application attempt is not started until previous AM container
+    // finish event is reported back to RM as a part of nm registration.
+    // 2) If previous AM container finish event is never reported back (i.e.
+    // node manager on which this AM container was running also went down) in
+    // that case AMLivenessMonitor should time out previous attempt and start
+    // new attempt.
+    // 3) If all the stored attempts had finished then new attempt should
+    // be started immediately.
+    YarnConfiguration conf = new YarnConfiguration(this.conf);
+    conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 40);
+    MemoryRMStateStore memStore = new MemoryRMStateStore();
+    memStore.init(conf);
+    RMState rmState = memStore.getState();
+    Map<ApplicationId, ApplicationState> rmAppState =
+        rmState.getApplicationState();
+    
+    // start RM
+    final MockRM rm1 = new MockRM(conf, memStore);
+    rm1.start();
+    MockNM nm1 =
+        new MockNM("127.0.0.1:1234" , 16382, rm1.getResourceTrackerService());
+    nm1.registerNode();
+     
+    // submitting app
+    RMApp app1 = rm1.submitApp(200);
+    rm1.waitForState(app1.getApplicationId(), RMAppState.ACCEPTED);
+    MockAM am1 = launchAM(app1, rm1, nm1);
+    nm1.nodeHeartbeat(am1.getApplicationAttemptId(), 1, ContainerState.COMPLETE);
+    // Fail first AM.
+    am1.waitForState(RMAppAttemptState.FAILED);
+    
+    // launch another AM.
+    MockAM am2 = launchAM(app1, rm1, nm1);
+    
+    Assert.assertEquals(1, rmAppState.size());
+    Assert.assertEquals(app1.getState(), RMAppState.RUNNING);
+    Assert.assertEquals(app1.getAppAttempts()
+        .get(app1.getCurrentAppAttempt().getAppAttemptId())
+        .getAppAttemptState(), RMAppAttemptState.RUNNING);
+
+    //  start new RM.
+    MockRM rm2 = null;
+    rm2 = new MockRM(conf, memStore);
+    rm2.start();
+    
+    nm1.setResourceTrackerService(rm2.getResourceTrackerService());
+    NodeHeartbeatResponse res = nm1.nodeHeartbeat(true);
+    Assert.assertEquals(NodeAction.RESYNC, res.getNodeAction());
+    
+    RMApp rmApp = rm2.getRMContext().getRMApps().get(app1.getApplicationId());
+    // application should be in ACCEPTED state
+    rm2.waitForState(app1.getApplicationId(), RMAppState.ACCEPTED);
+    
+    Assert.assertEquals(RMAppState.ACCEPTED, rmApp.getState());
+    // new attempt should not be started
+    Assert.assertEquals(2, rmApp.getAppAttempts().size());
+    // am1 attempt should be in FAILED state where as am2 attempt should be in
+    // LAUNCHED state
+    rm2.waitForState(am1.getApplicationAttemptId(), RMAppAttemptState.FAILED);
+    rm2.waitForState(am2.getApplicationAttemptId(), RMAppAttemptState.LAUNCHED);
+    Assert.assertEquals(RMAppAttemptState.FAILED,
+        rmApp.getAppAttempts().get(am1.getApplicationAttemptId())
+            .getAppAttemptState());
+    Assert.assertEquals(RMAppAttemptState.LAUNCHED,
+        rmApp.getAppAttempts().get(am2.getApplicationAttemptId())
+            .getAppAttemptState());
+    
+    List<ContainerStatus> containerStatuses = new ArrayList<ContainerStatus>();
+    ContainerStatus containerStatus =
+        BuilderUtils.newContainerStatus(
+            BuilderUtils.newContainerId(am2.getApplicationAttemptId(), 1),
+            ContainerState.COMPLETE, "Killed AM container", 143);
+    containerStatuses.add(containerStatus);
+    nm1.registerNode(containerStatuses);
+    rm2.waitForState(am2.getApplicationAttemptId(), RMAppAttemptState.FAILED);
+    launchAM(rmApp, rm2, nm1);
+    Assert.assertEquals(3, rmApp.getAppAttempts().size());
+    rm2.waitForState(rmApp.getCurrentAppAttempt().getAppAttemptId(),
+        RMAppAttemptState.RUNNING);
+    // Now restart RM ...
+    // Setting AMLivelinessMonitor interval to be 10 Secs. 
+    conf.setInt(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS, 10000);
+    MockRM rm3 = null;
+    rm3 = new MockRM(conf, memStore);
+    rm3.start();
+    
+    // Wait for RM to process all the events as a part of rm recovery.
+    nm1.setResourceTrackerService(rm3.getResourceTrackerService());
+    
+    rmApp = rm3.getRMContext().getRMApps().get(app1.getApplicationId());
+    // application should be in ACCEPTED state
+    rm3.waitForState(app1.getApplicationId(), RMAppState.ACCEPTED);
+    Assert.assertEquals(rmApp.getState(), RMAppState.ACCEPTED);
+    // new attempt should not be started
+    Assert.assertEquals(3, rmApp.getAppAttempts().size());
+    // am1 and am2 attempts should be in FAILED state where as am3 should be
+    // in LAUNCHED state
+    rm3.waitForState(am1.getApplicationAttemptId(), RMAppAttemptState.FAILED);
+    rm3.waitForState(am2.getApplicationAttemptId(), RMAppAttemptState.FAILED);
+    ApplicationAttemptId latestAppAttemptId =
+        rmApp.getCurrentAppAttempt().getAppAttemptId();
+    rm3.waitForState(latestAppAttemptId, RMAppAttemptState.LAUNCHED);
+    Assert.assertEquals(RMAppAttemptState.FAILED,
+        rmApp.getAppAttempts().get(am1.getApplicationAttemptId())
+            .getAppAttemptState());
+    Assert.assertEquals(RMAppAttemptState.FAILED,
+        rmApp.getAppAttempts().get(am2.getApplicationAttemptId())
+            .getAppAttemptState());
+    Assert.assertEquals(RMAppAttemptState.LAUNCHED,rmApp.getAppAttempts()
+        .get(latestAppAttemptId).getAppAttemptState());
+    
+    rm3.waitForState(latestAppAttemptId, RMAppAttemptState.FAILED);
+    rm3.waitForState(rmApp.getApplicationId(), RMAppState.ACCEPTED);
+    Assert.assertEquals(4, rmApp.getAppAttempts().size());
+    Assert.assertEquals(RMAppAttemptState.FAILED,
+        rmApp.getAppAttempts().get(latestAppAttemptId).getAppAttemptState());
+    
+    latestAppAttemptId = rmApp.getCurrentAppAttempt().getAppAttemptId();
+    
+    // The 4th attempt has started but is not yet saved into RMStateStore
+    // It will be saved only when we launch AM.
+
+    // submitting app but not starting AM for it.
+    RMApp app2 = rm3.submitApp(200);
+    rm3.waitForState(app2.getApplicationId(), RMAppState.ACCEPTED);
+    Assert.assertEquals(1, app2.getAppAttempts().size());
+    Assert.assertEquals(0,
+        memStore.getState().getApplicationState().get(app2.getApplicationId())
+            .getAttemptCount());
+
+    MockRM rm4 = null;
+    rm4 = new MockRM(conf, memStore);
+    rm4.start();
+    
+    rmApp = rm4.getRMContext().getRMApps().get(app1.getApplicationId());
+    rm4.waitForState(rmApp.getApplicationId(), RMAppState.ACCEPTED);
+    // wait for the attempt to be created.
+    int timeoutSecs = 0;
+    while (rmApp.getAppAttempts().size() != 2 && timeoutSecs++ < 40) {
+      Thread.sleep(200);
+    }
+    Assert.assertEquals(4, rmApp.getAppAttempts().size());
+    Assert.assertEquals(RMAppState.ACCEPTED, rmApp.getState());
+    rm4.waitForState(latestAppAttemptId, RMAppAttemptState.SCHEDULED);
+    Assert.assertEquals(RMAppAttemptState.SCHEDULED, rmApp.getAppAttempts()
+        .get(latestAppAttemptId).getAppAttemptState());
+    
+    // The initial application for which an AM was not started should be in
+    // ACCEPTED state with one application attempt started.
+    app2 = rm4.getRMContext().getRMApps().get(app2.getApplicationId());
+    rm4.waitForState(app2.getApplicationId(), RMAppState.ACCEPTED);
+    Assert.assertEquals(RMAppState.ACCEPTED, app2.getState());
+    Assert.assertEquals(1, app2.getAppAttempts().size());
+    rm4.waitForState(app2.getCurrentAppAttempt().getAppAttemptId(),
+        RMAppAttemptState.SCHEDULED);
+    Assert.assertEquals(RMAppAttemptState.SCHEDULED, app2
+        .getCurrentAppAttempt().getAppAttemptState());
+
   }
 
   @Test
@@ -443,6 +635,8 @@ public class TestRMRestart {
       .contains("Failing the application."));
     // failed diagnostics from attempt is lost because the diagnostics from
     // attempt is not yet available by the time app is saving the app state.
+    rm1.stop();
+    rm2.stop();
   }
 
   @Test
@@ -489,6 +683,48 @@ public class TestRMRestart {
     ApplicationReport appReport = verifyAppReportAfterRMRestart(app0, rm2);
     Assert.assertEquals(app0.getDiagnostics().toString(),
       appReport.getDiagnostics());
+    rm1.stop();
+    rm2.stop();
+  }
+
+  @Test
+  public void testRMRestartKilledAppWithNoAttempts() throws Exception {
+    MemoryRMStateStore memStore = new MemoryRMStateStore() {
+      @Override
+      public synchronized void storeApplicationAttemptStateInternal(
+          ApplicationAttemptId attemptId,
+          ApplicationAttemptStateDataPBImpl attemptStateData) throws Exception {
+        // ignore attempt saving request.
+      }
+
+      @Override
+      public synchronized void updateApplicationAttemptStateInternal(
+          ApplicationAttemptId attemptId,
+          ApplicationAttemptStateDataPBImpl attemptStateData) throws Exception {
+        // ignore attempt saving request.
+      }
+    };
+    memStore.init(conf);
+
+    // start RM
+    MockRM rm1 = new MockRM(conf, memStore);
+    rm1.start();
+    // create app
+    RMApp app0 =
+        rm1.submitApp(200, "name", "user",
+          new HashMap<ApplicationAccessType, String>(), false, "default", -1,
+          null, "MAPREDUCE", false);
+    // kill the app.
+    rm1.killApp(app0.getApplicationId());
+    rm1.waitForState(app0.getApplicationId(), RMAppState.KILLED);
+
+    // restart rm
+    MockRM rm2 = new MockRM(conf, memStore);
+    rm2.start();
+    RMApp loadedApp0 =
+        rm2.getRMContext().getRMApps().get(app0.getApplicationId());
+    rm2.waitForState(loadedApp0.getApplicationId(), RMAppState.KILLED);
+    Assert.assertTrue(loadedApp0.getAppAttempts().size() == 0);
   }
 
   @Test
@@ -538,6 +774,9 @@ public class TestRMRestart {
     Assert.assertEquals(FinalApplicationStatus.SUCCEEDED,
       appReport.getFinalApplicationStatus());
     Assert.assertEquals("trackingUrl", appReport.getOriginalTrackingUrl());
+
+    rm1.stop();
+    rm2.stop();
   }
 
   @Test
@@ -577,7 +816,14 @@ public class TestRMRestart {
     rm1.waitForState(am2.getApplicationAttemptId(), RMAppAttemptState.KILLED);
 
     // restart rm
-    MockRM rm2 = new MockRM(conf, memStore);
+
+    MockRM rm2 = new MockRM(conf, memStore) {
+      @Override
+      protected RMAppManager createRMAppManager() {
+        return spy(super.createRMAppManager());
+      }
+    };
+
     rm2.start();
 
     GetApplicationsRequest request1 =
@@ -620,6 +866,13 @@ public class TestRMRestart {
         rm2.getClientRMService().getApplications(request2);
     List<ApplicationReport> appList2 = response2.getApplicationList();
     Assert.assertTrue(3 == appList2.size());
+
+    // check application summary is logged for the completed apps after RM restart.
+    verify(rm2.getRMAppManager(), times(3)).logApplicationSummary(
+      isA(ApplicationId.class));
+
+    rm1.stop();
+    rm2.stop();
   }
 
   private MockAM launchAM(RMApp app, MockRM rm, MockNM nm)
@@ -720,6 +973,8 @@ public class TestRMRestart {
     Assert.assertEquals(BuilderUtils.newContainerId(attemptId1, 1), 
                         attemptState.getMasterContainer().getId());
 
+    // Setting AMLivelinessMonitor interval to be 3 Secs.
+    conf.setInt(YarnConfiguration.RM_AM_EXPIRY_INTERVAL_MS, 3000);
     // start new RM   
     MockRM rm2 = new MockRM(conf, memStore);
     rm2.start();
@@ -818,6 +1073,10 @@ public class TestRMRestart {
     MockRM rm2 = new TestSecurityMockRM(conf, memStore);
     rm2.start();
 
+    // Need to wait for a while as now token renewal happens on another thread
+    // and is asynchronous in nature.
+    waitForTokensToBeRenewed(rm2);
+
     // verify tokens are properly populated back to rm2 DelegationTokenRenewer
     Assert.assertEquals(tokenSet, rm2.getRMContext()
       .getDelegationTokenRenewer().getDelegationTokens());
@@ -825,6 +1084,21 @@ public class TestRMRestart {
     // stop the RM
     rm1.stop();
     rm2.stop();
+  }
+
+  private void waitForTokensToBeRenewed(MockRM rm2) throws Exception {
+    int waitCnt = 20;
+    boolean atleastOneAppInNEWState = true;
+    while (waitCnt-- > 0 && atleastOneAppInNEWState) {
+      atleastOneAppInNEWState = false;
+      for (RMApp rmApp : rm2.getRMContext().getRMApps().values()) {
+        if (rmApp.getState() == RMAppState.NEW) {
+          Thread.sleep(1000);
+          atleastOneAppInNEWState = true;
+          break;
+        }
+      }
+    }
   }
 
   @Test
@@ -920,7 +1194,6 @@ public class TestRMRestart {
   @Test
   public void testRMDelegationTokenRestoredOnRMRestart() throws Exception {
     conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 2);
-    
     conf.set(
         CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
         "kerberos");
@@ -1030,6 +1303,8 @@ public class TestRMRestart {
     // renewDate before renewing
     Long renewDateBeforeRenew = allTokensRM2.get(dtId1);
     try{
+      // Sleep for one millisecond to make sure renewDataAfterRenew is greater
+      Thread.sleep(1);
       // renew recovered token
       rm2.getRMDTSecretManager().renewToken(token1, "renewer1");
     } catch(Exception e) {
@@ -1061,6 +1336,43 @@ public class TestRMRestart {
     // stop the RM
     rm1.stop();
     rm2.stop();
+  }
+
+  // This is to test submit an application to the new RM with the old delegation
+  // token got from previous RM.
+  @Test
+  public void testAppSubmissionWithOldDelegationTokenAfterRMRestart()
+      throws Exception {
+    conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 2);
+    conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
+        "kerberos");
+    conf.set(YarnConfiguration.RM_ADDRESS, "localhost:8032");
+    UserGroupInformation.setConfiguration(conf);
+    MemoryRMStateStore memStore = new MemoryRMStateStore();
+    memStore.init(conf);
+
+    MockRM rm1 = new TestSecurityMockRM(conf, memStore);
+    rm1.start();
+
+    GetDelegationTokenRequest request1 =
+        GetDelegationTokenRequest.newInstance("renewer1");
+    UserGroupInformation.getCurrentUser().setAuthenticationMethod(
+        AuthMethod.KERBEROS);
+    GetDelegationTokenResponse response1 =
+        rm1.getClientRMService().getDelegationToken(request1);
+    Token<RMDelegationTokenIdentifier> token1 =
+        ConverterUtils.convertFromYarn(response1.getRMDelegationToken(), rmAddr);
+
+    // start new RM
+    MockRM rm2 = new TestSecurityMockRM(conf, memStore);
+    rm2.start();
+
+    // submit an app with the old delegation token got from previous RM.
+    Credentials ts = new Credentials();
+    ts.addToken(token1.getService(), token1);
+    RMApp app = rm2.submitApp(200, "name", "user",
+        new HashMap<ApplicationAccessType, String>(), false, "default", 1, ts);
+    rm2.waitForState(app.getApplicationId(), RMAppState.ACCEPTED);
   }
 
   @Test
@@ -1122,6 +1434,139 @@ public class TestRMRestart {
     Assert.assertTrue(rmAppState.size() == NUM_APPS);
   }
 
+  @Test
+  public void testFinishedAppRemovalAfterRMRestart() throws Exception {
+    MemoryRMStateStore memStore = new MemoryRMStateStore();
+    conf.setInt(YarnConfiguration.RM_MAX_COMPLETED_APPLICATIONS, 1);
+    memStore.init(conf);
+    RMState rmState = memStore.getState();
+
+    // start RM
+    MockRM rm1 = new MockRM(conf, memStore);
+    rm1.start();
+    MockNM nm1 =
+        new MockNM("127.0.0.1:1234", 15120, rm1.getResourceTrackerService());
+    nm1.registerNode();
+
+    // create an app and finish the app.
+    RMApp app0 = rm1.submitApp(200);
+    MockAM am0 = launchAM(app0, rm1, nm1);
+    finishApplicationMaster(app0, rm1, nm1, am0);
+
+    MockRM rm2 = new MockRM(conf, memStore);
+    rm2.start();
+    nm1.setResourceTrackerService(rm2.getResourceTrackerService());
+    nm1 = rm2.registerNode("127.0.0.1:1234", 15120);
+
+    Map<ApplicationId, ApplicationState> rmAppState =
+        rmState.getApplicationState();
+
+    // app0 exits in both state store and rmContext
+    Assert.assertEquals(RMAppState.FINISHED,
+      rmAppState.get(app0.getApplicationId()).getState());
+    rm2.waitForState(app0.getApplicationId(), RMAppState.FINISHED);
+
+    // create one more app and finish the app.
+    RMApp app1 = rm2.submitApp(200);
+    MockAM am1 = launchAM(app1, rm2, nm1);
+    finishApplicationMaster(app1, rm2, nm1, am1);
+
+    // the first app0 get kicked out from both rmContext and state store
+    Assert.assertNull(rm2.getRMContext().getRMApps()
+      .get(app0.getApplicationId()));
+    Assert.assertNull(rmAppState.get(app0.getApplicationId()));
+
+    rm1.stop();
+    rm2.stop();
+  }
+
+  // This is to test RM does not get hang on shutdown.
+  @Test (timeout = 10000)
+  public void testRMShutdown() throws Exception {
+    MemoryRMStateStore memStore = new MemoryRMStateStore() {
+      @Override
+      public synchronized void checkVersion()
+          throws Exception {
+        throw new Exception("Invalid version.");
+      }
+    };
+    // start RM
+    memStore.init(conf);
+    MockRM rm1 = null;
+    try {
+      rm1 = new MockRM(conf, memStore);
+      rm1.start();
+      Assert.fail();
+    } catch (Exception e) {
+      Assert.assertTrue(e.getMessage().contains("Invalid version."));
+    }
+    Assert.assertTrue(rm1.getServiceState() == STATE.STOPPED);
+  }
+
+  // This is to test Killing application should be able to wait until app
+  // reaches killed state and also check that attempt state is saved before app
+  // state is saved.
+  @Test
+  public void testClientRetryOnKillingApplication() throws Exception {
+    MemoryRMStateStore memStore = new TestMemoryRMStateStore();
+    memStore.init(conf);
+
+    // start RM
+    MockRM rm1 = new MockRM(conf, memStore);
+    rm1.start();
+    MockNM nm1 =
+        new MockNM("127.0.0.1:1234", 15120, rm1.getResourceTrackerService());
+    nm1.registerNode();
+
+    RMApp app1 =
+        rm1.submitApp(200, "name", "user", null, false, "default", 1, null,
+          "myType");
+    MockAM am1 = launchAM(app1, rm1, nm1);
+
+    KillApplicationResponse response;
+    int count = 0;
+    while (true) {
+      response = rm1.killApp(app1.getApplicationId());
+      if (response.getIsKillCompleted()) {
+        break;
+      }
+      Thread.sleep(100);
+      count++;
+    }
+    // we expect at least 2 calls for killApp as the first killApp always return
+    // false.
+    Assert.assertTrue(count >= 1);
+
+    rm1.waitForState(am1.getApplicationAttemptId(), RMAppAttemptState.KILLED);
+    rm1.waitForState(app1.getApplicationId(), RMAppState.KILLED);
+    Assert.assertEquals(1, ((TestMemoryRMStateStore) memStore).updateAttempt);
+    Assert.assertEquals(2, ((TestMemoryRMStateStore) memStore).updateApp);
+  }
+
+  public class TestMemoryRMStateStore extends MemoryRMStateStore {
+    int count = 0;
+    public int updateApp = 0;
+    public int updateAttempt = 0;
+
+    @Override
+    public void updateApplicationStateInternal(ApplicationId appId,
+        ApplicationStateDataPBImpl appStateData) throws Exception {
+      updateApp = ++count;
+      super.updateApplicationStateInternal(appId, appStateData);
+    }
+
+    @Override
+    public synchronized void
+        updateApplicationAttemptStateInternal(
+            ApplicationAttemptId attemptId,
+            ApplicationAttemptStateDataPBImpl attemptStateData)
+            throws Exception {
+      updateAttempt = ++count;
+      super.updateApplicationAttemptStateInternal(attemptId,
+        attemptStateData);
+    }
+  }
+
   public static class TestSecurityMockRM extends MockRM {
 
     public TestSecurityMockRM(Configuration conf, RMStateStore store) {
@@ -1131,7 +1576,7 @@ public class TestRMRestart {
     @Override
     protected ClientRMService createClientRMService() {
       return new ClientRMService(getRMContext(), getResourceScheduler(),
-          rmAppManager, applicationACLsManager, null, rmDTSecretManager){
+          rmAppManager, applicationACLsManager, null, getRMDTSecretManager()){
         @Override
         protected void serviceStart() throws Exception {
           // do nothing

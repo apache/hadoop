@@ -20,15 +20,29 @@ package org.apache.hadoop.yarn.server.api.protocolrecords;
 
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
+import org.apache.hadoop.yarn.util.Records;
 
-public interface NodeHeartbeatRequest {
-
-  NodeStatus getNodeStatus();
-  void setNodeStatus(NodeStatus status);
-
-  MasterKey getLastKnownContainerTokenMasterKey();
-  void setLastKnownContainerTokenMasterKey(MasterKey secretKey);
+public abstract class NodeHeartbeatRequest {
   
-  MasterKey getLastKnownNMTokenMasterKey();
-  void setLastKnownNMTokenMasterKey(MasterKey secretKey);
+  public static NodeHeartbeatRequest newInstance(NodeStatus nodeStatus,
+      MasterKey lastKnownContainerTokenMasterKey,
+      MasterKey lastKnownNMTokenMasterKey) {
+    NodeHeartbeatRequest nodeHeartbeatRequest =
+        Records.newRecord(NodeHeartbeatRequest.class);
+    nodeHeartbeatRequest.setNodeStatus(nodeStatus);
+    nodeHeartbeatRequest
+        .setLastKnownContainerTokenMasterKey(lastKnownContainerTokenMasterKey);
+    nodeHeartbeatRequest
+        .setLastKnownNMTokenMasterKey(lastKnownNMTokenMasterKey);
+    return nodeHeartbeatRequest;
+  }
+
+  public abstract NodeStatus getNodeStatus();
+  public abstract void setNodeStatus(NodeStatus status);
+
+  public abstract MasterKey getLastKnownContainerTokenMasterKey();
+  public abstract void setLastKnownContainerTokenMasterKey(MasterKey secretKey);
+  
+  public abstract MasterKey getLastKnownNMTokenMasterKey();
+  public abstract void setLastKnownNMTokenMasterKey(MasterKey secretKey);
 }

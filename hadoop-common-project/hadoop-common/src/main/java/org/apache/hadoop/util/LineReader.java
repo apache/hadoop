@@ -175,6 +175,11 @@ public class LineReader implements Closeable {
     }
   }
 
+  protected int fillBuffer(InputStream in, byte[] buffer, boolean inDelimiter)
+      throws IOException {
+    return in.read(buffer);
+  }
+
   /**
    * Read a line terminated by one of CR, LF, or CRLF.
    */
@@ -208,7 +213,7 @@ public class LineReader implements Closeable {
         if (prevCharCR) {
           ++bytesConsumed; //account for CR from previous read
         }
-        bufferLength = in.read(buffer);
+        bufferLength = fillBuffer(in, buffer, prevCharCR);
         if (bufferLength <= 0) {
           break; // EOF
         }
@@ -296,7 +301,7 @@ public class LineReader implements Closeable {
       int startPosn = bufferPosn; // Start from previous end position
       if (bufferPosn >= bufferLength) {
         startPosn = bufferPosn = 0;
-        bufferLength = in.read(buffer);
+        bufferLength = fillBuffer(in, buffer, ambiguousByteCount > 0);
         if (bufferLength <= 0) {
           str.append(recordDelimiterBytes, 0, ambiguousByteCount);
           break; // EOF

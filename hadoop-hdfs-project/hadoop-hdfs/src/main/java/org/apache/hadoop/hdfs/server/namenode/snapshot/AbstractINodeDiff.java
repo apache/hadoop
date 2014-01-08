@@ -22,8 +22,8 @@ import java.io.IOException;
 import java.util.List;
 
 import org.apache.hadoop.hdfs.server.namenode.INode;
-import org.apache.hadoop.hdfs.server.namenode.INodeAttributes;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
+import org.apache.hadoop.hdfs.server.namenode.INodeAttributes;
 import org.apache.hadoop.hdfs.server.namenode.Quota;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotFSImageFormat.ReferenceMap;
 
@@ -52,8 +52,8 @@ abstract class AbstractINodeDiff<N extends INode,
                                  D extends AbstractINodeDiff<N, A, D>>
     implements Comparable<Integer> {
 
-  /** The snapshot will be obtained after this diff is applied. */
-  Snapshot snapshot;
+  /** The id of the corresponding snapshot. */
+  private int snapshotId;
   /** The snapshot inode data.  It is null when there is no change. */
   A snapshotINode;
   /**
@@ -64,10 +64,8 @@ abstract class AbstractINodeDiff<N extends INode,
    */
   private D posteriorDiff;
 
-  AbstractINodeDiff(Snapshot snapshot, A snapshotINode, D posteriorDiff) {
-    Preconditions.checkNotNull(snapshot, "snapshot is null");
-
-    this.snapshot = snapshot;
+  AbstractINodeDiff(int snapshotId, A snapshotINode, D posteriorDiff) {
+    this.snapshotId = snapshotId;
     this.snapshotINode = snapshotINode;
     this.posteriorDiff = posteriorDiff;
   }
@@ -75,16 +73,16 @@ abstract class AbstractINodeDiff<N extends INode,
   /** Compare diffs with snapshot ID. */
   @Override
   public final int compareTo(final Integer that) {
-    return Snapshot.ID_INTEGER_COMPARATOR.compare(this.snapshot.getId(), that);
+    return Snapshot.ID_INTEGER_COMPARATOR.compare(this.snapshotId, that);
   }
 
   /** @return the snapshot object of this diff. */
-  public final Snapshot getSnapshot() {
-    return snapshot;
+  public final int getSnapshotId() {
+    return snapshotId;
   }
   
-  final void setSnapshot(Snapshot snapshot) {
-    this.snapshot = snapshot;
+  final void setSnapshotId(int snapshot) {
+    this.snapshotId = snapshot;
   }
 
   /** @return the posterior diff. */
@@ -98,7 +96,7 @@ abstract class AbstractINodeDiff<N extends INode,
   }
 
   /** Save the INode state to the snapshot if it is not done already. */
-  void saveSnapshotCopy(A snapshotCopy, N currentINode) {
+  void saveSnapshotCopy(A snapshotCopy) {
     Preconditions.checkState(snapshotINode == null, "Expected snapshotINode to be null");
     snapshotINode = snapshotCopy;
   }
@@ -132,13 +130,12 @@ abstract class AbstractINodeDiff<N extends INode,
 
   @Override
   public String toString() {
-    return getClass().getSimpleName() + ": " + snapshot + " (post="
-        + (posteriorDiff == null? null: posteriorDiff.snapshot) + ")";
+    return getClass().getSimpleName() + ": " + this.getSnapshotId() + " (post="
+        + (posteriorDiff == null? null: posteriorDiff.getSnapshotId()) + ")";
   }
 
   void writeSnapshot(DataOutput out) throws IOException {
-    // Assume the snapshot is recorded before, write id only.
-    out.writeInt(snapshot.getId());
+    out.writeInt(snapshotId);
   }
   
   abstract void write(DataOutput out, ReferenceMap referenceMap

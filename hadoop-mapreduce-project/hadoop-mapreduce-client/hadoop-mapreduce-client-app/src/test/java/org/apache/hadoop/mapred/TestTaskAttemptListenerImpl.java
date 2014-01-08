@@ -17,26 +17,23 @@
 */
 package org.apache.hadoop.mapred;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import org.apache.hadoop.mapred.Counters;
+import org.apache.hadoop.mapred.Counters.Counter;
+import org.apache.hadoop.mapreduce.checkpoint.EnumCounter;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
-
-import junit.framework.Assert;
+import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.TypeConverter;
+import org.apache.hadoop.mapreduce.checkpoint.CheckpointID;
+import org.apache.hadoop.mapreduce.checkpoint.FSCheckpointID;
+import org.apache.hadoop.mapreduce.checkpoint.TaskCheckpointID;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptCompletionEvent;
@@ -46,21 +43,31 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.TaskHeartbeatHandler;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
+import org.apache.hadoop.mapreduce.v2.app.rm.preemption.AMPreemptionPolicy;
+import org.apache.hadoop.mapreduce.v2.app.rm.preemption.CheckpointAMPreemptionPolicy;
 import org.apache.hadoop.mapreduce.v2.app.rm.RMHeartbeatHandler;
 import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
+import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.util.SystemClock;
+
 import org.junit.Test;
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
 
 public class TestTaskAttemptListenerImpl {
-  public static class MockTaskAttemptListenerImpl extends TaskAttemptListenerImpl {
+  public static class MockTaskAttemptListenerImpl
+      extends TaskAttemptListenerImpl {
 
     public MockTaskAttemptListenerImpl(AppContext context,
         JobTokenSecretManager jobTokenSecretManager,
         RMHeartbeatHandler rmHeartbeatHandler,
-        TaskHeartbeatHandler hbHandler) {
-      super(context, jobTokenSecretManager, rmHeartbeatHandler);
+        TaskHeartbeatHandler hbHandler,
+        AMPreemptionPolicy policy) {
+
+      super(context, jobTokenSecretManager, rmHeartbeatHandler, policy);
       this.taskHeartbeatHandler = hbHandler;
     }
     
@@ -87,9 +94,16 @@ public class TestTaskAttemptListenerImpl {
     RMHeartbeatHandler rmHeartbeatHandler =
         mock(RMHeartbeatHandler.class);
     TaskHeartbeatHandler hbHandler = mock(TaskHeartbeatHandler.class);
+    Dispatcher dispatcher = mock(Dispatcher.class);
+    EventHandler ea = mock(EventHandler.class);
+    when(dispatcher.getEventHandler()).thenReturn(ea);
+
+    when(appCtx.getEventHandler()).thenReturn(ea);
+    CheckpointAMPreemptionPolicy policy = new CheckpointAMPreemptionPolicy();
+    policy.init(appCtx);
     MockTaskAttemptListenerImpl listener = 
       new MockTaskAttemptListenerImpl(appCtx, secret,
-          rmHeartbeatHandler, hbHandler);
+          rmHeartbeatHandler, hbHandler, policy);
     Configuration conf = new Configuration();
     listener.init(conf);
     listener.start();
@@ -144,7 +158,7 @@ public class TestTaskAttemptListenerImpl {
     assertNotNull(jvmid);
     try {
       JVMId.forName("jvm_001_002_m_004_006");
-      Assert.fail();
+      fail();
     } catch (IllegalArgumentException e) {
       assertEquals(e.getMessage(),
           "TaskId string : jvm_001_002_m_004_006 is not properly formed");
@@ -190,8 +204,14 @@ public class TestTaskAttemptListenerImpl {
     RMHeartbeatHandler rmHeartbeatHandler =
         mock(RMHeartbeatHandler.class);
     final TaskHeartbeatHandler hbHandler = mock(TaskHeartbeatHandler.class);
-    TaskAttemptListenerImpl listener =
-        new TaskAttemptListenerImpl(appCtx, secret, rmHeartbeatHandler) {
+    Dispatcher dispatcher = mock(Dispatcher.class);
+    EventHandler ea = mock(EventHandler.class);
+    when(dispatcher.getEventHandler()).thenReturn(ea);
+    when(appCtx.getEventHandler()).thenReturn(ea);
+    CheckpointAMPreemptionPolicy policy = new CheckpointAMPreemptionPolicy();
+    policy.init(appCtx);
+    TaskAttemptListenerImpl listener = new TaskAttemptListenerImpl(
+        appCtx, secret, rmHeartbeatHandler, policy) {
       @Override
       protected void registerHeartbeatHandler(Configuration conf) {
         taskHeartbeatHandler = hbHandler;
@@ -219,7 +239,8 @@ public class TestTaskAttemptListenerImpl {
         isMap ? org.apache.hadoop.mapreduce.v2.api.records.TaskType.MAP
             : org.apache.hadoop.mapreduce.v2.api.records.TaskType.REDUCE);
     TaskAttemptId attemptId = MRBuilderUtils.newTaskAttemptId(tid, 0);
-    RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
+    RecordFactory recordFactory =
+      RecordFactoryProvider.getRecordFactory(null);
     TaskAttemptCompletionEvent tce = recordFactory
         .newRecordInstance(TaskAttemptCompletionEvent.class);
     tce.setEventId(eventId);
@@ -244,8 +265,14 @@ public class TestTaskAttemptListenerImpl {
     RMHeartbeatHandler rmHeartbeatHandler =
         mock(RMHeartbeatHandler.class);
     final TaskHeartbeatHandler hbHandler = mock(TaskHeartbeatHandler.class);
-    TaskAttemptListenerImpl listener =
-        new TaskAttemptListenerImpl(appCtx, secret, rmHeartbeatHandler) {
+    Dispatcher dispatcher = mock(Dispatcher.class);
+    EventHandler ea = mock(EventHandler.class);
+    when(dispatcher.getEventHandler()).thenReturn(ea);
+    when(appCtx.getEventHandler()).thenReturn(ea);
+    CheckpointAMPreemptionPolicy policy = new CheckpointAMPreemptionPolicy();
+    policy.init(appCtx);
+    TaskAttemptListenerImpl listener = new TaskAttemptListenerImpl(
+        appCtx, secret, rmHeartbeatHandler, policy) {
       @Override
       protected void registerHeartbeatHandler(Configuration conf) {
         taskHeartbeatHandler = hbHandler;
@@ -270,4 +297,88 @@ public class TestTaskAttemptListenerImpl {
 
     listener.stop();
   }
+
+  @Test
+  public void testCheckpointIDTracking()
+    throws IOException, InterruptedException{
+
+    SystemClock clock = new SystemClock();
+
+    org.apache.hadoop.mapreduce.v2.app.job.Task mockTask =
+        mock(org.apache.hadoop.mapreduce.v2.app.job.Task.class);
+    when(mockTask.canCommit(any(TaskAttemptId.class))).thenReturn(true);
+    Job mockJob = mock(Job.class);
+    when(mockJob.getTask(any(TaskId.class))).thenReturn(mockTask);
+
+    Dispatcher dispatcher = mock(Dispatcher.class);
+    EventHandler ea = mock(EventHandler.class);
+    when(dispatcher.getEventHandler()).thenReturn(ea);
+
+    RMHeartbeatHandler rmHeartbeatHandler =
+        mock(RMHeartbeatHandler.class);
+
+    AppContext appCtx = mock(AppContext.class);
+    when(appCtx.getJob(any(JobId.class))).thenReturn(mockJob);
+    when(appCtx.getClock()).thenReturn(clock);
+    when(appCtx.getEventHandler()).thenReturn(ea);
+    JobTokenSecretManager secret = mock(JobTokenSecretManager.class);
+    final TaskHeartbeatHandler hbHandler = mock(TaskHeartbeatHandler.class);
+    when(appCtx.getEventHandler()).thenReturn(ea);
+    CheckpointAMPreemptionPolicy policy = new CheckpointAMPreemptionPolicy();
+    policy.init(appCtx);
+    TaskAttemptListenerImpl listener = new TaskAttemptListenerImpl(
+        appCtx, secret, rmHeartbeatHandler, policy) {
+      @Override
+      protected void registerHeartbeatHandler(Configuration conf) {
+        taskHeartbeatHandler = hbHandler;
+      }
+    };
+
+    Configuration conf = new Configuration();
+    conf.setBoolean(MRJobConfig.TASK_PREEMPTION, true);
+    //conf.setBoolean("preemption.reduce", true);
+
+    listener.init(conf);
+    listener.start();
+
+    TaskAttemptID tid = new TaskAttemptID("12345", 1, TaskType.REDUCE, 1, 0);
+
+    List<Path> partialOut = new ArrayList<Path>();
+    partialOut.add(new Path("/prev1"));
+    partialOut.add(new Path("/prev2"));
+
+    Counters counters = mock(Counters.class);
+    final long CBYTES = 64L * 1024 * 1024;
+    final long CTIME = 4344L;
+    final Path CLOC = new Path("/test/1");
+    Counter cbytes = mock(Counter.class);
+    when(cbytes.getValue()).thenReturn(CBYTES);
+    Counter ctime = mock(Counter.class);
+    when(ctime.getValue()).thenReturn(CTIME);
+    when(counters.findCounter(eq(EnumCounter.CHECKPOINT_BYTES)))
+        .thenReturn(cbytes);
+    when(counters.findCounter(eq(EnumCounter.CHECKPOINT_MS)))
+        .thenReturn(ctime);
+
+    // propagating a taskstatus that contains a checkpoint id
+    TaskCheckpointID incid = new TaskCheckpointID(new FSCheckpointID(
+          CLOC), partialOut, counters);
+    listener.setCheckpointID(
+        org.apache.hadoop.mapred.TaskID.downgrade(tid.getTaskID()), incid);
+
+    // and try to get it back
+    CheckpointID outcid = listener.getCheckpointID(tid.getTaskID());
+    TaskCheckpointID tcid = (TaskCheckpointID) outcid;
+    assertEquals(CBYTES, tcid.getCheckpointBytes());
+    assertEquals(CTIME, tcid.getCheckpointTime());
+    assertTrue(partialOut.containsAll(tcid.getPartialCommittedOutput()));
+    assertTrue(tcid.getPartialCommittedOutput().containsAll(partialOut));
+
+    //assert it worked
+    assert outcid == incid;
+
+    listener.stop();
+
+  }
+
 }

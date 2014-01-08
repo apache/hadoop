@@ -1445,7 +1445,7 @@ _01_000001</amContainerLogs>
 *---------------+--------------+--------------------------------+
 | queue | string  | The queue the application was submitted to|
 *---------------+--------------+--------------------------------+
-| state         | string | The application state according to the ResourceManager - valid values are: NEW, SUBMITTED, ACCEPTED, RUNNING, FINISHED, FAILED, KILLED|
+| state         | string | The application state according to the ResourceManager - valid values are members of the YarnApplicationState enum: NEW, NEW_SAVING, SUBMITTED, ACCEPTED, RUNNING, FINISHED, FAILED, KILLED|
 *---------------+--------------+--------------------------------+
 | finalStatus | string | The final status of the application if finished - reported by the application itself - valid values are: UNDEFINED, SUCCEEDED, FAILED, KILLED|
 *---------------+--------------+--------------------------------+

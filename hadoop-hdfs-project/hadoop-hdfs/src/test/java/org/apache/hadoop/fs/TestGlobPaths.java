@@ -34,12 +34,12 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.*;
 
 public class TestGlobPaths {
-  
+
   private static final UserGroupInformation unprivilegedUser =
       UserGroupInformation.createRemoteUser("myuser");
 
   static class RegexPathFilter implements PathFilter {
-    
+
     private final String regex;
     public RegexPathFilter(String regex) {
       this.regex = regex;
@@ -51,7 +51,7 @@ public class TestGlobPaths {
     }
 
   }
-  
+
   static private MiniDFSCluster dfsCluster;
   static private FileSystem fs;
   static private FileSystem unprivilegedFs;
@@ -60,13 +60,12 @@ public class TestGlobPaths {
   static final private int NUM_OF_PATHS = 4;
   static private String USER_DIR;
   private Path[] path = new Path[NUM_OF_PATHS];
-  
+
   @BeforeClass
   public static void setUp() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     dfsCluster = new MiniDFSCluster.Builder(conf).build();
     fs = FileSystem.get(conf);
-    fc = FileContext.getFileContext(conf);
     unprivilegedFs =
       unprivilegedUser.doAs(new PrivilegedExceptionAction<FileSystem>() {
         @Override

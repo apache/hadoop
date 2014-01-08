@@ -31,11 +31,10 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -58,7 +57,7 @@ public class TestSnapshotPathINodes {
   static private DistributedFileSystem hdfs;
 
   @BeforeClass
-  static public void setUp() throws Exception {
+  public static void setUp() throws Exception {
     conf = new Configuration();
     cluster = new MiniDFSCluster.Builder(conf)
       .numDataNodes(REPLICATION)
@@ -69,12 +68,16 @@ public class TestSnapshotPathINodes {
     fsdir = fsn.getFSDirectory();
     
     hdfs = cluster.getFileSystem();
+  }
+
+  @Before
+  public void reset() throws Exception {
     DFSTestUtil.createFile(hdfs, file1, 1024, REPLICATION, seed);
     DFSTestUtil.createFile(hdfs, file2, 1024, REPLICATION, seed);
   }
 
   @AfterClass
-  static public void tearDown() throws Exception {
+  public static void tearDown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
     }
@@ -120,8 +123,12 @@ public class TestSnapshotPathINodes {
       final Snapshot snapshot, int index) {
     assertEquals(isSnapshot, inodesInPath.isSnapshot());
     assertEquals(index, inodesInPath.getSnapshotRootIndex());
-    assertEquals(isSnapshot? snapshot: null, inodesInPath.getPathSnapshot());
-    assertEquals(isSnapshot? null: snapshot, inodesInPath.getLatestSnapshot());
+    assertEquals(Snapshot.getSnapshotId(isSnapshot ? snapshot : null),
+        inodesInPath.getPathSnapshotId());
+    if (!isSnapshot) {
+      assertEquals(Snapshot.getSnapshotId(snapshot),
+          inodesInPath.getLatestSnapshotId());
+    }
     if (isSnapshot && index >= 0) {
       assertEquals(Snapshot.Root.class, inodesInPath.getINodes()[index].getClass());
     }
@@ -202,8 +209,7 @@ public class TestSnapshotPathINodes {
     // Check the INode for file1 (snapshot file)
     INode snapshotFileNode = inodes[inodes.length - 1]; 
     assertINodeFile(snapshotFileNode, file1);
-    assertTrue(snapshotFileNode.getParent() instanceof 
-        INodeDirectoryWithSnapshot);
+    assertTrue(snapshotFileNode.getParent().isWithSnapshot());
     
     // Call getExistingPathINodes and request only one INode.
     nodesInPath = INodesInPath.resolve(fsdir.rootDir, components, 1, false);
@@ -239,7 +245,7 @@ public class TestSnapshotPathINodes {
     // The last INode should be the INode for sub1
     final INode last = nodesInPath.getLastINode();
     assertEquals(last.getFullPathName(), sub1.toString());
-    assertFalse(last instanceof INodeFileWithSnapshot);
+    assertFalse(last instanceof INodeFile);
     
     String[] invalidPathComponent = {"invalidDir", "foo", ".snapshot", "bar"};
     Path invalidPath = new Path(invalidPathComponent[0]);
@@ -252,6 +258,8 @@ public class TestSnapshotPathINodes {
         System.out.println("The exception is expected: " + fnfe);
       }
     }
+    hdfs.deleteSnapshot(sub1, "s1");
+    hdfs.disallowSnapshot(sub1);
   }
   
   /** 
@@ -287,7 +295,7 @@ public class TestSnapshotPathINodes {
       // Check the INode for file1 (snapshot file)
       final INode inode = inodes[inodes.length - 1];
       assertEquals(file1.getName(), inode.getLocalName());
-      assertEquals(INodeFileWithSnapshot.class, inode.getClass());
+      assertTrue(inode.asFile().isWithSnapshot());
     }
 
     // Check the INodes for path /TestSnapshot/sub1/file1
@@ -309,6 +317,8 @@ public class TestSnapshotPathINodes {
         sub1.toString());
     assertEquals(inodes[components.length - 3].getFullPathName(),
         dir.toString());
+    hdfs.deleteSnapshot(sub1, "s2");
+    hdfs.disallowSnapshot(sub1);
   }
   
   static private Snapshot s4;
@@ -368,6 +378,8 @@ public class TestSnapshotPathINodes {
         sub1.toString());
     assertEquals(inodes[components.length - 3].getFullPathName(),
         dir.toString());
+    hdfs.deleteSnapshot(sub1, "s4");
+    hdfs.disallowSnapshot(sub1);
   }
   
   /** 
@@ -376,9 +388,6 @@ public class TestSnapshotPathINodes {
    */
   @Test (timeout=15000)
   public void testSnapshotPathINodesAfterModification() throws Exception {
-    //file1 was deleted, create it again.
-    DFSTestUtil.createFile(hdfs, file1, 1024, REPLICATION, seed);
-
     // First check the INode for /TestSnapshot/sub1/file1
     String[] names = INode.getPathNames(file1.toString());
     byte[][] components = INode.getPathComponents(names);
@@ -386,11 +395,12 @@ public class TestSnapshotPathINodes {
     INode[] inodes = nodesInPath.getINodes();
     // The number of inodes should be equal to components.length
     assertEquals(inodes.length, components.length);
-    assertSnapshot(nodesInPath, false, s4, -1);
 
     // The last INode should be associated with file1
     assertEquals(inodes[components.length - 1].getFullPathName(),
         file1.toString());
+    // record the modification time of the inode
+    final long modTime = inodes[inodes.length - 1].getModificationTime();
     
     // Create a snapshot for the dir, and check the inodes for the path
     // pointing to a snapshot file
@@ -414,11 +424,11 @@ public class TestSnapshotPathINodes {
     // Check the INode for snapshot of file1
     INode snapshotFileNode = ssInodes[ssInodes.length - 1]; 
     assertEquals(snapshotFileNode.getLocalName(), file1.getName());
-    assertTrue(snapshotFileNode instanceof INodeFileWithSnapshot);
+    assertTrue(snapshotFileNode.asFile().isWithSnapshot());
     // The modification time of the snapshot INode should be the same with the
     // original INode before modification
-    assertEquals(inodes[inodes.length - 1].getModificationTime(),
-        snapshotFileNode.getModificationTime(ssNodesInPath.getPathSnapshot()));
+    assertEquals(modTime,
+        snapshotFileNode.getModificationTime(ssNodesInPath.getPathSnapshotId()));
 
     // Check the INode for /TestSnapshot/sub1/file1 again
     names = INode.getPathNames(file1.toString());
@@ -432,7 +442,8 @@ public class TestSnapshotPathINodes {
     final int last = components.length - 1;
     assertEquals(newInodes[last].getFullPathName(), file1.toString());
     // The modification time of the INode for file3 should have been changed
-    Assert.assertFalse(inodes[last].getModificationTime()
-        == newInodes[last].getModificationTime());
+    Assert.assertFalse(modTime == newInodes[last].getModificationTime());
+    hdfs.deleteSnapshot(sub1, "s3");
+    hdfs.disallowSnapshot(sub1);
   }
 }

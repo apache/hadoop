@@ -398,9 +398,9 @@ public class TestShuffleHandler {
       List<File> fileMap) throws IOException {
     String attemptDir =
         StringUtils.join(Path.SEPARATOR,
-            Arrays.asList(new String[] { logDir.getAbsolutePath(),
+            new String[] { logDir.getAbsolutePath(),
                 ContainerLocalizer.USERCACHE, user,
-                ContainerLocalizer.APPCACHE, appId, "output", appAttemptId }));
+                ContainerLocalizer.APPCACHE, appId, "output", appAttemptId });
     File appAttemptDir = new File(attemptDir);
     appAttemptDir.mkdirs();
     System.out.println(appAttemptDir.getAbsolutePath());

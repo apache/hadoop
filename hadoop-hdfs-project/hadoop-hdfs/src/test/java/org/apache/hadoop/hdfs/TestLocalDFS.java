@@ -65,7 +65,7 @@ public class TestLocalDFS {
   /**
    * Tests get/set working directory in DFS.
    */
-  @Test
+  @Test(timeout=20000)
   public void testWorkingDirectory() throws IOException {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();

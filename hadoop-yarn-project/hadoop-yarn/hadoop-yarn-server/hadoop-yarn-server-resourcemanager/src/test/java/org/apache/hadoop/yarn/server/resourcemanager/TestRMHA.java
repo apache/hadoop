@@ -25,6 +25,7 @@ import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.HAServiceProtocol.StateChangeRequestInfo;
 import org.apache.hadoop.ha.HealthCheckFailedException;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.conf.HAUtil;
 import org.junit.Before;
@@ -39,6 +40,7 @@ import static org.junit.Assert.fail;
 
 public class TestRMHA {
   private Log LOG = LogFactory.getLog(TestRMHA.class);
+  private final Configuration configuration = new YarnConfiguration();
   private MockRM rm = null;
   private static final String STATE_ERR =
       "ResourceManager is in wrong HA state";
@@ -46,23 +48,23 @@ public class TestRMHA {
   private static final String RM1_ADDRESS = "0.0.0.0:0";
   private static final String RM1_NODE_ID = "rm1";
 
+  private static final String RM2_ADDRESS = "1.1.1.1:1";
+  private static final String RM2_NODE_ID = "rm2";
+
   @Before
   public void setUp() throws Exception {
-    Configuration conf = new YarnConfiguration();
-    conf.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
-    conf.set(YarnConfiguration.RM_HA_IDS, RM1_NODE_ID);
-    for (String confKey : HAUtil.RPC_ADDRESS_CONF_KEYS) {
-      conf.set(HAUtil.addSuffix(confKey, RM1_NODE_ID), RM1_ADDRESS);
+    configuration.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
+    configuration.set(YarnConfiguration.RM_HA_IDS, RM1_NODE_ID + "," + RM2_NODE_ID);
+    for (String confKey : YarnConfiguration.RM_SERVICES_ADDRESS_CONF_KEYS) {
+      configuration.set(HAUtil.addSuffix(confKey, RM1_NODE_ID), RM1_ADDRESS);
+      configuration.set(HAUtil.addSuffix(confKey, RM2_NODE_ID), RM2_ADDRESS);
     }
-    conf.set(YarnConfiguration.RM_HA_ID, RM1_NODE_ID);
-
-    rm = new MockRM(conf);
-    rm.init(conf);
+    configuration.set(YarnConfiguration.RM_HA_ID, RM1_NODE_ID);
   }
 
   private void checkMonitorHealth() throws IOException {
     try {
-      rm.haService.monitorHealth();
+      rm.adminService.monitorHealth();
     } catch (HealthCheckFailedException e) {
       fail("The RM is in bad health: it is Active, but the active services " +
           "are not running");
@@ -71,20 +73,20 @@ public class TestRMHA {
 
   private void checkStandbyRMFunctionality() throws IOException {
     assertEquals(STATE_ERR, HAServiceState.STANDBY,
-        rm.haService.getServiceStatus().getState());
+        rm.adminService.getServiceStatus().getState());
     assertFalse("Active RM services are started",
         rm.areActiveServicesRunning());
     assertTrue("RM is not ready to become active",
-        rm.haService.getServiceStatus().isReadyToBecomeActive());
+        rm.adminService.getServiceStatus().isReadyToBecomeActive());
   }
 
   private void checkActiveRMFunctionality() throws IOException {
     assertEquals(STATE_ERR, HAServiceState.ACTIVE,
-        rm.haService.getServiceStatus().getState());
+        rm.adminService.getServiceStatus().getState());
     assertTrue("Active RM services aren't started",
         rm.areActiveServicesRunning());
     assertTrue("RM is not ready to become active",
-        rm.haService.getServiceStatus().isReadyToBecomeActive());
+        rm.adminService.getServiceStatus().isReadyToBecomeActive());
 
     try {
       rm.getNewAppId();
@@ -109,13 +111,16 @@ public class TestRMHA {
    */
   @Test (timeout = 30000)
   public void testStartAndTransitions() throws IOException {
+    Configuration conf = new YarnConfiguration(configuration);
+    rm = new MockRM(conf);
+    rm.init(conf);
     StateChangeRequestInfo requestInfo = new StateChangeRequestInfo(
         HAServiceProtocol.RequestSource.REQUEST_BY_USER);
 
     assertEquals(STATE_ERR, HAServiceState.INITIALIZING,
-        rm.haService.getServiceStatus().getState());
+        rm.adminService.getServiceStatus().getState());
     assertFalse("RM is ready to become active before being started",
-        rm.haService.getServiceStatus().isReadyToBecomeActive());
+        rm.adminService.getServiceStatus().isReadyToBecomeActive());
     checkMonitorHealth();
 
     rm.start();
@@ -123,27 +128,27 @@ public class TestRMHA {
     checkStandbyRMFunctionality();
 
     // 1. Transition to Standby - must be a no-op
-    rm.haService.transitionToStandby(requestInfo);
+    rm.adminService.transitionToStandby(requestInfo);
     checkMonitorHealth();
     checkStandbyRMFunctionality();
 
     // 2. Transition to active
-    rm.haService.transitionToActive(requestInfo);
+    rm.adminService.transitionToActive(requestInfo);
     checkMonitorHealth();
     checkActiveRMFunctionality();
 
     // 3. Transition to active - no-op
-    rm.haService.transitionToActive(requestInfo);
+    rm.adminService.transitionToActive(requestInfo);
     checkMonitorHealth();
     checkActiveRMFunctionality();
 
     // 4. Transition to standby
-    rm.haService.transitionToStandby(requestInfo);
+    rm.adminService.transitionToStandby(requestInfo);
     checkMonitorHealth();
     checkStandbyRMFunctionality();
 
     // 5. Transition to active to check Active->Standby->Active works
-    rm.haService.transitionToActive(requestInfo);
+    rm.adminService.transitionToActive(requestInfo);
     checkMonitorHealth();
     checkActiveRMFunctionality();
 
@@ -151,11 +156,70 @@ public class TestRMHA {
     // become active
     rm.stop();
     assertEquals(STATE_ERR, HAServiceState.STOPPING,
-        rm.haService.getServiceStatus().getState());
+        rm.adminService.getServiceStatus().getState());
     assertFalse("RM is ready to become active even after it is stopped",
-        rm.haService.getServiceStatus().isReadyToBecomeActive());
+        rm.adminService.getServiceStatus().isReadyToBecomeActive());
     assertFalse("Active RM services are started",
         rm.areActiveServicesRunning());
     checkMonitorHealth();
+  }
+
+  @Test
+  public void testTransitionsWhenAutomaticFailoverEnabled() throws IOException {
+    final String ERR_UNFORCED_REQUEST = "User request succeeded even when " +
+        "automatic failover is enabled";
+
+    Configuration conf = new YarnConfiguration(configuration);
+    conf.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, true);
+
+    rm = new MockRM(conf);
+    rm.init(conf);
+    rm.start();
+    StateChangeRequestInfo requestInfo = new StateChangeRequestInfo(
+        HAServiceProtocol.RequestSource.REQUEST_BY_USER);
+
+    // Transition to standby
+    try {
+      rm.adminService.transitionToStandby(requestInfo);
+      fail(ERR_UNFORCED_REQUEST);
+    } catch (AccessControlException e) {
+      // expected
+    }
+    checkMonitorHealth();
+    checkStandbyRMFunctionality();
+
+    // Transition to active
+    try {
+      rm.adminService.transitionToActive(requestInfo);
+      fail(ERR_UNFORCED_REQUEST);
+    } catch (AccessControlException e) {
+      // expected
+    }
+    checkMonitorHealth();
+    checkStandbyRMFunctionality();
+
+
+    final String ERR_FORCED_REQUEST = "Forced request by user should work " +
+        "even if automatic failover is enabled";
+    requestInfo = new StateChangeRequestInfo(
+        HAServiceProtocol.RequestSource.REQUEST_BY_USER_FORCED);
+
+    // Transition to standby
+    try {
+      rm.adminService.transitionToStandby(requestInfo);
+    } catch (AccessControlException e) {
+      fail(ERR_FORCED_REQUEST);
+    }
+    checkMonitorHealth();
+    checkStandbyRMFunctionality();
+
+    // Transition to active
+    try {
+      rm.adminService.transitionToActive(requestInfo);
+    } catch (AccessControlException e) {
+      fail(ERR_FORCED_REQUEST);
+    }
+    checkMonitorHealth();
+    checkActiveRMFunctionality();
   }
 }

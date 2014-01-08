@@ -122,15 +122,17 @@ public class JMXJsonServlet extends HttpServlet {
 
   private static final long serialVersionUID = 1L;
 
-  // ----------------------------------------------------- Instance Variables
   private static final String CALLBACK_PARAM = "callback";
 
   /**
    * MBean server.
    */
-  protected transient MBeanServer mBeanServer = null;
+  protected transient MBeanServer mBeanServer;
 
-  // --------------------------------------------------------- Public Methods
+  /**
+   * Json Factory to create Json generators for write objects in json format
+   */
+  protected transient JsonFactory jsonFactory;
   /**
    * Initialize this servlet.
    */
@@ -138,6 +140,7 @@ public class JMXJsonServlet extends HttpServlet {
   public void init() throws ServletException {
     // Retrieve the MBean server
     mBeanServer = ManagementFactory.getPlatformMBeanServer();
+    jsonFactory = new JsonFactory();
   }
 
   /**
@@ -150,81 +153,70 @@ public class JMXJsonServlet extends HttpServlet {
    */
   @Override
   public void doGet(HttpServletRequest request, HttpServletResponse response) {
-    String jsonpcb = null;
-    PrintWriter writer = null;
     try {
       if (!HttpServer.isInstrumentationAccessAllowed(getServletContext(),
                                                      request, response)) {
         return;
       }
-      
       JsonGenerator jg = null;
-
-      writer = response.getWriter();
+      String jsonpcb = null;
+      PrintWriter writer = null;
+      try {
+        writer = response.getWriter();
  
-      // "callback" parameter implies JSONP outpout
-      jsonpcb = request.getParameter(CALLBACK_PARAM);
-      if (jsonpcb != null) {
-        response.setContentType("application/javascript; charset=utf8");
-        writer.write(jsonpcb + "(");
-      } else {
-        response.setContentType("application/json; charset=utf8");
-      }
+        // "callback" parameter implies JSONP outpout
+        jsonpcb = request.getParameter(CALLBACK_PARAM);
+        if (jsonpcb != null) {
+          response.setContentType("application/javascript; charset=utf8");
+          writer.write(jsonpcb + "(");
+        } else {
+          response.setContentType("application/json; charset=utf8");
+        }
 
-      JsonFactory jsonFactory = new JsonFactory();
-      jg = jsonFactory.createJsonGenerator(writer);
-      jg.disable(JsonGenerator.Feature.AUTO_CLOSE_TARGET);
-      jg.useDefaultPrettyPrinter();
-      jg.writeStartObject();
+        jg = jsonFactory.createJsonGenerator(writer);
+        jg.disable(JsonGenerator.Feature.AUTO_CLOSE_TARGET);
+        jg.useDefaultPrettyPrinter();
+        jg.writeStartObject();
 
-      if (mBeanServer == null) {
-        jg.writeStringField("result", "ERROR");
-        jg.writeStringField("message", "No MBeanServer could be found");
-        jg.close();
-        LOG.error("No MBeanServer could be found.");
-        response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-        return;
-      }
-      
-      // query per mbean attribute
-      String getmethod = request.getParameter("get");
-      if (getmethod != null) {
-        String[] splitStrings = getmethod.split("\\:\\:");
-        if (splitStrings.length != 2) {
-          jg.writeStringField("result", "ERROR");
-          jg.writeStringField("message", "query format is not as expected.");
-          jg.close();
-          response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+        // query per mbean attribute
+        String getmethod = request.getParameter("get");
+        if (getmethod != null) {
+          String[] splitStrings = getmethod.split("\\:\\:");
+          if (splitStrings.length != 2) {
+            jg.writeStringField("result", "ERROR");
+            jg.writeStringField("message", "query format is not as expected.");
+            jg.flush();
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            return;
+          }
+          listBeans(jg, new ObjectName(splitStrings[0]), splitStrings[1],
+              response);
           return;
         }
-        listBeans(jg, new ObjectName(splitStrings[0]), splitStrings[1],
-            response);
-        jg.close();
-        return;
-        
-      }
 
-      // query per mbean
-      String qry = request.getParameter("qry");
-      if (qry == null) {
-        qry = "*:*";
+        // query per mbean
+        String qry = request.getParameter("qry");
+        if (qry == null) {
+          qry = "*:*";
+        }
+        listBeans(jg, new ObjectName(qry), null, response);
+      } finally {
+        if (jg != null) {
+          jg.close();
+        }
+        if (jsonpcb != null) {
+           writer.write(");");
+        }
+        if (writer != null) {
+          writer.close();
+        }
       }
-      listBeans(jg, new ObjectName(qry), null, response);
-      jg.close();
-
-    } catch ( IOException e ) {
+    } catch (IOException e) {
       LOG.error("Caught an exception while processing JMX request", e);
       response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-    } catch ( MalformedObjectNameException e ) {
+    } catch (MalformedObjectNameException e) {
       LOG.error("Caught an exception while processing JMX request", e);
       response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-    } finally {
-      if (jsonpcb != null) {
-         writer.write(");");
-      }
-      if (writer != null) {
-        writer.close();
-      }
     }
   }
 

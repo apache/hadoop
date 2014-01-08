@@ -299,7 +299,7 @@ public class WritableRpcEngine implements RpcEngine {
 
   /** An RPC Server. */
   public static class Server extends RPC.Server {
-    /**
+    /** 
      * Construct an RPC server.
      * @param instance the instance whose methods will be called
      * @param conf the configuration to use

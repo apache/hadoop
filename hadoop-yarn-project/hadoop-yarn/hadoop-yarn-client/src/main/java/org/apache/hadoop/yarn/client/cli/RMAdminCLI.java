@@ -122,13 +122,13 @@ public class RMAdminCLI extends HAAdmin {
       }
     }
     String space = (usageInfo.args == "") ? "" : " ";
-    builder.append("Usage: java RMAdmin ["
+    builder.append("Usage: yarn rmadmin ["
         + cmd + space + usageInfo.args
         + "]\n");
   }
 
   private static void buildUsageMsg(StringBuilder builder) {
-    builder.append("Usage: java RMAdmin");
+    builder.append("Usage: yarn rmadmin\n");
     for (String cmdKey : ADMIN_USAGE.keySet()) {
       UsageInfo usageInfo = ADMIN_USAGE.get(cmdKey);
       builder.append("   " + cmdKey + " " + usageInfo.args + "\n");

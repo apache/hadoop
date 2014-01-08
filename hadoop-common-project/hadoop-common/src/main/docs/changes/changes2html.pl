@@ -242,7 +242,11 @@ for my $rel (@releases) {
 
       $item =~ s:\s*(\([^)"]+?\))\s*$:<br />$1:;       # Separate attribution
       $item =~ s:\n{2,}:\n<p/>\n:g;                    # Keep paragraph breaks
-      $item =~ s{(?:${jira_url_prefix})?(HADOOP-\d+)}  # Link to JIRA
+      $item =~ s{(?:${jira_url_prefix})?(HADOOP-\d+)}  # Link to JIRA Common
+                {<a href="${jira_url_prefix}$1">$1</a>}g;
+      $item =~ s{(?:${jira_url_prefix})?(HDFS-\d+)}    # Link to JIRA Hdfs
+                {<a href="${jira_url_prefix}$1">$1</a>}g;
+      $item =~ s{(?:${jira_url_prefix})?(MAPREDUCE-\d+)}  # Link to JIRA MR
                 {<a href="${jira_url_prefix}$1">$1</a>}g;
       print "      <li>$item</li>\n";
     }

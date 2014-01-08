@@ -19,14 +19,17 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+
+import junit.framework.Assert;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -57,7 +60,10 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
+import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.util.Time;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -207,9 +213,9 @@ public class TestINodeFile {
       // Call FSDirectory#unprotectedSetQuota which calls
       // INodeDirectory#replaceChild
       dfs.setQuota(dir, Long.MAX_VALUE - 1, replication * fileLen * 10);
-      INode dirNode = fsdir.getINode(dir.toString());
+      INodeDirectory dirNode = getDir(fsdir, dir);
       assertEquals(dir.toString(), dirNode.getFullPathName());
-      assertTrue(dirNode instanceof INodeDirectoryWithQuota);
+      assertTrue(dirNode.isWithQuota());
       
       final Path newDir = new Path("/newdir");
       final Path newFile = new Path(newDir, "file");
@@ -281,14 +287,6 @@ public class TestINodeFile {
         assertTrue(fnfe.getMessage().contains("File does not exist"));
       }
 
-      //cast to INodeFileUnderConstruction, should fail
-      try {
-        INodeFileUnderConstruction.valueOf(from, path);
-        fail();
-      } catch(FileNotFoundException fnfe) {
-        assertTrue(fnfe.getMessage().contains("File does not exist"));
-      }
-
       //cast to INodeDirectory, should fail
       try {
         INodeDirectory.valueOf(from, path);
@@ -305,14 +303,6 @@ public class TestINodeFile {
       final INodeFile f = INodeFile.valueOf(from, path);
       assertTrue(f == from);
 
-      //cast to INodeFileUnderConstruction, should fail
-      try {
-        INodeFileUnderConstruction.valueOf(from, path);
-        fail();
-      } catch(IOException ioe) {
-        assertTrue(ioe.getMessage().contains("File is not under construction"));
-      }
-
       //cast to INodeDirectory, should fail
       try {
         INodeDirectory.valueOf(from, path);
@@ -323,18 +313,13 @@ public class TestINodeFile {
     }
 
     {//cast from INodeFileUnderConstruction
-      final INode from = new INodeFileUnderConstruction(
-          INodeId.GRANDFATHER_INODE_ID, perm, replication, 0L, 0L, "client",
-          "machine", null);
+      final INode from = new INodeFile(
+          INodeId.GRANDFATHER_INODE_ID, null, perm, 0L, 0L, null, replication, 1024L);
+      from.asFile().toUnderConstruction("client", "machine", null);
     
       //cast to INodeFile, should success
       final INodeFile f = INodeFile.valueOf(from, path);
       assertTrue(f == from);
-
-      //cast to INodeFileUnderConstruction, should success
-      final INodeFileUnderConstruction u = INodeFileUnderConstruction.valueOf(
-          from, path);
-      assertTrue(u == from);
 
       //cast to INodeDirectory, should fail
       try {
@@ -352,14 +337,6 @@ public class TestINodeFile {
       //cast to INodeFile, should fail
       try {
         INodeFile.valueOf(from, path);
-        fail();
-      } catch(FileNotFoundException fnfe) {
-        assertTrue(fnfe.getMessage().contains("Path is not a file"));
-      }
-
-      //cast to INodeFileUnderConstruction, should fail
-      try {
-        INodeFileUnderConstruction.valueOf(from, path);
         fail();
       } catch(FileNotFoundException fnfe) {
         assertTrue(fnfe.getMessage().contains("Path is not a file"));
@@ -805,7 +782,7 @@ public class TestINodeFile {
       }
       System.out.println("Adding component " + DFSUtil.bytes2String(component));
       dir = new INodeDirectory(++id, component, permstatus, 0);
-      prev.addChild(dir, false, null, null);
+      prev.addChild(dir, false, Snapshot.CURRENT_STATE_ID);
       prev = dir;
     }
     return dir; // Last Inode in the chain
@@ -896,10 +873,57 @@ public class TestINodeFile {
     }
   }
   
+  private static INodeDirectory getDir(final FSDirectory fsdir, final Path dir)
+      throws IOException {
+    final String dirStr = dir.toString();
+    return INodeDirectory.valueOf(fsdir.getINode(dirStr), dirStr);
+  }
+
+  /**
+   * Test whether the inode in inodeMap has been replaced after regular inode
+   * replacement
+   */
+  @Test
+  public void testInodeReplacement() throws Exception {
+    final Configuration conf = new Configuration();
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+      cluster.waitActive();
+      final DistributedFileSystem hdfs = cluster.getFileSystem();
+      final FSDirectory fsdir = cluster.getNamesystem().getFSDirectory();
+
+      final Path dir = new Path("/dir");
+      hdfs.mkdirs(dir);
+      INodeDirectory dirNode = getDir(fsdir, dir);
+      INode dirNodeFromNode = fsdir.getInode(dirNode.getId());
+      assertSame(dirNode, dirNodeFromNode);
+
+      // set quota to dir, which leads to node replacement
+      hdfs.setQuota(dir, Long.MAX_VALUE - 1, Long.MAX_VALUE - 1);
+      dirNode = getDir(fsdir, dir);
+      assertTrue(dirNode.isWithQuota());
+      // the inode in inodeMap should also be replaced
+      dirNodeFromNode = fsdir.getInode(dirNode.getId());
+      assertSame(dirNode, dirNodeFromNode);
+
+      hdfs.setQuota(dir, -1, -1);
+      dirNode = getDir(fsdir, dir);
+      // the inode in inodeMap should also be replaced
+      dirNodeFromNode = fsdir.getInode(dirNode.getId());
+      assertSame(dirNode, dirNodeFromNode);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+  
   @Test
   public void testDotdotInodePath() throws Exception {
     final Configuration conf = new Configuration();
     MiniDFSCluster cluster = null;
+    DFSClient client = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
       cluster.waitActive();
@@ -912,7 +936,7 @@ public class TestINodeFile {
       long parentId = fsdir.getINode("/").getId();
       String testPath = "/.reserved/.inodes/" + dirId + "/..";
 
-      DFSClient client = new DFSClient(NameNode.getAddress(conf), conf);
+      client = new DFSClient(NameNode.getAddress(conf), conf);
       HdfsFileStatus status = client.getFileInfo(testPath);
       assertTrue(parentId == status.getFileId());
       
@@ -922,6 +946,7 @@ public class TestINodeFile {
       assertTrue(parentId == status.getFileId());
       
     } finally {
+      IOUtils.cleanup(LOG, client);
       if (cluster != null) {
         cluster.shutdown();
       }
@@ -972,5 +997,25 @@ public class TestINodeFile {
         cluster.shutdown();
       }
     }
+  }
+
+  @Test
+  public void testFileUnderConstruction() {
+    replication = 3;
+    final INodeFile file = new INodeFile(INodeId.GRANDFATHER_INODE_ID, null,
+        perm, 0L, 0L, null, replication, 1024L);
+    assertFalse(file.isUnderConstruction());
+
+    final String clientName = "client";
+    final String clientMachine = "machine";
+    file.toUnderConstruction(clientName, clientMachine, null);
+    assertTrue(file.isUnderConstruction());
+    FileUnderConstructionFeature uc = file.getFileUnderConstructionFeature();
+    assertEquals(clientName, uc.getClientName());
+    assertEquals(clientMachine, uc.getClientMachine());
+    Assert.assertNull(uc.getClientNode());
+
+    file.toCompleteFile(Time.now());
+    assertFalse(file.isUnderConstruction());
   }
 }

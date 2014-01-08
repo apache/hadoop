@@ -495,34 +495,6 @@ public class TestSaveNamespace {
     }
   }
   
-  /**
-   * Test for save namespace should succeed when parent directory renamed with
-   * open lease and destination directory exist. 
-   * This test is a regression for HDFS-2827
-   */
-  @Test
-  public void testSaveNamespaceWithRenamedLease() throws Exception {
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(new Configuration())
-        .numDataNodes(1).build();
-    cluster.waitActive();
-    DistributedFileSystem fs = (DistributedFileSystem) cluster.getFileSystem();
-    OutputStream out = null;
-    try {
-      fs.mkdirs(new Path("/test-target"));
-      out = fs.create(new Path("/test-source/foo")); // don't close
-      fs.rename(new Path("/test-source/"), new Path("/test-target/"));
-
-      fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
-      cluster.getNameNodeRpc().saveNamespace();
-      fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
-    } finally {
-      IOUtils.cleanup(LOG, out, fs);
-      if (cluster != null) {
-        cluster.shutdown();
-      }
-    }
-  }
-  
   @Test(timeout=20000)
   public void testCancelSaveNamespace() throws Exception {
     Configuration conf = getConf();
@@ -599,6 +571,34 @@ public class TestSaveNamespace {
     } finally {
       if (fsn != null) {
         fsn.close();
+      }
+    }
+  }
+
+  /**
+   * Test for save namespace should succeed when parent directory renamed with
+   * open lease and destination directory exist. 
+   * This test is a regression for HDFS-2827
+   */
+  @Test (timeout=30000)
+  public void testSaveNamespaceWithRenamedLease() throws Exception {
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(new Configuration())
+        .numDataNodes(1).build();
+    cluster.waitActive();
+    DistributedFileSystem fs = (DistributedFileSystem) cluster.getFileSystem();
+    OutputStream out = null;
+    try {
+      fs.mkdirs(new Path("/test-target"));
+      out = fs.create(new Path("/test-source/foo")); // don't close
+      fs.rename(new Path("/test-source/"), new Path("/test-target/"));
+
+      fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      cluster.getNameNodeRpc().saveNamespace();
+      fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    } finally {
+      IOUtils.cleanup(LOG, out, fs);
+      if (cluster != null) {
+        cluster.shutdown();
       }
     }
   }

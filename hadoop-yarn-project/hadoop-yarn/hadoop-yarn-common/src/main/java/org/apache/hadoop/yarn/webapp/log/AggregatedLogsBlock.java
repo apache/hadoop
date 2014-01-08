@@ -59,109 +59,113 @@ public class AggregatedLogsBlock extends HtmlBlock {
 
   @Override
   protected void render(Block html) {
-    ContainerId containerId = verifyAndGetContainerId(html);
-    NodeId nodeId = verifyAndGetNodeId(html);
-    String appOwner = verifyAndGetAppOwner(html);
-    LogLimits logLimits = verifyAndGetLogLimits(html);
-    if (containerId == null || nodeId == null || appOwner == null
-        || appOwner.isEmpty() || logLimits == null) {
-      return;
-    }
-    
-    ApplicationId applicationId =
-        containerId.getApplicationAttemptId().getApplicationId();
-    String logEntity = $(ENTITY_STRING);
-    if (logEntity == null || logEntity.isEmpty()) {
-      logEntity = containerId.toString();
-    }
-
-    if (!conf.getBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED,
-        YarnConfiguration.DEFAULT_LOG_AGGREGATION_ENABLED)) {
-      html.h1()
-          ._("Aggregation is not enabled. Try the nodemanager at " + nodeId)
-          ._();
-      return;
-    }
-    
-    Path remoteRootLogDir =
-        new Path(conf.get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
-            YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR));
     AggregatedLogFormat.LogReader reader = null;
     try {
-      reader =
-          new AggregatedLogFormat.LogReader(conf,
-              LogAggregationUtils.getRemoteNodeLogFileForApp(
-                  remoteRootLogDir, applicationId, appOwner, nodeId,
-                  LogAggregationUtils.getRemoteNodeLogDirSuffix(conf)));
-    } catch (FileNotFoundException e) {
-      // ACLs not available till the log file is opened.
-      html.h1()
-          ._("Logs not available for "
-              + logEntity
-              + ". Aggregation may not be complete, "
-              + "Check back later or try the nodemanager at "
-              + nodeId)._();
-      return;
-    } catch (IOException e) {
-      html.h1()._("Error getting logs for " + logEntity)._();
-      LOG.error("Error getting logs for " + logEntity, e);
-      return;
-    }
-
-    String owner = null;
-    Map<ApplicationAccessType, String> appAcls = null;
-    try {
-      owner = reader.getApplicationOwner();
-      appAcls = reader.getApplicationAcls();
-    } catch (IOException e) {
-      html.h1()._("Error getting logs for " + logEntity)._();
-      LOG.error("Error getting logs for " + logEntity, e);
-      return;
-    }
-    ApplicationACLsManager aclsManager = new ApplicationACLsManager(conf);
-    aclsManager.addApplication(applicationId, appAcls);
-
-    String remoteUser = request().getRemoteUser();
-    UserGroupInformation callerUGI = null;
-    if (remoteUser != null) {
-      callerUGI = UserGroupInformation.createRemoteUser(remoteUser);
-    }
-    if (callerUGI != null
-        && !aclsManager.checkAccess(callerUGI, ApplicationAccessType.VIEW_APP,
-            owner, applicationId)) {
-      html.h1()
-          ._("User [" + remoteUser
-              + "] is not authorized to view the logs for " + logEntity)._();
-      return;
-    }
-
-    String desiredLogType = $(CONTAINER_LOG_TYPE);
-    try {
-      AggregatedLogFormat.ContainerLogsReader logReader =
-          reader.getContainerLogsReader(containerId);
-      if (logReader == null) {
-        html.h1()._(
-            "Logs not available for " + logEntity
-                + ". Could be caused by the rentention policy")._();
+      ContainerId containerId = verifyAndGetContainerId(html);
+      NodeId nodeId = verifyAndGetNodeId(html);
+      String appOwner = verifyAndGetAppOwner(html);
+      LogLimits logLimits = verifyAndGetLogLimits(html);
+      if (containerId == null || nodeId == null || appOwner == null
+          || appOwner.isEmpty() || logLimits == null) {
         return;
       }
 
-      boolean foundLog = readContainerLogs(html, logReader, logLimits,
-          desiredLogType);
+      ApplicationId applicationId = containerId.getApplicationAttemptId()
+          .getApplicationId();
+      String logEntity = $(ENTITY_STRING);
+      if (logEntity == null || logEntity.isEmpty()) {
+        logEntity = containerId.toString();
+      }
 
-      if (!foundLog) {
-        if (desiredLogType.isEmpty()) {
-          html.h1("No logs available for container " + containerId.toString());
-        } else {
-          html.h1("Unable to locate '" + desiredLogType
-              + "' log for container " + containerId.toString());
+      if (!conf.getBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED,
+          YarnConfiguration.DEFAULT_LOG_AGGREGATION_ENABLED)) {
+        html.h1()
+            ._("Aggregation is not enabled. Try the nodemanager at " + nodeId)
+            ._();
+        return;
+      }
+
+      Path remoteRootLogDir = new Path(conf.get(
+          YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
+          YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR));
+
+      try {
+        reader = new AggregatedLogFormat.LogReader(conf,
+            LogAggregationUtils.getRemoteNodeLogFileForApp(remoteRootLogDir,
+                applicationId, appOwner, nodeId,
+                LogAggregationUtils.getRemoteNodeLogDirSuffix(conf)));
+      } catch (FileNotFoundException e) {
+        // ACLs not available till the log file is opened.
+        html.h1()
+            ._("Logs not available for " + logEntity
+                + ". Aggregation may not be complete, "
+                + "Check back later or try the nodemanager at " + nodeId)._();
+        return;
+      } catch (IOException e) {
+        html.h1()._("Error getting logs for " + logEntity)._();
+        LOG.error("Error getting logs for " + logEntity, e);
+        return;
+      }
+
+      String owner = null;
+      Map<ApplicationAccessType, String> appAcls = null;
+      try {
+        owner = reader.getApplicationOwner();
+        appAcls = reader.getApplicationAcls();
+      } catch (IOException e) {
+        html.h1()._("Error getting logs for " + logEntity)._();
+        LOG.error("Error getting logs for " + logEntity, e);
+        return;
+      }
+      ApplicationACLsManager aclsManager = new ApplicationACLsManager(conf);
+      aclsManager.addApplication(applicationId, appAcls);
+
+      String remoteUser = request().getRemoteUser();
+      UserGroupInformation callerUGI = null;
+      if (remoteUser != null) {
+        callerUGI = UserGroupInformation.createRemoteUser(remoteUser);
+      }
+      if (callerUGI != null
+          && !aclsManager.checkAccess(callerUGI,
+              ApplicationAccessType.VIEW_APP, owner, applicationId)) {
+        html.h1()
+            ._("User [" + remoteUser
+                + "] is not authorized to view the logs for " + logEntity)._();
+        return;
+      }
+
+      String desiredLogType = $(CONTAINER_LOG_TYPE);
+      try {
+        AggregatedLogFormat.ContainerLogsReader logReader = reader
+            .getContainerLogsReader(containerId);
+        if (logReader == null) {
+          html.h1()
+              ._("Logs not available for " + logEntity
+                  + ". Could be caused by the rentention policy")._();
+          return;
         }
+
+        boolean foundLog = readContainerLogs(html, logReader, logLimits,
+            desiredLogType);
+
+        if (!foundLog) {
+          if (desiredLogType.isEmpty()) {
+            html.h1("No logs available for container " + containerId.toString());
+          } else {
+            html.h1("Unable to locate '" + desiredLogType
+                + "' log for container " + containerId.toString());
+          }
+          return;
+        }
+      } catch (IOException e) {
+        html.h1()._("Error getting logs for " + logEntity)._();
+        LOG.error("Error getting logs for " + logEntity, e);
         return;
       }
-    } catch (IOException e) {
-      html.h1()._("Error getting logs for " + logEntity)._();
-      LOG.error("Error getting logs for " + logEntity, e);
-      return;
+    } finally {
+      if (reader != null) {
+        reader.close();
+      }
     }
   }
 

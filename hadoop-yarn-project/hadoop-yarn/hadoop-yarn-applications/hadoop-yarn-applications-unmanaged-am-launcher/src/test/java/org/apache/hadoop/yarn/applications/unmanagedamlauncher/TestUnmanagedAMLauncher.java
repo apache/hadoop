@@ -29,10 +29,17 @@ import java.io.OutputStream;
 import java.net.URL;
 
 import junit.framework.Assert;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
+import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.client.ClientRMProxy;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
 import org.junit.AfterClass;
@@ -122,8 +129,6 @@ public class TestUnmanagedAMLauncher {
       LOG.fatal("JAVA_HOME not defined. Test not running.");
       return;
     }
-    // start dist-shell with 0 containers because container launch will fail if
-    // there are no dist cache resources.
     String[] args = {
         "--classpath",
         classpath,
@@ -132,9 +137,8 @@ public class TestUnmanagedAMLauncher {
         "--cmd",
         javaHome
             + "/bin/java -Xmx512m "
-            + "org.apache.hadoop.yarn.applications.distributedshell.ApplicationMaster "
-            + "--container_memory 128 --num_containers 1 --priority 0 "
-            + "--shell_command " + (Shell.WINDOWS ? "dir" : "ls") };
+            + TestUnmanagedAMLauncher.class.getCanonicalName()
+            + " success" };
 
     LOG.info("Initializing Launcher");
     UnmanagedAMLauncher launcher = new UnmanagedAMLauncher(new Configuration(
@@ -157,8 +161,6 @@ public class TestUnmanagedAMLauncher {
       LOG.fatal("JAVA_HOME not defined. Test not running.");
       return;
     }
-
-    // remove shell command to make dist-shell fail in initialization itself
     String[] args = {
         "--classpath",
         classpath,
@@ -167,8 +169,8 @@ public class TestUnmanagedAMLauncher {
         "--cmd",
         javaHome
             + "/bin/java -Xmx512m "
-            + "org.apache.hadoop.yarn.applications.distributedshell.ApplicationMaster "
-            + "--container_memory 128 --num_containers 1 --priority 0" };
+            + TestUnmanagedAMLauncher.class.getCanonicalName()
+            + " failure" };
 
     LOG.info("Initializing Launcher");
     UnmanagedAMLauncher launcher = new UnmanagedAMLauncher(new Configuration(
@@ -185,4 +187,21 @@ public class TestUnmanagedAMLauncher {
     }
   }
 
+  // provide main method so this class can act as AM
+  public static void main(String[] args) throws Exception {
+    if (args[0].equals("success")) {
+      ApplicationMasterProtocol client = ClientRMProxy.createRMProxy(conf,
+          ApplicationMasterProtocol.class);
+      client.registerApplicationMaster(RegisterApplicationMasterRequest
+          .newInstance(NetUtils.getHostname(), -1, ""));
+      Thread.sleep(1000);
+      FinishApplicationMasterResponse resp =
+          client.finishApplicationMaster(FinishApplicationMasterRequest
+            .newInstance(FinalApplicationStatus.SUCCEEDED, "success", null));
+      assertTrue(resp.getIsUnregistered());
+      System.exit(0);
+    } else {
+      System.exit(1);
+    }
+  }
 }

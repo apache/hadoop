@@ -37,7 +37,7 @@ class MetricsRecordImpl extends AbstractMetricsRecord {
 
   /**
    * Construct a metrics record
-   * @param info  {@link MetricInfo} of the record
+   * @param info  {@link MetricsInfo} of the record
    * @param timestamp of the record
    * @param tags  of the record
    * @param metrics of the record

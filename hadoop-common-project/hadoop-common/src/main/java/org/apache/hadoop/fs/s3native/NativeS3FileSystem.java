@@ -582,35 +582,58 @@ public class NativeS3FileSystem extends FileSystem {
   public boolean rename(Path src, Path dst) throws IOException {
 
     String srcKey = pathToKey(makeAbsolute(src));
+    final String debugPreamble = "Renaming '" + src + "' to '" + dst + "' - ";
 
     if (srcKey.length() == 0) {
       // Cannot rename root of file system
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(debugPreamble +
+                  "returning false as cannot rename the root of a filesystem");
+      }
       return false;
     }
 
-    final String debugPreamble = "Renaming '" + src + "' to '" + dst + "' - ";
-
+    //get status of source
+    boolean srcIsFile;
+    try {
+      srcIsFile = getFileStatus(src).isFile();
+    } catch (FileNotFoundException e) {
+      //bail out fast if the source does not exist
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(debugPreamble + "returning false as src does not exist");
+      }
+      return false;
+    }
     // Figure out the final destination
-    String dstKey;
+    String dstKey = pathToKey(makeAbsolute(dst));
+
     try {
       boolean dstIsFile = getFileStatus(dst).isFile();
       if (dstIsFile) {
+        //destination is a file.
+        //you can't copy a file or a directory onto an existing file
+        //except for the special case of dest==src, which is a no-op
         if(LOG.isDebugEnabled()) {
           LOG.debug(debugPreamble +
-              "returning false as dst is an already existing file");
+              "returning without rename as dst is an already existing file");
         }
-        return false;
+        //exit, returning true iff the rename is onto self
+        return srcKey.equals(dstKey);
       } else {
+        //destination exists and is a directory
         if(LOG.isDebugEnabled()) {
           LOG.debug(debugPreamble + "using dst as output directory");
         }
+        //destination goes under the dst path, with the name of the
+        //source entry
         dstKey = pathToKey(makeAbsolute(new Path(dst, src.getName())));
       }
     } catch (FileNotFoundException e) {
+      //destination does not exist => the source file or directory
+      //is copied over with the name of the destination
       if(LOG.isDebugEnabled()) {
         LOG.debug(debugPreamble + "using dst as output destination");
       }
-      dstKey = pathToKey(makeAbsolute(dst));
       try {
         if (getFileStatus(dst.getParent()).isFile()) {
           if(LOG.isDebugEnabled()) {
@@ -628,16 +651,17 @@ public class NativeS3FileSystem extends FileSystem {
       }
     }
 
-    boolean srcIsFile;
-    try {
-      srcIsFile = getFileStatus(src).isFile();
-    } catch (FileNotFoundException e) {
-      if(LOG.isDebugEnabled()) {
-        LOG.debug(debugPreamble + "returning false as src does not exist");
+    //rename to self behavior follows Posix rules and is different
+    //for directories and files -the return code is driven by src type
+    if (srcKey.equals(dstKey)) {
+      //fully resolved destination key matches source: fail
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(debugPreamble + "renamingToSelf; returning true");
       }
-      return false;
+      return true;
     }
     if (srcIsFile) {
+      //source is a file; COPY then DELETE
       if(LOG.isDebugEnabled()) {
         LOG.debug(debugPreamble +
             "src is file, so doing copy then delete in S3");
@@ -645,9 +669,19 @@ public class NativeS3FileSystem extends FileSystem {
       store.copy(srcKey, dstKey);
       store.delete(srcKey);
     } else {
+      //src is a directory
       if(LOG.isDebugEnabled()) {
         LOG.debug(debugPreamble + "src is directory, so copying contents");
       }
+      //Verify dest is not a child of the parent
+      if (dstKey.startsWith(srcKey + "/")) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug(
+            debugPreamble + "cannot rename a directory to a subdirectory of self");
+        }
+        return false;
+      }
+      //create the subdir under the destination
       store.storeEmptyFile(dstKey + FOLDER_SUFFIX);
 
       List<String> keysToDelete = new ArrayList<String>();

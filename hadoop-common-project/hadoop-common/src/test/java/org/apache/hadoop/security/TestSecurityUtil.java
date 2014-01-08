@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.util.Locale;
 
 import javax.security.auth.kerberos.KerberosPrincipal;
 
@@ -112,7 +113,7 @@ public class TestSecurityUtil {
 
   @Test
   public void testLocalHostNameForNullOrWild() throws Exception {
-    String local = SecurityUtil.getLocalHostName();
+    String local = SecurityUtil.getLocalHostName().toLowerCase(Locale.US);
     assertEquals("hdfs/" + local + "@REALM",
                  SecurityUtil.getServerPrincipal("hdfs/_HOST@REALM", (String)null));
     assertEquals("hdfs/" + local + "@REALM",

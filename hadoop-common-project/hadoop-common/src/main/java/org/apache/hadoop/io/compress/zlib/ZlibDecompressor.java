@@ -23,6 +23,7 @@ import java.nio.Buffer;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.io.compress.Decompressor;
+import org.apache.hadoop.io.compress.DirectDecompressor;
 import org.apache.hadoop.util.NativeCodeLoader;
 
 /**
@@ -106,7 +107,7 @@ public class ZlibDecompressor implements Decompressor {
    */
   public ZlibDecompressor(CompressionHeader header, int directBufferSize) {
     this.header = header;
-    this.directBufferSize = directBufferSize;
+    this.directBufferSize = directBufferSize;    
     compressedDirectBuf = ByteBuffer.allocateDirect(directBufferSize);
     uncompressedDirectBuf = ByteBuffer.allocateDirect(directBufferSize);
     uncompressedDirectBuf.position(directBufferSize);
@@ -310,4 +311,86 @@ public class ZlibDecompressor implements Decompressor {
   private native static int getRemaining(long strm);
   private native static void reset(long strm);
   private native static void end(long strm);
+    
+  int inflateDirect(ByteBuffer src, ByteBuffer dst) throws IOException {
+    assert (this instanceof ZlibDirectDecompressor);
+    
+    ByteBuffer presliced = dst;
+    if (dst.position() > 0) {
+      presliced = dst;
+      dst = dst.slice();
+    }
+
+    Buffer originalCompressed = compressedDirectBuf;
+    Buffer originalUncompressed = uncompressedDirectBuf;
+    int originalBufferSize = directBufferSize;
+    compressedDirectBuf = src;
+    compressedDirectBufOff = src.position();
+    compressedDirectBufLen = src.remaining();
+    uncompressedDirectBuf = dst;
+    directBufferSize = dst.remaining();
+    int n = 0;
+    try {
+      n = inflateBytesDirect();
+      presliced.position(presliced.position() + n);
+      if (compressedDirectBufLen > 0) {
+        src.position(compressedDirectBufOff);
+      } else {
+        src.position(src.limit());
+      }
+    } finally {
+      compressedDirectBuf = originalCompressed;
+      uncompressedDirectBuf = originalUncompressed;
+      compressedDirectBufOff = 0;
+      compressedDirectBufLen = 0;
+      directBufferSize = originalBufferSize;
+    }
+    return n;
+  }
+  
+  public static class ZlibDirectDecompressor 
+      extends ZlibDecompressor implements DirectDecompressor {
+    public ZlibDirectDecompressor() {
+      super(CompressionHeader.DEFAULT_HEADER, 0);
+    }
+
+    public ZlibDirectDecompressor(CompressionHeader header, int directBufferSize) {
+      super(header, directBufferSize);
+    }
+    
+    @Override
+    public boolean finished() {
+      return (endOfInput && super.finished());
+    }
+    
+    @Override
+    public void reset() {
+      super.reset();
+      endOfInput = true;
+    }
+    
+    private boolean endOfInput;
+
+    @Override
+    public synchronized void decompress(ByteBuffer src, ByteBuffer dst)
+        throws IOException {
+      assert dst.isDirect() : "dst.isDirect()";
+      assert src.isDirect() : "src.isDirect()";
+      assert dst.remaining() > 0 : "dst.remaining() > 0";      
+      this.inflateDirect(src, dst);
+      endOfInput = !src.hasRemaining();
+    }
+
+    @Override
+    public synchronized void setDictionary(byte[] b, int off, int len) {
+      throw new UnsupportedOperationException(
+          "byte[] arrays are not supported for DirectDecompressor");
+    }
+
+    @Override
+    public synchronized int decompress(byte[] b, int off, int len) {
+      throw new UnsupportedOperationException(
+          "byte[] arrays are not supported for DirectDecompressor");
+    }
+  }
 }

@@ -32,6 +32,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.RMStateVersion;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationAttemptStateDataPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationStateDataPBImpl;
 import org.apache.hadoop.yarn.util.ConverterUtils;
@@ -43,12 +44,15 @@ import com.google.common.annotations.VisibleForTesting;
 public class MemoryRMStateStore extends RMStateStore {
   
   RMState state = new RMState();
-  
   @VisibleForTesting
   public RMState getState() {
     return state;
   }
-  
+
+  @Override
+  public void checkVersion() throws Exception {
+  }
+
   @Override
   public synchronized RMState loadState() throws Exception {
     // return a copy of the state to allow for modification of the real state
@@ -76,7 +80,7 @@ public class MemoryRMStateStore extends RMStateStore {
   }
 
   @Override
-  public void storeApplicationStateInternal(String appId, 
+  public void storeApplicationStateInternal(ApplicationId appId,
                                      ApplicationStateDataPBImpl appStateData)
       throws Exception {
     ApplicationState appState =
@@ -84,11 +88,11 @@ public class MemoryRMStateStore extends RMStateStore {
           appStateData.getStartTime(),
           appStateData.getApplicationSubmissionContext(),
           appStateData.getUser());
-    state.appState.put(appState.getAppId(), appState);
+    state.appState.put(appId, appState);
   }
 
   @Override
-  public void updateApplicationStateInternal(String appId,
+  public void updateApplicationStateInternal(ApplicationId appId,
       ApplicationStateDataPBImpl appStateData) throws Exception {
     ApplicationState updatedAppState =
         new ApplicationState(appStateData.getSubmitTime(),
@@ -98,21 +102,19 @@ public class MemoryRMStateStore extends RMStateStore {
           appStateData.getDiagnostics(), appStateData.getFinishTime());
     LOG.info("Updating final state " + appStateData.getState() + " for app: "
         + appId);
-    ApplicationId applicationId = updatedAppState.getAppId();
-    if (state.appState.get(applicationId) != null) {
+    if (state.appState.get(appId) != null) {
       // add the earlier attempts back
       updatedAppState.attempts
-        .putAll(state.appState.get(applicationId).attempts);
+        .putAll(state.appState.get(appId).attempts);
     }
-    state.appState.put(applicationId, updatedAppState);
+    state.appState.put(appId, updatedAppState);
   }
 
   @Override
-  public synchronized void storeApplicationAttemptStateInternal(String attemptIdStr, 
-                            ApplicationAttemptStateDataPBImpl attemptStateData)
-                            throws Exception {
-    ApplicationAttemptId attemptId = ConverterUtils
-                                        .toApplicationAttemptId(attemptIdStr);
+  public synchronized void storeApplicationAttemptStateInternal(
+      ApplicationAttemptId appAttemptId,
+      ApplicationAttemptStateDataPBImpl attemptStateData)
+      throws Exception {
     Credentials credentials = null;
     if(attemptStateData.getAppAttemptTokens() != null){
       DataInputByteBuffer dibb = new DataInputByteBuffer();
@@ -121,7 +123,7 @@ public class MemoryRMStateStore extends RMStateStore {
       credentials.readTokenStorageStream(dibb);
     }
     ApplicationAttemptState attemptState =
-        new ApplicationAttemptState(attemptId,
+        new ApplicationAttemptState(appAttemptId,
           attemptStateData.getMasterContainer(), credentials,
           attemptStateData.getStartTime());
 
@@ -135,10 +137,9 @@ public class MemoryRMStateStore extends RMStateStore {
 
   @Override
   public synchronized void updateApplicationAttemptStateInternal(
-      String attemptIdStr, ApplicationAttemptStateDataPBImpl attemptStateData)
+      ApplicationAttemptId appAttemptId,
+      ApplicationAttemptStateDataPBImpl attemptStateData)
       throws Exception {
-    ApplicationAttemptId attemptId =
-        ConverterUtils.toApplicationAttemptId(attemptIdStr);
     Credentials credentials = null;
     if (attemptStateData.getAppAttemptTokens() != null) {
       DataInputByteBuffer dibb = new DataInputByteBuffer();
@@ -147,7 +148,7 @@ public class MemoryRMStateStore extends RMStateStore {
       credentials.readTokenStorageStream(dibb);
     }
     ApplicationAttemptState updatedAttemptState =
-        new ApplicationAttemptState(attemptId,
+        new ApplicationAttemptState(appAttemptId,
           attemptStateData.getMasterContainer(), credentials,
           attemptStateData.getStartTime(), attemptStateData.getState(),
           attemptStateData.getFinalTrackingUrl(),
@@ -167,8 +168,8 @@ public class MemoryRMStateStore extends RMStateStore {
   }
 
   @Override
-  public synchronized void removeApplicationState(ApplicationState appState) 
-                                                            throws Exception {
+  public synchronized void removeApplicationStateInternal(
+      ApplicationState appState) throws Exception {
     ApplicationId appId = appState.getAppId();
     ApplicationState removed = state.appState.remove(appId);
     if (removed == null) {
@@ -223,5 +224,19 @@ public class MemoryRMStateStore extends RMStateStore {
     Set<DelegationKey> rmDTMasterKeyState =
         state.rmSecretManagerState.getMasterKeyState();
     rmDTMasterKeyState.remove(delegationKey);
+  }
+
+  @Override
+  protected RMStateVersion loadVersion() throws Exception {
+    return null;
+  }
+
+  @Override
+  protected void storeVersion() throws Exception {
+  }
+
+  @Override
+  protected RMStateVersion getCurrentVersion() {
+    return null;
   }
 }

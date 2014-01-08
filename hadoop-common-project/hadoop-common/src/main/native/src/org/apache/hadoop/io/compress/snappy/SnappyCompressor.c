@@ -134,11 +134,11 @@ JNIEXPORT jint JNICALL Java_org_apache_hadoop_io_compress_snappy_SnappyCompresso
   ret = dlsym_snappy_compress(uncompressed_bytes, uncompressed_direct_buf_len,
         compressed_bytes, &buf_len);
   if (ret != SNAPPY_OK){
-    THROW(env, "Ljava/lang/InternalError", "Could not compress data. Buffer length is too small.");
+    THROW(env, "java/lang/InternalError", "Could not compress data. Buffer length is too small.");
     return 0;
   }
   if (buf_len > JINT_MAX) {
-    THROW(env, "Ljava/lang/InternalError", "Invalid return buffer length.");
+    THROW(env, "java/lang/InternalError", "Invalid return buffer length.");
     return 0;
   }
 

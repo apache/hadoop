@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hdfs;
+
 import static org.junit.Assert.assertEquals;
 
 import org.apache.commons.logging.LogFactory;
@@ -34,8 +35,7 @@ import org.apache.log4j.Level;
 import org.junit.Test;
 
 /**
- * This class tests that a file need not be closed before its
- * data can be read by another client.
+ * This class tests client lease recovery.
  */
 public class TestFileCreationClient {
   static final String DIR = "/" + TestFileCreationClient.class.getSimpleName() + "/";

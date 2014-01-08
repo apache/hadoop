@@ -86,7 +86,7 @@ public abstract class QueueACLsTestBase {
       protected ClientRMService createClientRMService() {
         return new ClientRMService(getRMContext(), this.scheduler,
           this.rmAppManager, this.applicationACLsManager,
-          this.queueACLsManager, this.rmDTSecretManager);
+          this.queueACLsManager, getRMDTSecretManager());
       };
 
       @Override

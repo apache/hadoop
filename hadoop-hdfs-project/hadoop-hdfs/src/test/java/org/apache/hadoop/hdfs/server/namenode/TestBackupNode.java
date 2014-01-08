@@ -67,6 +67,10 @@ public class TestBackupNode {
   }
   
   static final String BASE_DIR = MiniDFSCluster.getBaseDirectory();
+  
+  static final long seed = 0xDEADBEEFL;
+  static final int blockSize = 4096;
+  static final int fileSize = 8192;
 
   @Before
   public void setUp() throws Exception {
@@ -193,12 +197,22 @@ public class TestBackupNode {
       
       // do some edits
       assertTrue(fileSys.mkdirs(new Path("/edit-while-bn-down")));
-      
+  
       // start a new backup node
       backup = startBackupNode(conf, StartupOption.BACKUP, 1);
 
       testBNInSync(cluster, backup, 4);
       assertNotNull(backup.getNamesystem().getFileInfo("/edit-while-bn-down", false));
+      
+      // Trigger an unclean shutdown of the backup node. Backup node will not
+      // unregister from the active when this is done simulating a node crash.
+      backup.stop(false);
+           
+      // do some edits on the active. This should go through without failing.
+      // This will verify that active is still up and can add entries to
+      // master editlog.
+      assertTrue(fileSys.mkdirs(new Path("/edit-while-bn-down-2")));
+      
     } finally {
       LOG.info("Shutting down...");
       if (backup != null) backup.stop();
@@ -351,7 +365,8 @@ public class TestBackupNode {
           + NetUtils.getHostPortString(add)).toUri(), conf);
       boolean canWrite = true;
       try {
-        TestCheckpoint.writeFile(bnFS, file3, replication);
+        DFSTestUtil.createFile(bnFS, file3, fileSize, fileSize, blockSize,
+            replication, seed);
       } catch (IOException eio) {
         LOG.info("Write to " + backup.getRole() + " failed as expected: ", eio);
         canWrite = false;
@@ -369,7 +384,9 @@ public class TestBackupNode {
       assertEquals("Reads to BackupNode are allowed, but not CheckpointNode.",
           canRead, backup.isRole(NamenodeRole.BACKUP));
 
-      TestCheckpoint.writeFile(fileSys, file3, replication);
+      DFSTestUtil.createFile(fileSys, file3, fileSize, fileSize, blockSize,
+          replication, seed);
+      
       TestCheckpoint.checkFile(fileSys, file3, replication);
       // should also be on BN right away
       assertTrue("file3 does not exist on BackupNode",
@@ -417,7 +434,6 @@ public class TestBackupNode {
   public void testCanReadData() throws IOException {
     Path file1 = new Path("/fileToRead.dat");
     Configuration conf = new HdfsConfiguration();
-    conf.setBoolean(DFSConfigKeys.DFS_PERSIST_BLOCKS_KEY, true);
     MiniDFSCluster cluster = null;
     FileSystem fileSys = null;
     BackupNode backup = null;
@@ -445,7 +461,7 @@ public class TestBackupNode {
       cluster.startDataNodes(conf, 3, true, StartupOption.REGULAR, null);
 
       DFSTestUtil.createFile(
-          fileSys, file1, 8192, (short)3, 0);
+          fileSys, file1, fileSize, fileSize, blockSize, (short)3, seed);
 
       // Read the same file from file systems pointing to NN and BN
       FileSystem bnFS = FileSystem.get(

@@ -23,6 +23,9 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.lang.reflect.Field;
+import java.nio.ByteBuffer;
+import java.nio.MappedByteBuffer;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -33,9 +36,10 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.io.SecureIOUtils.AlreadyExistsException;
 import org.apache.hadoop.util.NativeCodeLoader;
 import org.apache.hadoop.util.Shell;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+
+import sun.misc.Unsafe;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -94,9 +98,6 @@ public class NativeIO {
 
     private static final Log LOG = LogFactory.getLog(NativeIO.class);
 
-    @VisibleForTesting
-    public static CacheTracker cacheTracker = null;
-    
     private static boolean nativeLoaded = false;
     private static boolean fadvisePossible = true;
     private static boolean syncFileRangePossible = true;
@@ -107,10 +108,71 @@ public class NativeIO {
 
     private static long cacheTimeout = -1;
 
-    public static interface CacheTracker {
-      public void fadvise(String identifier, long offset, long len, int flags);
+    private static CacheManipulator cacheManipulator = new CacheManipulator();
+
+    public static CacheManipulator getCacheManipulator() {
+      return cacheManipulator;
     }
-    
+
+    public static void setCacheManipulator(CacheManipulator cacheManipulator) {
+      POSIX.cacheManipulator = cacheManipulator;
+    }
+
+    /**
+     * Used to manipulate the operating system cache.
+     */
+    @VisibleForTesting
+    public static class CacheManipulator {
+      public void mlock(String identifier, ByteBuffer buffer,
+          long len) throws IOException {
+        POSIX.mlock(buffer, len);
+      }
+
+      public long getMemlockLimit() {
+        return NativeIO.getMemlockLimit();
+      }
+
+      public long getOperatingSystemPageSize() {
+        return NativeIO.getOperatingSystemPageSize();
+      }
+
+      public void posixFadviseIfPossible(String identifier,
+        FileDescriptor fd, long offset, long len, int flags)
+            throws NativeIOException {
+        NativeIO.POSIX.posixFadviseIfPossible(identifier, fd, offset,
+            len, flags);
+      }
+
+      public boolean verifyCanMlock() {
+        return NativeIO.isAvailable();
+      }
+    }
+
+    /**
+     * A CacheManipulator used for testing which does not actually call mlock.
+     * This allows many tests to be run even when the operating system does not
+     * allow mlock, or only allows limited mlocking.
+     */
+    @VisibleForTesting
+    public static class NoMlockCacheManipulator extends CacheManipulator {
+      public void mlock(String identifier, ByteBuffer buffer,
+          long len) throws IOException {
+        LOG.info("mlocking " + identifier);
+      }
+
+      public long getMemlockLimit() {
+        return 1125899906842624L;
+      }
+
+      public long getOperatingSystemPageSize() {
+        return 4096;
+      }
+
+      public boolean verifyCanMlock() {
+        return true;
+      }
+    }
+
     static {
       if (NativeCodeLoader.isNativeCodeLoaded()) {
         try {
@@ -143,6 +205,12 @@ public class NativeIO {
      */
     public static boolean isAvailable() {
       return NativeCodeLoader.isNativeCodeLoaded() && nativeLoaded;
+    }
+
+    private static void assertCodeLoaded() throws IOException {
+      if (!isAvailable()) {
+        throw new IOException("NativeIO was not loaded");
+      }
     }
 
     /** Wrapper around open(2) */
@@ -187,12 +255,9 @@ public class NativeIO {
      *
      * @throws NativeIOException if there is an error with the syscall
      */
-    public static void posixFadviseIfPossible(String identifier,
+    static void posixFadviseIfPossible(String identifier,
         FileDescriptor fd, long offset, long len, int flags)
         throws NativeIOException {
-      if (cacheTracker != null) {
-        cacheTracker.fadvise(identifier, offset, len, flags);
-      }
       if (nativeLoaded && fadvisePossible) {
         try {
           posix_fadvise(fd, offset, len, flags);
@@ -222,6 +287,66 @@ public class NativeIO {
         } catch (UnsatisfiedLinkError ule) {
           syncFileRangePossible = false;
         }
+      }
+    }
+
+    static native void mlock_native(
+        ByteBuffer buffer, long len) throws NativeIOException;
+    static native void munlock_native(
+        ByteBuffer buffer, long len) throws NativeIOException;
+
+    /**
+     * Locks the provided direct ByteBuffer into memory, preventing it from
+     * swapping out. After a buffer is locked, future accesses will not incur
+     * a page fault.
+     * 
+     * See the mlock(2) man page for more information.
+     * 
+     * @throws NativeIOException
+     */
+    static void mlock(ByteBuffer buffer, long len)
+        throws IOException {
+      assertCodeLoaded();
+      if (!buffer.isDirect()) {
+        throw new IOException("Cannot mlock a non-direct ByteBuffer");
+      }
+      mlock_native(buffer, len);
+    }
+
+    /**
+     * Unlocks a locked direct ByteBuffer, allowing it to swap out of memory.
+     * This is a no-op if the ByteBuffer was not previously locked.
+     * 
+     * See the munlock(2) man page for more information.
+     * 
+     * @throws NativeIOException
+     */
+    public static void munlock(ByteBuffer buffer, long len)
+        throws IOException {
+      assertCodeLoaded();
+      if (!buffer.isDirect()) {
+        throw new IOException("Cannot munlock a non-direct ByteBuffer");
+      }
+      munlock_native(buffer, len);
+    }
+    
+    /**
+     * Unmaps the block from memory. See munmap(2).
+     *
+     * There isn't any portable way to unmap a memory region in Java.
+     * So we use the sun.nio method here.
+     * Note that unmapping a memory region could cause crashes if code
+     * continues to reference the unmapped code.  However, if we don't
+     * manually unmap the memory, we are dependent on the finalizer to
+     * do it, and we have no idea when the finalizer will run.
+     *
+     * @param buffer    The buffer to unmap.
+     */
+    public static void munmap(MappedByteBuffer buffer) {
+      if (buffer instanceof sun.nio.ch.DirectBuffer) {
+        sun.misc.Cleaner cleaner =
+            ((sun.nio.ch.DirectBuffer)buffer).cleaner();
+        cleaner.clean();
       }
     }
 
@@ -477,6 +602,35 @@ public class NativeIO {
 
   /** Initialize the JNI method ID and class ID cache */
   private static native void initNative();
+
+  /**
+   * Get the maximum number of bytes that can be locked into memory at any
+   * given point.
+   *
+   * @return 0 if no bytes can be locked into memory;
+   *         Long.MAX_VALUE if there is no limit;
+   *         The number of bytes that can be locked into memory otherwise.
+   */
+  static long getMemlockLimit() {
+    return isAvailable() ? getMemlockLimit0() : 0;
+  }
+
+  private static native long getMemlockLimit0();
+  
+  /**
+   * @return the operating system's page size.
+   */
+  static long getOperatingSystemPageSize() {
+    try {
+      Field f = Unsafe.class.getDeclaredField("theUnsafe");
+      f.setAccessible(true);
+      Unsafe unsafe = (Unsafe)f.get(null);
+      return unsafe.pageSize();
+    } catch (Throwable e) {
+      LOG.warn("Unable to get operating system page size.  Guessing 4096.", e);
+      return 4096;
+    }
+  }
 
   private static class CachedUid {
     final long timestamp;

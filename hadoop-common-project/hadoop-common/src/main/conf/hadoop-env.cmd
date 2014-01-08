@@ -58,7 +58,7 @@ set HADOOP_DATANODE_OPTS=-Dhadoop.security.logger=ERROR,RFAS %HADOOP_DATANODE_OP
 set HADOOP_SECONDARYNAMENODE_OPTS=-Dhadoop.security.logger=%HADOOP_SECURITY_LOGGER% -Dhdfs.audit.logger=%HDFS_AUDIT_LOGGER% %HADOOP_SECONDARYNAMENODE_OPTS%
 
 @rem The following applies to multiple commands (fs, dfs, fsck, distcp etc)
-set HADOOP_CLIENT_OPTS=-Xmx128m %HADOOP_CLIENT_OPTS%
+set HADOOP_CLIENT_OPTS=-Xmx512m %HADOOP_CLIENT_OPTS%
 @rem set HADOOP_JAVA_PLATFORM_OPTS="-XX:-UsePerfData %HADOOP_JAVA_PLATFORM_OPTS%"
 
 @rem On secure datanodes, user to run the datanode as after dropping privileges

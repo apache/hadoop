@@ -30,7 +30,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.security.PrivilegedExceptionAction;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.StringTokenizer;
@@ -56,7 +55,6 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
-import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSelector;
 import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
 import org.apache.hadoop.hdfs.web.resources.AccessTimeParam;
 import org.apache.hadoop.hdfs.web.resources.BlockSizeParam;
@@ -94,21 +92,17 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
-import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.hadoop.security.token.TokenRenewer;
-import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSelector;
 import org.apache.hadoop.util.Progressable;
 import org.mortbay.util.ajax.JSON;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
 import com.google.common.collect.Lists;
 
 /** A FileSystem for HDFS over the web. */
 public class WebHdfsFileSystem extends FileSystem
-    implements DelegationTokenRenewer.Renewable {
+    implements DelegationTokenRenewer.Renewable, TokenAspect.TokenManagementDelegator {
   public static final Log LOG = LogFactory.getLog(WebHdfsFileSystem.class);
   /** File System URI: {SCHEME}://namenode:port/path/to/file */
   public static final String SCHEME = "webhdfs";
@@ -118,38 +112,14 @@ public class WebHdfsFileSystem extends FileSystem
   public static final String PATH_PREFIX = "/" + SCHEME + "/v" + VERSION;
 
   /** Default connection factory may be overridden in tests to use smaller timeout values */
-  URLConnectionFactory connectionFactory = URLConnectionFactory.DEFAULT_CONNECTION_FACTORY;
+  protected URLConnectionFactory connectionFactory;
 
   /** Delegation token kind */
   public static final Text TOKEN_KIND = new Text("WEBHDFS delegation");
-  /** Token selector */
-  public static final WebHdfsDelegationTokenSelector DT_SELECTOR
-      = new WebHdfsDelegationTokenSelector();
-
-  private DelegationTokenRenewer dtRenewer = null;
-  @VisibleForTesting
-  DelegationTokenRenewer.RenewAction<?> action;
-
-  @VisibleForTesting
-  protected synchronized void addRenewAction(final WebHdfsFileSystem webhdfs) {
-    if (dtRenewer == null) {
-      dtRenewer = DelegationTokenRenewer.getInstance();
-    }
-
-    action = dtRenewer.addRenewAction(webhdfs);
-  }
-
-  /** Is WebHDFS enabled in conf? */
-  public static boolean isEnabled(final Configuration conf, final Log log) {
-    final boolean b = conf.getBoolean(DFSConfigKeys.DFS_WEBHDFS_ENABLED_KEY,
-        DFSConfigKeys.DFS_WEBHDFS_ENABLED_DEFAULT);
-    log.info(DFSConfigKeys.DFS_WEBHDFS_ENABLED_KEY + " = " + b);
-    return b;
-  }
+  protected TokenAspect<WebHdfsFileSystem> tokenAspect;
 
   private UserGroupInformation ugi;
   private URI uri;
-  private boolean hasInitedToken;
   private Token<?> delegationToken;
   private RetryPolicy retryPolicy = null;
   private Path workingDir;
@@ -167,17 +137,39 @@ public class WebHdfsFileSystem extends FileSystem
     return SCHEME;
   }
 
+  /**
+   * return the underlying transport protocol (http / https).
+   */
+  protected String getTransportScheme() {
+    return "http";
+  }
+
+  /**
+   * Initialize tokenAspect. This function is intended to
+   * be overridden by SWebHdfsFileSystem.
+   */
+  protected synchronized void initializeTokenAspect() {
+    tokenAspect = new TokenAspect<WebHdfsFileSystem>(this, TOKEN_KIND);
+  }
+
   @Override
   public synchronized void initialize(URI uri, Configuration conf
       ) throws IOException {
     super.initialize(uri, conf);
     setConf(conf);
+    /** set user pattern based on configuration file */
+    UserParam.setUserPattern(conf.get(DFSConfigKeys.DFS_WEBHDFS_USER_PATTERN_KEY, DFSConfigKeys.DFS_WEBHDFS_USER_PATTERN_DEFAULT));
+    connectionFactory = URLConnectionFactory
+        .newDefaultURLConnectionFactory(conf);
+    initializeTokenAspect();
+
+
     ugi = UserGroupInformation.getCurrentUser();
 
     try {
       this.uri = new URI(uri.getScheme(), uri.getAuthority(), null,
           null, null);
-      this.nnAddrs = DFSUtil.resolve(this.uri, getDefaultPort(), conf);
+      this.nnAddrs = DFSUtil.resolveWebHdfsUri(this.uri, conf);
     } catch (URISyntaxException e) {
       throw new IllegalArgumentException(e);
     }
@@ -212,39 +204,25 @@ public class WebHdfsFileSystem extends FileSystem
     this.workingDir = getHomeDirectory();
 
     if (UserGroupInformation.isSecurityEnabled()) {
-      initDelegationToken();
+      tokenAspect.initDelegationToken(ugi);
     }
   }
 
-  protected void initDelegationToken() throws IOException {
-    // look for webhdfs token, then try hdfs
-    Token<?> token = selectDelegationToken(ugi);
-    if (token != null) {
-      LOG.debug("Found existing DT for " + token.getService());        
-      setDelegationToken(token);
-      hasInitedToken = true;
-    }
+  @Override
+  public URI getCanonicalUri() {
+    return super.getCanonicalUri();
+  }
+
+  /** Is WebHDFS enabled in conf? */
+  public static boolean isEnabled(final Configuration conf, final Log log) {
+    final boolean b = conf.getBoolean(DFSConfigKeys.DFS_WEBHDFS_ENABLED_KEY,
+        DFSConfigKeys.DFS_WEBHDFS_ENABLED_DEFAULT);
+    return b;
   }
 
   protected synchronized Token<?> getDelegationToken() throws IOException {
-    // we haven't inited yet, or we used to have a token but it expired
-    if (!hasInitedToken || (action != null && !action.isValid())) {
-      //since we don't already have a token, go get one
-      Token<?> token = getDelegationToken(null);
-      // security might be disabled
-      if (token != null) {
-        setDelegationToken(token);
-        addRenewAction(this);
-        LOG.debug("Created new DT for " + token.getService());
-      }
-      hasInitedToken = true;
-    }
+    tokenAspect.ensureTokenInitialized();
     return delegationToken;
-  }
-
-  protected Token<DelegationTokenIdentifier> selectDelegationToken(
-      UserGroupInformation ugi) {
-    return DT_SELECTOR.selectToken(getCanonicalUri(), ugi.getTokens(), getConf());
   }
 
   @Override
@@ -370,7 +348,7 @@ public class WebHdfsFileSystem extends FileSystem
   private synchronized void resetStateToFailOver() {
     currentNNAddrIndex = (currentNNAddrIndex + 1) % nnAddrs.length;
     delegationToken = null;
-    hasInitedToken = false;
+    tokenAspect.reset();
   }
 
   /**
@@ -383,7 +361,7 @@ public class WebHdfsFileSystem extends FileSystem
    */
   private URL getNamenodeURL(String path, String query) throws IOException {
     InetSocketAddress nnAddr = getCurrentNNAddr();
-    final URL url = new URL("http", nnAddr.getHostName(),
+    final URL url = new URL(getTransportScheme(), nnAddr.getHostName(),
           nnAddr.getPort(), path + '?' + query);
     if (LOG.isTraceEnabled()) {
       LOG.trace("url=" + url);
@@ -491,7 +469,8 @@ public class WebHdfsFileSystem extends FileSystem
         throws IOException {
       final HttpURLConnection conn;
       try {
-        conn = (HttpURLConnection) connectionFactory.openConnection(op, url);
+        conn = (HttpURLConnection) connectionFactory.openConnection(url,
+            op.getRequireAuth());
       } catch (AuthenticationException e) {
         throw new IOException(e);
       }
@@ -880,8 +859,8 @@ public class WebHdfsFileSystem extends FileSystem
   @Override
   public void close() throws IOException {
     super.close();
-    if (dtRenewer != null) {
-      dtRenewer.removeRenewAction(this); // blocks
+    synchronized (this) {
+      tokenAspect.removeRenewAction();
     }
   }
 
@@ -987,7 +966,8 @@ public class WebHdfsFileSystem extends FileSystem
     }
   }
 
-  private synchronized long renewDelegationToken(final Token<?> token
+  @Override
+  public synchronized long renewDelegationToken(final Token<?> token
       ) throws IOException {
     final HttpOpParam.Op op = PutOpParam.Op.RENEWDELEGATIONTOKEN;
     TokenArgumentParam dtargParam = new TokenArgumentParam(
@@ -996,7 +976,8 @@ public class WebHdfsFileSystem extends FileSystem
     return (Long) m.get("long");
   }
 
-  private synchronized void cancelDelegationToken(final Token<?> token
+  @Override
+  public synchronized void cancelDelegationToken(final Token<?> token
       ) throws IOException {
     final HttpOpParam.Op op = PutOpParam.Op.CANCELDELEGATIONTOKEN;
     TokenArgumentParam dtargParam = new TokenArgumentParam(
@@ -1041,58 +1022,5 @@ public class WebHdfsFileSystem extends FileSystem
     final HttpOpParam.Op op = GetOpParam.Op.GETFILECHECKSUM;
     final Map<?, ?> m = run(op, p);
     return JsonUtil.toMD5MD5CRC32FileChecksum(m);
-  }
-
-  /** Delegation token renewer. */
-  public static class DtRenewer extends TokenRenewer {
-    @Override
-    public boolean handleKind(Text kind) {
-      return kind.equals(TOKEN_KIND);
-    }
-  
-    @Override
-    public boolean isManaged(Token<?> token) throws IOException {
-      return true;
-    }
-
-    private static WebHdfsFileSystem getWebHdfs(
-        final Token<?> token, final Configuration conf) throws IOException {
-      
-      final InetSocketAddress nnAddr = SecurityUtil.getTokenServiceAddr(token);
-      final URI uri = DFSUtil.createUri(WebHdfsFileSystem.SCHEME, nnAddr);
-      return (WebHdfsFileSystem)FileSystem.get(uri, conf);
-    }
-
-    @Override
-    public long renew(final Token<?> token, final Configuration conf
-        ) throws IOException, InterruptedException {
-      return getWebHdfs(token, conf).renewDelegationToken(token);
-    }
-  
-    @Override
-    public void cancel(final Token<?> token, final Configuration conf
-        ) throws IOException, InterruptedException {
-      getWebHdfs(token, conf).cancelDelegationToken(token);
-    }
-  }
-  
-  private static class WebHdfsDelegationTokenSelector
-  extends AbstractDelegationTokenSelector<DelegationTokenIdentifier> {
-    private static final DelegationTokenSelector hdfsTokenSelector =
-        new DelegationTokenSelector();
-    
-    public WebHdfsDelegationTokenSelector() {
-      super(TOKEN_KIND);
-    }
-    
-    Token<DelegationTokenIdentifier> selectToken(URI nnUri,
-        Collection<Token<?>> tokens, Configuration conf) {
-      Token<DelegationTokenIdentifier> token =
-          selectToken(SecurityUtil.buildTokenService(nnUri), tokens);
-      if (token == null) {
-        token = hdfsTokenSelector.selectToken(nnUri, tokens, conf); 
-      }
-      return token;
-    }
   }
 }

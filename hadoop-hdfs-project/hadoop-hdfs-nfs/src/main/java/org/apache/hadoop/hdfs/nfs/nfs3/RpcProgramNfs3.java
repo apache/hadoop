@@ -628,6 +628,14 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       }
     }
     
+    // In case there is buffered data for the same file, flush it. This can be
+    // optimized later by reading from the cache.
+    int ret = writeManager.commitBeforeRead(dfsClient, handle, offset + count);
+    if (ret != Nfs3Status.NFS3_OK) {
+      LOG.warn("commitBeforeRead didn't succeed with ret=" + ret
+          + ". Read may not get most recent data.");
+    }
+
     try {
       int buffSize = Math.min(MAX_READ_TRANSFER_SIZE, count);
       byte[] readbuffer = new byte[buffSize];

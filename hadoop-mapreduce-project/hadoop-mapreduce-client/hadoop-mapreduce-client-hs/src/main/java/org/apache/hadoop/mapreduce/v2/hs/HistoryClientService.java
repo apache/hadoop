@@ -88,6 +88,8 @@ import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebApps;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * This module is responsible for talking to the
  * JobClient (user facing).
@@ -142,7 +144,8 @@ public class HistoryClientService extends AbstractService {
     super.serviceStart();
   }
 
-  private void initializeWebApp(Configuration conf) {
+  @VisibleForTesting
+  protected void initializeWebApp(Configuration conf) {
     webApp = new HsWebApp(history);
     InetSocketAddress bindAddress = MRWebAppUtil.getJHSWebBindAddress(conf);
     // NOTE: there should be a .at(InetSocketAddress)

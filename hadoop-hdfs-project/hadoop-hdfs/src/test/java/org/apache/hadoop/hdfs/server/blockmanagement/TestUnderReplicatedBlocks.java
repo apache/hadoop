@@ -27,6 +27,7 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.junit.Test;
 
 public class TestUnderReplicatedBlocks {
@@ -47,9 +48,15 @@ public class TestUnderReplicatedBlocks {
       // but the block does not get put into the under-replicated blocks queue
       final BlockManager bm = cluster.getNamesystem().getBlockManager();
       ExtendedBlock b = DFSTestUtil.getFirstBlock(fs, FILE_PATH);
-      DatanodeDescriptor dn = bm.blocksMap.nodeIterator(b.getLocalBlock()).next();
+      DatanodeDescriptor dn = bm.blocksMap.getStorages(b.getLocalBlock())
+          .iterator().next().getDatanodeDescriptor();
       bm.addToInvalidates(b.getLocalBlock(), dn);
+      // Compute the invalidate work in NN, and trigger the heartbeat from DN
+      BlockManagerTestUtil.computeAllPendingWork(bm);
+      DataNodeTestUtils.triggerHeartbeat(cluster.getDataNode(dn.getIpcPort()));
+      // Wait to make sure the DataNode receives the deletion request 
       Thread.sleep(5000);
+      // Remove the record from blocksMap
       bm.blocksMap.removeNode(b.getLocalBlock(), dn);
       
       // increment this file's replication factor

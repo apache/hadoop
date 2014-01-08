@@ -86,6 +86,7 @@ public class MockHistoryJobs extends MockJobs {
           report.getFinishTime(), mockJob.getUserName(), mockJob.getName(), id, 
           mockJob.getCompletedMaps(), mockJob.getCompletedReduces(),
           String.valueOf(mockJob.getState()));
+      info.setJobStartTime(report.getStartTime());
       info.setQueueName(mockJob.getQueueName());
       ret.partial.put(id, new PartialJob(info, id));
 

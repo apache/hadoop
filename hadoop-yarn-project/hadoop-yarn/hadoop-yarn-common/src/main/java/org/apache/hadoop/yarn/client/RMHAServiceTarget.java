@@ -21,20 +21,23 @@ package org.apache.hadoop.yarn.client;
 import org.apache.hadoop.ha.BadFencingConfigurationException;
 import org.apache.hadoop.ha.HAServiceTarget;
 import org.apache.hadoop.ha.NodeFencer;
+import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
 public class RMHAServiceTarget extends HAServiceTarget {
-  private InetSocketAddress haAdminServiceAddress;
+  private final boolean autoFailoverEnabled;
+  private final InetSocketAddress haAdminServiceAddress;
 
   public RMHAServiceTarget(YarnConfiguration conf)
       throws IOException {
+    autoFailoverEnabled = HAUtil.isAutomaticFailoverEnabled(conf);
     haAdminServiceAddress = conf.getSocketAddr(
-        YarnConfiguration.RM_HA_ADMIN_ADDRESS,
-        YarnConfiguration.DEFAULT_RM_HA_ADMIN_ADDRESS,
-        YarnConfiguration.DEFAULT_RM_HA_ADMIN_PORT);
+        YarnConfiguration.RM_ADMIN_ADDRESS,
+        YarnConfiguration.DEFAULT_RM_ADMIN_ADDRESS,
+        YarnConfiguration.DEFAULT_RM_ADMIN_PORT);
   }
 
   @Override
@@ -44,19 +47,23 @@ public class RMHAServiceTarget extends HAServiceTarget {
 
   @Override
   public InetSocketAddress getZKFCAddress() {
-    // TODO (YARN-1177): Hook up ZKFC information
-    return null;
+    // TODO (YARN-1177): ZKFC implementation
+    throw new UnsupportedOperationException("RMHAServiceTarget doesn't have " +
+        "a corresponding ZKFC address");
   }
 
   @Override
   public NodeFencer getFencer() {
-    // TODO (YARN-1026): Hook up fencing implementation
     return null;
   }
 
   @Override
-  public void checkFencingConfigured()
-      throws BadFencingConfigurationException {
-    // TODO (YARN-1026): Based on fencing implementation
+  public void checkFencingConfigured() throws BadFencingConfigurationException {
+    throw new BadFencingConfigurationException("Fencer not configured");
+  }
+
+  @Override
+  public boolean isAutoFailoverEnabled() {
+    return autoFailoverEnabled;
   }
 }

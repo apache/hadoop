@@ -38,7 +38,7 @@ import static com.google.common.base.Preconditions.*;
 import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.commons.math.util.MathUtils;
+import org.apache.commons.math3.util.ArithmeticUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.metrics2.MetricsInfo;
 import org.apache.hadoop.metrics2.MetricsCollector;
@@ -235,11 +235,9 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
   void registerSource(String name, String desc, MetricsSource source) {
     checkNotNull(config, "config");
     MetricsConfig conf = sourceConfigs.get(name);
-    MetricsSourceAdapter sa = conf != null
-        ? new MetricsSourceAdapter(prefix, name, desc, source,
-                                   injectedTags, period, conf)
-        : new MetricsSourceAdapter(prefix, name, desc, source,
-          injectedTags, period, config.subset(SOURCE_KEY));
+    MetricsSourceAdapter sa = new MetricsSourceAdapter(prefix, name, desc,
+        source, injectedTags, period, conf != null ? conf
+            : config.subset(SOURCE_KEY));
     sources.put(name, sa);
     sa.start();
     LOG.debug("Registered source "+ name);
@@ -287,8 +285,7 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
               throws Throwable {
             try {
               return method.invoke(callback, args);
-            }
-            catch (Exception e) {
+            } catch (Exception e) {
               // These are not considered fatal.
               LOG.warn("Caught exception in callback "+ method.getName(), e);
             }
@@ -332,11 +329,11 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
     long millis = period * 1000;
     timer = new Timer("Timer for '"+ prefix +"' metrics system", true);
     timer.scheduleAtFixedRate(new TimerTask() {
+          @Override
           public void run() {
             try {
               onTimerEvent();
-            }
-            catch (Exception e) {
+            } catch (Exception e) {
               LOG.warn(e);
             }
           }
@@ -460,7 +457,7 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
       MetricsConfig conf = entry.getValue();
       int sinkPeriod = conf.getInt(PERIOD_KEY, PERIOD_DEFAULT);
       confPeriod = confPeriod == 0 ? sinkPeriod
-                                   : MathUtils.gcd(confPeriod, sinkPeriod);
+                                   : ArithmeticUtils.gcd(confPeriod, sinkPeriod);
       String clsName = conf.getClassName("");
       if (clsName == null) continue;  // sink can be registered later on
       String sinkName = entry.getKey();
@@ -469,8 +466,7 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
             conf.getString(DESC_KEY, sinkName), conf);
         sa.start();
         sinks.put(sinkName, sa);
-      }
-      catch (Exception e) {
+      } catch (Exception e) {
         LOG.warn("Error creating sink '"+ sinkName +"'", e);
       }
     }
@@ -512,8 +508,7 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
   static String getHostname() {
     try {
       return InetAddress.getLocalHost().getHostName();
-    }
-    catch (Exception e) {
+    } catch (Exception e) {
       LOG.error("Error getting localhost name. Using 'localhost'...", e);
     }
     return "localhost";
@@ -573,6 +568,7 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
     return true;
   }
 
+  @Override
   public MetricsSource getSource(String name) {
     return allSources.get(name);
   }

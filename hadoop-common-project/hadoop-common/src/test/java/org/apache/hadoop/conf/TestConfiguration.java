@@ -680,7 +680,7 @@ public class TestConfiguration extends TestCase {
     assertArrayEquals(expectedNames, extractClassNames(classes2));
   }
   
-  public void testGetStringCollection() throws IOException {
+  public void testGetStringCollection() {
     Configuration c = new Configuration();
     c.set("x", " a, b\n,\nc ");
     Collection<String> strs = c.getTrimmedStringCollection("x");
@@ -697,7 +697,7 @@ public class TestConfiguration extends TestCase {
     strs.add("z");
   }
 
-  public void testGetTrimmedStringCollection() throws IOException {
+  public void testGetTrimmedStringCollection() {
     Configuration c = new Configuration();
     c.set("x", "a, b, c");
     Collection<String> strs = c.getStringCollection("x");
@@ -724,7 +724,7 @@ public class TestConfiguration extends TestCase {
   
   enum Dingo { FOO, BAR };
   enum Yak { RAB, FOO };
-  public void testEnum() throws IOException {
+  public void testEnum() {
     Configuration conf = new Configuration();
     conf.setEnum("test.enum", Dingo.FOO);
     assertSame(Dingo.FOO, conf.getEnum("test.enum", Dingo.BAR));
@@ -732,7 +732,7 @@ public class TestConfiguration extends TestCase {
     boolean fail = false;
     try {
       conf.setEnum("test.enum", Dingo.BAR);
-      Yak y = conf.getEnum("test.enum", Yak.FOO);
+      conf.getEnum("test.enum", Yak.FOO);
     } catch (IllegalArgumentException e) {
       fail = true;
     }
@@ -839,7 +839,7 @@ public class TestConfiguration extends TestCase {
         new Path(sources[3]));
   }
 
-  public void testSocketAddress() throws IOException {
+  public void testSocketAddress() {
     Configuration conf = new Configuration();
     final String defaultAddr = "host:1";
     final int defaultPort = 2;
@@ -871,7 +871,7 @@ public class TestConfiguration extends TestCase {
     }
   }
 
-  public void testSetSocketAddress() throws IOException {
+  public void testSetSocketAddress() {
     Configuration conf = new Configuration();
     NetUtils.addStaticResolution("host", "127.0.0.1");
     final String defaultAddr = "host:1";
@@ -933,14 +933,14 @@ public class TestConfiguration extends TestCase {
     assertEquals("value5", conf.get("test.key4"));
   }
 
-  public void testSize() throws IOException {
+  public void testSize() {
     Configuration conf = new Configuration(false);
     conf.set("a", "A");
     conf.set("b", "B");
     assertEquals(2, conf.size());
   }
 
-  public void testClear() throws IOException {
+  public void testClear() {
     Configuration conf = new Configuration(false);
     conf.set("a", "A");
     conf.set("b", "B");
@@ -1154,6 +1154,27 @@ public class TestConfiguration extends TestCase {
     assertTrue("Picked out wrong key " + key3, !res.containsKey(key3));
     assertTrue("Picked out wrong key " + key4, !res.containsKey(key4));
   }
+
+  public void testGetClassesShouldReturnDefaultValue() throws Exception {
+    Configuration config = new Configuration();
+    Class<?>[] classes = 
+      config.getClasses("testClassName", Configuration.class);
+    assertEquals(
+        "Not returning expected number of classes. Number of returned classes ="
+            + classes.length, 1, classes.length);
+    assertEquals("Not returning the default class Name", Configuration.class,
+        classes[0]);
+  }
+
+  public void testGetClassesShouldReturnEmptyArray()
+      throws Exception {
+    Configuration config = new Configuration();
+    config.set("testClassName", "");
+    Class<?>[] classes = config.getClasses("testClassName", Configuration.class);
+    assertEquals(
+        "Not returning expected number of classes. Number of returned classes ="
+            + classes.length, 0, classes.length);
+  }
   
   public void testSettingValueNull() throws Exception {
     Configuration config = new Configuration();
@@ -1175,6 +1196,77 @@ public class TestConfiguration extends TestCase {
     }
   }
 
+  public void testInvalidSubstitutation() {
+    String key = "test.random.key";
+    String keyExpression = "${" + key + "}";
+    Configuration configuration = new Configuration();
+    configuration.set(key, keyExpression);
+    String value = configuration.get(key);
+    assertTrue("Unexpected value " + value, value.equals(keyExpression));
+  }
+
+  public void testBoolean() {
+    boolean value = true;
+    Configuration configuration = new Configuration();
+    configuration.setBoolean("value", value);
+    assertEquals(value, configuration.getBoolean("value", false));
+  }
+
+  public void testBooleanIfUnset() {
+    boolean value = true;
+    Configuration configuration = new Configuration();
+    configuration.setBooleanIfUnset("value", value);
+    assertEquals(value, configuration.getBoolean("value", false));
+    configuration.setBooleanIfUnset("value", false);
+    assertEquals(value, configuration.getBoolean("value", false));
+  }
+
+  public void testFloat() {
+    float value = 1.0F;
+    Configuration configuration = new Configuration();
+    configuration.setFloat("value", value);
+    assertEquals(value, configuration.getFloat("value", 0.0F));
+  }
+  
+  public void testDouble() {
+    double value = 1.0D;
+    Configuration configuration = new Configuration();
+    configuration.setDouble("value", value);
+    assertEquals(value, configuration.getDouble("value", 0.0D));
+  }
+
+  public void testInt() {
+    int value = 1;
+    Configuration configuration = new Configuration();
+    configuration.setInt("value", value);
+    assertEquals(value, configuration.getInt("value", 0));
+  }
+
+  public void testLong() {
+    long value = 1L;
+    Configuration configuration = new Configuration();
+    configuration.setLong("value", value);
+    assertEquals(value, configuration.getLong("value", 0L));
+  }
+
+  public void testStrings() {
+    String [] strings = {"FOO","BAR"};
+    Configuration configuration = new Configuration();
+    configuration.setStrings("strings", strings);
+    String [] returnStrings = configuration.getStrings("strings");
+    for(int i=0;i<returnStrings.length;i++) {
+       assertEquals(strings[i], returnStrings[i]);
+    }
+  }
+  
+  public void testSetPattern() {
+    Pattern testPattern = Pattern.compile("a+b");
+    Configuration configuration = new Configuration();
+    configuration.setPattern("testPattern", testPattern);
+    assertEquals(testPattern.pattern(),
+        configuration.getPattern("testPattern", Pattern.compile("")).pattern());
+  }
+  
   public void testGetClassByNameOrNull() throws Exception {
    Configuration config = new Configuration();
    Class<?> clazz = config.getClassByNameOrNull("java.lang.Object");

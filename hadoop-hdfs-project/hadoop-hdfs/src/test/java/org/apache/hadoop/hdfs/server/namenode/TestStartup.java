@@ -31,12 +31,10 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
@@ -81,20 +79,6 @@ public class TestStartup {
   static final int blockSize = 4096;
   static final int fileSize = 8192;
   private long editsLength=0, fsimageLength=0;
-
-
-  private void writeFile(FileSystem fileSys, Path name, int repl)
-  throws IOException {
-    FSDataOutputStream stm = fileSys.create(name, true, fileSys.getConf()
-        .getInt(CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096),
-        (short) repl, blockSize);
-    byte[] buffer = new byte[fileSize];
-    Random rand = new Random(seed);
-    rand.nextBytes(buffer);
-    stm.write(buffer);
-    stm.close();
-  }
-
 
   @Before
   public void setUp() throws Exception {
@@ -158,7 +142,8 @@ public class TestStartup {
         // create a file
         FileSystem fileSys = cluster.getFileSystem();
         Path p = new Path("t" + i);
-        this.writeFile(fileSys, p, 1);
+        DFSTestUtil.createFile(fileSys, p, fileSize, fileSize,
+            blockSize, (short) 1, seed);
         LOG.info("--file " + p.toString() + " created");
         LOG.info("--doing checkpoint");
         sn.doCheckpoint();  // this shouldn't fail

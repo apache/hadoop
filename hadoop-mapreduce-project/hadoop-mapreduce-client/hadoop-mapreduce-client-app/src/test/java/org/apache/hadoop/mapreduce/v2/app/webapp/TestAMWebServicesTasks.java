@@ -525,12 +525,13 @@ public class TestAMWebServicesTasks extends JerseyTest {
 
   public void verifyAMSingleTask(JSONObject info, Task task)
       throws JSONException {
-    assertEquals("incorrect number of elements", 8, info.length());
+    assertEquals("incorrect number of elements", 9, info.length());
 
     verifyTaskGeneric(task, info.getString("id"), info.getString("state"),
         info.getString("type"), info.getString("successfulAttempt"),
         info.getLong("startTime"), info.getLong("finishTime"),
-        info.getLong("elapsedTime"), (float) info.getDouble("progress"));
+        info.getLong("elapsedTime"), (float) info.getDouble("progress"),
+        info.getString("status"));
   }
 
   public void verifyAMTask(JSONArray arr, Job job, String type)
@@ -555,7 +556,7 @@ public class TestAMWebServicesTasks extends JerseyTest {
 
   public void verifyTaskGeneric(Task task, String id, String state,
       String type, String successfulAttempt, long startTime, long finishTime,
-      long elapsedTime, float progress) {
+      long elapsedTime, float progress, String status) {
 
     TaskId taskid = task.getID();
     String tid = MRApps.toString(taskid);
@@ -572,6 +573,7 @@ public class TestAMWebServicesTasks extends JerseyTest {
     assertEquals("finishTime wrong", report.getFinishTime(), finishTime);
     assertEquals("elapsedTime wrong", finishTime - startTime, elapsedTime);
     assertEquals("progress wrong", report.getProgress() * 100, progress, 1e-3f);
+    assertEquals("status wrong", report.getStatus(), status);
   }
 
   public void verifyAMSingleTaskXML(Element element, Task task) {
@@ -582,7 +584,8 @@ public class TestAMWebServicesTasks extends JerseyTest {
         WebServicesTestUtils.getXmlLong(element, "startTime"),
         WebServicesTestUtils.getXmlLong(element, "finishTime"),
         WebServicesTestUtils.getXmlLong(element, "elapsedTime"),
-        WebServicesTestUtils.getXmlFloat(element, "progress"));
+        WebServicesTestUtils.getXmlFloat(element, "progress"),
+        WebServicesTestUtils.getXmlString(element, "status"));
   }
 
   public void verifyAMTaskXML(NodeList nodes, Job job) {

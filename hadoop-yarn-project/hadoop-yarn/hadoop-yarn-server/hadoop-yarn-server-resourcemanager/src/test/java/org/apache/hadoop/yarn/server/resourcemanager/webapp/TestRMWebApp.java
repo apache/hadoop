@@ -32,6 +32,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
@@ -39,7 +40,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager.MockAsm;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
@@ -93,12 +93,14 @@ public class TestRMWebApp {
       }
     });
     RmView rmViewInstance = injector.getInstance(RmView.class);
-    rmViewInstance.set(YarnWebParams.APP_STATE, RMAppState.RUNNING.toString());
+    rmViewInstance.set(YarnWebParams.APP_STATE,
+        YarnApplicationState.RUNNING.toString());
     rmViewInstance.render();
     WebAppTests.flushOutput(injector);
 
     rmViewInstance.set(YarnWebParams.APP_STATE, StringHelper.cjoin(
-        RMAppState.ACCEPTED.toString(), RMAppState.RUNNING.toString()));
+        YarnApplicationState.ACCEPTED.toString(),
+        YarnApplicationState.RUNNING.toString()));
     rmViewInstance.render();
     WebAppTests.flushOutput(injector);
   }
@@ -161,7 +163,7 @@ public class TestRMWebApp {
       deactivatedNodesMap.put(node.getHostName(), node);
     }
    return new RMContextImpl(null, null, null, null,
-       null, null, null, null, null, null) {
+       null, null, null, null, null) {
       @Override
       public ConcurrentMap<ApplicationId, RMApp> getRMApps() {
         return applicationsMaps;
@@ -204,7 +206,7 @@ public class TestRMWebApp {
     cs.reinitialize(conf, new RMContextImpl(null, null, null, null, null,
         null, new RMContainerTokenSecretManager(conf),
         new NMTokenSecretManagerInRM(conf),
-        new ClientToAMTokenSecretManagerInRM(), null));
+        new ClientToAMTokenSecretManagerInRM()));
     return cs;
   }
 

@@ -56,8 +56,9 @@ public interface FSDatasetMBean {
   /**
    * Returns total capacity (in bytes) of storage (used and unused)
    * @return  total capacity of storage (used and unused)
+   * @throws IOException
    */
-  public long getCapacity();
+  public long getCapacity() throws IOException;
 
   /**
    * Returns the amount of free storage space (in bytes)
@@ -76,4 +77,29 @@ public interface FSDatasetMBean {
    * @return The number of failed volumes in the datanode.
    */
   public int getNumFailedVolumes();
+
+  /**
+   * Returns the amount of cache used by the datanode (in bytes).
+   */
+  public long getCacheUsed();
+
+  /**
+   * Returns the total cache capacity of the datanode (in bytes).
+   */
+  public long getCacheCapacity();
+
+  /**
+   * Returns the number of blocks cached.
+   */
+  public long getNumBlocksCached();
+
+  /**
+   * Returns the number of blocks that the datanode was unable to cache
+   */
+  public long getNumBlocksFailedToCache();
+
+  /**
+   * Returns the number of blocks that the datanode was unable to uncache
+   */
+  public long getNumBlocksFailedToUncache();
 }

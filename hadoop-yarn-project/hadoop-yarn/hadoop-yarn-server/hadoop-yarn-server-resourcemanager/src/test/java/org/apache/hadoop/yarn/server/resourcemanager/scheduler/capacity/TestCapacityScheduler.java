@@ -64,8 +64,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManage
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplication;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.TestSchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
@@ -345,7 +348,7 @@ public class TestCapacityScheduler {
     cs.reinitialize(conf, new RMContextImpl(null, null, null, null, null,
       null, new RMContainerTokenSecretManager(conf),
       new NMTokenSecretManagerInRM(conf),
-      new ClientToAMTokenSecretManagerInRM(), null));
+      new ClientToAMTokenSecretManagerInRM()));
     checkQueueCapacities(cs, A_CAPACITY, B_CAPACITY);
 
     conf.setCapacity(A, 80f);
@@ -444,7 +447,7 @@ public class TestCapacityScheduler {
     cs.reinitialize(conf, new RMContextImpl(null, null, null, null, null,
       null, new RMContainerTokenSecretManager(conf),
       new NMTokenSecretManagerInRM(conf),
-      new ClientToAMTokenSecretManagerInRM(), null));
+      new ClientToAMTokenSecretManagerInRM()));
   }
 
   @Test
@@ -457,7 +460,7 @@ public class TestCapacityScheduler {
     cs.reinitialize(csConf, new RMContextImpl(null, null, null, null,
       null, null, new RMContainerTokenSecretManager(csConf),
       new NMTokenSecretManagerInRM(csConf),
-      new ClientToAMTokenSecretManagerInRM(), null));
+      new ClientToAMTokenSecretManagerInRM()));
 
     RMNode n1 = MockNodes.newNodeInfo(0, MockNodes.newResource(4 * GB), 1);
     RMNode n2 = MockNodes.newNodeInfo(0, MockNodes.newResource(2 * GB), 2);
@@ -484,7 +487,7 @@ public class TestCapacityScheduler {
     cs.reinitialize(conf, new RMContextImpl(null, null, null, null, null,
       null, new RMContainerTokenSecretManager(conf),
       new NMTokenSecretManagerInRM(conf),
-      new ClientToAMTokenSecretManagerInRM(), null));
+      new ClientToAMTokenSecretManagerInRM()));
     checkQueueCapacities(cs, A_CAPACITY, B_CAPACITY);
 
     // Add a new queue b4
@@ -555,9 +558,12 @@ public class TestCapacityScheduler {
     ApplicationId appId = BuilderUtils.newApplicationId(100, 1);
     ApplicationAttemptId appAttemptId = BuilderUtils.newApplicationAttemptId(
         appId, 1);
-    SchedulerEvent event = new AppAddedSchedulerEvent(appAttemptId, "default",
-        "user");
-    cs.handle(event);
+    SchedulerEvent addAppEvent =
+        new AppAddedSchedulerEvent(appId, "default", "user");
+    cs.handle(addAppEvent);
+    SchedulerEvent addAttemptEvent =
+        new AppAttemptAddedSchedulerEvent(appAttemptId);
+    cs.handle(addAttemptEvent);
 
     // Verify the blacklist can be updated independent of requesting containers
     cs.allocate(appAttemptId, Collections.<ResourceRequest>emptyList(),
@@ -596,23 +602,24 @@ public class TestCapacityScheduler {
     public void testConcurrentAccessOnApplications() throws Exception {
       CapacityScheduler cs = new CapacityScheduler();
       verifyConcurrentAccessOnApplications(
-          cs.applications, FiCaSchedulerApp.class);
+          cs.appAttempts, FiCaSchedulerApp.class, Queue.class);
     }
 
-    public static <T extends SchedulerApplication>
+    public static <T extends SchedulerApplicationAttempt, Q extends Queue>
         void verifyConcurrentAccessOnApplications(
-            final Map<ApplicationAttemptId, T> applications, Class<T> clazz)
+            final Map<ApplicationAttemptId, T> applications, Class<T> appClazz,
+            final Class<Q> queueClazz)
                 throws Exception {
       final int size = 10000;
       final ApplicationId appId = ApplicationId.newInstance(0, 0);
-      final Constructor<T> ctor = clazz.getDeclaredConstructor(
-          ApplicationAttemptId.class, String.class, Queue.class,
+      final Constructor<T> ctor = appClazz.getDeclaredConstructor(
+          ApplicationAttemptId.class, String.class, queueClazz,
           ActiveUsersManager.class, RMContext.class);
 
       ApplicationAttemptId appAttemptId0
           = ApplicationAttemptId.newInstance(appId, 0);
       applications.put(appAttemptId0, ctor.newInstance(
-              appAttemptId0, null, mock(Queue.class), null, null));
+              appAttemptId0, null, mock(queueClazz), null, null));
       assertNotNull(applications.get(appAttemptId0));
 
       // Imitating the thread of scheduler that will add and remove apps
@@ -627,7 +634,7 @@ public class TestCapacityScheduler {
                 = ApplicationAttemptId.newInstance(appId, i);
             try {
               applications.put(appAttemptId, ctor.newInstance(
-                  appAttemptId, null, mock(Queue.class), null, null));
+                  appAttemptId, null, mock(queueClazz), null, null));
             } catch (Exception e) {
               failed.set(true);
               finished.set(true);
@@ -650,5 +657,52 @@ public class TestCapacityScheduler {
       }
       assertFalse(failed.get());
     }
+    
+    @Test
+    public void testGetAppsInQueue() throws Exception {
+      Application application_0 = new Application("user_0", "a1", resourceManager);
+      application_0.submit();
+      
+      Application application_1 = new Application("user_0", "a2", resourceManager);
+      application_1.submit();
+      
+      Application application_2 = new Application("user_0", "b2", resourceManager);
+      application_2.submit();
+      
+      ResourceScheduler scheduler = resourceManager.getResourceScheduler();
+      
+      List<ApplicationAttemptId> appsInA1 = scheduler.getAppsInQueue("a1");
+      assertEquals(1, appsInA1.size());
+      
+      List<ApplicationAttemptId> appsInA = scheduler.getAppsInQueue("a");
+      assertTrue(appsInA.contains(application_0.getApplicationAttemptId()));
+      assertTrue(appsInA.contains(application_1.getApplicationAttemptId()));
+      assertEquals(2, appsInA.size());
 
-}
+      List<ApplicationAttemptId> appsInRoot = scheduler.getAppsInQueue("root");
+      assertTrue(appsInRoot.contains(application_0.getApplicationAttemptId()));
+      assertTrue(appsInRoot.contains(application_1.getApplicationAttemptId()));
+      assertTrue(appsInRoot.contains(application_2.getApplicationAttemptId()));
+      assertEquals(3, appsInRoot.size());
+      
+      Assert.assertNull(scheduler.getAppsInQueue("nonexistentqueue"));
+    }
+
+  @Test
+  public void testAddAndRemoveAppFromCapacityScheduler() throws Exception {
+
+    AsyncDispatcher rmDispatcher = new AsyncDispatcher();
+    CapacityScheduler cs = new CapacityScheduler();
+    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+    setupQueueConfiguration(conf);
+    cs.reinitialize(conf, new RMContextImpl(rmDispatcher, null, null, null,
+      null, null, new RMContainerTokenSecretManager(conf),
+      new NMTokenSecretManagerInRM(conf),
+      new ClientToAMTokenSecretManagerInRM()));
+
+    SchedulerApplication app =
+        TestSchedulerUtils.verifyAppAddedAndRemovedFromScheduler(
+          cs.applications, cs, "a1");
+    Assert.assertEquals("a1", app.getQueue().getQueueName());
+  }
+ }

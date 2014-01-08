@@ -28,6 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -36,7 +37,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot.DirectoryDiff;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature.DirectoryDiff;
 import org.apache.hadoop.hdfs.util.Diff.ListType;
 import org.junit.After;
 import org.junit.Before;
@@ -92,12 +93,12 @@ public class TestSetQuotaWithSnapshot {
     INodeDirectory subNode = INodeDirectory.valueOf(
         fsdir.getINode(sub.toString()), sub);
     // subNode should be a INodeDirectory, but not an INodeDirectoryWithSnapshot
-    assertFalse(subNode instanceof INodeDirectoryWithSnapshot);
+    assertFalse(subNode.isWithSnapshot());
     
     hdfs.setQuota(sub, Long.MAX_VALUE - 1, Long.MAX_VALUE - 1);
     subNode = INodeDirectory.valueOf(fsdir.getINode(sub.toString()), sub);
     assertTrue(subNode.isQuotaSet());
-    assertFalse(subNode instanceof INodeDirectoryWithSnapshot);
+    assertFalse(subNode.isWithSnapshot());
   }
   
   /**
@@ -150,10 +151,12 @@ public class TestSetQuotaWithSnapshot {
     DFSTestUtil.createFile(hdfs, file, BLOCKSIZE, REPLICATION, seed);
     hdfs.setQuota(dir, HdfsConstants.QUOTA_RESET, HdfsConstants.QUOTA_RESET);
     INode subNode = fsdir.getINode4Write(subDir.toString());
-    assertTrue(subNode instanceof INodeDirectoryWithSnapshot);
-    List<DirectoryDiff> diffList = ((INodeDirectoryWithSnapshot) subNode).getDiffs().asList();
+    assertTrue(subNode.asDirectory().isWithSnapshot());
+    List<DirectoryDiff> diffList = subNode.asDirectory().getDiffs().asList();
     assertEquals(1, diffList.size());
-    assertEquals("s2", Snapshot.getSnapshotName(diffList.get(0).snapshot));
+    Snapshot s2 = ((INodeDirectorySnapshottable) dirNode).getSnapshot(DFSUtil
+        .string2Bytes("s2"));
+    assertEquals(s2.getId(), diffList.get(0).getSnapshotId());
     List<INode> createdList = diffList.get(0).getChildrenDiff().getList(ListType.CREATED);
     assertEquals(1, createdList.size());
     assertSame(fsdir.getINode4Write(file.toString()), createdList.get(0));

@@ -43,6 +43,7 @@ public class GangliaSink31 extends GangliaSink30 {
    * @param gSlope The slope for this metric
    * @throws IOException
    */
+  @Override
   protected void emitMetric(String groupName, String name, String type,
       String value, GangliaConf gConf, GangliaSlope gSlope) 
     throws IOException {

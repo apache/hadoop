@@ -32,6 +32,6 @@
 
   <tab label="Project" href="http://hadoop.apache.org/common/" />
   <tab label="Wiki" href="http://wiki.apache.org/hadoop" />
-  <tab label="Common 0.23 Documentation" dir="" />  
+  <tab label="Common 0.24 Documentation" dir="" />  
   
 </tabs>

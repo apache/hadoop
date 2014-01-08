@@ -85,6 +85,7 @@ class OpenFileCtx {
   private volatile boolean activeState;
   // The stream write-back status. True means one thread is doing write back.
   private volatile boolean asyncStatus;
+  private volatile long asyncWriteBackStartOffset;
 
   /**
    * The current offset of the file in HDFS. All the content before this offset
@@ -209,6 +210,7 @@ class OpenFileCtx {
     updateLastAccessTime();
     activeState = true;
     asyncStatus = false;
+    asyncWriteBackStartOffset = 0;
     dumpOut = null;
     raf = null;
     nonSequentialWriteInMemory = new AtomicLong(0);
@@ -217,9 +219,7 @@ class OpenFileCtx {
     enabledDump = dumpFilePath == null ? false: true;
     nextOffset = new AtomicLong();
     nextOffset.set(latestAttr.getSize());
-    try {	
-      assert(nextOffset.get() == this.fos.getPos());
-    } catch (IOException e) {}
+    assert(nextOffset.get() == this.fos.getPos());
     dumpThread = null;
     this.client = client;
     this.iug = iug;
@@ -230,7 +230,7 @@ class OpenFileCtx {
   }
   
   // Get flushed offset. Note that flushed data may not be persisted.
-  private long getFlushedOffset() throws IOException {
+  private long getFlushedOffset() {
     return fos.getPos();
   }
   
@@ -582,6 +582,7 @@ class OpenFileCtx {
               + nextOffset.get());
         }
         asyncStatus = true;
+        asyncWriteBackStartOffset = writeCtx.getOffset();
         asyncDataService.execute(new AsyncDataService.WriteBackTask(this));
       } else {
         if (LOG.isDebugEnabled()) {
@@ -710,15 +711,28 @@ class OpenFileCtx {
     }
     return response;
   }
-
+  
+  /**
+   * Check the commit status with the given offset
+   * @param commitOffset the offset to commit
+   * @param channel the channel to return response
+   * @param xid the xid of the commit request
+   * @param preOpAttr the preOp attribute
+   * @param fromRead whether the commit is triggered from read request
+   * @return one commit status: COMMIT_FINISHED, COMMIT_WAIT,
+   * COMMIT_INACTIVE_CTX, COMMIT_INACTIVE_WITH_PENDING_WRITE, COMMIT_ERROR
+   */
   public COMMIT_STATUS checkCommit(DFSClient dfsClient, long commitOffset,
-      Channel channel, int xid, Nfs3FileAttributes preOpAttr) {
-    // Keep stream active
-    updateLastAccessTime();
+      Channel channel, int xid, Nfs3FileAttributes preOpAttr, boolean fromRead) {
+    if (!fromRead) {
+      Preconditions.checkState(channel != null && preOpAttr != null);
+      // Keep stream active
+      updateLastAccessTime();
+    }
     Preconditions.checkState(commitOffset >= 0);
 
     COMMIT_STATUS ret = checkCommitInternal(commitOffset, channel, xid,
-        preOpAttr);
+        preOpAttr, fromRead);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Got commit status: " + ret.name());
     }
@@ -728,6 +742,7 @@ class OpenFileCtx {
       try {
         // Sync file data and length
         fos.hsync(EnumSet.of(SyncFlag.UPDATE_LENGTH));
+        ret = COMMIT_STATUS.COMMIT_FINISHED; // Remove COMMIT_DO_SYNC status 
         // Nothing to do for metadata since attr related change is pass-through
       } catch (ClosedChannelException cce) {
         if (pendingWrites.isEmpty()) {
@@ -744,13 +759,10 @@ class OpenFileCtx {
     }
     return ret;
   }
-
-  /**
-   * return one commit status: COMMIT_FINISHED, COMMIT_WAIT,
-   * COMMIT_INACTIVE_CTX, COMMIT_INACTIVE_WITH_PENDING_WRITE, COMMIT_ERROR
-   */
-  private synchronized COMMIT_STATUS checkCommitInternal(long commitOffset,
-      Channel channel, int xid, Nfs3FileAttributes preOpAttr) {
+  
+  @VisibleForTesting
+  synchronized COMMIT_STATUS checkCommitInternal(long commitOffset,
+      Channel channel, int xid, Nfs3FileAttributes preOpAttr, boolean fromRead) {
     if (!activeState) {
       if (pendingWrites.isEmpty()) {
         return COMMIT_STATUS.COMMIT_INACTIVE_CTX;
@@ -760,22 +772,18 @@ class OpenFileCtx {
       }
     }
 
-    long flushed = 0;
-    try {
-      flushed = getFlushedOffset();
-    } catch (IOException e) {
-      LOG.error("Can't get flushed offset, error:" + e);
-      return COMMIT_STATUS.COMMIT_ERROR;
-    }
+    long flushed = getFlushedOffset();
     if (LOG.isDebugEnabled()) {
       LOG.debug("getFlushedOffset=" + flushed + " commitOffset=" + commitOffset);
     }
 
     if (commitOffset > 0) {
       if (commitOffset > flushed) {
-        CommitCtx commitCtx = new CommitCtx(commitOffset, channel, xid,
-            preOpAttr);
-        pendingCommits.put(commitOffset, commitCtx);
+        if (!fromRead) {
+          CommitCtx commitCtx = new CommitCtx(commitOffset, channel, xid,
+              preOpAttr);
+          pendingCommits.put(commitOffset, commitCtx);
+        }
         return COMMIT_STATUS.COMMIT_WAIT;
       } else {
         return COMMIT_STATUS.COMMIT_DO_SYNC;
@@ -790,11 +798,13 @@ class OpenFileCtx {
       // do a sync here though the output stream might be closed.
       return COMMIT_STATUS.COMMIT_FINISHED;
     } else {
-      // Insert commit
-      long maxOffset = key.getKey().getMax() - 1;
-      Preconditions.checkState(maxOffset > 0);
-      CommitCtx commitCtx = new CommitCtx(maxOffset, channel, xid, preOpAttr);
-      pendingCommits.put(maxOffset, commitCtx);
+      if (!fromRead) {
+        // Insert commit
+        long maxOffset = key.getKey().getMax() - 1;
+        Preconditions.checkState(maxOffset > 0);
+        CommitCtx commitCtx = new CommitCtx(maxOffset, channel, xid, preOpAttr);
+        pendingCommits.put(maxOffset, commitCtx);
+      }
       return COMMIT_STATUS.COMMIT_WAIT;
     }
   }
@@ -896,9 +906,11 @@ class OpenFileCtx {
   /** Invoked by AsynDataService to write back to HDFS */
   void executeWriteBack() {
     Preconditions.checkState(asyncStatus,
-        "The openFileCtx has false async status");
+        "openFileCtx has false asyncStatus, fileId:" + latestAttr.getFileid());
+    final long startOffset = asyncWriteBackStartOffset;  
     try {
       while (activeState) {
+        // asyncStatus could be changed to false in offerNextToWrite()
         WriteCtx toWrite = offerNextToWrite();
         if (toWrite != null) {
           // Do the write
@@ -914,25 +926,33 @@ class OpenFileCtx {
             + latestAttr.getFileId());
       }
     } finally {
-      // make sure we reset asyncStatus to false
-      asyncStatus = false;
+      // Make sure to reset asyncStatus to false unless a race happens
+      synchronized (this) {
+        if (startOffset == asyncWriteBackStartOffset) {
+          asyncStatus = false;
+        } else {
+          LOG.info("Another asyn task is already started before this one"
+              + " is finalized. fileId:" + latestAttr.getFileid()
+              + " asyncStatus:" + asyncStatus + " original startOffset:"
+              + startOffset + " new startOffset:" + asyncWriteBackStartOffset
+              + ". Won't change asyncStatus here.");
+        }
+      }
     }
   }
 
   private void processCommits(long offset) {
     Preconditions.checkState(offset > 0);
-    long flushedOffset = 0;
-    Entry<Long, CommitCtx> entry = null;
+    long flushedOffset = getFlushedOffset();
+    Entry<Long, CommitCtx> entry = pendingCommits.firstEntry();
 
+    if (entry == null || entry.getValue().offset > flushedOffset) {
+      return;
+    }
+
+    // Now do sync for the ready commits
     int status = Nfs3Status.NFS3ERR_IO;
     try {
-      flushedOffset = getFlushedOffset();
-      entry = pendingCommits.firstEntry();
-      if (entry == null || entry.getValue().offset > flushedOffset) {
-        return;
-      }
-
-      // Now do sync for the ready commits
       // Sync file data and length
       fos.hsync(EnumSet.of(SyncFlag.UPDATE_LENGTH));
       status = Nfs3Status.NFS3_OK;

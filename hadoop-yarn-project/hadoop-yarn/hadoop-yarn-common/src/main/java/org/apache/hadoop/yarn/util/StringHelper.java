@@ -178,8 +178,4 @@ public final class StringHelper {
   public static String percent(double value) {
     return String.format("%.2f", value * 100);
   }
-  
-  public static String getPartUrl(String url, String part) {
-    return url.substring(url.indexOf(part));
-  }
 }

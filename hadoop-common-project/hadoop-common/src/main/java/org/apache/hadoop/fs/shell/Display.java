@@ -35,8 +35,10 @@ import org.apache.avro.Schema;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.AvroFSInput;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileChecksum;
+import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIsDirectoryException;
@@ -45,7 +47,6 @@ import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionCodecFactory;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -198,7 +199,7 @@ class Display extends FsCommand {
 
   protected class TextRecordInputStream extends InputStream {
     SequenceFile.Reader r;
-    WritableComparable<?> key;
+    Writable key;
     Writable val;
 
     DataInputBuffer inbuf;
@@ -210,7 +211,7 @@ class Display extends FsCommand {
       r = new SequenceFile.Reader(lconf, 
           SequenceFile.Reader.file(fpath));
       key = ReflectionUtils.newInstance(
-          r.getKeyClass().asSubclass(WritableComparable.class), lconf);
+          r.getKeyClass().asSubclass(Writable.class), lconf);
       val = ReflectionUtils.newInstance(
           r.getValueClass().asSubclass(Writable.class), lconf);
       inbuf = new DataInputBuffer();
@@ -260,8 +261,9 @@ class Display extends FsCommand {
       pos = 0;
       buffer = new byte[0];
       GenericDatumReader<Object> reader = new GenericDatumReader<Object>();
+      FileContext fc = FileContext.getFileContext(new Configuration());
       fileReader =
-        DataFileReader.openReader(new File(status.getPath().toUri()), reader);
+        DataFileReader.openReader(new AvroFSInput(fc, status.getPath()),reader);
       Schema schema = fileReader.getSchema();
       writer = new GenericDatumWriter<Object>(schema);
       output = new ByteArrayOutputStream();

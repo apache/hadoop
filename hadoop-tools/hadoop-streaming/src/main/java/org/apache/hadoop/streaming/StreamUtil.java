@@ -168,12 +168,17 @@ public class StreamUtil {
   }
 
   static private Environment env;
-  static String HOST;
+  private static String host;
 
+  public static String getHost(){
+    return host;
+  }
+ 
+   
   static {
     try {
       env = new Environment();
-      HOST = env.getHost();
+      host = env.getHost();
     } catch (IOException io) {
       io.printStackTrace();
     }

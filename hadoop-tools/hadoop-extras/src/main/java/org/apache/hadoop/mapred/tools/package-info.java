@@ -17,6 +17,6 @@
  */
 
 /**
- * Command-line tools associated with the org.apache.hadoop.mapred package.
+ * Command-line tools associated with MapReduce.
  */
 package org.apache.hadoop.mapred.tools;

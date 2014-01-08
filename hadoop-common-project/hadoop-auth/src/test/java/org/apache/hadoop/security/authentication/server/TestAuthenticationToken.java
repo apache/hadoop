@@ -92,7 +92,7 @@ public class TestAuthenticationToken {
     Assert.assertEquals("t", token.getType());
     Assert.assertEquals(expires, token.getExpires());
     Assert.assertFalse(token.isExpired());
-    Thread.sleep(51);
+    Thread.sleep(70);               // +20 msec fuzz for timer granularity.
     Assert.assertTrue(token.isExpired());
   }
 
@@ -107,7 +107,7 @@ public class TestAuthenticationToken {
     Assert.assertEquals("t", token.getType());
     Assert.assertEquals(expires, token.getExpires());
     Assert.assertFalse(token.isExpired());
-    Thread.sleep(51);
+    Thread.sleep(70);               // +20 msec fuzz for timer granularity.
     Assert.assertTrue(token.isExpired());
   }
 

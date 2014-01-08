@@ -582,7 +582,7 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
     Class<K> keyClass = (Class<K>) job.getMapOutputKeyClass();
     Class<V> valClass = (Class<V>) job.getMapOutputValueClass();
     RawComparator<K> comparator = 
-      (RawComparator<K>)job.getOutputKeyComparator();
+      (RawComparator<K>)job.getCombinerKeyGroupingComparator();
     try {
       CombineValuesIterator values = new CombineValuesIterator(
           kvIter, comparator, keyClass, valClass, job, Reporter.NULL,

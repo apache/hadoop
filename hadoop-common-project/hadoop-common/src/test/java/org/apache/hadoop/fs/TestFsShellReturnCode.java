@@ -24,6 +24,7 @@ import static org.junit.Assert.fail;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.io.PrintStream;
 import java.util.Arrays;
 import java.util.Collections;
@@ -34,6 +35,7 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.shell.CommandFactory;
 import org.apache.hadoop.fs.shell.FsCommand;
 import org.apache.hadoop.fs.shell.PathData;
 import org.apache.hadoop.io.IOUtils;
@@ -382,6 +384,33 @@ public class TestFsShellReturnCode {
     
   }
   
+  @Test (timeout = 30000)
+  public void testInterrupt() throws Exception {
+    MyFsShell shell = new MyFsShell();
+    shell.setConf(new Configuration());
+    final Path d = new Path(TEST_ROOT_DIR, "testInterrupt");
+    final Path f1 = new Path(d, "f1");
+    final Path f2 = new Path(d, "f2");
+    assertTrue(fileSys.mkdirs(d));
+    writeFile(fileSys, f1);
+    assertTrue(fileSys.isFile(f1));
+    writeFile(fileSys, f2);
+    assertTrue(fileSys.isFile(f2));
+
+    int exitCode = shell.run(
+        new String[]{ "-testInterrupt", f1.toString(), f2.toString() });
+    // processing a file throws an interrupt, it should blow on first file
+    assertEquals(1, InterruptCommand.processed);
+    assertEquals(130, exitCode);
+    
+    exitCode = shell.run(
+        new String[]{ "-testInterrupt", d.toString() });
+    // processing a file throws an interrupt, it should blow on file
+    // after descent into dir
+    assertEquals(2, InterruptCommand.processed);
+    assertEquals(130, exitCode);
+  }
+
   /**
    * Tests combinations of valid and invalid user and group arguments to chown.
    */
@@ -489,6 +518,30 @@ public class TestFsShellReturnCode {
       return stat;
     }
   }
+  
+  static class MyFsShell extends FsShell {
+    @Override
+    protected void registerCommands(CommandFactory factory) {
+      factory.addClass(InterruptCommand.class, "-testInterrupt");
+    }
+  }
+
+  static class InterruptCommand extends FsCommand {
+    static int processed = 0;
+    InterruptCommand() {
+      processed = 0;
+      setRecursive(true);
+    }
+    @Override
+    protected void processPath(PathData item) throws IOException {
+      System.out.println("processing: "+item);
+      processed++;
+      if (item.stat.isFile()) {
+        System.out.println("throw interrupt");
+        throw new InterruptedIOException();
+      }
+    }
+  }  
 
   /**
    * Asserts that for the given command, the given arguments are considered

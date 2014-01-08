@@ -19,6 +19,10 @@
 package org.apache.hadoop.yarn.server.resourcemanager.recovery;
 
 import static org.junit.Assert.assertTrue;
+
+import java.io.IOException;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import junit.framework.Assert;
 
 import org.apache.commons.logging.Log;
@@ -31,7 +35,13 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.RMStateVersion;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationStateDataPBImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.RMStateVersionPBImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.junit.Test;
 
@@ -42,7 +52,7 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
   class TestFSRMStateStoreTester implements RMStateStoreHelper {
 
     Path workingDirPathURI;
-    FileSystemRMStateStore store;
+    TestFileSystemRMStore store;
     MiniDFSCluster cluster;
 
     class TestFileSystemRMStore extends FileSystemRMStateStore {
@@ -53,6 +63,21 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
         assertTrue(workingDirPathURI.equals(fsWorkingPath));
         start();
         Assert.assertNotNull(fs);
+      }
+
+      public Path getVersionNode() {
+        return new Path(new Path(workingDirPathURI, ROOT_DIR_NAME), VERSION_NODE);
+      }
+
+      public RMStateVersion getCurrentVersion() {
+        return CURRENT_VERSION_INFO;
+      }
+
+      public Path getAppDir(String appId) {
+        Path rootDir = new Path(workingDirPathURI, ROOT_DIR_NAME);
+        Path appRootDir = new Path(rootDir, RM_APP_ROOT);
+        Path appDir = new Path(appRootDir, appId);
+        return appDir;
       }
     }
 
@@ -71,6 +96,8 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
       YarnConfiguration conf = new YarnConfiguration();
       conf.set(YarnConfiguration.FS_RM_STATE_STORE_URI,
           workingDirPathURI.toString());
+      conf.set(YarnConfiguration.FS_RM_STATE_STORE_RETRY_POLICY_SPEC,
+        "100,6000");
       this.store = new TestFileSystemRMStore(conf);
       return store;
     }
@@ -81,9 +108,27 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
       FileStatus[] files = fs.listStatus(workingDirPathURI);
       return files.length == 1;
     }
+
+    @Override
+    public void writeVersion(RMStateVersion version) throws Exception {
+      store.updateFile(store.getVersionNode(), ((RMStateVersionPBImpl) version)
+        .getProto().toByteArray());
+    }
+
+    @Override
+    public RMStateVersion getCurrentVersion() throws Exception {
+      return store.getCurrentVersion();
+    }
+
+    public boolean appExists(RMApp app) throws IOException {
+      FileSystem fs = cluster.getFileSystem();
+      Path nodePath =
+          store.getAppDir(app.getApplicationId().toString());
+      return fs.exists(nodePath);
+    }
   }
 
-  @Test
+  @Test(timeout = 60000)
   public void testFSRMStateStore() throws Exception {
     HdfsConfiguration conf = new HdfsConfiguration();
     MiniDFSCluster cluster =
@@ -98,11 +143,8 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
       String appAttemptIdStr3 = "appattempt_1352994193343_0001_000003";
       ApplicationAttemptId attemptId3 =
           ConverterUtils.toApplicationAttemptId(appAttemptIdStr3);
-      Path rootDir =
-          new Path(fileSystemRMStateStore.fsWorkingPath, "FSRMStateRoot");
-      Path appRootDir = new Path(rootDir, "RMAppRoot");
       Path appDir =
-          new Path(appRootDir, attemptId3.getApplicationId().toString());
+          fsTester.store.getAppDir(attemptId3.getApplicationId().toString());
       Path tempAppAttemptFile =
           new Path(appDir, attemptId3.toString() + ".tmp");
       fsOut = fileSystemRMStateStore.fs.create(tempAppAttemptFile, false);
@@ -110,9 +152,54 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
       fsOut.close();
 
       testRMAppStateStore(fsTester);
-      Assert.assertFalse(fileSystemRMStateStore.fsWorkingPath
+      Assert.assertFalse(fsTester.workingDirPathURI
           .getFileSystem(conf).exists(tempAppAttemptFile));
       testRMDTSecretManagerStateStore(fsTester);
+      testCheckVersion(fsTester);
+      testAppDeletion(fsTester);
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  @Test (timeout = 30000)
+  public void testFSRMStateStoreClientRetry() throws Exception {
+    HdfsConfiguration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
+    cluster.waitActive();
+    try {
+      TestFSRMStateStoreTester fsTester = new TestFSRMStateStoreTester(cluster);
+      final RMStateStore store = fsTester.getRMStateStore();
+      store.setRMDispatcher(new TestDispatcher());
+      final AtomicBoolean assertionFailedInThread = new AtomicBoolean(false);
+      cluster.shutdownNameNodes();
+
+      Thread clientThread = new Thread() {
+        @Override
+        public void run() {
+          try {
+            store.storeApplicationStateInternal(
+                ApplicationId.newInstance(100L, 1),
+                (ApplicationStateDataPBImpl) ApplicationStateDataPBImpl
+                    .newApplicationStateData(111, 111, "user", null,
+                        RMAppState.ACCEPTED, "diagnostics", 333));
+          } catch (Exception e) {
+            // TODO 0 datanode exception will not be retried by dfs client, fix
+            // that separately.
+            if (!e.getMessage().contains("could only be replicated" +
+                " to 0 nodes instead of minReplication (=1)")) {
+              assertionFailedInThread.set(true);
+            }
+            e.printStackTrace();
+          }
+        }
+      };
+      Thread.sleep(2000);
+      clientThread.start();
+      cluster.restartNameNode();
+      clientThread.join();
+      Assert.assertFalse(assertionFailedInThread.get());
     } finally {
       cluster.shutdown();
     }

@@ -28,7 +28,7 @@
 
 <property>
   <name>hadoop.common.configuration.version</name>
-  <value>0.23.0</value>
+  <value>3.0.0</value>
   <description>version of this configuration file</description>
 </property>
 
@@ -287,6 +287,14 @@
   running the Hadoop client. Change this to the absolute path to kinit if this
   is not the case.
   </description>
+</property>
+
+<property>
+    <name>hadoop.kerberos.min.seconds.before.relogin</name>
+    <value>60</value>
+    <description>The minimum time between relogin attempts for Kerberos, in
+    seconds.
+    </description>
 </property>
 
 <property>
@@ -607,6 +615,14 @@
   <value>10</value>
   <description>Indicates the number of retries a client will make to establish
                a server connection.
+  </description>
+</property>
+
+<property>
+  <name>ipc.client.connect.retry.interval</name>
+  <value>1000</value>
+  <description>Indicates the number of milliseconds a client will wait for
+    before retrying to establish a server connection.
   </description>
 </property>
 
@@ -996,18 +1012,6 @@
   </description>
 </property>
 
-
-<!-- Static Web User Filter properties. -->
-<property>
-  <description>
-    The user name to filter as, on static web filters
-    while rendering content. An example use is the HDFS
-    web UI (user to be used for browsing files).
-  </description>
-  <name>hadoop.http.staticuser.user</name>
-  <value>dr.who</value>
-</property>
-
 <property>
   <name>ha.zookeeper.quorum</name>
   <description>
@@ -1068,6 +1072,17 @@
   </description>
 </property>
 
+<!-- Static Web User Filter properties. -->
+<property>
+  <description>
+    The user name to filter as, on static web filters
+    while rendering content. An example use is the HDFS
+    web UI (user to be used for browsing files).
+  </description>
+  <name>hadoop.http.staticuser.user</name>
+  <value>dr.who</value>
+</property>
+
 <!-- SSLFactory configuration -->
 
 <property>
@@ -1118,9 +1133,7 @@
   <name>hadoop.ssl.enabled</name>
   <value>false</value>
   <description>
-    Whether to use SSL for the HTTP endpoints. If set to true, the
-    NameNode, DataNode, ResourceManager, NodeManager, HistoryServer and
-    MapReduceAppMaster web UIs will be served over HTTPS instead HTTP.
+    Deprecated. Use dfs.http.policy and yarn.http.policy instead.
   </description>
 </property>
 
@@ -1246,6 +1259,20 @@
   <value>4242</value>
   <description>
       Specify the port number used by Hadoop mount daemon.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.user.group.static.mapping.overrides</name>
+  <value>dr.who=;</value>
+  <description>
+    Static mapping of user to groups. This will override the groups if
+    available in the system for the specified user. In otherwords, groups
+    look-up will not happen for these users, instead groups mapped in this
+    configuration will be used.
+    Mapping should be in this format.
+    user1=group1,group2;user2=;user3=group2;
+    Default, "dr.who=;" will consider "dr.who" as user without groups.
   </description>
 </property>
 </configuration>

@@ -21,8 +21,12 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -32,7 +36,9 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
+import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
@@ -40,11 +46,18 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.LogVerificationAppender;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager.StatefulBlockInfo;
+import org.apache.hadoop.hdfs.server.namenode.FSClusterStats;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.Namesystem;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.test.PathUtils;
@@ -58,6 +71,10 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 public class TestReplicationPolicy {
+  {
+    ((Log4JLogger)BlockPlacementPolicy.LOG).getLogger().setLevel(Level.ALL);
+  }
+
   private Random random = DFSUtil.getRandom();
   private static final int BLOCK_SIZE = 1024;
   private static final int NUM_OF_DATANODES = 6;
@@ -66,6 +83,7 @@ public class TestReplicationPolicy {
   private static BlockPlacementPolicy replicator;
   private static final String filename = "/dummyfile.txt";
   private static DatanodeDescriptor dataNodes[];
+  private static DatanodeStorageInfo[] storages;
   // The interval for marking a datanode as stale,
   private static long staleInterval = 
       DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_DEFAULT;
@@ -73,17 +91,28 @@ public class TestReplicationPolicy {
   @Rule
   public ExpectedException exception = ExpectedException.none();
   
+  private static void updateHeartbeatWithUsage(DatanodeDescriptor dn,
+    long capacity, long dfsUsed, long remaining, long blockPoolUsed,
+    long dnCacheCapacity, long dnCacheUsed, int xceiverCount, int volFailures) {
+    dn.getStorageInfos()[0].setUtilizationForTesting(
+        capacity, dfsUsed, remaining, blockPoolUsed);
+    dn.updateHeartbeat(
+        BlockManagerTestUtil.getStorageReportsForDatanode(dn),
+        dnCacheCapacity, dnCacheUsed, xceiverCount, volFailures);
+  }
+
   @BeforeClass
   public static void setupCluster() throws Exception {
     Configuration conf = new HdfsConfiguration();
-    dataNodes = new DatanodeDescriptor[] {
-        DFSTestUtil.getDatanodeDescriptor("1.1.1.1", "/d1/r1"),
-        DFSTestUtil.getDatanodeDescriptor("2.2.2.2", "/d1/r1"),
-        DFSTestUtil.getDatanodeDescriptor("3.3.3.3", "/d1/r2"),
-        DFSTestUtil.getDatanodeDescriptor("4.4.4.4", "/d1/r2"),
-        DFSTestUtil.getDatanodeDescriptor("5.5.5.5", "/d2/r3"),
-        DFSTestUtil.getDatanodeDescriptor("6.6.6.6", "/d2/r3")
-      };
+    final String[] racks = {
+        "/d1/r1",
+        "/d1/r1",
+        "/d1/r2",
+        "/d1/r2",
+        "/d2/r3",
+        "/d2/r3"};
+    storages = DFSTestUtil.createDatanodeStorageInfos(racks);
+    dataNodes = DFSTestUtil.toDatanodeDescriptor(storages);
 
     FileSystem.setDefaultUri(conf, "hdfs://localhost:0");
     conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "0.0.0.0:0");
@@ -108,12 +137,19 @@ public class TestReplicationPolicy {
           dataNodes[i]);
     }
     for (int i=0; i < NUM_OF_DATANODES; i++) {
-      dataNodes[i].updateHeartbeat(
+      updateHeartbeatWithUsage(dataNodes[i],
           2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
-          2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0, 0);
+          2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0L, 0L, 0, 0);
     }    
   }
 
+  private static boolean isOnSameRack(DatanodeStorageInfo left, DatanodeStorageInfo right) {
+    return isOnSameRack(left, right.getDatanodeDescriptor());
+  }
+
+  private static boolean isOnSameRack(DatanodeStorageInfo left, DatanodeDescriptor right) {
+    return cluster.isOnSameRack(left.getDatanodeDescriptor(), right);
+  }
   /**
    * In this testcase, client is dataNodes[0]. So the 1st replica should be
    * placed on dataNodes[0], the 2nd replica should be placed on 
@@ -125,73 +161,74 @@ public class TestReplicationPolicy {
    */
   @Test
   public void testChooseTarget1() throws Exception {
-    dataNodes[0].updateHeartbeat(
+    updateHeartbeatWithUsage(dataNodes[0],
         2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 
-        HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 4, 0); // overloaded
+        HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
+        0L, 0L, 4, 0); // overloaded
 
-    DatanodeDescriptor[] targets;
+    DatanodeStorageInfo[] targets;
     targets = chooseTarget(0);
     assertEquals(targets.length, 0);
     
     targets = chooseTarget(1);
     assertEquals(targets.length, 1);
-    assertEquals(targets[0], dataNodes[0]);
+    assertEquals(storages[0], targets[0]);
     
     targets = chooseTarget(2);
     assertEquals(targets.length, 2);
-    assertEquals(targets[0], dataNodes[0]);
-    assertFalse(cluster.isOnSameRack(targets[0], targets[1]));
+    assertEquals(storages[0], targets[0]);
+    assertFalse(isOnSameRack(targets[0], targets[1]));
     
     targets = chooseTarget(3);
     assertEquals(targets.length, 3);
-    assertEquals(targets[0], dataNodes[0]);
-    assertFalse(cluster.isOnSameRack(targets[0], targets[1]));
-    assertTrue(cluster.isOnSameRack(targets[1], targets[2]));
+    assertEquals(storages[0], targets[0]);
+    assertFalse(isOnSameRack(targets[0], targets[1]));
+    assertTrue(isOnSameRack(targets[1], targets[2]));
 
     targets = chooseTarget(4);
     assertEquals(targets.length, 4);
-    assertEquals(targets[0], dataNodes[0]);
-    assertTrue(cluster.isOnSameRack(targets[1], targets[2]) ||
-               cluster.isOnSameRack(targets[2], targets[3]));
-    assertFalse(cluster.isOnSameRack(targets[0], targets[2]));
+    assertEquals(storages[0], targets[0]);
+    assertTrue(isOnSameRack(targets[1], targets[2]) ||
+               isOnSameRack(targets[2], targets[3]));
+    assertFalse(isOnSameRack(targets[0], targets[2]));
     
-    dataNodes[0].updateHeartbeat(
+    updateHeartbeatWithUsage(dataNodes[0],
         2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
-        HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0, 0); 
+        HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0L, 0L, 0, 0);
   }
 
-  private static DatanodeDescriptor[] chooseTarget(int numOfReplicas) {
+  private static DatanodeStorageInfo[] chooseTarget(int numOfReplicas) {
     return chooseTarget(numOfReplicas, dataNodes[0]);
   }
 
-  private static DatanodeDescriptor[] chooseTarget(int numOfReplicas,
+  private static DatanodeStorageInfo[] chooseTarget(int numOfReplicas,
       DatanodeDescriptor writer) {
     return chooseTarget(numOfReplicas, writer,
-        new ArrayList<DatanodeDescriptor>());
+        new ArrayList<DatanodeStorageInfo>());
   }
 
-  private static DatanodeDescriptor[] chooseTarget(int numOfReplicas,
-      List<DatanodeDescriptor> chosenNodes) {
+  private static DatanodeStorageInfo[] chooseTarget(int numOfReplicas,
+      List<DatanodeStorageInfo> chosenNodes) {
     return chooseTarget(numOfReplicas, dataNodes[0], chosenNodes);
   }
 
-  private static DatanodeDescriptor[] chooseTarget(int numOfReplicas,
-      DatanodeDescriptor writer, List<DatanodeDescriptor> chosenNodes) {
+  private static DatanodeStorageInfo[] chooseTarget(int numOfReplicas,
+      DatanodeDescriptor writer, List<DatanodeStorageInfo> chosenNodes) {
     return chooseTarget(numOfReplicas, writer, chosenNodes, null);
   }
 
-  private static DatanodeDescriptor[] chooseTarget(int numOfReplicas,
-      List<DatanodeDescriptor> chosenNodes, Set<Node> excludedNodes) {
+  private static DatanodeStorageInfo[] chooseTarget(int numOfReplicas,
+      List<DatanodeStorageInfo> chosenNodes, Set<Node> excludedNodes) {
     return chooseTarget(numOfReplicas, dataNodes[0], chosenNodes, excludedNodes);
   }
 
-  private static DatanodeDescriptor[] chooseTarget(
+  private static DatanodeStorageInfo[] chooseTarget(
       int numOfReplicas,
       DatanodeDescriptor writer,
-      List<DatanodeDescriptor> chosenNodes,
+      List<DatanodeStorageInfo> chosenNodes,
       Set<Node> excludedNodes) {
     return replicator.chooseTarget(filename, numOfReplicas, writer, chosenNodes,
-        false, excludedNodes, BLOCK_SIZE);
+        false, excludedNodes, BLOCK_SIZE, StorageType.DEFAULT);
   }
 
   /**
@@ -205,8 +242,8 @@ public class TestReplicationPolicy {
   @Test
   public void testChooseTarget2() throws Exception { 
     Set<Node> excludedNodes;
-    DatanodeDescriptor[] targets;
-    List<DatanodeDescriptor> chosenNodes = new ArrayList<DatanodeDescriptor>();
+    DatanodeStorageInfo[] targets;
+    List<DatanodeStorageInfo> chosenNodes = new ArrayList<DatanodeStorageInfo>();
     
     excludedNodes = new HashSet<Node>();
     excludedNodes.add(dataNodes[1]); 
@@ -218,49 +255,52 @@ public class TestReplicationPolicy {
     excludedNodes.add(dataNodes[1]); 
     targets = chooseTarget(1, chosenNodes, excludedNodes);
     assertEquals(targets.length, 1);
-    assertEquals(targets[0], dataNodes[0]);
+    assertEquals(storages[0], targets[0]);
     
     excludedNodes.clear();
     chosenNodes.clear();
     excludedNodes.add(dataNodes[1]); 
     targets = chooseTarget(2, chosenNodes, excludedNodes);
     assertEquals(targets.length, 2);
-    assertEquals(targets[0], dataNodes[0]);
-    assertFalse(cluster.isOnSameRack(targets[0], targets[1]));
+    assertEquals(storages[0], targets[0]);
+
+    assertFalse(isOnSameRack(targets[0], targets[1]));
     
     excludedNodes.clear();
     chosenNodes.clear();
     excludedNodes.add(dataNodes[1]); 
     targets = chooseTarget(3, chosenNodes, excludedNodes);
     assertEquals(targets.length, 3);
-    assertEquals(targets[0], dataNodes[0]);
-    assertFalse(cluster.isOnSameRack(targets[0], targets[1]));
-    assertTrue(cluster.isOnSameRack(targets[1], targets[2]));
+    assertEquals(storages[0], targets[0]);
+
+    assertFalse(isOnSameRack(targets[0], targets[1]));
+    assertTrue(isOnSameRack(targets[1], targets[2]));
     
     excludedNodes.clear();
     chosenNodes.clear();
     excludedNodes.add(dataNodes[1]); 
     targets = chooseTarget(4, chosenNodes, excludedNodes);
     assertEquals(targets.length, 4);
-    assertEquals(targets[0], dataNodes[0]);
+    assertEquals(storages[0], targets[0]);
+
     for(int i=1; i<4; i++) {
-      assertFalse(cluster.isOnSameRack(targets[0], targets[i]));
+      assertFalse(isOnSameRack(targets[0], targets[i]));
     }
-    assertTrue(cluster.isOnSameRack(targets[1], targets[2]) ||
-               cluster.isOnSameRack(targets[2], targets[3]));
-    assertFalse(cluster.isOnSameRack(targets[1], targets[3]));
+    assertTrue(isOnSameRack(targets[1], targets[2]) ||
+               isOnSameRack(targets[2], targets[3]));
+    assertFalse(isOnSameRack(targets[1], targets[3]));
 
     excludedNodes.clear();
     chosenNodes.clear();
     excludedNodes.add(dataNodes[1]); 
-    chosenNodes.add(dataNodes[2]);
+    chosenNodes.add(storages[2]);
     targets = replicator.chooseTarget(filename, 1, dataNodes[0], chosenNodes, true,
-        excludedNodes, BLOCK_SIZE);
+        excludedNodes, BLOCK_SIZE, StorageType.DEFAULT);
     System.out.println("targets=" + Arrays.asList(targets));
     assertEquals(2, targets.length);
     //make sure that the chosen node is in the target.
     int i = 0;
-    for (; i < targets.length && !dataNodes[2].equals(targets[i]); i++);
+    for (; i < targets.length && !storages[2].equals(targets[i]); i++);
     assertTrue(i < targets.length);
   }
 
@@ -275,42 +315,43 @@ public class TestReplicationPolicy {
   @Test
   public void testChooseTarget3() throws Exception {
     // make data node 0 to be not qualified to choose
-    dataNodes[0].updateHeartbeat(
+    updateHeartbeatWithUsage(dataNodes[0],
         2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
-        (HdfsConstants.MIN_BLOCKS_FOR_WRITE-1)*BLOCK_SIZE, 0L, 0, 0); // no space
+        (HdfsConstants.MIN_BLOCKS_FOR_WRITE-1)*BLOCK_SIZE, 0L,
+        0L, 0L, 0, 0); // no space
         
-    DatanodeDescriptor[] targets;
+    DatanodeStorageInfo[] targets;
     targets = chooseTarget(0);
     assertEquals(targets.length, 0);
     
     targets = chooseTarget(1);
     assertEquals(targets.length, 1);
-    assertEquals(targets[0], dataNodes[1]);
+    assertEquals(storages[1], targets[0]);
     
     targets = chooseTarget(2);
     assertEquals(targets.length, 2);
-    assertEquals(targets[0], dataNodes[1]);
-    assertFalse(cluster.isOnSameRack(targets[0], targets[1]));
+    assertEquals(storages[1], targets[0]);
+    assertFalse(isOnSameRack(targets[0], targets[1]));
     
     targets = chooseTarget(3);
     assertEquals(targets.length, 3);
-    assertEquals(targets[0], dataNodes[1]);
-    assertTrue(cluster.isOnSameRack(targets[1], targets[2]));
-    assertFalse(cluster.isOnSameRack(targets[0], targets[1]));
+    assertEquals(storages[1], targets[0]);
+    assertTrue(isOnSameRack(targets[1], targets[2]));
+    assertFalse(isOnSameRack(targets[0], targets[1]));
     
     targets = chooseTarget(4);
     assertEquals(targets.length, 4);
-    assertEquals(targets[0], dataNodes[1]);
+    assertEquals(storages[1], targets[0]);
     for(int i=1; i<4; i++) {
-      assertFalse(cluster.isOnSameRack(targets[0], targets[i]));
+      assertFalse(isOnSameRack(targets[0], targets[i]));
     }
-    assertTrue(cluster.isOnSameRack(targets[1], targets[2]) ||
-               cluster.isOnSameRack(targets[2], targets[3]));
-    assertFalse(cluster.isOnSameRack(targets[1], targets[3]));
+    assertTrue(isOnSameRack(targets[1], targets[2]) ||
+               isOnSameRack(targets[2], targets[3]));
+    assertFalse(isOnSameRack(targets[1], targets[3]));
 
-    dataNodes[0].updateHeartbeat(
+    updateHeartbeatWithUsage(dataNodes[0],
         2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
-        HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0, 0); 
+        HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0L, 0L, 0, 0);
   }
   
   /**
@@ -325,37 +366,37 @@ public class TestReplicationPolicy {
   public void testChoooseTarget4() throws Exception {
     // make data node 0 & 1 to be not qualified to choose: not enough disk space
     for(int i=0; i<2; i++) {
-      dataNodes[i].updateHeartbeat(
+      updateHeartbeatWithUsage(dataNodes[i],
           2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
-          (HdfsConstants.MIN_BLOCKS_FOR_WRITE-1)*BLOCK_SIZE, 0L, 0, 0);
+          (HdfsConstants.MIN_BLOCKS_FOR_WRITE-1)*BLOCK_SIZE, 0L, 0L, 0L, 0, 0);
     }
       
-    DatanodeDescriptor[] targets;
+    DatanodeStorageInfo[] targets;
     targets = chooseTarget(0);
     assertEquals(targets.length, 0);
     
     targets = chooseTarget(1);
     assertEquals(targets.length, 1);
-    assertFalse(cluster.isOnSameRack(targets[0], dataNodes[0]));
+    assertFalse(isOnSameRack(targets[0], dataNodes[0]));
     
     targets = chooseTarget(2);
     assertEquals(targets.length, 2);
-    assertFalse(cluster.isOnSameRack(targets[0], dataNodes[0]));
-    assertFalse(cluster.isOnSameRack(targets[0], targets[1]));
+    assertFalse(isOnSameRack(targets[0], dataNodes[0]));
+    assertFalse(isOnSameRack(targets[0], targets[1]));
     
     targets = chooseTarget(3);
     assertEquals(targets.length, 3);
     for(int i=0; i<3; i++) {
-      assertFalse(cluster.isOnSameRack(targets[i], dataNodes[0]));
+      assertFalse(isOnSameRack(targets[i], dataNodes[0]));
     }
-    assertTrue(cluster.isOnSameRack(targets[0], targets[1]) ||
-               cluster.isOnSameRack(targets[1], targets[2]));
-    assertFalse(cluster.isOnSameRack(targets[0], targets[2]));
+    assertTrue(isOnSameRack(targets[0], targets[1]) ||
+               isOnSameRack(targets[1], targets[2]));
+    assertFalse(isOnSameRack(targets[0], targets[2]));
     
     for(int i=0; i<2; i++) {
-      dataNodes[i].updateHeartbeat(
+      updateHeartbeatWithUsage(dataNodes[i],
           2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
-          HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0, 0);
+          HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0L, 0L, 0, 0);
     }
   }
 
@@ -371,7 +412,7 @@ public class TestReplicationPolicy {
     DatanodeDescriptor writerDesc =
       DFSTestUtil.getDatanodeDescriptor("7.7.7.7", "/d2/r4");
 
-    DatanodeDescriptor[] targets;
+    DatanodeStorageInfo[] targets;
     targets = chooseTarget(0, writerDesc);
     assertEquals(targets.length, 0);
 
@@ -380,12 +421,12 @@ public class TestReplicationPolicy {
 
     targets = chooseTarget(2, writerDesc);
     assertEquals(targets.length, 2);
-    assertFalse(cluster.isOnSameRack(targets[0], targets[1]));
+    assertFalse(isOnSameRack(targets[0], targets[1]));
 
     targets = chooseTarget(3, writerDesc);
     assertEquals(targets.length, 3);
-    assertTrue(cluster.isOnSameRack(targets[1], targets[2]));
-    assertFalse(cluster.isOnSameRack(targets[0], targets[1]));
+    assertTrue(isOnSameRack(targets[1], targets[2]));
+    assertFalse(isOnSameRack(targets[0], targets[1]));
   }
 
   /**
@@ -415,9 +456,9 @@ public class TestReplicationPolicy {
   public void testChooseTargetWithMoreThanAvailableNodes() throws Exception {
     // make data node 0 & 1 to be not qualified to choose: not enough disk space
     for(int i=0; i<2; i++) {
-      dataNodes[i].updateHeartbeat(
+      updateHeartbeatWithUsage(dataNodes[i],
           2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
-          (HdfsConstants.MIN_BLOCKS_FOR_WRITE-1)*BLOCK_SIZE, 0L, 0, 0);
+          (HdfsConstants.MIN_BLOCKS_FOR_WRITE-1)*BLOCK_SIZE, 0L, 0L, 0L, 0, 0);
     }
     
     final LogVerificationAppender appender = new LogVerificationAppender();
@@ -426,7 +467,7 @@ public class TestReplicationPolicy {
     
     // try to choose NUM_OF_DATANODES which is more than actually available
     // nodes.
-    DatanodeDescriptor[] targets = chooseTarget(NUM_OF_DATANODES);
+    DatanodeStorageInfo[] targets = chooseTarget(NUM_OF_DATANODES);
     assertEquals(targets.length, NUM_OF_DATANODES - 2);
 
     final List<LoggingEvent> log = appender.getLog();
@@ -434,30 +475,42 @@ public class TestReplicationPolicy {
     assertFalse(log.size() == 0);
     final LoggingEvent lastLogEntry = log.get(log.size() - 1);
     
-    assertEquals(lastLogEntry.getLevel(), Level.WARN);
+    assertTrue(Level.WARN.isGreaterOrEqual(lastLogEntry.getLevel()));
     // Suppose to place replicas on each node but two data nodes are not
     // available for placing replica, so here we expect a short of 2
     assertTrue(((String)lastLogEntry.getMessage()).contains("in need of 2"));
     
     for(int i=0; i<2; i++) {
-      dataNodes[i].updateHeartbeat(
+      updateHeartbeatWithUsage(dataNodes[i],
           2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
-          HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0, 0);
+          HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0L, 0L, 0, 0);
     }
   }
 
-  private boolean containsWithinRange(DatanodeDescriptor target,
+  private boolean containsWithinRange(DatanodeStorageInfo target,
       DatanodeDescriptor[] nodes, int startIndex, int endIndex) {
     assert startIndex >= 0 && startIndex < nodes.length;
     assert endIndex >= startIndex && endIndex < nodes.length;
     for (int i = startIndex; i <= endIndex; i++) {
-      if (nodes[i].equals(target)) {
+      if (nodes[i].equals(target.getDatanodeDescriptor())) {
         return true;
       }
     }
     return false;
   }
   
+  private boolean containsWithinRange(DatanodeDescriptor target,
+      DatanodeStorageInfo[] nodes, int startIndex, int endIndex) {
+    assert startIndex >= 0 && startIndex < nodes.length;
+    assert endIndex >= startIndex && endIndex < nodes.length;
+    for (int i = startIndex; i <= endIndex; i++) {
+      if (nodes[i].getDatanodeDescriptor().equals(target)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   @Test
   public void testChooseTargetWithStaleNodes() throws Exception {
     // Set dataNodes[0] as stale
@@ -466,19 +519,19 @@ public class TestReplicationPolicy {
       .getDatanodeManager().getHeartbeatManager().heartbeatCheck();
     assertTrue(namenode.getNamesystem().getBlockManager()
         .getDatanodeManager().shouldAvoidStaleDataNodesForWrite());
-    DatanodeDescriptor[] targets;
+    DatanodeStorageInfo[] targets;
     // We set the datanode[0] as stale, thus should choose datanode[1] since
     // datanode[1] is on the same rack with datanode[0] (writer)
     targets = chooseTarget(1);
     assertEquals(targets.length, 1);
-    assertEquals(targets[0], dataNodes[1]);
+    assertEquals(storages[1], targets[0]);
 
     Set<Node> excludedNodes = new HashSet<Node>();
     excludedNodes.add(dataNodes[1]);
-    List<DatanodeDescriptor> chosenNodes = new ArrayList<DatanodeDescriptor>();
+    List<DatanodeStorageInfo> chosenNodes = new ArrayList<DatanodeStorageInfo>();
     targets = chooseTarget(1, chosenNodes, excludedNodes);
     assertEquals(targets.length, 1);
-    assertFalse(cluster.isOnSameRack(targets[0], dataNodes[0]));
+    assertFalse(isOnSameRack(targets[0], dataNodes[0]));
     
     // reset
     dataNodes[0].setLastUpdate(Time.now());
@@ -503,7 +556,7 @@ public class TestReplicationPolicy {
     namenode.getNamesystem().getBlockManager()
       .getDatanodeManager().getHeartbeatManager().heartbeatCheck();
 
-    DatanodeDescriptor[] targets = chooseTarget(0);
+    DatanodeStorageInfo[] targets = chooseTarget(0);
     assertEquals(targets.length, 0);
 
     // Since we have 6 datanodes total, stale nodes should
@@ -575,11 +628,12 @@ public class TestReplicationPolicy {
           .getDatanode(miniCluster.getDataNodes().get(0).getDatanodeId());
       BlockPlacementPolicy replicator = miniCluster.getNameNode()
           .getNamesystem().getBlockManager().getBlockPlacementPolicy();
-      DatanodeDescriptor[] targets = replicator.chooseTarget(filename, 3,
-          staleNodeInfo, new ArrayList<DatanodeDescriptor>(), false, null, BLOCK_SIZE);
+      DatanodeStorageInfo[] targets = replicator.chooseTarget(filename, 3,
+          staleNodeInfo, new ArrayList<DatanodeStorageInfo>(), false, null,
+          BLOCK_SIZE, StorageType.DEFAULT);
 
       assertEquals(targets.length, 3);
-      assertFalse(cluster.isOnSameRack(targets[0], staleNodeInfo));
+      assertFalse(isOnSameRack(targets[0], staleNodeInfo));
       
       // Step 2. Set more than half of the datanodes as stale
       for (int i = 0; i < 4; i++) {
@@ -600,10 +654,11 @@ public class TestReplicationPolicy {
       assertFalse(miniCluster.getNameNode().getNamesystem().getBlockManager()
           .getDatanodeManager().shouldAvoidStaleDataNodesForWrite());
       // Call chooseTarget
-      targets = replicator.chooseTarget(filename, 3,
-          staleNodeInfo, new ArrayList<DatanodeDescriptor>(), false, null, BLOCK_SIZE);
+      targets = replicator.chooseTarget(filename, 3, staleNodeInfo,
+          new ArrayList<DatanodeStorageInfo>(), false, null, BLOCK_SIZE,
+          StorageType.DEFAULT);
       assertEquals(targets.length, 3);
-      assertTrue(cluster.isOnSameRack(targets[0], staleNodeInfo));
+      assertTrue(isOnSameRack(targets[0], staleNodeInfo));
       
       // Step 3. Set 2 stale datanodes back to healthy nodes, 
       // still have 2 stale nodes
@@ -625,7 +680,7 @@ public class TestReplicationPolicy {
       // Call chooseTarget
       targets = chooseTarget(3, staleNodeInfo);
       assertEquals(targets.length, 3);
-      assertFalse(cluster.isOnSameRack(targets[0], staleNodeInfo));
+      assertFalse(isOnSameRack(targets[0], staleNodeInfo));
     } finally {
       miniCluster.shutdown();
     }
@@ -640,26 +695,26 @@ public class TestReplicationPolicy {
    */
   @Test
   public void testRereplicate1() throws Exception {
-    List<DatanodeDescriptor> chosenNodes = new ArrayList<DatanodeDescriptor>();
-    chosenNodes.add(dataNodes[0]);    
-    DatanodeDescriptor[] targets;
+    List<DatanodeStorageInfo> chosenNodes = new ArrayList<DatanodeStorageInfo>();
+    chosenNodes.add(storages[0]);    
+    DatanodeStorageInfo[] targets;
     
     targets = chooseTarget(0, chosenNodes);
     assertEquals(targets.length, 0);
     
     targets = chooseTarget(1, chosenNodes);
     assertEquals(targets.length, 1);
-    assertFalse(cluster.isOnSameRack(dataNodes[0], targets[0]));
+    assertFalse(isOnSameRack(targets[0], dataNodes[0]));
     
     targets = chooseTarget(2, chosenNodes);
     assertEquals(targets.length, 2);
-    assertTrue(cluster.isOnSameRack(dataNodes[0], targets[0]));
-    assertFalse(cluster.isOnSameRack(targets[0], targets[1]));
+    assertTrue(isOnSameRack(targets[0], dataNodes[0]));
+    assertFalse(isOnSameRack(targets[0], targets[1]));
     
     targets = chooseTarget(3, chosenNodes);
     assertEquals(targets.length, 3);
-    assertTrue(cluster.isOnSameRack(dataNodes[0], targets[0]));
-    assertFalse(cluster.isOnSameRack(targets[0], targets[2]));
+    assertTrue(isOnSameRack(targets[0], dataNodes[0]));
+    assertFalse(isOnSameRack(targets[0], targets[2]));
   }
 
   /**
@@ -671,22 +726,22 @@ public class TestReplicationPolicy {
    */
   @Test
   public void testRereplicate2() throws Exception {
-    List<DatanodeDescriptor> chosenNodes = new ArrayList<DatanodeDescriptor>();
-    chosenNodes.add(dataNodes[0]);
-    chosenNodes.add(dataNodes[1]);
+    List<DatanodeStorageInfo> chosenNodes = new ArrayList<DatanodeStorageInfo>();
+    chosenNodes.add(storages[0]);
+    chosenNodes.add(storages[1]);
 
-    DatanodeDescriptor[] targets;
+    DatanodeStorageInfo[] targets;
     targets = chooseTarget(0, chosenNodes);
     assertEquals(targets.length, 0);
     
     targets = chooseTarget(1, chosenNodes);
     assertEquals(targets.length, 1);
-    assertFalse(cluster.isOnSameRack(dataNodes[0], targets[0]));
+    assertFalse(isOnSameRack(targets[0], dataNodes[0]));
     
     targets = chooseTarget(2, chosenNodes);
     assertEquals(targets.length, 2);
-    assertFalse(cluster.isOnSameRack(dataNodes[0], targets[0]));
-    assertFalse(cluster.isOnSameRack(dataNodes[0], targets[1]));
+    assertFalse(isOnSameRack(targets[0], dataNodes[0]));
+    assertFalse(isOnSameRack(targets[1], dataNodes[0]));
   }
 
   /**
@@ -698,31 +753,31 @@ public class TestReplicationPolicy {
    */
   @Test
   public void testRereplicate3() throws Exception {
-    List<DatanodeDescriptor> chosenNodes = new ArrayList<DatanodeDescriptor>();
-    chosenNodes.add(dataNodes[0]);
-    chosenNodes.add(dataNodes[2]);
+    List<DatanodeStorageInfo> chosenNodes = new ArrayList<DatanodeStorageInfo>();
+    chosenNodes.add(storages[0]);
+    chosenNodes.add(storages[2]);
     
-    DatanodeDescriptor[] targets;
+    DatanodeStorageInfo[] targets;
     targets = chooseTarget(0, chosenNodes);
     assertEquals(targets.length, 0);
     
     targets = chooseTarget(1, chosenNodes);
     assertEquals(targets.length, 1);
-    assertTrue(cluster.isOnSameRack(dataNodes[0], targets[0]));
-    assertFalse(cluster.isOnSameRack(dataNodes[2], targets[0]));
+    assertTrue(isOnSameRack(targets[0], dataNodes[0]));
+    assertFalse(isOnSameRack(targets[0], dataNodes[2]));
     
     targets = chooseTarget(1, dataNodes[2], chosenNodes);
     assertEquals(targets.length, 1);
-    assertTrue(cluster.isOnSameRack(dataNodes[2], targets[0]));
-    assertFalse(cluster.isOnSameRack(dataNodes[0], targets[0]));
+    assertTrue(isOnSameRack(targets[0], dataNodes[2]));
+    assertFalse(isOnSameRack(targets[0], dataNodes[0]));
 
     targets = chooseTarget(2, chosenNodes);
     assertEquals(targets.length, 2);
-    assertTrue(cluster.isOnSameRack(dataNodes[0], targets[0]));
+    assertTrue(isOnSameRack(targets[0], dataNodes[0]));
     
     targets = chooseTarget(2, dataNodes[2], chosenNodes);
     assertEquals(targets.length, 2);
-    assertTrue(cluster.isOnSameRack(dataNodes[2], targets[0]));
+    assertTrue(isOnSameRack(targets[0], dataNodes[2]));
   }
   
   /**
@@ -845,6 +900,57 @@ public class TestReplicationPolicy {
   }
   
   /**
+   * Test for the chooseReplicaToDelete are processed based on 
+   * block locality and free space
+   */
+  @Test
+  public void testChooseReplicaToDelete() throws Exception {
+    List<DatanodeDescriptor> replicaNodeList = new 
+        ArrayList<DatanodeDescriptor>();
+    final Map<String, List<DatanodeDescriptor>> rackMap
+        = new HashMap<String, List<DatanodeDescriptor>>();
+    
+    dataNodes[0].setRemaining(4*1024*1024);
+    replicaNodeList.add(dataNodes[0]);
+    
+    dataNodes[1].setRemaining(3*1024*1024);
+    replicaNodeList.add(dataNodes[1]);
+    
+    dataNodes[2].setRemaining(2*1024*1024);
+    replicaNodeList.add(dataNodes[2]);
+    
+    dataNodes[5].setRemaining(1*1024*1024);
+    replicaNodeList.add(dataNodes[5]);
+    
+    // Refresh the last update time for all the datanodes
+    for (int i = 0; i < dataNodes.length; i++) {
+      dataNodes[i].setLastUpdate(Time.now());
+    }
+    
+    List<DatanodeDescriptor> first = new ArrayList<DatanodeDescriptor>();
+    List<DatanodeDescriptor> second = new ArrayList<DatanodeDescriptor>();
+    replicator.splitNodesWithRack(
+        replicaNodeList, rackMap, first, second);
+    // dataNodes[0] and dataNodes[1] are in first set as their rack has two 
+    // replica nodes, while datanodes[2] and dataNodes[5] are in second set.
+    assertEquals(2, first.size());
+    assertEquals(2, second.size());
+    DatanodeDescriptor chosenNode = replicator.chooseReplicaToDelete(
+        null, null, (short)3, first, second);
+    // Within first set, dataNodes[1] with less free space
+    assertEquals(chosenNode, dataNodes[1]);
+
+    replicator.adjustSetsWithChosenReplica(
+        rackMap, first, second, chosenNode);
+    assertEquals(0, first.size());
+    assertEquals(3, second.size());
+    // Within second set, dataNodes[5] with less free space
+    chosenNode = replicator.chooseReplicaToDelete(
+        null, null, (short)2, first, second);
+    assertEquals(chosenNode, dataNodes[5]);
+  }
+  
+  /**
    * This testcase tests whether the default value returned by
    * DFSUtil.getInvalidateWorkPctPerIteration() is positive, 
    * and whether an IllegalArgumentException will be thrown 
@@ -931,50 +1037,188 @@ public class TestReplicationPolicy {
     exception.expect(IllegalArgumentException.class);
     blocksReplWorkMultiplier = DFSUtil.getReplWorkMultiplier(conf);
   }
-  
-  /**
-   * Test for the chooseReplicaToDelete are processed based on 
-   * block locality and free space
-   */
-  @Test
-  public void testChooseReplicaToDelete() throws Exception {
-    List<DatanodeDescriptor> replicaNodeList = new 
-        ArrayList<DatanodeDescriptor>();
-    final Map<String, List<DatanodeDescriptor>> rackMap
-        = new HashMap<String, List<DatanodeDescriptor>>();
-    
-    dataNodes[0].setRemaining(4*1024*1024);
-    replicaNodeList.add(dataNodes[0]);
-    
-    dataNodes[1].setRemaining(3*1024*1024);
-    replicaNodeList.add(dataNodes[1]);
-    
-    dataNodes[2].setRemaining(2*1024*1024);
-    replicaNodeList.add(dataNodes[2]);
-    
-    dataNodes[5].setRemaining(1*1024*1024);
-    replicaNodeList.add(dataNodes[5]);
-    
-    List<DatanodeDescriptor> first = new ArrayList<DatanodeDescriptor>();
-    List<DatanodeDescriptor> second = new ArrayList<DatanodeDescriptor>();
-    replicator.splitNodesWithRack(
-        replicaNodeList, rackMap, first, second);
-    // dataNodes[0] and dataNodes[1] are in first set as their rack has two 
-    // replica nodes, while datanodes[2] and dataNodes[5] are in second set.
-    assertEquals(2, first.size());
-    assertEquals(2, second.size());
-    DatanodeDescriptor chosenNode = replicator.chooseReplicaToDelete(
-        null, null, (short)3, first, second);
-    // Within first set, dataNodes[1] with less free space
-    assertEquals(chosenNode, dataNodes[1]);
 
-    replicator.adjustSetsWithChosenReplica(
-        rackMap, first, second, chosenNode);
-    assertEquals(0, first.size());
-    assertEquals(3, second.size());
-    // Within second set, dataNodes[5] with less free space
-    chosenNode = replicator.chooseReplicaToDelete(
-        null, null, (short)2, first, second);
-    assertEquals(chosenNode, dataNodes[5]);
+  @Test(timeout = 60000)
+  public void testUpdateDoesNotCauseSkippedReplication() {
+    UnderReplicatedBlocks underReplicatedBlocks = new UnderReplicatedBlocks();
+
+    Block block1 = new Block(random.nextLong());
+    Block block2 = new Block(random.nextLong());
+    Block block3 = new Block(random.nextLong());
+
+    // Adding QUEUE_VERY_UNDER_REPLICATED block
+    final int block1CurReplicas = 2;
+    final int block1ExpectedReplicas = 7;
+    underReplicatedBlocks.add(block1, block1CurReplicas, 0,
+        block1ExpectedReplicas);
+
+    // Adding QUEUE_VERY_UNDER_REPLICATED block
+    underReplicatedBlocks.add(block2, 2, 0, 7);
+
+    // Adding QUEUE_UNDER_REPLICATED block
+    underReplicatedBlocks.add(block3, 2, 0, 6);
+
+    List<List<Block>> chosenBlocks;
+
+    // Choose 1 block from UnderReplicatedBlocks. Then it should pick 1 block
+    // from QUEUE_VERY_UNDER_REPLICATED.
+    chosenBlocks = underReplicatedBlocks.chooseUnderReplicatedBlocks(1);
+    assertTheChosenBlocks(chosenBlocks, 0, 1, 0, 0, 0);
+
+    // Increasing the replications will move the block down a
+    // priority.  This simulates a replica being completed in between checks.
+    underReplicatedBlocks.update(block1, block1CurReplicas+1, 0,
+        block1ExpectedReplicas, 1, 0);
+
+    // Choose 1 block from UnderReplicatedBlocks. Then it should pick 1 block
+    // from QUEUE_VERY_UNDER_REPLICATED.
+    // This block was moved up a priority and should not be skipped over.
+    chosenBlocks = underReplicatedBlocks.chooseUnderReplicatedBlocks(1);
+    assertTheChosenBlocks(chosenBlocks, 0, 1, 0, 0, 0);
+
+    // Choose 1 block from UnderReplicatedBlocks. Then it should pick 1 block
+    // from QUEUE_UNDER_REPLICATED.
+    chosenBlocks = underReplicatedBlocks.chooseUnderReplicatedBlocks(1);
+    assertTheChosenBlocks(chosenBlocks, 0, 0, 1, 0, 0);
+  }
+
+  @Test(timeout = 60000)
+  public void testAddStoredBlockDoesNotCauseSkippedReplication()
+      throws IOException {
+    Namesystem mockNS = mock(Namesystem.class);
+    when(mockNS.isPopulatingReplQueues()).thenReturn(true);
+    when(mockNS.hasWriteLock()).thenReturn(true);
+    FSClusterStats mockStats = mock(FSClusterStats.class);
+    BlockManager bm =
+        new BlockManager(mockNS, mockStats, new HdfsConfiguration());
+    UnderReplicatedBlocks underReplicatedBlocks = bm.neededReplications;
+
+    Block block1 = new Block(random.nextLong());
+    Block block2 = new Block(random.nextLong());
+
+    // Adding QUEUE_UNDER_REPLICATED block
+    underReplicatedBlocks.add(block1, 0, 1, 1);
+
+    // Adding QUEUE_UNDER_REPLICATED block
+    underReplicatedBlocks.add(block2, 0, 1, 1);
+
+    List<List<Block>> chosenBlocks;
+
+    // Choose 1 block from UnderReplicatedBlocks. Then it should pick 1 block
+    // from QUEUE_VERY_UNDER_REPLICATED.
+    chosenBlocks = underReplicatedBlocks.chooseUnderReplicatedBlocks(1);
+    assertTheChosenBlocks(chosenBlocks, 1, 0, 0, 0, 0);
+
+    // Adding this block collection to the BlockManager, so that when we add the
+    // block under construction, the BlockManager will realize the expected
+    // replication has been achieved and remove it from the under-replicated
+    // queue.
+    BlockInfoUnderConstruction info = new BlockInfoUnderConstruction(block1, 1);
+    BlockCollection bc = mock(BlockCollection.class);
+    when(bc.getBlockReplication()).thenReturn((short)1);
+    bm.addBlockCollection(info, bc);
+
+    // Adding this block will increase its current replication, and that will
+    // remove it from the queue.
+    bm.addStoredBlockUnderConstruction(new StatefulBlockInfo(info, info,
+              ReplicaState.FINALIZED), TestReplicationPolicy.dataNodes[0],
+            "STORAGE");
+
+    // Choose 1 block from UnderReplicatedBlocks. Then it should pick 1 block
+    // from QUEUE_VERY_UNDER_REPLICATED.
+    // This block remains and should not be skipped over.
+    chosenBlocks = underReplicatedBlocks.chooseUnderReplicatedBlocks(1);
+    assertTheChosenBlocks(chosenBlocks, 1, 0, 0, 0, 0);
+  }
+
+  @Test(timeout = 60000)
+  public void
+      testConvertLastBlockToUnderConstructionDoesNotCauseSkippedReplication()
+          throws IOException {
+    Namesystem mockNS = mock(Namesystem.class);
+    when(mockNS.isPopulatingReplQueues()).thenReturn(true);
+    FSClusterStats mockStats = mock(FSClusterStats.class);
+    BlockManager bm =
+        new BlockManager(mockNS, mockStats, new HdfsConfiguration());
+    UnderReplicatedBlocks underReplicatedBlocks = bm.neededReplications;
+
+    Block block1 = new Block(random.nextLong());
+    Block block2 = new Block(random.nextLong());
+
+    // Adding QUEUE_UNDER_REPLICATED block
+    underReplicatedBlocks.add(block1, 0, 1, 1);
+
+    // Adding QUEUE_UNDER_REPLICATED block
+    underReplicatedBlocks.add(block2, 0, 1, 1);
+
+    List<List<Block>> chosenBlocks;
+
+    // Choose 1 block from UnderReplicatedBlocks. Then it should pick 1 block
+    // from QUEUE_VERY_UNDER_REPLICATED.
+    chosenBlocks = underReplicatedBlocks.chooseUnderReplicatedBlocks(1);
+    assertTheChosenBlocks(chosenBlocks, 1, 0, 0, 0, 0);
+
+    final BlockInfo info = new BlockInfo(block1, 1);
+    final BlockCollection mbc = mock(BlockCollection.class);
+    when(mbc.getLastBlock()).thenReturn(info);
+    when(mbc.getPreferredBlockSize()).thenReturn(block1.getNumBytes() + 1);
+    when(mbc.getBlockReplication()).thenReturn((short)1);
+    when(mbc.isUnderConstruction()).thenReturn(true);
+    ContentSummary cs = mock(ContentSummary.class);
+    when(cs.getLength()).thenReturn((long)1);
+    when(mbc.computeContentSummary()).thenReturn(cs);
+    info.setBlockCollection(mbc);
+    bm.addBlockCollection(info, mbc);
+
+    DatanodeStorageInfo[] storageAry = {new DatanodeStorageInfo(
+        dataNodes[0], new DatanodeStorage("s1"))};
+    final BlockInfoUnderConstruction ucBlock =
+        info.convertToBlockUnderConstruction(BlockUCState.UNDER_CONSTRUCTION,
+            storageAry);
+    when(mbc.setLastBlock((BlockInfo) any(), (DatanodeStorageInfo[]) any()))
+    .thenReturn(ucBlock);
+
+    bm.convertLastBlockToUnderConstruction(mbc);
+
+    // Choose 1 block from UnderReplicatedBlocks. Then it should pick 1 block
+    // from QUEUE_VERY_UNDER_REPLICATED.
+    // This block remains and should not be skipped over.
+    chosenBlocks = underReplicatedBlocks.chooseUnderReplicatedBlocks(1);
+    assertTheChosenBlocks(chosenBlocks, 1, 0, 0, 0, 0);
+  }
+
+  @Test(timeout = 60000)
+  public void testupdateNeededReplicationsDoesNotCauseSkippedReplication()
+      throws IOException {
+    Namesystem mockNS = mock(Namesystem.class);
+    when(mockNS.isPopulatingReplQueues()).thenReturn(true);
+    FSClusterStats mockStats = mock(FSClusterStats.class);
+    BlockManager bm =
+        new BlockManager(mockNS, mockStats, new HdfsConfiguration());
+    UnderReplicatedBlocks underReplicatedBlocks = bm.neededReplications;
+
+    Block block1 = new Block(random.nextLong());
+    Block block2 = new Block(random.nextLong());
+
+    // Adding QUEUE_UNDER_REPLICATED block
+    underReplicatedBlocks.add(block1, 0, 1, 1);
+
+    // Adding QUEUE_UNDER_REPLICATED block
+    underReplicatedBlocks.add(block2, 0, 1, 1);
+
+    List<List<Block>> chosenBlocks;
+
+    // Choose 1 block from UnderReplicatedBlocks. Then it should pick 1 block
+    // from QUEUE_VERY_UNDER_REPLICATED.
+    chosenBlocks = underReplicatedBlocks.chooseUnderReplicatedBlocks(1);
+    assertTheChosenBlocks(chosenBlocks, 1, 0, 0, 0, 0);
+
+    bm.setReplication((short)0, (short)1, "", block1);
+
+    // Choose 1 block from UnderReplicatedBlocks. Then it should pick 1 block
+    // from QUEUE_VERY_UNDER_REPLICATED.
+    // This block remains and should not be skipped over.
+    chosenBlocks = underReplicatedBlocks.chooseUnderReplicatedBlocks(1);
+    assertTheChosenBlocks(chosenBlocks, 1, 0, 0, 0, 0);
   }
 }

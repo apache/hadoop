@@ -358,7 +358,7 @@ public class TestNestedSnapshots {
     
     FSDirectory fsdir = cluster.getNamesystem().getFSDirectory();
     INode subNode = fsdir.getINode(sub.toString());
-    assertTrue(subNode instanceof INodeDirectoryWithSnapshot);
+    assertTrue(subNode.asDirectory().isWithSnapshot());
     
     hdfs.allowSnapshot(sub);
     subNode = fsdir.getINode(sub.toString());
@@ -366,6 +366,6 @@ public class TestNestedSnapshots {
     
     hdfs.disallowSnapshot(sub);
     subNode = fsdir.getINode(sub.toString());
-    assertTrue(subNode instanceof INodeDirectoryWithSnapshot);
+    assertTrue(subNode.asDirectory().isWithSnapshot());
   }
 }

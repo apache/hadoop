@@ -53,6 +53,7 @@ import org.apache.hadoop.mapreduce.QueueInfo;
 import org.apache.hadoop.mapreduce.TaskCompletionEvent;
 import org.apache.hadoop.mapreduce.TaskTrackerInfo;
 import org.apache.hadoop.mapreduce.TaskType;
+import org.apache.hadoop.mapreduce.checkpoint.TaskCheckpointID;
 import org.apache.hadoop.mapreduce.protocol.ClientProtocol;
 import org.apache.hadoop.mapreduce.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
@@ -575,10 +576,17 @@ public class LocalJobRunner implements ClientProtocol {
 
     // TaskUmbilicalProtocol methods
 
+    @Override
     public JvmTask getTask(JvmContext context) { return null; }
     
-    public synchronized boolean statusUpdate(TaskAttemptID taskId,
+    @Override
+    public synchronized AMFeedback statusUpdate(TaskAttemptID taskId,
         TaskStatus taskStatus) throws IOException, InterruptedException {
+      AMFeedback feedback = new AMFeedback();
+      feedback.setTaskFound(true);
+      if (null == taskStatus) {
+        return feedback;
+      }
       // Serialize as we would if distributed in order to make deep copy
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
       DataOutputStream dos = new DataOutputStream(baos);
@@ -618,7 +626,7 @@ public class LocalJobRunner implements ClientProtocol {
       }
 
       // ignore phase
-      return true;
+      return feedback;
     }
 
     /** Return the current values of the counters for this job,
@@ -654,24 +662,24 @@ public class LocalJobRunner implements ClientProtocol {
       statusUpdate(taskid, taskStatus);
     }
 
+    @Override
     public void reportDiagnosticInfo(TaskAttemptID taskid, String trace) {
       // Ignore for now
     }
     
+    @Override
     public void reportNextRecordRange(TaskAttemptID taskid, 
         SortedRanges.Range range) throws IOException {
       LOG.info("Task " + taskid + " reportedNextRecordRange " + range);
     }
 
-    public boolean ping(TaskAttemptID taskid) throws IOException {
-      return true;
-    }
-    
+    @Override
     public boolean canCommit(TaskAttemptID taskid) 
     throws IOException {
       return true;
     }
     
+    @Override
     public void done(TaskAttemptID taskId) throws IOException {
       int taskIndex = mapIds.indexOf(taskId);
       if (taskIndex >= 0) {                       // mapping
@@ -681,11 +689,13 @@ public class LocalJobRunner implements ClientProtocol {
       }
     }
 
+    @Override
     public synchronized void fsError(TaskAttemptID taskId, String message) 
     throws IOException {
       LOG.fatal("FSError: "+ message + "from task: " + taskId);
     }
 
+    @Override
     public void shuffleError(TaskAttemptID taskId, String message) throws IOException {
       LOG.fatal("shuffleError: "+ message + "from task: " + taskId);
     }
@@ -695,12 +705,30 @@ public class LocalJobRunner implements ClientProtocol {
       LOG.fatal("Fatal: "+ msg + "from task: " + taskId);
     }
     
+    @Override
     public MapTaskCompletionEventsUpdate getMapCompletionEvents(JobID jobId, 
         int fromEventId, int maxLocs, TaskAttemptID id) throws IOException {
       return new MapTaskCompletionEventsUpdate(
         org.apache.hadoop.mapred.TaskCompletionEvent.EMPTY_ARRAY, false);
     }
-    
+
+    @Override
+    public void preempted(TaskAttemptID taskId, TaskStatus taskStatus)
+        throws IOException, InterruptedException {
+      // ignore
+    }
+
+    @Override
+    public TaskCheckpointID getCheckpointID(TaskID taskId) {
+      // ignore
+      return null;
+    }
+
+    @Override
+    public void setCheckpointID(TaskID downgrade, TaskCheckpointID cid) {
+      // ignore
+    }
+
   }
 
   public LocalJobRunner(Configuration conf) throws IOException {

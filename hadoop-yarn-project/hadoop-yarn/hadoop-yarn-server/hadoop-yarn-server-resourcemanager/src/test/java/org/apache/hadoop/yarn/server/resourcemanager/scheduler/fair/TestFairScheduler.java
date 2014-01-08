@@ -19,10 +19,10 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
 
 import java.io.File;
@@ -33,18 +33,20 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Set;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.xml.parsers.ParserConfigurationException;
 
 import junit.framework.Assert;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.security.GroupMappingServiceProvider;
 import org.apache.hadoop.yarn.MockApps;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -52,11 +54,10 @@ import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
-import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPBImpl;
-import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -77,14 +78,15 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.TestSchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestCapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptAddedSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.DominantResourceFairnessPolicy;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FairSharePolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FifoPolicy;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Clock;
@@ -94,9 +96,11 @@ import org.junit.Before;
 import org.junit.Test;
 import org.xml.sax.SAXException;
 
+import com.google.common.collect.Sets;
+
 public class TestFairScheduler {
 
-  private class MockClock implements Clock {
+  static class MockClock implements Clock {
     private long time = 0;
     @Override
     public long getTime() {
@@ -117,6 +121,7 @@ public class TestFairScheduler {
 
   private FairScheduler scheduler;
   private ResourceManager resourceManager;
+  private Configuration conf;
   private static RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
 
   private int APP_ID = 1; // Incrementing counter for schedling apps
@@ -126,7 +131,7 @@ public class TestFairScheduler {
   @Before
   public void setUp() throws IOException {
     scheduler = new FairScheduler();
-    Configuration conf = createConfiguration();
+    conf = createConfiguration();
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, 0);
     conf.setInt(FairSchedulerConfiguration.RM_SCHEDULER_INCREMENT_ALLOCATION_MB,
       1024);
@@ -141,7 +146,6 @@ public class TestFairScheduler {
     ((AsyncDispatcher)resourceManager.getRMContext().getDispatcher()).start();
     resourceManager.getRMContext().getStateStore().start();
 
-    scheduler.reinitialize(conf, resourceManager.getRMContext());
     // to initialize the master key
     resourceManager.getRMContainerTokenSecretManager().rollMasterKey();
   }
@@ -253,7 +257,12 @@ public class TestFairScheduler {
   private ApplicationAttemptId createSchedulingRequest(int memory, int vcores,
       String queueId, String userId, int numContainers, int priority) {
     ApplicationAttemptId id = createAppAttemptId(this.APP_ID++, this.ATTEMPT_ID++);
-    scheduler.addApplication(id, queueId, userId);
+    scheduler.addApplication(id.getApplicationId(), queueId, userId);
+    // This conditional is for testAclSubmitApplication where app is rejected
+    // and no app is added.
+    if (scheduler.applications.containsKey(id.getApplicationId())) {
+      scheduler.addApplicationAttempt(id);
+    }
     List<ResourceRequest> ask = new ArrayList<ResourceRequest>();
     ResourceRequest request = createResourceRequest(memory, vcores, ResourceRequest.ANY,
         priority, numContainers, true);
@@ -287,12 +296,11 @@ public class TestFairScheduler {
 
   @Test(timeout=2000)
   public void testLoadConfigurationOnInitialize() throws IOException {
-    Configuration conf = createConfiguration();
     conf.setBoolean(FairSchedulerConfiguration.ASSIGN_MULTIPLE, true);
     conf.setInt(FairSchedulerConfiguration.MAX_ASSIGN, 3);
     conf.setBoolean(FairSchedulerConfiguration.SIZE_BASED_WEIGHT, true);
-    conf.setFloat(FairSchedulerConfiguration.LOCALITY_THRESHOLD_NODE, .5f);
-    conf.setFloat(FairSchedulerConfiguration.LOCALITY_THRESHOLD_RACK, .7f);
+    conf.setDouble(FairSchedulerConfiguration.LOCALITY_THRESHOLD_NODE, .5);
+    conf.setDouble(FairSchedulerConfiguration.LOCALITY_THRESHOLD_RACK, .7);
     conf.setBoolean(FairSchedulerConfiguration.CONTINUOUS_SCHEDULING_ENABLED,
             true);
     conf.setInt(FairSchedulerConfiguration.CONTINUOUS_SCHEDULING_SLEEP_MS,
@@ -358,6 +366,8 @@ public class TestFairScheduler {
   
   @Test
   public void testAggregateCapacityTracking() throws Exception {
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
     // Add a node
     RMNode node1 =
         MockNodes
@@ -380,7 +390,9 @@ public class TestFairScheduler {
   }
 
   @Test
-  public void testSimpleFairShareCalculation() {
+  public void testSimpleFairShareCalculation() throws IOException {
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
     // Add one big node (only care about aggregate capacity)
     RMNode node1 =
         MockNodes.newNodeInfo(1, Resources.createResource(10 * 1024), 1,
@@ -405,7 +417,9 @@ public class TestFairScheduler {
   }
   
   @Test
-  public void testSimpleHierarchicalFairShareCalculation() {
+  public void testSimpleHierarchicalFairShareCalculation() throws IOException {
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
     // Add one big node (only care about aggregate capacity)
     int capacity = 10 * 24;
     RMNode node1 =
@@ -436,7 +450,9 @@ public class TestFairScheduler {
   }
 
   @Test
-  public void testHierarchicalQueuesSimilarParents() {
+  public void testHierarchicalQueuesSimilarParents() throws IOException {
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
     QueueManager queueManager = scheduler.getQueueManager();
     FSLeafQueue leafQueue = queueManager.getLeafQueue("parent.child", true);
     Assert.assertEquals(2, queueManager.getLeafQueues().size());
@@ -458,8 +474,9 @@ public class TestFairScheduler {
   }
 
   @Test
-  public void testSchedulerRootQueueMetrics() throws InterruptedException {
-	  
+  public void testSchedulerRootQueueMetrics() throws Exception {
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
     // Add a node
     RMNode node1 = MockNodes.newNodeInfo(1, Resources.createResource(1024));
     NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
@@ -496,7 +513,9 @@ public class TestFairScheduler {
   }
 
   @Test (timeout = 5000)
-  public void testSimpleContainerAllocation() {
+  public void testSimpleContainerAllocation() throws IOException {
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
     // Add a node
     RMNode node1 =
         MockNodes
@@ -542,7 +561,9 @@ public class TestFairScheduler {
   }
 
   @Test (timeout = 5000)
-  public void testSimpleContainerReservation() throws InterruptedException {
+  public void testSimpleContainerReservation() throws Exception {
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
     // Add a node
     RMNode node1 =
         MockNodes
@@ -569,7 +590,7 @@ public class TestFairScheduler {
     // Make sure queue 2 is waiting with a reservation
     assertEquals(0, scheduler.getQueueManager().getQueue("queue2").
       getResourceUsage().getMemory());
-    assertEquals(1024, scheduler.applications.get(attId).getCurrentReservation().getMemory());
+    assertEquals(1024, scheduler.appAttempts.get(attId).getCurrentReservation().getMemory());
 
     // Now another node checks in with capacity
     RMNode node2 =
@@ -585,16 +606,15 @@ public class TestFairScheduler {
         getResourceUsage().getMemory());
 
     // The old reservation should still be there...
-    assertEquals(1024, scheduler.applications.get(attId).getCurrentReservation().getMemory());
+    assertEquals(1024, scheduler.appAttempts.get(attId).getCurrentReservation().getMemory());
     // ... but it should disappear when we update the first node.
     scheduler.handle(updateEvent);
-    assertEquals(0, scheduler.applications.get(attId).getCurrentReservation().getMemory());
+    assertEquals(0, scheduler.appAttempts.get(attId).getCurrentReservation().getMemory());
 
   }
 
   @Test
   public void testUserAsDefaultQueue() throws Exception {
-    Configuration conf = createConfiguration();
     conf.set(FairSchedulerConfiguration.USER_AS_DEFAULT_QUEUE, "true");
     scheduler.reinitialize(conf, resourceManager.getRMContext());
     RMContext rmContext = resourceManager.getRMContext();
@@ -605,39 +625,58 @@ public class TestFairScheduler {
             null, null, null, false, false, 0, null, null), null, null, 0, null);
     appsMap.put(appAttemptId.getApplicationId(), rmApp);
     
-    AppAddedSchedulerEvent appAddedEvent = new AppAddedSchedulerEvent(
-        appAttemptId, "default", "user1");
+    AppAddedSchedulerEvent appAddedEvent =
+        new AppAddedSchedulerEvent(appAttemptId.getApplicationId(), "default",
+          "user1");
     scheduler.handle(appAddedEvent);
+    AppAttemptAddedSchedulerEvent attempAddedEvent =
+        new AppAttemptAddedSchedulerEvent(appAttemptId);
+    scheduler.handle(attempAddedEvent);
     assertEquals(1, scheduler.getQueueManager().getLeafQueue("user1", true)
-        .getAppSchedulables().size());
+        .getRunnableAppSchedulables().size());
     assertEquals(0, scheduler.getQueueManager().getLeafQueue("default", true)
-        .getAppSchedulables().size());
+        .getRunnableAppSchedulables().size());
     assertEquals("root.user1", rmApp.getQueue());
-
+  }
+  
+  @Test
+  public void testNotUserAsDefaultQueue() throws Exception {
     conf.set(FairSchedulerConfiguration.USER_AS_DEFAULT_QUEUE, "false");
     scheduler.reinitialize(conf, resourceManager.getRMContext());
-    AppAddedSchedulerEvent appAddedEvent2 = new AppAddedSchedulerEvent(
-        createAppAttemptId(2, 1), "default", "user2");
-    scheduler.handle(appAddedEvent2);
-    assertEquals(1, scheduler.getQueueManager().getLeafQueue("user1", true)
-        .getAppSchedulables().size());
+    RMContext rmContext = resourceManager.getRMContext();
+    Map<ApplicationId, RMApp> appsMap = rmContext.getRMApps();
+    ApplicationAttemptId appAttemptId = createAppAttemptId(1, 1);
+    RMApp rmApp = new RMAppImpl(appAttemptId.getApplicationId(), rmContext, conf,
+        null, null, null, ApplicationSubmissionContext.newInstance(null, null,
+            null, null, null, false, false, 0, null, null), null, null, 0, null);
+    appsMap.put(appAttemptId.getApplicationId(), rmApp);
+
+    AppAddedSchedulerEvent appAddedEvent =
+        new AppAddedSchedulerEvent(appAttemptId.getApplicationId(), "default",
+          "user2");
+    scheduler.handle(appAddedEvent);
+    AppAttemptAddedSchedulerEvent attempAddedEvent =
+        new AppAttemptAddedSchedulerEvent(appAttemptId);
+    scheduler.handle(attempAddedEvent);
+    assertEquals(0, scheduler.getQueueManager().getLeafQueue("user1", true)
+        .getRunnableAppSchedulables().size());
     assertEquals(1, scheduler.getQueueManager().getLeafQueue("default", true)
-        .getAppSchedulables().size());
+        .getRunnableAppSchedulables().size());
     assertEquals(0, scheduler.getQueueManager().getLeafQueue("user2", true)
-        .getAppSchedulables().size());
+        .getRunnableAppSchedulables().size());
   }
 
   @Test
   public void testEmptyQueueName() throws Exception {
-    Configuration conf = createConfiguration();
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
 
     // only default queue
     assertEquals(1, scheduler.getQueueManager().getLeafQueues().size());
 
     // submit app with empty queue
     ApplicationAttemptId appAttemptId = createAppAttemptId(1, 1);
-    AppAddedSchedulerEvent appAddedEvent = new AppAddedSchedulerEvent(
-            appAttemptId, "", "user1");
+    AppAddedSchedulerEvent appAddedEvent =
+        new AppAddedSchedulerEvent(appAttemptId.getApplicationId(), "", "user1");
     scheduler.handle(appAddedEvent);
 
     // submission rejected
@@ -648,7 +687,6 @@ public class TestFairScheduler {
 
   @Test
   public void testAssignToQueue() throws Exception {
-    Configuration conf = createConfiguration();
     conf.set(FairSchedulerConfiguration.USER_AS_DEFAULT_QUEUE, "true");
     scheduler.reinitialize(conf, resourceManager.getRMContext());
     
@@ -664,12 +702,57 @@ public class TestFairScheduler {
     assertEquals(rmApp2.getQueue(), queue2.getName());
     assertEquals("root.notdefault", rmApp2.getQueue());
   }
+  
+  @Test
+  public void testQueuePlacementWithPolicy() throws Exception {
+    conf.setClass(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
+        SimpleGroupsMapping.class, GroupMappingServiceProvider.class);
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    ApplicationAttemptId appId;
+    Map<ApplicationAttemptId, FSSchedulerApp> apps = scheduler.appAttempts;
+
+    List<QueuePlacementRule> rules = new ArrayList<QueuePlacementRule>();
+    rules.add(new QueuePlacementRule.Specified().initialize(true, null));
+    rules.add(new QueuePlacementRule.User().initialize(false, null));
+    rules.add(new QueuePlacementRule.PrimaryGroup().initialize(false, null));
+    rules.add(new QueuePlacementRule.SecondaryGroupExistingQueue().initialize(false, null));
+    rules.add(new QueuePlacementRule.Default().initialize(true, null));
+    Set<String> queues = Sets.newHashSet("root.user1", "root.user3group",
+        "root.user4subgroup1", "root.user4subgroup2" , "root.user5subgroup2");
+    scheduler.getAllocationConfiguration().placementPolicy =
+        new QueuePlacementPolicy(rules, queues, conf);
+    appId = createSchedulingRequest(1024, "somequeue", "user1");
+    assertEquals("root.somequeue", apps.get(appId).getQueueName());
+    appId = createSchedulingRequest(1024, "default", "user1");
+    assertEquals("root.user1", apps.get(appId).getQueueName());
+    appId = createSchedulingRequest(1024, "default", "user3");
+    assertEquals("root.user3group", apps.get(appId).getQueueName());
+    appId = createSchedulingRequest(1024, "default", "user4");
+    assertEquals("root.user4subgroup1", apps.get(appId).getQueueName());
+    appId = createSchedulingRequest(1024, "default", "user5");
+    assertEquals("root.user5subgroup2", apps.get(appId).getQueueName());
+    appId = createSchedulingRequest(1024, "default", "otheruser");
+    assertEquals("root.default", apps.get(appId).getQueueName());
+    
+    // test without specified as first rule
+    rules = new ArrayList<QueuePlacementRule>();
+    rules.add(new QueuePlacementRule.User().initialize(false, null));
+    rules.add(new QueuePlacementRule.Specified().initialize(true, null));
+    rules.add(new QueuePlacementRule.Default().initialize(true, null));
+    scheduler.getAllocationConfiguration().placementPolicy =
+        new QueuePlacementPolicy(rules, queues, conf);
+    appId = createSchedulingRequest(1024, "somequeue", "user1");
+    assertEquals("root.user1", apps.get(appId).getQueueName());
+    appId = createSchedulingRequest(1024, "somequeue", "otheruser");
+    assertEquals("root.somequeue", apps.get(appId).getQueueName());
+    appId = createSchedulingRequest(1024, "default", "otheruser");
+    assertEquals("root.default", apps.get(appId).getQueueName());
+  }
 
   @Test
   public void testFairShareWithMinAlloc() throws Exception {
-    Configuration conf = createConfiguration();
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
-    scheduler.reinitialize(conf, resourceManager.getRMContext());
 
     PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
     out.println("<?xml version=\"1.0\"?>");
@@ -682,9 +765,8 @@ public class TestFairScheduler {
     out.println("</queue>");
     out.println("</allocations>");
     out.close();
-
-    QueueManager queueManager = scheduler.getQueueManager();
-    queueManager.initialize();
+    
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
 
     // Add one big node (only care about aggregate capacity)
     RMNode node1 =
@@ -716,12 +798,17 @@ public class TestFairScheduler {
    */
   @Test
   public void testQueueDemandCalculation() throws Exception {
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
     ApplicationAttemptId id11 = createAppAttemptId(1, 1);
-    scheduler.addApplication(id11, "root.queue1", "user1");
+    scheduler.addApplication(id11.getApplicationId(), "root.queue1", "user1");
+    scheduler.addApplicationAttempt(id11);
     ApplicationAttemptId id21 = createAppAttemptId(2, 1);
-    scheduler.addApplication(id21, "root.queue2", "user1");
+    scheduler.addApplication(id21.getApplicationId(), "root.queue2", "user1");
+    scheduler.addApplicationAttempt(id21);
     ApplicationAttemptId id22 = createAppAttemptId(2, 2);
-    scheduler.addApplication(id22, "root.queue2", "user1");
+    scheduler.addApplication(id22.getApplicationId(), "root.queue2", "user1");
+    scheduler.addApplicationAttempt(id22);
 
     int minReqSize = 
         FairSchedulerConfiguration.DEFAULT_RM_SCHEDULER_INCREMENT_ALLOCATION_MB;
@@ -761,18 +848,23 @@ public class TestFairScheduler {
 
   @Test
   public void testAppAdditionAndRemoval() throws Exception {
-    AppAddedSchedulerEvent appAddedEvent1 = new AppAddedSchedulerEvent(
-        createAppAttemptId(1, 1), "default", "user1");
-    scheduler.handle(appAddedEvent1);
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+    ApplicationAttemptId attemptId =createAppAttemptId(1, 1);
+    AppAddedSchedulerEvent appAddedEvent = new AppAddedSchedulerEvent(attemptId.getApplicationId(), "default",
+      "user1");
+    scheduler.handle(appAddedEvent);
+    AppAttemptAddedSchedulerEvent attemptAddedEvent =
+        new AppAttemptAddedSchedulerEvent(createAppAttemptId(1, 1));
+    scheduler.handle(attemptAddedEvent);
 
     // Scheduler should have two queues (the default and the one created for user1)
     assertEquals(2, scheduler.getQueueManager().getLeafQueues().size());
 
     // That queue should have one app
     assertEquals(1, scheduler.getQueueManager().getLeafQueue("user1", true)
-        .getAppSchedulables().size());
+        .getRunnableAppSchedulables().size());
 
-    AppRemovedSchedulerEvent appRemovedEvent1 = new AppRemovedSchedulerEvent(
+    AppAttemptRemovedSchedulerEvent appRemovedEvent1 = new AppAttemptRemovedSchedulerEvent(
         createAppAttemptId(1, 1), RMAppAttemptState.FINISHED);
 
     // Now remove app
@@ -780,136 +872,13 @@ public class TestFairScheduler {
 
     // Queue should have no apps
     assertEquals(0, scheduler.getQueueManager().getLeafQueue("user1", true)
-        .getAppSchedulables().size());
-  }
-
-  @Test
-  public void testAllocationFileParsing() throws Exception {
-    Configuration conf = createConfiguration();
-    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
-    scheduler.reinitialize(conf, resourceManager.getRMContext());
-
-    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    // Give queue A a minimum of 1024 M
-    out.println("<queue name=\"queueA\">");
-    out.println("<minResources>1024mb,0vcores</minResources>");
-    out.println("</queue>");
-    // Give queue B a minimum of 2048 M
-    out.println("<queue name=\"queueB\">");
-    out.println("<minResources>2048mb,0vcores</minResources>");
-    out.println("<aclAdministerApps>alice,bob admins</aclAdministerApps>");
-    out.println("<schedulingPolicy>fair</schedulingPolicy>");
-    out.println("</queue>");
-    // Give queue C no minimum
-    out.println("<queue name=\"queueC\">");
-    out.println("<aclSubmitApps>alice,bob admins</aclSubmitApps>");
-    out.println("</queue>");
-    // Give queue D a limit of 3 running apps
-    out.println("<queue name=\"queueD\">");
-    out.println("<maxRunningApps>3</maxRunningApps>");
-    out.println("</queue>");
-    // Give queue E a preemption timeout of one minute
-    out.println("<queue name=\"queueE\">");
-    out.println("<minSharePreemptionTimeout>60</minSharePreemptionTimeout>");
-    out.println("</queue>");
-    // Set default limit of apps per queue to 15
-    out.println("<queueMaxAppsDefault>15</queueMaxAppsDefault>");
-    // Set default limit of apps per user to 5
-    out.println("<userMaxAppsDefault>5</userMaxAppsDefault>");
-    // Give user1 a limit of 10 jobs
-    out.println("<user name=\"user1\">");
-    out.println("<maxRunningApps>10</maxRunningApps>");
-    out.println("</user>");
-    // Set default min share preemption timeout to 2 minutes
-    out.println("<defaultMinSharePreemptionTimeout>120"
-        + "</defaultMinSharePreemptionTimeout>");
-    // Set fair share preemption timeout to 5 minutes
-    out.println("<fairSharePreemptionTimeout>300</fairSharePreemptionTimeout>");
-    // Set default scheduling policy to DRF
-    out.println("<defaultQueueSchedulingPolicy>drf</defaultQueueSchedulingPolicy>");
-    out.println("</allocations>");
-    out.close();
-
-    QueueManager queueManager = scheduler.getQueueManager();
-    queueManager.initialize();
-
-    assertEquals(6, queueManager.getLeafQueues().size()); // 5 in file + default queue
-    assertEquals(Resources.createResource(0),
-        queueManager.getMinResources("root." + YarnConfiguration.DEFAULT_QUEUE_NAME));
-    assertEquals(Resources.createResource(0),
-        queueManager.getMinResources("root." + YarnConfiguration.DEFAULT_QUEUE_NAME));
-
-    assertEquals(Resources.createResource(1024, 0),
-        queueManager.getMinResources("root.queueA"));
-    assertEquals(Resources.createResource(2048, 0),
-        queueManager.getMinResources("root.queueB"));
-    assertEquals(Resources.createResource(0),
-        queueManager.getMinResources("root.queueC"));
-    assertEquals(Resources.createResource(0),
-        queueManager.getMinResources("root.queueD"));
-    assertEquals(Resources.createResource(0),
-        queueManager.getMinResources("root.queueE"));
-
-    assertEquals(15, queueManager.getQueueMaxApps("root." + YarnConfiguration.DEFAULT_QUEUE_NAME));
-    assertEquals(15, queueManager.getQueueMaxApps("root.queueA"));
-    assertEquals(15, queueManager.getQueueMaxApps("root.queueB"));
-    assertEquals(15, queueManager.getQueueMaxApps("root.queueC"));
-    assertEquals(3, queueManager.getQueueMaxApps("root.queueD"));
-    assertEquals(15, queueManager.getQueueMaxApps("root.queueE"));
-    assertEquals(10, queueManager.getUserMaxApps("user1"));
-    assertEquals(5, queueManager.getUserMaxApps("user2"));
-
-    // Root should get * ACL
-    assertEquals("*",queueManager.getQueueAcl("root",
-        QueueACL.ADMINISTER_QUEUE).getAclString());
-    assertEquals("*", queueManager.getQueueAcl("root",
-        QueueACL.SUBMIT_APPLICATIONS).getAclString());
-
-    // Unspecified queues should get default ACL
-    assertEquals(" ",queueManager.getQueueAcl("root.queueA",
-        QueueACL.ADMINISTER_QUEUE).getAclString());
-    assertEquals(" ", queueManager.getQueueAcl("root.queueA",
-        QueueACL.SUBMIT_APPLICATIONS).getAclString());
-
-    // Queue B ACL
-    assertEquals("alice,bob admins",queueManager.getQueueAcl("root.queueB",
-        QueueACL.ADMINISTER_QUEUE).getAclString());
-
-    // Queue C ACL
-    assertEquals("alice,bob admins",queueManager.getQueueAcl("root.queueC",
-        QueueACL.SUBMIT_APPLICATIONS).getAclString());
-
-    assertEquals(120000, queueManager.getMinSharePreemptionTimeout("root." + 
-        YarnConfiguration.DEFAULT_QUEUE_NAME));
-    assertEquals(120000, queueManager.getMinSharePreemptionTimeout("root.queueA"));
-    assertEquals(120000, queueManager.getMinSharePreemptionTimeout("root.queueB"));
-    assertEquals(120000, queueManager.getMinSharePreemptionTimeout("root.queueC"));
-    assertEquals(120000, queueManager.getMinSharePreemptionTimeout("root.queueD"));
-    assertEquals(120000, queueManager.getMinSharePreemptionTimeout("root.queueA"));
-    assertEquals(60000, queueManager.getMinSharePreemptionTimeout("root.queueE"));
-    assertEquals(300000, queueManager.getFairSharePreemptionTimeout());
-    
-    // Verify existing queues have default scheduling policy
-    assertEquals(DominantResourceFairnessPolicy.NAME,
-        queueManager.getQueue("root").getPolicy().getName());
-    assertEquals(DominantResourceFairnessPolicy.NAME,
-        queueManager.getQueue("root.queueA").getPolicy().getName());
-    // Verify default is overriden if specified explicitly
-    assertEquals(FairSharePolicy.NAME,
-        queueManager.getQueue("root.queueB").getPolicy().getName());
-    // Verify new queue gets default scheduling policy
-    assertEquals(DominantResourceFairnessPolicy.NAME,
-        queueManager.getLeafQueue("root.newqueue", true).getPolicy().getName());
+        .getRunnableAppSchedulables().size());
   }
 
   @Test
   public void testHierarchicalQueueAllocationFileParsing() throws IOException, SAXException, 
       AllocationConfigurationException, ParserConfigurationException {
-    Configuration conf = createConfiguration();
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
-    scheduler.reinitialize(conf, resourceManager.getRMContext());
 
     PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
     out.println("<?xml version=\"1.0\"?>");
@@ -929,9 +898,9 @@ public class TestFairScheduler {
     out.println("</allocations>");
     out.close();
 
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
     QueueManager queueManager = scheduler.getQueueManager();
-    queueManager.initialize();
-    
     Collection<FSLeafQueue> leafQueues = queueManager.getLeafQueues();
     Assert.assertEquals(4, leafQueues.size());
     Assert.assertNotNull(queueManager.getLeafQueue("queueA", false));
@@ -944,9 +913,7 @@ public class TestFairScheduler {
   
   @Test
   public void testConfigureRootQueue() throws Exception {
-    Configuration conf = createConfiguration();
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
-    scheduler.reinitialize(conf, resourceManager.getRMContext());
 
     PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
     out.println("<?xml version=\"1.0\"?>");
@@ -963,9 +930,9 @@ public class TestFairScheduler {
     out.println("</queue>");
     out.println("</allocations>");
     out.close();
-
+    
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
     QueueManager queueManager = scheduler.getQueueManager();
-    queueManager.initialize();
     
     FSQueue root = queueManager.getRootQueue();
     assertTrue(root.getPolicy() instanceof DominantResourceFairnessPolicy);
@@ -974,136 +941,9 @@ public class TestFairScheduler {
     assertNotNull(queueManager.getLeafQueue("child2", false));
   }
   
-  /**
-   * Verify that you can't place queues at the same level as the root queue in
-   * the allocations file.
-   */
-  @Test (expected = AllocationConfigurationException.class)
-  public void testQueueAlongsideRoot() throws Exception {
-    Configuration conf = createConfiguration();
-    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
-    scheduler.reinitialize(conf, resourceManager.getRMContext());
-
-    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    out.println("<queue name=\"root\">");
-    out.println("</queue>");
-    out.println("<queue name=\"other\">");
-    out.println("</queue>");
-    out.println("</allocations>");
-    out.close();
-
-    QueueManager queueManager = scheduler.getQueueManager();
-    queueManager.initialize();
-  }
-  
-  @Test
-  public void testBackwardsCompatibleAllocationFileParsing() throws Exception {
-    Configuration conf = createConfiguration();
-    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
-    scheduler.reinitialize(conf, resourceManager.getRMContext());
-
-    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
-    out.println("<?xml version=\"1.0\"?>");
-    out.println("<allocations>");
-    // Give queue A a minimum of 1024 M
-    out.println("<pool name=\"queueA\">");
-    out.println("<minResources>1024mb,0vcores</minResources>");
-    out.println("</pool>");
-    // Give queue B a minimum of 2048 M
-    out.println("<pool name=\"queueB\">");
-    out.println("<minResources>2048mb,0vcores</minResources>");
-    out.println("<aclAdministerApps>alice,bob admins</aclAdministerApps>");
-    out.println("</pool>");
-    // Give queue C no minimum
-    out.println("<pool name=\"queueC\">");
-    out.println("<aclSubmitApps>alice,bob admins</aclSubmitApps>");
-    out.println("</pool>");
-    // Give queue D a limit of 3 running apps
-    out.println("<pool name=\"queueD\">");
-    out.println("<maxRunningApps>3</maxRunningApps>");
-    out.println("</pool>");
-    // Give queue E a preemption timeout of one minute
-    out.println("<pool name=\"queueE\">");
-    out.println("<minSharePreemptionTimeout>60</minSharePreemptionTimeout>");
-    out.println("</pool>");
-    // Set default limit of apps per queue to 15
-    out.println("<queueMaxAppsDefault>15</queueMaxAppsDefault>");
-    // Set default limit of apps per user to 5
-    out.println("<userMaxAppsDefault>5</userMaxAppsDefault>");
-    // Give user1 a limit of 10 jobs
-    out.println("<user name=\"user1\">");
-    out.println("<maxRunningApps>10</maxRunningApps>");
-    out.println("</user>");
-    // Set default min share preemption timeout to 2 minutes
-    out.println("<defaultMinSharePreemptionTimeout>120"
-        + "</defaultMinSharePreemptionTimeout>");
-    // Set fair share preemption timeout to 5 minutes
-    out.println("<fairSharePreemptionTimeout>300</fairSharePreemptionTimeout>");
-    out.println("</allocations>");
-    out.close();
-
-    QueueManager queueManager = scheduler.getQueueManager();
-    queueManager.initialize();
-
-    assertEquals(6, queueManager.getLeafQueues().size()); // 5 in file + default queue
-    assertEquals(Resources.createResource(0),
-        queueManager.getMinResources("root." + YarnConfiguration.DEFAULT_QUEUE_NAME));
-    assertEquals(Resources.createResource(0),
-        queueManager.getMinResources("root." + YarnConfiguration.DEFAULT_QUEUE_NAME));
-
-    assertEquals(Resources.createResource(1024, 0),
-        queueManager.getMinResources("root.queueA"));
-    assertEquals(Resources.createResource(2048, 0),
-        queueManager.getMinResources("root.queueB"));
-    assertEquals(Resources.createResource(0),
-        queueManager.getMinResources("root.queueC"));
-    assertEquals(Resources.createResource(0),
-        queueManager.getMinResources("root.queueD"));
-    assertEquals(Resources.createResource(0),
-        queueManager.getMinResources("root.queueE"));
-
-    assertEquals(15, queueManager.getQueueMaxApps("root." + YarnConfiguration.DEFAULT_QUEUE_NAME));
-    assertEquals(15, queueManager.getQueueMaxApps("root.queueA"));
-    assertEquals(15, queueManager.getQueueMaxApps("root.queueB"));
-    assertEquals(15, queueManager.getQueueMaxApps("root.queueC"));
-    assertEquals(3, queueManager.getQueueMaxApps("root.queueD"));
-    assertEquals(15, queueManager.getQueueMaxApps("root.queueE"));
-    assertEquals(10, queueManager.getUserMaxApps("user1"));
-    assertEquals(5, queueManager.getUserMaxApps("user2"));
-
-    // Unspecified queues should get default ACL
-    assertEquals(" ", queueManager.getQueueAcl("root.queueA",
-        QueueACL.ADMINISTER_QUEUE).getAclString());
-    assertEquals(" ", queueManager.getQueueAcl("root.queueA",
-        QueueACL.SUBMIT_APPLICATIONS).getAclString());
-
-    // Queue B ACL
-    assertEquals("alice,bob admins", queueManager.getQueueAcl("root.queueB",
-        QueueACL.ADMINISTER_QUEUE).getAclString());
-
-    // Queue C ACL
-    assertEquals("alice,bob admins", queueManager.getQueueAcl("root.queueC",
-        QueueACL.SUBMIT_APPLICATIONS).getAclString());
-
-
-    assertEquals(120000, queueManager.getMinSharePreemptionTimeout("root." +
-        YarnConfiguration.DEFAULT_QUEUE_NAME));
-    assertEquals(120000, queueManager.getMinSharePreemptionTimeout("root.queueA"));
-    assertEquals(120000, queueManager.getMinSharePreemptionTimeout("root.queueB"));
-    assertEquals(120000, queueManager.getMinSharePreemptionTimeout("root.queueC"));
-    assertEquals(120000, queueManager.getMinSharePreemptionTimeout("root.queueD"));
-    assertEquals(120000, queueManager.getMinSharePreemptionTimeout("root.queueA"));
-    assertEquals(60000, queueManager.getMinSharePreemptionTimeout("root.queueE"));
-    assertEquals(300000, queueManager.getFairSharePreemptionTimeout());
-  }
-
   @Test (timeout = 5000)
   public void testIsStarvedForMinShare() throws Exception {
-    Configuration conf = createConfiguration();
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
-    scheduler.reinitialize(conf, resourceManager.getRMContext());
 
     PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
     out.println("<?xml version=\"1.0\"?>");
@@ -1117,8 +957,7 @@ public class TestFairScheduler {
     out.println("</allocations>");
     out.close();
 
-    QueueManager queueManager = scheduler.getQueueManager();
-    queueManager.initialize();
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
 
     // Add one big node (only care about aggregate capacity)
     RMNode node1 =
@@ -1161,9 +1000,7 @@ public class TestFairScheduler {
 
   @Test (timeout = 5000)
   public void testIsStarvedForFairShare() throws Exception {
-    Configuration conf = createConfiguration();
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
-    scheduler.reinitialize(conf, resourceManager.getRMContext());
 
     PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
     out.println("<?xml version=\"1.0\"?>");
@@ -1177,9 +1014,8 @@ public class TestFairScheduler {
     out.println("</allocations>");
     out.close();
 
-    QueueManager queueManager = scheduler.getQueueManager();
-    queueManager.initialize();
-
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+    
     // Add one big node (only care about aggregate capacity)
     RMNode node1 =
         MockNodes.newNodeInfo(1, Resources.createResource(4 * 1024, 4), 1,
@@ -1226,13 +1062,9 @@ public class TestFairScheduler {
    * now this means decreasing order of priority.
    */
   public void testChoiceOfPreemptedContainers() throws Exception {
-    Configuration conf = createConfiguration();
-    
     conf.setLong(FairSchedulerConfiguration.PREEMPTION_INTERVAL, 5000);
     conf.setLong(FairSchedulerConfiguration.WAIT_TIME_BEFORE_KILL, 10000); 
-    
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE + ".allocation.file", ALLOC_FILE);
-    scheduler.reinitialize(conf, resourceManager.getRMContext());
     
     MockClock clock = new MockClock();
     scheduler.setClock(clock);
@@ -1254,9 +1086,8 @@ public class TestFairScheduler {
     out.println("</queue>");
     out.println("</allocations>");
     out.close();
-
-    QueueManager queueManager = scheduler.getQueueManager();
-    queueManager.initialize();
+    
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
 
     // Create four nodes
     RMNode node1 =
@@ -1307,12 +1138,12 @@ public class TestFairScheduler {
       scheduler.handle(nodeUpdate3);
     }
 
-    assertEquals(1, scheduler.applications.get(app1).getLiveContainers().size());
-    assertEquals(1, scheduler.applications.get(app2).getLiveContainers().size());
-    assertEquals(1, scheduler.applications.get(app3).getLiveContainers().size());
-    assertEquals(1, scheduler.applications.get(app4).getLiveContainers().size());
-    assertEquals(1, scheduler.applications.get(app5).getLiveContainers().size());
-    assertEquals(1, scheduler.applications.get(app6).getLiveContainers().size());
+    assertEquals(1, scheduler.appAttempts.get(app1).getLiveContainers().size());
+    assertEquals(1, scheduler.appAttempts.get(app2).getLiveContainers().size());
+    assertEquals(1, scheduler.appAttempts.get(app3).getLiveContainers().size());
+    assertEquals(1, scheduler.appAttempts.get(app4).getLiveContainers().size());
+    assertEquals(1, scheduler.appAttempts.get(app5).getLiveContainers().size());
+    assertEquals(1, scheduler.appAttempts.get(app6).getLiveContainers().size());
 
     // Now new requests arrive from queues C and D
     ApplicationAttemptId app7 =
@@ -1335,16 +1166,16 @@ public class TestFairScheduler {
     // Make sure it is lowest priority container.
     scheduler.preemptResources(scheduler.getQueueManager().getLeafQueues(),
         Resources.createResource(2 * 1024));
-    assertEquals(1, scheduler.applications.get(app1).getLiveContainers().size());
-    assertEquals(1, scheduler.applications.get(app2).getLiveContainers().size());
-    assertEquals(1, scheduler.applications.get(app4).getLiveContainers().size());
-    assertEquals(1, scheduler.applications.get(app5).getLiveContainers().size());
+    assertEquals(1, scheduler.appAttempts.get(app1).getLiveContainers().size());
+    assertEquals(1, scheduler.appAttempts.get(app2).getLiveContainers().size());
+    assertEquals(1, scheduler.appAttempts.get(app4).getLiveContainers().size());
+    assertEquals(1, scheduler.appAttempts.get(app5).getLiveContainers().size());
     
     // First verify we are adding containers to preemption list for the application
-    assertTrue(!Collections.disjoint(scheduler.applications.get(app3).getLiveContainers(),
-                                     scheduler.applications.get(app3).getPreemptionContainers()));
-    assertTrue(!Collections.disjoint(scheduler.applications.get(app6).getLiveContainers(),
-                                     scheduler.applications.get(app6).getPreemptionContainers()));
+    assertTrue(!Collections.disjoint(scheduler.appAttempts.get(app3).getLiveContainers(),
+                                     scheduler.appAttempts.get(app3).getPreemptionContainers()));
+    assertTrue(!Collections.disjoint(scheduler.appAttempts.get(app6).getLiveContainers(),
+                                     scheduler.appAttempts.get(app6).getPreemptionContainers()));
 
     // Pretend 15 seconds have passed
     clock.tick(15);
@@ -1354,8 +1185,8 @@ public class TestFairScheduler {
         Resources.createResource(2 * 1024));
 
     // At this point the containers should have been killed (since we are not simulating AM)
-    assertEquals(0, scheduler.applications.get(app6).getLiveContainers().size());
-    assertEquals(0, scheduler.applications.get(app3).getLiveContainers().size());
+    assertEquals(0, scheduler.appAttempts.get(app6).getLiveContainers().size());
+    assertEquals(0, scheduler.appAttempts.get(app3).getLiveContainers().size());
 
     // Trigger a kill by insisting we want containers back
     scheduler.preemptResources(scheduler.getQueueManager().getLeafQueues(),
@@ -1369,22 +1200,22 @@ public class TestFairScheduler {
     scheduler.preemptResources(scheduler.getQueueManager().getLeafQueues(),
         Resources.createResource(2 * 1024));
     
-    assertEquals(1, scheduler.applications.get(app1).getLiveContainers().size());
-    assertEquals(0, scheduler.applications.get(app2).getLiveContainers().size());
-    assertEquals(0, scheduler.applications.get(app3).getLiveContainers().size());
-    assertEquals(1, scheduler.applications.get(app4).getLiveContainers().size());
-    assertEquals(0, scheduler.applications.get(app5).getLiveContainers().size());
-    assertEquals(0, scheduler.applications.get(app6).getLiveContainers().size());
+    assertEquals(1, scheduler.appAttempts.get(app1).getLiveContainers().size());
+    assertEquals(0, scheduler.appAttempts.get(app2).getLiveContainers().size());
+    assertEquals(0, scheduler.appAttempts.get(app3).getLiveContainers().size());
+    assertEquals(1, scheduler.appAttempts.get(app4).getLiveContainers().size());
+    assertEquals(0, scheduler.appAttempts.get(app5).getLiveContainers().size());
+    assertEquals(0, scheduler.appAttempts.get(app6).getLiveContainers().size());
 
     // Now A and B are below fair share, so preemption shouldn't do anything
     scheduler.preemptResources(scheduler.getQueueManager().getLeafQueues(),
         Resources.createResource(2 * 1024));
-    assertEquals(1, scheduler.applications.get(app1).getLiveContainers().size());
-    assertEquals(0, scheduler.applications.get(app2).getLiveContainers().size());
-    assertEquals(0, scheduler.applications.get(app3).getLiveContainers().size());
-    assertEquals(1, scheduler.applications.get(app4).getLiveContainers().size());
-    assertEquals(0, scheduler.applications.get(app5).getLiveContainers().size());
-    assertEquals(0, scheduler.applications.get(app6).getLiveContainers().size());
+    assertEquals(1, scheduler.appAttempts.get(app1).getLiveContainers().size());
+    assertEquals(0, scheduler.appAttempts.get(app2).getLiveContainers().size());
+    assertEquals(0, scheduler.appAttempts.get(app3).getLiveContainers().size());
+    assertEquals(1, scheduler.appAttempts.get(app4).getLiveContainers().size());
+    assertEquals(0, scheduler.appAttempts.get(app5).getLiveContainers().size());
+    assertEquals(0, scheduler.appAttempts.get(app6).getLiveContainers().size());
   }
 
   @Test (timeout = 5000)
@@ -1392,15 +1223,16 @@ public class TestFairScheduler {
    * Tests the timing of decision to preempt tasks.
    */
   public void testPreemptionDecision() throws Exception {
-    Configuration conf = createConfiguration();
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
     MockClock clock = new MockClock();
     scheduler.setClock(clock);
-    scheduler.reinitialize(conf, resourceManager.getRMContext());
 
     PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
     out.println("<?xml version=\"1.0\"?>");
     out.println("<allocations>");
+    out.println("<queue name=\"default\">");
+    out.println("<maxResources>0mb,0vcores</maxResources>");
+    out.println("</queue>");
     out.println("<queue name=\"queueA\">");
     out.println("<weight>.25</weight>");
     out.println("<minResources>1024mb,0vcores</minResources>");
@@ -1422,8 +1254,7 @@ public class TestFairScheduler {
     out.println("</allocations>");
     out.close();
 
-    QueueManager queueManager = scheduler.getQueueManager();
-    queueManager.initialize();
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
 
     // Create four nodes
     RMNode node1 =
@@ -1519,7 +1350,9 @@ public class TestFairScheduler {
   }
   
   @Test (timeout = 5000)
-  public void testMultipleContainersWaitingForReservation() {
+  public void testMultipleContainersWaitingForReservation() throws IOException {
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
     // Add a node
     RMNode node1 =
         MockNodes
@@ -1541,17 +1374,15 @@ public class TestFairScheduler {
     
     // One container should get reservation and the other should get nothing
     assertEquals(1024,
-        scheduler.applications.get(attId1).getCurrentReservation().getMemory());
+        scheduler.appAttempts.get(attId1).getCurrentReservation().getMemory());
     assertEquals(0,
-        scheduler.applications.get(attId2).getCurrentReservation().getMemory());
+        scheduler.appAttempts.get(attId2).getCurrentReservation().getMemory());
   }
 
   @Test (timeout = 5000)
   public void testUserMaxRunningApps() throws Exception {
     // Set max running apps
-    Configuration conf = createConfiguration();
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
-    scheduler.reinitialize(conf, resourceManager.getRMContext());
 
     PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
     out.println("<?xml version=\"1.0\"?>");
@@ -1562,8 +1393,7 @@ public class TestFairScheduler {
     out.println("</allocations>");
     out.close();
 
-    QueueManager queueManager = scheduler.getQueueManager();
-    queueManager.initialize();
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
     
     // Add a node
     RMNode node1 =
@@ -1581,7 +1411,7 @@ public class TestFairScheduler {
     scheduler.handle(updateEvent);
     
     // App 1 should be running
-    assertEquals(1, scheduler.applications.get(attId1).getLiveContainers().size());
+    assertEquals(1, scheduler.appAttempts.get(attId1).getLiveContainers().size());
     
     ApplicationAttemptId attId2 = createSchedulingRequest(1024, "queue1",
         "user1", 1);
@@ -1590,7 +1420,7 @@ public class TestFairScheduler {
     scheduler.handle(updateEvent);
     
     // App 2 should not be running
-    assertEquals(0, scheduler.applications.get(attId2).getLiveContainers().size());
+    assertEquals(0, scheduler.appAttempts.get(attId2).getLiveContainers().size());
     
     // Request another container for app 1
     createSchedulingRequestExistingApplication(1024, 1, attId1);
@@ -1599,11 +1429,13 @@ public class TestFairScheduler {
     scheduler.handle(updateEvent);
     
     // Request should be fulfilled
-    assertEquals(2, scheduler.applications.get(attId1).getLiveContainers().size());
+    assertEquals(2, scheduler.appAttempts.get(attId1).getLiveContainers().size());
   }
   
   @Test (timeout = 5000)
-  public void testReservationWhileMultiplePriorities() {
+  public void testReservationWhileMultiplePriorities() throws IOException {
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
     // Add a node
     RMNode node1 =
         MockNodes
@@ -1617,10 +1449,10 @@ public class TestFairScheduler {
     NodeUpdateSchedulerEvent updateEvent = new NodeUpdateSchedulerEvent(node1);
     scheduler.handle(updateEvent);
     
-    FSSchedulerApp app = scheduler.applications.get(attId);
+    FSSchedulerApp app = scheduler.appAttempts.get(attId);
     assertEquals(1, app.getLiveContainers().size());
     
-    ContainerId containerId = scheduler.applications.get(attId)
+    ContainerId containerId = scheduler.appAttempts.get(attId)
         .getLiveContainers().iterator().next().getContainerId();
 
     // Cause reservation to be created
@@ -1666,9 +1498,7 @@ public class TestFairScheduler {
   @Test
   public void testAclSubmitApplication() throws Exception {
     // Set acl's
-    Configuration conf = createConfiguration();
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
-    scheduler.reinitialize(conf, resourceManager.getRMContext());
 
     PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
     out.println("<?xml version=\"1.0\"?>");
@@ -1684,22 +1514,23 @@ public class TestFairScheduler {
     out.println("</allocations>");
     out.close();
 
-    QueueManager queueManager = scheduler.getQueueManager();
-    queueManager.initialize();
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
     
     ApplicationAttemptId attId1 = createSchedulingRequest(1024, "queue1",
         "norealuserhasthisname", 1);
     ApplicationAttemptId attId2 = createSchedulingRequest(1024, "queue1",
         "norealuserhasthisname2", 1);
 
-    FSSchedulerApp app1 = scheduler.applications.get(attId1);
+    FSSchedulerApp app1 = scheduler.appAttempts.get(attId1);
     assertNotNull("The application was not allowed", app1);
-    FSSchedulerApp app2 = scheduler.applications.get(attId2);
+    FSSchedulerApp app2 = scheduler.appAttempts.get(attId2);
     assertNull("The application was allowed", app2);
   }
   
   @Test (timeout = 5000)
   public void testMultipleNodesSingleRackRequest() throws Exception {
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
     RMNode node1 =
         MockNodes
             .newNodeInfo(1, Resources.createResource(1024), 1, "127.0.0.1");
@@ -1715,7 +1546,8 @@ public class TestFairScheduler {
     scheduler.handle(nodeEvent2);
     
     ApplicationAttemptId appId = createAppAttemptId(this.APP_ID++, this.ATTEMPT_ID++);
-    scheduler.addApplication(appId, "queue1", "user1");
+    scheduler.addApplication(appId.getApplicationId(), "queue1", "user1");
+    scheduler.addApplicationAttempt(appId);
     
     // 1 request with 2 nodes on the same rack. another request with 1 node on
     // a different rack
@@ -1734,18 +1566,20 @@ public class TestFairScheduler {
     NodeUpdateSchedulerEvent updateEvent1 = new NodeUpdateSchedulerEvent(node1);
     scheduler.handle(updateEvent1);
     // should assign node local
-    assertEquals(1, scheduler.applications.get(appId).getLiveContainers().size());
+    assertEquals(1, scheduler.appAttempts.get(appId).getLiveContainers().size());
 
     // node 2 checks in
     scheduler.update();
     NodeUpdateSchedulerEvent updateEvent2 = new NodeUpdateSchedulerEvent(node2);
     scheduler.handle(updateEvent2);
     // should assign rack local
-    assertEquals(2, scheduler.applications.get(appId).getLiveContainers().size());
+    assertEquals(2, scheduler.appAttempts.get(appId).getLiveContainers().size());
   }
   
   @Test (timeout = 5000)
   public void testFifoWithinQueue() throws Exception {
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
     RMNode node1 =
         MockNodes
             .newNodeInfo(1, Resources.createResource(3072, 3), 1, "127.0.0.1");
@@ -1758,8 +1592,8 @@ public class TestFairScheduler {
         "user1", 2);
     ApplicationAttemptId attId2 = createSchedulingRequest(1024, "queue1",
         "user1", 2);
-    FSSchedulerApp app1 = scheduler.applications.get(attId1);
-    FSSchedulerApp app2 = scheduler.applications.get(attId2);
+    FSSchedulerApp app1 = scheduler.appAttempts.get(attId1);
+    FSSchedulerApp app2 = scheduler.appAttempts.get(attId2);
     
     FSLeafQueue queue1 = scheduler.getQueueManager().getLeafQueue("queue1", true);
     queue1.setPolicy(new FifoPolicy());
@@ -1786,11 +1620,9 @@ public class TestFairScheduler {
   }
 
   @Test(timeout = 3000)
-  public void testMaxAssign() throws AllocationConfigurationException {
-    // set required scheduler configs
-    scheduler.assignMultiple = true;
-    scheduler.getQueueManager().getLeafQueue("root.default", true)
-        .setPolicy(SchedulingPolicy.getDefault());
+  public void testMaxAssign() throws Exception {
+    conf.setBoolean(FairSchedulerConfiguration.ASSIGN_MULTIPLE, true);
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
 
     RMNode node =
         MockNodes.newNodeInfo(1, Resources.createResource(16384, 16), 0,
@@ -1801,7 +1633,7 @@ public class TestFairScheduler {
 
     ApplicationAttemptId attId =
         createSchedulingRequest(1024, "root.default", "user", 8);
-    FSSchedulerApp app = scheduler.applications.get(attId);
+    FSSchedulerApp app = scheduler.appAttempts.get(attId);
 
     // set maxAssign to 2: only 2 containers should be allocated
     scheduler.maxAssign = 2;
@@ -1833,6 +1665,8 @@ public class TestFairScheduler {
    */
   @Test(timeout = 5000)
   public void testAssignContainer() throws Exception {
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
     final String user = "user1";
     final String fifoQueue = "fifo";
     final String fairParent = "fairParent";
@@ -1861,10 +1695,10 @@ public class TestFairScheduler {
     ApplicationAttemptId attId4 =
         createSchedulingRequest(1024, fifoQueue, user, 4);
 
-    FSSchedulerApp app1 = scheduler.applications.get(attId1);
-    FSSchedulerApp app2 = scheduler.applications.get(attId2);
-    FSSchedulerApp app3 = scheduler.applications.get(attId3);
-    FSSchedulerApp app4 = scheduler.applications.get(attId4);
+    FSSchedulerApp app1 = scheduler.appAttempts.get(attId1);
+    FSSchedulerApp app2 = scheduler.appAttempts.get(attId2);
+    FSSchedulerApp app3 = scheduler.appAttempts.get(attId3);
+    FSSchedulerApp app4 = scheduler.appAttempts.get(attId4);
 
     scheduler.getQueueManager().getLeafQueue(fifoQueue, true)
         .setPolicy(SchedulingPolicy.parse("fifo"));
@@ -1900,9 +1734,7 @@ public class TestFairScheduler {
   @Test
   public void testNotAllowSubmitApplication() throws Exception {
     // Set acl's
-    Configuration conf = createConfiguration();
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
-    scheduler.reinitialize(conf, resourceManager.getRMContext());
     PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
     out.println("<?xml version=\"1.0\"?>");
     out.println("<allocations>");
@@ -1916,8 +1748,8 @@ public class TestFairScheduler {
     out.println("</queue>");
     out.println("</allocations>");
     out.close();
-    QueueManager queueManager = scheduler.getQueueManager();
-    queueManager.initialize();
+    
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
     
     int appId = this.APP_ID++;
     String user = "usernotallow";
@@ -1953,7 +1785,7 @@ public class TestFairScheduler {
 
     ApplicationAttemptId attId =
         ApplicationAttemptId.newInstance(applicationId, this.ATTEMPT_ID++);
-    scheduler.addApplication(attId, queue, user);
+    scheduler.addApplication(attId.getApplicationId(), queue, user);
 
     numTries = 0;
     while (application.getFinishTime() == 0 && numTries < MAX_TRIES) {
@@ -1966,7 +1798,9 @@ public class TestFairScheduler {
   }
   
   @Test
-  public void testReservationThatDoesntFit() {
+  public void testReservationThatDoesntFit() throws IOException {
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
     RMNode node1 =
         MockNodes
             .newNodeInfo(1, Resources.createResource(1024), 1, "127.0.0.1");
@@ -1979,7 +1813,7 @@ public class TestFairScheduler {
     NodeUpdateSchedulerEvent updateEvent = new NodeUpdateSchedulerEvent(node1);
     scheduler.handle(updateEvent);
     
-    FSSchedulerApp app = scheduler.applications.get(attId);
+    FSSchedulerApp app = scheduler.appAttempts.get(attId);
     assertEquals(0, app.getLiveContainers().size());
     assertEquals(0, app.getReservedContainers().size());
     
@@ -1992,7 +1826,9 @@ public class TestFairScheduler {
   }
   
   @Test
-  public void testRemoveNodeUpdatesRootQueueMetrics() {
+  public void testRemoveNodeUpdatesRootQueueMetrics() throws IOException {
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
     assertEquals(0, scheduler.getRootQueueMetrics().getAvailableMB());
 	assertEquals(0, scheduler.getRootQueueMetrics().getAvailableVirtualCores());
     
@@ -2018,7 +1854,9 @@ public class TestFairScheduler {
 }
 
   @Test
-  public void testStrictLocality() {
+  public void testStrictLocality() throws IOException {
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
     RMNode node1 = MockNodes.newNodeInfo(1, Resources.createResource(1024), 1, "127.0.0.1");
     NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
     scheduler.handle(nodeEvent1);
@@ -2044,7 +1882,7 @@ public class TestFairScheduler {
     NodeUpdateSchedulerEvent node2UpdateEvent = new NodeUpdateSchedulerEvent(node2);
 
     // no matter how many heartbeats, node2 should never get a container
-    FSSchedulerApp app = scheduler.applications.get(attId1);
+    FSSchedulerApp app = scheduler.appAttempts.get(attId1);
     for (int i = 0; i < 10; i++) {
       scheduler.handle(node2UpdateEvent);
       assertEquals(0, app.getLiveContainers().size());
@@ -2056,7 +1894,9 @@ public class TestFairScheduler {
   }
   
   @Test
-  public void testCancelStrictLocality() {
+  public void testCancelStrictLocality() throws IOException {
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
     RMNode node1 = MockNodes.newNodeInfo(1, Resources.createResource(1024), 1, "127.0.0.1");
     NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
     scheduler.handle(nodeEvent1);
@@ -2081,7 +1921,7 @@ public class TestFairScheduler {
     NodeUpdateSchedulerEvent node2UpdateEvent = new NodeUpdateSchedulerEvent(node2);
 
     // no matter how many heartbeats, node2 should never get a container
-    FSSchedulerApp app = scheduler.applications.get(attId1);
+    FSSchedulerApp app = scheduler.appAttempts.get(attId1);
     for (int i = 0; i < 10; i++) {
       scheduler.handle(node2UpdateEvent);
       assertEquals(0, app.getLiveContainers().size());
@@ -2104,7 +1944,9 @@ public class TestFairScheduler {
    * a reservation on another.
    */
   @Test
-  public void testReservationsStrictLocality() {
+  public void testReservationsStrictLocality() throws IOException {
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
     RMNode node1 = MockNodes.newNodeInfo(1, Resources.createResource(1024), 1, "127.0.0.1");
     RMNode node2 = MockNodes.newNodeInfo(1, Resources.createResource(1024), 2, "127.0.0.2");
     NodeAddedSchedulerEvent nodeEvent2 = new NodeAddedSchedulerEvent(node1);
@@ -2112,7 +1954,7 @@ public class TestFairScheduler {
 
     ApplicationAttemptId attId = createSchedulingRequest(1024, "queue1",
         "user1", 0);
-    FSSchedulerApp app = scheduler.applications.get(attId);
+    FSSchedulerApp app = scheduler.appAttempts.get(attId);
     
     ResourceRequest nodeRequest = createResourceRequest(1024, node2.getHostName(), 1, 2, true);
     ResourceRequest rackRequest = createResourceRequest(1024, "rack1", 1, 2, true);
@@ -2142,7 +1984,9 @@ public class TestFairScheduler {
   }
   
   @Test
-  public void testNoMoreCpuOnNode() {
+  public void testNoMoreCpuOnNode() throws IOException {
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
     RMNode node1 = MockNodes.newNodeInfo(1, Resources.createResource(2048, 1),
         1, "127.0.0.1");
     NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
@@ -2150,7 +1994,7 @@ public class TestFairScheduler {
     
     ApplicationAttemptId attId = createSchedulingRequest(1024, 1, "default",
         "user1", 2);
-    FSSchedulerApp app = scheduler.applications.get(attId);
+    FSSchedulerApp app = scheduler.appAttempts.get(attId);
     scheduler.update();
 
     NodeUpdateSchedulerEvent updateEvent = new NodeUpdateSchedulerEvent(node1);
@@ -2162,16 +2006,18 @@ public class TestFairScheduler {
 
   @Test
   public void testBasicDRFAssignment() throws Exception {
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
     RMNode node = MockNodes.newNodeInfo(1, BuilderUtils.newResource(8192, 5));
     NodeAddedSchedulerEvent nodeEvent = new NodeAddedSchedulerEvent(node);
     scheduler.handle(nodeEvent);
 
     ApplicationAttemptId appAttId1 = createSchedulingRequest(2048, 1, "queue1",
         "user1", 2);
-    FSSchedulerApp app1 = scheduler.applications.get(appAttId1);
+    FSSchedulerApp app1 = scheduler.appAttempts.get(appAttId1);
     ApplicationAttemptId appAttId2 = createSchedulingRequest(1024, 2, "queue1",
         "user1", 2);
-    FSSchedulerApp app2 = scheduler.applications.get(appAttId2);
+    FSSchedulerApp app2 = scheduler.appAttempts.get(appAttId2);
 
     DominantResourceFairnessPolicy drfPolicy = new DominantResourceFairnessPolicy();
     drfPolicy.initialize(scheduler.getClusterCapacity());
@@ -2200,6 +2046,8 @@ public class TestFairScheduler {
    */
   @Test
   public void testBasicDRFWithQueues() throws Exception {
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
     RMNode node = MockNodes.newNodeInfo(1, BuilderUtils.newResource(8192, 7),
         1, "127.0.0.1");
     NodeAddedSchedulerEvent nodeEvent = new NodeAddedSchedulerEvent(node);
@@ -2207,13 +2055,13 @@ public class TestFairScheduler {
 
     ApplicationAttemptId appAttId1 = createSchedulingRequest(3072, 1, "queue1",
         "user1", 2);
-    FSSchedulerApp app1 = scheduler.applications.get(appAttId1);
+    FSSchedulerApp app1 = scheduler.appAttempts.get(appAttId1);
     ApplicationAttemptId appAttId2 = createSchedulingRequest(2048, 2, "queue1",
         "user1", 2);
-    FSSchedulerApp app2 = scheduler.applications.get(appAttId2);
+    FSSchedulerApp app2 = scheduler.appAttempts.get(appAttId2);
     ApplicationAttemptId appAttId3 = createSchedulingRequest(1024, 2, "queue2",
         "user1", 2);
-    FSSchedulerApp app3 = scheduler.applications.get(appAttId3);
+    FSSchedulerApp app3 = scheduler.appAttempts.get(appAttId3);
     
     DominantResourceFairnessPolicy drfPolicy = new DominantResourceFairnessPolicy();
     drfPolicy.initialize(scheduler.getClusterCapacity());
@@ -2234,6 +2082,8 @@ public class TestFairScheduler {
   
   @Test
   public void testDRFHierarchicalQueues() throws Exception {
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
     RMNode node = MockNodes.newNodeInfo(1, BuilderUtils.newResource(12288, 12),
         1, "127.0.0.1");
     NodeAddedSchedulerEvent nodeEvent = new NodeAddedSchedulerEvent(node);
@@ -2242,19 +2092,19 @@ public class TestFairScheduler {
     ApplicationAttemptId appAttId1 = createSchedulingRequest(3074, 1, "queue1.subqueue1",
         "user1", 2);
     Thread.sleep(3); // so that start times will be different
-    FSSchedulerApp app1 = scheduler.applications.get(appAttId1);
+    FSSchedulerApp app1 = scheduler.appAttempts.get(appAttId1);
     ApplicationAttemptId appAttId2 = createSchedulingRequest(1024, 3, "queue1.subqueue1",
         "user1", 2);
     Thread.sleep(3); // so that start times will be different
-    FSSchedulerApp app2 = scheduler.applications.get(appAttId2);
+    FSSchedulerApp app2 = scheduler.appAttempts.get(appAttId2);
     ApplicationAttemptId appAttId3 = createSchedulingRequest(2048, 2, "queue1.subqueue2",
         "user1", 2);
     Thread.sleep(3); // so that start times will be different
-    FSSchedulerApp app3 = scheduler.applications.get(appAttId3);
+    FSSchedulerApp app3 = scheduler.appAttempts.get(appAttId3);
     ApplicationAttemptId appAttId4 = createSchedulingRequest(1024, 2, "queue2",
         "user1", 2);
     Thread.sleep(3); // so that start times will be different
-    FSSchedulerApp app4 = scheduler.applications.get(appAttId4);
+    FSSchedulerApp app4 = scheduler.appAttempts.get(appAttId4);
     
     DominantResourceFairnessPolicy drfPolicy = new DominantResourceFairnessPolicy();
     drfPolicy.initialize(scheduler.getClusterCapacity());
@@ -2298,9 +2148,9 @@ public class TestFairScheduler {
 
   @Test(timeout = 30000)
   public void testHostPortNodeName() throws Exception {
-    scheduler.getConf().setBoolean(YarnConfiguration
+    conf.setBoolean(YarnConfiguration
         .RM_SCHEDULER_INCLUDE_PORT_IN_NODE_NAME, true);
-    scheduler.reinitialize(scheduler.getConf(), 
+    scheduler.reinitialize(conf, 
         resourceManager.getRMContext());
     RMNode node1 = MockNodes.newNodeInfo(1, Resources.createResource(1024),
         1, "127.0.0.1", 1);
@@ -2334,7 +2184,7 @@ public class TestFairScheduler {
         NodeUpdateSchedulerEvent(node2);
 
     // no matter how many heartbeats, node2 should never get a container  
-    FSSchedulerApp app = scheduler.applications.get(attId1);
+    FSSchedulerApp app = scheduler.appAttempts.get(attId1);
     for (int i = 0; i < 10; i++) {
       scheduler.handle(node2UpdateEvent);
       assertEquals(0, app.getLiveContainers().size());
@@ -2349,7 +2199,152 @@ public class TestFairScheduler {
   public void testConcurrentAccessOnApplications() throws Exception {
     FairScheduler fs = new FairScheduler();
     TestCapacityScheduler.verifyConcurrentAccessOnApplications(
-        fs.applications, FSSchedulerApp.class);
+        fs.appAttempts, FSSchedulerApp.class, FSLeafQueue.class);
+  }
+  
+  
+  private void verifyAppRunnable(ApplicationAttemptId attId, boolean runnable) {
+    FSSchedulerApp app = scheduler.appAttempts.get(attId);
+    FSLeafQueue queue = app.getQueue();
+    Collection<AppSchedulable> runnableApps =
+        queue.getRunnableAppSchedulables();
+    Collection<AppSchedulable> nonRunnableApps =
+        queue.getNonRunnableAppSchedulables();
+    assertEquals(runnable, runnableApps.contains(app.getAppSchedulable()));
+    assertEquals(!runnable, nonRunnableApps.contains(app.getAppSchedulable()));
+  }
+  
+  private void verifyQueueNumRunnable(String queueName, int numRunnableInQueue,
+      int numNonRunnableInQueue) {
+    FSLeafQueue queue = scheduler.getQueueManager().getLeafQueue(queueName, false);
+    assertEquals(numRunnableInQueue,
+        queue.getRunnableAppSchedulables().size());
+    assertEquals(numNonRunnableInQueue,
+        queue.getNonRunnableAppSchedulables().size());
+  }
+  
+  @Test
+  public void testUserAndQueueMaxRunningApps() throws Exception {
+    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+
+    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("<queue name=\"queue1\">");
+    out.println("<maxRunningApps>2</maxRunningApps>");
+    out.println("</queue>");
+    out.println("<user name=\"user1\">");
+    out.println("<maxRunningApps>1</maxRunningApps>");
+    out.println("</user>");
+    out.println("</allocations>");
+    out.close();
+    
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+    
+    // exceeds no limits
+    ApplicationAttemptId attId1 = createSchedulingRequest(1024, "queue1", "user1");
+    verifyAppRunnable(attId1, true);
+    verifyQueueNumRunnable("queue1", 1, 0);
+    // exceeds user limit
+    ApplicationAttemptId attId2 = createSchedulingRequest(1024, "queue2", "user1");
+    verifyAppRunnable(attId2, false);
+    verifyQueueNumRunnable("queue2", 0, 1);
+    // exceeds no limits
+    ApplicationAttemptId attId3 = createSchedulingRequest(1024, "queue1", "user2");
+    verifyAppRunnable(attId3, true);
+    verifyQueueNumRunnable("queue1", 2, 0);
+    // exceeds queue limit
+    ApplicationAttemptId attId4 = createSchedulingRequest(1024, "queue1", "user2");
+    verifyAppRunnable(attId4, false);
+    verifyQueueNumRunnable("queue1", 2, 1);
+    
+    // Remove app 1 and both app 2 and app 4 should becomes runnable in its place
+    AppAttemptRemovedSchedulerEvent appRemovedEvent1 =
+        new AppAttemptRemovedSchedulerEvent(attId1, RMAppAttemptState.FINISHED);
+    scheduler.handle(appRemovedEvent1);
+    verifyAppRunnable(attId2, true);
+    verifyQueueNumRunnable("queue2", 1, 0);
+    verifyAppRunnable(attId4, true);
+    verifyQueueNumRunnable("queue1", 2, 0);
+    
+    // A new app to queue1 should not be runnable
+    ApplicationAttemptId attId5 = createSchedulingRequest(1024, "queue1", "user2");
+    verifyAppRunnable(attId5, false);
+    verifyQueueNumRunnable("queue1", 2, 1);
+  }
+  
+  @Test
+  public void testMaxRunningAppsHierarchicalQueues() throws Exception {
+    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+    MockClock clock = new MockClock();
+    scheduler.setClock(clock);
+
+    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("<queue name=\"queue1\">");
+    out.println("  <maxRunningApps>3</maxRunningApps>");
+    out.println("  <queue name=\"sub1\"></queue>");
+    out.println("  <queue name=\"sub2\"></queue>");
+    out.println("  <queue name=\"sub3\">");
+    out.println("    <maxRunningApps>1</maxRunningApps>");
+    out.println("  </queue>");
+    out.println("</queue>");
+    out.println("</allocations>");
+    out.close();
+    
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+    
+    // exceeds no limits
+    ApplicationAttemptId attId1 = createSchedulingRequest(1024, "queue1.sub1", "user1");
+    verifyAppRunnable(attId1, true);
+    verifyQueueNumRunnable("queue1.sub1", 1, 0);
+    clock.tick(10);
+    // exceeds no limits
+    ApplicationAttemptId attId2 = createSchedulingRequest(1024, "queue1.sub3", "user1");
+    verifyAppRunnable(attId2, true);
+    verifyQueueNumRunnable("queue1.sub3", 1, 0);
+    clock.tick(10);
+    // exceeds no limits
+    ApplicationAttemptId attId3 = createSchedulingRequest(1024, "queue1.sub2", "user1");
+    verifyAppRunnable(attId3, true);
+    verifyQueueNumRunnable("queue1.sub2", 1, 0);
+    clock.tick(10);
+    // exceeds queue1 limit
+    ApplicationAttemptId attId4 = createSchedulingRequest(1024, "queue1.sub2", "user1");
+    verifyAppRunnable(attId4, false);
+    verifyQueueNumRunnable("queue1.sub2", 1, 1);
+    clock.tick(10);
+    // exceeds sub3 limit
+    ApplicationAttemptId attId5 = createSchedulingRequest(1024, "queue1.sub3", "user1");
+    verifyAppRunnable(attId5, false);
+    verifyQueueNumRunnable("queue1.sub3", 1, 1);
+    clock.tick(10);
+    
+    // Even though the app was removed from sub3, the app from sub2 gets to go
+    // because it came in first
+    AppAttemptRemovedSchedulerEvent appRemovedEvent1 =
+        new AppAttemptRemovedSchedulerEvent(attId2, RMAppAttemptState.FINISHED);
+    scheduler.handle(appRemovedEvent1);
+    verifyAppRunnable(attId4, true);
+    verifyQueueNumRunnable("queue1.sub2", 2, 0);
+    verifyAppRunnable(attId5, false);
+    verifyQueueNumRunnable("queue1.sub3", 0, 1);
+
+    // Now test removal of a non-runnable app
+    AppAttemptRemovedSchedulerEvent appRemovedEvent2 =
+        new AppAttemptRemovedSchedulerEvent(attId5, RMAppAttemptState.KILLED);
+    scheduler.handle(appRemovedEvent2);
+    assertEquals(0, scheduler.maxRunningEnforcer.usersNonRunnableApps
+        .get("user1").size());
+    // verify app gone in queue accounting
+    verifyQueueNumRunnable("queue1.sub3", 0, 0);
+    // verify it doesn't become runnable when there would be space for it
+    AppAttemptRemovedSchedulerEvent appRemovedEvent3 =
+        new AppAttemptRemovedSchedulerEvent(attId4, RMAppAttemptState.FINISHED);
+    scheduler.handle(appRemovedEvent3);
+    verifyQueueNumRunnable("queue1.sub2", 1, 0);
+    verifyQueueNumRunnable("queue1.sub3", 0, 0);
   }
 
   @Test (timeout = 10000)
@@ -2382,7 +2377,8 @@ public class TestFairScheduler {
     // send application request
     ApplicationAttemptId appAttemptId =
             createAppAttemptId(this.APP_ID++, this.ATTEMPT_ID++);
-    fs.addApplication(appAttemptId, "queue11", "user11");
+    fs.addApplication(appAttemptId.getApplicationId(), "queue11", "user11");
+    fs.addApplicationAttempt(appAttemptId);
     List<ResourceRequest> ask = new ArrayList<ResourceRequest>();
     ResourceRequest request =
             createResourceRequest(1024, 1, ResourceRequest.ANY, 1, 1, true);
@@ -2393,7 +2389,7 @@ public class TestFairScheduler {
     // at least one pass
     Thread.sleep(fs.getConf().getContinuousSchedulingSleepMs() + 500);
 
-    FSSchedulerApp app = fs.applications.get(appAttemptId);
+    FSSchedulerApp app = fs.appAttempts.get(appAttemptId);
     // Wait until app gets resources.
     while (app.getCurrentConsumption().equals(Resources.none())) { }
 
@@ -2427,10 +2423,8 @@ public class TestFairScheduler {
   
   @Test
   public void testDontAllowUndeclaredPools() throws Exception{
-    Configuration conf = createConfiguration();
     conf.setBoolean(FairSchedulerConfiguration.ALLOW_UNDECLARED_POOLS, false);
     conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
-    scheduler.reinitialize(conf, resourceManager.getRMContext());
 
     PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
     out.println("<?xml version=\"1.0\"?>");
@@ -2440,36 +2434,38 @@ public class TestFairScheduler {
     out.println("</allocations>");
     out.close();
 
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
     QueueManager queueManager = scheduler.getQueueManager();
-    queueManager.initialize();
     
     FSLeafQueue jerryQueue = queueManager.getLeafQueue("jerry", false);
     FSLeafQueue defaultQueue = queueManager.getLeafQueue("default", false);
     
     // Should get put into jerry
     createSchedulingRequest(1024, "jerry", "someuser");
-    assertEquals(1, jerryQueue.getAppSchedulables().size());
+    assertEquals(1, jerryQueue.getRunnableAppSchedulables().size());
 
     // Should get forced into default
     createSchedulingRequest(1024, "newqueue", "someuser");
-    assertEquals(1, jerryQueue.getAppSchedulables().size());
-    assertEquals(1, defaultQueue.getAppSchedulables().size());
+    assertEquals(1, jerryQueue.getRunnableAppSchedulables().size());
+    assertEquals(1, defaultQueue.getRunnableAppSchedulables().size());
     
     // Would get put into someuser because of user-as-default-queue, but should
     // be forced into default
     createSchedulingRequest(1024, "default", "someuser");
-    assertEquals(1, jerryQueue.getAppSchedulables().size());
-    assertEquals(2, defaultQueue.getAppSchedulables().size());
+    assertEquals(1, jerryQueue.getRunnableAppSchedulables().size());
+    assertEquals(2, defaultQueue.getRunnableAppSchedulables().size());
     
     // Should get put into jerry because of user-as-default-queue
     createSchedulingRequest(1024, "default", "jerry");
-    assertEquals(2, jerryQueue.getAppSchedulables().size());
-    assertEquals(2, defaultQueue.getAppSchedulables().size());
+    assertEquals(2, jerryQueue.getRunnableAppSchedulables().size());
+    assertEquals(2, defaultQueue.getRunnableAppSchedulables().size());
   }
 
   @SuppressWarnings("resource")
   @Test
   public void testBlacklistNodes() throws Exception {
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
     final int GB = 1024;
     String host = "127.0.0.1";
     RMNode node =
@@ -2481,7 +2477,7 @@ public class TestFairScheduler {
 
     ApplicationAttemptId appAttemptId =
         createSchedulingRequest(GB, "root.default", "user", 1);
-    FSSchedulerApp app = scheduler.applications.get(appAttemptId);
+    FSSchedulerApp app = scheduler.appAttempts.get(appAttemptId);
 
     // Verify the blacklist can be updated independent of requesting containers
     scheduler.allocate(appAttemptId, Collections.<ResourceRequest>emptyList(),
@@ -2491,7 +2487,7 @@ public class TestFairScheduler {
     scheduler.allocate(appAttemptId, Collections.<ResourceRequest>emptyList(),
         Collections.<ContainerId>emptyList(), null,
         Collections.singletonList(host));
-    assertFalse(scheduler.applications.get(appAttemptId).isBlacklisted(host));
+    assertFalse(scheduler.appAttempts.get(appAttemptId).isBlacklisted(host));
 
     List<ResourceRequest> update = Arrays.asList(
         createResourceRequest(GB, node.getHostName(), 1, 0, true));
@@ -2516,5 +2512,49 @@ public class TestFairScheduler {
     scheduler.handle(updateEvent);
     assertEquals("Incorrect number of containers allocated", 1, app
         .getLiveContainers().size());
+  }
+  
+  @Test
+  public void testGetAppsInQueue() throws Exception {
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    ApplicationAttemptId appAttId1 =
+        createSchedulingRequest(1024, 1, "queue1.subqueue1", "user1");
+    ApplicationAttemptId appAttId2 =
+        createSchedulingRequest(1024, 1, "queue1.subqueue2", "user1");
+    ApplicationAttemptId appAttId3 =
+        createSchedulingRequest(1024, 1, "default", "user1");
+    
+    List<ApplicationAttemptId> apps =
+        scheduler.getAppsInQueue("queue1.subqueue1");
+    assertEquals(1, apps.size());
+    assertEquals(appAttId1, apps.get(0));
+    // with and without root prefix should work
+    apps = scheduler.getAppsInQueue("root.queue1.subqueue1");
+    assertEquals(1, apps.size());
+    assertEquals(appAttId1, apps.get(0));
+    
+    apps = scheduler.getAppsInQueue("user1");
+    assertEquals(1, apps.size());
+    assertEquals(appAttId3, apps.get(0));
+    // with and without root prefix should work
+    apps = scheduler.getAppsInQueue("root.user1");
+    assertEquals(1, apps.size());
+    assertEquals(appAttId3, apps.get(0));
+
+    // apps in subqueues should be included
+    apps = scheduler.getAppsInQueue("queue1");
+    Assert.assertEquals(2, apps.size());
+    Set<ApplicationAttemptId> appAttIds = Sets.newHashSet(apps.get(0), apps.get(1));
+    assertTrue(appAttIds.contains(appAttId1));
+    assertTrue(appAttIds.contains(appAttId2));
+  }
+
+  @Test
+  public void testAddAndRemoveAppFromFairScheduler() throws Exception {
+    FairScheduler scheduler =
+        (FairScheduler) resourceManager.getResourceScheduler();
+    TestSchedulerUtils.verifyAppAddedAndRemovedFromScheduler(
+      scheduler.applications, scheduler, "default");
   }
 }

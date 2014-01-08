@@ -23,7 +23,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -38,13 +40,18 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ZKUtil;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.ApplicationAttemptStateDataProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.ApplicationStateDataProto;
+import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.RMStateVersionProto;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
+import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.RMStateVersion;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationAttemptStateDataPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationStateDataPBImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.RMStateVersionPBImpl;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
@@ -53,9 +60,12 @@ import org.apache.zookeeper.Op;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.Watcher.Event;
+import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.data.ACL;
+import org.apache.zookeeper.data.Id;
 import org.apache.zookeeper.data.Stat;
+import org.apache.zookeeper.server.auth.DigestAuthenticationProvider;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -65,16 +75,54 @@ public class ZKRMStateStore extends RMStateStore {
 
   public static final Log LOG = LogFactory.getLog(ZKRMStateStore.class);
 
-  private static final String ROOT_ZNODE_NAME = "ZKRMStateRoot";
+  protected static final String ROOT_ZNODE_NAME = "ZKRMStateRoot";
+  protected static final RMStateVersion CURRENT_VERSION_INFO = RMStateVersion
+      .newInstance(1, 0);
+  private static final String RM_DELEGATION_TOKENS_ROOT_ZNODE_NAME =
+      "RMDelegationTokensRoot";
+  private static final String RM_DT_SEQUENTIAL_NUMBER_ZNODE_NAME =
+      "RMDTSequentialNumber";
+  private static final String RM_DT_MASTER_KEYS_ROOT_ZNODE_NAME =
+      "RMDTMasterKeysRoot";
   private int numRetries;
 
   private String zkHostPort = null;
   private int zkSessionTimeout;
+  private long zkRetryInterval;
   private List<ACL> zkAcl;
+
+  /**
+   *
+   * ROOT_DIR_PATH
+   * |--- VERSION_INFO
+   * |--- RM_ZK_FENCING_LOCK
+   * |--- RM_APP_ROOT
+   * |     |----- (#ApplicationId1)
+   * |     |        |----- (#ApplicationAttemptIds)
+   * |     |
+   * |     |----- (#ApplicationId2)
+   * |     |       |----- (#ApplicationAttemptIds)
+   * |     ....
+   * |
+   * |--- RM_DT_SECRET_MANAGER_ROOT
+   *        |----- RM_DT_SEQUENTIAL_NUMBER_ZNODE_NAME
+   *        |----- RM_DELEGATION_TOKENS_ROOT_ZNODE_NAME
+   *        |       |----- Token_1
+   *        |       |----- Token_2
+   *        |       ....
+   *        |
+   *        |----- RM_DT_MASTER_KEYS_ROOT_ZNODE_NAME
+   *        |      |----- Key_1
+   *        |      |----- Key_2
+   *                ....
+   *
+   */
   private String zkRootNodePath;
-  private String rmDTSecretManagerRoot;
   private String rmAppRoot;
-  private String dtSequenceNumberPath = null;
+  private String rmDTSecretManagerRoot;
+  private String dtMasterKeysRootPath;
+  private String delegationTokensRootPath;
+  private String dtSequenceNumberPath;
 
   @VisibleForTesting
   protected String znodeWorkingPath;
@@ -83,39 +131,122 @@ public class ZKRMStateStore extends RMStateStore {
   protected ZooKeeper zkClient;
   private ZooKeeper oldZkClient;
 
+  /** Fencing related variables */
+  private static final String FENCING_LOCK = "RM_ZK_FENCING_LOCK";
+  private String fencingNodePath;
+  private Op createFencingNodePathOp;
+  private Op deleteFencingNodePathOp;
+
+  @VisibleForTesting
+  List<ACL> zkRootNodeAcl;
+  private boolean useDefaultFencingScheme = false;
+  public static final int CREATE_DELETE_PERMS =
+      ZooDefs.Perms.CREATE | ZooDefs.Perms.DELETE;
+  private final String zkRootNodeAuthScheme =
+      new DigestAuthenticationProvider().getScheme();
+
+  private String zkRootNodeUsername;
+  private String zkRootNodePassword;
+
+  /**
+   * Given the {@link Configuration} and {@link ACL}s used (zkAcl) for
+   * ZooKeeper access, construct the {@link ACL}s for the store's root node.
+   * In the constructed {@link ACL}, all the users allowed by zkAcl are given
+   * rwa access, while the current RM has exclude create-delete access.
+   *
+   * To be called only when HA is enabled and the configuration doesn't set ACL
+   * for the root node.
+   */
+  @VisibleForTesting
+  @Private
+  @Unstable
+  protected List<ACL> constructZkRootNodeACL(
+      Configuration conf, List<ACL> sourceACLs) throws NoSuchAlgorithmException {
+    List<ACL> zkRootNodeAcl = new ArrayList<ACL>();
+    for (ACL acl : sourceACLs) {
+      zkRootNodeAcl.add(new ACL(
+          ZKUtil.removeSpecificPerms(acl.getPerms(), CREATE_DELETE_PERMS),
+          acl.getId()));
+    }
+
+    zkRootNodeUsername = HAUtil.getConfValueForRMInstance(
+        YarnConfiguration.RM_ADDRESS,
+        YarnConfiguration.DEFAULT_RM_ADDRESS, conf);
+    zkRootNodePassword = Long.toString(ResourceManager.getClusterTimeStamp());
+    Id rmId = new Id(zkRootNodeAuthScheme,
+        DigestAuthenticationProvider.generateDigest(
+            zkRootNodeUsername + ":" + zkRootNodePassword));
+    zkRootNodeAcl.add(new ACL(CREATE_DELETE_PERMS, rmId));
+    return zkRootNodeAcl;
+  }
+
   @Override
   public synchronized void initInternal(Configuration conf) throws Exception {
-    zkHostPort = conf.get(YarnConfiguration.ZK_RM_STATE_STORE_ADDRESS);
+    zkHostPort = conf.get(YarnConfiguration.RM_ZK_ADDRESS);
     if (zkHostPort == null) {
       throw new YarnRuntimeException("No server address specified for " +
           "zookeeper state store for Resource Manager recovery. " +
-          YarnConfiguration.ZK_RM_STATE_STORE_ADDRESS + " is not configured.");
+          YarnConfiguration.RM_ZK_ADDRESS + " is not configured.");
     }
     numRetries =
-        conf.getInt(YarnConfiguration.ZK_RM_STATE_STORE_NUM_RETRIES,
-            YarnConfiguration.DEFAULT_ZK_RM_STATE_STORE_NUM_RETRIES);
+        conf.getInt(YarnConfiguration.RM_ZK_NUM_RETRIES,
+            YarnConfiguration.DEFAULT_ZK_RM_NUM_RETRIES);
     znodeWorkingPath =
         conf.get(YarnConfiguration.ZK_RM_STATE_STORE_PARENT_PATH,
             YarnConfiguration.DEFAULT_ZK_RM_STATE_STORE_PARENT_PATH);
     zkSessionTimeout =
-        conf.getInt(YarnConfiguration.ZK_RM_STATE_STORE_TIMEOUT_MS,
-            YarnConfiguration.DEFAULT_ZK_RM_STATE_STORE_TIMEOUT_MS);
+        conf.getInt(YarnConfiguration.RM_ZK_TIMEOUT_MS,
+            YarnConfiguration.DEFAULT_RM_ZK_TIMEOUT_MS);
+    zkRetryInterval =
+        conf.getLong(YarnConfiguration.RM_ZK_RETRY_INTERVAL_MS,
+          YarnConfiguration.DEFAULT_RM_ZK_RETRY_INTERVAL_MS);
     // Parse authentication from configuration.
     String zkAclConf =
-        conf.get(YarnConfiguration.ZK_RM_STATE_STORE_ACL,
-            YarnConfiguration.DEFAULT_ZK_RM_STATE_STORE_ACL);
+        conf.get(YarnConfiguration.RM_ZK_ACL,
+            YarnConfiguration.DEFAULT_RM_ZK_ACL);
     zkAclConf = ZKUtil.resolveConfIndirection(zkAclConf);
 
     try {
       zkAcl = ZKUtil.parseACLs(zkAclConf);
     } catch (ZKUtil.BadAclFormatException bafe) {
-      LOG.error("Invalid format for " + YarnConfiguration.ZK_RM_STATE_STORE_ACL);
+      LOG.error("Invalid format for " + YarnConfiguration.RM_ZK_ACL);
       throw bafe;
     }
 
-    zkRootNodePath = znodeWorkingPath + "/" + ROOT_ZNODE_NAME;
-    rmDTSecretManagerRoot = zkRootNodePath + "/" + RM_DT_SECRET_MANAGER_ROOT;
-    rmAppRoot = zkRootNodePath + "/" + RM_APP_ROOT;
+    zkRootNodePath = getNodePath(znodeWorkingPath, ROOT_ZNODE_NAME);
+    rmAppRoot = getNodePath(zkRootNodePath, RM_APP_ROOT);
+
+    /* Initialize fencing related paths, acls, and ops */
+    fencingNodePath = getNodePath(zkRootNodePath, FENCING_LOCK);
+    createFencingNodePathOp = Op.create(fencingNodePath, new byte[0], zkAcl,
+        CreateMode.PERSISTENT);
+    deleteFencingNodePathOp = Op.delete(fencingNodePath, -1);
+    if (HAUtil.isHAEnabled(conf)) {
+      String zkRootNodeAclConf = HAUtil.getConfValueForRMInstance
+          (YarnConfiguration.ZK_RM_STATE_STORE_ROOT_NODE_ACL, conf);
+      if (zkRootNodeAclConf != null) {
+        zkRootNodeAclConf = ZKUtil.resolveConfIndirection(zkRootNodeAclConf);
+        try {
+          zkRootNodeAcl = ZKUtil.parseACLs(zkRootNodeAclConf);
+        } catch (ZKUtil.BadAclFormatException bafe) {
+          LOG.error("Invalid format for " +
+              YarnConfiguration.ZK_RM_STATE_STORE_ROOT_NODE_ACL);
+          throw bafe;
+        }
+      } else {
+        useDefaultFencingScheme = true;
+        zkRootNodeAcl = constructZkRootNodeACL(conf, zkAcl);
+      }
+    }
+
+    rmDTSecretManagerRoot =
+        getNodePath(zkRootNodePath, RM_DT_SECRET_MANAGER_ROOT);
+    dtMasterKeysRootPath = getNodePath(rmDTSecretManagerRoot,
+        RM_DT_MASTER_KEYS_ROOT_ZNODE_NAME);
+    delegationTokensRootPath = getNodePath(rmDTSecretManagerRoot,
+        RM_DELEGATION_TOKENS_ROOT_ZNODE_NAME);
+    dtSequenceNumberPath = getNodePath(rmDTSecretManagerRoot,
+        RM_DT_SEQUENTIAL_NUMBER_ZNODE_NAME);
   }
 
   @Override
@@ -126,17 +257,76 @@ public class ZKRMStateStore extends RMStateStore {
     // ensure root dirs exist
     createRootDir(znodeWorkingPath);
     createRootDir(zkRootNodePath);
-    createRootDir(rmDTSecretManagerRoot);
+    if (HAUtil.isHAEnabled(getConfig())){
+      fence();
+    }
     createRootDir(rmAppRoot);
+    createRootDir(rmDTSecretManagerRoot);
+    createRootDir(dtMasterKeysRootPath);
+    createRootDir(delegationTokensRootPath);
+    createRootDir(dtSequenceNumberPath);
   }
 
-  private void createRootDir(String rootPath) throws Exception {
+  private void createRootDir(final String rootPath) throws Exception {
+    // For root dirs, we shouldn't use the doMulti helper methods
     try {
-      createWithRetries(rootPath, null, zkAcl, CreateMode.PERSISTENT);
+      new ZKAction<String>() {
+        @Override
+        public String run() throws KeeperException, InterruptedException {
+          return zkClient.create(rootPath, null, zkAcl, CreateMode.PERSISTENT);
+        }
+      }.runWithRetries();
     } catch (KeeperException ke) {
-      if (ke.code() != Code.NODEEXISTS) {
+      if (ke.code() == Code.NODEEXISTS) {
+        LOG.debug(rootPath + "znode already exists!");
+      } else {
         throw ke;
       }
+    }
+  }
+
+  private void logRootNodeAcls(String prefix) throws KeeperException,
+      InterruptedException {
+    Stat getStat = new Stat();
+    List<ACL> getAcls = zkClient.getACL(zkRootNodePath, getStat);
+
+    StringBuilder builder = new StringBuilder();
+    builder.append(prefix);
+    for (ACL acl : getAcls) {
+      builder.append(acl.toString());
+    }
+    builder.append(getStat.toString());
+    LOG.debug(builder.toString());
+  }
+
+  private synchronized void fence() throws Exception {
+    if (LOG.isTraceEnabled()) {
+      logRootNodeAcls("Before fencing\n");
+    }
+
+    new ZKAction<Void>() {
+      @Override
+      public Void run() throws KeeperException, InterruptedException {
+        zkClient.setACL(zkRootNodePath, zkRootNodeAcl, -1);
+        return null;
+      }
+    }.runWithRetries();
+
+    // delete fencingnodepath
+    new ZKAction<Void>() {
+      @Override
+      public Void run() throws KeeperException, InterruptedException {
+        try {
+          zkClient.multi(Collections.singletonList(deleteFencingNodePathOp));
+        } catch (KeeperException.NoNodeException nne) {
+          LOG.info("Fencing node " + fencingNodePath + " doesn't exist to delete");
+        }
+        return null;
+      }
+    }.runWithRetries();
+
+    if (LOG.isTraceEnabled()) {
+      logRootNodeAcls("After fencing\n");
     }
   }
 
@@ -165,6 +355,36 @@ public class ZKRMStateStore extends RMStateStore {
   }
 
   @Override
+  protected RMStateVersion getCurrentVersion() {
+    return CURRENT_VERSION_INFO;
+  }
+
+  @Override
+  protected synchronized void storeVersion() throws Exception {
+    String versionNodePath = getNodePath(zkRootNodePath, VERSION_NODE);
+    byte[] data =
+        ((RMStateVersionPBImpl) CURRENT_VERSION_INFO).getProto().toByteArray();
+    if (zkClient.exists(versionNodePath, true) != null) {
+      setDataWithRetries(versionNodePath, data, -1);
+    } else {
+      createWithRetries(versionNodePath, data, zkAcl, CreateMode.PERSISTENT);
+    }
+  }
+
+  @Override
+  protected synchronized RMStateVersion loadVersion() throws Exception {
+    String versionNodePath = getNodePath(zkRootNodePath, VERSION_NODE);
+
+    if (zkClient.exists(versionNodePath, true) != null) {
+      byte[] data = getDataWithRetries(versionNodePath, true);
+      RMStateVersion version =
+          new RMStateVersionPBImpl(RMStateVersionProto.parseFrom(data));
+      return version;
+    }
+    return null;
+  }
+
+  @Override
   public synchronized RMState loadState() throws Exception {
     RMState rmState = new RMState();
     // recover DelegationTokenSecretManager
@@ -176,25 +396,69 @@ public class ZKRMStateStore extends RMStateStore {
 
   private synchronized void loadRMDTSecretManagerState(RMState rmState)
       throws Exception {
-    List<String> childNodes = zkClient.getChildren(rmDTSecretManagerRoot, true);
+    loadRMDelegationKeyState(rmState);
+    loadRMSequentialNumberState(rmState);
+    loadRMDelegationTokenState(rmState);
+  }
 
+  private void loadRMDelegationKeyState(RMState rmState) throws Exception {
+    List<String> childNodes =
+        getChildrenWithRetries(dtMasterKeysRootPath, true);
     for (String childNodeName : childNodes) {
-      if (childNodeName.startsWith(DELEGATION_TOKEN_SEQUENCE_NUMBER_PREFIX)) {
-        rmState.rmSecretManagerState.dtSequenceNumber =
-            Integer.parseInt(childNodeName.split("_")[1]);
+      String childNodePath = getNodePath(dtMasterKeysRootPath, childNodeName);
+      byte[] childData = getDataWithRetries(childNodePath, true);
+
+      if (childData == null) {
+        LOG.warn("Content of " + childNodePath + " is broken.");
         continue;
       }
-      String childNodePath = getNodePath(rmDTSecretManagerRoot, childNodeName);
-      byte[] childData = getDataWithRetries(childNodePath, true);
 
       ByteArrayInputStream is = new ByteArrayInputStream(childData);
       DataInputStream fsIn = new DataInputStream(is);
+
       try {
         if (childNodeName.startsWith(DELEGATION_KEY_PREFIX)) {
           DelegationKey key = new DelegationKey();
           key.readFields(fsIn);
           rmState.rmSecretManagerState.masterKeyState.add(key);
-        } else if (childNodeName.startsWith(DELEGATION_TOKEN_PREFIX)) {
+        }
+      } finally {
+        is.close();
+      }
+    }
+  }
+
+  private void loadRMSequentialNumberState(RMState rmState) throws Exception {
+    byte[] seqData = getDataWithRetries(dtSequenceNumberPath, false);
+    if (seqData != null) {
+      ByteArrayInputStream seqIs = new ByteArrayInputStream(seqData);
+      DataInputStream seqIn = new DataInputStream(seqIs);
+
+      try {
+        rmState.rmSecretManagerState.dtSequenceNumber = seqIn.readInt();
+      } finally {
+        seqIn.close();
+      }
+    }
+  }
+
+  private void loadRMDelegationTokenState(RMState rmState) throws Exception {
+    List<String> childNodes = zkClient.getChildren(delegationTokensRootPath, true);
+    for (String childNodeName : childNodes) {
+      String childNodePath =
+          getNodePath(delegationTokensRootPath, childNodeName);
+      byte[] childData = getDataWithRetries(childNodePath, true);
+
+      if (childData == null) {
+        LOG.warn("Content of " + childNodePath + " is broken.");
+        continue;
+      }
+
+      ByteArrayInputStream is = new ByteArrayInputStream(childData);
+      DataInputStream fsIn = new DataInputStream(is);
+
+      try {
+        if (childNodeName.startsWith(DELEGATION_TOKEN_PREFIX)) {
           RMDelegationTokenIdentifier identifier =
               new RMDelegationTokenIdentifier();
           identifier.readFields(fsIn);
@@ -209,15 +473,15 @@ public class ZKRMStateStore extends RMStateStore {
   }
 
   private synchronized void loadRMAppState(RMState rmState) throws Exception {
-    List<String> childNodes = zkClient.getChildren(rmAppRoot, true);
-    List<ApplicationAttemptState> attempts =
-        new ArrayList<ApplicationAttemptState>();
+    List<String> childNodes = getChildrenWithRetries(rmAppRoot, true);
     for (String childNodeName : childNodes) {
       String childNodePath = getNodePath(rmAppRoot, childNodeName);
       byte[] childData = getDataWithRetries(childNodePath, true);
       if (childNodeName.startsWith(ApplicationId.appIdStrPrefix)) {
         // application
-        LOG.info("Loading application from znode: " + childNodeName);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Loading application from znode: " + childNodeName);
+        }
         ApplicationId appId = ConverterUtils.toApplicationId(childNodeName);
         ApplicationStateDataPBImpl appStateData =
             new ApplicationStateDataPBImpl(
@@ -234,15 +498,28 @@ public class ZKRMStateStore extends RMStateStore {
               "from the application id");
         }
         rmState.appState.put(appId, appState);
-      } else if (childNodeName
-          .startsWith(ApplicationAttemptId.appAttemptIdStrPrefix)) {
-        // attempt
-        LOG.info("Loading application attempt from znode: " + childNodeName);
+        loadApplicationAttemptState(appState, appId);
+      } else {
+        LOG.info("Unknown child node with name: " + childNodeName);
+      }
+    }
+  }
+
+  private void loadApplicationAttemptState(ApplicationState appState,
+      ApplicationId appId)
+      throws Exception {
+    String appPath = getNodePath(rmAppRoot, appId.toString());
+    List<String> attempts = getChildrenWithRetries(appPath, false);
+    for (String attemptIDStr : attempts) {
+      if (attemptIDStr.startsWith(ApplicationAttemptId.appAttemptIdStrPrefix)) {
+        String attemptPath = getNodePath(appPath, attemptIDStr);
+        byte[] attemptData = getDataWithRetries(attemptPath, true);
+
         ApplicationAttemptId attemptId =
-            ConverterUtils.toApplicationAttemptId(childNodeName);
+            ConverterUtils.toApplicationAttemptId(attemptIDStr);
         ApplicationAttemptStateDataPBImpl attemptStateData =
             new ApplicationAttemptStateDataPBImpl(
-                ApplicationAttemptStateDataProto.parseFrom(childData));
+                ApplicationAttemptStateDataProto.parseFrom(attemptData));
         Credentials credentials = null;
         if (attemptStateData.getAppAttemptTokens() != null) {
           credentials = new Credentials();
@@ -250,47 +527,26 @@ public class ZKRMStateStore extends RMStateStore {
           dibb.reset(attemptStateData.getAppAttemptTokens());
           credentials.readTokenStorageStream(dibb);
         }
+
         ApplicationAttemptState attemptState =
             new ApplicationAttemptState(attemptId,
-              attemptStateData.getMasterContainer(), credentials,
-              attemptStateData.getStartTime(),
-              attemptStateData.getState(),
-              attemptStateData.getFinalTrackingUrl(),
-              attemptStateData.getDiagnostics(),
-              attemptStateData.getFinalApplicationStatus());
-        if (!attemptId.equals(attemptState.getAttemptId())) {
-          throw new YarnRuntimeException("The child node name is different " +
-              "from the application attempt id");
-        }
-        attempts.add(attemptState);
-      } else {
-        LOG.info("Unknown child node with name: " + childNodeName);
-      }
-    }
+                attemptStateData.getMasterContainer(), credentials,
+                attemptStateData.getStartTime(),
+                attemptStateData.getState(),
+                attemptStateData.getFinalTrackingUrl(),
+                attemptStateData.getDiagnostics(),
+                attemptStateData.getFinalApplicationStatus());
 
-    // go through all attempts and add them to their apps
-    for (ApplicationAttemptState attemptState : attempts) {
-      ApplicationId appId = attemptState.getAttemptId().getApplicationId();
-      ApplicationState appState = rmState.appState.get(appId);
-      if (appState != null) {
         appState.attempts.put(attemptState.getAttemptId(), attemptState);
-      } else {
-        // the application znode may have been removed when the application
-        // completed but the RM might have stopped before it could remove the
-        // application attempt znodes
-        LOG.info("Application node not found for attempt: "
-            + attemptState.getAttemptId());
-        deleteWithRetries(
-            getNodePath(rmAppRoot, attemptState.getAttemptId().toString()),
-            0);
       }
     }
+    LOG.info("Done Loading applications from ZK state store");
   }
 
   @Override
-  public synchronized void storeApplicationStateInternal(String appId,
+  public synchronized void storeApplicationStateInternal(ApplicationId appId,
       ApplicationStateDataPBImpl appStateDataPB) throws Exception {
-    String nodeCreatePath = getNodePath(rmAppRoot, appId);
+    String nodeCreatePath = getNodePath(rmAppRoot, appId.toString());
 
     if (LOG.isDebugEnabled()) {
       LOG.debug("Storing info for app: " + appId + " at: " + nodeCreatePath);
@@ -302,25 +558,29 @@ public class ZKRMStateStore extends RMStateStore {
   }
 
   @Override
-  public synchronized void updateApplicationStateInternal(String appId,
+  public synchronized void updateApplicationStateInternal(ApplicationId appId,
       ApplicationStateDataPBImpl appStateDataPB) throws Exception {
-    String nodeCreatePath = getNodePath(rmAppRoot, appId);
+    String nodeUpdatePath = getNodePath(rmAppRoot, appId.toString());
 
     if (LOG.isDebugEnabled()) {
       LOG.debug("Storing final state info for app: " + appId + " at: "
-          + nodeCreatePath);
+          + nodeUpdatePath);
     }
     byte[] appStateData = appStateDataPB.getProto().toByteArray();
-    setDataWithRetries(nodeCreatePath, appStateData, 0);
+    setDataWithRetries(nodeUpdatePath, appStateData, 0);
   }
 
   @Override
   public synchronized void storeApplicationAttemptStateInternal(
-      String attemptId, ApplicationAttemptStateDataPBImpl attemptStateDataPB)
+      ApplicationAttemptId appAttemptId,
+      ApplicationAttemptStateDataPBImpl attemptStateDataPB)
       throws Exception {
-    String nodeCreatePath = getNodePath(rmAppRoot, attemptId);
+    String appDirPath = getNodePath(rmAppRoot,
+        appAttemptId.getApplicationId().toString());
+    String nodeCreatePath = getNodePath(appDirPath, appAttemptId.toString());
+
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Storing info for attempt: " + attemptId + " at: "
+      LOG.debug("Storing info for attempt: " + appAttemptId + " at: "
           + nodeCreatePath);
     }
     byte[] attemptStateData = attemptStateDataPB.getProto().toByteArray();
@@ -330,31 +590,36 @@ public class ZKRMStateStore extends RMStateStore {
 
   @Override
   public synchronized void updateApplicationAttemptStateInternal(
-      String attemptId, ApplicationAttemptStateDataPBImpl attemptStateDataPB)
+      ApplicationAttemptId appAttemptId,
+      ApplicationAttemptStateDataPBImpl attemptStateDataPB)
       throws Exception {
-    String nodeCreatePath = getNodePath(rmAppRoot, attemptId);
+    String appIdStr = appAttemptId.getApplicationId().toString();
+    String appAttemptIdStr = appAttemptId.toString();
+    String appDirPath = getNodePath(rmAppRoot, appIdStr);
+    String nodeUpdatePath = getNodePath(appDirPath, appAttemptIdStr);
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Storing final state info for attempt: " + attemptId + " at: "
-          + nodeCreatePath);
+      LOG.debug("Storing final state info for attempt: " + appAttemptIdStr
+          + " at: " + nodeUpdatePath);
     }
     byte[] attemptStateData = attemptStateDataPB.getProto().toByteArray();
-    setDataWithRetries(nodeCreatePath, attemptStateData, 0);
+    setDataWithRetries(nodeUpdatePath, attemptStateData, 0);
   }
 
   @Override
-  public synchronized void removeApplicationState(ApplicationState appState)
+  public synchronized void removeApplicationStateInternal(ApplicationState appState)
       throws Exception {
     String appId = appState.getAppId().toString();
-    String nodeRemovePath = getNodePath(rmAppRoot, appId);
+    String appIdRemovePath = getNodePath(rmAppRoot, appId);
     ArrayList<Op> opList = new ArrayList<Op>();
-    opList.add(Op.delete(nodeRemovePath, 0));
 
     for (ApplicationAttemptId attemptId : appState.attempts.keySet()) {
-      String attemptRemovePath = getNodePath(rmAppRoot, attemptId.toString());
-      opList.add(Op.delete(attemptRemovePath, 0));
+      String attemptRemovePath = getNodePath(appIdRemovePath, attemptId.toString());
+      opList.add(Op.delete(attemptRemovePath, -1));
     }
+    opList.add(Op.delete(appIdRemovePath, -1));
+
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Removing info for app: " + appId + " at: " + nodeRemovePath
+      LOG.debug("Removing info for app: " + appId + " at: " + appIdRemovePath
           + " and its attempts.");
     }
     doMultiWithRetries(opList);
@@ -367,38 +632,37 @@ public class ZKRMStateStore extends RMStateStore {
     ArrayList<Op> opList = new ArrayList<Op>();
     // store RM delegation token
     String nodeCreatePath =
-        getNodePath(rmDTSecretManagerRoot, DELEGATION_TOKEN_PREFIX
+        getNodePath(delegationTokensRootPath, DELEGATION_TOKEN_PREFIX
             + rmDTIdentifier.getSequenceNumber());
-    ByteArrayOutputStream os = new ByteArrayOutputStream();
-    DataOutputStream fsOut = new DataOutputStream(os);
+    ByteArrayOutputStream tokenOs = new ByteArrayOutputStream();
+    DataOutputStream tokenOut = new DataOutputStream(tokenOs);
+    ByteArrayOutputStream seqOs = new ByteArrayOutputStream();
+    DataOutputStream seqOut = new DataOutputStream(seqOs);
+
     try {
-      rmDTIdentifier.write(fsOut);
-      fsOut.writeLong(renewDate);
+      rmDTIdentifier.write(tokenOut);
+      tokenOut.writeLong(renewDate);
       if (LOG.isDebugEnabled()) {
         LOG.debug("Storing RMDelegationToken_" +
             rmDTIdentifier.getSequenceNumber());
       }
-      opList.add(Op.create(nodeCreatePath, os.toByteArray(), zkAcl,
+
+      opList.add(Op.create(nodeCreatePath, tokenOs.toByteArray(), zkAcl,
           CreateMode.PERSISTENT));
+
+
+     seqOut.writeInt(latestSequenceNumber);
+     if (LOG.isDebugEnabled()) {
+        LOG.debug("Storing " + dtSequenceNumberPath +
+            ". SequenceNumber: " + latestSequenceNumber);
+      }
+
+     opList.add(Op.setData(dtSequenceNumberPath, seqOs.toByteArray(), -1));
     } finally {
-      os.close();
+      tokenOs.close();
+      seqOs.close();
     }
 
-    // store sequence number
-    String latestSequenceNumberPath =
-        getNodePath(rmDTSecretManagerRoot,
-            DELEGATION_TOKEN_SEQUENCE_NUMBER_PREFIX + latestSequenceNumber);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Storing " + DELEGATION_TOKEN_SEQUENCE_NUMBER_PREFIX +
-          latestSequenceNumber);
-    }
-
-    if (dtSequenceNumberPath != null) {
-      opList.add(Op.delete(dtSequenceNumberPath, 0));
-    }
-    opList.add(Op.create(latestSequenceNumberPath, null, zkAcl,
-        CreateMode.PERSISTENT));
-    dtSequenceNumberPath = latestSequenceNumberPath;
     doMultiWithRetries(opList);
   }
 
@@ -406,20 +670,20 @@ public class ZKRMStateStore extends RMStateStore {
   protected synchronized void removeRMDelegationTokenState(
       RMDelegationTokenIdentifier rmDTIdentifier) throws Exception {
     String nodeRemovePath =
-        getNodePath(rmDTSecretManagerRoot, DELEGATION_TOKEN_PREFIX
+        getNodePath(delegationTokensRootPath, DELEGATION_TOKEN_PREFIX
             + rmDTIdentifier.getSequenceNumber());
     if (LOG.isDebugEnabled()) {
       LOG.debug("Removing RMDelegationToken_"
           + rmDTIdentifier.getSequenceNumber());
     }
-    deleteWithRetries(nodeRemovePath, 0);
+    deleteWithRetries(nodeRemovePath, -1);
   }
 
   @Override
   protected synchronized void storeRMDTMasterKeyState(
       DelegationKey delegationKey) throws Exception {
     String nodeCreatePath =
-        getNodePath(rmDTSecretManagerRoot, DELEGATION_KEY_PREFIX
+        getNodePath(dtMasterKeysRootPath, DELEGATION_KEY_PREFIX
             + delegationKey.getKeyId());
     ByteArrayOutputStream os = new ByteArrayOutputStream();
     DataOutputStream fsOut = new DataOutputStream(os);
@@ -439,12 +703,12 @@ public class ZKRMStateStore extends RMStateStore {
   protected synchronized void removeRMDTMasterKeyState(
       DelegationKey delegationKey) throws Exception {
     String nodeRemovePath =
-        getNodePath(rmDTSecretManagerRoot, DELEGATION_KEY_PREFIX
+        getNodePath(dtMasterKeysRootPath, DELEGATION_KEY_PREFIX
             + delegationKey.getKeyId());
     if (LOG.isDebugEnabled()) {
       LOG.debug("Removing RMDelegationKey_" + delegationKey.getKeyId());
     }
-    deleteWithRetries(nodeRemovePath, 0);
+    deleteWithRetries(nodeRemovePath, -1);
   }
 
   // ZK related code
@@ -466,6 +730,8 @@ public class ZKRMStateStore extends RMStateStore {
   }
 
   @VisibleForTesting
+  @Private
+  @Unstable
   public synchronized void processWatchEvent(WatchedEvent event)
       throws Exception {
     Event.EventType eventType = event.getType();
@@ -506,72 +772,87 @@ public class ZKRMStateStore extends RMStateStore {
   }
 
   @VisibleForTesting
+  @Private
+  @Unstable
   String getNodePath(String root, String nodeName) {
     return (root + "/" + nodeName);
   }
 
-  @VisibleForTesting
-  public String createWithRetries(
-      final String path, final byte[] data, final List<ACL> acl,
-      final CreateMode mode) throws Exception {
-    return new ZKAction<String>() {
+  /**
+   * Helper method that creates fencing node, executes the passed operations,
+   * and deletes the fencing node.
+   */
+  private synchronized void doMultiWithRetries(
+      final List<Op> opList) throws Exception {
+    final List<Op> execOpList = new ArrayList<Op>(opList.size() + 2);
+    execOpList.add(createFencingNodePathOp);
+    execOpList.addAll(opList);
+    execOpList.add(deleteFencingNodePathOp);
+    new ZKAction<Void>() {
       @Override
-      public String run() throws KeeperException, InterruptedException {
-        return zkClient.create(path, data, acl, mode);
+      public Void run() throws KeeperException, InterruptedException {
+        zkClient.multi(execOpList);
+        return null;
       }
     }.runWithRetries();
+  }
+
+  /**
+   * Helper method that creates fencing node, executes the passed operation,
+   * and deletes the fencing node.
+   */
+  private void doMultiWithRetries(final Op op) throws Exception {
+    doMultiWithRetries(Collections.singletonList(op));
+  }
+
+  @VisibleForTesting
+  @Private
+  @Unstable
+  public void createWithRetries(
+      final String path, final byte[] data, final List<ACL> acl,
+      final CreateMode mode) throws Exception {
+    doMultiWithRetries(Op.create(path, data, acl, mode));
   }
 
   private void deleteWithRetries(final String path, final int version)
       throws Exception {
-    new ZKAction<Void>() {
-      @Override
-      public Void run() throws KeeperException, InterruptedException {
-        /**
-         * Call exists() to leave a watch on the node denoted by path.
-         * Delete node if exists. To pass the existence information to the
-         * caller, call delete irrespective of whether node exists or not.
-         */
-        if (zkClient.exists(path, true) == null) {
-          LOG.error("Trying to delete a path (" + path
-              + ") that doesn't exist.");
-        }
-        zkClient.delete(path, version);
-        return null;
+    try {
+      doMultiWithRetries(Op.delete(path, version));
+    } catch (KeeperException.NoNodeException nne) {
+      // We tried to delete a node that doesn't exist
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Attempted to delete a non-existing znode " + path);
       }
-    }.runWithRetries();
-  }
-
-  private void doMultiWithRetries(final ArrayList<Op> opList) throws Exception {
-    new ZKAction<Void>() {
-      @Override
-      public Void run() throws KeeperException, InterruptedException {
-        zkClient.multi(opList);
-        return null;
-      }
-    }.runWithRetries();
+    }
   }
 
   @VisibleForTesting
+  @Private
+  @Unstable
   public void setDataWithRetries(final String path, final byte[] data,
                                  final int version) throws Exception {
-    new ZKAction<Void>() {
-      @Override
-      public Void run() throws KeeperException, InterruptedException {
-        zkClient.setData(path, data, version);
-        return null;
-      }
-    }.runWithRetries();
+    doMultiWithRetries(Op.setData(path, data, version));
   }
 
   @VisibleForTesting
+  @Private
+  @Unstable
   public byte[] getDataWithRetries(final String path, final boolean watch)
       throws Exception {
     return new ZKAction<byte[]>() {
       @Override
       public byte[] run() throws KeeperException, InterruptedException {
-        Stat stat = new Stat();
-        return zkClient.getData(path, watch, stat);
+        return zkClient.getData(path, watch, null);
+      }
+    }.runWithRetries();
+  }
+
+  private List<String> getChildrenWithRetries(
+      final String path, final boolean watch) throws Exception {
+    return new ZKAction<List<String>>() {
+      @Override
+      List<String> run() throws KeeperException, InterruptedException {
+        return zkClient.getChildren(path, watch);
       }
     }.runWithRetries();
   }
@@ -596,30 +877,40 @@ public class ZKRMStateStore extends RMStateStore {
       }
     }
 
+    private boolean shouldRetry(Code code) {
+      switch (code) {
+        case CONNECTIONLOSS:
+        case OPERATIONTIMEOUT:
+          return true;
+        default:
+          break;
+      }
+      return false;
+    }
+
     T runWithRetries() throws Exception {
       int retry = 0;
       while (true) {
         try {
           return runWithCheck();
+        } catch (KeeperException.NoAuthException nae) {
+          if (HAUtil.isHAEnabled(getConfig())) {
+            // NoAuthException possibly means that this store is fenced due to
+            // another RM becoming active. Even if not,
+            // it is safer to assume we have been fenced
+            throw new StoreFencedException();
+          }
         } catch (KeeperException ke) {
           if (shouldRetry(ke.code()) && ++retry < numRetries) {
+            LOG.info("Waiting for zookeeper to be connected, retry no. + "
+                + retry);
+            Thread.sleep(zkRetryInterval);
             continue;
           }
           throw ke;
         }
       }
     }
-  }
-
-  private static boolean shouldRetry(Code code) {
-    switch (code) {
-      case CONNECTIONLOSS:
-      case OPERATIONTIMEOUT:
-        return true;
-      default:
-        break;
-    }
-    return false;
   }
 
   private synchronized void createConnection()
@@ -629,6 +920,10 @@ public class ZKRMStateStore extends RMStateStore {
         retries++) {
       try {
         zkClient = getNewZooKeeper();
+        if (useDefaultFencingScheme) {
+          zkClient.addAuthInfo(zkRootNodeAuthScheme,
+              (zkRootNodeUsername + ":" + zkRootNodePassword).getBytes());
+        }
       } catch (IOException ioe) {
         // Retry in case of network failures
         LOG.info("Failed to connect to the ZooKeeper on attempt - " +
@@ -646,10 +941,13 @@ public class ZKRMStateStore extends RMStateStore {
 
   // protected to mock for testing
   @VisibleForTesting
+  @Private
+  @Unstable
   protected synchronized ZooKeeper getNewZooKeeper()
       throws IOException, InterruptedException {
     ZooKeeper zk = new ZooKeeper(zkHostPort, zkSessionTimeout, null);
     zk.register(new ForwardingWatcher());
     return zk;
   }
+
 }

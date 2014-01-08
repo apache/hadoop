@@ -865,7 +865,7 @@ public class TestSnapshot {
 
     @Override
     void modify() throws Exception {
-      DFSTestUtil.createFile(fs, file, fileLen,
+      DFSTestUtil.createFile(fs, file, fileLen, fileLen, BLOCKSIZE,
           REPLICATION, seed);
     }
 

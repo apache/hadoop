@@ -22,37 +22,41 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.util.Random;
+import java.net.URLConnection;
 
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.MiniDFSCluster.Builder;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
-import org.apache.hadoop.hdfs.web.HftpFileSystem;
-import org.apache.hadoop.hdfs.web.HsftpFileSystem;
+import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.util.ServletUtil;
-import org.apache.log4j.Level;
-import org.junit.*;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 public class TestHftpFileSystem {
-  private static final Random RAN = new Random();
-
+  private static final String BASEDIR = System.getProperty("test.build.dir",
+      "target/test-dir") + "/" + TestHftpFileSystem.class.getSimpleName();
+  private static String keystoresDir;
+  private static String sslConfDir;
   private static Configuration config = null;
   private static MiniDFSCluster cluster = null;
   private static String blockPoolId = null;
@@ -65,49 +69,44 @@ public class TestHftpFileSystem {
       new Path("/foo;bar"),
 
       // URI does not encode, Request#getPathInfo returns verbatim
-      new Path("/foo+"),
-      new Path("/foo+bar/foo+bar"),
-      new Path("/foo=bar/foo=bar"),
-      new Path("/foo,bar/foo,bar"),
-      new Path("/foo@bar/foo@bar"),
-      new Path("/foo&bar/foo&bar"),
-      new Path("/foo$bar/foo$bar"),
-      new Path("/foo_bar/foo_bar"),
-      new Path("/foo~bar/foo~bar"),
-      new Path("/foo.bar/foo.bar"),
-      new Path("/foo../bar/foo../bar"),
-      new Path("/foo.../bar/foo.../bar"),
+      new Path("/foo+"), new Path("/foo+bar/foo+bar"),
+      new Path("/foo=bar/foo=bar"), new Path("/foo,bar/foo,bar"),
+      new Path("/foo@bar/foo@bar"), new Path("/foo&bar/foo&bar"),
+      new Path("/foo$bar/foo$bar"), new Path("/foo_bar/foo_bar"),
+      new Path("/foo~bar/foo~bar"), new Path("/foo.bar/foo.bar"),
+      new Path("/foo../bar/foo../bar"), new Path("/foo.../bar/foo.../bar"),
       new Path("/foo'bar/foo'bar"),
       new Path("/foo#bar/foo#bar"),
       new Path("/foo!bar/foo!bar"),
       // HDFS file names may not contain ":"
 
       // URI percent encodes, Request#getPathInfo decodes
-      new Path("/foo bar/foo bar"),
-      new Path("/foo?bar/foo?bar"),
-      new Path("/foo\">bar/foo\">bar"),
-    };
+      new Path("/foo bar/foo bar"), new Path("/foo?bar/foo?bar"),
+      new Path("/foo\">bar/foo\">bar"), };
 
   @BeforeClass
-  public static void setUp() throws IOException {
-    ((Log4JLogger)HftpFileSystem.LOG).getLogger().setLevel(Level.ALL);
-
-    final long seed = RAN.nextLong();
-    System.out.println("seed=" + seed);
-    RAN.setSeed(seed);
-
+  public static void setUp() throws Exception {
     config = new Configuration();
     cluster = new MiniDFSCluster.Builder(config).numDataNodes(2).build();
     blockPoolId = cluster.getNamesystem().getBlockPoolId();
-    hftpUri =
-      "hftp://" + config.get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY);
+    hftpUri = "hftp://"
+        + config.get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY);
+    File base = new File(BASEDIR);
+    FileUtil.fullyDelete(base);
+    base.mkdirs();
+    keystoresDir = new File(BASEDIR).getAbsolutePath();
+    sslConfDir = KeyStoreTestUtil.getClasspathDir(TestHftpFileSystem.class);
+
+    KeyStoreTestUtil.setupSSLConfig(keystoresDir, sslConfDir, config, false);
   }
 
   @AfterClass
-  public static void tearDown() throws IOException {
+  public static void tearDown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();
     }
+    FileUtil.fullyDelete(new File(BASEDIR));
+    KeyStoreTestUtil.cleanupSSLConfig(keystoresDir, sslConfDir);
   }
 
   @Before
@@ -140,7 +139,8 @@ public class TestHftpFileSystem {
 
       // Check the file status matches the path. Hftp returns a FileStatus
       // with the entire URI, extract the path part.
-      assertEquals(p, new Path(hftpFs.getFileStatus(p).getPath().toUri().getPath()));
+      assertEquals(p, new Path(hftpFs.getFileStatus(p).getPath().toUri()
+          .getPath()));
 
       // Test list status (listPath servlet)
       assertEquals(1, hftpFs.listStatus(p).length);
@@ -158,21 +158,20 @@ public class TestHftpFileSystem {
     if (hdfs.exists(path)) {
       hdfs.delete(path, true);
     }
-    FSDataOutputStream out = hdfs.create(path, (short)1);
+    FSDataOutputStream out = hdfs.create(path, (short) 1);
     out.writeBytes("0123456789");
     out.close();
 
     // Get the path's block location so we can determine
     // if we were redirected to the right DN.
-    BlockLocation[] locations =
-        hdfs.getFileBlockLocations(path, 0, 10);
+    BlockLocation[] locations = hdfs.getFileBlockLocations(path, 0, 10);
     String xferAddr = locations[0].getNames()[0];
 
     // Connect to the NN to get redirected
     URL u = hftpFs.getNamenodeURL(
         "/data" + ServletUtil.encodePath(path.toUri().getPath()),
         "ugi=userx,groupy");
-    HttpURLConnection conn = (HttpURLConnection)u.openConnection();
+    HttpURLConnection conn = (HttpURLConnection) u.openConnection();
     HttpURLConnection.setFollowRedirects(true);
     conn.connect();
     conn.getInputStream();
@@ -181,15 +180,15 @@ public class TestHftpFileSystem {
     // Find the datanode that has the block according to locations
     // and check that the URL was redirected to this DN's info port
     for (DataNode node : cluster.getDataNodes()) {
-      DatanodeRegistration dnR =
-        DataNodeTestUtils.getDNRegistrationForBP(node, blockPoolId);
+      DatanodeRegistration dnR = DataNodeTestUtils.getDNRegistrationForBP(node,
+          blockPoolId);
       if (dnR.getXferAddr().equals(xferAddr)) {
         checked = true;
         assertEquals(dnR.getInfoPort(), conn.getURL().getPort());
       }
     }
-    assertTrue("The test never checked that location of " +
-               "the block and hftp desitnation are the same", checked);
+    assertTrue("The test never checked that location of "
+        + "the block and hftp desitnation are the same", checked);
   }
 
   /**
@@ -260,7 +259,7 @@ public class TestHftpFileSystem {
     os.writeBytes("0123456789");
     os.close();
 
-    // ByteRangeInputStream delays opens until reads.  Make sure it doesn't
+    // ByteRangeInputStream delays opens until reads. Make sure it doesn't
     // open a closed stream that has never been opened
     FSDataInputStream in = hftpFs.open(testFile);
     in.close();
@@ -298,16 +297,15 @@ public class TestHftpFileSystem {
     URI uri = URI.create("hftp://localhost");
     HftpFileSystem fs = (HftpFileSystem) FileSystem.get(uri, conf);
 
-    assertEquals(DFSConfigKeys.DFS_NAMENODE_HTTP_PORT_DEFAULT, fs.getDefaultPort());
+    assertEquals(DFSConfigKeys.DFS_NAMENODE_HTTP_PORT_DEFAULT,
+        fs.getDefaultPort());
 
     assertEquals(uri, fs.getUri());
 
     // HFTP uses http to get the token so canonical service name should
     // return the http port.
-    assertEquals(
-        "127.0.0.1:" + DFSConfigKeys.DFS_NAMENODE_HTTP_PORT_DEFAULT,
-        fs.getCanonicalServiceName()
-    );
+    assertEquals("127.0.0.1:" + DFSConfigKeys.DFS_NAMENODE_HTTP_PORT_DEFAULT,
+        fs.getCanonicalServiceName());
   }
 
   @Test
@@ -324,10 +322,7 @@ public class TestHftpFileSystem {
 
     // HFTP uses http to get the token so canonical service name should
     // return the http port.
-    assertEquals(
-        "127.0.0.1:123",
-        fs.getCanonicalServiceName()
-    );
+    assertEquals("127.0.0.1:123", fs.getCanonicalServiceName());
   }
 
   @Test
@@ -336,13 +331,11 @@ public class TestHftpFileSystem {
     URI uri = URI.create("hftp://localhost:123");
     HftpFileSystem fs = (HftpFileSystem) FileSystem.get(uri, conf);
 
-    assertEquals(DFSConfigKeys.DFS_NAMENODE_HTTP_PORT_DEFAULT, fs.getDefaultPort());
+    assertEquals(DFSConfigKeys.DFS_NAMENODE_HTTP_PORT_DEFAULT,
+        fs.getDefaultPort());
 
     assertEquals(uri, fs.getUri());
-    assertEquals(
-        "127.0.0.1:123",
-        fs.getCanonicalServiceName()
-    );
+    assertEquals("127.0.0.1:123", fs.getCanonicalServiceName());
   }
 
   @Test
@@ -356,13 +349,23 @@ public class TestHftpFileSystem {
     assertEquals(123, fs.getDefaultPort());
 
     assertEquals(uri, fs.getUri());
-    assertEquals(
-        "127.0.0.1:789",
-        fs.getCanonicalServiceName()
-    );
+    assertEquals("127.0.0.1:789", fs.getCanonicalServiceName());
   }
 
-  ///
+  @Test
+  public void testTimeout() throws IOException {
+    Configuration conf = new Configuration();
+    URI uri = URI.create("hftp://localhost");
+    HftpFileSystem fs = (HftpFileSystem) FileSystem.get(uri, conf);
+    URLConnection conn = fs.connectionFactory.openConnection(new URL(
+        "http://localhost"));
+    assertEquals(URLConnectionFactory.DEFAULT_SOCKET_TIMEOUT,
+        conn.getConnectTimeout());
+    assertEquals(URLConnectionFactory.DEFAULT_SOCKET_TIMEOUT,
+        conn.getReadTimeout());
+  }
+
+  // /
 
   @Test
   public void testHsftpDefaultPorts() throws IOException {
@@ -370,13 +373,12 @@ public class TestHftpFileSystem {
     URI uri = URI.create("hsftp://localhost");
     HsftpFileSystem fs = (HsftpFileSystem) FileSystem.get(uri, conf);
 
-    assertEquals(DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_DEFAULT, fs.getDefaultPort());
+    assertEquals(DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_DEFAULT,
+        fs.getDefaultPort());
 
     assertEquals(uri, fs.getUri());
-    assertEquals(
-        "127.0.0.1:"+DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_DEFAULT,
-        fs.getCanonicalServiceName()
-    );
+    assertEquals("127.0.0.1:" + DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_DEFAULT,
+        fs.getCanonicalServiceName());
   }
 
   @Test
@@ -391,10 +393,7 @@ public class TestHftpFileSystem {
     assertEquals(456, fs.getDefaultPort());
 
     assertEquals(uri, fs.getUri());
-    assertEquals(
-        "127.0.0.1:456",
-        fs.getCanonicalServiceName()
-    );
+    assertEquals("127.0.0.1:456", fs.getCanonicalServiceName());
   }
 
   @Test
@@ -403,13 +402,11 @@ public class TestHftpFileSystem {
     URI uri = URI.create("hsftp://localhost:123");
     HsftpFileSystem fs = (HsftpFileSystem) FileSystem.get(uri, conf);
 
-    assertEquals(DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_DEFAULT, fs.getDefaultPort());
+    assertEquals(DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_DEFAULT,
+        fs.getDefaultPort());
 
     assertEquals(uri, fs.getUri());
-    assertEquals(
-        "127.0.0.1:123",
-        fs.getCanonicalServiceName()
-    );
+    assertEquals("127.0.0.1:123", fs.getCanonicalServiceName());
   }
 
   @Test
@@ -424,9 +421,6 @@ public class TestHftpFileSystem {
     assertEquals(456, fs.getDefaultPort());
 
     assertEquals(uri, fs.getUri());
-    assertEquals(
-        "127.0.0.1:789",
-        fs.getCanonicalServiceName()
-    );
+    assertEquals("127.0.0.1:789", fs.getCanonicalServiceName());
   }
 }

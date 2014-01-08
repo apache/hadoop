@@ -22,20 +22,21 @@ import static org.junit.Assert.assertEquals;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.util.Time;
 import org.junit.Test;
 
@@ -52,22 +53,6 @@ public class TestInjectionForSimulatedStorage {
   private static final Log LOG = LogFactory.getLog(
       "org.apache.hadoop.hdfs.TestInjectionForSimulatedStorage");
 
-  
-  private void writeFile(FileSystem fileSys, Path name, int repl)
-                                                throws IOException {
-    // create and write a file that contains three blocks of data
-    FSDataOutputStream stm = fileSys.create(name, true, fileSys.getConf()
-        .getInt(CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096),
-        (short) repl, blockSize);
-    byte[] buffer = new byte[filesize];
-    for (int i=0; i<buffer.length; i++) {
-      buffer[i] = '1';
-    }
-    stm.write(buffer);
-    stm.close();
-  }
-  
-  // Waits for all of the blocks to have expected replication
 
   // Waits for all of the blocks to have expected replication
   private void waitForBlockReplication(String filename, 
@@ -149,9 +134,10 @@ public class TestInjectionForSimulatedStorage {
                                             cluster.getNameNodePort()),
                                             conf);
       
-      writeFile(cluster.getFileSystem(), testPath, numDataNodes);
+      DFSTestUtil.createFile(cluster.getFileSystem(), testPath, filesize,
+          filesize, blockSize, (short) numDataNodes, 0L);
       waitForBlockReplication(testFile, dfsClient.getNamenode(), numDataNodes, 20);
-      Iterable<Block>[] blocksList = cluster.getAllBlockReports(bpid);
+      List<Map<DatanodeStorage, BlockListAsLongs>> blocksList = cluster.getAllBlockReports(bpid);
       
       cluster.shutdown();
       cluster = null;
@@ -172,9 +158,11 @@ public class TestInjectionForSimulatedStorage {
                                   .build();
       cluster.waitActive();
       Set<Block> uniqueBlocks = new HashSet<Block>();
-      for (int i=0; i<blocksList.length; ++i) {
-        for (Block b : blocksList[i]) {
-          uniqueBlocks.add(new Block(b));
+      for(Map<DatanodeStorage, BlockListAsLongs> map : blocksList) {
+        for(BlockListAsLongs blockList : map.values()) {
+          for(Block b : blockList) {
+            uniqueBlocks.add(new Block(b));
+          }
         }
       }
       // Insert all the blocks in the first data node

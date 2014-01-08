@@ -249,7 +249,8 @@ class CapacitySchedulerPage extends RmView {
         _("$(function() {",
           "  $('#cs a span').addClass('ui-corner-all').css('position', 'absolute');",
           "  $('#cs').bind('loaded.jstree', function (e, data) {",
-          "    data.inst.open_node('#pq', true);",
+          "    var callback = { call:reopenQueryNodes }",
+          "    data.inst.open_node('#pq', callback);",
           "   }).",
           "    jstree({",
           "    core: { animation: 188, html_titles: true },",
@@ -265,7 +266,8 @@ class CapacitySchedulerPage extends RmView {
           "    $('#apps').dataTable().fnFilter(q, 3, true);",
           "  });",
           "  $('#cs').show();",
-          "});")._();
+          "});")._().
+      _(SchedulerPageUtil.QueueBlockUtil.class);
   }
 
   @Override protected Class<? extends SubView> content() {

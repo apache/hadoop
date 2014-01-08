@@ -35,8 +35,6 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.DstReference;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithName;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshot;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.util.ChunkedArrayList;
 import org.apache.hadoop.hdfs.util.Diff;
@@ -72,98 +70,101 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
   }
 
   /** Get the {@link PermissionStatus} */
-  abstract PermissionStatus getPermissionStatus(Snapshot snapshot);
+  abstract PermissionStatus getPermissionStatus(int snapshotId);
 
   /** The same as getPermissionStatus(null). */
   final PermissionStatus getPermissionStatus() {
-    return getPermissionStatus(null);
+    return getPermissionStatus(Snapshot.CURRENT_STATE_ID);
   }
 
   /**
-   * @param snapshot
-   *          if it is not null, get the result from the given snapshot;
-   *          otherwise, get the result from the current inode.
+   * @param snapshotId
+   *          if it is not {@link Snapshot#CURRENT_STATE_ID}, get the result
+   *          from the given snapshot; otherwise, get the result from the
+   *          current inode.
    * @return user name
    */
-  abstract String getUserName(Snapshot snapshot);
+  abstract String getUserName(int snapshotId);
 
-  /** The same as getUserName(null). */
+  /** The same as getUserName(Snapshot.CURRENT_STATE_ID). */
   @Override
   public final String getUserName() {
-    return getUserName(null);
+    return getUserName(Snapshot.CURRENT_STATE_ID);
   }
 
   /** Set user */
   abstract void setUser(String user);
 
   /** Set user */
-  final INode setUser(String user, Snapshot latest, INodeMap inodeMap)
+  final INode setUser(String user, int latestSnapshotId)
       throws QuotaExceededException {
-    final INode nodeToUpdate = recordModification(latest, inodeMap);
+    final INode nodeToUpdate = recordModification(latestSnapshotId);
     nodeToUpdate.setUser(user);
     return nodeToUpdate;
   }
   /**
-   * @param snapshot
-   *          if it is not null, get the result from the given snapshot;
-   *          otherwise, get the result from the current inode.
+   * @param snapshotId
+   *          if it is not {@link Snapshot#CURRENT_STATE_ID}, get the result
+   *          from the given snapshot; otherwise, get the result from the
+   *          current inode.
    * @return group name
    */
-  abstract String getGroupName(Snapshot snapshot);
+  abstract String getGroupName(int snapshotId);
 
-  /** The same as getGroupName(null). */
+  /** The same as getGroupName(Snapshot.CURRENT_STATE_ID). */
   @Override
   public final String getGroupName() {
-    return getGroupName(null);
+    return getGroupName(Snapshot.CURRENT_STATE_ID);
   }
 
   /** Set group */
   abstract void setGroup(String group);
 
   /** Set group */
-  final INode setGroup(String group, Snapshot latest, INodeMap inodeMap)
+  final INode setGroup(String group, int latestSnapshotId)
       throws QuotaExceededException {
-    final INode nodeToUpdate = recordModification(latest, inodeMap);
+    final INode nodeToUpdate = recordModification(latestSnapshotId);
     nodeToUpdate.setGroup(group);
     return nodeToUpdate;
   }
 
   /**
-   * @param snapshot
-   *          if it is not null, get the result from the given snapshot;
-   *          otherwise, get the result from the current inode.
+   * @param snapshotId
+   *          if it is not {@link Snapshot#CURRENT_STATE_ID}, get the result
+   *          from the given snapshot; otherwise, get the result from the
+   *          current inode.
    * @return permission.
    */
-  abstract FsPermission getFsPermission(Snapshot snapshot);
+  abstract FsPermission getFsPermission(int snapshotId);
   
-  /** The same as getFsPermission(null). */
+  /** The same as getFsPermission(Snapshot.CURRENT_STATE_ID). */
   @Override
   public final FsPermission getFsPermission() {
-    return getFsPermission(null);
+    return getFsPermission(Snapshot.CURRENT_STATE_ID);
   }
 
   /** Set the {@link FsPermission} of this {@link INode} */
   abstract void setPermission(FsPermission permission);
 
   /** Set the {@link FsPermission} of this {@link INode} */
-  INode setPermission(FsPermission permission, Snapshot latest,
-      INodeMap inodeMap) throws QuotaExceededException {
-    final INode nodeToUpdate = recordModification(latest, inodeMap);
+  INode setPermission(FsPermission permission, int latestSnapshotId) 
+      throws QuotaExceededException {
+    final INode nodeToUpdate = recordModification(latestSnapshotId);
     nodeToUpdate.setPermission(permission);
     return nodeToUpdate;
   }
 
   /**
-   * @return if the given snapshot is null, return this;
-   *     otherwise return the corresponding snapshot inode.
+   * @return if the given snapshot id is {@link Snapshot#CURRENT_STATE_ID},
+   *         return this; otherwise return the corresponding snapshot inode.
    */
-  public INodeAttributes getSnapshotINode(final Snapshot snapshot) {
+  public INodeAttributes getSnapshotINode(final int snapshotId) {
     return this;
   }
 
   /** Is this inode in the latest snapshot? */
-  public final boolean isInLatestSnapshot(final Snapshot latest) {
-    if (latest == null) {
+  public final boolean isInLatestSnapshot(final int latestSnapshotId) {
+    if (latestSnapshotId == Snapshot.CURRENT_STATE_ID) {
       return false;
     }
     // if parent is a reference node, parent must be a renamed node. We can 
@@ -175,10 +176,11 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
     if (parentDir == null) { // root
       return true;
     }
-    if (!parentDir.isInLatestSnapshot(latest)) {
+    if (!parentDir.isInLatestSnapshot(latestSnapshotId)) {
       return false;
     }
-    final INode child = parentDir.getChild(getLocalNameBytes(), latest);
+    final INode child = parentDir.getChild(getLocalNameBytes(),
+        latestSnapshotId);
     if (this == child) {
       return true;
     }
@@ -205,21 +207,22 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
    * operation, or the snapshot belonging to the DST tree.
    * 
    * @param latestInDst
-   *          the latest snapshot in the DST tree above the reference node
+   *          id of the latest snapshot in the DST tree above the reference node
    * @return True: the modification should be recorded in the snapshot that
    *         belongs to the SRC tree. False: the modification should be
    *         recorded in the snapshot that belongs to the DST tree.
    */
-  public final boolean shouldRecordInSrcSnapshot(final Snapshot latestInDst) {
+  public final boolean shouldRecordInSrcSnapshot(final int latestInDst) {
     Preconditions.checkState(!isReference());
 
-    if (latestInDst == null) {
+    if (latestInDst == Snapshot.CURRENT_STATE_ID) {
       return true;
     }
     INodeReference withCount = getParentReference();
     if (withCount != null) {
       int dstSnapshotId = withCount.getParentReference().getDstSnapshotId();
-      if (dstSnapshotId >= latestInDst.getId()) {
+      if (dstSnapshotId != Snapshot.CURRENT_STATE_ID
+          && dstSnapshotId >= latestInDst) {
         return true;
       }
     }
@@ -230,16 +233,15 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
    * This inode is being modified.  The previous version of the inode needs to
    * be recorded in the latest snapshot.
    *
-   * @param latest the latest snapshot that has been taken.
-   *        Note that it is null if no snapshots have been taken.
-   * @param inodeMap while recording modification, the inode or its parent may 
-   *                 get replaced, and the inodeMap needs to be updated.
+   * @param latestSnapshotId The id of the latest snapshot that has been taken.
+   *                         Note that it is {@link Snapshot#CURRENT_STATE_ID} 
+   *                         if no snapshots have been taken.
    * @return The current inode, which usually is the same object of this inode.
    *         However, in some cases, this inode may be replaced with a new inode
    *         for maintaining snapshots. The current inode is then the new inode.
    */
-  abstract INode recordModification(final Snapshot latest,
-      final INodeMap inodeMap) throws QuotaExceededException;
+  abstract INode recordModification(final int latestSnapshotId)
+      throws QuotaExceededException;
 
   /** Check whether it's a reference. */
   public boolean isReference() {
@@ -315,11 +317,11 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
    * 1.2.2 Else do nothing with the current INode. Recursively clean its 
    * children.
    * 
-   * 1.3 The current inode is a {@link FileWithSnapshot}.
+   * 1.3 The current inode is a file with snapshot.
    * Call recordModification(..) to capture the current states.
    * Mark the INode as deleted.
    * 
-   * 1.4 The current inode is a {@link INodeDirectoryWithSnapshot}.
+   * 1.4 The current inode is an {@link INodeDirectory} with snapshot feature.
    * Call recordModification(..) to capture the current states. 
    * Destroy files/directories created after the latest snapshot 
    * (i.e., the inodes stored in the created list of the latest snapshot).
@@ -328,18 +330,19 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
    * 2. When deleting a snapshot.
    * 2.1 To clean {@link INodeFile}: do nothing.
    * 2.2 To clean {@link INodeDirectory}: recursively clean its children.
-   * 2.3 To clean {@link FileWithSnapshot}: delete the corresponding snapshot in
+   * 2.3 To clean INodeFile with snapshot: delete the corresponding snapshot in
    * its diff list.
-   * 2.4 To clean {@link INodeDirectoryWithSnapshot}: delete the corresponding 
+   * 2.4 To clean {@link INodeDirectory} with snapshot: delete the corresponding 
    * snapshot in its diff list. Recursively clean its children.
    * </pre>
    * 
-   * @param snapshot
-   *          The snapshot to delete. Null means to delete the current
+   * @param snapshotId
+   *          The id of the snapshot to delete. 
+   *          {@link Snapshot#CURRENT_STATE_ID} means to delete the current
    *          file/directory.
-   * @param prior
-   *          The latest snapshot before the to-be-deleted snapshot. When
-   *          deleting a current inode, this parameter captures the latest
+   * @param priorSnapshotId
+   *          The id of the latest snapshot before the to-be-deleted snapshot.
+   *          When deleting a current inode, this parameter captures the latest
    *          snapshot.
    * @param collectedBlocks
    *          blocks collected from the descents for further block
@@ -349,8 +352,8 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
    *          inodeMap
    * @return quota usage delta when deleting a snapshot
    */
-  public abstract Quota.Counts cleanSubtree(final Snapshot snapshot,
-      Snapshot prior, BlocksMapUpdateInfo collectedBlocks,
+  public abstract Quota.Counts cleanSubtree(final int snapshotId,
+      int priorSnapshotId, BlocksMapUpdateInfo collectedBlocks,
       List<INode> removedINodes, boolean countDiffChange)
       throws QuotaExceededException;
   
@@ -371,29 +374,49 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
   public abstract void destroyAndCollectBlocks(
       BlocksMapUpdateInfo collectedBlocks, List<INode> removedINodes);
 
-  /** Compute {@link ContentSummary}. */
+  /** Compute {@link ContentSummary}. Blocking call */
   public final ContentSummary computeContentSummary() {
-    final Content.Counts counts = computeContentSummary(
-        Content.Counts.newInstance());
+    return computeAndConvertContentSummary(
+        new ContentSummaryComputationContext());
+  }
+
+  /**
+   * Compute {@link ContentSummary}. 
+   */
+  public final ContentSummary computeAndConvertContentSummary(
+      ContentSummaryComputationContext summary) {
+    Content.Counts counts = computeContentSummary(summary).getCounts();
+    final Quota.Counts q = getQuotaCounts();
     return new ContentSummary(counts.get(Content.LENGTH),
         counts.get(Content.FILE) + counts.get(Content.SYMLINK),
-        counts.get(Content.DIRECTORY), getNsQuota(),
-        counts.get(Content.DISKSPACE), getDsQuota());
+        counts.get(Content.DIRECTORY), q.get(Quota.NAMESPACE),
+        counts.get(Content.DISKSPACE), q.get(Quota.DISKSPACE));
   }
 
   /**
    * Count subtree content summary with a {@link Content.Counts}.
    *
-   * @param counts The subtree counts for returning.
-   * @return The same objects as the counts parameter.
+   * @param summary the context object holding counts for the subtree.
+   * @return The same objects as summary.
    */
-  public abstract Content.Counts computeContentSummary(Content.Counts counts);
+  public abstract ContentSummaryComputationContext computeContentSummary(
+      ContentSummaryComputationContext summary);
+
   
   /**
    * Check and add namespace/diskspace consumed to itself and the ancestors.
    * @throws QuotaExceededException if quote is violated.
    */
   public void addSpaceConsumed(long nsDelta, long dsDelta, boolean verify) 
+      throws QuotaExceededException {
+    addSpaceConsumed2Parent(nsDelta, dsDelta, verify);
+  }
+
+  /**
+   * Check and add namespace/diskspace consumed to itself and the ancestors.
+   * @throws QuotaExceededException if quote is violated.
+   */
+  void addSpaceConsumed2Parent(long nsDelta, long dsDelta, boolean verify) 
       throws QuotaExceededException {
     if (parent != null) {
       parent.addSpaceConsumed(nsDelta, dsDelta, verify);
@@ -402,18 +425,15 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
 
   /**
    * Get the quota set for this inode
-   * @return the quota if it is set; -1 otherwise
+   * @return the quota counts.  The count is -1 if it is not set.
    */
-  public long getNsQuota() {
-    return -1;
-  }
-
-  public long getDsQuota() {
-    return -1;
+  public Quota.Counts getQuotaCounts() {
+    return Quota.Counts.newInstance(-1, -1);
   }
   
   public final boolean isQuotaSet() {
-    return getNsQuota() >= 0 || getDsQuota() >= 0;
+    final Quota.Counts q = getQuotaCounts();
+    return q.get(Quota.NAMESPACE) >= 0 || q.get(Quota.DISKSPACE) >= 0;
   }
   
   /**
@@ -447,9 +467,10 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
    * @param counts The subtree counts for returning.
    * @param useCache Whether to use cached quota usage. Note that 
    *                 {@link WithName} node never uses cache for its subtree.
-   * @param lastSnapshotId {@link Snapshot#INVALID_ID} indicates the computation
-   *                       is in the current tree. Otherwise the id indicates
-   *                       the computation range for a {@link WithName} node.
+   * @param lastSnapshotId {@link Snapshot#CURRENT_STATE_ID} indicates the 
+   *                       computation is in the current tree. Otherwise the id
+   *                       indicates the computation range for a 
+   *                       {@link WithName} node.
    * @return The same objects as the counts parameter.
    */
   public abstract Quota.Counts computeQuotaUsage(Quota.Counts counts,
@@ -457,7 +478,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
 
   public final Quota.Counts computeQuotaUsage(Quota.Counts counts,
       boolean useCache) {
-    return computeQuotaUsage(counts, useCache, Snapshot.INVALID_ID);
+    return computeQuotaUsage(counts, useCache, Snapshot.CURRENT_STATE_ID);
   }
   
   /**
@@ -545,46 +566,48 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
   }
 
   /**
-   * @param snapshot
-   *          if it is not null, get the result from the given snapshot;
-   *          otherwise, get the result from the current inode.
+   * @param snapshotId
+   *          if it is not {@link Snapshot#CURRENT_STATE_ID}, get the result
+   *          from the given snapshot; otherwise, get the result from the
+   *          current inode.
    * @return modification time.
    */
-  abstract long getModificationTime(Snapshot snapshot);
+  abstract long getModificationTime(int snapshotId);
 
-  /** The same as getModificationTime(null). */
+  /** The same as getModificationTime(Snapshot.CURRENT_STATE_ID). */
   @Override
   public final long getModificationTime() {
-    return getModificationTime(null);
+    return getModificationTime(Snapshot.CURRENT_STATE_ID);
   }
 
   /** Update modification time if it is larger than the current value. */
-  public abstract INode updateModificationTime(long mtime, Snapshot latest,
-      INodeMap inodeMap) throws QuotaExceededException;
+  public abstract INode updateModificationTime(long mtime, int latestSnapshotId) 
+      throws QuotaExceededException;
 
   /** Set the last modification time of inode. */
   public abstract void setModificationTime(long modificationTime);
 
   /** Set the last modification time of inode. */
   public final INode setModificationTime(long modificationTime,
-      Snapshot latest, INodeMap inodeMap) throws QuotaExceededException {
-    final INode nodeToUpdate = recordModification(latest, inodeMap);
+      int latestSnapshotId) throws QuotaExceededException {
+    final INode nodeToUpdate = recordModification(latestSnapshotId);
     nodeToUpdate.setModificationTime(modificationTime);
     return nodeToUpdate;
   }
 
   /**
-   * @param snapshot
-   *          if it is not null, get the result from the given snapshot;
-   *          otherwise, get the result from the current inode.
+   * @param snapshotId
+   *          if it is not {@link Snapshot#CURRENT_STATE_ID}, get the result
+   *          from the given snapshot; otherwise, get the result from the
+   *          current inode.
    * @return access time
    */
-  abstract long getAccessTime(Snapshot snapshot);
+  abstract long getAccessTime(int snapshotId);
 
-  /** The same as getAccessTime(null). */
+  /** The same as getAccessTime(Snapshot.CURRENT_STATE_ID). */
   @Override
   public final long getAccessTime() {
-    return getAccessTime(null);
+    return getAccessTime(Snapshot.CURRENT_STATE_ID);
   }
 
   /**
@@ -595,9 +618,9 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
   /**
    * Set last access time of inode.
    */
-  public final INode setAccessTime(long accessTime, Snapshot latest,
-      INodeMap inodeMap) throws QuotaExceededException {
-    final INode nodeToUpdate = recordModification(latest, inodeMap);
+  public final INode setAccessTime(long accessTime, int latestSnapshotId)
+      throws QuotaExceededException {
+    final INode nodeToUpdate = recordModification(latestSnapshotId);
     nodeToUpdate.setAccessTime(accessTime);
     return nodeToUpdate;
   }
@@ -666,13 +689,15 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
   @VisibleForTesting
   public final StringBuffer dumpTreeRecursively() {
     final StringWriter out = new StringWriter(); 
-    dumpTreeRecursively(new PrintWriter(out, true), new StringBuilder(), null);
+    dumpTreeRecursively(new PrintWriter(out, true), new StringBuilder(),
+        Snapshot.CURRENT_STATE_ID);
     return out.getBuffer();
   }
 
   @VisibleForTesting
   public final void dumpTreeRecursively(PrintStream out) {
-    dumpTreeRecursively(new PrintWriter(out, true), new StringBuilder(), null);
+    dumpTreeRecursively(new PrintWriter(out, true), new StringBuilder(),
+        Snapshot.CURRENT_STATE_ID);
   }
 
   /**
@@ -681,7 +706,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
    */
   @VisibleForTesting
   public void dumpTreeRecursively(PrintWriter out, StringBuilder prefix,
-      Snapshot snapshot) {
+      int snapshotId) {
     out.print(prefix);
     out.print(" ");
     final String name = getLocalName();
@@ -690,7 +715,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
     out.print(getObjectString());
     out.print("), ");
     out.print(getParentString());
-    out.print(", " + getPermissionStatus(snapshot));
+    out.print(", " + getPermissionStatus(snapshotId));
   }
   
   /**
@@ -735,5 +760,12 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
     public void clear() {
       toDeleteList.clear();
     }
+  }
+
+  /** 
+   * INode feature such as {@link FileUnderConstructionFeature}
+   * and {@link DirectoryWithQuotaFeature}.
+   */
+  public interface Feature {
   }
 }

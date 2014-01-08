@@ -74,7 +74,7 @@ import com.google.common.io.Files;
 public abstract class FSImageTestUtil {
   
   public static final Log LOG = LogFactory.getLog(FSImageTestUtil.class);
-
+  
   /**
    * The position in the fsimage header where the txid is
    * written.
@@ -548,6 +548,13 @@ public abstract class FSImageTestUtil {
   /** get the fsImage*/
   public static FSImage getFSImage(NameNode node) {
     return node.getFSImage();
+  }
+
+  /**
+   * get NameSpace quota.
+   */
+  public static long getNSQuota(FSNamesystem ns) {
+    return ns.dir.rootDir.getQuotaCounts().get(Quota.NAMESPACE);
   }
   
   public static void assertNNFilesMatch(MiniDFSCluster cluster) throws Exception {

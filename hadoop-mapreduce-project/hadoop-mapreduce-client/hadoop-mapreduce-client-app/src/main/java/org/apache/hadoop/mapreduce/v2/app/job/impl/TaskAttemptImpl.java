@@ -192,6 +192,21 @@ public abstract class TaskAttemptImpl implements
     DIAGNOSTIC_INFORMATION_UPDATE_TRANSITION 
       = new DiagnosticInformationUpdater();
 
+  private static final EnumSet<TaskAttemptEventType>
+    FAILED_KILLED_STATE_IGNORED_EVENTS = EnumSet.of(
+      TaskAttemptEventType.TA_KILL,
+      TaskAttemptEventType.TA_ASSIGNED,
+      TaskAttemptEventType.TA_CONTAINER_COMPLETED,
+      TaskAttemptEventType.TA_UPDATE,
+      // Container launch events can arrive late
+      TaskAttemptEventType.TA_CONTAINER_LAUNCHED,
+      TaskAttemptEventType.TA_CONTAINER_LAUNCH_FAILED,
+      TaskAttemptEventType.TA_CONTAINER_CLEANED,
+      TaskAttemptEventType.TA_COMMIT_PENDING,
+      TaskAttemptEventType.TA_DONE,
+      TaskAttemptEventType.TA_FAILMSG,
+      TaskAttemptEventType.TA_TOO_MANY_FETCH_FAILURE);
+
   private static final StateMachineFactory
         <TaskAttemptImpl, TaskAttemptStateInternal, TaskAttemptEventType, TaskAttemptEvent>
         stateMachineFactory
@@ -289,6 +304,9 @@ public abstract class TaskAttemptImpl implements
      .addTransition(TaskAttemptStateInternal.RUNNING,
          TaskAttemptStateInternal.KILL_CONTAINER_CLEANUP, TaskAttemptEventType.TA_KILL,
          CLEANUP_CONTAINER_TRANSITION)
+     .addTransition(TaskAttemptStateInternal.RUNNING,
+         TaskAttemptStateInternal.KILLED,
+         TaskAttemptEventType.TA_PREEMPTED, new PreemptedTransition())
 
      // Transitions from COMMIT_PENDING state
      .addTransition(TaskAttemptStateInternal.COMMIT_PENDING,
@@ -422,6 +440,7 @@ public abstract class TaskAttemptImpl implements
              TaskAttemptEventType.TA_DONE,
              TaskAttemptEventType.TA_FAILMSG,
              TaskAttemptEventType.TA_CONTAINER_CLEANED,
+             TaskAttemptEventType.TA_PREEMPTED,
              // Container launch events can arrive late
              TaskAttemptEventType.TA_CONTAINER_LAUNCHED,
              TaskAttemptEventType.TA_CONTAINER_LAUNCH_FAILED))
@@ -452,18 +471,7 @@ public abstract class TaskAttemptImpl implements
        DIAGNOSTIC_INFORMATION_UPDATE_TRANSITION)
      // Ignore-able events for FAILED state
      .addTransition(TaskAttemptStateInternal.FAILED, TaskAttemptStateInternal.FAILED,
-         EnumSet.of(TaskAttemptEventType.TA_KILL,
-             TaskAttemptEventType.TA_ASSIGNED,
-             TaskAttemptEventType.TA_CONTAINER_COMPLETED,
-             TaskAttemptEventType.TA_UPDATE,
-             // Container launch events can arrive late
-             TaskAttemptEventType.TA_CONTAINER_LAUNCHED,
-             TaskAttemptEventType.TA_CONTAINER_LAUNCH_FAILED,
-             TaskAttemptEventType.TA_CONTAINER_CLEANED,
-             TaskAttemptEventType.TA_COMMIT_PENDING,
-             TaskAttemptEventType.TA_DONE,
-             TaskAttemptEventType.TA_FAILMSG,
-             TaskAttemptEventType.TA_TOO_MANY_FETCH_FAILURE))
+       FAILED_KILLED_STATE_IGNORED_EVENTS)
 
      // Transitions from KILLED state
      .addTransition(TaskAttemptStateInternal.KILLED, TaskAttemptStateInternal.KILLED,
@@ -471,17 +479,7 @@ public abstract class TaskAttemptImpl implements
          DIAGNOSTIC_INFORMATION_UPDATE_TRANSITION)
      // Ignore-able events for KILLED state
      .addTransition(TaskAttemptStateInternal.KILLED, TaskAttemptStateInternal.KILLED,
-         EnumSet.of(TaskAttemptEventType.TA_KILL,
-             TaskAttemptEventType.TA_ASSIGNED,
-             TaskAttemptEventType.TA_CONTAINER_COMPLETED,
-             TaskAttemptEventType.TA_UPDATE,
-             // Container launch events can arrive late
-             TaskAttemptEventType.TA_CONTAINER_LAUNCHED,
-             TaskAttemptEventType.TA_CONTAINER_LAUNCH_FAILED,
-             TaskAttemptEventType.TA_CONTAINER_CLEANED,
-             TaskAttemptEventType.TA_COMMIT_PENDING,
-             TaskAttemptEventType.TA_DONE,
-             TaskAttemptEventType.TA_FAILMSG))
+       FAILED_KILLED_STATE_IGNORED_EVENTS)
 
      // create the topology tables
      .installTopology();
@@ -1558,6 +1556,12 @@ public abstract class TaskAttemptImpl implements
         TaskAttemptEvent event) {
       //set the finish time
       taskAttempt.setFinishTime();
+
+      if (event instanceof TaskAttemptKillEvent) {
+        taskAttempt.addDiagnosticInfo(
+            ((TaskAttemptKillEvent) event).getMessage());
+      }
+
       //send the deallocate event to ContainerAllocator
       taskAttempt.eventHandler.handle(
           new ContainerAllocatorEvent(taskAttempt.attemptId,
@@ -1861,10 +1865,37 @@ public abstract class TaskAttemptImpl implements
         LOG.debug("Not generating HistoryFinish event since start event not " +
             "generated for taskAttempt: " + taskAttempt.getID());
       }
+
+      if (event instanceof TaskAttemptKillEvent) {
+        taskAttempt.addDiagnosticInfo(
+            ((TaskAttemptKillEvent) event).getMessage());
+      }
+
 //      taskAttempt.logAttemptFinishedEvent(TaskAttemptStateInternal.KILLED); Not logging Map/Reduce attempts in case of failure.
       taskAttempt.eventHandler.handle(new TaskTAttemptEvent(
           taskAttempt.attemptId,
           TaskEventType.T_ATTEMPT_KILLED));
+    }
+  }
+
+  private static class PreemptedTransition implements
+      SingleArcTransition<TaskAttemptImpl,TaskAttemptEvent> {
+    @SuppressWarnings("unchecked")
+    @Override
+    public void transition(TaskAttemptImpl taskAttempt,
+        TaskAttemptEvent event) {
+      taskAttempt.setFinishTime();
+      taskAttempt.taskAttemptListener.unregister(
+          taskAttempt.attemptId, taskAttempt.jvmID);
+      taskAttempt.eventHandler.handle(new ContainerLauncherEvent(
+          taskAttempt.attemptId,
+          taskAttempt.getAssignedContainerID(), taskAttempt.getAssignedContainerMgrAddress(),
+          taskAttempt.container.getContainerToken(),
+          ContainerLauncher.EventType.CONTAINER_REMOTE_CLEANUP));
+      taskAttempt.eventHandler.handle(new TaskTAttemptEvent(
+          taskAttempt.attemptId,
+          TaskEventType.T_ATTEMPT_KILLED));
+
     }
   }
 
@@ -1878,6 +1909,12 @@ public abstract class TaskAttemptImpl implements
       // for it
       taskAttempt.taskAttemptListener.unregister(
           taskAttempt.attemptId, taskAttempt.jvmID);
+
+      if (event instanceof TaskAttemptKillEvent) {
+        taskAttempt.addDiagnosticInfo(
+            ((TaskAttemptKillEvent) event).getMessage());
+      }
+
       taskAttempt.reportedStatus.progress = 1.0f;
       taskAttempt.updateProgressSplits();
       //send the cleanup event to containerLauncher

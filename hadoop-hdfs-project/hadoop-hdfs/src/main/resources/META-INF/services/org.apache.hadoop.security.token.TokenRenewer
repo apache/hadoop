@@ -13,5 +13,4 @@
 #
 org.apache.hadoop.hdfs.DFSClient$Renewer
 org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier$Renewer
-org.apache.hadoop.hdfs.web.HftpFileSystem$TokenManager
-org.apache.hadoop.hdfs.web.WebHdfsFileSystem$DtRenewer
+org.apache.hadoop.hdfs.web.TokenAspect$TokenManager

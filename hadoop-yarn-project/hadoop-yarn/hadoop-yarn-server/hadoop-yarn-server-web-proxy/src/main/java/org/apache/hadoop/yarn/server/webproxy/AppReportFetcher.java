@@ -19,21 +19,20 @@
 package org.apache.hadoop.yarn.server.webproxy;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.client.ClientRMProxy;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.ipc.YarnRPC;
 
 /**
  * This class abstracts away how ApplicationReports are fetched.
@@ -50,16 +49,12 @@ public class AppReportFetcher {
    */
   public AppReportFetcher(Configuration conf) {
     this.conf = conf;
-    YarnRPC rpc = YarnRPC.create(this.conf);
-    InetSocketAddress rmAddress = conf.getSocketAddr(
-            YarnConfiguration.RM_ADDRESS,
-            YarnConfiguration.DEFAULT_RM_ADDRESS,
-            YarnConfiguration.DEFAULT_RM_PORT);
-    LOG.info("Connecting to ResourceManager at " + rmAddress);
-    applicationsManager =
-        (ApplicationClientProtocol) rpc.getProxy(ApplicationClientProtocol.class,
-            rmAddress, this.conf);
-    LOG.info("Connected to ResourceManager at " + rmAddress);  
+    try {
+      applicationsManager = ClientRMProxy.createRMProxy(conf,
+          ApplicationClientProtocol.class);
+    } catch (IOException e) {
+      throw new YarnRuntimeException(e);
+    }
   }
   
   /**
@@ -90,5 +85,11 @@ public class AppReportFetcher {
     GetApplicationReportResponse response = applicationsManager
         .getApplicationReport(request);
     return response.getApplicationReport();
+  }
+
+  public void stop() {
+    if (this.applicationsManager != null) {
+      RPC.stopProxy(this.applicationsManager);
+    }
   }
 }

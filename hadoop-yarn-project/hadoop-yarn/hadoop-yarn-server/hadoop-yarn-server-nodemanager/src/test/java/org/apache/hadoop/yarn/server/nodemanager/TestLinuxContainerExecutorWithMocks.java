@@ -155,8 +155,8 @@ public class TestLinuxContainerExecutorWithMocks {
     mockExec.addSchedPriorityCommand(command);
     assertEquals("first should be nice", "nice", command.get(0));
     assertEquals("second should be -n", "-n", command.get(1));
-    assertEquals("third should be the priority", Integer.toString(2),
-                 command.get(2));
+    assertEquals("third should be the priority", Integer.toString(2), 
+                 command.get(2)); 
 
     testContainerLaunch();
   }
@@ -165,10 +165,11 @@ public class TestLinuxContainerExecutorWithMocks {
   public void testLaunchCommandWithoutPriority() throws IOException {
     // make sure the command doesn't contain the nice -n since priority
     // not specified
-   List<String> command = new ArrayList<String>();
+    List<String> command = new ArrayList<String>();
     mockExec.addSchedPriorityCommand(command);
     assertEquals("addSchedPriority should be empty", 0, command.size());
   }
+
   
   @Test (timeout = 5000)
   public void testStartLocalizer() throws IOException {

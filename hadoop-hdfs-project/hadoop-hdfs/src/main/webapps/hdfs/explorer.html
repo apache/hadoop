@@ -18,7 +18,7 @@
 	  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
-    <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css" />
+    <link rel="stylesheet" type="text/css" href="/static/bootstrap-3.0.2/css/bootstrap.min.css" />
     <link rel="stylesheet" type="text/css" href="/static/hadoop.css" />
     <title>Browsing HDFS</title>
   </head>
@@ -31,9 +31,9 @@
 	  </div>
 	  <div class="modal-body" id="file-info-body">
 	    <a id="file-info-download">Download</a>
-            <a id="file-info-preview" style="cursor:pointer">Tail the file (last 32K)</a>
+        <!--<a id="file-info-preview" style="cursor:pointer">Tail the file (last 32K)</a>-->
 	    <hr />
-	    <div class="panel panel-info" id="file-info-blockinfo-panel">
+	    <div class="panel panel-success" id="file-info-blockinfo-panel">
 	      <div class="panel-heading">
 		Block information -- 
 		<select class="btn btn-default" id="file-info-blockinfo-list">
@@ -50,7 +50,7 @@
 	      </div>
 	    </div>
 	  </div>
-	  <div class="modal-footer"><button type="button" class="btn btn-primary"
+	  <div class="modal-footer"><button type="button" class="btn btn-success"
 					    data-dismiss="modal">Close</button></div>
 	</div>
       </div>
@@ -73,8 +73,53 @@
       <br />
       <div id="panel"></div>
     </div>
-    <script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js">
-    </script><script type="text/javascript" src="//netdna.bootstrapcdn.com/bootstrap/3.0.0/js/bootstrap.min.js">
+
+    <script type="text/x-dust-template" id="tmpl-explorer">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Permission</th>
+            <th>Owner</th>
+            <th>Group</th>
+            <th>Size</th>
+            <th>Replication</th>
+            <th>Block Size</th>
+            <th>Name</th>
+          </tr>
+        </thead>
+        <tbody>
+          {#FileStatus}
+          <tr>
+            <td>{#helper_to_permission/}</td>
+            <td>{owner}</td>
+            <td>{group}</td>
+            <td>{length|fmt_bytes}</td>
+            <td>{replication}</td>
+            <td>{blockSize|fmt_bytes}</td>
+            <td><a style="cursor:pointer" inode-type="{type}" class="explorer-browse-links" inode-path="{pathSuffix}">{pathSuffix}</a></td>
+          </tr>
+          {/FileStatus}
+        </tbody>
+      </table>
+    </script>
+
+    <script type="text/x-dust-template" id="tmpl-block-info">
+      {#block}
+      <p>Block ID: {blockId}</p>
+      <p>Block Pool ID: {blockPoolId}</p>
+      <p>Generation Stamp: {generationStamp}</p>
+      <p>Size: {numBytes}</p>
+      {/block}
+      <p>Availability:
+        <ul>
+          {#locations}
+          <li>{hostName}</li>
+          {/locations}
+        </ul>
+      </p>
+    </script>
+    <script type="text/javascript" src="/static/jquery-1.10.2.min.js">
+    </script><script type="text/javascript" src="/static/bootstrap-3.0.2/js/bootstrap.min.js">
     </script><script type="text/javascript" src="/static/dust-full-2.0.0.min.js">
     </script><script type="text/javascript" src="/static/dust-helpers-1.1.1.min.js">
     </script><script type="text/javascript" src="dfs-dust.js">

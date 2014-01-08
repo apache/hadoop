@@ -21,10 +21,10 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.HashSet;
+import java.util.Arrays;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -66,11 +66,11 @@ import com.google.common.base.Charsets;
 public class CLI extends Configured implements Tool {
   private static final Log LOG = LogFactory.getLog(CLI.class);
   protected Cluster cluster;
+  private final Set<String> taskStates = new HashSet<String>(
+              Arrays.asList("pending", "running", "completed", "failed", "killed"));
   private static final Set<String> taskTypes = new HashSet<String>(
       Arrays.asList("MAP", "REDUCE"));
-  private final Set<String> taskStates = new HashSet<String>(Arrays.asList(
-      "running", "completed", "pending", "failed", "killed"));
- 
+  
   public CLI() {
   }
   
@@ -387,7 +387,7 @@ public class CLI extends Configured implements Tool {
   Cluster createCluster() throws IOException {
     return new Cluster(getConf());
   }
-
+  
   private String getJobPriorityNames() {
     StringBuffer sb = new StringBuffer();
     for (JobPriority p : JobPriority.values()) {
@@ -399,7 +399,7 @@ public class CLI extends Configured implements Tool {
   private String getTaskTypes() {
     return StringUtils.join(taskTypes, " ");
   }
-
+  
   /**
    * Display usage of the command-line tool and terminate execution.
    */
@@ -407,7 +407,7 @@ public class CLI extends Configured implements Tool {
     String prefix = "Usage: CLI ";
     String jobPriorityValues = getJobPriorityNames();
     String taskStates = "running, completed";
-
+    
     if ("-submit".equals(cmd)) {
       System.err.println(prefix + "[" + cmd + " <job-file>]");
     } else if ("-status".equals(cmd) || "-kill".equals(cmd)) {
@@ -570,10 +570,15 @@ public class CLI extends Configured implements Tool {
    * @param type the type of the task (map/reduce/setup/cleanup)
    * @param state the state of the task 
    * (pending/running/completed/failed/killed)
+   * @throws IOException when there is an error communicating with the master
+   * @throws InterruptedException
+   * @throws IllegalArgumentException if an invalid type/state is passed
    */
   protected void displayTasks(Job job, String type, String state) 
   throws IOException, InterruptedException {
-    TaskReport[] reports = job.getTaskReports(TaskType.valueOf(type.toUpperCase()));
+	  
+    TaskReport[] reports=null;
+    reports = job.getTaskReports(TaskType.valueOf(type.toUpperCase()));
     for (TaskReport report : reports) {
       TIPStatus status = report.getCurrentStatus();
       if ((state.equalsIgnoreCase("pending") && status ==TIPStatus.PENDING) ||

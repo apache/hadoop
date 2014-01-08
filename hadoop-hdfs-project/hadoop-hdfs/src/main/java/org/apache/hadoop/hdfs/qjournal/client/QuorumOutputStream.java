@@ -114,10 +114,10 @@ class QuorumOutputStream extends EditLogOutputStream {
   }
 
   @Override
-  public String generateHtmlReport() {
+  public String generateReport() {
     StringBuilder sb = new StringBuilder();
-    sb.append("Writing segment beginning at txid " + segmentTxId + "<br/>\n");
-    loggers.appendHtmlReport(sb);
+    sb.append("Writing segment beginning at txid " + segmentTxId + ". \n");
+    loggers.appendReport(sb);
     return sb.toString();
   }
   

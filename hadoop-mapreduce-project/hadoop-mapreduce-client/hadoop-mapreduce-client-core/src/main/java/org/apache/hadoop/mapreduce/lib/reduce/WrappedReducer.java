@@ -137,7 +137,7 @@ public class WrappedReducer<KEYIN, VALUEIN, KEYOUT, VALUEOUT>
 
     @Override
     public URI[] getCacheFiles() throws IOException {
-      return reduceContext.getCacheArchives();
+      return reduceContext.getCacheFiles();
     }
 
     @Override
@@ -159,6 +159,11 @@ public class WrappedReducer<KEYIN, VALUEIN, KEYOUT, VALUEOUT>
     @Override
     public String[] getFileTimestamps() {
       return reduceContext.getFileTimestamps();
+    }
+
+    @Override
+    public RawComparator<?> getCombinerKeyGroupingComparator() {
+      return reduceContext.getCombinerKeyGroupingComparator();
     }
 
     @Override

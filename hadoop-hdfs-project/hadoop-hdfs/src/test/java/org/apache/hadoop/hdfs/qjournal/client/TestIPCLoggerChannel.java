@@ -91,7 +91,6 @@ public class TestIPCLoggerChannel {
    */
   @Test
   public void testQueueLimiting() throws Exception {
-    
     // Block the underlying fake proxy from actually completing any calls.
     DelayAnswer delayer = new DelayAnswer(LOG);
     Mockito.doAnswer(delayer).when(mockProxy).journal(

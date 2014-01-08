@@ -305,7 +305,7 @@ public class TestDiff {
     final int i = Diff.search(current, inode.getKey());
     Assert.assertTrue(i >= 0);
     final INodeDirectory oldinode = (INodeDirectory)current.get(i);
-    final INodeDirectory newinode = new INodeDirectory(oldinode, false);
+    final INodeDirectory newinode = new INodeDirectory(oldinode, false, true);
     newinode.setModificationTime(oldinode.getModificationTime() + 1);
 
     current.set(i, newinode);

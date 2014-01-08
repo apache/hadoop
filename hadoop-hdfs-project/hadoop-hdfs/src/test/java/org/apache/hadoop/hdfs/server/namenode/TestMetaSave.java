@@ -26,15 +26,13 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.AfterClass;
@@ -51,17 +49,6 @@ public class TestMetaSave {
   private static MiniDFSCluster cluster = null;
   private static FileSystem fileSys = null;
   private static FSNamesystem namesystem = null;
-
-  private void createFile(FileSystem fileSys, Path name) throws IOException {
-    FSDataOutputStream stm = fileSys.create(name, true, fileSys.getConf()
-        .getInt(CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096),
-        (short) 2, blockSize);
-    byte[] buffer = new byte[1024];
-    Random rand = new Random(seed);
-    rand.nextBytes(buffer);
-    stm.write(buffer);
-    stm.close();
-  }
 
   @BeforeClass
   public static void setUp() throws IOException {
@@ -86,7 +73,8 @@ public class TestMetaSave {
   public void testMetaSave() throws IOException, InterruptedException {
     for (int i = 0; i < 2; i++) {
       Path file = new Path("/filestatus" + i);
-      createFile(fileSys, file);
+      DFSTestUtil.createFile(fileSys, file, 1024, 1024, blockSize, (short) 2,
+          seed);
     }
 
     cluster.stopDataNode(1);
@@ -105,7 +93,7 @@ public class TestMetaSave {
       reader = new BufferedReader(new InputStreamReader(in));
       String line = reader.readLine();
       assertTrue(line.equals(
-          "3 files and directories, 2 blocks = 5 total"));
+          "3 files and directories, 2 blocks = 5 total filesystem objects"));
       line = reader.readLine();
       assertTrue(line.equals("Live Datanodes: 1"));
       line = reader.readLine();
@@ -127,7 +115,8 @@ public class TestMetaSave {
       throws IOException, InterruptedException {
     for (int i = 0; i < 2; i++) {
       Path file = new Path("/filestatus" + i);
-      createFile(fileSys, file);
+      DFSTestUtil.createFile(fileSys, file, 1024, 1024, blockSize, (short) 2,
+          seed);
     }
 
     cluster.stopDataNode(1);

@@ -22,6 +22,7 @@ import java.io.FileInputStream;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.io.nativeio.NativeIO;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;
@@ -147,20 +148,9 @@ public class ClientMmap {
 
   /**
    * Unmap the memory region.
-   *
-   * There isn't any portable way to unmap a memory region in Java.
-   * So we use the sun.nio method here.
-   * Note that unmapping a memory region could cause crashes if code
-   * continues to reference the unmapped code.  However, if we don't
-   * manually unmap the memory, we are dependent on the finalizer to
-   * do it, and we have no idea when the finalizer will run.
    */
   void unmap() {
     assert(refCount.get() == 0);
-    if (map instanceof sun.nio.ch.DirectBuffer) {
-      final sun.misc.Cleaner cleaner =
-          ((sun.nio.ch.DirectBuffer) map).cleaner();
-      cleaner.clean();
-    }
+    NativeIO.POSIX.munmap(map);
   }
 }

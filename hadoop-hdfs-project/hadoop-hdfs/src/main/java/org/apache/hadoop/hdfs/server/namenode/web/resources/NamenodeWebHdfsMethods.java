@@ -53,6 +53,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Options;
+import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -61,11 +62,13 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifie
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.web.JsonUtil;
 import org.apache.hadoop.hdfs.web.ParamFilter;
+import org.apache.hadoop.hdfs.web.SWebHdfsFileSystem;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.hdfs.web.resources.AccessTimeParam;
 import org.apache.hadoop.hdfs.web.resources.BlockSizeParam;
@@ -96,6 +99,7 @@ import org.apache.hadoop.hdfs.web.resources.ReplicationParam;
 import org.apache.hadoop.hdfs.web.resources.TokenArgumentParam;
 import org.apache.hadoop.hdfs.web.resources.UriFsPathParam;
 import org.apache.hadoop.hdfs.web.resources.UserParam;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.security.Credentials;
@@ -158,7 +162,7 @@ public class NamenodeWebHdfsMethods {
 
   static DatanodeInfo chooseDatanode(final NameNode namenode,
       final String path, final HttpOpParam.Op op, final long openOffset,
-      final long blocksize, Configuration conf) throws IOException {
+      final long blocksize, final Configuration conf) throws IOException {
     final BlockManager bm = namenode.getNamesystem().getBlockManager();
 
     if (op == PutOpParam.Op.CREATE) {
@@ -166,11 +170,13 @@ public class NamenodeWebHdfsMethods {
       final DatanodeDescriptor clientNode = bm.getDatanodeManager(
           ).getDatanodeByHost(getRemoteAddress());
       if (clientNode != null) {
-        final DatanodeDescriptor[] datanodes = bm.getBlockPlacementPolicy()
+        final DatanodeStorageInfo[] storages = bm.getBlockPlacementPolicy()
             .chooseTarget(path, 1, clientNode,
-                new ArrayList<DatanodeDescriptor>(), false, null, blocksize);
-        if (datanodes.length > 0) {
-          return datanodes[0];
+                new ArrayList<DatanodeStorageInfo>(), false, null, blocksize,
+                // TODO: get storage type from the file
+                StorageType.DEFAULT);
+        if (storages.length > 0) {
+          return storages[0].getDatanodeDescriptor();
         }
       }
     } else if (op == GetOpParam.Op.OPEN
@@ -210,7 +216,8 @@ public class NamenodeWebHdfsMethods {
     final Credentials c = DelegationTokenSecretManager.createCredentials(
         namenode, ugi, renewer != null? renewer: ugi.getShortUserName());
     final Token<? extends TokenIdentifier> t = c.getAllTokens().iterator().next();
-    t.setKind(WebHdfsFileSystem.TOKEN_KIND);
+    Text kind = request.getScheme().equals("http") ? WebHdfsFileSystem.TOKEN_KIND : SWebHdfsFileSystem.TOKEN_KIND;
+    t.setKind(kind);
     return t;
   }
 
@@ -242,8 +249,12 @@ public class NamenodeWebHdfsMethods {
         + Param.toSortedString("&", parameters);
     final String uripath = WebHdfsFileSystem.PATH_PREFIX + path;
 
-    final URI uri = new URI("http", null, dn.getHostName(), dn.getInfoPort(),
-        uripath, query, null);
+    final String scheme = request.getScheme();
+    int port = "http".equals(scheme) ? dn.getInfoPort() : dn
+        .getInfoSecurePort();
+    final URI uri = new URI(scheme, null, dn.getHostName(), port, uripath,
+        query, null);
+
     if (LOG.isTraceEnabled()) {
       LOG.trace("redirectURI=" + uri);
     }

@@ -19,12 +19,12 @@
   <parent>
     <artifactId>hadoop-yarn</artifactId>
     <groupId>org.apache.hadoop</groupId>
-    <version>2.3.0-SNAPSHOT</version>
+    <version>3.0.0-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-yarn-api</artifactId>
-  <version>2.3.0-SNAPSHOT</version>
+  <version>3.0.0-SNAPSHOT</version>
   <name>hadoop-yarn-api</name>
 
   <properties>
@@ -62,8 +62,6 @@
                   <include>containermanagement_protocol.proto</include>
                   <include>server/yarn_server_resourcemanager_service_protos.proto</include>
                   <include>server/resourcemanager_administration_protocol.proto</include>
-                  <include>application_history_client.proto</include>
-                  <include>server/application_history_server.proto</include>
                 </includes>
               </source>
               <output>${project.build.directory}/generated-sources/java</output>

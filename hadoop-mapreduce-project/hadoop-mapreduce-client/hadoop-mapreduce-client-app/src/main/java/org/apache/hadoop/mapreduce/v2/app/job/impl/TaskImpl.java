@@ -69,6 +69,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.JobMapTaskRescheduledEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobTaskAttemptCompletedEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobTaskEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
+import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptKillEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptRecoverEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEvent;
@@ -100,6 +101,7 @@ import com.google.common.annotations.VisibleForTesting;
 public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
 
   private static final Log LOG = LogFactory.getLog(TaskImpl.class);
+  private static final String SPECULATION = "Speculation: ";
 
   protected final JobConf conf;
   protected final Path jobFile;
@@ -374,11 +376,15 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
     TaskReport report = recordFactory.newRecordInstance(TaskReport.class);
     readLock.lock();
     try {
+      TaskAttempt bestAttempt = selectBestAttempt();
       report.setTaskId(taskId);
       report.setStartTime(getLaunchTime());
       report.setFinishTime(getFinishTime());
       report.setTaskState(getState());
-      report.setProgress(getProgress());
+      report.setProgress(bestAttempt == null ? 0f : bestAttempt.getProgress());
+      report.setStatus(bestAttempt == null
+          ? ""
+          : bestAttempt.getReport().getStateString());
 
       for (TaskAttempt attempt : attempts.values()) {
         if (TaskAttemptState.RUNNING.equals(attempt.getState())) {
@@ -398,7 +404,9 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
 
       // Add a copy of counters as the last step so that their lifetime on heap
       // is as small as possible.
-      report.setCounters(TypeConverter.toYarn(getCounters()));
+      report.setCounters(TypeConverter.toYarn(bestAttempt == null
+          ? TaskAttemptImpl.EMPTY_COUNTERS
+          : bestAttempt.getCounters()));
 
       return report;
     } finally {
@@ -906,8 +914,8 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
         LOG.info(task.commitAttempt
             + " already given a go for committing the task output, so killing "
             + attemptID);
-        task.eventHandler.handle(new TaskAttemptEvent(
-            attemptID, TaskAttemptEventType.TA_KILL));
+        task.eventHandler.handle(new TaskAttemptKillEvent(attemptID,
+            SPECULATION + task.commitAttempt + " committed first!"));
       }
     }
   }
@@ -932,9 +940,8 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
             //  other reasons.
             !attempt.isFinished()) {
           LOG.info("Issuing kill to other attempt " + attempt.getID());
-          task.eventHandler.handle(
-              new TaskAttemptEvent(attempt.getID(), 
-                  TaskAttemptEventType.TA_KILL));
+          task.eventHandler.handle(new TaskAttemptKillEvent(attempt.getID(),
+              SPECULATION + task.successfulAttempt + " succeeded first!"));
         }
       }
       task.finished(TaskStateInternal.SUCCEEDED);
@@ -1199,8 +1206,7 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
   private void killUnfinishedAttempt(TaskAttempt attempt, String logMsg) {
     if (attempt != null && !attempt.isFinished()) {
       eventHandler.handle(
-          new TaskAttemptEvent(attempt.getID(),
-              TaskAttemptEventType.TA_KILL));
+          new TaskAttemptKillEvent(attempt.getID(), logMsg));
     }
   }
 

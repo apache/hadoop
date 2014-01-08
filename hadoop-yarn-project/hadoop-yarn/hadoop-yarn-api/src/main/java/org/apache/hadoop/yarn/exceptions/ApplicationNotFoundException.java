@@ -18,19 +18,14 @@
 
 package org.apache.hadoop.yarn.exceptions;
 
-import org.apache.hadoop.classification.InterfaceAudience.Public;
-import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
 
 /**
  * This exception is thrown on
- * {@link ApplicationClientProtocol#getApplicationReport
- * (GetApplicationReportRequest)} API
- * when the Application doesn't exist in RM and AHS
+ * {@link ApplicationClientProtocol#getApplicationReport(GetApplicationReportRequest)} API
+ * when the Application doesn't exist in RM
  */
-@Public
-@Unstable
 public class ApplicationNotFoundException extends YarnException{
 
   private static final long serialVersionUID = 8694408L;

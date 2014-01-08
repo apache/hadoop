@@ -48,6 +48,7 @@ public class TestFileNameIndexUtils {
     + FileNameIndexUtils.DELIMITER + "%s"
     + FileNameIndexUtils.DELIMITER + "%s"
     + FileNameIndexUtils.DELIMITER + "%s"
+    + FileNameIndexUtils.DELIMITER + "%s"
     + JobHistoryUtils.JOB_HISTORY_FILE_EXTENSION;
 
   private static final String JOB_ID = "job_1317928501754_0001";
@@ -67,6 +68,7 @@ public class TestFileNameIndexUtils {
   private static final String NUM_REDUCES = "1";
   private static final String JOB_STATUS = "SUCCEEDED";
   private static final String QUEUE_NAME = "default";
+  private static final String JOB_START_TIME = "1317928742060";
 
   @Test
   public void testEncodingDecodingEquivalence() throws IOException {
@@ -82,6 +84,7 @@ public class TestFileNameIndexUtils {
     info.setNumReduces(Integer.parseInt(NUM_REDUCES));
     info.setJobStatus(JOB_STATUS);
     info.setQueueName(QUEUE_NAME);
+    info.setJobStartTime(Long.parseLong(JOB_START_TIME));
 
     String jobHistoryFile = FileNameIndexUtils.getDoneFileName(info);
     JobIndexInfo parsedInfo = FileNameIndexUtils.getIndexInfo(jobHistoryFile);
@@ -104,6 +107,8 @@ public class TestFileNameIndexUtils {
         info.getJobStatus(), parsedInfo.getJobStatus());
     Assert.assertEquals("Queue name different after encoding and decoding",
         info.getQueueName(), parsedInfo.getQueueName());
+    Assert.assertEquals("Job start time different after encoding and decoding",
+              info.getJobStartTime(), parsedInfo.getJobStartTime());
   }
 
   @Test
@@ -120,6 +125,7 @@ public class TestFileNameIndexUtils {
     info.setNumReduces(Integer.parseInt(NUM_REDUCES));
     info.setJobStatus(JOB_STATUS);
     info.setQueueName(QUEUE_NAME);
+    info.setJobStartTime(Long.parseLong(JOB_START_TIME));
 
     String jobHistoryFile = FileNameIndexUtils.getDoneFileName(info);
     Assert.assertTrue("User name not encoded correctly into job history file",
@@ -137,7 +143,8 @@ public class TestFileNameIndexUtils {
         NUM_MAPS,
         NUM_REDUCES,
         JOB_STATUS,
-        QUEUE_NAME);
+        QUEUE_NAME,
+        JOB_START_TIME);
 
     JobIndexInfo info = FileNameIndexUtils.getIndexInfo(jobHistoryFile);
     Assert.assertEquals("User name doesn't match",
@@ -158,6 +165,7 @@ public class TestFileNameIndexUtils {
     info.setNumReduces(Integer.parseInt(NUM_REDUCES));
     info.setJobStatus(JOB_STATUS);
     info.setQueueName(QUEUE_NAME);
+    info.setJobStartTime(Long.parseLong(JOB_START_TIME));
 
     String jobHistoryFile = FileNameIndexUtils.getDoneFileName(info);
     Assert.assertTrue("Job name not encoded correctly into job history file",
@@ -175,7 +183,8 @@ public class TestFileNameIndexUtils {
         NUM_MAPS,
         NUM_REDUCES,
         JOB_STATUS,
-        QUEUE_NAME);
+        QUEUE_NAME,
+        JOB_START_TIME );
 
     JobIndexInfo info = FileNameIndexUtils.getIndexInfo(jobHistoryFile);
     Assert.assertEquals("Job name doesn't match",

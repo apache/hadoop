@@ -41,6 +41,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshSuperUserGroupsC
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshSuperUserGroupsConfigurationResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshUserToGroupsMappingsRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshUserToGroupsMappingsResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -157,6 +159,14 @@ public class TestResourceManagerAdministrationProtocolPBClientImpl {
     RefreshAdminAclsRequest request = recordFactory
             .newRecordInstance(RefreshAdminAclsRequest.class);
     RefreshAdminAclsResponse response = client.refreshAdminAcls(request);
+    assertNotNull(response);
+  }
+  
+  @Test
+  public void testUpdateNodeResource() throws Exception {
+    UpdateNodeResourceRequest request = recordFactory
+            .newRecordInstance(UpdateNodeResourceRequest.class);
+    UpdateNodeResourceResponse response = client.updateNodeResource(request);
     assertNotNull(response);
   }
 

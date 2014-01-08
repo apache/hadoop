@@ -19,7 +19,6 @@ package org.apache.hadoop.security;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.ipc.TestSaslRPC;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.authentication.util.KerberosName;
@@ -34,14 +33,15 @@ import javax.security.auth.login.LoginContext;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.lang.reflect.Method;
 import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_USER_GROUP_METRICS_PERCENTILES_INTERVALS;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTH_TO_LOCAL;
 import static org.apache.hadoop.ipc.TestSaslRPC.*;
-import static org.apache.hadoop.security.token.delegation.TestDelegationToken.TestDelegationTokenIdentifier;
 import static org.apache.hadoop.test.MetricsAsserts.*;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.mock;
@@ -53,9 +53,11 @@ public class TestUserGroupInformation {
   final private static String GROUP2_NAME = "group2";
   final private static String GROUP3_NAME = "group3";
   final private static String[] GROUP_NAMES = 
-    new String[]{GROUP1_NAME, GROUP2_NAME, GROUP3_NAME}; 
+    new String[]{GROUP1_NAME, GROUP2_NAME, GROUP3_NAME};
+  // Rollover interval of percentile metrics (in seconds)
+  private static final int PERCENTILES_INTERVAL = 1;
   private static Configuration conf;
- 
+  
   /**
    * UGI should not use the default security conf, else it will collide
    * with other classes that may change the default conf.  Using this dummy
@@ -79,7 +81,8 @@ public class TestUserGroupInformation {
     // doesn't matter what it is, but getGroups needs it set...
     // use HADOOP_HOME environment variable to prevent interfering with logic
     // that finds winutils.exe
-    System.setProperty("hadoop.home.dir", System.getenv("HADOOP_HOME"));
+    String home = System.getenv("HADOOP_HOME");
+    System.setProperty("hadoop.home.dir", (home != null ? home : "."));
     // fake the realm is kerberos is enabled
     System.setProperty("java.security.krb5.kdc", "");
     System.setProperty("java.security.krb5.realm", "DEFAULT.REALM");
@@ -149,11 +152,15 @@ public class TestUserGroupInformation {
   /** Test login method */
   @Test (timeout = 30000)
   public void testLogin() throws Exception {
+    conf.set(HADOOP_USER_GROUP_METRICS_PERCENTILES_INTERVALS,
+      String.valueOf(PERCENTILES_INTERVAL));
+    UserGroupInformation.setConfiguration(conf);
     // login from unix
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     assertEquals(UserGroupInformation.getCurrentUser(),
                  UserGroupInformation.getLoginUser());
     assertTrue(ugi.getGroupNames().length >= 1);
+    verifyGroupMetrics(1);
 
     // ensure that doAs works correctly
     UserGroupInformation userGroupInfo = 
@@ -727,6 +734,21 @@ public class TestUserGroupInformation {
     }
   }
 
+  private static void verifyGroupMetrics(
+      long groups) throws InterruptedException {
+    MetricsRecordBuilder rb = getMetrics("UgiMetrics");
+    if (groups > 0) {
+      assertCounterGt("GetGroupsNumOps", groups-1, rb);
+      double avg = getDoubleGauge("GetGroupsAvgTime", rb);
+      assertTrue(avg >= 0.0);
+
+      // Sleep for an interval+slop to let the percentiles rollover
+      Thread.sleep((PERCENTILES_INTERVAL+1)*1000);
+      // Check that the percentiles were updated
+      assertQuantileGauges("GetGroups1s", rb);
+    }
+  }
+
   /**
    * Test for the case that UserGroupInformation.getCurrentUser()
    * is called when the AccessControlContext has a Subject associated
@@ -744,6 +766,41 @@ public class TestUserGroupInformation {
           return null;
         }
       });
+  }
+
+  /** Test hasSufficientTimeElapsed method */
+  @Test (timeout = 30000)
+  public void testHasSufficientTimeElapsed() throws Exception {
+    // Make hasSufficientTimeElapsed public
+    Method method = UserGroupInformation.class
+            .getDeclaredMethod("hasSufficientTimeElapsed", long.class);
+    method.setAccessible(true);
+
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+    User user = ugi.getSubject().getPrincipals(User.class).iterator().next();
+    long now = System.currentTimeMillis();
+
+    // Using default relogin time (1 minute)
+    user.setLastLogin(now - 2 * 60 * 1000);  // 2 minutes before "now"
+    assertTrue((Boolean)method.invoke(ugi, now));
+    user.setLastLogin(now - 30 * 1000);      // 30 seconds before "now"
+    assertFalse((Boolean)method.invoke(ugi, now));
+
+    // Using relogin time of 10 minutes
+    Configuration conf2 = new Configuration(conf);
+    conf2.setLong(
+       CommonConfigurationKeysPublic.HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN,
+       10 * 60);
+    UserGroupInformation.setConfiguration(conf2);
+    user.setLastLogin(now - 15 * 60 * 1000); // 15 minutes before "now"
+    assertTrue((Boolean)method.invoke(ugi, now));
+    user.setLastLogin(now - 6 * 60 * 1000);  // 6 minutes before "now"
+    assertFalse((Boolean)method.invoke(ugi, now));
+    // Restore original conf to UGI
+    UserGroupInformation.setConfiguration(conf);
+
+    // Restore hasSufficientTimElapsed back to private
+    method.setAccessible(false);
   }
   
   @Test(timeout=1000)

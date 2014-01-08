@@ -90,6 +90,7 @@ public class GangliaContext extends AbstractMetricsContext {
   public GangliaContext() {
   }
     
+  @Override
   @InterfaceAudience.Private
   public void init(String contextName, ContextFactory factory) {
     super.init(contextName, factory);
@@ -105,8 +106,7 @@ public class GangliaContext extends AbstractMetricsContext {
         
     try {
       datagramSocket = new DatagramSocket();
-    }
-    catch (SocketException se) {
+    } catch (SocketException se) {
       se.printStackTrace();
     }
   }
@@ -122,6 +122,7 @@ public class GangliaContext extends AbstractMetricsContext {
     }
   }
   
+  @Override
   @InterfaceAudience.Private
   public void emitRecord(String contextName, String recordName,
     OutputRecord outRec) 

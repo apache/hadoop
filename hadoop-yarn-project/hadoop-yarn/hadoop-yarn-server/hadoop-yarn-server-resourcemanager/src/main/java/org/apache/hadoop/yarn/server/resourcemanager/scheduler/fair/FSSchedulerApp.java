@@ -44,8 +44,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerFini
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplication;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 /**
@@ -53,7 +52,7 @@ import org.apache.hadoop.yarn.util.resource.Resources;
  */
 @Private
 @Unstable
-public class FSSchedulerApp extends SchedulerApplication {
+public class FSSchedulerApp extends SchedulerApplicationAttempt {
 
   private static final Log LOG = LogFactory.getLog(FSSchedulerApp.class);
 
@@ -62,7 +61,7 @@ public class FSSchedulerApp extends SchedulerApplication {
   final Map<RMContainer, Long> preemptionMap = new HashMap<RMContainer, Long>();
   
   public FSSchedulerApp(ApplicationAttemptId applicationAttemptId, 
-      String user, Queue queue, ActiveUsersManager activeUsersManager,
+      String user, FSLeafQueue queue, ActiveUsersManager activeUsersManager,
       RMContext rmContext) {
     super(applicationAttemptId, user, queue, activeUsersManager, rmContext);
   }
@@ -272,8 +271,9 @@ public class FSSchedulerApp extends SchedulerApplication {
     
     // Create RMContainer
     RMContainer rmContainer = new RMContainerImpl(container, 
-        getApplicationAttemptId(), node.getNodeID(),
-        appSchedulingInfo.getUser(), rmContext);
+        getApplicationAttemptId(), node.getNodeID(), rmContext
+        .getDispatcher().getEventHandler(), rmContext
+        .getContainerAllocationExpirer());
 
     // Add it to allContainers list.
     newlyAllocatedContainers.add(rmContainer);
@@ -325,5 +325,10 @@ public class FSSchedulerApp extends SchedulerApplication {
 
   public Set<RMContainer> getPreemptionContainers() {
     return preemptionMap.keySet();
+  }
+  
+  @Override
+  public FSLeafQueue getQueue() {
+    return (FSLeafQueue)super.getQueue();
   }
 }

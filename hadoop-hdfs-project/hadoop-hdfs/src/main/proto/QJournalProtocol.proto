@@ -142,7 +142,9 @@ message GetJournalStateRequestProto {
 
 message GetJournalStateResponseProto {
   required uint64 lastPromisedEpoch = 1;
+  // Deprecated by fromURL
   required uint32 httpPort = 2;
+  optional string fromURL = 3;
 }
 
 /**
@@ -176,13 +178,15 @@ message GetEditLogManifestRequestProto {
   required JournalIdProto jid = 1;
   required uint64 sinceTxId = 2;  // Transaction ID
   // Whether or not the client will be reading from the returned streams.
-  optional bool forReading = 3 [default = true];
+  // optional bool forReading = 3 [default = true]; <obsolete, do not reuse>
   optional bool inProgressOk = 4 [default = false];
 }
 
 message GetEditLogManifestResponseProto {
   required RemoteEditLogManifestProto manifest = 1; 
+  // Deprecated by fromURL
   required uint32 httpPort = 2;
+  optional string fromURL = 3;
 
   // TODO: we should add nsinfo somewhere
   // to verify that it matches up with our expectation

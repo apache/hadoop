@@ -322,7 +322,7 @@ public class TestLeaseRecovery2 {
 
     // Reset default lease periods
     cluster.setLeasePeriod(HdfsConstants.LEASE_SOFTLIMIT_PERIOD,
-        HdfsConstants.LEASE_HARDLIMIT_PERIOD);
+                           HdfsConstants.LEASE_HARDLIMIT_PERIOD);
     //create a file
     // create a random file name
     String filestr = "/foo" + AppendTestUtil.nextInt();

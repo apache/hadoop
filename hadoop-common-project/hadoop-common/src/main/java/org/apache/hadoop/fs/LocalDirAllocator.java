@@ -265,6 +265,9 @@ public class LocalDirAllocator {
     private synchronized void confChanged(Configuration conf) 
         throws IOException {
       String newLocalDirs = conf.get(contextCfgItemName);
+      if (null == newLocalDirs) {
+        throw new IOException(contextCfgItemName + " not configured");
+      }
       if (!newLocalDirs.equals(savedLocalDirs)) {
         localDirs = StringUtils.getTrimmedStrings(newLocalDirs);
         localFS = FileSystem.getLocal(conf);
@@ -360,6 +363,10 @@ public class LocalDirAllocator {
         for(int i =0; i < dirDF.length; ++i) {
           availableOnDisk[i] = dirDF[i].getAvailable();
           totalAvailable += availableOnDisk[i];
+        }
+
+        if (totalAvailable == 0){
+          throw new DiskErrorException("No space available in any of the local directories.");
         }
 
         // Keep rolling the wheel till we get a valid path

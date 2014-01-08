@@ -408,16 +408,6 @@ public class MRApps extends Apps {
     return "cache file (" + MRJobConfig.CACHE_FILES + ") ";
   }
   
-  private static String toString(org.apache.hadoop.yarn.api.records.URL url) {
-    StringBuffer b = new StringBuffer();
-    b.append(url.getScheme()).append("://").append(url.getHost());
-    if(url.getPort() >= 0) {
-      b.append(":").append(url.getPort());
-    }
-    b.append(url.getFile());
-    return b.toString();
-  }
-  
   // TODO - Move this to MR!
   // Use TaskDistributedCacheManager.CacheFiles.makeCacheFiles(URI[], 
   // long[], boolean[], Path[], FileType)
@@ -455,15 +445,11 @@ public class MRApps extends Apps {
         }
         String linkName = name.toUri().getPath();
         LocalResource orig = localResources.get(linkName);
-        org.apache.hadoop.yarn.api.records.URL url = 
-          ConverterUtils.getYarnUrlFromURI(p.toUri());
-        if(orig != null && !orig.getResource().equals(url)) {
-          LOG.warn(
-              getResourceDescription(orig.getType()) + 
-              toString(orig.getResource()) + " conflicts with " + 
-              getResourceDescription(type) + toString(url) + 
-              " This will be an error in Hadoop 2.0");
-          continue;
+        if(orig != null && !orig.getResource().equals(
+            ConverterUtils.getYarnUrlFromURI(p.toUri()))) {
+          throw new InvalidJobConfException(
+              getResourceDescription(orig.getType()) + orig.getResource() + 
+              " conflicts with " + getResourceDescription(type) + u);
         }
         localResources.put(linkName, LocalResource.newInstance(ConverterUtils
           .getYarnUrlFromURI(p.toUri()), type, visibilities[i]
@@ -500,5 +486,36 @@ public class MRApps extends Apps {
     vargs.add(
         "-D" + YarnConfiguration.YARN_APP_CONTAINER_LOG_SIZE + "=" + logSize);
     vargs.add("-Dhadoop.root.logger=" + logLevel + ",CLA"); 
+  }
+
+  /**
+   * Return lines for system property keys and values per configuration.
+   *
+   * @return the formatted string for the system property lines or null if no
+   * properties are specified.
+   */
+  public static String getSystemPropertiesToLog(Configuration conf) {
+    String key = conf.get(MRJobConfig.MAPREDUCE_JVM_SYSTEM_PROPERTIES_TO_LOG,
+      MRJobConfig.DEFAULT_MAPREDUCE_JVM_SYSTEM_PROPERTIES_TO_LOG);
+    if (key != null) {
+      key = key.trim(); // trim leading and trailing whitespace from the config
+      if (!key.isEmpty()) {
+        String[] props = key.split(",");
+        if (props.length > 0) {
+          StringBuilder sb = new StringBuilder();
+          sb.append("\n/************************************************************\n");
+          sb.append("[system properties]\n");
+          for (String prop: props) {
+            prop = prop.trim(); // trim leading and trailing whitespace
+            if (!prop.isEmpty()) {
+              sb.append(prop).append(": ").append(System.getProperty(prop)).append('\n');
+            }
+          }
+          sb.append("************************************************************/");
+          return sb.toString();
+        }
+      }
+    }
+    return null;
   }
 }

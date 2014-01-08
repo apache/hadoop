@@ -823,7 +823,13 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     }
     Matcher match = varPat.matcher("");
     String eval = expr;
+    Set<String> evalSet = new HashSet<String>();
     for(int s=0; s<MAX_SUBST; s++) {
+      if (evalSet.contains(eval)) {
+        // Cyclic resolution pattern detected. Return current expression.
+        return eval;
+      }
+      evalSet.add(eval);
       match.reset(eval);
       if (!match.find()) {
         return eval;
@@ -1834,9 +1840,11 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    *         or <code>defaultValue</code>. 
    */
   public Class<?>[] getClasses(String name, Class<?> ... defaultValue) {
-    String[] classnames = getTrimmedStrings(name);
-    if (classnames == null)
+    String valueString = getRaw(name);
+    if (null == valueString) {
       return defaultValue;
+    }
+    String[] classnames = getTrimmedStrings(name);
     try {
       Class<?>[] classes = new Class<?>[classnames.length];
       for(int i = 0; i < classnames.length; i++) {
@@ -2327,7 +2335,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       if (!finalParameters.contains(attr)) {
         properties.setProperty(attr, value);
         updatingResource.put(attr, source);
-      } else {
+      } else if (!value.equals(properties.getProperty(attr))) {
         LOG.warn(name+":an attempt to override final parameter: "+attr
             +";  Ignoring.");
       }
@@ -2577,7 +2585,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
 
   /**
    * A unique class which is used as a sentinel value in the caching
-   * for getClassByName. {@see Configuration#getClassByNameOrNull(String)}
+   * for getClassByName. {@link Configuration#getClassByNameOrNull(String)}
    */
   private static abstract class NegativeCacheSentinel {}
 

@@ -167,7 +167,6 @@ public class TestDelegationToken {
     Assert.assertEquals(1, creds.numberOfTokens());
   }
   
-  @SuppressWarnings("deprecation")
   @Test
   public void testDelegationTokenWebHdfsApi() throws Exception {
     ((Log4JLogger)NamenodeWebHdfsMethods.LOG).getLogger().setLevel(Level.ALL);
@@ -196,6 +195,7 @@ public class TestDelegationToken {
     }
   }
 
+  @SuppressWarnings("deprecation")
   @Test
   public void testDelegationTokenWithDoAs() throws Exception {
     final DistributedFileSystem dfs = cluster.getFileSystem();

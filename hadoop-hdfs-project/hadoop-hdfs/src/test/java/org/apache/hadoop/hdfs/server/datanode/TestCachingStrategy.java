@@ -17,12 +17,11 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
+import java.io.FileDescriptor;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.TreeMap;
-
-import junit.framework.Assert;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -38,7 +37,9 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.namenode.EditLogFileOutputStream;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.nativeio.NativeIO;
-import org.apache.hadoop.io.nativeio.NativeIO.POSIX.CacheTracker;
+import org.apache.hadoop.io.nativeio.NativeIO.POSIX.CacheManipulator;
+import org.apache.hadoop.io.nativeio.NativeIOException;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -55,7 +56,7 @@ public class TestCachingStrategy {
     EditLogFileOutputStream.setShouldSkipFsyncForTesting(true);
 
     // Track calls to posix_fadvise.
-    NativeIO.POSIX.cacheTracker = tracker;
+    NativeIO.POSIX.setCacheManipulator(tracker);
     
     // Normally, we wait for a few megabytes of data to be read or written 
     // before dropping the cache.  This is to avoid an excessive number of
@@ -107,12 +108,13 @@ public class TestCachingStrategy {
     }
   }
 
-  private static class TestRecordingCacheTracker implements CacheTracker {
+  private static class TestRecordingCacheTracker extends CacheManipulator {
     private final Map<String, Stats> map = new TreeMap<String, Stats>();
 
     @Override
-    synchronized public void fadvise(String name,
-        long offset, long len, int flags) {
+    public void posixFadviseIfPossible(String name,
+      FileDescriptor fd, long offset, long len, int flags)
+          throws NativeIOException {
       if ((len < 0) || (len > Integer.MAX_VALUE)) {
         throw new RuntimeException("invalid length of " + len +
             " passed to posixFadviseIfPossible");
@@ -127,6 +129,7 @@ public class TestCachingStrategy {
         map.put(name, stats);
       }
       stats.fadvise((int)offset, (int)len, flags);
+      super.posixFadviseIfPossible(name, fd, offset, len, flags);
     }
 
     synchronized void clear() {

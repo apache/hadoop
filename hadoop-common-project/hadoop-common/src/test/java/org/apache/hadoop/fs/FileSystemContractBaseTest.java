@@ -20,6 +20,7 @@ package org.apache.hadoop.fs;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.Locale;
 
 import junit.framework.TestCase;
 
@@ -51,7 +52,13 @@ public abstract class FileSystemContractBaseTest extends TestCase {
 
   @Override
   protected void tearDown() throws Exception {
-    fs.delete(path("/test"), true);
+    try {
+      if (fs != null) {
+        fs.delete(path("/test"), true);
+      }
+    } catch (IOException e) {
+      LOG.error("Error deleting /test: " + e, e);
+    }
   }
   
   protected int getBlockSize() {
@@ -62,7 +69,20 @@ public abstract class FileSystemContractBaseTest extends TestCase {
     return "/user/" + System.getProperty("user.name");
   }
 
+  /**
+   * Override this if the filesystem does not support rename
+   * @return true if the FS supports rename -and rename related tests
+   * should be run
+   */
   protected boolean renameSupported() {
+    return true;
+  }
+
+  /**
+   * Override this if the filesystem is not case sensitive
+   * @return true if the case detection/preservation tests should run
+   */
+  protected boolean filesystemIsCaseSensitive() {
     return true;
   }
 
@@ -109,6 +129,7 @@ public abstract class FileSystemContractBaseTest extends TestCase {
     assertTrue(fs.mkdirs(testDir));
 
     assertTrue(fs.exists(testDir));
+    assertTrue("Should be a directory", fs.isDirectory(testDir));
     assertFalse(fs.isFile(testDir));
 
     Path parentDir = testDir.getParent();
@@ -118,17 +139,17 @@ public abstract class FileSystemContractBaseTest extends TestCase {
     Path grandparentDir = parentDir.getParent();
     assertTrue(fs.exists(grandparentDir));
     assertFalse(fs.isFile(grandparentDir));
-    
+
   }
-  
+
   public void testMkdirsFailsForSubdirectoryOfExistingFile() throws Exception {
     Path testDir = path("/test/hadoop");
     assertFalse(fs.exists(testDir));
     assertTrue(fs.mkdirs(testDir));
     assertTrue(fs.exists(testDir));
-    
+
     createFile(path("/test/hadoop/file"));
-    
+
     Path testSubDir = path("/test/hadoop/file/subdir");
     try {
       fs.mkdirs(testSubDir);
@@ -137,7 +158,7 @@ public abstract class FileSystemContractBaseTest extends TestCase {
       // expected
     }
     assertFalse(fs.exists(testSubDir));
-    
+
     Path testDeepSubDir = path("/test/hadoop/file/deep/sub/dir");
     try {
       fs.mkdirs(testDeepSubDir);
@@ -146,7 +167,7 @@ public abstract class FileSystemContractBaseTest extends TestCase {
       // expected
     }
     assertFalse(fs.exists(testDeepSubDir));
-    
+
   }
 
   public void testMkdirsWithUmask() throws Exception {
@@ -177,7 +198,7 @@ public abstract class FileSystemContractBaseTest extends TestCase {
       // expected
     }
   }
-  
+
   public void testListStatusThrowsExceptionForNonExistentFile() throws Exception {
     try {
       fs.listStatus(path("/test/hadoop/file"));
@@ -186,7 +207,7 @@ public abstract class FileSystemContractBaseTest extends TestCase {
       // expected
     }
   }
-  
+
   public void testListStatus() throws Exception {
     Path[] testDirs = { path("/test/hadoop/a"),
                         path("/test/hadoop/b"),
@@ -210,7 +231,7 @@ public abstract class FileSystemContractBaseTest extends TestCase {
     paths = fs.listStatus(path("/test/hadoop/a"));
     assertEquals(0, paths.length);
   }
-  
+
   public void testWriteReadAndDeleteEmptyFile() throws Exception {
     writeReadAndDelete(0);
   }
@@ -222,7 +243,7 @@ public abstract class FileSystemContractBaseTest extends TestCase {
   public void testWriteReadAndDeleteOneBlock() throws Exception {
     writeReadAndDelete(getBlockSize());
   }
-  
+
   public void testWriteReadAndDeleteOneAndAHalfBlocks() throws Exception {
     writeReadAndDelete(getBlockSize() + (getBlockSize() / 2));
   }
@@ -365,8 +386,7 @@ public abstract class FileSystemContractBaseTest extends TestCase {
     Path dst = path("/test/new/newdir");
     fs.mkdirs(dst);
     rename(src, dst, true, false, true);
-    assertTrue("Destination changed",
-        fs.exists(path("/test/new/newdir/file")));
+    assertIsFile(path("/test/new/newdir/file"));
   }
   
   public void testRenameDirectoryMoveToNonExistentDirectory() 
@@ -466,9 +486,9 @@ public abstract class FileSystemContractBaseTest extends TestCase {
   
   private void rename(Path src, Path dst, boolean renameSucceeded,
       boolean srcExists, boolean dstExists) throws IOException {
-    assertEquals("Rename result", renameSucceeded, fs.rename(src, dst));
-    assertEquals("Source exists", srcExists, fs.exists(src));
-    assertEquals("Destination exists", dstExists, fs.exists(dst));
+    assertEquals("mv " + src + " " + dst,renameSucceeded, fs.rename(src, dst));
+    assertEquals("Source exists: " + src, srcExists, fs.exists(src));
+    assertEquals("Destination exists" + dst, dstExists, fs.exists(dst));
   }
 
   /**
@@ -492,6 +512,253 @@ public abstract class FileSystemContractBaseTest extends TestCase {
     writeAndRead(path, filedata2, blockSize * 2, true, false);
     writeAndRead(path, filedata1, blockSize, true, false);
     writeAndRead(path, filedata2, blockSize * 2, true, false);
+  }
+
+  /**
+   * Assert that a filesystem is case sensitive.
+   * This is done by creating a mixed-case filename and asserting that
+   * its lower case version is not there.
+   * @throws Exception
+   */
+  public void testFilesystemIsCaseSensitive() throws Exception {
+    if (!filesystemIsCaseSensitive()) {
+      LOG.info("Skipping test");
+      return;
+    }
+    String mixedCaseFilename = "/test/UPPER.TXT";
+    Path upper = path(mixedCaseFilename);
+    Path lower = path(mixedCaseFilename.toLowerCase(Locale.ENGLISH));
+    assertFalse("File exists" + upper, fs.exists(upper));
+    assertFalse("File exists" + lower, fs.exists(lower));
+    FSDataOutputStream out = fs.create(upper);
+    out.writeUTF("UPPER");
+    out.close();
+    FileStatus upperStatus = fs.getFileStatus(upper);
+    assertTrue("File does not exist" + upper, fs.exists(upper));
+    //verify the lower-case version of the filename doesn't exist
+    assertFalse("File exists" + lower, fs.exists(lower));
+    //now overwrite the lower case version of the filename with a
+    //new version.
+    out = fs.create(lower);
+    out.writeUTF("l");
+    out.close();
+    assertTrue("File does not exist" + lower, fs.exists(lower));
+    //verify the length of the upper file hasn't changed
+    FileStatus newStatus = fs.getFileStatus(upper);
+    assertEquals("Expected status:" + upperStatus
+                 + " actual status " + newStatus,
+                 upperStatus.getLen(),
+                 newStatus.getLen()); }
+
+  /**
+   * Asserts that a zero byte file has a status of file and not
+   * directory or symlink
+   * @throws Exception on failures
+   */
+  public void testZeroByteFilesAreFiles() throws Exception {
+    Path src = path("/test/testZeroByteFilesAreFiles");
+    //create a zero byte file
+    FSDataOutputStream out = fs.create(src);
+    out.close();
+    assertIsFile(src);
+  }
+
+  /**
+   * Asserts that a zero byte file has a status of file and not
+   * directory or symlink
+   * @throws Exception on failures
+   */
+  public void testMultiByteFilesAreFiles() throws Exception {
+    Path src = path("/test/testMultiByteFilesAreFiles");
+    FSDataOutputStream out = fs.create(src);
+    out.writeUTF("testMultiByteFilesAreFiles");
+    out.close();
+    assertIsFile(src);
+  }
+
+  /**
+   * Assert that root directory renames are not allowed
+   * @throws Exception on failures
+   */
+  public void testRootDirAlwaysExists() throws Exception {
+    //this will throw an exception if the path is not found
+    fs.getFileStatus(path("/"));
+    //this catches overrides of the base exists() method that don't
+    //use getFileStatus() as an existence probe
+    assertTrue("FileSystem.exists() fails for root", fs.exists(path("/")));
+  }
+
+  /**
+   * Assert that root directory renames are not allowed
+   * @throws Exception on failures
+   */
+  public void testRenameRootDirForbidden() throws Exception {
+    if (!renameSupported()) return;
+
+    rename(path("/"),
+           path("/test/newRootDir"),
+           false, true, false);
+  }
+
+  /**
+   * Assert that renaming a parent directory to be a child
+   * of itself is forbidden
+   * @throws Exception on failures
+   */
+  public void testRenameChildDirForbidden() throws Exception {
+    if (!renameSupported()) return;
+    LOG.info("testRenameChildDirForbidden");
+    Path parentdir = path("/test/parentdir");
+    fs.mkdirs(parentdir);
+    Path childFile = new Path(parentdir, "childfile");
+    createFile(childFile);
+    //verify one level down
+    Path childdir = new Path(parentdir, "childdir");
+    rename(parentdir, childdir, false, true, false);
+    //now another level
+    fs.mkdirs(childdir);
+    Path childchilddir = new Path(childdir, "childdir");
+    rename(parentdir, childchilddir, false, true, false);
+  }
+
+  /**
+   * This a sanity check to make sure that any filesystem's handling of
+   * renames doesn't cause any regressions
+   */
+  public void testRenameToDirWithSamePrefixAllowed() throws Throwable {
+    if (!renameSupported()) return;
+    Path parentdir = path("test/parentdir");
+    fs.mkdirs(parentdir);
+    Path dest = path("test/parentdirdest");
+    rename(parentdir, dest, true, false, true);
+  }
+
+  /**
+   * trying to rename a directory onto itself should fail,
+   * preserving everything underneath.
+   */
+  public void testRenameDirToSelf() throws Throwable {
+    if (!renameSupported()) {
+      return;
+    }
+    Path parentdir = path("test/parentdir");
+    fs.mkdirs(parentdir);
+    Path child = new Path(parentdir, "child");
+    createFile(child);
+
+    rename(parentdir, parentdir, false, true, true);
+    //verify the child is still there
+    assertIsFile(child);
+  }
+
+  /**
+   * trying to rename a directory onto its parent dir will build
+   * a destination path of its original name, which should then fail.
+   * The source path and the destination path should still exist afterwards
+   */
+  public void testMoveDirUnderParent() throws Throwable {
+    if (!renameSupported()) {
+      return;
+    }
+    Path testdir = path("test/dir");
+    fs.mkdirs(testdir);
+    Path parent = testdir.getParent();
+    //the outcome here is ambiguous, so is not checked
+    fs.rename(testdir, parent);
+    assertEquals("Source exists: " + testdir, true, fs.exists(testdir));
+    assertEquals("Destination exists" + parent, true, fs.exists(parent));
+  }
+
+  /**
+   * trying to rename a file onto itself should succeed (it's a no-op)
+   *
+   */
+  public void testRenameFileToSelf() throws Throwable {
+    if (!renameSupported()) return;
+    Path filepath = path("test/file");
+    createFile(filepath);
+    //HDFS expects rename src, src -> true
+    rename(filepath, filepath, true, true, true);
+    //verify the file is still there
+    assertIsFile(filepath);
+  }
+
+  /**
+   * trying to move a file into it's parent dir should succeed
+   * again: no-op
+   */
+  public void testMoveFileUnderParent() throws Throwable {
+    if (!renameSupported()) return;
+    Path filepath = path("test/file");
+    createFile(filepath);
+    //HDFS expects rename src, src -> true
+    rename(filepath, filepath, true, true, true);
+    //verify the file is still there
+    assertIsFile(filepath);
+  }
+
+  public void testLSRootDir() throws Throwable {
+    Path dir = path("/");
+    Path child = path("/test");
+    createFile(child);
+    assertListFilesFinds(dir, child);
+  }
+
+  public void testListStatusRootDir() throws Throwable {
+    Path dir = path("/");
+    Path child  = path("/test");
+    createFile(child);
+    assertListStatusFinds(dir, child);
+  }
+
+  private void assertListFilesFinds(Path dir, Path subdir) throws IOException {
+    RemoteIterator<LocatedFileStatus> iterator =
+      fs.listFiles(dir, true);
+    boolean found = false;
+    StringBuilder builder = new StringBuilder();
+    while (iterator.hasNext()) {
+      LocatedFileStatus next =  iterator.next();
+      builder.append(next.toString()).append('\n');
+      if (next.getPath().equals(subdir)) {
+        found = true;
+      }
+    }
+    assertTrue("Path " + subdir
+               + " not found in directory " + dir + ":" + builder,
+               found);
+  }
+
+  private void assertListStatusFinds(Path dir, Path subdir) throws IOException {
+    FileStatus[] stats = fs.listStatus(dir);
+    boolean found = false;
+    StringBuilder builder = new StringBuilder();
+    for (FileStatus stat : stats) {
+      builder.append(stat.toString()).append('\n');
+      if (stat.getPath().equals(subdir)) {
+        found = true;
+      }
+    }
+    assertTrue("Path " + subdir
+               + " not found in directory " + dir + ":" + builder,
+               found);
+  }
+
+
+  /**
+   * Assert that a file exists and whose {@link FileStatus} entry
+   * declares that this is a file and not a symlink or directory.
+   * @param filename name of the file
+   * @throws IOException IO problems during file operations
+   */
+  private void assertIsFile(Path filename) throws IOException {
+    assertTrue("Does not exist: " + filename, fs.exists(filename));
+    FileStatus status = fs.getFileStatus(filename);
+    String fileInfo = filename + "  " + status;
+    assertTrue("Not a file " + fileInfo, status.isFile());
+    assertFalse("File claims to be a symlink " + fileInfo,
+                status.isSymlink());
+    assertFalse("File claims to be a directory " + fileInfo,
+                status.isDirectory());
   }
 
   /**

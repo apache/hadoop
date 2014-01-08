@@ -34,15 +34,18 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
-import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffReportEntry;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffType;
+import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.server.namenode.Content;
+import org.apache.hadoop.hdfs.server.namenode.ContentSummaryComputationContext;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeMap;
 import org.apache.hadoop.hdfs.server.namenode.Quota;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature.ChildrenDiff;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature.DirectoryDiff;
 import org.apache.hadoop.hdfs.util.Diff.ListType;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.util.Time;
@@ -57,7 +60,7 @@ import com.google.common.primitives.SignedBytes;
  * by the namesystem and FSDirectory locks.
  */
 @InterfaceAudience.Private
-public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
+public class INodeDirectorySnapshottable extends INodeDirectory {
   /** Limit the number of snapshot per snapshottable directory. */
   static final int SNAPSHOT_LIMIT = 1 << 16;
 
@@ -114,8 +117,8 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
      * the two snapshots, while its associated value is a {@link ChildrenDiff}
      * storing the changes (creation/deletion) happened to the children (files).
      */
-    private final Map<INodeDirectoryWithSnapshot, ChildrenDiff> dirDiffMap = 
-        new HashMap<INodeDirectoryWithSnapshot, ChildrenDiff>();
+    private final Map<INodeDirectory, ChildrenDiff> dirDiffMap = 
+        new HashMap<INodeDirectory, ChildrenDiff>();
     
     SnapshotDiffInfo(INodeDirectorySnapshottable snapshotRoot, Snapshot start,
         Snapshot end) {
@@ -125,8 +128,8 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
     }
     
     /** Add a dir-diff pair */
-    private void addDirDiff(INodeDirectoryWithSnapshot dir,
-        byte[][] relativePath, ChildrenDiff diff) {
+    private void addDirDiff(INodeDirectory dir, byte[][] relativePath,
+        ChildrenDiff diff) {
       dirDiffMap.put(dir, diff);
       diffMap.put(dir, relativePath);
     }
@@ -153,8 +156,7 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
         if (node.isDirectory()) {
           ChildrenDiff dirDiff = dirDiffMap.get(node);
           List<DiffReportEntry> subList = dirDiff.generateReport(
-              diffMap.get(node), (INodeDirectoryWithSnapshot) node,
-              isFromEarlier());
+              diffMap.get(node), isFromEarlier());
           diffReportList.addAll(subList);
         }
       }
@@ -182,8 +184,11 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
   private int snapshotQuota = SNAPSHOT_LIMIT;
 
   public INodeDirectorySnapshottable(INodeDirectory dir) {
-    super(dir, true, dir instanceof INodeDirectoryWithSnapshot ? 
-        ((INodeDirectoryWithSnapshot) dir).getDiffs(): null);
+    super(dir, true, true);
+    // add snapshot feature if the original directory does not have it
+    if (!isWithSnapshot()) {
+      addSnapshotFeature(null);
+    }
   }
   
   /** @return the number of existing snapshots. */
@@ -199,6 +204,15 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
   public Snapshot getSnapshot(byte[] snapshotName) {
     final int i = searchSnapshot(snapshotName);
     return i < 0? null: snapshotsByNames.get(i);
+  }
+  
+  Snapshot getSnapshotById(int sid) {
+    for (Snapshot s : snapshotsByNames) {
+      if (s.getId() == sid) {
+        return s;
+      }
+    }
+    return null;
   }
   
   /** @return {@link #snapshotsByNames} as a {@link ReadOnlyList} */
@@ -292,13 +306,14 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
           + "snapshot with the same name \"" + Snapshot.getSnapshotName(s) + "\".");
     }
 
-    final DirectoryDiff d = getDiffs().addDiff(s, this);
-    d.snapshotINode = s.getRoot();
+    final DirectoryDiff d = getDiffs().addDiff(id, this);
+    d.setSnapshotRoot(s.getRoot());
     snapshotsByNames.add(-i - 1, s);
 
     //set modification time
-    updateModificationTime(Time.now(), null, null);
-    s.getRoot().setModificationTime(getModificationTime(), null, null);
+    updateModificationTime(Time.now(), Snapshot.CURRENT_STATE_ID);
+    s.getRoot().setModificationTime(getModificationTime(),
+        Snapshot.CURRENT_STATE_ID);
     return s;
   }
   
@@ -321,10 +336,10 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
           + ": the snapshot does not exist.");
     } else {
       final Snapshot snapshot = snapshotsByNames.get(i);
-      Snapshot prior = Snapshot.findLatestSnapshot(this, snapshot);
+      int prior = Snapshot.findLatestSnapshot(this, snapshot.getId());
       try {
-        Quota.Counts counts = cleanSubtree(snapshot, prior, collectedBlocks,
-            removedINodes, true);
+        Quota.Counts counts = cleanSubtree(snapshot.getId(), prior,
+            collectedBlocks, removedINodes, true);
         INodeDirectory parent = getParent();
         if (parent != null) {
           // there will not be any WithName node corresponding to the deleted 
@@ -342,11 +357,12 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
   }
   
   @Override
-  public Content.Counts computeContentSummary(final Content.Counts counts) {
-    super.computeContentSummary(counts);
-    counts.add(Content.SNAPSHOT, snapshotsByNames.size());
-    counts.add(Content.SNAPSHOTTABLE_DIRECTORY, 1);
-    return counts;
+  public ContentSummaryComputationContext computeContentSummary(
+      final ContentSummaryComputationContext summary) {
+    super.computeContentSummary(summary);
+    summary.getCounts().add(Content.SNAPSHOT, snapshotsByNames.size());
+    summary.getCounts().add(Content.SNAPSHOTTABLE_DIRECTORY, 1);
+    return summary;
   }
 
   /**
@@ -411,16 +427,17 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
     byte[][] relativePath = parentPath.toArray(new byte[parentPath.size()][]);
     if (node.isDirectory()) {
       INodeDirectory dir = node.asDirectory();
-      if (dir instanceof INodeDirectoryWithSnapshot) {
-        INodeDirectoryWithSnapshot sdir = (INodeDirectoryWithSnapshot) dir;
-        boolean change = sdir.computeDiffBetweenSnapshots(
-            diffReport.from, diffReport.to, diff);
+      DirectoryWithSnapshotFeature sf = dir.getDirectoryWithSnapshotFeature();
+      if (sf != null) {
+        boolean change = sf.computeDiffBetweenSnapshots(diffReport.from,
+            diffReport.to, diff, dir);
         if (change) {
-          diffReport.addDirDiff(sdir, relativePath, diff);
+          diffReport.addDirDiff(dir, relativePath, diff);
         }
       }
-      ReadOnlyList<INode> children = dir.getChildrenList(diffReport
-          .isFromEarlier() ? diffReport.to : diffReport.from);
+      ReadOnlyList<INode> children = dir.getChildrenList(
+          diffReport.isFromEarlier() ? Snapshot.getSnapshotId(diffReport.to) : 
+            Snapshot.getSnapshotId(diffReport.from));
       for (INode child : children) {
         final byte[] name = child.getLocalNameBytes();
         if (diff.searchIndex(ListType.CREATED, name) < 0
@@ -430,8 +447,8 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
           parentPath.remove(parentPath.size() - 1);
         }
       }
-    } else if (node.isFile() && node.asFile() instanceof FileWithSnapshot) {
-      FileWithSnapshot file = (FileWithSnapshot) node.asFile();
+    } else if (node.isFile() && node.asFile().isWithSnapshot()) {
+      INodeFile file = node.asFile();
       Snapshot earlierSnapshot = diffReport.isFromEarlier() ? diffReport.from
           : diffReport.to;
       Snapshot laterSnapshot = diffReport.isFromEarlier() ? diffReport.to
@@ -439,7 +456,7 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
       boolean change = file.getDiffs().changedBetweenSnapshots(earlierSnapshot,
           laterSnapshot);
       if (change) {
-        diffReport.addFileDiff(file.asINodeFile(), relativePath);
+        diffReport.addFileDiff(file, relativePath);
       }
     }
   }
@@ -448,16 +465,17 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
    * Replace itself with {@link INodeDirectoryWithSnapshot} or
    * {@link INodeDirectory} depending on the latest snapshot.
    */
-  INodeDirectory replaceSelf(final Snapshot latest, final INodeMap inodeMap)
+  INodeDirectory replaceSelf(final int latestSnapshotId, final INodeMap inodeMap)
       throws QuotaExceededException {
-    if (latest == null) {
-      Preconditions.checkState(getLastSnapshot() == null,
-          "latest == null but getLastSnapshot() != null, this=%s", this);
-      return replaceSelf4INodeDirectory(inodeMap);
-    } else {
-      return replaceSelf4INodeDirectoryWithSnapshot(inodeMap)
-          .recordModification(latest, null);
+    if (latestSnapshotId == Snapshot.CURRENT_STATE_ID) {
+      Preconditions.checkState(getDirectoryWithSnapshotFeature()
+          .getLastSnapshotId() == Snapshot.CURRENT_STATE_ID, "this=%s", this);
     }
+    INodeDirectory dir = replaceSelf4INodeDirectory(inodeMap);
+    if (latestSnapshotId != Snapshot.CURRENT_STATE_ID) {
+      dir.recordModification(latestSnapshotId);
+    }
+    return dir;
   }
 
   @Override
@@ -467,10 +485,10 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
 
   @Override
   public void dumpTreeRecursively(PrintWriter out, StringBuilder prefix,
-      Snapshot snapshot) {
+      int snapshot) {
     super.dumpTreeRecursively(out, prefix, snapshot);
 
-    if (snapshot == null) {
+    if (snapshot == Snapshot.CURRENT_STATE_ID) {
       out.println();
       out.print(prefix);
 
@@ -486,7 +504,8 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
           n++;
         }
       }
-      Preconditions.checkState(n == snapshotsByNames.size());
+      Preconditions.checkState(n == snapshotsByNames.size(), "#n=" + n
+          + ", snapshotsByNames.size()=" + snapshotsByNames.size());
       out.print(", #snapshot=");
       out.println(n);
 
@@ -514,8 +533,9 @@ public class INodeDirectorySnapshottable extends INodeDirectoryWithSnapshot {
   
             @Override
             public SnapshotAndINode next() {
-              final Snapshot s = next.snapshot;
-              final SnapshotAndINode pair = new SnapshotAndINode(s);
+              final SnapshotAndINode pair = new SnapshotAndINode(next
+                  .getSnapshotId(), getSnapshotById(next.getSnapshotId())
+                  .getRoot());
               next = findNext();
               return pair;
             }

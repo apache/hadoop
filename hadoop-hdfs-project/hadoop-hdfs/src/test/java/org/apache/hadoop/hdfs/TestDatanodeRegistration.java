@@ -41,8 +41,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 
 /**
- * This class tests that a file need not be closed before its
- * data can be read by another client.
+ * This class tests data node registration.
  */
 public class TestDatanodeRegistration {
   
@@ -174,7 +173,7 @@ public class TestDatanodeRegistration {
 
       // register a datanode
       DatanodeID dnId = new DatanodeID(DN_IP_ADDR, DN_HOSTNAME,
-          "fake-storage-id", DN_XFER_PORT, DN_INFO_PORT, DN_INFO_SECURE_PORT,
+          "fake-datanode-id", DN_XFER_PORT, DN_INFO_PORT, DN_INFO_SECURE_PORT,
           DN_IPC_PORT);
       long nnCTime = cluster.getNamesystem().getFSImage().getStorage()
           .getCTime();
@@ -191,7 +190,7 @@ public class TestDatanodeRegistration {
 
       // register the same datanode again with a different storage ID
       dnId = new DatanodeID(DN_IP_ADDR, DN_HOSTNAME,
-          "changed-fake-storage-id", DN_XFER_PORT, DN_INFO_PORT,
+          "changed-fake-datanode-id", DN_XFER_PORT, DN_INFO_PORT,
           DN_INFO_SECURE_PORT, DN_IPC_PORT);
       dnReg = new DatanodeRegistration(dnId,
           mockStorageInfo, null, VersionInfo.getVersion());
@@ -227,7 +226,7 @@ public class TestDatanodeRegistration {
       DatanodeRegistration mockDnReg = mock(DatanodeRegistration.class);
       doReturn(HdfsConstants.LAYOUT_VERSION).when(mockDnReg).getVersion();
       doReturn(123).when(mockDnReg).getXferPort();
-      doReturn("fake-storage-id").when(mockDnReg).getStorageID();
+      doReturn("fake-storage-id").when(mockDnReg).getDatanodeUuid();
       doReturn(mockStorageInfo).when(mockDnReg).getStorageInfo();
       
       // Should succeed when software versions are the same.
@@ -274,8 +273,7 @@ public class TestDatanodeRegistration {
       
       DatanodeRegistration mockDnReg = mock(DatanodeRegistration.class);
       doReturn(HdfsConstants.LAYOUT_VERSION).when(mockDnReg).getVersion();
-      doReturn(123).when(mockDnReg).getXferPort();
-      doReturn("fake-storage-id").when(mockDnReg).getStorageID();
+      doReturn("fake-storage-id").when(mockDnReg).getDatanodeUuid();
       doReturn(mockStorageInfo).when(mockDnReg).getStorageInfo();
       
       // Should succeed when software versions are the same and CTimes are the

@@ -36,10 +36,8 @@ import org.apache.hadoop.hdfs.server.namenode.INodeDirectoryAttributes;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeFileAttributes;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshot.FileDiff;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshot.FileDiffList;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot.DirectoryDiff;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot.DirectoryDiffList;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature.DirectoryDiff;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature.DirectoryDiffList;
 import org.apache.hadoop.hdfs.tools.snapshot.SnapshotDiff;
 import org.apache.hadoop.hdfs.util.Diff.ListType;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
@@ -93,14 +91,12 @@ public class SnapshotFSImageFormat {
   public static void saveDirectoryDiffList(final INodeDirectory dir,
       final DataOutput out, final ReferenceMap referenceMap
       ) throws IOException {
-    saveINodeDiffs(dir instanceof INodeDirectoryWithSnapshot?
-        ((INodeDirectoryWithSnapshot)dir).getDiffs(): null, out, referenceMap);
+    saveINodeDiffs(dir.getDiffs(), out, referenceMap);
   }
   
   public static void saveFileDiffList(final INodeFile file,
       final DataOutput out) throws IOException {
-    saveINodeDiffs(file instanceof FileWithSnapshot?
-        ((FileWithSnapshot)file).getDiffs(): null, out, null);
+    saveINodeDiffs(file.getDiffs(), out, null);
   }
 
   public static FileDiffList loadFileDiffList(DataInput in,
@@ -122,7 +118,7 @@ public class SnapshotFSImageFormat {
 
   private static FileDiff loadFileDiff(FileDiff posterior, DataInput in,
       FSImageFormat.Loader loader) throws IOException {
-    // 1. Read the full path of the Snapshot root to identify the Snapshot
+    // 1. Read the id of the Snapshot root to identify the Snapshot
     final Snapshot snapshot = loader.getSnapshot(in);
 
     // 2. Load file size
@@ -132,7 +128,7 @@ public class SnapshotFSImageFormat {
     final INodeFileAttributes snapshotINode = in.readBoolean()?
         loader.loadINodeFileAttributes(in): null;
     
-    return new FileDiff(snapshot, snapshotINode, posterior, fileSize);
+    return new FileDiff(snapshot.getId(), snapshotINode, posterior, fileSize);
   }
 
   /**
@@ -142,7 +138,7 @@ public class SnapshotFSImageFormat {
    * @return The created node.
    */
   private static INode loadCreated(byte[] createdNodeName,
-      INodeDirectoryWithSnapshot parent) throws IOException {
+      INodeDirectory parent) throws IOException {
     // the INode in the created list should be a reference to another INode
     // in posterior SnapshotDiffs or one of the current children
     for (DirectoryDiff postDiff : parent.getDiffs()) {
@@ -153,7 +149,8 @@ public class SnapshotFSImageFormat {
       } // else go to the next SnapshotDiff
     } 
     // use the current child
-    INode currentChild = parent.getChild(createdNodeName, null);
+    INode currentChild = parent.getChild(createdNodeName,
+        Snapshot.CURRENT_STATE_ID);
     if (currentChild == null) {
       throw new IOException("Cannot find an INode associated with the INode "
           + DFSUtil.bytes2String(createdNodeName)
@@ -168,7 +165,7 @@ public class SnapshotFSImageFormat {
    * @param in The {@link DataInput} to read.
    * @return The created list.
    */
-  private static List<INode> loadCreatedList(INodeDirectoryWithSnapshot parent,
+  private static List<INode> loadCreatedList(INodeDirectory parent,
       DataInput in) throws IOException {
     // read the size of the created list
     int createdSize = in.readInt();
@@ -191,7 +188,7 @@ public class SnapshotFSImageFormat {
    * @param loader The {@link Loader} instance.
    * @return The deleted list.
    */
-  private static List<INode> loadDeletedList(INodeDirectoryWithSnapshot parent,
+  private static List<INode> loadDeletedList(INodeDirectory parent,
       List<INode> createdList, DataInput in, FSImageFormat.Loader loader)
       throws IOException {
     int deletedSize = in.readInt();
@@ -242,11 +239,10 @@ public class SnapshotFSImageFormat {
   public static void loadDirectoryDiffList(INodeDirectory dir,
       DataInput in, FSImageFormat.Loader loader) throws IOException {
     final int size = in.readInt();
-    if (dir instanceof INodeDirectoryWithSnapshot) {
-      INodeDirectoryWithSnapshot withSnapshot = (INodeDirectoryWithSnapshot)dir;
-      DirectoryDiffList diffs = withSnapshot.getDiffs();
+    if (dir.isWithSnapshot()) {
+      DirectoryDiffList diffs = dir.getDiffs();
       for (int i = 0; i < size; i++) {
-        diffs.addFirst(loadDirectoryDiff(withSnapshot, in, loader));
+        diffs.addFirst(loadDirectoryDiff(dir, in, loader));
       }
     }
   }
@@ -280,9 +276,8 @@ public class SnapshotFSImageFormat {
    *               using.
    * @return A {@link DirectoryDiff}.
    */
-  private static DirectoryDiff loadDirectoryDiff(
-      INodeDirectoryWithSnapshot parent, DataInput in,
-      FSImageFormat.Loader loader) throws IOException {
+  private static DirectoryDiff loadDirectoryDiff(INodeDirectory parent,
+      DataInput in, FSImageFormat.Loader loader) throws IOException {
     // 1. Read the full path of the Snapshot root to identify the Snapshot
     final Snapshot snapshot = loader.getSnapshot(in);
 
@@ -301,9 +296,9 @@ public class SnapshotFSImageFormat {
     
     // 6. Compose the SnapshotDiff
     List<DirectoryDiff> diffs = parent.getDiffs().asList();
-    DirectoryDiff sdiff = new DirectoryDiff(snapshot, snapshotINode,
-        diffs.isEmpty() ? null : diffs.get(0),
-        childrenSize, createdList, deletedList);
+    DirectoryDiff sdiff = new DirectoryDiff(snapshot.getId(), snapshotINode,
+        diffs.isEmpty() ? null : diffs.get(0), childrenSize, createdList,
+        deletedList, snapshotINode == snapshot.getRoot());
     return sdiff;
   }
   

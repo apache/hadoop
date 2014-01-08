@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
@@ -41,8 +42,9 @@ import org.apache.hadoop.hdfs.client.HdfsDataOutputStream.SyncFlag;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature.DirectoryDiff;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot.DirectoryDiff;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
 import org.apache.hadoop.hdfs.util.Canceler;
 import org.apache.log4j.Level;
@@ -158,7 +160,7 @@ public class TestFSImageWithSnapshot {
     try {
       loader.load(imageFile);
       FSImage.updateCountForQuota(
-          (INodeDirectoryWithQuota)fsn.getFSDirectory().getINode("/"));
+          INodeDirectory.valueOf(fsn.getFSDirectory().getINode("/"), "/"));
     } finally {
       fsn.getFSDirectory().writeUnlock();
       fsn.writeUnlock();
@@ -195,11 +197,12 @@ public class TestFSImageWithSnapshot {
     INodeDirectorySnapshottable rootNode = 
         (INodeDirectorySnapshottable) fsn.dir.getINode4Write(root.toString());
     assertTrue("The children list of root should be empty", 
-        rootNode.getChildrenList(null).isEmpty());
+        rootNode.getChildrenList(Snapshot.CURRENT_STATE_ID).isEmpty());
     // one snapshot on root: s1
     List<DirectoryDiff> diffList = rootNode.getDiffs().asList();
     assertEquals(1, diffList.size());
-    assertEquals("s1", diffList.get(0).getSnapshot().getRoot().getLocalName());
+    Snapshot s1 = rootNode.getSnapshot(DFSUtil.string2Bytes("s1"));
+    assertEquals(s1.getId(), diffList.get(0).getSnapshotId());
     
     // check SnapshotManager's snapshottable directory list
     assertEquals(1, fsn.getSnapshotManager().getNumSnapshottableDirs());

@@ -19,8 +19,9 @@ package org.apache.hadoop.fs;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem.Statistics;
-import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.util.StringUtils;
 
 import static org.apache.hadoop.fs.FileSystemTestHelper.*;
 
@@ -258,10 +259,14 @@ public class TestLocalFileSystem {
   public void testHasFileDescriptor() throws IOException {
     Path path = new Path(TEST_ROOT_DIR, "test-file");
     writeFile(fileSys, path, 1);
-    BufferedFSInputStream bis = new BufferedFSInputStream(
-        new RawLocalFileSystem().new LocalFSFileInputStream(path), 1024);
-    assertNotNull(bis.getFileDescriptor());
-    bis.close();
+    BufferedFSInputStream bis = null;
+    try {
+      bis = new BufferedFSInputStream(new RawLocalFileSystem()
+        .new LocalFSFileInputStream(path), 1024);
+      assertNotNull(bis.getFileDescriptor());
+    } finally {
+      IOUtils.cleanup(null, bis);
+    }
   }
 
   @Test(timeout = 1000)

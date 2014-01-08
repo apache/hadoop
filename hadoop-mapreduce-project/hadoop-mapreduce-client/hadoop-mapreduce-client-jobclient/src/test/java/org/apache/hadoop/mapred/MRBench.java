@@ -230,7 +230,7 @@ public class MRBench extends Configured implements Tool{
       "[-verbose]";
     
     String jarFile = null;
-    int inputLines = 1; 
+    long inputLines = 1; 
     int numRuns = 1;
     int numMaps = 2; 
     int numReduces = 1;
@@ -248,7 +248,7 @@ public class MRBench extends Configured implements Tool{
       } else if (args[i].equals("-reduces")) {
         numReduces = Integer.parseInt(args[++i]);
       } else if (args[i].equals("-inputLines")) {
-        inputLines = Integer.parseInt(args[++i]);
+        inputLines = Long.parseLong(args[++i]);
       } else if (args[i].equals("-inputType")) {
         String s = args[++i]; 
         if (s.equalsIgnoreCase("ascending")) {

@@ -34,6 +34,7 @@ public class JobIndexInfo {
   private int numMaps;
   private int numReduces;
   private String jobStatus;
+  private long jobStartTime;
   
   public JobIndexInfo() {
   }
@@ -48,6 +49,7 @@ public class JobIndexInfo {
     this.numMaps = numMaps;
     this.numReduces = numReduces;
     this.jobStatus = jobStatus;
+    this.jobStartTime = -1;
   }
   
   public long getSubmitTime() {
@@ -103,6 +105,12 @@ public class JobIndexInfo {
   }
   public void setJobStatus(String jobStatus) {
     this.jobStatus = jobStatus;
+  }
+  public long getJobStartTime() {
+      return jobStartTime;
+  }
+  public void setJobStartTime(long lTime) {
+      this.jobStartTime = lTime;
   }
 
   @Override

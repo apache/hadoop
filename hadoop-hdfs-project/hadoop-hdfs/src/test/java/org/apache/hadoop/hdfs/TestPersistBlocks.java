@@ -73,16 +73,30 @@ public class TestPersistBlocks {
     rand.nextBytes(DATA_BEFORE_RESTART);
     rand.nextBytes(DATA_AFTER_RESTART);
   }
+ 
+  /** check if DFS remains in proper condition after a restart 
+   **/
+  @Test  
+  public void TestRestartDfsWithFlush() throws Exception {
+    testRestartDfs(true);
+  }
   
-  /** check if DFS remains in proper condition after a restart */
-  @Test
-  public void testRestartDfs() throws Exception {
+  
+  /** check if DFS remains in proper condition after a restart 
+   **/
+  public void TestRestartDfsWithSync() throws Exception {
+    testRestartDfs(false);
+  }
+  
+  /** check if DFS remains in proper condition after a restart
+   * @param useFlush - if true then flush is used instead of sync (ie hflush)
+   */
+  void testRestartDfs(boolean useFlush) throws Exception {
     final Configuration conf = new HdfsConfiguration();
     // Turn off persistent IPC, so that the DFSClient can survive NN restart
     conf.setInt(
         CommonConfigurationKeysPublic.IPC_CLIENT_CONNECTION_MAXIDLETIME_KEY,
         0);
-    conf.setBoolean(DFSConfigKeys.DFS_PERSIST_BLOCKS_KEY, true);
     MiniDFSCluster cluster = null;
 
     long len = 0;
@@ -93,7 +107,10 @@ public class TestPersistBlocks {
       // Creating a file with 4096 blockSize to write multiple blocks
       stream = fs.create(FILE_PATH, true, BLOCK_SIZE, (short) 1, BLOCK_SIZE);
       stream.write(DATA_BEFORE_RESTART);
-      stream.hflush();
+      if (useFlush)
+        stream.flush();
+      else 
+        stream.hflush();
       
       // Wait for at least a few blocks to get through
       while (len <= BLOCK_SIZE) {
@@ -139,7 +156,6 @@ public class TestPersistBlocks {
     conf.setInt(
         CommonConfigurationKeysPublic.IPC_CLIENT_CONNECTION_MAXIDLETIME_KEY,
         0);
-    conf.setBoolean(DFSConfigKeys.DFS_PERSIST_BLOCKS_KEY, true);
     MiniDFSCluster cluster = null;
 
     long len = 0;
@@ -175,7 +191,7 @@ public class TestPersistBlocks {
       // This would mean that blocks were successfully persisted to the log
       FileStatus status = fs.getFileStatus(FILE_PATH);
       assertTrue("Length incorrect: " + status.getLen(),
-          status.getLen() != len - BLOCK_SIZE);
+          status.getLen() == len - BLOCK_SIZE);
 
       // Verify the data showed up from before restart, sans abandoned block.
       FSDataInputStream readStream = fs.open(FILE_PATH);
@@ -201,7 +217,6 @@ public class TestPersistBlocks {
     conf.setInt(
         CommonConfigurationKeysPublic.IPC_CLIENT_CONNECTION_MAXIDLETIME_KEY,
         0);
-    conf.setBoolean(DFSConfigKeys.DFS_PERSIST_BLOCKS_KEY, true);
     MiniDFSCluster cluster = null;
 
     FSDataOutputStream stream;
@@ -251,7 +266,6 @@ public class TestPersistBlocks {
     conf.setInt(
         CommonConfigurationKeysPublic.IPC_CLIENT_CONNECTION_MAXIDLETIME_KEY,
         0);
-    conf.setBoolean(DFSConfigKeys.DFS_PERSIST_BLOCKS_KEY, true);
     MiniDFSCluster cluster = null;
 
     FSDataOutputStream stream;

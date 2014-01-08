@@ -42,20 +42,18 @@ import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
-import org.apache.hadoop.hdfs.server.common.Storage.FormatConfirmable;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.common.Storage;
+import org.apache.hadoop.hdfs.server.common.Storage.FormatConfirmable;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageState;
 import org.apache.hadoop.hdfs.server.common.Util;
-import static org.apache.hadoop.util.Time.now;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.namenode.FSImageStorageInspector.FSImageFile;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.Phase;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress;
 import org.apache.hadoop.hdfs.server.protocol.CheckpointCommand;
@@ -408,60 +406,64 @@ public class FSImage implements Closeable {
     // Directories that don't have previous state do not rollback
     boolean canRollback = false;
     FSImage prevState = new FSImage(conf);
-    prevState.getStorage().layoutVersion = HdfsConstants.LAYOUT_VERSION;
-    for (Iterator<StorageDirectory> it = storage.dirIterator(); it.hasNext();) {
-      StorageDirectory sd = it.next();
-      File prevDir = sd.getPreviousDir();
-      if (!prevDir.exists()) {  // use current directory then
-        LOG.info("Storage directory " + sd.getRoot()
-                 + " does not contain previous fs state.");
-        // read and verify consistency with other directories
-        storage.readProperties(sd);
-        continue;
+    try {
+      prevState.getStorage().layoutVersion = HdfsConstants.LAYOUT_VERSION;
+      for (Iterator<StorageDirectory> it = storage.dirIterator(); it.hasNext();) {
+        StorageDirectory sd = it.next();
+        File prevDir = sd.getPreviousDir();
+        if (!prevDir.exists()) {  // use current directory then
+          LOG.info("Storage directory " + sd.getRoot()
+            + " does not contain previous fs state.");
+          // read and verify consistency with other directories
+          storage.readProperties(sd);
+          continue;
+        }
+
+        // read and verify consistency of the prev dir
+        prevState.getStorage().readPreviousVersionProperties(sd);
+
+        if (prevState.getLayoutVersion() != HdfsConstants.LAYOUT_VERSION) {
+          throw new IOException(
+            "Cannot rollback to storage version " +
+                prevState.getLayoutVersion() +
+                " using this version of the NameNode, which uses storage version " +
+                HdfsConstants.LAYOUT_VERSION + ". " +
+              "Please use the previous version of HDFS to perform the rollback.");
+        }
+        canRollback = true;
       }
+      if (!canRollback)
+        throw new IOException("Cannot rollback. None of the storage "
+            + "directories contain previous fs state.");
 
-      // read and verify consistency of the prev dir
-      prevState.getStorage().readPreviousVersionProperties(sd);
+      // Now that we know all directories are going to be consistent
+      // Do rollback for each directory containing previous state
+      for (Iterator<StorageDirectory> it = storage.dirIterator(); it.hasNext();) {
+        StorageDirectory sd = it.next();
+        File prevDir = sd.getPreviousDir();
+        if (!prevDir.exists())
+          continue;
 
-      if (prevState.getLayoutVersion() != HdfsConstants.LAYOUT_VERSION) {
-        throw new IOException(
-          "Cannot rollback to storage version " +
-          prevState.getLayoutVersion() +
-          " using this version of the NameNode, which uses storage version " +
-          HdfsConstants.LAYOUT_VERSION + ". " +
-          "Please use the previous version of HDFS to perform the rollback.");
+        LOG.info("Rolling back storage directory " + sd.getRoot()
+          + ".\n   new LV = " + prevState.getStorage().getLayoutVersion()
+          + "; new CTime = " + prevState.getStorage().getCTime());
+        File tmpDir = sd.getRemovedTmp();
+        assert !tmpDir.exists() : "removed.tmp directory must not exist.";
+        // rename current to tmp
+        File curDir = sd.getCurrentDir();
+        assert curDir.exists() : "Current directory must exist.";
+        NNStorage.rename(curDir, tmpDir);
+        // rename previous to current
+        NNStorage.rename(prevDir, curDir);
+
+        // delete tmp dir
+        NNStorage.deleteDir(tmpDir);
+        LOG.info("Rollback of " + sd.getRoot()+ " is complete.");
       }
-      canRollback = true;
+      isUpgradeFinalized = true;
+    } finally {
+      prevState.close();
     }
-    if (!canRollback)
-      throw new IOException("Cannot rollback. None of the storage "
-                            + "directories contain previous fs state.");
-
-    // Now that we know all directories are going to be consistent
-    // Do rollback for each directory containing previous state
-    for (Iterator<StorageDirectory> it = storage.dirIterator(); it.hasNext();) {
-      StorageDirectory sd = it.next();
-      File prevDir = sd.getPreviousDir();
-      if (!prevDir.exists())
-        continue;
-
-      LOG.info("Rolling back storage directory " + sd.getRoot()
-               + ".\n   new LV = " + prevState.getStorage().getLayoutVersion()
-               + "; new CTime = " + prevState.getStorage().getCTime());
-      File tmpDir = sd.getRemovedTmp();
-      assert !tmpDir.exists() : "removed.tmp directory must not exist.";
-      // rename current to tmp
-      File curDir = sd.getCurrentDir();
-      assert curDir.exists() : "Current directory must exist.";
-      NNStorage.rename(curDir, tmpDir);
-      // rename previous to current
-      NNStorage.rename(prevDir, curDir);
-
-      // delete tmp dir
-      NNStorage.deleteDir(tmpDir);
-      LOG.info("Rollback of " + sd.getRoot()+ " is complete.");
-    }
-    isUpgradeFinalized = true;
   }
 
   private void doFinalize(StorageDirectory sd) throws IOException {
@@ -758,7 +760,7 @@ public class FSImage implements Closeable {
    * This is an update of existing state of the filesystem and does not
    * throw QuotaExceededException.
    */
-  static void updateCountForQuota(INodeDirectoryWithQuota root) {
+  static void updateCountForQuota(INodeDirectory root) {
     updateCountForQuotaRecursively(root, Quota.Counts.newInstance());
   }
   
@@ -769,7 +771,7 @@ public class FSImage implements Closeable {
 
     dir.computeQuotaUsage4CurrentDirectory(counts);
     
-    for (INode child : dir.getChildrenList(null)) {
+    for (INode child : dir.getChildrenList(Snapshot.CURRENT_STATE_ID)) {
       if (child.isDirectory()) {
         updateCountForQuotaRecursively(child.asDirectory(), counts);
       } else {
@@ -780,21 +782,25 @@ public class FSImage implements Closeable {
       
     if (dir.isQuotaSet()) {
       // check if quota is violated. It indicates a software bug.
+      final Quota.Counts q = dir.getQuotaCounts();
+
       final long namespace = counts.get(Quota.NAMESPACE) - parentNamespace;
-      if (Quota.isViolated(dir.getNsQuota(), namespace)) {
+      final long nsQuota = q.get(Quota.NAMESPACE);
+      if (Quota.isViolated(nsQuota, namespace)) {
         LOG.error("BUG: Namespace quota violation in image for "
             + dir.getFullPathName()
-            + " quota = " + dir.getNsQuota() + " < consumed = " + namespace);
+            + " quota = " + nsQuota + " < consumed = " + namespace);
       }
 
       final long diskspace = counts.get(Quota.DISKSPACE) - parentDiskspace;
-      if (Quota.isViolated(dir.getDsQuota(), diskspace)) {
+      final long dsQuota = q.get(Quota.DISKSPACE);
+      if (Quota.isViolated(dsQuota, diskspace)) {
         LOG.error("BUG: Diskspace quota violation in image for "
             + dir.getFullPathName()
-            + " quota = " + dir.getDsQuota() + " < consumed = " + diskspace);
+            + " quota = " + dsQuota + " < consumed = " + diskspace);
       }
 
-      ((INodeDirectoryWithQuota)dir).setSpaceConsumed(namespace, diskspace);
+      dir.getDirectoryWithQuotaFeature().setSpaceConsumed(namespace, diskspace);
     }
   }
 
@@ -939,7 +945,7 @@ public class FSImage implements Closeable {
       storage.writeAll();
     } finally {
       if (editLogWasOpen) {
-        editLog.startLogSegment(imageTxId + 1, true);
+        editLog.startLogSegmentAndWriteHeaderTxn(imageTxId + 1);
         // Take this opportunity to note the current transaction.
         // Even if the namespace save was cancelled, this marker
         // is only used to determine what transaction ID is required

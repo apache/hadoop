@@ -94,6 +94,7 @@ public class JvmMetrics implements Updater {
      * This will be called periodically (with the period being configuration
      * dependent).
      */
+    @Override
     public void doUpdates(MetricsContext context) {
         doMemoryUpdates();
         doGarbageCollectionUpdates();

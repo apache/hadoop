@@ -37,8 +37,7 @@ public class HdfsBlockLocation extends BlockLocation {
   public HdfsBlockLocation(BlockLocation loc, LocatedBlock block) 
       throws IOException {
     // Initialize with data from passed in BlockLocation
-    super(loc.getNames(), loc.getHosts(), loc.getTopologyPaths(), 
-        loc.getOffset(), loc.getLength(), loc.isCorrupt());
+    super(loc);
     this.block = block;
   }
   

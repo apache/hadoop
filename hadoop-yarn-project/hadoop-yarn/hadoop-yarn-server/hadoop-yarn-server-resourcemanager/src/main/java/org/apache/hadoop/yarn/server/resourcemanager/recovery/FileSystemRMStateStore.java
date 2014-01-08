@@ -44,9 +44,12 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.ApplicationAttemptStateDataProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.ApplicationStateDataProto;
+import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.RMStateVersionProto;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.RMStateVersion;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationAttemptStateDataPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationStateDataPBImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.RMStateVersionPBImpl;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -63,7 +66,9 @@ public class FileSystemRMStateStore extends RMStateStore {
 
   public static final Log LOG = LogFactory.getLog(FileSystemRMStateStore.class);
 
-  private static final String ROOT_DIR_NAME = "FSRMStateRoot";
+  protected static final String ROOT_DIR_NAME = "FSRMStateRoot";
+  protected static final RMStateVersion CURRENT_VERSION_INFO = RMStateVersion
+    .newInstance(1, 0);
 
   protected FileSystem fs;
 
@@ -78,7 +83,6 @@ public class FileSystemRMStateStore extends RMStateStore {
   @Override
   public synchronized void initInternal(Configuration conf)
       throws Exception{
-
     fsWorkingPath = new Path(conf.get(YarnConfiguration.FS_RM_STATE_STORE_URI));
     rootDirPath = new Path(fsWorkingPath, ROOT_DIR_NAME);
     rmDTSecretManagerRoot = new Path(rootDirPath, RM_DT_SECRET_MANAGER_ROOT);
@@ -90,7 +94,14 @@ public class FileSystemRMStateStore extends RMStateStore {
     // create filesystem only now, as part of service-start. By this time, RM is
     // authenticated with kerberos so we are good to create a file-system
     // handle.
-    fs = fsWorkingPath.getFileSystem(getConfig());
+    Configuration conf = new Configuration(getConfig());
+    conf.setBoolean("dfs.client.retry.policy.enabled", true);
+    String retryPolicy =
+        conf.get(YarnConfiguration.FS_RM_STATE_STORE_RETRY_POLICY_SPEC,
+          YarnConfiguration.DEFAULT_FS_RM_STATE_STORE_RETRY_POLICY_SPEC);
+    conf.set("dfs.client.retry.policy.spec", retryPolicy);
+
+    fs = fsWorkingPath.getFileSystem(conf);
     fs.mkdirs(rmDTSecretManagerRoot);
     fs.mkdirs(rmAppRoot);
   }
@@ -98,6 +109,36 @@ public class FileSystemRMStateStore extends RMStateStore {
   @Override
   protected synchronized void closeInternal() throws Exception {
     fs.close();
+  }
+
+  @Override
+  protected RMStateVersion getCurrentVersion() {
+    return CURRENT_VERSION_INFO;
+  }
+
+  @Override
+  protected synchronized RMStateVersion loadVersion() throws Exception {
+    Path versionNodePath = getNodePath(rootDirPath, VERSION_NODE);
+    if (fs.exists(versionNodePath)) {
+      FileStatus status = fs.getFileStatus(versionNodePath);
+      byte[] data = readFile(versionNodePath, status.getLen());
+      RMStateVersion version =
+          new RMStateVersionPBImpl(RMStateVersionProto.parseFrom(data));
+      return version;
+    }
+    return null;
+  }
+
+  @Override
+  protected synchronized void storeVersion() throws Exception {
+    Path versionNodePath = getNodePath(rootDirPath, VERSION_NODE);
+    byte[] data =
+        ((RMStateVersionPBImpl) CURRENT_VERSION_INFO).getProto().toByteArray();
+    if (fs.exists(versionNodePath)) {
+      updateFile(versionNodePath, data);
+    } else {
+      writeFile(versionNodePath, data);
+    }
   }
 
   @Override
@@ -126,7 +167,9 @@ public class FileSystemRMStateStore extends RMStateStore {
               readFile(childNodeStatus.getPath(), childNodeStatus.getLen());
           if (childNodeName.startsWith(ApplicationId.appIdStrPrefix)) {
             // application
-            LOG.info("Loading application from node: " + childNodeName);
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Loading application from node: " + childNodeName);
+            }
             ApplicationId appId = ConverterUtils.toApplicationId(childNodeName);
             ApplicationStateDataPBImpl appStateData =
                 new ApplicationStateDataPBImpl(
@@ -144,7 +187,10 @@ public class FileSystemRMStateStore extends RMStateStore {
           } else if (childNodeName
             .startsWith(ApplicationAttemptId.appAttemptIdStrPrefix)) {
             // attempt
-            LOG.info("Loading application attempt from node: " + childNodeName);
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Loading application attempt from node: "
+                  + childNodeName);
+            }
             ApplicationAttemptId attemptId =
                 ConverterUtils.toApplicationAttemptId(childNodeName);
             ApplicationAttemptStateDataPBImpl attemptStateData =
@@ -184,6 +230,7 @@ public class FileSystemRMStateStore extends RMStateStore {
         assert appState != null;
         appState.attempts.put(attemptState.getAttemptId(), attemptState);
       }
+      LOG.info("Done Loading applications from FS state store");
     } catch (Exception e) {
       LOG.error("Failed to load state.", e);
       throw e;
@@ -240,11 +287,12 @@ public class FileSystemRMStateStore extends RMStateStore {
   }
 
   @Override
-  public synchronized void storeApplicationStateInternal(String appId,
+  public synchronized void storeApplicationStateInternal(ApplicationId appId,
       ApplicationStateDataPBImpl appStateDataPB) throws Exception {
-    Path appDirPath = getAppDir(rmAppRoot, appId);
+    String appIdStr = appId.toString();
+    Path appDirPath = getAppDir(rmAppRoot, appIdStr);
     fs.mkdirs(appDirPath);
-    Path nodeCreatePath = getNodePath(appDirPath, appId);
+    Path nodeCreatePath = getNodePath(appDirPath, appIdStr);
 
     LOG.info("Storing info for app: " + appId + " at: " + nodeCreatePath);
     byte[] appStateData = appStateDataPB.getProto().toByteArray();
@@ -259,10 +307,11 @@ public class FileSystemRMStateStore extends RMStateStore {
   }
 
   @Override
-  public synchronized void updateApplicationStateInternal(String appId,
+  public synchronized void updateApplicationStateInternal(ApplicationId appId,
       ApplicationStateDataPBImpl appStateDataPB) throws Exception {
-    Path appDirPath = getAppDir(rmAppRoot, appId);
-    Path nodeCreatePath = getNodePath(appDirPath, appId);
+    String appIdStr = appId.toString();
+    Path appDirPath = getAppDir(rmAppRoot, appIdStr);
+    Path nodeCreatePath = getNodePath(appDirPath, appIdStr);
 
     LOG.info("Updating info for app: " + appId + " at: " + nodeCreatePath);
     byte[] appStateData = appStateDataPB.getProto().toByteArray();
@@ -278,14 +327,13 @@ public class FileSystemRMStateStore extends RMStateStore {
 
   @Override
   public synchronized void storeApplicationAttemptStateInternal(
-      String attemptId, ApplicationAttemptStateDataPBImpl attemptStateDataPB)
+      ApplicationAttemptId appAttemptId,
+      ApplicationAttemptStateDataPBImpl attemptStateDataPB)
       throws Exception {
-    ApplicationAttemptId appAttemptId =
-        ConverterUtils.toApplicationAttemptId(attemptId);
     Path appDirPath =
         getAppDir(rmAppRoot, appAttemptId.getApplicationId().toString());
-    Path nodeCreatePath = getNodePath(appDirPath, attemptId);
-    LOG.info("Storing info for attempt: " + attemptId + " at: "
+    Path nodeCreatePath = getNodePath(appDirPath, appAttemptId.toString());
+    LOG.info("Storing info for attempt: " + appAttemptId + " at: "
         + nodeCreatePath);
     byte[] attemptStateData = attemptStateDataPB.getProto().toByteArray();
     try {
@@ -293,21 +341,20 @@ public class FileSystemRMStateStore extends RMStateStore {
       // based on whether we have lost the right to write to FS
       writeFile(nodeCreatePath, attemptStateData);
     } catch (Exception e) {
-      LOG.info("Error storing info for attempt: " + attemptId, e);
+      LOG.info("Error storing info for attempt: " + appAttemptId, e);
       throw e;
     }
   }
 
   @Override
   public synchronized void updateApplicationAttemptStateInternal(
-      String attemptId, ApplicationAttemptStateDataPBImpl attemptStateDataPB)
+      ApplicationAttemptId appAttemptId,
+      ApplicationAttemptStateDataPBImpl attemptStateDataPB)
       throws Exception {
-    ApplicationAttemptId appAttemptId =
-        ConverterUtils.toApplicationAttemptId(attemptId);
     Path appDirPath =
         getAppDir(rmAppRoot, appAttemptId.getApplicationId().toString());
-    Path nodeCreatePath = getNodePath(appDirPath, attemptId);
-    LOG.info("Updating info for attempt: " + attemptId + " at: "
+    Path nodeCreatePath = getNodePath(appDirPath, appAttemptId.toString());
+    LOG.info("Updating info for attempt: " + appAttemptId + " at: "
         + nodeCreatePath);
     byte[] attemptStateData = attemptStateDataPB.getProto().toByteArray();
     try {
@@ -315,13 +362,13 @@ public class FileSystemRMStateStore extends RMStateStore {
       // based on whether we have lost the right to write to FS
       updateFile(nodeCreatePath, attemptStateData);
     } catch (Exception e) {
-      LOG.info("Error updating info for attempt: " + attemptId, e);
+      LOG.info("Error updating info for attempt: " + appAttemptId, e);
       throw e;
     }
   }
 
   @Override
-  public synchronized void removeApplicationState(ApplicationState appState)
+  public synchronized void removeApplicationStateInternal(ApplicationState appState)
       throws Exception {
     String appId = appState.getAppId().toString();
     Path nodeRemovePath = getAppDir(rmAppRoot, appId);
@@ -430,7 +477,7 @@ public class FileSystemRMStateStore extends RMStateStore {
     fs.rename(tempPath, outputPath);
   }
 
-  private void updateFile(Path outputPath, byte[] data) throws Exception {
+  protected void updateFile(Path outputPath, byte[] data) throws Exception {
     if (fs.exists(outputPath)) {
       deleteFile(outputPath);
     }

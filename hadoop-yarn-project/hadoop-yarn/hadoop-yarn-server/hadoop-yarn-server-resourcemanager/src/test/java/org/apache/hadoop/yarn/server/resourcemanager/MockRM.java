@@ -33,6 +33,7 @@ import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
@@ -60,7 +61,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
-import org.apache.hadoop.yarn.server.resourcemanager.security.RMDelegationTokenSecretManager;
+import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
+import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
@@ -107,7 +109,7 @@ public class MockRM extends ResourceManager {
       throws Exception {
     RMApp app = getRMContext().getRMApps().get(attemptId.getApplicationId());
     Assert.assertNotNull("app shouldn't be null", app);
-    RMAppAttempt attempt = app.getCurrentAppAttempt();
+    RMAppAttempt attempt = app.getRMAppAttempt(attemptId);
     int timeoutSecs = 0;
     while (!finalState.equals(attempt.getAppAttemptState()) && timeoutSecs++ < 40) {
       System.out.println("AppAttempt : " + attemptId 
@@ -277,12 +279,10 @@ public class MockRM extends ResourceManager {
         node.getState());
   }
 
-  public void killApp(ApplicationId appId) throws Exception {
+  public KillApplicationResponse killApp(ApplicationId appId) throws Exception {
     ApplicationClientProtocol client = getClientRMService();
-    KillApplicationRequest req = Records
-        .newRecord(KillApplicationRequest.class);
-    req.setApplicationId(appId);
-    client.forceKillApplication(req);
+    KillApplicationRequest req = KillApplicationRequest.newInstance(appId);
+    return client.forceKillApplication(req);
   }
 
   // from AMLauncher
@@ -307,20 +307,10 @@ public class MockRM extends ResourceManager {
   }
 
   @Override
-  protected RMHAProtocolService createRMHAProtocolService() {
-    return new RMHAProtocolService(this) {
-      @Override
-      protected void startHAAdminServer() {
-        // do nothing
-      }
-    };
-  }
-
-  @Override
   protected ClientRMService createClientRMService() {
     return new ClientRMService(getRMContext(), getResourceScheduler(),
         rmAppManager, applicationACLsManager, queueACLsManager,
-        rmDTSecretManager) {
+        getRMDTSecretManager()) {
       @Override
       protected void serviceStart() {
         // override to not start rpc handler
@@ -336,8 +326,12 @@ public class MockRM extends ResourceManager {
   @Override
   protected ResourceTrackerService createResourceTrackerService() {
     Configuration conf = new Configuration();
-    
+
+    RMContainerTokenSecretManager containerTokenSecretManager =
+        getRMContainerTokenSecretManager();
     containerTokenSecretManager.rollMasterKey();
+    NMTokenSecretManagerInRM nmTokenSecretManager =
+        getRMNMTokenSecretManager();
     nmTokenSecretManager.rollMasterKey();
     return new ResourceTrackerService(getRMContext(), nodesListManager,
         this.nmLivelinessMonitor, containerTokenSecretManager,
@@ -391,20 +385,21 @@ public class MockRM extends ResourceManager {
   }
 
   @Override
-  protected AdminService createAdminService(ClientRMService clientRMService,
-      ApplicationMasterService applicationMasterService,
-      ResourceTrackerService resourceTrackerService) {
-    return new AdminService(getConfig(), scheduler, getRMContext(),
-        this.nodesListManager, clientRMService, applicationMasterService,
-        resourceTrackerService) {
+  protected AdminService createAdminService() {
+    return new AdminService(this, getRMContext()) {
       @Override
-      protected void serviceStart() {
+      protected void startServer() {
         // override to not start rpc handler
       }
 
       @Override
-      protected void serviceStop() {
+      protected void stopServer() {
         // don't do anything
+      }
+
+      @Override
+      protected EmbeddedElectorService createEmbeddedElectorService() {
+        return null;
       }
     };
   }
@@ -413,12 +408,12 @@ public class MockRM extends ResourceManager {
     return this.nodesListManager;
   }
 
-  public RMDelegationTokenSecretManager getRMDTSecretManager() {
-    return this.rmDTSecretManager;
+  public ClientToAMTokenSecretManagerInRM getClientToAMTokenSecretManager() {
+    return this.getRMContext().getClientToAMTokenSecretManager();
   }
 
-  public ClientToAMTokenSecretManagerInRM getClientToAMTokenSecretManager() {
-    return this.clientToAMSecretManager;
+  public RMAppManager getRMAppManager() {
+    return this.rmAppManager;
   }
 
   @Override

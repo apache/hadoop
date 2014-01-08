@@ -19,7 +19,6 @@
 package org.apache.hadoop.hdfs;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_FAILOVER_PROXY_PROVIDER_KEY_PREFIX;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_BACKUP_ADDRESS_KEY;
@@ -31,6 +30,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_A
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMESERVICES;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMESERVICE_ID;
+import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.hamcrest.CoreMatchers.not;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -429,20 +429,22 @@ public class TestDFSUtil {
   }
 
   @Test
-  public void testGetInfoServer() throws IOException {
+  public void testGetInfoServer() throws IOException, URISyntaxException {
     HdfsConfiguration conf = new HdfsConfiguration();
-    conf.set(HADOOP_SECURITY_AUTHENTICATION, "kerberos");
-    UserGroupInformation.setConfiguration(conf);
     
-    String httpsport = DFSUtil.getInfoServer(null, conf, true);
-    assertEquals("0.0.0.0:"+DFS_NAMENODE_HTTPS_PORT_DEFAULT, httpsport);
+    URI httpsport = DFSUtil.getInfoServer(null, conf, "https");
+    assertEquals(new URI("https", null, "0.0.0.0",
+        DFS_NAMENODE_HTTPS_PORT_DEFAULT, null, null, null), httpsport);
     
-    String httpport = DFSUtil.getInfoServer(null, conf, false);
-    assertEquals("0.0.0.0:"+DFS_NAMENODE_HTTP_PORT_DEFAULT, httpport);
-    
-    String httpAddress = DFSUtil.getInfoServer(new InetSocketAddress(
-        "localhost", 8020), conf, false);
-    assertEquals("localhost:" + DFS_NAMENODE_HTTP_PORT_DEFAULT, httpAddress);
+    URI httpport = DFSUtil.getInfoServer(null, conf, "http");
+    assertEquals(new URI("http", null, "0.0.0.0",
+        DFS_NAMENODE_HTTP_PORT_DEFAULT, null, null, null), httpport);
+
+    URI httpAddress = DFSUtil.getInfoServer(new InetSocketAddress(
+        "localhost", 8020), conf, "http");
+    assertEquals(
+        URI.create("http://localhost:" + DFS_NAMENODE_HTTP_PORT_DEFAULT),
+        httpAddress);
   }
   
   @Test
@@ -556,7 +558,7 @@ public class TestDFSUtil {
     Configuration conf = createWebHDFSHAConfiguration(LOGICAL_HOST_NAME, NS1_NN1_ADDR, NS1_NN2_ADDR);
 
     Map<String, Map<String, InetSocketAddress>> map =
-        DFSUtil.getHaNnHttpAddresses(conf);
+        DFSUtil.getHaNnWebHdfsAddresses(conf, "webhdfs");
 
     assertEquals(NS1_NN1_ADDR, map.get("ns1").get("nn1").toString());
     assertEquals(NS1_NN2_ADDR, map.get("ns1").get("nn2").toString());
@@ -574,7 +576,7 @@ public class TestDFSUtil {
     Configuration conf = createWebHDFSHAConfiguration(LOGICAL_HOST_NAME, NS1_NN1_ADDR, NS1_NN2_ADDR);
     URI uri = new URI("webhdfs://ns1");
     assertTrue(HAUtil.isLogicalUri(conf, uri));
-    InetSocketAddress[] addrs = DFSUtil.resolve(uri, DEFAULT_PORT, conf);
+    InetSocketAddress[] addrs = DFSUtil.resolveWebHdfsUri(uri, conf);
     assertArrayEquals(new InetSocketAddress[] {
       new InetSocketAddress(NS1_NN1_HOST, DEFAULT_PORT),
       new InetSocketAddress(NS1_NN2_HOST, DEFAULT_PORT),
@@ -723,5 +725,43 @@ public class TestDFSUtil {
     assertEquals("Test spnego key is NOT null",
         DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_KEYTAB_KEY,
         DFSUtil.getSpnegoKeytabKey(conf, defaultKey));
+  }
+
+  @Test(timeout=1000)
+  public void testDurationToString() throws Exception {
+    assertEquals("000:00:00:00.000", DFSUtil.durationToString(0));
+    assertEquals("001:01:01:01.000",
+        DFSUtil.durationToString(((24*60*60)+(60*60)+(60)+1)*1000));
+    assertEquals("000:23:59:59.999",
+        DFSUtil.durationToString(((23*60*60)+(59*60)+(59))*1000+999));
+    assertEquals("-001:01:01:01.000",
+        DFSUtil.durationToString(-((24*60*60)+(60*60)+(60)+1)*1000));
+    assertEquals("-000:23:59:59.574",
+        DFSUtil.durationToString(-(((23*60*60)+(59*60)+(59))*1000+574)));
+  }
+
+  @Test(timeout=5000)
+  public void testRelativeTimeConversion() throws Exception {
+    try {
+      DFSUtil.parseRelativeTime("1");
+    } catch (IOException e) {
+      assertExceptionContains("too short", e);
+    }
+    try {
+      DFSUtil.parseRelativeTime("1z");
+    } catch (IOException e) {
+      assertExceptionContains("unknown time unit", e);
+    }
+    try {
+      DFSUtil.parseRelativeTime("yyz");
+    } catch (IOException e) {
+      assertExceptionContains("is not a number", e);
+    }
+    assertEquals(61*1000, DFSUtil.parseRelativeTime("61s"));
+    assertEquals(61*60*1000, DFSUtil.parseRelativeTime("61m"));
+    assertEquals(0, DFSUtil.parseRelativeTime("0s"));
+    assertEquals(25*60*60*1000, DFSUtil.parseRelativeTime("25h"));
+    assertEquals(4*24*60*60*1000l, DFSUtil.parseRelativeTime("4d"));
+    assertEquals(999*24*60*60*1000l, DFSUtil.parseRelativeTime("999d"));
   }
 }

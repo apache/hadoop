@@ -17,6 +17,14 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.EnumSet;
+import java.util.List;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
@@ -25,27 +33,39 @@ import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.apache.hadoop.hdfs.protocol.*;
+import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataStorage;
-import org.apache.hadoop.hdfs.server.protocol.*;
+import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
+import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
+import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
+import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
+import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
+import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.security.Groups;
-import org.apache.hadoop.util.*;
+import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.util.VersionInfo;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
-
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.EnumSet;
-import java.util.List;
 
 /**
  * Main class for a series of name-node benchmarks.
@@ -586,6 +606,98 @@ public class NNThroughputBenchmark implements Tool {
   }
 
   /**
+   * Directory creation statistics.
+   *
+   * Each thread creates the same (+ or -1) number of directories.
+   * Directory names are pre-generated during initialization.
+   */
+  class MkdirsStats extends OperationStatsBase {
+    // Operation types
+    static final String OP_MKDIRS_NAME = "mkdirs";
+    static final String OP_MKDIRS_USAGE = "-op mkdirs [-threads T] [-dirs N] " +
+        "[-dirsPerDir P]";
+
+    protected FileNameGenerator nameGenerator;
+    protected String[][] dirPaths;
+
+    MkdirsStats(List<String> args) {
+      super();
+      parseArguments(args);
+    }
+
+    @Override
+    String getOpName() {
+      return OP_MKDIRS_NAME;
+    }
+
+    @Override
+    void parseArguments(List<String> args) {
+      boolean ignoreUnrelatedOptions = verifyOpArgument(args);
+      int nrDirsPerDir = 2;
+      for (int i = 2; i < args.size(); i++) {       // parse command line
+        if(args.get(i).equals("-dirs")) {
+          if(i+1 == args.size())  printUsage();
+          numOpsRequired = Integer.parseInt(args.get(++i));
+        } else if(args.get(i).equals("-threads")) {
+          if(i+1 == args.size())  printUsage();
+          numThreads = Integer.parseInt(args.get(++i));
+        } else if(args.get(i).equals("-dirsPerDir")) {
+          if(i+1 == args.size())  printUsage();
+          nrDirsPerDir = Integer.parseInt(args.get(++i));
+        } else if(!ignoreUnrelatedOptions)
+          printUsage();
+      }
+      nameGenerator = new FileNameGenerator(getBaseDir(), nrDirsPerDir);
+    }
+
+    @Override
+    void generateInputs(int[] opsPerThread) throws IOException {
+      assert opsPerThread.length == numThreads : "Error opsPerThread.length";
+      nameNodeProto.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE,
+          false);
+      LOG.info("Generate " + numOpsRequired + " inputs for " + getOpName());
+      dirPaths = new String[numThreads][];
+      for(int idx=0; idx < numThreads; idx++) {
+        int threadOps = opsPerThread[idx];
+        dirPaths[idx] = new String[threadOps];
+        for(int jdx=0; jdx < threadOps; jdx++)
+          dirPaths[idx][jdx] = nameGenerator.
+              getNextFileName("ThroughputBench");
+      }
+    }
+
+    /**
+     * returns client name
+     */
+    @Override
+    String getExecutionArgument(int daemonId) {
+      return getClientName(daemonId);
+    }
+
+    /**
+     * Do mkdirs operation.
+     */
+    @Override
+    long executeOp(int daemonId, int inputIdx, String clientName)
+        throws IOException {
+      long start = Time.now();
+      nameNodeProto.mkdirs(dirPaths[daemonId][inputIdx],
+          FsPermission.getDefault(), true);
+      long end = Time.now();
+      return end-start;
+    }
+
+    @Override
+    void printResults() {
+      LOG.info("--- " + getOpName() + " inputs ---");
+      LOG.info("nrDirs = " + numOpsRequired);
+      LOG.info("nrThreads = " + numThreads);
+      LOG.info("nrDirsPerDir = " + nameGenerator.getFilesPerDirectory());
+      printStats();
+    }
+  }
+
+  /**
    * Open file statistics.
    * 
    * Measure how many open calls (getBlockLocations()) 
@@ -817,17 +929,16 @@ public class NNThroughputBenchmark implements Tool {
       dnRegistration = new DatanodeRegistration(
           new DatanodeID(DNS.getDefaultIP("default"),
               DNS.getDefaultHost("default", "default"),
-              "", getNodePort(dnIdx),
+              DataNode.generateUuid(), getNodePort(dnIdx),
               DFSConfigKeys.DFS_DATANODE_HTTP_DEFAULT_PORT,
               DFSConfigKeys.DFS_DATANODE_HTTPS_DEFAULT_PORT,
               DFSConfigKeys.DFS_DATANODE_IPC_DEFAULT_PORT),
-          new DataStorage(nsInfo, ""),
+          new DataStorage(nsInfo),
           new ExportedBlockKeys(), VersionInfo.getVersion());
-      DataNode.setNewStorageID(dnRegistration);
       // register datanode
       dnRegistration = nameNodeProto.registerDatanode(dnRegistration);
       //first block reports
-      storage = new DatanodeStorage(dnRegistration.getStorageID());
+      storage = new DatanodeStorage(DatanodeStorage.generateUuid());
       final StorageBlockReport[] reports = {
           new StorageBlockReport(storage,
               new BlockListAsLongs(null, null).getBlockListAsLongs())
@@ -843,10 +954,10 @@ public class NNThroughputBenchmark implements Tool {
     void sendHeartbeat() throws IOException {
       // register datanode
       // TODO:FEDERATION currently a single block pool is supported
-      StorageReport[] rep = { new StorageReport(dnRegistration.getStorageID(),
-          false, DF_CAPACITY, DF_USED, DF_CAPACITY - DF_USED, DF_USED) };
-      DatanodeCommand[] cmds = nameNodeProto.sendHeartbeat(dnRegistration,
-          rep, 0, 0, 0).getCommands();
+      StorageReport[] rep = { new StorageReport(storage, false,
+          DF_CAPACITY, DF_USED, DF_CAPACITY - DF_USED, DF_USED) };
+      DatanodeCommand[] cmds = nameNodeProto.sendHeartbeat(dnRegistration, rep,
+          0L, 0L, 0, 0, 0).getCommands();
       if(cmds != null) {
         for (DatanodeCommand cmd : cmds ) {
           if(LOG.isDebugEnabled()) {
@@ -890,16 +1001,17 @@ public class NNThroughputBenchmark implements Tool {
     @SuppressWarnings("unused") // keep it for future blockReceived benchmark
     int replicateBlocks() throws IOException {
       // register datanode
-      StorageReport[] rep = { new StorageReport(dnRegistration.getStorageID(),
+      StorageReport[] rep = { new StorageReport(storage,
           false, DF_CAPACITY, DF_USED, DF_CAPACITY - DF_USED, DF_USED) };
       DatanodeCommand[] cmds = nameNodeProto.sendHeartbeat(dnRegistration,
-          rep, 0, 0, 0).getCommands();
+          rep, 0L, 0L, 0, 0, 0).getCommands();
       if (cmds != null) {
         for (DatanodeCommand cmd : cmds) {
           if (cmd.getAction() == DatanodeProtocol.DNA_TRANSFER) {
             // Send a copy of a block to another datanode
             BlockCommand bcmd = (BlockCommand)cmd;
-            return transferBlocks(bcmd.getBlocks(), bcmd.getTargets());
+            return transferBlocks(bcmd.getBlocks(), bcmd.getTargets(),
+                                  bcmd.getTargetStorageIDs());
           }
         }
       }
@@ -912,22 +1024,24 @@ public class NNThroughputBenchmark implements Tool {
      * that the blocks have been received.
      */
     private int transferBlocks( Block blocks[], 
-                                DatanodeInfo xferTargets[][] 
+                                DatanodeInfo xferTargets[][],
+                                String targetStorageIDs[][]
                               ) throws IOException {
       for(int i = 0; i < blocks.length; i++) {
         DatanodeInfo blockTargets[] = xferTargets[i];
         for(int t = 0; t < blockTargets.length; t++) {
           DatanodeInfo dnInfo = blockTargets[t];
+          String targetStorageID = targetStorageIDs[i][t];
           DatanodeRegistration receivedDNReg;
           receivedDNReg = new DatanodeRegistration(dnInfo,
-            new DataStorage(nsInfo, dnInfo.getStorageID()),
+            new DataStorage(nsInfo),
             new ExportedBlockKeys(), VersionInfo.getVersion());
           ReceivedDeletedBlockInfo[] rdBlocks = {
             new ReceivedDeletedBlockInfo(
                   blocks[i], ReceivedDeletedBlockInfo.BlockStatus.RECEIVED_BLOCK,
                   null) };
           StorageReceivedDeletedBlocks[] report = { new StorageReceivedDeletedBlocks(
-              receivedDNReg.getStorageID(), rdBlocks) };
+              targetStorageID, rdBlocks) };
           nameNodeProto.blockReceivedAndDeleted(receivedDNReg, nameNode
               .getNamesystem().getBlockPoolId(), report);
         }
@@ -1016,7 +1130,7 @@ public class NNThroughputBenchmark implements Tool {
       }
 
       // create files 
-      LOG.info("Creating " + nrFiles + " with " + blocksPerFile + " blocks each.");
+      LOG.info("Creating " + nrFiles + " files with " + blocksPerFile + " blocks each.");
       FileNameGenerator nameGenerator;
       nameGenerator = new FileNameGenerator(getBaseDir(), 100);
       String clientName = getClientName(007);
@@ -1050,7 +1164,7 @@ public class NNThroughputBenchmark implements Tool {
               loc.getBlock().getLocalBlock(),
               ReceivedDeletedBlockInfo.BlockStatus.RECEIVED_BLOCK, null) };
           StorageReceivedDeletedBlocks[] report = { new StorageReceivedDeletedBlocks(
-              datanodes[dnIdx].dnRegistration.getStorageID(), rdBlocks) };
+              datanodes[dnIdx].storage.getStorageID(), rdBlocks) };
           nameNodeProto.blockReceivedAndDeleted(datanodes[dnIdx].dnRegistration, loc
               .getBlock().getBlockPoolId(), report);
         }
@@ -1260,6 +1374,7 @@ public class NNThroughputBenchmark implements Tool {
     System.err.println("Usage: NNThroughputBenchmark"
         + "\n\t"    + OperationStatsBase.OP_ALL_USAGE
         + " | \n\t" + CreateFileStats.OP_CREATE_USAGE
+        + " | \n\t" + MkdirsStats.OP_MKDIRS_USAGE
         + " | \n\t" + OpenFileStats.OP_OPEN_USAGE
         + " | \n\t" + DeleteFileStats.OP_DELETE_USAGE
         + " | \n\t" + FileStatusStats.OP_FILE_STATUS_USAGE
@@ -1307,6 +1422,10 @@ public class NNThroughputBenchmark implements Tool {
     try {
       if(runAll || CreateFileStats.OP_CREATE_NAME.equals(type)) {
         opStat = new CreateFileStats(args);
+        ops.add(opStat);
+      }
+      if(runAll || MkdirsStats.OP_MKDIRS_NAME.equals(type)) {
+        opStat = new MkdirsStats(args);
         ops.add(opStat);
       }
       if(runAll || OpenFileStats.OP_OPEN_NAME.equals(type)) {

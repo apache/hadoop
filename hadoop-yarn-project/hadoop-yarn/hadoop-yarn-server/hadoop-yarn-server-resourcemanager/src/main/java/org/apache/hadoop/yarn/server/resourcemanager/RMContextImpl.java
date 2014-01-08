@@ -21,17 +21,19 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import org.apache.hadoop.ha.HAServiceProtocol;
+import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
-import org.apache.hadoop.yarn.server.resourcemanager.ahs.RMApplicationHistoryWriter;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.NullRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.AMRMTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer;
@@ -43,7 +45,7 @@ import com.google.common.annotations.VisibleForTesting;
 
 public class RMContextImpl implements RMContext {
 
-  private final Dispatcher rmDispatcher;
+  private Dispatcher rmDispatcher;
 
   private final ConcurrentMap<ApplicationId, RMApp> applications
     = new ConcurrentHashMap<ApplicationId, RMApp>();
@@ -54,41 +56,33 @@ public class RMContextImpl implements RMContext {
   private final ConcurrentMap<String, RMNode> inactiveNodes
     = new ConcurrentHashMap<String, RMNode>();
 
+  private boolean isHAEnabled;
+  private HAServiceState haServiceState =
+      HAServiceProtocol.HAServiceState.INITIALIZING;
+  
   private AMLivelinessMonitor amLivelinessMonitor;
   private AMLivelinessMonitor amFinishingMonitor;
   private RMStateStore stateStore = null;
   private ContainerAllocationExpirer containerAllocationExpirer;
-  private final DelegationTokenRenewer delegationTokenRenewer;
-  private final AMRMTokenSecretManager amRMTokenSecretManager;
-  private final RMContainerTokenSecretManager containerTokenSecretManager;
-  private final NMTokenSecretManagerInRM nmTokenSecretManager;
-  private final ClientToAMTokenSecretManagerInRM clientToAMTokenSecretManager;
+  private DelegationTokenRenewer delegationTokenRenewer;
+  private AMRMTokenSecretManager amRMTokenSecretManager;
+  private RMContainerTokenSecretManager containerTokenSecretManager;
+  private NMTokenSecretManagerInRM nmTokenSecretManager;
+  private ClientToAMTokenSecretManagerInRM clientToAMTokenSecretManager;
+  private AdminService adminService;
   private ClientRMService clientRMService;
   private RMDelegationTokenSecretManager rmDelegationTokenSecretManager;
-  private RMApplicationHistoryWriter rmApplicationHistoryWriter;
+  private ResourceScheduler scheduler;
+  private NodesListManager nodesListManager;
+  private ResourceTrackerService resourceTrackerService;
+  private ApplicationMasterService applicationMasterService;
 
-  public RMContextImpl(Dispatcher rmDispatcher,
-      RMStateStore store,
-      ContainerAllocationExpirer containerAllocationExpirer,
-      AMLivelinessMonitor amLivelinessMonitor,
-      AMLivelinessMonitor amFinishingMonitor,
-      DelegationTokenRenewer delegationTokenRenewer,
-      AMRMTokenSecretManager amRMTokenSecretManager,
-      RMContainerTokenSecretManager containerTokenSecretManager,
-      NMTokenSecretManagerInRM nmTokenSecretManager,
-      ClientToAMTokenSecretManagerInRM clientToAMTokenSecretManager,
-      RMApplicationHistoryWriter rmApplicationHistoryWriter) {
-    this.rmDispatcher = rmDispatcher;
-    this.stateStore = store;
-    this.containerAllocationExpirer = containerAllocationExpirer;
-    this.amLivelinessMonitor = amLivelinessMonitor;
-    this.amFinishingMonitor = amFinishingMonitor;
-    this.delegationTokenRenewer = delegationTokenRenewer;
-    this.amRMTokenSecretManager = amRMTokenSecretManager;
-    this.containerTokenSecretManager = containerTokenSecretManager;
-    this.nmTokenSecretManager = nmTokenSecretManager;
-    this.clientToAMTokenSecretManager = clientToAMTokenSecretManager;
-    this.rmApplicationHistoryWriter = rmApplicationHistoryWriter;
+  /**
+   * Default constructor. To be used in conjunction with setter methods for
+   * individual fields.
+   */
+  public RMContextImpl() {
+
   }
 
   @VisibleForTesting
@@ -101,12 +95,18 @@ public class RMContextImpl implements RMContext {
       AMRMTokenSecretManager appTokenSecretManager,
       RMContainerTokenSecretManager containerTokenSecretManager,
       NMTokenSecretManagerInRM nmTokenSecretManager,
-      ClientToAMTokenSecretManagerInRM clientToAMTokenSecretManager,
-      RMApplicationHistoryWriter rmApplicationHistoryWriter) {
-    this(rmDispatcher, null, containerAllocationExpirer, amLivelinessMonitor,
-        amFinishingMonitor, delegationTokenRenewer, appTokenSecretManager,
-        containerTokenSecretManager, nmTokenSecretManager,
-        clientToAMTokenSecretManager, rmApplicationHistoryWriter);
+      ClientToAMTokenSecretManagerInRM clientToAMTokenSecretManager) {
+    this();
+    this.setDispatcher(rmDispatcher);
+    this.setContainerAllocationExpirer(containerAllocationExpirer);
+    this.setAMLivelinessMonitor(amLivelinessMonitor);
+    this.setAMFinishingMonitor(amFinishingMonitor);
+    this.setDelegationTokenRenewer(delegationTokenRenewer);
+    this.setAMRMTokenSecretManager(appTokenSecretManager);
+    this.setContainerTokenSecretManager(containerTokenSecretManager);
+    this.setNMTokenSecretManager(nmTokenSecretManager);
+    this.setClientToAMTokenSecretManager(clientToAMTokenSecretManager);
+
     RMStateStore nullStore = new NullRMStateStore();
     nullStore.setRMDispatcher(rmDispatcher);
     try {
@@ -176,12 +176,27 @@ public class RMContextImpl implements RMContext {
   public NMTokenSecretManagerInRM getNMTokenSecretManager() {
     return this.nmTokenSecretManager;
   }
-  
+
+  @Override
+  public ResourceScheduler getScheduler() {
+    return this.scheduler;
+  }
+
+  @Override
+  public NodesListManager getNodesListManager() {
+    return this.nodesListManager;
+  }
+
   @Override
   public ClientToAMTokenSecretManagerInRM getClientToAMTokenSecretManager() {
     return this.clientToAMTokenSecretManager;
   }
-  
+
+  @Override
+  public AdminService getRMAdminService() {
+    return this.adminService;
+  }
+
   @VisibleForTesting
   public void setStateStore(RMStateStore store) {
     stateStore = store;
@@ -191,7 +206,35 @@ public class RMContextImpl implements RMContext {
   public ClientRMService getClientRMService() {
     return this.clientRMService;
   }
-  
+
+  @Override
+  public ApplicationMasterService getApplicationMasterService() {
+    return applicationMasterService;
+  }
+
+  @Override
+  public ResourceTrackerService getResourceTrackerService() {
+    return resourceTrackerService;
+  }
+
+  void setHAEnabled(boolean isHAEnabled) {
+    this.isHAEnabled = isHAEnabled;
+  }
+
+  void setHAServiceState(HAServiceState haServiceState) {
+    synchronized (haServiceState) {
+      this.haServiceState = haServiceState;
+    }
+  }
+
+  void setDispatcher(Dispatcher dispatcher) {
+    this.rmDispatcher = dispatcher;
+  }
+
+  void setRMAdminService(AdminService adminService) {
+    this.adminService = adminService;
+  }
+
   @Override
   public void setClientRMService(ClientRMService clientRMService) {
     this.clientRMService = clientRMService;
@@ -208,15 +251,71 @@ public class RMContextImpl implements RMContext {
     this.rmDelegationTokenSecretManager = delegationTokenSecretManager;
   }
 
-  @Override
-  public RMApplicationHistoryWriter getRMApplicationHistoryWriter() {
-    return rmApplicationHistoryWriter;
+  void setContainerAllocationExpirer(
+      ContainerAllocationExpirer containerAllocationExpirer) {
+    this.containerAllocationExpirer = containerAllocationExpirer;
+  }
+
+  void setAMLivelinessMonitor(AMLivelinessMonitor amLivelinessMonitor) {
+    this.amLivelinessMonitor = amLivelinessMonitor;
+  }
+
+  void setAMFinishingMonitor(AMLivelinessMonitor amFinishingMonitor) {
+    this.amFinishingMonitor = amFinishingMonitor;
+  }
+
+  void setContainerTokenSecretManager(
+      RMContainerTokenSecretManager containerTokenSecretManager) {
+    this.containerTokenSecretManager = containerTokenSecretManager;
+  }
+
+  void setNMTokenSecretManager(
+      NMTokenSecretManagerInRM nmTokenSecretManager) {
+    this.nmTokenSecretManager = nmTokenSecretManager;
+  }
+
+  void setScheduler(ResourceScheduler scheduler) {
+    this.scheduler = scheduler;
+  }
+
+  void setDelegationTokenRenewer(
+      DelegationTokenRenewer delegationTokenRenewer) {
+    this.delegationTokenRenewer = delegationTokenRenewer;
+  }
+
+  void setClientToAMTokenSecretManager(
+      ClientToAMTokenSecretManagerInRM clientToAMTokenSecretManager) {
+    this.clientToAMTokenSecretManager = clientToAMTokenSecretManager;
+  }
+
+  void setAMRMTokenSecretManager(
+      AMRMTokenSecretManager amRMTokenSecretManager) {
+    this.amRMTokenSecretManager = amRMTokenSecretManager;
+  }
+
+  void setNodesListManager(NodesListManager nodesListManager) {
+    this.nodesListManager = nodesListManager;
+  }
+
+  void setApplicationMasterService(
+      ApplicationMasterService applicationMasterService) {
+    this.applicationMasterService = applicationMasterService;
+  }
+
+  void setResourceTrackerService(
+      ResourceTrackerService resourceTrackerService) {
+    this.resourceTrackerService = resourceTrackerService;
   }
 
   @Override
-  public void setRMApplicationHistoryWriter(
-      RMApplicationHistoryWriter rmApplicationHistoryWriter) {
-    this.rmApplicationHistoryWriter = rmApplicationHistoryWriter;
+  public boolean isHAEnabled() {
+    return isHAEnabled;
   }
 
+  @Override
+  public HAServiceState getHAServiceState() {
+    synchronized (haServiceState) {
+      return haServiceState;
+    }
+  }
 }

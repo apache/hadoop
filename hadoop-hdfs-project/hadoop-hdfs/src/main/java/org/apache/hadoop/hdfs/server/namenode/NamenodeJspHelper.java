@@ -23,17 +23,11 @@ import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryMXBean;
 import java.lang.management.MemoryUsage;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.security.PrivilegedExceptionAction;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
@@ -50,6 +44,7 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifie
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
@@ -61,7 +56,6 @@ import org.apache.hadoop.hdfs.server.namenode.startupprogress.Status;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.Step;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.StepType;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
-import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -143,7 +137,7 @@ class NamenodeJspHelper {
     long usedNonHeap = (totalNonHeap * 100) / commitedNonHeap;
 
     String str = "<div>" + inodes + " files and directories, " + blocks + " blocks = "
-        + (inodes + blocks) + " total";
+        + (inodes + blocks) + " total filesystem objects";
     if (maxobjects != 0) {
       long pct = ((inodes + blocks) * 100) / maxobjects;
       str += " / " + maxobjects + " (" + pct + "%)";
@@ -341,7 +335,7 @@ class NamenodeJspHelper {
         } else if (openForWrite) {
           EditLogOutputStream elos = jas.getCurrentStream();
           if (elos != null) {
-            out.println(elos.generateHtmlReport());
+            out.println(elos.generateReport());
           } else {
             out.println("not currently writing");
           }
@@ -800,9 +794,13 @@ class NamenodeJspHelper {
        */
 
       generateNodeDataHeader(out, d, suffix, alive, nnInfoPort, nnaddr, scheme);
+      long currentTime = Time.now();
+      long timestamp = d.getLastUpdate();
       if (!alive) {
-        out.print("<td class=\"decommissioned\"> " + 
-            d.isDecommissioned() + "\n");
+        out.print("<td class=\"lastcontact\"> "
+            + new Date(timestamp) 
+            + "<td class=\"decommissioned\"> "
+            + d.isDecommissioned() + "\n");
         return;
       }
 
@@ -815,9 +813,6 @@ class NamenodeJspHelper {
       String percentRemaining = fraction2String(d.getRemainingPercent());
 
       String adminState = d.getAdminState().toString();
-
-      long timestamp = d.getLastUpdate();
-      long currentTime = Time.now();
       
       long bpUsed = d.getBlockPoolUsed();
       String percentBpUsed = fraction2String(d.getBlockPoolUsedPercent());
@@ -963,6 +958,8 @@ class NamenodeJspHelper {
                 + "<th " + nodeHeaderStr("node")
                 + "> Node <th " + nodeHeaderStr("address")
                 + "> Transferring<br>Address <th "
+                + nodeHeaderStr("lastcontact")
+                + "> Last <br>Contact <th "
                 + nodeHeaderStr("decommissioned")
                 + "> Decommissioned\n");
 
@@ -1088,7 +1085,7 @@ class NamenodeJspHelper {
           doc.endTag();
 
           doc.startTag("ds_quota");
-          doc.pcdata(""+inode.getDsQuota());
+          doc.pcdata(""+inode.getQuotaCounts().get(Quota.DISKSPACE));
           doc.endTag();
 
           doc.startTag("permission_status");
@@ -1111,13 +1108,12 @@ class NamenodeJspHelper {
         } 
 
         doc.startTag("replicas");
-        for (final Iterator<DatanodeDescriptor> it = blockManager != null ?
-            blockManager.datanodeIterator(block) :
-            Collections.<DatanodeDescriptor>emptyList().iterator();
-            it.hasNext();) {
+        for(DatanodeStorageInfo storage : (blockManager != null ?
+                blockManager.getStorages(block) :
+                Collections.<DatanodeStorageInfo>emptyList())) {
           doc.startTag("replica");
 
-          DatanodeDescriptor dd = it.next();
+          DatanodeDescriptor dd = storage.getDatanodeDescriptor();
 
           doc.startTag("host_name");
           doc.pcdata(dd.getHostName());

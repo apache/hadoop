@@ -276,6 +276,24 @@ public class DomainSocket implements Closeable {
     return new DomainSocket(path, fd);
   }
 
+  /**
+   * Create a pair of UNIX domain sockets which are connected to each other
+   * by calling socketpair(2).
+   *
+   * @return                An array of two UNIX domain sockets connected to
+   *                        each other.
+   * @throws IOException    on error.
+   */
+  public static DomainSocket[] socketpair() throws IOException {
+    int fds[] = socketpair0();
+    return new DomainSocket[] {
+      new DomainSocket("(anonymous0)", fds[0]),
+      new DomainSocket("(anonymous1)", fds[1])
+    };
+  }
+
+  private static native int[] socketpair0() throws IOException;
+
   private static native int accept0(int fd) throws IOException;
 
   /**

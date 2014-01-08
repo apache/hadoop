@@ -42,6 +42,10 @@ public class TestParallelShortCircuitReadUnCached extends TestParallelReadUtil {
       new File(sockDir.getDir(), 
         "TestParallelShortCircuitReadUnCached._PORT.sock").getAbsolutePath());
     conf.setBoolean(DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_KEY, true);
+    // Enabling data transfer encryption should have no effect when using
+    // short-circuit local reads.  This is a regression test for HDFS-5353.
+    conf.setBoolean(DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_KEY, true);
+    conf.setBoolean(DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
     conf.setBoolean(DFSConfigKeys.
         DFS_CLIENT_READ_SHORTCIRCUIT_SKIP_CHECKSUM_KEY, false);
     conf.setBoolean(DFSConfigKeys.

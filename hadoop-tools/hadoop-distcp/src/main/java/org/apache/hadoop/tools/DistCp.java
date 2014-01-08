@@ -320,7 +320,7 @@ public class DistCp extends Configured implements Tool {
    * @return Returns the path where the copy listing is created
    * @throws IOException - If any
    */
-  private Path createInputFileListing(Job job) throws IOException {
+  protected Path createInputFileListing(Job job) throws IOException {
     Path fileListingPath = getFileListingPath();
     CopyListing copyListing = CopyListing.getCopyListing(job.getConfiguration(),
         job.getCredentials(), inputOptions);
@@ -335,7 +335,7 @@ public class DistCp extends Configured implements Tool {
    * @return - Path where the copy listing file has to be saved
    * @throws IOException - Exception if any
    */
-  private Path getFileListingPath() throws IOException {
+  protected Path getFileListingPath() throws IOException {
     String fileListPathStr = metaFolder + "/fileList.seq";
     Path path = new Path(fileListPathStr);
     return new Path(path.toUri().normalize().toString());

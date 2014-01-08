@@ -73,6 +73,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NotReplicatedYetException;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
+import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.hdfs.web.WebHdfsTestUtil;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.IOUtils;
@@ -574,17 +575,20 @@ public class TestDFSClientRetries {
     LOG.info("Test 4 succeeded! Time spent: "  + (timestamp2-timestamp)/1000.0 + " sec.");
   }
 
-  private boolean busyTest(int xcievers, int threads, int fileLen, int timeWin, int retries) 
+  private boolean busyTest(int xcievers, int threads, int fileLen, int timeWin, int retries)
     throws IOException {
 
     boolean ret = true;
     short replicationFactor = 1;
     long blockSize = 128*1024*1024; // DFS block size
     int bufferSize = 4096;
-    
-    conf.setInt(DFSConfigKeys.DFS_DATANODE_MAX_RECEIVER_THREADS_KEY, xcievers);
-    conf.setInt(DFSConfigKeys.DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_KEY, 
-                retries);
+    int originalXcievers = conf.getInt(
+      DFSConfigKeys.DFS_DATANODE_MAX_RECEIVER_THREADS_KEY,
+      DFSConfigKeys.DFS_DATANODE_MAX_RECEIVER_THREADS_DEFAULT);
+    conf.setInt(DFSConfigKeys.DFS_DATANODE_MAX_RECEIVER_THREADS_KEY,
+      xcievers);
+    conf.setInt(DFSConfigKeys.DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_KEY,
+      retries);
     conf.setInt(DFSConfigKeys.DFS_CLIENT_RETRY_WINDOW_BASE, timeWin);
     // Disable keepalive
     conf.setInt(DFSConfigKeys.DFS_DATANODE_SOCKET_REUSE_KEEPALIVE_KEY, 0);
@@ -660,6 +664,8 @@ public class TestDFSClientRetries {
       e.printStackTrace();
       ret = false;
     } finally {
+      conf.setInt(DFSConfigKeys.DFS_DATANODE_MAX_RECEIVER_THREADS_KEY,
+        originalXcievers);
       fs.delete(file1, false);
       cluster.shutdown();
     }
@@ -805,6 +811,53 @@ public class TestDFSClientRetries {
     }
   }
 
+  /**
+   * Test that checksum failures are recovered from by the next read on the same
+   * DFSInputStream. Corruption information is not persisted from read call to
+   * read call, so the client should expect consecutive calls to behave the same
+   * way. See HDFS-3067.
+   */
+  @Test
+  public void testRetryOnChecksumFailure() throws Exception {
+    HdfsConfiguration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster =
+      new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+
+    try {
+      final short REPL_FACTOR = 1;
+      final long FILE_LENGTH = 512L;
+      cluster.waitActive();
+      FileSystem fs = cluster.getFileSystem();
+
+      Path path = new Path("/corrupted");
+
+      DFSTestUtil.createFile(fs, path, FILE_LENGTH, REPL_FACTOR, 12345L);
+      DFSTestUtil.waitReplication(fs, path, REPL_FACTOR);
+
+      ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, path);
+      int blockFilesCorrupted = cluster.corruptBlockOnDataNodes(block);
+      assertEquals("All replicas not corrupted", REPL_FACTOR,
+          blockFilesCorrupted);
+
+      InetSocketAddress nnAddr =
+        new InetSocketAddress("localhost", cluster.getNameNodePort());
+      DFSClient client = new DFSClient(nnAddr, conf);
+      DFSInputStream dis = client.open(path.toString());
+      byte[] arr = new byte[(int)FILE_LENGTH];
+      for (int i = 0; i < 2; ++i) {
+        try {
+          dis.read(arr, 0, (int)FILE_LENGTH);
+          fail("Expected ChecksumException not thrown");
+        } catch (Exception ex) {
+          GenericTestUtils.assertExceptionContains(
+              "Checksum error", ex);
+        }
+      }
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
   /** Test client retry with namenode restarting. */
   @Test(timeout=300000)
   public void testNamenodeRestart() throws Exception {
@@ -834,8 +887,8 @@ public class TestDFSClientRetries {
     try {
       cluster.waitActive();
       final DistributedFileSystem dfs = cluster.getFileSystem();
-      final FileSystem fs = isWebHDFS?
-          WebHdfsTestUtil.getWebHdfsFileSystem(conf): dfs;
+      final FileSystem fs = isWebHDFS ? WebHdfsTestUtil.getWebHdfsFileSystem(
+          conf, WebHdfsFileSystem.SCHEME) : dfs;
       final URI uri = dfs.getUri();
       assertTrue(HdfsUtils.isHealthy(uri));
 
@@ -1039,7 +1092,7 @@ public class TestDFSClientRetries {
     final UserGroupInformation ugi = UserGroupInformation.createUserForTesting(
         username, new String[]{"supergroup"});
 
-    return isWebHDFS? WebHdfsTestUtil.getWebHdfsFileSystemAs(ugi, conf)
+    return isWebHDFS? WebHdfsTestUtil.getWebHdfsFileSystemAs(ugi, conf, WebHdfsFileSystem.SCHEME)
         : DFSTestUtil.getFileSystemAs(ugi, conf);
   }
 
@@ -1072,53 +1125,6 @@ public class TestDFSClientRetries {
       assertEquals(expected, null);
     } else {
       assertEquals("MultipleLinearRandomRetry" + expected, r.toString());
-    }
-  }
-
-  /**
-   * Test that checksum failures are recovered from by the next read on the same
-   * DFSInputStream. Corruption information is not persisted from read call to
-   * read call, so the client should expect consecutive calls to behave the same
-   * way. See HDFS-3067.
-   */
-  @Test
-  public void testRetryOnChecksumFailure() throws Exception {
-    HdfsConfiguration conf = new HdfsConfiguration();
-    MiniDFSCluster cluster =
-      new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
-
-    try {
-      final short REPL_FACTOR = 1;
-      final long FILE_LENGTH = 512L;
-      cluster.waitActive();
-      FileSystem fs = cluster.getFileSystem();
-
-      Path path = new Path("/corrupted");
-
-      DFSTestUtil.createFile(fs, path, FILE_LENGTH, REPL_FACTOR, 12345L);
-      DFSTestUtil.waitReplication(fs, path, REPL_FACTOR);
-
-      ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, path);
-      int blockFilesCorrupted = cluster.corruptBlockOnDataNodes(block);
-      assertEquals("All replicas not corrupted", REPL_FACTOR,
-          blockFilesCorrupted);
-
-      InetSocketAddress nnAddr =
-        new InetSocketAddress("localhost", cluster.getNameNodePort());
-      DFSClient client = new DFSClient(nnAddr, conf);
-      DFSInputStream dis = client.open(path.toString());
-      byte[] arr = new byte[(int)FILE_LENGTH];
-      for (int i = 0; i < 2; ++i) {
-        try {
-          dis.read(arr, 0, (int)FILE_LENGTH);
-          fail("Expected ChecksumException not thrown");
-        } catch (Exception ex) {
-          GenericTestUtils.assertExceptionContains(
-              "Checksum error", ex);
-        }
-      }
-    } finally {
-      cluster.shutdown();
     }
   }
 }

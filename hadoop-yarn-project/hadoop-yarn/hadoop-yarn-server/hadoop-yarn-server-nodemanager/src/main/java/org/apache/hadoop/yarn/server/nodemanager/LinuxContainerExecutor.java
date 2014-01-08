@@ -67,11 +67,12 @@ public class LinuxContainerExecutor extends ContainerExecutor {
             conf.getClass(YarnConfiguration.NM_LINUX_CONTAINER_RESOURCES_HANDLER,
               DefaultLCEResourcesHandler.class, LCEResourcesHandler.class), conf);
     resourcesHandler.setConf(conf);
+
     if (conf.get(YarnConfiguration.NM_CONTAINER_EXECUTOR_SCHED_PRIORITY) != null) {
-     containerSchedPriorityIsSet = true;
-     containerSchedPriorityAdjustment = conf
-         .getInt(YarnConfiguration.NM_CONTAINER_EXECUTOR_SCHED_PRIORITY, 
-         YarnConfiguration.DEFAULT_NM_CONTAINER_EXECUTOR_SCHED_PRIORITY);
+      containerSchedPriorityIsSet = true;
+      containerSchedPriorityAdjustment = conf
+          .getInt(YarnConfiguration.NM_CONTAINER_EXECUTOR_SCHED_PRIORITY, 
+          YarnConfiguration.DEFAULT_NM_CONTAINER_EXECUTOR_SCHED_PRIORITY);
     }
     nonsecureLocalUser = conf.get(
         YarnConfiguration.NM_NONSECURE_MODE_LOCAL_USER_KEY,
@@ -92,8 +93,6 @@ public class LinuxContainerExecutor extends ContainerExecutor {
   String getRunAsUser(String user) {
     return UserGroupInformation.isSecurityEnabled() ? user : nonsecureLocalUser;
   }
-
-
 
   /**
    * List of commands that the setuid script will execute.
@@ -150,7 +149,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
     if (containerSchedPriorityIsSet) {
       command.addAll(Arrays.asList("nice", "-n",
           Integer.toString(containerSchedPriorityAdjustment)));
-    } 
+    }
   }
 
   @Override 
@@ -189,7 +188,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
     String runAsUser = getRunAsUser(user);
     List<String> command = new ArrayList<String>();
     addSchedPriorityCommand(command);
-    command.addAll(Arrays.asList(containerExecutorExe, 
+    command.addAll(Arrays.asList(containerExecutorExe,
                    runAsUser,
                    user, 
                    Integer.toString(Commands.INITIALIZE_CONTAINER.getValue()),

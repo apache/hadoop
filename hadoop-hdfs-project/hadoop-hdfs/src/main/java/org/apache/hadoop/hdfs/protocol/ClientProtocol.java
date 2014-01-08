@@ -19,15 +19,18 @@ package org.apache.hadoop.hdfs.protocol;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.EnumSet;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.CacheFlag;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.fs.Options;
+import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedEntries;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.UnresolvedLinkException;
@@ -353,7 +356,8 @@ public interface ClientProtocol {
    */
   @Idempotent
   public LocatedBlock getAdditionalDatanode(final String src, final ExtendedBlock blk,
-      final DatanodeInfo[] existings, final DatanodeInfo[] excludes,
+      final DatanodeInfo[] existings, final String[] existingStorageIDs,
+      final DatanodeInfo[] excludes,
       final int numAdditionalNodes, final String clientName
       ) throws AccessControlException, FileNotFoundException,
           SafeModeException, UnresolvedLinkException, IOException;
@@ -982,7 +986,7 @@ public interface ClientProtocol {
    */
   @AtMostOnce
   public void updatePipeline(String clientName, ExtendedBlock oldBlock, 
-      ExtendedBlock newBlock, DatanodeID[] newNodes)
+      ExtendedBlock newBlock, DatanodeID[] newNodes, String[] newStorageIDs)
       throws IOException;
 
   /**
@@ -1093,5 +1097,91 @@ public interface ClientProtocol {
   @Idempotent
   public SnapshotDiffReport getSnapshotDiffReport(String snapshotRoot,
       String fromSnapshot, String toSnapshot) throws IOException;
-}
 
+  /**
+   * Add a CacheDirective to the CacheManager.
+   * 
+   * @param directive A CacheDirectiveInfo to be added
+   * @param flags {@link CacheFlag}s to use for this operation.
+   * @return A CacheDirectiveInfo associated with the added directive
+   * @throws IOException if the directive could not be added
+   */
+  @AtMostOnce
+  public long addCacheDirective(CacheDirectiveInfo directive,
+      EnumSet<CacheFlag> flags) throws IOException;
+
+  /**
+   * Modify a CacheDirective in the CacheManager.
+   * 
+   * @return directive The directive to modify. Must contain a directive ID.
+   * @param flags {@link CacheFlag}s to use for this operation.
+   * @throws IOException if the directive could not be modified
+   */
+  @AtMostOnce
+  public void modifyCacheDirective(CacheDirectiveInfo directive,
+      EnumSet<CacheFlag> flags) throws IOException;
+
+  /**
+   * Remove a CacheDirectiveInfo from the CacheManager.
+   * 
+   * @param id of a CacheDirectiveInfo
+   * @throws IOException if the cache directive could not be removed
+   */
+  @AtMostOnce
+  public void removeCacheDirective(long id) throws IOException;
+
+  /**
+   * List the set of cached paths of a cache pool. Incrementally fetches results
+   * from the server.
+   * 
+   * @param prevId The last listed entry ID, or -1 if this is the first call to
+   *               listCacheDirectives.
+   * @param filter Parameters to use to filter the list results, 
+   *               or null to display all directives visible to us.
+   * @return A batch of CacheDirectiveEntry objects.
+   */
+  @Idempotent
+  public BatchedEntries<CacheDirectiveEntry> listCacheDirectives(
+      long prevId, CacheDirectiveInfo filter) throws IOException;
+
+  /**
+   * Add a new cache pool.
+   * 
+   * @param info Description of the new cache pool
+   * @throws IOException If the request could not be completed.
+   */
+  @AtMostOnce
+  public void addCachePool(CachePoolInfo info) throws IOException;
+
+  /**
+   * Modify an existing cache pool.
+   *
+   * @param req
+   *          The request to modify a cache pool.
+   * @throws IOException 
+   *          If the request could not be completed.
+   */
+  @AtMostOnce
+  public void modifyCachePool(CachePoolInfo req) throws IOException;
+  
+  /**
+   * Remove a cache pool.
+   * 
+   * @param pool name of the cache pool to remove.
+   * @throws IOException if the cache pool did not exist, or could not be
+   *           removed.
+   */
+  @AtMostOnce
+  public void removeCachePool(String pool) throws IOException;
+
+  /**
+   * List the set of cache pools. Incrementally fetches results from the server.
+   * 
+   * @param prevPool name of the last pool listed, or the empty string if this is
+   *          the first invocation of listCachePools
+   * @return A batch of CachePoolEntry objects.
+   */
+  @Idempotent
+  public BatchedEntries<CachePoolEntry> listCachePools(String prevPool)
+      throws IOException;
+}

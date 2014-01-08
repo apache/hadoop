@@ -22,7 +22,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.mock;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -61,6 +63,7 @@ import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Time;
 import org.apache.log4j.Level;
 import org.junit.Test;
+import org.mockito.InOrder;
 
 public class TestDistributedFileSystem {
   private static final Random RAN = new Random();
@@ -154,7 +157,38 @@ public class TestDistributedFileSystem {
       if (cluster != null) {cluster.shutdown();}
     }
   }
+
+  @Test
+  public void testDFSCloseOrdering() throws Exception {
+    DistributedFileSystem fs = new MyDistributedFileSystem();
+    Path path = new Path("/a");
+    fs.deleteOnExit(path);
+    fs.close();
+
+    InOrder inOrder = inOrder(fs.dfs);
+    inOrder.verify(fs.dfs).closeOutputStreams(eq(false));
+    inOrder.verify(fs.dfs).delete(eq(path.toString()), eq(true));
+    inOrder.verify(fs.dfs).close();
+  }
   
+  private static class MyDistributedFileSystem extends DistributedFileSystem {
+    MyDistributedFileSystem() {
+      statistics = new FileSystem.Statistics("myhdfs"); // can't mock finals
+      dfs = mock(DFSClient.class);
+    }
+    @Override
+    public boolean exists(Path p) {
+      return true; // trick out deleteOnExit
+    }
+    // Symlink resolution doesn't work with a mock, since it doesn't
+    // have a valid Configuration to resolve paths to the right FileSystem.
+    // Just call the DFSClient directly to register the delete
+    @Override
+    public boolean delete(Path f, final boolean recursive) throws IOException {
+      return dfs.delete(f.toUri().getPath(), recursive);
+    }
+  }
+
   @Test
   public void testDFSSeekExceptions() throws IOException {
     Configuration conf = getTestConfiguration();

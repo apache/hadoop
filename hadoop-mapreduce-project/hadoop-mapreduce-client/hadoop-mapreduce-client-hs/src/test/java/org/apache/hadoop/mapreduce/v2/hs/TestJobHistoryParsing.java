@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.mapreduce.v2.hs;
 
-import static junit.framework.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
@@ -340,8 +339,11 @@ public class TestJobHistoryParsing {
     PrintStream stdps = System.out;
     try {
       System.setOut(new PrintStream(outContent));
-      HistoryViewer viewer = new HistoryViewer(fc.makeQualified(
-          fileInfo.getHistoryFile()).toString(), conf, true);
+      HistoryViewer viewer;
+      synchronized (fileInfo) {
+        viewer = new HistoryViewer(fc.makeQualified(
+            fileInfo.getHistoryFile()).toString(), conf, true);
+      }
       viewer.print();
 
       for (TaskInfo taskInfo : allTasks.values()) {
@@ -398,29 +400,27 @@ public class TestJobHistoryParsing {
       // make sure all events are flushed
       app.waitForState(Service.STATE.STOPPED);
 
-      String jobhistoryDir = JobHistoryUtils
-          .getHistoryIntermediateDoneDirForUser(conf);
       JobHistory jobHistory = new JobHistory();
       jobHistory.init(conf);
+      HistoryFileInfo fileInfo = jobHistory.getJobFileInfo(jobId);
+      
+      JobHistoryParser parser;
+      JobInfo jobInfo;
+      synchronized (fileInfo) {
+        Path historyFilePath = fileInfo.getHistoryFile();
+        FSDataInputStream in = null;
+        FileContext fc = null;
+        try {
+          fc = FileContext.getFileContext(conf);
+          in = fc.open(fc.makeQualified(historyFilePath));
+        } catch (IOException ioe) {
+          LOG.info("Can not open history file: " + historyFilePath, ioe);
+          throw (new Exception("Can not open History File"));
+        }
 
-      JobIndexInfo jobIndexInfo = jobHistory.getJobFileInfo(jobId)
-          .getJobIndexInfo();
-      String jobhistoryFileName = FileNameIndexUtils
-          .getDoneFileName(jobIndexInfo);
-
-      Path historyFilePath = new Path(jobhistoryDir, jobhistoryFileName);
-      FSDataInputStream in = null;
-      FileContext fc = null;
-      try {
-        fc = FileContext.getFileContext(conf);
-        in = fc.open(fc.makeQualified(historyFilePath));
-      } catch (IOException ioe) {
-        LOG.info("Can not open history file: " + historyFilePath, ioe);
-        throw (new Exception("Can not open History File"));
+        parser = new JobHistoryParser(in);
+        jobInfo = parser.parse();
       }
-
-      JobHistoryParser parser = new JobHistoryParser(in);
-      JobInfo jobInfo = parser.parse();
       Exception parseException = parser.getParseException();
       Assert.assertNull("Caught an expected exception " + parseException,
           parseException);
@@ -465,29 +465,28 @@ public class TestJobHistoryParsing {
       // make sure all events are flushed
       app.waitForState(Service.STATE.STOPPED);
 
-      String jobhistoryDir = JobHistoryUtils
-          .getHistoryIntermediateDoneDirForUser(conf);
       JobHistory jobHistory = new JobHistory();
       jobHistory.init(conf);
 
-      JobIndexInfo jobIndexInfo = jobHistory.getJobFileInfo(jobId)
-          .getJobIndexInfo();
-      String jobhistoryFileName = FileNameIndexUtils
-          .getDoneFileName(jobIndexInfo);
+      HistoryFileInfo fileInfo = jobHistory.getJobFileInfo(jobId);
+      
+      JobHistoryParser parser;
+      JobInfo jobInfo;
+      synchronized (fileInfo) {
+        Path historyFilePath = fileInfo.getHistoryFile();
+        FSDataInputStream in = null;
+        FileContext fc = null;
+        try {
+          fc = FileContext.getFileContext(conf);
+          in = fc.open(fc.makeQualified(historyFilePath));
+        } catch (IOException ioe) {
+          LOG.info("Can not open history file: " + historyFilePath, ioe);
+          throw (new Exception("Can not open History File"));
+        }
 
-      Path historyFilePath = new Path(jobhistoryDir, jobhistoryFileName);
-      FSDataInputStream in = null;
-      FileContext fc = null;
-      try {
-        fc = FileContext.getFileContext(conf);
-        in = fc.open(fc.makeQualified(historyFilePath));
-      } catch (IOException ioe) {
-        LOG.info("Can not open history file: " + historyFilePath, ioe);
-        throw (new Exception("Can not open History File"));
+        parser = new JobHistoryParser(in);
+        jobInfo = parser.parse();
       }
-
-      JobHistoryParser parser = new JobHistoryParser(in);
-      JobInfo jobInfo = parser.parse();
       Exception parseException = parser.getParseException();
       Assert.assertNull("Caught an expected exception " + parseException,
           parseException);
@@ -601,7 +600,7 @@ public class TestJobHistoryParsing {
   }
 
   /**
-   * test clean old history files. Files should be deleted after 1 week by
+   * Test clean old history files. Files should be deleted after 1 week by
    * default.
    */
   @Test(timeout = 15000)
@@ -609,6 +608,7 @@ public class TestJobHistoryParsing {
     LOG.info("STARTING testDeleteFileInfo");
     try {
       Configuration conf = new Configuration();
+
       conf.setClass(
           CommonConfigurationKeysPublic.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
           MyResolver.class, DNSToSwitchMapping.class);
@@ -624,6 +624,7 @@ public class TestJobHistoryParsing {
 
       // make sure all events are flushed
       app.waitForState(Service.STATE.STOPPED);
+
       HistoryFileManager hfm = new HistoryFileManager();
       hfm.init(conf);
       HistoryFileInfo fileInfo = hfm.getFileInfo(jobId);
@@ -672,6 +673,8 @@ public class TestJobHistoryParsing {
           true);
       app.submit(configuration);
       Job job = app.getContext().getAllJobs().values().iterator().next();
+      JobId jobId = job.getID();
+      LOG.info("JOBID is " + TypeConverter.fromYarn(jobId).toString());
       app.waitForState(job, JobState.SUCCEEDED);
 
       JobHistory jobHistory = new JobHistory();
@@ -714,7 +717,8 @@ public class TestJobHistoryParsing {
     JobIndexInfo jii = new JobIndexInfo(0L, System.currentTimeMillis(), "user",
         "jobName", jobId, 3, 2, "JobStatus");
     PartialJob test = new PartialJob(jii, jobId);
-    assertEquals(1.0f, test.getProgress(), 0.001);
+    
+    Assert.assertEquals(1.0f, test.getProgress(), 0.001f);
     assertNull(test.getAllCounters());
     assertNull(test.getTasks());
     assertNull(test.getTasks(TaskType.MAP));

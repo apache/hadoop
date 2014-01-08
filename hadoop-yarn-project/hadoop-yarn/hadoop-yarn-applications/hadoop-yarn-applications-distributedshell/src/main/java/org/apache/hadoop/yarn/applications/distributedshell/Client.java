@@ -30,20 +30,26 @@ import java.util.Vector;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
@@ -134,7 +140,7 @@ public class Client {
   // Location of shell script 
   private String shellScriptPath = ""; 
   // Args to be passed to the shell command
-  private String shellArgs = "";
+  private String[] shellArgs = new String[] {};
   // Env variables to be setup for the shell command 
   private Map<String, String> shellEnv = new HashMap<String, String>();
   // Shell Command Container priority 
@@ -161,6 +167,15 @@ public class Client {
 
   // Command line options
   private Options opts;
+
+  private static final String shellCommandPath = "shellCommands";
+  private static final String shellArgsPath = "shellArgs";
+  private static final String appMasterJarPath = "AppMaster.jar";
+  // Hardcoded path to custom log_properties
+  private static final String log4jPath = "log4j.properties";
+
+  private static final String linuxShellPath = "ExecShellScript.sh";
+  private static final String windowBatPath = "ExecBatScript.bat";
 
   /**
    * @param args Command line arguments 
@@ -214,9 +229,14 @@ public class Client {
     opts.addOption("master_memory", true, "Amount of memory in MB to be requested to run the application master");
     opts.addOption("master_vcores", true, "Amount of virtual cores to be requested to run the application master");
     opts.addOption("jar", true, "Jar file containing the application master");
-    opts.addOption("shell_command", true, "Shell command to be executed by the Application Master");
-    opts.addOption("shell_script", true, "Location of the shell script to be executed");
-    opts.addOption("shell_args", true, "Command line args for the shell script");
+    opts.addOption("shell_command", true, "Shell command to be executed by " +
+        "the Application Master. Can only specify either --shell_command " +
+        "or --shell_script");
+    opts.addOption("shell_script", true, "Location of the shell script to be " +
+        "executed. Can only specify either --shell_command or --shell_script");
+    opts.addOption("shell_args", true, "Command line args for the shell script." +
+        "Multiple args can be separated by empty space.");
+    opts.getOption("shell_args").setArgs(Option.UNLIMITED_VALUES);
     opts.addOption("shell_env", true, "Environment for shell script. Specified as env_key=env_val pairs");
     opts.addOption("shell_cmd_priority", true, "Priority for the shell command containers");
     opts.addOption("container_memory", true, "Amount of memory in MB to be requested to run the shell command");
@@ -253,7 +273,16 @@ public class Client {
 
     if (args.length == 0) {
       throw new IllegalArgumentException("No args specified for client to initialize");
-    }		
+    }
+
+    if (cliParser.hasOption("log_properties")) {
+      String log4jPath = cliParser.getOptionValue("log_properties");
+      try {
+        Log4jPropertyHelper.updateLog4jConfiguration(Client.class, log4jPath);
+      } catch (Exception e) {
+        LOG.warn("Can not set up custom log4j properties. " + e);
+      }
+    }
 
     if (cliParser.hasOption("help")) {
       printUsage();
@@ -286,16 +315,19 @@ public class Client {
 
     appMasterJar = cliParser.getOptionValue("jar");
 
-    if (!cliParser.hasOption("shell_command")) {
-      throw new IllegalArgumentException("No shell command specified to be executed by application master");
-    }
-    shellCommand = cliParser.getOptionValue("shell_command");
-
-    if (cliParser.hasOption("shell_script")) {
+    if (!cliParser.hasOption("shell_command") && !cliParser.hasOption("shell_script")) {
+      throw new IllegalArgumentException(
+          "No shell command or shell script specified to be executed by application master");
+    } else if (cliParser.hasOption("shell_command") && cliParser.hasOption("shell_script")) {
+      throw new IllegalArgumentException("Can not specify shell_command option " +
+          "and shell_script option at the same time");
+    } else if (cliParser.hasOption("shell_command")) {
+      shellCommand = cliParser.getOptionValue("shell_command");
+    } else {
       shellScriptPath = cliParser.getOptionValue("shell_script");
     }
     if (cliParser.hasOption("shell_args")) {
-      shellArgs = cliParser.getOptionValue("shell_args");
+      shellArgs = cliParser.getOptionValues("shell_args");
     }
     if (cliParser.hasOption("shell_env")) { 
       String envs[] = cliParser.getOptionValues("shell_env");
@@ -424,43 +456,13 @@ public class Client {
     // Copy the application master jar to the filesystem 
     // Create a local resource to point to the destination jar path 
     FileSystem fs = FileSystem.get(conf);
-    Path src = new Path(appMasterJar);
-    String pathSuffix = appName + "/" + appId.getId() + "/AppMaster.jar";	    
-    Path dst = new Path(fs.getHomeDirectory(), pathSuffix);
-    fs.copyFromLocalFile(false, true, src, dst);
-    FileStatus destStatus = fs.getFileStatus(dst);
-    LocalResource amJarRsrc = Records.newRecord(LocalResource.class);
-
-    // Set the type of resource - file or archive
-    // archives are untarred at destination
-    // we don't need the jar file to be untarred for now
-    amJarRsrc.setType(LocalResourceType.FILE);
-    // Set visibility of the resource 
-    // Setting to most private option
-    amJarRsrc.setVisibility(LocalResourceVisibility.APPLICATION);	   
-    // Set the resource to be copied over
-    amJarRsrc.setResource(ConverterUtils.getYarnUrlFromPath(dst)); 
-    // Set timestamp and length of file so that the framework 
-    // can do basic sanity checks for the local resource 
-    // after it has been copied over to ensure it is the same 
-    // resource the client intended to use with the application
-    amJarRsrc.setTimestamp(destStatus.getModificationTime());
-    amJarRsrc.setSize(destStatus.getLen());
-    localResources.put("AppMaster.jar",  amJarRsrc);
+    addToLocalResources(fs, appMasterJar, appMasterJarPath, appId.getId(),
+        localResources, null);
 
     // Set the log4j properties if needed 
     if (!log4jPropFile.isEmpty()) {
-      Path log4jSrc = new Path(log4jPropFile);
-      Path log4jDst = new Path(fs.getHomeDirectory(), "log4j.props");
-      fs.copyFromLocalFile(false, true, log4jSrc, log4jDst);
-      FileStatus log4jFileStatus = fs.getFileStatus(log4jDst);
-      LocalResource log4jRsrc = Records.newRecord(LocalResource.class);
-      log4jRsrc.setType(LocalResourceType.FILE);
-      log4jRsrc.setVisibility(LocalResourceVisibility.APPLICATION);	   
-      log4jRsrc.setResource(ConverterUtils.getYarnUrlFromURI(log4jDst.toUri()));
-      log4jRsrc.setTimestamp(log4jFileStatus.getModificationTime());
-      log4jRsrc.setSize(log4jFileStatus.getLen());
-      localResources.put("log4j.properties", log4jRsrc);
+      addToLocalResources(fs, log4jPropFile, log4jPath, appId.getId(),
+          localResources, null);
     }			
 
     // The shell script has to be made available on the final container(s)
@@ -474,8 +476,11 @@ public class Client {
     long hdfsShellScriptTimestamp = 0;
     if (!shellScriptPath.isEmpty()) {
       Path shellSrc = new Path(shellScriptPath);
-      String shellPathSuffix = appName + "/" + appId.getId() + "/ExecShellScript.sh";
-      Path shellDst = new Path(fs.getHomeDirectory(), shellPathSuffix);
+      String shellPathSuffix =
+          appName + "/" + appId.getId() + "/"
+              + (Shell.WINDOWS ? windowBatPath : linuxShellPath);
+      Path shellDst =
+          new Path(fs.getHomeDirectory(), shellPathSuffix);
       fs.copyFromLocalFile(false, true, shellSrc, shellDst);
       hdfsShellScriptLocation = shellDst.toUri().toString(); 
       FileStatus shellFileStatus = fs.getFileStatus(shellDst);
@@ -483,6 +488,15 @@ public class Client {
       hdfsShellScriptTimestamp = shellFileStatus.getModificationTime();
     }
 
+    if (!shellCommand.isEmpty()) {
+      addToLocalResources(fs, null, shellCommandPath, appId.getId(),
+          localResources, shellCommand);
+    }
+
+    if (shellArgs.length > 0) {
+      addToLocalResources(fs, null, shellArgsPath, appId.getId(),
+          localResources, StringUtils.join(shellArgs, " "));
+    }
     // Set local resource info into app master container launch context
     amContainer.setLocalResources(localResources);
 
@@ -541,12 +555,7 @@ public class Client {
     vargs.add("--container_vcores " + String.valueOf(containerVirtualCores));
     vargs.add("--num_containers " + String.valueOf(numContainers));
     vargs.add("--priority " + String.valueOf(shellCmdPriority));
-    if (!shellCommand.isEmpty()) {
-      vargs.add("--shell_command " + shellCommand + "");
-    }
-    if (!shellArgs.isEmpty()) {
-      vargs.add("--shell_args " + shellArgs + "");
-    }
+
     for (Map.Entry<String, String> entry : shellEnv.entrySet()) {
       vargs.add("--shell_env " + entry.getKey() + "=" + entry.getValue());
     }			
@@ -715,4 +724,31 @@ public class Client {
     yarnClient.killApplication(appId);	
   }
 
+  private void addToLocalResources(FileSystem fs, String fileSrcPath,
+      String fileDstPath, int appId, Map<String, LocalResource> localResources,
+      String resources) throws IOException {
+    String suffix =
+        appName + "/" + appId + "/" + fileDstPath;
+    Path dst =
+        new Path(fs.getHomeDirectory(), suffix);
+    if (fileSrcPath == null) {
+      FSDataOutputStream ostream = null;
+      try {
+        ostream = FileSystem
+            .create(fs, dst, new FsPermission((short) 0710));
+        ostream.writeUTF(resources);
+      } finally {
+        IOUtils.closeQuietly(ostream);
+      }
+    } else {
+      fs.copyFromLocalFile(new Path(fileSrcPath), dst);
+    }
+    FileStatus scFileStatus = fs.getFileStatus(dst);
+    LocalResource scRsrc =
+        LocalResource.newInstance(
+            ConverterUtils.getYarnUrlFromURI(dst.toUri()),
+            LocalResourceType.FILE, LocalResourceVisibility.APPLICATION,
+            scFileStatus.getLen(), scFileStatus.getModificationTime());
+    localResources.put(fileDstPath, scRsrc);
+  }
 }

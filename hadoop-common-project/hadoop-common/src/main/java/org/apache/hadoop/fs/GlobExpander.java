@@ -39,12 +39,26 @@ class GlobExpander {
   }
   
   /**
-   * Expand globs in the given <code>filePattern</code> into a collection of 
-   * file patterns so that in the expanded set no file pattern has a
-   * slash character ("/") in a curly bracket pair.
+   * Expand globs in the given <code>filePattern</code> into a collection of
+   * file patterns so that in the expanded set no file pattern has a slash
+   * character ("/") in a curly bracket pair.
+   * <p>
+   * Some examples of how the filePattern is expanded:<br>
+   * <pre>
+   * <b>
+   * filePattern         - Expanded file pattern </b>
+   * {a/b}               - a/b
+   * /}{a/b}             - /}a/b
+   * p{a/b,c/d}s         - pa/bs, pc/ds
+   * {a/b,c/d,{e,f}}     - a/b, c/d, {e,f}
+   * {a/b,c/d}{e,f}      - a/b{e,f}, c/d{e,f}
+   * {a,b}/{b,{c/d,e/f}} - {a,b}/b, {a,b}/c/d, {a,b}/e/f
+   * {a,b}/{c/\d}        - {a,b}/c/d
+   * </pre>
+   * 
    * @param filePattern
    * @return expanded file patterns
-   * @throws IOException 
+   * @throws IOException
    */
   public static List<String> expand(String filePattern) throws IOException {
     List<String> fullyExpanded = new ArrayList<String>();
@@ -65,7 +79,7 @@ class GlobExpander {
   /**
    * Expand the leftmost outer curly bracket pair containing a
    * slash character ("/") in <code>filePattern</code>.
-   * @param filePattern
+   * @param filePatternWithOffset
    * @return expanded file patterns
    * @throws IOException 
    */

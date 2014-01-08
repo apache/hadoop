@@ -18,7 +18,8 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
 import java.io.File;
-import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -52,6 +53,11 @@ public class FairSchedulerConfiguration extends Configuration {
 
   public static final String ALLOCATION_FILE = CONF_PREFIX + "allocation.file";
   protected static final String DEFAULT_ALLOCATION_FILE = "fair-scheduler.xml";
+  
+  /** Whether to enable the Fair Scheduler event log */
+  public static final String EVENT_LOG_ENABLED = CONF_PREFIX + "event-log-enabled";
+  public static final boolean DEFAULT_EVENT_LOG_ENABLED = false;
+
   protected static final String EVENT_LOG_DIR = "eventlog.dir";
 
   /** Whether pools can be created that were not specified in the FS configuration file
@@ -151,14 +157,6 @@ public class FairSchedulerConfiguration extends Configuration {
     return Resources.createResource(incrementMemory, incrementCores);
   }
   
-  public boolean getAllowUndeclaredPools() {
-    return getBoolean(ALLOW_UNDECLARED_POOLS, DEFAULT_ALLOW_UNDECLARED_POOLS);
-  }
-
-  public boolean getUserAsDefaultQueue() {
-    return getBoolean(USER_AS_DEFAULT_QUEUE, DEFAULT_USER_AS_DEFAULT_QUEUE);
-  }
-
   public float getLocalityThresholdNode() {
     return getFloat(LOCALITY_THRESHOLD_NODE, DEFAULT_LOCALITY_THRESHOLD_NODE);
   }
@@ -199,30 +197,10 @@ public class FairSchedulerConfiguration extends Configuration {
     return getBoolean(SIZE_BASED_WEIGHT, DEFAULT_SIZE_BASED_WEIGHT);
   }
 
-  /**
-   * Path to XML file containing allocations. If the
-   * path is relative, it is searched for in the
-   * classpath, but loaded like a regular File.
-   */
-  public File getAllocationFile() {
-    String allocFilePath = get(ALLOCATION_FILE, DEFAULT_ALLOCATION_FILE);
-    File allocFile = new File(allocFilePath);
-    if (!allocFile.isAbsolute()) {
-      URL url = Thread.currentThread().getContextClassLoader()
-          .getResource(allocFilePath);
-      if (url == null) {
-        LOG.warn(allocFilePath + " not found on the classpath.");
-        allocFile = null;
-      } else if (!url.getProtocol().equalsIgnoreCase("file")) {
-        throw new RuntimeException("Allocation file " + url
-            + " found on the classpath is not on the local filesystem.");
-      } else {
-        allocFile = new File(url.getPath());
-      }
-    }
-    return allocFile;
+  public boolean isEventLogEnabled() {
+    return getBoolean(EVENT_LOG_ENABLED, DEFAULT_EVENT_LOG_ENABLED);
   }
-
+  
   public String getEventlogDir() {
     return get(EVENT_LOG_DIR, new File(System.getProperty("hadoop.log.dir",
     		"/tmp/")).getAbsolutePath() + File.separator + "fairscheduler");

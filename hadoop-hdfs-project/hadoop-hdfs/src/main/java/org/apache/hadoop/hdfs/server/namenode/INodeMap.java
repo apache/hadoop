@@ -23,7 +23,6 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.namenode.Quota.Counts;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.util.GSet;
 import org.apache.hadoop.util.LightWeightGSet;
 
@@ -89,7 +88,7 @@ public class INodeMap {
         "", "", new FsPermission((short) 0)), 0, 0) {
       
       @Override
-      INode recordModification(Snapshot latest, INodeMap inodeMap)
+      INode recordModification(int latestSnapshotId)
           throws QuotaExceededException {
         return null;
       }
@@ -107,12 +106,13 @@ public class INodeMap {
       }
       
       @Override
-      public Content.Counts computeContentSummary(Content.Counts counts) {
+      public ContentSummaryComputationContext computeContentSummary(
+          ContentSummaryComputationContext summary) {
         return null;
       }
       
       @Override
-      public Counts cleanSubtree(Snapshot snapshot, Snapshot prior,
+      public Counts cleanSubtree(int snapshotId, int priorSnapshotId,
           BlocksMapUpdateInfo collectedBlocks, List<INode> removedINodes,
           boolean countDiffChange) throws QuotaExceededException {
         return null;

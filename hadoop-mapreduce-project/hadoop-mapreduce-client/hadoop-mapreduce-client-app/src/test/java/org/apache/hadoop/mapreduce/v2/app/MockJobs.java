@@ -155,6 +155,7 @@ public class MockJobs extends MockApps {
   public static JobReport newJobReport(JobId id) {
     JobReport report = Records.newRecord(JobReport.class);
     report.setJobId(id);
+    report.setSubmitTime(System.currentTimeMillis()-DT);
     report
         .setStartTime(System.currentTimeMillis() - (int) (Math.random() * DT));
     report.setFinishTime(System.currentTimeMillis()
@@ -173,22 +174,37 @@ public class MockJobs extends MockApps {
     report.setFinishTime(System.currentTimeMillis()
         + (int) (Math.random() * DT) + 1);
     report.setProgress((float) Math.random());
+    report.setStatus("Moving average: " + Math.random());
     report.setCounters(TypeConverter.toYarn(newCounters()));
     report.setTaskState(TASK_STATES.next());
     return report;
   }
 
   public static TaskAttemptReport newTaskAttemptReport(TaskAttemptId id) {
+    ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(
+        id.getTaskId().getJobId().getAppId(), 0);
+    ContainerId containerId = ContainerId.newInstance(appAttemptId, 0);
     TaskAttemptReport report = Records.newRecord(TaskAttemptReport.class);
     report.setTaskAttemptId(id);
     report
         .setStartTime(System.currentTimeMillis() - (int) (Math.random() * DT));
     report.setFinishTime(System.currentTimeMillis()
         + (int) (Math.random() * DT) + 1);
+
+    if (id.getTaskId().getTaskType() == TaskType.REDUCE) {
+      report.setShuffleFinishTime(
+          (report.getFinishTime() + report.getStartTime()) / 2);
+      report.setSortFinishTime(
+          (report.getFinishTime() + report.getShuffleFinishTime()) / 2);
+    }
+
     report.setPhase(PHASES.next());
     report.setTaskAttemptState(TASK_ATTEMPT_STATES.next());
     report.setProgress((float) Math.random());
     report.setCounters(TypeConverter.toYarn(newCounters()));
+    report.setContainerId(containerId);
+    report.setDiagnosticInfo(DIAGS.next());
+    report.setStateString("Moving average " + Math.random());
     return report;
   }
 
@@ -229,8 +245,6 @@ public class MockJobs extends MockApps {
     taid.setTaskId(tid);
     taid.setId(i);
     final TaskAttemptReport report = newTaskAttemptReport(taid);
-    final List<String> diags = Lists.newArrayList();
-    diags.add(DIAGS.next());
     return new TaskAttempt() {
       @Override
       public NodeId getNodeId() throws UnsupportedOperationException{
@@ -249,12 +263,12 @@ public class MockJobs extends MockApps {
 
       @Override
       public long getLaunchTime() {
-        return 0;
+        return report.getStartTime();
       }
 
       @Override
       public long getFinishTime() {
-        return 0;
+        return report.getFinishTime();
       }
 
       @Override
@@ -312,7 +326,7 @@ public class MockJobs extends MockApps {
 
       @Override
       public List<String> getDiagnostics() {
-        return diags;
+        return Lists.newArrayList(report.getDiagnosticInfo());
       }
 
       @Override
@@ -322,12 +336,12 @@ public class MockJobs extends MockApps {
 
       @Override
       public long getShuffleFinishTime() {
-        return 0;
+        return report.getShuffleFinishTime();
       }
 
       @Override
       public long getSortFinishTime() {
-        return 0;
+        return report.getSortFinishTime();
       }
 
       @Override
