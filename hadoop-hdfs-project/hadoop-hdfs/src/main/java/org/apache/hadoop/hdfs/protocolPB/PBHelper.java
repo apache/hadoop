@@ -1559,13 +1559,17 @@ public class PBHelper {
     StorageReportProto.Builder builder = StorageReportProto.newBuilder()
         .setBlockPoolUsed(r.getBlockPoolUsed()).setCapacity(r.getCapacity())
         .setDfsUsed(r.getDfsUsed()).setRemaining(r.getRemaining())
-        .setStorageUuid(r.getStorageID());
+        .setStorageUuid(r.getStorage().getStorageID())
+        .setStorage(convert(r.getStorage()));
     return builder.build();
   }
 
   public static StorageReport convert(StorageReportProto p) {
-    return new StorageReport(p.getStorageUuid(), p.getFailed(),
-        p.getCapacity(), p.getDfsUsed(), p.getRemaining(),
+    return new StorageReport(
+        p.hasStorage() ?
+            convert(p.getStorage()) :
+            new DatanodeStorage(p.getStorageUuid()),
+        p.getFailed(), p.getCapacity(), p.getDfsUsed(), p.getRemaining(),
         p.getBlockPoolUsed());
   }
 

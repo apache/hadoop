@@ -78,22 +78,22 @@ public class FileWithSnapshotFeature implements INode.Feature {
     return (isCurrentFileDeleted()? "(DELETED), ": ", ") + diffs;
   }
   
-  public Quota.Counts cleanFile(final INodeFile file, final Snapshot snapshot,
-      Snapshot prior, final BlocksMapUpdateInfo collectedBlocks,
+  public Quota.Counts cleanFile(final INodeFile file, final int snapshotId,
+      int priorSnapshotId, final BlocksMapUpdateInfo collectedBlocks,
       final List<INode> removedINodes, final boolean countDiffChange)
       throws QuotaExceededException {
-    if (snapshot == null) {
+    if (snapshotId == Snapshot.CURRENT_STATE_ID) {
       // delete the current file while the file has snapshot feature
       if (!isCurrentFileDeleted()) {
-        file.recordModification(prior);
+        file.recordModification(priorSnapshotId);
         deleteCurrentFile();
       }
       collectBlocksAndClear(file, collectedBlocks, removedINodes);
       return Quota.Counts.newInstance();
     } else { // delete the snapshot
-      prior = getDiffs().updatePrior(snapshot, prior);
-      return diffs.deleteSnapshotDiff(snapshot, prior, file, collectedBlocks,
-          removedINodes, countDiffChange);
+      priorSnapshotId = getDiffs().updatePrior(snapshotId, priorSnapshotId);
+      return diffs.deleteSnapshotDiff(snapshotId, priorSnapshotId, file,
+          collectedBlocks, removedINodes, countDiffChange);
     }
   }
   

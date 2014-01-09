@@ -394,8 +394,9 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
     }
 
     synchronized StorageReport getStorageReport(String bpid) {
-      return new StorageReport(getStorageUuid(), false, getCapacity(),
-          getUsed(), getFree(), map.get(bpid).getUsed());
+      return new StorageReport(new DatanodeStorage(getStorageUuid()),
+          false, getCapacity(), getUsed(), getFree(),
+          map.get(bpid).getUsed());
     }
   }
   

@@ -225,30 +225,36 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
     private final int childrenSize;
     /** The children list diff. */
     private final ChildrenDiff diff;
+    private boolean isSnapshotRoot = false;
+    
+    private DirectoryDiff(int snapshotId, INodeDirectory dir) {
+      super(snapshotId, null, null);
 
-    private DirectoryDiff(Snapshot snapshot, INodeDirectory dir) {
-      super(snapshot, null, null);
-
-      this.childrenSize = dir.getChildrenList(null).size();
+      this.childrenSize = dir.getChildrenList(Snapshot.CURRENT_STATE_ID).size();
       this.diff = new ChildrenDiff();
     }
 
     /** Constructor used by FSImage loading */
-    DirectoryDiff(Snapshot snapshot, INodeDirectoryAttributes snapshotINode,
-        DirectoryDiff posteriorDiff, int childrenSize,
-        List<INode> createdList, List<INode> deletedList) {
-      super(snapshot, snapshotINode, posteriorDiff);
+    DirectoryDiff(int snapshotId, INodeDirectoryAttributes snapshotINode,
+        DirectoryDiff posteriorDiff, int childrenSize, List<INode> createdList,
+        List<INode> deletedList, boolean isSnapshotRoot) {
+      super(snapshotId, snapshotINode, posteriorDiff);
       this.childrenSize = childrenSize;
       this.diff = new ChildrenDiff(createdList, deletedList);
+      this.isSnapshotRoot = isSnapshotRoot;
     }
 
     ChildrenDiff getChildrenDiff() {
       return diff;
     }
-
-    /** Is the inode the root of the snapshot? */
+    
+    void setSnapshotRoot(INodeDirectoryAttributes root) {
+      this.snapshotINode = root;
+      this.isSnapshotRoot = true;
+    }
+    
     boolean isSnapshotRoot() {
-      return snapshotINode == snapshot.getRoot();
+      return isSnapshotRoot;
     }
 
     @Override
@@ -287,7 +293,7 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
               combined.combinePosterior(d.diff, null);
             }
             children = combined.apply2Current(ReadOnlyList.Util.asList(
-                currentDir.getChildrenList(null)));
+                currentDir.getChildrenList(Snapshot.CURRENT_STATE_ID)));
           }
           return children;
         }
@@ -327,7 +333,7 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
           return null;
         } else if (d.getPosterior() == null) {
           // no more posterior diff, get from current inode.
-          return currentDir.getChild(name, null);
+          return currentDir.getChild(name, Snapshot.CURRENT_STATE_ID);
         }
       }
     }
@@ -342,11 +348,9 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
       writeSnapshot(out);
       out.writeInt(childrenSize);
 
-      // write snapshotINode
-      if (isSnapshotRoot()) {
-        out.writeBoolean(true);
-      } else {
-        out.writeBoolean(false);
+      // Write snapshotINode
+      out.writeBoolean(isSnapshotRoot);
+      if (!isSnapshotRoot) {
         if (snapshotINode != null) {
           out.writeBoolean(true);
           FSImageSerialization.writeINodeDirectoryAttributes(snapshotINode, out);
@@ -373,7 +377,7 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
       extends AbstractINodeDiffList<INodeDirectory, INodeDirectoryAttributes, DirectoryDiff> {
 
     @Override
-    DirectoryDiff createDiff(Snapshot snapshot, INodeDirectory currentDir) {
+    DirectoryDiff createDiff(int snapshot, INodeDirectory currentDir) {
       return new DirectoryDiff(snapshot, currentDir);
     }
 
@@ -424,12 +428,13 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
   /**
    * Destroy a subtree under a DstReference node.
    */
-  public static void destroyDstSubtree(INode inode, final Snapshot snapshot,
-      final Snapshot prior, final BlocksMapUpdateInfo collectedBlocks,
+  public static void destroyDstSubtree(INode inode, final int snapshot,
+      final int prior, final BlocksMapUpdateInfo collectedBlocks,
       final List<INode> removedINodes) throws QuotaExceededException {
-    Preconditions.checkArgument(prior != null);
+    Preconditions.checkArgument(prior != Snapshot.NO_SNAPSHOT_ID);
     if (inode.isReference()) {
-      if (inode instanceof INodeReference.WithName && snapshot != null) {
+      if (inode instanceof INodeReference.WithName
+          && snapshot != Snapshot.CURRENT_STATE_ID) {
         // this inode has been renamed before the deletion of the DstReference
         // subtree
         inode.cleanSubtree(snapshot, prior, collectedBlocks, removedINodes,
@@ -447,18 +452,18 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
       DirectoryWithSnapshotFeature sf = dir.getDirectoryWithSnapshotFeature();
       if (sf != null) {
         DirectoryDiffList diffList = sf.getDiffs();
-        DirectoryDiff priorDiff = diffList.getDiff(prior);
-        if (priorDiff != null && priorDiff.getSnapshot().equals(prior)) {
+        DirectoryDiff priorDiff = diffList.getDiffById(prior);
+        if (priorDiff != null && priorDiff.getSnapshotId() == prior) {
           List<INode> dList = priorDiff.diff.getList(ListType.DELETED);
           excludedNodes = cloneDiffList(dList);
         }
         
-        if (snapshot != null) {
+        if (snapshot != Snapshot.CURRENT_STATE_ID) {
           diffList.deleteSnapshotDiff(snapshot, prior, dir, collectedBlocks,
               removedINodes, true);
         }
-        priorDiff = diffList.getDiff(prior);
-        if (priorDiff != null && priorDiff.getSnapshot().equals(prior)) {
+        priorDiff = diffList.getDiffById(prior);
+        if (priorDiff != null && priorDiff.getSnapshotId() == prior) {
           priorDiff.diff.destroyCreatedList(dir, collectedBlocks,
               removedINodes);
         }
@@ -478,14 +483,14 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
    * deleted list of prior.
    * @param inode The inode to clean.
    * @param post The post snapshot.
-   * @param prior The prior snapshot.
+   * @param prior The id of the prior snapshot.
    * @param collectedBlocks Used to collect blocks for later deletion.
    * @return Quota usage update.
    */
   private static Quota.Counts cleanDeletedINode(INode inode,
-      final Snapshot post, final Snapshot prior,
+      final int post, final int prior,
       final BlocksMapUpdateInfo collectedBlocks,
-      final List<INode> removedINodes, final boolean countDiffChange) 
+      final List<INode> removedINodes, final boolean countDiffChange)
       throws QuotaExceededException {
     Quota.Counts counts = Quota.Counts.newInstance();
     Deque<INode> queue = new ArrayDeque<INode>();
@@ -494,7 +499,7 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
       INode topNode = queue.pollFirst();
       if (topNode instanceof INodeReference.WithName) {
         INodeReference.WithName wn = (INodeReference.WithName) topNode;
-        if (wn.getLastSnapshotId() >= post.getId()) {
+        if (wn.getLastSnapshotId() >= post) {
           wn.cleanSubtree(post, prior, collectedBlocks, removedINodes,
               countDiffChange);
         }
@@ -511,8 +516,8 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
         if (sf != null) {
           // delete files/dirs created after prior. Note that these
           // files/dirs, along with inode, were deleted right after post.
-          DirectoryDiff priorDiff = sf.getDiffs().getDiff(prior);
-          if (priorDiff != null && priorDiff.getSnapshot().equals(prior)) {
+          DirectoryDiff priorDiff = sf.getDiffs().getDiffById(prior);
+          if (priorDiff != null && priorDiff.getSnapshotId() == prior) {
             priorChildrenDiff = priorDiff.getChildrenDiff();
             counts.add(priorChildrenDiff.destroyCreatedList(dir,
                 collectedBlocks, removedINodes));
@@ -540,8 +545,8 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
   }
 
   /** @return the last snapshot. */
-  public Snapshot getLastSnapshot() {
-    return diffs.getLastSnapshot();
+  public int getLastSnapshotId() {
+    return diffs.getLastSnapshotId();
   }
 
   /** @return the snapshot diff list. */
@@ -565,11 +570,13 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
    * to make sure that parent is in the given snapshot "latest".
    */
   public boolean addChild(INodeDirectory parent, INode inode,
-      boolean setModTime, Snapshot latest) throws QuotaExceededException {
-    ChildrenDiff diff = diffs.checkAndAddLatestSnapshotDiff(latest, parent).diff;
+      boolean setModTime, int latestSnapshotId) throws QuotaExceededException {
+    ChildrenDiff diff = diffs.checkAndAddLatestSnapshotDiff(latestSnapshotId,
+        parent).diff;
     int undoInfo = diff.create(inode);
 
-    final boolean added = parent.addChild(inode, setModTime, null);
+    final boolean added = parent.addChild(inode, setModTime,
+        Snapshot.CURRENT_STATE_ID);
     if (!added) {
       diff.undoCreate(inode, undoInfo);
     }
@@ -581,7 +588,7 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
    * needs to make sure that parent is in the given snapshot "latest".
    */
   public boolean removeChild(INodeDirectory parent, INode child,
-      Snapshot latest) throws QuotaExceededException {
+      int latestSnapshotId) throws QuotaExceededException {
     // For a directory that is not a renamed node, if isInLatestSnapshot returns
     // false, the directory is not in the latest snapshot, thus we do not need
     // to record the removed child in any snapshot.
@@ -593,7 +600,8 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
     // directory node cannot be in any snapshot (not in current tree, nor in
     // previous src tree). Thus we do not need to record the removed child in
     // any snapshot.
-    ChildrenDiff diff = diffs.checkAndAddLatestSnapshotDiff(latest, parent).diff;
+    ChildrenDiff diff = diffs.checkAndAddLatestSnapshotDiff(latestSnapshotId,
+        parent).diff;
     UndoInfo<INode> undoInfo = diff.delete(child);
 
     final boolean removed = parent.removeChild(child);
@@ -611,29 +619,29 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
    *         for the snapshot and return it. 
    */
   public ReadOnlyList<INode> getChildrenList(INodeDirectory currentINode,
-      final Snapshot snapshot) {
-    final DirectoryDiff diff = diffs.getDiff(snapshot);
+      final int snapshotId) {
+    final DirectoryDiff diff = diffs.getDiffById(snapshotId);
     return diff != null ? diff.getChildrenList(currentINode) : currentINode
-        .getChildrenList(null);
+        .getChildrenList(Snapshot.CURRENT_STATE_ID);
   }
   
   public INode getChild(INodeDirectory currentINode, byte[] name,
-      Snapshot snapshot) {
-    final DirectoryDiff diff = diffs.getDiff(snapshot);
+      int snapshotId) {
+    final DirectoryDiff diff = diffs.getDiffById(snapshotId);
     return diff != null ? diff.getChild(name, true, currentINode)
-        : currentINode.getChild(name, null);
+        : currentINode.getChild(name, Snapshot.CURRENT_STATE_ID);
   }
   
   /** Used to record the modification of a symlink node */
   public INode saveChild2Snapshot(INodeDirectory currentINode,
-      final INode child, final Snapshot latest, final INode snapshotCopy)
+      final INode child, final int latestSnapshotId, final INode snapshotCopy)
       throws QuotaExceededException {
     Preconditions.checkArgument(!child.isDirectory(),
         "child is a directory, child=%s", child);
-    Preconditions.checkArgument(latest != null);
+    Preconditions.checkArgument(latestSnapshotId != Snapshot.CURRENT_STATE_ID);
     
-    final DirectoryDiff diff = diffs.checkAndAddLatestSnapshotDiff(latest,
-        currentINode);
+    final DirectoryDiff diff = diffs.checkAndAddLatestSnapshotDiff(
+        latestSnapshotId, currentINode);
     if (diff.getChild(child.getLocalNameBytes(), false, currentINode) != null) {
       // it was already saved in the latest snapshot earlier.  
       return child;
@@ -656,7 +664,7 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
   public Quota.Counts computeQuotaUsage4CurrentDirectory(Quota.Counts counts) {
     for(DirectoryDiff d : diffs) {
       for(INode deleted : d.getChildrenDiff().getList(ListType.DELETED)) {
-        deleted.computeQuotaUsage(counts, false, Snapshot.INVALID_ID);
+        deleted.computeQuotaUsage(counts, false, Snapshot.CURRENT_STATE_ID);
       }
     }
     counts.add(Quota.NAMESPACE, diffs.asList().size());
@@ -744,14 +752,14 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
   }
 
   public Quota.Counts cleanDirectory(final INodeDirectory currentINode,
-      final Snapshot snapshot, Snapshot prior,
+      final int snapshot, int prior,
       final BlocksMapUpdateInfo collectedBlocks,
       final List<INode> removedINodes, final boolean countDiffChange)
       throws QuotaExceededException {
     Quota.Counts counts = Quota.Counts.newInstance();
     Map<INode, INode> priorCreated = null;
     Map<INode, INode> priorDeleted = null;
-    if (snapshot == null) { // delete the current directory
+    if (snapshot == Snapshot.CURRENT_STATE_ID) { // delete the current directory
       currentINode.recordModification(prior);
       // delete everything in created list
       DirectoryDiff lastDiff = diffs.getLast();
@@ -764,9 +772,9 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
       prior = getDiffs().updatePrior(snapshot, prior);
       // if there is a snapshot diff associated with prior, we need to record
       // its original created and deleted list before deleting post
-      if (prior != null) {
-        DirectoryDiff priorDiff = this.getDiffs().getDiff(prior);
-        if (priorDiff != null && priorDiff.getSnapshot().equals(prior)) {
+      if (prior != Snapshot.NO_SNAPSHOT_ID) {
+        DirectoryDiff priorDiff = this.getDiffs().getDiffById(prior);
+        if (priorDiff != null && priorDiff.getSnapshotId() == prior) {
           List<INode> cList = priorDiff.diff.getList(ListType.CREATED);
           List<INode> dList = priorDiff.diff.getList(ListType.DELETED);
           priorCreated = cloneDiffList(cList);
@@ -774,13 +782,13 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
         }
       }
       
-      counts.add(getDiffs().deleteSnapshotDiff(snapshot, prior, currentINode, 
-          collectedBlocks, removedINodes, countDiffChange));
+      counts.add(getDiffs().deleteSnapshotDiff(snapshot, prior,
+          currentINode, collectedBlocks, removedINodes, countDiffChange));
       
       // check priorDiff again since it may be created during the diff deletion
-      if (prior != null) {
-        DirectoryDiff priorDiff = this.getDiffs().getDiff(prior);
-        if (priorDiff != null && priorDiff.getSnapshot().equals(prior)) {
+      if (prior != Snapshot.NO_SNAPSHOT_ID) {
+        DirectoryDiff priorDiff = this.getDiffs().getDiffById(prior);
+        if (priorDiff != null && priorDiff.getSnapshotId() == prior) {
           // For files/directories created between "prior" and "snapshot", 
           // we need to clear snapshot copies for "snapshot". Note that we must
           // use null as prior in the cleanSubtree call. Files/directories that
@@ -791,8 +799,8 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
             for (INode cNode : priorDiff.getChildrenDiff().getList(
                 ListType.CREATED)) {
               if (priorCreated.containsKey(cNode)) {
-                counts.add(cNode.cleanSubtree(snapshot, null, collectedBlocks,
-                    removedINodes, countDiffChange));
+                counts.add(cNode.cleanSubtree(snapshot, Snapshot.NO_SNAPSHOT_ID,
+                    collectedBlocks, removedINodes, countDiffChange));
               }
             }
           }

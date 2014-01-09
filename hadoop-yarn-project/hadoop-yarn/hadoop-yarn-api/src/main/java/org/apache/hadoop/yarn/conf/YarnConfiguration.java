@@ -59,7 +59,7 @@ public class YarnConfiguration extends Configuration {
   public static final String IPC_PREFIX = YARN_PREFIX + "ipc.";
 
   /** Factory to create client IPC classes.*/
-  public static final String IPC_CLIENT_FACTORY_CLASS = 
+  public static final String IPC_CLIENT_FACTORY_CLASS =
     IPC_PREFIX + "client.factory.class";
   public static final String DEFAULT_IPC_CLIENT_FACTORY_CLASS = 
       "org.apache.hadoop.yarn.factories.impl.pb.RpcClientFactoryPBImpl";
@@ -86,6 +86,8 @@ public class YarnConfiguration extends Configuration {
   // Resource Manager Configs
   ////////////////////////////////
   public static final String RM_PREFIX = "yarn.resourcemanager.";
+
+  public static final String RM_CLUSTER_ID = RM_PREFIX + "cluster-id";
 
   /** The address of the applications manager interface in the RM.*/
   public static final String RM_ADDRESS = 
@@ -278,6 +280,36 @@ public class YarnConfiguration extends Configuration {
   public static final String RECOVERY_ENABLED = RM_PREFIX + "recovery.enabled";
   public static final boolean DEFAULT_RM_RECOVERY_ENABLED = false;
 
+  /** Zookeeper interaction configs */
+  public static final String RM_ZK_PREFIX = RM_PREFIX + "zk-";
+
+  public static final String RM_ZK_ADDRESS = RM_ZK_PREFIX + "address";
+
+  public static final String RM_ZK_NUM_RETRIES = RM_ZK_PREFIX + "num-retries";
+  public static final int DEFAULT_ZK_RM_NUM_RETRIES = 500;
+
+  public static final String RM_ZK_RETRY_INTERVAL_MS =
+      RM_ZK_PREFIX + "retry-interval-ms";
+  public static final long DEFAULT_RM_ZK_RETRY_INTERVAL_MS = 2000;
+
+  public static final String RM_ZK_TIMEOUT_MS = RM_ZK_PREFIX + "timeout-ms";
+  public static final int DEFAULT_RM_ZK_TIMEOUT_MS = 10000;
+
+  public static final String RM_ZK_ACL = RM_ZK_PREFIX + "acl";
+  public static final String DEFAULT_RM_ZK_ACL = "world:anyone:rwcda";
+
+  public static final String ZK_STATE_STORE_PREFIX =
+      RM_PREFIX + "zk-state-store.";
+
+  /** Parent znode path under which ZKRMStateStore will create znodes */
+  public static final String ZK_RM_STATE_STORE_PARENT_PATH =
+      ZK_STATE_STORE_PREFIX + "parent-path";
+  public static final String DEFAULT_ZK_RM_STATE_STORE_PARENT_PATH = "/rmstore";
+
+  /** Root node ACLs for fencing */
+  public static final String ZK_RM_STATE_STORE_ROOT_NODE_ACL =
+      ZK_STATE_STORE_PREFIX + "root-node.acl";
+
   /** HA related configs */
   public static final String RM_HA_PREFIX = RM_PREFIX + "ha.";
   public static final String RM_HA_ENABLED = RM_HA_PREFIX + "enabled";
@@ -295,6 +327,22 @@ public class YarnConfiguration extends Configuration {
           RM_RESOURCE_TRACKER_ADDRESS,
           HttpConfig.isSecure() ? RM_WEBAPP_HTTPS_ADDRESS
               : RM_WEBAPP_ADDRESS));
+
+  public static final String AUTO_FAILOVER_PREFIX =
+      RM_HA_PREFIX + "automatic-failover.";
+
+  public static final String AUTO_FAILOVER_ENABLED =
+      AUTO_FAILOVER_PREFIX + "enabled";
+  public static final boolean DEFAULT_AUTO_FAILOVER_ENABLED = false;
+
+  public static final String AUTO_FAILOVER_EMBEDDED =
+      AUTO_FAILOVER_PREFIX + "embedded";
+  public static final boolean DEFAULT_AUTO_FAILOVER_EMBEDDED = false;
+
+  public static final String AUTO_FAILOVER_ZK_BASE_PATH =
+      AUTO_FAILOVER_PREFIX + "zk-base-path";
+  public static final String DEFAULT_AUTO_FAILOVER_ZK_BASE_PATH =
+      "/yarn-leader-election";
 
   public static final String CLIENT_FAILOVER_PREFIX =
       YARN_PREFIX + "client.failover-";
@@ -334,36 +382,6 @@ public class YarnConfiguration extends Configuration {
       + "fs.state-store.retry-policy-spec";
   public static final String DEFAULT_FS_RM_STATE_STORE_RETRY_POLICY_SPEC =
       "2000, 500";
-  /**
-   * Comma separated host:port pairs, each corresponding to a ZK server for
-   * ZKRMStateStore
-   */
-  public static final String ZK_STATE_STORE_PREFIX =
-      RM_PREFIX + "zk-state-store.";
-  public static final String ZK_RM_STATE_STORE_NUM_RETRIES =
-      ZK_STATE_STORE_PREFIX + "num-retries";
-  public static final int DEFAULT_ZK_RM_STATE_STORE_NUM_RETRIES = 500;
-  /** retry interval when connecting to zookeeper*/
-  public static final String ZK_RM_STATE_STORE_RETRY_INTERVAL_MS =
-      ZK_STATE_STORE_PREFIX + "retry-interval-ms";
-  public static final long DEFAULT_ZK_RM_STATE_STORE_RETRY_INTERVAL_MS = 2000;
-  public static final String ZK_RM_STATE_STORE_ADDRESS =
-      ZK_STATE_STORE_PREFIX + "address";
-  /** Timeout in millisec for ZK server connection for ZKRMStateStore */
-  public static final String ZK_RM_STATE_STORE_TIMEOUT_MS =
-      ZK_STATE_STORE_PREFIX + "timeout-ms";
-  public static final int DEFAULT_ZK_RM_STATE_STORE_TIMEOUT_MS = 60000;
-  /** Parent znode path under which ZKRMStateStore will create znodes */
-  public static final String ZK_RM_STATE_STORE_PARENT_PATH =
-      ZK_STATE_STORE_PREFIX + "parent-path";
-  public static final String DEFAULT_ZK_RM_STATE_STORE_PARENT_PATH = "/rmstore";
-  /** ACL for znodes in ZKRMStateStore */
-  public static final String ZK_RM_STATE_STORE_ACL =
-      ZK_STATE_STORE_PREFIX + "acl";
-  public static final String DEFAULT_ZK_RM_STATE_STORE_ACL =
-      "world:anyone:rwcda";
-  public static final String ZK_RM_STATE_STORE_ROOT_NODE_ACL =
-      ZK_STATE_STORE_PREFIX + "root-node.acl";
 
   /** The maximum number of completed applications RM keeps. */ 
   public static final String RM_MAX_COMPLETED_APPLICATIONS =

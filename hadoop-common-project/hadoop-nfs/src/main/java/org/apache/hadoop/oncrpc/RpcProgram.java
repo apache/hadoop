@@ -78,23 +78,41 @@ public abstract class RpcProgram extends SimpleChannelUpstreamHandler {
     for (int vers = lowProgVersion; vers <= highProgVersion; vers++) {
       PortmapMapping mapEntry = new PortmapMapping(progNumber, vers, transport,
           port);
-      register(mapEntry);
+      register(mapEntry, true);
+    }
+  }
+  
+  /**
+   * Unregister this program with the local portmapper.
+   */
+  public void unregister(int transport, int boundPort) {
+    if (boundPort != port) {
+      LOG.info("The bound port is " + boundPort
+          + ", different with configured port " + port);
+      port = boundPort;
+    }
+    // Unregister all the program versions with portmapper for a given transport
+    for (int vers = lowProgVersion; vers <= highProgVersion; vers++) {
+      PortmapMapping mapEntry = new PortmapMapping(progNumber, vers, transport,
+          port);
+      register(mapEntry, false);
     }
   }
   
   /**
    * Register the program with Portmap or Rpcbind
    */
-  protected void register(PortmapMapping mapEntry) {
-    XDR mappingRequest = PortmapRequest.create(mapEntry);
+  protected void register(PortmapMapping mapEntry, boolean set) {
+    XDR mappingRequest = PortmapRequest.create(mapEntry, set);
     SimpleUdpClient registrationClient = new SimpleUdpClient(host, RPCB_PORT,
         mappingRequest);
     try {
       registrationClient.run();
     } catch (IOException e) {
-      LOG.error("Registration failure with " + host + ":" + port
+      String request = set ? "Registration" : "Unregistration";
+      LOG.error(request + " failure with " + host + ":" + port
           + ", portmap entry: " + mapEntry);
-      throw new RuntimeException("Registration failure");
+      throw new RuntimeException(request + " failure");
     }
   }
 

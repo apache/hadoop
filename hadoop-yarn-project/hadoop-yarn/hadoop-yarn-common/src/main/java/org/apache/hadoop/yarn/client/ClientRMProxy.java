@@ -39,14 +39,11 @@ import com.google.common.base.Preconditions;
 
 public class ClientRMProxy<T> extends RMProxy<T>  {
   private static final Log LOG = LogFactory.getLog(ClientRMProxy.class);
+  private static final ClientRMProxy INSTANCE = new ClientRMProxy();
 
   private interface ClientRMProtocols extends ApplicationClientProtocol,
       ApplicationMasterProtocol, ResourceManagerAdministrationProtocol {
     // Add nothing
-  }
-
-  static {
-    INSTANCE = new ClientRMProxy();
   }
 
   private ClientRMProxy(){
@@ -63,9 +60,7 @@ public class ClientRMProxy<T> extends RMProxy<T>  {
    */
   public static <T> T createRMProxy(final Configuration configuration,
       final Class<T> protocol) throws IOException {
-    // This method exists only to initiate this class' static INSTANCE. TODO:
-    // FIX if possible
-    return RMProxy.createRMProxy(configuration, protocol);
+    return createRMProxy(configuration, protocol, INSTANCE);
   }
 
   private static void setupTokens(InetSocketAddress resourceManagerAddress)

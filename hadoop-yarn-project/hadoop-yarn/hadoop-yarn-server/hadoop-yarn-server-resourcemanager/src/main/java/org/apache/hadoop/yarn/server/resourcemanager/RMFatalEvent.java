@@ -15,22 +15,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.namenode.snapshot;
+package org.apache.hadoop.yarn.server.resourcemanager;
 
-import org.apache.hadoop.hdfs.server.namenode.INodeFile;
-import org.apache.hadoop.hdfs.server.namenode.INodeFileAttributes;
+import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.event.AbstractEvent;
 
-/** A list of FileDiffs for storing snapshot data. */
-public class FileDiffList extends
-    AbstractINodeDiffList<INodeFile, INodeFileAttributes, FileDiff> {
-  
-  @Override
-  FileDiff createDiff(int snapshotId, INodeFile file) {
-    return new FileDiff(snapshotId, file);
+public class RMFatalEvent extends AbstractEvent<RMFatalEventType> {
+  private String cause;
+
+  public RMFatalEvent(RMFatalEventType rmFatalEventType, String cause) {
+    super(rmFatalEventType);
+    this.cause = cause;
   }
-  
-  @Override
-  INodeFileAttributes createSnapshotCopy(INodeFile currentINode) {
-    return new INodeFileAttributes.SnapshotCopy(currentINode);
+
+  public RMFatalEvent(RMFatalEventType rmFatalEventType, Exception cause) {
+    super(rmFatalEventType);
+    this.cause = StringUtils.stringifyException(cause);
   }
+
+  public String getCause() {return this.cause;}
 }

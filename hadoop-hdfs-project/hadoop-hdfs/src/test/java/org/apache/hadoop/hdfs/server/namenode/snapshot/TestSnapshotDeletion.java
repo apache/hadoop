@@ -268,7 +268,8 @@ public class TestSnapshotDeletion {
         (INodeDirectory) fsdir.getINode(snapshotNoChangeDir.toString());
     // should still be an INodeDirectory
     assertEquals(INodeDirectory.class, snapshotNode.getClass());
-    ReadOnlyList<INode> children = snapshotNode.getChildrenList(null);
+    ReadOnlyList<INode> children = snapshotNode
+        .getChildrenList(Snapshot.CURRENT_STATE_ID);
     // check 2 children: noChangeFile and metaChangeFile2
     assertEquals(2, children.size());
     INode noChangeFileSCopy = children.get(1);
@@ -286,11 +287,11 @@ public class TestSnapshotDeletion {
     
     // check the replication factor of metaChangeFile2SCopy
     assertEquals(REPLICATION_1,
-        metaChangeFile2SCopy.getFileReplication(null));
+        metaChangeFile2SCopy.getFileReplication(Snapshot.CURRENT_STATE_ID));
     assertEquals(REPLICATION_1,
-        metaChangeFile2SCopy.getFileReplication(snapshot1));
+        metaChangeFile2SCopy.getFileReplication(snapshot1.getId()));
     assertEquals(REPLICATION,
-        metaChangeFile2SCopy.getFileReplication(snapshot0));
+        metaChangeFile2SCopy.getFileReplication(snapshot0.getId()));
     
     // Case 4: delete directory sub
     // before deleting sub, we first create a new file under sub
@@ -316,23 +317,25 @@ public class TestSnapshotDeletion {
     assertTrue(snapshotNode4Sub.isWithSnapshot());
     // the snapshot copy of sub has only one child subsub.
     // newFile should have been destroyed
-    assertEquals(1, snapshotNode4Sub.getChildrenList(null).size());
+    assertEquals(1, snapshotNode4Sub.getChildrenList(Snapshot.CURRENT_STATE_ID)
+        .size());
     // but should have two children, subsub and noChangeDir, when s1 was taken  
-    assertEquals(2, snapshotNode4Sub.getChildrenList(snapshot1).size());
+    assertEquals(2, snapshotNode4Sub.getChildrenList(snapshot1.getId()).size());
     
     // check the snapshot copy of subsub, which is contained in the subtree of
     // sub's snapshot copy
-    INode snapshotNode4Subsub = snapshotNode4Sub.getChildrenList(null).get(0);
+    INode snapshotNode4Subsub = snapshotNode4Sub.getChildrenList(
+        Snapshot.CURRENT_STATE_ID).get(0);
     assertTrue(snapshotNode4Subsub.asDirectory().isWithSnapshot());
     assertTrue(snapshotNode4Sub == snapshotNode4Subsub.getParent());
     // check the children of subsub
     INodeDirectory snapshotSubsubDir = (INodeDirectory) snapshotNode4Subsub;
-    children = snapshotSubsubDir.getChildrenList(null);
+    children = snapshotSubsubDir.getChildrenList(Snapshot.CURRENT_STATE_ID);
     assertEquals(2, children.size());
     assertEquals(children.get(0).getLocalName(), metaChangeFile1.getName());
     assertEquals(children.get(1).getLocalName(), newFileAfterS0.getName());
     // only one child before snapshot s0 
-    children = snapshotSubsubDir.getChildrenList(snapshot0);
+    children = snapshotSubsubDir.getChildrenList(snapshot0.getId());
     assertEquals(1, children.size());
     INode child = children.get(0);
     assertEquals(child.getLocalName(), metaChangeFile1.getName());
@@ -341,11 +344,11 @@ public class TestSnapshotDeletion {
     assertTrue(metaChangeFile1SCopy.isWithSnapshot());
     assertFalse(metaChangeFile1SCopy.isUnderConstruction());
     assertEquals(REPLICATION_1,
-        metaChangeFile1SCopy.getFileReplication(null));
+        metaChangeFile1SCopy.getFileReplication(Snapshot.CURRENT_STATE_ID));
     assertEquals(REPLICATION_1,
-        metaChangeFile1SCopy.getFileReplication(snapshot1));
+        metaChangeFile1SCopy.getFileReplication(snapshot1.getId()));
     assertEquals(REPLICATION,
-        metaChangeFile1SCopy.getFileReplication(snapshot0));
+        metaChangeFile1SCopy.getFileReplication(snapshot0.getId()));
   }
   
   /**
@@ -474,9 +477,10 @@ public class TestSnapshotDeletion {
         (INodeDirectorySnapshottable) fsdir.getINode(dir.toString());
     Snapshot snapshot0 = dirNode.getSnapshot(DFSUtil.string2Bytes("s0"));
     assertNull(snapshot0);
+    Snapshot snapshot1 = dirNode.getSnapshot(DFSUtil.string2Bytes("s1"));
     DirectoryDiffList diffList = dirNode.getDiffs();
     assertEquals(1, diffList.asList().size());
-    assertEquals("s1", diffList.getLast().snapshot.getRoot().getLocalName());
+    assertEquals(snapshot1.getId(), diffList.getLast().getSnapshotId());
     diffList = fsdir.getINode(metaChangeDir.toString()).asDirectory()
         .getDiffs();
     assertEquals(0, diffList.asList().size());
