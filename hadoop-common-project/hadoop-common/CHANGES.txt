@@ -212,6 +212,9 @@ Release 2.4.0 - UNRELEASED
     HADOOP-10207. TestUserGroupInformation#testLogin is flaky (jxiang via
     cmccabe)
 
+    HADOOP-10214. Fix multithreaded correctness warnings in ActiveStandbyElector
+    (Liang Xie via kasha)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
