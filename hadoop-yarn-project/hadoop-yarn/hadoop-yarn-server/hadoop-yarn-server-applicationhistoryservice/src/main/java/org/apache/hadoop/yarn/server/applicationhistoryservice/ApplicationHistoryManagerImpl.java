@@ -56,9 +56,7 @@ public class ApplicationHistoryManagerImpl extends AbstractService implements
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
     LOG.info("ApplicationHistory Init");
-    historyStore = ReflectionUtils.newInstance(conf.getClass(
-        YarnConfiguration.AHS_STORE, FileSystemApplicationHistoryStore.class,
-        ApplicationHistoryStore.class), conf);
+    historyStore = createApplicationHistoryStore(conf);
     historyStore.init(conf);
     super.serviceInit(conf);
   }
@@ -75,6 +73,13 @@ public class ApplicationHistoryManagerImpl extends AbstractService implements
     LOG.info("Stopping ApplicationHistory");
     historyStore.stop();
     super.serviceStop();
+  }
+
+  protected ApplicationHistoryStore createApplicationHistoryStore(
+      Configuration conf) {
+    return ReflectionUtils.newInstance(conf.getClass(
+        YarnConfiguration.AHS_STORE, FileSystemApplicationHistoryStore.class,
+        ApplicationHistoryStore.class), conf);
   }
 
   @Override
@@ -148,8 +153,9 @@ public class ApplicationHistoryManagerImpl extends AbstractService implements
     return ApplicationAttemptReport.newInstance(appAttemptHistory
         .getApplicationAttemptId(), appAttemptHistory.getHost(),
         appAttemptHistory.getRPCPort(), appAttemptHistory.getTrackingURL(),
-        appAttemptHistory.getDiagnosticsInfo(), null, appAttemptHistory
-            .getMasterContainerId());
+        appAttemptHistory.getDiagnosticsInfo(),
+        appAttemptHistory.getYarnApplicationAttemptState(),
+        appAttemptHistory.getMasterContainerId());
   }
 
   @Override

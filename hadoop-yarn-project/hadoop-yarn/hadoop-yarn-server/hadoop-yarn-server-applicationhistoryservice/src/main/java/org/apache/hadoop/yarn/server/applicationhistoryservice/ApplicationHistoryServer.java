@@ -31,6 +31,11 @@ import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.server.applicationhistoryservice.webapp.AHSWebApp;
+import org.apache.hadoop.yarn.webapp.WebApp;
+import org.apache.hadoop.yarn.webapp.WebApps;
+import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -46,6 +51,7 @@ public class ApplicationHistoryServer extends CompositeService {
 
   ApplicationHistoryClientService ahsClientService;
   ApplicationHistoryManager historyManager;
+  private WebApp webApp;
 
   public ApplicationHistoryServer() {
     super(ApplicationHistoryServer.class.getName());
@@ -57,8 +63,6 @@ public class ApplicationHistoryServer extends CompositeService {
     ahsClientService = createApplicationHistoryClientService(historyManager);
     addService(ahsClientService);
     addService((Service) historyManager);
-    AHSWebServer webServer = new AHSWebServer();
-    addService(webServer);
     super.serviceInit(conf);
   }
 
@@ -66,11 +70,17 @@ public class ApplicationHistoryServer extends CompositeService {
   protected void serviceStart() throws Exception {
     DefaultMetricsSystem.initialize("ApplicationHistoryServer");
     JvmMetrics.initSingleton("ApplicationHistoryServer", null);
+
+    startWebApp();
     super.serviceStart();
   }
 
   @Override
   protected void serviceStop() throws Exception {
+    if (webApp != null) {
+      webApp.stop();
+    }
+
     DefaultMetricsSystem.shutdown();
     super.serviceStop();
   }
@@ -118,4 +128,31 @@ public class ApplicationHistoryServer extends CompositeService {
   public static void main(String[] args) {
     launchAppHistoryServer(args);
   }
+
+  protected ApplicationHistoryManager createApplicationHistoryManager(
+      Configuration conf) {
+    return new ApplicationHistoryManagerImpl();
+  }
+
+  protected void startWebApp() {
+    String bindAddress = WebAppUtils.getAHSWebAppURLWithoutScheme(getConfig());
+    LOG.info("Instantiating AHSWebApp at " + bindAddress);
+    try {
+      webApp = WebApps
+          .$for("applicationhistory", ApplicationHistoryClientService.class,
+              ahsClientService, "ws")
+          .with(getConfig())
+          .withHttpSpnegoPrincipalKey(
+              YarnConfiguration.AHS_WEBAPP_SPNEGO_USER_NAME_KEY)
+          .withHttpSpnegoKeytabKey(
+              YarnConfiguration.AHS_WEBAPP_SPNEGO_KEYTAB_FILE_KEY)
+          .at(bindAddress)
+          .start(new AHSWebApp(historyManager));
+    } catch (Exception e) {
+      String msg = "AHSWebApp failed to start.";
+      LOG.error(msg, e);
+      throw new YarnRuntimeException(msg, e);
+    }
+  }
+
 }
