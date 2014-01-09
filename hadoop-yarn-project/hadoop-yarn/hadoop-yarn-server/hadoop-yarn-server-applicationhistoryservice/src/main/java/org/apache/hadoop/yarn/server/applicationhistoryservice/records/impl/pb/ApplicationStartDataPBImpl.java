@@ -148,7 +148,7 @@ public class ApplicationStartDataPBImpl
   @Override
   public long getSubmitTime() {
     ApplicationStartDataProtoOrBuilder p = viaProto ? proto : builder;
-    return p.getStartTime();
+    return p.getSubmitTime();
   }
 
   @Override

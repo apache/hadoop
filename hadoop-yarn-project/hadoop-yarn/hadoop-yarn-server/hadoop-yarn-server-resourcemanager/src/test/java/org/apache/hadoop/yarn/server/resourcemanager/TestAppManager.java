@@ -22,9 +22,9 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 import static org.mockito.Matchers.isA;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.times;
 
 import java.util.HashMap;
 import java.util.List;
@@ -47,6 +47,7 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.server.resourcemanager.ahs.RMApplicationHistoryWriter;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.MockRMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -104,9 +105,10 @@ public class TestAppManager{
         rmDispatcher);
     AMLivelinessMonitor amFinishingMonitor = new AMLivelinessMonitor(
         rmDispatcher);
+    RMApplicationHistoryWriter writer = mock(RMApplicationHistoryWriter.class);
     RMContext context = new RMContextImpl(rmDispatcher,
         containerAllocationExpirer, amLivelinessMonitor, amFinishingMonitor,
-        null, null, null, null, null) {
+        null, null, null, null, null, writer) {
       @Override
       public ConcurrentMap<ApplicationId, RMApp> getRMApps() {
         return map;
