@@ -141,7 +141,8 @@ if "%1" == "--config" (
     goto :eof
   )
 
-  set yarncommands=resourcemanager nodemanager proxyserver rmadmin version jar application node logs daemonlog
+  set yarncommands=resourcemanager nodemanager proxyserver rmadmin version jar ^
+     application applicationattempt container node logs daemonlog historyserver
   for %%i in ( %yarncommands% ) do (
     if %yarn-command% == %%i set yarncommand=true
   )
@@ -173,7 +174,20 @@ goto :eof
 :application
   set CLASS=org.apache.hadoop.yarn.client.cli.ApplicationCLI
   set YARN_OPTS=%YARN_OPTS% %YARN_CLIENT_OPTS%
+  set yarn-command-arguments=%yarn-command% %yarn-command-arguments%
   goto :eof
+
+:applicationattempt
+  set CLASS=org.apache.hadoop.yarn.client.cli.ApplicationCLI
+  set YARN_OPTS=%YARN_OPTS% %YARN_CLIENT_OPTS%
+  set yarn-command-arguments=%yarn-command% %yarn-command-arguments%
+  goto :eof
+
+:container
+  set CLASS=org.apache.hadoop.yarn.client.cli.ApplicationCLI
+  set YARN_OPTS=%YARN_OPTS% %YARN_CLIENT_OPTS%
+  set yarn-command-arguments=%yarn-command% %yarn-command-arguments%
+  goto :eof  
 
 :node
   set CLASS=org.apache.hadoop.yarn.client.cli.NodeCLI
@@ -268,6 +282,8 @@ goto :eof
   @echo   version              print the version
   @echo   jar ^<jar^>          run a jar file
   @echo   application          prints application(s) report/kill application
+  @echo   applicationattempt   prints applicationattempt(s) report
+  @echo   container            prints container(s) report
   @echo   node                 prints node report(s)
   @echo   logs                 dump container logs
   @echo   classpath            prints the class path needed to get the

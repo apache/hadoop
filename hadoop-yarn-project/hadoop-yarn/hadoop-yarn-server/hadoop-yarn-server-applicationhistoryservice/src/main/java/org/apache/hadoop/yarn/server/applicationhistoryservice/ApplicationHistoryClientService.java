@@ -52,6 +52,9 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.ApplicationAttemptNotFoundException;
+import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
+import org.apache.hadoop.yarn.exceptions.ContainerNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 
@@ -122,10 +125,14 @@ public class ApplicationHistoryClientService extends AbstractService {
     public GetApplicationAttemptReportResponse getApplicationAttemptReport(
         GetApplicationAttemptReportRequest request) throws YarnException,
         IOException {
-      GetApplicationAttemptReportResponse response = GetApplicationAttemptReportResponse
-          .newInstance(history.getApplicationAttempt(request
-              .getApplicationAttemptId()));
-      return response;
+      try {
+        GetApplicationAttemptReportResponse response = GetApplicationAttemptReportResponse
+            .newInstance(history.getApplicationAttempt(request
+                .getApplicationAttemptId()));
+        return response;
+      } catch (IOException e) {
+        throw new ApplicationAttemptNotFoundException(e.getMessage());
+      }
     }
 
     @Override
@@ -141,10 +148,14 @@ public class ApplicationHistoryClientService extends AbstractService {
     @Override
     public GetApplicationReportResponse getApplicationReport(
         GetApplicationReportRequest request) throws YarnException, IOException {
-      ApplicationId applicationId = request.getApplicationId();
-      GetApplicationReportResponse response = GetApplicationReportResponse
-          .newInstance(history.getApplication(applicationId));
-      return response;
+      try {
+        ApplicationId applicationId = request.getApplicationId();
+        GetApplicationReportResponse response = GetApplicationReportResponse
+            .newInstance(history.getApplication(applicationId));
+        return response;
+      } catch (IOException e) {
+        throw new ApplicationNotFoundException(e.getMessage());
+      }
     }
 
     @Override
@@ -159,9 +170,13 @@ public class ApplicationHistoryClientService extends AbstractService {
     @Override
     public GetContainerReportResponse getContainerReport(
         GetContainerReportRequest request) throws YarnException, IOException {
-      GetContainerReportResponse response = GetContainerReportResponse
-          .newInstance(history.getContainer(request.getContainerId()));
-      return response;
+      try {
+        GetContainerReportResponse response = GetContainerReportResponse
+            .newInstance(history.getContainer(request.getContainerId()));
+        return response;
+      } catch (IOException e) {
+        throw new ContainerNotFoundException(e.getMessage());
+      }
     }
 
     @Override
