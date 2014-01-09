@@ -380,6 +380,9 @@ Release 2.3.0 - UNRELEASED
     YARN-1438. Ensure container diagnostics includes exception from container
     launch. (stevel via acmurthy)
 
+    YARN-1138. yarn.application.classpath is set to point to $HADOOP_CONF_DIR
+    etc., which does not work on Windows. (Chuan Liu via cnauroth)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
