@@ -58,6 +58,7 @@ function print_usage(){
   echo "where COMMAND is one of:"
   echo "  resourcemanager      run the ResourceManager" 
   echo "  nodemanager          run a nodemanager on each slave" 
+  echo "  historyserver        run the application history server" 
   echo "  rmadmin              admin tools" 
   echo "  version              print the version"
   echo "  jar <jar>            run a jar file"
@@ -145,6 +146,10 @@ if [ -d "$HADOOP_YARN_HOME/yarn-server/yarn-server-common/target/classes" ]; the
 fi
 if [ -d "$HADOOP_YARN_HOME/yarn-server/yarn-server-resourcemanager/target/classes" ]; then
   CLASSPATH=${CLASSPATH}:$HADOOP_YARN_HOME/yarn-server/yarn-server-resourcemanager/target/classes
+  CLASSPATH=${CLASSPATH}:$HADOOP_YARN_HOME/yarn-server/yarn-server-applicationhistoryservice/target/classes
+fi
+if [ -d "$HADOOP_YARN_HOME/yarn-server/yarn-server-applicationhistoryservice/target/classes" ]; then
+  CLASSPATH=${CLASSPATH}:$HADOOP_YARN_HOME/yarn-server/yarn-server-applicationhistoryservice/target/classes
 fi
 if [ -d "$HADOOP_YARN_HOME/build/test/classes" ]; then
   CLASSPATH=${CLASSPATH}:$HADOOP_YARN_HOME/target/test/classes
@@ -190,6 +195,13 @@ elif [ "$COMMAND" = "resourcemanager" ] ; then
   if [ "$YARN_RESOURCEMANAGER_HEAPSIZE" != "" ]; then
     JAVA_HEAP_MAX="-Xmx""$YARN_RESOURCEMANAGER_HEAPSIZE""m"
   fi
+elif [ "$COMMAND" = "historyserver" ] ; then
+  CLASSPATH=${CLASSPATH}:$YARN_CONF_DIR/ahs-config/log4j.properties
+  CLASS='org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryServer'
+  YARN_OPTS="$YARN_OPTS $YARN_HISTORYSERVER_OPTS"
+  if [ "$YARN_RESOURCEMANAGER_HEAPSIZE" != "" ]; then
+    JAVA_HEAP_MAX="-Xmx""$YARN_HISTORYSERVER_HEAPSIZE""m"
+  fi  
 elif [ "$COMMAND" = "nodemanager" ] ; then
   CLASSPATH=${CLASSPATH}:$YARN_CONF_DIR/nm-config/log4j.properties
   CLASS='org.apache.hadoop.yarn.server.nodemanager.NodeManager'
