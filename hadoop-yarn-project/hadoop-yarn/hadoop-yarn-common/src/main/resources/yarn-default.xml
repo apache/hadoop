@@ -1022,6 +1022,23 @@
      <value>$HADOOP_CONF_DIR,$HADOOP_COMMON_HOME/share/hadoop/common/*,$HADOOP_COMMON_HOME/share/hadoop/common/lib/*,$HADOOP_HDFS_HOME/share/hadoop/hdfs/*,$HADOOP_HDFS_HOME/share/hadoop/hdfs/lib/*,$HADOOP_YARN_HOME/share/hadoop/yarn/*,$HADOOP_YARN_HOME/share/hadoop/yarn/lib/*</value>
   </property>
 
+  <!-- Application History Service's Configuration-->
+
+  <property>
+    <description>URI pointing to the location of the FileSystem path where
+    the history will be persisted. This must be supplied when using
+    org.apache.hadoop.yarn.server.applicationhistoryservice.FileSystemApplicationHistoryStore
+    as the value for yarn.resourcemanager.ahs.writer.class</description>
+    <name>yarn.ahs.fs-history-store.uri</name>
+    <value>${hadoop.log.dir}/yarn/system/ahstore</value>
+  </property>
+
+  <property>
+    <description>T-file compression types used to compress history data.</description>
+    <name>yarn.ahs.fs-history-store.compression-type</name>
+    <value>none</value>
+  </property>
+
   <!-- Other configuration -->
   <property>
     <description>The interval that the yarn client library uses to poll the
