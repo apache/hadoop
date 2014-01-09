@@ -100,7 +100,7 @@ public class AHSClientService extends AbstractService implements
   }
 
   @Override
-  public GetContainerReportResponse getContainer(
+  public GetContainerReportResponse getContainerReport(
       GetContainerReportRequest request) throws YarnException, IOException {
     // TODO Auto-generated method stub
     return null;
