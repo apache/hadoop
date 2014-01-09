@@ -245,6 +245,9 @@ Trunk (Unreleased)
     HDFS-5715. Use Snapshot ID to indicate the corresponding Snapshot for a
     FileDiff/DirectoryDiff. (jing9)
 
+    HDFS-5721. sharedEditsImage in Namenode#initializeSharedEdits() should be 
+    closed before method returns. (Ted Yu via junping_du)
+
   OPTIMIZATIONS
 
     HDFS-5349. DNA_CACHE and DNA_UNCACHE should be by blockId only. (cmccabe)
