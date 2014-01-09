@@ -1,0 +1,202 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.hadoop.yarn.api.records;
+
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.util.Records;
+
+/**
+ * <p>
+ * <code>ContainerReport</code> is a report of an container.
+ * </p>
+ * 
+ * <p>
+ * It includes details such as:
+ * <ul>
+ * <li>{@link ContainerId} of the container.</li>
+ * <li>Allocated Resources to the container.</li>
+ * <li>Assigned Node id.</li>
+ * <li>Assigned Priority.</li>
+ * <li>Start Time.</li>
+ * <li>Finish Time.</li>
+ * <li>Container Exit Status.</li>
+ * <li>{@link ContainerState} of the container.</li>
+ * <li>Diagnostic information in case of errors.</li>
+ * <li>Log URL.</li>
+ * </ul>
+ * </p>
+ * 
+ */
+
+@Public
+@Unstable
+public abstract class ContainerReport {
+  @Private
+  @Unstable
+  public static ContainerReport newInstance(ContainerId containerId,
+      Resource allocatedResource, NodeId assignedNode, Priority priority,
+      long startTime, long finishTime, String diagnosticInfo, String logUrl,
+      int containerExitStatus, ContainerState containerState) {
+    ContainerReport report = Records.newRecord(ContainerReport.class);
+    report.setContainerId(containerId);
+    report.setAllocatedResource(allocatedResource);
+    report.setAssignedNode(assignedNode);
+    report.setPriority(priority);
+    report.setStartTime(startTime);
+    report.setFinishTime(finishTime);
+    report.setDiagnosticsInfo(diagnosticInfo);
+    report.setLogUrl(logUrl);
+    report.setContainerExitStatus(containerExitStatus);
+    report.setContainerState(containerState);
+    return report;
+  }
+
+  /**
+   * Get the <code>ContainerId</code> of the container.
+   * 
+   * @return <code>ContainerId</code> of the container.
+   */
+  @Public
+  @Unstable
+  public abstract ContainerId getContainerId();
+
+  @Public
+  @Unstable
+  public abstract void setContainerId(ContainerId containerId);
+
+  /**
+   * Get the allocated <code>Resource</code> of the container.
+   * 
+   * @return allocated <code>Resource</code> of the container.
+   */
+  @Public
+  @Unstable
+  public abstract Resource getAllocatedResource();
+
+  @Public
+  @Unstable
+  public abstract void setAllocatedResource(Resource resource);
+
+  /**
+   * Get the allocated <code>NodeId</code> where container is running.
+   * 
+   * @return allocated <code>NodeId</code> where container is running.
+   */
+  @Public
+  @Unstable
+  public abstract NodeId getAssignedNode();
+
+  @Public
+  @Unstable
+  public abstract void setAssignedNode(NodeId nodeId);
+
+  /**
+   * Get the allocated <code>Priority</code> of the container.
+   * 
+   * @return allocated <code>Priority</code> of the container.
+   */
+  @Public
+  @Unstable
+  public abstract Priority getPriority();
+
+  @Public
+  @Unstable
+  public abstract void setPriority(Priority priority);
+
+  /**
+   * Get the Start time of the container.
+   * 
+   * @return Start time of the container
+   */
+  @Public
+  @Unstable
+  public abstract long getStartTime();
+
+  @Public
+  @Unstable
+  public abstract void setStartTime(long startTime);
+
+  /**
+   * Get the Finish time of the container.
+   * 
+   * @return Finish time of the container
+   */
+  @Public
+  @Unstable
+  public abstract long getFinishTime();
+
+  @Public
+  @Unstable
+  public abstract void setFinishTime(long finishTime);
+
+  /**
+   * Get the DiagnosticsInfo of the container.
+   * 
+   * @return DiagnosticsInfo of the container
+   */
+  @Public
+  @Unstable
+  public abstract String getDiagnosticsInfo();
+
+  @Public
+  @Unstable
+  public abstract void setDiagnosticsInfo(String diagnosticsInfo);
+
+  /**
+   * Get the LogURL of the container.
+   * 
+   * @return LogURL of the container
+   */
+  @Public
+  @Unstable
+  public abstract String getLogUrl();
+
+  @Public
+  @Unstable
+  public abstract void setLogUrl(String logUrl);
+
+  /**
+   * Get the final <code>ContainerState</code> of the container.
+   * 
+   * @return final <code>ContainerState</code> of the container.
+   */
+  @Public
+  @Unstable
+  public abstract ContainerState getContainerState();
+
+  @Public
+  @Unstable
+  public abstract void setContainerState(ContainerState containerState);
+
+  /**
+   * Get the final <code>exit status</code> of the container.
+   * 
+   * @return final <code>exit status</code> of the container.
+   */
+  @Public
+  @Unstable
+  public abstract int getContainerExitStatus();
+
+  @Public
+  @Unstable
+  public abstract void setContainerExitStatus(int containerExitStatus);
+
+}
