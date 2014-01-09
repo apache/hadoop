@@ -33,6 +33,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueState;
+import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.proto.YarnProtos.AMCommandProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationAccessTypeProto;
@@ -45,6 +46,7 @@ import org.apache.hadoop.yarn.proto.YarnProtos.NodeIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeStateProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.QueueACLProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.QueueStateProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.YarnApplicationAttemptStateProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.YarnApplicationStateProto;
 
 import com.google.protobuf.ByteString;
@@ -94,6 +96,21 @@ public class ProtoUtils {
   }
   public static YarnApplicationState convertFromProtoFormat(YarnApplicationStateProto e) {
     return YarnApplicationState.valueOf(e.name());
+  }
+
+  /*
+   * YarnApplicationAttemptState
+   */
+  private static String YARN_APPLICATION_ATTEMPT_STATE_PREFIX = "APP_ATTEMPT_";
+  public static YarnApplicationAttemptStateProto convertToProtoFormat(
+      YarnApplicationAttemptState e) {
+    return YarnApplicationAttemptStateProto
+        .valueOf(YARN_APPLICATION_ATTEMPT_STATE_PREFIX + e.name());
+  }
+  public static YarnApplicationAttemptState convertFromProtoFormat(
+      YarnApplicationAttemptStateProto e) {
+    return YarnApplicationAttemptState.valueOf(e.name().replace(
+        YARN_APPLICATION_ATTEMPT_STATE_PREFIX, ""));
   }
 
   /*

@@ -19,102 +19,189 @@
 package org.apache.hadoop.yarn.server.applicationhistoryservice;
 
 import java.io.IOException;
-import java.util.HashMap;
 
 import junit.framework.Assert;
 
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.records.ApplicationAttemptHistoryData;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.records.ApplicationHistoryData;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.records.ContainerHistoryData;
-import org.apache.hadoop.yarn.server.applicationhistoryservice.records.impl.pb.ApplicationAttemptHistoryDataPBImpl;
-import org.apache.hadoop.yarn.server.applicationhistoryservice.records.impl.pb.ApplicationHistoryDataPBImpl;
-import org.apache.hadoop.yarn.server.applicationhistoryservice.records.impl.pb.ContainerHistoryDataPBImpl;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-public class TestMemoryApplicationHistoryStore {
-  MemoryApplicationHistoryStore memstore = null;
+public class TestMemoryApplicationHistoryStore extends
+    ApplicationHistoryStoreTestUtils {
 
   @Before
-  public void setup() throws Throwable {
-    memstore = MemoryApplicationHistoryStore.getMemoryStore();
-    writeHistoryApplication();
-    writeHistoryApplicationAttempt();
-    writeContainer();
-  }
-
-  public void writeHistoryApplication() throws Throwable {
-    ApplicationHistoryData appData = new ApplicationHistoryDataPBImpl();
-    appData.setApplicationId(ApplicationId.newInstance(1234, 1));
-    memstore.writeApplication(appData);
-  }
-
-  public void writeHistoryApplicationAttempt() throws Throwable {
-    ApplicationAttemptHistoryData appAttemptHistoryData =
-        new ApplicationAttemptHistoryDataPBImpl();
-    appAttemptHistoryData.setApplicationAttemptId(ApplicationAttemptId
-      .newInstance(ApplicationId.newInstance(1234, 1), 1));
-    memstore.writeApplicationAttempt(appAttemptHistoryData);
-  }
-
-  public void writeContainer() throws Throwable {
-    ContainerHistoryData container = new ContainerHistoryDataPBImpl();
-    container.setContainerId(ContainerId.newInstance(ApplicationAttemptId
-      .newInstance(ApplicationId.newInstance(1234, 1), 1), 1));
-    memstore.writeContainer(container);
-  }
-
-  public ContainerHistoryData writeContainer(ApplicationAttemptId appAttemptId,
-      int containerId) throws Throwable {
-    ContainerHistoryData container = new ContainerHistoryDataPBImpl();
-    container
-      .setContainerId(ContainerId.newInstance(appAttemptId, containerId));
-    memstore.writeContainer(container);
-    return container;
-  }
-  
-  @After
-  public void tearDown() {
+  public void setup() {
+    store = new MemoryApplicationHistoryStore();
   }
 
   @Test
-  public void testReadApplication() throws Throwable {
-    HashMap<ApplicationId, ApplicationHistoryData> map =
-        (HashMap<ApplicationId, ApplicationHistoryData>) memstore
-          .getAllApplications();
-    Assert.assertEquals(1, map.size());
-    ApplicationHistoryData appData = null;
-    for (ApplicationId appId : map.keySet()) {
-      appData = map.get(appId);
-      Assert.assertEquals("application_1234_0001", appData.getApplicationId()
-        .toString());
+  public void testReadWriteApplicationHistory() throws Exception {
+    // Out of order
+    ApplicationId appId = ApplicationId.newInstance(0, 1);
+    try {
+      writeApplicationFinishData(appId);
+      Assert.fail();
+    } catch (IOException e) {
+      Assert.assertTrue(e.getMessage().contains(
+          "is stored before the start information"));
     }
-    HashMap<ApplicationAttemptId, ApplicationAttemptHistoryData> appAttempts =
-        (HashMap<ApplicationAttemptId, ApplicationAttemptHistoryData>) memstore
-          .getApplicationAttempts(appData.getApplicationId());
-    Assert.assertEquals(1, appAttempts.size());
-    ApplicationAttemptHistoryData appAttempt = null;
-    for (ApplicationAttemptId appAttemptId : appAttempts.keySet()) {
-      appAttempt = appAttempts.get(appAttemptId);
-      Assert.assertEquals("appattempt_1234_0001_000001", appAttempt
-        .getApplicationAttemptId().toString());
+    // Normal
+    int numApps = 5;
+    for (int i = 1; i <= numApps; ++i) {
+      appId = ApplicationId.newInstance(0, i);
+      writeApplicationStartData(appId);
+      writeApplicationFinishData(appId);
     }
-    ContainerHistoryData amContainer =
-        memstore.getContainer(ContainerId.newInstance(ApplicationAttemptId
-          .newInstance(ApplicationId.newInstance(1234, 1), 1), 1));
-    Assert.assertEquals("container_1234_0001_01_000001", amContainer
-      .getContainerId().toString());
-    ContainerHistoryData container2 =
-        writeContainer(appAttempt.getApplicationAttemptId(), 2);
-    HashMap<ContainerId, ContainerHistoryData> containers =
-        (HashMap<ContainerId, ContainerHistoryData>) memstore
-          .getContainers(appAttempt.getApplicationAttemptId());
-    Assert.assertEquals(2, containers.size());
-    Assert.assertEquals("container_1234_0001_01_000002", containers.get(
-      container2.getContainerId()).getContainerId().toString());
+    Assert.assertEquals(numApps, store.getAllApplications().size());
+    for (int i = 1; i <= numApps; ++i) {
+      appId = ApplicationId.newInstance(0, i);
+      ApplicationHistoryData data = store.getApplication(appId);
+      Assert.assertNotNull(data);
+      Assert.assertEquals(appId.toString(), data.getApplicationName());
+      Assert.assertEquals(appId.toString(), data.getDiagnosticsInfo());
+    }
+    // Write again
+    appId = ApplicationId.newInstance(0, 1);
+    try {
+      writeApplicationStartData(appId);
+      Assert.fail();
+    } catch (IOException e) {
+      Assert.assertTrue(e.getMessage().contains("is already stored"));
+    }
+    try {
+      writeApplicationFinishData(appId);
+      Assert.fail();
+    } catch (IOException e) {
+      Assert.assertTrue(e.getMessage().contains("is already stored"));
+    }
   }
+
+  @Test
+  public void testReadWriteApplicationAttemptHistory() throws Exception {
+    // Out of order
+    ApplicationId appId = ApplicationId.newInstance(0, 1);
+    ApplicationAttemptId appAttemptId =
+        ApplicationAttemptId.newInstance(appId, 1);
+    try {
+      writeApplicationAttemptFinishData(appAttemptId);
+      Assert.fail();
+    } catch (IOException e) {
+      Assert.assertTrue(e.getMessage().contains(
+          "is stored before the start information"));
+    }
+    // Normal
+    int numAppAttempts = 5;
+    writeApplicationStartData(appId);
+    for (int i = 1; i <= numAppAttempts; ++i) {
+      appAttemptId =
+          ApplicationAttemptId.newInstance(appId, i);
+      writeApplicationAttemptStartData(appAttemptId);
+      writeApplicationAttemptFinishData(appAttemptId);
+    }
+    Assert.assertEquals(
+        numAppAttempts, store.getApplicationAttempts(appId).size());
+    for (int i = 1; i <= numAppAttempts; ++i) {
+      appAttemptId =
+          ApplicationAttemptId.newInstance(appId, i);
+      ApplicationAttemptHistoryData data =
+          store.getApplicationAttempt(appAttemptId);
+      Assert.assertNotNull(data);
+      Assert.assertEquals(appAttemptId.toString(), data.getHost());
+      Assert.assertEquals(appAttemptId.toString(), data.getDiagnosticsInfo());
+    }
+    writeApplicationFinishData(appId);
+    // Write again
+    appAttemptId =
+        ApplicationAttemptId.newInstance(appId, 1);
+    try {
+      writeApplicationAttemptStartData(appAttemptId);
+      Assert.fail();
+    } catch (IOException e) {
+      Assert.assertTrue(e.getMessage().contains("is already stored"));
+    }
+    try {
+      writeApplicationAttemptFinishData(appAttemptId);
+      Assert.fail();
+    } catch (IOException e) {
+      Assert.assertTrue(e.getMessage().contains("is already stored"));
+    }
+  }
+
+  @Test
+  public void testReadWriteContainerHistory() throws Exception {
+    // Out of order
+    ApplicationId appId = ApplicationId.newInstance(0, 1);
+    ApplicationAttemptId appAttemptId =
+        ApplicationAttemptId.newInstance(appId, 1);
+    ContainerId containerId = ContainerId.newInstance(appAttemptId, 1);
+    try {
+      writeContainerFinishData(containerId);
+      Assert.fail();
+    } catch (IOException e) {
+      Assert.assertTrue(e.getMessage().contains(
+          "is stored before the start information"));
+    }
+    // Normal
+    writeApplicationAttemptStartData(appAttemptId);
+    int numContainers = 5;
+    for (int i = 1; i <= numContainers; ++i) {
+      containerId = ContainerId.newInstance(appAttemptId, i);
+      writeContainerStartData(containerId);
+      writeContainerFinishData(containerId);
+    }
+    Assert.assertEquals(
+        numContainers, store.getContainers(appAttemptId).size());
+    for (int i = 1; i <= numContainers; ++i) {
+      containerId = ContainerId.newInstance(appAttemptId, i);
+      ContainerHistoryData data = store.getContainer(containerId);
+      Assert.assertNotNull(data);
+      Assert.assertEquals(Priority.newInstance(containerId.getId()),
+          data.getPriority());
+      Assert.assertEquals(containerId.toString(), data.getDiagnosticsInfo());
+    }
+    ContainerHistoryData masterContainer = store.getAMContainer(appAttemptId);
+    Assert.assertNotNull(masterContainer);
+    Assert.assertEquals(ContainerId.newInstance(appAttemptId, 1),
+        masterContainer.getContainerId());
+    writeApplicationAttemptFinishData(appAttemptId);
+    // Write again
+    containerId = ContainerId.newInstance(appAttemptId, 1);
+    try {
+      writeContainerStartData(containerId);
+      Assert.fail();
+    } catch (IOException e) {
+      Assert.assertTrue(e.getMessage().contains("is already stored"));
+    }
+    try {
+      writeContainerFinishData(containerId);
+      Assert.fail();
+    } catch (IOException e) {
+      Assert.assertTrue(e.getMessage().contains("is already stored"));
+    }
+  }
+
+  @Test
+  public void testMassiveWriteContainerHistory() throws IOException {
+    long mb = 1024 * 1024;
+    Runtime runtime = Runtime.getRuntime();
+    long usedMemoryBefore = (runtime.totalMemory() - runtime.freeMemory()) / mb;
+    int numContainers = 100000;
+    ApplicationId appId = ApplicationId.newInstance(0, 1);
+    ApplicationAttemptId appAttemptId =
+        ApplicationAttemptId.newInstance(appId, 1);
+    for (int i = 1; i <= numContainers; ++i) {
+      ContainerId containerId = ContainerId.newInstance(appAttemptId, i);
+      writeContainerStartData(containerId);
+      writeContainerFinishData(containerId);
+    }
+    long usedMemoryAfter = (runtime.totalMemory() - runtime.freeMemory()) / mb;
+    Assert.assertTrue((usedMemoryAfter - usedMemoryBefore) < 100);
+  }
+
 }

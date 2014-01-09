@@ -20,32 +20,34 @@ package org.apache.hadoop.yarn.server.applicationhistoryservice.records.impl.pb;
 
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationIdPBImpl;
-import org.apache.hadoop.yarn.api.records.impl.pb.ProtoBase;
 import org.apache.hadoop.yarn.api.records.impl.pb.ProtoUtils;
-import org.apache.hadoop.yarn.proto.ApplicationHistoryServerProtos.ApplicationHistoryDataProto;
-import org.apache.hadoop.yarn.proto.ApplicationHistoryServerProtos.ApplicationHistoryDataProtoOrBuilder;
+import org.apache.hadoop.yarn.proto.ApplicationHistoryServerProtos.ApplicationFinishDataProto;
+import org.apache.hadoop.yarn.proto.ApplicationHistoryServerProtos.ApplicationFinishDataProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.FinalApplicationStatusProto;
-import org.apache.hadoop.yarn.server.applicationhistoryservice.records.ApplicationHistoryData;
+import org.apache.hadoop.yarn.proto.YarnProtos.YarnApplicationStateProto;
+import org.apache.hadoop.yarn.server.applicationhistoryservice.records.ApplicationFinishData;
+
+import com.google.protobuf.TextFormat;
 
 
-public class ApplicationHistoryDataPBImpl
-    extends ProtoBase<ApplicationHistoryDataProto>
-        implements ApplicationHistoryData {
+public class ApplicationFinishDataPBImpl
+    extends ApplicationFinishData {
 
-  ApplicationHistoryDataProto proto =
-      ApplicationHistoryDataProto.getDefaultInstance();
-  ApplicationHistoryDataProto.Builder builder = null;
+  ApplicationFinishDataProto proto =
+      ApplicationFinishDataProto.getDefaultInstance();
+  ApplicationFinishDataProto.Builder builder = null;
   boolean viaProto = false;
 
   private ApplicationId applicationId;
 
-  public ApplicationHistoryDataPBImpl() {
-    builder = ApplicationHistoryDataProto.newBuilder();
+  public ApplicationFinishDataPBImpl() {
+    builder = ApplicationFinishDataProto.newBuilder();
   }
 
-  public ApplicationHistoryDataPBImpl(ApplicationHistoryDataProto proto) {
+  public ApplicationFinishDataPBImpl(ApplicationFinishDataProto proto) {
     this.proto = proto;
     viaProto = true;
   }
@@ -55,7 +57,7 @@ public class ApplicationHistoryDataPBImpl
     if (this.applicationId != null) {
       return this.applicationId;
     }
-    ApplicationHistoryDataProtoOrBuilder p = viaProto ? proto : builder;
+    ApplicationFinishDataProtoOrBuilder p = viaProto ? proto : builder;
     if (!p.hasApplicationId()) {
       return null;
     }
@@ -73,108 +75,8 @@ public class ApplicationHistoryDataPBImpl
   }
 
   @Override
-  public String getApplicationName() {
-    ApplicationHistoryDataProtoOrBuilder p = viaProto ? proto : builder;
-    if (!p.hasApplicationName()) {
-      return null;
-    }
-    return p.getApplicationName();
-  }
-
-  @Override
-  public void setApplicationName(String applicationName) {
-    maybeInitBuilder();
-    if (applicationName == null) {
-      builder.clearApplicationName();
-      return;
-    }
-    builder.setApplicationName(applicationName);
-  }
-
-  @Override
-  public String getApplicationType() {
-    ApplicationHistoryDataProtoOrBuilder p = viaProto ? proto : builder;
-    if (!p.hasApplicationType()) {
-      return null;
-    }
-    return p.getApplicationType();
-  }
-
-  @Override
-  public void setApplicationType(String applicationType) {
-    maybeInitBuilder();
-    if (applicationType == null) {
-      builder.clearApplicationType();
-      return;
-    }
-    builder.setApplicationType(applicationType);
-  }
-
-  @Override
-  public String getUser() {
-    ApplicationHistoryDataProtoOrBuilder p = viaProto ? proto : builder;
-    if (!p.hasUser()) {
-      return null;
-    }
-    return p.getUser();
-  }
-
-  @Override
-  public void setUser(String user) {
-    maybeInitBuilder();
-    if (user == null) {
-      builder.clearUser();
-      return;
-    }
-    builder.setUser(user);
-  }
-
-  @Override
-  public String getQueue() {
-    ApplicationHistoryDataProtoOrBuilder p = viaProto ? proto : builder;
-    if (!p.hasQueue()) {
-      return null;
-    }
-    return p.getQueue();
-  }
-
-  @Override
-  public void setQueue(String queue) {
-    maybeInitBuilder();
-    if (queue == null) {
-      builder.clearQueue();
-      return;
-    }
-    builder.setQueue(queue);
-  }
-
-  @Override
-  public long getSubmitTime() {
-    ApplicationHistoryDataProtoOrBuilder p = viaProto ? proto : builder;
-    return p.getStartTime();
-  }
-
-  @Override
-  public void setSubmitTime(long submitTime) {
-    maybeInitBuilder();
-    builder.setSubmitTime(submitTime);
-  }
-
-  @Override
-  public long getStartTime() {
-    ApplicationHistoryDataProtoOrBuilder p = viaProto ? proto : builder;
-    return p.getStartTime();
-  }
-
-  @Override
-  public void setStartTime(long startTime) {
-    maybeInitBuilder();
-    builder.setStartTime(startTime);
-  }
-
-  @Override
   public long getFinishTime() {
-    ApplicationHistoryDataProtoOrBuilder p = viaProto ? proto : builder;
+    ApplicationFinishDataProtoOrBuilder p = viaProto ? proto : builder;
     return p.getFinishTime();
   }
 
@@ -186,7 +88,7 @@ public class ApplicationHistoryDataPBImpl
 
   @Override
   public String getDiagnosticsInfo() {
-    ApplicationHistoryDataProtoOrBuilder p = viaProto ? proto : builder;
+    ApplicationFinishDataProtoOrBuilder p = viaProto ? proto : builder;
     if (!p.hasDiagnosticsInfo()) {
       return null;
     }
@@ -194,18 +96,18 @@ public class ApplicationHistoryDataPBImpl
   }
 
   @Override
-  public void setDiagnosticsInfo(String diagnosticInfo) {
+  public void setDiagnosticsInfo(String diagnosticsInfo) {
     maybeInitBuilder();
-    if (diagnosticInfo == null) {
+    if (diagnosticsInfo == null) {
       builder.clearDiagnosticsInfo();
       return;
     }
-    builder.setDiagnosticsInfo(diagnosticInfo);
+    builder.setDiagnosticsInfo(diagnosticsInfo);
   }
 
   @Override
   public FinalApplicationStatus getFinalApplicationStatus() {
-    ApplicationHistoryDataProtoOrBuilder p = viaProto ? proto : builder;
+    ApplicationFinishDataProtoOrBuilder p = viaProto ? proto : builder;
     if (!p.hasFinalApplicationStatus()) {
       return null;
     }
@@ -225,7 +127,25 @@ public class ApplicationHistoryDataPBImpl
   }
 
   @Override
-  public ApplicationHistoryDataProto getProto() {
+  public YarnApplicationState getYarnApplicationState() {
+    ApplicationFinishDataProtoOrBuilder p = viaProto ? proto : builder;
+    if (!p.hasYarnApplicationState()) {
+      return null;
+    }
+    return convertFromProtoFormat(p.getYarnApplicationState());
+  }
+
+  @Override
+  public void setYarnApplicationState(YarnApplicationState state) {
+    maybeInitBuilder();
+    if (state == null) {
+      builder.clearYarnApplicationState();
+      return;
+    }
+    builder.setYarnApplicationState(convertToProtoFormat(state));
+  }
+
+  public ApplicationFinishDataProto getProto() {
     mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
@@ -249,7 +169,7 @@ public class ApplicationHistoryDataPBImpl
 
   @Override
   public String toString() {
-    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
+    return TextFormat.shortDebugString(getProto());
   }
 
   private void mergeLocalToBuilder() {
@@ -270,7 +190,7 @@ public class ApplicationHistoryDataPBImpl
 
   private void maybeInitBuilder() {
     if (viaProto || builder == null) {
-      builder = ApplicationHistoryDataProto.newBuilder(proto);
+      builder = ApplicationFinishDataProto.newBuilder(proto);
     }
     viaProto = false;
   }
@@ -293,6 +213,16 @@ public class ApplicationHistoryDataPBImpl
   private FinalApplicationStatusProto convertToProtoFormat(
       FinalApplicationStatus finalApplicationStatus) {
     return ProtoUtils.convertToProtoFormat(finalApplicationStatus);
+  }
+
+  private YarnApplicationStateProto convertToProtoFormat(
+      YarnApplicationState state) {
+    return ProtoUtils.convertToProtoFormat(state);
+  }
+
+  private YarnApplicationState convertFromProtoFormat(
+      YarnApplicationStateProto yarnApplicationState) {
+    return ProtoUtils.convertFromProtoFormat(yarnApplicationState);
   }
 
 }
