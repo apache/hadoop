@@ -271,7 +271,7 @@ public class JsonUtil {
   }
   
   /** Convert a DatanodeInfo to a Json map. */
-  private static Map<String, Object> toJsonMap(final DatanodeInfo datanodeinfo) {
+  static Map<String, Object> toJsonMap(final DatanodeInfo datanodeinfo) {
     if (datanodeinfo == null) {
       return null;
     }
@@ -279,6 +279,9 @@ public class JsonUtil {
     // TODO: Fix storageID
     final Map<String, Object> m = new TreeMap<String, Object>();
     m.put("ipAddr", datanodeinfo.getIpAddr());
+    // 'name' is equivalent to ipAddr:xferPort. Older clients (1.x, 0.23.x) 
+    // expects this instead of the two fields.
+    m.put("name", datanodeinfo.getXferAddr());
     m.put("hostName", datanodeinfo.getHostName());
     m.put("storageID", datanodeinfo.getDatanodeUuid());
     m.put("xferPort", datanodeinfo.getXferPort());
@@ -298,7 +301,8 @@ public class JsonUtil {
   }
 
   /** Convert a Json map to an DatanodeInfo object. */
-  static DatanodeInfo toDatanodeInfo(final Map<?, ?> m) {
+  static DatanodeInfo toDatanodeInfo(final Map<?, ?> m)
+      throws IOException {
     if (m == null) {
       return null;
     }
@@ -308,12 +312,46 @@ public class JsonUtil {
       infoSecurePort = 0l; // same as the default value in hdfs.proto
     }
 
+    // ipAddr and xferPort are the critical fields for accessing data.
+    // If any one of the two is missing, an exception needs to be thrown.
+
+    // Handle the case of old servers (1.x, 0.23.x) sending 'name' instead
+    // of ipAddr and xferPort.
+    Object tmpValue = m.get("ipAddr");
+    String ipAddr = (tmpValue == null) ? null : (String)tmpValue;
+    tmpValue = m.get("xferPort");
+    int xferPort = (tmpValue == null) ? -1 : (int)(long)(Long)tmpValue;
+    if (ipAddr == null) {
+      tmpValue = m.get("name");
+      if (tmpValue != null) {
+        String name = (String)tmpValue;
+        int colonIdx = name.indexOf(':');
+        if (colonIdx > 0) {
+          ipAddr = name.substring(0, colonIdx);
+          xferPort = Integer.parseInt(name.substring(colonIdx +1));
+        } else {
+          throw new IOException(
+              "Invalid value in server response: name=[" + name + "]");
+        }
+      } else {
+        throw new IOException(
+            "Missing both 'ipAddr' and 'name' in server response.");
+      }
+      // ipAddr is non-null & non-empty string at this point.
+    }
+
+    // Check the validity of xferPort.
+    if (xferPort == -1) {
+      throw new IOException(
+          "Invalid or missing 'xferPort' in server response.");
+    }
+
     // TODO: Fix storageID
     return new DatanodeInfo(
-        (String)m.get("ipAddr"),
+        ipAddr,
         (String)m.get("hostName"),
         (String)m.get("storageID"),
-        (int)(long)(Long)m.get("xferPort"),
+        xferPort,
         (int)(long)(Long)m.get("infoPort"),
         (int)(long)(Long)infoSecurePort,
         (int)(long)(Long)m.get("ipcPort"),
@@ -344,7 +382,8 @@ public class JsonUtil {
   }
 
   /** Convert an Object[] to a DatanodeInfo[]. */
-  private static DatanodeInfo[] toDatanodeInfoArray(final Object[] objects) {
+  private static DatanodeInfo[] toDatanodeInfoArray(final Object[] objects) 
+      throws IOException {
     if (objects == null) {
       return null;
     } else if (objects.length == 0) {
