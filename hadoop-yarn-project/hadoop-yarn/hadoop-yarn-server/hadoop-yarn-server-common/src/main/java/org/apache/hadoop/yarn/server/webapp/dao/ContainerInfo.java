@@ -24,7 +24,6 @@ import javax.xml.bind.annotation.XmlRootElement;
 
 import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.ContainerState;
-import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.util.Times;
 
 @XmlRootElement(name = "container")
@@ -35,7 +34,7 @@ public class ContainerInfo {
   protected int allocatedMB;
   protected int allocatedVCores;
   protected String assignedNodeId;
-  protected Priority priority;
+  protected int priority;
   protected long startedTime;
   protected long finishedTime;
   protected long elapsedTime;
@@ -57,7 +56,7 @@ public class ContainerInfo {
     if (container.getAssignedNode() != null) {
       assignedNodeId = container.getAssignedNode().toString();
     }
-    priority = container.getPriority();
+    priority = container.getPriority().getPriority();
     startedTime = container.getStartTime();
     finishedTime = container.getFinishTime();
     elapsedTime = Times.elapsed(startedTime, finishedTime);
@@ -83,7 +82,7 @@ public class ContainerInfo {
     return assignedNodeId;
   }
 
-  public Priority getPriority() {
+  public int getPriority() {
     return priority;
   }
 

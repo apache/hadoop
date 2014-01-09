@@ -27,8 +27,11 @@ import javax.ws.rs.ext.Provider;
 import javax.xml.bind.JAXBContext;
 
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
+import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptsInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.AppInfo;
+import org.apache.hadoop.yarn.server.webapp.dao.AppsInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
+import org.apache.hadoop.yarn.server.webapp.dao.ContainersInfo;
 
 import com.google.inject.Singleton;
 import com.sun.jersey.api.json.JSONConfiguration;
@@ -43,7 +46,9 @@ public class JAXBContextResolver implements ContextResolver<JAXBContext> {
   private final Set<Class> types;
 
   // you have to specify all the dao classes here
-  private final Class[] cTypes = { AppInfo.class, AppAttemptInfo.class, ContainerInfo.class };
+  private final Class[] cTypes = { AppInfo.class, AppsInfo.class,
+      AppAttemptInfo.class, AppAttemptsInfo.class, ContainerInfo.class,
+      ContainersInfo.class };
 
   public JAXBContextResolver() throws Exception {
     this.types = new HashSet<Class>(Arrays.asList(cTypes));
