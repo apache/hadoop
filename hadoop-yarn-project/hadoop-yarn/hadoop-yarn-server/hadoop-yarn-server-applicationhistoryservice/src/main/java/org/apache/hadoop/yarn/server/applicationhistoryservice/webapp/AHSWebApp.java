@@ -45,5 +45,7 @@ public class AHSWebApp extends WebApp implements YarnWebParams {
     route(pajoin("/appattempt", APPLICATION_ATTEMPT_ID), AHSController.class,
         "appattempt");
     route(pajoin("/container", CONTAINER_ID), AHSController.class, "container");
+    route(pajoin("/logs", NM_NODENAME, CONTAINER_ID, ENTITY_STRING, APP_OWNER,
+        CONTAINER_LOG_TYPE), AHSController.class, "logs");
   }
 }

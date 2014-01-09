@@ -18,6 +18,7 @@
 package org.apache.hadoop.yarn.server.webapp;
 
 import static org.apache.hadoop.yarn.util.StringHelper.join;
+import static org.apache.hadoop.yarn.util.StringHelper.getPartUrl;
 import static org.apache.hadoop.yarn.webapp.YarnWebParams.APPLICATION_ATTEMPT_ID;
 
 import java.io.IOException;
@@ -126,6 +127,8 @@ public class AppAttemptBlock extends HtmlBlock {
 
     StringBuilder containersTableData = new StringBuilder("[\n");
     for (ContainerReport containerReport : containers) {
+      String logURL = containerReport.getLogUrl();
+      logURL = getPartUrl(logURL, "log");
       ContainerInfo container = new ContainerInfo(containerReport);
       // ConatinerID numerical value parsed by parseHadoopID in yarn.dt.plugins.js
       containersTableData
@@ -141,9 +144,9 @@ public class AppAttemptBlock extends HtmlBlock {
           .append("</a>\",\"")
           .append(container.getContainerExitStatus())
           .append("\",\"<a href='")
-          .append(container.getLogUrl() == null ? "#" : url(container.getLogUrl()))
+          .append(logURL == null ? "#" : url(logURL))
           .append("'>")
-          .append(container.getLogUrl() == null ? "N/A" : "Logs")
+          .append(logURL == null ? "N/A" : "Logs")
           .append("</a>\"],\n");
     }
     if (containersTableData.charAt(containersTableData.length() - 2) == ',') {
