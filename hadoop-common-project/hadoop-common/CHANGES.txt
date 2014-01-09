@@ -118,6 +118,9 @@ Release 2.4.0 - UNRELEASED
     HADOOP-10208. Remove duplicate initialization in StringUtils.getStringCollection.
     (Benoy Antony via jing9)
 
+    HADOOP-9420. Add percentile or max metric for rpcQueueTime, processing time.
+    (Liang Xie via wang)
+
   OPTIMIZATIONS
 
     HADOOP-9748. Reduce blocking on UGI.ensureInitialized (daryn)

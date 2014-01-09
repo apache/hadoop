@@ -2107,7 +2107,7 @@ public abstract class Server {
     listener = new Listener();
     this.port = listener.getAddress().getPort();    
     connectionManager = new ConnectionManager();
-    this.rpcMetrics = RpcMetrics.create(this);
+    this.rpcMetrics = RpcMetrics.create(this, conf);
     this.rpcDetailedMetrics = RpcDetailedMetrics.create(this.port);
     this.tcpNoDelay = conf.getBoolean(
         CommonConfigurationKeysPublic.IPC_SERVER_TCPNODELAY_KEY,

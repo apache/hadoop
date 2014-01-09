@@ -19,14 +19,17 @@ package org.apache.hadoop.ipc.metrics;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MutableCounterInt;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
+import org.apache.hadoop.metrics2.lib.MutableQuantiles;
 import org.apache.hadoop.metrics2.lib.MutableRate;
 
 /**
@@ -41,26 +44,48 @@ public class RpcMetrics {
   final Server server;
   final MetricsRegistry registry;
   final String name;
+  final boolean rpcQuantileEnable;
   
-  RpcMetrics(Server server) {
+  RpcMetrics(Server server, Configuration conf) {
     String port = String.valueOf(server.getListenerAddress().getPort());
-    name = "RpcActivityForPort"+ port;
+    name = "RpcActivityForPort" + port;
     this.server = server;
     registry = new MetricsRegistry("rpc").tag("port", "RPC port", port);
-    LOG.debug("Initialized "+ registry);
+    int[] intervals = conf.getInts(
+        CommonConfigurationKeys.RPC_METRICS_PERCENTILES_INTERVALS_KEY);
+    rpcQuantileEnable = (intervals.length > 0) && conf.getBoolean(
+        CommonConfigurationKeys.RPC_METRICS_QUANTILE_ENABLE, false);
+    if (rpcQuantileEnable) {
+      rpcQueueTimeMillisQuantiles =
+          new MutableQuantiles[intervals.length];
+      rpcProcessingTimeMillisQuantiles =
+          new MutableQuantiles[intervals.length];
+      for (int i = 0; i < intervals.length; i++) {
+        int interval = intervals[i];
+        rpcQueueTimeMillisQuantiles[i] = registry.newQuantiles("rpcQueueTime"
+            + interval + "s", "rpc queue time in milli second", "ops",
+            "latency", interval);
+        rpcProcessingTimeMillisQuantiles[i] = registry.newQuantiles(
+            "rpcProcessingTime" + interval + "s",
+            "rpc processing time in milli second", "ops", "latency", interval);
+      }
+    }
+    LOG.debug("Initialized " + registry);
   }
 
   public String name() { return name; }
 
-  public static RpcMetrics create(Server server) {
-    RpcMetrics m = new RpcMetrics(server);
+  public static RpcMetrics create(Server server, Configuration conf) {
+    RpcMetrics m = new RpcMetrics(server, conf);
     return DefaultMetricsSystem.instance().register(m.name, null, m);
   }
 
   @Metric("Number of received bytes") MutableCounterLong receivedBytes;
   @Metric("Number of sent bytes") MutableCounterLong sentBytes;
   @Metric("Queue time") MutableRate rpcQueueTime;
+  MutableQuantiles[] rpcQueueTimeMillisQuantiles;
   @Metric("Processsing time") MutableRate rpcProcessingTime;
+  MutableQuantiles[] rpcProcessingTimeMillisQuantiles;
   @Metric("Number of authentication failures")
   MutableCounterInt rpcAuthenticationFailures;
   @Metric("Number of authentication successes")
@@ -146,6 +171,11 @@ public class RpcMetrics {
   //@Override
   public void addRpcQueueTime(int qTime) {
     rpcQueueTime.add(qTime);
+    if (rpcQuantileEnable) {
+      for (MutableQuantiles q : rpcQueueTimeMillisQuantiles) {
+        q.add(qTime);
+      }
+    }
   }
 
   /**
@@ -155,5 +185,10 @@ public class RpcMetrics {
   //@Override
   public void addRpcProcessingTime(int processingTime) {
     rpcProcessingTime.add(processingTime);
+    if (rpcQuantileEnable) {
+      for (MutableQuantiles q : rpcProcessingTimeMillisQuantiles) {
+        q.add(processingTime);
+      }
+    }
   }
 }
