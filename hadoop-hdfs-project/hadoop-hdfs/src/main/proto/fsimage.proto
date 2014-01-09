@@ -1,0 +1,67 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+option java_package = "org.apache.hadoop.hdfs.server.namenode";
+option java_outer_classname = "FsImageProto";
+
+package hadoop.hdfs.fsimage;
+
+/**
+ * This file defines the on-disk layout of the file system image. The
+ * layout is defined by the following EBNF grammar, in which angle
+ * brackets mark protobuf definitions. (e.g., <FileHeader>)
+ *
+ * FILE := MAGIC <FileHeader> [blank] SECTION*
+ * MAGIC := 'HDFSIMG1'
+ * SECTION := NameSystemSection | ...
+ *
+ * Some notes:
+ *
+ * The codec field in FileHeader describes the compression codec used
+ * for all sections. The fileheader is always uncompressed.
+ *
+ * All protobuf messages are serialized in delimited form, which means
+ * that there always will be an integer indicates the size of the
+ * protobuf message.
+ *
+ **/
+
+message FileHeader {
+  // The on-disk layout version of the file.
+  required uint32 ondiskVersion = 1;
+  // layoutVersion describes which features are available in the
+  // FSImage.
+  required uint32 layoutVersion = 2;
+  optional string codec   = 3;
+  // The offset of the first data section
+  required uint64 dataOffset = 4;
+  message Section {
+    optional string name = 1;
+    optional uint64 length = 2;
+  }
+  repeated Section sections = 5;
+}
+
+message NameSystemSection {
+  optional uint32 namespaceId = 1;
+  optional uint64 genstampV1 = 2;
+  optional uint64 genstampV2 = 3;
+  optional uint64 genstampV1Limit = 4;
+  optional uint64 lastAllocatedBlockId = 5;
+  optional uint64 transactionId = 6;
+}

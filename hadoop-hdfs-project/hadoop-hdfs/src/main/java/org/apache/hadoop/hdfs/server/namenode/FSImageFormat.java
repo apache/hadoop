@@ -64,8 +64,11 @@ import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress.Co
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.Step;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.StepType;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.io.Text;
+
+import com.google.common.base.Preconditions;
 
 /**
  * Contains inner classes for reading or writing the on-disk format for
@@ -172,16 +175,75 @@ import org.apache.hadoop.io.Text;
 @InterfaceStability.Evolving
 public class FSImageFormat {
   private static final Log LOG = FSImage.LOG;
-  
+
   // Static-only class
   private FSImageFormat() {}
-  
+
+  interface AbstractLoader {
+    MD5Hash getLoadedImageMd5();
+    long getLoadedImageTxId();
+  }
+
+  static class LoaderDelegator implements AbstractLoader {
+    private AbstractLoader impl;
+    private final Configuration conf;
+    private final FSNamesystem fsn;
+
+    LoaderDelegator(Configuration conf, FSNamesystem fsn) {
+      this.conf = conf;
+      this.fsn = fsn;
+    }
+
+    @Override
+    public MD5Hash getLoadedImageMd5() {
+      return impl.getLoadedImageMd5();
+    }
+
+    @Override
+    public long getLoadedImageTxId() {
+      return impl.getLoadedImageTxId();
+    }
+
+    public void load(File file) throws IOException {
+      Preconditions.checkState(impl == null, "Image already loaded!");
+
+      byte[] magic = new byte[FSImageFormatProtobuf.MAGIC_HEADER.length];
+      FileInputStream is = null;
+      try {
+        is = new FileInputStream(file);
+        if (is.read(magic) == magic.length
+            && Arrays.equals(magic, FSImageFormatProtobuf.MAGIC_HEADER)) {
+          FSImageFormatProtobuf.Loader loader = new FSImageFormatProtobuf.Loader(
+              conf, fsn);
+          impl = loader;
+          is.getChannel().position(0);
+          loader.load(is);
+        } else {
+          Loader loader = new Loader(conf, fsn);
+          impl = loader;
+          loader.load(file);
+        }
+
+      } finally {
+        IOUtils.cleanup(LOG, is);
+      }
+    }
+  }
+
+  /**
+   * Construct a loader class to load the image. It chooses the loader based on
+   * the layout version.
+   */
+  public static LoaderDelegator newLoader(Configuration conf, FSNamesystem fsn) {
+    return new LoaderDelegator(conf, fsn);
+  }
+
   /**
    * A one-shot class responsible for loading an image. The load() function
    * should be called once, after which the getter methods may be used to retrieve
    * information about the image that was loaded, if loading was successful.
    */
-  public static class Loader {
+  public static class Loader implements AbstractLoader {
     private final Configuration conf;
     /** which namesystem this loader is working for */
     private final FSNamesystem namesystem;
@@ -206,12 +268,14 @@ public class FSImageFormat {
      * Return the MD5 checksum of the image that has been loaded.
      * @throws IllegalStateException if load() has not yet been called.
      */
-    MD5Hash getLoadedImageMd5() {
+    @Override
+    public MD5Hash getLoadedImageMd5() {
       checkLoaded();
       return imgDigest;
     }
 
-    long getLoadedImageTxId() {
+    @Override
+    public long getLoadedImageTxId() {
       checkLoaded();
       return imgTxId;
     }
@@ -234,7 +298,7 @@ public class FSImageFormat {
       }
     }
 
-    void load(File curFile) throws IOException {
+    public void load(File curFile) throws IOException {
       checkNotLoaded();
       assert curFile != null : "curFile is null";
 

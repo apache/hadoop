@@ -27,7 +27,6 @@ import java.util.Map;
 
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormat;
-import org.apache.hadoop.hdfs.server.namenode.FSImageFormat.Loader;
 import org.apache.hadoop.hdfs.server.namenode.FSImageSerialization;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeAttributes;
