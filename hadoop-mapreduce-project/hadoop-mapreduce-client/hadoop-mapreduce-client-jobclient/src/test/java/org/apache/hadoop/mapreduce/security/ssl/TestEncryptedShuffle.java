@@ -31,6 +31,7 @@ import org.apache.hadoop.mapred.RunningJob;
 
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -86,8 +87,10 @@ public class TestEncryptedShuffle {
     conf.set("dfs.block.access.token.enable", "false");
     conf.set("dfs.permissions", "true");
     conf.set("hadoop.security.authentication", "simple");
-    String cp = conf.get(YarnConfiguration.YARN_APPLICATION_CLASSPATH) +
-      File.pathSeparator + classpathDir;
+    String cp = conf.get(YarnConfiguration.YARN_APPLICATION_CLASSPATH,
+        StringUtils.join(",",
+            YarnConfiguration.DEFAULT_YARN_APPLICATION_CLASSPATH))
+        + File.pathSeparator + classpathDir;
     conf.set(YarnConfiguration.YARN_APPLICATION_CLASSPATH, cp);
     dfsCluster = new MiniDFSCluster(conf, 1, true, null);
     FileSystem fileSystem = dfsCluster.getFileSystem();
