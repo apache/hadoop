@@ -337,7 +337,34 @@ public class TestCompositeService {
     assertEquals("Incorrect number of services",
         1, testService.getServices().size());
   }
-  
+
+  @Test
+  public void testRemoveService() {
+    CompositeService testService = new CompositeService("TestService") {
+      @Override
+      public void serviceInit(Configuration conf) {
+        Integer notAService = new Integer(0);
+        assertFalse("Added an integer as a service",
+            addIfService(notAService));
+
+        Service service1 = new AbstractService("Service1") {};
+        addIfService(service1);
+
+        Service service2 = new AbstractService("Service2") {};
+        addIfService(service2);
+
+        Service service3 = new AbstractService("Service3") {};
+        addIfService(service3);
+
+        removeService(service1);
+      }
+    };
+
+    testService.init(new Configuration());
+    assertEquals("Incorrect number of services",
+        2, testService.getServices().size());
+  }
+
   public static class CompositeServiceAddingAChild extends CompositeService{
     Service child;
 

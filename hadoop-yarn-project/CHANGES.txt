@@ -295,6 +295,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1293. Fixed TestContainerLaunch#testInvalidEnvSyntaxDiagnostics failure
     caused by non-English system locale. (Tsuyoshi OZAWA via jianhe)
 
+    YARN-1574. RMDispatcher should be reset on transition to standby. (Xuan Gong
+    via kasha)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
