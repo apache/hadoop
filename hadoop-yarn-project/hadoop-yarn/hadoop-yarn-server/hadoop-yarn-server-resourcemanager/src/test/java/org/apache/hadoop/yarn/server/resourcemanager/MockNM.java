@@ -43,6 +43,7 @@ import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
+import org.mortbay.log.Log;
 
 public class MockNM {
 
@@ -130,12 +131,13 @@ public class MockNM {
       int containerId, ContainerState containerState) throws Exception {
     HashMap<ApplicationId, List<ContainerStatus>> nodeUpdate =
         new HashMap<ApplicationId, List<ContainerStatus>>(1);
-    ContainerStatus amContainerStatus = BuilderUtils.newContainerStatus(
-        BuilderUtils.newContainerId(attemptId, 1),
-        ContainerState.COMPLETE, "Success", 0);
+    ContainerStatus containerStatus = BuilderUtils.newContainerStatus(
+        BuilderUtils.newContainerId(attemptId, containerId), containerState,
+        "Success", 0);
     ArrayList<ContainerStatus> containerStatusList =
         new ArrayList<ContainerStatus>(1);
-    containerStatusList.add(amContainerStatus);
+    containerStatusList.add(containerStatus);
+    Log.info("ContainerStatus: " + containerStatus);
     nodeUpdate.put(attemptId.getApplicationId(), containerStatusList);
     return nodeHeartbeat(nodeUpdate, true);
   }
@@ -152,6 +154,7 @@ public class MockNM {
     status.setResponseId(resId);
     status.setNodeId(nodeId);
     for (Map.Entry<ApplicationId, List<ContainerStatus>> entry : conts.entrySet()) {
+      Log.info("entry.getValue() " + entry.getValue());
       status.setContainersStatuses(entry.getValue());
     }
     NodeHealthStatus healthStatus = Records.newRecord(NodeHealthStatus.class);

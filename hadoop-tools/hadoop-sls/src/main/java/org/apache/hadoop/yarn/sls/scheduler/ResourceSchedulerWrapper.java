@@ -860,4 +860,9 @@ public class ResourceSchedulerWrapper implements
   public List<ApplicationAttemptId> getAppsInQueue(String queue) {
     return scheduler.getAppsInQueue(queue);
   }
+
+  @Override
+  public RMContainer getRMContainer(ContainerId containerId) {
+    return null;
+  }
 }

@@ -64,7 +64,7 @@ public abstract class SchedulerApplicationAttempt {
 
   protected final AppSchedulingInfo appSchedulingInfo;
   
-  protected final Map<ContainerId, RMContainer> liveContainers =
+  protected Map<ContainerId, RMContainer> liveContainers =
       new HashMap<ContainerId, RMContainer>();
   protected final Map<Priority, Map<NodeId, RMContainer>> reservedContainers = 
       new HashMap<Priority, Map<NodeId, RMContainer>>();
@@ -73,7 +73,7 @@ public abstract class SchedulerApplicationAttempt {
   
   protected final Resource currentReservation = Resource.newInstance(0, 0);
   private Resource resourceLimit = Resource.newInstance(0, 0);
-  protected final Resource currentConsumption = Resource.newInstance(0, 0);
+  protected Resource currentConsumption = Resource.newInstance(0, 0);
 
   protected List<RMContainer> newlyAllocatedContainers = 
       new ArrayList<RMContainer>();
@@ -407,4 +407,29 @@ public abstract class SchedulerApplicationAttempt {
         Resources.add(currentConsumption, currentReservation));
   }
 
+  public synchronized Map<ContainerId, RMContainer> getLiveContainersMap() {
+    return this.liveContainers;
+  }
+
+  public synchronized Resource getResourceLimit() {
+    return this.resourceLimit;
+  }
+
+  public synchronized Map<Priority, Long> getLastScheduledContainer() {
+    return this.lastScheduledContainer;
+  }
+
+  public synchronized void transferStateFromPreviousAttempt(
+      SchedulerApplicationAttempt appAttempt) {
+    this.liveContainers = appAttempt.getLiveContainersMap();
+    // this.reReservations = appAttempt.reReservations;
+    this.currentConsumption = appAttempt.getCurrentConsumption();
+    this.resourceLimit = appAttempt.getResourceLimit();
+    // this.currentReservation = appAttempt.currentReservation;
+    // this.newlyAllocatedContainers = appAttempt.newlyAllocatedContainers;
+    // this.schedulingOpportunities = appAttempt.schedulingOpportunities;
+    this.lastScheduledContainer = appAttempt.getLastScheduledContainer();
+    this.appSchedulingInfo
+      .transferStateFromPreviousAppSchedulingInfo(appAttempt.appSchedulingInfo);
+  }
 }
