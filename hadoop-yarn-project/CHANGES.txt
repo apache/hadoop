@@ -187,6 +187,8 @@ Release 2.4.0 - UNRELEASED
 
     YARN-1568. Rename clusterid to clusterId in ActiveRMInfoProto (kasha)
 
+    YARN-1579. ActiveRMInfoProto fields should be optional (kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES
