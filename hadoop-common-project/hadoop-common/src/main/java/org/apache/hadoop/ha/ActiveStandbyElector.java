@@ -768,7 +768,7 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
   }
 
   @InterfaceAudience.Private
-  public void terminateConnection() {
+  public synchronized void terminateConnection() {
     if (zkClient == null) {
       return;
     }

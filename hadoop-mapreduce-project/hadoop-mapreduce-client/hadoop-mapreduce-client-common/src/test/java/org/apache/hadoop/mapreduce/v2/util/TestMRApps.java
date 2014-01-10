@@ -182,9 +182,10 @@ public class TestMRApps {
     MRApps.setClasspath(environment, job.getConfiguration());
     assertTrue(environment.get("CLASSPATH").startsWith(
       ApplicationConstants.Environment.PWD.$() + File.pathSeparator));
-    String yarnAppClasspath = 
-        job.getConfiguration().get(
-            YarnConfiguration.YARN_APPLICATION_CLASSPATH);
+    String yarnAppClasspath = job.getConfiguration().get(
+        YarnConfiguration.YARN_APPLICATION_CLASSPATH,
+        StringUtils.join(",",
+            YarnConfiguration.DEFAULT_YARN_APPLICATION_CLASSPATH));
     if (yarnAppClasspath != null) {
       yarnAppClasspath = yarnAppClasspath.replaceAll(",\\s*", File.pathSeparator)
         .trim();
@@ -217,7 +218,10 @@ public class TestMRApps {
     MRApps.setClasspath(environment, conf);
     assertTrue(environment.get("CLASSPATH").startsWith(
       ApplicationConstants.Environment.PWD.$() + File.pathSeparator));
-    String confClasspath = job.getConfiguration().get(YarnConfiguration.YARN_APPLICATION_CLASSPATH);
+    String confClasspath = job.getConfiguration().get(
+        YarnConfiguration.YARN_APPLICATION_CLASSPATH,
+        StringUtils.join(",",
+            YarnConfiguration.DEFAULT_YARN_APPLICATION_CLASSPATH));
     if (confClasspath != null) {
       confClasspath = confClasspath.replaceAll(",\\s*", File.pathSeparator)
         .trim();
