@@ -257,6 +257,9 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-5449. WebHdfs compatibility broken between 2.2 and 1.x / 23.x (kihwal)
 
+    HDFS-5756. hadoopRzOptionsSetByteBufferPool does not accept NULL argument,
+    contrary to docs. (cmccabe via wang)
+
 BREAKDOWN OF HDFS-2832 SUBTASKS AND RELATED JIRAS
 
     HDFS-4985. Add storage type to the protocol and expose it in block report
