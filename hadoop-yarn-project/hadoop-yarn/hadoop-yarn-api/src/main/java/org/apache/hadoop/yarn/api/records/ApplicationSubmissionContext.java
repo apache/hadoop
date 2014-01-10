@@ -24,6 +24,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
+import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
@@ -57,7 +58,8 @@ public abstract class ApplicationSubmissionContext {
       ApplicationId applicationId, String applicationName, String queue,
       Priority priority, ContainerLaunchContext amContainer,
       boolean isUnmanagedAM, boolean cancelTokensWhenComplete,
-      int maxAppAttempts, Resource resource, String applicationType) {
+      int maxAppAttempts, Resource resource, String applicationType,
+      boolean keepContainers) {
     ApplicationSubmissionContext context =
         Records.newRecord(ApplicationSubmissionContext.class);
     context.setApplicationId(applicationId);
@@ -70,7 +72,20 @@ public abstract class ApplicationSubmissionContext {
     context.setMaxAppAttempts(maxAppAttempts);
     context.setResource(resource);
     context.setApplicationType(applicationType);
+    context.setKeepContainersAcrossApplicationAttempts(keepContainers);
     return context;
+  }
+
+  @Public
+  @Stable
+  public static ApplicationSubmissionContext newInstance(
+      ApplicationId applicationId, String applicationName, String queue,
+      Priority priority, ContainerLaunchContext amContainer,
+      boolean isUnmanagedAM, boolean cancelTokensWhenComplete,
+      int maxAppAttempts, Resource resource, String applicationType) {
+    return newInstance(applicationId, applicationName, queue, priority,
+      amContainer, isUnmanagedAM, cancelTokensWhenComplete, maxAppAttempts,
+      resource, null, false);
   }
 
   @Public
@@ -268,4 +283,35 @@ public abstract class ApplicationSubmissionContext {
   @Public
   @Stable
   public abstract void setApplicationType(String applicationType);
+
+
+  /**
+   * Get the flag which indicates whether to keep containers across application
+   * attempts or not.
+   * 
+   * @return the flag which indicates whether to keep containers across
+   *         application attempts or not.
+   */
+  @Public
+  @Stable
+  public abstract boolean getKeepContainersAcrossApplicationAttempts();
+
+  /**
+   * Set the flag which indicates whether to keep containers across application
+   * attempts.
+   * <p>
+   * If the flag is true, running containers will not be killed when application
+   * attempt fails and these containers will be retrieved by the new application
+   * attempt on registration via
+   * {@link ApplicationMasterProtocol#registerApplicationMaster(RegisterApplicationMasterRequest)}.
+   * </p>
+   * 
+   * @param keepContainers
+   *          the flag which indicates whether to keep containers across
+   *          application attempts.
+   */
+  @Public
+  @Stable
+  public abstract void setKeepContainersAcrossApplicationAttempts(
+      boolean keepContainers);
 }

@@ -156,7 +156,7 @@ public class TestFifoScheduler {
     SchedulerEvent appEvent = new AppAddedSchedulerEvent(appId, "queue", "user");
     schedular.handle(appEvent);
     SchedulerEvent attemptEvent =
-        new AppAttemptAddedSchedulerEvent(appAttemptId);
+        new AppAttemptAddedSchedulerEvent(appAttemptId, false);
     schedular.handle(attemptEvent);
 
     appAttemptId = BuilderUtils.newApplicationAttemptId(appId, 2);
@@ -166,7 +166,7 @@ public class TestFifoScheduler {
           "user");
     schedular.handle(appEvent2);
     SchedulerEvent attemptEvent2 =
-        new AppAttemptAddedSchedulerEvent(appAttemptId);
+        new AppAttemptAddedSchedulerEvent(appAttemptId, false);
     schedular.handle(attemptEvent2);
 
     int afterAppsSubmitted = metrics.getAppsSubmitted();
@@ -203,7 +203,7 @@ public class TestFifoScheduler {
           "user1");
     scheduler.handle(appEvent);
     AppAttemptAddedSchedulerEvent attemptEvent =
-        new AppAttemptAddedSchedulerEvent(appAttemptId);
+        new AppAttemptAddedSchedulerEvent(appAttemptId, false);
     scheduler.handle(attemptEvent);
 
     int memory = 64;
@@ -293,7 +293,7 @@ public class TestFifoScheduler {
           "user1");
     scheduler.handle(appEvent);
     AppAttemptAddedSchedulerEvent attemptEvent =
-        new AppAttemptAddedSchedulerEvent(appAttemptId);
+        new AppAttemptAddedSchedulerEvent(appAttemptId, false);
     scheduler.handle(attemptEvent);
 
     int memory = 1024;
@@ -534,13 +534,6 @@ public class TestFifoScheduler {
     LOG.info("--- END: testFifoScheduler ---");
   }
 
-  @Test
-  public void testConcurrentAccessOnApplications() throws Exception {
-    FifoScheduler fs = new FifoScheduler();
-    TestCapacityScheduler.verifyConcurrentAccessOnApplications(
-        fs.appAttempts, FiCaSchedulerApp.class, Queue.class);
-  }
-
   @SuppressWarnings("resource")
   @Test
   public void testBlackListNodes() throws Exception {
@@ -564,18 +557,18 @@ public class TestFifoScheduler {
           "user");
     fs.handle(appEvent);
     SchedulerEvent attemptEvent =
-        new AppAttemptAddedSchedulerEvent(appAttemptId);
+        new AppAttemptAddedSchedulerEvent(appAttemptId, false);
     fs.handle(attemptEvent);
 
     // Verify the blacklist can be updated independent of requesting containers
     fs.allocate(appAttemptId, Collections.<ResourceRequest>emptyList(),
         Collections.<ContainerId>emptyList(),
         Collections.singletonList(host), null);
-    Assert.assertTrue(fs.getApplication(appAttemptId).isBlacklisted(host));
+    Assert.assertTrue(fs.getApplicationAttempt(appAttemptId).isBlacklisted(host));
     fs.allocate(appAttemptId, Collections.<ResourceRequest>emptyList(),
         Collections.<ContainerId>emptyList(), null,
         Collections.singletonList(host));
-    Assert.assertFalse(fs.getApplication(appAttemptId).isBlacklisted(host));
+    Assert.assertFalse(fs.getApplicationAttempt(appAttemptId).isBlacklisted(host));
     rm.stop();
   }
   

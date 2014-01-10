@@ -1390,7 +1390,7 @@ public class TestRMWebServicesApps extends JerseyTest {
   @Test
   public void testMultipleAppAttempts() throws JSONException, Exception {
     rm.start();
-    MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 2048);
+    MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 8192);
     RMApp app1 = rm.submitApp(CONTAINER_MB, "testwordcount", "user1");
     amNodeManager.nodeHeartbeat(true);
     rm.waitForState(app1.getCurrentAppAttempt().getAppAttemptId(),
@@ -1403,11 +1403,13 @@ public class TestRMWebServicesApps extends JerseyTest {
     while (--retriesLeft > 0) {
       RMAppEvent event =
           new RMAppFailedAttemptEvent(app1.getApplicationId(),
-              RMAppEventType.ATTEMPT_FAILED, "");
+              RMAppEventType.ATTEMPT_FAILED, "", false);
       app1.handle(event);
       rm.waitForState(app1.getApplicationId(), RMAppState.ACCEPTED);
       amNodeManager.nodeHeartbeat(true);
     }
+    // kick the scheduler to allocate the am container.
+    amNodeManager.nodeHeartbeat(true);
     rm.waitForState(app1.getCurrentAppAttempt().getAppAttemptId(),
       RMAppAttemptState.ALLOCATED);
     assertEquals("incorrect number of attempts", maxAppAttempts,

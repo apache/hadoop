@@ -219,7 +219,8 @@ public class FiCaSchedulerNode extends SchedulerNode {
             " on node " + this.reservedContainer.getReservedNode());
       }
       
-      // Cannot reserve more than one application on a given node!
+      // Cannot reserve more than one application attempt on a given node!
+      // Reservation is still against attempt.
       if (!this.reservedContainer.getContainer().getId().getApplicationAttemptId().equals(
           reservedContainer.getContainer().getId().getApplicationAttemptId())) {
         throw new IllegalStateException("Trying to reserve" +

@@ -421,21 +421,26 @@ public class ApplicationMasterService extends AbstractService implements
         LOG.warn("Invalid blacklist request by application " + appAttemptId, e);
         throw e;
       }
-      
-      try {
-        RMServerUtils.validateContainerReleaseRequest(release, appAttemptId);
-      } catch (InvalidContainerReleaseException e) {
-        LOG.warn("Invalid container release by application " + appAttemptId, e);
-        throw e;
+
+      RMApp app =
+          this.rmContext.getRMApps().get(appAttemptId.getApplicationId());
+      // In the case of work-preserving AM restart, it's possible for the
+      // AM to release containers from the earlier attempt.
+      if (!app.getApplicationSubmissionContext()
+        .getKeepContainersAcrossApplicationAttempts()) {
+        try {
+          RMServerUtils.validateContainerReleaseRequest(release, appAttemptId);
+        } catch (InvalidContainerReleaseException e) {
+          LOG.warn("Invalid container release by application " + appAttemptId, e);
+          throw e;
+        }
       }
-      
+
       // Send new requests to appAttempt.
       Allocation allocation =
           this.rScheduler.allocate(appAttemptId, ask, release, 
               blacklistAdditions, blacklistRemovals);
 
-      RMApp app = this.rmContext.getRMApps().get(
-          appAttemptId.getApplicationId());
       RMAppAttempt appAttempt = app.getRMAppAttempt(appAttemptId);
       
       AllocateResponse allocateResponse =

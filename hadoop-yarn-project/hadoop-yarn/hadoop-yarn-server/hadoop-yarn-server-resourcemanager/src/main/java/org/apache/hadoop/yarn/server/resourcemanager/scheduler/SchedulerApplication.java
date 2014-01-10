@@ -26,6 +26,7 @@ public class SchedulerApplication {
 
   private final Queue queue;
   private final String user;
+  private SchedulerApplicationAttempt currentAttempt;
 
   public SchedulerApplication(Queue queue, String user) {
     this.queue = queue;
@@ -38,5 +39,13 @@ public class SchedulerApplication {
 
   public String getUser() {
     return user;
+  }
+
+  public SchedulerApplicationAttempt getCurrentAppAttempt() {
+    return currentAttempt;
+  }
+
+  public void setCurrentAppAttempt(SchedulerApplicationAttempt currentAttempt) {
+    this.currentAttempt = currentAttempt;
   }
 }

@@ -190,24 +190,29 @@ public class BootstrapStandby implements Tool, Configurable {
     // Load the newly formatted image, using all of the directories (including shared
     // edits)
     FSImage image = new FSImage(conf);
-    image.getStorage().setStorageInfo(storage);
-    image.initEditLog();
-    assert image.getEditLog().isOpenForRead() :
+    try {
+      image.getStorage().setStorageInfo(storage);
+      image.initEditLog();
+      assert image.getEditLog().isOpenForRead() :
         "Expected edit log to be open for read";
-    
-    // Ensure that we have enough edits already in the shared directory to
-    // start up from the last checkpoint on the active.
-    if (!checkLogsAvailableForRead(image, imageTxId, curTxId)) {
-      return ERR_CODE_LOGS_UNAVAILABLE;
-    }
-    
-    image.getStorage().writeTransactionIdFileToStorage(curTxId);
 
-    // Download that checkpoint into our storage directories.
-    MD5Hash hash = TransferFsImage.downloadImageToStorage(
+      // Ensure that we have enough edits already in the shared directory to
+      // start up from the last checkpoint on the active.
+      if (!checkLogsAvailableForRead(image, imageTxId, curTxId)) {
+        return ERR_CODE_LOGS_UNAVAILABLE;
+      }
+
+      image.getStorage().writeTransactionIdFileToStorage(curTxId);
+
+      // Download that checkpoint into our storage directories.
+      MD5Hash hash = TransferFsImage.downloadImageToStorage(
         otherHttpAddr, imageTxId,
         storage, true);
-    image.saveDigestAndRenameCheckpointImage(imageTxId, hash);
+      image.saveDigestAndRenameCheckpointImage(imageTxId, hash);
+    } catch (IOException ioe) {
+      image.close();
+      throw ioe;
+    }
     return 0;
   }
 
