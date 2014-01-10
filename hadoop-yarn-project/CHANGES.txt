@@ -43,6 +43,8 @@ Release 2.4.0 - UNRELEASED
     YARN-1490. Introduced the ability to make ResourceManager optionally not kill
     all containers when an ApplicationMaster exits. (Jian He via vinodkv)
 
+    YARN-1033. Expose RM active/standby state to Web UI and REST API (kasha)
+
   IMPROVEMENTS
 
     YARN-7. Support CPU resource for DistributedShell. (Junping Du via llu)
