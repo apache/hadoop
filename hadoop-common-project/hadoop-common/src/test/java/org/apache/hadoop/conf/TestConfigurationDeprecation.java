@@ -26,6 +26,7 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.ByteArrayOutputStream;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -398,5 +399,31 @@ public class TestConfigurationDeprecation {
     for (Future<Void> future : futures) {
       Uninterruptibles.getUninterruptibly(future);
     }
+  }
+
+  @Test
+  public void testNoFalseDeprecationWarning() throws IOException {
+    Configuration conf = new Configuration();
+    Configuration.addDeprecation("AA", "BB");
+    conf.set("BB", "bb");
+    conf.get("BB");
+    conf.writeXml(new ByteArrayOutputStream());
+    assertEquals(false, Configuration.hasWarnedDeprecation("AA"));
+    conf.set("AA", "aa");
+    assertEquals(true, Configuration.hasWarnedDeprecation("AA"));
+  }
+  
+  @Test
+  public void testDeprecationSetUnset() throws IOException {
+    addDeprecationToConfiguration();
+    Configuration conf = new Configuration();
+    //"X" is deprecated by "Y" and "Z"
+    conf.set("Y", "y");
+    assertEquals("y", conf.get("Z"));
+    conf.set("X", "x");
+    assertEquals("x", conf.get("Z"));
+    conf.unset("Y");
+    assertEquals(null, conf.get("Z"));
+    assertEquals(null, conf.get("X"));
   }
 }

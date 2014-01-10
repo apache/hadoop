@@ -553,36 +553,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   }
 
   /**
-   * Returns the alternate name for a key if the property name is deprecated
-   * or if deprecates a property name.
-   *
-   * @param name property name.
-   * @return alternate name.
-   */
-  private String[] getAlternateNames(String name) {
-    String altNames[] = null;
-    DeprecationContext cur = deprecationContext.get();
-    DeprecatedKeyInfo keyInfo = cur.getDeprecatedKeyMap().get(name);
-    if (keyInfo == null) {
-      altNames = (cur.getReverseDeprecatedKeyMap().get(name) != null ) ? 
-        new String [] {cur.getReverseDeprecatedKeyMap().get(name)} : null;
-      if(altNames != null && altNames.length > 0) {
-    	//To help look for other new configs for this deprecated config
-    	keyInfo = cur.getDeprecatedKeyMap().get(altNames[0]);
-      }      
-    } 
-    if(keyInfo != null && keyInfo.newKeys.length > 0) {
-      List<String> list = new ArrayList<String>(); 
-      if(altNames != null) {
-    	  list.addAll(Arrays.asList(altNames));
-      }
-      list.addAll(Arrays.asList(keyInfo.newKeys));
-      altNames = list.toArray(new String[list.size()]);
-    }
-    return altNames;
-  }
-
-  /**
    * Checks for the presence of the property <code>name</code> in the
    * deprecation map. Returns the first of the list of new keys if present
    * in the deprecation map or the <code>name</code> itself. If the property
@@ -927,6 +897,37 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     return result;
   }
 
+  /**
+   * Returns alternative names (non-deprecated keys or previously-set deprecated keys)
+   * for a given non-deprecated key.
+   * If the given key is deprecated, return null.
+   *
+   * @param name property name.
+   * @return alternative names.
+   */
+  private String[] getAlternativeNames(String name) {
+    String altNames[] = null;
+    DeprecatedKeyInfo keyInfo = null;
+    DeprecationContext cur = deprecationContext.get();
+    String depKey = cur.getReverseDeprecatedKeyMap().get(name);
+    if(depKey != null) {
+      keyInfo = cur.getDeprecatedKeyMap().get(depKey);
+      if(keyInfo.newKeys.length > 0) {
+        if(getProps().containsKey(depKey)) {
+          //if deprecated key is previously set explicitly
+          List<String> list = new ArrayList<String>();
+          list.addAll(Arrays.asList(keyInfo.newKeys));
+          list.add(depKey);
+          altNames = list.toArray(new String[list.size()]);
+        }
+        else {
+          altNames = keyInfo.newKeys;
+        }
+      }
+    }
+    return altNames;
+  }
+
   /** 
    * Set the <code>value</code> of the <code>name</code> property. If 
    * <code>name</code> is deprecated or there is a deprecated name associated to it,
@@ -941,9 +942,9 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   
   /** 
    * Set the <code>value</code> of the <code>name</code> property. If 
-   * <code>name</code> is deprecated or there is a deprecated name associated to it,
-   * it sets the value to both names.
-   * 
+   * <code>name</code> is deprecated, it also sets the <code>value</code> to
+   * the keys that replace the deprecated key.
+   *
    * @param name property name.
    * @param value property value.
    * @param source the place that this configuration value came from 
@@ -963,23 +964,30 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     }
     getOverlay().setProperty(name, value);
     getProps().setProperty(name, value);
-    if(source == null) {
-      updatingResource.put(name, new String[] {"programatically"});
-    } else {
-      updatingResource.put(name, new String[] {source});
-    }
-    String[] altNames = getAlternateNames(name);
-    if (altNames != null && altNames.length > 0) {
-      String altSource = "because " + name + " is deprecated";
-      for(String altName : altNames) {
-        if(!altName.equals(name)) {
-          getOverlay().setProperty(altName, value);
-          getProps().setProperty(altName, value);
-          updatingResource.put(altName, new String[] {altSource});
+    String newSource = (source == null ? "programatically" : source);
+
+    if (!isDeprecated(name)) {
+      updatingResource.put(name, new String[] {newSource});
+      String[] altNames = getAlternativeNames(name);
+      if(altNames != null) {
+        for(String n: altNames) {
+          if(!n.equals(name)) {
+            getOverlay().setProperty(n, value);
+            getProps().setProperty(n, value);
+            updatingResource.put(n, new String[] {newSource});
+          }
         }
       }
     }
-    warnOnceIfDeprecated(deprecations, name);
+    else {
+      String[] names = handleDeprecation(deprecationContext.get(), name);
+      String altSource = "because " + name + " is deprecated";
+      for(String n : names) {
+        getOverlay().setProperty(n, value);
+        getProps().setProperty(n, value);
+        updatingResource.put(n, new String[] {altSource});
+      }
+    }
   }
 
   private void warnOnceIfDeprecated(DeprecationContext deprecations, String name) {
@@ -993,14 +1001,20 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * Unset a previously set property.
    */
   public synchronized void unset(String name) {
-    String[] altNames = getAlternateNames(name);
-    getOverlay().remove(name);
-    getProps().remove(name);
-    if (altNames !=null && altNames.length > 0) {
-      for(String altName : altNames) {
-    	getOverlay().remove(altName);
-    	getProps().remove(altName);
+    String[] names = null;
+    if (!isDeprecated(name)) {
+      names = getAlternativeNames(name);
+      if(names == null) {
+    	  names = new String[]{name};
       }
+    }
+    else {
+      names = handleDeprecation(deprecationContext.get(), name);
+    }
+
+    for(String n: names) {
+      getOverlay().remove(n);
+      getProps().remove(n);
     }
   }
 
@@ -2591,5 +2605,19 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       }
       System.out.println(entry.getKey() + "\t" + newKeys.toString());
     }
+  }
+
+  /**
+   * Returns whether or not a deprecated name has been warned. If the name is not
+   * deprecated then always return false
+   */
+  public static boolean hasWarnedDeprecation(String name) {
+    DeprecationContext deprecations = deprecationContext.get();
+    if(deprecations.getDeprecatedKeyMap().containsKey(name)) {
+      if(deprecations.getDeprecatedKeyMap().get(name).accessed.get()) {
+        return true;
+      }
+    }
+    return false;
   }
 }
