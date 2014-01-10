@@ -62,6 +62,8 @@ ResourceManager REST API's.
 *---------------+--------------+-------------------------------+
 | state         | string | The ResourceManager state - valid values are: NOTINITED, INITED, STARTED, STOPPED|
 *---------------+--------------+-------------------------------+
+| haState       | string | The ResourceManager HA state - valid values are: INITIALIZING, ACTIVE, STANDBY, STOPPED|
+*---------------+--------------+-------------------------------+
 | resourceManagerVersion | string  | Version of the ResourceManager |
 *---------------+--------------+-------------------------------+
 | resourceManagerBuildVersion | string  | ResourceManager build string with build version, user, and checksum |
