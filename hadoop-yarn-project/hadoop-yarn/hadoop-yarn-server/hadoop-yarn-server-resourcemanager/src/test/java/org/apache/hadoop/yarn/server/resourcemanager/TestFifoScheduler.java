@@ -302,7 +302,7 @@ public class TestFifoScheduler {
         new AppAddedSchedulerEvent(appId1, "queue", "user");
     fs.handle(appEvent);
     SchedulerEvent attemptEvent =
-        new AppAttemptAddedSchedulerEvent(appAttemptId1);
+        new AppAttemptAddedSchedulerEvent(appAttemptId1, false);
     fs.handle(attemptEvent);
 
     List<ContainerId> emptyId = new ArrayList<ContainerId>();
@@ -396,7 +396,7 @@ public class TestFifoScheduler {
         new AppAddedSchedulerEvent(appId1, "queue", "user");
     fs.handle(appEvent);
     SchedulerEvent attemptEvent =
-        new AppAttemptAddedSchedulerEvent(appAttemptId1);
+        new AppAttemptAddedSchedulerEvent(appAttemptId1, false);
     fs.handle(attemptEvent);
 
     ApplicationId appId2 = BuilderUtils.newApplicationId(200, 2);
@@ -406,7 +406,7 @@ public class TestFifoScheduler {
         new AppAddedSchedulerEvent(appId2, "queue", "user");
     fs.handle(appEvent2);
     SchedulerEvent attemptEvent2 =
-        new AppAttemptAddedSchedulerEvent(appAttemptId2);
+        new AppAttemptAddedSchedulerEvent(appAttemptId2, false);
     fs.handle(attemptEvent2);
 
     List<ContainerId> emptyId = new ArrayList<ContainerId>();

@@ -298,6 +298,19 @@ extends ApplicationSubmissionContext {
     this.resource = resource;
   }
 
+  @Override
+  public void
+      setKeepContainersAcrossApplicationAttempts(boolean keepContainers) {
+    maybeInitBuilder();
+    builder.setKeepContainersAcrossApplicationAttempts(keepContainers);
+  }
+
+  @Override
+  public boolean getKeepContainersAcrossApplicationAttempts() {
+    ApplicationSubmissionContextProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getKeepContainersAcrossApplicationAttempts();
+  }
+
   private PriorityPBImpl convertFromProtoFormat(PriorityProto p) {
     return new PriorityPBImpl(p);
   }
