@@ -128,6 +128,8 @@ public class OfflineEditsViewerHelper {
     DFSTestUtil.runOperations(cluster, dfs, cluster.getConfiguration(0),
         dfs.getDefaultBlockSize(), 0);
 
+    cluster.getNamesystem().addUpgradeMarker();
+
     // Force a roll so we get an OP_END_LOG_SEGMENT txn
     return cluster.getNameNodeRpc().rollEditLog();
   }

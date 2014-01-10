@@ -75,6 +75,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SymlinkOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.TimesOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.UpdateBlocksOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.UpdateMasterKeyOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.UpgradeMarkerOp.UpgradeMarkerException;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
@@ -206,6 +207,8 @@ public class FSEditLogLoader {
             if (lastInodeId < inodeId) {
               lastInodeId = inodeId;
             }
+          } catch (UpgradeMarkerException e) {
+            throw e;
           } catch (Throwable e) {
             LOG.error("Encountered exception on operation " + op, e);
             MetaRecoveryContext.editLogLoaderPrompt("Failed to " +
@@ -233,6 +236,9 @@ public class FSEditLogLoader {
             }
           }
           numEdits++;
+        } catch (UpgradeMarkerException e) {
+          LOG.info("Stopped at upgrade marker");
+          break;
         } catch (MetaRecoveryContext.RequestStopException e) {
           MetaRecoveryContext.LOG.warn("Stopped reading edit log at " +
               in.getPosition() + "/"  + in.length());
@@ -636,6 +642,9 @@ public class FSEditLogLoader {
       AllocateBlockIdOp allocateBlockIdOp = (AllocateBlockIdOp) op;
       fsNamesys.setLastAllocatedBlockId(allocateBlockIdOp.blockId);
       break;
+    }
+    case OP_UPGRADE_MARKER: {
+      throw new UpgradeMarkerException();
     }
     case OP_ADD_CACHE_DIRECTIVE: {
       AddCacheDirectiveInfoOp addOp = (AddCacheDirectiveInfoOp) op;

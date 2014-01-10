@@ -7047,6 +7047,24 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
   }
 
+  void addUpgradeMarker() throws IOException {
+    checkSuperuserPrivilege();
+    checkOperation(OperationCategory.WRITE);
+    writeLock();
+    try {
+      checkOperation(OperationCategory.WRITE);
+
+      getEditLog().logUpgradeMarker();
+    } finally {
+      writeUnlock();
+    }
+    getEditLog().logSync();
+
+    if (auditLog.isInfoEnabled() && isExternalInvocation()) {
+      logAuditEvent(true, "upgrade", null, null, null);
+    }
+  }
+
   long addCacheDirective(CacheDirectiveInfo directive, EnumSet<CacheFlag> flags)
       throws IOException {
     checkOperation(OperationCategory.WRITE);

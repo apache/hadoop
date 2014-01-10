@@ -55,6 +55,7 @@ import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_SYMLINK
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_TIMES;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_UPDATE_BLOCKS;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_UPDATE_MASTER_KEY;
+import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_UPGRADE_MARKER;
 
 import java.io.DataInput;
 import java.io.DataInputStream;
@@ -166,6 +167,8 @@ public abstract class FSEditLogOp {
       inst.put(OP_ADD_CACHE_POOL, new AddCachePoolOp());
       inst.put(OP_MODIFY_CACHE_POOL, new ModifyCachePoolOp());
       inst.put(OP_REMOVE_CACHE_POOL, new RemoveCachePoolOp());
+
+      inst.put(OP_UPGRADE_MARKER, new UpgradeMarkerOp());
     }
     
     public FSEditLogOp get(FSEditLogOpCodes opcode) {
@@ -3275,6 +3278,45 @@ public abstract class FSEditLogOp {
     public void readFields(DataInput in) throws IOException {
       this.blkid = in.readLong();
       this.len = in.readLong();
+    }
+  }
+  /**
+   * Operation corresponding to upgrade
+   */
+  static class UpgradeMarkerOp extends FSEditLogOp { // @Idempotent
+    public UpgradeMarkerOp() {
+      super(OP_UPGRADE_MARKER);
+    }
+
+    static UpgradeMarkerOp getInstance(OpInstanceCache cache) {
+      return (UpgradeMarkerOp) cache.get(OP_UPGRADE_MARKER);
+    }
+
+    @Override
+    void readFields(DataInputStream in, int logVersion) throws IOException {
+    }
+
+    @Override
+    public void writeFields(DataOutputStream out) throws IOException {
+    }
+
+    @Override
+    protected void toXml(ContentHandler contentHandler) throws SAXException {
+    }
+
+    @Override
+    void fromXml(Stanza st) throws InvalidXmlException {
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder builder = new StringBuilder();
+      builder.append("UpgradeMarkerOp");
+      return builder.toString();
+    }
+    
+    static class UpgradeMarkerException extends IOException {
+      private static final long serialVersionUID = 1L;
     }
   }
 
