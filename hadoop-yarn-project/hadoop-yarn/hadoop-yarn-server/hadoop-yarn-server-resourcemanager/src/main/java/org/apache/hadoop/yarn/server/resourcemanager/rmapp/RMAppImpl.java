@@ -63,6 +63,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptE
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppStartAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
@@ -76,6 +77,7 @@ import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
+@SuppressWarnings({ "rawtypes", "unchecked" })
 public class RMAppImpl implements RMApp, Recoverable {
 
   private static final Log LOG = LogFactory.getLog(RMAppImpl.class);
@@ -633,7 +635,7 @@ public class RMAppImpl implements RMApp, Recoverable {
       this.writeLock.unlock();
     }
   }
-  
+
   @Override
   public void recover(RMState state) throws Exception{
     ApplicationState appState = state.getApplicationState().get(getApplicationId());
@@ -646,26 +648,28 @@ public class RMAppImpl implements RMApp, Recoverable {
 
     for(int i=0; i<appState.getAttemptCount(); ++i) {
       // create attempt
-      createNewAttempt(false);
+      createNewAttempt();
       ((RMAppAttemptImpl)this.currentAttempt).recover(state);
     }
   }
 
-  @SuppressWarnings("unchecked")
-  private void createNewAttempt(boolean startAttempt) {
+  private void createNewAttempt() {
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(applicationId, attempts.size() + 1);
     RMAppAttempt attempt =
         new RMAppAttemptImpl(appAttemptId, rmContext, scheduler, masterService,
-          submissionContext, conf);
+          submissionContext, conf, maxAppAttempts == attempts.size());
     attempts.put(appAttemptId, attempt);
     currentAttempt = attempt;
-    if(startAttempt) {
-      handler.handle(
-          new RMAppAttemptEvent(appAttemptId, RMAppAttemptEventType.START));
-    }
   }
   
+  private void
+      createAndStartNewAttempt(boolean transferStateFromPreviousAttempt) {
+    createNewAttempt();
+    handler.handle(new RMAppStartAttemptEvent(currentAttempt.getAppAttemptId(),
+      transferStateFromPreviousAttempt));
+  }
+
   private void processNodeUpdate(RMAppNodeUpdateType type, RMNode node) {
     NodeState nodeState = node.getState();
     updatedNodes.add(node);
@@ -688,7 +692,6 @@ public class RMAppImpl implements RMApp, Recoverable {
     };
   }
 
-  @SuppressWarnings("unchecked")
   private static final class RMAppRecoveredTransition implements
       MultipleArcTransition<RMAppImpl, RMAppEvent, RMAppState> {
 
@@ -729,7 +732,6 @@ public class RMAppImpl implements RMApp, Recoverable {
 
   private static final class AddApplicationToSchedulerTransition extends
       RMAppTransition {
-    @SuppressWarnings("unchecked")
     @Override
     public void transition(RMAppImpl app, RMAppEvent event) {
       if (event instanceof RMAppNewSavedEvent) {
@@ -751,14 +753,13 @@ public class RMAppImpl implements RMApp, Recoverable {
   private static final class StartAppAttemptTransition extends RMAppTransition {
     @Override
     public void transition(RMAppImpl app, RMAppEvent event) {
-      app.createNewAttempt(true);
+      app.createAndStartNewAttempt(false);
     };
   }
 
   private static final class FinalStateSavedTransition implements
       MultipleArcTransition<RMAppImpl, RMAppEvent, RMAppState> {
 
-    @SuppressWarnings({ "rawtypes", "unchecked" })
     @Override
     public RMAppState transition(RMAppImpl app, RMAppEvent event) {
       RMAppUpdateSavedEvent storeEvent = (RMAppUpdateSavedEvent) event;
@@ -959,7 +960,6 @@ public class RMAppImpl implements RMApp, Recoverable {
   }
 
   private static class KillAttemptTransition extends RMAppTransition {
-    @SuppressWarnings("unchecked")
     @Override
     public void transition(RMAppImpl app, RMAppEvent event) {
       app.stateBeforeKilling = app.getState();
@@ -987,7 +987,6 @@ public class RMAppImpl implements RMApp, Recoverable {
       return nodes;
     }
 
-    @SuppressWarnings("unchecked")
     public void transition(RMAppImpl app, RMAppEvent event) {
       Set<NodeId> nodes = getNodesOnWhichAttemptRan(app);
       for (NodeId nodeId : nodes) {
@@ -1019,7 +1018,21 @@ public class RMAppImpl implements RMApp, Recoverable {
     public RMAppState transition(RMAppImpl app, RMAppEvent event) {
       if (!app.submissionContext.getUnmanagedAM()
           && app.attempts.size() < app.maxAppAttempts) {
-        app.createNewAttempt(true);
+        boolean transferStateFromPreviousAttempt = false;
+        RMAppFailedAttemptEvent failedEvent = (RMAppFailedAttemptEvent) event;
+        transferStateFromPreviousAttempt =
+            failedEvent.getTransferStateFromPreviousAttempt();
+
+        RMAppAttempt oldAttempt = app.currentAttempt;
+        app.createAndStartNewAttempt(transferStateFromPreviousAttempt);
+        // Transfer the state from the previous attempt to the current attempt.
+        // Note that the previous failed attempt may still be collecting the
+        // container events from the scheduler and update its data structures
+        // before the new attempt is created.
+        if (transferStateFromPreviousAttempt) {
+          ((RMAppAttemptImpl) app.currentAttempt)
+            .transferStateFromPreviousAttempt(oldAttempt);
+        }
         return initialState;
       } else {
         app.rememberTargetTransitionsAndStoreState(event,

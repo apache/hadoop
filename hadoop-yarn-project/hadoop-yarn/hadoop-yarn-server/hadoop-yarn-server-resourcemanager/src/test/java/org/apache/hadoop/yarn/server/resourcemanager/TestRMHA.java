@@ -26,8 +26,11 @@ import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.HAServiceProtocol.StateChangeRequestInfo;
 import org.apache.hadoop.ha.HealthCheckFailedException;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.conf.HAUtil;
+import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.event.EventHandler;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -221,5 +224,82 @@ public class TestRMHA {
     }
     checkMonitorHealth();
     checkActiveRMFunctionality();
+  }
+
+  @Test
+  public void testRMDispatcherForHA() throws IOException {
+    String errorMessageForEventHandler =
+        "Expect to get the same number of handlers";
+    String errorMessageForService = "Expect to get the same number of services";
+    Configuration conf = new YarnConfiguration(configuration);
+    rm = new MockRM(conf) {
+      @Override
+      protected Dispatcher createDispatcher() {
+        return new MyCountingDispatcher();
+      }
+    };
+    rm.init(conf);
+    int expectedEventHandlerCount =
+        ((MyCountingDispatcher) rm.getRMContext().getDispatcher())
+            .getEventHandlerCount();
+    int expectedServiceCount = rm.getServices().size();
+    assertTrue(expectedEventHandlerCount != 0);
+
+    StateChangeRequestInfo requestInfo = new StateChangeRequestInfo(
+        HAServiceProtocol.RequestSource.REQUEST_BY_USER);
+
+    assertEquals(STATE_ERR, HAServiceState.INITIALIZING,
+        rm.adminService.getServiceStatus().getState());
+    assertFalse("RM is ready to become active before being started",
+        rm.adminService.getServiceStatus().isReadyToBecomeActive());
+    rm.start();
+
+    //call transitions to standby and active a couple of times
+    rm.adminService.transitionToStandby(requestInfo);
+    rm.adminService.transitionToActive(requestInfo);
+    rm.adminService.transitionToStandby(requestInfo);
+    rm.adminService.transitionToActive(requestInfo);
+    rm.adminService.transitionToStandby(requestInfo);
+
+    rm.adminService.transitionToActive(requestInfo);
+    assertEquals(errorMessageForEventHandler, expectedEventHandlerCount,
+        ((MyCountingDispatcher) rm.getRMContext().getDispatcher())
+        .getEventHandlerCount());
+    assertEquals(errorMessageForService, expectedServiceCount,
+        rm.getServices().size());
+
+    rm.adminService.transitionToStandby(requestInfo);
+    assertEquals(errorMessageForEventHandler, expectedEventHandlerCount,
+        ((MyCountingDispatcher) rm.getRMContext().getDispatcher())
+        .getEventHandlerCount());
+    assertEquals(errorMessageForService, expectedServiceCount,
+        rm.getServices().size());
+
+    rm.stop();
+  }
+
+  @SuppressWarnings("rawtypes")
+  class MyCountingDispatcher extends AbstractService implements Dispatcher {
+
+    private int eventHandlerCount;
+
+    public MyCountingDispatcher() {
+      super("MyCountingDispatcher");
+      this.eventHandlerCount = 0;
+    }
+
+    @Override
+    public EventHandler getEventHandler() {
+      return null;
+    }
+
+    @Override
+    public void register(Class<? extends Enum> eventType, EventHandler handler) {
+      this.eventHandlerCount ++;
+    }
+
+    public int getEventHandlerCount() {
+      return this.eventHandlerCount;
+    }
   }
 }

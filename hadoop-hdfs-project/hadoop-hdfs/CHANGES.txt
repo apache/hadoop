@@ -245,6 +245,9 @@ Trunk (Unreleased)
     HDFS-5715. Use Snapshot ID to indicate the corresponding Snapshot for a
     FileDiff/DirectoryDiff. (jing9)
 
+    HDFS-5721. sharedEditsImage in Namenode#initializeSharedEdits() should be 
+    closed before method returns. (Ted Yu via junping_du)
+
   OPTIMIZATIONS
 
     HDFS-5349. DNA_CACHE and DNA_UNCACHE should be by blockId only. (cmccabe)
@@ -735,6 +738,13 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-5690. DataNode fails to start in secure mode when dfs.http.policy equals to 
     HTTP_ONLY. (Haohui Mai via jing9)
+
+    HDFS-5449. WebHdfs compatibility broken between 2.2 and 1.x / 23.x (kihwal)
+
+    HDFS-5756. hadoopRzOptionsSetByteBufferPool does not accept NULL argument,
+    contrary to docs. (cmccabe via wang)
+
+    HDFS-5747. Fix NPEs in BlockManager. (Arpit Agarwal)
 
   BREAKDOWN OF HDFS-2832 SUBTASKS AND RELATED JIRAS
 

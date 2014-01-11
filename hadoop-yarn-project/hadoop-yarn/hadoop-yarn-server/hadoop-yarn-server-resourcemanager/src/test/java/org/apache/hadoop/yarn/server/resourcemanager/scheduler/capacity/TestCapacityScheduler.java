@@ -562,18 +562,18 @@ public class TestCapacityScheduler {
         new AppAddedSchedulerEvent(appId, "default", "user");
     cs.handle(addAppEvent);
     SchedulerEvent addAttemptEvent =
-        new AppAttemptAddedSchedulerEvent(appAttemptId);
+        new AppAttemptAddedSchedulerEvent(appAttemptId, false);
     cs.handle(addAttemptEvent);
 
     // Verify the blacklist can be updated independent of requesting containers
     cs.allocate(appAttemptId, Collections.<ResourceRequest>emptyList(),
         Collections.<ContainerId>emptyList(),
         Collections.singletonList(host), null);
-    Assert.assertTrue(cs.getApplication(appAttemptId).isBlacklisted(host));
+    Assert.assertTrue(cs.getApplicationAttempt(appAttemptId).isBlacklisted(host));
     cs.allocate(appAttemptId, Collections.<ResourceRequest>emptyList(),
         Collections.<ContainerId>emptyList(), null,
         Collections.singletonList(host));
-    Assert.assertFalse(cs.getApplication(appAttemptId).isBlacklisted(host));
+    Assert.assertFalse(cs.getApplicationAttempt(appAttemptId).isBlacklisted(host));
     rm.stop();
   }
 
@@ -596,66 +596,6 @@ public class TestCapacityScheduler {
       //different clusterId
       assertTrue(appComparator.compare(app1, app3) < 0);
       assertTrue(appComparator.compare(app2, app3) < 0);
-    }
-
-    @Test
-    public void testConcurrentAccessOnApplications() throws Exception {
-      CapacityScheduler cs = new CapacityScheduler();
-      verifyConcurrentAccessOnApplications(
-          cs.appAttempts, FiCaSchedulerApp.class, Queue.class);
-    }
-
-    public static <T extends SchedulerApplicationAttempt, Q extends Queue>
-        void verifyConcurrentAccessOnApplications(
-            final Map<ApplicationAttemptId, T> applications, Class<T> appClazz,
-            final Class<Q> queueClazz)
-                throws Exception {
-      final int size = 10000;
-      final ApplicationId appId = ApplicationId.newInstance(0, 0);
-      final Constructor<T> ctor = appClazz.getDeclaredConstructor(
-          ApplicationAttemptId.class, String.class, queueClazz,
-          ActiveUsersManager.class, RMContext.class);
-
-      ApplicationAttemptId appAttemptId0
-          = ApplicationAttemptId.newInstance(appId, 0);
-      applications.put(appAttemptId0, ctor.newInstance(
-              appAttemptId0, null, mock(queueClazz), null, null));
-      assertNotNull(applications.get(appAttemptId0));
-
-      // Imitating the thread of scheduler that will add and remove apps
-      final AtomicBoolean finished = new AtomicBoolean(false);
-      final AtomicBoolean failed = new AtomicBoolean(false);
-      Thread t = new Thread() {
-
-        @Override
-        public void run() {
-          for (int i = 1; i <= size; ++i) {
-            ApplicationAttemptId appAttemptId
-                = ApplicationAttemptId.newInstance(appId, i);
-            try {
-              applications.put(appAttemptId, ctor.newInstance(
-                  appAttemptId, null, mock(queueClazz), null, null));
-            } catch (Exception e) {
-              failed.set(true);
-              finished.set(true);
-              return;
-            }
-          }
-          for (int i = 1; i <= size; ++i) {
-            ApplicationAttemptId appAttemptId
-                = ApplicationAttemptId.newInstance(appId, i);
-            applications.remove(appAttemptId);
-          }
-          finished.set(true);
-        }
-      };
-      t.start();
-
-      // Imitating the thread of rmappattempt that will get the app
-      while (!finished.get()) {
-        assertNotNull(applications.get(appAttemptId0));
-      }
-      assertFalse(failed.get());
     }
     
     @Test

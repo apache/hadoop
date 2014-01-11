@@ -58,6 +58,11 @@ Release 2.4.0 - UNRELEASED
     YARN-1029. Added embedded leader election in the ResourceManager. (Karthik
     Kambatla via vinodkv)
 
+    YARN-1490. Introduced the ability to make ResourceManager optionally not kill
+    all containers when an ApplicationMaster exits. (Jian He via vinodkv)
+
+    YARN-1033. Expose RM active/standby state to Web UI and REST API (kasha)
+
   IMPROVEMENTS
 
     YARN-7. Support CPU resource for DistributedShell. (Junping Du via llu)
@@ -205,6 +210,8 @@ Release 2.4.0 - UNRELEASED
 
     YARN-1568. Rename clusterid to clusterId in ActiveRMInfoProto (kasha)
 
+    YARN-1579. ActiveRMInfoProto fields should be optional (kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -306,6 +313,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1293. Fixed TestContainerLaunch#testInvalidEnvSyntaxDiagnostics failure
     caused by non-English system locale. (Tsuyoshi OZAWA via jianhe)
 
+    YARN-1574. RMDispatcher should be reset on transition to standby. (Xuan Gong
+    via kasha)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -394,6 +404,9 @@ Release 2.3.0 - UNRELEASED
 
     YARN-1438. Ensure container diagnostics includes exception from container
     launch. (stevel via acmurthy)
+
+    YARN-1138. yarn.application.classpath is set to point to $HADOOP_CONF_DIR
+    etc., which does not work on Windows. (Chuan Liu via cnauroth)
 
 Release 2.2.0 - 2013-10-13
 

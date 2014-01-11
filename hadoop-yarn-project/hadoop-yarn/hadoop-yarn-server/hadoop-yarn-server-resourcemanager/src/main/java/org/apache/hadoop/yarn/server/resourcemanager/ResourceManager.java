@@ -37,6 +37,7 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.service.CompositeService;
+import org.apache.hadoop.service.Service;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.ShutdownHookManager;
@@ -180,12 +181,10 @@ public class ResourceManager extends CompositeService implements Recoverable {
     this.conf = conf;
     this.rmContext = new RMContextImpl();
 
-    rmDispatcher = createDispatcher();
+    // register the handlers for all AlwaysOn services using setupDispatcher().
+    rmDispatcher = setupDispatcher();
     addIfService(rmDispatcher);
     rmContext.setDispatcher(rmDispatcher);
-
-    rmDispatcher.register(RMFatalEventType.class,
-        new ResourceManager.RMFatalEventDispatcher(this.rmContext, this));
 
     adminService = createAdminService();
     addService(adminService);
@@ -832,6 +831,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
         HAServiceProtocol.HAServiceState.ACTIVE) {
       stopActiveServices();
       if (initialize) {
+        resetDispatcher();
         createAndInitActiveServices();
       }
     }
@@ -993,5 +993,25 @@ public class ResourceManager extends CompositeService implements Recoverable {
     HttpConfig.setPolicy(Policy.fromString(conf.get(
       YarnConfiguration.YARN_HTTP_POLICY_KEY,
       YarnConfiguration.YARN_HTTP_POLICY_DEFAULT)));
+  }
+
+  /**
+   * Register the handlers for alwaysOn services
+   */
+  private Dispatcher setupDispatcher() {
+    Dispatcher dispatcher = createDispatcher();
+    dispatcher.register(RMFatalEventType.class,
+        new ResourceManager.RMFatalEventDispatcher(this.rmContext, this));
+    return dispatcher;
+  }
+
+  private void resetDispatcher() {
+    Dispatcher dispatcher = setupDispatcher();
+    ((Service)dispatcher).init(this.conf);
+    ((Service)dispatcher).start();
+    removeService((Service)rmDispatcher);
+    rmDispatcher = dispatcher;
+    addIfService(rmDispatcher);
+    rmContext.setDispatcher(rmDispatcher);
   }
 }

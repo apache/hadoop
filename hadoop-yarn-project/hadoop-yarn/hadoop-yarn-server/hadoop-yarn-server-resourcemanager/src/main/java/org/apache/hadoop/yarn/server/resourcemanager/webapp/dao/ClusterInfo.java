@@ -21,6 +21,7 @@ import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
 
+import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
@@ -33,6 +34,7 @@ public class ClusterInfo {
   protected long id;
   protected long startedOn;
   protected STATE state;
+  protected HAServiceProtocol.HAServiceState haState;
   protected String resourceManagerVersion;
   protected String resourceManagerBuildVersion;
   protected String resourceManagerVersionBuiltOn;
@@ -48,6 +50,7 @@ public class ClusterInfo {
 
     this.id = ts;
     this.state = rm.getServiceState();
+    this.haState = rm.getRMContext().getHAServiceState();
     this.startedOn = ts;
     this.resourceManagerVersion = YarnVersionInfo.getVersion();
     this.resourceManagerBuildVersion = YarnVersionInfo.getBuildVersion();
@@ -59,6 +62,10 @@ public class ClusterInfo {
 
   public String getState() {
     return this.state.toString();
+  }
+
+  public String getHAState() {
+    return this.haState.toString();
   }
 
   public String getRMVersion() {
