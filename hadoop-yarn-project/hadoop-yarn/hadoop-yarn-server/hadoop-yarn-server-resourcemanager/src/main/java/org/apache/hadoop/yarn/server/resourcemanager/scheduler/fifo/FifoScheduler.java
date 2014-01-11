@@ -71,6 +71,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerStat
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanContainerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.UpdatedContainerInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
@@ -104,7 +105,8 @@ import com.google.common.annotations.VisibleForTesting;
 @LimitedPrivate("yarn")
 @Evolving
 @SuppressWarnings("unchecked")
-public class FifoScheduler implements ResourceScheduler, Configurable {
+public class FifoScheduler extends AbstractYarnScheduler implements
+    ResourceScheduler, Configurable {
 
   private static final Log LOG = LogFactory.getLog(FifoScheduler.class);
 
@@ -115,7 +117,6 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
 
   private final static Container[] EMPTY_CONTAINER_ARRAY = new Container[] {};
   private final static List<Container> EMPTY_CONTAINER_LIST = Arrays.asList(EMPTY_CONTAINER_ARRAY);
-  private RMContext rmContext;
 
   protected Map<NodeId, FiCaSchedulerNode> nodes = new ConcurrentHashMap<NodeId, FiCaSchedulerNode>();
 
@@ -123,11 +124,6 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
   private Resource minimumAllocation;
   private Resource maximumAllocation;
   private boolean usePortForNodeName;
-
-  // Use ConcurrentSkipListMap because applications need to be ordered
-  @VisibleForTesting
-  protected Map<ApplicationId, SchedulerApplication> applications =
-      new ConcurrentSkipListMap<ApplicationId, SchedulerApplication>();
 
   private ActiveUsersManager activeUsersManager;
 
@@ -243,6 +239,9 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
     if (!this.initialized) {
       validateConf(conf);
       this.rmContext = rmContext;
+      //Use ConcurrentSkipListMap because applications need to be ordered
+      this.applications =
+          new ConcurrentSkipListMap<ApplicationId, SchedulerApplication>();
       this.minimumAllocation = 
         Resources.createResource(conf.getInt(
             YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
