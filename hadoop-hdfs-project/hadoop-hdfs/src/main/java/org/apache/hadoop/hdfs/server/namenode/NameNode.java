@@ -549,8 +549,8 @@ public class NameNode implements NameNodeStatusMXBean {
   }
   
   private void stopCommonServices() {
-    if(namesystem != null) namesystem.close();
     if(rpcServer != null) rpcServer.stop();
+    if(namesystem != null) namesystem.close();
     if (pauseMonitor != null) pauseMonitor.stop();
     if (plugins != null) {
       for (ServicePlugin p : plugins) {
