@@ -298,6 +298,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1574. RMDispatcher should be reset on transition to standby. (Xuan Gong
     via kasha)
 
+    YARN-1166. Fixed app-specific and attempt-specific QueueMetrics to be
+    triggered by accordingly app event and attempt event. 
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

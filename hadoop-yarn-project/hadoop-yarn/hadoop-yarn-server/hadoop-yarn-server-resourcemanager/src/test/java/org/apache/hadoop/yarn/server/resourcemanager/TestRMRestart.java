@@ -84,6 +84,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.log4j.Level;
@@ -179,7 +180,7 @@ public class TestRMRestart {
     am1.registerAppAttempt();
 
     // AM request for containers
-    am1.allocate("127.0.0.1" , 1000, 1, new ArrayList<ContainerId>());    
+    am1.allocate("127.0.0.1" , 1000, 1, new ArrayList<ContainerId>());   
     // kick the scheduler
     nm1.nodeHeartbeat(true);
     List<Container> conts = am1.allocate(new ArrayList<ResourceRequest>(),
@@ -1541,6 +1542,128 @@ public class TestRMRestart {
     rm1.waitForState(app1.getApplicationId(), RMAppState.KILLED);
     Assert.assertEquals(1, ((TestMemoryRMStateStore) memStore).updateAttempt);
     Assert.assertEquals(2, ((TestMemoryRMStateStore) memStore).updateApp);
+  }
+
+  @SuppressWarnings("resource")
+  @Test
+  public void testQueueMetricsOnRMRestart() throws Exception {
+    conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
+        YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
+    MemoryRMStateStore memStore = new MemoryRMStateStore();
+    memStore.init(conf);
+
+    // PHASE 1: create state in an RM
+    // start RM
+    MockRM rm1 = new MockRM(conf, memStore);
+    rm1.start();
+    MockNM nm1 =
+        new MockNM("127.0.0.1:1234", 15120, rm1.getResourceTrackerService());
+    nm1.registerNode();
+    QueueMetrics qm1 = rm1.getResourceScheduler().getRootQueueMetrics();
+    resetQueueMetrics(qm1);
+    assertQueueMetrics(qm1, 0, 0, 0, 0);
+
+    // create app that gets launched and does allocate before RM restart
+    RMApp app1 = rm1.submitApp(200);
+    assertQueueMetrics(qm1, 1, 1, 0, 0);
+    nm1.nodeHeartbeat(true);
+    RMAppAttempt attempt1 = app1.getCurrentAppAttempt();
+    ApplicationAttemptId attemptId1 = attempt1.getAppAttemptId();
+    rm1.waitForState(attemptId1, RMAppAttemptState.ALLOCATED);
+    MockAM am1 = rm1.sendAMLaunched(attempt1.getAppAttemptId());
+    am1.registerAppAttempt();
+    am1.allocate("127.0.0.1" , 1000, 1, new ArrayList<ContainerId>()); 
+    nm1.nodeHeartbeat(true);
+    List<Container> conts = am1.allocate(new ArrayList<ResourceRequest>(),
+        new ArrayList<ContainerId>()).getAllocatedContainers();
+    while (conts.size() == 0) {
+      nm1.nodeHeartbeat(true);
+      conts.addAll(am1.allocate(new ArrayList<ResourceRequest>(),
+          new ArrayList<ContainerId>()).getAllocatedContainers());
+      Thread.sleep(500);
+    }
+    assertQueueMetrics(qm1, 1, 0, 1, 0);
+
+    // PHASE 2: create new RM and start from old state
+    // create new RM to represent restart and recover state
+    MockRM rm2 = new MockRM(conf, memStore);
+    rm2.start();
+    nm1.setResourceTrackerService(rm2.getResourceTrackerService());
+    QueueMetrics qm2 = rm2.getResourceScheduler().getRootQueueMetrics();
+    resetQueueMetrics(qm2);
+    assertQueueMetrics(qm2, 0, 0, 0, 0);
+    // recover app
+    RMApp loadedApp1 = rm2.getRMContext().getRMApps().get(app1.getApplicationId());
+    am1.setAMRMProtocol(rm2.getApplicationMasterService());
+    am1.allocate(new ArrayList<ResourceRequest>(), new ArrayList<ContainerId>());
+    nm1.nodeHeartbeat(true);
+    nm1 = new MockNM("127.0.0.1:1234", 15120, rm2.getResourceTrackerService());
+    List<ContainerStatus> containerStatuses = new ArrayList<ContainerStatus>();
+    ContainerStatus containerStatus =
+        BuilderUtils.newContainerStatus(BuilderUtils.newContainerId(loadedApp1
+            .getCurrentAppAttempt().getAppAttemptId(), 1),
+            ContainerState.COMPLETE, "Killed AM container", 143);
+    containerStatuses.add(containerStatus);
+    nm1.registerNode(containerStatuses);
+    int timeoutSecs = 0;
+    while (loadedApp1.getAppAttempts().size() != 2 && timeoutSecs++ < 40) {;
+      Thread.sleep(200);
+    }
+
+    assertQueueMetrics(qm2, 1, 1, 0, 0);
+    nm1.nodeHeartbeat(true);
+    attempt1 = loadedApp1.getCurrentAppAttempt();
+    attemptId1 = attempt1.getAppAttemptId();
+    rm2.waitForState(attemptId1, RMAppAttemptState.ALLOCATED);
+    assertQueueMetrics(qm2, 1, 0, 1, 0);
+    am1 = rm2.sendAMLaunched(attempt1.getAppAttemptId());
+    am1.registerAppAttempt();
+    am1.allocate("127.0.0.1" , 1000, 3, new ArrayList<ContainerId>());
+    nm1.nodeHeartbeat(true);
+    conts = am1.allocate(new ArrayList<ResourceRequest>(),
+        new ArrayList<ContainerId>()).getAllocatedContainers();
+    while (conts.size() == 0) {
+      nm1.nodeHeartbeat(true);
+      conts.addAll(am1.allocate(new ArrayList<ResourceRequest>(),
+          new ArrayList<ContainerId>()).getAllocatedContainers());
+      Thread.sleep(500);
+    }
+
+    // finish the AMs
+    finishApplicationMaster(loadedApp1, rm2, nm1, am1);
+    assertQueueMetrics(qm2, 1, 0, 0, 1);
+
+    // stop RM's
+    rm2.stop();
+    rm1.stop();
+  }
+
+
+  // The metrics has some carry-on value from the previous RM, because the
+  // test case is in-memory, for the same queue name (e.g. root), there's
+  // always a singleton QueueMetrics object.
+  private int appsSubmittedCarryOn = 0;
+  private int appsPendingCarryOn = 0;
+  private int appsRunningCarryOn = 0;
+  private int appsCompletedCarryOn = 0;
+
+  private void resetQueueMetrics(QueueMetrics qm) {
+    appsSubmittedCarryOn = qm.getAppsSubmitted();
+    appsPendingCarryOn = qm.getAppsPending();
+    appsRunningCarryOn = qm.getAppsRunning();
+    appsCompletedCarryOn = qm.getAppsCompleted();
+  }
+
+  private void assertQueueMetrics(QueueMetrics qm, int appsSubmitted,
+      int appsPending, int appsRunning, int appsCompleted) {
+    Assert.assertEquals(qm.getAppsSubmitted(),
+        appsSubmitted + appsSubmittedCarryOn);
+    Assert.assertEquals(qm.getAppsPending(),
+        appsPending + appsPendingCarryOn);
+    Assert.assertEquals(qm.getAppsRunning(),
+        appsRunning + appsRunningCarryOn);
+    Assert.assertEquals(qm.getAppsCompleted(),
+        appsCompleted + appsCompletedCarryOn);
   }
 
   public class TestMemoryRMStateStore extends MemoryRMStateStore {

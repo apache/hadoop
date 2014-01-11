@@ -643,6 +643,7 @@ public class FairScheduler implements ResourceScheduler {
     SchedulerApplication application =
         new SchedulerApplication(queue, user);
     applications.put(applicationId, application);
+    queue.getMetrics().submitApp(user);
 
     LOG.info("Accepted application " + applicationId + " from user: " + user
         + ", in queue: " + queueName + ", currently num of applications: "
@@ -680,7 +681,7 @@ public class FairScheduler implements ResourceScheduler {
       maxRunningEnforcer.trackNonRunnableApp(attempt);
     }
     
-    queue.getMetrics().submitApp(user, applicationAttemptId.getAttemptId());
+    queue.getMetrics().submitAppAttempt(user);
 
     LOG.info("Added Application Attempt " + applicationAttemptId
         + " to scheduler from user: " + user);
@@ -714,6 +715,12 @@ public class FairScheduler implements ResourceScheduler {
 
   private synchronized void removeApplication(ApplicationId applicationId,
       RMAppState finalState) {
+    SchedulerApplication application = applications.get(applicationId);
+    if (application == null){
+      LOG.warn("Couldn't find application " + applicationId);
+      return;
+    }
+    application.stop(finalState);
     applications.remove(applicationId);
   }
 
