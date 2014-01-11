@@ -28,6 +28,8 @@ HDFS-4685 (Unreleased)
 
     HDFS-5673. Implement logic for modification of ACLs. (cnauroth)
 
+    HADOOP-10220. Add ACL indicator bit to FsPermission. (cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES
