@@ -70,7 +70,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptA
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
@@ -160,11 +159,6 @@ public class TestFifoScheduler {
     schedular.handle(attemptEvent);
 
     appAttemptId = BuilderUtils.newApplicationAttemptId(appId, 2);
-
-    SchedulerEvent appEvent2 =
-        new AppAddedSchedulerEvent(appAttemptId.getApplicationId(), "queue",
-          "user");
-    schedular.handle(appEvent2);
     SchedulerEvent attemptEvent2 =
         new AppAttemptAddedSchedulerEvent(appAttemptId, false);
     schedular.handle(attemptEvent2);
