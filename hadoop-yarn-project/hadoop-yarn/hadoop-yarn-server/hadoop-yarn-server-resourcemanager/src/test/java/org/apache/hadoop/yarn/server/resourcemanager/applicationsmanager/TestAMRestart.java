@@ -24,6 +24,7 @@ import java.util.List;
 
 import junit.framework.Assert;
 
+import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -150,7 +151,29 @@ public class TestAMRestart {
     ApplicationAttemptId newAttemptId =
         app1.getCurrentAppAttempt().getAppAttemptId();
     Assert.assertFalse(newAttemptId.equals(am1.getApplicationAttemptId()));
-    MockAM am2 = MockRM.launchAM(app1, rm1, nm1);
+
+    // launch the new AM
+    RMAppAttempt attempt2 = app1.getCurrentAppAttempt();
+    nm1.nodeHeartbeat(true);
+    MockAM am2 = rm1.sendAMLaunched(attempt2.getAppAttemptId());
+    RegisterApplicationMasterResponse registerResponse =
+        am2.registerAppAttempt();
+
+    // Assert two containers are running: container2 and container3;
+    Assert.assertEquals(2, registerResponse.getContainersFromPreviousAttempt()
+      .size());
+    boolean containerId2Exists = false, containerId3Exists = false;
+    for (Container container : registerResponse
+      .getContainersFromPreviousAttempt()) {
+      if (container.getId().equals(containerId2)) {
+        containerId2Exists = true;
+      }
+      if (container.getId().equals(containerId3)) {
+        containerId3Exists = true;
+      }
+    }
+    Assert.assertTrue(containerId2Exists && containerId3Exists);
+    rm1.waitForState(app1.getApplicationId(), RMAppState.RUNNING);
 
     // complete container by sending the container complete event which has earlier
     // attempt's attemptId

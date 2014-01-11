@@ -45,6 +45,10 @@ Release 2.4.0 - UNRELEASED
 
     YARN-1033. Expose RM active/standby state to Web UI and REST API (kasha)
 
+    YARN-1041. Added the ApplicationMasterProtocol API for applications to use the
+    ability in ResourceManager to optionally not kill containers when the
+    ApplicationMaster exits. (Jian He via vinodkv)
+
   IMPROVEMENTS
 
     YARN-7. Support CPU resource for DistributedShell. (Junping Du via llu)
