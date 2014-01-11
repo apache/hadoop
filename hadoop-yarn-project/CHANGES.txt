@@ -49,6 +49,9 @@ Release 2.4.0 - UNRELEASED
     ability in ResourceManager to optionally not kill containers when the
     ApplicationMaster exits. (Jian He via vinodkv)
 
+    YARN-1566. Changed Distributed Shell to retain containers across application
+    attempts. (Jian He via vinodkv)
+
   IMPROVEMENTS
 
     YARN-7. Support CPU resource for DistributedShell. (Junping Du via llu)
