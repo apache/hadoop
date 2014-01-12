@@ -218,6 +218,9 @@ Release 2.4.0 - UNRELEASED
     HADOOP-10214. Fix multithreaded correctness warnings in ActiveStandbyElector
     (Liang Xie via kasha)
 
+    HADOOP-10223. MiniKdc#main() should close the FileReader it creates. 
+    (Ted Yu via tucu)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
