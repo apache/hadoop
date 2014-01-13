@@ -201,6 +201,10 @@ Release 2.4.0 - UNRELEASED
 
     YARN-1579. ActiveRMInfoProto fields should be optional (kasha)
 
+    YARN-888. Cleaned up POM files so that non-leaf modules don't include any
+    dependencies and thus compact the dependency list for leaf modules.
+    (Alejandro Abdelnur via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES

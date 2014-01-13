@@ -32,6 +32,8 @@
     <hadoop.common.build.dir>${basedir}/../../../../hadoop-common-project/hadoop-common/target</hadoop.common.build.dir>
   </properties>
 
+  <!-- Do not add dependencies here, add them to the POM of the leaf module -->
+
   <modules>
     <module>hadoop-yarn-applications-distributedshell</module>
     <module>hadoop-yarn-applications-unmanaged-am-launcher</module>
