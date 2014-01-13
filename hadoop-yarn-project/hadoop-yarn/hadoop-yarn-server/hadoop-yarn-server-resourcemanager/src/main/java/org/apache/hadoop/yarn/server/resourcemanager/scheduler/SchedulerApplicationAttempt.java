@@ -233,7 +233,9 @@ public abstract class SchedulerApplicationAttempt {
     if (rmContainer == null) {
       rmContainer = 
           new RMContainerImpl(container, getApplicationAttemptId(), 
-              node.getNodeID(), appSchedulingInfo.getUser(), rmContext);
+              node.getNodeID(), rmContext.getDispatcher().getEventHandler(), 
+              rmContext.getContainerAllocationExpirer(),
+              appSchedulingInfo.getUser());
         
       Resources.addTo(currentReservation, container.getResource());
       

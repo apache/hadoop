@@ -55,7 +55,6 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
-import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -63,7 +62,6 @@ import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.ClientToAMTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.RMServerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
@@ -1023,9 +1021,6 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       appAttempt.eventHandler.handle(new AppAttemptRemovedSchedulerEvent(
         appAttemptId, finalAttemptState));
       appAttempt.removeCredentials(appAttempt);
-
-      appAttempt.rmContext.getRMApplicationHistoryWriter()
-          .applicationAttemptFinished(appAttempt);
     }
   }
 
@@ -1118,9 +1113,6 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       // write at AM launch time, so we don't save the AM's tracking URL anywhere
       // as that would mean an extra state-store write. For now, we hope that in
       // work-preserving restart, AMs are forced to reregister.
-
-      appAttempt.rmContext.getRMApplicationHistoryWriter()
-          .applicationAttemptStarted(appAttempt);
     }
   }
 
@@ -1476,23 +1468,6 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     } finally {
       this.readLock.unlock();
     }
-  }
-
-  @Override
-  public RMAppAttemptState getState() {
-    this.readLock.lock();
-
-    try {
-      return this.stateMachine.getCurrentState();
-    } finally {
-      this.readLock.unlock();
-    }
-  }
-
-  @Override
-  public YarnApplicationAttemptState createApplicationAttemptState() {
-    RMAppAttemptState state = getState();
-    return RMServerUtils.createApplicationAttemptState(state);
   }
 
   private void launchAttempt(){

@@ -34,7 +34,6 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerAcquiredEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerAllocatedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerFinishedEvent;
@@ -137,7 +136,6 @@ public class RMContainerImpl implements RMContainer {
   private final ApplicationAttemptId appAttemptId;
   private final NodeId nodeId;
   private final Container container;
-  private final RMContext rmContext;
   private final EventHandler eventHandler;
   private final ContainerAllocationExpirer containerAllocationExpirer;
   private final String user;
@@ -150,26 +148,24 @@ public class RMContainerImpl implements RMContainer {
   private String logURL;
   private ContainerStatus finishedStatus;
 
-
   public RMContainerImpl(Container container,
       ApplicationAttemptId appAttemptId, NodeId nodeId,
-      String user, RMContext rmContext) {
+      EventHandler handler,
+      ContainerAllocationExpirer containerAllocationExpirer,
+      String user) {
     this.stateMachine = stateMachineFactory.make(this);
     this.containerId = container.getId();
     this.nodeId = nodeId;
     this.container = container;
     this.appAttemptId = appAttemptId;
+    this.eventHandler = handler;
+    this.containerAllocationExpirer = containerAllocationExpirer;
     this.user = user;
     this.startTime = System.currentTimeMillis();
-    this.rmContext = rmContext;
-    this.eventHandler = rmContext.getDispatcher().getEventHandler();
-    this.containerAllocationExpirer = rmContext.getContainerAllocationExpirer();
     
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     this.readLock = lock.readLock();
     this.writeLock = lock.writeLock();
-
-    rmContext.getRMApplicationHistoryWriter().containerStarted(this);
   }
 
   @Override
@@ -386,9 +382,6 @@ public class RMContainerImpl implements RMContainer {
       // Inform AppAttempt
       container.eventHandler.handle(new RMAppAttemptContainerFinishedEvent(
           container.appAttemptId, finishedEvent.getRemoteContainerStatus()));
-
-      container.rmContext.getRMApplicationHistoryWriter()
-          .containerFinished(container);
     }
   }
 
