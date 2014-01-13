@@ -262,6 +262,9 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-5747. Fix NPEs in BlockManager. (Arpit Agarwal)
 
+    HDFS-5710. FSDirectory#getFullPathName should check inodes against null.
+    (Uma Maheswara Rao G via jing9)
+
   BREAKDOWN OF HDFS-2832 SUBTASKS AND RELATED JIRAS
 
     HDFS-4985. Add storage type to the protocol and expose it in block report

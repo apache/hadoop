@@ -1884,7 +1884,8 @@ public class FSDirectory implements Closeable {
   /** Return the full path name of the specified inode */
   static String getFullPathName(INode inode) {
     INode[] inodes = getFullPathINodes(inode);
-    return getFullPathName(inodes, inodes.length - 1);
+    // inodes can be null only when its called without holding lock
+    return inodes == null ? "" : getFullPathName(inodes, inodes.length - 1);
   }
   
   /**
