@@ -58,7 +58,7 @@ public abstract class PoolPlacementRule {
    */
   public String assignJobToPool(String requestedPool, String user,
       Groups groups, Collection<String> configuredPools) throws IOException {
-    String pool = getPoolForJob(requestedPool, user, groups);
+    String pool = getPoolForJob(requestedPool, user, groups, configuredPools);
     if (create || configuredPools.contains(pool)) {
       return pool;
     } else {
@@ -98,12 +98,14 @@ public abstract class PoolPlacementRule {
    *    The user submitting the job.
    * @param groups
    *    The groups of the user submitting the job.
+   * @param configuredPools
+   *    The pools specified in the scheduler configuration.
    * @return
    *    The name of the Pool to assign the job to, or null to empty string
    *    continue to the next rule.
    */
   protected abstract String getPoolForJob(String requestedPool, String user,
-      Groups groups) throws IOException;
+      Groups groups, Collection<String> configuredQueues) throws IOException;
 
   /**
    * Places jobs in pools by username of the submitter
@@ -111,7 +113,7 @@ public abstract class PoolPlacementRule {
   public static class User extends PoolPlacementRule {
     @Override
     protected String getPoolForJob(String requestedPool,
-        String user, Groups groups) {
+        String user, Groups groups, Collection<String> configuredPools) {
       if (user != null) {
         return user; 
       } else {
@@ -131,7 +133,8 @@ public abstract class PoolPlacementRule {
   public static class PrimaryGroup extends PoolPlacementRule {
     @Override
     protected String getPoolForJob(String requestedPool,
-        String user, Groups groups) throws IOException {
+        String user, Groups groups, 
+        Collection<String> configuredPools) throws IOException {
       if (user == null) {
         return Pool.DEFAULT_POOL_NAME;
       }
@@ -150,13 +153,41 @@ public abstract class PoolPlacementRule {
     }
   }
 
+  
+  /**
+   * Places jobs in queues by secondary group of the submitter
+   * 
+   * Match will be made on first secondary group that exist in
+   * pool
+   */
+  public static class SecondaryGroupExistingPool extends PoolPlacementRule {
+    @Override
+    protected String getPoolForJob(String requestedPool,
+        String user, Groups groups, 
+        Collection<String> configuredPools) throws IOException {
+      List<String> groupNames = groups.getGroups(user);
+
+      for (int i = 1; i < groupNames.size(); i++) {
+        if (configuredPools.contains(groupNames.get(i))) {
+          return groupNames.get(i);
+        }
+      }
+      return "";
+    }
+        
+    @Override
+    public boolean isTerminal() {
+      return create;
+    }
+  }
+
   /**
    * Places jobs in pools by requested pool of the submitter
    */
   public static class Specified extends PoolPlacementRule {
     @Override
     protected String getPoolForJob(String requestedPool,
-        String user, Groups groups) {
+        String user, Groups groups, Collection<String> configuredPools) {
       if (requestedPool.equals(Pool.DEFAULT_POOL_NAME)) {
         return "";
       } else {
@@ -176,7 +207,7 @@ public abstract class PoolPlacementRule {
   public static class Default extends PoolPlacementRule {
     @Override
     protected String getPoolForJob(String requestedPool, String user,
-        Groups groups) {
+        Groups groups, Collection<String> configuredPools) {
       return Pool.DEFAULT_POOL_NAME;
     }
     
@@ -198,7 +229,7 @@ public abstract class PoolPlacementRule {
     
     @Override
     protected String getPoolForJob(String requestedPool, String user,
-        Groups groups) {
+        Groups groups, Collection<String> configuredPools) {
       throw new UnsupportedOperationException();
     }
     

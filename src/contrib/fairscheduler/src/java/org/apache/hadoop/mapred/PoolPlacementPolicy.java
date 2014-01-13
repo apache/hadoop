@@ -39,6 +39,7 @@ public class PoolPlacementPolicy {
         new HashMap<String, Class<? extends PoolPlacementRule>>();
     map.put("user", PoolPlacementRule.User.class);
     map.put("primaryGroup", PoolPlacementRule.PrimaryGroup.class);
+    map.put("secondaryGroupExistingPool", PoolPlacementRule.SecondaryGroupExistingPool.class);
     map.put("specified", PoolPlacementRule.Specified.class);
     map.put("default", PoolPlacementRule.Default.class);
     map.put("reject", PoolPlacementRule.Reject.class);

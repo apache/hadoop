@@ -601,24 +601,33 @@ public class TestFairScheduler extends TestCase {
   
   private JobInProgress submitJobNotInitialized(int state, int maps, int reduces)
 	    throws IOException {
-    return submitJob(state, maps, reduces, null, null, false);
+    return submitJob(state, maps, reduces, null, null, false, null);
   }
 
   private JobInProgress submitJob(int state, int maps, int reduces)
       throws IOException {
-    return submitJob(state, maps, reduces, null, null, true);
+    return submitJob(state, maps, reduces, null, null, true, null);
   }
   
   private JobInProgress submitJob(int state, int maps, int reduces, String pool)
       throws IOException {
-    return submitJob(state, maps, reduces, pool, null, true);
+    return submitJob(state, maps, reduces, pool, null, true, null);
   }
   
   private JobInProgress submitJob(int state, int maps, int reduces, String pool,
       String[][] mapInputLocations, boolean initializeJob) throws IOException {
+    return submitJob(state, maps, reduces, pool, mapInputLocations, initializeJob, null);
+  }
+
+  private JobInProgress submitJob(int state, int maps, int reduces, String pool,
+      String[][] mapInputLocations, boolean initializeJob, 
+      String userName) throws IOException {
     JobConf jobConf = new JobConf(conf);
     jobConf.setNumMapTasks(maps);
     jobConf.setNumReduceTasks(reduces);
+    if (userName != null) {
+      jobConf.set("user.name", userName);
+    }
     if (pool != null)
       jobConf.set(POOL_PROPERTY, pool);
     JobInProgress job = new FakeJobInProgress(jobConf, taskTrackerManager,
@@ -3098,10 +3107,14 @@ public class TestFairScheduler extends TestCase {
     rules.add(new PoolPlacementRule.Specified().initialize(true, null));
     rules.add(new PoolPlacementRule.User().initialize(false, null));
     rules.add(new PoolPlacementRule.PrimaryGroup().initialize(false, null));
+    rules.add(new PoolPlacementRule.SecondaryGroupExistingPool().initialize(false, null));
     rules.add(new PoolPlacementRule.Default().initialize(true, null));
     Set<String> pools = new HashSet();
     pools.add("user1");
     pools.add("user3group");
+    pools.add("user4subgroup1");
+    pools.add("user4subgroup2");
+    pools.add("user5subgroup2");
 
     placementPolicyConfig.set("user.name", "user1");
     PoolManager poolManager = scheduler.getPoolManager();
@@ -3109,18 +3122,24 @@ public class TestFairScheduler extends TestCase {
     poolManager.placementPolicy = new PoolPlacementPolicy(
         rules, pools, placementPolicyConfig);
     
-    JobInProgress job1 = submitJob(JobStatus.RUNNING, 2, 1);
-
-    job1.getJobConf().set("user.name", "user1");
+    JobInProgress job1 = submitJob(JobStatus.RUNNING, 2, 1, null, null, false, "user1");
     poolManager.setPool(job1, "somepool");
     assertEquals("somepool", poolManager.getPoolName(job1));
 
     poolManager.setPool(job1, "default");
     assertEquals("user1", poolManager.getPoolName(job1));
 
-    job1.getJobConf().set("user.name", "user3");
+    job1 = submitJob(JobStatus.RUNNING, 2, 1, null, null, false, "user3");
     poolManager.setPool(job1, "default");
     assertEquals("user3group", poolManager.getPoolName(job1));
+
+    job1 = submitJob(JobStatus.RUNNING, 2, 1, null, null, false, "user4");
+    poolManager.setPool(job1, "default");
+    assertEquals("user4subgroup1", poolManager.getPoolName(job1));
+
+    job1 = submitJob(JobStatus.RUNNING, 2, 1, null, null, false, "user5");
+    poolManager.setPool(job1, "default");
+    assertEquals("user5subgroup2", poolManager.getPoolName(job1));
 
     job1.getJobConf().set("user.name", "otheruser");
     poolManager.setPool(job1, "default");

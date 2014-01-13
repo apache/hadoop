@@ -55,6 +55,9 @@ Release 1.3.0 - unreleased
     MAPREDUCE-3310. Custom grouping comparator cannot be set for Combiners 
     (tucu)
 
+    MAPREDUCE-5712. Backport Fair Scheduler pool placement by secondary group
+    (Ted Malaska via Sandy Ryza)
+
   BUG FIXES
 
     HADOOP-9863. Backport HADOOP-8686 to support BigEndian on ppc64. 
