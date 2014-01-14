@@ -120,8 +120,7 @@ public class FsPermission implements Writable {
   }
 
   public void fromShort(short n) {
-    FsAction[] v = FsAction.values();
-
+    FsAction[] v = FSACTION_VALUES;
     set(v[(n >>> 6) & 7], v[(n >>> 3) & 7], v[n & 7], (((n >>> 9) & 1) == 1) );
   }
 
@@ -209,6 +208,8 @@ public class FsPermission implements Writable {
                   CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY;
   public static final int DEFAULT_UMASK = 
                   CommonConfigurationKeys.FS_PERMISSIONS_UMASK_DEFAULT;
+
+  private static final FsAction[] FSACTION_VALUES = FsAction.values();
 
   /** 
    * Get the user file creation mask (umask)
