@@ -263,6 +263,22 @@ public class YarnConfiguration extends Configuration {
       RM_PREFIX + "nodemanagers.heartbeat-interval-ms";
   public static final long DEFAULT_RM_NM_HEARTBEAT_INTERVAL_MS = 1000;
 
+  /** The setting that controls whether RM writes history data. */
+  public static final String RM_HISTORY_WRITER_ENABLED = RM_PREFIX
+      + "history-writer.enabled";
+  public static final boolean DEFAULT_RM_HISTORY_WRITER_ENABLED = false;
+
+  /** Number of worker threads that write the history data. */
+  public static final String RM_HISTORY_WRITER_MULTI_THREADED_DISPATCHER_POOL_SIZE =
+      RM_PREFIX + "history-writer.multi-threaded-dispatcher.pool-size";
+  public static final int DEFAULT_RM_HISTORY_WRITER_MULTI_THREADED_DISPATCHER_POOL_SIZE =
+      10;
+
+  /** The implementation class of ApplicationHistoryStore, which is to be used
+   *  by RMApplicationHistoryWriter. */
+  public static final String RM_HISTORY_WRITER_CLASS = RM_PREFIX
+      + "history-writer.class";
+
   //Delegation token related keys
   public static final String  DELEGATION_KEY_UPDATE_INTERVAL_KEY = 
     RM_PREFIX + "delegation.key.update-interval";
