@@ -440,6 +440,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-5675. Add Mkdirs operation to NNThroughputBenchmark.
     (Plamen Jeliazkov via shv)
 
+    HDFS-5677. Need error checking for HA cluster configuration.
+    (Vincent Sheffer via cos)
+
   OPTIMIZATIONS
 
   BUG FIXES
