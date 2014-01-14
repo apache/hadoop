@@ -216,8 +216,7 @@ public class FSImageFormat {
           FSImageFormatProtobuf.Loader loader = new FSImageFormatProtobuf.Loader(
               conf, fsn);
           impl = loader;
-          is.getChannel().position(0);
-          loader.load(is);
+          loader.load(file);
         } else {
           Loader loader = new Loader(conf, fsn);
           impl = loader;

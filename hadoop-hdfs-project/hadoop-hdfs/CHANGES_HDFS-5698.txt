@@ -1,3 +1,5 @@
 HDFS-5698 subtasks
 
     HDFS-5717. Save FSImage header in protobuf. (Haohui Mai via jing9) 
+
+    HDFS-5738. Serialize INode information in protobuf. (Haohui Mai via jing9)

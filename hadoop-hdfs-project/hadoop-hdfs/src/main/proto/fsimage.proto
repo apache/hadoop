@@ -21,18 +21,21 @@ option java_outer_classname = "FsImageProto";
 
 package hadoop.hdfs.fsimage;
 
+import "hdfs.proto";
+
 /**
  * This file defines the on-disk layout of the file system image. The
  * layout is defined by the following EBNF grammar, in which angle
- * brackets mark protobuf definitions. (e.g., <FileHeader>)
+ * brackets mark protobuf definitions. (e.g., <FileSummary>)
  *
- * FILE := MAGIC <FileHeader> [blank] SECTION*
+ * FILE := MAGIC SECTION* <FileSummary> FileSummaryLength
  * MAGIC := 'HDFSIMG1'
- * SECTION := NameSystemSection | ...
+ * SECTION := <NameSystemSection> | ...
+ * FileSummaryLength := 4 byte int
  *
  * Some notes:
  *
- * The codec field in FileHeader describes the compression codec used
+ * The codec field in FileSummary describes the compression codec used
  * for all sections. The fileheader is always uncompressed.
  *
  * All protobuf messages are serialized in delimited form, which means
@@ -41,22 +44,24 @@ package hadoop.hdfs.fsimage;
  *
  **/
 
-message FileHeader {
-  // The on-disk layout version of the file.
+message FileSummary {
+  // The version of the above EBNF grammars.
   required uint32 ondiskVersion = 1;
   // layoutVersion describes which features are available in the
   // FSImage.
   required uint32 layoutVersion = 2;
-  optional string codec   = 3;
-  // The offset of the first data section
-  required uint64 dataOffset = 4;
+  optional string codec         = 3;
   message Section {
     optional string name = 1;
     optional uint64 length = 2;
+    optional uint64 offset = 3;
   }
-  repeated Section sections = 5;
+  repeated Section sections = 4;
 }
 
+/**
+ * Name: NS_INFO
+ **/
 message NameSystemSection {
   optional uint32 namespaceId = 1;
   optional uint64 genstampV1 = 2;
@@ -64,4 +69,66 @@ message NameSystemSection {
   optional uint64 genstampV1Limit = 4;
   optional uint64 lastAllocatedBlockId = 5;
   optional uint64 transactionId = 6;
+}
+
+/**
+ * Name: INODE
+ **/
+message INodeSection {
+  message Permission {
+    optional string user = 1;
+    optional string group = 2;
+    optional uint32 permission = 3;
+  }
+
+  message INodeFile {
+    optional uint32 replication = 1;
+    optional uint64 modificationTime = 2;
+    optional uint64 accessTime = 3;
+    optional uint64 preferredBlockSize = 4;
+    optional Permission permission = 5;
+    repeated BlockProto blocks = 6;
+  }
+
+  message INodeDirectory {
+    optional uint64 modificationTime = 1;
+    // namespace quota
+    optional uint64 nsQuota = 2;
+    // diskspace quota
+    optional uint64 dsQuota = 3;
+    optional Permission permission = 4;
+  }
+
+  message INode {
+    enum Type {
+      FILE = 1;
+      DIRECTORY = 2;
+      REFERENCE = 3;
+      SYMLINK = 4;
+    };
+    required Type type = 1;
+    required uint64 id = 2;
+
+    optional INodeFile file = 3;
+    optional INodeDirectory directory = 4;
+
+    optional bytes name = 16;
+    repeated bytes features = 17;
+  }
+
+  optional uint64 lastInodeId = 1;
+  optional uint64 numInodes = 2;
+  // repeated INodes..
+}
+
+/**
+ * This section records the children of each directories
+ * NAME: INODE_DIR
+ **/
+message INodeDirectorySection {
+  message DirEntry {
+    optional uint64 parent = 1;
+    repeated uint64 children = 2;
+  }
+  // repeated DirEntry, ended at the boundary of the section.
 }
