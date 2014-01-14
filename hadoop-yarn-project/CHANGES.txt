@@ -63,6 +63,13 @@ Release 2.4.0 - UNRELEASED
 
     YARN-1033. Expose RM active/standby state to Web UI and REST API (kasha)
 
+    YARN-1041. Added the ApplicationMasterProtocol API for applications to use the
+    ability in ResourceManager to optionally not kill containers when the
+    ApplicationMaster exits. (Jian He via vinodkv)
+
+    YARN-1566. Changed Distributed Shell to retain containers across application
+    attempts. (Jian He via vinodkv)
+
   IMPROVEMENTS
 
     YARN-7. Support CPU resource for DistributedShell. (Junping Du via llu)
@@ -212,6 +219,10 @@ Release 2.4.0 - UNRELEASED
 
     YARN-1579. ActiveRMInfoProto fields should be optional (kasha)
 
+    YARN-888. Cleaned up POM files so that non-leaf modules don't include any
+    dependencies and thus compact the dependency list for leaf modules.
+    (Alejandro Abdelnur via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -312,6 +323,12 @@ Release 2.4.0 - UNRELEASED
 
     YARN-1293. Fixed TestContainerLaunch#testInvalidEnvSyntaxDiagnostics failure
     caused by non-English system locale. (Tsuyoshi OZAWA via jianhe)
+
+    YARN-1574. RMDispatcher should be reset on transition to standby. (Xuan Gong
+    via kasha)
+
+    YARN-1166. Fixed app-specific and attempt-specific QueueMetrics to be
+    triggered by accordingly app event and attempt event. 
 
 Release 2.3.0 - UNRELEASED
 

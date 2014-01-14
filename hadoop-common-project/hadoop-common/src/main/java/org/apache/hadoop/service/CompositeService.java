@@ -95,7 +95,7 @@ public class CompositeService extends AbstractService {
 
   protected synchronized boolean removeService(Service service) {
     synchronized (serviceList) {
-      return serviceList.add(service);
+      return serviceList.remove(service);
     }
   }
 

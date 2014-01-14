@@ -591,8 +591,8 @@ public class TestFifoScheduler {
         ResourceScheduler.class);
     MockRM rm = new MockRM(conf);
     FifoScheduler fs = (FifoScheduler)rm.getResourceScheduler();
-    TestSchedulerUtils.verifyAppAddedAndRemovedFromScheduler(
-      fs.getSchedulerApplications(), fs, "queue");
+    TestSchedulerUtils.verifyAppAddedAndRemovedFromScheduler(fs.applications,
+      fs, "queue");
   }
 
   private void checkApplicationResourceUsage(int expected, 
