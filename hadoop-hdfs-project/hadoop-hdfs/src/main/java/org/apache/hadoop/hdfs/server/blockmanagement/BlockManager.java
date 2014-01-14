@@ -1214,8 +1214,10 @@ public class BlockManager {
             // block should belong to a file
             bc = blocksMap.getBlockCollection(block);
             // abandoned block or block reopened for append
-            if(bc == null || bc instanceof MutableBlockCollection) {
-              neededReplications.remove(block, priority); // remove from neededReplications
+            if(bc == null
+	        || (bc instanceof MutableBlockCollection && block.equals(bc.getLastBlock()))) {
+	      // remove from neededReplications
+              neededReplications.remove(block, priority);
               neededReplications.decrementReplicationIndex(priority);
               continue;
             }
@@ -1297,7 +1299,7 @@ public class BlockManager {
           // block should belong to a file
           bc = blocksMap.getBlockCollection(block);
           // abandoned block or block reopened for append
-          if(bc == null || bc instanceof MutableBlockCollection) {
+          if(bc == null || (bc instanceof MutableBlockCollection && block.equals(bc.getLastBlock()))) {
             neededReplications.remove(block, priority); // remove from neededReplications
             rw.targets = null;
             neededReplications.decrementReplicationIndex(priority);
@@ -2911,8 +2913,16 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
         NumberReplicas num = countNodes(block);
         int curReplicas = num.liveReplicas();
         int curExpectedReplicas = getReplication(block);
+                
         if (isNeededReplication(block, curExpectedReplicas, curReplicas)) {
           if (curExpectedReplicas > curReplicas) {
+            if (bc instanceof MutableBlockCollection) {
+              if (block.equals(bc.getLastBlock()) && curReplicas > minReplication) {
+                continue;
+              }
+              underReplicatedInOpenFiles++;
+            }
+            
             // Log info about one block for this node which needs replication
             if (!status) {
               status = true;
@@ -2928,9 +2938,6 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
             underReplicatedBlocks++;
             if ((curReplicas == 0) && (num.decommissionedReplicas() > 0)) {
               decommissionOnlyReplicas++;
-            }
-            if (bc instanceof MutableBlockCollection) {
-              underReplicatedInOpenFiles++;
             }
           }
           if (!neededReplications.contains(block) &&
