@@ -739,7 +739,6 @@ public class FileSystemApplicationHistoryStore extends AbstractService
       }
     }
 
-    private FSDataInputStream fsdis;
     private TFile.Reader reader;
     private TFile.Reader.Scanner scanner;
 
@@ -773,7 +772,7 @@ public class FileSystemApplicationHistoryStore extends AbstractService
     }
 
     public void close() {
-      IOUtils.cleanup(LOG, scanner, reader, fsdis);
+      IOUtils.cleanup(LOG, scanner, reader);
     }
 
   }

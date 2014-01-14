@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.applicationhistoryservice;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -94,9 +95,10 @@ public class ApplicationHistoryManagerImpl extends AbstractService implements
     Map<ApplicationId, ApplicationHistoryData> histData = historyStore
         .getAllApplications();
     HashMap<ApplicationId, ApplicationReport> applicationsReport = new HashMap<ApplicationId, ApplicationReport>();
-    for (ApplicationId appId : histData.keySet()) {
-      applicationsReport.put(appId, convertToApplicationReport(histData
-          .get(appId)));
+    for (Entry<ApplicationId, ApplicationHistoryData> entry : histData
+      .entrySet()) {
+      applicationsReport.put(entry.getKey(),
+        convertToApplicationReport(entry.getValue()));
     }
     return applicationsReport;
   }
@@ -171,9 +173,10 @@ public class ApplicationHistoryManagerImpl extends AbstractService implements
     Map<ApplicationAttemptId, ApplicationAttemptHistoryData> histData = historyStore
         .getApplicationAttempts(appId);
     HashMap<ApplicationAttemptId, ApplicationAttemptReport> applicationAttemptsReport = new HashMap<ApplicationAttemptId, ApplicationAttemptReport>();
-    for (ApplicationAttemptId appAttemptId : histData.keySet()) {
-      applicationAttemptsReport.put(appAttemptId,
-          convertToApplicationAttemptReport(histData.get(appAttemptId)));
+    for (Entry<ApplicationAttemptId, ApplicationAttemptHistoryData> entry : histData
+      .entrySet()) {
+      applicationAttemptsReport.put(entry.getKey(),
+        convertToApplicationAttemptReport(entry.getValue()));
     }
     return applicationAttemptsReport;
   }
@@ -201,9 +204,9 @@ public class ApplicationHistoryManagerImpl extends AbstractService implements
     Map<ContainerId, ContainerHistoryData> histData = historyStore
         .getContainers(appAttemptId);
     HashMap<ContainerId, ContainerReport> containersReport = new HashMap<ContainerId, ContainerReport>();
-    for (ContainerId container : histData.keySet()) {
-      containersReport.put(container, convertToContainerReport(histData
-          .get(container)));
+    for (Entry<ContainerId, ContainerHistoryData> entry : histData.entrySet()) {
+      containersReport.put(entry.getKey(),
+        convertToContainerReport(entry.getValue()));
     }
     return containersReport;
   }

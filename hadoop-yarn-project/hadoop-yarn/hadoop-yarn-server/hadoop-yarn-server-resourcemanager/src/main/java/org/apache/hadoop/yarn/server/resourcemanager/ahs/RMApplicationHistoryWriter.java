@@ -319,7 +319,7 @@ public class RMApplicationHistoryWriter extends CompositeService {
         // dispatcher, such that all the writing events of one application will
         // be handled by one thread, the scheduled order of the these events
         // will be preserved
-        int index = Math.abs(event.hashCode()) % dispatchers.size();
+        int index = (event.hashCode() & Integer.MAX_VALUE) % dispatchers.size();
         dispatchers.get(index).getEventHandler().handle(event);
       }
 
