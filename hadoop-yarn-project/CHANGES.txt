@@ -205,6 +205,9 @@ Release 2.4.0 - UNRELEASED
     dependencies and thus compact the dependency list for leaf modules.
     (Alejandro Abdelnur via vinodkv)
 
+    YARN-1567. In Fair Scheduler, allow empty queues to change between leaf and
+    parent on allocation file reload (Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES

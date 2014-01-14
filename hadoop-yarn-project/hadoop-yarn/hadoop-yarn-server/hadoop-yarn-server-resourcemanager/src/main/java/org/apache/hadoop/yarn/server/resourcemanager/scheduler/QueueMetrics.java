@@ -509,4 +509,8 @@ public class QueueMetrics implements MetricsSource {
   public int getActiveApps() {
     return activeApplications.value();
   }
+  
+  public MetricsSystem getMetricsSystem() {
+    return metricsSystem;
+  }
 }
