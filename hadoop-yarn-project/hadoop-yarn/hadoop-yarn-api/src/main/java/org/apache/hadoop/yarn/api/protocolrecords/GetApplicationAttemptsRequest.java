@@ -56,7 +56,7 @@ public abstract class GetApplicationAttemptsRequest {
   /**
    * Set the <code>ApplicationId</code> of an application
    *
-   * @param ApplicationId <code>ApplicationId</code> of an application
+   * @param applicationId <code>ApplicationId</code> of an application
    */
   @Public
   @Unstable

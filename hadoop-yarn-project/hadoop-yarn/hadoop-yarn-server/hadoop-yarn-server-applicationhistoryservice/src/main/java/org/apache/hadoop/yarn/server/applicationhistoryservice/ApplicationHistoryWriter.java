@@ -31,8 +31,9 @@ import org.apache.hadoop.yarn.server.applicationhistoryservice.records.Container
 
 /**
  * It is the interface of writing the application history, exposing the methods
- * of writing {@link ApplicationHistoryData},
- * {@link ApplicationAttemptHistoryData} and {@link ContainerHistoryData}.
+ * of writing {@link ApplicationStartData}, {@link ApplicationFinishData}
+ * {@link ApplicationAttemptStartData}, {@link ApplicationAttemptFinishData},
+ * {@link ContainerStartData} and {@link ContainerFinishData}.
  */
 @Private
 @Unstable
