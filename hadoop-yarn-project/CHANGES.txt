@@ -1520,6 +1520,21 @@ Release 2.1.0-beta - 2013-08-22
     yarn.resourcemanager.connect.{max.wait.secs|retry_interval.secs}
     (Karthik Kambatla via acmurthy)
 
+Release 2.0.6-alpha - 08/22/2013
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    YARN-854. Fixing YARN bugs that are failing applications in secure
+    environment. (Omkar Vinit Joshi and shv)
+
 Release 2.0.5-alpha - 06/06/2013
 
   INCOMPATIBLE CHANGES
