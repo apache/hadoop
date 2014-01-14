@@ -125,7 +125,15 @@ public class MiniKdc {
               + file.getAbsolutePath());
     }
     Properties userConf = new Properties();
-    userConf.load(new FileReader(file));
+    FileReader r = null;
+    try {
+      r = new FileReader(file);
+      userConf.load(r);
+    } finally {
+      if (r != null) {
+        r.close();
+      }
+    }
     for (Map.Entry entry : userConf.entrySet()) {
       conf.put(entry.getKey(), entry.getValue());
     }

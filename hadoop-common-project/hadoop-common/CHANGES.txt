@@ -415,6 +415,9 @@ Release 2.4.0 - UNRELEASED
     HADOOP-10208. Remove duplicate initialization in StringUtils.getStringCollection.
     (Benoy Antony via jing9)
 
+    HADOOP-9420. Add percentile or max metric for rpcQueueTime, processing time.
+    (Liang Xie via wang)
+
   OPTIMIZATIONS
 
     HADOOP-9748. Reduce blocking on UGI.ensureInitialized (daryn)
@@ -505,6 +508,12 @@ Release 2.4.0 - UNRELEASED
 
     HADOOP-10207. TestUserGroupInformation#testLogin is flaky (jxiang via cmccabe)
 
+    HADOOP-10214. Fix multithreaded correctness warnings in ActiveStandbyElector
+    (Liang Xie via kasha)
+
+    HADOOP-10223. MiniKdc#main() should close the FileReader it creates. 
+    (Ted Yu via tucu)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -589,6 +598,9 @@ Release 2.3.0 - UNRELEASED
 
     HADOOP-10193. hadoop-auth's PseudoAuthenticationHandler can consume getInputStream. 
     (gchanan via tucu)
+
+    HADOOP-10178. Configuration deprecation always emit "deprecated" warnings
+    when a new key is used. (Shanyu Zhao via cnauroth)
 
 Release 2.2.0 - 2013-10-13
 

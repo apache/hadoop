@@ -46,10 +46,20 @@ public abstract class ContainerId implements Comparable<ContainerId>{
   }
 
   /**
-   * Get the <code>ApplicationAttemptId</code> of the application to which
-   * the <code>Container</code> was assigned.
-   * @return <code>ApplicationAttemptId</code> of the application to which
-   *         the <code>Container</code> was assigned
+   * Get the <code>ApplicationAttemptId</code> of the application to which the
+   * <code>Container</code> was assigned.
+   * <p>
+   * Note: If containers are kept alive across application attempts via
+   * {@link ApplicationSubmissionContext#setKeepContainersAcrossApplicationAttempts(boolean)}
+   * the <code>ContainerId</code> does not necessarily contain the current
+   * running application attempt's <code>ApplicationAttemptId</code> This
+   * container can be allocated by previously exited application attempt and
+   * managed by the current running attempt thus have the previous application
+   * attempt's <code>ApplicationAttemptId</code>.
+   * </p>
+   * 
+   * @return <code>ApplicationAttemptId</code> of the application to which the
+   *         <code>Container</code> was assigned
    */
   @Public
   @Stable

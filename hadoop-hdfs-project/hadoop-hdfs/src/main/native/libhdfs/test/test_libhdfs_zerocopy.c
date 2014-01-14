@@ -140,6 +140,12 @@ static int doTestZeroCopyReads(hdfsFS fs, const char *fileName)
     EXPECT_NULL(hadoopReadZero(file, opts, TEST_ZEROCOPY_FULL_BLOCK_SIZE));
     EXPECT_INT_EQ(EPROTONOSUPPORT, errno);
 
+    /* Verify that setting a NULL ByteBufferPool class works. */
+    EXPECT_ZERO(hadoopRzOptionsSetByteBufferPool(opts, NULL));
+    EXPECT_ZERO(hadoopRzOptionsSetSkipChecksum(opts, 0));
+    EXPECT_NULL(hadoopReadZero(file, opts, TEST_ZEROCOPY_FULL_BLOCK_SIZE));
+    EXPECT_INT_EQ(EPROTONOSUPPORT, errno);
+
     /* Now set a ByteBufferPool and try again.  It should succeed this time. */
     EXPECT_ZERO(hadoopRzOptionsSetByteBufferPool(opts,
           ELASTIC_BYTE_BUFFER_POOL_CLASS));

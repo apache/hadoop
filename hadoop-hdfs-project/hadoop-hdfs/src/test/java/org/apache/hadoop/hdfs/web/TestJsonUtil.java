@@ -24,6 +24,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.namenode.INodeId;
 import org.apache.hadoop.util.Time;
@@ -61,7 +62,7 @@ public class TestJsonUtil {
   }
   
   @Test
-  public void testToDatanodeInfoWithoutSecurePort() {
+  public void testToDatanodeInfoWithoutSecurePort() throws Exception {
     Map<String, Object> response = new HashMap<String, Object>();
     
     response.put("ipAddr", "127.0.0.1");
@@ -83,5 +84,64 @@ public class TestJsonUtil {
     response.put("cacheUsed", 321l);
     
     JsonUtil.toDatanodeInfo(response);
+  }
+
+  @Test
+  public void testToDatanodeInfoWithName() throws Exception {
+    Map<String, Object> response = new HashMap<String, Object>();
+
+    // Older servers (1.x, 0.23, etc.) sends 'name' instead of ipAddr
+    // and xferPort.
+    String name = "127.0.0.1:1004";
+    response.put("name", name);
+    response.put("hostName", "localhost");
+    response.put("storageID", "fake-id");
+    response.put("infoPort", 1338l);
+    response.put("ipcPort", 1339l);
+    response.put("capacity", 1024l);
+    response.put("dfsUsed", 512l);
+    response.put("remaining", 512l);
+    response.put("blockPoolUsed", 512l);
+    response.put("lastUpdate", 0l);
+    response.put("xceiverCount", 4096l);
+    response.put("networkLocation", "foo.bar.baz");
+    response.put("adminState", "NORMAL");
+    response.put("cacheCapacity", 123l);
+    response.put("cacheUsed", 321l);
+
+    DatanodeInfo di = JsonUtil.toDatanodeInfo(response);
+    Assert.assertEquals(name, di.getXferAddr());
+
+    // The encoded result should contain name, ipAddr and xferPort.
+    Map<String, Object> r = JsonUtil.toJsonMap(di);
+    Assert.assertEquals(name, (String)r.get("name"));
+    Assert.assertEquals("127.0.0.1", (String)r.get("ipAddr"));
+    // In this test, it is Integer instead of Long since json was not actually
+    // involved in constructing the map.
+    Assert.assertEquals(1004, (int)(Integer)r.get("xferPort"));
+
+    // Invalid names
+    String[] badNames = {"127.0.0.1", "127.0.0.1:", ":", "127.0.0.1:sweet", ":123"};
+    for (String badName : badNames) {
+      response.put("name", badName);
+      checkDecodeFailure(response);
+    }
+
+    // Missing both name and ipAddr
+    response.remove("name");
+    checkDecodeFailure(response);
+
+    // Only missing xferPort
+    response.put("ipAddr", "127.0.0.1");
+    checkDecodeFailure(response);
+  }
+
+  private void checkDecodeFailure(Map<String, Object> map) {
+    try {
+      JsonUtil.toDatanodeInfo(map);
+      Assert.fail("Exception not thrown against bad input.");
+    } catch (Exception e) {
+      // expected
+    }
   }
 }

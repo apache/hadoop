@@ -55,6 +55,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
@@ -63,7 +64,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptRemovedSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
@@ -345,15 +349,20 @@ public class TestLeafQueue {
         .getMockApplicationAttemptId(0, 1);
     FiCaSchedulerApp app_0 = new FiCaSchedulerApp(appAttemptId_0, user_0, a, null,
         rmContext);
-    a.submitApplicationAttempt(app_0, user_0);
-    
-    when(cs.getApplication(appAttemptId_0)).thenReturn(app_0);
+    AppAddedSchedulerEvent addAppEvent =
+        new AppAddedSchedulerEvent(appAttemptId_0.getApplicationId(),
+          a.getQueueName(), user_0);
+    cs.handle(addAppEvent);
+    AppAttemptAddedSchedulerEvent addAttemptEvent = 
+        new AppAttemptAddedSchedulerEvent(appAttemptId_0, false);
+    cs.handle(addAttemptEvent);
+
     AppAttemptRemovedSchedulerEvent event = new AppAttemptRemovedSchedulerEvent(
-        appAttemptId_0, RMAppAttemptState.FAILED);
+        appAttemptId_0, RMAppAttemptState.FAILED, false);
     cs.handle(event);
     
     assertEquals(0, a.getMetrics().getAppsPending());
-    assertEquals(1, a.getMetrics().getAppsFailed());
+    assertEquals(0, a.getMetrics().getAppsFailed());
 
     // Attempt the same application again
     final ApplicationAttemptId appAttemptId_1 = TestUtils
@@ -365,10 +374,12 @@ public class TestLeafQueue {
     assertEquals(1, a.getMetrics().getAppsSubmitted());
     assertEquals(1, a.getMetrics().getAppsPending());
     
-    when(cs.getApplication(appAttemptId_1)).thenReturn(app_0);
     event = new AppAttemptRemovedSchedulerEvent(appAttemptId_0,
-        RMAppAttemptState.FINISHED);
+        RMAppAttemptState.FINISHED, false);
     cs.handle(event);
+    AppRemovedSchedulerEvent rEvent = new AppRemovedSchedulerEvent(
+        appAttemptId_0.getApplicationId(), RMAppState.FINISHED);
+    cs.handle(rEvent);
     
     assertEquals(1, a.getMetrics().getAppsSubmitted());
     assertEquals(0, a.getMetrics().getAppsPending());

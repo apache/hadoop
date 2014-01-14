@@ -51,6 +51,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
@@ -68,10 +69,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEventT
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.ApplicationMasterLauncher;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.ApplicationAttemptState;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppFailedAttemptEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppRejectedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerAcquiredEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerAllocatedEvent;
@@ -120,14 +121,15 @@ public class TestRMAppAttemptTransitions {
   private AMLivelinessMonitor amFinishingMonitor;
   private RMStateStore store;
 
-  private RMApp application;
+  private RMAppImpl application;
   private RMAppAttempt applicationAttempt;
 
   private Configuration conf = new Configuration();
   private AMRMTokenSecretManager amRMTokenManager = spy(new AMRMTokenSecretManager(conf));
   private ClientToAMTokenSecretManagerInRM clientToAMTokenManager =
       spy(new ClientToAMTokenSecretManagerInRM());
-  
+  private boolean transferStateFromPreviousAttempt = false;
+
   private final class TestApplicationAttemptEventDispatcher implements
       EventHandler<RMAppAttemptEvent> {
 
@@ -150,6 +152,11 @@ public class TestRMAppAttemptTransitions {
     @Override
     public void handle(RMAppEvent event) {
       assertEquals(application.getApplicationId(), event.getApplicationId());
+      if (event instanceof RMAppFailedAttemptEvent) {
+        transferStateFromPreviousAttempt =
+            ((RMAppFailedAttemptEvent) event)
+              .getTransferStateFromPreviousAttempt();
+      }
       try {
         application.handle(event);
       } catch (Throwable t) {
@@ -254,10 +261,10 @@ public class TestRMAppAttemptTransitions {
 
     unmanagedAM = false;
     
-    application = mock(RMApp.class);
+    application = mock(RMAppImpl.class);
     applicationAttempt =
         new RMAppAttemptImpl(applicationAttemptId, rmContext, scheduler,
-          masterService, submissionContext, new Configuration());
+          masterService, submissionContext, new Configuration(), false);
     when(application.getCurrentAppAttempt()).thenReturn(applicationAttempt);
     when(application.getApplicationId()).thenReturn(applicationId);
     
@@ -371,6 +378,7 @@ public class TestRMAppAttemptTransitions {
     assertNull(applicationAttempt.getFinalApplicationStatus());
     verifyTokenCount(applicationAttempt.getAppAttemptId(), 1);
     verifyAttemptFinalStateSaved();
+    assertFalse(transferStateFromPreviousAttempt);
   }
   
   /**
@@ -525,6 +533,7 @@ public class TestRMAppAttemptTransitions {
     assertEquals(container, applicationAttempt.getMasterContainer());
     assertEquals(finalStatus, applicationAttempt.getFinalApplicationStatus());
     verifyTokenCount(applicationAttempt.getAppAttemptId(), 1);
+    assertFalse(transferStateFromPreviousAttempt);
   }
   
   
@@ -654,6 +663,7 @@ public class TestRMAppAttemptTransitions {
         diagnostics));
     testAppAttemptFinishedState(null, finalStatus, url, diagnostics, 1,
         true);
+    assertFalse(transferStateFromPreviousAttempt);
   }
 
   private void sendAttemptUpdateSavedEvent(RMAppAttempt applicationAttempt) {
@@ -679,6 +689,21 @@ public class TestRMAppAttemptTransitions {
         applicationAttempt.getAppAttemptId(), "host", 8042, "oldtrackingurl"));
     testAppAttemptSubmittedToFailedState(
         "Unmanaged AM must register after AM attempt reaches LAUNCHED state.");
+  }
+
+  @Test
+  public void testUnmanagedAMContainersCleanup() {
+    unmanagedAM = true;
+    when(submissionContext.getUnmanagedAM()).thenReturn(true);
+    when(submissionContext.getKeepContainersAcrossApplicationAttempts())
+      .thenReturn(true);
+    // submit AM and check it goes to SUBMITTED state
+    submitApplicationAttempt();
+    // launch AM and verify attempt failed
+    applicationAttempt.handle(new RMAppAttemptRegistrationEvent(
+      applicationAttempt.getAppAttemptId(), "host", 8042, "oldtrackingurl"));
+    sendAttemptUpdateSavedEvent(applicationAttempt);
+    assertFalse(transferStateFromPreviousAttempt);
   }
 
   @Test
@@ -1090,6 +1115,64 @@ public class TestRMAppAttemptTransitions {
     Assert.assertNull(token);
     token = applicationAttempt.createClientToken("clientuser");
     Assert.assertNull(token);
+  }
+
+  @Test
+  public void testFailedToFailed() {
+    // create a failed attempt.
+    when(submissionContext.getKeepContainersAcrossApplicationAttempts())
+      .thenReturn(true);
+    Container amContainer = allocateApplicationAttempt();
+    launchApplicationAttempt(amContainer);
+    runApplicationAttempt(amContainer, "host", 8042, "oldtrackingurl", false);
+    ContainerStatus cs1 =
+        ContainerStatus.newInstance(amContainer.getId(),
+          ContainerState.COMPLETE, "some error", 123);
+    ApplicationAttemptId appAttemptId = applicationAttempt.getAppAttemptId();
+    applicationAttempt.handle(new RMAppAttemptContainerFinishedEvent(
+      appAttemptId, cs1));
+    sendAttemptUpdateSavedEvent(applicationAttempt);
+    assertEquals(RMAppAttemptState.FAILED,
+      applicationAttempt.getAppAttemptState());
+    // should not kill containers when attempt fails.
+    assertTrue(transferStateFromPreviousAttempt);
+
+    // failed attempt captured the container finished event.
+    assertEquals(0, applicationAttempt.getJustFinishedContainers().size());
+    ContainerStatus cs2 =
+        ContainerStatus.newInstance(ContainerId.newInstance(appAttemptId, 2),
+          ContainerState.COMPLETE, "", 0);
+    applicationAttempt.handle(new RMAppAttemptContainerFinishedEvent(
+      appAttemptId, cs2));
+    assertEquals(1, applicationAttempt.getJustFinishedContainers().size());
+    assertEquals(cs2.getContainerId(), applicationAttempt
+      .getJustFinishedContainers().get(0).getContainerId());
+  }
+
+
+  @Test
+  public void testContainersCleanupForLastAttempt() {
+    // create a failed attempt.
+    applicationAttempt =
+        new RMAppAttemptImpl(applicationAttempt.getAppAttemptId(), rmContext,
+          scheduler, masterService, submissionContext, new Configuration(),
+          true);
+    when(submissionContext.getKeepContainersAcrossApplicationAttempts())
+      .thenReturn(true);
+    when(submissionContext.getMaxAppAttempts()).thenReturn(1);
+    Container amContainer = allocateApplicationAttempt();
+    launchApplicationAttempt(amContainer);
+    runApplicationAttempt(amContainer, "host", 8042, "oldtrackingurl", false);
+    ContainerStatus cs1 =
+        ContainerStatus.newInstance(amContainer.getId(),
+          ContainerState.COMPLETE, "some error", 123);
+    ApplicationAttemptId appAttemptId = applicationAttempt.getAppAttemptId();
+    applicationAttempt.handle(new RMAppAttemptContainerFinishedEvent(
+      appAttemptId, cs1));
+    sendAttemptUpdateSavedEvent(applicationAttempt);
+    assertEquals(RMAppAttemptState.FAILED,
+      applicationAttempt.getAppAttemptState());
+    assertFalse(transferStateFromPreviousAttempt);
   }
 
   private void verifyTokenCount(ApplicationAttemptId appAttemptId, int count) {

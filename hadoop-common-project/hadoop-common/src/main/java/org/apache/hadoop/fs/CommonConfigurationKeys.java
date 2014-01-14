@@ -242,4 +242,9 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
 
   public static final String HADOOP_USER_GROUP_METRICS_PERCENTILES_INTERVALS =
     "hadoop.user.group.metrics.percentiles.intervals";
+
+  public static final String RPC_METRICS_QUANTILE_ENABLE =
+      "rpc.metrics.quantile.enable";
+  public static final String  RPC_METRICS_PERCENTILES_INTERVALS_KEY =
+      "rpc.metrics.percentiles.intervals";
 }

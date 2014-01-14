@@ -16,25 +16,18 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.scheduler.event;
+package org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt;
 
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 
-public class AppAttemptAddedSchedulerEvent extends SchedulerEvent {
+public class RMAppStartAttemptEvent extends RMAppAttemptEvent {
 
-  private final ApplicationAttemptId applicationAttemptId;
   private final boolean transferStateFromPreviousAttempt;
 
-  public AppAttemptAddedSchedulerEvent(
-      ApplicationAttemptId applicationAttemptId,
+  public RMAppStartAttemptEvent(ApplicationAttemptId appAttemptId,
       boolean transferStateFromPreviousAttempt) {
-    super(SchedulerEventType.APP_ATTEMPT_ADDED);
-    this.applicationAttemptId = applicationAttemptId;
+    super(appAttemptId, RMAppAttemptEventType.START);
     this.transferStateFromPreviousAttempt = transferStateFromPreviousAttempt;
-  }
-
-  public ApplicationAttemptId getApplicationAttemptId() {
-    return applicationAttemptId;
   }
 
   public boolean getTransferStateFromPreviousAttempt() {

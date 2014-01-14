@@ -32,14 +32,7 @@
     <hadoop.common.build.dir>${basedir}/../../../../hadoop-common-project/hadoop-common/target</hadoop.common.build.dir>
   </properties>
 
-  <dependencies>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-yarn-common</artifactId>
-      <type>test-jar</type>
-      <scope>test</scope>
-    </dependency>
-  </dependencies>
+  <!-- Do not add dependencies here, add them to the POM of the leaf module -->
 
   <modules>
     <module>hadoop-yarn-server-common</module>

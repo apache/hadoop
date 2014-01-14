@@ -29,6 +29,7 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.yarn.api.records.QueueState;
@@ -267,6 +268,7 @@ public class TestRMWebServices extends JerseyTest {
       verifyClusterGeneric(WebServicesTestUtils.getXmlLong(element, "id"),
           WebServicesTestUtils.getXmlLong(element, "startedOn"),
           WebServicesTestUtils.getXmlString(element, "state"),
+          WebServicesTestUtils.getXmlString(element, "haState"),
           WebServicesTestUtils.getXmlString(element, "hadoopVersionBuiltOn"),
           WebServicesTestUtils.getXmlString(element, "hadoopBuildVersion"),
           WebServicesTestUtils.getXmlString(element, "hadoopVersion"),
@@ -282,9 +284,10 @@ public class TestRMWebServices extends JerseyTest {
       Exception {
     assertEquals("incorrect number of elements", 1, json.length());
     JSONObject info = json.getJSONObject("clusterInfo");
-    assertEquals("incorrect number of elements", 9, info.length());
+    assertEquals("incorrect number of elements", 10, info.length());
     verifyClusterGeneric(info.getLong("id"), info.getLong("startedOn"),
-        info.getString("state"), info.getString("hadoopVersionBuiltOn"),
+        info.getString("state"), info.getString("haState"),
+        info.getString("hadoopVersionBuiltOn"),
         info.getString("hadoopBuildVersion"), info.getString("hadoopVersion"),
         info.getString("resourceManagerVersionBuiltOn"),
         info.getString("resourceManagerBuildVersion"),
@@ -293,9 +296,10 @@ public class TestRMWebServices extends JerseyTest {
   }
 
   public void verifyClusterGeneric(long clusterid, long startedon,
-      String state, String hadoopVersionBuiltOn, String hadoopBuildVersion,
-      String hadoopVersion, String resourceManagerVersionBuiltOn,
-      String resourceManagerBuildVersion, String resourceManagerVersion) {
+      String state, String haState, String hadoopVersionBuiltOn,
+      String hadoopBuildVersion, String hadoopVersion,
+      String resourceManagerVersionBuiltOn, String resourceManagerBuildVersion,
+      String resourceManagerVersion) {
 
     assertEquals("clusterId doesn't match: ",
         ResourceManager.getClusterTimeStamp(), clusterid);
@@ -303,6 +307,8 @@ public class TestRMWebServices extends JerseyTest {
         ResourceManager.getClusterTimeStamp(), startedon);
     assertTrue("stated doesn't match: " + state,
         state.matches(STATE.INITED.toString()));
+    assertTrue("HA state doesn't match: " + haState,
+        haState.matches("INITIALIZING"));
 
     WebServicesTestUtils.checkStringMatch("hadoopVersionBuiltOn",
         VersionInfo.getDate(), hadoopVersionBuiltOn);

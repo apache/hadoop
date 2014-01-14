@@ -25,13 +25,15 @@ public class AppAttemptRemovedSchedulerEvent extends SchedulerEvent {
 
   private final ApplicationAttemptId applicationAttemptId;
   private final RMAppAttemptState finalAttemptState;
+  private final boolean keepContainersAcrossAppAttempts;
 
   public AppAttemptRemovedSchedulerEvent(
       ApplicationAttemptId applicationAttemptId,
-      RMAppAttemptState finalAttemptState) {
+      RMAppAttemptState finalAttemptState, boolean keepContainers) {
     super(SchedulerEventType.APP_ATTEMPT_REMOVED);
     this.applicationAttemptId = applicationAttemptId;
     this.finalAttemptState = finalAttemptState;
+    this.keepContainersAcrossAppAttempts = keepContainers;
   }
 
   public ApplicationAttemptId getApplicationAttemptID() {
@@ -40,5 +42,9 @@ public class AppAttemptRemovedSchedulerEvent extends SchedulerEvent {
 
   public RMAppAttemptState getFinalAttemptState() {
     return this.finalAttemptState;
+  }
+
+  public boolean getKeepContainersAcrossAppAttempts() {
+    return this.keepContainersAcrossAppAttempts;
   }
 }
