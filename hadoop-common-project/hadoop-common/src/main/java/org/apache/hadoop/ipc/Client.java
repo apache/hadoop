@@ -286,7 +286,7 @@ public class Client {
       if (!Arrays.equals(id, RpcConstants.DUMMY_CLIENT_ID)) {
         if (!Arrays.equals(id, clientId)) {
           throw new IOException("Client IDs not matched: local ID="
-              + StringUtils.byteToHexString(clientId) + ", ID in reponse="
+              + StringUtils.byteToHexString(clientId) + ", ID in response="
               + StringUtils.byteToHexString(header.getClientId().toByteArray()));
         }
       }

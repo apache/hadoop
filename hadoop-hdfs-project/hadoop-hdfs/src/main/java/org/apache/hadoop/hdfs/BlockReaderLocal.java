@@ -328,10 +328,12 @@ class BlockReaderLocal implements BlockReader {
 
   private synchronized int drainDataBuf(ByteBuffer buf)
       throws IOException {
-    if (dataBuf == null) return 0;
+    if (dataBuf == null) return -1;
     int oldLimit = dataBuf.limit();
     int nRead = Math.min(dataBuf.remaining(), buf.remaining());
-    if (nRead == 0) return 0;
+    if (nRead == 0) {
+      return (dataBuf.remaining() == 0) ? -1 : 0;
+    }
     try {
       dataBuf.limit(dataBuf.position() + nRead);
       buf.put(dataBuf);
@@ -444,13 +446,11 @@ class BlockReaderLocal implements BlockReader {
     int total = 0;
     while (buf.hasRemaining()) {
       int nRead = dataIn.read(buf, dataPos);
-      if (nRead < 0) {
-        break;
-      }
+      if (nRead <= 0) break;
       dataPos += nRead;
       total += nRead;
     }
-    return (total == 0) ? -1 : total;
+    return (total == 0 && (dataPos == dataIn.size())) ? -1 : total;
   }
 
   /**
@@ -512,15 +512,15 @@ class BlockReaderLocal implements BlockReader {
   private synchronized int readWithBounceBuffer(ByteBuffer buf,
         boolean canSkipChecksum) throws IOException {
     int total = 0;
-    boolean eof = false;
-    while (true) {
-      int bb = drainDataBuf(buf); // drain bounce buffer if possible
+    int bb = drainDataBuf(buf); // drain bounce buffer if possible
+    if (bb >= 0) {
       total += bb;
-      int needed = buf.remaining();
-      if (eof || (needed == 0)) {
-        break;
-      } else if (buf.isDirect() && (needed >= maxReadaheadLength)
-          && ((dataPos % bytesPerChecksum) == 0)) {
+      if (buf.remaining() == 0) return total;
+    }
+    boolean eof = false;
+    do {
+      if (buf.isDirect() && (buf.remaining() >= maxReadaheadLength)
+            && ((dataPos % bytesPerChecksum) == 0)) {
         // Fast lane: try to read directly into user-supplied buffer, bypassing
         // bounce buffer.
         int oldLimit = buf.limit();
@@ -540,9 +540,13 @@ class BlockReaderLocal implements BlockReader {
         if (fillDataBuf(canSkipChecksum)) {
           eof = true;
         }
+        bb = drainDataBuf(buf); // drain bounce buffer if possible
+        if (bb >= 0) {
+          total += bb;
+        }
       }
-    }
-    return total == 0 ? -1 : total;
+    } while ((!eof) && (buf.remaining() > 0));
+    return (eof && total == 0) ? -1 : total;
   }
 
   @Override
@@ -587,8 +591,10 @@ class BlockReaderLocal implements BlockReader {
     int nRead = dataIn.read(ByteBuffer.wrap(arr, off, len), dataPos);
     if (nRead > 0) {
       dataPos += nRead;
+    } else if ((nRead == 0) && (dataPos == dataIn.size())) {
+      return -1;
     }
-    return nRead == 0 ? -1 : nRead;
+    return nRead;
   }
 
   private synchronized int readWithBounceBuffer(byte arr[], int off, int len,
@@ -599,9 +605,10 @@ class BlockReaderLocal implements BlockReader {
       dataBuf.limit(maxReadaheadLength);
       fillDataBuf(canSkipChecksum);
     }
+    if (dataBuf.remaining() == 0) return -1;
     int toRead = Math.min(dataBuf.remaining(), len);
     dataBuf.get(arr, off, toRead);
-    return toRead == 0 ? -1 : toRead;
+    return toRead;
   }
 
   @Override

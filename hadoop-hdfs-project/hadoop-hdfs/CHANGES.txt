@@ -674,6 +674,13 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-5220. Expose group resolution time as metric (jxiang via cmccabe)
 
+    HDFS-5762. BlockReaderLocal doesn't return -1 on EOF when doing zero-length
+    reads (Colin Patrick McCabe)
+
+    HDFS-5766. In DFSInputStream, do not add datanode to deadNodes after
+    InvalidEncryptionKeyException in fetchBlockByteRange (Liang Xie via Colin
+    Patrick McCabe)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn)
@@ -926,6 +933,8 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-5677. Need error checking for HA cluster configuration.
     (Vincent Sheffer via cos)
+
+    HDFS-5704. Change OP_UPDATE_BLOCKS with a new OP_ADD_BLOCK. (jing9)
 
   OPTIMIZATIONS
 

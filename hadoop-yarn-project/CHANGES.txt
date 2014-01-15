@@ -417,6 +417,13 @@ Release 2.4.0 - UNRELEASED
     YARN-1166. Fixed app-specific and attempt-specific QueueMetrics to be
     triggered by accordingly app event and attempt event. 
 
+    YARN-1598. HA-related rmadmin commands don't work on a secure cluster (kasha)
+
+    YARN-1603. Remove two *.orig files which were unexpectedly committed. 
+    (Zhijie Shen via junping_du)
+
+    YARN-1601. 3rd party JARs are missing from hadoop-dist output. (tucu)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
