@@ -340,6 +340,9 @@ Release 2.4.0 - UNRELEASED
 
     YARN-1601. 3rd party JARs are missing from hadoop-dist output. (tucu)
 
+    YARN-1351. Invalid string format in Fair Scheduler log warn message
+    (Konstantin Weitz via Sandy Ryza)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
