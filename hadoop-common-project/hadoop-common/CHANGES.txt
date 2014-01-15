@@ -287,6 +287,9 @@ Trunk (Unreleased)
 
     HADOOP-10044 Improve the javadoc of rpc code (sanjay Radia)
 
+    HADOOP-10125. no need to process RPC request if the client connection
+    has been dropped (Ming Ma via brandonli)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
@@ -430,6 +433,9 @@ Release 2.4.0 - UNRELEASED
     HADOOP-10173. Remove UGI from DIGEST-MD5 SASL server creation (daryn via
     kihwal)
 
+    HADOOP-10228. FsPermission#fromShort() should cache FsAction.values().
+    (Haohui Mai via cnauroth)
+
   BUG FIXES
 
     HADOOP-9964. Fix deadlocks in TestHttpServer by synchronize
@@ -513,6 +519,9 @@ Release 2.4.0 - UNRELEASED
 
     HADOOP-10223. MiniKdc#main() should close the FileReader it creates. 
     (Ted Yu via tucu)
+
+    HADOOP-10236. Fix typo in o.a.h.ipc.Client#checkResponse. (Akira Ajisaka
+    via suresh)
 
 Release 2.3.0 - UNRELEASED
 
@@ -601,6 +610,8 @@ Release 2.3.0 - UNRELEASED
 
     HADOOP-10178. Configuration deprecation always emit "deprecated" warnings
     when a new key is used. (Shanyu Zhao via cnauroth)
+
+    HADOOP-10234. "hadoop.cmd jar" does not propagate exit code. (cnauroth)
 
 Release 2.2.0 - 2013-10-13
 
@@ -1328,6 +1339,18 @@ Release 2.1.0-beta - 2013-08-22
     on hadoop.security.authentication value. (markrmiller@gmail.com via tucu)
 
     HADOOP-9701. mvn site ambiguous links in hadoop-common. (kkambatl via tucu)
+
+Release 2.0.6-alpha - 08/22/2013
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
 
 Release 2.0.5-alpha - 06/06/2013
 

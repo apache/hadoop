@@ -478,6 +478,12 @@ Trunk (Unreleased)
 
     HDFS-5726. Fix compilation error in AbstractINodeDiff for JDK7. (jing9)
 
+    HDFS-5768. Consolidate the serialization code in DelegationTokenSecretManager 
+    (Haohui Mai via brandonli)
+
+    HDFS-5775. Consolidate the code for serialization in CacheManager
+    (Haohui Mai via brandonli)
+
 Release 2.4.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -673,6 +679,13 @@ Release 2.4.0 - UNRELEASED
     (Haohui Mai via jing9)
 
     HDFS-5220. Expose group resolution time as metric (jxiang via cmccabe)
+
+    HDFS-5762. BlockReaderLocal doesn't return -1 on EOF when doing zero-length
+    reads (Colin Patrick McCabe)
+
+    HDFS-5766. In DFSInputStream, do not add datanode to deadNodes after
+    InvalidEncryptionKeyException in fetchBlockByteRange (Liang Xie via Colin
+    Patrick McCabe)
 
   OPTIMIZATIONS
 
@@ -923,6 +936,11 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-5675. Add Mkdirs operation to NNThroughputBenchmark.
     (Plamen Jeliazkov via shv)
+
+    HDFS-5677. Need error checking for HA cluster configuration.
+    (Vincent Sheffer via cos)
+
+    HDFS-5704. Change OP_UPDATE_BLOCKS with a new OP_ADD_BLOCK. (jing9)
 
   OPTIMIZATIONS
 
@@ -2303,6 +2321,16 @@ Release 2.1.0-beta - 2013-08-22
 
     HDFS-4982. JournalNode should relogin from keytab before fetching logs
     from other JNs (todd)
+
+Release 2.0.6-alpha - 08/22/2013
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
 
 Release 2.0.5-alpha - 06/06/2013
 

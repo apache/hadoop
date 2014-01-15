@@ -2629,7 +2629,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       newBlock = createNewBlock();
       saveAllocatedBlock(src, inodesInPath, newBlock, targets);
 
-      dir.persistBlocks(src, pendingFile, false);
+      dir.persistNewBlock(src, pendingFile);
       offset = pendingFile.computeFileSize();
     } finally {
       writeUnlock();
@@ -6259,16 +6259,16 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @param out save state of the secret manager
    * @param sdPath String storage directory path
    */
-  void saveSecretManagerState(DataOutputStream out, String sdPath)
+  void saveSecretManagerStateCompat(DataOutputStream out, String sdPath)
       throws IOException {
-    dtSecretManager.saveSecretManagerState(out, sdPath);
+    dtSecretManager.saveSecretManagerStateCompat(out, sdPath);
   }
 
   /**
    * @param in load the state of secret manager from input stream
    */
-  void loadSecretManagerState(DataInput in) throws IOException {
-    dtSecretManager.loadSecretManagerState(in);
+  void loadSecretManagerStateCompat(DataInput in) throws IOException {
+    dtSecretManager.loadSecretManagerStateCompat(in);
   }
 
   /**

@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -158,7 +159,7 @@ public abstract class FSQueue extends Schedulable implements Queue {
   /**
    * Gets the children of this queue, if any.
    */
-  public abstract Collection<FSQueue> getChildQueues();
+  public abstract List<FSQueue> getChildQueues();
   
   /**
    * Adds all applications in the queue and its subqueues to the given collection.

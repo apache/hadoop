@@ -76,7 +76,8 @@ public class AllocationConfiguration {
   @VisibleForTesting
   QueuePlacementPolicy placementPolicy;
   
-  private final Set<String> queueNames;
+  @VisibleForTesting
+  Set<String> queueNames;
   
   public AllocationConfiguration(Map<String, Resource> minQueueResources, 
       Map<String, Resource> maxQueueResources, 

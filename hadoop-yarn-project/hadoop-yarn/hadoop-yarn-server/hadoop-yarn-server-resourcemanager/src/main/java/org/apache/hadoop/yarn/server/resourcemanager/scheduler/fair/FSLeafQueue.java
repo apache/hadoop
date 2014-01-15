@@ -214,7 +214,7 @@ public class FSLeafQueue extends FSQueue {
   }
 
   @Override
-  public Collection<FSQueue> getChildQueues() {
+  public List<FSQueue> getChildQueues() {
     return new ArrayList<FSQueue>(1);
   }
   

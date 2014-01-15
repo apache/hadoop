@@ -223,6 +223,9 @@ Release 2.4.0 - UNRELEASED
     dependencies and thus compact the dependency list for leaf modules.
     (Alejandro Abdelnur via vinodkv)
 
+    YARN-1567. In Fair Scheduler, allow empty queues to change between leaf and
+    parent on allocation file reload (Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -329,6 +332,16 @@ Release 2.4.0 - UNRELEASED
 
     YARN-1166. Fixed app-specific and attempt-specific QueueMetrics to be
     triggered by accordingly app event and attempt event. 
+
+    YARN-1598. HA-related rmadmin commands don't work on a secure cluster (kasha)
+
+    YARN-1603. Remove two *.orig files which were unexpectedly committed. 
+    (Zhijie Shen via junping_du)
+
+    YARN-1601. 3rd party JARs are missing from hadoop-dist output. (tucu)
+
+    YARN-1351. Invalid string format in Fair Scheduler log warn message
+    (Konstantin Weitz via Sandy Ryza)
 
 Release 2.3.0 - UNRELEASED
 
@@ -1534,6 +1547,21 @@ Release 2.1.0-beta - 2013-08-22
     YARN-1056. Remove dual use of string 'resourcemanager' in
     yarn.resourcemanager.connect.{max.wait.secs|retry_interval.secs}
     (Karthik Kambatla via acmurthy)
+
+Release 2.0.6-alpha - 08/22/2013
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    YARN-854. Fixing YARN bugs that are failing applications in secure
+    environment. (Omkar Vinit Joshi and shv)
 
 Release 2.0.5-alpha - 06/06/2013
 
