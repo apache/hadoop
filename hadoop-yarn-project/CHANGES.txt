@@ -317,6 +317,9 @@ Release 2.4.0 - UNRELEASED
 
     YARN-1598. HA-related rmadmin commands don't work on a secure cluster (kasha)
 
+    YARN-1603. Remove two *.orig files which were unexpectedly committed. 
+    (Zhijie Shen via junping_du)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
