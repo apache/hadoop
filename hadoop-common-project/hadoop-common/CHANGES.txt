@@ -312,6 +312,8 @@ Release 2.3.0 - UNRELEASED
     HADOOP-10178. Configuration deprecation always emit "deprecated" warnings
     when a new key is used. (Shanyu Zhao via cnauroth)
 
+    HADOOP-10234. "hadoop.cmd jar" does not propagate exit code. (cnauroth)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES

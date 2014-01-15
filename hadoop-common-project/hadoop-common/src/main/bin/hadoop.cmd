@@ -143,7 +143,7 @@ call :updatepath %HADOOP_BIN_PATH%
 
   call %JAVA% %JAVA_HEAP_MAX% %HADOOP_OPTS% -classpath %CLASSPATH% %CLASS% %hadoop-command-arguments%
 
-  goto :eof
+  exit /b %ERRORLEVEL%
 
 :fs 
   set CLASS=org.apache.hadoop.fs.FsShell
