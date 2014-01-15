@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hdfs.protocol;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -76,6 +79,24 @@ public class HdfsConstants {
   // SafeMode actions
   public static enum SafeModeAction {
     SAFEMODE_LEAVE, SAFEMODE_ENTER, SAFEMODE_GET;
+  }
+
+  public static enum RollingUpgradeAction {
+    QUERY, START, FINALIZE;
+    
+    private static final Map<String, RollingUpgradeAction> MAP
+        = new HashMap<String, RollingUpgradeAction>();
+    static {
+      MAP.put("", QUERY);
+      for(RollingUpgradeAction a : values()) {
+        MAP.put(a.name(), a);
+      }
+    }
+
+    /** Covert the given String to a RollingUpgradeAction. */
+    public static RollingUpgradeAction fromString(String s) {
+      return MAP.get(s.toUpperCase());
+    }
   }
 
   // type of the datanode report

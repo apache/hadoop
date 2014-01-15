@@ -49,7 +49,9 @@ import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
+import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.TransferFsImage;
@@ -62,6 +64,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
+
+import com.google.common.base.Preconditions;
 
 /**
  * This class provides some DFS administrative access shell commands.
@@ -270,7 +274,59 @@ public class DFSAdmin extends FsShell {
       dfs.setQuota(path, HdfsConstants.QUOTA_DONT_SET, quota);
     }
   }
-  
+
+  private static class RollingUpgradeCommand {
+    static final String NAME = "rollingUpgrade";
+    static final String USAGE = "-"+NAME+" [<query|start|finalize>]";
+    static final String DESCRIPTION = USAGE + ":\n"
+        + "     query: query current rolling upgrade status.\n"
+        + "     start: start rolling upgrade."
+        + "  finalize: finalize rolling upgrade.";
+
+    /** Check if a command is the rollingUpgrade command
+     * 
+     * @param cmd A string representation of a command starting with "-"
+     * @return true if this is a clrQuota command; false otherwise
+     */
+    static boolean matches(String cmd) {
+      return ("-"+NAME).equals(cmd); 
+    }
+
+    static int run(DistributedFileSystem dfs, String[] argv, int idx) throws IOException {
+      final RollingUpgradeAction action = RollingUpgradeAction.fromString(
+          argv.length >= 2? argv[1]: "");
+      if (action == null) {
+        throw new IllegalArgumentException("Failed to covert \"" + argv[1]
+            +"\" to " + RollingUpgradeAction.class.getSimpleName());
+      }
+
+      System.out.println(action + " rolling upgrade ...");
+
+      final RollingUpgradeInfo info = dfs.rollingUpgrade(action);
+      switch(action){
+      case QUERY:
+        if (info.isStarted()) {
+          System.out.println("Rolling upgrade is in progress:");
+          System.out.println(info);
+        } else {
+          System.out.println("There is no rolling upgrade in progress.");
+        }
+        break;
+      case START:
+        Preconditions.checkState(info.isStarted());
+        System.out.println("Rolling upgrade is started:");
+        System.out.println(info);
+        break;
+      case FINALIZE:
+        Preconditions.checkState(info.isFinalized());
+        System.out.println("Rolling upgrade is finalized:");
+        System.out.println(info);
+        break;
+      }
+      return 0;
+    }
+  }
+
   /**
    * Construct a DFSAdmin object.
    */
@@ -575,9 +631,11 @@ public class DFSAdmin extends FsShell {
       "\t[" + ClearQuotaCommand.USAGE +"]\n" +
       "\t[" + SetSpaceQuotaCommand.USAGE + "]\n" +
       "\t[" + ClearSpaceQuotaCommand.USAGE +"]\n" +
+      "\t[-finalizeUpgrade]\n" +
+      "\t[" + RollingUpgradeCommand.USAGE +"]\n" +
       "\t[-refreshServiceAcl]\n" +
       "\t[-refreshUserToGroupsMappings]\n" +
-      "\t[refreshSuperUserGroupsConfiguration]\n" +
+      "\t[-refreshSuperUserGroupsConfiguration]\n" +
       "\t[-printTopology]\n" +
       "\t[-refreshNamenodes datanodehost:port]\n"+
       "\t[-deleteBlockPool datanodehost:port blockpoolId [force]]\n"+
@@ -699,6 +757,8 @@ public class DFSAdmin extends FsShell {
       System.out.println(refreshNodes);
     } else if ("finalizeUpgrade".equals(cmd)) {
       System.out.println(finalizeUpgrade);
+    } else if (RollingUpgradeCommand.matches("-"+cmd)) {
+      System.out.println(RollingUpgradeCommand.DESCRIPTION);
     } else if ("metasave".equals(cmd)) {
       System.out.println(metaSave);
     } else if (SetQuotaCommand.matches("-"+cmd)) {
@@ -740,6 +800,7 @@ public class DFSAdmin extends FsShell {
       System.out.println(restoreFailedStorage);
       System.out.println(refreshNodes);
       System.out.println(finalizeUpgrade);
+      System.out.println(RollingUpgradeCommand.DESCRIPTION);
       System.out.println(metaSave);
       System.out.println(SetQuotaCommand.DESCRIPTION);
       System.out.println(ClearQuotaCommand.DESCRIPTION);
@@ -952,6 +1013,9 @@ public class DFSAdmin extends FsShell {
     } else if ("-finalizeUpgrade".equals(cmd)) {
       System.err.println("Usage: java DFSAdmin"
                          + " [-finalizeUpgrade]");
+    } else if (RollingUpgradeCommand.matches(cmd)) {
+      System.err.println("Usage: java DFSAdmin"
+          + " [" + RollingUpgradeCommand.USAGE+"]");
     } else if ("-metasave".equals(cmd)) {
       System.err.println("Usage: java DFSAdmin"
           + " [-metasave filename]");
@@ -1003,6 +1067,7 @@ public class DFSAdmin extends FsShell {
       System.err.println("           [-restoreFailedStorage true|false|check]");
       System.err.println("           [-refreshNodes]");
       System.err.println("           [-finalizeUpgrade]");
+      System.err.println("           ["+RollingUpgradeCommand.USAGE+"]");
       System.err.println("           [-metasave filename]");
       System.err.println("           [-refreshServiceAcl]");
       System.err.println("           [-refreshUserToGroupsMappings]");
@@ -1087,6 +1152,11 @@ public class DFSAdmin extends FsShell {
         printUsage(cmd);
         return exitCode;
       }
+    } else if (RollingUpgradeCommand.matches(cmd)) {
+      if (argv.length < 1 || argv.length > 2) {
+        printUsage(cmd);
+        return exitCode;
+      }
     } else if ("-metasave".equals(cmd)) {
       if (argv.length != 2) {
         printUsage(cmd);
@@ -1162,6 +1232,8 @@ public class DFSAdmin extends FsShell {
         exitCode = refreshNodes();
       } else if ("-finalizeUpgrade".equals(cmd)) {
         exitCode = finalizeUpgrade();
+      } else if (RollingUpgradeCommand.matches(cmd)) {
+        exitCode = RollingUpgradeCommand.run(getDFS(), argv, i);
       } else if ("-metasave".equals(cmd)) {
         exitCode = metaSave(argv, i);
       } else if (ClearQuotaCommand.matches(cmd)) {

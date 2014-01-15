@@ -4,3 +4,6 @@ HDFS-5535 subtasks:
     jing9)
 
     HDFS-5645. Support upgrade marker in editlog streams. (szetszwo)
+
+    HDFS-5752. Add a new DFSAdmin command to query, start and finalize rolling
+    upgrade. (szetszwo)
