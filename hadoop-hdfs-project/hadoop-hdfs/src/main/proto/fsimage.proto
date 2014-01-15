@@ -42,7 +42,7 @@ import "hdfs.proto";
  * that there always will be an integer indicates the size of the
  * protobuf message.
  *
- **/
+ */
 
 message FileSummary {
   // The version of the above EBNF grammars.
@@ -51,6 +51,7 @@ message FileSummary {
   // FSImage.
   required uint32 layoutVersion = 2;
   optional string codec         = 3;
+  // index for each section
   message Section {
     optional string name = 1;
     optional uint64 length = 2;
@@ -61,7 +62,7 @@ message FileSummary {
 
 /**
  * Name: NS_INFO
- **/
+ */
 message NameSystemSection {
   optional uint32 namespaceId = 1;
   optional uint64 genstampV1 = 2;
@@ -73,12 +74,20 @@ message NameSystemSection {
 
 /**
  * Name: INODE
- **/
+ */
 message INodeSection {
   message Permission {
     optional string user = 1;
     optional string group = 2;
     optional uint32 permission = 3;
+  }
+
+  /**
+   * under-construction feature for INodeFile
+   */
+  message FileUnderConstructionFeature {
+    optional string clientName = 1;
+    optional string clientMachine = 2;
   }
 
   message INodeFile {
@@ -88,6 +97,7 @@ message INodeSection {
     optional uint64 preferredBlockSize = 4;
     optional Permission permission = 5;
     repeated BlockProto blocks = 6;
+    optional FileUnderConstructionFeature fileUC = 7;
   }
 
   message INodeDirectory {
@@ -108,12 +118,10 @@ message INodeSection {
     };
     required Type type = 1;
     required uint64 id = 2;
-
-    optional INodeFile file = 3;
-    optional INodeDirectory directory = 4;
-
-    optional bytes name = 16;
-    repeated bytes features = 17;
+    optional bytes name = 3;
+    
+    optional INodeFile file = 4;
+    optional INodeDirectory directory = 5;
   }
 
   optional uint64 lastInodeId = 1;
@@ -122,9 +130,22 @@ message INodeSection {
 }
 
 /**
+ * This section records information about under-construction files for
+ * reconstructing the lease map.
+ * NAME: FILES_UNDERCONSTRUCTION
+ */
+message FilesUnderConstructionSection {
+  message FileUnderConstructionEntry {
+    optional uint64 inodeId = 1;
+    optional string fullPath = 2;
+  }
+  // repeated FileUnderConstructionEntry...
+}
+
+/**
  * This section records the children of each directories
  * NAME: INODE_DIR
- **/
+ */
 message INodeDirectorySection {
   message DirEntry {
     optional uint64 parent = 1;

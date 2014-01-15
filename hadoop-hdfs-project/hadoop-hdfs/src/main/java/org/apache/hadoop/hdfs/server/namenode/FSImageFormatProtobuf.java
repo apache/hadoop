@@ -54,10 +54,10 @@ import com.google.protobuf.CodedOutputStream;
  */
 final class FSImageFormatProtobuf {
   private static final Log LOG = LogFactory.getLog(FSImageFormatProtobuf.class);
-  
+
   static final byte[] MAGIC_HEADER = "HDFSIMG1".getBytes();
   private static final int FILE_VERSION = 1;
-  
+
   static final class Loader implements FSImageFormat.AbstractLoader {
     private static final int MINIMUM_FILE_LENGTH = 8;
     private final Configuration conf;
@@ -171,6 +171,9 @@ final class FSImageFormatProtobuf {
         case INODE_DIR:
           inodeLoader.loadINodeDirectorySection(in);
           break;
+        case FILES_UNDERCONSTRUCTION:
+          inodeLoader.loadFilesUnderConstructionSection(in);
+          break;
         default:
           LOG.warn("Unregconized section " + n);
           break;
@@ -244,6 +247,7 @@ final class FSImageFormatProtobuf {
           out, summary);
       saver.serializeINodeSection();
       saver.serializeINodeDirectorySection();
+      saver.serializeFilesUCSection();
     }
 
     private void saveInternal(FileOutputStream fout,
@@ -306,7 +310,8 @@ final class FSImageFormatProtobuf {
    * Supported section name
    */
   enum SectionName {
-    INODE("INODE"), INODE_DIR("INODE_DIR"), NS_INFO("NS_INFO");
+    INODE("INODE"), INODE_DIR("INODE_DIR"), NS_INFO("NS_INFO"),
+    FILES_UNDERCONSTRUCTION("FILES_UNDERCONSTRUCTION");
 
     private static final SectionName[] values = SectionName.values();
 
@@ -324,7 +329,7 @@ final class FSImageFormatProtobuf {
       this.name = name;
     }
   }
-  
+
   private static int getOndiskTrunkSize(com.google.protobuf.GeneratedMessage s) {
     return CodedOutputStream.computeRawVarint32Size(s.getSerializedSize())
         + s.getSerializedSize();
