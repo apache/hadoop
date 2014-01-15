@@ -71,7 +71,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEven
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.UpdatedContainerInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
@@ -121,10 +120,10 @@ import com.google.common.annotations.VisibleForTesting;
 @LimitedPrivate("yarn")
 @Unstable
 @SuppressWarnings("unchecked")
-public class FairScheduler extends AbstractYarnScheduler implements
-    ResourceScheduler {
+public class FairScheduler implements ResourceScheduler {
   private boolean initialized;
   private FairSchedulerConfiguration conf;
+  private RMContext rmContext;
   private Resource minimumAllocation;
   private Resource maximumAllocation;
   private Resource incrAllocation;
@@ -157,6 +156,11 @@ public class FairScheduler extends AbstractYarnScheduler implements
   protected long lastPreemptionUpdateTime;
   // Time we last ran preemptTasksIfNecessary
   private long lastPreemptCheckTime;
+
+  // This stores per-application scheduling information,
+  @VisibleForTesting
+  protected Map<ApplicationId, SchedulerApplication> applications =
+      new ConcurrentHashMap<ApplicationId, SchedulerApplication>();
 
   // Nodes in the cluster, indexed by NodeId
   private Map<NodeId, FSSchedulerNode> nodes = 
@@ -1231,9 +1235,6 @@ public class FairScheduler extends AbstractYarnScheduler implements
       
       rootMetrics = FSQueueMetrics.forQueue("root", null, true, conf);
       this.rmContext = rmContext;
-      // This stores per-application scheduling information
-      this.applications =
-          new ConcurrentHashMap<ApplicationId, SchedulerApplication>();
       this.eventLog = new FairSchedulerEventLog();
       eventLog.init(this.conf);
 
@@ -1356,4 +1357,5 @@ public class FairScheduler extends AbstractYarnScheduler implements
     queue.collectSchedulerApplications(apps);
     return apps;
   }
+
 }

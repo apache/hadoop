@@ -324,12 +324,14 @@ public class BlockInfoUnderConstruction extends BlockInfo {
     Iterator<ReplicaUnderConstruction> it = replicas.iterator();
     while (it.hasNext()) {
       ReplicaUnderConstruction r = it.next();
-      if(r.getExpectedStorageLocation() == storage) {
+      DatanodeStorageInfo expectedLocation = r.getExpectedStorageLocation();
+      if(expectedLocation == storage) {
         // Record the gen stamp from the report
         r.setGenerationStamp(block.getGenerationStamp());
         return;
-      } else if (r.getExpectedStorageLocation().getDatanodeDescriptor() ==
-          storage.getDatanodeDescriptor()) {
+      } else if (expectedLocation != null &&
+                 expectedLocation.getDatanodeDescriptor() ==
+                     storage.getDatanodeDescriptor()) {
 
         // The Datanode reported that the block is on a different storage
         // than the one chosen by BlockPlacementPolicy. This can occur as

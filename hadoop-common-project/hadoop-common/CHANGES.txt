@@ -430,6 +430,9 @@ Release 2.4.0 - UNRELEASED
     HADOOP-10173. Remove UGI from DIGEST-MD5 SASL server creation (daryn via
     kihwal)
 
+    HADOOP-10228. FsPermission#fromShort() should cache FsAction.values().
+    (Haohui Mai via cnauroth)
+
   BUG FIXES
 
     HADOOP-9964. Fix deadlocks in TestHttpServer by synchronize
@@ -510,6 +513,9 @@ Release 2.4.0 - UNRELEASED
 
     HADOOP-10214. Fix multithreaded correctness warnings in ActiveStandbyElector
     (Liang Xie via kasha)
+
+    HADOOP-10223. MiniKdc#main() should close the FileReader it creates. 
+    (Ted Yu via tucu)
 
 Release 2.3.0 - UNRELEASED
 
@@ -595,6 +601,9 @@ Release 2.3.0 - UNRELEASED
 
     HADOOP-10193. hadoop-auth's PseudoAuthenticationHandler can consume getInputStream. 
     (gchanan via tucu)
+
+    HADOOP-10178. Configuration deprecation always emit "deprecated" warnings
+    when a new key is used. (Shanyu Zhao via cnauroth)
 
 Release 2.2.0 - 2013-10-13
 
@@ -1322,6 +1331,18 @@ Release 2.1.0-beta - 2013-08-22
     on hadoop.security.authentication value. (markrmiller@gmail.com via tucu)
 
     HADOOP-9701. mvn site ambiguous links in hadoop-common. (kkambatl via tucu)
+
+Release 2.0.6-alpha - 08/22/2013
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
 
 Release 2.0.5-alpha - 06/06/2013
 

@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.api.protocolrecords;
 
 import java.nio.ByteBuffer;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -27,6 +28,7 @@ import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
+import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.util.Records;
 
@@ -47,16 +49,19 @@ import org.apache.hadoop.yarn.util.Records;
 @Public
 @Stable
 public abstract class RegisterApplicationMasterResponse {
+
   @Private
   @Unstable
   public static RegisterApplicationMasterResponse newInstance(
       Resource minCapability, Resource maxCapability,
-      Map<ApplicationAccessType, String> acls, ByteBuffer key) {
+      Map<ApplicationAccessType, String> acls, ByteBuffer key,
+      List<Container> containersFromPreviousAttempt) {
     RegisterApplicationMasterResponse response =
         Records.newRecord(RegisterApplicationMasterResponse.class);
     response.setMaximumResourceCapability(maxCapability);
     response.setApplicationACLs(acls);
     response.setClientToAMTokenMasterKey(key);
+    response.setContainersFromPreviousAttempt(containersFromPreviousAttempt);
     return response;
   }
 
@@ -105,4 +110,30 @@ public abstract class RegisterApplicationMasterResponse {
   @Public
   @Stable
   public abstract void setClientToAMTokenMasterKey(ByteBuffer key);
+
+  /**
+   * <p>
+   * Get the list of running containers as viewed by
+   * <code>ResourceManager</code> from previous application attempt.
+   * </p>
+   * 
+   * @return the list of running containers as viewed by
+   *         <code>ResourceManager</code> from previous application attempt
+   */
+  @Public
+  @Unstable
+  public abstract List<Container> getContainersFromPreviousAttempt();
+
+  /**
+   * Set the list of running containers as viewed by
+   * <code>ResourceManager</code> from previous application attempt.
+   * 
+   * @param containersFromPreviousAttempt
+   *          the list of running containers as viewed by
+   *          <code>ResourceManager</code> from previous application attempt.
+   */
+  @Private
+  @Unstable
+  public abstract void setContainersFromPreviousAttempt(
+      List<Container> containersFromPreviousAttempt);
 }

@@ -162,6 +162,9 @@ public class Client {
   // Timeout threshold for client. Kill app after time interval expires.
   private long clientTimeout = 600000;
 
+  // flag to indicate whether to keep containers across application attempts.
+  private boolean keepContainers = false;
+
   // Debug flag
   boolean debugFlag = false;	
 
@@ -243,6 +246,11 @@ public class Client {
     opts.addOption("container_vcores", true, "Amount of virtual cores to be requested to run the shell command");
     opts.addOption("num_containers", true, "No. of containers on which the shell command needs to be executed");
     opts.addOption("log_properties", true, "log4j.properties file");
+    opts.addOption("keep_containers_across_application_attempts", false,
+      "Flag to indicate whether to keep containers across application attempts." +
+      " If the flag is true, running containers will not be killed when" +
+      " application attempt fails and these containers will be retrieved by" +
+      " the new application attempt ");
     opts.addOption("debug", false, "Dump out debug information");
     opts.addOption("help", false, "Print usage");
 
@@ -294,12 +302,17 @@ public class Client {
 
     }
 
+    if (cliParser.hasOption("keep_containers_across_application_attempts")) {
+      LOG.info("keep_containers_across_application_attempts");
+      keepContainers = true;
+    }
+
     appName = cliParser.getOptionValue("appname", "DistributedShell");
     amPriority = Integer.parseInt(cliParser.getOptionValue("priority", "0"));
     amQueue = cliParser.getOptionValue("queue", "default");
     amMemory = Integer.parseInt(cliParser.getOptionValue("master_memory", "10"));		
     amVCores = Integer.parseInt(cliParser.getOptionValue("master_vcores", "1"));
-    
+
     if (amMemory < 0) {
       throw new IllegalArgumentException("Invalid memory specified for application master, exiting."
           + " Specified memory=" + amMemory);
@@ -442,6 +455,8 @@ public class Client {
     // set the application name
     ApplicationSubmissionContext appContext = app.getApplicationSubmissionContext();
     ApplicationId appId = appContext.getApplicationId();
+
+    appContext.setKeepContainersAcrossApplicationAttempts(keepContainers);
     appContext.setApplicationName(appName);
 
     // Set up the container launch context for the application master

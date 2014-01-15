@@ -18,58 +18,53 @@
 
 package org.apache.hadoop.yarn.applications.distributedshell;
 
+import java.io.IOException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 
-import java.nio.ByteBuffer;
-import java.util.Map;
+public class TestDSFailedAppMaster extends ApplicationMaster {
 
-public class ContainerLaunchFailAppMaster extends ApplicationMaster {
-
-  private static final Log LOG =
-    LogFactory.getLog(ContainerLaunchFailAppMaster.class);
-
-  public ContainerLaunchFailAppMaster() {
-    super();
-  }
+  private static final Log LOG = LogFactory.getLog(TestDSFailedAppMaster.class);
 
   @Override
-  NMCallbackHandler createNMCallbackHandler() {
-    return new FailContainerLaunchNMCallbackHandler(this);
-  }
+  public boolean run() throws YarnException, IOException {
+    boolean res = super.run();
 
-  class FailContainerLaunchNMCallbackHandler
-    extends ApplicationMaster.NMCallbackHandler {
-
-    public FailContainerLaunchNMCallbackHandler(
-      ApplicationMaster applicationMaster) {
-      super(applicationMaster);
+    // for the 2nd attempt.
+    if (appAttemptID.getAttemptId() == 2) {
+      // should reuse the earlier running container, so numAllocatedContainers
+      // should be set to 1. And should ask no more containers, so
+      // numRequestedContainers should be set to 0.
+      if (numAllocatedContainers.get() != 1
+          || numRequestedContainers.get() != 0) {
+        LOG.info("Application Master failed. exiting");
+        System.exit(200);
+      }
     }
-
-    @Override
-    public void onContainerStarted(ContainerId containerId,
-                                   Map<String, ByteBuffer> allServiceResponse) {
-      super.onStartContainerError(containerId,
-        new RuntimeException("Inject Container Launch failure"));
-    }
-
+    return res;
   }
 
   public static void main(String[] args) {
     boolean result = false;
     try {
-      ContainerLaunchFailAppMaster appMaster =
-        new ContainerLaunchFailAppMaster();
-      LOG.info("Initializing ApplicationMaster");
+      TestDSFailedAppMaster appMaster = new TestDSFailedAppMaster();
       boolean doRun = appMaster.init(args);
       if (!doRun) {
         System.exit(0);
       }
       result = appMaster.run();
+      if (appMaster.appAttemptID.getAttemptId() == 1) {
+        try {
+          // sleep some time, wait for the AM to launch a container.
+          Thread.sleep(3000);
+        } catch (InterruptedException e) {}
+        // fail the first am.
+        System.exit(100);
+      }
       appMaster.finish();
     } catch (Throwable t) {
-      LOG.fatal("Error running ApplicationMaster", t);
       System.exit(1);
     }
     if (result) {
@@ -80,5 +75,4 @@ public class ContainerLaunchFailAppMaster extends ApplicationMaster {
       System.exit(2);
     }
   }
-
 }

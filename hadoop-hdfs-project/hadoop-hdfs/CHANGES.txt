@@ -741,6 +741,17 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-5449. WebHdfs compatibility broken between 2.2 and 1.x / 23.x (kihwal)
 
+    HDFS-5756. hadoopRzOptionsSetByteBufferPool does not accept NULL argument,
+    contrary to docs. (cmccabe via wang)
+
+    HDFS-5747. Fix NPEs in BlockManager. (Arpit Agarwal)
+
+    HDFS-5710. FSDirectory#getFullPathName should check inodes against null.
+    (Uma Maheswara Rao G via jing9)
+
+    HDFS-5579. Under construction files make DataNode decommission take very long
+    hours. (zhaoyunjiong via jing9)
+
   BREAKDOWN OF HDFS-2832 SUBTASKS AND RELATED JIRAS
 
     HDFS-4985. Add storage type to the protocol and expose it in block report
@@ -912,6 +923,9 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-5675. Add Mkdirs operation to NNThroughputBenchmark.
     (Plamen Jeliazkov via shv)
+
+    HDFS-5677. Need error checking for HA cluster configuration.
+    (Vincent Sheffer via cos)
 
   OPTIMIZATIONS
 
@@ -2292,6 +2306,16 @@ Release 2.1.0-beta - 2013-08-22
 
     HDFS-4982. JournalNode should relogin from keytab before fetching logs
     from other JNs (todd)
+
+Release 2.0.6-alpha - 08/22/2013
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
 
 Release 2.0.5-alpha - 06/06/2013
 

@@ -2174,16 +2174,18 @@ int hadoopRzOptionsSetByteBufferPool(
         return -1;
     }
 
-    // Note: we don't have to call hadoopRzOptionsClearCached in this
-    // function, since the ByteBufferPool is passed separately from the
-    // EnumSet of ReadOptions.
+    if (className) {
+      // Note: we don't have to call hadoopRzOptionsClearCached in this
+      // function, since the ByteBufferPool is passed separately from the
+      // EnumSet of ReadOptions.
 
-    jthr = constructNewObjectOfClass(env, &byteBufferPool, className, "()V");
-    if (jthr) {
-        printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
-            "hadoopRzOptionsSetByteBufferPool(className=%s): ", className);
-        errno = EINVAL;
-        return -1;
+      jthr = constructNewObjectOfClass(env, &byteBufferPool, className, "()V");
+      if (jthr) {
+          printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+              "hadoopRzOptionsSetByteBufferPool(className=%s): ", className);
+          errno = EINVAL;
+          return -1;
+      }
     }
     if (opts->byteBufferPool) {
         // Delete any previous ByteBufferPool we had.

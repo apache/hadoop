@@ -1233,8 +1233,10 @@ public class BlockManager {
             // block should belong to a file
             bc = blocksMap.getBlockCollection(block);
             // abandoned block or block reopened for append
-            if(bc == null || bc.isUnderConstruction()) {
-              neededReplications.remove(block, priority); // remove from neededReplications
+            if (bc == null
+                || (bc.isUnderConstruction() && block.equals(bc.getLastBlock()))) {
+              // remove from neededReplications
+              neededReplications.remove(block, priority);
               continue;
             }
 
@@ -1314,7 +1316,7 @@ public class BlockManager {
           // block should belong to a file
           bc = blocksMap.getBlockCollection(block);
           // abandoned block or block reopened for append
-          if(bc == null || bc.isUnderConstruction()) {
+          if(bc == null || (bc.isUnderConstruction() && block.equals(bc.getLastBlock()))) {
             neededReplications.remove(block, priority); // remove from neededReplications
             rw.targets = null;
             continue;
@@ -3007,8 +3009,16 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
         NumberReplicas num = countNodes(block);
         int curReplicas = num.liveReplicas();
         int curExpectedReplicas = getReplication(block);
+                
         if (isNeededReplication(block, curExpectedReplicas, curReplicas)) {
           if (curExpectedReplicas > curReplicas) {
+            if (bc.isUnderConstruction()) {
+              if (block.equals(bc.getLastBlock()) && curReplicas > minReplication) {
+                continue;
+              }
+              underReplicatedInOpenFiles++;
+            }
+            
             // Log info about one block for this node which needs replication
             if (!status) {
               status = true;
@@ -3024,9 +3034,6 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
             underReplicatedBlocks++;
             if ((curReplicas == 0) && (num.decommissionedReplicas() > 0)) {
               decommissionOnlyReplicas++;
-            }
-            if (bc.isUnderConstruction()) {
-              underReplicatedInOpenFiles++;
             }
           }
           if (!neededReplications.contains(block) &&
