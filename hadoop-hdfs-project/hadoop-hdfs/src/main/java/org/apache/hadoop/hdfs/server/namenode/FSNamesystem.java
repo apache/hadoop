@@ -2629,7 +2629,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       newBlock = createNewBlock();
       saveAllocatedBlock(src, inodesInPath, newBlock, targets);
 
-      dir.persistBlocks(src, pendingFile, false);
+      dir.persistNewBlock(src, pendingFile);
       offset = pendingFile.computeFileSize();
     } finally {
       writeUnlock();

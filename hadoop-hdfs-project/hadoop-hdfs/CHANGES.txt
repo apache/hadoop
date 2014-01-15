@@ -927,6 +927,8 @@ Release 2.3.0 - UNRELEASED
     HDFS-5677. Need error checking for HA cluster configuration.
     (Vincent Sheffer via cos)
 
+    HDFS-5704. Change OP_UPDATE_BLOCKS with a new OP_ADD_BLOCK. (jing9)
+
   OPTIMIZATIONS
 
   BUG FIXES
