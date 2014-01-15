@@ -39,6 +39,8 @@ public interface BlockReader extends ByteBufferReadable {
    * "Read should not modify user buffer before successful read"
    * because it first reads the data to user buffer and then checks
    * the checksum.
+   * Note: this must return -1 on EOF, even in the case of a 0-byte read.
+   * See HDFS-5762 for details.
    */
   int read(byte[] buf, int off, int len) throws IOException;
 
