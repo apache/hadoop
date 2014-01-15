@@ -288,7 +288,7 @@ Trunk (Unreleased)
     HADOOP-10044 Improve the javadoc of rpc code (sanjay Radia)
 
     HADOOP-10125. no need to process RPC request if the client connection
-    has been dropped (Min Ma via brandonli)
+    has been dropped (Ming Ma via brandonli)
 
   OPTIMIZATIONS
 
