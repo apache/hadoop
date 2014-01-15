@@ -2021,6 +2021,10 @@ public abstract class Server {
           if (LOG.isDebugEnabled()) {
             LOG.debug(Thread.currentThread().getName() + ": " + call + " for RpcKind " + call.rpcKind);
           }
+          if (!call.connection.channel.isOpen()) {
+            LOG.info(Thread.currentThread().getName() + ": skipped " + call);
+            continue;
+          }
           String errorClass = null;
           String error = null;
           RpcStatusProto returnStatus = RpcStatusProto.SUCCESS;
