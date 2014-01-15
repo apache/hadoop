@@ -677,6 +677,10 @@ Release 2.4.0 - UNRELEASED
     HDFS-5762. BlockReaderLocal doesn't return -1 on EOF when doing zero-length
     reads (Colin Patrick McCabe)
 
+    HDFS-5766. In DFSInputStream, do not add datanode to deadNodes after
+    InvalidEncryptionKeyException in fetchBlockByteRange (Liang Xie via Colin
+    Patrick McCabe)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn)
