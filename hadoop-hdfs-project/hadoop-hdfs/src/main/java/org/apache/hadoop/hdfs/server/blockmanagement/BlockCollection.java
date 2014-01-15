@@ -31,7 +31,7 @@ public interface BlockCollection {
   /**
    * Get the last block of the collection.
    */
-  public BlockInfo getLastBlock() throws IOException;
+  public BlockInfo getLastBlock();
 
   /** 
    * Get content summary.

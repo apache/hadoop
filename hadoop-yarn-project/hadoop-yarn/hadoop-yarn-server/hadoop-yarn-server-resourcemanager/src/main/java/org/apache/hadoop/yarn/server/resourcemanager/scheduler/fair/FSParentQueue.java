@@ -157,7 +157,7 @@ public class FSParentQueue extends FSQueue {
   }
 
   @Override
-  public Collection<FSQueue> getChildQueues() {
+  public List<FSQueue> getChildQueues() {
     return childQueues;
   }
 

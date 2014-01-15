@@ -998,6 +998,16 @@ Release 2.1.0-beta - 2013-08-22
     MAPREDUCE-4374. Fix child task environment variable config and add support
     for Windows. (Chuan Liu via cnauroth)
 
+Release 2.0.6-alpha - 08/22/2013
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
 Release 2.0.5-alpha - 06/06/2013
 
   INCOMPATIBLE CHANGES
