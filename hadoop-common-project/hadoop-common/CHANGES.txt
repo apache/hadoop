@@ -19,6 +19,8 @@ Release 0.23.11 - UNRELEASED
     HADOOP-10081. Client.setupIOStreams can leak socket resources on exception
     or error (Tsuyoshi OZAWA via jlowe)
 
+    HADOOP-10146. Workaround JDK7 Process fd close bug (daryn)
+
 Release 0.23.10 - 2013-12-09
 
   INCOMPATIBLE CHANGES
