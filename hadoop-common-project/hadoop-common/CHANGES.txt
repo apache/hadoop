@@ -526,6 +526,8 @@ Release 2.4.0 - UNRELEASED
     HADOOP-10236. Fix typo in o.a.h.ipc.Client#checkResponse. (Akira Ajisaka
     via suresh)
 
+    HADOOP-10146. Workaround JDK7 Process fd close bug (daryn)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
