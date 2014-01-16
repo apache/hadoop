@@ -218,8 +218,6 @@ public class LinuxContainerExecutor extends ContainerExecutor {
     }
     String[] commandArray = command.toArray(new String[command.size()]);
     ShellCommandExecutor shExec = new ShellCommandExecutor(commandArray);
-    // TODO: DEBUG
-    LOG.info("initApplication: " + Arrays.toString(commandArray));
     if (LOG.isDebugEnabled()) {
       LOG.debug("initApplication: " + Arrays.toString(commandArray));
     }
@@ -275,8 +273,9 @@ public class LinuxContainerExecutor extends ContainerExecutor {
         String[] commandArray = command.toArray(new String[command.size()]);
         shExec = new ShellCommandExecutor(commandArray, null, // NM's cwd
             container.getLaunchContext().getEnvironment()); // sanitized env
-        // DEBUG
-        LOG.info("launchContainer: " + Arrays.toString(commandArray));
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("launchContainer: " + Arrays.toString(commandArray));
+        }
         shExec.execute();
         if (LOG.isDebugEnabled()) {
           logOutput(shExec.getOutput());
@@ -375,7 +374,6 @@ public class LinuxContainerExecutor extends ContainerExecutor {
     }
     String[] commandArray = command.toArray(new String[command.size()]);
     ShellCommandExecutor shExec = new ShellCommandExecutor(commandArray);
-    LOG.info(" -- DEBUG -- deleteAsUser: " + Arrays.toString(commandArray));
     if (LOG.isDebugEnabled()) {
       LOG.debug("deleteAsUser: " + Arrays.toString(commandArray));
     }
