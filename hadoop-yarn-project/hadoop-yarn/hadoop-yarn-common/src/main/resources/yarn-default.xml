@@ -335,7 +335,7 @@
     Expirations happens when the cluster does not hear from the client within
     the specified session timeout period (i.e. no heartbeat).</description>
     <name>yarn.resourcemanager.zk-timeout-ms</name>
-    <value>60000</value>
+    <value>10000</value>
   </property>
 
   <property>
