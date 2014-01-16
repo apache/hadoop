@@ -60,13 +60,13 @@ public enum FSEditLogOpCodes {
   OP_DISALLOW_SNAPSHOT          ((byte) 30),
   OP_SET_GENSTAMP_V2            ((byte) 31),
   OP_ALLOCATE_BLOCK_ID          ((byte) 32),
-  OP_ADD_CACHE_DIRECTIVE       ((byte) 33),
-  OP_REMOVE_CACHE_DIRECTIVE    ((byte) 34),
-  OP_ADD_CACHE_POOL                       ((byte) 35),
-  OP_MODIFY_CACHE_POOL                    ((byte) 36),
-  OP_REMOVE_CACHE_POOL                    ((byte) 37),
-  OP_MODIFY_CACHE_DIRECTIVE     ((byte) 38),
-  OP_ADD_BLOCK                  ((byte) 39),
+  OP_ADD_BLOCK                  ((byte) 33),
+  OP_ADD_CACHE_DIRECTIVE       ((byte) 34),
+  OP_REMOVE_CACHE_DIRECTIVE    ((byte) 35),
+  OP_ADD_CACHE_POOL                       ((byte) 36),
+  OP_MODIFY_CACHE_POOL                    ((byte) 37),
+  OP_REMOVE_CACHE_POOL                    ((byte) 38),
+  OP_MODIFY_CACHE_DIRECTIVE     ((byte) 39),
 
   // Note that fromByte(..) depends on OP_INVALID being at the last position.  
   OP_INVALID                    ((byte) -1);

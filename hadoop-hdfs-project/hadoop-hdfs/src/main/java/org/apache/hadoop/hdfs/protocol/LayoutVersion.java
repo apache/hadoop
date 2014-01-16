@@ -107,11 +107,12 @@ public class LayoutVersion {
         "block IDs in the edits log and image files"),
     EDITLOG_SUPPORT_RETRYCACHE(-47, "Record ClientId and CallId in editlog to " 
         + "enable rebuilding retry cache in case of HA failover"),
-    CACHING(-48, "Support for cache pools and path-based caching"),
-    ADD_DATANODE_AND_STORAGE_UUIDS(-49, "Replace StorageID with DatanodeUuid."
+    EDITLOG_ADD_BLOCK(-48, "Add new editlog that only records allocation of "
+        + "the new block instead of the entire block list"),
+    CACHING(-49, "Support for cache pools and path-based caching"),
+    ADD_DATANODE_AND_STORAGE_UUIDS(-50, "Replace StorageID with DatanodeUuid."
         + " Use distinct StorageUuid per storage directory.");
 
-    
     final int lv;
     final int ancestorLV;
     final String description;
