@@ -78,6 +78,13 @@ public class JHAdminConfig {
     MR_HISTORY_PREFIX + "done-dir";
 
   /**
+   * Maximum time the History server will wait for the FileSystem for History
+   * files to become available. Default value is -1, forever.
+   */
+  public static final String MR_HISTORY_MAX_START_WAIT_TIME =
+      MR_HISTORY_PREFIX + "maximum-start-wait-time-millis";
+  public static final long DEFAULT_MR_HISTORY_MAX_START_WAIT_TIME = -1;
+  /**
    *  Path where history files should be stored after a job finished and before
    *  they are pulled into the job history server.
    **/
