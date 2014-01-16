@@ -275,6 +275,9 @@ Release 2.4.0 - UNRELEASED
     MAPREDUCE-5724. JobHistoryServer does not start if HDFS is not running. 
     (tucu)
 
+    MAPREDUCE-5672. Provide optional RollingFileAppender for container log4j
+    (syslog) (Gera Shegalov via jlowe)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
