@@ -290,9 +290,6 @@ Trunk (Unreleased)
 
     HADOOP-10044 Improve the javadoc of rpc code (sanjay Radia)
 
-    HADOOP-10125. no need to process RPC request if the client connection
-    has been dropped (Ming Ma via brandonli)
-
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
@@ -527,6 +524,9 @@ Release 2.4.0 - UNRELEASED
     via suresh)
 
     HADOOP-10146. Workaround JDK7 Process fd close bug (daryn)
+
+    HADOOP-10125. no need to process RPC request if the client connection
+    has been dropped (Ming Ma via brandonli)
 
 Release 2.3.0 - UNRELEASED
 
