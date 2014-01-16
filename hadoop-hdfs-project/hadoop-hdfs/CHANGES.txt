@@ -478,6 +478,16 @@ Trunk (Unreleased)
 
     HDFS-5726. Fix compilation error in AbstractINodeDiff for JDK7. (jing9)
 
+    HDFS-5768. Consolidate the serialization code in DelegationTokenSecretManager 
+    (Haohui Mai via brandonli)
+
+    HDFS-5775. Consolidate the code for serialization in CacheManager
+    (Haohui Mai via brandonli)
+
+    HDFS-5704. Change OP_UPDATE_BLOCKS with a new OP_ADD_BLOCK. (jing9)
+
+    HDFS-5777. Update LayoutVersion for the new editlog op OP_ADD_BLOCK. (jing9)
+
 Release 2.4.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -933,8 +943,6 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-5677. Need error checking for HA cluster configuration.
     (Vincent Sheffer via cos)
-
-    HDFS-5704. Change OP_UPDATE_BLOCKS with a new OP_ADD_BLOCK. (jing9)
 
   OPTIMIZATIONS
 

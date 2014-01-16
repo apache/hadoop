@@ -870,7 +870,7 @@ public class FSImageFormat {
         //This must not happen if security is turned on.
         return; 
       }
-      namesystem.loadSecretManagerState(in);
+      namesystem.loadSecretManagerStateCompat(in);
     }
 
     private void loadCacheManagerState(DataInput in) throws IOException {
@@ -878,7 +878,7 @@ public class FSImageFormat {
       if (!LayoutVersion.supports(Feature.CACHING, imgVersion)) {
         return;
       }
-      namesystem.getCacheManager().loadState(in);
+      namesystem.getCacheManager().loadStateCompat(in);
     }
 
     private int getLayoutVersion() {
@@ -1032,9 +1032,9 @@ public class FSImageFormat {
         sourceNamesystem.saveFilesUnderConstruction(out, snapshotUCMap);
         
         context.checkCancelled();
-        sourceNamesystem.saveSecretManagerState(out, sdPath);
+        sourceNamesystem.saveSecretManagerStateCompat(out, sdPath);
         context.checkCancelled();
-        sourceNamesystem.getCacheManager().saveState(out, sdPath);
+        sourceNamesystem.getCacheManager().saveStateCompat(out, sdPath);
         context.checkCancelled();
         out.flush();
         context.checkCancelled();

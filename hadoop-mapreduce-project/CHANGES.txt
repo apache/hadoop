@@ -272,6 +272,9 @@ Release 2.4.0 - UNRELEASED
     MAPREDUCE-5689. MRAppMaster does not preempt reducers when scheduled maps 
     cannot be fulfilled. (lohit via kasha)
 
+    MAPREDUCE-5724. JobHistoryServer does not start if HDFS is not running. 
+    (tucu)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
