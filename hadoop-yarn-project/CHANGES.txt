@@ -343,6 +343,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1351. Invalid string format in Fair Scheduler log warn message
     (Konstantin Weitz via Sandy Ryza)
 
+    YARN-1608. LinuxContainerExecutor has a few DEBUG messages at INFO level
+    (kasha)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
