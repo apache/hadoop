@@ -772,6 +772,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-5579. Under construction files make DataNode decommission take very long
     hours. (zhaoyunjiong via jing9)
 
+    HDFS-5794. Fix the inconsistency of layout version number of 
+    ADD_DATANODE_AND_STORAGE_UUIDS between trunk and branch-2. (jing9)
+
   BREAKDOWN OF HDFS-2832 SUBTASKS AND RELATED JIRAS
 
     HDFS-4985. Add storage type to the protocol and expose it in block report
