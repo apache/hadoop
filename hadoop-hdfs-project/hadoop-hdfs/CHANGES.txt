@@ -484,9 +484,8 @@ Trunk (Unreleased)
     HDFS-5775. Consolidate the code for serialization in CacheManager
     (Haohui Mai via brandonli)
 
-    HDFS-5704. Change OP_UPDATE_BLOCKS with a new OP_ADD_BLOCK. (jing9)
-
-    HDFS-5777. Update LayoutVersion for the new editlog op OP_ADD_BLOCK. (jing9)
+    HDFS-5794. Fix the inconsistency of layout version number of 
+    ADD_DATANODE_AND_STORAGE_UUIDS between trunk and branch-2. (jing9)
 
 Release 2.4.0 - UNRELEASED
 
@@ -694,6 +693,8 @@ Release 2.4.0 - UNRELEASED
     InvalidEncryptionKeyException in fetchBlockByteRange (Liang Xie via Colin
     Patrick McCabe)
 
+    HDFS-5704. Change OP_UPDATE_BLOCKS with a new OP_ADD_BLOCK. (jing9)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn)
@@ -772,8 +773,7 @@ Release 2.4.0 - UNRELEASED
     HDFS-5579. Under construction files make DataNode decommission take very long
     hours. (zhaoyunjiong via jing9)
 
-    HDFS-5794. Fix the inconsistency of layout version number of 
-    ADD_DATANODE_AND_STORAGE_UUIDS between trunk and branch-2. (jing9)
+    HDFS-5777. Update LayoutVersion for the new editlog op OP_ADD_BLOCK. (jing9)
 
   BREAKDOWN OF HDFS-2832 SUBTASKS AND RELATED JIRAS
 
