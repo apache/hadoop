@@ -87,6 +87,7 @@ public class YarnClientImpl extends YarnClient {
   protected long submitPollIntervalMillis;
   private long asyncApiPollIntervalMillis;
   protected AHSClient historyClient;
+  private boolean historyServiceEnabled;
 
   private static final String ROOT = "root";
 
@@ -107,8 +108,14 @@ public class YarnClientImpl extends YarnClient {
         YarnConfiguration.YARN_CLIENT_APP_SUBMISSION_POLL_INTERVAL_MS,
         YarnConfiguration.DEFAULT_YARN_CLIENT_APPLICATION_CLIENT_PROTOCOL_POLL_INTERVAL_MS);
     }
-    historyClient = AHSClientImpl.createAHSClient();
-    historyClient.init(getConfig());
+
+    if (conf.getBoolean(YarnConfiguration.YARN_HISTORY_SERVICE_ENABLED,
+      YarnConfiguration.DEFAULT_YARN_HISTORY_SERVICE_ENABLED)) {
+      historyServiceEnabled = true;
+      historyClient = AHSClientImpl.createAHSClient();
+      historyClient.init(getConfig());
+    }
+
     super.serviceInit(conf);
   }
 
@@ -117,7 +124,9 @@ public class YarnClientImpl extends YarnClient {
     try {
       rmClient = ClientRMProxy.createRMProxy(getConfig(),
           ApplicationClientProtocol.class);
-      historyClient.start();
+      if (historyServiceEnabled) {
+        historyClient.start();
+      }
     } catch (IOException e) {
       throw new YarnRuntimeException(e);
     }
@@ -129,7 +138,9 @@ public class YarnClientImpl extends YarnClient {
     if (this.rmClient != null) {
       RPC.stopProxy(this.rmClient);
     }
-    historyClient.stop();
+    if (historyServiceEnabled) {
+      historyClient.stop();
+    }
     super.serviceStop();
   }
 
@@ -225,11 +236,18 @@ public class YarnClientImpl extends YarnClient {
       request.setApplicationId(appId);
       response = rmClient.getApplicationReport(request);
     } catch (YarnException e) {
+
+      if (!historyServiceEnabled) {
+        // Just throw it as usual if historyService is not enabled.
+        throw e;
+      }
+
+      // Even if history-service is enabled, treat all exceptions still the same
+      // except the following
       if (!(e.getClass() == ApplicationNotFoundException.class)) {
         throw e;
       }
-    }
-    if (response == null || response.getApplicationReport() == null) {
+
       return historyClient.getApplicationReport(appId);
     }
     return response.getApplicationReport();
@@ -397,25 +415,37 @@ public class YarnClientImpl extends YarnClient {
   @Override
   public ApplicationAttemptReport getApplicationAttemptReport(
       ApplicationAttemptId appAttemptId) throws YarnException, IOException {
-    return historyClient.getApplicationAttemptReport(appAttemptId);
+    if (historyServiceEnabled) {
+      return historyClient.getApplicationAttemptReport(appAttemptId);
+    }
+    throw new YarnException("History service is not enabled.");
   }
 
   @Override
   public List<ApplicationAttemptReport> getApplicationAttempts(
       ApplicationId appId) throws YarnException, IOException {
-    return historyClient.getApplicationAttempts(appId);
+    if (historyServiceEnabled) {
+      return historyClient.getApplicationAttempts(appId);
+    }
+    throw new YarnException("History service is not enabled.");
   }
 
   @Override
   public ContainerReport getContainerReport(ContainerId containerId)
       throws YarnException, IOException {
-    return historyClient.getContainerReport(containerId);
+    if (historyServiceEnabled) {
+      return historyClient.getContainerReport(containerId);
+    }
+    throw new YarnException("History service is not enabled.");
   }
 
   @Override
   public List<ContainerReport> getContainers(
       ApplicationAttemptId applicationAttemptId) throws YarnException,
       IOException {
-    return historyClient.getContainers(applicationAttemptId);
+    if (historyServiceEnabled) {
+      return historyClient.getContainers(applicationAttemptId);
+    }
+    throw new YarnException("History service is not enabled.");
   }
 }

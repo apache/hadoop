@@ -263,11 +263,6 @@ public class YarnConfiguration extends Configuration {
       RM_PREFIX + "nodemanagers.heartbeat-interval-ms";
   public static final long DEFAULT_RM_NM_HEARTBEAT_INTERVAL_MS = 1000;
 
-  /** The setting that controls whether RM writes history data. */
-  public static final String RM_HISTORY_WRITER_ENABLED = RM_PREFIX
-      + "history-writer.enabled";
-  public static final boolean DEFAULT_RM_HISTORY_WRITER_ENABLED = false;
-
   /** Number of worker threads that write the history data. */
   public static final String RM_HISTORY_WRITER_MULTI_THREADED_DISPATCHER_POOL_SIZE =
       RM_PREFIX + "history-writer.multi-threaded-dispatcher.pool-size";
@@ -949,6 +944,11 @@ public class YarnConfiguration extends Configuration {
   ////////////////////////////////
 
   public static final String AHS_PREFIX = YARN_PREFIX + "ahs.";
+
+  /** The setting that controls whether history-service is enabled or not.. */
+  public static final String YARN_HISTORY_SERVICE_ENABLED = AHS_PREFIX
+      + ".enabled";
+  public static final boolean DEFAULT_YARN_HISTORY_SERVICE_ENABLED = false;
 
   /** URI for FileSystemApplicationHistoryStore */
   public static final String FS_HISTORY_STORE_URI = AHS_PREFIX + "fs-history-store.uri";

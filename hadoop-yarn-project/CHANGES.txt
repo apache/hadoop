@@ -84,6 +84,9 @@ Branch YARN-321: Generic ApplicationHistoryService
   YARN-1597. Fixed Findbugs warnings on branch YARN-321. (Vinod Kumar Vavilapalli
   via zjshen)
 
+  YARN-1595. Made enabling history service configurable and fixed test failures on
+  branch YARN-321. (Vinod Kumar Vavilapalli via zjshen)
+
 Trunk - Unreleased 
 
   INCOMPATIBLE CHANGES
