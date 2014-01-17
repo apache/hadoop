@@ -200,6 +200,8 @@ Release 2.4.0 - UNRELEASED
     InvalidEncryptionKeyException in fetchBlockByteRange (Liang Xie via Colin
     Patrick McCabe)
 
+    HDFS-5704. Change OP_UPDATE_BLOCKS with a new OP_ADD_BLOCK. (jing9)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn)
@@ -274,6 +276,8 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-5579. Under construction files make DataNode decommission take very long
     hours. (zhaoyunjiong via jing9)
+
+    HDFS-5777. Update LayoutVersion for the new editlog op OP_ADD_BLOCK. (jing9)
 
   BREAKDOWN OF HDFS-2832 SUBTASKS AND RELATED JIRAS
 

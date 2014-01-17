@@ -39,10 +39,13 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifie
 
 import static org.apache.hadoop.util.ExitUtil.terminate;
 
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.Storage.FormatConfirmable;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.AddBlockOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.AddOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.AllocateBlockIdOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.AllowSnapshotOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.CancelDelegationTokenOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.CloseOp;
@@ -68,11 +71,9 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SymlinkOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.TimesOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.UpdateBlocksOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.UpdateMasterKeyOp;
-import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.AllocateBlockIdOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetGenstampV1Op;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetGenstampV2Op;
 import org.apache.hadoop.hdfs.server.namenode.JournalSet.JournalAndStream;
-import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
@@ -704,7 +705,17 @@ public class FSEditLog implements LogsPurgeable {
     logEdit(op);
   }
   
-  public void logUpdateBlocks(String path, INodeFileUnderConstruction file,
+  public void logAddBlock(String path, INodeFileUnderConstruction file) {
+    BlockInfo[] blocks = file.getBlocks();
+    Preconditions.checkState(blocks != null && blocks.length > 0);
+    BlockInfo pBlock = blocks.length > 1 ? blocks[blocks.length - 2] : null;
+    BlockInfo lastBlock = blocks[blocks.length - 1];
+    AddBlockOp op = AddBlockOp.getInstance(cache.get()).setPath(path)
+        .setPenultimateBlock(pBlock).setLastBlock(lastBlock);
+    logEdit(op);
+  }
+  
+  public void logUpdateBlocks(String path, INodeFileUnderConstruction file, 
       boolean toLogRpcIds) {
     UpdateBlocksOp op = UpdateBlocksOp.getInstance(cache.get())
       .setPath(path)

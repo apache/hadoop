@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.util.Time.now;
 
-import java.io.File;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -41,7 +40,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.common.Storage;
-import org.apache.hadoop.hdfs.server.namenode.EditLogFileInputStream.LogHeaderCorruptException;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.AddBlockOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.AddCloseOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.AllocateBlockIdOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.AllowSnapshotOp;
@@ -81,6 +80,7 @@ import org.apache.hadoop.hdfs.util.ChunkedArrayList;
 import org.apache.hadoop.hdfs.util.Holder;
 
 import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
 
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -407,7 +407,18 @@ public class FSEditLogLoader {
       }
       break;
     }
-      
+    case OP_ADD_BLOCK: {
+      AddBlockOp addBlockOp = (AddBlockOp) op;
+      String path = addBlockOp.getPath();
+      if (FSNamesystem.LOG.isDebugEnabled()) {
+        FSNamesystem.LOG.debug(op.opCode + ": " + path +
+            " new block id : " + addBlockOp.getLastBlock().getBlockId());
+      }
+      INodeFile oldFile = INodeFile.valueOf(fsDir.getINode(path), path);
+      // add the new block to the INodeFile
+      addNewBlock(fsDir, addBlockOp, oldFile);
+      break;
+    }
     case OP_SET_REPLICATION: {
       SetReplicationOp setReplicationOp = (SetReplicationOp)op;
       short replication = fsNamesys.getBlockManager().adjustReplication(
@@ -660,6 +671,45 @@ public class FSEditLogLoader {
     return sb.toString();
   }
 
+  /**
+   * Add a new block into the given INodeFile
+   */
+  private void addNewBlock(FSDirectory fsDir, AddBlockOp op, INodeFile file)
+      throws IOException {
+    BlockInfo[] oldBlocks = file.getBlocks();
+    Block pBlock = op.getPenultimateBlock();
+    Block newBlock= op.getLastBlock();
+    
+    if (pBlock != null) { // the penultimate block is not null
+      Preconditions.checkState(oldBlocks != null && oldBlocks.length > 0);
+      // compare pBlock with the last block of oldBlocks
+      Block oldLastBlock = oldBlocks[oldBlocks.length - 1];
+      if (oldLastBlock.getBlockId() != pBlock.getBlockId()
+          || oldLastBlock.getGenerationStamp() != pBlock.getGenerationStamp()) {
+        throw new IOException(
+            "Mismatched block IDs or generation stamps for the old last block of file "
+                + op.getPath() + ", the old last block is " + oldLastBlock
+                + ", and the block read from editlog is " + pBlock);
+      }
+      
+      oldLastBlock.setNumBytes(pBlock.getNumBytes());
+      if (oldLastBlock instanceof BlockInfoUnderConstruction) {
+        fsNamesys.getBlockManager().forceCompleteBlock(
+            (INodeFileUnderConstruction) file,
+            (BlockInfoUnderConstruction) oldLastBlock);
+        fsNamesys.getBlockManager().processQueuedMessagesForBlock(pBlock);
+      }
+    } else { // the penultimate block is null
+      Preconditions.checkState(oldBlocks == null || oldBlocks.length == 0);
+    }
+    // add the new block
+    BlockInfo newBI = new BlockInfoUnderConstruction(
+          newBlock, file.getBlockReplication());
+    fsNamesys.getBlockManager().addBlockCollection(newBI, file);
+    file.addBlock(newBI);
+    fsNamesys.getBlockManager().processQueuedMessagesForBlock(newBlock);
+  }
+  
   /**
    * Update in-memory data structures with new block information.
    * @throws IOException
