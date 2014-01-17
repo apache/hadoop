@@ -111,7 +111,8 @@ public class LayoutVersion {
         + "the new block instead of the entire block list"),
     CACHING(-49, "Support for cache pools and path-based caching"),
     ADD_DATANODE_AND_STORAGE_UUIDS(-50, "Replace StorageID with DatanodeUuid."
-        + " Use distinct StorageUuid per storage directory.");
+        + " Use distinct StorageUuid per storage directory."),
+    ADD_LAYOUT_FLAGS(-51, "Add support for layout flags.");
 
     final int lv;
     final int ancestorLV;

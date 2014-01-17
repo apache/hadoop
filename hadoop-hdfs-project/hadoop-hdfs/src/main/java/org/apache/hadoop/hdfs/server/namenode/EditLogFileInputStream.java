@@ -34,6 +34,9 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.LayoutFlags;
+import org.apache.hadoop.hdfs.protocol.LayoutVersion;
+import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.namenode.TransferFsImage.HttpGetFailedException;
 import org.apache.hadoop.hdfs.web.URLConnectionFactory;
@@ -145,6 +148,14 @@ public class EditLogFileInputStream extends EditLogInputStream {
         logVersion = readLogVersion(dataIn);
       } catch (EOFException eofe) {
         throw new LogHeaderCorruptException("No header found in log");
+      }
+      if (LayoutVersion.supports(Feature.ADD_LAYOUT_FLAGS, logVersion)) {
+        try {
+          LayoutFlags.read(dataIn);
+        } catch (EOFException eofe) {
+          throw new LogHeaderCorruptException("EOF while reading layout " +
+              "flags from log");
+        }
       }
       reader = new FSEditLogOp.Reader(dataIn, tracker, logVersion);
       reader.setMaxOpSize(maxOpSize);

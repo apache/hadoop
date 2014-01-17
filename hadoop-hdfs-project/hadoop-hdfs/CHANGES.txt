@@ -522,6 +522,9 @@ Release 2.4.0 - UNRELEASED
     as a collection of storages (see breakdown of tasks below for features and
     contributors).
 
+    HDFS-5784. reserve space in edit log header and fsimage header for feature
+    flag section (cmccabe)
+
   IMPROVEMENTS
 
     HDFS-5267. Remove volatile from LightWeightHashSet. (Junping Du via llu)

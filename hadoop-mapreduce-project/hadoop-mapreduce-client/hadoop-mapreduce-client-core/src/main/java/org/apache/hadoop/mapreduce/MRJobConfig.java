@@ -412,6 +412,10 @@ public interface MRJobConfig {
     MR_AM_PREFIX+"log.level";
   public static final String DEFAULT_MR_AM_LOG_LEVEL = "INFO";
 
+  public static final String MR_AM_LOG_BACKUPS =
+      MR_AM_PREFIX + "container.log.backups";
+  public static final int DEFAULT_MR_AM_LOG_BACKUPS = 0; // don't roll
+
   /**The number of splits when reporting progress in MR*/
   public static final String MR_AM_NUM_PROGRESS_SPLITS = 
     MR_AM_PREFIX+"num-progress-splits";
@@ -692,7 +696,11 @@ public interface MRJobConfig {
       + "$HADOOP_MAPRED_HOME/share/hadoop/mapreduce/lib/*";
 
   public static final String WORKFLOW_ID = "mapreduce.workflow.id";
-  
+
+  public static final String TASK_LOG_BACKUPS =
+      MR_PREFIX + "task.container.log.backups";
+  public static final int DEFAULT_TASK_LOG_BACKUPS = 0; // don't roll
+
   public static final String WORKFLOW_NAME = "mapreduce.workflow.name";
   
   public static final String WORKFLOW_NODE_NAME =

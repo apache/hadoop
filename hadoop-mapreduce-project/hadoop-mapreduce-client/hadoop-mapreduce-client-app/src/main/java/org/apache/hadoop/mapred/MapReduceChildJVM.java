@@ -149,8 +149,10 @@ public class MapReduceChildJVM {
   private static void setupLog4jProperties(Task task,
       Vector<String> vargs,
       long logSize) {
-    String logLevel = getChildLogLevel(task.conf, task.isMapTask()); 
-    MRApps.addLog4jSystemProperties(logLevel, logSize, vargs);
+    String logLevel = getChildLogLevel(task.conf, task.isMapTask());
+    int numBackups = task.conf.getInt(MRJobConfig.TASK_LOG_BACKUPS,
+        MRJobConfig.DEFAULT_TASK_LOG_BACKUPS);
+    MRApps.addLog4jSystemProperties(logLevel, logSize, numBackups, vargs);
   }
 
   public static List<String> getVMCommand(
