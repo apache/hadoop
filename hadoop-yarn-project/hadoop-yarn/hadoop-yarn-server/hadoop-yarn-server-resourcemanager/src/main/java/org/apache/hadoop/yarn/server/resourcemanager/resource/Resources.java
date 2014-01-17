@@ -119,4 +119,8 @@ public class Resources {
   public static Resource max(Resource lhs, Resource rhs) {
     return (lhs.getMemory() > rhs.getMemory()) ? lhs : rhs;
   }
+  
+  public static boolean fitsIn(Resource smaller, Resource bigger) {
+    return smaller.getMemory() <= bigger.getMemory();
+  }
 }

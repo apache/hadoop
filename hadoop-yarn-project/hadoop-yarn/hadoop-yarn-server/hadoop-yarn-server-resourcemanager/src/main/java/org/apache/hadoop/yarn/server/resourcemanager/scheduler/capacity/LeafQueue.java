@@ -779,7 +779,7 @@ public class LeafQueue implements CSQueue {
       LOG.debug("assignContainers: node=" + node.getHostName()
         + " #applications=" + activeApplications.size());
     }
-    
+
     // Check for reserved resources
     RMContainer reservedContainer = node.getReservedContainer();
     if (reservedContainer != null) {
@@ -1237,9 +1237,16 @@ public class LeafQueue implements CSQueue {
         + " request=" + request + " type=" + type);
     }
     Resource capability = request.getCapability();
-
     Resource available = node.getAvailableResource();
+    Resource totalResource = node.getTotalResource();
 
+    if (!Resources.fitsIn(capability, totalResource)) {
+      LOG.warn("Node : " + node.getNodeID()
+          + " does not have sufficient resource for request : " + request
+          + " node total capability : " + node.getTotalResource());
+      return Resources.none();
+    }
+    
     assert (available.getMemory() >  0);
 
     // Create the container if necessary

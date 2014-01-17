@@ -52,6 +52,8 @@ public class SchedulerNode {
 
   private RMContainer reservedContainer;
   
+  private Resource totalResourceCapability;
+  
   /* set of containers that are allocated containers */
   private final Map<ContainerId, RMContainer> launchedContainers = 
     new HashMap<ContainerId, RMContainer>();
@@ -63,6 +65,7 @@ public class SchedulerNode {
   public SchedulerNode(RMNode node) {
     this.rmNode = node;
     this.availableResource.setMemory(node.getTotalCapability().getMemory());
+    this.totalResourceCapability = Resources.createResource(node.getTotalCapability().getMemory());
   }
 
   public RMNode getRMNode() {
@@ -236,6 +239,14 @@ public class SchedulerNode {
 
   public synchronized RMContainer getReservedContainer() {
     return reservedContainer;
+  }
+  
+  /**
+   * Get total resources on the node.
+   * @return total resources on the node.
+   */
+  public  Resource getTotalResource() {
+   return this.totalResourceCapability;
   }
 
 }
