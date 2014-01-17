@@ -87,6 +87,9 @@ Branch YARN-321: Generic ApplicationHistoryService
   YARN-1595. Made enabling history service configurable and fixed test failures on
   branch YARN-321. (Vinod Kumar Vavilapalli via zjshen)
 
+  YARN-1605. Fixed formatting issues in the new module on branch YARN-321. (Vinod
+  Kumar Vavilapalli via zjshen)
+
 Trunk - Unreleased 
 
   INCOMPATIBLE CHANGES

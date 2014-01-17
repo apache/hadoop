@@ -32,11 +32,11 @@ import org.apache.hadoop.yarn.server.applicationhistoryservice.records.Applicati
 
 import com.google.protobuf.TextFormat;
 
-public class ApplicationAttemptFinishDataPBImpl
-    extends ApplicationAttemptFinishData {
+public class ApplicationAttemptFinishDataPBImpl extends
+    ApplicationAttemptFinishData {
 
-  ApplicationAttemptFinishDataProto proto =
-      ApplicationAttemptFinishDataProto.getDefaultInstance();
+  ApplicationAttemptFinishDataProto proto = ApplicationAttemptFinishDataProto
+    .getDefaultInstance();
   ApplicationAttemptFinishDataProto.Builder builder = null;
   boolean viaProto = false;
 
@@ -131,8 +131,8 @@ public class ApplicationAttemptFinishDataPBImpl
       builder.clearFinalApplicationStatus();
       return;
     }
-    builder.setFinalApplicationStatus(
-        convertToProtoFormat(finalApplicationStatus));
+    builder
+      .setFinalApplicationStatus(convertToProtoFormat(finalApplicationStatus));
   }
 
   @Override
@@ -182,11 +182,11 @@ public class ApplicationAttemptFinishDataPBImpl
   }
 
   private void mergeLocalToBuilder() {
-    if (this.applicationAttemptId != null && !((ApplicationAttemptIdPBImpl)
-        this.applicationAttemptId).getProto().equals(
-            builder.getApplicationAttemptId())) {
-      builder.setApplicationAttemptId(
-          convertToProtoFormat(this.applicationAttemptId));
+    if (this.applicationAttemptId != null
+        && !((ApplicationAttemptIdPBImpl) this.applicationAttemptId).getProto()
+          .equals(builder.getApplicationAttemptId())) {
+      builder
+        .setApplicationAttemptId(convertToProtoFormat(this.applicationAttemptId));
     }
   }
 

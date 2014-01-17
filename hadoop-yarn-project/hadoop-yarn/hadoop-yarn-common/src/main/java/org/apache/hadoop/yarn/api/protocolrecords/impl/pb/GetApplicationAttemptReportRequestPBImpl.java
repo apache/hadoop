@@ -81,8 +81,8 @@ public class GetApplicationAttemptReportRequestPBImpl extends
 
   private void mergeLocalToBuilder() {
     if (applicationAttemptId != null) {
-      builder.setApplicationAttemptId(
-          convertToProtoFormat(this.applicationAttemptId));
+      builder
+        .setApplicationAttemptId(convertToProtoFormat(this.applicationAttemptId));
     }
   }
 
@@ -107,8 +107,8 @@ public class GetApplicationAttemptReportRequestPBImpl extends
     if (this.applicationAttemptId != null) {
       return this.applicationAttemptId;
     }
-    GetApplicationAttemptReportRequestProtoOrBuilder p
-    = viaProto ? proto : builder;
+    GetApplicationAttemptReportRequestProtoOrBuilder p =
+        viaProto ? proto : builder;
     if (!p.hasApplicationAttemptId()) {
       return null;
     }
@@ -118,7 +118,8 @@ public class GetApplicationAttemptReportRequestPBImpl extends
   }
 
   @Override
-  public void setApplicationAttemptId(ApplicationAttemptId applicationAttemptId) {
+  public void
+      setApplicationAttemptId(ApplicationAttemptId applicationAttemptId) {
     maybeInitBuilder();
     if (applicationAttemptId == null) {
       builder.clearApplicationAttemptId();
@@ -131,7 +132,8 @@ public class GetApplicationAttemptReportRequestPBImpl extends
     return new ApplicationAttemptIdPBImpl(p);
   }
 
-  private ApplicationAttemptIdProto convertToProtoFormat(ApplicationAttemptId t) {
+  private ApplicationAttemptIdProto
+      convertToProtoFormat(ApplicationAttemptId t) {
     return ((ApplicationAttemptIdPBImpl) t).getProto();
   }
 

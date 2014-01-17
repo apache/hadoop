@@ -89,16 +89,16 @@ public class FileSystemApplicationHistoryStore extends AbstractService
     implements ApplicationHistoryStore {
 
   private static final Log LOG = LogFactory
-      .getLog(FileSystemApplicationHistoryStore.class);
+    .getLog(FileSystemApplicationHistoryStore.class);
 
   private static final String ROOT_DIR_NAME = "ApplicationHistoryDataRoot";
   private static final int MIN_BLOCK_SIZE = 256 * 1024;
   private static final String START_DATA_SUFFIX = "_start";
   private static final String FINISH_DATA_SUFFIX = "_finish";
-  private static final FsPermission ROOT_DIR_UMASK =
-      FsPermission.createImmutable((short) 0740);
-  private static final FsPermission HISTORY_FILE_UMASK =
-      FsPermission.createImmutable((short) 0640);
+  private static final FsPermission ROOT_DIR_UMASK = FsPermission
+    .createImmutable((short) 0740);
+  private static final FsPermission HISTORY_FILE_UMASK = FsPermission
+    .createImmutable((short) 0640);
 
   private FileSystem fs;
   private Path rootDirPath;
@@ -112,8 +112,8 @@ public class FileSystemApplicationHistoryStore extends AbstractService
 
   @Override
   public void serviceInit(Configuration conf) throws Exception {
-    Path fsWorkingPath = new Path(
-        conf.get(YarnConfiguration.FS_HISTORY_STORE_URI));
+    Path fsWorkingPath =
+        new Path(conf.get(YarnConfiguration.FS_HISTORY_STORE_URI));
     rootDirPath = new Path(fsWorkingPath, ROOT_DIR_NAME);
     try {
       fs = fsWorkingPath.getFileSystem(conf);
@@ -130,7 +130,7 @@ public class FileSystemApplicationHistoryStore extends AbstractService
   public void serviceStop() throws Exception {
     try {
       for (Entry<ApplicationId, HistoryFileWriter> entry : outstandingWriters
-          .entrySet()) {
+        .entrySet()) {
         entry.getValue().close();
       }
       outstandingWriters.clear();
@@ -148,9 +148,9 @@ public class FileSystemApplicationHistoryStore extends AbstractService
       boolean readStartData = false;
       boolean readFinishData = false;
       ApplicationHistoryData historyData =
-          ApplicationHistoryData.newInstance(
-              appId, null, null, null, null, Long.MIN_VALUE, Long.MIN_VALUE,
-              Long.MAX_VALUE, null, FinalApplicationStatus.UNDEFINED, null);
+          ApplicationHistoryData.newInstance(appId, null, null, null, null,
+            Long.MIN_VALUE, Long.MIN_VALUE, Long.MAX_VALUE, null,
+            FinalApplicationStatus.UNDEFINED, null);
       while ((!readStartData || !readFinishData) && hfReader.hasNext()) {
         HistoryFileReader.Entry entry = hfReader.next();
         if (entry.key.id.equals(appId.toString())) {
@@ -238,15 +238,14 @@ public class FileSystemApplicationHistoryStore extends AbstractService
       hfReader.close();
     }
     for (Map.Entry<ApplicationAttemptId, StartFinishDataPair<ApplicationAttemptStartData, ApplicationAttemptFinishData>> entry : startFinshDataMap
-        .entrySet()) {
+      .entrySet()) {
       ApplicationAttemptHistoryData historyData =
-          ApplicationAttemptHistoryData.newInstance(
-              entry.getKey(), null, -1, null, null, null,
-              FinalApplicationStatus.UNDEFINED, null);
+          ApplicationAttemptHistoryData.newInstance(entry.getKey(), null, -1,
+            null, null, null, FinalApplicationStatus.UNDEFINED, null);
       mergeApplicationAttemptHistoryData(historyData,
-          entry.getValue().startData);
+        entry.getValue().startData);
       mergeApplicationAttemptHistoryData(historyData,
-          entry.getValue().finishData);
+        entry.getValue().finishData);
       historyDataMap.put(entry.getKey(), historyData);
     }
     return historyDataMap;
@@ -286,9 +285,8 @@ public class FileSystemApplicationHistoryStore extends AbstractService
       boolean readStartData = false;
       boolean readFinishData = false;
       ApplicationAttemptHistoryData historyData =
-          ApplicationAttemptHistoryData.newInstance(
-              appAttemptId, null, -1, null, null, null,
-              FinalApplicationStatus.UNDEFINED, null);
+          ApplicationAttemptHistoryData.newInstance(appAttemptId, null, -1,
+            null, null, null, FinalApplicationStatus.UNDEFINED, null);
       while ((!readStartData || !readFinishData) && hfReader.hasNext()) {
         HistoryFileReader.Entry entry = hfReader.next();
         if (entry.key.id.equals(appAttemptId.toString())) {
@@ -333,20 +331,19 @@ public class FileSystemApplicationHistoryStore extends AbstractService
       throws IOException {
     HistoryFileReader hfReader =
         getHistoryFileReader(containerId.getApplicationAttemptId()
-            .getApplicationId());
+          .getApplicationId());
     try {
       boolean readStartData = false;
       boolean readFinishData = false;
       ContainerHistoryData historyData =
-          ContainerHistoryData.newInstance(containerId, null, null, null,
-              Long.MIN_VALUE, Long.MAX_VALUE, null, null, Integer.MAX_VALUE,
-              null);
+          ContainerHistoryData
+            .newInstance(containerId, null, null, null, Long.MIN_VALUE,
+              Long.MAX_VALUE, null, null, Integer.MAX_VALUE, null);
       while ((!readStartData || !readFinishData) && hfReader.hasNext()) {
         HistoryFileReader.Entry entry = hfReader.next();
         if (entry.key.id.equals(containerId.toString())) {
           if (entry.key.suffix.equals(START_DATA_SUFFIX)) {
-            ContainerStartData startData =
-                parseContainerStartData(entry.value);
+            ContainerStartData startData = parseContainerStartData(entry.value);
             mergeContainerHistoryData(historyData, startData);
             readStartData = true;
           } else if (entry.key.suffix.equals(FINISH_DATA_SUFFIX)) {
@@ -404,10 +401,10 @@ public class FileSystemApplicationHistoryStore extends AbstractService
         if (entry.key.id.startsWith(ConverterUtils.CONTAINER_PREFIX)) {
           if (entry.key.suffix.equals(START_DATA_SUFFIX)) {
             retrieveStartFinishData(appAttemptId, entry, startFinshDataMap,
-                true);
+              true);
           } else if (entry.key.suffix.equals(FINISH_DATA_SUFFIX)) {
             retrieveStartFinishData(appAttemptId, entry, startFinshDataMap,
-                false);
+              false);
           }
         }
       }
@@ -420,11 +417,11 @@ public class FileSystemApplicationHistoryStore extends AbstractService
       hfReader.close();
     }
     for (Map.Entry<ContainerId, StartFinishDataPair<ContainerStartData, ContainerFinishData>> entry : startFinshDataMap
-        .entrySet()) {
+      .entrySet()) {
       ContainerHistoryData historyData =
-          ContainerHistoryData.newInstance(entry.getKey(), null, null, null,
-              Long.MIN_VALUE, Long.MAX_VALUE, null, null, Integer.MAX_VALUE,
-              null);
+          ContainerHistoryData
+            .newInstance(entry.getKey(), null, null, null, Long.MIN_VALUE,
+              Long.MAX_VALUE, null, null, Integer.MAX_VALUE, null);
       mergeContainerHistoryData(historyData, entry.getValue().startData);
       mergeContainerHistoryData(historyData, entry.getValue().finishData);
       historyDataMap.put(entry.getKey(), historyData);
@@ -439,8 +436,7 @@ public class FileSystemApplicationHistoryStore extends AbstractService
           HistoryFileReader.Entry entry,
           Map<ContainerId, StartFinishDataPair<ContainerStartData, ContainerFinishData>> startFinshDataMap,
           boolean start) throws IOException {
-    ContainerId containerId =
-        ConverterUtils.toContainerId(entry.key.id);
+    ContainerId containerId = ConverterUtils.toContainerId(entry.key.id);
     if (containerId.getApplicationAttemptId().equals(appAttemptId)) {
       StartFinishDataPair<ContainerStartData, ContainerFinishData> pair =
           startFinshDataMap.get(containerId);
@@ -482,9 +478,8 @@ public class FileSystemApplicationHistoryStore extends AbstractService
     assert appStart instanceof ApplicationStartDataPBImpl;
     try {
       hfWriter.writeHistoryData(new HistoryDataKey(appStart.getApplicationId()
-          .toString(), START_DATA_SUFFIX),
-          ((ApplicationStartDataPBImpl) appStart)
-              .getProto().toByteArray());
+        .toString(), START_DATA_SUFFIX),
+        ((ApplicationStartDataPBImpl) appStart).getProto().toByteArray());
       LOG.info("Start information of application "
           + appStart.getApplicationId() + " is written");
     } catch (IOException e) {
@@ -501,10 +496,9 @@ public class FileSystemApplicationHistoryStore extends AbstractService
         getHistoryFileWriter(appFinish.getApplicationId());
     assert appFinish instanceof ApplicationFinishDataPBImpl;
     try {
-      hfWriter.writeHistoryData(
-          new HistoryDataKey(appFinish.getApplicationId().toString(),
-              FINISH_DATA_SUFFIX),
-          ((ApplicationFinishDataPBImpl) appFinish).getProto().toByteArray());
+      hfWriter.writeHistoryData(new HistoryDataKey(appFinish.getApplicationId()
+        .toString(), FINISH_DATA_SUFFIX),
+        ((ApplicationFinishDataPBImpl) appFinish).getProto().toByteArray());
       LOG.info("Finish information of application "
           + appFinish.getApplicationId() + " is written");
     } catch (IOException e) {
@@ -522,15 +516,13 @@ public class FileSystemApplicationHistoryStore extends AbstractService
       ApplicationAttemptStartData appAttemptStart) throws IOException {
     HistoryFileWriter hfWriter =
         getHistoryFileWriter(appAttemptStart.getApplicationAttemptId()
-            .getApplicationId());
+          .getApplicationId());
     assert appAttemptStart instanceof ApplicationAttemptStartDataPBImpl;
     try {
-      hfWriter.writeHistoryData(
-          new HistoryDataKey(appAttemptStart.getApplicationAttemptId()
-              .toString(),
-              START_DATA_SUFFIX),
-          ((ApplicationAttemptStartDataPBImpl) appAttemptStart).getProto()
-              .toByteArray());
+      hfWriter.writeHistoryData(new HistoryDataKey(appAttemptStart
+        .getApplicationAttemptId().toString(), START_DATA_SUFFIX),
+        ((ApplicationAttemptStartDataPBImpl) appAttemptStart).getProto()
+          .toByteArray());
       LOG.info("Start information of application attempt "
           + appAttemptStart.getApplicationAttemptId() + " is written");
     } catch (IOException e) {
@@ -545,15 +537,13 @@ public class FileSystemApplicationHistoryStore extends AbstractService
       ApplicationAttemptFinishData appAttemptFinish) throws IOException {
     HistoryFileWriter hfWriter =
         getHistoryFileWriter(appAttemptFinish.getApplicationAttemptId()
-            .getApplicationId());
+          .getApplicationId());
     assert appAttemptFinish instanceof ApplicationAttemptFinishDataPBImpl;
     try {
-      hfWriter.writeHistoryData(
-          new HistoryDataKey(appAttemptFinish.getApplicationAttemptId()
-              .toString(),
-              FINISH_DATA_SUFFIX),
-          ((ApplicationAttemptFinishDataPBImpl) appAttemptFinish).getProto()
-              .toByteArray());
+      hfWriter.writeHistoryData(new HistoryDataKey(appAttemptFinish
+        .getApplicationAttemptId().toString(), FINISH_DATA_SUFFIX),
+        ((ApplicationAttemptFinishDataPBImpl) appAttemptFinish).getProto()
+          .toByteArray());
       LOG.info("Finish information of application attempt "
           + appAttemptFinish.getApplicationAttemptId() + " is written");
     } catch (IOException e) {
@@ -568,14 +558,12 @@ public class FileSystemApplicationHistoryStore extends AbstractService
       throws IOException {
     HistoryFileWriter hfWriter =
         getHistoryFileWriter(containerStart.getContainerId()
-            .getApplicationAttemptId()
-            .getApplicationId());
+          .getApplicationAttemptId().getApplicationId());
     assert containerStart instanceof ContainerStartDataPBImpl;
     try {
-      hfWriter.writeHistoryData(
-          new HistoryDataKey(containerStart.getContainerId().toString(),
-              START_DATA_SUFFIX),
-          ((ContainerStartDataPBImpl) containerStart).getProto().toByteArray());
+      hfWriter.writeHistoryData(new HistoryDataKey(containerStart
+        .getContainerId().toString(), START_DATA_SUFFIX),
+        ((ContainerStartDataPBImpl) containerStart).getProto().toByteArray());
       LOG.info("Start information of container "
           + containerStart.getContainerId() + " is written");
     } catch (IOException e) {
@@ -590,14 +578,12 @@ public class FileSystemApplicationHistoryStore extends AbstractService
       throws IOException {
     HistoryFileWriter hfWriter =
         getHistoryFileWriter(containerFinish.getContainerId()
-            .getApplicationAttemptId().getApplicationId());
+          .getApplicationAttemptId().getApplicationId());
     assert containerFinish instanceof ContainerFinishDataPBImpl;
     try {
-      hfWriter.writeHistoryData(
-          new HistoryDataKey(containerFinish.getContainerId().toString(),
-              FINISH_DATA_SUFFIX),
-          ((ContainerFinishDataPBImpl) containerFinish).getProto()
-              .toByteArray());
+      hfWriter.writeHistoryData(new HistoryDataKey(containerFinish
+        .getContainerId().toString(), FINISH_DATA_SUFFIX),
+        ((ContainerFinishDataPBImpl) containerFinish).getProto().toByteArray());
       LOG.info("Finish information of container "
           + containerFinish.getContainerId() + " is written");
     } catch (IOException e) {
@@ -609,43 +595,42 @@ public class FileSystemApplicationHistoryStore extends AbstractService
   private static ApplicationStartData parseApplicationStartData(byte[] value)
       throws InvalidProtocolBufferException {
     return new ApplicationStartDataPBImpl(
-        ApplicationStartDataProto.parseFrom(value));
+      ApplicationStartDataProto.parseFrom(value));
   }
 
   private static ApplicationFinishData parseApplicationFinishData(byte[] value)
       throws InvalidProtocolBufferException {
     return new ApplicationFinishDataPBImpl(
-        ApplicationFinishDataProto.parseFrom(value));
+      ApplicationFinishDataProto.parseFrom(value));
   }
 
   private static ApplicationAttemptStartData parseApplicationAttemptStartData(
       byte[] value) throws InvalidProtocolBufferException {
     return new ApplicationAttemptStartDataPBImpl(
-        ApplicationAttemptStartDataProto.parseFrom(value));
+      ApplicationAttemptStartDataProto.parseFrom(value));
   }
 
   private static ApplicationAttemptFinishData
-      parseApplicationAttemptFinishData(
-          byte[] value) throws InvalidProtocolBufferException {
+      parseApplicationAttemptFinishData(byte[] value)
+          throws InvalidProtocolBufferException {
     return new ApplicationAttemptFinishDataPBImpl(
-        ApplicationAttemptFinishDataProto.parseFrom(value));
+      ApplicationAttemptFinishDataProto.parseFrom(value));
   }
 
   private static ContainerStartData parseContainerStartData(byte[] value)
       throws InvalidProtocolBufferException {
     return new ContainerStartDataPBImpl(
-        ContainerStartDataProto.parseFrom(value));
+      ContainerStartDataProto.parseFrom(value));
   }
 
   private static ContainerFinishData parseContainerFinishData(byte[] value)
       throws InvalidProtocolBufferException {
     return new ContainerFinishDataPBImpl(
-        ContainerFinishDataProto.parseFrom(value));
+      ContainerFinishDataProto.parseFrom(value));
   }
 
   private static void mergeApplicationHistoryData(
-      ApplicationHistoryData historyData,
-      ApplicationStartData startData) {
+      ApplicationHistoryData historyData, ApplicationStartData startData) {
     historyData.setApplicationName(startData.getApplicationName());
     historyData.setApplicationType(startData.getApplicationType());
     historyData.setQueue(startData.getQueue());
@@ -655,12 +640,11 @@ public class FileSystemApplicationHistoryStore extends AbstractService
   }
 
   private static void mergeApplicationHistoryData(
-      ApplicationHistoryData historyData,
-      ApplicationFinishData finishData) {
+      ApplicationHistoryData historyData, ApplicationFinishData finishData) {
     historyData.setFinishTime(finishData.getFinishTime());
     historyData.setDiagnosticsInfo(finishData.getDiagnosticsInfo());
     historyData.setFinalApplicationStatus(finishData
-        .getFinalApplicationStatus());
+      .getFinalApplicationStatus());
     historyData.setYarnApplicationState(finishData.getYarnApplicationState());
   }
 
@@ -678,9 +662,9 @@ public class FileSystemApplicationHistoryStore extends AbstractService
     historyData.setDiagnosticsInfo(finishData.getDiagnosticsInfo());
     historyData.setTrackingURL(finishData.getTrackingURL());
     historyData.setFinalApplicationStatus(finishData
-        .getFinalApplicationStatus());
+      .getFinalApplicationStatus());
     historyData.setYarnApplicationAttemptState(finishData
-        .getYarnApplicationAttemptState());
+      .getYarnApplicationAttemptState());
   }
 
   private static void mergeContainerHistoryData(
@@ -696,8 +680,7 @@ public class FileSystemApplicationHistoryStore extends AbstractService
     historyData.setFinishTime(finishData.getFinishTime());
     historyData.setDiagnosticsInfo(finishData.getDiagnosticsInfo());
     historyData.setLogURL(finishData.getLogURL());
-    historyData.setContainerExitStatus(finishData
-        .getContainerExitStatus());
+    historyData.setContainerExitStatus(finishData.getContainerExitStatus());
     historyData.setContainerState(finishData.getContainerState());
   }
 
@@ -746,7 +729,7 @@ public class FileSystemApplicationHistoryStore extends AbstractService
       FSDataInputStream fsdis = fs.open(historyFile);
       reader =
           new TFile.Reader(fsdis, fs.getFileStatus(historyFile).getLen(),
-              getConfig());
+            getConfig());
       reset();
     }
 
@@ -782,8 +765,7 @@ public class FileSystemApplicationHistoryStore extends AbstractService
     private FSDataOutputStream fsdos;
     private TFile.Writer writer;
 
-    public HistoryFileWriter(Path historyFile)
-        throws IOException {
+    public HistoryFileWriter(Path historyFile) throws IOException {
       if (fs.exists(historyFile)) {
         fsdos = fs.append(historyFile);
       } else {
@@ -792,9 +774,9 @@ public class FileSystemApplicationHistoryStore extends AbstractService
       fs.setPermission(historyFile, HISTORY_FILE_UMASK);
       writer =
           new TFile.Writer(fsdos, MIN_BLOCK_SIZE, getConfig().get(
-              YarnConfiguration.FS_HISTORY_STORE_COMPRESSION_TYPE,
-              YarnConfiguration.DEFAULT_FS_HISTORY_STORE_COMPRESSION_TYPE),
-              null, getConfig());
+            YarnConfiguration.FS_HISTORY_STORE_COMPRESSION_TYPE,
+            YarnConfiguration.DEFAULT_FS_HISTORY_STORE_COMPRESSION_TYPE), null,
+            getConfig());
     }
 
     public synchronized void close() {

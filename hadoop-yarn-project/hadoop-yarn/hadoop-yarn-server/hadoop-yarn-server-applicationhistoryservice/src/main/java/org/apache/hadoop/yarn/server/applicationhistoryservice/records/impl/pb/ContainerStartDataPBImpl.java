@@ -36,12 +36,9 @@ import org.apache.hadoop.yarn.server.applicationhistoryservice.records.Container
 
 import com.google.protobuf.TextFormat;
 
+public class ContainerStartDataPBImpl extends ContainerStartData {
 
-public class ContainerStartDataPBImpl
-    extends ContainerStartData {
-
-  ContainerStartDataProto proto =
-      ContainerStartDataProto.getDefaultInstance();
+  ContainerStartDataProto proto = ContainerStartDataProto.getDefaultInstance();
   ContainerStartDataProto.Builder builder = null;
   boolean viaProto = false;
 
@@ -187,20 +184,24 @@ public class ContainerStartDataPBImpl
   }
 
   private void mergeLocalToBuilder() {
-    if (this.containerId != null && !((ContainerIdPBImpl)
-        this.containerId).getProto().equals(builder.getContainerId())) {
+    if (this.containerId != null
+        && !((ContainerIdPBImpl) this.containerId).getProto().equals(
+          builder.getContainerId())) {
       builder.setContainerId(convertToProtoFormat(this.containerId));
     }
-    if (this.resource != null && !((ResourcePBImpl)
-        this.resource).getProto().equals(builder.getAllocatedResource())) {
+    if (this.resource != null
+        && !((ResourcePBImpl) this.resource).getProto().equals(
+          builder.getAllocatedResource())) {
       builder.setAllocatedResource(convertToProtoFormat(this.resource));
     }
-    if (this.nodeId != null && !((NodeIdPBImpl)
-        this.nodeId).getProto().equals(builder.getAssignedNodeId())) {
+    if (this.nodeId != null
+        && !((NodeIdPBImpl) this.nodeId).getProto().equals(
+          builder.getAssignedNodeId())) {
       builder.setAssignedNodeId(convertToProtoFormat(this.nodeId));
     }
-    if (this.priority != null && !((PriorityPBImpl)
-        this.priority).getProto().equals(builder.getPriority())) {
+    if (this.priority != null
+        && !((PriorityPBImpl) this.priority).getProto().equals(
+          builder.getPriority())) {
       builder.setPriority(convertToProtoFormat(this.priority));
     }
   }
@@ -221,13 +222,12 @@ public class ContainerStartDataPBImpl
     viaProto = false;
   }
 
-  private ContainerIdProto convertToProtoFormat(
-      ContainerId containerId) {
+  private ContainerIdProto convertToProtoFormat(ContainerId containerId) {
     return ((ContainerIdPBImpl) containerId).getProto();
   }
 
-  private ContainerIdPBImpl convertFromProtoFormat(
-      ContainerIdProto containerId) {
+  private ContainerIdPBImpl
+      convertFromProtoFormat(ContainerIdProto containerId) {
     return new ContainerIdPBImpl(containerId);
   }
 

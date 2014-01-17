@@ -32,12 +32,10 @@ import org.apache.hadoop.yarn.server.applicationhistoryservice.records.Applicati
 
 import com.google.protobuf.TextFormat;
 
+public class ApplicationFinishDataPBImpl extends ApplicationFinishData {
 
-public class ApplicationFinishDataPBImpl
-    extends ApplicationFinishData {
-
-  ApplicationFinishDataProto proto =
-      ApplicationFinishDataProto.getDefaultInstance();
+  ApplicationFinishDataProto proto = ApplicationFinishDataProto
+    .getDefaultInstance();
   ApplicationFinishDataProto.Builder builder = null;
   boolean viaProto = false;
 
@@ -122,8 +120,8 @@ public class ApplicationFinishDataPBImpl
       builder.clearFinalApplicationStatus();
       return;
     }
-    builder.setFinalApplicationStatus(
-        convertToProtoFormat(finalApplicationStatus));
+    builder
+      .setFinalApplicationStatus(convertToProtoFormat(finalApplicationStatus));
   }
 
   @Override
@@ -173,8 +171,9 @@ public class ApplicationFinishDataPBImpl
   }
 
   private void mergeLocalToBuilder() {
-    if (this.applicationId != null && !((ApplicationIdPBImpl)
-        this.applicationId).getProto().equals(builder.getApplicationId())) {
+    if (this.applicationId != null
+        && !((ApplicationIdPBImpl) this.applicationId).getProto().equals(
+          builder.getApplicationId())) {
       builder.setApplicationId(convertToProtoFormat(this.applicationId));
     }
   }
@@ -195,8 +194,7 @@ public class ApplicationFinishDataPBImpl
     viaProto = false;
   }
 
-  private ApplicationIdProto convertToProtoFormat(
-      ApplicationId applicationId) {
+  private ApplicationIdProto convertToProtoFormat(ApplicationId applicationId) {
     return ((ApplicationIdPBImpl) applicationId).getProto();
   }
 

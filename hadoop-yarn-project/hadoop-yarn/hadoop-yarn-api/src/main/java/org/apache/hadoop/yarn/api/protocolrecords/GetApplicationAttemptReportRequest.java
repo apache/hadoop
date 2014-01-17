@@ -26,12 +26,16 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
- * <p>The request sent by a client to the <code>ResourceManager</code> to get
- * an {@link ApplicationAttemptReport} for an application attempt.</p>
- *
- * <p>The request should include the {@link ApplicationAttemptId} of the
- * application attempt.</p>
- *
+ * <p>
+ * The request sent by a client to the <code>ResourceManager</code> to get an
+ * {@link ApplicationAttemptReport} for an application attempt.
+ * </p>
+ * 
+ * <p>
+ * The request should include the {@link ApplicationAttemptId} of the
+ * application attempt.
+ * </p>
+ * 
  * @see ApplicationAttemptReport
  * @see ApplicationHistoryProtocol#getApplicationAttemptReport(GetApplicationAttemptReportRequest)
  */
@@ -51,7 +55,7 @@ public abstract class GetApplicationAttemptReportRequest {
 
   /**
    * Get the <code>ApplicationAttemptId</code> of an application attempt.
-   *
+   * 
    * @return <code>ApplicationAttemptId</code> of an application attempt
    */
   @Public
@@ -60,9 +64,9 @@ public abstract class GetApplicationAttemptReportRequest {
 
   /**
    * Set the <code>ApplicationAttemptId</code> of an application attempt
-   *
-   * @param applicationAttemptId <code>ApplicationAttemptId</code> of an
-   *  application attempt
+   * 
+   * @param applicationAttemptId
+   *          <code>ApplicationAttemptId</code> of an application attempt
    */
   @Public
   @Unstable

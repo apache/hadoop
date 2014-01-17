@@ -26,8 +26,8 @@ import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
- * The class contains the fields that can be determined when
- * <code>RMApp</code> finishes, and that need to be stored persistently.
+ * The class contains the fields that can be determined when <code>RMApp</code>
+ * finishes, and that need to be stored persistently.
  */
 @Public
 @Unstable

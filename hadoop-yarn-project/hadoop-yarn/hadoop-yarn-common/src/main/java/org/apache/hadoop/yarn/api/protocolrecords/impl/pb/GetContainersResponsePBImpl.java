@@ -35,11 +35,10 @@ import com.google.protobuf.TextFormat;
 
 @Private
 @Unstable
-public class GetContainersResponsePBImpl
-extends GetContainersResponse {
+public class GetContainersResponsePBImpl extends GetContainersResponse {
 
-  GetContainersResponseProto proto =
-    GetContainersResponseProto.getDefaultInstance();
+  GetContainersResponseProto proto = GetContainersResponseProto
+    .getDefaultInstance();
   GetContainersResponseProto.Builder builder = null;
   boolean viaProto = false;
 
@@ -140,32 +139,33 @@ extends GetContainersResponse {
     if (containerList == null) {
       return;
     }
-    Iterable<ContainerReportProto> iterable = new Iterable<ContainerReportProto>() {
-      @Override
-      public Iterator<ContainerReportProto> iterator() {
-        return new Iterator<ContainerReportProto>() {
-
-          Iterator<ContainerReport> iter = containerList.iterator();
-
+    Iterable<ContainerReportProto> iterable =
+        new Iterable<ContainerReportProto>() {
           @Override
-          public boolean hasNext() {
-            return iter.hasNext();
-          }
+          public Iterator<ContainerReportProto> iterator() {
+            return new Iterator<ContainerReportProto>() {
 
-          @Override
-          public ContainerReportProto next() {
-            return convertToProtoFormat(iter.next());
-          }
+              Iterator<ContainerReport> iter = containerList.iterator();
 
-          @Override
-          public void remove() {
-            throw new UnsupportedOperationException();
+              @Override
+              public boolean hasNext() {
+                return iter.hasNext();
+              }
+
+              @Override
+              public ContainerReportProto next() {
+                return convertToProtoFormat(iter.next());
+              }
+
+              @Override
+              public void remove() {
+                throw new UnsupportedOperationException();
+
+              }
+            };
 
           }
         };
-
-      }
-    };
     builder.addAllContainers(iterable);
   }
 

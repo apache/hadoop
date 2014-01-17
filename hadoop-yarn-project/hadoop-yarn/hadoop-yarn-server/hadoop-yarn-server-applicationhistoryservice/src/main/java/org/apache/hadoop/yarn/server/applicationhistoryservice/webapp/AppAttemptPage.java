@@ -34,9 +34,11 @@ public class AppAttemptPage extends AHSView {
     commonPreHead(html);
 
     String appAttemptId = $(YarnWebParams.APPLICATION_ATTEMPT_ID);
-    set(TITLE, appAttemptId.isEmpty() ?
-        "Bad request: missing application attempt ID" : join(
-        "Application Attempt ", $(YarnWebParams.APPLICATION_ATTEMPT_ID)));
+    set(
+      TITLE,
+      appAttemptId.isEmpty() ? "Bad request: missing application attempt ID"
+          : join("Application Attempt ",
+            $(YarnWebParams.APPLICATION_ATTEMPT_ID)));
 
     set(DATATABLES_ID, "containers");
     set(initID(DATATABLES, "containers"), containersTableInit());
@@ -49,13 +51,10 @@ public class AppAttemptPage extends AHSView {
   }
 
   private String containersTableInit() {
-    return tableInit()
-      .append(", 'aaData': containersTableData")
-      .append(", bDeferRender: true")
-      .append(", bProcessing: true")
+    return tableInit().append(", 'aaData': containersTableData")
+      .append(", bDeferRender: true").append(", bProcessing: true")
 
-      .append("\n, aoColumnDefs: ")
-      .append(getContainersTableColumnDefs())
+      .append("\n, aoColumnDefs: ").append(getContainersTableColumnDefs())
 
       // Sort by id upon page load
       .append(", aaSorting: [[0, 'desc']]}").toString();
@@ -63,9 +62,7 @@ public class AppAttemptPage extends AHSView {
 
   protected String getContainersTableColumnDefs() {
     StringBuilder sb = new StringBuilder();
-    return sb
-      .append("[\n")
-      .append("{'sType':'numeric', 'aTargets': [0]")
+    return sb.append("[\n").append("{'sType':'numeric', 'aTargets': [0]")
       .append(", 'mRender': parseHadoopID }]").toString();
   }
 

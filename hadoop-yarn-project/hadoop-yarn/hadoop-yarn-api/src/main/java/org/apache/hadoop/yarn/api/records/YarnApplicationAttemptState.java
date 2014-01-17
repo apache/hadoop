@@ -33,16 +33,16 @@ public enum YarnApplicationAttemptState {
   /** AppAttempt has been submitted. */
   SUBMITTED,
 
-  /**AppAttempt was scheduled*/
+  /** AppAttempt was scheduled */
   SCHEDULED,
 
-  /**Acquired AM Container from Scheduler and Saving AppAttempt Data*/
+  /** Acquired AM Container from Scheduler and Saving AppAttempt Data */
   ALLOCATED_SAVING,
 
-  /**AppAttempt Data was saved*/
+  /** AppAttempt Data was saved */
   ALLOCATED,
 
-  /**AppAttempt was launched*/
+  /** AppAttempt was launched */
   LAUNCHED,
 
   /** AppAttempt failed. */
@@ -51,7 +51,7 @@ public enum YarnApplicationAttemptState {
   /** AppAttempt is currently running. */
   RUNNING,
 
-  /** AppAttempt is waiting for state bing saved*/
+  /** AppAttempt is waiting for state bing saved */
   FINAL_SAVING,
 
   /** AppAttempt is finishing. */

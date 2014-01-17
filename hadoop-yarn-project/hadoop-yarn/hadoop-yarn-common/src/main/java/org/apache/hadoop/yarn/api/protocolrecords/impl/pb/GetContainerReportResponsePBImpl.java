@@ -27,11 +27,11 @@ import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetContainerReportResponse
 
 import com.google.protobuf.TextFormat;
 
-public class GetContainerReportResponsePBImpl
-    extends GetContainerReportResponse {
+public class GetContainerReportResponsePBImpl extends
+    GetContainerReportResponse {
 
-  GetContainerReportResponseProto proto =
-      GetContainerReportResponseProto.getDefaultInstance();
+  GetContainerReportResponseProto proto = GetContainerReportResponseProto
+    .getDefaultInstance();
   GetContainerReportResponseProto.Builder builder = null;
   boolean viaProto = false;
 
@@ -41,8 +41,7 @@ public class GetContainerReportResponsePBImpl
     builder = GetContainerReportResponseProto.newBuilder();
   }
 
-  public GetContainerReportResponsePBImpl(
-      GetContainerReportResponseProto proto) {
+  public GetContainerReportResponsePBImpl(GetContainerReportResponseProto proto) {
     this.proto = proto;
     viaProto = true;
   }
@@ -117,8 +116,7 @@ public class GetContainerReportResponsePBImpl
     this.containerReport = containerReport;
   }
 
-  private ContainerReportPBImpl convertFromProtoFormat(
-      ContainerReportProto p) {
+  private ContainerReportPBImpl convertFromProtoFormat(ContainerReportProto p) {
     return new ContainerReportPBImpl(p);
   }
 

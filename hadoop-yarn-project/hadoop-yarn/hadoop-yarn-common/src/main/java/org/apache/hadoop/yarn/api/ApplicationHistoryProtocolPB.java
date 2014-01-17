@@ -25,7 +25,9 @@ import org.apache.hadoop.yarn.proto.ApplicationHistoryProtocol.ApplicationHistor
 
 @Private
 @Unstable
-@ProtocolInfo(protocolName = "org.apache.hadoop.yarn.api.ApplicationHistoryProtocolPB", protocolVersion = 1)
+@ProtocolInfo(
+    protocolName = "org.apache.hadoop.yarn.api.ApplicationHistoryProtocolPB",
+    protocolVersion = 1)
 public interface ApplicationHistoryProtocolPB extends
     ApplicationHistoryProtocolService.BlockingInterface {
 }

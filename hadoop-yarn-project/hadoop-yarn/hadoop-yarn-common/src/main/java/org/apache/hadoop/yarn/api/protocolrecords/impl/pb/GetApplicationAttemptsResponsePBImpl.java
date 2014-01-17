@@ -148,8 +148,8 @@ public class GetApplicationAttemptsResponsePBImpl extends
           public Iterator<ApplicationAttemptReportProto> iterator() {
             return new Iterator<ApplicationAttemptReportProto>() {
 
-              Iterator<ApplicationAttemptReport> iter =
-                  applicationAttemptList.iterator();
+              Iterator<ApplicationAttemptReport> iter = applicationAttemptList
+                .iterator();
 
               @Override
               public boolean hasNext() {

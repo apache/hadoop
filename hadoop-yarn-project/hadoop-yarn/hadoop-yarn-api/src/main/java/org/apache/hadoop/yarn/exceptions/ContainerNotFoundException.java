@@ -25,8 +25,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetContainerReportRequest;
 
 /**
  * This exception is thrown on
- * {@link ApplicationHistoryProtocol#getContainerReport
- * (GetContainerReportRequest)}
+ * {@link ApplicationHistoryProtocol#getContainerReport (GetContainerReportRequest)}
  * API when the container doesn't exist in AHS
  */
 @Public

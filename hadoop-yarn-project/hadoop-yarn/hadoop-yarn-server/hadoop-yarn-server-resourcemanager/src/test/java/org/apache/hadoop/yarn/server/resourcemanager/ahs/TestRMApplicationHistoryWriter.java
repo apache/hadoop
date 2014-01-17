@@ -88,9 +88,12 @@ public class TestRMApplicationHistoryWriter {
 
       @Override
       protected Dispatcher createDispatcher(Configuration conf) {
-        MultiThreadedDispatcher dispatcher = new MultiThreadedDispatcher(conf.getInt(
-            YarnConfiguration.RM_HISTORY_WRITER_MULTI_THREADED_DISPATCHER_POOL_SIZE,
-            YarnConfiguration.DEFAULT_RM_HISTORY_WRITER_MULTI_THREADED_DISPATCHER_POOL_SIZE));
+        MultiThreadedDispatcher dispatcher =
+            new MultiThreadedDispatcher(
+              conf
+                .getInt(
+                  YarnConfiguration.RM_HISTORY_WRITER_MULTI_THREADED_DISPATCHER_POOL_SIZE,
+                  YarnConfiguration.DEFAULT_RM_HISTORY_WRITER_MULTI_THREADED_DISPATCHER_POOL_SIZE));
         dispatcher.setDrainEventsOnStop();
         return dispatcher;
       }
@@ -131,11 +134,11 @@ public class TestRMApplicationHistoryWriter {
     when(app.getStartTime()).thenReturn(1L);
     when(app.getFinishTime()).thenReturn(2L);
     when(app.getDiagnostics()).thenReturn(
-        new StringBuilder("test diagnostics info"));
+      new StringBuilder("test diagnostics info"));
     when(app.getFinalApplicationStatus()).thenReturn(
-        FinalApplicationStatus.UNDEFINED);
+      FinalApplicationStatus.UNDEFINED);
     when(app.createApplicationState())
-        .thenReturn(YarnApplicationState.FINISHED);
+      .thenReturn(YarnApplicationState.FINISHED);
     return app;
   }
 
@@ -146,26 +149,25 @@ public class TestRMApplicationHistoryWriter {
     when(appAttempt.getHost()).thenReturn("test host");
     when(appAttempt.getRpcPort()).thenReturn(-100);
     Container container = mock(Container.class);
-    when(container.getId()).thenReturn(
-        ContainerId.newInstance(appAttemptId, 1));
+    when(container.getId())
+      .thenReturn(ContainerId.newInstance(appAttemptId, 1));
     when(appAttempt.getMasterContainer()).thenReturn(container);
     when(appAttempt.getDiagnostics()).thenReturn("test diagnostics info");
     when(appAttempt.getTrackingUrl()).thenReturn("test url");
     when(appAttempt.getFinalApplicationStatus()).thenReturn(
-        FinalApplicationStatus.UNDEFINED);
+      FinalApplicationStatus.UNDEFINED);
     when(appAttempt.createApplicationAttemptState()).thenReturn(
-        YarnApplicationAttemptState.FINISHED);
+      YarnApplicationAttemptState.FINISHED);
     return appAttempt;
   }
 
-  private static RMContainer createRMContainer(
-      ContainerId containerId) {
+  private static RMContainer createRMContainer(ContainerId containerId) {
     RMContainer container = mock(RMContainer.class);
     when(container.getContainerId()).thenReturn(containerId);
     when(container.getAllocatedNode()).thenReturn(
-        NodeId.newInstance("test host", -100));
+      NodeId.newInstance("test host", -100));
     when(container.getAllocatedResource()).thenReturn(
-        Resource.newInstance(-1, -1));
+      Resource.newInstance(-1, -1));
     when(container.getAllocatedPriority()).thenReturn(Priority.UNDEFINED);
     when(container.getStartTime()).thenReturn(0L);
     when(container.getFinishTime()).thenReturn(1L);
@@ -210,22 +212,22 @@ public class TestRMApplicationHistoryWriter {
     Assert.assertEquals(2L, appHD.getFinishTime());
     Assert.assertEquals("test diagnostics info", appHD.getDiagnosticsInfo());
     Assert.assertEquals(FinalApplicationStatus.UNDEFINED,
-        appHD.getFinalApplicationStatus());
+      appHD.getFinalApplicationStatus());
     Assert.assertEquals(YarnApplicationState.FINISHED,
-        appHD.getYarnApplicationState());
+      appHD.getYarnApplicationState());
   }
 
   @Test
   public void testWriteApplicationAttempt() throws Exception {
-    RMAppAttempt appAttempt = createRMAppAttempt(
-        ApplicationAttemptId.newInstance(
-            ApplicationId.newInstance(0, 1), 1));
+    RMAppAttempt appAttempt =
+        createRMAppAttempt(ApplicationAttemptId.newInstance(
+          ApplicationId.newInstance(0, 1), 1));
     writer.applicationAttemptStarted(appAttempt);
     ApplicationAttemptHistoryData appAttemptHD = null;
     for (int i = 0; i < MAX_RETRIES; ++i) {
       appAttemptHD =
           store.getApplicationAttempt(ApplicationAttemptId.newInstance(
-              ApplicationId.newInstance(0, 1), 1));
+            ApplicationId.newInstance(0, 1), 1));
       if (appAttemptHD != null) {
         break;
       } else {
@@ -235,16 +237,15 @@ public class TestRMApplicationHistoryWriter {
     Assert.assertNotNull(appAttemptHD);
     Assert.assertEquals("test host", appAttemptHD.getHost());
     Assert.assertEquals(-100, appAttemptHD.getRPCPort());
-    Assert.assertEquals(
-        ContainerId.newInstance(ApplicationAttemptId.newInstance(
-            ApplicationId.newInstance(0, 1), 1), 1),
-        appAttemptHD.getMasterContainerId());
+    Assert.assertEquals(ContainerId.newInstance(
+      ApplicationAttemptId.newInstance(ApplicationId.newInstance(0, 1), 1), 1),
+      appAttemptHD.getMasterContainerId());
 
     writer.applicationAttemptFinished(appAttempt);
     for (int i = 0; i < MAX_RETRIES; ++i) {
       appAttemptHD =
           store.getApplicationAttempt(ApplicationAttemptId.newInstance(
-              ApplicationId.newInstance(0, 1), 1));
+            ApplicationId.newInstance(0, 1), 1));
       if (appAttemptHD.getYarnApplicationAttemptState() != null) {
         break;
       } else {
@@ -252,26 +253,26 @@ public class TestRMApplicationHistoryWriter {
       }
     }
     Assert.assertEquals("test diagnostics info",
-        appAttemptHD.getDiagnosticsInfo());
+      appAttemptHD.getDiagnosticsInfo());
     Assert.assertEquals("test url", appAttemptHD.getTrackingURL());
     Assert.assertEquals(FinalApplicationStatus.UNDEFINED,
-        appAttemptHD.getFinalApplicationStatus());
+      appAttemptHD.getFinalApplicationStatus());
     Assert.assertEquals(YarnApplicationAttemptState.FINISHED,
-        appAttemptHD.getYarnApplicationAttemptState());
+      appAttemptHD.getYarnApplicationAttemptState());
   }
 
   @Test
   public void testWriteContainer() throws Exception {
-    RMContainer container = createRMContainer(
-        ContainerId.newInstance(ApplicationAttemptId.newInstance(
-            ApplicationId.newInstance(0, 1), 1), 1));
+    RMContainer container =
+        createRMContainer(ContainerId.newInstance(
+          ApplicationAttemptId.newInstance(ApplicationId.newInstance(0, 1), 1),
+          1));
     writer.containerStarted(container);
     ContainerHistoryData containerHD = null;
     for (int i = 0; i < MAX_RETRIES; ++i) {
       containerHD =
-          store.getContainer(ContainerId.newInstance(
-              ApplicationAttemptId.newInstance(
-                  ApplicationId.newInstance(0, 1), 1), 1));
+          store.getContainer(ContainerId.newInstance(ApplicationAttemptId
+            .newInstance(ApplicationId.newInstance(0, 1), 1), 1));
       if (containerHD != null) {
         break;
       } else {
@@ -280,18 +281,17 @@ public class TestRMApplicationHistoryWriter {
     }
     Assert.assertNotNull(containerHD);
     Assert.assertEquals(NodeId.newInstance("test host", -100),
-        containerHD.getAssignedNode());
+      containerHD.getAssignedNode());
     Assert.assertEquals(Resource.newInstance(-1, -1),
-        containerHD.getAllocatedResource());
+      containerHD.getAllocatedResource());
     Assert.assertEquals(Priority.UNDEFINED, containerHD.getPriority());
     Assert.assertEquals(0L, container.getStartTime());
 
     writer.containerFinished(container);
     for (int i = 0; i < MAX_RETRIES; ++i) {
       containerHD =
-          store.getContainer(ContainerId.newInstance(
-              ApplicationAttemptId.newInstance(
-                  ApplicationId.newInstance(0, 1), 1), 1));
+          store.getContainer(ContainerId.newInstance(ApplicationAttemptId
+            .newInstance(ApplicationId.newInstance(0, 1), 1), 1));
       if (containerHD.getContainerState() != null) {
         break;
       } else {
@@ -299,11 +299,11 @@ public class TestRMApplicationHistoryWriter {
       }
     }
     Assert.assertEquals("test diagnostics info",
-        containerHD.getDiagnosticsInfo());
+      containerHD.getDiagnosticsInfo());
     Assert.assertEquals("test log url", containerHD.getLogURL());
     Assert.assertEquals(-1, containerHD.getContainerExitStatus());
     Assert.assertEquals(ContainerState.COMPLETE,
-        containerHD.getContainerState());
+      containerHD.getContainerState());
   }
 
   @Test
@@ -367,18 +367,23 @@ public class TestRMApplicationHistoryWriter {
           @Override
           public void applicationStarted(RMApp app) {
           }
+
           @Override
           public void applicationFinished(RMApp app) {
           }
+
           @Override
           public void applicationAttemptStarted(RMAppAttempt appAttempt) {
           }
+
           @Override
           public void applicationAttemptFinished(RMAppAttempt appAttempt) {
           }
+
           @Override
           public void containerStarted(RMContainer container) {
           }
+
           @Override
           public void containerFinished(RMContainer container) {
           }
@@ -410,17 +415,18 @@ public class TestRMApplicationHistoryWriter {
     am.registerAppAttempt();
 
     int request = 10000;
-    am.allocate("127.0.0.1" , 1024, request, 
-        new ArrayList<ContainerId>());
+    am.allocate("127.0.0.1", 1024, request, new ArrayList<ContainerId>());
     nm.nodeHeartbeat(true);
-    List<Container> allocated = am.allocate(new ArrayList<ResourceRequest>(),
-        new ArrayList<ContainerId>()).getAllocatedContainers();
+    List<Container> allocated =
+        am.allocate(new ArrayList<ResourceRequest>(),
+          new ArrayList<ContainerId>()).getAllocatedContainers();
     int waitCount = 0;
     int allocatedSize = allocated.size();
     while (allocatedSize < request && waitCount++ < 200) {
       Thread.sleep(100);
-      allocated = am.allocate(new ArrayList<ResourceRequest>(),
-          new ArrayList<ContainerId>()).getAllocatedContainers();
+      allocated =
+          am.allocate(new ArrayList<ResourceRequest>(),
+            new ArrayList<ContainerId>()).getAllocatedContainers();
       allocatedSize += allocated.size();
       nm.nodeHeartbeat(true);
     }
@@ -470,27 +476,28 @@ public class TestRMApplicationHistoryWriter {
             (WritingApplicationHistoryEvent) event;
         switch (ashEvent.getType()) {
           case APP_START:
-            incrementCounts(((WritingApplicationStartEvent) event).getApplicationId());
+            incrementCounts(((WritingApplicationStartEvent) event)
+              .getApplicationId());
             break;
           case APP_FINISH:
             incrementCounts(((WritingApplicationFinishEvent) event)
-                .getApplicationId());
+              .getApplicationId());
             break;
           case APP_ATTEMPT_START:
             incrementCounts(((WritingApplicationAttemptStartEvent) event)
-                .getApplicationAttemptId().getApplicationId());
+              .getApplicationAttemptId().getApplicationId());
             break;
           case APP_ATTEMPT_FINISH:
             incrementCounts(((WritingApplicationAttemptFinishEvent) event)
-                .getApplicationAttemptId().getApplicationId());
+              .getApplicationAttemptId().getApplicationId());
             break;
           case CONTAINER_START:
-            incrementCounts(((WritingContainerStartEvent) event).getContainerId()
-                .getApplicationAttemptId().getApplicationId());
+            incrementCounts(((WritingContainerStartEvent) event)
+              .getContainerId().getApplicationAttemptId().getApplicationId());
             break;
           case CONTAINER_FINISH:
-            incrementCounts(((WritingContainerFinishEvent) event).getContainerId()
-                .getApplicationAttemptId().getApplicationId());
+            incrementCounts(((WritingContainerFinishEvent) event)
+              .getContainerId().getApplicationAttemptId().getApplicationId());
             break;
         }
       }

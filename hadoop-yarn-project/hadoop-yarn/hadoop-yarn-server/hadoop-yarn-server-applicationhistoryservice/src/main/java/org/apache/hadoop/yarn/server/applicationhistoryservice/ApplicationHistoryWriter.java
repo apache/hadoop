@@ -70,8 +70,8 @@ public interface ApplicationHistoryWriter {
    *          available when it starts
    * @throws IOException
    */
-  void applicationAttemptStarted(
-      ApplicationAttemptStartData appAttemptStart) throws IOException;
+  void applicationAttemptStarted(ApplicationAttemptStartData appAttemptStart)
+      throws IOException;
 
   /**
    * This method writes the information of <code>RMAppAttempt</code> that is
@@ -82,8 +82,9 @@ public interface ApplicationHistoryWriter {
    *          available when it finishes
    * @throws IOException
    */
-  void applicationAttemptFinished(
-      ApplicationAttemptFinishData appAttemptFinish) throws IOException;
+  void
+      applicationAttemptFinished(ApplicationAttemptFinishData appAttemptFinish)
+          throws IOException;
 
   /**
    * This method writes the information of <code>RMContainer</code> that is

@@ -30,12 +30,11 @@ import org.apache.hadoop.yarn.server.applicationhistoryservice.records.Applicati
 
 import com.google.protobuf.TextFormat;
 
+public class ApplicationAttemptStartDataPBImpl extends
+    ApplicationAttemptStartData {
 
-public class ApplicationAttemptStartDataPBImpl
-    extends ApplicationAttemptStartData {
-
-  ApplicationAttemptStartDataProto proto =
-      ApplicationAttemptStartDataProto.getDefaultInstance();
+  ApplicationAttemptStartDataProto proto = ApplicationAttemptStartDataProto
+    .getDefaultInstance();
   ApplicationAttemptStartDataProto.Builder builder = null;
   boolean viaProto = false;
 
@@ -116,8 +115,7 @@ public class ApplicationAttemptStartDataPBImpl
     if (!p.hasApplicationAttemptId()) {
       return null;
     }
-    this.masterContainerId =
-        convertFromProtoFormat(p.getMasterContainerId());
+    this.masterContainerId = convertFromProtoFormat(p.getMasterContainerId());
     return this.masterContainerId;
   }
 
@@ -158,17 +156,17 @@ public class ApplicationAttemptStartDataPBImpl
   }
 
   private void mergeLocalToBuilder() {
-    if (this.applicationAttemptId != null && !((ApplicationAttemptIdPBImpl)
-        this.applicationAttemptId).getProto().equals(
-            builder.getApplicationAttemptId())) {
-      builder.setApplicationAttemptId(
-          convertToProtoFormat(this.applicationAttemptId));
+    if (this.applicationAttemptId != null
+        && !((ApplicationAttemptIdPBImpl) this.applicationAttemptId).getProto()
+          .equals(builder.getApplicationAttemptId())) {
+      builder
+        .setApplicationAttemptId(convertToProtoFormat(this.applicationAttemptId));
     }
-    if (this.masterContainerId != null && !((ContainerIdPBImpl)
-        this.masterContainerId).getProto().equals(
-            builder.getMasterContainerId())) {
-      builder.setMasterContainerId(
-          convertToProtoFormat(this.masterContainerId));
+    if (this.masterContainerId != null
+        && !((ContainerIdPBImpl) this.masterContainerId).getProto().equals(
+          builder.getMasterContainerId())) {
+      builder
+        .setMasterContainerId(convertToProtoFormat(this.masterContainerId));
     }
   }
 
@@ -198,13 +196,12 @@ public class ApplicationAttemptStartDataPBImpl
     return ((ApplicationAttemptIdPBImpl) applicationAttemptId).getProto();
   }
 
-  private ContainerIdPBImpl convertFromProtoFormat(
-      ContainerIdProto containerId) {
+  private ContainerIdPBImpl
+      convertFromProtoFormat(ContainerIdProto containerId) {
     return new ContainerIdPBImpl(containerId);
   }
 
-  private ContainerIdProto convertToProtoFormat(
-      ContainerId masterContainerId) {
+  private ContainerIdProto convertToProtoFormat(ContainerId masterContainerId) {
     return ((ContainerIdPBImpl) masterContainerId).getProto();
   }
 

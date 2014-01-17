@@ -28,8 +28,8 @@ import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetContainersRequestProtoO
 import com.google.protobuf.TextFormat;
 
 public class GetContainersRequestPBImpl extends GetContainersRequest {
-  GetContainersRequestProto proto =
-      GetContainersRequestProto.getDefaultInstance();
+  GetContainersRequestProto proto = GetContainersRequestProto
+    .getDefaultInstance();
   GetContainersRequestProto.Builder builder = null;
   boolean viaProto = false;
 
@@ -74,8 +74,8 @@ public class GetContainersRequestPBImpl extends GetContainersRequest {
 
   private void mergeLocalToBuilder() {
     if (applicationAttemptId != null) {
-      builder.setApplicationAttemptId(
-          convertToProtoFormat(this.applicationAttemptId));
+      builder
+        .setApplicationAttemptId(convertToProtoFormat(this.applicationAttemptId));
     }
   }
 
@@ -110,8 +110,8 @@ public class GetContainersRequestPBImpl extends GetContainersRequest {
   }
 
   @Override
-  public void setApplicationAttemptId(
-      ApplicationAttemptId applicationAttemptId) {
+  public void
+      setApplicationAttemptId(ApplicationAttemptId applicationAttemptId) {
     maybeInitBuilder();
     if (applicationAttemptId == null) {
       builder.clearApplicationAttemptId();
@@ -124,8 +124,8 @@ public class GetContainersRequestPBImpl extends GetContainersRequest {
     return new ApplicationAttemptIdPBImpl(p);
   }
 
-  private ApplicationAttemptIdProto convertToProtoFormat(
-      ApplicationAttemptId t) {
+  private ApplicationAttemptIdProto
+      convertToProtoFormat(ApplicationAttemptId t) {
     return ((ApplicationAttemptIdPBImpl) t).getProto();
   }
 }

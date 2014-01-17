@@ -25,12 +25,16 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
- * <p>The response sent by the <code>ResourceManager</code> to a client requesting
- * an application attempt report.</p>
- *
- * <p>The response includes an {@link ApplicationAttemptReport} which has the
- * details about the particular application attempt</p>
- *
+ * <p>
+ * The response sent by the <code>ResourceManager</code> to a client requesting
+ * an application attempt report.
+ * </p>
+ * 
+ * <p>
+ * The response includes an {@link ApplicationAttemptReport} which has the
+ * details about the particular application attempt
+ * </p>
+ * 
  * @see ApplicationAttemptReport
  * @see ApplicationHistoryProtocol#getApplicationAttemptReport(GetApplicationAttemptReportRequest)
  */
@@ -59,9 +63,9 @@ public abstract class GetApplicationAttemptReportResponse {
 
   /**
    * Get the <code>ApplicationAttemptReport</code> for the application attempt.
-   *
-   * @param applicationAttemptReport <code>ApplicationAttemptReport</code> for
-   * the application attempt
+   * 
+   * @param applicationAttemptReport
+   *          <code>ApplicationAttemptReport</code> for the application attempt
    */
   @Public
   @Unstable

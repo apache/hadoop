@@ -53,22 +53,13 @@ public class AppsBlock extends HtmlBlock {
   public void render(Block html) {
     setTitle("Applications");
 
-    TBODY<TABLE<Hamlet>> tbody = html.
-        table("#apps").
-        thead().
-        tr().
-        th(".id", "ID").
-        th(".user", "User").
-        th(".name", "Name").
-        th(".type", "Application Type").
-        th(".queue", "Queue").
-        th(".starttime", "StartTime").
-        th(".finishtime", "FinishTime").
-        th(".state", "State").
-        th(".finalstatus", "FinalStatus").
-        th(".progress", "Progress").
-        th(".ui", "Tracking UI")._()._().
-        tbody();
+    TBODY<TABLE<Hamlet>> tbody =
+        html.table("#apps").thead().tr().th(".id", "ID").th(".user", "User")
+          .th(".name", "Name").th(".type", "Application Type")
+          .th(".queue", "Queue").th(".starttime", "StartTime")
+          .th(".finishtime", "FinishTime").th(".state", "State")
+          .th(".finalstatus", "FinalStatus").th(".progress", "Progress")
+          .th(".ui", "Tracking UI")._()._().tbody();
     Collection<YarnApplicationState> reqAppStates = null;
     String reqStateString = $(APP_STATE);
     if (reqStateString != null && !reqStateString.isEmpty()) {
@@ -83,8 +74,7 @@ public class AppsBlock extends HtmlBlock {
     try {
       appReports = appContext.getAllApplications().values();
     } catch (IOException e) {
-      String message =
-          "Failed to read the applications.";
+      String message = "Failed to read the applications.";
       LOG.error(message, e);
       html.p()._(message)._();
       return;
@@ -99,51 +89,53 @@ public class AppsBlock extends HtmlBlock {
       String percent = String.format("%.1f", app.getProgress());
       // AppID numerical value parsed by parseHadoopID in yarn.dt.plugins.js
       appsTableData
-          .append("[\"<a href='")
-          .append(url("app", app.getAppId()))
-          .append("'>")
-          .append(app.getAppId())
-          .append("</a>\",\"")
-          .append(
-              StringEscapeUtils.escapeJavaScript(StringEscapeUtils.escapeHtml(
-                  app.getUser())))
-          .append("\",\"")
-          .append(
-              StringEscapeUtils.escapeJavaScript(StringEscapeUtils.escapeHtml(
-                  app.getName())))
-          .append("\",\"")
-          .append(
-              StringEscapeUtils.escapeJavaScript(StringEscapeUtils.escapeHtml(
-                  app.getType())))
-          .append("\",\"")
-          .append(
-              StringEscapeUtils.escapeJavaScript(StringEscapeUtils.escapeHtml(
-                  app.getQueue()))).append("\",\"")
-          .append(app.getStartedTime()).append("\",\"")
-          .append(app.getFinishedTime()).append("\",\"")
-          .append(app.getAppState()).append("\",\"")
-          .append(app.getFinalAppStatus()).append("\",\"")
-          // Progress bar
-          .append("<br title='").append(percent)
-          .append("'> <div class='").append(C_PROGRESSBAR).append("' title='")
-          .append(join(percent, '%')).append("'> ").append("<div class='")
-          .append(C_PROGRESSBAR_VALUE).append("' style='")
-          .append(join("width:", percent, '%')).append("'> </div> </div>")
-          .append("\",\"<a href='");
+        .append("[\"<a href='")
+        .append(url("app", app.getAppId()))
+        .append("'>")
+        .append(app.getAppId())
+        .append("</a>\",\"")
+        .append(
+          StringEscapeUtils.escapeJavaScript(StringEscapeUtils.escapeHtml(app
+            .getUser())))
+        .append("\",\"")
+        .append(
+          StringEscapeUtils.escapeJavaScript(StringEscapeUtils.escapeHtml(app
+            .getName())))
+        .append("\",\"")
+        .append(
+          StringEscapeUtils.escapeJavaScript(StringEscapeUtils.escapeHtml(app
+            .getType())))
+        .append("\",\"")
+        .append(
+          StringEscapeUtils.escapeJavaScript(StringEscapeUtils.escapeHtml(app
+            .getQueue()))).append("\",\"").append(app.getStartedTime())
+        .append("\",\"").append(app.getFinishedTime())
+        .append("\",\"")
+        .append(app.getAppState())
+        .append("\",\"")
+        .append(app.getFinalAppStatus())
+        .append("\",\"")
+        // Progress bar
+        .append("<br title='").append(percent).append("'> <div class='")
+        .append(C_PROGRESSBAR).append("' title='").append(join(percent, '%'))
+        .append("'> ").append("<div class='").append(C_PROGRESSBAR_VALUE)
+        .append("' style='").append(join("width:", percent, '%'))
+        .append("'> </div> </div>").append("\",\"<a href='");
 
-      String trackingURL = app.getTrackingUrl() == null ? "#" : app.getTrackingUrl();
+      String trackingURL =
+          app.getTrackingUrl() == null ? "#" : app.getTrackingUrl();
 
-      appsTableData.append(trackingURL).append("'>")
-          .append("History").append("</a>\"],\n");
+      appsTableData.append(trackingURL).append("'>").append("History")
+        .append("</a>\"],\n");
 
     }
     if (appsTableData.charAt(appsTableData.length() - 2) == ',') {
       appsTableData.delete(appsTableData.length() - 2,
-          appsTableData.length() - 1);
+        appsTableData.length() - 1);
     }
     appsTableData.append("]");
-    html.script().$type("text/javascript").
-        _("var appsTableData=" + appsTableData)._();
+    html.script().$type("text/javascript")
+      ._("var appsTableData=" + appsTableData)._();
 
     tbody._()._();
   }

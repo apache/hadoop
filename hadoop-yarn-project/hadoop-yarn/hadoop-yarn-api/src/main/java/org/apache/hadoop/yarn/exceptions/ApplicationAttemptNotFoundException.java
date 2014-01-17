@@ -25,8 +25,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportReq
 
 /**
  * This exception is thrown on
- * {@link ApplicationHistoryProtocol#getApplicationAttemptReport
- * (GetApplicationAttemptReportRequest)}
+ * {@link ApplicationHistoryProtocol#getApplicationAttemptReport (GetApplicationAttemptReportRequest)}
  * API when the Application Attempt doesn't exist in Application History Server
  */
 @Public

@@ -42,16 +42,16 @@ import org.apache.hadoop.yarn.server.applicationhistoryservice.records.Container
 import org.apache.hadoop.yarn.server.applicationhistoryservice.records.ContainerStartData;
 
 /**
- * In-memory implementation of {@link ApplicationHistoryStore}.
- * This implementation is for test purpose only. If users improperly instantiate
- * it, they may encounter reading and writing history data in different memory
+ * In-memory implementation of {@link ApplicationHistoryStore}. This
+ * implementation is for test purpose only. If users improperly instantiate it,
+ * they may encounter reading and writing history data in different memory
  * store.
  * 
  */
 @Private
 @Unstable
-public class MemoryApplicationHistoryStore extends AbstractService
-    implements ApplicationHistoryStore {
+public class MemoryApplicationHistoryStore extends AbstractService implements
+    ApplicationHistoryStore {
 
   private final ConcurrentMap<ApplicationId, ApplicationHistoryData> applicationData =
       new ConcurrentHashMap<ApplicationId, ApplicationHistoryData>();
@@ -66,8 +66,7 @@ public class MemoryApplicationHistoryStore extends AbstractService
 
   @Override
   public Map<ApplicationId, ApplicationHistoryData> getAllApplications() {
-    return new HashMap<ApplicationId, ApplicationHistoryData>(
-        applicationData);
+    return new HashMap<ApplicationId, ApplicationHistoryData>(applicationData);
   }
 
   @Override
@@ -77,14 +76,15 @@ public class MemoryApplicationHistoryStore extends AbstractService
 
   @Override
   public Map<ApplicationAttemptId, ApplicationAttemptHistoryData>
-      getApplicationAttempts(
-          ApplicationId appId) {
+      getApplicationAttempts(ApplicationId appId) {
     ConcurrentMap<ApplicationAttemptId, ApplicationAttemptHistoryData> subMap =
         applicationAttemptData.get(appId);
     if (subMap == null) {
-      return Collections.<ApplicationAttemptId, ApplicationAttemptHistoryData>emptyMap();
+      return Collections
+        .<ApplicationAttemptId, ApplicationAttemptHistoryData> emptyMap();
     } else {
-      return new HashMap<ApplicationAttemptId, ApplicationAttemptHistoryData>(subMap);
+      return new HashMap<ApplicationAttemptId, ApplicationAttemptHistoryData>(
+        subMap);
     }
   }
 
@@ -101,8 +101,7 @@ public class MemoryApplicationHistoryStore extends AbstractService
   }
 
   @Override
-  public ContainerHistoryData getAMContainer(
-      ApplicationAttemptId appAttemptId) {
+  public ContainerHistoryData getAMContainer(ApplicationAttemptId appAttemptId) {
     ApplicationAttemptHistoryData appAttempt =
         getApplicationAttempt(appAttemptId);
     if (appAttempt == null || appAttempt.getMasterContainerId() == null) {
@@ -129,7 +128,7 @@ public class MemoryApplicationHistoryStore extends AbstractService
     ConcurrentMap<ContainerId, ContainerHistoryData> subMap =
         containerData.get(appAttemptId);
     if (subMap == null) {
-      return Collections.<ContainerId, ContainerHistoryData>emptyMap();
+      return Collections.<ContainerId, ContainerHistoryData> emptyMap();
     } else {
       return new HashMap<ContainerId, ContainerHistoryData>(subMap);
     }
@@ -140,15 +139,10 @@ public class MemoryApplicationHistoryStore extends AbstractService
       throws IOException {
     ApplicationHistoryData oldData =
         applicationData.putIfAbsent(appStart.getApplicationId(),
-            ApplicationHistoryData.newInstance(
-                appStart.getApplicationId(),
-                appStart.getApplicationName(),
-                appStart.getApplicationType(),
-                appStart.getQueue(),
-                appStart.getUser(),
-                appStart.getSubmitTime(),
-                appStart.getStartTime(),
-                Long.MAX_VALUE, null, null, null));
+          ApplicationHistoryData.newInstance(appStart.getApplicationId(),
+            appStart.getApplicationName(), appStart.getApplicationType(),
+            appStart.getQueue(), appStart.getUser(), appStart.getSubmitTime(),
+            appStart.getStartTime(), Long.MAX_VALUE, null, null, null));
     if (oldData != null) {
       throw new IOException("The start information of application "
           + appStart.getApplicationId() + " is already stored.");
@@ -182,18 +176,15 @@ public class MemoryApplicationHistoryStore extends AbstractService
       ApplicationAttemptStartData appAttemptStart) throws IOException {
     ConcurrentMap<ApplicationAttemptId, ApplicationAttemptHistoryData> subMap =
         getSubMap(appAttemptStart.getApplicationAttemptId().getApplicationId());
-    ApplicationAttemptHistoryData oldData = subMap.putIfAbsent(
-        appAttemptStart.getApplicationAttemptId(),
-        ApplicationAttemptHistoryData.newInstance(
+    ApplicationAttemptHistoryData oldData =
+        subMap.putIfAbsent(appAttemptStart.getApplicationAttemptId(),
+          ApplicationAttemptHistoryData.newInstance(
             appAttemptStart.getApplicationAttemptId(),
-            appAttemptStart.getHost(),
-            appAttemptStart.getRPCPort(),
-            appAttemptStart.getMasterContainerId(),
-            null, null, null, null));
+            appAttemptStart.getHost(), appAttemptStart.getRPCPort(),
+            appAttemptStart.getMasterContainerId(), null, null, null, null));
     if (oldData != null) {
       throw new IOException("The start information of application attempt "
-          + appAttemptStart.getApplicationAttemptId()
-          + " is already stored.");
+          + appAttemptStart.getApplicationAttemptId() + " is already stored.");
     }
   }
 
@@ -213,20 +204,22 @@ public class MemoryApplicationHistoryStore extends AbstractService
     // if the finish information is already recorded
     if (data.getYarnApplicationAttemptState() != null) {
       throw new IOException("The finish information of application attempt "
-          + appAttemptFinish.getApplicationAttemptId()
-          + " is already stored.");
+          + appAttemptFinish.getApplicationAttemptId() + " is already stored.");
     }
     data.setTrackingURL(appAttemptFinish.getTrackingURL());
     data.setDiagnosticsInfo(appAttemptFinish.getDiagnosticsInfo());
-    data.setFinalApplicationStatus(appAttemptFinish.getFinalApplicationStatus());
-    data.setYarnApplicationAttemptState(appAttemptFinish.getYarnApplicationAttemptState());
+    data
+      .setFinalApplicationStatus(appAttemptFinish.getFinalApplicationStatus());
+    data.setYarnApplicationAttemptState(appAttemptFinish
+      .getYarnApplicationAttemptState());
   }
 
   private ConcurrentMap<ApplicationAttemptId, ApplicationAttemptHistoryData>
       getSubMap(ApplicationId appId) {
-    applicationAttemptData.putIfAbsent(appId,
-        new ConcurrentHashMap<ApplicationAttemptId,
-        ApplicationAttemptHistoryData>());
+    applicationAttemptData
+      .putIfAbsent(
+        appId,
+        new ConcurrentHashMap<ApplicationAttemptId, ApplicationAttemptHistoryData>());
     return applicationAttemptData.get(appId);
   }
 
@@ -235,15 +228,13 @@ public class MemoryApplicationHistoryStore extends AbstractService
       throws IOException {
     ConcurrentMap<ContainerId, ContainerHistoryData> subMap =
         getSubMap(containerStart.getContainerId().getApplicationAttemptId());
-    ContainerHistoryData oldData = subMap.putIfAbsent(
-        containerStart.getContainerId(),
-        ContainerHistoryData.newInstance(
-            containerStart.getContainerId(),
+    ContainerHistoryData oldData =
+        subMap.putIfAbsent(containerStart.getContainerId(),
+          ContainerHistoryData.newInstance(containerStart.getContainerId(),
             containerStart.getAllocatedResource(),
-            containerStart.getAssignedNode(),
-            containerStart.getPriority(),
-            containerStart.getStartTime(),
-            Long.MAX_VALUE, null, null, Integer.MAX_VALUE, null));
+            containerStart.getAssignedNode(), containerStart.getPriority(),
+            containerStart.getStartTime(), Long.MAX_VALUE, null, null,
+            Integer.MAX_VALUE, null));
     if (oldData != null) {
       throw new IOException("The start information of container "
           + containerStart.getContainerId() + " is already stored.");
@@ -277,7 +268,7 @@ public class MemoryApplicationHistoryStore extends AbstractService
   private ConcurrentMap<ContainerId, ContainerHistoryData> getSubMap(
       ApplicationAttemptId appAttemptId) {
     containerData.putIfAbsent(appAttemptId,
-        new ConcurrentHashMap<ContainerId, ContainerHistoryData>());
+      new ConcurrentHashMap<ContainerId, ContainerHistoryData>());
     return containerData.get(appAttemptId);
   }
 
