@@ -90,6 +90,8 @@ Release 2.3.0 - UNRELEASED
 
     HADOOP-10234. "hadoop.cmd jar" does not propagate exit code. (cnauroth)
 
+    HADOOP-10112. har file listing doesn't work with wild card. (brandonli)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES

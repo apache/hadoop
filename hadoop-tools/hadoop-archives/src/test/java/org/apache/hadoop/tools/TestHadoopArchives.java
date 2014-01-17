@@ -18,7 +18,10 @@
 
 package org.apache.hadoop.tools;
 
+import static org.junit.Assert.assertTrue;
+
 import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.URI;
@@ -34,6 +37,8 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.JarFinder;
@@ -111,7 +116,14 @@ public class TestHadoopArchives {
       System.err.println(e);
     }
   }
-
+  static Path writeFile(FileSystem fs, Path f) throws IOException {
+    DataOutputStream out = fs.create(f);
+    out.writeBytes("dhruba: " + f);
+    out.close();
+    assertTrue(fs.exists(f));
+    return f;
+  }
+  
   @Test
   public void testRelativePath() throws Exception {
     fs.delete(archivePath, true);
@@ -221,5 +233,72 @@ public class TestHadoopArchives {
     System.out
         .println("lsr paths = " + paths.toString().replace(", ", ",\n  "));
     return paths;
+  }
+  
+  // Make sure har file system works with wildcards
+  @Test
+  public void testHar() throws IOException {
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2)
+        .build();
+    FileSystem fs = cluster.getFileSystem();
+    assertTrue("Not a HDFS: " + fs.getUri(),
+        fs instanceof DistributedFileSystem);
+    final DistributedFileSystem dfs = (DistributedFileSystem) fs;
+    PrintStream psBackup = System.out;
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    PrintStream psOut = new PrintStream(out);
+    System.setOut(psOut);
+    HadoopArchives archiveShell = new HadoopArchives(conf);
+    archiveShell.setConf(conf);
+
+    FsShell fsShell = new FsShell();
+    fsShell.setConf(conf);
+
+    try {
+      Path myPath = new Path("/test/dir");
+      assertTrue(fs.mkdirs(myPath));
+      assertTrue(fs.exists(myPath));
+      myPath = new Path("/test/dir/dir2");
+      assertTrue(fs.mkdirs(myPath));
+      assertTrue(fs.exists(myPath));
+      Path myFile = new Path("/test/dir/dir2/file");
+      writeFile(fs, myFile);
+      assertTrue(fs.exists(myFile));
+
+      String[] args = new String[5];
+      args[0] = "-archiveName";
+      args[1] = "foo.har";
+      args[2] = "-p";
+      args[3] = "/test/dir";
+      args[4] = "/test";
+      int val = -1;
+      try {
+        val = archiveShell.run(args);
+      } catch (Exception e) {
+        System.err.println("Exception raised from HadoopArchives.run "
+            + e.getLocalizedMessage());
+      }
+      assertTrue(val == 0);
+
+      args = new String[2];
+      args[0] = "-ls";
+      args[1] = "har:///test/foo.har/d*";
+      val = -1;
+      try {
+        val = fsShell.run(args);
+      } catch (Exception e) {
+        System.err.println("Exception raised from HadoopArchives.run "
+            + e.getLocalizedMessage());
+      }
+
+      String returnString = out.toString();
+      out.reset();
+      assertTrue(returnString.contains("har:///test/foo.har/dir2/file"));
+    } finally {
+      IOUtils.cleanup(null, dfs);
+      System.setOut(psBackup);
+      cluster.shutdown();
+    }
   }
 }

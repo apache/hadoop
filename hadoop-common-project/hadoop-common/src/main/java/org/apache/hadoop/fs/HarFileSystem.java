@@ -17,6 +17,21 @@
  */
 package org.apache.hadoop.fs;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URLDecoder;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -25,14 +40,6 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.util.LineReader;
 import org.apache.hadoop.util.Progressable;
-
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URLDecoder;
-import java.util.*;
 
 /**
  * This is an implementation of the Hadoop Archive 
@@ -664,15 +671,20 @@ public class HarFileSystem extends FileSystem {
    */
   @Override
   public FileStatus getFileStatus(Path f) throws IOException {
-    HarStatus hstatus = getFileHarStatus(f);
+    Path p = makeQualified(f);
+    if (p.toUri().getPath().length() < archivePath.toString().length()) {
+      // still in the source file system
+      return fs.getFileStatus(new Path(p.toUri().getPath()));
+    }
+
+    HarStatus hstatus = getFileHarStatus(p);
     return toFileStatus(hstatus, null);
   }
 
   private HarStatus getFileHarStatus(Path f) throws IOException {
     // get the fs DataInputStream for the underlying file
     // look up the index.
-    Path p = makeQualified(f);
-    Path harPath = getPathInHar(p);
+    Path harPath = getPathInHar(f);
     if (harPath == null) {
       throw new IOException("Invalid file name: " + f + " in " + uri);
     }
@@ -789,6 +801,11 @@ public class HarFileSystem extends FileSystem {
     // to the client
     List<FileStatus> statuses = new ArrayList<FileStatus>();
     Path tmpPath = makeQualified(f);
+    if (tmpPath.toUri().getPath().length() < archivePath.toString().length()) {
+      // still in the source file system
+      return fs.listStatus(new Path(tmpPath.toUri().getPath()));
+    }
+    
     Path harPath = getPathInHar(tmpPath);
     HarStatus hstatus = metadata.archive.get(harPath);
     if (hstatus == null) {
