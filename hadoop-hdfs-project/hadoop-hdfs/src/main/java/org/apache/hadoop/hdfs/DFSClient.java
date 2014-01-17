@@ -111,6 +111,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.client.ClientMmapManager;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
+import org.apache.hadoop.hdfs.protocol.AclException;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveIterator;
@@ -2648,10 +2649,11 @@ public class DFSClient implements java.io.Closeable {
       namenode.modifyAclEntries(src, aclSpec);
     } catch(RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
+                                     AclException.class,
                                      FileNotFoundException.class,
                                      SafeModeException.class,
-                                     UnresolvedPathException.class,
-                                     SnapshotAccessControlException.class);
+                                     SnapshotAccessControlException.class,
+                                     UnresolvedPathException.class);
     }
   }
 
@@ -2662,10 +2664,11 @@ public class DFSClient implements java.io.Closeable {
       namenode.removeAclEntries(src, aclSpec);
     } catch(RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
+                                     AclException.class,
                                      FileNotFoundException.class,
                                      SafeModeException.class,
-                                     UnresolvedPathException.class,
-                                     SnapshotAccessControlException.class);
+                                     SnapshotAccessControlException.class,
+                                     UnresolvedPathException.class);
     }
   }
 
@@ -2675,10 +2678,11 @@ public class DFSClient implements java.io.Closeable {
       namenode.removeDefaultAcl(src);
     } catch(RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
+                                     AclException.class,
                                      FileNotFoundException.class,
                                      SafeModeException.class,
-                                     UnresolvedPathException.class,
-                                     SnapshotAccessControlException.class);
+                                     SnapshotAccessControlException.class,
+                                     UnresolvedPathException.class);
     }
   }
 
@@ -2688,10 +2692,11 @@ public class DFSClient implements java.io.Closeable {
       namenode.removeAcl(src);
     } catch(RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
+                                     AclException.class,
                                      FileNotFoundException.class,
                                      SafeModeException.class,
-                                     UnresolvedPathException.class,
-                                     SnapshotAccessControlException.class);
+                                     SnapshotAccessControlException.class,
+                                     UnresolvedPathException.class);
     }
   }
 
@@ -2701,10 +2706,11 @@ public class DFSClient implements java.io.Closeable {
       namenode.setAcl(src, aclSpec);
     } catch(RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
+                                     AclException.class,
                                      FileNotFoundException.class,
                                      SafeModeException.class,
-                                     UnresolvedPathException.class,
-                                     SnapshotAccessControlException.class);
+                                     SnapshotAccessControlException.class,
+                                     UnresolvedPathException.class);
     }
   }
 

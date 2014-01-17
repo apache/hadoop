@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.shell;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -32,6 +33,7 @@ import org.apache.hadoop.fs.permission.AclEntryScope;
 import org.apache.hadoop.fs.permission.AclEntryType;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -92,9 +94,86 @@ class AclCommands extends FsCommand {
         }
         out.println("# flags: --" + stickyFlag);
       }
-      for (AclEntry entry : entries) {
-        out.println(entry);
+
+      FsPermission perm = item.stat.getPermission();
+      if (perm.getAclBit()) {
+        printExtendedAcl(perm, entries);
+      } else {
+        printMinimalAcl(perm);
       }
+    }
+
+    /**
+     * Prints an extended ACL, including all extended ACL entries and also the
+     * base entries implied by the permission bits.
+     *
+     * @param perm FsPermission of file
+     * @param entries List<AclEntry> containing ACL entries of file
+     */
+    private void printExtendedAcl(FsPermission perm, List<AclEntry> entries) {
+      // Print owner entry implied by owner permission bits.
+      out.println(new AclEntry.Builder()
+        .setScope(AclEntryScope.ACCESS)
+        .setType(AclEntryType.USER)
+        .setPermission(perm.getUserAction())
+        .build());
+
+      // Print all extended access ACL entries.
+      Iterator<AclEntry> entryIter = entries.iterator();
+      AclEntry curEntry = null;
+      while (entryIter.hasNext()) {
+        curEntry = entryIter.next();
+        if (curEntry.getScope() == AclEntryScope.DEFAULT) {
+          break;
+        }
+        out.println(curEntry);
+      }
+
+      // Print mask entry implied by group permission bits.
+      out.println(new AclEntry.Builder()
+        .setScope(AclEntryScope.ACCESS)
+        .setType(AclEntryType.MASK)
+        .setPermission(perm.getGroupAction())
+        .build());
+
+      // Print other entry implied by other bits.
+      out.println(new AclEntry.Builder()
+        .setScope(AclEntryScope.ACCESS)
+        .setType(AclEntryType.OTHER)
+        .setPermission(perm.getOtherAction())
+        .build());
+
+      // Print default ACL entries.
+      if (curEntry != null && curEntry.getScope() == AclEntryScope.DEFAULT) {
+        out.println(curEntry);
+      }
+      while (entryIter.hasNext()) {
+        out.println(entryIter.next());
+      }
+    }
+
+    /**
+     * Prints a minimal ACL, consisting of exactly 3 ACL entries implied by the
+     * permission bits.
+     *
+     * @param perm FsPermission of file
+     */
+    private void printMinimalAcl(FsPermission perm) {
+      out.println(new AclEntry.Builder()
+        .setScope(AclEntryScope.ACCESS)
+        .setType(AclEntryType.USER)
+        .setPermission(perm.getUserAction())
+        .build());
+      out.println(new AclEntry.Builder()
+        .setScope(AclEntryScope.ACCESS)
+        .setType(AclEntryType.GROUP)
+        .setPermission(perm.getGroupAction())
+        .build());
+      out.println(new AclEntry.Builder()
+        .setScope(AclEntryScope.ACCESS)
+        .setType(AclEntryType.OTHER)
+        .setPermission(perm.getOtherAction())
+        .build());
     }
   }
 

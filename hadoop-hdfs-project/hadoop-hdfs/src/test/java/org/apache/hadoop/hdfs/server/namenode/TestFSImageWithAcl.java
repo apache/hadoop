@@ -17,15 +17,17 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.apache.hadoop.hdfs.server.namenode.AclTestHelpers.*;
+import static org.apache.hadoop.fs.permission.AclEntryScope.*;
+import static org.apache.hadoop.fs.permission.AclEntryType.*;
+import static org.apache.hadoop.fs.permission.FsAction.*;
+
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.AclEntry;
-import org.apache.hadoop.fs.permission.AclEntryScope;
-import org.apache.hadoop.fs.permission.AclEntryType;
 import org.apache.hadoop.fs.permission.AclStatus;
-import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
@@ -59,9 +61,8 @@ public class TestFSImageWithAcl {
     fs.mkdirs(new Path("/23"));
 
     AclEntry e = new AclEntry.Builder().setName("foo")
-        .setPermission(FsAction.READ_EXECUTE).setScope(AclEntryScope.DEFAULT)
-        .setType(AclEntryType.OTHER).build();
-    fs.setAcl(p, Lists.newArrayList(e));
+        .setPermission(READ_EXECUTE).setScope(ACCESS).setType(USER).build();
+    fs.modifyAclEntries(p, Lists.newArrayList(e));
 
     if (persistNamespace) {
       fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
@@ -75,7 +76,24 @@ public class TestFSImageWithAcl {
     AclStatus s = cluster.getNamesystem().getAclStatus(p.toString());
     AclEntry[] returned = Lists.newArrayList(s.getEntries()).toArray(
         new AclEntry[0]);
-    Assert.assertArrayEquals(new AclEntry[] { e }, returned);
+    Assert.assertArrayEquals(new AclEntry[] {
+        aclEntry(ACCESS, USER, "foo", READ_EXECUTE),
+        aclEntry(ACCESS, GROUP, READ) }, returned);
+
+    fs.removeAcl(p);
+
+    if (persistNamespace) {
+      fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      fs.saveNamespace();
+      fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    }
+
+    cluster.restartNameNode();
+    cluster.waitActive();
+
+    s = cluster.getNamesystem().getAclStatus(p.toString());
+    returned = Lists.newArrayList(s.getEntries()).toArray(new AclEntry[0]);
+    Assert.assertArrayEquals(new AclEntry[] { }, returned);
   }
 
   @Test

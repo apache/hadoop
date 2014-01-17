@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
@@ -328,10 +329,46 @@ public class TestSafeMode {
         fs.setTimes(file1, 0, 0);
       }});
 
+    runFsFun("modifyAclEntries while in SM", new FSRun() {
+      @Override
+      public void run(FileSystem fs) throws IOException {
+        fs.modifyAclEntries(file1, Lists.<AclEntry>newArrayList());
+      }});
+
+    runFsFun("removeAclEntries while in SM", new FSRun() {
+      @Override
+      public void run(FileSystem fs) throws IOException {
+        fs.removeAclEntries(file1, Lists.<AclEntry>newArrayList());
+      }});
+
+    runFsFun("removeDefaultAcl while in SM", new FSRun() {
+      @Override
+      public void run(FileSystem fs) throws IOException {
+        fs.removeDefaultAcl(file1);
+      }});
+
+    runFsFun("removeAcl while in SM", new FSRun() {
+      @Override
+      public void run(FileSystem fs) throws IOException {
+        fs.removeAcl(file1);
+      }});
+
+    runFsFun("setAcl while in SM", new FSRun() {
+      @Override
+      public void run(FileSystem fs) throws IOException {
+        fs.setAcl(file1, Lists.<AclEntry>newArrayList());
+      }});
+
     try {
       DFSTestUtil.readFile(fs, file1);
     } catch (IOException ioe) {
       fail("Set times failed while in SM");
+    }
+
+    try {
+      fs.getAclStatus(file1);
+    } catch (IOException ioe) {
+      fail("getAclStatus failed while in SM");
     }
 
     assertFalse("Could not leave SM",

@@ -1151,7 +1151,18 @@ public class FSDirectory implements Closeable {
     if (inode == null) {
       throw new FileNotFoundException("File does not exist: " + src);
     }
-    inode.setPermission(permissions, inodesInPath.getLatestSnapshotId());
+    int snapshotId = inodesInPath.getLatestSnapshotId();
+    FsPermission oldPerm = inode.getPermissionStatus(snapshotId).getPermission();
+    // This method cannot toggle the ACL bit.
+    if (oldPerm.getAclBit() != permissions.getAclBit()) {
+      permissions = new FsPermission(
+        permissions.getUserAction(),
+        permissions.getGroupAction(),
+        permissions.getOtherAction(),
+        permissions.getStickyBit(),
+        oldPerm.getAclBit());
+    }
+    inode.setPermission(permissions, snapshotId);
   }
 
   void setOwner(String src, String username, String groupname)
@@ -2631,6 +2642,78 @@ public class FSDirectory implements Closeable {
     return addINode(path, symlink) ? symlink : null;
   }
 
+  void modifyAclEntries(String src, List<AclEntry> aclSpec) throws IOException {
+    writeLock();
+    try {
+      List<AclEntry> newAcl = unprotectedModifyAclEntries(src, aclSpec);
+      fsImage.getEditLog().logSetAcl(src, newAcl);
+    } finally {
+      writeUnlock();
+    }
+  }
+
+  private List<AclEntry> unprotectedModifyAclEntries(String src,
+      List<AclEntry> aclSpec) throws IOException {
+    assert hasWriteLock();
+    INodesInPath iip = rootDir.getINodesInPath4Write(normalizePath(src), true);
+    INodeWithAdditionalFields inode = resolveINodeWithAdditionalFields(src, iip);
+    int snapshotId = iip.getLatestSnapshotId();
+    List<AclEntry> existingAcl = AclStorage.readINodeLogicalAcl(inode,
+      snapshotId);
+    List<AclEntry> newAcl = AclTransformation.mergeAclEntries(existingAcl,
+      aclSpec);
+    AclStorage.updateINodeAcl(inode, newAcl, snapshotId);
+    return newAcl;
+  }
+
+  void removeAclEntries(String src, List<AclEntry> aclSpec) throws IOException {
+    writeLock();
+    try {
+      List<AclEntry> newAcl = unprotectedRemoveAclEntries(src, aclSpec);
+      fsImage.getEditLog().logSetAcl(src, newAcl);
+    } finally {
+      writeUnlock();
+    }
+  }
+
+  private List<AclEntry> unprotectedRemoveAclEntries(String src,
+      List<AclEntry> aclSpec) throws IOException {
+    assert hasWriteLock();
+    INodesInPath iip = rootDir.getINodesInPath4Write(normalizePath(src), true);
+    INodeWithAdditionalFields inode = resolveINodeWithAdditionalFields(src, iip);
+    int snapshotId = iip.getLatestSnapshotId();
+    List<AclEntry> existingAcl = AclStorage.readINodeLogicalAcl(inode,
+      snapshotId);
+    List<AclEntry> newAcl = AclTransformation.filterAclEntriesByAclSpec(
+      existingAcl, aclSpec);
+    AclStorage.updateINodeAcl(inode, newAcl, snapshotId);
+    return newAcl;
+  }
+
+  void removeDefaultAcl(String src) throws IOException {
+    writeLock();
+    try {
+      List<AclEntry> newAcl = unprotectedRemoveDefaultAcl(src);
+      fsImage.getEditLog().logSetAcl(src, newAcl);
+    } finally {
+      writeUnlock();
+    }
+  }
+
+  private List<AclEntry> unprotectedRemoveDefaultAcl(String src)
+      throws IOException {
+    assert hasWriteLock();
+    INodesInPath iip = rootDir.getINodesInPath4Write(normalizePath(src), true);
+    INodeWithAdditionalFields inode = resolveINodeWithAdditionalFields(src, iip);
+    int snapshotId = iip.getLatestSnapshotId();
+    List<AclEntry> existingAcl = AclStorage.readINodeLogicalAcl(inode,
+      snapshotId);
+    List<AclEntry> newAcl = AclTransformation.filterDefaultAclEntries(
+      existingAcl);
+    AclStorage.updateINodeAcl(inode, newAcl, snapshotId);
+    return newAcl;
+  }
+
   void removeAcl(String src) throws IOException {
     writeLock();
     try {
@@ -2641,74 +2724,67 @@ public class FSDirectory implements Closeable {
     }
   }
 
-  private void unprotectedRemoveAcl(String src) throws UnresolvedLinkException,
-      SnapshotAccessControlException, FileNotFoundException {
+  private void unprotectedRemoveAcl(String src) throws IOException {
     assert hasWriteLock();
-    final INodeWithAdditionalFields node = resolveINodeWithAdditionalField(src);
-    AclFeature f = node.getAclFeature();
-    if (f != null)
-      node.removeAclFeature();
+    INodesInPath iip = rootDir.getINodesInPath4Write(normalizePath(src), true);
+    INodeWithAdditionalFields inode = resolveINodeWithAdditionalFields(src, iip);
+    int snapshotId = iip.getLatestSnapshotId();
+    AclStorage.removeINodeAcl(inode, snapshotId);
   }
 
   void setAcl(String src, List<AclEntry> aclSpec) throws IOException {
     writeLock();
     try {
-      unprotectedSetAcl(src, aclSpec);
-      fsImage.getEditLog().logSetAcl(src, aclSpec);
+      List<AclEntry> newAcl = unprotectedSetAcl(src, aclSpec);
+      fsImage.getEditLog().logSetAcl(src, newAcl);
     } finally {
       writeUnlock();
     }
   }
 
-  void unprotectedSetAcl(String src, List<AclEntry> aclSpec)
-      throws UnresolvedLinkException, SnapshotAccessControlException,
-      FileNotFoundException {
+  List<AclEntry> unprotectedSetAcl(String src, List<AclEntry> aclSpec)
+      throws IOException {
+    // ACL removal is logged to edits as OP_SET_ACL with an empty list.
+    if (aclSpec.isEmpty()) {
+      unprotectedRemoveAcl(src);
+      return AclFeature.EMPTY_ENTRY_LIST;
+    }
+
     assert hasWriteLock();
-    final INodeWithAdditionalFields node = resolveINodeWithAdditionalField(src);
-    AclFeature f = node.getAclFeature();
-
-    if (aclSpec.size() == 0) {
-      if (f != null)
-        node.removeAclFeature();
-      return;
-    }
-
-    if (f == null) {
-      f = new AclFeature();
-      node.addAclFeature(f);
-    }
-    f.setEntries(aclSpec);
+    INodesInPath iip = rootDir.getINodesInPath4Write(normalizePath(src), true);
+    INodeWithAdditionalFields inode = resolveINodeWithAdditionalFields(src, iip);
+    int snapshotId = iip.getLatestSnapshotId();
+    List<AclEntry> existingAcl = AclStorage.readINodeLogicalAcl(inode,
+      snapshotId);
+    List<AclEntry> newAcl = AclTransformation.replaceAclEntries(existingAcl,
+      aclSpec);
+    AclStorage.updateINodeAcl(inode, newAcl, snapshotId);
+    return newAcl;
   }
 
   AclStatus getAclStatus(String src) throws IOException {
     readLock();
     try {
-      final INodeWithAdditionalFields node = resolveINodeWithAdditionalField(src);
-      AclFeature f = node.getAclFeature();
-
-      AclStatus.Builder builder = new AclStatus.Builder()
-          .owner(node.getUserName()).group(node.getGroupName())
-          .stickyBit(node.getFsPermission().getStickyBit());
-      if (f != null) {
-        builder.addEntries(f.getEntries());
-      }
-      return builder.build();
+      INodesInPath iip = rootDir.getINodesInPath4Write(normalizePath(src), true);
+      final INodeWithAdditionalFields inode = resolveINodeWithAdditionalFields(
+        src, iip);
+      int snapshotId = iip.getLatestSnapshotId();
+      List<AclEntry> acl = AclStorage.readINodeAcl(inode, snapshotId);
+      return new AclStatus.Builder()
+          .owner(inode.getUserName()).group(inode.getGroupName())
+          .stickyBit(inode.getFsPermission(snapshotId).getStickyBit())
+          .addEntries(acl).build();
     } finally {
       readUnlock();
     }
   }
 
-  private INodeWithAdditionalFields resolveINodeWithAdditionalField(String src)
-      throws UnresolvedLinkException, SnapshotAccessControlException,
-      FileNotFoundException {
-    String srcs = normalizePath(src);
-    final INodesInPath iip = rootDir.getINodesInPath4Write(srcs, true);
+  private static INodeWithAdditionalFields resolveINodeWithAdditionalFields(
+      String src, INodesInPath iip) throws FileNotFoundException {
     INode inode = iip.getLastINode();
     if (!(inode instanceof INodeWithAdditionalFields))
       throw new FileNotFoundException("cannot find " + src);
-
-    final INodeWithAdditionalFields node = (INodeWithAdditionalFields) inode;
-    return node;
+    return (INodeWithAdditionalFields)inode;
   }
 
   /**

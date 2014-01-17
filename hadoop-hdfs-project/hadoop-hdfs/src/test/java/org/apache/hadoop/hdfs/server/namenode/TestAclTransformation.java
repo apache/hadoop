@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import static org.apache.hadoop.fs.permission.AclEntryScope.*;
 import static org.apache.hadoop.fs.permission.AclEntryType.*;
 import static org.apache.hadoop.fs.permission.FsAction.*;
+import static org.apache.hadoop.hdfs.server.namenode.AclTestHelpers.*;
 import static org.apache.hadoop.hdfs.server.namenode.AclTransformation.*;
 import static org.junit.Assert.*;
 
@@ -1203,40 +1204,5 @@ public class TestAclTransformation {
       aclEntry(ACCESS, GROUP, "sales", ALL),
       aclEntry(ACCESS, MASK, ALL));
     replaceAclEntries(existing, aclSpec);
-  }
-
-  private static AclEntry aclEntry(AclEntryScope scope, AclEntryType type,
-      FsAction permission) {
-    return new AclEntry.Builder()
-      .setScope(scope)
-      .setType(type)
-      .setPermission(permission)
-      .build();
-  }
-
-  private static AclEntry aclEntry(AclEntryScope scope, AclEntryType type,
-      String name, FsAction permission) {
-    return new AclEntry.Builder()
-      .setScope(scope)
-      .setType(type)
-      .setName(name)
-      .setPermission(permission)
-      .build();
-  }
-
-  private static AclEntry aclEntry(AclEntryScope scope, AclEntryType type,
-      String name) {
-    return new AclEntry.Builder()
-      .setScope(scope)
-      .setType(type)
-      .setName(name)
-      .build();
-  }
-
-  private static AclEntry aclEntry(AclEntryScope scope, AclEntryType type) {
-    return new AclEntry.Builder()
-      .setScope(scope)
-      .setType(type)
-      .build();
   }
 }

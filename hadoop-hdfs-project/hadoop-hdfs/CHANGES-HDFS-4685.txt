@@ -30,6 +30,9 @@ HDFS-4685 (Unreleased)
 
     HADOOP-10220. Add ACL indicator bit to FsPermission. (cnauroth)
 
+    HDFS-5758. NameNode: complete implementation of inode modifications for
+    ACLs. (Chris Nauroth via wheat9)
+
   OPTIMIZATIONS
 
   BUG FIXES
