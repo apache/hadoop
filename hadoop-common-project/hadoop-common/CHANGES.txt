@@ -528,6 +528,8 @@ Release 2.4.0 - UNRELEASED
     HADOOP-10125. no need to process RPC request if the client connection
     has been dropped (Ming Ma via brandonli)
 
+    HADOOP-10235. Hadoop tarball has 2 versions of stax-api JARs. (tucu)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
