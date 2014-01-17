@@ -361,7 +361,6 @@ public class TaskAttemptListenerImpl extends CompositeService
     if (taskStatus == null) {
       //We are using statusUpdate only as a simple ping
       LOG.info("Ping from " + taskAttemptID.toString());
-      taskHeartbeatHandler.progressing(yarnAttemptID);
       return feedback;
     }
 
