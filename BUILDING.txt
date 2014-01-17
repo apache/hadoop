@@ -183,11 +183,11 @@ Building on Windows
 Requirements:
 
 * Windows System
-* JDK 1.6
-* Maven 3.0
-* Windows SDK or Visual Studio 2010 Professional
-* ProtocolBuffer 2.4.1+ (for MapReduce and HDFS)
+* JDK 1.6+
+* Maven 3.0 or later
 * Findbugs 1.3.9 (if running findbugs)
+* ProtocolBuffer 2.5.0
+* Windows SDK or Visual Studio 2010 Professional
 * Unix command-line tools from GnuWin32 or Cygwin: sh, mkdir, rm, cp, tar, gzip
 * Internet connection for first build (to fetch all Maven and Hadoop dependencies)
 
