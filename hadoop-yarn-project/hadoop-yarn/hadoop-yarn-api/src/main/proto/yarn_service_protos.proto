@@ -127,6 +127,14 @@ message GetClusterMetricsResponseProto {
   optional YarnClusterMetricsProto cluster_metrics = 1;
 }
 
+message MoveApplicationAcrossQueuesRequestProto {
+  required ApplicationIdProto application_id = 1;
+  required string target_queue = 2;
+}
+
+message MoveApplicationAcrossQueuesResponseProto {
+}
+
 message GetApplicationsRequestProto {
   repeated string application_types = 1;
   repeated YarnApplicationStateProto application_states = 2;

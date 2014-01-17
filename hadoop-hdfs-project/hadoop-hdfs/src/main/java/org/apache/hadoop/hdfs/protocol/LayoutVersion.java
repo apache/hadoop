@@ -109,10 +109,10 @@ public class LayoutVersion {
         + "enable rebuilding retry cache in case of HA failover"),
     EDITLOG_ADD_BLOCK(-48, "Add new editlog that only records allocation of "
         + "the new block instead of the entire block list"),
-    CACHING(-49, "Support for cache pools and path-based caching"),
-    ADD_DATANODE_AND_STORAGE_UUIDS(-50, "Replace StorageID with DatanodeUuid."
+    ADD_DATANODE_AND_STORAGE_UUIDS(-49, "Replace StorageID with DatanodeUuid."
         + " Use distinct StorageUuid per storage directory."),
-    ADD_LAYOUT_FLAGS(-51, "Add support for layout flags.");
+    ADD_LAYOUT_FLAGS(-50, "Add support for layout flags."),
+    CACHING(-51, "Support for cache pools and path-based caching");
 
     final int lv;
     final int ancestorLV;
