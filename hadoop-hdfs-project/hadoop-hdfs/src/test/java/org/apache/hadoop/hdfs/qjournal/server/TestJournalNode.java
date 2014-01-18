@@ -191,6 +191,7 @@ public class TestJournalNode {
         "/getJournal?segmentTxId=1&jid=" + journalId));
     byte[] expected = Bytes.concat(
             Ints.toByteArray(HdfsConstants.LAYOUT_VERSION),
+            (new byte[] { 0, 0, 0, 0 }), // layout flags section
             EDITS_DATA);
 
     assertArrayEquals(expected, retrievedViaHttp);

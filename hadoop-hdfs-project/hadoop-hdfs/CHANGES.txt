@@ -478,6 +478,15 @@ Trunk (Unreleased)
 
     HDFS-5726. Fix compilation error in AbstractINodeDiff for JDK7. (jing9)
 
+    HDFS-5768. Consolidate the serialization code in DelegationTokenSecretManager 
+    (Haohui Mai via brandonli)
+
+    HDFS-5775. Consolidate the code for serialization in CacheManager
+    (Haohui Mai via brandonli)
+
+    HDFS-5794. Fix the inconsistency of layout version number of 
+    ADD_DATANODE_AND_STORAGE_UUIDS between trunk and branch-2. (jing9)
+
 Release 2.4.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -511,6 +520,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-2832. Heterogeneous Storages support in HDFS phase 1 - treat DataNode
     as a collection of storages (see breakdown of tasks below for features and
     contributors).
+
+    HDFS-5784. reserve space in edit log header and fsimage header for feature
+    flag section (cmccabe)
 
   IMPROVEMENTS
 
@@ -674,6 +686,15 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-5220. Expose group resolution time as metric (jxiang via cmccabe)
 
+    HDFS-5762. BlockReaderLocal doesn't return -1 on EOF when doing zero-length
+    reads (Colin Patrick McCabe)
+
+    HDFS-5766. In DFSInputStream, do not add datanode to deadNodes after
+    InvalidEncryptionKeyException in fetchBlockByteRange (Liang Xie via Colin
+    Patrick McCabe)
+
+    HDFS-5704. Change OP_UPDATE_BLOCKS with a new OP_ADD_BLOCK. (jing9)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn)
@@ -751,6 +772,8 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-5579. Under construction files make DataNode decommission take very long
     hours. (zhaoyunjiong via jing9)
+
+    HDFS-5777. Update LayoutVersion for the new editlog op OP_ADD_BLOCK. (jing9)
 
   BREAKDOWN OF HDFS-2832 SUBTASKS AND RELATED JIRAS
 

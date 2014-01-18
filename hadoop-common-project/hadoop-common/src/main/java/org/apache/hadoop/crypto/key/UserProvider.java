@@ -50,6 +50,11 @@ public class UserProvider extends KeyProvider {
   }
 
   @Override
+  public boolean isTransient() {
+    return true;
+  }
+
+  @Override
   public KeyVersion getKeyVersion(String versionName) {
     byte[] bytes = credentials.getSecretKey(new Text(versionName));
     if (bytes == null) {
