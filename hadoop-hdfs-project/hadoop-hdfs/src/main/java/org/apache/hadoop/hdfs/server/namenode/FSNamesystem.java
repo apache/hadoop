@@ -168,6 +168,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
+import org.apache.hadoop.hdfs.protocol.RollingUpgradeException;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffReportEntry;
@@ -393,6 +394,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   private final SnapshotManager snapshotManager;
   private final CacheManager cacheManager;
   private final DatanodeStatistics datanodeStatistics;
+
+  private RollingUpgradeInfo rollingUpgradeInfo;
 
   // Block pool ID used by this namenode
   private String blockPoolId;
@@ -7054,25 +7057,75 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
   }
 
-  RollingUpgradeInfo addUpgradeMarker() throws IOException {
-    final long startTime;
+  RollingUpgradeInfo queryRollingUpgrade() throws IOException {
+    checkSuperuserPrivilege();
+    checkOperation(OperationCategory.READ);
+    readLock();
+    try {
+      return rollingUpgradeInfo != null? rollingUpgradeInfo
+          : RollingUpgradeInfo.EMPTY_INFO;
+    } finally {
+      readUnlock();
+    }
+  }
+
+  RollingUpgradeInfo startRollingUpgrade() throws IOException {
     checkSuperuserPrivilege();
     checkOperation(OperationCategory.WRITE);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
+      final String err = "Failed to start rolling upgrade";
+      checkNameNodeSafeMode(err);
 
-      startTime = now();
-      getEditLog().logUpgradeMarker();
+      if (rollingUpgradeInfo != null) {
+        throw new RollingUpgradeException(err
+            + " since a rolling upgrade is already in progress."
+            + "\nExisting rolling upgrade info: " + rollingUpgradeInfo);
+      }
+
+      final CheckpointSignature cs = getFSImage().rollEditLog();
+      LOG.info("Successfully rolled edit log for preparing rolling upgrade."
+          + " Checkpoint signature: " + cs);
+      rollingUpgradeInfo = new RollingUpgradeInfo(now());
+      getEditLog().logUpgradeMarker(rollingUpgradeInfo.getStartTime());
     } finally {
       writeUnlock();
     }
     getEditLog().logSync();
 
     if (auditLog.isInfoEnabled() && isExternalInvocation()) {
-      logAuditEvent(true, "upgrade", null, null, null);
+      logAuditEvent(true, "startRollingUpgrade", null, null, null);
     }
-    return new RollingUpgradeInfo(startTime, 0L);
+    return rollingUpgradeInfo;
+  }
+
+  RollingUpgradeInfo finalizeRollingUpgrade() throws IOException {
+    checkSuperuserPrivilege();
+    checkOperation(OperationCategory.WRITE);
+    writeLock();
+    final RollingUpgradeInfo returnInfo;
+    try {
+      checkOperation(OperationCategory.WRITE);
+      final String err = "Failed to finalize rolling upgrade";
+      checkNameNodeSafeMode(err);
+
+      if (rollingUpgradeInfo == null) {
+        throw new RollingUpgradeException(err
+            + " since there is no rolling upgrade in progress.");
+      }
+
+      returnInfo = new RollingUpgradeInfo(rollingUpgradeInfo.getStartTime(), now());
+      getFSImage().saveNamespace(this);
+      rollingUpgradeInfo = null;
+    } finally {
+      writeUnlock();
+    }
+
+    if (auditLog.isInfoEnabled() && isExternalInvocation()) {
+      logAuditEvent(true, "finalizeRollingUpgrade", null, null, null);
+    }
+    return returnInfo;
   }
 
   long addCacheDirective(CacheDirectiveInfo directive, EnumSet<CacheFlag> flags)

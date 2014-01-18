@@ -35,6 +35,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
+import org.apache.hadoop.util.Time;
 
 /**
  * OfflineEditsViewerHelper is a helper class for TestOfflineEditsViewer,
@@ -128,7 +129,7 @@ public class OfflineEditsViewerHelper {
     DFSTestUtil.runOperations(cluster, dfs, cluster.getConfiguration(0),
         dfs.getDefaultBlockSize(), 0);
 
-    cluster.getNamesystem().addUpgradeMarker();
+    cluster.getNamesystem().getEditLog().logUpgradeMarker(Time.now());
 
     // Force a roll so we get an OP_END_LOG_SEGMENT txn
     return cluster.getNameNodeRpc().rollEditLog();

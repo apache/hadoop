@@ -53,7 +53,7 @@ public class TestEditLogUpgradeMarker {
         dfs.mkdirs(foo);
   
         //add marker
-        namesystem.addUpgradeMarker();
+        namesystem.startRollingUpgrade();
   
         dfs.mkdirs(bar);
         

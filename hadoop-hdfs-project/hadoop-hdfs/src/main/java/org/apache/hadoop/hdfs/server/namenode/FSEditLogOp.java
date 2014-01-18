@@ -3284,6 +3284,8 @@ public abstract class FSEditLogOp {
    * Operation corresponding to upgrade
    */
   static class UpgradeMarkerOp extends FSEditLogOp { // @Idempotent
+    private long startTime;
+
     public UpgradeMarkerOp() {
       super(OP_UPGRADE_MARKER);
     }
@@ -3292,20 +3294,29 @@ public abstract class FSEditLogOp {
       return (UpgradeMarkerOp) cache.get(OP_UPGRADE_MARKER);
     }
 
+    void setStartTime(long startTime) {
+      this.startTime = startTime;
+    }
+
     @Override
     void readFields(DataInputStream in, int logVersion) throws IOException {
+      startTime = in.readLong();
     }
 
     @Override
     public void writeFields(DataOutputStream out) throws IOException {
+      FSImageSerialization.writeLong(startTime, out);
     }
 
     @Override
     protected void toXml(ContentHandler contentHandler) throws SAXException {
+      XMLUtils.addSaxString(contentHandler, "STARTTIME",
+          Long.valueOf(startTime).toString());
     }
 
     @Override
     void fromXml(Stanza st) throws InvalidXmlException {
+      this.startTime = Long.valueOf(st.getValue("STARTTIME"));
     }
 
     @Override

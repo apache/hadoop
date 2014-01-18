@@ -28,9 +28,15 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class RollingUpgradeInfo {
+  public static final RollingUpgradeInfo EMPTY_INFO = new RollingUpgradeInfo(0); 
+
   private long startTime;
   private long finalizeTime;
   
+  public RollingUpgradeInfo(long startTime) {
+    this(startTime, 0L);
+  }
+
   public RollingUpgradeInfo(long startTime, long finalizeTime) {
     this.startTime = startTime;
     this.finalizeTime = finalizeTime;

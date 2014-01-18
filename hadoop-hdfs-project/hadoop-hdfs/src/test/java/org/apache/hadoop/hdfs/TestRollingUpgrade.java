@@ -32,7 +32,7 @@ public class TestRollingUpgrade {
    * Test DFSAdmin Upgrade Command.
    */
   @Test
-  public void testDFSAdminRollingUpgradeCommand() throws Exception {
+  public void testDFSAdminRollingUpgradeCommands() throws Exception {
     // start a cluster 
     final Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = null;
@@ -42,6 +42,7 @@ public class TestRollingUpgrade {
 
       final Path foo = new Path("/foo");
       final Path bar = new Path("/bar");
+      final Path baz = new Path("/baz");
 
       {
         final DistributedFileSystem dfs = cluster.getFileSystem();
@@ -49,22 +50,56 @@ public class TestRollingUpgrade {
         dfs.mkdirs(foo);
 
         {
+          //illegal argument
+          final String[] args = {"-rollingUpgrade", "abc"};
+          Assert.assertTrue(dfsadmin.run(args) != 0);
+        }
+
+        {
+          //query rolling upgrade
+          final String[] args = {"-rollingUpgrade"};
+          Assert.assertEquals(0, dfsadmin.run(args));
+        }
+
+        {
           //start rolling upgrade
           final String[] args = {"-rollingUpgrade", "start"};
-          dfsadmin.run(args);
+          Assert.assertEquals(0, dfsadmin.run(args));
+        }
+
+        {
+          //query rolling upgrade
+          final String[] args = {"-rollingUpgrade", "query"};
+          Assert.assertEquals(0, dfsadmin.run(args));
         }
 
         dfs.mkdirs(bar);
         
+        {
+          //finalize rolling upgrade
+          final String[] args = {"-rollingUpgrade", "finalize"};
+          Assert.assertEquals(0, dfsadmin.run(args));
+        }
+
+        dfs.mkdirs(baz);
+
+        {
+          //query rolling upgrade
+          final String[] args = {"-rollingUpgrade"};
+          Assert.assertEquals(0, dfsadmin.run(args));
+        }
+
         Assert.assertTrue(dfs.exists(foo));
         Assert.assertTrue(dfs.exists(bar));
+        Assert.assertTrue(dfs.exists(baz));
       }
-      
+
       cluster.restartNameNode();
       {
         final DistributedFileSystem dfs = cluster.getFileSystem();
         Assert.assertTrue(dfs.exists(foo));
-        Assert.assertFalse(dfs.exists(bar));
+        Assert.assertTrue(dfs.exists(bar));
+        Assert.assertTrue(dfs.exists(baz));
       }
     } finally {
       if(cluster != null) cluster.shutdown();
