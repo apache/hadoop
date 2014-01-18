@@ -928,6 +928,9 @@ public class YarnConfiguration extends Configuration {
   public static final String YARN_APP_CONTAINER_LOG_SIZE =
       YARN_PREFIX + "app.container.log.filesize";
 
+  public static final String YARN_APP_CONTAINER_LOG_BACKUPS =
+      YARN_PREFIX + "app.container.log.backups";
+
   ////////////////////////////////
   // Other Configs
   ////////////////////////////////

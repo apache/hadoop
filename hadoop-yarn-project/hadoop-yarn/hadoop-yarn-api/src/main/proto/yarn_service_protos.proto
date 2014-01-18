@@ -44,6 +44,7 @@ message RegisterApplicationMasterResponseProto {
   optional ResourceProto maximumCapability = 1;
   optional bytes client_to_am_token_master_key = 2;
   repeated ApplicationACLMapProto application_ACLs = 3;
+  repeated ContainerProto containers_from_previous_attempt = 4;
 }
 
 message FinishApplicationMasterRequestProto {
@@ -124,6 +125,14 @@ message GetClusterMetricsRequestProto {
 
 message GetClusterMetricsResponseProto {
   optional YarnClusterMetricsProto cluster_metrics = 1;
+}
+
+message MoveApplicationAcrossQueuesRequestProto {
+  required ApplicationIdProto application_id = 1;
+  required string target_queue = 2;
+}
+
+message MoveApplicationAcrossQueuesResponseProto {
 }
 
 message GetApplicationsRequestProto {

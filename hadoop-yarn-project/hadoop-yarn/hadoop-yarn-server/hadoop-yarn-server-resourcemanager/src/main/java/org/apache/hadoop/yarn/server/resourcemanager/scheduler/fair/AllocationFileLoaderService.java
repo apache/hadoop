@@ -387,7 +387,7 @@ public class AllocationFileLoaderService extends AbstractService {
     if (maxQueueResources.containsKey(queueName) && minQueueResources.containsKey(queueName)
         && !Resources.fitsIn(minQueueResources.get(queueName),
             maxQueueResources.get(queueName))) {
-      LOG.warn(String.format("Queue %s has max resources %d less than min resources %d",
+      LOG.warn(String.format("Queue %s has max resources %s less than min resources %s",
           queueName, maxQueueResources.get(queueName), minQueueResources.get(queueName)));
     }
   }

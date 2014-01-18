@@ -97,29 +97,30 @@ public class TestFileAppendRestart {
 
       counts = FSImageTestUtil.countEditLogOpTypes(editLog);
       // OP_ADD to create file
-      // OP_UPDATE_BLOCKS for first block
+      // OP_ADD_BLOCK for first block
       // OP_CLOSE to close file
       // OP_ADD to reopen file
-      // OP_UPDATE_BLOCKS for second block
+      // OP_ADD_BLOCK for second block
       // OP_CLOSE to close file
       assertEquals(2, (int)counts.get(FSEditLogOpCodes.OP_ADD).held);
-      assertEquals(2, (int)counts.get(FSEditLogOpCodes.OP_UPDATE_BLOCKS).held);
+      assertEquals(2, (int)counts.get(FSEditLogOpCodes.OP_ADD_BLOCK).held);
       assertEquals(2, (int)counts.get(FSEditLogOpCodes.OP_CLOSE).held);
 
       Path p2 = new Path("/not-block-boundaries");
       writeAndAppend(fs, p2, BLOCK_SIZE/2, BLOCK_SIZE);
       counts = FSImageTestUtil.countEditLogOpTypes(editLog);
       // OP_ADD to create file
-      // OP_UPDATE_BLOCKS for first block
+      // OP_ADD_BLOCK for first block
       // OP_CLOSE to close file
       // OP_ADD to re-establish the lease
       // OP_UPDATE_BLOCKS from the updatePipeline call (increments genstamp of last block)
-      // OP_UPDATE_BLOCKS at the start of the second block
+      // OP_ADD_BLOCK at the start of the second block
       // OP_CLOSE to close file
-      // Total: 2 OP_ADDs, 3 OP_UPDATE_BLOCKS, and 2 OP_CLOSEs in addition
-      //        to the ones above
+      // Total: 2 OP_ADDs, 1 OP_UPDATE_BLOCKS, 2 OP_ADD_BLOCKs, and 2 OP_CLOSEs
+       //       in addition to the ones above
       assertEquals(2+2, (int)counts.get(FSEditLogOpCodes.OP_ADD).held);
-      assertEquals(2+3, (int)counts.get(FSEditLogOpCodes.OP_UPDATE_BLOCKS).held);
+      assertEquals(1, (int)counts.get(FSEditLogOpCodes.OP_UPDATE_BLOCKS).held);
+      assertEquals(2+2, (int)counts.get(FSEditLogOpCodes.OP_ADD_BLOCK).held);
       assertEquals(2+2, (int)counts.get(FSEditLogOpCodes.OP_CLOSE).held);
       
       cluster.restartNameNode();
@@ -176,13 +177,14 @@ public class TestFileAppendRestart {
   }
 
   /**
-   * Test to append to the file, when one of datanode in the existing pipeline is down.
-   * @throws Exception
+   * Test to append to the file, when one of datanode in the existing pipeline
+   * is down.
    */
   @Test
   public void testAppendWithPipelineRecovery() throws Exception {
     Configuration conf = new Configuration();
     MiniDFSCluster cluster = null;
+    FSDataOutputStream out = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf).manageDataDfsDirs(true)
           .manageNameDfsDirs(true).numDataNodes(4)
@@ -192,11 +194,20 @@ public class TestFileAppendRestart {
 
       DistributedFileSystem fs = cluster.getFileSystem();
       Path path = new Path("/test1");
-      DFSTestUtil.createFile(fs, path, 1024, (short) 3, 1l);
+      
+      out = fs.create(path, true, BLOCK_SIZE, (short) 3, BLOCK_SIZE);
+      AppendTestUtil.write(out, 0, 1024);
+      out.close();
 
       cluster.stopDataNode(3);
-      DFSTestUtil.appendFile(fs, path, "hello");
+      out = fs.append(path);
+      AppendTestUtil.write(out, 1024, 1024);
+      out.close();
+      
+      cluster.restartNameNode(true);
+      AppendTestUtil.check(fs, path, 2048);
     } finally {
+      IOUtils.closeStream(out);
       if (null != cluster) {
         cluster.shutdown();
       }

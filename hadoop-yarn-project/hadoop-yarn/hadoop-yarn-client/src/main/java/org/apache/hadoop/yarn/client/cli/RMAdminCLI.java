@@ -28,6 +28,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ha.HAAdmin;
 import org.apache.hadoop.ha.HAServiceTarget;
 import org.apache.hadoop.ipc.RemoteException;
@@ -364,11 +365,24 @@ public class RMAdminCLI extends HAAdmin {
   @Override
   public void setConf(Configuration conf) {
     if (conf != null) {
-      if (!(conf instanceof YarnConfiguration)) {
-        conf = new YarnConfiguration(conf);
-      }
+      conf = addSecurityConfiguration(conf);
     }
     super.setConf(conf);
+  }
+
+  /**
+   * Add the requisite security principal settings to the given Configuration,
+   * returning a copy.
+   * @param conf the original config
+   * @return a copy with the security settings added
+   */
+  private static Configuration addSecurityConfiguration(Configuration conf) {
+    // Make a copy so we don't mutate it. Also use an YarnConfiguration to
+    // force loading of yarn-site.xml.
+    conf = new YarnConfiguration(conf);
+    conf.set(CommonConfigurationKeys.HADOOP_SECURITY_SERVICE_USER_NAME_KEY,
+        conf.get(YarnConfiguration.RM_PRINCIPAL, ""));
+    return conf;
   }
 
   @Override

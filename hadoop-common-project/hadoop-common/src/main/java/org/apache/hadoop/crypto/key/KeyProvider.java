@@ -245,6 +245,17 @@ public abstract class KeyProvider {
   }
 
   /**
+   * Indicates whether this provider represents a store
+   * that is intended for transient use - such as the UserProvider
+   * is. These providers are generally used to provide access to
+   * keying material rather than for long term storage.
+   * @return true if transient, false otherwise
+   */
+  public boolean isTransient() {
+    return false;
+  }
+
+  /**
    * Get the key material for a specific version of the key. This method is used
    * when decrypting data.
    * @param versionName the name of a specific version of the key

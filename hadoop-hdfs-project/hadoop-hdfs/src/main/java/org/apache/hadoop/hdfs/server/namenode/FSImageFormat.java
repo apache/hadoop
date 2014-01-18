@@ -50,6 +50,7 @@ import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.protocol.proto.AclProtos.AclFsImageProto;
 import org.apache.hadoop.hdfs.protocolPB.PBHelper;
+import org.apache.hadoop.hdfs.protocol.LayoutFlags;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
@@ -271,6 +272,9 @@ public class FSImageFormat {
         }
         boolean supportSnapshot = LayoutVersion.supports(Feature.SNAPSHOT,
             imgVersion);
+        if (LayoutVersion.supports(Feature.ADD_LAYOUT_FLAGS, imgVersion)) {
+          LayoutFlags.read(in);
+        }
 
         // read namespaceID: first appeared in version -2
         in.readInt();
@@ -903,7 +907,7 @@ public class FSImageFormat {
         //This must not happen if security is turned on.
         return; 
       }
-      namesystem.loadSecretManagerState(in);
+      namesystem.loadSecretManagerStateCompat(in);
     }
 
     private void loadCacheManagerState(DataInput in) throws IOException {
@@ -911,7 +915,7 @@ public class FSImageFormat {
       if (!LayoutVersion.supports(Feature.CACHING, imgVersion)) {
         return;
       }
-      namesystem.getCacheManager().loadState(in);
+      namesystem.getCacheManager().loadStateCompat(in);
     }
 
     private int getLayoutVersion() {
@@ -1023,6 +1027,7 @@ public class FSImageFormat {
       DataOutputStream out = new DataOutputStream(fos);
       try {
         out.writeInt(HdfsConstants.LAYOUT_VERSION);
+        LayoutFlags.write(out);
         // We use the non-locked version of getNamespaceInfo here since
         // the coordinating thread of saveNamespace already has read-locked
         // the namespace for us. If we attempt to take another readlock
@@ -1065,9 +1070,9 @@ public class FSImageFormat {
         sourceNamesystem.saveFilesUnderConstruction(out, snapshotUCMap);
         
         context.checkCancelled();
-        sourceNamesystem.saveSecretManagerState(out, sdPath);
+        sourceNamesystem.saveSecretManagerStateCompat(out, sdPath);
         context.checkCancelled();
-        sourceNamesystem.getCacheManager().saveState(out, sdPath);
+        sourceNamesystem.getCacheManager().saveStateCompat(out, sdPath);
         context.checkCancelled();
         out.flush();
         context.checkCancelled();

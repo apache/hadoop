@@ -67,6 +67,7 @@ public class ContainerLaunchFailAppMaster extends ApplicationMaster {
         System.exit(0);
       }
       result = appMaster.run();
+      appMaster.finish();
     } catch (Throwable t) {
       LOG.fatal("Error running ApplicationMaster", t);
       System.exit(1);

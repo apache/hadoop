@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_ADD;
+import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_ADD_BLOCK;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_ADD_CACHE_DIRECTIVE;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_ADD_CACHE_POOL;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_ALLOCATE_BLOCK_ID;
@@ -175,6 +176,7 @@ public abstract class FSEditLogOp {
       inst.put(OP_ADD_CACHE_POOL, new AddCachePoolOp());
       inst.put(OP_MODIFY_CACHE_POOL, new ModifyCachePoolOp());
       inst.put(OP_REMOVE_CACHE_POOL, new RemoveCachePoolOp());
+      inst.put(OP_ADD_BLOCK, new AddBlockOp());
       inst.put(OP_SET_ACL, new SetAclOp());
     }
     
@@ -617,6 +619,108 @@ public abstract class FSEditLogOp {
       builder.append("CloseOp ");
       builder.append(stringifyMembers());
       return builder.toString();
+    }
+  }
+  
+  static class AddBlockOp extends FSEditLogOp {
+    private String path;
+    private Block penultimateBlock;
+    private Block lastBlock;
+    
+    private AddBlockOp() {
+      super(OP_ADD_BLOCK);
+    }
+    
+    static AddBlockOp getInstance(OpInstanceCache cache) {
+      return (AddBlockOp) cache.get(OP_ADD_BLOCK);
+    }
+    
+    AddBlockOp setPath(String path) {
+      this.path = path;
+      return this;
+    }
+    
+    public String getPath() {
+      return path;
+    }
+
+    AddBlockOp setPenultimateBlock(Block pBlock) {
+      this.penultimateBlock = pBlock;
+      return this;
+    }
+    
+    Block getPenultimateBlock() {
+      return penultimateBlock;
+    }
+    
+    AddBlockOp setLastBlock(Block lastBlock) {
+      this.lastBlock = lastBlock;
+      return this;
+    }
+    
+    Block getLastBlock() {
+      return lastBlock;
+    }
+
+    @Override
+    public void writeFields(DataOutputStream out) throws IOException {
+      FSImageSerialization.writeString(path, out);
+      int size = penultimateBlock != null ? 2 : 1;
+      Block[] blocks = new Block[size];
+      if (penultimateBlock != null) {
+        blocks[0] = penultimateBlock;
+      }
+      blocks[size - 1] = lastBlock;
+      FSImageSerialization.writeCompactBlockArray(blocks, out);
+      // clientId and callId
+      writeRpcIds(rpcClientId, rpcCallId, out);
+    }
+    
+    @Override
+    void readFields(DataInputStream in, int logVersion) throws IOException {
+      path = FSImageSerialization.readString(in);
+      Block[] blocks = FSImageSerialization.readCompactBlockArray(in,
+          logVersion);
+      Preconditions.checkState(blocks.length == 2 || blocks.length == 1);
+      penultimateBlock = blocks.length == 1 ? null : blocks[0];
+      lastBlock = blocks[blocks.length - 1];
+      readRpcIds(in, logVersion);
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder();
+      sb.append("AddBlockOp [path=")
+        .append(path)
+        .append(", penultimateBlock=")
+        .append(penultimateBlock == null ? "NULL" : penultimateBlock)
+        .append(", lastBlock=")
+        .append(lastBlock);
+      appendRpcIdsToString(sb, rpcClientId, rpcCallId);
+      sb.append("]");
+      return sb.toString();
+    }
+    
+    @Override
+    protected void toXml(ContentHandler contentHandler) throws SAXException {
+      XMLUtils.addSaxString(contentHandler, "PATH", path);
+      if (penultimateBlock != null) {
+        FSEditLogOp.blockToXml(contentHandler, penultimateBlock);
+      }
+      FSEditLogOp.blockToXml(contentHandler, lastBlock);
+      appendRpcIdsToXml(contentHandler, rpcClientId, rpcCallId);
+    }
+    
+    @Override 
+    void fromXml(Stanza st) throws InvalidXmlException {
+      this.path = st.getValue("PATH");
+      List<Stanza> blocks = st.getChildren("BLOCK");
+      int size = blocks.size();
+      Preconditions.checkState(size == 1 || size == 2);
+      this.penultimateBlock = size == 2 ? 
+          FSEditLogOp.blockFromXml(blocks.get(0)) : null;
+      this.lastBlock = FSEditLogOp.blockFromXml(blocks.get(size - 1));
+      readRpcIdsFromXml(st);
     }
   }
   

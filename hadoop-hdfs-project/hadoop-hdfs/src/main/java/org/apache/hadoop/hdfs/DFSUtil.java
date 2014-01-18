@@ -585,6 +585,12 @@ public class DFSUtil {
       String address = getConfValue(defaultValue, suffix, conf, keys);
       if (address != null) {
         InetSocketAddress isa = NetUtils.createSocketAddr(address);
+        if (isa.isUnresolved()) {
+          LOG.warn("Namenode for " + nsId +
+                   " remains unresolved for ID " + nnId +
+                   ".  Check your hdfs-site.xml file to " +
+                   "ensure namenodes are configured properly.");
+        }
         ret.put(nnId, isa);
       }
     }
