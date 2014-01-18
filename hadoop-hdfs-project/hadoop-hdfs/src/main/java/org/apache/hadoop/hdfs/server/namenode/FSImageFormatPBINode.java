@@ -209,19 +209,16 @@ final class FSImageFormatPBINode {
 
   final static class Saver {
     private final FSNamesystem fsn;
-    private final FileSummary.Builder headers;
-    private final OutputStream out;
+    private final FileSummary.Builder summary;
     private final FSImageFormatProtobuf.Saver parent;
 
-    Saver(FSImageFormatProtobuf.Saver parent, OutputStream out,
-        FileSummary.Builder headers) {
+    Saver(FSImageFormatProtobuf.Saver parent, FileSummary.Builder summary) {
       this.parent = parent;
-      this.out = out;
-      this.headers = headers;
+      this.summary = summary;
       this.fsn = parent.context.getSourceNamesystem();
     }
 
-    void serializeINodeDirectorySection() throws IOException {
+    void serializeINodeDirectorySection(OutputStream out) throws IOException {
       for (INodeWithAdditionalFields n : fsn.dir.getINodeMap().getMap()) {
         if (!n.isDirectory())
           continue;
@@ -238,24 +235,25 @@ final class FSImageFormatPBINode {
           e.writeDelimitedTo(out);
         }
       }
-      parent.commitSection(headers,
+      parent.commitSection(summary,
           FSImageFormatProtobuf.SectionName.INODE_DIR);
     }
 
-    void serializeINodeSection() throws IOException {
+    void serializeINodeSection(OutputStream out) throws IOException {
       INodeMap inodesMap = fsn.dir.getINodeMap();
+
       INodeSection.Builder b = INodeSection.newBuilder()
           .setLastInodeId(fsn.getLastInodeId()).setNumInodes(inodesMap.size());
       INodeSection s = b.build();
       s.writeDelimitedTo(out);
 
       for (INodeWithAdditionalFields n : inodesMap.getMap()) {
-        save(n);
+        save(out, n);
       }
-      parent.commitSection(headers, FSImageFormatProtobuf.SectionName.INODE);
+      parent.commitSection(summary, FSImageFormatProtobuf.SectionName.INODE);
     }
 
-    void serializeFilesUCSection() throws IOException {
+    void serializeFilesUCSection(OutputStream out) throws IOException {
       Map<String, INodeFile> ucMap = fsn.getFilesUnderConstruction();
       for (Map.Entry<String, INodeFile> entry : ucMap.entrySet()) {
         String path = entry.getKey();
@@ -265,7 +263,7 @@ final class FSImageFormatPBINode {
         FileUnderConstructionEntry e = b.build();
         e.writeDelimitedTo(out);
       }
-      parent.commitSection(headers,
+      parent.commitSection(summary,
           FSImageFormatProtobuf.SectionName.FILES_UNDERCONSTRUCTION);
     }
 
@@ -274,15 +272,15 @@ final class FSImageFormatPBINode {
           .setGroup(n.getGroupName()).setPermission(n.getFsPermissionShort());
     }
 
-    private void save(INode n) throws IOException {
+    private void save(OutputStream out, INode n) throws IOException {
       if (n.isDirectory()) {
-        save(n.asDirectory());
+        save(out, n.asDirectory());
       } else if (n.isFile()) {
-        save(n.asFile());
+        save(out, n.asFile());
       }
     }
 
-    private void save(INodeDirectory n) throws IOException {
+    private void save(OutputStream out, INodeDirectory n) throws IOException {
       Quota.Counts quota = n.getQuotaCounts();
       INodeSection.INodeDirectory.Builder b = INodeSection.INodeDirectory
           .newBuilder().setModificationTime(n.getModificationTime())
@@ -296,7 +294,7 @@ final class FSImageFormatPBINode {
       r.writeDelimitedTo(out);
     }
 
-    private void save(INodeFile n) throws IOException {
+    private void save(OutputStream out, INodeFile n) throws IOException {
       INodeSection.INodeFile.Builder b = INodeSection.INodeFile.newBuilder()
           .setAccessTime(n.getAccessTime())
           .setModificationTime(n.getModificationTime())

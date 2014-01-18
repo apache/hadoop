@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.EnumSet;
 
@@ -28,6 +29,7 @@ import junit.framework.Assert;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSOutputStream;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -36,70 +38,101 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
-import org.junit.After;
-import org.junit.Before;
+import org.apache.hadoop.hdfs.util.MD5FileUtils;
 import org.junit.Test;
 
 public class TestFSImage {
 
-  private MiniDFSCluster cluster;
-  private Configuration conf;
-  private DistributedFileSystem fs;
-  private FSNamesystem fsn;
-
-  @Before
-  public void setUp() throws IOException {
-    conf = new Configuration();
-    cluster = new MiniDFSCluster.Builder(conf).build();
-    cluster.waitActive();
-    fsn = cluster.getNamesystem();
-    fs = cluster.getFileSystem();
-  }
-
-  @After
-  public void tearDown() throws IOException {
-    if (cluster != null) {
-      cluster.shutdown();
-    }
+  @Test
+  public void testPersist() throws IOException {
+    Configuration conf = new Configuration();
+    testPersistHelper(conf);
   }
 
   @Test
-  public void testINode() throws IOException {
-    final Path dir = new Path("/abc/def");
-    final Path file1 = new Path(dir, "f1");
-    final Path file2 = new Path(dir, "f2");
+  public void testCompression() throws IOException {
+    Configuration conf = new Configuration();
+    conf.setBoolean(DFSConfigKeys.DFS_IMAGE_COMPRESS_KEY, true);
+    conf.set(DFSConfigKeys.DFS_IMAGE_COMPRESSION_CODEC_KEY,
+        "org.apache.hadoop.io.compress.GzipCodec");
+    testPersistHelper(conf);
+  }
 
-    // create an empty file f1
-    fs.create(file1).close();
+  private void testPersistHelper(Configuration conf) throws IOException {
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).build();
+      cluster.waitActive();
+      FSNamesystem fsn = cluster.getNamesystem();
+      DistributedFileSystem fs = cluster.getFileSystem();
 
-    // create an under-construction file f2
-    FSDataOutputStream out = fs.create(file2);
-    out.writeBytes("hello");
-    ((DFSOutputStream) out.getWrappedStream()).hsync(EnumSet
-        .of(SyncFlag.UPDATE_LENGTH));
+      final Path dir = new Path("/abc/def");
+      final Path file1 = new Path(dir, "f1");
+      final Path file2 = new Path(dir, "f2");
 
-    // checkpoint
-    fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
-    fs.saveNamespace();
-    fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+      // create an empty file f1
+      fs.create(file1).close();
 
-    cluster.restartNameNode();
-    cluster.waitActive();
-    fs = cluster.getFileSystem();
+      // create an under-construction file f2
+      FSDataOutputStream out = fs.create(file2);
+      out.writeBytes("hello");
+      ((DFSOutputStream) out.getWrappedStream()).hsync(EnumSet
+          .of(SyncFlag.UPDATE_LENGTH));
 
-    assertTrue(fs.isDirectory(dir));
-    assertTrue(fs.exists(file1));
-    assertTrue(fs.exists(file2));
+      // checkpoint
+      fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      fs.saveNamespace();
+      fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
 
-    // check internals of file2
-    INodeFile file2Node = fsn.dir.getINode4Write(file2.toString()).asFile();
-    assertEquals("hello".length(), file2Node.computeFileSize());
-    assertTrue(file2Node.isUnderConstruction());
-    BlockInfo[] blks = file2Node.getBlocks();
-    assertEquals(1, blks.length);
-    assertEquals(BlockUCState.UNDER_CONSTRUCTION, blks[0].getBlockUCState());
-    // check lease manager
-    Lease lease = fsn.leaseManager.getLeaseByPath(file2.toString());
-    Assert.assertNotNull(lease);
+      cluster.restartNameNode();
+      cluster.waitActive();
+      fs = cluster.getFileSystem();
+
+      assertTrue(fs.isDirectory(dir));
+      assertTrue(fs.exists(file1));
+      assertTrue(fs.exists(file2));
+
+      // check internals of file2
+      INodeFile file2Node = fsn.dir.getINode4Write(file2.toString()).asFile();
+      assertEquals("hello".length(), file2Node.computeFileSize());
+      assertTrue(file2Node.isUnderConstruction());
+      BlockInfo[] blks = file2Node.getBlocks();
+      assertEquals(1, blks.length);
+      assertEquals(BlockUCState.UNDER_CONSTRUCTION, blks[0].getBlockUCState());
+      // check lease manager
+      Lease lease = fsn.leaseManager.getLeaseByPath(file2.toString());
+      Assert.assertNotNull(lease);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  /**
+   * Ensure that the digest written by the saver equals to the digest of the
+   * file.
+   */
+  @Test
+  public void testDigest() throws IOException {
+    Configuration conf = new Configuration();
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
+      DistributedFileSystem fs = cluster.getFileSystem();
+      fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      fs.saveNamespace();
+      fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+      File currentDir = FSImageTestUtil.getNameNodeCurrentDirs(cluster, 0).get(
+          0);
+      File fsimage = FSImageTestUtil.findNewestImageFile(currentDir
+          .getAbsolutePath());
+      assertEquals(MD5FileUtils.readStoredMd5ForFile(fsimage),
+          MD5FileUtils.computeMd5ForFile(fsimage));
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
   }
 }
