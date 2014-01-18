@@ -110,7 +110,8 @@ public class LayoutVersion {
     EDITLOG_ADD_BLOCK(-48, "Add new editlog that only records allocation of "
         + "the new block instead of the entire block list"),
     ADD_DATANODE_AND_STORAGE_UUIDS(-49, "Replace StorageID with DatanodeUuid."
-        + " Use distinct StorageUuid per storage directory.");
+        + " Use distinct StorageUuid per storage directory."),
+    ADD_LAYOUT_FLAGS(-50, "Add support for layout flags.");
 
     final int lv;
     final int ancestorLV;

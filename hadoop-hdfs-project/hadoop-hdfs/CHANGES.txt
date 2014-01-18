@@ -202,6 +202,9 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-5704. Change OP_UPDATE_BLOCKS with a new OP_ADD_BLOCK. (jing9)
 
+    HDFS-5784. Reserve space in edit log header and fsimage header for feature
+    flag section. (Colin Patrick McCabe)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn)

@@ -377,8 +377,9 @@ public class TestFSEditLogLoader {
     File testDir = new File(TEST_DIR, "testValidateEmptyEditLog");
     SortedMap<Long, Long> offsetToTxId = Maps.newTreeMap();
     File logFile = prepareUnfinalizedTestEditLog(testDir, 0, offsetToTxId);
-    // Truncate the file so that there is nothing except the header
-    truncateFile(logFile, 4);
+    // Truncate the file so that there is nothing except the header and
+    // layout flags section.
+    truncateFile(logFile, 8);
     EditLogValidation validation =
         EditLogFileInputStream.validateEditLog(logFile);
     assertTrue(!validation.hasCorruptHeader());
