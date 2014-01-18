@@ -109,12 +109,16 @@ message INodeSection {
     optional Permission permission = 4;
   }
 
+  message INodeSymlink {
+    optional Permission permission = 1;
+    optional bytes target = 2;
+  }
+
   message INode {
     enum Type {
       FILE = 1;
       DIRECTORY = 2;
-      REFERENCE = 3;
-      SYMLINK = 4;
+      SYMLINK = 3;
     };
     required Type type = 1;
     required uint64 id = 2;
@@ -122,6 +126,7 @@ message INodeSection {
     
     optional INodeFile file = 4;
     optional INodeDirectory directory = 5;
+    optional INodeSymlink symlink = 6;
   }
 
   optional uint64 lastInodeId = 1;

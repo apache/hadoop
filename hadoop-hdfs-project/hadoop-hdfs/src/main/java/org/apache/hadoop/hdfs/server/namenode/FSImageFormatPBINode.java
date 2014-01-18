@@ -132,6 +132,8 @@ final class FSImageFormatPBINode {
         return loadINodeFile(n);
       case DIRECTORY:
         return loadINodeDirectory(n);
+      case SYMLINK:
+        return loadINodeSymlink(n);
       default:
         break;
       }
@@ -181,6 +183,15 @@ final class FSImageFormatPBINode {
         }
       }
       return file;
+    }
+
+
+    private INodeSymlink loadINodeSymlink(INodeSection.INode n) {
+      assert n.getType() == INodeSection.INode.Type.SYMLINK;
+      INodeSection.INodeSymlink s = n.getSymlink();
+      final PermissionStatus permissions = loadPermission(s.getPermission());
+      return new INodeSymlink(n.getId(), n.getName().toByteArray(), permissions,
+          0, 0, s.getTarget().toStringUtf8());
     }
 
     private void loadRootINode(INodeSection.INode p) {
@@ -277,6 +288,8 @@ final class FSImageFormatPBINode {
         save(out, n.asDirectory());
       } else if (n.isFile()) {
         save(out, n.asFile());
+      } else if (n.isSymlink()) {
+        save(out, n.asSymlink());
       }
     }
 
@@ -288,9 +301,8 @@ final class FSImageFormatPBINode {
           .setDsQuota(quota.get(Quota.DISKSPACE))
           .setPermission(buildPermissionStatus(n));
 
-      INodeSection.INode r = INodeSection.INode.newBuilder()
-          .setType(INodeSection.INode.Type.DIRECTORY).setId(n.getId())
-          .setName(ByteString.copyFrom(n.getLocalNameBytes())).setDirectory(b).build();
+      INodeSection.INode r = buildINodeCommon(n)
+          .setType(INodeSection.INode.Type.DIRECTORY).setDirectory(b).build();
       r.writeDelimitedTo(out);
     }
 
@@ -314,10 +326,24 @@ final class FSImageFormatPBINode {
         b.setFileUC(f);
       }
 
-      INodeSection.INode r = INodeSection.INode.newBuilder()
-          .setType(INodeSection.INode.Type.FILE).setId(n.getId())
-          .setName(ByteString.copyFrom(n.getLocalNameBytes())).setFile(b).build();
+      INodeSection.INode r = buildINodeCommon(n)
+          .setType(INodeSection.INode.Type.FILE).setFile(b).build();
       r.writeDelimitedTo(out);
+    }
+
+    private void save(OutputStream out, INodeSymlink n) throws IOException {
+      INodeSection.INodeSymlink.Builder b = INodeSection.INodeSymlink
+          .newBuilder().setPermission(buildPermissionStatus(n))
+          .setTarget(ByteString.copyFrom(n.getSymlink()));
+      INodeSection.INode r = buildINodeCommon(n)
+          .setType(INodeSection.INode.Type.SYMLINK).setSymlink(b).build();
+      r.writeDelimitedTo(out);
+    }
+
+    private final INodeSection.INode.Builder buildINodeCommon(INode n) {
+      return INodeSection.INode.newBuilder()
+          .setId(n.getId())
+          .setName(ByteString.copyFrom(n.getLocalNameBytes()));
     }
   }
 
