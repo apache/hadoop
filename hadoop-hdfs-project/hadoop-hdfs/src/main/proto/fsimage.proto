@@ -73,15 +73,13 @@ message NameSystemSection {
 }
 
 /**
+ * Permission is serialized as a 64-bit long. [0:24):[25:48):[48:64) (in Big Endian). 
+ * The first and the second parts are the string ids of the user and
+ * group name, and the last 16 bits are the permission bits.
+ *
  * Name: INODE
  */
 message INodeSection {
-  message Permission {
-    optional string user = 1;
-    optional string group = 2;
-    optional uint32 permission = 3;
-  }
-
   /**
    * under-construction feature for INodeFile
    */
@@ -95,7 +93,7 @@ message INodeSection {
     optional uint64 modificationTime = 2;
     optional uint64 accessTime = 3;
     optional uint64 preferredBlockSize = 4;
-    optional Permission permission = 5;
+    optional fixed64 permission = 5;
     repeated BlockProto blocks = 6;
     optional FileUnderConstructionFeature fileUC = 7;
   }
@@ -106,11 +104,11 @@ message INodeSection {
     optional uint64 nsQuota = 2;
     // diskspace quota
     optional uint64 dsQuota = 3;
-    optional Permission permission = 4;
+    optional fixed64 permission = 4;
   }
 
   message INodeSymlink {
-    optional Permission permission = 1;
+    optional fixed64 permission = 1;
     optional bytes target = 2;
   }
 
@@ -157,4 +155,17 @@ message INodeDirectorySection {
     repeated uint64 children = 2;
   }
   // repeated DirEntry, ended at the boundary of the section.
+}
+
+/**
+ * This section maps string to id
+ * NAME: STRING_TABLE
+ **/
+message StringTableSection {
+  message Entry {
+    optional uint32 id = 1;
+    optional string str = 2;
+  }
+  optional uint32 numEntry = 1;
+  // repeated Entry
 }

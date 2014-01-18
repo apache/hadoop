@@ -33,6 +33,10 @@ import java.nio.channels.FileChannel;
 import java.security.DigestOutputStream;
 import java.security.MessageDigest;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Map.Entry;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -41,11 +45,14 @@ import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.FileSummary;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.NameSystemSection;
+import org.apache.hadoop.hdfs.server.namenode.FsImageProto.StringTableSection;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressorStream;
 
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.io.LimitInputStream;
 import com.google.protobuf.CodedOutputStream;
 
@@ -62,6 +69,8 @@ final class FSImageFormatProtobuf {
     private static final int MINIMUM_FILE_LENGTH = 8;
     private final Configuration conf;
     private final FSNamesystem fsn;
+
+    String[] stringTable;
 
     /** The MD5 sum of the loaded file */
     private MD5Hash imgDigest;
@@ -143,9 +152,26 @@ final class FSImageFormatProtobuf {
       FileChannel channel = fin.getChannel();
 
       FSImageFormatPBINode.Loader inodeLoader = new FSImageFormatPBINode.Loader(
-          fsn);
+          fsn, this);
 
-      for (FileSummary.Section s : summary.getSectionsList()) {
+      ArrayList<FileSummary.Section> sections = Lists.newArrayList(summary
+          .getSectionsList());
+      Collections.sort(sections, new Comparator<FileSummary.Section>() {
+        @Override
+        public int compare(FileSummary.Section s1, FileSummary.Section s2) {
+          SectionName n1 = SectionName.fromString(s1.getName());
+          SectionName n2 = SectionName.fromString(s2.getName());
+          if (n1 == null) {
+            return n2 == null ? 0 : -1;
+          } else if (n2 == null) {
+            return -1;
+          } else {
+            return n1.ordinal() - n2.ordinal();
+          }
+        }
+      });
+
+      for (FileSummary.Section s : sections) {
         channel.position(s.getOffset());
         InputStream in = new BufferedInputStream(new LimitInputStream(fin,
             s.getLength()));
@@ -164,6 +190,9 @@ final class FSImageFormatProtobuf {
         switch (SectionName.fromString(n)) {
         case NS_INFO:
           loadNameSystemSection(in, s);
+          break;
+        case STRING_TABLE:
+          loadStringTableSection(in);
           break;
         case INODE:
           inodeLoader.loadINodeSection(in);
@@ -190,12 +219,23 @@ final class FSImageFormatProtobuf {
       fsn.setLastAllocatedBlockId(s.getLastAllocatedBlockId());
       imgTxId = s.getTransactionId();
     }
+
+    private void loadStringTableSection(InputStream in) throws IOException {
+      StringTableSection s = StringTableSection.parseDelimitedFrom(in);
+      stringTable = new String[s.getNumEntry() + 1];
+      for (int i = 0; i < s.getNumEntry(); ++i) {
+        StringTableSection.Entry e = StringTableSection.Entry
+            .parseDelimitedFrom(in);
+        stringTable[e.getId()] = e.getStr();
+      }
+    }
   }
 
   static final class Saver {
     final SaveNamespaceContext context;
     private long currentOffset = MAGIC_HEADER.length;
     private MD5Hash savedDigest;
+    private HashMap<String, Integer> stringMap = Maps.newHashMap();
 
     private FileChannel fileChannel;
     // OutputStream for the section data
@@ -284,6 +324,7 @@ final class FSImageFormatProtobuf {
 
       saveNameSystemSection(b);
       saveInodes(b);
+      saveStringTableSection(b);
 
       // Flush the buffered data into the file before appending the header
       flushSectionOutputStream();
@@ -316,14 +357,46 @@ final class FSImageFormatProtobuf {
 
       commitSection(summary, SectionName.NS_INFO);
     }
+
+    private void saveStringTableSection(FileSummary.Builder summary) throws IOException {
+      OutputStream out = sectionOutputStream;
+      StringTableSection.Builder b = StringTableSection.newBuilder()
+          .setNumEntry(stringMap.size());
+      b.build().writeDelimitedTo(out);
+      for (Entry<String, Integer> e : stringMap.entrySet()) {
+        StringTableSection.Entry.Builder eb = StringTableSection.Entry
+            .newBuilder().setId(e.getValue()).setStr(e.getKey());
+        eb.build().writeDelimitedTo(out);
+      }
+      commitSection(summary, SectionName.STRING_TABLE);
+    }
+
+    int getStringId(String str) {
+      if (str == null) {
+        return 0;
+      }
+
+      Integer v = stringMap.get(str);
+      if (v == null) {
+        int nv = stringMap.size() + 1;
+        stringMap.put(str, nv);
+        return nv;
+      }
+      return v;
+    }
   }
 
   /**
-   * Supported section name
+   * Supported section name. The order of the enum determines the order of
+   * loading.
    */
   enum SectionName {
-    INODE("INODE"), INODE_DIR("INODE_DIR"), NS_INFO("NS_INFO"),
+    NS_INFO("NS_INFO"),
+    STRING_TABLE("STRING_TABLE"),
+    INODE("INODE"), INODE_DIR("INODE_DIR"),
     FILES_UNDERCONSTRUCTION("FILES_UNDERCONSTRUCTION");
+    SECRET_MANAGER("SECRET_MANAGER"),
+    CACHE_MANAGER("CACHE_MANAGER");
 
     private static final SectionName[] values = SectionName.values();
 

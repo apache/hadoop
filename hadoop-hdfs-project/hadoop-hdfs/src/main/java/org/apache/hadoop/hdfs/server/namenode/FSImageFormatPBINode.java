@@ -37,7 +37,6 @@ import org.apache.hadoop.hdfs.server.namenode.FsImageProto.FileSummary;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.FilesUnderConstructionSection.FileUnderConstructionEntry;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeDirectorySection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection;
-import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection.Permission;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 
@@ -45,18 +44,27 @@ import com.google.common.base.Preconditions;
 import com.google.protobuf.ByteString;
 
 final class FSImageFormatPBINode {
+  private final static int USER_GROUP_STRID_MASK = (1 << 24) - 1;
+  private final static int USER_STRID_OFFSET = 40;
+  private final static int GROUP_STRID_OFFSET = 16;
+
   final static class Loader {
-    private static PermissionStatus loadPermission(Permission p) {
-      return new PermissionStatus(p.getUser(), p.getGroup(), new FsPermission(
-          (short) p.getPermission()));
+    private PermissionStatus loadPermission(long id) {
+      short perm = (short) (id & ((1 << GROUP_STRID_OFFSET) - 1));
+      int gsid = (int) ((id >> GROUP_STRID_OFFSET) & USER_GROUP_STRID_MASK);
+      int usid = (int) ((id >> USER_STRID_OFFSET) & USER_GROUP_STRID_MASK);
+      return new PermissionStatus(parent.stringTable[usid],
+          parent.stringTable[gsid], new FsPermission(perm));
     }
 
     private final FSDirectory dir;
     private final FSNamesystem fsn;
+    private final FSImageFormatProtobuf.Loader parent;
 
-    Loader(FSNamesystem fsn) {
+    Loader(FSNamesystem fsn, final FSImageFormatProtobuf.Loader parent) {
       this.fsn = fsn;
       this.dir = fsn.dir;
+      this.parent = parent;
     }
 
     void loadINodeDirectorySection(InputStream in) throws IOException {
@@ -278,9 +286,12 @@ final class FSImageFormatPBINode {
           FSImageFormatProtobuf.SectionName.FILES_UNDERCONSTRUCTION);
     }
 
-    private INodeSection.Permission.Builder buildPermissionStatus(INode n) {
-      return INodeSection.Permission.newBuilder().setUser(n.getUserName())
-          .setGroup(n.getGroupName()).setPermission(n.getFsPermissionShort());
+    private long buildPermissionStatus(INode n) {
+      int userId = parent.getStringId(n.getUserName());
+      int groupId = parent.getStringId(n.getGroupName());
+      return ((userId & USER_GROUP_STRID_MASK) << USER_STRID_OFFSET)
+          | ((groupId & USER_GROUP_STRID_MASK) << GROUP_STRID_OFFSET)
+          | n.getFsPermissionShort();
     }
 
     private void save(OutputStream out, INode n) throws IOException {

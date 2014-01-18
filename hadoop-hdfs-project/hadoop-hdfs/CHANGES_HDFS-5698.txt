@@ -9,3 +9,6 @@ HDFS-5698 subtasks
     HDFS-5783. Compute the digest before loading FSImage. (Haohui Mai via jing9)
 
     HDFS-5785. Serialize symlink in protobuf. (Haohui Mai via jing9)
+
+    HDFS-5793. Optimize the serialization of PermissionStatus. (Haohui Mai via
+    jing9)
