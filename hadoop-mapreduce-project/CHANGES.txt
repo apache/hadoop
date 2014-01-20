@@ -280,6 +280,8 @@ Release 2.4.0 - UNRELEASED
     MAPREDUCE-5724. JobHistoryServer does not start if HDFS is not running. 
     (tucu)
 
+    MAPREDUCE-5729. mapred job -list throws NPE (kasha)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
