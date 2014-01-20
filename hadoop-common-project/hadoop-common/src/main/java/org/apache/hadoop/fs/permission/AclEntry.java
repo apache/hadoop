@@ -17,12 +17,16 @@
  */
 package org.apache.hadoop.fs.permission;
 
-import static org.apache.hadoop.fs.permission.AclEntryScope.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
 import com.google.common.base.Objects;
 
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * Defines a single entry in an ACL.  An ACL entry has a type (user, group,
@@ -192,5 +196,75 @@ public class AclEntry {
     this.name = name;
     this.permission = permission;
     this.scope = scope;
+  }
+
+  /**
+   * Parses a string representation of an ACL spec into a list of AclEntry
+   * objects. Example: "user::rwx,user:foo:rw-,group::r--,other::---"
+   * 
+   * @param aclSpec
+   *          String representation of an ACL spec.
+   * @param includePermission
+   *          for setAcl operations this will be true. i.e. AclSpec should
+   *          include permissions.<br>
+   *          But for removeAcl operation it will be false. i.e. AclSpec should
+   *          not contain permissions.<br>
+   *          Example: "user:foo,group:bar"
+   * @return Returns list of AclEntries parsed
+   */
+  public static List<AclEntry> parseAclSpec(String aclSpec,
+      boolean includePermission) {
+    List<AclEntry> aclEntries = new ArrayList<AclEntry>();
+    Collection<String> aclStrings = StringUtils.getStringCollection(aclSpec,
+        ",");
+    for (String aclStr : aclStrings) {
+      AclEntry.Builder builder = new AclEntry.Builder();
+      // Here "::" represent one empty string.
+      // StringUtils.getStringCollection() will ignore this.
+      String[] split = aclStr.split(":");
+      int expectedAclSpecLength = 2;
+      if (includePermission) {
+        expectedAclSpecLength = 3;
+      }
+      if (split.length != expectedAclSpecLength
+          && !(split.length == expectedAclSpecLength + 1 && "default"
+              .equals(split[0]))) {
+        throw new HadoopIllegalArgumentException("Invalid <aclSpec> : "
+            + aclStr);
+      }
+      int index = 0;
+      if (split.length == expectedAclSpecLength + 1) {
+        assert "default".equals(split[0]);
+        // default entry
+        index++;
+        builder.setScope(AclEntryScope.DEFAULT);
+      }
+      String type = split[index++];
+      AclEntryType aclType = null;
+      try {
+        aclType = Enum.valueOf(AclEntryType.class, type.toUpperCase());
+        builder.setType(aclType);
+      } catch (IllegalArgumentException iae) {
+        throw new HadoopIllegalArgumentException(
+            "Invalid type of acl in <aclSpec> :" + aclStr);
+      }
+
+      String name = split[index++];
+      if (!name.isEmpty()) {
+        builder.setName(name);
+      }
+
+      if (expectedAclSpecLength == 3) {
+        String permission = split[index++];
+        FsAction fsAction = FsAction.getFsAction(permission);
+        if (null == fsAction) {
+          throw new HadoopIllegalArgumentException(
+              "Invalid permission in <aclSpec> : " + aclStr);
+        }
+        builder.setPermission(fsAction);
+      }
+      aclEntries.add(builder.build());
+    }
+    return aclEntries;
   }
 }

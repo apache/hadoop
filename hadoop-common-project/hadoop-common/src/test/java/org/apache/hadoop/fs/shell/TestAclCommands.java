@@ -17,12 +17,18 @@
  */
 package org.apache.hadoop.fs.shell;
 
-import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.*;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FsShell;
+import org.apache.hadoop.fs.permission.AclEntry;
+import org.apache.hadoop.fs.permission.AclEntryScope;
+import org.apache.hadoop.fs.permission.AclEntryType;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.Before;
 import org.junit.Test;
@@ -57,6 +63,37 @@ public class TestAclCommands {
     assertFalse("setfacl should fail with extra arguments",
         0 == runCommand(new String[] { "-setfacl", "--set",
             "default:user::rwx", "/path", "extra" }));
+    assertFalse("setfacl should fail with permissions for -x",
+        0 == runCommand(new String[] { "-setfacl", "-x", "user:user1:rwx",
+            "/path" }));
+    assertFalse("setfacl should fail with permissions for -x",
+        0 == runCommand(new String[] { "-setfacl", "-m",
+            "", "/path" }));
+  }
+
+  @Test
+  public void testMultipleAclSpecParsing() throws Exception {
+    List<AclEntry> parsedList = AclEntry.parseAclSpec(
+        "group::rwx,user:user1:rwx,user:user2:rw-,group:group1:rw-,default:group:group1:rw-", true);
+
+    AclEntry basicAcl = new AclEntry.Builder().setType(AclEntryType.GROUP)
+        .setPermission(FsAction.ALL).build();
+    AclEntry user1Acl = new AclEntry.Builder().setType(AclEntryType.USER)
+        .setPermission(FsAction.ALL).setName("user1").build();
+    AclEntry user2Acl = new AclEntry.Builder().setType(AclEntryType.USER)
+        .setPermission(FsAction.READ_WRITE).setName("user2").build();
+    AclEntry group1Acl = new AclEntry.Builder().setType(AclEntryType.GROUP)
+        .setPermission(FsAction.READ_WRITE).setName("group1").build();
+    AclEntry defaultAcl = new AclEntry.Builder().setType(AclEntryType.GROUP)
+        .setPermission(FsAction.READ_WRITE).setName("group1")
+        .setScope(AclEntryScope.DEFAULT).build();
+    List<AclEntry> expectedList = new ArrayList<AclEntry>();
+    expectedList.add(basicAcl);
+    expectedList.add(user1Acl);
+    expectedList.add(user2Acl);
+    expectedList.add(group1Acl);
+    expectedList.add(defaultAcl);
+    assertEquals("Parsed Acl not correct", expectedList, parsedList);
   }
 
   private int runCommand(String[] commands) throws Exception {

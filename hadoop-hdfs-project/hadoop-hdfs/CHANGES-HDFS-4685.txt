@@ -45,3 +45,6 @@ HDFS-4685 (Unreleased)
 
     HDFS-5739. ACL RPC must allow null name or unspecified permissions in ACL
     entries. (cnauroth)
+
+    HADOOP-10213. Fix bugs parsing ACL spec in FsShell setfacl.
+    (Vinay via cnauroth)

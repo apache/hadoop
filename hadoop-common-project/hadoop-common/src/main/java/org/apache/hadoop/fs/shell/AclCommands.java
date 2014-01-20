@@ -18,8 +18,6 @@
 package org.apache.hadoop.fs.shell;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -27,14 +25,12 @@ import java.util.List;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclEntryScope;
 import org.apache.hadoop.fs.permission.AclEntryType;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.util.StringUtils;
 
 /**
  * Acl related operations
@@ -201,9 +197,6 @@ class AclCommands extends FsCommand {
         + "<acl_spec>: Comma separated list of ACL entries.\n"
         + "<path>: File or directory to modify.\n";
 
-    private static final String DEFAULT = "default";
-
-    Path path = null;
     CommandFormat cf = new CommandFormat(0, Integer.MAX_VALUE, "b", "k", "R",
         "m", "x", "-set");
     List<AclEntry> aclEntries = null;
@@ -230,7 +223,7 @@ class AclCommands extends FsCommand {
         if (args.size() < 2) {
           throw new HadoopIllegalArgumentException("<acl_spec> is missing");
         }
-        aclEntries = parseAclSpec(args.removeFirst());
+        aclEntries = AclEntry.parseAclSpec(args.removeFirst(), !cf.getOpt("x"));
       }
 
       if (args.isEmpty()) {
@@ -239,7 +232,6 @@ class AclCommands extends FsCommand {
       if (args.size() > 1) {
         throw new HadoopIllegalArgumentException("Too many arguments");
       }
-      path = new Path(args.removeFirst());
     }
 
     @Override
@@ -253,59 +245,8 @@ class AclCommands extends FsCommand {
       } else if (cf.getOpt("x")) {
         item.fs.removeAclEntries(item.path, aclEntries);
       } else if (cf.getOpt("-set")) {
-        item.fs.setAcl(path, aclEntries);
+        item.fs.setAcl(item.path, aclEntries);
       }
-    }
-
-    /**
-     * Parse the aclSpec and returns the list of AclEntry objects.
-     * 
-     * @param aclSpec
-     * @return
-     */
-    private List<AclEntry> parseAclSpec(String aclSpec) {
-      List<AclEntry> aclEntries = new ArrayList<AclEntry>();
-      Collection<String> aclStrings = StringUtils.getStringCollection(aclSpec,
-          ",");
-      for (String aclStr : aclStrings) {
-        AclEntry.Builder builder = new AclEntry.Builder();
-        // Here "::" represent one empty string.
-        // StringUtils.getStringCollection() will ignore this.
-        String[] split = aclSpec.split(":");
-        if (split.length != 3
-            && !(split.length == 4 && DEFAULT.equals(split[0]))) {
-          throw new HadoopIllegalArgumentException("Invalid <aclSpec> : "
-              + aclStr);
-        }
-        int index = 0;
-        if (split.length == 4) {
-          assert DEFAULT.equals(split[0]);
-          // default entry
-          index++;
-          builder.setScope(AclEntryScope.DEFAULT);
-        }
-        String type = split[index++];
-        AclEntryType aclType = null;
-        try {
-          aclType = Enum.valueOf(AclEntryType.class, type.toUpperCase());
-          builder.setType(aclType);
-        } catch (IllegalArgumentException iae) {
-          throw new HadoopIllegalArgumentException(
-              "Invalid type of acl in <aclSpec> :" + aclStr);
-        }
-
-        builder.setName(split[index++]);
-
-        String permission = split[index++];
-        FsAction fsAction = FsAction.getFsAction(permission);
-        if (null == fsAction) {
-          throw new HadoopIllegalArgumentException(
-              "Invalid permission in <aclSpec> : " + aclStr);
-        }
-        builder.setPermission(fsAction);
-        aclEntries.add(builder.build());
-      }
-      return aclEntries;
     }
   }
 }
