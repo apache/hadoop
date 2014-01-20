@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.security;
 
+import static org.apache.hadoop.fs.permission.AclEntryScope.*;
+import static org.apache.hadoop.fs.permission.AclEntryType.*;
+import static org.apache.hadoop.fs.permission.FsAction.*;
+import static org.apache.hadoop.hdfs.server.namenode.AclTestHelpers.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -24,6 +28,7 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
+import java.util.Arrays;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -101,8 +106,43 @@ public class TestPermissionSymlinks {
 
   @Test(timeout = 5000)
   public void testDelete() throws Exception {
-    // Try to delete where the symlink's parent dir is not writable
     fs.setPermission(linkParent, new FsPermission((short) 0555));
+    doDeleteLinkParentNotWritable();
+
+    fs.setPermission(linkParent, new FsPermission((short) 0777));
+    fs.setPermission(targetParent, new FsPermission((short) 0555));
+    fs.setPermission(target, new FsPermission((short) 0555));
+    doDeleteTargetParentAndTargetNotWritable();
+  }
+
+  @Test
+  public void testAclDelete() throws Exception {
+    fs.setAcl(linkParent, Arrays.asList(
+      aclEntry(ACCESS, USER, ALL),
+      aclEntry(ACCESS, USER, user.getUserName(), READ_EXECUTE),
+      aclEntry(ACCESS, GROUP, ALL),
+      aclEntry(ACCESS, OTHER, ALL)));
+    doDeleteLinkParentNotWritable();
+
+    fs.setAcl(linkParent, Arrays.asList(
+      aclEntry(ACCESS, USER, ALL),
+      aclEntry(ACCESS, GROUP, ALL),
+      aclEntry(ACCESS, OTHER, ALL)));
+    fs.setAcl(targetParent, Arrays.asList(
+      aclEntry(ACCESS, USER, ALL),
+      aclEntry(ACCESS, USER, user.getUserName(), READ_EXECUTE),
+      aclEntry(ACCESS, GROUP, ALL),
+      aclEntry(ACCESS, OTHER, ALL)));
+    fs.setAcl(target, Arrays.asList(
+      aclEntry(ACCESS, USER, ALL),
+      aclEntry(ACCESS, USER, user.getUserName(), READ_EXECUTE),
+      aclEntry(ACCESS, GROUP, ALL),
+      aclEntry(ACCESS, OTHER, ALL)));
+    doDeleteTargetParentAndTargetNotWritable();
+  }
+
+  private void doDeleteLinkParentNotWritable() throws Exception {
+    // Try to delete where the symlink's parent dir is not writable
     try {
       user.doAs(new PrivilegedExceptionAction<Object>() {
         @Override
@@ -116,11 +156,11 @@ public class TestPermissionSymlinks {
     } catch (AccessControlException e) {
       GenericTestUtils.assertExceptionContains("Permission denied", e);
     }
+  }
+
+  private void doDeleteTargetParentAndTargetNotWritable() throws Exception {
     // Try a delete where the symlink parent dir is writable,
     // but the target's parent and target are not
-    fs.setPermission(linkParent, new FsPermission((short) 0777));
-    fs.setPermission(targetParent, new FsPermission((short) 0555));
-    fs.setPermission(target, new FsPermission((short) 0555));
     user.doAs(new PrivilegedExceptionAction<Object>() {
       @Override
       public Object run() throws IOException {
@@ -139,6 +179,20 @@ public class TestPermissionSymlinks {
   @Test(timeout = 5000)
   public void testReadWhenTargetNotReadable() throws Exception {
     fs.setPermission(target, new FsPermission((short) 0000));
+    doReadTargetNotReadable();
+  }
+
+  @Test
+  public void testAclReadTargetNotReadable() throws Exception {
+    fs.setAcl(target, Arrays.asList(
+      aclEntry(ACCESS, USER, READ_WRITE),
+      aclEntry(ACCESS, USER, user.getUserName(), NONE),
+      aclEntry(ACCESS, GROUP, READ),
+      aclEntry(ACCESS, OTHER, READ)));
+    doReadTargetNotReadable();
+  }
+
+  private void doReadTargetNotReadable() throws Exception {
     try {
       user.doAs(new PrivilegedExceptionAction<Object>() {
         @Override
@@ -157,8 +211,22 @@ public class TestPermissionSymlinks {
 
   @Test(timeout = 5000)
   public void testFileStatus() throws Exception {
-    // Try to getFileLinkStatus the link when the target is not readable
     fs.setPermission(target, new FsPermission((short) 0000));
+    doGetFileLinkStatusTargetNotReadable();
+  }
+
+  @Test
+  public void testAclGetFileLinkStatusTargetNotReadable() throws Exception {
+    fs.setAcl(target, Arrays.asList(
+      aclEntry(ACCESS, USER, READ_WRITE),
+      aclEntry(ACCESS, USER, user.getUserName(), NONE),
+      aclEntry(ACCESS, GROUP, READ),
+      aclEntry(ACCESS, OTHER, READ)));
+    doGetFileLinkStatusTargetNotReadable();
+  }
+
+  private void doGetFileLinkStatusTargetNotReadable() throws Exception {
+    // Try to getFileLinkStatus the link when the target is not readable
     user.doAs(new PrivilegedExceptionAction<Object>() {
       @Override
       public Object run() throws IOException {
@@ -176,9 +244,28 @@ public class TestPermissionSymlinks {
 
   @Test(timeout = 5000)
   public void testRenameLinkTargetNotWritableFC() throws Exception {
-    // Rename the link when the target and parent are not writable
     fs.setPermission(target, new FsPermission((short) 0555));
     fs.setPermission(targetParent, new FsPermission((short) 0555));
+    doRenameLinkTargetNotWritableFC();
+  }
+
+  @Test
+  public void testAclRenameTargetNotWritableFC() throws Exception {
+    fs.setAcl(target, Arrays.asList(
+      aclEntry(ACCESS, USER, ALL),
+      aclEntry(ACCESS, USER, user.getUserName(), READ_EXECUTE),
+      aclEntry(ACCESS, GROUP, ALL),
+      aclEntry(ACCESS, OTHER, ALL)));
+    fs.setAcl(targetParent, Arrays.asList(
+      aclEntry(ACCESS, USER, ALL),
+      aclEntry(ACCESS, USER, user.getUserName(), READ_EXECUTE),
+      aclEntry(ACCESS, GROUP, ALL),
+      aclEntry(ACCESS, OTHER, ALL)));
+    doRenameLinkTargetNotWritableFC();
+  }
+
+  private void doRenameLinkTargetNotWritableFC() throws Exception {
+    // Rename the link when the target and parent are not writable
     user.doAs(new PrivilegedExceptionAction<Object>() {
       @Override
       public Object run() throws IOException {
@@ -197,8 +284,22 @@ public class TestPermissionSymlinks {
 
   @Test(timeout = 5000)
   public void testRenameSrcNotWritableFC() throws Exception {
-    // Rename the link when the target and parent are not writable
     fs.setPermission(linkParent, new FsPermission((short) 0555));
+    doRenameSrcNotWritableFC();
+  }
+
+  @Test
+  public void testAclRenameSrcNotWritableFC() throws Exception {
+    fs.setAcl(linkParent, Arrays.asList(
+      aclEntry(ACCESS, USER, ALL),
+      aclEntry(ACCESS, USER, user.getUserName(), READ_EXECUTE),
+      aclEntry(ACCESS, GROUP, ALL),
+      aclEntry(ACCESS, OTHER, ALL)));
+    doRenameSrcNotWritableFC();
+  }
+
+  private void doRenameSrcNotWritableFC() throws Exception {
+    // Rename the link when the target and parent are not writable
     try {
       user.doAs(new PrivilegedExceptionAction<Object>() {
         @Override
@@ -220,9 +321,28 @@ public class TestPermissionSymlinks {
 
   @Test(timeout = 5000)
   public void testRenameLinkTargetNotWritableFS() throws Exception {
-    // Rename the link when the target and parent are not writable
     fs.setPermission(target, new FsPermission((short) 0555));
     fs.setPermission(targetParent, new FsPermission((short) 0555));
+    doRenameLinkTargetNotWritableFS();
+  }
+
+  @Test
+  public void testAclRenameTargetNotWritableFS() throws Exception {
+    fs.setAcl(target, Arrays.asList(
+      aclEntry(ACCESS, USER, ALL),
+      aclEntry(ACCESS, USER, user.getUserName(), READ_EXECUTE),
+      aclEntry(ACCESS, GROUP, ALL),
+      aclEntry(ACCESS, OTHER, ALL)));
+    fs.setAcl(targetParent, Arrays.asList(
+      aclEntry(ACCESS, USER, ALL),
+      aclEntry(ACCESS, USER, user.getUserName(), READ_EXECUTE),
+      aclEntry(ACCESS, GROUP, ALL),
+      aclEntry(ACCESS, OTHER, ALL)));
+    doRenameLinkTargetNotWritableFS();
+  }
+
+  private void doRenameLinkTargetNotWritableFS() throws Exception {
+    // Rename the link when the target and parent are not writable
     user.doAs(new PrivilegedExceptionAction<Object>() {
       @Override
       public Object run() throws IOException {
@@ -241,8 +361,22 @@ public class TestPermissionSymlinks {
 
   @Test(timeout = 5000)
   public void testRenameSrcNotWritableFS() throws Exception {
-    // Rename the link when the target and parent are not writable
     fs.setPermission(linkParent, new FsPermission((short) 0555));
+    doRenameSrcNotWritableFS();
+  }
+
+  @Test
+  public void testAclRenameSrcNotWritableFS() throws Exception {
+    fs.setAcl(linkParent, Arrays.asList(
+      aclEntry(ACCESS, USER, ALL),
+      aclEntry(ACCESS, USER, user.getUserName(), READ_EXECUTE),
+      aclEntry(ACCESS, GROUP, ALL),
+      aclEntry(ACCESS, OTHER, ALL)));
+    doRenameSrcNotWritableFS();
+  }
+
+  private void doRenameSrcNotWritableFS() throws Exception {
+    // Rename the link when the target and parent are not writable
     try {
       user.doAs(new PrivilegedExceptionAction<Object>() {
         @Override
@@ -258,6 +392,4 @@ public class TestPermissionSymlinks {
       GenericTestUtils.assertExceptionContains("Permission denied", e);
     }
   }
-
-
 }

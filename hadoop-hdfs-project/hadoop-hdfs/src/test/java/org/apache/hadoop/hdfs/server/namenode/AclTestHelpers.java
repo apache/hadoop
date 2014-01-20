@@ -25,7 +25,7 @@ import org.apache.hadoop.fs.permission.FsAction;
 /**
  * Helper methods useful for writing ACL tests.
  */
-final class AclTestHelpers {
+public final class AclTestHelpers {
 
   /**
    * Create a new AclEntry with scope, type and permission (no name).

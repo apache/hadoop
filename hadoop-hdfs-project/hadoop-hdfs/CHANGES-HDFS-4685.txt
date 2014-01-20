@@ -36,6 +36,9 @@ HDFS-4685 (Unreleased)
     HDFS-5612. NameNode: change all permission checks to enforce ACLs in
     addition to permissions. (Chris Nauroth via wheat9)
 
+    HDFS-5613. NameNode: implement handling of ACLs in combination with
+    symlinks. (Chris Nauroth via wheat9)
+
   OPTIMIZATIONS
 
   BUG FIXES
