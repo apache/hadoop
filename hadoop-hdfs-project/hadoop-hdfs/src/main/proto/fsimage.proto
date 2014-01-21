@@ -239,6 +239,31 @@ message StringTableSection {
   // repeated Entry
 }
 
+message SecretManagerSection {
+  message DelegationKey {
+    optional uint32 id         = 1;
+    optional uint64 expiryDate = 2;
+    optional bytes  key        = 3;
+  }
+  message PersistToken {
+    optional uint32 version        = 1;
+    optional string owner          = 2;
+    optional string renewer        = 3;
+    optional string realUser       = 4;
+    optional uint64 issueDate      = 5;
+    optional uint64 maxDate        = 6;
+    optional uint32 sequenceNumber = 7;
+    optional uint32 masterKeyId    = 8;
+    optional uint64 expiryDate     = 9;
+  }
+  optional uint32 currentId = 1;
+  optional uint32 tokenSequenceNumber = 2;
+  optional uint32 numKeys = 3;
+  optional uint32 numTokens = 4;
+  // repeated DelegationKey keys
+  // repeated PersistToken tokens
+}
+
 message CacheManagerSection {
   required uint64 nextDirectiveId = 1;
   required uint32 numPools        = 2;
@@ -246,3 +271,4 @@ message CacheManagerSection {
   // repeated CachePoolInfoProto pools
   // repeated CacheDirectiveInfoProto directives
 }
+

@@ -55,9 +55,11 @@ import org.apache.hadoop.hdfs.server.namenode.FsImageProto.NameSystemSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.StringTableSection;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FSImageFormatPBSnapshot;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
+import org.apache.hadoop.hdfs.server.namenode.FsImageProto.SecretManagerSection;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressorStream;
+import org.apache.hadoop.security.UserGroupInformation;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -204,7 +206,7 @@ public final class FSImageFormatProtobuf {
         String n = s.getName();
         switch (SectionName.fromString(n)) {
         case NS_INFO:
-          loadNameSystemSection(in, s);
+          loadNameSystemSection(in);
           break;
         case STRING_TABLE:
           loadStringTableSection(in);
@@ -227,6 +229,9 @@ public final class FSImageFormatProtobuf {
         case CACHE_MANAGER:
           loadCacheManagerSection(in);
           break;
+        case SECRET_MANAGER:
+          loadSecretManagerSection(in);
+          break;
         default:
           LOG.warn("Unregconized section " + n);
           break;
@@ -234,8 +239,7 @@ public final class FSImageFormatProtobuf {
       }
     }
 
-    private void loadNameSystemSection(InputStream in,
-        FileSummary.Section sections) throws IOException {
+    private void loadNameSystemSection(InputStream in) throws IOException {
       NameSystemSection s = NameSystemSection.parseDelimitedFrom(in);
       fsn.setGenerationStampV1(s.getGenstampV1());
       fsn.setGenerationStampV2(s.getGenstampV2());
@@ -252,6 +256,23 @@ public final class FSImageFormatProtobuf {
             .parseDelimitedFrom(in);
         stringTable[e.getId()] = e.getStr();
       }
+    }
+
+    private void loadSecretManagerSection(InputStream in) throws IOException {
+      SecretManagerSection s = SecretManagerSection.parseDelimitedFrom(in);
+      int numKeys = s.getNumKeys(), numTokens = s.getNumTokens();
+      ArrayList<SecretManagerSection.DelegationKey> keys = Lists
+          .newArrayListWithCapacity(numKeys);
+      ArrayList<SecretManagerSection.PersistToken> tokens = Lists
+          .newArrayListWithCapacity(numTokens);
+
+      for (int i = 0; i < numKeys; ++i)
+        keys.add(SecretManagerSection.DelegationKey.parseDelimitedFrom(in));
+
+      for (int i = 0; i < numTokens; ++i)
+        tokens.add(SecretManagerSection.PersistToken.parseDelimitedFrom(in));
+
+      fsn.loadSecretManagerState(s, keys, tokens);
     }
 
     private void loadCacheManagerSection(InputStream in) throws IOException {
@@ -374,6 +395,7 @@ public final class FSImageFormatProtobuf {
       saveSnapshots(b);
       saveStringTableSection(b);
 
+      saveSecretManagerSection(b);
       saveCacheManagerSection(b);
 
       // Flush the buffered data into the file before appending the header
@@ -383,6 +405,21 @@ public final class FSImageFormatProtobuf {
       saveFileSummary(underlyingOutputStream, summary);
       underlyingOutputStream.close();
       savedDigest = new MD5Hash(digester.digest());
+    }
+
+    private void saveSecretManagerSection(FileSummary.Builder summary)
+        throws IOException {
+      final FSNamesystem fsn = context.getSourceNamesystem();
+      DelegationTokenSecretManager.SecretManagerState state = fsn
+          .saveSecretManagerState();
+      state.section.writeDelimitedTo(sectionOutputStream);
+      for (SecretManagerSection.DelegationKey k : state.keys)
+        k.writeDelimitedTo(sectionOutputStream);
+
+      for (SecretManagerSection.PersistToken t : state.tokens)
+        t.writeDelimitedTo(sectionOutputStream);
+
+      commitSection(summary, SectionName.SECRET_MANAGER);
     }
 
     private void saveCacheManagerSection(FileSummary.Builder summary) throws IOException {
@@ -481,6 +518,7 @@ public final class FSImageFormatProtobuf {
     INODE_DIR("INODE_DIR"),
     FILES_UNDERCONSTRUCTION("FILES_UNDERCONSTRUCTION"),
     SNAPSHOT_DIFF("SNAPSHOT_DIFF"),
+    SECRET_MANAGER("SECRET_MANAGER"),
     CACHE_MANAGER("CACHE_MANAGER");
 
     private static final SectionName[] values = SectionName.values();
