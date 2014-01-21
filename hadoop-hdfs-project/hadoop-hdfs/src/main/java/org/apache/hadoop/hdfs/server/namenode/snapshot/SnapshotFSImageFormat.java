@@ -136,7 +136,7 @@ public class SnapshotFSImageFormat {
    * @param parent The directory that the created list belongs to.
    * @return The created node.
    */
-  private static INode loadCreated(byte[] createdNodeName,
+  public static INode loadCreated(byte[] createdNodeName,
       INodeDirectory parent) throws IOException {
     // the INode in the created list should be a reference to another INode
     // in posterior SnapshotDiffs or one of the current children

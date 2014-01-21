@@ -112,6 +112,17 @@ message INodeSection {
     optional bytes target = 2;
   }
 
+  message INodeReference {
+    // id of the referred inode 
+    optional uint64 referredId = 1;
+    // local name recorded in WithName
+    optional bytes name = 2;
+    // recorded in DstReference
+    optional uint32 dstSnapshotId = 3;
+    // recorded in WithName
+    optional uint32 lastSnapshotId = 4;
+  }
+
   message INode {
     enum Type {
       FILE = 1;
@@ -153,14 +164,72 @@ message INodeDirectorySection {
   message DirEntry {
     optional uint64 parent = 1;
     repeated uint64 children = 2;
+    optional uint64 numOfRef = 3;
+    // repeated INodeReference...
   }
   // repeated DirEntry, ended at the boundary of the section.
 }
 
 /**
+ * This section records the information about snapshot
+ * NAME: SNAPSHOT
+ */
+message SnapshotsSection {
+  message Snapshot {
+    optional uint32 snapshotId = 1;
+    // Snapshot root
+    optional INodeSection.INode root = 2;
+  }
+
+  optional uint32 snapshotCounter = 1;
+  repeated uint64 snapshottableDir = 2;
+  // total number of snapshots
+  optional uint32 numSnapshots = 3;
+  // repeated Snapshots...
+}
+
+/**
+ * This section records information about snapshot diffs
+ * NAME: SNAPSHOT_DIFF
+ */
+message SnapshotDiffSection {
+  message CreatedListEntry {
+    optional bytes name = 1;
+  }
+
+  message DirectoryDiff {
+    optional uint32 snapshotId = 1;
+    optional uint32 childrenSize = 2;
+    optional bool isSnapshotRoot = 3;
+    optional bytes name = 4;
+    optional INodeSection.INodeDirectory snapshotCopy = 5;
+    optional uint32 clistSize = 6;
+    optional uint32 dlistSize = 7;
+    repeated uint64 deletedINode = 8; // id of deleted inode 
+    // repeated CreatedListEntry
+    // repeated INodeReference (number of ref: dlistSize - dlist.size)
+  }
+
+  message FileDiff {
+    optional uint32 snapshotId = 1;
+    optional uint64 fileSize = 2;
+    optional bytes name = 3;
+    optional INodeSection.INodeFile snapshotCopy = 4;
+  }
+
+  message DiffEntry {
+    optional uint64 inodeId = 1;
+    optional uint32 numOfDiff = 2;
+    // repeated DirectoryDiff or FileDiff
+  }
+
+  // repeated DiffEntry
+}
+
+/**
  * This section maps string to id
  * NAME: STRING_TABLE
- **/
+ */
 message StringTableSection {
   message Entry {
     optional uint32 id = 1;

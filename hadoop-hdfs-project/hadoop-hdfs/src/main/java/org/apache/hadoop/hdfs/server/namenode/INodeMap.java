@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.util.Iterator;
 import java.util.List;
 
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -46,8 +47,8 @@ public class INodeMap {
   /** Synchronized by external lock. */
   private final GSet<INode, INodeWithAdditionalFields> map;
   
-  GSet<INode, INodeWithAdditionalFields> getMap() {
-    return map;
+  public Iterator<INodeWithAdditionalFields> getMapIterator() {
+    return map.iterator();
   }
 
   private INodeMap(GSet<INode, INodeWithAdditionalFields> map) {

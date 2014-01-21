@@ -270,6 +270,23 @@ public class SnapshotManager implements SnapshotStats {
     return numSnapshots.get();
   }
   
+  void setNumSnapshots(int num) {
+    numSnapshots.set(num);
+  }
+
+  int getSnapshotCounter() {
+    return snapshotCounter;
+  }
+
+  void setSnapshotCounter(int counter) {
+    snapshotCounter = counter;
+  }
+
+  INodeDirectorySnapshottable[] getSnapshottableDirs() {
+    return snapshottables.values().toArray(
+        new INodeDirectorySnapshottable[snapshottables.size()]);
+  }
+
   /**
    * Write {@link #snapshotCounter}, {@link #numSnapshots},
    * and all snapshots to the DataOutput.

@@ -32,20 +32,24 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.security.DigestOutputStream;
 import java.security.MessageDigest;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.FileSummary;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.NameSystemSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.StringTableSection;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.FSImageFormatPBSnapshot;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.io.compress.CompressionCodec;
@@ -59,18 +63,19 @@ import com.google.protobuf.CodedOutputStream;
 /**
  * Utility class to read / write fsimage in protobuf format.
  */
-final class FSImageFormatProtobuf {
+@InterfaceAudience.Private
+public final class FSImageFormatProtobuf {
   private static final Log LOG = LogFactory.getLog(FSImageFormatProtobuf.class);
 
   static final byte[] MAGIC_HEADER = "HDFSIMG1".getBytes();
   private static final int FILE_VERSION = 1;
 
-  static final class Loader implements FSImageFormat.AbstractLoader {
+  public static final class Loader implements FSImageFormat.AbstractLoader {
     private static final int MINIMUM_FILE_LENGTH = 8;
     private final Configuration conf;
     private final FSNamesystem fsn;
 
-    String[] stringTable;
+    private String[] stringTable;
 
     /** The MD5 sum of the loaded file */
     private MD5Hash imgDigest;
@@ -90,6 +95,10 @@ final class FSImageFormatProtobuf {
     @Override
     public long getLoadedImageTxId() {
       return imgTxId;
+    }
+
+    public String[] getStringTable() {
+      return stringTable;
     }
 
     void load(File file) throws IOException {
@@ -153,6 +162,8 @@ final class FSImageFormatProtobuf {
 
       FSImageFormatPBINode.Loader inodeLoader = new FSImageFormatPBINode.Loader(
           fsn, this);
+      FSImageFormatPBSnapshot.Loader snapshotLoader =
+          new FSImageFormatPBSnapshot.Loader(fsn, this);
 
       ArrayList<FileSummary.Section> sections = Lists.newArrayList(summary
           .getSectionsList());
@@ -203,6 +214,12 @@ final class FSImageFormatProtobuf {
         case FILES_UNDERCONSTRUCTION:
           inodeLoader.loadFilesUnderConstructionSection(in);
           break;
+        case SNAPSHOT:
+          snapshotLoader.loadSnapshotsSection(in);
+          break;
+        case SNAPSHOT_DIFF:
+          snapshotLoader.loadSnapshotDiffSection(in);
+          break;
         default:
           LOG.warn("Unregconized section " + n);
           break;
@@ -210,8 +227,8 @@ final class FSImageFormatProtobuf {
       }
     }
 
-    private void loadNameSystemSection(InputStream in, FileSummary.Section sections)
-        throws IOException {
+    private void loadNameSystemSection(InputStream in,
+        FileSummary.Section sections) throws IOException {
       NameSystemSection s = NameSystemSection.parseDelimitedFrom(in);
       fsn.setGenerationStampV1(s.getGenstampV1());
       fsn.setGenerationStampV2(s.getGenstampV2());
@@ -231,11 +248,11 @@ final class FSImageFormatProtobuf {
     }
   }
 
-  static final class Saver {
+  public static final class Saver {
     final SaveNamespaceContext context;
     private long currentOffset = MAGIC_HEADER.length;
     private MD5Hash savedDigest;
-    private HashMap<String, Integer> stringMap = Maps.newHashMap();
+    private StringMap stringMap = new StringMap();
 
     private FileChannel fileChannel;
     // OutputStream for the section data
@@ -251,7 +268,7 @@ final class FSImageFormatProtobuf {
       return savedDigest;
     }
 
-    void commitSection(FileSummary.Builder summary, SectionName name)
+    public void commitSection(FileSummary.Builder summary, SectionName name)
         throws IOException {
       long oldOffset = currentOffset;
       flushSectionOutputStream();
@@ -294,11 +311,19 @@ final class FSImageFormatProtobuf {
     }
 
     private void saveInodes(FileSummary.Builder summary) throws IOException {
-      FSImageFormatPBINode.Saver saver = new FSImageFormatPBINode.Saver(this,
-          summary);
-      saver.serializeINodeSection(sectionOutputStream);
-      saver.serializeINodeDirectorySection(sectionOutputStream);
-      saver.serializeFilesUCSection(sectionOutputStream);
+      FSImageFormatPBINode.Saver inodeSaver = new FSImageFormatPBINode.Saver(
+          this, summary);
+      inodeSaver.serializeINodeSection(sectionOutputStream);
+      inodeSaver.serializeINodeDirectorySection(sectionOutputStream);
+      inodeSaver.serializeFilesUCSection(sectionOutputStream);
+    }
+
+    private void saveSnapshots(FileSummary.Builder summary) throws IOException {
+      FSImageFormatPBSnapshot.Saver snapshotSaver =
+          new FSImageFormatPBSnapshot.Saver(this, summary,
+              context.getSourceNamesystem());
+      snapshotSaver.serializeSnapshotsSection(sectionOutputStream);
+      snapshotSaver.serializeSnapshotDiffSection(sectionOutputStream);
     }
 
     private void saveInternal(FileOutputStream fout,
@@ -324,6 +349,7 @@ final class FSImageFormatProtobuf {
 
       saveNameSystemSection(b);
       saveInodes(b);
+      saveSnapshots(b);
       saveStringTableSection(b);
 
       // Flush the buffered data into the file before appending the header
@@ -371,11 +397,22 @@ final class FSImageFormatProtobuf {
       commitSection(summary, SectionName.STRING_TABLE);
     }
 
+    public StringMap getStringMap() {
+      return stringMap;
+    }
+  }
+
+  public static class StringMap {
+    private final Map<String, Integer> stringMap;
+
+    public StringMap() {
+      stringMap = Maps.newHashMap();
+    }
+
     int getStringId(String str) {
       if (str == null) {
         return 0;
       }
-
       Integer v = stringMap.get(str);
       if (v == null) {
         int nv = stringMap.size() + 1;
@@ -384,17 +421,28 @@ final class FSImageFormatProtobuf {
       }
       return v;
     }
+
+    int size() {
+      return stringMap.size();
+    }
+
+    Set<Entry<String, Integer>> entrySet() {
+      return stringMap.entrySet();
+    }
   }
 
   /**
    * Supported section name. The order of the enum determines the order of
    * loading.
    */
-  enum SectionName {
+  public enum SectionName {
     NS_INFO("NS_INFO"),
     STRING_TABLE("STRING_TABLE"),
-    INODE("INODE"), INODE_DIR("INODE_DIR"),
-    FILES_UNDERCONSTRUCTION("FILES_UNDERCONSTRUCTION");
+    INODE("INODE"),
+    SNAPSHOT("SNAPSHOT"),
+    INODE_DIR("INODE_DIR"),
+    FILES_UNDERCONSTRUCTION("FILES_UNDERCONSTRUCTION"),
+    SNAPSHOT_DIFF("SNAPSHOT_DIFF"),
     SECRET_MANAGER("SECRET_MANAGER"),
     CACHE_MANAGER("CACHE_MANAGER");
 

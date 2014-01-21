@@ -12,3 +12,5 @@ HDFS-5698 subtasks
 
     HDFS-5793. Optimize the serialization of PermissionStatus. (Haohui Mai via
     jing9)
+
+    HDFS-5743. Use protobuf to serialize snapshot information. (jing9)
