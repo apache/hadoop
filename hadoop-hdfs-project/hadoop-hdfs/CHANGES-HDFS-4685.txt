@@ -42,6 +42,8 @@ HDFS-4685 (Unreleased)
     HDFS-5615. NameNode: implement handling of ACLs in combination with sticky
     bit. (Chris Nauroth via wheat9)
 
+    HADOOP-10241. Clean up output of FsShell getfacl. (Chris Nauroth via wheat9)
+
   OPTIMIZATIONS
 
   BUG FIXES

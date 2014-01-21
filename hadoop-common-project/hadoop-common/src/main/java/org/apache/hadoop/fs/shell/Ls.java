@@ -60,7 +60,8 @@ class Ls extends FsCommand {
   protected static final SimpleDateFormat dateFormat = 
     new SimpleDateFormat("yyyy-MM-dd HH:mm");
 
-  protected int maxRepl = 3, maxLen = 10, maxOwner = 0, maxGroup = 0;
+  protected int maxPerm = 9, maxRepl = 3, maxLen = 10, maxOwner = 0,
+    maxGroup = 0;
   protected String lineFormat;
   protected boolean dirRecurse;
 
@@ -125,6 +126,7 @@ class Ls extends FsCommand {
   private void adjustColumnWidths(PathData items[]) {
     for (PathData item : items) {
       FileStatus stat = item.stat;
+      maxPerm  = maxLength(maxPerm, stat.getPermission());
       maxRepl  = maxLength(maxRepl, stat.getReplication());
       maxLen   = maxLength(maxLen, stat.getLen());
       maxOwner = maxLength(maxOwner, stat.getOwner());
@@ -132,7 +134,7 @@ class Ls extends FsCommand {
     }
 
     StringBuilder fmt = new StringBuilder();
-    fmt.append("%s%s "); // permission string
+    fmt.append("%s%-" + maxPerm + "s "); // permission string
     fmt.append("%"  + maxRepl  + "s ");
     // Do not use '%-0s' as a formatting conversion, since it will throw a
     // a MissingFormatWidthException if it is used in String.format().
