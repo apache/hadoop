@@ -39,6 +39,9 @@ HDFS-4685 (Unreleased)
     HDFS-5613. NameNode: implement handling of ACLs in combination with
     symlinks. (Chris Nauroth via wheat9)
 
+    HDFS-5615. NameNode: implement handling of ACLs in combination with sticky
+    bit. (Chris Nauroth via wheat9)
+
   OPTIMIZATIONS
 
   BUG FIXES
