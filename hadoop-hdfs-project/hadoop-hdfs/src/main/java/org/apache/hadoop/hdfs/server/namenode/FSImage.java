@@ -259,7 +259,7 @@ public class FSImage implements Closeable {
       // just load the image
     }
     
-    return loadFSImage(target, recovery);
+    return loadFSImage(target, startOpt, recovery);
   }
   
   /**
@@ -327,7 +327,7 @@ public class FSImage implements Closeable {
     }
 
     // load the latest image
-    this.loadFSImage(target, null);
+    this.loadFSImage(target, null, null);
 
     // Do upgrade for each directory
     long oldCTime = storage.getCTime();
@@ -582,7 +582,8 @@ public class FSImage implements Closeable {
    * @return whether the image should be saved
    * @throws IOException
    */
-  boolean loadFSImage(FSNamesystem target, MetaRecoveryContext recovery)
+  private boolean loadFSImage(FSNamesystem target, StartupOption startOpt,
+      MetaRecoveryContext recovery)
       throws IOException {
     FSImageStorageInspector inspector = storage.readAndInspectDirs();
     FSImageFile imageFile = null;
@@ -646,7 +647,7 @@ public class FSImage implements Closeable {
       throw new IOException("Failed to load an FSImage file!");
     }
     prog.endPhase(Phase.LOADING_FSIMAGE);
-    long txnsAdvanced = loadEdits(editStreams, target, recovery);
+    long txnsAdvanced = loadEdits(editStreams, target, startOpt, recovery);
     needToSave |= needsResaveBasedOnStaleCheckpoint(imageFile.getFile(),
                                                     txnsAdvanced);
     editLog.setNextTxId(lastAppliedTxId + 1);
@@ -718,7 +719,13 @@ public class FSImage implements Closeable {
    * Load the specified list of edit files into the image.
    */
   public long loadEdits(Iterable<EditLogInputStream> editStreams,
-      FSNamesystem target, MetaRecoveryContext recovery) throws IOException {
+      FSNamesystem target) throws IOException {
+    return loadEdits(editStreams, target, null, null);
+  }
+
+  private long loadEdits(Iterable<EditLogInputStream> editStreams,
+      FSNamesystem target, StartupOption startOpt, MetaRecoveryContext recovery)
+          throws IOException {
     LOG.debug("About to load edits:\n  " + Joiner.on("\n  ").join(editStreams));
     StartupProgress prog = NameNode.getStartupProgress();
     prog.beginPhase(Phase.LOADING_EDITS);
@@ -732,7 +739,7 @@ public class FSImage implements Closeable {
         LOG.info("Reading " + editIn + " expecting start txid #" +
               (lastAppliedTxId + 1));
         try {
-          loader.loadFSEdits(editIn, lastAppliedTxId + 1, recovery);
+          loader.loadFSEdits(editIn, lastAppliedTxId + 1, startOpt, recovery);
         } finally {
           // Update lastAppliedTxId even in case of error, since some ops may
           // have been successfully applied before the error.

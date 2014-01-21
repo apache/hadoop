@@ -9,3 +9,6 @@ HDFS-5535 subtasks:
     upgrade. (szetszwo)
 
     HDFS-5786. Support QUERY and FINALIZE actions of rolling upgrade. (szetszwo)
+
+    HDFS-5753. Add new NN startup options for downgrade and rollback using
+    upgrade marker. (szetszwo)
