@@ -381,4 +381,50 @@ public class TestTaskAttemptListenerImpl {
 
   }
 
+  @SuppressWarnings("rawtypes")
+  @Test
+  public void testStatusUpdateProgress()
+      throws IOException, InterruptedException {
+    AppContext appCtx = mock(AppContext.class);
+    JobTokenSecretManager secret = mock(JobTokenSecretManager.class);
+    RMHeartbeatHandler rmHeartbeatHandler =
+        mock(RMHeartbeatHandler.class);
+    TaskHeartbeatHandler hbHandler = mock(TaskHeartbeatHandler.class);
+    Dispatcher dispatcher = mock(Dispatcher.class);
+    EventHandler ea = mock(EventHandler.class);
+    when(dispatcher.getEventHandler()).thenReturn(ea);
+
+    when(appCtx.getEventHandler()).thenReturn(ea);
+    CheckpointAMPreemptionPolicy policy = new CheckpointAMPreemptionPolicy();
+    policy.init(appCtx);
+    MockTaskAttemptListenerImpl listener =
+      new MockTaskAttemptListenerImpl(appCtx, secret,
+          rmHeartbeatHandler, hbHandler, policy);
+    Configuration conf = new Configuration();
+    listener.init(conf);
+    listener.start();
+    JVMId id = new JVMId("foo",1, true, 1);
+    WrappedJvmID wid = new WrappedJvmID(id.getJobId(), id.isMap, id.getId());
+
+    TaskAttemptID attemptID = new TaskAttemptID("1", 1, TaskType.MAP, 1, 1);
+    TaskAttemptId attemptId = TypeConverter.toYarn(attemptID);
+    Task task = mock(Task.class);
+    listener.registerPendingTask(task, wid);
+    listener.registerLaunchedTask(attemptId, wid);
+    verify(hbHandler).register(attemptId);
+
+    // make sure a ping doesn't report progress
+    AMFeedback feedback = listener.statusUpdate(attemptID, null);
+    assertTrue(feedback.getTaskFound());
+    verify(hbHandler, never()).progressing(eq(attemptId));
+
+    // make sure a status update does report progress
+    MapTaskStatus mockStatus = new MapTaskStatus(attemptID, 0.0f, 1,
+        TaskStatus.State.RUNNING, "", "RUNNING", "", TaskStatus.Phase.MAP,
+        new Counters());
+    feedback = listener.statusUpdate(attemptID, mockStatus);
+    assertTrue(feedback.getTaskFound());
+    verify(hbHandler).progressing(eq(attemptId));
+    listener.close();
+  }
 }

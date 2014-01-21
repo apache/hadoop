@@ -319,6 +319,8 @@ Release 2.4.0 - UNRELEASED
     YARN-1567. In Fair Scheduler, allow empty queues to change between leaf and
     parent on allocation file reload (Sandy Ryza)
 
+    YARN-1616. RMFatalEventDispatcher should log the cause of the event (kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES

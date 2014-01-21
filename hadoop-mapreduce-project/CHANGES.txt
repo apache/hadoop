@@ -146,6 +146,8 @@ Trunk (Unreleased)
     MAPREDUCE-5191. TestQueue#testQueue fails with timeout on Windows. (Ivan
     Mitic via hitesh)
 
+    MAPREDUCE-5717. Task pings are interpreted as task progress (jlowe)
+
 Release 2.4.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -200,6 +202,9 @@ Release 2.4.0 - UNRELEASED
 
     MAPREDUCE-5672. Provide optional RollingFileAppender for container log4j
     (syslog) (Gera Shegalov via jlowe)
+
+    MAPREDUCE-5725. Make explicit that TestNetworkedJob relies on the Capacity
+    Scheduler (Sandy Ryza)
 
   OPTIMIZATIONS
 
@@ -277,6 +282,8 @@ Release 2.4.0 - UNRELEASED
 
     MAPREDUCE-5724. JobHistoryServer does not start if HDFS is not running. 
     (tucu)
+
+    MAPREDUCE-5729. mapred job -list throws NPE (kasha)
 
 Release 2.3.0 - UNRELEASED
 

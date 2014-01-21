@@ -617,7 +617,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
     @Override
     public void handle(RMFatalEvent event) {
       LOG.fatal("Received a " + RMFatalEvent.class.getName() + " of type " +
-          event.getType().name());
+          event.getType().name() + ". Cause:\n" + event.getCause());
 
       if (event.getType() == RMFatalEventType.STATE_STORE_FENCED) {
         LOG.info("RMStateStore has been fenced");
