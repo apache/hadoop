@@ -511,6 +511,31 @@
 </property>
 
 <property>
+  <name>yarn.app.mapreduce.task.container.log.backups</name>
+  <value>0</value>
+  <description>Number of backup files for task logs when using
+    ContainerRollingLogAppender (CRLA). See
+    org.apache.log4j.RollingFileAppender.maxBackupIndex. By default,
+    ContainerLogAppender (CLA) is used, and container logs are not rolled. CRLA
+    is enabled for tasks when both mapreduce.task.userlog.limit.kb and
+    yarn.app.mapreduce.task.container.log.backups are greater than zero.
+  </description>
+</property>
+
+<property>
+  <name>yarn.app.mapreduce.am.container.log.backups</name>
+  <value>0</value>
+  <description>Number of backup files for the ApplicationMaster logs when using
+    ContainerRollingLogAppender (CRLA). See
+    org.apache.log4j.RollingFileAppender.maxBackupIndex. By default,
+    ContainerLogAppender (CLA) is used, and container logs are not rolled. CRLA
+    is enabled for the ApplicationMaster when both
+    mapreduce.task.userlog.limit.kb and
+    yarn.app.mapreduce.am.container.log.backups are greater than zero.
+  </description>
+</property>
+
+<property>
   <name>mapreduce.job.maxtaskfailures.per.tracker</name>
   <value>3</value>
   <description>The number of task-failures on a node manager of a given job 
@@ -575,6 +600,31 @@
     <description> To set the ranges of reduce tasks to profile.
     mapreduce.task.profile has to be set to true for the value to be accounted.
     </description>
+  </property>
+
+  <property>
+    <name>mapreduce.task.profile.params</name>
+    <value></value>
+    <description>JVM profiler parameters used to profile map and reduce task
+      attempts. This string may contain a single format specifier %s that will
+      be replaced by the path to profile.out in the task attempt log directory.
+      To specify different profiling options for map tasks and reduce tasks,
+      more specific parameters mapreduce.task.profile.map.params and
+      mapreduce.task.profile.reduce.params should be used.</description>
+  </property>
+
+  <property>
+    <name>mapreduce.task.profile.map.params</name>
+    <value>${mapreduce.task.profile.params}</value>
+    <description>Map-task-specific JVM profiler parameters. See
+      mapreduce.task.profile.params</description>
+  </property>
+
+  <property>
+    <name>mapreduce.task.profile.reduce.params</name>
+    <value>${mapreduce.task.profile.params}</value>
+    <description>Reduce-task-specific JVM profiler parameters. See
+      mapreduce.task.profile.params</description>
   </property>
 
   <property>

@@ -146,6 +146,8 @@ Trunk (Unreleased)
     MAPREDUCE-5191. TestQueue#testQueue fails with timeout on Windows. (Ivan
     Mitic via hitesh)
 
+    MAPREDUCE-5717. Task pings are interpreted as task progress (jlowe)
+
 Release 2.4.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -197,6 +199,12 @@ Release 2.4.0 - UNRELEASED
     with Hadoop 2.0 (Gera Shegalov via Sandy Ryza)
 
     MAPREDUCE-3310. Custom grouping comparator cannot be set for Combiners (tucu)
+
+    MAPREDUCE-5672. Provide optional RollingFileAppender for container log4j
+    (syslog) (Gera Shegalov via jlowe)
+
+    MAPREDUCE-5725. Make explicit that TestNetworkedJob relies on the Capacity
+    Scheduler (Sandy Ryza)
 
   OPTIMIZATIONS
 
@@ -272,6 +280,11 @@ Release 2.4.0 - UNRELEASED
     MAPREDUCE-5689. MRAppMaster does not preempt reducers when scheduled maps 
     cannot be fulfilled. (lohit via kasha)
 
+    MAPREDUCE-5724. JobHistoryServer does not start if HDFS is not running. 
+    (tucu)
+
+    MAPREDUCE-5729. mapred job -list throws NPE (kasha)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -327,6 +340,9 @@ Release 2.3.0 - UNRELEASED
 
     MAPREDUCE-5674. Missing start and finish time in mapred.JobStatus.
     (Chuan Liu via cnauroth)
+
+    MAPREDUCE-5650. Job fails when hprof mapreduce.task.profile.map/reduce.params
+    is specified (Gera Shegalov via Sandy Ryza)
 
 Release 2.2.0 - 2013-10-13
 

@@ -484,6 +484,9 @@ Trunk (Unreleased)
     HDFS-5775. Consolidate the code for serialization in CacheManager
     (Haohui Mai via brandonli)
 
+    HDFS-5794. Fix the inconsistency of layout version number of 
+    ADD_DATANODE_AND_STORAGE_UUIDS between trunk and branch-2. (jing9)
+
 Release 2.4.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -517,6 +520,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-2832. Heterogeneous Storages support in HDFS phase 1 - treat DataNode
     as a collection of storages (see breakdown of tasks below for features and
     contributors).
+
+    HDFS-5784. reserve space in edit log header and fsimage header for feature
+    flag section (cmccabe)
 
   IMPROVEMENTS
 
@@ -687,6 +693,8 @@ Release 2.4.0 - UNRELEASED
     InvalidEncryptionKeyException in fetchBlockByteRange (Liang Xie via Colin
     Patrick McCabe)
 
+    HDFS-5704. Change OP_UPDATE_BLOCKS with a new OP_ADD_BLOCK. (jing9)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn)
@@ -764,6 +772,11 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-5579. Under construction files make DataNode decommission take very long
     hours. (zhaoyunjiong via jing9)
+
+    HDFS-5777. Update LayoutVersion for the new editlog op OP_ADD_BLOCK. (jing9)
+
+    HDFS-5800. Fix a typo in DFSClient.renewLease().  (Kousuke Saruta
+    via szetszwo)
 
   BREAKDOWN OF HDFS-2832 SUBTASKS AND RELATED JIRAS
 
@@ -939,8 +952,6 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-5677. Need error checking for HA cluster configuration.
     (Vincent Sheffer via cos)
-
-    HDFS-5704. Change OP_UPDATE_BLOCKS with a new OP_ADD_BLOCK. (jing9)
 
   OPTIMIZATIONS
 

@@ -61,6 +61,7 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.util.ApplicationClassLoader;
 import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.apache.log4j.RollingFileAppender;
 
 /**
  * Helper class for MR applications
@@ -476,16 +477,24 @@ public class MRApps extends Apps {
    * Add the JVM system properties necessary to configure {@link ContainerLogAppender}.
    * @param logLevel the desired log level (eg INFO/WARN/DEBUG)
    * @param logSize See {@link ContainerLogAppender#setTotalLogFileSize(long)}
+   * @param numBackups See {@link RollingFileAppender#setMaxBackupIndex(int)}
    * @param vargs the argument list to append to
    */
   public static void addLog4jSystemProperties(
-      String logLevel, long logSize, List<String> vargs) {
+      String logLevel, long logSize, int numBackups, List<String> vargs) {
     vargs.add("-Dlog4j.configuration=container-log4j.properties");
     vargs.add("-D" + YarnConfiguration.YARN_APP_CONTAINER_LOG_DIR + "=" +
         ApplicationConstants.LOG_DIR_EXPANSION_VAR);
     vargs.add(
         "-D" + YarnConfiguration.YARN_APP_CONTAINER_LOG_SIZE + "=" + logSize);
-    vargs.add("-Dhadoop.root.logger=" + logLevel + ",CLA"); 
+    if (logSize > 0L && numBackups > 0) {
+      // log should be rolled
+      vargs.add("-D" + YarnConfiguration.YARN_APP_CONTAINER_LOG_BACKUPS + "="
+          + numBackups);
+      vargs.add("-Dhadoop.root.logger=" + logLevel + ",CRLA");
+    } else {
+      vargs.add("-Dhadoop.root.logger=" + logLevel + ",CLA");
+    }
   }
 
   /**

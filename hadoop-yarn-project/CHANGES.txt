@@ -6,6 +6,9 @@ Trunk - Unreleased
 
   NEW FEATURES
 
+    YARN-1496. Protocol additions to allow moving apps between queues (Sandy
+    Ryza)
+
   IMPROVEMENTS
 
   OPTIMIZATIONS
@@ -342,6 +345,12 @@ Release 2.4.0 - UNRELEASED
 
     YARN-1351. Invalid string format in Fair Scheduler log warn message
     (Konstantin Weitz via Sandy Ryza)
+
+    YARN-1608. LinuxContainerExecutor has a few DEBUG messages at INFO level
+    (kasha)
+
+    YARN-1606. Fix the default value of yarn.resourcemanager.zk-timeout-ms 
+    in yarn-default.xml (kasha)
 
 Release 2.3.0 - UNRELEASED
 
