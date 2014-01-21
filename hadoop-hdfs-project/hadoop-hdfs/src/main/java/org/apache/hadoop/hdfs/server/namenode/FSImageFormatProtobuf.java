@@ -46,6 +46,10 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CacheDirectiveInfoProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CachePoolInfoProto;
+import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
+import org.apache.hadoop.hdfs.server.namenode.FsImageProto.CacheManagerSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.FileSummary;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.NameSystemSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.StringTableSection;
@@ -220,6 +224,9 @@ public final class FSImageFormatProtobuf {
         case SNAPSHOT_DIFF:
           snapshotLoader.loadSnapshotDiffSection(in);
           break;
+        case CACHE_MANAGER:
+          loadCacheManagerSection(in);
+          break;
         default:
           LOG.warn("Unregconized section " + n);
           break;
@@ -246,6 +253,21 @@ public final class FSImageFormatProtobuf {
         stringTable[e.getId()] = e.getStr();
       }
     }
+
+    private void loadCacheManagerSection(InputStream in) throws IOException {
+      CacheManagerSection s = CacheManagerSection.parseDelimitedFrom(in);
+      ArrayList<CachePoolInfoProto> pools = Lists.newArrayListWithCapacity(s
+          .getNumPools());
+      ArrayList<CacheDirectiveInfoProto> directives = Lists
+          .newArrayListWithCapacity(s.getNumDirectives());
+      for (int i = 0; i < s.getNumPools(); ++i)
+        pools.add(CachePoolInfoProto.parseDelimitedFrom(in));
+      for (int i = 0; i < s.getNumDirectives(); ++i)
+        directives.add(CacheDirectiveInfoProto.parseDelimitedFrom(in));
+      fsn.getCacheManager().loadState(
+          new CacheManager.PersistState(s, pools, directives));
+    }
+
   }
 
   public static final class Saver {
@@ -352,6 +374,8 @@ public final class FSImageFormatProtobuf {
       saveSnapshots(b);
       saveStringTableSection(b);
 
+      saveCacheManagerSection(b);
+
       // Flush the buffered data into the file before appending the header
       flushSectionOutputStream();
 
@@ -359,6 +383,20 @@ public final class FSImageFormatProtobuf {
       saveFileSummary(underlyingOutputStream, summary);
       underlyingOutputStream.close();
       savedDigest = new MD5Hash(digester.digest());
+    }
+
+    private void saveCacheManagerSection(FileSummary.Builder summary) throws IOException {
+      final FSNamesystem fsn = context.getSourceNamesystem();
+      CacheManager.PersistState state = fsn.getCacheManager().saveState();
+      state.section.writeDelimitedTo(sectionOutputStream);
+
+      for (CachePoolInfoProto p : state.pools)
+        p.writeDelimitedTo(sectionOutputStream);
+
+      for (CacheDirectiveInfoProto p : state.directives)
+        p.writeDelimitedTo(sectionOutputStream);
+
+      commitSection(summary, SectionName.CACHE_MANAGER);
     }
 
     private void saveNameSystemSection(
@@ -443,7 +481,6 @@ public final class FSImageFormatProtobuf {
     INODE_DIR("INODE_DIR"),
     FILES_UNDERCONSTRUCTION("FILES_UNDERCONSTRUCTION"),
     SNAPSHOT_DIFF("SNAPSHOT_DIFF"),
-    SECRET_MANAGER("SECRET_MANAGER"),
     CACHE_MANAGER("CACHE_MANAGER");
 
     private static final SectionName[] values = SectionName.values();

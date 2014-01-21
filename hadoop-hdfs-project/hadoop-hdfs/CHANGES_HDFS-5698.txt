@@ -14,3 +14,5 @@ HDFS-5698 subtasks
     jing9)
 
     HDFS-5743. Use protobuf to serialize snapshot information. (jing9)
+
+    HDFS-5774. Serialize CachePool directives in protobuf. (Haohui Mai via jing9)

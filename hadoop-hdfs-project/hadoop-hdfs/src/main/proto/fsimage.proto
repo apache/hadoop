@@ -73,7 +73,7 @@ message NameSystemSection {
 }
 
 /**
- * Permission is serialized as a 64-bit long. [0:24):[25:48):[48:64) (in Big Endian). 
+ * Permission is serialized as a 64-bit long. [0:24):[25:48):[48:64) (in Big Endian).
  * The first and the second parts are the string ids of the user and
  * group name, and the last 16 bits are the permission bits.
  *
@@ -113,7 +113,7 @@ message INodeSection {
   }
 
   message INodeReference {
-    // id of the referred inode 
+    // id of the referred inode
     optional uint64 referredId = 1;
     // local name recorded in WithName
     optional bytes name = 2;
@@ -132,7 +132,7 @@ message INodeSection {
     required Type type = 1;
     required uint64 id = 2;
     optional bytes name = 3;
-    
+
     optional INodeFile file = 4;
     optional INodeDirectory directory = 5;
     optional INodeSymlink symlink = 6;
@@ -205,7 +205,7 @@ message SnapshotDiffSection {
     optional INodeSection.INodeDirectory snapshotCopy = 5;
     optional uint32 clistSize = 6;
     optional uint32 dlistSize = 7;
-    repeated uint64 deletedINode = 8; // id of deleted inode 
+    repeated uint64 deletedINode = 8; // id of deleted inode
     // repeated CreatedListEntry
     // repeated INodeReference (number of ref: dlistSize - dlist.size)
   }
@@ -237,4 +237,12 @@ message StringTableSection {
   }
   optional uint32 numEntry = 1;
   // repeated Entry
+}
+
+message CacheManagerSection {
+  required uint64 nextDirectiveId = 1;
+  required uint32 numPools        = 2;
+  required uint32 numDirectives   = 3;
+  // repeated CachePoolInfoProto pools
+  // repeated CacheDirectiveInfoProto directives
 }
