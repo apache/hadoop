@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn;
 
 import java.io.File;
+import java.io.Flushable;
 import java.util.LinkedList;
 import java.util.Queue;
 
@@ -33,7 +34,9 @@ import org.apache.log4j.spi.LoggingEvent;
  */
 @Public
 @Unstable
-public class ContainerLogAppender extends FileAppender {
+public class ContainerLogAppender extends FileAppender
+  implements Flushable
+{
   private String containerLogDir;
   //so that log4j can configure it from the configuration(log4j.properties). 
   private int maxEvents;
@@ -65,6 +68,7 @@ public class ContainerLogAppender extends FileAppender {
     }
   }
   
+  @Override
   public void flush() {
     if (qw != null) {
       qw.flush();
