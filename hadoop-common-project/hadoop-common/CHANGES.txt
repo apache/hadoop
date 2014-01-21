@@ -136,6 +136,9 @@ Release 2.4.0 - UNRELEASED
     HADOOP-10228. FsPermission#fromShort() should cache FsAction.values().
     (Haohui Mai via cnauroth)
 
+    HADOOP-10143 replace WritableFactories's hashmap with ConcurrentHashMap
+    (Liang Xie via stack)
+
   BUG FIXES
 
     HADOOP-9964. Fix deadlocks in TestHttpServer by synchronize
