@@ -778,6 +778,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-5800. Fix a typo in DFSClient.renewLease().  (Kousuke Saruta
     via szetszwo)
 
+    HDFS-5748. Too much information shown in the dfs health page.
+    (Haohui Mai via brandonli)
+
   BREAKDOWN OF HDFS-2832 SUBTASKS AND RELATED JIRAS
 
     HDFS-4985. Add storage type to the protocol and expose it in block report

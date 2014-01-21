@@ -193,3 +193,23 @@ div.security {
   color: #fff !important;
   background-color: #5FA33E !important;
 }
+
+header.bs-docs-nav, header.bs-docs-nav .navbar-brand {
+  border-radius: 0px;
+  background-color: #5fa33e;
+  color: #fff;
+}
+
+#ui-tabs > li > a {
+  color: #dcf0d3;
+}
+
+#ui-tabs .active a {
+  color: #fff;
+  background-color: #446633;
+}
+
+#alert-panel {
+  margin-top:20px;
+  display: none;
+}
