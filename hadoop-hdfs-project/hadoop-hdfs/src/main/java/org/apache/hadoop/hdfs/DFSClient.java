@@ -87,6 +87,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.BlockStorageLocation;
+import org.apache.hadoop.fs.CacheFlag;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
@@ -100,6 +101,7 @@ import org.apache.hadoop.fs.MD5MD5CRC32CastagnoliFileChecksum;
 import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.fs.MD5MD5CRC32GzipFileChecksum;
 import org.apache.hadoop.fs.Options;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
@@ -109,6 +111,11 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.client.ClientMmapManager;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
+import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
+import org.apache.hadoop.hdfs.protocol.CacheDirectiveIterator;
+import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
+import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
+import org.apache.hadoop.hdfs.protocol.CachePoolIterator;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
 import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
@@ -117,6 +124,7 @@ import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsBlocksMetadata;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -2312,7 +2320,73 @@ public class DFSClient implements java.io.Closeable {
       throw re.unwrapRemoteException();
     }
   }
+
+  public long addCacheDirective(
+      CacheDirectiveInfo info, EnumSet<CacheFlag> flags) throws IOException {
+    checkOpen();
+    try {
+      return namenode.addCacheDirective(info, flags);
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException();
+    }
+  }
   
+  public void modifyCacheDirective(
+      CacheDirectiveInfo info, EnumSet<CacheFlag> flags) throws IOException {
+    checkOpen();
+    try {
+      namenode.modifyCacheDirective(info, flags);
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException();
+    }
+  }
+
+  public void removeCacheDirective(long id)
+      throws IOException {
+    checkOpen();
+    try {
+      namenode.removeCacheDirective(id);
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException();
+    }
+  }
+  
+  public RemoteIterator<CacheDirectiveEntry> listCacheDirectives(
+      CacheDirectiveInfo filter) throws IOException {
+    return new CacheDirectiveIterator(namenode, filter);
+  }
+
+  public void addCachePool(CachePoolInfo info) throws IOException {
+    checkOpen();
+    try {
+      namenode.addCachePool(info);
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException();
+    }
+  }
+
+  public void modifyCachePool(CachePoolInfo info) throws IOException {
+    checkOpen();
+    try {
+      namenode.modifyCachePool(info);
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException();
+    }
+  }
+
+  public void removeCachePool(String poolName) throws IOException {
+    checkOpen();
+    try {
+      namenode.removeCachePool(poolName);
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException();
+    }
+  }
+
+  public RemoteIterator<CachePoolEntry> listCachePools() throws IOException {
+    return new CachePoolIterator(namenode);
+  }
+
   /**
    * Save namespace image.
    * 

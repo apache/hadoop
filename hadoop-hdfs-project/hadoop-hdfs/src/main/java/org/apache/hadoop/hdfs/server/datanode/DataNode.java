@@ -124,6 +124,7 @@ import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.ReadaheadPool;
+import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
@@ -264,6 +265,7 @@ public class DataNode extends Configured
   private SecureResources secureResources = null;
   private List<StorageLocation> dataDirs;
   private Configuration conf;
+  private final long maxNumberOfBlocksToLog;
 
   private final List<String> usersWithLocalPathAccess;
   private boolean connectToDnViaHostname;
@@ -279,6 +281,8 @@ public class DataNode extends Configured
            final List<StorageLocation> dataDirs,
            final SecureResources resources) throws IOException {
     super(conf);
+    this.maxNumberOfBlocksToLog = conf.getLong(DFS_MAX_NUM_BLOCKS_TO_LOG_KEY,
+        DFS_MAX_NUM_BLOCKS_TO_LOG_DEFAULT);
 
     this.usersWithLocalPathAccess = Arrays.asList(
         conf.getTrimmedStrings(DFSConfigKeys.DFS_BLOCK_LOCAL_PATH_ACCESS_USER_KEY));
@@ -737,6 +741,27 @@ public class DataNode extends Configured
     this.conf = conf;
     this.dnConf = new DNConf(conf);
 
+    if (dnConf.maxLockedMemory > 0) {
+      if (!NativeIO.POSIX.getCacheManipulator().verifyCanMlock()) {
+        throw new RuntimeException(String.format(
+            "Cannot start datanode because the configured max locked memory" +
+            " size (%s) is greater than zero and native code is not available.",
+            DFS_DATANODE_MAX_LOCKED_MEMORY_KEY));
+      }
+      long ulimit = NativeIO.POSIX.getCacheManipulator().getMemlockLimit();
+      if (dnConf.maxLockedMemory > ulimit) {
+      throw new RuntimeException(String.format(
+          "Cannot start datanode because the configured max locked memory" +
+          " size (%s) of %d bytes is more than the datanode's available" +
+          " RLIMIT_MEMLOCK ulimit of %d bytes.",
+          DFS_DATANODE_MAX_LOCKED_MEMORY_KEY,
+          dnConf.maxLockedMemory,
+          ulimit));
+      }
+    }
+    LOG.info("Starting DataNode with maxLockedMemory = " +
+        dnConf.maxLockedMemory);
+
     storage = new DataStorage();
     
     // global DN settings
@@ -1073,6 +1098,10 @@ public class DataNode extends Configured
               + "authorization. The user " + currentUser
               + " is not allowed to call getBlockLocalPathInfo");
     }
+  }
+
+  public long getMaxNumberOfBlocksToLog() {
+    return maxNumberOfBlocksToLog;
   }
 
   @Override

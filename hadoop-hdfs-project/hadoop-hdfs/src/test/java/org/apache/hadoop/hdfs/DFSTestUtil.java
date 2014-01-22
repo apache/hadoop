@@ -850,7 +850,7 @@ public class DFSTestUtil {
         DFSConfigKeys.DFS_DATANODE_HTTP_DEFAULT_PORT,
         DFSConfigKeys.DFS_DATANODE_HTTPS_DEFAULT_PORT,
         DFSConfigKeys.DFS_DATANODE_IPC_DEFAULT_PORT,
-        1, 2, 3, 4, 5, 6, "local", adminState);
+        1l, 2l, 3l, 4l, 0l, 0l, 5, 6, "local", adminState);
   }
 
   public static DatanodeDescriptor getDatanodeDescriptor(String ipAddr,
@@ -1060,6 +1060,27 @@ public class DFSTestUtil {
       locatedBlocks = DFSClientAdapter.callGetBlockLocations(
           cluster.getNameNodeRpc(nnIndex), filePath, 0L, bytes.length);
     } while (locatedBlocks.isUnderConstruction());
+    // OP_ADD_CACHE_POOL
+    filesystem.addCachePool(new CachePoolInfo("pool1"));
+    // OP_MODIFY_CACHE_POOL
+    filesystem.modifyCachePool(new CachePoolInfo("pool1").setLimit(99l));
+    // OP_ADD_PATH_BASED_CACHE_DIRECTIVE
+    long id = filesystem.addCacheDirective(
+        new CacheDirectiveInfo.Builder().
+            setPath(new Path("/path")).
+            setReplication((short)1).
+            setPool("pool1").
+            build(), EnumSet.of(CacheFlag.FORCE));
+    // OP_MODIFY_PATH_BASED_CACHE_DIRECTIVE
+    filesystem.modifyCacheDirective(
+        new CacheDirectiveInfo.Builder().
+            setId(id).
+            setReplication((short)2).
+            build(), EnumSet.of(CacheFlag.FORCE));
+    // OP_REMOVE_PATH_BASED_CACHE_DIRECTIVE
+    filesystem.removeCacheDirective(id);
+    // OP_REMOVE_CACHE_POOL
+    filesystem.removeCachePool("pool1");
   }
 
   public static void abortStream(DFSOutputStream out) throws IOException {

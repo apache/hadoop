@@ -30,6 +30,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_A
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMESERVICES;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMESERVICE_ID;
+import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.hamcrest.CoreMatchers.not;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -724,5 +725,43 @@ public class TestDFSUtil {
     assertEquals("Test spnego key is NOT null",
         DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_KEYTAB_KEY,
         DFSUtil.getSpnegoKeytabKey(conf, defaultKey));
+  }
+
+  @Test(timeout=1000)
+  public void testDurationToString() throws Exception {
+    assertEquals("000:00:00:00.000", DFSUtil.durationToString(0));
+    assertEquals("001:01:01:01.000",
+        DFSUtil.durationToString(((24*60*60)+(60*60)+(60)+1)*1000));
+    assertEquals("000:23:59:59.999",
+        DFSUtil.durationToString(((23*60*60)+(59*60)+(59))*1000+999));
+    assertEquals("-001:01:01:01.000",
+        DFSUtil.durationToString(-((24*60*60)+(60*60)+(60)+1)*1000));
+    assertEquals("-000:23:59:59.574",
+        DFSUtil.durationToString(-(((23*60*60)+(59*60)+(59))*1000+574)));
+  }
+
+  @Test(timeout=5000)
+  public void testRelativeTimeConversion() throws Exception {
+    try {
+      DFSUtil.parseRelativeTime("1");
+    } catch (IOException e) {
+      assertExceptionContains("too short", e);
+    }
+    try {
+      DFSUtil.parseRelativeTime("1z");
+    } catch (IOException e) {
+      assertExceptionContains("unknown time unit", e);
+    }
+    try {
+      DFSUtil.parseRelativeTime("yyz");
+    } catch (IOException e) {
+      assertExceptionContains("is not a number", e);
+    }
+    assertEquals(61*1000, DFSUtil.parseRelativeTime("61s"));
+    assertEquals(61*60*1000, DFSUtil.parseRelativeTime("61m"));
+    assertEquals(0, DFSUtil.parseRelativeTime("0s"));
+    assertEquals(25*60*60*1000, DFSUtil.parseRelativeTime("25h"));
+    assertEquals(4*24*60*60*1000l, DFSUtil.parseRelativeTime("4d"));
+    assertEquals(999*24*60*60*1000l, DFSUtil.parseRelativeTime("999d"));
   }
 }

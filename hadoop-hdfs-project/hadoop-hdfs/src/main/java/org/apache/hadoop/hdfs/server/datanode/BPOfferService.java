@@ -34,6 +34,7 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.protocol.BalancerBandwidthCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
+import org.apache.hadoop.hdfs.server.protocol.BlockIdCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
@@ -538,6 +539,21 @@ class BPOfferService {
   }
   }
 
+  private String blockIdArrayToString(long ids[]) {
+    long maxNumberOfBlocksToLog = dn.getMaxNumberOfBlocksToLog();
+    StringBuilder bld = new StringBuilder();
+    String prefix = "";
+    for (int i = 0; i < ids.length; i++) {
+      if (i >= maxNumberOfBlocksToLog) {
+        bld.append("...");
+        break;
+      }
+      bld.append(prefix).append(ids[i]);
+      prefix = ", ";
+    }
+    return bld.toString();
+  }
+
   /**
    * This method should handle all commands from Active namenode except
    * DNA_REGISTER which should be handled earlier itself.
@@ -550,6 +566,8 @@ class BPOfferService {
       BPServiceActor actor) throws IOException {
     final BlockCommand bcmd = 
       cmd instanceof BlockCommand? (BlockCommand)cmd: null;
+    final BlockIdCommand blockIdCmd = 
+      cmd instanceof BlockIdCommand ? (BlockIdCommand)cmd: null;
 
     switch(cmd.getAction()) {
     case DatanodeProtocol.DNA_TRANSFER:
@@ -574,6 +592,20 @@ class BPOfferService {
         throw e;
       }
       dn.metrics.incrBlocksRemoved(toDelete.length);
+      break;
+    case DatanodeProtocol.DNA_CACHE:
+      LOG.info("DatanodeCommand action: DNA_CACHE for " +
+        blockIdCmd.getBlockPoolId() + " of [" +
+          blockIdArrayToString(blockIdCmd.getBlockIds()) + "]");
+      dn.getFSDataset().cache(blockIdCmd.getBlockPoolId(), blockIdCmd.getBlockIds());
+      dn.metrics.incrBlocksCached(blockIdCmd.getBlockIds().length);
+      break;
+    case DatanodeProtocol.DNA_UNCACHE:
+      LOG.info("DatanodeCommand action: DNA_UNCACHE for " +
+        blockIdCmd.getBlockPoolId() + " of [" +
+          blockIdArrayToString(blockIdCmd.getBlockIds()) + "]");
+      dn.getFSDataset().uncache(blockIdCmd.getBlockPoolId(), blockIdCmd.getBlockIds());
+      dn.metrics.incrBlocksUncached(blockIdCmd.getBlockIds().length);
       break;
     case DatanodeProtocol.DNA_SHUTDOWN:
       // TODO: DNA_SHUTDOWN appears to be unused - the NN never sends this command
@@ -639,6 +671,8 @@ class BPOfferService {
     case DatanodeProtocol.DNA_FINALIZE:
     case DatanodeProtocol.DNA_RECOVERBLOCK:
     case DatanodeProtocol.DNA_BALANCERBANDWIDTHUPDATE:
+    case DatanodeProtocol.DNA_CACHE:
+    case DatanodeProtocol.DNA_UNCACHE:
       LOG.warn("Got a command from standby NN - ignoring command:" + cmd.getAction());
       break;
     default:

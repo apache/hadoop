@@ -1476,6 +1476,102 @@
 </property>
 
 <property>
+  <name>dfs.namenode.path.based.cache.block.map.allocation.percent</name>
+  <value>0.25</value>
+  <description>
+    The percentage of the Java heap which we will allocate to the cached blocks
+    map.  The cached blocks map is a hash map which uses chained hashing.
+    Smaller maps may be accessed more slowly if the number of cached blocks is
+    large; larger maps will consume more memory.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.max.locked.memory</name>
+  <value>0</value>
+  <description>
+    The amount of memory in bytes to use for caching of block replicas in
+    memory on the datanode. The datanode's maximum locked memory soft ulimit
+    (RLIMIT_MEMLOCK) must be set to at least this value, else the datanode
+    will abort on startup.
+
+    By default, this parameter is set to 0, which disables in-memory caching.
+
+    If the native libraries are not available to the DataNode, this
+    configuration has no effect.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.list.cache.directives.num.responses</name>
+  <value>100</value>
+  <description>
+    This value controls the number of cache directives that the NameNode will
+    send over the wire in response to a listDirectives RPC.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.list.cache.pools.num.responses</name>
+  <value>100</value>
+  <description>
+    This value controls the number of cache pools that the NameNode will
+    send over the wire in response to a listPools RPC.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.path.based.cache.refresh.interval.ms</name>
+  <value>300000</value>
+  <description>
+    The amount of milliseconds between subsequent path cache rescans.  Path
+    cache rescans are when we calculate which blocks should be cached, and on
+    what datanodes.
+
+    By default, this parameter is set to 300000, which is five minutes.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.path.based.cache.retry.interval.ms</name>
+  <value>60000</value>
+  <description>
+    When the NameNode needs to uncache something that is cached, or cache
+    something that is not cached, it must direct the DataNodes to do so by
+    sending a DNA_CACHE or DNA_UNCACHE command in response to a DataNode
+    heartbeat.  This parameter controls how frequently the NameNode will
+    resend these commands.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.fsdatasetcache.max.threads.per.volume</name>
+  <value>4</value>
+  <description>
+    The maximum number of threads per volume to use for caching new data
+    on the datanode. These threads consume both I/O and CPU. This can affect
+    normal datanode operations.
+  </description>
+</property>
+
+<property>
+  <name>dfs.cachereport.intervalMsec</name>
+  <value>10000</value>
+  <description>
+    Determines cache reporting interval in milliseconds.  After this amount of
+    time, the DataNode sends a full report of its cache state to the NameNode.
+    The NameNode uses the cache report to update its map of cached blocks to
+    DataNode locations.
+
+    This configuration has no effect if in-memory caching has been disabled by
+    setting dfs.datanode.max.locked.memory to 0 (which is the default).
+
+    If the native libraries are not available to the DataNode, this
+    configuration has no effect.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.edit.log.autoroll.multiplier.threshold</name>
   <value>2.0</value>
   <description>

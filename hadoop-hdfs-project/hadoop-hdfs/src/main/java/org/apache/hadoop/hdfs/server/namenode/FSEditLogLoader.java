@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
 import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -31,17 +32,21 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.AddBlockOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.AddCachePoolOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.AddCloseOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.AddCacheDirectiveInfoOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.AllocateBlockIdOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.AllowSnapshotOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.BlockListUpdatingOp;
@@ -54,7 +59,11 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.DeleteSnapshotOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.DisallowSnapshotOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.GetDelegationTokenOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.MkdirOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.ModifyCachePoolOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.ModifyCacheDirectiveInfoOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.ReassignLeaseOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RemoveCachePoolOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RemoveCacheDirectiveInfoOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenameOldOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenameOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenameSnapshotOp;
@@ -78,6 +87,7 @@ import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress.Co
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.Step;
 import org.apache.hadoop.hdfs.util.ChunkedArrayList;
 import org.apache.hadoop.hdfs.util.Holder;
+import org.apache.jasper.tagplugins.jstl.core.Remove;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
@@ -646,6 +656,59 @@ public class FSEditLogLoader {
     case OP_ALLOCATE_BLOCK_ID: {
       AllocateBlockIdOp allocateBlockIdOp = (AllocateBlockIdOp) op;
       fsNamesys.setLastAllocatedBlockId(allocateBlockIdOp.blockId);
+      break;
+    }
+    case OP_ADD_CACHE_DIRECTIVE: {
+      AddCacheDirectiveInfoOp addOp = (AddCacheDirectiveInfoOp) op;
+      CacheDirectiveInfo result = fsNamesys.
+          getCacheManager().addDirectiveFromEditLog(addOp.directive);
+      if (toAddRetryCache) {
+        Long id = result.getId();
+        fsNamesys.addCacheEntryWithPayload(op.rpcClientId, op.rpcCallId, id);
+      }
+      break;
+    }
+    case OP_MODIFY_CACHE_DIRECTIVE: {
+      ModifyCacheDirectiveInfoOp modifyOp =
+          (ModifyCacheDirectiveInfoOp) op;
+      fsNamesys.getCacheManager().modifyDirectiveFromEditLog(
+          modifyOp.directive);
+      if (toAddRetryCache) {
+        fsNamesys.addCacheEntry(op.rpcClientId, op.rpcCallId);
+      }
+      break;
+    }
+    case OP_REMOVE_CACHE_DIRECTIVE: {
+      RemoveCacheDirectiveInfoOp removeOp =
+          (RemoveCacheDirectiveInfoOp) op;
+      fsNamesys.getCacheManager().removeDirective(removeOp.id, null);
+      if (toAddRetryCache) {
+        fsNamesys.addCacheEntry(op.rpcClientId, op.rpcCallId);
+      }
+      break;
+    }
+    case OP_ADD_CACHE_POOL: {
+      AddCachePoolOp addOp = (AddCachePoolOp) op;
+      fsNamesys.getCacheManager().addCachePool(addOp.info);
+      if (toAddRetryCache) {
+        fsNamesys.addCacheEntry(op.rpcClientId, op.rpcCallId);
+      }
+      break;
+    }
+    case OP_MODIFY_CACHE_POOL: {
+      ModifyCachePoolOp modifyOp = (ModifyCachePoolOp) op;
+      fsNamesys.getCacheManager().modifyCachePool(modifyOp.info);
+      if (toAddRetryCache) {
+        fsNamesys.addCacheEntry(op.rpcClientId, op.rpcCallId);
+      }
+      break;
+    }
+    case OP_REMOVE_CACHE_POOL: {
+      RemoveCachePoolOp removeOp = (RemoveCachePoolOp) op;
+      fsNamesys.getCacheManager().removeCachePool(removeOp.poolName);
+      if (toAddRetryCache) {
+        fsNamesys.addCacheEntry(op.rpcClientId, op.rpcCallId);
+      }
       break;
     }
     default:

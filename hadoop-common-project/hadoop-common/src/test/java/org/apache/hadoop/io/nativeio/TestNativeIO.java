@@ -24,6 +24,9 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileChannel.MapMode;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -32,6 +35,7 @@ import java.util.List;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+
 import static org.junit.Assume.*;
 import static org.junit.Assert.*;
 
@@ -45,6 +49,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.NativeCodeLoader;
+import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Time;
 
 public class TestNativeIO {
@@ -562,5 +567,61 @@ public class TestNativeIO {
     }
 
     FileUtils.deleteQuietly(TEST_DIR);
+  }
+
+  @Test(timeout=10000)
+  public void testMlock() throws Exception {
+    assumeTrue(NativeIO.isAvailable());
+    assumeTrue(Shell.LINUX);
+    final File TEST_FILE = new File(new File(
+        System.getProperty("test.build.data","build/test/data")),
+        "testMlockFile");
+    final int BUF_LEN = 12289;
+    byte buf[] = new byte[BUF_LEN];
+    int bufSum = 0;
+    for (int i = 0; i < buf.length; i++) {
+      buf[i] = (byte)(i % 60);
+      bufSum += buf[i];
+    }
+    FileOutputStream fos = new FileOutputStream(TEST_FILE);
+    try {
+      fos.write(buf);
+      fos.getChannel().force(true);
+    } finally {
+      fos.close();
+    }
+    
+    FileInputStream fis = null;
+    FileChannel channel = null;
+    try {
+      // Map file into memory
+      fis = new FileInputStream(TEST_FILE);
+      channel = fis.getChannel();
+      long fileSize = channel.size();
+      MappedByteBuffer mapbuf = channel.map(MapMode.READ_ONLY, 0, fileSize);
+      // mlock the buffer
+      NativeIO.POSIX.mlock(mapbuf, fileSize);
+      // Read the buffer
+      int sum = 0;
+      for (int i=0; i<fileSize; i++) {
+        sum += mapbuf.get(i);
+      }
+      assertEquals("Expected sums to be equal", bufSum, sum);
+      // munlock the buffer
+      NativeIO.POSIX.munlock(mapbuf, fileSize);
+    } finally {
+      if (channel != null) {
+        channel.close();
+      }
+      if (fis != null) {
+        fis.close();
+      }
+    }
+  }
+
+  @Test(timeout=10000)
+  public void testGetMemlockLimit() throws Exception {
+    assumeTrue(NativeIO.isAvailable());
+    NativeIO.getMemlockLimit();
   }
 }

@@ -440,7 +440,7 @@ public class TestPBHelper {
     };
     LocatedBlock lb = new LocatedBlock(
         new ExtendedBlock("bp12", 12345, 10, 53),
-        dnInfos, storageIDs, media, 5, false);
+        dnInfos, storageIDs, media, 5, false, new DatanodeInfo[]{});
     lb.setBlockToken(new Token<BlockTokenIdentifier>(
         "identifier".getBytes(), "password".getBytes(), new Text("kind"),
         new Text("service")));

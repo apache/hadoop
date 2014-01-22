@@ -246,10 +246,10 @@ public class LightWeightGSet<K, E extends K> implements GSet<K, E> {
 
   private class SetIterator implements Iterator<E> {
     /** The starting modification for fail-fast. */
-    private final int startModification = modification;
+    private int iterModification = modification;
     /** The current index of the entry array. */
     private int index = -1;
-    /** The next element to return. */
+    private LinkedElement cur = null;
     private LinkedElement next = nextNonemptyEntry();
 
     /** Find the next nonempty entry starting at (index + 1). */
@@ -258,30 +258,51 @@ public class LightWeightGSet<K, E extends K> implements GSet<K, E> {
       return index < entries.length? entries[index]: null;
     }
 
+    private void ensureNext() {
+      if (modification != iterModification) {
+        throw new ConcurrentModificationException("modification=" + modification
+            + " != iterModification = " + iterModification);
+      }
+      if (next != null) {
+        return;
+      }
+      if (cur == null) {
+        return;
+      }
+      next = cur.getNext();
+      if (next == null) {
+        next = nextNonemptyEntry();
+      }
+    }
+
     @Override
     public boolean hasNext() {
+      ensureNext();
       return next != null;
     }
 
     @Override
     public E next() {
-      if (modification != startModification) {
-        throw new ConcurrentModificationException("modification=" + modification
-            + " != startModification = " + startModification);
+      ensureNext();
+      if (next == null) {
+        throw new IllegalStateException("There are no more elements");
       }
-
-      final E e = convert(next);
-
-      //find the next element
-      final LinkedElement n = next.getNext();
-      next = n != null? n: nextNonemptyEntry();
-
-      return e;
+      cur = next;
+      next = null;
+      return convert(cur);
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public void remove() {
-      throw new UnsupportedOperationException("Remove is not supported.");
+      ensureNext();
+      if (cur == null) {
+        throw new IllegalStateException("There is no current element " +
+            "to remove");
+      }
+      LightWeightGSet.this.remove((K)cur);
+      iterModification++;
+      cur = null;
     }
   }
   

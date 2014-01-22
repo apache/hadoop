@@ -57,6 +57,8 @@ public class DataNodeMetrics {
   @Metric MutableCounterLong blocksRemoved;
   @Metric MutableCounterLong blocksVerified;
   @Metric MutableCounterLong blockVerificationFailures;
+  @Metric MutableCounterLong blocksCached;
+  @Metric MutableCounterLong blocksUncached;
   @Metric MutableCounterLong readsFromLocalClient;
   @Metric MutableCounterLong readsFromRemoteClient;
   @Metric MutableCounterLong writesFromLocalClient;
@@ -74,6 +76,7 @@ public class DataNodeMetrics {
   @Metric MutableRate replaceBlockOp;
   @Metric MutableRate heartbeats;
   @Metric MutableRate blockReports;
+  @Metric MutableRate cacheReports;
   @Metric MutableRate packetAckRoundTripTimeNanos;
   MutableQuantiles[] packetAckRoundTripTimeNanosQuantiles;
   
@@ -151,6 +154,10 @@ public class DataNodeMetrics {
     blockReports.add(latency);
   }
 
+  public void addCacheReport(long latency) {
+    cacheReports.add(latency);
+  }
+
   public void incrBlocksReplicated(int delta) {
     blocksReplicated.incr(delta);
   }
@@ -173,6 +180,15 @@ public class DataNodeMetrics {
 
   public void incrBlocksVerified() {
     blocksVerified.incr();
+  }
+
+
+  public void incrBlocksCached(int delta) {
+    blocksCached.incr(delta);
+  }
+
+  public void incrBlocksUncached(int delta) {
+    blocksUncached.incr(delta);
   }
 
   public void addReadBlockOp(long latency) {

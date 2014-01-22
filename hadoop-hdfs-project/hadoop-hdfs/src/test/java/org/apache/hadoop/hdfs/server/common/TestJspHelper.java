@@ -477,8 +477,8 @@ public class TestJspHelper {
     StorageReport[] report2 = new StorageReport[] {
         new StorageReport(dns2, false, 2500, 200, 1848, 200)
     };
-    dnDesc1.updateHeartbeat(report1, 10, 2);
-    dnDesc2.updateHeartbeat(report2, 20, 1);
+    dnDesc1.updateHeartbeat(report1, 5L, 3L, 10, 2);
+    dnDesc2.updateHeartbeat(report2, 10L, 2L, 20, 1);
 
     ArrayList<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
     live.add(dnDesc1);

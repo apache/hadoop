@@ -29,6 +29,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -36,6 +37,7 @@ import java.util.Set;
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CacheFlag;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
@@ -46,6 +48,7 @@ import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnresolvedLinkException;
+import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedEntries;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.ha.HAServiceStatus;
@@ -60,6 +63,10 @@ import org.apache.hadoop.hdfs.HDFSPolicyProvider;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
+import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
+import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
+import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
+import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
 import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
 import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -953,11 +960,13 @@ class NameNodeRpcServer implements NamenodeProtocols {
 
   @Override // DatanodeProtocol
   public HeartbeatResponse sendHeartbeat(DatanodeRegistration nodeReg,
-      StorageReport[] report, int xmitsInProgress, int xceiverCount,
+      StorageReport[] report, long dnCacheCapacity, long dnCacheUsed,
+      int xmitsInProgress, int xceiverCount,
       int failedVolumes) throws IOException {
     verifyRequest(nodeReg);
     return namesystem.handleHeartbeat(nodeReg, report,
-        xceiverCount, xmitsInProgress, failedVolumes);
+        dnCacheCapacity, dnCacheUsed, xceiverCount, xmitsInProgress,
+        failedVolumes);
   }
 
   @Override // DatanodeProtocol
@@ -976,6 +985,18 @@ class NameNodeRpcServer implements NamenodeProtocols {
 
     if (nn.getFSImage().isUpgradeFinalized() && !nn.isStandbyState())
       return new FinalizeCommand(poolId);
+    return null;
+  }
+
+  @Override
+  public DatanodeCommand cacheReport(DatanodeRegistration nodeReg,
+      String poolId, List<Long> blockIds) throws IOException {
+    verifyRequest(nodeReg);
+    if (blockStateChangeLog.isDebugEnabled()) {
+      blockStateChangeLog.debug("*BLOCK* NameNode.cacheReport: "
+           + "from " + nodeReg + " " + blockIds.size() + " blocks");
+    }
+    namesystem.getCacheManager().processCacheReport(nodeReg, blockIds);
     return null;
   }
 
@@ -1213,6 +1234,53 @@ class NameNodeRpcServer implements NamenodeProtocols {
         earlierSnapshotName, laterSnapshotName);
     metrics.incrSnapshotDiffReportOps();
     return report;
+  }
+
+  @Override
+  public long addCacheDirective(
+      CacheDirectiveInfo path, EnumSet<CacheFlag> flags) throws IOException {
+    return namesystem.addCacheDirective(path, flags);
+  }
+
+  @Override
+  public void modifyCacheDirective(
+      CacheDirectiveInfo directive, EnumSet<CacheFlag> flags) throws IOException {
+    namesystem.modifyCacheDirective(directive, flags);
+  }
+
+  @Override
+  public void removeCacheDirective(long id) throws IOException {
+    namesystem.removeCacheDirective(id);
+  }
+
+  @Override
+  public BatchedEntries<CacheDirectiveEntry> listCacheDirectives(long prevId,
+      CacheDirectiveInfo filter) throws IOException {
+    if (filter == null) {
+      filter = new CacheDirectiveInfo.Builder().build();
+    }
+    return namesystem.listCacheDirectives(prevId, filter);
+  }
+
+  @Override
+  public void addCachePool(CachePoolInfo info) throws IOException {
+    namesystem.addCachePool(info);
+  }
+
+  @Override
+  public void modifyCachePool(CachePoolInfo info) throws IOException {
+    namesystem.modifyCachePool(info);
+  }
+
+  @Override
+  public void removeCachePool(String cachePoolName) throws IOException {
+    namesystem.removeCachePool(cachePoolName);
+  }
+
+  @Override
+  public BatchedEntries<CachePoolEntry> listCachePools(String prevKey)
+      throws IOException {
+    return namesystem.listCachePools(prevKey != null ? prevKey : "");
   }
 }
 

@@ -101,7 +101,7 @@ public class TestStorageReport {
     Mockito.verify(nnSpy).sendHeartbeat(
         any(DatanodeRegistration.class),
         captor.capture(),
-        anyInt(), anyInt(), anyInt());
+        anyLong(), anyLong(), anyInt(), anyInt(), anyInt());
 
     StorageReport[] reports = captor.getValue();
 

@@ -16,8 +16,6 @@
  * limitations under the License.
  */
 
-#define _GNU_SOURCE
-
 #include "org_apache_hadoop.h"
 #include "org_apache_hadoop_io_nativeio_NativeIO.h"
 
@@ -28,11 +26,15 @@
 #include <grp.h>
 #include <jni.h>
 #include <pwd.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/mman.h>
+#include <sys/resource.h>
 #include <sys/stat.h>
 #include <sys/syscall.h>
+#include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include "config.h"
@@ -357,6 +359,71 @@ Java_org_apache_hadoop_io_nativeio_NativeIO_00024POSIX_sync_1file_1range(
       throw_ioe(env, errno);
     }
   }
+#endif
+}
+
+#define CHECK_DIRECT_BUFFER_ADDRESS(buf) \
+  { \
+    if (!buf) { \
+      THROW(env, "java/lang/UnsupportedOperationException", \
+        "JNI access to direct buffers not available"); \
+      return; \
+    } \
+  }
+
+/**
+ * public static native void mlock_native(
+ *   ByteBuffer buffer, long offset);
+ *
+ * The "00024" in the function name is an artifact of how JNI encodes
+ * special characters. U+0024 is '$'.
+ */
+JNIEXPORT void JNICALL
+Java_org_apache_hadoop_io_nativeio_NativeIO_00024POSIX_mlock_1native(
+  JNIEnv *env, jclass clazz,
+  jobject buffer, jlong len)
+{
+#ifdef UNIX
+  void* buf = (void*)(*env)->GetDirectBufferAddress(env, buffer);
+  PASS_EXCEPTIONS(env);
+
+  if (mlock(buf, len)) {
+    CHECK_DIRECT_BUFFER_ADDRESS(buf);
+    throw_ioe(env, errno);
+  }
+#endif
+
+#ifdef WINDOWS
+  THROW(env, "java/io/IOException",
+    "The function POSIX.mlock_native() is not supported on Windows");
+#endif
+}
+
+/**
+ * public static native void munlock_native(
+ *   ByteBuffer buffer, long offset);
+ *
+ * The "00024" in the function name is an artifact of how JNI encodes
+ * special characters. U+0024 is '$'.
+ */
+JNIEXPORT void JNICALL
+Java_org_apache_hadoop_io_nativeio_NativeIO_00024POSIX_munlock_1native(
+  JNIEnv *env, jclass clazz,
+  jobject buffer, jlong len)
+{
+#ifdef UNIX
+  void* buf = (void*)(*env)->GetDirectBufferAddress(env, buffer);
+  PASS_EXCEPTIONS(env);
+
+  if (munlock(buf, len)) {
+    CHECK_DIRECT_BUFFER_ADDRESS(buf);
+    throw_ioe(env, errno);
+  }
+#endif
+
+#ifdef WINDOWS
+  THROW(env, "java/io/IOException",
+    "The function POSIX.munlock_native() is not supported on Windows");
 #endif
 }
 
@@ -921,6 +988,24 @@ done:
 done:
   if (src) (*env)->ReleaseStringChars(env, jsrc, src);
   if (dst) (*env)->ReleaseStringChars(env, jdst, dst);
+#endif
+}
+
+JNIEXPORT jlong JNICALL
+Java_org_apache_hadoop_io_nativeio_NativeIO_getMemlockLimit0(
+JNIEnv *env, jclass clazz)
+{
+#ifdef WINDOWS
+  return 0;
+#else
+  struct rlimit rlim;
+  int rc = getrlimit(RLIMIT_MEMLOCK, &rlim);
+  if (rc != 0) {
+    throw_ioe(env, errno);
+    return 0;
+  }
+  return (rlim.rlim_cur == RLIM_INFINITY) ?
+    INT64_MAX : rlim.rlim_cur;
 #endif
 }
 

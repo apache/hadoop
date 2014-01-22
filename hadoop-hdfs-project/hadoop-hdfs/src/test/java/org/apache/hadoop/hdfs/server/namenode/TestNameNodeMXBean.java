@@ -31,7 +31,10 @@ import javax.management.ObjectName;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.io.nativeio.NativeIO;
+import org.apache.hadoop.io.nativeio.NativeIO.POSIX.NoMlockCacheManipulator;
 import org.apache.hadoop.util.VersionInfo;
 import org.junit.Test;
 import org.mortbay.util.ajax.JSON;
@@ -46,10 +49,16 @@ public class TestNameNodeMXBean {
    */
   private static final double DELTA = 0.000001;
 
+  static {
+    NativeIO.POSIX.setCacheManipulator(new NoMlockCacheManipulator());
+  }
+
   @SuppressWarnings({ "unchecked" })
   @Test
   public void testNameNodeMXBeanInfo() throws Exception {
     Configuration conf = new Configuration();
+    conf.setLong(DFSConfigKeys.DFS_DATANODE_MAX_LOCKED_MEMORY_KEY,
+      NativeIO.POSIX.getCacheManipulator().getMemlockLimit());
     MiniDFSCluster cluster = null;
 
     try {
@@ -171,6 +180,10 @@ public class TestNameNodeMXBean {
       }
       assertEquals(1, statusMap.get("active").size());
       assertEquals(1, statusMap.get("failed").size());
+      assertEquals(0L, mbs.getAttribute(mxbeanName, "CacheUsed"));
+      assertEquals(NativeIO.POSIX.getCacheManipulator().getMemlockLimit() * 
+          cluster.getDataNodes().size(),
+              mbs.getAttribute(mxbeanName, "CacheCapacity"));
     } finally {
       if (cluster != null) {
         for (URI dir : cluster.getNameDirs(0)) {

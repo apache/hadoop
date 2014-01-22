@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -26,7 +30,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import junit.framework.TestCase;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
@@ -44,7 +47,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-public class TestReplicationPolicyWithNodeGroup extends TestCase {
+public class TestReplicationPolicyWithNodeGroup {
   private static final int BLOCK_SIZE = 1024;
   private static final int NUM_OF_DATANODES = 8;
   private static final int NUM_OF_DATANODES_BOUNDARY = 6;
@@ -145,19 +148,20 @@ public class TestReplicationPolicyWithNodeGroup extends TestCase {
   
   private static void updateHeartbeatWithUsage(DatanodeDescriptor dn,
       long capacity, long dfsUsed, long remaining, long blockPoolUsed,
-      int xceiverCount, int volFailures) {
+      long dnCacheCapacity, long dnCacheUsed, int xceiverCount,
+      int volFailures) {
     dn.getStorageInfos()[0].setUtilizationForTesting(
         capacity, dfsUsed, remaining, blockPoolUsed);
     dn.updateHeartbeat(
         BlockManagerTestUtil.getStorageReportsForDatanode(dn),
-        xceiverCount, volFailures);
+        dnCacheCapacity, dnCacheUsed, xceiverCount, volFailures);
   }
 
   private static void setupDataNodeCapacity() {
     for(int i=0; i<NUM_OF_DATANODES; i++) {
       updateHeartbeatWithUsage(dataNodes[i],
           2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
-          2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0, 0);
+          2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0L, 0L, 0, 0);
     }
   }
   
@@ -236,10 +240,12 @@ public class TestReplicationPolicyWithNodeGroup extends TestCase {
    * the 1st is on dataNodes[0] and the 2nd is on a different rack.
    * @throws Exception
    */
+  @Test
   public void testChooseTarget1() throws Exception {
     updateHeartbeatWithUsage(dataNodes[0],
         2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 
-        HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 4, 0); // overloaded
+        HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
+        0L, 0L, 4, 0); // overloaded
 
     DatanodeStorageInfo[] targets;
     targets = chooseTarget(0);
@@ -276,7 +282,7 @@ public class TestReplicationPolicyWithNodeGroup extends TestCase {
 
     updateHeartbeatWithUsage(dataNodes[0],
         2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
-        HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0, 0); 
+        HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0L, 0L, 0, 0);
   }
 
   private void verifyNoTwoTargetsOnSameNodeGroup(DatanodeStorageInfo[] targets) {
@@ -295,6 +301,7 @@ public class TestReplicationPolicyWithNodeGroup extends TestCase {
    * node group, and the rest should be placed on a third rack.
    * @throws Exception
    */
+  @Test
   public void testChooseTarget2() throws Exception {
     DatanodeStorageInfo[] targets;
     BlockPlacementPolicyDefault repl = (BlockPlacementPolicyDefault)replicator;
@@ -338,11 +345,13 @@ public class TestReplicationPolicyWithNodeGroup extends TestCase {
    * and the rest should be placed on the third rack.
    * @throws Exception
    */
+  @Test
   public void testChooseTarget3() throws Exception {
     // make data node 0 to be not qualified to choose
     updateHeartbeatWithUsage(dataNodes[0],
         2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
-        (HdfsConstants.MIN_BLOCKS_FOR_WRITE-1)*BLOCK_SIZE, 0L, 0, 0); // no space
+        (HdfsConstants.MIN_BLOCKS_FOR_WRITE-1)*BLOCK_SIZE, 0L,
+        0L, 0L, 0, 0); // no space
 
     DatanodeStorageInfo[] targets;
     targets = chooseTarget(0);
@@ -373,7 +382,7 @@ public class TestReplicationPolicyWithNodeGroup extends TestCase {
 
     updateHeartbeatWithUsage(dataNodes[0],
         2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
-        HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0, 0); 
+        HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0L, 0L, 0, 0);
   }
 
   /**
@@ -385,12 +394,13 @@ public class TestReplicationPolicyWithNodeGroup extends TestCase {
    * in different node group.
    * @throws Exception
    */
+  @Test
   public void testChooseTarget4() throws Exception {
     // make data node 0-2 to be not qualified to choose: not enough disk space
     for(int i=0; i<3; i++) {
       updateHeartbeatWithUsage(dataNodes[i],
           2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
-          (HdfsConstants.MIN_BLOCKS_FOR_WRITE-1)*BLOCK_SIZE, 0L, 0, 0);
+          (HdfsConstants.MIN_BLOCKS_FOR_WRITE-1)*BLOCK_SIZE, 0L, 0L, 0L, 0, 0);
     }
 
     DatanodeStorageInfo[] targets;
@@ -424,6 +434,7 @@ public class TestReplicationPolicyWithNodeGroup extends TestCase {
    * the 3rd replica should be placed on the same rack as the 2nd replica,
    * @throws Exception
    */
+  @Test
   public void testChooseTarget5() throws Exception {
     setupDataNodeCapacity();
     DatanodeStorageInfo[] targets;
@@ -451,6 +462,7 @@ public class TestReplicationPolicyWithNodeGroup extends TestCase {
    * the 1st replica. The 3rd replica can be placed randomly.
    * @throws Exception
    */
+  @Test
   public void testRereplicate1() throws Exception {
     setupDataNodeCapacity();
     List<DatanodeStorageInfo> chosenNodes = new ArrayList<DatanodeStorageInfo>();
@@ -483,6 +495,7 @@ public class TestReplicationPolicyWithNodeGroup extends TestCase {
    * the rest replicas can be placed randomly,
    * @throws Exception
    */
+  @Test
   public void testRereplicate2() throws Exception {
     setupDataNodeCapacity();
     List<DatanodeStorageInfo> chosenNodes = new ArrayList<DatanodeStorageInfo>();
@@ -510,6 +523,7 @@ public class TestReplicationPolicyWithNodeGroup extends TestCase {
    * the rest replicas can be placed randomly,
    * @throws Exception
    */
+  @Test
   public void testRereplicate3() throws Exception {
     setupDataNodeCapacity();
     List<DatanodeStorageInfo> chosenNodes = new ArrayList<DatanodeStorageInfo>();
@@ -615,11 +629,11 @@ public class TestReplicationPolicyWithNodeGroup extends TestCase {
       updateHeartbeatWithUsage(dataNodes[0],
                 2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
                 (HdfsConstants.MIN_BLOCKS_FOR_WRITE-1)*BLOCK_SIZE,
-                0L, 0, 0);
+                0L, 0L, 0L, 0, 0);
 
       updateHeartbeatWithUsage(dataNodesInBoundaryCase[i],
           2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
-          2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0, 0);
+          2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0L, 0L, 0, 0);
     }
 
     DatanodeStorageInfo[] targets;
@@ -650,7 +664,7 @@ public class TestReplicationPolicyWithNodeGroup extends TestCase {
     for(int i=0; i<NUM_OF_DATANODES_BOUNDARY; i++) {
       updateHeartbeatWithUsage(dataNodesInBoundaryCase[i],
           2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
-          2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0, 0);
+          2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0L, 0L, 0, 0);
     }
     List<DatanodeStorageInfo> chosenNodes = new ArrayList<DatanodeStorageInfo>();
     chosenNodes.add(storagesInBoundaryCase[0]);
@@ -688,7 +702,7 @@ public class TestReplicationPolicyWithNodeGroup extends TestCase {
     for(int i=0; i<NUM_OF_DATANODES_MORE_TARGETS; i++) {
       updateHeartbeatWithUsage(dataNodesInMoreTargetsCase[i],
           2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
-          2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0, 0);
+          2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0L, 0L, 0, 0);
     }
 
     DatanodeStorageInfo[] targets;

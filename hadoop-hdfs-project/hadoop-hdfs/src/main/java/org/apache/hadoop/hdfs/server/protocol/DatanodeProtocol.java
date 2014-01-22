@@ -19,13 +19,14 @@
 package org.apache.hadoop.hdfs.server.protocol;
 
 import java.io.*;
+import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
-import org.apache.hadoop.io.retry.AtMostOnce;
 import org.apache.hadoop.io.retry.Idempotent;
 import org.apache.hadoop.security.KerberosInfo;
 
@@ -74,6 +75,8 @@ public interface DatanodeProtocol {
   final static int DNA_RECOVERBLOCK = 6;  // request a block recovery
   final static int DNA_ACCESSKEYUPDATE = 7;  // update access key
   final static int DNA_BALANCERBANDWIDTHUPDATE = 8; // update balancer bandwidth
+  final static int DNA_CACHE = 9;      // cache blocks
+  final static int DNA_UNCACHE = 10;   // uncache blocks
 
   /** 
    * Register Datanode.
@@ -104,6 +107,8 @@ public interface DatanodeProtocol {
   @Idempotent
   public HeartbeatResponse sendHeartbeat(DatanodeRegistration registration,
                                        StorageReport[] reports,
+                                       long dnCacheCapacity,
+                                       long dnCacheUsed,
                                        int xmitsInProgress,
                                        int xceiverCount,
                                        int failedVolumes) throws IOException;
@@ -128,6 +133,24 @@ public interface DatanodeProtocol {
   public DatanodeCommand blockReport(DatanodeRegistration registration,
       String poolId, StorageBlockReport[] reports) throws IOException;
     
+
+  /**
+   * Communicates the complete list of locally cached blocks to the NameNode.
+   * 
+   * This method is similar to
+   * {@link #blockReport(DatanodeRegistration, String, StorageBlockReport[])},
+   * which is used to communicated blocks stored on disk.
+   *
+   * @param            The datanode registration.
+   * @param poolId     The block pool ID for the blocks.
+   * @param blockIds   A list of block IDs.
+   * @return           The DatanodeCommand.
+   * @throws IOException
+   */
+  @Idempotent
+  public DatanodeCommand cacheReport(DatanodeRegistration registration,
+      String poolId, List<Long> blockIds) throws IOException;
+
   /**
    * blockReceivedAndDeleted() allows the DataNode to tell the NameNode about
    * recently-received and -deleted block data. 
