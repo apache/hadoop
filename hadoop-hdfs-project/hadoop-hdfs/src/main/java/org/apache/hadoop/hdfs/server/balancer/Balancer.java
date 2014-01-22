@@ -337,6 +337,7 @@ public class Balancer {
         sock.connect(
             NetUtils.createSocketAddr(target.datanode.getXferAddr()),
             HdfsServerConstants.READ_TIMEOUT);
+        sock.setSoTimeout(HdfsServerConstants.READ_TIMEOUT);
         sock.setKeepAlive(true);
         
         OutputStream unbufOut = sock.getOutputStream();
