@@ -193,6 +193,9 @@ Release 1.3.0 - unreleased
     MAPREDUCE-5710. Backport MAPREDUCE-1305 to branch-1 (Yongjun Zhang via
     Sandy Ryza)
 
+    HDFS-2264. NamenodeProtocol has the wrong value for clientPrincipal in 
+    KerberosInfo annotation. (Aaron T. Myers, backported by jing9)
+
 Release 1.2.2 - unreleased
 
   INCOMPATIBLE CHANGES
