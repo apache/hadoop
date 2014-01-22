@@ -113,9 +113,6 @@ Trunk (Unreleased)
 
     HADOOP-10177. Create CLI tools for managing keys. (Larry McCay via omalley)
 
-    HADOOP-10143 replace WritableFactories's hashmap with ConcurrentHashMap
-    (Liang Xie via stack)
-
   BUG FIXES
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.
@@ -424,6 +421,9 @@ Release 2.4.0 - UNRELEASED
     HADOOP-9420. Add percentile or max metric for rpcQueueTime, processing time.
     (Liang Xie via wang)
 
+    HADOOP-10143 replace WritableFactories's hashmap with ConcurrentHashMap
+    (Liang Xie via stack)
+
   OPTIMIZATIONS
 
     HADOOP-9748. Reduce blocking on UGI.ensureInitialized (daryn)
@@ -532,6 +532,9 @@ Release 2.4.0 - UNRELEASED
     has been dropped (Ming Ma via brandonli)
 
     HADOOP-10235. Hadoop tarball has 2 versions of stax-api JARs. (tucu)
+
+    HADOOP-10252. HttpServer can't start if hostname is not specified. (Jimmy
+    Xiang via atm)
 
 Release 2.3.0 - UNRELEASED
 

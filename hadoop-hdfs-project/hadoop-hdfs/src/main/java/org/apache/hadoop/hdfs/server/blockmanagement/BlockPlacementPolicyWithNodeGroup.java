@@ -46,12 +46,12 @@ import org.apache.hadoop.net.NodeBase;
  */
 public class BlockPlacementPolicyWithNodeGroup extends BlockPlacementPolicyDefault {
 
-  BlockPlacementPolicyWithNodeGroup(Configuration conf,  FSClusterStats stats,
+  protected BlockPlacementPolicyWithNodeGroup(Configuration conf,  FSClusterStats stats,
       NetworkTopology clusterMap) {
     initialize(conf, stats, clusterMap);
   }
 
-  BlockPlacementPolicyWithNodeGroup() {
+  protected BlockPlacementPolicyWithNodeGroup() {
   }
 
   @Override

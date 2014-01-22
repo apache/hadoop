@@ -695,6 +695,9 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-5704. Change OP_UPDATE_BLOCKS with a new OP_ADD_BLOCK. (jing9)
 
+    HDFS-5434. Change block placement policy constructors from package private
+    to protected. (Buddy Taylor via Arpit Agarwal)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn)
@@ -777,6 +780,9 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-5800. Fix a typo in DFSClient.renewLease().  (Kousuke Saruta
     via szetszwo)
+
+    HDFS-5748. Too much information shown in the dfs health page.
+    (Haohui Mai via brandonli)
 
   BREAKDOWN OF HDFS-2832 SUBTASKS AND RELATED JIRAS
 
