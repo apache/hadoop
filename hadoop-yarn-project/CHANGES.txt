@@ -234,6 +234,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1624. QueuePlacementPolicy format is not easily readable via a JAXB
     parser (Aditya Acharya via Sandy Ryza)
 
+    YARN-1623. Include queue name in RegisterApplicationMasterResponse (Sandy
+    Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES

@@ -55,13 +55,14 @@ public abstract class RegisterApplicationMasterResponse {
   public static RegisterApplicationMasterResponse newInstance(
       Resource minCapability, Resource maxCapability,
       Map<ApplicationAccessType, String> acls, ByteBuffer key,
-      List<Container> containersFromPreviousAttempt) {
+      List<Container> containersFromPreviousAttempt, String queue) {
     RegisterApplicationMasterResponse response =
         Records.newRecord(RegisterApplicationMasterResponse.class);
     response.setMaximumResourceCapability(maxCapability);
     response.setApplicationACLs(acls);
     response.setClientToAMTokenMasterKey(key);
     response.setContainersFromPreviousAttempt(containersFromPreviousAttempt);
+    response.setQueue(queue);
     return response;
   }
 
@@ -111,6 +112,20 @@ public abstract class RegisterApplicationMasterResponse {
   @Stable
   public abstract void setClientToAMTokenMasterKey(ByteBuffer key);
 
+  /**
+   * <p>Get the queue that the application was placed in.<p>
+   */
+  @Public
+  @Stable
+  public abstract String getQueue();
+  
+  /**
+   * <p>Set the queue that the application was placed in.<p>
+   */
+  @Public
+  @Stable
+  public abstract void setQueue(String queue);
+  
   /**
    * <p>
    * Get the list of running containers as viewed by
