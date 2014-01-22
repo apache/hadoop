@@ -243,7 +243,7 @@ public class HttpFSFileSystem extends FileSystem
     if (makeQualified) {
       path = makeQualified(path);
     }
-    final URL url = HttpFSUtils.createHttpURL(path, params);
+    final URL url = HttpFSUtils.createURL(path, params);
     return doAsRealUserIfNecessary(new Callable<HttpURLConnection>() {
       @Override
       public HttpURLConnection call() throws Exception {
