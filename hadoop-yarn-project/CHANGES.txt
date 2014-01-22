@@ -357,6 +357,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1606. Fix the default value of yarn.resourcemanager.zk-timeout-ms 
     in yarn-default.xml (kasha)
 
+    YARN-1607. TestRM relies on the scheduler assigning multiple containers in
+    a single node update (Sandy Ryza)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
