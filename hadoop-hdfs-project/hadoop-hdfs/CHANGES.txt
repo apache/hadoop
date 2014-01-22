@@ -524,6 +524,8 @@ Release 2.4.0 - UNRELEASED
     HDFS-5784. reserve space in edit log header and fsimage header for feature
     flag section (cmccabe)
 
+    HDFS-5703. Add support for HTTPS and swebhdfs to HttpFS. (tucu)
+
   IMPROVEMENTS
 
     HDFS-5267. Remove volatile from LightWeightHashSet. (Junping Du via llu)

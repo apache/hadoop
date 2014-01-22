@@ -29,22 +29,25 @@ import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdenti
 public class DelegationTokenIdentifier
   extends AbstractDelegationTokenIdentifier {
 
-  public static final Text KIND_NAME = WebHdfsFileSystem.TOKEN_KIND;
+  private Text kind = WebHdfsFileSystem.TOKEN_KIND;
 
-  public DelegationTokenIdentifier() {
+  public DelegationTokenIdentifier(Text kind) {
+    this.kind = kind;
   }
 
   /**
    * Create a new delegation token identifier
    *
+   * @param kind token kind
    * @param owner the effective username of the token owner
    * @param renewer the username of the renewer
    * @param realUser the real username of the token owner
    */
-  public DelegationTokenIdentifier(Text owner, Text renewer, Text realUser) {
+  public DelegationTokenIdentifier(Text kind, Text owner, Text renewer,
+      Text realUser) {
     super(owner, renewer, realUser);
+    this.kind = kind;
   }
-
 
   /**
    * Returns the kind, <code>TOKEN_KIND</code>.
@@ -52,7 +55,7 @@ public class DelegationTokenIdentifier
    */
   @Override
   public Text getKind() {
-    return KIND_NAME;
+    return kind;
   }
 
 }
