@@ -267,6 +267,7 @@ public class ApplicationMasterService extends AbstractService implements
           .getMaximumResourceCapability());
       response.setApplicationACLs(app.getRMAppAttempt(applicationAttemptId)
           .getSubmissionContext().getAMContainerSpec().getApplicationACLs());
+      response.setQueue(app.getQueue());
       if (UserGroupInformation.isSecurityEnabled()) {
         LOG.info("Setting client token master key");
         response.setClientToAMTokenMasterKey(java.nio.ByteBuffer.wrap(rmContext
