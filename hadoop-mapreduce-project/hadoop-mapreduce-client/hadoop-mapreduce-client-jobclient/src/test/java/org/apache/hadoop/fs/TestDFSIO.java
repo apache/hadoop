@@ -208,6 +208,9 @@ public class TestDFSIO implements Tool {
                                 .build();
     FileSystem fs = cluster.getFileSystem();
     bench.createControlFile(fs, DEFAULT_NR_BYTES, DEFAULT_NR_FILES);
+
+    /** Check write here, as it is required for other tests */
+    testWrite();
   }
 
   @AfterClass
@@ -219,8 +222,7 @@ public class TestDFSIO implements Tool {
     cluster.shutdown();
   }
 
-  @Test
-  public void testWrite() throws Exception {
+  public static void testWrite() throws Exception {
     FileSystem fs = cluster.getFileSystem();
     long tStart = System.currentTimeMillis();
     bench.writeTest(fs);
@@ -228,7 +230,7 @@ public class TestDFSIO implements Tool {
     bench.analyzeResult(fs, TestType.TEST_TYPE_WRITE, execTime);
   }
 
-  @Test
+  @Test (timeout = 3000)
   public void testRead() throws Exception {
     FileSystem fs = cluster.getFileSystem();
     long tStart = System.currentTimeMillis();
@@ -237,7 +239,7 @@ public class TestDFSIO implements Tool {
     bench.analyzeResult(fs, TestType.TEST_TYPE_READ, execTime);
   }
 
-  @Test
+  @Test (timeout = 3000)
   public void testReadRandom() throws Exception {
     FileSystem fs = cluster.getFileSystem();
     long tStart = System.currentTimeMillis();
@@ -247,7 +249,7 @@ public class TestDFSIO implements Tool {
     bench.analyzeResult(fs, TestType.TEST_TYPE_READ_RANDOM, execTime);
   }
 
-  @Test
+  @Test (timeout = 3000)
   public void testReadBackward() throws Exception {
     FileSystem fs = cluster.getFileSystem();
     long tStart = System.currentTimeMillis();
@@ -257,7 +259,7 @@ public class TestDFSIO implements Tool {
     bench.analyzeResult(fs, TestType.TEST_TYPE_READ_BACKWARD, execTime);
   }
 
-  @Test
+  @Test (timeout = 3000)
   public void testReadSkip() throws Exception {
     FileSystem fs = cluster.getFileSystem();
     long tStart = System.currentTimeMillis();
@@ -267,7 +269,7 @@ public class TestDFSIO implements Tool {
     bench.analyzeResult(fs, TestType.TEST_TYPE_READ_SKIP, execTime);
   }
 
-  @Test
+  @Test (timeout = 3000)
   public void testAppend() throws Exception {
     FileSystem fs = cluster.getFileSystem();
     long tStart = System.currentTimeMillis();

@@ -15,6 +15,9 @@ Release 0.23.11 - UNRELEASED
     MAPREDUCE-5623. TestJobCleanup fails because of RejectedExecutionException
     and NPE. (jlowe)
 
+    MAPREDUCE-5454. TestDFSIO fails intermittently on JDK7 (Karthik Kambatla
+    via jlowe)
+
 Release 0.23.10 - 2013-12-09
 
   INCOMPATIBLE CHANGES
