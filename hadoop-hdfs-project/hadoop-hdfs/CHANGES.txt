@@ -499,6 +499,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-5434. Change block placement policy constructors from package private
     to protected. (Buddy Taylor via Arpit Agarwal)
 
+    HDFS-5788. listLocatedStatus response can be very large. (Nathan Roberts
+    via kihwal)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn)
