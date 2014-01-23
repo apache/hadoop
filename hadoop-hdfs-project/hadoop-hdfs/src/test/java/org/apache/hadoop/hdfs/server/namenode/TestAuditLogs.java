@@ -18,16 +18,17 @@
 
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 import java.util.regex.Pattern;
 
 import org.apache.commons.logging.impl.Log4JLogger;
@@ -46,6 +47,8 @@ import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.PathUtils;
+import org.apache.log4j.Appender;
+import org.apache.log4j.AsyncAppender;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
@@ -54,13 +57,30 @@ import org.apache.log4j.RollingFileAppender;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
 /**
  * A JUnit test that audit logs are generated
  */
+@RunWith(Parameterized.class)
 public class TestAuditLogs {
   static final String auditLogFile = PathUtils.getTestDirName(TestAuditLogs.class) + "/TestAuditLogs-audit.log";
+  boolean useAsyncLog;
   
+  @Parameters
+  public static Collection<Object[]> data() {
+    Collection<Object[]> params = new ArrayList<Object[]>();
+    params.add(new Object[]{new Boolean(false)});
+    params.add(new Object[]{new Boolean(true)});
+    return params;
+  }
+  
+  public TestAuditLogs(boolean useAsyncLog) {
+    this.useAsyncLog = useAsyncLog;
+  }
+
   // Pattern for: 
   // allowed=(true|false) ugi=name ip=/address cmd={cmd} src={path} dst=null perm=null
   static final Pattern auditPattern = Pattern.compile(
@@ -84,17 +104,28 @@ public class TestAuditLogs {
 
   @Before
   public void setupCluster() throws Exception {
+    // must configure prior to instantiating the namesystem because it
+    // will reconfigure the logger if async is enabled
+    configureAuditLogs();
     conf = new HdfsConfiguration();
     final long precision = 1L;
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECISION_KEY, precision);
     conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 10000L);
     conf.setBoolean(DFSConfigKeys.DFS_WEBHDFS_ENABLED_KEY, true);
+    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_ASYNC_KEY, useAsyncLog);
     util = new DFSTestUtil.Builder().setName("TestAuditAllowed").
         setNumFiles(20).build();
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(4).build();
     fs = cluster.getFileSystem();
     util.createFiles(fs, fileName);
 
+    // make sure the appender is what it's supposed to be
+    Logger logger = ((Log4JLogger) FSNamesystem.auditLog).getLogger();
+    @SuppressWarnings("unchecked")
+    List<Appender> appenders = Collections.list(logger.getAllAppenders());
+    assertEquals(1, appenders.size());
+    assertEquals(useAsyncLog, appenders.get(0) instanceof AsyncAppender);
+    
     fnames = util.getFileNames(fileName);
     util.waitReplication(fs, fileName, (short)3);
     userGroupInfo = UserGroupInformation.createUserForTesting(username, groups);
@@ -203,6 +234,7 @@ public class TestAuditLogs {
     try {
       hftpFs = (HftpFileSystem) new Path(hftpUri).getFileSystem(conf);
       InputStream istream = hftpFs.open(file);
+      @SuppressWarnings("unused")
       int val = istream.read();
       istream.close();
 
@@ -234,6 +266,12 @@ public class TestAuditLogs {
 
   /** Sets up log4j logger for auditlogs */
   private void setupAuditLogs() throws IOException {
+    Logger logger = ((Log4JLogger) FSNamesystem.auditLog).getLogger();
+    // enable logging now that the test is ready to run
+    logger.setLevel(Level.INFO);
+  }
+  
+  private void configureAuditLogs() throws IOException {
     // Shutdown the LogManager to release all logger open file handles.
     // Unfortunately, Apache commons logging library does not provide
     // means to release underlying loggers. For additional info look up
@@ -245,7 +283,8 @@ public class TestAuditLogs {
       assertTrue(file.delete());
     }
     Logger logger = ((Log4JLogger) FSNamesystem.auditLog).getLogger();
-    logger.setLevel(Level.INFO);
+    // disable logging while the cluster startup preps files
+    logger.setLevel(Level.OFF);
     PatternLayout layout = new PatternLayout("%m%n");
     RollingFileAppender appender = new RollingFileAppender(layout, auditLogFile);
     logger.addAppender(appender);

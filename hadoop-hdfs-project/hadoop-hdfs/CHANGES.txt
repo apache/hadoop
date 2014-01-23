@@ -511,6 +511,9 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-5681. renewLease should not hold fsn write lock. (daryn via Kihwal)
 
+    HDFS-5241. Provide alternate queuing audit logger to reduce logging
+    contention (daryn)
+
   BUG FIXES
 
     HDFS-5034.  Remove debug prints from GetFileLinkInfo (Andrew Wang via Colin
