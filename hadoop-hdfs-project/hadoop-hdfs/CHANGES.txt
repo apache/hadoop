@@ -1126,6 +1126,8 @@ Release 2.3.0 - UNRELEASED
     HDFS-5649. Unregister NFS and Mount service when NFS gateway is shutting down.
     (brandonli)
 
+    HDFS-5789. Some of snapshot APIs missing checkOperation double check in fsn. (umamahesh)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
