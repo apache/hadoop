@@ -288,6 +288,9 @@ Release 2.4.0 - UNRELEASED
     MAPREDUCE-5693. Restore MRv1 behavior for log flush (Gera Shegalov via
     jlowe)
 
+    MAPREDUCE-5723. MR AM container log can be truncated or empty.
+    (Mohammad Kamrul Islam via kasha)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
