@@ -98,6 +98,9 @@ Release 2.3.0 - UNRELEASED
     HADOOP-10110. hadoop-auth has a build break due to missing dependency
     (Chuan Liu via cos)
 
+    HADOOP-10167. Mark hadoop-common source as UTF-8 in Maven pom files / refactoring
+    (Mikhail Antonov via cos)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
