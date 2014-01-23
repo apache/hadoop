@@ -6777,6 +6777,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   
   /** Allow snapshot on a directroy. */
   void allowSnapshot(String path) throws SafeModeException, IOException {
+    checkOperation(OperationCategory.WRITE);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -6802,6 +6803,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   
   /** Disallow snapshot on a directory. */
   void disallowSnapshot(String path) throws SafeModeException, IOException {
+    checkOperation(OperationCategory.WRITE);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -6925,6 +6927,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   public SnapshottableDirectoryStatus[] getSnapshottableDirListing()
       throws IOException {
     SnapshottableDirectoryStatus[] status = null;
+    checkOperation(OperationCategory.READ);
     final FSPermissionChecker checker = getPermissionChecker();
     readLock();
     try {
@@ -6958,6 +6961,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   SnapshotDiffReport getSnapshotDiffReport(String path,
       String fromSnapshot, String toSnapshot) throws IOException {
     SnapshotDiffInfo diffs = null;
+    checkOperation(OperationCategory.READ);
     final FSPermissionChecker pc = getPermissionChecker();
     readLock();
     try {
