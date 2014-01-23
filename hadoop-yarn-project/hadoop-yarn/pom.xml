@@ -26,7 +26,6 @@
   <name>hadoop-yarn</name>
 
   <properties>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <test.logs>true</test.logs>
     <test.timeout>600000</test.timeout>
     <yarn.basedir>${basedir}</yarn.basedir>
