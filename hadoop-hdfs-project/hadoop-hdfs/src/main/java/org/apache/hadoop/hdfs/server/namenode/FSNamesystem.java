@@ -7327,6 +7327,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   void modifyAclEntries(String src, List<AclEntry> aclSpec) throws IOException {
+    HdfsFileStatus resultingStat = null;
     FSPermissionChecker pc = getPermissionChecker();
     checkOperation(OperationCategory.WRITE);
     byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
@@ -7337,14 +7338,16 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       src = FSDirectory.resolvePath(src, pathComponents, dir);
       checkOwner(pc, src);
       dir.modifyAclEntries(src, aclSpec);
+      resultingStat = getAuditFileInfo(src, false);
     } finally {
       writeUnlock();
     }
     getEditLog().logSync();
-    logAuditEvent(true, "modifyAclEntries", src);
+    logAuditEvent(true, "modifyAclEntries", src, null, resultingStat);
   }
 
   void removeAclEntries(String src, List<AclEntry> aclSpec) throws IOException {
+    HdfsFileStatus resultingStat = null;
     FSPermissionChecker pc = getPermissionChecker();
     checkOperation(OperationCategory.WRITE);
     byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
@@ -7355,14 +7358,16 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       src = FSDirectory.resolvePath(src, pathComponents, dir);
       checkOwner(pc, src);
       dir.removeAclEntries(src, aclSpec);
+      resultingStat = getAuditFileInfo(src, false);
     } finally {
       writeUnlock();
     }
     getEditLog().logSync();
-    logAuditEvent(true, "removeAclEntries", src);
+    logAuditEvent(true, "removeAclEntries", src, null, resultingStat);
   }
 
   void removeDefaultAcl(String src) throws IOException {
+    HdfsFileStatus resultingStat = null;
     FSPermissionChecker pc = getPermissionChecker();
     checkOperation(OperationCategory.WRITE);
     byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
@@ -7373,14 +7378,16 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       src = FSDirectory.resolvePath(src, pathComponents, dir);
       checkOwner(pc, src);
       dir.removeDefaultAcl(src);
+      resultingStat = getAuditFileInfo(src, false);
     } finally {
       writeUnlock();
     }
     getEditLog().logSync();
-    logAuditEvent(true, "removeDefaultAcl", src);
+    logAuditEvent(true, "removeDefaultAcl", src, null, resultingStat);
   }
 
   void removeAcl(String src) throws IOException {
+    HdfsFileStatus resultingStat = null;
     FSPermissionChecker pc = getPermissionChecker();
     checkOperation(OperationCategory.WRITE);
     byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
@@ -7391,14 +7398,16 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       src = FSDirectory.resolvePath(src, pathComponents, dir);
       checkOwner(pc, src);
       dir.removeAcl(src);
+      resultingStat = getAuditFileInfo(src, false);
     } finally {
       writeUnlock();
     }
     getEditLog().logSync();
-    logAuditEvent(true, "removeAcl", src);
+    logAuditEvent(true, "removeAcl", src, null, resultingStat);
   }
 
   void setAcl(String src, List<AclEntry> aclSpec) throws IOException {
+    HdfsFileStatus resultingStat = null;
     FSPermissionChecker pc = getPermissionChecker();
     checkOperation(OperationCategory.WRITE);
     byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
@@ -7409,9 +7418,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       src = FSDirectory.resolvePath(src, pathComponents, dir);
       checkOwner(pc, src);
       dir.setAcl(src, aclSpec);
+      resultingStat = getAuditFileInfo(src, false);
     } finally {
       writeUnlock();
     }
+    getEditLog().logSync();
+    logAuditEvent(true, "setAcl", src, null, resultingStat);
   }
 
   AclStatus getAclStatus(String src) throws IOException {
