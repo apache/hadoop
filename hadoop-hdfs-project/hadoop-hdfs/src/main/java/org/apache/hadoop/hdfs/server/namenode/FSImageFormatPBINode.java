@@ -314,22 +314,26 @@ public final class FSImageFormatPBINode {
 
     private final FSNamesystem fsn;
     private final FileSummary.Builder summary;
+    private final SaveNamespaceContext context;
     private final FSImageFormatProtobuf.Saver parent;
 
     Saver(FSImageFormatProtobuf.Saver parent, FileSummary.Builder summary) {
       this.parent = parent;
       this.summary = summary;
-      this.fsn = parent.context.getSourceNamesystem();
+      this.context = parent.getContext();
+      this.fsn = context.getSourceNamesystem();
     }
 
     void serializeINodeDirectorySection(OutputStream out) throws IOException {
       Iterator<INodeWithAdditionalFields> iter = fsn.getFSDirectory()
           .getINodeMap().getMapIterator();
+      int i = 0;
       while (iter.hasNext()) {
         INodeWithAdditionalFields n = iter.next();
         if (!n.isDirectory()) {
           continue;
         }
+
         ReadOnlyList<INode> children = n.asDirectory().getChildrenList(
             Snapshot.CURRENT_STATE_ID);
         if (children.size() > 0) {
@@ -351,6 +355,11 @@ public final class FSImageFormatPBINode {
             rb.build().writeDelimitedTo(out);
           }
         }
+
+        ++i;
+        if (i % FSImageFormatProtobuf.Saver.CHECK_CANCEL_INTERVAL == 0) {
+          context.checkCancelled();
+        }
       }
       parent.commitSection(summary,
           FSImageFormatProtobuf.SectionName.INODE_DIR);
@@ -364,10 +373,15 @@ public final class FSImageFormatPBINode {
       INodeSection s = b.build();
       s.writeDelimitedTo(out);
 
+      int i = 0;
       Iterator<INodeWithAdditionalFields> iter = inodesMap.getMapIterator();
       while (iter.hasNext()) {
         INodeWithAdditionalFields n = iter.next();
         save(out, n);
+        ++i;
+        if (i % FSImageFormatProtobuf.Saver.CHECK_CANCEL_INTERVAL == 0) {
+          context.checkCancelled();
+        }
       }
       parent.commitSection(summary, FSImageFormatProtobuf.SectionName.INODE);
     }

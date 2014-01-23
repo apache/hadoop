@@ -55,6 +55,7 @@ import org.apache.hadoop.hdfs.server.namenode.INodeFileAttributes;
 import org.apache.hadoop.hdfs.server.namenode.INodeMap;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference;
 import org.apache.hadoop.hdfs.server.namenode.INodeWithAdditionalFields;
+import org.apache.hadoop.hdfs.server.namenode.SaveNamespaceContext;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature.DirectoryDiff;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature.DirectoryDiffList;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot.Root;
@@ -280,11 +281,13 @@ public class FSImageFormatPBSnapshot {
     private final FSNamesystem fsn;
     private final FileSummary.Builder headers;
     private final FSImageFormatProtobuf.Saver parent;
+    private final SaveNamespaceContext context;
 
     public Saver(FSImageFormatProtobuf.Saver parent,
-        FileSummary.Builder headers, FSNamesystem fsn) {
+        FileSummary.Builder headers, SaveNamespaceContext context, FSNamesystem fsn) {
       this.parent = parent;
       this.headers = headers;
+      this.context = context;
       this.fsn = fsn;
     }
 
@@ -317,6 +320,9 @@ public class FSImageFormatPBSnapshot {
               .setDirectory(db).build();
           sb.setRoot(r).build().writeDelimitedTo(out);
           i++;
+          if (i % FSImageFormatProtobuf.Saver.CHECK_CANCEL_INTERVAL == 0) {
+            context.checkCancelled();
+          }
         }
       }
       Preconditions.checkState(i == sm.getNumSnapshots());
@@ -329,6 +335,7 @@ public class FSImageFormatPBSnapshot {
     public void serializeSnapshotDiffSection(OutputStream out)
         throws IOException {
       INodeMap inodesMap = fsn.getFSDirectory().getINodeMap();
+      int i = 0;
       Iterator<INodeWithAdditionalFields> iter = inodesMap.getMapIterator();
       while (iter.hasNext()) {
         INodeWithAdditionalFields inode = iter.next();
@@ -336,6 +343,10 @@ public class FSImageFormatPBSnapshot {
           serializeFileDiffList(inode.asFile(), out);
         } else if (inode.isDirectory()) {
           serializeDirDiffList(inode.asDirectory(), out);
+        }
+        ++i;
+        if (i % FSImageFormatProtobuf.Saver.CHECK_CANCEL_INTERVAL == 0) {
+          context.checkCancelled();
         }
       }
       parent.commitSection(headers,

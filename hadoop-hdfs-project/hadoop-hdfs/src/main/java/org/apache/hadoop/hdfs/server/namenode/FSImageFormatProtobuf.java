@@ -291,7 +291,7 @@ public final class FSImageFormatProtobuf {
   }
 
   public static final class Saver {
-    final SaveNamespaceContext context;
+    private final SaveNamespaceContext context;
     private long currentOffset = MAGIC_HEADER.length;
     private MD5Hash savedDigest;
     private StringMap stringMap = new StringMap();
@@ -301,6 +301,7 @@ public final class FSImageFormatProtobuf {
     private OutputStream sectionOutputStream;
     private CompressionCodec codec;
     private OutputStream underlyingOutputStream;
+    public static final int CHECK_CANCEL_INTERVAL = 4096;
 
     Saver(SaveNamespaceContext context) {
       this.context = context;
@@ -308,6 +309,10 @@ public final class FSImageFormatProtobuf {
 
     public MD5Hash getSavedDigest() {
       return savedDigest;
+    }
+
+    public SaveNamespaceContext getContext() {
+      return context;
     }
 
     public void commitSection(FileSummary.Builder summary, SectionName name)
@@ -363,7 +368,7 @@ public final class FSImageFormatProtobuf {
     private void saveSnapshots(FileSummary.Builder summary) throws IOException {
       FSImageFormatPBSnapshot.Saver snapshotSaver =
           new FSImageFormatPBSnapshot.Saver(this, summary,
-              context.getSourceNamesystem());
+              context, context.getSourceNamesystem());
       snapshotSaver.serializeSnapshotSection(sectionOutputStream);
       snapshotSaver.serializeSnapshotDiffSection(sectionOutputStream);
     }
@@ -390,6 +395,10 @@ public final class FSImageFormatProtobuf {
       }
 
       saveNameSystemSection(b);
+      // Check for cancellation right after serializing the name system section.
+      // Some unit tests, such as TestSaveNamespace#testCancelSaveNameSpace
+      // depends on this behavior.
+      context.checkCancelled();
       saveInodes(b);
       saveSnapshots(b);
       saveStringTableSection(b);

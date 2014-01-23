@@ -22,3 +22,5 @@ HDFS-5698 subtasks
 
     HDFS-5824. Add a Type field in Snapshot DiffEntry's protobuf definition.
     (jing9)
+
+    HDFS-5808. Implement cancellation when saving FSImage. (Haohui Mai via jing9)
