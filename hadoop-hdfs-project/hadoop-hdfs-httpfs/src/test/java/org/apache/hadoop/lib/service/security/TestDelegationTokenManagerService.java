@@ -23,6 +23,9 @@ import org.apache.hadoop.fs.http.server.HttpFSServerWebApp;
 import org.apache.hadoop.lib.server.Server;
 import org.apache.hadoop.lib.service.DelegationTokenManager;
 import org.apache.hadoop.lib.service.DelegationTokenManagerException;
+import org.apache.hadoop.lib.service.hadoop.FileSystemAccessService;
+import org.apache.hadoop.lib.service.instrumentation.InstrumentationService;
+import org.apache.hadoop.lib.service.scheduler.SchedulerService;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.HTestCase;
@@ -43,9 +46,12 @@ public class TestDelegationTokenManagerService extends HTestCase {
   public void service() throws Exception {
     String dir = TestDirHelper.getTestDir().getAbsolutePath();
     Configuration conf = new Configuration(false);
-    conf.set("server.services", StringUtils.join(",",
-      Arrays.asList(DelegationTokenManagerService.class.getName())));
-    Server server = new Server("server", dir, dir, dir, dir, conf);
+    conf.set("httpfs.services", StringUtils.join(",",
+      Arrays.asList(InstrumentationService.class.getName(),
+          SchedulerService.class.getName(),
+          FileSystemAccessService.class.getName(),
+          DelegationTokenManagerService.class.getName())));
+    Server server = new HttpFSServerWebApp(dir, dir, dir, dir, conf);
     server.init();
     DelegationTokenManager tm = server.get(DelegationTokenManager.class);
     Assert.assertNotNull(tm);

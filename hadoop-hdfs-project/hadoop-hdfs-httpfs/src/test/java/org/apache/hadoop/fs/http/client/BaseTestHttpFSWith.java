@@ -116,10 +116,14 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     return HttpFSFileSystem.class;
   }
 
+  protected String getScheme() {
+    return "webhdfs";
+  }
+
   protected FileSystem getHttpFSFileSystem() throws Exception {
     Configuration conf = new Configuration();
     conf.set("fs.webhdfs.impl", getFileSystemClass().getName());
-    URI uri = new URI("webhdfs://" +
+    URI uri = new URI(getScheme() + "://" +
                       TestJettyHelper.getJettyURL().toURI().getAuthority());
     return FileSystem.get(uri, conf);
   }
@@ -127,7 +131,7 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
   protected void testGet() throws Exception {
     FileSystem fs = getHttpFSFileSystem();
     Assert.assertNotNull(fs);
-    URI uri = new URI("webhdfs://" +
+    URI uri = new URI(getScheme() + "://" +
                       TestJettyHelper.getJettyURL().toURI().getAuthority());
     Assert.assertEquals(fs.getUri(), uri);
     fs.close();

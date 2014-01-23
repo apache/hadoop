@@ -94,11 +94,11 @@ public class HttpFSServerWebApp extends ServerWebApp {
    */
   @Override
   public void init() throws ServerException {
-    super.init();
     if (SERVER != null) {
       throw new RuntimeException("HttpFSServer server already initialized");
     }
     SERVER = this;
+    super.init();
     adminGroup = getConfig().get(getPrefixedName(CONF_ADMIN_GROUP), "admin");
     LOG.info("Connects to Namenode [{}]",
              get().get(FileSystemAccess.class).getFileSystemConfiguration().
