@@ -237,6 +237,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1623. Include queue name in RegisterApplicationMasterResponse (Sandy
     Ryza)
 
+    YARN-1573. ZK store should use a private password for root-node-acls. 
+    (kasha).
+
   OPTIMIZATIONS
 
   BUG FIXES
