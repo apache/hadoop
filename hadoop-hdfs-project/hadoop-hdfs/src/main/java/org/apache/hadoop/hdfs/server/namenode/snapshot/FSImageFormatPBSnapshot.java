@@ -45,7 +45,8 @@ import org.apache.hadoop.hdfs.server.namenode.FsImageProto.FileSummary;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.SnapshotDiffSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.SnapshotDiffSection.CreatedListEntry;
-import org.apache.hadoop.hdfs.server.namenode.FsImageProto.SnapshotsSection;
+import org.apache.hadoop.hdfs.server.namenode.FsImageProto.SnapshotDiffSection.DiffEntry.Type;
+import org.apache.hadoop.hdfs.server.namenode.FsImageProto.SnapshotSection;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectoryAttributes;
@@ -87,9 +88,9 @@ public class FSImageFormatPBSnapshot {
      *
      * @return A map containing all the snapshots loaded from the fsimage.
      */
-    public void loadSnapshotsSection(InputStream in) throws IOException {
+    public void loadSnapshotSection(InputStream in) throws IOException {
       SnapshotManager sm = fsn.getSnapshotManager();
-      SnapshotsSection section = SnapshotsSection.parseDelimitedFrom(in);
+      SnapshotSection section = SnapshotSection.parseDelimitedFrom(in);
       int snum = section.getNumSnapshots();
       sm.setNumSnapshots(snum);
       sm.setSnapshotCounter(section.getSnapshotCounter());
@@ -111,7 +112,7 @@ public class FSImageFormatPBSnapshot {
 
     private void loadSnapshots(InputStream in, int size) throws IOException {
       for (int i = 0; i < size; i++) {
-        SnapshotsSection.Snapshot pbs = SnapshotsSection.Snapshot
+        SnapshotSection.Snapshot pbs = SnapshotSection.Snapshot
             .parseDelimitedFrom(in);
         INodeDirectory root = loadINodeDirectory(pbs.getRoot(),
             parent.getStringTable());
@@ -138,10 +139,14 @@ public class FSImageFormatPBSnapshot {
         }
         long inodeId = entry.getInodeId();
         INode inode = fsDir.getInode(inodeId);
-        if (inode.isFile()) {
+        SnapshotDiffSection.DiffEntry.Type type = entry.getType();
+        switch (type) {
+        case FILEDIFF:
           loadFileDiffList(in, inode.asFile(), entry.getNumOfDiff());
-        } else if (inode.isDirectory()) {
+          break;
+        case DIRECTORYDIFF:
           loadDirectoryDiffList(in, inode.asDirectory(), entry.getNumOfDiff());
+          break;
         }
       }
     }
@@ -198,8 +203,8 @@ public class FSImageFormatPBSnapshot {
      *        inodes' ids are directly recorded in protobuf
      */
     private List<INode> loadDeletedList(InputStream in, INodeDirectory dir,
-        int totalSize, List<Long> deletedNodes) throws IOException {
-      List<INode> dlist = new ArrayList<INode>(totalSize);
+        int refNum, List<Long> deletedNodes) throws IOException {
+      List<INode> dlist = new ArrayList<INode>(refNum + deletedNodes.size());
       // load non-reference inodes
       for (long deletedId : deletedNodes) {
         INode deleted = fsDir.getInode(deletedId);
@@ -207,7 +212,6 @@ public class FSImageFormatPBSnapshot {
         addToDeletedList(deleted, dir);
       }
       // load reference nodes in the deleted list
-      int refNum = totalSize - deletedNodes.size();
       for (int r = 0; r < refNum; r++) {
         INodeSection.INodeReference ref = INodeSection.INodeReference
             .parseDelimitedFrom(in);
@@ -256,10 +260,11 @@ public class FSImageFormatPBSnapshot {
                   modTime, dirCopyInPb.getNsQuota(), dirCopyInPb.getDsQuota());
         }
         // load created list
-        List<INode> clist = loadCreatedList(in, dir, diffInPb.getClistSize());
+        List<INode> clist = loadCreatedList(in, dir,
+            diffInPb.getCreatedListSize());
         // load deleted list
-        List<INode> dlist = loadDeletedList(in, dir, diffInPb.getDlistSize(),
-            diffInPb.getDeletedINodeList());
+        List<INode> dlist = loadDeletedList(in, dir,
+            diffInPb.getNumOfDeletedRef(), diffInPb.getDeletedINodeList());
         // create the directory diff
         DirectoryDiff diff = new DirectoryDiff(snapshotId, copy, null,
             childrenSize, clist, dlist, useRoot);
@@ -286,9 +291,9 @@ public class FSImageFormatPBSnapshot {
     /**
      * save all the snapshottable directories and snapshots to fsimage
      */
-    public void serializeSnapshotsSection(OutputStream out) throws IOException {
+    public void serializeSnapshotSection(OutputStream out) throws IOException {
       SnapshotManager sm = fsn.getSnapshotManager();
-      SnapshotsSection.Builder b = SnapshotsSection.newBuilder()
+      SnapshotSection.Builder b = SnapshotSection.newBuilder()
           .setSnapshotCounter(sm.getSnapshotCounter())
           .setNumSnapshots(sm.getNumSnapshots());
 
@@ -301,7 +306,7 @@ public class FSImageFormatPBSnapshot {
       for(INodeDirectorySnapshottable sdir : snapshottables) {
         for(Snapshot s : sdir.getSnapshotsByNames()) {
           Root sroot = s.getRoot();
-          SnapshotsSection.Snapshot.Builder sb = SnapshotsSection.Snapshot
+          SnapshotSection.Snapshot.Builder sb = SnapshotSection.Snapshot
               .newBuilder().setSnapshotId(s.getId());
           INodeSection.INodeDirectory.Builder db = buildINodeDirectory(sroot,
               parent.getStringMap());
@@ -343,7 +348,7 @@ public class FSImageFormatPBSnapshot {
       if (sf != null) {
         List<FileDiff> diffList = sf.getDiffs().asList();
         SnapshotDiffSection.DiffEntry entry = SnapshotDiffSection.DiffEntry
-            .newBuilder().setInodeId(file.getId())
+            .newBuilder().setInodeId(file.getId()).setType(Type.FILEDIFF)
             .setNumOfDiff(diffList.size()).build();
         entry.writeDelimitedTo(out);
         for (int i = diffList.size() - 1; i >= 0; i--) {
@@ -382,7 +387,7 @@ public class FSImageFormatPBSnapshot {
       if (sf != null) {
         List<DirectoryDiff> diffList = sf.getDiffs().asList();
         SnapshotDiffSection.DiffEntry entry = SnapshotDiffSection.DiffEntry
-            .newBuilder().setInodeId(dir.getId())
+            .newBuilder().setInodeId(dir.getId()).setType(Type.DIRECTORYDIFF)
             .setNumOfDiff(diffList.size()).build();
         entry.writeDelimitedTo(out);
         for (int i = diffList.size() - 1; i >= 0; i--) { // reverse order!
@@ -400,9 +405,8 @@ public class FSImageFormatPBSnapshot {
           // process created list and deleted list
           List<INode> created = diff.getChildrenDiff()
               .getList(ListType.CREATED);
-          db.setClistSize(created.size());
+          db.setCreatedListSize(created.size());
           List<INode> deleted = diff.getChildrenDiff().getList(ListType.DELETED);
-          db.setDlistSize(deleted.size());
           List<INodeReference> refs = new ArrayList<INodeReference>();
           for (INode d : deleted) {
             if (d.isReference()) {
@@ -411,6 +415,7 @@ public class FSImageFormatPBSnapshot {
               db.addDeletedINode(d.getId());
             }
           }
+          db.setNumOfDeletedRef(refs.size());
           db.build().writeDelimitedTo(out);
           saveCreatedDeletedList(created, refs, out);
         }

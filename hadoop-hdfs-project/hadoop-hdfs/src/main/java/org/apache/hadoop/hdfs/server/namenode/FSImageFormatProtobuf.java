@@ -52,14 +52,13 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretMan
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.CacheManagerSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.FileSummary;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.NameSystemSection;
+import org.apache.hadoop.hdfs.server.namenode.FsImageProto.SecretManagerSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.StringTableSection;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FSImageFormatPBSnapshot;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
-import org.apache.hadoop.hdfs.server.namenode.FsImageProto.SecretManagerSection;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressorStream;
-import org.apache.hadoop.security.UserGroupInformation;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -221,7 +220,7 @@ public final class FSImageFormatProtobuf {
           inodeLoader.loadFilesUnderConstructionSection(in);
           break;
         case SNAPSHOT:
-          snapshotLoader.loadSnapshotsSection(in);
+          snapshotLoader.loadSnapshotSection(in);
           break;
         case SNAPSHOT_DIFF:
           snapshotLoader.loadSnapshotDiffSection(in);
@@ -365,7 +364,7 @@ public final class FSImageFormatProtobuf {
       FSImageFormatPBSnapshot.Saver snapshotSaver =
           new FSImageFormatPBSnapshot.Saver(this, summary,
               context.getSourceNamesystem());
-      snapshotSaver.serializeSnapshotsSection(sectionOutputStream);
+      snapshotSaver.serializeSnapshotSection(sectionOutputStream);
       snapshotSaver.serializeSnapshotDiffSection(sectionOutputStream);
     }
 

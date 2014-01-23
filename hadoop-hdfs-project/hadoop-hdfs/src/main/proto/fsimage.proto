@@ -174,7 +174,7 @@ message INodeDirectorySection {
  * This section records the information about snapshot
  * NAME: SNAPSHOT
  */
-message SnapshotsSection {
+message SnapshotSection {
   message Snapshot {
     optional uint32 snapshotId = 1;
     // Snapshot root
@@ -185,7 +185,7 @@ message SnapshotsSection {
   repeated uint64 snapshottableDir = 2;
   // total number of snapshots
   optional uint32 numSnapshots = 3;
-  // repeated Snapshots...
+  // repeated Snapshot...
 }
 
 /**
@@ -203,11 +203,11 @@ message SnapshotDiffSection {
     optional bool isSnapshotRoot = 3;
     optional bytes name = 4;
     optional INodeSection.INodeDirectory snapshotCopy = 5;
-    optional uint32 clistSize = 6;
-    optional uint32 dlistSize = 7;
+    optional uint32 createdListSize = 6;
+    optional uint32 numOfDeletedRef = 7; // number of reference nodes in deleted list
     repeated uint64 deletedINode = 8; // id of deleted inode
-    // repeated CreatedListEntry
-    // repeated INodeReference (number of ref: dlistSize - dlist.size)
+    // repeated CreatedListEntry (size is specified by createdListSize)
+    // repeated INodeReference (reference inodes in deleted list)
   }
 
   message FileDiff {
@@ -218,8 +218,14 @@ message SnapshotDiffSection {
   }
 
   message DiffEntry {
-    optional uint64 inodeId = 1;
-    optional uint32 numOfDiff = 2;
+    enum Type {
+      FILEDIFF = 1;
+      DIRECTORYDIFF = 2;
+    }
+    required Type type = 1;
+    optional uint64 inodeId = 2;
+    optional uint32 numOfDiff = 3;
+
     // repeated DirectoryDiff or FileDiff
   }
 
