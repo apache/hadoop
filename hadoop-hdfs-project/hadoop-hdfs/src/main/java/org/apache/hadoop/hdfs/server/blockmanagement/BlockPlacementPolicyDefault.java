@@ -79,7 +79,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
    */
   protected int tolerateHeartbeatMultiplier;
 
-  BlockPlacementPolicyDefault(Configuration conf,  FSClusterStats stats,
+  protected BlockPlacementPolicyDefault(Configuration conf, FSClusterStats stats,
                            NetworkTopology clusterMap) {
     initialize(conf, stats, clusterMap);
   }

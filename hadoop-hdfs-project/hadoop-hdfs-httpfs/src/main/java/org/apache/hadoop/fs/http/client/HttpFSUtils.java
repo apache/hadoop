@@ -55,17 +55,21 @@ public class HttpFSUtils {
    *
    * @return a <code>URL</code> for the HttpFSServer server,
    *
-   * @throws IOException thrown if an IO error occurrs.
+   * @throws IOException thrown if an IO error occurs.
    */
-  static URL createHttpURL(Path path, Map<String, String> params)
+  static URL createURL(Path path, Map<String, String> params)
     throws IOException {
     URI uri = path.toUri();
     String realScheme;
     if (uri.getScheme().equalsIgnoreCase(HttpFSFileSystem.SCHEME)) {
       realScheme = "http";
+    } else if (uri.getScheme().equalsIgnoreCase(HttpsFSFileSystem.SCHEME)) {
+      realScheme = "https";
+
     } else {
       throw new IllegalArgumentException(MessageFormat.format(
-        "Invalid scheme [{0}] it should be 'webhdfs'", uri));
+        "Invalid scheme [{0}] it should be '" + HttpFSFileSystem.SCHEME + "' " +
+            "or '" + HttpsFSFileSystem.SCHEME + "'", uri));
     }
     StringBuilder sb = new StringBuilder();
     sb.append(realScheme).append("://").append(uri.getAuthority()).

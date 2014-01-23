@@ -75,7 +75,7 @@ public class TestAllocationFileLoaderService {
     out.println("  </queue>");
     out.println("  <queue name=\"queueB\" />");
     out.println("  <queuePlacementPolicy>");
-    out.println("    <default />");
+    out.println("    <rule name='default' />");
     out.println("  </queuePlacementPolicy>");
     out.println("</allocations>");
     out.close();
@@ -113,8 +113,8 @@ public class TestAllocationFileLoaderService {
     out.println("    <maxRunningApps>3</maxRunningApps>");
     out.println("  </queue>");
     out.println("  <queuePlacementPolicy>");
-    out.println("    <specified />");
-    out.println("    <default />");
+    out.println("    <rule name='specified' />");
+    out.println("    <rule name='default' />");
     out.println("  </queuePlacementPolicy>");
     out.println("</allocations>");
     out.close();

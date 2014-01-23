@@ -252,6 +252,25 @@ public class RegisterApplicationMasterResponsePBImpl extends
     this.containersFromPreviousAttempt = new ArrayList<Container>();
     this.containersFromPreviousAttempt.addAll(containers);
   }
+  
+  @Override
+  public String getQueue() {
+    RegisterApplicationMasterResponseProtoOrBuilder p = viaProto ? proto : builder;
+    if (!p.hasQueue()) {
+      return null;
+    }
+    return p.getQueue();
+  }
+  
+  @Override
+  public void setQueue(String queue) {
+    maybeInitBuilder();
+    if (queue == null) {
+      builder.clearQueue();
+    } else {
+      builder.setQueue(queue);
+    }
+  }
 
   private void initRunningContainersList() {
     RegisterApplicationMasterResponseProtoOrBuilder p = viaProto ? proto : builder;

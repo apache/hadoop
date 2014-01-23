@@ -229,6 +229,17 @@ Release 2.4.0 - UNRELEASED
     YARN-1567. In Fair Scheduler, allow empty queues to change between leaf and
     parent on allocation file reload (Sandy Ryza)
 
+    YARN-1616. RMFatalEventDispatcher should log the cause of the event (kasha)
+
+    YARN-1624. QueuePlacementPolicy format is not easily readable via a JAXB
+    parser (Aditya Acharya via Sandy Ryza)
+
+    YARN-1623. Include queue name in RegisterApplicationMasterResponse (Sandy
+    Ryza)
+
+    YARN-1573. ZK store should use a private password for root-node-acls. 
+    (kasha).
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -351,6 +362,9 @@ Release 2.4.0 - UNRELEASED
 
     YARN-1606. Fix the default value of yarn.resourcemanager.zk-timeout-ms 
     in yarn-default.xml (kasha)
+
+    YARN-1607. TestRM relies on the scheduler assigning multiple containers in
+    a single node update (Sandy Ryza)
 
 Release 2.3.0 - UNRELEASED
 

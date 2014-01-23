@@ -143,6 +143,27 @@ else
   print "Using   HTTPFS_HTTP_HOSTNAME: ${HTTPFS_HTTP_HOSTNAME}"
 fi
 
+if [ "${HTTPFS_SSL_ENABLED}" = "" ]; then
+  export HTTPFS_SSL_ENABLED="false"
+  print "Setting HTTPFS_SSL_ENABLED: ${HTTPFS_SSL_ENABLED}"
+else
+  print "Using   HTTPFS_SSL_ENABLED: ${HTTPFS_SSL_ENABLED}"
+fi
+
+if [ "${HTTPFS_SSL_KEYSTORE_FILE}" = "" ]; then
+  export HTTPFS_SSL_KEYSTORE_FILE=${HOME}/.keystore
+  print "Setting HTTPFS_SSL_KEYSTORE_FILE:     ${HTTPFS_SSL_KEYSTORE_FILE}"
+else
+  print "Using   HTTPFS_SSL_KEYSTORE_FILE:     ${HTTPFS_SSL_KEYSTORE_FILE}"
+fi
+
+if [ "${HTTPFS_SSL_KEYSTORE_PASS}" = "" ]; then
+  export HTTPFS_SSL_KEYSTORE_PASS=password
+  print "Setting HTTPFS_SSL_KEYSTORE_PASS:     ${HTTPFS_SSL_KEYSTORE_PASS}"
+else
+  print "Using   HTTPFS_SSL_KEYSTORE_PASS:     ${HTTPFS_SSL_KEYSTORE_PASS}"
+fi
+
 if [ "${CATALINA_BASE}" = "" ]; then
   export CATALINA_BASE=${HTTPFS_HOME}/share/hadoop/httpfs/tomcat
   print "Setting CATALINA_BASE:       ${CATALINA_BASE}"

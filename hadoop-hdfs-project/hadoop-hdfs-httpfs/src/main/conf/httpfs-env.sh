@@ -39,3 +39,15 @@
 # The hostname HttpFS server runs on
 #
 # export HTTPFS_HTTP_HOSTNAME=`hostname -f`
+
+# Indicates if HttpFS is using SSL
+#
+# export HTTPFS_SSL_ENABLED=false
+
+# The location of the SSL keystore if using SSL
+#
+# export HTTPFS_SSL_KEYSTORE_FILE=${HOME}/.keystore
+
+# The password of the SSL keystore if using SSL
+#
+# export HTTPFS_SSL_KEYSTORE_PASS=password

@@ -19,6 +19,8 @@ package org.apache.hadoop.lib.service.security;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.http.server.HttpFSServerWebApp;
+import org.apache.hadoop.hdfs.web.SWebHdfsFileSystem;
+import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.lib.server.BaseService;
 import org.apache.hadoop.lib.server.ServerException;
@@ -55,6 +57,8 @@ public class DelegationTokenManagerService extends BaseService
 
   DelegationTokenSecretManager secretManager = null;
 
+  private Text tokenKind;
+
   public DelegationTokenManagerService() {
     super(PREFIX);
   }
@@ -70,7 +74,9 @@ public class DelegationTokenManagerService extends BaseService
     long updateInterval = getServiceConfig().getLong(UPDATE_INTERVAL, DAY);
     long maxLifetime = getServiceConfig().getLong(MAX_LIFETIME, 7 * DAY);
     long renewInterval = getServiceConfig().getLong(RENEW_INTERVAL, DAY);
-    secretManager = new DelegationTokenSecretManager(updateInterval,
+    tokenKind = (HttpFSServerWebApp.get().isSslEnabled())
+                ? SWebHdfsFileSystem.TOKEN_KIND : WebHdfsFileSystem.TOKEN_KIND;
+    secretManager = new DelegationTokenSecretManager(tokenKind, updateInterval,
                                                      maxLifetime,
                                                      renewInterval, HOUR);
     try {
@@ -122,7 +128,7 @@ public class DelegationTokenManagerService extends BaseService
       realUser = new Text(ugi.getRealUser().getUserName());
     }
     DelegationTokenIdentifier tokenIdentifier =
-      new DelegationTokenIdentifier(owner, new Text(renewer), realUser);
+      new DelegationTokenIdentifier(tokenKind, owner, new Text(renewer), realUser);
     Token<DelegationTokenIdentifier> token =
       new Token<DelegationTokenIdentifier>(tokenIdentifier, secretManager);
     try {
@@ -188,7 +194,7 @@ public class DelegationTokenManagerService extends BaseService
     throws DelegationTokenManagerException {
     ByteArrayInputStream buf = new ByteArrayInputStream(token.getIdentifier());
     DataInputStream dis = new DataInputStream(buf);
-    DelegationTokenIdentifier id = new DelegationTokenIdentifier();
+    DelegationTokenIdentifier id = new DelegationTokenIdentifier(tokenKind);
     try {
       id.readFields(dis);
       dis.close();
@@ -203,6 +209,8 @@ public class DelegationTokenManagerService extends BaseService
   private static class DelegationTokenSecretManager
     extends AbstractDelegationTokenSecretManager<DelegationTokenIdentifier> {
 
+    private Text tokenKind;
+
     /**
      * Create a secret manager
      *
@@ -215,17 +223,18 @@ public class DelegationTokenManagerService extends BaseService
      * scanned
      * for expired tokens
      */
-    public DelegationTokenSecretManager(long delegationKeyUpdateInterval,
+    public DelegationTokenSecretManager(Text tokenKind, long delegationKeyUpdateInterval,
                                         long delegationTokenMaxLifetime,
                                         long delegationTokenRenewInterval,
                                         long delegationTokenRemoverScanInterval) {
       super(delegationKeyUpdateInterval, delegationTokenMaxLifetime,
             delegationTokenRenewInterval, delegationTokenRemoverScanInterval);
+      this.tokenKind = tokenKind;
     }
 
     @Override
     public DelegationTokenIdentifier createIdentifier() {
-      return new DelegationTokenIdentifier();
+      return new DelegationTokenIdentifier(tokenKind);
     }
 
   }

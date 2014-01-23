@@ -31,6 +31,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.io.IOUtils;
@@ -45,6 +46,7 @@ import org.apache.hadoop.mapred.FileOutputCommitter;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.LocalContainerLauncher;
 import org.apache.hadoop.mapred.TaskAttemptListenerImpl;
+import org.apache.hadoop.mapred.TaskLog;
 import org.apache.hadoop.mapred.TaskUmbilicalProtocol;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.OutputCommitter;
@@ -119,6 +121,7 @@ import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.service.ServiceOperations;
+import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringInterner;
@@ -212,6 +215,7 @@ public class MRAppMaster extends CompositeService {
   boolean errorHappenedShutDown = false;
   private String shutDownMessage = null;
   JobStateInternal forcedState = null;
+  private final ScheduledExecutorService logSyncer;
 
   private long recoveredJobStartTime = 0;
 
@@ -240,6 +244,7 @@ public class MRAppMaster extends CompositeService {
     this.nmHttpPort = nmHttpPort;
     this.metrics = MRAppMetrics.create();
     this.maxAppAttempts = maxAppAttempts;
+    logSyncer = TaskLog.createLogSyncer();
     LOG.info("Created MRAppMaster for application " + applicationAttemptId);
   }
 
@@ -1078,6 +1083,12 @@ public class MRAppMaster extends CompositeService {
     // All components have started, start the job.
     startJobs();
   }
+  
+  @Override
+  public void stop() {
+    super.stop();
+    TaskLog.syncLogsShutdown(logSyncer);
+  }
 
   private void processRecovery() {
     if (appAttemptID.getAttemptId() == 1) {
@@ -1395,9 +1406,7 @@ public class MRAppMaster extends CompositeService {
       initAndStartAppMaster(appMaster, conf, jobUserName);
     } catch (Throwable t) {
       LOG.fatal("Error starting MRAppMaster", t);
-      System.exit(1);
-    } finally {
-      LogManager.shutdown();
+      ExitUtil.terminate(1, t);
     }
   }
 
@@ -1473,4 +1482,11 @@ public class MRAppMaster extends CompositeService {
       }
     });
   }
+
+  @Override
+  protected void serviceStop() throws Exception {
+    super.serviceStop();
+    LogManager.shutdown();
+  }
+
 }
