@@ -24,6 +24,9 @@ Release 0.23.11 - UNRELEASED
     YARN-1592. CapacityScheduler tries to reserve more than a node's total
     memory on branch-0.23 (Omkar Vinit Joshi and Thomas Graves via jlowe)
 
+    YARN-1575. Public localizer crashes with "Localized unkown resource"
+    (jlowe)
+
 Release 0.23.10 - 2013-12-09
 
   INCOMPATIBLE CHANGES

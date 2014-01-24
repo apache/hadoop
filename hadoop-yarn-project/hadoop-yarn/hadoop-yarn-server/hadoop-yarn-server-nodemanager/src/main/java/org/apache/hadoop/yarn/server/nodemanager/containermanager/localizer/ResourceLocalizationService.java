@@ -635,7 +635,10 @@ public class ResourceLocalizationService extends CompositeService
         while (!Thread.currentThread().isInterrupted()) {
           try {
             Future<Path> completed = queue.take();
-            LocalizerResourceRequestEvent assoc = pending.remove(completed);
+            LocalizerResourceRequestEvent assoc;
+            synchronized (attempts) {
+              assoc = pending.remove(completed);
+            }
             try {
               Path local = completed.get();
               if (null == assoc) {
