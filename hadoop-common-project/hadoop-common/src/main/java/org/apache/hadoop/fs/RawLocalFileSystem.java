@@ -16,7 +16,10 @@
  * limitations under the License.
  */
 
+
 package org.apache.hadoop.fs;
+
+import com.google.common.annotations.VisibleForTesting;
 
 import java.io.BufferedOutputStream;
 import java.io.DataOutput;
@@ -51,7 +54,13 @@ import org.apache.hadoop.util.StringUtils;
 public class RawLocalFileSystem extends FileSystem {
   static final URI NAME = URI.create("file:///");
   private Path workingDir;
-  private static final boolean useDeprecatedFileStatus = !Stat.isAvailable();
+  // Temporary workaround for HADOOP-9652.
+  private static boolean useDeprecatedFileStatus = true;
+
+  @VisibleForTesting
+  public static void useStatIfAvailable() {
+    useDeprecatedFileStatus = !Stat.isAvailable();
+  }
   
   public RawLocalFileSystem() {
     workingDir = getInitialWorkingDirectory();
