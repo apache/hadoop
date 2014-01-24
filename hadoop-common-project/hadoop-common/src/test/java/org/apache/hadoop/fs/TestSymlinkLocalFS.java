@@ -38,6 +38,11 @@ import org.junit.Test;
  * Test symbolic links using LocalFs.
  */
 abstract public class TestSymlinkLocalFS extends SymlinkBaseTest {
+
+  // Workaround for HADOOP-9652
+  static {
+    RawLocalFileSystem.useStatIfAvailable();
+  }
   
   @Override
   protected String getScheme() {
