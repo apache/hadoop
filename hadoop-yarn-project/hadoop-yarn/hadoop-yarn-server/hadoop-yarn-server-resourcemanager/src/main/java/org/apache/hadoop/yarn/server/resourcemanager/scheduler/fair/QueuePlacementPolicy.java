@@ -80,7 +80,13 @@ public class QueuePlacementPolicy {
       Node node = elements.item(i);
       if (node instanceof Element) {
         Element element = (Element)node;
-        String ruleName = element.getTagName();
+
+        String ruleName = element.getAttribute("name");
+        if ("".equals(ruleName)) {
+          throw new AllocationConfigurationException("No name provided for a " +
+            "rule element");
+        }
+
         Class<? extends QueuePlacementRule> clazz = ruleClasses.get(ruleName);
         if (clazz == null) {
           throw new AllocationConfigurationException("No rule class found for "

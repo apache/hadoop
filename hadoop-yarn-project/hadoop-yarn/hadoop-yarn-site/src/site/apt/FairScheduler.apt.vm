@@ -318,9 +318,9 @@ Allocation file format
   <userMaxAppsDefault>5</userMaxAppsDefault>
   
   <queuePlacementPolicy>
-    <specified />
-    <primarygroup create="false" />
-    <default />
+    <rule name="specified" />
+    <rule name="primaryGroup" create="false" />
+    <rule name="default" />
   </queuePlacementPolicy>
 </allocations>
 ---

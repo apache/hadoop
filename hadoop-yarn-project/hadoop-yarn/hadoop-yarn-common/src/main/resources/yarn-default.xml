@@ -357,7 +357,7 @@
 
       By default, when this property is not set, we use the ACLs from
       yarn.resourcemanager.zk-acl for shared admin access and
-      rm-address:cluster-timestamp for username-based exclusive create-delete
+      rm-address:random-number for username-based exclusive create-delete
       access.
 
       This property allows users to set ACLs of their choice instead of using

@@ -45,6 +45,7 @@ message RegisterApplicationMasterResponseProto {
   optional bytes client_to_am_token_master_key = 2;
   repeated ApplicationACLMapProto application_ACLs = 3;
   repeated ContainerProto containers_from_previous_attempt = 4;
+  optional string queue = 5;
 }
 
 message FinishApplicationMasterRequestProto {

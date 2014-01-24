@@ -118,4 +118,46 @@ Transfer-Encoding: chunked
   HttpFS supports the following {{{./httpfs-default.html}configuration properties}}
   in the HttpFS's <<<conf/httpfs-site.xml>>> configuration file.
 
+* HttpFS over HTTPS (SSL)
+
+  To configure HttpFS to work over SSL edit the {{httpfs-env.sh}} script in the
+  configuration directory setting the {{HTTPFS_SSL_ENABLED}} to {{true}}.
+
+  In addition, the following 2 properties may be defined (shown with default
+  values):
+
+    * HTTPFS_SSL_KEYSTORE_FILE=${HOME}/.keystore
+
+    * HTTPFS_SSL_KEYSTORE_PASS=password
+
+  In the HttpFS <<<tomcat/conf>>> directory, replace the <<<server.xml>>> file
+  with the  <<<ssl-server.xml>>> file.
+
+
+  You need to create an SSL certificate for the HttpFS server. As the
+  <<<httpfs>>> Unix user, using the Java <<<keytool>>> command to create the
+  SSL certificate:
+
++---+
+$ keytool -genkey -alias tomcat -keyalg RSA
++---+
+
+  You will be asked a series of questions in an interactive prompt.  It will
+  create the keystore file, which will be named <<.keystore>> and located in the
+  <<<httpfs>>> user home directory.
+
+  The password you enter for "keystore password" must match the  value of the
+  <<<HTTPFS_SSL_KEYSTORE_PASS>>> environment variable set in the
+  <<<httpfs-env.sh>>> script in the configuration directory.
+
+  The answer to "What is your first and last name?" (i.e. "CN") must be the
+  hostname of the machine where the HttpFS Server will be running.
+
+  Start HttpFS. It should work over HTTPS.
+
+  Using the Hadoop <<<FileSystem>>> API or the Hadoop FS shell, use the
+  <<<swebhdfs://>>> scheme. Make sure the JVM is picking up the truststore
+  containing the public key of the SSL certificate if using a self-signed
+  certificate.
+
   \[ {{{./index.html}Go Back}} \]
