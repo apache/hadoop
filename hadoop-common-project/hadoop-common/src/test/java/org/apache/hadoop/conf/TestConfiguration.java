@@ -1183,6 +1183,8 @@ public class TestConfiguration extends TestCase {
       fail("Should throw an IllegalArgumentException exception ");
     } catch (Exception e) {
       assertTrue(e instanceof IllegalArgumentException);
+      assertEquals(e.getMessage(),
+          "The value of property testClassName must not be null");
     }
   }
 
@@ -1193,6 +1195,7 @@ public class TestConfiguration extends TestCase {
       fail("Should throw an IllegalArgumentException exception ");
     } catch (Exception e) {
       assertTrue(e instanceof IllegalArgumentException);
+      assertEquals(e.getMessage(), "Property name must not be null");
     }
   }
 
