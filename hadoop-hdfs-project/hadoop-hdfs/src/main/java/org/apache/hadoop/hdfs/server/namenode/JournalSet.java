@@ -33,6 +33,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdfs.server.common.Storage;
+import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
@@ -77,11 +79,14 @@ public class JournalSet implements JournalManager {
     private final JournalManager journal;
     private boolean disabled = false;
     private EditLogOutputStream stream;
-    private boolean required = false;
+    private final boolean required;
+    private final boolean shared;
     
-    public JournalAndStream(JournalManager manager, boolean required) {
+    public JournalAndStream(JournalManager manager, boolean required,
+        boolean shared) {
       this.journal = manager;
       this.required = required;
+      this.shared = shared;
     }
 
     public void startLogSegment(long txId) throws IOException {
@@ -163,6 +168,10 @@ public class JournalSet implements JournalManager {
     public boolean isRequired() {
       return required;
     }
+    
+    public boolean isShared() {
+      return shared;
+    }
   }
  
   // COW implementation is necessary since some users (eg the web ui) call
@@ -178,7 +187,7 @@ public class JournalSet implements JournalManager {
   
   @Override
   public void format(NamespaceInfo nsInfo) throws IOException {
-    // The iteration is done by FSEditLog itself
+    // The operation is done by FSEditLog itself
     throw new UnsupportedOperationException();
   }
 
@@ -537,9 +546,13 @@ public class JournalSet implements JournalManager {
     }
     return jList;
   }
-
+  
   void add(JournalManager j, boolean required) {
-    JournalAndStream jas = new JournalAndStream(j, required);
+    add(j, required, false);
+  }
+  
+  void add(JournalManager j, boolean required, boolean shared) {
+    JournalAndStream jas = new JournalAndStream(j, required, shared);
     journals.add(jas);
   }
   
@@ -654,5 +667,41 @@ public class JournalSet implements JournalManager {
       }
     }
     return buf.toString();
+  }
+
+  @Override
+  public void doPreUpgrade() throws IOException {
+    // This operation is handled by FSEditLog directly.
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void doUpgrade(Storage storage) throws IOException {
+    // This operation is handled by FSEditLog directly.
+    throw new UnsupportedOperationException();
+  }
+  
+  @Override
+  public void doFinalize() throws IOException {
+    // This operation is handled by FSEditLog directly.
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public boolean canRollBack(StorageInfo storage, StorageInfo prevStorage, int targetLayoutVersion) throws IOException {
+    // This operation is handled by FSEditLog directly.
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void doRollback() throws IOException {
+    // This operation is handled by FSEditLog directly.
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public long getJournalCTime() throws IOException {
+    // This operation is handled by FSEditLog directly.
+    throw new UnsupportedOperationException();
   }
 }

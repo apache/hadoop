@@ -148,6 +148,8 @@ Trunk (Unreleased)
     HDFS-5721. sharedEditsImage in Namenode#initializeSharedEdits() should be 
     closed before method returns. (Ted Yu via junping_du)
 
+    HDFS-5138. Support HDFS upgrade in HA. (atm via todd)
+
   OPTIMIZATIONS
 
   BUG FIXES

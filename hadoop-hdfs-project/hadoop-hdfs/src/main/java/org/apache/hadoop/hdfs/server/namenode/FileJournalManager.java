@@ -33,14 +33,15 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.common.StorageErrorReporter;
+import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.namenode.NNStorageRetentionManager.StoragePurger;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogLoader.EditLogValidation;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
-
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
@@ -488,5 +489,50 @@ public class FileJournalManager implements JournalManager {
                            file.toString(), firstTxId, lastTxId,
                            isInProgress(), hasCorruptHeader);
     }
+  }
+  
+  @Override
+  public void doPreUpgrade() throws IOException {
+    LOG.info("Starting upgrade of edits directory " + sd.getRoot());
+    try {
+     NNUpgradeUtil.doPreUpgrade(sd);
+    } catch (IOException ioe) {
+     LOG.error("Failed to move aside pre-upgrade storage " +
+         "in image directory " + sd.getRoot(), ioe);
+     throw ioe;
+    }
+  }
+  
+  /**
+   * This method assumes that the fields of the {@link Storage} object have
+   * already been updated to the appropriate new values for the upgrade.
+   */
+  @Override
+  public void doUpgrade(Storage storage) throws IOException {
+    NNUpgradeUtil.doUpgrade(sd, storage);
+  }
+  
+  @Override
+  public void doFinalize() throws IOException {
+    NNUpgradeUtil.doFinalize(sd);
+  }
+
+  @Override
+  public boolean canRollBack(StorageInfo storage, StorageInfo prevStorage,
+      int targetLayoutVersion) throws IOException {
+    return NNUpgradeUtil.canRollBack(sd, storage,
+        prevStorage, targetLayoutVersion);
+  }
+
+  @Override
+  public void doRollback() throws IOException {
+    NNUpgradeUtil.doRollBack(sd);
+  }
+
+  @Override
+  public long getJournalCTime() throws IOException {
+    StorageInfo sInfo = new StorageInfo();
+    sInfo.readProperties(sd);
+    return sInfo.getCTime();
   }
 }

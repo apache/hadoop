@@ -39,6 +39,7 @@ import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.Storage;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.namenode.EditLogInputStream;
 import org.apache.hadoop.hdfs.server.namenode.FSImage;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
@@ -192,7 +193,7 @@ public class BootstrapStandby implements Tool, Configurable {
     FSImage image = new FSImage(conf);
     try {
       image.getStorage().setStorageInfo(storage);
-      image.initEditLog();
+      image.initEditLog(StartupOption.REGULAR);
       assert image.getEditLog().isOpenForRead() :
         "Expected edit log to be open for read";
 
