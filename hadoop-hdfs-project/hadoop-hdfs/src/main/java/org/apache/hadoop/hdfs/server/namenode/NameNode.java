@@ -818,14 +818,20 @@ public class NameNode implements NameNodeStatusMXBean {
     System.out.println("Formatting using clusterid: " + clusterId);
     
     FSImage fsImage = new FSImage(conf, nameDirsToFormat, editDirsToFormat);
-    FSNamesystem fsn = new FSNamesystem(conf, fsImage);
-    fsImage.getEditLog().initJournalsForWrite();
-    
-    if (!fsImage.confirmFormat(force, isInteractive)) {
-      return true; // aborted
+    try {
+      FSNamesystem fsn = new FSNamesystem(conf, fsImage);
+      fsImage.getEditLog().initJournalsForWrite();
+
+      if (!fsImage.confirmFormat(force, isInteractive)) {
+        return true; // aborted
+      }
+
+      fsImage.format(fsn, clusterId);
+    } catch (IOException ioe) {
+      LOG.warn("Encountered exception during format: ", ioe);
+      fsImage.close();
+      throw ioe;
     }
-    
-    fsImage.format(fsn, clusterId);
     return false;
   }
 
@@ -899,6 +905,7 @@ public class NameNode implements NameNodeStatusMXBean {
     }
 
     NNStorage existingStorage = null;
+    FSImage sharedEditsImage = null;
     try {
       FSNamesystem fsns =
           FSNamesystem.loadFromDisk(getConfigurationWithoutSharedEdits(conf));
@@ -908,7 +915,7 @@ public class NameNode implements NameNodeStatusMXBean {
       
       List<URI> sharedEditsDirs = FSNamesystem.getSharedEditsDirs(conf);
       
-      FSImage sharedEditsImage = new FSImage(conf,
+      sharedEditsImage = new FSImage(conf,
           Lists.<URI>newArrayList(),
           sharedEditsDirs);
       sharedEditsImage.getEditLog().initJournalsForWrite();
@@ -936,6 +943,13 @@ public class NameNode implements NameNodeStatusMXBean {
       LOG.error("Could not initialize shared edits dir", ioe);
       return true; // aborted
     } finally {
+      if (sharedEditsImage != null) {
+        try {
+          sharedEditsImage.close();
+        }  catch (IOException ioe) {
+          LOG.warn("Could not close sharedEditsImage", ioe);
+        }
+      }
       // Have to unlock storage explicitly for the case when we're running in a
       // unit test, which runs in the same JVM as NNs.
       if (existingStorage != null) {

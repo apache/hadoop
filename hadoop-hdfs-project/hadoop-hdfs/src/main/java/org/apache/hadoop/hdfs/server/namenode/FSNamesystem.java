@@ -604,8 +604,14 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
     long loadStart = now();
     String nameserviceId = DFSUtil.getNamenodeNameServiceId(conf);
-    namesystem.loadFSImage(startOpt, fsImage,
-      HAUtil.isHAEnabled(conf, nameserviceId));
+    try {
+      namesystem.loadFSImage(startOpt, fsImage,
+        HAUtil.isHAEnabled(conf, nameserviceId));
+    } catch (IOException ioe) {
+      LOG.warn("Encountered exception loading fsimage", ioe);
+      fsImage.close();
+      throw ioe;
+    }
     long timeTakenToLoadFSImage = now() - loadStart;
     LOG.info("Finished loading FSImage in " + timeTakenToLoadFSImage + " msecs");
     NameNodeMetrics nnMetrics = NameNode.getNameNodeMetrics();
