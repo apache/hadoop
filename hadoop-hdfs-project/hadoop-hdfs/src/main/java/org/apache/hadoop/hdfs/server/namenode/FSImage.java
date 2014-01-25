@@ -408,60 +408,64 @@ public class FSImage implements Closeable {
     // Directories that don't have previous state do not rollback
     boolean canRollback = false;
     FSImage prevState = new FSImage(conf);
-    prevState.getStorage().layoutVersion = HdfsConstants.LAYOUT_VERSION;
-    for (Iterator<StorageDirectory> it = storage.dirIterator(); it.hasNext();) {
-      StorageDirectory sd = it.next();
-      File prevDir = sd.getPreviousDir();
-      if (!prevDir.exists()) {  // use current directory then
-        LOG.info("Storage directory " + sd.getRoot()
-                 + " does not contain previous fs state.");
-        // read and verify consistency with other directories
-        storage.readProperties(sd);
-        continue;
+    try {
+      prevState.getStorage().layoutVersion = HdfsConstants.LAYOUT_VERSION;
+      for (Iterator<StorageDirectory> it = storage.dirIterator(); it.hasNext();) {
+        StorageDirectory sd = it.next();
+        File prevDir = sd.getPreviousDir();
+        if (!prevDir.exists()) {  // use current directory then
+          LOG.info("Storage directory " + sd.getRoot()
+            + " does not contain previous fs state.");
+          // read and verify consistency with other directories
+          storage.readProperties(sd);
+          continue;
+        }
+
+        // read and verify consistency of the prev dir
+        prevState.getStorage().readPreviousVersionProperties(sd);
+
+        if (prevState.getLayoutVersion() != HdfsConstants.LAYOUT_VERSION) {
+          throw new IOException(
+            "Cannot rollback to storage version " +
+                prevState.getLayoutVersion() +
+                " using this version of the NameNode, which uses storage version " +
+                HdfsConstants.LAYOUT_VERSION + ". " +
+              "Please use the previous version of HDFS to perform the rollback.");
+        }
+        canRollback = true;
       }
+      if (!canRollback)
+        throw new IOException("Cannot rollback. None of the storage "
+            + "directories contain previous fs state.");
 
-      // read and verify consistency of the prev dir
-      prevState.getStorage().readPreviousVersionProperties(sd);
+      // Now that we know all directories are going to be consistent
+      // Do rollback for each directory containing previous state
+      for (Iterator<StorageDirectory> it = storage.dirIterator(); it.hasNext();) {
+        StorageDirectory sd = it.next();
+        File prevDir = sd.getPreviousDir();
+        if (!prevDir.exists())
+          continue;
 
-      if (prevState.getLayoutVersion() != HdfsConstants.LAYOUT_VERSION) {
-        throw new IOException(
-          "Cannot rollback to storage version " +
-          prevState.getLayoutVersion() +
-          " using this version of the NameNode, which uses storage version " +
-          HdfsConstants.LAYOUT_VERSION + ". " +
-          "Please use the previous version of HDFS to perform the rollback.");
+        LOG.info("Rolling back storage directory " + sd.getRoot()
+          + ".\n   new LV = " + prevState.getStorage().getLayoutVersion()
+          + "; new CTime = " + prevState.getStorage().getCTime());
+        File tmpDir = sd.getRemovedTmp();
+        assert !tmpDir.exists() : "removed.tmp directory must not exist.";
+        // rename current to tmp
+        File curDir = sd.getCurrentDir();
+        assert curDir.exists() : "Current directory must exist.";
+        NNStorage.rename(curDir, tmpDir);
+        // rename previous to current
+        NNStorage.rename(prevDir, curDir);
+
+        // delete tmp dir
+        NNStorage.deleteDir(tmpDir);
+        LOG.info("Rollback of " + sd.getRoot()+ " is complete.");
       }
-      canRollback = true;
+      isUpgradeFinalized = true;
+    } finally {
+      prevState.close();
     }
-    if (!canRollback)
-      throw new IOException("Cannot rollback. None of the storage "
-                            + "directories contain previous fs state.");
-
-    // Now that we know all directories are going to be consistent
-    // Do rollback for each directory containing previous state
-    for (Iterator<StorageDirectory> it = storage.dirIterator(); it.hasNext();) {
-      StorageDirectory sd = it.next();
-      File prevDir = sd.getPreviousDir();
-      if (!prevDir.exists())
-        continue;
-
-      LOG.info("Rolling back storage directory " + sd.getRoot()
-               + ".\n   new LV = " + prevState.getStorage().getLayoutVersion()
-               + "; new CTime = " + prevState.getStorage().getCTime());
-      File tmpDir = sd.getRemovedTmp();
-      assert !tmpDir.exists() : "removed.tmp directory must not exist.";
-      // rename current to tmp
-      File curDir = sd.getCurrentDir();
-      assert curDir.exists() : "Current directory must exist.";
-      NNStorage.rename(curDir, tmpDir);
-      // rename previous to current
-      NNStorage.rename(prevDir, curDir);
-
-      // delete tmp dir
-      NNStorage.deleteDir(tmpDir);
-      LOG.info("Rollback of " + sd.getRoot()+ " is complete.");
-    }
-    isUpgradeFinalized = true;
   }
 
   private void doFinalize(StorageDirectory sd) throws IOException {
