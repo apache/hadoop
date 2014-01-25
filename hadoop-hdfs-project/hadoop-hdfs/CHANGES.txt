@@ -1137,6 +1137,9 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-5789. Some of snapshot APIs missing checkOperation double check in fsn. (umamahesh)
 
+    HDFS-5343. When cat command is issued on snapshot files getting unexpected result.
+    (Sathish via umamahesh)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
