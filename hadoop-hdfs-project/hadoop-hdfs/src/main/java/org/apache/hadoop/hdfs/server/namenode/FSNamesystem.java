@@ -549,6 +549,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     return leaseManager;
   }
   
+  boolean isHaEnabled() {
+    return haEnabled;
+  }
+  
   /**
    * Check the supplied configuration for correctness.
    * @param conf Supplies the configuration to validate.
@@ -878,7 +882,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
       // This will start a new log segment and write to the seen_txid file, so
       // we shouldn't do it when coming up in standby state
-      if (!haEnabled) {
+      if (!haEnabled || (haEnabled && startOpt == StartupOption.UPGRADE)) {
         fsImage.openEditLogForWrite();
       }
       success = true;
@@ -1005,6 +1009,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
         dir.fsImage.editLog.openForWrite();
       }
+      
       if (haEnabled) {
         // Renew all of the leases before becoming active.
         // This is because, while we were in standby mode,
@@ -1031,14 +1036,17 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
   }
   
+  private boolean inActiveState() {
+    return haContext != null &&
+        haContext.getState().getServiceState() == HAServiceState.ACTIVE;
+  }
+  
   /**
    * @return Whether the namenode is transitioning to active state and is in the
    *         middle of the {@link #startActiveServices()}
    */
   public boolean inTransitionToActive() {
-    return haEnabled && haContext != null
-        && haContext.getState().getServiceState() == HAServiceState.ACTIVE
-        && startingActiveService;
+    return haEnabled && inActiveState() && startingActiveService;
   }
 
   private boolean shouldUseDelegationTokens() {
@@ -4512,11 +4520,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     
   void finalizeUpgrade() throws IOException {
     checkSuperuserPrivilege();
-    checkOperation(OperationCategory.WRITE);
+    checkOperation(OperationCategory.UNCHECKED);
     writeLock();
     try {
-      checkOperation(OperationCategory.WRITE);
-      getFSImage().finalizeUpgrade();
+      checkOperation(OperationCategory.UNCHECKED);
+      getFSImage().finalizeUpgrade(this.isHaEnabled() && inActiveState());
     } finally {
       writeUnlock();
     }
@@ -7421,5 +7429,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       logger.addAppender(asyncAppender);        
     }
   }
+
 }
 

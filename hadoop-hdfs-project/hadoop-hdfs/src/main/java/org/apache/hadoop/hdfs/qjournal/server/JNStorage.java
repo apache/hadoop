@@ -130,6 +130,10 @@ class JNStorage extends Storage {
     return new File(sd.getCurrentDir(), "paxos");
   }
   
+  File getRoot() {
+    return sd.getRoot();
+  }
+  
   /**
    * Remove any log files and associated paxos files which are older than
    * the given txid.
@@ -182,12 +186,15 @@ class JNStorage extends Storage {
     unlockAll();
     sd.clearDirectory();
     writeProperties(sd);
+    createPaxosDir();
+    analyzeStorage();
+  }
+  
+  void createPaxosDir() throws IOException {
     if (!getPaxosDir().mkdirs()) {
       throw new IOException("Could not create paxos dir: " + getPaxosDir());
     }
-    analyzeStorage();
   }
-
   
   void analyzeStorage() throws IOException {
     this.state = sd.analyzeStorage(StartupOption.REGULAR, this);

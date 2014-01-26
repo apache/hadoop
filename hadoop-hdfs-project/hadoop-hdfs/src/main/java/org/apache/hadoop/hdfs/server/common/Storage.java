@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs.server.common;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -26,26 +25,23 @@ import java.lang.management.ManagementFactory;
 import java.nio.channels.FileLock;
 import java.nio.channels.OverlappingFileLockException;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Properties;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.hdfs.protocol.LayoutVersion;
-import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.util.VersionInfo;
 
-import com.google.common.base.Preconditions;
-
 import com.google.common.base.Charsets;
+import com.google.common.base.Preconditions;
 
 
 
@@ -82,7 +78,6 @@ public abstract class Storage extends StorageInfo {
   public static final int[] LAYOUT_VERSIONS_203 = {-19, -31};
 
   public    static final String STORAGE_FILE_LOCK     = "in_use.lock";
-  protected static final String STORAGE_FILE_VERSION  = "VERSION";
   public    static final String STORAGE_DIR_CURRENT   = "current";
   public    static final String STORAGE_DIR_PREVIOUS  = "previous";
   public    static final String STORAGE_TMP_REMOVED   = "removed.tmp";
@@ -126,22 +121,24 @@ public abstract class Storage extends StorageInfo {
   
   private class DirIterator implements Iterator<StorageDirectory> {
     StorageDirType dirType;
+    boolean includeShared;
     int prevIndex; // for remove()
     int nextIndex; // for next()
     
-    DirIterator(StorageDirType dirType) {
+    DirIterator(StorageDirType dirType, boolean includeShared) {
       this.dirType = dirType;
       this.nextIndex = 0;
       this.prevIndex = 0;
+      this.includeShared = includeShared;
     }
     
     @Override
     public boolean hasNext() {
       if (storageDirs.isEmpty() || nextIndex >= storageDirs.size())
         return false;
-      if (dirType != null) {
+      if (dirType != null || !includeShared) {
         while (nextIndex < storageDirs.size()) {
-          if (getStorageDir(nextIndex).getStorageDirType().isOfType(dirType))
+          if (shouldReturnNextDir())
             break;
           nextIndex++;
         }
@@ -156,9 +153,9 @@ public abstract class Storage extends StorageInfo {
       StorageDirectory sd = getStorageDir(nextIndex);
       prevIndex = nextIndex;
       nextIndex++;
-      if (dirType != null) {
+      if (dirType != null || !includeShared) {
         while (nextIndex < storageDirs.size()) {
-          if (getStorageDir(nextIndex).getStorageDirType().isOfType(dirType))
+          if (shouldReturnNextDir())
             break;
           nextIndex++;
         }
@@ -171,6 +168,12 @@ public abstract class Storage extends StorageInfo {
       nextIndex = prevIndex; // restore previous state
       storageDirs.remove(prevIndex); // remove last returned element
       hasNext(); // reset nextIndex to correct place
+    }
+    
+    private boolean shouldReturnNextDir() {
+      StorageDirectory sd = getStorageDir(nextIndex);
+      return (dirType == null || sd.getStorageDirType().isOfType(dirType)) &&
+          (includeShared || !sd.isShared());
     }
   }
   
@@ -203,7 +206,27 @@ public abstract class Storage extends StorageInfo {
    * them via the Iterator
    */
   public Iterator<StorageDirectory> dirIterator(StorageDirType dirType) {
-    return new DirIterator(dirType);
+    return dirIterator(dirType, true);
+  }
+  
+  /**
+   * Return all entries in storageDirs, potentially excluding shared dirs.
+   * @param includeShared whether or not to include shared dirs.
+   * @return an iterator over the configured storage dirs.
+   */
+  public Iterator<StorageDirectory> dirIterator(boolean includeShared) {
+    return dirIterator(null, includeShared);
+  }
+  
+  /**
+   * @param dirType all entries will be of this type of dir
+   * @param includeShared true to include any shared directories,
+   *        false otherwise
+   * @return an iterator over the configured storage dirs.
+   */
+  public Iterator<StorageDirectory> dirIterator(StorageDirType dirType,
+      boolean includeShared) {
+    return new DirIterator(dirType, includeShared);
   }
   
   public Iterable<StorageDirectory> dirIterable(final StorageDirType dirType) {
@@ -233,7 +256,9 @@ public abstract class Storage extends StorageInfo {
   @InterfaceAudience.Private
   public static class StorageDirectory implements FormatConfirmable {
     final File root;              // root directory
-    final boolean useLock;        // flag to enable storage lock
+    // whether or not this dir is shared between two separate NNs for HA, or
+    // between multiple block pools in the case of federation.
+    final boolean isShared;
     final StorageDirType dirType; // storage dir type
     FileLock lock;                // storage lock
 
@@ -241,11 +266,11 @@ public abstract class Storage extends StorageInfo {
     
     public StorageDirectory(File dir) {
       // default dirType is null
-      this(dir, null, true);
+      this(dir, null, false);
     }
     
     public StorageDirectory(File dir, StorageDirType dirType) {
-      this(dir, dirType, true);
+      this(dir, dirType, false);
     }
     
     public void setStorageUuid(String storageUuid) {
@@ -260,14 +285,14 @@ public abstract class Storage extends StorageInfo {
      * Constructor
      * @param dir directory corresponding to the storage
      * @param dirType storage directory type
-     * @param useLock true - enables locking on the storage directory and false
-     *          disables locking
+     * @param isShared whether or not this dir is shared between two NNs. true
+     *          disables locking on the storage directory, false enables locking
      */
-    public StorageDirectory(File dir, StorageDirType dirType, boolean useLock) {
+    public StorageDirectory(File dir, StorageDirType dirType, boolean isShared) {
       this.root = dir;
       this.lock = null;
       this.dirType = dirType;
-      this.useLock = useLock;
+      this.isShared = isShared;
     }
     
     /**
@@ -621,6 +646,10 @@ public abstract class Storage extends StorageInfo {
       
       return true;
     }
+    
+    public boolean isShared() {
+      return isShared;
+    }
 
 
     /**
@@ -635,7 +664,7 @@ public abstract class Storage extends StorageInfo {
      * @throws IOException if locking fails
      */
     public void lock() throws IOException {
-      if (!useLock) {
+      if (isShared()) {
         LOG.info("Locking is disabled");
         return;
       }
@@ -890,22 +919,6 @@ public abstract class Storage extends StorageInfo {
   }
   
   /**
-   * Get common storage fields.
-   * Should be overloaded if additional fields need to be get.
-   * 
-   * @param props
-   * @throws IOException
-   */
-  protected void setFieldsFromProperties(
-      Properties props, StorageDirectory sd) throws IOException {
-    setLayoutVersion(props, sd);
-    setNamespaceID(props, sd);
-    setStorageType(props, sd);
-    setcTime(props, sd);
-    setClusterId(props, layoutVersion, sd);
-  }
-  
-  /**
    * Set common storage fields into the given properties object.
    * Should be overloaded if additional fields need to be set.
    * 
@@ -923,22 +936,29 @@ public abstract class Storage extends StorageInfo {
     }
     props.setProperty("cTime", String.valueOf(cTime));
   }
-
+  
   /**
-   * Read properties from the VERSION file in the given storage directory.
+   * Get common storage fields.
+   * Should be overloaded if additional fields need to be get.
+   * 
+   * @param props
+   * @throws IOException
    */
-  public void readProperties(StorageDirectory sd) throws IOException {
-    Properties props = readPropertiesFile(sd.getVersionFile());
-    setFieldsFromProperties(props, sd);
+  protected void setFieldsFromProperties(
+      Properties props, StorageDirectory sd) throws IOException {
+    super.setFieldsFromProperties(props, sd);
+    setStorageType(props, sd);
   }
-
-  /**
-   * Read properties from the the previous/VERSION file in the given storage directory.
-   */
-  public void readPreviousVersionProperties(StorageDirectory sd)
-      throws IOException {
-    Properties props = readPropertiesFile(sd.getPreviousVersionFile());
-    setFieldsFromProperties(props, sd);
+  
+  /** Validate and set storage type from {@link Properties}*/
+  protected void setStorageType(Properties props, StorageDirectory sd)
+      throws InconsistentFSStateException {
+    NodeType type = NodeType.valueOf(getProperty(props, sd, "storageType"));
+    if (!storageType.equals(type)) {
+      throw new InconsistentFSStateException(sd.root,
+          "node type is incompatible with others.");
+    }
+    storageType = type;
   }
 
   /**
@@ -947,10 +967,15 @@ public abstract class Storage extends StorageInfo {
   public void writeProperties(StorageDirectory sd) throws IOException {
     writeProperties(sd.getVersionFile(), sd);
   }
-
+  
   public void writeProperties(File to, StorageDirectory sd) throws IOException {
     Properties props = new Properties();
     setPropertiesFromFields(props, sd);
+    writeProperties(to, sd, props);
+  }
+
+  public static void writeProperties(File to, StorageDirectory sd,
+      Properties props) throws IOException {
     RandomAccessFile file = new RandomAccessFile(to, "rws");
     FileOutputStream out = null;
     try {
@@ -976,23 +1001,6 @@ public abstract class Storage extends StorageInfo {
       }
       file.close();
     }
-  }
-  
-  public static Properties readPropertiesFile(File from) throws IOException {
-    RandomAccessFile file = new RandomAccessFile(from, "rws");
-    FileInputStream in = null;
-    Properties props = new Properties();
-    try {
-      in = new FileInputStream(file.getFD());
-      file.seek(0);
-      props.load(in);
-    } finally {
-      if (in != null) {
-        in.close();
-      }
-      file.close();
-    }
-    return props;
   }
 
   public static void rename(File from, File to) throws IOException {
@@ -1042,69 +1050,6 @@ public abstract class Storage extends StorageInfo {
       + "-" + storage.getClusterID()
       + "-" + Integer.toString(storage.getLayoutVersion())
       + "-" + Long.toString(storage.getCTime());
-  }
-  
-  String getProperty(Properties props, StorageDirectory sd,
-      String name) throws InconsistentFSStateException {
-    String property = props.getProperty(name);
-    if (property == null) {
-      throw new InconsistentFSStateException(sd.root, "file "
-          + STORAGE_FILE_VERSION + " has " + name + " missing.");
-    }
-    return property;
-  }
-  
-  /** Validate and set storage type from {@link Properties}*/
-  protected void setStorageType(Properties props, StorageDirectory sd)
-      throws InconsistentFSStateException {
-    NodeType type = NodeType.valueOf(getProperty(props, sd, "storageType"));
-    if (!storageType.equals(type)) {
-      throw new InconsistentFSStateException(sd.root,
-          "node type is incompatible with others.");
-    }
-    storageType = type;
-  }
-  
-  /** Validate and set ctime from {@link Properties}*/
-  protected void setcTime(Properties props, StorageDirectory sd)
-      throws InconsistentFSStateException {
-    cTime = Long.parseLong(getProperty(props, sd, "cTime"));
-  }
-
-  /** Validate and set clusterId from {@link Properties}*/
-  protected void setClusterId(Properties props, int layoutVersion,
-      StorageDirectory sd) throws InconsistentFSStateException {
-    // Set cluster ID in version that supports federation
-    if (LayoutVersion.supports(Feature.FEDERATION, layoutVersion)) {
-      String cid = getProperty(props, sd, "clusterID");
-      if (!(clusterID.equals("") || cid.equals("") || clusterID.equals(cid))) {
-        throw new InconsistentFSStateException(sd.getRoot(),
-            "cluster Id is incompatible with others.");
-      }
-      clusterID = cid;
-    }
-  }
-  
-  /** Validate and set layout version from {@link Properties}*/
-  protected void setLayoutVersion(Properties props, StorageDirectory sd)
-      throws IncorrectVersionException, InconsistentFSStateException {
-    int lv = Integer.parseInt(getProperty(props, sd, "layoutVersion"));
-    if (lv < HdfsConstants.LAYOUT_VERSION) { // future version
-      throw new IncorrectVersionException(lv, "storage directory "
-          + sd.root.getAbsolutePath());
-    }
-    layoutVersion = lv;
-  }
-  
-  /** Validate and set namespaceID version from {@link Properties}*/
-  protected void setNamespaceID(Properties props, StorageDirectory sd)
-      throws InconsistentFSStateException {
-    int nsId = Integer.parseInt(getProperty(props, sd, "namespaceID"));
-    if (namespaceID != 0 && nsId != 0 && namespaceID != nsId) {
-      throw new InconsistentFSStateException(sd.root,
-          "namespaceID is incompatible with others.");
-    }
-    namespaceID = nsId;
   }
   
   public static boolean is203LayoutVersion(int layoutVersion) {

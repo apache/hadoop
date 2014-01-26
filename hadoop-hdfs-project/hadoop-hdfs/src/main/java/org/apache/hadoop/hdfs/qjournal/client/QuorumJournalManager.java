@@ -34,10 +34,13 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetJournalStateResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.NewEpochResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.PrepareRecoveryResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.SegmentStateProto;
+import org.apache.hadoop.hdfs.server.common.Storage;
+import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.namenode.EditLogFileInputStream;
 import org.apache.hadoop.hdfs.server.namenode.EditLogInputStream;
 import org.apache.hadoop.hdfs.server.namenode.EditLogOutputStream;
@@ -77,8 +80,14 @@ public class QuorumJournalManager implements JournalManager {
   // Since these don't occur during normal operation, we can
   // use rather lengthy timeouts, and don't need to make them
   // configurable.
-  private static final int FORMAT_TIMEOUT_MS = 60000;
-  private static final int HASDATA_TIMEOUT_MS = 60000;
+  private static final int FORMAT_TIMEOUT_MS            = 60000;
+  private static final int HASDATA_TIMEOUT_MS           = 60000;
+  private static final int CAN_ROLL_BACK_TIMEOUT_MS     = 60000;
+  private static final int FINALIZE_TIMEOUT_MS          = 60000;
+  private static final int PRE_UPGRADE_TIMEOUT_MS       = 60000;
+  private static final int ROLL_BACK_TIMEOUT_MS         = 60000;
+  private static final int UPGRADE_TIMEOUT_MS           = 60000;
+  private static final int GET_JOURNAL_CTIME_TIMEOUT_MS = 60000;
   
   private final Configuration conf;
   private final URI uri;
@@ -492,4 +501,131 @@ public class QuorumJournalManager implements JournalManager {
     return loggers;
   }
 
+  @Override
+  public void doPreUpgrade() throws IOException {
+    QuorumCall<AsyncLogger, Void> call = loggers.doPreUpgrade();
+    try {
+      call.waitFor(loggers.size(), loggers.size(), 0, PRE_UPGRADE_TIMEOUT_MS,
+          "doPreUpgrade");
+      
+      if (call.countExceptions() > 0) {
+        call.rethrowException("Could not do pre-upgrade of one or more JournalNodes");
+      }
+    } catch (InterruptedException e) {
+      throw new IOException("Interrupted waiting for doPreUpgrade() response");
+    } catch (TimeoutException e) {
+      throw new IOException("Timed out waiting for doPreUpgrade() response");
+    }
+  }
+
+  @Override
+  public void doUpgrade(Storage storage) throws IOException {
+    QuorumCall<AsyncLogger, Void> call = loggers.doUpgrade(storage);
+    try {
+      call.waitFor(loggers.size(), loggers.size(), 0, UPGRADE_TIMEOUT_MS,
+          "doUpgrade");
+      
+      if (call.countExceptions() > 0) {
+        call.rethrowException("Could not perform upgrade of one or more JournalNodes");
+      }
+    } catch (InterruptedException e) {
+      throw new IOException("Interrupted waiting for doUpgrade() response");
+    } catch (TimeoutException e) {
+      throw new IOException("Timed out waiting for doUpgrade() response");
+    }
+  }
+  
+  @Override
+  public void doFinalize() throws IOException {
+    QuorumCall<AsyncLogger, Void> call = loggers.doFinalize();
+    try {
+      call.waitFor(loggers.size(), loggers.size(), 0, FINALIZE_TIMEOUT_MS,
+          "doFinalize");
+      
+      if (call.countExceptions() > 0) {
+        call.rethrowException("Could not finalize one or more JournalNodes");
+      }
+    } catch (InterruptedException e) {
+      throw new IOException("Interrupted waiting for doFinalize() response");
+    } catch (TimeoutException e) {
+      throw new IOException("Timed out waiting for doFinalize() response");
+    }
+  }
+  
+  @Override
+  public boolean canRollBack(StorageInfo storage, StorageInfo prevStorage,
+      int targetLayoutVersion) throws IOException {
+    QuorumCall<AsyncLogger, Boolean> call = loggers.canRollBack(storage,
+        prevStorage, targetLayoutVersion);
+    try {
+      call.waitFor(loggers.size(), loggers.size(), 0, CAN_ROLL_BACK_TIMEOUT_MS,
+          "lockSharedStorage");
+      
+      if (call.countExceptions() > 0) {
+        call.rethrowException("Could not check if roll back possible for"
+            + " one or more JournalNodes");
+      }
+      
+      // Either they all return the same thing or this call fails, so we can
+      // just return the first result.
+      DFSUtil.assertAllResultsEqual(call.getResults().values());
+      for (Boolean result : call.getResults().values()) {
+        return result;
+      }
+    } catch (InterruptedException e) {
+      throw new IOException("Interrupted waiting for lockSharedStorage() " +
+          "response");
+    } catch (TimeoutException e) {
+      throw new IOException("Timed out waiting for lockSharedStorage() " +
+          "response");
+    }
+    
+    throw new AssertionError("Unreachable code.");
+  }
+
+  @Override
+  public void doRollback() throws IOException {
+    QuorumCall<AsyncLogger, Void> call = loggers.doRollback();
+    try {
+      call.waitFor(loggers.size(), loggers.size(), 0, ROLL_BACK_TIMEOUT_MS,
+          "doRollback");
+      
+      if (call.countExceptions() > 0) {
+        call.rethrowException("Could not perform rollback of one or more JournalNodes");
+      }
+    } catch (InterruptedException e) {
+      throw new IOException("Interrupted waiting for doFinalize() response");
+    } catch (TimeoutException e) {
+      throw new IOException("Timed out waiting for doFinalize() response");
+    }
+  }
+  
+  @Override
+  public long getJournalCTime() throws IOException {
+    QuorumCall<AsyncLogger, Long> call = loggers.getJournalCTime();
+    try {
+      call.waitFor(loggers.size(), loggers.size(), 0,
+          GET_JOURNAL_CTIME_TIMEOUT_MS, "getJournalCTime");
+      
+      if (call.countExceptions() > 0) {
+        call.rethrowException("Could not journal CTime for one "
+            + "more JournalNodes");
+      }
+      
+      // Either they all return the same thing or this call fails, so we can
+      // just return the first result.
+      DFSUtil.assertAllResultsEqual(call.getResults().values());
+      for (Long result : call.getResults().values()) {
+        return result;
+      }
+    } catch (InterruptedException e) {
+      throw new IOException("Interrupted waiting for getJournalCTime() " +
+          "response");
+    } catch (TimeoutException e) {
+      throw new IOException("Timed out waiting for getJournalCTime() " +
+          "response");
+    }
+    
+    throw new AssertionError("Unreachable code.");
+  }
 }
