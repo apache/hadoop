@@ -106,6 +106,9 @@ Trunk - Unreleased
     YARN-1605. Fixed formatting issues in the new module on branch YARN-321. (Vinod
     Kumar Vavilapalli via zjshen)
 
+    YARN-1625. Fixed RAT warnings after YARN-321 merge. (Shinichi Yamashita via
+    vinodkv)
+
 Release 2.4.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
