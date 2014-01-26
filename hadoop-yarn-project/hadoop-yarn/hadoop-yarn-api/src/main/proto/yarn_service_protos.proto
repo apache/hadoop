@@ -45,6 +45,7 @@ message RegisterApplicationMasterResponseProto {
   optional bytes client_to_am_token_master_key = 2;
   repeated ApplicationACLMapProto application_ACLs = 3;
   repeated ContainerProto containers_from_previous_attempt = 4;
+  optional string queue = 5;
 }
 
 message FinishApplicationMasterRequestProto {
@@ -238,4 +239,40 @@ message GetContainerStatusesRequestProto {
 message GetContainerStatusesResponseProto {
   repeated ContainerStatusProto status = 1;
   repeated ContainerExceptionMapProto failed_requests = 2;
+}
+
+//////////////////////////////////////////////////////
+/////// Application_History_Protocol /////////////////
+//////////////////////////////////////////////////////
+
+message GetApplicationAttemptReportRequestProto {
+  optional ApplicationAttemptIdProto application_attempt_id = 1;
+}
+
+message GetApplicationAttemptReportResponseProto {
+  optional ApplicationAttemptReportProto application_attempt_report = 1;
+}
+
+message GetApplicationAttemptsRequestProto {
+  optional ApplicationIdProto application_id = 1;
+}
+
+message GetApplicationAttemptsResponseProto {
+  repeated ApplicationAttemptReportProto application_attempts = 1;
+}
+
+message GetContainerReportRequestProto {
+  optional ContainerIdProto container_id = 1;
+}
+
+message GetContainerReportResponseProto {
+  optional ContainerReportProto container_report = 1;
+}
+
+message GetContainersRequestProto {
+  optional ApplicationAttemptIdProto application_attempt_id = 1;
+}
+
+message GetContainersResponseProto {
+  repeated ContainerReportProto containers = 1;
 }

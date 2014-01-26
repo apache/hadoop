@@ -27,6 +27,7 @@ import java.net.URI;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ScheduledExecutorService;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -61,7 +62,6 @@ import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.util.ConverterUtils;
-import org.apache.log4j.LogManager;
 
 /**
  * The main() for MapReduce task processes.
@@ -123,6 +123,7 @@ class YarnChild {
     LOG.debug("PID: " + System.getenv().get("JVM_PID"));
     Task task = null;
     UserGroupInformation childUGI = null;
+    ScheduledExecutorService logSyncer = null;
 
     try {
       int idleLoopCount = 0;
@@ -160,6 +161,8 @@ class YarnChild {
 
       // set job classloader if configured before invoking the task
       MRApps.setJobClassLoader(job);
+
+      logSyncer = TaskLog.createLogSyncer();
 
       // Create a final reference to the task for the doAs block
       final Task taskFinal = task;
@@ -214,10 +217,7 @@ class YarnChild {
     } finally {
       RPC.stopProxy(umbilical);
       DefaultMetricsSystem.shutdown();
-      // Shutting down log4j of the child-vm...
-      // This assumes that on return from Task.run()
-      // there is no more logging done.
-      LogManager.shutdown();
+      TaskLog.syncLogsShutdown(logSyncer);
     }
   }
 

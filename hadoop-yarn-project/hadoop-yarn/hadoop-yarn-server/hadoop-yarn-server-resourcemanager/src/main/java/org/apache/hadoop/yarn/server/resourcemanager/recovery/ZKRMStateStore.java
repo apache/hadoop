@@ -24,6 +24,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -47,7 +48,6 @@ import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.Appli
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.ApplicationStateDataProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.RMStateVersionProto;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
-import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.RMStateVersion;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationAttemptStateDataPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationStateDataPBImpl;
@@ -74,6 +74,7 @@ import com.google.common.annotations.VisibleForTesting;
 public class ZKRMStateStore extends RMStateStore {
 
   public static final Log LOG = LogFactory.getLog(ZKRMStateStore.class);
+  private final SecureRandom random = new SecureRandom();
 
   protected static final String ROOT_ZNODE_NAME = "ZKRMStateRoot";
   protected static final RMStateVersion CURRENT_VERSION_INFO = RMStateVersion
@@ -136,6 +137,8 @@ public class ZKRMStateStore extends RMStateStore {
   private String fencingNodePath;
   private Op createFencingNodePathOp;
   private Op deleteFencingNodePathOp;
+  private String zkRootNodeUsername;
+  private final String zkRootNodePassword = Long.toString(random.nextLong());
 
   @VisibleForTesting
   List<ACL> zkRootNodeAcl;
@@ -144,9 +147,6 @@ public class ZKRMStateStore extends RMStateStore {
       ZooDefs.Perms.CREATE | ZooDefs.Perms.DELETE;
   private final String zkRootNodeAuthScheme =
       new DigestAuthenticationProvider().getScheme();
-
-  private String zkRootNodeUsername;
-  private String zkRootNodePassword;
 
   /**
    * Given the {@link Configuration} and {@link ACL}s used (zkAcl) for
@@ -172,7 +172,6 @@ public class ZKRMStateStore extends RMStateStore {
     zkRootNodeUsername = HAUtil.getConfValueForRMInstance(
         YarnConfiguration.RM_ADDRESS,
         YarnConfiguration.DEFAULT_RM_ADDRESS, conf);
-    zkRootNodePassword = Long.toString(ResourceManager.getClusterTimeStamp());
     Id rmId = new Id(zkRootNodeAuthScheme,
         DigestAuthenticationProvider.generateDigest(
             zkRootNodeUsername + ":" + zkRootNodePassword));

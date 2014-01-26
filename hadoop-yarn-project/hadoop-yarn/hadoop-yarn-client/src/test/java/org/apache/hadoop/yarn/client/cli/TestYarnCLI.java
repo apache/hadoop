@@ -43,19 +43,26 @@ import junit.framework.Assert;
 
 import org.apache.commons.lang.time.DateFormatUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerReport;
+import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
+import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.Before;
 import org.junit.Test;
+import org.mortbay.log.Log;
 
 import org.apache.commons.cli.Options;
 
@@ -114,19 +121,180 @@ public class TestYarnCLI {
   }
 
   @Test
+  public void testGetApplicationAttemptReport() throws Exception {
+    ApplicationCLI cli = createAndGetAppCLI();
+    ApplicationId applicationId = ApplicationId.newInstance(1234, 5);
+    ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(
+        applicationId, 1);
+    ApplicationAttemptReport attemptReport = ApplicationAttemptReport
+        .newInstance(attemptId, "host", 124, "url", "diagnostics",
+            YarnApplicationAttemptState.FINISHED, ContainerId.newInstance(
+                attemptId, 1));
+    when(
+        client
+            .getApplicationAttemptReport(any(ApplicationAttemptId.class)))
+        .thenReturn(attemptReport);
+    int result = cli.run(new String[] { "applicationattempt", "-status",
+        attemptId.toString() });
+    assertEquals(0, result);
+    verify(client).getApplicationAttemptReport(attemptId);
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    PrintWriter pw = new PrintWriter(baos);
+    pw.println("Application Attempt Report : ");
+    pw.println("\tApplicationAttempt-Id : appattempt_1234_0005_000001");
+    pw.println("\tState : FINISHED");
+    pw.println("\tAMContainer : container_1234_0005_01_000001");
+    pw.println("\tTracking-URL : url");
+    pw.println("\tRPC Port : 124");
+    pw.println("\tAM Host : host");
+    pw.println("\tDiagnostics : diagnostics");
+    pw.close();
+    String appReportStr = baos.toString("UTF-8");
+    Assert.assertEquals(appReportStr, sysOutStream.toString());
+    verify(sysOut, times(1)).println(isA(String.class));
+  }
+  
+  @Test
+  public void testGetApplicationAttempts() throws Exception {
+    ApplicationCLI cli = createAndGetAppCLI();
+    ApplicationId applicationId = ApplicationId.newInstance(1234, 5);
+    ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(
+        applicationId, 1);
+    ApplicationAttemptId attemptId1 = ApplicationAttemptId.newInstance(
+        applicationId, 2);
+    ApplicationAttemptReport attemptReport = ApplicationAttemptReport
+        .newInstance(attemptId, "host", 124, "url", "diagnostics",
+            YarnApplicationAttemptState.FINISHED, ContainerId.newInstance(
+                attemptId, 1));
+    ApplicationAttemptReport attemptReport1 = ApplicationAttemptReport
+        .newInstance(attemptId1, "host", 124, "url", "diagnostics",
+            YarnApplicationAttemptState.FINISHED, ContainerId.newInstance(
+                attemptId1, 1));
+    List<ApplicationAttemptReport> reports = new ArrayList<ApplicationAttemptReport>();
+    reports.add(attemptReport);
+    reports.add(attemptReport1);
+    when(client.getApplicationAttempts(any(ApplicationId.class)))
+        .thenReturn(reports);
+    int result = cli.run(new String[] { "applicationattempt", "-list",
+        applicationId.toString() });
+    assertEquals(0, result);
+    verify(client).getApplicationAttempts(applicationId);
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    PrintWriter pw = new PrintWriter(baos);
+    pw.println("Total number of application attempts :2");
+    pw.print("         ApplicationAttempt-Id");
+    pw.print("\t               State");
+    pw.print("\t                    AM-Container-Id");
+    pw.println("\t                       Tracking-URL");
+    pw.print("   appattempt_1234_0005_000001");
+    pw.print("\t            FINISHED");
+    pw.print("\t      container_1234_0005_01_000001");
+    pw.println("\t                                url");
+    pw.print("   appattempt_1234_0005_000002");
+    pw.print("\t            FINISHED");
+    pw.print("\t      container_1234_0005_02_000001");
+    pw.println("\t                                url");
+    pw.close();
+    String appReportStr = baos.toString("UTF-8");
+    Assert.assertEquals(appReportStr, sysOutStream.toString());
+  }
+  
+  @Test
+  public void testGetContainerReport() throws Exception {
+    ApplicationCLI cli = createAndGetAppCLI();
+    ApplicationId applicationId = ApplicationId.newInstance(1234, 5);
+    ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(
+        applicationId, 1);
+    ContainerId containerId = ContainerId.newInstance(attemptId, 1);
+    ContainerReport container = ContainerReport.newInstance(containerId, null,
+        NodeId.newInstance("host", 1234), Priority.UNDEFINED, 1234, 5678,
+        "diagnosticInfo", "logURL", 0, ContainerState.COMPLETE);
+    when(client.getContainerReport(any(ContainerId.class))).thenReturn(
+        container);
+    int result = cli.run(new String[] { "container", "-status",
+        containerId.toString() });
+    assertEquals(0, result);
+    verify(client).getContainerReport(containerId);
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    PrintWriter pw = new PrintWriter(baos);
+    pw.println("Container Report : ");
+    pw.println("\tContainer-Id : container_1234_0005_01_000001");
+    pw.println("\tStart-Time : 1234");
+    pw.println("\tFinish-Time : 5678");
+    pw.println("\tState : COMPLETE");
+    pw.println("\tLOG-URL : logURL");
+    pw.println("\tHost : host:1234");
+    pw.println("\tDiagnostics : diagnosticInfo");
+    pw.close();
+    String appReportStr = baos.toString("UTF-8");
+    Assert.assertEquals(appReportStr, sysOutStream.toString());
+    verify(sysOut, times(1)).println(isA(String.class));
+  }
+  
+  @Test
+  public void testGetContainers() throws Exception {
+    ApplicationCLI cli = createAndGetAppCLI();
+    ApplicationId applicationId = ApplicationId.newInstance(1234, 5);
+    ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(
+        applicationId, 1);
+    ContainerId containerId = ContainerId.newInstance(attemptId, 1);
+    ContainerId containerId1 = ContainerId.newInstance(attemptId, 2);
+    ContainerReport container = ContainerReport.newInstance(containerId, null,
+        NodeId.newInstance("host", 1234), Priority.UNDEFINED, 1234, 5678,
+        "diagnosticInfo", "logURL", 0, ContainerState.COMPLETE);
+    ContainerReport container1 = ContainerReport.newInstance(containerId1, null,
+        NodeId.newInstance("host", 1234), Priority.UNDEFINED, 1234, 5678,
+        "diagnosticInfo", "logURL", 0, ContainerState.COMPLETE);
+    List<ContainerReport> reports = new ArrayList<ContainerReport>();
+    reports.add(container);
+    reports.add(container1);
+    when(client.getContainers(any(ApplicationAttemptId.class))).thenReturn(
+        reports);
+    int result = cli.run(new String[] { "container", "-list",
+        attemptId.toString() });
+    assertEquals(0, result);
+    verify(client).getContainers(attemptId);
+    Log.info(sysOutStream.toString());
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    PrintWriter pw = new PrintWriter(baos);
+    pw.println("Total number of containers :2");
+    pw.print("                  Container-Id");
+    pw.print("\t          Start Time");
+    pw.print("\t         Finish Time");
+    pw.print("\t               State");
+    pw.print("\t                Host");
+    pw.println("\t                            LOG-URL");
+    pw.print(" container_1234_0005_01_000001");
+    pw.print("\t                1234");
+    pw.print("\t                5678");
+    pw.print("\t            COMPLETE");
+    pw.print("\t           host:1234");
+    pw.println("\t                             logURL");
+    pw.print(" container_1234_0005_01_000002");
+    pw.print("\t                1234");
+    pw.print("\t                5678");
+    pw.print("\t            COMPLETE");
+    pw.print("\t           host:1234");
+    pw.println("\t                             logURL");
+    pw.close();
+    String appReportStr = baos.toString("UTF-8");
+    Assert.assertEquals(appReportStr, sysOutStream.toString());
+  }
+  
+  @Test
   public void testGetApplicationReportException() throws Exception {
     ApplicationCLI cli = createAndGetAppCLI();
     ApplicationId applicationId = ApplicationId.newInstance(1234, 5);
     when(client.getApplicationReport(any(ApplicationId.class))).thenThrow(
-        new ApplicationNotFoundException("Application with id '"
-            + applicationId + "' doesn't exist in RM."));
+        new ApplicationNotFoundException("History file for application"
+            + applicationId + " is not found"));
     try {
       cli.run(new String[] { "-status", applicationId.toString() });
       Assert.fail();
     } catch (Exception ex) {
       Assert.assertTrue(ex instanceof ApplicationNotFoundException);
-      Assert.assertEquals("Application with id '" + applicationId
-          + "' doesn't exist in RM.", ex.getMessage());
+      Assert.assertEquals("History file for application"
+          + applicationId + " is not found", ex.getMessage());
     }
   }
 

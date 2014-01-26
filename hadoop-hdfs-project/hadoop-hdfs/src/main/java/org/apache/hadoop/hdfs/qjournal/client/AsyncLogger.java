@@ -27,6 +27,7 @@ import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.NewEpochR
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.PrepareRecoveryResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.SegmentStateProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.RequestInfo;
+import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 
@@ -151,4 +152,17 @@ interface AsyncLogger {
    * StringBuilder. This is displayed on the NN web UI.
    */
   public void appendReport(StringBuilder sb);
+
+  public ListenableFuture<Void> doPreUpgrade();
+
+  public ListenableFuture<Void> doUpgrade(StorageInfo sInfo);
+
+  public ListenableFuture<Void> doFinalize();
+
+  public ListenableFuture<Boolean> canRollBack(StorageInfo storage,
+      StorageInfo prevStorage, int targetLayoutVersion);
+
+  public ListenableFuture<Void> doRollback();
+
+  public ListenableFuture<Long> getJournalCTime();
 }

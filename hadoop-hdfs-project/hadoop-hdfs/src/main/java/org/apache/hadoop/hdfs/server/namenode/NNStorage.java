@@ -299,7 +299,7 @@ public class NNStorage extends Storage implements Closeable,
       if(dirName.getScheme().compareTo("file") == 0) {
         this.addStorageDir(new StorageDirectory(new File(dirName.getPath()),
             dirType,
-            !sharedEditsDirs.contains(dirName))); // Don't lock the dir if it's shared.
+            sharedEditsDirs.contains(dirName))); // Don't lock the dir if it's shared.
       }
     }
 
@@ -310,7 +310,7 @@ public class NNStorage extends Storage implements Closeable,
       // URI is of type file://
       if(dirName.getScheme().compareTo("file") == 0)
         this.addStorageDir(new StorageDirectory(new File(dirName.getPath()),
-                    NameNodeDirType.EDITS, !sharedEditsDirs.contains(dirName)));
+                    NameNodeDirType.EDITS, sharedEditsDirs.contains(dirName)));
     }
   }
 
@@ -976,7 +976,7 @@ public class NNStorage extends Storage implements Closeable,
     StringBuilder layoutVersions = new StringBuilder();
 
     // First determine what range of layout versions we're going to inspect
-    for (Iterator<StorageDirectory> it = dirIterator();
+    for (Iterator<StorageDirectory> it = dirIterator(false);
          it.hasNext();) {
       StorageDirectory sd = it.next();
       if (!sd.getVersionFile().exists()) {

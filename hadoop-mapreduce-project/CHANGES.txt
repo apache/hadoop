@@ -203,6 +203,9 @@ Release 2.4.0 - UNRELEASED
     MAPREDUCE-5672. Provide optional RollingFileAppender for container log4j
     (syslog) (Gera Shegalov via jlowe)
 
+    MAPREDUCE-5725. Make explicit that TestNetworkedJob relies on the Capacity
+    Scheduler (Sandy Ryza)
+
   OPTIMIZATIONS
 
     MAPREDUCE-5484. YarnChild unnecessarily loads job conf twice (Sandy Ryza)
@@ -279,6 +282,14 @@ Release 2.4.0 - UNRELEASED
 
     MAPREDUCE-5724. JobHistoryServer does not start if HDFS is not running. 
     (tucu)
+
+    MAPREDUCE-5729. mapred job -list throws NPE (kasha)
+
+    MAPREDUCE-5693. Restore MRv1 behavior for log flush (Gera Shegalov via
+    jlowe)
+
+    MAPREDUCE-5723. MR AM container log can be truncated or empty.
+    (Mohammad Kamrul Islam via kasha)
 
 Release 2.3.0 - UNRELEASED
 

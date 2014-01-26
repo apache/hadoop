@@ -792,6 +792,9 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
             currentNode = blockSeekTo(pos);
           }
           int realLen = (int) Math.min(len, (blockEnd - pos + 1L));
+          if (locatedBlocks.isLastBlockComplete()) {
+            realLen = (int) Math.min(realLen, locatedBlocks.getFileLength());
+          }
           int result = readBuffer(strategy, off, realLen, corruptedBlockMap);
           
           if (result >= 0) {

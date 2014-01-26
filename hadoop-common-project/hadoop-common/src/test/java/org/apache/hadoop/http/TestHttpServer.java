@@ -524,6 +524,17 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     Assert.assertFalse(HttpServer.isInstrumentationAccessAllowed(context, request, response));
   }
 
+  @Test
+  @SuppressWarnings("deprecation")
+  public void testOldConstructor() throws Exception {
+    HttpServer server = new HttpServer("test", "0.0.0.0", 0, false);
+    try {
+      server.start();
+    } finally {
+      server.stop();
+    }
+  }
+
   @Test public void testBindAddress() throws Exception {
     checkBindAddress("localhost", 0, false).stop();
     // hang onto this one for a bit more testing

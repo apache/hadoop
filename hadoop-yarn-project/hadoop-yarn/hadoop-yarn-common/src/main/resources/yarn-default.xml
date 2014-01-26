@@ -357,7 +357,7 @@
 
       By default, when this property is not set, we use the ACLs from
       yarn.resourcemanager.zk-acl for shared admin access and
-      rm-address:cluster-timestamp for username-based exclusive create-delete
+      rm-address:random-number for username-based exclusive create-delete
       access.
 
       This property allows users to set ACLs of their choice instead of using
@@ -562,6 +562,30 @@
         scheduler, other policies, or a configuration of either.</description>
     <name>yarn.resourcemanager.scheduler.monitor.policies</name>
     <value>org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.ProportionalCapacityPreemptionPolicy</value>
+  </property>
+
+  <property>
+    <description>Indicate to ResourceManager as well as clients whether
+    history-service is enabled or not. If enabled, ResourceManager starts
+    recording historical data that ApplicationHistory service can consume.
+    Similarly, clients can redirect to the history service when applications
+    finish if this is enabled.</description>
+    <name>yarn.ahs.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>Number of worker threads that write the history data.</description>
+    <name>yarn.resourcemanager.history-writer.multi-threaded-dispatcher.pool-size</name>
+    <value>10</value>
+  </property>
+
+  <property>
+    <description>The implementation class of ApplicationHistoryStore, which is
+    to be used by RMApplicationHistoryWriter.
+    </description>
+    <name>yarn.resourcemanager.history-writer.class</name>
+    <value>org.apache.hadoop.yarn.server.applicationhistoryservice.NullApplicationHistoryStore</value>
   </property>
 
   <!-- Node Manager Configs -->
@@ -1039,6 +1063,61 @@
     </description>
     <name>yarn.application.classpath</name>
     <value></value>
+  </property>
+
+  <!-- Application History Service's Configuration-->
+
+  <property>
+    <description>The hostname of the AHS.</description>
+    <name>yarn.ahs.hostname</name>
+    <value>0.0.0.0</value>
+  </property>
+
+  <property>
+    <description>The http address of the AHS web application.</description>
+    <name>yarn.ahs.webapp.address</name>
+    <value>${yarn.ahs.hostname}:8188</value>
+  </property>
+
+  <property>
+    <description>The https adddress of the AHS web application.</description>
+    <name>yarn.ahs.webapp.https.address</name>
+    <value>${yarn.ahs.hostname}:8190</value>
+  </property>
+
+  <property>
+    <description>URI pointing to the location of the FileSystem path where
+    the history will be persisted. This must be supplied when using
+    org.apache.hadoop.yarn.server.applicationhistoryservice.FileSystemApplicationHistoryStore
+    as the value for yarn.resourcemanager.history-writer.store.class</description>
+    <name>yarn.ahs.fs-history-store.uri</name>
+    <value>${hadoop.log.dir}/yarn/system/ahstore</value>
+  </property>
+
+  <property>
+    <description>This is default address for the Application History server
+    to start the RPC server.</description>
+    <name>yarn.ahs.address</name>
+    <value>0.0.0.0:10200</value>
+  </property>
+
+  <property>
+    <description>CLient thread count to serve the client requests.</description>
+    <name>yarn.ahs.client.thread-count</name>
+    <value>10</value>
+  </property>
+  
+  <property>
+    <description>T-file compression types used to compress history data.</description>
+    <name>yarn.ahs.fs-history-store.compression-type</name>
+    <value>none</value>
+  </property>
+  
+  <property>
+	<description> Store class name for history store, defaulting to file
+		system store </description>
+	<name>yarn.ahs.store.class</name>
+	<value>org.apache.hadoop.yarn.server.applicationhistoryservice.FileSystemApplicationHistoryStore</value>
   </property>
 
   <!-- Other configuration -->

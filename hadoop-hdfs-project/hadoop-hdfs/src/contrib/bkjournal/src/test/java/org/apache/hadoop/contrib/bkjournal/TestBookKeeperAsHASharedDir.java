@@ -316,7 +316,7 @@ public class TestBookKeeperAsHASharedDir {
     } catch (IOException ioe) {
       LOG.info("Got expected exception", ioe);
       GenericTestUtils.assertExceptionContains(
-          "Cannot start an HA namenode with name dirs that need recovery", ioe);
+          "storage directory does not exist or is not accessible", ioe);
     }
   }
 

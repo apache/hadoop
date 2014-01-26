@@ -52,6 +52,7 @@ import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.server.resourcemanager.ahs.RMApplicationHistoryWriter;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.ApplicationMasterLauncher;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.SchedulingEditPolicy;
@@ -261,6 +262,10 @@ public class ResourceManager extends CompositeService implements Recoverable {
       this.applicationACLsManager, this.conf);
   }
 
+  protected RMApplicationHistoryWriter createRMApplicationHistoryWriter() {
+    return new RMApplicationHistoryWriter();
+  }
+
   // sanity check for configurations
   protected static void validateConfigs(Configuration conf) {
     // validate max-attempts
@@ -344,6 +349,11 @@ public class ResourceManager extends CompositeService implements Recoverable {
         delegationTokenRenewer = createDelegationTokenRenewer();
         rmContext.setDelegationTokenRenewer(delegationTokenRenewer);
       }
+
+      RMApplicationHistoryWriter rmApplicationHistoryWriter =
+          createRMApplicationHistoryWriter();
+      addService(rmApplicationHistoryWriter);
+      rmContext.setRMApplicationHistoryWriter(rmApplicationHistoryWriter);
 
       // Register event handler for NodesListManager
       nodesListManager = new NodesListManager(rmContext);
@@ -607,7 +617,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
     @Override
     public void handle(RMFatalEvent event) {
       LOG.fatal("Received a " + RMFatalEvent.class.getName() + " of type " +
-          event.getType().name());
+          event.getType().name() + ". Cause:\n" + event.getCause());
 
       if (event.getType() == RMFatalEventType.STATE_STORE_FENCED) {
         LOG.info("RMStateStore has been fenced");

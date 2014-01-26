@@ -101,7 +101,7 @@ public class TestRMNodeTransitions {
     
     rmContext =
         new RMContextImpl(rmDispatcher, null, null, null,
-            mock(DelegationTokenRenewer.class), null, null, null, null);
+            mock(DelegationTokenRenewer.class), null, null, null, null, null);
     scheduler = mock(YarnScheduler.class);
     doAnswer(
         new Answer<Void>() {

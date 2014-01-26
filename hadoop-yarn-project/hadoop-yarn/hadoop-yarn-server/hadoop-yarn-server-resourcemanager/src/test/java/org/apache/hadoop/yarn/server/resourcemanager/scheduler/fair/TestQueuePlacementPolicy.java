@@ -49,8 +49,8 @@ public class TestQueuePlacementPolicy {
   public void testSpecifiedUserPolicy() throws Exception {
     StringBuffer sb = new StringBuffer();
     sb.append("<queuePlacementPolicy>");
-    sb.append("  <specified />");
-    sb.append("  <user />");
+    sb.append("  <rule name='specified' />");
+    sb.append("  <rule name='user' />");
     sb.append("</queuePlacementPolicy>");
     QueuePlacementPolicy policy = parse(sb.toString());
     assertEquals("root.specifiedq",policy.assignAppToQueue("specifiedq", "someuser"));
@@ -62,9 +62,9 @@ public class TestQueuePlacementPolicy {
   public void testNoCreate() throws Exception {
     StringBuffer sb = new StringBuffer();
     sb.append("<queuePlacementPolicy>");
-    sb.append("  <specified />");
-    sb.append("  <user create=\"false\" />");
-    sb.append("  <default />");
+    sb.append("  <rule name='specified' />");
+    sb.append("  <rule name='user' create=\"false\" />");
+    sb.append("  <rule name='default' />");
     sb.append("</queuePlacementPolicy>");
     QueuePlacementPolicy policy = parse(sb.toString());
     assertEquals("root.specifiedq", policy.assignAppToQueue("specifiedq", "someuser"));
@@ -77,8 +77,8 @@ public class TestQueuePlacementPolicy {
   public void testSpecifiedThenReject() throws Exception {
     StringBuffer sb = new StringBuffer();
     sb.append("<queuePlacementPolicy>");
-    sb.append("  <specified />");
-    sb.append("  <reject />");
+    sb.append("  <rule name='specified' />");
+    sb.append("  <rule name='reject' />");
     sb.append("</queuePlacementPolicy>");
     QueuePlacementPolicy policy = parse(sb.toString());
     assertEquals("root.specifiedq", policy.assignAppToQueue("specifiedq", "someuser"));
@@ -89,8 +89,8 @@ public class TestQueuePlacementPolicy {
   public void testOmittedTerminalRule() throws Exception {
     StringBuffer sb = new StringBuffer();
     sb.append("<queuePlacementPolicy>");
-    sb.append("  <specified />");
-    sb.append("  <user create=\"false\" />");
+    sb.append("  <rule name='specified' />");
+    sb.append("  <rule name='user' create=\"false\" />");
     sb.append("</queuePlacementPolicy>");
     parse(sb.toString());
   }
@@ -99,9 +99,9 @@ public class TestQueuePlacementPolicy {
   public void testTerminalRuleInMiddle() throws Exception {
     StringBuffer sb = new StringBuffer();
     sb.append("<queuePlacementPolicy>");
-    sb.append("  <specified />");
-    sb.append("  <default />");
-    sb.append("  <user />");
+    sb.append("  <rule name='specified' />");
+    sb.append("  <rule name='default' />");
+    sb.append("  <rule name='user' />");
     sb.append("</queuePlacementPolicy>");
     parse(sb.toString());
   }

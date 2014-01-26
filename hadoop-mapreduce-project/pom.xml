@@ -29,7 +29,6 @@
   <url>http://hadoop.apache.org/mapreduce/</url>
 
   <properties>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <test.logs>true</test.logs>
     <test.timeout>600000</test.timeout>
     <fork.mode>once</fork.mode>

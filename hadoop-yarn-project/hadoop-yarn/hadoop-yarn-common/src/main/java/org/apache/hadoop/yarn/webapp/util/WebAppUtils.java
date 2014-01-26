@@ -17,6 +17,8 @@
 */
 package org.apache.hadoop.yarn.webapp.util;
 
+import static org.apache.hadoop.yarn.util.StringHelper.join;
+
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
@@ -27,7 +29,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.http.HttpConfig.Policy;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.util.ConverterUtils;
 
 import com.google.common.base.Joiner;
 
@@ -144,6 +148,16 @@ public class WebAppUtils {
         YarnConfiguration.DEFAULT_NM_WEBAPP_ADDRESS);
     }
   }
+
+  public static String getAHSWebAppURLWithoutScheme(Configuration conf) {
+    if (HttpConfig.isSecure()) {
+      return conf.get(YarnConfiguration.AHS_WEBAPP_HTTPS_ADDRESS,
+        YarnConfiguration.DEFAULT_AHS_WEBAPP_HTTPS_ADDRESS);
+    } else {
+      return conf.get(YarnConfiguration.AHS_WEBAPP_ADDRESS,
+        YarnConfiguration.DEFAULT_AHS_WEBAPP_ADDRESS);
+    }
+  }
   
   /**
    * if url has scheme then it will be returned as it is else it will return
@@ -159,5 +173,12 @@ public class WebAppUtils {
     } else {
       return schemePrefix + url;
     }
+  }
+  
+  public static String getLogUrl(String nodeHttpAddress, String allocatedNode,
+      ContainerId containerId, String user) {
+    return join(HttpConfig.getSchemePrefix(), nodeHttpAddress, "/logs", "/",
+        allocatedNode, "/", ConverterUtils.toString(containerId), "/",
+        ConverterUtils.toString(containerId), "/", user);
   }
 }

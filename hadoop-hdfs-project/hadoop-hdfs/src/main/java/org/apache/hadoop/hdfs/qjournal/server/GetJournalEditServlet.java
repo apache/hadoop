@@ -40,6 +40,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.qjournal.client.QuorumJournalManager;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
+import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.namenode.FileJournalManager;
 import org.apache.hadoop.hdfs.server.namenode.FileJournalManager.EditLogFile;
 import org.apache.hadoop.hdfs.server.namenode.GetImageServlet;
@@ -139,20 +140,26 @@ public class GetJournalEditServlet extends HttpServlet {
   private boolean checkStorageInfoOrSendError(JNStorage storage,
       HttpServletRequest request, HttpServletResponse response)
       throws IOException {
-    String myStorageInfoString = storage.toColonSeparatedString();
+    int myNsId = storage.getNamespaceID();
+    String myClusterId = storage.getClusterID();
+    
     String theirStorageInfoString = StringEscapeUtils.escapeHtml(
         request.getParameter(STORAGEINFO_PARAM));
 
-    if (theirStorageInfoString != null
-        && !myStorageInfoString.equals(theirStorageInfoString)) {
-      String msg = "This node has storage info '" + myStorageInfoString
-          + "' but the requesting node expected '"
-          + theirStorageInfoString + "'";
-      
-      response.sendError(HttpServletResponse.SC_FORBIDDEN, msg);
-      LOG.warn("Received an invalid request file transfer request from " +
-          request.getRemoteAddr() + ": " + msg);
-      return false;
+    if (theirStorageInfoString != null) {
+      int theirNsId = StorageInfo.getNsIdFromColonSeparatedString(
+          theirStorageInfoString);
+      String theirClusterId = StorageInfo.getClusterIdFromColonSeparatedString(
+          theirStorageInfoString);
+      if (myNsId != theirNsId || !myClusterId.equals(theirClusterId)) {
+        String msg = "This node has namespaceId '" + myNsId + " and clusterId '"
+            + myClusterId + "' but the requesting node expected '" + theirNsId
+            + "' and '" + theirClusterId + "'";
+        response.sendError(HttpServletResponse.SC_FORBIDDEN, msg);
+        LOG.warn("Received an invalid request file transfer request from " +
+            request.getRemoteAddr() + ": " + msg);
+        return false;
+      }
     }
     return true;
   }

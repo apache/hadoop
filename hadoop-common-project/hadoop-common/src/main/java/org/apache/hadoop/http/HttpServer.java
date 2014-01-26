@@ -455,7 +455,7 @@ public class HttpServer implements FilterContainer {
   public HttpServer(String name, String bindAddress, int port,
       boolean findPort, Configuration conf, AccessControlList adminsAcl, 
       Connector connector, String[] pathSpecs) throws IOException {
-    this(new Builder().setName(name)
+    this(new Builder().setName(name).hostName(bindAddress)
         .addEndpoint(URI.create("http://" + bindAddress + ":" + port))
         .setFindPort(findPort).setConf(conf).setACL(adminsAcl)
         .setConnector(connector).setPathSpec(pathSpecs));

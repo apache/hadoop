@@ -45,7 +45,9 @@ import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
 import org.apache.hadoop.mapreduce.Cluster.JobTrackerStatus;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.junit.Test;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -76,8 +78,7 @@ public class TestNetworkedJob {
     FileSystem fileSys = null;
 
     try {
-      mr = MiniMRClientClusterFactory.create(this.getClass(), 2,
-          new Configuration());
+      mr = createMiniClusterWithCapacityScheduler();
 
       JobConf job = new JobConf(mr.getConfig());
 
@@ -129,8 +130,7 @@ public class TestNetworkedJob {
     FileSystem fileSys = null;
 
     try {
-      Configuration conf = new Configuration();
-      mr = MiniMRClientClusterFactory.create(this.getClass(), 2, conf);
+      mr = createMiniClusterWithCapacityScheduler();
 
       JobConf job = new JobConf(mr.getConfig());
 
@@ -315,8 +315,7 @@ public class TestNetworkedJob {
     FileSystem fileSys = null;
     PrintStream oldOut = System.out;
     try {
-      Configuration conf = new Configuration();
-      mr = MiniMRClientClusterFactory.create(this.getClass(), 2, conf);
+      mr = createMiniClusterWithCapacityScheduler();
 
       JobConf job = new JobConf(mr.getConfig());
 
@@ -391,5 +390,14 @@ public class TestNetworkedJob {
         mr.stop();
       }
     }
+  }
+  
+  private MiniMRClientCluster createMiniClusterWithCapacityScheduler()
+      throws IOException {
+    Configuration conf = new Configuration();
+    // Expected queue names depending on Capacity Scheduler queue naming
+    conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+        CapacityScheduler.class);
+    return MiniMRClientClusterFactory.create(this.getClass(), 2, conf);
   }
 }
