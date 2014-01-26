@@ -109,6 +109,9 @@ Trunk - Unreleased
     YARN-1625. Fixed RAT warnings after YARN-321 merge. (Shinichi Yamashita via
     vinodkv)
 
+    YARN-1613. Fixed the typo with the configuration name
+    YARN_HISTORY_SERVICE_ENABLED. (Akira Ajisaka via vinodkv)
+
 Release 2.4.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
