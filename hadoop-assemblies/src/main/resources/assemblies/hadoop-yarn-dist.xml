@@ -123,6 +123,13 @@
       </includes>
     </fileSet>
     <fileSet>
+      <directory>hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-applicationhistoryservice/target</directory>
+      <outputDirectory>/share/hadoop/${hadoop.component}/sources</outputDirectory>
+      <includes>
+        <include>*-sources.jar</include>
+      </includes>
+    </fileSet>
+    <fileSet>
       <directory>hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-tests/target</directory>
       <outputDirectory>/share/hadoop/${hadoop.component}/sources</outputDirectory>
       <includes>

@@ -9,7 +9,66 @@ Trunk - Unreleased
     YARN-1496. Protocol additions to allow moving apps between queues (Sandy
     Ryza)
 
+    YARN-930. Bootstrapping ApplicationHistoryService module. (vinodkv)
+  
+    YARN-947. Implementing the data objects to be used by the History reader
+    and writer interfaces. (Zhijie Shen via vinodkv)
+  
+    YARN-934. Defined a Writer Interface for HistoryStorage. (Zhijie Shen via
+    vinodkv)
+  
+    YARN-925. Defined a Reader Interface for HistoryStorage. (Mayank Bansal via
+    vinodkv)
+  
+    YARN-978. Created ApplicationAttemptReport. (Mayank Bansal via vinodkv)
+  
+    YARN-956. Added a testable in-memory HistoryStorage. (Mayank Bansal via
+    vinodkv)
+  
+    YARN-975. Added a file-system implementation for HistoryStorage. (Zhijie Shen
+    via vinodkv)
+  
+    YARN-1123. Added a new ContainerReport and its Protobuf implementation. (Mayank
+    Bansal via vinodkv)
+  
+    YARN-979. Added more APIs for getting information about ApplicationAttempts
+    and Containers from ApplicationHistoryProtocol. (Mayank Bansal and Zhijie Shen
+    via vinodkv)
+  
+    YARN-953. Changed ResourceManager to start writing history data. (Zhijie Shen
+    via vinodkv)
+  
+    YARN-1266. Implemented PB service and client wrappers for
+    ApplicationHistoryProtocol. (Mayank Bansal via vinodkv)
+  
+    YARN-955. Implemented ApplicationHistoryProtocol handler. (Mayank Bansal via
+    vinodkv)
+  
+    YARN-1242. Changed yarn scripts to be able to start ApplicationHistoryServer
+    as an individual process. (Mayank Bansal via vinodkv)
+  
+    YARN-954. Implemented web UI for the ApplicationHistoryServer and wired it into
+    the HistoryStorage. (Zhijie Shen via vinodkv)
+  
+    YARN-967. Added the client and CLI interfaces for obtaining ApplicationHistory
+    data. (Mayank Bansal via vinodkv)
+  
+    YARN-1023. Added Webservices REST APIs support for Application History. (Zhijie
+    Shen via vinodkv)
+  
+    YARN-1413. Implemented serving of aggregated-logs in the ApplicationHistory
+    server. (Mayank Bansal via vinodkv)
+
   IMPROVEMENTS
+
+    YARN-1007. Enhance History Reader interface for Containers. (Mayank Bansal via
+    devaraj)
+  
+    YARN-974. Added more information to RMContainer to be collected and recorded in
+    Application-History. (Zhijie Shen via vinodkv)
+  
+    YARN-987. Added ApplicationHistoryManager responsible for exposing reports to
+    all clients. (Mayank Bansal via vinodkv)
 
   OPTIMIZATIONS
 
@@ -17,6 +76,35 @@ Trunk - Unreleased
 
     YARN-524 TestYarnVersionInfo failing if generated properties doesn't
     include an SVN URL. (stevel)
+
+    YARN-935. Correcting pom.xml to build applicationhistoryserver module
+    successfully. (Zhijie Shen via vinodkv)
+  
+    YARN-962. Fixed bug in application-history proto file and renamed it be just
+    a client proto file. (Zhijie Shen via vinodkv)
+  
+    YARN-984. Renamed the incorrectly named applicationhistoryservice.records.pb.impl
+    package to be applicationhistoryservice.records.impl.pb. (Devaraj K via vinodkv)
+  
+    YARN-1534. Fixed failure of test TestAHSWebApp. (Shinichi Yamashita via vinodkv)
+  
+    YARN-1555. Fixed test failures in applicationhistoryservice.* (Vinod Kumar 
+    Vavilapalli via mayank)
+  
+    YARN-1594. Updated pom.xml of applicationhistoryservice sub-project according to
+    YARN-888. (Vinod Kumar Vavilapalli via zjshen)
+  
+    YARN-1596. Fixed Javadoc warnings on branch YARN-321. (Vinod Kumar Vavilapalli
+    via zjshen)
+  
+    YARN-1597. Fixed Findbugs warnings on branch YARN-321. (Vinod Kumar Vavilapalli
+    via zjshen)
+  
+    YARN-1595. Made enabling history service configurable and fixed test failures on
+    branch YARN-321. (Vinod Kumar Vavilapalli via zjshen)
+  
+    YARN-1605. Fixed formatting issues in the new module on branch YARN-321. (Vinod
+    Kumar Vavilapalli via zjshen)
 
 Release 2.4.0 - UNRELEASED
 

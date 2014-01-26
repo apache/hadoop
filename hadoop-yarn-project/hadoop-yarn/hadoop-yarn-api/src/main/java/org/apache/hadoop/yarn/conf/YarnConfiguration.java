@@ -263,6 +263,17 @@ public class YarnConfiguration extends Configuration {
       RM_PREFIX + "nodemanagers.heartbeat-interval-ms";
   public static final long DEFAULT_RM_NM_HEARTBEAT_INTERVAL_MS = 1000;
 
+  /** Number of worker threads that write the history data. */
+  public static final String RM_HISTORY_WRITER_MULTI_THREADED_DISPATCHER_POOL_SIZE =
+      RM_PREFIX + "history-writer.multi-threaded-dispatcher.pool-size";
+  public static final int DEFAULT_RM_HISTORY_WRITER_MULTI_THREADED_DISPATCHER_POOL_SIZE =
+      10;
+
+  /** The implementation class of ApplicationHistoryStore, which is to be used
+   *  by RMApplicationHistoryWriter. */
+  public static final String RM_HISTORY_WRITER_CLASS = RM_PREFIX
+      + "history-writer.class";
+
   //Delegation token related keys
   public static final String  DELEGATION_KEY_UPDATE_INTERVAL_KEY = 
     RM_PREFIX + "delegation.key.update-interval";
@@ -930,6 +941,63 @@ public class YarnConfiguration extends Configuration {
 
   public static final String YARN_APP_CONTAINER_LOG_BACKUPS =
       YARN_PREFIX + "app.container.log.backups";
+
+  ////////////////////////////////
+  // AHS Configs
+  ////////////////////////////////
+
+  public static final String AHS_PREFIX = YARN_PREFIX + "ahs.";
+
+  /** The setting that controls whether history-service is enabled or not.. */
+  public static final String YARN_HISTORY_SERVICE_ENABLED = AHS_PREFIX
+      + ".enabled";
+  public static final boolean DEFAULT_YARN_HISTORY_SERVICE_ENABLED = false;
+
+  /** URI for FileSystemApplicationHistoryStore */
+  public static final String FS_HISTORY_STORE_URI = AHS_PREFIX + "fs-history-store.uri";
+
+  /** T-file compression types used to compress history data.*/
+  public static final String FS_HISTORY_STORE_COMPRESSION_TYPE = AHS_PREFIX + "fs-history-store.compression-type";
+  public static final String DEFAULT_FS_HISTORY_STORE_COMPRESSION_TYPE = "none";
+
+  /** AHS store class */
+  public static final String AHS_STORE = AHS_PREFIX + "store.class";
+
+  /** host:port address for Application History Server API. */
+  public static final String AHS_ADDRESS = AHS_PREFIX + "address";
+  public static final int DEFAULT_AHS_PORT = 10200;
+  public static final String DEFAULT_AHS_ADDRESS = "0.0.0.0:"
+      + DEFAULT_AHS_PORT;
+
+  /** The number of threads to handle client API requests. */
+  public static final String AHS_CLIENT_THREAD_COUNT = AHS_PREFIX
+      + "client.thread-count";
+  public static final int DEFAULT_AHS_CLIENT_THREAD_COUNT = 10;
+  
+
+  /** The address of the AHS web application.*/
+  public static final String AHS_WEBAPP_ADDRESS = AHS_PREFIX
+      + "webapp.address";
+
+  public static final int DEFAULT_AHS_WEBAPP_PORT = 8188;
+  public static final String DEFAULT_AHS_WEBAPP_ADDRESS = "0.0.0.0:"
+      + DEFAULT_AHS_WEBAPP_PORT;
+
+  /** The https address of the AHS web application.*/
+  public static final String AHS_WEBAPP_HTTPS_ADDRESS = AHS_PREFIX
+      + "webapp.https.address";
+
+  public static final int DEFAULT_AHS_WEBAPP_HTTPS_PORT = 8190;
+  public static final String DEFAULT_AHS_WEBAPP_HTTPS_ADDRESS = "0.0.0.0:"
+      + DEFAULT_AHS_WEBAPP_HTTPS_PORT;
+
+  /**The kerberos principal to be used for spnego filter for AHS.*/
+  public static final String AHS_WEBAPP_SPNEGO_USER_NAME_KEY =
+      AHS_PREFIX + "webapp.spnego-principal";
+
+  /**The kerberos keytab to be used for spnego filter for AHS.*/
+  public static final String AHS_WEBAPP_SPNEGO_KEYTAB_FILE_KEY =
+      AHS_PREFIX + "webapp.spnego-keytab-file";
 
   ////////////////////////////////
   // Other Configs

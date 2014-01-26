@@ -29,9 +29,13 @@ import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
@@ -40,6 +44,7 @@ import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.client.api.impl.YarnClientImpl;
+import org.apache.hadoop.yarn.exceptions.ContainerNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 
@@ -359,5 +364,76 @@ public abstract class YarnClient extends AbstractService {
    * @throws IOException
    */
   public abstract List<QueueUserACLInfo> getQueueAclsInfo() throws YarnException,
+      IOException;
+  
+  /**
+   * <p>
+   * Get a report of the given ApplicationAttempt.
+   * </p>
+   * 
+   * <p>
+   * In secure mode, <code>YARN</code> verifies access to the application, queue
+   * etc. before accepting the request.
+   * </p>
+   * 
+   * @param applicationAttemptId
+   *          {@link ApplicationAttemptId} of the application attempt that needs
+   *          a report
+   * @return application attempt report
+   * @throws YarnException
+   * @throws {@link ApplicationAttemptNotFoundException} if application attempt
+   *         not found
+   * @throws IOException
+   */
+  public abstract ApplicationAttemptReport getApplicationAttemptReport(
+      ApplicationAttemptId applicationAttemptId) throws YarnException, IOException;
+
+  /**
+   * <p>
+   * Get a report of all (ApplicationAttempts) of Application in the cluster.
+   * </p>
+   * 
+   * @param applicationId
+   * @return a list of reports for all application attempts for specified
+   *         application.
+   * @throws YarnException
+   * @throws IOException
+   */
+  public abstract List<ApplicationAttemptReport> getApplicationAttempts(
+      ApplicationId applicationId) throws YarnException, IOException;
+
+  /**
+   * <p>
+   * Get a report of the given Container.
+   * </p>
+   * 
+   * <p>
+   * In secure mode, <code>YARN</code> verifies access to the application, queue
+   * etc. before accepting the request.
+   * </p>
+   * 
+   * @param containerId
+   *          {@link ContainerId} of the container that needs a report
+   * @return container report
+   * @throws YarnException
+   * @throws {@link ContainerNotFoundException} if container not found.
+   * @throws IOException
+   */
+  public abstract ContainerReport getContainerReport(ContainerId containerId)
+      throws YarnException, IOException;
+
+  /**
+   * <p>
+   * Get a report of all (Containers) of ApplicationAttempt in the cluster.
+   * </p>
+   * 
+   * @param applicationAttemptId
+   * @return a list of reports of all containers for specified application
+   *         attempts
+   * @throws YarnException
+   * @throws IOException
+   */
+  public abstract List<ContainerReport> getContainers(
+      ApplicationAttemptId applicationAttemptId) throws YarnException,
       IOException;
 }

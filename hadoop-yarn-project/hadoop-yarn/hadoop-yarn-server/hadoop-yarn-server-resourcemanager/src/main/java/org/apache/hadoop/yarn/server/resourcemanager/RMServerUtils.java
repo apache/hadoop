@@ -33,9 +33,14 @@ import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceBlacklistRequest;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.exceptions.InvalidContainerReleaseException;
 import org.apache.hadoop.yarn.exceptions.InvalidResourceBlacklistRequestException;
 import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 
@@ -43,6 +48,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
  * Utility methods to aid serving RM data through the REST and RPC APIs
  */
 public class RMServerUtils {
+
   public static List<RMNode> queryRMNodes(RMContext context,
       EnumSet<NodeState> acceptedStates) {
     // nodes contains nodes that are NEW, RUNNING OR UNHEALTHY
@@ -56,7 +62,7 @@ public class RMServerUtils {
         }
       }
     }
-    
+
     // inactiveNodes contains nodes that are DECOMMISSIONED, LOST, OR REBOOTED
     if (acceptedStates.contains(NodeState.DECOMMISSIONED) ||
         acceptedStates.contains(NodeState.LOST) ||
@@ -69,7 +75,7 @@ public class RMServerUtils {
     }
     return results;
   }
-  
+
   /**
    * Utility method to validate a list resource requests, by insuring that the
    * requested memory/vcore is non-negative and not greater than max
@@ -85,8 +91,9 @@ public class RMServerUtils {
    * @throw <code>InvalidResourceBlacklistRequestException </code> if the
    * resource is not able to be added to the blacklist.
    */
-  public static void validateBlacklistRequest(ResourceBlacklistRequest blacklistRequest) 
-  throws InvalidResourceBlacklistRequestException {
+  public static void validateBlacklistRequest(
+      ResourceBlacklistRequest blacklistRequest)
+      throws InvalidResourceBlacklistRequestException {
     if (blacklistRequest != null) {
       List<String> plus = blacklistRequest.getBlacklistAdditions();
       if (plus != null && plus.contains(ResourceRequest.ANY)) {
@@ -100,10 +107,12 @@ public class RMServerUtils {
    * It will validate to make sure all the containers belong to correct
    * application attempt id. If not then it will throw
    * {@link InvalidContainerReleaseException}
-   * @param containerReleaseList containers to be released as requested by
-   * application master.
-   * @param appAttemptId Application attempt Id
-   * @throws InvalidContainerReleaseException 
+   * 
+   * @param containerReleaseList
+   *          containers to be released as requested by application master.
+   * @param appAttemptId
+   *          Application attempt Id
+   * @throws InvalidContainerReleaseException
    */
   public static void
       validateContainerReleaseRequest(List<ContainerId> containerReleaseList,
@@ -111,9 +120,11 @@ public class RMServerUtils {
           throws InvalidContainerReleaseException {
     for (ContainerId cId : containerReleaseList) {
       if (!appAttemptId.equals(cId.getApplicationAttemptId())) {
-        throw new InvalidContainerReleaseException("Cannot release container : "
-            + cId.toString() + " not belonging to this application attempt : "
-            + appAttemptId);
+        throw new InvalidContainerReleaseException(
+            "Cannot release container : "
+                + cId.toString()
+                + " not belonging to this application attempt : "
+                + appAttemptId);
       }
     }
   }
@@ -157,4 +168,63 @@ public class RMServerUtils {
     }
     return user;
   }
+
+  public static YarnApplicationState createApplicationState(
+      RMAppState rmAppState) {
+    switch (rmAppState) {
+      case NEW:
+        return YarnApplicationState.NEW;
+      case NEW_SAVING:
+        return YarnApplicationState.NEW_SAVING;
+      case SUBMITTED:
+        return YarnApplicationState.SUBMITTED;
+      case ACCEPTED:
+        return YarnApplicationState.ACCEPTED;
+      case RUNNING:
+        return YarnApplicationState.RUNNING;
+      case FINISHING:
+      case FINISHED:
+        return YarnApplicationState.FINISHED;
+      case KILLED:
+        return YarnApplicationState.KILLED;
+      case FAILED:
+        return YarnApplicationState.FAILED;
+      default:
+        throw new YarnRuntimeException("Unknown state passed!");
+      }
+  }
+
+  public static YarnApplicationAttemptState createApplicationAttemptState(
+      RMAppAttemptState rmAppAttemptState) {
+    switch (rmAppAttemptState) {
+      case NEW:
+        return YarnApplicationAttemptState.NEW;
+      case SUBMITTED:
+        return YarnApplicationAttemptState.SUBMITTED;
+      case SCHEDULED:
+        return YarnApplicationAttemptState.SCHEDULED;
+      case ALLOCATED:
+        return YarnApplicationAttemptState.ALLOCATED;
+      case LAUNCHED:
+        return YarnApplicationAttemptState.LAUNCHED;
+      case ALLOCATED_SAVING:
+      case LAUNCHED_UNMANAGED_SAVING:
+        return YarnApplicationAttemptState.ALLOCATED_SAVING;
+      case RUNNING:
+        return YarnApplicationAttemptState.RUNNING;
+      case FINISHING:
+        return YarnApplicationAttemptState.FINISHING;
+      case FINAL_SAVING:
+        return YarnApplicationAttemptState.FINAL_SAVING;
+      case FINISHED:
+        return YarnApplicationAttemptState.FINISHED;
+      case KILLED:
+        return YarnApplicationAttemptState.KILLED;
+      case FAILED:
+        return YarnApplicationAttemptState.FAILED;
+      default:
+        throw new YarnRuntimeException("Unknown state passed!");
+    }
+  }
+
 }

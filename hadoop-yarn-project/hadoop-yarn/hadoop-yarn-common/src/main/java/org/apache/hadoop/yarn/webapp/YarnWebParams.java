@@ -24,6 +24,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 public interface YarnWebParams {
   String NM_NODENAME = "nm.id";
   String APPLICATION_ID = "app.id";
+  String APPLICATION_ATTEMPT_ID = "appattempt.id";
   String CONTAINER_ID = "container.id";
   String CONTAINER_LOG_TYPE= "log.type";
   String ENTITY_STRING = "entity.string";
