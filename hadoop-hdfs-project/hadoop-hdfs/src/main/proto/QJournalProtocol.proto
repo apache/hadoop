@@ -134,6 +134,72 @@ message IsFormattedResponseProto {
 }
 
 /**
+ * getJournalCTime()
+ */
+message GetJournalCTimeRequestProto {
+  required JournalIdProto jid = 1;
+}
+
+message GetJournalCTimeResponseProto {
+  required int64 resultCTime = 1;
+}
+
+/**
+ * doPreUpgrade()
+ */
+message DoPreUpgradeRequestProto {
+  required JournalIdProto jid = 1;
+}
+
+message DoPreUpgradeResponseProto {
+}
+
+/**
+ * doUpgrade()
+ */
+message DoUpgradeRequestProto {
+  required JournalIdProto jid = 1;
+  required StorageInfoProto sInfo = 2;
+}
+
+message DoUpgradeResponseProto {
+}
+
+/**
+ * doFinalize()
+ */
+message DoFinalizeRequestProto {
+  required JournalIdProto jid = 1;
+}
+
+message DoFinalizeResponseProto {
+}
+
+/**
+ * canRollBack()
+ */
+message CanRollBackRequestProto {
+  required JournalIdProto jid = 1;
+  required StorageInfoProto storage = 2;
+  required StorageInfoProto prevStorage = 3;
+  required int32 targetLayoutVersion = 4;
+}
+
+message CanRollBackResponseProto {
+  required bool canRollBack = 1;
+}
+
+/**
+ * doRollback()
+ */
+message DoRollbackRequestProto {
+  required JournalIdProto jid = 1;
+}
+
+message DoRollbackResponseProto {
+}
+
+/**
  * getJournalState()
  */
 message GetJournalStateRequestProto {
@@ -235,6 +301,18 @@ message AcceptRecoveryResponseProto {
  */
 service QJournalProtocolService {
   rpc isFormatted(IsFormattedRequestProto) returns (IsFormattedResponseProto);
+
+  rpc getJournalCTime(GetJournalCTimeRequestProto) returns (GetJournalCTimeResponseProto);
+  
+  rpc doPreUpgrade(DoPreUpgradeRequestProto) returns (DoPreUpgradeResponseProto);
+  
+  rpc doUpgrade(DoUpgradeRequestProto) returns (DoUpgradeResponseProto);
+
+  rpc doFinalize(DoFinalizeRequestProto) returns (DoFinalizeResponseProto);
+
+  rpc canRollBack(CanRollBackRequestProto) returns (CanRollBackResponseProto);
+
+  rpc doRollback(DoRollbackRequestProto) returns (DoRollbackResponseProto);
 
   rpc getJournalState(GetJournalStateRequestProto) returns (GetJournalStateResponseProto);
 

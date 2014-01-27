@@ -963,7 +963,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
         "Property name must not be null");
     Preconditions.checkArgument(
         value != null,
-        "Property value must not be null");
+        "The value of property " + name + " must not be null");
     DeprecationContext deprecations = deprecationContext.get();
     if (deprecations.getDeprecatedKeyMap().isEmpty()) {
       getProps();

@@ -41,8 +41,8 @@ import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
-import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.ahs.RMApplicationHistoryWriter;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
@@ -248,14 +248,18 @@ public class TestChildQueueOrder {
     ContainerAllocationExpirer expirer = 
       mock(ContainerAllocationExpirer.class);
     DrainDispatcher drainDispatcher = new DrainDispatcher();
-    EventHandler eventHandler = drainDispatcher.getEventHandler();
+    RMApplicationHistoryWriter writer = mock(RMApplicationHistoryWriter.class);
+    RMContext rmContext = mock(RMContext.class);
+    when(rmContext.getContainerAllocationExpirer()).thenReturn(expirer);
+    when(rmContext.getDispatcher()).thenReturn(drainDispatcher);
+    when(rmContext.getRMApplicationHistoryWriter()).thenReturn(writer);
     ApplicationAttemptId appAttemptId = BuilderUtils.newApplicationAttemptId(
         app_0.getApplicationId(), 1);
     ContainerId containerId = BuilderUtils.newContainerId(appAttemptId, 1);
     Container container=TestUtils.getMockContainer(containerId, 
         node_0.getNodeID(), Resources.createResource(1*GB), priority);
     RMContainer rmContainer = new RMContainerImpl(container, appAttemptId,
-        node_0.getNodeID(), eventHandler, expirer);
+        node_0.getNodeID(), "user", rmContext);
 
     // Assign {1,2,3,4} 1GB containers respectively to queues
     stubQueueAllocation(a, clusterResource, node_0, 1*GB);

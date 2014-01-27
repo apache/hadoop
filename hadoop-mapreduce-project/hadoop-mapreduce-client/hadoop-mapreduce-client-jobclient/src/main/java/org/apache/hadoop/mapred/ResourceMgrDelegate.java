@@ -44,9 +44,13 @@ import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.NodeState;
@@ -370,5 +374,30 @@ public class ResourceMgrDelegate extends YarnClient {
   public List<QueueUserACLInfo> getQueueAclsInfo() throws YarnException,
       IOException {
     return client.getQueueAclsInfo();
+  }
+
+  @Override
+  public ApplicationAttemptReport getApplicationAttemptReport(
+      ApplicationAttemptId appAttemptId) throws YarnException, IOException {
+    return client.getApplicationAttemptReport(appAttemptId);
+  }
+
+  @Override
+  public List<ApplicationAttemptReport> getApplicationAttempts(
+      ApplicationId appId) throws YarnException, IOException {
+    return client.getApplicationAttempts(appId);
+  }
+
+  @Override
+  public ContainerReport getContainerReport(ContainerId containerId)
+      throws YarnException, IOException {
+    return client.getContainerReport(containerId);
+  }
+
+  @Override
+  public List<ContainerReport> getContainers(
+      ApplicationAttemptId applicationAttemptId) throws YarnException,
+      IOException {
+    return client.getContainers(applicationAttemptId);
   }
 }

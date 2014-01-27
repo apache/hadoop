@@ -120,8 +120,11 @@ if "%1" == "--config" (
 
   if exist %HADOOP_YARN_HOME%\yarn-server\yarn-server-resourcemanager\target\classes (
     set CLASSPATH=%CLASSPATH%;%HADOOP_YARN_HOME%\yarn-server\yarn-server-resourcemanager\target\classes
+    set CLASSPATH=%CLASSPATH%;%HADOOP_YARN_HOME%\yarn-server\yarn-server-applicationhistoryservice\target\classes
   )
-
+  if exist %HADOOP_YARN_HOME%\yarn-server\yarn-server-applicationhistoryservice\target\classes (
+    set CLASSPATH=%CLASSPATH%;%HADOOP_YARN_HOME%\yarn-server\yarn-server-applicationhistoryservice\target\classes
+  )
   if exist %HADOOP_YARN_HOME%\build\test\classes (
     set CLASSPATH=%CLASSPATH%;%HADOOP_YARN_HOME%\build\test\classes
   )
@@ -138,7 +141,8 @@ if "%1" == "--config" (
     goto :eof
   )
 
-  set yarncommands=resourcemanager nodemanager proxyserver rmadmin version jar application node logs daemonlog
+  set yarncommands=resourcemanager nodemanager proxyserver rmadmin version jar ^
+     application applicationattempt container node logs daemonlog historyserver
   for %%i in ( %yarncommands% ) do (
     if %yarn-command% == %%i set yarncommand=true
   )
@@ -170,7 +174,20 @@ goto :eof
 :application
   set CLASS=org.apache.hadoop.yarn.client.cli.ApplicationCLI
   set YARN_OPTS=%YARN_OPTS% %YARN_CLIENT_OPTS%
+  set yarn-command-arguments=%yarn-command% %yarn-command-arguments%
   goto :eof
+
+:applicationattempt
+  set CLASS=org.apache.hadoop.yarn.client.cli.ApplicationCLI
+  set YARN_OPTS=%YARN_OPTS% %YARN_CLIENT_OPTS%
+  set yarn-command-arguments=%yarn-command% %yarn-command-arguments%
+  goto :eof
+
+:container
+  set CLASS=org.apache.hadoop.yarn.client.cli.ApplicationCLI
+  set YARN_OPTS=%YARN_OPTS% %YARN_CLIENT_OPTS%
+  set yarn-command-arguments=%yarn-command% %yarn-command-arguments%
+  goto :eof  
 
 :node
   set CLASS=org.apache.hadoop.yarn.client.cli.NodeCLI
@@ -183,6 +200,15 @@ goto :eof
   set YARN_OPTS=%YARN_OPTS% %YARN_RESOURCEMANAGER_OPTS%
   if defined YARN_RESOURCEMANAGER_HEAPSIZE (
     set JAVA_HEAP_MAX=-Xmx%YARN_RESOURCEMANAGER_HEAPSIZE%m
+  )
+  goto :eof
+
+:historyserver
+  set CLASSPATH=%CLASSPATH%;%YARN_CONF_DIR%\ahs-config\log4j.properties
+  set CLASS=org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryServer
+  set YARN_OPTS=%YARN_OPTS% %HADOOP_HISTORYSERVER_OPTS%
+  if defined YARN_RESOURCEMANAGER_HEAPSIZE (
+    set JAVA_HEAP_MAX=-Xmx%YARN_HISTORYSERVER_HEAPSIZE%m
   )
   goto :eof
 
@@ -251,10 +277,13 @@ goto :eof
   @echo        where COMMAND is one of:
   @echo   resourcemanager      run the ResourceManager
   @echo   nodemanager          run a nodemanager on each slave
+  @echo   historyserver        run the application history server  
   @echo   rmadmin              admin tools
   @echo   version              print the version
   @echo   jar ^<jar^>          run a jar file
   @echo   application          prints application(s) report/kill application
+  @echo   applicationattempt   prints applicationattempt(s) report
+  @echo   container            prints container(s) report
   @echo   node                 prints node report(s)
   @echo   logs                 dump container logs
   @echo   classpath            prints the class path needed to get the

@@ -765,3 +765,49 @@ digest:hdfs-zkfcs:vlUvLnd8MlacsE80rDuu6ONESbM=:rwcda
   Even if automatic failover is configured, you may initiate a manual failover
   using the same <<<hdfs haadmin>>> command. It will perform a coordinated
   failover.
+
+* HDFS Upgrade/Finalization/Rollback with HA Enabled
+
+  When moving between versions of HDFS, sometimes the newer software can simply
+  be installed and the cluster restarted. Sometimes, however, upgrading the
+  version of HDFS you're running may require changing on-disk data. In this case,
+  one must use the HDFS Upgrade/Finalize/Rollback facility after installing the
+  new software. This process is made more complex in an HA environment, since the
+  on-disk metadata that the NN relies upon is by definition distributed, both on
+  the two HA NNs in the pair, and on the JournalNodes in the case that QJM is
+  being used for the shared edits storage. This documentation section describes
+  the procedure to use the HDFS Upgrade/Finalize/Rollback facility in an HA setup.
+
+  <<To perform an HA upgrade>>, the operator must do the following:
+
+    [[1]] Shut down all of the NNs as normal, and install the newer software.
+
+    [[2]] Start one of the NNs with the <<<'-upgrade'>>> flag.
+  
+    [[3]] On start, this NN will not enter the standby state as usual in an HA
+    setup. Rather, this NN will immediately enter the active state, perform an
+    upgrade of its local storage dirs, and also perform an upgrade of the shared
+    edit log.
+  
+    [[4]] At this point the other NN in the HA pair will be out of sync with
+    the upgraded NN. In order to bring it back in sync and once again have a highly
+    available setup, you should re-bootstrap this NameNode by running the NN with
+    the <<<'-bootstrapStandby'>>> flag. It is an error to start this second NN with
+    the <<<'-upgrade'>>> flag.
+  
+  Note that if at any time you want to restart the NameNodes before finalizing
+  or rolling back the upgrade, you should start the NNs as normal, i.e. without
+  any special startup flag.
+
+  <<To finalize an HA upgrade>>, the operator will use the <<<`hdfsadmin
+  dfsadmin -finalizeUpgrade'>>> command while the NNs are running and one of them
+  is active. The active NN at the time this happens will perform the finalization
+  of the shared log, and the NN whose local storage directories contain the
+  previous FS state will delete its local state.
+
+  <<To perform a rollback>> of an upgrade, both NNs should first be shut down.
+  The operator should run the roll back command on the NN where they initiated
+  the upgrade procedure, which will perform the rollback on the local dirs there,
+  as well as on the shared log, either NFS or on the JNs. Afterward, this NN
+  should be started and the operator should run <<<`-bootstrapStandby'>>> on the
+  other NN to bring the two NNs in sync with this rolled-back file system state.

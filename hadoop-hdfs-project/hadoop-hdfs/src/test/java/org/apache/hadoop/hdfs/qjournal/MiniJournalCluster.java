@@ -167,8 +167,16 @@ public class MiniJournalCluster {
     return new File(baseDir, "journalnode-" + idx).getAbsoluteFile();
   }
   
+  public File getJournalDir(int idx, String jid) {
+    return new File(getStorageDir(idx), jid);
+  }
+  
   public File getCurrentDir(int idx, String jid) {
-    return new File(new File(getStorageDir(idx), jid), "current");
+    return new File(getJournalDir(idx, jid), "current");
+  }
+  
+  public File getPreviousDir(int idx, String jid) {
+    return new File(getJournalDir(idx, jid), "previous");
   }
 
   public JournalNode getJournalNode(int i) {

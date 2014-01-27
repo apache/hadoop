@@ -148,6 +148,8 @@ Trunk (Unreleased)
     HDFS-5721. sharedEditsImage in Namenode#initializeSharedEdits() should be 
     closed before method returns. (Ted Yu via junping_du)
 
+    HDFS-5138. Support HDFS upgrade in HA. (atm via todd)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -593,6 +595,9 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-5806. balancer should set SoTimeout to avoid indefinite hangs.
     (Nathan Roberts via Andrew Wang).
+
+    HDFS-5728. Block recovery will fail if the metafile does not have crc 
+    for all chunks of the block (Vinay via kihwal)
 
   BREAKDOWN OF HDFS-2832 SUBTASKS AND RELATED JIRAS
 
@@ -1133,6 +1138,9 @@ Release 2.3.0 - UNRELEASED
     (brandonli)
 
     HDFS-5789. Some of snapshot APIs missing checkOperation double check in fsn. (umamahesh)
+
+    HDFS-5343. When cat command is issued on snapshot files getting unexpected result.
+    (Sathish via umamahesh)
 
 Release 2.2.0 - 2013-10-13
 

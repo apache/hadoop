@@ -27,6 +27,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.server.resourcemanager.ahs.RMApplicationHistoryWriter;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.NullRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -76,6 +77,7 @@ public class RMContextImpl implements RMContext {
   private NodesListManager nodesListManager;
   private ResourceTrackerService resourceTrackerService;
   private ApplicationMasterService applicationMasterService;
+  private RMApplicationHistoryWriter rmApplicationHistoryWriter;
 
   /**
    * Default constructor. To be used in conjunction with setter methods for
@@ -95,7 +97,8 @@ public class RMContextImpl implements RMContext {
       AMRMTokenSecretManager appTokenSecretManager,
       RMContainerTokenSecretManager containerTokenSecretManager,
       NMTokenSecretManagerInRM nmTokenSecretManager,
-      ClientToAMTokenSecretManagerInRM clientToAMTokenSecretManager) {
+      ClientToAMTokenSecretManagerInRM clientToAMTokenSecretManager,
+      RMApplicationHistoryWriter rmApplicationHistoryWriter) {
     this();
     this.setDispatcher(rmDispatcher);
     this.setContainerAllocationExpirer(containerAllocationExpirer);
@@ -106,6 +109,7 @@ public class RMContextImpl implements RMContext {
     this.setContainerTokenSecretManager(containerTokenSecretManager);
     this.setNMTokenSecretManager(nmTokenSecretManager);
     this.setClientToAMTokenSecretManager(clientToAMTokenSecretManager);
+    this.setRMApplicationHistoryWriter(rmApplicationHistoryWriter);
 
     RMStateStore nullStore = new NullRMStateStore();
     nullStore.setRMDispatcher(rmDispatcher);
@@ -318,4 +322,16 @@ public class RMContextImpl implements RMContext {
       return haServiceState;
     }
   }
+
+  @Override
+  public RMApplicationHistoryWriter getRMApplicationHistoryWriter() {
+    return rmApplicationHistoryWriter;
+  }
+
+  @Override
+  public void setRMApplicationHistoryWriter(
+      RMApplicationHistoryWriter rmApplicationHistoryWriter) {
+    this.rmApplicationHistoryWriter = rmApplicationHistoryWriter;
+  }
+
 }

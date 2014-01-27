@@ -41,6 +41,7 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.ahs.RMApplicationHistoryWriter;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
@@ -84,12 +85,13 @@ public class TestUtils {
         new ContainerAllocationExpirer(nullDispatcher);
     
     Configuration conf = new Configuration();
+    RMApplicationHistoryWriter writer =  mock(RMApplicationHistoryWriter.class);
     RMContext rmContext =
         new RMContextImpl(nullDispatcher, cae, null, null, null,
           new AMRMTokenSecretManager(conf),
           new RMContainerTokenSecretManager(conf),
           new NMTokenSecretManagerInRM(conf),
-          new ClientToAMTokenSecretManagerInRM());
+          new ClientToAMTokenSecretManagerInRM(), writer);
     
     return rmContext;
   }
