@@ -562,6 +562,9 @@ Release 2.3.0 - UNRELEASED
     HADOOP-10248. Property name should be included in the exception where property value 
     is null (Akira AJISAKA via umamahesh)
 
+    HADOOP-10086. User document for authentication in secure cluster.
+    (Masatake Iwasaki via Arpit Agarwal)
+
   OPTIMIZATIONS
 
     HADOOP-10142. Avoid groups lookup for unprivileged users such as "dr.who"
@@ -639,6 +642,9 @@ Release 2.3.0 - UNRELEASED
 
     HADOOP-10167. Mark hadoop-common source as UTF-8 in Maven pom files / refactoring
     (Mikhail Antonov via cos)
+
+    HADOOP-9982. Fix dead links in hadoop site docs. (Akira Ajisaka via Arpit
+    Agarwal)
 
 Release 2.2.0 - 2013-10-13
 
