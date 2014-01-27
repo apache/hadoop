@@ -1151,6 +1151,10 @@ Release 2.3.0 - UNRELEASED
     HDFS-5297. Fix dead links in HDFS site documents. (Akira Ajisaka via
     Arpit Agarwal)
 
+    HDFS-5830. WebHdfsFileSystem.getFileBlockLocations throws
+    IllegalArgumentException when accessing another cluster. (Yongjun Zhang via
+    Colin Patrick McCabe)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
