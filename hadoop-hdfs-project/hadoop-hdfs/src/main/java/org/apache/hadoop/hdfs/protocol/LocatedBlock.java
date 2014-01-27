@@ -98,9 +98,8 @@ public class LocatedBlock {
     }
     this.storageIDs = storageIDs;
     this.storageTypes = storageTypes;
-    Preconditions.checkArgument(cachedLocs != null,
-        "cachedLocs should not be null, use a different constructor");
-    if (cachedLocs.length == 0) {
+
+    if (cachedLocs == null || cachedLocs.length == 0) {
       this.cachedLocs = EMPTY_LOCS;
     } else {
       this.cachedLocs = cachedLocs;
