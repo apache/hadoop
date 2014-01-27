@@ -16,8 +16,6 @@
   ---
   ${maven.build.timestamp}
 
-  \[ {{{../index.html}Go Back}} \]
-
 %{toc|section=1|fromDepth=0}
 
 Hadoop MapReduce Next Generation - Cluster Setup
@@ -29,7 +27,7 @@ Hadoop MapReduce Next Generation - Cluster Setup
   with thousands of nodes.
 
   To play with Hadoop, you may first want to install it on a single
-  machine (see {{{SingleCluster}Single Node Setup}}).
+  machine (see {{{./SingleCluster.html}Single Node Setup}}).
 
 * {Prerequisites}
 
