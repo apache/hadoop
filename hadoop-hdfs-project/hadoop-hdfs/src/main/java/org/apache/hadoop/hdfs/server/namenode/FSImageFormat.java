@@ -208,12 +208,12 @@ public class FSImageFormat {
     public void load(File file) throws IOException {
       Preconditions.checkState(impl == null, "Image already loaded!");
 
-      byte[] magic = new byte[FSImageFormatProtobuf.MAGIC_HEADER.length];
+      byte[] magic = new byte[FSImageUtil.MAGIC_HEADER.length];
       FileInputStream is = null;
       try {
         is = new FileInputStream(file);
         if (is.read(magic) == magic.length
-            && Arrays.equals(magic, FSImageFormatProtobuf.MAGIC_HEADER)) {
+            && Arrays.equals(magic, FSImageUtil.MAGIC_HEADER)) {
           FSImageFormatProtobuf.Loader loader = new FSImageFormatProtobuf.Loader(
               conf, fsn);
           impl = loader;

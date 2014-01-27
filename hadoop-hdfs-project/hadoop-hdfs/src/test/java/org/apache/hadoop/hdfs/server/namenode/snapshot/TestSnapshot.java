@@ -25,6 +25,9 @@ import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.RandomAccessFile;
+import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
@@ -53,8 +56,7 @@ import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper.TestDirectoryTree;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper.TestDirectoryTree.Node;
-import org.apache.hadoop.hdfs.tools.offlineImageViewer.OfflineImageViewer;
-import org.apache.hadoop.hdfs.tools.offlineImageViewer.XmlImageVisitor;
+import org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
@@ -245,8 +247,8 @@ public class TestSnapshot {
    * snapshots
    */
   @Test
-  public void testOfflineImageViewer() throws Throwable {
-    runTestSnapshot(SNAPSHOT_ITERATION_NUMBER);
+  public void testOfflineImageViewer() throws Exception {
+    runTestSnapshot(1);
     
     // retrieve the fsimage. Note that we already save namespace to fsimage at
     // the end of each iteration of runTestSnapshot.
@@ -254,31 +256,10 @@ public class TestSnapshot {
         FSImageTestUtil.getFSImage(
         cluster.getNameNode()).getStorage().getStorageDir(0));
     assertNotNull("Didn't generate or can't find fsimage", originalFsimage);
-    
-    String ROOT = System.getProperty("test.build.data", "build/test/data");
-    File testFile = new File(ROOT, "/image");
-    String xmlImage = ROOT + "/image_xml";
-    boolean success = false;
-    
-    try {
-      DFSTestUtil.copyFile(originalFsimage, testFile);
-      XmlImageVisitor v = new XmlImageVisitor(xmlImage, true);
-      OfflineImageViewer oiv = new OfflineImageViewer(testFile.getPath(), v,
-          true);
-      oiv.go();
-      success = true;
-    } finally {
-      if (testFile.exists()) {
-        testFile.delete();
-      }
-      // delete the xml file if the parsing is successful
-      if (success) {
-        File xmlImageFile = new File(xmlImage);
-        if (xmlImageFile.exists()) {
-          xmlImageFile.delete();
-        }
-      }
-    }
+    StringWriter output = new StringWriter();
+    PrintWriter o = new PrintWriter(output);
+    PBImageXmlWriter v = new PBImageXmlWriter(new Configuration(), o);
+    v.visit(new RandomAccessFile(originalFsimage, "r"));
   }
 
   private void runTestSnapshot(int iteration) throws Exception {

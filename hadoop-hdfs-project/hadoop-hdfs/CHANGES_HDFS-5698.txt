@@ -27,3 +27,5 @@ HDFS-5698 subtasks
 
     HDFS-5826. Update the stored edit logs to be consistent with the changes in 
     HDFS-5698 branch. (Haohui Mai via jing9)
+
+    HDFS-5797. Implement offline image viewer. (Haohui Mai via jing9)

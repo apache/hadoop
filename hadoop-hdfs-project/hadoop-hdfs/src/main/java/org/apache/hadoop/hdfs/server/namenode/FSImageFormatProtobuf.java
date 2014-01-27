@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -33,7 +32,6 @@ import java.nio.channels.FileChannel;
 import java.security.DigestOutputStream;
 import java.security.MessageDigest;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Map;
@@ -45,7 +43,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
-import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CacheDirectiveInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CachePoolInfoProto;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
@@ -72,11 +69,8 @@ import com.google.protobuf.CodedOutputStream;
 public final class FSImageFormatProtobuf {
   private static final Log LOG = LogFactory.getLog(FSImageFormatProtobuf.class);
 
-  static final byte[] MAGIC_HEADER = "HDFSIMG1".getBytes();
-  private static final int FILE_VERSION = 1;
-
   public static final class Loader implements FSImageFormat.AbstractLoader {
-    private static final int MINIMUM_FILE_LENGTH = 8;
+    static final int MINIMUM_FILE_LENGTH = 8;
     private final Configuration conf;
     private final FSNamesystem fsn;
 
@@ -118,50 +112,12 @@ public final class FSImageFormatProtobuf {
       }
     }
 
-    private boolean checkFileFormat(RandomAccessFile file) throws IOException {
-      if (file.length() < MINIMUM_FILE_LENGTH)
-        return false;
-
-      byte[] magic = new byte[MAGIC_HEADER.length];
-      file.readFully(magic);
-      if (!Arrays.equals(MAGIC_HEADER, magic))
-        return false;
-
-      return true;
-    }
-
-    private FileSummary loadSummary(RandomAccessFile file) throws IOException {
-      final int FILE_LENGTH_FIELD_SIZE = 4;
-      long fileLength = file.length();
-      file.seek(fileLength - FILE_LENGTH_FIELD_SIZE);
-      int summaryLength = file.readInt();
-      file.seek(fileLength - FILE_LENGTH_FIELD_SIZE - summaryLength);
-
-      byte[] summaryBytes = new byte[summaryLength];
-      file.readFully(summaryBytes);
-
-      FileSummary summary = FileSummary
-          .parseDelimitedFrom(new ByteArrayInputStream(summaryBytes));
-      if (summary.getOndiskVersion() != FILE_VERSION) {
-        throw new IOException("Unsupported file version "
-            + summary.getOndiskVersion());
-      }
-
-      if (!LayoutVersion.supports(Feature.PROTOBUF_FORMAT,
-          summary.getLayoutVersion())) {
-        throw new IOException("Unsupported layout version "
-            + summary.getLayoutVersion());
-      }
-      return summary;
-    }
-
-    @SuppressWarnings("resource")
     private void loadInternal(RandomAccessFile raFile, FileInputStream fin)
         throws IOException {
-      if (!checkFileFormat(raFile)) {
+      if (!FSImageUtil.checkFileFormat(raFile)) {
         throw new IOException("Unrecognized file format");
       }
-      FileSummary summary = loadSummary(raFile);
+      FileSummary summary = FSImageUtil.loadSummary(raFile);
 
       FileChannel channel = fin.getChannel();
 
@@ -192,15 +148,8 @@ public final class FSImageFormatProtobuf {
         InputStream in = new BufferedInputStream(new LimitInputStream(fin,
             s.getLength()));
 
-        if (summary.hasCodec()) {
-          // read compression related info
-          FSImageCompression compression = FSImageCompression
-              .createCompression(conf, summary.getCodec());
-          CompressionCodec imageCodec = compression.getImageCodec();
-          if (summary.getCodec() != null) {
-            in = imageCodec.createInputStream(in);
-          }
-        }
+        in = FSImageUtil.wrapInputStreamForCompression(conf,
+            summary.getCodec(), in);
 
         String n = s.getName();
         switch (SectionName.fromString(n)) {
@@ -292,7 +241,7 @@ public final class FSImageFormatProtobuf {
 
   public static final class Saver {
     private final SaveNamespaceContext context;
-    private long currentOffset = MAGIC_HEADER.length;
+    private long currentOffset = FSImageUtil.MAGIC_HEADER.length;
     private MD5Hash savedDigest;
     private StringMap stringMap = new StringMap();
 
@@ -378,12 +327,12 @@ public final class FSImageFormatProtobuf {
       MessageDigest digester = MD5Hash.getDigester();
       underlyingOutputStream = new DigestOutputStream(new BufferedOutputStream(
           fout), digester);
-      underlyingOutputStream.write(MAGIC_HEADER);
+      underlyingOutputStream.write(FSImageUtil.MAGIC_HEADER);
 
       fileChannel = fout.getChannel();
 
       FileSummary.Builder b = FileSummary.newBuilder()
-          .setOndiskVersion(FILE_VERSION)
+          .setOndiskVersion(FSImageUtil.FILE_VERSION)
           .setLayoutVersion(LayoutVersion.getCurrentLayoutVersion());
 
       codec = compression.getImageCodec();
@@ -531,7 +480,7 @@ public final class FSImageFormatProtobuf {
 
     private static final SectionName[] values = SectionName.values();
 
-    private static SectionName fromString(String name) {
+    public static SectionName fromString(String name) {
       for (SectionName n : values) {
         if (n.name.equals(name))
           return n;
