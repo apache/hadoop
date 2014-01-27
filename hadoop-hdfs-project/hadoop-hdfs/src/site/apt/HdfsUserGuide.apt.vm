@@ -108,9 +108,11 @@ HDFS Users Guide
    The following documents describe how to install and set up a Hadoop
    cluster:
 
-     * {{Single Node Setup}} for first-time users.
+     * {{{../hadoop-common/SingleCluster.html}Single Node Setup}}
+       for first-time users.
 
-     * {{Cluster Setup}} for large, distributed clusters.
+     * {{{../hadoop-common/ClusterSetup.html}Cluster Setup}}
+       for large, distributed clusters.
 
    The rest of this document assumes the user is able to set up and run a
    HDFS with at least one DataNode. For the purpose of this document, both
@@ -136,7 +138,8 @@ HDFS Users Guide
    for a command. These commands support most of the normal files system
    operations like copying files, changing file permissions, etc. It also
    supports a few HDFS specific operations like changing replication of
-   files. For more information see {{{File System Shell Guide}}}.
+   files. For more information see {{{../hadoop-common/FileSystemShell.html}
+   File System Shell Guide}}.
 
 **  DFSAdmin Command
 
@@ -169,7 +172,7 @@ HDFS Users Guide
        of racks and datanodes attached to the tracks as viewed by the
        NameNode.
 
-   For command usage, see {{{dfsadmin}}}.
+   For command usage, see {{{../hadoop-common/CommandsManual.html#dfsadmin}dfsadmin}}.
 
 * Secondary NameNode
 
@@ -203,7 +206,8 @@ HDFS Users Guide
    So that the check pointed image is always ready to be read by the
    primary NameNode if necessary.
 
-   For command usage, see {{{secondarynamenode}}}.
+   For command usage,
+   see {{{../hadoop-common/CommandsManual.html#secondarynamenode}secondarynamenode}}.
 
 * Checkpoint Node
 
@@ -245,7 +249,7 @@ HDFS Users Guide
    Multiple checkpoint nodes may be specified in the cluster configuration
    file.
 
-   For command usage, see {{{namenode}}}.
+   For command usage, see {{{../hadoop-common/CommandsManual.html#namenode}namenode}}.
 
 * Backup Node
 
@@ -287,7 +291,7 @@ HDFS Users Guide
 
    For a complete discussion of the motivation behind the creation of the
    Backup node and Checkpoint node, see {{{https://issues.apache.org/jira/browse/HADOOP-4539}HADOOP-4539}}.
-   For command usage, see {{{namenode}}}.
+   For command usage, see {{{../hadoop-common/CommandsManual.html#namenode}namenode}}.
 
 * Import Checkpoint
 
@@ -310,7 +314,7 @@ HDFS Users Guide
    verifies that the image in <<<dfs.namenode.checkpoint.dir>>> is consistent,
    but does not modify it in any way.
 
-   For command usage, see {{{namenode}}}.
+   For command usage, see {{{../hadoop-common/CommandsManual.html#namenode}namenode}}.
 
 * Rebalancer
 
@@ -337,7 +341,7 @@ HDFS Users Guide
    A brief administrator's guide for rebalancer as a PDF is attached to
    {{{https://issues.apache.org/jira/browse/HADOOP-1652}HADOOP-1652}}.
 
-   For command usage, see {{{balancer}}}.
+   For command usage, see {{{../hadoop-common/CommandsManual.html#balancer}balancer}}.
 
 * Rack Awareness
 
@@ -379,8 +383,9 @@ HDFS Users Guide
    most of the recoverable failures. By default fsck ignores open files
    but provides an option to select all files during reporting. The HDFS
    fsck command is not a Hadoop shell command. It can be run as
-   <<<bin/hadoop fsck>>>. For command usage, see {{{fsck}}}. fsck can be run on the
-   whole file system or on a subset of files.
+   <<<bin/hadoop fsck>>>. For command usage, see 
+   {{{../hadoop-common/CommandsManual.html#fsck}fsck}}. fsck can be run on
+   the whole file system or on a subset of files.
 
 * fetchdt
 
@@ -393,7 +398,8 @@ HDFS Users Guide
    command. It can be run as <<<bin/hadoop fetchdt DTfile>>>. After you got
    the token you can run an HDFS command without having Kerberos tickets,
    by pointing <<<HADOOP_TOKEN_FILE_LOCATION>>> environmental variable to the
-   delegation token file. For command usage, see {{{fetchdt}}} command.
+   delegation token file. For command usage, see
+   {{{../hadoop-common/CommandsManual.html#fetchdt}fetchdt}} command.
 
 * Recovery Mode
 
@@ -427,10 +433,11 @@ HDFS Users Guide
    let alone to restart HDFS from scratch. HDFS allows administrators to
    go back to earlier version of Hadoop and rollback the cluster to the
    state it was in before the upgrade. HDFS upgrade is described in more
-   detail in {{{Hadoop Upgrade}}} Wiki page. HDFS can have one such backup at a
-   time. Before upgrading, administrators need to remove existing backup
-   using bin/hadoop dfsadmin <<<-finalizeUpgrade>>> command. The following
-   briefly describes the typical upgrade procedure:
+   detail in {{{http://wiki.apache.org/hadoop/Hadoop_Upgrade}Hadoop Upgrade}}
+   Wiki page. HDFS can have one such backup at a time. Before upgrading,
+   administrators need to remove existing backupusing bin/hadoop dfsadmin
+   <<<-finalizeUpgrade>>> command. The following briefly describes the
+   typical upgrade procedure:
 
      * Before upgrading Hadoop software, finalize if there an existing
        backup. <<<dfsadmin -upgradeProgress>>> status can tell if the cluster
@@ -450,7 +457,7 @@ HDFS Users Guide
 
           * stop the cluster and distribute earlier version of Hadoop.
 
-          * start the cluster with rollback option. (<<<bin/start-dfs.h -rollback>>>).
+          * start the cluster with rollback option. (<<<bin/start-dfs.sh -rollback>>>).
 
 * File Permissions and Security
 
@@ -465,14 +472,15 @@ HDFS Users Guide
 * Scalability
 
    Hadoop currently runs on clusters with thousands of nodes. The
-   {{{PoweredBy}}} Wiki page lists some of the organizations that deploy Hadoop
-   on large clusters. HDFS has one NameNode for each cluster. Currently
-   the total memory available on NameNode is the primary scalability
-   limitation. On very large clusters, increasing average size of files
-   stored in HDFS helps with increasing cluster size without increasing
-   memory requirements on NameNode. The default configuration may not
-   suite very large clustes. The {{{FAQ}}} Wiki page lists suggested
-   configuration improvements for large Hadoop clusters.
+   {{{http://wiki.apache.org/hadoop/PoweredBy}PoweredBy}} Wiki page lists
+   some of the organizations that deploy Hadoop on large clusters.
+   HDFS has one NameNode for each cluster. Currently the total memory
+   available on NameNode is the primary scalability limitation.
+   On very large clusters, increasing average size of files stored in
+   HDFS helps with increasing cluster size without increasing memory
+   requirements on NameNode. The default configuration may not suite
+   very large clusters. The {{{http://wiki.apache.org/hadoop/FAQ}FAQ}}
+   Wiki page lists suggested configuration improvements for large Hadoop clusters.
 
 * Related Documentation
 
@@ -481,19 +489,22 @@ HDFS Users Guide
    documentation about Hadoop and HDFS. The following list is a starting
    point for further exploration:
 
-     * {{{Hadoop Site}}}: The home page for the Apache Hadoop site.
+     * {{{http://hadoop.apache.org}Hadoop Site}}: The home page for
+       the Apache Hadoop site.
 
-     * {{{Hadoop Wiki}}}: The home page (FrontPage) for the Hadoop Wiki. Unlike
+     * {{{http://wiki.apache.org/hadoop/FrontPage}Hadoop Wiki}}:
+       The home page (FrontPage) for the Hadoop Wiki. Unlike
        the released documentation, which is part of Hadoop source tree,
        Hadoop Wiki is regularly edited by Hadoop Community.
 
-     * {{{FAQ}}}: The FAQ Wiki page.
+     * {{{http://wiki.apache.org/hadoop/FAQ}FAQ}}: The FAQ Wiki page.
 
-     * {{{Hadoop JavaDoc API}}}.
+     * {{{../../api/index.html}Hadoop JavaDoc API}}.
 
-     * {{{Hadoop User Mailing List}}}: core-user[at]hadoop.apache.org.
+     * Hadoop User Mailing List: user[at]hadoop.apache.org.
 
-     * Explore {{{src/hdfs/hdfs-default.xml}}}. It includes brief description of
-       most of the configuration variables available.
+     * Explore {{{./hdfs-default.xml}hdfs-default.xml}}. It includes
+       brief description of most of the configuration variables available.
 
-     * {{{Hadoop Commands Guide}}}: Hadoop commands usage.
+     * {{{../hadoop-common/CommandsManual.html}Hadoop Commands Guide}}:
+       Hadoop commands usage.

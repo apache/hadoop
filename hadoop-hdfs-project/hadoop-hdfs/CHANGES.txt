@@ -1148,6 +1148,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-5343. When cat command is issued on snapshot files getting unexpected result.
     (Sathish via umamahesh)
 
+    HDFS-5297. Fix dead links in HDFS site documents. (Akira Ajisaka via
+    Arpit Agarwal)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
