@@ -18,8 +18,6 @@
 
 Hadoop MapReduce Next Generation - Setting up a Single Node Cluster.
 
-  \[ {{{./index.html}Go Back}} \]
-
 %{toc|section=1|fromDepth=0}
 
 * Mapreduce Tarball
@@ -32,7 +30,8 @@ $ mvn clean install -DskipTests
 $ cd hadoop-mapreduce-project
 $ mvn clean install assembly:assembly -Pnative
 +---+
-  <<NOTE:>> You will need protoc 2.5.0 installed.
+  <<NOTE:>> You will need {{{http://code.google.com/p/protobuf}protoc 2.5.0}}
+            installed.
 
   To ignore the native builds in mapreduce you can omit the <<<-Pnative>>> argument
   for maven. The tarball should be available in <<<target/>>> directory. 

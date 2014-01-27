@@ -233,9 +233,10 @@ hand-in-hand to address this.
 
     * In particular for MapReduce applications, the developer community will 
       try our best to support provide binary compatibility across major 
-      releases e.g. applications using org.apache.hadop.mapred.* APIs are 
-      supported compatibly across hadoop-1.x and hadoop-2.x. See 
-      {{{../hadoop-mapreduce-client/hadoop-mapreduce-client-core/MapReduce_Compatibility_Hadoop1_Hadoop2.html}
+      releases e.g. applications using org.apache.hadoop.mapred.
+      
+    * APIs are supported compatibly across hadoop-1.x and hadoop-2.x. See 
+      {{{../../hadoop-mapreduce-client/hadoop-mapreduce-client-core/MapReduce_Compatibility_Hadoop1_Hadoop2.html}
       Compatibility for MapReduce applications between hadoop-1.x and hadoop-2.x}} 
       for more details.
 
@@ -248,13 +249,13 @@ hand-in-hand to address this.
 
   * {{{../hadoop-hdfs/WebHDFS.html}WebHDFS}} - Stable
 
-  * {{{../hadoop-yarn/hadoop-yarn-site/ResourceManagerRest.html}ResourceManager}}
+  * {{{../../hadoop-yarn/hadoop-yarn-site/ResourceManagerRest.html}ResourceManager}}
 
-  * {{{../hadoop-yarn/hadoop-yarn-site/NodeManagerRest.html}NodeManager}}
+  * {{{../../hadoop-yarn/hadoop-yarn-site/NodeManagerRest.html}NodeManager}}
 
-  * {{{../hadoop-yarn/hadoop-yarn-site/MapredAppMasterRest.html}MR Application Master}}
+  * {{{../../hadoop-yarn/hadoop-yarn-site/MapredAppMasterRest.html}MR Application Master}}
 
-  * {{{../hadoop-yarn/hadoop-yarn-site/HistoryServerRest.html}History Server}}
+  * {{{../../hadoop-yarn/hadoop-yarn-site/HistoryServerRest.html}History Server}}
   
 *** Policy
     
@@ -512,7 +513,8 @@ hand-in-hand to address this.
     {{{https://issues.apache.org/jira/browse/HADOOP-9517}HADOOP-9517}}
 
   * Binary compatibility for MapReduce end-user applications between hadoop-1.x and hadoop-2.x -
-    {{{../hadoop-mapreduce-client/hadoop-mapreduce-client-core/MapReduce_Compatibility_Hadoop1_Hadoop2.html}MapReduce Compatibility between hadoop-1.x and hadoop-2.x}}
+    {{{../../hadoop-mapreduce-client/hadoop-mapreduce-client-core/MapReduce_Compatibility_Hadoop1_Hadoop2.html}
+    MapReduce Compatibility between hadoop-1.x and hadoop-2.x}}
 
   * Annotations for interfaces as per interface classification
     schedule -
