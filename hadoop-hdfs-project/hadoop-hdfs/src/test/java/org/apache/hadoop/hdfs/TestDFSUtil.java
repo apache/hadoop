@@ -117,6 +117,20 @@ public class TestDFSUtil {
     assertEquals(0, bs.length);
   }
 
+  /**
+   * Test constructing LocatedBlock with null cachedLocs
+   */
+  @Test
+  public void testLocatedBlockConstructorWithNullCachedLocs() {
+    DatanodeInfo d = DFSTestUtil.getLocalDatanodeInfo();
+    DatanodeInfo[] ds = new DatanodeInfo[1];
+    ds[0] = d;
+    
+    ExtendedBlock b1 = new ExtendedBlock("bpid", 1, 1, 1);
+    LocatedBlock l1 = new LocatedBlock(b1, ds, null, null, 0, false, null);
+    final DatanodeInfo[] cachedLocs = l1.getCachedLocations();
+    assertTrue(cachedLocs.length == 0);
+  }
 
   private Configuration setupAddress(String key) {
     HdfsConfiguration conf = new HdfsConfiguration();
