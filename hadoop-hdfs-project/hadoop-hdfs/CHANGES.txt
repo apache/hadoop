@@ -693,6 +693,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-5677. Need error checking for HA cluster configuration.
     (Vincent Sheffer via cos)
 
+    HADOOP-10086. User document for authentication in secure cluster.
+    (Masatake Iwasaki via Arpit Agarwal)
+
   OPTIMIZATIONS
 
   BUG FIXES
