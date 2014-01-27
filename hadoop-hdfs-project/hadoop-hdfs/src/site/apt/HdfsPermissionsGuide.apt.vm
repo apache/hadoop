@@ -18,8 +18,6 @@
 
 HDFS Permissions Guide
 
-  \[ {{{./index.html}Go Back}} \]
-
 %{toc|section=1|fromDepth=0}
 
 * Overview
@@ -55,8 +53,10 @@ HDFS Permissions Guide
 
      * If the user name matches the owner of foo, then the owner
        permissions are tested;
+
      * Else if the group of foo matches any of member of the groups list,
        then the group permissions are tested;
+
      * Otherwise the other permissions of foo are tested.
 
    If a permissions check fails, the client operation fails.
