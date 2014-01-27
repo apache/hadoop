@@ -37,12 +37,14 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.qjournal.protocol.JournalNotFormattedException;
 import org.apache.hadoop.hdfs.qjournal.protocol.JournalOutOfSyncException;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocol;
+import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.NewEpochResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.PersistedRecoveryPaxosData;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.PrepareRecoveryResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.SegmentStateProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.RequestInfo;
 import org.apache.hadoop.hdfs.server.common.StorageErrorReporter;
+import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.namenode.EditLogOutputStream;
 import org.apache.hadoop.hdfs.server.namenode.FileJournalManager;
 import org.apache.hadoop.hdfs.server.namenode.FileJournalManager.EditLogFile;
@@ -73,7 +75,7 @@ import com.google.protobuf.TextFormat;
  * Each such journal is entirely independent despite being hosted by
  * the same JVM.
  */
-class Journal implements Closeable {
+public class Journal implements Closeable {
   static final Log LOG = LogFactory.getLog(Journal.class);
 
 
@@ -122,8 +124,8 @@ class Journal implements Closeable {
    */
   private BestEffortLongFile committedTxnId;
   
-  private static final String LAST_PROMISED_FILENAME = "last-promised-epoch";
-  private static final String LAST_WRITER_EPOCH = "last-writer-epoch";
+  public static final String LAST_PROMISED_FILENAME = "last-promised-epoch";
+  public static final String LAST_WRITER_EPOCH = "last-writer-epoch";
   private static final String COMMITTED_TXID_FILENAME = "committed-txid";
   
   private final FileJournalManager fjm;
@@ -627,7 +629,7 @@ class Journal implements Closeable {
   }
 
   /**
-   * @see QJournalProtocol#getEditLogManifest(String, long)
+   * @see QJournalProtocol#getEditLogManifest(String, long, boolean)
    */
   public RemoteEditLogManifest getEditLogManifest(long sinceTxId,
       boolean inProgressOk) throws IOException {
@@ -728,7 +730,7 @@ class Journal implements Closeable {
   }
   
   /**
-   * @see QJournalProtocol#acceptRecovery(RequestInfo, SegmentStateProto, URL)
+   * @see QJournalProtocol#acceptRecovery(RequestInfo, QJournalProtocolProtos.SegmentStateProto, URL)
    */
   public synchronized void acceptRecovery(RequestInfo reqInfo,
       SegmentStateProto segment, URL fromUrl)
@@ -979,5 +981,63 @@ class Journal implements Closeable {
         fos.abort();
       }
     }
+  }
+
+  public synchronized void doPreUpgrade() throws IOException {
+    storage.getJournalManager().doPreUpgrade();
+  }
+
+  public synchronized void doUpgrade(StorageInfo sInfo) throws IOException {
+    long oldCTime = storage.getCTime();
+    storage.cTime = sInfo.cTime;
+    int oldLV = storage.getLayoutVersion();
+    storage.layoutVersion = sInfo.layoutVersion;
+    LOG.info("Starting upgrade of edits directory: "
+        + ".\n   old LV = " + oldLV
+        + "; old CTime = " + oldCTime
+        + ".\n   new LV = " + storage.getLayoutVersion()
+        + "; new CTime = " + storage.getCTime());
+    storage.getJournalManager().doUpgrade(storage);
+    storage.createPaxosDir();
+    
+    // Copy over the contents of the epoch data files to the new dir.
+    File currentDir = storage.getSingularStorageDir().getCurrentDir();
+    File previousDir = storage.getSingularStorageDir().getPreviousDir();
+    
+    PersistentLongFile prevLastPromisedEpoch = new PersistentLongFile(
+        new File(previousDir, LAST_PROMISED_FILENAME), 0);
+    PersistentLongFile prevLastWriterEpoch = new PersistentLongFile(
+        new File(previousDir, LAST_WRITER_EPOCH), 0);
+    
+    lastPromisedEpoch = new PersistentLongFile(
+        new File(currentDir, LAST_PROMISED_FILENAME), 0);
+    lastWriterEpoch = new PersistentLongFile(
+        new File(currentDir, LAST_WRITER_EPOCH), 0);
+    
+    lastPromisedEpoch.set(prevLastPromisedEpoch.get());
+    lastWriterEpoch.set(prevLastWriterEpoch.get());
+  }
+
+  public synchronized void doFinalize() throws IOException {
+    LOG.info("Finalizing upgrade for journal " 
+          + storage.getRoot() + "."
+          + (storage.getLayoutVersion()==0 ? "" :
+            "\n   cur LV = " + storage.getLayoutVersion()
+            + "; cur CTime = " + storage.getCTime()));
+    storage.getJournalManager().doFinalize();
+  }
+
+  public Boolean canRollBack(StorageInfo storage, StorageInfo prevStorage,
+      int targetLayoutVersion) throws IOException {
+    return this.storage.getJournalManager().canRollBack(storage, prevStorage,
+        targetLayoutVersion);
+  }
+
+  public void doRollback() throws IOException {
+    storage.getJournalManager().doRollback();
+  }
+
+  public Long getJournalCTime() throws IOException {
+    return storage.getJournalManager().getJournalCTime();
   }
 }

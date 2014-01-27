@@ -424,6 +424,9 @@ Release 2.4.0 - UNRELEASED
     HADOOP-10143 replace WritableFactories's hashmap with ConcurrentHashMap
     (Liang Xie via stack)
 
+    HADOOP-9652. Allow RawLocalFs#getFileLinkStatus to fill in the link owner
+    and mode if requested. (Andrew Wang via Colin Patrick McCabe)
+
   OPTIMIZATIONS
 
     HADOOP-9748. Reduce blocking on UGI.ensureInitialized (daryn)
@@ -449,9 +452,6 @@ Release 2.4.0 - UNRELEASED
 
     HADOOP-9817. FileSystem#globStatus and FileContext#globStatus need to work
     with symlinks. (Colin Patrick McCabe via Andrew Wang)
-
-    HADOOP-9652.  RawLocalFs#getFileLinkStatus does not fill in the link owner
-    and mode.  (Andrew Wang via Colin Patrick McCabe)
 
     HADOOP-9875.  TestDoAsEffectiveUser can fail on JDK 7.  (Aaron T. Myers via
     Colin Patrick McCabe)
@@ -536,6 +536,9 @@ Release 2.4.0 - UNRELEASED
     HADOOP-10252. HttpServer can't start if hostname is not specified. (Jimmy
     Xiang via atm)
 
+    HADOOP-10203. Connection leak in
+    Jets3tNativeFileSystemStore#retrieveMetadata. (Andrei Savu via atm)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -555,6 +558,9 @@ Release 2.3.0 - UNRELEASED
 
     HADOOP-10132. RPC#stopProxy() should log the class of proxy when IllegalArgumentException 
     is encountered (Ted yu via umamahesh)
+
+    HADOOP-10248. Property name should be included in the exception where property value 
+    is null (Akira AJISAKA via umamahesh)
 
   OPTIMIZATIONS
 
@@ -630,6 +636,9 @@ Release 2.3.0 - UNRELEASED
     protoc 2.4.1 instead of 2.5.0. (cnauroth)
 
     HADOOP-10112. har file listing doesn't work with wild card. (brandonli)
+
+    HADOOP-10167. Mark hadoop-common source as UTF-8 in Maven pom files / refactoring
+    (Mikhail Antonov via cos)
 
 Release 2.2.0 - 2013-10-13
 

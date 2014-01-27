@@ -35,8 +35,10 @@ import org.apache.commons.cli.Options;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.ConverterUtils;
@@ -46,13 +48,22 @@ import com.google.common.annotations.VisibleForTesting;
 @Private
 @Unstable
 public class ApplicationCLI extends YarnCLI {
-  private static final String APPLICATIONS_PATTERN =
-    "%30s\t%20s\t%20s\t%10s\t%10s\t%18s\t%18s\t%15s\t%35s" +
-    System.getProperty("line.separator");
+  private static final String APPLICATIONS_PATTERN = 
+    "%30s\t%20s\t%20s\t%10s\t%10s\t%18s\t%18s\t%15s\t%35s"
+      + System.getProperty("line.separator");
+  private static final String APPLICATION_ATTEMPTS_PATTERN =
+    "%30s\t%20s\t%35s\t%35s"
+      + System.getProperty("line.separator");
+  private static final String CONTAINER_PATTERN = 
+    "%30s\t%20s\t%20s\t%20s\t%20s\t%35s"
+      + System.getProperty("line.separator");
 
   private static final String APP_TYPE_CMD = "appTypes";
-  private static final String APP_STATE_CMD ="appStates";
+  private static final String APP_STATE_CMD = "appStates";
   private static final String ALLSTATES_OPTION = "ALL";
+  public static final String APPLICATION = "application";
+  public static final String APPLICATION_ATTEMPT = "applicationattempt";
+  public static final String CONTAINER = "container";
 
   private boolean allAppStates;
 
@@ -69,23 +80,33 @@ public class ApplicationCLI extends YarnCLI {
   public int run(String[] args) throws Exception {
 
     Options opts = new Options();
-    opts.addOption(STATUS_CMD, true, "Prints the status of the application.");
-    opts.addOption(LIST_CMD, false, "List applications from the RM. " +
-        "Supports optional use of -appTypes to filter applications " +
-        "based on application type, " +
-        "and -appStates to filter applications based on application state");
+    opts.addOption(STATUS_CMD, true,
+        "Prints the status of the application.");
+    if (args.length > 0
+        && args[0].compareToIgnoreCase(APPLICATION_ATTEMPT) == 0) {
+      opts.addOption(LIST_CMD, true,
+          "List application attempts for aplication from AHS. ");
+    } else if (args.length > 0 && args[0].compareToIgnoreCase("container") == 0) {
+      opts.addOption(LIST_CMD, true,
+          "List containers for application attempts from AHS. ");
+    } else {
+      opts.addOption(LIST_CMD, false, "List applications from the RM. "
+          + "Supports optional use of -appTypes to filter applications "
+          + "based on application type, "
+          + "and -appStates to filter applications based on application state");
+    }
     opts.addOption(KILL_CMD, true, "Kills the application.");
     opts.addOption(HELP_CMD, false, "Displays help for all commands.");
-    Option appTypeOpt = new Option(APP_TYPE_CMD, true, "Works with -list to " +
-        "filter applications based on " +
-        "input comma-separated list of application types.");
+    Option appTypeOpt = new Option(APP_TYPE_CMD, true, "Works with -list to "
+        + "filter applications based on "
+        + "input comma-separated list of application types.");
     appTypeOpt.setValueSeparator(',');
     appTypeOpt.setArgs(Option.UNLIMITED_VALUES);
     appTypeOpt.setArgName("Types");
     opts.addOption(appTypeOpt);
-    Option appStateOpt = new Option(APP_STATE_CMD, true, "Works with -list " +
-        "to filter applications based on input comma-separated list of " +
-        "application states. " + getAllValidApplicationStates());
+    Option appStateOpt = new Option(APP_STATE_CMD, true, "Works with -list "
+        + "to filter applications based on input comma-separated list of "
+        + "application states. " + getAllValidApplicationStates());
     appStateOpt.setValueSeparator(',');
     appStateOpt.setArgs(Option.UNLIMITED_VALUES);
     appStateOpt.setArgName("States");
@@ -104,50 +125,77 @@ public class ApplicationCLI extends YarnCLI {
     }
 
     if (cliParser.hasOption(STATUS_CMD)) {
-      if (args.length != 2) {
+      if ((args[0].compareToIgnoreCase(APPLICATION) == 0)
+          || (args[0].compareToIgnoreCase(APPLICATION_ATTEMPT) == 0)
+          || (args[0].compareToIgnoreCase(CONTAINER) == 0)) {
+        if (args.length != 3) {
+          printUsage(opts);
+          return exitCode;
+        }
+      } else if (args.length != 2) {
         printUsage(opts);
         return exitCode;
       }
-      printApplicationReport(cliParser.getOptionValue(STATUS_CMD));
+      if (args[0].compareToIgnoreCase(APPLICATION_ATTEMPT) == 0) {
+        printApplicationAttemptReport(cliParser.getOptionValue(STATUS_CMD));
+      } else if (args[0].compareToIgnoreCase(CONTAINER) == 0) {
+        printContainerReport(cliParser.getOptionValue(STATUS_CMD));
+      } else {
+        printApplicationReport(cliParser.getOptionValue(STATUS_CMD));
+      }
     } else if (cliParser.hasOption(LIST_CMD)) {
-      allAppStates = false;
-      Set<String> appTypes = new HashSet<String>();
-      if(cliParser.hasOption(APP_TYPE_CMD)) {
-        String[] types = cliParser.getOptionValues(APP_TYPE_CMD);
-        if (types != null) {
-          for (String type : types) {
-            if (!type.trim().isEmpty()) {
-              appTypes.add(type.toUpperCase().trim());
+      if (args[0].compareToIgnoreCase(APPLICATION_ATTEMPT) == 0) {
+        if (args.length != 3) {
+          printUsage(opts);
+          return exitCode;
+        }
+        listApplicationAttempts(cliParser.getOptionValue(LIST_CMD));
+      } else if (args[0].compareToIgnoreCase(CONTAINER) == 0) {
+        if (args.length != 3) {
+          printUsage(opts);
+          return exitCode;
+        }
+        listContainers(cliParser.getOptionValue(LIST_CMD));
+      } else {
+        allAppStates = false;
+        Set<String> appTypes = new HashSet<String>();
+        if (cliParser.hasOption(APP_TYPE_CMD)) {
+          String[] types = cliParser.getOptionValues(APP_TYPE_CMD);
+          if (types != null) {
+            for (String type : types) {
+              if (!type.trim().isEmpty()) {
+                appTypes.add(type.toUpperCase().trim());
+              }
             }
           }
         }
-      }
 
-      EnumSet<YarnApplicationState> appStates =
-          EnumSet.noneOf(YarnApplicationState.class);
-      if (cliParser.hasOption(APP_STATE_CMD)) {
-        String[] states = cliParser.getOptionValues(APP_STATE_CMD);
-        if (states != null) {
-          for (String state : states) {
-            if (!state.trim().isEmpty()) {
-              if (state.trim().equalsIgnoreCase(ALLSTATES_OPTION)) {
-                allAppStates = true;
-                break;
-              }
-              try {
-                appStates.add(YarnApplicationState.valueOf(state.toUpperCase()
-                    .trim()));
-              } catch (IllegalArgumentException ex) {
-                sysout.println("The application state " + state
-                    + " is invalid.");
-                sysout.println(getAllValidApplicationStates());
-                return exitCode;
+        EnumSet<YarnApplicationState> appStates = EnumSet
+            .noneOf(YarnApplicationState.class);
+        if (cliParser.hasOption(APP_STATE_CMD)) {
+          String[] states = cliParser.getOptionValues(APP_STATE_CMD);
+          if (states != null) {
+            for (String state : states) {
+              if (!state.trim().isEmpty()) {
+                if (state.trim().equalsIgnoreCase(ALLSTATES_OPTION)) {
+                  allAppStates = true;
+                  break;
+                }
+                try {
+                  appStates.add(YarnApplicationState.valueOf(state
+                      .toUpperCase().trim()));
+                } catch (IllegalArgumentException ex) {
+                  sysout.println("The application state " + state
+                      + " is invalid.");
+                  sysout.println(getAllValidApplicationStates());
+                  return exitCode;
+                }
               }
             }
           }
         }
+        listApplications(appTypes, appStates);
       }
-      listApplications(appTypes, appStates);
     } else if (cliParser.hasOption(KILL_CMD)) {
       if (args.length != 2) {
         printUsage(opts);
@@ -175,8 +223,85 @@ public class ApplicationCLI extends YarnCLI {
   }
 
   /**
-   * Lists the applications matching the given application Types
-   * And application States present in the Resource Manager
+   * Prints the application attempt report for an application attempt id.
+   * 
+   * @param applicationAttemptId
+   * @throws YarnException
+   */
+  private void printApplicationAttemptReport(String applicationAttemptId)
+      throws YarnException, IOException {
+    ApplicationAttemptReport appAttemptReport = client
+        .getApplicationAttemptReport(ConverterUtils
+            .toApplicationAttemptId(applicationAttemptId));
+    // Use PrintWriter.println, which uses correct platform line ending.
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    PrintWriter appAttemptReportStr = new PrintWriter(baos);
+    if (appAttemptReport != null) {
+      appAttemptReportStr.println("Application Attempt Report : ");
+      appAttemptReportStr.print("\tApplicationAttempt-Id : ");
+      appAttemptReportStr.println(appAttemptReport.getApplicationAttemptId());
+      appAttemptReportStr.print("\tState : ");
+      appAttemptReportStr.println(appAttemptReport
+          .getYarnApplicationAttemptState());
+      appAttemptReportStr.print("\tAMContainer : ");
+      appAttemptReportStr.println(appAttemptReport.getAMContainerId()
+          .toString());
+      appAttemptReportStr.print("\tTracking-URL : ");
+      appAttemptReportStr.println(appAttemptReport.getTrackingUrl());
+      appAttemptReportStr.print("\tRPC Port : ");
+      appAttemptReportStr.println(appAttemptReport.getRpcPort());
+      appAttemptReportStr.print("\tAM Host : ");
+      appAttemptReportStr.println(appAttemptReport.getHost());
+      appAttemptReportStr.print("\tDiagnostics : ");
+      appAttemptReportStr.print(appAttemptReport.getDiagnostics());
+    } else {
+      appAttemptReportStr.print("Application Attempt with id '"
+          + applicationAttemptId + "' doesn't exist in History Server.");
+    }
+    appAttemptReportStr.close();
+    sysout.println(baos.toString("UTF-8"));
+  }
+
+  /**
+   * Prints the container report for an container id.
+   * 
+   * @param containerId
+   * @throws YarnException
+   */
+  private void printContainerReport(String containerId) throws YarnException,
+      IOException {
+    ContainerReport containerReport = client.getContainerReport((ConverterUtils
+        .toContainerId(containerId)));
+    // Use PrintWriter.println, which uses correct platform line ending.
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    PrintWriter containerReportStr = new PrintWriter(baos);
+    if (containerReport != null) {
+      containerReportStr.println("Container Report : ");
+      containerReportStr.print("\tContainer-Id : ");
+      containerReportStr.println(containerReport.getContainerId());
+      containerReportStr.print("\tStart-Time : ");
+      containerReportStr.println(containerReport.getStartTime());
+      containerReportStr.print("\tFinish-Time : ");
+      containerReportStr.println(containerReport.getFinishTime());
+      containerReportStr.print("\tState : ");
+      containerReportStr.println(containerReport.getContainerState());
+      containerReportStr.print("\tLOG-URL : ");
+      containerReportStr.println(containerReport.getLogUrl());
+      containerReportStr.print("\tHost : ");
+      containerReportStr.println(containerReport.getAssignedNode());
+      containerReportStr.print("\tDiagnostics : ");
+      containerReportStr.print(containerReport.getDiagnosticsInfo());
+    } else {
+      containerReportStr.print("Container with id '" + containerId
+          + "' doesn't exist in Hostory Server.");
+    }
+    containerReportStr.close();
+    sysout.println(baos.toString("UTF-8"));
+  }
+
+  /**
+   * Lists the applications matching the given application Types And application
+   * States present in the Resource Manager
    * 
    * @param appTypes
    * @param appStates
@@ -188,7 +313,7 @@ public class ApplicationCLI extends YarnCLI {
       IOException {
     PrintWriter writer = new PrintWriter(sysout);
     if (allAppStates) {
-      for(YarnApplicationState appState : YarnApplicationState.values()) {
+      for (YarnApplicationState appState : YarnApplicationState.values()) {
         appStates.add(appState);
       }
     } else {
@@ -199,23 +324,24 @@ public class ApplicationCLI extends YarnCLI {
       }
     }
 
-    List<ApplicationReport> appsReport =
-        client.getApplications(appTypes, appStates);
+    List<ApplicationReport> appsReport = client.getApplications(appTypes,
+        appStates);
 
-    writer
-        .println("Total number of applications (application-types: " + appTypes
-            + " and states: " + appStates + ")" + ":" + appsReport.size());
-    writer.printf(APPLICATIONS_PATTERN, "Application-Id",
-        "Application-Name","Application-Type", "User", "Queue", 
-        "State", "Final-State","Progress", "Tracking-URL");
+    writer.println("Total number of applications (application-types: "
+        + appTypes + " and states: " + appStates + ")" + ":"
+        + appsReport.size());
+    writer.printf(APPLICATIONS_PATTERN, "Application-Id", "Application-Name",
+        "Application-Type", "User", "Queue", "State", "Final-State",
+        "Progress", "Tracking-URL");
     for (ApplicationReport appReport : appsReport) {
       DecimalFormat formatter = new DecimalFormat("###.##%");
       String progress = formatter.format(appReport.getProgress());
       writer.printf(APPLICATIONS_PATTERN, appReport.getApplicationId(),
-          appReport.getName(),appReport.getApplicationType(), appReport.getUser(),
-          appReport.getQueue(),appReport.getYarnApplicationState(),
-          appReport.getFinalApplicationStatus(),progress,
-          appReport.getOriginalTrackingUrl());
+          appReport.getName(), appReport.getApplicationType(), appReport
+              .getUser(), appReport.getQueue(), appReport
+              .getYarnApplicationState(),
+          appReport.getFinalApplicationStatus(), progress, appReport
+              .getOriginalTrackingUrl());
     }
     writer.flush();
   }
@@ -227,8 +353,8 @@ public class ApplicationCLI extends YarnCLI {
    * @throws YarnException
    * @throws IOException
    */
-  private void killApplication(String applicationId)
-      throws YarnException, IOException {
+  private void killApplication(String applicationId) throws YarnException,
+      IOException {
     ApplicationId appId = ConverterUtils.toApplicationId(applicationId);
     ApplicationReport appReport = client.getApplicationReport(appId);
     if (appReport.getYarnApplicationState() == YarnApplicationState.FINISHED
@@ -296,14 +422,63 @@ public class ApplicationCLI extends YarnCLI {
 
   private String getAllValidApplicationStates() {
     StringBuilder sb = new StringBuilder();
-    sb.append("The valid application state can be"
-        + " one of the following: ");
+    sb.append("The valid application state can be" + " one of the following: ");
     sb.append(ALLSTATES_OPTION + ",");
-    for (YarnApplicationState appState : YarnApplicationState
-        .values()) {
-      sb.append(appState+",");
+    for (YarnApplicationState appState : YarnApplicationState.values()) {
+      sb.append(appState + ",");
     }
     String output = sb.toString();
-    return output.substring(0, output.length()-1);
+    return output.substring(0, output.length() - 1);
+  }
+
+  /**
+   * Lists the application attempts matching the given applicationid
+   * 
+   * @param applicationId
+   * @throws YarnException
+   * @throws IOException
+   */
+  private void listApplicationAttempts(String appId) throws YarnException,
+      IOException {
+    PrintWriter writer = new PrintWriter(sysout);
+
+    List<ApplicationAttemptReport> appAttemptsReport = client
+        .getApplicationAttempts(ConverterUtils.toApplicationId(appId));
+    writer.println("Total number of application attempts " + ":"
+        + appAttemptsReport.size());
+    writer.printf(APPLICATION_ATTEMPTS_PATTERN, "ApplicationAttempt-Id",
+        "State", "AM-Container-Id", "Tracking-URL");
+    for (ApplicationAttemptReport appAttemptReport : appAttemptsReport) {
+      writer.printf(APPLICATION_ATTEMPTS_PATTERN, appAttemptReport
+          .getApplicationAttemptId(), appAttemptReport
+          .getYarnApplicationAttemptState(), appAttemptReport
+          .getAMContainerId().toString(), appAttemptReport.getTrackingUrl());
+    }
+    writer.flush();
+  }
+
+  /**
+   * Lists the containers matching the given application attempts
+   * 
+   * @param appAttemptId
+   * @throws YarnException
+   * @throws IOException
+   */
+  private void listContainers(String appAttemptId) throws YarnException,
+      IOException {
+    PrintWriter writer = new PrintWriter(sysout);
+
+    List<ContainerReport> appsReport = client
+        .getContainers(ConverterUtils.toApplicationAttemptId(appAttemptId));
+    writer.println("Total number of containers " + ":" + appsReport.size());
+    writer.printf(CONTAINER_PATTERN, "Container-Id", "Start Time",
+        "Finish Time", "State", "Host", "LOG-URL");
+    for (ContainerReport containerReport : appsReport) {
+      writer.printf(CONTAINER_PATTERN, containerReport.getContainerId(),
+          containerReport.getStartTime(), containerReport.getFinishTime(),
+          containerReport.getContainerState(), containerReport
+              .getAssignedNode(), containerReport.getLogUrl());
+    }
+    writer.flush();
   }
 }

@@ -121,9 +121,8 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
     
     // Create RMContainer
     RMContainer rmContainer = new RMContainerImpl(container, this
-        .getApplicationAttemptId(), node.getNodeID(), this.rmContext
-        .getDispatcher().getEventHandler(), this.rmContext
-        .getContainerAllocationExpirer());
+        .getApplicationAttemptId(), node.getNodeID(),
+        appSchedulingInfo.getUser(), this.rmContext);
 
     // Add it to allContainers list.
     newlyAllocatedContainers.add(rmContainer);

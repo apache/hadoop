@@ -28,10 +28,13 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerState;
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerAcquiredEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerAllocatedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerFinishedEvent;
@@ -40,6 +43,7 @@ import org.apache.hadoop.yarn.state.InvalidStateTransitonException;
 import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
+import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 @SuppressWarnings({"unchecked", "rawtypes"})
 public class RMContainerImpl implements RMContainer {
@@ -133,28 +137,39 @@ public class RMContainerImpl implements RMContainer {
   private final ApplicationAttemptId appAttemptId;
   private final NodeId nodeId;
   private final Container container;
+  private final RMContext rmContext;
   private final EventHandler eventHandler;
   private final ContainerAllocationExpirer containerAllocationExpirer;
+  private final String user;
 
   private Resource reservedResource;
   private NodeId reservedNode;
   private Priority reservedPriority;
+  private long startTime;
+  private long finishTime;
+  private String logURL;
+  private ContainerStatus finishedStatus;
+
 
   public RMContainerImpl(Container container,
       ApplicationAttemptId appAttemptId, NodeId nodeId,
-      EventHandler handler,
-      ContainerAllocationExpirer containerAllocationExpirer) {
+      String user, RMContext rmContext) {
     this.stateMachine = stateMachineFactory.make(this);
     this.containerId = container.getId();
     this.nodeId = nodeId;
     this.container = container;
     this.appAttemptId = appAttemptId;
-    this.eventHandler = handler;
-    this.containerAllocationExpirer = containerAllocationExpirer;
+    this.user = user;
+    this.startTime = System.currentTimeMillis();
+    this.rmContext = rmContext;
+    this.eventHandler = rmContext.getDispatcher().getEventHandler();
+    this.containerAllocationExpirer = rmContext.getContainerAllocationExpirer();
     
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     this.readLock = lock.readLock();
     this.writeLock = lock.writeLock();
+
+    rmContext.getRMApplicationHistoryWriter().containerStarted(this);
   }
 
   @Override
@@ -197,7 +212,77 @@ public class RMContainerImpl implements RMContainer {
   public Priority getReservedPriority() {
     return reservedPriority;
   }
-  
+
+  @Override
+  public Resource getAllocatedResource() {
+    return container.getResource();
+  }
+
+  @Override
+  public NodeId getAllocatedNode() {
+    return container.getNodeId();
+  }
+
+  @Override
+  public Priority getAllocatedPriority() {
+    return container.getPriority();
+  }
+
+  @Override
+  public long getStartTime() {
+    return startTime;
+  }
+
+  @Override
+  public long getFinishTime() {
+    try {
+      readLock.lock();
+      return finishTime;
+    } finally {
+      readLock.unlock();
+    }
+  }
+
+  @Override
+  public String getDiagnosticsInfo() {
+    try {
+      readLock.lock();
+      return finishedStatus.getDiagnostics();
+    } finally {
+      readLock.unlock();
+    }
+  }
+
+  @Override
+  public String getLogURL() {
+    try {
+      readLock.lock();
+      return logURL;
+    } finally {
+      readLock.unlock();
+    }
+  }
+
+  @Override
+  public int getContainerExitStatus() {
+    try {
+      readLock.lock();
+      return finishedStatus.getExitStatus();
+    } finally {
+      readLock.unlock();
+    }
+  }
+
+  @Override
+  public ContainerState getContainerState() {
+    try {
+      readLock.lock();
+      return finishedStatus.getState();
+    } finally {
+      readLock.unlock();
+    }
+  }
+
   @Override
   public String toString() {
     return containerId.toString();
@@ -276,6 +361,11 @@ public class RMContainerImpl implements RMContainer {
 
     @Override
     public void transition(RMContainerImpl container, RMContainerEvent event) {
+      // The logs of running containers should be found on NM webUI
+      // The logs should be accessible after the container is launched
+      container.logURL = WebAppUtils.getLogUrl(container.container
+          .getNodeHttpAddress(), container.getAllocatedNode().toString(),
+          container.containerId, container.user);
       // Unregister from containerAllocationExpirer.
       container.containerAllocationExpirer.unregister(container
           .getContainerId());
@@ -288,9 +378,17 @@ public class RMContainerImpl implements RMContainer {
     public void transition(RMContainerImpl container, RMContainerEvent event) {
       RMContainerFinishedEvent finishedEvent = (RMContainerFinishedEvent) event;
 
+      container.finishTime = System.currentTimeMillis();
+      container.finishedStatus = finishedEvent.getRemoteContainerStatus();
+      // TODO: when AHS webUI is ready, logURL should be updated to point to
+      // the web page that will show the aggregated logs
+
       // Inform AppAttempt
       container.eventHandler.handle(new RMAppAttemptContainerFinishedEvent(
           container.appAttemptId, finishedEvent.getRemoteContainerStatus()));
+
+      container.rmContext.getRMApplicationHistoryWriter()
+          .containerFinished(container);
     }
   }
 

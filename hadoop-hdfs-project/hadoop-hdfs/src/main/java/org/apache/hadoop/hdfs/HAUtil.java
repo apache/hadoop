@@ -26,22 +26,29 @@ import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.UnresolvedLinkException;
+import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSelector;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.ipc.StandbyException;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
@@ -304,5 +311,56 @@ public class HAUtil {
     DistributedFileSystem dfs = (DistributedFileSystem) fs;
     DFSClient dfsClient = dfs.getClient();
     return RPC.getServerAddress(dfsClient.getNamenode());
+  }
+  
+  /**
+   * Get an RPC proxy for each NN in an HA nameservice. Used when a given RPC
+   * call should be made on every NN in an HA nameservice, not just the active.
+   * 
+   * @param conf configuration
+   * @param nsId the nameservice to get all of the proxies for.
+   * @return a list of RPC proxies for each NN in the nameservice.
+   * @throws IOException in the event of error.
+   */
+  public static List<ClientProtocol> getProxiesForAllNameNodesInNameservice(
+      Configuration conf, String nsId) throws IOException {
+    Map<String, InetSocketAddress> nnAddresses =
+        DFSUtil.getRpcAddressesForNameserviceId(conf, nsId, null);
+    
+    List<ClientProtocol> namenodes = new ArrayList<ClientProtocol>();
+    for (InetSocketAddress nnAddress : nnAddresses.values()) {
+      NameNodeProxies.ProxyAndInfo<ClientProtocol> proxyInfo = null;
+      proxyInfo = NameNodeProxies.createNonHAProxy(conf,
+          nnAddress, ClientProtocol.class,
+          UserGroupInformation.getCurrentUser(), false);
+      namenodes.add(proxyInfo.getProxy());
+    }
+    return namenodes;
+  }
+  
+  /**
+   * Used to ensure that at least one of the given HA NNs is currently in the
+   * active state..
+   * 
+   * @param namenodes list of RPC proxies for each NN to check.
+   * @return true if at least one NN is active, false if all are in the standby state.
+   * @throws IOException in the event of error.
+   */
+  public static boolean isAtLeastOneActive(List<ClientProtocol> namenodes)
+      throws IOException {
+    for (ClientProtocol namenode : namenodes) {
+      try {
+        namenode.getFileInfo("/");
+        return true;
+      } catch (RemoteException re) {
+        IOException cause = re.unwrapRemoteException();
+        if (cause instanceof StandbyException) {
+          // This is expected to happen for a standby NN.
+        } else {
+          throw re;
+        }
+      }
+    }
+    return false;
   }
 }

@@ -17,22 +17,26 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
-import java.util.Random;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
+
 
 import org.apache.hadoop.fs.FileStatus;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
+
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.util.ToolRunner;
 
 public class TestSnapshotFileLength {
 
@@ -111,5 +115,62 @@ public class TestSnapshotFileLength {
     bytesRead = fis.read(0, buffer, 0, buffer.length);
     assertThat(bytesRead, is(BLOCKSIZE));
     fis.close();
+  }
+
+  /**
+   * Adding as part of jira HDFS-5343
+   * Test for checking the cat command on snapshot path it
+   *  cannot read a file beyond snapshot file length
+   * @throws Exception
+   */
+  @Test (timeout = 600000)
+  public void testSnapshotFileLengthWithCatCommand() throws Exception {
+
+    FSDataInputStream fis = null;
+    FileStatus fileStatus = null;
+
+    int bytesRead;
+    byte[] buffer = new byte[BLOCKSIZE * 8];
+
+    hdfs.mkdirs(sub);
+    Path file1 = new Path(sub, file1Name);
+    DFSTestUtil.createFile(hdfs, file1, BLOCKSIZE, REPLICATION, SEED);
+
+    hdfs.allowSnapshot(sub);
+    hdfs.createSnapshot(sub, snapshot1);
+
+    DFSTestUtil.appendFile(hdfs, file1, BLOCKSIZE);
+
+    // Make sure we can read the entire file via its non-snapshot path.
+    fileStatus = hdfs.getFileStatus(file1);
+    assertEquals(fileStatus.getLen(), BLOCKSIZE * 2);
+    fis = hdfs.open(file1);
+    bytesRead = fis.read(buffer, 0, buffer.length);
+    assertEquals(bytesRead, BLOCKSIZE * 2);
+    fis.close();
+
+    Path file1snap1 =
+        SnapshotTestHelper.getSnapshotPath(sub, snapshot1, file1Name);
+    fis = hdfs.open(file1snap1);
+    fileStatus = hdfs.getFileStatus(file1snap1);
+    assertEquals(fileStatus.getLen(), BLOCKSIZE);
+    // Make sure we can only read up to the snapshot length.
+    bytesRead = fis.read(buffer, 0, buffer.length);
+    assertEquals(bytesRead, BLOCKSIZE);
+    fis.close();
+
+    PrintStream psBackup = System.out;
+    ByteArrayOutputStream bao = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(bao));
+    System.setErr(new PrintStream(bao));
+    // Make sure we can cat the file upto to snapshot length
+    FsShell shell = new FsShell();
+    try{
+      ToolRunner.run(conf, shell, new String[] { "-cat",
+      "/TestSnapshotFileLength/sub1/.snapshot/snapshot1/file1" });
+      assertEquals(bao.size(), BLOCKSIZE);
+    }finally{
+      System.setOut(psBackup);
+    }
   }
 }

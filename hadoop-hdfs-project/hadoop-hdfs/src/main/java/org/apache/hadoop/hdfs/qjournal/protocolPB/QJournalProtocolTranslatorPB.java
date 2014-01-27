@@ -23,13 +23,23 @@ import java.net.URL;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hdfs.protocolPB.JournalProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocol;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos;
+import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.AcceptRecoveryRequestProto;
+import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.CanRollBackRequestProto;
+import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.CanRollBackResponseProto;
+import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.DoFinalizeRequestProto;
+import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.DoPreUpgradeRequestProto;
+import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.DoRollbackRequestProto;
+import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.DoUpgradeRequestProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.FinalizeLogSegmentRequestProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.FormatRequestProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetEditLogManifestRequestProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetEditLogManifestResponseProto;
+import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetJournalCTimeRequestProto;
+import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetJournalCTimeResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetJournalStateRequestProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetJournalStateResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.HeartbeatRequestProto;
@@ -39,7 +49,6 @@ import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.JournalId
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.JournalRequestProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.NewEpochRequestProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.NewEpochResponseProto;
-import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.AcceptRecoveryRequestProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.PrepareRecoveryRequestProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.PrepareRecoveryResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.PurgeLogsRequestProto;
@@ -47,6 +56,7 @@ import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.RequestIn
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.SegmentStateProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.StartLogSegmentRequestProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.RequestInfo;
+import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.protocol.JournalProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.ipc.ProtobufHelper;
@@ -275,6 +285,87 @@ public class QJournalProtocolTranslatorPB implements ProtocolMetaInterface,
     return RpcClientUtil.isMethodSupported(rpcProxy,
         QJournalProtocolPB.class, RPC.RpcKind.RPC_PROTOCOL_BUFFER,
         RPC.getProtocolVersion(QJournalProtocolPB.class), methodName);
+  }
+
+  @Override
+  public void doPreUpgrade(String jid) throws IOException {
+    try {
+      rpcProxy.doPreUpgrade(NULL_CONTROLLER,
+          DoPreUpgradeRequestProto.newBuilder()
+            .setJid(convertJournalId(jid))
+            .build());
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+
+  @Override
+  public void doUpgrade(String journalId, StorageInfo sInfo) throws IOException {
+    try {
+      rpcProxy.doUpgrade(NULL_CONTROLLER,
+          DoUpgradeRequestProto.newBuilder()
+            .setJid(convertJournalId(journalId))
+            .setSInfo(PBHelper.convert(sInfo))
+            .build());
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+  
+  @Override
+  public void doFinalize(String jid) throws IOException {
+    try {
+      rpcProxy.doFinalize(NULL_CONTROLLER,
+          DoFinalizeRequestProto.newBuilder()
+            .setJid(convertJournalId(jid))
+            .build());
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+
+  @Override
+  public Boolean canRollBack(String journalId, StorageInfo storage,
+      StorageInfo prevStorage, int targetLayoutVersion) throws IOException {
+    try {
+      CanRollBackResponseProto response = rpcProxy.canRollBack(
+          NULL_CONTROLLER,
+          CanRollBackRequestProto.newBuilder()
+            .setJid(convertJournalId(journalId))
+            .setStorage(PBHelper.convert(storage))
+            .setPrevStorage(PBHelper.convert(prevStorage))
+            .setTargetLayoutVersion(targetLayoutVersion)
+            .build());
+      return response.getCanRollBack();
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+
+  @Override
+  public void doRollback(String journalId) throws IOException {
+    try {
+      rpcProxy.doRollback(NULL_CONTROLLER,
+          DoRollbackRequestProto.newBuilder()
+            .setJid(convertJournalId(journalId))
+            .build());
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+
+  @Override
+  public Long getJournalCTime(String journalId) throws IOException {
+    try {
+      GetJournalCTimeResponseProto response = rpcProxy.getJournalCTime(
+          NULL_CONTROLLER,
+          GetJournalCTimeRequestProto.newBuilder()
+            .setJid(convertJournalId(journalId))
+            .build());
+      return response.getResultCTime();
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
   }
 
 }

@@ -103,7 +103,7 @@ public class BlockPoolSliceStorage extends Storage {
         dataDirs.size());
     for (Iterator<File> it = dataDirs.iterator(); it.hasNext();) {
       File dataDir = it.next();
-      StorageDirectory sd = new StorageDirectory(dataDir, null, false);
+      StorageDirectory sd = new StorageDirectory(dataDir, null, true);
       StorageState curState;
       try {
         curState = sd.analyzeStorage(startOpt, this);

@@ -110,23 +110,29 @@ class Jets3tNativeFileSystemStore implements NativeFileSystemStore {
       handleS3ServiceException(e);
     }
   }
-  
+
   @Override
   public FileMetadata retrieveMetadata(String key) throws IOException {
+    StorageObject object = null;
     try {
       if(LOG.isDebugEnabled()) {
         LOG.debug("Getting metadata for key: " + key + " from bucket:" + bucket.getName());
       }
-      S3Object object = s3Service.getObject(bucket.getName(), key);
+      object = s3Service.getObjectDetails(bucket.getName(), key);
       return new FileMetadata(key, object.getContentLength(),
           object.getLastModifiedDate().getTime());
-    } catch (S3ServiceException e) {
+
+    } catch (ServiceException e) {
       // Following is brittle. Is there a better way?
-      if (e.getS3ErrorCode().matches("NoSuchKey")) {
+      if ("NoSuchKey".equals(e.getErrorCode())) {
         return null; //return null if key not found
       }
-      handleS3ServiceException(e);
+      handleServiceException(e);
       return null; //never returned - keep compiler happy
+    } finally {
+      if (object != null) {
+        object.closeDataInputStream();
+      }
     }
   }
 

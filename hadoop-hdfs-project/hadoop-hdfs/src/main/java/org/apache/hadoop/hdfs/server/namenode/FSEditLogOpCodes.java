@@ -68,7 +68,7 @@ public enum FSEditLogOpCodes {
   OP_REMOVE_CACHE_POOL                    ((byte) 38),
   OP_MODIFY_CACHE_DIRECTIVE     ((byte) 39),
 
-  // Note that fromByte(..) depends on OP_INVALID being at the last position.  
+  // Note that the current range of the valid OP code is 0~127
   OP_INVALID                    ((byte) -1);
 
   private final byte opCode;
@@ -91,7 +91,22 @@ public enum FSEditLogOpCodes {
     return opCode;
   }
 
-  private static final FSEditLogOpCodes[] VALUES = FSEditLogOpCodes.values();
+  private static FSEditLogOpCodes[] VALUES;
+  
+  static {
+    byte max = 0;
+    for (FSEditLogOpCodes code : FSEditLogOpCodes.values()) {
+      if (code.getOpCode() > max) {
+        max = code.getOpCode();
+      }
+    }
+    VALUES = new FSEditLogOpCodes[max + 1];
+    for (FSEditLogOpCodes code : FSEditLogOpCodes.values()) {
+      if (code.getOpCode() >= 0) {
+        VALUES[code.getOpCode()] = code;
+      }
+    }
+  }
 
   /**
    * Converts byte to FSEditLogOpCodes enum value
@@ -100,12 +115,9 @@ public enum FSEditLogOpCodes {
    * @return enum with byte value of opCode
    */
   public static FSEditLogOpCodes fromByte(byte opCode) {
-    if (opCode == -1) {
-      return OP_INVALID;
-    }
-    if (opCode >= 0 && opCode < OP_INVALID.ordinal()) {
+    if (opCode >= 0 && opCode < VALUES.length) {
       return VALUES[opCode];
     }
-    return null;
+    return opCode == -1 ? OP_INVALID : null;
   }
 }

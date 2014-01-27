@@ -22,7 +22,9 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.FormatConfirmable;
+import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 
 /**
@@ -64,6 +66,54 @@ public interface JournalManager extends Closeable, FormatConfirmable,
    * Recover segments which have not been finalized.
    */
   void recoverUnfinalizedSegments() throws IOException;
+  
+  /**
+   * Perform any steps that must succeed across all JournalManagers involved in
+   * an upgrade before proceeding onto the actual upgrade stage. If a call to
+   * any JM's doPreUpgrade method fails, then doUpgrade will not be called for
+   * any JM.
+   */
+  void doPreUpgrade() throws IOException;
+  
+  /**
+   * Perform the actual upgrade of the JM. After this is completed, the NN can
+   * begin to use the new upgraded metadata. This metadata may later be either
+   * finalized or rolled back to the previous state.
+   * 
+   * @param storage info about the new upgraded versions.
+   */
+  void doUpgrade(Storage storage) throws IOException;
+  
+  /**
+   * Finalize the upgrade. JMs should purge any state that they had been keeping
+   * around during the upgrade process. After this is completed, rollback is no
+   * longer allowed.
+   */
+  void doFinalize() throws IOException;
+  
+  /**
+   * Return true if this JM can roll back to the previous storage state, false
+   * otherwise. The NN will refuse to run the rollback operation unless at least
+   * one JM or fsimage storage directory can roll back.
+   * 
+   * @param storage the storage info for the current state
+   * @param prevStorage the storage info for the previous (unupgraded) state
+   * @param targetLayoutVersion the layout version we intend to roll back to
+   * @return true if this JM can roll back, false otherwise.
+   */
+  boolean canRollBack(StorageInfo storage, StorageInfo prevStorage,
+      int targetLayoutVersion) throws IOException;
+  
+  /**
+   * Perform the rollback to the previous FS state. JMs which do not need to
+   * roll back their state should just return without error.
+   */
+  void doRollback() throws IOException;
+  
+  /**
+   * @return the CTime of the journal manager.
+   */
+  long getJournalCTime() throws IOException;
 
   /**
    * Close the journal manager, freeing any resources it may hold.
@@ -84,4 +134,5 @@ public interface JournalManager extends Closeable, FormatConfirmable,
       super(reason);
     }
   }
+
 }

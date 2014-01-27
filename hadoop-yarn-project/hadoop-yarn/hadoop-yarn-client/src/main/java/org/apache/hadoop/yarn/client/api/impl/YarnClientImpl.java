@@ -49,9 +49,13 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
@@ -60,9 +64,11 @@ import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.client.ClientRMProxy;
+import org.apache.hadoop.yarn.client.api.AHSClient;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.client.api.YarnClientApplication;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
@@ -80,6 +86,8 @@ public class YarnClientImpl extends YarnClient {
   protected ApplicationClientProtocol rmClient;
   protected long submitPollIntervalMillis;
   private long asyncApiPollIntervalMillis;
+  protected AHSClient historyClient;
+  private boolean historyServiceEnabled;
 
   private static final String ROOT = "root";
 
@@ -100,6 +108,14 @@ public class YarnClientImpl extends YarnClient {
         YarnConfiguration.YARN_CLIENT_APP_SUBMISSION_POLL_INTERVAL_MS,
         YarnConfiguration.DEFAULT_YARN_CLIENT_APPLICATION_CLIENT_PROTOCOL_POLL_INTERVAL_MS);
     }
+
+    if (conf.getBoolean(YarnConfiguration.YARN_HISTORY_SERVICE_ENABLED,
+      YarnConfiguration.DEFAULT_YARN_HISTORY_SERVICE_ENABLED)) {
+      historyServiceEnabled = true;
+      historyClient = AHSClientImpl.createAHSClient();
+      historyClient.init(getConfig());
+    }
+
     super.serviceInit(conf);
   }
 
@@ -107,7 +123,10 @@ public class YarnClientImpl extends YarnClient {
   protected void serviceStart() throws Exception {
     try {
       rmClient = ClientRMProxy.createRMProxy(getConfig(),
-            ApplicationClientProtocol.class);
+          ApplicationClientProtocol.class);
+      if (historyServiceEnabled) {
+        historyClient.start();
+      }
     } catch (IOException e) {
       throw new YarnRuntimeException(e);
     }
@@ -118,6 +137,9 @@ public class YarnClientImpl extends YarnClient {
   protected void serviceStop() throws Exception {
     if (this.rmClient != null) {
       RPC.stopProxy(this.rmClient);
+    }
+    if (historyServiceEnabled) {
+      historyClient.stop();
     }
     super.serviceStop();
   }
@@ -207,11 +229,27 @@ public class YarnClientImpl extends YarnClient {
   @Override
   public ApplicationReport getApplicationReport(ApplicationId appId)
       throws YarnException, IOException {
-    GetApplicationReportRequest request =
-        Records.newRecord(GetApplicationReportRequest.class);
-    request.setApplicationId(appId);
-    GetApplicationReportResponse response =
-        rmClient.getApplicationReport(request);
+    GetApplicationReportResponse response = null;
+    try {
+      GetApplicationReportRequest request = Records
+          .newRecord(GetApplicationReportRequest.class);
+      request.setApplicationId(appId);
+      response = rmClient.getApplicationReport(request);
+    } catch (YarnException e) {
+
+      if (!historyServiceEnabled) {
+        // Just throw it as usual if historyService is not enabled.
+        throw e;
+      }
+
+      // Even if history-service is enabled, treat all exceptions still the same
+      // except the following
+      if (!(e.getClass() == ApplicationNotFoundException.class)) {
+        throw e;
+      }
+
+      return historyClient.getApplicationReport(appId);
+    }
     return response.getApplicationReport();
   }
 
@@ -372,5 +410,42 @@ public class YarnClientImpl extends YarnClient {
   @VisibleForTesting
   public void setRMClient(ApplicationClientProtocol rmClient) {
     this.rmClient = rmClient;
+  }
+
+  @Override
+  public ApplicationAttemptReport getApplicationAttemptReport(
+      ApplicationAttemptId appAttemptId) throws YarnException, IOException {
+    if (historyServiceEnabled) {
+      return historyClient.getApplicationAttemptReport(appAttemptId);
+    }
+    throw new YarnException("History service is not enabled.");
+  }
+
+  @Override
+  public List<ApplicationAttemptReport> getApplicationAttempts(
+      ApplicationId appId) throws YarnException, IOException {
+    if (historyServiceEnabled) {
+      return historyClient.getApplicationAttempts(appId);
+    }
+    throw new YarnException("History service is not enabled.");
+  }
+
+  @Override
+  public ContainerReport getContainerReport(ContainerId containerId)
+      throws YarnException, IOException {
+    if (historyServiceEnabled) {
+      return historyClient.getContainerReport(containerId);
+    }
+    throw new YarnException("History service is not enabled.");
+  }
+
+  @Override
+  public List<ContainerReport> getContainers(
+      ApplicationAttemptId applicationAttemptId) throws YarnException,
+      IOException {
+    if (historyServiceEnabled) {
+      return historyClient.getContainers(applicationAttemptId);
+    }
+    throw new YarnException("History service is not enabled.");
   }
 }

@@ -18,6 +18,8 @@
 package org.apache.hadoop.contrib.bkjournal;
 
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.server.common.Storage;
+import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.namenode.JournalManager;
 import org.apache.hadoop.hdfs.server.namenode.EditLogOutputStream;
 import org.apache.hadoop.hdfs.server.namenode.EditLogInputStream;
@@ -657,6 +659,37 @@ public class BookKeeperJournalManager implements JournalManager {
         }
       }
     }
+  }
+
+  @Override
+  public void doPreUpgrade() throws IOException {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void doUpgrade(Storage storage) throws IOException {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public long getJournalCTime() throws IOException {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void doFinalize() throws IOException {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public boolean canRollBack(StorageInfo storage, StorageInfo prevStorage,
+      int targetLayoutVersion) throws IOException {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void doRollback() throws IOException {
+    throw new UnsupportedOperationException();
   }
 
   @Override
