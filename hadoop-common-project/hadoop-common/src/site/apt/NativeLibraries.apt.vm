@@ -117,22 +117,18 @@ Native Libraries Guide
      * zlib-development package (stable version >= 1.2.0)
 
    Once you installed the prerequisite packages use the standard hadoop
-   build.xml file and pass along the compile.native flag (set to true) to
-   build the native hadoop library:
+   pom.xml file and pass along the native flag to build the native hadoop 
+   library:
 
 ----
-   $ ant -Dcompile.native=true <target>
+   $ mvn package -Pdist,native -Dskiptests -Dtar
 ----
 
    You should see the newly-built library in:
 
 ----
-   $ build/native/<platform>/lib
+   $ hadoop-dist/target/hadoop-${project.version}/lib/native
 ----
-
-   where <platform> is a combination of the system-properties:
-   ${os.name}-${os.arch}-${sun.arch.data.model} (for example,
-   Linux-i386-32).
 
    Please note the following:
 
