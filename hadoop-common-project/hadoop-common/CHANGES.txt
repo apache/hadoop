@@ -542,6 +542,9 @@ Release 2.4.0 - UNRELEASED
     HADOOP-10250. VersionUtil returns wrong value when comparing two versions.
     (Yongjun Zhang via atm)
 
+    HADOOP-10288. Explicit reference to Log4JLogger breaks non-log4j users
+    (todd)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
