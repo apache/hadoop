@@ -66,7 +66,7 @@ public class TestAclCommands {
     assertFalse("setfacl should fail with permissions for -x",
         0 == runCommand(new String[] { "-setfacl", "-x", "user:user1:rwx",
             "/path" }));
-    assertFalse("setfacl should fail with permissions for -x",
+    assertFalse("setfacl should fail ACL spec missing",
         0 == runCommand(new String[] { "-setfacl", "-m",
             "", "/path" }));
   }
@@ -74,7 +74,8 @@ public class TestAclCommands {
   @Test
   public void testMultipleAclSpecParsing() throws Exception {
     List<AclEntry> parsedList = AclEntry.parseAclSpec(
-        "group::rwx,user:user1:rwx,user:user2:rw-,group:group1:rw-,default:group:group1:rw-", true);
+        "group::rwx,user:user1:rwx,user:user2:rw-,"
+            + "group:group1:rw-,default:group:group1:rw-", true);
 
     AclEntry basicAcl = new AclEntry.Builder().setType(AclEntryType.GROUP)
         .setPermission(FsAction.ALL).build();
@@ -93,6 +94,37 @@ public class TestAclCommands {
     expectedList.add(user2Acl);
     expectedList.add(group1Acl);
     expectedList.add(defaultAcl);
+    assertEquals("Parsed Acl not correct", expectedList, parsedList);
+  }
+
+  @Test
+  public void testMultipleAclSpecParsingWithoutPermissions() throws Exception {
+    List<AclEntry> parsedList = AclEntry.parseAclSpec(
+        "user::,user:user1:,group::,group:group1:,mask::,other::,"
+            + "default:user:user1::,default:mask::", false);
+
+    AclEntry owner = new AclEntry.Builder().setType(AclEntryType.USER).build();
+    AclEntry namedUser = new AclEntry.Builder().setType(AclEntryType.USER)
+        .setName("user1").build();
+    AclEntry group = new AclEntry.Builder().setType(AclEntryType.GROUP).build();
+    AclEntry namedGroup = new AclEntry.Builder().setType(AclEntryType.GROUP)
+        .setName("group1").build();
+    AclEntry mask = new AclEntry.Builder().setType(AclEntryType.MASK).build();
+    AclEntry other = new AclEntry.Builder().setType(AclEntryType.OTHER).build();
+    AclEntry defaultUser = new AclEntry.Builder()
+        .setScope(AclEntryScope.DEFAULT).setType(AclEntryType.USER)
+        .setName("user1").build();
+    AclEntry defaultMask = new AclEntry.Builder()
+        .setScope(AclEntryScope.DEFAULT).setType(AclEntryType.MASK).build();
+    List<AclEntry> expectedList = new ArrayList<AclEntry>();
+    expectedList.add(owner);
+    expectedList.add(namedUser);
+    expectedList.add(group);
+    expectedList.add(namedGroup);
+    expectedList.add(mask);
+    expectedList.add(other);
+    expectedList.add(defaultUser);
+    expectedList.add(defaultMask);
     assertEquals("Parsed Acl not correct", expectedList, parsedList);
   }
 

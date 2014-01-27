@@ -58,3 +58,6 @@ HDFS-4685 (Unreleased)
     (Vinay via cnauroth)
 
     HDFS-5799. Make audit logging consistent across ACL APIs. (cnauroth)
+
+    HADOOP-10277. setfacl -x fails to parse ACL spec if trying to remove the
+    mask entry. (Vinay via cnauroth)

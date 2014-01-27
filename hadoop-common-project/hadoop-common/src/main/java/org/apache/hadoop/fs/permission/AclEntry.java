@@ -210,7 +210,7 @@ public class AclEntry {
    *          But for removeAcl operation it will be false. i.e. AclSpec should
    *          not contain permissions.<br>
    *          Example: "user:foo,group:bar"
-   * @return Returns list of AclEntries parsed
+   * @return Returns list of {@link AclEntry} parsed
    */
   public static List<AclEntry> parseAclSpec(String aclSpec,
       boolean includePermission) {
@@ -218,53 +218,84 @@ public class AclEntry {
     Collection<String> aclStrings = StringUtils.getStringCollection(aclSpec,
         ",");
     for (String aclStr : aclStrings) {
-      AclEntry.Builder builder = new AclEntry.Builder();
-      // Here "::" represent one empty string.
-      // StringUtils.getStringCollection() will ignore this.
-      String[] split = aclStr.split(":");
-      int expectedAclSpecLength = 2;
-      if (includePermission) {
-        expectedAclSpecLength = 3;
-      }
-      if (split.length != expectedAclSpecLength
-          && !(split.length == expectedAclSpecLength + 1 && "default"
-              .equals(split[0]))) {
-        throw new HadoopIllegalArgumentException("Invalid <aclSpec> : "
-            + aclStr);
-      }
-      int index = 0;
-      if (split.length == expectedAclSpecLength + 1) {
-        assert "default".equals(split[0]);
-        // default entry
-        index++;
-        builder.setScope(AclEntryScope.DEFAULT);
-      }
-      String type = split[index++];
-      AclEntryType aclType = null;
-      try {
-        aclType = Enum.valueOf(AclEntryType.class, type.toUpperCase());
-        builder.setType(aclType);
-      } catch (IllegalArgumentException iae) {
-        throw new HadoopIllegalArgumentException(
-            "Invalid type of acl in <aclSpec> :" + aclStr);
-      }
+      AclEntry aclEntry = parseAclEntry(aclStr, includePermission);
+      aclEntries.add(aclEntry);
+    }
+    return aclEntries;
+  }
 
-      String name = split[index++];
+  /**
+   * Parses a string representation of an ACL into a AclEntry object.<br>
+   * 
+   * @param aclStr
+   *          String representation of an ACL.<br>
+   *          Example: "user:foo:rw-"
+   * @param includePermission
+   *          for setAcl operations this will be true. i.e. Acl should include
+   *          permissions.<br>
+   *          But for removeAcl operation it will be false. i.e. Acl should not
+   *          contain permissions.<br>
+   *          Example: "user:foo,group:bar,mask::"
+   * @return Returns an {@link AclEntry} object
+   */
+  public static AclEntry parseAclEntry(String aclStr,
+      boolean includePermission) {
+    AclEntry.Builder builder = new AclEntry.Builder();
+    // Here "::" represent one empty string.
+    // StringUtils.getStringCollection() will ignore this.
+    String[] split = aclStr.split(":");
+
+    if (split.length == 0) {
+      throw new HadoopIllegalArgumentException("Invalid <aclSpec> : " + aclStr);
+    }
+    int index = 0;
+    if ("default".equals(split[0])) {
+      // default entry
+      index++;
+      builder.setScope(AclEntryScope.DEFAULT);
+    }
+
+    if (split.length <= index) {
+      throw new HadoopIllegalArgumentException("Invalid <aclSpec> : " + aclStr);
+    }
+
+    AclEntryType aclType = null;
+    try {
+      aclType = Enum.valueOf(AclEntryType.class, split[index].toUpperCase());
+      builder.setType(aclType);
+      index++;
+    } catch (IllegalArgumentException iae) {
+      throw new HadoopIllegalArgumentException(
+          "Invalid type of acl in <aclSpec> :" + aclStr);
+    }
+
+    if (split.length > index) {
+      String name = split[index];
       if (!name.isEmpty()) {
         builder.setName(name);
       }
-
-      if (expectedAclSpecLength == 3) {
-        String permission = split[index++];
-        FsAction fsAction = FsAction.getFsAction(permission);
-        if (null == fsAction) {
-          throw new HadoopIllegalArgumentException(
-              "Invalid permission in <aclSpec> : " + aclStr);
-        }
-        builder.setPermission(fsAction);
-      }
-      aclEntries.add(builder.build());
+      index++;
     }
-    return aclEntries;
+
+    if (includePermission) {
+      if (split.length < index) {
+        throw new HadoopIllegalArgumentException("Invalid <aclSpec> : "
+            + aclStr);
+      }
+      String permission = split[index];
+      FsAction fsAction = FsAction.getFsAction(permission);
+      if (null == fsAction) {
+        throw new HadoopIllegalArgumentException(
+            "Invalid permission in <aclSpec> : " + aclStr);
+      }
+      builder.setPermission(fsAction);
+      index++;
+    }
+
+    if (split.length > index) {
+      throw new HadoopIllegalArgumentException("Invalid <aclSpec> : " + aclStr);
+    }
+    AclEntry aclEntry = builder.build();
+    return aclEntry;
   }
 }
