@@ -47,12 +47,15 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppRejectedEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * This class manages the list of applications for the resource manager. 
@@ -62,8 +65,9 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
 
   private static final Log LOG = LogFactory.getLog(RMAppManager.class);
 
-  private int completedAppsMax = YarnConfiguration.DEFAULT_RM_MAX_COMPLETED_APPLICATIONS;
-  private int globalMaxAppAttempts;
+  private int maxCompletedAppsInMemory;
+  private int maxCompletedAppsInStateStore;
+  protected int completedAppsInStateStore = 0;
   private LinkedList<ApplicationId> completedApps = new LinkedList<ApplicationId>();
 
   private final RMContext rmContext;
@@ -80,11 +84,16 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     this.masterService = masterService;
     this.applicationACLsManager = applicationACLsManager;
     this.conf = conf;
-    setCompletedAppsMax(conf.getInt(
+    this.maxCompletedAppsInMemory = conf.getInt(
         YarnConfiguration.RM_MAX_COMPLETED_APPLICATIONS,
-        YarnConfiguration.DEFAULT_RM_MAX_COMPLETED_APPLICATIONS));
-    globalMaxAppAttempts = conf.getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
-        YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
+        YarnConfiguration.DEFAULT_RM_MAX_COMPLETED_APPLICATIONS);
+    this.maxCompletedAppsInStateStore =
+        conf.getInt(
+          YarnConfiguration.RM_STATE_STORE_MAX_COMPLETED_APPLICATIONS,
+          YarnConfiguration.DEFAULT_RM_STATE_STORE_MAX_COMPLETED_APPLICATIONS);
+    if (this.maxCompletedAppsInStateStore > this.maxCompletedAppsInMemory) {
+      this.maxCompletedAppsInStateStore = this.maxCompletedAppsInMemory;
+    }
   }
 
   /**
@@ -168,8 +177,9 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     }
   }
 
-  protected synchronized void setCompletedAppsMax(int max) {
-    this.completedAppsMax = max;
+  @VisibleForTesting
+  public void logApplicationSummary(ApplicationId appId) {
+    ApplicationSummary.logAppSummary(rmContext.getRMApps().get(appId));
   }
 
   protected synchronized int getCompletedAppsListSize() {
@@ -185,7 +195,8 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
         rmContext.getDelegationTokenRenewer().applicationFinished(applicationId);
       }
       
-      completedApps.add(applicationId);  
+      completedApps.add(applicationId);
+      completedAppsInStateStore++;
       writeAuditLog(applicationId);
     }
   }
@@ -224,10 +235,26 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
    * check to see if hit the limit for max # completed apps kept
    */
   protected synchronized void checkAppNumCompletedLimit() {
-    while (completedApps.size() > this.completedAppsMax) {
-      ApplicationId removeId = completedApps.remove();  
-      LOG.info("Application should be expired, max # apps"
-          + " met. Removing app: " + removeId); 
+    // check apps kept in state store.
+    while (completedAppsInStateStore > this.maxCompletedAppsInStateStore) {
+      ApplicationId removeId =
+          completedApps.get(completedApps.size() - completedAppsInStateStore);
+      RMApp removeApp = rmContext.getRMApps().get(removeId);
+      LOG.info("Max number of completed apps kept in state store met:"
+          + " maxCompletedAppsInStateStore = " + maxCompletedAppsInStateStore
+          + ", removing app " + removeApp.getApplicationId()
+          + " from state store.");
+      rmContext.getStateStore().removeApplication(removeApp);
+      completedAppsInStateStore--;
+    }
+
+    // check apps kept in memorty.
+    while (completedApps.size() > this.maxCompletedAppsInMemory) {
+      ApplicationId removeId = completedApps.remove();
+      LOG.info("Application should be expired, max number of completed apps"
+          + " kept in memory met: maxCompletedAppsInMemory = "
+          + this.maxCompletedAppsInMemory + ", removing app " + removeId
+          + " from memory: ");
       rmContext.getRMApps().remove(removeId);
       this.applicationACLsManager.removeApplication(removeId);
     }
@@ -236,31 +263,59 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
   @SuppressWarnings("unchecked")
   protected void submitApplication(
       ApplicationSubmissionContext submissionContext, long submitTime,
-      boolean isRecovered, String user) throws YarnException {
+      String user, boolean isRecovered, RMState state) throws YarnException {
     ApplicationId applicationId = submissionContext.getApplicationId();
 
-    // Validation of the ApplicationSubmissionContext needs to be completed
-    // here. Only those fields that are dependent on RM's configuration are
-    // checked here as they have to be validated whether they are part of new
-    // submission or just being recovered.
+    RMAppImpl application =
+        createAndPopulateNewRMApp(submissionContext, submitTime, user);
 
-    // Check whether AM resource requirements are within required limits
-    if (!submissionContext.getUnmanagedAM()) {
-      ResourceRequest amReq = BuilderUtils.newResourceRequest(
-          RMAppAttemptImpl.AM_CONTAINER_PRIORITY, ResourceRequest.ANY,
-          submissionContext.getResource(), 1);
-      try {
-        SchedulerUtils.validateResourceRequest(amReq,
-            scheduler.getMaximumResourceCapability());
-      } catch (InvalidResourceRequestException e) {
-        LOG.warn("RM app submission failed in validating AM resource request"
-            + " for application " + applicationId, e);
-        throw e;
+    if (isRecovered) {
+      recoverApplication(state, application);
+      RMAppState rmAppState =
+          state.getApplicationState().get(applicationId).getState();
+      if (isApplicationInFinalState(rmAppState)) {
+        // We are synchronously moving the application into final state so that
+        // momentarily client will not see this application in NEW state. Also
+        // for finished applications we will avoid renewing tokens.
+        application
+            .handle(new RMAppEvent(applicationId, RMAppEventType.RECOVER));
+        return;
       }
     }
+    
+    if (UserGroupInformation.isSecurityEnabled()) {
+      Credentials credentials = null;
+      try {
+        credentials = parseCredentials(submissionContext);
+      } catch (Exception e) {
+        LOG.warn(
+            "Unable to parse credentials.", e);
+        // Sending APP_REJECTED is fine, since we assume that the
+        // RMApp is in NEW state and thus we haven't yet informed the
+        // scheduler about the existence of the application
+        assert application.getState() == RMAppState.NEW;
+        this.rmContext.getDispatcher().getEventHandler().handle(
+            new RMAppRejectedEvent(applicationId, e.getMessage()));
+        throw RPCUtil.getRemoteException(e);
+      }
+      this.rmContext.getDelegationTokenRenewer().addApplication(
+          applicationId, credentials,
+          submissionContext.getCancelTokensWhenComplete(), isRecovered);
+    } else {
+      this.rmContext.getDispatcher().getEventHandler()
+          .handle(new RMAppEvent(applicationId,
+              isRecovered ? RMAppEventType.RECOVER : RMAppEventType.START));
+    }
+  }
 
+  private RMAppImpl createAndPopulateNewRMApp(
+      ApplicationSubmissionContext submissionContext,
+      long submitTime, String user)
+      throws YarnException {
+    ApplicationId applicationId = submissionContext.getApplicationId();
+    validateResourceRequest(submissionContext);
     // Create RMApp
-    RMApp application =
+    RMAppImpl application =
         new RMAppImpl(applicationId, rmContext, this.conf,
             submissionContext.getApplicationName(), user,
             submissionContext.getQueue(),
@@ -277,35 +332,53 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
       LOG.warn(message);
       throw RPCUtil.getRemoteException(message);
     }
-
     // Inform the ACLs Manager
     this.applicationACLsManager.addApplication(applicationId,
         submissionContext.getAMContainerSpec().getApplicationACLs());
+    return application;
+  }
 
-    try {
-      // Setup tokens for renewal
-      if (UserGroupInformation.isSecurityEnabled()) {
-        this.rmContext.getDelegationTokenRenewer().addApplication(
-            applicationId,parseCredentials(submissionContext),
-            submissionContext.getCancelTokensWhenComplete()
-            );
+  private void validateResourceRequest(
+      ApplicationSubmissionContext submissionContext)
+      throws InvalidResourceRequestException {
+    // Validation of the ApplicationSubmissionContext needs to be completed
+    // here. Only those fields that are dependent on RM's configuration are
+    // checked here as they have to be validated whether they are part of new
+    // submission or just being recovered.
+
+    // Check whether AM resource requirements are within required limits
+    if (!submissionContext.getUnmanagedAM()) {
+      ResourceRequest amReq = BuilderUtils.newResourceRequest(
+          RMAppAttemptImpl.AM_CONTAINER_PRIORITY, ResourceRequest.ANY,
+          submissionContext.getResource(), 1);
+      try {
+        SchedulerUtils.validateResourceRequest(amReq,
+            scheduler.getMaximumResourceCapability());
+      } catch (InvalidResourceRequestException e) {
+        LOG.warn("RM app submission failed in validating AM resource request"
+            + " for application " + submissionContext.getApplicationId(), e);
+        throw e;
       }
-    } catch (IOException ie) {
-      LOG.warn(
-          "Unable to add the application to the delegation token renewer.",
-          ie);
-      // Sending APP_REJECTED is fine, since we assume that the
-      // RMApp is in NEW state and thus we havne't yet informed the
-      // Scheduler about the existence of the application
-      this.rmContext.getDispatcher().getEventHandler().handle(
-          new RMAppRejectedEvent(applicationId, ie.getMessage()));
-      throw RPCUtil.getRemoteException(ie);
     }
+  }
 
-    // All done, start the RMApp
-    this.rmContext.getDispatcher().getEventHandler().handle(
-        new RMAppEvent(applicationId, isRecovered ? RMAppEventType.RECOVER:
-            RMAppEventType.START));
+  private void recoverApplication(RMState state, RMAppImpl application)
+      throws YarnException {
+    try {
+      application.recover(state);
+    } catch (Exception e) {
+      LOG.error("Error recovering application", e);
+      throw new YarnException(e);
+    }
+  }
+
+  private boolean isApplicationInFinalState(RMAppState rmAppState) {
+    if (rmAppState == RMAppState.FINISHED || rmAppState == RMAppState.FAILED
+        || rmAppState == RMAppState.KILLED) {
+      return true;
+    } else {
+      return false;
+    }
   }
   
   private Credentials parseCredentials(ApplicationSubmissionContext application) 
@@ -328,53 +401,9 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     // recover applications
     Map<ApplicationId, ApplicationState> appStates = state.getApplicationState();
     LOG.info("Recovering " + appStates.size() + " applications");
-    for(ApplicationState appState : appStates.values()) {
-      boolean shouldRecover = true;
-      if(appState.getApplicationSubmissionContext().getUnmanagedAM()) {
-        // do not recover unmanaged applications since current recovery 
-        // mechanism of restarting attempts does not work for them.
-        // This will need to be changed in work preserving recovery in which 
-        // RM will re-connect with the running AM's instead of restarting them
-        LOG.info("Not recovering unmanaged application " + appState.getAppId());
-        shouldRecover = false;
-      }
-      int individualMaxAppAttempts = appState.getApplicationSubmissionContext()
-          .getMaxAppAttempts();
-      int maxAppAttempts;
-      if (individualMaxAppAttempts <= 0 ||
-          individualMaxAppAttempts > globalMaxAppAttempts) {
-        maxAppAttempts = globalMaxAppAttempts;
-        LOG.warn("The specific max attempts: " + individualMaxAppAttempts
-            + " for application: " + appState.getAppId()
-            + " is invalid, because it is out of the range [1, "
-            + globalMaxAppAttempts + "]. Use the global max attempts instead.");
-      } else {
-        maxAppAttempts = individualMaxAppAttempts;
-      }
-      // In work-preserve restart, if attemptCount == maxAttempts, the job still
-      // needs to be recovered because the last attempt may still be running.
-      if(appState.getAttemptCount() >= maxAppAttempts) {
-        LOG.info("Not recovering application " + appState.getAppId() +
-            " due to recovering attempt is beyond maxAppAttempt limit");
-        shouldRecover = false;
-      }
-
-      // re-submit the application
-      // this is going to send an app start event but since the async dispatcher
-      // has not started that event will be queued until we have completed re
-      // populating the state
-      if(shouldRecover) {
-        LOG.info("Recovering application " + appState.getAppId());
-        submitApplication(appState.getApplicationSubmissionContext(), 
-                        appState.getSubmitTime(), true, appState.getUser());
-        // re-populate attempt information in application
-        RMAppImpl appImpl = (RMAppImpl) rmContext.getRMApps().get(
-                                                        appState.getAppId());
-        appImpl.recover(state);
-      }
-      else {
-        store.removeApplication(appState);
-      }
+    for (ApplicationState appState : appStates.values()) {
+      submitApplication(appState.getApplicationSubmissionContext(),
+        appState.getSubmitTime(), appState.getUser(), true, state);
     }
   }
 
@@ -387,8 +416,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
       case APP_COMPLETED: 
       {
         finishApplication(applicationId);
-        ApplicationSummary.logAppSummary(
-            rmContext.getRMApps().get(applicationId));
+        logApplicationSummary(applicationId);
         checkAppNumCompletedLimit(); 
       } 
       break;

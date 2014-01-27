@@ -47,10 +47,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class TestPermissionSymlinks {
-  // Re-enable symlinks for tests, see HADOOP-10020 and HADOOP-10052
-  static {
-    FileSystem.enableSymlinks();
-  }
 
   private static final Log LOG = LogFactory.getLog(TestPermissionSymlinks.class);
   private static final Configuration conf = new HdfsConfiguration();

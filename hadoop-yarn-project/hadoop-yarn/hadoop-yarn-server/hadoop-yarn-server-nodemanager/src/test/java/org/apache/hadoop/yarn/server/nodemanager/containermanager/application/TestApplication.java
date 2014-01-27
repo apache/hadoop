@@ -516,6 +516,8 @@ public class TestApplication {
       
       when(context.getContainerTokenSecretManager()).thenReturn(
         new NMContainerTokenSecretManager(conf));
+      when(context.getApplicationACLsManager()).thenReturn(
+        new ApplicationACLsManager(conf));
       when(context.getNMTokenSecretManager()).thenReturn(nmTokenSecretMgr);
       
       // Setting master key
@@ -528,8 +530,7 @@ public class TestApplication {
       this.user = user;
       this.appId = BuilderUtils.newApplicationId(timestamp, id);
 
-      app = new ApplicationImpl(dispatcher, new ApplicationACLsManager(
-          new Configuration()), this.user, appId, null, context);
+      app = new ApplicationImpl(dispatcher, this.user, appId, null, context);
       containers = new ArrayList<Container>();
       for (int i = 0; i < numContainers; i++) {
         Container container = createMockedContainer(this.appId, i);

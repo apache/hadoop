@@ -51,6 +51,7 @@ public class FileNameIndexUtils {
   private static final int NUM_REDUCES_INDEX = 6;
   private static final int JOB_STATUS_INDEX = 7;
   private static final int QUEUE_NAME_INDEX = 8;
+  private static final int JOB_START_TIME_INDEX = 9;
 
   /**
    * Constructs the job history file name from the JobIndexInfo.
@@ -64,7 +65,7 @@ public class FileNameIndexUtils {
     sb.append(escapeDelimiters(TypeConverter.fromYarn(indexInfo.getJobId()).toString()));
     sb.append(DELIMITER);
     
-    //StartTime
+    //SubmitTime
     sb.append(indexInfo.getSubmitTime());
     sb.append(DELIMITER);
     
@@ -94,6 +95,10 @@ public class FileNameIndexUtils {
     
     //QueueName
     sb.append(indexInfo.getQueueName());
+    sb.append(DELIMITER);
+
+    //JobStartTime
+    sb.append(indexInfo.getJobStartTime());
 
     sb.append(JobHistoryUtils.JOB_HISTORY_FILE_EXTENSION);
     return encodeJobHistoryFileName(sb.toString());
@@ -161,6 +166,14 @@ public class FileNameIndexUtils {
 
       indexInfo.setQueueName(
           decodeJobHistoryFileName(jobDetails[QUEUE_NAME_INDEX]));
+
+      try{
+        indexInfo.setJobStartTime(
+          Long.parseLong(decodeJobHistoryFileName(jobDetails[JOB_START_TIME_INDEX])));
+      } catch (NumberFormatException e){
+        LOG.warn("Unable to parse launch time from job history file "
+            + jhFileName + " : " + e);
+      }
     } catch (IndexOutOfBoundsException e) {
       LOG.warn("Parsing job history file with partial data encoded into name: "
           + jhFileName);

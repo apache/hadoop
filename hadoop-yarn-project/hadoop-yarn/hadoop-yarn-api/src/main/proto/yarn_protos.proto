@@ -58,6 +58,16 @@ message ResourceProto {
   optional int32 virtual_cores = 2;
 }
 
+message ResourceOptionProto {
+  optional ResourceProto resource = 1;
+  optional int32 over_commit_timeout = 2;
+}
+
+message NodeResourceMapProto {
+  optional NodeIdProto node_id = 1;
+  optional ResourceOptionProto resource_option = 2;
+}
+
 message PriorityProto {
   optional int32 priority = 1;
 }
@@ -238,6 +248,7 @@ message ApplicationSubmissionContextProto {
   optional int32 maxAppAttempts = 8 [default = 0];
   optional ResourceProto resource = 9;
   optional string applicationType = 10 [default = "YARN"];
+  optional bool keep_containers_across_application_attempts = 11 [default = false];
 }
 
 enum ApplicationAccessTypeProto {
@@ -304,6 +315,22 @@ enum ContainerExitStatusProto {
   INVALID = -1000;
   ABORTED = -100;
   DISKS_FAILED = -101;
+}
+
+message ContainerResourceIncreaseRequestProto {
+  optional ContainerIdProto container_id = 1;
+  optional ResourceProto capability = 2;
+} 
+
+message ContainerResourceIncreaseProto {
+  optional ContainerIdProto container_id = 1;
+  optional ResourceProto capability = 2;
+  optional hadoop.common.TokenProto container_token = 3;
+}
+
+message ContainerResourceDecreaseProto {
+  optional ContainerIdProto container_id = 1;
+  optional ResourceProto capability = 2;
 }
 
 ////////////////////////////////////////////////////////////////////////

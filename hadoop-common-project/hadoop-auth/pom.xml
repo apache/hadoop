@@ -20,12 +20,12 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>2.3.0-SNAPSHOT</version>
+    <version>2.4.0-SNAPSHOT</version>
     <relativePath>../../hadoop-project</relativePath>
   </parent>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-auth</artifactId>
-  <version>2.3.0-SNAPSHOT</version>
+  <version>2.4.0-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <name>Apache Hadoop Auth</name>
@@ -33,7 +33,6 @@
 
   <properties>
     <maven.build.timestamp.format>yyyyMMdd</maven.build.timestamp.format>
-    <kerberos.realm>LOCALHOST</kerberos.realm>
   </properties>
 
   <dependencies>
@@ -94,6 +93,11 @@
       <scope>runtime</scope>
     </dependency>
     <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-minikdc</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>org.apache.httpcomponents</groupId>
       <artifactId>httpclient</artifactId>
       <scope>compile</scope>
@@ -101,35 +105,7 @@
   </dependencies>
 
   <build>
-    <testResources>
-      <testResource>
-        <directory>${basedir}/src/test/resources</directory>
-        <filtering>true</filtering>
-        <includes>
-          <include>krb5.conf</include>
-        </includes>
-      </testResource>
-    </testResources>
     <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <configuration>
-          <forkMode>always</forkMode>
-          <forkedProcessTimeoutInSeconds>600</forkedProcessTimeoutInSeconds>
-          <systemPropertyVariables>
-            <java.security.krb5.conf>${project.build.directory}/test-classes/krb5.conf</java.security.krb5.conf>
-            <kerberos.realm>${kerberos.realm}</kerberos.realm>
-          </systemPropertyVariables>
-          <excludes>
-            <exclude>**/${test.exclude}.java</exclude>
-            <exclude>${test.exclude.pattern}</exclude>
-            <exclude>**/TestKerberosAuth*.java</exclude>
-            <exclude>**/TestAltKerberosAuth*.java</exclude>
-            <exclude>**/Test*$*.java</exclude>
-          </excludes>
-        </configuration>
-      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-source-plugin</artifactId>
@@ -149,33 +125,6 @@
   </build>
 
   <profiles>
-    <profile>
-      <id>testKerberos</id>
-      <activation>
-        <activeByDefault>false</activeByDefault>
-      </activation>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-surefire-plugin</artifactId>
-            <configuration>
-              <forkMode>always</forkMode>
-              <forkedProcessTimeoutInSeconds>600</forkedProcessTimeoutInSeconds>
-              <systemPropertyVariables>
-                <java.security.krb5.conf>${project.build.directory}/test-classes/krb5.conf</java.security.krb5.conf>
-                <kerberos.realm>${kerberos.realm}</kerberos.realm>
-              </systemPropertyVariables>
-              <excludes>
-                <exclude>**/${test.exclude}.java</exclude>
-                <exclude>${test.exclude.pattern}</exclude>
-                <exclude>**/Test*$*.java</exclude>
-              </excludes>
-            </configuration>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
     <profile>
       <id>docs</id>
       <activation>

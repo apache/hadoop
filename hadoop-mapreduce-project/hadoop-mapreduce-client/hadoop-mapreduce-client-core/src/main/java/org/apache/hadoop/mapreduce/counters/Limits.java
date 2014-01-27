@@ -28,37 +28,80 @@ import static org.apache.hadoop.mapreduce.MRJobConfig.*;
 public class Limits {
 
   static final Configuration conf = new JobConf();
-  public static final int GROUP_NAME_MAX =
-      conf.getInt(COUNTER_GROUP_NAME_MAX_KEY, COUNTER_GROUP_NAME_MAX_DEFAULT);
-  public static final int COUNTER_NAME_MAX =
-      conf.getInt(COUNTER_NAME_MAX_KEY, COUNTER_NAME_MAX_DEFAULT);
-  public static final int GROUPS_MAX =
-      conf.getInt(COUNTER_GROUPS_MAX_KEY, COUNTER_GROUPS_MAX_DEFAULT);
-  public static final int COUNTERS_MAX =
-      conf.getInt(COUNTERS_MAX_KEY, COUNTERS_MAX_DEFAULT);
 
   private int totalCounters;
   private LimitExceededException firstViolation;
 
+  private static boolean isInited;
+  
+  private static int GROUP_NAME_MAX;
+  private static int COUNTER_NAME_MAX;
+  private static int GROUPS_MAX;
+  private static int COUNTERS_MAX;
+  
+  public synchronized static void init(Configuration conf) {
+    if (!isInited) {
+      if (conf == null) {
+        conf = new JobConf();
+      }
+      GROUP_NAME_MAX = conf.getInt(COUNTER_GROUP_NAME_MAX_KEY,
+          COUNTER_GROUP_NAME_MAX_DEFAULT);
+      COUNTER_NAME_MAX = conf.getInt(COUNTER_NAME_MAX_KEY,
+          COUNTER_NAME_MAX_DEFAULT);
+      GROUPS_MAX = conf.getInt(COUNTER_GROUPS_MAX_KEY, COUNTER_GROUPS_MAX_DEFAULT);
+      COUNTERS_MAX = conf.getInt(COUNTERS_MAX_KEY, COUNTERS_MAX_DEFAULT);
+    }
+    isInited = true;
+  }
+  
+  public static int getGroupNameMax() {
+    if (!isInited) {
+      init(null);
+    }
+    return GROUP_NAME_MAX;
+  }
+  
+  public static int getCounterNameMax() {
+    if (!isInited) {
+      init(null);
+    }
+    return COUNTER_NAME_MAX;
+  }
+  
+  public static int getGroupsMax() {
+    if (!isInited) {
+      init(null);
+    }
+    return GROUPS_MAX;
+  }
+  
+  public static int getCountersMax() {
+    if (!isInited) {
+      init(null);
+    }
+    return COUNTERS_MAX;
+  }
+  
   public static String filterName(String name, int maxLen) {
     return name.length() > maxLen ? name.substring(0, maxLen - 1) : name;
   }
 
   public static String filterCounterName(String name) {
-    return filterName(name, COUNTER_NAME_MAX);
+    return filterName(name, getCounterNameMax());
   }
 
   public static String filterGroupName(String name) {
-    return filterName(name, GROUP_NAME_MAX);
+    return filterName(name, getGroupNameMax());
   }
 
   public synchronized void checkCounters(int size) {
     if (firstViolation != null) {
       throw new LimitExceededException(firstViolation);
     }
-    if (size > COUNTERS_MAX) {
+    int countersMax = getCountersMax();
+    if (size > countersMax) {
       firstViolation = new LimitExceededException("Too many counters: "+ size +
-                                                  " max="+ COUNTERS_MAX);
+                                                  " max="+ countersMax);
       throw firstViolation;
     }
   }
@@ -72,9 +115,10 @@ public class Limits {
     if (firstViolation != null) {
       throw new LimitExceededException(firstViolation);
     }
-    if (size > GROUPS_MAX) {
+    int groupsMax = getGroupsMax();
+    if (size > groupsMax) {
       firstViolation = new LimitExceededException("Too many counter groups: "+
-                                                  size +" max="+ GROUPS_MAX);
+                                                  size +" max="+ groupsMax);
     }
   }
 

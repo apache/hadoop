@@ -31,7 +31,6 @@ import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.PrepareRe
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.SegmentStateProto;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
-import org.apache.jasper.compiler.JspUtil;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
@@ -177,17 +176,16 @@ class AsyncLoggerSet {
    * state of the underlying loggers.
    * @param sb the StringBuilder to append to
    */
-  void appendHtmlReport(StringBuilder sb) {
-    sb.append("<table class=\"storage\">");
-    sb.append("<thead><tr><td>JN</td><td>Status</td></tr></thead>\n");
-    for (AsyncLogger l : loggers) {
-      sb.append("<tr>");
-      sb.append("<td>" + JspUtil.escapeXml(l.toString()) + "</td>");
-      sb.append("<td>");
-      l.appendHtmlReport(sb);
-      sb.append("</td></tr>\n");
+  void appendReport(StringBuilder sb) {
+    for (int i = 0, len = loggers.size(); i < len; ++i) {
+      AsyncLogger l = loggers.get(i);
+      if (i != 0) {
+        sb.append(", ");
+      }
+      sb.append(l).append(" (");
+      l.appendReport(sb);
+      sb.append(")");
     }
-    sb.append("</table>");
   }
 
   /**

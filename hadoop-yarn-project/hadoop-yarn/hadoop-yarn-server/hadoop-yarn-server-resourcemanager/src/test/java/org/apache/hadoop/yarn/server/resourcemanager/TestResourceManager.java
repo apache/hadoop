@@ -36,7 +36,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -79,22 +79,23 @@ public class TestResourceManager {
 
   @Test
   public void testResourceAllocation() throws IOException,
-      YarnException {
+      YarnException, InterruptedException {
     LOG.info("--- START: testResourceAllocation ---");
         
     final int memory = 4 * 1024;
+    final int vcores = 4;
     
     // Register node1
     String host1 = "host1";
     org.apache.hadoop.yarn.server.resourcemanager.NodeManager nm1 = 
       registerNode(host1, 1234, 2345, NetworkTopology.DEFAULT_RACK, 
-          Resources.createResource(memory, 1));
+          Resources.createResource(memory, vcores));
     
     // Register node2
     String host2 = "host2";
     org.apache.hadoop.yarn.server.resourcemanager.NodeManager nm2 = 
       registerNode(host2, 1234, 2345, NetworkTopology.DEFAULT_RACK, 
-          Resources.createResource(memory/2, 1));
+          Resources.createResource(memory/2, vcores/2));
 
     // Submit an application
     Application application = new Application("user1", resourceManager);
@@ -142,8 +143,10 @@ public class TestResourceManager {
     application.schedule();
     checkResourceUsage(nm1, nm2);
     
-    // Send a heartbeat to kick the tires on the Scheduler
+    // Send heartbeats to kick the tires on the Scheduler
     nodeUpdate(nm2);
+    nodeUpdate(nm2);
+    nodeUpdate(nm1);
     nodeUpdate(nm1);
     
     // Get allocations from the scheduler
@@ -159,8 +162,9 @@ public class TestResourceManager {
     application.finishTask(t3);
     
     // Notify scheduler application is finished.
-    AppRemovedSchedulerEvent appRemovedEvent1 = new AppRemovedSchedulerEvent(
-        application.getApplicationAttemptId(), RMAppAttemptState.FINISHED);
+    AppAttemptRemovedSchedulerEvent appRemovedEvent1 =
+        new AppAttemptRemovedSchedulerEvent(
+          application.getApplicationAttemptId(), RMAppAttemptState.FINISHED, false);
     resourceManager.getResourceScheduler().handle(appRemovedEvent1);
     
     checkResourceUsage(nm1, nm2);

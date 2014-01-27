@@ -18,12 +18,16 @@
 
 package org.apache.hadoop.yarn.applications.distributedshell;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.PrintWriter;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -105,7 +109,7 @@ public class TestDistributedShell {
       }
     }
   }
-
+  
   @Test(timeout=90000)
   public void testDSShell() throws Exception {
 
@@ -118,8 +122,12 @@ public class TestDistributedShell {
         Shell.WINDOWS ? "dir" : "ls",
         "--master_memory",
         "512",
+        "--master_vcores",
+        "2",
         "--container_memory",
-        "128"
+        "128",
+        "--container_vcores",
+        "1"
     };
 
     LOG.info("Initializing DS Client");
@@ -164,6 +172,212 @@ public class TestDistributedShell {
     LOG.info("Client run completed. Result=" + result);
     Assert.assertTrue(result.get());
 
+  }
+
+  @Test(timeout=90000)
+  public void testDSRestartWithPreviousRunningContainers() throws Exception {
+    String[] args = {
+        "--jar",
+        APPMASTER_JAR,
+        "--num_containers",
+        "1",
+        "--shell_command",
+        Shell.WINDOWS ? "timeout 8" : "sleep 8",
+        "--master_memory",
+        "512",
+        "--container_memory",
+        "128",
+        "--keep_containers_across_application_attempts"
+      };
+
+      LOG.info("Initializing DS Client");
+      Client client = new Client(TestDSFailedAppMaster.class.getName(),
+        new Configuration(yarnCluster.getConfig()));
+
+      client.init(args);
+      LOG.info("Running DS Client");
+      boolean result = client.run();
+
+      LOG.info("Client run completed. Result=" + result);
+      // application should succeed
+      Assert.assertTrue(result);
+    }
+
+  @Test(timeout=90000)
+  public void testDSShellWithCustomLogPropertyFile() throws Exception {
+    final File basedir =
+        new File("target", TestDistributedShell.class.getName());
+    final File tmpDir = new File(basedir, "tmpDir");
+    tmpDir.mkdirs();
+    final File customLogProperty = new File(tmpDir, "custom_log4j.properties");
+    if (customLogProperty.exists()) {
+      customLogProperty.delete();
+    }
+    if(!customLogProperty.createNewFile()) {
+      Assert.fail("Can not create custom log4j property file.");
+    }
+    PrintWriter fileWriter = new PrintWriter(customLogProperty);
+    // set the output to DEBUG level
+    fileWriter.write("log4j.rootLogger=debug,stdout");
+    fileWriter.close();
+    String[] args = {
+        "--jar",
+        APPMASTER_JAR,
+        "--num_containers",
+        "3",
+        "--shell_command",
+        "echo",
+        "--shell_args",
+        "HADOOP",
+        "--log_properties",
+        customLogProperty.getAbsolutePath(),
+        "--master_memory",
+        "512",
+        "--master_vcores",
+        "2",
+        "--container_memory",
+        "128",
+        "--container_vcores",
+        "1"
+    };
+
+    //Before run the DS, the default the log level is INFO
+    final Log LOG_Client =
+        LogFactory.getLog(Client.class);
+    Assert.assertTrue(LOG_Client.isInfoEnabled());
+    Assert.assertFalse(LOG_Client.isDebugEnabled());
+    final Log LOG_AM = LogFactory.getLog(ApplicationMaster.class);
+    Assert.assertTrue(LOG_AM.isInfoEnabled());
+    Assert.assertFalse(LOG_AM.isDebugEnabled());
+
+    LOG.info("Initializing DS Client");
+    final Client client =
+        new Client(new Configuration(yarnCluster.getConfig()));
+    boolean initSuccess = client.init(args);
+    Assert.assertTrue(initSuccess);
+    LOG.info("Running DS Client");
+    boolean result = client.run();
+    LOG.info("Client run completed. Result=" + result);
+    Assert.assertTrue(verifyContainerLog(3, null, true, "DEBUG") > 10);
+    //After DS is finished, the log level should be DEBUG
+    Assert.assertTrue(LOG_Client.isInfoEnabled());
+    Assert.assertTrue(LOG_Client.isDebugEnabled());
+    Assert.assertTrue(LOG_AM.isInfoEnabled());
+    Assert.assertTrue(LOG_AM.isDebugEnabled());
+  }
+
+  public void testDSShellWithCommands() throws Exception {
+
+    String[] args = {
+        "--jar",
+        APPMASTER_JAR,
+        "--num_containers",
+        "2",
+        "--shell_command",
+        "\"echo output_ignored;echo output_expected\"",
+        "--master_memory",
+        "512",
+        "--master_vcores",
+        "2",
+        "--container_memory",
+        "128",
+        "--container_vcores",
+        "1"
+    };
+
+    LOG.info("Initializing DS Client");
+    final Client client =
+        new Client(new Configuration(yarnCluster.getConfig()));
+    boolean initSuccess = client.init(args);
+    Assert.assertTrue(initSuccess);
+    LOG.info("Running DS Client");
+    boolean result = client.run();
+    LOG.info("Client run completed. Result=" + result);
+    List<String> expectedContent = new ArrayList<String>();
+    expectedContent.add("output_expected");
+    verifyContainerLog(2, expectedContent, false, "");
+  }
+
+  @Test(timeout=90000)
+  public void testDSShellWithMultipleArgs() throws Exception {
+    String[] args = {
+        "--jar",
+        APPMASTER_JAR,
+        "--num_containers",
+        "4",
+        "--shell_command",
+        "echo",
+        "--shell_args",
+        "HADOOP YARN MAPREDUCE HDFS",
+        "--master_memory",
+        "512",
+        "--master_vcores",
+        "2",
+        "--container_memory",
+        "128",
+        "--container_vcores",
+        "1"
+    };
+
+    LOG.info("Initializing DS Client");
+    final Client client =
+        new Client(new Configuration(yarnCluster.getConfig()));
+    boolean initSuccess = client.init(args);
+    Assert.assertTrue(initSuccess);
+    LOG.info("Running DS Client");
+    boolean result = client.run();
+    LOG.info("Client run completed. Result=" + result);
+    List<String> expectedContent = new ArrayList<String>();
+    expectedContent.add("HADOOP YARN MAPREDUCE HDFS");
+    verifyContainerLog(4, expectedContent, false, "");
+  }
+
+  @Test(timeout=90000)
+  public void testDSShellWithShellScript() throws Exception {
+    final File basedir =
+        new File("target", TestDistributedShell.class.getName());
+    final File tmpDir = new File(basedir, "tmpDir");
+    tmpDir.mkdirs();
+    final File customShellScript = new File(tmpDir, "custom_script.sh");
+    if (customShellScript.exists()) {
+      customShellScript.delete();
+    }
+    if (!customShellScript.createNewFile()) {
+      Assert.fail("Can not create custom shell script file.");
+    }
+    PrintWriter fileWriter = new PrintWriter(customShellScript);
+    // set the output to DEBUG level
+    fileWriter.write("echo testDSShellWithShellScript");
+    fileWriter.close();
+    System.out.println(customShellScript.getAbsolutePath());
+    String[] args = {
+        "--jar",
+        APPMASTER_JAR,
+        "--num_containers",
+        "1",
+        "--shell_script",
+        customShellScript.getAbsolutePath(),
+        "--master_memory",
+        "512",
+        "--master_vcores",
+        "2",
+        "--container_memory",
+        "128",
+        "--container_vcores",
+        "1"
+    };
+
+    LOG.info("Initializing DS Client");
+    final Client client =
+        new Client(new Configuration(yarnCluster.getConfig()));
+    boolean initSuccess = client.init(args);
+    Assert.assertTrue(initSuccess);
+    LOG.info("Running DS Client");
+    boolean result = client.run();
+    LOG.info("Client run completed. Result=" + result);
+    List<String> expectedContent = new ArrayList<String>();
+    expectedContent.add("testDSShellWithShellScript");
+    verifyContainerLog(1, expectedContent, false, "");
   }
 
   @Test(timeout=90000)
@@ -237,6 +451,83 @@ public class TestDistributedShell {
       Assert.assertTrue("The throw exception is not expected",
           e.getMessage().contains("Invalid no. of containers"));
     }
+    
+    LOG.info("Initializing DS Client with invalid no. of vcores");
+    try {
+      String[] args = {
+          "--jar",
+          APPMASTER_JAR,
+          "--num_containers",
+          "2",
+          "--shell_command",
+          Shell.WINDOWS ? "dir" : "ls",
+          "--master_memory",
+          "512",
+          "--master_vcores",
+          "-2",
+          "--container_memory",
+          "128",
+          "--container_vcores",
+          "1"
+      };
+      client.init(args);
+      Assert.fail("Exception is expected");
+    } catch (IllegalArgumentException e) {
+      Assert.assertTrue("The throw exception is not expected",
+          e.getMessage().contains("Invalid virtual cores specified"));
+    }
+
+    LOG.info("Initializing DS Client with --shell_command and --shell_script");
+    try {
+      String[] args = {
+          "--jar",
+          APPMASTER_JAR,
+          "--num_containers",
+          "2",
+          "--shell_command",
+          Shell.WINDOWS ? "dir" : "ls",
+          "--master_memory",
+          "512",
+          "--master_vcores",
+          "2",
+          "--container_memory",
+          "128",
+          "--container_vcores",
+          "1",
+          "--shell_script",
+          "test.sh"
+      };
+      client.init(args);
+      Assert.fail("Exception is expected");
+    } catch (IllegalArgumentException e) {
+      Assert.assertTrue("The throw exception is not expected",
+          e.getMessage().contains("Can not specify shell_command option " +
+          "and shell_script option at the same time"));
+    }
+
+    LOG.info("Initializing DS Client without --shell_command and --shell_script");
+    try {
+      String[] args = {
+          "--jar",
+          APPMASTER_JAR,
+          "--num_containers",
+          "2",
+          "--master_memory",
+          "512",
+          "--master_vcores",
+          "2",
+          "--container_memory",
+          "128",
+          "--container_vcores",
+          "1"
+      };
+      client.init(args);
+      Assert.fail("Exception is expected");
+    } catch (IllegalArgumentException e) {
+      Assert.assertTrue("The throw exception is not expected",
+          e.getMessage().contains("No shell command or shell script specified " +
+          "to be executed by application master"));
+    }
   }
 
   protected static void waitForNMToRegister(NodeManager nm)
@@ -277,5 +568,102 @@ public class TestDistributedShell {
 
   }
 
+  @Test(timeout=90000)
+  public void testDebugFlag() throws Exception {
+    String[] args = {
+        "--jar",
+        APPMASTER_JAR,
+        "--num_containers",
+        "2",
+        "--shell_command",
+        Shell.WINDOWS ? "dir" : "ls",
+        "--master_memory",
+        "512",
+        "--master_vcores",
+        "2",
+        "--container_memory",
+        "128",
+        "--container_vcores",
+        "1",
+        "--debug"
+    };
+
+    LOG.info("Initializing DS Client");
+    Client client = new Client(new Configuration(yarnCluster.getConfig()));
+    Assert.assertTrue(client.init(args));
+    LOG.info("Running DS Client");
+    Assert.assertTrue(client.run());
+  }
+
+  private int verifyContainerLog(int containerNum,
+      List<String> expectedContent, boolean count, String expectedWord) {
+    File logFolder =
+        new File(yarnCluster.getNodeManager(0).getConfig()
+            .get(YarnConfiguration.NM_LOG_DIRS,
+                YarnConfiguration.DEFAULT_NM_LOG_DIRS));
+
+    File[] listOfFiles = logFolder.listFiles();
+    int currentContainerLogFileIndex = -1;
+    for (int i = listOfFiles.length - 1; i >= 0; i--) {
+      if (listOfFiles[i].listFiles().length == containerNum + 1) {
+        currentContainerLogFileIndex = i;
+        break;
+      }
+    }
+    Assert.assertTrue(currentContainerLogFileIndex != -1);
+    File[] containerFiles =
+        listOfFiles[currentContainerLogFileIndex].listFiles();
+
+    int numOfWords = 0;
+    for (int i = 0; i < containerFiles.length; i++) {
+      for (File output : containerFiles[i].listFiles()) {
+        if (output.getName().trim().contains("stdout")) {
+          BufferedReader br = null;
+          List<String> stdOutContent = new ArrayList<String>();
+          try {
+
+            String sCurrentLine;
+            br = new BufferedReader(new FileReader(output));
+            int numOfline = 0;
+            while ((sCurrentLine = br.readLine()) != null) {
+              if (count) {
+                if (sCurrentLine.contains(expectedWord)) {
+                  numOfWords++;
+                }
+              } else if (output.getName().trim().equals("stdout")){
+                if (! Shell.WINDOWS) {
+                  Assert.assertEquals("The current is" + sCurrentLine,
+                      expectedContent.get(numOfline), sCurrentLine.trim());
+                  numOfline++;
+                } else {
+                  stdOutContent.add(sCurrentLine.trim());
+                }
+              }
+            }
+            /* By executing bat script using cmd /c,
+             * it will output all contents from bat script first
+             * It is hard for us to do check line by line
+             * Simply check whether output from bat file contains
+             * all the expected messages
+             */
+            if (Shell.WINDOWS && !count
+                && output.getName().trim().equals("stdout")) {
+              Assert.assertTrue(stdOutContent.containsAll(expectedContent));
+            }
+          } catch (IOException e) {
+            e.printStackTrace();
+          } finally {
+            try {
+              if (br != null)
+                br.close();
+            } catch (IOException ex) {
+              ex.printStackTrace();
+            }
+          }
+        }
+      }
+    }
+    return numOfWords;
+  }
 }
 

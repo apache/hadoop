@@ -949,12 +949,29 @@ public class JobConf extends Configuration {
     return get(KeyFieldBasedPartitioner.PARTITIONER_OPTIONS);
   }
 
+  /**
+   * Get the user defined {@link WritableComparable} comparator for
+   * grouping keys of inputs to the combiner.
+   *
+   * @return comparator set by the user for grouping values.
+   * @see #setCombinerKeyGroupingComparator(Class) for details.
+   */
+  public RawComparator getCombinerKeyGroupingComparator() {
+    Class<? extends RawComparator> theClass = getClass(
+        JobContext.COMBINER_GROUP_COMPARATOR_CLASS, null, RawComparator.class);
+    if (theClass == null) {
+      return getOutputKeyComparator();
+    }
+
+    return ReflectionUtils.newInstance(theClass, this);
+  }
+
   /** 
    * Get the user defined {@link WritableComparable} comparator for 
    * grouping keys of inputs to the reduce.
    * 
    * @return comparator set by the user for grouping values.
-   * @see #setOutputValueGroupingComparator(Class) for details.  
+   * @see #setOutputValueGroupingComparator(Class) for details.
    */
   public RawComparator getOutputValueGroupingComparator() {
     Class<? extends RawComparator> theClass = getClass(
@@ -964,6 +981,37 @@ public class JobConf extends Configuration {
     }
     
     return ReflectionUtils.newInstance(theClass, this);
+  }
+
+  /**
+   * Set the user defined {@link RawComparator} comparator for
+   * grouping keys in the input to the combiner.
+   * <p/>
+   * <p>This comparator should be provided if the equivalence rules for keys
+   * for sorting the intermediates are different from those for grouping keys
+   * before each call to
+   * {@link Reducer#reduce(Object, java.util.Iterator, OutputCollector, Reporter)}.</p>
+   * <p/>
+   * <p>For key-value pairs (K1,V1) and (K2,V2), the values (V1, V2) are passed
+   * in a single call to the reduce function if K1 and K2 compare as equal.</p>
+   * <p/>
+   * <p>Since {@link #setOutputKeyComparatorClass(Class)} can be used to control
+   * how keys are sorted, this can be used in conjunction to simulate
+   * <i>secondary sort on values</i>.</p>
+   * <p/>
+   * <p><i>Note</i>: This is not a guarantee of the combiner sort being
+   * <i>stable</i> in any sense. (In any case, with the order of available
+   * map-outputs to the combiner being non-deterministic, it wouldn't make
+   * that much sense.)</p>
+   *
+   * @param theClass the comparator class to be used for grouping keys for the
+   * combiner. It should implement <code>RawComparator</code>.
+   * @see #setOutputKeyComparatorClass(Class)
+   */
+  public void setCombinerKeyGroupingComparator(
+      Class<? extends RawComparator> theClass) {
+    setClass(JobContext.COMBINER_GROUP_COMPARATOR_CLASS,
+        theClass, RawComparator.class);
   }
 
   /** 
@@ -989,7 +1037,8 @@ public class JobConf extends Configuration {
    * 
    * @param theClass the comparator class to be used for grouping keys. 
    *                 It should implement <code>RawComparator</code>.
-   * @see #setOutputKeyComparatorClass(Class)                 
+   * @see #setOutputKeyComparatorClass(Class)
+   * @see #setCombinerKeyGroupingComparator(Class)
    */
   public void setOutputValueGroupingComparator(
       Class<? extends RawComparator> theClass) {

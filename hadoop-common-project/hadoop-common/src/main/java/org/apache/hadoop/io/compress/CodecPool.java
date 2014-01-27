@@ -85,16 +85,15 @@ public class CodecPool {
     T codec = null;
     
     // Check if an appropriate codec is available
+    List<T> codecList;
     synchronized (pool) {
-      if (pool.containsKey(codecClass)) {
-        List<T> codecList = pool.get(codecClass);
-        
-        if (codecList != null) {
-          synchronized (codecList) {
-            if (!codecList.isEmpty()) {
-              codec = codecList.remove(codecList.size()-1);
-            }
-          }
+      codecList = pool.get(codecClass);
+    }
+
+    if (codecList != null) {
+      synchronized (codecList) {
+        if (!codecList.isEmpty()) {
+          codec = codecList.remove(codecList.size() - 1);
         }
       }
     }
@@ -105,15 +104,17 @@ public class CodecPool {
   private static <T> void payback(Map<Class<T>, List<T>> pool, T codec) {
     if (codec != null) {
       Class<T> codecClass = ReflectionUtils.getClass(codec);
+      List<T> codecList;
       synchronized (pool) {
-        if (!pool.containsKey(codecClass)) {
-          pool.put(codecClass, new ArrayList<T>());
+        codecList = pool.get(codecClass);
+        if (codecList == null) {
+          codecList = new ArrayList<T>();
+          pool.put(codecClass, codecList);
         }
+      }
 
-        List<T> codecList = pool.get(codecClass);
-        synchronized (codecList) {
-          codecList.add(codec);
-        }
+      synchronized (codecList) {
+        codecList.add(codec);
       }
     }
   }

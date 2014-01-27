@@ -38,7 +38,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ServletUtil;
 
 /** Redirect queries about the hosted filesystem to an appropriate datanode.
- * @see org.apache.hadoop.hdfs.HftpFileSystem
+ * @see org.apache.hadoop.hdfs.web.HftpFileSystem
  */
 @InterfaceAudience.Private
 public class FileDataServlet extends DfsServlet {

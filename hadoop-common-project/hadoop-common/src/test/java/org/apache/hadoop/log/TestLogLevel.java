@@ -21,8 +21,10 @@ import java.io.*;
 import java.net.*;
 
 import org.apache.hadoop.http.HttpServer;
+import org.apache.hadoop.net.NetUtils;
 
 import junit.framework.TestCase;
+
 import org.apache.commons.logging.*;
 import org.apache.commons.logging.impl.*;
 import org.apache.log4j.*;
@@ -42,13 +44,17 @@ public class TestLogLevel extends TestCase {
       log.error("log.error1");
       assertTrue(!Level.ERROR.equals(log.getEffectiveLevel()));
 
-      HttpServer server = new HttpServer("..", "localhost", 22222, true);
+      HttpServer server = new HttpServer.Builder().setName("..")
+          .addEndpoint(new URI("http://localhost:0")).setFindPort(true)
+          .build();
+      
       server.start();
-      int port = server.getPort();
+      String authority = NetUtils.getHostPortString(server
+          .getConnectorAddress(0));
 
       //servlet
-      URL url = new URL("http://localhost:" + port
-          + "/logLevel?log=" + logName + "&level=" + Level.ERROR);
+      URL url = new URL("http://" + authority + "/logLevel?log=" + logName
+          + "&level=" + Level.ERROR);
       out.println("*** Connecting to " + url);
       URLConnection connection = url.openConnection();
       connection.connect();
@@ -64,7 +70,7 @@ public class TestLogLevel extends TestCase {
       assertTrue(Level.ERROR.equals(log.getEffectiveLevel()));
 
       //command line
-      String[] args = {"-setlevel", "localhost:"+port, logName,""+Level.DEBUG};
+      String[] args = {"-setlevel", authority, logName, Level.DEBUG.toString()};
       LogLevel.main(args);
       log.debug("log.debug3");
       log.info("log.info3");

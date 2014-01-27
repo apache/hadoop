@@ -43,6 +43,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
@@ -52,7 +53,6 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Ap
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.ContainerLogsPage.ContainersLogsBlock;
-import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.webapp.YarnWebParams;
 import org.apache.hadoop.yarn.webapp.test.WebAppTests;
@@ -65,7 +65,7 @@ import com.google.inject.Module;
 public class TestContainerLogsPage {
 
   @Test(timeout=30000)
-  public void testContainerLogDirs() throws IOException {
+  public void testContainerLogDirs() throws IOException, YarnException {
     File absLogDir = new File("target",
       TestNMWebServer.class.getSimpleName() + "LogDir").getAbsoluteFile();
     String logdirwithFile = absLogDir.toURI().toString();
@@ -88,7 +88,7 @@ public class TestContainerLogsPage {
     ContainerId container1 = BuilderUtils.newContainerId(recordFactory, appId,
         appAttemptId, 0);
     List<File> files = null;
-    files = ContainerLogsPage.ContainersLogsBlock.getContainerLogDirs(
+    files = ContainerLogsUtils.getContainerLogDirs(
         container1, dirsHandler);
     Assert.assertTrue(!(files.get(0).toString().contains("file:")));
   }
@@ -148,8 +148,6 @@ public class TestContainerLogsPage {
       out.write("Log file Content".getBytes());
       out.close();
 
-      ApplicationACLsManager aclsManager = mock(ApplicationACLsManager.class);
-
       Context context = mock(Context.class);
       ConcurrentMap<ApplicationId, Application> appMap =
           new ConcurrentHashMap<ApplicationId, Application>();
@@ -158,6 +156,7 @@ public class TestContainerLogsPage {
       ConcurrentHashMap<ContainerId, Container> containers =
           new ConcurrentHashMap<ContainerId, Container>();
       when(context.getContainers()).thenReturn(containers);
+      when(context.getLocalDirsHandler()).thenReturn(dirsHandler);
 
       MockContainer container = new MockContainer(appAttemptId,
         new AsyncDispatcher(), conf, user, appId, 1);
@@ -165,7 +164,7 @@ public class TestContainerLogsPage {
       context.getContainers().put(container1, container);
 
       ContainersLogsBlock cLogsBlock =
-          new ContainersLogsBlock(conf, context, aclsManager, dirsHandler);
+          new ContainersLogsBlock(context);
 
       Map<String, String> params = new HashMap<String, String>();
       params.put(YarnWebParams.CONTAINER_ID, container1.toString());

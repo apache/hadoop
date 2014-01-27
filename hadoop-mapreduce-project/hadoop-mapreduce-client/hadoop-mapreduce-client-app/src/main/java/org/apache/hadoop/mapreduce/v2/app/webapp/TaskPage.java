@@ -63,6 +63,7 @@ public class TaskPage extends AppView {
             th(".id", "Attempt").
             th(".progress", "Progress").
             th(".state", "State").
+            th(".status", "Status").
             th(".node", "Node").
             th(".logs", "Logs").
             th(".tsh", "Started").
@@ -84,6 +85,7 @@ public class TaskPage extends AppView {
         .append(ta.getId()).append("\",\"")
         .append(progress).append("\",\"")
         .append(ta.getState().toString()).append("\",\"")
+        .append(ta.getStatus()).append("\",\"")
 
         .append(nodeHttpAddr == null ? "N/A" :
           "<a class='nodelink' href='" + MRWebAppUtil.getYARNWebappScheme() + nodeHttpAddr + "'>"
@@ -144,13 +146,13 @@ public class TaskPage extends AppView {
     .append("\n,aoColumnDefs:[\n")
 
     //logs column should not filterable (it includes container ID which may pollute searches)
-    .append("\n{'aTargets': [ 4 ]")
+    .append("\n{'aTargets': [ 5 ]")
     .append(", 'bSearchable': false }")
 
-    .append("\n, {'sType':'numeric', 'aTargets': [ 5, 6")
+    .append("\n, {'sType':'numeric', 'aTargets': [ 6, 7")
     .append(" ], 'mRender': renderHadoopDate }")
 
-    .append("\n, {'sType':'numeric', 'aTargets': [ 7")
+    .append("\n, {'sType':'numeric', 'aTargets': [ 8")
     .append(" ], 'mRender': renderHadoopElapsedTime }]")
 
     // Sort by id upon page load

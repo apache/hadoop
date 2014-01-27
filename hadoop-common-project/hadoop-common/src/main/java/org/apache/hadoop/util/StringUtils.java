@@ -343,7 +343,6 @@ public class StringUtils {
     if (str == null)
       return values;
     StringTokenizer tokenizer = new StringTokenizer(str, delim);
-    values = new ArrayList<String>();
     while (tokenizer.hasMoreTokens()) {
       values.add(tokenizer.nextToken());
     }
@@ -918,5 +917,84 @@ public class StringUtils {
       str.append(e.toString() + "\n");
     }
     return str.toString();
+  }
+
+  /**
+   * From a list of command-line arguments, remove both an option and the 
+   * next argument.
+   *
+   * @param name  Name of the option to remove.  Example: -foo.
+   * @param args  List of arguments.
+   * @return      null if the option was not found; the value of the 
+   *              option otherwise.
+   * @throws IllegalArgumentException if the option's argument is not present
+   */
+  public static String popOptionWithArgument(String name, List<String> args)
+      throws IllegalArgumentException {
+    String val = null;
+    for (Iterator<String> iter = args.iterator(); iter.hasNext(); ) {
+      String cur = iter.next();
+      if (cur.equals("--")) {
+        // stop parsing arguments when you see --
+        break;
+      } else if (cur.equals(name)) {
+        iter.remove();
+        if (!iter.hasNext()) {
+          throw new IllegalArgumentException("option " + name + " requires 1 " +
+              "argument.");
+        }
+        val = iter.next();
+        iter.remove();
+        break;
+      }
+    }
+    return val;
+  }
+  
+  /**
+   * From a list of command-line arguments, remove an option.
+   *
+   * @param name  Name of the option to remove.  Example: -foo.
+   * @param args  List of arguments.
+   * @return      true if the option was found and removed; false otherwise.
+   */
+  public static boolean popOption(String name, List<String> args) {
+    for (Iterator<String> iter = args.iterator(); iter.hasNext(); ) {
+      String cur = iter.next();
+      if (cur.equals("--")) {
+        // stop parsing arguments when you see --
+        break;
+      } else if (cur.equals(name)) {
+        iter.remove();
+        return true;
+      }
+    }
+    return false;
+  }
+  
+  /**
+   * From a list of command-line arguments, return the first non-option
+   * argument.  Non-option arguments are those which either come after 
+   * a double dash (--) or do not start with a dash.
+   *
+   * @param args  List of arguments.
+   * @return      The first non-option argument, or null if there were none.
+   */
+  public static String popFirstNonOption(List<String> args) {
+    for (Iterator<String> iter = args.iterator(); iter.hasNext(); ) {
+      String cur = iter.next();
+      if (cur.equals("--")) {
+        if (!iter.hasNext()) {
+          return null;
+        }
+        cur = iter.next();
+        iter.remove();
+        return cur;
+      } else if (!cur.startsWith("-")) {
+        iter.remove();
+        return cur;
+      }
+    }
+    return null;
   }
 }

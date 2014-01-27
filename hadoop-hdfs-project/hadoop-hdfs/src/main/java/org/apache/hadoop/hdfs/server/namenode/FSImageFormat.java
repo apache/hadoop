@@ -49,6 +49,7 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
+import org.apache.hadoop.hdfs.protocol.LayoutFlags;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
@@ -264,6 +265,9 @@ public class FSImageFormat {
         }
         boolean supportSnapshot = LayoutVersion.supports(Feature.SNAPSHOT,
             imgVersion);
+        if (LayoutVersion.supports(Feature.ADD_LAYOUT_FLAGS, imgVersion)) {
+          LayoutFlags.read(in);
+        }
 
         // read namespaceID: first appeared in version -2
         in.readInt();
@@ -353,6 +357,8 @@ public class FSImageFormat {
         prog.setCount(Phase.LOADING_FSIMAGE, step, numFiles);
 
         loadSecretManagerState(in);
+
+        loadCacheManagerState(in);
 
         // make sure to read to the end of file
         boolean eof = (in.read() == -1);
@@ -742,7 +748,7 @@ public class FSImageFormat {
           : dir;
     } else if (numBlocks == -2) {
       //symlink
-      if (!FileSystem.isSymlinksEnabled()) {
+      if (!FileSystem.areSymlinksEnabled()) {
         throw new IOException("Symlinks not supported - please remove symlink before upgrading to this version of HDFS");
       }
 
@@ -893,6 +899,14 @@ public class FSImageFormat {
       namesystem.loadSecretManagerState(in);
     }
 
+    private void loadCacheManagerState(DataInput in) throws IOException {
+      int imgVersion = getLayoutVersion();
+      if (!LayoutVersion.supports(Feature.CACHING, imgVersion)) {
+        return;
+      }
+      namesystem.getCacheManager().loadState(in);
+    }
+
     private int getLayoutVersion() {
       return namesystem.getFSImage().getStorage().getLayoutVersion();
     }
@@ -1001,6 +1015,7 @@ public class FSImageFormat {
       DataOutputStream out = new DataOutputStream(fos);
       try {
         out.writeInt(HdfsConstants.LAYOUT_VERSION);
+        LayoutFlags.write(out);
         // We use the non-locked version of getNamespaceInfo here since
         // the coordinating thread of saveNamespace already has read-locked
         // the namespace for us. If we attempt to take another readlock
@@ -1045,6 +1060,8 @@ public class FSImageFormat {
         
         context.checkCancelled();
         sourceNamesystem.saveSecretManagerState(out, sdPath);
+        context.checkCancelled();
+        sourceNamesystem.getCacheManager().saveState(out, sdPath);
         context.checkCancelled();
         out.flush();
         context.checkCancelled();

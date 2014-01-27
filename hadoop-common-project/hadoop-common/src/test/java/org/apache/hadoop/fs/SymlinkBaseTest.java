@@ -28,7 +28,6 @@ import org.apache.hadoop.test.GenericTestUtils;
 
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeTrue;
-
 import org.junit.Test;
 import org.junit.Before;
 import org.junit.After;
@@ -36,7 +35,6 @@ import org.junit.After;
 /**
  * Base test for symbolic links
  */
-@SuppressWarnings("deprecation")
 public abstract class SymlinkBaseTest {
   // Re-enable symlinks for tests, see HADOOP-10020 and HADOOP-10052
   static {

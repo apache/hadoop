@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -191,6 +190,11 @@ public class DirectoryScanner implements Runnable {
 
     private final FsVolumeSpi volume;
 
+    /**
+     * Get the file's length in async block scan
+     */
+    private final long blockFileLength;
+
     private final static Pattern CONDENSED_PATH_REGEX =
         Pattern.compile("(?<!^)(\\\\|/){2,}");
     
@@ -225,16 +229,13 @@ public class DirectoryScanner implements Runnable {
       throw new RuntimeException(prefix + " is not a prefix of " + fullPath);
     }
 
-    ScanInfo(long blockId) {
-      this(blockId, null, null, null);
-    }
-
     ScanInfo(long blockId, File blockFile, File metaFile, FsVolumeSpi vol) {
       this.blockId = blockId;
       String condensedVolPath = vol == null ? null :
         getCondensedPath(vol.getBasePath());
       this.blockSuffix = blockFile == null ? null :
         getSuffix(blockFile, condensedVolPath);
+      this.blockFileLength = (blockFile != null) ? blockFile.length() : 0; 
       if (metaFile == null) {
         this.metaSuffix = null;
       } else if (blockFile == null) {
@@ -249,6 +250,10 @@ public class DirectoryScanner implements Runnable {
     File getBlockFile() {
       return (blockSuffix == null) ? null :
         new File(volume.getBasePath(), blockSuffix);
+    }
+
+    long getBlockFileLength() {
+      return blockFileLength;
     }
 
     File getMetaFile() {
@@ -429,8 +434,8 @@ public class DirectoryScanner implements Runnable {
         diffs.put(bpid, diffRecord);
         
         statsRecord.totalBlocks = blockpoolReport.length;
-        List<Block> bl = dataset.getFinalizedBlocks(bpid);
-        Block[] memReport = bl.toArray(new Block[bl.size()]);
+        List<FinalizedReplica> bl = dataset.getFinalizedBlocks(bpid);
+        FinalizedReplica[] memReport = bl.toArray(new FinalizedReplica[bl.size()]);
         Arrays.sort(memReport); // Sort based on blockId
   
         int d = 0; // index for blockpoolReport
@@ -448,7 +453,8 @@ public class DirectoryScanner implements Runnable {
           }
           if (info.getBlockId() > memBlock.getBlockId()) {
             // Block is missing on the disk
-            addDifference(diffRecord, statsRecord, memBlock.getBlockId());
+            addDifference(diffRecord, statsRecord,
+                          memBlock.getBlockId(), info.getVolume());
             m++;
             continue;
           }
@@ -458,7 +464,7 @@ public class DirectoryScanner implements Runnable {
             // Block metadata file exits and block file is missing
             addDifference(diffRecord, statsRecord, info);
           } else if (info.getGenStamp() != memBlock.getGenerationStamp()
-              || info.getBlockFile().length() != memBlock.getNumBytes()) {
+              || info.getBlockFileLength() != memBlock.getNumBytes()) {
             // Block metadata file is missing or has wrong generation stamp,
             // or block file length is different than expected
             statsRecord.mismatchBlocks++;
@@ -468,7 +474,9 @@ public class DirectoryScanner implements Runnable {
           m++;
         }
         while (m < memReport.length) {
-          addDifference(diffRecord, statsRecord, memReport[m++].getBlockId());
+          FinalizedReplica current = memReport[m++];
+          addDifference(diffRecord, statsRecord,
+                        current.getBlockId(), current.getVolume());
         }
         while (d < blockpoolReport.length) {
           statsRecord.missingMemoryBlocks++;
@@ -492,10 +500,11 @@ public class DirectoryScanner implements Runnable {
 
   /** Block is not found on the disk */
   private void addDifference(LinkedList<ScanInfo> diffRecord,
-                             Stats statsRecord, long blockId) {
+                             Stats statsRecord, long blockId,
+                             FsVolumeSpi vol) {
     statsRecord.missingBlockFile++;
     statsRecord.missingMetaFile++;
-    diffRecord.add(new ScanInfo(blockId));
+    diffRecord.add(new ScanInfo(blockId, null, null, vol));
   }
 
   /** Is the given volume still valid in the dataset? */

@@ -30,6 +30,7 @@ import java.io.OutputStream;
 
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.test.PathUtils;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -40,10 +41,7 @@ public class TestAtomicFileOutputStream {
   private static final String TEST_STRING = "hello world";
   private static final String TEST_STRING_2 = "goodbye world";
 
-  private static File BASE_DIR = new File(
-      System.getProperty("test.build.data", "build/test/data"));
-  private static File TEST_DIR = new File(BASE_DIR,
-      TestAtomicFileOutputStream.class.getName());
+  private static File TEST_DIR = PathUtils.getTestDir(TestAtomicFileOutputStream.class);
   
   private static File DST_FILE = new File(TEST_DIR, "test.txt");
   

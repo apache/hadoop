@@ -24,11 +24,13 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
@@ -48,6 +50,8 @@ public class LinuxContainerExecutor extends ContainerExecutor {
   private static final Log LOG = LogFactory
       .getLog(LinuxContainerExecutor.class);
 
+  private String nonsecureLocalUser;
+  private Pattern nonsecureLocalUserPattern;
   private String containerExecutorExe;
   private LCEResourcesHandler resourcesHandler;
   private boolean containerSchedPriorityIsSet = false;
@@ -69,6 +73,24 @@ public class LinuxContainerExecutor extends ContainerExecutor {
          .getInt(YarnConfiguration.NM_CONTAINER_EXECUTOR_SCHED_PRIORITY, 
          YarnConfiguration.DEFAULT_NM_CONTAINER_EXECUTOR_SCHED_PRIORITY);
     }
+    nonsecureLocalUser = conf.get(
+        YarnConfiguration.NM_NONSECURE_MODE_LOCAL_USER_KEY,
+        YarnConfiguration.DEFAULT_NM_NONSECURE_MODE_LOCAL_USER);
+    nonsecureLocalUserPattern = Pattern.compile(
+        conf.get(YarnConfiguration.NM_NONSECURE_MODE_USER_PATTERN_KEY,
+            YarnConfiguration.DEFAULT_NM_NONSECURE_MODE_USER_PATTERN));        
+  }
+
+  void verifyUsernamePattern(String user) {
+    if (!UserGroupInformation.isSecurityEnabled() &&
+        !nonsecureLocalUserPattern.matcher(user).matches()) {
+        throw new IllegalArgumentException("Invalid user name '" + user + "'," +
+            " it must match '" + nonsecureLocalUserPattern.pattern() + "'");
+      }
+  }
+
+  String getRunAsUser(String user) {
+    return UserGroupInformation.isSecurityEnabled() ? user : nonsecureLocalUser;
   }
 
 
@@ -163,9 +185,12 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       List<String> localDirs, List<String> logDirs)
       throws IOException, InterruptedException {
 
+    verifyUsernamePattern(user);
+    String runAsUser = getRunAsUser(user);
     List<String> command = new ArrayList<String>();
     addSchedPriorityCommand(command);
     command.addAll(Arrays.asList(containerExecutorExe, 
+                   runAsUser,
                    user, 
                    Integer.toString(Commands.INITIALIZE_CONTAINER.getValue()),
                    appId,
@@ -193,8 +218,6 @@ public class LinuxContainerExecutor extends ContainerExecutor {
     }
     String[] commandArray = command.toArray(new String[command.size()]);
     ShellCommandExecutor shExec = new ShellCommandExecutor(commandArray);
-    // TODO: DEBUG
-    LOG.info("initApplication: " + Arrays.toString(commandArray));
     if (LOG.isDebugEnabled()) {
       LOG.debug("initApplication: " + Arrays.toString(commandArray));
     }
@@ -219,6 +242,9 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       String user, String appId, Path containerWorkDir,
       List<String> localDirs, List<String> logDirs) throws IOException {
 
+    verifyUsernamePattern(user);
+    String runAsUser = getRunAsUser(user);
+
     ContainerId containerId = container.getContainerId();
     String containerIdStr = ConverterUtils.toString(containerId);
     
@@ -235,7 +261,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
         List<String> command = new ArrayList<String>();
         addSchedPriorityCommand(command);
         command.addAll(Arrays.asList(
-            containerExecutorExe, user, Integer
+            containerExecutorExe, runAsUser, user, Integer
                 .toString(Commands.LAUNCH_CONTAINER.getValue()), appId,
             containerIdStr, containerWorkDir.toString(),
             nmPrivateCotainerScriptPath.toUri().getPath().toString(),
@@ -247,8 +273,9 @@ public class LinuxContainerExecutor extends ContainerExecutor {
         String[] commandArray = command.toArray(new String[command.size()]);
         shExec = new ShellCommandExecutor(commandArray, null, // NM's cwd
             container.getLaunchContext().getEnvironment()); // sanitized env
-        // DEBUG
-        LOG.info("launchContainer: " + Arrays.toString(commandArray));
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("launchContainer: " + Arrays.toString(commandArray));
+        }
         shExec.execute();
         if (LOG.isDebugEnabled()) {
           logOutput(shExec.getOutput());
@@ -294,8 +321,12 @@ public class LinuxContainerExecutor extends ContainerExecutor {
   public boolean signalContainer(String user, String pid, Signal signal)
       throws IOException {
 
+    verifyUsernamePattern(user);
+    String runAsUser = getRunAsUser(user);
+
     String[] command =
         new String[] { containerExecutorExe,
+                   runAsUser,
                    user,
                    Integer.toString(Commands.SIGNAL_CONTAINER.getValue()),
                    pid,
@@ -323,8 +354,12 @@ public class LinuxContainerExecutor extends ContainerExecutor {
 
   @Override
   public void deleteAsUser(String user, Path dir, Path... baseDirs) {
+    verifyUsernamePattern(user);
+    String runAsUser = getRunAsUser(user);
+
     List<String> command = new ArrayList<String>(
         Arrays.asList(containerExecutorExe,
+                    runAsUser,
                     user,
                     Integer.toString(Commands.DELETE_AS_USER.getValue()),
                     dir == null ? "" : dir.toUri().getPath()));
@@ -339,7 +374,6 @@ public class LinuxContainerExecutor extends ContainerExecutor {
     }
     String[] commandArray = command.toArray(new String[command.size()]);
     ShellCommandExecutor shExec = new ShellCommandExecutor(commandArray);
-    LOG.info(" -- DEBUG -- deleteAsUser: " + Arrays.toString(commandArray));
     if (LOG.isDebugEnabled()) {
       LOG.debug("deleteAsUser: " + Arrays.toString(commandArray));
     }

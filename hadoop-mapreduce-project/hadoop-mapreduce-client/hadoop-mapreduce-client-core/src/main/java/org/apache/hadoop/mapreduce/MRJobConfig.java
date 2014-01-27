@@ -93,6 +93,8 @@ public interface MRJobConfig {
 
   public static final String KEY_COMPARATOR = "mapreduce.job.output.key.comparator.class";
 
+  public static final String COMBINER_GROUP_COMPARATOR_CLASS = "mapreduce.job.combiner.group.comparator.class";
+
   public static final String GROUP_COMPARATOR_CLASS = "mapreduce.job.output.group.comparator.class";
 
   public static final String WORKING_DIR = "mapreduce.job.working.dir";
@@ -352,13 +354,21 @@ public interface MRJobConfig {
 
   public static final String MR_AM_PREFIX = MR_PREFIX + "am.";
 
-  /** The number of client retires to the AM - before reconnecting to the RM
+  /** The number of client retries to the AM - before reconnecting to the RM
    * to fetch Application State. 
    */
   public static final String MR_CLIENT_TO_AM_IPC_MAX_RETRIES = 
     MR_PREFIX + "client-am.ipc.max-retries";
   public static final int DEFAULT_MR_CLIENT_TO_AM_IPC_MAX_RETRIES = 3;
   
+  /** The number of client retries on socket timeouts to the AM - before
+   * reconnecting to the RM to fetch Application Status.
+   */
+  public static final String MR_CLIENT_TO_AM_IPC_MAX_RETRIES_ON_TIMEOUTS =
+    MR_PREFIX + "yarn.app.mapreduce.client-am.ipc.max-retries-on-timeouts";
+  public static final int
+    DEFAULT_MR_CLIENT_TO_AM_IPC_MAX_RETRIES_ON_TIMEOUTS = 3;
+
   /**
    * The number of client retries to the RM/HS before throwing exception.
    */
@@ -396,6 +406,10 @@ public interface MRJobConfig {
   public static final String MR_AM_LOG_LEVEL = 
     MR_AM_PREFIX+"log.level";
   public static final String DEFAULT_MR_AM_LOG_LEVEL = "INFO";
+
+  public static final String MR_AM_LOG_BACKUPS =
+      MR_AM_PREFIX + "container.log.backups";
+  public static final int DEFAULT_MR_AM_LOG_BACKUPS = 0; // don't roll
 
   /**The number of splits when reporting progress in MR*/
   public static final String MR_AM_NUM_PROGRESS_SPLITS = 
@@ -655,6 +669,12 @@ public interface MRJobConfig {
       "mapreduce.application.classpath";
 
   /**
+   * Path to MapReduce framework archive
+   */
+  public static final String MAPREDUCE_APPLICATION_FRAMEWORK_PATH =
+      "mapreduce.application.framework.path";
+
+  /**
    * Default CLASSPATH for all YARN MapReduce applications.
    */
   public final String 
@@ -665,7 +685,11 @@ public interface MRJobConfig {
       + "$HADOOP_MAPRED_HOME/share/hadoop/mapreduce/lib/*";
 
   public static final String WORKFLOW_ID = "mapreduce.workflow.id";
-  
+
+  public static final String TASK_LOG_BACKUPS =
+      MR_PREFIX + "task.container.log.backups";
+  public static final int DEFAULT_TASK_LOG_BACKUPS = 0; // don't roll
+
   public static final String WORKFLOW_NAME = "mapreduce.workflow.name";
   
   public static final String WORKFLOW_NODE_NAME =

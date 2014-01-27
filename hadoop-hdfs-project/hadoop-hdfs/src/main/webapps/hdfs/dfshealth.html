@@ -1,0 +1,299 @@
+<!--
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<link rel="stylesheet" type="text/css" href="/static/bootstrap-3.0.2/css/bootstrap.min.css" />
+<link rel="stylesheet" type="text/css" href="/static/hadoop.css" />
+<title>Namenode information</title>
+</head>
+<body>
+
+<header class="navbar navbar-inverse bs-docs-nav" role="banner">
+<div class="container">
+  <div class="navbar-header">
+    <a href="http://hadoop.apache.org/core" class="navbar-brand">Hadoop</a>
+  </div>
+
+  <ul class="nav navbar-nav" id="ui-tabs">
+    <li><a href="#tab-overview">Overview</a></li>
+    <li><a href="#tab-datanode">Datanodes</a></li>
+    <li><a href="#tab-snapshot">Snapshot</a></li>
+    <li><a href="#tab-startup-progress">Startup Progress</a></li>
+    <li class="dropdown">
+      <a href="#" class="dropdown-toggle" data-toggle="dropdown">Utilities <b class="caret"></b></a>
+      <ul class="dropdown-menu">
+        <li><a href="explorer.html">Browse the file system</a></li>
+        <li><a href="logs">Logs</a></li>
+      </ul>
+    </li>
+  </ul>
+</div>
+</header>
+
+<div class="container">
+
+<div id="alert-panel">
+  <div class="alert alert-danger">
+    <button type="button" class="close" onclick="$('#alert-panel').hide();">&times;</button>
+    <div class="alert-body" id="alert-panel-body"></div>
+  </div>
+</div>
+
+<div class="tab-content">
+  <div class="tab-pane" id="tab-overview"></div>
+  <div class="tab-pane" id="tab-datanode"></div>
+  <div class="tab-pane" id="tab-snapshot"></div>
+  <div class="tab-pane" id="tab-startup-progress"></div>
+</div>
+
+<div class="row">
+  <hr />
+  <div class="col-xs-2"><p><a href="http://hadoop.apache.org/core">Hadoop</a>, 2014.</p></div>
+  <div class="col-xs-1 pull-right"><a style="color: #ddd" href="dfshealth.jsp">Legacy UI</a></div>
+</div>
+</div>
+
+<script type="text/x-dust-template" id="tmpl-dfshealth">
+
+{#nn}
+{@if cond="{DistinctVersionCount} > 1"}
+<div class="alert alert-dismissable alert-info">
+  <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
+
+  There are {DistinctVersionCount} versions of datanodes currently live: 
+  {#DistinctVersions}
+  {key} ({value}) {@sep},{/sep}
+  {/DistinctVersions}
+</div>
+{/if}
+
+{@if cond="{NumberOfMissingBlocks} > 0"}
+<div class="alert alert-dismissable alert-warning">
+  <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
+
+  <p>There are {NumberOfMissingBlocks} missing blocks. The following files may be corrupted:</p>
+  <br/>
+  <div class="well">
+    {#CorruptFiles}
+    {.}<br/>
+    {/CorruptFiles}
+  </div>
+  <p>Please check the logs or run fsck in order to identify the missing blocks. See the Hadoop FAQ for common causes and potential solutions.</p>
+</div>
+{/if}
+{/nn}
+
+<div class="page-header"><h1>Overview {#nnstat}<small>'{HostAndPort}' ({State})</small>{/nnstat}</h1></div>
+{#nn}
+<table class="table table-bordered table-striped">
+  <tr><th>Started:</th><td>{NNStarted}</td></tr>
+  <tr><th>Version:</th><td>{Version}</td></tr>
+  <tr><th>Compiled:</th><td>{CompileInfo}</td></tr>
+  <tr><th>Cluster ID:</th><td>{ClusterId}</td></tr>
+  <tr><th>Block Pool ID:</th><td>{BlockPoolId}</td></tr>
+</table>
+{/nn}
+
+<div class="page-header"><h1>Summary</h1></div>
+<p>
+  Security is {#nnstat}{#SecurityEnabled}on{:else}off{/SecurityEnabled}{/nnstat}.</p>
+<p>{#nn}{#Safemode}{.}{:else}Safemode is off.{/Safemode}{/nn}</p>
+
+<p>
+  {#fs}
+  {FilesTotal} files and directories, {BlocksTotal} blocks = {@math key="{FilesTotal}" method="add" operand="{BlocksTotal}"/} total filesystem object(s).
+  {#helper_fs_max_objects/}
+  {/fs}
+</p>
+{#mem.HeapMemoryUsage}
+<p>Heap Memory used {used|fmt_bytes} of {committed|fmt_bytes} Heap Memory. Max Heap Memory is {max|fmt_bytes}. </p>
+{/mem.HeapMemoryUsage}
+
+{#mem.NonHeapMemoryUsage}
+<p>Non Heap Memory used {used|fmt_bytes} of {committed|fmt_bytes} Commited Non Heap Memory. Max Non Heap Memory is {max|fmt_bytes}. </p>
+{/mem.NonHeapMemoryUsage}
+
+{#nn}
+<table class="table table-bordered table-striped">
+  <tr><th> Configured Capacity:</th><td>{Total|fmt_bytes}</td></tr>
+  <tr><th> DFS Used:</th><td>{Used|fmt_bytes}</td></tr>
+  <tr><th> Non DFS Used:</th><td>{NonDfsUsedSpace|fmt_bytes}</td></tr>
+  <tr><th> DFS Remaining:</th><td>{Free|fmt_bytes}</td></tr>
+  <tr><th> DFS Used%:</th><td>{PercentUsed|fmt_percentage}</td></tr>
+  <tr><th> DFS Remaining%:</th><td>{PercentRemaining|fmt_percentage}</td></tr>
+  <tr><th> Block Pool Used:</th><td>{BlockPoolUsedSpace|fmt_bytes}</td></tr>
+  <tr><th> Block Pool Used%:</th><td>{PercentBlockPoolUsed|fmt_percentage}</td></tr>
+  <tr><th> DataNodes usages% (Min/Median/Max/stdDev): </th>
+	<td>{#NodeUsage.nodeUsage}{min} / {median} / {max} / {stdDev}{/NodeUsage.nodeUsage}</td></tr>
+{/nn}
+
+{#fs}
+  <tr><th><a href="#tab-datanode">Live Nodes</a></th><td>{NumLiveDataNodes} (Decommissioned: {NumDecomLiveDataNodes})</td></tr>
+  <tr><th><a href="#tab-datanode">Dead Nodes</a></th><td>{NumDeadDataNodes} (Decommissioned: {NumDecomDeadDataNodes})</td></tr>
+  <tr><th><a href="#tab-datanode">Decommissioning Nodes</a></th><td>{NumDecommissioningDataNodes}</td></tr>
+  <tr><th title="Excludes missing blocks.">Number of Under-Replicated Blocks</th><td>{UnderReplicatedBlocks}</td></tr>
+{/fs}
+</table>
+
+<div class="page-header"><h1>Namenode Journal Status</h1></div>
+<p><b>Current transaction ID:</b> {nn.JournalTransactionInfo.LastAppliedOrWrittenTxId}</p>
+<table class="table" title="NameNode Journals">
+  <thead>
+	<tr><th>Journal Manager</th><th>State</th></tr>
+  </thead>
+  <tbody>
+	{#nn.NameJournalStatus}
+	<tr><td>{manager}</td><td>{stream}</td></tr>
+	{/nn.NameJournalStatus}
+  </tbody>
+</table>
+
+<div class="page-header"><h1>NameNode Storage</h1></div>
+<table class="table" title="NameNode Storage">
+  <thead><tr><td><b>Storage Directory</b></td><td><b>Type</b></td><td><b>State</b></td></tr></thead>
+  {#nn.NameDirStatuses}
+  {#active}{#helper_dir_status type="Active"/}{/active}
+  {#failed}{#helper_dir_status type="Failed"/}{/failed}
+  {/nn.NameDirStatuses}
+</table>
+</script>
+
+<script type="text/x-dust-template" id="tmpl-snapshot">
+<div class="page-header"><h1>Snapshot Summary</h1></div>
+<p><b>Snapshottable directories</b>: {SnapshottableDirectories}</p>
+<p><b>Snapshotted directories</b>: {Snapshots}</p>
+</script>
+
+<script type="text/x-dust-template" id="tmpl-datanode">
+<div class="page-header"><h1>Datanode Information</h1></div>
+<div class="page-header"><h1><small>In operation</small></h1></div>
+<small>
+<table class="table">
+  <thead>
+    <tr>
+      <th>Node</th>
+      <th>Last contact</th>
+      <th>Admin State</th>
+      <th>Capacity</th>
+      <th>Used</th>
+      <th>Non DFS Used</th>
+      <th>Remaining</th>
+      <th>Blocks</th>
+      <th>Block pool used</th>
+      <th>Failed Volumes</th>
+      <th>Version</th>
+    </tr>
+  </thead>
+  {#LiveNodes}
+  <tr>
+    <td>{name} ({xferaddr})</td>
+    <td>{lastContact}</td>
+    <td>{adminState}</td>
+    <td>{capacity|fmt_bytes}</td>
+    <td>{used|fmt_bytes}</td>
+    <td>{nonDfsUsedSpace|fmt_bytes}</td>
+    <td>{remaining|fmt_bytes}</td>
+    <td>{numBlocks}</td>
+    <td>{blockPoolUsed|fmt_bytes} ({blockPoolUsedPercent|fmt_percentage})</td>
+    <td>{volfails}</td>
+    <td>{version}</td>
+  </tr>
+  {/LiveNodes}
+  {#DeadNodes}
+  <tr class="danger">
+    <td>{name} ({xferaddr})</td>
+    <td>{lastContact}</td>
+    <td>Dead{?decomissioned}, Decomissioned{/decomissioned}</td>
+    <td>-</td>
+    <td>-</td>
+    <td>-</td>
+    <td>-</td>
+    <td>-</td>
+    <td>-</td>
+    <td>-</td>
+    <td>-</td>
+  </tr>
+  {/DeadNodes}
+</table>
+</small>
+
+<div class="page-header"><h1><small>Decomissioning</small></h1></div>
+<small>
+<table class="table">
+  <thead>
+    <tr>
+      <th>Node</th>
+      <th>Last contact</th>
+      <th>Under replicated blocks</th>
+      <th>Blocks with no live replicas</th>
+      <th>Under Replicated Blocks <br/>In files under construction</th>
+    </tr>
+  </thead>
+  {#DecomNodes}
+  <tr>
+    <td>{name} ({xferaddr})</td>
+    <td>{lastContact}</td>
+    <td>{underReplicatedBlocks}</td>
+    <td>{decommissionOnlyReplicas}</td>
+    <td>{underReplicateInOpenFiles}</td>
+  </tr>
+  {/DecomNodes}
+</table>
+</small>
+</script>
+
+<script type="text/x-dust-template" id="tmpl-startup-progress">
+<div class="page-header"><h1>Startup Progress</h1></div>
+<p>Elapsed Time: {elapsedTime|fmt_time}, Percent Complete: {percentComplete|fmt_percentage}</p>
+<table class="table">
+  <thead>
+	<tr class="active">
+	  <th>Phase</th>
+	  <th style="text-align:center">Completion</th>
+	  <th style="text-align:center">Elapsed Time</th>
+	</tr>
+  </thead>
+  <tbody>
+	{#phases}
+	<tr class="phase">
+	  <td class="startupdesc">{desc} {file} {size|fmt_bytes}</td>
+	  <td style="text-align:center">{percentComplete|fmt_percentage}</td>
+	  <td style="text-align:center">{elapsedTime|fmt_time}</td>
+	</tr>
+	{#steps root_file=file}
+	<tr class="step">
+	  <td class="startupdesc">{stepDesc} {stepFile} {stepSize|fmt_bytes} ({count}/{total})</td>
+	  <td style="text-align:center">{percentComplete|fmt_percentage}</td>
+	  <td></td>
+	</tr>
+	{/steps}
+	{/phases}
+  </tbody>
+</table>
+</script>
+
+<script type="text/javascript" src="/static/jquery-1.10.2.min.js">
+</script><script type="text/javascript" src="/static/bootstrap-3.0.2/js/bootstrap.min.js">
+</script><script type="text/javascript" src="/static/dust-full-2.0.0.min.js">
+</script><script type="text/javascript" src="/static/dust-helpers-1.1.1.min.js">
+</script><script type="text/javascript" src="dfs-dust.js">
+</script><script type="text/javascript" src="dfshealth.js">
+</script>
+</body>
+</html>

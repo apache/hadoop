@@ -57,6 +57,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequ
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 @Private
@@ -94,9 +95,9 @@ public class NodeManager implements ContainerManagementProtocol {
     RegisterNodeManagerRequest request = recordFactory
         .newRecordInstance(RegisterNodeManagerRequest.class);
     request.setHttpPort(httpPort);
-    request.setNodeId(this.nodeId);
     request.setResource(capability);
     request.setNodeId(this.nodeId);
+    request.setNMVersion(YarnVersionInfo.getVersion());
     resourceTrackerService.registerNodeManager(request);
     this.resourceManager = resourceManager;
     resourceManager.getResourceScheduler().getNodeReport(this.nodeId);

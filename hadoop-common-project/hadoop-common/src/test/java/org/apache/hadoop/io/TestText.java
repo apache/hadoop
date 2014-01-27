@@ -19,11 +19,12 @@
 package org.apache.hadoop.io;
 
 import junit.framework.TestCase;
-
 import java.io.IOException;
+import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.util.Random;
+import com.google.common.primitives.Bytes;
 
 /** Unit tests for LargeUTF8. */
 public class TestText extends TestCase {
@@ -321,7 +322,81 @@ public class TestText extends TestCase {
       (new Text("foo"),
        "{\"type\":\"string\",\"java-class\":\"org.apache.hadoop.io.Text\"}");
   }
-
+  
+  /**
+   * 
+   */
+  public void testCharAt() {
+    String line = "adsawseeeeegqewgasddga";
+    Text text = new Text(line);
+    for (int i = 0; i < line.length(); i++) {
+      assertTrue("testCharAt error1 !!!", text.charAt(i) == line.charAt(i));
+    }    
+    assertEquals("testCharAt error2 !!!", -1, text.charAt(-1));    
+    assertEquals("testCharAt error3 !!!", -1, text.charAt(100));
+  }    
+  
+  /**
+   * test {@code Text} readFields/write operations
+   */
+  public void testReadWriteOperations() {
+    String line = "adsawseeeeegqewgasddga";
+    byte[] inputBytes = line.getBytes();       
+    inputBytes = Bytes.concat(new byte[] {(byte)22}, inputBytes);        
+    
+    DataInputBuffer in = new DataInputBuffer();
+    DataOutputBuffer out = new DataOutputBuffer();
+    Text text = new Text(line);
+    try {      
+      in.reset(inputBytes, inputBytes.length);
+      text.readFields(in);      
+    } catch(Exception ex) {
+      fail("testReadFields error !!!");
+    }    
+    try {
+      text.write(out);
+    } catch(IOException ex) {      
+    } catch(Exception ex) {
+      fail("testReadWriteOperations error !!!");
+    }        
+  }
+  
+  /**
+   * test {@code Text.bytesToCodePoint(bytes) } 
+   * with {@code BufferUnderflowException}
+   * 
+   */
+  public void testBytesToCodePoint() {
+    try {
+      ByteBuffer bytes = ByteBuffer.wrap(new byte[] {-2, 45, 23, 12, 76, 89});                                      
+      Text.bytesToCodePoint(bytes);      
+      assertTrue("testBytesToCodePoint error !!!", bytes.position() == 6 );                      
+    } catch (BufferUnderflowException ex) {
+      fail("testBytesToCodePoint unexp exception");
+    } catch (Exception e) {
+      fail("testBytesToCodePoint unexp exception");
+    }    
+  }
+  
+  public void testbytesToCodePointWithInvalidUTF() {
+    try {                 
+      Text.bytesToCodePoint(ByteBuffer.wrap(new byte[] {-2}));
+      fail("testbytesToCodePointWithInvalidUTF error unexp exception !!!");
+    } catch (BufferUnderflowException ex) {      
+    } catch(Exception e) {
+      fail("testbytesToCodePointWithInvalidUTF error unexp exception !!!");
+    }
+  }
+  
+  public void testUtf8Length() {         
+    assertEquals("testUtf8Length1 error   !!!", 1, Text.utf8Length(new String(new char[]{(char)1})));
+    assertEquals("testUtf8Length127 error !!!", 1, Text.utf8Length(new String(new char[]{(char)127})));
+    assertEquals("testUtf8Length128 error !!!", 2, Text.utf8Length(new String(new char[]{(char)128})));
+    assertEquals("testUtf8Length193 error !!!", 2, Text.utf8Length(new String(new char[]{(char)193})));    
+    assertEquals("testUtf8Length225 error !!!", 2, Text.utf8Length(new String(new char[]{(char)225})));
+    assertEquals("testUtf8Length254 error !!!", 2, Text.utf8Length(new String(new char[]{(char)254})));                 
+  }
+  
   public static void main(String[] args)  throws Exception
   {
     TestText test = new TestText("main");

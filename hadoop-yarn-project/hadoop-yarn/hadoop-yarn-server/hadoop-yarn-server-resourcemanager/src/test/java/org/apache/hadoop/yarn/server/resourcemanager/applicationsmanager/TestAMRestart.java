@@ -18,49 +18,31 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import junit.framework.Assert;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.YarnApplicationState;
-import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
+import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.NodeId;
-import org.apache.hadoop.yarn.api.records.Priority;
-import org.apache.hadoop.yarn.api.records.QueueInfo;
-import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
-import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ContainerState;
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.factories.RecordFactory;
-import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.server.resourcemanager.ClientRMService;
-import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
-import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
-import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
-import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.security.AMRMTokenSecretManager;
-import org.apache.hadoop.yarn.server.security.BaseContainerTokenSecretManager;
-import org.apache.hadoop.yarn.util.resource.Resources;
-import org.junit.After;
-import org.junit.Before;
+import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.junit.Test;
 
 /**
@@ -68,238 +50,186 @@ import org.junit.Test;
  *
  */
 public class TestAMRestart {
-//  private static final Log LOG = LogFactory.getLog(TestAMRestart.class);
-//  ApplicationsManagerImpl appImpl;
-//  RMContext asmContext = new RMContextImpl(new MemStore());
-//  ApplicationTokenSecretManager appTokenSecretManager =
-//    new ApplicationTokenSecretManager();
-//  DummyResourceScheduler scheduler;
-//  private ClientRMService clientRMService;
-//  int count = 0;
-//  ApplicationId appID;
-//  final int maxFailures = 3;
-//  AtomicInteger launchNotify = new AtomicInteger();
-//  AtomicInteger schedulerNotify = new AtomicInteger();
-//  volatile boolean stop = false;
-//  int schedulerAddApplication = 0;
-//  int schedulerRemoveApplication = 0;
-//  int launcherLaunchCalled = 0;
-//  int launcherCleanupCalled = 0;
-//  private final static RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
-//
-//  private class ExtApplicationsManagerImpl extends ApplicationsManagerImpl {
-//    public ExtApplicationsManagerImpl(
-//        ApplicationTokenSecretManager applicationTokenSecretManager,
-//        YarnScheduler scheduler, RMContext asmContext) {
-//      super(applicationTokenSecretManager, scheduler, asmContext);
-//    }
-//
-//    @Override
-//    public EventHandler<ASMEvent<AMLauncherEventType>> createNewApplicationMasterLauncher(
-//        ApplicationTokenSecretManager tokenSecretManager) {
-//      return new DummyAMLauncher();
-//    }
-//  }
-//
-//  private class DummyAMLauncher implements EventHandler<ASMEvent<AMLauncherEventType>> {
-//
-//    public DummyAMLauncher() {
-//      asmContext.getDispatcher().register(AMLauncherEventType.class, this);
-//      new Thread() {
-//        public void run() {
-//          while (!stop) {
-//            LOG.info("DEBUG -- waiting for launch");
-//            synchronized(launchNotify) {
-//              while (launchNotify.get() == 0) {
-//                try {
-//                  launchNotify.wait();
-//                } catch (InterruptedException e) {
-//                }
-//              }
-//              asmContext.getDispatcher().getEventHandler().handle(
-//                  new ApplicationEvent(
-//                      ApplicationEventType.LAUNCHED, appID));
-//              launchNotify.addAndGet(-1);
-//            }
-//          }
-//        }
-//      }.start();
-//    }
-//
-//    @Override
-//    public void handle(ASMEvent<AMLauncherEventType> event) {
-//      switch (event.getType()) {
-//      case CLEANUP:
-//        launcherCleanupCalled++;
-//        break;
-//      case LAUNCH:
-//        LOG.info("DEBUG -- launching");
-//        launcherLaunchCalled++;
-//        synchronized (launchNotify) {
-//          launchNotify.addAndGet(1);
-//          launchNotify.notify();
-//        }
-//        break;
-//      default:
-//        break;
-//      }
-//    }
-//  }
-//
-//  private class DummyResourceScheduler implements ResourceScheduler {
-//
-//    @Override
-//    public void removeNode(RMNode node) {
-//    }
-//
-//    @Override
-//    public Allocation allocate(ApplicationId applicationId,
-//        List<ResourceRequest> ask, List<Container> release) throws IOException {
-//      Container container = recordFactory.newRecordInstance(Container.class);
-//      container.setContainerToken(recordFactory.newRecordInstance(ContainerToken.class));
-//      container.setNodeId(recordFactory.newRecordInstance(NodeId.class));
-//      container.setContainerManagerAddress("localhost");
-//      container.setNodeHttpAddress("localhost:8042");
-//      container.setId(recordFactory.newRecordInstance(ContainerId.class));
-//      container.getId().setAppId(appID);
-//      container.getId().setId(count);
-//      count++;
-//      return new Allocation(Arrays.asList(container), Resources.none());
-//    }
-//
-//    @Override
-//    public void handle(ASMEvent<ApplicationTrackerEventType> event) {
-//      switch (event.getType()) {
-//      case ADD:
-//        schedulerAddApplication++;
-//        break;
-//      case EXPIRE:
-//        schedulerRemoveApplication++;
-//        LOG.info("REMOVING app : " + schedulerRemoveApplication);
-//        if (schedulerRemoveApplication == maxFailures) {
-//          synchronized (schedulerNotify) {
-//            schedulerNotify.addAndGet(1);
-//            schedulerNotify.notify();
-//          }
-//        }
-//        break;
-//      default:
-//        break;
-//      }
-//    }
-//
-//    @Override
-//    public QueueInfo getQueueInfo(String queueName,
-//        boolean includeChildQueues,
-//        boolean recursive) throws IOException {
-//      return null;
-//    }
-//    @Override
-//    public List<QueueUserACLInfo> getQueueUserAclInfo() {
-//      return null;
-//    }
-//    @Override
-//    public void addApplication(ApplicationId applicationId,
-//        ApplicationMaster master, String user, String queue, Priority priority,
-//        ApplicationStore store)
-//        throws IOException {
-//    }
-//    @Override
-//    public void addNode(RMNode nodeInfo) {
-//    }
-//    @Override
-//    public void recover(RMState state) throws Exception {
-//    }
-//    @Override
-//    public void reinitialize(Configuration conf,
-//        ContainerTokenSecretManager secretManager, RMContext rmContext)
-//        throws IOException {
-//    }
-//
-//    @Override
-//    public void nodeUpdate(RMNode nodeInfo,
-//        Map<String, List<Container>> containers) {
-//    }
-//
-//    @Override
-//    public Resource getMaximumResourceCapability() {
-//      // TODO Auto-generated method stub
-//      return null;
-//    }
-//
-//    @Override
-//    public Resource getMinimumResourceCapability() {
-//      // TODO Auto-generated method stub
-//      return null;
-//    }
-//  }
-//
-//  @Before
-//  public void setUp() {
-//
-//    asmContext.getDispatcher().register(ApplicationEventType.class,
-//        new ResourceManager.ApplicationEventDispatcher(asmContext));
-//
-//    appID = recordFactory.newRecordInstance(ApplicationId.class);
-//    appID.setClusterTimestamp(System.currentTimeMillis());
-//    appID.setId(1);
-//    Configuration conf = new Configuration();
-//    scheduler = new DummyResourceScheduler();
-//    asmContext.getDispatcher().init(conf);
-//    asmContext.getDispatcher().start();
-//    asmContext.getDispatcher().register(ApplicationTrackerEventType.class, scheduler);
-//    appImpl = new ExtApplicationsManagerImpl(appTokenSecretManager, scheduler, asmContext);
-//
-//    conf.setLong(YarnConfiguration.AM_EXPIRY_INTERVAL, 1000L);
-//    conf.setInt(RMConfig.AM_MAX_RETRIES, maxFailures);
-//    appImpl.init(conf);
-//    appImpl.start();
-//
-//    this.clientRMService = new ClientRMService(asmContext, appImpl
-//        .getAmLivelinessMonitor(), appImpl.getClientToAMSecretManager(),
-//        scheduler);
-//    this.clientRMService.init(conf);
-//  }
-//
-//  @After
-//  public void tearDown() {
-//  }
-//
-//  private void waitForFailed(AppAttempt application, ApplicationState
-//      finalState) throws Exception {
-//    int count = 0;
-//    while(application.getState() != finalState && count < 10) {
-//      Thread.sleep(500);
-//      count++;
-//    }
-//    Assert.assertEquals(finalState, application.getState());
-//  }
-//
-//  @Test
-//  public void testAMRestart() throws Exception {
-//    ApplicationSubmissionContext subContext = recordFactory.newRecordInstance(ApplicationSubmissionContext.class);
-//    subContext.setApplicationId(appID);
-//    subContext.setApplicationName("dummyApp");
-////    subContext.command = new ArrayList<String>();
-////    subContext.environment = new HashMap<String, String>();
-////    subContext.fsTokens = new ArrayList<String>();
-//    subContext.setFsTokensTodo(ByteBuffer.wrap(new byte[0]));
-//    SubmitApplicationRequest request = recordFactory
-//        .newRecordInstance(SubmitApplicationRequest.class);
-//    request.setApplicationSubmissionContext(subContext);
-//    clientRMService.submitApplication(request);
-//    AppAttempt application = asmContext.getApplications().get(appID);
-//    synchronized (schedulerNotify) {
-//      while(schedulerNotify.get() == 0) {
-//        schedulerNotify.wait();
-//      }
-//    }
-//    Assert.assertEquals(maxFailures, launcherCleanupCalled);
-//    Assert.assertEquals(maxFailures, launcherLaunchCalled);
-//    Assert.assertEquals(maxFailures, schedulerAddApplication);
-//    Assert.assertEquals(maxFailures, schedulerRemoveApplication);
-//    Assert.assertEquals(maxFailures, application.getFailedCount());
-//    waitForFailed(application, ApplicationState.FAILED);
-//    stop = true;
-//  }
+
+  @Test
+  public void testAMRestartWithExistingContainers() throws Exception {
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 2);
+
+    MockRM rm1 = new MockRM(conf);
+    rm1.start();
+    RMApp app1 =
+        rm1.submitApp(200, "name", "user",
+          new HashMap<ApplicationAccessType, String>(), false, "default", -1,
+          null, "MAPREDUCE", false, true);
+    MockNM nm1 =
+        new MockNM("127.0.0.1:1234", 10240, rm1.getResourceTrackerService());
+    nm1.registerNode();
+    MockNM nm2 =
+        new MockNM("127.0.0.1:2351", 4089, rm1.getResourceTrackerService());
+    nm2.registerNode();
+
+    MockAM am1 = MockRM.launchAM(app1, rm1, nm1);
+    int NUM_CONTAINERS = 3;
+    // allocate NUM_CONTAINERS containers
+    am1.allocate("127.0.0.1", 1024, NUM_CONTAINERS,
+      new ArrayList<ContainerId>());
+    nm1.nodeHeartbeat(true);
+
+    // wait for containers to be allocated.
+    List<Container> containers =
+        am1.allocate(new ArrayList<ResourceRequest>(),
+          new ArrayList<ContainerId>()).getAllocatedContainers();
+    while (containers.size() != NUM_CONTAINERS) {
+      nm1.nodeHeartbeat(true);
+      containers.addAll(am1.allocate(new ArrayList<ResourceRequest>(),
+        new ArrayList<ContainerId>()).getAllocatedContainers());
+      Thread.sleep(200);
+    }
+
+    // launch the 2nd container, for testing running container transferred.
+    nm1.nodeHeartbeat(am1.getApplicationAttemptId(), 2, ContainerState.RUNNING);
+    ContainerId containerId2 =
+        ContainerId.newInstance(am1.getApplicationAttemptId(), 2);
+    rm1.waitForState(nm1, containerId2, RMContainerState.RUNNING);
+
+    // launch the 3rd container, for testing container allocated by previous
+    // attempt is completed by the next new attempt/
+    nm1.nodeHeartbeat(am1.getApplicationAttemptId(), 3, ContainerState.RUNNING);
+    ContainerId containerId3 =
+        ContainerId.newInstance(am1.getApplicationAttemptId(), 3);
+    rm1.waitForState(nm1, containerId3, RMContainerState.RUNNING);
+
+    // 4th container still in AQUIRED state. for testing Acquired container is
+    // always killed.
+    ContainerId containerId4 =
+        ContainerId.newInstance(am1.getApplicationAttemptId(), 4);
+    rm1.waitForState(nm1, containerId4, RMContainerState.ACQUIRED);
+
+    // 5th container is in Allocated state. for testing allocated container is
+    // always killed.
+    am1.allocate("127.0.0.1", 1024, 1, new ArrayList<ContainerId>());
+    nm1.nodeHeartbeat(true);
+    ContainerId containerId5 =
+        ContainerId.newInstance(am1.getApplicationAttemptId(), 5);
+    rm1.waitForContainerAllocated(nm1, containerId5);
+    rm1.waitForState(nm1, containerId5, RMContainerState.ALLOCATED);
+
+    // 6th container is in Reserved state.
+    am1.allocate("127.0.0.1", 6000, 1, new ArrayList<ContainerId>());
+    ContainerId containerId6 =
+        ContainerId.newInstance(am1.getApplicationAttemptId(), 6);
+    nm1.nodeHeartbeat(true);
+    SchedulerApplicationAttempt schedulerAttempt =
+        ((CapacityScheduler) rm1.getResourceScheduler())
+          .getCurrentAttemptForContainer(containerId6);
+    while (schedulerAttempt.getReservedContainers().size() == 0) {
+      System.out.println("Waiting for container " + containerId6
+          + " to be reserved.");
+      nm1.nodeHeartbeat(true);
+      Thread.sleep(200);
+    }
+    // assert containerId6 is reserved.
+    Assert.assertEquals(containerId6, schedulerAttempt.getReservedContainers()
+      .get(0).getContainerId());
+
+    // fail the AM by sending CONTAINER_FINISHED event without registering.
+    nm1.nodeHeartbeat(am1.getApplicationAttemptId(), 1, ContainerState.COMPLETE);
+    am1.waitForState(RMAppAttemptState.FAILED);
+
+    // wait for some time. previous AM's running containers should still remain
+    // in scheduler even though am failed
+    Thread.sleep(3000);
+    rm1.waitForState(nm1, containerId2, RMContainerState.RUNNING);
+    // acquired/allocated containers are cleaned up.
+    Assert.assertNull(rm1.getResourceScheduler().getRMContainer(containerId4));
+    Assert.assertNull(rm1.getResourceScheduler().getRMContainer(containerId5));
+
+    // wait for app to start a new attempt.
+    rm1.waitForState(app1.getApplicationId(), RMAppState.ACCEPTED);
+    // assert this is a new AM.
+    ApplicationAttemptId newAttemptId =
+        app1.getCurrentAppAttempt().getAppAttemptId();
+    Assert.assertFalse(newAttemptId.equals(am1.getApplicationAttemptId()));
+
+    // launch the new AM
+    RMAppAttempt attempt2 = app1.getCurrentAppAttempt();
+    nm1.nodeHeartbeat(true);
+    MockAM am2 = rm1.sendAMLaunched(attempt2.getAppAttemptId());
+    RegisterApplicationMasterResponse registerResponse =
+        am2.registerAppAttempt();
+
+    // Assert two containers are running: container2 and container3;
+    Assert.assertEquals(2, registerResponse.getContainersFromPreviousAttempt()
+      .size());
+    boolean containerId2Exists = false, containerId3Exists = false;
+    for (Container container : registerResponse
+      .getContainersFromPreviousAttempt()) {
+      if (container.getId().equals(containerId2)) {
+        containerId2Exists = true;
+      }
+      if (container.getId().equals(containerId3)) {
+        containerId3Exists = true;
+      }
+    }
+    Assert.assertTrue(containerId2Exists && containerId3Exists);
+    rm1.waitForState(app1.getApplicationId(), RMAppState.RUNNING);
+
+    // complete container by sending the container complete event which has earlier
+    // attempt's attemptId
+    nm1.nodeHeartbeat(am1.getApplicationAttemptId(), 3, ContainerState.COMPLETE);
+    rm1.waitForState(nm1, containerId3, RMContainerState.COMPLETED);
+
+    // Even though the completed container containerId3 event was sent to the
+    // earlier failed attempt, new RMAppAttempt can also capture this container
+    // info.
+    // completed containerId4 is also transferred to the new attempt.
+    RMAppAttempt newAttempt =
+        app1.getRMAppAttempt(am2.getApplicationAttemptId());
+    // 4 containers finished, acquired/allocated/reserved/completed.
+    Assert.assertEquals(4, newAttempt.getJustFinishedContainers().size());
+    boolean container3Exists = false, container4Exists = false, container5Exists =
+        false, container6Exists = false;
+    for(ContainerStatus status :  newAttempt.getJustFinishedContainers()) {
+      if(status.getContainerId().equals(containerId3)) {
+        // containerId3 is the container ran by previous attempt but finished by the
+        // new attempt.
+        container3Exists = true;
+      }
+      if (status.getContainerId().equals(containerId4)) {
+        // containerId4 is the Acquired Container killed by the previous attempt,
+        // it's now inside new attempt's finished container list.
+        container4Exists = true;
+      }
+      if (status.getContainerId().equals(containerId5)) {
+        // containerId5 is the Allocated container killed by previous failed attempt.
+        container5Exists = true;
+      }
+      if (status.getContainerId().equals(containerId6)) {
+        // containerId6 is the reserved container killed by previous failed attempt.
+        container6Exists = true;
+      }
+    }
+    Assert.assertTrue(container3Exists && container4Exists && container5Exists
+        && container6Exists);
+
+    // New SchedulerApplicationAttempt also has the containers info.
+    rm1.waitForState(nm1, containerId2, RMContainerState.RUNNING);
+
+    // record the scheduler attempt for testing.
+    SchedulerApplicationAttempt schedulerNewAttempt =
+        ((CapacityScheduler) rm1.getResourceScheduler())
+          .getCurrentAttemptForContainer(containerId2);
+    // finish this application
+    MockRM.finishApplicationMaster(app1, rm1, nm1, am2);
+
+    // the 2nd attempt released the 1st attempt's running container, when the
+    // 2nd attempt finishes.
+    Assert.assertFalse(schedulerNewAttempt.getLiveContainers().contains(
+      containerId2));
+    // all 4 normal containers finished.
+    Assert.assertEquals(5, newAttempt.getJustFinishedContainers().size());
+
+    rm1.stop();
+  }
 }

@@ -27,6 +27,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
+import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.Time;
 
@@ -148,6 +149,17 @@ class HeartbeatManager implements DatanodeStatistics {
   public synchronized int getXceiverCount() {
     return stats.xceiverCount;
   }
+  
+  @Override
+  public synchronized long getCacheCapacity() {
+    return stats.cacheCapacity;
+  }
+
+  @Override
+  public synchronized long getCacheUsed() {
+    return stats.cacheUsed;
+  }
+  
 
   @Override
   public synchronized long[] getStats() {
@@ -170,7 +182,7 @@ class HeartbeatManager implements DatanodeStatistics {
       addDatanode(d);
 
       //update its timestamp
-      d.updateHeartbeat(0L, 0L, 0L, 0L, 0, 0);
+      d.updateHeartbeat(StorageReport.EMPTY_ARRAY, 0L, 0L, 0, 0);
     }
   }
 
@@ -192,10 +204,10 @@ class HeartbeatManager implements DatanodeStatistics {
   }
 
   synchronized void updateHeartbeat(final DatanodeDescriptor node,
-      long capacity, long dfsUsed, long remaining, long blockPoolUsed,
+      StorageReport[] reports, long cacheCapacity, long cacheUsed,
       int xceiverCount, int failedVolumes) {
     stats.subtract(node);
-    node.updateHeartbeat(capacity, dfsUsed, remaining, blockPoolUsed,
+    node.updateHeartbeat(reports, cacheCapacity, cacheUsed,
         xceiverCount, failedVolumes);
     stats.add(node);
   }
@@ -308,6 +320,8 @@ class HeartbeatManager implements DatanodeStatistics {
     private long capacityRemaining = 0L;
     private long blockPoolUsed = 0L;
     private int xceiverCount = 0;
+    private long cacheCapacity = 0L;
+    private long cacheUsed = 0L;
 
     private int expiredHeartbeats = 0;
 
@@ -321,6 +335,8 @@ class HeartbeatManager implements DatanodeStatistics {
       } else {
         capacityTotal += node.getDfsUsed();
       }
+      cacheCapacity += node.getCacheCapacity();
+      cacheUsed += node.getCacheUsed();
     }
 
     private void subtract(final DatanodeDescriptor node) {
@@ -333,6 +349,8 @@ class HeartbeatManager implements DatanodeStatistics {
       } else {
         capacityTotal -= node.getDfsUsed();
       }
+      cacheCapacity -= node.getCacheCapacity();
+      cacheUsed -= node.getCacheUsed();
     }
     
     /** Increment expired heartbeat counter. */
@@ -341,3 +359,4 @@ class HeartbeatManager implements DatanodeStatistics {
     }
   }
 }
+

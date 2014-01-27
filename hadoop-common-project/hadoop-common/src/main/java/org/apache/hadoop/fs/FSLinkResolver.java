@@ -76,7 +76,6 @@ public abstract class FSLinkResolver<T> {
    * @return Generic type determined by the implementation of next.
    * @throws IOException
    */
-  @SuppressWarnings("deprecation")
   public T resolve(final FileContext fc, final Path path) throws IOException {
     int count = 0;
     T in = null;
@@ -96,7 +95,7 @@ public abstract class FSLinkResolver<T> {
               + " and symlink resolution is disabled ("
               + CommonConfigurationKeys.FS_CLIENT_RESOLVE_REMOTE_SYMLINKS_KEY + ").", e);
         }
-        if (!FileSystem.isSymlinksEnabled()) {
+        if (!FileSystem.areSymlinksEnabled()) {
           throw new IOException("Symlink resolution is disabled in"
               + " this version of Hadoop.");
         }

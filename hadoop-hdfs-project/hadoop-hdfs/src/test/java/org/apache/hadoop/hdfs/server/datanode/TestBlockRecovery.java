@@ -35,6 +35,7 @@ import static org.mockito.Mockito.when;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -120,7 +121,7 @@ public class TestBlockRecovery {
    * @throws IOException
    */
   @Before
-  public void startUp() throws IOException {
+  public void startUp() throws IOException, URISyntaxException {
     conf = new HdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, DATA_DIR);
     conf.set(DFSConfigKeys.DFS_DATANODE_ADDRESS_KEY, "0.0.0.0:0");
@@ -129,11 +130,12 @@ public class TestBlockRecovery {
     conf.setInt(CommonConfigurationKeys.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY, 0);
     FileSystem.setDefaultUri(conf,
         "hdfs://" + NN_ADDR.getHostName() + ":" + NN_ADDR.getPort());
-    ArrayList<File> dirs = new ArrayList<File>();
+    ArrayList<StorageLocation> locations = new ArrayList<StorageLocation>();
     File dataDir = new File(DATA_DIR);
     FileUtil.fullyDelete(dataDir);
     dataDir.mkdirs();
-    dirs.add(dataDir);
+    StorageLocation location = StorageLocation.parse(dataDir.getPath());
+    locations.add(location);
     final DatanodeProtocolClientSideTranslatorPB namenode =
       mock(DatanodeProtocolClientSideTranslatorPB.class);
 
@@ -152,6 +154,8 @@ public class TestBlockRecovery {
     when(namenode.sendHeartbeat(
             Mockito.any(DatanodeRegistration.class),
             Mockito.any(StorageReport[].class),
+            Mockito.anyLong(),
+            Mockito.anyLong(),
             Mockito.anyInt(),
             Mockito.anyInt(),
             Mockito.anyInt()))
@@ -159,7 +163,7 @@ public class TestBlockRecovery {
             new DatanodeCommand[0],
             new NNHAStatusHeartbeat(HAServiceState.ACTIVE, 1)));
 
-    dn = new DataNode(conf, dirs, null) {
+    dn = new DataNode(conf, locations, null) {
       @Override
       DatanodeProtocolClientSideTranslatorPB connectToNN(
           InetSocketAddress nnAddr) throws IOException {

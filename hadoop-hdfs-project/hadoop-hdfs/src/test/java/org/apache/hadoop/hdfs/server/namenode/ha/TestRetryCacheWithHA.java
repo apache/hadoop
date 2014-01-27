@@ -29,6 +29,7 @@ import java.net.URI;
 import java.net.UnknownHostException;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Random;
@@ -37,11 +38,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CacheFlag;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -53,12 +56,16 @@ import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream.SyncFlag;
+import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
+import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
+import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
@@ -82,6 +89,7 @@ public class TestRetryCacheWithHA {
   private static final int BlockSize = 1024;
   private static final short DataNodes = 3;
   private static final int CHECKTIMES = 10;
+  private static final int ResponseSize = 3;
   
   private MiniDFSCluster cluster;
   private DistributedFileSystem dfs;
@@ -116,6 +124,8 @@ public class TestRetryCacheWithHA {
   @Before
   public void setup() throws Exception {
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BlockSize);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_LIST_CACHE_DIRECTIVES_NUM_RESPONSES, ResponseSize);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_LIST_CACHE_POOLS_NUM_RESPONSES, ResponseSize);
     cluster = new MiniDFSCluster.Builder(conf)
         .nnTopology(MiniDFSNNTopology.simpleHATopology())
         .numDataNodes(DataNodes).build();
@@ -147,7 +157,7 @@ public class TestRetryCacheWithHA {
     FSNamesystem fsn0 = cluster.getNamesystem(0);
     LightWeightCache<CacheEntry, CacheEntry> cacheSet = 
         (LightWeightCache<CacheEntry, CacheEntry>) fsn0.getRetryCache().getCacheSet();
-    assertEquals(14, cacheSet.size());
+    assertEquals(20, cacheSet.size());
     
     Map<CacheEntry, CacheEntry> oldEntries = 
         new HashMap<CacheEntry, CacheEntry>();
@@ -168,7 +178,7 @@ public class TestRetryCacheWithHA {
     FSNamesystem fsn1 = cluster.getNamesystem(1);
     cacheSet = (LightWeightCache<CacheEntry, CacheEntry>) fsn1
         .getRetryCache().getCacheSet();
-    assertEquals(14, cacheSet.size());
+    assertEquals(20, cacheSet.size());
     iter = cacheSet.iterator();
     while (iter.hasNext()) {
       CacheEntry entry = iter.next();
@@ -707,9 +717,10 @@ public class TestRetryCacheWithHA {
       DatanodeInfo[] newNodes = new DatanodeInfo[2];
       newNodes[0] = nodes[0];
       newNodes[1] = nodes[1];
+      String[] storageIDs = {"s0", "s1"};
       
       client.getNamenode().updatePipeline(client.getClientName(), oldBlock,
-          newBlock, newNodes);
+          newBlock, newNodes, storageIDs);
       out.close();
     }
 
@@ -719,10 +730,10 @@ public class TestRetryCacheWithHA {
           .getNamesystem(0).getFSDirectory().getINode4Write(file).asFile();
       BlockInfoUnderConstruction blkUC = 
           (BlockInfoUnderConstruction) (fileNode.getBlocks())[1];
-      int datanodeNum = blkUC.getExpectedLocations().length;
+      int datanodeNum = blkUC.getExpectedStorageLocations().length;
       for (int i = 0; i < CHECKTIMES && datanodeNum != 2; i++) {
         Thread.sleep(1000);
-        datanodeNum = blkUC.getExpectedLocations().length;
+        datanodeNum = blkUC.getExpectedStorageLocations().length;
       }
       return datanodeNum == 2;
     }
@@ -733,6 +744,263 @@ public class TestRetryCacheWithHA {
     }
   }
   
+  /** addCacheDirective */
+  class AddCacheDirectiveInfoOp extends AtMostOnceOp {
+    private CacheDirectiveInfo directive;
+    private Long result;
+
+    AddCacheDirectiveInfoOp(DFSClient client,
+        CacheDirectiveInfo directive) {
+      super("addCacheDirective", client);
+      this.directive = directive;
+    }
+
+    @Override
+    void prepare() throws Exception {
+      dfs.addCachePool(new CachePoolInfo(directive.getPool()));
+    }
+
+    @Override
+    void invoke() throws Exception {
+      result = client.addCacheDirective(directive, EnumSet.of(CacheFlag.FORCE));
+    }
+
+    @Override
+    boolean checkNamenodeBeforeReturn() throws Exception {
+      for (int i = 0; i < CHECKTIMES; i++) {
+        RemoteIterator<CacheDirectiveEntry> iter =
+            dfs.listCacheDirectives(
+                new CacheDirectiveInfo.Builder().
+                    setPool(directive.getPool()).
+                    setPath(directive.getPath()).
+                    build());
+        if (iter.hasNext()) {
+          return true;
+        }
+        Thread.sleep(1000);
+      }
+      return false;
+    }
+
+    @Override
+    Object getResult() {
+      return result;
+    }
+  }
+
+  /** modifyCacheDirective */
+  class ModifyCacheDirectiveInfoOp extends AtMostOnceOp {
+    private final CacheDirectiveInfo directive;
+    private final short newReplication;
+    private long id;
+
+    ModifyCacheDirectiveInfoOp(DFSClient client,
+        CacheDirectiveInfo directive, short newReplication) {
+      super("modifyCacheDirective", client);
+      this.directive = directive;
+      this.newReplication = newReplication;
+    }
+
+    @Override
+    void prepare() throws Exception {
+      dfs.addCachePool(new CachePoolInfo(directive.getPool()));
+      id = client.addCacheDirective(directive, EnumSet.of(CacheFlag.FORCE));
+    }
+
+    @Override
+    void invoke() throws Exception {
+      client.modifyCacheDirective(
+          new CacheDirectiveInfo.Builder().
+              setId(id).
+              setReplication(newReplication).
+              build(), EnumSet.of(CacheFlag.FORCE));
+    }
+
+    @Override
+    boolean checkNamenodeBeforeReturn() throws Exception {
+      for (int i = 0; i < CHECKTIMES; i++) {
+        RemoteIterator<CacheDirectiveEntry> iter =
+            dfs.listCacheDirectives(
+                new CacheDirectiveInfo.Builder().
+                    setPool(directive.getPool()).
+                    setPath(directive.getPath()).
+                    build());
+        while (iter.hasNext()) {
+          CacheDirectiveInfo result = iter.next().getInfo();
+          if ((result.getId() == id) &&
+              (result.getReplication().shortValue() == newReplication)) {
+            return true;
+          }
+        }
+        Thread.sleep(1000);
+      }
+      return false;
+    }
+
+    @Override
+    Object getResult() {
+      return null;
+    }
+  }
+
+  /** removeCacheDirective */
+  class RemoveCacheDirectiveInfoOp extends AtMostOnceOp {
+    private CacheDirectiveInfo directive;
+    private long id;
+
+    RemoveCacheDirectiveInfoOp(DFSClient client, String pool,
+        String path) {
+      super("removeCacheDirective", client);
+      this.directive = new CacheDirectiveInfo.Builder().
+          setPool(pool).
+          setPath(new Path(path)).
+          build();
+    }
+
+    @Override
+    void prepare() throws Exception {
+      dfs.addCachePool(new CachePoolInfo(directive.getPool()));
+      id = dfs.addCacheDirective(directive, EnumSet.of(CacheFlag.FORCE));
+    }
+
+    @Override
+    void invoke() throws Exception {
+      client.removeCacheDirective(id);
+    }
+
+    @Override
+    boolean checkNamenodeBeforeReturn() throws Exception {
+      for (int i = 0; i < CHECKTIMES; i++) {
+        RemoteIterator<CacheDirectiveEntry> iter =
+            dfs.listCacheDirectives(
+                new CacheDirectiveInfo.Builder().
+                  setPool(directive.getPool()).
+                  setPath(directive.getPath()).
+                  build());
+        if (!iter.hasNext()) {
+          return true;
+        }
+        Thread.sleep(1000);
+      }
+      return false;
+    }
+
+    @Override
+    Object getResult() {
+      return null;
+    }
+  }
+
+  /** addCachePool */
+  class AddCachePoolOp extends AtMostOnceOp {
+    private String pool;
+
+    AddCachePoolOp(DFSClient client, String pool) {
+      super("addCachePool", client);
+      this.pool = pool;
+    }
+
+    @Override
+    void prepare() throws Exception {
+    }
+
+    @Override
+    void invoke() throws Exception {
+      client.addCachePool(new CachePoolInfo(pool));
+    }
+
+    @Override
+    boolean checkNamenodeBeforeReturn() throws Exception {
+      for (int i = 0; i < CHECKTIMES; i++) {
+        RemoteIterator<CachePoolEntry> iter = dfs.listCachePools();
+        if (iter.hasNext()) {
+          return true;
+        }
+        Thread.sleep(1000);
+      }
+      return false;
+    }
+
+    @Override
+    Object getResult() {
+      return null;
+    }
+  }
+
+  /** modifyCachePool */
+  class ModifyCachePoolOp extends AtMostOnceOp {
+    String pool;
+
+    ModifyCachePoolOp(DFSClient client, String pool) {
+      super("modifyCachePool", client);
+      this.pool = pool;
+    }
+
+    @Override
+    void prepare() throws Exception {
+      client.addCachePool(new CachePoolInfo(pool).setLimit(10l));
+    }
+
+    @Override
+    void invoke() throws Exception {
+      client.modifyCachePool(new CachePoolInfo(pool).setLimit(99l));
+    }
+
+    @Override
+    boolean checkNamenodeBeforeReturn() throws Exception {
+      for (int i = 0; i < CHECKTIMES; i++) {
+        RemoteIterator<CachePoolEntry> iter = dfs.listCachePools();
+        if (iter.hasNext() && (long)iter.next().getInfo().getLimit() == 99) {
+          return true;
+        }
+        Thread.sleep(1000);
+      }
+      return false;
+    }
+
+    @Override
+    Object getResult() {
+      return null;
+    }
+  }
+
+  /** removeCachePool */
+  class RemoveCachePoolOp extends AtMostOnceOp {
+    private String pool;
+
+    RemoveCachePoolOp(DFSClient client, String pool) {
+      super("removeCachePool", client);
+      this.pool = pool;
+    }
+
+    @Override
+    void prepare() throws Exception {
+      client.addCachePool(new CachePoolInfo(pool));
+    }
+
+    @Override
+    void invoke() throws Exception {
+      client.removeCachePool(pool);
+    }
+
+    @Override
+    boolean checkNamenodeBeforeReturn() throws Exception {
+      for (int i = 0; i < CHECKTIMES; i++) {
+        RemoteIterator<CachePoolEntry> iter = dfs.listCachePools();
+        if (!iter.hasNext()) {
+          return true;
+        }
+        Thread.sleep(1000);
+      }
+      return false;
+    }
+
+    @Override
+    Object getResult() {
+      return null;
+    }
+  }
+
   @Test (timeout=60000)
   public void testCreateSnapshot() throws Exception {
     final DFSClient client = genClientWithDummyHandler();
@@ -810,6 +1078,58 @@ public class TestRetryCacheWithHA {
     testClientRetryWithFailover(op);
   }
   
+  @Test (timeout=60000)
+  public void testAddCacheDirectiveInfo() throws Exception {
+    DFSClient client = genClientWithDummyHandler();
+    AtMostOnceOp op = new AddCacheDirectiveInfoOp(client, 
+        new CacheDirectiveInfo.Builder().
+            setPool("pool").
+            setPath(new Path("/path")).
+            build());
+    testClientRetryWithFailover(op);
+  }
+
+  @Test (timeout=60000)
+  public void testModifyCacheDirectiveInfo() throws Exception {
+    DFSClient client = genClientWithDummyHandler();
+    AtMostOnceOp op = new ModifyCacheDirectiveInfoOp(client, 
+        new CacheDirectiveInfo.Builder().
+            setPool("pool").
+            setPath(new Path("/path")).
+            setReplication((short)1).build(),
+        (short)555);
+    testClientRetryWithFailover(op);
+  }
+
+  @Test (timeout=60000)
+  public void testRemoveCacheDescriptor() throws Exception {
+    DFSClient client = genClientWithDummyHandler();
+    AtMostOnceOp op = new RemoveCacheDirectiveInfoOp(client, "pool",
+        "/path");
+    testClientRetryWithFailover(op);
+  }
+
+  @Test (timeout=60000)
+  public void testAddCachePool() throws Exception {
+    DFSClient client = genClientWithDummyHandler();
+    AtMostOnceOp op = new AddCachePoolOp(client, "pool");
+    testClientRetryWithFailover(op);
+  }
+
+  @Test (timeout=60000)
+  public void testModifyCachePool() throws Exception {
+    DFSClient client = genClientWithDummyHandler();
+    AtMostOnceOp op = new ModifyCachePoolOp(client, "pool");
+    testClientRetryWithFailover(op);
+  }
+
+  @Test (timeout=60000)
+  public void testRemoveCachePool() throws Exception {
+    DFSClient client = genClientWithDummyHandler();
+    AtMostOnceOp op = new RemoveCachePoolOp(client, "pool");
+    testClientRetryWithFailover(op);
+  }
+
   /**
    * When NN failover happens, if the client did not receive the response and
    * send a retry request to the other NN, the same response should be recieved
@@ -861,5 +1181,93 @@ public class TestRetryCacheWithHA {
       LOG.info("Got the result of " + op.name + ": "
           + results.get(op.name));
     }
+  }
+
+  /**
+   * Add a list of cache pools, list cache pools,
+   * switch active NN, and list cache pools again.
+   */
+  @Test (timeout=60000)
+  public void testListCachePools() throws Exception {
+    final int poolCount = 7;
+    HashSet<String> poolNames = new HashSet<String>(poolCount);
+    for (int i=0; i<poolCount; i++) {
+      String poolName = "testListCachePools-" + i;
+      dfs.addCachePool(new CachePoolInfo(poolName));
+      poolNames.add(poolName);
+    }
+    listCachePools(poolNames, 0);
+
+    cluster.transitionToStandby(0);
+    cluster.transitionToActive(1);
+    cluster.waitActive(1);
+    listCachePools(poolNames, 1);
+  }
+
+  /**
+   * Add a list of cache directives, list cache directives,
+   * switch active NN, and list cache directives again.
+   */
+  @Test (timeout=60000)
+  public void testListCacheDirectives() throws Exception {
+    final int poolCount = 7;
+    HashSet<String> poolNames = new HashSet<String>(poolCount);
+    Path path = new Path("/p");
+    for (int i=0; i<poolCount; i++) {
+      String poolName = "testListCacheDirectives-" + i;
+      CacheDirectiveInfo directiveInfo =
+        new CacheDirectiveInfo.Builder().setPool(poolName).setPath(path).build();
+      dfs.addCachePool(new CachePoolInfo(poolName));
+      dfs.addCacheDirective(directiveInfo, EnumSet.of(CacheFlag.FORCE));
+      poolNames.add(poolName);
+    }
+    listCacheDirectives(poolNames, 0);
+
+    cluster.transitionToStandby(0);
+    cluster.transitionToActive(1);
+    cluster.waitActive(1);
+    listCacheDirectives(poolNames, 1);
+  }
+
+  @SuppressWarnings("unchecked")
+  private void listCachePools(
+      HashSet<String> poolNames, int active) throws Exception {
+    HashSet<String> tmpNames = (HashSet<String>)poolNames.clone();
+    RemoteIterator<CachePoolEntry> pools = dfs.listCachePools();
+    int poolCount = poolNames.size();
+    for (int i=0; i<poolCount; i++) {
+      CachePoolEntry pool = pools.next();
+      String pollName = pool.getInfo().getPoolName();
+      assertTrue("The pool name should be expected", tmpNames.remove(pollName));
+      if (i % 2 == 0) {
+        int standby = active;
+        active = (standby == 0) ? 1 : 0;
+        cluster.transitionToStandby(standby);
+        cluster.transitionToActive(active);
+        cluster.waitActive(active);
+      }
+    }
+    assertTrue("All pools must be found", tmpNames.isEmpty());
+  }
+
+  @SuppressWarnings("unchecked")
+  private void listCacheDirectives(
+      HashSet<String> poolNames, int active) throws Exception {
+    HashSet<String> tmpNames = (HashSet<String>)poolNames.clone();
+    RemoteIterator<CacheDirectiveEntry> directives = dfs.listCacheDirectives(null);
+    int poolCount = poolNames.size();
+    for (int i=0; i<poolCount; i++) {
+      CacheDirectiveEntry directive = directives.next();
+      String pollName = directive.getInfo().getPool();
+      assertTrue("The pool name should be expected", tmpNames.remove(pollName));
+      if (i % 2 == 0) {
+        int standby = active;
+        active = (standby == 0) ? 1 : 0;
+        cluster.transitionToStandby(standby);
+        cluster.transitionToActive(active);
+        cluster.waitActive(active);
+      }
+    }
+    assertTrue("All pools must be found", tmpNames.isEmpty());
   }
 }

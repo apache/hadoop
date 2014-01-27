@@ -38,6 +38,7 @@ import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenInfo;
+import org.junit.Before;
 import org.junit.Test;
 import org.apache.hadoop.ipc.TestSaslRPC.TestTokenSecretManager;
 import org.apache.hadoop.ipc.TestSaslRPC.TestTokenIdentifier;
@@ -58,7 +59,7 @@ public class TestDoAsEffectiveUser {
       GROUP2_NAME };
   private static final String ADDRESS = "0.0.0.0";
   private TestProtocol proxy;
-  private static Configuration masterConf = new Configuration();
+  private static final Configuration masterConf = new Configuration();
   
   
   public static final Log LOG = LogFactory
@@ -70,6 +71,10 @@ public class TestDoAsEffectiveUser {
         "RULE:[2:$1@$0](.*@HADOOP.APACHE.ORG)s/@.*//" +
         "RULE:[1:$1@$0](.*@HADOOP.APACHE.ORG)s/@.*//"
         + "DEFAULT");
+  }
+
+  @Before
+  public void setMasterConf() {
     UserGroupInformation.setConfiguration(masterConf);
   }
 

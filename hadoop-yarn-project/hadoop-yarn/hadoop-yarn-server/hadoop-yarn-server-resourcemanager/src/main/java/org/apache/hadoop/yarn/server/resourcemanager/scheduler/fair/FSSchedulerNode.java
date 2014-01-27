@@ -269,4 +269,11 @@ public class FSSchedulerNode extends SchedulerNode {
   public synchronized AppSchedulable getReservedAppSchedulable() {
     return reservedAppSchedulable;
   }
+  
+  @Override
+  public synchronized void applyDeltaOnAvailableResource(Resource deltaResource) {
+    // we can only adjust available resource if total resource is changed.
+    Resources.addTo(this.availableResource, deltaResource);
+  }
+  
 }

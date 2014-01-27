@@ -43,6 +43,7 @@ import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -92,11 +93,12 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   private final int httpPort;
   private final String nodeAddress; // The containerManager address
   private final String httpAddress;
-  private final Resource totalCapability;
+  private volatile ResourceOption resourceOption;
   private final Node node;
 
   private String healthReport;
   private long lastHealthReportTime;
+  private String nodeManagerVersion;
 
   /* set of containers that have just launched */
   private final Map<ContainerId, ContainerStatus> justLaunchedContainers = 
@@ -172,18 +174,19 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
                              RMNodeEvent> stateMachine;
 
   public RMNodeImpl(NodeId nodeId, RMContext context, String hostName,
-      int cmPort, int httpPort, Node node, Resource capability) {
+      int cmPort, int httpPort, Node node, ResourceOption resourceOption, String nodeManagerVersion) {
     this.nodeId = nodeId;
     this.context = context;
     this.hostName = hostName;
     this.commandPort = cmPort;
     this.httpPort = httpPort;
-    this.totalCapability = capability; 
+    this.resourceOption = resourceOption; 
     this.nodeAddress = hostName + ":" + cmPort;
     this.httpAddress = hostName + ":" + httpPort;
     this.node = node;
     this.healthReport = "Healthy";
     this.lastHealthReportTime = System.currentTimeMillis();
+    this.nodeManagerVersion = nodeManagerVersion;
 
     this.latestNodeHeartBeatResponse.setResponseId(0);
 
@@ -233,14 +236,24 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
 
   @Override
   public Resource getTotalCapability() {
-   return this.totalCapability;
+    return this.resourceOption.getResource();
+  }
+  
+  @Override
+  public void setResourceOption(ResourceOption resourceOption) {
+    this.resourceOption = resourceOption;
+  }
+  
+  @Override
+  public ResourceOption getResourceOption(){
+    return this.resourceOption;
   }
 
   @Override
   public String getRackName() {
     return node.getNetworkLocation();
   }
-
+  
   @Override
   public Node getNode() {
     return this.node;
@@ -286,6 +299,11 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     } finally {
       this.readLock.unlock();
     }
+  }
+
+  @Override
+  public String getNodeManagerVersion() {
+    return nodeManagerVersion;
   }
 
   @Override

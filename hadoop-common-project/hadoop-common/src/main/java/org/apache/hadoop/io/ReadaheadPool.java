@@ -203,8 +203,8 @@ public class ReadaheadPool {
       // It's also possible that we'll end up requesting readahead on some
       // other FD, which may be wasted work, but won't cause a problem.
       try {
-        NativeIO.POSIX.posixFadviseIfPossible(identifier, fd, off, len,
-            NativeIO.POSIX.POSIX_FADV_WILLNEED);
+        NativeIO.POSIX.getCacheManipulator().posixFadviseIfPossible(identifier,
+            fd, off, len, NativeIO.POSIX.POSIX_FADV_WILLNEED);
       } catch (IOException ioe) {
         if (canceled) {
           // no big deal - the reader canceled the request and closed

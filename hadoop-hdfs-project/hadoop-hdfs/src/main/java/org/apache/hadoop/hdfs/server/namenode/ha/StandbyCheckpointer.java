@@ -17,9 +17,18 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
+import static org.apache.hadoop.util.Time.now;
+
 import java.io.IOException;
-import java.net.InetSocketAddress;
+import java.net.URI;
+import java.net.URL;
 import java.security.PrivilegedAction;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.ThreadFactory;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -35,13 +44,12 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.SaveNamespaceCancelledException;
 import org.apache.hadoop.hdfs.server.namenode.TransferFsImage;
 import org.apache.hadoop.hdfs.util.Canceler;
-import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
-import static org.apache.hadoop.util.Time.now;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * Thread which runs inside the NN when it's in Standby state,
@@ -57,8 +65,9 @@ public class StandbyCheckpointer {
   private final FSNamesystem namesystem;
   private long lastCheckpointTime;
   private final CheckpointerThread thread;
-  private String activeNNAddress;
-  private InetSocketAddress myNNAddress;
+  private final ThreadFactory uploadThreadFactory;
+  private URL activeNNAddress;
+  private URL myNNAddress;
 
   private Object cancelLock = new Object();
   private Canceler canceler;
@@ -72,6 +81,8 @@ public class StandbyCheckpointer {
     this.namesystem = ns;
     this.checkpointConf = new CheckpointConf(conf); 
     this.thread = new CheckpointerThread();
+    this.uploadThreadFactory = new ThreadFactoryBuilder().setDaemon(true)
+        .setNameFormat("TransferFsImageUpload-%d").build();
 
     setNameNodeAddresses(conf);
   }
@@ -83,7 +94,7 @@ public class StandbyCheckpointer {
    */
   private void setNameNodeAddresses(Configuration conf) throws IOException {
     // Look up our own address.
-    String myAddrString = getHttpAddress(conf);
+    myNNAddress = getHttpAddress(conf);
 
     // Look up the active node's address
     Configuration confForActive = HAUtil.getConfForOtherNode(conf);
@@ -92,32 +103,22 @@ public class StandbyCheckpointer {
     // Sanity-check.
     Preconditions.checkArgument(checkAddress(activeNNAddress),
         "Bad address for active NN: %s", activeNNAddress);
-    Preconditions.checkArgument(checkAddress(myAddrString),
-        "Bad address for standby NN: %s", myAddrString);
-    myNNAddress = NetUtils.createSocketAddr(myAddrString);
+    Preconditions.checkArgument(checkAddress(myNNAddress),
+        "Bad address for standby NN: %s", myNNAddress);
   }
   
-  private String getHttpAddress(Configuration conf) throws IOException {
-    String configuredAddr = DFSUtil.getInfoServer(null, conf, false);
-    
-    // Use the hostname from the RPC address as a default, in case
-    // the HTTP address is configured to 0.0.0.0.
-    String hostnameFromRpc = NameNode.getServiceAddress(
-        conf, true).getHostName();
-    try {
-      return DFSUtil.substituteForWildcardAddress(
-          configuredAddr, hostnameFromRpc);
-    } catch (IOException e) {
-      throw new IllegalArgumentException(e);
-    }
+  private URL getHttpAddress(Configuration conf) throws IOException {
+    final String scheme = DFSUtil.getHttpClientScheme(conf);
+    String defaultHost = NameNode.getServiceAddress(conf, true).getHostName();
+    URI addr = DFSUtil.getInfoServerWithDefaultHost(defaultHost, conf, scheme);
+    return addr.toURL();
   }
   
   /**
    * Ensure that the given address is valid and has a port
    * specified.
    */
-  private boolean checkAddress(String addrStr) {
-    InetSocketAddress addr = NetUtils.createSocketAddr(addrStr);
+  private static boolean checkAddress(URL addr) {
     return addr.getPort() != 0;
   }
 
@@ -142,7 +143,7 @@ public class StandbyCheckpointer {
 
   private void doCheckpoint() throws InterruptedException, IOException {
     assert canceler != null;
-    long txid;
+    final long txid;
     
     namesystem.writeLockInterruptibly();
     try {
@@ -171,9 +172,26 @@ public class StandbyCheckpointer {
     }
     
     // Upload the saved checkpoint back to the active
-    TransferFsImage.uploadImageFromStorage(
-        activeNNAddress, myNNAddress,
-        namesystem.getFSImage().getStorage(), txid);
+    // Do this in a separate thread to avoid blocking transition to active
+    // See HDFS-4816
+    ExecutorService executor =
+        Executors.newSingleThreadExecutor(uploadThreadFactory);
+    Future<Void> upload = executor.submit(new Callable<Void>() {
+      @Override
+      public Void call() throws IOException {
+        TransferFsImage.uploadImageFromStorage(
+            activeNNAddress, myNNAddress,
+            namesystem.getFSImage().getStorage(), txid);
+        return null;
+      }
+    });
+    executor.shutdown();
+    try {
+      upload.get();
+    } catch (ExecutionException e) {
+      throw new IOException("Exception during image upload: " + e.getMessage(),
+          e.getCause());
+    }
   }
   
   /**
@@ -301,6 +319,7 @@ public class StandbyCheckpointer {
           LOG.info("Checkpoint was cancelled: " + ce.getMessage());
           canceledCount++;
         } catch (InterruptedException ie) {
+          LOG.info("Interrupted during checkpointing", ie);
           // Probably requested shutdown.
           continue;
         } catch (Throwable t) {
@@ -315,7 +334,7 @@ public class StandbyCheckpointer {
   }
 
   @VisibleForTesting
-  String getActiveNNAddress() {
+  URL getActiveNNAddress() {
     return activeNNAddress;
   }
 }

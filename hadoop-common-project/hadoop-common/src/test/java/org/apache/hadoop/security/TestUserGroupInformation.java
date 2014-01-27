@@ -19,7 +19,6 @@ package org.apache.hadoop.security;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.ipc.TestSaslRPC;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.authentication.util.KerberosName;
@@ -39,9 +38,9 @@ import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_USER_GROUP_METRICS_PERCENTILES_INTERVALS;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTH_TO_LOCAL;
 import static org.apache.hadoop.ipc.TestSaslRPC.*;
-import static org.apache.hadoop.security.token.delegation.TestDelegationToken.TestDelegationTokenIdentifier;
 import static org.apache.hadoop.test.MetricsAsserts.*;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.mock;
@@ -53,7 +52,9 @@ public class TestUserGroupInformation {
   final private static String GROUP2_NAME = "group2";
   final private static String GROUP3_NAME = "group3";
   final private static String[] GROUP_NAMES = 
-    new String[]{GROUP1_NAME, GROUP2_NAME, GROUP3_NAME}; 
+    new String[]{GROUP1_NAME, GROUP2_NAME, GROUP3_NAME};
+  // Rollover interval of percentile metrics (in seconds)
+  private static final int PERCENTILES_INTERVAL = 1;
   private static Configuration conf;
  
   /**
@@ -79,7 +80,8 @@ public class TestUserGroupInformation {
     // doesn't matter what it is, but getGroups needs it set...
     // use HADOOP_HOME environment variable to prevent interfering with logic
     // that finds winutils.exe
-    System.setProperty("hadoop.home.dir", System.getenv("HADOOP_HOME"));
+    String home = System.getenv("HADOOP_HOME");
+    System.setProperty("hadoop.home.dir", (home != null ? home : "."));
     // fake the realm is kerberos is enabled
     System.setProperty("java.security.krb5.kdc", "");
     System.setProperty("java.security.krb5.realm", "DEFAULT.REALM");
@@ -149,11 +151,15 @@ public class TestUserGroupInformation {
   /** Test login method */
   @Test (timeout = 30000)
   public void testLogin() throws Exception {
+    conf.set(HADOOP_USER_GROUP_METRICS_PERCENTILES_INTERVALS,
+      String.valueOf(PERCENTILES_INTERVAL));
+    UserGroupInformation.setConfiguration(conf);
     // login from unix
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     assertEquals(UserGroupInformation.getCurrentUser(),
                  UserGroupInformation.getLoginUser());
     assertTrue(ugi.getGroupNames().length >= 1);
+    verifyGroupMetrics(1);
 
     // ensure that doAs works correctly
     UserGroupInformation userGroupInfo = 
@@ -724,6 +730,21 @@ public class TestUserGroupInformation {
     if (failure > 0) {
       assertCounter("LoginFailureNumPos", failure, rb);
       assertGaugeGt("LoginFailureAvgTime", 0, rb);
+    }
+  }
+
+  private static void verifyGroupMetrics(
+      long groups) throws InterruptedException {
+    MetricsRecordBuilder rb = getMetrics("UgiMetrics");
+    if (groups > 0) {
+      assertCounterGt("GetGroupsNumOps", groups-1, rb);
+      double avg = getDoubleGauge("GetGroupsAvgTime", rb);
+      assertTrue(avg >= 0.0);
+
+      // Sleep for an interval+slop to let the percentiles rollover
+      Thread.sleep((PERCENTILES_INTERVAL+1)*1000);
+      // Check that the percentiles were updated
+      assertQuantileGauges("GetGroups1s", rb);
     }
   }
 

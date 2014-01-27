@@ -63,7 +63,7 @@ public class TestKeyFieldBasedComparator extends HadoopTestCase {
     conf.setOutputValueClass(LongWritable.class);
 
     conf.setNumMapTasks(1);
-    conf.setNumReduceTasks(2);
+    conf.setNumReduceTasks(1);
 
     conf.setOutputFormat(TextOutputFormat.class);
     conf.setOutputKeyComparatorClass(KeyFieldBasedComparator.class);
@@ -101,9 +101,7 @@ public class TestKeyFieldBasedComparator extends HadoopTestCase {
       BufferedReader reader = new BufferedReader(new InputStreamReader(is));
       String line = reader.readLine();
       //make sure we get what we expect as the first line, and also
-      //that we have two lines (both the lines must end up in the same
-      //reducer since the partitioner takes the same key spec for all
-      //lines
+      //that we have two lines
       if (expect == 1) {
         assertTrue(line.startsWith(line1));
       } else if (expect == 2) {

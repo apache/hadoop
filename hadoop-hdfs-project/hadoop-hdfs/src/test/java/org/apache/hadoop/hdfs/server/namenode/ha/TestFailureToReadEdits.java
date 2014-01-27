@@ -104,10 +104,7 @@ public class TestFailureToReadEdits {
     HAUtil.setAllowStandbyReads(conf, true);
     
     if (clusterType == TestType.SHARED_DIR_HA) {
-      MiniDFSNNTopology topology = new MiniDFSNNTopology()
-        .addNameservice(new MiniDFSNNTopology.NSConf("ns1")
-          .addNN(new MiniDFSNNTopology.NNConf("nn1").setHttpPort(10001))
-          .addNN(new MiniDFSNNTopology.NNConf("nn2").setHttpPort(10002)));
+      MiniDFSNNTopology topology = MiniQJMHACluster.createDefaultTopology();
       cluster = new MiniDFSCluster.Builder(conf)
         .nnTopology(topology)
         .numDataNodes(0)
@@ -119,7 +116,6 @@ public class TestFailureToReadEdits {
       miniQjmHaCluster = builder.build();
       cluster = miniQjmHaCluster.getDfsCluster();
     }
-    
     cluster.waitActive();
     
     nn0 = cluster.getNameNode(0);

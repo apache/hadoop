@@ -50,7 +50,7 @@ public class MiniDFSClusterWithNodeGroup extends MiniDFSCluster {
   }
 
   public synchronized void startDataNodes(Configuration conf, int numDataNodes,
-      boolean manageDfsDirs, StartupOption operation, 
+      StorageType storageType, boolean manageDfsDirs, StartupOption operation,
       String[] racks, String[] nodeGroups, String[] hosts,
       long[] simulatedCapacities,
       boolean setupHostsFile,
@@ -112,15 +112,7 @@ public class MiniDFSClusterWithNodeGroup extends MiniDFSCluster {
       // Set up datanode address
       setupDatanodeAddress(dnConf, setupHostsFile, checkDataNodeAddrConfig);
       if (manageDfsDirs) {
-        File dir1 = getInstanceStorageDir(i, 0);
-        File dir2 = getInstanceStorageDir(i, 1);
-        dir1.mkdirs();
-        dir2.mkdirs();
-        if (!dir1.isDirectory() || !dir2.isDirectory()) { 
-          throw new IOException("Mkdirs failed to create directory for DataNode "
-              + i + ": " + dir1 + " or " + dir2);
-        }
-        String dirs = fileAsURI(dir1) + "," + fileAsURI(dir2);
+        String dirs = makeDataNodeDirs(i, storageType);
         dnConf.set(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, dirs);
         conf.set(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, dirs);
       }
@@ -158,9 +150,8 @@ public class MiniDFSClusterWithNodeGroup extends MiniDFSCluster {
       
       SecureResources secureResources = null;
       if (UserGroupInformation.isSecurityEnabled()) {
-        SSLFactory sslFactory = new SSLFactory(SSLFactory.Mode.SERVER, dnConf);
         try {
-          secureResources = SecureDataNodeStarter.getSecureResources(sslFactory, dnConf);
+          secureResources = SecureDataNodeStarter.getSecureResources(dnConf);
         } catch (Exception ex) {
           ex.printStackTrace();
         }
@@ -199,7 +190,7 @@ public class MiniDFSClusterWithNodeGroup extends MiniDFSCluster {
       String[] racks, String[] nodeGroups, String[] hosts,
       long[] simulatedCapacities,
       boolean setupHostsFile) throws IOException {
-    startDataNodes(conf, numDataNodes, manageDfsDirs, operation, racks, nodeGroups, 
+    startDataNodes(conf, numDataNodes, StorageType.DEFAULT, manageDfsDirs, operation, racks, nodeGroups,
         hosts, simulatedCapacities, setupHostsFile, false, false);
   }
 
@@ -214,13 +205,13 @@ public class MiniDFSClusterWithNodeGroup extends MiniDFSCluster {
   // This is for initialize from parent class.
   @Override
   public synchronized void startDataNodes(Configuration conf, int numDataNodes, 
-      boolean manageDfsDirs, StartupOption operation, 
+      StorageType storageType, boolean manageDfsDirs, StartupOption operation,
       String[] racks, String[] hosts,
       long[] simulatedCapacities,
       boolean setupHostsFile,
       boolean checkDataNodeAddrConfig,
       boolean checkDataNodeHostConfig) throws IOException {
-    startDataNodes(conf, numDataNodes, manageDfsDirs, operation, racks, 
+    startDataNodes(conf, numDataNodes, storageType, manageDfsDirs, operation, racks,
         NODE_GROUPS, hosts, simulatedCapacities, setupHostsFile, 
         checkDataNodeAddrConfig, checkDataNodeHostConfig);
   }

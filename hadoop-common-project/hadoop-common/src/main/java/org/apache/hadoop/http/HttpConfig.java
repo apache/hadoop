@@ -31,14 +31,24 @@ public class HttpConfig {
   private static Policy policy;
   public enum Policy {
     HTTP_ONLY,
-    HTTPS_ONLY;
+    HTTPS_ONLY,
+    HTTP_AND_HTTPS;
 
     public static Policy fromString(String value) {
-      if (value.equalsIgnoreCase(CommonConfigurationKeysPublic
-              .HTTP_POLICY_HTTPS_ONLY)) {
+      if (HTTPS_ONLY.name().equalsIgnoreCase(value)) {
         return HTTPS_ONLY;
+      } else if (HTTP_AND_HTTPS.name().equalsIgnoreCase(value)) {
+        return HTTP_AND_HTTPS;
       }
       return HTTP_ONLY;
+    }
+
+    public boolean isHttpEnabled() {
+      return this == HTTP_ONLY || this == HTTP_AND_HTTPS;
+    }
+
+    public boolean isHttpsEnabled() {
+      return this == HTTPS_ONLY || this == HTTP_AND_HTTPS;
     }
   }
 

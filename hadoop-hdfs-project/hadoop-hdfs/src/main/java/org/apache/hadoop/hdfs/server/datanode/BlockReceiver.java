@@ -162,7 +162,8 @@ class BlockReceiver implements Closeable {
         switch (stage) {
         case PIPELINE_SETUP_CREATE:
           replicaInfo = datanode.data.createRbw(block);
-          datanode.notifyNamenodeReceivingBlock(block);
+          datanode.notifyNamenodeReceivingBlock(
+              block, replicaInfo.getStorageUuid());
           break;
         case PIPELINE_SETUP_STREAMING_RECOVERY:
           replicaInfo = datanode.data.recoverRbw(
@@ -176,7 +177,8 @@ class BlockReceiver implements Closeable {
                 block.getLocalBlock());
           }
           block.setGenerationStamp(newGs);
-          datanode.notifyNamenodeReceivingBlock(block);
+          datanode.notifyNamenodeReceivingBlock(
+              block, replicaInfo.getStorageUuid());
           break;
         case PIPELINE_SETUP_APPEND_RECOVERY:
           replicaInfo = datanode.data.recoverAppend(block, newGs, minBytesRcvd);
@@ -185,7 +187,8 @@ class BlockReceiver implements Closeable {
                 block.getLocalBlock());
           }
           block.setGenerationStamp(newGs);
-          datanode.notifyNamenodeReceivingBlock(block);
+          datanode.notifyNamenodeReceivingBlock(
+              block, replicaInfo.getStorageUuid());
           break;
         case TRANSFER_RBW:
         case TRANSFER_FINALIZED:
@@ -251,6 +254,10 @@ class BlockReceiver implements Closeable {
 
   /** Return the datanode object. */
   DataNode getDataNode() {return datanode;}
+
+  String getStorageUuid() {
+    return replicaInfo.getStorageUuid();
+  }
 
   /**
    * close files.
@@ -657,8 +664,9 @@ class BlockReceiver implements Closeable {
         //                     
         long dropPos = lastCacheManagementOffset - CACHE_DROP_LAG_BYTES;
         if (dropPos > 0 && dropCacheBehindWrites) {
-          NativeIO.POSIX.posixFadviseIfPossible(block.getBlockName(),
-              outFd, 0, dropPos, NativeIO.POSIX.POSIX_FADV_DONTNEED);
+          NativeIO.POSIX.getCacheManipulator().posixFadviseIfPossible(
+              block.getBlockName(), outFd, 0, dropPos,
+              NativeIO.POSIX.POSIX_FADV_DONTNEED);
         }
         lastCacheManagementOffset = offsetInBlock;
       }
@@ -1027,7 +1035,7 @@ class BlockReceiver implements Closeable {
               final long endTime = ClientTraceLog.isInfoEnabled() ? System.nanoTime() : 0;
               block.setNumBytes(replicaInfo.getNumBytes());
               datanode.data.finalizeBlock(block);
-              datanode.closeBlock(block, DataNode.EMPTY_DEL_HINT);
+              datanode.closeBlock(block, DataNode.EMPTY_DEL_HINT, replicaInfo.getStorageUuid());
               if (ClientTraceLog.isInfoEnabled() && isClient) {
                 long offset = 0;
                 DatanodeRegistration dnR = 
@@ -1035,7 +1043,7 @@ class BlockReceiver implements Closeable {
                 ClientTraceLog.info(String.format(DN_CLIENTTRACE_FORMAT,
                       inAddr, myAddr, block.getNumBytes(),
                       "HDFS_WRITE", clientname, offset,
-                      dnR.getStorageID(), block, endTime-startTime));
+                      dnR.getDatanodeUuid(), block, endTime-startTime));
               } else {
                 LOG.info("Received " + block + " size "
                     + block.getNumBytes() + " from " + inAddr);

@@ -35,6 +35,7 @@ import org.junit.Test;
 
 import static org.apache.hadoop.fs.FileContextTestHelper.*;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 /**
  * <p>
@@ -174,6 +175,13 @@ public abstract class FileContextPermissionBase {
         System.out.println("Not testing changing the group since user " +
                            "belongs to only one group.");
       }
+      
+      try {
+        fc.setOwner(f, null, null);
+        fail("Exception expected.");
+      } catch (IllegalArgumentException iae) {
+        // okay
+      }
     } 
     finally {cleanupFile(fc, f);}
   }
@@ -211,8 +219,6 @@ public abstract class FileContextPermissionBase {
   
   
   /*
-   * Some filesystem like HDFS ignore the "x" bit if the permission.
-   * Others like localFs does not.
    * Override the method below if the file system being tested masks our
    * certain bits for file masks.
    */

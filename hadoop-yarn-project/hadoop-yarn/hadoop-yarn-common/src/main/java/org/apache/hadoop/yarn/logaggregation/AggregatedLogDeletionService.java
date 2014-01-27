@@ -41,6 +41,7 @@ public class AggregatedLogDeletionService extends AbstractService {
   private static final Log LOG = LogFactory.getLog(AggregatedLogDeletionService.class);
   
   private Timer timer = null;
+  private long checkIntervalMsecs;
   
   static class LogDeletionTask extends TimerTask {
     private Configuration conf;
@@ -133,37 +134,71 @@ public class AggregatedLogDeletionService extends AbstractService {
 
   @Override
   protected void serviceStart() throws Exception {
-    Configuration conf = getConfig();
-    if (!conf.getBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED,
-        YarnConfiguration.DEFAULT_LOG_AGGREGATION_ENABLED)) {
-      //Log aggregation is not enabled so don't bother
-      return;
-    }
-    long retentionSecs = conf.getLong(YarnConfiguration.LOG_AGGREGATION_RETAIN_SECONDS,
-        YarnConfiguration.DEFAULT_LOG_AGGREGATION_RETAIN_SECONDS);
-    if(retentionSecs < 0) {
-      LOG.info("Log Aggregation deletion is disabled because retention is" +
-      		" too small (" + retentionSecs + ")");
-      return;
-    }
-    long checkIntervalMsecs = 1000 * conf.getLong(
-        YarnConfiguration.LOG_AGGREGATION_RETAIN_CHECK_INTERVAL_SECONDS,
-        YarnConfiguration.DEFAULT_LOG_AGGREGATION_RETAIN_CHECK_INTERVAL_SECONDS);
-    if (checkIntervalMsecs <= 0) {
-      // when unspecified compute check interval as 1/10th of retention
-      checkIntervalMsecs = (retentionSecs * 1000) / 10;
-    }
-    TimerTask task = new LogDeletionTask(conf, retentionSecs);
-    timer = new Timer();
-    timer.scheduleAtFixedRate(task, 0, checkIntervalMsecs);
+    scheduleLogDeletionTask();
     super.serviceStart();
   }
 
   @Override
   protected void serviceStop() throws Exception {
-    if(timer != null) {
+    stopTimer();
+    super.serviceStop();
+  }
+  
+  private void setLogAggCheckIntervalMsecs(long retentionSecs) {
+    Configuration conf = getConfig();
+    checkIntervalMsecs = 1000 * conf
+        .getLong(
+            YarnConfiguration.LOG_AGGREGATION_RETAIN_CHECK_INTERVAL_SECONDS,
+            YarnConfiguration.DEFAULT_LOG_AGGREGATION_RETAIN_CHECK_INTERVAL_SECONDS);
+    if (checkIntervalMsecs <= 0) {
+      // when unspecified compute check interval as 1/10th of retention
+      checkIntervalMsecs = (retentionSecs * 1000) / 10;
+    }
+  }
+  
+  public void refreshLogRetentionSettings() {
+    if (getServiceState() == STATE.STARTED) {
+      Configuration conf = createConf();
+      setConfig(conf);
+      stopTimer();
+      scheduleLogDeletionTask();
+    } else {
+      LOG.warn("Failed to execute refreshLogRetentionSettings : Aggregated Log Deletion Service is not started");
+    }
+  }
+  
+  private void scheduleLogDeletionTask() {
+    Configuration conf = getConfig();
+    if (!conf.getBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED,
+        YarnConfiguration.DEFAULT_LOG_AGGREGATION_ENABLED)) {
+      // Log aggregation is not enabled so don't bother
+      return;
+    }
+    long retentionSecs = conf.getLong(
+        YarnConfiguration.LOG_AGGREGATION_RETAIN_SECONDS,
+        YarnConfiguration.DEFAULT_LOG_AGGREGATION_RETAIN_SECONDS);
+    if (retentionSecs < 0) {
+      LOG.info("Log Aggregation deletion is disabled because retention is"
+          + " too small (" + retentionSecs + ")");
+      return;
+    }
+    setLogAggCheckIntervalMsecs(retentionSecs);
+    TimerTask task = new LogDeletionTask(conf, retentionSecs);
+    timer = new Timer();
+    timer.scheduleAtFixedRate(task, 0, checkIntervalMsecs);
+  }
+
+  private void stopTimer() {
+    if (timer != null) {
       timer.cancel();
     }
-    super.serviceStop();
+  }
+  
+  public long getCheckIntervalMsecs() {
+    return checkIntervalMsecs;
+  }
+
+  protected Configuration createConf() {
+    return new Configuration();
   }
 }

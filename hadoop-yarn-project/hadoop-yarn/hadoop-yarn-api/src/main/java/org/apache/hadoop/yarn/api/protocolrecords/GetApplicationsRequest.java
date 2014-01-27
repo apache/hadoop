@@ -21,6 +21,8 @@ package org.apache.hadoop.yarn.api.protocolrecords;
 import java.util.EnumSet;
 import java.util.Set;
 
+import org.apache.commons.collections.buffer.UnboundedFifoBuffer;
+import org.apache.commons.lang.math.LongRange;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
@@ -150,4 +152,109 @@ public abstract class GetApplicationsRequest {
   @Unstable
   public abstract void
       setApplicationStates(EnumSet<YarnApplicationState> applicationStates);
+
+  /**
+   * Set the application states to filter applications on
+   *
+   * @param applicationStates all lower-case string representation of the
+   *                          application states to filter on
+   */
+  @Private
+  @Unstable
+  public abstract void setApplicationStates(Set<String> applicationStates);
+
+  /**
+   * Get the users to filter applications on
+   *
+   * @return set of users to filter applications on
+   */
+  @Private
+  @Unstable
+  public abstract Set<String> getUsers();
+
+  /**
+   * Set the users to filter applications on
+   *
+   * @param users set of users to filter applications on
+   */
+  @Private
+  @Unstable
+  public abstract void setUsers(Set<String> users);
+
+  /**
+   * Get the queues to filter applications on
+   *
+   * @return set of queues to filter applications on
+   */
+  @Private
+  @Unstable
+  public abstract Set<String> getQueues();
+
+  /**
+   * Set the queue to filter applications on
+   *
+   * @param queue user to filter applications on
+   */
+  @Private
+  @Unstable
+  public abstract void setQueues(Set<String> queue);
+
+  /**
+   * Get the limit on the number applications to return
+   *
+   * @return number of applications to limit to
+   */
+  @Private
+  @Unstable
+  public abstract long getLimit();
+
+  /**
+   * Limit the number applications to return
+   *
+   * @param limit number of applications to limit to
+   */
+  @Private
+  @Unstable
+  public abstract void setLimit(long limit);
+
+  /**
+   * Get the range of start times to filter applications on
+   *
+   * @return {@link LongRange} of start times to filter applications on
+   */
+  @Private
+  @Unstable
+  public abstract LongRange getStartRange();
+
+  /**
+   * Set the range of start times to filter applications on
+   *
+   * @param begin beginning of the range
+   * @param end end of the range
+   * @throws IllegalArgumentException
+   */
+  @Private
+  @Unstable
+  public abstract void setStartRange(long begin, long end)
+      throws IllegalArgumentException;
+
+  /**
+   * Get the range of finish times to filter applications on
+   *
+   * @return {@link LongRange} of finish times to filter applications on
+   */
+  @Private
+  @Unstable
+  public abstract LongRange getFinishRange();
+
+  /**
+   * Set the range of finish times to filter applications on
+   *
+   * @param begin beginning of the range
+   * @param end end of the range
+   * @throws IllegalArgumentException
+   */
+  @Private
+  @Unstable
+  public abstract void setFinishRange(long begin, long end);
 }

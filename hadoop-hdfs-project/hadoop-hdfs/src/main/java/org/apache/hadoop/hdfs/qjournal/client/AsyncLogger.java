@@ -150,5 +150,5 @@ interface AsyncLogger {
    * Append an HTML-formatted report for this logger's status to the provided
    * StringBuilder. This is displayed on the NN web UI.
    */
-  public void appendHtmlReport(StringBuilder sb);
+  public void appendReport(StringBuilder sb);
 }

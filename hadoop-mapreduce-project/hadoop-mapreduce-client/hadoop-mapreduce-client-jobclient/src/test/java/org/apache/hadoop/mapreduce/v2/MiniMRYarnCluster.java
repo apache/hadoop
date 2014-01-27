@@ -190,11 +190,14 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
         if (!getConfig().getBoolean(
             JHAdminConfig.MR_HISTORY_MINICLUSTER_FIXED_PORTS,
             JHAdminConfig.DEFAULT_MR_HISTORY_MINICLUSTER_FIXED_PORTS)) {
+          String hostname = MiniYARNCluster.getHostname();
           // pick free random ports.
           getConfig().set(JHAdminConfig.MR_HISTORY_ADDRESS,
-              MiniYARNCluster.getHostname() + ":0");
-          MRWebAppUtil.setJHSWebappURLWithoutScheme(getConfig(),
-              MiniYARNCluster.getHostname() + ":0");
+            hostname + ":0");
+          MRWebAppUtil.setJHSWebappURLWithoutScheme(getConfig(), hostname
+              + ":0");
+          getConfig().set(JHAdminConfig.JHS_ADMIN_ADDRESS,
+            hostname + ":0");
         }
         historyServer = new JobHistoryServer();
         historyServer.init(getConfig());

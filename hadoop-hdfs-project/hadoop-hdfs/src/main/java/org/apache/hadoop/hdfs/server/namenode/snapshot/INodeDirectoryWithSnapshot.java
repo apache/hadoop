@@ -32,6 +32,7 @@ import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffReportEntry;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffType;
 import org.apache.hadoop.hdfs.server.namenode.Content;
+import org.apache.hadoop.hdfs.server.namenode.ContentSummaryComputationContext;
 import org.apache.hadoop.hdfs.server.namenode.FSImageSerialization;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
@@ -185,14 +186,10 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
         INode dnode = deleted.get(d);
         if (cnode.compareTo(dnode.getLocalNameBytes()) == 0) {
           fullPath[fullPath.length - 1] = cnode.getLocalNameBytes();
-          if (cnode.isSymlink() && dnode.isSymlink()) {
-            dList.add(new DiffReportEntry(DiffType.MODIFY, fullPath));
-          } else {
-            // must be the case: delete first and then create an inode with the
-            // same name
-            cList.add(new DiffReportEntry(DiffType.CREATE, fullPath));
-            dList.add(new DiffReportEntry(DiffType.DELETE, fullPath));
-          }
+          // must be the case: delete first and then create an inode with the
+          // same name
+          cList.add(new DiffReportEntry(DiffType.CREATE, fullPath));
+          dList.add(new DiffReportEntry(DiffType.DELETE, fullPath));
           c++;
           d++;
         } else if (cnode.compareTo(dnode.getLocalNameBytes()) < 0) {
@@ -892,18 +889,27 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
   }
 
   @Override
-  public Content.Counts computeContentSummary(final Content.Counts counts) {
-    super.computeContentSummary(counts);
-    computeContentSummary4Snapshot(counts);
-    return counts;
+  public ContentSummaryComputationContext computeContentSummary(
+      final ContentSummaryComputationContext summary) {
+    // Snapshot summary calc won't be relinquishing locks in the middle.
+    // Do this first and handover to parent.
+    computeContentSummary4Snapshot(summary.getCounts());
+    super.computeContentSummary(summary);
+    return summary;
   }
 
   private void computeContentSummary4Snapshot(final Content.Counts counts) {
+    // Create a new blank summary context for blocking processing of subtree.
+    ContentSummaryComputationContext summary = 
+        new ContentSummaryComputationContext();
     for(DirectoryDiff d : diffs) {
       for(INode deleted : d.getChildrenDiff().getList(ListType.DELETED)) {
-        deleted.computeContentSummary(counts);
+        deleted.computeContentSummary(summary);
       }
     }
+    // Add the counts from deleted trees.
+    counts.add(summary.getCounts());
+    // Add the deleted directory count.
     counts.add(Content.DIRECTORY, diffs.asList().size());
   }
   

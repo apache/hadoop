@@ -22,12 +22,12 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>2.3.0-SNAPSHOT</version>
+    <version>2.4.0-SNAPSHOT</version>
     <relativePath>../../hadoop-project</relativePath>
   </parent>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-hdfs-httpfs</artifactId>
-  <version>2.3.0-SNAPSHOT</version>
+  <version>2.4.0-SNAPSHOT</version>
   <packaging>war</packaging>
 
   <name>Apache Hadoop HttpFS</name>
@@ -553,6 +553,9 @@
                     <mkdir dir="${httpfs.tomcat.dist.dir}/webapps"/>
                     <delete file="${httpfs.tomcat.dist.dir}/conf/server.xml"/>
                     <copy file="${basedir}/src/main/tomcat/server.xml"
+                          toDir="${httpfs.tomcat.dist.dir}/conf"/>
+                    <delete file="${httpfs.tomcat.dist.dir}/conf/ssl-server.xml"/>
+                    <copy file="${basedir}/src/main/tomcat/ssl-server.xml"
                           toDir="${httpfs.tomcat.dist.dir}/conf"/>
                     <delete file="${httpfs.tomcat.dist.dir}/conf/logging.properties"/>
                     <copy file="${basedir}/src/main/tomcat/logging.properties"

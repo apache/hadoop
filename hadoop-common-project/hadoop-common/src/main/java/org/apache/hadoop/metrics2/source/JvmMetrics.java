@@ -24,10 +24,8 @@ import java.lang.management.MemoryUsage;
 import java.lang.management.ThreadInfo;
 import java.lang.management.ThreadMXBean;
 import java.lang.management.GarbageCollectorMXBean;
-import java.util.Map;
 import java.util.List;
-
-import com.google.common.collect.Maps;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.log.metrics.EventCounter;
@@ -67,7 +65,8 @@ public class JvmMetrics implements MetricsSource {
       ManagementFactory.getGarbageCollectorMXBeans();
   final ThreadMXBean threadMXBean = ManagementFactory.getThreadMXBean();
   final String processName, sessionId;
-  final Map<String, MetricsInfo[]> gcInfoCache = Maps.newHashMap();
+  final ConcurrentHashMap<String, MetricsInfo[]> gcInfoCache =
+      new ConcurrentHashMap<String, MetricsInfo[]>();
 
   JvmMetrics(String processName, String sessionId) {
     this.processName = processName;
@@ -101,8 +100,10 @@ public class JvmMetrics implements MetricsSource {
     Runtime runtime = Runtime.getRuntime();
     rb.addGauge(MemNonHeapUsedM, memNonHeap.getUsed() / M)
       .addGauge(MemNonHeapCommittedM, memNonHeap.getCommitted() / M)
+      .addGauge(MemNonHeapMaxM, memNonHeap.getMax() / M)
       .addGauge(MemHeapUsedM, memHeap.getUsed() / M)
       .addGauge(MemHeapCommittedM, memHeap.getCommitted() / M)
+      .addGauge(MemHeapMaxM, memHeap.getMax() / M)
       .addGauge(MemMaxM, runtime.maxMemory() / M);
   }
 
@@ -121,13 +122,17 @@ public class JvmMetrics implements MetricsSource {
       .addCounter(GcTimeMillis, timeMillis);
   }
 
-  private synchronized MetricsInfo[] getGcInfo(String gcName) {
+  private MetricsInfo[] getGcInfo(String gcName) {
     MetricsInfo[] gcInfo = gcInfoCache.get(gcName);
     if (gcInfo == null) {
       gcInfo = new MetricsInfo[2];
-      gcInfo[0] = Interns.info("GcCount"+ gcName, "GC Count for "+ gcName);
-      gcInfo[1] = Interns.info("GcTimeMillis"+ gcName, "GC Time for "+ gcName);
-      gcInfoCache.put(gcName, gcInfo);
+      gcInfo[0] = Interns.info("GcCount" + gcName, "GC Count for " + gcName);
+      gcInfo[1] = Interns
+          .info("GcTimeMillis" + gcName, "GC Time for " + gcName);
+      MetricsInfo[] previousGcInfo = gcInfoCache.putIfAbsent(gcName, gcInfo);
+      if (previousGcInfo != null) {
+        return previousGcInfo;
+      }
     }
     return gcInfo;
   }

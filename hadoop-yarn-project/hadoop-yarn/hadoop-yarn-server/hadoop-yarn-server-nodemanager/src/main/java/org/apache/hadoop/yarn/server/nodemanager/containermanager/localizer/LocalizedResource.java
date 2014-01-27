@@ -193,8 +193,8 @@ public class LocalizedResource implements EventHandler<ResourceEvent> {
         LOG.warn("Can't handle this event at current state", e);
       }
       if (oldState != newState) {
-        LOG.info("Resource " + resourcePath + " transitioned from "
-            + oldState
+        LOG.info("Resource " + resourcePath + (localPath != null ? 
+          "(->" + localPath + ")": "") + " transitioned from " + oldState
             + " to " + newState);
       }
     } finally {

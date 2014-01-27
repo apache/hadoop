@@ -101,6 +101,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoSchedule
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.SystemClock;
 import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 @SuppressWarnings("unchecked")
@@ -110,6 +111,12 @@ public class TestRMContainerAllocator {
       .getLog(TestRMContainerAllocator.class);
   static final RecordFactory recordFactory = RecordFactoryProvider
       .getRecordFactory(null);
+
+  @Before
+  public void setup() {
+    MyContainerAllocator.getJobUpdatedNodeEvents().clear();
+    MyContainerAllocator.getTaskAttemptKillEvents().clear();
+  }
 
   @After
   public void tearDown() {
@@ -432,9 +439,19 @@ public class TestRMContainerAllocator {
   }
 
   private static class MyResourceManager extends MockRM {
+
+    private static long fakeClusterTimeStamp = System.currentTimeMillis();
     
     public MyResourceManager(Configuration conf) {
       super(conf);
+    }
+
+    @Override
+    public void serviceStart() throws Exception {
+      super.serviceStart();
+      // Ensure that the application attempt IDs for all the tests are the same
+      // The application attempt IDs will be used as the login user names
+      MyResourceManager.setClusterTimeStamp(fakeClusterTimeStamp);
     }
 
     @Override
@@ -760,6 +777,9 @@ public class TestRMContainerAllocator {
 
     nm1.nodeHeartbeat(true);
     dispatcher.await();
+    Assert.assertEquals(1, allocator.getJobUpdatedNodeEvents().size());
+    Assert.assertEquals(3, allocator.getJobUpdatedNodeEvents().get(0).getUpdatedNodes().size());
+    allocator.getJobUpdatedNodeEvents().clear();
     // get the assignment
     assigned = allocator.schedule();
     dispatcher.await();
@@ -1491,11 +1511,11 @@ public class TestRMContainerAllocator {
       return result;
     }
     
-    List<TaskAttemptKillEvent> getTaskAttemptKillEvents() {
+    static List<TaskAttemptKillEvent> getTaskAttemptKillEvents() {
       return taskAttemptKillEvents;
     }
     
-    List<JobUpdatedNodesEvent> getJobUpdatedNodeEvents() {
+    static List<JobUpdatedNodesEvent> getJobUpdatedNodeEvents() {
       return jobUpdatedNodeEvents;
     }
 
@@ -1580,6 +1600,21 @@ public class TestRMContainerAllocator {
         numPendingReduces, 
         maxReduceRampupLimit, reduceSlowStart);
     verify(allocator).rampDownReduces(anyInt());
+
+    // Test reduce ramp-down for when there are scheduled maps
+    // Since we have two scheduled Maps, rampDownReducers 
+    // should be invoked twice.
+    scheduledMaps = 2;
+    assignedReduces = 2;
+    doReturn(10 * 1024).when(allocator).getMemLimit();
+    allocator.scheduleReduces(
+        totalMaps, succeededMaps, 
+        scheduledMaps, scheduledReduces, 
+        assignedMaps, assignedReduces, 
+        mapResourceReqt, reduceResourceReqt, 
+        numPendingReduces, 
+        maxReduceRampupLimit, reduceSlowStart);
+    verify(allocator, times(2)).rampDownReduces(anyInt());
   }
 
   private static class RecalculateContainerAllocator extends MyContainerAllocator {

@@ -64,9 +64,12 @@
 <% healthjsp.generateJournalReport(out, nn, request); %>
 <hr/>
 <% healthjsp.generateConfReport(out, nn, request); %>
-<hr>
+<hr/>
+<h3>Snapshot Summary</h3>
+<% NamenodeJspHelper.generateSnapshotReport(out, fsn); %>
+<hr/>
 <h3>Startup Progress</h3>
 <% healthjsp.generateStartupProgress(out, nn.getStartupProgress()); %>
-<%
-out.println(ServletUtil.htmlFooter());
-%>
+<hr/><p><a href="http://hadoop.apache.org/core">Hadoop</a>, 2013.&nbsp;<a href="dfshealth.html">New UI</a></p>
+</body>
+</html>

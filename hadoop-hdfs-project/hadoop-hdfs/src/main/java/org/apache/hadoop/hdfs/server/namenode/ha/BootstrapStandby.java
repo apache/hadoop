@@ -23,6 +23,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.net.URL;
 import java.security.PrivilegedAction;
 import java.util.Collection;
 import java.util.List;
@@ -69,7 +70,7 @@ public class BootstrapStandby implements Tool, Configurable {
   private String nnId;
   private String otherNNId;
 
-  private String otherHttpAddr;
+  private URL otherHttpAddr;
   private InetSocketAddress otherIpcAddr;
   private Collection<URI> dirsToFormat;
   private List<URI> editUrisToFormat;
@@ -179,6 +180,7 @@ public class BootstrapStandby implements Tool, Configurable {
     // Check with the user before blowing away data.
     if (!Storage.confirmFormat(storage.dirIterable(null),
             force, interactive)) {
+      storage.close();
       return ERR_CODE_ALREADY_FORMATTED;
     }
     
@@ -188,24 +190,29 @@ public class BootstrapStandby implements Tool, Configurable {
     // Load the newly formatted image, using all of the directories (including shared
     // edits)
     FSImage image = new FSImage(conf);
-    image.getStorage().setStorageInfo(storage);
-    image.initEditLog();
-    assert image.getEditLog().isOpenForRead() :
+    try {
+      image.getStorage().setStorageInfo(storage);
+      image.initEditLog();
+      assert image.getEditLog().isOpenForRead() :
         "Expected edit log to be open for read";
-    
-    // Ensure that we have enough edits already in the shared directory to
-    // start up from the last checkpoint on the active.
-    if (!checkLogsAvailableForRead(image, imageTxId, curTxId)) {
-      return ERR_CODE_LOGS_UNAVAILABLE;
-    }
-    
-    image.getStorage().writeTransactionIdFileToStorage(curTxId);
 
-    // Download that checkpoint into our storage directories.
-    MD5Hash hash = TransferFsImage.downloadImageToStorage(
-        otherHttpAddr.toString(), imageTxId,
+      // Ensure that we have enough edits already in the shared directory to
+      // start up from the last checkpoint on the active.
+      if (!checkLogsAvailableForRead(image, imageTxId, curTxId)) {
+        return ERR_CODE_LOGS_UNAVAILABLE;
+      }
+
+      image.getStorage().writeTransactionIdFileToStorage(curTxId);
+
+      // Download that checkpoint into our storage directories.
+      MD5Hash hash = TransferFsImage.downloadImageToStorage(
+        otherHttpAddr, imageTxId,
         storage, true);
-    image.saveDigestAndRenameCheckpointImage(imageTxId, hash);
+      image.saveDigestAndRenameCheckpointImage(imageTxId, hash);
+    } catch (IOException ioe) {
+      image.close();
+      throw ioe;
+    }
     return 0;
   }
 
@@ -276,11 +283,10 @@ public class BootstrapStandby implements Tool, Configurable {
         "Could not determine valid IPC address for other NameNode (%s)" +
         ", got: %s", otherNNId, otherIpcAddr);
 
-    otherHttpAddr = DFSUtil.getInfoServer(null, otherNode, false);
-    otherHttpAddr = DFSUtil.substituteForWildcardAddress(otherHttpAddr,
-        otherIpcAddr.getHostName());
-    
-    
+    final String scheme = DFSUtil.getHttpClientScheme(conf);
+    otherHttpAddr = DFSUtil.getInfoServerWithDefaultHost(
+        otherIpcAddr.getHostName(), otherNode, scheme).toURL();
+
     dirsToFormat = FSNamesystem.getNamespaceDirs(conf);
     editUrisToFormat = FSNamesystem.getNamespaceEditsDirs(
         conf, false);

@@ -270,7 +270,7 @@ public abstract class FileSystemContractBaseTest extends TestCase {
   
   public void testWriteInNonExistentDirectory() throws IOException {
     Path path = path("/test/hadoop/file");
-    assertFalse("Parent doesn't exist", fs.exists(path.getParent()));
+    assertFalse("Parent exists", fs.exists(path.getParent()));
     createFile(path);
     
     assertTrue("Exists", fs.exists(path));
@@ -280,7 +280,7 @@ public abstract class FileSystemContractBaseTest extends TestCase {
 
   public void testDeleteNonExistentFile() throws IOException {
     Path path = path("/test/hadoop/file");    
-    assertFalse("Doesn't exist", fs.exists(path));
+    assertFalse("Path exists: " + path, fs.exists(path));
     assertFalse("No deletion", fs.delete(path, true));
   }
   

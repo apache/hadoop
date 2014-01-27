@@ -19,21 +19,26 @@
 package org.apache.hadoop.hdfs;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_FAILOVER_PROXY_PROVIDER_KEY_PREFIX;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_BACKUP_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HTTP_PORT_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMESERVICES;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMESERVICE_ID;
-import org.apache.hadoop.util.Shell;
-
-import static org.junit.Assert.*;
-import org.junit.Assume;
-import static org.hamcrest.CoreMatchers.*;
+import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
+import static org.hamcrest.CoreMatchers.not;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -54,8 +59,11 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.Shell;
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -421,20 +429,22 @@ public class TestDFSUtil {
   }
 
   @Test
-  public void testGetInfoServer() throws IOException {
+  public void testGetInfoServer() throws IOException, URISyntaxException {
     HdfsConfiguration conf = new HdfsConfiguration();
-    conf.set(HADOOP_SECURITY_AUTHENTICATION, "kerberos");
-    UserGroupInformation.setConfiguration(conf);
     
-    String httpsport = DFSUtil.getInfoServer(null, conf, true);
-    assertEquals("0.0.0.0:"+DFS_NAMENODE_HTTPS_PORT_DEFAULT, httpsport);
+    URI httpsport = DFSUtil.getInfoServer(null, conf, "https");
+    assertEquals(new URI("https", null, "0.0.0.0",
+        DFS_NAMENODE_HTTPS_PORT_DEFAULT, null, null, null), httpsport);
     
-    String httpport = DFSUtil.getInfoServer(null, conf, false);
-    assertEquals("0.0.0.0:"+DFS_NAMENODE_HTTP_PORT_DEFAULT, httpport);
-    
-    String httpAddress = DFSUtil.getInfoServer(new InetSocketAddress(
-        "localhost", 8020), conf, false);
-    assertEquals("localhost:" + DFS_NAMENODE_HTTP_PORT_DEFAULT, httpAddress);
+    URI httpport = DFSUtil.getInfoServer(null, conf, "http");
+    assertEquals(new URI("http", null, "0.0.0.0",
+        DFS_NAMENODE_HTTP_PORT_DEFAULT, null, null, null), httpport);
+
+    URI httpAddress = DFSUtil.getInfoServer(new InetSocketAddress(
+        "localhost", 8020), conf, "http");
+    assertEquals(
+        URI.create("http://localhost:" + DFS_NAMENODE_HTTP_PORT_DEFAULT),
+        httpAddress);
   }
   
   @Test
@@ -537,6 +547,55 @@ public class TestDFSUtil {
     // We can determine the nameservice ID, there's only one listed
     assertEquals("ns1", DFSUtil.getNamenodeNameServiceId(conf));
     assertEquals("ns1", DFSUtil.getSecondaryNameServiceId(conf));
+  }
+
+  @Test
+  public void testGetHaNnHttpAddresses() throws IOException {
+    final String LOGICAL_HOST_NAME = "ns1";
+    final String NS1_NN1_ADDR      = "ns1-nn1.example.com:8020";
+    final String NS1_NN2_ADDR      = "ns1-nn2.example.com:8020";
+
+    Configuration conf = createWebHDFSHAConfiguration(LOGICAL_HOST_NAME, NS1_NN1_ADDR, NS1_NN2_ADDR);
+
+    Map<String, Map<String, InetSocketAddress>> map =
+        DFSUtil.getHaNnWebHdfsAddresses(conf, "webhdfs");
+
+    assertEquals(NS1_NN1_ADDR, map.get("ns1").get("nn1").toString());
+    assertEquals(NS1_NN2_ADDR, map.get("ns1").get("nn2").toString());
+  }
+
+  @Test
+  public void testResolve() throws IOException, URISyntaxException {
+    final String LOGICAL_HOST_NAME = "ns1";
+    final String NS1_NN1_HOST      = "ns1-nn1.example.com";
+    final String NS1_NN2_HOST      = "ns1-nn2.example.com";
+    final String NS1_NN1_ADDR      = "ns1-nn1.example.com:8020";
+    final String NS1_NN2_ADDR      = "ns1-nn2.example.com:8020";
+    final int DEFAULT_PORT         = NameNode.DEFAULT_PORT;
+
+    Configuration conf = createWebHDFSHAConfiguration(LOGICAL_HOST_NAME, NS1_NN1_ADDR, NS1_NN2_ADDR);
+    URI uri = new URI("webhdfs://ns1");
+    assertTrue(HAUtil.isLogicalUri(conf, uri));
+    InetSocketAddress[] addrs = DFSUtil.resolveWebHdfsUri(uri, conf);
+    assertArrayEquals(new InetSocketAddress[] {
+      new InetSocketAddress(NS1_NN1_HOST, DEFAULT_PORT),
+      new InetSocketAddress(NS1_NN2_HOST, DEFAULT_PORT),
+    }, addrs);
+  }
+
+  private static Configuration createWebHDFSHAConfiguration(String logicalHostName, String nnaddr1, String nnaddr2) {
+    HdfsConfiguration conf = new HdfsConfiguration();
+
+    conf.set(DFS_NAMESERVICES, "ns1");
+    conf.set(DFSUtil.addKeySuffixes(DFS_HA_NAMENODES_KEY_PREFIX, "ns1"),"nn1,nn2");
+    conf.set(DFSUtil.addKeySuffixes(
+        DFS_NAMENODE_HTTP_ADDRESS_KEY, "ns1", "nn1"), nnaddr1);
+    conf.set(DFSUtil.addKeySuffixes(
+        DFS_NAMENODE_HTTP_ADDRESS_KEY, "ns1", "nn2"), nnaddr2);
+
+    conf.set(DFS_CLIENT_FAILOVER_PROXY_PROVIDER_KEY_PREFIX + "." + logicalHostName,
+        ConfiguredFailoverProxyProvider.class.getName());
+    return conf;
   }
 
   @Test
@@ -666,5 +725,43 @@ public class TestDFSUtil {
     assertEquals("Test spnego key is NOT null",
         DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_KEYTAB_KEY,
         DFSUtil.getSpnegoKeytabKey(conf, defaultKey));
+  }
+
+  @Test(timeout=1000)
+  public void testDurationToString() throws Exception {
+    assertEquals("000:00:00:00.000", DFSUtil.durationToString(0));
+    assertEquals("001:01:01:01.000",
+        DFSUtil.durationToString(((24*60*60)+(60*60)+(60)+1)*1000));
+    assertEquals("000:23:59:59.999",
+        DFSUtil.durationToString(((23*60*60)+(59*60)+(59))*1000+999));
+    assertEquals("-001:01:01:01.000",
+        DFSUtil.durationToString(-((24*60*60)+(60*60)+(60)+1)*1000));
+    assertEquals("-000:23:59:59.574",
+        DFSUtil.durationToString(-(((23*60*60)+(59*60)+(59))*1000+574)));
+  }
+
+  @Test(timeout=5000)
+  public void testRelativeTimeConversion() throws Exception {
+    try {
+      DFSUtil.parseRelativeTime("1");
+    } catch (IOException e) {
+      assertExceptionContains("too short", e);
+    }
+    try {
+      DFSUtil.parseRelativeTime("1z");
+    } catch (IOException e) {
+      assertExceptionContains("unknown time unit", e);
+    }
+    try {
+      DFSUtil.parseRelativeTime("yyz");
+    } catch (IOException e) {
+      assertExceptionContains("is not a number", e);
+    }
+    assertEquals(61*1000, DFSUtil.parseRelativeTime("61s"));
+    assertEquals(61*60*1000, DFSUtil.parseRelativeTime("61m"));
+    assertEquals(0, DFSUtil.parseRelativeTime("0s"));
+    assertEquals(25*60*60*1000, DFSUtil.parseRelativeTime("25h"));
+    assertEquals(4*24*60*60*1000l, DFSUtil.parseRelativeTime("4d"));
+    assertEquals(999*24*60*60*1000l, DFSUtil.parseRelativeTime("999d"));
   }
 }

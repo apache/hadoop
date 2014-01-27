@@ -28,11 +28,38 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.AvroTestUtil;
 import org.apache.hadoop.util.Shell;
 
+import com.google.common.base.Joiner;
+
 import junit.framework.TestCase;
 
-import static org.junit.Assert.fail;
-
 public class TestPath extends TestCase {
+  /**
+   * Merge a bunch of Path objects into a sorted semicolon-separated
+   * path string.
+   */
+  public static String mergeStatuses(Path paths[]) {
+    String pathStrings[] = new String[paths.length];
+    int i = 0;
+    for (Path path : paths) {
+      pathStrings[i++] = path.toUri().getPath();
+    }
+    Arrays.sort(pathStrings);
+    return Joiner.on(";").join(pathStrings);
+  }
+
+  /**
+   * Merge a bunch of FileStatus objects into a sorted semicolon-separated
+   * path string.
+   */
+  public static String mergeStatuses(FileStatus statuses[]) {
+    Path paths[] = new Path[statuses.length];
+    int i = 0;
+    for (FileStatus status : statuses) {
+      paths[i++] = status.getPath();
+    }
+    return mergeStatuses(paths);
+  }
+
   @Test (timeout = 30000)
   public void testToString() {
     toStringTest("/");
@@ -388,10 +415,11 @@ public class TestPath extends TestCase {
     // ensure globStatus with "*" finds all dir contents
     stats = lfs.globStatus(new Path(testRoot, "*"));
     Arrays.sort(stats);
-    assertEquals(paths.length, stats.length);
-    for (int i=0; i < paths.length; i++) {
-      assertEquals(paths[i].getParent(), stats[i].getPath());
+    Path parentPaths[] = new Path[paths.length];
+    for (int i = 0; i < paths.length; i++) {
+      parentPaths[i] = paths[i].getParent();
     }
+    assertEquals(mergeStatuses(parentPaths), mergeStatuses(stats));
 
     // ensure that globStatus with an escaped "\*" only finds "*"
     stats = lfs.globStatus(new Path(testRoot, "\\*"));
@@ -401,9 +429,7 @@ public class TestPath extends TestCase {
     // try to glob the inner file for all dirs
     stats = lfs.globStatus(new Path(testRoot, "*/f"));
     assertEquals(paths.length, stats.length);
-    for (int i=0; i < paths.length; i++) {
-      assertEquals(paths[i], stats[i].getPath());
-    }
+    assertEquals(mergeStatuses(paths), mergeStatuses(stats));
 
     // try to get the inner file for only the "*" dir
     stats = lfs.globStatus(new Path(testRoot, "\\*/f"));
@@ -434,6 +460,13 @@ public class TestPath extends TestCase {
       Path.mergePaths(new Path("/C:/foo"),
         new Path("/C:/bar")));
 
+    assertEquals(new Path(Shell.WINDOWS ? "/C:/bar" : "/C:/C:/bar"),
+        Path.mergePaths(new Path("/C:/"),
+          new Path("/C:/bar")));
+
+    assertEquals(new Path("/bar"),
+        Path.mergePaths(new Path("/"), new Path("/bar")));
+
     assertEquals(new Path("viewfs:///foo/bar"),
       Path.mergePaths(new Path("viewfs:///foo"),
         new Path("file:///bar")));
@@ -441,5 +474,17 @@ public class TestPath extends TestCase {
     assertEquals(new Path("viewfs://vfsauthority/foo/bar"),
       Path.mergePaths(new Path("viewfs://vfsauthority/foo"),
         new Path("file://fileauthority/bar")));
+  }
+
+  @Test (timeout = 30000)
+  public void testIsWindowsAbsolutePath() {
+    if (!Shell.WINDOWS) return;
+    assertTrue(Path.isWindowsAbsolutePath("C:\\test", false));
+    assertTrue(Path.isWindowsAbsolutePath("C:/test", false));
+    assertTrue(Path.isWindowsAbsolutePath("/C:/test", true));
+    assertFalse(Path.isWindowsAbsolutePath("/test", false));
+    assertFalse(Path.isWindowsAbsolutePath("/test", true));
+    assertFalse(Path.isWindowsAbsolutePath("C:test", false));
+    assertFalse(Path.isWindowsAbsolutePath("/C:test", true));
   }
 }

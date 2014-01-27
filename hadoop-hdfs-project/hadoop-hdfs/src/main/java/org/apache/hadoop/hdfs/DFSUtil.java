@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.hdfs;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ADMIN;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_HTTPS_NEED_AUTH_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_HTTPS_NEED_AUTH_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NAMENODE_ID_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_BACKUP_ADDRESS_KEY;
@@ -38,12 +41,15 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.SecureRandom;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
@@ -63,6 +69,7 @@ import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
@@ -75,18 +82,21 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocolPB.ClientDatanodeProtocolTranslatorPB;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.io.retry.RetryPolicies;
-import org.apache.hadoop.io.retry.RetryPolicy;
-import org.apache.hadoop.io.retry.RetryProxy;
+import org.apache.hadoop.hdfs.web.SWebHdfsFileSystem;
+import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
+import org.apache.hadoop.http.HttpConfig;
+import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
@@ -135,6 +145,23 @@ public class DFSUtil {
   /** @return a pseudo secure random number generator. */
   public static SecureRandom getSecureRandom() {
     return SECURE_RANDOM.get();
+  }
+
+  /** Shuffle the elements in the given array. */
+  public static <T> T[] shuffle(final T[] array) {
+    if (array != null && array.length > 0) {
+      final Random random = getRandom();
+      for (int n = array.length; n > 1; ) {
+        final int randomIndex = random.nextInt(n);
+        n--;
+        if (n != randomIndex) {
+          final T tmp = array[randomIndex];
+          array[randomIndex] = array[n];
+          array[n] = tmp;
+        }
+      }
+    }
+    return array;
   }
 
   /**
@@ -424,7 +451,13 @@ public class DFSUtil {
                                      locations[hCnt].getNetworkLocation());
         racks[hCnt] = node.toString();
       }
-      blkLocations[idx] = new BlockLocation(xferAddrs, hosts, racks,
+      DatanodeInfo[] cachedLocations = blk.getCachedLocations();
+      String[] cachedHosts = new String[cachedLocations.length];
+      for (int i=0; i<cachedLocations.length; i++) {
+        cachedHosts[i] = cachedLocations[i].getHostName();
+      }
+      blkLocations[idx] = new BlockLocation(xferAddrs, hosts, cachedHosts,
+                                            racks,
                                             blk.getStartOffset(),
                                             blk.getBlockSize(),
                                             blk.isCorrupt());
@@ -604,6 +637,65 @@ public class DFSUtil {
   public static Map<String, Map<String, InetSocketAddress>> getHaNnRpcAddresses(
       Configuration conf) {
     return getAddresses(conf, null, DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY);
+  }
+
+  /**
+   * Returns list of InetSocketAddress corresponding to HA NN HTTP addresses from
+   * the configuration.
+   *
+   * @return list of InetSocketAddresses
+   */
+  public static Map<String, Map<String, InetSocketAddress>> getHaNnWebHdfsAddresses(
+      Configuration conf, String scheme) {
+    if (WebHdfsFileSystem.SCHEME.equals(scheme)) {
+      return getAddresses(conf, null,
+          DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY);
+    } else if (SWebHdfsFileSystem.SCHEME.equals(scheme)) {
+      return getAddresses(conf, null,
+          DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY);
+    } else {
+      throw new IllegalArgumentException("Unsupported scheme: " + scheme);
+    }
+  }
+
+  /**
+   * Resolve an HDFS URL into real INetSocketAddress. It works like a DNS resolver
+   * when the URL points to an non-HA cluster. When the URL points to an HA
+   * cluster, the resolver further resolves the logical name (i.e., the authority
+   * in the URL) into real namenode addresses.
+   */
+  public static InetSocketAddress[] resolveWebHdfsUri(URI uri, Configuration conf)
+      throws IOException {
+    int defaultPort;
+    String scheme = uri.getScheme();
+    if (WebHdfsFileSystem.SCHEME.equals(scheme)) {
+      defaultPort = DFSConfigKeys.DFS_NAMENODE_HTTP_PORT_DEFAULT;
+    } else if (SWebHdfsFileSystem.SCHEME.equals(scheme)) {
+      defaultPort = DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_DEFAULT;
+    } else {
+      throw new IllegalArgumentException("Unsupported scheme: " + scheme);
+    }
+
+    ArrayList<InetSocketAddress> ret = new ArrayList<InetSocketAddress>();
+
+    if (!HAUtil.isLogicalUri(conf, uri)) {
+      InetSocketAddress addr = NetUtils.createSocketAddr(uri.getAuthority(),
+          defaultPort);
+      ret.add(addr);
+
+    } else {
+      Map<String, Map<String, InetSocketAddress>> addresses = DFSUtil
+          .getHaNnWebHdfsAddresses(conf, scheme);
+
+      for (Map<String, InetSocketAddress> addrs : addresses.values()) {
+        for (InetSocketAddress addr : addrs.values()) {
+          ret.add(addr);
+        }
+      }
+    }
+
+    InetSocketAddress[] r = new InetSocketAddress[ret.size()];
+    return ret.toArray(r);
   }
   
   /**
@@ -894,39 +986,71 @@ public class DFSUtil {
    * given namenode rpc address.
    * @param conf
    * @param namenodeAddr - namenode RPC address
-   * @param httpsAddress -If true, and if security is enabled, returns server 
-   *                      https address. If false, returns server http address.
+   * @param scheme - the scheme (http / https)
    * @return server http or https address
    * @throws IOException 
    */
-  public static String getInfoServer(InetSocketAddress namenodeAddr,
-      Configuration conf, boolean httpsAddress) throws IOException {
-    boolean securityOn = UserGroupInformation.isSecurityEnabled();
-    String httpAddressKey = (securityOn && httpsAddress) ? 
-        DFS_NAMENODE_HTTPS_ADDRESS_KEY : DFS_NAMENODE_HTTP_ADDRESS_KEY;
-    String httpAddressDefault = (securityOn && httpsAddress) ? 
-        DFS_NAMENODE_HTTPS_ADDRESS_DEFAULT : DFS_NAMENODE_HTTP_ADDRESS_DEFAULT;
-      
-    String suffixes[];
+  public static URI getInfoServer(InetSocketAddress namenodeAddr,
+      Configuration conf, String scheme) throws IOException {
+    String[] suffixes = null;
     if (namenodeAddr != null) {
       // if non-default namenode, try reverse look up 
       // the nameServiceID if it is available
       suffixes = getSuffixIDs(conf, namenodeAddr,
           DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY,
           DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY);
-    } else {
-      suffixes = new String[2];
     }
-    String configuredInfoAddr = getSuffixedConf(conf, httpAddressKey,
-        httpAddressDefault, suffixes);
+
+    String authority;
+    if ("http".equals(scheme)) {
+      authority = getSuffixedConf(conf, DFS_NAMENODE_HTTP_ADDRESS_KEY,
+          DFS_NAMENODE_HTTP_ADDRESS_DEFAULT, suffixes);
+    } else if ("https".equals(scheme)) {
+      authority = getSuffixedConf(conf, DFS_NAMENODE_HTTPS_ADDRESS_KEY,
+          DFS_NAMENODE_HTTPS_ADDRESS_DEFAULT, suffixes);
+    } else {
+      throw new IllegalArgumentException("Invalid scheme:" + scheme);
+    }
+
     if (namenodeAddr != null) {
-      return substituteForWildcardAddress(configuredInfoAddr,
+      authority = substituteForWildcardAddress(authority,
           namenodeAddr.getHostName());
-    } else {
-      return configuredInfoAddr;
     }
+    return URI.create(scheme + "://" + authority);
   }
-  
+
+  /**
+   * Lookup the HTTP / HTTPS address of the namenode, and replace its hostname
+   * with defaultHost when it found out that the address is a wildcard / local
+   * address.
+   *
+   * @param defaultHost
+   *          The default host name of the namenode.
+   * @param conf
+   *          The configuration
+   * @param scheme
+   *          HTTP or HTTPS
+   * @throws IOException
+   */
+  public static URI getInfoServerWithDefaultHost(String defaultHost,
+      Configuration conf, final String scheme) throws IOException {
+    URI configuredAddr = getInfoServer(null, conf, scheme);
+    String authority = substituteForWildcardAddress(
+        configuredAddr.getAuthority(), defaultHost);
+    return URI.create(scheme + "://" + authority);
+  }
+
+  /**
+   * Determine whether HTTP or HTTPS should be used to connect to the remote
+   * server. Currently the client only connects to the server via HTTPS if the
+   * policy is set to HTTPS_ONLY.
+   *
+   * @return the scheme (HTTP / HTTPS)
+   */
+  public static String getHttpClientScheme(Configuration conf) {
+    HttpConfig.Policy policy = DFSUtil.getHttpPolicy(conf);
+    return policy == HttpConfig.Policy.HTTPS_ONLY ? "https" : "http";
+  }
 
   /**
    * Substitute a default host in the case that an address has been configured
@@ -940,8 +1064,9 @@ public class DFSUtil {
    * @return the substituted address
    * @throws IOException if it is a wildcard address and security is enabled
    */
-  public static String substituteForWildcardAddress(String configuredAddress,
-      String defaultHost) throws IOException {
+  @VisibleForTesting
+  static String substituteForWildcardAddress(String configuredAddress,
+    String defaultHost) throws IOException {
     InetSocketAddress sockAddr = NetUtils.createSocketAddr(configuredAddress);
     InetSocketAddress defaultSockAddr = NetUtils.createSocketAddr(defaultHost
         + ":0");
@@ -1353,5 +1478,198 @@ public class DFSUtil {
         conf.get(DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_KEYTAB_KEY);
     return (value == null || value.isEmpty()) ?
         defaultKey : DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_KEYTAB_KEY;
+  }
+
+  /**
+   * Get http policy. Http Policy is chosen as follows:
+   * <ol>
+   * <li>If hadoop.ssl.enabled is set, http endpoints are not started. Only
+   * https endpoints are started on configured https ports</li>
+   * <li>This configuration is overridden by dfs.https.enable configuration, if
+   * it is set to true. In that case, both http and https endpoints are stared.</li>
+   * <li>All the above configurations are overridden by dfs.http.policy
+   * configuration. With this configuration you can set http-only, https-only
+   * and http-and-https endpoints.</li>
+   * </ol>
+   * See hdfs-default.xml documentation for more details on each of the above
+   * configuration settings.
+   */
+  public static HttpConfig.Policy getHttpPolicy(Configuration conf) {
+    String httpPolicy = conf.get(DFSConfigKeys.DFS_HTTP_POLICY_KEY,
+        DFSConfigKeys.DFS_HTTP_POLICY_DEFAULT);
+
+    HttpConfig.Policy policy = HttpConfig.Policy.fromString(httpPolicy);
+
+    if (policy == HttpConfig.Policy.HTTP_ONLY) {
+      boolean httpsEnabled = conf.getBoolean(
+          DFSConfigKeys.DFS_HTTPS_ENABLE_KEY,
+          DFSConfigKeys.DFS_HTTPS_ENABLE_DEFAULT);
+
+      boolean hadoopSslEnabled = conf.getBoolean(
+          CommonConfigurationKeys.HADOOP_SSL_ENABLED_KEY,
+          CommonConfigurationKeys.HADOOP_SSL_ENABLED_DEFAULT);
+
+      if (hadoopSslEnabled) {
+        LOG.warn(CommonConfigurationKeys.HADOOP_SSL_ENABLED_KEY
+            + " is deprecated. Please use "
+            + DFSConfigKeys.DFS_HTTPS_ENABLE_KEY + ".");
+        policy = HttpConfig.Policy.HTTPS_ONLY;
+      } else if (httpsEnabled) {
+        LOG.warn(DFSConfigKeys.DFS_HTTPS_ENABLE_KEY
+            + " is deprecated. Please use "
+            + DFSConfigKeys.DFS_HTTPS_ENABLE_KEY + ".");
+        policy = HttpConfig.Policy.HTTP_AND_HTTPS;
+      }
+    }
+
+    conf.set(DFSConfigKeys.DFS_HTTP_POLICY_KEY, policy.name());
+    return policy;
+  }
+
+  public static HttpServer.Builder loadSslConfToHttpServerBuilder(HttpServer.Builder builder,
+      Configuration sslConf) {
+    return builder
+        .needsClientAuth(
+            sslConf.getBoolean(DFS_CLIENT_HTTPS_NEED_AUTH_KEY,
+                DFS_CLIENT_HTTPS_NEED_AUTH_DEFAULT))
+        .keyPassword(sslConf.get("ssl.server.keystore.keypassword"))
+        .keyStore(sslConf.get("ssl.server.keystore.location"),
+            sslConf.get("ssl.server.keystore.password"),
+            sslConf.get("ssl.server.keystore.type", "jks"))
+        .trustStore(sslConf.get("ssl.server.truststore.location"),
+            sslConf.get("ssl.server.truststore.password"),
+            sslConf.get("ssl.server.truststore.type", "jks"));
+  }
+
+  /**
+   * Load HTTPS-related configuration.
+   */
+  public static Configuration loadSslConfiguration(Configuration conf) {
+    Configuration sslConf = new Configuration(false);
+
+    sslConf.addResource(conf.get(
+        DFSConfigKeys.DFS_SERVER_HTTPS_KEYSTORE_RESOURCE_KEY,
+        DFSConfigKeys.DFS_SERVER_HTTPS_KEYSTORE_RESOURCE_DEFAULT));
+
+    boolean requireClientAuth = conf.getBoolean(DFS_CLIENT_HTTPS_NEED_AUTH_KEY,
+        DFS_CLIENT_HTTPS_NEED_AUTH_DEFAULT);
+    sslConf.setBoolean(DFS_CLIENT_HTTPS_NEED_AUTH_KEY, requireClientAuth);
+    return sslConf;
+  }
+
+  /**
+   * Return a HttpServer.Builder that the journalnode / namenode / secondary
+   * namenode can use to initialize their HTTP / HTTPS server.
+   *
+   */
+  public static HttpServer.Builder httpServerTemplateForNNAndJN(
+      Configuration conf, final InetSocketAddress httpAddr,
+      final InetSocketAddress httpsAddr, String name, String spnegoUserNameKey,
+      String spnegoKeytabFileKey) throws IOException {
+    HttpConfig.Policy policy = getHttpPolicy(conf);
+
+    HttpServer.Builder builder = new HttpServer.Builder().setName(name)
+        .setConf(conf).setACL(new AccessControlList(conf.get(DFS_ADMIN, " ")))
+        .setSecurityEnabled(UserGroupInformation.isSecurityEnabled())
+        .setUsernameConfKey(spnegoUserNameKey)
+        .setKeytabConfKey(getSpnegoKeytabKey(conf, spnegoKeytabFileKey));
+
+    // initialize the webserver for uploading/downloading files.
+    LOG.info("Starting web server as: "
+        + SecurityUtil.getServerPrincipal(conf.get(spnegoUserNameKey),
+            httpAddr.getHostName()));
+
+    if (policy.isHttpEnabled()) {
+      if (httpAddr.getPort() == 0) {
+        builder.setFindPort(true);
+      }
+
+      URI uri = URI.create("http://" + NetUtils.getHostPortString(httpAddr));
+      builder.addEndpoint(uri);
+      LOG.info("Starting Web-server for " + name + " at: " + uri);
+    }
+
+    if (policy.isHttpsEnabled() && httpsAddr != null) {
+      Configuration sslConf = loadSslConfiguration(conf);
+      loadSslConfToHttpServerBuilder(builder, sslConf);
+
+      if (httpsAddr.getPort() == 0) {
+        builder.setFindPort(true);
+      }
+
+      URI uri = URI.create("https://" + NetUtils.getHostPortString(httpsAddr));
+      builder.addEndpoint(uri);
+      LOG.info("Starting Web-server for " + name + " at: " + uri);
+    }
+    return builder;
+  }
+
+  /**
+   * Converts a Date into an ISO-8601 formatted datetime string.
+   */
+  public static String dateToIso8601String(Date date) {
+    SimpleDateFormat df =
+        new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ", Locale.ENGLISH);
+    return df.format(date);
+  }
+
+  /**
+   * Converts a time duration in milliseconds into DDD:HH:MM:SS format.
+   */
+  public static String durationToString(long durationMs) {
+    boolean negative = false;
+    if (durationMs < 0) {
+      negative = true;
+      durationMs = -durationMs;
+    }
+    // Chop off the milliseconds
+    long durationSec = durationMs / 1000;
+    final int secondsPerMinute = 60;
+    final int secondsPerHour = 60*60;
+    final int secondsPerDay = 60*60*24;
+    final long days = durationSec / secondsPerDay;
+    durationSec -= days * secondsPerDay;
+    final long hours = durationSec / secondsPerHour;
+    durationSec -= hours * secondsPerHour;
+    final long minutes = durationSec / secondsPerMinute;
+    durationSec -= minutes * secondsPerMinute;
+    final long seconds = durationSec;
+    final long milliseconds = durationMs % 1000;
+    String format = "%03d:%02d:%02d:%02d.%03d";
+    if (negative)  {
+      format = "-" + format;
+    }
+    return String.format(format, days, hours, minutes, seconds, milliseconds);
+  }
+
+  /**
+   * Converts a relative time string into a duration in milliseconds.
+   */
+  public static long parseRelativeTime(String relTime) throws IOException {
+    if (relTime.length() < 2) {
+      throw new IOException("Unable to parse relative time value of " + relTime
+          + ": too short");
+    }
+    String ttlString = relTime.substring(0, relTime.length()-1);
+    long ttl;
+    try {
+      ttl = Long.parseLong(ttlString);
+    } catch (NumberFormatException e) {
+      throw new IOException("Unable to parse relative time value of " + relTime
+          + ": " + ttlString + " is not a number");
+    }
+    if (relTime.endsWith("s")) {
+      // pass
+    } else if (relTime.endsWith("m")) {
+      ttl *= 60;
+    } else if (relTime.endsWith("h")) {
+      ttl *= 60*60;
+    } else if (relTime.endsWith("d")) {
+      ttl *= 60*60*24;
+    } else {
+      throw new IOException("Unable to parse relative time value of " + relTime
+          + ": unknown time unit " + relTime.charAt(relTime.length() - 1));
+    }
+    return ttl*1000;
   }
 }

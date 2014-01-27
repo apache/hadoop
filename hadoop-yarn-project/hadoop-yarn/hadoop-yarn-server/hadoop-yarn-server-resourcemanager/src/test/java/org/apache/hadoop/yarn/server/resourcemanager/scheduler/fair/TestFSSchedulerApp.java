@@ -24,11 +24,24 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
+import org.apache.hadoop.yarn.util.Clock;
 import org.junit.Test;
 import org.mockito.Mockito;
 
 public class TestFSSchedulerApp {
+
+  private class MockClock implements Clock {
+    private long time = 0;
+    @Override
+    public long getTime() {
+      return time;
+    }
+
+    public void tick(int seconds) {
+      time = time + seconds * 1000;
+    }
+
+  }
 
   private ApplicationAttemptId createAppAttemptId(int appId, int attemptId) {
     ApplicationId appIdImpl = ApplicationId.newInstance(0, appId);
@@ -39,7 +52,7 @@ public class TestFSSchedulerApp {
 
   @Test
   public void testDelayScheduling() {
-    Queue queue = Mockito.mock(Queue.class);
+    FSLeafQueue queue = Mockito.mock(FSLeafQueue.class);
     Priority prio = Mockito.mock(Priority.class);
     Mockito.when(prio.getPriority()).thenReturn(1);
     double nodeLocalityThreshold = .5;
@@ -94,12 +107,69 @@ public class TestFSSchedulerApp {
   }
 
   @Test
+  public void testDelaySchedulingForContinuousScheduling()
+          throws InterruptedException {
+    FSLeafQueue queue = Mockito.mock(FSLeafQueue.class);
+    Priority prio = Mockito.mock(Priority.class);
+    Mockito.when(prio.getPriority()).thenReturn(1);
+
+    MockClock clock = new MockClock();
+
+    long nodeLocalityDelayMs = 5 * 1000L;    // 5 seconds
+    long rackLocalityDelayMs = 6 * 1000L;    // 6 seconds
+
+    ApplicationAttemptId applicationAttemptId = createAppAttemptId(1, 1);
+    FSSchedulerApp schedulerApp =
+            new FSSchedulerApp(applicationAttemptId, "user1", queue,
+                    null, null);
+    AppSchedulable appSchedulable = Mockito.mock(AppSchedulable.class);
+    long startTime = clock.getTime();
+    Mockito.when(appSchedulable.getStartTime()).thenReturn(startTime);
+    schedulerApp.setAppSchedulable(appSchedulable);
+
+    // Default level should be node-local
+    assertEquals(NodeType.NODE_LOCAL,
+            schedulerApp.getAllowedLocalityLevelByTime(prio,
+                    nodeLocalityDelayMs, rackLocalityDelayMs, clock.getTime()));
+
+    // after 4 seconds should remain node local
+    clock.tick(4);
+    assertEquals(NodeType.NODE_LOCAL,
+            schedulerApp.getAllowedLocalityLevelByTime(prio,
+                    nodeLocalityDelayMs, rackLocalityDelayMs, clock.getTime()));
+
+    // after 6 seconds should switch to rack local
+    clock.tick(2);
+    assertEquals(NodeType.RACK_LOCAL,
+            schedulerApp.getAllowedLocalityLevelByTime(prio,
+                    nodeLocalityDelayMs, rackLocalityDelayMs, clock.getTime()));
+
+    // manually set back to node local
+    schedulerApp.resetAllowedLocalityLevel(prio, NodeType.NODE_LOCAL);
+    schedulerApp.resetSchedulingOpportunities(prio, clock.getTime());
+    assertEquals(NodeType.NODE_LOCAL,
+            schedulerApp.getAllowedLocalityLevelByTime(prio,
+                    nodeLocalityDelayMs, rackLocalityDelayMs, clock.getTime()));
+
+    // Now escalate again to rack-local, then to off-switch
+    clock.tick(6);
+    assertEquals(NodeType.RACK_LOCAL,
+            schedulerApp.getAllowedLocalityLevelByTime(prio,
+                    nodeLocalityDelayMs, rackLocalityDelayMs, clock.getTime()));
+
+    clock.tick(7);
+    assertEquals(NodeType.OFF_SWITCH,
+            schedulerApp.getAllowedLocalityLevelByTime(prio,
+                    nodeLocalityDelayMs, rackLocalityDelayMs, clock.getTime()));
+  }
+
+  @Test
   /**
    * Ensure that when negative paramaters are given (signaling delay scheduling
    * no tin use), the least restrictive locality level is returned.
    */
   public void testLocalityLevelWithoutDelays() {
-    Queue queue = Mockito.mock(Queue.class);
+    FSLeafQueue queue = Mockito.mock(FSLeafQueue.class);
     Priority prio = Mockito.mock(Priority.class);
     Mockito.when(prio.getPriority()).thenReturn(1);
 

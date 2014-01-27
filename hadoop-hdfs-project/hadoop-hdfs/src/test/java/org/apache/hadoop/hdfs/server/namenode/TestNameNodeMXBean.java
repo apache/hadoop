@@ -31,7 +31,10 @@ import javax.management.ObjectName;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.io.nativeio.NativeIO;
+import org.apache.hadoop.io.nativeio.NativeIO.POSIX.NoMlockCacheManipulator;
 import org.apache.hadoop.util.VersionInfo;
 import org.junit.Test;
 import org.mortbay.util.ajax.JSON;
@@ -46,10 +49,16 @@ public class TestNameNodeMXBean {
    */
   private static final double DELTA = 0.000001;
 
-  @SuppressWarnings({ "unchecked", "deprecation" })
+  static {
+    NativeIO.POSIX.setCacheManipulator(new NoMlockCacheManipulator());
+  }
+
+  @SuppressWarnings({ "unchecked" })
   @Test
   public void testNameNodeMXBeanInfo() throws Exception {
     Configuration conf = new Configuration();
+    conf.setLong(DFSConfigKeys.DFS_DATANODE_MAX_LOCKED_MEMORY_KEY,
+      NativeIO.POSIX.getCacheManipulator().getMemlockLimit());
     MiniDFSCluster cluster = null;
 
     try {
@@ -112,11 +121,29 @@ public class TestNameNodeMXBean {
       String deadnodeinfo = (String) (mbs.getAttribute(mxbeanName,
           "DeadNodes"));
       assertEquals(fsn.getDeadNodes(), deadnodeinfo);
+      // get attribute NodeUsage
+      String nodeUsage = (String) (mbs.getAttribute(mxbeanName,
+          "NodeUsage"));
+      assertEquals("Bad value for NodeUsage", fsn.getNodeUsage(), nodeUsage);
+      // get attribute NameJournalStatus
+      String nameJournalStatus = (String) (mbs.getAttribute(mxbeanName,
+          "NameJournalStatus"));
+      assertEquals("Bad value for NameJournalStatus", fsn.getNameJournalStatus(), nameJournalStatus);
       // get attribute JournalTransactionInfo
       String journalTxnInfo = (String) mbs.getAttribute(mxbeanName,
           "JournalTransactionInfo");
       assertEquals("Bad value for NameTxnIds", fsn.getJournalTransactionInfo(),
           journalTxnInfo);
+      // get attribute "NNStarted"
+      String nnStarted = (String) mbs.getAttribute(mxbeanName, "NNStarted");
+      assertEquals("Bad value for NNStarted", fsn.getNNStarted(), nnStarted);
+      // get attribute "CompileInfo"
+      String compileInfo = (String) mbs.getAttribute(mxbeanName, "CompileInfo");
+      assertEquals("Bad value for CompileInfo", fsn.getCompileInfo(), compileInfo);
+      // get attribute CorruptFiles
+      String corruptFiles = (String) (mbs.getAttribute(mxbeanName,
+          "CorruptFiles"));
+      assertEquals("Bad value for CorruptFiles", fsn.getCorruptFiles(), corruptFiles);
       // get attribute NameDirStatuses
       String nameDirStatuses = (String) (mbs.getAttribute(mxbeanName,
           "NameDirStatuses"));
@@ -134,7 +161,7 @@ public class TestNameNodeMXBean {
       assertEquals(0, statusMap.get("failed").size());
       
       // This will cause the first dir to fail.
-      File failedNameDir = new File(nameDirUris.toArray(new URI[0])[0]);
+      File failedNameDir = new File(nameDirUris.iterator().next());
       assertEquals(0, FileUtil.chmod(
         new File(failedNameDir, "current").getAbsolutePath(), "000"));
       cluster.getNameNodeRpc().rollEditLog();
@@ -153,6 +180,10 @@ public class TestNameNodeMXBean {
       }
       assertEquals(1, statusMap.get("active").size());
       assertEquals(1, statusMap.get("failed").size());
+      assertEquals(0L, mbs.getAttribute(mxbeanName, "CacheUsed"));
+      assertEquals(NativeIO.POSIX.getCacheManipulator().getMemlockLimit() * 
+          cluster.getDataNodes().size(),
+              mbs.getAttribute(mxbeanName, "CacheCapacity"));
     } finally {
       if (cluster != null) {
         for (URI dir : cluster.getNameDirs(0)) {

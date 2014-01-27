@@ -20,8 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -141,5 +140,58 @@ public class TestFSNamesystem {
     assertTrue("FSNamesystem didn't enter safemode", fsn.isInSafeMode());
     assertTrue("Replication queues weren't being populated after entering "
       + "safemode 2nd time", fsn.isPopulatingReplQueues());
+  }
+  
+  @Test
+  public void testFsLockFairness() throws IOException, InterruptedException{
+    Configuration conf = new Configuration();
+
+    FSEditLog fsEditLog = Mockito.mock(FSEditLog.class);
+    FSImage fsImage = Mockito.mock(FSImage.class);
+    Mockito.when(fsImage.getEditLog()).thenReturn(fsEditLog);
+
+    conf.setBoolean("dfs.namenode.fslock.fair", true);
+    FSNamesystem fsNamesystem = new FSNamesystem(conf, fsImage);
+    assertTrue(fsNamesystem.getFsLockForTests().isFair());
+    
+    conf.setBoolean("dfs.namenode.fslock.fair", false);
+    fsNamesystem = new FSNamesystem(conf, fsImage);
+    assertFalse(fsNamesystem.getFsLockForTests().isFair());
+  }  
+  
+  @Test
+  public void testFSNamesystemLockCompatibility() {
+    FSNamesystemLock rwLock = new FSNamesystemLock(true);
+
+    assertEquals(0, rwLock.getReadHoldCount());
+    rwLock.readLock().lock();
+    assertEquals(1, rwLock.getReadHoldCount());
+
+    rwLock.readLock().lock();
+    assertEquals(2, rwLock.getReadHoldCount());
+
+    rwLock.readLock().unlock();
+    assertEquals(1, rwLock.getReadHoldCount());
+
+    rwLock.readLock().unlock();
+    assertEquals(0, rwLock.getReadHoldCount());
+
+    assertFalse(rwLock.isWriteLockedByCurrentThread());
+    assertEquals(0, rwLock.getWriteHoldCount());
+    rwLock.writeLock().lock();
+    assertTrue(rwLock.isWriteLockedByCurrentThread());
+    assertEquals(1, rwLock.getWriteHoldCount());
+    
+    rwLock.writeLock().lock();
+    assertTrue(rwLock.isWriteLockedByCurrentThread());
+    assertEquals(2, rwLock.getWriteHoldCount());
+
+    rwLock.writeLock().unlock();
+    assertTrue(rwLock.isWriteLockedByCurrentThread());
+    assertEquals(1, rwLock.getWriteHoldCount());
+
+    rwLock.writeLock().unlock();
+    assertFalse(rwLock.isWriteLockedByCurrentThread());
+    assertEquals(0, rwLock.getWriteHoldCount());
   }
 }

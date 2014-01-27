@@ -27,6 +27,7 @@ import java.net.URI;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ScheduledExecutorService;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -41,6 +42,7 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskType;
+import org.apache.hadoop.mapreduce.counters.Limits;
 import org.apache.hadoop.mapreduce.filecache.DistributedCache;
 import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
@@ -60,7 +62,6 @@ import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.util.ConverterUtils;
-import org.apache.log4j.LogManager;
 
 /**
  * The main() for MapReduce task processes.
@@ -75,9 +76,11 @@ class YarnChild {
     Thread.setDefaultUncaughtExceptionHandler(new YarnUncaughtExceptionHandler());
     LOG.debug("Child starting");
 
-    final JobConf defaultConf = new JobConf();
-    defaultConf.addResource(MRJobConfig.JOB_CONF_FILE);
-    UserGroupInformation.setConfiguration(defaultConf);
+    final JobConf job = new JobConf();
+    // Initing with our JobConf allows us to avoid loading confs twice
+    Limits.init(job);
+    job.addResource(MRJobConfig.JOB_CONF_FILE);
+    UserGroupInformation.setConfiguration(job);
 
     String host = args[0];
     int port = Integer.parseInt(args[1]);
@@ -111,7 +114,7 @@ class YarnChild {
       @Override
       public TaskUmbilicalProtocol run() throws Exception {
         return (TaskUmbilicalProtocol)RPC.getProxy(TaskUmbilicalProtocol.class,
-            TaskUmbilicalProtocol.versionID, address, defaultConf);
+            TaskUmbilicalProtocol.versionID, address, job);
       }
     });
 
@@ -120,6 +123,7 @@ class YarnChild {
     LOG.debug("PID: " + System.getenv().get("JVM_PID"));
     Task task = null;
     UserGroupInformation childUGI = null;
+    ScheduledExecutorService logSyncer = null;
 
     try {
       int idleLoopCount = 0;
@@ -140,7 +144,7 @@ class YarnChild {
       YarnChild.taskid = task.getTaskID();
 
       // Create the job-conf and set credentials
-      final JobConf job = configureTask(task, credentials, jt);
+      configureTask(job, task, credentials, jt);
 
       // Initiate Java VM metrics
       JvmMetrics.initSingleton(jvmId.toString(), job.getSessionId());
@@ -151,6 +155,8 @@ class YarnChild {
 
       // set job classloader if configured before invoking the task
       MRApps.setJobClassLoader(job);
+
+      logSyncer = TaskLog.createLogSyncer();
 
       // Create a final reference to the task for the doAs block
       final Task taskFinal = task;
@@ -205,10 +211,7 @@ class YarnChild {
     } finally {
       RPC.stopProxy(umbilical);
       DefaultMetricsSystem.shutdown();
-      // Shutting down log4j of the child-vm...
-      // This assumes that on return from Task.run()
-      // there is no more logging done.
-      LogManager.shutdown();
+      TaskLog.syncLogsShutdown(logSyncer);
     }
   }
 
@@ -254,11 +257,10 @@ class YarnChild {
     job.set(MRJobConfig.JOB_LOCAL_DIR,workDir.toString());
   }
 
-  private static JobConf configureTask(Task task, Credentials credentials,
-      Token<JobTokenIdentifier> jt) throws IOException {
-    final JobConf job = new JobConf(MRJobConfig.JOB_CONF_FILE);
+  private static void configureTask(JobConf job, Task task,
+      Credentials credentials, Token<JobTokenIdentifier> jt) throws IOException {
     job.setCredentials(credentials);
-
+    
     ApplicationAttemptId appAttemptId =
         ConverterUtils.toContainerId(
             System.getenv(Environment.CONTAINER_ID.name()))
@@ -300,7 +302,6 @@ class YarnChild {
     writeLocalJobFile(localTaskFile, job);
     task.setJobFile(localTaskFile.toString());
     task.setConf(job);
-    return job;
   }
 
   /**

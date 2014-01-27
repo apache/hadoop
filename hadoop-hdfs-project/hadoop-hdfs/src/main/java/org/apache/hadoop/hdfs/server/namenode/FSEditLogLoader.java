@@ -19,13 +19,12 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.util.Time.now;
 
-import java.io.File;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -33,17 +32,21 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.common.Storage;
-import org.apache.hadoop.hdfs.server.namenode.EditLogFileInputStream.LogHeaderCorruptException;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.AddBlockOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.AddCachePoolOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.AddCloseOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.AddCacheDirectiveInfoOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.AllocateBlockIdOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.AllowSnapshotOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.BlockListUpdatingOp;
@@ -56,7 +59,11 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.DeleteSnapshotOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.DisallowSnapshotOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.GetDelegationTokenOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.MkdirOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.ModifyCachePoolOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.ModifyCacheDirectiveInfoOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.ReassignLeaseOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RemoveCachePoolOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RemoveCacheDirectiveInfoOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenameOldOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenameOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenameSnapshotOp;
@@ -78,9 +85,12 @@ import org.apache.hadoop.hdfs.server.namenode.startupprogress.Phase;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress.Counter;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.Step;
+import org.apache.hadoop.hdfs.util.ChunkedArrayList;
 import org.apache.hadoop.hdfs.util.Holder;
+import org.apache.jasper.tagplugins.jstl.core.Remove;
 
 import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
 
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -407,7 +417,18 @@ public class FSEditLogLoader {
       }
       break;
     }
-      
+    case OP_ADD_BLOCK: {
+      AddBlockOp addBlockOp = (AddBlockOp) op;
+      String path = addBlockOp.getPath();
+      if (FSNamesystem.LOG.isDebugEnabled()) {
+        FSNamesystem.LOG.debug(op.opCode + ": " + path +
+            " new block id : " + addBlockOp.getLastBlock().getBlockId());
+      }
+      INodeFile oldFile = INodeFile.valueOf(fsDir.getINode(path), path);
+      // add the new block to the INodeFile
+      addNewBlock(fsDir, addBlockOp, oldFile);
+      break;
+    }
     case OP_SET_REPLICATION: {
       SetReplicationOp setReplicationOp = (SetReplicationOp)op;
       short replication = fsNamesys.getBlockManager().adjustReplication(
@@ -502,7 +523,7 @@ public class FSEditLogLoader {
       break;
     }
     case OP_SYMLINK: {
-      if (!FileSystem.isSymlinksEnabled()) {
+      if (!FileSystem.areSymlinksEnabled()) {
         throw new IOException("Symlinks not supported - please remove symlink before upgrading to this version of HDFS");
       }
       SymlinkOp symlinkOp = (SymlinkOp)op;
@@ -588,7 +609,7 @@ public class FSEditLogLoader {
     case OP_DELETE_SNAPSHOT: {
       DeleteSnapshotOp deleteSnapshotOp = (DeleteSnapshotOp) op;
       BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
-      List<INode> removedINodes = new ArrayList<INode>();
+      List<INode> removedINodes = new ChunkedArrayList<INode>();
       fsNamesys.getSnapshotManager().deleteSnapshot(
           deleteSnapshotOp.snapshotRoot, deleteSnapshotOp.snapshotName,
           collectedBlocks, removedINodes);
@@ -637,6 +658,59 @@ public class FSEditLogLoader {
       fsNamesys.setLastAllocatedBlockId(allocateBlockIdOp.blockId);
       break;
     }
+    case OP_ADD_CACHE_DIRECTIVE: {
+      AddCacheDirectiveInfoOp addOp = (AddCacheDirectiveInfoOp) op;
+      CacheDirectiveInfo result = fsNamesys.
+          getCacheManager().addDirectiveFromEditLog(addOp.directive);
+      if (toAddRetryCache) {
+        Long id = result.getId();
+        fsNamesys.addCacheEntryWithPayload(op.rpcClientId, op.rpcCallId, id);
+      }
+      break;
+    }
+    case OP_MODIFY_CACHE_DIRECTIVE: {
+      ModifyCacheDirectiveInfoOp modifyOp =
+          (ModifyCacheDirectiveInfoOp) op;
+      fsNamesys.getCacheManager().modifyDirectiveFromEditLog(
+          modifyOp.directive);
+      if (toAddRetryCache) {
+        fsNamesys.addCacheEntry(op.rpcClientId, op.rpcCallId);
+      }
+      break;
+    }
+    case OP_REMOVE_CACHE_DIRECTIVE: {
+      RemoveCacheDirectiveInfoOp removeOp =
+          (RemoveCacheDirectiveInfoOp) op;
+      fsNamesys.getCacheManager().removeDirective(removeOp.id, null);
+      if (toAddRetryCache) {
+        fsNamesys.addCacheEntry(op.rpcClientId, op.rpcCallId);
+      }
+      break;
+    }
+    case OP_ADD_CACHE_POOL: {
+      AddCachePoolOp addOp = (AddCachePoolOp) op;
+      fsNamesys.getCacheManager().addCachePool(addOp.info);
+      if (toAddRetryCache) {
+        fsNamesys.addCacheEntry(op.rpcClientId, op.rpcCallId);
+      }
+      break;
+    }
+    case OP_MODIFY_CACHE_POOL: {
+      ModifyCachePoolOp modifyOp = (ModifyCachePoolOp) op;
+      fsNamesys.getCacheManager().modifyCachePool(modifyOp.info);
+      if (toAddRetryCache) {
+        fsNamesys.addCacheEntry(op.rpcClientId, op.rpcCallId);
+      }
+      break;
+    }
+    case OP_REMOVE_CACHE_POOL: {
+      RemoveCachePoolOp removeOp = (RemoveCachePoolOp) op;
+      fsNamesys.getCacheManager().removeCachePool(removeOp.poolName);
+      if (toAddRetryCache) {
+        fsNamesys.addCacheEntry(op.rpcClientId, op.rpcCallId);
+      }
+      break;
+    }
     default:
       throw new IOException("Invalid operation read " + op.opCode);
     }
@@ -660,6 +734,45 @@ public class FSEditLogLoader {
     return sb.toString();
   }
 
+  /**
+   * Add a new block into the given INodeFile
+   */
+  private void addNewBlock(FSDirectory fsDir, AddBlockOp op, INodeFile file)
+      throws IOException {
+    BlockInfo[] oldBlocks = file.getBlocks();
+    Block pBlock = op.getPenultimateBlock();
+    Block newBlock= op.getLastBlock();
+    
+    if (pBlock != null) { // the penultimate block is not null
+      Preconditions.checkState(oldBlocks != null && oldBlocks.length > 0);
+      // compare pBlock with the last block of oldBlocks
+      Block oldLastBlock = oldBlocks[oldBlocks.length - 1];
+      if (oldLastBlock.getBlockId() != pBlock.getBlockId()
+          || oldLastBlock.getGenerationStamp() != pBlock.getGenerationStamp()) {
+        throw new IOException(
+            "Mismatched block IDs or generation stamps for the old last block of file "
+                + op.getPath() + ", the old last block is " + oldLastBlock
+                + ", and the block read from editlog is " + pBlock);
+      }
+      
+      oldLastBlock.setNumBytes(pBlock.getNumBytes());
+      if (oldLastBlock instanceof BlockInfoUnderConstruction) {
+        fsNamesys.getBlockManager().forceCompleteBlock(
+            (INodeFileUnderConstruction) file,
+            (BlockInfoUnderConstruction) oldLastBlock);
+        fsNamesys.getBlockManager().processQueuedMessagesForBlock(pBlock);
+      }
+    } else { // the penultimate block is null
+      Preconditions.checkState(oldBlocks == null || oldBlocks.length == 0);
+    }
+    // add the new block
+    BlockInfo newBI = new BlockInfoUnderConstruction(
+          newBlock, file.getBlockReplication());
+    fsNamesys.getBlockManager().addBlockCollection(newBI, file);
+    file.addBlock(newBI);
+    fsNamesys.getBlockManager().processQueuedMessagesForBlock(newBlock);
+  }
+  
   /**
    * Update in-memory data structures with new block information.
    * @throws IOException

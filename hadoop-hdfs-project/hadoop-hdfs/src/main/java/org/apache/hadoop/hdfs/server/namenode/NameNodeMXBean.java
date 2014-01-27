@@ -101,6 +101,16 @@ public interface NameNodeMXBean {
    * @return the percentage of the remaining space on the cluster
    */
   public float getPercentRemaining();
+
+  /**
+   * Returns the amount of cache used by the datanode (in bytes).
+   */
+  public long getCacheUsed();
+
+  /**
+   * Returns the total cache capacity of the datanode (in bytes).
+   */
+  public long getCacheCapacity();
   
   /**
    * Get the total space used by the block pools of this namenode
@@ -182,12 +192,47 @@ public interface NameNodeMXBean {
    * @return the name dir status information, as a JSON string.
    */
   public String getNameDirStatuses();
+
+  /**
+   * Get Max, Median, Min and Standard Deviation of DataNodes usage.
+   *
+   * @return the DataNode usage information, as a JSON string.
+   */
+  public String getNodeUsage();
+
+  /**
+   * Get status information about the journals of the NN.
+   *
+   * @return the name journal status information, as a JSON string.
+   */
+  public String getNameJournalStatus();
   
   /**
    * Get information about the transaction ID, including the last applied 
    * transaction ID and the most recent checkpoint's transaction ID
    */
   public String getJournalTransactionInfo();
+
+  /**
+   * Gets the NN start time
+   *
+   * @return the NN start time
+   */
+  public String getNNStarted();
+
+  /**
+   * Get the compilation information which contains date, user and branch
+   *
+   * @return the compilation information, as a JSON string.
+   */
+  public String getCompileInfo();
+
+  /**
+   * Get the list of corrupt files
+   *
+   * @return the list of corrupt files, as a JSON string.
+   */
+  public String getCorruptFiles();
 
   /**
    * Get the number of distinct versions of live datanodes

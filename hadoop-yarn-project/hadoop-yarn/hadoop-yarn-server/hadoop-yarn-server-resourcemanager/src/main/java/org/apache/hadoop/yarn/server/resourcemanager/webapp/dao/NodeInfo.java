@@ -38,6 +38,7 @@ public class NodeInfo {
   protected String nodeHostName;
   protected String nodeHTTPAddress;
   protected long lastHealthUpdate;
+  protected String version;
   protected String healthReport;
   protected int numContainers;
   protected long usedMemoryMB;
@@ -64,6 +65,7 @@ public class NodeInfo {
     this.nodeHTTPAddress = ni.getHttpAddress();
     this.lastHealthUpdate = ni.getLastHealthReportTime();
     this.healthReport = String.valueOf(ni.getHealthReport());
+    this.version = ni.getNodeManagerVersion();
   }
 
   public String getRack() {
@@ -88,6 +90,10 @@ public class NodeInfo {
 
   public long getLastHealthUpdate() {
     return this.lastHealthUpdate;
+  }
+
+  public String getVersion() {
+    return this.version;
   }
 
   public String getHealthReport() {

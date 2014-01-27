@@ -252,6 +252,17 @@ public class JobContextImpl implements JobContext {
     return conf.getJar();
   }
 
+  /**
+   * Get the user defined {@link RawComparator} comparator for
+   * grouping keys of inputs to the combiner.
+   *
+   * @return comparator set by the user for grouping values.
+   * @see Job#setCombinerKeyGroupingComparatorClass(Class) for details.
+   */
+  public RawComparator<?> getCombinerKeyGroupingComparator() {
+    return conf.getCombinerKeyGroupingComparator();
+  }
+
   /** 
    * Get the user defined {@link RawComparator} comparator for 
    * grouping keys of inputs to the reduce.

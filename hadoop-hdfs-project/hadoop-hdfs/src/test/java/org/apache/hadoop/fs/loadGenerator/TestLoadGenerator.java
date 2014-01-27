@@ -29,6 +29,7 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -39,8 +40,7 @@ import org.junit.Test;
 public class TestLoadGenerator extends Configured implements Tool {
   private static final Configuration CONF = new HdfsConfiguration();
   private static final int DEFAULT_BLOCK_SIZE = 10;
-  private static final String OUT_DIR = 
-    System.getProperty("test.build.data","build/test/data");
+  private static final File OUT_DIR = PathUtils.getTestDir(TestLoadGenerator.class);
   private static final File DIR_STRUCTURE_FILE = 
     new File(OUT_DIR, StructureGenerator.DIR_STRUCTURE_FILE_NAME);
   private static final File FILE_STRUCTURE_FILE =
@@ -65,7 +65,7 @@ public class TestLoadGenerator extends Configured implements Tool {
     StructureGenerator sg = new StructureGenerator();
     String[] args = new String[]{"-maxDepth", "2", "-minWidth", "1",
         "-maxWidth", "2", "-numOfFiles", "2",
-        "-avgFileSize", "1", "-outDir", OUT_DIR, "-seed", "1"};
+        "-avgFileSize", "1", "-outDir", OUT_DIR.getAbsolutePath(), "-seed", "1"};
     
     final int MAX_DEPTH = 1;
     final int MIN_WIDTH = 3;
@@ -133,8 +133,7 @@ public class TestLoadGenerator extends Configured implements Tool {
   public void testLoadGenerator() throws Exception {
     final String TEST_SPACE_ROOT = "/test";
 
-    final String SCRIPT_TEST_DIR = new File(System.getProperty("test.build.data",
-    "/tmp")).getAbsolutePath();
+    final String SCRIPT_TEST_DIR = OUT_DIR.getAbsolutePath();
     String script = SCRIPT_TEST_DIR + "/" + "loadgenscript";
     String script2 = SCRIPT_TEST_DIR + "/" + "loadgenscript2";
     File scriptFile1 = new File(script);
@@ -156,7 +155,7 @@ public class TestLoadGenerator extends Configured implements Tool {
     try {
       DataGenerator dg = new DataGenerator();
       dg.setConf(CONF);
-      String [] args = new String[] {"-inDir", OUT_DIR, "-root", TEST_SPACE_ROOT};
+      String [] args = new String[] {"-inDir", OUT_DIR.getAbsolutePath(), "-root", TEST_SPACE_ROOT};
       assertEquals(0, dg.run(args));
 
       final int READ_PROBABILITY = 1;

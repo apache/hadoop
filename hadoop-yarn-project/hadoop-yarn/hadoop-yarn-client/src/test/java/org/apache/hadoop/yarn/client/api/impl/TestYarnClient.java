@@ -42,6 +42,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -89,6 +91,7 @@ public class TestYarnClient {
     rm.stop();
   }
 
+  @SuppressWarnings("deprecation")
   @Test (timeout = 30000)
   public void testSubmitApplication() {
     Configuration conf = new Configuration();
@@ -126,6 +129,23 @@ public class TestYarnClient {
     }
 
     client.stop();
+  }
+
+  @Test
+  public void testKillApplication() throws Exception {
+    MockRM rm = new MockRM();
+    rm.start();
+    RMApp app = rm.submitApp(2000);
+
+    Configuration conf = new Configuration();
+    @SuppressWarnings("resource")
+    final YarnClient client = new MockYarnClient();
+    client.init(conf);
+    client.start();
+
+    client.killApplication(app.getApplicationId());
+    verify(((MockYarnClient) client).getRMClient(), times(2))
+      .forceKillApplication(any(KillApplicationRequest.class));
   }
 
   @Test(timeout = 30000)
@@ -234,12 +254,21 @@ public class TestYarnClient {
             GetApplicationReportRequest.class))).thenReturn(mockResponse);
         when(rmClient.getApplications(any(GetApplicationsRequest.class)))
             .thenReturn(mockAppResponse);
+        // return false for 1st kill request, and true for the 2nd.
+        when(rmClient.forceKillApplication(any(
+          KillApplicationRequest.class)))
+          .thenReturn(KillApplicationResponse.newInstance(false)).thenReturn(
+            KillApplicationResponse.newInstance(true));
       } catch (YarnException e) {
         Assert.fail("Exception is not expected.");
       } catch (IOException e) {
         Assert.fail("Exception is not expected.");
       }
       when(mockResponse.getApplicationReport()).thenReturn(mockReport);
+    }
+
+    public ApplicationClientProtocol getRMClient() {
+      return rmClient;
     }
 
     @Override
@@ -349,6 +378,13 @@ public class TestYarnClient {
 
       appId = createApp(rmClient, true);
       waitTillAccepted(rmClient, appId);
+      long start = System.currentTimeMillis();
+      while (rmClient.getAMRMToken(appId) == null) {
+        if (System.currentTimeMillis() - start > 20 * 1000) {
+          Assert.fail("AMRM token is null");
+        }
+        Thread.sleep(100);
+      }
       //unmanaged AMs do return AMRM token
       Assert.assertNotNull(rmClient.getAMRMToken(appId));
       
@@ -363,6 +399,13 @@ public class TestYarnClient {
             rmClient.start();
             ApplicationId appId = createApp(rmClient, true);
             waitTillAccepted(rmClient, appId);
+            long start = System.currentTimeMillis();
+            while (rmClient.getAMRMToken(appId) == null) {
+              if (System.currentTimeMillis() - start > 20 * 1000) {
+                Assert.fail("AMRM token is null");
+              }
+              Thread.sleep(100);
+            }
             //unmanaged AMs do return AMRM token
             Assert.assertNotNull(rmClient.getAMRMToken(appId));
             return appId;

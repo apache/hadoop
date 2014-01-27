@@ -19,8 +19,12 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 
+import static org.mockito.Matchers.isA;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.times;
 
 import java.util.HashMap;
 import java.util.List;
@@ -43,6 +47,7 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.MockRMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
@@ -99,7 +104,7 @@ public class TestAppManager{
         rmDispatcher);
     AMLivelinessMonitor amFinishingMonitor = new AMLivelinessMonitor(
         rmDispatcher);
-    return new RMContextImpl(rmDispatcher,
+    RMContext context = new RMContextImpl(rmDispatcher,
         containerAllocationExpirer, amLivelinessMonitor, amFinishingMonitor,
         null, null, null, null, null) {
       @Override
@@ -107,6 +112,8 @@ public class TestAppManager{
         return map;
       }
     };
+    ((RMContextImpl)context).setStateStore(mock(RMStateStore.class));
+    return context;
   }
 
   public class TestAppManagerDispatcher implements
@@ -142,7 +149,6 @@ public class TestAppManager{
 
     public TestRMAppManager(RMContext context, Configuration conf) {
       super(context, null, null, new ApplicationACLsManager(conf), conf);
-      setCompletedAppsMax(YarnConfiguration.DEFAULT_RM_MAX_COMPLETED_APPLICATIONS);
     }
 
     public TestRMAppManager(RMContext context,
@@ -150,7 +156,6 @@ public class TestAppManager{
         YarnScheduler scheduler, ApplicationMasterService masterService,
         ApplicationACLsManager applicationACLsManager, Configuration conf) {
       super(context, scheduler, masterService, applicationACLsManager, conf);
-      setCompletedAppsMax(YarnConfiguration.DEFAULT_RM_MAX_COMPLETED_APPLICATIONS);
     }
 
     public void checkAppNumCompletedLimit() {
@@ -164,15 +169,14 @@ public class TestAppManager{
     public int getCompletedAppsListSize() {
       return super.getCompletedAppsListSize();
     }
-
-    public void setCompletedAppsMax(int max) {
-      super.setCompletedAppsMax(max);
+    public int getCompletedAppsInStateStore() {
+      return this.completedAppsInStateStore;
     }
     public void submitApplication(
         ApplicationSubmissionContext submissionContext, String user)
             throws YarnException {
       super.submitApplication(submissionContext, System.currentTimeMillis(),
-          false, user);
+          user, false, null);
     }
   }
 
@@ -227,9 +231,9 @@ public class TestAppManager{
     // Create such that none of the applications will retire since
     // haven't hit max #
     RMContext rmContext = mockRMContext(10, now - 10);
-    TestRMAppManager appMonitor = new TestRMAppManager(rmContext, new Configuration());
-
-    appMonitor.setCompletedAppsMax(10);
+    Configuration conf = new YarnConfiguration();
+    conf.setInt(YarnConfiguration.RM_MAX_COMPLETED_APPLICATIONS, 10);
+    TestRMAppManager appMonitor = new TestRMAppManager(rmContext,conf);
 
     Assert.assertEquals("Number of apps incorrect before checkAppTimeLimit",
         10, rmContext.getRMApps().size());
@@ -243,6 +247,8 @@ public class TestAppManager{
         rmContext.getRMApps().size());
     Assert.assertEquals("Number of completed apps incorrect after check", 10,
         appMonitor.getCompletedAppsListSize());
+    verify(rmContext.getStateStore(), never()).removeApplication(
+      isA(RMApp.class));
   }
 
   @Test
@@ -250,9 +256,10 @@ public class TestAppManager{
     long now = System.currentTimeMillis();
 
     RMContext rmContext = mockRMContext(10, now - 20000);
-    TestRMAppManager appMonitor = new TestRMAppManager(rmContext, new Configuration());
-
-    appMonitor.setCompletedAppsMax(3);
+    Configuration conf = new YarnConfiguration();
+    conf.setInt(YarnConfiguration.RM_STATE_STORE_MAX_COMPLETED_APPLICATIONS, 3); 
+    conf.setInt(YarnConfiguration.RM_MAX_COMPLETED_APPLICATIONS, 3);
+    TestRMAppManager appMonitor = new TestRMAppManager(rmContext, conf);
 
     Assert.assertEquals("Number of apps incorrect before", 10, rmContext
         .getRMApps().size());
@@ -266,6 +273,8 @@ public class TestAppManager{
         rmContext.getRMApps().size());
     Assert.assertEquals("Number of completed apps incorrect after check", 3,
         appMonitor.getCompletedAppsListSize());
+    verify(rmContext.getStateStore(), times(7)).removeApplication(
+      isA(RMApp.class));
   }
 
   @Test
@@ -274,14 +283,17 @@ public class TestAppManager{
 
     // these parameters don't matter, override applications below
     RMContext rmContext = mockRMContext(10, now - 20000);
-    TestRMAppManager appMonitor = new TestRMAppManager(rmContext, new Configuration());
+    Configuration conf = new YarnConfiguration();
+    conf.setInt(YarnConfiguration.RM_STATE_STORE_MAX_COMPLETED_APPLICATIONS, 2);
+    conf.setInt(YarnConfiguration.RM_MAX_COMPLETED_APPLICATIONS, 2);
 
-    appMonitor.setCompletedAppsMax(2);
+    TestRMAppManager appMonitor = new TestRMAppManager(rmContext, conf);
 
     // clear out applications map
     rmContext.getRMApps().clear();
     Assert.assertEquals("map isn't empty", 0, rmContext.getRMApps().size());
 
+    // 6 applications are in final state, 4 are not in final state.
     // / set with various finished states
     RMApp app = new MockRMApp(0, now - 20000, RMAppState.KILLED);
     rmContext.getRMApps().put(app.getApplicationId(), app);
@@ -318,7 +330,9 @@ public class TestAppManager{
         rmContext.getRMApps().size());
     Assert.assertEquals("Number of completed apps incorrect after check", 2,
         appMonitor.getCompletedAppsListSize());
-
+    // 6 applications in final state, 4 of them are removed
+    verify(rmContext.getStateStore(), times(4)).removeApplication(
+      isA(RMApp.class));
   }
 
   @Test
@@ -342,13 +356,12 @@ public class TestAppManager{
     long now = System.currentTimeMillis();
 
     RMContext rmContext = mockRMContext(10, now - 20000);
-    TestRMAppManager appMonitor = new TestRMAppManager(rmContext, new Configuration());
-
+    Configuration conf = new YarnConfiguration();
+    conf.setInt(YarnConfiguration.RM_STATE_STORE_MAX_COMPLETED_APPLICATIONS, 0);
+    conf.setInt(YarnConfiguration.RM_MAX_COMPLETED_APPLICATIONS, 0);
+    TestRMAppManager appMonitor = new TestRMAppManager(rmContext, conf);
     Assert.assertEquals("Number of apps incorrect before", 10, rmContext
         .getRMApps().size());
-
-    // test with 0
-    appMonitor.setCompletedAppsMax(0);
 
     addToCompletedApps(appMonitor, rmContext);
     Assert.assertEquals("Number of completed apps incorrect", 10,
@@ -360,6 +373,64 @@ public class TestAppManager{
         rmContext.getRMApps().size());
     Assert.assertEquals("Number of completed apps incorrect after check", 0,
         appMonitor.getCompletedAppsListSize());
+    verify(rmContext.getStateStore(), times(10)).removeApplication(
+      isA(RMApp.class));
+  }
+
+  @Test
+  public void testStateStoreAppLimitLessThanMemoryAppLimit() {
+    long now = System.currentTimeMillis();
+    RMContext rmContext = mockRMContext(10, now - 20000);
+    Configuration conf = new YarnConfiguration();
+    int maxAppsInMemory = 8;
+    int maxAppsInStateStore = 4;
+    conf.setInt(YarnConfiguration.RM_MAX_COMPLETED_APPLICATIONS, maxAppsInMemory);
+    conf.setInt(YarnConfiguration.RM_STATE_STORE_MAX_COMPLETED_APPLICATIONS,
+      maxAppsInStateStore);
+    TestRMAppManager appMonitor = new TestRMAppManager(rmContext, conf);
+
+    addToCompletedApps(appMonitor, rmContext);
+    Assert.assertEquals("Number of completed apps incorrect", 10,
+        appMonitor.getCompletedAppsListSize());
+    appMonitor.checkAppNumCompletedLimit();
+
+    Assert.assertEquals("Number of apps incorrect after # completed check",
+      maxAppsInMemory, rmContext.getRMApps().size());
+    Assert.assertEquals("Number of completed apps incorrect after check",
+      maxAppsInMemory, appMonitor.getCompletedAppsListSize());
+
+    int numRemoveAppsFromStateStore = 10 - maxAppsInStateStore;
+    verify(rmContext.getStateStore(), times(numRemoveAppsFromStateStore))
+      .removeApplication(isA(RMApp.class));
+    Assert.assertEquals(maxAppsInStateStore,
+      appMonitor.getCompletedAppsInStateStore());
+  }
+
+  @Test
+  public void testStateStoreAppLimitLargerThanMemoryAppLimit() {
+    long now = System.currentTimeMillis();
+    RMContext rmContext = mockRMContext(10, now - 20000);
+    Configuration conf = new YarnConfiguration();
+    int maxAppsInMemory = 8;
+    conf.setInt(YarnConfiguration.RM_MAX_COMPLETED_APPLICATIONS, maxAppsInMemory);
+    // larger than maxCompletedAppsInMemory, reset to RM_MAX_COMPLETED_APPLICATIONS.
+    conf.setInt(YarnConfiguration.RM_STATE_STORE_MAX_COMPLETED_APPLICATIONS, 1000);
+    TestRMAppManager appMonitor = new TestRMAppManager(rmContext, conf);
+
+    addToCompletedApps(appMonitor, rmContext);
+    Assert.assertEquals("Number of completed apps incorrect", 10,
+        appMonitor.getCompletedAppsListSize());
+    appMonitor.checkAppNumCompletedLimit();
+
+    int numRemoveApps = 10 - maxAppsInMemory;
+    Assert.assertEquals("Number of apps incorrect after # completed check",
+      maxAppsInMemory, rmContext.getRMApps().size());
+    Assert.assertEquals("Number of completed apps incorrect after check",
+      maxAppsInMemory, appMonitor.getCompletedAppsListSize());
+    verify(rmContext.getStateStore(), times(numRemoveApps)).removeApplication(
+      isA(RMApp.class));
+    Assert.assertEquals(maxAppsInMemory,
+      appMonitor.getCompletedAppsInStateStore());
   }
 
   protected void setupDispatcher(RMContext rmContext, Configuration conf) {

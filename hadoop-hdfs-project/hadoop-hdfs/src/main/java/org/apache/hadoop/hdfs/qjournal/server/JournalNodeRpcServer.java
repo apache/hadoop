@@ -115,6 +115,7 @@ class JournalNodeRpcServer implements QJournalProtocol {
     return jn.getOrCreateJournal(journalId).isFormatted();
   }
 
+  @SuppressWarnings("deprecation")
   @Override
   public GetJournalStateResponseProto getJournalState(String journalId)
         throws IOException {
@@ -122,6 +123,7 @@ class JournalNodeRpcServer implements QJournalProtocol {
     return GetJournalStateResponseProto.newBuilder()
         .setLastPromisedEpoch(epoch)
         .setHttpPort(jn.getBoundHttpAddress().getPort())
+        .setFromURL(jn.getHttpServerURI())
         .build();
   }
 
@@ -173,6 +175,7 @@ class JournalNodeRpcServer implements QJournalProtocol {
       .purgeLogsOlderThan(reqInfo, minTxIdToKeep);
   }
 
+  @SuppressWarnings("deprecation")
   @Override
   public GetEditLogManifestResponseProto getEditLogManifest(String jid,
       long sinceTxId, boolean inProgressOk)
@@ -184,6 +187,7 @@ class JournalNodeRpcServer implements QJournalProtocol {
     return GetEditLogManifestResponseProto.newBuilder()
         .setManifest(PBHelper.convert(manifest))
         .setHttpPort(jn.getBoundHttpAddress().getPort())
+        .setFromURL(jn.getHttpServerURI())
         .build();
   }
 

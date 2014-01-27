@@ -71,6 +71,8 @@ public class NameNodeMetrics {
   MutableCounterLong listSnapshottableDirOps;
   @Metric("Number of snapshotDiffReport operations")
   MutableCounterLong snapshotDiffReportOps;
+  @Metric("Number of blockReceivedAndDeleted calls")
+  MutableCounterLong blockReceivedAndDeletedOps;
 
   @Metric("Journal transactions") MutableRate transactions;
   @Metric("Journal syncs") MutableRate syncs;
@@ -79,9 +81,20 @@ public class NameNodeMetrics {
   MutableCounterLong transactionsBatchedInSync;
   @Metric("Block report") MutableRate blockReport;
   MutableQuantiles[] blockReportQuantiles;
+  @Metric("Cache report") MutableRate cacheReport;
+  MutableQuantiles[] cacheReportQuantiles;
 
-  @Metric("Duration in SafeMode at startup") MutableGaugeInt safeModeTime;
-  @Metric("Time loading FS Image at startup") MutableGaugeInt fsImageLoadTime;
+  @Metric("Duration in SafeMode at startup in msec")
+  MutableGaugeInt safeModeTime;
+  @Metric("Time loading FS Image at startup in msec")
+  MutableGaugeInt fsImageLoadTime;
+
+  @Metric("GetImageServlet getEdit")
+  MutableRate getEdit;
+  @Metric("GetImageServlet getImage")
+  MutableRate getImage;
+  @Metric("GetImageServlet putImage")
+  MutableRate putImage;
 
   NameNodeMetrics(String processName, String sessionId, int[] intervals) {
     registry.tag(ProcessName, processName).tag(SessionId, sessionId);
@@ -89,6 +102,7 @@ public class NameNodeMetrics {
     final int len = intervals.length;
     syncsQuantiles = new MutableQuantiles[len];
     blockReportQuantiles = new MutableQuantiles[len];
+    cacheReportQuantiles = new MutableQuantiles[len];
     
     for (int i = 0; i < len; i++) {
       int interval = intervals[i];
@@ -98,6 +112,9 @@ public class NameNodeMetrics {
       blockReportQuantiles[i] = registry.newQuantiles(
           "blockReport" + interval + "s", 
           "Block report", "ops", "latency", interval);
+      cacheReportQuantiles[i] = registry.newQuantiles(
+          "cacheReport" + interval + "s",
+          "Cache report", "ops", "latency", interval);
     }
   }
 
@@ -201,6 +218,10 @@ public class NameNodeMetrics {
     snapshotDiffReportOps.incr();
   }
   
+  public void incrBlockReceivedAndDeletedOps() {
+    blockReceivedAndDeletedOps.incr();
+  }
+
   public void addTransaction(long latency) {
     transactions.add(latency);
   }
@@ -227,7 +248,26 @@ public class NameNodeMetrics {
     }
   }
 
+  public void addCacheBlockReport(long latency) {
+    cacheReport.add(latency);
+    for (MutableQuantiles q : cacheReportQuantiles) {
+      q.add(latency);
+    }
+  }
+
   public void setSafeModeTime(long elapsed) {
     safeModeTime.set((int) elapsed);
+  }
+
+  public void addGetEdit(long latency) {
+    getEdit.add(latency);
+  }
+
+  public void addGetImage(long latency) {
+    getImage.add(latency);
+  }
+
+  public void addPutImage(long latency) {
+    putImage.add(latency);
   }
 }

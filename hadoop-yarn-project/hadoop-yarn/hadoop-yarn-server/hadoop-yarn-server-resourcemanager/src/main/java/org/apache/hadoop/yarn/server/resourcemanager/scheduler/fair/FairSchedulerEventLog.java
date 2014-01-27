@@ -75,26 +75,30 @@ class FairSchedulerEventLog {
   private DailyRollingFileAppender appender;
 
   boolean init(FairSchedulerConfiguration conf) {
-    try {
-      logDir = conf.getEventlogDir();
-      File logDirFile = new File(logDir);
-      if (!logDirFile.exists()) {
-        if (!logDirFile.mkdirs()) {
-          throw new IOException(
-              "Mkdirs failed to create " + logDirFile.toString());
+    if (conf.isEventLogEnabled()) {
+      try {
+        logDir = conf.getEventlogDir();
+        File logDirFile = new File(logDir);
+        if (!logDirFile.exists()) {
+          if (!logDirFile.mkdirs()) {
+            throw new IOException(
+                "Mkdirs failed to create " + logDirFile.toString());
+          }
         }
+        String username = System.getProperty("user.name");
+        logFile = String.format("%s%shadoop-%s-fairscheduler.log",
+            logDir, File.separator, username);
+        logDisabled = false;
+        PatternLayout layout = new PatternLayout("%d{ISO8601}\t%m%n");
+        appender = new DailyRollingFileAppender(layout, logFile, "'.'yyyy-MM-dd");
+        appender.activateOptions();
+        LOG.info("Initialized fair scheduler event log, logging to " + logFile);
+      } catch (IOException e) {
+        LOG.error(
+            "Failed to initialize fair scheduler event log. Disabling it.", e);
+        logDisabled = true;
       }
-      String username = System.getProperty("user.name");
-      logFile = String.format("%s%shadoop-%s-fairscheduler.log",
-          logDir, File.separator, username);
-      logDisabled = false;
-      PatternLayout layout = new PatternLayout("%d{ISO8601}\t%m%n");
-      appender = new DailyRollingFileAppender(layout, logFile, "'.'yyyy-MM-dd");
-      appender.activateOptions();
-      LOG.info("Initialized fair scheduler event log, logging to " + logFile);
-    } catch (IOException e) {
-      LOG.error(
-          "Failed to initialize fair scheduler event log. Disabling it.", e);
+    } else {
       logDisabled = true;
     }
     return !(logDisabled);

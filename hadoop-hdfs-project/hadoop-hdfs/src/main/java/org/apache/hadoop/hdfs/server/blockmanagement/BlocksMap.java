@@ -29,11 +29,11 @@ import org.apache.hadoop.util.LightWeightGSet;
  * the datanodes that store the block.
  */
 class BlocksMap {
-  private static class NodeIterator implements Iterator<DatanodeDescriptor> {
+  private static class StorageIterator implements Iterator<DatanodeStorageInfo> {
     private BlockInfo blockInfo;
     private int nextIdx = 0;
       
-    NodeIterator(BlockInfo blkInfo) {
+    StorageIterator(BlockInfo blkInfo) {
       this.blockInfo = blkInfo;
     }
 
@@ -44,8 +44,8 @@ class BlocksMap {
     }
 
     @Override
-    public DatanodeDescriptor next() {
-      return blockInfo.getDatanode(nextIdx++);
+    public DatanodeStorageInfo next() {
+      return blockInfo.getStorageInfo(nextIdx++);
     }
 
     @Override
@@ -57,11 +57,11 @@ class BlocksMap {
   /** Constant {@link LightWeightGSet} capacity. */
   private final int capacity;
   
-  private volatile GSet<Block, BlockInfo> blocks;
+  private GSet<Block, BlockInfo> blocks;
 
-  BlocksMap(final float loadFactor) {
+  BlocksMap(int capacity) {
     // Use 2% of total memory to size the GSet capacity
-    this.capacity = LightWeightGSet.computeCapacity(2.0, "BlocksMap");
+    this.capacity = capacity;
     this.blocks = new LightWeightGSet<Block, BlockInfo>(capacity);
   }
 
@@ -115,18 +115,23 @@ class BlocksMap {
 
   /**
    * Searches for the block in the BlocksMap and 
-   * returns Iterator that iterates through the nodes the block belongs to.
+   * returns {@link Iterable} of the storages the block belongs to.
    */
-  Iterator<DatanodeDescriptor> nodeIterator(Block b) {
-    return nodeIterator(blocks.get(b));
+  Iterable<DatanodeStorageInfo> getStorages(Block b) {
+    return getStorages(blocks.get(b));
   }
 
   /**
    * For a block that has already been retrieved from the BlocksMap
-   * returns Iterator that iterates through the nodes the block belongs to.
+   * returns {@link Iterable} of the storages the block belongs to.
    */
-  Iterator<DatanodeDescriptor> nodeIterator(BlockInfo storedBlock) {
-    return new NodeIterator(storedBlock);
+  Iterable<DatanodeStorageInfo> getStorages(final BlockInfo storedBlock) {
+    return new Iterable<DatanodeStorageInfo>() {
+      @Override
+      public Iterator<DatanodeStorageInfo> iterator() {
+        return new StorageIterator(storedBlock);
+      }
+    };
   }
 
   /** counts number of containing nodes. Better than using iterator. */

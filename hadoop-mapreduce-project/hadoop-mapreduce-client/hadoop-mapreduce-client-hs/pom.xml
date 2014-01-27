@@ -19,12 +19,12 @@
   <parent>
     <artifactId>hadoop-mapreduce-client</artifactId>
     <groupId>org.apache.hadoop</groupId>
-    <version>2.3.0-SNAPSHOT</version>
+    <version>2.4.0-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-mapreduce-client-hs</artifactId>
-  <version>2.3.0-SNAPSHOT</version>
+  <version>2.4.0-SNAPSHOT</version>
   <name>hadoop-mapreduce-client-hs</name>
 
   <properties>
@@ -33,6 +33,10 @@
   </properties>
 
   <dependencies>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-hdfs</artifactId>
+    </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-mapreduce-client-common</artifactId>
@@ -53,6 +57,12 @@
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-hdfs</artifactId>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
@@ -67,6 +77,36 @@
           </excludes>
         </configuration>
       </plugin>
+      <plugin>
+		<groupId>org.apache.hadoop</groupId>
+		<artifactId>hadoop-maven-plugins</artifactId>
+		<executions>
+			<execution>
+				<id>compile-protoc</id>
+				<phase>generate-sources</phase>
+				<goals>
+				<goal>protoc</goal>
+				</goals>
+				<configuration>
+        <protocVersion>${protobuf.version}</protocVersion>
+        <protocCommand>${protoc.path}</protocCommand>
+				<imports>
+					<param>
+						${basedir}/../../../../hadoop-common-project/hadoop-common/src/main/proto
+					</param>
+					<param>${basedir}/src/main/proto</param>
+				</imports>
+				<source>
+					<directory>${basedir}/src/main/proto</directory>
+					<includes>
+						<include>HSAdminRefreshProtocol.proto</include>
+					</includes>
+				</source>
+				<output>${project.build.directory}/generated-sources/java</output>
+				</configuration>
+			</execution>
+		</executions>
+		</plugin>
     </plugins>
   </build>
 

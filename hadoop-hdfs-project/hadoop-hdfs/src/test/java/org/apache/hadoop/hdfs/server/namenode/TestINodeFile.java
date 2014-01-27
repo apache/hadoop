@@ -25,6 +25,7 @@ import static org.junit.Assert.fail;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -62,6 +63,10 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 public class TestINodeFile {
+  // Re-enable symlinks for tests, see HADOOP-10020 and HADOOP-10052
+  static {
+    FileSystem.enableSymlinks();
+  }
   public static final Log LOG = LogFactory.getLog(TestINodeFile.class);
 
   static final short BLOCKBITS = 48;
@@ -927,7 +932,76 @@ public class TestINodeFile {
       }
     }
   }
-  
+  @Test
+  public void testLocationLimitInListingOps() throws Exception {
+    final Configuration conf = new Configuration();
+    conf.setInt(DFSConfigKeys.DFS_LIST_LIMIT, 9); // 3 blocks * 3 replicas
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
+      cluster.waitActive();
+      final DistributedFileSystem hdfs = cluster.getFileSystem();
+      ArrayList<String> source = new ArrayList<String>();
+
+      // tmp1 holds files with 3 blocks, 3 replicas
+      // tmp2 holds files with 3 blocks, 1 replica
+      hdfs.mkdirs(new Path("/tmp1"));
+      hdfs.mkdirs(new Path("/tmp2"));
+
+      source.add("f1");
+      source.add("f2");
+
+      int numEntries = source.size();
+      for (int j=0;j<numEntries;j++) {
+          DFSTestUtil.createFile(hdfs, new Path("/tmp1/"+source.get(j)), 4096,
+          3*1024-100, 1024, (short) 3, 0);
+      }
+
+      byte[] start = HdfsFileStatus.EMPTY_NAME;
+      for (int j=0;j<numEntries;j++) {
+          DirectoryListing dl = cluster.getNameNodeRpc().getListing("/tmp1",
+              start, true);
+          assertTrue(dl.getPartialListing().length == 1);
+          for (int i=0;i<dl.getPartialListing().length; i++) {
+              source.remove(dl.getPartialListing()[i].getLocalName());
+          }
+          start = dl.getLastName();
+      }
+      // Verify we have listed all entries in the directory.
+      assertTrue(source.size() == 0);
+
+      // Now create 6 files, each with 3 locations. Should take 2 iterations of 3
+      source.add("f1");
+      source.add("f2");
+      source.add("f3");
+      source.add("f4");
+      source.add("f5");
+      source.add("f6");
+      numEntries = source.size();
+      for (int j=0;j<numEntries;j++) {
+          DFSTestUtil.createFile(hdfs, new Path("/tmp2/"+source.get(j)), 4096,
+          3*1024-100, 1024, (short) 1, 0);
+      }
+
+      start = HdfsFileStatus.EMPTY_NAME;
+      for (int j=0;j<numEntries/3;j++) {
+          DirectoryListing dl = cluster.getNameNodeRpc().getListing("/tmp2",
+              start, true);
+          assertTrue(dl.getPartialListing().length == 3);
+          for (int i=0;i<dl.getPartialListing().length; i++) {
+              source.remove(dl.getPartialListing()[i].getLocalName());
+          }
+          start = dl.getLastName();
+      }
+      // Verify we have listed all entries in tmp2.
+      assertTrue(source.size() == 0);
+  } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
   @Test
   public void testFilesInGetListingOps() throws Exception {
     final Configuration conf = new Configuration();

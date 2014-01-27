@@ -83,11 +83,13 @@ public abstract class WebApp extends ServletModule {
    * @return InetSocketAddress
    */
   public InetSocketAddress getListenerAddress() {
-    return checkNotNull(httpServer, "httpServer").getListenerAddress();
+    return checkNotNull(httpServer, "httpServer").getConnectorAddress(0);
   }
 	
   public int port() {
-    return checkNotNull(httpServer, "httpServer").getPort();
+    InetSocketAddress addr = checkNotNull(httpServer, "httpServer")
+        .getConnectorAddress(0);
+    return addr == null ? -1 : addr.getPort();
   }
 
   public void stop() {

@@ -21,6 +21,7 @@ package org.apache.hadoop.mapreduce.v2.util;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.security.AccessController;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
@@ -60,6 +61,7 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.util.ApplicationClassLoader;
 import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.apache.log4j.RollingFileAppender;
 
 /**
  * Helper class for MR applications
@@ -134,6 +136,30 @@ public class MRApps extends Apps {
     return TaskAttemptStateUI.valueOf(attemptStateStr);
   }
 
+  // gets the base name of the MapReduce framework or null if no
+  // framework was configured
+  private static String getMRFrameworkName(Configuration conf) {
+    String frameworkName = null;
+    String framework =
+        conf.get(MRJobConfig.MAPREDUCE_APPLICATION_FRAMEWORK_PATH, "");
+    if (!framework.isEmpty()) {
+      URI uri;
+      try {
+        uri = new URI(framework);
+      } catch (URISyntaxException e) {
+        throw new IllegalArgumentException("Unable to parse '" + framework
+            + "' as a URI, check the setting for "
+            + MRJobConfig.MAPREDUCE_APPLICATION_FRAMEWORK_PATH, e);
+      }
+
+      frameworkName = uri.getFragment();
+      if (frameworkName == null) {
+        frameworkName = new Path(uri).getName();
+      }
+    }
+    return frameworkName;
+  }
+
   private static void setMRFrameworkClasspath(
       Map<String, String> environment, Configuration conf) throws IOException {
     // Propagate the system classpath when using the mini cluster
@@ -142,19 +168,34 @@ public class MRApps extends Apps {
           System.getProperty("java.class.path"));
     }
 
-    // Add standard Hadoop classes
-    for (String c : conf.getStrings(
-        YarnConfiguration.YARN_APPLICATION_CLASSPATH,
-        YarnConfiguration.DEFAULT_YARN_APPLICATION_CLASSPATH)) {
-      Apps.addToEnvironment(environment, Environment.CLASSPATH.name(), c
-          .trim());
+    // if the framework is specified then only use the MR classpath
+    String frameworkName = getMRFrameworkName(conf);
+    if (frameworkName == null) {
+      // Add standard Hadoop classes
+      for (String c : conf.getStrings(
+          YarnConfiguration.YARN_APPLICATION_CLASSPATH,
+          YarnConfiguration.DEFAULT_YARN_APPLICATION_CLASSPATH)) {
+        Apps.addToEnvironment(environment, Environment.CLASSPATH.name(), c
+            .trim());
+      }
     }
+
+    boolean foundFrameworkInClasspath = (frameworkName == null);
     for (String c : conf.getStrings(
         MRJobConfig.MAPREDUCE_APPLICATION_CLASSPATH,
         StringUtils.getStrings(
             MRJobConfig.DEFAULT_MAPREDUCE_APPLICATION_CLASSPATH))){
       Apps.addToEnvironment(environment, Environment.CLASSPATH.name(), c
           .trim());
+      if (!foundFrameworkInClasspath) {
+        foundFrameworkInClasspath = c.contains(frameworkName);
+      }
+    }
+
+    if (!foundFrameworkInClasspath) {
+      throw new IllegalArgumentException(
+          "Could not locate MapReduce framework name '" + frameworkName
+          + "' in " + MRJobConfig.MAPREDUCE_APPLICATION_CLASSPATH);
     }
     // TODO: Remove duplicates.
   }
@@ -450,15 +491,23 @@ public class MRApps extends Apps {
    * Add the JVM system properties necessary to configure {@link ContainerLogAppender}.
    * @param logLevel the desired log level (eg INFO/WARN/DEBUG)
    * @param logSize See {@link ContainerLogAppender#setTotalLogFileSize(long)}
+   * @param numBackups See {@link RollingFileAppender#setMaxBackupIndex(int)}
    * @param vargs the argument list to append to
    */
   public static void addLog4jSystemProperties(
-      String logLevel, long logSize, List<String> vargs) {
+      String logLevel, long logSize, int numBackups, List<String> vargs) {
     vargs.add("-Dlog4j.configuration=container-log4j.properties");
     vargs.add("-D" + YarnConfiguration.YARN_APP_CONTAINER_LOG_DIR + "=" +
         ApplicationConstants.LOG_DIR_EXPANSION_VAR);
     vargs.add(
         "-D" + YarnConfiguration.YARN_APP_CONTAINER_LOG_SIZE + "=" + logSize);
-    vargs.add("-Dhadoop.root.logger=" + logLevel + ",CLA"); 
+    if (logSize > 0L && numBackups > 0) {
+      // log should be rolled
+      vargs.add("-D" + YarnConfiguration.YARN_APP_CONTAINER_LOG_BACKUPS + "="
+          + numBackups);
+      vargs.add("-Dhadoop.root.logger=" + logLevel + ",CRLA");
+    } else {
+      vargs.add("-Dhadoop.root.logger=" + logLevel + ",CLA");
+    }
   }
 }

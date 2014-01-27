@@ -197,13 +197,13 @@ public interface RMApp extends EventHandler<RMAppEvent> {
   String getApplicationType(); 
 
   /**
-   * Check whether this application is safe to unregister.
-   * An application is deemed to be safe to unregister if it is an unmanaged
-   * AM or its state has been removed from state store.
+   * Check whether this application is safe to terminate.
+   * An application is deemed to be safe to terminate if it is an unmanaged
+   * AM or its state has been saved in state store.
    * @return the flag which indicates whether this application is safe to
-   *         unregister.
+   *         terminate.
    */
-  boolean isAppSafeToUnregister();
+  boolean isAppSafeToTerminate();
 
   /**
    * Create the external user-facing state of ApplicationMaster from the

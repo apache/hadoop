@@ -206,14 +206,13 @@ public final class FileSystemTestWrapper extends FSTestWrapper {
     return fs.makeQualified(path);
   }
 
+  @SuppressWarnings("deprecation")
   @Override
   public void mkdir(Path dir, FsPermission permission, boolean createParent)
       throws AccessControlException, FileAlreadyExistsException,
       FileNotFoundException, ParentNotDirectoryException,
       UnsupportedFileSystemException, IOException {
-    // Note that there is no "mkdir" in FileSystem, it always does
-    // "mkdir -p" (creating parent directories).
-    fs.mkdirs(dir, permission);
+    fs.primitiveMkdir(dir, permission, createParent);
   }
 
   @Override
@@ -397,5 +396,11 @@ public final class FileSystemTestWrapper extends FSTestWrapper {
   public FileStatus[] listStatus(Path f) throws AccessControlException,
       FileNotFoundException, UnsupportedFileSystemException, IOException {
     return fs.listStatus(f);
+  }
+
+  @Override
+  public FileStatus[] globStatus(Path pathPattern, PathFilter filter)
+      throws IOException {
+    return fs.globStatus(pathPattern, filter);
   }
 }

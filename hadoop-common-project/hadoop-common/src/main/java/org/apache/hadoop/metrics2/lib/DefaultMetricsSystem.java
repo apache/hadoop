@@ -38,8 +38,8 @@ public enum DefaultMetricsSystem {
   private AtomicReference<MetricsSystem> impl =
       new AtomicReference<MetricsSystem>(new MetricsSystemImpl());
   volatile boolean miniClusterMode = false;
-  final UniqueNames mBeanNames = new UniqueNames();
-  final UniqueNames sourceNames = new UniqueNames();
+  transient final UniqueNames mBeanNames = new UniqueNames();
+  transient final UniqueNames sourceNames = new UniqueNames();
 
   /**
    * Convenience method to initialize the metrics system

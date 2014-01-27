@@ -46,20 +46,36 @@ public class WebHdfsTestUtil {
     return conf;
   }
 
-  public static WebHdfsFileSystem getWebHdfsFileSystem(final Configuration conf
-      ) throws IOException, URISyntaxException {
-    final String uri = WebHdfsFileSystem.SCHEME  + "://"
-        + conf.get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY);
+  public static WebHdfsFileSystem getWebHdfsFileSystem(
+      final Configuration conf, String scheme) throws IOException,
+      URISyntaxException {
+    final String uri;
+
+    if (WebHdfsFileSystem.SCHEME.equals(scheme)) {
+      uri = WebHdfsFileSystem.SCHEME + "://"
+          + conf.get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY);
+    } else if (SWebHdfsFileSystem.SCHEME.equals(scheme)) {
+      uri = SWebHdfsFileSystem.SCHEME + "://"
+          + conf.get(DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY);
+    } else {
+      throw new IllegalArgumentException("unknown scheme:" + scheme);
+    }
     return (WebHdfsFileSystem)FileSystem.get(new URI(uri), conf);
   }
 
   public static WebHdfsFileSystem getWebHdfsFileSystemAs(
-      final UserGroupInformation ugi, final Configuration conf
+  final UserGroupInformation ugi, final Configuration conf
+  ) throws IOException, InterruptedException {
+    return getWebHdfsFileSystemAs(ugi, conf, WebHdfsFileSystem.SCHEME);
+  }
+
+  public static WebHdfsFileSystem getWebHdfsFileSystemAs(
+      final UserGroupInformation ugi, final Configuration conf, String scheme
       ) throws IOException, InterruptedException {
     return ugi.doAs(new PrivilegedExceptionAction<WebHdfsFileSystem>() {
       @Override
       public WebHdfsFileSystem run() throws Exception {
-        return getWebHdfsFileSystem(conf);
+        return getWebHdfsFileSystem(conf, WebHdfsFileSystem.SCHEME);
       }
     });
   }
@@ -77,11 +93,6 @@ public class WebHdfsTestUtil {
     conn.connect();
     Assert.assertEquals(expectedResponseCode, conn.getResponseCode());
     return WebHdfsFileSystem.jsonParse(conn, false);
-  }
-  
-  public static HttpURLConnection twoStepWrite(final WebHdfsFileSystem webhdfs,
-      final HttpOpParam.Op op, HttpURLConnection conn) throws IOException {
-    return webhdfs.new Runner(op, conn).twoStepWrite();
   }
 
   public static FSDataOutputStream write(final WebHdfsFileSystem webhdfs,

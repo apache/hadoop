@@ -42,7 +42,17 @@ public enum StepType {
   /**
    * The namenode is performing an operation related to inodes.
    */
-  INODES("Inodes", "inodes");
+  INODES("Inodes", "inodes"),
+
+  /**
+   * The namenode is performing an operation related to cache pools.
+   */
+  CACHE_POOLS("CachePools", "cache pools"),
+
+  /**
+   * The namenode is performing an operation related to cache entries.
+   */
+  CACHE_ENTRIES("CacheEntries", "cache entries");
 
   private final String name, description;
 

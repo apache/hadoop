@@ -316,10 +316,11 @@ public class TestNamenodeRetryCache {
     ExtendedBlock oldBlock = new ExtendedBlock();
     ExtendedBlock newBlock = new ExtendedBlock();
     DatanodeID[] newNodes = new DatanodeID[2];
+    String[] newStorages = new String[2];
     
     newCall();
     try {
-      ns0.updatePipeline("testClient", oldBlock, newBlock, newNodes);
+      ns0.updatePipeline("testClient", oldBlock, newBlock, newNodes, newStorages);
       fail("Expect StandbyException from the updatePipeline call");
     } catch (StandbyException e) {
       // expected, since in the beginning both nn are in standby state
@@ -329,7 +330,7 @@ public class TestNamenodeRetryCache {
     
     cluster.transitionToActive(0);
     try {
-      ns0.updatePipeline("testClient", oldBlock, newBlock, newNodes);
+      ns0.updatePipeline("testClient", oldBlock, newBlock, newNodes, newStorages);
     } catch (IOException e) {
       // ignore call should not hang.
     }
@@ -413,7 +414,7 @@ public class TestNamenodeRetryCache {
     
     LightWeightCache<CacheEntry, CacheEntry> cacheSet = 
         (LightWeightCache<CacheEntry, CacheEntry>) namesystem.getRetryCache().getCacheSet();
-    assertEquals(14, cacheSet.size());
+    assertEquals(20, cacheSet.size());
     
     Map<CacheEntry, CacheEntry> oldEntries = 
         new HashMap<CacheEntry, CacheEntry>();
@@ -432,7 +433,7 @@ public class TestNamenodeRetryCache {
     assertTrue(namesystem.hasRetryCache());
     cacheSet = (LightWeightCache<CacheEntry, CacheEntry>) namesystem
         .getRetryCache().getCacheSet();
-    assertEquals(14, cacheSet.size());
+    assertEquals(20, cacheSet.size());
     iter = cacheSet.iterator();
     while (iter.hasNext()) {
       CacheEntry entry = iter.next();

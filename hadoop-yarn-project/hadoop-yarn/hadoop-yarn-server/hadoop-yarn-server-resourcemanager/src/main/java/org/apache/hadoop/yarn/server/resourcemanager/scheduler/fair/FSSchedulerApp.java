@@ -44,8 +44,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerFini
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplication;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 /**
@@ -53,7 +52,7 @@ import org.apache.hadoop.yarn.util.resource.Resources;
  */
 @Private
 @Unstable
-public class FSSchedulerApp extends SchedulerApplication {
+public class FSSchedulerApp extends SchedulerApplicationAttempt {
 
   private static final Log LOG = LogFactory.getLog(FSSchedulerApp.class);
 
@@ -62,7 +61,7 @@ public class FSSchedulerApp extends SchedulerApplication {
   final Map<RMContainer, Long> preemptionMap = new HashMap<RMContainer, Long>();
   
   public FSSchedulerApp(ApplicationAttemptId applicationAttemptId, 
-      String user, Queue queue, ActiveUsersManager activeUsersManager,
+      String user, FSLeafQueue queue, ActiveUsersManager activeUsersManager,
       RMContext rmContext) {
     super(applicationAttemptId, user, queue, activeUsersManager, rmContext);
   }
@@ -197,6 +196,55 @@ public class FSSchedulerApp extends SchedulerApplication {
     return allowedLocalityLevel.get(priority);
   }
 
+  /**
+   * Return the level at which we are allowed to schedule containers.
+   * Given the thresholds indicating how much time passed before relaxing
+   * scheduling constraints.
+   */
+  public synchronized NodeType getAllowedLocalityLevelByTime(Priority priority,
+          long nodeLocalityDelayMs, long rackLocalityDelayMs,
+          long currentTimeMs) {
+
+    // if not being used, can schedule anywhere
+    if (nodeLocalityDelayMs < 0 || rackLocalityDelayMs < 0) {
+      return NodeType.OFF_SWITCH;
+    }
+
+    // default level is NODE_LOCAL
+    if (! allowedLocalityLevel.containsKey(priority)) {
+      allowedLocalityLevel.put(priority, NodeType.NODE_LOCAL);
+      return NodeType.NODE_LOCAL;
+    }
+
+    NodeType allowed = allowedLocalityLevel.get(priority);
+
+    // if level is already most liberal, we're done
+    if (allowed.equals(NodeType.OFF_SWITCH)) {
+      return NodeType.OFF_SWITCH;
+    }
+
+    // check waiting time
+    long waitTime = currentTimeMs;
+    if (lastScheduledContainer.containsKey(priority)) {
+      waitTime -= lastScheduledContainer.get(priority);
+    } else {
+      waitTime -= appSchedulable.getStartTime();
+    }
+
+    long thresholdTime = allowed.equals(NodeType.NODE_LOCAL) ?
+            nodeLocalityDelayMs : rackLocalityDelayMs;
+
+    if (waitTime > thresholdTime) {
+      if (allowed.equals(NodeType.NODE_LOCAL)) {
+        allowedLocalityLevel.put(priority, NodeType.RACK_LOCAL);
+        resetSchedulingOpportunities(priority, currentTimeMs);
+      } else if (allowed.equals(NodeType.RACK_LOCAL)) {
+        allowedLocalityLevel.put(priority, NodeType.OFF_SWITCH);
+        resetSchedulingOpportunities(priority, currentTimeMs);
+      }
+    }
+    return allowedLocalityLevel.get(priority);
+  }
 
   synchronized public RMContainer allocate(NodeType type, FSSchedulerNode node,
       Priority priority, ResourceRequest request,
@@ -277,5 +325,10 @@ public class FSSchedulerApp extends SchedulerApplication {
 
   public Set<RMContainer> getPreemptionContainers() {
     return preemptionMap.keySet();
+  }
+  
+  @Override
+  public FSLeafQueue getQueue() {
+    return (FSLeafQueue)super.getQueue();
   }
 }

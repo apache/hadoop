@@ -93,15 +93,6 @@ public class TestNMWebServicesContainers extends JerseyTest {
   private Injector injector = Guice.createInjector(new ServletModule() {
     @Override
     protected void configureServlets() {
-      nmContext = new NodeManager.NMContext(null, null) {
-        public NodeId getNodeId() {
-          return NodeId.newInstance("testhost.foo.com", 8042);
-        };
-
-        public int getHttpPort() {
-          return 1234;
-        };
-      };
       resourceView = new ResourceView() {
         @Override
         public long getVmemAllocatedForContainers() {
@@ -131,6 +122,15 @@ public class TestNMWebServicesContainers extends JerseyTest {
       healthChecker.init(conf);
       dirsHandler = healthChecker.getDiskHandler();
       aclsManager = new ApplicationACLsManager(conf);
+      nmContext = new NodeManager.NMContext(null, null, dirsHandler, aclsManager) {
+        public NodeId getNodeId() {
+          return NodeId.newInstance("testhost.foo.com", 8042);
+        };
+
+        public int getHttpPort() {
+          return 1234;
+        };
+      };
       nmWebApp = new NMWebApp(resourceView, aclsManager, dirsHandler);
       bind(JAXBContextResolver.class);
       bind(NMWebServices.class);

@@ -41,11 +41,11 @@ public enum RMAppAttemptEventType {
   CONTAINER_FINISHED,
   
   // Source: RMStateStore
-  ATTEMPT_SAVED,
+  ATTEMPT_NEW_SAVED,
+  ATTEMPT_UPDATE_SAVED,
 
   // Source: Scheduler
-  APP_REJECTED,
-  APP_ACCEPTED,
+  ATTEMPT_ADDED,
   
   // Source: RMAttemptImpl.recover
   RECOVER

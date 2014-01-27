@@ -39,7 +39,7 @@ public class FairSchedulerLeafQueueInfo extends FairSchedulerQueueInfo {
   
   public FairSchedulerLeafQueueInfo(FSLeafQueue queue, FairScheduler scheduler) {
     super(queue, scheduler);
-    Collection<AppSchedulable> apps = queue.getAppSchedulables();
+    Collection<AppSchedulable> apps = queue.getRunnableAppSchedulables();
     for (AppSchedulable app : apps) {
       if (app.getApp().isPending()) {
         numPendingApps++;
@@ -47,6 +47,7 @@ public class FairSchedulerLeafQueueInfo extends FairSchedulerQueueInfo {
         numActiveApps++;
       }
     }
+    numPendingApps += queue.getNonRunnableAppSchedulables().size();
   }
   
   public int getNumActiveApplications() {

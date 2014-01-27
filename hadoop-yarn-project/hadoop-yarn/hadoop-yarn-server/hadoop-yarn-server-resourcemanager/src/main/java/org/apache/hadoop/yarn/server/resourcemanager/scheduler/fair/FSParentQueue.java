@@ -28,10 +28,12 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.util.resource.Resources;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 
 @Private
 @Unstable
@@ -41,13 +43,12 @@ public class FSParentQueue extends FSQueue {
 
   private final List<FSQueue> childQueues = 
       new ArrayList<FSQueue>();
-  private final QueueManager queueMgr;
   private Resource demand = Resources.createResource(0);
+  private int runnableApps;
   
-  public FSParentQueue(String name, QueueManager queueMgr, FairScheduler scheduler,
+  public FSParentQueue(String name, FairScheduler scheduler,
       FSParentQueue parent) {
-    super(name, queueMgr, scheduler, parent);
-    this.queueMgr = queueMgr;
+    super(name, scheduler, parent);
   }
   
   public void addChildQueue(FSQueue child) {
@@ -81,7 +82,8 @@ public class FSParentQueue extends FSQueue {
   public void updateDemand() {
     // Compute demand by iterating through apps in the queue
     // Limit demand to maxResources
-    Resource maxRes = queueMgr.getMaxResources(getName());
+    Resource maxRes = scheduler.getAllocationConfiguration()
+        .getMaxResources(getName());
     demand = Resources.createResource(0);
     for (FSQueue childQueue : childQueues) {
       childQueue.updateDemand();
@@ -155,7 +157,7 @@ public class FSParentQueue extends FSQueue {
   }
 
   @Override
-  public Collection<FSQueue> getChildQueues() {
+  public List<FSQueue> getChildQueues() {
     return childQueues;
   }
 
@@ -163,12 +165,33 @@ public class FSParentQueue extends FSQueue {
   public void setPolicy(SchedulingPolicy policy)
       throws AllocationConfigurationException {
     boolean allowed =
-        SchedulingPolicy.isApplicableTo(policy, (this == queueMgr
-            .getRootQueue()) ? SchedulingPolicy.DEPTH_ROOT
+        SchedulingPolicy.isApplicableTo(policy, (parent == null)
+            ? SchedulingPolicy.DEPTH_ROOT
             : SchedulingPolicy.DEPTH_INTERMEDIATE);
     if (!allowed) {
       throwPolicyDoesnotApplyException(policy);
     }
     super.policy = policy;
+  }
+  
+  public void incrementRunnableApps() {
+    runnableApps++;
+  }
+  
+  public void decrementRunnableApps() {
+    runnableApps--;
+  }
+
+  @Override
+  public int getNumRunnableApps() {
+    return runnableApps;
+  }
+
+  @Override
+  public void collectSchedulerApplications(
+      Collection<ApplicationAttemptId> apps) {
+    for (FSQueue childQueue : childQueues) {
+      childQueue.collectSchedulerApplications(apps);
+    }
   }
 }

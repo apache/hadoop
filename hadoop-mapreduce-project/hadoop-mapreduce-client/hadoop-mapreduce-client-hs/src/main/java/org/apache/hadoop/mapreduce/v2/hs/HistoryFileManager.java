@@ -20,6 +20,7 @@ package org.apache.hadoop.mapreduce.v2.hs;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.ConnectException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -52,6 +53,7 @@ import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.mapred.JobACLsManager;
 import org.apache.hadoop.mapreduce.jobhistory.JobSummary;
@@ -61,12 +63,15 @@ import org.apache.hadoop.mapreduce.v2.jobhistory.FileNameIndexUtils;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobIndexInfo;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.ShutdownThreadsHelper;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hadoop.yarn.util.Clock;
+import org.apache.hadoop.yarn.util.SystemClock;
 
 /**
  * This class provides a way to interact with history files in a thread safe
@@ -417,7 +422,7 @@ public class HistoryFileManager extends AbstractService {
       return historyFile;
     }
     
-    private synchronized void delete() throws IOException {
+    protected synchronized void delete() throws IOException {
       if (LOG.isDebugEnabled()) {
         LOG.debug("deleting " + historyFile + " and " + confFile);
       }
@@ -462,7 +467,8 @@ public class HistoryFileManager extends AbstractService {
 
   private JobACLsManager aclsMgr;
 
-  private Configuration conf;
+  @VisibleForTesting
+  Configuration conf;
 
   private String serialNumberFormat;
 
@@ -489,46 +495,17 @@ public class HistoryFileManager extends AbstractService {
         + (JobHistoryUtils.SERIAL_NUMBER_DIRECTORY_DIGITS + serialNumberLowDigits)
         + "d");
 
-    String doneDirPrefix = null;
-    doneDirPrefix = JobHistoryUtils
-        .getConfiguredHistoryServerDoneDirPrefix(conf);
-    try {
-      doneDirPrefixPath = FileContext.getFileContext(conf).makeQualified(
-          new Path(doneDirPrefix));
-      doneDirFc = FileContext.getFileContext(doneDirPrefixPath.toUri(), conf);
-      doneDirFc.setUMask(JobHistoryUtils.HISTORY_DONE_DIR_UMASK);
-      mkdir(doneDirFc, doneDirPrefixPath, new FsPermission(
-          JobHistoryUtils.HISTORY_DONE_DIR_PERMISSION));
-    } catch (IOException e) {
-      throw new YarnRuntimeException("Error creating done directory: ["
-          + doneDirPrefixPath + "]", e);
-    }
-
-    String intermediateDoneDirPrefix = null;
-    intermediateDoneDirPrefix = JobHistoryUtils
-        .getConfiguredHistoryIntermediateDoneDirPrefix(conf);
-    try {
-      intermediateDoneDirPath = FileContext.getFileContext(conf).makeQualified(
-          new Path(intermediateDoneDirPrefix));
-      intermediateDoneDirFc = FileContext.getFileContext(
-          intermediateDoneDirPath.toUri(), conf);
-      mkdir(intermediateDoneDirFc, intermediateDoneDirPath, new FsPermission(
-          JobHistoryUtils.HISTORY_INTERMEDIATE_DONE_DIR_PERMISSIONS.toShort()));
-    } catch (IOException e) {
-      LOG.info("error creating done directory on dfs " + e);
-      throw new YarnRuntimeException("Error creating intermediate done directory: ["
-          + intermediateDoneDirPath + "]", e);
-    }
+    long maxFSWaitTime = conf.getLong(
+        JHAdminConfig.MR_HISTORY_MAX_START_WAIT_TIME,
+        JHAdminConfig.DEFAULT_MR_HISTORY_MAX_START_WAIT_TIME);
+    createHistoryDirs(new SystemClock(), 10 * 1000, maxFSWaitTime);
 
     this.aclsMgr = new JobACLsManager(conf);
 
     maxHistoryAge = conf.getLong(JHAdminConfig.MR_HISTORY_MAX_AGE_MS,
         JHAdminConfig.DEFAULT_MR_HISTORY_MAX_AGE);
     
-    jobListCache = new JobListCache(conf.getInt(
-        JHAdminConfig.MR_HISTORY_JOBLIST_CACHE_SIZE,
-        JHAdminConfig.DEFAULT_MR_HISTORY_JOBLIST_CACHE_SIZE),
-        maxHistoryAge);
+    jobListCache = createJobListCache();
 
     serialNumberIndex = new SerialNumberIndex(conf.getInt(
         JHAdminConfig.MR_HISTORY_DATESTRING_CACHE_SIZE,
@@ -545,10 +522,117 @@ public class HistoryFileManager extends AbstractService {
     super.serviceInit(conf);
   }
 
+  @VisibleForTesting
+  void createHistoryDirs(Clock clock, long intervalCheckMillis,
+      long timeOutMillis) throws IOException {
+    long start = clock.getTime();
+    boolean done = false;
+    int counter = 0;
+    while (!done &&
+        ((timeOutMillis == -1) || (clock.getTime() - start < timeOutMillis))) {
+      done = tryCreatingHistoryDirs(counter++ % 3 == 0); // log every 3 attempts, 30sec
+      try {
+        Thread.sleep(intervalCheckMillis);
+      } catch (InterruptedException ex) {
+        throw new YarnRuntimeException(ex);
+      }
+    }
+    if (!done) {
+      throw new YarnRuntimeException("Timed out '" + timeOutMillis+
+              "ms' waiting for FileSystem to become available");
+    }
+  }
+
+  /**
+   * DistributedFileSystem returns a RemoteException with a message stating
+   * SafeModeException in it. So this is only way to check it is because of
+   * being in safe mode.
+   */
+  private boolean isBecauseSafeMode(Throwable ex) {
+    return ex.toString().contains("SafeModeException");
+  }
+
+  /**
+   * Returns TRUE if the history dirs were created, FALSE if they could not
+   * be created because the FileSystem is not reachable or in safe mode and
+   * throws and exception otherwise.
+   */
+  @VisibleForTesting
+  boolean tryCreatingHistoryDirs(boolean logWait) throws IOException {
+    boolean succeeded = true;
+    String doneDirPrefix = JobHistoryUtils.
+        getConfiguredHistoryServerDoneDirPrefix(conf);
+    try {
+      doneDirPrefixPath = FileContext.getFileContext(conf).makeQualified(
+          new Path(doneDirPrefix));
+      doneDirFc = FileContext.getFileContext(doneDirPrefixPath.toUri(), conf);
+      doneDirFc.setUMask(JobHistoryUtils.HISTORY_DONE_DIR_UMASK);
+      mkdir(doneDirFc, doneDirPrefixPath, new FsPermission(
+          JobHistoryUtils.HISTORY_DONE_DIR_PERMISSION));
+    } catch (ConnectException ex) {
+      if (logWait) {
+        LOG.info("Waiting for FileSystem at " +
+            doneDirPrefixPath.toUri().getAuthority()  + "to be available");
+      }
+      succeeded = false;
+    } catch (IOException e) {
+      if (isBecauseSafeMode(e)) {
+        succeeded = false;
+        if (logWait) {
+          LOG.info("Waiting for FileSystem at " +
+              doneDirPrefixPath.toUri().getAuthority() +
+              "to be out of safe mode");
+        }
+      } else {
+        throw new YarnRuntimeException("Error creating done directory: ["
+            + doneDirPrefixPath + "]", e);
+      }
+    }
+    if (succeeded) {
+      String intermediateDoneDirPrefix = JobHistoryUtils.
+          getConfiguredHistoryIntermediateDoneDirPrefix(conf);
+      try {
+        intermediateDoneDirPath = FileContext.getFileContext(conf).makeQualified(
+            new Path(intermediateDoneDirPrefix));
+        intermediateDoneDirFc = FileContext.getFileContext(
+            intermediateDoneDirPath.toUri(), conf);
+        mkdir(intermediateDoneDirFc, intermediateDoneDirPath, new FsPermission(
+            JobHistoryUtils.HISTORY_INTERMEDIATE_DONE_DIR_PERMISSIONS.toShort()));
+      } catch (ConnectException ex) {
+        succeeded = false;
+        if (logWait) {
+          LOG.info("Waiting for FileSystem at " +
+              intermediateDoneDirPath.toUri().getAuthority() +
+              "to be available");
+        }
+      } catch (IOException e) {
+        if (isBecauseSafeMode(e)) {
+          succeeded = false;
+          if (logWait) {
+            LOG.info("Waiting for FileSystem at " +
+                intermediateDoneDirPath.toUri().getAuthority() +
+                "to be out of safe mode");
+          }
+        } else {
+          throw new YarnRuntimeException(
+              "Error creating intermediate done directory: ["
+              + intermediateDoneDirPath + "]", e);
+        }
+      }
+    }
+    return succeeded;
+  }
+
   @Override
   public void serviceStop() throws Exception {
     ShutdownThreadsHelper.shutdownExecutorService(moveToDoneExecutor);
     super.serviceStop();
+  }
+
+  protected JobListCache createJobListCache() {
+    return new JobListCache(conf.getInt(
+        JHAdminConfig.MR_HISTORY_JOBLIST_CACHE_SIZE,
+        JHAdminConfig.DEFAULT_MR_HISTORY_JOBLIST_CACHE_SIZE), maxHistoryAge);
   }
 
   private void mkdir(FileContext fc, Path path, FsPermission fsp)
@@ -663,18 +747,18 @@ public class HistoryFileManager extends AbstractService {
     return jhStatusList;
   }
 
-  private static List<FileStatus> scanDirectoryForHistoryFiles(Path path,
+  protected List<FileStatus> scanDirectoryForHistoryFiles(Path path,
       FileContext fc) throws IOException {
     return scanDirectory(path, fc, JobHistoryUtils.getHistoryFileFilter());
   }
-
+  
   /**
    * Finds all history directories with a timestamp component by scanning the
    * filesystem. Used when the JobHistory server is started.
    * 
-   * @return
+   * @return list of history directories
    */
-  private List<FileStatus> findTimestampedDirectories() throws IOException {
+  protected List<FileStatus> findTimestampedDirectories() throws IOException {
     List<FileStatus> fsList = JobHistoryUtils.localGlobber(doneDirFc,
         doneDirPrefixPath, DONE_BEFORE_SERIAL_TAIL);
     return fsList;
@@ -963,7 +1047,7 @@ public class HistoryFileManager extends AbstractService {
         }
       }
       if (!halted) {
-        doneDirFc.delete(doneDirFc.makeQualified(serialDir.getPath()), true);
+        deleteDir(serialDir);
         removeDirectoryFromSerialNumberIndex(serialDir.getPath());
         existingDoneSubdirs.remove(serialDir.getPath());
       } else {
@@ -971,6 +1055,13 @@ public class HistoryFileManager extends AbstractService {
       }
     }
   }
+  
+  protected boolean deleteDir(FileStatus serialDir)
+      throws AccessControlException, FileNotFoundException,
+      UnsupportedFileSystemException, IOException {
+    return doneDirFc.delete(doneDirFc.makeQualified(serialDir.getPath()), true);
+  }
+
   @VisibleForTesting
   protected void setMaxHistoryAge(long newValue){
     maxHistoryAge=newValue;

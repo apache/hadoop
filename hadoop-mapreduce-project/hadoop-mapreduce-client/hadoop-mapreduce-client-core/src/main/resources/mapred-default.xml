@@ -286,6 +286,14 @@
 
 
 <property>
+    <name>mapreduce.job.max.split.locations</name>
+    <value>10</value>
+    <description>The max number of block locations to store for each split for 
+    locality calculation.
+    </description>
+</property>
+
+<property>
   <name>mapreduce.job.split.metainfo.maxsize</name>
   <value>10000000</value>
   <description>The maximum permissible size of the split metainfo file. 
@@ -804,6 +812,31 @@
   <name>mapreduce.task.userlog.limit.kb</name>
   <value>0</value>
   <description>The maximum size of user-logs of each task in KB. 0 disables the cap.
+  </description>
+</property>
+
+<property>
+  <name>yarn.app.mapreduce.task.container.log.backups</name>
+  <value>0</value>
+  <description>Number of backup files for task logs when using
+    ContainerRollingLogAppender (CRLA). See
+    org.apache.log4j.RollingFileAppender.maxBackupIndex. By default,
+    ContainerLogAppender (CLA) is used, and container logs are not rolled. CRLA
+    is enabled for tasks when both mapreduce.task.userlog.limit.kb and
+    yarn.app.mapreduce.task.container.log.backups are greater than zero.
+  </description>
+</property>
+
+<property>
+  <name>yarn.app.mapreduce.am.container.log.backups</name>
+  <value>0</value>
+  <description>Number of backup files for the ApplicationMaster logs when using
+    ContainerRollingLogAppender (CRLA). See
+    org.apache.log4j.RollingFileAppender.maxBackupIndex. By default,
+    ContainerLogAppender (CLA) is used, and container logs are not rolled. CRLA
+    is enabled for the ApplicationMaster when both
+    mapreduce.task.userlog.limit.kb and
+    yarn.app.mapreduce.am.container.log.backups are greater than zero.
   </description>
 </property>
 
@@ -1462,6 +1495,13 @@
 </property>
 
 <property>
+  <name>yarn.app.mapreduce.client-am.ipc.max-retries-on-timeouts</name>
+  <value>3</value>
+  <description>The number of client retries on socket timeouts to the AM - before
+    reconnecting to the RM to fetch Application Status.</description>
+</property>
+
+<property>
   <name>yarn.app.mapreduce.client.max-retries</name>
   <value>3</value>
   <description>The number of client retries to the RM/HS before
@@ -1497,6 +1537,24 @@
   %HADOOP_MAPRED_HOME%/share/hadoop/mapreduce/lib/*.
   </description>
    <name>mapreduce.application.classpath</name>
+   <value></value>
+</property>
+
+<property>
+  <description>Path to the MapReduce framework archive. If set, the framework
+    archive will automatically be distributed along with the job, and this
+    path would normally reside in a public location in an HDFS filesystem. As
+    with distributed cache files, this can be a URL with a fragment specifying
+    the alias to use for the archive name. For example,
+    hdfs:/mapred/framework/hadoop-mapreduce-2.1.1.tar.gz#mrframework would
+    alias the localized archive as "mrframework".
+
+    Note that mapreduce.application.classpath must include the appropriate
+    classpath for the specified framework. The base name of the archive, or
+    alias of the archive if an alias is used, must appear in the specified
+    classpath.
+  </description>
+   <name>mapreduce.application.framework.path</name>
    <value></value>
 </property>
 
@@ -1632,6 +1690,42 @@
   <name>mapreduce.jobhistory.minicluster.fixed.ports</name>
   <value>false</value>
   <description>Whether to use fixed ports with the minicluster</description>
+</property>
+
+<property>
+  <name>mapreduce.jobhistory.admin.address</name>
+  <value>0.0.0.0:10033</value>
+  <description>The address of the History server admin interface.</description>
+</property>
+
+<property>
+  <name>mapreduce.jobhistory.admin.acl</name>
+  <value>*</value>
+  <description>ACL of who can be admin of the History server.</description>
+</property>
+
+<property>
+  <name>mapreduce.jobhistory.recovery.enable</name>
+  <value>false</value>
+  <description>Enable the history server to store server state and recover
+  server state upon startup.  If enabled then
+  mapreduce.jobhistory.recovery.store.class must be specified.</description>
+</property>
+
+<property>
+  <name>mapreduce.jobhistory.recovery.store.class</name>
+  <value>org.apache.hadoop.mapreduce.v2.hs.HistoryServerFileSystemStateStoreService</value>
+  <description>The HistoryServerStateStoreService class to store history server
+  state for recovery.</description>
+</property>
+
+<property>
+  <name>mapreduce.jobhistory.recovery.store.fs.uri</name>
+  <value>${hadoop.tmp.dir}/mapred/history/recoverystore</value>
+  <!--value>hdfs://localhost:9000/mapred/history/recoverystore</value-->
+  <description>The URI where history server state will be stored if
+  HistoryServerFileSystemStateStoreService is configured as the recovery
+  storage class.</description>
 </property>
 
 <property>

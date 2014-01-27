@@ -19,9 +19,13 @@ package org.apache.hadoop.io.compress.zlib;
 
 import static org.junit.Assert.*;
 import static org.junit.Assume.*;
+
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.ByteBuffer;
 import java.util.Random;
+import java.util.zip.DeflaterOutputStream;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -33,6 +37,8 @@ import org.apache.hadoop.io.compress.DecompressorStream;
 import org.apache.hadoop.io.compress.CompressDecompressTester.CompressionTestStrategy;
 import org.apache.hadoop.io.compress.zlib.ZlibCompressor.CompressionLevel;
 import org.apache.hadoop.io.compress.zlib.ZlibCompressor.CompressionStrategy;
+import org.apache.hadoop.io.compress.zlib.ZlibDecompressor.ZlibDirectDecompressor;
+import org.apache.hadoop.util.NativeCodeLoader;
 import org.junit.Before;
 import org.junit.Test;
 import com.google.common.collect.ImmutableSet;
@@ -147,6 +153,60 @@ public class TestZlibCompressorDecompressor {
       decompressor.reset();
     } catch (IOException ex) {
       fail("testZlibCompressDecompress ex !!!" + ex);
+    }
+  }
+  
+  
+  private void compressDecompressLoop(int rawDataSize) throws IOException {
+    byte[] rawData = null;
+    rawData = generate(rawDataSize);
+    ByteArrayOutputStream baos = new ByteArrayOutputStream(rawDataSize+12);
+    DeflaterOutputStream dos = new DeflaterOutputStream(baos);
+    dos.write(rawData);
+    dos.flush();
+    dos.close();
+    byte[] compressedResult = baos.toByteArray();
+    int compressedSize = compressedResult.length;
+    ZlibDirectDecompressor decompressor = new ZlibDirectDecompressor();
+   
+    ByteBuffer inBuf = ByteBuffer.allocateDirect(compressedSize);
+    ByteBuffer outBuf = ByteBuffer.allocateDirect(rawDataSize);
+
+    inBuf.put(compressedResult, 0, compressedSize);
+    inBuf.flip();    
+
+    ByteBuffer expected = ByteBuffer.wrap(rawData);
+    
+    outBuf.clear();
+    while(!decompressor.finished()) {
+      decompressor.decompress(inBuf, outBuf);
+      if (outBuf.remaining() == 0) {
+        outBuf.flip();
+        while (outBuf.remaining() > 0) {        
+          assertEquals(expected.get(), outBuf.get());
+        }
+        outBuf.clear();
+      }
+    }
+    outBuf.flip();
+    while (outBuf.remaining() > 0) {        
+      assertEquals(expected.get(), outBuf.get());
+    }
+    outBuf.clear();
+    
+    assertEquals(0, expected.remaining());
+  }
+
+  @Test
+  public void testZlibDirectCompressDecompress() {
+    int[] size = { 1, 4, 16, 4 * 1024, 64 * 1024, 128 * 1024, 1024 * 1024 };
+    assumeTrue(NativeCodeLoader.isNativeCodeLoaded());
+    try {
+      for (int i = 0; i < size.length; i++) {
+        compressDecompressLoop(size[i]);
+      }
+    } catch (IOException ex) {
+      fail("testZlibDirectCompressDecompress ex !!!" + ex);
     }
   }
   

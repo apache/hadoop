@@ -36,6 +36,7 @@ import javax.servlet.http.HttpServletRequest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.net.NetUtils;
 import org.junit.Test;
 
 public class TestGlobalFilter extends HttpServerFunctionalTest {
@@ -125,7 +126,8 @@ public class TestGlobalFilter extends HttpServerFunctionalTest {
         dataURL, streamFile, rootURL, allURL, outURL, logURL};
 
     //access the urls
-    final String prefix = "http://localhost:" + http.getPort();
+    final String prefix = "http://"
+        + NetUtils.getHostPortString(http.getConnectorAddress(0));
     try {
       for(int i = 0; i < urls.length; i++) {
         access(prefix + urls[i]);

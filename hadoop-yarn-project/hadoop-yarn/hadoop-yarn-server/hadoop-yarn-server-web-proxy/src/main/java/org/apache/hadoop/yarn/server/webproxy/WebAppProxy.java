@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.webproxy;
 
 import java.io.IOException;
+import java.net.URI;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -30,8 +31,9 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
-
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+
+import com.google.common.annotations.VisibleForTesting;
 
 public class WebAppProxy extends AbstractService {
   public static final String FETCHER_ATTRIBUTE= "AppUrlFetcher";
@@ -88,8 +90,10 @@ public class WebAppProxy extends AbstractService {
   @Override
   protected void serviceStart() throws Exception {
     try {
-      proxyServer = new HttpServer("proxy", bindAddress, port,
-          port == 0, getConfig(), acl);
+      proxyServer = new HttpServer.Builder().setName("proxy")
+          .addEndpoint(URI.create("http://" + bindAddress + ":" + port))
+          .setFindPort(port == 0)
+          .setConf(getConfig()).setACL(acl).build();
       proxyServer.addServlet(ProxyUriUtils.PROXY_SERVLET_NAME, 
           ProxyUriUtils.PROXY_PATH_SPEC, WebAppProxyServlet.class);
       proxyServer.setAttribute(FETCHER_ATTRIBUTE, fetcher);
@@ -113,6 +117,9 @@ public class WebAppProxy extends AbstractService {
         throw new YarnRuntimeException("Error stopping proxy web server",e);
       }
     }
+    if(this.fetcher != null) {
+      this.fetcher.stop();
+    }
     super.serviceStop();
   }
 
@@ -123,5 +130,10 @@ public class WebAppProxy extends AbstractService {
       } catch (InterruptedException e) {
       }
     }
+  }
+
+  @VisibleForTesting
+  String getBindAddress() {
+    return bindAddress + ":" + port;
   }
 }

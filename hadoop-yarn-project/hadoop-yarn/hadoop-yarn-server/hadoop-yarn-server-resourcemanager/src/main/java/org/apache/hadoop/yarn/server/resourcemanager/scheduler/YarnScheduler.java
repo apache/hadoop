@@ -25,8 +25,10 @@ import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.QueueACL;
@@ -35,6 +37,7 @@ import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 
 /**
@@ -130,6 +133,16 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
   SchedulerAppReport getSchedulerAppInfo(ApplicationAttemptId appAttemptId);
 
   /**
+   * Get a resource usage report from a given app attempt ID.
+   * @param appAttemptId the id of the application attempt
+   * @return resource usage report for this given attempt
+   */
+  @LimitedPrivate("yarn")
+  @Evolving
+  ApplicationResourceUsageReport getAppResourceUsageReport(
+      ApplicationAttemptId appAttemptId);
+  
+  /**
    * Get the root queue for the scheduler.
    * @return the root queue for the scheduler.
    */
@@ -149,4 +162,22 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
    */
   boolean checkAccess(UserGroupInformation callerUGI,
       QueueACL acl, String queueName);
+  
+  /**
+   * Gets the apps under a given queue
+   * @param queueName the name of the queue.
+   * @return a collection of app attempt ids in the given queue.
+   */
+  @LimitedPrivate("yarn")
+  @Stable
+  public List<ApplicationAttemptId> getAppsInQueue(String queueName);
+
+  /**
+   * Get the container for the given containerId.
+   * @param containerId
+   * @return the container for the given containerId.
+   */
+  @LimitedPrivate("yarn")
+  @Unstable
+  public RMContainer getRMContainer(ContainerId containerId);
 }

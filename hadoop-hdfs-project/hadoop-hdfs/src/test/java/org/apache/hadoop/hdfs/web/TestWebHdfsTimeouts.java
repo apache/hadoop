@@ -18,13 +18,15 @@
 
 package org.apache.hadoop.hdfs.web;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -33,17 +35,17 @@ import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.authentication.client.ConnectionConfigurator;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 /**
  * This test suite checks that WebHdfsFileSystem sets connection timeouts and
@@ -58,7 +60,6 @@ public class TestWebHdfsTimeouts {
 
   private static final int CLIENTS_TO_CONSUME_BACKLOG = 100;
   private static final int CONNECTION_BACKLOG = 1;
-  private static final int INITIAL_SOCKET_TIMEOUT = URLUtils.SOCKET_TIMEOUT;
   private static final int SHORT_SOCKET_TIMEOUT = 5;
   private static final int TEST_TIMEOUT = 10000;
 
@@ -67,14 +68,23 @@ public class TestWebHdfsTimeouts {
   private InetSocketAddress nnHttpAddress;
   private ServerSocket serverSocket;
   private Thread serverThread;
+  private URLConnectionFactory connectionFactory = new URLConnectionFactory(new ConnectionConfigurator() {
+    @Override
+    public HttpURLConnection configure(HttpURLConnection conn) throws IOException {
+      conn.setReadTimeout(SHORT_SOCKET_TIMEOUT);
+      conn.setConnectTimeout(SHORT_SOCKET_TIMEOUT);
+      return conn;
+    }
+  });
 
   @Before
   public void setUp() throws Exception {
-    URLUtils.SOCKET_TIMEOUT = SHORT_SOCKET_TIMEOUT;
     Configuration conf = WebHdfsTestUtil.createConf();
-    nnHttpAddress = NameNode.getHttpAddress(conf);
-    serverSocket = new ServerSocket(nnHttpAddress.getPort(), CONNECTION_BACKLOG);
-    fs = WebHdfsTestUtil.getWebHdfsFileSystem(conf);
+    serverSocket = new ServerSocket(0, CONNECTION_BACKLOG);
+    nnHttpAddress = new InetSocketAddress("localhost", serverSocket.getLocalPort());
+    conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "localhost:" + serverSocket.getLocalPort());
+    fs = WebHdfsTestUtil.getWebHdfsFileSystem(conf, WebHdfsFileSystem.SCHEME);
+    fs.connectionFactory = connectionFactory;
     clients = new ArrayList<SocketChannel>();
     serverThread = null;
   }
@@ -240,7 +250,7 @@ public class TestWebHdfsTimeouts {
    */
   private void startSingleTemporaryRedirectResponseThread(
       final boolean consumeConnectionBacklog) {
-    URLUtils.SOCKET_TIMEOUT = INITIAL_SOCKET_TIMEOUT;
+    fs.connectionFactory = URLConnectionFactory.DEFAULT_SYSTEM_CONNECTION_FACTORY;
     serverThread = new Thread() {
       @Override
       public void run() {
@@ -254,7 +264,7 @@ public class TestWebHdfsTimeouts {
           clientSocket = serverSocket.accept();
 
           // Immediately setup conditions for subsequent connections.
-          URLUtils.SOCKET_TIMEOUT = SHORT_SOCKET_TIMEOUT;
+          fs.connectionFactory = connectionFactory;
           if (consumeConnectionBacklog) {
             consumeConnectionBacklog();
           }

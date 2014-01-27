@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_KEY;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
@@ -28,6 +32,9 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+
+import javax.management.ObjectName;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -41,6 +48,7 @@ import org.apache.hadoop.ha.ServiceFailedException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Trash;
+
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 import static org.apache.hadoop.util.ExitUtil.terminate;
 import static org.apache.hadoop.util.ToolRunner.confirmPrompt;
@@ -70,6 +78,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.RefreshUserMappingsProtocol;
@@ -78,6 +87,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
 import org.apache.hadoop.tools.GetUserMappingsProtocol;
 import org.apache.hadoop.util.ExitUtil.ExitException;
+import org.apache.hadoop.util.JvmPauseMonitor;
 import org.apache.hadoop.util.ServicePlugin;
 import org.apache.hadoop.util.StringUtils;
 
@@ -124,7 +134,7 @@ import com.google.common.collect.Lists;
  * NameNode state, for example partial blocksMap etc.
  **********************************************************/
 @InterfaceAudience.Private
-public class NameNode {
+public class NameNode implements NameNodeStatusMXBean {
   static{
     HdfsConfiguration.init();
   }
@@ -259,6 +269,9 @@ public class NameNode {
   private List<ServicePlugin> plugins;
   
   private NameNodeRpcServer rpcServer;
+
+  private JvmPauseMonitor pauseMonitor;
+  private ObjectName nameNodeStatusBeanName;
   
   /** Format a new filesystem.  Destroys any filesystem that may already
    * exist at this location.  **/
@@ -268,10 +281,6 @@ public class NameNode {
 
   static NameNodeMetrics metrics;
   private static final StartupProgress startupProgress = new StartupProgress();
-  static {
-    StartupProgressMetrics.register(startupProgress);
-  }
-
   /** Return the {@link FSNamesystem} object.
    * @return {@link FSNamesystem} object.
    */
@@ -427,16 +436,10 @@ public class NameNode {
     return getHttpAddress(conf);
   }
 
-  /** @return the NameNode HTTP address set in the conf. */
+  /** @return the NameNode HTTP address. */
   public static InetSocketAddress getHttpAddress(Configuration conf) {
     return  NetUtils.createSocketAddr(
         conf.get(DFS_NAMENODE_HTTP_ADDRESS_KEY, DFS_NAMENODE_HTTP_ADDRESS_DEFAULT));
-  }
-  
-  protected void setHttpServerAddress(Configuration conf) {
-    String hostPort = NetUtils.getHostPortString(getHttpAddress());
-    conf.set(DFS_NAMENODE_HTTP_ADDRESS_KEY, hostPort);
-    LOG.info("Web-server up at: " + hostPort);
   }
 
   protected void loadNamesystem(Configuration conf) throws IOException {
@@ -479,14 +482,22 @@ public class NameNode {
    * @param conf the configuration
    */
   protected void initialize(Configuration conf) throws IOException {
+    if (conf.get(HADOOP_USER_GROUP_METRICS_PERCENTILES_INTERVALS) == null) {
+      String intervals = conf.get(DFS_METRICS_PERCENTILES_INTERVALS_KEY);
+      if (intervals != null) {
+        conf.set(HADOOP_USER_GROUP_METRICS_PERCENTILES_INTERVALS,
+          intervals);
+      }
+    }
+
     UserGroupInformation.setConfiguration(conf);
     loginAsNameNodeUser(conf);
 
     NameNode.initMetrics(conf, this.getRole());
+    StartupProgressMetrics.register(startupProgress);
 
     if (NamenodeRole.NAMENODE == role) {
       startHttpServer(conf);
-      validateConfigurationSettingsOrAbort(conf);
     }
     loadNamesystem(conf);
 
@@ -494,9 +505,10 @@ public class NameNode {
     if (NamenodeRole.NAMENODE == role) {
       httpServer.setNameNodeAddress(getNameNodeAddress());
       httpServer.setFSImage(getFSImage());
-    } else {
-      validateConfigurationSettingsOrAbort(conf);
     }
+    
+    pauseMonitor = new JvmPauseMonitor(conf);
+    pauseMonitor.start();
 
     startCommonServices(conf);
   }
@@ -510,48 +522,10 @@ public class NameNode {
     return new NameNodeRpcServer(conf, this);
   }
 
-  /**
-   * Verifies that the final Configuration Settings look ok for the NameNode to
-   * properly start up
-   * Things to check for include:
-   * - HTTP Server Port does not equal the RPC Server Port
-   * @param conf
-   * @throws IOException
-   */
-  protected void validateConfigurationSettings(final Configuration conf) 
-      throws IOException {
-    // check to make sure the web port and rpc port do not match 
-    if(getHttpServerAddress(conf).getPort() 
-        == getRpcServerAddress(conf).getPort()) {
-      String errMsg = "dfs.namenode.rpc-address " +
-          "("+ getRpcServerAddress(conf) + ") and " +
-          "dfs.namenode.http-address ("+ getHttpServerAddress(conf) + ") " +
-          "configuration keys are bound to the same port, unable to start " +
-          "NameNode. Port: " + getRpcServerAddress(conf).getPort();
-      throw new IOException(errMsg);
-    } 
-  }
-
-  /**
-   * Validate NameNode configuration.  Log a fatal error and abort if
-   * configuration is invalid.
-   * 
-   * @param conf Configuration to validate
-   * @throws IOException thrown if conf is invalid
-   */
-  private void validateConfigurationSettingsOrAbort(Configuration conf)
-      throws IOException {
-    try {
-      validateConfigurationSettings(conf);
-    } catch (IOException e) {
-      LOG.fatal(e.toString());
-      throw e;
-    }
-  }
-
   /** Start the services common to active and standby states */
   private void startCommonServices(Configuration conf) throws IOException {
     namesystem.startCommonServices(conf, haContext);
+    registerNNSMXBean();
     if (NamenodeRole.NAMENODE != role) {
       startHttpServer(conf);
       httpServer.setNameNodeAddress(getNameNodeAddress());
@@ -575,8 +549,9 @@ public class NameNode {
   }
   
   private void stopCommonServices() {
-    if(namesystem != null) namesystem.close();
     if(rpcServer != null) rpcServer.stop();
+    if(namesystem != null) namesystem.close();
+    if (pauseMonitor != null) pauseMonitor.stop();
     if (plugins != null) {
       for (ServicePlugin p : plugins) {
         try {
@@ -625,7 +600,6 @@ public class NameNode {
     httpServer = new NameNodeHttpServer(conf, this, getHttpServerAddress(conf));
     httpServer.start();
     httpServer.setStartupProgress(startupProgress);
-    setHttpServerAddress(conf);
   }
   
   private void stopHttpServer() {
@@ -647,7 +621,7 @@ public class NameNode {
    * <li>{@link StartupOption#CHECKPOINT CHECKPOINT} - start checkpoint node</li>
    * <li>{@link StartupOption#UPGRADE UPGRADE} - start the cluster  
    * upgrade and create a snapshot of the current file system state</li> 
-   * <li>{@link StartupOption#RECOVERY RECOVERY} - recover name node
+   * <li>{@link StartupOption#RECOVER RECOVERY} - recover name node
    * metadata</li>
    * <li>{@link StartupOption#ROLLBACK ROLLBACK} - roll the  
    *            cluster back to the previous state</li>
@@ -682,8 +656,13 @@ public class NameNode {
     try {
       initializeGenericKeys(conf, nsId, namenodeId);
       initialize(conf);
-      state.prepareToEnterState(haContext);
-      state.enterState(haContext);
+      try {
+        haContext.writeLock();
+        state.prepareToEnterState(haContext);
+        state.enterState(haContext);
+      } finally {
+        haContext.writeUnlock();
+      }
     } catch (IOException e) {
       this.stop();
       throw e;
@@ -735,6 +714,10 @@ public class NameNode {
       }
       if (namesystem != null) {
         namesystem.shutdown();
+      }
+      if (nameNodeStatusBeanName != null) {
+        MBeans.unregister(nameNodeStatusBeanName);
+        nameNodeStatusBeanName = null;
       }
     }
   }
@@ -788,6 +771,14 @@ public class NameNode {
   }
 
   /**
+   * @return NameNode HTTPS address, used by the Web UI, image transfer,
+   *    and HTTP-based file system clients like Hftp and WebHDFS
+   */
+  public InetSocketAddress getHttpsAddress() {
+    return httpServer.getHttpsAddress();
+  }
+
+  /**
    * Verify that configured directories exist, then
    * Interactively confirm that formatting is desired 
    * for each existing directory and format them.
@@ -827,14 +818,20 @@ public class NameNode {
     System.out.println("Formatting using clusterid: " + clusterId);
     
     FSImage fsImage = new FSImage(conf, nameDirsToFormat, editDirsToFormat);
-    FSNamesystem fsn = new FSNamesystem(conf, fsImage);
-    fsImage.getEditLog().initJournalsForWrite();
-    
-    if (!fsImage.confirmFormat(force, isInteractive)) {
-      return true; // aborted
+    try {
+      FSNamesystem fsn = new FSNamesystem(conf, fsImage);
+      fsImage.getEditLog().initJournalsForWrite();
+
+      if (!fsImage.confirmFormat(force, isInteractive)) {
+        return true; // aborted
+      }
+
+      fsImage.format(fsn, clusterId);
+    } catch (IOException ioe) {
+      LOG.warn("Encountered exception during format: ", ioe);
+      fsImage.close();
+      throw ioe;
     }
-    
-    fsImage.format(fsn, clusterId);
     return false;
   }
 
@@ -908,6 +905,7 @@ public class NameNode {
     }
 
     NNStorage existingStorage = null;
+    FSImage sharedEditsImage = null;
     try {
       FSNamesystem fsns =
           FSNamesystem.loadFromDisk(getConfigurationWithoutSharedEdits(conf));
@@ -917,7 +915,7 @@ public class NameNode {
       
       List<URI> sharedEditsDirs = FSNamesystem.getSharedEditsDirs(conf);
       
-      FSImage sharedEditsImage = new FSImage(conf,
+      sharedEditsImage = new FSImage(conf,
           Lists.<URI>newArrayList(),
           sharedEditsDirs);
       sharedEditsImage.getEditLog().initJournalsForWrite();
@@ -945,6 +943,13 @@ public class NameNode {
       LOG.error("Could not initialize shared edits dir", ioe);
       return true; // aborted
     } finally {
+      if (sharedEditsImage != null) {
+        try {
+          sharedEditsImage.close();
+        }  catch (IOException ioe) {
+          LOG.warn("Could not close sharedEditsImage", ioe);
+        }
+      }
       // Have to unlock storage explicitly for the case when we're running in a
       // unit test, which runs in the same JVM as NNs.
       if (existingStorage != null) {
@@ -1391,6 +1396,43 @@ public class NameNode {
       return HAServiceState.INITIALIZING;
     }
     return state.getServiceState();
+  }
+
+  /**
+   * Register NameNodeStatusMXBean
+   */
+  private void registerNNSMXBean() {
+    nameNodeStatusBeanName = MBeans.register("NameNode", "NameNodeStatus", this);
+  }
+
+  @Override // NameNodeStatusMXBean
+  public String getNNRole() {
+    String roleStr = "";
+    NamenodeRole role = getRole();
+    if (null != role) {
+      roleStr = role.toString();
+    }
+    return roleStr;
+  }
+
+  @Override // NameNodeStatusMXBean
+  public String getState() {
+    String servStateStr = "";
+    HAServiceState servState = getServiceState();
+    if (null != servState) {
+      servStateStr = servState.toString();
+    }
+    return servStateStr;
+  }
+
+  @Override // NameNodeStatusMXBean
+  public String getHostAndPort() {
+    return getNameNodeAddressHostPortString();
+  }
+
+  @Override // NameNodeStatusMXBean
+  public boolean isSecurityEnabled() {
+    return UserGroupInformation.isSecurityEnabled();
   }
 
   /**

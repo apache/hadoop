@@ -68,7 +68,6 @@ public abstract class FileSystemLinkResolver<T> {
    * @return Generic type determined by implementation
    * @throws IOException
    */
-  @SuppressWarnings("deprecation")
   public T resolve(final FileSystem filesys, final Path path)
       throws IOException {
     int count = 0;
@@ -88,9 +87,9 @@ public abstract class FileSystemLinkResolver<T> {
               + CommonConfigurationKeys.FS_CLIENT_RESOLVE_REMOTE_SYMLINKS_KEY
               + ").", e);
         }
-        if (!FileSystem.isSymlinksEnabled()) {
-          throw new IOException("Symlink resolution is disabled in"
-              + " this version of Hadoop.");
+        if (!FileSystem.areSymlinksEnabled()) {
+          throw new IOException("Symlink resolution is disabled in" +
+              " this version of Hadoop.");
         }
         if (count++ > FsConstants.MAX_PATH_LINKS) {
           throw new IOException("Possible cyclic loop while " +

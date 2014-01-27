@@ -100,6 +100,18 @@ class FileDistributionVisitor extends TextWriterImageVisitor {
 
   @Override
   void finish() throws IOException {
+    output();
+    super.finish();
+  }
+
+  @Override
+  void finishAbnormally() throws IOException {
+    System.out.println("*** Image processing finished abnormally.  Ending ***");
+    output();
+    super.finishAbnormally();
+  }
+
+  private void output() throws IOException {
     // write the distribution into the output file
     write("Size\tNumFiles\n");
     for(int i = 0; i < distribution.length; i++)
@@ -109,7 +121,6 @@ class FileDistributionVisitor extends TextWriterImageVisitor {
     System.out.println("totalBlocks = " + totalBlocks);
     System.out.println("totalSpace = " + totalSpace);
     System.out.println("maxFileSize = " + maxFileSize);
-    super.finish();
   }
 
   @Override

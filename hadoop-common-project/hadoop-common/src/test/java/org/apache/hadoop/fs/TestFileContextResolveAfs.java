@@ -31,11 +31,9 @@ import org.junit.Test;
  * Tests resolution of AbstractFileSystems for a given path with symlinks.
  */
 public class TestFileContextResolveAfs {
-  // Re-enable symlinks for tests, see HADOOP-10020 and HADOOP-10052
-  static {
+  static{
     FileSystem.enableSymlinks();
   }
-  
   private static String TEST_ROOT_DIR_LOCAL
     = System.getProperty("test.build.data","/tmp");
   

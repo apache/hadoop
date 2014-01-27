@@ -89,8 +89,8 @@ public class TestStandbyCheckpoints {
 
     MiniDFSNNTopology topology = new MiniDFSNNTopology()
       .addNameservice(new MiniDFSNNTopology.NSConf("ns1")
-        .addNN(new MiniDFSNNTopology.NNConf("nn1").setHttpPort(10001))
-        .addNN(new MiniDFSNNTopology.NNConf("nn2").setHttpPort(10002)));
+        .addNN(new MiniDFSNNTopology.NNConf("nn1").setHttpPort(10061))
+        .addNN(new MiniDFSNNTopology.NNConf("nn2").setHttpPort(10062)));
     
     cluster = new MiniDFSCluster.Builder(conf)
       .nnTopology(topology)
@@ -238,6 +238,34 @@ public class TestStandbyCheckpoints {
     }
     
     assertTrue(canceledOne);
+  }
+
+  /**
+   * Test cancellation of ongoing checkpoints when failover happens
+   * mid-checkpoint during image upload from standby to active NN.
+   */
+  @Test(timeout=60000)
+  public void testCheckpointCancellationDuringUpload() throws Exception {
+    // don't compress, we want a big image
+    cluster.getConfiguration(0).setBoolean(
+        DFSConfigKeys.DFS_IMAGE_COMPRESS_KEY, false);
+    cluster.getConfiguration(1).setBoolean(
+        DFSConfigKeys.DFS_IMAGE_COMPRESS_KEY, false);
+    // Throttle SBN upload to make it hang during upload to ANN
+    cluster.getConfiguration(1).setLong(
+        DFSConfigKeys.DFS_IMAGE_TRANSFER_RATE_KEY, 100);
+    cluster.restartNameNode(0);
+    cluster.restartNameNode(1);
+    nn0 = cluster.getNameNode(0);
+    nn1 = cluster.getNameNode(1);
+
+    cluster.transitionToActive(0);
+
+    doEdits(0, 100);
+    HATestUtil.waitForStandbyToCatchUp(nn0, nn1);
+    HATestUtil.waitForCheckpoint(cluster, 1, ImmutableList.of(104));
+    cluster.transitionToStandby(0);
+    cluster.transitionToActive(1);
   }
   
   /**

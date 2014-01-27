@@ -17,10 +17,13 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.apache.hadoop.util.Time.now;
+
 import java.security.PrivilegedExceptionAction;
 import java.util.*;
 import java.io.*;
 import java.net.InetSocketAddress;
+import java.net.URL;
 
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
@@ -31,10 +34,8 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -42,6 +43,7 @@ import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
+import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
@@ -87,8 +89,9 @@ public class GetImageServlet extends HttpServlet {
       ServletContext context = getServletContext();
       final FSImage nnImage = NameNodeHttpServer.getFsImageFromContext(context);
       final GetImageParams parsedParams = new GetImageParams(request, response);
-      final Configuration conf = 
-        (Configuration)getServletContext().getAttribute(JspHelper.CURRENT_CONF);
+      final Configuration conf = (Configuration) context
+          .getAttribute(JspHelper.CURRENT_CONF);
+      final NameNodeMetrics metrics = NameNode.getNameNodeMetrics();
       
       if (UserGroupInformation.isSecurityEnabled() && 
           !isValidRequestor(context, request.getUserPrincipal().getName(), conf)) {
@@ -129,14 +132,26 @@ public class GetImageServlet extends HttpServlet {
               throw new IOException(errorMessage);
             }
             CheckpointFaultInjector.getInstance().beforeGetImageSetsHeaders();
+            long start = now();
             serveFile(imageFile);
+
+            if (metrics != null) { // Metrics non-null only when used inside name node
+              long elapsed = now() - start;
+              metrics.addGetImage(elapsed);
+            }
           } else if (parsedParams.isGetEdit()) {
             long startTxId = parsedParams.getStartTxId();
             long endTxId = parsedParams.getEndTxId();
             
             File editFile = nnImage.getStorage()
                 .findFinalizedEditsFile(startTxId, endTxId);
+            long start = now();
             serveFile(editFile);
+
+            if (metrics != null) { // Metrics non-null only when used inside name node
+              long elapsed = now() - start;
+              metrics.addGetEdit(elapsed);
+            }
           } else if (parsedParams.isPutImage()) {
             final long txid = parsedParams.getTxId();
 
@@ -160,12 +175,18 @@ public class GetImageServlet extends HttpServlet {
                 UserGroupInformation.getCurrentUser().checkTGTAndReloginFromKeytab();
               }
               
+              long start = now();
               // issue a HTTP get request to download the new fsimage 
               MD5Hash downloadImageDigest =
                 TransferFsImage.downloadImageToStorage(
-                        parsedParams.getInfoServer(), txid,
+                        parsedParams.getInfoServer(conf), txid,
                         nnImage.getStorage(), true);
               nnImage.saveDigestAndRenameCheckpointImage(txid, downloadImageDigest);
+
+              if (metrics != null) { // Metrics non-null only when used inside name node
+                long elapsed = now() - start;
+                metrics.addPutImage(elapsed);
+              }
               
               // Now that we have a new checkpoint, we might be able to
               // remove some old ones.
@@ -309,7 +330,9 @@ public class GetImageServlet extends HttpServlet {
   }
   
   static String getParamStringToPutImage(long txid,
-      InetSocketAddress imageListenAddress, Storage storage) {
+      URL url, Storage storage) {
+    InetSocketAddress imageListenAddress = NetUtils.createSocketAddr(url
+        .getAuthority());
     String machine = !imageListenAddress.isUnresolved()
         && imageListenAddress.getAddress().isAnyLocalAddress() ? null
         : imageListenAddress.getHostName();
@@ -419,11 +442,11 @@ public class GetImageServlet extends HttpServlet {
       return isPutImage;
     }
     
-    String getInfoServer() throws IOException{
+    URL getInfoServer(Configuration conf) throws IOException {
       if (machineName == null || remoteport == 0) {
-        throw new IOException ("MachineName and port undefined");
+        throw new IOException("MachineName and port undefined");
       }
-      return machineName + ":" + remoteport;
+      return new URL(DFSUtil.getHttpClientScheme(conf), machineName, remoteport, "");
     }
     
     boolean shouldFetchLatest() {

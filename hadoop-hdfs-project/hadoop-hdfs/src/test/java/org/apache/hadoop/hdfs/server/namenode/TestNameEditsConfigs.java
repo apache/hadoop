@@ -39,6 +39,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
+import org.apache.hadoop.test.PathUtils;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -62,7 +63,7 @@ public class TestNameEditsConfigs {
 
   short replication = 3;
   private File base_dir = new File(
-      System.getProperty("test.build.data", "build/test/data"), "dfs/");
+      PathUtils.getTestDir(TestNameEditsConfigs.class), "dfs");
 
   @Before
   public void setUp() throws IOException {
@@ -70,7 +71,7 @@ public class TestNameEditsConfigs {
       throw new IOException("Cannot remove directory " + base_dir);
     }
   }
-
+  
   private void writeFile(FileSystem fileSys, Path name, int repl)
       throws IOException {
     FSDataOutputStream stm = fileSys.create(name, true, fileSys.getConf()

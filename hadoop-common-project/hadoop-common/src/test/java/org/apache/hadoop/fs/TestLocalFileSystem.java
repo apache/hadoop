@@ -25,6 +25,7 @@ import org.apache.hadoop.util.Shell;
 import static org.apache.hadoop.fs.FileSystemTestHelper.*;
 
 import java.io.*;
+import java.net.URI;
 import java.util.Arrays;
 import java.util.Random;
 
@@ -373,12 +374,12 @@ public class TestLocalFileSystem {
 
     FileStatus status = fileSys.getFileStatus(path);
     assertTrue("check we're actually changing something", newModTime != status.getModificationTime());
-    assertEquals(0, status.getAccessTime());
+    long accessTime = status.getAccessTime();
 
     fileSys.setTimes(path, newModTime, -1);
     status = fileSys.getFileStatus(path);
     assertEquals(newModTime, status.getModificationTime());
-    assertEquals(0, status.getAccessTime());
+    assertEquals(accessTime, status.getAccessTime());
   }
 
   /**
@@ -529,5 +530,19 @@ public class TestLocalFileSystem {
           "\noff=" + seekOff + " len=" + toRead;
       fail(s);
     }
+  }
+
+  @Test
+  public void testStripFragmentFromPath() throws Exception {
+    FileSystem fs = FileSystem.getLocal(new Configuration());
+    Path pathQualified = TEST_PATH.makeQualified(fs.getUri(),
+        fs.getWorkingDirectory());
+    Path pathWithFragment = new Path(
+        new URI(pathQualified.toString() + "#glacier"));
+    // Create test file with fragment
+    FileSystemTestHelper.createFile(fs, pathWithFragment);
+    Path resolved = fs.resolvePath(pathWithFragment);
+    assertEquals("resolvePath did not strip fragment from Path", pathQualified,
+        resolved);
   }
 }

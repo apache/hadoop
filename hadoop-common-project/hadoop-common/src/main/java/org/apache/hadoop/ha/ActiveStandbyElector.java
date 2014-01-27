@@ -766,8 +766,9 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
     zkClient = getNewZooKeeper();
     LOG.debug("Created new connection for " + this);
   }
-  
-  void terminateConnection() {
+
+  @InterfaceAudience.Private
+  public synchronized void terminateConnection() {
     if (zkClient == null) {
       return;
     }

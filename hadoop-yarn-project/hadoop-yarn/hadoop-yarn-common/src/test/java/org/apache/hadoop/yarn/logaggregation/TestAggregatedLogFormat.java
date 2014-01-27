@@ -114,7 +114,7 @@ public class TestAggregatedLogFormat {
             testContainerId, ugi.getShortUserName());
 
     logWriter.append(logKey, logValue);
-    logWriter.closeWriter();
+    logWriter.close();
 
     // make sure permission are correct on the file
     FileStatus fsStatus =  fs.getFileStatus(remoteAppLogFile);
@@ -194,7 +194,7 @@ public class TestAggregatedLogFormat {
         ugi.getShortUserName());
     logWriter.append(logKey, logValue);
 
-    logWriter.closeWriter();
+    logWriter.close();
     
     BufferedReader in =
         new BufferedReader(new FileReader(new File(remoteAppLogFile

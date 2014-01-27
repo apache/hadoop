@@ -43,6 +43,7 @@ public class AboutBlock extends HtmlBlock {
     info("Cluster overview").
       _("Cluster ID:", cinfo.getClusterId()).
       _("ResourceManager state:", cinfo.getState()).
+      _("ResourceManager HA state:", cinfo.getHAState()).
       _("ResourceManager started on:", Times.format(cinfo.getStartedOn())).
       _("ResourceManager version:", cinfo.getRMBuildVersion() +
           " on " + cinfo.getRMVersionBuiltOn()).

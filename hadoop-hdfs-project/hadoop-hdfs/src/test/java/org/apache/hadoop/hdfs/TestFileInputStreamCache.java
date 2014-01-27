@@ -17,13 +17,13 @@
  */
 package org.apache.hadoop.hdfs;
 
-import junit.framework.Assert;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.unix.TemporarySocketDirectory;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.FileInputStream;

@@ -538,7 +538,7 @@ public class TestHsWebServicesTasks extends JerseyTest {
 
   public void verifyHsSingleTask(JSONObject info, Task task)
       throws JSONException {
-    assertEquals("incorrect number of elements", 8, info.length());
+    assertEquals("incorrect number of elements", 9, info.length());
 
     verifyTaskGeneric(task, info.getString("id"), info.getString("state"),
         info.getString("type"), info.getString("successfulAttempt"),

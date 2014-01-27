@@ -26,8 +26,9 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
-import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 
 /**
  * Node managers information on available resources 
@@ -36,6 +37,9 @@ import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
  */
 public interface RMNode {
 
+  /** negative value means no timeout */
+  public static final int OVER_COMMIT_TIMEOUT_MILLIS_DEFAULT = -1;
+  
   /**
    * the node id of of this node.
    * @return the node id of this node.
@@ -84,12 +88,30 @@ public interface RMNode {
    * @return the time of the latest health report received from this node.
    */
   public long getLastHealthReportTime();
-  
+
+  /**
+   * the node manager version of the node received as part of the
+   * registration with the resource manager
+   */
+  public String getNodeManagerVersion();
+
   /**
    * the total available resource.
    * @return the total available resource.
    */
-  public org.apache.hadoop.yarn.api.records.Resource getTotalCapability();
+  public Resource getTotalCapability();
+  
+  /**
+   * Set resource option with total available resource and overCommitTimoutMillis
+   * @param resourceOption
+   */
+  public void setResourceOption(ResourceOption resourceOption);
+  
+  /**
+   * resource option with total available resource and overCommitTimoutMillis
+   * @return ResourceOption
+   */
+  public ResourceOption getResourceOption();
   
   /**
    * The rack name for this node manager.

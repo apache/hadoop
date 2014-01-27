@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.qjournal.client;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
 import java.security.PrivilegedExceptionAction;
 import java.util.concurrent.Callable;
@@ -84,8 +85,9 @@ public class IPCLoggerChannel implements AsyncLogger {
   
   private final String journalId;
   private final NamespaceInfo nsInfo;
-  private int httpPort = -1;
-  
+
+  private URL httpServerURL;
+
   private final IPCLoggerChannelMetrics metrics;
   
   /**
@@ -242,13 +244,12 @@ public class IPCLoggerChannel implements AsyncLogger {
   public URL buildURLToFetchLogs(long segmentTxId) {
     Preconditions.checkArgument(segmentTxId > 0,
         "Invalid segment: %s", segmentTxId);
-    Preconditions.checkState(httpPort != -1,
-        "HTTP port not set yet");
+    Preconditions.checkState(hasHttpServerEndPoint(), "No HTTP/HTTPS endpoint");
         
     try {
       String path = GetJournalEditServlet.buildPath(
           journalId, segmentTxId, nsInfo);
-      return new URL("http", addr.getHostName(), httpPort, path.toString());
+      return new URL(httpServerURL, path);
     } catch (MalformedURLException e) {
       // should never get here.
       throw new RuntimeException(e);
@@ -314,7 +315,7 @@ public class IPCLoggerChannel implements AsyncLogger {
       public GetJournalStateResponseProto call() throws IOException {
         GetJournalStateResponseProto ret =
             getProxy().getJournalState(journalId);
-        httpPort = ret.getHttpPort();
+        constructHttpServerURI(ret);
         return ret;
       }
     });
@@ -528,7 +529,7 @@ public class IPCLoggerChannel implements AsyncLogger {
             journalId, fromTxnId, inProgressOk);
         // Update the http port, since we need this to build URLs to any of the
         // returned logs.
-        httpPort = ret.getHttpPort();
+        constructHttpServerURI(ret);
         return PBHelper.convert(ret.getManifest());
       }
     });
@@ -540,10 +541,12 @@ public class IPCLoggerChannel implements AsyncLogger {
     return executor.submit(new Callable<PrepareRecoveryResponseProto>() {
       @Override
       public PrepareRecoveryResponseProto call() throws IOException {
-        if (httpPort < 0) {
-          // If the HTTP port hasn't been set yet, force an RPC call so we know
-          // what the HTTP port should be.
-          httpPort = getProxy().getJournalState(journalId).getHttpPort();
+        if (!hasHttpServerEndPoint()) {
+          // force an RPC call so we know what the HTTP port should be if it
+          // haven't done so.
+          GetJournalStateResponseProto ret = getProxy().getJournalState(
+              journalId);
+          constructHttpServerURI(ret);
         }
         return getProxy().prepareRecovery(createReqInfo(), segmentTxId);
       }
@@ -569,7 +572,7 @@ public class IPCLoggerChannel implements AsyncLogger {
   }
 
   @Override
-  public synchronized void appendHtmlReport(StringBuilder sb) {
+  public synchronized void appendReport(StringBuilder sb) {
     sb.append("Written txid ").append(highestAckedTxId);
     long behind = getLagTxns();
     if (behind > 0) {
@@ -593,5 +596,44 @@ public class IPCLoggerChannel implements AsyncLogger {
     return TimeUnit.MILLISECONDS.convert(
         Math.max(lastCommitNanos - lastAckNanos, 0),
         TimeUnit.NANOSECONDS);
+  }
+
+  private void constructHttpServerURI(GetEditLogManifestResponseProto ret) {
+    if (ret.hasFromURL()) {
+      URI uri = URI.create(ret.getFromURL());
+      httpServerURL = getHttpServerURI(uri.getScheme(), uri.getPort());
+    } else {
+      httpServerURL = getHttpServerURI("http", ret.getHttpPort());;
+    }
+  }
+
+  private void constructHttpServerURI(GetJournalStateResponseProto ret) {
+    if (ret.hasFromURL()) {
+      URI uri = URI.create(ret.getFromURL());
+      httpServerURL = getHttpServerURI(uri.getScheme(), uri.getPort());
+    } else {
+      httpServerURL = getHttpServerURI("http", ret.getHttpPort());;
+    }
+  }
+
+  /**
+   * Construct the http server based on the response.
+   *
+   * The fromURL field in the response specifies the endpoint of the http
+   * server. However, the address might not be accurate since the server can
+   * bind to multiple interfaces. Here the client plugs in the address specified
+   * in the configuration and generates the URI.
+   */
+  private URL getHttpServerURI(String scheme, int port) {
+    try {
+      return new URL(scheme, addr.getHostName(), port, "");
+    } catch (MalformedURLException e) {
+      // Unreachable
+      throw new RuntimeException(e);
+    }
+  }
+
+  private boolean hasHttpServerEndPoint() {
+   return httpServerURL != null;
   }
 }

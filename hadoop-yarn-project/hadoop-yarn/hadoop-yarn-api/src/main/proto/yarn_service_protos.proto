@@ -44,6 +44,8 @@ message RegisterApplicationMasterResponseProto {
   optional ResourceProto maximumCapability = 1;
   optional bytes client_to_am_token_master_key = 2;
   repeated ApplicationACLMapProto application_ACLs = 3;
+  repeated ContainerProto containers_from_previous_attempt = 4;
+  optional string queue = 5;
 }
 
 message FinishApplicationMasterRequestProto {
@@ -62,6 +64,7 @@ message AllocateRequestProto {
   optional ResourceBlacklistRequestProto blacklist_request = 3;
   optional int32 response_id = 4;
   optional float progress = 5;
+  repeated ContainerResourceIncreaseRequestProto increase_request = 6;
 }
 
 message NMTokenProto {
@@ -79,6 +82,8 @@ message AllocateResponseProto {
   optional int32 num_cluster_nodes = 7;
   optional PreemptionMessageProto preempt = 8;
   repeated NMTokenProto nm_tokens = 9;
+  repeated ContainerResourceIncreaseProto increased_containers = 10;
+  repeated ContainerResourceDecreaseProto decreased_containers = 11;
 }
 
 //////////////////////////////////////////////////////
@@ -113,6 +118,7 @@ message KillApplicationRequestProto {
 }
 
 message KillApplicationResponseProto {
+  optional bool is_kill_completed = 1 [default = false];
 }
 
 message GetClusterMetricsRequestProto {
@@ -125,6 +131,13 @@ message GetClusterMetricsResponseProto {
 message GetApplicationsRequestProto {
   repeated string application_types = 1;
   repeated YarnApplicationStateProto application_states = 2;
+  repeated string users = 3;
+  repeated string queues = 4;
+  optional int64 limit = 5;
+  optional int64 start_begin = 6;
+  optional int64 start_end = 7;
+  optional int64 finish_begin = 8;
+  optional int64 finish_end = 9;
 }
 
 message GetApplicationsResponseProto {

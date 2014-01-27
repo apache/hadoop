@@ -36,7 +36,7 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplication;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
@@ -206,7 +206,7 @@ public class FiCaSchedulerNode extends SchedulerNode {
   }
 
   public synchronized void reserveResource(
-      SchedulerApplication application, Priority priority, 
+      SchedulerApplicationAttempt application, Priority priority, 
       RMContainer reservedContainer) {
     // Check if it's already reserved
     if (this.reservedContainer != null) {
@@ -219,7 +219,8 @@ public class FiCaSchedulerNode extends SchedulerNode {
             " on node " + this.reservedContainer.getReservedNode());
       }
       
-      // Cannot reserve more than one application on a given node!
+      // Cannot reserve more than one application attempt on a given node!
+      // Reservation is still against attempt.
       if (!this.reservedContainer.getContainer().getId().getApplicationAttemptId().equals(
           reservedContainer.getContainer().getId().getApplicationAttemptId())) {
         throw new IllegalStateException("Trying to reserve" +
@@ -241,7 +242,7 @@ public class FiCaSchedulerNode extends SchedulerNode {
   }
 
   public synchronized void unreserveResource(
-      SchedulerApplication application) {
+      SchedulerApplicationAttempt application) {
     
     // adding NP checks as this can now be called for preemption
     if (reservedContainer != null
@@ -266,6 +267,12 @@ public class FiCaSchedulerNode extends SchedulerNode {
 
   public synchronized RMContainer getReservedContainer() {
     return reservedContainer;
+  }
+
+  @Override
+  public synchronized void applyDeltaOnAvailableResource(Resource deltaResource) {
+    // we can only adjust available resource if total resource is changed.
+    Resources.addTo(this.availableResource, deltaResource);
   }
 
 }

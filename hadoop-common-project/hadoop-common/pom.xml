@@ -20,12 +20,12 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project-dist</artifactId>
-    <version>2.3.0-SNAPSHOT</version>
+    <version>2.4.0-SNAPSHOT</version>
     <relativePath>../../hadoop-project-dist</relativePath>
   </parent>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-common</artifactId>
-  <version>2.3.0-SNAPSHOT</version>
+  <version>2.4.0-SNAPSHOT</version>
   <description>Apache Hadoop Common</description>
   <name>Apache Hadoop Common</name>
   <packaging>jar</packaging>
@@ -53,7 +53,7 @@
     </dependency>
     <dependency>
       <groupId>org.apache.commons</groupId>
-      <artifactId>commons-math</artifactId>
+      <artifactId>commons-math3</artifactId>
       <scope>compile</scope>
     </dependency>
     <dependency>
@@ -79,6 +79,11 @@
     <dependency>
       <groupId>commons-net</groupId>
       <artifactId>commons-net</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>commons-collections</groupId>
+      <artifactId>commons-collections</artifactId>
       <scope>compile</scope>
     </dependency>
     <dependency>
@@ -212,6 +217,11 @@
     <dependency>
       <groupId>com.jcraft</groupId>
       <artifactId>jsch</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.google.code.findbugs</groupId>
+      <artifactId>jsr305</artifactId>
+      <scope>compile</scope>
     </dependency>
 
     <dependency>
@@ -451,7 +461,12 @@
             <exclude>src/test/empty-file</exclude>
             <exclude>src/test/all-tests</exclude>
             <exclude>src/test/resources/kdc/ldif/users.ldif</exclude>
+            <exclude>src/main/native/src/org/apache/hadoop/io/compress/lz4/lz4.h</exclude>
             <exclude>src/main/native/src/org/apache/hadoop/io/compress/lz4/lz4.c</exclude>
+            <exclude>src/main/native/src/org/apache/hadoop/io/compress/lz4/lz4_encoder.h</exclude>
+            <exclude>src/main/native/src/org/apache/hadoop/io/compress/lz4/lz4hc.h</exclude>
+            <exclude>src/main/native/src/org/apache/hadoop/io/compress/lz4/lz4hc.c</exclude>
+            <exclude>src/main/native/src/org/apache/hadoop/io/compress/lz4/lz4hc_encoder.h</exclude>
             <exclude>src/test/java/org/apache/hadoop/fs/test-untar.tgz</exclude>
             <exclude>src/test/resources/test.har/_SUCCESS</exclude>
             <exclude>src/test/resources/test.har/_index</exclude>
@@ -703,9 +718,7 @@
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-surefire-plugin</artifactId>
             <configuration>
-              <forkMode>perthread</forkMode>
-              <threadCount>${testsThreadCount}</threadCount>
-              <parallel>classes</parallel>
+              <forkCount>${testsThreadCount}</forkCount>
               <argLine>-Xmx1024m -XX:+HeapDumpOnOutOfMemoryError -DminiClusterDedicatedDirs=true</argLine>
             </configuration>
           </plugin>

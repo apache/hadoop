@@ -107,12 +107,16 @@ public class INodeDirectoryWithQuota extends INodeDirectory {
   }
 
   @Override
-  public Content.Counts computeContentSummary(
-      final Content.Counts counts) {
-    final long original = counts.get(Content.DISKSPACE);
-    super.computeContentSummary(counts);
-    checkDiskspace(counts.get(Content.DISKSPACE) - original);
-    return counts;
+  public ContentSummaryComputationContext computeContentSummary(
+      final ContentSummaryComputationContext summary) {
+    final long original = summary.getCounts().get(Content.DISKSPACE);
+    long oldYieldCount = summary.getYieldCount();
+    super.computeContentSummary(summary);
+    // Check only when the content has not changed in the middle.
+    if (oldYieldCount == summary.getYieldCount()) {
+      checkDiskspace(summary.getCounts().get(Content.DISKSPACE) - original);
+    }
+    return summary;
   }
   
   private void checkDiskspace(final long computed) {

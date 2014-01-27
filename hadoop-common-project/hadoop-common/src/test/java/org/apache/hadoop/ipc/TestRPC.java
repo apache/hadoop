@@ -20,6 +20,7 @@ package org.apache.hadoop.ipc;
 
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounterGt;
+import static org.apache.hadoop.test.MetricsAsserts.getLongCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotSame;
@@ -67,6 +68,7 @@ import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.Service;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.test.MetricsAsserts;
 import org.apache.hadoop.test.MockitoUtil;
 import org.junit.Before;
 import org.junit.Test;
@@ -864,6 +866,8 @@ public class TestRPC {
       }
       // clear interrupt status for future tests
       Thread.interrupted();
+    } finally {
+      server.stop();
     }
   }
   
@@ -929,6 +933,7 @@ public class TestRPC {
     
     // should not cause any other thread to get an error
     assertTrue("rpc got exception " + error.get(), error.get() == null);
+    server.stop();
   }
 
   @Test
@@ -950,6 +955,45 @@ public class TestRPC {
       proxy.sleep(pingInterval*4);
     } finally {
       if (proxy != null) RPC.stopProxy(proxy);
+      server.stop();
+    }
+  }
+
+  @Test
+  public void testRpcMetrics() throws Exception {
+    Configuration configuration = new Configuration();
+    final int interval = 1;
+    configuration.setBoolean(CommonConfigurationKeys.
+        RPC_METRICS_QUANTILE_ENABLE, true);
+    configuration.set(CommonConfigurationKeys.
+        RPC_METRICS_PERCENTILES_INTERVALS_KEY, "" + interval);
+    final Server server = new RPC.Builder(configuration)
+        .setProtocol(TestProtocol.class).setInstance(new TestImpl())
+        .setBindAddress(ADDRESS).setPort(0).setNumHandlers(5).setVerbose(true)
+        .build();
+    server.start();
+    final TestProtocol proxy = RPC.getProxy(TestProtocol.class,
+        TestProtocol.versionID, server.getListenerAddress(), configuration);
+    try {
+      for (int i=0; i<1000; i++) {
+        proxy.ping();
+        proxy.echo("" + i);
+      }
+      MetricsRecordBuilder rpcMetrics =
+          getMetrics(server.getRpcMetrics().name());
+      assertTrue("Expected non-zero rpc queue time",
+          getLongCounter("RpcQueueTimeNumOps", rpcMetrics) > 0);
+      assertTrue("Expected non-zero rpc processing time",
+          getLongCounter("RpcProcessingTimeNumOps", rpcMetrics) > 0);
+      MetricsAsserts.assertQuantileGauges("RpcQueueTime" + interval + "s",
+          rpcMetrics);
+      MetricsAsserts.assertQuantileGauges("RpcProcessingTime" + interval + "s",
+          rpcMetrics);
+    } finally {
+      if (proxy != null) {
+        RPC.stopProxy(proxy);
+      }
+      server.stop();
     }
   }
 

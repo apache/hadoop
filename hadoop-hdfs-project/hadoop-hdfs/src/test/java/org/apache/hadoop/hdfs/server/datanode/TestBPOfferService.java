@@ -52,6 +52,7 @@ import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
 import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.PathUtils;
 import org.apache.log4j.Level;
 import org.junit.Before;
 import org.junit.Test;
@@ -72,8 +73,7 @@ public class TestBPOfferService {
       TestBPOfferService.class);
   private static final ExtendedBlock FAKE_BLOCK =
     new ExtendedBlock(FAKE_BPID, 12345L);
-  private static final String TEST_BUILD_DATA = System.getProperty(
-    "test.build.data", "build/test/data");
+  private static final File TEST_BUILD_DATA = PathUtils.getTestDir(TestBPOfferService.class);
 
   static {
     ((Log4JLogger)DataNode.LOG).getLogger().setLevel(Level.ALL);
@@ -104,7 +104,7 @@ public class TestBPOfferService {
     .when(mockDn).getMetrics();
 
     // Set up a simulated dataset with our fake BP
-    mockFSDataset = Mockito.spy(new SimulatedFSDataset(null, null, conf));
+    mockFSDataset = Mockito.spy(new SimulatedFSDataset(null, conf));
     mockFSDataset.addBlockPool(FAKE_BPID, conf);
 
     // Wire the dataset to the DN.
@@ -128,6 +128,8 @@ public class TestBPOfferService {
       .when(mock).sendHeartbeat(
           Mockito.any(DatanodeRegistration.class),
           Mockito.any(StorageReport[].class),
+          Mockito.anyLong(),
+          Mockito.anyLong(),
           Mockito.anyInt(),
           Mockito.anyInt(),
           Mockito.anyInt());
@@ -178,7 +180,7 @@ public class TestBPOfferService {
       waitForBlockReport(mockNN2);
 
       // When we receive a block, it should report it to both NNs
-      bpos.notifyNamenodeReceivedBlock(FAKE_BLOCK, "");
+      bpos.notifyNamenodeReceivedBlock(FAKE_BLOCK, "", "");
 
       ReceivedDeletedBlockInfo[] ret = waitForBlockReceived(FAKE_BLOCK, mockNN1);
       assertEquals(1, ret.length);

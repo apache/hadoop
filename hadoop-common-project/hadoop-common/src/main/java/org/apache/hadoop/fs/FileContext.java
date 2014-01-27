@@ -268,7 +268,7 @@ public final class FileContext {
    * Hence this method is not called makeAbsolute() and 
    * has been deliberately declared private.
    */
-  private Path fixRelativePart(Path p) {
+  Path fixRelativePart(Path p) {
     if (p.isUriPathAbsolute()) {
       return p;
     } else {
@@ -1345,7 +1345,7 @@ public final class FileContext {
       FileAlreadyExistsException, FileNotFoundException,
       ParentNotDirectoryException, UnsupportedFileSystemException, 
       IOException { 
-    if (!FileSystem.isSymlinksEnabled()) {
+    if (!FileSystem.areSymlinksEnabled()) {
       throw new UnsupportedOperationException("Symlinks not supported");
     }
     final Path nonRelLink = fixRelativePart(link);
@@ -1919,7 +1919,7 @@ public final class FileContext {
     public FileStatus[] globStatus(Path pathPattern)
         throws AccessControlException, UnsupportedFileSystemException,
         IOException {
-      return globStatus(pathPattern, DEFAULT_FILTER);
+      return new Globber(FileContext.this, pathPattern, DEFAULT_FILTER).glob();
     }
     
     /**
@@ -1948,154 +1948,7 @@ public final class FileContext {
     public FileStatus[] globStatus(final Path pathPattern,
         final PathFilter filter) throws AccessControlException,
         UnsupportedFileSystemException, IOException {
-      URI uri = getFSofPath(fixRelativePart(pathPattern)).getUri();
-
-      String filename = pathPattern.toUri().getPath();
-
-      List<String> filePatterns = GlobExpander.expand(filename);
-      if (filePatterns.size() == 1) {
-        Path absPathPattern = fixRelativePart(pathPattern);
-        return globStatusInternal(uri, new Path(absPathPattern.toUri()
-            .getPath()), filter);
-      } else {
-        List<FileStatus> results = new ArrayList<FileStatus>();
-        for (String iFilePattern : filePatterns) {
-          Path iAbsFilePattern = fixRelativePart(new Path(iFilePattern));
-          FileStatus[] files = globStatusInternal(uri, iAbsFilePattern, filter);
-          for (FileStatus file : files) {
-            results.add(file);
-          }
-        }
-        return results.toArray(new FileStatus[results.size()]);
-      }
-    }
-
-    /**
-     * 
-     * @param uri for all the inPathPattern
-     * @param inPathPattern - without the scheme & authority (take from uri)
-     * @param filter
-     *
-     * @return an array of FileStatus objects
-     *
-     * @throws AccessControlException If access is denied
-     * @throws IOException If an I/O error occurred
-     */
-    private FileStatus[] globStatusInternal(final URI uri,
-        final Path inPathPattern, final PathFilter filter)
-        throws AccessControlException, IOException
-      {
-      Path[] parents = new Path[1];
-      int level = 0;
-      
-      assert(inPathPattern.toUri().getScheme() == null &&
-          inPathPattern.toUri().getAuthority() == null && 
-          inPathPattern.isUriPathAbsolute());
-
-      
-      String filename = inPathPattern.toUri().getPath();
-      
-      // path has only zero component
-      if ("".equals(filename) || Path.SEPARATOR.equals(filename)) {
-        Path p = inPathPattern.makeQualified(uri, null);
-        return getFileStatus(new Path[]{p});
-      }
-
-      // path has at least one component
-      String[] components = filename.split(Path.SEPARATOR);
-      
-      // Path is absolute, first component is "/" hence first component
-      // is the uri root
-      parents[0] = new Path(new Path(uri), new Path("/"));
-      level = 1;
-
-      // glob the paths that match the parent path, ie. [0, components.length-1]
-      boolean[] hasGlob = new boolean[]{false};
-      Path[] relParentPaths = 
-        globPathsLevel(parents, components, level, hasGlob);
-      FileStatus[] results;
-      
-      if (relParentPaths == null || relParentPaths.length == 0) {
-        results = null;
-      } else {
-        // fix the pathes to be abs
-        Path[] parentPaths = new Path [relParentPaths.length]; 
-        for(int i=0; i<relParentPaths.length; i++) {
-          parentPaths[i] = relParentPaths[i].makeQualified(uri, null);
-        }
-        
-        // Now work on the last component of the path
-        GlobFilter fp = 
-                    new GlobFilter(components[components.length - 1], filter);
-        if (fp.hasPattern()) { // last component has a pattern
-          // list parent directories and then glob the results
-          try {
-            results = listStatus(parentPaths, fp);
-          } catch (FileNotFoundException e) {
-            results = null;
-          }
-          hasGlob[0] = true;
-        } else { // last component does not have a pattern
-          // get all the path names
-          ArrayList<Path> filteredPaths = 
-                                      new ArrayList<Path>(parentPaths.length);
-          for (int i = 0; i < parentPaths.length; i++) {
-            parentPaths[i] = new Path(parentPaths[i],
-              components[components.length - 1]);
-            if (fp.accept(parentPaths[i])) {
-              filteredPaths.add(parentPaths[i]);
-            }
-          }
-          // get all their statuses
-          results = getFileStatus(
-              filteredPaths.toArray(new Path[filteredPaths.size()]));
-        }
-      }
-
-      // Decide if the pathPattern contains a glob or not
-      if (results == null) {
-        if (hasGlob[0]) {
-          results = new FileStatus[0];
-        }
-      } else {
-        if (results.length == 0) {
-          if (!hasGlob[0]) {
-            results = null;
-          }
-        } else {
-          Arrays.sort(results);
-        }
-      }
-      return results;
-    }
-
-    /*
-     * For a path of N components, return a list of paths that match the
-     * components [<code>level</code>, <code>N-1</code>].
-     */
-    private Path[] globPathsLevel(Path[] parents, String[] filePattern,
-        int level, boolean[] hasGlob) throws AccessControlException,
-        FileNotFoundException, IOException {
-      if (level == filePattern.length - 1) {
-        return parents;
-      }
-      if (parents == null || parents.length == 0) {
-        return null;
-      }
-      GlobFilter fp = new GlobFilter(filePattern[level]);
-      if (fp.hasPattern()) {
-        try {
-          parents = FileUtil.stat2Paths(listStatus(parents, fp));
-        } catch (FileNotFoundException e) {
-          parents = null;
-        }
-        hasGlob[0] = true;
-      } else {
-        for (int i = 0; i < parents.length; i++) {
-          parents[i] = new Path(parents[i], filePattern[level]);
-        }
-      }
-      return globPathsLevel(parents, filePattern, level + 1, hasGlob);
+      return new Globber(FileContext.this, pathPattern, filter).glob();
     }
 
     /**

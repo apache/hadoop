@@ -137,6 +137,14 @@ abstract public class ReplicaInfo extends Block implements Replica {
   void setVolume(FsVolumeSpi vol) {
     this.volume = vol;
   }
+
+  /**
+   * Get the storageUuid of the volume that stores this replica.
+   */
+  @Override
+  public String getStorageUuid() {
+    return volume.getStorageID();
+  }
   
   /**
    * Return the parent directory path where this replica is located

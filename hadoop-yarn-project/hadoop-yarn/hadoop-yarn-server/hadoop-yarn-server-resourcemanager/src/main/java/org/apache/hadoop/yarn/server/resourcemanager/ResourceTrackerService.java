@@ -28,8 +28,14 @@ import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.util.VersionUtil;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerState;
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -44,17 +50,21 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResp
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerFinishedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeReconnectEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeStatusEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
+import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.authorize.RMPolicyProvider;
 import org.apache.hadoop.yarn.server.utils.YarnServerBuilderUtils;
 import org.apache.hadoop.yarn.util.RackResolver;
+import org.apache.hadoop.yarn.util.YarnVersionInfo;
 
 public class ResourceTrackerService extends AbstractService implements
     ResourceTracker {
@@ -73,6 +83,7 @@ public class ResourceTrackerService extends AbstractService implements
   private long nextHeartBeatInterval;
   private Server server;
   private InetSocketAddress resourceTrackerAddress;
+  private String minimumNodeManagerVersion;
 
   private static final NodeHeartbeatResponse resync = recordFactory
       .newRecordInstance(NodeHeartbeatResponse.class);
@@ -99,6 +110,7 @@ public class ResourceTrackerService extends AbstractService implements
     this.nmLivelinessMonitor = nmLivelinessMonitor;
     this.containerTokenSecretManager = containerTokenSecretManager;
     this.nmTokenSecretManager = nmTokenSecretManager;
+
   }
 
   @Override
@@ -124,7 +136,11 @@ public class ResourceTrackerService extends AbstractService implements
     minAllocVcores = conf.getInt(
     	YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES,
     	YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_VCORES);
-    
+
+    minimumNodeManagerVersion = conf.get(
+        YarnConfiguration.RM_NODEMANAGER_MINIMUM_VERSION,
+        YarnConfiguration.DEFAULT_RM_NODEMANAGER_MINIMUM_VERSION);
+
     super.serviceInit(conf);
   }
 
@@ -172,9 +188,56 @@ public class ResourceTrackerService extends AbstractService implements
     int cmPort = nodeId.getPort();
     int httpPort = request.getHttpPort();
     Resource capability = request.getResource();
+    String nodeManagerVersion = request.getNMVersion();
 
+    if (!request.getContainerStatuses().isEmpty()) {
+      LOG.info("received container statuses on node manager register :"
+          + request.getContainerStatuses());
+      for (ContainerStatus containerStatus : request.getContainerStatuses()) {
+        ApplicationAttemptId appAttemptId =
+            containerStatus.getContainerId().getApplicationAttemptId();
+        RMApp rmApp =
+            rmContext.getRMApps().get(appAttemptId.getApplicationId());
+        if (rmApp != null) {
+          RMAppAttempt rmAppAttempt = rmApp.getRMAppAttempt(appAttemptId);
+          if (rmAppAttempt.getMasterContainer().getId()
+              .equals(containerStatus.getContainerId())
+              && containerStatus.getState() == ContainerState.COMPLETE) {
+            // sending master container finished event.
+            RMAppAttemptContainerFinishedEvent evt =
+                new RMAppAttemptContainerFinishedEvent(appAttemptId,
+                    containerStatus);
+            rmContext.getDispatcher().getEventHandler().handle(evt);
+          }
+        } else {
+          LOG.error("Received finished container :"
+              + containerStatus.getContainerId()
+              + " for non existing application :"
+              + appAttemptId.getApplicationId());
+        }
+      }
+    }
     RegisterNodeManagerResponse response = recordFactory
         .newRecordInstance(RegisterNodeManagerResponse.class);
+
+    if (!minimumNodeManagerVersion.equals("NONE")) {
+      if (minimumNodeManagerVersion.equals("EqualToRM")) {
+        minimumNodeManagerVersion = YarnVersionInfo.getVersion();
+      }
+
+      if ((nodeManagerVersion == null) ||
+          (VersionUtil.compareVersions(nodeManagerVersion,minimumNodeManagerVersion)) < 0) {
+        String message =
+            "Disallowed NodeManager Version " + nodeManagerVersion
+                + ", is less than the minimum version "
+                + minimumNodeManagerVersion + " sending SHUTDOWN signal to "
+                + "NodeManager.";
+        LOG.info(message);
+        response.setDiagnosticsMessage(message);
+        response.setNodeAction(NodeAction.SHUTDOWN);
+        return response;
+      }
+    }
 
     // Check if this node is a 'valid' node
     if (!this.nodesListManager.isValidNode(host)) {
@@ -206,7 +269,8 @@ public class ResourceTrackerService extends AbstractService implements
         .getCurrentKey());    
 
     RMNode rmNode = new RMNodeImpl(nodeId, rmContext, host, cmPort, httpPort,
-        resolve(host), capability);
+        resolve(host), ResourceOption.newInstance(capability, RMNode.OVER_COMMIT_TIMEOUT_MILLIS_DEFAULT),
+        nodeManagerVersion);
 
     RMNode oldNode = this.rmContext.getRMNodes().putIfAbsent(nodeId, rmNode);
     if (oldNode == null) {
@@ -229,7 +293,8 @@ public class ResourceTrackerService extends AbstractService implements
             + ", assigned nodeId " + nodeId;
     LOG.info(message);
     response.setNodeAction(NodeAction.NORMAL);
-    response.setRMIdentifier(ResourceManager.clusterTimeStamp);
+    response.setRMIdentifier(ResourceManager.getClusterTimeStamp());
+    response.setRMVersion(YarnVersionInfo.getVersion());
     return response;
   }
 

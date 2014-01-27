@@ -36,6 +36,7 @@ import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
@@ -76,7 +77,7 @@ public class TestNMWebServer {
   }
   
   private int startNMWebAppServer(String webAddr) {
-    Context nmContext = new NodeManager.NMContext(null, null);
+    Context nmContext = new NodeManager.NMContext(null, null, null, null);
     ResourceView resourceView = new ResourceView() {
       @Override
       public long getVmemAllocatedForContainers() {
@@ -133,8 +134,8 @@ public class TestNMWebServer {
   }
 
   @Test
-  public void testNMWebApp() throws IOException {
-    Context nmContext = new NodeManager.NMContext(null, null);
+  public void testNMWebApp() throws IOException, YarnException {
+    Context nmContext = new NodeManager.NMContext(null, null, null, null);
     ResourceView resourceView = new ResourceView() {
       @Override
       public long getVmemAllocatedForContainers() {
@@ -219,10 +220,10 @@ public class TestNMWebServer {
 
   private void writeContainerLogs(Context nmContext,
       ContainerId containerId, LocalDirsHandlerService dirsHandler)
-        throws IOException {
+        throws IOException, YarnException {
     // ContainerLogDir should be created
     File containerLogDir =
-        ContainerLogsPage.ContainersLogsBlock.getContainerLogDirs(containerId,
+        ContainerLogsUtils.getContainerLogDirs(containerId,
             dirsHandler).get(0);
     containerLogDir.mkdirs();
     for (String fileType : new String[] { "stdout", "stderr", "syslog" }) {

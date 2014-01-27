@@ -344,11 +344,11 @@ public class INodeFile extends INodeWithAdditionalFields
   }
 
   @Override
-  public final Content.Counts computeContentSummary(
-      final Content.Counts counts) {
-    computeContentSummary4Snapshot(counts);
-    computeContentSummary4Current(counts);
-    return counts;
+  public final ContentSummaryComputationContext  computeContentSummary(
+      final ContentSummaryComputationContext summary) {
+    computeContentSummary4Snapshot(summary.getCounts());
+    computeContentSummary4Current(summary.getCounts());
+    return summary;
   }
 
   private void computeContentSummary4Snapshot(final Content.Counts counts) {
@@ -467,7 +467,7 @@ public class INodeFile extends INodeWithAdditionalFields
   }
 
   @Override
-  public BlockInfo getLastBlock() throws IOException {
+  public BlockInfo getLastBlock() {
     return blocks == null || blocks.length == 0? null: blocks[blocks.length-1];
   }
 

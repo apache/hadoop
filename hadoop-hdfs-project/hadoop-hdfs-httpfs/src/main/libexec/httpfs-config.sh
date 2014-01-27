@@ -55,7 +55,7 @@ print "Setting HTTPFS_HOME:          ${HTTPFS_HOME}"
 #
 if [ -e "${HTTPFS_HOME}/bin/httpfs-env.sh" ]; then
   print "Sourcing:                    ${HTTPFS_HOME}/bin/httpfs-env.sh"
-  source ${HTTPFS_HOME}/bin/HTTPFS-env.sh
+  source ${HTTPFS_HOME}/bin/httpfs-env.sh
   grep "^ *export " ${HTTPFS_HOME}/bin/httpfs-env.sh | sed 's/ *export/  setting/'
 fi
 
@@ -141,6 +141,27 @@ if [ "${HTTPFS_HTTP_HOSTNAME}" = "" ]; then
   print "Setting HTTPFS_HTTP_HOSTNAME: ${HTTPFS_HTTP_HOSTNAME}"
 else
   print "Using   HTTPFS_HTTP_HOSTNAME: ${HTTPFS_HTTP_HOSTNAME}"
+fi
+
+if [ "${HTTPFS_SSL_ENABLED}" = "" ]; then
+  export HTTPFS_SSL_ENABLED="false"
+  print "Setting HTTPFS_SSL_ENABLED: ${HTTPFS_SSL_ENABLED}"
+else
+  print "Using   HTTPFS_SSL_ENABLED: ${HTTPFS_SSL_ENABLED}"
+fi
+
+if [ "${HTTPFS_SSL_KEYSTORE_FILE}" = "" ]; then
+  export HTTPFS_SSL_KEYSTORE_FILE=${HOME}/.keystore
+  print "Setting HTTPFS_SSL_KEYSTORE_FILE:     ${HTTPFS_SSL_KEYSTORE_FILE}"
+else
+  print "Using   HTTPFS_SSL_KEYSTORE_FILE:     ${HTTPFS_SSL_KEYSTORE_FILE}"
+fi
+
+if [ "${HTTPFS_SSL_KEYSTORE_PASS}" = "" ]; then
+  export HTTPFS_SSL_KEYSTORE_PASS=password
+  print "Setting HTTPFS_SSL_KEYSTORE_PASS:     ${HTTPFS_SSL_KEYSTORE_PASS}"
+else
+  print "Using   HTTPFS_SSL_KEYSTORE_PASS:     ${HTTPFS_SSL_KEYSTORE_PASS}"
 fi
 
 if [ "${CATALINA_BASE}" = "" ]; then

@@ -17,13 +17,18 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import java.io.*;
-import java.net.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.InetSocketAddress;
+import java.net.URL;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.List;
-import java.lang.Math;
 
 import javax.servlet.ServletOutputStream;
 import javax.servlet.ServletResponse;
@@ -35,18 +40,22 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.http.HttpConfig;
-import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.hdfs.server.common.StorageErrorReporter;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
+import org.apache.hadoop.hdfs.server.common.StorageErrorReporter;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
+import org.apache.hadoop.hdfs.web.URLConnectionFactory;
 import org.apache.hadoop.io.MD5Hash;
+import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.util.Time;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
@@ -62,18 +71,27 @@ public class TransferFsImage {
   public final static String MD5_HEADER = "X-MD5-Digest";
   @VisibleForTesting
   static int timeout = 0;
+  private static URLConnectionFactory connectionFactory;
+  private static boolean isSpnegoEnabled;
+
+  static {
+    Configuration conf = new Configuration();
+    connectionFactory = URLConnectionFactory
+        .newDefaultURLConnectionFactory(conf);
+    isSpnegoEnabled = UserGroupInformation.isSecurityEnabled();
+  }
 
   private static final Log LOG = LogFactory.getLog(TransferFsImage.class);
   
-  public static void downloadMostRecentImageToDirectory(String fsName,
+  public static void downloadMostRecentImageToDirectory(URL infoServer,
       File dir) throws IOException {
     String fileId = GetImageServlet.getParamStringForMostRecentImage();
-    getFileClient(fsName, fileId, Lists.newArrayList(dir),
+    getFileClient(infoServer, fileId, Lists.newArrayList(dir),
         null, false);
   }
 
   public static MD5Hash downloadImageToStorage(
-      String fsName, long imageTxId, Storage dstStorage, boolean needDigest)
+      URL fsName, long imageTxId, Storage dstStorage, boolean needDigest)
       throws IOException {
     String fileid = GetImageServlet.getParamStringForImage(
         imageTxId, dstStorage);
@@ -91,7 +109,7 @@ public class TransferFsImage {
     return hash;
   }
   
-  static void downloadEditsToStorage(String fsName, RemoteEditLog log,
+  static void downloadEditsToStorage(URL fsName, RemoteEditLog log,
       NNStorage dstStorage) throws IOException {
     assert log.getStartTxId() > 0 && log.getEndTxId() > 0 :
       "bad log: " + log;
@@ -145,17 +163,17 @@ public class TransferFsImage {
    * Requests that the NameNode download an image from this node.
    *
    * @param fsName the http address for the remote NN
-   * @param imageListenAddress the host/port where the local node is running an
+   * @param myNNAddress the host/port where the local node is running an
    *                           HTTPServer hosting GetImageServlet
    * @param storage the storage directory to transfer the image from
    * @param txid the transaction ID of the image to be uploaded
    */
-  public static void uploadImageFromStorage(String fsName,
-      InetSocketAddress imageListenAddress,
+  public static void uploadImageFromStorage(URL fsName,
+      URL myNNAddress,
       Storage storage, long txid) throws IOException {
     
     String fileid = GetImageServlet.getParamStringToPutImage(
-        txid, imageListenAddress, storage);
+        txid, myNNAddress, storage);
     // this doesn't directly upload an image, but rather asks the NN
     // to connect back to the 2NN to download the specified image.
     try {
@@ -233,26 +251,24 @@ public class TransferFsImage {
    *                   this storage object will be notified. 
    * @Return a digest of the received file if getChecksum is true
    */
-  static MD5Hash getFileClient(String nnHostPort,
+  static MD5Hash getFileClient(URL infoServer,
       String queryString, List<File> localPaths,
       Storage dstStorage, boolean getChecksum) throws IOException {
-
-    String str = HttpConfig.getSchemePrefix() + nnHostPort + "/getimage?" +
-        queryString;
-    LOG.info("Opening connection to " + str);
-    //
-    // open connection to remote server
-    //
-    URL url = new URL(str);
+    URL url = new URL(infoServer, "/getimage?" + queryString);
+    LOG.info("Opening connection to " + url);
     return doGetUrl(url, localPaths, dstStorage, getChecksum);
   }
   
   public static MD5Hash doGetUrl(URL url, List<File> localPaths,
       Storage dstStorage, boolean getChecksum) throws IOException {
     long startTime = Time.monotonicNow();
-
-    HttpURLConnection connection = (HttpURLConnection)
-      SecurityUtil.openSecureHttpConnection(url);
+    HttpURLConnection connection;
+    try {
+      connection = (HttpURLConnection)
+        connectionFactory.openConnection(url, isSpnegoEnabled);
+    } catch (AuthenticationException e) {
+      throw new IOException(e);
+    }
 
     if (timeout <= 0) {
       Configuration conf = new HdfsConfiguration();

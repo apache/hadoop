@@ -20,9 +20,6 @@ package org.apache.hadoop.hdfs;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType.DATA_NODE;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType.NAME_NODE;
 import static org.junit.Assert.*;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.IOException;
@@ -194,21 +191,25 @@ public class TestDFSRollback {
       // Create a previous snapshot for the blockpool
       UpgradeUtilities.createBlockPoolStorageDirs(dataNodeDirs, "previous",
           UpgradeUtilities.getCurrentBlockPoolID(cluster));
-      // Older LayoutVersion to make it rollback
+      // Put newer layout version in current.
       storageInfo = new StorageInfo(
-          UpgradeUtilities.getCurrentLayoutVersion()+1,
+          UpgradeUtilities.getCurrentLayoutVersion()-1,
           UpgradeUtilities.getCurrentNamespaceID(cluster),
           UpgradeUtilities.getCurrentClusterID(cluster),
           UpgradeUtilities.getCurrentFsscTime(cluster));
-      // Create old VERSION file for each data dir
+
+      // Overwrite VERSION file in the current directory of
+      // volume directories and block pool slice directories
+      // with a layout version from future.
+      File[] dataCurrentDirs = new File[dataNodeDirs.length];
       for (int i=0; i<dataNodeDirs.length; i++) {
-        Path bpPrevPath = new Path(dataNodeDirs[i] + "/current/"
-            + UpgradeUtilities.getCurrentBlockPoolID(cluster));
-        UpgradeUtilities.createBlockPoolVersionFile(
-            new File(bpPrevPath.toString()),
-            storageInfo,
-            UpgradeUtilities.getCurrentBlockPoolID(cluster));
+        dataCurrentDirs[i] = new File((new Path(dataNodeDirs[i] 
+            + "/current")).toString());
       }
+      UpgradeUtilities.createDataNodeVersionFile(
+          dataCurrentDirs,
+          storageInfo,
+          UpgradeUtilities.getCurrentBlockPoolID(cluster));
 
       cluster.startDataNodes(conf, 1, false, StartupOption.ROLLBACK, null);
       assertTrue(cluster.isDataNodeUp());

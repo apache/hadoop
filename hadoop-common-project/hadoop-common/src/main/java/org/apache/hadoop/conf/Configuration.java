@@ -957,7 +957,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
         "Property name must not be null");
     Preconditions.checkArgument(
         value != null,
-        "Property value must not be null");
+        "The value of property " + name + " must not be null");
     DeprecationContext deprecations = deprecationContext.get();
     if (deprecations.getDeprecatedKeyMap().isEmpty()) {
       getProps();
@@ -2072,6 +2072,15 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     }
   }
 
+  /**
+   * Get the set of parameters marked final.
+   *
+   * @return final parameter set.
+   */
+  public Set<String> getFinalParameters() {
+    return new HashSet<String>(finalParameters);
+  }
+
   protected synchronized Properties getProps() {
     if (properties == null) {
       properties = new Properties();
@@ -2131,7 +2140,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   private Document parse(DocumentBuilder builder, URL url)
       throws IOException, SAXException {
     if (!quietmode) {
-      LOG.info("parsing URL " + url);
+      LOG.debug("parsing URL " + url);
     }
     if (url == null) {
       return null;
@@ -2142,7 +2151,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   private Document parse(DocumentBuilder builder, InputStream is,
       String systemId) throws IOException, SAXException {
     if (!quietmode) {
-      LOG.info("parsing input stream " + is);
+      LOG.debug("parsing input stream " + is);
     }
     if (is == null) {
       return null;
@@ -2215,7 +2224,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
           .getAbsoluteFile();
         if (file.exists()) {
           if (!quiet) {
-            LOG.info("parsing File " + file);
+            LOG.debug("parsing File " + file);
           }
           doc = parse(builder, new BufferedInputStream(
               new FileInputStream(file)), ((Path)resource).toString());

@@ -26,7 +26,7 @@ public interface NodeStatusUpdater extends Service {
 
   void sendOutofBandHeartBeat();
 
-  NodeStatus getNodeStatusAndUpdateContainersInContext();
+  NodeStatus getNodeStatusAndUpdateContainersInContext(int responseId);
 
   long getRMIdentifier();
   

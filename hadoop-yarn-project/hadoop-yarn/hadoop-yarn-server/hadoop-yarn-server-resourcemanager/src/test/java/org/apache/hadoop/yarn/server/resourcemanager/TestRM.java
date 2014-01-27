@@ -19,26 +19,36 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import junit.framework.Assert;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.NMToken;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.Token;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
@@ -49,6 +59,9 @@ public class TestRM {
 
   private static final Log LOG = LogFactory.getLog(TestRM.class);
 
+  // Milliseconds to sleep for when waiting for something to happen
+  private final static int WAIT_SLEEP_MS = 100;
+  
   @Test
   public void testGetNewAppId() throws Exception {
     Logger rootLogger = LogManager.getRootLogger();
@@ -62,7 +75,7 @@ public class TestRM {
     rm.stop();
   }
   
-  @Test
+  @Test (timeout = 30000)
   public void testAppWithNoContainers() throws Exception {
     Logger rootLogger = LogManager.getRootLogger();
     rootLogger.setLevel(Level.DEBUG);
@@ -84,11 +97,13 @@ public class TestRM {
     rm.stop();
   }
 
-  @Test
+  @Test (timeout = 30000)
   public void testAppOnMultiNode() throws Exception {
     Logger rootLogger = LogManager.getRootLogger();
     rootLogger.setLevel(Level.DEBUG);
-    MockRM rm = new MockRM();
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.set("yarn.scheduler.capacity.node-locality-delay", "-1");
+    MockRM rm = new MockRM(conf);
     rm.start();
     MockNM nm1 = rm.registerNode("h1:1234", 5120);
     MockNM nm2 = rm.registerNode("h2:5678", 10240);
@@ -107,30 +122,30 @@ public class TestRM {
     am.allocate("h1" , 1000, request, new ArrayList<ContainerId>());
     
     //kick the scheduler
-    nm1.nodeHeartbeat(true);
     List<Container> conts = am.allocate(new ArrayList<ResourceRequest>(),
         new ArrayList<ContainerId>()).getAllocatedContainers();
     int contReceived = conts.size();
     while (contReceived < 3) {//only 3 containers are available on node1
+      nm1.nodeHeartbeat(true);
       conts.addAll(am.allocate(new ArrayList<ResourceRequest>(),
           new ArrayList<ContainerId>()).getAllocatedContainers());
       contReceived = conts.size();
       LOG.info("Got " + contReceived + " containers. Waiting to get " + 3);
-      Thread.sleep(2000);
+      Thread.sleep(WAIT_SLEEP_MS);
     }
     Assert.assertEquals(3, conts.size());
 
     //send node2 heartbeat
-    nm2.nodeHeartbeat(true);
     conts = am.allocate(new ArrayList<ResourceRequest>(),
         new ArrayList<ContainerId>()).getAllocatedContainers();
     contReceived = conts.size();
     while (contReceived < 10) {
+      nm2.nodeHeartbeat(true);
       conts.addAll(am.allocate(new ArrayList<ResourceRequest>(),
           new ArrayList<ContainerId>()).getAllocatedContainers());
       contReceived = conts.size();
       LOG.info("Got " + contReceived + " containers. Waiting to get " + 10);
-      Thread.sleep(2000);
+      Thread.sleep(WAIT_SLEEP_MS);
     }
     Assert.assertEquals(10, conts.size());
 
@@ -141,7 +156,7 @@ public class TestRM {
     rm.stop();
   }
   
-  @Test
+  @Test (timeout = 40000)
   public void testNMToken() throws Exception {
     MockRM rm = new MockRM();
     try {
@@ -178,19 +193,17 @@ public class TestRM {
       // initially requesting 2 containers.
       AllocateResponse response =
           am.allocate("h1", 1000, 2, releaseContainerList);
-      nm1.nodeHeartbeat(true);
       Assert.assertEquals(0, response.getAllocatedContainers().size());
       allocateContainersAndValidateNMTokens(am, containersReceivedForNM1, 2,
-          nmTokens);
+          nmTokens, nm1);
       Assert.assertEquals(1, nmTokens.size());
 
       
       // requesting 2 more containers.
       response = am.allocate("h1", 1000, 2, releaseContainerList);
-      nm1.nodeHeartbeat(true);
       Assert.assertEquals(0, response.getAllocatedContainers().size());
       allocateContainersAndValidateNMTokens(am, containersReceivedForNM1, 4,
-          nmTokens);
+          nmTokens, nm1);
       Assert.assertEquals(1, nmTokens.size());
       
       
@@ -202,23 +215,27 @@ public class TestRM {
           new ArrayList<Container>();
       
       response = am.allocate("h2", 1000, 2, releaseContainerList);
-      nm2.nodeHeartbeat(true);
       Assert.assertEquals(0, response.getAllocatedContainers().size());
       allocateContainersAndValidateNMTokens(am, containersReceivedForNM2, 2,
-          nmTokens);
+          nmTokens, nm2);
       Assert.assertEquals(2, nmTokens.size());
       
       // Simulating NM-2 restart.
       nm2 = rm.registerNode("h2:1234", 10000);
-      nm2.nodeHeartbeat(true);
-      
+      // Wait for reconnect to make it through the RM and create a new RMNode
+      Map<NodeId, RMNode> nodes = rm.getRMContext().getRMNodes();
+      while (nodes.get(nm2.getNodeId()).getLastNodeHeartBeatResponse()
+          .getResponseId() > 0) {
+        Thread.sleep(WAIT_SLEEP_MS);
+      }
+
       int interval = 40;
       // Wait for nm Token to be cleared.
       while (nmTokenSecretManager
           .isApplicationAttemptNMTokenPresent(attempt.getAppAttemptId(),
               nm2.getNodeId()) && interval-- > 0) {
         LOG.info("waiting for nmToken to be cleared for : " + nm2.getNodeId());
-        Thread.sleep(1000);
+        Thread.sleep(WAIT_SLEEP_MS);
       }
       Assert.assertTrue(nmTokenSecretManager
           .isApplicationAttemptRegistered(attempt.getAppAttemptId()));
@@ -229,10 +246,9 @@ public class TestRM {
       
       // We should again receive the NMToken.
       response = am.allocate("h2", 1000, 2, releaseContainerList);
-      nm2.nodeHeartbeat(true);
       Assert.assertEquals(0, response.getAllocatedContainers().size());
       allocateContainersAndValidateNMTokens(am, containersReceivedForNM2, 4,
-          nmTokens);
+          nmTokens, nm2);
       Assert.assertEquals(2, nmTokens.size());
 
       // Now rolling over NMToken masterKey. it should resend the NMToken in
@@ -261,10 +277,9 @@ public class TestRM {
       Assert.assertEquals(0, nmTokens.size());
       // We should again receive the NMToken.
       response = am.allocate("h2", 1000, 1, releaseContainerList);
-      nm2.nodeHeartbeat(true);
       Assert.assertEquals(0, response.getAllocatedContainers().size());
       allocateContainersAndValidateNMTokens(am, containersReceivedForNM2, 5,
-          nmTokens);
+          nmTokens, nm2);
       Assert.assertEquals(1, nmTokens.size());
       Assert.assertTrue(nmTokenSecretManager
           .isApplicationAttemptNMTokenPresent(attempt.getAppAttemptId(),
@@ -284,6 +299,8 @@ public class TestRM {
         nm2.nodeHeartbeat(attempt.getAppAttemptId(), container.getId().getId(),
             ContainerState.COMPLETE);
       }
+      nm1.nodeHeartbeat(am.getApplicationAttemptId(), 1,
+        ContainerState.COMPLETE);
       am.waitForState(RMAppAttemptState.FINISHED);
       Assert.assertFalse(nmTokenSecretManager
           .isApplicationAttemptRegistered(attempt.getAppAttemptId()));
@@ -294,12 +311,14 @@ public class TestRM {
 
   protected void allocateContainersAndValidateNMTokens(MockAM am,
       ArrayList<Container> containersReceived, int totalContainerRequested,
-      HashMap<String, Token> nmTokens) throws Exception, InterruptedException {
+      HashMap<String, Token> nmTokens, MockNM nm) throws Exception,
+      InterruptedException {
     ArrayList<ContainerId> releaseContainerList = new ArrayList<ContainerId>();
     AllocateResponse response;
     ArrayList<ResourceRequest> resourceRequest =
         new ArrayList<ResourceRequest>();      
     while (containersReceived.size() < totalContainerRequested) {
+      nm.nodeHeartbeat(true);
       LOG.info("requesting containers..");
       response =
           am.allocate(resourceRequest, releaseContainerList);
@@ -315,7 +334,7 @@ public class TestRM {
       }
       LOG.info("Got " + containersReceived.size()
           + " containers. Waiting to get " + totalContainerRequested);
-      Thread.sleep(500);
+      Thread.sleep(WAIT_SLEEP_MS);
     }
   }
 
@@ -362,6 +381,89 @@ public class TestRM {
     rm1.waitForState(attemptId2, RMAppAttemptState.ALLOCATED);
 
     rm1.stop();
+  }
+
+  // This is to test AM Host and rpc port are invalidated after the am attempt
+  // is killed or failed, so that client doesn't get the wrong information.
+  @Test (timeout = 80000)
+  public void testInvalidateAMHostPortWhenAMFailedOrKilled() throws Exception {
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 1);
+    MockRM rm1 = new MockRM(conf);
+    rm1.start();
+
+    // a succeeded app
+    RMApp app1 = rm1.submitApp(200);
+    MockNM nm1 =
+        new MockNM("127.0.0.1:1234", 15120, rm1.getResourceTrackerService());
+    nm1.registerNode();
+    MockAM am1 = MockRM.launchAM(app1, rm1, nm1);
+    MockRM.finishApplicationMaster(app1, rm1, nm1, am1);
+
+    // a failed app
+    RMApp app2 = rm1.submitApp(200);
+    MockAM am2 = MockRM.launchAM(app2, rm1, nm1);
+    nm1.nodeHeartbeat(am2.getApplicationAttemptId(), 1, ContainerState.COMPLETE);
+    am2.waitForState(RMAppAttemptState.FAILED);
+    rm1.waitForState(app2.getApplicationId(), RMAppState.FAILED);
+
+    // a killed app
+    RMApp app3 = rm1.submitApp(200);
+    MockAM am3 = MockRM.launchAM(app3, rm1, nm1);
+    rm1.killApp(app3.getApplicationId());
+    rm1.waitForState(app3.getApplicationId(), RMAppState.KILLED);
+    rm1.waitForState(am3.getApplicationAttemptId(), RMAppAttemptState.KILLED);
+
+    GetApplicationsRequest request1 =
+        GetApplicationsRequest.newInstance(EnumSet.of(
+          YarnApplicationState.FINISHED, YarnApplicationState.KILLED,
+          YarnApplicationState.FAILED));
+    GetApplicationsResponse response1 =
+        rm1.getClientRMService().getApplications(request1);
+    List<ApplicationReport> appList1 = response1.getApplicationList();
+
+    Assert.assertEquals(3, appList1.size());
+    for (ApplicationReport report : appList1) {
+      // killed/failed apps host and rpc port are invalidated.
+      if (report.getApplicationId().equals(app2.getApplicationId())
+          || report.getApplicationId().equals(app3.getApplicationId())) {
+        Assert.assertEquals("N/A", report.getHost());
+        Assert.assertEquals(-1, report.getRpcPort());
+      }
+      // succeeded app's host and rpc port is not invalidated
+      if (report.getApplicationId().equals(app1.getApplicationId())) {
+        Assert.assertFalse(report.getHost().equals("N/A"));
+        Assert.assertTrue(report.getRpcPort() != -1);
+      }
+    }
+  }
+
+  @Test (timeout = 60000)
+  public void testInvalidatedAMHostPortOnAMRestart() throws Exception {
+    YarnConfiguration conf = new YarnConfiguration();
+    MockRM rm1 = new MockRM(conf);
+    rm1.start();
+    MockNM nm1 =
+        new MockNM("127.0.0.1:1234", 15120, rm1.getResourceTrackerService());
+    nm1.registerNode();
+
+    // a failed app
+    RMApp app2 = rm1.submitApp(200);
+    MockAM am2 = MockRM.launchAM(app2, rm1, nm1);
+    nm1
+      .nodeHeartbeat(am2.getApplicationAttemptId(), 1, ContainerState.COMPLETE);
+    am2.waitForState(RMAppAttemptState.FAILED);
+    rm1.waitForState(app2.getApplicationId(), RMAppState.ACCEPTED);
+
+    // before new attempt is launched, the app report returns the invalid AM
+    // host and port.
+    GetApplicationReportRequest request1 =
+        GetApplicationReportRequest.newInstance(app2.getApplicationId());
+    ApplicationReport report1 =
+        rm1.getClientRMService().getApplicationReport(request1)
+          .getApplicationReport();
+    Assert.assertEquals("N/A", report1.getHost());
+    Assert.assertEquals(-1, report1.getRpcPort());
   }
 
   public static void main(String[] args) throws Exception {

@@ -138,6 +138,7 @@ public class Groups {
     List<String> groupList = impl.getGroups(user);
     long endMs = Time.monotonicNow();
     long deltaMs = endMs - startMs ;
+    UserGroupInformation.metrics.addGetGroups(deltaMs);
     if (deltaMs > warningDeltaMs) {
       LOG.warn("Potential performance problem: getGroups(user=" + user +") " +
           "took " + deltaMs + " milliseconds.");

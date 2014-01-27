@@ -69,15 +69,22 @@ public class FadvisedFileRegion extends DefaultFileRegion {
     if (readaheadRequest != null) {
       readaheadRequest.cancel();
     }
+    super.releaseExternalResources();
+  }
+  
+  /**
+   * Call when the transfer completes successfully so we can advise the OS that
+   * we don't need the region to be cached anymore.
+   */
+  public void transferSuccessful() {
     if (manageOsCache && getCount() > 0) {
       try {
-        NativeIO.POSIX.posixFadviseIfPossible(identifier,
+        NativeIO.POSIX.getCacheManipulator().posixFadviseIfPossible(identifier,
            fd, getPosition(), getCount(),
            NativeIO.POSIX.POSIX_FADV_DONTNEED);
       } catch (Throwable t) {
         LOG.warn("Failed to manage OS cache for " + identifier, t);
       }
     }
-    super.releaseExternalResources();
   }
 }

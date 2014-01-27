@@ -55,10 +55,15 @@ public class CommonConfigurationKeysPublic {
   /** Default value for FS_DF_INTERVAL_KEY */
   public static final long    FS_DF_INTERVAL_DEFAULT = 60000;
   /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
+  public static final String  FS_DU_INTERVAL_KEY = "fs.du.interval";
+  /** Default value for FS_DU_INTERVAL_KEY */
+  public static final long    FS_DU_INTERVAL_DEFAULT = 600000;
+  /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
   public static final String  FS_CLIENT_RESOLVE_REMOTE_SYMLINKS_KEY =
     "fs.client.resolve.remote.symlinks";
   /** Default value for FS_CLIENT_RESOLVE_REMOTE_SYMLINKS_KEY */
   public static final boolean FS_CLIENT_RESOLVE_REMOTE_SYMLINKS_DEFAULT = true;
+
 
   //Defaults are not specified for following keys
   /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
@@ -186,6 +191,11 @@ public class CommonConfigurationKeysPublic {
     "ipc.client.connect.max.retries";
   /** Default value for IPC_CLIENT_CONNECT_MAX_RETRIES_KEY */
   public static final int     IPC_CLIENT_CONNECT_MAX_RETRIES_DEFAULT = 10;
+  /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
+  public static final String  IPC_CLIENT_CONNECT_RETRY_INTERVAL_KEY =
+      "ipc.client.connect.retry.interval";
+  /** Default value for IPC_CLIENT_CONNECT_RETRY_INTERVAL_KEY */
+  public static final int     IPC_CLIENT_CONNECT_RETRY_INTERVAL_DEFAULT = 1000;
   /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
   public static final String  IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SOCKET_TIMEOUTS_KEY =
     "ipc.client.connect.max.retries.on.timeouts";

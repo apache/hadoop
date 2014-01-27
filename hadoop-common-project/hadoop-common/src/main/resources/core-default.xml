@@ -466,6 +466,12 @@
 </property>
 
 <property>
+  <name>fs.du.interval</name>
+  <value>600000</value>
+  <description>File space usage statistics refresh interval in msec.</description>
+</property>
+
+<property>
   <name>fs.s3.block.size</name>
   <value>67108864</value>
   <description>Block size to use when writing files to S3.</description>
@@ -495,6 +501,11 @@
   </description>
 </property>
 
+<property>
+  <name>fs.swift.impl</name>
+  <value>org.apache.hadoop.fs.swift.snative.SwiftNativeFileSystem</value>
+  <description>The implementation class of the OpenStack Swift Filesystem</description>
+</property>
 
 <property>
   <name>fs.automatic.close</name>
@@ -596,6 +607,14 @@
   <value>10</value>
   <description>Indicates the number of retries a client will make to establish
                a server connection.
+  </description>
+</property>
+
+<property>
+  <name>ipc.client.connect.retry.interval</name>
+  <value>1000</value>
+  <description>Indicates the number of milliseconds a client will wait for
+    before retrying to establish a server connection.
   </description>
 </property>
 
@@ -1107,9 +1126,7 @@
   <name>hadoop.ssl.enabled</name>
   <value>false</value>
   <description>
-    Whether to use SSL for the HTTP endpoints. If set to true, the
-    NameNode, DataNode, ResourceManager, NodeManager, HistoryServer and
-    MapReduceAppMaster web UIs will be served over HTTPS instead HTTP.
+    Deprecated. Use dfs.http.policy and yarn.http.policy instead.
   </description>
 </property>
 

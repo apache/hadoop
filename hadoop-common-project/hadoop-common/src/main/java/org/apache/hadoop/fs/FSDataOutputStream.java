@@ -26,9 +26,8 @@ import java.io.OutputStream;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
-/** Utility that wraps a {@link OutputStream} in a {@link DataOutputStream},
- * buffers output through a {@link BufferedOutputStream} and creates a checksum
- * file. */
+/** Utility that wraps a {@link OutputStream} in a {@link DataOutputStream}.
+ */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class FSDataOutputStream extends DataOutputStream

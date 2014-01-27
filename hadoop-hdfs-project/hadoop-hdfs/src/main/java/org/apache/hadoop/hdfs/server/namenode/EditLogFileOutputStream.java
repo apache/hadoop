@@ -32,6 +32,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.LayoutFlags;
 import org.apache.hadoop.io.IOUtils;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -132,6 +133,7 @@ public class EditLogFileOutputStream extends EditLogOutputStream {
   @VisibleForTesting
   public static void writeHeader(DataOutputStream out) throws IOException {
     out.writeInt(HdfsConstants.LAYOUT_VERSION);
+    LayoutFlags.write(out);
   }
 
   @Override

@@ -25,7 +25,6 @@ import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.net.HttpURLConnection;
-import java.net.InetSocketAddress;
 import java.net.URL;
 import java.util.concurrent.ExecutionException;
 
@@ -46,6 +45,7 @@ import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.MetricsAsserts;
+import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.Shell;
 import org.junit.After;
 import org.junit.Before;
@@ -61,13 +61,13 @@ public class TestJournalNode {
   private static final NamespaceInfo FAKE_NSINFO = new NamespaceInfo(
       12345, "mycluster", "my-bp", 0L);
 
+  private static File TEST_BUILD_DATA = PathUtils.getTestDir(TestJournalNode.class);
+
   private JournalNode jn;
   private Journal journal; 
   private Configuration conf = new Configuration();
   private IPCLoggerChannel ch;
   private String journalId;
-  private File TEST_BUILD_DATA =
-      new File(System.getProperty("test.build.data", "build/test/data"));
 
   static {
     // Avoid an error when we double-initialize JvmMetrics
@@ -162,10 +162,7 @@ public class TestJournalNode {
   
   @Test(timeout=100000)
   public void testHttpServer() throws Exception {
-    InetSocketAddress addr = jn.getBoundHttpAddress();
-    assertTrue(addr.getPort() > 0);
-    
-    String urlRoot = "http://localhost:" + addr.getPort();
+    String urlRoot = jn.getHttpServerURI();
     
     // Check default servlets.
     String pageContents = DFSTestUtil.urlGet(new URL(urlRoot + "/jmx"));
@@ -194,6 +191,7 @@ public class TestJournalNode {
         "/getJournal?segmentTxId=1&jid=" + journalId));
     byte[] expected = Bytes.concat(
             Ints.toByteArray(HdfsConstants.LAYOUT_VERSION),
+            (new byte[] { 0, 0, 0, 0 }), // layout flags section
             EDITS_DATA);
 
     assertArrayEquals(expected, retrievedViaHttp);

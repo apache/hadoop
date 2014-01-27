@@ -48,7 +48,7 @@ public class TestBlockInfo {
 
     final int MAX_BLOCKS = 10;
 
-    DatanodeDescriptor dd = DFSTestUtil.getLocalDatanodeDescriptor();
+    DatanodeStorageInfo dd = DFSTestUtil.createDatanodeStorageInfo("s1", "1.1.1.1");
     ArrayList<Block> blockList = new ArrayList<Block>(MAX_BLOCKS);
     ArrayList<BlockInfo> blockInfoList = new ArrayList<BlockInfo>();
     int headIndex;
@@ -62,7 +62,7 @@ public class TestBlockInfo {
 
       // index of the datanode should be 0
       assertEquals("Find datanode should be 0", 0, blockInfoList.get(i)
-          .findDatanode(dd));
+          .findStorageInfo(dd));
     }
 
     // list length should be equal to the number of blocks we inserted
@@ -76,31 +76,31 @@ public class TestBlockInfo {
     }
     assertEquals("There should be MAX_BLOCK blockInfo's", MAX_BLOCKS, len);
 
-    headIndex = dd.getHead().findDatanode(dd);
+    headIndex = dd.getBlockListHeadForTesting().findStorageInfo(dd);
 
     LOG.info("Moving each block to the head of the list...");
     for (int i = 0; i < MAX_BLOCKS; i++) {
-      curIndex = blockInfoList.get(i).findDatanode(dd);
+      curIndex = blockInfoList.get(i).findStorageInfo(dd);
       headIndex = dd.moveBlockToHead(blockInfoList.get(i), curIndex, headIndex);
       // the moved element must be at the head of the list
       assertEquals("Block should be at the head of the list now.",
-          blockInfoList.get(i), dd.getHead());
+          blockInfoList.get(i), dd.getBlockListHeadForTesting());
     }
 
     // move head of the list to the head - this should not change the list
     LOG.info("Moving head to the head...");
 
-    BlockInfo temp = dd.getHead();
+    BlockInfo temp = dd.getBlockListHeadForTesting();
     curIndex = 0;
     headIndex = 0;
     dd.moveBlockToHead(temp, curIndex, headIndex);
     assertEquals(
         "Moving head to the head of the list shopuld not change the list",
-        temp, dd.getHead());
+        temp, dd.getBlockListHeadForTesting());
 
     // check all elements of the list against the original blockInfoList
     LOG.info("Checking elements of the list...");
-    temp = dd.getHead();
+    temp = dd.getBlockListHeadForTesting();
     assertNotNull("Head should not be null", temp);
     int c = MAX_BLOCKS - 1;
     while (temp != null) {
@@ -110,15 +110,15 @@ public class TestBlockInfo {
     }
 
     LOG.info("Moving random blocks to the head of the list...");
-    headIndex = dd.getHead().findDatanode(dd);
+    headIndex = dd.getBlockListHeadForTesting().findStorageInfo(dd);
     Random rand = new Random();
     for (int i = 0; i < MAX_BLOCKS; i++) {
       int j = rand.nextInt(MAX_BLOCKS);
-      curIndex = blockInfoList.get(j).findDatanode(dd);
+      curIndex = blockInfoList.get(j).findStorageInfo(dd);
       headIndex = dd.moveBlockToHead(blockInfoList.get(j), curIndex, headIndex);
       // the moved element must be at the head of the list
       assertEquals("Block should be at the head of the list now.",
-          blockInfoList.get(j), dd.getHead());
+          blockInfoList.get(j), dd.getBlockListHeadForTesting());
     }
   }
 }

@@ -22,7 +22,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.Collection;
 
 import org.apache.hadoop.conf.Configuration;
@@ -104,7 +103,10 @@ public class TestOverReplicatedBlocks {
           String corruptMachineName = corruptDataNode.getXferAddr();
           for (DatanodeDescriptor datanode : hm.getDatanodes()) {
             if (!corruptMachineName.equals(datanode.getXferAddr())) {
-              datanode.updateHeartbeat(100L, 100L, 0L, 100L, 0, 0);
+              datanode.getStorageInfos()[0].setUtilizationForTesting(100L, 100L, 0, 100L);
+              datanode.updateHeartbeat(
+                  BlockManagerTestUtil.getStorageReportsForDatanode(datanode),
+                  0L, 0L, 0, 0);
             }
           }
 
@@ -156,7 +158,7 @@ public class TestOverReplicatedBlocks {
       DataNode lastDN = cluster.getDataNodes().get(3);
       DatanodeRegistration dnReg = DataNodeTestUtils.getDNRegistrationForBP(
           lastDN, namesystem.getBlockPoolId());
-      String lastDNid = dnReg.getStorageID();
+      String lastDNid = dnReg.getDatanodeUuid();
 
       final Path fileName = new Path("/foo2");
       DFSTestUtil.createFile(fs, fileName, SMALL_FILE_LENGTH, (short)4, 0L);
@@ -221,3 +223,4 @@ public class TestOverReplicatedBlocks {
     }
   }
 }
+

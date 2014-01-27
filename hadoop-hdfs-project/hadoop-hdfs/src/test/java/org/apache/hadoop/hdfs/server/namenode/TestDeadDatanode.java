@@ -104,11 +104,11 @@ public class TestDeadDatanode {
     DatanodeRegistration reg = 
       DataNodeTestUtils.getDNRegistrationForBP(cluster.getDataNodes().get(0), poolId);
       
-    waitForDatanodeState(reg.getStorageID(), true, 20000);
+    waitForDatanodeState(reg.getDatanodeUuid(), true, 20000);
 
     // Shutdown and wait for datanode to be marked dead
     dn.shutdown();
-    waitForDatanodeState(reg.getStorageID(), false, 20000);
+    waitForDatanodeState(reg.getDatanodeUuid(), false, 20000);
 
     DatanodeProtocol dnp = cluster.getNameNodeRpc();
     
@@ -117,7 +117,7 @@ public class TestDeadDatanode {
         ReceivedDeletedBlockInfo.BlockStatus.RECEIVED_BLOCK,
         null) };
     StorageReceivedDeletedBlocks[] storageBlocks = { 
-        new StorageReceivedDeletedBlocks(reg.getStorageID(), blocks) };
+        new StorageReceivedDeletedBlocks(reg.getDatanodeUuid(), blocks) };
     
     // Ensure blockReceived call from dead datanode is rejected with IOException
     try {
@@ -129,7 +129,7 @@ public class TestDeadDatanode {
 
     // Ensure blockReport from dead datanode is rejected with IOException
     StorageBlockReport[] report = { new StorageBlockReport(
-        new DatanodeStorage(reg.getStorageID()),
+        new DatanodeStorage(reg.getDatanodeUuid()),
         new long[] { 0L, 0L, 0L }) };
     try {
       dnp.blockReport(reg, poolId, report);
@@ -140,9 +140,11 @@ public class TestDeadDatanode {
 
     // Ensure heartbeat from dead datanode is rejected with a command
     // that asks datanode to register again
-    StorageReport[] rep = { new StorageReport(reg.getStorageID(), false, 0, 0,
-        0, 0) };
-    DatanodeCommand[] cmd = dnp.sendHeartbeat(reg, rep, 0, 0, 0).getCommands();
+    StorageReport[] rep = { new StorageReport(
+        new DatanodeStorage(reg.getDatanodeUuid()),
+        false, 0, 0, 0, 0) };
+    DatanodeCommand[] cmd = dnp.sendHeartbeat(reg, rep, 0L, 0L, 0, 0, 0)
+      .getCommands();
     assertEquals(1, cmd.length);
     assertEquals(cmd[0].getAction(), RegisterCommand.REGISTER
         .getAction());

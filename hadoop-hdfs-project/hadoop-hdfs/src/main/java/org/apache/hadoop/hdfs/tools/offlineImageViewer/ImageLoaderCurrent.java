@@ -28,6 +28,7 @@ import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
+import org.apache.hadoop.hdfs.protocol.LayoutFlags;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
@@ -126,10 +127,10 @@ class ImageLoaderCurrent implements ImageLoader {
                                       new SimpleDateFormat("yyyy-MM-dd HH:mm");
   private static int[] versions = { -16, -17, -18, -19, -20, -21, -22, -23,
       -24, -25, -26, -27, -28, -30, -31, -32, -33, -34, -35, -36, -37, -38, -39,
-      -40, -41, -42, -43, -44, -45, -46, -47 };
+      -40, -41, -42, -43, -44, -45, -46, -47, -48, -49, -50, -51 };
   private int imageVersion = 0;
   
-  private final Map<Long, String> subtreeMap = new HashMap<Long, String>();
+  private final Map<Long, Boolean> subtreeMap = new HashMap<Long, Boolean>();
   private final Map<Long, String> dirNodeMap = new HashMap<Long, String>();
 
   /* (non-Javadoc)
@@ -157,6 +158,9 @@ class ImageLoaderCurrent implements ImageLoader {
       imageVersion = in.readInt();
       if( !canLoadVersion(imageVersion))
         throw new IOException("Cannot process fslayout version " + imageVersion);
+      if (LayoutVersion.supports(Feature.ADD_LAYOUT_FLAGS, imageVersion)) {
+        LayoutFlags.read(in);
+      }
 
       v.visit(ImageElement.IMAGE_VERSION, imageVersion);
       v.visit(ImageElement.NAMESPACE_ID, in.readInt());
@@ -216,6 +220,9 @@ class ImageLoaderCurrent implements ImageLoader {
         processDelegationTokens(in, v);
       }
       
+      if (LayoutVersion.supports(Feature.CACHING, imageVersion)) {
+        processCacheManagerState(in, v);
+      }
       v.leaveEnclosingElement(); // FSImage
       done = true;
     } finally {
@@ -227,6 +234,25 @@ class ImageLoaderCurrent implements ImageLoader {
     }
   }
 
+  /**
+   * Process CacheManager state from the fsimage.
+   */
+  private void processCacheManagerState(DataInputStream in, ImageVisitor v)
+      throws IOException {
+    v.visit(ImageElement.CACHE_NEXT_ENTRY_ID, in.readLong());
+    final int numPools = in.readInt();
+    for (int i=0; i<numPools; i++) {
+      v.visit(ImageElement.CACHE_POOL_NAME, Text.readString(in));
+      processCachePoolPermission(in, v);
+      v.visit(ImageElement.CACHE_POOL_WEIGHT, in.readInt());
+    }
+    final int numEntries = in.readInt();
+    for (int i=0; i<numEntries; i++) {
+      v.visit(ImageElement.CACHE_ENTRY_PATH, Text.readString(in));
+      v.visit(ImageElement.CACHE_ENTRY_REPLICATION, in.readShort());
+      v.visit(ImageElement.CACHE_ENTRY_POOL_NAME, Text.readString(in));
+    }
+  }
   /**
    * Process the Delegation Token related section in fsimage.
    * 
@@ -385,6 +411,22 @@ class ImageLoaderCurrent implements ImageLoader {
   }
 
   /**
+   * Extract CachePool permissions stored in the fsimage file.
+   *
+   * @param in Datastream to process
+   * @param v Visitor to walk over inodes
+   */
+  private void processCachePoolPermission(DataInputStream in, ImageVisitor v)
+      throws IOException {
+    v.visitEnclosingElement(ImageElement.PERMISSIONS);
+    v.visit(ImageElement.CACHE_POOL_OWNER_NAME, Text.readString(in));
+    v.visit(ImageElement.CACHE_POOL_GROUP_NAME, Text.readString(in));
+    FsPermission fsp = new FsPermission(in.readShort());
+    v.visit(ImageElement.CACHE_POOL_PERMISSION_STRING, fsp.toString());
+    v.leaveEnclosingElement(); // Permissions
+  }
+
+  /**
    * Process the INode records stored in the fsimage.
    *
    * @param in Datastream to process
@@ -462,11 +504,15 @@ class ImageLoaderCurrent implements ImageLoader {
     // 1. load dir node id
     long inodeId = in.readLong();
     
-    String dirName = dirNodeMap.get(inodeId);
-    String oldValue = subtreeMap.put(inodeId, dirName);
-    if (oldValue != null) { // the subtree has been visited
-      return;
-    }
+    String dirName = dirNodeMap.remove(inodeId);
+    Boolean visitedRef = subtreeMap.get(inodeId);
+    if (visitedRef != null) {
+      if (visitedRef.booleanValue()) { // the subtree has been visited
+        return;
+      } else { // first time to visit
+        subtreeMap.put(inodeId, true);
+      }
+    } // else the dir is not linked by a RefNode, thus cannot be revisited
     
     // 2. load possible snapshots
     processSnapshots(in, v, dirName);
@@ -657,6 +703,8 @@ class ImageLoaderCurrent implements ImageLoader {
     
     if (numBlocks >= 0) { // File
       if (supportSnapshot) {
+        // make sure subtreeMap only contains entry for directory
+        subtreeMap.remove(inodeId);
         // process file diffs
         processFileDiffList(in, v, parentName);
         if (isSnapshotCopy) {
@@ -700,6 +748,11 @@ class ImageLoaderCurrent implements ImageLoader {
       
       final boolean firstReferred = in.readBoolean();
       if (firstReferred) {
+        // if a subtree is linked by multiple "parents", the corresponding dir
+        // must be referred by a reference node. we put the reference node into
+        // the subtreeMap here and let its value be false. when we later visit
+        // the subtree for the first time, we change the value to true.
+        subtreeMap.put(inodeId, false);
         v.visitEnclosingElement(ImageElement.SNAPSHOT_REF_INODE);
         processINode(in, v, skipBlocks, parentName, isSnapshotCopy);
         v.leaveEnclosingElement();  // referred inode    

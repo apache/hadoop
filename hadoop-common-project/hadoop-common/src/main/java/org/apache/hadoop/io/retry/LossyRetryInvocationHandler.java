@@ -18,9 +18,9 @@
 package org.apache.hadoop.io.retry;
 
 import java.lang.reflect.Method;
-import java.net.UnknownHostException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.ipc.RetriableException;
 
 /**
  * A dummy invocation handler extending RetryInvocationHandler. It drops the
@@ -52,7 +52,7 @@ public class LossyRetryInvocationHandler<T> extends RetryInvocationHandler<T> {
     if (retryCount < this.numToDrop) {
       RetryCount.set(++retryCount);
       LOG.info("Drop the response. Current retryCount == " + retryCount);
-      throw new UnknownHostException("Fake Exception");
+      throw new RetriableException("Fake Exception");
     } else {
       LOG.info("retryCount == " + retryCount
           + ". It's time to normally process the response");

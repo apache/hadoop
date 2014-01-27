@@ -28,6 +28,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 
+import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.jsp.JspWriter;
@@ -52,6 +53,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ServletUtil;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.VersionInfo;
 
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
@@ -680,4 +682,24 @@ public class DatanodeJspHelper {
     final String nnAddr = request.getParameter(JspHelper.NAMENODE_ADDRESS);
     return getDFSClient(ugi, nnAddr, conf);
   }
+
+  /** Return a table containing version information. */
+  public static String getVersionTable(ServletContext context) {
+    StringBuilder sb = new StringBuilder();
+    final DataNode dataNode = (DataNode) context.getAttribute("datanode");
+    sb.append("<div class='dfstable'><table>");
+    sb.append("<tr><td class='col1'>Version:</td><td>");
+    sb.append(VersionInfo.getVersion() + ", " + VersionInfo.getRevision());
+    sb.append("</td></tr>\n" + "\n  <tr><td class='col1'>Compiled:</td><td>"
+        + VersionInfo.getDate());
+    sb.append(" by " + VersionInfo.getUser() + " from "
+        + VersionInfo.getBranch());
+    if (dataNode != null) {
+      sb.append("</td></tr>\n  <tr><td class='col1'>Cluster ID:</td><td>"
+          + dataNode.getClusterId());
+    }
+    sb.append("</td></tr>\n</table></div>");
+    return sb.toString();
+  }
+
 }

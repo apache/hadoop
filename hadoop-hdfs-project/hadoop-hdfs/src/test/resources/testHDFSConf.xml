@@ -443,6 +443,153 @@
       </comparators>
     </test>
 
+    <test> <!-- TESTED -->
+      <description>ls: whitespaces in an absolute path to a file</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir -p "/a path with/whitespaces in directories"</command>
+        <command>-fs NAMENODE -touchz "/a path with/whitespaces in directories/and file names"</command>
+        <command>-fs NAMENODE -ls "/a path with/whitespaces in directories"</command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -r "/a path with"</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>TokenComparator</type>
+          <expected-output>Found 1 items</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-rw-r--r--( )*1( )*[a-z]*( )*supergroup( )*0( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/a path with/whitespaces in directories/and file names</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!-- TESTED -->
+      <description>ls: whitespaces in a relative path to a file</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir -p "a path with/whitespaces in directories"</command>
+        <command>-fs NAMENODE -touchz "a path with/whitespaces in directories/and file names"</command>
+        <command>-fs NAMENODE -ls "a path with/whitespaces in directories"</command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -r "a path with"</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>TokenComparator</type>
+          <expected-output>Found 1 items</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-rw-r--r--( )*1( )*[a-z]*( )*supergroup( )*0( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*a path with/whitespaces in directories/and file names</expected-output>
+        </comparator>
+      </comparators>
+    </test> 
+
+    <test> <!-- TESTED -->
+      <description>ls: whitespaces in a scheme-qualified path to a file</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir -p "NAMENODE/a path with/whitespaces in directories"</command>
+        <command>-fs NAMENODE -touchz "NAMENODE/a path with/whitespaces in directories/and file names"</command>
+        <command>-fs NAMENODE -ls "NAMENODE/a path with/whitespaces in directories"</command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -r "NAMENODE/a path with"</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>TokenComparator</type>
+          <expected-output>Found 1 items</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-rw-r--r--( )*1( )*[a-z]*( )*supergroup( )*0( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*NAMENODE/a path with/whitespaces in directories/and file names</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!-- TESTED -->
+      <description>ls: whitespaces in an absolute path to a file, using globbing</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir -p "/a path with/whitespaces in directories"</command>
+        <command>-fs NAMENODE -touchz "/a path with/whitespaces in directories/and file names"</command>
+        <command>-fs NAMENODE -touchz "/a path with/whitespaces in directories/and file names 2"</command>
+        <command>-fs NAMENODE -ls "/a*/w*"</command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -r "/a path with"</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>TokenComparator</type>
+          <expected-output>Found 2 items</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-rw-r--r--( )*1( )*[a-z]*( )*supergroup( )*0( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/a path with/whitespaces in directories/and file names</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-rw-r--r--( )*1( )*[a-z]*( )*supergroup( )*0( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/a path with/whitespaces in directories/and file names 2</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!-- TESTED -->
+      <description>ls: whitespaces in a relative path to a file, using globbing</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir -p "a path with/whitespaces in directories"</command>
+        <command>-fs NAMENODE -touchz "a path with/whitespaces in directories/and file names"</command>
+        <command>-fs NAMENODE -touchz "a path with/whitespaces in directories/and file names 2"</command>
+        <command>-fs NAMENODE -ls "a*/w*"</command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -r "a path with"</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>TokenComparator</type>
+          <expected-output>Found 2 items</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-rw-r--r--( )*1( )*[a-z]*( )*supergroup( )*0( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*a path with/whitespaces in directories/and file names</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-rw-r--r--( )*1( )*[a-z]*( )*supergroup( )*0( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*a path with/whitespaces in directories/and file names 2</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!-- TESTED -->
+      <description>ls: whitespaces in a scheme-qualified path to a file, using globbing</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir -p "NAMENODE/a path with/whitespaces in directories"</command>
+        <command>-fs NAMENODE -touchz "NAMENODE/a path with/whitespaces in directories/and file names"</command>
+        <command>-fs NAMENODE -touchz "NAMENODE/a path with/whitespaces in directories/and file names 2"</command>
+        <command>-fs NAMENODE -ls "NAMENODE/a*/w*"</command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -r "NAMENODE/a path with"</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>TokenComparator</type>
+          <expected-output>Found 2 items</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-rw-r--r--( )*1( )*[a-z]*( )*supergroup( )*0( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*NAMENODE/a path with/whitespaces in directories/and file names</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^-rw-r--r--( )*1( )*[a-z]*( )*supergroup( )*0( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*NAMENODE/a path with/whitespaces in directories/and file names 2</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
     <!-- Tests for ls -R -->
     <test> <!-- TESTED -->
       <description>ls: files/directories using absolute path</description>
@@ -6524,23 +6671,23 @@
       <comparators>
         <comparator>
           <type>TokenComparator</type>
-          <expected-output>"data15bytes-15"</expected-output>
+          <expected-output>data15bytes-15</expected-output>
         </comparator>
         <comparator>
           <type>TokenComparator</type>
-          <expected-output>"data30bytes-30"</expected-output>
+          <expected-output>data30bytes-30</expected-output>
         </comparator>
         <comparator>
           <type>TokenComparator</type>
-          <expected-output>"data60bytes-60"</expected-output>
+          <expected-output>data60bytes-60</expected-output>
         </comparator>
         <comparator>
           <type>TokenComparator</type>
-          <expected-output>"data120bytes-120"</expected-output>
+          <expected-output>data120bytes-120</expected-output>
         </comparator>
         <comparator>
           <type>TokenComparator</type>
-          <expected-output>"datadir-0"</expected-output>
+          <expected-output>datadir-0</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -6563,23 +6710,23 @@
       <comparators>
         <comparator>
           <type>TokenComparator</type>
-          <expected-output>"data15bytes-15"</expected-output>
+          <expected-output>data15bytes-15</expected-output>
         </comparator>
         <comparator>
           <type>TokenComparator</type>
-          <expected-output>"data30bytes-30"</expected-output>
+          <expected-output>data30bytes-30</expected-output>
         </comparator>
         <comparator>
           <type>TokenComparator</type>
-          <expected-output>"data60bytes-60"</expected-output>
+          <expected-output>data60bytes-60</expected-output>
         </comparator>
         <comparator>
           <type>TokenComparator</type>
-          <expected-output>"data120bytes-120"</expected-output>
+          <expected-output>data120bytes-120</expected-output>
         </comparator>
         <comparator>
           <type>TokenComparator</type>
-          <expected-output>"datadir-0"</expected-output>
+          <expected-output>datadir-0</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -6665,23 +6812,23 @@
       <comparators>
         <comparator>
           <type>TokenComparator</type>
-          <expected-output>"data15bytes-15"</expected-output>
+          <expected-output>data15bytes-15</expected-output>
         </comparator>
         <comparator>
           <type>TokenComparator</type>
-          <expected-output>"data30bytes-30"</expected-output>
+          <expected-output>data30bytes-30</expected-output>
         </comparator>
         <comparator>
           <type>TokenComparator</type>
-          <expected-output>"data60bytes-60"</expected-output>
+          <expected-output>data60bytes-60</expected-output>
         </comparator>
         <comparator>
           <type>TokenComparator</type>
-          <expected-output>"data120bytes-120"</expected-output>
+          <expected-output>data120bytes-120</expected-output>
         </comparator>
         <comparator>
           <type>TokenComparator</type>
-          <expected-output>"datadir-0"</expected-output>
+          <expected-output>datadir-0</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -6752,23 +6899,23 @@
       <comparators>
         <comparator>
           <type>TokenComparator</type>
-          <expected-output>"data15bytes-15"</expected-output>
+          <expected-output>data15bytes-15</expected-output>
         </comparator>
         <comparator>
           <type>TokenComparator</type>
-          <expected-output>"data30bytes-30"</expected-output>
+          <expected-output>data30bytes-30</expected-output>
         </comparator>
         <comparator>
           <type>TokenComparator</type>
-          <expected-output>"data60bytes-60"</expected-output>
+          <expected-output>data60bytes-60</expected-output>
         </comparator>
         <comparator>
           <type>TokenComparator</type>
-          <expected-output>"data120bytes-120"</expected-output>
+          <expected-output>data120bytes-120</expected-output>
         </comparator>
         <comparator>
           <type>TokenComparator</type>
-          <expected-output>"datadir-0"</expected-output>
+          <expected-output>datadir-0</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -16377,7 +16524,7 @@
       </comparators>
     </test>
   
-  <test> <!--Tested -->
+    <test> <!--Tested -->
       <description>Verifying clrSpaceQuota operation is not permitted in safemode</description>
       <test-commands>
         <command>-fs NAMENODE -mkdir /test </command>

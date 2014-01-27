@@ -44,6 +44,7 @@ public abstract class ServerWebApp extends Server implements ServletContextListe
   private static final String TEMP_DIR = ".temp.dir";
   private static final String HTTP_HOSTNAME = ".http.hostname";
   private static final String HTTP_PORT = ".http.port";
+  public static final String SSL_ENABLED = ".ssl.enabled";
 
   private static ThreadLocal<String> HOME_DIR_TL = new ThreadLocal<String>();
 
@@ -224,5 +225,13 @@ public abstract class ServerWebApp extends Server implements ServletContextListe
   @VisibleForTesting
   public void setAuthority(InetSocketAddress authority) {
     this.authority = authority;
+  }
+
+
+  /**
+   *
+   */
+  public boolean isSslEnabled() {
+    return Boolean.valueOf(System.getProperty(getName() + SSL_ENABLED, "false"));
   }
 }

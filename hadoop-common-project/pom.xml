@@ -20,12 +20,12 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>2.3.0-SNAPSHOT</version>
+    <version>2.4.0-SNAPSHOT</version>
     <relativePath>../hadoop-project</relativePath>
   </parent>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-common-project</artifactId>
-  <version>2.3.0-SNAPSHOT</version>
+  <version>2.4.0-SNAPSHOT</version>
   <description>Apache Hadoop Common Project</description>
   <name>Apache Hadoop Common Project</name>
   <packaging>pom</packaging>
@@ -36,6 +36,7 @@
     <module>hadoop-common</module>
     <module>hadoop-annotations</module>
     <module>hadoop-nfs</module>
+    <module>hadoop-minikdc</module>
   </modules>
 
   <build>

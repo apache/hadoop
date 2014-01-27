@@ -38,6 +38,17 @@ public class JHAdminConfig {
   public static final String DEFAULT_MR_HISTORY_ADDRESS = "0.0.0.0:" +
       DEFAULT_MR_HISTORY_PORT;
   
+  /** The address of the History server admin interface. */
+  public static final String JHS_ADMIN_ADDRESS = MR_HISTORY_PREFIX
+      + "admin.address";
+  public static final int DEFAULT_JHS_ADMIN_PORT = 10033;
+  public static final String DEFAULT_JHS_ADMIN_ADDRESS = "0.0.0.0:"
+      + DEFAULT_JHS_ADMIN_PORT;
+
+  /** ACL of who can be admin of Job history server. */
+  public static final String JHS_ADMIN_ACL = MR_HISTORY_PREFIX + "admin.acl";
+  public static final String DEFAULT_JHS_ADMIN_ACL = "*";
+  
   /** If history cleaning should be enabled or not.*/
   public static final String MR_HISTORY_CLEANER_ENABLE = 
     MR_HISTORY_PREFIX + "cleaner.enable";
@@ -66,6 +77,13 @@ public class JHAdminConfig {
   public static final String MR_HISTORY_DONE_DIR =
     MR_HISTORY_PREFIX + "done-dir";
 
+  /**
+   * Maximum time the History server will wait for the FileSystem for History
+   * files to become available. Default value is -1, forever.
+   */
+  public static final String MR_HISTORY_MAX_START_WAIT_TIME =
+      MR_HISTORY_PREFIX + "maximum-start-wait-time-millis";
+  public static final long DEFAULT_MR_HISTORY_MAX_START_WAIT_TIME = -1;
   /**
    *  Path where history files should be stored after a job finished and before
    *  they are pulled into the job history server.
@@ -152,6 +170,27 @@ public class JHAdminConfig {
    */
   public static final String MR_HISTORY_STORAGE =
     MR_HISTORY_PREFIX + "store.class";
+
+  /**
+   * Enable the history server to store server state and recover server state
+   * upon startup.
+   */
+  public static final String MR_HS_RECOVERY_ENABLE =
+      MR_HISTORY_PREFIX + "recovery.enable";
+  public static final boolean DEFAULT_MR_HS_RECOVERY_ENABLE = false;
+
+  /**
+   * The HistoryServerStateStoreService class to store and recover server state
+   */
+  public static final String MR_HS_STATE_STORE =
+      MR_HISTORY_PREFIX + "recovery.store.class";
+
+  /**
+   * The URI where server state will be stored when
+   * HistoryServerFileSystemStateStoreService is configured as the state store
+   */
+  public static final String MR_HS_FS_STATE_STORE_URI =
+      MR_HISTORY_PREFIX + "recovery.store.fs.uri";
 
   /** Whether to use fixed ports with the minicluster. */
   public static final String MR_HISTORY_MINICLUSTER_FIXED_PORTS = MR_HISTORY_PREFIX

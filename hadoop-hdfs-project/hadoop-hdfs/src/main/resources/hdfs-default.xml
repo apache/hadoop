@@ -137,7 +137,20 @@
 <property>
   <name>dfs.https.enable</name>
   <value>false</value>
+  <description>
+    Deprecated. Use "dfs.http.policy" instead.
+  </description>
+</property>
+
+<property>
+  <name>dfs.http.policy</name>
+  <value>HTTP_ONLY</value>
   <description>Decide if HTTPS(SSL) is supported on HDFS
+    This configures the HTTP endpoint for HDFS daemons:
+      The following values are supported:
+      - HTTP_ONLY : Service is provided only on http
+      - HTTPS_ONLY : Service is provided only on https
+      - HTTP_AND_HTTPS : Service is provided both on http and https
   </description>
 </property>
 
@@ -566,6 +579,22 @@
   <description>The maximum number of files, directories and blocks
   dfs supports. A value of zero indicates no limit to the number
   of objects that dfs supports.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.datanode.registration.ip-hostname-check</name>
+  <value>true</value>
+  <description>
+    If true (the default), then the namenode requires that a connecting
+    datanode's address must be resolved to a hostname.  If necessary, a reverse
+    DNS lookup is performed.  All attempts to register a datanode from an
+    unresolvable address are rejected.
+
+    It is recommended that this setting be left on to prevent accidental
+    registration of datanodes listed by hostname in the excludes file during a
+    DNS outage.  Only set this to false in environments where there is no
+    infrastructure to support reverse DNS lookup.
   </description>
 </property>
 
@@ -1163,7 +1192,7 @@
 
 <property>
   <name>dfs.webhdfs.enabled</name>
-  <value>false</value>
+  <value>true</value>
   <description>
     Enable WebHDFS (REST API) in Namenodes and Datanodes.
   </description>
@@ -1365,11 +1394,14 @@
   <name>dfs.client.cache.readahead</name>
   <value></value>
   <description>
-    Just like dfs.datanode.readahead.bytes, this setting causes the datanode to
+    When using remote reads, this setting causes the datanode to
     read ahead in the block file using posix_fadvise, potentially decreasing
     I/O wait times.  Unlike dfs.datanode.readahead.bytes, this is a client-side
     setting rather than a setting for the entire datanode.  If present, this
     setting will override the DataNode default.
+
+    When using local reads, this setting determines how much readahead we do in
+    BlockReaderLocal.
 
     If the native libraries are not available to the DataNode, this
     configuration has no effect.
@@ -1377,43 +1409,166 @@
 </property>
 
 <property>
-	<name>dfs.namenode.enable.retrycache</name>
-	<value>true</value>
-	<description>
-	  This enables the retry cache on the namenode. Namenode tracks for
-	  non-idempotent requests the corresponding response. If a client retries the
-	  request, the response from the retry cache is sent. Such operations
-	  are tagged with annotation @AtMostOnce in namenode protocols. It is
-	  recommended that this flag be set to true. Setting it to false, will result
-	  in clients getting failure responses to retried request. This flag must 
-	  be enabled in HA setup for transparent fail-overs.
-	  
-	  The entries in the cache have expiration time configurable
-	  using dfs.namenode.retrycache.expirytime.millis.
-	</description>
+  <name>dfs.namenode.enable.retrycache</name>
+  <value>true</value>
+  <description>
+    This enables the retry cache on the namenode. Namenode tracks for
+    non-idempotent requests the corresponding response. If a client retries the
+    request, the response from the retry cache is sent. Such operations
+    are tagged with annotation @AtMostOnce in namenode protocols. It is
+    recommended that this flag be set to true. Setting it to false, will result
+    in clients getting failure responses to retried request. This flag must 
+    be enabled in HA setup for transparent fail-overs.
+
+    The entries in the cache have expiration time configurable
+    using dfs.namenode.retrycache.expirytime.millis.
+  </description>
 </property>
 
 <property>
-	<name>dfs.namenode.retrycache.expirytime.millis</name>
-	<value>600000</value>
-	<description>
-	  The time for which retry cache entries are retained.
-	</description>
+  <name>dfs.namenode.retrycache.expirytime.millis</name>
+  <value>600000</value>
+  <description>
+    The time for which retry cache entries are retained.
+  </description>
 </property>
 
 <property>
-	<name>dfs.namenode.retrycache.heap.percent</name>
-	<value>0.03f</value>
-	<description>
-	  This parameter configures the heap size allocated for retry cache
-	  (excluding the response cached). This corresponds to approximately
-	  4096 entries for every 64MB of namenode process java heap size.
-	  Assuming retry cache entry expiration time (configured using
-	  dfs.namenode.retrycache.expirytime.millis) of 10 minutes, this
-	  enables retry cache to support 7 operations per second sustained
-	  for 10 minutes. As the heap size is increased, the operation rate
-	  linearly increases.
-	</description>
+  <name>dfs.namenode.retrycache.heap.percent</name>
+  <value>0.03f</value>
+  <description>
+    This parameter configures the heap size allocated for retry cache
+    (excluding the response cached). This corresponds to approximately
+    4096 entries for every 64MB of namenode process java heap size.
+    Assuming retry cache entry expiration time (configured using
+    dfs.namenode.retrycache.expirytime.millis) of 10 minutes, this
+    enables retry cache to support 7 operations per second sustained
+    for 10 minutes. As the heap size is increased, the operation rate
+    linearly increases.
+  </description>
+</property>
+
+<property>
+  <name>dfs.client.mmap.cache.size</name>
+  <value>1024</value>
+  <description>
+    When zero-copy reads are used, the DFSClient keeps a cache of recently used
+    memory mapped regions.  This parameter controls the maximum number of
+    entries that we will keep in that cache.
+
+    If this is set to 0, we will not allow mmap.
+
+    The larger this number is, the more file descriptors we will potentially
+    use for memory-mapped files.  mmaped files also use virtual address space.
+    You may need to increase your ulimit virtual address space limits before
+    increasing the client mmap cache size.
+  </description>
+</property>
+
+<property>
+  <name>dfs.client.mmap.cache.timeout.ms</name>
+  <value>900000</value>
+  <description>
+    The minimum length of time that we will keep an mmap entry in the cache
+    between uses.  If an entry is in the cache longer than this, and nobody
+    uses it, it will be removed by a background thread.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.path.based.cache.block.map.allocation.percent</name>
+  <value>0.25</value>
+  <description>
+    The percentage of the Java heap which we will allocate to the cached blocks
+    map.  The cached blocks map is a hash map which uses chained hashing.
+    Smaller maps may be accessed more slowly if the number of cached blocks is
+    large; larger maps will consume more memory.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.max.locked.memory</name>
+  <value>0</value>
+  <description>
+    The amount of memory in bytes to use for caching of block replicas in
+    memory on the datanode. The datanode's maximum locked memory soft ulimit
+    (RLIMIT_MEMLOCK) must be set to at least this value, else the datanode
+    will abort on startup.
+
+    By default, this parameter is set to 0, which disables in-memory caching.
+
+    If the native libraries are not available to the DataNode, this
+    configuration has no effect.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.list.cache.directives.num.responses</name>
+  <value>100</value>
+  <description>
+    This value controls the number of cache directives that the NameNode will
+    send over the wire in response to a listDirectives RPC.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.list.cache.pools.num.responses</name>
+  <value>100</value>
+  <description>
+    This value controls the number of cache pools that the NameNode will
+    send over the wire in response to a listPools RPC.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.path.based.cache.refresh.interval.ms</name>
+  <value>300000</value>
+  <description>
+    The amount of milliseconds between subsequent path cache rescans.  Path
+    cache rescans are when we calculate which blocks should be cached, and on
+    what datanodes.
+
+    By default, this parameter is set to 300000, which is five minutes.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.path.based.cache.retry.interval.ms</name>
+  <value>60000</value>
+  <description>
+    When the NameNode needs to uncache something that is cached, or cache
+    something that is not cached, it must direct the DataNodes to do so by
+    sending a DNA_CACHE or DNA_UNCACHE command in response to a DataNode
+    heartbeat.  This parameter controls how frequently the NameNode will
+    resend these commands.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.fsdatasetcache.max.threads.per.volume</name>
+  <value>4</value>
+  <description>
+    The maximum number of threads per volume to use for caching new data
+    on the datanode. These threads consume both I/O and CPU. This can affect
+    normal datanode operations.
+  </description>
+</property>
+
+<property>
+  <name>dfs.cachereport.intervalMsec</name>
+  <value>10000</value>
+  <description>
+    Determines cache reporting interval in milliseconds.  After this amount of
+    time, the DataNode sends a full report of its cache state to the NameNode.
+    The NameNode uses the cache report to update its map of cached blocks to
+    DataNode locations.
+
+    This configuration has no effect if in-memory caching has been disabled by
+    setting dfs.datanode.max.locked.memory to 0 (which is the default).
+
+    If the native libraries are not available to the DataNode, this
+    configuration has no effect.
+  </description>
 </property>
 
 <property>

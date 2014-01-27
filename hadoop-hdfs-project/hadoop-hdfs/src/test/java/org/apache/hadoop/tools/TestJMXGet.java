@@ -21,10 +21,19 @@ package org.apache.hadoop.tools;
 import static org.apache.hadoop.test.MetricsAsserts.assertGauge;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.PipedInputStream;
+import java.io.PipedOutputStream;
+import java.io.PrintStream;
+import java.lang.management.ManagementFactory;
 import java.util.Random;
+import java.util.Set;
+
+import javax.management.MBeanServerConnection;
+import javax.management.ObjectName;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -99,10 +108,10 @@ public class TestJMXGet {
     writeFile(cluster.getFileSystem(), new Path("/test1"), 2);
 
     JMXGet jmx = new JMXGet();
-    //jmx.setService("*"); // list all hadoop services
-    //jmx.init();
-    //jmx = new JMXGet();
+    String serviceName = "NameNode";
+    jmx.setService(serviceName);
     jmx.init(); // default lists namenode mbeans only
+    assertTrue("error printAllValues", checkPrintAllValues(jmx));
 
     //get some data from different source
     assertEquals(numDatanodes, Integer.parseInt(
@@ -113,8 +122,29 @@ public class TestJMXGet {
         jmx.getValue("NumOpenConnections")));
 
     cluster.shutdown();
+    MBeanServerConnection mbsc = ManagementFactory.getPlatformMBeanServer();
+    ObjectName query = new ObjectName("Hadoop:service=" + serviceName + ",*");
+    Set<ObjectName> names = mbsc.queryNames(query, null);
+    assertTrue("No beans should be registered for " + serviceName, names.isEmpty());
   }
-
+  
+  private static boolean checkPrintAllValues(JMXGet jmx) throws Exception {
+    int size = 0; 
+    byte[] bytes = null;
+    String pattern = "List of all the available keys:";
+    PipedOutputStream pipeOut = new PipedOutputStream();
+    PipedInputStream pipeIn = new PipedInputStream(pipeOut);
+    System.setErr(new PrintStream(pipeOut));
+    jmx.printAllValues();
+    if ((size = pipeIn.available()) != 0) {
+      bytes = new byte[size];
+      pipeIn.read(bytes, 0, bytes.length);            
+    }
+    pipeOut.close();
+    pipeIn.close();
+    return bytes != null ? new String(bytes).contains(pattern) : false;
+  }
+  
   /**
    * test JMX connection to DataNode..
    * @throws Exception 
@@ -128,13 +158,15 @@ public class TestJMXGet {
     writeFile(cluster.getFileSystem(), new Path("/test"), 2);
 
     JMXGet jmx = new JMXGet();
-    //jmx.setService("*"); // list all hadoop services
-    //jmx.init();
-    //jmx = new JMXGet();
-    jmx.setService("DataNode");
+    String serviceName = "DataNode";
+    jmx.setService(serviceName);
     jmx.init();
     assertEquals(fileSize, Integer.parseInt(jmx.getValue("BytesWritten")));
 
     cluster.shutdown();
+    MBeanServerConnection mbsc = ManagementFactory.getPlatformMBeanServer();
+    ObjectName query = new ObjectName("Hadoop:service=" + serviceName + ",*");
+    Set<ObjectName> names = mbsc.queryNames(query, null);
+    assertTrue("No beans should be registered for " + serviceName, names.isEmpty());
   }
 }

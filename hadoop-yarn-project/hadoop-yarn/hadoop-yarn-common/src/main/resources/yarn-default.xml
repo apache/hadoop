@@ -264,15 +264,109 @@
 
   <property>
     <description>Enable RM to recover state after starting. If true, then 
-    yarn.resourcemanager.store.class must be specified</description>
+      yarn.resourcemanager.store.class must be specified. </description>
     <name>yarn.resourcemanager.recovery.enabled</name>
     <value>false</value>
   </property>
 
   <property>
-    <description>The class to use as the persistent store.</description>
+    <description>The class to use as the persistent store.
+
+      If org.apache.hadoop.yarn.server.resourcemanager.recovery.ZKRMStateStore
+      is used, the store is implicitly fenced; meaning a single ResourceManager
+      is able to use the store at any point in time. More details on this
+      implicit fencing, along with setting up appropriate ACLs is discussed
+      under yarn.resourcemanager.zk-state-store.root-node.acl.
+    </description>
     <name>yarn.resourcemanager.store.class</name>
     <value>org.apache.hadoop.yarn.server.resourcemanager.recovery.FileSystemRMStateStore</value>
+  </property>
+
+  <property>
+    <description>The maximum number of completed applications RM state
+    store keeps, less than or equals to ${yarn.resourcemanager.max-completed-applications}.
+    By default, it equals to ${yarn.resourcemanager.max-completed-applications}.
+    This ensures that the applications kept in the state store are consistent with
+    the applications remembered in RM memory.
+    Any values larger than ${yarn.resourcemanager.max-completed-applications} will
+    be reset to ${yarn.resourcemanager.max-completed-applications}.
+    Note that this value impacts the RM recovery performance.Typically,
+    a smaller value indicates better performance on RM recovery.
+    </description>
+    <name>yarn.resourcemanager.state-store.max-completed-applications</name>
+    <value>${yarn.resourcemanager.max-completed-applications}</value>
+  </property>
+
+  <property>
+    <description>Host:Port of the ZooKeeper server to be used by the RM. This
+      must be supplied when using the ZooKeeper based implementation of the
+      RM state store and/or embedded automatic failover in a HA setting.
+    </description>
+    <name>yarn.resourcemanager.zk-address</name>
+    <!--value>127.0.0.1:2181</value-->
+  </property>
+
+  <property>
+    <description>Number of times RM tries to connect to ZooKeeper.</description>
+    <name>yarn.resourcemanager.zk-num-retries</name>
+    <value>500</value>
+  </property>
+
+  <property>
+    <description>Retry interval in milliseconds when connecting to ZooKeeper.
+    </description>
+    <name>yarn.resourcemanager.zk-retry-interval-ms</name>
+    <value>2000</value>
+  </property>
+
+  <property>
+    <description>Full path of the ZooKeeper znode where RM state will be
+    stored. This must be supplied when using
+    org.apache.hadoop.yarn.server.resourcemanager.recovery.ZKRMStateStore
+    as the value for yarn.resourcemanager.store.class</description>
+    <name>yarn.resourcemanager.zk-state-store.parent-path</name>
+    <value>/rmstore</value>
+  </property>
+
+  <property>
+    <description>ZooKeeper session timeout in milliseconds. Session expiration
+    is managed by the ZooKeeper cluster itself, not by the client. This value is
+    used by the cluster to determine when the client's session expires.
+    Expirations happens when the cluster does not hear from the client within
+    the specified session timeout period (i.e. no heartbeat).</description>
+    <name>yarn.resourcemanager.zk-timeout-ms</name>
+    <value>10000</value>
+  </property>
+
+  <property>
+    <description>ACL's to be used for ZooKeeper znodes.</description>
+    <name>yarn.resourcemanager.zk-acl</name>
+    <value>world:anyone:rwcda</value>
+  </property>
+
+  <property>
+    <description>
+      ACLs to be used for the root znode when using ZKRMStateStore in a HA
+      scenario for fencing.
+
+      ZKRMStateStore supports implicit fencing to allow a single
+      ResourceManager write-access to the store. For fencing, the
+      ResourceManagers in the cluster share read-write-admin privileges on the
+      root node, but the Active ResourceManager claims exclusive create-delete
+      permissions.
+
+      By default, when this property is not set, we use the ACLs from
+      yarn.resourcemanager.zk-acl for shared admin access and
+      rm-address:random-number for username-based exclusive create-delete
+      access.
+
+      This property allows users to set ACLs of their choice instead of using
+      the default mechanism. For fencing to work, the ACLs should be
+      carefully set differently on each ResourceManger such that all the
+      ResourceManagers have shared admin access and the Active ResourceManger
+      takes over (exclusively) the create-delete access.
+    </description>
+    <name>yarn.resourcemanager.zk-state-store.root-node.acl</name>
   </property>
 
   <property>
@@ -283,6 +377,130 @@
     <name>yarn.resourcemanager.fs.state-store.uri</name>
     <value>${hadoop.tmp.dir}/yarn/system/rmstore</value>
     <!--value>hdfs://localhost:9000/rmstore</value-->
+  </property>
+
+  <property>
+    <description>hdfs client retry policy specification. hdfs client retry
+    is always enabled. Specified in pairs of sleep-time and number-of-retries
+    and (t0, n0), (t1, n1), ..., the first n0 retries sleep t0 milliseconds on
+    average, the following n1 retries sleep t1 milliseconds on average, and so on.
+    </description>
+    <name>yarn.resourcemanager.fs.state-store.retry-policy-spec</name>
+    <value>2000, 500</value>
+  </property>
+
+  <property>
+    <description>Enable RM high-availability. When enabled,
+      (1) The RM starts in the Standby mode by default, and transitions to
+      the Active mode when prompted to.
+      (2) The nodes in the RM ensemble are listed in
+      yarn.resourcemanager.ha.rm-ids
+      (3) The id of each RM comes from yarn.resourcemanager.ha.id
+      (4) The actual physical addresses come from the configs of the pattern
+      - {rpc-config}.{id}</description>
+    <name>yarn.resourcemanager.ha.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>Enable automatic failover.</description>
+    <name>yarn.resourcemanager.ha.automatic-failover.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>Enable embedded automatic failover. The embedded elector
+      relies on the RM state store to handle fencing, and is primarily intended
+      to be used in conjunction with ZKRMStateStore.</description>
+    <name>yarn.resourcemanager.ha.automatic-failover.embedded</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>The base znode path to use for storing leader information,
+      when using ZooKeeper based leader election.</description>
+    <name>yarn.resourcemanager.ha.automatic-failover.zk-base-path</name>
+    <value>/yarn-leader-election</value>
+  </property>
+
+  <property>
+    <description>Name of the cluster. In a HA setting,
+      this is used to ensure the RM participates in leader
+      election fo this cluster and ensures it does not affect
+      other clusters</description>
+    <name>yarn.resourcemanager.cluster-id</name>
+    <!--value>yarn-cluster</value-->
+  </property>
+
+  <property>
+    <description>The list of RM nodes in the cluster when HA is
+      enabled. See description of yarn.resourcemanager.ha
+      .enabled for full details on how this is used.</description>
+    <name>yarn.resourcemanager.ha.rm-ids</name>
+    <!--value>rm1,rm2</value-->
+  </property>
+
+  <property>
+    <description>The id (string) of the current RM. When HA is enabled, this
+      is a required config. See description of yarn.resourcemanager.ha.enabled
+      for full details on how this is used.</description>
+    <name>yarn.resourcemanager.ha.id</name>
+    <!--value>rm1</value-->
+  </property>
+
+  <property>
+    <description>When HA is enabled, the class to be used by Clients, AMs and
+      NMs to failover to the Active RM. It should extend
+      org.apache.hadoop.yarn.client.RMFailoverProxyProvider</description>
+    <name>yarn.client.failover-proxy-provider</name>
+    <value>org.apache.hadoop.yarn.client.ConfiguredRMFailoverProxyProvider</value>
+  </property>
+
+  <property>
+    <description>When HA is enabled, the max number of times
+      FailoverProxyProvider should attempt failover. When set,
+      this overrides the yarn.resourcemanager.connect.max-wait.ms. When
+      not set, this is inferred from
+      yarn.resourcemanager.connect.max-wait.ms.</description>
+    <name>yarn.client.failover-max-attempts</name>
+    <!--value>15</value-->
+  </property>
+
+  <property>
+    <description>When HA is enabled, the sleep base (in milliseconds) to be
+      used for calculating the exponential delay between failovers. When set,
+      this overrides the yarn.resourcemanager.connect.* settings. When
+      not set, yarn.resourcemanager.connect.retry-interval.ms is used instead.
+    </description>
+    <name>yarn.client.failover-sleep-base-ms</name>
+    <!--value>500</value-->
+  </property>
+
+  <property>
+    <description>When HA is enabled, the maximum sleep time (in milliseconds)
+      between failovers. When set, this overrides the
+      yarn.resourcemanager.connect.* settings. When not set,
+      yarn.resourcemanager.connect.retry-interval.ms is used instead.</description>
+    <name>yarn.client.failover-sleep-max-ms</name>
+    <!--value>15000</value-->
+  </property>
+
+  <property>
+    <description>When HA is enabled, the number of retries per
+      attempt to connect to a ResourceManager. In other words,
+      it is the ipc.client.connect.max.retries to be used during
+      failover attempts</description>
+    <name>yarn.client.failover-retries</name>
+    <value>0</value>
+  </property>
+
+  <property>
+    <description>When HA is enabled, the number of retries per
+      attempt to connect to a ResourceManager on socket timeouts. In other
+      words, it is the ipc.client.connect.max.retries.on.timeouts to be used
+      during failover attempts</description>
+    <name>yarn.client.failover-retries-on-socket-timeouts</name>
+    <value>0</value>
   </property>
 
   <property>
@@ -320,6 +538,14 @@
     <description>The heart-beat interval in milliseconds for every NodeManager in the cluster.</description>
     <name>yarn.resourcemanager.nodemanagers.heartbeat-interval-ms</name>
     <value>1000</value>
+  </property>
+
+  <property>
+    <description>The minimum allowed version of a connecting nodemanager.  The valid values are
+      NONE (no version checking), EqualToRM (the nodemanager's version is equal to
+      or greater than the RM version), or a Version String.</description>
+    <name>yarn.resourcemanager.nodemanager.minimum.version</name>
+    <value>NONE</value>
   </property>
 
   <property>
@@ -657,6 +883,21 @@
   </property>
 
   <property>
+    <description>The UNIX user that containers will run as when Linux-container-executor
+    is used in nonsecure mode (a use case for this is using cgroups).</description>
+    <name>yarn.nodemanager.linux-container-executor.nonsecure-mode.local-user</name>
+    <value>nobody</value>
+  </property>
+
+  <property>
+    <description>The allowed pattern for UNIX user names enforced by
+    Linux-container-executor when used in nonsecure mode (use case for this
+    is using cgroups). The default value is taken from /usr/sbin/adduser</description>
+    <name>yarn.nodemanager.linux-container-executor.nonsecure-mode.user-pattern</name>
+    <value>^[_.A-Za-z0-9][-@_.A-Za-z0-9]{0,255}?[$]?$</value>
+  </property>
+
+  <property>
     <description>T-file compression types used to compress aggregated logs.</description>
     <name>yarn.nodemanager.log-aggregation.compression-type</name>
     <value>none</value>
@@ -699,6 +940,14 @@
     <description>Time interval, in seconds, between each NM attempt to connect to RM.</description>
     <name>yarn.nodemanager.resourcemanager.connect.retry_interval.secs</name>
     <value>30</value>
+  </property>
+
+  <property>
+    <description>The minimum allowed version of a resourcemanager that a nodemanager will connect to.  
+      The valid values are NONE (no version checking), EqualToNM (the resourcemanager's version is 
+      equal to or greater than the NM version), or a Version String.</description>
+    <name>yarn.nodemanager.resourcemanager.minimum.version</name>
+    <value>NONE</value>
   </property>
 
   <property>
@@ -794,10 +1043,10 @@
 
   <!-- Other configuration -->
   <property>
-    <description>The interval of the yarn client's querying application state
-    after application submission. The unit is millisecond.</description>
-    <name>yarn.client.app-submission.poll-interval</name>
-    <value>1000</value>
+    <description>The interval that the yarn client library uses to poll the
+    completion status of the asynchronous API of application client protocol.
+    </description>
+    <name>yarn.client.application-client-protocol.poll-interval-ms</name>
+    <value>200</value>
   </property>
-
 </configuration>

@@ -29,12 +29,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
 
-@SuppressWarnings("deprecation")
 public class TestSymlinkHdfsDisable {
-  // Re-enable symlinks for tests, see HADOOP-10020 and HADOOP-10052
-  static {
-    FileSystem.enableSymlinks();
-  }
 
   @Test(timeout=60000)
   public void testSymlinkHdfsDisable() throws Exception {

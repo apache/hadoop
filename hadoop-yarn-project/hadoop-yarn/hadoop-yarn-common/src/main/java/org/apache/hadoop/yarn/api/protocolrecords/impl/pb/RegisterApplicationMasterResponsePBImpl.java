@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.api.protocolrecords.impl.pb;
 
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -29,10 +30,13 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
+import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.impl.pb.ContainerPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ProtoUtils;
 import org.apache.hadoop.yarn.api.records.impl.pb.ResourcePBImpl;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationACLMapProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.ContainerProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.RegisterApplicationMasterResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.RegisterApplicationMasterResponseProtoOrBuilder;
@@ -52,6 +56,7 @@ public class RegisterApplicationMasterResponsePBImpl extends
 
   private Resource maximumResourceCapability;
   private Map<ApplicationAccessType, String> applicationACLS = null;
+  private List<Container> containersFromPreviousAttempt = null;
 
   public RegisterApplicationMasterResponsePBImpl() {
     builder = RegisterApplicationMasterResponseProto.newBuilder();
@@ -104,6 +109,9 @@ public class RegisterApplicationMasterResponsePBImpl extends
     }
     if (this.applicationACLS != null) {
       addApplicationACLs();
+    }
+    if (this.containersFromPreviousAttempt != null) {
+      addRunningContainersToProto();
     }
   }
 
@@ -226,6 +234,62 @@ public class RegisterApplicationMasterResponsePBImpl extends
         ByteBuffer.wrap(builder.getClientToAmTokenMasterKey().toByteArray());
     return key;
   }
+
+  @Override
+  public List<Container> getContainersFromPreviousAttempt() {
+    if (this.containersFromPreviousAttempt != null) {
+      return this.containersFromPreviousAttempt;
+    }
+    initRunningContainersList();
+    return this.containersFromPreviousAttempt;
+  }
+
+  @Override
+  public void setContainersFromPreviousAttempt(final List<Container> containers) {
+    if (containers == null) {
+      return;
+    }
+    this.containersFromPreviousAttempt = new ArrayList<Container>();
+    this.containersFromPreviousAttempt.addAll(containers);
+  }
+  
+  @Override
+  public String getQueue() {
+    RegisterApplicationMasterResponseProtoOrBuilder p = viaProto ? proto : builder;
+    if (!p.hasQueue()) {
+      return null;
+    }
+    return p.getQueue();
+  }
+  
+  @Override
+  public void setQueue(String queue) {
+    maybeInitBuilder();
+    if (queue == null) {
+      builder.clearQueue();
+    } else {
+      builder.setQueue(queue);
+    }
+  }
+
+  private void initRunningContainersList() {
+    RegisterApplicationMasterResponseProtoOrBuilder p = viaProto ? proto : builder;
+    List<ContainerProto> list = p.getContainersFromPreviousAttemptList();
+    containersFromPreviousAttempt = new ArrayList<Container>();
+    for (ContainerProto c : list) {
+      containersFromPreviousAttempt.add(convertFromProtoFormat(c));
+    }
+  }
+
+  private void addRunningContainersToProto() {
+    maybeInitBuilder();
+    builder.clearContainersFromPreviousAttempt();
+    List<ContainerProto> list = new ArrayList<ContainerProto>();
+    for (Container c : containersFromPreviousAttempt) {
+      list.add(convertToProtoFormat(c));
+    }
+    builder.addAllContainersFromPreviousAttempt(list);
+  }
   
   private Resource convertFromProtoFormat(ResourceProto resource) {
     return new ResourcePBImpl(resource);
@@ -235,4 +299,11 @@ public class RegisterApplicationMasterResponsePBImpl extends
     return ((ResourcePBImpl)resource).getProto();
   }
 
+  private ContainerPBImpl convertFromProtoFormat(ContainerProto p) {
+    return new ContainerPBImpl(p);
+  }
+
+  private ContainerProto convertToProtoFormat(Container t) {
+    return ((ContainerPBImpl) t).getProto();
+  }
 }

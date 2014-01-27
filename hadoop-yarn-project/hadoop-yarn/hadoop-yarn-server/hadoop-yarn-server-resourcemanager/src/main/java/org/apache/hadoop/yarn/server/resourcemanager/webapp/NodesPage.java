@@ -76,6 +76,7 @@ class NodesPage extends RmView {
           th(".containers", "Containers").
           th(".mem", "Mem Used").
           th(".mem", "Mem Avail").
+          th(".nodeManagerVersion", "Version").
           _()._().
           tbody();
       NodeState stateFilter = null;
@@ -129,6 +130,7 @@ class NodesPage extends RmView {
               _(StringUtils.byteDesc(usedMemory * BYTES_IN_MB))._().
             td().br().$title(String.valueOf(usedMemory))._().
               _(StringUtils.byteDesc(availableMemory * BYTES_IN_MB))._().
+            td(ni.getNodeManagerVersion()).
             _();
       }
       tbody._()._();

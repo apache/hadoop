@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ADMIN;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.HashMap;
@@ -36,11 +36,11 @@ import org.apache.hadoop.hdfs.web.AuthFilter;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.hdfs.web.resources.Param;
 import org.apache.hadoop.hdfs.web.resources.UserParam;
+import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.authorize.AccessControlList;
 
 /**
  * Encapsulates the HTTP server started by the NameNode. 
@@ -59,119 +59,129 @@ public class NameNodeHttpServer {
   public static final String FSIMAGE_ATTRIBUTE_KEY = "name.system.image";
   protected static final String NAMENODE_ATTRIBUTE_KEY = "name.node";
   public static final String STARTUP_PROGRESS_ATTRIBUTE_KEY = "startup.progress";
-  
-  public NameNodeHttpServer(
-      Configuration conf,
-      NameNode nn,
+
+  NameNodeHttpServer(Configuration conf, NameNode nn,
       InetSocketAddress bindAddress) {
     this.conf = conf;
     this.nn = nn;
     this.bindAddress = bindAddress;
   }
-  
-  public void start() throws IOException {
+
+  private void initWebHdfs(Configuration conf) throws IOException {
+    if (WebHdfsFileSystem.isEnabled(conf, HttpServer.LOG)) {
+      // set user pattern based on configuration file
+      UserParam.setUserPattern(conf.get(DFSConfigKeys.DFS_WEBHDFS_USER_PATTERN_KEY, DFSConfigKeys.DFS_WEBHDFS_USER_PATTERN_DEFAULT));
+      //add SPNEGO authentication filter for webhdfs
+      final String name = "SPNEGO";
+      final String classname = AuthFilter.class.getName();
+      final String pathSpec = WebHdfsFileSystem.PATH_PREFIX + "/*";
+      Map<String, String> params = getAuthFilterParams(conf);
+      HttpServer.defineFilter(httpServer.getWebAppContext(), name, classname, params,
+          new String[]{pathSpec});
+      HttpServer.LOG.info("Added filter '" + name + "' (class=" + classname + ")");
+
+      // add webhdfs packages
+      httpServer.addJerseyResourcePackage(
+          NamenodeWebHdfsMethods.class.getPackage().getName()
+              + ";" + Param.class.getPackage().getName(), pathSpec);
+    }
+  }
+
+  /**
+   * @see DFSUtil#getHttpPolicy(org.apache.hadoop.conf.Configuration)
+   * for information related to the different configuration options and
+   * Http Policy is decided.
+   */
+  void start() throws IOException {
+    HttpConfig.Policy policy = DFSUtil.getHttpPolicy(conf);
     final String infoHost = bindAddress.getHostName();
-    int infoPort = bindAddress.getPort();
 
-    httpServer = new HttpServer("hdfs", infoHost, infoPort,
-                                infoPort == 0, conf,
-                                new AccessControlList(conf.get(DFS_ADMIN, " "))) {
-      {
-        // Add SPNEGO support to NameNode
-        if (UserGroupInformation.isSecurityEnabled()) {
-          initSpnego(conf,
-              DFSConfigKeys.DFS_NAMENODE_INTERNAL_SPNEGO_USER_NAME_KEY,
-              DFSUtil.getSpnegoKeytabKey(conf,
-                  DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY));
-        }
-        if (WebHdfsFileSystem.isEnabled(conf, LOG)) {
-          // set user pattern based on configuration file
-          UserParam.setUserPattern(conf.get(DFSConfigKeys.DFS_WEBHDFS_USER_PATTERN_KEY, DFSConfigKeys.DFS_WEBHDFS_USER_PATTERN_DEFAULT));
+    final InetSocketAddress httpAddr = bindAddress;
+    final String httpsAddrString = conf.get(
+        DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY,
+        DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_DEFAULT);
+    InetSocketAddress httpsAddr = NetUtils.createSocketAddr(httpsAddrString);
 
-          // add SPNEGO authentication filter for webhdfs
-          final String name = "SPNEGO";
-          final String classname = AuthFilter.class.getName();
-          final String pathSpec = WebHdfsFileSystem.PATH_PREFIX + "/*";
-          Map<String, String> params = getAuthFilterParams(conf);
-          defineFilter(webAppContext, name, classname, params,
-                       new String[]{pathSpec});
-          LOG.info("Added filter '" + name + "' (class=" + classname + ")");
+    HttpServer.Builder builder = DFSUtil.httpServerTemplateForNNAndJN(conf,
+        httpAddr, httpsAddr, "hdfs",
+        DFSConfigKeys.DFS_NAMENODE_INTERNAL_SPNEGO_USER_NAME_KEY,
+        DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY);
 
-          // add webhdfs packages
-          addJerseyResourcePackage(
-            NamenodeWebHdfsMethods.class.getPackage().getName()
-            + ";" + Param.class.getPackage().getName(), pathSpec);
-        }
-      }
+    httpServer = builder.build();
 
-      private Map<String, String> getAuthFilterParams(Configuration conf)
-        throws IOException {
-        Map<String, String> params = new HashMap<String, String>();
-        String principalInConf = conf
-          .get(DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY);
-        if (principalInConf != null && !principalInConf.isEmpty()) {
-          params
-            .put(
-              DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY,
-              SecurityUtil.getServerPrincipal(principalInConf,
-                                              bindAddress.getHostName()));
-        } else if (UserGroupInformation.isSecurityEnabled()) {
-          LOG.error("WebHDFS and security are enabled, but configuration property '" +
-                    DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY +
-                    "' is not set.");
-        }
-        String httpKeytab = conf.get(DFSUtil.getSpnegoKeytabKey(conf,
-            DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY));
-        if (httpKeytab != null && !httpKeytab.isEmpty()) {
-          params.put(
-            DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_KEYTAB_KEY,
-            httpKeytab);
-        } else if (UserGroupInformation.isSecurityEnabled()) {
-          LOG.error("WebHDFS and security are enabled, but configuration property '" +
-                    DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_KEYTAB_KEY +
-                    "' is not set.");
-        }
-        return params;
-      }
-    };
-
-    boolean certSSL = conf.getBoolean(DFSConfigKeys.DFS_HTTPS_ENABLE_KEY, false);
-    if (certSSL) {
-      boolean needClientAuth = conf.getBoolean("dfs.https.need.client.auth", false);
-      httpsAddress = NetUtils.createSocketAddr(conf.get(
-          DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY,
-          DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_DEFAULT));
-
-      Configuration sslConf = new Configuration(false);
-      sslConf.addResource(conf.get(
-          DFSConfigKeys.DFS_SERVER_HTTPS_KEYSTORE_RESOURCE_KEY,
-          DFSConfigKeys.DFS_SERVER_HTTPS_KEYSTORE_RESOURCE_DEFAULT));
-      httpServer.addSslListener(httpsAddress, sslConf, needClientAuth);
+    if (policy.isHttpsEnabled()) {
       // assume same ssl port for all datanodes
       InetSocketAddress datanodeSslPort = NetUtils.createSocketAddr(conf.get(
-        DFSConfigKeys.DFS_DATANODE_HTTPS_ADDRESS_KEY, infoHost + ":" + 50475));
-      httpServer.setAttribute(DFSConfigKeys.DFS_DATANODE_HTTPS_PORT_KEY, datanodeSslPort
-        .getPort());
+          DFSConfigKeys.DFS_DATANODE_HTTPS_ADDRESS_KEY, infoHost + ":"
+              + DFSConfigKeys.DFS_DATANODE_HTTPS_DEFAULT_PORT));
+      httpServer.setAttribute(DFSConfigKeys.DFS_DATANODE_HTTPS_PORT_KEY,
+          datanodeSslPort.getPort());
     }
+
+    initWebHdfs(conf);
+
     httpServer.setAttribute(NAMENODE_ATTRIBUTE_KEY, nn);
     httpServer.setAttribute(JspHelper.CURRENT_CONF, conf);
     setupServlets(httpServer, conf);
     httpServer.start();
-    httpAddress = new InetSocketAddress(bindAddress.getAddress(), httpServer.getPort());
+
+    int connIdx = 0;
+    if (policy.isHttpEnabled()) {
+      httpAddress = httpServer.getConnectorAddress(connIdx++);
+      conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY,
+          NetUtils.getHostPortString(httpAddress));
+    }
+
+    if (policy.isHttpsEnabled()) {
+      httpsAddress = httpServer.getConnectorAddress(connIdx);
+      conf.set(DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY,
+          NetUtils.getHostPortString(httpsAddress));
+    }
+  }
+  
+  private Map<String, String> getAuthFilterParams(Configuration conf)
+      throws IOException {
+    Map<String, String> params = new HashMap<String, String>();
+    String principalInConf = conf
+        .get(DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY);
+    if (principalInConf != null && !principalInConf.isEmpty()) {
+      params
+          .put(
+              DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY,
+              SecurityUtil.getServerPrincipal(principalInConf,
+                                              bindAddress.getHostName()));
+    } else if (UserGroupInformation.isSecurityEnabled()) {
+      HttpServer.LOG.error(
+          "WebHDFS and security are enabled, but configuration property '" +
+          DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY +
+          "' is not set.");
+    }
+    String httpKeytab = conf.get(DFSUtil.getSpnegoKeytabKey(conf,
+        DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY));
+    if (httpKeytab != null && !httpKeytab.isEmpty()) {
+      params.put(
+          DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_KEYTAB_KEY,
+          httpKeytab);
+    } else if (UserGroupInformation.isSecurityEnabled()) {
+      HttpServer.LOG.error(
+          "WebHDFS and security are enabled, but configuration property '" +
+          DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_KEYTAB_KEY +
+          "' is not set.");
+    }
+    return params;
   }
 
-
-  public void stop() throws Exception {
+  void stop() throws Exception {
     if (httpServer != null) {
       httpServer.stop();
     }
   }
 
-  public InetSocketAddress getHttpAddress() {
+  InetSocketAddress getHttpAddress() {
     return httpAddress;
   }
 
-  public InetSocketAddress getHttpsAddress() {
+  InetSocketAddress getHttpsAddress() {
     return httpsAddress;
   }
 
@@ -180,7 +190,7 @@ public class NameNodeHttpServer {
    * 
    * @param fsImage FSImage to set
    */
-  public void setFSImage(FSImage fsImage) {
+  void setFSImage(FSImage fsImage) {
     httpServer.setAttribute(FSIMAGE_ATTRIBUTE_KEY, fsImage);
   }
 
@@ -189,7 +199,7 @@ public class NameNodeHttpServer {
    * 
    * @param nameNodeAddress InetSocketAddress to set
    */
-  public void setNameNodeAddress(InetSocketAddress nameNodeAddress) {
+  void setNameNodeAddress(InetSocketAddress nameNodeAddress) {
     httpServer.setAttribute(NAMENODE_ADDRESS_ATTRIBUTE_KEY,
         NetUtils.getConnectAddress(nameNodeAddress));
   }
@@ -199,7 +209,7 @@ public class NameNodeHttpServer {
    * 
    * @param prog StartupProgress to set
    */
-  public void setStartupProgress(StartupProgress prog) {
+  void setStartupProgress(StartupProgress prog) {
     httpServer.setAttribute(STARTUP_PROGRESS_ATTRIBUTE_KEY, prog);
   }
 
@@ -229,7 +239,7 @@ public class NameNodeHttpServer {
         ContentSummaryServlet.class, false);
   }
 
-  public static FSImage getFsImageFromContext(ServletContext context) {
+  static FSImage getFsImageFromContext(ServletContext context) {
     return (FSImage)context.getAttribute(FSIMAGE_ATTRIBUTE_KEY);
   }
 
@@ -237,7 +247,7 @@ public class NameNodeHttpServer {
     return (NameNode)context.getAttribute(NAMENODE_ATTRIBUTE_KEY);
   }
 
-  public static Configuration getConfFromContext(ServletContext context) {
+  static Configuration getConfFromContext(ServletContext context) {
     return (Configuration)context.getAttribute(JspHelper.CURRENT_CONF);
   }
 
@@ -253,7 +263,7 @@ public class NameNodeHttpServer {
    * @param context ServletContext to get
    * @return StartupProgress associated with context
    */
-  public static StartupProgress getStartupProgressFromContext(
+  static StartupProgress getStartupProgressFromContext(
       ServletContext context) {
     return (StartupProgress)context.getAttribute(STARTUP_PROGRESS_ATTRIBUTE_KEY);
   }

@@ -17,21 +17,6 @@
  */
 package org.apache.hadoop.fs;
 
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URLDecoder;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -40,6 +25,14 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.util.LineReader;
 import org.apache.hadoop.util.Progressable;
+
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URLDecoder;
+import java.util.*;
 
 /**
  * This is an implementation of the Hadoop Archive 
@@ -671,20 +664,15 @@ public class HarFileSystem extends FileSystem {
    */
   @Override
   public FileStatus getFileStatus(Path f) throws IOException {
-    Path p = makeQualified(f);
-    if (p.toUri().getPath().length() < archivePath.toString().length()) {
-      // still in the source file system
-      return fs.getFileStatus(new Path(p.toUri().getPath()));
-    }
-
-    HarStatus hstatus = getFileHarStatus(p);
+    HarStatus hstatus = getFileHarStatus(f);
     return toFileStatus(hstatus, null);
   }
 
   private HarStatus getFileHarStatus(Path f) throws IOException {
     // get the fs DataInputStream for the underlying file
     // look up the index.
-    Path harPath = getPathInHar(f);
+    Path p = makeQualified(f);
+    Path harPath = getPathInHar(p);
     if (harPath == null) {
       throw new IOException("Invalid file name: " + f + " in " + uri);
     }
@@ -801,11 +789,6 @@ public class HarFileSystem extends FileSystem {
     // to the client
     List<FileStatus> statuses = new ArrayList<FileStatus>();
     Path tmpPath = makeQualified(f);
-    if (tmpPath.toUri().getPath().length() < archivePath.toString().length()) {
-      // still in the source file system
-      return fs.listStatus(new Path(tmpPath.toUri().getPath()));
-    }
-    
     Path harPath = getPathInHar(tmpPath);
     HarStatus hstatus = metadata.archive.get(harPath);
     if (hstatus == null) {
@@ -919,11 +902,15 @@ public class HarFileSystem extends FileSystem {
       private long position, start, end;
       //The underlying data input stream that the
       // underlying filesystem will return.
-      private FSDataInputStream underLyingStream;
+      private final FSDataInputStream underLyingStream;
       //one byte buffer
-      private byte[] oneBytebuff = new byte[1];
+      private final byte[] oneBytebuff = new byte[1];
+      
       HarFsInputStream(FileSystem fs, Path path, long start,
           long length, int bufferSize) throws IOException {
+        if (length < 0) {
+          throw new IllegalArgumentException("Negative length ["+length+"]");
+        }
         underLyingStream = fs.open(path, bufferSize);
         underLyingStream.seek(start);
         // the start of this file in the part file
@@ -937,7 +924,7 @@ public class HarFileSystem extends FileSystem {
       @Override
       public synchronized int available() throws IOException {
         long remaining = end - underLyingStream.getPos();
-        if (remaining > (long)Integer.MAX_VALUE) {
+        if (remaining > Integer.MAX_VALUE) {
           return Integer.MAX_VALUE;
         }
         return (int) remaining;
@@ -969,10 +956,14 @@ public class HarFileSystem extends FileSystem {
         return (ret <= 0) ? -1: (oneBytebuff[0] & 0xff);
       }
       
+      // NB: currently this method actually never executed becusae
+      // java.io.DataInputStream.read(byte[]) directly delegates to 
+      // method java.io.InputStream.read(byte[], int, int).
+      // However, potentially it can be invoked, so leave it intact for now.
       @Override
       public synchronized int read(byte[] b) throws IOException {
-        int ret = read(b, 0, b.length);
-        if (ret != -1) {
+        final int ret = read(b, 0, b.length);
+        if (ret > 0) {
           position += ret;
         }
         return ret;
@@ -1001,15 +992,19 @@ public class HarFileSystem extends FileSystem {
       public synchronized long skip(long n) throws IOException {
         long tmpN = n;
         if (tmpN > 0) {
-          if (position + tmpN > end) {
-            tmpN = end - position;
-          }
+          final long actualRemaining = end - position; 
+          if (tmpN > actualRemaining) {
+            tmpN = actualRemaining;
+          }   
           underLyingStream.seek(tmpN + position);
           position += tmpN;
           return tmpN;
-        }
-        return (tmpN < 0)? -1 : 0;
-      }
+        }   
+        // NB: the contract is described in java.io.InputStream.skip(long):
+        // this method returns the number of bytes actually skipped, so,
+        // the return value should never be negative. 
+        return 0;
+      }   
       
       @Override
       public synchronized long getPos() throws IOException {
@@ -1017,12 +1012,21 @@ public class HarFileSystem extends FileSystem {
       }
       
       @Override
-      public synchronized void seek(long pos) throws IOException {
-        if (pos < 0 || (start + pos > end)) {
-          throw new IOException("Failed to seek: EOF");
-        }
+      public synchronized void seek(final long pos) throws IOException {
+        validatePosition(pos);
         position = start + pos;
         underLyingStream.seek(position);
+      }
+
+      private void validatePosition(final long pos) throws IOException {
+        if (pos < 0) {
+          throw new IOException("Negative position: "+pos);
+         }
+         final long length = end - start;
+         if (pos > length) {
+           throw new IOException("Position behind the end " +
+               "of the stream (length = "+length+"): " + pos);
+         }
       }
 
       @Override
@@ -1041,7 +1045,12 @@ public class HarFileSystem extends FileSystem {
       throws IOException {
         int nlength = length;
         if (start + nlength + pos > end) {
-          nlength = (int) (end - (start + pos));
+          // length corrected to the real remaining length:
+          nlength = (int) (end - start - pos);
+        }
+        if (nlength <= 0) {
+          // EOS:
+          return -1;
         }
         return underLyingStream.read(pos + start , b, offset, nlength);
       }
