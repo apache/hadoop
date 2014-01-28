@@ -457,6 +457,9 @@ Branch YARN-321: Generic ApplicationHistoryService
   YARN-962. Fixed bug in application-history proto file and renamed it be just
   a client proto file. (Zhijie Shen via vinodkv)
 
+  YARN-947. Implementing the data objects to be used by the History reader
+  and writer interfaces. (Zhijie Shen via vinodkv)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
