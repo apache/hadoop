@@ -15,14 +15,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.yarn.server.applicationhistoryservice.webapp;
 
-package org.apache.hadoop.yarn.server.applicationhistoryservice;
+import static org.apache.hadoop.yarn.util.StringHelper.join;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.yarn.server.api.ApplicationContext;
+import org.apache.hadoop.yarn.server.webapp.ContainerBlock;
+import org.apache.hadoop.yarn.webapp.SubView;
+import org.apache.hadoop.yarn.webapp.YarnWebParams;
 
-@InterfaceAudience.Public
-@InterfaceStability.Unstable
-public interface ApplicationHistoryManager extends ApplicationContext {
-}
+public class ContainerPage extends AHSView {
+
+  @Override
+  protected void preHead(Page.HTML<_> html) {
+    commonPreHead(html);
+
+    String containerId = $(YarnWebParams.CONTAINER_ID);
+    set(TITLE, containerId.isEmpty() ?
+        "Bad request: missing container ID" : join(
+        "Container ", $(YarnWebParams.CONTAINER_ID)));
+  }
+
+  @Override
+  protected Class<? extends SubView> content() {
+    return ContainerBlock.class;
+  }}

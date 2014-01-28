@@ -1065,6 +1065,24 @@
   <!-- Application History Service's Configuration-->
 
   <property>
+    <description>The hostname of the AHS.</description>
+    <name>yarn.ahs.hostname</name>
+    <value>0.0.0.0</value>
+  </property>
+
+  <property>
+    <description>The http address of the AHS web application.</description>
+    <name>yarn.ahs.webapp.address</name>
+    <value>${yarn.ahs.hostname}:8188</value>
+  </property>
+
+  <property>
+    <description>The https adddress of the AHS web application.</description>
+    <name>yarn.ahs.webapp.https.address</name>
+    <value>${yarn.ahs.hostname}:8190</value>
+  </property>
+
+  <property>
     <description>URI pointing to the location of the FileSystem path where
     the history will be persisted. This must be supplied when using
     org.apache.hadoop.yarn.server.applicationhistoryservice.FileSystemApplicationHistoryStore
