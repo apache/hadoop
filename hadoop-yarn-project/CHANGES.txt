@@ -219,6 +219,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1573. ZK store should use a private password for root-node-acls. 
     (kasha).
 
+    YARN-1630. Introduce timeout for async polling operations in YarnClientImpl
+    (Aditya Acharya via Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES
