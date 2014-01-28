@@ -1020,6 +1020,17 @@ public class YarnConfiguration extends Configuration {
       YARN_PREFIX + "client.application-client-protocol.poll-interval-ms";
   public static final long DEFAULT_YARN_CLIENT_APPLICATION_CLIENT_PROTOCOL_POLL_INTERVAL_MS =
       200;
+
+  /**
+   * The duration that the yarn client library waits, cumulatively across polls,
+   * for an expected state change to occur. Defaults to -1, which indicates no
+   * limit.
+   */
+  public static final String YARN_CLIENT_APPLICATION_CLIENT_PROTOCOL_POLL_TIMEOUT_MS =
+      YARN_PREFIX + "client.application-client-protocol.poll-timeout-ms";
+  public static final long DEFAULT_YARN_CLIENT_APPLICATION_CLIENT_PROTOCOL_POLL_TIMEOUT_MS =
+      -1;
+
   /**
    * Max number of threads in NMClientAsync to process container management
    * events
