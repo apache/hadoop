@@ -962,6 +962,17 @@ public class YarnConfiguration extends Configuration {
 
   /** AHS store class */
   public static final String AHS_STORE = AHS_PREFIX + "store.class";
+
+  /** host:port address for Application History Server API. */
+  public static final String AHS_ADDRESS = AHS_PREFIX + "address";
+  public static final int DEFAULT_AHS_PORT = 10200;
+  public static final String DEFAULT_AHS_ADDRESS = "0.0.0.0:"
+      + DEFAULT_AHS_PORT;
+
+  /** The number of threads to handle client API requests. */
+  public static final String AHS_CLIENT_THREAD_COUNT = AHS_PREFIX
+      + "client.thread-count";
+  public static final int DEFAULT_AHS_CLIENT_THREAD_COUNT = 10;
   
   ////////////////////////////////
   // Other Configs

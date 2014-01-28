@@ -1074,6 +1074,19 @@
   </property>
 
   <property>
+    <description>This is default address for the Application History server
+    to start the RPC server.</description>
+    <name>yarn.ahs.address</name>
+    <value>0.0.0.0:10200</value>
+  </property>
+
+  <property>
+    <description>CLient thread count to serve the client requests.</description>
+    <name>yarn.ahs.client.thread-count</name>
+    <value>10</value>
+  </property>
+  
+  <property>
     <description>T-file compression types used to compress history data.</description>
     <name>yarn.ahs.fs-history-store.compression-type</name>
     <value>none</value>

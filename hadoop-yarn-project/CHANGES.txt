@@ -499,6 +499,9 @@ Branch YARN-321: Generic ApplicationHistoryService
   YARN-1266. Implemented PB service and client wrappers for
   ApplicationHistoryProtocol. (Mayank Bansal via vinodkv)
 
+  YARN-955. Implemented ApplicationHistoryProtocol handler. (Mayank Bansal via
+  vinodkv)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES

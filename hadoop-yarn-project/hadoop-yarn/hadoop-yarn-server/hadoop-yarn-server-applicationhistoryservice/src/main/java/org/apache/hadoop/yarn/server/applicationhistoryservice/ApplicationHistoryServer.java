@@ -1,25 +1,38 @@
 /**
-* Licensed to the Apache Software Foundation (ASF) under one
-* or more contributor license agreements.  See the NOTICE file
-* distributed with this work for additional information
-* regarding copyright ownership.  The ASF licenses this file
-* to you under the Apache License, Version 2.0 (the
-* "License"); you may not use this file except in compliance
-* with the License.  You may obtain a copy of the License at
-*
-*     http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*/
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 package org.apache.hadoop.yarn.server.applicationhistoryservice;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.service.CompositeService;
+import org.apache.hadoop.service.Service;
+import org.apache.hadoop.util.ExitUtil;
+import org.apache.hadoop.util.ShutdownHookManager;
+import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * History server that keeps track of all types of history in the cluster.
@@ -27,16 +40,82 @@ import org.apache.hadoop.service.CompositeService;
  */
 public class ApplicationHistoryServer extends CompositeService {
 
+  public static final int SHUTDOWN_HOOK_PRIORITY = 30;
+  private static final Log LOG = LogFactory
+      .getLog(ApplicationHistoryServer.class);
+
+  ApplicationHistoryClientService ahsClientService;
+  ApplicationHistoryManager historyManager;
+
   public ApplicationHistoryServer() {
     super(ApplicationHistoryServer.class.getName());
   }
 
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
-    super.serviceInit(conf);
-    AHSClientService ahsClientService = new AHSClientService();
+    historyManager = createApplicationHistory();
+    ahsClientService = createApplicationHistoryClientService(historyManager);
     addService(ahsClientService);
+    addService((Service) historyManager);
     AHSWebServer webServer = new AHSWebServer();
     addService(webServer);
+    super.serviceInit(conf);
+  }
+
+  @Override
+  protected void serviceStart() throws Exception {
+    DefaultMetricsSystem.initialize("ApplicationHistoryServer");
+    JvmMetrics.initSingleton("ApplicationHistoryServer", null);
+    super.serviceStart();
+  }
+
+  @Override
+  protected void serviceStop() throws Exception {
+    DefaultMetricsSystem.shutdown();
+    super.serviceStop();
+  }
+
+  @Private
+  @VisibleForTesting
+  public ApplicationHistoryClientService getClientService() {
+    return this.ahsClientService;
+  }
+
+  protected ApplicationHistoryClientService createApplicationHistoryClientService(
+      ApplicationHistoryManager historyManager) {
+    return new ApplicationHistoryClientService(historyManager);
+  }
+
+  protected ApplicationHistoryManager createApplicationHistory() {
+    return new ApplicationHistoryManagerImpl();
+  }
+
+  protected ApplicationHistoryManager getApplicationHistory() {
+    return this.historyManager;
+  }
+
+  static ApplicationHistoryServer launchAppHistoryServer(String[] args) {
+    Thread
+        .setDefaultUncaughtExceptionHandler(new YarnUncaughtExceptionHandler());
+    StringUtils.startupShutdownMessage(ApplicationHistoryServer.class, args,
+        LOG);
+    ApplicationHistoryServer appHistoryServer = null;
+    try {
+      appHistoryServer = new ApplicationHistoryServer();
+      ShutdownHookManager.get().addShutdownHook(
+          new CompositeServiceShutdownHook(appHistoryServer),
+          SHUTDOWN_HOOK_PRIORITY);
+      YarnConfiguration conf = new YarnConfiguration();
+      appHistoryServer.init(conf);
+      appHistoryServer.start();
+    } catch (Throwable t) {
+      LOG.fatal("Error starting ApplicationHistoryServer", t);
+      ExitUtil.terminate(-1, "Error starting ApplicationHistoryServer");
+    }
+    return appHistoryServer;
+  }
+
+  public static void main(String[] args) {
+    launchAppHistoryServer(args);
   }
 }
