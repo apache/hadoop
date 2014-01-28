@@ -950,7 +950,7 @@ public class YarnConfiguration extends Configuration {
 
   /** The setting that controls whether history-service is enabled or not.. */
   public static final String YARN_HISTORY_SERVICE_ENABLED = AHS_PREFIX
-      + ".enabled";
+      + "enabled";
   public static final boolean DEFAULT_YARN_HISTORY_SERVICE_ENABLED = false;
 
   /** URI for FileSystemApplicationHistoryStore */

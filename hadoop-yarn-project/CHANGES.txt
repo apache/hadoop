@@ -34,6 +34,7 @@ Branch YARN-321: Generic ApplicationHistoryService
   YARN-975. Added a file-system implementation for HistoryStorage. (Zhijie Shen
   via vinodkv)
 
+<<<<<<< .working
   YARN-1123. Added a new ContainerReport and its Protobuf implementation. (Mayank
   Bansal via vinodkv)
 
@@ -93,6 +94,9 @@ Branch YARN-321: Generic ApplicationHistoryService
 
   YARN-1625. Fixed RAT warnings after YARN-321 merge. (Shinichi Yamashita via
   vinodkv)
+
+  YARN-1613. Fixed the typo with the configuration name
+  YARN_HISTORY_SERVICE_ENABLED. (Akira Ajisaka via vinodkv)
 
 Release 2.4.0 - UNRELEASED
 
