@@ -480,6 +480,9 @@ Branch YARN-321: Generic ApplicationHistoryService
   YARN-975. Added a file-system implementation for HistoryStorage. (Zhijie Shen
   via vinodkv)
 
+  YARN-1123. Added a new ContainerReport and its Protobuf implementation. (Mayank
+  Bansal via vinodkv)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
