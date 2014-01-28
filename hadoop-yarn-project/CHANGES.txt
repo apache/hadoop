@@ -502,6 +502,9 @@ Branch YARN-321: Generic ApplicationHistoryService
   YARN-955. Implemented ApplicationHistoryProtocol handler. (Mayank Bansal via
   vinodkv)
 
+  YARN-1242. Changed yarn scripts to be able to start ApplicationHistoryServer
+  as an individual process. (Mayank Bansal via vinodkv)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
