@@ -536,6 +536,15 @@ Release 2.4.0 - UNRELEASED
     HADOOP-10252. HttpServer can't start if hostname is not specified. (Jimmy
     Xiang via atm)
 
+    HADOOP-10203. Connection leak in
+    Jets3tNativeFileSystemStore#retrieveMetadata. (Andrei Savu via atm)
+
+    HADOOP-10250. VersionUtil returns wrong value when comparing two versions.
+    (Yongjun Zhang via atm)
+
+    HADOOP-10288. Explicit reference to Log4JLogger breaks non-log4j users
+    (todd)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -558,6 +567,12 @@ Release 2.3.0 - UNRELEASED
 
     HADOOP-10248. Property name should be included in the exception where property value 
     is null (Akira AJISAKA via umamahesh)
+
+    HADOOP-10086. User document for authentication in secure cluster.
+    (Masatake Iwasaki via Arpit Agarwal)
+
+    HADOOP-10274 Lower the logging level from ERROR to WARN for UGI.doAs method
+    (Takeshi Miao via stack)
 
   OPTIMIZATIONS
 
@@ -636,6 +651,12 @@ Release 2.3.0 - UNRELEASED
 
     HADOOP-10167. Mark hadoop-common source as UTF-8 in Maven pom files / refactoring
     (Mikhail Antonov via cos)
+
+    HADOOP-9982. Fix dead links in hadoop site docs. (Akira Ajisaka via Arpit
+    Agarwal)
+
+    HADOOP-10212. Incorrect compile command in Native Library document.
+    (Akira Ajisaka via Arpit Agarwal)
 
 Release 2.2.0 - 2013-10-13
 

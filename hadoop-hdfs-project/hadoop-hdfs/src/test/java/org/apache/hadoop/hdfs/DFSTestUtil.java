@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
+
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -27,7 +29,6 @@ import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.fs.Options.Rename;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.MiniDFSCluster.NameNodeInfo;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
@@ -889,21 +890,7 @@ public class DFSTestUtil {
   
   /** Copy one file's contents into the other **/
   public static void copyFile(File src, File dest) throws IOException {
-    InputStream in = null;
-    OutputStream out = null;
-    
-    try {
-      in = new FileInputStream(src);
-      out = new FileOutputStream(dest);
-
-      byte [] b = new byte[1024];
-      while( in.read(b)  > 0 ) {
-        out.write(b);
-      }
-    } finally {
-      if(in != null) in.close();
-      if(out != null) out.close();
-    }
+    FileUtils.copyFile(src, dest);
   }
 
   public static class Builder {

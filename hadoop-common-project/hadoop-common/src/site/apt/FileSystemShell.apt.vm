@@ -88,7 +88,7 @@ chgrp
 
    Change group association of files. The user must be the owner of files, or
    else a super-user. Additional information is in the
-   {{{betterurl}Permissions Guide}}.
+   {{{../hadoop-hdfs/HdfsPermissionsGuide.html}Permissions Guide}}.
 
    Options
 
@@ -101,7 +101,7 @@ chmod
    Change the permissions of files. With -R, make the change recursively
    through the directory structure. The user must be the owner of the file, or
    else a super-user. Additional information is in the
-   {{{betterurl}Permissions Guide}}.
+   {{{../hadoop-hdfs/HdfsPermissionsGuide.html}Permissions Guide}}.
 
    Options
 
@@ -112,7 +112,7 @@ chown
    Usage: <<<hdfs dfs -chown [-R] [OWNER][:[GROUP]] URI [URI ]>>>
 
    Change the owner of files. The user must be a super-user. Additional information
-   is in the {{{betterurl}Permissions Guide}}.
+   is in the {{{../hadoop-hdfs/HdfsPermissionsGuide.html}Permissions Guide}}.
 
    Options
 
@@ -210,8 +210,8 @@ expunge
 
    Usage: <<<hdfs dfs -expunge>>>
 
-   Empty the Trash. Refer to the {{{betterurl}HDFS Architecture Guide}} for
-   more information on the Trash feature.
+   Empty the Trash. Refer to the {{{../hadoop-hdfs/HdfsDesign.html}
+   HDFS Architecture Guide}} for more information on the Trash feature.
 
 get
 
@@ -439,7 +439,9 @@ test
    Options:
 
      * The -e option will check to see if the file exists, returning 0 if true.
+
      * The -z option will check to see if the file is zero length, returning 0 if true.
+
      * The -d option will check to see if the path is directory, returning 0 if true.
 
    Example:

@@ -504,6 +504,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-5788. listLocatedStatus response can be very large. (Nathan Roberts
     via kihwal)
 
+    HDFS-5781. Use an array to record the mapping between FSEditLogOpCode and 
+    the corresponding byte value. (jing9)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn)
@@ -979,6 +982,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-5677. Need error checking for HA cluster configuration.
     (Vincent Sheffer via cos)
 
+    HDFS-5825. Use FileUtils.copyFile() to implement DFSTestUtils.copyFile().
+    (Haohui Mai via Arpit Agarwal)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -1141,6 +1147,15 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-5343. When cat command is issued on snapshot files getting unexpected result.
     (Sathish via umamahesh)
+
+    HDFS-5297. Fix dead links in HDFS site documents. (Akira Ajisaka via
+    Arpit Agarwal)
+
+    HDFS-5830. WebHdfsFileSystem.getFileBlockLocations throws
+    IllegalArgumentException when accessing another cluster. (Yongjun Zhang via
+    Colin Patrick McCabe)
+
+    HDFS-5833. Fix SecondaryNameNode javadoc. (Bangtao Zhou via Arpit Agarwal)
 
 Release 2.2.0 - 2013-10-13
 

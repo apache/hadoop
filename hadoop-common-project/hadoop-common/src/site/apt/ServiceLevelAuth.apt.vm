@@ -29,8 +29,10 @@ Service Level Authorization Guide
 
    Make sure Hadoop is installed, configured and setup correctly. For more
    information see:
-     * Single Node Setup for first-time users.
-     * Cluster Setup for large, distributed clusters.
+
+     * {{{./SingleCluster.html}Single Node Setup}} for first-time users.
+
+     * {{{./ClusterSetup.html}Cluster Setup}} for large, distributed clusters.
 
 * Overview
 
