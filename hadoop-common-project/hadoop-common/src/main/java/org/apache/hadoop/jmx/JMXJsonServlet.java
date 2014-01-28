@@ -46,7 +46,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.http.HttpServer;
+import org.apache.hadoop.http.HttpServer2;
 import org.codehaus.jackson.JsonFactory;
 import org.codehaus.jackson.JsonGenerator;
 
@@ -153,7 +153,7 @@ public class JMXJsonServlet extends HttpServlet {
     String jsonpcb = null;
     PrintWriter writer = null;
     try {
-      if (!HttpServer.isInstrumentationAccessAllowed(getServletContext(),
+      if (!HttpServer2.isInstrumentationAccessAllowed(getServletContext(),
                                                      request, response)) {
         return;
       }

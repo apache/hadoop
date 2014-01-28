@@ -121,7 +121,7 @@ import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.hdfs.web.resources.Param;
 import org.apache.hadoop.http.HttpConfig;
-import org.apache.hadoop.http.HttpServer;
+import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.ReadaheadPool;
 import org.apache.hadoop.io.nativeio.NativeIO;
@@ -236,7 +236,7 @@ public class DataNode extends Configured
   private volatile boolean heartbeatsDisabledForTests = false;
   private DataStorage storage = null;
 
-  private HttpServer infoServer = null;
+  private HttpServer2 infoServer = null;
   private int infoPort;
   private int infoSecurePort;
 
@@ -359,7 +359,7 @@ public class DataNode extends Configured
    * Http Policy is decided.
    */
   private void startInfoServer(Configuration conf) throws IOException {
-    HttpServer.Builder builder = new HttpServer.Builder().setName("datanode")
+    HttpServer2.Builder builder = new HttpServer2.Builder().setName("datanode")
         .setConf(conf).setACL(new AccessControlList(conf.get(DFS_ADMIN, " ")));
 
     HttpConfig.Policy policy = DFSUtil.getHttpPolicy(conf);

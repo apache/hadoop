@@ -24,7 +24,7 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.http.HttpServer;
+import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.http.HttpServerFunctionalTest;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -32,7 +32,7 @@ import org.junit.Test;
 
 public class TestJMXJsonServlet extends HttpServerFunctionalTest {
   private   static final Log LOG = LogFactory.getLog(TestJMXJsonServlet.class);
-  private static HttpServer server;
+  private static HttpServer2 server;
   private static URL baseUrl;
 
   @BeforeClass public static void setup() throws Exception {

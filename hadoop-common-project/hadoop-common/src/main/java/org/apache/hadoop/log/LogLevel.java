@@ -28,7 +28,7 @@ import org.apache.commons.logging.*;
 import org.apache.commons.logging.impl.*;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.http.HttpServer;
+import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.util.ServletUtil;
 
 /**
@@ -93,7 +93,7 @@ public class LogLevel {
         ) throws ServletException, IOException {
 
       // Do the authorization
-      if (!HttpServer.hasAdministratorAccess(getServletContext(), request,
+      if (!HttpServer2.hasAdministratorAccess(getServletContext(), request,
           response)) {
         return;
       }

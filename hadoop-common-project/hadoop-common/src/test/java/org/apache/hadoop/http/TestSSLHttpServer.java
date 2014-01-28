@@ -48,7 +48,7 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
 
   private static final Log LOG = LogFactory.getLog(TestSSLHttpServer.class);
   private static Configuration conf;
-  private static HttpServer server;
+  private static HttpServer2 server;
   private static URL baseUrl;
   private static String keystoresDir;
   private static String sslConfDir;
@@ -57,7 +57,7 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
   @BeforeClass
   public static void setup() throws Exception {
     conf = new Configuration();
-    conf.setInt(HttpServer.HTTP_MAX_THREADS, 10);
+    conf.setInt(HttpServer2.HTTP_MAX_THREADS, 10);
 
     File base = new File(BASEDIR);
     FileUtil.fullyDelete(base);
@@ -73,7 +73,7 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
     clientSslFactory = new SSLFactory(SSLFactory.Mode.CLIENT, sslConf);
     clientSslFactory.init();
 
-    server = new HttpServer.Builder()
+    server = new HttpServer2.Builder()
         .setName("test")
         .addEndpoint(new URI("https://localhost"))
         .setConf(conf)

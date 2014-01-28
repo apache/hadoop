@@ -37,7 +37,7 @@ public class AdminAuthorizedServlet extends DefaultServlet {
   protected void doGet(HttpServletRequest request, HttpServletResponse response)
  throws ServletException, IOException {
     // Do the authorization
-    if (HttpServer.hasAdministratorAccess(getServletContext(), request,
+    if (HttpServer2.hasAdministratorAccess(getServletContext(), request,
         response)) {
       // Authorization is done. Just call super.
       super.doGet(request, response);
