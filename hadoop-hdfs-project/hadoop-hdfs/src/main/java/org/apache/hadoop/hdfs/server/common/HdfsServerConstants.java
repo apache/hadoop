@@ -47,7 +47,7 @@ public final class HdfsServerConstants {
 
   /** Startup options for rolling upgrade. */
   public static enum RollingUpgradeStartupOption{
-    ROLLBACK, DOWNGRADE;
+    ROLLBACK, DOWNGRADE, STARTED;
     
     private static final RollingUpgradeStartupOption[] VALUES = values();
 

@@ -58,7 +58,25 @@ public class RollingUpgradeInfo {
   public long getFinalizeTime() {
     return finalizeTime;
   }
-  
+
+  @Override
+  public int hashCode() {
+    //only use lower 32 bits
+    return (int)startTime ^ (int)finalizeTime;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (obj == this) {
+      return true;
+    } else if (obj == null || !(obj instanceof RollingUpgradeInfo)) {
+      return false;
+    }
+    final RollingUpgradeInfo that = (RollingUpgradeInfo)obj;
+    return this.startTime == that.startTime
+        && this.finalizeTime == that.finalizeTime;
+  }
+
   @Override
   public String toString() {
     return "     Start Time: " + (startTime == 0? "<NOT STARTED>": timestamp2String(startTime))

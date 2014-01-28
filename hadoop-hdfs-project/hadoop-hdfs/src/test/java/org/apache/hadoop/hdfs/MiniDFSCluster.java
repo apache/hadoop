@@ -914,6 +914,10 @@ public class MiniDFSCluster {
   }
   
   private static String[] createArgs(StartupOption operation) {
+    if (operation == StartupOption.ROLLINGUPGRADE) {
+      return new String[]{operation.getName(),
+          operation.getRollingUpgradeStartupOption().name()};
+    }
     String[] args = (operation == null ||
         operation == StartupOption.FORMAT ||
         operation == StartupOption.REGULAR) ?

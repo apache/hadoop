@@ -10,5 +10,8 @@ HDFS-5535 subtasks:
 
     HDFS-5786. Support QUERY and FINALIZE actions of rolling upgrade. (szetszwo)
 
-    HDFS-5753. Add new NN startup options for downgrade and rollback using
+    HDFS-5753. Add new Namenode startup options for downgrade and rollback using
     upgrade marker. (szetszwo)
+
+    HDFS-5835. Add a new option for starting Namenode when rolling upgrade is
+    in progress. (szetszwo)

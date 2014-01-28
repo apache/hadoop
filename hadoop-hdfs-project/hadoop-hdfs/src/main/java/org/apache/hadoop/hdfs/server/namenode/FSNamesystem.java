@@ -7110,7 +7110,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       final CheckpointSignature cs = getFSImage().rollEditLog();
       LOG.info("Successfully rolled edit log for preparing rolling upgrade."
           + " Checkpoint signature: " + cs);
-      rollingUpgradeInfo = new RollingUpgradeInfo(now());
+      setRollingUpgradeInfo(now());
       getEditLog().logUpgradeMarker(rollingUpgradeInfo.getStartTime());
     } finally {
       writeUnlock();
@@ -7121,6 +7121,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       logAuditEvent(true, "startRollingUpgrade", null, null, null);
     }
     return rollingUpgradeInfo;
+  }
+
+  void setRollingUpgradeInfo(long startTime) {
+    rollingUpgradeInfo = new RollingUpgradeInfo(startTime);;
   }
 
   RollingUpgradeInfo finalizeRollingUpgrade() throws IOException {

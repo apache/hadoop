@@ -3398,6 +3398,10 @@ public abstract class FSEditLogOp {
       return (UpgradeMarkerOp) cache.get(OP_UPGRADE_MARKER);
     }
 
+    long getStartTime() {
+      return startTime;
+    }
+
     void setStartTime(long startTime) {
       this.startTime = startTime;
     }

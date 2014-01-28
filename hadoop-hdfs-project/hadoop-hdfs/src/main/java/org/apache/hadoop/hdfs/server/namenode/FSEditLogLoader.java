@@ -79,6 +79,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SymlinkOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.TimesOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.UpdateBlocksOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.UpdateMasterKeyOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.UpgradeMarkerOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.UpgradeMarkerOp.UpgradeMarkerException;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
@@ -676,6 +677,12 @@ public class FSEditLogLoader {
         } else if (startOpt.getRollingUpgradeStartupOption()
             == RollingUpgradeStartupOption.DOWNGRADE) {
           //ignore upgrade marker
+          break;
+        } else if (startOpt.getRollingUpgradeStartupOption()
+            == RollingUpgradeStartupOption.STARTED) {
+          //rolling upgrade is already started, set info
+          final UpgradeMarkerOp upgradeOp = (UpgradeMarkerOp)op; 
+          fsNamesys.setRollingUpgradeInfo(upgradeOp.getStartTime());
           break;
         }
       }
