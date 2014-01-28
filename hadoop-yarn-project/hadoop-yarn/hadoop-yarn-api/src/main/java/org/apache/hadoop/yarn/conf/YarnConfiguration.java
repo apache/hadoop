@@ -932,6 +932,19 @@ public class YarnConfiguration extends Configuration {
       YARN_PREFIX + "app.container.log.backups";
 
   ////////////////////////////////
+  // AHS Configs
+  ////////////////////////////////
+
+  public static final String AHS_PREFIX = YARN_PREFIX + "ahs.";
+
+  /** URI for FileSystemApplicationHistoryStore */
+  public static final String FS_HISTORY_STORE_URI = AHS_PREFIX + "fs-history-store.uri";
+
+  /** T-file compression types used to compress history data.*/
+  public static final String FS_HISTORY_STORE_COMPRESSION_TYPE = AHS_PREFIX + "fs-history-store.compression-type";
+  public static final String DEFAULT_FS_HISTORY_STORE_COMPRESSION_TYPE = "none";
+
+  ////////////////////////////////
   // Other Configs
   ////////////////////////////////
 

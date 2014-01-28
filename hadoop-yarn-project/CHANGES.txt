@@ -477,6 +477,9 @@ Branch YARN-321: Generic ApplicationHistoryService
   YARN-1007. Enhance History Reader interface for Containers. (Mayank Bansal via
   devaraj)
 
+  YARN-975. Added a file-system implementation for HistoryStorage. (Zhijie Shen
+  via vinodkv)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
