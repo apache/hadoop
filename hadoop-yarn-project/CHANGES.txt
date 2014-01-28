@@ -519,6 +519,9 @@ Branch YARN-321: Generic ApplicationHistoryService
   YARN-1413. Implemented serving of aggregated-logs in the ApplicationHistory
   server. (Mayank Bansal via vinodkv)
 
+  YARN-1555. Fixed test failures in applicationhistoryservice.* (Vinod Kumar 
+  Vavilapalli via mayank)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
