@@ -21,6 +21,10 @@ import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
@@ -152,4 +156,41 @@ public class TestMaxRunningAppsEnforcer {
     assertEquals(0, leaf2.getNonRunnableAppSchedulables().size());
   }
   
+  @Test
+  public void testMultipleAppsWaitingOnCousinQueue() {
+    FSLeafQueue leaf1 = queueManager.getLeafQueue("root.queue1.subqueue1.leaf1", true);
+    FSLeafQueue leaf2 = queueManager.getLeafQueue("root.queue1.subqueue2.leaf2", true);
+    queueMaxApps.put("root.queue1", 2);
+    FSSchedulerApp app1 = addApp(leaf1, "user");
+    addApp(leaf2, "user");
+    addApp(leaf2, "user");
+    addApp(leaf2, "user");
+    assertEquals(1, leaf1.getRunnableAppSchedulables().size());
+    assertEquals(1, leaf2.getRunnableAppSchedulables().size());
+    assertEquals(2, leaf2.getNonRunnableAppSchedulables().size());
+    removeApp(app1);
+    assertEquals(0, leaf1.getRunnableAppSchedulables().size());
+    assertEquals(2, leaf2.getRunnableAppSchedulables().size());
+    assertEquals(1, leaf2.getNonRunnableAppSchedulables().size());
+  }
+  
+  @Test
+  public void testMultiListStartTimeIteratorEmptyAppLists() {
+    List<List<AppSchedulable>> lists = new ArrayList<List<AppSchedulable>>();
+    lists.add(Arrays.asList(mockAppSched(1)));
+    lists.add(Arrays.asList(mockAppSched(2)));
+    Iterator<FSSchedulerApp> iter =
+        new MaxRunningAppsEnforcer.MultiListStartTimeIterator(lists);
+    assertEquals(1, iter.next().getAppSchedulable().getStartTime());
+    assertEquals(2, iter.next().getAppSchedulable().getStartTime());
+  }
+  
+  private AppSchedulable mockAppSched(long startTime) {
+    AppSchedulable appSched = mock(AppSchedulable.class);
+    when(appSched.getStartTime()).thenReturn(startTime);
+    FSSchedulerApp schedApp = mock(FSSchedulerApp.class);
+    when(schedApp.getAppSchedulable()).thenReturn(appSched);
+    when(appSched.getApp()).thenReturn(schedApp);
+    return appSched;
+  }
 }
