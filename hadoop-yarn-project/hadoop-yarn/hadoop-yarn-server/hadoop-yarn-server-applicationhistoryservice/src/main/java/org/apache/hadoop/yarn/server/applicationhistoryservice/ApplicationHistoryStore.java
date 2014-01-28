@@ -20,9 +20,18 @@ package org.apache.hadoop.yarn.server.applicationhistoryservice;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.service.Service;
 
+/**
+ * This class is the abstract of the storage of the application history data. It
+ * is a {@link Service}, such that the implementation of this class can make use
+ * of the service life cycle to initialize and cleanup the storage. Users can
+ * access the storage via {@link ApplicationHistoryReader} and
+ * {@link ApplicationHistoryWriter} interfaces.
+ * 
+ */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
-public interface ApplicationHistoryStore extends ApplicationHistoryReader,
-    ApplicationHistoryWriter {
+public interface ApplicationHistoryStore extends Service,
+    ApplicationHistoryReader, ApplicationHistoryWriter {
 }

@@ -20,34 +20,31 @@ package org.apache.hadoop.yarn.server.applicationhistoryservice.records.impl.pb;
 
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationAttemptIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ContainerIdPBImpl;
-import org.apache.hadoop.yarn.api.records.impl.pb.ProtoBase;
-import org.apache.hadoop.yarn.api.records.impl.pb.ProtoUtils;
-import org.apache.hadoop.yarn.proto.ApplicationHistoryServerProtos.ApplicationAttemptHistoryDataProto;
-import org.apache.hadoop.yarn.proto.ApplicationHistoryServerProtos.ApplicationAttemptHistoryDataProtoOrBuilder;
+import org.apache.hadoop.yarn.proto.ApplicationHistoryServerProtos.ApplicationAttemptStartDataProto;
+import org.apache.hadoop.yarn.proto.ApplicationHistoryServerProtos.ApplicationAttemptStartDataProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationAttemptIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProto;
-import org.apache.hadoop.yarn.proto.YarnProtos.FinalApplicationStatusProto;
-import org.apache.hadoop.yarn.server.applicationhistoryservice.records.ApplicationAttemptHistoryData;
+import org.apache.hadoop.yarn.server.applicationhistoryservice.records.ApplicationAttemptStartData;
+
+import com.google.protobuf.TextFormat;
 
 
-public class ApplicationAttemptHistoryDataPBImpl
-    extends ProtoBase<ApplicationAttemptHistoryDataProto>
-        implements ApplicationAttemptHistoryData {
+public class ApplicationAttemptStartDataPBImpl
+    extends ApplicationAttemptStartData {
 
-  ApplicationAttemptHistoryDataProto proto =
-      ApplicationAttemptHistoryDataProto.getDefaultInstance();
-  ApplicationAttemptHistoryDataProto.Builder builder = null;
+  ApplicationAttemptStartDataProto proto =
+      ApplicationAttemptStartDataProto.getDefaultInstance();
+  ApplicationAttemptStartDataProto.Builder builder = null;
   boolean viaProto = false;
 
-  public ApplicationAttemptHistoryDataPBImpl() {
-    builder = ApplicationAttemptHistoryDataProto.newBuilder();
+  public ApplicationAttemptStartDataPBImpl() {
+    builder = ApplicationAttemptStartDataProto.newBuilder();
   }
 
-  public ApplicationAttemptHistoryDataPBImpl(
-      ApplicationAttemptHistoryDataProto proto) {
+  public ApplicationAttemptStartDataPBImpl(
+      ApplicationAttemptStartDataProto proto) {
     this.proto = proto;
     viaProto = true;
   }
@@ -60,7 +57,7 @@ public class ApplicationAttemptHistoryDataPBImpl
     if (this.applicationAttemptId != null) {
       return this.applicationAttemptId;
     }
-    ApplicationAttemptHistoryDataProtoOrBuilder p = viaProto ? proto : builder;
+    ApplicationAttemptStartDataProtoOrBuilder p = viaProto ? proto : builder;
     if (!p.hasApplicationAttemptId()) {
       return null;
     }
@@ -81,7 +78,7 @@ public class ApplicationAttemptHistoryDataPBImpl
 
   @Override
   public String getHost() {
-    ApplicationAttemptHistoryDataProtoOrBuilder p = viaProto ? proto : builder;
+    ApplicationAttemptStartDataProtoOrBuilder p = viaProto ? proto : builder;
     if (!p.hasHost()) {
       return null;
     }
@@ -100,7 +97,7 @@ public class ApplicationAttemptHistoryDataPBImpl
 
   @Override
   public int getRPCPort() {
-    ApplicationAttemptHistoryDataProtoOrBuilder p = viaProto ? proto : builder;
+    ApplicationAttemptStartDataProtoOrBuilder p = viaProto ? proto : builder;
     return p.getRpcPort();
   }
 
@@ -111,70 +108,11 @@ public class ApplicationAttemptHistoryDataPBImpl
   }
 
   @Override
-  public String getTrackingURL() {
-    ApplicationAttemptHistoryDataProtoOrBuilder p = viaProto ? proto : builder;
-    if (!p.hasTrackingUrl()) {
-      return null;
-    }
-    return p.getTrackingUrl();
-  }
-
-  @Override
-  public void setTrackingURL(String trackingURL) {
-    maybeInitBuilder();
-    if (trackingURL == null) {
-      builder.clearTrackingUrl();
-      return;
-    }
-    builder.setTrackingUrl(trackingURL);
-  }
-
-  @Override
-  public String getDiagnosticsInfo() {
-    ApplicationAttemptHistoryDataProtoOrBuilder p = viaProto ? proto : builder;
-    if (!p.hasDiagnosticsInfo()) {
-      return null;
-    }
-    return p.getDiagnosticsInfo();
-  }
-
-  @Override
-  public void setDiagnosticsInfo(String diagnosticsInfo) {
-    maybeInitBuilder();
-    if (diagnosticsInfo == null) {
-      builder.clearDiagnosticsInfo();
-      return;
-    }
-    builder.setDiagnosticsInfo(diagnosticsInfo);
-  }
-
-  @Override
-  public FinalApplicationStatus getFinalApplicationStatus() {
-    ApplicationAttemptHistoryDataProtoOrBuilder p = viaProto ? proto : builder;
-    if (!p.hasFinalApplicationStatus()) {
-      return null;
-    }
-    return convertFromProtoFormat(p.getFinalApplicationStatus());
-  }
-
-  @Override
-  public void setFinalApplicationStatus(
-      FinalApplicationStatus finalApplicationStatus) {
-    maybeInitBuilder();
-    if (finalApplicationStatus == null) {
-      builder.clearFinalApplicationStatus();
-      return;
-    }
-    builder.setFinalApplicationStatus(
-        convertToProtoFormat(finalApplicationStatus));
-  }
-
-  @Override
   public ContainerId getMasterContainerId() {
     if (this.masterContainerId != null) {
       return this.masterContainerId;
     }
-    ApplicationAttemptHistoryDataProtoOrBuilder p = viaProto ? proto : builder;
+    ApplicationAttemptStartDataProtoOrBuilder p = viaProto ? proto : builder;
     if (!p.hasApplicationAttemptId()) {
       return null;
     }
@@ -192,8 +130,7 @@ public class ApplicationAttemptHistoryDataPBImpl
     this.masterContainerId = masterContainerId;
   }
 
-  @Override
-  public ApplicationAttemptHistoryDataProto getProto() {
+  public ApplicationAttemptStartDataProto getProto() {
     mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
@@ -217,7 +154,7 @@ public class ApplicationAttemptHistoryDataPBImpl
 
   @Override
   public String toString() {
-    return getProto().toString().replaceAll("\\n", ", ").replaceAll("\\s+", " ");
+    return TextFormat.shortDebugString(getProto());
   }
 
   private void mergeLocalToBuilder() {
@@ -246,7 +183,7 @@ public class ApplicationAttemptHistoryDataPBImpl
 
   private void maybeInitBuilder() {
     if (viaProto || builder == null) {
-      builder = ApplicationAttemptHistoryDataProto.newBuilder(proto);
+      builder = ApplicationAttemptStartDataProto.newBuilder(proto);
     }
     viaProto = false;
   }
@@ -259,16 +196,6 @@ public class ApplicationAttemptHistoryDataPBImpl
   private ApplicationAttemptIdProto convertToProtoFormat(
       ApplicationAttemptId applicationAttemptId) {
     return ((ApplicationAttemptIdPBImpl) applicationAttemptId).getProto();
-  }
-
-  private FinalApplicationStatus convertFromProtoFormat(
-      FinalApplicationStatusProto finalApplicationStatus) {
-    return ProtoUtils.convertFromProtoFormat(finalApplicationStatus);
-  }
-
-  private FinalApplicationStatusProto convertToProtoFormat(
-      FinalApplicationStatus finalApplicationStatus) {
-    return ProtoUtils.convertToProtoFormat(finalApplicationStatus);
   }
 
   private ContainerIdPBImpl convertFromProtoFormat(

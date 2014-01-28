@@ -27,83 +27,171 @@ import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 
 /**
- * The class contains all the fields that need to be stored persistently for
+ * The class contains all the fields that are stored persistently for
  * <code>RMContainer</code>.
  */
 @Public
 @Unstable
-public interface ContainerHistoryData {
+public class ContainerHistoryData {
+
+  private ContainerId containerId;
+
+  private Resource allocatedResource;
+
+  private NodeId assignedNode;
+
+  private Priority priority;
+
+  private long startTime;
+
+  private long finishTime;
+
+  private String diagnosticsInfo;
+
+  private String logURL;
+
+  private int containerExitStatus;
+
+  private ContainerState containerState;
 
   @Public
   @Unstable
-  ContainerId getContainerId();
+  public static ContainerHistoryData newInstance(ContainerId containerId,
+      Resource allocatedResource, NodeId assignedNode, Priority priority,
+      long startTime, long finishTime, String diagnosticsInfo, String logURL,
+      int containerExitCode, ContainerState containerState) {
+    ContainerHistoryData containerHD = new ContainerHistoryData();
+    containerHD.setContainerId(containerId);
+    containerHD.setAllocatedResource(allocatedResource);
+    containerHD.setAssignedNode(assignedNode);
+    containerHD.setPriority(priority);
+    containerHD.setStartTime(startTime);
+    containerHD.setFinishTime(finishTime);
+    containerHD.setDiagnosticsInfo(diagnosticsInfo);
+    containerHD.setLogURL(logURL);
+    containerHD.setContainerExitStatus(containerExitCode);
+    containerHD.setContainerState(containerState);
+    return containerHD;
+  }
 
   @Public
   @Unstable
-  void setContainerId(ContainerId containerId);
+  public ContainerId getContainerId() {
+    return containerId;
+  }
 
   @Public
   @Unstable
-  Resource getAllocatedResource();
+  public void setContainerId(ContainerId containerId) {
+    this.containerId = containerId;
+  }
 
   @Public
   @Unstable
-  void setAllocatedResource(Resource resource);
+  public Resource getAllocatedResource() {
+    return allocatedResource;
+  }
 
   @Public
   @Unstable
-  NodeId getAssignedNode();
+  public void setAllocatedResource(Resource resource) {
+    this.allocatedResource = resource;
+  }
 
   @Public
   @Unstable
-  void setAssignedNode(NodeId nodeId);
+  public NodeId getAssignedNode() {
+    return assignedNode;
+  }
 
   @Public
   @Unstable
-  Priority getPriority();
+  public void setAssignedNode(NodeId nodeId) {
+    this.assignedNode = nodeId;
+  }
 
   @Public
   @Unstable
-  void setPriority(Priority priority);
+  public Priority getPriority() {
+    return priority;
+  }
 
   @Public
   @Unstable
-  long getStartTime();
+  public void setPriority(Priority priority) {
+    this.priority = priority;
+  }
 
   @Public
   @Unstable
-  void setStartTime(long startTime);
+  public long getStartTime() {
+    return startTime;
+  }
 
   @Public
   @Unstable
-  long getFinishTime();
+  public void setStartTime(long startTime) {
+    this.startTime = startTime;
+  }
 
   @Public
   @Unstable
-  void setFinishTime(long finishTime);
+  public long getFinishTime() {
+    return finishTime;
+  }
 
   @Public
   @Unstable
-  String getDiagnosticsInfo();
+  public void setFinishTime(long finishTime) {
+    this.finishTime = finishTime;
+  }
 
   @Public
   @Unstable
-  void setDiagnosticsInfo(String diagnosticInfo);
+  public String getDiagnosticsInfo() {
+    return diagnosticsInfo;
+  }
 
   @Public
   @Unstable
-  String getLogURL();
+  public void setDiagnosticsInfo(String diagnosticsInfo) {
+    this.diagnosticsInfo = diagnosticsInfo;
+  }
 
   @Public
   @Unstable
-  void setLogURL(String logURL);
+  public String getLogURL() {
+    return logURL;
+  }
 
   @Public
   @Unstable
-  ContainerState getFinalContainerStatus();
+  public void setLogURL(String logURL) {
+    this.logURL = logURL;
+  }
 
   @Public
   @Unstable
-  void setFinalContainerStatus(ContainerState finalContainerState);
+  public int getContainerExitStatus() {
+    return containerExitStatus;
+  }
+
+  @Public
+  @Unstable
+  public void setContainerExitStatus(int containerExitStatus) {
+    this.containerExitStatus = containerExitStatus;
+  }
+
+  @Public
+  @Unstable
+  public ContainerState getContainerState() {
+    return containerState;
+  }
+
+  @Public
+  @Unstable
+  public void setContainerState(ContainerState containerState) {
+    this.containerState = containerState;
+  }
 
 }
