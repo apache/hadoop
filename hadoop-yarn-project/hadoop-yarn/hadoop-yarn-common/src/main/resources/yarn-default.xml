@@ -1057,6 +1057,13 @@
     <name>yarn.ahs.fs-history-store.compression-type</name>
     <value>none</value>
   </property>
+  
+  <property>
+	<description> Store class name for history store, defaulting to file
+		system store </description>
+	<name>yarn.ahs.store.class</name>
+	<value>org.apache.hadoop.yarn.server.applicationhistoryservice.FileSystemApplicationHistoryStore</value>
+  </property>
 
   <!-- Other configuration -->
   <property>

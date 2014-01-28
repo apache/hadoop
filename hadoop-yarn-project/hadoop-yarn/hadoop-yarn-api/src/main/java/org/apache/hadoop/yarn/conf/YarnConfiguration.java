@@ -944,6 +944,9 @@ public class YarnConfiguration extends Configuration {
   public static final String FS_HISTORY_STORE_COMPRESSION_TYPE = AHS_PREFIX + "fs-history-store.compression-type";
   public static final String DEFAULT_FS_HISTORY_STORE_COMPRESSION_TYPE = "none";
 
+  /** AHS store class */
+  public static final String AHS_STORE = AHS_PREFIX + "store.class";
+  
   ////////////////////////////////
   // Other Configs
   ////////////////////////////////
