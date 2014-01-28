@@ -496,6 +496,9 @@ Branch YARN-321: Generic ApplicationHistoryService
   YARN-953. Changed ResourceManager to start writing history data. (Zhijie Shen
   via vinodkv)
 
+  YARN-1266. Implemented PB service and client wrappers for
+  ApplicationHistoryProtocol. (Mayank Bansal via vinodkv)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
