@@ -469,6 +469,8 @@ Branch YARN-321: Generic ApplicationHistoryService
   YARN-925. Defined a Reader Interface for HistoryStorage. (Mayank Bansal via
   vinodkv)
 
+  YARN-978. Created ApplicationAttemptReport. (Mayank Bansal via vinodkv)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
