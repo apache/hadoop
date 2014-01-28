@@ -18,7 +18,7 @@ package org.apache.hadoop.security;
 
 
 import junit.framework.TestCase;
-import org.apache.hadoop.http.HttpServer;
+import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.FilterContainer;
@@ -49,7 +49,7 @@ public class TestAuthenticationFilter extends TestCase {
              AuthenticationFilterInitializer.SIGNATURE_SECRET_FILE, 
              secretFile.getAbsolutePath());
 
-    conf.set(HttpServer.BIND_ADDRESS, "barhost");
+    conf.set(HttpServer2.BIND_ADDRESS, "barhost");
     
     FilterContainer container = Mockito.mock(FilterContainer.class);
     Mockito.doAnswer(

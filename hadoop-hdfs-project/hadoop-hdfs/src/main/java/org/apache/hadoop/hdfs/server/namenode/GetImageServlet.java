@@ -47,7 +47,7 @@ import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
-import org.apache.hadoop.http.HttpServer;
+import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -287,7 +287,7 @@ public class GetImageServlet extends HttpServlet {
       }
     }
     
-    if (HttpServer.userHasAdministratorAccess(context, remoteUser)) {
+    if (HttpServer2.userHasAdministratorAccess(context, remoteUser)) {
       LOG.info("GetImageServlet allowing administrator: " + remoteUser);
       return true;
     }

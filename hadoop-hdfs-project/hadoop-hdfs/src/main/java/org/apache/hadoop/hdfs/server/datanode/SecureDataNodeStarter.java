@@ -27,7 +27,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.http.HttpConfig;
-import org.apache.hadoop.http.HttpServer;
+import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.mortbay.jetty.Connector;
 
@@ -119,7 +119,7 @@ public class SecureDataNodeStarter implements Daemon {
     // certificates if they are communicating through SSL.
     Connector listener = null;
     if (policy.isHttpEnabled()) {
-      listener = HttpServer.createDefaultChannelConnector();
+      listener = HttpServer2.createDefaultChannelConnector();
       InetSocketAddress infoSocAddr = DataNode.getInfoAddr(conf);
       listener.setHost(infoSocAddr.getHostName());
       listener.setPort(infoSocAddr.getPort());
