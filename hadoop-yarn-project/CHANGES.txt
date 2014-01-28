@@ -483,6 +483,10 @@ Branch YARN-321: Generic ApplicationHistoryService
   YARN-1123. Added a new ContainerReport and its Protobuf implementation. (Mayank
   Bansal via vinodkv)
 
+  YARN-979. Added more APIs for getting information about ApplicationAttempts
+  and Containers from ApplicationHistoryProtocol. (Mayank Bansal and Zhijie Shen
+  via vinodkv)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES

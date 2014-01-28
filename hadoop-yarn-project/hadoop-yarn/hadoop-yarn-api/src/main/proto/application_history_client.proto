@@ -20,13 +20,18 @@ option java_package = "org.apache.hadoop.yarn.proto";
 option java_outer_classname = "ApplicationHistoryProtocol";
 option java_generic_services = true;
 option java_generate_equals_and_hash = true;
+package hadoop.yarn;
 
 import "Security.proto";
 import "yarn_service_protos.proto";
 
 service ApplicationHistoryProtocolService {
   rpc getApplicationReport (GetApplicationReportRequestProto) returns (GetApplicationReportResponseProto);
-  rpc getAllApplications (GetAllApplicationsRequestProto) returns (GetAllApplicationsResponseProto);
+  rpc getApplications (GetApplicationsRequestProto) returns (GetApplicationsResponseProto);
+  rpc getApplicationAttemptReport (GetApplicationAttemptReportRequestProto) returns (GetApplicationAttemptReportResponseProto);
+  rpc getApplicationAttempts (GetApplicationAttemptsRequestProto) returns (GetApplicationAttemptsResponseProto);
+  rpc getContainerReport (GetContainerReportRequestProto) returns (GetContainerReportResponseProto);
+  rpc getContainers (GetContainersRequestProto) returns (GetContainersResponseProto);
   rpc getDelegationToken(hadoop.common.GetDelegationTokenRequestProto) returns (hadoop.common.GetDelegationTokenResponseProto);
   rpc renewDelegationToken(hadoop.common.RenewDelegationTokenRequestProto) returns (hadoop.common.RenewDelegationTokenResponseProto);
   rpc cancelDelegationToken(hadoop.common.CancelDelegationTokenRequestProto) returns (hadoop.common.CancelDelegationTokenResponseProto);
