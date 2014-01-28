@@ -386,7 +386,7 @@ public abstract class YarnClient extends AbstractService {
    * @throws IOException
    */
   public abstract ApplicationAttemptReport getApplicationAttemptReport(
-      ApplicationAttemptId appAttemptId) throws YarnException, IOException;
+      ApplicationAttemptId applicationAttemptId) throws YarnException, IOException;
 
   /**
    * <p>
@@ -400,7 +400,7 @@ public abstract class YarnClient extends AbstractService {
    * @throws IOException
    */
   public abstract List<ApplicationAttemptReport> getApplicationAttempts(
-      ApplicationId appId) throws YarnException, IOException;
+      ApplicationId applicationId) throws YarnException, IOException;
 
   /**
    * <p>

@@ -37,17 +37,18 @@ public interface ApplicationHistoryReader {
   /**
    * This method returns Application {@link ApplicationHistoryData} for the
    * specified {@link ApplicationId}.
+   * @param appId 
    * 
    * @return {@link ApplicationHistoryData} for the ApplicationId.
-   * @throws {@link IOException}
+   * @throws IOException
    */
   ApplicationHistoryData getApplication(ApplicationId appId) throws IOException;
 
   /**
    * This method returns all Application {@link ApplicationHistoryData}s
    * 
-   * @return map {@link ApplicationId, @link ApplicationHistoryData}s.
-   * @throws {@link IOException}
+   * @return map of {@link ApplicationId} to {@link ApplicationHistoryData}s.
+   * @throws IOException
    */
   Map<ApplicationId, ApplicationHistoryData> getAllApplications()
       throws IOException;
@@ -56,9 +57,10 @@ public interface ApplicationHistoryReader {
    * Application can have multiple application attempts
    * {@link ApplicationAttemptHistoryData}. This method returns the all
    * {@link ApplicationAttemptHistoryData}s for the Application.
+   * @param appId 
    * 
    * @return all {@link ApplicationAttemptHistoryData}s for the Application.
-   * @throws {@link IOException}
+   * @throws IOException
    */
   Map<ApplicationAttemptId, ApplicationAttemptHistoryData> getApplicationAttempts(
       ApplicationId appId) throws IOException;
@@ -67,9 +69,9 @@ public interface ApplicationHistoryReader {
    * This method returns {@link ApplicationAttemptHistoryData} for specified
    * {@link ApplicationId}.
    * 
-   * @param {@link ApplicationAttemptId}
+   * @param appAttemptId {@link ApplicationAttemptId}
    * @return {@link ApplicationAttemptHistoryData} for ApplicationAttemptId
-   * @throws {@link IOException}
+   * @throws IOException
    */
   ApplicationAttemptHistoryData getApplicationAttempt(
       ApplicationAttemptId appAttemptId) throws IOException;
@@ -78,9 +80,9 @@ public interface ApplicationHistoryReader {
    * This method returns {@link ContainerHistoryData} for specified
    * {@link ContainerId}.
    * 
-   * @param {@link ContainerId}
+   * @param containerId {@link ContainerId}
    * @return {@link ContainerHistoryData} for ContainerId
-   * @throws {@link IOException}
+   * @throws IOException
    */
   ContainerHistoryData getContainer(ContainerId containerId) throws IOException;
 
@@ -88,21 +90,22 @@ public interface ApplicationHistoryReader {
    * This method returns {@link ContainerHistoryData} for specified
    * {@link ApplicationAttemptId}.
    * 
-   * @param {@link ApplicationAttemptId}
+   * @param appAttemptId {@link ApplicationAttemptId}
    * @return {@link ContainerHistoryData} for ApplicationAttemptId
-   * @throws {@link IOException}
+   * @throws IOException
    */
   ContainerHistoryData getAMContainer(ApplicationAttemptId appAttemptId)
       throws IOException;
   
   /**
-   * This method returns Map{@link ContainerId,@link ContainerHistoryData} for
-   * specified {@link ApplicationAttemptId}.
+   * This method returns Map{@link ContainerId} to {@link ContainerHistoryData}
+   * for specified {@link ApplicationAttemptId}.
    * 
-   * @param {@link ApplicationAttemptId}
-   * @return Map{@link ContainerId, @link ContainerHistoryData} for
+   * @param appAttemptId
+   *          {@link ApplicationAttemptId}
+   * @return Map{@link ContainerId} to {@link ContainerHistoryData} for
    *         ApplicationAttemptId
-   * @throws {@link IOException}
+   * @throws IOException
    */
   Map<ContainerId, ContainerHistoryData> getContainers(
       ApplicationAttemptId appAttemptId) throws IOException;

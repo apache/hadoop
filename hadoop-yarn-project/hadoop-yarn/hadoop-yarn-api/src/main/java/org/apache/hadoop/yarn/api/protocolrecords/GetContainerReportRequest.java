@@ -52,7 +52,7 @@ public abstract class GetContainerReportRequest {
   /**
    * Set the <code>ContainerId</code> of the container
    * 
-   * @param ContainerId
+   * @param containerId
    *          <code>ContainerId</code> of the container
    */
   @Public

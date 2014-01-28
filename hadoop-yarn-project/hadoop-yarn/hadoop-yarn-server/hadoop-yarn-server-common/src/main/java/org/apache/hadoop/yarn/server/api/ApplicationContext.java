@@ -36,9 +36,10 @@ public interface ApplicationContext {
   /**
    * This method returns Application {@link ApplicationReport} for the specified
    * {@link ApplicationId}.
+   * @param appId 
    * 
    * @return {@link ApplicationReport} for the ApplicationId.
-   * @throws {@link IOException}
+   * @throws IOException 
    */
   @Public
   @Unstable
@@ -47,8 +48,8 @@ public interface ApplicationContext {
   /**
    * This method returns all Application {@link ApplicationReport}s
    * 
-   * @return map {@link ApplicationId, @link ApplicationReport}s.
-   * @throws {@link IOException}
+   * @return map of {@link ApplicationId} to {@link ApplicationReport}s.
+   * @throws IOException
    */
   @Public
   @Unstable
@@ -58,9 +59,10 @@ public interface ApplicationContext {
    * Application can have multiple application attempts
    * {@link ApplicationAttemptReport}. This method returns the all
    * {@link ApplicationAttemptReport}s for the Application.
+   * @param appId 
    * 
    * @return all {@link ApplicationAttemptReport}s for the Application.
-   * @throws {@link IOException}
+   * @throws IOException
    */
   @Public
   @Unstable
@@ -71,9 +73,9 @@ public interface ApplicationContext {
    * This method returns {@link ApplicationAttemptReport} for specified
    * {@link ApplicationId}.
    * 
-   * @param {@link ApplicationAttemptId}
+   * @param appAttemptId {@link ApplicationAttemptId}
    * @return {@link ApplicationAttemptReport} for ApplicationAttemptId
-   * @throws {@link IOException}
+   * @throws IOException
    */
   @Public
   @Unstable
@@ -84,9 +86,9 @@ public interface ApplicationContext {
    * This method returns {@link ContainerReport} for specified
    * {@link ContainerId}.
    * 
-   * @param {@link ContainerId}
+   * @param containerId {@link ContainerId}
    * @return {@link ContainerReport} for ContainerId
-   * @throws {@link IOException}
+   * @throws IOException
    */
   @Public
   @Unstable
@@ -96,9 +98,9 @@ public interface ApplicationContext {
    * This method returns {@link ContainerReport} for specified
    * {@link ApplicationAttemptId}.
    * 
-   * @param {@link ApplicationAttemptId}
+   * @param appAttemptId {@link ApplicationAttemptId}
    * @return {@link ContainerReport} for ApplicationAttemptId
-   * @throws {@link IOException}
+   * @throws IOException
    */
   @Public
   @Unstable
@@ -106,13 +108,14 @@ public interface ApplicationContext {
       throws IOException;
 
   /**
-   * This method returns Map{@link ContainerId,@link ContainerReport} for
-   * specified {@link ApplicationAttemptId}.
+   * This method returns Map of {@link ContainerId} to {@link ContainerReport}
+   * for specified {@link ApplicationAttemptId}.
    * 
-   * @param {@link ApplicationAttemptId}
-   * @return Map{@link ContainerId, @link ContainerReport} for
+   * @param appAttemptId
+   *          {@link ApplicationAttemptId}
+   * @return Map of {@link ContainerId} to {@link ContainerReport} for
    *         ApplicationAttemptId
-   * @throws {@link IOException}
+   * @throws IOException
    */
   @Public
   @Unstable

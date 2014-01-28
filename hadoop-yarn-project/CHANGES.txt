@@ -78,6 +78,9 @@ Branch YARN-321: Generic ApplicationHistoryService
   YARN-1594. Updated pom.xml of applicationhistoryservice sub-project according to
   YARN-888. (Vinod Kumar Vavilapalli via zjshen)
 
+  YARN-1596. Fixed Javadoc warnings on branch YARN-321. (Vinod Kumar Vavilapalli
+  via zjshen)
+
 Release 2.4.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

@@ -60,7 +60,7 @@ public abstract class GetApplicationAttemptReportResponse {
   /**
    * Get the <code>ApplicationAttemptReport</code> for the application attempt.
    *
-   * @param ApplicationAttemptReport <code>ApplicationAttemptReport</code> for
+   * @param applicationAttemptReport <code>ApplicationAttemptReport</code> for
    * the application attempt
    */
   @Public
