@@ -487,6 +487,9 @@ Branch YARN-321: Generic ApplicationHistoryService
   and Containers from ApplicationHistoryProtocol. (Mayank Bansal and Zhijie Shen
   via vinodkv)
 
+  YARN-974. Added more information to RMContainer to be collected and recorded in
+  Application-History. (Zhijie Shen via vinodkv)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
