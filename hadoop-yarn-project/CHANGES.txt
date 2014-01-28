@@ -511,6 +511,9 @@ Branch YARN-321: Generic ApplicationHistoryService
   YARN-967. Added the client and CLI interfaces for obtaining ApplicationHistory
   data. (Mayank Bansal via vinodkv)
 
+  YARN-1023. Added Webservices REST APIs support for Application History. (Zhijie
+  Shen via vinodkv)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES

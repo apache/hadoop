@@ -69,7 +69,7 @@ public class ApplicationHistoryStoreTestUtils {
       ApplicationAttemptId appAttemptId) throws IOException {
     store.applicationAttemptFinished(
         ApplicationAttemptFinishData.newInstance(appAttemptId,
-            appAttemptId.toString(), "test diagnostics info",
+            appAttemptId.toString(), "test tracking url",
             FinalApplicationStatus.UNDEFINED,
             YarnApplicationAttemptState.FINISHED));
   }

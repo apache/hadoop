@@ -25,7 +25,7 @@ import javax.xml.bind.annotation.XmlRootElement;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
 
-@XmlRootElement(name = "appattempt")
+@XmlRootElement(name = "appAttempt")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class AppAttemptInfo {
 
