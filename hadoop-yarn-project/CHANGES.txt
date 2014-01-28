@@ -508,6 +508,9 @@ Branch YARN-321: Generic ApplicationHistoryService
   YARN-954. Implemented web UI for the ApplicationHistoryServer and wired it into
   the HistoryStorage. (Zhijie Shen via vinodkv)
 
+  YARN-967. Added the client and CLI interfaces for obtaining ApplicationHistory
+  data. (Mayank Bansal via vinodkv)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
