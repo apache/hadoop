@@ -112,6 +112,7 @@
                   <include>containermanagement_protocol.proto</include>
                   <include>server/yarn_server_resourcemanager_service_protos.proto</include>
                   <include>server/resourcemanager_administration_protocol.proto</include>
+                  <include>src/main/proto/application_history_service.proto</include>
                 </includes>
               </source>
               <output>${project.build.directory}/generated-sources/java</output>
