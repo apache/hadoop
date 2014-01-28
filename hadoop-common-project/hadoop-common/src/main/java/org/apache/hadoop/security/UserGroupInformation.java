@@ -1548,7 +1548,7 @@ public class UserGroupInformation {
       return Subject.doAs(subject, action);
     } catch (PrivilegedActionException pae) {
       Throwable cause = pae.getCause();
-      LOG.error("PriviledgedActionException as:"+this+" cause:"+cause);
+      LOG.warn("PriviledgedActionException as:"+this+" cause:"+cause);
       if (cause instanceof IOException) {
         throw (IOException) cause;
       } else if (cause instanceof Error) {
