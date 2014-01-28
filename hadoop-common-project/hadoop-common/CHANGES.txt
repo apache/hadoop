@@ -571,6 +571,9 @@ Release 2.3.0 - UNRELEASED
     HADOOP-10086. User document for authentication in secure cluster.
     (Masatake Iwasaki via Arpit Agarwal)
 
+    HADOOP-10274 Lower the logging level from ERROR to WARN for UGI.doAs method
+    (Takeshi Miao via stack)
+
   OPTIMIZATIONS
 
     HADOOP-10142. Avoid groups lookup for unprivileged users such as "dr.who"
