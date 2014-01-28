@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.applicationhistoryservice;
 
+import java.io.IOException;
 import java.util.HashMap;
 
 import junit.framework.Assert;
@@ -67,12 +68,21 @@ public class TestMemoryApplicationHistoryStore {
     memstore.writeContainer(container);
   }
 
+  public ContainerHistoryData writeContainer(ApplicationAttemptId appAttemptId,
+      int containerId) throws Throwable {
+    ContainerHistoryData container = new ContainerHistoryDataPBImpl();
+    container
+      .setContainerId(ContainerId.newInstance(appAttemptId, containerId));
+    memstore.writeContainer(container);
+    return container;
+  }
+  
   @After
   public void tearDown() {
   }
 
   @Test
-  public void testReadApplication() {
+  public void testReadApplication() throws Throwable {
     HashMap<ApplicationId, ApplicationHistoryData> map =
         (HashMap<ApplicationId, ApplicationHistoryData>) memstore
           .getAllApplications();
@@ -98,5 +108,13 @@ public class TestMemoryApplicationHistoryStore {
           .newInstance(ApplicationId.newInstance(1234, 1), 1), 1));
     Assert.assertEquals("container_1234_0001_01_000001", amContainer
       .getContainerId().toString());
+    ContainerHistoryData container2 =
+        writeContainer(appAttempt.getApplicationAttemptId(), 2);
+    HashMap<ContainerId, ContainerHistoryData> containers =
+        (HashMap<ContainerId, ContainerHistoryData>) memstore
+          .getContainers(appAttempt.getApplicationAttemptId());
+    Assert.assertEquals(2, containers.size());
+    Assert.assertEquals("container_1234_0001_01_000002", containers.get(
+      container2.getContainerId()).getContainerId().toString());
   }
 }
