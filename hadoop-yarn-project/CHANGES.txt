@@ -81,6 +81,9 @@ Branch YARN-321: Generic ApplicationHistoryService
   YARN-1596. Fixed Javadoc warnings on branch YARN-321. (Vinod Kumar Vavilapalli
   via zjshen)
 
+  YARN-1597. Fixed Findbugs warnings on branch YARN-321. (Vinod Kumar Vavilapalli
+  via zjshen)
+
 Release 2.4.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
