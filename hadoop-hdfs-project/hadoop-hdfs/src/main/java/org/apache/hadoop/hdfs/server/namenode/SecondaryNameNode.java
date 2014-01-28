@@ -90,7 +90,7 @@ import com.google.common.collect.ImmutableList;
  * The Secondary NameNode is a daemon that periodically wakes
  * up (determined by the schedule specified in the configuration),
  * triggers a periodic checkpoint and then goes back to sleep.
- * The Secondary NameNode uses the ClientProtocol to talk to the
+ * The Secondary NameNode uses the NamenodeProtocol to talk to the
  * primary NameNode.
  *
  **********************************************************/
