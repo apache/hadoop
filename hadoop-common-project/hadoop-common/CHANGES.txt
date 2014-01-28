@@ -661,8 +661,8 @@ Release 2.3.0 - UNRELEASED
     HADOOP-9830. Fix typo at http://hadoop.apache.org/docs/current/
     (Kousuke Saruta via Arpit Agarwal)
 
-    HADOOP-10255. Rename HttpServer into HttpServer2.
-    (Haohui Mai via suresh)
+    HADOOP-10255. Rename HttpServer to HttpServer2 to retain older 
+    HttpServer in branch-2 for compatibility. (Haohui Mai via suresh)
 
 Release 2.2.0 - 2013-10-13
 
