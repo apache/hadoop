@@ -460,6 +460,9 @@ Branch YARN-321: Generic ApplicationHistoryService
   YARN-947. Implementing the data objects to be used by the History reader
   and writer interfaces. (Zhijie Shen via vinodkv)
 
+  YARN-984. Renamed the incorrectly named applicationhistoryservice.records.pb.impl
+  package to be applicationhistoryservice.records.impl.pb. (Devaraj K via vinodkv)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
