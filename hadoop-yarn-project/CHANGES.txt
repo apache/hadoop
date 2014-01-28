@@ -465,6 +465,8 @@ Release 2.4.0 - UNRELEASED
 
     YARN-1642. RMDTRenewer#getRMClient should use ClientRMProxy (kasha)
 
+    YARN-1629. IndexOutOfBoundsException in MaxRunningAppsEnforcer (Sandy Ryza)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
