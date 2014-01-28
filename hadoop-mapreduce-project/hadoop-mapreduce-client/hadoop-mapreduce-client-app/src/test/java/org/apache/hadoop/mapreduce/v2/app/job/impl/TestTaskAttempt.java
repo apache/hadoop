@@ -41,6 +41,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RawLocalFileSystem;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MapTaskAttemptImpl;
+import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.JobCounter;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEvent;
@@ -182,13 +183,13 @@ public class TestTaskAttempt{
   }
 
   @Test
-  public void testSlotMillisCounterUpdate() throws Exception {
-    verifySlotMillis(2048, 2048, 1024);
-    verifySlotMillis(2048, 1024, 1024);
-    verifySlotMillis(10240, 1024, 2048);
+  public void testMillisCountersUpdate() throws Exception {
+    verifyMillisCounters(2048, 2048, 1024);
+    verifyMillisCounters(2048, 1024, 1024);
+    verifyMillisCounters(10240, 1024, 2048);
   }
 
-  public void verifySlotMillis(int mapMemMb, int reduceMemMb,
+  public void verifyMillisCounters(int mapMemMb, int reduceMemMb,
       int minContainerSize) throws Exception {
     Clock actualClock = new SystemClock();
     ControlledClock clock = new ControlledClock(actualClock);
@@ -232,13 +233,23 @@ public class TestTaskAttempt{
     Assert.assertEquals(mta.getLaunchTime(), 10);
     Assert.assertEquals(rta.getFinishTime(), 11);
     Assert.assertEquals(rta.getLaunchTime(), 10);
+    Counters counters = job.getAllCounters();
     Assert.assertEquals((int) Math.ceil((float) mapMemMb / minContainerSize),
-        job.getAllCounters().findCounter(JobCounter.SLOTS_MILLIS_MAPS)
-            .getValue());
-    Assert.assertEquals(
-        (int) Math.ceil((float) reduceMemMb / minContainerSize), job
-            .getAllCounters().findCounter(JobCounter.SLOTS_MILLIS_REDUCES)
-            .getValue());
+        counters.findCounter(JobCounter.SLOTS_MILLIS_MAPS).getValue());
+    Assert.assertEquals((int) Math.ceil((float) reduceMemMb / minContainerSize),
+        counters.findCounter(JobCounter.SLOTS_MILLIS_REDUCES).getValue());
+    Assert.assertEquals(1,
+        counters.findCounter(JobCounter.MILLIS_MAPS).getValue());
+    Assert.assertEquals(1,
+        counters.findCounter(JobCounter.MILLIS_REDUCES).getValue());
+    Assert.assertEquals(mapMemMb,
+        counters.findCounter(JobCounter.MB_MILLIS_MAPS).getValue());
+    Assert.assertEquals(reduceMemMb,
+        counters.findCounter(JobCounter.MB_MILLIS_REDUCES).getValue());
+    Assert.assertEquals(1,
+        counters.findCounter(JobCounter.VCORES_MILLIS_MAPS).getValue());
+    Assert.assertEquals(1,
+        counters.findCounter(JobCounter.VCORES_MILLIS_REDUCES).getValue());
   }
 
   private TaskAttemptImpl createMapTaskAttemptImplForTest(

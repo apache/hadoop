@@ -1261,57 +1261,56 @@ public abstract class TaskAttemptImpl implements
       }
     }
   }
-
-  private static long computeSlotMillis(TaskAttemptImpl taskAttempt) {
+  
+  private static void updateMillisCounters(JobCounterUpdateEvent jce,
+      TaskAttemptImpl taskAttempt) {
     TaskType taskType = taskAttempt.getID().getTaskId().getTaskType();
-    int slotMemoryReq =
+    long duration = (taskAttempt.getFinishTime() - taskAttempt.getLaunchTime());
+    int mbRequired =
         taskAttempt.getMemoryRequired(taskAttempt.conf, taskType);
+    int vcoresRequired = taskAttempt.getCpuRequired(taskAttempt.conf, taskType);
 
     int minSlotMemSize = taskAttempt.conf.getInt(
       YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
       YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB);
 
     int simSlotsRequired =
-        minSlotMemSize == 0 ? 0 : (int) Math.ceil((float) slotMemoryReq
+        minSlotMemSize == 0 ? 0 : (int) Math.ceil((float) mbRequired
             / minSlotMemSize);
 
-    long slotMillisIncrement =
-        simSlotsRequired
-            * (taskAttempt.getFinishTime() - taskAttempt.getLaunchTime());
-    return slotMillisIncrement;
+    if (taskType == TaskType.MAP) {
+      jce.addCounterUpdate(JobCounter.SLOTS_MILLIS_MAPS, simSlotsRequired * duration);
+      jce.addCounterUpdate(JobCounter.MB_MILLIS_MAPS, duration * mbRequired);
+      jce.addCounterUpdate(JobCounter.VCORES_MILLIS_MAPS, duration * vcoresRequired);
+      jce.addCounterUpdate(JobCounter.MILLIS_MAPS, duration);
+    } else {
+      jce.addCounterUpdate(JobCounter.SLOTS_MILLIS_REDUCES, simSlotsRequired * duration);
+      jce.addCounterUpdate(JobCounter.MB_MILLIS_REDUCES, duration * mbRequired);
+      jce.addCounterUpdate(JobCounter.VCORES_MILLIS_REDUCES, duration * vcoresRequired);
+      jce.addCounterUpdate(JobCounter.MILLIS_REDUCES, duration);
+    }
   }
 
   private static JobCounterUpdateEvent createJobCounterUpdateEventTASucceeded(
       TaskAttemptImpl taskAttempt) {
-    long slotMillis = computeSlotMillis(taskAttempt);
     TaskId taskId = taskAttempt.attemptId.getTaskId();
     JobCounterUpdateEvent jce = new JobCounterUpdateEvent(taskId.getJobId());
-    jce.addCounterUpdate(
-      taskId.getTaskType() == TaskType.MAP ?
-        JobCounter.SLOTS_MILLIS_MAPS : JobCounter.SLOTS_MILLIS_REDUCES,
-        slotMillis);
+    updateMillisCounters(jce, taskAttempt);
     return jce;
   }
-
+  
   private static JobCounterUpdateEvent createJobCounterUpdateEventTAFailed(
       TaskAttemptImpl taskAttempt, boolean taskAlreadyCompleted) {
     TaskType taskType = taskAttempt.getID().getTaskId().getTaskType();
     JobCounterUpdateEvent jce = new JobCounterUpdateEvent(taskAttempt.getID().getTaskId().getJobId());
     
-    long slotMillisIncrement = computeSlotMillis(taskAttempt);
-    
     if (taskType == TaskType.MAP) {
       jce.addCounterUpdate(JobCounter.NUM_FAILED_MAPS, 1);
-      if(!taskAlreadyCompleted) {
-        // dont double count the elapsed time
-        jce.addCounterUpdate(JobCounter.SLOTS_MILLIS_MAPS, slotMillisIncrement);
-      }
     } else {
       jce.addCounterUpdate(JobCounter.NUM_FAILED_REDUCES, 1);
-      if(!taskAlreadyCompleted) {
-        // dont double count the elapsed time
-        jce.addCounterUpdate(JobCounter.SLOTS_MILLIS_REDUCES, slotMillisIncrement);
-      }
+    }
+    if (!taskAlreadyCompleted) {
+      updateMillisCounters(jce, taskAttempt);
     }
     return jce;
   }
@@ -1321,20 +1320,13 @@ public abstract class TaskAttemptImpl implements
     TaskType taskType = taskAttempt.getID().getTaskId().getTaskType();
     JobCounterUpdateEvent jce = new JobCounterUpdateEvent(taskAttempt.getID().getTaskId().getJobId());
     
-    long slotMillisIncrement = computeSlotMillis(taskAttempt);
-    
     if (taskType == TaskType.MAP) {
       jce.addCounterUpdate(JobCounter.NUM_KILLED_MAPS, 1);
-      if(!taskAlreadyCompleted) {
-        // dont double count the elapsed time
-        jce.addCounterUpdate(JobCounter.SLOTS_MILLIS_MAPS, slotMillisIncrement);
-      }
     } else {
       jce.addCounterUpdate(JobCounter.NUM_KILLED_REDUCES, 1);
-      if(!taskAlreadyCompleted) {
-        // dont double count the elapsed time
-        jce.addCounterUpdate(JobCounter.SLOTS_MILLIS_REDUCES, slotMillisIncrement);
-      }
+    }
+    if (!taskAlreadyCompleted) {
+      updateMillisCounters(jce, taskAttempt);
     }
     return jce;
   }  
