@@ -348,6 +348,8 @@ Release 2.4.0 - UNRELEASED
     YARN-1575. Public localizer crashes with "Localized unkown resource"
     (jlowe)
 
+    YARN-1642. RMDTRenewer#getRMClient should use ClientRMProxy (kasha)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
