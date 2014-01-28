@@ -516,6 +516,9 @@ Branch YARN-321: Generic ApplicationHistoryService
 
   YARN-1534. Fixed failure of test TestAHSWebApp. (Shinichi Yamashita via vinodkv)
 
+  YARN-1413. Implemented serving of aggregated-logs in the ApplicationHistory
+  server. (Mayank Bansal via vinodkv)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES

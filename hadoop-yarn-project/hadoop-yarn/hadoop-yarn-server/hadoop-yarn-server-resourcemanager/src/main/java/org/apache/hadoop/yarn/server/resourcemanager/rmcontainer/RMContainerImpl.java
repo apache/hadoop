@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.rmcontainer;
 
-import static org.apache.hadoop.yarn.util.StringHelper.join;
-
 import java.util.EnumSet;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
@@ -27,7 +25,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -46,7 +43,7 @@ import org.apache.hadoop.yarn.state.InvalidStateTransitonException;
 import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
-import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 @SuppressWarnings({"unchecked", "rawtypes"})
 public class RMContainerImpl implements RMContainer {
@@ -366,10 +363,9 @@ public class RMContainerImpl implements RMContainer {
     public void transition(RMContainerImpl container, RMContainerEvent event) {
       // The logs of running containers should be found on NM webUI
       // The logs should be accessible after the container is launched
-      container.logURL = join(HttpConfig.getSchemePrefix(),
-          container.container.getNodeHttpAddress(), "/node", "/containerlogs/",
-              ConverterUtils.toString(container.containerId), "/",
-              container.user);
+      container.logURL = WebAppUtils.getLogUrl(container.container
+          .getNodeHttpAddress(), container.getAllocatedNode().toString(),
+          container.containerId, container.user);
       // Unregister from containerAllocationExpirer.
       container.containerAllocationExpirer.unregister(container
           .getContainerId());

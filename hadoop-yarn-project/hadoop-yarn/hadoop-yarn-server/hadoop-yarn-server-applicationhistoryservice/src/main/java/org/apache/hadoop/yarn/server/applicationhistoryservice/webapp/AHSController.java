@@ -47,4 +47,10 @@ public class AHSController extends Controller {
     render(ContainerPage.class);
   }
 
+  /**
+   * Render the logs page.
+   */
+  public void logs() {
+    render(AHSLogsPage.class);
+  }
 }
