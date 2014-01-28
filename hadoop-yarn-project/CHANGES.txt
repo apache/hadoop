@@ -493,6 +493,9 @@ Branch YARN-321: Generic ApplicationHistoryService
   YARN-987. Added ApplicationHistoryManager responsible for exposing reports to
   all clients. (Mayank Bansal via vinodkv)
 
+  YARN-953. Changed ResourceManager to start writing history data. (Zhijie Shen
+  via vinodkv)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES

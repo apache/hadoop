@@ -19,9 +19,12 @@
 package org.apache.hadoop.yarn.server.resourcemanager.rmcontainer;
 
 import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -36,6 +39,8 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.ahs.RMApplicationHistoryWriter;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerFinishedEvent;
@@ -48,12 +53,10 @@ import org.mockito.ArgumentCaptor;
 @SuppressWarnings({ "unchecked", "rawtypes" })
 public class TestRMContainerImpl {
 
-  @SuppressWarnings("resource")
   @Test
   public void testReleaseWhileRunning() {
 
     DrainDispatcher drainDispatcher = new DrainDispatcher();
-    EventHandler eventHandler = drainDispatcher.getEventHandler();
     EventHandler<RMAppAttemptEvent> appAttemptEventHandler = mock(EventHandler.class);
     EventHandler generic = mock(EventHandler.class);
     drainDispatcher.register(RMAppAttemptEventType.class,
@@ -74,19 +77,24 @@ public class TestRMContainerImpl {
     Container container = BuilderUtils.newContainer(containerId, nodeId,
         "host:3465", resource, priority, null);
 
+    RMApplicationHistoryWriter writer = mock(RMApplicationHistoryWriter.class);
+    RMContext rmContext = mock(RMContext.class);
+    when(rmContext.getDispatcher()).thenReturn(drainDispatcher);
+    when(rmContext.getContainerAllocationExpirer()).thenReturn(expirer);
+    when(rmContext.getRMApplicationHistoryWriter()).thenReturn(writer);
     RMContainer rmContainer = new RMContainerImpl(container, appAttemptId,
-        nodeId, eventHandler, expirer, "user");
+        nodeId, "user", rmContext);
 
     assertEquals(RMContainerState.NEW, rmContainer.getState());
     assertEquals(resource, rmContainer.getAllocatedResource());
     assertEquals(nodeId, rmContainer.getAllocatedNode());
     assertEquals(priority, rmContainer.getAllocatedPriority());
+    verify(writer).containerStarted(any(RMContainer.class));
 
     rmContainer.handle(new RMContainerEvent(containerId,
         RMContainerEventType.START));
     drainDispatcher.await();
     assertEquals(RMContainerState.ALLOCATED, rmContainer.getState());
-
     rmContainer.handle(new RMContainerEvent(containerId,
         RMContainerEventType.ACQUIRED));
     drainDispatcher.await();
@@ -114,6 +122,7 @@ public class TestRMContainerImpl {
     assertEquals(ContainerExitStatus.ABORTED,
         rmContainer.getContainerExitStatus());
     assertEquals(ContainerState.COMPLETE, rmContainer.getContainerState());
+    verify(writer).containerFinished(any(RMContainer.class));
 
     ArgumentCaptor<RMAppAttemptContainerFinishedEvent> captor = ArgumentCaptor
         .forClass(RMAppAttemptContainerFinishedEvent.class);
@@ -130,12 +139,10 @@ public class TestRMContainerImpl {
     assertEquals(RMContainerState.RELEASED, rmContainer.getState());
   }
 
-  @SuppressWarnings("resource")
   @Test
   public void testExpireWhileRunning() {
 
     DrainDispatcher drainDispatcher = new DrainDispatcher();
-    EventHandler eventHandler = drainDispatcher.getEventHandler();
     EventHandler<RMAppAttemptEvent> appAttemptEventHandler = mock(EventHandler.class);
     EventHandler generic = mock(EventHandler.class);
     drainDispatcher.register(RMAppAttemptEventType.class,
@@ -156,13 +163,19 @@ public class TestRMContainerImpl {
     Container container = BuilderUtils.newContainer(containerId, nodeId,
         "host:3465", resource, priority, null);
 
+    RMApplicationHistoryWriter writer = mock(RMApplicationHistoryWriter.class);
+    RMContext rmContext = mock(RMContext.class);
+    when(rmContext.getDispatcher()).thenReturn(drainDispatcher);
+    when(rmContext.getContainerAllocationExpirer()).thenReturn(expirer);
+    when(rmContext.getRMApplicationHistoryWriter()).thenReturn(writer);
     RMContainer rmContainer = new RMContainerImpl(container, appAttemptId,
-        nodeId, eventHandler, expirer, "user");
+        nodeId, "user", rmContext);
 
     assertEquals(RMContainerState.NEW, rmContainer.getState());
     assertEquals(resource, rmContainer.getAllocatedResource());
     assertEquals(nodeId, rmContainer.getAllocatedNode());
     assertEquals(priority, rmContainer.getAllocatedPriority());
+    verify(writer).containerStarted(any(RMContainer.class));
 
     rmContainer.handle(new RMContainerEvent(containerId,
         RMContainerEventType.START));
@@ -191,5 +204,6 @@ public class TestRMContainerImpl {
         containerStatus, RMContainerEventType.EXPIRE));
     drainDispatcher.await();
     assertEquals(RMContainerState.RUNNING, rmContainer.getState());
+    verify(writer, never()).containerFinished(any(RMContainer.class));
   }
 }
