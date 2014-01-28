@@ -565,9 +565,12 @@
   </property>
 
   <property>
-    <description>Enable RM to write history data. If true, then
-    yarn.resourcemanager.history-writer.class must be specified</description>
-    <name>yarn.resourcemanager.history-writer.enabled</name>
+    <description>Indicate to ResourceManager as well as clients whether
+    history-service is enabled or not. If enabled, ResourceManager starts
+    recording historical data that ApplicationHistory service can consume.
+    Similarly, clients can redirect to the history service when applications
+    finish if this is enabled.</description>
+    <name>yarn.ahs.enabled</name>
     <value>false</value>
   </property>
 
