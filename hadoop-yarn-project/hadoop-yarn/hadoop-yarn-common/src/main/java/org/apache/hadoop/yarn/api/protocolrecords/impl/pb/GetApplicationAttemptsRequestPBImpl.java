@@ -34,8 +34,8 @@ import com.google.protobuf.TextFormat;
 public class GetApplicationAttemptsRequestPBImpl extends
     GetApplicationAttemptsRequest {
 
-  GetApplicationAttemptsRequestProto proto =
-      GetApplicationAttemptsRequestProto.getDefaultInstance();
+  GetApplicationAttemptsRequestProto proto = GetApplicationAttemptsRequestProto
+    .getDefaultInstance();
   GetApplicationAttemptsRequestProto.Builder builder = null;
   boolean viaProto = false;
 

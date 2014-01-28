@@ -50,7 +50,6 @@ import org.apache.hadoop.yarn.client.api.AHSClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
-import org.apache.hadoop.yarn.util.Records;
 
 @Private
 @Unstable

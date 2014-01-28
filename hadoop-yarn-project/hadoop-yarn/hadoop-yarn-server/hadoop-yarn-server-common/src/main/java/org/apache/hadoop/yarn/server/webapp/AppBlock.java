@@ -76,8 +76,7 @@ public class AppBlock extends HtmlBlock {
     try {
       appReport = appContext.getApplication(appID);
     } catch (IOException e) {
-      String message =
-          "Failed to read the application " + appID + ".";
+      String message = "Failed to read the application " + appID + ".";
       LOG.error(message, e);
       html.p()._(message)._();
       return;
@@ -90,19 +89,20 @@ public class AppBlock extends HtmlBlock {
 
     setTitle(join("Application ", aid));
 
-    info("Application Overview").
-        _("User:", app.getUser()).
-        _("Name:", app.getName()).
-        _("Application Type:", app.getType()).
-        _("State:", app.getAppState()).
-        _("FinalStatus:", app.getFinalAppStatus()).
-        _("Started:", Times.format(app.getStartedTime())).
-        _("Elapsed:", StringUtils.formatTime(
-            Times.elapsed(app.getStartedTime(), app.getFinishedTime()))).
-        _("Tracking URL:",
-            app.getTrackingUrl() == null ? "#" : root_url(app.getTrackingUrl()),
-            "History").
-        _("Diagnostics:", app.getDiagnosticsInfo());
+    info("Application Overview")
+      ._("User:", app.getUser())
+      ._("Name:", app.getName())
+      ._("Application Type:", app.getType())
+      ._("State:", app.getAppState())
+      ._("FinalStatus:", app.getFinalAppStatus())
+      ._("Started:", Times.format(app.getStartedTime()))
+      ._(
+        "Elapsed:",
+        StringUtils.formatTime(Times.elapsed(app.getStartedTime(),
+          app.getFinishedTime())))
+      ._("Tracking URL:",
+        app.getTrackingUrl() == null ? "#" : root_url(app.getTrackingUrl()),
+        "History")._("Diagnostics:", app.getDiagnosticsInfo());
 
     html._(InfoBlock.class);
 
@@ -118,23 +118,19 @@ public class AppBlock extends HtmlBlock {
     }
 
     // Application Attempt Table
-    TBODY<TABLE<Hamlet>> tbody = html.
-        table("#attempts").
-        thead().
-        tr().
-        th(".id", "Attempt ID").
-        th(".started", "Started").
-        th(".node", "Node").
-        th(".logs", "Logs")._()._().
-        tbody();
+    TBODY<TABLE<Hamlet>> tbody =
+        html.table("#attempts").thead().tr().th(".id", "Attempt ID")
+          .th(".started", "Started").th(".node", "Node").th(".logs", "Logs")
+          ._()._().tbody();
 
     StringBuilder attemptsTableData = new StringBuilder("[\n");
     for (ApplicationAttemptReport appAttemptReport : attempts) {
       AppAttemptInfo appAttempt = new AppAttemptInfo(appAttemptReport);
       ContainerReport containerReport;
       try {
-        containerReport = appContext.getAMContainer(appAttemptReport
-            .getApplicationAttemptId());
+        containerReport =
+            appContext.getAMContainer(appAttemptReport
+              .getApplicationAttemptId());
       } catch (IOException e) {
         String message =
             "Failed to read the AM container of the application attempt "
@@ -149,41 +145,40 @@ public class AppBlock extends HtmlBlock {
         ContainerInfo container = new ContainerInfo(containerReport);
         startTime = container.getStartedTime();
         logsLink = containerReport.getLogUrl();
-        logsLink = getPartUrl(logsLink,"log");
+        logsLink = getPartUrl(logsLink, "log");
       }
       String nodeLink = null;
       if (appAttempt.getHost() != null && appAttempt.getRpcPort() >= 0
           && appAttempt.getRpcPort() < 65536) {
         nodeLink = appAttempt.getHost() + ":" + appAttempt.getRpcPort();
       }
-      // AppAttemptID numerical value parsed by parseHadoopID in yarn.dt.plugins.js
+      // AppAttemptID numerical value parsed by parseHadoopID in
+      // yarn.dt.plugins.js
       attemptsTableData
-          .append("[\"<a href='")
-          .append(url("appattempt", appAttempt.getAppAttemptId()))
-          .append("'>")
-          .append(appAttempt.getAppAttemptId())
-          .append("</a>\",\"")
-          .append(startTime)
-          .append("\",\"<a href='")
-          .append(nodeLink == null ? "#" : url(HttpConfig.getSchemePrefix(),
-              nodeLink))
-          .append("'>")
-          .append(nodeLink == null ? "N/A" : StringEscapeUtils.escapeJavaScript(
-              StringEscapeUtils.escapeHtml(nodeLink)))
-          .append("</a>\",\"<a href='")
-          .append(logsLink == null ? "#" : url(logsLink))
-          .append("'>")
-          .append(nodeLink == null ? "N/A" : "Logs")
-          .append("</a>\"],\n");
+        .append("[\"<a href='")
+        .append(url("appattempt", appAttempt.getAppAttemptId()))
+        .append("'>")
+        .append(appAttempt.getAppAttemptId())
+        .append("</a>\",\"")
+        .append(startTime)
+        .append("\",\"<a href='")
+        .append(
+          nodeLink == null ? "#" : url(HttpConfig.getSchemePrefix(), nodeLink))
+        .append("'>")
+        .append(
+          nodeLink == null ? "N/A" : StringEscapeUtils
+            .escapeJavaScript(StringEscapeUtils.escapeHtml(nodeLink)))
+        .append("</a>\",\"<a href='")
+        .append(logsLink == null ? "#" : url(logsLink)).append("'>")
+        .append(nodeLink == null ? "N/A" : "Logs").append("</a>\"],\n");
     }
     if (attemptsTableData.charAt(attemptsTableData.length() - 2) == ',') {
       attemptsTableData.delete(attemptsTableData.length() - 2,
-          attemptsTableData.length() - 1);
+        attemptsTableData.length() - 1);
     }
     attemptsTableData.append("]");
-    html.script().$type("text/javascript").
-        _("var attemptsTableData=" + attemptsTableData)._();
-
+    html.script().$type("text/javascript")
+      ._("var attemptsTableData=" + attemptsTableData)._();
 
     tbody._()._();
   }

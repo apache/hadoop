@@ -24,11 +24,15 @@ import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
- * <p>The response sent by the <code>ResourceManager</code> to a client
- * requesting a container report.</p>
+ * <p>
+ * The response sent by the <code>ResourceManager</code> to a client requesting
+ * a container report.
+ * </p>
  * 
- * <p>The response includes a {@link ContainerReport} which has details of a
- * container.</p>
+ * <p>
+ * The response includes a {@link ContainerReport} which has details of a
+ * container.
+ * </p>
  * 
  */
 @Public

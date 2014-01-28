@@ -91,17 +91,19 @@ public class AppAttemptBlock extends HtmlBlock {
         && appAttempt.getRpcPort() < 65536) {
       node = appAttempt.getHost() + ":" + appAttempt.getRpcPort();
     }
-    info("Application Attempt Overview").
-        _("State", appAttempt.getAppAttemptState()).
-        _("Master Container",
-            appAttempt.getAmContainerId() == null ? "#" : root_url("container",
-                appAttempt.getAmContainerId()),
-            String.valueOf(appAttempt.getAmContainerId())).
-        _("Node:", node).
-        _("Tracking URL:",
-            appAttempt.getTrackingUrl() == null ? "#" : root_url(appAttempt
-                .getTrackingUrl()), "History").
-        _("Diagnostics Info:", appAttempt.getDiagnosticsInfo());
+    info("Application Attempt Overview")
+      ._("State", appAttempt.getAppAttemptState())
+      ._(
+        "Master Container",
+        appAttempt.getAmContainerId() == null ? "#" : root_url("container",
+          appAttempt.getAmContainerId()),
+        String.valueOf(appAttempt.getAmContainerId()))
+      ._("Node:", node)
+      ._(
+        "Tracking URL:",
+        appAttempt.getTrackingUrl() == null ? "#" : root_url(appAttempt
+          .getTrackingUrl()), "History")
+      ._("Diagnostics Info:", appAttempt.getDiagnosticsInfo());
 
     html._(InfoBlock.class);
 
@@ -109,54 +111,49 @@ public class AppAttemptBlock extends HtmlBlock {
     try {
       containers = appContext.getContainers(appAttemptId).values();
     } catch (IOException e) {
-      html.p()._("Sorry, Failed to get containers for application attempt"
-          + attemptid + ".")._();
+      html
+        .p()
+        ._(
+          "Sorry, Failed to get containers for application attempt" + attemptid
+              + ".")._();
       return;
     }
-    
+
     // Container Table
-    TBODY<TABLE<Hamlet>> tbody = html.
-        table("#containers").
-        thead().
-        tr().
-        th(".id", "Container ID").
-        th(".node", "Node").
-        th(".exitstatus", "Container Exit Status").
-        th(".logs", "Logs")._()._().
-        tbody();
+    TBODY<TABLE<Hamlet>> tbody =
+        html.table("#containers").thead().tr().th(".id", "Container ID")
+          .th(".node", "Node").th(".exitstatus", "Container Exit Status")
+          .th(".logs", "Logs")._()._().tbody();
 
     StringBuilder containersTableData = new StringBuilder("[\n");
     for (ContainerReport containerReport : containers) {
       String logURL = containerReport.getLogUrl();
       logURL = getPartUrl(logURL, "log");
       ContainerInfo container = new ContainerInfo(containerReport);
-      // ConatinerID numerical value parsed by parseHadoopID in yarn.dt.plugins.js
+      // ConatinerID numerical value parsed by parseHadoopID in
+      // yarn.dt.plugins.js
       containersTableData
-          .append("[\"<a href='")
-          .append(url("container", container.getContainerId()))
-          .append("'>")
-          .append(container.getContainerId())
-          .append("</a>\",\"<a href='")
-          .append(container.getAssignedNodeId())
-          .append("'>")
-          .append(StringEscapeUtils.escapeJavaScript(
-              StringEscapeUtils.escapeHtml(container.getAssignedNodeId())))
-          .append("</a>\",\"")
-          .append(container.getContainerExitStatus())
-          .append("\",\"<a href='")
-          .append(logURL == null ? "#" : url(logURL))
-          .append("'>")
-          .append(logURL == null ? "N/A" : "Logs")
-          .append("</a>\"],\n");
+        .append("[\"<a href='")
+        .append(url("container", container.getContainerId()))
+        .append("'>")
+        .append(container.getContainerId())
+        .append("</a>\",\"<a href='")
+        .append(container.getAssignedNodeId())
+        .append("'>")
+        .append(
+          StringEscapeUtils.escapeJavaScript(StringEscapeUtils
+            .escapeHtml(container.getAssignedNodeId()))).append("</a>\",\"")
+        .append(container.getContainerExitStatus()).append("\",\"<a href='")
+        .append(logURL == null ? "#" : url(logURL)).append("'>")
+        .append(logURL == null ? "N/A" : "Logs").append("</a>\"],\n");
     }
     if (containersTableData.charAt(containersTableData.length() - 2) == ',') {
       containersTableData.delete(containersTableData.length() - 2,
-          containersTableData.length() - 1);
+        containersTableData.length() - 1);
     }
     containersTableData.append("]");
-    html.script().$type("text/javascript").
-        _("var containersTableData=" + containersTableData)._();
-
+    html.script().$type("text/javascript")
+      ._("var containersTableData=" + containersTableData)._();
 
     tbody._()._();
   }

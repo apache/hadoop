@@ -49,7 +49,7 @@ public class TestMemoryApplicationHistoryStore extends
       Assert.fail();
     } catch (IOException e) {
       Assert.assertTrue(e.getMessage().contains(
-          "is stored before the start information"));
+        "is stored before the start information"));
     }
     // Normal
     int numApps = 5;
@@ -93,22 +93,20 @@ public class TestMemoryApplicationHistoryStore extends
       Assert.fail();
     } catch (IOException e) {
       Assert.assertTrue(e.getMessage().contains(
-          "is stored before the start information"));
+        "is stored before the start information"));
     }
     // Normal
     int numAppAttempts = 5;
     writeApplicationStartData(appId);
     for (int i = 1; i <= numAppAttempts; ++i) {
-      appAttemptId =
-          ApplicationAttemptId.newInstance(appId, i);
+      appAttemptId = ApplicationAttemptId.newInstance(appId, i);
       writeApplicationAttemptStartData(appAttemptId);
       writeApplicationAttemptFinishData(appAttemptId);
     }
-    Assert.assertEquals(
-        numAppAttempts, store.getApplicationAttempts(appId).size());
+    Assert.assertEquals(numAppAttempts, store.getApplicationAttempts(appId)
+      .size());
     for (int i = 1; i <= numAppAttempts; ++i) {
-      appAttemptId =
-          ApplicationAttemptId.newInstance(appId, i);
+      appAttemptId = ApplicationAttemptId.newInstance(appId, i);
       ApplicationAttemptHistoryData data =
           store.getApplicationAttempt(appAttemptId);
       Assert.assertNotNull(data);
@@ -117,8 +115,7 @@ public class TestMemoryApplicationHistoryStore extends
     }
     writeApplicationFinishData(appId);
     // Write again
-    appAttemptId =
-        ApplicationAttemptId.newInstance(appId, 1);
+    appAttemptId = ApplicationAttemptId.newInstance(appId, 1);
     try {
       writeApplicationAttemptStartData(appAttemptId);
       Assert.fail();
@@ -145,7 +142,7 @@ public class TestMemoryApplicationHistoryStore extends
       Assert.fail();
     } catch (IOException e) {
       Assert.assertTrue(e.getMessage().contains(
-          "is stored before the start information"));
+        "is stored before the start information"));
     }
     // Normal
     writeApplicationAttemptStartData(appAttemptId);
@@ -155,20 +152,20 @@ public class TestMemoryApplicationHistoryStore extends
       writeContainerStartData(containerId);
       writeContainerFinishData(containerId);
     }
-    Assert.assertEquals(
-        numContainers, store.getContainers(appAttemptId).size());
+    Assert
+      .assertEquals(numContainers, store.getContainers(appAttemptId).size());
     for (int i = 1; i <= numContainers; ++i) {
       containerId = ContainerId.newInstance(appAttemptId, i);
       ContainerHistoryData data = store.getContainer(containerId);
       Assert.assertNotNull(data);
       Assert.assertEquals(Priority.newInstance(containerId.getId()),
-          data.getPriority());
+        data.getPriority());
       Assert.assertEquals(containerId.toString(), data.getDiagnosticsInfo());
     }
     ContainerHistoryData masterContainer = store.getAMContainer(appAttemptId);
     Assert.assertNotNull(masterContainer);
     Assert.assertEquals(ContainerId.newInstance(appAttemptId, 1),
-        masterContainer.getContainerId());
+      masterContainer.getContainerId());
     writeApplicationAttemptFinishData(appAttemptId);
     // Write again
     containerId = ContainerId.newInstance(appAttemptId, 1);

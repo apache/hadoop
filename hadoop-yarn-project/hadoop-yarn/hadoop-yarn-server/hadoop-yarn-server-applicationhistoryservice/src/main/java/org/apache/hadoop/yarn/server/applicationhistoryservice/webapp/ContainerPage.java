@@ -30,12 +30,12 @@ public class ContainerPage extends AHSView {
     commonPreHead(html);
 
     String containerId = $(YarnWebParams.CONTAINER_ID);
-    set(TITLE, containerId.isEmpty() ?
-        "Bad request: missing container ID" : join(
-        "Container ", $(YarnWebParams.CONTAINER_ID)));
+    set(TITLE, containerId.isEmpty() ? "Bad request: missing container ID"
+        : join("Container ", $(YarnWebParams.CONTAINER_ID)));
   }
 
   @Override
   protected Class<? extends SubView> content() {
     return ContainerBlock.class;
-  }}
+  }
+}

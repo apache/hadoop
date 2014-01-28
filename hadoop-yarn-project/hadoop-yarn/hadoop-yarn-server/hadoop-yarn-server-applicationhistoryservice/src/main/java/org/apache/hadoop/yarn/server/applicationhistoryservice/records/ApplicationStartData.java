@@ -24,8 +24,8 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
- * The class contains the fields that can be determined when
- * <code>RMApp</code> starts, and that need to be stored persistently.
+ * The class contains the fields that can be determined when <code>RMApp</code>
+ * starts, and that need to be stored persistently.
  */
 @Public
 @Unstable
@@ -33,12 +33,10 @@ public abstract class ApplicationStartData {
 
   @Public
   @Unstable
-  public static ApplicationStartData newInstance(
-      ApplicationId applicationId, String applicationName,
-      String applicationType, String queue, String user,
-      long submitTime, long startTime) {
-    ApplicationStartData appSD =
-        Records.newRecord(ApplicationStartData.class);
+  public static ApplicationStartData newInstance(ApplicationId applicationId,
+      String applicationName, String applicationType, String queue,
+      String user, long submitTime, long startTime) {
+    ApplicationStartData appSD = Records.newRecord(ApplicationStartData.class);
     appSD.setApplicationId(applicationId);
     appSD.setApplicationName(applicationName);
     appSD.setApplicationType(applicationType);

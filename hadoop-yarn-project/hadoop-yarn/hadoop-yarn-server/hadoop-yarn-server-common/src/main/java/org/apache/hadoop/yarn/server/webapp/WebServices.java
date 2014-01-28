@@ -55,19 +55,10 @@ public class WebServices {
     this.appContext = appContext;
   }
 
-  public AppsInfo getApps(
-      HttpServletRequest req,
-      HttpServletResponse res,
-      String stateQuery,
-      Set<String> statesQuery,
-      String finalStatusQuery,
-      String userQuery,
-      String queueQuery,
-      String count,
-      String startedBegin,
-      String startedEnd,
-      String finishBegin,
-      String finishEnd,
+  public AppsInfo getApps(HttpServletRequest req, HttpServletResponse res,
+      String stateQuery, Set<String> statesQuery, String finalStatusQuery,
+      String userQuery, String queueQuery, String count, String startedBegin,
+      String startedEnd, String finishBegin, String finishEnd,
       Set<String> applicationTypes) {
     long num = 0;
     boolean checkCount = false;
@@ -107,7 +98,7 @@ public class WebServices {
     }
     if (sBegin > sEnd) {
       throw new BadRequestException(
-          "startedTimeEnd must be greater than startTimeBegin");
+        "startedTimeEnd must be greater than startTimeBegin");
     }
 
     if (finishBegin != null && !finishBegin.isEmpty()) {
@@ -126,7 +117,7 @@ public class WebServices {
     }
     if (fBegin > fEnd) {
       throw new BadRequestException(
-          "finishTimeEnd must be greater than finishTimeBegin");
+        "finishTimeEnd must be greater than finishTimeBegin");
     }
 
     Set<String> appTypes = parseQueries(applicationTypes, false);
@@ -156,14 +147,15 @@ public class WebServices {
         break;
       }
 
-      if (checkAppStates && !appStates.contains(
-          appReport.getYarnApplicationState().toString().toLowerCase())) {
+      if (checkAppStates
+          && !appStates.contains(appReport.getYarnApplicationState().toString()
+            .toLowerCase())) {
         continue;
       }
       if (finalStatusQuery != null && !finalStatusQuery.isEmpty()) {
         FinalApplicationStatus.valueOf(finalStatusQuery);
         if (!appReport.getFinalApplicationStatus().toString()
-            .equalsIgnoreCase(finalStatusQuery)) {
+          .equalsIgnoreCase(finalStatusQuery)) {
           continue;
         }
       }
@@ -177,19 +169,18 @@ public class WebServices {
           continue;
         }
       }
-      if (checkAppTypes && !appTypes.contains(
-          appReport.getApplicationType().trim().toLowerCase())) {
+      if (checkAppTypes
+          && !appTypes.contains(appReport.getApplicationType().trim()
+            .toLowerCase())) {
         continue;
       }
 
       if (checkStart
-          && (appReport.getStartTime() < sBegin ||
-          appReport.getStartTime() > sEnd)) {
+          && (appReport.getStartTime() < sBegin || appReport.getStartTime() > sEnd)) {
         continue;
       }
       if (checkEnd
-          && (appReport.getFinishTime() < fBegin ||
-          appReport.getFinishTime() > fEnd)) {
+          && (appReport.getFinishTime() < fBegin || appReport.getFinishTime() > fEnd)) {
         continue;
       }
       AppInfo app = new AppInfo(appReport);
@@ -200,8 +191,8 @@ public class WebServices {
     return allApps;
   }
 
-  public AppInfo getApp(
-      HttpServletRequest req, HttpServletResponse res, String appId) {
+  public AppInfo getApp(HttpServletRequest req, HttpServletResponse res,
+      String appId) {
     ApplicationId id = parseApplicationId(appId);
     ApplicationReport app = null;
     try {
@@ -215,8 +206,8 @@ public class WebServices {
     return new AppInfo(app);
   }
 
-  public AppAttemptsInfo getAppAttempts(
-      HttpServletRequest req, HttpServletResponse res, String appId) {
+  public AppAttemptsInfo getAppAttempts(HttpServletRequest req,
+      HttpServletResponse res, String appId) {
     ApplicationId id = parseApplicationId(appId);
     Collection<ApplicationAttemptReport> appAttemptReports = null;
     try {
@@ -233,9 +224,8 @@ public class WebServices {
     return appAttemptsInfo;
   }
 
-  public AppAttemptInfo getAppAttempt(
-      HttpServletRequest req, HttpServletResponse res,
-      String appId, String appAttemptId) {
+  public AppAttemptInfo getAppAttempt(HttpServletRequest req,
+      HttpServletResponse res, String appId, String appAttemptId) {
     ApplicationId aid = parseApplicationId(appId);
     ApplicationAttemptId aaid = parseApplicationAttemptId(appAttemptId);
     validateIds(aid, aaid, null);
@@ -246,15 +236,14 @@ public class WebServices {
       throw new WebApplicationException(e);
     }
     if (appAttempt == null) {
-      throw new NotFoundException(
-          "app attempt with id: " + appAttemptId + " not found");
+      throw new NotFoundException("app attempt with id: " + appAttemptId
+          + " not found");
     }
     return new AppAttemptInfo(appAttempt);
   }
 
-  public ContainersInfo getContainers(
-      HttpServletRequest req, HttpServletResponse res,
-      String appId, String appAttemptId) {
+  public ContainersInfo getContainers(HttpServletRequest req,
+      HttpServletResponse res, String appId, String appAttemptId) {
     ApplicationId aid = parseApplicationId(appId);
     ApplicationAttemptId aaid = parseApplicationAttemptId(appAttemptId);
     validateIds(aid, aaid, null);
@@ -272,9 +261,9 @@ public class WebServices {
     return containersInfo;
   }
 
-  public ContainerInfo getContainer(
-      HttpServletRequest req, HttpServletResponse res,
-      String appId, String appAttemptId, String containerId) {
+  public ContainerInfo getContainer(HttpServletRequest req,
+      HttpServletResponse res, String appId, String appAttemptId,
+      String containerId) {
     ApplicationId aid = parseApplicationId(appId);
     ApplicationAttemptId aaid = parseApplicationAttemptId(appAttemptId);
     ContainerId cid = parseContainerId(containerId);
@@ -286,18 +275,19 @@ public class WebServices {
       throw new WebApplicationException(e);
     }
     if (container == null) {
-      throw new NotFoundException(
-          "container with id: " + containerId + " not found");
+      throw new NotFoundException("container with id: " + containerId
+          + " not found");
     }
     return new ContainerInfo(container);
   }
+
   protected void init(HttpServletResponse response) {
     // clear content type
     response.setContentType(null);
   }
 
-  protected static Set<String> parseQueries(
-      Set<String> queries, boolean isState) {
+  protected static Set<String>
+      parseQueries(Set<String> queries, boolean isState) {
     Set<String> params = new HashSet<String>();
     if (!queries.isEmpty()) {
       for (String query : queries) {
@@ -313,9 +303,9 @@ public class WebServices {
                   YarnApplicationState[] stateArray =
                       YarnApplicationState.values();
                   String allAppStates = Arrays.toString(stateArray);
-                  throw new BadRequestException(
-                      "Invalid application-state " + paramStr.trim()
-                          + " specified. It should be one of " + allAppStates);
+                  throw new BadRequestException("Invalid application-state "
+                      + paramStr.trim() + " specified. It should be one of "
+                      + allAppStates);
                 }
               }
               params.add(paramStr.trim().toLowerCase());
@@ -341,8 +331,8 @@ public class WebServices {
   protected static ApplicationAttemptId parseApplicationAttemptId(
       String appAttemptId) {
     if (appAttemptId == null || appAttemptId.isEmpty()) {
-      throw new NotFoundException(
-          "appAttemptId, " + appAttemptId + ", is empty or null");
+      throw new NotFoundException("appAttemptId, " + appAttemptId
+          + ", is empty or null");
     }
     ApplicationAttemptId aaid =
         ConverterUtils.toApplicationAttemptId(appAttemptId);
@@ -354,8 +344,8 @@ public class WebServices {
 
   protected static ContainerId parseContainerId(String containerId) {
     if (containerId == null || containerId.isEmpty()) {
-      throw new NotFoundException(
-          "containerId, " + containerId + ", is empty or null");
+      throw new NotFoundException("containerId, " + containerId
+          + ", is empty or null");
     }
     ContainerId cid = ConverterUtils.toContainerId(containerId);
     if (cid == null) {
@@ -365,8 +355,7 @@ public class WebServices {
   }
 
   protected void validateIds(ApplicationId appId,
-      ApplicationAttemptId appAttemptId,
-      ContainerId containerId) {
+      ApplicationAttemptId appAttemptId, ContainerId containerId) {
     if (!appAttemptId.getApplicationId().equals(appId)) {
       throw new NotFoundException("appId and appAttemptId don't match");
     }

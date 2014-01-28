@@ -56,21 +56,18 @@ public class AHSWebServices extends WebServices {
 
   @GET
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
-  public AppsInfo get(
-      @Context HttpServletRequest req,
+  public AppsInfo get(@Context HttpServletRequest req,
       @Context HttpServletResponse res) {
     return getApps(req, res, null, Collections.<String> emptySet(), null, null,
-        null, null, null, null, null, null, Collections.<String> emptySet());
+      null, null, null, null, null, null, Collections.<String> emptySet());
   }
 
   @GET
   @Path("/apps")
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   @Override
-  public AppsInfo getApps(
-      @Context HttpServletRequest req,
-      @Context HttpServletResponse res,
-      @QueryParam("state") String stateQuery,
+  public AppsInfo getApps(@Context HttpServletRequest req,
+      @Context HttpServletResponse res, @QueryParam("state") String stateQuery,
       @QueryParam("states") Set<String> statesQuery,
       @QueryParam("finalStatus") String finalStatusQuery,
       @QueryParam("user") String userQuery,
@@ -84,18 +81,16 @@ public class AHSWebServices extends WebServices {
     init(res);
     validateStates(stateQuery, statesQuery);
     return super.getApps(req, res, stateQuery, statesQuery, finalStatusQuery,
-        userQuery, queueQuery, count, startedBegin, startedEnd, finishBegin,
-        finishEnd, applicationTypes);
+      userQuery, queueQuery, count, startedBegin, startedEnd, finishBegin,
+      finishEnd, applicationTypes);
   }
 
   @GET
   @Path("/apps/{appid}")
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   @Override
-  public AppInfo getApp(
-      @Context HttpServletRequest req,
-      @Context HttpServletResponse res,
-      @PathParam("appid") String appId) {
+  public AppInfo getApp(@Context HttpServletRequest req,
+      @Context HttpServletResponse res, @PathParam("appid") String appId) {
     init(res);
     return super.getApp(req, res, appId);
   }
@@ -104,10 +99,8 @@ public class AHSWebServices extends WebServices {
   @Path("/apps/{appid}/appattempts")
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   @Override
-  public AppAttemptsInfo getAppAttempts(
-      @Context HttpServletRequest req,
-      @Context HttpServletResponse res,
-      @PathParam("appid") String appId) {
+  public AppAttemptsInfo getAppAttempts(@Context HttpServletRequest req,
+      @Context HttpServletResponse res, @PathParam("appid") String appId) {
     init(res);
     return super.getAppAttempts(req, res, appId);
   }
@@ -116,10 +109,8 @@ public class AHSWebServices extends WebServices {
   @Path("/apps/{appid}/appattempts/{appattemptid}")
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   @Override
-  public AppAttemptInfo getAppAttempt(
-      @Context HttpServletRequest req,
-      @Context HttpServletResponse res,
-      @PathParam("appid") String appId,
+  public AppAttemptInfo getAppAttempt(@Context HttpServletRequest req,
+      @Context HttpServletResponse res, @PathParam("appid") String appId,
       @PathParam("appattemptid") String appAttemptId) {
     init(res);
     return super.getAppAttempt(req, res, appId, appAttemptId);
@@ -129,10 +120,8 @@ public class AHSWebServices extends WebServices {
   @Path("/apps/{appid}/appattempts/{appattemptid}/containers")
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   @Override
-  public ContainersInfo getContainers(
-      @Context HttpServletRequest req,
-      @Context HttpServletResponse res,
-      @PathParam("appid") String appId,
+  public ContainersInfo getContainers(@Context HttpServletRequest req,
+      @Context HttpServletResponse res, @PathParam("appid") String appId,
       @PathParam("appattemptid") String appAttemptId) {
     init(res);
     return super.getContainers(req, res, appId, appAttemptId);
@@ -142,18 +131,16 @@ public class AHSWebServices extends WebServices {
   @Path("/apps/{appid}/appattempts/{appattemptid}/containers/{containerid}")
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   @Override
-  public ContainerInfo getContainer(
-      @Context HttpServletRequest req,
-      @Context HttpServletResponse res,
-      @PathParam("appid") String appId,
+  public ContainerInfo getContainer(@Context HttpServletRequest req,
+      @Context HttpServletResponse res, @PathParam("appid") String appId,
       @PathParam("appattemptid") String appAttemptId,
       @PathParam("containerid") String containerId) {
     init(res);
     return super.getContainer(req, res, appId, appAttemptId, containerId);
   }
 
-  private static void validateStates(
-      String stateQuery, Set<String> statesQuery) {
+  private static void
+      validateStates(String stateQuery, Set<String> statesQuery) {
     // stateQuery is deprecated.
     if (stateQuery != null && !stateQuery.isEmpty()) {
       statesQuery.add(stateQuery);
@@ -166,9 +153,8 @@ public class AHSWebServices extends WebServices {
         case KILLED:
           continue;
         default:
-          throw new BadRequestException(
-              "Invalid application-state " + appState
-                  + " specified. It should be a final state");
+          throw new BadRequestException("Invalid application-state " + appState
+              + " specified. It should be a final state");
       }
     }
   }

@@ -108,8 +108,7 @@ public class TestFileSystemApplicationHistoryStore extends
       Assert.assertEquals(appId.toString(), appData.getDiagnosticsInfo());
 
       // read application attempt history data
-      Assert.assertEquals(
-          num, store.getApplicationAttempts(appId).size());
+      Assert.assertEquals(num, store.getApplicationAttempts(appId).size());
       for (int j = 1; j <= num; ++j) {
         ApplicationAttemptId appAttemptId =
             ApplicationAttemptId.newInstance(appId, j);
@@ -118,25 +117,24 @@ public class TestFileSystemApplicationHistoryStore extends
         Assert.assertNotNull(attemptData);
         Assert.assertEquals(appAttemptId.toString(), attemptData.getHost());
         Assert.assertEquals(appAttemptId.toString(),
-            attemptData.getDiagnosticsInfo());
+          attemptData.getDiagnosticsInfo());
 
         // read container history data
-        Assert.assertEquals(
-            num, store.getContainers(appAttemptId).size());
+        Assert.assertEquals(num, store.getContainers(appAttemptId).size());
         for (int k = 1; k <= num; ++k) {
           ContainerId containerId = ContainerId.newInstance(appAttemptId, k);
           ContainerHistoryData containerData = store.getContainer(containerId);
           Assert.assertNotNull(containerData);
           Assert.assertEquals(Priority.newInstance(containerId.getId()),
-              containerData.getPriority());
+            containerData.getPriority());
           Assert.assertEquals(containerId.toString(),
-              containerData.getDiagnosticsInfo());
+            containerData.getDiagnosticsInfo());
         }
         ContainerHistoryData masterContainer =
             store.getAMContainer(appAttemptId);
         Assert.assertNotNull(masterContainer);
         Assert.assertEquals(ContainerId.newInstance(appAttemptId, 1),
-            masterContainer.getContainerId());
+          masterContainer.getContainerId());
       }
     }
   }

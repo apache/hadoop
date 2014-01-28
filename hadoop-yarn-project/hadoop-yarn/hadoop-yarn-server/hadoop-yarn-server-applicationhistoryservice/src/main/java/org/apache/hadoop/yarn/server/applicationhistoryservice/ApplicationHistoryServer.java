@@ -47,7 +47,7 @@ public class ApplicationHistoryServer extends CompositeService {
 
   public static final int SHUTDOWN_HOOK_PRIORITY = 30;
   private static final Log LOG = LogFactory
-      .getLog(ApplicationHistoryServer.class);
+    .getLog(ApplicationHistoryServer.class);
 
   ApplicationHistoryClientService ahsClientService;
   ApplicationHistoryManager historyManager;
@@ -91,8 +91,9 @@ public class ApplicationHistoryServer extends CompositeService {
     return this.ahsClientService;
   }
 
-  protected ApplicationHistoryClientService createApplicationHistoryClientService(
-      ApplicationHistoryManager historyManager) {
+  protected ApplicationHistoryClientService
+      createApplicationHistoryClientService(
+          ApplicationHistoryManager historyManager) {
     return new ApplicationHistoryClientService(historyManager);
   }
 
@@ -106,15 +107,15 @@ public class ApplicationHistoryServer extends CompositeService {
 
   static ApplicationHistoryServer launchAppHistoryServer(String[] args) {
     Thread
-        .setDefaultUncaughtExceptionHandler(new YarnUncaughtExceptionHandler());
+      .setDefaultUncaughtExceptionHandler(new YarnUncaughtExceptionHandler());
     StringUtils.startupShutdownMessage(ApplicationHistoryServer.class, args,
-        LOG);
+      LOG);
     ApplicationHistoryServer appHistoryServer = null;
     try {
       appHistoryServer = new ApplicationHistoryServer();
       ShutdownHookManager.get().addShutdownHook(
-          new CompositeServiceShutdownHook(appHistoryServer),
-          SHUTDOWN_HOOK_PRIORITY);
+        new CompositeServiceShutdownHook(appHistoryServer),
+        SHUTDOWN_HOOK_PRIORITY);
       YarnConfiguration conf = new YarnConfiguration();
       appHistoryServer.init(conf);
       appHistoryServer.start();
@@ -138,16 +139,16 @@ public class ApplicationHistoryServer extends CompositeService {
     String bindAddress = WebAppUtils.getAHSWebAppURLWithoutScheme(getConfig());
     LOG.info("Instantiating AHSWebApp at " + bindAddress);
     try {
-      webApp = WebApps
-          .$for("applicationhistory", ApplicationHistoryClientService.class,
+      webApp =
+          WebApps
+            .$for("applicationhistory", ApplicationHistoryClientService.class,
               ahsClientService, "ws")
-          .with(getConfig())
-          .withHttpSpnegoPrincipalKey(
+            .with(getConfig())
+            .withHttpSpnegoPrincipalKey(
               YarnConfiguration.AHS_WEBAPP_SPNEGO_USER_NAME_KEY)
-          .withHttpSpnegoKeytabKey(
+            .withHttpSpnegoKeytabKey(
               YarnConfiguration.AHS_WEBAPP_SPNEGO_KEYTAB_FILE_KEY)
-          .at(bindAddress)
-          .start(new AHSWebApp(historyManager));
+            .at(bindAddress).start(new AHSWebApp(historyManager));
     } catch (Exception e) {
       String msg = "AHSWebApp failed to start.";
       LOG.error(msg, e);

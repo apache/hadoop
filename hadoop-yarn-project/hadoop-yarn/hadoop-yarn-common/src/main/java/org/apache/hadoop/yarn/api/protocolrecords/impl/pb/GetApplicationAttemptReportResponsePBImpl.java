@@ -81,8 +81,8 @@ public class GetApplicationAttemptReportResponsePBImpl extends
 
   private void mergeLocalToBuilder() {
     if (this.applicationAttemptReport != null) {
-      builder.setApplicationAttemptReport(
-          convertToProtoFormat(this.applicationAttemptReport));
+      builder
+        .setApplicationAttemptReport(convertToProtoFormat(this.applicationAttemptReport));
     }
   }
 
@@ -107,8 +107,8 @@ public class GetApplicationAttemptReportResponsePBImpl extends
     if (this.applicationAttemptReport != null) {
       return this.applicationAttemptReport;
     }
-    GetApplicationAttemptReportResponseProtoOrBuilder p
-    = viaProto ? proto : builder;
+    GetApplicationAttemptReportResponseProtoOrBuilder p =
+        viaProto ? proto : builder;
     if (!p.hasApplicationAttemptReport()) {
       return null;
     }

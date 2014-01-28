@@ -268,7 +268,7 @@ public class ContainerReportPBImpl extends ContainerReport {
   private void mergeLocalToBuilder() {
     if (this.containerId != null
         && !((ContainerIdPBImpl) containerId).getProto().equals(
-            builder.getContainerId())) {
+          builder.getContainerId())) {
       builder.setContainerId(convertToProtoFormat(this.containerId));
     }
     if (this.nodeId != null
@@ -277,12 +277,12 @@ public class ContainerReportPBImpl extends ContainerReport {
     }
     if (this.resource != null
         && !((ResourcePBImpl) this.resource).getProto().equals(
-            builder.getResource())) {
+          builder.getResource())) {
       builder.setResource(convertToProtoFormat(this.resource));
     }
     if (this.priority != null
         && !((PriorityPBImpl) this.priority).getProto().equals(
-            builder.getPriority())) {
+          builder.getPriority())) {
       builder.setPriority(convertToProtoFormat(this.priority));
     }
   }
@@ -334,7 +334,8 @@ public class ContainerReportPBImpl extends ContainerReport {
     return ((PriorityPBImpl) p).getProto();
   }
 
-  private ContainerStateProto convertToProtoFormat(ContainerState containerState) {
+  private ContainerStateProto
+      convertToProtoFormat(ContainerState containerState) {
     return ProtoUtils.convertToProtoFormat(containerState);
   }
 

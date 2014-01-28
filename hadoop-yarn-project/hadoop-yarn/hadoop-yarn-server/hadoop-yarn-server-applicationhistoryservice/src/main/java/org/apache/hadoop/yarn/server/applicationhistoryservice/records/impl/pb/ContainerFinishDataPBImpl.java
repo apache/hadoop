@@ -30,12 +30,10 @@ import org.apache.hadoop.yarn.server.applicationhistoryservice.records.Container
 
 import com.google.protobuf.TextFormat;
 
+public class ContainerFinishDataPBImpl extends ContainerFinishData {
 
-public class ContainerFinishDataPBImpl
-    extends ContainerFinishData {
-
-  ContainerFinishDataProto proto =
-      ContainerFinishDataProto.getDefaultInstance();
+  ContainerFinishDataProto proto = ContainerFinishDataProto
+    .getDefaultInstance();
   ContainerFinishDataProto.Builder builder = null;
   boolean viaProto = false;
 
@@ -181,8 +179,9 @@ public class ContainerFinishDataPBImpl
   }
 
   private void mergeLocalToBuilder() {
-    if (this.containerId != null && !((ContainerIdPBImpl)
-        this.containerId).getProto().equals(builder.getContainerId())) {
+    if (this.containerId != null
+        && !((ContainerIdPBImpl) this.containerId).getProto().equals(
+          builder.getContainerId())) {
       builder.setContainerId(convertToProtoFormat(this.containerId));
     }
   }
@@ -203,18 +202,16 @@ public class ContainerFinishDataPBImpl
     viaProto = false;
   }
 
-  private ContainerIdProto convertToProtoFormat(
-      ContainerId containerId) {
+  private ContainerIdProto convertToProtoFormat(ContainerId containerId) {
     return ((ContainerIdPBImpl) containerId).getProto();
   }
 
-  private ContainerIdPBImpl convertFromProtoFormat(
-      ContainerIdProto containerId) {
+  private ContainerIdPBImpl
+      convertFromProtoFormat(ContainerIdProto containerId) {
     return new ContainerIdPBImpl(containerId);
   }
 
-  private ContainerStateProto convertToProtoFormat(
-      ContainerState state) {
+  private ContainerStateProto convertToProtoFormat(ContainerState state) {
     return ProtoUtils.convertToProtoFormat(state);
   }
 

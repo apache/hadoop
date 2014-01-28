@@ -47,11 +47,11 @@ public class AHSProxy<T> {
       final Class<T> protocol, final InetSocketAddress rmAddress)
       throws IOException {
     return UserGroupInformation.getCurrentUser().doAs(
-        new PrivilegedAction<T>() {
-          @Override
-          public T run() {
-            return (T) YarnRPC.create(conf).getProxy(protocol, rmAddress, conf);
-          }
-        });
+      new PrivilegedAction<T>() {
+        @Override
+        public T run() {
+          return (T) YarnRPC.create(conf).getProxy(protocol, rmAddress, conf);
+        }
+      });
   }
 }

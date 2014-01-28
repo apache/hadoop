@@ -25,8 +25,10 @@ import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
- * <p>The request sent by a client to the <code>ResourceManager</code> to 
- * get an {@link ContainerReport} for a container.</p>
+ * <p>
+ * The request sent by a client to the <code>ResourceManager</code> to get an
+ * {@link ContainerReport} for a container.
+ * </p>
  */
 @Public
 @Unstable
@@ -35,7 +37,8 @@ public abstract class GetContainerReportRequest {
   @Public
   @Unstable
   public static GetContainerReportRequest newInstance(ContainerId containerId) {
-    GetContainerReportRequest request = Records.newRecord(GetContainerReportRequest.class);
+    GetContainerReportRequest request =
+        Records.newRecord(GetContainerReportRequest.class);
     request.setContainerId(containerId);
     return request;
   }

@@ -27,17 +27,13 @@ import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenRequest
 import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenResponseProto;
 import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenRequestProto;
 import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenResponseProto;
-import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.ApplicationHistoryProtocol;
 import org.apache.hadoop.yarn.api.ApplicationHistoryProtocolPB;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetContainerReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerReportResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainersResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenResponse;
@@ -61,14 +57,14 @@ import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.GetDelegationTokenResp
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.RenewDelegationTokenRequestPBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.RenewDelegationTokenResponsePBImpl;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetApplicationReportRequestProto;
-import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetApplicationReportResponseProto;
-import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetApplicationsRequestProto;
-import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetApplicationsResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetApplicationAttemptReportRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetApplicationAttemptReportResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetApplicationAttemptsRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetApplicationAttemptsResponseProto;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetApplicationReportRequestProto;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetApplicationReportResponseProto;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetApplicationsRequestProto;
+import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetApplicationsResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetContainerReportRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetContainerReportResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetContainersRequestProto;
@@ -90,11 +86,11 @@ public class ApplicationHistoryProtocolPBServiceImpl implements
   public GetApplicationReportResponseProto getApplicationReport(
       RpcController arg0, GetApplicationReportRequestProto proto)
       throws ServiceException {
-    GetApplicationReportRequestPBImpl request = new GetApplicationReportRequestPBImpl(
-        proto);
+    GetApplicationReportRequestPBImpl request =
+        new GetApplicationReportRequestPBImpl(proto);
     try {
-      GetApplicationReportResponse response = real
-          .getApplicationReport(request);
+      GetApplicationReportResponse response =
+          real.getApplicationReport(request);
       return ((GetApplicationReportResponsePBImpl) response).getProto();
     } catch (YarnException e) {
       throw new ServiceException(e);
@@ -106,8 +102,8 @@ public class ApplicationHistoryProtocolPBServiceImpl implements
   @Override
   public GetApplicationsResponseProto getApplications(RpcController controller,
       GetApplicationsRequestProto proto) throws ServiceException {
-    GetApplicationsRequestPBImpl request = new GetApplicationsRequestPBImpl(
-        proto);
+    GetApplicationsRequestPBImpl request =
+        new GetApplicationsRequestPBImpl(proto);
     try {
       GetApplicationsResponse response = real.getApplications(request);
       return ((GetApplicationsResponsePBImpl) response).getProto();
@@ -122,11 +118,11 @@ public class ApplicationHistoryProtocolPBServiceImpl implements
   public GetApplicationAttemptReportResponseProto getApplicationAttemptReport(
       RpcController controller, GetApplicationAttemptReportRequestProto proto)
       throws ServiceException {
-    GetApplicationAttemptReportRequestPBImpl request = new GetApplicationAttemptReportRequestPBImpl(
-        proto);
+    GetApplicationAttemptReportRequestPBImpl request =
+        new GetApplicationAttemptReportRequestPBImpl(proto);
     try {
-      GetApplicationAttemptReportResponse response = real
-          .getApplicationAttemptReport(request);
+      GetApplicationAttemptReportResponse response =
+          real.getApplicationAttemptReport(request);
       return ((GetApplicationAttemptReportResponsePBImpl) response).getProto();
     } catch (YarnException e) {
       throw new ServiceException(e);
@@ -139,11 +135,11 @@ public class ApplicationHistoryProtocolPBServiceImpl implements
   public GetApplicationAttemptsResponseProto getApplicationAttempts(
       RpcController controller, GetApplicationAttemptsRequestProto proto)
       throws ServiceException {
-    GetApplicationAttemptsRequestPBImpl request = new GetApplicationAttemptsRequestPBImpl(
-        proto);
+    GetApplicationAttemptsRequestPBImpl request =
+        new GetApplicationAttemptsRequestPBImpl(proto);
     try {
-      GetApplicationAttemptsResponse response = real
-          .getApplicationAttempts(request);
+      GetApplicationAttemptsResponse response =
+          real.getApplicationAttempts(request);
       return ((GetApplicationAttemptsResponsePBImpl) response).getProto();
     } catch (YarnException e) {
       throw new ServiceException(e);
@@ -156,8 +152,8 @@ public class ApplicationHistoryProtocolPBServiceImpl implements
   public GetContainerReportResponseProto getContainerReport(
       RpcController controller, GetContainerReportRequestProto proto)
       throws ServiceException {
-    GetContainerReportRequestPBImpl request = new GetContainerReportRequestPBImpl(
-        proto);
+    GetContainerReportRequestPBImpl request =
+        new GetContainerReportRequestPBImpl(proto);
     try {
       GetContainerReportResponse response = real.getContainerReport(request);
       return ((GetContainerReportResponsePBImpl) response).getProto();
@@ -186,8 +182,8 @@ public class ApplicationHistoryProtocolPBServiceImpl implements
   public GetDelegationTokenResponseProto getDelegationToken(
       RpcController controller, GetDelegationTokenRequestProto proto)
       throws ServiceException {
-    GetDelegationTokenRequestPBImpl request = new GetDelegationTokenRequestPBImpl(
-        proto);
+    GetDelegationTokenRequestPBImpl request =
+        new GetDelegationTokenRequestPBImpl(proto);
     try {
       GetDelegationTokenResponse response = real.getDelegationToken(request);
       return ((GetDelegationTokenResponsePBImpl) response).getProto();
@@ -202,11 +198,11 @@ public class ApplicationHistoryProtocolPBServiceImpl implements
   public RenewDelegationTokenResponseProto renewDelegationToken(
       RpcController controller, RenewDelegationTokenRequestProto proto)
       throws ServiceException {
-    RenewDelegationTokenRequestPBImpl request = new RenewDelegationTokenRequestPBImpl(
-        proto);
+    RenewDelegationTokenRequestPBImpl request =
+        new RenewDelegationTokenRequestPBImpl(proto);
     try {
-      RenewDelegationTokenResponse response = real
-          .renewDelegationToken(request);
+      RenewDelegationTokenResponse response =
+          real.renewDelegationToken(request);
       return ((RenewDelegationTokenResponsePBImpl) response).getProto();
     } catch (YarnException e) {
       throw new ServiceException(e);
@@ -219,11 +215,11 @@ public class ApplicationHistoryProtocolPBServiceImpl implements
   public CancelDelegationTokenResponseProto cancelDelegationToken(
       RpcController controller, CancelDelegationTokenRequestProto proto)
       throws ServiceException {
-    CancelDelegationTokenRequestPBImpl request = new CancelDelegationTokenRequestPBImpl(
-        proto);
+    CancelDelegationTokenRequestPBImpl request =
+        new CancelDelegationTokenRequestPBImpl(proto);
     try {
-      CancelDelegationTokenResponse response = real
-          .cancelDelegationToken(request);
+      CancelDelegationTokenResponse response =
+          real.cancelDelegationToken(request);
       return ((CancelDelegationTokenResponsePBImpl) response).getProto();
     } catch (YarnException e) {
       throw new ServiceException(e);

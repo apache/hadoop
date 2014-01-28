@@ -27,12 +27,10 @@ import org.apache.hadoop.yarn.server.applicationhistoryservice.records.Applicati
 
 import com.google.protobuf.TextFormat;
 
+public class ApplicationStartDataPBImpl extends ApplicationStartData {
 
-public class ApplicationStartDataPBImpl
-    extends ApplicationStartData {
-
-  ApplicationStartDataProto proto =
-      ApplicationStartDataProto.getDefaultInstance();
+  ApplicationStartDataProto proto = ApplicationStartDataProto
+    .getDefaultInstance();
   ApplicationStartDataProto.Builder builder = null;
   boolean viaProto = false;
 
@@ -197,8 +195,9 @@ public class ApplicationStartDataPBImpl
   }
 
   private void mergeLocalToBuilder() {
-    if (this.applicationId != null && !((ApplicationIdPBImpl)
-        this.applicationId).getProto().equals(builder.getApplicationId())) {
+    if (this.applicationId != null
+        && !((ApplicationIdPBImpl) this.applicationId).getProto().equals(
+          builder.getApplicationId())) {
       builder.setApplicationId(convertToProtoFormat(this.applicationId));
     }
   }
@@ -219,8 +218,7 @@ public class ApplicationStartDataPBImpl
     viaProto = false;
   }
 
-  private ApplicationIdProto convertToProtoFormat(
-      ApplicationId applicationId) {
+  private ApplicationIdProto convertToProtoFormat(ApplicationId applicationId) {
     return ((ApplicationIdPBImpl) applicationId).getProto();
   }
 

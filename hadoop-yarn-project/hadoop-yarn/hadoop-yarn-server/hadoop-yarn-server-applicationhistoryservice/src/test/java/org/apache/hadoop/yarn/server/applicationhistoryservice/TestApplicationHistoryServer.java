@@ -41,8 +41,8 @@ public class TestApplicationHistoryServer {
     historyServer.init(config);
     assertEquals(STATE.INITED, historyServer.getServiceState());
     assertEquals(2, historyServer.getServices().size());
-    ApplicationHistoryClientService historyService = historyServer
-        .getClientService();
+    ApplicationHistoryClientService historyService =
+        historyServer.getClientService();
     assertNotNull(historyServer.getClientService());
     assertEquals(STATE.INITED, historyService.getServiceState());
 
@@ -59,8 +59,8 @@ public class TestApplicationHistoryServer {
 
     ExitUtil.disableSystemExit();
     try {
-      historyServer = ApplicationHistoryServer
-          .launchAppHistoryServer(new String[0]);
+      historyServer =
+          ApplicationHistoryServer.launchAppHistoryServer(new String[0]);
     } catch (ExitUtil.ExitException e) {
       assertEquals(0, e.status);
       ExitUtil.resetFirstExitException();

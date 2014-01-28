@@ -205,8 +205,8 @@ public class ApplicationHistoryData {
 
   @Public
   @Unstable
-  public void setYarnApplicationState(
-      YarnApplicationState yarnApplicationState) {
+  public void
+      setYarnApplicationState(YarnApplicationState yarnApplicationState) {
     this.yarnApplicationState = yarnApplicationState;
   }
 

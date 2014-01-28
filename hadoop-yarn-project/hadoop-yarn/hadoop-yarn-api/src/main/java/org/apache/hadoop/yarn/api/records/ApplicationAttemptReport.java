@@ -27,7 +27,7 @@ import org.apache.hadoop.yarn.util.Records;
  * <p>
  * <code>ApplicationAttemptReport</code> is a report of an application attempt.
  * </p>
- *
+ * 
  * <p>
  * It includes details such as:
  * <ul>
@@ -41,7 +41,7 @@ import org.apache.hadoop.yarn.util.Records;
  * <li>{@link ContainerId} of the master Container.</li>
  * </ul>
  * </p>
- *
+ * 
  */
 @Public
 @Unstable
@@ -67,7 +67,7 @@ public abstract class ApplicationAttemptReport {
 
   /**
    * Get the <em>YarnApplicationAttemptState</em> of the application attempt.
-   *
+   * 
    * @return <em>YarnApplicationAttemptState</em> of the application attempt
    */
   @Public
@@ -81,7 +81,7 @@ public abstract class ApplicationAttemptReport {
 
   /**
    * Get the <em>RPC port</em> of this attempt <code>ApplicationMaster</code>.
-   *
+   * 
    * @return <em>RPC port</em> of this attempt <code>ApplicationMaster</code>
    */
   @Public
@@ -95,7 +95,7 @@ public abstract class ApplicationAttemptReport {
   /**
    * Get the <em>host</em> on which this attempt of
    * <code>ApplicationMaster</code> is running.
-   *
+   * 
    * @return <em>host</em> on which this attempt of
    *         <code>ApplicationMaster</code> is running
    */
@@ -110,7 +110,7 @@ public abstract class ApplicationAttemptReport {
   /**
    * Get the <em>diagnositic information</em> of the application attempt in case
    * of errors.
-   *
+   * 
    * @return <em>diagnositic information</em> of the application attempt in case
    *         of errors
    */
@@ -124,7 +124,7 @@ public abstract class ApplicationAttemptReport {
 
   /**
    * Get the <em>tracking url</em> for the application attempt.
-   *
+   * 
    * @return <em>tracking url</em> for the application attempt
    */
   @Public
@@ -138,7 +138,7 @@ public abstract class ApplicationAttemptReport {
   /**
    * Get the <code>ApplicationAttemptId</code> of this attempt of the
    * application
-   *
+   * 
    * @return <code>ApplicationAttemptId</code> of the attempt
    */
   @Public
@@ -152,7 +152,7 @@ public abstract class ApplicationAttemptReport {
 
   /**
    * Get the <code>ContainerId</code> of AMContainer for this attempt
-   *
+   * 
    * @return <code>ContainerId</code> of the attempt
    */
   @Public

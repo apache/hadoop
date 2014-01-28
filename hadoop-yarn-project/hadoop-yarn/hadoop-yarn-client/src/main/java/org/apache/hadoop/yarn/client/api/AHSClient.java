@@ -126,7 +126,8 @@ public abstract class AHSClient extends AbstractService {
    * @throws IOException
    */
   public abstract ApplicationAttemptReport getApplicationAttemptReport(
-      ApplicationAttemptId applicationAttemptId) throws YarnException, IOException;
+      ApplicationAttemptId applicationAttemptId) throws YarnException,
+      IOException;
 
   /**
    * <p>

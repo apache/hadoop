@@ -86,9 +86,10 @@ public class ApplicationHistoryProtocolPBClientImpl implements
   public ApplicationHistoryProtocolPBClientImpl(long clientVersion,
       InetSocketAddress addr, Configuration conf) throws IOException {
     RPC.setProtocolEngine(conf, ApplicationHistoryProtocolPB.class,
-        ProtobufRpcEngine.class);
-    proxy = RPC.getProxy(ApplicationHistoryProtocolPB.class, clientVersion,
-        addr, conf);
+      ProtobufRpcEngine.class);
+    proxy =
+        RPC.getProxy(ApplicationHistoryProtocolPB.class, clientVersion, addr,
+          conf);
   }
 
   @Override
@@ -101,11 +102,11 @@ public class ApplicationHistoryProtocolPBClientImpl implements
   @Override
   public GetApplicationReportResponse getApplicationReport(
       GetApplicationReportRequest request) throws YarnException, IOException {
-    GetApplicationReportRequestProto requestProto = ((GetApplicationReportRequestPBImpl) request)
-        .getProto();
+    GetApplicationReportRequestProto requestProto =
+        ((GetApplicationReportRequestPBImpl) request).getProto();
     try {
       return new GetApplicationReportResponsePBImpl(proxy.getApplicationReport(
-          null, requestProto));
+        null, requestProto));
     } catch (ServiceException e) {
       RPCUtil.unwrapAndThrowException(e);
       return null;
@@ -113,13 +114,14 @@ public class ApplicationHistoryProtocolPBClientImpl implements
   }
 
   @Override
-  public GetApplicationsResponse getApplications(GetApplicationsRequest request)
-      throws YarnException, IOException {
-    GetApplicationsRequestProto requestProto = ((GetApplicationsRequestPBImpl) request)
-        .getProto();
+  public GetApplicationsResponse
+      getApplications(GetApplicationsRequest request) throws YarnException,
+          IOException {
+    GetApplicationsRequestProto requestProto =
+        ((GetApplicationsRequestPBImpl) request).getProto();
     try {
       return new GetApplicationsResponsePBImpl(proxy.getApplications(null,
-          requestProto));
+        requestProto));
     } catch (ServiceException e) {
       RPCUtil.unwrapAndThrowException(e);
       return null;
@@ -130,11 +132,11 @@ public class ApplicationHistoryProtocolPBClientImpl implements
   public GetApplicationAttemptReportResponse getApplicationAttemptReport(
       GetApplicationAttemptReportRequest request) throws YarnException,
       IOException {
-    GetApplicationAttemptReportRequestProto requestProto = ((GetApplicationAttemptReportRequestPBImpl) request)
-        .getProto();
+    GetApplicationAttemptReportRequestProto requestProto =
+        ((GetApplicationAttemptReportRequestPBImpl) request).getProto();
     try {
-      return new GetApplicationAttemptReportResponsePBImpl(proxy
-          .getApplicationAttemptReport(null, requestProto));
+      return new GetApplicationAttemptReportResponsePBImpl(
+        proxy.getApplicationAttemptReport(null, requestProto));
     } catch (ServiceException e) {
       RPCUtil.unwrapAndThrowException(e);
       return null;
@@ -144,11 +146,11 @@ public class ApplicationHistoryProtocolPBClientImpl implements
   @Override
   public GetApplicationAttemptsResponse getApplicationAttempts(
       GetApplicationAttemptsRequest request) throws YarnException, IOException {
-    GetApplicationAttemptsRequestProto requestProto = ((GetApplicationAttemptsRequestPBImpl) request)
-        .getProto();
+    GetApplicationAttemptsRequestProto requestProto =
+        ((GetApplicationAttemptsRequestPBImpl) request).getProto();
     try {
-      return new GetApplicationAttemptsResponsePBImpl(proxy
-          .getApplicationAttempts(null, requestProto));
+      return new GetApplicationAttemptsResponsePBImpl(
+        proxy.getApplicationAttempts(null, requestProto));
     } catch (ServiceException e) {
       RPCUtil.unwrapAndThrowException(e);
       return null;
@@ -158,11 +160,11 @@ public class ApplicationHistoryProtocolPBClientImpl implements
   @Override
   public GetContainerReportResponse getContainerReport(
       GetContainerReportRequest request) throws YarnException, IOException {
-    GetContainerReportRequestProto requestProto = ((GetContainerReportRequestPBImpl) request)
-        .getProto();
+    GetContainerReportRequestProto requestProto =
+        ((GetContainerReportRequestPBImpl) request).getProto();
     try {
       return new GetContainerReportResponsePBImpl(proxy.getContainerReport(
-          null, requestProto));
+        null, requestProto));
     } catch (ServiceException e) {
       RPCUtil.unwrapAndThrowException(e);
       return null;
@@ -172,11 +174,11 @@ public class ApplicationHistoryProtocolPBClientImpl implements
   @Override
   public GetContainersResponse getContainers(GetContainersRequest request)
       throws YarnException, IOException {
-    GetContainersRequestProto requestProto = ((GetContainersRequestPBImpl) request)
-        .getProto();
+    GetContainersRequestProto requestProto =
+        ((GetContainersRequestPBImpl) request).getProto();
     try {
       return new GetContainersResponsePBImpl(proxy.getContainers(null,
-          requestProto));
+        requestProto));
     } catch (ServiceException e) {
       RPCUtil.unwrapAndThrowException(e);
       return null;
@@ -185,8 +187,7 @@ public class ApplicationHistoryProtocolPBClientImpl implements
 
   @Override
   public GetDelegationTokenResponse getDelegationToken(
-      GetDelegationTokenRequest request) throws YarnException,
-      IOException {
+      GetDelegationTokenRequest request) throws YarnException, IOException {
     GetDelegationTokenRequestProto requestProto =
         ((GetDelegationTokenRequestPBImpl) request).getProto();
     try {
@@ -200,13 +201,12 @@ public class ApplicationHistoryProtocolPBClientImpl implements
 
   @Override
   public RenewDelegationTokenResponse renewDelegationToken(
-      RenewDelegationTokenRequest request) throws YarnException,
-      IOException {
-    RenewDelegationTokenRequestProto requestProto = 
+      RenewDelegationTokenRequest request) throws YarnException, IOException {
+    RenewDelegationTokenRequestProto requestProto =
         ((RenewDelegationTokenRequestPBImpl) request).getProto();
     try {
       return new RenewDelegationTokenResponsePBImpl(proxy.renewDelegationToken(
-          null, requestProto));
+        null, requestProto));
     } catch (ServiceException e) {
       RPCUtil.unwrapAndThrowException(e);
       return null;
@@ -215,13 +215,12 @@ public class ApplicationHistoryProtocolPBClientImpl implements
 
   @Override
   public CancelDelegationTokenResponse cancelDelegationToken(
-      CancelDelegationTokenRequest request) throws YarnException,
-      IOException {
+      CancelDelegationTokenRequest request) throws YarnException, IOException {
     CancelDelegationTokenRequestProto requestProto =
         ((CancelDelegationTokenRequestPBImpl) request).getProto();
     try {
       return new CancelDelegationTokenResponsePBImpl(
-          proxy.cancelDelegationToken(null, requestProto));
+        proxy.cancelDelegationToken(null, requestProto));
 
     } catch (ServiceException e) {
       RPCUtil.unwrapAndThrowException(e);

@@ -60,7 +60,7 @@ import org.apache.hadoop.yarn.ipc.YarnRPC;
 
 public class ApplicationHistoryClientService extends AbstractService {
   private static final Log LOG = LogFactory
-      .getLog(ApplicationHistoryClientService.class);
+    .getLog(ApplicationHistoryClientService.class);
   private ApplicationHistoryManager history;
   private ApplicationHistoryProtocol protocolHandler;
   private Server server;
@@ -75,18 +75,21 @@ public class ApplicationHistoryClientService extends AbstractService {
   protected void serviceStart() throws Exception {
     Configuration conf = getConfig();
     YarnRPC rpc = YarnRPC.create(conf);
-    InetSocketAddress address = conf.getSocketAddr(
-        YarnConfiguration.AHS_ADDRESS, YarnConfiguration.DEFAULT_AHS_ADDRESS,
-        YarnConfiguration.DEFAULT_AHS_PORT);
+    InetSocketAddress address =
+        conf.getSocketAddr(YarnConfiguration.AHS_ADDRESS,
+          YarnConfiguration.DEFAULT_AHS_ADDRESS,
+          YarnConfiguration.DEFAULT_AHS_PORT);
 
-    server = rpc.getServer(ApplicationHistoryProtocol.class, protocolHandler,
-        address, conf, null, conf.getInt(
+    server =
+        rpc.getServer(ApplicationHistoryProtocol.class, protocolHandler,
+          address, conf, null, conf.getInt(
             YarnConfiguration.AHS_CLIENT_THREAD_COUNT,
             YarnConfiguration.DEFAULT_AHS_CLIENT_THREAD_COUNT));
 
     server.start();
-    this.bindAddress = conf.updateConnectAddr(YarnConfiguration.AHS_ADDRESS,
-        server.getListenerAddress());
+    this.bindAddress =
+        conf.updateConnectAddr(YarnConfiguration.AHS_ADDRESS,
+          server.getListenerAddress());
     LOG.info("Instantiated ApplicationHistoryClientService at "
         + this.bindAddress);
 
@@ -126,9 +129,9 @@ public class ApplicationHistoryClientService extends AbstractService {
         GetApplicationAttemptReportRequest request) throws YarnException,
         IOException {
       try {
-        GetApplicationAttemptReportResponse response = GetApplicationAttemptReportResponse
-            .newInstance(history.getApplicationAttempt(request
-                .getApplicationAttemptId()));
+        GetApplicationAttemptReportResponse response =
+            GetApplicationAttemptReportResponse.newInstance(history
+              .getApplicationAttempt(request.getApplicationAttemptId()));
         return response;
       } catch (IOException e) {
         throw new ApplicationAttemptNotFoundException(e.getMessage());
@@ -139,8 +142,9 @@ public class ApplicationHistoryClientService extends AbstractService {
     public GetApplicationAttemptsResponse getApplicationAttempts(
         GetApplicationAttemptsRequest request) throws YarnException,
         IOException {
-      GetApplicationAttemptsResponse response = GetApplicationAttemptsResponse
-          .newInstance(new ArrayList<ApplicationAttemptReport>(history
+      GetApplicationAttemptsResponse response =
+          GetApplicationAttemptsResponse
+            .newInstance(new ArrayList<ApplicationAttemptReport>(history
               .getApplicationAttempts(request.getApplicationId()).values()));
       return response;
     }
@@ -150,8 +154,9 @@ public class ApplicationHistoryClientService extends AbstractService {
         GetApplicationReportRequest request) throws YarnException, IOException {
       try {
         ApplicationId applicationId = request.getApplicationId();
-        GetApplicationReportResponse response = GetApplicationReportResponse
-            .newInstance(history.getApplication(applicationId));
+        GetApplicationReportResponse response =
+            GetApplicationReportResponse.newInstance(history
+              .getApplication(applicationId));
         return response;
       } catch (IOException e) {
         throw new ApplicationNotFoundException(e.getMessage());
@@ -161,9 +166,9 @@ public class ApplicationHistoryClientService extends AbstractService {
     @Override
     public GetApplicationsResponse getApplications(
         GetApplicationsRequest request) throws YarnException, IOException {
-      GetApplicationsResponse response = GetApplicationsResponse
-          .newInstance(new ArrayList<ApplicationReport>(history
-              .getAllApplications().values()));
+      GetApplicationsResponse response =
+          GetApplicationsResponse.newInstance(new ArrayList<ApplicationReport>(
+            history.getAllApplications().values()));
       return response;
     }
 
@@ -171,8 +176,9 @@ public class ApplicationHistoryClientService extends AbstractService {
     public GetContainerReportResponse getContainerReport(
         GetContainerReportRequest request) throws YarnException, IOException {
       try {
-        GetContainerReportResponse response = GetContainerReportResponse
-            .newInstance(history.getContainer(request.getContainerId()));
+        GetContainerReportResponse response =
+            GetContainerReportResponse.newInstance(history.getContainer(request
+              .getContainerId()));
         return response;
       } catch (IOException e) {
         throw new ContainerNotFoundException(e.getMessage());
@@ -182,9 +188,9 @@ public class ApplicationHistoryClientService extends AbstractService {
     @Override
     public GetContainersResponse getContainers(GetContainersRequest request)
         throws YarnException, IOException {
-      GetContainersResponse response = GetContainersResponse
-          .newInstance(new ArrayList<ContainerReport>(history.getContainers(
-              request.getApplicationAttemptId()).values()));
+      GetContainersResponse response =
+          GetContainersResponse.newInstance(new ArrayList<ContainerReport>(
+            history.getContainers(request.getApplicationAttemptId()).values()));
       return response;
     }
 

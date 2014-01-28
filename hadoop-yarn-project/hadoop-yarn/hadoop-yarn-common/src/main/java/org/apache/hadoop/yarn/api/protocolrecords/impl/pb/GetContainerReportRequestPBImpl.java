@@ -32,8 +32,8 @@ import com.google.protobuf.TextFormat;
 @Private
 @Unstable
 public class GetContainerReportRequestPBImpl extends GetContainerReportRequest {
-  GetContainerReportRequestProto proto =
-      GetContainerReportRequestProto.getDefaultInstance();
+  GetContainerReportRequestProto proto = GetContainerReportRequestProto
+    .getDefaultInstance();
   GetContainerReportRequestProto.Builder builder = null;
   boolean viaProto = false;
 

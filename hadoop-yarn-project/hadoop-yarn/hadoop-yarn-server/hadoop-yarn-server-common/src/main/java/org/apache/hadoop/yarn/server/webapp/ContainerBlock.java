@@ -77,25 +77,28 @@ public class ContainerBlock extends HtmlBlock {
       puts("Container not found: " + containerid);
       return;
     }
-    
+
     ContainerInfo container = new ContainerInfo(containerReport);
     String logURL = containerReport.getLogUrl();
-    logURL = getPartUrl(logURL,"log");
+    logURL = getPartUrl(logURL, "log");
     setTitle(join("Container ", containerid));
 
-    info("Container Overview").
-    _("State:", container.getContainerState()).
-    _("Exit Status:", container.getContainerExitStatus()).
-    _("Node:", container.getAssignedNodeId()).
-    _("Priority:", container.getPriority()).
-    _("Started:", Times.format(container.getStartedTime())).
-    _("Elapsed:", StringUtils.formatTime(
-        Times.elapsed(container.getStartedTime(),
-            container.getFinishedTime()))).
-    _("Resource:", container.getAllocatedMB() + " Memory, " +
-        container.getAllocatedVCores() + " VCores").
-    _("Logs:", logURL == null ? "#" : url(logURL), "Logs").
-    _("Diagnostics:", container.getDiagnosticsInfo());
+    info("Container Overview")
+      ._("State:", container.getContainerState())
+      ._("Exit Status:", container.getContainerExitStatus())
+      ._("Node:", container.getAssignedNodeId())
+      ._("Priority:", container.getPriority())
+      ._("Started:", Times.format(container.getStartedTime()))
+      ._(
+        "Elapsed:",
+        StringUtils.formatTime(Times.elapsed(container.getStartedTime(),
+          container.getFinishedTime())))
+      ._(
+        "Resource:",
+        container.getAllocatedMB() + " Memory, "
+            + container.getAllocatedVCores() + " VCores")
+      ._("Logs:", logURL == null ? "#" : url(logURL), "Logs")
+      ._("Diagnostics:", container.getDiagnosticsInfo());
 
     html._(InfoBlock.class);
   }

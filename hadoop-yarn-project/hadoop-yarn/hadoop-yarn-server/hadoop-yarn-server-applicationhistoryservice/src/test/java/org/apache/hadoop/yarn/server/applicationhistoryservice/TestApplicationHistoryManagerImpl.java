@@ -39,7 +39,7 @@ public class TestApplicationHistoryManagerImpl extends
   public void setup() throws Exception {
     Configuration config = new Configuration();
     config.setClass(YarnConfiguration.AHS_STORE,
-        MemoryApplicationHistoryStore.class, ApplicationHistoryStore.class);
+      MemoryApplicationHistoryStore.class, ApplicationHistoryStore.class);
     applicationHistoryManagerImpl = new ApplicationHistoryManagerImpl();
     applicationHistoryManagerImpl.init(config);
     applicationHistoryManagerImpl.start();
@@ -57,16 +57,16 @@ public class TestApplicationHistoryManagerImpl extends
     appId = ApplicationId.newInstance(0, 1);
     writeApplicationStartData(appId);
     writeApplicationFinishData(appId);
-    ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(appId,
-        1);
+    ApplicationAttemptId appAttemptId =
+        ApplicationAttemptId.newInstance(appId, 1);
     writeApplicationAttemptStartData(appAttemptId);
     writeApplicationAttemptFinishData(appAttemptId);
-    ApplicationReport appReport = applicationHistoryManagerImpl
-        .getApplication(appId);
+    ApplicationReport appReport =
+        applicationHistoryManagerImpl.getApplication(appId);
     Assert.assertNotNull(appReport);
     Assert.assertEquals(appId, appReport.getApplicationId());
-    Assert.assertEquals(appAttemptId, appReport
-        .getCurrentApplicationAttemptId());
+    Assert.assertEquals(appAttemptId,
+      appReport.getCurrentApplicationAttemptId());
     Assert.assertEquals(appAttemptId.toString(), appReport.getHost());
     Assert.assertEquals("test type", appReport.getApplicationType().toString());
     Assert.assertEquals("test queue", appReport.getQueue().toString());
