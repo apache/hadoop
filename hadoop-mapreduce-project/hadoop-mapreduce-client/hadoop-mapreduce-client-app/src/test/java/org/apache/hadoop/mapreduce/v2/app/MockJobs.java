@@ -629,6 +629,11 @@ public class MockJobs extends MockApps {
         jobConf.addResource(fc.open(configFile), configFile.toString());
         return jobConf;
       }
+
+      @Override
+      public void setQueueName(String queueName) {
+        // do nothing
+      }
     };
   }
 

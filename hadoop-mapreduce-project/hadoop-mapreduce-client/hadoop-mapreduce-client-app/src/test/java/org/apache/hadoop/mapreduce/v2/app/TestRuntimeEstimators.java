@@ -505,6 +505,11 @@ public class TestRuntimeEstimators {
     public Configuration loadConfFile() {
       throw new UnsupportedOperationException();
     }
+
+    @Override
+    public void setQueueName(String queueName) {
+      // do nothing
+    }
   }
 
   /*

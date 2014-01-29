@@ -209,6 +209,9 @@ Release 2.4.0 - UNRELEASED
     MAPREDUCE-5464. Add analogs of the SLOTS_MILLIS counters that jive with the
     YARN resource model (Sandy Ryza)
 
+    MAPREDUCE-5732. Report proper queue when job has been automatically placed
+    (Sandy Ryza)
+
   OPTIMIZATIONS
 
     MAPREDUCE-5484. YarnChild unnecessarily loads job conf twice (Sandy Ryza)

@@ -39,6 +39,7 @@ public class MockAppContext implements AppContext {
   final Map<JobId, Job> jobs;
   final long startTime = System.currentTimeMillis();
   Set<String> blacklistedNodes;
+  String queue;
   
   public MockAppContext(int appid) {
     appID = MockJobs.newAppID(appid);

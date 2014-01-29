@@ -122,6 +122,13 @@
       ]
      },
 
+     {"type": "record", "name": "JobQueueChange",
+      "fields": [
+          {"name": "jobid", "type": "string"},
+          {"name": "jobQueueName", "type": "string"}
+      ]
+     },
+
      {"type": "record", "name": "JobUnsuccessfulCompletion",
       "fields": [
           {"name": "jobid", "type": "string"},
@@ -267,6 +274,7 @@
           "JOB_FINISHED",
           "JOB_PRIORITY_CHANGED",
           "JOB_STATUS_CHANGED",
+          "JOB_QUEUE_CHANGED",
           "JOB_FAILED",
           "JOB_KILLED",
           "JOB_ERROR",
@@ -306,6 +314,7 @@
                "JobInited",
                "AMStarted",
                "JobPriorityChange",
+               "JobQueueChange",
                "JobStatusChanged",
                "JobSubmitted",
                "JobUnsuccessfulCompletion",
