@@ -1001,7 +1001,12 @@ public class SecondaryNameNode implements Runnable {
             sig.mostRecentCheckpointTxId + " even though it should have " +
             "just been downloaded");
       }
-      dstImage.reloadFromImageFile(file, dstNamesystem);
+      dstNamesystem.writeLock();
+      try {
+        dstImage.reloadFromImageFile(file, dstNamesystem);
+      } finally {
+        dstNamesystem.writeUnlock();
+      }
       dstNamesystem.dir.imageLoadComplete();
     }
     // error simulation code for junit test
