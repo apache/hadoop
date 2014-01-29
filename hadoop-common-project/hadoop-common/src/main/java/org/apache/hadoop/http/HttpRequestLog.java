@@ -53,7 +53,17 @@ public class HttpRequestLog {
     String appenderName = name + "requestlog";
     Log logger = LogFactory.getLog(loggerName);
 
-    if (logger instanceof Log4JLogger) {
+    boolean isLog4JLogger;;
+    try {
+      isLog4JLogger = logger instanceof Log4JLogger;
+    } catch (NoClassDefFoundError err) {
+      // In some dependent projects, log4j may not even be on the classpath at
+      // runtime, in which case the above instanceof check will throw
+      // NoClassDefFoundError.
+      LOG.debug("Could not load Log4JLogger class", err);
+      isLog4JLogger = false;
+    }
+    if (isLog4JLogger) {
       Log4JLogger httpLog4JLog = (Log4JLogger)logger;
       Logger httpLogger = httpLog4JLog.getLogger();
       Appender appender = null;
