@@ -359,6 +359,9 @@ Release 2.3.0 - UNRELEASED
     HADOOP-9830. Fix typo at http://hadoop.apache.org/docs/current/
     (Kousuke Saruta via Arpit Agarwal)
 
+    HADOOP-10291. TestSecurityUtil#testSocketAddrWithIP fails due to test
+    order dependency. (Mit Desai via Arpit Agarwal)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
