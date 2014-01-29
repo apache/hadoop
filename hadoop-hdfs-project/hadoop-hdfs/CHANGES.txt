@@ -602,6 +602,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-5728. Block recovery will fail if the metafile does not have crc 
     for all chunks of the block (Vinay via kihwal)
 
+    HDFS-5842. Cannot create hftp filesystem when using a proxy user ugi and a doAs 
+    on a secure cluster. (jing9)
+
   BREAKDOWN OF HDFS-2832 SUBTASKS AND RELATED JIRAS
 
     HDFS-4985. Add storage type to the protocol and expose it in block report
