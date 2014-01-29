@@ -52,6 +52,10 @@ import org.apache.hadoop.hdfs.server.namenode.FsImageProto.NameSystemSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.SecretManagerSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.StringTableSection;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FSImageFormatPBSnapshot;
+import org.apache.hadoop.hdfs.server.namenode.startupprogress.Phase;
+import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress;
+import org.apache.hadoop.hdfs.server.namenode.startupprogress.Step;
+import org.apache.hadoop.hdfs.server.namenode.startupprogress.StepType;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.io.compress.CompressionCodec;
@@ -101,11 +105,14 @@ public final class FSImageFormatProtobuf {
     }
 
     void load(File file) throws IOException {
+      long start = System.currentTimeMillis();
       imgDigest = MD5FileUtils.computeMd5ForFile(file);
       RandomAccessFile raFile = new RandomAccessFile(file, "r");
       FileInputStream fin = new FileInputStream(file);
       try {
         loadInternal(raFile, fin);
+        long end = System.currentTimeMillis();
+        LOG.info("Loaded FSImage in " + (end - start) / 1000 + " seconds.");
       } finally {
         fin.close();
         raFile.close();
@@ -123,8 +130,8 @@ public final class FSImageFormatProtobuf {
 
       FSImageFormatPBINode.Loader inodeLoader = new FSImageFormatPBINode.Loader(
           fsn, this);
-      FSImageFormatPBSnapshot.Loader snapshotLoader =
-          new FSImageFormatPBSnapshot.Loader(fsn, this);
+      FSImageFormatPBSnapshot.Loader snapshotLoader = new FSImageFormatPBSnapshot.Loader(
+          fsn, this);
 
       ArrayList<FileSummary.Section> sections = Lists.newArrayList(summary
           .getSectionsList());
@@ -143,6 +150,14 @@ public final class FSImageFormatProtobuf {
         }
       });
 
+      StartupProgress prog = NameNode.getStartupProgress();
+      /**
+       * beginStep() and the endStep() calls do not match the boundary of the
+       * sections. This is because that the current implementation only allows
+       * a particular step to be started for once.
+       */
+      Step currentStep = null;
+
       for (FileSummary.Section s : sections) {
         channel.position(s.getOffset());
         InputStream in = new BufferedInputStream(new LimitInputStream(fin,
@@ -152,6 +167,7 @@ public final class FSImageFormatProtobuf {
             summary.getCodec(), in);
 
         String n = s.getName();
+
         switch (SectionName.fromString(n)) {
         case NS_INFO:
           loadNameSystemSection(in);
@@ -159,8 +175,11 @@ public final class FSImageFormatProtobuf {
         case STRING_TABLE:
           loadStringTableSection(in);
           break;
-        case INODE:
+        case INODE: {
+          currentStep = new Step(StepType.INODES);
+          prog.beginStep(Phase.LOADING_FSIMAGE, currentStep);
           inodeLoader.loadINodeSection(in);
+        }
           break;
         case INODE_DIR:
           inodeLoader.loadINodeDirectorySection(in);
@@ -174,11 +193,20 @@ public final class FSImageFormatProtobuf {
         case SNAPSHOT_DIFF:
           snapshotLoader.loadSnapshotDiffSection(in);
           break;
-        case CACHE_MANAGER:
-          loadCacheManagerSection(in);
-          break;
-        case SECRET_MANAGER:
+        case SECRET_MANAGER: {
+          prog.endStep(Phase.LOADING_FSIMAGE, currentStep);
+          Step step = new Step(StepType.DELEGATION_TOKENS);
+          prog.beginStep(Phase.LOADING_FSIMAGE, step);
           loadSecretManagerSection(in);
+          prog.endStep(Phase.LOADING_FSIMAGE, step);
+        }
+          break;
+        case CACHE_MANAGER: {
+          Step step = new Step(StepType.CACHE_POOLS);
+          prog.beginStep(Phase.LOADING_FSIMAGE, step);
+          loadCacheManagerSection(in);
+          prog.endStep(Phase.LOADING_FSIMAGE, step);
+        }
           break;
         default:
           LOG.warn("Unregconized section " + n);
@@ -291,7 +319,7 @@ public final class FSImageFormatProtobuf {
       FileOutputStream fout = new FileOutputStream(file);
       fileChannel = fout.getChannel();
       try {
-        saveInternal(fout, compression);
+        saveInternal(fout, compression, file.getAbsolutePath().toString());
       } finally {
         fout.close();
       }
@@ -307,24 +335,27 @@ public final class FSImageFormatProtobuf {
     }
 
     private void saveInodes(FileSummary.Builder summary) throws IOException {
-      FSImageFormatPBINode.Saver inodeSaver = new FSImageFormatPBINode.Saver(
-          this, summary);
-      inodeSaver.serializeINodeSection(sectionOutputStream);
-      inodeSaver.serializeINodeDirectorySection(sectionOutputStream);
-      inodeSaver.serializeFilesUCSection(sectionOutputStream);
+      FSImageFormatPBINode.Saver saver = new FSImageFormatPBINode.Saver(this,
+          summary);
+
+      saver.serializeINodeSection(sectionOutputStream);
+      saver.serializeINodeDirectorySection(sectionOutputStream);
+      saver.serializeFilesUCSection(sectionOutputStream);
     }
 
     private void saveSnapshots(FileSummary.Builder summary) throws IOException {
-      FSImageFormatPBSnapshot.Saver snapshotSaver =
-          new FSImageFormatPBSnapshot.Saver(this, summary,
-              context, context.getSourceNamesystem());
+      FSImageFormatPBSnapshot.Saver snapshotSaver = new FSImageFormatPBSnapshot.Saver(
+          this, summary, context, context.getSourceNamesystem());
+
       snapshotSaver.serializeSnapshotSection(sectionOutputStream);
       snapshotSaver.serializeSnapshotDiffSection(sectionOutputStream);
     }
 
     private void saveInternal(FileOutputStream fout,
-        FSImageCompression compression) throws IOException {
+        FSImageCompression compression, String filePath) throws IOException {
+      StartupProgress prog = NameNode.getStartupProgress();
       MessageDigest digester = MD5Hash.getDigester();
+
       underlyingOutputStream = new DigestOutputStream(new BufferedOutputStream(
           fout), digester);
       underlyingOutputStream.write(FSImageUtil.MAGIC_HEADER);
@@ -348,14 +379,27 @@ public final class FSImageFormatProtobuf {
       // Some unit tests, such as TestSaveNamespace#testCancelSaveNameSpace
       // depends on this behavior.
       context.checkCancelled();
+
+      Step step = new Step(StepType.INODES, filePath);
+      prog.beginStep(Phase.SAVING_CHECKPOINT, step);
       saveInodes(b);
       saveSnapshots(b);
+      prog.endStep(Phase.SAVING_CHECKPOINT, step);
+
+      step = new Step(StepType.DELEGATION_TOKENS, filePath);
+      prog.beginStep(Phase.SAVING_CHECKPOINT, step);
+      saveSecretManagerSection(b);
+      prog.endStep(Phase.SAVING_CHECKPOINT, step);
+
+      step = new Step(StepType.CACHE_POOLS, filePath);
+      prog.beginStep(Phase.SAVING_CHECKPOINT, step);
+      saveCacheManagerSection(b);
+      prog.endStep(Phase.SAVING_CHECKPOINT, step);
+
       saveStringTableSection(b);
 
-      saveSecretManagerSection(b);
-      saveCacheManagerSection(b);
-
-      // Flush the buffered data into the file before appending the header
+      // We use the underlyingOutputStream to write the header. Therefore flush
+      // the buffered stream (which is potentially compressed) first.
       flushSectionOutputStream();
 
       FileSummary summary = b.build();
@@ -379,7 +423,8 @@ public final class FSImageFormatProtobuf {
       commitSection(summary, SectionName.SECRET_MANAGER);
     }
 
-    private void saveCacheManagerSection(FileSummary.Builder summary) throws IOException {
+    private void saveCacheManagerSection(FileSummary.Builder summary)
+        throws IOException {
       final FSNamesystem fsn = context.getSourceNamesystem();
       CacheManager.PersistState state = fsn.getCacheManager().saveState();
       state.section.writeDelimitedTo(sectionOutputStream);
@@ -393,8 +438,8 @@ public final class FSImageFormatProtobuf {
       commitSection(summary, SectionName.CACHE_MANAGER);
     }
 
-    private void saveNameSystemSection(
-        FileSummary.Builder summary) throws IOException {
+    private void saveNameSystemSection(FileSummary.Builder summary)
+        throws IOException {
       final FSNamesystem fsn = context.getSourceNamesystem();
       OutputStream out = sectionOutputStream;
       NameSystemSection.Builder b = NameSystemSection.newBuilder()
@@ -416,7 +461,8 @@ public final class FSImageFormatProtobuf {
       commitSection(summary, SectionName.NS_INFO);
     }
 
-    private void saveStringTableSection(FileSummary.Builder summary) throws IOException {
+    private void saveStringTableSection(FileSummary.Builder summary)
+        throws IOException {
       OutputStream out = sectionOutputStream;
       StringTableSection.Builder b = StringTableSection.newBuilder()
           .setNumEntry(stringMap.size());

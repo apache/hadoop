@@ -26,6 +26,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -55,6 +57,7 @@ public final class FSImageFormatPBINode {
   private final static long USER_GROUP_STRID_MASK = (1 << 24) - 1;
   private final static int USER_STRID_OFFSET = 40;
   private final static int GROUP_STRID_OFFSET = 16;
+  private static final Log LOG = LogFactory.getLog(FSImageFormatProtobuf.class);
 
   public final static class Loader {
     public static PermissionStatus loadPermission(long id,
@@ -152,6 +155,7 @@ public final class FSImageFormatPBINode {
     void loadINodeSection(InputStream in) throws IOException {
       INodeSection s = INodeSection.parseDelimitedFrom(in);
       fsn.resetLastInodeId(s.getLastInodeId());
+      LOG.info("Loading " + s.getNumInodes() + " INodes.");
       for (int i = 0; i < s.getNumInodes(); ++i) {
         INodeSection.INode p = INodeSection.INode.parseDelimitedFrom(in);
         if (p.getId() == INodeId.ROOT_INODE_ID) {
