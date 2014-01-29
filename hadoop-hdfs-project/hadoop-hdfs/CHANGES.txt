@@ -316,6 +316,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-5721. sharedEditsImage in Namenode#initializeSharedEdits() should be
     closed before method returns (Ted Yu via todd)
 
+    HDFS-5842. Cannot create hftp filesystem when using a proxy user ugi and a doAs 
+    on a secure cluster. (jing9)
+
   BREAKDOWN OF HDFS-2832 SUBTASKS AND RELATED JIRAS
 
     HDFS-4985. Add storage type to the protocol and expose it in block report
