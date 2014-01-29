@@ -85,7 +85,7 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.web.SWebHdfsFileSystem;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.http.HttpConfig;
-import org.apache.hadoop.http.HttpServer;
+import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
@@ -1526,7 +1526,7 @@ public class DFSUtil {
     return policy;
   }
 
-  public static HttpServer.Builder loadSslConfToHttpServerBuilder(HttpServer.Builder builder,
+  public static HttpServer2.Builder loadSslConfToHttpServerBuilder(HttpServer2.Builder builder,
       Configuration sslConf) {
     return builder
         .needsClientAuth(
@@ -1562,13 +1562,13 @@ public class DFSUtil {
    * namenode can use to initialize their HTTP / HTTPS server.
    *
    */
-  public static HttpServer.Builder httpServerTemplateForNNAndJN(
+  public static HttpServer2.Builder httpServerTemplateForNNAndJN(
       Configuration conf, final InetSocketAddress httpAddr,
       final InetSocketAddress httpsAddr, String name, String spnegoUserNameKey,
       String spnegoKeytabFileKey) throws IOException {
     HttpConfig.Policy policy = getHttpPolicy(conf);
 
-    HttpServer.Builder builder = new HttpServer.Builder().setName(name)
+    HttpServer2.Builder builder = new HttpServer2.Builder().setName(name)
         .setConf(conf).setACL(new AccessControlList(conf.get(DFS_ADMIN, " ")))
         .setSecurityEnabled(UserGroupInformation.isSecurityEnabled())
         .setUsernameConfKey(spnegoUserNameKey)

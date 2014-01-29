@@ -40,7 +40,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.junit.Test;
 
 public class TestPathFilter extends HttpServerFunctionalTest {
-  static final Log LOG = LogFactory.getLog(HttpServer.class);
+  static final Log LOG = LogFactory.getLog(HttpServer2.class);
   static final Set<String> RECORDS = new TreeSet<String>(); 
 
   /** A very simple filter that records accessed uri's */
@@ -107,10 +107,10 @@ public class TestPathFilter extends HttpServerFunctionalTest {
     Configuration conf = new Configuration();
     
     //start a http server with CountingFilter
-    conf.set(HttpServer.FILTER_INITIALIZER_PROPERTY,
+    conf.set(HttpServer2.FILTER_INITIALIZER_PROPERTY,
         RecordingFilter.Initializer.class.getName());
     String[] pathSpecs = { "/path", "/path/*" };
-    HttpServer http = createTestServer(conf, pathSpecs);
+    HttpServer2 http = createTestServer(conf, pathSpecs);
     http.start();
 
     final String baseURL = "/path";

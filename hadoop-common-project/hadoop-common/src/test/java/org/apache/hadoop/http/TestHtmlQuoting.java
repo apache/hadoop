@@ -68,8 +68,8 @@ public class TestHtmlQuoting {
   @Test
   public void testRequestQuoting() throws Exception {
     HttpServletRequest mockReq = Mockito.mock(HttpServletRequest.class);
-    HttpServer.QuotingInputFilter.RequestQuoter quoter =
-      new HttpServer.QuotingInputFilter.RequestQuoter(mockReq);
+    HttpServer2.QuotingInputFilter.RequestQuoter quoter =
+      new HttpServer2.QuotingInputFilter.RequestQuoter(mockReq);
     
     Mockito.doReturn("a<b").when(mockReq).getParameter("x");
     assertEquals("Test simple param quoting",

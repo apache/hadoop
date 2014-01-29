@@ -35,7 +35,7 @@ import javax.servlet.http.HttpServlet;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.http.HttpServer;
+import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.security.AdminACLsManager;
 import org.slf4j.Logger;
@@ -216,7 +216,7 @@ public class WebApps {
             System.exit(1);
           }
         }
-        HttpServer.Builder builder = new HttpServer.Builder().setName(name)
+        HttpServer2.Builder builder = new HttpServer2.Builder().setName(name)
             .addEndpoint(URI.create("http://" + bindAddress + ":" + port))
             .setConf(conf).setFindPort(findPort)
             .setACL(new AdminACLsManager(conf).getAdminAcl())
@@ -231,7 +231,7 @@ public class WebApps {
               .setKeytabConfKey(spnegoKeytabKey)
               .setSecurityEnabled(UserGroupInformation.isSecurityEnabled());
         }
-        HttpServer server = builder.build();
+        HttpServer2 server = builder.build();
 
         for(ServletStruct struct: servlets) {
           server.addServlet(struct.name, struct.spec, struct.clazz);
@@ -239,7 +239,7 @@ public class WebApps {
         for(Map.Entry<String, Object> entry : attributes.entrySet()) {
           server.setAttribute(entry.getKey(), entry.getValue());
         }
-        HttpServer.defineFilter(server.getWebAppContext(), "guice",
+        HttpServer2.defineFilter(server.getWebAppContext(), "guice",
           GuiceFilter.class.getName(), null, new String[] { "/*" });
 
         webapp.setConf(conf);

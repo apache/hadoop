@@ -20,7 +20,7 @@ package org.apache.hadoop.log;
 import java.io.*;
 import java.net.*;
 
-import org.apache.hadoop.http.HttpServer;
+import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.net.NetUtils;
 
 import junit.framework.TestCase;
@@ -44,7 +44,7 @@ public class TestLogLevel extends TestCase {
       log.error("log.error1");
       assertTrue(!Level.ERROR.equals(log.getEffectiveLevel()));
 
-      HttpServer server = new HttpServer.Builder().setName("..")
+      HttpServer2 server = new HttpServer2.Builder().setName("..")
           .addEndpoint(new URI("http://localhost:0")).setFindPort(true)
           .build();
       

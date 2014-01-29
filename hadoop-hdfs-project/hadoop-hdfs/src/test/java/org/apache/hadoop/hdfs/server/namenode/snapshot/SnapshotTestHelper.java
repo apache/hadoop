@@ -58,7 +58,7 @@ import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.http.HttpServer;
+import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.ipc.ProtobufRpcEngine.Server;
 import org.apache.hadoop.metrics2.impl.MetricsSystemImpl;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -89,7 +89,7 @@ public class SnapshotTestHelper {
     setLevel2OFF(LogFactory.getLog(MetricsSystemImpl.class));
     
     setLevel2OFF(DataBlockScanner.LOG);
-    setLevel2OFF(HttpServer.LOG);
+    setLevel2OFF(HttpServer2.LOG);
     setLevel2OFF(DataNode.LOG);
     setLevel2OFF(BlockPoolSliceStorage.LOG);
     setLevel2OFF(LeaseManager.LOG);
