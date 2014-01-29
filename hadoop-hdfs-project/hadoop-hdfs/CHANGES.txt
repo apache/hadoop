@@ -868,6 +868,9 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-5833. Fix SecondaryNameNode javadoc. (Bangtao Zhou via Arpit Agarwal)
 
+    HDFS-5844. Fix broken link in WebHDFS.apt.vm. (Akira Ajisaka via
+    Arpit Agarwal)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
