@@ -364,4 +364,11 @@
       <Bug pattern="OBL_UNSATISFIED_OBLIGATION"/>
     </Match>
 
+     <!-- code from maven source, null value is checked at callee side. -->
+     <Match>
+       <Class name="org.apache.hadoop.util.ComparableVersion$ListItem" />
+       <Method name="compareTo" />
+       <Bug code="NP" />
+     </Match>
+
 </FindBugsFilter>
