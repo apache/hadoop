@@ -869,7 +869,7 @@ Content-Length: 0
 * {Error Responses}
 
   When an operation fails, the server may throw an exception.
-  The JSON schema of error responses is defined in {{{RemoteException JSON Schema}}}.
+  The JSON schema of error responses is defined in {{RemoteException JSON Schema}}.
   The table below shows the mapping from exceptions to HTTP response codes.
 
 ** {HTTP Response Codes}
