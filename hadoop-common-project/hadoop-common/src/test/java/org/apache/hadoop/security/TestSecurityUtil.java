@@ -331,7 +331,9 @@ public class TestSecurityUtil {
 
   @Test
   public void testSocketAddrWithIP() {
-    verifyServiceAddr("127.0.0.1", "127.0.0.1");
+    String staticHost = "127.0.0.1";
+    NetUtils.addStaticResolution(staticHost, "localhost");
+    verifyServiceAddr(staticHost, "127.0.0.1");
   }
 
   @Test
