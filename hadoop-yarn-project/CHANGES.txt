@@ -450,6 +450,9 @@ Release 2.3.0 - UNRELEASED
     YARN-1138. yarn.application.classpath is set to point to $HADOOP_CONF_DIR
     etc., which does not work on Windows. (Chuan Liu via cnauroth)
 
+    YARN-1600. RM does not startup when security is enabled without spnego
+    configured (Haohui Mai via jlowe)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES

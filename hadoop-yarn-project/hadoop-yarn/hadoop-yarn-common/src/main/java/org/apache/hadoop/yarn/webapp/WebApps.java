@@ -223,7 +223,9 @@ public class WebApps {
             .setPathSpec(pathList.toArray(new String[0]));
 
         boolean hasSpnegoConf = spnegoPrincipalKey != null
-            && spnegoKeytabKey != null;
+            && conf.get(spnegoPrincipalKey) != null && spnegoKeytabKey != null
+            && conf.get(spnegoKeytabKey) != null;
+
         if (hasSpnegoConf) {
           builder.setUsernameConfKey(spnegoPrincipalKey)
               .setKeytabConfKey(spnegoKeytabKey)
