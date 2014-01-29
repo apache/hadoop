@@ -281,13 +281,17 @@ public class TestRMAppTransitions {
   private void assertTimesAtFinish(RMApp application) {
     assertStartTimeSet(application);
     Assert.assertTrue("application finish time is not greater then 0",
-        (application.getFinishTime() > 0)); 
+        (application.getFinishTime() > 0));
     Assert.assertTrue("application finish time is not >= then start time",
         (application.getFinishTime() >= application.getStartTime()));
   }
 
   private void assertAppFinalStateSaved(RMApp application){
     verify(store, times(1)).updateApplicationState(any(ApplicationState.class));
+  }
+
+  private void assertAppFinalStateNotSaved(RMApp application){
+    verify(store, times(0)).updateApplicationState(any(ApplicationState.class));
   }
 
   private void assertKilled(RMApp application) {
@@ -316,7 +320,6 @@ public class TestRMAppTransitions {
     StringBuilder diag = application.getDiagnostics();
     Assert.assertTrue("application diagnostics is not correct",
         diag.toString().matches(regex));
-    assertAppFinalStateSaved(application);
   }
 
   private void sendAppUpdateSavedEvent(RMApp application) {
@@ -468,6 +471,7 @@ public class TestRMAppTransitions {
     sendAppUpdateSavedEvent(application);
     assertFailed(application,
         ".*Unmanaged application.*Failing the application.*");
+    assertAppFinalStateSaved(application);
   }
   
   @Test
@@ -497,6 +501,7 @@ public class TestRMAppTransitions {
     rmDispatcher.await();
     sendAppUpdateSavedEvent(application);
     assertKilled(application);
+    assertAppFinalStateNotSaved(application);
   }
 
   @Test
@@ -512,6 +517,7 @@ public class TestRMAppTransitions {
     rmDispatcher.await();
     sendAppUpdateSavedEvent(application);
     assertFailed(application, rejectedText);
+    assertAppFinalStateNotSaved(application);
   }
 
   @Test (timeout = 30000)
@@ -541,6 +547,7 @@ public class TestRMAppTransitions {
     rmDispatcher.await();
     sendAppUpdateSavedEvent(application);
     assertFailed(application, rejectedText);
+    assertAppFinalStateSaved(application);
   }
 
   @Test (timeout = 30000)
@@ -556,6 +563,7 @@ public class TestRMAppTransitions {
     rmDispatcher.await();
     sendAppUpdateSavedEvent(application);
     assertFailed(application, rejectedText);
+    assertAppFinalStateSaved(application);
   }
 
   @Test
@@ -603,6 +611,7 @@ public class TestRMAppTransitions {
     rmDispatcher.await();
     sendAppUpdateSavedEvent(application);
     assertFailed(application, ".*" + message + ".*Failing the application.*");
+    assertAppFinalStateSaved(application);
   }
 
   @Test
@@ -685,12 +694,14 @@ public class TestRMAppTransitions {
     rmDispatcher.await();
     sendAppUpdateSavedEvent(application);
     assertFailed(application, ".*Failing the application.*");
+    assertAppFinalStateSaved(application);
 
     // FAILED => FAILED event RMAppEventType.KILL
     event = new RMAppEvent(application.getApplicationId(), RMAppEventType.KILL);
     application.handle(event);
     rmDispatcher.await();
     assertFailed(application, ".*Failing the application.*");
+    assertAppFinalStateSaved(application);
   }
 
   @Test

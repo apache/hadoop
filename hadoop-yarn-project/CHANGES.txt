@@ -355,6 +355,8 @@ Release 2.4.0 - UNRELEASED
 
     YARN-1629. IndexOutOfBoundsException in MaxRunningAppsEnforcer (Sandy Ryza)
 
+    YARN-1618. Fix invalid RMApp transition from NEW to FINAL_SAVING (kasha)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
