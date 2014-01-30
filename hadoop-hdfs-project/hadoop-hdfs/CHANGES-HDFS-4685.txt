@@ -44,6 +44,9 @@ HDFS-4685 (Unreleased)
 
     HADOOP-10241. Clean up output of FsShell getfacl. (Chris Nauroth via wheat9)
 
+    HDFS-5702. FsShell Cli: Add XML based End-to-End test for getfacl and
+    setfacl commands. (Vinay via cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES
