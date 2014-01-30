@@ -183,6 +183,9 @@ public class JobHistoryParser implements HistoryEventHandler {
     case JOB_PRIORITY_CHANGED:
       handleJobPriorityChangeEvent((JobPriorityChangeEvent) event);
       break;
+    case JOB_QUEUE_CHANGED:
+      handleJobQueueChangeEvent((JobQueueChangeEvent) event);
+      break;
     case JOB_FAILED:
     case JOB_KILLED:
     case JOB_ERROR:
@@ -384,6 +387,10 @@ public class JobHistoryParser implements HistoryEventHandler {
 
   private void handleJobPriorityChangeEvent(JobPriorityChangeEvent event) {
     info.priority = event.getPriority();
+  }
+  
+  private void handleJobQueueChangeEvent(JobQueueChangeEvent event) {
+    info.jobQueueName = event.getJobQueueName();
   }
 
   private void handleJobInitedEvent(JobInitedEvent event) {

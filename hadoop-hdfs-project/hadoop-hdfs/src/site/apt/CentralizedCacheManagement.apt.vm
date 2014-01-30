@@ -22,110 +22,140 @@ Centralized Cache Management in HDFS
 
 %{toc|section=1|fromDepth=2|toDepth=4}
 
-* {Background}
+* {Overview}
 
-  Normally, HDFS relies on the operating system to cache data it reads from disk.
-  However, HDFS can also be configured to use centralized cache management. Under
-  centralized cache management, the HDFS NameNode itself decides which blocks
-  should be cached, and where they should be cached.
+  <Centralized cache management> in HDFS is an explicit caching mechanism that
+  allows users to specify <paths> to be cached by HDFS. The NameNode will
+  communicate with DataNodes that have the desired blocks on disk, and instruct
+  them to cache the blocks in off-heap caches. 
 
-  Centralized cache management has several advantages. First of all, it
-  prevents frequently used block files from being evicted from memory. This is
-  particularly important when the size of the working set exceeds the size of
-  main memory, which is true for many big data applications. Secondly, when
-  HDFS decides what should be cached, it can let clients know about this
-  information through the getFileBlockLocations API. Finally, when the DataNode
-  knows a block is locked into memory, it can provide access to that block via
-  mmap.
+  Centralized cache management in HDFS has many significant advantages.
+
+  [[1]] Explicit pinning prevents frequently used data from being evicted from
+  memory. This is particularly important when the size of the working set
+  exceeds the size of main memory, which is common for many HDFS workloads.
+
+  [[1]] Because DataNode caches are managed by the NameNode, applications can
+  query the set of cached block locations when making task placement decisions.
+  Co-locating a task with a cached block replica improves read performance.
+
+  [[1]] When block has been cached by a DataNode, clients can use a new ,
+  more-efficient, zero-copy read API. Since checksum verification of cached
+  data is done once by the DataNode, clients can incur essentially zero
+  overhead when using this new API.
+
+  [[1]] Centralized caching can improve overall cluster memory utilization.
+  When relying on the OS buffer cache at each DataNode, repeated reads of
+  a block will result in all <n> replicas of the block being pulled into
+  buffer cache. With centralized cache management, a user can explicitly pin
+  only <m> of the <n> replicas, saving <n-m> memory.
 
 * {Use Cases}
 
-  Centralized cache management is most useful for files which are accessed very
-  often. For example, a "fact table" in Hive which is often used in joins is a
-  good candidate for caching. On the other hand, when running a classic
-  "word count" MapReduce job which counts the number of words in each
-  document, there may not be any good candidates for caching, since all the
-  files may be accessed exactly once.
+  Centralized cache management is useful for files that accessed repeatedly.
+  For example, a small <fact table> in Hive which is often used for joins is a
+  good candidate for caching. On the other hand, caching the input of a <
+  one year reporting query> is probably less useful, since the
+  historical data might only be read once.
+
+  Centralized cache management is also useful for mixed workloads with
+  performance SLAs. Caching the working set of a high-priority workload
+  insures that it does not contend for disk I/O with a low-priority workload.
 
 * {Architecture}
 
 [images/caching.png] Caching Architecture
 
-  With centralized cache management, the NameNode coordinates all caching
-  across the cluster. It receives cache information from each DataNode via the
-  cache report, a periodic message that describes all the blocks IDs cached on
-  a given DataNode. The NameNode will reply to DataNode heartbeat messages
-  with commands telling it which blocks to cache and which to uncache.
+  In this architecture, the NameNode is responsible for coordinating all the
+  DataNode off-heap caches in the cluster. The NameNode periodically receives
+  a <cache report> from each DataNode which describes all the blocks cached
+  on a given DN. The NameNode manages DataNode caches by piggybacking cache and
+  uncache commands on the DataNode heartbeat.
 
-  The NameNode stores a set of path cache directives, which tell it which files
-  to cache. The NameNode also stores a set of cache pools, which are groups of
-  cache directives.  These directives and pools are persisted to the edit log
-  and fsimage, and will be loaded if the cluster is restarted.
+  The NameNode queries its set of <cache directives> to determine
+  which paths should be cached. Cache directives are persistently stored in the
+  fsimage and edit log, and can be added, removed, and modified via Java and
+  command-line APIs. The NameNode also stores a set of <cache pools>,
+  which are administrative entities used to group cache directives together for
+  resource management and enforcing permissions.
 
-  Periodically, the NameNode rescans the namespace, to see which blocks need to
-  be cached based on the current set of path cache directives. Rescans are also
-  triggered by relevant user actions, such as adding or removing a cache
-  directive or removing a cache pool.
-
-  Cache directives also may specific a numeric cache replication, which is the
-  number of replicas to cache.  This number may be equal to or smaller than the
-  file's block replication.  If multiple cache directives cover the same file
-  with different cache replication settings, then the highest cache replication
-  setting is applied.
+  The NameNode periodically rescans the namespace and active cache directives
+  to determine which blocks need to be cached or uncached and assign caching
+  work to DataNodes. Rescans can also be triggered by user actions like adding
+  or removing a cache directive or removing a cache pool.
 
   We do not currently cache blocks which are under construction, corrupt, or
   otherwise incomplete.  If a cache directive covers a symlink, the symlink
   target is not cached.
 
-  Caching is currently done on a per-file basis, although we would like to add
-  block-level granularity in the future.
+  Caching is currently done on the file or directory-level. Block and sub-block
+  caching is an item of future work.
 
-* {Interface}
+* {Concepts}
 
-  The NameNode stores a list of "cache directives."  These directives contain a
-  path as well as the number of times blocks in that path should be replicated.
+** {Cache directive}
 
-  Paths can be either directories or files. If the path specifies a file, that
-  file is cached. If the path specifies a directory, all the files in the
-  directory will be cached. However, this process is not recursive-- only the
-  direct children of the directory will be cached.
+  A <cache directive> defines a path that should be cached. Paths can be either
+  directories or files. Directories are cached non-recursively, meaning only
+  files in the first-level listing of the directory.
 
-** {hdfs cacheadmin Shell}
+  Directives also specify additional parameters, such as the cache replication
+  factor and expiration time. The replication factor specifies the number of
+  block replicas to cache. If multiple cache directives refer to the same file,
+  the maximum cache replication factor is applied.
 
-  Path cache directives can be created by the <<<hdfs cacheadmin
-  -addDirective>>> command and removed via the <<<hdfs cacheadmin
-  -removeDirective>>> command. To list the current path cache directives, use
-  <<<hdfs cacheadmin -listDirectives>>>. Each path cache directive has a
-  unique 64-bit ID number which will not be reused if it is deleted.  To remove
-  all path cache directives with a specified path, use <<<hdfs cacheadmin
-  -removeDirectives>>>.
+  The expiration time is specified on the command line as a <time-to-live
+  (TTL)>, a relative expiration time in the future. After a cache directive
+  expires, it is no longer considered by the NameNode when making caching
+  decisions.
 
-  Directives are grouped into "cache pools."  Each cache pool gets a share of
-  the cluster's resources. Additionally, cache pools are used for
-  authentication. Cache pools have a mode, user, and group, similar to regular
-  files. The same authentication rules are applied as for normal files. So, for
-  example, if the mode is 0777, any user can add or remove directives from the
-  cache pool. If the mode is 0644, only the owner can write to the cache pool,
-  but anyone can read from it. And so forth.
+** {Cache pool}
 
-  Cache pools are identified by name. They can be created by the <<<hdfs
-  cacheAdmin -addPool>>> command, modified by the <<<hdfs cacheadmin
-  -modifyPool>>> command, and removed via the <<<hdfs cacheadmin
-  -removePool>>> command. To list the current cache pools, use <<<hdfs
-  cacheAdmin -listPools>>>
+  A <cache pool> is an administrative entity used to manage groups of cache
+  directives. Cache pools have UNIX-like <permissions>, which restrict which
+  users and groups have access to the pool. Write permissions allow users to
+  add and remove cache directives to the pool. Read permissions allow users to
+  list the cache directives in a pool, as well as additional metadata. Execute
+  permissions are unused.
+
+  Cache pools are also used for resource management. Pools can enforce a
+  maximum <limit>, which restricts the number of bytes that can be cached in
+  aggregate by directives in the pool. Normally, the sum of the pool limits
+  will approximately equal the amount of aggregate memory reserved for
+  HDFS caching on the cluster. Cache pools also track a number of statistics
+  to help cluster users determine what is and should be cached.
+
+  Pools also can enforce a maximum time-to-live. This restricts the maximum
+  expiration time of directives being added to the pool.
+
+* {<<<cacheadmin>>> command-line interface}
+
+  On the command-line, administrators and users can interact with cache pools
+  and directives via the <<<hdfs cacheadmin>>> subcommand.
+
+  Cache directives are identified by a unique, non-repeating 64-bit integer ID.
+  IDs will not be reused even if a cache directive is later removed.
+
+  Cache pools are identified by a unique string name.
+
+** {Cache directive commands}
 
 *** {addDirective}
 
-  Usage: <<<hdfs cacheadmin -addDirective -path <path> -replication <replication> -pool <pool-name> >>>
+  Usage: <<<hdfs cacheadmin -addDirective -path <path> -pool <pool-name> [-force] [-replication <replication>] [-ttl <time-to-live>]>>>
 
   Add a new cache directive.
 
 *--+--+
 \<path\> | A path to cache. The path can be a directory or a file.
 *--+--+
+\<pool-name\> | The pool to which the directive will be added. You must have write permission on the cache pool in order to add new directives.
+*--+--+
+-force | Skips checking of cache pool resource limits.
+*--+--+
 \<replication\> | The cache replication factor to use. Defaults to 1.
 *--+--+
-\<pool-name\> | The pool to which the directive will be added. You must have write permission on the cache pool in order to add new directives.
+\<time-to-live\> | How long the directive is valid. Can be specified in minutes, hours, and days, e.g. 30m, 4h, 2d. Valid units are [smhd]. "never" indicates a directive that never expires. If unspecified, the directive never expires.
 *--+--+
 
 *** {removeDirective}
@@ -150,7 +180,7 @@ Centralized Cache Management in HDFS
 
 *** {listDirectives}
 
-  Usage: <<<hdfs cacheadmin -listDirectives [-path <path>] [-pool <pool>] >>>
+  Usage: <<<hdfs cacheadmin -listDirectives [-stats] [-path <path>] [-pool <pool>]>>>
 
   List cache directives.
 
@@ -159,10 +189,14 @@ Centralized Cache Management in HDFS
 *--+--+
 \<pool\> | List only path cache directives in that pool.
 *--+--+
+-stats | List path-based cache directive statistics.
+*--+--+
+
+** {Cache pool commands}
 
 *** {addPool}
 
-  Usage: <<<hdfs cacheadmin -addPool <name> [-owner <owner>] [-group <group>] [-mode <mode>] [-weight <weight>] >>>
+  Usage: <<<hdfs cacheadmin -addPool <name> [-owner <owner>] [-group <group>] [-mode <mode>] [-limit <limit>] [-maxTtl <maxTtl>>>>
 
   Add a new cache pool.
 
@@ -175,12 +209,14 @@ Centralized Cache Management in HDFS
 *--+--+
 \<mode\> | UNIX-style permissions for the pool. Permissions are specified in octal, e.g. 0755. By default, this is set to 0755.
 *--+--+
-\<weight\> | Weight of the pool. This is a relative measure of the importance of the pool used during cache resource management. By default, it is set to 100.
+\<limit\> | The maximum number of bytes that can be cached by directives in this pool, in aggregate. By default, no limit is set.
+*--+--+
+\<maxTtl\> | The maximum allowed time-to-live for directives being added to the pool. This can be specified in seconds, minutes, hours, and days, e.g. 120s, 30m, 4h, 2d. Valid units are [smhd]. By default, no maximum is set. A value of \"never\" specifies that there is no limit.
 *--+--+
 
 *** {modifyPool}
 
-  Usage: <<<hdfs cacheadmin -modifyPool <name> [-owner <owner>] [-group <group>] [-mode <mode>] [-weight <weight>] >>>
+  Usage: <<<hdfs cacheadmin -modifyPool <name> [-owner <owner>] [-group <group>] [-mode <mode>] [-limit <limit>] [-maxTtl <maxTtl>]>>>
 
   Modifies the metadata of an existing cache pool.
 
@@ -193,7 +229,9 @@ Centralized Cache Management in HDFS
 *--+--+
 \<mode\> | Unix-style permissions of the pool in octal.
 *--+--+
-\<weight\> | Weight of the pool.
+\<limit\> | Maximum number of bytes that can be cached by this pool.
+*--+--+
+\<maxTtl\> | The maximum allowed time-to-live for directives being added to the pool.
 *--+--+
 
 *** {removePool}
@@ -208,11 +246,13 @@ Centralized Cache Management in HDFS
 
 *** {listPools}
 
-  Usage: <<<hdfs cacheadmin -listPools [name] >>>
+  Usage: <<<hdfs cacheadmin -listPools [-stats] [<name>]>>>
 
   Display information about one or more cache pools, e.g. name, owner, group,
   permissions, etc.
 
+*--+--+
+-stats | Display additional cache pool statistics.
 *--+--+
 \<name\> | If specified, list only the named cache pool.
 *--+--+
@@ -244,10 +284,12 @@ Centralized Cache Management in HDFS
 
   * dfs.datanode.max.locked.memory
 
-    The DataNode will treat this as the maximum amount of memory it can use for
-    its cache. When setting this value, please remember that you will need space
-    in memory for other things, such as the Java virtual machine (JVM) itself
-    and the operating system's page cache.
+    This determines the maximum amount of memory a DataNode will use for caching.
+    The "locked-in-memory size" ulimit (<<<ulimit -l>>>) of the DataNode user
+    also needs to be increased to match this parameter (see below section on
+    {{OS Limits}}). When setting this value, please remember that you will need
+    space in memory for other things as well, such as the DataNode and
+    application JVM heaps and the operating system page cache.
 
 *** Optional
 

@@ -52,7 +52,3 @@ Hadoop Auth, Java HTTP SPNEGO ${project.version}
 
   * {{{./BuildingIt.html}Building It}}
 
-  * {{{./apidocs/index.html}JavaDocs}}
-
-  * {{{./dependencies.html}Dependencies}}
-

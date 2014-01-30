@@ -334,6 +334,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1573. ZK store should use a private password for root-node-acls. 
     (kasha).
 
+    YARN-1630. Introduce timeout for async polling operations in YarnClientImpl
+    (Aditya Acharya via Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -463,6 +466,12 @@ Release 2.4.0 - UNRELEASED
     YARN-1575. Public localizer crashes with "Localized unkown resource"
     (jlowe)
 
+    YARN-1642. RMDTRenewer#getRMClient should use ClientRMProxy (kasha)
+
+    YARN-1629. IndexOutOfBoundsException in MaxRunningAppsEnforcer (Sandy Ryza)
+
+    YARN-1618. Fix invalid RMApp transition from NEW to FINAL_SAVING (kasha)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -554,6 +563,9 @@ Release 2.3.0 - UNRELEASED
 
     YARN-1138. yarn.application.classpath is set to point to $HADOOP_CONF_DIR
     etc., which does not work on Windows. (Chuan Liu via cnauroth)
+
+    YARN-1600. RM does not startup when security is enabled without spnego
+    configured (Haohui Mai via jlowe)
 
 Release 2.2.0 - 2013-10-13
 

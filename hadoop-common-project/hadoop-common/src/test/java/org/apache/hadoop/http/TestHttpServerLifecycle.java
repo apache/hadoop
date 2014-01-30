@@ -23,18 +23,18 @@ import org.junit.Test;
 public class TestHttpServerLifecycle extends HttpServerFunctionalTest {
 
   /**
-   * Check that a server is alive by probing the {@link HttpServer#isAlive()} method
+   * Check that a server is alive by probing the {@link HttpServer2#isAlive()} method
    * and the text of its toString() description
    * @param server server
    */
-  private void assertAlive(HttpServer server) {
+  private void assertAlive(HttpServer2 server) {
     assertTrue("Server is not alive", server.isAlive());
-    assertToStringContains(server, HttpServer.STATE_DESCRIPTION_ALIVE);
+    assertToStringContains(server, HttpServer2.STATE_DESCRIPTION_ALIVE);
   }
 
-  private void assertNotLive(HttpServer server) {
+  private void assertNotLive(HttpServer2 server) {
     assertTrue("Server should not be live", !server.isAlive());
-    assertToStringContains(server, HttpServer.STATE_DESCRIPTION_NOT_LIVE);
+    assertToStringContains(server, HttpServer2.STATE_DESCRIPTION_NOT_LIVE);
   }
 
   /**
@@ -43,12 +43,12 @@ public class TestHttpServerLifecycle extends HttpServerFunctionalTest {
    * @throws Throwable on failure
    */
   @Test public void testCreatedServerIsNotAlive() throws Throwable {
-    HttpServer server = createTestServer();
+    HttpServer2 server = createTestServer();
     assertNotLive(server);
   }
 
   @Test public void testStopUnstartedServer() throws Throwable {
-    HttpServer server = createTestServer();
+    HttpServer2 server = createTestServer();
     stop(server);
   }
 
@@ -59,7 +59,7 @@ public class TestHttpServerLifecycle extends HttpServerFunctionalTest {
    */
   @Test
   public void testStartedServerIsAlive() throws Throwable {
-    HttpServer server = null;
+    HttpServer2 server = null;
     server = createTestServer();
     assertNotLive(server);
     server.start();
@@ -78,22 +78,22 @@ public class TestHttpServerLifecycle extends HttpServerFunctionalTest {
     requestLogAppender.setName("httprequestlog");
     requestLogAppender.setFilename(System.getProperty("test.build.data", "/tmp/")
         + "jetty-name-yyyy_mm_dd.log");
-    Logger.getLogger(HttpServer.class.getName() + ".test").addAppender(requestLogAppender);
-    HttpServer server = null;
+    Logger.getLogger(HttpServer2.class.getName() + ".test").addAppender(requestLogAppender);
+    HttpServer2 server = null;
     server = createTestServer();
     assertNotLive(server);
     server.start();
     assertAlive(server);
     stop(server);
-    Logger.getLogger(HttpServer.class.getName() + ".test").removeAppender(requestLogAppender);
+    Logger.getLogger(HttpServer2.class.getName() + ".test").removeAppender(requestLogAppender);
   }
 
   /**
-   * Assert that the result of {@link HttpServer#toString()} contains the specific text
+   * Assert that the result of {@link HttpServer2#toString()} contains the specific text
    * @param server server to examine
    * @param text text to search for
    */
-  private void assertToStringContains(HttpServer server, String text) {
+  private void assertToStringContains(HttpServer2 server, String text) {
     String description = server.toString();
     assertTrue("Did not find \"" + text + "\" in \"" + description + "\"",
                description.contains(text));
@@ -105,7 +105,7 @@ public class TestHttpServerLifecycle extends HttpServerFunctionalTest {
    * @throws Throwable on failure
    */
   @Test public void testStoppedServerIsNotAlive() throws Throwable {
-    HttpServer server = createAndStartTestServer();
+    HttpServer2 server = createAndStartTestServer();
     assertAlive(server);
     stop(server);
     assertNotLive(server);
@@ -117,7 +117,7 @@ public class TestHttpServerLifecycle extends HttpServerFunctionalTest {
    * @throws Throwable on failure
    */
   @Test public void testStoppingTwiceServerIsAllowed() throws Throwable {
-    HttpServer server = createAndStartTestServer();
+    HttpServer2 server = createAndStartTestServer();
     assertAlive(server);
     stop(server);
     assertNotLive(server);
@@ -133,7 +133,7 @@ public class TestHttpServerLifecycle extends HttpServerFunctionalTest {
    */
   @Test
   public void testWepAppContextAfterServerStop() throws Throwable {
-    HttpServer server = null;
+    HttpServer2 server = null;
     String key = "test.attribute.key";
     String value = "test.attribute.value";
     server = createTestServer();

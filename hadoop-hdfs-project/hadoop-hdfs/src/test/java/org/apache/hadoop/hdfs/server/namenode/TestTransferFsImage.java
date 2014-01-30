@@ -37,7 +37,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.http.HttpServer;
+import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.http.HttpServerFunctionalTest;
 import org.apache.hadoop.test.PathUtils;
 import org.apache.hadoop.util.StringUtils;
@@ -119,7 +119,7 @@ public class TestTransferFsImage {
    */
   @Test(timeout = 5000)
   public void testImageTransferTimeout() throws Exception {
-    HttpServer testServer = HttpServerFunctionalTest.createServer("hdfs");
+    HttpServer2 testServer = HttpServerFunctionalTest.createServer("hdfs");
     try {
       testServer.addServlet("GetImage", "/getimage", TestGetImageServlet.class);
       testServer.start();

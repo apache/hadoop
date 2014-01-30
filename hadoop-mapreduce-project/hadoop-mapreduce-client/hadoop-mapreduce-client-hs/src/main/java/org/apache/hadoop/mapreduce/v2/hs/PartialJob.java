@@ -190,5 +190,10 @@ public class PartialJob implements org.apache.hadoop.mapreduce.v2.app.job.Job {
   public List<AMInfo> getAMInfos() {
     return null;
   }
+  
+  @Override
+  public void setQueueName(String queueName) {
+    throw new UnsupportedOperationException("Can't set job's queue name in history");
+  }
 
 }

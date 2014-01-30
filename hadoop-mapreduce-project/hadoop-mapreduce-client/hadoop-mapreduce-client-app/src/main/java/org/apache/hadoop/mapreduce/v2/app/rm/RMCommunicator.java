@@ -109,11 +109,11 @@ public abstract class RMCommunicator extends AbstractService
   @Override
   protected void serviceStart() throws Exception {
     scheduler= createSchedulerProxy();
-    register();
-    startAllocatorThread();
     JobID id = TypeConverter.fromYarn(this.applicationId);
     JobId jobId = TypeConverter.toYarn(id);
     job = context.getJob(jobId);
+    register();
+    startAllocatorThread();
     super.serviceStart();
   }
 
@@ -161,6 +161,9 @@ public abstract class RMCommunicator extends AbstractService
       }
       this.applicationACLs = response.getApplicationACLs();
       LOG.info("maxContainerCapability: " + maxContainerCapability.getMemory());
+      String queue = response.getQueue();
+      LOG.info("queue: " + queue);
+      job.setQueueName(queue);
     } catch (Exception are) {
       LOG.error("Exception while registering", are);
       throw new YarnRuntimeException(are);

@@ -44,8 +44,9 @@ Overview
 Generic Options
 
    The following options are supported by {{dfsadmin}}, {{fs}}, {{fsck}},
-   {{job}} and {{fetchdt}}. Applications should implement {{{some_useful_url}Tool}} to support
-   {{{another_useful_url}GenericOptions}}.
+   {{job}} and {{fetchdt}}. Applications should implement 
+   {{{../../api/org/apache/hadoop/util/Tool.html}Tool}} to support
+   GenericOptions.
 
 *------------------------------------------------+-----------------------------+
 ||            GENERIC_OPTION                     ||            Description
@@ -123,7 +124,8 @@ User Commands
 
 * <<<fsck>>>
 
-   Runs a HDFS filesystem checking utility. See {{Fsck}} for more info.
+   Runs a HDFS filesystem checking utility.
+   See {{{../hadoop-hdfs/HdfsUserGuide.html#fsck}fsck}} for more info.
 
    Usage: <<<hadoop fsck [GENERIC_OPTIONS] <path> [-move | -delete | -openforwrite] [-files [-blocks [-locations | -racks]]]>>>
 
@@ -149,7 +151,8 @@ User Commands
 
 * <<<fetchdt>>>
 
-   Gets Delegation Token from a NameNode. See {{fetchdt}} for more info.
+   Gets Delegation Token from a NameNode.
+   See {{{../hadoop-hdfs/HdfsUserGuide.html#fetchdt}fetchdt}} for more info.
 
    Usage: <<<hadoop fetchdt [GENERIC_OPTIONS] [--webservice <namenode_http_addr>] <path> >>>
 
@@ -302,7 +305,8 @@ Administration Commands
 * <<<balancer>>>
 
    Runs a cluster balancing utility. An administrator can simply press Ctrl-C
-   to stop the rebalancing process. See Rebalancer for more details.
+   to stop the rebalancing process. See
+   {{{../hadoop-hdfs/HdfsUserGuide.html#Rebalancer}Rebalancer}} for more details.
 
    Usage: <<<hadoop balancer [-threshold <threshold>]>>>
 
@@ -445,7 +449,7 @@ Administration Commands
 * <<<namenode>>>
 
    Runs the namenode. More info about the upgrade, rollback and finalize is
-   at Upgrade Rollback
+   at {{{../hadoop-hdfs/HdfsUserGuide.html#Upgrade_and_Rollback}Upgrade Rollback}}.
 
    Usage: <<<hadoop namenode [-format] | [-upgrade] | [-rollback] | [-finalize] | [-importCheckpoint]>>>
 
@@ -474,8 +478,9 @@ Administration Commands
 
 * <<<secondarynamenode>>>
 
-   Runs the HDFS secondary namenode. See Secondary Namenode for more
-   info.
+   Runs the HDFS secondary namenode.
+   See {{{../hadoop-hdfs/HdfsUserGuide.html#Secondary_NameNode}Secondary Namenode}}
+   for more info.
 
    Usage: <<<hadoop secondarynamenode [-checkpoint [force]] | [-geteditsize]>>>
 

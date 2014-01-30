@@ -98,6 +98,8 @@ public class EventReader implements Closeable {
       result = new JobFinishedEvent(); break;
     case JOB_PRIORITY_CHANGED:
       result = new JobPriorityChangeEvent(); break;
+    case JOB_QUEUE_CHANGED:
+      result = new JobQueueChangeEvent(); break;
     case JOB_STATUS_CHANGED:
       result = new JobStatusChangedEvent(); break;
     case JOB_FAILED:
