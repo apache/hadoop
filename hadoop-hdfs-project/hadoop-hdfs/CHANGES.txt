@@ -304,6 +304,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-5492. Port HDFS-2069 (Incorrect default trash interval in the
     docs) to trunk. (Akira Ajisaka via Arpit Agarwal)
 
+    HDFS-5843. DFSClient.getFileChecksum() throws IOException if checksum is 
+    disabled. (Laurent Goujon via jing9)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

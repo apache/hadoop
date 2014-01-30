@@ -655,8 +655,9 @@ class DataXceiver extends Receiver implements Runnable {
       final BlockMetadataHeader header = BlockMetadataHeader.readHeader(checksumIn);
       final DataChecksum checksum = header.getChecksum(); 
       final int bytesPerCRC = checksum.getBytesPerChecksum();
-      final long crcPerBlock = (metadataIn.getLength()
-          - BlockMetadataHeader.getHeaderSize())/checksum.getChecksumSize();
+      final long crcPerBlock = checksum.getChecksumSize() > 0 
+              ? (metadataIn.getLength() - BlockMetadataHeader.getHeaderSize())/checksum.getChecksumSize()
+              : 0;
       
       //compute block checksum
       final MD5Hash md5 = MD5Hash.digest(checksumIn);
