@@ -39,7 +39,7 @@ import org.apache.hadoop.security.authorize.AccessControlList;
 
 
 /**
- * Main interface to interact with the job. Provides only getters. 
+ * Main interface to interact with the job.
  */
 public interface Job {
 
@@ -98,4 +98,6 @@ public interface Job {
   List<AMInfo> getAMInfos();
   
   boolean checkAccess(UserGroupInformation callerUGI, JobACL jobOperation);
+  
+  public void setQueueName(String queueName);
 }

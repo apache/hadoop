@@ -81,6 +81,15 @@ public class TestEvents {
     assertEquals(test.getPriority(), JobPriority.LOW);
 
   }
+  
+  @Test(timeout = 10000)
+  public void testJobQueueChange() throws Exception {
+    org.apache.hadoop.mapreduce.JobID jid = new JobID("001", 1);
+    JobQueueChangeEvent test = new JobQueueChangeEvent(jid,
+        "newqueue");
+    assertEquals(test.getJobId().toString(), jid.toString());
+    assertEquals(test.getJobQueueName(), "newqueue");
+  }
 
   /**
    * simple test TaskUpdatedEvent and TaskUpdated
