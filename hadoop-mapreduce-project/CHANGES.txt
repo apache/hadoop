@@ -150,6 +150,9 @@ Release 2.4.0 - UNRELEASED
     MAPREDUCE-5464. Add analogs of the SLOTS_MILLIS counters that jive with the
     YARN resource model (Sandy Ryza)
 
+    MAPREDUCE-5732. Report proper queue when job has been automatically placed
+    (Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -224,9 +227,6 @@ Release 2.3.0 - UNRELEASED
 
     MAPREDUCE-5725. Make explicit that TestNetworkedJob relies on the Capacity
     Scheduler (Sandy Ryza)
-
-    MAPREDUCE-5732. Report proper queue when job has been automatically placed
-    (Sandy Ryza)
 
   OPTIMIZATIONS
 
