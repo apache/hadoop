@@ -304,6 +304,9 @@ Release 2.4.0 - UNRELEASED
     HADOOP-10139. Update and improve the Single Cluster Setup document.
     (Akira Ajisaka via Arpit Agarwal)
 
+    HADOOP-10295. Allow distcp to automatically identify the checksum type of 
+    source files and use it for the target. (jing9 and Laurent Goujon)
+
   OPTIMIZATIONS
 
   BUG FIXES
