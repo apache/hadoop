@@ -88,6 +88,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1630. Introduce timeout for async polling operations in YarnClientImpl
     (Aditya Acharya via Sandy Ryza)
 
+    YARN-1617. Remove ancient comment and surround LOG.debug in
+    AppSchedulingInfo.allocate (Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES

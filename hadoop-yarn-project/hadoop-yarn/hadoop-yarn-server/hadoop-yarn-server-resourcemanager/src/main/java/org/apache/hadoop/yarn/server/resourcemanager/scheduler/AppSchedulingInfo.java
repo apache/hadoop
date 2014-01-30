@@ -262,8 +262,13 @@ public class AppSchedulingInfo {
       pending = false;
       metrics.runAppAttempt(applicationId, user);
     }
-    LOG.debug("allocate: user: " + user + ", memory: "
-        + request.getCapability());
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("allocate: applicationId=" + applicationId
+          + " container=" + container.getId()
+          + " host=" + container.getNodeId().toString()
+          + " user=" + user
+          + " resource=" + request.getCapability());
+    }
     metrics.allocateResources(user, 1, request.getCapability());
   }
 
@@ -277,9 +282,6 @@ public class AppSchedulingInfo {
   synchronized private void allocateNodeLocal( 
       SchedulerNode node, Priority priority, 
       ResourceRequest nodeLocalRequest, Container container) {
-    // Update consumption and track allocations
-    allocate(container);
-
     // Update future requirements
     nodeLocalRequest.setNumContainers(nodeLocalRequest.getNumContainers() - 1);
     if (nodeLocalRequest.getNumContainers() == 0) {
@@ -306,10 +308,6 @@ public class AppSchedulingInfo {
   synchronized private void allocateRackLocal(
       SchedulerNode node, Priority priority,
       ResourceRequest rackLocalRequest, Container container) {
-
-    // Update consumption and track allocations
-    allocate(container);
-
     // Update future requirements
     rackLocalRequest.setNumContainers(rackLocalRequest.getNumContainers() - 1);
     if (rackLocalRequest.getNumContainers() == 0) {
@@ -329,10 +327,6 @@ public class AppSchedulingInfo {
   synchronized private void allocateOffSwitch(
       SchedulerNode node, Priority priority,
       ResourceRequest offSwitchRequest, Container container) {
-
-    // Update consumption and track allocations
-    allocate(container);
-
     // Update future requirements
     decrementOutstanding(offSwitchRequest);
   }
@@ -365,20 +359,6 @@ public class AppSchedulingInfo {
     }
   }
   
-  synchronized private void allocate(Container container) {
-    // Update consumption and track allocations
-    //TODO: fixme sharad
-    /* try {
-        store.storeContainer(container);
-      } catch (IOException ie) {
-        // TODO fix this. we shouldnt ignore
-      }*/
-    
-    LOG.debug("allocate: applicationId=" + applicationId + " container="
-        + container.getId() + " host="
-        + container.getNodeId().toString());
-  }
-
   synchronized public void stop(RMAppAttemptState rmAppAttemptFinalState) {
     // clear pending resources metrics for the application
     QueueMetrics metrics = queue.getMetrics();
