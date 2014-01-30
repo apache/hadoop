@@ -43,7 +43,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.http.HttpServer;
+import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.util.StringUtils;
@@ -274,7 +274,7 @@ public class TestWebAppProxyServlet {
 
   private class WebAppProxyForTest extends WebAppProxy {
     
-    HttpServer proxyServer;
+    HttpServer2 proxyServer;
     AppReportFetcherForTest appReportFetcher;
     
     @Override
@@ -286,7 +286,7 @@ public class TestWebAppProxyServlet {
         AccessControlList acl = new AccessControlList(
             conf.get(YarnConfiguration.YARN_ADMIN_ACL, 
             YarnConfiguration.DEFAULT_YARN_ADMIN_ACL));
-        proxyServer = new HttpServer.Builder()
+        proxyServer = new HttpServer2.Builder()
             .setName("proxy")
             .addEndpoint(URI.create("http://" + bindAddress + ":0"))
             .setFindPort(true)

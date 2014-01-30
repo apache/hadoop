@@ -37,7 +37,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.http.HttpServer;
+import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobContext;
 import org.apache.hadoop.mapreduce.MRJobConfig;
@@ -199,7 +199,7 @@ public class TestJobEndNotifier extends JobEndNotifier {
 
   @Test
   public void testNotificationOnLastRetryNormalShutdown() throws Exception {
-    HttpServer server = startHttpServer();
+    HttpServer2 server = startHttpServer();
     // Act like it is the second attempt. Default max attempts is 2
     MRApp app = spy(new MRAppWithCustomContainerAllocator(
         2, 2, true, this.getClass().getName(), true, 2, true));
@@ -223,7 +223,7 @@ public class TestJobEndNotifier extends JobEndNotifier {
   @Test
   public void testAbsentNotificationOnNotLastRetryUnregistrationFailure()
       throws Exception {
-    HttpServer server = startHttpServer();
+    HttpServer2 server = startHttpServer();
     MRApp app = spy(new MRAppWithCustomContainerAllocator(2, 2, false,
         this.getClass().getName(), true, 1, false));
     doNothing().when(app).sysexit();
@@ -250,7 +250,7 @@ public class TestJobEndNotifier extends JobEndNotifier {
   @Test
   public void testNotificationOnLastRetryUnregistrationFailure()
       throws Exception {
-    HttpServer server = startHttpServer();
+    HttpServer2 server = startHttpServer();
     MRApp app = spy(new MRAppWithCustomContainerAllocator(2, 2, false,
         this.getClass().getName(), true, 2, false));
     doNothing().when(app).sysexit();
@@ -274,10 +274,10 @@ public class TestJobEndNotifier extends JobEndNotifier {
     server.stop();
   }
 
-  private static HttpServer startHttpServer() throws Exception {
+  private static HttpServer2 startHttpServer() throws Exception {
     new File(System.getProperty(
         "build.webapps", "build/webapps") + "/test").mkdirs();
-    HttpServer server = new HttpServer.Builder().setName("test")
+    HttpServer2 server = new HttpServer2.Builder().setName("test")
         .addEndpoint(URI.create("http://localhost:0"))
         .setFindPort(true).build();
     server.addServlet("jobend", "/jobend", JobEndServlet.class);

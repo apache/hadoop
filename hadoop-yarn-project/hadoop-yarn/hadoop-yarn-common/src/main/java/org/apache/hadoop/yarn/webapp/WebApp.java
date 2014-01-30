@@ -28,7 +28,7 @@ import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.http.HttpServer;
+import org.apache.hadoop.http.HttpServer2;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,7 +59,7 @@ public abstract class WebApp extends ServletModule {
   private volatile String redirectPath;
   private volatile String wsName;
   private volatile Configuration conf;
-  private volatile HttpServer httpServer;
+  private volatile HttpServer2 httpServer;
   private volatile GuiceFilter guiceFilter;
   private final Router router = new Router();
 
@@ -72,11 +72,11 @@ public abstract class WebApp extends ServletModule {
   static final Splitter pathSplitter =
       Splitter.on('/').trimResults().omitEmptyStrings();
 
-  void setHttpServer(HttpServer server) {
+  void setHttpServer(HttpServer2 server) {
     httpServer = checkNotNull(server, "http server");
   }
 
-  @Provides public HttpServer httpServer() { return httpServer; }
+  @Provides public HttpServer2 httpServer() { return httpServer; }
 
   /**
    * Get the address the http server is bound to

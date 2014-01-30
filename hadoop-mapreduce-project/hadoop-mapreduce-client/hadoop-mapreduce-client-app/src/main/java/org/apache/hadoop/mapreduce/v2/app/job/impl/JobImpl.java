@@ -59,6 +59,7 @@ import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEvent;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.TaskInfo;
 import org.apache.hadoop.mapreduce.jobhistory.JobInfoChangeEvent;
 import org.apache.hadoop.mapreduce.jobhistory.JobInitedEvent;
+import org.apache.hadoop.mapreduce.jobhistory.JobQueueChangeEvent;
 import org.apache.hadoop.mapreduce.jobhistory.JobSubmittedEvent;
 import org.apache.hadoop.mapreduce.jobhistory.JobUnsuccessfulCompletionEvent;
 import org.apache.hadoop.mapreduce.lib.chain.ChainMapper;
@@ -181,7 +182,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   private final EventHandler eventHandler;
   private final MRAppMetrics metrics;
   private final String userName;
-  private final String queueName;
+  private String queueName;
   private final long appSubmitTime;
   private final AppContext appContext;
 
@@ -1121,6 +1122,13 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   @Override
   public String getQueueName() {
     return queueName;
+  }
+  
+  @Override
+  public void setQueueName(String queueName) {
+    this.queueName = queueName;
+    JobQueueChangeEvent jqce = new JobQueueChangeEvent(oldJobId, queueName);
+    eventHandler.handle(new JobHistoryEvent(jobId, jqce));
   }
   
   /*

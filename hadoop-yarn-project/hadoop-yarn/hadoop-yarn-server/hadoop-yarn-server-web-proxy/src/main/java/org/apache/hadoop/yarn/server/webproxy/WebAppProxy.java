@@ -24,7 +24,7 @@ import java.net.URI;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.http.HttpServer;
+import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.StringUtils;
@@ -41,7 +41,7 @@ public class WebAppProxy extends AbstractService {
   public static final String PROXY_HOST_ATTRIBUTE = "proxyHost";
   private static final Log LOG = LogFactory.getLog(WebAppProxy.class);
   
-  private HttpServer proxyServer = null;
+  private HttpServer2 proxyServer = null;
   private String bindAddress = null;
   private int port = 0;
   private AccessControlList acl = null;
@@ -90,7 +90,7 @@ public class WebAppProxy extends AbstractService {
   @Override
   protected void serviceStart() throws Exception {
     try {
-      proxyServer = new HttpServer.Builder().setName("proxy")
+      proxyServer = new HttpServer2.Builder().setName("proxy")
           .addEndpoint(URI.create("http://" + bindAddress + ":" + port))
           .setFindPort(port == 0)
           .setConf(getConfig()).setACL(acl).build();

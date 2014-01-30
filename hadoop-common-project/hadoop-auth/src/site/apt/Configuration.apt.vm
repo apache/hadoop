@@ -24,8 +24,7 @@ Configuration
 
 * Server Side Configuration Setup
 
-  The {{{./apidocs/org/apache/hadoop/auth/server/AuthenticationFilter.html}
-  AuthenticationFilter filter}} is Hadoop Auth's server side component.
+  The AuthenticationFilter filter is Hadoop Auth's server side component.
 
   This filter must be configured in front of all the web application resources
   that required authenticated requests. For example:
@@ -46,9 +45,7 @@ Configuration
     must start with the prefix. The default value is no prefix.
 
   * <<<[PREFIX.]type>>>: the authentication type keyword (<<<simple>>> or
-    <<<kerberos>>>) or a
-    {{{./apidocs/org/apache/hadoop/auth/server/AuthenticationHandler.html}
-    Authentication handler implementation}}.
+    <<<kerberos>>>) or a Authentication handler implementation.
 
   * <<<[PREFIX.]signature.secret>>>: The secret to SHA-sign the generated
     authentication tokens. If a secret is not provided a random secret is

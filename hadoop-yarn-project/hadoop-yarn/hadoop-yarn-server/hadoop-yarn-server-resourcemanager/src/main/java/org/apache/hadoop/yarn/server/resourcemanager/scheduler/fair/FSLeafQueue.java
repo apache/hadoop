@@ -91,15 +91,6 @@ public class FSLeafQueue extends FSQueue {
     }
   }
   
-  public void makeAppRunnable(AppSchedulable appSched) {
-    if (!nonRunnableAppScheds.remove(appSched)) {
-      throw new IllegalStateException("Can't make app runnable that does not " +
-      		"already exist in queue as non-runnable" + appSched);
-    }
-    
-    runnableAppScheds.add(appSched);
-  }
-  
   public Collection<AppSchedulable> getRunnableAppSchedulables() {
     return runnableAppScheds;
   }

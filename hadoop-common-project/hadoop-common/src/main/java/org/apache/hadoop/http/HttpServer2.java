@@ -24,7 +24,6 @@ import java.io.PrintWriter;
 import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -89,17 +88,19 @@ import com.google.common.collect.Lists;
 import com.sun.jersey.spi.container.servlet.ServletContainer;
 
 /**
- * Create a Jetty embedded server to answer http requests. The primary goal
- * is to serve up status information for the server.
- * There are three contexts:
- *   "/logs/" -> points to the log directory
- *   "/static/" -> points to common static files (src/webapps/static)
- *   "/" -> the jsp server code from (src/webapps/<name>)
+ * Create a Jetty embedded server to answer http requests. The primary goal is
+ * to serve up status information for the server. There are three contexts:
+ * "/logs/" -> points to the log directory "/static/" -> points to common static
+ * files (src/webapps/static) "/" -> the jsp server code from
+ * (src/webapps/<name>)
+ *
+ * This class is a fork of the old HttpServer. HttpServer exists for
+ * compatibility reasons. See HBASE-10336 for more details.
  */
-@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce", "HBase"})
+@InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class HttpServer implements FilterContainer {
-  public static final Log LOG = LogFactory.getLog(HttpServer.class);
+public final class HttpServer2 implements FilterContainer {
+  public static final Log LOG = LogFactory.getLog(HttpServer2.class);
 
   static final String FILTER_INITIALIZER_PROPERTY
       = "hadoop.http.filter.initializers";
@@ -166,11 +167,6 @@ public class HttpServer implements FilterContainer {
     // The -keypass option in keytool
     private String keyPassword;
 
-    @Deprecated
-    private String bindAddress;
-    @Deprecated
-    private int port = -1;
-
     private boolean findPort;
 
     private String hostName;
@@ -204,7 +200,7 @@ public class HttpServer implements FilterContainer {
       this.hostName = hostName;
       return this;
     }
-    
+
     public Builder trustStore(String location, String password, String type) {
       this.trustStore = location;
       this.trustStorePassword = password;
@@ -233,76 +229,49 @@ public class HttpServer implements FilterContainer {
       return this;
     }
 
-    /**
-     * Use addEndpoint() instead.
-     */
-    @Deprecated
-    public Builder setBindAddress(String bindAddress){
-      this.bindAddress = bindAddress;
-      return this;
-    }
-
-    /**
-     * Use addEndpoint() instead.
-     */
-    @Deprecated
-    public Builder setPort(int port) {
-      this.port = port;
-      return this;
-    }
-    
     public Builder setFindPort(boolean findPort) {
       this.findPort = findPort;
       return this;
     }
-    
+
     public Builder setConf(Configuration conf) {
       this.conf = conf;
       return this;
     }
-    
+
     public Builder setConnector(Connector connector) {
       this.connector = connector;
       return this;
     }
-    
+
     public Builder setPathSpec(String[] pathSpec) {
       this.pathSpecs = pathSpec;
       return this;
     }
-    
+
     public Builder setACL(AccessControlList acl) {
       this.adminsAcl = acl;
       return this;
     }
-    
+
     public Builder setSecurityEnabled(boolean securityEnabled) {
       this.securityEnabled = securityEnabled;
       return this;
     }
-    
+
     public Builder setUsernameConfKey(String usernameConfKey) {
       this.usernameConfKey = usernameConfKey;
       return this;
     }
-    
+
     public Builder setKeytabConfKey(String keytabConfKey) {
       this.keytabConfKey = keytabConfKey;
       return this;
     }
-    
-    public HttpServer build() throws IOException {
+
+    public HttpServer2 build() throws IOException {
       if (this.name == null) {
         throw new HadoopIllegalArgumentException("name is not set");
-      }
-
-      // Make the behavior compatible with deprecated interfaces
-      if (bindAddress != null && port != -1) {
-        try {
-          endpoints.add(0, new URI("http", "", bindAddress, port, "", "", ""));
-        } catch (URISyntaxException e) {
-          throw new HadoopIllegalArgumentException("Invalid endpoint: "+ e);
-        }
       }
 
       if (endpoints.size() == 0 && connector == null) {
@@ -313,12 +282,12 @@ public class HttpServer implements FilterContainer {
         hostName = endpoints.size() == 0 ? connector.getHost() : endpoints.get(
             0).getHost();
       }
-      
+
       if (this.conf == null) {
         conf = new Configuration();
       }
-      
-      HttpServer server = new HttpServer(this);
+
+      HttpServer2 server = new HttpServer2(this);
 
       if (this.securityEnabled) {
         server.initSpnego(conf, hostName, usernameConfKey, keytabConfKey);
@@ -332,7 +301,7 @@ public class HttpServer implements FilterContainer {
         Connector listener = null;
         String scheme = ep.getScheme();
         if ("http".equals(scheme)) {
-          listener = HttpServer.createDefaultChannelConnector();
+          listener = HttpServer2.createDefaultChannelConnector();
         } else if ("https".equals(scheme)) {
           SslSocketConnector c = new SslSocketConnector();
           c.setNeedClientAuth(needsClientAuth);
@@ -363,105 +332,8 @@ public class HttpServer implements FilterContainer {
       return server;
     }
   }
-  
-  /** Same as this(name, bindAddress, port, findPort, null); */
-  @Deprecated
-  public HttpServer(String name, String bindAddress, int port, boolean findPort
-      ) throws IOException {
-    this(name, bindAddress, port, findPort, new Configuration());
-  }
 
-  @Deprecated
-  public HttpServer(String name, String bindAddress, int port,
-      boolean findPort, Configuration conf, Connector connector) throws IOException {
-    this(name, bindAddress, port, findPort, conf, null, connector, null);
-  }
-
-  /**
-   * Create a status server on the given port. Allows you to specify the
-   * path specifications that this server will be serving so that they will be
-   * added to the filters properly.  
-   * 
-   * @param name The name of the server
-   * @param bindAddress The address for this server
-   * @param port The port to use on the server
-   * @param findPort whether the server should start at the given port and 
-   *        increment by 1 until it finds a free port.
-   * @param conf Configuration 
-   * @param pathSpecs Path specifications that this httpserver will be serving. 
-   *        These will be added to any filters.
-   */
-  @Deprecated
-  public HttpServer(String name, String bindAddress, int port,
-      boolean findPort, Configuration conf, String[] pathSpecs) throws IOException {
-    this(name, bindAddress, port, findPort, conf, null, null, pathSpecs);
-  }
-  
-  /**
-   * Create a status server on the given port.
-   * The jsp scripts are taken from src/webapps/<name>.
-   * @param name The name of the server
-   * @param port The port to use on the server
-   * @param findPort whether the server should start at the given port and 
-   *        increment by 1 until it finds a free port.
-   * @param conf Configuration 
-   */
-  @Deprecated
-  public HttpServer(String name, String bindAddress, int port,
-      boolean findPort, Configuration conf) throws IOException {
-    this(name, bindAddress, port, findPort, conf, null, null, null);
-  }
-
-  @Deprecated
-  public HttpServer(String name, String bindAddress, int port,
-      boolean findPort, Configuration conf, AccessControlList adminsAcl) 
-      throws IOException {
-    this(name, bindAddress, port, findPort, conf, adminsAcl, null, null);
-  }
-
-  /**
-   * Create a status server on the given port.
-   * The jsp scripts are taken from src/webapps/<name>.
-   * @param name The name of the server
-   * @param bindAddress The address for this server
-   * @param port The port to use on the server
-   * @param findPort whether the server should start at the given port and 
-   *        increment by 1 until it finds a free port.
-   * @param conf Configuration 
-   * @param adminsAcl {@link AccessControlList} of the admins
-   */
-  @Deprecated
-  public HttpServer(String name, String bindAddress, int port,
-      boolean findPort, Configuration conf, AccessControlList adminsAcl, 
-      Connector connector) throws IOException {
-    this(name, bindAddress, port, findPort, conf, adminsAcl, connector, null);
-  }
-
-  /**
-   * Create a status server on the given port.
-   * The jsp scripts are taken from src/webapps/<name>.
-   * @param name The name of the server
-   * @param bindAddress The address for this server
-   * @param port The port to use on the server
-   * @param findPort whether the server should start at the given port and 
-   *        increment by 1 until it finds a free port.
-   * @param conf Configuration 
-   * @param adminsAcl {@link AccessControlList} of the admins
-   * @param connector A jetty connection listener
-   * @param pathSpecs Path specifications that this httpserver will be serving. 
-   *        These will be added to any filters.
-   */
-  @Deprecated
-  public HttpServer(String name, String bindAddress, int port,
-      boolean findPort, Configuration conf, AccessControlList adminsAcl, 
-      Connector connector, String[] pathSpecs) throws IOException {
-    this(new Builder().setName(name).hostName(bindAddress)
-        .addEndpoint(URI.create("http://" + bindAddress + ":" + port))
-        .setFindPort(findPort).setConf(conf).setACL(adminsAcl)
-        .setConnector(connector).setPathSpec(pathSpecs));
-  }
-
-  private HttpServer(final Builder b) throws IOException {
+  private HttpServer2(final Builder b) throws IOException {
     final String appDir = getWebAppsPath(b.name);
     this.webServer = new Server();
     this.adminsAcl = b.adminsAcl;
@@ -554,9 +426,9 @@ public class HttpServer implements FilterContainer {
    * listener.
    */
   public Connector createBaseListener(Configuration conf) throws IOException {
-    return HttpServer.createDefaultChannelConnector();
+    return HttpServer2.createDefaultChannelConnector();
   }
-  
+
   @InterfaceAudience.Private
   public static Connector createDefaultChannelConnector() {
     SelectChannelConnector ret = new SelectChannelConnector();
@@ -567,7 +439,7 @@ public class HttpServer implements FilterContainer {
     if(Shell.WINDOWS) {
       // result of setting the SO_REUSEADDR flag is different on Windows
       // http://msdn.microsoft.com/en-us/library/ms740621(v=vs.85).aspx
-      // without this 2 NN's can start on the same machine and listen on 
+      // without this 2 NN's can start on the same machine and listen on
       // the same port with indeterminate routing of incoming requests to them
       ret.setReuseAddress(false);
     }
@@ -601,7 +473,7 @@ public class HttpServer implements FilterContainer {
    */
   protected void addDefaultApps(ContextHandlerCollection parent,
       final String appDir, Configuration conf) throws IOException {
-    // set up the context for "/logs/" if "hadoop.log.dir" property is defined. 
+    // set up the context for "/logs/" if "hadoop.log.dir" property is defined.
     String logDir = System.getProperty("hadoop.log.dir");
     if (logDir != null) {
       Context logContext = new Context(parent, "/logs");
@@ -628,7 +500,7 @@ public class HttpServer implements FilterContainer {
     setContextAttributes(staticContext, conf);
     defaultContexts.put(staticContext, true);
   }
-  
+
   private void setContextAttributes(Context context, Configuration conf) {
     context.getServletContext().setAttribute(CONF_CONTEXT_ATTRIBUTE, conf);
     context.getServletContext().setAttribute(ADMINS_ACL, adminsAcl);
@@ -654,10 +526,10 @@ public class HttpServer implements FilterContainer {
   }
 
   /**
-   * Add a context 
+   * Add a context
    * @param pathSpec The path spec for the context
    * @param dir The directory containing the context
-   * @param isFiltered if true, the servlet is added to the filter path mapping 
+   * @param isFiltered if true, the servlet is added to the filter path mapping
    * @throws IOException
    */
   protected void addContext(String pathSpec, String dir, boolean isFiltered) throws IOException {
@@ -680,7 +552,7 @@ public class HttpServer implements FilterContainer {
     webAppContext.setAttribute(name, value);
   }
 
-  /** 
+  /**
    * Add a Jersey resource package.
    * @param packageName The Java package name containing the Jersey resource.
    * @param pathSpec The path spec for the servlet
@@ -709,11 +581,11 @@ public class HttpServer implements FilterContainer {
   }
 
   /**
-   * Add an internal servlet in the server. 
+   * Add an internal servlet in the server.
    * Note: This method is to be used for adding servlets that facilitate
    * internal communication and not for user facing functionality. For
-   * servlets added using this method, filters are not enabled. 
-   * 
+   * servlets added using this method, filters are not enabled.
+   *
    * @param name The name of the servlet (can be passed as null)
    * @param pathSpec The path spec for the servlet
    * @param clazz The servlet class
@@ -725,18 +597,18 @@ public class HttpServer implements FilterContainer {
 
   /**
    * Add an internal servlet in the server, specifying whether or not to
-   * protect with Kerberos authentication. 
+   * protect with Kerberos authentication.
    * Note: This method is to be used for adding servlets that facilitate
    * internal communication and not for user facing functionality. For
    +   * servlets added using this method, filters (except internal Kerberos
-   * filters) are not enabled. 
-   * 
+   * filters) are not enabled.
+   *
    * @param name The name of the servlet (can be passed as null)
    * @param pathSpec The path spec for the servlet
    * @param clazz The servlet class
    * @param requireAuth Require Kerberos authenticate to access servlet
    */
-  public void addInternalServlet(String name, String pathSpec, 
+  public void addInternalServlet(String name, String pathSpec,
       Class<? extends HttpServlet> clazz, boolean requireAuth) {
     ServletHolder holder = new ServletHolder(clazz);
     if (name != null) {
@@ -820,7 +692,7 @@ public class HttpServer implements FilterContainer {
       handler.addFilterMapping(fmap);
     }
   }
-  
+
   /**
    * Get the value in the webapp context.
    * @param name The name of the attribute
@@ -829,7 +701,7 @@ public class HttpServer implements FilterContainer {
   public Object getAttribute(String name) {
     return webAppContext.getAttribute(name);
   }
-  
+
   public WebAppContext getWebAppContext(){
     return this.webAppContext;
   }
@@ -842,7 +714,7 @@ public class HttpServer implements FilterContainer {
    */
   protected String getWebAppsPath(String appName) throws FileNotFoundException {
     URL url = getClass().getClassLoader().getResource("webapps/" + appName);
-    if (url == null) 
+    if (url == null)
       throw new FileNotFoundException("webapps/" + appName
           + " not found in CLASSPATH");
     String urlString = url.toString();
@@ -900,7 +772,7 @@ public class HttpServer implements FilterContainer {
       params.put("kerberos.keytab", httpKeytab);
     }
     params.put(AuthenticationFilter.AUTH_TYPE, "kerberos");
-  
+
     defineFilter(webAppContext, SPNEGO_FILTER,
                  AuthenticationFilter.class.getName(), params, null);
   }
@@ -987,7 +859,7 @@ public class HttpServer implements FilterContainer {
       }
     }
   }
-  
+
   /**
    * stop the server
    */
@@ -1105,7 +977,7 @@ public class HttpServer implements FilterContainer {
   /**
    * Does the user sending the HttpServletRequest has the administrator ACLs? If
    * it isn't the case, response will be modified to send an error to the user.
-   * 
+   *
    * @param servletContext
    * @param request
    * @param response used to send the error response if user does not have admin access.
@@ -1130,7 +1002,7 @@ public class HttpServer implements FilterContainer {
                          "authorized to access this page.");
       return false;
     }
-    
+
     if (servletContext.getAttribute(ADMINS_ACL) != null &&
         !userHasAdministratorAccess(servletContext, remoteUser)) {
       response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "User "
@@ -1144,7 +1016,7 @@ public class HttpServer implements FilterContainer {
   /**
    * Get the admin ACLs from the given ServletContext and check if the given
    * user is in the ACL.
-   * 
+   *
    * @param servletContext the context containing the admin ACL.
    * @param remoteUser the remote user to check for.
    * @return true if the user is present in the ACL, false if no ACL is set or
@@ -1171,7 +1043,7 @@ public class HttpServer implements FilterContainer {
     @Override
     public void doGet(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
-      if (!HttpServer.isInstrumentationAccessAllowed(getServletContext(),
+      if (!HttpServer2.isInstrumentationAccessAllowed(getServletContext(),
                                                      request, response)) {
         return;
       }
@@ -1179,10 +1051,10 @@ public class HttpServer implements FilterContainer {
       PrintWriter out = response.getWriter();
       ReflectionUtils.printThreadInfo(out, "");
       out.close();
-      ReflectionUtils.logThreadInfo(LOG, "jsp requested", 1);      
+      ReflectionUtils.logThreadInfo(LOG, "jsp requested", 1);
     }
   }
-  
+
   /**
    * A Servlet input filter that quotes all HTML active characters in the
    * parameter names and values. The goal is to quote the characters to make
@@ -1197,7 +1069,7 @@ public class HttpServer implements FilterContainer {
         super(rawRequest);
         this.rawRequest = rawRequest;
       }
-      
+
       /**
        * Return the set of parameter names, quoting each name.
        */
@@ -1218,7 +1090,7 @@ public class HttpServer implements FilterContainer {
           }
         };
       }
-      
+
       /**
        * Unquote the name and quote the value.
        */
@@ -1227,7 +1099,7 @@ public class HttpServer implements FilterContainer {
         return HtmlQuoting.quoteHtmlChars(rawRequest.getParameter
                                      (HtmlQuoting.unquoteHtmlChars(name)));
       }
-      
+
       @Override
       public String[] getParameterValues(String name) {
         String unquoteName = HtmlQuoting.unquoteHtmlChars(name);
@@ -1257,7 +1129,7 @@ public class HttpServer implements FilterContainer {
         }
         return result;
       }
-      
+
       /**
        * Quote the url so that users specifying the HOST HTTP header
        * can't inject attacks.
@@ -1267,7 +1139,7 @@ public class HttpServer implements FilterContainer {
         String url = rawRequest.getRequestURL().toString();
         return new StringBuffer(HtmlQuoting.quoteHtmlChars(url));
       }
-      
+
       /**
        * Quote the server name so that users specifying the HOST HTTP header
        * can't inject attacks.
@@ -1288,11 +1160,11 @@ public class HttpServer implements FilterContainer {
     }
 
     @Override
-    public void doFilter(ServletRequest request, 
+    public void doFilter(ServletRequest request,
                          ServletResponse response,
                          FilterChain chain
                          ) throws IOException, ServletException {
-      HttpServletRequestWrapper quoted = 
+      HttpServletRequestWrapper quoted =
         new RequestQuoter((HttpServletRequest) request);
       HttpServletResponse httpResponse = (HttpServletResponse) response;
 

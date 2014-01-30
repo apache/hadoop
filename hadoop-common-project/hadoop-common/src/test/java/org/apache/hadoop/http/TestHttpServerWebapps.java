@@ -36,7 +36,7 @@ public class TestHttpServerWebapps extends HttpServerFunctionalTest {
    */
   @Test
   public void testValidServerResource() throws Throwable {
-    HttpServer server = null;
+    HttpServer2 server = null;
     try {
       server = createServer("test");
     } finally {
@@ -51,7 +51,7 @@ public class TestHttpServerWebapps extends HttpServerFunctionalTest {
   @Test
   public void testMissingServerResource() throws Throwable {
     try {
-      HttpServer server = createServer("NoSuchWebapp");
+      HttpServer2 server = createServer("NoSuchWebapp");
       //should not have got here.
       //close the server
       String serverDescription = server.toString();

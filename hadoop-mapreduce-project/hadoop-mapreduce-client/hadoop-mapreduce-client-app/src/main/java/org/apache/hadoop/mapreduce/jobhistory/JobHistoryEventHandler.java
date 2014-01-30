@@ -525,6 +525,12 @@ public class JobHistoryEventHandler extends AbstractService
         JobInitedEvent jie = (JobInitedEvent) event.getHistoryEvent();
         mi.getJobIndexInfo().setJobStartTime(jie.getLaunchTime());
       }
+      
+      if (event.getHistoryEvent().getEventType() == EventType.JOB_QUEUE_CHANGED) {
+        JobQueueChangeEvent jQueueEvent =
+            (JobQueueChangeEvent) event.getHistoryEvent();
+        mi.getJobIndexInfo().setQueueName(jQueueEvent.getJobQueueName());
+      }
 
       // If this is JobFinishedEvent, close the writer and setup the job-index
       if (event.getHistoryEvent().getEventType() == EventType.JOB_FINISHED) {
