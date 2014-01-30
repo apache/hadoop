@@ -82,9 +82,6 @@ Trunk (Unreleased)
 
   BUG FIXES
 
-    MAPREDUCE-4272. SortedRanges.Range#compareTo is not spec compliant.
-    (Yu Gao via llu)
-
     MAPREDUCE-3194. "mapred mradmin" command is broken in mrv2
                      (Jason Lowe via bobby)
 
@@ -130,14 +127,8 @@ Trunk (Unreleased)
     MAPREDUCE-4574. Fix TotalOrderParitioner to work with
     non-WritableComparable key types. (harsh)
 
-    MAPREDUCE-4884. Streaming tests fail to start MiniMRCluster due to missing
-    queue configuration. (Chris Nauroth via suresh)
-
     MAPREDUCE-5012. Typo in javadoc for IdentityMapper class. (Adam Monsen
     via suresh)
-
-    MAPREDUCE-4885. Streaming tests have multiple failures on Windows. (Chris
-    Nauroth via bikas)
 
     MAPREDUCE-4987. TestMRJobs#testDistributedCache fails on Windows due to
     classpath problems and unexpected behavior of symlinks (Chris Nauroth via
@@ -1002,8 +993,14 @@ Release 2.1.0-beta - 2013-08-22
     HADOOP-9372. Fix bad timeout annotations on tests.
     (Arpit Agarwal via suresh)
 
+    MAPREDUCE-4885. Streaming tests have multiple failures on Windows. (Chris
+    Nauroth via bikas)
+
     MAPREDUCE-5177. Use common utils FileUtil#setReadable/Writable/Executable & 
     FileUtil#canRead/Write/Execute. (Ivan Mitic via suresh)
+
+    MAPREDUCE-5349. TestClusterMapReduceTestCase and TestJobName fail on Windows
+    in branch-2. (Chuan Liu via cnauroth)
 
     MAPREDUCE-5355. MiniMRYarnCluster with localFs does not work on Windows.
     (Chuan Liu via cnauroth)
@@ -1155,6 +1152,9 @@ Release 2.0.3-alpha - 2013-02-06
 
   BUG FIXES
 
+    MAPREDUCE-4272. SortedRanges.Range#compareTo is not spec compliant.
+    (Yu Gao via llu)
+
     MAPREDUCE-4607. Race condition in ReduceTask completion can result in Task
     being incorrectly failed. (Bikas Saha via tomwhite)
 
@@ -1217,6 +1217,9 @@ Release 2.0.3-alpha - 2013-02-06
     MAPREDUCE-4969. TestKeyValueTextInputFormat test fails with Open JDK 7.
     (Arpit Agarwal via suresh)
 
+    MAPREDUCE-4884. Streaming tests fail to start MiniMRCluster due to missing
+    queue configuration. (Chris Nauroth via suresh)
+
     MAPREDUCE-4953. HadoopPipes misuses fprintf. (Andy Isaacson via atm)
 
 Release 2.0.2-alpha - 2012-09-07 
@@ -1225,7 +1228,7 @@ Release 2.0.2-alpha - 2012-09-07
 
   NEW FEATURES
 
-    MAPREDUCE-987. Exposing MiniDFS and MiniMR clusters as a single process 
+    MAPREDUCE-987. Exposing MiniDFS and MiniMR clusters as a single process
     command-line. (ahmed via tucu)
 
     MAPREDUCE-4417. add support for encrypted shuffle (tucu)
