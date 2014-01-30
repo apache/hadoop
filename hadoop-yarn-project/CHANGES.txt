@@ -9,6 +9,21 @@ Trunk - Unreleased
     YARN-1496. Protocol additions to allow moving apps between queues (Sandy
     Ryza)
 
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    YARN-524 TestYarnVersionInfo failing if generated properties doesn't
+    include an SVN URL. (stevel)
+
+Release 2.4.0 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
     YARN-930. Bootstrapping ApplicationHistoryService module. (vinodkv)
   
     YARN-947. Implementing the data objects to be used by the History reader
@@ -70,12 +85,12 @@ Trunk - Unreleased
     YARN-987. Added ApplicationHistoryManager responsible for exposing reports to
     all clients. (Mayank Bansal via vinodkv)
 
+    YARN-1630. Introduce timeout for async polling operations in YarnClientImpl
+    (Aditya Acharya via Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES
-
-    YARN-524 TestYarnVersionInfo failing if generated properties doesn't
-    include an SVN URL. (stevel)
 
     YARN-935. Correcting pom.xml to build applicationhistoryserver module
     successfully. (Zhijie Shen via vinodkv)
@@ -111,21 +126,6 @@ Trunk - Unreleased
 
     YARN-1613. Fixed the typo with the configuration name
     YARN_HISTORY_SERVICE_ENABLED. (Akira Ajisaka via vinodkv)
-
-Release 2.4.0 - UNRELEASED
-
-  INCOMPATIBLE CHANGES
-
-  NEW FEATURES
-
-  IMPROVEMENTS
-
-    YARN-1630. Introduce timeout for async polling operations in YarnClientImpl
-    (Aditya Acharya via Sandy Ryza)
-
-  OPTIMIZATIONS
-
-  BUG FIXES
 
     YARN-1618. Fix invalid RMApp transition from NEW to FINAL_SAVING (kasha)
 
