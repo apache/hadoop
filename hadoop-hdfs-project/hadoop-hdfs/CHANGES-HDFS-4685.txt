@@ -47,6 +47,9 @@ HDFS-4685 (Unreleased)
     HDFS-5702. FsShell Cli: Add XML based End-to-End test for getfacl and
     setfacl commands. (Vinay via cnauroth)
 
+    HDFS-5608. WebHDFS: implement ACL APIs.
+    (Sachin Jose and Renil Joseph via cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES
