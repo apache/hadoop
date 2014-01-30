@@ -17,11 +17,11 @@
   ---
   ${maven.build.timestamp}
 
-%{toc|section=1|fromDepth=0}
-
 HDFS Architecture
 
-Introduction
+%{toc|section=1|fromDepth=0}
+
+* Introduction
 
    The Hadoop Distributed File System (HDFS) is a distributed file system
    designed to run on commodity hardware. It has many similarities with
@@ -35,9 +35,9 @@ Introduction
    is part of the Apache Hadoop Core project. The project URL is
    {{http://hadoop.apache.org/}}.
 
-Assumptions and Goals
+* Assumptions and Goals
 
-Hardware Failure
+** Hardware Failure
 
    Hardware failure is the norm rather than the exception. An HDFS
    instance may consist of hundreds or thousands of server machines, each
@@ -47,7 +47,7 @@ Hardware Failure
    non-functional. Therefore, detection of faults and quick, automatic
    recovery from them is a core architectural goal of HDFS.
 
-Streaming Data Access
+** Streaming Data Access
 
    Applications that run on HDFS need streaming access to their data sets.
    They are not general purpose applications that typically run on general
@@ -58,7 +58,7 @@ Streaming Data Access
    targeted for HDFS. POSIX semantics in a few key areas has been traded
    to increase data throughput rates.
 
-Large Data Sets
+** Large Data Sets
 
    Applications that run on HDFS have large data sets. A typical file in
    HDFS is gigabytes to terabytes in size. Thus, HDFS is tuned to support
@@ -66,7 +66,7 @@ Large Data Sets
    to hundreds of nodes in a single cluster. It should support tens of
    millions of files in a single instance.
 
-Simple Coherency Model
+** Simple Coherency Model
 
    HDFS applications need a write-once-read-many access model for files. A
    file once created, written, and closed need not be changed. This
@@ -75,7 +75,7 @@ Simple Coherency Model
    perfectly with this model. There is a plan to support appending-writes
    to files in the future.
 
-“Moving Computation is Cheaper than Moving Data”
+** “Moving Computation is Cheaper than Moving Data”
 
    A computation requested by an application is much more efficient if it
    is executed near the data it operates on. This is especially true when
@@ -86,13 +86,13 @@ Simple Coherency Model
    running. HDFS provides interfaces for applications to move themselves
    closer to where the data is located.
 
-Portability Across Heterogeneous Hardware and Software Platforms
+** Portability Across Heterogeneous Hardware and Software Platforms
 
    HDFS has been designed to be easily portable from one platform to
    another. This facilitates widespread adoption of HDFS as a platform of
    choice for a large set of applications.
 
-NameNode and DataNodes
+* NameNode and DataNodes
 
    HDFS has a master/slave architecture. An HDFS cluster consists of a
    single NameNode, a master server that manages the file system namespace
@@ -127,7 +127,7 @@ NameNode and DataNodes
    repository for all HDFS metadata. The system is designed in such a way
    that user data never flows through the NameNode.
 
-The File System Namespace
+* The File System Namespace
 
    HDFS supports a traditional hierarchical file organization. A user or
    an application can create directories and store files inside these
@@ -145,7 +145,7 @@ The File System Namespace
    replication factor of that file. This information is stored by the
    NameNode.
 
-Data Replication
+* Data Replication
 
    HDFS is designed to reliably store very large files across machines in
    a large cluster. It stores each file as a sequence of blocks; all
@@ -164,7 +164,7 @@ Data Replication
 
 [images/hdfsdatanodes.png] HDFS DataNodes
 
-Replica Placement: The First Baby Steps
+** Replica Placement: The First Baby Steps
 
    The placement of replicas is critical to HDFS reliability and
    performance. Optimizing replica placement distinguishes HDFS from most
@@ -210,7 +210,7 @@ Replica Placement: The First Baby Steps
    The current, default replica placement policy described here is a work
    in progress.
 
-Replica Selection
+** Replica Selection
 
    To minimize global bandwidth consumption and read latency, HDFS tries
    to satisfy a read request from a replica that is closest to the reader.
@@ -219,7 +219,7 @@ Replica Selection
    cluster spans multiple data centers, then a replica that is resident in
    the local data center is preferred over any remote replica.
 
-Safemode
+** Safemode
 
    On startup, the NameNode enters a special state called Safemode.
    Replication of data blocks does not occur when the NameNode is in the
@@ -234,7 +234,7 @@ Safemode
    blocks (if any) that still have fewer than the specified number of
    replicas. The NameNode then replicates these blocks to other DataNodes.
 
-The Persistence of File System Metadata
+* The Persistence of File System Metadata
 
    The HDFS namespace is stored by the NameNode. The NameNode uses a
    transaction log called the EditLog to persistently record every change
@@ -273,7 +273,7 @@ The Persistence of File System Metadata
    each of these local files and sends this report to the NameNode: this
    is the Blockreport.
 
-The Communication Protocols
+* The Communication Protocols
 
    All HDFS communication protocols are layered on top of the TCP/IP
    protocol. A client establishes a connection to a configurable TCP port
@@ -284,13 +284,13 @@ The Communication Protocols
    RPCs. Instead, it only responds to RPC requests issued by DataNodes or
    clients.
 
-Robustness
+* Robustness
 
    The primary objective of HDFS is to store data reliably even in the
    presence of failures. The three common types of failures are NameNode
    failures, DataNode failures and network partitions.
 
-Data Disk Failure, Heartbeats and Re-Replication
+** Data Disk Failure, Heartbeats and Re-Replication
 
    Each DataNode sends a Heartbeat message to the NameNode periodically. A
    network partition can cause a subset of DataNodes to lose connectivity
@@ -306,7 +306,7 @@ Data Disk Failure, Heartbeats and Re-Replication
    corrupted, a hard disk on a DataNode may fail, or the replication
    factor of a file may be increased.
 
-Cluster Rebalancing
+** Cluster Rebalancing
 
    The HDFS architecture is compatible with data rebalancing schemes. A
    scheme might automatically move data from one DataNode to another if
@@ -316,7 +316,7 @@ Cluster Rebalancing
    cluster. These types of data rebalancing schemes are not yet
    implemented.
 
-Data Integrity
+** Data Integrity
 
    It is possible that a block of data fetched from a DataNode arrives
    corrupted. This corruption can occur because of faults in a storage
@@ -330,7 +330,7 @@ Data Integrity
    to retrieve that block from another DataNode that has a replica of that
    block.
 
-Metadata Disk Failure
+** Metadata Disk Failure
 
    The FsImage and the EditLog are central data structures of HDFS. A
    corruption of these files can cause the HDFS instance to be
@@ -350,16 +350,16 @@ Metadata Disk Failure
    Currently, automatic restart and failover of the NameNode software to
    another machine is not supported.
 
-Snapshots
+** Snapshots
 
    Snapshots support storing a copy of data at a particular instant of
    time. One usage of the snapshot feature may be to roll back a corrupted
    HDFS instance to a previously known good point in time. HDFS does not
    currently support snapshots but will in a future release.
 
-Data Organization
+* Data Organization
 
-Data Blocks
+** Data Blocks
 
    HDFS is designed to support very large files. Applications that are
    compatible with HDFS are those that deal with large data sets. These
@@ -370,7 +370,7 @@ Data Blocks
    chunks, and if possible, each chunk will reside on a different
    DataNode.
 
-Staging
+** Staging
 
    A client request to create a file does not reach the NameNode
    immediately. In fact, initially the HDFS client caches the file data
@@ -397,7 +397,7 @@ Staging
    side caching to improve performance. A POSIX requirement has been
    relaxed to achieve higher performance of data uploads.
 
-Replication Pipelining
+** Replication Pipelining
 
    When a client is writing data to an HDFS file, its data is first
    written to a local file as explained in the previous section. Suppose
@@ -406,7 +406,7 @@ Replication Pipelining
    DataNodes from the NameNode. This list contains the DataNodes that will
    host a replica of that block. The client then flushes the data block to
    the first DataNode. The first DataNode starts receiving the data in
-   small portions (4 KB), writes each portion to its local repository and
+   small portions, writes each portion to its local repository and
    transfers that portion to the second DataNode in the list. The second
    DataNode, in turn starts receiving each portion of the data block,
    writes that portion to its repository and then flushes that portion to
@@ -416,7 +416,7 @@ Replication Pipelining
    the next one in the pipeline. Thus, the data is pipelined from one
    DataNode to the next.
 
-Accessibility
+* Accessibility
 
    HDFS can be accessed from applications in many different ways.
    Natively, HDFS provides a
@@ -426,7 +426,7 @@ Accessibility
    of an HDFS instance. Work is in progress to expose HDFS through the WebDAV
    protocol.
 
-FS Shell
+** FS Shell
 
    HDFS allows user data to be organized in the form of files and
    directories. It provides a commandline interface called FS shell that
@@ -447,7 +447,7 @@ FS Shell
    FS shell is targeted for applications that need a scripting language to
    interact with the stored data.
 
-DFSAdmin
+** DFSAdmin
 
    The DFSAdmin command set is used for administering an HDFS cluster.
    These are commands that are used only by an HDFS administrator. Here
@@ -463,16 +463,16 @@ DFSAdmin
 |Recommission or decommission DataNode(s) | <<<bin/hadoop dfsadmin -refreshNodes>>>
 *---------+---------+
 
-Browser Interface
+** Browser Interface
 
    A typical HDFS install configures a web server to expose the HDFS
    namespace through a configurable TCP port. This allows a user to
    navigate the HDFS namespace and view the contents of its files using a
    web browser.
 
-Space Reclamation
+* Space Reclamation
 
-File Deletes and Undeletes
+** File Deletes and Undeletes
 
    When a file is deleted by a user or an application, it is not
    immediately removed from HDFS. Instead, HDFS first renames it to a file
@@ -490,12 +490,12 @@ File Deletes and Undeletes
    file. The <<</trash>>> directory contains only the latest copy of the file
    that was deleted. The <<</trash>>> directory is just like any other directory
    with one special feature: HDFS applies specified policies to
-   automatically delete files from this directory. The current default
-   policy is to delete files from <<</trash>>> that are more than 6 hours old.
-   In the future, this policy will be configurable through a well defined
-   interface.
+   automatically delete files from this directory. Current default trash
+   interval is set to 0 (Deletes file without storing in trash). This value is
+   configurable parameter stored as <<<fs.trash.interval>>> stored in
+   core-site.xml.
 
-Decrease Replication Factor
+** Decrease Replication Factor
 
    When the replication factor of a file is reduced, the NameNode selects
    excess replicas that can be deleted. The next Heartbeat transfers this
@@ -505,7 +505,7 @@ Decrease Replication Factor
    of the setReplication API call and the appearance of free space in the
    cluster.
 
-References
+* References
 
    Hadoop {{{http://hadoop.apache.org/docs/current/api/}JavaDoc API}}.
 

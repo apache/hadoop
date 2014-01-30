@@ -301,6 +301,9 @@ Release 2.4.0 - UNRELEASED
 
   BUG FIXES
 
+    HDFS-5492. Port HDFS-2069 (Incorrect default trash interval in the
+    docs) to trunk. (Akira Ajisaka via Arpit Agarwal)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
