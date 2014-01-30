@@ -186,8 +186,8 @@ public class DelegationTokenFetcher {
             } else {
               // otherwise we are fetching
               if (webUrl != null) {
-                Credentials creds = getDTfromRemote(connectionFactory, new URI(webUrl),
-                    renewer);
+                Credentials creds = getDTfromRemote(connectionFactory, new URI(
+                    webUrl), renewer, null);
                 creds.writeTokenStorageFile(tokenFile, conf);
                 for (Token<?> token : creds.getAllTokens()) {
                   System.out.println("Fetched token via " + webUrl + " for "
@@ -210,12 +210,17 @@ public class DelegationTokenFetcher {
   }
   
   static public Credentials getDTfromRemote(URLConnectionFactory factory,
-      URI nnUri, String renewer) throws IOException {
+      URI nnUri, String renewer, String proxyUser) throws IOException {
     StringBuilder buf = new StringBuilder(nnUri.toString())
         .append(GetDelegationTokenServlet.PATH_SPEC);
+    String separator = "?";
     if (renewer != null) {
       buf.append("?").append(GetDelegationTokenServlet.RENEWER).append("=")
           .append(renewer);
+      separator = "&";
+    }
+    if (proxyUser != null) {
+      buf.append(separator).append("doas=").append(proxyUser);
     }
 
     boolean isHttps = nnUri.getScheme().equals("https");
