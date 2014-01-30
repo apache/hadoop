@@ -118,6 +118,28 @@ Release 2.4.0 - UNRELEASED
 
   NEW FEATURES
 
+  IMPROVEMENTS
+
+    YARN-1630. Introduce timeout for async polling operations in YarnClientImpl
+    (Aditya Acharya via Sandy Ryza)
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    YARN-1618. Fix invalid RMApp transition from NEW to FINAL_SAVING (kasha)
+
+    YARN-1600. RM does not startup when security is enabled without spnego
+    configured (Haohui Mai via jlowe)
+
+    YARN-1642. RMDTRenewer#getRMClient should use ClientRMProxy (kasha)
+
+Release 2.3.0 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
     YARN-649. Added a new NM web-service to serve container logs in plain text
     over HTTP. (Sandy Ryza via vinodkv)
 
@@ -168,6 +190,30 @@ Release 2.4.0 - UNRELEASED
     attempts. (Jian He via vinodkv)
 
   IMPROVEMENTS
+
+    YARN-305. Fair scheduler logs too many "Node offered to app" messages.
+    (Lohit Vijayarenu via Sandy Ryza)
+
+    YARN-1258. Allow configuring the Fair Scheduler root queue (Sandy Ryza)
+
+    YARN-1288. Make Fair Scheduler ACLs more user friendly (Sandy Ryza)
+
+    YARN-1315. TestQueueACLs should also test FairScheduler (Sandy Ryza)
+
+    YARN-1335. Move duplicate code from FSSchedulerApp and FiCaSchedulerApp
+    into SchedulerApplication (Sandy Ryza)
+
+    YARN-1333. Support blacklisting in the Fair Scheduler (Tsuyoshi Ozawa via
+    Sandy Ryza)
+
+    YARN-1109. Demote NodeManager "Sending out status for container" logs to
+    debug (haosdent via Sandy Ryza)
+
+    YARN-1321. Changed NMTokenCache to support both singleton and an instance
+    usage. (Alejandro Abdelnur via vinodkv) 
+
+    YARN-1388. Fair Scheduler page always displays blank fair share (Liyin Liang
+    via Sandy Ryza)
 
     YARN-7. Support CPU resource for DistributedShell. (Junping Du via llu)
 
@@ -334,12 +380,65 @@ Release 2.4.0 - UNRELEASED
     YARN-1573. ZK store should use a private password for root-node-acls. 
     (kasha).
 
-    YARN-1630. Introduce timeout for async polling operations in YarnClientImpl
-    (Aditya Acharya via Sandy Ryza)
-
   OPTIMIZATIONS
 
   BUG FIXES
+
+    YARN-1284. LCE: Race condition leaves dangling cgroups entries for killed
+    containers. (Alejandro Abdelnur via Sandy Ryza)
+
+    YARN-1283. Fixed RM to give a fully-qualified proxy URL for an application
+    so that clients don't need to do scheme-mangling. (Omkar Vinit Joshi via
+    vinodkv)
+
+    YARN-879. Fixed tests w.r.t o.a.h.y.server.resourcemanager.Application.
+    (Junping Du via devaraj)
+
+    YARN-1265. Fair Scheduler chokes on unhealthy node reconnect (Sandy Ryza)
+
+    YARN-1044. used/min/max resources do not display info in the scheduler page
+    (Sangjin Lee via Sandy Ryza)
+
+    YARN-1259. In Fair Scheduler web UI, queue num pending and num active apps
+    switched. (Robert Kanter via Sandy Ryza)
+
+    YARN-1295. In UnixLocalWrapperScriptBuilder, using bash -c can cause Text
+    file busy errors (Sandy Ryza)
+
+    YARN-1185. Fixed FileSystemRMStateStore to not leave partial files that
+    prevent subsequent ResourceManager recovery. (Omkar Vinit Joshi via vinodkv)
+
+    YARN-1331. yarn.cmd exits with NoClassDefFoundError trying to run rmadmin or
+    logs. (cnauroth)
+
+    YARN-1330. Fair Scheduler: defaultQueueSchedulingPolicy does not take effect
+    (Sandy Ryza)
+    
+    YARN-1022. Unnecessary INFO logs in AMRMClientAsync (haosdent via bikas)
+    
+    YARN-1349. yarn.cmd does not support passthrough to any arbitrary class.
+    (cnauroth)
+    
+    YARN-1357. TestContainerLaunch.testContainerEnvVariables fails on Windows.
+    (Chuan Liu via cnauroth)
+
+    YARN-1358. TestYarnCLI fails on Windows due to line endings. (Chuan Liu via
+    cnauroth)
+
+    YARN-1343. NodeManagers additions/restarts are not reported as node updates 
+    in AllocateResponse responses to AMs. (tucu)
+
+    YARN-1381. Same relaxLocality appears twice in exception message of
+    AMRMClientImpl#checkLocalityRelaxationConflict() (Ted Yu via Sandy Ryza)
+
+    YARN-1407. RM Web UI and REST APIs should uniformly use
+    YarnApplicationState (Sandy Ryza)
+
+    YARN-1438. Ensure container diagnostics includes exception from container
+    launch. (stevel via acmurthy)
+
+    YARN-1138. yarn.application.classpath is set to point to $HADOOP_CONF_DIR
+    etc., which does not work on Windows. (Chuan Liu via cnauroth)
 
     YARN-461. Fair scheduler should not accept apps with empty string queue name. 
     (ywskycn via tucu)
@@ -466,106 +565,7 @@ Release 2.4.0 - UNRELEASED
     YARN-1575. Public localizer crashes with "Localized unkown resource"
     (jlowe)
 
-    YARN-1642. RMDTRenewer#getRMClient should use ClientRMProxy (kasha)
-
     YARN-1629. IndexOutOfBoundsException in MaxRunningAppsEnforcer (Sandy Ryza)
-
-    YARN-1618. Fix invalid RMApp transition from NEW to FINAL_SAVING (kasha)
-
-Release 2.3.0 - UNRELEASED
-
-  INCOMPATIBLE CHANGES
-
-  NEW FEATURES
-
-  IMPROVEMENTS
-
-    YARN-305. Fair scheduler logs too many "Node offered to app" messages.
-    (Lohit Vijayarenu via Sandy Ryza)
-
-    YARN-1258. Allow configuring the Fair Scheduler root queue (Sandy Ryza)
-
-    YARN-1288. Make Fair Scheduler ACLs more user friendly (Sandy Ryza)
-
-    YARN-1315. TestQueueACLs should also test FairScheduler (Sandy Ryza)
-
-    YARN-1335. Move duplicate code from FSSchedulerApp and FiCaSchedulerApp
-    into SchedulerApplication (Sandy Ryza)
-
-    YARN-1333. Support blacklisting in the Fair Scheduler (Tsuyoshi Ozawa via
-    Sandy Ryza)
-
-    YARN-1109. Demote NodeManager "Sending out status for container" logs to
-    debug (haosdent via Sandy Ryza)
-
-    YARN-1321. Changed NMTokenCache to support both singleton and an instance
-    usage. (Alejandro Abdelnur via vinodkv) 
-
-    YARN-1388. Fair Scheduler page always displays blank fair share (Liyin Liang
-    via Sandy Ryza)
-
-  OPTIMIZATIONS
-
-  BUG FIXES
-
-    YARN-1284. LCE: Race condition leaves dangling cgroups entries for killed
-    containers. (Alejandro Abdelnur via Sandy Ryza)
-
-    YARN-1283. Fixed RM to give a fully-qualified proxy URL for an application
-    so that clients don't need to do scheme-mangling. (Omkar Vinit Joshi via
-    vinodkv)
-
-    YARN-879. Fixed tests w.r.t o.a.h.y.server.resourcemanager.Application.
-    (Junping Du via devaraj)
-
-    YARN-1265. Fair Scheduler chokes on unhealthy node reconnect (Sandy Ryza)
-
-    YARN-1044. used/min/max resources do not display info in the scheduler page
-    (Sangjin Lee via Sandy Ryza)
-
-    YARN-1259. In Fair Scheduler web UI, queue num pending and num active apps
-    switched. (Robert Kanter via Sandy Ryza)
-
-    YARN-1295. In UnixLocalWrapperScriptBuilder, using bash -c can cause Text
-    file busy errors (Sandy Ryza)
-
-    YARN-1185. Fixed FileSystemRMStateStore to not leave partial files that
-    prevent subsequent ResourceManager recovery. (Omkar Vinit Joshi via vinodkv)
-
-    YARN-1331. yarn.cmd exits with NoClassDefFoundError trying to run rmadmin or
-    logs. (cnauroth)
-
-    YARN-1330. Fair Scheduler: defaultQueueSchedulingPolicy does not take effect
-    (Sandy Ryza)
-    
-    YARN-1022. Unnecessary INFO logs in AMRMClientAsync (haosdent via bikas)
-    
-    YARN-1349. yarn.cmd does not support passthrough to any arbitrary class.
-    (cnauroth)
-    
-    YARN-1357. TestContainerLaunch.testContainerEnvVariables fails on Windows.
-    (Chuan Liu via cnauroth)
-
-    YARN-1358. TestYarnCLI fails on Windows due to line endings. (Chuan Liu via
-    cnauroth)
-
-    YARN-1343. NodeManagers additions/restarts are not reported as node updates 
-    in AllocateResponse responses to AMs. (tucu)
-
-    YARN-1381. Same relaxLocality appears twice in exception message of
-    AMRMClientImpl#checkLocalityRelaxationConflict() (Ted Yu via Sandy Ryza)
-
-    YARN-1407. RM Web UI and REST APIs should uniformly use
-    YarnApplicationState (Sandy Ryza)
-
-    YARN-1438. Ensure container diagnostics includes exception from container
-    launch. (stevel via acmurthy)
-
-    YARN-1138. yarn.application.classpath is set to point to $HADOOP_CONF_DIR
-    etc., which does not work on Windows. (Chuan Liu via cnauroth)
-
-    YARN-1600. RM does not startup when security is enabled without spnego
-    configured (Haohui Mai via jlowe)
 
 Release 2.2.0 - 2013-10-13
 
