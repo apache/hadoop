@@ -2120,7 +2120,7 @@ public abstract class Server {
     // Create the responder here
     responder = new Responder();
     
-    if (secretManager != null) {
+    if (secretManager != null || UserGroupInformation.isSecurityEnabled()) {
       SaslRpcServer.init(conf);
     }
     
