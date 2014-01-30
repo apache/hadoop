@@ -301,9 +301,6 @@ Release 2.4.0 - UNRELEASED
 
   BUG FIXES
 
-    HDFS-5842. Cannot create hftp filesystem when using a proxy user ugi and a doAs 
-    on a secure cluster. (jing9)
-
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -829,6 +826,9 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-5845. SecondaryNameNode dies when checkpointing with cache pools.
     (wang)
+
+    HDFS-5842. Cannot create hftp filesystem when using a proxy user ugi and a doAs 
+    on a secure cluster. (jing9)
 
   BREAKDOWN OF HDFS-2832 SUBTASKS AND RELATED JIRAS
 
