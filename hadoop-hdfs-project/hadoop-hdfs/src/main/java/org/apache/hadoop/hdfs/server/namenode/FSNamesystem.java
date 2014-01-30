@@ -521,6 +521,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     leaseManager.removeAllLeases();
     inodeId.setCurrentValue(INodeId.LAST_RESERVED_ID);
     snapshotManager.clearSnapshottableDirs();
+    cacheManager.clear();
   }
 
   @VisibleForTesting

@@ -1637,7 +1637,7 @@ public class TestCheckpoint {
    * Test that the secondary namenode correctly deletes temporary edits
    * on startup.
    */
-  @Test(timeout = 30000)
+  @Test(timeout = 60000)
   public void testDeleteTemporaryEditsOnStartup() throws IOException {
     Configuration conf = new HdfsConfiguration();
     SecondaryNameNode secondary = null;

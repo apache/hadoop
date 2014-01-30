@@ -38,7 +38,6 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-4949. Centralized cache management in HDFS (wang and cmccabe)
 
-
   IMPROVEMENTS
 
     HDFS-5360. Improvement of usage message of renameSnapshot and
@@ -521,6 +520,9 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-5721. sharedEditsImage in Namenode#initializeSharedEdits() should be
     closed before method returns (Ted Yu via todd)
+
+    HDFS-5845. SecondaryNameNode dies when checkpointing with cache pools.
+    (wang)
 
   BREAKDOWN OF HDFS-2832 SUBTASKS AND RELATED JIRAS
 
