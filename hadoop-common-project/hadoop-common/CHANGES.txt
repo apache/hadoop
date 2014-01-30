@@ -301,6 +301,9 @@ Release 2.4.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    HADOOP-10139. Update and improve the Single Cluster Setup document.
+    (Akira Ajisaka via Arpit Agarwal)
+
   OPTIMIZATIONS
 
   BUG FIXES
