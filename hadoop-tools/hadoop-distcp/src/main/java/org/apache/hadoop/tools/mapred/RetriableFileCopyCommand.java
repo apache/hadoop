@@ -18,22 +18,32 @@
 
 package org.apache.hadoop.tools.mapred;
 
-import org.apache.hadoop.tools.util.RetriableCommand;
-import org.apache.hadoop.tools.util.ThrottledInputStream;
-import org.apache.hadoop.tools.util.DistCpUtils;
-import org.apache.hadoop.tools.DistCpOptions.*;
-import org.apache.hadoop.tools.DistCpConstants;
-import org.apache.hadoop.fs.*;
-import org.apache.hadoop.mapreduce.Mapper;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.IOUtils;
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.EnumSet;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CreateFlag;
+import org.apache.hadoop.fs.FileChecksum;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Options.ChecksumOpt;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.tools.DistCpConstants;
+import org.apache.hadoop.tools.DistCpOptions.FileAttribute;
+import org.apache.hadoop.tools.util.DistCpUtils;
+import org.apache.hadoop.tools.util.RetriableCommand;
+import org.apache.hadoop.tools.util.ThrottledInputStream;
 
 import com.google.common.annotations.VisibleForTesting;
-
-import java.io.*;
-import java.util.EnumSet;
 
 /**
  * This class extends RetriableCommand to implement the copy of files,
@@ -44,7 +54,7 @@ public class RetriableFileCopyCommand extends RetriableCommand {
   private static Log LOG = LogFactory.getLog(RetriableFileCopyCommand.class);
   private static int BUFFER_SIZE = 8 * 1024;
   private boolean skipCrc = false;
-  
+
   /**
    * Constructor, taking a description of the action.
    * @param description Verbose description of the copy operation.
@@ -52,7 +62,7 @@ public class RetriableFileCopyCommand extends RetriableCommand {
   public RetriableFileCopyCommand(String description) {
     super(description);
   }
- 
+
   /**
    * Create a RetriableFileCopyCommand.
    *
@@ -99,15 +109,21 @@ public class RetriableFileCopyCommand extends RetriableCommand {
         LOG.debug("Copying " + sourceFileStatus.getPath() + " to " + target);
         LOG.debug("Tmp-file path: " + tmpTargetPath);
       }
-      FileSystem sourceFS = sourceFileStatus.getPath().getFileSystem(
-              configuration);
-      long bytesRead = copyToTmpFile(tmpTargetPath, targetFS, sourceFileStatus,
-                                     context, fileAttributes);
+      final Path sourcePath = sourceFileStatus.getPath();
+      final FileSystem sourceFS = sourcePath.getFileSystem(configuration);
+      final FileChecksum sourceChecksum = fileAttributes
+          .contains(FileAttribute.CHECKSUMTYPE) ? sourceFS
+          .getFileChecksum(sourcePath) : null;
 
-      compareFileLengths(sourceFileStatus, tmpTargetPath, configuration, bytesRead);
+      long bytesRead = copyToTmpFile(tmpTargetPath, targetFS, sourceFileStatus,
+          context, fileAttributes, sourceChecksum);
+
+      compareFileLengths(sourceFileStatus, tmpTargetPath, configuration,
+          bytesRead);
       //At this point, src&dest lengths are same. if length==0, we skip checksum
       if ((bytesRead != 0) && (!skipCrc)) {
-        compareCheckSums(sourceFS, sourceFileStatus.getPath(), targetFS, tmpTargetPath);
+        compareCheckSums(sourceFS, sourceFileStatus.getPath(), sourceChecksum,
+            targetFS, tmpTargetPath);
       }
       promoteTmpToTarget(tmpTargetPath, target, targetFS);
       return bytesRead;
@@ -118,14 +134,33 @@ public class RetriableFileCopyCommand extends RetriableCommand {
     }
   }
 
+  /**
+   * @return the checksum spec of the source checksum if checksum type should be
+   *         preserved
+   */
+  private ChecksumOpt getChecksumOpt(EnumSet<FileAttribute> fileAttributes,
+      FileChecksum sourceChecksum) {
+    if (fileAttributes.contains(FileAttribute.CHECKSUMTYPE)
+        && sourceChecksum != null) {
+      return sourceChecksum.getChecksumOpt();
+    }
+    return null;
+  }
+
   private long copyToTmpFile(Path tmpTargetPath, FileSystem targetFS,
-                             FileStatus sourceFileStatus, Mapper.Context context,
-                             EnumSet<FileAttribute> fileAttributes)
-                             throws IOException {
-    OutputStream outStream = new BufferedOutputStream(targetFS.create(
-            tmpTargetPath, true, BUFFER_SIZE,
-            getReplicationFactor(fileAttributes, sourceFileStatus, targetFS, tmpTargetPath),
-            getBlockSize(fileAttributes, sourceFileStatus, targetFS, tmpTargetPath), context));
+      FileStatus sourceFileStatus, Mapper.Context context,
+      EnumSet<FileAttribute> fileAttributes, final FileChecksum sourceChecksum)
+      throws IOException {
+    FsPermission permission = FsPermission.getFileDefault().applyUMask(
+        FsPermission.getUMask(targetFS.getConf()));
+    OutputStream outStream = new BufferedOutputStream(
+        targetFS.create(tmpTargetPath, permission,
+            EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE), BUFFER_SIZE,
+            getReplicationFactor(fileAttributes, sourceFileStatus, targetFS,
+                tmpTargetPath),
+            getBlockSize(fileAttributes, sourceFileStatus, targetFS,
+                tmpTargetPath),
+            context, getChecksumOpt(fileAttributes, sourceChecksum)));
     return copyBytes(sourceFileStatus, outStream, BUFFER_SIZE, context);
   }
 
@@ -140,9 +175,10 @@ public class RetriableFileCopyCommand extends RetriableCommand {
   }
 
   private void compareCheckSums(FileSystem sourceFS, Path source,
-                                FileSystem targetFS, Path target)
-                                throws IOException {
-    if (!DistCpUtils.checksumsAreEqual(sourceFS, source, targetFS, target)) {
+      FileChecksum sourceChecksum, FileSystem targetFS, Path target)
+      throws IOException {
+    if (!DistCpUtils.checksumsAreEqual(sourceFS, source, sourceChecksum,
+        targetFS, target)) {
       StringBuilder errorMessage = new StringBuilder("Check-sum mismatch between ")
           .append(source).append(" and ").append(target).append(".");
       if (sourceFS.getFileStatus(source).getBlockSize() != targetFS.getFileStatus(target).getBlockSize()) {
@@ -249,11 +285,18 @@ public class RetriableFileCopyCommand extends RetriableCommand {
             sourceFile.getReplication() : targetFS.getDefaultReplication(tmpTargetPath);
   }
 
+  /**
+   * @return the block size of the source file if we need to preserve either
+   *         the block size or the checksum type. Otherwise the default block
+   *         size of the target FS.
+   */
   private static long getBlockSize(
           EnumSet<FileAttribute> fileAttributes,
           FileStatus sourceFile, FileSystem targetFS, Path tmpTargetPath) {
-    return fileAttributes.contains(FileAttribute.BLOCKSIZE)?
-            sourceFile.getBlockSize() : targetFS.getDefaultBlockSize(tmpTargetPath);
+    boolean preserve = fileAttributes.contains(FileAttribute.BLOCKSIZE)
+        || fileAttributes.contains(FileAttribute.CHECKSUMTYPE);
+    return preserve ? sourceFile.getBlockSize() : targetFS
+        .getDefaultBlockSize(tmpTargetPath);
   }
 
   /**
@@ -261,7 +304,7 @@ public class RetriableFileCopyCommand extends RetriableCommand {
    * failures from other kinds of IOExceptions.
    * The failure to read from source is dealt with specially, in the CopyMapper.
    * Such failures may be skipped if the DistCpOptions indicate so.
-   * Write failures are intolerable, and amount to CopyMapper failure.  
+   * Write failures are intolerable, and amount to CopyMapper failure.
    */
   public static class CopyReadException extends IOException {
     public CopyReadException(Throwable rootCause) {
