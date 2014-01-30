@@ -56,7 +56,6 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-4949. Centralized cache management in HDFS (wang and cmccabe)
 
-
   IMPROVEMENTS
 
     HDFS-5360. Improvement of usage message of renameSnapshot and
@@ -270,6 +269,8 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-5788. listLocatedStatus response can be very large. (Nathan Roberts
     via kihwal)
+
+    HDFS-5841. Update HDFS caching documentation with new changes. (wang)
 
   OPTIMIZATIONS
 
