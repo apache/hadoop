@@ -54,7 +54,8 @@ public class RpcMetrics {
     int[] intervals = conf.getInts(
         CommonConfigurationKeys.RPC_METRICS_PERCENTILES_INTERVALS_KEY);
     rpcQuantileEnable = (intervals.length > 0) && conf.getBoolean(
-        CommonConfigurationKeys.RPC_METRICS_QUANTILE_ENABLE, false);
+        CommonConfigurationKeys.RPC_METRICS_QUANTILE_ENABLE,
+        CommonConfigurationKeys.RPC_METRICS_QUANTILE_ENABLE_DEFAULT);
     if (rpcQuantileEnable) {
       rpcQueueTimeMillisQuantiles =
           new MutableQuantiles[intervals.length];

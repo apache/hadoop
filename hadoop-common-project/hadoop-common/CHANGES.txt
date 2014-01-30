@@ -457,6 +457,9 @@ Release 2.3.0 - UNRELEASED
     HADOOP-9652. Allow RawLocalFs#getFileLinkStatus to fill in the link owner
     and mode if requested. (Andrew Wang via Colin Patrick McCabe)
 
+    HADOOP-10305. Add "rpc.metrics.quantile.enable" and
+    "rpc.metrics.percentiles.intervals" to core-default.xml.
+    (Akira Ajisaka via wang)
 
   OPTIMIZATIONS
 
