@@ -1,6 +1,6 @@
 Hadoop MapReduce Change Log
 
-Release 2.4.0 - UNRELEASED
+Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
@@ -21,6 +21,19 @@ Release 2.4.0 - UNRELEASED
     MAPREDUCE-5332. Support token-preserving restart of history server (jlowe)
 
   IMPROVEMENTS
+  
+    MAPREDUCE-5329. Allow MR applications to use additional AuxServices,
+    which are compatible with the default MapReduce shuffle.
+    (Avner BenHanoch via sseth)
+
+    MAPREDUCE-5463. Deprecate SLOTS_MILLIS counters (Tzuyoshi Ozawa via Sandy
+    Ryza)
+
+    MAPREDUCE-5457. Add a KeyOnlyTextOutputReader to enable streaming to write
+    out text files without separators (Sandy Ryza)
+
+    MAPREDUCE-5596. Allow configuring the number of threads used to serve
+    shuffle connections (Sandy Ryza via jlowe)
 
     MAPREDUCE-434. LocalJobRunner limited to single reducer (Sandy Ryza and
     Aaron Kimball via Sandy Ryza)
@@ -58,10 +71,10 @@ Release 2.4.0 - UNRELEASED
     MAPREDUCE-5725. Make explicit that TestNetworkedJob relies on the Capacity
     Scheduler (Sandy Ryza)
 
-    MAPREDUCE-5464. Add analogs of the SLOTS_MILLIS counters that jive with the
-    YARN resource model (Sandy Ryza)
-
   OPTIMIZATIONS
+
+    MAPREDUCE-4680. Job history cleaner should only check timestamps of files in
+    old enough directories (Robert Kanter via Sandy Ryza)
 
     MAPREDUCE-5484. YarnChild unnecessarily loads job conf twice (Sandy Ryza)
 
@@ -72,6 +85,37 @@ Release 2.4.0 - UNRELEASED
     fetch fails (Sandy Ryza)
 
   BUG FIXES
+
+    MAPREDUCE-5569. FloatSplitter is not generating correct splits (Nathan
+    Roberts via jlowe)
+
+    MAPREDUCE-5546. mapred.cmd on Windows set HADOOP_OPTS incorrectly (Chuan Liu
+    via cnauroth)
+
+    MAPREDUCE-5518. Fixed typo "can't read paritions file". (Albert Chu
+    via devaraj)
+
+    MAPREDUCE-5561. org.apache.hadoop.mapreduce.v2.app.job.impl.TestJobImpl
+    testcase failing on trunk (Karthik Kambatla via jlowe)
+
+    MAPREDUCE-5598. TestUserDefinedCounters.testMapReduceJob is flakey
+    (Robert Kanter via jlowe)
+
+    MAPREDUCE-5604. TestMRAMWithNonNormalizedCapabilities fails on Windows due to
+    exceeding max path length. (cnauroth)
+
+    MAPREDUCE-5451. MR uses LD_LIBRARY_PATH which doesn't mean anything in
+    Windows. (Yingda Chen via cnauroth)
+
+    MAPREDUCE-5409. MRAppMaster throws InvalidStateTransitonException: Invalid
+    event: TA_TOO_MANY_FETCH_FAILURE at KILLED for TaskAttemptImpl (Gera
+    Shegalov via jlowe)
+
+    MAPREDUCE-5674. Missing start and finish time in mapred.JobStatus.
+    (Chuan Liu via cnauroth)
+
+    MAPREDUCE-5650. Job fails when hprof mapreduce.task.profile.map/reduce.params
+    is specified (Gera Shegalov via Sandy Ryza)
 
     MAPREDUCE-5316. job -list-attempt-ids command does not handle illegal
     task-state (Ashwin Shankar via jlowe)
@@ -145,65 +189,6 @@ Release 2.4.0 - UNRELEASED
 
     MAPREDUCE-5723. MR AM container log can be truncated or empty.
     (Mohammad Kamrul Islam via kasha)
-
-Release 2.3.0 - UNRELEASED
-
-  INCOMPATIBLE CHANGES
-
-  NEW FEATURES
-
-  IMPROVEMENTS
-  
-    MAPREDUCE-5329. Allow MR applications to use additional AuxServices,
-    which are compatible with the default MapReduce shuffle.
-    (Avner BenHanoch via sseth)
-
-    MAPREDUCE-5463. Deprecate SLOTS_MILLIS counters (Tzuyoshi Ozawa via Sandy
-    Ryza)
-
-    MAPREDUCE-5457. Add a KeyOnlyTextOutputReader to enable streaming to write
-    out text files without separators (Sandy Ryza)
-
-    MAPREDUCE-5596. Allow configuring the number of threads used to serve
-    shuffle connections (Sandy Ryza via jlowe)
-
-  OPTIMIZATIONS
-
-    MAPREDUCE-4680. Job history cleaner should only check timestamps of files in
-    old enough directories (Robert Kanter via Sandy Ryza)
-
-  BUG FIXES
-
-    MAPREDUCE-5569. FloatSplitter is not generating correct splits (Nathan
-    Roberts via jlowe)
-
-    MAPREDUCE-5546. mapred.cmd on Windows set HADOOP_OPTS incorrectly (Chuan Liu
-    via cnauroth)
-
-    MAPREDUCE-5518. Fixed typo "can't read paritions file". (Albert Chu
-    via devaraj)
-
-    MAPREDUCE-5561. org.apache.hadoop.mapreduce.v2.app.job.impl.TestJobImpl
-    testcase failing on trunk (Karthik Kambatla via jlowe)
-
-    MAPREDUCE-5598. TestUserDefinedCounters.testMapReduceJob is flakey
-    (Robert Kanter via jlowe)
-
-    MAPREDUCE-5604. TestMRAMWithNonNormalizedCapabilities fails on Windows due to
-    exceeding max path length. (cnauroth)
-
-    MAPREDUCE-5451. MR uses LD_LIBRARY_PATH which doesn't mean anything in
-    Windows. (Yingda Chen via cnauroth)
-
-    MAPREDUCE-5409. MRAppMaster throws InvalidStateTransitonException: Invalid
-    event: TA_TOO_MANY_FETCH_FAILURE at KILLED for TaskAttemptImpl (Gera
-    Shegalov via jlowe)
-
-    MAPREDUCE-5674. Missing start and finish time in mapred.JobStatus.
-    (Chuan Liu via cnauroth)
-
-    MAPREDUCE-5650. Job fails when hprof mapreduce.task.profile.map/reduce.params
-    is specified (Gera Shegalov via Sandy Ryza)
 
 Release 2.2.0 - 2013-10-13
 
@@ -970,6 +955,8 @@ Release 2.0.3-alpha - 2013-02-06
 
     HADOOP-8911. CRLF characters in source and text files.
     (Raja Aluri via suresh)
+
+    MAPREDUCE-4723. Fix warnings found by findbugs 2. (Sandy Ryza via eli)
 
     MAPREDUCE-4703. Add the ability to start the MiniMRClientCluster using 
     the configurations used before it is being stopped. (ahmed.radwan via tucu)
