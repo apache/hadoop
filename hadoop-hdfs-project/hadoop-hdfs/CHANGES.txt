@@ -299,6 +299,9 @@ Release 2.4.0 - UNRELEASED
 
   OPTIMIZATIONS
 
+    HDFS-5790. LeaseManager.findPath is very slow when many leases need recovery
+    (todd)
+
   BUG FIXES
 
     HDFS-5492. Port HDFS-2069 (Incorrect default trash interval in the

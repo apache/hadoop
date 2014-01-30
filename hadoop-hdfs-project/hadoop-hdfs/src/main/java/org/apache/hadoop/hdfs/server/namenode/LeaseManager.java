@@ -180,24 +180,6 @@ public class LeaseManager {
   }
 
   /**
-   * Finds the pathname for the specified pendingFile
-   */
-  public synchronized String findPath(INodeFile pendingFile)
-      throws IOException {
-    FileUnderConstructionFeature uc = pendingFile.getFileUnderConstructionFeature();
-    Preconditions.checkArgument(uc != null);
-    Lease lease = getLease(uc.getClientName());
-    if (lease != null) {
-      String src = lease.findPath(pendingFile);
-      if (src != null) {
-        return src;
-      }
-    }
-    throw new IOException("pendingFile (=" + pendingFile + ") not found."
-        + "(lease=" + lease + ")");
-  }
-
-  /**
    * Renew the lease(s) held by the given client
    */
   synchronized void renewLease(String holder) {
@@ -250,24 +232,6 @@ public class LeaseManager {
     /** @return true if the Soft Limit Timer has expired */
     public boolean expiredSoftLimit() {
       return now() - lastUpdate > softLimit;
-    }
-
-    /**
-     * @return the path associated with the pendingFile and null if not found.
-     */
-    private String findPath(INodeFile pendingFile) {
-      try {
-        for (String src : paths) {
-          INode node = fsnamesystem.dir.getINode(src);
-          if (node == pendingFile
-              || (node.isFile() && node.asFile() == pendingFile)) {
-            return src;
-          }
-        }
-      } catch (UnresolvedLinkException e) {
-        throw new AssertionError("Lease files should reside on this FS");
-      }
-      return null;
     }
 
     /** Does this lease contain any path? */

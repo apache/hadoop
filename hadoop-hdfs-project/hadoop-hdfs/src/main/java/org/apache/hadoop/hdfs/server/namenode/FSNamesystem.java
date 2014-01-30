@@ -3800,7 +3800,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     final long diff = fileINode.getPreferredBlockSize() - commitBlock.getNumBytes();    
     if (diff > 0) {
       try {
-        String path = leaseManager.findPath(fileINode);
+        String path = fileINode.getFullPathName();
         dir.updateSpaceConsumed(path, 0, -diff*fileINode.getFileReplication());
       } catch (IOException e) {
         LOG.warn("Unexpected exception while updating disk space.", e);
@@ -4002,7 +4002,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   @VisibleForTesting
   String closeFileCommitBlocks(INodeFile pendingFile, BlockInfo storedBlock)
       throws IOException {
-    String src = leaseManager.findPath(pendingFile);
+    String src = pendingFile.getFullPathName();
 
     // commit the last block and complete it if it has minimum replicas
     commitOrCompleteLastBlock(pendingFile, storedBlock);
@@ -4024,7 +4024,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   @VisibleForTesting
   String persistBlocks(INodeFile pendingFile, boolean logRetryCache)
       throws IOException {
-    String src = leaseManager.findPath(pendingFile);
+    String src = pendingFile.getFullPathName();
     dir.persistBlocks(src, pendingFile, logRetryCache);
     return src;
   }
@@ -5952,7 +5952,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         .getDatanodeStorageInfos(newNodes, newStorageIDs);
     blockinfo.setExpectedLocations(storages);
 
-    String src = leaseManager.findPath(pendingFile);
+    String src = pendingFile.getFullPathName();
     dir.persistBlocks(src, pendingFile, logRetryCache);
   }
 
