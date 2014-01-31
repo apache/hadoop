@@ -67,3 +67,6 @@ HDFS-4685 (Unreleased)
 
     HADOOP-10277. setfacl -x fails to parse ACL spec if trying to remove the
     mask entry. (Vinay via cnauroth)
+
+    HDFS-5849. Removing ACL from an inode fails if it has only a default ACL.
+    (cnauroth)

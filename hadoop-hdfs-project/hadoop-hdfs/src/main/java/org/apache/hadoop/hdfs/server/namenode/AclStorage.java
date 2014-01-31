@@ -26,6 +26,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclEntryScope;
 import org.apache.hadoop.fs.permission.AclEntryType;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.AclException;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
@@ -157,22 +158,27 @@ final class AclStorage {
       int snapshotId) throws QuotaExceededException {
     FsPermission perm = inode.getPermissionStatus(snapshotId).getPermission();
     if (perm.getAclBit()) {
-      // Restore group permissions from the feature's entry to permission bits,
-      // overwriting the mask, which is not part of a minimal ACL.
       List<AclEntry> featureEntries = inode.getAclFeature().getEntries();
-      AclEntry groupEntryKey = new AclEntry.Builder()
-        .setScope(AclEntryScope.ACCESS)
-        .setType(AclEntryType.GROUP)
-        .build();
-      int groupEntryIndex = Collections.binarySearch(featureEntries,
-        groupEntryKey, AclTransformation.ACL_ENTRY_COMPARATOR);
-      assert groupEntryIndex >= 0;
+      final FsAction groupPerm;
+      if (featureEntries.get(0).getScope() == AclEntryScope.ACCESS) {
+        // Restore group permissions from the feature's entry to permission
+        // bits, overwriting the mask, which is not part of a minimal ACL.
+        AclEntry groupEntryKey = new AclEntry.Builder()
+          .setScope(AclEntryScope.ACCESS)
+          .setType(AclEntryType.GROUP)
+          .build();
+        int groupEntryIndex = Collections.binarySearch(featureEntries,
+          groupEntryKey, AclTransformation.ACL_ENTRY_COMPARATOR);
+        assert groupEntryIndex >= 0;
+        groupPerm = featureEntries.get(groupEntryIndex).getPermission();
+      } else {
+        groupPerm = perm.getGroupAction();
+      }
 
       // Remove the feature and turn off the ACL bit.
       inode.removeAclFeature();
       FsPermission newPerm = new FsPermission(perm.getUserAction(),
-        featureEntries.get(groupEntryIndex).getPermission(),
-        perm.getOtherAction(),
+        groupPerm, perm.getOtherAction(),
         perm.getStickyBit(), false);
       inode.setPermission(newPerm, snapshotId);
     }

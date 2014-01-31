@@ -535,6 +535,23 @@ public class TestNameNodeAcl {
     assertAclFeature(false);
   }
 
+  @Test
+  public void testRemoveAclOnlyDefault() throws IOException {
+    FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short)0750));
+    List<AclEntry> aclSpec = Lists.newArrayList(
+      aclEntry(ACCESS, USER, ALL),
+      aclEntry(ACCESS, GROUP, READ_EXECUTE),
+      aclEntry(ACCESS, OTHER, NONE),
+      aclEntry(DEFAULT, USER, "foo", ALL));
+    fs.setAcl(path, aclSpec);
+    fs.removeAcl(path);
+    AclStatus s = fs.getAclStatus(path);
+    AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
+    assertArrayEquals(new AclEntry[] { }, returned);
+    assertPermission((short)0750);
+    assertAclFeature(false);
+  }
+
   @Test(expected=FileNotFoundException.class)
   public void testRemoveAclPathNotFound() throws IOException {
     // Path has not been created.
