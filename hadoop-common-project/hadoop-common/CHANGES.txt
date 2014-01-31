@@ -311,6 +311,9 @@ Release 2.4.0 - UNRELEASED
 
   BUG FIXES
 
+    HADOOP-10320. Javadoc in InterfaceStability.java lacks final </ul>.
+    (René Nyffenegger via cnauroth)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
