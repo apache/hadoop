@@ -59,6 +59,7 @@ import org.apache.hadoop.hdfs.security.token.block.BlockKey;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.namenode.CheckpointSignature;
 import org.apache.hadoop.hdfs.server.protocol.*;
@@ -100,15 +101,15 @@ public class TestPBHelper {
         PBHelper.convert(NamenodeRoleProto.NAMENODE));
   }
 
-  private static StorageInfo getStorageInfo() {
-    return new StorageInfo(1, 2, "cid", 3);
+  private static StorageInfo getStorageInfo(NodeType type) {
+    return new StorageInfo(1, 2, "cid", 3, type);
   }
 
   @Test
   public void testConvertStoragInfo() {
-    StorageInfo info = getStorageInfo();
+    StorageInfo info = getStorageInfo(NodeType.NAME_NODE);
     StorageInfoProto infoProto = PBHelper.convert(info);
-    StorageInfo info2 = PBHelper.convert(infoProto);
+    StorageInfo info2 = PBHelper.convert(infoProto, NodeType.NAME_NODE);
     assertEquals(info.getClusterID(), info2.getClusterID());
     assertEquals(info.getCTime(), info2.getCTime());
     assertEquals(info.getLayoutVersion(), info2.getLayoutVersion());
@@ -117,7 +118,7 @@ public class TestPBHelper {
 
   @Test
   public void testConvertNamenodeRegistration() {
-    StorageInfo info = getStorageInfo();
+    StorageInfo info = getStorageInfo(NodeType.NAME_NODE);
     NamenodeRegistration reg = new NamenodeRegistration("address:999",
         "http:1000", info, NamenodeRole.NAMENODE);
     NamenodeRegistrationProto regProto = PBHelper.convert(reg);
@@ -243,8 +244,8 @@ public class TestPBHelper {
 
   @Test
   public void testConvertCheckpointSignature() {
-    CheckpointSignature s = new CheckpointSignature(getStorageInfo(), "bpid",
-        100, 1);
+    CheckpointSignature s = new CheckpointSignature(
+        getStorageInfo(NodeType.NAME_NODE), "bpid", 100, 1);
     CheckpointSignatureProto sProto = PBHelper.convert(s);
     CheckpointSignature s1 = PBHelper.convert(sProto);
     assertEquals(s.getBlockpoolID(), s1.getBlockpoolID());
@@ -515,7 +516,7 @@ public class TestPBHelper {
     ExportedBlockKeys expKeys = new ExportedBlockKeys(true, 9, 10,
         getBlockKey(1), keys);
     DatanodeRegistration reg = new DatanodeRegistration(dnId,
-        new StorageInfo(), expKeys, "3.0.0");
+        new StorageInfo(NodeType.DATA_NODE), expKeys, "3.0.0");
     DatanodeRegistrationProto proto = PBHelper.convert(reg);
     DatanodeRegistration reg2 = PBHelper.convert(proto);
     compare(reg.getStorageInfo(), reg2.getStorageInfo());

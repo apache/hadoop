@@ -973,7 +973,6 @@ class NameNodeRpcServer implements NamenodeProtocols {
   @Override // DatanodeProtocol
   public DatanodeRegistration registerDatanode(DatanodeRegistration nodeReg)
       throws IOException {
-    verifyLayoutVersion(nodeReg.getVersion());
     verifySoftwareVersion(nodeReg);
     namesystem.registerDatanode(nodeReg);
     return nodeReg;
@@ -1071,7 +1070,6 @@ class NameNodeRpcServer implements NamenodeProtocols {
    * @throws UnregisteredNodeException if the registration is invalid
    */
   void verifyRequest(NodeRegistration nodeReg) throws IOException {
-    verifyLayoutVersion(nodeReg.getVersion());
     if (!namesystem.getRegistrationID().equals(nodeReg.getRegistrationID())) {
       LOG.warn("Invalid registrationID - expected: "
           + namesystem.getRegistrationID() + " received: "
@@ -1147,8 +1145,9 @@ class NameNodeRpcServer implements NamenodeProtocols {
    * @throws IOException
    */
   void verifyLayoutVersion(int version) throws IOException {
-    if (version != HdfsConstants.LAYOUT_VERSION)
-      throw new IncorrectVersionException(version, "data node");
+    if (version != HdfsConstants.NAMENODE_LAYOUT_VERSION)
+      throw new IncorrectVersionException(
+          HdfsConstants.NAMENODE_LAYOUT_VERSION, version, "data node");
   }
   
   private void verifySoftwareVersion(DatanodeRegistration dnReg)

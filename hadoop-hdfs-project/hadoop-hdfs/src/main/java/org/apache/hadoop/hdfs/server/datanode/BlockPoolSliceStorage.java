@@ -32,7 +32,6 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.HardLink;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
-import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
@@ -65,7 +64,7 @@ public class BlockPoolSliceStorage extends Storage {
   private String blockpoolID = ""; // id of the blockpool
 
   public BlockPoolSliceStorage(StorageInfo storageInfo, String bpid) {
-    super(NodeType.DATA_NODE, storageInfo);
+    super(storageInfo);
     blockpoolID = bpid;
   }
 
@@ -93,9 +92,6 @@ public class BlockPoolSliceStorage extends Storage {
    */
   void recoverTransitionRead(DataNode datanode, NamespaceInfo nsInfo,
       Collection<File> dataDirs, StartupOption startOpt) throws IOException {
-    assert HdfsConstants.LAYOUT_VERSION == nsInfo.getLayoutVersion() 
-        : "Block-pool and name-node layout versions must be the same.";
-
     // 1. For each BP data directory analyze the state and
     // check whether all is consistent before transitioning.
     this.storageDirs = new ArrayList<StorageDirectory>(dataDirs.size());
@@ -143,8 +139,6 @@ public class BlockPoolSliceStorage extends Storage {
     // while others could be up-to-date for the regular startup.
     for (int idx = 0; idx < getNumStorageDirs(); idx++) {
       doTransition(getStorageDir(idx), nsInfo, startOpt);
-      assert getLayoutVersion() == nsInfo.getLayoutVersion() 
-          : "Data-node and name-node layout versions must be the same.";
       assert getCTime() == nsInfo.getCTime() 
           : "Data-node and name-node CTimes must be the same.";
     }
@@ -175,11 +169,10 @@ public class BlockPoolSliceStorage extends Storage {
     LOG.info("Formatting block pool " + blockpoolID + " directory "
         + bpSdir.getCurrentDir());
     bpSdir.clearDirectory(); // create directory
-    this.layoutVersion = HdfsConstants.LAYOUT_VERSION;
+    this.layoutVersion = HdfsConstants.DATANODE_LAYOUT_VERSION;
     this.cTime = nsInfo.getCTime();
     this.namespaceID = nsInfo.getNamespaceID();
     this.blockpoolID = nsInfo.getBlockPoolID();
-    this.storageType = NodeType.DATA_NODE;
     writeProperties(bpSdir);
   }
 
@@ -243,7 +236,7 @@ public class BlockPoolSliceStorage extends Storage {
     
     readProperties(sd);
     checkVersionUpgradable(this.layoutVersion);
-    assert this.layoutVersion >= HdfsConstants.LAYOUT_VERSION 
+    assert this.layoutVersion >= HdfsConstants.DATANODE_LAYOUT_VERSION 
        : "Future version is not allowed";
     if (getNamespaceID() != nsInfo.getNamespaceID()) {
       throw new IOException("Incompatible namespaceIDs in "
@@ -257,11 +250,11 @@ public class BlockPoolSliceStorage extends Storage {
           + nsInfo.getBlockPoolID() + "; datanode blockpoolID = "
           + blockpoolID);
     }
-    if (this.layoutVersion == HdfsConstants.LAYOUT_VERSION
+    if (this.layoutVersion == HdfsConstants.DATANODE_LAYOUT_VERSION
         && this.cTime == nsInfo.getCTime()) {
       return; // regular startup
     }
-    if (this.layoutVersion > HdfsConstants.LAYOUT_VERSION
+    if (this.layoutVersion > HdfsConstants.DATANODE_LAYOUT_VERSION
         || this.cTime < nsInfo.getCTime()) {
       doUpgrade(sd, nsInfo); // upgrade
       return;
@@ -294,7 +287,8 @@ public class BlockPoolSliceStorage extends Storage {
    */
   void doUpgrade(StorageDirectory bpSd, NamespaceInfo nsInfo) throws IOException {
     // Upgrading is applicable only to release with federation or after
-    if (!LayoutVersion.supports(Feature.FEDERATION, layoutVersion)) {
+    if (!DataNodeLayoutVersion.supports(
+        LayoutVersion.Feature.FEDERATION, layoutVersion)) {
       return;
     }
     LOG.info("Upgrading block pool storage directory " + bpSd.getRoot()
@@ -327,7 +321,7 @@ public class BlockPoolSliceStorage extends Storage {
     
     // 3. Create new <SD>/current with block files hardlinks and VERSION
     linkAllBlocks(bpTmpDir, bpCurDir);
-    this.layoutVersion = HdfsConstants.LAYOUT_VERSION;
+    this.layoutVersion = HdfsConstants.DATANODE_LAYOUT_VERSION;
     assert this.namespaceID == nsInfo.getNamespaceID() 
         : "Data-node and name-node layout versions must be the same.";
     this.cTime = nsInfo.getCTime();
@@ -349,7 +343,8 @@ public class BlockPoolSliceStorage extends Storage {
    * @throws IOException if the directory is not empty or it can not be removed
    */
   private void cleanupDetachDir(File detachDir) throws IOException {
-    if (!LayoutVersion.supports(Feature.APPEND_RBW_DIR, layoutVersion)
+    if (!DataNodeLayoutVersion.supports(
+        LayoutVersion.Feature.APPEND_RBW_DIR, layoutVersion)
         && detachDir.exists() && detachDir.isDirectory()) {
 
       if (FileUtil.list(detachDir).length != 0) {
@@ -389,13 +384,13 @@ public class BlockPoolSliceStorage extends Storage {
     // the namespace state or can be further upgraded to it.
     // In another word, we can only roll back when ( storedLV >= software LV)
     // && ( DN.previousCTime <= NN.ctime)
-    if (!(prevInfo.getLayoutVersion() >= HdfsConstants.LAYOUT_VERSION && 
+    if (!(prevInfo.getLayoutVersion() >= HdfsConstants.DATANODE_LAYOUT_VERSION && 
         prevInfo.getCTime() <= nsInfo.getCTime())) { // cannot rollback
       throw new InconsistentFSStateException(bpSd.getRoot(),
           "Cannot rollback to a newer state.\nDatanode previous state: LV = "
               + prevInfo.getLayoutVersion() + " CTime = " + prevInfo.getCTime()
               + " is newer than the namespace state: LV = "
-              + nsInfo.getLayoutVersion() + " CTime = " + nsInfo.getCTime());
+              + HdfsConstants.DATANODE_LAYOUT_VERSION + " CTime = " + nsInfo.getCTime());
     }
     
     LOG.info("Rolling back storage directory " + bpSd.getRoot()

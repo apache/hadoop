@@ -64,6 +64,8 @@ import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.PurgeLogs
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.StartLogSegmentRequestProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.StartLogSegmentResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.RequestInfo;
+import org.apache.hadoop.hdfs.server.common.StorageInfo;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.protocol.JournalProtocol;
 
 import com.google.protobuf.RpcController;
@@ -274,9 +276,9 @@ public class QJournalProtocolServerSideTranslatorPB implements QJournalProtocolP
   @Override
   public DoUpgradeResponseProto doUpgrade(RpcController controller,
       DoUpgradeRequestProto request) throws ServiceException {
+    StorageInfo si = PBHelper.convert(request.getSInfo(), NodeType.NAME_NODE);
     try {
-      impl.doUpgrade(convert(request.getJid()),
-          PBHelper.convert(request.getSInfo()));
+      impl.doUpgrade(convert(request.getJid()), si);
       return DoUpgradeResponseProto.getDefaultInstance();
     } catch (IOException e) {
       throw new ServiceException(e);
@@ -298,9 +300,9 @@ public class QJournalProtocolServerSideTranslatorPB implements QJournalProtocolP
   public CanRollBackResponseProto canRollBack(RpcController controller,
       CanRollBackRequestProto request) throws ServiceException {
     try {
-      Boolean result = impl.canRollBack(convert(request.getJid()),
-          PBHelper.convert(request.getStorage()),
-          PBHelper.convert(request.getPrevStorage()),
+      StorageInfo si = PBHelper.convert(request.getStorage(), NodeType.NAME_NODE);
+      Boolean result = impl.canRollBack(convert(request.getJid()), si,
+          PBHelper.convert(request.getPrevStorage(), NodeType.NAME_NODE),
           request.getTargetLayoutVersion());
       return CanRollBackResponseProto.newBuilder()
           .setCanRollBack(result)

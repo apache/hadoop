@@ -30,6 +30,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
@@ -190,10 +191,11 @@ public class TestDFSRollback {
           UpgradeUtilities.getCurrentBlockPoolID(cluster));
       // Put newer layout version in current.
       storageInfo = new StorageInfo(
-          UpgradeUtilities.getCurrentLayoutVersion()-1,
+          HdfsConstants.DATANODE_LAYOUT_VERSION - 1,
           UpgradeUtilities.getCurrentNamespaceID(cluster),
           UpgradeUtilities.getCurrentClusterID(cluster),
-          UpgradeUtilities.getCurrentFsscTime(cluster));
+          UpgradeUtilities.getCurrentFsscTime(cluster),
+          NodeType.DATA_NODE);
 
       // Overwrite VERSION file in the current directory of
       // volume directories and block pool slice directories
@@ -250,7 +252,8 @@ public class TestDFSRollback {
       storageInfo = new StorageInfo(Integer.MIN_VALUE, 
           UpgradeUtilities.getCurrentNamespaceID(cluster), 
           UpgradeUtilities.getCurrentClusterID(cluster), 
-          UpgradeUtilities.getCurrentFsscTime(cluster));
+          UpgradeUtilities.getCurrentFsscTime(cluster),
+          NodeType.DATA_NODE);
       
       UpgradeUtilities.createDataNodeVersionFile(baseDirs, storageInfo,
           UpgradeUtilities.getCurrentBlockPoolID(cluster));
@@ -274,10 +277,11 @@ public class TestDFSRollback {
       
       UpgradeUtilities.createDataNodeStorageDirs(dataNodeDirs, "current");
       baseDirs = UpgradeUtilities.createDataNodeStorageDirs(dataNodeDirs, "previous");
-      storageInfo = new StorageInfo(UpgradeUtilities.getCurrentLayoutVersion(), 
-            UpgradeUtilities.getCurrentNamespaceID(cluster), 
-            UpgradeUtilities.getCurrentClusterID(cluster), Long.MAX_VALUE);
-      
+      storageInfo = new StorageInfo(HdfsConstants.DATANODE_LAYOUT_VERSION,
+          UpgradeUtilities.getCurrentNamespaceID(cluster),
+          UpgradeUtilities.getCurrentClusterID(cluster), Long.MAX_VALUE,
+          NodeType.DATA_NODE);
+     
       UpgradeUtilities.createDataNodeVersionFile(baseDirs, storageInfo,
           UpgradeUtilities.getCurrentBlockPoolID(cluster));
       
@@ -317,10 +321,10 @@ public class TestDFSRollback {
       log("NameNode rollback with old layout version in previous", numDirs);
       UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "current");
       baseDirs = UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "previous");
-      storageInfo = new StorageInfo(1, 
+      storageInfo = new StorageInfo(1,
           UpgradeUtilities.getCurrentNamespaceID(null),
           UpgradeUtilities.getCurrentClusterID(null),
-          UpgradeUtilities.getCurrentFsscTime(null));
+          UpgradeUtilities.getCurrentFsscTime(null), NodeType.NAME_NODE);
       
       UpgradeUtilities.createNameNodeVersionFile(conf, baseDirs,
           storageInfo, UpgradeUtilities.getCurrentBlockPoolID(cluster));

@@ -34,6 +34,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.Storage;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.common.StorageErrorReporter;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
@@ -531,7 +532,7 @@ public class FileJournalManager implements JournalManager {
 
   @Override
   public long getJournalCTime() throws IOException {
-    StorageInfo sInfo = new StorageInfo();
+    StorageInfo sInfo = new StorageInfo(NodeType.NAME_NODE);
     sInfo.readProperties(sd);
     return sInfo.getCTime();
   }

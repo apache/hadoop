@@ -33,7 +33,6 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
-import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
@@ -118,8 +117,9 @@ public class FSImageSerialization {
       DataInput in, FSNamesystem fsNamesys, int imgVersion)
       throws IOException {
     byte[] name = readBytes(in);
-    long inodeId = LayoutVersion.supports(Feature.ADD_INODE_ID, imgVersion) ? in
-        .readLong() : fsNamesys.allocateNewInodeId();
+    long inodeId = NameNodeLayoutVersion.supports(
+        LayoutVersion.Feature.ADD_INODE_ID, imgVersion) ? in.readLong()
+        : fsNamesys.allocateNewInodeId();
     short blockReplication = in.readShort();
     long modificationTime = in.readLong();
     long preferredBlockSize = in.readLong();

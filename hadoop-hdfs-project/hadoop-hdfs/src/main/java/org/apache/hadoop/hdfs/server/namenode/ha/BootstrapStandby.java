@@ -153,9 +153,9 @@ public class BootstrapStandby implements Tool, Configurable {
     }
 
     if (!checkLayoutVersion(nsInfo)) {
-      LOG.fatal("Layout version on remote node (" +
-          nsInfo.getLayoutVersion() + ") does not match " +
-          "this node's layout version (" + HdfsConstants.LAYOUT_VERSION + ")");
+      LOG.fatal("Layout version on remote node (" + nsInfo.getLayoutVersion()
+          + ") does not match " + "this node's layout version ("
+          + HdfsConstants.NAMENODE_LAYOUT_VERSION + ")");
       return ERR_CODE_INVALID_VERSION;
     }
 
@@ -257,7 +257,7 @@ public class BootstrapStandby implements Tool, Configurable {
   }
 
   private boolean checkLayoutVersion(NamespaceInfo nsInfo) throws IOException {
-    return (nsInfo.getLayoutVersion() == HdfsConstants.LAYOUT_VERSION);
+    return (nsInfo.getLayoutVersion() == HdfsConstants.NAMENODE_LAYOUT_VERSION);
   }
   
   private void parseConfAndFindOtherNN() throws IOException {

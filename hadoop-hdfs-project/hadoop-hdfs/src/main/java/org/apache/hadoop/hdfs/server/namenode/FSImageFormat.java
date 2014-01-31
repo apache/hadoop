@@ -260,9 +260,10 @@ public class FSImageFormat {
               "imgVersion " + imgVersion +
               " expected to be " + getLayoutVersion());
         }
-        boolean supportSnapshot = LayoutVersion.supports(Feature.SNAPSHOT,
-            imgVersion);
-        if (LayoutVersion.supports(Feature.ADD_LAYOUT_FLAGS, imgVersion)) {
+        boolean supportSnapshot = NameNodeLayoutVersion.supports(
+            LayoutVersion.Feature.SNAPSHOT, imgVersion);
+        if (NameNodeLayoutVersion.supports(
+            LayoutVersion.Feature.ADD_LAYOUT_FLAGS, imgVersion)) {
           LayoutFlags.read(in);
         }
 
@@ -275,7 +276,8 @@ public class FSImageFormat {
         long genstamp = in.readLong();
         namesystem.setGenerationStampV1(genstamp);
         
-        if (LayoutVersion.supports(Feature.SEQUENTIAL_BLOCK_ID, imgVersion)) {
+        if (NameNodeLayoutVersion.supports(
+            LayoutVersion.Feature.SEQUENTIAL_BLOCK_ID, imgVersion)) {
           // read the starting generation stamp for sequential block IDs
           genstamp = in.readLong();
           namesystem.setGenerationStampV2(genstamp);
@@ -297,14 +299,16 @@ public class FSImageFormat {
 
         // read the transaction ID of the last edit represented by
         // this image
-        if (LayoutVersion.supports(Feature.STORED_TXIDS, imgVersion)) {
+        if (NameNodeLayoutVersion.supports(
+            LayoutVersion.Feature.STORED_TXIDS, imgVersion)) {
           imgTxId = in.readLong();
         } else {
           imgTxId = 0;
         }
 
         // read the last allocated inode id in the fsimage
-        if (LayoutVersion.supports(Feature.ADD_INODE_ID, imgVersion)) {
+        if (NameNodeLayoutVersion.supports(
+            LayoutVersion.Feature.ADD_INODE_ID, imgVersion)) {
           long lastInodeId = in.readLong();
           namesystem.resetLastInodeId(lastInodeId);
           if (LOG.isDebugEnabled()) {
@@ -323,7 +327,8 @@ public class FSImageFormat {
 
         // read compression related info
         FSImageCompression compression;
-        if (LayoutVersion.supports(Feature.FSIMAGE_COMPRESSION, imgVersion)) {
+        if (NameNodeLayoutVersion.supports(
+            LayoutVersion.Feature.FSIMAGE_COMPRESSION, imgVersion)) {
           compression = FSImageCompression.readCompressionHeader(conf, in);
         } else {
           compression = FSImageCompression.createNoopCompression();
@@ -336,8 +341,8 @@ public class FSImageFormat {
         LOG.info("Number of files = " + numFiles);
         prog.setTotal(Phase.LOADING_FSIMAGE, step, numFiles);
         Counter counter = prog.getCounter(Phase.LOADING_FSIMAGE, step);
-        if (LayoutVersion.supports(Feature.FSIMAGE_NAME_OPTIMIZATION,
-            imgVersion)) {
+        if (NameNodeLayoutVersion.supports(
+            LayoutVersion.Feature.FSIMAGE_NAME_OPTIMIZATION, imgVersion)) {
           if (supportSnapshot) {
             loadLocalNameINodesWithSnapshot(numFiles, in, counter);
           } else {
@@ -394,9 +399,10 @@ public class FSImageFormat {
      */
     private void loadLocalNameINodesWithSnapshot(long numFiles, DataInput in,
         Counter counter) throws IOException {
-      assert LayoutVersion.supports(Feature.FSIMAGE_NAME_OPTIMIZATION,
-          getLayoutVersion());
-      assert LayoutVersion.supports(Feature.SNAPSHOT, getLayoutVersion());
+      assert NameNodeLayoutVersion.supports(
+          LayoutVersion.Feature.FSIMAGE_NAME_OPTIMIZATION, getLayoutVersion());
+      assert NameNodeLayoutVersion.supports(
+          LayoutVersion.Feature.SNAPSHOT, getLayoutVersion());
       
       // load root
       loadRoot(in, counter);
@@ -414,8 +420,8 @@ public class FSImageFormat {
    */  
    private void loadLocalNameINodes(long numFiles, DataInput in, Counter counter)
        throws IOException {
-     assert LayoutVersion.supports(Feature.FSIMAGE_NAME_OPTIMIZATION,
-         getLayoutVersion());
+     assert NameNodeLayoutVersion.supports(
+         LayoutVersion.Feature.FSIMAGE_NAME_OPTIMIZATION, getLayoutVersion());
      assert numFiles > 0;
 
      // load root
@@ -624,7 +630,8 @@ public class FSImageFormat {
       final byte[] localName = FSImageSerialization.readLocalName(in);
       INode inode = loadINode(localName, isSnapshotINode, in, counter);
       if (updateINodeMap
-          && LayoutVersion.supports(Feature.ADD_INODE_ID, getLayoutVersion())) {
+          && NameNodeLayoutVersion.supports(
+              LayoutVersion.Feature.ADD_INODE_ID, getLayoutVersion())) {
         namesystem.dir.addToInodeMap(inode);
       }
       return inode;
@@ -640,18 +647,21 @@ public class FSImageFormat {
   INode loadINode(final byte[] localName, boolean isSnapshotINode,
       DataInput in, Counter counter) throws IOException {
     final int imgVersion = getLayoutVersion();
-    if (LayoutVersion.supports(Feature.SNAPSHOT, imgVersion)) {
+    if (NameNodeLayoutVersion.supports(
+        LayoutVersion.Feature.SNAPSHOT, imgVersion)) {
       namesystem.getFSDirectory().verifyINodeName(localName);
     }
 
-    long inodeId = LayoutVersion.supports(Feature.ADD_INODE_ID, imgVersion) ? 
-           in.readLong() : namesystem.allocateNewInodeId();
+    long inodeId = NameNodeLayoutVersion.supports(
+        LayoutVersion.Feature.ADD_INODE_ID, imgVersion) ? in.readLong()
+        : namesystem.allocateNewInodeId();
     
     final short replication = namesystem.getBlockManager().adjustReplication(
         in.readShort());
     final long modificationTime = in.readLong();
     long atime = 0;
-    if (LayoutVersion.supports(Feature.FILE_ACCESS_TIME, imgVersion)) {
+    if (NameNodeLayoutVersion.supports(
+        LayoutVersion.Feature.FILE_ACCESS_TIME, imgVersion)) {
       atime = in.readLong();
     }
     final long blockSize = in.readLong();
@@ -671,7 +681,8 @@ public class FSImageFormat {
       String clientMachine = "";
       boolean underConstruction = false;
       FileDiffList fileDiffs = null;
-      if (LayoutVersion.supports(Feature.SNAPSHOT, imgVersion)) {
+      if (NameNodeLayoutVersion.supports(
+          LayoutVersion.Feature.SNAPSHOT, imgVersion)) {
         // read diffs
         fileDiffs = SnapshotFSImageFormat.loadFileDiffList(in, this);
 
@@ -710,14 +721,16 @@ public class FSImageFormat {
       //read quotas
       final long nsQuota = in.readLong();
       long dsQuota = -1L;
-      if (LayoutVersion.supports(Feature.DISKSPACE_QUOTA, imgVersion)) {
+      if (NameNodeLayoutVersion.supports(
+          LayoutVersion.Feature.DISKSPACE_QUOTA, imgVersion)) {
         dsQuota = in.readLong();
       }
 
       //read snapshot info
       boolean snapshottable = false;
       boolean withSnapshot = false;
-      if (LayoutVersion.supports(Feature.SNAPSHOT, imgVersion)) {
+      if (NameNodeLayoutVersion.supports(
+          LayoutVersion.Feature.SNAPSHOT, imgVersion)) {
         snapshottable = in.readBoolean();
         if (!snapshottable) {
           withSnapshot = in.readBoolean();
@@ -780,7 +793,8 @@ public class FSImageFormat {
         throws IOException {
       final int layoutVersion = getLayoutVersion();
       
-      if (!LayoutVersion.supports(Feature.OPTIMIZE_SNAPSHOT_INODES, layoutVersion)) {
+      if (!NameNodeLayoutVersion.supports(
+          LayoutVersion.Feature.OPTIMIZE_SNAPSHOT_INODES, layoutVersion)) {
         return loadINodeWithLocalName(true, in, false).asFile();
       }
   
@@ -801,7 +815,8 @@ public class FSImageFormat {
         throws IOException {
       final int layoutVersion = getLayoutVersion();
       
-      if (!LayoutVersion.supports(Feature.OPTIMIZE_SNAPSHOT_INODES, layoutVersion)) {
+      if (!NameNodeLayoutVersion.supports(
+          LayoutVersion.Feature.OPTIMIZE_SNAPSHOT_INODES, layoutVersion)) {
         return loadINodeWithLocalName(true, in, false).asDirectory();
       }
   
@@ -836,7 +851,8 @@ public class FSImageFormat {
         INodeFile oldnode = null;
         boolean inSnapshot = false;
         if (path != null && FSDirectory.isReservedName(path) && 
-            LayoutVersion.supports(Feature.ADD_INODE_ID, getLayoutVersion())) {
+            NameNodeLayoutVersion.supports(
+                LayoutVersion.Feature.ADD_INODE_ID, getLayoutVersion())) {
           // TODO: for HDFS-5428, we use reserved path for those INodeFileUC in 
           // snapshot. If we support INode ID in the layout version, we can use
           // the inode id to find the oldnode.
@@ -869,7 +885,8 @@ public class FSImageFormat {
         throws IOException {
       int imgVersion = getLayoutVersion();
 
-      if (!LayoutVersion.supports(Feature.DELEGATION_TOKEN, imgVersion)) {
+      if (!NameNodeLayoutVersion.supports(
+          LayoutVersion.Feature.DELEGATION_TOKEN, imgVersion)) {
         //SecretManagerState is not available.
         //This must not happen if security is turned on.
         return; 
@@ -879,7 +896,8 @@ public class FSImageFormat {
 
     private void loadCacheManagerState(DataInput in) throws IOException {
       int imgVersion = getLayoutVersion();
-      if (!LayoutVersion.supports(Feature.CACHING, imgVersion)) {
+      if (!NameNodeLayoutVersion.supports(
+          LayoutVersion.Feature.CACHING, imgVersion)) {
         return;
       }
       namesystem.getCacheManager().loadStateCompat(in);
@@ -993,7 +1011,7 @@ public class FSImageFormat {
       DigestOutputStream fos = new DigestOutputStream(fout, digester);
       DataOutputStream out = new DataOutputStream(fos);
       try {
-        out.writeInt(HdfsConstants.LAYOUT_VERSION);
+        out.writeInt(HdfsConstants.NAMENODE_LAYOUT_VERSION);
         LayoutFlags.write(out);
         // We use the non-locked version of getNamespaceInfo here since
         // the coordinating thread of saveNamespace already has read-locked

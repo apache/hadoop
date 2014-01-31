@@ -15,3 +15,6 @@ HDFS-5535 subtasks:
 
     HDFS-5835. Add a new option for starting Namenode when rolling upgrade is
     in progress. (szetszwo)
+
+    HDFS-5754. Split LayoutVerion into NameNodeLayoutVersion and
+    DataNodeLayoutVersion. (Brandon Li via szetszwo)

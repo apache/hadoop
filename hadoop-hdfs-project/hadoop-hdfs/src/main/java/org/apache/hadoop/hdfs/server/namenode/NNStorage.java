@@ -38,7 +38,6 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
-import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
@@ -533,7 +532,7 @@ public class NNStorage extends Storage implements Closeable,
    */
   public void format(NamespaceInfo nsInfo) throws IOException {
     Preconditions.checkArgument(nsInfo.getLayoutVersion() == 0 ||
-        nsInfo.getLayoutVersion() == HdfsConstants.LAYOUT_VERSION,
+        nsInfo.getLayoutVersion() == HdfsConstants.NAMENODE_LAYOUT_VERSION,
         "Bad layout version: %s", nsInfo.getLayoutVersion());
     
     this.setStorageInfo(nsInfo);
@@ -552,7 +551,7 @@ public class NNStorage extends Storage implements Closeable,
   }
   
   public void format() throws IOException {
-    this.layoutVersion = HdfsConstants.LAYOUT_VERSION;
+    this.layoutVersion = HdfsConstants.NAMENODE_LAYOUT_VERSION;
     for (Iterator<StorageDirectory> it =
                            dirIterator(); it.hasNext();) {
       StorageDirectory sd = it.next();
@@ -589,7 +588,8 @@ public class NNStorage extends Storage implements Closeable,
     }
 
     // Set Block pool ID in version with federation support
-    if (versionSupportsFederation()) {
+    if (NameNodeLayoutVersion.supports(
+        LayoutVersion.Feature.FEDERATION, getLayoutVersion())) {
       String sbpid = props.getProperty("blockpoolID");
       setBlockPoolID(sd.getRoot(), sbpid);
     }
@@ -614,7 +614,7 @@ public class NNStorage extends Storage implements Closeable,
    * This should only be used during upgrades.
    */
   String getDeprecatedProperty(String prop) {
-    assert getLayoutVersion() > HdfsConstants.LAYOUT_VERSION :
+    assert getLayoutVersion() > HdfsConstants.NAMENODE_LAYOUT_VERSION :
       "getDeprecatedProperty should only be done when loading " +
       "storage from past versions during upgrade.";
     return deprecatedProperties.get(prop);
@@ -636,7 +636,8 @@ public class NNStorage extends Storage implements Closeable,
                            ) throws IOException {
     super.setPropertiesFromFields(props, sd);
     // Set blockpoolID in version with federation support
-    if (versionSupportsFederation()) {
+    if (NameNodeLayoutVersion.supports(
+        LayoutVersion.Feature.FEDERATION, getLayoutVersion())) {
       props.setProperty("blockpoolID", blockpoolID);
     }
   }
@@ -808,7 +809,8 @@ public class NNStorage extends Storage implements Closeable,
       // If upgrade from a release that does not support federation,
       // if clusterId is provided in the startupOptions use it.
       // Else generate a new cluster ID      
-      if (!LayoutVersion.supports(Feature.FEDERATION, layoutVersion)) {
+      if (!NameNodeLayoutVersion.supports(
+          LayoutVersion.Feature.FEDERATION, layoutVersion)) {
         if (startOpt.getClusterId() == null) {
           startOpt.setClusterId(newClusterID());
         }
@@ -1005,7 +1007,8 @@ public class NNStorage extends Storage implements Closeable,
     // (ie edits_<txnid>) then use the new inspector, which will ignore
     // the old format dirs.
     FSImageStorageInspector inspector;
-    if (LayoutVersion.supports(Feature.TXID_BASED_LAYOUT, getLayoutVersion())) {
+    if (NameNodeLayoutVersion.supports(
+        LayoutVersion.Feature.TXID_BASED_LAYOUT, getLayoutVersion())) {
       inspector = new FSImageTransactionalStorageInspector();
     } else {
       inspector = new FSImagePreTransactionalStorageInspector();

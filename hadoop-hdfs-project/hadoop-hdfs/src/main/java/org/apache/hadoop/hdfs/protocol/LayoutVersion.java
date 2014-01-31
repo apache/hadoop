@@ -17,9 +17,10 @@
  */
 package org.apache.hadoop.hdfs.protocol;
 
-import java.util.EnumSet;
-import java.util.HashMap;
+import java.util.Comparator;
 import java.util.Map;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 
@@ -54,19 +55,27 @@ public class LayoutVersion {
   public static final int BUGFIX_HDFS_2991_VERSION = -40;
 
   /**
-   * Enums for features that change the layout version.
+   * The interface to be implemented by NameNode and DataNode layout features 
+   */
+  public interface LayoutFeature {
+    public FeatureInfo getInfo();
+  }
+
+  /**
+   * Enums for features that change the layout version before rolling
+   * upgrade is supported.
    * <br><br>
    * To add a new layout version:
    * <ul>
    * <li>Define a new enum constant with a short enum name, the new layout version 
    * and description of the added feature.</li>
    * <li>When adding a layout version with an ancestor that is not same as
-   * its immediate predecessor, use the constructor where a spacific ancestor
+   * its immediate predecessor, use the constructor where a specific ancestor
    * can be passed.
    * </li>
    * </ul>
    */
-  public static enum Feature {
+  public static enum Feature implements LayoutFeature {
     NAMESPACE_QUOTA(-16, "Support for namespace quotas"),
     FILE_ACCESS_TIME(-17, "Support for access time on files"),
     DISKSPACE_QUOTA(-18, "Support for disk space quotas"),
@@ -112,15 +121,10 @@ public class LayoutVersion {
     ADD_DATANODE_AND_STORAGE_UUIDS(-49, "Replace StorageID with DatanodeUuid."
         + " Use distinct StorageUuid per storage directory."),
     ADD_LAYOUT_FLAGS(-50, "Add support for layout flags."),
-    CACHING(-51, "Support for cache pools and path-based caching"),
-    ROLLING_UPGRADE_MARKER(-52, "Upgrade marker for rolling upgrade");
+    CACHING(-51, "Support for cache pools and path-based caching");
 
-    final int lv;
-    final int ancestorLV;
-    final String description;
-    final boolean reserved;
-    final Feature[] specialFeatures;
-    
+    private final FeatureInfo info;
+
     /**
      * Feature that is added at layout version {@code lv} - 1. 
      * @param lv new layout version with the addition of this feature
@@ -136,16 +140,35 @@ public class LayoutVersion {
      * @param ancestorLV layout version from which the new lv is derived from.
      * @param description description of the feature
      * @param reserved true when this is a layout version reserved for previous
-     *          verions
+     *        version
      * @param features set of features that are to be enabled for this version
      */
     Feature(final int lv, final int ancestorLV, final String description,
         boolean reserved, Feature... features) {
+      info = new FeatureInfo(lv, ancestorLV, description, reserved, features);
+    }
+    
+    @Override
+    public FeatureInfo getInfo() {
+      return info;
+    }
+  }
+  
+  /** Feature information. */
+  public static class FeatureInfo {
+    private final int lv;
+    private final int ancestorLV;
+    private final String description;
+    private final boolean reserved;
+    private final LayoutFeature[] specialFeatures;
+
+    public FeatureInfo(final int lv, final int ancestorLV, final String description,
+        boolean reserved, LayoutFeature... specialFeatures) {
       this.lv = lv;
       this.ancestorLV = ancestorLV;
       this.description = description;
       this.reserved = reserved;
-      specialFeatures = features;
+      this.specialFeatures = specialFeatures;
     }
     
     /** 
@@ -175,80 +198,88 @@ public class LayoutVersion {
     public boolean isReservedForOldRelease() {
       return reserved;
     }
+    
+    public LayoutFeature[] getSpecialFeatures() {
+      return specialFeatures;
+    }
   }
-  
-  // Build layout version and corresponding feature matrix
-  static final Map<Integer, EnumSet<Feature>>map = 
-    new HashMap<Integer, EnumSet<Feature>>();
-  
-  // Static initialization 
-  static {
-    initMap();
+
+  static class LayoutFeatureComparator implements Comparator<LayoutFeature> {
+    @Override
+    public int compare(LayoutFeature arg0, LayoutFeature arg1) {
+      return arg0.getInfo().getLayoutVersion()
+          - arg1.getInfo().getLayoutVersion();
+    }
   }
-  
-  /**
-   * Initialize the map of a layout version and EnumSet of {@link Feature}s 
-   * supported.
-   */
-  private static void initMap() {
+ 
+  public static void updateMap(Map<Integer, SortedSet<LayoutFeature>> map,
+      LayoutFeature[] features) {
     // Go through all the enum constants and build a map of
-    // LayoutVersion <-> EnumSet of all supported features in that LayoutVersion
-    for (Feature f : Feature.values()) {
-      EnumSet<Feature> ancestorSet = map.get(f.ancestorLV);
+    // LayoutVersion <-> Set of all supported features in that LayoutVersion
+    for (LayoutFeature f : features) {
+      final FeatureInfo info = f.getInfo();
+      SortedSet<LayoutFeature> ancestorSet = map.get(info.getAncestorLayoutVersion());
       if (ancestorSet == null) {
-        ancestorSet = EnumSet.noneOf(Feature.class); // Empty enum set
-        map.put(f.ancestorLV, ancestorSet);
+        // Empty set
+        ancestorSet = new TreeSet<LayoutFeature>(new LayoutFeatureComparator());
+        map.put(info.getAncestorLayoutVersion(), ancestorSet);
       }
-      EnumSet<Feature> featureSet = EnumSet.copyOf(ancestorSet);
-      if (f.specialFeatures != null) {
-        for (Feature specialFeature : f.specialFeatures) {
+      SortedSet<LayoutFeature> featureSet = new TreeSet<LayoutFeature>(ancestorSet);
+      if (info.getSpecialFeatures() != null) {
+        for (LayoutFeature specialFeature : info.getSpecialFeatures()) {
           featureSet.add(specialFeature);
         }
       }
       featureSet.add(f);
-      map.put(f.lv, featureSet);
+      map.put(info.getLayoutVersion(), featureSet);
     }
   }
   
   /**
    * Gets formatted string that describes {@link LayoutVersion} information.
    */
-  public static String getString() {
+  public String getString(Map<Integer, SortedSet<LayoutFeature>> map,
+      LayoutFeature[] values) {
     final StringBuilder buf = new StringBuilder();
     buf.append("Feature List:\n");
-    for (Feature f : Feature.values()) {
+    for (LayoutFeature f : values) {
+      final FeatureInfo info = f.getInfo();
       buf.append(f).append(" introduced in layout version ")
-          .append(f.lv).append(" (").
-      append(f.description).append(")\n");
+          .append(info.getLayoutVersion()).append(" (")
+          .append(info.getDescription()).append(")\n");
     }
-    
+
     buf.append("\n\nLayoutVersion and supported features:\n");
-    for (Feature f : Feature.values()) {
-      buf.append(f.lv).append(": ").append(map.get(f.lv))
-          .append("\n");
+    for (LayoutFeature f : values) {
+      final FeatureInfo info = f.getInfo();
+      buf.append(info.getLayoutVersion()).append(": ")
+          .append(map.get(info.getLayoutVersion())).append("\n");
     }
     return buf.toString();
   }
   
   /**
    * Returns true if a given feature is supported in the given layout version
+   * @param map layout feature map
    * @param f Feature
    * @param lv LayoutVersion
    * @return true if {@code f} is supported in layout version {@code lv}
    */
-  public static boolean supports(final Feature f, final int lv) {
-    final EnumSet<Feature> set =  map.get(lv);
+  public static boolean supports(Map<Integer, SortedSet<LayoutFeature>> map,
+      final LayoutFeature f, final int lv) {
+    final SortedSet<LayoutFeature> set =  map.get(lv);
     return set != null && set.contains(f);
   }
   
   /**
    * Get the current layout version
    */
-  public static int getCurrentLayoutVersion() {
-    Feature[] values = Feature.values();
+  public static int getCurrentLayoutVersion(
+      Map<Integer, SortedSet<LayoutFeature>> map, LayoutFeature[] values) {
     for (int i = values.length -1; i >= 0; i--) {
-      if (!values[i].isReservedForOldRelease()) {
-        return values[i].lv;
+      final FeatureInfo info = values[i].getInfo();
+      if (!info.isReservedForOldRelease()) {
+        return info.getLayoutVersion();
       }
     }
     throw new AssertionError("All layout versions are reserved.");

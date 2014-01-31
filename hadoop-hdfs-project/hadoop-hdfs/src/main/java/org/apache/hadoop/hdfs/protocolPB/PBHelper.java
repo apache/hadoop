@@ -138,6 +138,7 @@ import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.namenode.CheckpointSignature;
@@ -232,9 +233,9 @@ public class PBHelper {
         .setNamespceID(info.getNamespaceID()).build();
   }
 
-  public static StorageInfo convert(StorageInfoProto info) {
+  public static StorageInfo convert(StorageInfoProto info, NodeType type) {
     return new StorageInfo(info.getLayoutVersion(), info.getNamespceID(),
-        info.getClusterID(), info.getCTime());
+        info.getClusterID(), info.getCTime(), type);
   }
 
   public static NamenodeRegistrationProto convert(NamenodeRegistration reg) {
@@ -245,8 +246,9 @@ public class PBHelper {
   }
 
   public static NamenodeRegistration convert(NamenodeRegistrationProto reg) {
+    StorageInfo si = convert(reg.getStorageInfo(), NodeType.NAME_NODE);
     return new NamenodeRegistration(reg.getRpcAddress(), reg.getHttpAddress(),
-        convert(reg.getStorageInfo()), convert(reg.getRole()));
+        si, convert(reg.getRole()));
   }
 
   // DatanodeId
@@ -378,9 +380,9 @@ public class PBHelper {
   }
 
   public static CheckpointSignature convert(CheckpointSignatureProto s) {
-    return new CheckpointSignature(PBHelper.convert(s.getStorageInfo()),
-        s.getBlockPoolId(), s.getMostRecentCheckpointTxId(),
-        s.getCurSegmentTxId());
+    StorageInfo si = PBHelper.convert(s.getStorageInfo(), NodeType.NAME_NODE);
+    return new CheckpointSignature(si, s.getBlockPoolId(),
+        s.getMostRecentCheckpointTxId(), s.getCurSegmentTxId());
   }
 
   public static RemoteEditLogProto convert(RemoteEditLog log) {
@@ -733,9 +735,9 @@ public class PBHelper {
   }
 
   public static DatanodeRegistration convert(DatanodeRegistrationProto proto) {
+    StorageInfo si = convert(proto.getStorageInfo(), NodeType.DATA_NODE);
     return new DatanodeRegistration(PBHelper.convert(proto.getDatanodeID()),
-        PBHelper.convert(proto.getStorageInfo()), PBHelper.convert(proto
-            .getKeys()), proto.getSoftwareVersion());
+        si, PBHelper.convert(proto.getKeys()), proto.getSoftwareVersion());
   }
 
   public static DatanodeCommand convert(DatanodeCommandProto proto) {

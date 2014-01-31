@@ -38,7 +38,6 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
-import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
@@ -91,7 +90,7 @@ public class DataStorage extends Storage {
   }
   
   public DataStorage(StorageInfo storageInfo) {
-    super(NodeType.DATA_NODE, storageInfo);
+    super(storageInfo);
   }
 
   public synchronized String getDatanodeUuid() {
@@ -131,10 +130,9 @@ public class DataStorage extends Storage {
       // DN storage has been initialized, no need to do anything
       return;
     }
-    assert HdfsConstants.LAYOUT_VERSION == nsInfo.getLayoutVersion() :
-      "Data-node version " + HdfsConstants.LAYOUT_VERSION + 
-      " and name-node layout version " + nsInfo.getLayoutVersion() + 
-      " must be the same.";
+    if( HdfsConstants.DATANODE_LAYOUT_VERSION == nsInfo.getLayoutVersion())
+      LOG.info("Data-node version: " + HdfsConstants.DATANODE_LAYOUT_VERSION + 
+      " and name-node layout version: " + nsInfo.getLayoutVersion());
     
     // 1. For each data directory calculate its state and 
     // check whether all is consistent before transitioning.
@@ -261,7 +259,7 @@ public class DataStorage extends Storage {
   void format(StorageDirectory sd, NamespaceInfo nsInfo,
               String datanodeUuid) throws IOException {
     sd.clearDirectory(); // create directory
-    this.layoutVersion = HdfsConstants.LAYOUT_VERSION;
+    this.layoutVersion = HdfsConstants.DATANODE_LAYOUT_VERSION;
     this.clusterID = nsInfo.getClusterID();
     this.namespaceID = nsInfo.getNamespaceID();
     this.cTime = 0;
@@ -297,7 +295,8 @@ public class DataStorage extends Storage {
     }
 
     // Set NamespaceID in version before federation
-    if (!LayoutVersion.supports(Feature.FEDERATION, layoutVersion)) {
+    if (!DataNodeLayoutVersion.supports(
+        LayoutVersion.Feature.FEDERATION, layoutVersion)) {
       props.setProperty("namespaceID", String.valueOf(namespaceID));
     }
   }
@@ -321,11 +320,12 @@ public class DataStorage extends Storage {
       setLayoutVersion(props, sd);
     }
     setcTime(props, sd);
-    setStorageType(props, sd);
+    checkStorageType(props, sd);
     setClusterId(props, layoutVersion, sd);
     
     // Read NamespaceID in version before federation
-    if (!LayoutVersion.supports(Feature.FEDERATION, layoutVersion)) {
+    if (!DataNodeLayoutVersion.supports(
+        LayoutVersion.Feature.FEDERATION, layoutVersion)) {
       setNamespaceID(props, sd);
     }
     
@@ -414,11 +414,12 @@ public class DataStorage extends Storage {
     }
     readProperties(sd);
     checkVersionUpgradable(this.layoutVersion);
-    assert this.layoutVersion >= HdfsConstants.LAYOUT_VERSION :
+    assert this.layoutVersion >= HdfsConstants.DATANODE_LAYOUT_VERSION :
       "Future version is not allowed";
     
     boolean federationSupported = 
-      LayoutVersion.supports(Feature.FEDERATION, layoutVersion);
+      DataNodeLayoutVersion.supports(
+          LayoutVersion.Feature.FEDERATION, layoutVersion);
     // For pre-federation version - validate the namespaceID
     if (!federationSupported &&
         getNamespaceID() != nsInfo.getNamespaceID()) {
@@ -440,11 +441,11 @@ public class DataStorage extends Storage {
     // meaningful at BlockPoolSliceStorage level. 
 
     // regular start up. 
-    if (this.layoutVersion == HdfsConstants.LAYOUT_VERSION)
+    if (this.layoutVersion == HdfsConstants.DATANODE_LAYOUT_VERSION)
       return; // regular startup
     
     // do upgrade
-    if (this.layoutVersion > HdfsConstants.LAYOUT_VERSION) {
+    if (this.layoutVersion > HdfsConstants.DATANODE_LAYOUT_VERSION) {
       doUpgrade(sd, nsInfo);  // upgrade
       return;
     }
@@ -455,7 +456,7 @@ public class DataStorage extends Storage {
     // failed.
     throw new IOException("BUG: The stored LV = " + this.getLayoutVersion()
                           + " is newer than the supported LV = "
-                          + HdfsConstants.LAYOUT_VERSION
+                          + HdfsConstants.DATANODE_LAYOUT_VERSION
                           + " or name node LV = "
                           + nsInfo.getLayoutVersion());
   }
@@ -485,7 +486,8 @@ public class DataStorage extends Storage {
   void doUpgrade(StorageDirectory sd, NamespaceInfo nsInfo) throws IOException {
     // If the existing on-disk layout version supportes federation, simply
     // update its layout version.
-    if (LayoutVersion.supports(Feature.FEDERATION, layoutVersion)) {
+    if (DataNodeLayoutVersion.supports(
+        LayoutVersion.Feature.FEDERATION, layoutVersion)) {
       // The VERSION file is already read in. Override the layoutVersion 
       // field and overwrite the file.
       LOG.info("Updating layout version from " + layoutVersion + " to "
@@ -528,7 +530,7 @@ public class DataStorage extends Storage {
     linkAllBlocks(tmpDir, bbwDir, new File(curBpDir, STORAGE_DIR_CURRENT));
     
     // 4. Write version file under <SD>/current
-    layoutVersion = HdfsConstants.LAYOUT_VERSION;
+    layoutVersion = HdfsConstants.DATANODE_LAYOUT_VERSION;
     clusterID = nsInfo.getClusterID();
     writeProperties(sd);
     
@@ -548,7 +550,8 @@ public class DataStorage extends Storage {
    * @throws IOException if the directory is not empty or it can not be removed
    */
   private void cleanupDetachDir(File detachDir) throws IOException {
-    if (!LayoutVersion.supports(Feature.APPEND_RBW_DIR, layoutVersion) &&
+    if (!DataNodeLayoutVersion.supports(
+        LayoutVersion.Feature.APPEND_RBW_DIR, layoutVersion) &&
         detachDir.exists() && detachDir.isDirectory() ) {
       
         if (FileUtil.list(detachDir).length != 0 ) {
@@ -590,9 +593,10 @@ public class DataStorage extends Storage {
       // running a wrong version.  But this will be detected in block pool
       // level and the invalid VERSION content will be overwritten when
       // the error is corrected and rollback is retried.
-      if (LayoutVersion.supports(Feature.FEDERATION,
-          HdfsConstants.LAYOUT_VERSION) && 
-          HdfsConstants.LAYOUT_VERSION == nsInfo.getLayoutVersion()) {
+      if (DataNodeLayoutVersion.supports(
+          LayoutVersion.Feature.FEDERATION,
+          HdfsConstants.DATANODE_LAYOUT_VERSION) && 
+          HdfsConstants.DATANODE_LAYOUT_VERSION == nsInfo.getLayoutVersion()) {
         readProperties(sd, nsInfo.getLayoutVersion());
         writeProperties(sd);
         LOG.info("Layout version rolled back to " +
@@ -605,7 +609,7 @@ public class DataStorage extends Storage {
 
     // We allow rollback to a state, which is either consistent with
     // the namespace state or can be further upgraded to it.
-    if (!(prevInfo.getLayoutVersion() >= HdfsConstants.LAYOUT_VERSION
+    if (!(prevInfo.getLayoutVersion() >= HdfsConstants.DATANODE_LAYOUT_VERSION
           && prevInfo.getCTime() <= nsInfo.getCTime()))  // cannot rollback
       throw new InconsistentFSStateException(sd.getRoot(),
           "Cannot rollback to a newer state.\nDatanode previous state: LV = "
@@ -710,7 +714,8 @@ public class DataStorage extends Storage {
     HardLink hardLink = new HardLink();
     // do the link
     int diskLayoutVersion = this.getLayoutVersion();
-    if (LayoutVersion.supports(Feature.APPEND_RBW_DIR, diskLayoutVersion)) {
+    if (DataNodeLayoutVersion.supports(
+        LayoutVersion.Feature.APPEND_RBW_DIR, diskLayoutVersion)) {
       // hardlink finalized blocks in tmpDir/finalized
       linkBlocks(new File(fromDir, STORAGE_DIR_FINALIZED), 
           new File(toDir, STORAGE_DIR_FINALIZED), diskLayoutVersion, hardLink);

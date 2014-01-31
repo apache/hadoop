@@ -42,6 +42,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
@@ -884,8 +885,8 @@ public class DFSTestUtil {
   }
   
   public static DatanodeRegistration getLocalDatanodeRegistration() {
-    return new DatanodeRegistration(getLocalDatanodeID(),
-        new StorageInfo(), new ExportedBlockKeys(), VersionInfo.getVersion());
+    return new DatanodeRegistration(getLocalDatanodeID(), new StorageInfo(
+        NodeType.DATA_NODE), new ExportedBlockKeys(), VersionInfo.getVersion());
   }
   
   /** Copy one file's contents into the other **/

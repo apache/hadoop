@@ -41,7 +41,6 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
-import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
@@ -216,11 +215,11 @@ public class FSImage implements Closeable {
     }
     if (startOpt != StartupOption.UPGRADE
         && layoutVersion < Storage.LAST_PRE_UPGRADE_LAYOUT_VERSION
-        && layoutVersion != HdfsConstants.LAYOUT_VERSION) {
+        && layoutVersion != HdfsConstants.NAMENODE_LAYOUT_VERSION) {
       throw new IOException(
           "\nFile system image contains an old layout version " 
           + storage.getLayoutVersion() + ".\nAn upgrade to version "
-          + HdfsConstants.LAYOUT_VERSION + " is required.\n"
+          + HdfsConstants.NAMENODE_LAYOUT_VERSION + " is required.\n"
           + "Please restart NameNode with -upgrade option.");
     }
     
@@ -333,7 +332,7 @@ public class FSImage implements Closeable {
     long oldCTime = storage.getCTime();
     storage.cTime = now();  // generate new cTime for the state
     int oldLV = storage.getLayoutVersion();
-    storage.layoutVersion = HdfsConstants.LAYOUT_VERSION;
+    storage.layoutVersion = HdfsConstants.NAMENODE_LAYOUT_VERSION;
     
     List<StorageDirectory> errorSDs =
       Collections.synchronizedList(new ArrayList<StorageDirectory>());
@@ -393,11 +392,11 @@ public class FSImage implements Closeable {
     boolean canRollback = false;
     FSImage prevState = new FSImage(conf);
     try {
-      prevState.getStorage().layoutVersion = HdfsConstants.LAYOUT_VERSION;
+      prevState.getStorage().layoutVersion = HdfsConstants.NAMENODE_LAYOUT_VERSION;
       for (Iterator<StorageDirectory> it = storage.dirIterator(false); it.hasNext();) {
         StorageDirectory sd = it.next();
         if (!NNUpgradeUtil.canRollBack(sd, storage, prevState.getStorage(),
-            HdfsConstants.LAYOUT_VERSION)) {
+            HdfsConstants.NAMENODE_LAYOUT_VERSION)) {
           continue;
         }
         canRollback = true;
@@ -407,7 +406,7 @@ public class FSImage implements Closeable {
         // If HA is enabled, check if the shared log can be rolled back as well.
         editLog.initJournalsForWrite();
         canRollback |= editLog.canRollBackSharedLog(prevState.getStorage(),
-            HdfsConstants.LAYOUT_VERSION);
+            HdfsConstants.NAMENODE_LAYOUT_VERSION);
       }
       
       if (!canRollback)
@@ -561,8 +560,8 @@ public class FSImage implements Closeable {
 
     initEditLog(startOpt);
 
-    if (LayoutVersion.supports(Feature.TXID_BASED_LAYOUT, 
-                               getLayoutVersion())) {
+    if (NameNodeLayoutVersion.supports(
+        LayoutVersion.Feature.TXID_BASED_LAYOUT, getLayoutVersion())) {
       // If we're open for write, we're either non-HA or we're the active NN, so
       // we better be able to load all the edits. If we're the standby NN, it's
       // OK to not be able to read all of edits right now.
@@ -618,13 +617,13 @@ public class FSImage implements Closeable {
     StorageDirectory sdForProperties = imageFile.sd;
     storage.readProperties(sdForProperties);
 
-    if (LayoutVersion.supports(Feature.TXID_BASED_LAYOUT,
-                               getLayoutVersion())) {
+    if (NameNodeLayoutVersion.supports(
+        LayoutVersion.Feature.TXID_BASED_LAYOUT, getLayoutVersion())) {
       // For txid-based layout, we should have a .md5 file
       // next to the image file
       loadFSImage(imageFile.getFile(), target, recovery);
-    } else if (LayoutVersion.supports(Feature.FSIMAGE_CHECKSUM,
-                                      getLayoutVersion())) {
+    } else if (NameNodeLayoutVersion.supports(
+        LayoutVersion.Feature.FSIMAGE_CHECKSUM, getLayoutVersion())) {
       // In 0.22, we have the checksum stored in the VERSION file.
       String md5 = storage.getDeprecatedProperty(
           NNStorage.DEPRECATED_MESSAGE_DIGEST_PROPERTY);

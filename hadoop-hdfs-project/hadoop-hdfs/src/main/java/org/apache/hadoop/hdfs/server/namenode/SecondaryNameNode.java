@@ -511,8 +511,10 @@ public class SecondaryNameNode implements Runnable {
     boolean loadImage = false;
     boolean isFreshCheckpointer = (checkpointImage.getNamespaceID() == 0);
     boolean isSameCluster =
-        (dstStorage.versionSupportsFederation() && sig.isSameCluster(checkpointImage)) ||
-        (!dstStorage.versionSupportsFederation() && sig.namespaceIdMatches(checkpointImage));
+        (dstStorage.versionSupportsFederation(NameNodeLayoutVersion.FEATURES)
+            && sig.isSameCluster(checkpointImage)) ||
+        (!dstStorage.versionSupportsFederation(NameNodeLayoutVersion.FEATURES)
+            && sig.namespaceIdMatches(checkpointImage));
     if (isFreshCheckpointer ||
         (isSameCluster &&
          !sig.storageVersionMatches(checkpointImage.getStorage()))) {
