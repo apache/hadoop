@@ -1194,7 +1194,7 @@ public class DataNode extends Configured
   
   private void checkBlockToken(ExtendedBlock block, Token<BlockTokenIdentifier> token,
       AccessMode accessMode) throws IOException {
-    if (isBlockTokenEnabled && UserGroupInformation.isSecurityEnabled()) {
+    if (isBlockTokenEnabled) {
       BlockTokenIdentifier id = new BlockTokenIdentifier();
       ByteArrayInputStream buf = new ByteArrayInputStream(token.getIdentifier());
       DataInputStream in = new DataInputStream(buf);

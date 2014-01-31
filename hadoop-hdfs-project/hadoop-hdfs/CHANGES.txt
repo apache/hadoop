@@ -303,6 +303,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-5804. HDFS NFS Gateway fails to mount and proxy when using Kerberos.
     (Abin Shahab via jing9)
 
+    HDFS-5859. DataNode#checkBlockToken should check block tokens even if
+    security is not enabled. (cmccabe)
+
   OPTIMIZATIONS
 
     HDFS-5790. LeaseManager.findPath is very slow when many leases need recovery
