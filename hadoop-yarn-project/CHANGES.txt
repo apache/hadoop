@@ -9,6 +9,9 @@ Trunk - Unreleased
     YARN-1496. Protocol additions to allow moving apps between queues (Sandy
     Ryza)
 
+    YARN-1498. Common scheduler changes for moving apps between queues (Sandy
+    Ryza)
+
   IMPROVEMENTS
 
   OPTIMIZATIONS

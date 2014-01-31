@@ -73,7 +73,7 @@ public class TestQueueMetrics {
     checkApps(queueSource, 1, 1, 0, 0, 0, 0, true);
 
     metrics.setAvailableResourcesToQueue(Resources.createResource(100*GB, 100));
-    metrics.incrPendingResources(user, 5, Resources.createResource(15*GB, 15));
+    metrics.incrPendingResources(user, 5, Resources.createResource(3*GB, 3));
     // Available resources is set externally, as it depends on dynamic
     // configurable cluster/queue resources
     checkResources(queueSource, 0, 0, 0, 0, 0, 100*GB, 100, 15*GB, 15, 5, 0, 0, 0);
@@ -81,7 +81,7 @@ public class TestQueueMetrics {
     metrics.runAppAttempt(app.getApplicationId(), user);
     checkApps(queueSource, 1, 0, 1, 0, 0, 0, true);
 
-    metrics.allocateResources(user, 3, Resources.createResource(2*GB, 2));
+    metrics.allocateResources(user, 3, Resources.createResource(2*GB, 2), true);
     checkResources(queueSource, 6*GB, 6, 3, 3, 0, 100*GB, 100, 9*GB, 9, 2, 0, 0, 0);
 
     metrics.releaseResources(user, 1, Resources.createResource(2*GB, 2));
@@ -171,7 +171,7 @@ public class TestQueueMetrics {
 
     metrics.setAvailableResourcesToQueue(Resources.createResource(100*GB, 100));
     metrics.setAvailableResourcesToUser(user, Resources.createResource(10*GB, 10));
-    metrics.incrPendingResources(user, 5, Resources.createResource(15*GB, 15));
+    metrics.incrPendingResources(user, 5, Resources.createResource(3*GB, 3));
     // Available resources is set externally, as it depends on dynamic
     // configurable cluster/queue resources
     checkResources(queueSource, 0, 0, 0, 0, 0,  100*GB, 100, 15*GB, 15, 5, 0, 0, 0);
@@ -181,7 +181,7 @@ public class TestQueueMetrics {
     checkApps(queueSource, 1, 0, 1, 0, 0, 0, true);
     checkApps(userSource, 1, 0, 1, 0, 0, 0, true);
 
-    metrics.allocateResources(user, 3, Resources.createResource(2*GB, 2));
+    metrics.allocateResources(user, 3, Resources.createResource(2*GB, 2), true);
     checkResources(queueSource, 6*GB, 6, 3, 3, 0, 100*GB, 100, 9*GB, 9, 2, 0, 0, 0);
     checkResources(userSource, 6*GB, 6, 3, 3, 0, 10*GB, 10, 9*GB, 9, 2, 0, 0, 0);
 
@@ -232,7 +232,7 @@ public class TestQueueMetrics {
     metrics.setAvailableResourcesToQueue(Resources.createResource(100*GB, 100));
     parentMetrics.setAvailableResourcesToUser(user, Resources.createResource(10*GB, 10));
     metrics.setAvailableResourcesToUser(user, Resources.createResource(10*GB, 10));
-    metrics.incrPendingResources(user, 5, Resources.createResource(15*GB, 15));
+    metrics.incrPendingResources(user, 5, Resources.createResource(3*GB, 3));
     checkResources(queueSource, 0, 0, 0, 0, 0, 100*GB, 100, 15*GB, 15, 5, 0, 0, 0);
     checkResources(parentQueueSource, 0, 0, 0, 0, 0, 100*GB, 100, 15*GB, 15, 5, 0, 0, 0);
     checkResources(userSource, 0, 0, 0, 0, 0, 10*GB, 10, 15*GB, 15, 5, 0, 0, 0);
@@ -242,7 +242,7 @@ public class TestQueueMetrics {
     checkApps(queueSource, 1, 0, 1, 0, 0, 0, true);
     checkApps(userSource, 1, 0, 1, 0, 0, 0, true);
 
-    metrics.allocateResources(user, 3, Resources.createResource(2*GB, 2));
+    metrics.allocateResources(user, 3, Resources.createResource(2*GB, 2), true);
     metrics.reserveResource(user, Resources.createResource(3*GB, 3));
     // Available resources is set externally, as it depends on dynamic
     // configurable cluster/queue resources

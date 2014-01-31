@@ -33,6 +33,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplication;
@@ -54,11 +55,14 @@ public class FSLeafQueue extends FSQueue {
   private long lastTimeAtMinShare;
   private long lastTimeAtHalfFairShare;
   
+  private final ActiveUsersManager activeUsersManager;
+  
   public FSLeafQueue(String name, FairScheduler scheduler,
       FSParentQueue parent) {
     super(name, scheduler, parent);
     this.lastTimeAtMinShare = scheduler.getClock().getTime();
     this.lastTimeAtHalfFairShare = scheduler.getClock().getTime();
+    activeUsersManager = new ActiveUsersManager(getMetrics());
   }
   
   public void addApp(FSSchedulerApp app, boolean runnable) {
@@ -244,5 +248,10 @@ public class FSLeafQueue extends FSQueue {
   @Override
   public int getNumRunnableApps() {
     return runnableAppScheds.size();
+  }
+  
+  @Override
+  public ActiveUsersManager getActiveUsersManager() {
+    return activeUsersManager;
   }
 }

@@ -33,7 +33,7 @@ import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
 
 @Private
 @Unstable
@@ -193,5 +193,11 @@ public class FSParentQueue extends FSQueue {
     for (FSQueue childQueue : childQueues) {
       childQueue.collectSchedulerApplications(apps);
     }
+  }
+  
+  @Override
+  public ActiveUsersManager getActiveUsersManager() {
+    // Should never be called since all applications are submitted to LeafQueues
+    return null;
   }
 }
