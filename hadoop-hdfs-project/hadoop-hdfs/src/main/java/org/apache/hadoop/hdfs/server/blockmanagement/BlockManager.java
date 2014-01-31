@@ -1621,15 +1621,19 @@ public class BlockManager {
   /**
    * The given storage is reporting all its blocks.
    * Update the (storage-->block list) and (block-->storage list) maps.
+   *
+   * @return true if all known storages of the given DN have finished reporting.
+   * @throws IOException
    */
-  public void processReport(final DatanodeID nodeID,
+  public boolean processReport(final DatanodeID nodeID,
       final DatanodeStorage storage, final String poolId,
       final BlockListAsLongs newReport) throws IOException {
     namesystem.writeLock();
     final long startTime = Time.now(); //after acquiring write lock
     final long endTime;
+    DatanodeDescriptor node;
     try {
-      final DatanodeDescriptor node = datanodeManager.getDatanode(nodeID);
+      node = datanodeManager.getDatanode(nodeID);
       if (node == null || !node.isAlive) {
         throw new IOException(
             "ProcessReport from dead or unregistered node: " + nodeID);
@@ -1637,13 +1641,21 @@ public class BlockManager {
 
       // To minimize startup time, we discard any second (or later) block reports
       // that we receive while still in startup phase.
-      final DatanodeStorageInfo storageInfo = node.updateStorage(storage);
+      DatanodeStorageInfo storageInfo = node.getStorageInfo(storage.getStorageID());
+
+      if (storageInfo == null) {
+        // We handle this for backwards compatibility.
+        storageInfo = node.updateStorage(storage);
+        LOG.warn("Unknown storageId " + storage.getStorageID() +
+                    ", updating storageMap. This indicates a buggy " +
+                    "DataNode that isn't heartbeating correctly.");
+      }
       if (namesystem.isInStartupSafeMode()
           && storageInfo.getBlockReportCount() > 0) {
         blockLog.info("BLOCK* processReport: "
             + "discarded non-initial block report from " + nodeID
             + " because namenode still in startup phase");
-        return;
+        return !node.hasStaleStorages();
       }
 
       if (storageInfo.numBlocks() == 0) {
@@ -1660,7 +1672,7 @@ public class BlockManager {
       storageInfo.receivedBlockReport();
       if (staleBefore && !storageInfo.areBlockContentsStale()) {
         LOG.info("BLOCK* processReport: Received first block report from "
-            + node + " after starting up or becoming active. Its block "
+            + storage + " after starting up or becoming active. Its block "
             + "contents are no longer considered stale");
         rescanPostponedMisreplicatedBlocks();
       }
@@ -1675,9 +1687,10 @@ public class BlockManager {
     if (metrics != null) {
       metrics.addBlockReport((int) (endTime - startTime));
     }
-    blockLog.info("BLOCK* processReport: from "
-        + nodeID + ", blocks: " + newReport.getNumberOfBlocks()
+    blockLog.info("BLOCK* processReport: from storage " + storage.getStorageID()
+        + " node " + nodeID + ", blocks: " + newReport.getNumberOfBlocks()
         + ", processing time: " + (endTime - startTime) + " msecs");
+    return !node.hasStaleStorages();
   }
 
   /**
@@ -1832,7 +1845,7 @@ public class BlockManager {
       Collection<BlockToMarkCorrupt> toCorrupt, // add to corrupt replicas list
       Collection<StatefulBlockInfo> toUC) { // add to under-construction list
 
-    final DatanodeStorageInfo storageInfo = dn.updateStorage(storage);
+    final DatanodeStorageInfo storageInfo = dn.getStorageInfo(storage.getStorageID());
 
     // place a delimiter in the list which separates blocks 
     // that have been reported from those that have not

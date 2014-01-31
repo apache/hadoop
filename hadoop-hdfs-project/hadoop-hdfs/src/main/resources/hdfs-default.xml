@@ -483,6 +483,20 @@
 </property>
 
 <property>
+    <name>dfs.blockreport.split.threshold</name>
+    <value>1000000</value>
+    <description>If the number of blocks on the DataNode is below this
+    threshold then it will send block reports for all Storage Directories
+    in a single message.
+
+    If the number of blocks exceeds this threshold then the DataNode will
+    send block reports for each Storage Directory in separate messages.
+
+    Set to zero to always split.
+    </description>
+</property>
+
+<property>
   <name>dfs.datanode.directoryscan.interval</name>
   <value>21600</value>
   <description>Interval in seconds for Datanode to scan data directories and
