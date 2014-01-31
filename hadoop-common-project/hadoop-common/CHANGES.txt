@@ -467,6 +467,9 @@ Release 2.3.0 - UNRELEASED
     "rpc.metrics.percentiles.intervals" to core-default.xml.
     (Akira Ajisaka via wang)
 
+    HADOOP-10317. Rename branch-2.3 release version from 2.4.0-SNAPSHOT
+    to 2.3.0-SNAPSHOT. (wang)
+
   OPTIMIZATIONS
 
     HADOOP-10142. Avoid groups lookup for unprivileged users such as "dr.who"
