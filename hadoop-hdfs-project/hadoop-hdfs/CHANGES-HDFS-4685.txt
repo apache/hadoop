@@ -50,6 +50,9 @@ HDFS-4685 (Unreleased)
     HDFS-5608. WebHDFS: implement ACL APIs.
     (Sachin Jose and Renil Joseph via cnauroth)
 
+    HDFS-5614. NameNode: implement handling of ACLs in combination with
+    snapshots. (cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES

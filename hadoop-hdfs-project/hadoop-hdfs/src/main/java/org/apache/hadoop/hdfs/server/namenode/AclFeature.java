@@ -31,13 +31,13 @@ import org.apache.hadoop.fs.permission.AclEntry;
 public class AclFeature implements INode.Feature {
   public static final List<AclEntry> EMPTY_ENTRY_LIST = Collections.emptyList();
 
-  private List<AclEntry> entries;
+  private final List<AclEntry> entries;
+
+  public AclFeature(List<AclEntry> entries) {
+    this.entries = entries;
+  }
 
   public List<AclEntry> getEntries() {
     return entries;
-  }
-
-  public void setEntries(List<AclEntry> entries) {
-    this.entries = entries;
   }
 }

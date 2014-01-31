@@ -240,16 +240,13 @@ class FSPermissionChecker {
     }
     FsPermission mode = inode.getFsPermission(snapshotId);
     if (mode.getAclBit()) {
-      // TODO: handling of INodeReference?
-      AclFeature aclFeature = inode instanceof INodeWithAdditionalFields ?
-        ((INodeWithAdditionalFields)inode).getAclFeature() : null;
-      if (aclFeature != null) {
-        List<AclEntry> featureEntries = aclFeature.getEntries();
-        // It's possible that the inode has a default ACL but no access ACL.
-        if (featureEntries.get(0).getScope() == AclEntryScope.ACCESS) {
-          checkAccessAcl(inode, snapshotId, access, mode, featureEntries);
-          return;
-        }
+      AclFeature aclFeature = inode.getAclFeature(snapshotId);
+      assert aclFeature != null;
+      List<AclEntry> featureEntries = aclFeature.getEntries();
+      // It's possible that the inode has a default ACL but no access ACL.
+      if (featureEntries.get(0).getScope() == AclEntryScope.ACCESS) {
+        checkAccessAcl(inode, snapshotId, access, mode, featureEntries);
+        return;
       }
     }
     checkFsPermission(inode, snapshotId, access, mode);

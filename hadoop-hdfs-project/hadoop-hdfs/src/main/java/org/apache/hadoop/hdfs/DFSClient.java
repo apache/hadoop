@@ -2651,6 +2651,7 @@ public class DFSClient implements java.io.Closeable {
       throw re.unwrapRemoteException(AccessControlException.class,
                                      AclException.class,
                                      FileNotFoundException.class,
+                                     NSQuotaExceededException.class,
                                      SafeModeException.class,
                                      SnapshotAccessControlException.class,
                                      UnresolvedPathException.class);
@@ -2666,6 +2667,7 @@ public class DFSClient implements java.io.Closeable {
       throw re.unwrapRemoteException(AccessControlException.class,
                                      AclException.class,
                                      FileNotFoundException.class,
+                                     NSQuotaExceededException.class,
                                      SafeModeException.class,
                                      SnapshotAccessControlException.class,
                                      UnresolvedPathException.class);
@@ -2680,6 +2682,7 @@ public class DFSClient implements java.io.Closeable {
       throw re.unwrapRemoteException(AccessControlException.class,
                                      AclException.class,
                                      FileNotFoundException.class,
+                                     NSQuotaExceededException.class,
                                      SafeModeException.class,
                                      SnapshotAccessControlException.class,
                                      UnresolvedPathException.class);
@@ -2694,6 +2697,7 @@ public class DFSClient implements java.io.Closeable {
       throw re.unwrapRemoteException(AccessControlException.class,
                                      AclException.class,
                                      FileNotFoundException.class,
+                                     NSQuotaExceededException.class,
                                      SafeModeException.class,
                                      SnapshotAccessControlException.class,
                                      UnresolvedPathException.class);
@@ -2708,6 +2712,7 @@ public class DFSClient implements java.io.Closeable {
       throw re.unwrapRemoteException(AccessControlException.class,
                                      AclException.class,
                                      FileNotFoundException.class,
+                                     NSQuotaExceededException.class,
                                      SafeModeException.class,
                                      SnapshotAccessControlException.class,
                                      UnresolvedPathException.class);

@@ -21,6 +21,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Date;
 
@@ -28,11 +29,15 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.server.namenode.AclFeature;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormat;
 import org.apache.hadoop.hdfs.server.namenode.FSImageSerialization;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
+
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 
 /** Snapshot of a sub-tree in the namesystem. */
 @InterfaceAudience.Private
@@ -139,7 +144,10 @@ public class Snapshot implements Comparable<byte[]> {
   /** The root directory of the snapshot. */
   static public class Root extends INodeDirectory {
     Root(INodeDirectory other) {
-      super(other, false, false);
+      // Always preserve ACL.
+      super(other, false, Lists.newArrayList(
+        Iterables.filter(Arrays.asList(other.getFeatures()), AclFeature.class))
+        .toArray(new Feature[0]));
     }
 
     @Override

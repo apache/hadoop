@@ -77,8 +77,11 @@ public class INodeDirectory extends INodeWithAdditionalFields
    * @param other The INodeDirectory to be copied
    * @param adopt Indicate whether or not need to set the parent field of child
    *              INodes to the new node
+   * @param featuresToCopy any number of features to copy to the new node.
+   *              The method will do a reference copy, not a deep copy.
    */
-  public INodeDirectory(INodeDirectory other, boolean adopt, boolean copyFeatures) {
+  public INodeDirectory(INodeDirectory other, boolean adopt,
+      Feature... featuresToCopy) {
     super(other);
     this.children = other.children;
     if (adopt && this.children != null) {
@@ -86,9 +89,7 @@ public class INodeDirectory extends INodeWithAdditionalFields
         child.setParent(this);
       }
     }
-    if (copyFeatures) {
-      this.features = other.features;
-    }
+    this.features = featuresToCopy;
   }
 
   /** @return true unconditionally. */
@@ -231,7 +232,8 @@ public class INodeDirectory extends INodeWithAdditionalFields
   public INodeDirectory replaceSelf4INodeDirectory(final INodeMap inodeMap) {
     Preconditions.checkState(getClass() != INodeDirectory.class,
         "the class is already INodeDirectory, this=%s", this);
-    return replaceSelf(new INodeDirectory(this, true, true), inodeMap);
+    return replaceSelf(new INodeDirectory(this, true, this.getFeatures()),
+      inodeMap);
   }
 
   /** Replace itself with the given directory. */
