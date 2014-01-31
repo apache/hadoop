@@ -20,12 +20,15 @@ package org.apache.hadoop.hdfs.nfs.nfs3;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertThat;
+import static org.hamcrest.core.Is.is;
 
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.DFSClient;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.Test;
 
 public class TestDFSClientCache {
@@ -47,6 +50,28 @@ public class TestDFSClientCache {
     cache.getDfsClient("test2");
     assertTrue(isDfsClientClose(c1));
     assertEquals(MAX_CACHE_SIZE - 1, cache.clientCache.size());
+  }
+
+  @Test
+  public void testGetUserGroupInformation() throws IOException {
+    String userName = "user1";
+    String currentUser = "currentUser";
+
+    UserGroupInformation currentUserUgi = UserGroupInformation
+            .createUserForTesting(currentUser, new String[0]);
+    currentUserUgi.setAuthenticationMethod(
+            UserGroupInformation.AuthenticationMethod.KERBEROS);
+    Configuration conf = new Configuration();
+    conf.set(FileSystem.FS_DEFAULT_NAME_KEY, "hdfs://localhost");
+    DFSClientCache cache = new DFSClientCache(conf);
+    UserGroupInformation ugiResult
+            = cache.getUserGroupInformation(userName, currentUserUgi);
+
+    assertThat(ugiResult.getUserName(), is(userName));
+    assertThat(ugiResult.getRealUser(), is(currentUserUgi));
+    assertThat(
+            ugiResult.getAuthenticationMethod(),
+            is(UserGroupInformation.AuthenticationMethod.PROXY));
   }
 
   private static boolean isDfsClientClose(DFSClient c) {
