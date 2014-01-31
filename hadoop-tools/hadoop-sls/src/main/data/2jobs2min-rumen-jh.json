@@ -13,9 +13,9 @@
     "finishTime" : 1371222078206,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2118.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2118.smile.com" ]
       },
-      "hostName" : "/default-rack/a2118.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2118.smile.com",
       "startTime" : 1371222061163,
       "result" : "SUCCESS",
       "finishTime" : 1371222078206,
@@ -60,9 +60,9 @@
     "finishTime" : 1371222076092,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2118.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2118.smile.com" ]
       },
-      "hostName" : "/default-rack/a2118.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2118.smile.com",
       "startTime" : 1371222061164,
       "result" : "SUCCESS",
       "finishTime" : 1371222076092,
@@ -107,9 +107,9 @@
     "finishTime" : 1371222076916,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2118.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2118.smile.com" ]
       },
-      "hostName" : "/default-rack/a2118.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2118.smile.com",
       "startTime" : 1371222061159,
       "result" : "SUCCESS",
       "finishTime" : 1371222076916,
@@ -154,9 +154,9 @@
     "finishTime" : 1371222078156,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2118.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2118.smile.com" ]
       },
-      "hostName" : "/default-rack/a2118.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2118.smile.com",
       "startTime" : 1371222061160,
       "result" : "SUCCESS",
       "finishTime" : 1371222078156,
@@ -201,9 +201,9 @@
     "finishTime" : 1371222077984,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2118.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2118.smile.com" ]
       },
-      "hostName" : "/default-rack/a2118.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2118.smile.com",
       "startTime" : 1371222061161,
       "result" : "SUCCESS",
       "finishTime" : 1371222077984,
@@ -248,9 +248,9 @@
     "finishTime" : 1371222078263,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2118.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2118.smile.com" ]
       },
-      "hostName" : "/default-rack/a2118.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2118.smile.com",
       "startTime" : 1371222061161,
       "result" : "SUCCESS",
       "finishTime" : 1371222078263,
@@ -295,9 +295,9 @@
     "finishTime" : 1371222080381,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2115.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2115.smile.com" ]
       },
-      "hostName" : "/default-rack/a2115.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2115.smile.com",
       "startTime" : 1371222061165,
       "result" : "SUCCESS",
       "finishTime" : 1371222080381,
@@ -342,9 +342,9 @@
     "finishTime" : 1371222080174,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2115.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2115.smile.com" ]
       },
-      "hostName" : "/default-rack/a2115.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2115.smile.com",
       "startTime" : 1371222061168,
       "result" : "SUCCESS",
       "finishTime" : 1371222080174,
@@ -389,9 +389,9 @@
     "finishTime" : 1371222080738,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2115.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2115.smile.com" ]
       },
-      "hostName" : "/default-rack/a2115.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2115.smile.com",
       "startTime" : 1371222061150,
       "result" : "SUCCESS",
       "finishTime" : 1371222080738,
@@ -436,9 +436,9 @@
     "finishTime" : 1371222080294,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2115.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2115.smile.com" ]
       },
-      "hostName" : "/default-rack/a2115.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2115.smile.com",
       "startTime" : 1371222061167,
       "result" : "SUCCESS",
       "finishTime" : 1371222080294,
@@ -483,9 +483,9 @@
     "finishTime" : 1371222079719,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2115.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2115.smile.com" ]
       },
-      "hostName" : "/default-rack/a2115.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2115.smile.com",
       "startTime" : 1371222061175,
       "result" : "SUCCESS",
       "finishTime" : 1371222079719,
@@ -530,9 +530,9 @@
     "finishTime" : 1371222080741,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2115.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2115.smile.com" ]
       },
-      "hostName" : "/default-rack/a2115.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2115.smile.com",
       "startTime" : 1371222061174,
       "result" : "SUCCESS",
       "finishTime" : 1371222080741,
@@ -577,9 +577,9 @@
     "finishTime" : 1371222080631,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2115.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2115.smile.com" ]
       },
-      "hostName" : "/default-rack/a2115.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2115.smile.com",
       "startTime" : 1371222061173,
       "result" : "SUCCESS",
       "finishTime" : 1371222080631,
@@ -624,9 +624,9 @@
     "finishTime" : 1371222080047,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2115.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2115.smile.com" ]
       },
-      "hostName" : "/default-rack/a2115.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2115.smile.com",
       "startTime" : 1371222061177,
       "result" : "SUCCESS",
       "finishTime" : 1371222080047,
@@ -671,9 +671,9 @@
     "finishTime" : 1371222080403,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2116.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2116.smile.com" ]
       },
-      "hostName" : "/default-rack/a2116.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2116.smile.com",
       "startTime" : 1371222061182,
       "result" : "SUCCESS",
       "finishTime" : 1371222080403,
@@ -718,9 +718,9 @@
     "finishTime" : 1371222080385,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2116.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2116.smile.com" ]
       },
-      "hostName" : "/default-rack/a2116.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2116.smile.com",
       "startTime" : 1371222061182,
       "result" : "SUCCESS",
       "finishTime" : 1371222080385,
@@ -765,9 +765,9 @@
     "finishTime" : 1371222080314,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2116.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2116.smile.com" ]
       },
-      "hostName" : "/default-rack/a2116.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2116.smile.com",
       "startTime" : 1371222061183,
       "result" : "SUCCESS",
       "finishTime" : 1371222080314,
@@ -812,9 +812,9 @@
     "finishTime" : 1371222079863,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2116.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2116.smile.com" ]
       },
-      "hostName" : "/default-rack/a2116.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2116.smile.com",
       "startTime" : 1371222061183,
       "result" : "SUCCESS",
       "finishTime" : 1371222079863,
@@ -859,9 +859,9 @@
     "finishTime" : 1371222080024,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2116.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2116.smile.com" ]
       },
-      "hostName" : "/default-rack/a2116.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2116.smile.com",
       "startTime" : 1371222061180,
       "result" : "SUCCESS",
       "finishTime" : 1371222080024,
@@ -906,9 +906,9 @@
     "finishTime" : 1371222081077,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2116.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2116.smile.com" ]
       },
-      "hostName" : "/default-rack/a2116.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2116.smile.com",
       "startTime" : 1371222061181,
       "result" : "SUCCESS",
       "finishTime" : 1371222081077,
@@ -953,9 +953,9 @@
     "finishTime" : 1371222080321,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2116.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2116.smile.com" ]
       },
-      "hostName" : "/default-rack/a2116.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2116.smile.com",
       "startTime" : 1371222061184,
       "result" : "SUCCESS",
       "finishTime" : 1371222080321,
@@ -1000,9 +1000,9 @@
     "finishTime" : 1371222081794,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2116.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2116.smile.com" ]
       },
-      "hostName" : "/default-rack/a2116.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2116.smile.com",
       "startTime" : 1371222061178,
       "result" : "SUCCESS",
       "finishTime" : 1371222081794,
@@ -1047,9 +1047,9 @@
     "finishTime" : 1371222080729,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2117.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2117.smile.com" ]
       },
-      "hostName" : "/default-rack/a2117.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2117.smile.com",
       "startTime" : 1371222061185,
       "result" : "SUCCESS",
       "finishTime" : 1371222080729,
@@ -1094,9 +1094,9 @@
     "finishTime" : 1371222080052,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2117.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2117.smile.com" ]
       },
-      "hostName" : "/default-rack/a2117.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2117.smile.com",
       "startTime" : 1371222061186,
       "result" : "SUCCESS",
       "finishTime" : 1371222080052,
@@ -1141,9 +1141,9 @@
     "finishTime" : 1371222080302,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2117.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2117.smile.com" ]
       },
-      "hostName" : "/default-rack/a2117.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2117.smile.com",
       "startTime" : 1371222061188,
       "result" : "SUCCESS",
       "finishTime" : 1371222080302,
@@ -1188,9 +1188,9 @@
     "finishTime" : 1371222080632,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2117.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2117.smile.com" ]
       },
-      "hostName" : "/default-rack/a2117.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2117.smile.com",
       "startTime" : 1371222061188,
       "result" : "SUCCESS",
       "finishTime" : 1371222080632,
@@ -1235,9 +1235,9 @@
     "finishTime" : 1371222080672,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2117.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2117.smile.com" ]
       },
-      "hostName" : "/default-rack/a2117.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2117.smile.com",
       "startTime" : 1371222061191,
       "result" : "SUCCESS",
       "finishTime" : 1371222080672,
@@ -1282,9 +1282,9 @@
     "finishTime" : 1371222081541,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2117.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2117.smile.com" ]
       },
-      "hostName" : "/default-rack/a2117.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2117.smile.com",
       "startTime" : 1371222061193,
       "result" : "SUCCESS",
       "finishTime" : 1371222081541,
@@ -1329,9 +1329,9 @@
     "finishTime" : 1371222080630,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2117.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2117.smile.com" ]
       },
-      "hostName" : "/default-rack/a2117.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2117.smile.com",
       "startTime" : 1371222061190,
       "result" : "SUCCESS",
       "finishTime" : 1371222080630,
@@ -1376,9 +1376,9 @@
     "finishTime" : 1371222080196,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2117.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2117.smile.com" ]
       },
-      "hostName" : "/default-rack/a2117.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2117.smile.com",
       "startTime" : 1371222061192,
       "result" : "SUCCESS",
       "finishTime" : 1371222080196,
@@ -1423,9 +1423,9 @@
     "finishTime" : 1371222095399,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2118.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2118.smile.com" ]
       },
-      "hostName" : "/default-rack/a2118.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2118.smile.com",
       "startTime" : 1371222077057,
       "result" : "SUCCESS",
       "finishTime" : 1371222095399,
@@ -1470,9 +1470,9 @@
     "finishTime" : 1371222101752,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2118.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2118.smile.com" ]
       },
-      "hostName" : "/default-rack/a2118.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2118.smile.com",
       "startTime" : 1371222078069,
       "result" : "SUCCESS",
       "finishTime" : 1371222101752,
@@ -1517,9 +1517,9 @@
     "finishTime" : 1371222102468,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2118.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2118.smile.com" ]
       },
-      "hostName" : "/default-rack/a2118.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2118.smile.com",
       "startTime" : 1371222080073,
       "result" : "SUCCESS",
       "finishTime" : 1371222102468,
@@ -1564,9 +1564,9 @@
     "finishTime" : 1371222101998,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2116.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2116.smile.com" ]
       },
-      "hostName" : "/default-rack/a2116.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2116.smile.com",
       "startTime" : 1371222080074,
       "result" : "SUCCESS",
       "finishTime" : 1371222101998,
@@ -1611,9 +1611,9 @@
     "finishTime" : 1371222102416,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2115.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2115.smile.com" ]
       },
-      "hostName" : "/default-rack/a2115.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2115.smile.com",
       "startTime" : 1371222080074,
       "result" : "SUCCESS",
       "finishTime" : 1371222102416,
@@ -1658,9 +1658,9 @@
     "finishTime" : 1371222102415,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2118.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2118.smile.com" ]
       },
-      "hostName" : "/default-rack/a2118.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2118.smile.com",
       "startTime" : 1371222081100,
       "result" : "SUCCESS",
       "finishTime" : 1371222102415,
@@ -1705,9 +1705,9 @@
     "finishTime" : 1371222125169,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2118.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2118.smile.com" ]
       },
-      "hostName" : "/default-rack/a2118.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2118.smile.com",
       "startTime" : 1371222081101,
       "result" : "SUCCESS",
       "finishTime" : 1371222125169,
@@ -1752,9 +1752,9 @@
     "finishTime" : 1371222103766,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2118.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2118.smile.com" ]
       },
-      "hostName" : "/default-rack/a2118.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2118.smile.com",
       "startTime" : 1371222081107,
       "result" : "SUCCESS",
       "finishTime" : 1371222103766,
@@ -1799,9 +1799,9 @@
     "finishTime" : 1371222102985,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2115.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2115.smile.com" ]
       },
-      "hostName" : "/default-rack/a2115.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2115.smile.com",
       "startTime" : 1371222081108,
       "result" : "SUCCESS",
       "finishTime" : 1371222102985,
@@ -1846,9 +1846,9 @@
     "finishTime" : 1371222102412,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2117.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2117.smile.com" ]
       },
-      "hostName" : "/default-rack/a2117.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2117.smile.com",
       "startTime" : 1371222081122,
       "result" : "SUCCESS",
       "finishTime" : 1371222102412,
@@ -1893,9 +1893,9 @@
     "finishTime" : 1371222103554,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2116.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2116.smile.com" ]
       },
-      "hostName" : "/default-rack/a2116.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2116.smile.com",
       "startTime" : 1371222081118,
       "result" : "SUCCESS",
       "finishTime" : 1371222103554,
@@ -1940,9 +1940,9 @@
     "finishTime" : 1371222101748,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2115.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2115.smile.com" ]
       },
-      "hostName" : "/default-rack/a2115.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2115.smile.com",
       "startTime" : 1371222081109,
       "result" : "SUCCESS",
       "finishTime" : 1371222101748,
@@ -1987,9 +1987,9 @@
     "finishTime" : 1371222103767,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2115.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2115.smile.com" ]
       },
-      "hostName" : "/default-rack/a2115.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2115.smile.com",
       "startTime" : 1371222081119,
       "result" : "SUCCESS",
       "finishTime" : 1371222103767,
@@ -2034,9 +2034,9 @@
     "finishTime" : 1371222103881,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2117.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2117.smile.com" ]
       },
-      "hostName" : "/default-rack/a2117.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2117.smile.com",
       "startTime" : 1371222081121,
       "result" : "SUCCESS",
       "finishTime" : 1371222103881,
@@ -2081,9 +2081,9 @@
     "finishTime" : 1371222102868,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2117.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2117.smile.com" ]
       },
-      "hostName" : "/default-rack/a2117.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2117.smile.com",
       "startTime" : 1371222081121,
       "result" : "SUCCESS",
       "finishTime" : 1371222102868,
@@ -2128,9 +2128,9 @@
     "finishTime" : 1371222127471,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2115.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2115.smile.com" ]
       },
-      "hostName" : "/default-rack/a2115.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2115.smile.com",
       "startTime" : 1371222081121,
       "result" : "SUCCESS",
       "finishTime" : 1371222127471,
@@ -2175,9 +2175,9 @@
     "finishTime" : 1371222124895,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2116.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2116.smile.com" ]
       },
-      "hostName" : "/default-rack/a2116.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2116.smile.com",
       "startTime" : 1371222082113,
       "result" : "SUCCESS",
       "finishTime" : 1371222124895,
@@ -2222,9 +2222,9 @@
     "finishTime" : 1371222102985,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2117.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2117.smile.com" ]
       },
-      "hostName" : "/default-rack/a2117.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2117.smile.com",
       "startTime" : 1371222082114,
       "result" : "SUCCESS",
       "finishTime" : 1371222102985,
@@ -2269,9 +2269,9 @@
     "finishTime" : 1371222102897,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2115.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2115.smile.com" ]
       },
-      "hostName" : "/default-rack/a2115.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2115.smile.com",
       "startTime" : 1371222082113,
       "result" : "SUCCESS",
       "finishTime" : 1371222102897,
@@ -2316,9 +2316,9 @@
     "finishTime" : 1371222129137,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2116.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2116.smile.com" ]
       },
-      "hostName" : "/default-rack/a2116.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2116.smile.com",
       "startTime" : 1371222082116,
       "result" : "SUCCESS",
       "finishTime" : 1371222129137,
@@ -2363,9 +2363,9 @@
     "finishTime" : 1371222103702,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2116.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2116.smile.com" ]
       },
-      "hostName" : "/default-rack/a2116.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2116.smile.com",
       "startTime" : 1371222082115,
       "result" : "SUCCESS",
       "finishTime" : 1371222103702,
@@ -2410,9 +2410,9 @@
     "finishTime" : 1371222114762,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2116.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2116.smile.com" ]
       },
-      "hostName" : "/default-rack/a2116.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2116.smile.com",
       "startTime" : 1371222082116,
       "result" : "SUCCESS",
       "finishTime" : 1371222114762,
@@ -2457,9 +2457,9 @@
     "finishTime" : 1371222116084,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2116.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2116.smile.com" ]
       },
-      "hostName" : "/default-rack/a2116.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2116.smile.com",
       "startTime" : 1371222082115,
       "result" : "SUCCESS",
       "finishTime" : 1371222116084,
@@ -2504,9 +2504,9 @@
     "finishTime" : 1371222103694,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2117.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2117.smile.com" ]
       },
-      "hostName" : "/default-rack/a2117.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2117.smile.com",
       "startTime" : 1371222083110,
       "result" : "SUCCESS",
       "finishTime" : 1371222103694,
@@ -2551,9 +2551,9 @@
     "finishTime" : 1371222127757,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2117.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2117.smile.com" ]
       },
-      "hostName" : "/default-rack/a2117.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2117.smile.com",
       "startTime" : 1371222083125,
       "result" : "SUCCESS",
       "finishTime" : 1371222127757,
@@ -2598,9 +2598,9 @@
     "finishTime" : 1371222103714,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2117.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2117.smile.com" ]
       },
-      "hostName" : "/default-rack/a2117.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2117.smile.com",
       "startTime" : 1371222083112,
       "result" : "SUCCESS",
       "finishTime" : 1371222103714,
@@ -2645,9 +2645,9 @@
     "finishTime" : 1371222103849,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2117.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2117.smile.com" ]
       },
-      "hostName" : "/default-rack/a2117.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2117.smile.com",
       "startTime" : 1371222083165,
       "result" : "SUCCESS",
       "finishTime" : 1371222103849,
@@ -2692,9 +2692,9 @@
     "finishTime" : 1371222103712,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2115.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2115.smile.com" ]
       },
-      "hostName" : "/default-rack/a2115.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2115.smile.com",
       "startTime" : 1371222083127,
       "result" : "SUCCESS",
       "finishTime" : 1371222103712,
@@ -2739,9 +2739,9 @@
     "finishTime" : 1371222122471,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2115.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2115.smile.com" ]
       },
-      "hostName" : "/default-rack/a2115.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2115.smile.com",
       "startTime" : 1371222083128,
       "result" : "SUCCESS",
       "finishTime" : 1371222122471,
@@ -2786,9 +2786,9 @@
     "finishTime" : 1371222124673,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2116.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2116.smile.com" ]
       },
-      "hostName" : "/default-rack/a2116.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2116.smile.com",
       "startTime" : 1371222083120,
       "result" : "SUCCESS",
       "finishTime" : 1371222124673,
@@ -2833,9 +2833,9 @@
     "finishTime" : 1371222116128,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2118.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2118.smile.com" ]
       },
-      "hostName" : "/default-rack/a2118.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2118.smile.com",
       "startTime" : 1371222097139,
       "result" : "SUCCESS",
       "finishTime" : 1371222116128,
@@ -2880,9 +2880,9 @@
     "finishTime" : 1371222116509,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2118.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2118.smile.com" ]
       },
-      "hostName" : "/default-rack/a2118.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2118.smile.com",
       "startTime" : 1371222103155,
       "result" : "SUCCESS",
       "finishTime" : 1371222116509,
@@ -2927,9 +2927,9 @@
     "finishTime" : 1371222120045,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2115.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2115.smile.com" ]
       },
-      "hostName" : "/default-rack/a2115.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2115.smile.com",
       "startTime" : 1371222103156,
       "result" : "SUCCESS",
       "finishTime" : 1371222120045,
@@ -2974,9 +2974,9 @@
     "finishTime" : 1371222117644,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2117.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2117.smile.com" ]
       },
-      "hostName" : "/default-rack/a2117.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2117.smile.com",
       "startTime" : 1371222103154,
       "result" : "SUCCESS",
       "finishTime" : 1371222117644,
@@ -3021,9 +3021,9 @@
     "finishTime" : 1371222117257,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2115.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2115.smile.com" ]
       },
-      "hostName" : "/default-rack/a2115.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2115.smile.com",
       "startTime" : 1371222103156,
       "result" : "SUCCESS",
       "finishTime" : 1371222117257,
@@ -3068,9 +3068,9 @@
     "finishTime" : 1371222142884,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2116.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2116.smile.com" ]
       },
-      "hostName" : "/default-rack/a2116.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2116.smile.com",
       "startTime" : 1371222103154,
       "result" : "SUCCESS",
       "finishTime" : 1371222142884,
@@ -3115,9 +3115,9 @@
     "finishTime" : 1371222118279,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2118.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2118.smile.com" ]
       },
-      "hostName" : "/default-rack/a2118.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2118.smile.com",
       "startTime" : 1371222104206,
       "result" : "SUCCESS",
       "finishTime" : 1371222118279,
@@ -3162,9 +3162,9 @@
     "finishTime" : 1371222122382,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2117.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2117.smile.com" ]
       },
-      "hostName" : "/default-rack/a2117.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2117.smile.com",
       "startTime" : 1371222104212,
       "result" : "SUCCESS",
       "finishTime" : 1371222122382,
@@ -3209,9 +3209,9 @@
     "finishTime" : 1371222139789,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2116.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2116.smile.com" ]
       },
-      "hostName" : "/default-rack/a2116.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2116.smile.com",
       "startTime" : 1371222104213,
       "result" : "SUCCESS",
       "finishTime" : 1371222139789,
@@ -3256,9 +3256,9 @@
     "finishTime" : 1371222117823,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2115.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2115.smile.com" ]
       },
-      "hostName" : "/default-rack/a2115.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2115.smile.com",
       "startTime" : 1371222104211,
       "result" : "SUCCESS",
       "finishTime" : 1371222117823,
@@ -3303,9 +3303,9 @@
     "finishTime" : 1371222120103,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2117.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2117.smile.com" ]
       },
-      "hostName" : "/default-rack/a2117.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2117.smile.com",
       "startTime" : 1371222104209,
       "result" : "SUCCESS",
       "finishTime" : 1371222120103,
@@ -3350,9 +3350,9 @@
     "finishTime" : 1371222116746,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2118.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2118.smile.com" ]
       },
-      "hostName" : "/default-rack/a2118.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2118.smile.com",
       "startTime" : 1371222104212,
       "result" : "SUCCESS",
       "finishTime" : 1371222116746,
@@ -3397,9 +3397,9 @@
     "finishTime" : 1371222119279,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2115.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2115.smile.com" ]
       },
-      "hostName" : "/default-rack/a2115.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2115.smile.com",
       "startTime" : 1371222104210,
       "result" : "SUCCESS",
       "finishTime" : 1371222119279,
@@ -3444,9 +3444,9 @@
     "finishTime" : 1371222116354,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2116.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2116.smile.com" ]
       },
-      "hostName" : "/default-rack/a2116.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2116.smile.com",
       "startTime" : 1371222105211,
       "result" : "SUCCESS",
       "finishTime" : 1371222116354,
@@ -3491,9 +3491,9 @@
     "finishTime" : 1371222117482,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2115.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2115.smile.com" ]
       },
-      "hostName" : "/default-rack/a2115.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2115.smile.com",
       "startTime" : 1371222105212,
       "result" : "SUCCESS",
       "finishTime" : 1371222117482,
@@ -3538,9 +3538,9 @@
     "finishTime" : 1371222122401,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2118.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2118.smile.com" ]
       },
-      "hostName" : "/default-rack/a2118.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2118.smile.com",
       "startTime" : 1371222105213,
       "result" : "SUCCESS",
       "finishTime" : 1371222122401,
@@ -3585,9 +3585,9 @@
     "finishTime" : 1371222122853,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2115.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2115.smile.com" ]
       },
-      "hostName" : "/default-rack/a2115.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2115.smile.com",
       "startTime" : 1371222106215,
       "result" : "SUCCESS",
       "finishTime" : 1371222122853,
@@ -3632,9 +3632,9 @@
     "finishTime" : 1371222123218,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2117.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2117.smile.com" ]
       },
-      "hostName" : "/default-rack/a2117.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2117.smile.com",
       "startTime" : 1371222106215,
       "result" : "SUCCESS",
       "finishTime" : 1371222123218,
@@ -3679,9 +3679,9 @@
     "finishTime" : 1371222127755,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2117.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2117.smile.com" ]
       },
-      "hostName" : "/default-rack/a2117.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2117.smile.com",
       "startTime" : 1371222107218,
       "result" : "SUCCESS",
       "finishTime" : 1371222127755,
@@ -3726,9 +3726,9 @@
     "finishTime" : 1371222127589,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2117.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2117.smile.com" ]
       },
-      "hostName" : "/default-rack/a2117.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2117.smile.com",
       "startTime" : 1371222107220,
       "result" : "SUCCESS",
       "finishTime" : 1371222127589,
@@ -3773,9 +3773,9 @@
     "finishTime" : 1371222123105,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2117.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2117.smile.com" ]
       },
-      "hostName" : "/default-rack/a2117.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2117.smile.com",
       "startTime" : 1371222107219,
       "result" : "SUCCESS",
       "finishTime" : 1371222123105,
@@ -3820,9 +3820,9 @@
     "finishTime" : 1371222132159,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2116.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2116.smile.com" ]
       },
-      "hostName" : "/default-rack/a2116.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2116.smile.com",
       "startTime" : 1371222116240,
       "result" : "SUCCESS",
       "finishTime" : 1371222132159,
@@ -3867,9 +3867,9 @@
     "finishTime" : 1371222132250,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2116.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2116.smile.com" ]
       },
-      "hostName" : "/default-rack/a2116.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2116.smile.com",
       "startTime" : 1371222117244,
       "result" : "SUCCESS",
       "finishTime" : 1371222132250,
@@ -3914,9 +3914,9 @@
     "finishTime" : 1371222134319,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2118.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2118.smile.com" ]
       },
-      "hostName" : "/default-rack/a2118.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2118.smile.com",
       "startTime" : 1371222117244,
       "result" : "SUCCESS",
       "finishTime" : 1371222134319,
@@ -3961,9 +3961,9 @@
     "finishTime" : 1371222133861,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2116.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2116.smile.com" ]
       },
-      "hostName" : "/default-rack/a2116.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2116.smile.com",
       "startTime" : 1371222118252,
       "result" : "SUCCESS",
       "finishTime" : 1371222133861,
@@ -4008,9 +4008,9 @@
     "finishTime" : 1371222139704,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2115.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2115.smile.com" ]
       },
-      "hostName" : "/default-rack/a2115.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2115.smile.com",
       "startTime" : 1371222118252,
       "result" : "SUCCESS",
       "finishTime" : 1371222139704,
@@ -4055,9 +4055,9 @@
     "finishTime" : 1371222136354,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2118.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2118.smile.com" ]
       },
-      "hostName" : "/default-rack/a2118.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2118.smile.com",
       "startTime" : 1371222118251,
       "result" : "SUCCESS",
       "finishTime" : 1371222136354,
@@ -4102,9 +4102,9 @@
     "finishTime" : 1371222139789,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2115.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2115.smile.com" ]
       },
-      "hostName" : "/default-rack/a2115.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2115.smile.com",
       "startTime" : 1371222118251,
       "result" : "SUCCESS",
       "finishTime" : 1371222139789,
@@ -4149,9 +4149,9 @@
     "finishTime" : 1371222136362,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2118.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2118.smile.com" ]
       },
-      "hostName" : "/default-rack/a2118.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2118.smile.com",
       "startTime" : 1371222119253,
       "result" : "SUCCESS",
       "finishTime" : 1371222136362,
@@ -4196,9 +4196,9 @@
     "finishTime" : 1371222132666,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2117.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2117.smile.com" ]
       },
-      "hostName" : "/default-rack/a2117.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2117.smile.com",
       "startTime" : 1371222119254,
       "result" : "SUCCESS",
       "finishTime" : 1371222132666,
@@ -4243,9 +4243,9 @@
     "finishTime" : 1371222141107,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2115.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2115.smile.com" ]
       },
-      "hostName" : "/default-rack/a2115.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2115.smile.com",
       "startTime" : 1371222119254,
       "result" : "SUCCESS",
       "finishTime" : 1371222141107,
@@ -4290,9 +4290,9 @@
     "finishTime" : 1371222135965,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2118.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2118.smile.com" ]
       },
-      "hostName" : "/default-rack/a2118.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2118.smile.com",
       "startTime" : 1371222120259,
       "result" : "SUCCESS",
       "finishTime" : 1371222135965,
@@ -4337,9 +4337,9 @@
     "finishTime" : 1371222141263,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2115.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2115.smile.com" ]
       },
-      "hostName" : "/default-rack/a2115.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2115.smile.com",
       "startTime" : 1371222120260,
       "result" : "SUCCESS",
       "finishTime" : 1371222141263,
@@ -4384,9 +4384,9 @@
     "finishTime" : 1371222140945,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2115.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2115.smile.com" ]
       },
-      "hostName" : "/default-rack/a2115.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2115.smile.com",
       "startTime" : 1371222121262,
       "result" : "SUCCESS",
       "finishTime" : 1371222140945,
@@ -4431,9 +4431,9 @@
     "finishTime" : 1371222136213,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2117.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2117.smile.com" ]
       },
-      "hostName" : "/default-rack/a2117.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2117.smile.com",
       "startTime" : 1371222122266,
       "result" : "SUCCESS",
       "finishTime" : 1371222136213,
@@ -4478,9 +4478,9 @@
     "finishTime" : 1371222141112,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2115.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2115.smile.com" ]
       },
-      "hostName" : "/default-rack/a2115.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2115.smile.com",
       "startTime" : 1371222123269,
       "result" : "SUCCESS",
       "finishTime" : 1371222141112,
@@ -4549,7 +4549,7 @@
     "s3.blocksize" : "67108864",
     "mapreduce.task.io.sort.factor" : "10",
     "yarn.nodemanager.disk-health-checker.interval-ms" : "120000",
-    "mapreduce.job.working.dir" : "hdfs://a2115.halxg.cloudera.com:8020/user/jenkins",
+    "mapreduce.job.working.dir" : "hdfs://a2115.smile.com:8020/user/jenkins",
     "yarn.admin.acl" : "*",
     "mapreduce.job.speculative.speculativecap" : "0.1",
     "dfs.namenode.num.checkpoints.retained" : "2",
@@ -4558,7 +4558,7 @@
     "io.map.index.interval" : "128",
     "s3.client-write-packet-size" : "65536",
     "mapreduce.task.files.preserve.failedtasks" : "false",
-    "dfs.namenode.http-address" : "a2115.halxg.cloudera.com:20101",
+    "dfs.namenode.http-address" : "a2115.smile.com:20101",
     "ha.zookeeper.session-timeout.ms" : "5000",
     "hadoop.hdfs.configuration.version" : "1",
     "s3.replication" : "3",
@@ -4575,7 +4575,7 @@
     "dfs.namenode.checkpoint.dir" : "file://${hadoop.tmp.dir}/dfs/namesecondary",
     "dfs.namenode.replication.work.multiplier.per.iteration" : "2",
     "fs.trash.interval" : "1",
-    "yarn.resourcemanager.admin.address" : "a2115.halxg.cloudera.com:8033",
+    "yarn.resourcemanager.admin.address" : "a2115.smile.com:8033",
     "ha.health-monitor.check-interval.ms" : "1000",
     "mapreduce.job.outputformat.class" : "org.apache.hadoop.examples.terasort.TeraOutputFormat",
     "hadoop.jetty.logs.serve.aliases" : "true",
@@ -4727,7 +4727,7 @@
     "dfs.https.port" : "20102",
     "dfs.namenode.replication.interval" : "3",
     "mapreduce.task.skip.start.attempts" : "2",
-    "dfs.namenode.https-address" : "a2115.halxg.cloudera.com:20102",
+    "dfs.namenode.https-address" : "a2115.smile.com:20102",
     "mapreduce.jobtracker.persist.jobstatus.dir" : "/jobtracker/jobsInfo",
     "ipc.client.kill.max" : "10",
     "dfs.ha.automatic-failover.enabled" : "false",
@@ -4757,7 +4757,7 @@
     "ftp.replication" : "3",
     "mapreduce.jobtracker.http.address" : "0.0.0.0:50030",
     "yarn.nodemanager.health-checker.script.timeout-ms" : "1200000",
-    "mapreduce.jobhistory.address" : "a2115.halxg.cloudera.com:10020",
+    "mapreduce.jobhistory.address" : "a2115.smile.com:10020",
     "mapreduce.jobtracker.taskcache.levels" : "2",
     "dfs.datanode.dns.nameserver" : "default",
     "mapreduce.application.classpath" : "$HADOOP_MAPRED_HOME/share/hadoop/mapreduce/*,$HADOOP_MAPRED_HOME/share/hadoop/mapreduce/lib/*",
@@ -4799,13 +4799,13 @@
     "hadoop.fuse.timer.period" : "5",
     "dfs.namenode.num.extra.edits.retained" : "1000000",
     "hadoop.rpc.socket.factory.class.default" : "org.apache.hadoop.net.StandardSocketFactory",
-    "mapreduce.job.submithostname" : "a2115.halxg.cloudera.com",
+    "mapreduce.job.submithostname" : "a2115.smile.com",
     "dfs.namenode.handler.count" : "10",
     "fs.automatic.close" : "false",
     "mapreduce.job.submithostaddress" : "10.20.206.115",
     "mapreduce.tasktracker.healthchecker.script.timeout" : "600000",
     "dfs.datanode.directoryscan.interval" : "21600",
-    "yarn.resourcemanager.address" : "a2115.halxg.cloudera.com:8032",
+    "yarn.resourcemanager.address" : "a2115.smile.com:8032",
     "yarn.nodemanager.health-checker.interval-ms" : "600000",
     "dfs.client.file-block-storage-locations.num-threads" : "10",
     "yarn.resourcemanager.container-tokens.master-key-rolling-interval-secs" : "86400",
@@ -4820,7 +4820,7 @@
     "ftp.stream-buffer-size" : "4096",
     "dfs.namenode.avoid.write.stale.datanode" : "false",
     "hadoop.security.group.mapping.ldap.search.attr.member" : "member",
-    "mapreduce.output.fileoutputformat.outputdir" : "hdfs://a2115.halxg.cloudera.com:8020/user/jenkins/tera-gen-1",
+    "mapreduce.output.fileoutputformat.outputdir" : "hdfs://a2115.smile.com:8020/user/jenkins/tera-gen-1",
     "dfs.blockreport.initialDelay" : "0",
     "yarn.nm.liveness-monitor.expiry-interval-ms" : "600000",
     "hadoop.http.authentication.token.validity" : "36000",
@@ -4836,7 +4836,7 @@
     "mapreduce.task.profile" : "false",
     "mapreduce.tasktracker.http.address" : "0.0.0.0:50060",
     "mapreduce.tasktracker.instrumentation" : "org.apache.hadoop.mapred.TaskTrackerMetricsInst",
-    "mapreduce.jobhistory.webapp.address" : "a2115.halxg.cloudera.com:19888",
+    "mapreduce.jobhistory.webapp.address" : "a2115.smile.com:19888",
     "ha.failover-controller.graceful-fence.rpc-timeout.ms" : "5000",
     "yarn.ipc.rpc.class" : "org.apache.hadoop.yarn.ipc.HadoopYarnProtoRPC",
     "mapreduce.job.name" : "TeraGen",
@@ -4866,14 +4866,14 @@
     "hadoop.security.auth_to_local" : "DEFAULT",
     "dfs.secondary.namenode.kerberos.internal.spnego.principal" : "${dfs.web.authentication.kerberos.principal}",
     "ftp.client-write-packet-size" : "65536",
-    "fs.defaultFS" : "hdfs://a2115.halxg.cloudera.com:8020",
+    "fs.defaultFS" : "hdfs://a2115.smile.com:8020",
     "yarn.nodemanager.address" : "0.0.0.0:0",
     "yarn.scheduler.fair.assignmultiple" : "true",
     "yarn.resourcemanager.scheduler.client.thread-count" : "50",
     "mapreduce.task.merge.progress.records" : "10000",
     "file.client-write-packet-size" : "65536",
     "yarn.nodemanager.delete.thread-count" : "4",
-    "yarn.resourcemanager.scheduler.address" : "a2115.halxg.cloudera.com:8030",
+    "yarn.resourcemanager.scheduler.address" : "a2115.smile.com:8030",
     "fs.trash.checkpoint.interval" : "0",
     "hadoop.http.authentication.signature.secret.file" : "${user.home}/hadoop-http-auth-signature-secret",
     "s3native.stream-buffer-size" : "4096",
@@ -4915,7 +4915,7 @@
     "mapreduce.map.skip.maxrecords" : "0",
     "dfs.datanode.https.address" : "0.0.0.0:50475",
     "file.replication" : "1",
-    "yarn.resourcemanager.resource-tracker.address" : "a2115.halxg.cloudera.com:8031",
+    "yarn.resourcemanager.resource-tracker.address" : "a2115.smile.com:8031",
     "dfs.datanode.drop.cache.behind.reads" : "false",
     "hadoop.fuse.connection.timeout" : "300",
     "hadoop.work.around.non.threadsafe.getpwuid" : "false",
@@ -4940,7 +4940,7 @@
     "mapreduce.task.profile.maps" : "0-2",
     "dfs.namenode.decommission.interval" : "30",
     "dfs.image.compression.codec" : "org.apache.hadoop.io.compress.DefaultCodec",
-    "yarn.resourcemanager.webapp.address" : "a2115.halxg.cloudera.com:8088",
+    "yarn.resourcemanager.webapp.address" : "a2115.smile.com:8088",
     "mapreduce.jobtracker.system.dir" : "${hadoop.tmp.dir}/mapred/system",
     "hadoop.ssl.hostname.verifier" : "DEFAULT",
     "yarn.nodemanager.vmem-pmem-ratio" : "2.1",
@@ -5127,9 +5127,9 @@
     "finishTime" : 1371222188484,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2117.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2117.smile.com" ]
       },
-      "hostName" : "/default-rack/a2117.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2117.smile.com",
       "startTime" : 1371222166321,
       "result" : "SUCCESS",
       "finishTime" : 1371222188484,
@@ -5174,9 +5174,9 @@
     "finishTime" : 1371222185876,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2117.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2117.smile.com" ]
       },
-      "hostName" : "/default-rack/a2117.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2117.smile.com",
       "startTime" : 1371222166287,
       "result" : "SUCCESS",
       "finishTime" : 1371222185876,
@@ -5221,9 +5221,9 @@
     "finishTime" : 1371222187434,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2117.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2117.smile.com" ]
       },
-      "hostName" : "/default-rack/a2117.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2117.smile.com",
       "startTime" : 1371222166324,
       "result" : "SUCCESS",
       "finishTime" : 1371222187434,
@@ -5268,9 +5268,9 @@
     "finishTime" : 1371222186091,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2117.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2117.smile.com" ]
       },
-      "hostName" : "/default-rack/a2117.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2117.smile.com",
       "startTime" : 1371222166325,
       "result" : "SUCCESS",
       "finishTime" : 1371222186091,
@@ -5315,9 +5315,9 @@
     "finishTime" : 1371222189053,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2117.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2117.smile.com" ]
       },
-      "hostName" : "/default-rack/a2117.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2117.smile.com",
       "startTime" : 1371222166287,
       "result" : "SUCCESS",
       "finishTime" : 1371222189053,
@@ -5362,9 +5362,9 @@
     "finishTime" : 1371222184979,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2117.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2117.smile.com" ]
       },
-      "hostName" : "/default-rack/a2117.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2117.smile.com",
       "startTime" : 1371222166323,
       "result" : "SUCCESS",
       "finishTime" : 1371222184979,
@@ -5409,9 +5409,9 @@
     "finishTime" : 1371222185246,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2117.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2117.smile.com" ]
       },
-      "hostName" : "/default-rack/a2117.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2117.smile.com",
       "startTime" : 1371222166324,
       "result" : "SUCCESS",
       "finishTime" : 1371222185246,
@@ -5456,9 +5456,9 @@
     "finishTime" : 1371222185092,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2117.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2117.smile.com" ]
       },
-      "hostName" : "/default-rack/a2117.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2117.smile.com",
       "startTime" : 1371222166325,
       "result" : "SUCCESS",
       "finishTime" : 1371222185092,
@@ -5503,9 +5503,9 @@
     "finishTime" : 1371222188434,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2115.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2115.smile.com" ]
       },
-      "hostName" : "/default-rack/a2115.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2115.smile.com",
       "startTime" : 1371222166282,
       "result" : "SUCCESS",
       "finishTime" : 1371222188434,
@@ -5550,9 +5550,9 @@
     "finishTime" : 1371222186078,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2115.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2115.smile.com" ]
       },
-      "hostName" : "/default-rack/a2115.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2115.smile.com",
       "startTime" : 1371222166289,
       "result" : "SUCCESS",
       "finishTime" : 1371222186078,
@@ -5597,9 +5597,9 @@
     "finishTime" : 1371222185273,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2115.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2115.smile.com" ]
       },
-      "hostName" : "/default-rack/a2115.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2115.smile.com",
       "startTime" : 1371222166293,
       "result" : "SUCCESS",
       "finishTime" : 1371222185273,
@@ -5644,9 +5644,9 @@
     "finishTime" : 1371222188434,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2115.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2115.smile.com" ]
       },
-      "hostName" : "/default-rack/a2115.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2115.smile.com",
       "startTime" : 1371222166290,
       "result" : "SUCCESS",
       "finishTime" : 1371222188434,
@@ -5691,9 +5691,9 @@
     "finishTime" : 1371222185278,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2115.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2115.smile.com" ]
       },
-      "hostName" : "/default-rack/a2115.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2115.smile.com",
       "startTime" : 1371222166295,
       "result" : "SUCCESS",
       "finishTime" : 1371222185278,
@@ -5738,9 +5738,9 @@
     "finishTime" : 1371222185273,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2115.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2115.smile.com" ]
       },
-      "hostName" : "/default-rack/a2115.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2115.smile.com",
       "startTime" : 1371222166291,
       "result" : "SUCCESS",
       "finishTime" : 1371222185273,
@@ -5785,9 +5785,9 @@
     "finishTime" : 1371222185953,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2115.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2115.smile.com" ]
       },
-      "hostName" : "/default-rack/a2115.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2115.smile.com",
       "startTime" : 1371222166297,
       "result" : "SUCCESS",
       "finishTime" : 1371222185953,
@@ -5832,9 +5832,9 @@
     "finishTime" : 1371222189058,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2115.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2115.smile.com" ]
       },
-      "hostName" : "/default-rack/a2115.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2115.smile.com",
       "startTime" : 1371222166333,
       "result" : "SUCCESS",
       "finishTime" : 1371222189058,
@@ -5879,9 +5879,9 @@
     "finishTime" : 1371222185112,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2118.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2118.smile.com" ]
       },
-      "hostName" : "/default-rack/a2118.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2118.smile.com",
       "startTime" : 1371222166298,
       "result" : "SUCCESS",
       "finishTime" : 1371222185112,
@@ -5926,9 +5926,9 @@
     "finishTime" : 1371222185125,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2118.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2118.smile.com" ]
       },
-      "hostName" : "/default-rack/a2118.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2118.smile.com",
       "startTime" : 1371222166299,
       "result" : "SUCCESS",
       "finishTime" : 1371222185125,
@@ -5973,9 +5973,9 @@
     "finishTime" : 1371222185117,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2118.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2118.smile.com" ]
       },
-      "hostName" : "/default-rack/a2118.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2118.smile.com",
       "startTime" : 1371222166301,
       "result" : "SUCCESS",
       "finishTime" : 1371222185117,
@@ -6020,9 +6020,9 @@
     "finishTime" : 1371222186145,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2118.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2118.smile.com" ]
       },
-      "hostName" : "/default-rack/a2118.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2118.smile.com",
       "startTime" : 1371222166303,
       "result" : "SUCCESS",
       "finishTime" : 1371222186145,
@@ -6067,9 +6067,9 @@
     "finishTime" : 1371222188294,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2118.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2118.smile.com" ]
       },
-      "hostName" : "/default-rack/a2118.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2118.smile.com",
       "startTime" : 1371222166304,
       "result" : "SUCCESS",
       "finishTime" : 1371222188294,
@@ -6114,9 +6114,9 @@
     "finishTime" : 1371222185112,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2118.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2118.smile.com" ]
       },
-      "hostName" : "/default-rack/a2118.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2118.smile.com",
       "startTime" : 1371222166306,
       "result" : "SUCCESS",
       "finishTime" : 1371222185112,
@@ -6161,9 +6161,9 @@
     "finishTime" : 1371222186222,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2118.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2118.smile.com" ]
       },
-      "hostName" : "/default-rack/a2118.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2118.smile.com",
       "startTime" : 1371222166307,
       "result" : "SUCCESS",
       "finishTime" : 1371222186222,
@@ -6208,9 +6208,9 @@
     "finishTime" : 1371222186145,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2118.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2118.smile.com" ]
       },
-      "hostName" : "/default-rack/a2118.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2118.smile.com",
       "startTime" : 1371222166345,
       "result" : "SUCCESS",
       "finishTime" : 1371222186145,
@@ -6255,9 +6255,9 @@
     "finishTime" : 1371222189046,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2116.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2116.smile.com" ]
       },
-      "hostName" : "/default-rack/a2116.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2116.smile.com",
       "startTime" : 1371222166312,
       "result" : "SUCCESS",
       "finishTime" : 1371222189046,
@@ -6302,9 +6302,9 @@
     "finishTime" : 1371222185135,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2116.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2116.smile.com" ]
       },
-      "hostName" : "/default-rack/a2116.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2116.smile.com",
       "startTime" : 1371222166313,
       "result" : "SUCCESS",
       "finishTime" : 1371222185135,
@@ -6349,9 +6349,9 @@
     "finishTime" : 1371222185121,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2116.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2116.smile.com" ]
       },
-      "hostName" : "/default-rack/a2116.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2116.smile.com",
       "startTime" : 1371222166319,
       "result" : "SUCCESS",
       "finishTime" : 1371222185121,
@@ -6396,9 +6396,9 @@
     "finishTime" : 1371222186069,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2116.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2116.smile.com" ]
       },
-      "hostName" : "/default-rack/a2116.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2116.smile.com",
       "startTime" : 1371222166318,
       "result" : "SUCCESS",
       "finishTime" : 1371222186069,
@@ -6443,9 +6443,9 @@
     "finishTime" : 1371222185115,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2116.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2116.smile.com" ]
       },
-      "hostName" : "/default-rack/a2116.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2116.smile.com",
       "startTime" : 1371222166327,
       "result" : "SUCCESS",
       "finishTime" : 1371222185115,
@@ -6490,9 +6490,9 @@
     "finishTime" : 1371222186085,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2116.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2116.smile.com" ]
       },
-      "hostName" : "/default-rack/a2116.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2116.smile.com",
       "startTime" : 1371222166330,
       "result" : "SUCCESS",
       "finishTime" : 1371222186085,
@@ -6537,9 +6537,9 @@
     "finishTime" : 1371222209777,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2117.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2117.smile.com" ]
       },
-      "hostName" : "/default-rack/a2117.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2117.smile.com",
       "startTime" : 1371222186223,
       "result" : "SUCCESS",
       "finishTime" : 1371222209777,
@@ -6584,9 +6584,9 @@
     "finishTime" : 1371222209814,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2117.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2117.smile.com" ]
       },
-      "hostName" : "/default-rack/a2117.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2117.smile.com",
       "startTime" : 1371222186224,
       "result" : "SUCCESS",
       "finishTime" : 1371222209814,
@@ -6631,9 +6631,9 @@
     "finishTime" : 1371222209796,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2117.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2117.smile.com" ]
       },
-      "hostName" : "/default-rack/a2117.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2117.smile.com",
       "startTime" : 1371222186230,
       "result" : "SUCCESS",
       "finishTime" : 1371222209796,
@@ -6678,9 +6678,9 @@
     "finishTime" : 1371222209114,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2116.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2116.smile.com" ]
       },
-      "hostName" : "/default-rack/a2116.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2116.smile.com",
       "startTime" : 1371222186269,
       "result" : "SUCCESS",
       "finishTime" : 1371222209114,
@@ -6725,9 +6725,9 @@
     "finishTime" : 1371222205072,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2116.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2116.smile.com" ]
       },
-      "hostName" : "/default-rack/a2116.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2116.smile.com",
       "startTime" : 1371222186230,
       "result" : "SUCCESS",
       "finishTime" : 1371222205072,
@@ -6772,9 +6772,9 @@
     "finishTime" : 1371222209265,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2116.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2116.smile.com" ]
       },
-      "hostName" : "/default-rack/a2116.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2116.smile.com",
       "startTime" : 1371222186231,
       "result" : "SUCCESS",
       "finishTime" : 1371222209265,
@@ -6819,9 +6819,9 @@
     "finishTime" : 1371222205027,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2118.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2118.smile.com" ]
       },
-      "hostName" : "/default-rack/a2118.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2118.smile.com",
       "startTime" : 1371222186270,
       "result" : "SUCCESS",
       "finishTime" : 1371222205027,
@@ -6866,9 +6866,9 @@
     "finishTime" : 1371222204802,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2118.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2118.smile.com" ]
       },
-      "hostName" : "/default-rack/a2118.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2118.smile.com",
       "startTime" : 1371222186229,
       "result" : "SUCCESS",
       "finishTime" : 1371222204802,
@@ -6913,9 +6913,9 @@
     "finishTime" : 1371222205071,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2118.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2118.smile.com" ]
       },
-      "hostName" : "/default-rack/a2118.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2118.smile.com",
       "startTime" : 1371222186231,
       "result" : "SUCCESS",
       "finishTime" : 1371222205071,
@@ -6960,9 +6960,9 @@
     "finishTime" : 1371222204844,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2118.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2118.smile.com" ]
       },
-      "hostName" : "/default-rack/a2118.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2118.smile.com",
       "startTime" : 1371222186270,
       "result" : "SUCCESS",
       "finishTime" : 1371222204844,
@@ -7007,9 +7007,9 @@
     "finishTime" : 1371222208051,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2115.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2115.smile.com" ]
       },
-      "hostName" : "/default-rack/a2115.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2115.smile.com",
       "startTime" : 1371222187226,
       "result" : "SUCCESS",
       "finishTime" : 1371222208051,
@@ -7054,9 +7054,9 @@
     "finishTime" : 1371222209764,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2117.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2117.smile.com" ]
       },
-      "hostName" : "/default-rack/a2117.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2117.smile.com",
       "startTime" : 1371222187225,
       "result" : "SUCCESS",
       "finishTime" : 1371222209764,
@@ -7101,9 +7101,9 @@
     "finishTime" : 1371222210013,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2118.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2118.smile.com" ]
       },
-      "hostName" : "/default-rack/a2118.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2118.smile.com",
       "startTime" : 1371222188236,
       "result" : "SUCCESS",
       "finishTime" : 1371222210013,
@@ -7148,9 +7148,9 @@
     "finishTime" : 1371222209829,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2117.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2117.smile.com" ]
       },
-      "hostName" : "/default-rack/a2117.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2117.smile.com",
       "startTime" : 1371222188247,
       "result" : "SUCCESS",
       "finishTime" : 1371222209829,
@@ -7195,9 +7195,9 @@
     "finishTime" : 1371222205147,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2115.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2115.smile.com" ]
       },
-      "hostName" : "/default-rack/a2115.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2115.smile.com",
       "startTime" : 1371222188243,
       "result" : "SUCCESS",
       "finishTime" : 1371222205147,
@@ -7242,9 +7242,9 @@
     "finishTime" : 1371222208888,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2115.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2115.smile.com" ]
       },
-      "hostName" : "/default-rack/a2115.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2115.smile.com",
       "startTime" : 1371222188284,
       "result" : "SUCCESS",
       "finishTime" : 1371222208888,
@@ -7289,9 +7289,9 @@
     "finishTime" : 1371222209764,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2115.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2115.smile.com" ]
       },
-      "hostName" : "/default-rack/a2115.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2115.smile.com",
       "startTime" : 1371222188246,
       "result" : "SUCCESS",
       "finishTime" : 1371222209764,
@@ -7336,9 +7336,9 @@
     "finishTime" : 1371222209770,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2115.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2115.smile.com" ]
       },
-      "hostName" : "/default-rack/a2115.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2115.smile.com",
       "startTime" : 1371222188244,
       "result" : "SUCCESS",
       "finishTime" : 1371222209770,
@@ -7383,9 +7383,9 @@
     "finishTime" : 1371222209758,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2116.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2116.smile.com" ]
       },
-      "hostName" : "/default-rack/a2116.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2116.smile.com",
       "startTime" : 1371222188248,
       "result" : "SUCCESS",
       "finishTime" : 1371222209758,
@@ -7430,9 +7430,9 @@
     "finishTime" : 1371222209877,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2118.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2118.smile.com" ]
       },
-      "hostName" : "/default-rack/a2118.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2118.smile.com",
       "startTime" : 1371222188245,
       "result" : "SUCCESS",
       "finishTime" : 1371222209877,
@@ -7477,9 +7477,9 @@
     "finishTime" : 1371222209871,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2118.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2118.smile.com" ]
       },
-      "hostName" : "/default-rack/a2118.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2118.smile.com",
       "startTime" : 1371222188246,
       "result" : "SUCCESS",
       "finishTime" : 1371222209871,
@@ -7524,9 +7524,9 @@
     "finishTime" : 1371222209798,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2117.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2117.smile.com" ]
       },
-      "hostName" : "/default-rack/a2117.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2117.smile.com",
       "startTime" : 1371222189249,
       "result" : "SUCCESS",
       "finishTime" : 1371222209798,
@@ -7571,9 +7571,9 @@
     "finishTime" : 1371222209546,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2116.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2116.smile.com" ]
       },
-      "hostName" : "/default-rack/a2116.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2116.smile.com",
       "startTime" : 1371222189252,
       "result" : "SUCCESS",
       "finishTime" : 1371222209546,
@@ -7618,9 +7618,9 @@
     "finishTime" : 1371222211732,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2117.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2117.smile.com" ]
       },
-      "hostName" : "/default-rack/a2117.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2117.smile.com",
       "startTime" : 1371222189248,
       "result" : "SUCCESS",
       "finishTime" : 1371222211732,
@@ -7665,9 +7665,9 @@
     "finishTime" : 1371222209794,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2115.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2115.smile.com" ]
       },
-      "hostName" : "/default-rack/a2115.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2115.smile.com",
       "startTime" : 1371222189250,
       "result" : "SUCCESS",
       "finishTime" : 1371222209794,
@@ -7712,9 +7712,9 @@
     "finishTime" : 1371222209829,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2118.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2118.smile.com" ]
       },
-      "hostName" : "/default-rack/a2118.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2118.smile.com",
       "startTime" : 1371222190266,
       "result" : "SUCCESS",
       "finishTime" : 1371222209829,
@@ -7759,9 +7759,9 @@
     "finishTime" : 1371222209766,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2116.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2116.smile.com" ]
       },
-      "hostName" : "/default-rack/a2116.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2116.smile.com",
       "startTime" : 1371222190265,
       "result" : "SUCCESS",
       "finishTime" : 1371222209766,
@@ -7806,9 +7806,9 @@
     "finishTime" : 1371222209780,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2115.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2115.smile.com" ]
       },
-      "hostName" : "/default-rack/a2115.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2115.smile.com",
       "startTime" : 1371222190273,
       "result" : "SUCCESS",
       "finishTime" : 1371222209780,
@@ -7853,9 +7853,9 @@
     "finishTime" : 1371222209289,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2115.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2115.smile.com" ]
       },
-      "hostName" : "/default-rack/a2115.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2115.smile.com",
       "startTime" : 1371222190266,
       "result" : "SUCCESS",
       "finishTime" : 1371222209289,
@@ -7900,9 +7900,9 @@
     "finishTime" : 1371222211562,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2117.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2117.smile.com" ]
       },
-      "hostName" : "/default-rack/a2117.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2117.smile.com",
       "startTime" : 1371222192248,
       "result" : "SUCCESS",
       "finishTime" : 1371222211562,
@@ -7947,9 +7947,9 @@
     "finishTime" : 1371222225441,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2118.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2118.smile.com" ]
       },
-      "hostName" : "/default-rack/a2118.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2118.smile.com",
       "startTime" : 1371222206294,
       "result" : "SUCCESS",
       "finishTime" : 1371222225441,
@@ -7994,9 +7994,9 @@
     "finishTime" : 1371222221672,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2116.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2116.smile.com" ]
       },
-      "hostName" : "/default-rack/a2116.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2116.smile.com",
       "startTime" : 1371222206296,
       "result" : "SUCCESS",
       "finishTime" : 1371222221672,
@@ -8041,9 +8041,9 @@
     "finishTime" : 1371222221958,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2115.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2115.smile.com" ]
       },
-      "hostName" : "/default-rack/a2115.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2115.smile.com",
       "startTime" : 1371222206298,
       "result" : "SUCCESS",
       "finishTime" : 1371222221958,
@@ -8088,9 +8088,9 @@
     "finishTime" : 1371222227163,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2118.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2118.smile.com" ]
       },
-      "hostName" : "/default-rack/a2118.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2118.smile.com",
       "startTime" : 1371222207290,
       "result" : "SUCCESS",
       "finishTime" : 1371222227163,
@@ -8135,9 +8135,9 @@
     "finishTime" : 1371222227254,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2118.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2118.smile.com" ]
       },
-      "hostName" : "/default-rack/a2118.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2118.smile.com",
       "startTime" : 1371222207289,
       "result" : "SUCCESS",
       "finishTime" : 1371222227254,
@@ -8182,9 +8182,9 @@
     "finishTime" : 1371222230890,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2118.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2118.smile.com" ]
       },
-      "hostName" : "/default-rack/a2118.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2118.smile.com",
       "startTime" : 1371222207289,
       "result" : "SUCCESS",
       "finishTime" : 1371222230890,
@@ -8229,9 +8229,9 @@
     "finishTime" : 1371222241231,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2115.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2115.smile.com" ]
       },
-      "hostName" : "/default-rack/a2115.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2115.smile.com",
       "startTime" : 1371222209293,
       "result" : "SUCCESS",
       "finishTime" : 1371222241231,
@@ -8276,9 +8276,9 @@
     "finishTime" : 1371222225138,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2116.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2116.smile.com" ]
       },
-      "hostName" : "/default-rack/a2116.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2116.smile.com",
       "startTime" : 1371222209294,
       "result" : "SUCCESS",
       "finishTime" : 1371222225138,
@@ -8323,9 +8323,9 @@
     "finishTime" : 1371222230905,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2115.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2115.smile.com" ]
       },
-      "hostName" : "/default-rack/a2115.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2115.smile.com",
       "startTime" : 1371222210298,
       "result" : "SUCCESS",
       "finishTime" : 1371222230905,
@@ -8370,9 +8370,9 @@
     "finishTime" : 1371222225328,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2116.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2116.smile.com" ]
       },
-      "hostName" : "/default-rack/a2116.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2116.smile.com",
       "startTime" : 1371222210302,
       "result" : "SUCCESS",
       "finishTime" : 1371222225328,
@@ -8417,9 +8417,9 @@
     "finishTime" : 1371222230923,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2116.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2116.smile.com" ]
       },
-      "hostName" : "/default-rack/a2116.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2116.smile.com",
       "startTime" : 1371222210301,
       "result" : "SUCCESS",
       "finishTime" : 1371222230923,
@@ -8464,9 +8464,9 @@
     "finishTime" : 1371222243147,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2115.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2115.smile.com" ]
       },
-      "hostName" : "/default-rack/a2115.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2115.smile.com",
       "startTime" : 1371222210300,
       "result" : "SUCCESS",
       "finishTime" : 1371222243147,
@@ -8511,9 +8511,9 @@
     "finishTime" : 1371222230925,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2118.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2118.smile.com" ]
       },
-      "hostName" : "/default-rack/a2118.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2118.smile.com",
       "startTime" : 1371222210302,
       "result" : "SUCCESS",
       "finishTime" : 1371222230925,
@@ -8558,9 +8558,9 @@
     "finishTime" : 1371222233643,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2116.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2116.smile.com" ]
       },
-      "hostName" : "/default-rack/a2116.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2116.smile.com",
       "startTime" : 1371222211323,
       "result" : "SUCCESS",
       "finishTime" : 1371222233643,
@@ -8605,9 +8605,9 @@
     "finishTime" : 1371222231021,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2115.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2115.smile.com" ]
       },
-      "hostName" : "/default-rack/a2115.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2115.smile.com",
       "startTime" : 1371222211318,
       "result" : "SUCCESS",
       "finishTime" : 1371222231021,
@@ -8652,9 +8652,9 @@
     "finishTime" : 1371222230806,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2117.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2117.smile.com" ]
       },
-      "hostName" : "/default-rack/a2117.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2117.smile.com",
       "startTime" : 1371222211320,
       "result" : "SUCCESS",
       "finishTime" : 1371222230806,
@@ -8699,9 +8699,9 @@
     "finishTime" : 1371222231013,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2118.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2118.smile.com" ]
       },
-      "hostName" : "/default-rack/a2118.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2118.smile.com",
       "startTime" : 1371222211322,
       "result" : "SUCCESS",
       "finishTime" : 1371222231013,
@@ -8746,9 +8746,9 @@
     "finishTime" : 1371222230986,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2118.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2118.smile.com" ]
       },
-      "hostName" : "/default-rack/a2118.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2118.smile.com",
       "startTime" : 1371222211321,
       "result" : "SUCCESS",
       "finishTime" : 1371222230986,
@@ -8793,9 +8793,9 @@
     "finishTime" : 1371222230909,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2118.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2118.smile.com" ]
       },
-      "hostName" : "/default-rack/a2118.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2118.smile.com",
       "startTime" : 1371222211322,
       "result" : "SUCCESS",
       "finishTime" : 1371222230909,
@@ -8840,9 +8840,9 @@
     "finishTime" : 1371222241634,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2117.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2117.smile.com" ]
       },
-      "hostName" : "/default-rack/a2117.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2117.smile.com",
       "startTime" : 1371222212318,
       "result" : "SUCCESS",
       "finishTime" : 1371222241634,
@@ -8887,9 +8887,9 @@
     "finishTime" : 1371222234375,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2117.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2117.smile.com" ]
       },
-      "hostName" : "/default-rack/a2117.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2117.smile.com",
       "startTime" : 1371222212320,
       "result" : "SUCCESS",
       "finishTime" : 1371222234375,
@@ -8934,9 +8934,9 @@
     "finishTime" : 1371222233436,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2117.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2117.smile.com" ]
       },
-      "hostName" : "/default-rack/a2117.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2117.smile.com",
       "startTime" : 1371222212365,
       "result" : "SUCCESS",
       "finishTime" : 1371222233436,
@@ -8981,9 +8981,9 @@
     "finishTime" : 1371222234234,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2117.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2117.smile.com" ]
       },
-      "hostName" : "/default-rack/a2117.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2117.smile.com",
       "startTime" : 1371222212323,
       "result" : "SUCCESS",
       "finishTime" : 1371222234234,
@@ -9028,9 +9028,9 @@
     "finishTime" : 1371222234374,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2117.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2117.smile.com" ]
       },
-      "hostName" : "/default-rack/a2117.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2117.smile.com",
       "startTime" : 1371222212325,
       "result" : "SUCCESS",
       "finishTime" : 1371222234374,
@@ -9075,9 +9075,9 @@
     "finishTime" : 1371222233257,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2117.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2117.smile.com" ]
       },
-      "hostName" : "/default-rack/a2117.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2117.smile.com",
       "startTime" : 1371222212365,
       "result" : "SUCCESS",
       "finishTime" : 1371222233257,
@@ -9122,9 +9122,9 @@
     "finishTime" : 1371222240854,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2116.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2116.smile.com" ]
       },
-      "hostName" : "/default-rack/a2116.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2116.smile.com",
       "startTime" : 1371222212327,
       "result" : "SUCCESS",
       "finishTime" : 1371222240854,
@@ -9169,9 +9169,9 @@
     "finishTime" : 1371222230895,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2115.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2115.smile.com" ]
       },
-      "hostName" : "/default-rack/a2115.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2115.smile.com",
       "startTime" : 1371222212325,
       "result" : "SUCCESS",
       "finishTime" : 1371222230895,
@@ -9216,9 +9216,9 @@
     "finishTime" : 1371222243205,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2115.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2115.smile.com" ]
       },
-      "hostName" : "/default-rack/a2115.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2115.smile.com",
       "startTime" : 1371222212324,
       "result" : "SUCCESS",
       "finishTime" : 1371222243205,
@@ -9263,9 +9263,9 @@
     "finishTime" : 1371222232772,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2115.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2115.smile.com" ]
       },
-      "hostName" : "/default-rack/a2115.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2115.smile.com",
       "startTime" : 1371222212326,
       "result" : "SUCCESS",
       "finishTime" : 1371222232772,
@@ -9310,9 +9310,9 @@
     "finishTime" : 1371222232612,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2117.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2117.smile.com" ]
       },
-      "hostName" : "/default-rack/a2117.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2117.smile.com",
       "startTime" : 1371222213322,
       "result" : "SUCCESS",
       "finishTime" : 1371222232612,
@@ -9357,9 +9357,9 @@
     "finishTime" : 1371222235284,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2116.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2116.smile.com" ]
       },
-      "hostName" : "/default-rack/a2116.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2116.smile.com",
       "startTime" : 1371222223387,
       "result" : "SUCCESS",
       "finishTime" : 1371222235284,
@@ -9404,9 +9404,9 @@
     "finishTime" : 1371222237538,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2115.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2115.smile.com" ]
       },
-      "hostName" : "/default-rack/a2115.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2115.smile.com",
       "startTime" : 1371222223387,
       "result" : "SUCCESS",
       "finishTime" : 1371222237538,
@@ -9451,9 +9451,9 @@
     "finishTime" : 1371222239274,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2116.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2116.smile.com" ]
       },
-      "hostName" : "/default-rack/a2116.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2116.smile.com",
       "startTime" : 1371222225390,
       "result" : "SUCCESS",
       "finishTime" : 1371222239274,
@@ -9498,9 +9498,9 @@
     "finishTime" : 1371222249913,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2116.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2116.smile.com" ]
       },
-      "hostName" : "/default-rack/a2116.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2116.smile.com",
       "startTime" : 1371222226395,
       "result" : "SUCCESS",
       "finishTime" : 1371222249913,
@@ -9545,9 +9545,9 @@
     "finishTime" : 1371222241825,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2118.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2118.smile.com" ]
       },
-      "hostName" : "/default-rack/a2118.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2118.smile.com",
       "startTime" : 1371222227397,
       "result" : "SUCCESS",
       "finishTime" : 1371222241825,
@@ -9592,9 +9592,9 @@
     "finishTime" : 1371222241726,
     "attempts" : [ {
       "location" : {
-        "layers" : [ "default-rack", "a2118.halxg.cloudera.com" ]
+        "layers" : [ "default-rack", "a2118.smile.com" ]
       },
-      "hostName" : "/default-rack/a2118.halxg.cloudera.com",
+      "hostName" : "/default-rack/a2118.smile.com",
       "startTime" : 1371222228399,
       "result" : "SUCCESS",
       "finishTime" : 1371222241726,
@@ -9663,7 +9663,7 @@
     "s3.blocksize" : "67108864",
     "mapreduce.task.io.sort.factor" : "10",
     "yarn.nodemanager.disk-health-checker.interval-ms" : "120000",
-    "mapreduce.job.working.dir" : "hdfs://a2115.halxg.cloudera.com:8020/user/jenkins",
+    "mapreduce.job.working.dir" : "hdfs://a2115.smile.com:8020/user/jenkins",
     "yarn.admin.acl" : "*",
     "mapreduce.job.speculative.speculativecap" : "0.1",
     "dfs.namenode.num.checkpoints.retained" : "2",
@@ -9672,7 +9672,7 @@
     "io.map.index.interval" : "128",
     "s3.client-write-packet-size" : "65536",
     "mapreduce.task.files.preserve.failedtasks" : "false",
-    "dfs.namenode.http-address" : "a2115.halxg.cloudera.com:20101",
+    "dfs.namenode.http-address" : "a2115.smile.com:20101",
     "ha.zookeeper.session-timeout.ms" : "5000",
     "hadoop.hdfs.configuration.version" : "1",
     "s3.replication" : "3",
@@ -9689,7 +9689,7 @@
     "dfs.namenode.checkpoint.dir" : "file://${hadoop.tmp.dir}/dfs/namesecondary",
     "dfs.namenode.replication.work.multiplier.per.iteration" : "2",
     "fs.trash.interval" : "1",
-    "yarn.resourcemanager.admin.address" : "a2115.halxg.cloudera.com:8033",
+    "yarn.resourcemanager.admin.address" : "a2115.smile.com:8033",
     "ha.health-monitor.check-interval.ms" : "1000",
     "mapreduce.job.outputformat.class" : "org.apache.hadoop.examples.terasort.TeraOutputFormat",
     "hadoop.jetty.logs.serve.aliases" : "true",
@@ -9841,7 +9841,7 @@
     "dfs.https.port" : "20102",
     "dfs.namenode.replication.interval" : "3",
     "mapreduce.task.skip.start.attempts" : "2",
-    "dfs.namenode.https-address" : "a2115.halxg.cloudera.com:20102",
+    "dfs.namenode.https-address" : "a2115.smile.com:20102",
     "mapreduce.jobtracker.persist.jobstatus.dir" : "/jobtracker/jobsInfo",
     "ipc.client.kill.max" : "10",
     "dfs.ha.automatic-failover.enabled" : "false",
@@ -9871,7 +9871,7 @@
     "ftp.replication" : "3",
     "mapreduce.jobtracker.http.address" : "0.0.0.0:50030",
     "yarn.nodemanager.health-checker.script.timeout-ms" : "1200000",
-    "mapreduce.jobhistory.address" : "a2115.halxg.cloudera.com:10020",
+    "mapreduce.jobhistory.address" : "a2115.smile.com:10020",
     "mapreduce.jobtracker.taskcache.levels" : "2",
     "dfs.datanode.dns.nameserver" : "default",
     "mapreduce.application.classpath" : "$HADOOP_MAPRED_HOME/share/hadoop/mapreduce/*,$HADOOP_MAPRED_HOME/share/hadoop/mapreduce/lib/*",
@@ -9913,13 +9913,13 @@
     "hadoop.fuse.timer.period" : "5",
     "dfs.namenode.num.extra.edits.retained" : "1000000",
     "hadoop.rpc.socket.factory.class.default" : "org.apache.hadoop.net.StandardSocketFactory",
-    "mapreduce.job.submithostname" : "a2115.halxg.cloudera.com",
+    "mapreduce.job.submithostname" : "a2115.smile.com",
     "dfs.namenode.handler.count" : "10",
     "fs.automatic.close" : "false",
     "mapreduce.job.submithostaddress" : "10.20.206.115",
     "mapreduce.tasktracker.healthchecker.script.timeout" : "600000",
     "dfs.datanode.directoryscan.interval" : "21600",
-    "yarn.resourcemanager.address" : "a2115.halxg.cloudera.com:8032",
+    "yarn.resourcemanager.address" : "a2115.smile.com:8032",
     "yarn.nodemanager.health-checker.interval-ms" : "600000",
     "dfs.client.file-block-storage-locations.num-threads" : "10",
     "yarn.resourcemanager.container-tokens.master-key-rolling-interval-secs" : "86400",
@@ -9934,7 +9934,7 @@
     "ftp.stream-buffer-size" : "4096",
     "dfs.namenode.avoid.write.stale.datanode" : "false",
     "hadoop.security.group.mapping.ldap.search.attr.member" : "member",
-    "mapreduce.output.fileoutputformat.outputdir" : "hdfs://a2115.halxg.cloudera.com:8020/user/jenkins/tera-gen-2",
+    "mapreduce.output.fileoutputformat.outputdir" : "hdfs://a2115.smile.com:8020/user/jenkins/tera-gen-2",
     "dfs.blockreport.initialDelay" : "0",
     "yarn.nm.liveness-monitor.expiry-interval-ms" : "600000",
     "hadoop.http.authentication.token.validity" : "36000",
@@ -9950,7 +9950,7 @@
     "mapreduce.task.profile" : "false",
     "mapreduce.tasktracker.http.address" : "0.0.0.0:50060",
     "mapreduce.tasktracker.instrumentation" : "org.apache.hadoop.mapred.TaskTrackerMetricsInst",
-    "mapreduce.jobhistory.webapp.address" : "a2115.halxg.cloudera.com:19888",
+    "mapreduce.jobhistory.webapp.address" : "a2115.smile.com:19888",
     "ha.failover-controller.graceful-fence.rpc-timeout.ms" : "5000",
     "yarn.ipc.rpc.class" : "org.apache.hadoop.yarn.ipc.HadoopYarnProtoRPC",
     "mapreduce.job.name" : "TeraGen",
@@ -9980,14 +9980,14 @@
     "hadoop.security.auth_to_local" : "DEFAULT",
     "dfs.secondary.namenode.kerberos.internal.spnego.principal" : "${dfs.web.authentication.kerberos.principal}",
     "ftp.client-write-packet-size" : "65536",
-    "fs.defaultFS" : "hdfs://a2115.halxg.cloudera.com:8020",
+    "fs.defaultFS" : "hdfs://a2115.smile.com:8020",
     "yarn.nodemanager.address" : "0.0.0.0:0",
     "yarn.scheduler.fair.assignmultiple" : "true",
     "yarn.resourcemanager.scheduler.client.thread-count" : "50",
     "mapreduce.task.merge.progress.records" : "10000",
     "file.client-write-packet-size" : "65536",
     "yarn.nodemanager.delete.thread-count" : "4",
-    "yarn.resourcemanager.scheduler.address" : "a2115.halxg.cloudera.com:8030",
+    "yarn.resourcemanager.scheduler.address" : "a2115.smile.com:8030",
     "fs.trash.checkpoint.interval" : "0",
     "hadoop.http.authentication.signature.secret.file" : "${user.home}/hadoop-http-auth-signature-secret",
     "s3native.stream-buffer-size" : "4096",
@@ -10029,7 +10029,7 @@
     "mapreduce.map.skip.maxrecords" : "0",
     "dfs.datanode.https.address" : "0.0.0.0:50475",
     "file.replication" : "1",
-    "yarn.resourcemanager.resource-tracker.address" : "a2115.halxg.cloudera.com:8031",
+    "yarn.resourcemanager.resource-tracker.address" : "a2115.smile.com:8031",
     "dfs.datanode.drop.cache.behind.reads" : "false",
     "hadoop.fuse.connection.timeout" : "300",
     "hadoop.work.around.non.threadsafe.getpwuid" : "false",
@@ -10054,7 +10054,7 @@
     "mapreduce.task.profile.maps" : "0-2",
     "dfs.namenode.decommission.interval" : "30",
     "dfs.image.compression.codec" : "org.apache.hadoop.io.compress.DefaultCodec",
-    "yarn.resourcemanager.webapp.address" : "a2115.halxg.cloudera.com:8088",
+    "yarn.resourcemanager.webapp.address" : "a2115.smile.com:8088",
     "mapreduce.jobtracker.system.dir" : "${hadoop.tmp.dir}/mapred/system",
     "hadoop.ssl.hostname.verifier" : "DEFAULT",
     "yarn.nodemanager.vmem-pmem-ratio" : "2.1",
