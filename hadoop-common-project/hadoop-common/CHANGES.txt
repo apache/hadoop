@@ -376,6 +376,8 @@ Release 2.3.0 - UNRELEASED
     HADOOP-10310. SaslRpcServer should be initialized even when no secret
     manager present. (atm)
 
+    HADOOP-10311. Cleanup vendor names from the code base. (tucu)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
