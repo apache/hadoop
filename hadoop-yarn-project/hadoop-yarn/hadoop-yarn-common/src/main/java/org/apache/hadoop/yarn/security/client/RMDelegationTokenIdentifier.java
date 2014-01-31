@@ -37,8 +37,8 @@ import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecret
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenRequest;
+import org.apache.hadoop.yarn.client.ClientRMProxy;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
@@ -138,7 +138,7 @@ public class RMDelegationTokenIdentifier extends AbstractDelegationTokenIdentifi
     }
     
     private static ApplicationClientProtocol getRmClient(Token<?> token,
-        Configuration conf) {
+        Configuration conf) throws IOException {
       InetSocketAddress addr = SecurityUtil.getTokenServiceAddr(token);
       if (localSecretManager != null) {
         // return null if it's our token
@@ -151,8 +151,7 @@ public class RMDelegationTokenIdentifier extends AbstractDelegationTokenIdentifi
           return null;
         }
       }
-      final YarnRPC rpc = YarnRPC.create(conf);
-      return (ApplicationClientProtocol)rpc.getProxy(ApplicationClientProtocol.class, addr, conf);        
+      return ClientRMProxy.createRMProxy(conf, ApplicationClientProtocol.class);
     }
 
     // get renewer so we can always renew our own tokens

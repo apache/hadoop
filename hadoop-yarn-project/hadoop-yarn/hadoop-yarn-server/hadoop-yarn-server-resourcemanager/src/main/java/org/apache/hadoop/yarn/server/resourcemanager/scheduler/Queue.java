@@ -58,4 +58,6 @@ public interface Queue {
   List<QueueUserACLInfo> getQueueUserAclInfo(UserGroupInformation user);
 
   boolean hasAccess(QueueACL acl, UserGroupInformation user);
+  
+  public ActiveUsersManager getActiveUsersManager();
 }

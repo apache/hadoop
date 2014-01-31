@@ -110,7 +110,7 @@ public class TestOptionsParser {
         "hdfs://localhost:8020/target/"});
     Assert.assertEquals(options.getMapBandwidth(), 11);
   }
-  
+
   @Test(expected=IllegalArgumentException.class)
   public void testParseNonPositiveBandwidth() {
     OptionsParser.parse(new String[] {
@@ -119,7 +119,7 @@ public class TestOptionsParser {
         "hdfs://localhost:8020/source/first",
         "hdfs://localhost:8020/target/"});
   }
-  
+
   @Test(expected=IllegalArgumentException.class)
   public void testParseZeroBandwidth() {
     OptionsParser.parse(new String[] {
@@ -397,6 +397,7 @@ public class TestOptionsParser {
     Assert.assertFalse(options.shouldPreserve(FileAttribute.PERMISSION));
     Assert.assertFalse(options.shouldPreserve(FileAttribute.USER));
     Assert.assertFalse(options.shouldPreserve(FileAttribute.GROUP));
+    Assert.assertFalse(options.shouldPreserve(FileAttribute.CHECKSUMTYPE));
 
     options = OptionsParser.parse(new String[] {
         "-p",
@@ -408,6 +409,7 @@ public class TestOptionsParser {
     Assert.assertTrue(options.shouldPreserve(FileAttribute.PERMISSION));
     Assert.assertTrue(options.shouldPreserve(FileAttribute.USER));
     Assert.assertTrue(options.shouldPreserve(FileAttribute.GROUP));
+    Assert.assertTrue(options.shouldPreserve(FileAttribute.CHECKSUMTYPE));
 
     options = OptionsParser.parse(new String[] {
         "-p",
@@ -418,6 +420,7 @@ public class TestOptionsParser {
     Assert.assertTrue(options.shouldPreserve(FileAttribute.PERMISSION));
     Assert.assertTrue(options.shouldPreserve(FileAttribute.USER));
     Assert.assertTrue(options.shouldPreserve(FileAttribute.GROUP));
+    Assert.assertTrue(options.shouldPreserve(FileAttribute.CHECKSUMTYPE));
 
     options = OptionsParser.parse(new String[] {
         "-pbr",
@@ -429,6 +432,7 @@ public class TestOptionsParser {
     Assert.assertFalse(options.shouldPreserve(FileAttribute.PERMISSION));
     Assert.assertFalse(options.shouldPreserve(FileAttribute.USER));
     Assert.assertFalse(options.shouldPreserve(FileAttribute.GROUP));
+    Assert.assertFalse(options.shouldPreserve(FileAttribute.CHECKSUMTYPE));
 
     options = OptionsParser.parse(new String[] {
         "-pbrgup",
@@ -440,6 +444,31 @@ public class TestOptionsParser {
     Assert.assertTrue(options.shouldPreserve(FileAttribute.PERMISSION));
     Assert.assertTrue(options.shouldPreserve(FileAttribute.USER));
     Assert.assertTrue(options.shouldPreserve(FileAttribute.GROUP));
+    Assert.assertFalse(options.shouldPreserve(FileAttribute.CHECKSUMTYPE));
+
+    options = OptionsParser.parse(new String[] {
+        "-pbrgupc",
+        "-f",
+        "hdfs://localhost:8020/source/first",
+        "hdfs://localhost:8020/target/"});
+    Assert.assertTrue(options.shouldPreserve(FileAttribute.BLOCKSIZE));
+    Assert.assertTrue(options.shouldPreserve(FileAttribute.REPLICATION));
+    Assert.assertTrue(options.shouldPreserve(FileAttribute.PERMISSION));
+    Assert.assertTrue(options.shouldPreserve(FileAttribute.USER));
+    Assert.assertTrue(options.shouldPreserve(FileAttribute.GROUP));
+    Assert.assertTrue(options.shouldPreserve(FileAttribute.CHECKSUMTYPE));
+
+    options = OptionsParser.parse(new String[] {
+        "-pc",
+        "-f",
+        "hdfs://localhost:8020/source/first",
+        "hdfs://localhost:8020/target/"});
+    Assert.assertFalse(options.shouldPreserve(FileAttribute.BLOCKSIZE));
+    Assert.assertFalse(options.shouldPreserve(FileAttribute.REPLICATION));
+    Assert.assertFalse(options.shouldPreserve(FileAttribute.PERMISSION));
+    Assert.assertFalse(options.shouldPreserve(FileAttribute.USER));
+    Assert.assertFalse(options.shouldPreserve(FileAttribute.GROUP));
+    Assert.assertTrue(options.shouldPreserve(FileAttribute.CHECKSUMTYPE));
 
     options = OptionsParser.parse(new String[] {
         "-p",
@@ -452,7 +481,7 @@ public class TestOptionsParser {
       attribIterator.next();
       i++;
     }
-    Assert.assertEquals(i, 5);
+    Assert.assertEquals(i, 6);
 
     try {
       OptionsParser.parse(new String[] {

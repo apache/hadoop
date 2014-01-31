@@ -40,7 +40,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
 
 public class TestServletFilter extends HttpServerFunctionalTest {
-  static final Log LOG = LogFactory.getLog(HttpServer.class);
+  static final Log LOG = LogFactory.getLog(HttpServer2.class);
   static volatile String uri = null; 
 
   /** A very simple filter which record the uri filtered. */
@@ -105,9 +105,9 @@ public class TestServletFilter extends HttpServerFunctionalTest {
     Configuration conf = new Configuration();
     
     //start a http server with CountingFilter
-    conf.set(HttpServer.FILTER_INITIALIZER_PROPERTY,
+    conf.set(HttpServer2.FILTER_INITIALIZER_PROPERTY,
         SimpleFilter.Initializer.class.getName());
-    HttpServer http = createTestServer(conf);
+    HttpServer2 http = createTestServer(conf);
     http.start();
 
     final String fsckURL = "/fsck";
@@ -167,9 +167,9 @@ public class TestServletFilter extends HttpServerFunctionalTest {
   public void testServletFilterWhenInitThrowsException() throws Exception {
     Configuration conf = new Configuration();
     // start a http server with ErrorFilter
-    conf.set(HttpServer.FILTER_INITIALIZER_PROPERTY,
+    conf.set(HttpServer2.FILTER_INITIALIZER_PROPERTY,
         ErrorFilter.Initializer.class.getName());
-    HttpServer http = createTestServer(conf);
+    HttpServer2 http = createTestServer(conf);
     try {
       http.start();
       fail("expecting exception");
@@ -186,8 +186,8 @@ public class TestServletFilter extends HttpServerFunctionalTest {
   public void testContextSpecificServletFilterWhenInitThrowsException()
       throws Exception {
     Configuration conf = new Configuration();
-    HttpServer http = createTestServer(conf);
-    HttpServer.defineFilter(http.webAppContext,
+    HttpServer2 http = createTestServer(conf);
+    HttpServer2.defineFilter(http.webAppContext,
         "ErrorFilter", ErrorFilter.class.getName(),
         null, null);
     try {

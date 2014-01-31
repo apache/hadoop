@@ -18,29 +18,6 @@
 
 package org.apache.hadoop.tools.mapred;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.permission.FsAction;
-import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapreduce.*;
-import org.apache.hadoop.security.AccessControlException;
-import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.tools.DistCpConstants;
-import org.apache.hadoop.tools.DistCpOptionSwitch;
-import org.apache.hadoop.tools.DistCpOptions;
-import org.apache.hadoop.tools.StubContext;
-import org.apache.hadoop.tools.util.DistCpUtils;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -49,11 +26,38 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CreateFlag;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Options.ChecksumOpt;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.tools.DistCpConstants;
+import org.apache.hadoop.tools.DistCpOptionSwitch;
+import org.apache.hadoop.tools.DistCpOptions;
+import org.apache.hadoop.tools.StubContext;
+import org.apache.hadoop.tools.util.DistCpUtils;
+import org.apache.hadoop.util.DataChecksum;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
+
 public class TestCopyMapper {
   private static final Log LOG = LogFactory.getLog(TestCopyMapper.class);
   private static List<Path> pathList = new ArrayList<Path>();
   private static int nFiles = 0;
   private static final int DEFAULT_FILE_SIZE = 1024;
+  private static final long NON_DEFAULT_BLOCK_SIZE = 4096;
 
   private static MiniDFSCluster cluster;
 
@@ -119,10 +123,25 @@ public class TestCopyMapper {
     mkdirs(SOURCE_PATH + "/2/3/4");
     mkdirs(SOURCE_PATH + "/2/3");
     mkdirs(SOURCE_PATH + "/5");
-    touchFile(SOURCE_PATH + "/5/6", true);
+    touchFile(SOURCE_PATH + "/5/6", true, null);
     mkdirs(SOURCE_PATH + "/7");
     mkdirs(SOURCE_PATH + "/7/8");
     touchFile(SOURCE_PATH + "/7/8/9");
+  }
+
+  private static void createSourceDataWithDifferentChecksumType()
+      throws Exception {
+    mkdirs(SOURCE_PATH + "/1");
+    mkdirs(SOURCE_PATH + "/2");
+    mkdirs(SOURCE_PATH + "/2/3/4");
+    mkdirs(SOURCE_PATH + "/2/3");
+    mkdirs(SOURCE_PATH + "/5");
+    touchFile(SOURCE_PATH + "/5/6", new ChecksumOpt(DataChecksum.Type.CRC32,
+        512));
+    mkdirs(SOURCE_PATH + "/7");
+    mkdirs(SOURCE_PATH + "/7/8");
+    touchFile(SOURCE_PATH + "/7/8/9", new ChecksumOpt(DataChecksum.Type.CRC32C,
+        512));
   }
 
   private static void mkdirs(String path) throws Exception {
@@ -134,21 +153,31 @@ public class TestCopyMapper {
   }
 
   private static void touchFile(String path) throws Exception {
-    touchFile(path, false);
+    touchFile(path, false, null);
   }
 
-  private static void touchFile(String path, boolean createMultipleBlocks) throws Exception {
-    final long NON_DEFAULT_BLOCK_SIZE = 4096;
+  private static void touchFile(String path, ChecksumOpt checksumOpt)
+      throws Exception {
+    // create files with specific checksum opt and non-default block size
+    touchFile(path, true, checksumOpt);
+  }
+
+  private static void touchFile(String path, boolean createMultipleBlocks,
+      ChecksumOpt checksumOpt) throws Exception {
     FileSystem fs;
     DataOutputStream outputStream = null;
     try {
       fs = cluster.getFileSystem();
       final Path qualifiedPath = new Path(path).makeQualified(fs.getUri(),
-                                                      fs.getWorkingDirectory());
-      final long blockSize = createMultipleBlocks? NON_DEFAULT_BLOCK_SIZE : fs.getDefaultBlockSize(qualifiedPath) * 2;
-      outputStream = fs.create(qualifiedPath, true, 0,
-              (short)(fs.getDefaultReplication(qualifiedPath)*2),
-              blockSize);
+          fs.getWorkingDirectory());
+      final long blockSize = createMultipleBlocks ? NON_DEFAULT_BLOCK_SIZE : fs
+          .getDefaultBlockSize(qualifiedPath) * 2;
+      FsPermission permission = FsPermission.getFileDefault().applyUMask(
+          FsPermission.getUMask(fs.getConf()));
+      outputStream = fs.create(qualifiedPath, permission,
+          EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE), 0,
+          (short) (fs.getDefaultReplication(qualifiedPath) * 2), blockSize,
+          null, checksumOpt);
       byte[] bytes = new byte[DEFAULT_FILE_SIZE];
       outputStream.write(bytes);
       long fileSize = DEFAULT_FILE_SIZE;
@@ -171,17 +200,40 @@ public class TestCopyMapper {
     }
   }
 
+  @Test
+  public void testCopyWithDifferentChecksumType() throws Exception {
+    testCopy(true);
+  }
+
   @Test(timeout=40000)
   public void testRun() {
+    testCopy(false);
+  }
+
+  private void testCopy(boolean preserveChecksum) {
     try {
       deleteState();
-      createSourceData();
+      if (preserveChecksum) {
+        createSourceDataWithDifferentChecksumType();
+      } else {
+        createSourceData();
+      }
 
       FileSystem fs = cluster.getFileSystem();
       CopyMapper copyMapper = new CopyMapper();
       StubContext stubContext = new StubContext(getConfiguration(), null, 0);
       Mapper<Text, FileStatus, Text, Text>.Context context
               = stubContext.getContext();
+
+      Configuration configuration = context.getConfiguration();
+      EnumSet<DistCpOptions.FileAttribute> fileAttributes
+              = EnumSet.of(DistCpOptions.FileAttribute.REPLICATION);
+      if (preserveChecksum) {
+        fileAttributes.add(DistCpOptions.FileAttribute.CHECKSUMTYPE);
+      }
+      configuration.set(DistCpOptionSwitch.PRESERVE_STATUS.getConfigLabel(),
+              DistCpUtils.packAttributes(fileAttributes));
+
       copyMapper.setup(context);
 
       for (Path path: pathList) {
@@ -195,19 +247,29 @@ public class TestCopyMapper {
                 .replaceAll(SOURCE_PATH, TARGET_PATH));
         Assert.assertTrue(fs.exists(targetPath));
         Assert.assertTrue(fs.isFile(targetPath) == fs.isFile(path));
-        Assert.assertEquals(fs.getFileStatus(path).getReplication(),
-                fs.getFileStatus(targetPath).getReplication());
-        Assert.assertEquals(fs.getFileStatus(path).getBlockSize(),
-                fs.getFileStatus(targetPath).getBlockSize());
-        Assert.assertTrue(!fs.isFile(targetPath) ||
-                fs.getFileChecksum(targetPath).equals(
-                        fs.getFileChecksum(path)));
+        FileStatus sourceStatus = fs.getFileStatus(path);
+        FileStatus targetStatus = fs.getFileStatus(targetPath);
+        Assert.assertEquals(sourceStatus.getReplication(),
+            targetStatus.getReplication());
+        if (preserveChecksum) {
+          Assert.assertEquals(sourceStatus.getBlockSize(),
+              targetStatus.getBlockSize());
+        }
+        Assert.assertTrue(!fs.isFile(targetPath)
+            || fs.getFileChecksum(targetPath).equals(fs.getFileChecksum(path)));
       }
 
       Assert.assertEquals(pathList.size(),
               stubContext.getReporter().getCounter(CopyMapper.Counter.COPY).getValue());
-      Assert.assertEquals(nFiles * DEFAULT_FILE_SIZE,
-              stubContext.getReporter().getCounter(CopyMapper.Counter.BYTESCOPIED).getValue());
+      if (!preserveChecksum) {
+        Assert.assertEquals(nFiles * DEFAULT_FILE_SIZE, stubContext
+            .getReporter().getCounter(CopyMapper.Counter.BYTESCOPIED)
+            .getValue());
+      } else {
+        Assert.assertEquals(nFiles * NON_DEFAULT_BLOCK_SIZE * 2, stubContext
+            .getReporter().getCounter(CopyMapper.Counter.BYTESCOPIED)
+            .getValue());
+      }
 
       testCopyingExistingFiles(fs, copyMapper, context);
       for (Text value : stubContext.getWriter().values()) {
@@ -309,7 +371,7 @@ public class TestCopyMapper {
       UserGroupInformation tmpUser = UserGroupInformation.createRemoteUser("guest");
 
       final CopyMapper copyMapper = new CopyMapper();
-      
+
       final Mapper<Text, FileStatus, Text, Text>.Context context =  tmpUser.
           doAs(new PrivilegedAction<Mapper<Text, FileStatus, Text, Text>.Context>() {
         @Override
@@ -535,7 +597,7 @@ public class TestCopyMapper {
 
       final Mapper<Text, FileStatus, Text, Text>.Context context
               = stubContext.getContext();
-      
+
       context.getConfiguration().set(DistCpConstants.CONF_LABEL_PRESERVE_STATUS,
         DistCpUtils.packAttributes(preserveStatus));
 

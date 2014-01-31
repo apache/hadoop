@@ -27,7 +27,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.http.HttpServer;
+import org.apache.hadoop.http.HttpServer2;
 
 /**
  * A servlet to print out the running configuration data.
@@ -47,7 +47,7 @@ public class ConfServlet extends HttpServlet {
    */
   private Configuration getConfFromContext() {
     Configuration conf = (Configuration)getServletContext().getAttribute(
-        HttpServer.CONF_CONTEXT_ATTRIBUTE);
+        HttpServer2.CONF_CONTEXT_ATTRIBUTE);
     assert conf != null;
     return conf;
   }
@@ -56,7 +56,7 @@ public class ConfServlet extends HttpServlet {
   public void doGet(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
 
-    if (!HttpServer.isInstrumentationAccessAllowed(getServletContext(),
+    if (!HttpServer2.isInstrumentationAccessAllowed(getServletContext(),
                                                    request, response)) {
       return;
     }

@@ -117,6 +117,9 @@ public class MRApp extends MRAppMaster {
   private File testWorkDir;
   private Path testAbsPath;
   private ClusterInfo clusterInfo;
+  
+  // Queue to pretend the RM assigned us
+  private String assignedQueue;
 
   public static String NM_HOST = "localhost";
   public static int NM_PORT = 1234;
@@ -133,7 +136,7 @@ public class MRApp extends MRAppMaster {
 
   public MRApp(int maps, int reduces, boolean autoComplete, String testName,
       boolean cleanOnStart, Clock clock) {
-    this(maps, reduces, autoComplete, testName, cleanOnStart, 1, clock);
+    this(maps, reduces, autoComplete, testName, cleanOnStart, 1, clock, null);
   }
 
   public MRApp(int maps, int reduces, boolean autoComplete, String testName,
@@ -145,6 +148,12 @@ public class MRApp extends MRAppMaster {
   public MRApp(int maps, int reduces, boolean autoComplete, String testName,
       boolean cleanOnStart) {
     this(maps, reduces, autoComplete, testName, cleanOnStart, 1);
+  }
+  
+  public MRApp(int maps, int reduces, boolean autoComplete, String testName,
+      boolean cleanOnStart, String assignedQueue) {
+    this(maps, reduces, autoComplete, testName, cleanOnStart, 1,
+        new SystemClock(), assignedQueue);
   }
 
   public MRApp(int maps, int reduces, boolean autoComplete, String testName,
@@ -178,7 +187,7 @@ public class MRApp extends MRAppMaster {
   public MRApp(int maps, int reduces, boolean autoComplete, String testName,
       boolean cleanOnStart, int startCount) {
     this(maps, reduces, autoComplete, testName, cleanOnStart, startCount,
-        new SystemClock());
+        new SystemClock(), null);
   }
 
   public MRApp(int maps, int reduces, boolean autoComplete, String testName,
@@ -191,33 +200,34 @@ public class MRApp extends MRAppMaster {
       boolean cleanOnStart, int startCount, Clock clock, boolean unregistered) {
     this(getApplicationAttemptId(applicationId, startCount), getContainerId(
       applicationId, startCount), maps, reduces, autoComplete, testName,
-      cleanOnStart, startCount, clock, unregistered);
+      cleanOnStart, startCount, clock, unregistered, null);
   }
 
   public MRApp(int maps, int reduces, boolean autoComplete, String testName,
-      boolean cleanOnStart, int startCount, Clock clock) {
+      boolean cleanOnStart, int startCount, Clock clock, String assignedQueue) {
     this(getApplicationAttemptId(applicationId, startCount), getContainerId(
       applicationId, startCount), maps, reduces, autoComplete, testName,
-      cleanOnStart, startCount, clock, true);
+      cleanOnStart, startCount, clock, true, assignedQueue);
   }
 
   public MRApp(ApplicationAttemptId appAttemptId, ContainerId amContainerId,
       int maps, int reduces, boolean autoComplete, String testName,
       boolean cleanOnStart, int startCount, boolean unregistered) {
     this(appAttemptId, amContainerId, maps, reduces, autoComplete, testName,
-        cleanOnStart, startCount, new SystemClock(), unregistered);
+        cleanOnStart, startCount, new SystemClock(), unregistered, null);
   }
 
   public MRApp(ApplicationAttemptId appAttemptId, ContainerId amContainerId,
       int maps, int reduces, boolean autoComplete, String testName,
       boolean cleanOnStart, int startCount) {
     this(appAttemptId, amContainerId, maps, reduces, autoComplete, testName,
-        cleanOnStart, startCount, new SystemClock(), true);
+        cleanOnStart, startCount, new SystemClock(), true, null);
   }
 
   public MRApp(ApplicationAttemptId appAttemptId, ContainerId amContainerId,
       int maps, int reduces, boolean autoComplete, String testName,
-      boolean cleanOnStart, int startCount, Clock clock, boolean unregistered) {
+      boolean cleanOnStart, int startCount, Clock clock, boolean unregistered,
+      String assignedQueue) {
     super(appAttemptId, amContainerId, NM_HOST, NM_PORT, NM_HTTP_PORT, clock, System
         .currentTimeMillis(), MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS);
     this.testWorkDir = new File("target", testName);
@@ -239,6 +249,7 @@ public class MRApp extends MRAppMaster {
     // If safeToReportTerminationToUser is set to true, we can verify whether
     // the job can reaches the final state when MRAppMaster shuts down.
     this.successfullyUnregistered.set(unregistered);
+    this.assignedQueue = assignedQueue;
   }
 
   @Override
@@ -285,6 +296,9 @@ public class MRApp extends MRAppMaster {
     start();
     DefaultMetricsSystem.shutdown();
     Job job = getContext().getAllJobs().values().iterator().next();
+    if (assignedQueue != null) {
+      job.setQueueName(assignedQueue);
+    }
 
     // Write job.xml
     String jobFile = MRApps.getJobFile(conf, user,

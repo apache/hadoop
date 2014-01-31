@@ -620,7 +620,7 @@ public class CacheAdmin extends Configured implements Tool {
           "directives being added to the pool. This can be specified in " +
           "seconds, minutes, hours, and days, e.g. 120s, 30m, 4h, 2d. " +
           "Valid units are [smhd]. By default, no maximum is set. " +
-          "This can also be manually specified by \"never\".");
+          "A value of \"never\" specifies that there is no limit.");
       return getShortUsage() + "\n" +
           "Add a new cache pool.\n\n" + 
           listing.toString();

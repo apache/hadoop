@@ -45,7 +45,7 @@ Apache Hadoop ${project.version}
 
   The new ResourceManager manages the global assignment of compute resources to 
   applications and the per-application ApplicationMaster manages the 
-  application‚Äôs scheduling and coordination. 
+  application‚ scheduling and coordination. 
 
   An application is either a single job in the sense of classic MapReduce jobs 
   or a DAG of such jobs. 

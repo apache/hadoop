@@ -125,7 +125,7 @@ public class DistCpUtils {
    * @param sourceRootPath - Source root path
    * @param childPath - Path for which relative path is required
    * @return - Relative portion of the child path (always prefixed with /
-   *           unless it is empty 
+   *           unless it is empty
    */
   public static String getRelativePath(Path sourceRootPath, Path childPath) {
     String childPathString = childPath.toUri().getPath();
@@ -277,9 +277,11 @@ public class DistCpUtils {
    * If checksums's can't be retrieved, it doesn't fail the test
    * Only time the comparison would fail is when checksums are
    * available and they don't match
-   *                                  
+   *
    * @param sourceFS FileSystem for the source path.
    * @param source The source path.
+   * @param sourceChecksum The checksum of the source file. If it is null we
+   * still need to retrieve it through sourceFS.
    * @param targetFS FileSystem for the target path.
    * @param target The target path.
    * @return If either checksum couldn't be retrieved, the function returns
@@ -288,12 +290,12 @@ public class DistCpUtils {
    * @throws IOException if there's an exception while retrieving checksums.
    */
   public static boolean checksumsAreEqual(FileSystem sourceFS, Path source,
-                                   FileSystem targetFS, Path target)
-                                   throws IOException {
-    FileChecksum sourceChecksum = null;
+      FileChecksum sourceChecksum, FileSystem targetFS, Path target)
+      throws IOException {
     FileChecksum targetChecksum = null;
     try {
-      sourceChecksum = sourceFS.getFileChecksum(source);
+      sourceChecksum = sourceChecksum != null ? sourceChecksum : sourceFS
+          .getFileChecksum(source);
       targetChecksum = targetFS.getFileChecksum(target);
     } catch (IOException e) {
       LOG.error("Unable to retrieve checksum for " + source + " or " + target, e);

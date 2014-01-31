@@ -28,7 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
-import org.apache.hadoop.http.HttpServer;
+import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.net.NetUtils;
 
 /**
@@ -38,7 +38,7 @@ import org.apache.hadoop.net.NetUtils;
 public class JournalNodeHttpServer {
   public static final String JN_ATTRIBUTE_KEY = "localjournal";
 
-  private HttpServer httpServer;
+  private HttpServer2 httpServer;
   private JournalNode localJournalNode;
 
   private final Configuration conf;
@@ -56,7 +56,7 @@ public class JournalNodeHttpServer {
         DFSConfigKeys.DFS_JOURNALNODE_HTTPS_ADDRESS_DEFAULT);
     InetSocketAddress httpsAddr = NetUtils.createSocketAddr(httpsAddrString);
 
-    HttpServer.Builder builder = DFSUtil.httpServerTemplateForNNAndJN(conf,
+    HttpServer2.Builder builder = DFSUtil.httpServerTemplateForNNAndJN(conf,
         httpAddr, httpsAddr, "journal",
         DFSConfigKeys.DFS_JOURNALNODE_INTERNAL_SPNEGO_USER_NAME_KEY,
         DFSConfigKeys.DFS_JOURNALNODE_KEYTAB_FILE_KEY);

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.client.api.impl;
 
+import static org.junit.Assert.assertFalse;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -35,6 +36,7 @@ import java.util.Set;
 
 import junit.framework.Assert;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
@@ -474,4 +476,30 @@ public class TestYarnClient {
     }
   }
 
+  @Test
+  public void testAsyncAPIPollTimeout() {
+    testAsyncAPIPollTimeoutHelper(null, false);
+    testAsyncAPIPollTimeoutHelper(0L, true);
+    testAsyncAPIPollTimeoutHelper(1L, true);
+  }
+
+  private void testAsyncAPIPollTimeoutHelper(Long valueForTimeout,
+      boolean expectedTimeoutEnforcement) {
+    YarnClientImpl client = new YarnClientImpl();
+    try {
+      Configuration conf = new Configuration();
+      if (valueForTimeout != null) {
+        conf.setLong(
+            YarnConfiguration.YARN_CLIENT_APPLICATION_CLIENT_PROTOCOL_POLL_TIMEOUT_MS,
+            valueForTimeout);
+      }
+
+      client.init(conf);
+
+      Assert.assertEquals(
+          expectedTimeoutEnforcement, client.enforceAsyncAPITimeout());
+    } finally {
+      IOUtils.closeQuietly(client);
+    }
+  }
 }

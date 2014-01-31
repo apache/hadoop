@@ -453,4 +453,9 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
     }
     return amInfos;
   }
+
+  @Override
+  public void setQueueName(String queueName) {
+    throw new UnsupportedOperationException("Can't set job's queue name in history");
+  }
 }

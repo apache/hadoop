@@ -415,5 +415,9 @@ public class TestHsWebServicesAcls {
       return aclsMgr.checkAccess(callerUGI, jobOperation,
           this.getUserName(), jobAcls.get(jobOperation));
     }
+
+    @Override
+    public void setQueueName(String queueName) {
+    }
   }
 }

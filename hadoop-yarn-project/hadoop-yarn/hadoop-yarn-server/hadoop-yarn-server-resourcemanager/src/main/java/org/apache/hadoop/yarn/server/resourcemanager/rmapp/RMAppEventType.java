@@ -24,8 +24,10 @@ public enum RMAppEventType {
   RECOVER,
   KILL,
 
-  // Source: Scheduler
+  // Source: Scheduler and RMAppManager
   APP_REJECTED,
+
+  // Source: Scheduler
   APP_ACCEPTED,
 
   // Source: RMAppAttempt
