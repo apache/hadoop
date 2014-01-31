@@ -756,5 +756,135 @@
         </comparator>
       </comparators>
     </test>
+    <test>
+      <description>getfacl: only default ACL</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /dir1</command>
+        <command>-fs NAMENODE -setfacl -m default:user:charlie:rwx /dir1</command>
+        <command>-fs NAMENODE -getfacl /dir1</command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -R /dir1</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output># file: /dir1</expected-output>
+        </comparator>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output># owner: USERNAME</expected-output>
+        </comparator>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output># group: supergroup</expected-output>
+        </comparator>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>user::rwx</expected-output>
+        </comparator>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>group::r-x</expected-output>
+        </comparator>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>other::r-x</expected-output>
+        </comparator>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>default:user::rwx</expected-output>
+        </comparator>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>default:user:charlie:rwx</expected-output>
+        </comparator>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>default:group::r-x</expected-output>
+        </comparator>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>default:mask::rwx</expected-output>
+        </comparator>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>default:other::r-x</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+    <test>
+      <description>getfacl: effective permissions</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /dir1</command>
+        <command>-fs NAMENODE -setfacl -m user:charlie:rwx,group::-wx,group:sales:rwx,mask::r-x,default:user:charlie:rwx,default:group::r-x,default:group:sales:rwx,default:mask::rw- /dir1</command>
+        <command>-fs NAMENODE -getfacl /dir1</command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -R /dir1</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output># file: /dir1</expected-output>
+        </comparator>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output># owner: USERNAME</expected-output>
+        </comparator>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output># group: supergroup</expected-output>
+        </comparator>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>user::rwx</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^user:charlie:rwx\s+#effective:r-x$</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^group::-wx\s+#effective:--x$</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^group:sales:rwx\s+#effective:r-x$</expected-output>
+        </comparator>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>mask::r-x</expected-output>
+        </comparator>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>other::r-x</expected-output>
+        </comparator>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>default:user::rwx</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^default:user:charlie:rwx\s+#effective:rw-$</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^default:group::r-x\s+#effective:r--$</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^default:group:sales:rwx\s+#effective:rw-$</expected-output>
+        </comparator>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>default:mask::rw-</expected-output>
+        </comparator>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>default:other::r-x</expected-output>
+        </comparator>
+      </comparators>
+    </test>
   </tests>
 </configuration>

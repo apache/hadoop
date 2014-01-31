@@ -70,3 +70,6 @@ HDFS-4685 (Unreleased)
 
     HDFS-5849. Removing ACL from an inode fails if it has only a default ACL.
     (cnauroth)
+
+    HADOOP-10270. getfacl does not display effective permissions of masked
+    entries. (cnauroth)
