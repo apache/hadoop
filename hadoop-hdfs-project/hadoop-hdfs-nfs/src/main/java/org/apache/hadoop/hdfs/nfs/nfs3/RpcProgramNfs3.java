@@ -479,9 +479,9 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     } 
 
     try {
-      // Use superUserClient to get file attr since we don't know whether the
-      // NFS client user has access permission to the file
-      attrs = writeManager.getFileAttr(superUserClient, handle, iug);
+      // HDFS-5804 removed supserUserClient access
+      attrs = writeManager.getFileAttr(dfsClient, handle, iug);
+
       if (attrs == null) {
         LOG.error("Can't get path for fileId:" + handle.getFileId());
         return new ACCESS3Response(Nfs3Status.NFS3ERR_STALE);
@@ -603,8 +603,10 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       // Only do access check.
       try {
         // Don't read from cache. Client may not have read permission.
-        attrs = Nfs3Utils.getFileAttr(superUserClient,
-            Nfs3Utils.getFileIdPath(handle), iug);
+        attrs = Nfs3Utils.getFileAttr(
+                  dfsClient,
+                  Nfs3Utils.getFileIdPath(handle),
+                  iug);
       } catch (IOException e) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Get error accessing file, fileId:" + handle.getFileId());

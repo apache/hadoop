@@ -50,6 +50,7 @@ import org.apache.hadoop.nfs.nfs3.response.CREATE3Response;
 import org.apache.hadoop.nfs.nfs3.response.READ3Response;
 import org.apache.hadoop.oncrpc.XDR;
 import org.apache.hadoop.oncrpc.security.SecurityHandler;
+import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.jboss.netty.channel.Channel;
 import org.junit.Assert;
 import org.junit.Test;
@@ -285,6 +286,14 @@ public class TestWrites {
     SecurityHandler securityHandler = Mockito.mock(SecurityHandler.class);
     Mockito.when(securityHandler.getUser()).thenReturn(
         System.getProperty("user.name"));
+    String currentUser = System.getProperty("user.name");
+    config.set(
+            ProxyUsers.getProxySuperuserGroupConfKey(currentUser),
+            "*");
+    config.set(
+            ProxyUsers.getProxySuperuserIpConfKey(currentUser),
+            "*");
+    ProxyUsers.refreshSuperUserGroupsConfiguration(config);
 
     try {
       cluster = new MiniDFSCluster.Builder(config).numDataNodes(1).build();
