@@ -297,9 +297,27 @@ Release 2.4.0 - UNRELEASED
     HDFS-5781. Use an array to record the mapping between FSEditLogOpCode and 
     the corresponding byte value. (jing9)
 
+    HDFS-5153. Datanode should send block reports for each storage in a
+    separate message. (Arpit Agarwal)
+
+    HDFS-5804. HDFS NFS Gateway fails to mount and proxy when using Kerberos.
+    (Abin Shahab via jing9)
+
   OPTIMIZATIONS
 
+    HDFS-5790. LeaseManager.findPath is very slow when many leases need recovery
+    (todd)
+
   BUG FIXES
+
+    HDFS-5492. Port HDFS-2069 (Incorrect default trash interval in the
+    docs) to trunk. (Akira Ajisaka via Arpit Agarwal)
+
+    HDFS-5843. DFSClient.getFileChecksum() throws IOException if checksum is 
+    disabled. (Laurent Goujon via jing9)
+
+    HDFS-5856. DataNode.checkDiskError might throw NPE.
+    (Josh Elser via suresh)
 
 Release 2.3.0 - UNRELEASED
 

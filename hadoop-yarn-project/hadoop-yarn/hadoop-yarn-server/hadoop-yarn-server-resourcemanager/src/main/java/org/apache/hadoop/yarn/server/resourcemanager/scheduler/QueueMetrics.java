@@ -280,6 +280,36 @@ public class QueueMetrics implements MetricsSource {
       parent.finishApp(user, rmAppFinalState);
     }
   }
+  
+  public void moveAppFrom(AppSchedulingInfo app) {
+    if (app.isPending()) {
+      appsPending.decr();
+    } else {
+      appsRunning.decr();
+    }
+    QueueMetrics userMetrics = getUserMetrics(app.getUser());
+    if (userMetrics != null) {
+      userMetrics.moveAppFrom(app);
+    }
+    if (parent != null) {
+      parent.moveAppFrom(app);
+    }
+  }
+  
+  public void moveAppTo(AppSchedulingInfo app) {
+    if (app.isPending()) {
+      appsPending.incr();
+    } else {
+      appsRunning.incr();
+    }
+    QueueMetrics userMetrics = getUserMetrics(app.getUser());
+    if (userMetrics != null) {
+      userMetrics.moveAppTo(app);
+    }
+    if (parent != null) {
+      parent.moveAppTo(app);
+    }
+  }
 
   /**
    * Set available resources. To be called by scheduler periodically as
@@ -324,8 +354,8 @@ public class QueueMetrics implements MetricsSource {
 
   private void _incrPendingResources(int containers, Resource res) {
     pendingContainers.incr(containers);
-    pendingMB.incr(res.getMemory());
-    pendingVCores.incr(res.getVirtualCores());
+    pendingMB.incr(res.getMemory() * containers);
+    pendingVCores.incr(res.getVirtualCores() * containers);
   }
 
   public void decrPendingResources(String user, int containers, Resource res) {
@@ -341,22 +371,25 @@ public class QueueMetrics implements MetricsSource {
 
   private void _decrPendingResources(int containers, Resource res) {
     pendingContainers.decr(containers);
-    pendingMB.decr(res.getMemory());
-    pendingVCores.decr(res.getVirtualCores());
+    pendingMB.decr(res.getMemory() * containers);
+    pendingVCores.decr(res.getVirtualCores() * containers);
   }
 
-  public void allocateResources(String user, int containers, Resource res) {
+  public void allocateResources(String user, int containers, Resource res,
+      boolean decrPending) {
     allocatedContainers.incr(containers);
     aggregateContainersAllocated.incr(containers);
     allocatedMB.incr(res.getMemory() * containers);
     allocatedVCores.incr(res.getVirtualCores() * containers);
-    _decrPendingResources(containers, Resources.multiply(res, containers));
+    if (decrPending) {
+      _decrPendingResources(containers, res);
+    }
     QueueMetrics userMetrics = getUserMetrics(user);
     if (userMetrics != null) {
-      userMetrics.allocateResources(user, containers, res);
+      userMetrics.allocateResources(user, containers, res, decrPending);
     }
     if (parent != null) {
-      parent.allocateResources(user, containers, res);
+      parent.allocateResources(user, containers, res, decrPending);
     }
   }
 

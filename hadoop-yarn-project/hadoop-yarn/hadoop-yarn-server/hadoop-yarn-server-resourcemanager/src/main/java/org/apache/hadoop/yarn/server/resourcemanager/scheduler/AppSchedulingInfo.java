@@ -64,7 +64,7 @@ public class AppSchedulingInfo {
   private Set<String> blacklist = new HashSet<String>();
 
   //private final ApplicationStore store;
-  private final ActiveUsersManager activeUsersManager;
+  private ActiveUsersManager activeUsersManager;
   
   /* Allocated by scheduler */
   boolean pending = true; // for app metrics
@@ -171,11 +171,10 @@ public class AppSchedulingInfo {
             .getNumContainers() : 0;
         Resource lastRequestCapability = lastRequest != null ? lastRequest
             .getCapability() : Resources.none();
-        metrics.incrPendingResources(user, request.getNumContainers()
-            - lastRequestContainers, Resources.subtractFrom( // save a clone
-            Resources.multiply(request.getCapability(), request
-                .getNumContainers()), Resources.multiply(lastRequestCapability,
-                lastRequestContainers)));
+        metrics.incrPendingResources(user, request.getNumContainers(),
+            request.getCapability());
+        metrics.decrPendingResources(user, lastRequestContainers,
+            lastRequestCapability);
       }
     }
   }
@@ -262,9 +261,15 @@ public class AppSchedulingInfo {
       pending = false;
       metrics.runAppAttempt(applicationId, user);
     }
-    LOG.debug("allocate: user: " + user + ", memory: "
-        + request.getCapability());
-    metrics.allocateResources(user, 1, request.getCapability());
+
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("allocate: applicationId=" + applicationId
+          + " container=" + container.getId()
+          + " host=" + container.getNodeId().toString()
+          + " user=" + user
+          + " resource=" + request.getCapability());
+    }
+    metrics.allocateResources(user, 1, request.getCapability(), true);
   }
 
   /**
@@ -277,9 +282,6 @@ public class AppSchedulingInfo {
   synchronized private void allocateNodeLocal( 
       SchedulerNode node, Priority priority, 
       ResourceRequest nodeLocalRequest, Container container) {
-    // Update consumption and track allocations
-    allocate(container);
-
     // Update future requirements
     nodeLocalRequest.setNumContainers(nodeLocalRequest.getNumContainers() - 1);
     if (nodeLocalRequest.getNumContainers() == 0) {
@@ -306,10 +308,6 @@ public class AppSchedulingInfo {
   synchronized private void allocateRackLocal(
       SchedulerNode node, Priority priority,
       ResourceRequest rackLocalRequest, Container container) {
-
-    // Update consumption and track allocations
-    allocate(container);
-
     // Update future requirements
     rackLocalRequest.setNumContainers(rackLocalRequest.getNumContainers() - 1);
     if (rackLocalRequest.getNumContainers() == 0) {
@@ -329,10 +327,6 @@ public class AppSchedulingInfo {
   synchronized private void allocateOffSwitch(
       SchedulerNode node, Priority priority,
       ResourceRequest offSwitchRequest, Container container) {
-
-    // Update consumption and track allocations
-    allocate(container);
-
     // Update future requirements
     decrementOutstanding(offSwitchRequest);
   }
@@ -365,18 +359,24 @@ public class AppSchedulingInfo {
     }
   }
   
-  synchronized private void allocate(Container container) {
-    // Update consumption and track allocations
-    //TODO: fixme sharad
-    /* try {
-        store.storeContainer(container);
-      } catch (IOException ie) {
-        // TODO fix this. we shouldnt ignore
-      }*/
-    
-    LOG.debug("allocate: applicationId=" + applicationId + " container="
-        + container.getId() + " host="
-        + container.getNodeId().toString());
+  synchronized public void move(Queue newQueue) {
+    QueueMetrics oldMetrics = queue.getMetrics();
+    QueueMetrics newMetrics = newQueue.getMetrics();
+    for (Map<String, ResourceRequest> asks : requests.values()) {
+      ResourceRequest request = asks.get(ResourceRequest.ANY);
+      if (request != null) {
+        oldMetrics.decrPendingResources(user, request.getNumContainers(),
+            request.getCapability());
+        newMetrics.incrPendingResources(user, request.getNumContainers(),
+            request.getCapability());
+      }
+    }
+    oldMetrics.moveAppFrom(this);
+    newMetrics.moveAppTo(this);
+    activeUsersManager.deactivateApplication(user, applicationId);
+    activeUsersManager = newQueue.getActiveUsersManager();
+    activeUsersManager.activateApplication(user, applicationId);
+    this.queue = newQueue;
   }
 
   synchronized public void stop(RMAppAttemptState rmAppAttemptFinalState) {
@@ -386,8 +386,7 @@ public class AppSchedulingInfo {
       ResourceRequest request = asks.get(ResourceRequest.ANY);
       if (request != null) {
         metrics.decrPendingResources(user, request.getNumContainers(),
-            Resources.multiply(request.getCapability(), request
-                .getNumContainers()));
+            request.getCapability());
       }
     }
     metrics.finishAppAttempt(applicationId, pending, user);
