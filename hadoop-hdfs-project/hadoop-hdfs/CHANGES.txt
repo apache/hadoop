@@ -297,6 +297,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-5781. Use an array to record the mapping between FSEditLogOpCode and 
     the corresponding byte value. (jing9)
 
+    HDFS-5153. Datanode should send block reports for each storage in a
+    separate message. (Arpit Agarwal)
+
   OPTIMIZATIONS
 
     HDFS-5790. LeaseManager.findPath is very slow when many leases need recovery
