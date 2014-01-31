@@ -152,6 +152,9 @@ Release 2.3.0 - UNRELEASED
     HADOOP-10317. Rename branch-2.3 release version from 2.4.0-SNAPSHOT
     to 2.3.0-SNAPSHOT. (wang)
 
+    HADOOP-10313. Script and jenkins job to produce Hadoop release artifacts. 
+    (tucu)
+
   OPTIMIZATIONS
 
     HADOOP-10142. Avoid groups lookup for unprivileged users such as "dr.who"
