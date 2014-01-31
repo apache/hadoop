@@ -16,28 +16,21 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.applicationmasterservice;
+package org.apache.hadoop.yarn.server.resourcemanager;
 
 import junit.framework.Assert;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.InvalidContainerReleaseException;
-import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
-import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
-import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
-import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
-import org.apache.hadoop.yarn.server.resourcemanager.TestFifoScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.junit.BeforeClass;
@@ -146,35 +139,6 @@ public class TestApplicationMasterService {
         sb.append(attempt2.getAppAttemptId().toString());
         Assert.assertTrue(e.getMessage().contains(sb.toString()));
       }
-    } finally {
-      if (rm != null) {
-        rm.stop();
-      }
-    }
-  }
-  
-  @Test (timeout = 60000)
-  public void testNotifyAMOfPlacedQueue() throws Exception {
-    // By default, FairScheduler assigns queue by user name
-    conf.setClass(YarnConfiguration.RM_SCHEDULER, FairScheduler.class,
-        ResourceScheduler.class);
-    MockRM rm = new MockRM(conf);
-    try {
-      rm.start();
-
-      // Register node1
-      MockNM nm1 = rm.registerNode("127.0.0.1:1234", 6 * GB);
-
-      // Submit an application
-      RMApp app1 = rm.submitApp(1024, "somename", "user1");
-
-      // kick the scheduling
-      nm1.nodeHeartbeat(true);
-      RMAppAttempt attempt1 = app1.getCurrentAppAttempt();
-      MockAM am1 = rm.sendAMLaunched(attempt1.getAppAttemptId());
-      
-      RegisterApplicationMasterResponse response = am1.registerAppAttempt();
-      Assert.assertEquals("root.user1", response.getQueue());
     } finally {
       if (rm != null) {
         rm.stop();
