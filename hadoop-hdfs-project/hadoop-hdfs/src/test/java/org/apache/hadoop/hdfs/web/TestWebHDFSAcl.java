@@ -15,27 +15,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.namenode;
+package org.apache.hadoop.hdfs.web;
 
 import static org.junit.Assert.*;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.server.namenode.FSAclBaseTest;
 import org.junit.BeforeClass;
 
 /**
- * Tests NameNode interaction for all ACL modification APIs.  This test suite
- * also covers interaction of setPermission with inodes that have ACLs.
+ * Tests ACL APIs via WebHDFS.
  */
-public class TestNameNodeAcl extends FSAclBaseTest {
+public class TestWebHDFSAcl extends FSAclBaseTest {
 
   @BeforeClass
   public static void init() throws Exception {
-    Configuration conf = new Configuration();
+    Configuration conf = WebHdfsTestUtil.createConf();
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     cluster.waitActive();
-    fs = cluster.getFileSystem();
-    assertTrue(fs instanceof DistributedFileSystem);
+    fs = WebHdfsTestUtil.getWebHdfsFileSystem(conf, WebHdfsFileSystem.SCHEME);
+    assertTrue(fs instanceof WebHdfsFileSystem);
   }
 }

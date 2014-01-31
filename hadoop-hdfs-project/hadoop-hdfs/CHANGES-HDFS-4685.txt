@@ -53,6 +53,9 @@ HDFS-4685 (Unreleased)
     HDFS-5614. NameNode: implement handling of ACLs in combination with
     snapshots. (cnauroth)
 
+    HDFS-5858. Refactor common ACL test cases to be run through multiple
+    FileSystem implementations. (cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES
