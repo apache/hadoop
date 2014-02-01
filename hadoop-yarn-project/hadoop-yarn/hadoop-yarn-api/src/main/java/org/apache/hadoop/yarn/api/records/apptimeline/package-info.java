@@ -15,31 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+@InterfaceAudience.Public
+package org.apache.hadoop.yarn.api.records.apptimeline;
+import org.apache.hadoop.classification.InterfaceAudience;
 
-package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
-
-public enum RMAppEventType {
-  // Source: ClientRMService
-  START,
-  RECOVER,
-  KILL,
-  MOVE, // Move app to a new queue
-
-  // Source: Scheduler and RMAppManager
-  APP_REJECTED,
-
-  // Source: Scheduler
-  APP_ACCEPTED,
-
-  // Source: RMAppAttempt
-  ATTEMPT_REGISTERED,
-  ATTEMPT_UNREGISTERED,
-  ATTEMPT_FINISHED, // Will send the final state
-  ATTEMPT_FAILED,
-  ATTEMPT_KILLED,
-  NODE_UPDATE,
-
-  // Source: RMStateStore
-  APP_NEW_SAVED,
-  APP_UPDATE_SAVED,
-}

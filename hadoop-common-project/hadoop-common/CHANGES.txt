@@ -311,6 +311,9 @@ Release 2.4.0 - UNRELEASED
 
   BUG FIXES
 
+    HADOOP-10320. Javadoc in InterfaceStability.java lacks final </ul>.
+    (René Nyffenegger via cnauroth)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -469,6 +472,9 @@ Release 2.3.0 - UNRELEASED
 
     HADOOP-10317. Rename branch-2.3 release version from 2.4.0-SNAPSHOT
     to 2.3.0-SNAPSHOT. (wang)
+
+    HADOOP-10313. Script and jenkins job to produce Hadoop release artifacts. 
+    (tucu)
 
   OPTIMIZATIONS
 
@@ -676,6 +682,8 @@ Release 2.3.0 - UNRELEASED
 
     HADOOP-10310. SaslRpcServer should be initialized even when no secret
     manager present. (atm)
+
+    HADOOP-10311. Cleanup vendor names from the code base. (tucu)
 
 Release 2.2.0 - 2013-10-13
 

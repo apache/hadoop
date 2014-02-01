@@ -33,6 +33,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Public;
  * <li>Classes that are {@link Private} are to be considered unstable unless
  * a different InterfaceStability annotation states otherwise.</li>
  * <li>Incompatible changes must not be made to classes marked as stable.</li>
+ * </ul>
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving

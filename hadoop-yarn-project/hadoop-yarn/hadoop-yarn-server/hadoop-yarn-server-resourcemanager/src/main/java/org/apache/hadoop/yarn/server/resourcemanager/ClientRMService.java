@@ -94,6 +94,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstant
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMoveEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
@@ -103,6 +105,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.authorize.RMPolicy
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
+
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.SettableFuture;
 
 
 /**
@@ -686,10 +691,74 @@ public class ClientRMService extends AbstractService implements
     }
   }
   
+  @SuppressWarnings("unchecked")
   @Override
   public MoveApplicationAcrossQueuesResponse moveApplicationAcrossQueues(
       MoveApplicationAcrossQueuesRequest request) throws YarnException {
-    throw new UnsupportedOperationException("Move not yet supported");
+    ApplicationId applicationId = request.getApplicationId();
+
+    UserGroupInformation callerUGI;
+    try {
+      callerUGI = UserGroupInformation.getCurrentUser();
+    } catch (IOException ie) {
+      LOG.info("Error getting UGI ", ie);
+      RMAuditLogger.logFailure("UNKNOWN", AuditConstants.MOVE_APP_REQUEST,
+          "UNKNOWN", "ClientRMService" , "Error getting UGI",
+          applicationId);
+      throw RPCUtil.getRemoteException(ie);
+    }
+
+    RMApp application = this.rmContext.getRMApps().get(applicationId);
+    if (application == null) {
+      RMAuditLogger.logFailure(callerUGI.getUserName(),
+          AuditConstants.MOVE_APP_REQUEST, "UNKNOWN", "ClientRMService",
+          "Trying to move an absent application", applicationId);
+      throw new ApplicationNotFoundException("Trying to move an absent"
+          + " application " + applicationId);
+    }
+
+    if (!checkAccess(callerUGI, application.getUser(),
+        ApplicationAccessType.MODIFY_APP, application)) {
+      RMAuditLogger.logFailure(callerUGI.getShortUserName(),
+          AuditConstants.MOVE_APP_REQUEST,
+          "User doesn't have permissions to "
+              + ApplicationAccessType.MODIFY_APP.toString(), "ClientRMService",
+          AuditConstants.UNAUTHORIZED_USER, applicationId);
+      throw RPCUtil.getRemoteException(new AccessControlException("User "
+          + callerUGI.getShortUserName() + " cannot perform operation "
+          + ApplicationAccessType.MODIFY_APP.name() + " on " + applicationId));
+    }
+    
+    // Moves only allowed when app is in a state that means it is tracked by
+    // the scheduler
+    if (EnumSet.of(RMAppState.NEW, RMAppState.NEW_SAVING, RMAppState.FAILED,
+        RMAppState.FINAL_SAVING, RMAppState.FINISHING, RMAppState.FINISHED,
+        RMAppState.KILLED, RMAppState.KILLING, RMAppState.FAILED)
+        .contains(application.getState())) {
+      String msg = "App in " + application.getState() + " state cannot be moved.";
+      RMAuditLogger.logFailure(callerUGI.getShortUserName(),
+          AuditConstants.MOVE_APP_REQUEST, "UNKNOWN", "ClientRMService", msg);
+      throw new YarnException(msg);
+    }
+
+    SettableFuture<Object> future = SettableFuture.create();
+    this.rmContext.getDispatcher().getEventHandler().handle(
+        new RMAppMoveEvent(applicationId, request.getTargetQueue(), future));
+    
+    try {
+      Futures.get(future, YarnException.class);
+    } catch (YarnException ex) {
+      RMAuditLogger.logFailure(callerUGI.getShortUserName(),
+          AuditConstants.MOVE_APP_REQUEST, "UNKNOWN", "ClientRMService",
+          ex.getMessage());
+      throw ex;
+    }
+
+    RMAuditLogger.logSuccess(callerUGI.getShortUserName(), 
+        AuditConstants.MOVE_APP_REQUEST, "ClientRMService" , applicationId);
+    MoveApplicationAcrossQueuesResponse response = recordFactory
+        .newRecordInstance(MoveApplicationAcrossQueuesResponse.class);
+    return response;
   }
 
   private String getRenewerForToken(Token<RMDelegationTokenIdentifier> token)

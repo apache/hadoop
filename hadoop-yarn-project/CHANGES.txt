@@ -12,6 +12,8 @@ Trunk - Unreleased
     YARN-1498. Common scheduler changes for moving apps between queues (Sandy
     Ryza)
 
+    YARN-1504. RM changes for moving apps between queues (Sandy Ryza)
+
   IMPROVEMENTS
 
   OPTIMIZATIONS
@@ -77,6 +79,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1413. Implemented serving of aggregated-logs in the ApplicationHistory
     server. (Mayank Bansal via vinodkv)
 
+    YARN-1633. Defined user-facing entity, entity-info and event objects related
+    to Application Timeline feature. (Zhijie Shen via vinodkv)
+
   IMPROVEMENTS
 
     YARN-1007. Enhance History Reader interface for Containers. (Mayank Bansal via
@@ -139,6 +144,9 @@ Release 2.4.0 - UNRELEASED
     configured (Haohui Mai via jlowe)
 
     YARN-1642. RMDTRenewer#getRMClient should use ClientRMProxy (kasha)
+
+    YARN-1632. TestApplicationMasterServices should be under
+    org.apache.hadoop.yarn.server.resourcemanager package (Chen He via jeagles)
 
 Release 2.3.0 - UNRELEASED
 

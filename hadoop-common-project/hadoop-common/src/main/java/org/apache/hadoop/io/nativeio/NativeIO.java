@@ -487,6 +487,16 @@ public class NativeIO {
       new ConcurrentHashMap<Integer, CachedName>();
 
     private enum IdCache { USER, GROUP }
+
+    public final static int MMAP_PROT_READ = 0x1; 
+    public final static int MMAP_PROT_WRITE = 0x2; 
+    public final static int MMAP_PROT_EXEC = 0x4; 
+
+    public static native long mmap(FileDescriptor fd, int prot,
+        boolean shared, long length) throws IOException;
+
+    public static native void munmap(long addr, long length)
+        throws IOException;
   }
 
   private static boolean workaroundNonThreadSafePasswdCalls = false;

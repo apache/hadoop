@@ -16,30 +16,24 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
+package org.apache.hadoop.hdfs.server.datanode;
 
-public enum RMAppEventType {
-  // Source: ClientRMService
-  START,
-  RECOVER,
-  KILL,
-  MOVE, // Move app to a new queue
+import java.io.IOException;
 
-  // Source: Scheduler and RMAppManager
-  APP_REJECTED,
+import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
+import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
 
-  // Source: Scheduler
-  APP_ACCEPTED,
+/**
+ * Runs all tests in BlockReportTestBase, sending one block report
+ * per DataNode. This tests that the NN can handle the legacy DN
+ * behavior where it presents itself as a single logical storage.
+ */
+public class TestNNHandlesCombinedBlockReport extends BlockReportTestBase {
 
-  // Source: RMAppAttempt
-  ATTEMPT_REGISTERED,
-  ATTEMPT_UNREGISTERED,
-  ATTEMPT_FINISHED, // Will send the final state
-  ATTEMPT_FAILED,
-  ATTEMPT_KILLED,
-  NODE_UPDATE,
-
-  // Source: RMStateStore
-  APP_NEW_SAVED,
-  APP_UPDATE_SAVED,
+  @Override
+  protected void sendBlockReports(DatanodeRegistration dnR, String poolId,
+                                  StorageBlockReport[] reports) throws IOException {
+    LOG.info("Sending combined block reports for " + dnR);
+    cluster.getNameNodeRpc().blockReport(dnR, poolId, reports);
+  }
 }
