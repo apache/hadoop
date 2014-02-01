@@ -12,6 +12,8 @@ Trunk - Unreleased
     YARN-1498. Common scheduler changes for moving apps between queues (Sandy
     Ryza)
 
+    YARN-1504. RM changes for moving apps between queues (Sandy Ryza)
+
   IMPROVEMENTS
 
   OPTIMIZATIONS

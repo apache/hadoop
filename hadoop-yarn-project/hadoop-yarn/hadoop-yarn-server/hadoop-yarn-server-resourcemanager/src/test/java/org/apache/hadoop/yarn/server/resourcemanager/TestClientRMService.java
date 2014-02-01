@@ -58,6 +58,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.MoveApplicationAcrossQueuesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
@@ -231,6 +232,20 @@ public class TestClientRMService {
           "Trying to kill an absent " +
               "application " + request.getApplicationId());
     }
+  }
+  
+  @Test (expected = ApplicationNotFoundException.class)
+  public void testMoveAbsentApplication() throws YarnException {
+    RMContext rmContext = mock(RMContext.class);
+    when(rmContext.getRMApps()).thenReturn(
+        new ConcurrentHashMap<ApplicationId, RMApp>());
+    ClientRMService rmService = new ClientRMService(rmContext, null, null,
+        null, null, null);
+    ApplicationId applicationId =
+        BuilderUtils.newApplicationId(System.currentTimeMillis(), 0);
+    MoveApplicationAcrossQueuesRequest request =
+        MoveApplicationAcrossQueuesRequest.newInstance(applicationId, "newqueue");
+    rmService.moveApplicationAcrossQueues(request);
   }
 
   @Test
