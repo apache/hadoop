@@ -77,6 +77,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1413. Implemented serving of aggregated-logs in the ApplicationHistory
     server. (Mayank Bansal via vinodkv)
 
+    YARN-1633. Defined user-facing entity, entity-info and event objects related
+    to Application Timeline feature. (Zhijie Shen via vinodkv)
+
   IMPROVEMENTS
 
     YARN-1007. Enhance History Reader interface for Containers. (Mayank Bansal via
