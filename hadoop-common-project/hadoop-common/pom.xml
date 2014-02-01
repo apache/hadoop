@@ -543,6 +543,7 @@
                     <javahClassName>org.apache.hadoop.io.compress.bzip2.Bzip2Decompressor</javahClassName>
                     <javahClassName>org.apache.hadoop.security.JniBasedUnixGroupsMapping</javahClassName>
                     <javahClassName>org.apache.hadoop.io.nativeio.NativeIO</javahClassName>
+                    <javahClassName>org.apache.hadoop.io.nativeio.SharedFileDescriptorFactory</javahClassName>
                     <javahClassName>org.apache.hadoop.security.JniBasedUnixGroupsNetgroupMapping</javahClassName>
                     <javahClassName>org.apache.hadoop.io.compress.snappy.SnappyCompressor</javahClassName>
                     <javahClassName>org.apache.hadoop.io.compress.snappy.SnappyDecompressor</javahClassName>
@@ -550,6 +551,7 @@
                     <javahClassName>org.apache.hadoop.io.compress.lz4.Lz4Decompressor</javahClassName>
                     <javahClassName>org.apache.hadoop.util.NativeCrc32</javahClassName>
                     <javahClassName>org.apache.hadoop.net.unix.DomainSocket</javahClassName>
+                    <javahClassName>org.apache.hadoop.net.unix.DomainSocketWatcher</javahClassName>
                   </javahClassNames>
                   <javahOutputDirectory>${project.build.directory}/native/javah</javahOutputDirectory>
                 </configuration>

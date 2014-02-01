@@ -306,6 +306,8 @@ Release 2.4.0 - UNRELEASED
     HDFS-5859. DataNode#checkBlockToken should check block tokens even if
     security is not enabled. (cmccabe)
 
+    HDFS-5746.  Add ShortCircuitSharedMemorySegment (cmccabe)
+
   OPTIMIZATIONS
 
     HDFS-5790. LeaseManager.findPath is very slow when many leases need recovery
