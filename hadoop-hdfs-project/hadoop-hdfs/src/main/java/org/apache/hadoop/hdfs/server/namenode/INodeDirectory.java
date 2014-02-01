@@ -146,12 +146,7 @@ public class INodeDirectory extends INodeWithAdditionalFields
    * otherwise, return null.
    */
   public final DirectoryWithQuotaFeature getDirectoryWithQuotaFeature() {
-    for (Feature f : features) {
-      if (f instanceof DirectoryWithQuotaFeature) {
-        return (DirectoryWithQuotaFeature)f;
-      }
-    }
-    return null;
+    return getFeature(DirectoryWithQuotaFeature.class);
   }
 
   /** Is this directory with quota? */
@@ -186,12 +181,7 @@ public class INodeDirectory extends INodeWithAdditionalFields
    * otherwise, return null.
    */
   public final DirectoryWithSnapshotFeature getDirectoryWithSnapshotFeature() {
-    for (Feature f : features) {
-      if (f instanceof DirectoryWithSnapshotFeature) {
-        return (DirectoryWithSnapshotFeature) f;
-      }
-    }
-    return null;
+    return getFeature(DirectoryWithSnapshotFeature.class);
   }
 
   /** Is this file has the snapshot feature? */

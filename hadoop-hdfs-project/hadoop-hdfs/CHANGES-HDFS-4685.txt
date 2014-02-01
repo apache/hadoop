@@ -56,6 +56,9 @@ HDFS-4685 (Unreleased)
     HDFS-5858. Refactor common ACL test cases to be run through multiple
     FileSystem implementations. (cnauroth)
 
+    HDFS-5860. Refactor INodeDirectory getDirectoryXFeature methods to use
+    common getFeature helper method. (Jing Zhao via cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES
