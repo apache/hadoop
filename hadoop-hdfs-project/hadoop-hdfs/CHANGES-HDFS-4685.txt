@@ -59,6 +59,9 @@ HDFS-4685 (Unreleased)
     HDFS-5860. Refactor INodeDirectory getDirectoryXFeature methods to use
     common getFeature helper method. (Jing Zhao via cnauroth)
 
+    HDFS-5861. Add CLI test for Ls output for extended ACL marker.
+    (Vinay via cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES

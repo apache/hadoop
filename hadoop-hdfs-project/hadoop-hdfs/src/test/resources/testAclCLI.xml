@@ -886,5 +886,26 @@
         </comparator>
       </comparators>
     </test>
+    <test>
+      <description>ls: display extended acl marker</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir -p /dir1/dir2</command>
+        <command>-fs NAMENODE -setfacl -m user:charlie:rwx,group::-wx,group:sales:rwx,mask::r-x,default:user:charlie:rwx,default:group::r-x,default:group:sales:rwx,default:mask::rw- /dir1/dir2</command>
+        <command>-fs NAMENODE -ls /dir1</command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -R /dir1</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>TokenComparator</type>
+          <expected-output>Found 1 items</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^drwxr-xr-x\+( )*-( )*[a-zA-z0-9]*( )*supergroup( )*0( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/dir1/dir2</expected-output>
+        </comparator>
+      </comparators>
+    </test>
   </tests>
 </configuration>
