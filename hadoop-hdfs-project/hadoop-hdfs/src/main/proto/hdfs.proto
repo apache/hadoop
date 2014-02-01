@@ -459,4 +459,9 @@ message SnapshotInfoProto {
   // TODO: do we need access time?
 }
 
-
+/**
+ * Rolling upgrade status
+ */
+message RollingUpgradeStatusProto {
+  required string blockPoolId = 1;
+}

@@ -120,7 +120,6 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.Report
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RestoreFailedStorageRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RollEditsRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RollEditsResponseProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RollingUpgradeInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RollingUpgradeRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RollingUpgradeResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.SaveNamespaceRequestProto;
@@ -646,8 +645,7 @@ public class ClientNamenodeProtocolTranslatorPB implements
         .setAction(PBHelper.convert(action)).build();
     try {
       final RollingUpgradeResponseProto proto = rpcProxy.rollingUpgrade(null, r);
-      final RollingUpgradeInfoProto info = proto.getRollingUpgradeInfo();
-      return new RollingUpgradeInfo(info.getStartTime(), info.getFinalizeTime());
+      return PBHelper.convert(proto.getRollingUpgradeInfo());
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }

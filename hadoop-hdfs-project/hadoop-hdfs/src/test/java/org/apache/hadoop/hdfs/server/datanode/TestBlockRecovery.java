@@ -163,7 +163,8 @@ public class TestBlockRecovery {
             Mockito.anyInt()))
         .thenReturn(new HeartbeatResponse(
             new DatanodeCommand[0],
-            new NNHAStatusHeartbeat(HAServiceState.ACTIVE, 1)));
+            new NNHAStatusHeartbeat(HAServiceState.ACTIVE, 1),
+            null));
 
     dn = new DataNode(conf, locations, null) {
       @Override

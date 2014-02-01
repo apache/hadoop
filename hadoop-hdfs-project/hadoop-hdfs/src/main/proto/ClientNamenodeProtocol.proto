@@ -343,8 +343,9 @@ message RollingUpgradeRequestProto {
 }
 
 message RollingUpgradeInfoProto {
-  required uint64 startTime = 1;
-  required uint64 finalizeTime = 2;
+  required RollingUpgradeStatusProto status = 1;
+  required uint64 startTime = 2;
+  required uint64 finalizeTime = 3;
 }
 
 message RollingUpgradeResponseProto {

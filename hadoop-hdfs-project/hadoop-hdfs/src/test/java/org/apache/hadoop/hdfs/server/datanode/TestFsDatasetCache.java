@@ -151,10 +151,9 @@ public class TestFsDatasetCache {
 
   private static void setHeartbeatResponse(DatanodeCommand[] cmds)
       throws IOException {
-    HeartbeatResponse response = new HeartbeatResponse(
-        cmds,
-        new NNHAStatusHeartbeat(HAServiceState.ACTIVE,
-        fsImage.getLastAppliedOrWrittenTxId()));
+    NNHAStatusHeartbeat ha = new NNHAStatusHeartbeat(HAServiceState.ACTIVE,
+        fsImage.getLastAppliedOrWrittenTxId());
+    HeartbeatResponse response = new HeartbeatResponse(cmds, ha, null);
     doReturn(response).when(spyNN).sendHeartbeat(
         (DatanodeRegistration) any(),
         (StorageReport[]) any(), anyLong(), anyLong(),

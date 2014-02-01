@@ -27,17 +27,19 @@ import org.apache.hadoop.classification.InterfaceStability;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class RollingUpgradeInfo {
-  public static final RollingUpgradeInfo EMPTY_INFO = new RollingUpgradeInfo(0); 
+public class RollingUpgradeInfo extends RollingUpgradeStatus {
+  public static final RollingUpgradeInfo EMPTY_INFO = new RollingUpgradeInfo(
+      null, 0); 
 
   private long startTime;
   private long finalizeTime;
   
-  public RollingUpgradeInfo(long startTime) {
-    this(startTime, 0L);
+  public RollingUpgradeInfo(String blockPoolId, long startTime) {
+    this(blockPoolId, startTime, 0L);
   }
 
-  public RollingUpgradeInfo(long startTime, long finalizeTime) {
+  public RollingUpgradeInfo(String blockPoolId, long startTime, long finalizeTime) {
+    super(blockPoolId);
     this.startTime = startTime;
     this.finalizeTime = finalizeTime;
   }
@@ -62,7 +64,7 @@ public class RollingUpgradeInfo {
   @Override
   public int hashCode() {
     //only use lower 32 bits
-    return (int)startTime ^ (int)finalizeTime;
+    return super.hashCode() ^ (int)startTime ^ (int)finalizeTime;
   }
 
   @Override
@@ -73,13 +75,15 @@ public class RollingUpgradeInfo {
       return false;
     }
     final RollingUpgradeInfo that = (RollingUpgradeInfo)obj;
-    return this.startTime == that.startTime
+    return super.equals(that)
+        && this.startTime == that.startTime
         && this.finalizeTime == that.finalizeTime;
   }
 
   @Override
   public String toString() {
-    return "     Start Time: " + (startTime == 0? "<NOT STARTED>": timestamp2String(startTime))
+    return super.toString()
+      +  "\n     Start Time: " + (startTime == 0? "<NOT STARTED>": timestamp2String(startTime))
       +  "\n  Finalize Time: " + (finalizeTime == 0? "<NOT FINALIZED>": timestamp2String(finalizeTime));
   }
   

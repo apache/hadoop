@@ -36,10 +36,10 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_STANDBY_CHECKPOINTS_KE
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECISION_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECISION_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AUDIT_LOGGERS_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_TOKEN_TRACKING_ID_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_TOKEN_TRACKING_ID_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_ASYNC_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_ASYNC_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_TOKEN_TRACKING_ID_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_TOKEN_TRACKING_ID_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DEFAULT_AUDIT_LOGGER_NAME;
@@ -4193,21 +4193,22 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         throws IOException {
     readLock();
     try {
+      //get datanode commands
       final int maxTransfer = blockManager.getMaxReplicationStreams()
           - xmitsInProgress;
       DatanodeCommand[] cmds = blockManager.getDatanodeManager().handleHeartbeat(
           nodeReg, reports, blockPoolId, cacheCapacity, cacheUsed,
           xceiverCount, maxTransfer, failedVolumes);
-      return new HeartbeatResponse(cmds, createHaStatusHeartbeat());
+      
+      //create ha status
+      final NNHAStatusHeartbeat haState = new NNHAStatusHeartbeat(
+          haContext.getState().getServiceState(),
+          getFSImage().getLastAppliedOrWrittenTxId());
+
+      return new HeartbeatResponse(cmds, haState, rollingUpgradeInfo);
     } finally {
       readUnlock();
     }
-  }
-
-  private NNHAStatusHeartbeat createHaStatusHeartbeat() {
-    HAState state = haContext.getState();
-    return new NNHAStatusHeartbeat(state.getServiceState(),
-        getFSImage().getLastAppliedOrWrittenTxId());
   }
 
   /**
@@ -7102,12 +7103,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       final String err = "Failed to start rolling upgrade";
       checkNameNodeSafeMode(err);
 
-      if (rollingUpgradeInfo != null) {
+      if (isRollingUpgrade()) {
         throw new RollingUpgradeException(err
             + " since a rolling upgrade is already in progress."
             + "\nExisting rolling upgrade info: " + rollingUpgradeInfo);
       }
-
+      
       final CheckpointSignature cs = getFSImage().rollEditLog();
       LOG.info("Successfully rolled edit log for preparing rolling upgrade."
           + " Checkpoint signature: " + cs);
@@ -7125,7 +7126,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   void setRollingUpgradeInfo(long startTime) {
-    rollingUpgradeInfo = new RollingUpgradeInfo(startTime);;
+    rollingUpgradeInfo = new RollingUpgradeInfo(blockPoolId, startTime);
+  }
+
+  /** Is rolling upgrade in progress? */
+  boolean isRollingUpgrade() {
+    return rollingUpgradeInfo != null;
   }
 
   RollingUpgradeInfo finalizeRollingUpgrade() throws IOException {
@@ -7138,12 +7144,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       final String err = "Failed to finalize rolling upgrade";
       checkNameNodeSafeMode(err);
 
-      if (rollingUpgradeInfo == null) {
+      if (!isRollingUpgrade()) {
         throw new RollingUpgradeException(err
             + " since there is no rolling upgrade in progress.");
       }
 
-      returnInfo = new RollingUpgradeInfo(rollingUpgradeInfo.getStartTime(), now());
+      returnInfo = new RollingUpgradeInfo(blockPoolId,
+          rollingUpgradeInfo.getStartTime(), now());
       getFSImage().saveNamespace(this);
       rollingUpgradeInfo = null;
     } finally {

@@ -59,6 +59,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
+import org.apache.hadoop.hdfs.protocol.RollingUpgradeStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffReportEntry;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffType;
@@ -124,6 +125,7 @@ import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.RecoveringBlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.RemoteEditLogManifestProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.RemoteEditLogProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ReplicaStateProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.RollingUpgradeStatusProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.SnapshotDiffReportEntryProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.SnapshotDiffReportProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.SnapshottableDirectoryListingProto;
@@ -1453,11 +1455,29 @@ public class PBHelper {
     }
   }
 
+  public static RollingUpgradeStatusProto convertRollingUpgradeStatus(
+      RollingUpgradeStatus status) {
+    return RollingUpgradeStatusProto.newBuilder()
+        .setBlockPoolId(status.getBlockPoolId())
+        .build();
+  }
+
+  public static RollingUpgradeStatus convert(RollingUpgradeStatusProto proto) {
+    return new RollingUpgradeStatus(proto.getBlockPoolId());
+  }
+
   public static RollingUpgradeInfoProto convert(RollingUpgradeInfo info) {
     return RollingUpgradeInfoProto.newBuilder()
+        .setStatus(convertRollingUpgradeStatus(info))
         .setStartTime(info.getStartTime())
         .setFinalizeTime(info.getFinalizeTime())
         .build();
+  }
+
+  public static RollingUpgradeInfo convert(RollingUpgradeInfoProto proto) {
+    RollingUpgradeStatusProto status = proto.getStatus();
+    return new RollingUpgradeInfo(status.getBlockPoolId(),
+        proto.getStartTime(), proto.getFinalizeTime());
   }
 
   public static CorruptFileBlocks convert(CorruptFileBlocksProto c) {

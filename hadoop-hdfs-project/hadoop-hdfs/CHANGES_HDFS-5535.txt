@@ -18,3 +18,5 @@ HDFS-5535 subtasks:
 
     HDFS-5754. Split LayoutVerion into NameNodeLayoutVersion and
     DataNodeLayoutVersion. (Brandon Li via szetszwo)
+
+    HDFS-5848. Add rolling upgrade status to heartbeat response. (szetszwo)

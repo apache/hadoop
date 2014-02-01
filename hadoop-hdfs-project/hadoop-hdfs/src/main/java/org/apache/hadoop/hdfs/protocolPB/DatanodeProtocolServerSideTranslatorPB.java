@@ -121,6 +121,8 @@ public class DatanodeProtocolServerSideTranslatorPB implements
       }
     }
     builder.setHaStatus(PBHelper.convert(response.getNameNodeHaState()));
+    builder.setRollingUpgradeStatus(PBHelper.convertRollingUpgradeStatus(
+        response.getRollingUpdateStatus()));
     return builder.build();
   }
 
