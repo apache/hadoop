@@ -324,6 +324,10 @@ Release 2.4.0 - UNRELEASED
     HDFS-5856. DataNode.checkDiskError might throw NPE.
     (Josh Elser via suresh)
 
+    HDFS-5828. BlockPlacementPolicyWithNodeGroup can place multiple replicas on
+    the same node group when dfs.namenode.avoid.write.stale.datanode is true. 
+    (Buddy via junping_du)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
