@@ -313,6 +313,9 @@ Release 2.4.0 - UNRELEASED
 
     HADOOP-10320. Javadoc in InterfaceStability.java lacks final </ul>.
     (René Nyffenegger via cnauroth)
+    
+    HADOOP-10085. CompositeService should allow adding services while being 
+    inited. (Steve Loughran via kasha)
 
 Release 2.3.0 - UNRELEASED
 
