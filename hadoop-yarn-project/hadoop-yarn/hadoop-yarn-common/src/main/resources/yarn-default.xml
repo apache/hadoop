@@ -588,6 +588,18 @@
     <value>org.apache.hadoop.yarn.server.applicationhistoryservice.NullApplicationHistoryStore</value>
   </property>
 
+  <property>
+    <description>The class to use as the configuration provider.
+    If org.apache.hadoop.yarn.LocalConfigurationProvider is used,
+    the local configuration will be loaded.
+    If org.apache.hadoop.yarn.FileSystemBasedConfigurationProvider is used,
+    the configuration which will be loaded should be uploaded to remote File system first.
+    </description>>
+    <name>yarn.resourcemanager.configuration.provider-class</name>
+    <value>org.apache.hadoop.yarn.LocalConfigurationProvider</value>
+    <!-- <value>org.apache.hadoop.yarn.FileSystemBasedConfigurationProvider</value> -->
+  </property>
+
   <!-- Node Manager Configs -->
   <property>
     <description>The hostname of the NM.</description>

@@ -82,6 +82,10 @@ Release 2.4.0 - UNRELEASED
     YARN-1633. Defined user-facing entity, entity-info and event objects related
     to Application Timeline feature. (Zhijie Shen via vinodkv)
 
+    YARN-1611. Introduced the concept of a configuration provider which can be
+    used by ResourceManager to read configuration locally or from remote systems
+    so as to help RM failover. (Xuan Gong via vinodkv)
+
   IMPROVEMENTS
 
     YARN-1007. Enhance History Reader interface for Containers. (Mayank Bansal via
