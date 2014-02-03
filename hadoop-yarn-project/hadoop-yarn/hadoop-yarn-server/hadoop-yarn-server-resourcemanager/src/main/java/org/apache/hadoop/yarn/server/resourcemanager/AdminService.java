@@ -74,6 +74,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRespo
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.security.authorize.RMPolicyProvider;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.BlockingService;
 
 public class AdminService extends CompositeService implements
@@ -407,14 +408,22 @@ public class AdminService extends CompositeService implements
 
   @Override
   public RefreshAdminAclsResponse refreshAdminAcls(
-      RefreshAdminAclsRequest request) throws YarnException {
-    UserGroupInformation user = checkAcls("refreshAdminAcls");
+      RefreshAdminAclsRequest request) throws YarnException, IOException {
+    String argName = "refreshAdminAcls";
+    UserGroupInformation user = checkAcls(argName);
     
-    Configuration conf = new Configuration();
+    if (!isRMActive()) {
+      RMAuditLogger.logFailure(user.getShortUserName(), argName,
+          adminAcl.toString(), "AdminService",
+          "ResourceManager is not active. Can not refresh user-groups.");
+      throwStandbyException();
+    }
+    Configuration conf =
+        getConfiguration(YarnConfiguration.YARN_SITE_XML_FILE);
     adminAcl = new AccessControlList(conf.get(
         YarnConfiguration.YARN_ADMIN_ACL,
         YarnConfiguration.DEFAULT_YARN_ADMIN_ACL));
-    RMAuditLogger.logSuccess(user.getShortUserName(), "refreshAdminAcls", 
+    RMAuditLogger.logSuccess(user.getShortUserName(), argName,
         "AdminService");
 
     return recordFactory.newRecordInstance(RefreshAdminAclsResponse.class);
@@ -503,5 +512,10 @@ public class AdminService extends CompositeService implements
   private synchronized Configuration getConfiguration(String confFileName)
       throws YarnException, IOException {
     return this.configurationProvider.getConfiguration(confFileName);
+  }
+
+  @VisibleForTesting
+  public AccessControlList getAccessControlList() {
+    return this.adminAcl;
   }
 }
