@@ -395,7 +395,9 @@
       the Active mode when prompted to.
       (2) The nodes in the RM ensemble are listed in
       yarn.resourcemanager.ha.rm-ids
-      (3) The id of each RM comes from yarn.resourcemanager.ha.id
+      (3) The id of each RM either comes from yarn.resourcemanager.ha.id
+      if yarn.resourcemanager.ha.id is explicitly specified or can be
+      figured out by matching yarn.resourcemanager.address.{id} with local address
       (4) The actual physical addresses come from the configs of the pattern
       - {rpc-config}.{id}</description>
     <name>yarn.resourcemanager.ha.enabled</name>
@@ -442,7 +444,10 @@
 
   <property>
     <description>The id (string) of the current RM. When HA is enabled, this
-      is a required config. See description of yarn.resourcemanager.ha.enabled
+      is an optional config. The id of current RM can be set by explicitly
+      specifying yarn.resourcemanager.ha.id or figured out by matching
+      yarn.resourcemanager.address.{id} with local address
+      See description of yarn.resourcemanager.ha.enabled
       for full details on how this is used.</description>
     <name>yarn.resourcemanager.ha.id</name>
     <!--value>rm1</value-->

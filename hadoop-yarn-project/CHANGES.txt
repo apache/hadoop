@@ -103,6 +103,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1617. Remove ancient comment and surround LOG.debug in
     AppSchedulingInfo.allocate (Sandy Ryza)
 
+    YARN-1639. Modified RM HA configuration handling to have a way of not
+    requiring separate configuration files for each RM. (Xuan Gong via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
