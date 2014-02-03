@@ -86,6 +86,10 @@ Release 2.4.0 - UNRELEASED
     used by ResourceManager to read configuration locally or from remote systems
     so as to help RM failover. (Xuan Gong via vinodkv)
 
+    YARN-1659. Defined the ApplicationTimelineStore store as an abstraction for
+    implementing different storage impls for storing timeline information.
+    (Billie Rinaldi via vinodkv)
+
   IMPROVEMENTS
 
     YARN-1007. Enhance History Reader interface for Containers. (Mayank Bansal via

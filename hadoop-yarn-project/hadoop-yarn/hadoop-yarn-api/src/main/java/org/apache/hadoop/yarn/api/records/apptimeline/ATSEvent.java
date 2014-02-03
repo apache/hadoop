@@ -39,7 +39,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 @XmlAccessorType(XmlAccessType.NONE)
 @Public
 @Unstable
-public class ATSEvent {
+public class ATSEvent implements Comparable<ATSEvent> {
 
   private long timestamp;
   private String eventType;
@@ -131,4 +131,42 @@ public class ATSEvent {
     this.eventInfo = eventInfo;
   }
 
+  @Override
+  public int compareTo(ATSEvent other) {
+    if (timestamp > other.timestamp) {
+      return -1;
+    } else if (timestamp < other.timestamp) {
+      return 1;
+    } else {
+      return eventType.compareTo(other.eventType);
+    }
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o)
+      return true;
+    if (o == null || getClass() != o.getClass())
+      return false;
+
+    ATSEvent atsEvent = (ATSEvent) o;
+
+    if (timestamp != atsEvent.timestamp)
+      return false;
+    if (!eventType.equals(atsEvent.eventType))
+      return false;
+    if (eventInfo != null ? !eventInfo.equals(atsEvent.eventInfo) :
+        atsEvent.eventInfo != null)
+      return false;
+
+    return true;
+  }
+
+  @Override
+  public int hashCode() {
+    int result = (int) (timestamp ^ (timestamp >>> 32));
+    result = 31 * result + eventType.hashCode();
+    result = 31 * result + (eventInfo != null ? eventInfo.hashCode() : 0);
+    return result;
+  }
 }
