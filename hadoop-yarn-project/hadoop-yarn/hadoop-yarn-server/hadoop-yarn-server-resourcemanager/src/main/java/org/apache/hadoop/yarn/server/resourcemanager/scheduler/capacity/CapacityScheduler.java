@@ -195,6 +195,7 @@ public class CapacityScheduler extends AbstractYarnScheduler
 
   private ResourceCalculator calculator;
   private boolean usePortForNodeName;
+  private boolean useLocalConfigurationProvider;
 
   public CapacityScheduler() {}
 
@@ -261,7 +262,13 @@ public class CapacityScheduler extends AbstractYarnScheduler
   public synchronized void
       reinitialize(Configuration conf, RMContext rmContext) throws IOException {
     if (!initialized) {
-      this.conf = new CapacitySchedulerConfiguration(conf);
+      this.useLocalConfigurationProvider = conf.get(
+          YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
+          YarnConfiguration.DEFAULT_RM_CONFIGURATION_PROVIDER_CLASS).equals(
+          "org.apache.hadoop.yarn.LocalConfigurationProvider");
+      this.conf =
+          new CapacitySchedulerConfiguration(conf,
+              this.useLocalConfigurationProvider);
       validateConf(this.conf);
       this.minimumAllocation = this.conf.getMinimumAllocation();
       this.maximumAllocation = this.conf.getMaximumAllocation();
@@ -279,9 +286,10 @@ public class CapacityScheduler extends AbstractYarnScheduler
           "minimumAllocation=<" + getMinimumResourceCapability() + ">, " +
           "maximumAllocation=<" + getMaximumResourceCapability() + ">");
     } else {
-
       CapacitySchedulerConfiguration oldConf = this.conf; 
-      this.conf = new CapacitySchedulerConfiguration(conf);
+      this.conf =
+          new CapacitySchedulerConfiguration(conf,
+              this.useLocalConfigurationProvider);
       validateConf(this.conf);
       try {
         LOG.info("Re-initializing queues...");

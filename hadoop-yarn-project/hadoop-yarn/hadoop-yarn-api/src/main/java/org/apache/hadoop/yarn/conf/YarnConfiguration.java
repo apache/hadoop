@@ -37,6 +37,9 @@ import org.apache.hadoop.yarn.api.ApplicationConstants;
 @Evolving
 public class YarnConfiguration extends Configuration {
 
+  @Private
+  public static final String CS_CONFIGURATION_FILE= "capacity-scheduler.xml";
+
   private static final String YARN_DEFAULT_XML_FILE = "yarn-default.xml";
   private static final String YARN_SITE_XML_FILE = "yarn-site.xml";
 
@@ -328,6 +331,16 @@ public class YarnConfiguration extends Configuration {
 
   public static final String RM_HA_IDS = RM_HA_PREFIX + "rm-ids";
   public static final String RM_HA_ID = RM_HA_PREFIX + "id";
+
+  /** Store the related configuration files in File System */
+  public static final String FS_BASED_RM_CONF_STORE = RM_PREFIX
+      + "configuration.file-system-based-store";
+  public static final String DEFAULT_FS_BASED_RM_CONF_STORE = "/yarn/conf";
+
+  public static final String RM_CONFIGURATION_PROVIDER_CLASS = RM_PREFIX
+      + "configuration.provider-class";
+  public static final String DEFAULT_RM_CONFIGURATION_PROVIDER_CLASS =
+      "org.apache.hadoop.yarn.LocalConfigurationProvider";
 
   @Private
   public static final List<String> RM_SERVICES_ADDRESS_CONF_KEYS =
