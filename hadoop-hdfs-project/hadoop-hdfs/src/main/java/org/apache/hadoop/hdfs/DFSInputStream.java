@@ -47,6 +47,7 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 
 /****************************************************************
@@ -419,7 +420,8 @@ public class DFSInputStream extends FSInputStream {
         }
         return chosenNode;
       } catch (IOException ex) {
-        if (ex instanceof InvalidBlockTokenException && refetchToken > 0) {
+        if ((ex instanceof InvalidBlockTokenException || ex instanceof InvalidToken)
+            && refetchToken > 0) {
           DFSClient.LOG.info("Will fetch a new access token and retry, " 
               + "access token was invalid when connecting to " + targetAddr
               + " : " + ex);
@@ -690,7 +692,8 @@ public class DFSInputStream extends FSInputStream {
         dfsClient.disableShortCircuit();
         continue;
       } catch (IOException e) {
-        if (e instanceof InvalidBlockTokenException && refetchToken > 0) {
+        if ((e instanceof InvalidBlockTokenException || e instanceof InvalidToken)
+            && refetchToken > 0) {
           DFSClient.LOG.info("Will get a new access token and retry, "
               + "access token was invalid when connecting to " + targetAddr
               + " : " + e);

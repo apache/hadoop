@@ -36,6 +36,9 @@ Release 0.23.10 - 2013-12-09
 
     HDFS-4995. Make getContentSummary less expensive. (kihwal)
 
+    HDFS-5637. Try to refeatchToken while local read InvalidToken occurred.
+    (Liang Xie via junping_du)
+
   OPTIMIZATIONS
 
     HDFS-5239.  Allow FSNamesystem lock fairness to be configurable (daryn via
