@@ -21,10 +21,13 @@ package org.apache.hadoop.yarn.conf;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
+import java.net.InetSocketAddress;
 import java.util.Collection;
 
 @InterfaceAudience.Private
@@ -108,8 +111,7 @@ public class HAUtil {
           String errmsg = iae.getMessage();
           if (confKey == null) {
             // Error at addSuffix
-            errmsg = getInvalidValueMessage(YarnConfiguration.RM_HA_ID,
-              getRMHAId(conf));
+            errmsg = getInvalidValueMessage(YarnConfiguration.RM_HA_ID, id);
           }
           throwBadConfigurationException(errmsg);
         }
@@ -122,10 +124,18 @@ public class HAUtil {
   }
 
   private static void verifyAndSetCurrentRMHAId(Configuration conf) {
-    String rmId = conf.getTrimmed(YarnConfiguration.RM_HA_ID);
+    String rmId = getRMHAId(conf);
     if (rmId == null) {
-      throwBadConfigurationException(
-        getNeedToSetValueMessage(YarnConfiguration.RM_HA_ID));
+      StringBuilder msg = new StringBuilder();
+      msg.append("Can not find valid RM_HA_ID. None of ");
+      for (String id : conf
+          .getTrimmedStringCollection(YarnConfiguration.RM_HA_IDS)) {
+        msg.append(addSuffix(YarnConfiguration.RM_ADDRESS, id) + " ");
+      }
+      msg.append(" are matching" +
+          " the local address OR " + YarnConfiguration.RM_HA_ID + " is not" +
+          " specified in HA Configuration");
+      throwBadConfigurationException(msg.toString());
     } else {
       Collection<String> ids = getRMHAIds(conf);
       if (!ids.contains(rmId)) {
@@ -179,7 +189,34 @@ public class HAUtil {
    * @return RM Id on success
    */
   public static String getRMHAId(Configuration conf) {
-    return conf.get(YarnConfiguration.RM_HA_ID);
+    int found = 0;
+    String currentRMId = conf.getTrimmed(YarnConfiguration.RM_HA_ID);
+    if(currentRMId == null) {
+      for(String rmId : getRMHAIds(conf)) {
+        String key = addSuffix(YarnConfiguration.RM_ADDRESS, rmId);
+        String addr = conf.get(key);
+        if (addr == null) {
+          continue;
+        }
+        InetSocketAddress s;
+        try {
+          s = NetUtils.createSocketAddr(addr);
+        } catch (Exception e) {
+          LOG.warn("Exception in creating socket address " + addr, e);
+          continue;
+        }
+        if (!s.isUnresolved() && NetUtils.isLocalAddress(s.getAddress())) {
+          currentRMId = rmId.trim();
+          found++;
+        }
+      }
+    }
+    if (found > 1) { // Only one address must match the local address
+      String msg = "The HA Configuration has multiple addresses that match "
+          + "local node's address.";
+      throw new HadoopIllegalArgumentException(msg);
+    }
+    return currentRMId;
   }
 
   @VisibleForTesting
