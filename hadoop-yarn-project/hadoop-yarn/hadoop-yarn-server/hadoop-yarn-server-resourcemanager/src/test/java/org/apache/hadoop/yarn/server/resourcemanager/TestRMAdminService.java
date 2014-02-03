@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshQueuesRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
@@ -50,6 +51,7 @@ public class TestRMAdminService {
 
   @Before
   public void setup() throws IOException {
+    Configuration.addDefaultResource(YarnConfiguration.CS_CONFIGURATION_FILE);
     fs = FileSystem.get(configuration);
     workingPath =
         new Path(new File("target", this.getClass().getSimpleName()
@@ -72,6 +74,7 @@ public class TestRMAdminService {
     fs.delete(workingPath, true);
     fs.delete(tmpDir, true);
   }
+
   @Test
   public void testAdminRefreshQueuesWithLocalConfigurationProvider()
       throws IOException, YarnException {
@@ -95,7 +98,6 @@ public class TestRMAdminService {
   @Test
   public void testAdminRefreshQueuesWithFileSystemBasedConfigurationProvider()
       throws IOException, YarnException {
-    Configuration.addDefaultResource(YarnConfiguration.CS_CONFIGURATION_FILE);
     configuration.set(YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
         "org.apache.hadoop.yarn.FileSystemBasedConfigurationProvider");
     rm = new MockRM(configuration);
@@ -132,6 +134,58 @@ public class TestRMAdminService {
     int maxAppsAfter = cs.getConfiguration().getMaximumSystemApplications();
     Assert.assertEquals(maxAppsAfter, 5000);
     Assert.assertTrue(maxAppsAfter != maxAppsBefore);
+  }
+
+  @Test
+  public void testAdminAclsWithLocalConfigurationProvider() {
+    rm = new MockRM(configuration);
+    rm.init(configuration);
+    rm.start();
+
+    try {
+      rm.adminService.refreshAdminAcls(RefreshAdminAclsRequest.newInstance());
+    } catch (Exception ex) {
+      fail("Using localConfigurationProvider. Should not get any exception.");
+    }
+  }
+
+  @Test
+  public void testAdminAclsWithFileSystemBasedConfigurationProvider()
+      throws IOException, YarnException {
+    configuration.set(YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
+        "org.apache.hadoop.yarn.FileSystemBasedConfigurationProvider");
+    rm = new MockRM(configuration);
+    rm.init(configuration);
+    rm.start();
+
+    // clean the remoteDirectory
+    cleanRemoteDirectory();
+
+    try {
+      rm.adminService.refreshAdminAcls(RefreshAdminAclsRequest.newInstance());
+      fail("FileSystemBasedConfigurationProvider is used." +
+          " Should get an exception here");
+    } catch (Exception ex) {
+      Assert.assertTrue(ex.getMessage().contains(
+          "Can not find Configuration: yarn-site.xml"));
+    }
+
+    String aclStringBefore =
+        rm.adminService.getAccessControlList().getAclString().trim();
+
+    YarnConfiguration yarnConf = new YarnConfiguration();
+    yarnConf.set(YarnConfiguration.YARN_ADMIN_ACL, "world:anyone:rwcda");
+    String yarnConfFile = writeConfigurationXML(yarnConf, "yarn-site.xml");
+
+    // upload the file into Remote File System
+    uploadToRemoteFileSystem(new Path(yarnConfFile));
+    rm.adminService.refreshAdminAcls(RefreshAdminAclsRequest.newInstance());
+
+    String aclStringAfter =
+        rm.adminService.getAccessControlList().getAclString().trim();
+
+    Assert.assertTrue(!aclStringAfter.equals(aclStringBefore));
+    Assert.assertEquals(aclStringAfter, "world:anyone:rwcda");
   }
 
   private String writeConfigurationXML(Configuration conf, String confXMLName)

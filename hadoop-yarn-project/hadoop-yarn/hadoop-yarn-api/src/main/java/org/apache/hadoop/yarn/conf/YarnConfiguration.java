@@ -40,8 +40,10 @@ public class YarnConfiguration extends Configuration {
   @Private
   public static final String CS_CONFIGURATION_FILE= "capacity-scheduler.xml";
 
+  @Private
+  public static final String YARN_SITE_XML_FILE = "yarn-site.xml";
+
   private static final String YARN_DEFAULT_XML_FILE = "yarn-default.xml";
-  private static final String YARN_SITE_XML_FILE = "yarn-site.xml";
 
   static {
     Configuration.addDefaultResource(YARN_DEFAULT_XML_FILE);
