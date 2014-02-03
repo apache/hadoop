@@ -363,21 +363,22 @@ public class AdminService extends CompositeService implements
   @Override
   public RefreshSuperUserGroupsConfigurationResponse refreshSuperUserGroupsConfiguration(
       RefreshSuperUserGroupsConfigurationRequest request)
-      throws YarnException, StandbyException {
-    UserGroupInformation user = checkAcls("refreshSuperUserGroupsConfiguration");
+      throws YarnException, IOException {
+    String argName = "refreshSuperUserGroupsConfiguration";
+    UserGroupInformation user = checkAcls(argName);
 
-    // TODO (YARN-1459): Revisit handling super-user-groups on Standby RM
     if (!isRMActive()) {
-      RMAuditLogger.logFailure(user.getShortUserName(),
-          "refreshSuperUserGroupsConfiguration",
+      RMAuditLogger.logFailure(user.getShortUserName(), argName,
           adminAcl.toString(), "AdminService",
           "ResourceManager is not active. Can not refresh super-user-groups.");
       throwStandbyException();
     }
 
-    ProxyUsers.refreshSuperUserGroupsConfiguration(new Configuration());
+    Configuration conf =
+        getConfiguration(YarnConfiguration.CORE_SITE_CONFIGURATION_FILE);
+    ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
     RMAuditLogger.logSuccess(user.getShortUserName(),
-        "refreshSuperUserGroupsConfiguration", "AdminService");
+        argName, "AdminService");
     
     return recordFactory.newRecordInstance(
         RefreshSuperUserGroupsConfigurationResponse.class);

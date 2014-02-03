@@ -29,10 +29,12 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshQueuesRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshSuperUserGroupsConfigurationRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.junit.After;
@@ -186,6 +188,65 @@ public class TestRMAdminService {
 
     Assert.assertTrue(!aclStringAfter.equals(aclStringBefore));
     Assert.assertEquals(aclStringAfter, "world:anyone:rwcda");
+  }
+
+  @Test
+  public void
+      testRefreshSuperUserGroupsWithLocalConfigurationProvider() {
+    rm = new MockRM(configuration);
+    rm.init(configuration);
+    rm.start();
+
+    try {
+      rm.adminService.refreshSuperUserGroupsConfiguration(
+          RefreshSuperUserGroupsConfigurationRequest.newInstance());
+    } catch (Exception ex) {
+      fail("Using localConfigurationProvider. Should not get any exception.");
+    }
+  }
+
+  @Test
+  public void
+      testRefreshSuperUserGroupsWithFileSystemBasedConfigurationProvider()
+      throws IOException, YarnException {
+    configuration.set(YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
+        "org.apache.hadoop.yarn.FileSystemBasedConfigurationProvider");
+    rm = new MockRM(configuration);
+    rm.init(configuration);
+    rm.start();
+
+    // clean the remoteDirectory
+    cleanRemoteDirectory();
+
+    try {
+      rm.adminService.refreshSuperUserGroupsConfiguration(
+          RefreshSuperUserGroupsConfigurationRequest.newInstance());
+      fail("FileSystemBasedConfigurationProvider is used." +
+          " Should get an exception here");
+    } catch (Exception ex) {
+      Assert.assertTrue(ex.getMessage().contains(
+          "Can not find Configuration: core-site.xml"));
+    }
+
+    Configuration coreConf = new Configuration(false);
+    coreConf.set("hadoop.proxyuser.test.groups", "test_groups");
+    coreConf.set("hadoop.proxyuser.test.hosts", "test_hosts");
+    String coreConfFile = writeConfigurationXML(coreConf,
+        "core-site.xml");
+
+    // upload the file into Remote File System
+    uploadToRemoteFileSystem(new Path(coreConfFile));
+    rm.adminService.refreshSuperUserGroupsConfiguration(
+        RefreshSuperUserGroupsConfigurationRequest.newInstance());
+    Assert.assertTrue(ProxyUsers.getProxyGroups()
+        .get("hadoop.proxyuser.test.groups").size() == 1);
+    Assert.assertTrue(ProxyUsers.getProxyGroups()
+        .get("hadoop.proxyuser.test.groups").contains("test_groups"));
+
+    Assert.assertTrue(ProxyUsers.getProxyHosts()
+        .get("hadoop.proxyuser.test.hosts").size() == 1);
+    Assert.assertTrue(ProxyUsers.getProxyHosts()
+        .get("hadoop.proxyuser.test.hosts").contains("test_hosts"));
   }
 
   private String writeConfigurationXML(Configuration conf, String confXMLName)

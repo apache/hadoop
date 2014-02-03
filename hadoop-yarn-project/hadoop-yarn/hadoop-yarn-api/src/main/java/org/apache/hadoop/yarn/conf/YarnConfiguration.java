@@ -43,6 +43,9 @@ public class YarnConfiguration extends Configuration {
   @Private
   public static final String YARN_SITE_XML_FILE = "yarn-site.xml";
 
+  @Private
+  public static final String CORE_SITE_CONFIGURATION_FILE = "core-site.xml";
+
   private static final String YARN_DEFAULT_XML_FILE = "yarn-default.xml";
 
   static {
