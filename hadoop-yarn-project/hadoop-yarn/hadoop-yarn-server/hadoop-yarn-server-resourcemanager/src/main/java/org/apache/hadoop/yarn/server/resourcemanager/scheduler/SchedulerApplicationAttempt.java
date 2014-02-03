@@ -432,7 +432,7 @@ public class SchedulerApplicationAttempt {
       .transferStateFromPreviousAppSchedulingInfo(appAttempt.appSchedulingInfo);
   }
   
-  public void move(Queue newQueue) {
+  public synchronized void move(Queue newQueue) {
     QueueMetrics oldMetrics = queue.getMetrics();
     QueueMetrics newMetrics = newQueue.getMetrics();
     String user = getUser();
