@@ -160,7 +160,7 @@ public class ATSEvents {
      * @param event
      *          a single event
      */
-    public void addEntity(ATSEvent event) {
+    public void addEvent(ATSEvent event) {
       events.add(event);
     }
 
