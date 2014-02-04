@@ -118,37 +118,6 @@ Release 2.4.0 - UNRELEASED
     be available across RM failover by making using of a remote
     configuration-provider. (Xuan Gong via vinodkv)
 
-  OPTIMIZATIONS
-
-  BUG FIXES
-
-    YARN-935. Correcting pom.xml to build applicationhistoryserver module
-    successfully. (Zhijie Shen via vinodkv)
-  
-    YARN-962. Fixed bug in application-history proto file and renamed it be just
-    a client proto file. (Zhijie Shen via vinodkv)
-  
-    YARN-984. Renamed the incorrectly named applicationhistoryservice.records.pb.impl
-    package to be applicationhistoryservice.records.impl.pb. (Devaraj K via vinodkv)
-  
-    YARN-1534. Fixed failure of test TestAHSWebApp. (Shinichi Yamashita via vinodkv)
-  
-    YARN-1555. Fixed test failures in applicationhistoryservice.* (Vinod Kumar 
-    Vavilapalli via mayank)
-  
-    YARN-1594. Updated pom.xml of applicationhistoryservice sub-project according to
-    YARN-888. (Vinod Kumar Vavilapalli via zjshen)
-  
-    YARN-1596. Fixed Javadoc warnings on branch YARN-321. (Vinod Kumar Vavilapalli
-    via zjshen)
-  
-    YARN-1597. Fixed Findbugs warnings on branch YARN-321. (Vinod Kumar Vavilapalli
-    via zjshen)
-  
-    YARN-1595. Made enabling history service configurable and fixed test failures on
-    branch YARN-321. (Vinod Kumar Vavilapalli via zjshen)
-  OPTIMIZATIONS
-
   BUG FIXES
 
     YARN-935. Correcting pom.xml to build applicationhistoryserver module
