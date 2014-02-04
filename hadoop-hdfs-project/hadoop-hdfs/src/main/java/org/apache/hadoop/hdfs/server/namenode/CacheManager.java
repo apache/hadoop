@@ -67,6 +67,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CacheDirectiveInfoExpirationProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CacheDirectiveInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CachePoolInfoProto;
+import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.CacheReplicationMonitor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
@@ -993,18 +994,23 @@ public final class CacheManager {
       CacheDirectiveInfo info = directive.toInfo();
       CacheDirectiveInfoProto.Builder b = CacheDirectiveInfoProto.newBuilder();
 
-      if (info.getPath() != null)
+      if (info.getPath() != null) {
         b.setPath(info.getPath().toUri().getPath());
+      }
 
-      if (info.getReplication() != null)
+      if (info.getReplication() != null) {
         b.setReplication(info.getReplication());
+      }
 
-      if (info.getPool() != null)
+      if (info.getPool() != null) {
         b.setPool(info.getPool());
+      }
 
-      if (info.getExpiration() != null)
-        b.setExpiration(CacheDirectiveInfoExpirationProto.newBuilder()
-            .setMillis(info.getExpiration().getMillis()));
+      Expiration expiry = info.getExpiration();
+      if (expiry != null) {
+        assert (!expiry.isRelative());
+        b.setExpiration(PBHelper.convert(expiry));
+      }
 
       directives.add(b.build());
     }

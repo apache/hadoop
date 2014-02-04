@@ -31,3 +31,6 @@ HDFS-5698 subtasks
     HDFS-5797. Implement offline image viewer. (Haohui Mai via jing9)
 
     HDFS-5771. Track progress when loading fsimage. (Haohui Mai via cnauroth)
+
+    HDFS-5871. Use PBHelper to serialize CacheDirectiveInfoExpirationProto.
+    (Haohui Mai via jing9)
