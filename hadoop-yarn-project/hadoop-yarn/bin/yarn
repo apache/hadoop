@@ -204,7 +204,7 @@ elif [ "$COMMAND" = "historyserver" ] ; then
   CLASSPATH=${CLASSPATH}:$YARN_CONF_DIR/ahs-config/log4j.properties
   CLASS='org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryServer'
   YARN_OPTS="$YARN_OPTS $YARN_HISTORYSERVER_OPTS"
-  if [ "$YARN_RESOURCEMANAGER_HEAPSIZE" != "" ]; then
+  if [ "$YARN_HISTORYSERVER_HEAPSIZE" != "" ]; then
     JAVA_HEAP_MAX="-Xmx""$YARN_HISTORYSERVER_HEAPSIZE""m"
   fi  
 elif [ "$COMMAND" = "nodemanager" ] ; then

@@ -172,6 +172,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1673. Fix option parsing in YARN's application CLI after it is broken
     by YARN-967. (Mayank Bansal via vinodkv)
 
+    YARN-1684. Fixed history server heap size in yarn script. (Billie Rinaldi
+    via zjshen)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
