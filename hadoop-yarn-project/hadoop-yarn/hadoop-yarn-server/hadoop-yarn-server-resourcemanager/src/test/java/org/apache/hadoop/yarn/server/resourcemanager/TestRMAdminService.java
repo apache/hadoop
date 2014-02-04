@@ -24,16 +24,19 @@ import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.authorize.ProxyUsers;
+import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshQueuesRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshServiceAclsRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshSuperUserGroupsConfigurationRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
@@ -188,6 +191,120 @@ public class TestRMAdminService {
 
     Assert.assertTrue(!aclStringAfter.equals(aclStringBefore));
     Assert.assertEquals(aclStringAfter, "world:anyone:rwcda");
+  }
+
+  @Test
+  public void testServiceAclsRefreshWithLocalConfigurationProvider() {
+    configuration.setBoolean(
+        CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION, true);
+    ResourceManager resourceManager = null;
+
+    try {
+      resourceManager = new ResourceManager();
+      resourceManager.init(configuration);
+      resourceManager.start();
+      resourceManager.adminService.refreshServiceAcls(RefreshServiceAclsRequest
+          .newInstance());
+    } catch (Exception ex) {
+      fail("Using localConfigurationProvider. Should not get any exception.");
+    } finally {
+      if (resourceManager != null) {
+        resourceManager.stop();
+      }
+    }
+  }
+
+  @SuppressWarnings("resource")
+  @Test
+  public void testServiceAclsRefreshWithFileSystemBasedConfigurationProvider()
+      throws IOException, YarnException {
+    configuration.setBoolean(
+        CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION, true);
+    configuration.set(YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
+        "org.apache.hadoop.yarn.FileSystemBasedConfigurationProvider");
+    ResourceManager resourceManager = null;
+    try {
+      resourceManager = new ResourceManager();
+      resourceManager.init(configuration);
+      resourceManager.start();
+
+      // clean the remoteDirectory
+      cleanRemoteDirectory();
+
+      try {
+        resourceManager.adminService
+            .refreshServiceAcls(RefreshServiceAclsRequest
+                .newInstance());
+        fail("FileSystemBasedConfigurationProvider is used." +
+            " Should get an exception here");
+      } catch (Exception ex) {
+        Assert.assertTrue(ex.getMessage().contains(
+            "Can not find Configuration: hadoop-policy.xml"));
+      }
+
+      String aclsString = "alice,bob users,wheel";
+      Configuration conf = new Configuration();
+      conf.setBoolean(
+          CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION, true);
+      conf.set("security.applicationclient.protocol.acl", aclsString);
+      String hadoopConfFile = writeConfigurationXML(conf, "hadoop-policy.xml");
+
+      // upload the file into Remote File System
+      uploadToRemoteFileSystem(new Path(hadoopConfFile));
+
+      resourceManager.adminService.refreshServiceAcls(RefreshServiceAclsRequest
+          .newInstance());
+
+      // verify service Acls refresh for AdminService
+      ServiceAuthorizationManager adminServiceServiceManager =
+          resourceManager.adminService.getServer()
+              .getServiceAuthorizationManager();
+      verifyServiceACLsRefresh(adminServiceServiceManager,
+          org.apache.hadoop.yarn.api.ApplicationClientProtocolPB.class,
+          aclsString);
+
+      // verify service ACLs refresh for ClientRMService
+      ServiceAuthorizationManager clientRMServiceServiceManager =
+          resourceManager.getRMContext().getClientRMService().getServer()
+              .getServiceAuthorizationManager();
+      verifyServiceACLsRefresh(clientRMServiceServiceManager,
+          org.apache.hadoop.yarn.api.ApplicationClientProtocolPB.class,
+          aclsString);
+
+      // verify service ACLs refresh for ApplicationMasterService
+      ServiceAuthorizationManager appMasterService =
+          resourceManager.getRMContext().getApplicationMasterService()
+              .getServer().getServiceAuthorizationManager();
+      verifyServiceACLsRefresh(appMasterService,
+          org.apache.hadoop.yarn.api.ApplicationClientProtocolPB.class,
+          aclsString);
+
+      // verify service ACLs refresh for ResourceTrackerService
+      ServiceAuthorizationManager RTService =
+          resourceManager.getRMContext().getResourceTrackerService()
+              .getServer().getServiceAuthorizationManager();
+      verifyServiceACLsRefresh(RTService,
+          org.apache.hadoop.yarn.api.ApplicationClientProtocolPB.class,
+          aclsString);
+    } finally {
+      if (resourceManager != null) {
+        resourceManager.stop();
+      }
+    }
+  }
+
+  private void verifyServiceACLsRefresh(ServiceAuthorizationManager manager,
+      Class<?> protocol, String aclString) {
+    for (Class<?> protocolClass : manager.getProtocolsWithAcls()) {
+      AccessControlList accessList =
+          manager.getProtocolsAcls(protocolClass);
+      if (protocolClass == protocol) {
+        Assert.assertEquals(accessList.getAclString(),
+            aclString);
+      } else {
+        Assert.assertEquals(accessList.getAclString(), "*");
+      }
+    }
   }
 
   @Test

@@ -122,6 +122,10 @@ Release 2.4.0 - UNRELEASED
     to be consistent with what exists (false) in the code and documentation.
     (Kenji Kikushima via vinodkv)
 
+    YARN-1669. Modified RM HA handling of protocol level service-ACLS to
+    be available across RM failover by making using of a remote
+    configuration-provider. (Xuan Gong via vinodkv)
+
   BUG FIXES
 
     YARN-935. Correcting pom.xml to build applicationhistoryserver module

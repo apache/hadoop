@@ -39,6 +39,7 @@ import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.LocalConfigurationProvider;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
@@ -86,6 +87,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.authorize.RMPolicyProvider;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 
+import com.google.common.annotations.VisibleForTesting;
+
 @SuppressWarnings("unchecked")
 @Private
 public class ApplicationMasterService extends AbstractService implements
@@ -102,6 +105,7 @@ public class ApplicationMasterService extends AbstractService implements
   private final AllocateResponse resync =
       recordFactory.newRecordInstance(AllocateResponse.class);
   private final RMContext rmContext;
+  private boolean useLocalConfigurationProvider;
 
   public ApplicationMasterService(RMContext rmContext, YarnScheduler scheduler) {
     super(ApplicationMasterService.class.getName());
@@ -109,6 +113,15 @@ public class ApplicationMasterService extends AbstractService implements
     this.rScheduler = scheduler;
     this.resync.setAMCommand(AMCommand.AM_RESYNC);
     this.rmContext = rmContext;
+  }
+
+  @Override
+  protected void serviceInit(Configuration conf) throws Exception {
+    this.useLocalConfigurationProvider =
+        (LocalConfigurationProvider.class.isAssignableFrom(conf.getClass(
+            YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
+            LocalConfigurationProvider.class)));
+    super.serviceInit(conf);
   }
 
   @Override
@@ -578,7 +591,12 @@ public class ApplicationMasterService extends AbstractService implements
 
   public void refreshServiceAcls(Configuration configuration, 
       PolicyProvider policyProvider) {
-    this.server.refreshServiceAcl(configuration, policyProvider);
+    if (this.useLocalConfigurationProvider) {
+      this.server.refreshServiceAcl(configuration, policyProvider);
+    } else {
+      this.server.refreshServiceAclWithConfigration(configuration,
+          policyProvider);
+    }
   }
   
   @Override
@@ -603,5 +621,10 @@ public class ApplicationMasterService extends AbstractService implements
     public synchronized void setAllocateResponse(AllocateResponse response) {
       this.response = response;
     }
+  }
+
+  @VisibleForTesting
+  public Server getServer() {
+    return this.server;
   }
 }

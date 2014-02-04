@@ -451,6 +451,14 @@ public abstract class Server {
   }
 
   /**
+   * Refresh the service authorization ACL for the service handled by this server
+   * using the specified Configuration.
+   */
+  public void refreshServiceAclWithConfigration(Configuration conf,
+      PolicyProvider provider) {
+    serviceAuthorizationManager.refreshWithConfiguration(conf, provider);
+  }
+  /**
    * Returns a handle to the serviceAuthorizationManager (required in tests)
    * @return instance of ServiceAuthorizationManager for this server
    */

@@ -35,6 +35,7 @@ import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.yarn.LocalConfigurationProvider;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
@@ -262,10 +263,10 @@ public class CapacityScheduler extends AbstractYarnScheduler
   public synchronized void
       reinitialize(Configuration conf, RMContext rmContext) throws IOException {
     if (!initialized) {
-      this.useLocalConfigurationProvider = conf.get(
-          YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
-          YarnConfiguration.DEFAULT_RM_CONFIGURATION_PROVIDER_CLASS).equals(
-          "org.apache.hadoop.yarn.LocalConfigurationProvider");
+      this.useLocalConfigurationProvider =
+          (LocalConfigurationProvider.class.isAssignableFrom(conf.getClass(
+              YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
+              LocalConfigurationProvider.class)));
       this.conf =
           new CapacitySchedulerConfiguration(conf,
               this.useLocalConfigurationProvider);
