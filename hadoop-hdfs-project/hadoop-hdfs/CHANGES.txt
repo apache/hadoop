@@ -331,6 +331,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-5767. NFS implementation assumes userName userId mapping to be unique,
     which is not true sometimes (Yongjun Zhang via brandonli)
 
+    HDFS-5791. TestHttpsFileSystem should use a random port to avoid binding
+    error during testing (Haohui Mai via brandonli)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
