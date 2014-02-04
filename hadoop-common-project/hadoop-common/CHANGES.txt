@@ -113,6 +113,9 @@ Trunk (Unreleased)
 
     HADOOP-10177. Create CLI tools for managing keys. (Larry McCay via omalley)
 
+    HADOOP-10244. TestKeyShell improperly tests the results of delete (Larry
+    McCay via omalley)
+
   BUG FIXES
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.
