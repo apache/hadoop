@@ -165,6 +165,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1632. TestApplicationMasterServices should be under
     org.apache.hadoop.yarn.server.resourcemanager package (Chen He via jeagles)
 
+    YARN-1673. Fix option parsing in YARN's application CLI after it is broken
+    by YARN-967. (Mayank Bansal via vinodkv)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
