@@ -50,14 +50,6 @@ public class IdUserGroup {
   private BiMap<Integer, String> gidNameMap = HashBiMap.create();
 
   private long lastUpdateTime = 0; // Last time maps were updated
-
-  static public class DuplicateNameOrIdException extends IOException {
-    private static final long serialVersionUID = 1L;
-
-    public DuplicateNameOrIdException(String msg) {
-      super(msg);
-    }
-  }
   
   public IdUserGroup() throws IOException {
     updateMaps();
@@ -80,7 +72,8 @@ public class IdUserGroup {
     }
   }
 
-  private static final String DUPLICATE_NAME_ID_DEBUG_INFO = "NFS gateway can't start with duplicate name or id on the host system.\n"
+  private static final String DUPLICATE_NAME_ID_DEBUG_INFO =
+      "NFS gateway could have problem starting with duplicate name or id on the host system.\n"
       + "This is because HDFS (non-kerberos cluster) uses name as the only way to identify a user or group.\n"
       + "The host system with duplicated user/group name or id might work fine most of the time by itself.\n"
       + "However when NFS gateway talks to HDFS, HDFS accepts only user and group name.\n"
@@ -88,6 +81,16 @@ public class IdUserGroup {
       + "<getent passwd | cut -d: -f1,3> and <getent group | cut -d: -f1,3> on Linux systms,\n"
       + "<dscl . -list /Users UniqueID> and <dscl . -list /Groups PrimaryGroupID> on MacOS.";
   
+  private static void reportDuplicateEntry(final String header,
+      final Integer key, final String value,
+      final Integer ekey, final String evalue) {    
+      LOG.warn("\n" + header + String.format(
+          "new entry (%d, %s), existing entry: (%d, %s).\n%s\n%s",
+          key, value, ekey, evalue,
+          "The new entry is to be ignored for the following reason.",
+          DUPLICATE_NAME_ID_DEBUG_INFO));
+  }
+      
   /**
    * Get the whole list of users and groups and save them in the maps.
    * @throws IOException 
@@ -108,22 +111,27 @@ public class IdUserGroup {
         }
         LOG.debug("add to " + mapName + "map:" + nameId[0] + " id:" + nameId[1]);
         // HDFS can't differentiate duplicate names with simple authentication
-        Integer key = Integer.valueOf(nameId[1]);
-        String value = nameId[0];
+        final Integer key = Integer.valueOf(nameId[1]);
+        final String value = nameId[0];        
         if (map.containsKey(key)) {
-          LOG.error(String.format(
-              "Got duplicate id:(%d, %s), existing entry: (%d, %s).\n%s", key,
-              value, key, map.get(key), DUPLICATE_NAME_ID_DEBUG_INFO));
-          throw new DuplicateNameOrIdException("Got duplicate id.");
+          final String prevValue = map.get(key);
+          if (value.equals(prevValue)) {
+            // silently ignore equivalent entries
+            continue;
+          }
+          reportDuplicateEntry(
+              "Got multiple names associated with the same id: ",
+              key, value, key, prevValue);           
+          continue;
         }
-        if (map.containsValue(nameId[0])) {
-          LOG.error(String.format(
-              "Got duplicate name:(%d, %s), existing entry: (%d, %s) \n%s",
-              key, value, map.inverse().get(value), value,
-              DUPLICATE_NAME_ID_DEBUG_INFO));
-          throw new DuplicateNameOrIdException("Got duplicate name");
+        if (map.containsValue(value)) {
+          final Integer prevKey = map.inverse().get(value);
+          reportDuplicateEntry(
+              "Got multiple ids associated with the same name: ",
+              key, value, prevKey, value);
+          continue;
         }
-        map.put(Integer.valueOf(nameId[1]), nameId[0]);
+        map.put(key, value);
       }
       LOG.info("Updated " + mapName + " map size:" + map.size());
       

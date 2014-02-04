@@ -328,6 +328,9 @@ Release 2.4.0 - UNRELEASED
     the same node group when dfs.namenode.avoid.write.stale.datanode is true. 
     (Buddy via junping_du)
 
+    HDFS-5767. NFS implementation assumes userName userId mapping to be unique,
+    which is not true sometimes (Yongjun Zhang via brandonli)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
