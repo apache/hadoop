@@ -130,7 +130,7 @@
   <property>
     <description>Are acls enabled.</description>
     <name>yarn.acl.enable</name>
-    <value>true</value>
+    <value>false</value>
   </property>
 
   <property>

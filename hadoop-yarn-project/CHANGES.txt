@@ -118,6 +118,10 @@ Release 2.4.0 - UNRELEASED
     be available across RM failover by making using of a remote
     configuration-provider. (Xuan Gong via vinodkv)
 
+    YARN-1285. Changed the default value of yarn.acl.enable in yarn-default.xml
+    to be consistent with what exists (false) in the code and documentation.
+    (Kenji Kikushima via vinodkv)
+
   BUG FIXES
 
     YARN-935. Correcting pom.xml to build applicationhistoryserver module
