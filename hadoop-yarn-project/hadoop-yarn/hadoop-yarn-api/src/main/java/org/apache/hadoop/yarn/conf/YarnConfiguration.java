@@ -41,6 +41,10 @@ public class YarnConfiguration extends Configuration {
   public static final String CS_CONFIGURATION_FILE= "capacity-scheduler.xml";
 
   @Private
+  public static final String HADOOP_POLICY_CONFIGURATION_FILE =
+      "hadoop-policy.xml";
+
+  @Private
   public static final String YARN_SITE_XML_FILE = "yarn-site.xml";
 
   @Private

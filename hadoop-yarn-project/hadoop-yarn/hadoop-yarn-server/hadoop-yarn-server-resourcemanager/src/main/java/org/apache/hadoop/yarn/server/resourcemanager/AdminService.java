@@ -45,6 +45,7 @@ import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.service.CompositeService;
+import org.apache.hadoop.yarn.LocalConfigurationProvider;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.conf.ConfigurationProvider;
@@ -432,9 +433,8 @@ public class AdminService extends CompositeService implements
 
   @Override
   public RefreshServiceAclsResponse refreshServiceAcls(
-      RefreshServiceAclsRequest request) throws YarnException {
-    Configuration conf = new Configuration();
-    if (!conf.getBoolean(
+      RefreshServiceAclsRequest request) throws YarnException, IOException {
+    if (!getConfig().getBoolean(
              CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION, 
              false)) {
       throw RPCUtil.getRemoteException(
@@ -442,27 +442,38 @@ public class AdminService extends CompositeService implements
               CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION + 
               ") not enabled."));
     }
-    
-    PolicyProvider policyProvider = new RMPolicyProvider(); 
-    
-    refreshServiceAcls(conf, policyProvider);
-    if (isRMActive()) {
-      rmContext.getClientRMService().refreshServiceAcls(conf, policyProvider);
-      rmContext.getApplicationMasterService().refreshServiceAcls(
-          conf, policyProvider);
-      rmContext.getResourceTrackerService().refreshServiceAcls(
-          conf, policyProvider);
-    } else {
-      LOG.warn("ResourceManager is not active. Not refreshing ACLs for " +
-          "Clients, ApplicationMasters and NodeManagers");
+
+    String argName = "refreshServiceAcls";
+    if (!isRMActive()) {
+      RMAuditLogger.logFailure(UserGroupInformation.getCurrentUser()
+          .getShortUserName(), argName,
+          adminAcl.toString(), "AdminService",
+          "ResourceManager is not active. Can not refresh Service ACLs.");
+      throwStandbyException();
     }
+
+    PolicyProvider policyProvider = new RMPolicyProvider(); 
+    Configuration conf =
+        getConfiguration(YarnConfiguration.HADOOP_POLICY_CONFIGURATION_FILE);
+
+    refreshServiceAcls(conf, policyProvider);
+    rmContext.getClientRMService().refreshServiceAcls(conf, policyProvider);
+    rmContext.getApplicationMasterService().refreshServiceAcls(
+        conf, policyProvider);
+    rmContext.getResourceTrackerService().refreshServiceAcls(
+        conf, policyProvider);
     
     return recordFactory.newRecordInstance(RefreshServiceAclsResponse.class);
   }
 
-  void refreshServiceAcls(Configuration configuration, 
+  synchronized void refreshServiceAcls(Configuration configuration,
       PolicyProvider policyProvider) {
-    this.server.refreshServiceAcl(configuration, policyProvider);
+    if (this.configurationProvider instanceof LocalConfigurationProvider) {
+      this.server.refreshServiceAcl(configuration, policyProvider);
+    } else {
+      this.server.refreshServiceAclWithConfigration(configuration,
+          policyProvider);
+    }
   }
 
   @Override
@@ -518,5 +529,10 @@ public class AdminService extends CompositeService implements
   @VisibleForTesting
   public AccessControlList getAccessControlList() {
     return this.adminAcl;
+  }
+
+  @VisibleForTesting
+  public Server getServer() {
+    return this.server;
   }
 }

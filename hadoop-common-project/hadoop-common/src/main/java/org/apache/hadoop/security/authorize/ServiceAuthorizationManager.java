@@ -33,6 +33,8 @@ import org.apache.hadoop.security.KerberosInfo;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * An authorization manager which handles service-level authorization
  * for incoming service requests.
@@ -120,19 +122,23 @@ public class ServiceAuthorizationManager {
     // Make a copy of the original config, and load the policy file
     Configuration policyConf = new Configuration(conf);
     policyConf.addResource(policyFile);
-    
+    refreshWithConfiguration(policyConf, provider);
+  }
+
+  public synchronized void refreshWithConfiguration(Configuration conf,
+      PolicyProvider provider) {
     final Map<Class<?>, AccessControlList> newAcls =
-      new IdentityHashMap<Class<?>, AccessControlList>();
+        new IdentityHashMap<Class<?>, AccessControlList>();
 
     // Parse the config file
     Service[] services = provider.getServices();
     if (services != null) {
       for (Service service : services) {
-        AccessControlList acl = 
-          new AccessControlList(
-              policyConf.get(service.getServiceKey(), 
-                             AccessControlList.WILDCARD_ACL_VALUE)
-              );
+        AccessControlList acl =
+            new AccessControlList(
+                conf.get(service.getServiceKey(),
+                    AccessControlList.WILDCARD_ACL_VALUE)
+            );
         newAcls.put(service.getProtocol(), acl);
       }
     }
@@ -141,8 +147,13 @@ public class ServiceAuthorizationManager {
     protocolToAcl = newAcls;
   }
 
-  // Package-protected for use in tests.
-  Set<Class<?>> getProtocolsWithAcls() {
+  @VisibleForTesting
+  public Set<Class<?>> getProtocolsWithAcls() {
     return protocolToAcl.keySet();
+  }
+
+  @VisibleForTesting
+  public AccessControlList getProtocolsAcls(Class<?> className) {
+    return protocolToAcl.get(className);
   }
 }

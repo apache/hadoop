@@ -43,6 +43,7 @@ import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.yarn.LocalConfigurationProvider;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenResponse;
@@ -102,6 +103,9 @@ import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.SettableFuture;
 
 /**
  * The client interface to the Resource Manager. This module handles all the rpc
@@ -126,6 +130,7 @@ public class ClientRMService extends AbstractService implements
 
   private final ApplicationACLsManager applicationsACLsManager;
   private final QueueACLsManager queueACLsManager;
+  private boolean useLocalConfigurationProvider;
 
   public ClientRMService(RMContext rmContext, YarnScheduler scheduler,
       RMAppManager rmAppManager, ApplicationACLsManager applicationACLsManager,
@@ -143,6 +148,10 @@ public class ClientRMService extends AbstractService implements
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
     clientBindAddress = getBindAddress(conf);
+    this.useLocalConfigurationProvider =
+        (LocalConfigurationProvider.class.isAssignableFrom(conf.getClass(
+            YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
+            LocalConfigurationProvider.class)));
     super.serviceInit(conf);
   }
 
@@ -696,7 +705,12 @@ public class ClientRMService extends AbstractService implements
 
   void refreshServiceAcls(Configuration configuration, 
       PolicyProvider policyProvider) {
-    this.server.refreshServiceAcl(configuration, policyProvider);
+    if (this.useLocalConfigurationProvider) {
+      this.server.refreshServiceAcl(configuration, policyProvider);
+    } else {
+      this.server.refreshServiceAclWithConfigration(configuration,
+          policyProvider);
+    }
   }
 
   private boolean isAllowedDelegationTokenOp() throws IOException {
@@ -709,5 +723,10 @@ public class ClientRMService extends AbstractService implements
     } else {
       return true;
     }
+  }
+
+  @VisibleForTesting
+  public Server getServer() {
+    return this.server;
   }
 }
