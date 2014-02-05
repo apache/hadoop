@@ -864,7 +864,7 @@ Release 2.3.0 - UNRELEASED
     on a secure cluster. (jing9)
 
     HDFS-5399. Revisit SafeModeException and corresponding retry policies.
-    (Haohui Mai via todd)
+    (Jing Zhao via todd)
 
   BREAKDOWN OF HDFS-2832 SUBTASKS AND RELATED JIRAS
 
