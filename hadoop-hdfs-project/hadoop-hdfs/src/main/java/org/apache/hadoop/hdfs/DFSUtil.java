@@ -262,6 +262,47 @@ public class DFSUtil {
   }
 
   /**
+   * Checks if a string is a valid path component. For instance, components
+   * cannot contain a ":" or "/", and cannot be equal to a reserved component
+   * like ".snapshot".
+   * <p>
+   * The primary use of this method is for validating paths when loading the
+   * FSImage. During normal NN operation, paths are sometimes allowed to
+   * contain reserved components.
+   * 
+   * @return If component is valid
+   */
+  public static boolean isValidNameForComponent(String component) {
+    if (component.equals(".") ||
+        component.equals("..") ||
+        component.indexOf(":") >= 0 ||
+        component.indexOf("/") >= 0) {
+      return false;
+    }
+    return !isReservedPathComponent(component);
+  }
+
+
+  /**
+   * Returns if the component is reserved.
+   * 
+   * <p>
+   * Note that some components are only reserved under certain directories, e.g.
+   * "/.reserved" is reserved, while "/hadoop/.reserved" is not.
+   * 
+   * @param component
+   * @return if the component is reserved
+   */
+  public static boolean isReservedPathComponent(String component) {
+    for (String reserved : HdfsConstants.RESERVED_PATH_COMPONENTS) {
+      if (component.equals(reserved)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
    * Converts a byte array to a string using UTF8 encoding.
    */
   public static String bytes2String(byte[] bytes) {
@@ -312,7 +353,25 @@ public class DFSUtil {
     }
     return result.toString();
   }
-  
+
+  /**
+   * Converts a list of path components into a path using Path.SEPARATOR.
+   * 
+   * @param components Path components
+   * @return Combined path as a UTF-8 string
+   */
+  public static String strings2PathString(String[] components) {
+    if (components.length == 0) {
+      return "";
+    }
+    if (components.length == 1) {
+      if (components[0] == null || components[0].isEmpty()) {
+        return Path.SEPARATOR;
+      }
+    }
+    return Joiner.on(Path.SEPARATOR).join(components);
+  }
+
   /**
    * Given a list of path components returns a byte array
    */

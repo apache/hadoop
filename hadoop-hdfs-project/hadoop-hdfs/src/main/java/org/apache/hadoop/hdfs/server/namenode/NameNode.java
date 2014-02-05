@@ -212,7 +212,9 @@ public class NameNode implements NameNodeStatusMXBean {
       + StartupOption.CLUSTERID.getName() + " cid ] ["
       + StartupOption.FORCE.getName() + "] ["
       + StartupOption.NONINTERACTIVE.getName() + "] ] | ["
-      + StartupOption.UPGRADE.getName() + "] | ["
+      + StartupOption.UPGRADE.getName() + 
+        " [" + StartupOption.CLUSTERID.getName() + " cid]" +
+        " [" + StartupOption.RENAMERESERVED.getName() + "<k-v pairs>] ] | ["
       + StartupOption.ROLLBACK.getName() + "] | ["
       + StartupOption.FINALIZE.getName() + "] | ["
       + StartupOption.IMPORT.getName() + "] | ["
@@ -1056,7 +1058,8 @@ public class NameNode implements NameNodeStatusMXBean {
     out.println(USAGE + "\n");
   }
 
-  private static StartupOption parseArguments(String args[]) {
+  @VisibleForTesting
+  static StartupOption parseArguments(String args[]) {
     int argsLen = (args == null) ? 0 : args.length;
     StartupOption startOpt = StartupOption.REGULAR;
     for(int i=0; i < argsLen; i++) {
@@ -1103,11 +1106,33 @@ public class NameNode implements NameNodeStatusMXBean {
         startOpt = StartupOption.CHECKPOINT;
       } else if (StartupOption.UPGRADE.getName().equalsIgnoreCase(cmd)) {
         startOpt = StartupOption.UPGRADE;
-        // might be followed by two args
-        if (i + 2 < argsLen
-            && args[i + 1].equalsIgnoreCase(StartupOption.CLUSTERID.getName())) {
-          i += 2;
-          startOpt.setClusterId(args[i]);
+        /* Can be followed by CLUSTERID with a required parameter or
+         * RENAMERESERVED with an optional parameter
+         */
+        while (i + 1 < argsLen) {
+          String flag = args[i + 1];
+          if (flag.equalsIgnoreCase(StartupOption.CLUSTERID.getName())) {
+            if (i + 2 < argsLen) {
+              i += 2;
+              startOpt.setClusterId(args[i]);
+            } else {
+              LOG.fatal("Must specify a valid cluster ID after the "
+                  + StartupOption.CLUSTERID.getName() + " flag");
+              return null;
+            }
+          } else if (flag.equalsIgnoreCase(StartupOption.RENAMERESERVED
+              .getName())) {
+            if (i + 2 < argsLen) {
+              FSImageFormat.setRenameReservedPairs(args[i + 2]);
+              i += 2;
+            } else {
+              FSImageFormat.useDefaultRenameReservedPairs();
+              i += 1;
+            }
+          } else {
+            LOG.fatal("Unknown upgrade flag " + flag);
+            return null;
+          }
         }
       } else if (StartupOption.ROLLBACK.getName().equalsIgnoreCase(cmd)) {
         startOpt = StartupOption.ROLLBACK;

@@ -334,6 +334,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-5791. TestHttpsFileSystem should use a random port to avoid binding
     error during testing (Haohui Mai via brandonli)
 
+    HDFS-5709. Improve NameNode upgrade with existing reserved paths and path
+    components. (Andrew Wang via atm)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
