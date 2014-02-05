@@ -535,6 +535,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-5876. SecureDataNodeStarter does not pick up configuration in 
     hdfs-site.xml. (Haohui Mai via jing9)
 
+    HDFS-5873. dfs.http.policy should have higher precedence over dfs.https.enable.
+    (Haohui Mai via jing9)
+
   BREAKDOWN OF HDFS-2832 SUBTASKS AND RELATED JIRAS
 
     HDFS-4985. Add storage type to the protocol and expose it in block report

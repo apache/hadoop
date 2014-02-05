@@ -1495,31 +1495,34 @@ public class DFSUtil {
    * configuration settings.
    */
   public static HttpConfig.Policy getHttpPolicy(Configuration conf) {
-    String httpPolicy = conf.get(DFSConfigKeys.DFS_HTTP_POLICY_KEY,
-        DFSConfigKeys.DFS_HTTP_POLICY_DEFAULT);
-
-    HttpConfig.Policy policy = HttpConfig.Policy.fromString(httpPolicy);
-
-    if (policy == HttpConfig.Policy.HTTP_ONLY) {
-      boolean httpsEnabled = conf.getBoolean(
-          DFSConfigKeys.DFS_HTTPS_ENABLE_KEY,
+    String policyStr = conf.get(DFSConfigKeys.DFS_HTTP_POLICY_KEY);
+    if (policyStr == null) {
+      boolean https = conf.getBoolean(DFSConfigKeys.DFS_HTTPS_ENABLE_KEY,
           DFSConfigKeys.DFS_HTTPS_ENABLE_DEFAULT);
 
-      boolean hadoopSslEnabled = conf.getBoolean(
+      boolean hadoopSsl = conf.getBoolean(
           CommonConfigurationKeys.HADOOP_SSL_ENABLED_KEY,
           CommonConfigurationKeys.HADOOP_SSL_ENABLED_DEFAULT);
 
-      if (hadoopSslEnabled) {
+      if (hadoopSsl) {
         LOG.warn(CommonConfigurationKeys.HADOOP_SSL_ENABLED_KEY
-            + " is deprecated. Please use "
-            + DFSConfigKeys.DFS_HTTPS_ENABLE_KEY + ".");
-        policy = HttpConfig.Policy.HTTPS_ONLY;
-      } else if (httpsEnabled) {
-        LOG.warn(DFSConfigKeys.DFS_HTTPS_ENABLE_KEY
-            + " is deprecated. Please use "
-            + DFSConfigKeys.DFS_HTTPS_ENABLE_KEY + ".");
-        policy = HttpConfig.Policy.HTTP_AND_HTTPS;
+            + " is deprecated. Please use " + DFSConfigKeys.DFS_HTTP_POLICY_KEY
+            + ".");
       }
+      if (https) {
+        LOG.warn(DFSConfigKeys.DFS_HTTPS_ENABLE_KEY
+            + " is deprecated. Please use " + DFSConfigKeys.DFS_HTTP_POLICY_KEY
+            + ".");
+      }
+
+      return (hadoopSsl || https) ? HttpConfig.Policy.HTTP_AND_HTTPS
+          : HttpConfig.Policy.HTTP_ONLY;
+    }
+
+    HttpConfig.Policy policy = HttpConfig.Policy.fromString(policyStr);
+    if (policy == null) {
+      throw new HadoopIllegalArgumentException("Unregonized value '"
+          + policyStr + "' for " + DFSConfigKeys.DFS_HTTP_POLICY_KEY);
     }
 
     conf.set(DFSConfigKeys.DFS_HTTP_POLICY_KEY, policy.name());

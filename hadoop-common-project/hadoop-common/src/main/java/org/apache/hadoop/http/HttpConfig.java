@@ -34,13 +34,14 @@ public class HttpConfig {
     HTTPS_ONLY,
     HTTP_AND_HTTPS;
 
+    private static final Policy[] VALUES = values();
     public static Policy fromString(String value) {
-      if (HTTPS_ONLY.name().equalsIgnoreCase(value)) {
-        return HTTPS_ONLY;
-      } else if (HTTP_AND_HTTPS.name().equalsIgnoreCase(value)) {
-        return HTTP_AND_HTTPS;
+      for (Policy p : VALUES) {
+        if (p.name().equalsIgnoreCase(value)) {
+          return p;
+        }
       }
-      return HTTP_ONLY;
+      return null;
     }
 
     public boolean isHttpEnabled() {
