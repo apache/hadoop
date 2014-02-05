@@ -1029,6 +1029,15 @@ public class YarnConfiguration extends Configuration {
       AHS_PREFIX + "webapp.spnego-keytab-file";
 
   ////////////////////////////////
+  // ATS Configs
+  ////////////////////////////////
+
+  public static final String ATS_PREFIX = YARN_PREFIX + "ats.";
+
+  /** ATS store class */
+  public static final String ATS_STORE = ATS_PREFIX + "store.class";
+
+  ////////////////////////////////
   // Other Configs
   ////////////////////////////////
 
