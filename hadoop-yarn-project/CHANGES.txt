@@ -90,6 +90,9 @@ Release 2.4.0 - UNRELEASED
     implementing different storage impls for storing timeline information.
     (Billie Rinaldi via vinodkv)
 
+    YARN-1634. Added a testable in-memory implementation of
+    ApplicationTimelineStore. (Zhijie Shen via vinodkv)
+
   IMPROVEMENTS
 
     YARN-1007. Enhance History Reader interface for Containers. (Mayank Bansal via
@@ -125,6 +128,8 @@ Release 2.4.0 - UNRELEASED
     YARN-1669. Modified RM HA handling of protocol level service-ACLS to
     be available across RM failover by making using of a remote
     configuration-provider. (Xuan Gong via vinodkv)
+
+  OPTIMIZATIONS
 
   BUG FIXES
 
