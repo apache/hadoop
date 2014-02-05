@@ -1132,11 +1132,24 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     if (isInSafeMode()) {
       SafeModeException se = new SafeModeException(errorMsg, safeMode);
       if (haEnabled && haContext != null
-          && haContext.getState().getServiceState() == HAServiceState.ACTIVE) {
+          && haContext.getState().getServiceState() == HAServiceState.ACTIVE
+          && shouldRetrySafeMode(this.safeMode)) {
         throw new RetriableException(se);
       } else {
         throw se;
       }
+    }
+  }
+  
+  /**
+   * We already know that the safemode is on. We will throw a RetriableException
+   * if the safemode is not manual or caused by low resource.
+   */
+  private boolean shouldRetrySafeMode(SafeModeInfo safeMode) {
+    if (safeMode == null) {
+      return false;
+    } else {
+      return !safeMode.isManual() && !safeMode.areResourcesLow();
     }
   }
   

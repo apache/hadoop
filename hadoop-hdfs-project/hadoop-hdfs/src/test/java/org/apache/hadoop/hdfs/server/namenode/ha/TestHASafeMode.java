@@ -55,6 +55,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.FSImage;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem.SafeModeInfo;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.io.IOUtils;
@@ -65,6 +66,7 @@ import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.internal.util.reflection.Whitebox;
 
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
@@ -124,6 +126,9 @@ public class TestHASafeMode {
     final Path test = new Path("/test");
     // let nn0 enter safemode
     NameNodeAdapter.enterSafeMode(nn0, false);
+    SafeModeInfo safeMode = (SafeModeInfo) Whitebox.getInternalState(
+        nn0.getNamesystem(), "safeMode");
+    Whitebox.setInternalState(safeMode, "extension", Integer.valueOf(30000));
     LOG.info("enter safemode");
     new Thread() {
       @Override

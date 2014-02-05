@@ -188,6 +188,9 @@ public class WebHdfsFileSystem extends FileSystem
       int maxFailoverAttempts = conf.getInt(
           DFSConfigKeys.DFS_HTTP_CLIENT_FAILOVER_MAX_ATTEMPTS_KEY,
           DFSConfigKeys.DFS_HTTP_CLIENT_FAILOVER_MAX_ATTEMPTS_DEFAULT);
+      int maxRetryAttempts = conf.getInt(
+          DFSConfigKeys.DFS_HTTP_CLIENT_RETRY_MAX_ATTEMPTS_KEY,
+          DFSConfigKeys.DFS_HTTP_CLIENT_RETRY_MAX_ATTEMPTS_DEFAULT);
       int failoverSleepBaseMillis = conf.getInt(
           DFSConfigKeys.DFS_HTTP_CLIENT_FAILOVER_SLEEPTIME_BASE_KEY,
           DFSConfigKeys.DFS_HTTP_CLIENT_FAILOVER_SLEEPTIME_BASE_DEFAULT);
@@ -197,7 +200,7 @@ public class WebHdfsFileSystem extends FileSystem
 
       this.retryPolicy = RetryPolicies
           .failoverOnNetworkException(RetryPolicies.TRY_ONCE_THEN_FAIL,
-              maxFailoverAttempts, failoverSleepBaseMillis,
+              maxFailoverAttempts, maxRetryAttempts, failoverSleepBaseMillis,
               failoverSleepMaxMillis);
     }
 
