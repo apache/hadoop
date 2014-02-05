@@ -863,6 +863,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-5842. Cannot create hftp filesystem when using a proxy user ugi and a doAs 
     on a secure cluster. (jing9)
 
+    HDFS-5399. Revisit SafeModeException and corresponding retry policies.
+    (Haohui Mai via todd)
+
   BREAKDOWN OF HDFS-2832 SUBTASKS AND RELATED JIRAS
 
     HDFS-4985. Add storage type to the protocol and expose it in block report
