@@ -320,6 +320,8 @@ Release 2.4.0 - UNRELEASED
     HADOOP-10085. CompositeService should allow adding services while being 
     inited. (Steve Loughran via kasha)
 
+    HADOOP-10273. Fix 'mvn site'. (Arpit Agarwal)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
