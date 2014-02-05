@@ -261,12 +261,14 @@ public class RMWebServices {
       @QueryParam("startedTimeEnd") String startedEnd,
       @QueryParam("finishedTimeBegin") String finishBegin,
       @QueryParam("finishedTimeEnd") String finishEnd,
-      @QueryParam("applicationTypes") Set<String> applicationTypes) {
+      @QueryParam("applicationTypes") Set<String> applicationTypes,
+      @QueryParam("applicationTags") Set<String> applicationTags) {
     boolean checkCount = false;
     boolean checkStart = false;
     boolean checkEnd = false;
     boolean checkAppTypes = false;
     boolean checkAppStates = false;
+    boolean checkAppTags = false;
     long countNum = 0;
 
     // set values suitable in case both of begin/end not specified
@@ -327,6 +329,11 @@ public class RMWebServices {
       checkAppTypes = true;
     }
 
+    Set<String> appTags = parseQueries(applicationTags, false);
+    if (!appTags.isEmpty()) {
+      checkAppTags = true;
+    }
+
     // stateQuery is deprecated.
     if (stateQuery != null && !stateQuery.isEmpty()) {
       statesQuery.add(stateQuery);
@@ -352,6 +359,10 @@ public class RMWebServices {
 
     if (checkAppTypes) {
       request.setApplicationTypes(appTypes);
+    }
+
+    if (checkAppTags) {
+      request.setApplicationTags(appTags);
     }
 
     if (checkAppStates) {

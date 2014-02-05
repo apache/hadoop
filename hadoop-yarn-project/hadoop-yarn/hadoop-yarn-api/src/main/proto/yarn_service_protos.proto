@@ -128,6 +128,12 @@ message GetClusterMetricsResponseProto {
   optional YarnClusterMetricsProto cluster_metrics = 1;
 }
 
+enum ApplicationsRequestScopeProto {
+  ALL = 0;
+  VIEWABLE = 1;
+  OWN = 2;
+}
+
 message GetApplicationsRequestProto {
   repeated string application_types = 1;
   repeated YarnApplicationStateProto application_states = 2;
@@ -138,6 +144,8 @@ message GetApplicationsRequestProto {
   optional int64 start_end = 7;
   optional int64 finish_begin = 8;
   optional int64 finish_end = 9;
+  repeated string applicationTags = 10;
+  optional ApplicationsRequestScopeProto scope = 11 [default = ALL];
 }
 
 message GetApplicationsResponseProto {

@@ -25,6 +25,7 @@ import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -49,6 +50,12 @@ public class YarnConfiguration extends Configuration {
 
   @Private
   public static final String CORE_SITE_CONFIGURATION_FILE = "core-site.xml";
+
+  @Evolving
+  public static final int APPLICATION_MAX_TAGS = 10;
+
+  @Evolving
+  public static final int APPLICATION_MAX_TAG_LENGTH = 100;
 
   private static final String YARN_DEFAULT_XML_FILE = "yarn-default.xml";
 

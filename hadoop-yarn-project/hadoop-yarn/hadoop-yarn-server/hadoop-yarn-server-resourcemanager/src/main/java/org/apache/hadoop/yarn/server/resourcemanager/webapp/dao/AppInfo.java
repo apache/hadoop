@@ -24,6 +24,7 @@ import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
 
+import com.google.common.base.Joiner;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
@@ -33,7 +34,6 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Times;
@@ -67,6 +67,7 @@ public class AppInfo {
   protected String diagnostics;
   protected long clusterId;
   protected String applicationType;
+  protected String applicationTags = "";
   
   // these are only allowed if acls allow
   protected long startedTime;
@@ -116,6 +117,9 @@ public class AppInfo {
       this.diagnostics = app.getDiagnostics().toString();
       if (diagnostics == null || diagnostics.isEmpty()) {
         this.diagnostics = "";
+      }
+      if (app.getApplicationTags() != null && !app.getApplicationTags().isEmpty()) {
+        this.applicationTags = Joiner.on(',').join(app.getApplicationTags());
       }
       this.finalStatus = app.getFinalApplicationStatus();
       this.clusterId = ResourceManager.getClusterTimeStamp();
@@ -238,6 +242,10 @@ public class AppInfo {
 
   public String getApplicationType() {
     return this.applicationType;
+  }
+
+  public String getApplicationTags() {
+    return this.applicationTags;
   }
   
   public int getRunningContainers() {

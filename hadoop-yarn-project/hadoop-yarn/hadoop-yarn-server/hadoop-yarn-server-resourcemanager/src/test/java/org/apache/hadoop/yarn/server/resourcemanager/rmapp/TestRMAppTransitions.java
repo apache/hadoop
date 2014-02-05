@@ -230,7 +230,7 @@ public class TestRMAppTransitions {
     RMApp application =
         new RMAppImpl(applicationId, rmContext, conf, name, user, queue,
           submissionContext, scheduler, masterService,
-          System.currentTimeMillis(), "YARN");
+          System.currentTimeMillis(), "YARN", null);
 
     testAppStartState(applicationId, user, name, queue, application);
     this.rmContext.getRMApps().putIfAbsent(application.getApplicationId(),

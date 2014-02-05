@@ -1317,8 +1317,8 @@ public class TestRMWebServicesApps extends JerseyTest {
   public void verifyAppInfo(JSONObject info, RMApp app) throws JSONException,
       Exception {
 
-    // 15 because trackingUrl not assigned yet
-    assertEquals("incorrect number of elements", 19, info.length());
+    // 20 because trackingUrl not assigned yet
+    assertEquals("incorrect number of elements", 20, info.length());
 
     verifyAppInfoGeneric(app, info.getString("id"), info.getString("user"),
       info.getString("name"), info.getString("applicationType"), info.getString("queue"),
