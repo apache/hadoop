@@ -104,7 +104,9 @@ public class TestNameNodeHttpServer {
           server.getHttpsAddress() == null));
 
     } finally {
-      server.stop();
+      if (server != null) {
+        server.stop();
+      }
     }
   }
 
