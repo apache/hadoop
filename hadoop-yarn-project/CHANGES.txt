@@ -67,6 +67,9 @@ Release 2.4.0 - UNRELEASED
     implementing different storage impls for storing timeline information.
     (Billie Rinaldi via vinodkv)
 
+    YARN-1634. Added a testable in-memory implementation of
+    ApplicationTimelineStore. (Zhijie Shen via vinodkv)
+
   IMPROVEMENTS
 
     YARN-1007. Enhance History Reader interface for Containers. (Mayank Bansal via
