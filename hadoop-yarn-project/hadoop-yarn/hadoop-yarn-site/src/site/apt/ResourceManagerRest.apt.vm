@@ -1123,6 +1123,7 @@ ResourceManager REST API's.
   * finishedTimeBegin - applications with finish time beginning with this time, specified in ms since epoch
   * finishedTimeEnd - applications with finish time ending with this time, specified in ms since epoch
   * applicationTypes - applications matching the given application types, specified as a comma-separated list.
+  * applicationTags - applications matching any of the given application tags, specified as a comma-separated list.
 ------
 
 ** Elements of the <apps> (Applications) object

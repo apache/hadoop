@@ -27,6 +27,7 @@ import java.util.Set;
 import org.apache.commons.lang.math.LongRange;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.yarn.api.protocolrecords.ApplicationsRequestScope;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.impl.pb.ProtoUtils;
@@ -49,6 +50,8 @@ public class GetApplicationsRequestPBImpl extends GetApplicationsRequest {
   Set<String> queues = null;
   long limit = Long.MAX_VALUE;
   LongRange start = null, finish = null;
+  private Set<String> applicationTags;
+  private ApplicationsRequestScope scope;
 
   public GetApplicationsRequestPBImpl() {
     builder = GetApplicationsRequestProto.newBuilder();
@@ -111,6 +114,12 @@ public class GetApplicationsRequestPBImpl extends GetApplicationsRequest {
             }
           };
       builder.addAllApplicationStates(iterable);
+    }
+    if (this.applicationTags != null && !this.applicationTags.isEmpty()) {
+      builder.addAllApplicationTags(this.applicationTags);
+    }
+    if (this.scope != null) {
+      builder.setScope(ProtoUtils.convertToProtoFormat(scope));
     }
   }
 
@@ -187,10 +196,62 @@ public class GetApplicationsRequestPBImpl extends GetApplicationsRequest {
     this.applicationTypes = applicationTypes;
   }
 
+  private void initApplicationTags() {
+    if (this.applicationTags != null) {
+      return;
+    }
+    GetApplicationsRequestProtoOrBuilder p = viaProto ? proto : builder;
+    this.applicationTags = new HashSet<String>();
+    this.applicationTags.addAll(p.getApplicationTagsList());
+  }
+
+  @Override
+  public Set<String> getApplicationTags() {
+    initApplicationTags();
+    return this.applicationTags;
+  }
+
+  @Override
+  public void setApplicationTags(Set<String> tags) {
+    maybeInitBuilder();
+    if (tags == null || tags.isEmpty()) {
+      builder.clearApplicationTags();
+      this.applicationTags = null;
+      return;
+    }
+    // Convert applicationTags to lower case and add
+    this.applicationTags = new HashSet<String>();
+    for (String tag : tags) {
+      this.applicationTags.add(tag.toLowerCase());
+    }
+  }
+
   @Override
   public EnumSet<YarnApplicationState> getApplicationStates() {
     initApplicationStates();
     return this.applicationStates;
+  }
+
+  private void initScope() {
+    if (this.scope != null) {
+      return;
+    }
+    GetApplicationsRequestProtoOrBuilder p = viaProto ? proto : builder;
+    this.scope = ProtoUtils.convertFromProtoFormat(p.getScope());
+  }
+
+  @Override
+  public ApplicationsRequestScope getScope() {
+    initScope();
+    return this.scope;
+  }
+
+  public void setScope(ApplicationsRequestScope scope) {
+    maybeInitBuilder();
+    if (scope == null) {
+      builder.clearScope();
+    }
+    this.scope = scope;
   }
 
   @Override
@@ -223,7 +284,6 @@ public class GetApplicationsRequestPBImpl extends GetApplicationsRequest {
     return this.users;
   }
 
-  @Override
   public void setUsers(Set<String> users) {
     maybeInitBuilder();
     if (users == null) {

@@ -38,6 +38,9 @@ import org.apache.hadoop.yarn.proto.YarnProtos.YarnApplicationStateProto;
 
 import com.google.protobuf.TextFormat;
 
+import java.util.HashSet;
+import java.util.Set;
+
 @Private
 @Unstable
 public class ApplicationReportPBImpl extends ApplicationReport {
@@ -49,6 +52,7 @@ public class ApplicationReportPBImpl extends ApplicationReport {
   private ApplicationAttemptId currentApplicationAttemptId;
   private Token clientToAMToken = null;
   private Token amRmToken = null;
+  private Set<String> applicationTags = null;
 
   public ApplicationReportPBImpl() {
     builder = ApplicationReportProto.newBuilder();
@@ -245,6 +249,21 @@ public class ApplicationReportPBImpl extends ApplicationReport {
     return amRmToken;
   }
 
+  private void initApplicationTags() {
+    if (this.applicationTags != null) {
+      return;
+    }
+    ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
+    this.applicationTags = new HashSet<String>();
+    this.applicationTags.addAll(p.getApplicationTagsList());
+  }
+
+  @Override
+  public Set<String> getApplicationTags() {
+    initApplicationTags();
+    return this.applicationTags;
+  }
+
   @Override
   public void setApplicationId(ApplicationId applicationId) {
     maybeInitBuilder();
@@ -356,6 +375,15 @@ public class ApplicationReportPBImpl extends ApplicationReport {
   }
 
   @Override
+  public void setApplicationTags(Set<String> tags) {
+    maybeInitBuilder();
+    if (tags == null || tags.isEmpty()) {
+      builder.clearApplicationTags();
+    }
+    this.applicationTags = tags;
+  }
+
+  @Override
   public void setDiagnostics(String diagnostics) {
     maybeInitBuilder();
     if (diagnostics == null) {
@@ -449,6 +477,9 @@ public class ApplicationReportPBImpl extends ApplicationReport {
       && !((TokenPBImpl) this.amRmToken).getProto().equals(
       builder.getAmRmToken())) {
       builder.setAmRmToken(convertToProtoFormat(this.amRmToken));
+    }
+    if (this.applicationTags != null && !this.applicationTags.isEmpty()) {
+      builder.addAllApplicationTags(this.applicationTags);
     }
   }
 

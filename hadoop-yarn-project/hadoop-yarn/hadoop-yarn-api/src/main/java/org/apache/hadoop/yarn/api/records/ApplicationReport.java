@@ -25,6 +25,8 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.util.Records;
 
+import java.util.Set;
+
 /**
  * <p><code>ApplicationReport</code> is a report of an application.</p>
  *
@@ -320,6 +322,18 @@ public abstract class ApplicationReport {
   @Private
   @Unstable
   public abstract void setApplicationType(String applicationType);
+
+  /**
+   * Get all tags corresponding to the application
+   * @return Application's tags
+   */
+  @Public
+  @Stable
+  public abstract Set<String> getApplicationTags();
+
+  @Private
+  @Unstable
+  public abstract void setApplicationTags(Set<String> tags);
 
   @Private
   @Stable

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.api.records.impl.pb;
 
+import com.google.common.base.CharMatcher;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -25,6 +26,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationSubmissionContextProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationSubmissionContextProtoOrBuilder;
@@ -33,6 +35,9 @@ import org.apache.hadoop.yarn.proto.YarnProtos.PriorityProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
 
 import com.google.protobuf.TextFormat;
+
+import java.util.HashSet;
+import java.util.Set;
 
 @Private
 @Unstable
@@ -47,6 +52,7 @@ extends ApplicationSubmissionContext {
   private Priority priority = null;
   private ContainerLaunchContext amContainer = null;
   private Resource resource = null;
+  private Set<String> applicationTags = null;
 
   public ApplicationSubmissionContextPBImpl() {
     builder = ApplicationSubmissionContextProto.newBuilder();
@@ -99,6 +105,9 @@ extends ApplicationSubmissionContext {
         !((ResourcePBImpl) this.resource).getProto().equals(
             builder.getResource())) {
       builder.setResource(convertToProtoFormat(this.resource));
+    }
+    if (this.applicationTags != null && !this.applicationTags.isEmpty()) {
+      builder.addAllApplicationTags(this.applicationTags);
     }
   }
 
@@ -196,7 +205,22 @@ extends ApplicationSubmissionContext {
     }
     return (p.getApplicationType());
   }
-  
+
+  private void initApplicationTags() {
+    if (this.applicationTags != null) {
+      return;
+    }
+    ApplicationSubmissionContextProtoOrBuilder p = viaProto ? proto : builder;
+    this.applicationTags = new HashSet<String>();
+    this.applicationTags.addAll(p.getApplicationTagsList());
+  }
+
+  @Override
+  public Set<String> getApplicationTags() {
+    initApplicationTags();
+    return this.applicationTags;
+  }
+
   @Override
   public void setQueue(String queue) {
     maybeInitBuilder();
@@ -215,6 +239,40 @@ extends ApplicationSubmissionContext {
       return;
     }
     builder.setApplicationType((applicationType));
+  }
+
+  private void checkTags(Set<String> tags) {
+    if (tags.size() > YarnConfiguration.APPLICATION_MAX_TAGS) {
+      throw new IllegalArgumentException("Too many applicationTags, a maximum of only "
+          + YarnConfiguration.APPLICATION_MAX_TAGS + " are allowed!");
+    }
+    for (String tag : tags) {
+      if (tag.length() > YarnConfiguration.APPLICATION_MAX_TAG_LENGTH) {
+        throw new IllegalArgumentException("Tag " + tag + " is too long, " +
+            "maximum allowed length of a tag is " +
+            YarnConfiguration.APPLICATION_MAX_TAG_LENGTH);
+      }
+      if (!CharMatcher.ASCII.matchesAllOf(tag)) {
+        throw new IllegalArgumentException("A tag can only have ASCII " +
+            "characters! Invalid tag - " + tag);
+      }
+    }
+  }
+
+  @Override
+  public void setApplicationTags(Set<String> tags) {
+    maybeInitBuilder();
+    if (tags == null || tags.isEmpty()) {
+      builder.clearApplicationTags();
+      this.applicationTags = null;
+      return;
+    }
+    checkTags(tags);
+    // Convert applicationTags to lower case and add
+    this.applicationTags = new HashSet<String>();
+    for (String tag : tags) {
+      this.applicationTags.add(tag.toLowerCase());
+    }
   }
 
   @Override

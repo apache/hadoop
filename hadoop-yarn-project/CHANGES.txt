@@ -93,6 +93,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1634. Added a testable in-memory implementation of
     ApplicationTimelineStore. (Zhijie Shen via vinodkv)
 
+    YARN-1461. Added tags for YARN applications and changed RM to handle them.
+    (Karthik Kambatla via zjshen)
+
   IMPROVEMENTS
 
     YARN-1007. Enhance History Reader interface for Containers. (Mayank Bansal via
