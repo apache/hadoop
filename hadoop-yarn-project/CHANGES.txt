@@ -96,6 +96,10 @@ Release 2.4.0 - UNRELEASED
     YARN-1461. Added tags for YARN applications and changed RM to handle them.
     (Karthik Kambatla via zjshen)
 
+    YARN-1636. Augmented Application-history server's web-services to also expose
+    new APIs for retrieving and storing timeline information. (Zhijie Shen via
+    vinodkv)
+
   IMPROVEMENTS
 
     YARN-1007. Enhance History Reader interface for Containers. (Mayank Bansal via
