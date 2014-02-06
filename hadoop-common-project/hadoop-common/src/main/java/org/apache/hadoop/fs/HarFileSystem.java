@@ -614,15 +614,20 @@ public class HarFileSystem extends FilterFileSystem {
    */
   @Override
   public FileStatus getFileStatus(Path f) throws IOException {
-    HarStatus hstatus = getFileHarStatus(f);
+    Path p = makeQualified(f);
+    if (p.toUri().getPath().length() < archivePath.toString().length()) {
+      // still in the source file system
+      return fs.getFileStatus(new Path(p.toUri().getPath()));
+    }
+
+    HarStatus hstatus = getFileHarStatus(p);
     return toFileStatus(hstatus, null);
   }
 
   private HarStatus getFileHarStatus(Path f) throws IOException {
     // get the fs DataInputStream for the underlying file
     // look up the index.
-    Path p = makeQualified(f);
-    Path harPath = getPathInHar(p);
+    Path harPath = getPathInHar(f);
     if (harPath == null) {
       throw new IOException("Invalid file name: " + f + " in " + uri);
     }
@@ -716,6 +721,11 @@ public class HarFileSystem extends FilterFileSystem {
     // to the client
     List<FileStatus> statuses = new ArrayList<FileStatus>();
     Path tmpPath = makeQualified(f);
+    if (tmpPath.toUri().getPath().length() < archivePath.toString().length()) {
+      // still in the source file system
+      return fs.listStatus(new Path(tmpPath.toUri().getPath()));
+    }
+    
     Path harPath = getPathInHar(tmpPath);
     HarStatus hstatus = metadata.archive.get(harPath);
     if (hstatus == null) {

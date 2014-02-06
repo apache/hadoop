@@ -21,6 +21,9 @@ Release 0.23.11 - UNRELEASED
 
     HADOOP-10146. Workaround JDK7 Process fd close bug (daryn)
 
+    HADOOP-10112. har file listing doesn't work with wild card (Brandon Li via
+    jlowe)
+
 Release 0.23.10 - 2013-12-09
 
   INCOMPATIBLE CHANGES
