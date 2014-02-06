@@ -1123,9 +1123,9 @@ public class RMContainerAllocator extends RMContainerRequestor
           new Comparator<TaskAttemptId>() {
         @Override
         public int compare(TaskAttemptId o1, TaskAttemptId o2) {
-          float p = getJob().getTask(o1.getTaskId()).getAttempt(o1).getProgress() -
-              getJob().getTask(o2.getTaskId()).getAttempt(o2).getProgress();
-          return p >= 0 ? 1 : -1;
+          return Float.compare(
+              getJob().getTask(o1.getTaskId()).getAttempt(o1).getProgress(),
+              getJob().getTask(o2.getTaskId()).getAttempt(o2).getProgress());
         }
       });
       
