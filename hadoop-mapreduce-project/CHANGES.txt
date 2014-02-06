@@ -153,6 +153,8 @@ Release 2.4.0 - UNRELEASED
     MAPREDUCE-5732. Report proper queue when job has been automatically placed
     (Sandy Ryza)
 
+    MAPREDUCE-5699. Allow setting tags on MR jobs (kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES
