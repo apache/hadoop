@@ -630,6 +630,9 @@ Release 2.3.0 - UNRELEASED
     YARN-1628. Fixed the test failure in TestContainerManagerSecurity. (Vinod
     Kumar Vavilapalli via zjshen)
 
+    YARN-1661. Fixed DS ApplicationMaster to write the correct exit log. (Vinod
+    Kumar Vavilapalli via zjshen)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
