@@ -191,7 +191,7 @@ Release 2.3.0 - UNRELEASED
     (Mohammad Kamrul Islam via kasha)
 
     MAPREDUCE-5743. Fixed the test failure in TestRMContainerAllocator.
-    (Vinod Kumar Vavilapalli via zjshen)
+    (Ted Yu and Vinod Kumar Vavilapalli via zjshen)
 
 Release 2.2.0 - 2013-10-13
 
