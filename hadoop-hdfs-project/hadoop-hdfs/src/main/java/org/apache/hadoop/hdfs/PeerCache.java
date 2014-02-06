@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs;
 
+import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
@@ -25,6 +26,7 @@ import java.util.Map.Entry;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.LinkedListMultimap;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -118,6 +120,11 @@ class PeerCache {
     return instance;
   }
 
+  @VisibleForTesting
+  public static synchronized void setInstance(int c, long e) {
+    instance = new PeerCache(c, e);
+  }
+
   private boolean isDaemonStarted() {
     return (daemon == null)? false: true;
   }
@@ -171,8 +178,17 @@ class PeerCache {
     while (iter.hasNext()) {
       Value candidate = iter.next();
       iter.remove();
-      if (!candidate.getPeer().isClosed()) {
-        return candidate.getPeer();
+      long ageMs = Time.monotonicNow() - candidate.getTime();
+      Peer peer = candidate.getPeer();
+      if (ageMs >= expiryPeriod) {
+        try {
+          peer.close();
+        } catch (IOException e) {
+          LOG.warn("got IOException closing stale peer " + peer +
+                ", which is " + ageMs + " ms old");
+        }
+      } else if (!peer.isClosed()) {
+        return peer;
       }
     }
     return null;
