@@ -23,6 +23,7 @@ import java.util.List;
 
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.RollingUpgradeStatus;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockReceivedAndDeletedRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockReceivedAndDeletedResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockReportRequestProto;
@@ -121,8 +122,12 @@ public class DatanodeProtocolServerSideTranslatorPB implements
       }
     }
     builder.setHaStatus(PBHelper.convert(response.getNameNodeHaState()));
-    builder.setRollingUpgradeStatus(PBHelper.convertRollingUpgradeStatus(
-        response.getRollingUpdateStatus()));
+    RollingUpgradeStatus rollingUpdateStatus = response
+        .getRollingUpdateStatus();
+    if (rollingUpdateStatus != null) {
+      builder.setRollingUpgradeStatus(PBHelper
+          .convertRollingUpgradeStatus(rollingUpdateStatus));
+    }
     return builder.build();
   }
 
