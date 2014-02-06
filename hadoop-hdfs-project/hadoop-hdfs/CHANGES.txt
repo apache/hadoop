@@ -337,6 +337,8 @@ Release 2.4.0 - UNRELEASED
     HDFS-5709. Improve NameNode upgrade with existing reserved paths and path
     components. (Andrew Wang via atm)
 
+    HDFS-5881. Fix skip() of the short-circuit local reader(legacy). (kihwal)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
