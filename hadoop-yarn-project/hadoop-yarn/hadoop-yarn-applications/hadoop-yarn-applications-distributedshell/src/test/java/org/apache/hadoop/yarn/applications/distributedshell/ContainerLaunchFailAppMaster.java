@@ -18,12 +18,12 @@
 
 package org.apache.hadoop.yarn.applications.distributedshell;
 
+import java.nio.ByteBuffer;
+import java.util.Map;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-
-import java.nio.ByteBuffer;
-import java.util.Map;
 
 public class ContainerLaunchFailAppMaster extends ApplicationMaster {
 
@@ -66,8 +66,8 @@ public class ContainerLaunchFailAppMaster extends ApplicationMaster {
       if (!doRun) {
         System.exit(0);
       }
-      result = appMaster.run();
-      appMaster.finish();
+      appMaster.run();
+      result = appMaster.finish();
     } catch (Throwable t) {
       LOG.fatal("Error running ApplicationMaster", t);
       System.exit(1);

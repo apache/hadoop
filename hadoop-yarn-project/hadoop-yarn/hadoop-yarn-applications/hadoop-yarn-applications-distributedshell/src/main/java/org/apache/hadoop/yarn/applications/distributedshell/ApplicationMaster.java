@@ -232,7 +232,6 @@ public class ApplicationMaster {
   private static final String shellArgsPath = "shellArgs";
 
   private volatile boolean done;
-  private volatile boolean success;
 
   private ByteBuffer allTokens;
 
@@ -254,8 +253,8 @@ public class ApplicationMaster {
       if (!doRun) {
         System.exit(0);
       }
-      result = appMaster.run();
-      appMaster.finish();
+      appMaster.run();
+      result = appMaster.finish();
     } catch (Throwable t) {
       LOG.fatal("Error running ApplicationMaster", t);
       System.exit(1);
@@ -480,7 +479,7 @@ public class ApplicationMaster {
    * @throws IOException
    */
   @SuppressWarnings({ "unchecked" })
-  public boolean run() throws YarnException, IOException {
+  public void run() throws YarnException, IOException {
     LOG.info("Starting ApplicationMaster");
 
     Credentials credentials =
@@ -561,7 +560,6 @@ public class ApplicationMaster {
       amRMClient.addContainerRequest(containerAsk);
     }
     numRequestedContainers.set(numTotalContainersToRequest);
-    return success;
   }
 
   @VisibleForTesting
@@ -569,7 +567,8 @@ public class ApplicationMaster {
     return new NMCallbackHandler(this);
   }
 
-  protected void finish() {
+  @VisibleForTesting
+  protected boolean finish() {
     // wait for completion.
     while (!done
         && (numCompletedContainers.get() != numTotalContainers)) {
@@ -600,7 +599,7 @@ public class ApplicationMaster {
 
     FinalApplicationStatus appStatus;
     String appMessage = null;
-    success = true;
+    boolean success = true;
     if (numFailedContainers.get() == 0 && 
         numCompletedContainers.get() == numTotalContainers) {
       appStatus = FinalApplicationStatus.SUCCEEDED;
@@ -621,6 +620,8 @@ public class ApplicationMaster {
     }
     
     amRMClient.stop();
+
+    return success;
   }
   
   private class RMCallbackHandler implements AMRMClientAsync.CallbackHandler {
