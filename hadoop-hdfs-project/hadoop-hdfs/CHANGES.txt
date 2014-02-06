@@ -342,6 +342,9 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-5881. Fix skip() of the short-circuit local reader(legacy). (kihwal)
 
+    HDFS-5895. HDFS cacheadmin -listPools has exit_code of 1 when the command
+    returns 0 result. (Tassapol Athiapinya via cnauroth)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
