@@ -1648,8 +1648,16 @@ public class TestRMContainerAllocator {
     RMApp app = rm.submitApp(1024);
     dispatcher.await();
 
+    // Make a node to register so as to launch the AM.
+    MockNM amNodeManager = rm.registerNode("amNM:1234", 2048);
+    amNodeManager.nodeHeartbeat(true);
+    dispatcher.await();
+
     ApplicationAttemptId appAttemptId = app.getCurrentAppAttempt()
         .getAppAttemptId();
+    rm.sendAMLaunched(appAttemptId);
+    dispatcher.await();
+
     JobId jobId = MRBuilderUtils.newJobId(appAttemptId.getApplicationId(), 0);
     Job job = mock(Job.class);
     when(job.getReport()).thenReturn(
