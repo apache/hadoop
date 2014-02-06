@@ -395,17 +395,17 @@ class BlockReaderLocal implements BlockReader {
         skipBuf = new byte[bytesPerChecksum];
       }
       int ret = read(skipBuf, 0, (int)(n - remaining));
-      return ret;
+      return (remaining + ret);
     }
   
     // optimize for big gap: discard the current buffer, skip to
     // the beginning of the appropriate checksum chunk and then
     // read to the middle of that chunk to be in sync with checksums.
-    this.offsetFromChunkBoundary = newPosition % bytesPerChecksum;
-    long toskip = n - remaining - this.offsetFromChunkBoundary;
+    int myOffsetFromChunkBoundary = newPosition % bytesPerChecksum;
+    long toskip = n - remaining - myOffsetFromChunkBoundary;
   
-    dataBuff.clear();
-    checksumBuff.clear();
+    dataBuff.position(dataBuff.limit());
+    checksumBuff.position(checksumBuff.limit());
   
     long dataSkipped = dataIn.skip(toskip);
     if (dataSkipped != toskip) {
@@ -419,17 +419,30 @@ class BlockReaderLocal implements BlockReader {
       }
     }
 
-    // read into the middle of the chunk
+    // Reset this.offsetFromChunkBoundary so that the next read
+    // returns data from the beginning of the chunk.
+    this.offsetFromChunkBoundary = 0;
+
+    // If the new position is chunk-aligned, we are done.
+    if (myOffsetFromChunkBoundary == 0) {
+      assert (toskip + remaining) == n;
+      return (toskip + remaining);
+    }
+
+    // The new position is not chunk-aligned, so we need to skip
+    // myOffsetFromChunkBoundary bytes more.
     if (skipBuf == null) {
       skipBuf = new byte[bytesPerChecksum];
     }
     assert skipBuf.length == bytesPerChecksum;
-    assert this.offsetFromChunkBoundary < bytesPerChecksum;
-    int ret = read(skipBuf, 0, this.offsetFromChunkBoundary);
+    assert myOffsetFromChunkBoundary < bytesPerChecksum;
+
+    int ret = read(skipBuf, 0, myOffsetFromChunkBoundary);
+
     if (ret == -1) {  // EOS
-      return toskip;
+      return (toskip + remaining);
     } else {
-      return (toskip + ret);
+      return (toskip + remaining + ret);
     }
   }
 

@@ -11,6 +11,7 @@ Release 0.23.11 - UNRELEASED
   OPTIMIZATIONS
     
   BUG FIXES
+    HDFS-5881. Fix skip() of the short-circuit local reader(legacy). (kihwal)
 
 Release 0.23.10 - 2013-12-09
 

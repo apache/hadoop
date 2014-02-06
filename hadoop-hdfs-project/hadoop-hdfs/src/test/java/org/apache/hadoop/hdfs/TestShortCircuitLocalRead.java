@@ -54,7 +54,10 @@ public class TestShortCircuitLocalRead {
   static final String DIR = "/" + TestShortCircuitLocalRead.class.getSimpleName() + "/";
 
   static final long seed = 0xDEADBEEFL;
-  static final int blockSize = 5120;
+  // block size needs to be bigger than the internal buffer, so that block redaer
+  // can be reused.
+  static final int blockSize = 65536;
+  static final int internalDataBufSize = 512 * 64;
   boolean simulatedStorage = false;
   
   // creates a file but does not close it
@@ -91,7 +94,12 @@ public class TestShortCircuitLocalRead {
     // Now read using a different API.
     actual = new byte[expected.length-readOffset];
     stm = fs.open(name);
-    long skipped = stm.skip(readOffset);
+    long skipped = 0;
+    if (readOffset >= internalDataBufSize) {
+      // force multiple seeks across internal data buffer boundary.
+      skipped += stm.read(actual, 0, internalDataBufSize);
+    }
+    skipped += stm.skip(readOffset - skipped);
     Assert.assertEquals(skipped, readOffset);
     //Read a small number of bytes first.
     int nread = stm.read(actual, 0, 3);
@@ -172,6 +180,7 @@ public class TestShortCircuitLocalRead {
   public void testReadFromAnOffset() throws IOException {
     doTestShortCircuitRead(false, 3*blockSize+100, 777);
     doTestShortCircuitRead(true, 3*blockSize+100, 777);
+    doTestShortCircuitRead(false, 3*blockSize+100, internalDataBufSize + 7245);
   }
   
   @Test
