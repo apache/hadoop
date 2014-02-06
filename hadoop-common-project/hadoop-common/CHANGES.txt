@@ -322,8 +322,6 @@ Release 2.4.0 - UNRELEASED
     HADOOP-10085. CompositeService should allow adding services while being 
     inited. (Steve Loughran via kasha)
 
-    HADOOP-10273. Fix 'mvn site'. (Arpit Agarwal)
-
     HADOOP-10327. Trunk windows build broken after HDFS-5746.
     (Vinay via cnauroth)
 
@@ -697,6 +695,8 @@ Release 2.3.0 - UNRELEASED
     manager present. (atm)
 
     HADOOP-10311. Cleanup vendor names from the code base. (tucu)
+
+    HADOOP-10273. Fix 'mvn site'. (Arpit Agarwal)
 
 Release 2.2.0 - 2013-10-13
 
