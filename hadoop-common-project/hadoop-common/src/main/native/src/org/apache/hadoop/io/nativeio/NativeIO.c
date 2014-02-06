@@ -671,6 +671,7 @@ Java_org_apache_hadoop_io_nativeio_NativeIO_00024POSIX_mmap(
   JNIEnv *env, jclass clazz, jobject jfd, jint jprot,
   jboolean jshared, jlong length)
 {
+#ifdef UNIX
   void *addr = 0;
   int prot, flags, fd;
   
@@ -684,18 +685,33 @@ Java_org_apache_hadoop_io_nativeio_NativeIO_00024POSIX_mmap(
     throw_ioe(env, errno);
   }
   return (jlong)(intptr_t)addr;
+#endif  //   UNIX
+
+#ifdef WINDOWS
+  THROW(env, "java/io/IOException",
+    "The function POSIX.mmap() is not supported on Windows");
+  return NULL;
+#endif
 }
 
 JNIEXPORT void JNICALL 
 Java_org_apache_hadoop_io_nativeio_NativeIO_00024POSIX_munmap(
   JNIEnv *env, jclass clazz, jlong jaddr, jlong length)
 {
+#ifdef UNIX
   void *addr;
 
   addr = (void*)(intptr_t)jaddr;
   if (munmap(addr, length) < 0) {
     throw_ioe(env, errno);
   }
+#endif  //   UNIX
+
+#ifdef WINDOWS
+  THROW(env, "java/io/IOException",
+    "The function POSIX.munmap() is not supported on Windows");
+  return NULL;
+#endif
 }
 
 
@@ -1050,4 +1066,3 @@ JNIEnv *env, jclass clazz)
 /**
  * vim: sw=2: ts=2: et:
  */
-
