@@ -347,6 +347,9 @@ Release 2.3.0 - UNRELEASED
     MAPREDUCE-5723. MR AM container log can be truncated or empty.
     (Mohammad Kamrul Islam via kasha)
 
+    MAPREDUCE-5743. Fixed the test failure in TestRMContainerAllocator.
+    (Vinod Kumar Vavilapalli via zjshen)
+
 Release 2.2.0 - 2013-10-13
 
   INCOMPATIBLE CHANGES
