@@ -230,6 +230,10 @@ Release 2.3.0 - UNRELEASED
     MAPREDUCE-5725. Make explicit that TestNetworkedJob relies on the Capacity
     Scheduler (Sandy Ryza)
 
+    MAPREDUCE-5744. Job hangs because 
+    RMContainerAllocator$AssignedRequests.preemptReduce() violates the 
+    comparator contract (Gera Shegalov via kasha)
+
   OPTIMIZATIONS
 
     MAPREDUCE-4680. Job history cleaner should only check timestamps of files in
