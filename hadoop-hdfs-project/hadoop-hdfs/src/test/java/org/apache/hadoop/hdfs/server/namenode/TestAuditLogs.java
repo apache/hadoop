@@ -28,6 +28,7 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Enumeration;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -301,11 +302,18 @@ public class TestAuditLogs {
     // Turn off the logs
     Logger logger = ((Log4JLogger) FSNamesystem.auditLog).getLogger();
     logger.setLevel(Level.OFF);
-    
+
+    // Close the appenders and force all logs to be flushed
+    Enumeration<?> appenders = logger.getAllAppenders();
+    while (appenders.hasMoreElements()) {
+      Appender appender = (Appender)appenders.nextElement();
+      appender.close();
+    }
+
     BufferedReader reader = new BufferedReader(new FileReader(auditLogFile));
     String line = null;
     boolean ret = true;
-   
+
     try {
       for (int i = 0; i < ndupe; i++) {
         line = reader.readLine();
