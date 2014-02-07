@@ -345,6 +345,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-5895. HDFS cacheadmin -listPools has exit_code of 1 when the command
     returns 0 result. (Tassapol Athiapinya via cnauroth)
 
+    HDFS-5807. TestBalancerWithNodeGroup.testBalancerWithNodeGroup fails
+    intermittently. (Chen He via kihwal)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
