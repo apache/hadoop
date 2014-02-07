@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.hadoop.yarn.MockApps;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -215,6 +216,11 @@ public class MockRMApp implements RMApp {
   @Override
   public String getApplicationType() {
     return YarnConfiguration.DEFAULT_APPLICATION_TYPE;
+  }
+
+  @Override
+  public Set<String> getApplicationTags() {
+    return null;
   }
 
   @Override

@@ -25,6 +25,7 @@ import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -37,8 +38,26 @@ import org.apache.hadoop.yarn.api.ApplicationConstants;
 @Evolving
 public class YarnConfiguration extends Configuration {
 
+  @Private
+  public static final String CS_CONFIGURATION_FILE= "capacity-scheduler.xml";
+
+  @Private
+  public static final String HADOOP_POLICY_CONFIGURATION_FILE =
+      "hadoop-policy.xml";
+
+  @Private
+  public static final String YARN_SITE_XML_FILE = "yarn-site.xml";
+
+  @Private
+  public static final String CORE_SITE_CONFIGURATION_FILE = "core-site.xml";
+
+  @Evolving
+  public static final int APPLICATION_MAX_TAGS = 10;
+
+  @Evolving
+  public static final int APPLICATION_MAX_TAG_LENGTH = 100;
+
   private static final String YARN_DEFAULT_XML_FILE = "yarn-default.xml";
-  private static final String YARN_SITE_XML_FILE = "yarn-site.xml";
 
   static {
     Configuration.addDefaultResource(YARN_DEFAULT_XML_FILE);
@@ -328,6 +347,16 @@ public class YarnConfiguration extends Configuration {
 
   public static final String RM_HA_IDS = RM_HA_PREFIX + "rm-ids";
   public static final String RM_HA_ID = RM_HA_PREFIX + "id";
+
+  /** Store the related configuration files in File System */
+  public static final String FS_BASED_RM_CONF_STORE = RM_PREFIX
+      + "configuration.file-system-based-store";
+  public static final String DEFAULT_FS_BASED_RM_CONF_STORE = "/yarn/conf";
+
+  public static final String RM_CONFIGURATION_PROVIDER_CLASS = RM_PREFIX
+      + "configuration.provider-class";
+  public static final String DEFAULT_RM_CONFIGURATION_PROVIDER_CLASS =
+      "org.apache.hadoop.yarn.LocalConfigurationProvider";
 
   @Private
   public static final List<String> RM_SERVICES_ADDRESS_CONF_KEYS =
@@ -998,6 +1027,15 @@ public class YarnConfiguration extends Configuration {
   /**The kerberos keytab to be used for spnego filter for AHS.*/
   public static final String AHS_WEBAPP_SPNEGO_KEYTAB_FILE_KEY =
       AHS_PREFIX + "webapp.spnego-keytab-file";
+
+  ////////////////////////////////
+  // ATS Configs
+  ////////////////////////////////
+
+  public static final String ATS_PREFIX = YARN_PREFIX + "ats.";
+
+  /** ATS store class */
+  public static final String ATS_STORE = ATS_PREFIX + "store.class";
 
   ////////////////////////////////
   // Other Configs

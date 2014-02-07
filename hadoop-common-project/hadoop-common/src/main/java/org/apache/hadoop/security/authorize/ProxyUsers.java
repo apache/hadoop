@@ -30,6 +30,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 
+import com.google.common.annotations.VisibleForTesting;
+
 @InterfaceAudience.Private
 public class ProxyUsers {
 
@@ -177,4 +179,13 @@ public class ProxyUsers {
       (list.contains("*"));
   }
 
+  @VisibleForTesting
+  public static Map<String, Collection<String>> getProxyGroups() {
+    return proxyGroups;
+  }
+
+  @VisibleForTesting
+  public static Map<String, Collection<String>> getProxyHosts() {
+    return proxyHosts;
+  }
 }

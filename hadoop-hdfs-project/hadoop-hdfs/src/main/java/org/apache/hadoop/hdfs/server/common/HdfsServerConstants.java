@@ -79,7 +79,8 @@ public final class HdfsServerConstants {
     INITIALIZESHAREDEDITS("-initializeSharedEdits"),
     RECOVER  ("-recover"),
     FORCE("-force"),
-    NONINTERACTIVE("-nonInteractive");
+    NONINTERACTIVE("-nonInteractive"),
+    RENAMERESERVED("-renameReserved");
     
     private final String name;
     

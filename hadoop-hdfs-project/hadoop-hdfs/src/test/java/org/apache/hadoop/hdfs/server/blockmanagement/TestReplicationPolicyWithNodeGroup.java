@@ -124,6 +124,8 @@ public class TestReplicationPolicyWithNodeGroup {
     CONF.set(CommonConfigurationKeysPublic.NET_TOPOLOGY_IMPL_KEY, 
         NetworkTopologyWithNodeGroup.class.getName());
     
+    CONF.setBoolean(DFSConfigKeys.DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_WRITE_KEY, true);
+    
     File baseDir = PathUtils.getTestDir(TestReplicationPolicyWithNodeGroup.class);
     
     CONF.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,

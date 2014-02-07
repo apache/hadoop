@@ -1317,8 +1317,8 @@ public class TestRMWebServicesApps extends JerseyTest {
   public void verifyAppInfo(JSONObject info, RMApp app) throws JSONException,
       Exception {
 
-    // 15 because trackingUrl not assigned yet
-    assertEquals("incorrect number of elements", 19, info.length());
+    // 20 because trackingUrl not assigned yet
+    assertEquals("incorrect number of elements", 20, info.length());
 
     verifyAppInfoGeneric(app, info.getString("id"), info.getString("user"),
       info.getString("name"), info.getString("applicationType"), info.getString("queue"),
@@ -1389,7 +1389,7 @@ public class TestRMWebServicesApps extends JerseyTest {
     rm.start();
     MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 8192);
     RMApp app1 = rm.submitApp(CONTAINER_MB, "testwordcount", "user1");
-    MockAM am = MockRM.launchAM(app1, rm, amNodeManager);
+    MockAM am = MockRM.launchAndRegisterAM(app1, rm, amNodeManager);
     int maxAppAttempts = rm.getConfig().getInt(
         YarnConfiguration.RM_AM_MAX_ATTEMPTS,
         YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
@@ -1405,7 +1405,7 @@ public class TestRMWebServicesApps extends JerseyTest {
       }
       // wait for app to start a new attempt.
       rm.waitForState(app1.getApplicationId(), RMAppState.ACCEPTED);
-      am = MockRM.launchAM(app1, rm, amNodeManager);
+      am = MockRM.launchAndRegisterAM(app1, rm, amNodeManager);
       numAttempt++;
     }
     assertEquals("incorrect number of attempts", maxAppAttempts,

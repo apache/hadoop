@@ -25,10 +25,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeLayoutVersion;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion;
+import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 
 /************************************
  * Some handy constants
@@ -141,6 +140,16 @@ public class HdfsConstants {
    */
   public static final int DATANODE_LAYOUT_VERSION
       = DataNodeLayoutVersion.CURRENT_LAYOUT_VERSION;
+
+  /**
+   * Path components that are reserved in HDFS.
+   * <p>
+   * .reserved is only reserved under root ("/").
+   */
+  public static final String[] RESERVED_PATH_COMPONENTS = new String[] {
+    HdfsConstants.DOT_SNAPSHOT_DIR,
+    FSDirectory.DOT_RESERVED_STRING
+  };
 
   /**
    * A special path component contained in the path for a snapshot file/dir

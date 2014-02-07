@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.apache.hadoop.hdfs.server.namenode.FSImageFormat.renameReservedPathsOnUpgrade;
 import static org.apache.hadoop.util.Time.now;
 
 import java.io.FilterInputStream;
@@ -320,8 +321,10 @@ public class FSEditLogLoader {
     switch (op.opCode) {
     case OP_ADD: {
       AddCloseOp addCloseOp = (AddCloseOp)op;
+      final String path =
+          renameReservedPathsOnUpgrade(addCloseOp.path, logVersion);
       if (FSNamesystem.LOG.isDebugEnabled()) {
-        FSNamesystem.LOG.debug(op.opCode + ": " + addCloseOp.path +
+        FSNamesystem.LOG.debug(op.opCode + ": " + path +
             " numblocks : " + addCloseOp.blocks.length +
             " clientHolder " + addCloseOp.clientName +
             " clientMachine " + addCloseOp.clientMachine);
@@ -332,9 +335,9 @@ public class FSEditLogLoader {
       // 3. OP_ADD to open file for append
 
       // See if the file already exists (persistBlocks call)
-      final INodesInPath iip = fsDir.getLastINodeInPath(addCloseOp.path);
+      final INodesInPath iip = fsDir.getLastINodeInPath(path);
       final INodeFile oldFile = INodeFile.valueOf(
-          iip.getINode(0), addCloseOp.path, true);
+          iip.getINode(0), path, true);
       INodeFile newFile = oldFile;
       if (oldFile == null) { // this is OP_ADD on a new file (case 1)
         // versions > 0 support per file replication
@@ -347,10 +350,10 @@ public class FSEditLogLoader {
         inodeId = getAndUpdateLastInodeId(addCloseOp.inodeId, logVersion,
             lastInodeId);
         newFile = fsDir.unprotectedAddFile(inodeId,
-            addCloseOp.path, addCloseOp.permissions, replication,
+            path, addCloseOp.permissions, replication,
             addCloseOp.mtime, addCloseOp.atime, addCloseOp.blockSize, true,
             addCloseOp.clientName, addCloseOp.clientMachine);
-        fsNamesys.leaseManager.addLease(addCloseOp.clientName, addCloseOp.path);
+        fsNamesys.leaseManager.addLease(addCloseOp.clientName, path);
 
         // add the op into retry cache if necessary
         if (toAddRetryCache) {
@@ -366,11 +369,11 @@ public class FSEditLogLoader {
             FSNamesystem.LOG.debug("Reopening an already-closed file " +
                 "for append");
           }
-          LocatedBlock lb = fsNamesys.prepareFileForWrite(addCloseOp.path,
+          LocatedBlock lb = fsNamesys.prepareFileForWrite(path,
               oldFile, addCloseOp.clientName, addCloseOp.clientMachine, null,
               false, iip.getLatestSnapshotId(), false);
-          newFile = INodeFile.valueOf(fsDir.getINode(addCloseOp.path),
-              addCloseOp.path, true);
+          newFile = INodeFile.valueOf(fsDir.getINode(path),
+              path, true);
           
           // add the op into retry cache is necessary
           if (toAddRetryCache) {
@@ -391,16 +394,17 @@ public class FSEditLogLoader {
     }
     case OP_CLOSE: {
       AddCloseOp addCloseOp = (AddCloseOp)op;
-      
+      final String path =
+          renameReservedPathsOnUpgrade(addCloseOp.path, logVersion);
       if (FSNamesystem.LOG.isDebugEnabled()) {
-        FSNamesystem.LOG.debug(op.opCode + ": " + addCloseOp.path +
+        FSNamesystem.LOG.debug(op.opCode + ": " + path +
             " numblocks : " + addCloseOp.blocks.length +
             " clientHolder " + addCloseOp.clientName +
             " clientMachine " + addCloseOp.clientMachine);
       }
 
-      final INodesInPath iip = fsDir.getLastINodeInPath(addCloseOp.path);
-      final INodeFile file = INodeFile.valueOf(iip.getINode(0), addCloseOp.path);
+      final INodesInPath iip = fsDir.getLastINodeInPath(path);
+      final INodeFile file = INodeFile.valueOf(iip.getINode(0), path);
 
       // Update the salient file attributes.
       file.setAccessTime(addCloseOp.atime, Snapshot.CURRENT_STATE_ID);
@@ -414,24 +418,26 @@ public class FSEditLogLoader {
         // could show up twice in a row. But after that version, this
         // should be fixed, so we should treat it as an error.
         throw new IOException(
-            "File is not under construction: " + addCloseOp.path);
+            "File is not under construction: " + path);
       }
       // One might expect that you could use removeLease(holder, path) here,
       // but OP_CLOSE doesn't serialize the holder. So, remove by path.
       if (file.isUnderConstruction()) {
-        fsNamesys.leaseManager.removeLeaseWithPrefixPath(addCloseOp.path);
+        fsNamesys.leaseManager.removeLeaseWithPrefixPath(path);
         file.toCompleteFile(file.getModificationTime());
       }
       break;
     }
     case OP_UPDATE_BLOCKS: {
       UpdateBlocksOp updateOp = (UpdateBlocksOp)op;
+      final String path =
+          renameReservedPathsOnUpgrade(updateOp.path, logVersion);
       if (FSNamesystem.LOG.isDebugEnabled()) {
-        FSNamesystem.LOG.debug(op.opCode + ": " + updateOp.path +
+        FSNamesystem.LOG.debug(op.opCode + ": " + path +
             " numblocks : " + updateOp.blocks.length);
       }
-      INodeFile oldFile = INodeFile.valueOf(fsDir.getINode(updateOp.path),
-          updateOp.path);
+      INodeFile oldFile = INodeFile.valueOf(fsDir.getINode(path),
+          path);
       // Update in-memory data structures
       updateBlocks(fsDir, updateOp, oldFile);
       
@@ -442,7 +448,7 @@ public class FSEditLogLoader {
     }
     case OP_ADD_BLOCK: {
       AddBlockOp addBlockOp = (AddBlockOp) op;
-      String path = addBlockOp.getPath();
+      String path = renameReservedPathsOnUpgrade(addBlockOp.getPath(), logVersion);
       if (FSNamesystem.LOG.isDebugEnabled()) {
         FSNamesystem.LOG.debug(op.opCode + ": " + path +
             " new block id : " + addBlockOp.getLastBlock().getBlockId());
@@ -456,14 +462,20 @@ public class FSEditLogLoader {
       SetReplicationOp setReplicationOp = (SetReplicationOp)op;
       short replication = fsNamesys.getBlockManager().adjustReplication(
           setReplicationOp.replication);
-      fsDir.unprotectedSetReplication(setReplicationOp.path,
+      fsDir.unprotectedSetReplication(
+          renameReservedPathsOnUpgrade(setReplicationOp.path, logVersion),
                                       replication, null);
       break;
     }
     case OP_CONCAT_DELETE: {
       ConcatDeleteOp concatDeleteOp = (ConcatDeleteOp)op;
-      fsDir.unprotectedConcat(concatDeleteOp.trg, concatDeleteOp.srcs,
-          concatDeleteOp.timestamp);
+      String trg = renameReservedPathsOnUpgrade(concatDeleteOp.trg, logVersion);
+      String[] srcs = new String[concatDeleteOp.srcs.length];
+      for (int i=0; i<srcs.length; i++) {
+        srcs[i] =
+            renameReservedPathsOnUpgrade(concatDeleteOp.srcs[i], logVersion);
+      }
+      fsDir.unprotectedConcat(trg, srcs, concatDeleteOp.timestamp);
       
       if (toAddRetryCache) {
         fsNamesys.addCacheEntry(concatDeleteOp.rpcClientId,
@@ -473,7 +485,9 @@ public class FSEditLogLoader {
     }
     case OP_RENAME_OLD: {
       RenameOldOp renameOp = (RenameOldOp)op;
-      fsDir.unprotectedRenameTo(renameOp.src, renameOp.dst,
+      final String src = renameReservedPathsOnUpgrade(renameOp.src, logVersion);
+      final String dst = renameReservedPathsOnUpgrade(renameOp.dst, logVersion);
+      fsDir.unprotectedRenameTo(src, dst,
                                 renameOp.timestamp);
       
       if (toAddRetryCache) {
@@ -483,7 +497,9 @@ public class FSEditLogLoader {
     }
     case OP_DELETE: {
       DeleteOp deleteOp = (DeleteOp)op;
-      fsDir.unprotectedDelete(deleteOp.path, deleteOp.timestamp);
+      fsDir.unprotectedDelete(
+          renameReservedPathsOnUpgrade(deleteOp.path, logVersion),
+          deleteOp.timestamp);
       
       if (toAddRetryCache) {
         fsNamesys.addCacheEntry(deleteOp.rpcClientId, deleteOp.rpcCallId);
@@ -494,8 +510,9 @@ public class FSEditLogLoader {
       MkdirOp mkdirOp = (MkdirOp)op;
       inodeId = getAndUpdateLastInodeId(mkdirOp.inodeId, logVersion,
           lastInodeId);
-      fsDir.unprotectedMkdir(inodeId, mkdirOp.path, mkdirOp.permissions,
-                             mkdirOp.timestamp);
+      fsDir.unprotectedMkdir(inodeId,
+          renameReservedPathsOnUpgrade(mkdirOp.path, logVersion),
+          mkdirOp.permissions, mkdirOp.timestamp);
       break;
     }
     case OP_SET_GENSTAMP_V1: {
@@ -505,53 +522,56 @@ public class FSEditLogLoader {
     }
     case OP_SET_PERMISSIONS: {
       SetPermissionsOp setPermissionsOp = (SetPermissionsOp)op;
-      fsDir.unprotectedSetPermission(setPermissionsOp.src,
-                                     setPermissionsOp.permissions);
+      fsDir.unprotectedSetPermission(
+          renameReservedPathsOnUpgrade(setPermissionsOp.src, logVersion),
+          setPermissionsOp.permissions);
       break;
     }
     case OP_SET_OWNER: {
       SetOwnerOp setOwnerOp = (SetOwnerOp)op;
-      fsDir.unprotectedSetOwner(setOwnerOp.src, setOwnerOp.username,
-                                setOwnerOp.groupname);
+      fsDir.unprotectedSetOwner(
+          renameReservedPathsOnUpgrade(setOwnerOp.src, logVersion),
+          setOwnerOp.username, setOwnerOp.groupname);
       break;
     }
     case OP_SET_NS_QUOTA: {
       SetNSQuotaOp setNSQuotaOp = (SetNSQuotaOp)op;
-      fsDir.unprotectedSetQuota(setNSQuotaOp.src,
-                                setNSQuotaOp.nsQuota,
-                                HdfsConstants.QUOTA_DONT_SET);
+      fsDir.unprotectedSetQuota(
+          renameReservedPathsOnUpgrade(setNSQuotaOp.src, logVersion),
+          setNSQuotaOp.nsQuota, HdfsConstants.QUOTA_DONT_SET);
       break;
     }
     case OP_CLEAR_NS_QUOTA: {
       ClearNSQuotaOp clearNSQuotaOp = (ClearNSQuotaOp)op;
-      fsDir.unprotectedSetQuota(clearNSQuotaOp.src,
-                                HdfsConstants.QUOTA_RESET,
-                                HdfsConstants.QUOTA_DONT_SET);
+      fsDir.unprotectedSetQuota(
+          renameReservedPathsOnUpgrade(clearNSQuotaOp.src, logVersion),
+          HdfsConstants.QUOTA_RESET, HdfsConstants.QUOTA_DONT_SET);
       break;
     }
 
     case OP_SET_QUOTA:
       SetQuotaOp setQuotaOp = (SetQuotaOp)op;
-      fsDir.unprotectedSetQuota(setQuotaOp.src,
-                                setQuotaOp.nsQuota,
-                                setQuotaOp.dsQuota);
+      fsDir.unprotectedSetQuota(
+          renameReservedPathsOnUpgrade(setQuotaOp.src, logVersion),
+          setQuotaOp.nsQuota, setQuotaOp.dsQuota);
       break;
 
     case OP_TIMES: {
       TimesOp timesOp = (TimesOp)op;
 
-      fsDir.unprotectedSetTimes(timesOp.path,
-                                timesOp.mtime,
-                                timesOp.atime, true);
+      fsDir.unprotectedSetTimes(
+          renameReservedPathsOnUpgrade(timesOp.path, logVersion),
+          timesOp.mtime, timesOp.atime, true);
       break;
     }
     case OP_SYMLINK: {
       SymlinkOp symlinkOp = (SymlinkOp)op;
       inodeId = getAndUpdateLastInodeId(symlinkOp.inodeId, logVersion,
           lastInodeId);
-      fsDir.unprotectedAddSymlink(inodeId, symlinkOp.path,
-                                  symlinkOp.value, symlinkOp.mtime, 
-                                  symlinkOp.atime, symlinkOp.permissionStatus);
+      fsDir.unprotectedAddSymlink(inodeId,
+          renameReservedPathsOnUpgrade(symlinkOp.path, logVersion),
+          symlinkOp.value, symlinkOp.mtime, symlinkOp.atime,
+          symlinkOp.permissionStatus);
       
       if (toAddRetryCache) {
         fsNamesys.addCacheEntry(symlinkOp.rpcClientId, symlinkOp.rpcCallId);
@@ -560,8 +580,10 @@ public class FSEditLogLoader {
     }
     case OP_RENAME: {
       RenameOp renameOp = (RenameOp)op;
-      fsDir.unprotectedRenameTo(renameOp.src, renameOp.dst,
-                                renameOp.timestamp, renameOp.options);
+      fsDir.unprotectedRenameTo(
+          renameReservedPathsOnUpgrade(renameOp.src, logVersion),
+          renameReservedPathsOnUpgrade(renameOp.dst, logVersion),
+          renameOp.timestamp, renameOp.options);
       
       if (toAddRetryCache) {
         fsNamesys.addCacheEntry(renameOp.rpcClientId, renameOp.rpcCallId);
@@ -604,10 +626,12 @@ public class FSEditLogLoader {
 
       Lease lease = fsNamesys.leaseManager.getLease(
           reassignLeaseOp.leaseHolder);
-      INodeFile pendingFile = fsDir.getINode(reassignLeaseOp.path).asFile();
+      final String path =
+          renameReservedPathsOnUpgrade(reassignLeaseOp.path, logVersion);
+      INodeFile pendingFile = fsDir.getINode(path).asFile();
       Preconditions.checkState(pendingFile.isUnderConstruction());
       fsNamesys.reassignLeaseInternal(lease,
-          reassignLeaseOp.path, reassignLeaseOp.newHolder, pendingFile);
+          path, reassignLeaseOp.newHolder, pendingFile);
       break;
     }
     case OP_START_LOG_SEGMENT:
@@ -617,8 +641,11 @@ public class FSEditLogLoader {
     }
     case OP_CREATE_SNAPSHOT: {
       CreateSnapshotOp createSnapshotOp = (CreateSnapshotOp) op;
+      final String snapshotRoot =
+          renameReservedPathsOnUpgrade(createSnapshotOp.snapshotRoot,
+              logVersion);
       String path = fsNamesys.getSnapshotManager().createSnapshot(
-          createSnapshotOp.snapshotRoot, createSnapshotOp.snapshotName);
+          snapshotRoot, createSnapshotOp.snapshotName);
       if (toAddRetryCache) {
         fsNamesys.addCacheEntryWithPayload(createSnapshotOp.rpcClientId,
             createSnapshotOp.rpcCallId, path);
@@ -629,8 +656,11 @@ public class FSEditLogLoader {
       DeleteSnapshotOp deleteSnapshotOp = (DeleteSnapshotOp) op;
       BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
       List<INode> removedINodes = new ChunkedArrayList<INode>();
+      final String snapshotRoot =
+          renameReservedPathsOnUpgrade(deleteSnapshotOp.snapshotRoot,
+              logVersion);
       fsNamesys.getSnapshotManager().deleteSnapshot(
-          deleteSnapshotOp.snapshotRoot, deleteSnapshotOp.snapshotName,
+          snapshotRoot, deleteSnapshotOp.snapshotName,
           collectedBlocks, removedINodes);
       fsNamesys.removeBlocksAndUpdateSafemodeTotal(collectedBlocks);
       collectedBlocks.clear();
@@ -645,8 +675,11 @@ public class FSEditLogLoader {
     }
     case OP_RENAME_SNAPSHOT: {
       RenameSnapshotOp renameSnapshotOp = (RenameSnapshotOp) op;
+      final String snapshotRoot =
+          renameReservedPathsOnUpgrade(renameSnapshotOp.snapshotRoot,
+              logVersion);
       fsNamesys.getSnapshotManager().renameSnapshot(
-          renameSnapshotOp.snapshotRoot, renameSnapshotOp.snapshotOldName,
+          snapshotRoot, renameSnapshotOp.snapshotOldName,
           renameSnapshotOp.snapshotNewName);
       
       if (toAddRetryCache) {
@@ -657,14 +690,19 @@ public class FSEditLogLoader {
     }
     case OP_ALLOW_SNAPSHOT: {
       AllowSnapshotOp allowSnapshotOp = (AllowSnapshotOp) op;
+      final String snapshotRoot =
+          renameReservedPathsOnUpgrade(allowSnapshotOp.snapshotRoot, logVersion);
       fsNamesys.getSnapshotManager().setSnapshottable(
-          allowSnapshotOp.snapshotRoot, false);
+          snapshotRoot, false);
       break;
     }
     case OP_DISALLOW_SNAPSHOT: {
       DisallowSnapshotOp disallowSnapshotOp = (DisallowSnapshotOp) op;
+      final String snapshotRoot =
+          renameReservedPathsOnUpgrade(disallowSnapshotOp.snapshotRoot,
+              logVersion);
       fsNamesys.getSnapshotManager().resetSnapshottable(
-          disallowSnapshotOp.snapshotRoot);
+          snapshotRoot);
       break;
     }
     case OP_SET_GENSTAMP_V2: {

@@ -1345,6 +1345,14 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
           pos += blockReader.skip(diff);
           if (pos == targetPos) {
             done = true;
+          } else {
+            // The range was already checked. If the block reader returns
+            // something unexpected instead of throwing an exception, it is
+            // most likely a bug. 
+            String errMsg = "BlockReader failed to seek to " + 
+                targetPos + ". Instead, it seeked to " + pos + ".";
+            DFSClient.LOG.warn(errMsg);
+            throw new IOException(errMsg);
           }
         } catch (IOException e) {//make following read to retry
           if(DFSClient.LOG.isDebugEnabled()) {

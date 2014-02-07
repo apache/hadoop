@@ -962,9 +962,8 @@ public class CacheAdmin extends Configured implements Tool {
       if (numResults > 0) { 
         System.out.print(listing);
       }
-      // If there are no results, we return 1 (failure exit code);
-      // otherwise we return 0 (success exit code).
-      return (numResults == 0) ? 1 : 0;
+      // If list pools succeed, we return 0 (success exit code)
+      return 0;
     }
   }
 

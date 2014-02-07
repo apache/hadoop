@@ -18,10 +18,13 @@
 
 package org.apache.hadoop.yarn.api.records.apptimeline;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import junit.framework.Assert;
 
+import org.apache.hadoop.yarn.api.records.apptimeline.ATSPutErrors.ATSPutError;
 import org.junit.Test;
 
 public class TestApplicationTimelineRecords {
@@ -42,10 +45,8 @@ public class TestApplicationTimelineRecords {
         event.addEventInfo("key2", "val2");
         entity.addEvent(event);
       }
-      entity.addRelatedEntity(
-          "test ref type 1", Arrays.asList((Object) "test ref id 1"));
-      entity.addRelatedEntity(
-          "test ref type 2", Arrays.asList((Object) "test ref id 2"));
+      entity.addRelatedEntity("test ref type 1", "test ref id 1");
+      entity.addRelatedEntity("test ref type 2", "test ref id 2");
       entity.addPrimaryFilter("pkey1", "pval1");
       entity.addPrimaryFilter("pkey2", "pval2");
       entity.addOtherInfo("okey1", "oval1");
@@ -83,7 +84,7 @@ public class TestApplicationTimelineRecords {
         event.setEventType("event type " + i);
         event.addEventInfo("key1", "val1");
         event.addEventInfo("key2", "val2");
-        partEvents.addEntity(event);
+        partEvents.addEvent(event);
       }
       events.addEvent(partEvents);
     }
@@ -108,6 +109,38 @@ public class TestApplicationTimelineRecords {
     ATSEvent event22 = partEvents2.getEvents().get(1);
     Assert.assertEquals("event type 1", event22.getEventType());
     Assert.assertEquals(2, event22.getEventInfo().size());
+  }
+
+  @Test
+  public void testATSPutErrors() {
+    ATSPutErrors atsPutErrors = new ATSPutErrors();
+    ATSPutError error1 = new ATSPutError();
+    error1.setEntityId("entity id 1");
+    error1.setEntityId("entity type 1");
+    error1.setErrorCode(1);
+    atsPutErrors.addError(error1);
+    List<ATSPutError> errors = new ArrayList<ATSPutError>();
+    errors.add(error1);
+    ATSPutError error2 = new ATSPutError();
+    error2.setEntityId("entity id 2");
+    error2.setEntityId("entity type 2");
+    error2.setErrorCode(2);
+    errors.add(error2);
+    atsPutErrors.addErrors(errors);
+
+    Assert.assertEquals(3, atsPutErrors.getErrors().size());
+    ATSPutError e = atsPutErrors.getErrors().get(0);
+    Assert.assertEquals(error1.getEntityId(), e.getEntityId());
+    Assert.assertEquals(error1.getEntityType(), e.getEntityType());
+    Assert.assertEquals(error1.getErrorCode(), e.getErrorCode());
+    e = atsPutErrors.getErrors().get(1);
+    Assert.assertEquals(error1.getEntityId(), e.getEntityId());
+    Assert.assertEquals(error1.getEntityType(), e.getEntityType());
+    Assert.assertEquals(error1.getErrorCode(), e.getErrorCode());
+    e = atsPutErrors.getErrors().get(2);
+    Assert.assertEquals(error2.getEntityId(), e.getEntityId());
+    Assert.assertEquals(error2.getEntityType(), e.getEntityType());
+    Assert.assertEquals(error2.getErrorCode(), e.getErrorCode());
   }
 
 }

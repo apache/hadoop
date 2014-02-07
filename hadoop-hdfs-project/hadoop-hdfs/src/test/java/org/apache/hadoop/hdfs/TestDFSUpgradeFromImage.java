@@ -27,6 +27,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.TreeMap;
@@ -43,7 +44,9 @@ import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
+import org.apache.hadoop.hdfs.server.namenode.FSImageFormat;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.log4j.Logger;
 import org.junit.Test;
@@ -67,6 +70,7 @@ public class TestDFSUpgradeFromImage {
   private static final String HADOOP_DFS_DIR_TXT = "hadoop-dfs-dir.txt";
   private static final String HADOOP22_IMAGE = "hadoop-22-dfs-dir.tgz";
   private static final String HADOOP1_BBW_IMAGE = "hadoop1-bbw.tgz";
+  private static final String HADOOP2_RESERVED_IMAGE = "hadoop-2-reserved.tgz";
 
   private static class ReferenceFileInfo {
     String path;
@@ -318,6 +322,87 @@ public class TestDFSUpgradeFromImage {
       int md5failures = appender.countExceptionsWithMessage(
           " is corrupt with MD5 checksum of ");
       assertEquals("Upgrade did not fail with bad MD5", 1, md5failures);
+    }
+  }
+
+  /**
+   * Test upgrade from 2.0 image with a variety of .snapshot and .reserved
+   * paths to test renaming on upgrade
+   */
+  @Test
+  public void testUpgradeFromRel2ReservedImage() throws IOException {
+    unpackStorage(HADOOP2_RESERVED_IMAGE);
+    MiniDFSCluster cluster = null;
+    // Try it once without setting the upgrade flag to ensure it fails
+    try {
+      cluster =
+          new MiniDFSCluster.Builder(new Configuration())
+              .format(false)
+              .startupOption(StartupOption.UPGRADE)
+              .numDataNodes(0).build();
+    } catch (IllegalArgumentException e) {
+      GenericTestUtils.assertExceptionContains(
+          "reserved path component in this version",
+          e);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+    // Try it again with a custom rename string
+    try {
+      FSImageFormat.setRenameReservedPairs(
+          ".snapshot=.user-snapshot," +
+          ".reserved=.my-reserved");
+      cluster =
+          new MiniDFSCluster.Builder(new Configuration())
+              .format(false)
+              .startupOption(StartupOption.UPGRADE)
+              .numDataNodes(0).build();
+      // Make sure the paths were renamed as expected
+      DistributedFileSystem dfs = cluster.getFileSystem();
+      ArrayList<Path> toList = new ArrayList<Path>();
+      ArrayList<String> found = new ArrayList<String>();
+      toList.add(new Path("/"));
+      while (!toList.isEmpty()) {
+        Path p = toList.remove(0);
+        FileStatus[] statuses = dfs.listStatus(p);
+        for (FileStatus status: statuses) {
+          final String path = status.getPath().toUri().getPath();
+          System.out.println("Found path " + path);
+          found.add(path);
+          if (status.isDirectory()) {
+            toList.add(status.getPath());
+          }
+        }
+      }
+      String[] expected = new String[] {
+          "/edits",
+          "/edits/.reserved",
+          "/edits/.user-snapshot",
+          "/edits/.user-snapshot/editsdir",
+          "/edits/.user-snapshot/editsdir/editscontents",
+          "/edits/.user-snapshot/editsdir/editsdir2",
+          "/image",
+          "/image/.reserved",
+          "/image/.user-snapshot",
+          "/image/.user-snapshot/imagedir",
+          "/image/.user-snapshot/imagedir/imagecontents",
+          "/image/.user-snapshot/imagedir/imagedir2",
+          "/.my-reserved",
+          "/.my-reserved/edits-touch",
+          "/.my-reserved/image-touch"
+      };
+
+      for (String s: expected) {
+        assertTrue("Did not find expected path " + s, found.contains(s));
+      }
+      assertEquals("Found an unexpected path while listing filesystem",
+          found.size(), expected.length);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
     }
   }
     

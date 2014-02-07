@@ -104,6 +104,7 @@ public class RMAppImpl implements RMApp, Recoverable {
   private final long submitTime;
   private final Set<RMNode> updatedNodes = new HashSet<RMNode>();
   private final String applicationType;
+  private final Set<String> applicationTags;
 
   // Mutable fields
   private long startTime;
@@ -195,10 +196,8 @@ public class RMAppImpl implements RMApp, Recoverable {
         // waiting for the previous AM to exit.
         RMAppEventType.ATTEMPT_FAILED,
         new AttemptFailedTransition(RMAppState.ACCEPTED))
-    .addTransition(RMAppState.ACCEPTED, RMAppState.FINAL_SAVING,
-        RMAppEventType.KILL,
-        new FinalSavingTransition(
-          new AppKilledTransition(), RMAppState.KILLED))
+    .addTransition(RMAppState.ACCEPTED, RMAppState.KILLING,
+        RMAppEventType.KILL, new KillAttemptTransition())
     // ACCECPTED state can once again receive APP_ACCEPTED event, because on
     // recovery the app returns ACCEPTED state and the app once again go
     // through the scheduler and triggers one more APP_ACCEPTED event at
@@ -302,9 +301,9 @@ public class RMAppImpl implements RMApp, Recoverable {
   
   public RMAppImpl(ApplicationId applicationId, RMContext rmContext,
       Configuration config, String name, String user, String queue,
-      ApplicationSubmissionContext submissionContext,
-      YarnScheduler scheduler,
-      ApplicationMasterService masterService, long submitTime, String applicationType) {
+      ApplicationSubmissionContext submissionContext, YarnScheduler scheduler,
+      ApplicationMasterService masterService, long submitTime,
+      String applicationType, Set<String> applicationTags) {
 
     this.applicationId = applicationId;
     this.name = name;
@@ -320,6 +319,7 @@ public class RMAppImpl implements RMApp, Recoverable {
     this.submitTime = submitTime;
     this.startTime = System.currentTimeMillis();
     this.applicationType = applicationType;
+    this.applicationTags = applicationTags;
 
     int globalMaxAppAttempts = conf.getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
         YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
@@ -553,7 +553,7 @@ public class RMAppImpl implements RMApp, Recoverable {
           createApplicationState(), diags,
           trackingUrl, this.startTime, this.finishTime, finishState,
           appUsageReport, origTrackingUrl, progress, this.applicationType, 
-          amrmToken);
+          amrmToken, applicationTags);
     } finally {
       this.readLock.unlock();
     }
@@ -1083,6 +1083,11 @@ public class RMAppImpl implements RMApp, Recoverable {
   @Override
   public String getApplicationType() {
     return this.applicationType;
+  }
+
+  @Override
+  public Set<String> getApplicationTags() {
+    return this.applicationTags;
   }
 
   @Override

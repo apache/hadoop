@@ -43,7 +43,9 @@ import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.yarn.LocalConfigurationProvider;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
+import org.apache.hadoop.yarn.api.protocolrecords.ApplicationsRequestScope;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
@@ -106,6 +108,7 @@ import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.SettableFuture;
 
@@ -133,6 +136,7 @@ public class ClientRMService extends AbstractService implements
 
   private final ApplicationACLsManager applicationsACLsManager;
   private final QueueACLsManager queueACLsManager;
+  private boolean useLocalConfigurationProvider;
 
   public ClientRMService(RMContext rmContext, YarnScheduler scheduler,
       RMAppManager rmAppManager, ApplicationACLsManager applicationACLsManager,
@@ -150,6 +154,10 @@ public class ClientRMService extends AbstractService implements
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
     clientBindAddress = getBindAddress(conf);
+    this.useLocalConfigurationProvider =
+        (LocalConfigurationProvider.class.isAssignableFrom(conf.getClass(
+            YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
+            LocalConfigurationProvider.class)));
     super.serviceInit(conf);
   }
 
@@ -438,9 +446,11 @@ public class ClientRMService extends AbstractService implements
         request.getApplicationStates();
     Set<String> users = request.getUsers();
     Set<String> queues = request.getQueues();
+    Set<String> tags = request.getApplicationTags();
     long limit = request.getLimit();
     LongRange start = request.getStartRange();
     LongRange finish = request.getFinishRange();
+    ApplicationsRequestScope scope = request.getScope();
 
     final Map<ApplicationId, RMApp> apps = rmContext.getRMApps();
     Iterator<RMApp> appsIter;
@@ -487,6 +497,17 @@ public class ClientRMService extends AbstractService implements
     List<ApplicationReport> reports = new ArrayList<ApplicationReport>();
     while (appsIter.hasNext() && reports.size() < limit) {
       RMApp application = appsIter.next();
+
+      // Check if current application falls under the specified scope
+      boolean allowAccess = checkAccess(callerUGI, application.getUser(),
+          ApplicationAccessType.VIEW_APP, application);
+      if (scope == ApplicationsRequestScope.OWN &&
+          !callerUGI.getUserName().equals(application.getUser())) {
+        continue;
+      } else if (scope == ApplicationsRequestScope.VIEWABLE && !allowAccess) {
+        continue;
+      }
+
       if (applicationTypes != null && !applicationTypes.isEmpty()) {
         String appTypeToMatch = caseSensitive
             ? application.getApplicationType()
@@ -516,8 +537,23 @@ public class ClientRMService extends AbstractService implements
         continue;
       }
 
-      boolean allowAccess = checkAccess(callerUGI, application.getUser(),
-          ApplicationAccessType.VIEW_APP, application);
+      if (tags != null && !tags.isEmpty()) {
+        Set<String> appTags = application.getApplicationTags();
+        if (appTags == null || appTags.isEmpty()) {
+          continue;
+        }
+        boolean match = false;
+        for (String tag : tags) {
+          if (appTags.contains(tag)) {
+            match = true;
+            break;
+          }
+        }
+        if (!match) {
+          continue;
+        }
+      }
+
       reports.add(application.createAndGetApplicationReport(
           callerUGI.getUserName(), allowAccess));
     }
@@ -773,7 +809,12 @@ public class ClientRMService extends AbstractService implements
 
   void refreshServiceAcls(Configuration configuration, 
       PolicyProvider policyProvider) {
-    this.server.refreshServiceAcl(configuration, policyProvider);
+    if (this.useLocalConfigurationProvider) {
+      this.server.refreshServiceAcl(configuration, policyProvider);
+    } else {
+      this.server.refreshServiceAclWithConfigration(configuration,
+          policyProvider);
+    }
   }
 
   private boolean isAllowedDelegationTokenOp() throws IOException {
@@ -786,5 +827,10 @@ public class ClientRMService extends AbstractService implements
     } else {
       return true;
     }
+  }
+
+  @VisibleForTesting
+  public Server getServer() {
+    return this.server;
   }
 }
