@@ -675,6 +675,7 @@ public class TestYarnCLI {
     int result = spyCli.run(new String[] { "-help" });
     Assert.assertTrue(result == 0);
     verify(spyCli).printUsage(any(Options.class));
+    System.err.println(sysOutStream.toString()); //todo sandyt remove this hejfkdsl
     Assert.assertEquals(createApplicationCLIHelpMessage(),
         sysOutStream.toString());
 
@@ -741,6 +742,56 @@ public class TestYarnCLI {
     cli = createAndGetAppCLI();
     try {
       cli.run(new String[] { "application","-kill", applicationId.toString() });
+      Assert.fail();
+    } catch (Exception ex) {
+      Assert.assertTrue(ex instanceof ApplicationNotFoundException);
+      Assert.assertEquals("Application with id '" + applicationId +
+          "' doesn't exist in RM.", ex.getMessage());
+    }
+  }
+  
+  @Test
+  public void testMoveApplicationAcrossQueues() throws Exception {
+    ApplicationCLI cli = createAndGetAppCLI();
+    ApplicationId applicationId = ApplicationId.newInstance(1234, 5);
+
+    ApplicationReport newApplicationReport2 = ApplicationReport.newInstance(
+        applicationId, ApplicationAttemptId.newInstance(applicationId, 1),
+        "user", "queue", "appname", "host", 124, null,
+        YarnApplicationState.FINISHED, "diagnostics", "url", 0, 0,
+        FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.53789f, "YARN", null);
+    when(client.getApplicationReport(any(ApplicationId.class))).thenReturn(
+        newApplicationReport2);
+    int result = cli.run(new String[] { "-movetoqueue", applicationId.toString(),
+        "-queue", "targetqueue"});
+    assertEquals(0, result);
+    verify(client, times(0)).moveApplicationAcrossQueues(
+        any(ApplicationId.class), any(String.class));
+    verify(sysOut).println(
+        "Application " + applicationId + " has already finished ");
+
+    ApplicationReport newApplicationReport = ApplicationReport.newInstance(
+        applicationId, ApplicationAttemptId.newInstance(applicationId, 1),
+        "user", "queue", "appname", "host", 124, null,
+        YarnApplicationState.RUNNING, "diagnostics", "url", 0, 0,
+        FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.53789f, "YARN", null);
+    when(client.getApplicationReport(any(ApplicationId.class))).thenReturn(
+        newApplicationReport);
+    result = cli.run(new String[] { "-movetoqueue", applicationId.toString(),
+        "-queue", "targetqueue"});
+    assertEquals(0, result);
+    verify(client).moveApplicationAcrossQueues(any(ApplicationId.class),
+        any(String.class));
+    verify(sysOut).println("Moving application application_1234_0005 to queue targetqueue");
+    verify(sysOut).println("Successfully completed move.");
+
+    doThrow(new ApplicationNotFoundException("Application with id '"
+        + applicationId + "' doesn't exist in RM.")).when(client)
+        .moveApplicationAcrossQueues(applicationId, "targetqueue");
+    cli = createAndGetAppCLI();
+    try {
+      result = cli.run(new String[] { "-movetoqueue", applicationId.toString(),
+          "-queue", "targetqueue"});
       Assert.fail();
     } catch (Exception ex) {
       Assert.assertTrue(ex instanceof ApplicationNotFoundException);
@@ -1087,23 +1138,28 @@ public class TestYarnCLI {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     PrintWriter pw = new PrintWriter(baos);
     pw.println("usage: application");
-    pw.println(" -appStates <States>        Works with -list to filter applications based");
-    pw.println("                            on input comma-separated list of application");
-    pw.println("                            states. The valid application state can be one");
-    pw.println("                            of the following:");
-    pw.println("                            ALL,NEW,NEW_SAVING,SUBMITTED,ACCEPTED,RUNNING,");
-    pw.println("                            FINISHED,FAILED,KILLED");
-    pw.println(" -appTypes <Types>          Works with -list to filter applications based");
-    pw.println("                            on input comma-separated list of application");
-    pw.println("                            types.");
-    pw.println(" -help                      Displays help for all commands.");
-    pw.println(" -kill <Application ID>     Kills the application.");
-    pw.println(" -list                      List applications from the RM. Supports");
-    pw.println("                            optional use of -appTypes to filter");
-    pw.println("                            applications based on application type, and");
-    pw.println("                            -appStates to filter applications based on");
-    pw.println("                            application state");
-    pw.println(" -status <Application ID>   Prints the status of the application.");
+    pw.println(" -appStates <States>             Works with -list to filter applications");
+    pw.println("                                 based on input comma-separated list of");
+    pw.println("                                 application states. The valid application");
+    pw.println("                                 state can be one of the following:");
+    pw.println("                                 ALL,NEW,NEW_SAVING,SUBMITTED,ACCEPTED,RUN");
+    pw.println("                                 NING,FINISHED,FAILED,KILLED");
+    pw.println(" -appTypes <Types>               Works with -list to filter applications");
+    pw.println("                                 based on input comma-separated list of");
+    pw.println("                                 application types.");
+    pw.println(" -help                           Displays help for all commands.");
+    pw.println(" -kill <Application ID>          Kills the application.");
+    pw.println(" -list                           List applications from the RM. Supports");
+    pw.println("                                 optional use of -appTypes to filter");
+    pw.println("                                 applications based on application type,");
+    pw.println("                                 and -appStates to filter applications");
+    pw.println("                                 based on application state");
+    pw.println(" -movetoqueue <Application ID>   Moves the application to a different");
+    pw.println("                                 queue.");
+    pw.println(" -queue <Queue Name>             Works with the movetoqueue command to");
+    pw.println("                                 specify which queue to move an");
+    pw.println("                                 application to.");
+    pw.println(" -status <Application ID>        Prints the status of the application.");
     pw.close();
     String appsHelpStr = baos.toString("UTF-8");
     return appsHelpStr;

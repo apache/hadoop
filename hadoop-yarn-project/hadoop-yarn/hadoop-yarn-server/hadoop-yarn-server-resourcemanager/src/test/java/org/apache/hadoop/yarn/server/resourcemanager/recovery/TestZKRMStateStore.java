@@ -159,6 +159,7 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
         HAServiceProtocol.RequestSource.REQUEST_BY_USER);
 
     Configuration conf1 = createHARMConf("rm1,rm2", "rm1", 1234);
+    conf1.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
     ResourceManager rm1 = new ResourceManager();
     rm1.init(conf1);
     rm1.start();
@@ -170,6 +171,7 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
         rm1.getRMContext().getRMAdminService().getServiceStatus().getState());
 
     Configuration conf2 = createHARMConf("rm1,rm2", "rm2", 5678);
+    conf2.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
     ResourceManager rm2 = new ResourceManager();
     rm2.init(conf2);
     rm2.start();
