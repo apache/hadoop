@@ -348,6 +348,8 @@ Release 2.4.0 - UNRELEASED
     HDFS-5807. TestBalancerWithNodeGroup.testBalancerWithNodeGroup fails
     intermittently. (Chen He via kihwal)
 
+    HDFS-5882. TestAuditLogs is flaky (jxiang via cmccabe)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
