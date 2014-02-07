@@ -41,7 +41,7 @@ import org.apache.hadoop.metrics2.lib.MutableGaugeInt;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.slf4j.Logger;
@@ -57,7 +57,7 @@ public class QueueMetrics implements MetricsSource {
   @Metric("# of pending apps") MutableGaugeInt appsPending;
   @Metric("# of apps completed") MutableCounterInt appsCompleted;
   @Metric("# of apps killed") MutableCounterInt appsKilled;
-  @Metric("# of apps failed") MutableCounterInt appsFailed;
+  @Metric("# of apps failed") MutableGaugeInt appsFailed;
 
   @Metric("Allocated memory in MB") MutableGaugeInt allocatedMB;
   @Metric("Allocated CPU in virtual cores") MutableGaugeInt allocatedVCores;
@@ -214,70 +214,54 @@ public class QueueMetrics implements MetricsSource {
     registry.snapshot(collector.addRecord(registry.info()), all);
   }
 
-  public void submitApp(String user) {
-    appsSubmitted.incr();
-    QueueMetrics userMetrics = getUserMetrics(user);
-    if (userMetrics != null) {
-      userMetrics.submitApp(user);
+  public void submitApp(String user, int attemptId) {
+    if (attemptId == 1) {
+      appsSubmitted.incr();
+    } else {
+      appsFailed.decr();
     }
-    if (parent != null) {
-      parent.submitApp(user);
-    }
-  }
-
-  public void submitAppAttempt(String user) {
     appsPending.incr();
     QueueMetrics userMetrics = getUserMetrics(user);
     if (userMetrics != null) {
-      userMetrics.submitAppAttempt(user);
+      userMetrics.submitApp(user, attemptId);
     }
     if (parent != null) {
-      parent.submitAppAttempt(user);
+      parent.submitApp(user, attemptId);
     }
   }
 
-  public void runAppAttempt(ApplicationId appId, String user) {
-    runBuckets.add(appId, System.currentTimeMillis());
+  public void incrAppsRunning(AppSchedulingInfo app, String user) {
+    runBuckets.add(app.getApplicationId(), System.currentTimeMillis());
     appsRunning.incr();
     appsPending.decr();
     QueueMetrics userMetrics = getUserMetrics(user);
     if (userMetrics != null) {
-      userMetrics.runAppAttempt(appId, user);
+      userMetrics.incrAppsRunning(app, user);
     }
     if (parent != null) {
-      parent.runAppAttempt(appId, user);
+      parent.incrAppsRunning(app, user);
     }
   }
 
-  public void finishAppAttempt(
-      ApplicationId appId, boolean isPending, String user) {
-    runBuckets.remove(appId);
-    if (isPending) {
-      appsPending.decr();
-    } else {
-      appsRunning.decr();
-    }
-    QueueMetrics userMetrics = getUserMetrics(user);
-    if (userMetrics != null) {
-      userMetrics.finishAppAttempt(appId, isPending, user);
-    }
-    if (parent != null) {
-      parent.finishAppAttempt(appId, isPending, user);
-    }
-  }
-
-  public void finishApp(String user, RMAppState rmAppFinalState) {
-    switch (rmAppFinalState) {
+  public void finishApp(AppSchedulingInfo app,
+      RMAppAttemptState rmAppAttemptFinalState) {
+    runBuckets.remove(app.getApplicationId());
+    switch (rmAppAttemptFinalState) {
       case KILLED: appsKilled.incr(); break;
       case FAILED: appsFailed.incr(); break;
       default: appsCompleted.incr();  break;
     }
-    QueueMetrics userMetrics = getUserMetrics(user);
+    if (app.isPending()) {
+      appsPending.decr();
+    } else {
+      appsRunning.decr();
+    }
+    QueueMetrics userMetrics = getUserMetrics(app.getUser());
     if (userMetrics != null) {
-      userMetrics.finishApp(user, rmAppFinalState);
+      userMetrics.finishApp(app, rmAppAttemptFinalState);
     }
     if (parent != null) {
-      parent.finishApp(user, rmAppFinalState);
+      parent.finishApp(app, rmAppAttemptFinalState);
     }
   }
 

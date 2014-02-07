@@ -37,6 +37,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
@@ -87,8 +88,6 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
-
-import com.google.common.annotations.VisibleForTesting;
 
 /**
  * An ApplicationMaster for executing shell commands on a set of launched
@@ -170,8 +169,7 @@ public class ApplicationMaster {
   private NMCallbackHandler containerListener;
   
   // Application Attempt Id ( combination of attemptId and fail count )
-  @VisibleForTesting
-  protected ApplicationAttemptId appAttemptID;
+  private ApplicationAttemptId appAttemptID;
 
   // TODO
   // For status update for clients - yet to be implemented
@@ -196,15 +194,13 @@ public class ApplicationMaster {
   private AtomicInteger numCompletedContainers = new AtomicInteger();
   // Allocated container count so that we know how many containers has the RM
   // allocated to us
-  @VisibleForTesting
-  protected AtomicInteger numAllocatedContainers = new AtomicInteger();
+  private AtomicInteger numAllocatedContainers = new AtomicInteger();
   // Count of failed containers
   private AtomicInteger numFailedContainers = new AtomicInteger();
   // Count of containers already requested from the RM
   // Needed as once requested, we should not request for containers again.
   // Only request for more if the original requirement changes.
-  @VisibleForTesting
-  protected AtomicInteger numRequestedContainers = new AtomicInteger();
+  private AtomicInteger numRequestedContainers = new AtomicInteger();
 
   // Shell command to be executed
   private String shellCommand = "";
@@ -232,6 +228,7 @@ public class ApplicationMaster {
   private static final String shellArgsPath = "shellArgs";
 
   private volatile boolean done;
+  private volatile boolean success;
 
   private ByteBuffer allTokens;
 
@@ -253,8 +250,7 @@ public class ApplicationMaster {
       if (!doRun) {
         System.exit(0);
       }
-      appMaster.run();
-      result = appMaster.finish();
+      result = appMaster.run();
     } catch (Throwable t) {
       LOG.fatal("Error running ApplicationMaster", t);
       System.exit(1);
@@ -479,7 +475,7 @@ public class ApplicationMaster {
    * @throws IOException
    */
   @SuppressWarnings({ "unchecked" })
-  public void run() throws YarnException, IOException {
+  public boolean run() throws YarnException, IOException {
     LOG.info("Starting ApplicationMaster");
 
     Credentials credentials =
@@ -541,25 +537,27 @@ public class ApplicationMaster {
       containerVirtualCores = maxVCores;
     }
 
-    List<Container> previousAMRunningContainers =
-        response.getContainersFromPreviousAttempt();
-    LOG.info("Received " + previousAMRunningContainers.size()
-        + " previous AM's running containers on AM registration.");
-    numAllocatedContainers.addAndGet(previousAMRunningContainers.size());
-
-    int numTotalContainersToRequest =
-        numTotalContainers - previousAMRunningContainers.size();
     // Setup ask for containers from RM
     // Send request for containers to RM
     // Until we get our fully allocated quota, we keep on polling RM for
     // containers
     // Keep looping until all the containers are launched and shell script
     // executed on them ( regardless of success/failure).
-    for (int i = 0; i < numTotalContainersToRequest; ++i) {
+    for (int i = 0; i < numTotalContainers; ++i) {
       ContainerRequest containerAsk = setupContainerAskForRM();
       amRMClient.addContainerRequest(containerAsk);
     }
-    numRequestedContainers.set(numTotalContainersToRequest);
+    numRequestedContainers.set(numTotalContainers);
+
+    while (!done
+        && (numCompletedContainers.get() != numTotalContainers)) {
+      try {
+        Thread.sleep(200);
+      } catch (InterruptedException ex) {}
+    }
+    finish();
+    
+    return success;
   }
 
   @VisibleForTesting
@@ -567,16 +565,7 @@ public class ApplicationMaster {
     return new NMCallbackHandler(this);
   }
 
-  @VisibleForTesting
-  protected boolean finish() {
-    // wait for completion.
-    while (!done
-        && (numCompletedContainers.get() != numTotalContainers)) {
-      try {
-        Thread.sleep(200);
-      } catch (InterruptedException ex) {}
-    }
-
+  private void finish() {
     // Join all launched threads
     // needed for when we time out
     // and we need to release containers
@@ -599,7 +588,7 @@ public class ApplicationMaster {
 
     FinalApplicationStatus appStatus;
     String appMessage = null;
-    boolean success = true;
+    success = true;
     if (numFailedContainers.get() == 0 && 
         numCompletedContainers.get() == numTotalContainers) {
       appStatus = FinalApplicationStatus.SUCCEEDED;
@@ -620,8 +609,6 @@ public class ApplicationMaster {
     }
     
     amRMClient.stop();
-
-    return success;
   }
   
   private class RMCallbackHandler implements AMRMClientAsync.CallbackHandler {

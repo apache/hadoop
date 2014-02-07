@@ -38,7 +38,6 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
@@ -60,6 +59,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManage
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplication;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
@@ -99,7 +99,7 @@ public class LeafQueue implements CSQueue {
   private volatile int numContainers;
 
   Set<FiCaSchedulerApp> activeApplications;
-  Map<ApplicationAttemptId, FiCaSchedulerApp> applicationAttemptMap = 
+  Map<ApplicationAttemptId, FiCaSchedulerApp> applicationsMap = 
       new HashMap<ApplicationAttemptId, FiCaSchedulerApp>();
   
   Set<FiCaSchedulerApp> pendingApplications;
@@ -635,21 +635,7 @@ public class LeafQueue implements CSQueue {
   }
 
   @Override
-  public void submitApplicationAttempt(FiCaSchedulerApp application,
-      String userName) {
-    // Careful! Locking order is important!
-    synchronized (this) {
-      User user = getUser(userName);
-      // Add the attempt to our data-structures
-      addApplicationAttempt(application, user);
-    }
-
-    metrics.submitAppAttempt(userName);
-    getParent().submitApplicationAttempt(application, userName);
-  }
-
-  @Override
-  public void submitApplication(ApplicationId applicationId, String userName,
+  public void submitApplication(FiCaSchedulerApp application, String userName,
       String queue)  throws AccessControlException {
     // Careful! Locking order is important!
 
@@ -667,7 +653,8 @@ public class LeafQueue implements CSQueue {
       // Check if the queue is accepting jobs
       if (getState() != QueueState.RUNNING) {
         String msg = "Queue " + getQueuePath() +
-        " is STOPPED. Cannot accept submission of application: " + applicationId;
+        " is STOPPED. Cannot accept submission of application: " +
+        application.getApplicationId();
         LOG.info(msg);
         throw new AccessControlException(msg);
       }
@@ -676,7 +663,8 @@ public class LeafQueue implements CSQueue {
       if (getNumApplications() >= getMaxApplications()) {
         String msg = "Queue " + getQueuePath() + 
         " already has " + getNumApplications() + " applications," +
-        " cannot accept submission of application: " + applicationId;
+        " cannot accept submission of application: " + 
+        application.getApplicationId();
         LOG.info(msg);
         throw new AccessControlException(msg);
       }
@@ -687,22 +675,28 @@ public class LeafQueue implements CSQueue {
         String msg = "Queue " + getQueuePath() + 
         " already has " + user.getTotalApplications() + 
         " applications from user " + userName + 
-        " cannot accept submission of application: " + applicationId;
+        " cannot accept submission of application: " + 
+        application.getApplicationId();
         LOG.info(msg);
         throw new AccessControlException(msg);
       }
+
+      // Add the application to our data-structures
+      addApplication(application, user);
     }
+
+    int attemptId = application.getApplicationAttemptId().getAttemptId();
+    metrics.submitApp(userName, attemptId);
 
     // Inform the parent queue
     try {
-      getParent().submitApplication(applicationId, userName, queue);
+      getParent().submitApplication(application, userName, queue);
     } catch (AccessControlException ace) {
       LOG.info("Failed to submit application to parent-queue: " + 
           getParent().getQueuePath(), ace);
+      removeApplication(application, user);
       throw ace;
     }
-
-    metrics.submitApp(userName);
   }
 
   private synchronized void activateApplications() {
@@ -728,11 +722,11 @@ public class LeafQueue implements CSQueue {
     }
   }
   
-  private synchronized void addApplicationAttempt(FiCaSchedulerApp application, User user) {
+  private synchronized void addApplication(FiCaSchedulerApp application, User user) {
     // Accept 
     user.submitApplication();
     pendingApplications.add(application);
-    applicationAttemptMap.put(application.getApplicationAttemptId(), application);
+    applicationsMap.put(application.getApplicationAttemptId(), application);
 
     // Activate applications
     activateApplications();
@@ -748,28 +742,22 @@ public class LeafQueue implements CSQueue {
   }
 
   @Override
-  public void finishApplication(ApplicationId application, String user) {
-    // Inform the activeUsersManager
-    activeUsersManager.deactivateApplication(user, application);
-    // Inform the parent queue
-    getParent().finishApplication(application, user);
-  }
-
-  @Override
-  public void finishApplicationAttempt(FiCaSchedulerApp application, String queue) {
+  public void finishApplication(FiCaSchedulerApp application, String queue) {
     // Careful! Locking order is important!
     synchronized (this) {
-      removeApplicationAttempt(application, getUser(application.getUser()));
+      removeApplication(application, getUser(application.getUser()));
     }
-    getParent().finishApplicationAttempt(application, queue);
+
+    // Inform the parent queue
+    getParent().finishApplication(application, queue);
   }
 
-  public synchronized void removeApplicationAttempt(FiCaSchedulerApp application, User user) {
+  public synchronized void removeApplication(FiCaSchedulerApp application, User user) {
     boolean wasActive = activeApplications.remove(application);
     if (!wasActive) {
       pendingApplications.remove(application);
     }
-    applicationAttemptMap.remove(application.getApplicationAttemptId());
+    applicationsMap.remove(application.getApplicationAttemptId());
 
     user.finishApplication(wasActive);
     if (user.getTotalApplications() == 0) {
@@ -778,7 +766,13 @@ public class LeafQueue implements CSQueue {
 
     // Check if we can activate more applications
     activateApplications();
-
+    
+    // Inform the activeUsersManager
+    synchronized (application) {
+      activeUsersManager.deactivateApplication(
+          application.getUser(), application.getApplicationId());
+    }
+    
     LOG.info("Application removed -" +
         " appId: " + application.getApplicationId() + 
         " user: " + application.getUser() + 
@@ -789,10 +783,10 @@ public class LeafQueue implements CSQueue {
         " #queue-active-applications: " + getNumActiveApplications()
         );
   }
-
+  
   private synchronized FiCaSchedulerApp getApplication(
       ApplicationAttemptId applicationAttemptId) {
-    return applicationAttemptMap.get(applicationAttemptId);
+    return applicationsMap.get(applicationAttemptId);
   }
 
   private static final CSAssignment NULL_ASSIGNMENT =

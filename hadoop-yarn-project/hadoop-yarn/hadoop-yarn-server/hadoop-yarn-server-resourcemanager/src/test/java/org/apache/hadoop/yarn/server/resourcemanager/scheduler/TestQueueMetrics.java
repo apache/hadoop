@@ -37,7 +37,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -66,10 +66,8 @@ public class TestQueueMetrics {
     MetricsSource queueSource= queueSource(ms, queueName);
     AppSchedulingInfo app = mockApp(user);
 
-    metrics.submitApp(user);
+    metrics.submitApp(user, 1);
     MetricsSource userSource = userSource(ms, queueName, user);
-    checkApps(queueSource, 1, 0, 0, 0, 0, 0, true);
-    metrics.submitAppAttempt(user);
     checkApps(queueSource, 1, 1, 0, 0, 0, 0, true);
 
     metrics.setAvailableResourcesToQueue(Resources.createResource(100*GB, 100));
@@ -78,7 +76,7 @@ public class TestQueueMetrics {
     // configurable cluster/queue resources
     checkResources(queueSource, 0, 0, 0, 0, 0, 100*GB, 100, 15*GB, 15, 5, 0, 0, 0);
 
-    metrics.runAppAttempt(app.getApplicationId(), user);
+    metrics.incrAppsRunning(app, user);
     checkApps(queueSource, 1, 0, 1, 0, 0, 0, true);
 
     metrics.allocateResources(user, 3, Resources.createResource(2*GB, 2));
@@ -87,10 +85,7 @@ public class TestQueueMetrics {
     metrics.releaseResources(user, 1, Resources.createResource(2*GB, 2));
     checkResources(queueSource, 4*GB, 4, 2, 3, 1, 100*GB, 100, 9*GB, 9, 2, 0, 0, 0);
 
-    metrics.finishAppAttempt(
-        app.getApplicationId(), app.isPending(), app.getUser());
-    checkApps(queueSource, 1, 0, 0, 0, 0, 0, true);
-    metrics.finishApp(user, RMAppState.FINISHED);
+    metrics.finishApp(app, RMAppAttemptState.FINISHED);
     checkApps(queueSource, 1, 0, 0, 1, 0, 0, true);
     assertNull(userSource);
   }
@@ -105,47 +100,39 @@ public class TestQueueMetrics {
     MetricsSource queueSource = queueSource(ms, queueName);
     AppSchedulingInfo app = mockApp(user);
 
-    metrics.submitApp(user);
+    metrics.submitApp(user, 1);
     MetricsSource userSource = userSource(ms, queueName, user);
-    checkApps(queueSource, 1, 0, 0, 0, 0, 0, true);
-    metrics.submitAppAttempt(user);
     checkApps(queueSource, 1, 1, 0, 0, 0, 0, true);
 
-    metrics.runAppAttempt(app.getApplicationId(), user);
+    metrics.incrAppsRunning(app, user);
     checkApps(queueSource, 1, 0, 1, 0, 0, 0, true);
 
-    metrics.finishAppAttempt(
-        app.getApplicationId(), app.isPending(), app.getUser());
-    checkApps(queueSource, 1, 0, 0, 0, 0, 0, true);
+    metrics.finishApp(app, RMAppAttemptState.FAILED);
+    checkApps(queueSource, 1, 0, 0, 0, 1, 0, true);
 
     // As the application has failed, framework retries the same application
     // based on configuration
-    metrics.submitAppAttempt(user);
+    metrics.submitApp(user, 2);
     checkApps(queueSource, 1, 1, 0, 0, 0, 0, true);
 
-    metrics.runAppAttempt(app.getApplicationId(), user);
+    metrics.incrAppsRunning(app, user);
     checkApps(queueSource, 1, 0, 1, 0, 0, 0, true);
 
     // Suppose say application has failed this time as well.
-    metrics.finishAppAttempt(
-        app.getApplicationId(), app.isPending(), app.getUser());
-    checkApps(queueSource, 1, 0, 0, 0, 0, 0, true);
+    metrics.finishApp(app, RMAppAttemptState.FAILED);
+    checkApps(queueSource, 1, 0, 0, 0, 1, 0, true);
 
     // As the application has failed, framework retries the same application
     // based on configuration
-    metrics.submitAppAttempt(user);
+    metrics.submitApp(user, 3);
     checkApps(queueSource, 1, 1, 0, 0, 0, 0, true);
 
-    metrics.runAppAttempt(app.getApplicationId(), user);
+    metrics.incrAppsRunning(app, user);
     checkApps(queueSource, 1, 0, 1, 0, 0, 0, true);
 
-    // Suppose say application has failed, and there's no more retries.
-    metrics.finishAppAttempt(
-        app.getApplicationId(), app.isPending(), app.getUser());
-    checkApps(queueSource, 1, 0, 0, 0, 0, 0, true);
-
-    metrics.finishApp(user, RMAppState.FAILED);
-    checkApps(queueSource, 1, 0, 0, 0, 1, 0, true);
+    // Suppose say application has finished.
+    metrics.finishApp(app, RMAppAttemptState.FINISHED);
+    checkApps(queueSource, 1, 0, 0, 1, 0, 0, true);
 
     assertNull(userSource);
   }
@@ -159,13 +146,9 @@ public class TestQueueMetrics {
     MetricsSource queueSource = queueSource(ms, queueName);
     AppSchedulingInfo app = mockApp(user);
 
-    metrics.submitApp(user);
+    metrics.submitApp(user, 1);
     MetricsSource userSource = userSource(ms, queueName, user);
 
-    checkApps(queueSource, 1, 0, 0, 0, 0, 0, true);
-    checkApps(userSource, 1, 0, 0, 0, 0, 0, true);
-
-    metrics.submitAppAttempt(user);
     checkApps(queueSource, 1, 1, 0, 0, 0, 0, true);
     checkApps(userSource, 1, 1, 0, 0, 0, 0, true);
 
@@ -177,7 +160,7 @@ public class TestQueueMetrics {
     checkResources(queueSource, 0, 0, 0, 0, 0,  100*GB, 100, 15*GB, 15, 5, 0, 0, 0);
     checkResources(userSource, 0, 0, 0, 0, 0, 10*GB, 10, 15*GB, 15, 5, 0, 0, 0);
 
-    metrics.runAppAttempt(app.getApplicationId(), user);
+    metrics.incrAppsRunning(app, user);
     checkApps(queueSource, 1, 0, 1, 0, 0, 0, true);
     checkApps(userSource, 1, 0, 1, 0, 0, 0, true);
 
@@ -189,11 +172,7 @@ public class TestQueueMetrics {
     checkResources(queueSource, 4*GB, 4, 2, 3, 1, 100*GB, 100, 9*GB, 9, 2, 0, 0, 0);
     checkResources(userSource, 4*GB, 4, 2, 3, 1, 10*GB, 10, 9*GB, 9, 2, 0, 0, 0);
 
-    metrics.finishAppAttempt(
-        app.getApplicationId(), app.isPending(), app.getUser());
-    checkApps(queueSource, 1, 0, 0, 0, 0, 0, true);
-    checkApps(userSource, 1, 0, 0, 0, 0, 0, true);
-    metrics.finishApp(user, RMAppState.FINISHED);
+    metrics.finishApp(app, RMAppAttemptState.FINISHED);
     checkApps(queueSource, 1, 0, 0, 1, 0, 0, true);
     checkApps(userSource, 1, 0, 0, 1, 0, 0, true);
   }
@@ -213,16 +192,10 @@ public class TestQueueMetrics {
     MetricsSource queueSource = queueSource(ms, leafQueueName);
     AppSchedulingInfo app = mockApp(user);
 
-    metrics.submitApp(user);
+    metrics.submitApp(user, 1);
     MetricsSource userSource = userSource(ms, leafQueueName, user);
     MetricsSource parentUserSource = userSource(ms, parentQueueName, user);
 
-    checkApps(queueSource, 1, 0, 0, 0, 0, 0, true);
-    checkApps(parentQueueSource, 1, 0, 0, 0, 0, 0, true);
-    checkApps(userSource, 1, 0, 0, 0, 0, 0, true);
-    checkApps(parentUserSource, 1, 0, 0, 0, 0, 0, true);
-
-    metrics.submitAppAttempt(user);
     checkApps(queueSource, 1, 1, 0, 0, 0, 0, true);
     checkApps(parentQueueSource, 1, 1, 0, 0, 0, 0, true);
     checkApps(userSource, 1, 1, 0, 0, 0, 0, true);
@@ -238,7 +211,7 @@ public class TestQueueMetrics {
     checkResources(userSource, 0, 0, 0, 0, 0, 10*GB, 10, 15*GB, 15, 5, 0, 0, 0);
     checkResources(parentUserSource, 0, 0, 0, 0, 0, 10*GB, 10, 15*GB, 15, 5, 0, 0, 0);
 
-    metrics.runAppAttempt(app.getApplicationId(), user);
+    metrics.incrAppsRunning(app, user);
     checkApps(queueSource, 1, 0, 1, 0, 0, 0, true);
     checkApps(userSource, 1, 0, 1, 0, 0, 0, true);
 
@@ -258,14 +231,7 @@ public class TestQueueMetrics {
     checkResources(userSource, 4*GB, 4, 2, 3, 1, 10*GB, 10, 9*GB, 9, 2, 0, 0, 0);
     checkResources(parentUserSource, 4*GB, 4, 2, 3, 1, 10*GB, 10, 9*GB, 9, 2, 0, 0, 0);
 
-    metrics.finishAppAttempt(
-        app.getApplicationId(), app.isPending(), app.getUser());
-    checkApps(queueSource, 1, 0, 0, 0, 0, 0, true);
-    checkApps(parentQueueSource, 1, 0, 0, 0, 0, 0, true);
-    checkApps(userSource, 1, 0, 0, 0, 0, 0, true);
-    checkApps(parentUserSource, 1, 0, 0, 0, 0, 0, true);
-
-    metrics.finishApp(user, RMAppState.FINISHED);
+    metrics.finishApp(app, RMAppAttemptState.FINISHED);
     checkApps(queueSource, 1, 0, 0, 1, 0, 0, true);
     checkApps(parentQueueSource, 1, 0, 0, 1, 0, 0, true);
     checkApps(userSource, 1, 0, 0, 1, 0, 0, true);
@@ -342,7 +308,7 @@ public class TestQueueMetrics {
     assertGauge("AppsPending", pending, rb);
     assertGauge("AppsRunning", running, rb);
     assertCounter("AppsCompleted", completed, rb);
-    assertCounter("AppsFailed", failed, rb);
+    assertGauge("AppsFailed", failed, rb);
     assertCounter("AppsKilled", killed, rb);
   }
 

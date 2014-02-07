@@ -61,11 +61,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppReport;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.TestSchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestCapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
@@ -152,16 +150,14 @@ public class TestFifoScheduler {
     ApplicationAttemptId appAttemptId = BuilderUtils.newApplicationAttemptId(
         appId, 1);
 
-    SchedulerEvent appEvent = new AppAddedSchedulerEvent(appId, "queue", "user");
-    schedular.handle(appEvent);
-    SchedulerEvent attemptEvent =
-        new AppAttemptAddedSchedulerEvent(appAttemptId, false);
-    schedular.handle(attemptEvent);
+    SchedulerEvent event =
+        new AppAttemptAddedSchedulerEvent(appAttemptId, "queue", "user");
+    schedular.handle(event);
 
     appAttemptId = BuilderUtils.newApplicationAttemptId(appId, 2);
-    SchedulerEvent attemptEvent2 =
-        new AppAttemptAddedSchedulerEvent(appAttemptId, false);
-    schedular.handle(attemptEvent2);
+
+    event = new AppAttemptAddedSchedulerEvent(appAttemptId, "queue", "user");
+    schedular.handle(event);
 
     int afterAppsSubmitted = metrics.getAppsSubmitted();
     Assert.assertEquals(1, afterAppsSubmitted - beforeAppsSubmitted);
@@ -192,13 +188,9 @@ public class TestFifoScheduler {
     int _appAttemptId = 1;
     ApplicationAttemptId appAttemptId = createAppAttemptId(_appId,
         _appAttemptId);
-    AppAddedSchedulerEvent appEvent =
-        new AppAddedSchedulerEvent(appAttemptId.getApplicationId(), "queue1",
-          "user1");
-    scheduler.handle(appEvent);
-    AppAttemptAddedSchedulerEvent attemptEvent =
-        new AppAttemptAddedSchedulerEvent(appAttemptId, false);
-    scheduler.handle(attemptEvent);
+    AppAttemptAddedSchedulerEvent appEvent1 =
+        new AppAttemptAddedSchedulerEvent(appAttemptId, "queue1", "user1");
+    scheduler.handle(appEvent1);
 
     int memory = 64;
     int nConts = 3;
@@ -282,13 +274,9 @@ public class TestFifoScheduler {
     int _appAttemptId = 1;
     ApplicationAttemptId appAttemptId = createAppAttemptId(_appId,
         _appAttemptId);
-    AppAddedSchedulerEvent appEvent =
-        new AppAddedSchedulerEvent(appAttemptId.getApplicationId(), "queue1",
-          "user1");
-    scheduler.handle(appEvent);
-    AppAttemptAddedSchedulerEvent attemptEvent =
-        new AppAttemptAddedSchedulerEvent(appAttemptId, false);
-    scheduler.handle(attemptEvent);
+    AppAttemptAddedSchedulerEvent appEvent1 =
+        new AppAttemptAddedSchedulerEvent(appAttemptId, "queue1", "user1");
+    scheduler.handle(appEvent1);
 
     int memory = 1024;
     int priority = 1;
@@ -528,6 +516,13 @@ public class TestFifoScheduler {
     LOG.info("--- END: testFifoScheduler ---");
   }
 
+  @Test
+  public void testConcurrentAccessOnApplications() throws Exception {
+    FifoScheduler fs = new FifoScheduler();
+    TestCapacityScheduler.verifyConcurrentAccessOnApplications(
+        fs.applications, FiCaSchedulerApp.class, Queue.class);
+  }
+
   @SuppressWarnings("resource")
   @Test
   public void testBlackListNodes() throws Exception {
@@ -546,23 +541,19 @@ public class TestFifoScheduler {
     ApplicationId appId = BuilderUtils.newApplicationId(100, 1);
     ApplicationAttemptId appAttemptId = BuilderUtils.newApplicationAttemptId(
         appId, 1);
-    SchedulerEvent appEvent =
-        new AppAddedSchedulerEvent(appId, "default",
-          "user");
-    fs.handle(appEvent);
-    SchedulerEvent attemptEvent =
-        new AppAttemptAddedSchedulerEvent(appAttemptId, false);
-    fs.handle(attemptEvent);
+    SchedulerEvent event =
+        new AppAttemptAddedSchedulerEvent(appAttemptId, "default", "user");
+    fs.handle(event);
 
     // Verify the blacklist can be updated independent of requesting containers
     fs.allocate(appAttemptId, Collections.<ResourceRequest>emptyList(),
         Collections.<ContainerId>emptyList(),
         Collections.singletonList(host), null);
-    Assert.assertTrue(fs.getApplicationAttempt(appAttemptId).isBlacklisted(host));
+    Assert.assertTrue(fs.getApplication(appAttemptId).isBlacklisted(host));
     fs.allocate(appAttemptId, Collections.<ResourceRequest>emptyList(),
         Collections.<ContainerId>emptyList(), null,
         Collections.singletonList(host));
-    Assert.assertFalse(fs.getApplicationAttempt(appAttemptId).isBlacklisted(host));
+    Assert.assertFalse(fs.getApplication(appAttemptId).isBlacklisted(host));
     rm.stop();
   }
   
@@ -582,17 +573,6 @@ public class TestFifoScheduler {
     assertEquals(2, appsInDefault.size());
     
     Assert.assertNull(scheduler.getAppsInQueue("someotherqueue"));
-  }
-
-  @Test
-  public void testAddAndRemoveAppFromFiFoScheduler() throws Exception {
-    Configuration conf = new Configuration();
-    conf.setClass(YarnConfiguration.RM_SCHEDULER, FifoScheduler.class,
-        ResourceScheduler.class);
-    MockRM rm = new MockRM(conf);
-    FifoScheduler fs = (FifoScheduler)rm.getResourceScheduler();
-    TestSchedulerUtils.verifyAppAddedAndRemovedFromScheduler(
-      fs.getSchedulerApplications(), fs, "queue");
   }
 
   private void checkApplicationResourceUsage(int expected, 

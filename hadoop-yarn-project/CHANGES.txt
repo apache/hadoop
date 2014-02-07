@@ -43,17 +43,7 @@ Release 2.3.0 - UNRELEASED
     YARN-1029. Added embedded leader election in the ResourceManager. (Karthik
     Kambatla via vinodkv)
 
-    YARN-1490. Introduced the ability to make ResourceManager optionally not kill
-    all containers when an ApplicationMaster exits. (Jian He via vinodkv)
-
     YARN-1033. Expose RM active/standby state to Web UI and REST API (kasha)
-
-    YARN-1041. Added the ApplicationMasterProtocol API for applications to use the
-    ability in ResourceManager to optionally not kill containers when the
-    ApplicationMaster exits. (Jian He via vinodkv)
-
-    YARN-1566. Changed Distributed Shell to retain containers across application
-    attempts. (Jian He via vinodkv)
 
   IMPROVEMENTS
 
@@ -217,9 +207,6 @@ Release 2.3.0 - UNRELEASED
 
     YARN-1541. Changed ResourceManager to invalidate ApplicationMaster host/port
     information once an AM crashes. (Jian He via vinodkv)
-
-    YARN-1493. Changed ResourceManager and Scheduler interfacing to recognize
-    app-attempts separately from apps. (Jian He via vinodkv)
 
     YARN-1482. Modified WebApplicationProxy to make it work across ResourceManager
     fail-over. (Xuan Gong via vinodkv)
@@ -406,9 +393,6 @@ Release 2.3.0 - UNRELEASED
     YARN-1574. RMDispatcher should be reset on transition to standby. (Xuan Gong
     via kasha)
 
-    YARN-1166. Fixed app-specific and attempt-specific QueueMetrics to be
-    triggered by accordingly app event and attempt event. 
-
     YARN-1598. HA-related rmadmin commands don't work on a secure cluster (kasha)
 
     YARN-1603. Remove two *.orig files which were unexpectedly committed. 
@@ -434,12 +418,6 @@ Release 2.3.0 - UNRELEASED
     YARN-1629. IndexOutOfBoundsException in MaxRunningAppsEnforcer (Sandy Ryza)
 
     YARN-1628. Fixed the test failure in TestContainerManagerSecurity. (Vinod
-    Kumar Vavilapalli via zjshen)
-
-    YARN-1661. Fixed DS ApplicationMaster to write the correct exit log. (Vinod
-    Kumar Vavilapalli via zjshen)
-
-    YARN-1689. Made RMAppAttempt get killed when RMApp is at ACCEPTED. (Vinod
     Kumar Vavilapalli via zjshen)
 
 Release 2.2.0 - 2013-10-13

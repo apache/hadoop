@@ -41,9 +41,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppFailedAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.QueueACLsManager;
@@ -1384,29 +1386,24 @@ public class TestRMWebServicesApps extends JerseyTest {
     rm.stop();
   }
 
-  @Test (timeout = 20000)
+  @Test
   public void testMultipleAppAttempts() throws JSONException, Exception {
     rm.start();
-    MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 8192);
+    MockNM amNodeManager = rm.registerNode("127.0.0.1:1234", 2048);
     RMApp app1 = rm.submitApp(CONTAINER_MB, "testwordcount", "user1");
-    MockAM am = MockRM.launchAndRegisterAM(app1, rm, amNodeManager);
+    amNodeManager.nodeHeartbeat(true);
     int maxAppAttempts = rm.getConfig().getInt(
         YarnConfiguration.RM_AM_MAX_ATTEMPTS,
         YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
     assertTrue(maxAppAttempts > 1);
-    int numAttempt = 1;
-    while (true) {
-      // fail the AM by sending CONTAINER_FINISHED event without registering.
-      amNodeManager.nodeHeartbeat(am.getApplicationAttemptId(), 1, ContainerState.COMPLETE);
-      am.waitForState(RMAppAttemptState.FAILED);
-      if (numAttempt == maxAppAttempts) {
-        rm.waitForState(app1.getApplicationId(), RMAppState.FAILED);
-        break;
-      }
-      // wait for app to start a new attempt.
+    int retriesLeft = maxAppAttempts;
+    while (--retriesLeft > 0) {
+      RMAppEvent event =
+          new RMAppFailedAttemptEvent(app1.getApplicationId(),
+              RMAppEventType.ATTEMPT_FAILED, "");
+      app1.handle(event);
       rm.waitForState(app1.getApplicationId(), RMAppState.ACCEPTED);
-      am = MockRM.launchAndRegisterAM(app1, rm, amNodeManager);
-      numAttempt++;
+      amNodeManager.nodeHeartbeat(true);
     }
     assertEquals("incorrect number of attempts", maxAppAttempts,
         app1.getAppAttempts().values().size());

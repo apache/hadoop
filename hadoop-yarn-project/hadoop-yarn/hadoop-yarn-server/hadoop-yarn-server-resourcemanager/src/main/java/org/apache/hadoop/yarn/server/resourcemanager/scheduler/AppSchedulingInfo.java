@@ -59,10 +59,10 @@ public class AppSchedulingInfo {
 
   final Set<Priority> priorities = new TreeSet<Priority>(
       new org.apache.hadoop.yarn.server.resourcemanager.resource.Priority.Comparator());
-  final Map<Priority, Map<String, ResourceRequest>> requests =
+  final Map<Priority, Map<String, ResourceRequest>> requests = 
     new HashMap<Priority, Map<String, ResourceRequest>>();
-  private Set<String> blacklist = new HashSet<String>();
-
+  final Set<String> blacklist = new HashSet<String>();
+  
   //private final ApplicationStore store;
   private final ActiveUsersManager activeUsersManager;
   
@@ -260,7 +260,7 @@ public class AppSchedulingInfo {
       // once an allocation is done we assume the application is
       // running from scheduler's POV.
       pending = false;
-      metrics.runAppAttempt(applicationId, user);
+      metrics.incrAppsRunning(this, user);
     }
     LOG.debug("allocate: user: " + user + ", memory: "
         + request.getCapability());
@@ -390,7 +390,7 @@ public class AppSchedulingInfo {
                 .getNumContainers()));
       }
     }
-    metrics.finishAppAttempt(applicationId, pending, user);
+    metrics.finishApp(this, rmAppAttemptFinalState);
     
     // Clear requests themselves
     clearRequests();
@@ -398,16 +398,5 @@ public class AppSchedulingInfo {
 
   public synchronized void setQueue(Queue queue) {
     this.queue = queue;
-  }
-
-  public synchronized Set<String> getBlackList() {
-    return this.blacklist;
-  }
-
-  public synchronized void transferStateFromPreviousAppSchedulingInfo(
-      AppSchedulingInfo appInfo) {
-    //    this.priorities = appInfo.getPriorities();
-    //    this.requests = appInfo.getRequests();
-    this.blacklist = appInfo.getBlackList();
   }
 }

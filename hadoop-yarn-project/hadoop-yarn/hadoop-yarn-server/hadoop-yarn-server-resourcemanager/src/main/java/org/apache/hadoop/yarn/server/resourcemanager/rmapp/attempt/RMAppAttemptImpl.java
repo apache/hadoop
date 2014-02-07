@@ -75,11 +75,13 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppFailedAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppFinishedAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppRejectedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerAcquiredEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerFinishedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptLaunchFailedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptNewSavedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptRegistrationEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptRejectedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptStatusupdateEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptUnregistrationEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptUpdateSavedEvent;
@@ -129,9 +131,9 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
   private SecretKey clientTokenMasterKey = null;
 
   //nodes on while this attempt's containers ran
-  private Set<NodeId> ranNodes =
+  private final Set<NodeId> ranNodes =
     new HashSet<NodeId>();
-  private List<ContainerStatus> justFinishedContainers =
+  private final List<ContainerStatus> justFinishedContainers =
     new ArrayList<ContainerStatus>();
   private Container masterContainer;
 
@@ -148,7 +150,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
   private final StringBuilder diagnostics = new StringBuilder();
 
   private Configuration conf;
-  private final boolean isLastAttempt;
+  private String user;
+  
   private static final ExpiredTransition EXPIRED_TRANSITION =
       new ExpiredTransition();
 
@@ -183,10 +186,14 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
           RMAppAttemptEventType.RECOVER, new AttemptRecoveredTransition())
           
       // Transitions from SUBMITTED state
+      .addTransition(RMAppAttemptState.SUBMITTED, RMAppAttemptState.FINAL_SAVING,
+          RMAppAttemptEventType.APP_REJECTED,
+          new FinalSavingTransition(new AppRejectedTransition(),
+            RMAppAttemptState.FAILED))
       .addTransition(RMAppAttemptState.SUBMITTED, 
           EnumSet.of(RMAppAttemptState.LAUNCHED_UNMANAGED_SAVING,
                      RMAppAttemptState.SCHEDULED),
-          RMAppAttemptEventType.ATTEMPT_ADDED,
+          RMAppAttemptEventType.APP_ACCEPTED, 
           new ScheduleTransition())
       .addTransition(RMAppAttemptState.SUBMITTED, RMAppAttemptState.FINAL_SAVING,
           RMAppAttemptEventType.KILL,
@@ -330,12 +337,6 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
               RMAppAttemptEventType.KILL))
 
       // Transitions from FAILED State
-      // For work-preserving AM restart, failed attempt are still capturing
-      // CONTAINER_FINISHED event and record the finished containers for the
-      // use by the next new attempt.
-      .addTransition(RMAppAttemptState.FAILED, RMAppAttemptState.FAILED,
-          RMAppAttemptEventType.CONTAINER_FINISHED,
-          new ContainerFinishedAtFailedTransition())
       .addTransition(
           RMAppAttemptState.FAILED,
           RMAppAttemptState.FAILED,
@@ -344,7 +345,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
               RMAppAttemptEventType.KILL,
               RMAppAttemptEventType.UNREGISTERED,
               RMAppAttemptEventType.STATUS_UPDATE,
-              RMAppAttemptEventType.CONTAINER_ALLOCATED))
+              RMAppAttemptEventType.CONTAINER_ALLOCATED,
+              RMAppAttemptEventType.CONTAINER_FINISHED))
 
       // Transitions from FINISHING State
       .addTransition(RMAppAttemptState.FINISHING,
@@ -378,7 +380,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       .addTransition(
           RMAppAttemptState.KILLED,
           RMAppAttemptState.KILLED,
-          EnumSet.of(RMAppAttemptEventType.ATTEMPT_ADDED,
+          EnumSet.of(RMAppAttemptEventType.APP_ACCEPTED,
+              RMAppAttemptEventType.APP_REJECTED,
               RMAppAttemptEventType.EXPIRE,
               RMAppAttemptEventType.LAUNCHED,
               RMAppAttemptEventType.LAUNCH_FAILED,
@@ -395,7 +398,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       RMContext rmContext, YarnScheduler scheduler,
       ApplicationMasterService masterService,
       ApplicationSubmissionContext submissionContext,
-      Configuration conf, boolean isLastAttempt) {
+      Configuration conf, String user) {
     this.conf = conf;
     this.applicationAttemptId = appAttemptId;
     this.rmContext = rmContext;
@@ -409,8 +412,9 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     this.writeLock = lock.writeLock();
 
     this.proxiedTrackingUrl = generateProxyUriWithScheme(null);
-    this.isLastAttempt = isLastAttempt;
+    
     this.stateMachine = stateMachineFactory.make(this);
+    this.user = user;
   }
 
   @Override
@@ -421,7 +425,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
   @Override
   public ApplicationSubmissionContext getSubmissionContext() {
     return this.submissionContext;
-  }
+  } 
 
   @Override
   public FinalApplicationStatus getFinalApplicationStatus() {
@@ -690,11 +694,6 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     this.startTime = attemptState.getStartTime();
   }
 
-  public void transferStateFromPreviousAttempt(RMAppAttempt attempt) {
-    this.justFinishedContainers = attempt.getJustFinishedContainers();
-    this.ranNodes = attempt.getRanNodes();
-  }
-
   private void recoverAppAttemptCredentials(Credentials appAttemptTokens)
       throws IOException {
     if (appAttemptTokens == null) {
@@ -731,12 +730,6 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     public void transition(RMAppAttemptImpl appAttempt,
         RMAppAttemptEvent event) {
 
-	    boolean transferStateFromPreviousAttempt = false;
-      if (event instanceof RMAppStartAttemptEvent) {
-        transferStateFromPreviousAttempt =
-            ((RMAppStartAttemptEvent) event)
-              .getTransferStateFromPreviousAttempt();
-      }
       appAttempt.startTime = System.currentTimeMillis();
 
       // Register with the ApplicationMasterService
@@ -756,10 +749,36 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
           new Token<AMRMTokenIdentifier>(id,
             appAttempt.rmContext.getAMRMTokenSecretManager());
 
-      // Add the applicationAttempt to the scheduler and inform the scheduler
-      // whether to transfer the state from previous attempt.
-      appAttempt.eventHandler.handle(new AppAttemptAddedSchedulerEvent(
-        appAttempt.applicationAttemptId, transferStateFromPreviousAttempt));
+      // Add the applicationAttempt to the scheduler
+      appAttempt.eventHandler.handle(
+          new AppAttemptAddedSchedulerEvent(appAttempt.applicationAttemptId,
+              appAttempt.submissionContext.getQueue(), appAttempt.user));
+    }
+  }
+
+  private static final class AppRejectedTransition extends BaseTransition {
+    @Override
+    public void transition(RMAppAttemptImpl appAttempt,
+        RMAppAttemptEvent event) {
+
+      RMAppAttemptRejectedEvent rejectedEvent = (RMAppAttemptRejectedEvent) event;
+
+      // Tell the AMS. Unregister from the ApplicationMasterService
+      appAttempt.masterService
+          .unregisterAttempt(appAttempt.applicationAttemptId);
+      
+      // Save the diagnostic message
+      String message = rejectedEvent.getMessage();
+      appAttempt.diagnostics.append(message);
+
+      // Send the rejection event to app
+      appAttempt.eventHandler.handle(
+          new RMAppRejectedEvent(
+              rejectedEvent.getApplicationAttemptId().getApplicationId(),
+              message)
+          );
+
+      appAttempt.removeCredentials(appAttempt);
     }
   }
 
@@ -775,6 +794,11 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     public RMAppAttemptState transition(RMAppAttemptImpl appAttempt,
         RMAppAttemptEvent event) {
       if (!appAttempt.submissionContext.getUnmanagedAM()) {
+        // Send the acceptance to the app
+        appAttempt.eventHandler.handle(new RMAppEvent(event
+            .getApplicationAttemptId().getApplicationId(),
+            RMAppEventType.APP_ACCEPTED));
+
         // Request a container for the AM.
         ResourceRequest request =
             BuilderUtils.newResourceRequest(
@@ -894,6 +918,11 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     FinalApplicationStatus finalStatus = null;
 
     switch (event.getType()) {
+    case APP_REJECTED:
+      RMAppAttemptRejectedEvent rejectedEvent =
+          (RMAppAttemptRejectedEvent) event;
+      diags = rejectedEvent.getMessage();
+      break;
     case LAUNCH_FAILED:
       RMAppAttemptLaunchFailedEvent launchFaileEvent =
           (RMAppAttemptLaunchFailedEvent) event;
@@ -998,7 +1027,6 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       // Tell the application and the scheduler
       ApplicationId applicationId = appAttemptId.getApplicationId();
       RMAppEvent appEvent = null;
-      boolean keepContainersAcrossAppAttempts = false;
       switch (finalAttemptState) {
         case FINISHED:
         {
@@ -1014,7 +1042,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
           appEvent =
               new RMAppFailedAttemptEvent(applicationId,
                   RMAppEventType.ATTEMPT_KILLED,
-                  "Application killed by user.", false);
+                  "Application killed by user.");
         }
         break;
         case FAILED:
@@ -1022,17 +1050,10 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
           // don't leave the tracking URL pointing to a non-existent AM
           appAttempt.setTrackingUrlToRMAppPage();
           appAttempt.invalidateAMHostAndPort();
-          if (appAttempt.submissionContext
-            .getKeepContainersAcrossApplicationAttempts()
-              && !appAttempt.isLastAttempt
-              && !appAttempt.submissionContext.getUnmanagedAM()) {
-            keepContainersAcrossAppAttempts = true;
-          }
           appEvent =
               new RMAppFailedAttemptEvent(applicationId,
-                RMAppEventType.ATTEMPT_FAILED, appAttempt.getDiagnostics(),
-                keepContainersAcrossAppAttempts);
-
+                  RMAppEventType.ATTEMPT_FAILED,
+                  appAttempt.getDiagnostics());
         }
         break;
         default:
@@ -1044,7 +1065,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
 
       appAttempt.eventHandler.handle(appEvent);
       appAttempt.eventHandler.handle(new AppAttemptRemovedSchedulerEvent(
-        appAttemptId, finalAttemptState, keepContainersAcrossAppAttempts));
+        appAttemptId, finalAttemptState));
       appAttempt.removeCredentials(appAttempt);
     }
   }
@@ -1070,11 +1091,16 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     public void transition(RMAppAttemptImpl appAttempt,
                             RMAppAttemptEvent event) {
       appAttempt.checkAttemptStoreError(event);
-      // TODO Today unmanaged AM client is waiting for app state to be Accepted to
-      // launch the AM. This is broken since we changed to start the attempt
-      // after the application is Accepted. We may need to introduce an attempt
-      // report that client can rely on to query the attempt state and choose to
-      // launch the unmanaged AM.
+      // Send the acceptance to the app
+      // Ideally this should have been done when the scheduler accepted the app.
+      // But its here because until the attempt is saved the client should not
+      // launch the unmanaged AM. Client waits for the app status to be accepted
+      // before doing so. So we have to delay the accepted state until we have 
+      // completed storing the attempt
+      appAttempt.eventHandler.handle(new RMAppEvent(event
+          .getApplicationAttemptId().getApplicationId(),
+          RMAppEventType.APP_ACCEPTED));
+      
       super.transition(appAttempt, event);
     }    
   }
@@ -1373,20 +1399,6 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       // Normal container.Put it in completedcontainers list
       appAttempt.justFinishedContainers.add(containerStatus);
       return RMAppAttemptState.RUNNING;
-    }
-  }
-
-  private static final class ContainerFinishedAtFailedTransition
-      extends BaseTransition {
-    @Override
-    public void
-        transition(RMAppAttemptImpl appAttempt, RMAppAttemptEvent event) {
-      RMAppAttemptContainerFinishedEvent containerFinishedEvent =
-          (RMAppAttemptContainerFinishedEvent) event;
-      ContainerStatus containerStatus =
-          containerFinishedEvent.getContainerStatus();
-      // Normal container. Add it in completed containers list
-      appAttempt.justFinishedContainers.add(containerStatus);
     }
   }
 

@@ -64,9 +64,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptRemovedSchedulerEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
@@ -106,8 +105,8 @@ public class ResourceSchedulerWrapper implements ResourceScheduler,
 
   private Configuration conf;
   private ResourceScheduler scheduler;
-  private Map<ApplicationId, String> appQueueMap =
-          new ConcurrentHashMap<ApplicationId, String>();
+  private Map<ApplicationAttemptId, String> appQueueMap =
+          new ConcurrentHashMap<ApplicationAttemptId, String>();
   private BufferedWriter jobRuntimeLogBW;
 
   // Priority of the ResourceSchedulerWrapper shutdown hook.
@@ -242,7 +241,7 @@ public class ResourceSchedulerWrapper implements ResourceScheduler,
             (AppAttemptRemovedSchedulerEvent) schedulerEvent;
         ApplicationAttemptId appAttemptId =
                 appRemoveEvent.getApplicationAttemptID();
-        String queue = appQueueMap.get(appAttemptId.getApplicationId());
+        String queue = appQueueMap.get(appAttemptId);
         SchedulerAppReport app = scheduler.getSchedulerAppInfo(appAttemptId);
         if (! app.getLiveContainers().isEmpty()) {  // have 0 or 1
           // should have one container which is AM container
@@ -264,18 +263,20 @@ public class ResourceSchedulerWrapper implements ResourceScheduler,
       schedulerHandleCounter.inc();
       schedulerHandleCounterMap.get(schedulerEvent.getType()).inc();
 
-      if (schedulerEvent.getType() == SchedulerEventType.APP_REMOVED
-          && schedulerEvent instanceof AppRemovedSchedulerEvent) {
+      if (schedulerEvent.getType() == SchedulerEventType.APP_ATTEMPT_REMOVED
+          && schedulerEvent instanceof AppAttemptRemovedSchedulerEvent) {
         SLSRunner.decreaseRemainingApps();
-        AppRemovedSchedulerEvent appRemoveEvent =
-                (AppRemovedSchedulerEvent) schedulerEvent;
-        appQueueMap.remove(appRemoveEvent.getApplicationID());
-      } else if (schedulerEvent.getType() == SchedulerEventType.APP_ADDED
-          && schedulerEvent instanceof AppAddedSchedulerEvent) {
-        AppAddedSchedulerEvent appAddEvent =
-                (AppAddedSchedulerEvent) schedulerEvent;
+        AppAttemptRemovedSchedulerEvent appRemoveEvent =
+                (AppAttemptRemovedSchedulerEvent) schedulerEvent;
+        ApplicationAttemptId appAttemptId =
+                appRemoveEvent.getApplicationAttemptID();
+        appQueueMap.remove(appRemoveEvent.getApplicationAttemptID());
+      } else if (schedulerEvent.getType() == SchedulerEventType.APP_ATTEMPT_ADDED
+          && schedulerEvent instanceof AppAttemptAddedSchedulerEvent) {
+        AppAttemptAddedSchedulerEvent appAddEvent =
+                (AppAttemptAddedSchedulerEvent) schedulerEvent;
         String queueName = appAddEvent.getQueue();
-        appQueueMap.put(appAddEvent.getApplicationId(), queueName);
+        appQueueMap.put(appAddEvent.getApplicationAttemptId(), queueName);
       }
     }
   }
@@ -297,9 +298,7 @@ public class ResourceSchedulerWrapper implements ResourceScheduler,
           continue;
         }
 
-        String queue =
-            appQueueMap.get(containerId.getApplicationAttemptId()
-              .getApplicationId());
+        String queue = appQueueMap.get(containerId.getApplicationAttemptId());
         int releasedMemory = 0, releasedVCores = 0;
         if (status.getExitStatus() == ContainerExitStatus.SUCCESS) {
           for (RMContainer rmc : app.getLiveContainers()) {
@@ -331,7 +330,7 @@ public class ResourceSchedulerWrapper implements ResourceScheduler,
     // update queue information
     Resource pendingResource = Resources.createResource(0, 0);
     Resource allocatedResource = Resources.createResource(0, 0);
-    String queueName = appQueueMap.get(attemptId.getApplicationId());
+    String queueName = appQueueMap.get(attemptId);
     // container requested
     for (ResourceRequest request : resourceRequests) {
       if (request.getResourceName().equals(ResourceRequest.ANY)) {
@@ -860,11 +859,6 @@ public class ResourceSchedulerWrapper implements ResourceScheduler,
   @Override
   public List<ApplicationAttemptId> getAppsInQueue(String queue) {
     return scheduler.getAppsInQueue(queue);
-  }
-
-  @Override
-  public RMContainer getRMContainer(ContainerId containerId) {
-    return null;
   }
 }
 

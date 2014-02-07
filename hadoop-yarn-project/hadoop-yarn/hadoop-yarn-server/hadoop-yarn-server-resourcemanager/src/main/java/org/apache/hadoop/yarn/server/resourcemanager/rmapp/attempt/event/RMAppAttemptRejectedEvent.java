@@ -16,21 +16,22 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt;
+package org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event;
 
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
 
-public class RMAppStartAttemptEvent extends RMAppAttemptEvent {
+public class RMAppAttemptRejectedEvent extends RMAppAttemptEvent {
 
-  private final boolean transferStateFromPreviousAttempt;
+  private final String message;
 
-  public RMAppStartAttemptEvent(ApplicationAttemptId appAttemptId,
-      boolean transferStateFromPreviousAttempt) {
-    super(appAttemptId, RMAppAttemptEventType.START);
-    this.transferStateFromPreviousAttempt = transferStateFromPreviousAttempt;
+  public RMAppAttemptRejectedEvent(ApplicationAttemptId appAttemptId, String message) {
+    super(appAttemptId, RMAppAttemptEventType.APP_REJECTED);
+    this.message = message;
   }
 
-  public boolean getTransferStateFromPreviousAttempt() {
-    return transferStateFromPreviousAttempt;
+  public String getMessage() {
+    return this.message;
   }
 }
