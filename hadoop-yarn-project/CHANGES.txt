@@ -17,6 +17,9 @@ Trunk - Unreleased
     YARN-1499. Fair Scheduler changes for moving apps between queues (Sandy
     Ryza)
 
+    YARN-1497. Command line additions for moving apps between queues (Sandy
+    Ryza)
+
   IMPROVEMENTS
 
   OPTIMIZATIONS
