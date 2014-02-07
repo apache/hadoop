@@ -37,3 +37,6 @@ HDFS-5698 subtasks
 
     HDFS-5884. LoadDelegator should use IOUtils.readFully() to read the magic
     header. (Haohui Mai via jing9)
+
+    HDFS-5885. Add annotation for repeated fields in the protobuf definition.
+    (Haohui Mai via jing9)

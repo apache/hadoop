@@ -163,7 +163,7 @@ message FilesUnderConstructionSection {
 message INodeDirectorySection {
   message DirEntry {
     optional uint64 parent = 1;
-    repeated uint64 children = 2;
+    repeated uint64 children = 2 [packed = true];
     optional uint64 numOfRef = 3;
     // repeated INodeReference...
   }
@@ -182,7 +182,7 @@ message SnapshotSection {
   }
 
   optional uint32 snapshotCounter = 1;
-  repeated uint64 snapshottableDir = 2;
+  repeated uint64 snapshottableDir = 2 [packed = true];
   // total number of snapshots
   optional uint32 numSnapshots = 3;
   // repeated Snapshot...
@@ -205,7 +205,7 @@ message SnapshotDiffSection {
     optional INodeSection.INodeDirectory snapshotCopy = 5;
     optional uint32 createdListSize = 6;
     optional uint32 numOfDeletedRef = 7; // number of reference nodes in deleted list
-    repeated uint64 deletedINode = 8; // id of deleted inode
+    repeated uint64 deletedINode = 8 [packed = true]; // id of deleted inode
     // repeated CreatedListEntry (size is specified by createdListSize)
     // repeated INodeReference (reference inodes in deleted list)
   }
