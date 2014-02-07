@@ -373,11 +373,11 @@ public class YarnConfiguration extends Configuration {
 
   public static final String AUTO_FAILOVER_ENABLED =
       AUTO_FAILOVER_PREFIX + "enabled";
-  public static final boolean DEFAULT_AUTO_FAILOVER_ENABLED = false;
+  public static final boolean DEFAULT_AUTO_FAILOVER_ENABLED = true;
 
   public static final String AUTO_FAILOVER_EMBEDDED =
       AUTO_FAILOVER_PREFIX + "embedded";
-  public static final boolean DEFAULT_AUTO_FAILOVER_EMBEDDED = false;
+  public static final boolean DEFAULT_AUTO_FAILOVER_EMBEDDED = true;
 
   public static final String AUTO_FAILOVER_ZK_BASE_PATH =
       AUTO_FAILOVER_PREFIX + "zk-base-path";

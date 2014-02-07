@@ -42,7 +42,7 @@ public class TestMiniYARNClusterForHA {
   @Before
   public void setup() throws IOException, InterruptedException {
     Configuration conf = new YarnConfiguration();
-
+    conf.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
     cluster = new MiniYARNCluster(TestMiniYARNClusterForHA.class.getName(),
         2, 1, 1, 1);
     cluster.init(conf);

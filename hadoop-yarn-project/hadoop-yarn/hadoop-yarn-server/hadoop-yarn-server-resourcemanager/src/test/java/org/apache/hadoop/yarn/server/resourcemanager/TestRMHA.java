@@ -119,6 +119,7 @@ public class TestRMHA {
    */
   @Test (timeout = 30000)
   public void testStartAndTransitions() throws IOException {
+    configuration.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
     Configuration conf = new YarnConfiguration(configuration);
     rm = new MockRM(conf);
     rm.init(conf);
@@ -178,7 +179,6 @@ public class TestRMHA {
         "automatic failover is enabled";
 
     Configuration conf = new YarnConfiguration(configuration);
-    conf.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, true);
 
     rm = new MockRM(conf);
     rm.init(conf);
@@ -236,6 +236,7 @@ public class TestRMHA {
     String errorMessageForEventHandler =
         "Expect to get the same number of handlers";
     String errorMessageForService = "Expect to get the same number of services";
+    configuration.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
     Configuration conf = new YarnConfiguration(configuration);
     rm = new MockRM(conf) {
       @Override

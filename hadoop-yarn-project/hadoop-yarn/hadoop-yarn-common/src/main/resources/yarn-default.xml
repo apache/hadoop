@@ -405,17 +405,20 @@
   </property>
 
   <property>
-    <description>Enable automatic failover.</description>
+    <description>Enable automatic failover.
+      By default, it is enabled only when HA is enabled</description>
     <name>yarn.resourcemanager.ha.automatic-failover.enabled</name>
-    <value>false</value>
+    <value>true</value>
   </property>
 
   <property>
-    <description>Enable embedded automatic failover. The embedded elector
-      relies on the RM state store to handle fencing, and is primarily intended
-      to be used in conjunction with ZKRMStateStore.</description>
+    <description>Enable embedded automatic failover.
+      By default, it is enabled only when HA is enabled.
+      The embedded elector relies on the RM state store to handle fencing,
+      and is primarily intended to be used in conjunction with ZKRMStateStore.
+    </description>
     <name>yarn.resourcemanager.ha.automatic-failover.embedded</name>
-    <value>false</value>
+    <value>true</value>
   </property>
 
   <property>

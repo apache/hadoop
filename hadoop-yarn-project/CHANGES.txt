@@ -139,6 +139,9 @@ Release 2.4.0 - UNRELEASED
     be available across RM failover by making using of a remote
     configuration-provider. (Xuan Gong via vinodkv)
 
+    YARN-1665. Simplify the configuration of RM HA by having better default
+    values. (Xuan Gong via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
