@@ -208,11 +208,13 @@ public class SnapshotFSImageFormat {
   
   /**
    * Load snapshots and snapshotQuota for a Snapshottable directory.
-   * @param snapshottableParent The snapshottable directory for loading.
-   * @param numSnapshots The number of snapshots that the directory has.
-   * @param in The {@link DataInput} instance to read.
-   * @param loader The {@link Loader} instance that this loading procedure is 
-   *               using.
+   *
+   * @param snapshottableParent
+   *          The snapshottable directory for loading.
+   * @param numSnapshots
+   *          The number of snapshots that the directory has.
+   * @param loader
+   *          The loader
    */
   public static void loadSnapshotList(
       INodeDirectorySnapshottable snapshottableParent, int numSnapshots,
@@ -230,10 +232,13 @@ public class SnapshotFSImageFormat {
   /**
    * Load the {@link SnapshotDiff} list for the INodeDirectoryWithSnapshot
    * directory.
-   * @param dir The snapshottable directory for loading.
-   * @param in The {@link DataInput} instance to read.
-   * @param loader The {@link Loader} instance that this loading procedure is 
-   *               using.
+   *
+   * @param dir
+   *          The snapshottable directory for loading.
+   * @param in
+   *          The {@link DataInput} instance to read.
+   * @param loader
+   *          The loader
    */
   public static void loadDirectoryDiffList(INodeDirectory dir,
       DataInput in, FSImageFormat.Loader loader) throws IOException {

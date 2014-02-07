@@ -129,7 +129,7 @@ final class FileDistributionCalculator {
         totalSpace += fileSize;
 
         int bucket = fileSize > maxSize ? distribution.length - 1 : (int) Math
-            .ceil(fileSize / steps);
+            .ceil((double)fileSize / steps);
         ++distribution[bucket];
 
       } else if (p.getType() == INodeSection.INode.Type.DIRECTORY) {

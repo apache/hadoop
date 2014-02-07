@@ -87,7 +87,6 @@ public class FSImageFormatPBSnapshot {
      * Load the snapshots section from fsimage. Also convert snapshottable
      * directories into {@link INodeDirectorySnapshottable}.
      *
-     * @return A map containing all the snapshots loaded from the fsimage.
      */
     public void loadSnapshotSection(InputStream in) throws IOException {
       SnapshotManager sm = fsn.getSnapshotManager();

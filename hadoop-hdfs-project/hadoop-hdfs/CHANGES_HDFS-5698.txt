@@ -40,3 +40,6 @@ HDFS-5698 subtasks
 
     HDFS-5885. Add annotation for repeated fields in the protobuf definition.
     (Haohui Mai via jing9)
+
+    HDFS-5906. Fixing findbugs and javadoc warnings in the HDFS-5698 branch.
+    (Haohui Mai via jing9)

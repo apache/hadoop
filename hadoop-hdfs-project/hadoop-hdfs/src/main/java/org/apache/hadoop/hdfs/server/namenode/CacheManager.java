@@ -64,7 +64,6 @@ import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CacheDirectiveInfoExpirationProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CacheDirectiveInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CachePoolInfoProto;
 import org.apache.hadoop.hdfs.protocolPB.PBHelper;
@@ -973,7 +972,8 @@ public final class CacheManager {
 
     for (CachePool pool : cachePools.values()) {
       CachePoolInfo p = pool.getInfo(true);
-      CachePoolInfoProto.Builder b = CachePoolInfoProto.newBuilder();
+      CachePoolInfoProto.Builder b = CachePoolInfoProto.newBuilder()
+          .setPoolName(p.getPoolName());
 
       if (p.getOwnerName() != null)
         b.setOwnerName(p.getOwnerName());
