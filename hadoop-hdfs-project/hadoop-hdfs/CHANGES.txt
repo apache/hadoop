@@ -350,6 +350,9 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-5882. TestAuditLogs is flaky (jxiang via cmccabe)
 
+    HDFS-5900. Cannot set cache pool limit of "unlimited" via CacheAdmin.
+    (wang)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

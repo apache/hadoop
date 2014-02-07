@@ -469,6 +469,8 @@
       </test-commands>
       <cleanup-commands>
         <cache-admin-command>-removePool pool1</cache-admin-command>
+        <cache-admin-command>-removePool pool2</cache-admin-command>
+        <cache-admin-command>-removePool pool3</cache-admin-command>
       </cleanup-commands>
       <comparators>
         <comparator>
@@ -486,6 +488,34 @@
         <comparator>
           <type>SubstringComparator</type>
           <expected-output>pool3  andrew  andrew  rwxr-xr-x   unlimited  000:04:00:00.000</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!--Tested -->
+      <description>Testing setting pool unlimited limits</description>
+      <test-commands>
+        <cache-admin-command>-addPool pool1 -limit unlimited -owner andrew -group andrew</cache-admin-command>
+        <cache-admin-command>-addPool pool2 -limit 10 -owner andrew -group andrew</cache-admin-command>
+        <cache-admin-command>-modifyPool pool2 -limit unlimited</cache-admin-command>
+        <cache-admin-command>-listPools</cache-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <cache-admin-command>-removePool pool1</cache-admin-command>
+        <cache-admin-command>-removePool pool2</cache-admin-command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Found 2 results</expected-output>
+        </comparator>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>pool1  andrew  andrew  rwxr-xr-x   unlimited   never</expected-output>
+        </comparator>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>pool2  andrew  andrew  rwxr-xr-x   unlimited   never</expected-output>
         </comparator>
       </comparators>
     </test>
