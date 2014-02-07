@@ -101,20 +101,7 @@ public class HAUtil {
     for (String id: ids) {
       // verify the RM service addresses configurations for every RMIds
       for (String prefix : YarnConfiguration.RM_SERVICES_ADDRESS_CONF_KEYS) {
-        String confKey = null;
-        try {
-          confKey = addSuffix(prefix, id);
-          if (conf.getTrimmed(confKey) == null) {
-            throwBadConfigurationException(getNeedToSetValueMessage(confKey));
-          }
-        } catch (IllegalArgumentException iae) {
-          String errmsg = iae.getMessage();
-          if (confKey == null) {
-            // Error at addSuffix
-            errmsg = getInvalidValueMessage(YarnConfiguration.RM_HA_ID, id);
-          }
-          throwBadConfigurationException(errmsg);
-        }
+        checkAndSetRMRPCAddress(prefix, id, conf);
       }
       setValue.append(id);
       setValue.append(",");
@@ -249,9 +236,13 @@ public class HAUtil {
   @InterfaceAudience.Private
   @VisibleForTesting
   static String getConfKeyForRMInstance(String prefix, Configuration conf) {
-    return YarnConfiguration.RM_SERVICES_ADDRESS_CONF_KEYS.contains(prefix)
-        ? addSuffix(prefix, getRMHAId(conf))
-        : prefix;
+    if (!YarnConfiguration.RM_SERVICES_ADDRESS_CONF_KEYS.contains(prefix)) {
+      return prefix;
+    } else {
+      String RMId = getRMHAId(conf);
+      checkAndSetRMRPCAddress(prefix, RMId, conf);
+      return addSuffix(prefix, RMId);
+    }
   }
 
   public static String getConfValueForRMInstance(String prefix,
@@ -283,5 +274,31 @@ public class HAUtil {
           "already have '.' prepended.");
     }
     return key + "." + suffix;
+  }
+
+  private static void checkAndSetRMRPCAddress(String prefix, String RMId,
+      Configuration conf) {
+    String rpcAddressConfKey = null;
+    try {
+      rpcAddressConfKey = addSuffix(prefix, RMId);
+      if (conf.getTrimmed(rpcAddressConfKey) == null) {
+        String hostNameConfKey = addSuffix(YarnConfiguration.RM_HOSTNAME, RMId);
+        String confVal = conf.getTrimmed(hostNameConfKey);
+        if (confVal == null) {
+          throwBadConfigurationException(getNeedToSetValueMessage(
+              hostNameConfKey + " or " + addSuffix(prefix, RMId)));
+        } else {
+          conf.set(addSuffix(prefix, RMId), confVal + ":"
+              + YarnConfiguration.getRMDefaultPortNumber(prefix));
+        }
+      }
+    } catch (IllegalArgumentException iae) {
+      String errmsg = iae.getMessage();
+      if (rpcAddressConfKey == null) {
+        // Error at addSuffix
+        errmsg = getInvalidValueMessage(YarnConfiguration.RM_HA_ID, RMId);
+      }
+      throwBadConfigurationException(errmsg);
+    }
   }
 }

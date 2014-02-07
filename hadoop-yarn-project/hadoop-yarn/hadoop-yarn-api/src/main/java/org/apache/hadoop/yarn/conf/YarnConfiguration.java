@@ -23,6 +23,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -107,6 +108,8 @@ public class YarnConfiguration extends Configuration {
   public static final String RM_PREFIX = "yarn.resourcemanager.";
 
   public static final String RM_CLUSTER_ID = RM_PREFIX + "cluster-id";
+
+  public static final String RM_HOSTNAME = RM_PREFIX + "hostname";
 
   /** The address of the applications manager interface in the RM.*/
   public static final String RM_ADDRESS = 
@@ -1138,5 +1141,28 @@ public class YarnConfiguration extends Configuration {
       prefix = HAUtil.addSuffix(prefix, HAUtil.getRMHAId(this));
     }
     return super.updateConnectAddr(prefix, addr);
+  }
+
+  @Private
+  public static int getRMDefaultPortNumber(String addressPrefix) {
+    if (addressPrefix.equals(YarnConfiguration.RM_ADDRESS)) {
+      return YarnConfiguration.DEFAULT_RM_PORT;
+    } else if (addressPrefix.equals(YarnConfiguration.RM_SCHEDULER_ADDRESS)) {
+      return YarnConfiguration.DEFAULT_RM_SCHEDULER_PORT;
+    } else if (addressPrefix.equals(YarnConfiguration.RM_WEBAPP_ADDRESS)) {
+      return YarnConfiguration.DEFAULT_RM_WEBAPP_PORT;
+    } else if (addressPrefix.equals(YarnConfiguration.RM_WEBAPP_HTTPS_ADDRESS)) {
+      return YarnConfiguration.DEFAULT_RM_WEBAPP_HTTPS_PORT;
+    } else if (addressPrefix
+        .equals(YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS)) {
+      return YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_PORT;
+    } else if (addressPrefix.equals(YarnConfiguration.RM_ADMIN_ADDRESS)) {
+      return YarnConfiguration.DEFAULT_RM_ADMIN_PORT;
+    } else {
+      throw new HadoopIllegalArgumentException(
+          "Invalid RM RPC address Prefix: " + addressPrefix
+              + ". The valid value should be one of "
+              + YarnConfiguration.RM_SERVICES_ADDRESS_CONF_KEYS);
+    }
   }
 }
