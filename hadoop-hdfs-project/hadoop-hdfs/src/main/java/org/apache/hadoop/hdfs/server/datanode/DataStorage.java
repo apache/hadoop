@@ -130,9 +130,8 @@ public class DataStorage extends Storage {
       // DN storage has been initialized, no need to do anything
       return;
     }
-    if( HdfsConstants.DATANODE_LAYOUT_VERSION == nsInfo.getLayoutVersion())
-      LOG.info("Data-node version: " + HdfsConstants.DATANODE_LAYOUT_VERSION + 
-      " and name-node layout version: " + nsInfo.getLayoutVersion());
+    LOG.info("Data-node version: " + HdfsConstants.DATANODE_LAYOUT_VERSION
+        + " and name-node layout version: " + nsInfo.getLayoutVersion());
     
     // 1. For each data directory calculate its state and 
     // check whether all is consistent before transitioning.
@@ -184,8 +183,6 @@ public class DataStorage extends Storage {
     // while others could be uptodate for the regular startup.
     for(int idx = 0; idx < getNumStorageDirs(); idx++) {
       doTransition(datanode, getStorageDir(idx), nsInfo, startOpt);
-      assert this.getLayoutVersion() == nsInfo.getLayoutVersion() :
-        "Data-node and name-node layout versions must be the same.";
       createStorageID(getStorageDir(idx));
     }
     
@@ -450,15 +447,13 @@ public class DataStorage extends Storage {
       return;
     }
     
-    // layoutVersion < LAYOUT_VERSION. I.e. stored layout version is newer
+    // layoutVersion < DATANODE_LAYOUT_VERSION. I.e. stored layout version is newer
     // than the version supported by datanode. This should have been caught
     // in readProperties(), even if rollback was not carried out or somehow
     // failed.
     throw new IOException("BUG: The stored LV = " + this.getLayoutVersion()
-                          + " is newer than the supported LV = "
-                          + HdfsConstants.DATANODE_LAYOUT_VERSION
-                          + " or name node LV = "
-                          + nsInfo.getLayoutVersion());
+        + " is newer than the supported LV = "
+        + HdfsConstants.DATANODE_LAYOUT_VERSION);
   }
 
   /**
@@ -491,8 +486,9 @@ public class DataStorage extends Storage {
       // The VERSION file is already read in. Override the layoutVersion 
       // field and overwrite the file.
       LOG.info("Updating layout version from " + layoutVersion + " to "
-          + nsInfo.getLayoutVersion() + " for storage " + sd.getRoot());
-      layoutVersion = nsInfo.getLayoutVersion();
+          + HdfsConstants.DATANODE_LAYOUT_VERSION + " for storage "
+          + sd.getRoot());
+      layoutVersion = HdfsConstants.DATANODE_LAYOUT_VERSION;
       writeProperties(sd);
       return;
     }
@@ -500,7 +496,7 @@ public class DataStorage extends Storage {
     LOG.info("Upgrading storage directory " + sd.getRoot()
              + ".\n   old LV = " + this.getLayoutVersion()
              + "; old CTime = " + this.getCTime()
-             + ".\n   new LV = " + nsInfo.getLayoutVersion()
+             + ".\n   new LV = " + HdfsConstants.DATANODE_LAYOUT_VERSION
              + "; new CTime = " + nsInfo.getCTime());
     
     File curDir = sd.getCurrentDir();
@@ -587,20 +583,13 @@ public class DataStorage extends Storage {
     File prevDir = sd.getPreviousDir();
     // This is a regular startup or a post-federation rollback
     if (!prevDir.exists()) {
-      // The current datanode version supports federation and the layout
-      // version from namenode matches what the datanode supports. An invalid
-      // rollback may happen if namenode didn't rollback and datanode is
-      // running a wrong version.  But this will be detected in block pool
-      // level and the invalid VERSION content will be overwritten when
-      // the error is corrected and rollback is retried.
-      if (DataNodeLayoutVersion.supports(
-          LayoutVersion.Feature.FEDERATION,
-          HdfsConstants.DATANODE_LAYOUT_VERSION) && 
-          HdfsConstants.DATANODE_LAYOUT_VERSION == nsInfo.getLayoutVersion()) {
-        readProperties(sd, nsInfo.getLayoutVersion());
+      if (DataNodeLayoutVersion.supports(LayoutVersion.Feature.FEDERATION,
+          HdfsConstants.DATANODE_LAYOUT_VERSION)) {
+        readProperties(sd, HdfsConstants.DATANODE_LAYOUT_VERSION);
         writeProperties(sd);
-        LOG.info("Layout version rolled back to " +
-            nsInfo.getLayoutVersion() + " for storage " + sd.getRoot());
+        LOG.info("Layout version rolled back to "
+            + HdfsConstants.DATANODE_LAYOUT_VERSION + " for storage "
+            + sd.getRoot());
       }
       return;
     }
@@ -615,10 +604,11 @@ public class DataStorage extends Storage {
           "Cannot rollback to a newer state.\nDatanode previous state: LV = "
               + prevInfo.getLayoutVersion() + " CTime = " + prevInfo.getCTime()
               + " is newer than the namespace state: LV = "
-              + nsInfo.getLayoutVersion() + " CTime = " + nsInfo.getCTime());
+              + HdfsConstants.DATANODE_LAYOUT_VERSION + " CTime = "
+              + nsInfo.getCTime());
     LOG.info("Rolling back storage directory " + sd.getRoot()
-             + ".\n   target LV = " + nsInfo.getLayoutVersion()
-             + "; target CTime = " + nsInfo.getCTime());
+        + ".\n   target LV = " + HdfsConstants.DATANODE_LAYOUT_VERSION
+        + "; target CTime = " + nsInfo.getCTime());
     File tmpDir = sd.getRemovedTmp();
     assert !tmpDir.exists() : "removed.tmp directory must not exist.";
     // rename current to tmp

@@ -25,3 +25,6 @@ HDFS-5535 subtasks:
 
     HDFS-5869. When starting rolling upgrade or NN restarts, NN should create
     a checkpoint right before the upgrade marker.  (szetszwo)
+
+    HDFS-5874. Should not compare DataNode current layout version with that of
+    NameNode in DataStrorage. (brandonli)

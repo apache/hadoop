@@ -201,12 +201,6 @@ class BPServiceActor implements Runnable {
           "DataNode version '" + dnVersion + "' but is within acceptable " +
           "limits. Note: This is normal during a rolling upgrade.");
     }
-    
-    if (HdfsConstants.DATANODE_LAYOUT_VERSION != nsInfo.getLayoutVersion()) {
-      LOG.info("DataNode and NameNode layout versions are different:" +
-        " DataNode version: "+ HdfsConstants.DATANODE_LAYOUT_VERSION +
-        " NameNode version: "+ nsInfo.getLayoutVersion());
-    }
   }
 
   private void connectToNNAndHandshake() throws IOException {
