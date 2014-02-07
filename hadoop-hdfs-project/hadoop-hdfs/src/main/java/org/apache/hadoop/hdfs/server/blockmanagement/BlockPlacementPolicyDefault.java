@@ -317,7 +317,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
         // We need to additionally exclude the nodes that were added to the 
         // result list in the successful calls to choose*() above.
         for (DatanodeStorageInfo resultStorage : results) {
-          oldExcludedNodes.add(resultStorage.getDatanodeDescriptor());
+          addToExcludedNodes(resultStorage.getDatanodeDescriptor(), oldExcludedNodes);
         }
         // Set numOfReplicas, since it can get out of sync with the result list
         // if the NotEnoughReplicasException was thrown in chooseRandom().

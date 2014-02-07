@@ -25,7 +25,10 @@ import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.util.Records;
+
+import java.util.Set;
 
 /**
  * <p><code>ApplicationSubmissionContext</code> represents all of the
@@ -284,7 +287,6 @@ public abstract class ApplicationSubmissionContext {
   @Stable
   public abstract void setApplicationType(String applicationType);
 
-
   /**
    * Get the flag which indicates whether to keep containers across application
    * attempts or not.
@@ -314,4 +316,26 @@ public abstract class ApplicationSubmissionContext {
   @Stable
   public abstract void setKeepContainersAcrossApplicationAttempts(
       boolean keepContainers);
+
+  /**
+   * Get tags for the application
+   *
+   * @return the application tags
+   */
+  @Public
+  @Stable
+  public abstract Set<String> getApplicationTags();
+
+  /**
+   * Set tags for the application. A maximum of
+   * {@link YarnConfiguration#APPLICATION_MAX_TAGS} are allowed
+   * per application. Each tag can be at most
+   * {@link YarnConfiguration#APPLICATION_MAX_TAG_LENGTH}
+   * characters, and can contain only ASCII characters.
+   *
+   * @param tags tags to set
+   */
+  @Public
+  @Stable
+  public abstract void setApplicationTags(Set<String> tags);
 }

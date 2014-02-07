@@ -681,7 +681,7 @@ public class TestYarnCLI {
     sysOutStream.reset();
     ApplicationId applicationId = ApplicationId.newInstance(1234, 5);
     result =
-        cli.run(new String[] { "-kill", applicationId.toString(), "args" });
+        cli.run(new String[] {"application", "-kill", applicationId.toString(), "args" });
     verify(spyCli).printUsage(any(Options.class));
     Assert.assertEquals(createApplicationCLIHelpMessage(),
         sysOutStream.toString());
@@ -717,7 +717,7 @@ public class TestYarnCLI {
         FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.53789f, "YARN", null);
     when(client.getApplicationReport(any(ApplicationId.class))).thenReturn(
         newApplicationReport2);
-    int result = cli.run(new String[] { "-kill", applicationId.toString() });
+    int result = cli.run(new String[] { "application","-kill", applicationId.toString() });
     assertEquals(0, result);
     verify(client, times(0)).killApplication(any(ApplicationId.class));
     verify(sysOut).println(
@@ -730,7 +730,7 @@ public class TestYarnCLI {
         FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.53789f, "YARN", null);
     when(client.getApplicationReport(any(ApplicationId.class))).thenReturn(
         newApplicationReport);
-    result = cli.run(new String[] { "-kill", applicationId.toString() });
+    result = cli.run(new String[] { "application","-kill", applicationId.toString() });
     assertEquals(0, result);
     verify(client).killApplication(any(ApplicationId.class));
     verify(sysOut).println("Killing application application_1234_0005");
@@ -740,7 +740,7 @@ public class TestYarnCLI {
         .getApplicationReport(applicationId);
     cli = createAndGetAppCLI();
     try {
-      cli.run(new String[] { "-kill", applicationId.toString() });
+      cli.run(new String[] { "application","-kill", applicationId.toString() });
       Assert.fail();
     } catch (Exception ex) {
       Assert.assertTrue(ex instanceof ApplicationNotFoundException);

@@ -57,7 +57,7 @@ import com.google.common.collect.Multiset;
  */
 @Private
 @Unstable
-public abstract class SchedulerApplicationAttempt {
+public class SchedulerApplicationAttempt {
   
   private static final Log LOG = LogFactory
     .getLog(SchedulerApplicationAttempt.class);
@@ -91,7 +91,7 @@ public abstract class SchedulerApplicationAttempt {
   protected Map<Priority, Long> lastScheduledContainer =
       new HashMap<Priority, Long>();
 
-  protected final Queue queue;
+  protected Queue queue;
   protected boolean isStopped = false;
   
   protected final RMContext rmContext;
@@ -431,4 +431,25 @@ public abstract class SchedulerApplicationAttempt {
     this.appSchedulingInfo
       .transferStateFromPreviousAppSchedulingInfo(appAttempt.appSchedulingInfo);
   }
+  
+  public synchronized void move(Queue newQueue) {
+    QueueMetrics oldMetrics = queue.getMetrics();
+    QueueMetrics newMetrics = newQueue.getMetrics();
+    String user = getUser();
+    for (RMContainer liveContainer : liveContainers.values()) {
+      Resource resource = liveContainer.getContainer().getResource();
+      oldMetrics.releaseResources(user, 1, resource);
+      newMetrics.allocateResources(user, 1, resource, false);
+    }
+    for (Map<NodeId, RMContainer> map : reservedContainers.values()) {
+      for (RMContainer reservedContainer : map.values()) {
+        Resource resource = reservedContainer.getReservedResource();
+        oldMetrics.unreserveResource(user, resource);
+        newMetrics.reserveResource(user, resource);
+      }
+    }
+
+    appSchedulingInfo.move(newQueue);
+    this.queue = newQueue;
+  }  
 }

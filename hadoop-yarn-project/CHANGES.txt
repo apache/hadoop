@@ -9,6 +9,14 @@ Trunk - Unreleased
     YARN-1496. Protocol additions to allow moving apps between queues (Sandy
     Ryza)
 
+    YARN-1498. Common scheduler changes for moving apps between queues (Sandy
+    Ryza)
+
+    YARN-1504. RM changes for moving apps between queues (Sandy Ryza)
+
+    YARN-1499. Fair Scheduler changes for moving apps between queues (Sandy
+    Ryza)
+
   IMPROVEMENTS
 
   OPTIMIZATIONS
@@ -74,6 +82,27 @@ Release 2.4.0 - UNRELEASED
     YARN-1413. Implemented serving of aggregated-logs in the ApplicationHistory
     server. (Mayank Bansal via vinodkv)
 
+    YARN-1633. Defined user-facing entity, entity-info and event objects related
+    to Application Timeline feature. (Zhijie Shen via vinodkv)
+
+    YARN-1611. Introduced the concept of a configuration provider which can be
+    used by ResourceManager to read configuration locally or from remote systems
+    so as to help RM failover. (Xuan Gong via vinodkv)
+
+    YARN-1659. Defined the ApplicationTimelineStore store as an abstraction for
+    implementing different storage impls for storing timeline information.
+    (Billie Rinaldi via vinodkv)
+
+    YARN-1634. Added a testable in-memory implementation of
+    ApplicationTimelineStore. (Zhijie Shen via vinodkv)
+
+    YARN-1461. Added tags for YARN applications and changed RM to handle them.
+    (Karthik Kambatla via zjshen)
+
+    YARN-1636. Augmented Application-history server's web-services to also expose
+    new APIs for retrieving and storing timeline information. (Zhijie Shen via
+    vinodkv)
+
   IMPROVEMENTS
 
     YARN-1007. Enhance History Reader interface for Containers. (Mayank Bansal via
@@ -87,6 +116,28 @@ Release 2.4.0 - UNRELEASED
 
     YARN-1630. Introduce timeout for async polling operations in YarnClientImpl
     (Aditya Acharya via Sandy Ryza)
+
+    YARN-1617. Remove ancient comment and surround LOG.debug in
+    AppSchedulingInfo.allocate (Sandy Ryza)
+
+    YARN-1639. Modified RM HA configuration handling to have a way of not
+    requiring separate configuration files for each RM. (Xuan Gong via vinodkv)
+
+    YARN-1668. Modified RM HA handling of admin-acls to be available across RM
+    failover by making using of a remote configuration-provider. (Xuan Gong via
+    vinodkv)
+
+    YARN-1667. Modified RM HA handling of super users (with proxying ability) to
+    be available across RM failover by making using of a remote
+    configuration-provider. (Xuan Gong via vinodkv)
+
+    YARN-1285. Changed the default value of yarn.acl.enable in yarn-default.xml
+    to be consistent with what exists (false) in the code and documentation.
+    (Kenji Kikushima via vinodkv)
+
+    YARN-1669. Modified RM HA handling of protocol level service-ACLS to
+    be available across RM failover by making using of a remote
+    configuration-provider. (Xuan Gong via vinodkv)
 
   OPTIMIZATIONS
 
@@ -133,6 +184,15 @@ Release 2.4.0 - UNRELEASED
     configured (Haohui Mai via jlowe)
 
     YARN-1642. RMDTRenewer#getRMClient should use ClientRMProxy (kasha)
+
+    YARN-1632. TestApplicationMasterServices should be under
+    org.apache.hadoop.yarn.server.resourcemanager package (Chen He via jeagles)
+
+    YARN-1673. Fix option parsing in YARN's application CLI after it is broken
+    by YARN-967. (Mayank Bansal via vinodkv)
+
+    YARN-1684. Fixed history server heap size in yarn script. (Billie Rinaldi
+    via zjshen)
 
 Release 2.3.0 - UNRELEASED
 
@@ -566,6 +626,15 @@ Release 2.3.0 - UNRELEASED
     (jlowe)
 
     YARN-1629. IndexOutOfBoundsException in MaxRunningAppsEnforcer (Sandy Ryza)
+
+    YARN-1628. Fixed the test failure in TestContainerManagerSecurity. (Vinod
+    Kumar Vavilapalli via zjshen)
+
+    YARN-1661. Fixed DS ApplicationMaster to write the correct exit log. (Vinod
+    Kumar Vavilapalli via zjshen)
+
+    YARN-1689. Made RMAppAttempt get killed when RMApp is at ACCEPTED. (Vinod
+    Kumar Vavilapalli via zjshen)
 
 Release 2.2.0 - 2013-10-13
 

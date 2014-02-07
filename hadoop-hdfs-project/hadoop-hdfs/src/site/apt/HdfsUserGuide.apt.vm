@@ -435,7 +435,7 @@ HDFS Users Guide
    state it was in before the upgrade. HDFS upgrade is described in more
    detail in {{{http://wiki.apache.org/hadoop/Hadoop_Upgrade}Hadoop Upgrade}}
    Wiki page. HDFS can have one such backup at a time. Before upgrading,
-   administrators need to remove existing backupusing bin/hadoop dfsadmin
+   administrators need to remove existing backup using bin/hadoop dfsadmin
    <<<-finalizeUpgrade>>> command. The following briefly describes the
    typical upgrade procedure:
 
@@ -458,6 +458,33 @@ HDFS Users Guide
           * stop the cluster and distribute earlier version of Hadoop.
 
           * start the cluster with rollback option. (<<<bin/start-dfs.sh -rollback>>>).
+
+    When upgrading to a new version of HDFS, it is necessary to rename or
+    delete any paths that are reserved in the new version of HDFS. If the
+    NameNode encounters a reserved path during upgrade, it will print an
+    error like the following:
+
+    <<< /.reserved is a reserved path and .snapshot is a
+    reserved path component in this version of HDFS. Please rollback and delete
+    or rename this path, or upgrade with the -renameReserved [key-value pairs]
+    option to automatically rename these paths during upgrade.>>>
+
+    Specifying <<<-upgrade -renameReserved [optional key-value pairs]>>> causes
+    the NameNode to automatically rename any reserved paths found during
+    startup. For example, to rename all paths named <<<.snapshot>>> to
+    <<<.my-snapshot>>> and <<<.reserved>>> to <<<.my-reserved>>>, a user would
+    specify <<<-upgrade -renameReserved
+    .snapshot=.my-snapshot,.reserved=.my-reserved>>>.
+
+    If no key-value pairs are specified with <<<-renameReserved>>>, the
+    NameNode will then suffix reserved paths with
+    <<<.<LAYOUT-VERSION>.UPGRADE_RENAMED>>>, e.g.
+    <<<.snapshot.-51.UPGRADE_RENAMED>>>.
+
+    There are some caveats to this renaming process. It's recommended,
+    if possible, to first <<<hdfs dfsadmin -saveNamespace>>> before upgrading.
+    This is because data inconsistency can result if an edit log operation
+    refers to the destination of an automatically renamed file.
 
 * File Permissions and Security
 

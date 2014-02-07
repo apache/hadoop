@@ -36,6 +36,8 @@ import org.junit.Test;
 
 import java.io.IOException;
 
+import junit.framework.Assert;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -48,11 +50,14 @@ public class TestRMHA {
   private static final String STATE_ERR =
       "ResourceManager is in wrong HA state";
 
-  private static final String RM1_ADDRESS = "0.0.0.0:0";
+  private static final String RM1_ADDRESS = "1.1.1.1:1";
   private static final String RM1_NODE_ID = "rm1";
 
-  private static final String RM2_ADDRESS = "1.1.1.1:1";
+  private static final String RM2_ADDRESS = "0.0.0.0:0";
   private static final String RM2_NODE_ID = "rm2";
+
+  private static final String RM3_ADDRESS = "2.2.2.2:2";
+  private static final String RM3_NODE_ID = "rm3";
 
   @Before
   public void setUp() throws Exception {
@@ -61,8 +66,8 @@ public class TestRMHA {
     for (String confKey : YarnConfiguration.RM_SERVICES_ADDRESS_CONF_KEYS) {
       configuration.set(HAUtil.addSuffix(confKey, RM1_NODE_ID), RM1_ADDRESS);
       configuration.set(HAUtil.addSuffix(confKey, RM2_NODE_ID), RM2_ADDRESS);
+      configuration.set(HAUtil.addSuffix(confKey, RM3_NODE_ID), RM3_ADDRESS);
     }
-    configuration.set(YarnConfiguration.RM_HA_ID, RM1_NODE_ID);
   }
 
   private void checkMonitorHealth() throws IOException {
@@ -276,6 +281,36 @@ public class TestRMHA {
         rm.getServices().size());
 
     rm.stop();
+  }
+
+  @Test
+  public void testHAIDLookup() {
+    //test implicitly lookup HA-ID
+    Configuration conf = new YarnConfiguration(configuration);
+    rm = new MockRM(conf);
+    rm.init(conf);
+
+    assertEquals(conf.get(YarnConfiguration.RM_HA_ID), RM2_NODE_ID);
+
+    //test explicitly lookup HA-ID
+    configuration.set(YarnConfiguration.RM_HA_ID, RM1_NODE_ID);
+    conf = new YarnConfiguration(configuration);
+    rm = new MockRM(conf);
+    rm.init(conf);
+    assertEquals(conf.get(YarnConfiguration.RM_HA_ID), RM1_NODE_ID);
+
+    //test if RM_HA_ID can not be found
+    configuration.set(YarnConfiguration.RM_HA_IDS, RM1_NODE_ID+ "," + RM3_NODE_ID);
+    configuration.unset(YarnConfiguration.RM_HA_ID);
+    conf = new YarnConfiguration(configuration);
+    try {
+      rm = new MockRM(conf);
+      rm.init(conf);
+      fail("Should get an exception here.");
+    } catch (Exception ex) {
+      Assert.assertTrue(ex.getMessage().contains(
+          "Invalid configuration! Can not find valid RM_HA_ID."));
+    }
   }
 
   @SuppressWarnings("rawtypes")

@@ -85,6 +85,7 @@ public class TestNameNodeHttpServer {
   @Test
   public void testHttpPolicy() throws Exception {
     conf.set(DFSConfigKeys.DFS_HTTP_POLICY_KEY, policy.name());
+    conf.set(DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY, "localhost:0");
 
     InetSocketAddress addr = InetSocketAddress.createUnresolved("localhost", 0);
     NameNodeHttpServer server = null;
@@ -103,7 +104,9 @@ public class TestNameNodeHttpServer {
           server.getHttpsAddress() == null));
 
     } finally {
-      server.stop();
+      if (server != null) {
+        server.stop();
+      }
     }
   }
 

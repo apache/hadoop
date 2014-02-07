@@ -41,8 +41,10 @@ import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CyclicBarrier;
 
+import com.google.common.collect.Sets;
 import junit.framework.Assert;
 
+import org.apache.commons.lang.math.LongRange;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -51,6 +53,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.MockApps;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
+import org.apache.hadoop.yarn.api.protocolrecords.ApplicationsRequestScope;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
@@ -58,6 +61,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.MoveApplicationAcrossQueuesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
@@ -71,6 +75,7 @@ import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.Event;
@@ -231,6 +236,20 @@ public class TestClientRMService {
           "Trying to kill an absent " +
               "application " + request.getApplicationId());
     }
+  }
+  
+  @Test (expected = ApplicationNotFoundException.class)
+  public void testMoveAbsentApplication() throws YarnException {
+    RMContext rmContext = mock(RMContext.class);
+    when(rmContext.getRMApps()).thenReturn(
+        new ConcurrentHashMap<ApplicationId, RMApp>());
+    ClientRMService rmService = new ClientRMService(rmContext, null, null,
+        null, null, null);
+    ApplicationId applicationId =
+        BuilderUtils.newApplicationId(System.currentTimeMillis(), 0);
+    MoveApplicationAcrossQueuesRequest request =
+        MoveApplicationAcrossQueuesRequest.newInstance(applicationId, "newqueue");
+    rmService.moveApplicationAcrossQueues(request);
   }
 
   @Test
@@ -450,6 +469,7 @@ public class TestClientRMService {
         {MockApps.newAppName(), MockApps.newAppName(), MockApps.newAppName()};
     ApplicationId[] appIds =
         {getApplicationId(101), getApplicationId(102), getApplicationId(103)};
+    List<String> tags = Arrays.asList("Tag1", "Tag2", "Tag3");
 
     // Submit applications
     for (int i = 0; i < appIds.length; i++) {
@@ -457,7 +477,8 @@ public class TestClientRMService {
       when(mockAclsManager.checkAccess(UserGroupInformation.getCurrentUser(),
               ApplicationAccessType.VIEW_APP, null, appId)).thenReturn(true);
       SubmitApplicationRequest submitRequest = mockSubmitAppRequest(
-          appId, appNames[i], queues[i % queues.length]);
+          appId, appNames[i], queues[i % queues.length],
+          new HashSet<String>(tags.subList(0, i + 1)));
       rmService.submitApplication(submitRequest);
     }
 
@@ -497,6 +518,41 @@ public class TestClientRMService {
 
     userSet.add(UserGroupInformation.getCurrentUser().getShortUserName());
     assertEquals("Incorrect number of applications for user", 3,
+        rmService.getApplications(request).getApplicationList().size());
+
+    // Check tags
+    request = GetApplicationsRequest.newInstance(
+        ApplicationsRequestScope.ALL, null, null, null, null, null, null,
+        null, null);
+    Set<String> tagSet = new HashSet<String>();
+    request.setApplicationTags(tagSet);
+    assertEquals("Incorrect number of matching tags", 6,
+        rmService.getApplications(request).getApplicationList().size());
+
+    tagSet = Sets.newHashSet(tags.get(0));
+    request.setApplicationTags(tagSet);
+    assertEquals("Incorrect number of matching tags", 3,
+        rmService.getApplications(request).getApplicationList().size());
+
+    tagSet = Sets.newHashSet(tags.get(1));
+    request.setApplicationTags(tagSet);
+    assertEquals("Incorrect number of matching tags", 2,
+        rmService.getApplications(request).getApplicationList().size());
+
+    tagSet = Sets.newHashSet(tags.get(2));
+    request.setApplicationTags(tagSet);
+    assertEquals("Incorrect number of matching tags", 1,
+        rmService.getApplications(request).getApplicationList().size());
+
+    // Check scope
+    request = GetApplicationsRequest.newInstance(
+        ApplicationsRequestScope.VIEWABLE);
+    assertEquals("Incorrect number of applications for the scope", 6,
+        rmService.getApplications(request).getApplicationList().size());
+
+    request = GetApplicationsRequest.newInstance(
+        ApplicationsRequestScope.OWN);
+    assertEquals("Incorrect number of applications for the scope", 3,
         rmService.getApplications(request).getApplicationList().size());
   }
   
@@ -568,6 +624,11 @@ public class TestClientRMService {
 
   private SubmitApplicationRequest mockSubmitAppRequest(ApplicationId appId,
       String name, String queue) {
+    return mockSubmitAppRequest(appId, name, queue, null);
+  }
+
+  private SubmitApplicationRequest mockSubmitAppRequest(ApplicationId appId,
+      String name, String queue, Set<String> tags) {
     ContainerLaunchContext amContainerSpec = mock(ContainerLaunchContext.class);
 
     Resource resource = Resources.createResource(
@@ -581,6 +642,7 @@ public class TestClientRMService {
     submissionContext.setApplicationId(appId);
     submissionContext.setResource(resource);
     submissionContext.setApplicationType(appType);
+    submissionContext.setApplicationTags(tags);
 
     SubmitApplicationRequest submitRequest =
         recordFactory.newRecordInstance(SubmitApplicationRequest.class);
@@ -649,7 +711,7 @@ public class TestClientRMService {
     when(asContext.getMaxAppAttempts()).thenReturn(1);
     RMAppImpl app =  spy(new RMAppImpl(applicationId3, rmContext, config, null, null,
         queueName, asContext, yarnScheduler, null , System
-            .currentTimeMillis(), "YARN"));
+            .currentTimeMillis(), "YARN", null));
     ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(applicationId3, 1);
     RMAppAttemptImpl rmAppAttemptImpl = new RMAppAttemptImpl(attemptId,
         rmContext, yarnScheduler, null, asContext, config, false);

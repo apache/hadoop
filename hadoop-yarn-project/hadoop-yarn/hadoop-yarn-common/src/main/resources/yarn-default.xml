@@ -130,7 +130,7 @@
   <property>
     <description>Are acls enabled.</description>
     <name>yarn.acl.enable</name>
-    <value>true</value>
+    <value>false</value>
   </property>
 
   <property>
@@ -395,7 +395,9 @@
       the Active mode when prompted to.
       (2) The nodes in the RM ensemble are listed in
       yarn.resourcemanager.ha.rm-ids
-      (3) The id of each RM comes from yarn.resourcemanager.ha.id
+      (3) The id of each RM either comes from yarn.resourcemanager.ha.id
+      if yarn.resourcemanager.ha.id is explicitly specified or can be
+      figured out by matching yarn.resourcemanager.address.{id} with local address
       (4) The actual physical addresses come from the configs of the pattern
       - {rpc-config}.{id}</description>
     <name>yarn.resourcemanager.ha.enabled</name>
@@ -442,7 +444,10 @@
 
   <property>
     <description>The id (string) of the current RM. When HA is enabled, this
-      is a required config. See description of yarn.resourcemanager.ha.enabled
+      is an optional config. The id of current RM can be set by explicitly
+      specifying yarn.resourcemanager.ha.id or figured out by matching
+      yarn.resourcemanager.address.{id} with local address
+      See description of yarn.resourcemanager.ha.enabled
       for full details on how this is used.</description>
     <name>yarn.resourcemanager.ha.id</name>
     <!--value>rm1</value-->
@@ -586,6 +591,18 @@
     </description>
     <name>yarn.resourcemanager.history-writer.class</name>
     <value>org.apache.hadoop.yarn.server.applicationhistoryservice.NullApplicationHistoryStore</value>
+  </property>
+
+  <property>
+    <description>The class to use as the configuration provider.
+    If org.apache.hadoop.yarn.LocalConfigurationProvider is used,
+    the local configuration will be loaded.
+    If org.apache.hadoop.yarn.FileSystemBasedConfigurationProvider is used,
+    the configuration which will be loaded should be uploaded to remote File system first.
+    </description>>
+    <name>yarn.resourcemanager.configuration.provider-class</name>
+    <value>org.apache.hadoop.yarn.LocalConfigurationProvider</value>
+    <!-- <value>org.apache.hadoop.yarn.FileSystemBasedConfigurationProvider</value> -->
   </property>
 
   <!-- Node Manager Configs -->
@@ -1118,6 +1135,14 @@
 		system store </description>
 	<name>yarn.ahs.store.class</name>
 	<value>org.apache.hadoop.yarn.server.applicationhistoryservice.FileSystemApplicationHistoryStore</value>
+  </property>
+
+  <!-- Application Timeline Service's Configuration-->
+
+  <property>
+    <description>Store class name for application timeline store</description>
+    <name>yarn.ats.store.class</name>
+    <value>org.apache.hadoop.yarn.server.applicationhistoryservice.apptimeline.MemoryApplicationTimelineStore</value>
   </property>
 
   <!-- Other configuration -->

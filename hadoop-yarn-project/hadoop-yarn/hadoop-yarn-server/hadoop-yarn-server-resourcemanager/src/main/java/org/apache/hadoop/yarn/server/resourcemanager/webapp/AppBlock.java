@@ -110,6 +110,7 @@ public class AppBlock extends HtmlBlock {
       _("User:", app.getUser()).
       _("Name:", app.getName()).
       _("Application Type:", app.getApplicationType()).
+      _("Application Tags:", app.getApplicationTags()).
       _("State:", app.getState()).
       _("FinalStatus:", app.getFinalStatus()).
       _("Started:", Times.format(app.getStartTime())).

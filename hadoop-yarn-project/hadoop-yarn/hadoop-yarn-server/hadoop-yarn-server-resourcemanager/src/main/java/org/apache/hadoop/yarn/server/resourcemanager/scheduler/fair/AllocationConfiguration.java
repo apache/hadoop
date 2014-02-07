@@ -39,7 +39,8 @@ public class AllocationConfiguration {
   // Minimum resource allocation for each queue
   private final Map<String, Resource> minQueueResources;
   // Maximum amount of resources per queue
-  private final Map<String, Resource> maxQueueResources;
+  @VisibleForTesting
+  final Map<String, Resource> maxQueueResources;
   // Sharing weights for each queue
   private final Map<String, ResourceWeights> queueWeights;
   

@@ -36,6 +36,7 @@ import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.UnknownHostException;
 import java.nio.channels.ClosedByInterruptException;
+import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SocketChannel;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
@@ -50,7 +51,6 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.management.ObjectName;
-
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -362,13 +362,13 @@ public class DataNode extends Configured
         .setConf(conf).setACL(new AccessControlList(conf.get(DFS_ADMIN, " ")));
 
     HttpConfig.Policy policy = DFSUtil.getHttpPolicy(conf);
-    InetSocketAddress infoSocAddr = DataNode.getInfoAddr(conf);
-    String infoHost = infoSocAddr.getHostName();
 
     if (policy.isHttpEnabled()) {
       if (secureResources == null) {
+        InetSocketAddress infoSocAddr = DataNode.getInfoAddr(conf);
         int port = infoSocAddr.getPort();
-        builder.addEndpoint(URI.create("http://" + infoHost + ":" + port));
+        builder.addEndpoint(URI.create("http://"
+            + NetUtils.getHostPortString(infoSocAddr)));
         if (port == 0) {
           builder.setFindPort(true);
         }
@@ -381,7 +381,7 @@ public class DataNode extends Configured
 
     if (policy.isHttpsEnabled()) {
       InetSocketAddress secInfoSocAddr = NetUtils.createSocketAddr(conf.get(
-          DFS_DATANODE_HTTPS_ADDRESS_KEY, infoHost + ":" + 0));
+          DFS_DATANODE_HTTPS_ADDRESS_KEY, DFS_DATANODE_HTTPS_ADDRESS_DEFAULT));
 
       Configuration sslConf = DFSUtil.loadSslConfiguration(conf);
       DFSUtil.loadSslConfToHttpServerBuilder(builder, sslConf);
@@ -390,7 +390,8 @@ public class DataNode extends Configured
       if (port == 0) {
         builder.setFindPort(true);
       }
-      builder.addEndpoint(URI.create("https://" + infoHost + ":" + port));
+      builder.addEndpoint(URI.create("https://"
+          + NetUtils.getHostPortString(secInfoSocAddr)));
     }
 
     this.infoServer = builder.build();
@@ -1194,7 +1195,7 @@ public class DataNode extends Configured
   
   private void checkBlockToken(ExtendedBlock block, Token<BlockTokenIdentifier> token,
       AccessMode accessMode) throws IOException {
-    if (isBlockTokenEnabled && UserGroupInformation.isSecurityEnabled()) {
+    if (isBlockTokenEnabled) {
       BlockTokenIdentifier id = new BlockTokenIdentifier();
       ByteArrayInputStream buf = new ByteArrayInputStream(token.getIdentifier());
       DataInputStream in = new DataInputStream(buf);
@@ -1324,12 +1325,7 @@ public class DataNode extends Configured
   protected void checkDiskError(Exception e ) throws IOException {
     
     LOG.warn("checkDiskError: exception: ", e);
-    if (e instanceof SocketException || e instanceof SocketTimeoutException
-    	  || e instanceof ClosedByInterruptException 
-    	  || e.getMessage().startsWith("An established connection was aborted")
-    	  || e.getMessage().startsWith("Broken pipe")
-    	  || e.getMessage().startsWith("Connection reset")
-    	  || e.getMessage().contains("java.nio.channels.SocketChannel")) {
+    if (isNetworkRelatedException(e)) {
       LOG.info("Not checking disk as checkDiskError was called on a network" +
       		" related exception");	
       return;
@@ -1340,6 +1336,28 @@ public class DataNode extends Configured
     } else {
       checkDiskError();
     }
+  }
+  
+  /**
+   * Check if the provided exception looks like it's from a network error
+   * @param e the exception from a checkDiskError call
+   * @return true if this exception is network related, false otherwise
+   */
+  protected boolean isNetworkRelatedException(Exception e) {
+    if (e instanceof SocketException 
+        || e instanceof SocketTimeoutException
+        || e instanceof ClosedChannelException 
+        || e instanceof ClosedByInterruptException) {
+      return true;
+    }
+    
+    String msg = e.getMessage();
+    
+    return null != msg 
+        && (msg.startsWith("An established connection was aborted")
+            || msg.startsWith("Broken pipe")
+            || msg.startsWith("Connection reset")
+            || msg.contains("java.nio.channels.SocketChannel"));
   }
   
   /**

@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
 import java.util.Collection;
 
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -194,7 +195,13 @@ public interface RMApp extends EventHandler<RMAppEvent> {
    * Returns the application type
    * @return the application type.
    */
-  String getApplicationType(); 
+  String getApplicationType();
+
+  /**
+   * Get tags for the application
+   * @return tags corresponding to the application
+   */
+  Set<String> getApplicationTags();
 
   /**
    * Check whether this application is safe to terminate.

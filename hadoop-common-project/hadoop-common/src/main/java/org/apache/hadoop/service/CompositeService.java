@@ -19,7 +19,6 @@
 package org.apache.hadoop.service;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -54,13 +53,13 @@ public class CompositeService extends AbstractService {
   }
 
   /**
-   * Get an unmodifiable list of services
+   * Get a cloned list of services
    * @return a list of child services at the time of invocation -
    * added services will not be picked up.
    */
   public List<Service> getServices() {
     synchronized (serviceList) {
-      return Collections.unmodifiableList(serviceList);
+      return new ArrayList<Service>(serviceList);
     }
   }
 

@@ -178,7 +178,9 @@ add_dual_library(hadoop
     ${D}/io/nativeio/NativeIO.c
     ${D}/io/nativeio/errno_enum.c
     ${D}/io/nativeio/file_descriptor.c
+    ${D}/io/nativeio/SharedFileDescriptorFactory.c
     ${D}/net/unix/DomainSocket.c
+    ${D}/net/unix/DomainSocketWatcher.c
     ${D}/security/JniBasedUnixGroupsMapping.c
     ${D}/security/JniBasedUnixGroupsNetgroupMapping.c
     ${D}/security/hadoop_group_info.c

@@ -207,7 +207,7 @@ goto :eof
   set CLASSPATH=%CLASSPATH%;%YARN_CONF_DIR%\ahs-config\log4j.properties
   set CLASS=org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryServer
   set YARN_OPTS=%YARN_OPTS% %HADOOP_HISTORYSERVER_OPTS%
-  if defined YARN_RESOURCEMANAGER_HEAPSIZE (
+  if defined YARN_HISTORYSERVER_HEAPSIZE (
     set JAVA_HEAP_MAX=-Xmx%YARN_HISTORYSERVER_HEAPSIZE%m
   )
   goto :eof

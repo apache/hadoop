@@ -23,6 +23,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.nio.ByteBuffer;
+import java.util.Random;
 
 import org.apache.hadoop.oncrpc.RpcUtil.RpcFrameDecoder;
 import org.apache.hadoop.oncrpc.security.CredentialsNone;
@@ -31,17 +32,17 @@ import org.jboss.netty.buffer.ByteBufferBackedChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.junit.Test;
 import org.mockito.Mockito;
 
 public class TestFrameDecoder {
 
-  private static int port = 12345; // some random server port
   private static int resultSize;
 
-  static void testRequest(XDR request) {
-    SimpleTcpClient tcpClient = new SimpleTcpClient("localhost", port, request,
+  static void testRequest(XDR request, int serverPort) {
+    SimpleTcpClient tcpClient = new SimpleTcpClient("localhost", serverPort, request,
         true);
     tcpClient.run();
   }
@@ -148,10 +149,25 @@ public class TestFrameDecoder {
   @Test
   public void testFrames() {
 
-    RpcProgram program = new TestFrameDecoder.TestRpcProgram("TestRpcProgram",
-        "localhost", port, 100000, 1, 2);
-    SimpleTcpServer tcpServer = new SimpleTcpServer(port, program, 1);
-    tcpServer.run();
+    Random rand = new Random();
+    int serverPort = 30000 + rand.nextInt(10000);
+    int retries = 10;    // A few retries in case initial choice is in use.
+
+    while (true) {
+      try {
+        RpcProgram program = new TestFrameDecoder.TestRpcProgram("TestRpcProgram",
+            "localhost", serverPort, 100000, 1, 2);
+        SimpleTcpServer tcpServer = new SimpleTcpServer(serverPort, program, 1);
+        tcpServer.run();
+        break;          // Successfully bound a port, break out.
+      } catch (ChannelException ce) {
+        if (retries-- > 0) {
+          serverPort += rand.nextInt(20); // Port in use? Try another.
+        } else {
+          throw ce;     // Out of retries.
+        }
+      }
+    }
 
     XDR xdrOut = createGetportMount();
     int headerSize = xdrOut.size();
@@ -161,7 +177,7 @@ public class TestFrameDecoder {
     int requestSize = xdrOut.size() - headerSize;
 
     // Send the request to the server
-    testRequest(xdrOut);
+    testRequest(xdrOut, serverPort);
 
     // Verify the server got the request with right size
     assertEquals(requestSize, resultSize);

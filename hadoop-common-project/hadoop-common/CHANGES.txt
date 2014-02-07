@@ -113,6 +113,11 @@ Trunk (Unreleased)
 
     HADOOP-10177. Create CLI tools for managing keys. (Larry McCay via omalley)
 
+    HADOOP-10244. TestKeyShell improperly tests the results of delete (Larry
+    McCay via omalley)
+
+    HADOOP-10325. Improve jenkins javadoc warnings from test-patch.sh (cmccabe)
+
   BUG FIXES
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.
@@ -304,9 +309,24 @@ Release 2.4.0 - UNRELEASED
     HADOOP-10139. Update and improve the Single Cluster Setup document.
     (Akira Ajisaka via Arpit Agarwal)
 
+    HADOOP-10295. Allow distcp to automatically identify the checksum type of 
+    source files and use it for the target. (jing9 and Laurent Goujon)
+
   OPTIMIZATIONS
 
   BUG FIXES
+
+    HADOOP-10320. Javadoc in InterfaceStability.java lacks final </ul>.
+    (René Nyffenegger via cnauroth)
+    
+    HADOOP-10085. CompositeService should allow adding services while being 
+    inited. (Steve Loughran via kasha)
+
+    HADOOP-10327. Trunk windows build broken after HDFS-5746.
+    (Vinay via cnauroth)
+
+    HADOOP-10330. TestFrameDecoder fails if it cannot bind port 12345.
+    (Arpit Agarwal)
 
 Release 2.3.0 - UNRELEASED
 
@@ -463,6 +483,12 @@ Release 2.3.0 - UNRELEASED
     HADOOP-10305. Add "rpc.metrics.quantile.enable" and
     "rpc.metrics.percentiles.intervals" to core-default.xml.
     (Akira Ajisaka via wang)
+
+    HADOOP-10317. Rename branch-2.3 release version from 2.4.0-SNAPSHOT
+    to 2.3.0-SNAPSHOT. (wang)
+
+    HADOOP-10313. Script and jenkins job to produce Hadoop release artifacts. 
+    (tucu)
 
   OPTIMIZATIONS
 
@@ -670,6 +696,10 @@ Release 2.3.0 - UNRELEASED
 
     HADOOP-10310. SaslRpcServer should be initialized even when no secret
     manager present. (atm)
+
+    HADOOP-10311. Cleanup vendor names from the code base. (tucu)
+
+    HADOOP-10273. Fix 'mvn site'. (Arpit Agarwal)
 
 Release 2.2.0 - 2013-10-13
 

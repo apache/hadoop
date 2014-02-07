@@ -34,7 +34,7 @@ public class OptionsParser {
 
   private static final Log LOG = LogFactory.getLog(OptionsParser.class);
 
-  private static final Options cliOptions = new Options();      
+  private static final Options cliOptions = new Options();
 
   static {
     for (DistCpOptionSwitch option : DistCpOptionSwitch.values()) {
@@ -50,7 +50,7 @@ public class OptionsParser {
     protected String[] flatten(Options options, String[] arguments, boolean stopAtNonOption) {
       for (int index = 0; index < arguments.length; index++) {
         if (arguments[index].equals("-" + DistCpOptionSwitch.PRESERVE_STATUS.getSwitch())) {
-          arguments[index] = "-prbugp";
+          arguments[index] = "-prbugpc";
         }
       }
       return super.flatten(options, arguments, stopAtNonOption);
@@ -125,7 +125,7 @@ public class OptionsParser {
         option.setAtomicWorkPath(new Path(workPath));
       }
     } else if (command.hasOption(DistCpOptionSwitch.WORK_PATH.getSwitch())) {
-      throw new IllegalArgumentException("-tmp work-path can only be specified along with -atomic");      
+      throw new IllegalArgumentException("-tmp work-path can only be specified along with -atomic");
     }
 
     if (command.hasOption(DistCpOptionSwitch.LOG_PATH.getSwitch())) {

@@ -29,8 +29,8 @@ public class TestDSFailedAppMaster extends ApplicationMaster {
   private static final Log LOG = LogFactory.getLog(TestDSFailedAppMaster.class);
 
   @Override
-  public boolean run() throws YarnException, IOException {
-    boolean res = super.run();
+  public void run() throws YarnException, IOException {
+    super.run();
 
     // for the 2nd attempt.
     if (appAttemptID.getAttemptId() == 2) {
@@ -39,11 +39,12 @@ public class TestDSFailedAppMaster extends ApplicationMaster {
       // numRequestedContainers should be set to 0.
       if (numAllocatedContainers.get() != 1
           || numRequestedContainers.get() != 0) {
-        LOG.info("Application Master failed. exiting");
+        LOG.info("NumAllocatedContainers is " + numAllocatedContainers.get()
+            + " and NumRequestedContainers is " + numAllocatedContainers.get()
+            + ".Application Master failed. exiting");
         System.exit(200);
       }
     }
-    return res;
   }
 
   public static void main(String[] args) {
@@ -54,7 +55,7 @@ public class TestDSFailedAppMaster extends ApplicationMaster {
       if (!doRun) {
         System.exit(0);
       }
-      result = appMaster.run();
+      appMaster.run();
       if (appMaster.appAttemptID.getAttemptId() == 1) {
         try {
           // sleep some time, wait for the AM to launch a container.
@@ -63,7 +64,7 @@ public class TestDSFailedAppMaster extends ApplicationMaster {
         // fail the first am.
         System.exit(100);
       }
-      appMaster.finish();
+      result = appMaster.finish();
     } catch (Throwable t) {
       System.exit(1);
     }

@@ -32,12 +32,13 @@ import java.security.DigestOutputStream;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
-import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -45,13 +46,15 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIsNotDirectoryException;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.LayoutFlags;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
-import org.apache.hadoop.hdfs.protocol.LayoutFlags;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileDiffList;
@@ -68,8 +71,10 @@ import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.base.Preconditions;
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * Contains inner classes for reading or writing the on-disk format for
@@ -468,7 +473,8 @@ public class FSImageFormat {
     }
     
   /** 
-   * load fsimage files assuming only local names are stored
+   * load fsimage files assuming only local names are stored. Used when
+   * snapshots are not supported by the layout version.
    *   
    * @param numFiles number of files expected to be read
    * @param in image input stream
@@ -584,6 +590,8 @@ public class FSImageFormat {
     */
    private int loadDirectory(DataInput in, Counter counter) throws IOException {
      String parentPath = FSImageSerialization.readString(in);
+     // Rename .snapshot paths if we're doing an upgrade
+     parentPath = renameReservedPathsOnUpgrade(parentPath, getLayoutVersion());
      final INodeDirectory parent = INodeDirectory.valueOf(
          namesystem.dir.rootDir.getNode(parentPath, true), parentPath);
      return loadChildren(parent, in, counter);
@@ -643,11 +651,9 @@ public class FSImageFormat {
    */
   private void addToParent(INodeDirectory parent, INode child) {
     FSDirectory fsDir = namesystem.dir;
-    if (parent == fsDir.rootDir && FSDirectory.isReservedName(child)) {
-        throw new HadoopIllegalArgumentException("File name \""
-            + child.getLocalName() + "\" is reserved. Please "
-            + " change the name of the existing file or directory to another "
-            + "name before upgrading to this release.");
+    if (parent == fsDir.rootDir) {
+        child.setLocalName(renameReservedRootComponentOnUpgrade(
+            child.getLocalNameBytes(), getLayoutVersion()));
     }
     // NOTE: This does not update space counts for parents
     if (!parent.addChild(child)) {
@@ -684,7 +690,9 @@ public class FSImageFormat {
     public INode loadINodeWithLocalName(boolean isSnapshotINode,
         DataInput in, boolean updateINodeMap, Counter counter)
         throws IOException {
-      final byte[] localName = FSImageSerialization.readLocalName(in);
+      byte[] localName = FSImageSerialization.readLocalName(in);
+      localName =
+          renameReservedComponentOnUpgrade(localName, getLayoutVersion());
       INode inode = loadINode(localName, isSnapshotINode, in, counter);
       if (updateINodeMap
           && LayoutVersion.supports(Feature.ADD_INODE_ID, getLayoutVersion())) {
@@ -989,7 +997,156 @@ public class FSImageFormat {
       return snapshotMap.get(in.readInt());
     }
   }
-  
+
+  @VisibleForTesting
+  public static TreeMap<String, String> renameReservedMap =
+      new TreeMap<String, String>();
+
+  /**
+   * Use the default key-value pairs that will be used to determine how to
+   * rename reserved paths on upgrade.
+   */
+  @VisibleForTesting
+  public static void useDefaultRenameReservedPairs() {
+    renameReservedMap.clear();
+    for (String key: HdfsConstants.RESERVED_PATH_COMPONENTS) {
+      renameReservedMap.put(
+          key,
+          key + "." + LayoutVersion.getCurrentLayoutVersion() + "."
+              + "UPGRADE_RENAMED");
+    }
+  }
+
+  /**
+   * Set the key-value pairs that will be used to determine how to rename
+   * reserved paths on upgrade.
+   */
+  @VisibleForTesting
+  public static void setRenameReservedPairs(String renameReserved) {
+    // Clear and set the default values
+    useDefaultRenameReservedPairs();
+    // Overwrite with provided values
+    setRenameReservedMapInternal(renameReserved);
+  }
+
+  private static void setRenameReservedMapInternal(String renameReserved) {
+    Collection<String> pairs =
+        StringUtils.getTrimmedStringCollection(renameReserved);
+    for (String p : pairs) {
+      String[] pair = StringUtils.split(p, '/', '=');
+      Preconditions.checkArgument(pair.length == 2,
+          "Could not parse key-value pair " + p);
+      String key = pair[0];
+      String value = pair[1];
+      Preconditions.checkArgument(DFSUtil.isReservedPathComponent(key),
+          "Unknown reserved path " + key);
+      Preconditions.checkArgument(DFSUtil.isValidNameForComponent(value),
+          "Invalid rename path for " + key + ": " + value);
+      LOG.info("Will rename reserved path " + key + " to " + value);
+      renameReservedMap.put(key, value);
+    }
+  }
+
+  /**
+   * When upgrading from an old version, the filesystem could contain paths
+   * that are now reserved in the new version (e.g. .snapshot). This renames
+   * these new reserved paths to a user-specified value to avoid collisions
+   * with the reserved name.
+   * 
+   * @param path Old path potentially containing a reserved path
+   * @return New path with reserved path components renamed to user value
+   */
+  static String renameReservedPathsOnUpgrade(String path,
+      final int layoutVersion) {
+    final String oldPath = path;
+    // If any known LVs aren't supported, we're doing an upgrade
+    if (!LayoutVersion.supports(Feature.ADD_INODE_ID, layoutVersion)) {
+      String[] components = INode.getPathNames(path);
+      // Only need to worry about the root directory
+      if (components.length > 1) {
+        components[1] = DFSUtil.bytes2String(
+            renameReservedRootComponentOnUpgrade(
+                DFSUtil.string2Bytes(components[1]),
+                layoutVersion));
+        path = DFSUtil.strings2PathString(components);
+      }
+    }
+    if (!LayoutVersion.supports(Feature.SNAPSHOT, layoutVersion)) {
+      String[] components = INode.getPathNames(path);
+      // Special case the root path
+      if (components.length == 0) {
+        return path;
+      }
+      for (int i=0; i<components.length; i++) {
+        components[i] = DFSUtil.bytes2String(
+            renameReservedComponentOnUpgrade(
+                DFSUtil.string2Bytes(components[i]),
+                layoutVersion));
+      }
+      path = DFSUtil.strings2PathString(components);
+    }
+
+    if (!path.equals(oldPath)) {
+      LOG.info("Upgrade process renamed reserved path " + oldPath + " to "
+          + path);
+    }
+    return path;
+  }
+
+  private final static String RESERVED_ERROR_MSG = 
+      FSDirectory.DOT_RESERVED_PATH_PREFIX + " is a reserved path and "
+      + HdfsConstants.DOT_SNAPSHOT_DIR + " is a reserved path component in"
+      + " this version of HDFS. Please rollback and delete or rename"
+      + " this path, or upgrade with the "
+      + StartupOption.RENAMERESERVED.getName()
+      + " [key-value pairs]"
+      + " option to automatically rename these paths during upgrade.";
+
+  /**
+   * Same as {@link #renameReservedPathsOnUpgrade(String)}, but for a single
+   * byte array path component.
+   */
+  private static byte[] renameReservedComponentOnUpgrade(byte[] component,
+      final int layoutVersion) {
+    // If the LV doesn't support snapshots, we're doing an upgrade
+    if (!LayoutVersion.supports(Feature.SNAPSHOT, layoutVersion)) {
+      if (Arrays.equals(component, HdfsConstants.DOT_SNAPSHOT_DIR_BYTES)) {
+        Preconditions.checkArgument(
+            renameReservedMap != null &&
+            renameReservedMap.containsKey(HdfsConstants.DOT_SNAPSHOT_DIR),
+            RESERVED_ERROR_MSG);
+        component =
+            DFSUtil.string2Bytes(renameReservedMap
+                .get(HdfsConstants.DOT_SNAPSHOT_DIR));
+      }
+    }
+    return component;
+  }
+
+  /**
+   * Same as {@link #renameReservedPathsOnUpgrade(String)}, but for a single
+   * byte array path component.
+   */
+  private static byte[] renameReservedRootComponentOnUpgrade(byte[] component,
+      final int layoutVersion) {
+    // If the LV doesn't support inode IDs, we're doing an upgrade
+    if (!LayoutVersion.supports(Feature.ADD_INODE_ID, layoutVersion)) {
+      if (Arrays.equals(component, FSDirectory.DOT_RESERVED)) {
+        Preconditions.checkArgument(
+            renameReservedMap != null &&
+            renameReservedMap.containsKey(FSDirectory.DOT_RESERVED_STRING),
+            RESERVED_ERROR_MSG);
+        final String renameString = renameReservedMap
+            .get(FSDirectory.DOT_RESERVED_STRING);
+        component =
+            DFSUtil.string2Bytes(renameString);
+        LOG.info("Renamed root path " + FSDirectory.DOT_RESERVED_STRING
+            + " to " + renameString);
+      }
+    }
+    return component;
+  }
+
   /**
    * A one-shot class responsible for writing an image file.
    * The write() function should be called once, after which the getter

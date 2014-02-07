@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.yarn.MockApps;
@@ -140,6 +141,11 @@ public abstract class MockAsm extends MockApps {
     }
 
     @Override
+    public Set<String> getApplicationTags() {
+      throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
     public void setQueue(String name) {
       throw new UnsupportedOperationException("Not supported yet.");
     }
@@ -235,7 +241,11 @@ public abstract class MockAsm extends MockApps {
       public int getMaxAppAttempts() {
         return maxAppAttempts;
       }
-      
+
+      @Override
+      public Set<String> getApplicationTags() {
+        return null;
+      }
     };
   }
 

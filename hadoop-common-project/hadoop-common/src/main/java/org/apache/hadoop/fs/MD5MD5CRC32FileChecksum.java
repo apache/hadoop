@@ -56,7 +56,7 @@ public class MD5MD5CRC32FileChecksum extends FileChecksum {
     this.crcPerBlock = crcPerBlock;
     this.md5 = md5;
   }
-  
+
   @Override
   public String getAlgorithmName() {
     return "MD5-of-" + crcPerBlock + "MD5-of-" + bytesPerCRC +
@@ -73,10 +73,10 @@ public class MD5MD5CRC32FileChecksum extends FileChecksum {
 
     throw new IOException("Unknown checksum type in " + algorithm);
   }
- 
+
   @Override
   public int getLength() {return LENGTH;}
- 
+
   @Override
   public byte[] getBytes() {
     return WritableUtils.toByteArray(this);
@@ -88,6 +88,7 @@ public class MD5MD5CRC32FileChecksum extends FileChecksum {
     return DataChecksum.Type.CRC32;
   }
 
+  @Override
   public ChecksumOpt getChecksumOpt() {
     return new ChecksumOpt(getCrcType(), bytesPerCRC);
   }
@@ -98,12 +99,12 @@ public class MD5MD5CRC32FileChecksum extends FileChecksum {
     crcPerBlock = in.readLong();
     md5 = MD5Hash.read(in);
   }
- 
+
   @Override
   public void write(DataOutput out) throws IOException {
     out.writeInt(bytesPerCRC);
     out.writeLong(crcPerBlock);
-    md5.write(out);    
+    md5.write(out);
   }
 
   /** Write that object to xml output. */
@@ -157,11 +158,11 @@ public class MD5MD5CRC32FileChecksum extends FileChecksum {
       }
     } catch (Exception e) {
       throw new SAXException("Invalid attributes: bytesPerCRC=" + bytesPerCRC
-          + ", crcPerBlock=" + crcPerBlock + ", crcType=" + crcType 
+          + ", crcPerBlock=" + crcPerBlock + ", crcType=" + crcType
           + ", md5=" + md5, e);
     }
   }
- 
+
   @Override
   public String toString() {
     return getAlgorithmName() + ":" + md5;

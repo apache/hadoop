@@ -352,7 +352,8 @@ Configuration for <<<conf/core-site.xml>>>
 | | | This value is deprecated. Use dfs.http.policy |
 *-------------------------+-------------------------+------------------------+
 | <<<dfs.http.policy>>> | <HTTP_ONLY> or <HTTPS_ONLY> or <HTTP_AND_HTTPS> | |
-| | | HTTPS_ONLY turns off http access |
+| | | HTTPS_ONLY turns off http access. This option takes precedence over |
+| | | the deprecated configuration dfs.https.enable and hadoop.ssl.enabled. |
 *-------------------------+-------------------------+------------------------+
 | <<<dfs.namenode.https-address>>> | <nn_host_fqdn:50470> | |
 *-------------------------+-------------------------+------------------------+

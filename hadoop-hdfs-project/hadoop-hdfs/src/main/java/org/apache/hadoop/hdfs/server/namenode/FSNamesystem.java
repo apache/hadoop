@@ -1164,11 +1164,24 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     if (isInSafeMode()) {
       SafeModeException se = new SafeModeException(errorMsg, safeMode);
       if (haEnabled && haContext != null
-          && haContext.getState().getServiceState() == HAServiceState.ACTIVE) {
+          && haContext.getState().getServiceState() == HAServiceState.ACTIVE
+          && shouldRetrySafeMode(this.safeMode)) {
         throw new RetriableException(se);
       } else {
         throw se;
       }
+    }
+  }
+  
+  /**
+   * We already know that the safemode is on. We will throw a RetriableException
+   * if the safemode is not manual or caused by low resource.
+   */
+  private boolean shouldRetrySafeMode(SafeModeInfo safeMode) {
+    if (safeMode == null) {
+      return false;
+    } else {
+      return !safeMode.isManual() && !safeMode.areResourcesLow();
     }
   }
   
@@ -3803,7 +3816,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     final long diff = fileINode.getPreferredBlockSize() - commitBlock.getNumBytes();    
     if (diff > 0) {
       try {
-        String path = leaseManager.findPath(fileINode);
+        String path = fileINode.getFullPathName();
         dir.updateSpaceConsumed(path, 0, -diff*fileINode.getFileReplication());
       } catch (IOException e) {
         LOG.warn("Unexpected exception while updating disk space.", e);
@@ -4005,7 +4018,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   @VisibleForTesting
   String closeFileCommitBlocks(INodeFile pendingFile, BlockInfo storedBlock)
       throws IOException {
-    String src = leaseManager.findPath(pendingFile);
+    String src = pendingFile.getFullPathName();
 
     // commit the last block and complete it if it has minimum replicas
     commitOrCompleteLastBlock(pendingFile, storedBlock);
@@ -4027,7 +4040,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   @VisibleForTesting
   String persistBlocks(INodeFile pendingFile, boolean logRetryCache)
       throws IOException {
-    String src = leaseManager.findPath(pendingFile);
+    String src = pendingFile.getFullPathName();
     dir.persistBlocks(src, pendingFile, logRetryCache);
     return src;
   }
@@ -5955,7 +5968,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         .getDatanodeStorageInfos(newNodes, newStorageIDs);
     blockinfo.setExpectedLocations(storages);
 
-    String src = leaseManager.findPath(pendingFile);
+    String src = pendingFile.getFullPathName();
     dir.persistBlocks(src, pendingFile, logRetryCache);
   }
 

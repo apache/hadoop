@@ -40,7 +40,7 @@ public class TestApplicationHistoryServer {
     Configuration config = new YarnConfiguration();
     historyServer.init(config);
     assertEquals(STATE.INITED, historyServer.getServiceState());
-    assertEquals(2, historyServer.getServices().size());
+    assertEquals(3, historyServer.getServices().size());
     ApplicationHistoryClientService historyService =
         historyServer.getClientService();
     assertNotNull(historyServer.getClientService());

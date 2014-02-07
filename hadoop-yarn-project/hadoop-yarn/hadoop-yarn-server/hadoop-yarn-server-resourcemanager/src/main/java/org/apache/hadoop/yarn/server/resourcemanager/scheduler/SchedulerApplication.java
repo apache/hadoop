@@ -25,7 +25,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 @Unstable
 public class SchedulerApplication {
 
-  private final Queue queue;
+  private Queue queue;
   private final String user;
   private SchedulerApplicationAttempt currentAttempt;
 
@@ -36,6 +36,10 @@ public class SchedulerApplication {
 
   public Queue getQueue() {
     return queue;
+  }
+  
+  public void setQueue(Queue queue) {
+    this.queue = queue;
   }
 
   public String getUser() {

@@ -111,7 +111,7 @@ public class CopyMapper extends Mapper<Text, FileStatus, Text, Text> {
    */
   private void initializeSSLConf(Context context) throws IOException {
     LOG.info("Initializing SSL configuration");
-    
+
     String workDir = conf.get(JobContext.JOB_LOCAL_DIR) + "/work";
     Path[] cacheFiles = context.getLocalCacheFiles();
 
@@ -294,7 +294,7 @@ public class CopyMapper extends Mapper<Text, FileStatus, Text, Text> {
             RetriableFileCopyCommand.CopyReadException) {
       incrementCounter(context, Counter.FAIL, 1);
       incrementCounter(context, Counter.BYTESFAILED, sourceFileStatus.getLen());
-      context.write(null, new Text("FAIL: " + sourceFileStatus.getPath() + " - " + 
+      context.write(null, new Text("FAIL: " + sourceFileStatus.getPath() + " - " +
           StringUtils.stringifyException(exception)));
     }
     else
@@ -322,7 +322,7 @@ public class CopyMapper extends Mapper<Text, FileStatus, Text, Text> {
                    targetFileStatus.getLen() != source.getLen()
                 || (!skipCrc &&
                        !DistCpUtils.checksumsAreEqual(sourceFS,
-                                          source.getPath(), targetFS, target))
+                          source.getPath(), null, targetFS, target))
                 || (source.getBlockSize() != targetFileStatus.getBlockSize() &&
                       preserve.contains(FileAttribute.BLOCKSIZE))
                );

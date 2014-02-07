@@ -297,7 +297,24 @@ Release 2.4.0 - UNRELEASED
     HDFS-5781. Use an array to record the mapping between FSEditLogOpCode and 
     the corresponding byte value. (jing9)
 
+    HDFS-5153. Datanode should send block reports for each storage in a
+    separate message. (Arpit Agarwal)
+
+    HDFS-5804. HDFS NFS Gateway fails to mount and proxy when using Kerberos.
+    (Abin Shahab via jing9)
+
+    HDFS-5859. DataNode#checkBlockToken should check block tokens even if
+    security is not enabled. (cmccabe)
+
+    HDFS-5746.  Add ShortCircuitSharedMemorySegment (cmccabe)
+
+    HDFS-4911.  Reduce PeerCache timeout to be commensurate with
+    dfs.datanode.socket.reuse.keepalive (cmccabe)
+
   OPTIMIZATIONS
+
+    HDFS-5790. LeaseManager.findPath is very slow when many leases need recovery
+    (todd)
 
   BUG FIXES
 
@@ -306,6 +323,30 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-5843. DFSClient.getFileChecksum() throws IOException if checksum is 
     disabled. (Laurent Goujon via jing9)
+
+    HDFS-5856. DataNode.checkDiskError might throw NPE.
+    (Josh Elser via suresh)
+
+    HDFS-5828. BlockPlacementPolicyWithNodeGroup can place multiple replicas on
+    the same node group when dfs.namenode.avoid.write.stale.datanode is true. 
+    (Buddy via junping_du)
+
+    HDFS-5767. NFS implementation assumes userName userId mapping to be unique,
+    which is not true sometimes (Yongjun Zhang via brandonli)
+
+    HDFS-5791. TestHttpsFileSystem should use a random port to avoid binding
+    error during testing (Haohui Mai via brandonli)
+
+    HDFS-5709. Improve NameNode upgrade with existing reserved paths and path
+    components. (Andrew Wang via atm)
+
+    HDFS-5881. Fix skip() of the short-circuit local reader(legacy). (kihwal)
+
+    HDFS-5895. HDFS cacheadmin -listPools has exit_code of 1 when the command
+    returns 0 result. (Tassapol Athiapinya via cnauroth)
+
+    HDFS-5807. TestBalancerWithNodeGroup.testBalancerWithNodeGroup fails
+    intermittently. (Chen He via kihwal)
 
 Release 2.3.0 - UNRELEASED
 
@@ -835,6 +876,15 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-5842. Cannot create hftp filesystem when using a proxy user ugi and a doAs 
     on a secure cluster. (jing9)
+
+    HDFS-5399. Revisit SafeModeException and corresponding retry policies.
+    (Jing Zhao via todd)
+
+    HDFS-5876. SecureDataNodeStarter does not pick up configuration in 
+    hdfs-site.xml. (Haohui Mai via jing9)
+
+    HDFS-5873. dfs.http.policy should have higher precedence over dfs.https.enable.
+    (Haohui Mai via jing9)
 
   BREAKDOWN OF HDFS-2832 SUBTASKS AND RELATED JIRAS
 

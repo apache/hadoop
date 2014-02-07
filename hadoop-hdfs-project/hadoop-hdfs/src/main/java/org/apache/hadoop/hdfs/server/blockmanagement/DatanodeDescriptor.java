@@ -257,6 +257,17 @@ public class DatanodeDescriptor extends DatanodeInfo {
     }
   }
 
+  boolean hasStaleStorages() {
+    synchronized (storageMap) {
+      for (DatanodeStorageInfo storage : storageMap.values()) {
+        if (storage.areBlockContentsStale()) {
+          return true;
+        }
+      }
+      return false;
+    }
+  }
+
   /**
    * Remove block from the list of blocks belonging to the data-node. Remove
    * data-node from the block.

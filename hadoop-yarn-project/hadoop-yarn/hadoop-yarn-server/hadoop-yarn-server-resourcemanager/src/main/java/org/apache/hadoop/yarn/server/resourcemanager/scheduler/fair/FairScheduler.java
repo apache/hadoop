@@ -51,6 +51,7 @@ import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger;
@@ -75,7 +76,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnSched
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplication;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
@@ -121,8 +121,7 @@ import com.google.common.annotations.VisibleForTesting;
 @LimitedPrivate("yarn")
 @Unstable
 @SuppressWarnings("unchecked")
-public class FairScheduler extends AbstractYarnScheduler implements
-    ResourceScheduler {
+public class FairScheduler extends AbstractYarnScheduler {
   private boolean initialized;
   private FairSchedulerConfiguration conf;
   private Resource minimumAllocation;
@@ -767,7 +766,9 @@ public class FairScheduler extends AbstractYarnScheduler implements
     boolean wasRunnable = queue.removeApp(attempt);
 
     if (wasRunnable) {
-      maxRunningEnforcer.updateRunnabilityOnAppRemoval(attempt);
+      maxRunningEnforcer.untrackRunnableApp(attempt);
+      maxRunningEnforcer.updateRunnabilityOnAppRemoval(attempt,
+          attempt.getQueue());
     } else {
       maxRunningEnforcer.untrackNonRunnableApp(attempt);
     }
@@ -1355,5 +1356,120 @@ public class FairScheduler extends AbstractYarnScheduler implements
     List<ApplicationAttemptId> apps = new ArrayList<ApplicationAttemptId>();
     queue.collectSchedulerApplications(apps);
     return apps;
+  }
+
+  @Override
+  public synchronized String moveApplication(ApplicationId appId,
+      String queueName) throws YarnException {
+    SchedulerApplication app = applications.get(appId);
+    if (app == null) {
+      throw new YarnException("App to be moved " + appId + " not found.");
+    }
+    FSSchedulerApp attempt = (FSSchedulerApp) app.getCurrentAppAttempt();
+    
+    FSLeafQueue oldQueue = (FSLeafQueue) app.getQueue();
+    FSLeafQueue targetQueue = queueMgr.getLeafQueue(queueName, false);
+    if (targetQueue == null) {
+      throw new YarnException("Target queue " + queueName
+          + " not found or is not a leaf queue.");
+    }
+    if (targetQueue == oldQueue) {
+      return oldQueue.getQueueName();
+    }
+    
+    if (oldQueue.getRunnableAppSchedulables().contains(
+        attempt.getAppSchedulable())) {
+      verifyMoveDoesNotViolateConstraints(attempt, oldQueue, targetQueue);
+    }
+    
+    executeMove(app, attempt, oldQueue, targetQueue);
+    return targetQueue.getQueueName();
+  }
+  
+  private void verifyMoveDoesNotViolateConstraints(FSSchedulerApp app,
+      FSLeafQueue oldQueue, FSLeafQueue targetQueue) throws YarnException {
+    String queueName = targetQueue.getQueueName();
+    ApplicationAttemptId appAttId = app.getApplicationAttemptId();
+    // When checking maxResources and maxRunningApps, only need to consider
+    // queues before the lowest common ancestor of the two queues because the
+    // total running apps in queues above will not be changed.
+    FSQueue lowestCommonAncestor = findLowestCommonAncestorQueue(oldQueue,
+        targetQueue);
+    Resource consumption = app.getCurrentConsumption();
+    
+    // Check whether the move would go over maxRunningApps or maxShare
+    FSQueue cur = targetQueue;
+    while (cur != lowestCommonAncestor) {
+      // maxRunningApps
+      if (cur.getNumRunnableApps() == allocConf.getQueueMaxApps(cur.getQueueName())) {
+        throw new YarnException("Moving app attempt " + appAttId + " to queue "
+            + queueName + " would violate queue maxRunningApps constraints on"
+            + " queue " + cur.getQueueName());
+      }
+      
+      // maxShare
+      if (!Resources.fitsIn(Resources.add(cur.getResourceUsage(), consumption),
+          cur.getMaxShare())) {
+        throw new YarnException("Moving app attempt " + appAttId + " to queue "
+            + queueName + " would violate queue maxShare constraints on"
+            + " queue " + cur.getQueueName());
+      }
+      
+      cur = cur.getParent();
+    }
+  }
+  
+  /**
+   * Helper for moveApplication, which is synchronized, so all operations will
+   * be atomic.
+   */
+  private void executeMove(SchedulerApplication app, FSSchedulerApp attempt,
+      FSLeafQueue oldQueue, FSLeafQueue newQueue) {
+    boolean wasRunnable = oldQueue.removeApp(attempt);
+    // if app was not runnable before, it may be runnable now
+    boolean nowRunnable = maxRunningEnforcer.canAppBeRunnable(newQueue,
+        attempt.getUser());
+    if (wasRunnable && !nowRunnable) {
+      throw new IllegalStateException("Should have already verified that app "
+          + attempt.getApplicationId() + " would be runnable in new queue");
+    }
+    
+    if (wasRunnable) {
+      maxRunningEnforcer.untrackRunnableApp(attempt);
+    } else if (nowRunnable) {
+      // App has changed from non-runnable to runnable
+      maxRunningEnforcer.untrackNonRunnableApp(attempt);
+    }
+    
+    attempt.move(newQueue); // This updates all the metrics
+    app.setQueue(newQueue);
+    newQueue.addApp(attempt, nowRunnable);
+    
+    if (nowRunnable) {
+      maxRunningEnforcer.trackRunnableApp(attempt);
+    }
+    if (wasRunnable) {
+      maxRunningEnforcer.updateRunnabilityOnAppRemoval(attempt, oldQueue);
+    }
+  }
+  
+  private FSQueue findLowestCommonAncestorQueue(FSQueue queue1, FSQueue queue2) {
+    // Because queue names include ancestors, separated by periods, we can find
+    // the lowest common ancestors by going from the start of the names until
+    // there's a character that doesn't match.
+    String name1 = queue1.getName();
+    String name2 = queue2.getName();
+    // We keep track of the last period we encounter to avoid returning root.apple
+    // when the queues are root.applepie and root.appletart
+    int lastPeriodIndex = -1;
+    for (int i = 0; i < Math.max(name1.length(), name2.length()); i++) {
+      if (name1.length() <= i || name2.length() <= i ||
+          name1.charAt(i) != name2.charAt(i)) {
+        return queueMgr.getQueue(name1.substring(lastPeriodIndex));
+      } else if (name1.charAt(i) == '.') {
+        lastPeriodIndex = i;
+      }
+    }
+    return queue1; // names are identical
   }
 }
