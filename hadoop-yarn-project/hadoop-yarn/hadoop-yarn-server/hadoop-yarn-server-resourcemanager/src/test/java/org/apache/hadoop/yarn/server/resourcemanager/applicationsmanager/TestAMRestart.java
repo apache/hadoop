@@ -69,7 +69,7 @@ public class TestAMRestart {
         new MockNM("127.0.0.1:2351", 4089, rm1.getResourceTrackerService());
     nm2.registerNode();
 
-    MockAM am1 = MockRM.launchAM(app1, rm1, nm1);
+    MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
     int NUM_CONTAINERS = 3;
     // allocate NUM_CONTAINERS containers
     am1.allocate("127.0.0.1", 1024, NUM_CONTAINERS,
