@@ -142,6 +142,11 @@ Release 2.4.0 - UNRELEASED
     YARN-1665. Simplify the configuration of RM HA by having better default
     values. (Xuan Gong via vinodkv)
 
+    YARN-1660. Simplified the RM HA configuration to accept and be able to simply
+    depend just on configuration properties of the form
+    yarn.resourcemanager.hostname.RMID and use the default ports for all service
+    addresses. (Xuan Gong via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
