@@ -320,9 +320,10 @@ public class FSEditLogLoader {
         inodeId = getAndUpdateLastInodeId(addCloseOp.inodeId, logVersion,
             lastInodeId);
         newFile = fsDir.unprotectedAddFile(inodeId,
-            addCloseOp.path, addCloseOp.permissions, replication,
-            addCloseOp.mtime, addCloseOp.atime, addCloseOp.blockSize, true,
-            addCloseOp.clientName, addCloseOp.clientMachine);
+            addCloseOp.path, addCloseOp.permissions, addCloseOp.aclEntries,
+            replication, addCloseOp.mtime, addCloseOp.atime,
+            addCloseOp.blockSize, true, addCloseOp.clientName,
+            addCloseOp.clientMachine);
         fsNamesys.leaseManager.addLease(addCloseOp.clientName, addCloseOp.path);
 
         // add the op into retry cache if necessary
@@ -468,7 +469,7 @@ public class FSEditLogLoader {
       inodeId = getAndUpdateLastInodeId(mkdirOp.inodeId, logVersion,
           lastInodeId);
       fsDir.unprotectedMkdir(inodeId, mkdirOp.path, mkdirOp.permissions,
-                             mkdirOp.timestamp);
+                             mkdirOp.aclEntries, mkdirOp.timestamp);
       break;
     }
     case OP_SET_GENSTAMP_V1: {

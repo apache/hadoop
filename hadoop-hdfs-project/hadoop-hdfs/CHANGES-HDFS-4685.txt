@@ -62,6 +62,8 @@ HDFS-4685 (Unreleased)
     HDFS-5861. Add CLI test for Ls output for extended ACL marker.
     (Vinay via cnauroth)
 
+    HDFS-5616. NameNode: implement default ACL handling. (cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES

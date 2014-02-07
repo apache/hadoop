@@ -593,11 +593,15 @@
         </comparator>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>group::r--</expected-output>
+          <expected-output>group::r-x</expected-output>
         </comparator>
         <comparator>
           <type>SubstringComparator</type>
           <expected-output>group:admin:rwx</expected-output>
+        </comparator>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>mask::r--</expected-output>
         </comparator>
         <comparator>
           <type>SubstringComparator</type>

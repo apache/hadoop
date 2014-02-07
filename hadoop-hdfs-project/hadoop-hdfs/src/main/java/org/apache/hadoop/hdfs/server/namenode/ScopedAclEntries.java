@@ -49,7 +49,7 @@ final class ScopedAclEntries {
         Collections.<AclEntry>emptyList();
       defaultEntries = aclEntries.subList(pivot, aclEntries.size());
     } else {
-      accessEntries = !aclEntries.isEmpty() ? aclEntries : null;
+      accessEntries = aclEntries;
       defaultEntries = Collections.emptyList();
     }
   }

@@ -23,11 +23,13 @@ import static org.apache.hadoop.fs.permission.AclEntryType.*;
 import static org.apache.hadoop.fs.permission.FsAction.*;
 
 import java.io.IOException;
+import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
@@ -64,14 +66,7 @@ public class TestFSImageWithAcl {
         .setPermission(READ_EXECUTE).setScope(ACCESS).setType(USER).build();
     fs.modifyAclEntries(p, Lists.newArrayList(e));
 
-    if (persistNamespace) {
-      fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
-      fs.saveNamespace();
-      fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
-    }
-
-    cluster.restartNameNode();
-    cluster.waitActive();
+    restart(fs, persistNamespace);
 
     AclStatus s = cluster.getNamesystem().getAclStatus(p.toString());
     AclEntry[] returned = Lists.newArrayList(s.getEntries()).toArray(
@@ -111,5 +106,134 @@ public class TestFSImageWithAcl {
   @Test
   public void testAclEditLog() throws IOException {
     testAcl(false);
+  }
+
+  private void doTestDefaultAclNewChildren(boolean persistNamespace)
+      throws IOException {
+    Path dirPath = new Path("/dir");
+    Path filePath = new Path(dirPath, "file1");
+    Path subdirPath = new Path(dirPath, "subdir1");
+    DistributedFileSystem fs = cluster.getFileSystem();
+    fs.mkdirs(dirPath);
+    List<AclEntry> aclSpec = Lists.newArrayList(
+      aclEntry(DEFAULT, USER, "foo", ALL));
+    fs.setAcl(dirPath, aclSpec);
+
+    fs.create(filePath).close();
+    fs.mkdirs(subdirPath);
+
+    AclEntry[] fileExpected = new AclEntry[] {
+      aclEntry(ACCESS, USER, "foo", ALL),
+      aclEntry(ACCESS, GROUP, READ_EXECUTE) };
+    AclEntry[] subdirExpected = new AclEntry[] {
+      aclEntry(ACCESS, USER, "foo", ALL),
+      aclEntry(ACCESS, GROUP, READ_EXECUTE),
+      aclEntry(DEFAULT, USER, ALL),
+      aclEntry(DEFAULT, USER, "foo", ALL),
+      aclEntry(DEFAULT, GROUP, READ_EXECUTE),
+      aclEntry(DEFAULT, MASK, ALL),
+      aclEntry(DEFAULT, OTHER, READ_EXECUTE) };
+
+    AclEntry[] fileReturned = fs.getAclStatus(filePath).getEntries()
+      .toArray(new AclEntry[0]);
+    Assert.assertArrayEquals(fileExpected, fileReturned);
+    AclEntry[] subdirReturned = fs.getAclStatus(subdirPath).getEntries()
+      .toArray(new AclEntry[0]);
+    Assert.assertArrayEquals(subdirExpected, subdirReturned);
+    assertPermission(fs, subdirPath, (short)02755);
+
+    restart(fs, persistNamespace);
+
+    fileReturned = fs.getAclStatus(filePath).getEntries()
+      .toArray(new AclEntry[0]);
+    Assert.assertArrayEquals(fileExpected, fileReturned);
+    subdirReturned = fs.getAclStatus(subdirPath).getEntries()
+      .toArray(new AclEntry[0]);
+    Assert.assertArrayEquals(subdirExpected, subdirReturned);
+    assertPermission(fs, subdirPath, (short)02755);
+
+    aclSpec = Lists.newArrayList(aclEntry(DEFAULT, USER, "foo", READ_WRITE));
+    fs.modifyAclEntries(dirPath, aclSpec);
+
+    fileReturned = fs.getAclStatus(filePath).getEntries()
+      .toArray(new AclEntry[0]);
+    Assert.assertArrayEquals(fileExpected, fileReturned);
+    subdirReturned = fs.getAclStatus(subdirPath).getEntries()
+      .toArray(new AclEntry[0]);
+    Assert.assertArrayEquals(subdirExpected, subdirReturned);
+    assertPermission(fs, subdirPath, (short)02755);
+
+    restart(fs, persistNamespace);
+
+    fileReturned = fs.getAclStatus(filePath).getEntries()
+      .toArray(new AclEntry[0]);
+    Assert.assertArrayEquals(fileExpected, fileReturned);
+    subdirReturned = fs.getAclStatus(subdirPath).getEntries()
+      .toArray(new AclEntry[0]);
+    Assert.assertArrayEquals(subdirExpected, subdirReturned);
+    assertPermission(fs, subdirPath, (short)02755);
+
+    fs.removeAcl(dirPath);
+
+    fileReturned = fs.getAclStatus(filePath).getEntries()
+      .toArray(new AclEntry[0]);
+    Assert.assertArrayEquals(fileExpected, fileReturned);
+    subdirReturned = fs.getAclStatus(subdirPath).getEntries()
+      .toArray(new AclEntry[0]);
+    Assert.assertArrayEquals(subdirExpected, subdirReturned);
+    assertPermission(fs, subdirPath, (short)02755);
+
+    restart(fs, persistNamespace);
+
+    fileReturned = fs.getAclStatus(filePath).getEntries()
+      .toArray(new AclEntry[0]);
+    Assert.assertArrayEquals(fileExpected, fileReturned);
+    subdirReturned = fs.getAclStatus(subdirPath).getEntries()
+      .toArray(new AclEntry[0]);
+    Assert.assertArrayEquals(subdirExpected, subdirReturned);
+    assertPermission(fs, subdirPath, (short)02755);
+  }
+
+  @Test
+  public void testFsImageDefaultAclNewChildren() throws IOException {
+    doTestDefaultAclNewChildren(true);
+  }
+
+  @Test
+  public void testEditLogDefaultAclNewChildren() throws IOException {
+    doTestDefaultAclNewChildren(false);
+  }
+
+  /**
+   * Asserts the value of the FsPermission bits on the inode of a specific path.
+   *
+   * @param fs DistributedFileSystem to use for check
+   * @param pathToCheck Path inode to check
+   * @param perm short expected permission bits
+   * @throws IOException thrown if there is an I/O error
+   */
+  private static void assertPermission(DistributedFileSystem fs,
+      Path pathToCheck, short perm) throws IOException {
+    Assert.assertEquals(FsPermission.createImmutable(perm),
+      fs.getFileStatus(pathToCheck).getPermission());
+  }
+
+  /**
+   * Restart the NameNode, optionally saving a new checkpoint.
+   *
+   * @param fs DistributedFileSystem used for saving namespace
+   * @param persistNamespace boolean true to save a new checkpoint
+   * @throws IOException if restart fails
+   */
+  private void restart(DistributedFileSystem fs, boolean persistNamespace)
+      throws IOException {
+    if (persistNamespace) {
+      fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      fs.saveNamespace();
+      fs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    }
+
+    cluster.restartNameNode();
+    cluster.waitActive();
   }
 }

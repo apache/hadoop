@@ -23,6 +23,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.FSAclBaseTest;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
+import org.junit.Test;
 
 /**
  * Tests ACL APIs via WebHDFS.
@@ -36,5 +38,15 @@ public class TestWebHDFSAcl extends FSAclBaseTest {
     cluster.waitActive();
     fs = WebHdfsTestUtil.getWebHdfsFileSystem(conf, WebHdfsFileSystem.SCHEME);
     assertTrue(fs instanceof WebHdfsFileSystem);
+  }
+
+  /**
+   * We need to skip this test on WebHDFS, because WebHDFS currently cannot
+   * resolve symlinks.
+   */
+  @Override
+  @Test
+  @Ignore
+  public void testDefaultAclNewSymlinkIntermediate() {
   }
 }

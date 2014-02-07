@@ -27,6 +27,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.List;
 
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.AclEntry;
@@ -786,6 +787,255 @@ public abstract class FSAclBaseTest {
     assertAclFeature(true);
   }
 
+  @Test
+  public void testDefaultAclNewFile() throws Exception {
+    FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short)0750));
+    List<AclEntry> aclSpec = Lists.newArrayList(
+      aclEntry(DEFAULT, USER, "foo", ALL));
+    fs.setAcl(path, aclSpec);
+    Path filePath = new Path(path, "file1");
+    fs.create(filePath).close();
+    AclStatus s = fs.getAclStatus(filePath);
+    AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
+    assertArrayEquals(new AclEntry[] {
+      aclEntry(ACCESS, USER, "foo", ALL),
+      aclEntry(ACCESS, GROUP, READ_EXECUTE) }, returned);
+    assertPermission(filePath, (short)02640);
+    assertAclFeature(filePath, true);
+  }
+
+  @Test
+  public void testOnlyAccessAclNewFile() throws Exception {
+    FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short)0750));
+    List<AclEntry> aclSpec = Lists.newArrayList(
+      aclEntry(ACCESS, USER, "foo", ALL));
+    fs.modifyAclEntries(path, aclSpec);
+    Path filePath = new Path(path, "file1");
+    fs.create(filePath).close();
+    AclStatus s = fs.getAclStatus(filePath);
+    AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
+    assertArrayEquals(new AclEntry[] { }, returned);
+    assertPermission(filePath, (short)0644);
+    assertAclFeature(filePath, false);
+  }
+
+  @Test
+  public void testDefaultMinimalAclNewFile() throws Exception {
+    FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short)0750));
+    List<AclEntry> aclSpec = Lists.newArrayList(
+      aclEntry(DEFAULT, USER, ALL),
+      aclEntry(DEFAULT, GROUP, READ_EXECUTE),
+      aclEntry(DEFAULT, OTHER, NONE));
+    fs.setAcl(path, aclSpec);
+    Path filePath = new Path(path, "file1");
+    fs.create(filePath).close();
+    AclStatus s = fs.getAclStatus(filePath);
+    AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
+    assertArrayEquals(new AclEntry[] { }, returned);
+    assertPermission(filePath, (short)0640);
+    assertAclFeature(filePath, false);
+  }
+
+  @Test
+  public void testDefaultAclNewDir() throws Exception {
+    FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short)0750));
+    List<AclEntry> aclSpec = Lists.newArrayList(
+      aclEntry(DEFAULT, USER, "foo", ALL));
+    fs.setAcl(path, aclSpec);
+    Path dirPath = new Path(path, "dir1");
+    fs.mkdirs(dirPath);
+    AclStatus s = fs.getAclStatus(dirPath);
+    AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
+    assertArrayEquals(new AclEntry[] {
+      aclEntry(ACCESS, USER, "foo", ALL),
+      aclEntry(ACCESS, GROUP, READ_EXECUTE),
+      aclEntry(DEFAULT, USER, ALL),
+      aclEntry(DEFAULT, USER, "foo", ALL),
+      aclEntry(DEFAULT, GROUP, READ_EXECUTE),
+      aclEntry(DEFAULT, MASK, ALL),
+      aclEntry(DEFAULT, OTHER, NONE) }, returned);
+    assertPermission(dirPath, (short)02750);
+    assertAclFeature(dirPath, true);
+  }
+
+  @Test
+  public void testOnlyAccessAclNewDir() throws Exception {
+    FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short)0750));
+    List<AclEntry> aclSpec = Lists.newArrayList(
+      aclEntry(ACCESS, USER, "foo", ALL));
+    fs.modifyAclEntries(path, aclSpec);
+    Path dirPath = new Path(path, "dir1");
+    fs.mkdirs(dirPath);
+    AclStatus s = fs.getAclStatus(dirPath);
+    AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
+    assertArrayEquals(new AclEntry[] { }, returned);
+    assertPermission(dirPath, (short)0755);
+    assertAclFeature(dirPath, false);
+  }
+
+  @Test
+  public void testDefaultMinimalAclNewDir() throws Exception {
+    FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short)0750));
+    List<AclEntry> aclSpec = Lists.newArrayList(
+      aclEntry(DEFAULT, USER, ALL),
+      aclEntry(DEFAULT, GROUP, READ_EXECUTE),
+      aclEntry(DEFAULT, OTHER, NONE));
+    fs.setAcl(path, aclSpec);
+    Path dirPath = new Path(path, "dir1");
+    fs.mkdirs(dirPath);
+    AclStatus s = fs.getAclStatus(dirPath);
+    AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
+    assertArrayEquals(new AclEntry[] {
+      aclEntry(DEFAULT, USER, ALL),
+      aclEntry(DEFAULT, GROUP, READ_EXECUTE),
+      aclEntry(DEFAULT, OTHER, NONE) }, returned);
+    assertPermission(dirPath, (short)02750);
+    assertAclFeature(dirPath, true);
+  }
+
+  @Test
+  public void testDefaultAclNewFileIntermediate() throws Exception {
+    FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short)0750));
+    List<AclEntry> aclSpec = Lists.newArrayList(
+      aclEntry(DEFAULT, USER, "foo", ALL));
+    fs.setAcl(path, aclSpec);
+    Path dirPath = new Path(path, "dir1");
+    Path filePath = new Path(dirPath, "file1");
+    fs.create(filePath).close();
+    AclEntry[] expected = new AclEntry[] {
+      aclEntry(ACCESS, USER, "foo", ALL),
+      aclEntry(ACCESS, GROUP, READ_EXECUTE),
+      aclEntry(DEFAULT, USER, ALL),
+      aclEntry(DEFAULT, USER, "foo", ALL),
+      aclEntry(DEFAULT, GROUP, READ_EXECUTE),
+      aclEntry(DEFAULT, MASK, ALL),
+      aclEntry(DEFAULT, OTHER, NONE) };
+    AclStatus s = fs.getAclStatus(dirPath);
+    AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
+    assertArrayEquals(expected, returned);
+    assertPermission(dirPath, (short)02750);
+    assertAclFeature(dirPath, true);
+    expected = new AclEntry[] {
+      aclEntry(ACCESS, USER, "foo", ALL),
+      aclEntry(ACCESS, GROUP, READ_EXECUTE) };
+    s = fs.getAclStatus(filePath);
+    returned = s.getEntries().toArray(new AclEntry[0]);
+    assertArrayEquals(expected, returned);
+    assertPermission(filePath, (short)02640);
+    assertAclFeature(filePath, true);
+  }
+
+  @Test
+  public void testDefaultAclNewDirIntermediate() throws Exception {
+    FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short)0750));
+    List<AclEntry> aclSpec = Lists.newArrayList(
+      aclEntry(DEFAULT, USER, "foo", ALL));
+    fs.setAcl(path, aclSpec);
+    Path dirPath = new Path(path, "dir1");
+    Path subdirPath = new Path(dirPath, "subdir1");
+    fs.mkdirs(subdirPath);
+    AclEntry[] expected = new AclEntry[] {
+      aclEntry(ACCESS, USER, "foo", ALL),
+      aclEntry(ACCESS, GROUP, READ_EXECUTE),
+      aclEntry(DEFAULT, USER, ALL),
+      aclEntry(DEFAULT, USER, "foo", ALL),
+      aclEntry(DEFAULT, GROUP, READ_EXECUTE),
+      aclEntry(DEFAULT, MASK, ALL),
+      aclEntry(DEFAULT, OTHER, NONE) };
+    AclStatus s = fs.getAclStatus(dirPath);
+    AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
+    assertArrayEquals(expected, returned);
+    assertPermission(dirPath, (short)02750);
+    assertAclFeature(dirPath, true);
+    s = fs.getAclStatus(subdirPath);
+    returned = s.getEntries().toArray(new AclEntry[0]);
+    assertArrayEquals(expected, returned);
+    assertPermission(subdirPath, (short)02750);
+    assertAclFeature(subdirPath, true);
+  }
+
+  @Test
+  public void testDefaultAclNewSymlinkIntermediate() throws Exception {
+    FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short)0750));
+    Path filePath = new Path(path, "file1");
+    fs.create(filePath).close();
+    fs.setPermission(filePath, FsPermission.createImmutable((short)0640));
+    List<AclEntry> aclSpec = Lists.newArrayList(
+      aclEntry(DEFAULT, USER, "foo", ALL));
+    fs.setAcl(path, aclSpec);
+    Path dirPath = new Path(path, "dir1");
+    Path linkPath = new Path(dirPath, "link1");
+    fs.createSymlink(filePath, linkPath, true);
+    AclEntry[] expected = new AclEntry[] {
+      aclEntry(ACCESS, USER, "foo", ALL),
+      aclEntry(ACCESS, GROUP, READ_EXECUTE),
+      aclEntry(DEFAULT, USER, ALL),
+      aclEntry(DEFAULT, USER, "foo", ALL),
+      aclEntry(DEFAULT, GROUP, READ_EXECUTE),
+      aclEntry(DEFAULT, MASK, ALL),
+      aclEntry(DEFAULT, OTHER, NONE) };
+    AclStatus s = fs.getAclStatus(dirPath);
+    AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
+    assertArrayEquals(expected, returned);
+    assertPermission(dirPath, (short)02750);
+    assertAclFeature(dirPath, true);
+    expected = new AclEntry[] { };
+    s = fs.getAclStatus(linkPath);
+    returned = s.getEntries().toArray(new AclEntry[0]);
+    assertArrayEquals(expected, returned);
+    assertPermission(linkPath, (short)0640);
+    assertAclFeature(linkPath, false);
+    s = fs.getAclStatus(filePath);
+    returned = s.getEntries().toArray(new AclEntry[0]);
+    assertArrayEquals(expected, returned);
+    assertPermission(filePath, (short)0640);
+    assertAclFeature(filePath, false);
+  }
+
+  @Test
+  public void testDefaultAclNewFileWithMode() throws Exception {
+    FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short)0755));
+    List<AclEntry> aclSpec = Lists.newArrayList(
+      aclEntry(DEFAULT, USER, "foo", ALL));
+    fs.setAcl(path, aclSpec);
+    Path filePath = new Path(path, "file1");
+    int bufferSize = cluster.getConfiguration(0).getInt(
+      CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY,
+      CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_DEFAULT);
+    fs.create(filePath, new FsPermission((short)0740), false, bufferSize,
+      fs.getDefaultReplication(filePath), fs.getDefaultBlockSize(path), null)
+      .close();
+    AclStatus s = fs.getAclStatus(filePath);
+    AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
+    assertArrayEquals(new AclEntry[] {
+      aclEntry(ACCESS, USER, "foo", ALL),
+      aclEntry(ACCESS, GROUP, READ_EXECUTE) }, returned);
+    assertPermission(filePath, (short)02740);
+    assertAclFeature(filePath, true);
+  }
+
+  @Test
+  public void testDefaultAclNewDirWithMode() throws Exception {
+    FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short)0755));
+    List<AclEntry> aclSpec = Lists.newArrayList(
+      aclEntry(DEFAULT, USER, "foo", ALL));
+    fs.setAcl(path, aclSpec);
+    Path dirPath = new Path(path, "dir1");
+    fs.mkdirs(dirPath, new FsPermission((short)0740));
+    AclStatus s = fs.getAclStatus(dirPath);
+    AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
+    assertArrayEquals(new AclEntry[] {
+      aclEntry(ACCESS, USER, "foo", ALL),
+      aclEntry(ACCESS, GROUP, READ_EXECUTE),
+      aclEntry(DEFAULT, USER, ALL),
+      aclEntry(DEFAULT, USER, "foo", ALL),
+      aclEntry(DEFAULT, GROUP, READ_EXECUTE),
+      aclEntry(DEFAULT, MASK, ALL),
+      aclEntry(DEFAULT, OTHER, READ_EXECUTE) }, returned);
+    assertPermission(dirPath, (short)02740);
+    assertAclFeature(dirPath, true);
+  }
+
   /**
    * Asserts whether or not the inode for the test path has an AclFeature.
    *
@@ -795,8 +1045,21 @@ public abstract class FSAclBaseTest {
    */
   private static void assertAclFeature(boolean expectAclFeature)
       throws IOException {
+    assertAclFeature(path, expectAclFeature);
+  }
+
+  /**
+   * Asserts whether or not the inode for a specific path has an AclFeature.
+   *
+   * @param pathToCheck Path inode to check
+   * @param expectAclFeature boolean true if an AclFeature must be present,
+   *   false if an AclFeature must not be present
+   * @throws IOException thrown if there is an I/O error
+   */
+  private static void assertAclFeature(Path pathToCheck,
+      boolean expectAclFeature) throws IOException {
     INode inode = cluster.getNamesystem().getFSDirectory().getRoot()
-      .getNode(path.toUri().getPath(), false);
+      .getNode(pathToCheck.toUri().getPath(), false);
     assertNotNull(inode);
     AclFeature aclFeature = inode.getAclFeature();
     if (expectAclFeature) {
@@ -813,7 +1076,19 @@ public abstract class FSAclBaseTest {
    * @throws IOException thrown if there is an I/O error
    */
   private static void assertPermission(short perm) throws IOException {
+    assertPermission(path, perm);
+  }
+
+  /**
+   * Asserts the value of the FsPermission bits on the inode of a specific path.
+   *
+   * @param pathToCheck Path inode to check
+   * @param perm short expected permission bits
+   * @throws IOException thrown if there is an I/O error
+   */
+  private static void assertPermission(Path pathToCheck, short perm)
+      throws IOException {
     assertEquals(FsPermission.createImmutable(perm),
-      fs.getFileStatus(path).getPermission());
+      fs.getFileStatus(pathToCheck).getPermission());
   }
 }
