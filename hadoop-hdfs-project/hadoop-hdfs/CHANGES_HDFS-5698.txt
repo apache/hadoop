@@ -43,3 +43,6 @@ HDFS-5698 subtasks
 
     HDFS-5906. Fixing findbugs and javadoc warnings in the HDFS-5698 branch.
     (Haohui Mai via jing9)
+
+    HDFS-5911. The id of a CacheDirective instance does not get serialized in 
+    the protobuf-fsimage. (Haohui Mai via jing9)

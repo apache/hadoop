@@ -992,7 +992,8 @@ public final class CacheManager {
 
     for (CacheDirective directive : directivesById.values()) {
       CacheDirectiveInfo info = directive.toInfo();
-      CacheDirectiveInfoProto.Builder b = CacheDirectiveInfoProto.newBuilder();
+      CacheDirectiveInfoProto.Builder b = CacheDirectiveInfoProto.newBuilder()
+          .setId(info.getId());
 
       if (info.getPath() != null) {
         b.setPath(info.getPath().toUri().getPath());
