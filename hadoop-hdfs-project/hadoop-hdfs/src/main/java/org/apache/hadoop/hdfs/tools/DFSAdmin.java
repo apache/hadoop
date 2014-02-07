@@ -307,7 +307,7 @@ public class DFSAdmin extends FsShell {
       final RollingUpgradeInfo info = dfs.rollingUpgrade(action);
       switch(action){
       case QUERY:
-        if (info.isStarted()) {
+        if (info != null && info.isStarted()) {
           System.out.println("Rolling upgrade is in progress:");
           System.out.println(info);
         } else {

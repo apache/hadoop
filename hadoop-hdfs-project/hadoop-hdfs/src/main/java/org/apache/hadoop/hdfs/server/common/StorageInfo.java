@@ -36,7 +36,6 @@ import org.apache.hadoop.hdfs.server.datanode.DataNodeLayoutVersion;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion;
 
 import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
 
 /**
  * Common class for storage information.
@@ -95,7 +94,6 @@ public class StorageInfo {
   public long   getCTime()        { return cTime; }
   
   public void   setStorageInfo(StorageInfo from) {
-    Preconditions.checkArgument(from.storageType == storageType);
     layoutVersion = from.layoutVersion;
     clusterID = from.clusterID;
     namespaceID = from.namespaceID;

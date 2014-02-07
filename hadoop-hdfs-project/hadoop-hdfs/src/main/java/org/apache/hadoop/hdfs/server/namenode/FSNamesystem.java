@@ -204,7 +204,6 @@ import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
 import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
 import org.apache.hadoop.hdfs.server.namenode.ha.EditLogTailer;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAContext;
-import org.apache.hadoop.hdfs.server.namenode.ha.HAState;
 import org.apache.hadoop.hdfs.server.namenode.ha.StandbyCheckpointer;
 import org.apache.hadoop.hdfs.server.namenode.metrics.FSNamesystemMBean;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
@@ -401,7 +400,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   private final CacheManager cacheManager;
   private final DatanodeStatistics datanodeStatistics;
 
-  private RollingUpgradeInfo rollingUpgradeInfo;
+  private RollingUpgradeInfo rollingUpgradeInfo = null;
 
   // Block pool ID used by this namenode
   private String blockPoolId;
@@ -622,8 +621,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @return an FSNamesystem which contains the loaded namespace
    * @throws IOException if loading fails
    */
-  public static FSNamesystem loadFromDisk(Configuration conf)
-      throws IOException {
+  static FSNamesystem loadFromDisk(Configuration conf) throws IOException {
 
     checkConfiguration(conf);
     FSImage fsImage = new FSImage(conf,
@@ -636,10 +634,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
 
     long loadStart = now();
-    String nameserviceId = DFSUtil.getNamenodeNameServiceId(conf);
     try {
-      namesystem.loadFSImage(startOpt, fsImage,
-        HAUtil.isHAEnabled(conf, nameserviceId));
+      namesystem.loadFSImage(startOpt);
     } catch (IOException ioe) {
       LOG.warn("Encountered exception loading fsimage", ioe);
       fsImage.close();
@@ -864,8 +860,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     return Collections.unmodifiableList(auditLoggers);
   }
 
-  void loadFSImage(StartupOption startOpt, FSImage fsImage, boolean haEnabled)
-      throws IOException {
+  private void loadFSImage(StartupOption startOpt) throws IOException {
+    final FSImage fsImage = getFSImage();
+
     // format before starting up if requested
     if (startOpt == StartupOption.FORMAT) {
       
@@ -878,8 +875,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     try {
       // We shouldn't be calling saveNamespace if we've come up in standby state.
       MetaRecoveryContext recovery = startOpt.createRecoveryContext();
-      boolean needToSave =
-        fsImage.recoverTransitionRead(startOpt, this, recovery) && !haEnabled;
+      final boolean staleImage
+          = fsImage.recoverTransitionRead(startOpt, this, recovery);
+      final boolean needToSave = staleImage && !haEnabled && !isRollingUpgrade(); 
+      LOG.info("Need to save fs image? " + needToSave
+          + " (staleImage=" + staleImage + ", haEnabled=" + haEnabled
+          + ", isRollingUpgrade=" + isRollingUpgrade() + ")");
       if (needToSave) {
         fsImage.saveNamespace(this);
       } else {
@@ -4494,6 +4495,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     readLock();
     try {
       checkOperation(OperationCategory.UNCHECKED);
+      checkRollingUpgrade("save namespace");
+
       if (!isInSafeMode()) {
         throw new IOException("Safe mode should be turned ON "
             + "in order to create namespace image.");
@@ -5317,8 +5320,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     NamenodeCommand cmd = null;
     try {
       checkOperation(OperationCategory.CHECKPOINT);
-
       checkNameNodeSafeMode("Checkpoint not started");
+      
       LOG.info("Start checkpoint for " + backupNode.getAddress());
       cmd = getFSImage().startCheckpoint(backupNode, activeNamenode);
       getEditLog().logSync();
@@ -7087,8 +7090,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     checkOperation(OperationCategory.READ);
     readLock();
     try {
-      return rollingUpgradeInfo != null? rollingUpgradeInfo
-          : RollingUpgradeInfo.EMPTY_INFO;
+      return rollingUpgradeInfo;
     } finally {
       readUnlock();
     }
@@ -7100,18 +7102,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
-      final String err = "Failed to start rolling upgrade";
-      checkNameNodeSafeMode(err);
+      final String action = "start rolling upgrade";
+      checkNameNodeSafeMode("Failed to " + action);
+      checkRollingUpgrade(action);
 
-      if (isRollingUpgrade()) {
-        throw new RollingUpgradeException(err
-            + " since a rolling upgrade is already in progress."
-            + "\nExisting rolling upgrade info: " + rollingUpgradeInfo);
-      }
-      
-      final CheckpointSignature cs = getFSImage().rollEditLog();
-      LOG.info("Successfully rolled edit log for preparing rolling upgrade."
-          + " Checkpoint signature: " + cs);
+      getFSImage().saveNamespace(this);
+      LOG.info("Successfully saved namespace for preparing rolling upgrade.");
+
       setRollingUpgradeInfo(now());
       getEditLog().logUpgradeMarker(rollingUpgradeInfo.getStartTime());
     } finally {
@@ -7134,6 +7131,14 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     return rollingUpgradeInfo != null;
   }
 
+  private void checkRollingUpgrade(String action) throws RollingUpgradeException {
+    if (isRollingUpgrade()) {
+      throw new RollingUpgradeException("Failed to " + action
+          + " since a rolling upgrade is already in progress."
+          + " Existing rolling upgrade info:\n" + rollingUpgradeInfo);
+    }
+  }
+  
   RollingUpgradeInfo finalizeRollingUpgrade() throws IOException {
     checkSuperuserPrivilege();
     checkOperation(OperationCategory.WRITE);

@@ -97,9 +97,12 @@ import com.google.common.base.Preconditions;
 @InterfaceStability.Evolving
 public class FSEditLogLoader {
   static final Log LOG = LogFactory.getLog(FSEditLogLoader.class.getName());
-  static long REPLAY_TRANSACTION_LOG_INTERVAL = 1000; // 1sec
+  static final long REPLAY_TRANSACTION_LOG_INTERVAL = 1000; // 1sec
+
   private final FSNamesystem fsNamesys;
   private long lastAppliedTxId;
+  /** Total number of end transactions loaded. */
+  private int totalEdits = 0;
   
   public FSEditLogLoader(FSNamesystem fsNamesys, long lastAppliedTxId) {
     this.fsNamesys = fsNamesys;
@@ -212,6 +215,10 @@ public class FSEditLogLoader {
             }
           }
           try {
+            if (LOG.isTraceEnabled()) {
+              LOG.trace("op=" + op + ", startOpt=" + startOpt
+                  + ", numEdits=" + numEdits + ", totalEdits=" + totalEdits);
+            }
             long inodeId = applyEditLogOp(op, fsDir, startOpt,
                 in.getVersion(), lastInodeId);
             if (lastInodeId < inodeId) {
@@ -250,6 +257,7 @@ public class FSEditLogLoader {
             }
           }
           numEdits++;
+          totalEdits++;
         } catch (UpgradeMarkerException e) {
           LOG.info("Stopped at upgrade marker");
           break;
@@ -671,15 +679,19 @@ public class FSEditLogLoader {
     }
     case OP_UPGRADE_MARKER: {
       if (startOpt == StartupOption.ROLLINGUPGRADE) {
-        if (startOpt.getRollingUpgradeStartupOption()
-            == RollingUpgradeStartupOption.ROLLBACK) {
+        final RollingUpgradeStartupOption rollingUpgradeOpt
+            = startOpt.getRollingUpgradeStartupOption(); 
+        if (rollingUpgradeOpt == RollingUpgradeStartupOption.ROLLBACK) {
           throw new UpgradeMarkerException();
-        } else if (startOpt.getRollingUpgradeStartupOption()
-            == RollingUpgradeStartupOption.DOWNGRADE) {
+        } else if (rollingUpgradeOpt == RollingUpgradeStartupOption.DOWNGRADE) {
           //ignore upgrade marker
           break;
-        } else if (startOpt.getRollingUpgradeStartupOption()
-            == RollingUpgradeStartupOption.STARTED) {
+        } else if (rollingUpgradeOpt == RollingUpgradeStartupOption.STARTED) {
+          if (totalEdits > 1) {
+            // save namespace if this is not the second edit transaction
+            // (the first must be OP_START_LOG_SEGMENT)
+            fsNamesys.getFSImage().saveNamespace(fsNamesys);
+          }
           //rolling upgrade is already started, set info
           final UpgradeMarkerOp upgradeOp = (UpgradeMarkerOp)op; 
           fsNamesys.setRollingUpgradeInfo(upgradeOp.getStartTime());

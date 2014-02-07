@@ -690,9 +690,11 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
     try {
       final RollingUpgradeInfo info = server.rollingUpgrade(
           PBHelper.convert(req.getAction()));
-      return RollingUpgradeResponseProto.newBuilder()
-          .setRollingUpgradeInfo(PBHelper.convert(info))
-          .build();
+      final RollingUpgradeResponseProto.Builder b = RollingUpgradeResponseProto.newBuilder();
+      if (info != null) {
+        b.setRollingUpgradeInfo(PBHelper.convert(info));
+      }
+      return b.build();
     } catch (IOException e) {
       throw new ServiceException(e);
     }

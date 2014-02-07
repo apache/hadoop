@@ -156,6 +156,16 @@ public final class HdfsServerConstants {
     public void setInteractiveFormat(boolean interactive) {
       isInteractiveFormat = interactive;
     }
+    
+    @Override
+    public String toString() {
+      if (this == ROLLINGUPGRADE) {
+        return new StringBuilder(super.toString())
+            .append("(").append(getRollingUpgradeStartupOption()).append(")")
+            .toString();
+      }
+      return super.toString();
+    }
   }
 
   // Timeouts for communicating with DataNode for streaming writes/reads

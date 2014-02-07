@@ -349,7 +349,7 @@ message RollingUpgradeInfoProto {
 }
 
 message RollingUpgradeResponseProto {
-  required RollingUpgradeInfoProto rollingUpgradeInfo= 1;
+  optional RollingUpgradeInfoProto rollingUpgradeInfo= 1;
 }
 
 message ListCorruptFileBlocksRequestProto {

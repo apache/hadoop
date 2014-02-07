@@ -1546,14 +1546,6 @@ public class MiniDFSCluster {
   /**
    * Restart the namenode.
    */
-  public synchronized void restartNameNode() throws IOException {
-    checkSingleNameNode();
-    restartNameNode(true);
-  }
-  
-  /**
-   * Restart the namenode.
-   */
   public synchronized void restartNameNode(String... args) throws IOException {
     checkSingleNameNode();
     restartNameNode(0, true, args);

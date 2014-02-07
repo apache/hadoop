@@ -22,3 +22,6 @@ HDFS-5535 subtasks:
     HDFS-5848. Add rolling upgrade status to heartbeat response. (szetszwo)
 
     HDFS-5890. Avoid NPE in Datanode heartbeat. (Vinay via brandonli)
+
+    HDFS-5869. When starting rolling upgrade or NN restarts, NN should create
+    a checkpoint right before the upgrade marker.  (szetszwo)

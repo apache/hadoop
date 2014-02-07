@@ -26,10 +26,17 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
+import org.apache.hadoop.hdfs.protocol.RollingUpgradeException;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.qjournal.MiniJournalCluster;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.RollingUpgradeStartupOption;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.hdfs.server.namenode.SecondaryNameNode;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
+import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.util.ExitUtil;
+import org.apache.hadoop.util.ExitUtil.ExitException;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -111,6 +118,7 @@ public class TestRollingUpgrade {
     conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, dir.getAbsolutePath());
     conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY,
         mjc.getQuorumJournalURI("myjournal").toString());
+    conf.setLong(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_KEY, 0L);
     return conf;
   }
 
@@ -120,6 +128,9 @@ public class TestRollingUpgrade {
     final File nn1Dir = new File(nnDirPrefix + "image1");
     final File nn2Dir = new File(nnDirPrefix + "image2");
     
+    LOG.info("nn1Dir=" + nn1Dir);
+    LOG.info("nn2Dir=" + nn2Dir);
+
     final Configuration conf = new HdfsConfiguration();
     final MiniJournalCluster mjc = new MiniJournalCluster.Builder(conf).build();
     setConf(conf, nn1Dir, mjc);
@@ -155,6 +166,7 @@ public class TestRollingUpgrade {
 
       final Path foo = new Path("/foo");
       final Path bar = new Path("/bar");
+      final Path baz = new Path("/baz");
 
       final RollingUpgradeInfo info1;
       {
@@ -163,17 +175,35 @@ public class TestRollingUpgrade {
   
         //start rolling upgrade
         info1 = dfs.rollingUpgrade(RollingUpgradeAction.START);
-        LOG.info("start " + info1);
+        LOG.info("START\n" + info1);
 
         //query rolling upgrade
         Assert.assertEquals(info1, dfs.rollingUpgrade(RollingUpgradeAction.QUERY));
   
         dfs.mkdirs(bar);
+        
+        //save namespace should fail
+        try {
+          dfs.saveNamespace();
+          Assert.fail();
+        } catch(RemoteException re) {
+          Assert.assertEquals(RollingUpgradeException.class.getName(),
+              re.getClassName());
+          LOG.info("The exception is expected.", re);
+        }
+
+        //start checkpoint should fail
+        try {
+          NameNodeAdapter.startCheckpoint(cluster.getNameNode(), null, null);
+          Assert.fail();
+        } catch(RollingUpgradeException re) {
+          LOG.info("The exception is expected.", re);
+        }
       }
 
       // cluster2 takes over QJM
       final Configuration conf2 = setConf(new Configuration(), nn2Dir, mjc);
-      //set startup option to downgrade for ignoring upgrade marker in editlog
+      // use "started" option for ignoring upgrade marker in editlog
       StartupOption.ROLLINGUPGRADE.setRollingUpgradeStartupOption("started");
       cluster2 = new MiniDFSCluster.Builder(conf2)
         .numDataNodes(0)
@@ -186,13 +216,50 @@ public class TestRollingUpgrade {
       // Check that cluster2 sees the edits made on cluster1
       Assert.assertTrue(dfs2.exists(foo));
       Assert.assertTrue(dfs2.exists(bar));
+      Assert.assertFalse(dfs2.exists(baz));
 
       //query rolling upgrade in cluster2
       Assert.assertEquals(info1, dfs2.rollingUpgrade(RollingUpgradeAction.QUERY));
 
-      LOG.info("finalize: " + dfs2.rollingUpgrade(RollingUpgradeAction.FINALIZE));
+      dfs2.mkdirs(baz);
+
+      LOG.info("RESTART cluster 2 with -rollingupgrade started");
+      cluster2.restartNameNode();
+      Assert.assertEquals(info1, dfs2.rollingUpgrade(RollingUpgradeAction.QUERY));
+      Assert.assertTrue(dfs2.exists(foo));
+      Assert.assertTrue(dfs2.exists(bar));
+      Assert.assertTrue(dfs2.exists(baz));
+
+      LOG.info("RESTART cluster 2 with -rollingupgrade started again");
+      cluster2.restartNameNode();
+      Assert.assertEquals(info1, dfs2.rollingUpgrade(RollingUpgradeAction.QUERY));
+      Assert.assertTrue(dfs2.exists(foo));
+      Assert.assertTrue(dfs2.exists(bar));
+      Assert.assertTrue(dfs2.exists(baz));
+
+      //finalize rolling upgrade
+      final RollingUpgradeInfo finalize = dfs2.rollingUpgrade(RollingUpgradeAction.FINALIZE);
+      LOG.info("FINALIZE: " + finalize);
+      Assert.assertEquals(info1.getStartTime(), finalize.getStartTime());
+
+      LOG.info("RESTART cluster 2 with regular startup option");
+      cluster2.getNameNodeInfos()[0].setStartOpt(StartupOption.REGULAR);
+      cluster2.restartNameNode();
+      Assert.assertTrue(dfs2.exists(foo));
+      Assert.assertTrue(dfs2.exists(bar));
+      Assert.assertTrue(dfs2.exists(baz));
     } finally {
       if (cluster2 != null) cluster2.shutdown();
     }
+  }
+
+  @Test(expected=ExitException.class)
+  public void testSecondaryNameNode() throws Exception {
+    ExitUtil.disableSystemExit();
+
+    final String[] args = {
+        StartupOption.ROLLINGUPGRADE.getName(),
+        RollingUpgradeStartupOption.STARTED.name()};
+    SecondaryNameNode.main(args);
   }
 }

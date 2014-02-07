@@ -645,7 +645,10 @@ public class ClientNamenodeProtocolTranslatorPB implements
         .setAction(PBHelper.convert(action)).build();
     try {
       final RollingUpgradeResponseProto proto = rpcProxy.rollingUpgrade(null, r);
-      return PBHelper.convert(proto.getRollingUpgradeInfo());
+      if (proto.hasRollingUpgradeInfo()) {
+        return PBHelper.convert(proto.getRollingUpgradeInfo());
+      }
+      return null;
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
