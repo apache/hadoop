@@ -94,9 +94,21 @@ public class ATSPutErrors {
   @Public
   @Unstable
   public static class ATSPutError {
+    /**
+     * Error code returned when no start time can be found when putting an
+     * entity. This occurs when the entity does not already exist in the
+     * store and it is put with no start time or events specified.
+     */
+    public static final int NO_START_TIME = 1;
+    /**
+     * Error code returned if an IOException is encountered when putting an
+     * entity.
+     */
+    public static final int IO_EXCEPTION = 2;
+
     private String entityId;
     private String entityType;
-    private Integer errorCode;
+    private int errorCode;
 
     /**
      * Get the entity Id
@@ -144,7 +156,7 @@ public class ATSPutErrors {
      * @return an error code
      */
     @XmlElement(name = "errorcode")
-    public Integer getErrorCode() {
+    public int getErrorCode() {
       return errorCode;
     }
 
@@ -154,7 +166,7 @@ public class ATSPutErrors {
      * @param errorCode
      *          an error code
      */
-    public void setErrorCode(Integer errorCode) {
+    public void setErrorCode(int errorCode) {
       this.errorCode = errorCode;
     }
 

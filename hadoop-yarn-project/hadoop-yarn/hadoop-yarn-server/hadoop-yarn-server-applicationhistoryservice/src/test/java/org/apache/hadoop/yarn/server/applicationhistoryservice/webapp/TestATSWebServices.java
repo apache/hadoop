@@ -157,6 +157,43 @@ public class TestATSWebServices extends JerseyTest {
   }
 
   @Test
+  public void testGetEntityFields1() throws Exception {
+    WebResource r = resource();
+    ClientResponse response = r.path("ws").path("v1").path("apptimeline")
+        .path("type_1").path("id_1").queryParam("fields", "events,otherinfo")
+        .accept(MediaType.APPLICATION_JSON)
+        .get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    ATSEntity entity = response.getEntity(ATSEntity.class);
+    Assert.assertNotNull(entity);
+    Assert.assertEquals("id_1", entity.getEntityId());
+    Assert.assertEquals("type_1", entity.getEntityType());
+    Assert.assertEquals(123l, entity.getStartTime().longValue());
+    Assert.assertEquals(2, entity.getEvents().size());
+    Assert.assertEquals(0, entity.getPrimaryFilters().size());
+    Assert.assertEquals(4, entity.getOtherInfo().size());
+  }
+
+  @Test
+  public void testGetEntityFields2() throws Exception {
+    WebResource r = resource();
+    ClientResponse response = r.path("ws").path("v1").path("apptimeline")
+        .path("type_1").path("id_1").queryParam("fields", "lasteventonly," +
+            "primaryfilters,relatedentities")
+        .accept(MediaType.APPLICATION_JSON)
+        .get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    ATSEntity entity = response.getEntity(ATSEntity.class);
+    Assert.assertNotNull(entity);
+    Assert.assertEquals("id_1", entity.getEntityId());
+    Assert.assertEquals("type_1", entity.getEntityType());
+    Assert.assertEquals(123l, entity.getStartTime().longValue());
+    Assert.assertEquals(1, entity.getEvents().size());
+    Assert.assertEquals(2, entity.getPrimaryFilters().size());
+    Assert.assertEquals(0, entity.getOtherInfo().size());
+  }
+
+  @Test
   public void testGetEvents() throws Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("apptimeline")

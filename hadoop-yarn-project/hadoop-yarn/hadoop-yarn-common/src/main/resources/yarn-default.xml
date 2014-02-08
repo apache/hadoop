@@ -1145,7 +1145,13 @@
   <property>
     <description>Store class name for application timeline store</description>
     <name>yarn.ats.store.class</name>
-    <value>org.apache.hadoop.yarn.server.applicationhistoryservice.apptimeline.MemoryApplicationTimelineStore</value>
+    <value>org.apache.hadoop.yarn.server.applicationhistoryservice.apptimeline.LeveldbApplicationTimelineStore</value>
+  </property>
+
+  <property>
+    <description>Store file name for leveldb application timeline store</description>
+    <name>yarn.ats.leveldb-apptimeline-store.path</name>
+    <value>${yarn.log.dir}/ats</value>
   </property>
 
   <!-- Other configuration -->

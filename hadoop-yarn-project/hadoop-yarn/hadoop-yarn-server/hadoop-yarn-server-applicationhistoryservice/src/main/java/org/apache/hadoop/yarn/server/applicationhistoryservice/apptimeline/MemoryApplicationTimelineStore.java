@@ -53,8 +53,8 @@ import org.apache.hadoop.yarn.api.records.apptimeline.ATSPutErrors.ATSPutError;
 public class MemoryApplicationTimelineStore
     extends AbstractService implements ApplicationTimelineStore {
 
-  private Map<EntityId, ATSEntity> entities =
-      new HashMap<EntityId, ATSEntity>();
+  private Map<EntityIdentifier, ATSEntity> entities =
+      new HashMap<EntityIdentifier, ATSEntity>();
 
   public MemoryApplicationTimelineStore() {
     super(MemoryApplicationTimelineStore.class.getName());
@@ -125,7 +125,7 @@ public class MemoryApplicationTimelineStore
     if (fieldsToRetrieve == null) {
       fieldsToRetrieve = EnumSet.allOf(Field.class);
     }
-    ATSEntity entity = entities.get(new EntityId(entityId, entityType));
+    ATSEntity entity = entities.get(new EntityIdentifier(entityId, entityType));
     if (entity == null) {
       return null;
     } else {
@@ -152,7 +152,7 @@ public class MemoryApplicationTimelineStore
       windowEnd = Long.MAX_VALUE;
     }
     for (String entityId : entityIds) {
-      EntityId entityID = new EntityId(entityId, entityType);
+      EntityIdentifier entityID = new EntityIdentifier(entityId, entityType);
       ATSEntity entity = entities.get(entityID);
       if (entity == null) {
         continue;
@@ -184,8 +184,8 @@ public class MemoryApplicationTimelineStore
   public ATSPutErrors put(ATSEntities data) {
     ATSPutErrors errors = new ATSPutErrors();
     for (ATSEntity entity : data.getEntities()) {
-      EntityId entityId =
-          new EntityId(entity.getEntityId(), entity.getEntityType());
+      EntityIdentifier entityId =
+          new EntityIdentifier(entity.getEntityId(), entity.getEntityType());
       // store entity info in memory
       ATSEntity existingEntity = entities.get(entityId);
       if (existingEntity == null) {
@@ -210,7 +210,7 @@ public class MemoryApplicationTimelineStore
           ATSPutError error = new ATSPutError();
           error.setEntityId(entityId.getId());
           error.setEntityType(entityId.getType());
-          error.setErrorCode(1);
+          error.setErrorCode(ATSPutError.NO_START_TIME);
           errors.addError(error);
           entities.remove(entityId);
           continue;
@@ -242,12 +242,20 @@ public class MemoryApplicationTimelineStore
           continue;
         }
         for (String idStr : partRelatedEntities.getValue()) {
-          EntityId relatedEntityId =
-              new EntityId(idStr, partRelatedEntities.getKey());
+          EntityIdentifier relatedEntityId =
+              new EntityIdentifier(idStr, partRelatedEntities.getKey());
           ATSEntity relatedEntity = entities.get(relatedEntityId);
           if (relatedEntity != null) {
             relatedEntity.addRelatedEntity(
                 existingEntity.getEntityType(), existingEntity.getEntityId());
+          } else {
+            relatedEntity = new ATSEntity();
+            relatedEntity.setEntityId(relatedEntityId.getId());
+            relatedEntity.setEntityType(relatedEntityId.getType());
+            relatedEntity.setStartTime(existingEntity.getStartTime());
+            relatedEntity.addRelatedEntity(existingEntity.getEntityType(),
+                existingEntity.getEntityId());
+            entities.put(relatedEntityId, relatedEntity);
           }
         }
       }

@@ -1041,6 +1041,10 @@ public class YarnConfiguration extends Configuration {
   /** ATS store class */
   public static final String ATS_STORE = ATS_PREFIX + "store.class";
 
+  /** ATS leveldb path */
+  public static final String ATS_LEVELDB_PATH_PROPERTY =
+      ATS_PREFIX + "leveldb-apptimeline-store.path";
+
   ////////////////////////////////
   // Other Configs
   ////////////////////////////////
