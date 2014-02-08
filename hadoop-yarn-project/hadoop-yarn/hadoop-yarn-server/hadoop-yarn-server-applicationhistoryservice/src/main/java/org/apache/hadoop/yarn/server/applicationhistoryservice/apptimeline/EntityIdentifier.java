@@ -26,12 +26,12 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
  */
 @Private
 @Unstable
-public class EntityId implements Comparable<EntityId> {
+public class EntityIdentifier implements Comparable<EntityIdentifier> {
 
   private String id;
   private String type;
 
-  public EntityId(String id, String type) {
+  public EntityIdentifier(String id, String type) {
     this.id = id;
     this.type = type;
   }
@@ -53,7 +53,7 @@ public class EntityId implements Comparable<EntityId> {
   }
 
   @Override
-  public int compareTo(EntityId other) {
+  public int compareTo(EntityIdentifier other) {
     int c = type.compareTo(other.type);
     if (c != 0) return c;
     return id.compareTo(other.id);
@@ -78,7 +78,7 @@ public class EntityId implements Comparable<EntityId> {
       return false;
     if (getClass() != obj.getClass())
       return false;
-    EntityId other = (EntityId) obj;
+    EntityIdentifier other = (EntityIdentifier) obj;
     if (id == null) {
       if (other.id != null)
         return false;

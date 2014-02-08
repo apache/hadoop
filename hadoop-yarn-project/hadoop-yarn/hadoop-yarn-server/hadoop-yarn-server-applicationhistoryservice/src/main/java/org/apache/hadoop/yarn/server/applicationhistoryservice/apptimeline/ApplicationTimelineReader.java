@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.applicationhistoryservice.apptimeline;
 
+import java.io.IOException;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.Set;
@@ -78,13 +79,15 @@ public interface ApplicationTimelineReader {
    *                         retrieve (see {@link Field}). If the set of fields
    *                         contains {@link Field#LAST_EVENT_ONLY} and not
    *                         {@link Field#EVENTS}, the most recent event for
-   *                         each entity is retrieved.
+   *                         each entity is retrieved. If null, retrieves all
+   *                         fields.
    * @return An {@link ATSEntities} object.
+   * @throws IOException
    */
   ATSEntities getEntities(String entityType,
       Long limit, Long windowStart, Long windowEnd,
       NameValuePair primaryFilter, Collection<NameValuePair> secondaryFilters,
-      EnumSet<Field> fieldsToRetrieve);
+      EnumSet<Field> fieldsToRetrieve) throws IOException;
 
   /**
    * This method retrieves the entity information for a given entity.
@@ -95,11 +98,13 @@ public interface ApplicationTimelineReader {
    *                         retrieve (see {@link Field}). If the set of
    *                         fields contains {@link Field#LAST_EVENT_ONLY} and
    *                         not {@link Field#EVENTS}, the most recent event
-   *                         for each entity is retrieved.
+   *                         for each entity is retrieved. If null, retrieves
+   *                         all fields.
    * @return An {@link ATSEntity} object.
+   * @throws IOException
    */
   ATSEntity getEntity(String entity, String entityType, EnumSet<Field>
-      fieldsToRetrieve);
+      fieldsToRetrieve) throws IOException;
 
   /**
    * This method retrieves the events for a list of entities all of the same
@@ -118,8 +123,9 @@ public interface ApplicationTimelineReader {
    * @param eventTypes Restricts the events returned to the given types. If
    *                   null, events of all types will be returned.
    * @return An {@link ATSEvents} object.
+   * @throws IOException
    */
   ATSEvents getEntityTimelines(String entityType,
       SortedSet<String> entityIds, Long limit, Long windowStart,
-      Long windowEnd, Set<String> eventTypes);
+      Long windowEnd, Set<String> eventTypes) throws IOException;
 }

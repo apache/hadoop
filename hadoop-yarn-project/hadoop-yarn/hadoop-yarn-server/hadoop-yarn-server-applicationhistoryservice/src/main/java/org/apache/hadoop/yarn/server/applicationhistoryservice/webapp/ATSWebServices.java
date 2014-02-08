@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.applicationhistoryservice.webapp;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
@@ -45,6 +46,8 @@ import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.apptimeline.ATSEntities;
@@ -63,6 +66,8 @@ import com.google.inject.Singleton;
 @Path("/ws/v1/apptimeline")
 //TODO: support XML serialization/deserialization
 public class ATSWebServices {
+
+  private static final Log LOG = LogFactory.getLog(ATSWebServices.class);
 
   private ApplicationTimelineStore store;
 
@@ -143,6 +148,10 @@ public class ATSWebServices {
           "windowStart, windowEnd or limit is not a numeric value.");
     } catch (IllegalArgumentException e) {
       throw new BadRequestException("requested invalid field.");
+    } catch (IOException e) {
+      LOG.error("Error getting entities", e);
+      throw new WebApplicationException(e,
+          Response.Status.INTERNAL_SERVER_ERROR);
     }
     if (entities == null) {
       return new ATSEntities();
@@ -171,6 +180,10 @@ public class ATSWebServices {
     } catch (IllegalArgumentException e) {
       throw new BadRequestException(
           "requested invalid field.");
+    } catch (IOException e) {
+      LOG.error("Error getting entity", e);
+      throw new WebApplicationException(e,
+          Response.Status.INTERNAL_SERVER_ERROR);
     }
     if (entity == null) {
       throw new WebApplicationException(Response.Status.NOT_FOUND);
@@ -206,6 +219,10 @@ public class ATSWebServices {
     } catch (NumberFormatException e) {
       throw new BadRequestException(
           "windowStart, windowEnd or limit is not a numeric value.");
+    } catch (IOException e) {
+      LOG.error("Error getting entity timelines", e);
+      throw new WebApplicationException(e,
+          Response.Status.INTERNAL_SERVER_ERROR);
     }
     if (events == null) {
       return new ATSEvents();
@@ -228,7 +245,13 @@ public class ATSWebServices {
     if (entities == null) {
       return new ATSPutErrors();
     }
-    return store.put(entities);
+    try {
+      return store.put(entities);
+    } catch (IOException e) {
+      LOG.error("Error putting entities", e);
+      throw new WebApplicationException(e,
+          Response.Status.INTERNAL_SERVER_ERROR);
+    }
   }
 
   private void init(HttpServletResponse response) {
@@ -275,7 +298,17 @@ public class ATSWebServices {
     String[] strs = str.split(delimiter);
     List<Field> fieldList = new ArrayList<Field>();
     for (String s : strs) {
-      fieldList.add(Field.valueOf(s.toUpperCase()));
+      s = s.trim().toUpperCase();
+      if (s.equals("EVENTS"))
+        fieldList.add(Field.EVENTS);
+      else if (s.equals("LASTEVENTONLY"))
+        fieldList.add(Field.LAST_EVENT_ONLY);
+      else if (s.equals("RELATEDENTITIES"))
+        fieldList.add(Field.RELATED_ENTITIES);
+      else if (s.equals("PRIMARYFILTERS"))
+        fieldList.add(Field.PRIMARY_FILTERS);
+      else if (s.equals("OTHERINFO"))
+        fieldList.add(Field.OTHER_INFO);
     }
     if (fieldList.size() == 0)
       return null;

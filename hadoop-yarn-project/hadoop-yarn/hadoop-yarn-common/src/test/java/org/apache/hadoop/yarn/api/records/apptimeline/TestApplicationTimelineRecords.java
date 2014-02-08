@@ -117,14 +117,14 @@ public class TestApplicationTimelineRecords {
     ATSPutError error1 = new ATSPutError();
     error1.setEntityId("entity id 1");
     error1.setEntityId("entity type 1");
-    error1.setErrorCode(1);
+    error1.setErrorCode(ATSPutError.NO_START_TIME);
     atsPutErrors.addError(error1);
     List<ATSPutError> errors = new ArrayList<ATSPutError>();
     errors.add(error1);
     ATSPutError error2 = new ATSPutError();
     error2.setEntityId("entity id 2");
     error2.setEntityId("entity type 2");
-    error2.setErrorCode(2);
+    error2.setErrorCode(ATSPutError.IO_EXCEPTION);
     errors.add(error2);
     atsPutErrors.addErrors(errors);
 

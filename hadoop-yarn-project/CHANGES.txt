@@ -116,6 +116,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1566. Changed Distributed Shell to retain containers across application
     attempts. (Jian He via vinodkv)
 
+    YARN-1635. Implemented a Leveldb based ApplicationTimelineStore. (Billie
+    Rinaldi via zjshen)
+
   IMPROVEMENTS
 
     YARN-1007. Enhance History Reader interface for Containers. (Mayank Bansal via

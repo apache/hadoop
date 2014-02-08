@@ -21,6 +21,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -71,7 +73,7 @@ public class ApplicationTimelineStoreTestUtils {
   /**
    * Load test data into the given store
    */
-  protected void loadTestData() {
+  protected void loadTestData() throws IOException {
     ATSEntities atsEntities = new ATSEntities();
     Map<String, Object> primaryFilters = new HashMap<String, Object>();
     primaryFilters.put("user", "username");
@@ -126,7 +128,7 @@ public class ApplicationTimelineStoreTestUtils {
     response = store.put(atsEntities);
     assertEquals(0, response.getErrors().size());
     atsEntities.setEntities(Collections.singletonList(createEntity(entity1b,
-        entityType1, 123l, Collections.singletonList(ev2), null,
+        entityType1, 789l, Collections.singletonList(ev2), null,
         primaryFilters, otherInfo2)));
     response = store.put(atsEntities);
     assertEquals(0, response.getErrors().size());
@@ -138,11 +140,11 @@ public class ApplicationTimelineStoreTestUtils {
     ATSPutError error = response.getErrors().get(0);
     assertEquals("badentityid", error.getEntityId());
     assertEquals("badentity", error.getEntityType());
-    assertEquals((Integer) 1, error.getErrorCode());
+    assertEquals(ATSPutError.NO_START_TIME, error.getErrorCode());
   }
 
   /**
-   * Load veification data
+   * Load verification data
    */
   protected void loadVerificationData() throws Exception {
     userFilter = new NameValuePair("user",
@@ -197,7 +199,7 @@ public class ApplicationTimelineStoreTestUtils {
     events2.add(ev4);
   }
 
-  public void testGetSingleEntity() {
+  public void testGetSingleEntity() throws IOException {
     // test getting entity info
     verifyEntityInfo(null, null, null, null, null, null,
         store.getEntity("id_1", "type_2", EnumSet.allOf(Field.class)));
@@ -222,6 +224,10 @@ public class ApplicationTimelineStoreTestUtils {
         null, null, null, store.getEntity(entity1, entityType1,
         EnumSet.of(Field.LAST_EVENT_ONLY)));
 
+    verifyEntityInfo(entity1b, entityType1, events1, EMPTY_REL_ENTITIES,
+        primaryFilters, otherInfo, store.getEntity(entity1b, entityType1,
+        null));
+
     verifyEntityInfo(entity1, entityType1, null, null, primaryFilters, null,
         store.getEntity(entity1, entityType1,
             EnumSet.of(Field.PRIMARY_FILTERS)));
@@ -234,7 +240,7 @@ public class ApplicationTimelineStoreTestUtils {
             EnumSet.of(Field.RELATED_ENTITIES)));
   }
 
-  public void testGetEntities() {
+  public void testGetEntities() throws IOException {
     // test getting entities
     assertEquals("nonzero entities size for nonexistent type", 0,
         store.getEntities("type_0", null, null, null, null, null,
@@ -305,7 +311,7 @@ public class ApplicationTimelineStoreTestUtils {
         primaryFilters, otherInfo, entities.get(1));
   }
 
-  public void testGetEntitiesWithPrimaryFilters() {
+  public void testGetEntitiesWithPrimaryFilters() throws IOException {
     // test using primary filter
     assertEquals("nonzero entities size for primary filter", 0,
         store.getEntities("type_1", null, null, null,
@@ -361,7 +367,7 @@ public class ApplicationTimelineStoreTestUtils {
         primaryFilters, otherInfo, entities.get(1));
   }
 
-  public void testGetEntitiesWithSecondaryFilters() {
+  public void testGetEntitiesWithSecondaryFilters() throws IOException {
     // test using secondary filter
     List<ATSEntity> entities = store.getEntities("type_1", null, null, null,
         null, goodTestingFilters, EnumSet.allOf(Field.class)).getEntities();
@@ -388,7 +394,7 @@ public class ApplicationTimelineStoreTestUtils {
     assertEquals(0, entities.size());
   }
 
-  public void testGetEvents() {
+  public void testGetEvents() throws IOException {
     // test getting entity timelines
     SortedSet<String> sortedSet = new TreeSet<String>();
     sortedSet.add(entity1);
