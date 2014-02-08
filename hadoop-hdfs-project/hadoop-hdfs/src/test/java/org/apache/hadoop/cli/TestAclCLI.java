@@ -36,6 +36,7 @@ public class TestAclCLI extends CLITestHelperDFS {
   @Override
   public void setUp() throws Exception {
     super.setUp();
+    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     fs = cluster.getFileSystem();
     namenode = conf.get(DFSConfigKeys.FS_DEFAULT_NAME_KEY, "file:///");

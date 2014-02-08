@@ -2725,6 +2725,7 @@ public class DFSClient implements java.io.Closeable {
       return namenode.getAclStatus(src);
     } catch(RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
+                                     AclException.class,
                                      FileNotFoundException.class,
                                      UnresolvedPathException.class);
     }

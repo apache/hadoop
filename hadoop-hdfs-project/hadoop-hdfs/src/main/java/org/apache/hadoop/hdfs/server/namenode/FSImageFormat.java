@@ -802,6 +802,7 @@ public class FSImageFormat {
 
     private AclFeature loadAclFeature(DataInput in, final int imgVersion)
         throws IOException {
+      namesystem.getAclConfigFlag().checkForFsImage();
       AclFeature aclFeature = null;
       if (LayoutVersion.supports(Feature.EXTENDED_ACL, imgVersion)) {
         AclFsImageProto p = AclFsImageProto

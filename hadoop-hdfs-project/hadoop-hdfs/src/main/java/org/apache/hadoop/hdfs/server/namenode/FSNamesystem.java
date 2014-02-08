@@ -503,7 +503,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   private INodeId inodeId;
   
   private final RetryCache retryCache;
-  
+
+  private final AclConfigFlag aclConfigFlag;
+
   /**
    * Set the last allocated inode id when fsimage or editlog is loaded. 
    */
@@ -774,6 +776,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       this.isDefaultAuditLogger = auditLoggers.size() == 1 &&
         auditLoggers.get(0) instanceof DefaultAuditLogger;
       this.retryCache = ignoreRetryCache ? null : initRetryCache(conf);
+      this.aclConfigFlag = new AclConfigFlag(conf);
     } catch(IOException e) {
       LOG.error(getClass().getSimpleName() + " initialization failed.", e);
       close();
@@ -7350,7 +7353,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     return results;
   }
 
+  AclConfigFlag getAclConfigFlag() {
+    return aclConfigFlag;
+  }
+
   void modifyAclEntries(String src, List<AclEntry> aclSpec) throws IOException {
+    aclConfigFlag.checkForApiCall();
     HdfsFileStatus resultingStat = null;
     FSPermissionChecker pc = getPermissionChecker();
     checkOperation(OperationCategory.WRITE);
@@ -7371,6 +7379,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   void removeAclEntries(String src, List<AclEntry> aclSpec) throws IOException {
+    aclConfigFlag.checkForApiCall();
     HdfsFileStatus resultingStat = null;
     FSPermissionChecker pc = getPermissionChecker();
     checkOperation(OperationCategory.WRITE);
@@ -7391,6 +7400,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   void removeDefaultAcl(String src) throws IOException {
+    aclConfigFlag.checkForApiCall();
     HdfsFileStatus resultingStat = null;
     FSPermissionChecker pc = getPermissionChecker();
     checkOperation(OperationCategory.WRITE);
@@ -7411,6 +7421,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   void removeAcl(String src) throws IOException {
+    aclConfigFlag.checkForApiCall();
     HdfsFileStatus resultingStat = null;
     FSPermissionChecker pc = getPermissionChecker();
     checkOperation(OperationCategory.WRITE);
@@ -7431,6 +7442,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   void setAcl(String src, List<AclEntry> aclSpec) throws IOException {
+    aclConfigFlag.checkForApiCall();
     HdfsFileStatus resultingStat = null;
     FSPermissionChecker pc = getPermissionChecker();
     checkOperation(OperationCategory.WRITE);
@@ -7451,6 +7463,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   AclStatus getAclStatus(String src) throws IOException {
+    aclConfigFlag.checkForApiCall();
     checkOperation(OperationCategory.READ);
     readLock();
     try {

@@ -64,6 +64,7 @@ public class TestStickyBit {
   public static void init() throws Exception {
     conf = new HdfsConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, true);
+    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
     initCluster(true);
   }
 

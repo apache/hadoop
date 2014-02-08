@@ -346,6 +346,20 @@
 -->
 
 <property>
+  <name>dfs.namenode.acls.enabled</name>
+  <value>false</value>
+  <description>
+    Set to true to enable support for HDFS ACLs (Access Control Lists).  By
+    default, ACLs are disabled.  When ACLs are disabled, the NameNode rejects
+    all attempts to set an ACL.  An fsimage containing an ACL will cause the
+    NameNode to abort during startup, and ACLs present in the edit log will
+    cause the NameNode to abort.  To transition from ACLs enabled to ACLs
+    disabled, restart the NameNode with ACLs enabled, remove all ACLs, save a
+    new checkpoint, and then restart the NameNode with ACLs disabled.
+  </description>
+</property>
+
+<property>
   <name>dfs.block.access.token.enable</name>
   <value>false</value>
   <description>

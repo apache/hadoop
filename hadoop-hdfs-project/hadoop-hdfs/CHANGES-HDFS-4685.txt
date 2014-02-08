@@ -64,6 +64,9 @@ HDFS-4685 (Unreleased)
 
     HDFS-5616. NameNode: implement default ACL handling. (cnauroth)
 
+    HDFS-5899. Add configuration flag to disable/enable support for ACLs.
+    (cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES

@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.web;
 import static org.junit.Assert.*;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.FSAclBaseTest;
 import org.junit.BeforeClass;
@@ -34,6 +35,7 @@ public class TestWebHDFSAcl extends FSAclBaseTest {
   @BeforeClass
   public static void init() throws Exception {
     Configuration conf = WebHdfsTestUtil.createConf();
+    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     cluster.waitActive();
     fs = WebHdfsTestUtil.getWebHdfsFileSystem(conf, WebHdfsFileSystem.SCHEME);
