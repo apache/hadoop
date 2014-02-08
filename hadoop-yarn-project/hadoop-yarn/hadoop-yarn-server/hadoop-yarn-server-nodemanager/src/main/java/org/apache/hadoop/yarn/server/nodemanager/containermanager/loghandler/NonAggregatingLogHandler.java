@@ -73,7 +73,8 @@ public class NonAggregatingLogHandler extends AbstractService implements
   protected void serviceInit(Configuration conf) throws Exception {
     // Default 3 hours.
     this.deleteDelaySeconds =
-        conf.getLong(YarnConfiguration.NM_LOG_RETAIN_SECONDS, 3 * 60 * 60);
+        conf.getLong(YarnConfiguration.NM_LOG_RETAIN_SECONDS,
+                YarnConfiguration.DEFAULT_NM_LOG_RETAIN_SECONDS);
     sched = createScheduledThreadPoolExecutor(conf);
     super.serviceInit(conf);
   }

@@ -629,6 +629,7 @@ public class YarnConfiguration extends Configuration {
    */
   public static final String NM_LOG_RETAIN_SECONDS = NM_PREFIX
       + "log.retain-seconds";
+  public static final long DEFAULT_NM_LOG_RETAIN_SECONDS = 3 * 60 * 60;
 
   /**
    * Number of threads used in log cleanup. Only applicable if Log aggregation
