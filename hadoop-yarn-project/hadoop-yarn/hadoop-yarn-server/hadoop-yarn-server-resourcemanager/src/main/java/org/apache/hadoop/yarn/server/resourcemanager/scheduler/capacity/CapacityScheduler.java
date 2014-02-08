@@ -35,6 +35,7 @@ import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.yarn.LocalConfigurationProvider;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
@@ -195,6 +196,7 @@ public class CapacityScheduler extends AbstractYarnScheduler
 
   private ResourceCalculator calculator;
   private boolean usePortForNodeName;
+  private boolean useLocalConfigurationProvider;
 
   public CapacityScheduler() {}
 
@@ -261,7 +263,13 @@ public class CapacityScheduler extends AbstractYarnScheduler
   public synchronized void
       reinitialize(Configuration conf, RMContext rmContext) throws IOException {
     if (!initialized) {
-      this.conf = new CapacitySchedulerConfiguration(conf);
+      this.useLocalConfigurationProvider =
+          (LocalConfigurationProvider.class.isAssignableFrom(conf.getClass(
+              YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
+              LocalConfigurationProvider.class)));
+      this.conf =
+          new CapacitySchedulerConfiguration(conf,
+              this.useLocalConfigurationProvider);
       validateConf(this.conf);
       this.minimumAllocation = this.conf.getMinimumAllocation();
       this.maximumAllocation = this.conf.getMaximumAllocation();
@@ -279,9 +287,10 @@ public class CapacityScheduler extends AbstractYarnScheduler
           "minimumAllocation=<" + getMinimumResourceCapability() + ">, " +
           "maximumAllocation=<" + getMaximumResourceCapability() + ">");
     } else {
-
       CapacitySchedulerConfiguration oldConf = this.conf; 
-      this.conf = new CapacitySchedulerConfiguration(conf);
+      this.conf =
+          new CapacitySchedulerConfiguration(conf,
+              this.useLocalConfigurationProvider);
       validateConf(this.conf);
       try {
         LOG.info("Re-initializing queues...");

@@ -784,6 +784,12 @@
         <artifactId>grizzly-http-servlet</artifactId>
         <version>2.1.2</version>
       </dependency>
+
+      <dependency>
+        <groupId>org.fusesource.leveldbjni</groupId>
+        <artifactId>leveldbjni-all</artifactId>
+        <version>1.8</version>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 

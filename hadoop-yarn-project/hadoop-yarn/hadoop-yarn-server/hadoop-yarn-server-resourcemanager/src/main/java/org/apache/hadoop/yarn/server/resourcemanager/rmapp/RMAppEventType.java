@@ -23,6 +23,7 @@ public enum RMAppEventType {
   START,
   RECOVER,
   KILL,
+  MOVE, // Move app to a new queue
 
   // Source: Scheduler and RMAppManager
   APP_REJECTED,

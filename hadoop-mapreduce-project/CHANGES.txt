@@ -153,6 +153,8 @@ Release 2.4.0 - UNRELEASED
     MAPREDUCE-5732. Report proper queue when job has been automatically placed
     (Sandy Ryza)
 
+    MAPREDUCE-5699. Allow setting tags on MR jobs (kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -227,6 +229,10 @@ Release 2.3.0 - UNRELEASED
 
     MAPREDUCE-5725. Make explicit that TestNetworkedJob relies on the Capacity
     Scheduler (Sandy Ryza)
+
+    MAPREDUCE-5744. Job hangs because 
+    RMContainerAllocator$AssignedRequests.preemptReduce() violates the 
+    comparator contract (Gera Shegalov via kasha)
 
   OPTIMIZATIONS
 
@@ -346,6 +352,9 @@ Release 2.3.0 - UNRELEASED
 
     MAPREDUCE-5723. MR AM container log can be truncated or empty.
     (Mohammad Kamrul Islam via kasha)
+
+    MAPREDUCE-5743. Fixed the test failure in TestRMContainerAllocator.
+    (Ted Yu and Vinod Kumar Vavilapalli via zjshen)
 
 Release 2.2.0 - 2013-10-13
 

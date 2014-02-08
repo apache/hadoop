@@ -20,7 +20,7 @@
   xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
 
   <properties>
-    <title>HFDS Snapshots</title>
+    <title>HDFS Snapshots</title>
   </properties>
 
   <body>
@@ -99,13 +99,20 @@
     <li>Copying a file from snapshot <code>s0</code>:
       <source>hdfs dfs -cp /foo/.snapshot/s0/bar /tmp</source></li>
   </ul>
-  <p>
-    <b>Note</b> that the name ".snapshot" is now a reserved file name in HDFS
-    so that users cannot create a file/directory with ".snapshot" as the name.
-    If ".snapshot" is used in a previous version of HDFS, it must be renamed before upgrade;
-    otherwise, upgrade will fail. 
-  </p>
   </subsection>
+  </section>
+
+  <section name="Upgrading to a version of HDFS with snapshots" id="Upgrade">
+
+  <p>
+    The HDFS snapshot feature introduces a new reserved path name used to
+    interact with snapshots: <tt>.snapshot</tt>. When upgrading from an
+    older version of HDFS, existing paths named <tt>.snapshot</tt> need
+    to first be renamed or deleted to avoid conflicting with the reserved path.
+    See the upgrade section in
+    <a href="HdfsUserGuide.html#Upgrade_and_Rollback">the HDFS user guide</a>
+    for more information.  </p>
+
   </section>
 
   <section name="Snapshot Operations" id="SnapshotOperations">

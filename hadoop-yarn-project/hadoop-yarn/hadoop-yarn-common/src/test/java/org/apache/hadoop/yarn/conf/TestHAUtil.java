@@ -159,8 +159,9 @@ public class TestHAUtil {
       String confKey =
         HAUtil.addSuffix(YarnConfiguration.RM_ADDRESS, RM1_NODE_ID);
       assertEquals("YarnRuntimeException by Configuration#set()",
-        HAUtil.BAD_CONFIG_MESSAGE_PREFIX + HAUtil.getNeedToSetValueMessage(confKey),
-        e.getMessage());
+        HAUtil.BAD_CONFIG_MESSAGE_PREFIX + HAUtil.getNeedToSetValueMessage(
+            HAUtil.addSuffix(YarnConfiguration.RM_HOSTNAME, RM1_NODE_ID)
+            + " or " + confKey), e.getMessage());
     }
 
     // simulate the case YarnConfiguration.RM_HA_IDS doesn't contain

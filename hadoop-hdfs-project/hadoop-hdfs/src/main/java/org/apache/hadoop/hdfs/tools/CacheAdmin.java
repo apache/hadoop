@@ -140,6 +140,18 @@ public class CacheAdmin extends Configured implements Tool {
     return maxTtl;
   }
 
+  private static Long parseLimitString(String limitString) {
+    Long limit = null;
+    if (limitString != null) {
+      if (limitString.equalsIgnoreCase("unlimited")) {
+        limit = CachePoolInfo.LIMIT_UNLIMITED;
+      } else {
+        limit = Long.parseLong(limitString);
+      }
+    }
+    return limit;
+  }
+
   private static Expiration parseExpirationString(String ttlString)
       throws IOException {
     Expiration ex = null;
@@ -650,8 +662,8 @@ public class CacheAdmin extends Configured implements Tool {
         info.setMode(new FsPermission(mode));
       }
       String limitString = StringUtils.popOptionWithArgument("-limit", args);
-      if (limitString != null) {
-        long limit = Long.parseLong(limitString);
+      Long limit = parseLimitString(limitString);
+      if (limit != null) {
         info.setLimit(limit);
       }
       String maxTtlString = StringUtils.popOptionWithArgument("-maxTtl", args);
@@ -726,8 +738,7 @@ public class CacheAdmin extends Configured implements Tool {
       Integer mode = (modeString == null) ?
           null : Integer.parseInt(modeString, 8);
       String limitString = StringUtils.popOptionWithArgument("-limit", args);
-      Long limit = (limitString == null) ?
-          null : Long.parseLong(limitString);
+      Long limit = parseLimitString(limitString);
       String maxTtlString = StringUtils.popOptionWithArgument("-maxTtl", args);
       Long maxTtl = null;
       try {
@@ -962,9 +973,8 @@ public class CacheAdmin extends Configured implements Tool {
       if (numResults > 0) { 
         System.out.print(listing);
       }
-      // If there are no results, we return 1 (failure exit code);
-      // otherwise we return 0 (success exit code).
-      return (numResults == 0) ? 1 : 0;
+      // If list pools succeed, we return 0 (success exit code)
+      return 0;
     }
   }
 

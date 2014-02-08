@@ -12,6 +12,14 @@ Trunk - Unreleased
     YARN-1498. Common scheduler changes for moving apps between queues (Sandy
     Ryza)
 
+    YARN-1504. RM changes for moving apps between queues (Sandy Ryza)
+
+    YARN-1499. Fair Scheduler changes for moving apps between queues (Sandy
+    Ryza)
+
+    YARN-1497. Command line additions for moving apps between queues (Sandy
+    Ryza)
+
   IMPROVEMENTS
 
   OPTIMIZATIONS
@@ -77,6 +85,40 @@ Release 2.4.0 - UNRELEASED
     YARN-1413. Implemented serving of aggregated-logs in the ApplicationHistory
     server. (Mayank Bansal via vinodkv)
 
+    YARN-1633. Defined user-facing entity, entity-info and event objects related
+    to Application Timeline feature. (Zhijie Shen via vinodkv)
+
+    YARN-1611. Introduced the concept of a configuration provider which can be
+    used by ResourceManager to read configuration locally or from remote systems
+    so as to help RM failover. (Xuan Gong via vinodkv)
+
+    YARN-1659. Defined the ApplicationTimelineStore store as an abstraction for
+    implementing different storage impls for storing timeline information.
+    (Billie Rinaldi via vinodkv)
+
+    YARN-1634. Added a testable in-memory implementation of
+    ApplicationTimelineStore. (Zhijie Shen via vinodkv)
+
+    YARN-1461. Added tags for YARN applications and changed RM to handle them.
+    (Karthik Kambatla via zjshen)
+
+    YARN-1636. Augmented Application-history server's web-services to also expose
+    new APIs for retrieving and storing timeline information. (Zhijie Shen via
+    vinodkv)
+
+    YARN-1490. Introduced the ability to make ResourceManager optionally not kill
+    all containers when an ApplicationMaster exits. (Jian He via vinodkv)
+
+    YARN-1041. Added the ApplicationMasterProtocol API for applications to use the
+    ability in ResourceManager to optionally not kill containers when the
+    ApplicationMaster exits. (Jian He via vinodkv)
+
+    YARN-1566. Changed Distributed Shell to retain containers across application
+    attempts. (Jian He via vinodkv)
+
+    YARN-1635. Implemented a Leveldb based ApplicationTimelineStore. (Billie
+    Rinaldi via zjshen)
+
   IMPROVEMENTS
 
     YARN-1007. Enhance History Reader interface for Containers. (Mayank Bansal via
@@ -93,6 +135,36 @@ Release 2.4.0 - UNRELEASED
 
     YARN-1617. Remove ancient comment and surround LOG.debug in
     AppSchedulingInfo.allocate (Sandy Ryza)
+
+    YARN-1639. Modified RM HA configuration handling to have a way of not
+    requiring separate configuration files for each RM. (Xuan Gong via vinodkv)
+
+    YARN-1668. Modified RM HA handling of admin-acls to be available across RM
+    failover by making using of a remote configuration-provider. (Xuan Gong via
+    vinodkv)
+
+    YARN-1667. Modified RM HA handling of super users (with proxying ability) to
+    be available across RM failover by making using of a remote
+    configuration-provider. (Xuan Gong via vinodkv)
+
+    YARN-1285. Changed the default value of yarn.acl.enable in yarn-default.xml
+    to be consistent with what exists (false) in the code and documentation.
+    (Kenji Kikushima via vinodkv)
+
+    YARN-1669. Modified RM HA handling of protocol level service-ACLS to
+    be available across RM failover by making using of a remote
+    configuration-provider. (Xuan Gong via vinodkv)
+
+    YARN-1665. Simplify the configuration of RM HA by having better default
+    values. (Xuan Gong via vinodkv)
+
+    YARN-1660. Simplified the RM HA configuration to accept and be able to simply
+    depend just on configuration properties of the form
+    yarn.resourcemanager.hostname.RMID and use the default ports for all service
+    addresses. (Xuan Gong via vinodkv)
+
+    YARN-1493. Changed ResourceManager and Scheduler interfacing to recognize
+    app-attempts separately from apps. (Jian He via vinodkv)
 
   OPTIMIZATIONS
 
@@ -143,6 +215,24 @@ Release 2.4.0 - UNRELEASED
     YARN-1632. TestApplicationMasterServices should be under
     org.apache.hadoop.yarn.server.resourcemanager package (Chen He via jeagles)
 
+    YARN-1673. Fix option parsing in YARN's application CLI after it is broken
+    by YARN-967. (Mayank Bansal via vinodkv)
+
+    YARN-1684. Fixed history server heap size in yarn script. (Billie Rinaldi
+    via zjshen)
+
+    YARN-1166. Fixed app-specific and attempt-specific QueueMetrics to be
+    triggered by accordingly app event and attempt event. 
+
+    YARN-1689. Made RMAppAttempt get killed when RMApp is at ACCEPTED. (Vinod
+    Kumar Vavilapalli via zjshen)
+
+    YARN-1661. Fixed DS ApplicationMaster to write the correct exit log. (Vinod
+    Kumar Vavilapalli via zjshen)
+
+    YARN-1672. YarnConfiguration is missing a default for 
+    yarn.nodemanager.log.retain-seconds (Naren Koneru via kasha)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -186,17 +276,7 @@ Release 2.3.0 - UNRELEASED
     YARN-1029. Added embedded leader election in the ResourceManager. (Karthik
     Kambatla via vinodkv)
 
-    YARN-1490. Introduced the ability to make ResourceManager optionally not kill
-    all containers when an ApplicationMaster exits. (Jian He via vinodkv)
-
     YARN-1033. Expose RM active/standby state to Web UI and REST API (kasha)
-
-    YARN-1041. Added the ApplicationMasterProtocol API for applications to use the
-    ability in ResourceManager to optionally not kill containers when the
-    ApplicationMaster exits. (Jian He via vinodkv)
-
-    YARN-1566. Changed Distributed Shell to retain containers across application
-    attempts. (Jian He via vinodkv)
 
   IMPROVEMENTS
 
@@ -360,9 +440,6 @@ Release 2.3.0 - UNRELEASED
 
     YARN-1541. Changed ResourceManager to invalidate ApplicationMaster host/port
     information once an AM crashes. (Jian He via vinodkv)
-
-    YARN-1493. Changed ResourceManager and Scheduler interfacing to recognize
-    app-attempts separately from apps. (Jian He via vinodkv)
 
     YARN-1482. Modified WebApplicationProxy to make it work across ResourceManager
     fail-over. (Xuan Gong via vinodkv)
@@ -549,9 +626,6 @@ Release 2.3.0 - UNRELEASED
     YARN-1574. RMDispatcher should be reset on transition to standby. (Xuan Gong
     via kasha)
 
-    YARN-1166. Fixed app-specific and attempt-specific QueueMetrics to be
-    triggered by accordingly app event and attempt event. 
-
     YARN-1598. HA-related rmadmin commands don't work on a secure cluster (kasha)
 
     YARN-1603. Remove two *.orig files which were unexpectedly committed. 
@@ -575,6 +649,9 @@ Release 2.3.0 - UNRELEASED
     (jlowe)
 
     YARN-1629. IndexOutOfBoundsException in MaxRunningAppsEnforcer (Sandy Ryza)
+
+    YARN-1628. Fixed the test failure in TestContainerManagerSecurity. (Vinod
+    Kumar Vavilapalli via zjshen)
 
 Release 2.2.0 - 2013-10-13
 

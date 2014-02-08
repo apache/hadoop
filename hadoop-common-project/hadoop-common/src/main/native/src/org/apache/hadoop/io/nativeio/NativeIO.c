@@ -18,6 +18,7 @@
 
 #include "org_apache_hadoop.h"
 #include "org_apache_hadoop_io_nativeio_NativeIO.h"
+#include "org_apache_hadoop_io_nativeio_NativeIO_POSIX.h"
 
 #ifdef UNIX
 #include <assert.h>
@@ -48,6 +49,10 @@
 
 #include "file_descriptor.h"
 #include "errno_enum.h"
+
+#define MMAP_PROT_READ org_apache_hadoop_io_nativeio_NativeIO_POSIX_MMAP_PROT_READ
+#define MMAP_PROT_WRITE org_apache_hadoop_io_nativeio_NativeIO_POSIX_MMAP_PROT_WRITE
+#define MMAP_PROT_EXEC org_apache_hadoop_io_nativeio_NativeIO_POSIX_MMAP_PROT_EXEC
 
 // the NativeIO$POSIX$Stat inner class and its constructor
 static jclass stat_clazz;
@@ -661,6 +666,55 @@ cleanup:
 #endif
 }
 
+JNIEXPORT jlong JNICALL 
+Java_org_apache_hadoop_io_nativeio_NativeIO_00024POSIX_mmap(
+  JNIEnv *env, jclass clazz, jobject jfd, jint jprot,
+  jboolean jshared, jlong length)
+{
+#ifdef UNIX
+  void *addr = 0;
+  int prot, flags, fd;
+  
+  prot = ((jprot & MMAP_PROT_READ) ? PROT_READ : 0) |
+         ((jprot & MMAP_PROT_WRITE) ? PROT_WRITE : 0) |
+         ((jprot & MMAP_PROT_EXEC) ? PROT_EXEC : 0);
+  flags = (jshared == JNI_TRUE) ? MAP_SHARED : MAP_PRIVATE;
+  fd = fd_get(env, jfd);
+  addr = mmap(NULL, length, prot, flags, fd, 0);
+  if (addr == MAP_FAILED) {
+    throw_ioe(env, errno);
+  }
+  return (jlong)(intptr_t)addr;
+#endif  //   UNIX
+
+#ifdef WINDOWS
+  THROW(env, "java/io/IOException",
+    "The function POSIX.mmap() is not supported on Windows");
+  return NULL;
+#endif
+}
+
+JNIEXPORT void JNICALL 
+Java_org_apache_hadoop_io_nativeio_NativeIO_00024POSIX_munmap(
+  JNIEnv *env, jclass clazz, jlong jaddr, jlong length)
+{
+#ifdef UNIX
+  void *addr;
+
+  addr = (void*)(intptr_t)jaddr;
+  if (munmap(addr, length) < 0) {
+    throw_ioe(env, errno);
+  }
+#endif  //   UNIX
+
+#ifdef WINDOWS
+  THROW(env, "java/io/IOException",
+    "The function POSIX.munmap() is not supported on Windows");
+  return NULL;
+#endif
+}
+
+
 /*
  * static native String getGroupName(int gid);
  *
@@ -1012,4 +1066,3 @@ JNIEnv *env, jclass clazz)
 /**
  * vim: sw=2: ts=2: et:
  */
-

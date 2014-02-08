@@ -47,6 +47,7 @@ import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.ClientToAMTokenIdentifier;
@@ -103,6 +104,7 @@ public class RMAppImpl implements RMApp, Recoverable {
   private final long submitTime;
   private final Set<RMNode> updatedNodes = new HashSet<RMNode>();
   private final String applicationType;
+  private final Set<String> applicationTags;
 
   // Mutable fields
   private long startTime;
@@ -166,6 +168,8 @@ public class RMAppImpl implements RMApp, Recoverable {
      // Transitions from SUBMITTED state
     .addTransition(RMAppState.SUBMITTED, RMAppState.SUBMITTED,
         RMAppEventType.NODE_UPDATE, new RMAppNodeUpdateTransition())
+    .addTransition(RMAppState.SUBMITTED, RMAppState.SUBMITTED,
+        RMAppEventType.MOVE, new RMAppMoveTransition())
     .addTransition(RMAppState.SUBMITTED, RMAppState.FINAL_SAVING,
         RMAppEventType.APP_REJECTED,
         new FinalSavingTransition(
@@ -181,6 +185,8 @@ public class RMAppImpl implements RMApp, Recoverable {
      // Transitions from ACCEPTED state
     .addTransition(RMAppState.ACCEPTED, RMAppState.ACCEPTED,
         RMAppEventType.NODE_UPDATE, new RMAppNodeUpdateTransition())
+    .addTransition(RMAppState.ACCEPTED, RMAppState.ACCEPTED,
+        RMAppEventType.MOVE, new RMAppMoveTransition())
     .addTransition(RMAppState.ACCEPTED, RMAppState.RUNNING,
         RMAppEventType.ATTEMPT_REGISTERED)
     .addTransition(RMAppState.ACCEPTED,
@@ -190,10 +196,8 @@ public class RMAppImpl implements RMApp, Recoverable {
         // waiting for the previous AM to exit.
         RMAppEventType.ATTEMPT_FAILED,
         new AttemptFailedTransition(RMAppState.ACCEPTED))
-    .addTransition(RMAppState.ACCEPTED, RMAppState.FINAL_SAVING,
-        RMAppEventType.KILL,
-        new FinalSavingTransition(
-          new AppKilledTransition(), RMAppState.KILLED))
+    .addTransition(RMAppState.ACCEPTED, RMAppState.KILLING,
+        RMAppEventType.KILL, new KillAttemptTransition())
     // ACCECPTED state can once again receive APP_ACCEPTED event, because on
     // recovery the app returns ACCEPTED state and the app once again go
     // through the scheduler and triggers one more APP_ACCEPTED event at
@@ -204,6 +208,8 @@ public class RMAppImpl implements RMApp, Recoverable {
      // Transitions from RUNNING state
     .addTransition(RMAppState.RUNNING, RMAppState.RUNNING,
         RMAppEventType.NODE_UPDATE, new RMAppNodeUpdateTransition())
+    .addTransition(RMAppState.RUNNING, RMAppState.RUNNING,
+        RMAppEventType.MOVE, new RMAppMoveTransition())
     .addTransition(RMAppState.RUNNING, RMAppState.FINAL_SAVING,
         RMAppEventType.ATTEMPT_UNREGISTERED,
         new FinalSavingTransition(
@@ -295,9 +301,9 @@ public class RMAppImpl implements RMApp, Recoverable {
   
   public RMAppImpl(ApplicationId applicationId, RMContext rmContext,
       Configuration config, String name, String user, String queue,
-      ApplicationSubmissionContext submissionContext,
-      YarnScheduler scheduler,
-      ApplicationMasterService masterService, long submitTime, String applicationType) {
+      ApplicationSubmissionContext submissionContext, YarnScheduler scheduler,
+      ApplicationMasterService masterService, long submitTime,
+      String applicationType, Set<String> applicationTags) {
 
     this.applicationId = applicationId;
     this.name = name;
@@ -313,6 +319,7 @@ public class RMAppImpl implements RMApp, Recoverable {
     this.submitTime = submitTime;
     this.startTime = System.currentTimeMillis();
     this.applicationType = applicationType;
+    this.applicationTags = applicationTags;
 
     int globalMaxAppAttempts = conf.getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
         YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
@@ -546,7 +553,7 @@ public class RMAppImpl implements RMApp, Recoverable {
           createApplicationState(), diags,
           trackingUrl, this.startTime, this.finishTime, finishState,
           appUsageReport, origTrackingUrl, progress, this.applicationType, 
-          amrmToken);
+          amrmToken, applicationTags);
     } finally {
       this.readLock.unlock();
     }
@@ -692,6 +699,31 @@ public class RMAppImpl implements RMApp, Recoverable {
     };
   }
 
+  /**
+   * Move an app to a new queue.
+   * This transition must set the result on the Future in the RMAppMoveEvent,
+   * either as an exception for failure or null for success, or the client will
+   * be left waiting forever.
+   */
+  @SuppressWarnings("unchecked")
+  private static final class RMAppMoveTransition extends RMAppTransition {
+    public void transition(RMAppImpl app, RMAppEvent event) {
+      RMAppMoveEvent moveEvent = (RMAppMoveEvent) event;
+      try {
+        app.queue = app.scheduler.moveApplication(app.applicationId,
+            moveEvent.getTargetQueue());
+      } catch (YarnException ex) {
+        moveEvent.getResult().setException(ex);
+        return;
+      }
+      
+      // TODO: Write out change to state store (YARN-1558)
+      
+      moveEvent.getResult().set(null);
+    }
+  }
+
+  @SuppressWarnings("unchecked")
   private static final class RMAppRecoveredTransition implements
       MultipleArcTransition<RMAppImpl, RMAppEvent, RMAppState> {
 
@@ -1051,6 +1083,11 @@ public class RMAppImpl implements RMApp, Recoverable {
   @Override
   public String getApplicationType() {
     return this.applicationType;
+  }
+
+  @Override
+  public Set<String> getApplicationTags() {
+    return this.applicationTags;
   }
 
   @Override

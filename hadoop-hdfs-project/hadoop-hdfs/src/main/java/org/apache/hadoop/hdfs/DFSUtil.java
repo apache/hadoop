@@ -262,6 +262,47 @@ public class DFSUtil {
   }
 
   /**
+   * Checks if a string is a valid path component. For instance, components
+   * cannot contain a ":" or "/", and cannot be equal to a reserved component
+   * like ".snapshot".
+   * <p>
+   * The primary use of this method is for validating paths when loading the
+   * FSImage. During normal NN operation, paths are sometimes allowed to
+   * contain reserved components.
+   * 
+   * @return If component is valid
+   */
+  public static boolean isValidNameForComponent(String component) {
+    if (component.equals(".") ||
+        component.equals("..") ||
+        component.indexOf(":") >= 0 ||
+        component.indexOf("/") >= 0) {
+      return false;
+    }
+    return !isReservedPathComponent(component);
+  }
+
+
+  /**
+   * Returns if the component is reserved.
+   * 
+   * <p>
+   * Note that some components are only reserved under certain directories, e.g.
+   * "/.reserved" is reserved, while "/hadoop/.reserved" is not.
+   * 
+   * @param component
+   * @return if the component is reserved
+   */
+  public static boolean isReservedPathComponent(String component) {
+    for (String reserved : HdfsConstants.RESERVED_PATH_COMPONENTS) {
+      if (component.equals(reserved)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
    * Converts a byte array to a string using UTF8 encoding.
    */
   public static String bytes2String(byte[] bytes) {
@@ -312,7 +353,25 @@ public class DFSUtil {
     }
     return result.toString();
   }
-  
+
+  /**
+   * Converts a list of path components into a path using Path.SEPARATOR.
+   * 
+   * @param components Path components
+   * @return Combined path as a UTF-8 string
+   */
+  public static String strings2PathString(String[] components) {
+    if (components.length == 0) {
+      return "";
+    }
+    if (components.length == 1) {
+      if (components[0] == null || components[0].isEmpty()) {
+        return Path.SEPARATOR;
+      }
+    }
+    return Joiner.on(Path.SEPARATOR).join(components);
+  }
+
   /**
    * Given a list of path components returns a byte array
    */
@@ -1508,31 +1567,34 @@ public class DFSUtil {
    * configuration settings.
    */
   public static HttpConfig.Policy getHttpPolicy(Configuration conf) {
-    String httpPolicy = conf.get(DFSConfigKeys.DFS_HTTP_POLICY_KEY,
-        DFSConfigKeys.DFS_HTTP_POLICY_DEFAULT);
-
-    HttpConfig.Policy policy = HttpConfig.Policy.fromString(httpPolicy);
-
-    if (policy == HttpConfig.Policy.HTTP_ONLY) {
-      boolean httpsEnabled = conf.getBoolean(
-          DFSConfigKeys.DFS_HTTPS_ENABLE_KEY,
+    String policyStr = conf.get(DFSConfigKeys.DFS_HTTP_POLICY_KEY);
+    if (policyStr == null) {
+      boolean https = conf.getBoolean(DFSConfigKeys.DFS_HTTPS_ENABLE_KEY,
           DFSConfigKeys.DFS_HTTPS_ENABLE_DEFAULT);
 
-      boolean hadoopSslEnabled = conf.getBoolean(
+      boolean hadoopSsl = conf.getBoolean(
           CommonConfigurationKeys.HADOOP_SSL_ENABLED_KEY,
           CommonConfigurationKeys.HADOOP_SSL_ENABLED_DEFAULT);
 
-      if (hadoopSslEnabled) {
+      if (hadoopSsl) {
         LOG.warn(CommonConfigurationKeys.HADOOP_SSL_ENABLED_KEY
-            + " is deprecated. Please use "
-            + DFSConfigKeys.DFS_HTTPS_ENABLE_KEY + ".");
-        policy = HttpConfig.Policy.HTTPS_ONLY;
-      } else if (httpsEnabled) {
-        LOG.warn(DFSConfigKeys.DFS_HTTPS_ENABLE_KEY
-            + " is deprecated. Please use "
-            + DFSConfigKeys.DFS_HTTPS_ENABLE_KEY + ".");
-        policy = HttpConfig.Policy.HTTP_AND_HTTPS;
+            + " is deprecated. Please use " + DFSConfigKeys.DFS_HTTP_POLICY_KEY
+            + ".");
       }
+      if (https) {
+        LOG.warn(DFSConfigKeys.DFS_HTTPS_ENABLE_KEY
+            + " is deprecated. Please use " + DFSConfigKeys.DFS_HTTP_POLICY_KEY
+            + ".");
+      }
+
+      return (hadoopSsl || https) ? HttpConfig.Policy.HTTP_AND_HTTPS
+          : HttpConfig.Policy.HTTP_ONLY;
+    }
+
+    HttpConfig.Policy policy = HttpConfig.Policy.fromString(policyStr);
+    if (policy == null) {
+      throw new HadoopIllegalArgumentException("Unregonized value '"
+          + policyStr + "' for " + DFSConfigKeys.DFS_HTTP_POLICY_KEY);
     }
 
     conf.set(DFSConfigKeys.DFS_HTTP_POLICY_KEY, policy.name());

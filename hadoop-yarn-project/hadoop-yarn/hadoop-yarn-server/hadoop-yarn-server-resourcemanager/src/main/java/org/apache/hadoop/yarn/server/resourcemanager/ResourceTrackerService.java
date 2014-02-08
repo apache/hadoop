@@ -29,6 +29,7 @@ import org.apache.hadoop.net.Node;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.VersionUtil;
+import org.apache.hadoop.yarn.LocalConfigurationProvider;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
@@ -66,6 +67,8 @@ import org.apache.hadoop.yarn.server.utils.YarnServerBuilderUtils;
 import org.apache.hadoop.yarn.util.RackResolver;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
 
+import com.google.common.annotations.VisibleForTesting;
+
 public class ResourceTrackerService extends AbstractService implements
     ResourceTracker {
 
@@ -92,6 +95,7 @@ public class ResourceTrackerService extends AbstractService implements
   
   private int minAllocMb;
   private int minAllocVcores;
+  private boolean useLocalConfigurationProvider;
 
   static {
     resync.setNodeAction(NodeAction.RESYNC);
@@ -141,6 +145,10 @@ public class ResourceTrackerService extends AbstractService implements
         YarnConfiguration.RM_NODEMANAGER_MINIMUM_VERSION,
         YarnConfiguration.DEFAULT_RM_NODEMANAGER_MINIMUM_VERSION);
 
+    this.useLocalConfigurationProvider =
+        (LocalConfigurationProvider.class.isAssignableFrom(conf.getClass(
+            YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
+            LocalConfigurationProvider.class)));
     super.serviceInit(conf);
   }
 
@@ -415,6 +423,16 @@ public class ResourceTrackerService extends AbstractService implements
 
   void refreshServiceAcls(Configuration configuration, 
       PolicyProvider policyProvider) {
-    this.server.refreshServiceAcl(configuration, policyProvider);
+    if (this.useLocalConfigurationProvider) {
+      this.server.refreshServiceAcl(configuration, policyProvider);
+    } else {
+      this.server.refreshServiceAclWithConfigration(configuration,
+          policyProvider);
+    }
+  }
+
+  @VisibleForTesting
+  public Server getServer() {
+    return this.server;
   }
 }

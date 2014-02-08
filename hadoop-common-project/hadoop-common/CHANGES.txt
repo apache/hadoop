@@ -113,6 +113,11 @@ Trunk (Unreleased)
 
     HADOOP-10177. Create CLI tools for managing keys. (Larry McCay via omalley)
 
+    HADOOP-10244. TestKeyShell improperly tests the results of delete (Larry
+    McCay via omalley)
+
+    HADOOP-10325. Improve jenkins javadoc warnings from test-patch.sh (cmccabe)
+
   BUG FIXES
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.
@@ -313,6 +318,15 @@ Release 2.4.0 - UNRELEASED
 
     HADOOP-10320. Javadoc in InterfaceStability.java lacks final </ul>.
     (René Nyffenegger via cnauroth)
+    
+    HADOOP-10085. CompositeService should allow adding services while being 
+    inited. (Steve Loughran via kasha)
+
+    HADOOP-10327. Trunk windows build broken after HDFS-5746.
+    (Vinay via cnauroth)
+
+    HADOOP-10330. TestFrameDecoder fails if it cannot bind port 12345.
+    (Arpit Agarwal)
 
 Release 2.3.0 - UNRELEASED
 
@@ -684,6 +698,8 @@ Release 2.3.0 - UNRELEASED
     manager present. (atm)
 
     HADOOP-10311. Cleanup vendor names from the code base. (tucu)
+
+    HADOOP-10273. Fix 'mvn site'. (Arpit Agarwal)
 
 Release 2.2.0 - 2013-10-13
 

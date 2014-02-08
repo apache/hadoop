@@ -21,7 +21,9 @@ package org.apache.hadoop.mapred;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Vector;
@@ -467,6 +469,8 @@ public class YARNRunner implements ClientProtocol {
         ContainerLaunchContext.newInstance(localResources, environment,
           vargsFinal, null, securityTokens, acls);
 
+    Collection<String> tagsFromConf =
+        jobConf.getTrimmedStringCollection(MRJobConfig.JOB_TAGS);
 
     // Set up the ApplicationSubmissionContext
     ApplicationSubmissionContext appContext =
@@ -486,6 +490,9 @@ public class YARNRunner implements ClientProtocol {
             MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS));
     appContext.setResource(capability);
     appContext.setApplicationType(MRJobConfig.MR_APPLICATION_TYPE);
+    if (tagsFromConf != null && !tagsFromConf.isEmpty()) {
+      appContext.setApplicationTags(new HashSet<String>(tagsFromConf));
+    }
     return appContext;
   }
 

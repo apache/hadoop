@@ -26,6 +26,7 @@ import java.nio.ByteBuffer;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.io.Text;
@@ -312,7 +313,7 @@ public class BuilderUtils {
       String url, long startTime, long finishTime,
       FinalApplicationStatus finalStatus,
       ApplicationResourceUsageReport appResources, String origTrackingUrl,
-      float progress, String appType, Token amRmToken) {
+      float progress, String appType, Token amRmToken, Set<String> tags) {
     ApplicationReport report = recordFactory
         .newRecordInstance(ApplicationReport.class);
     report.setApplicationId(applicationId);
@@ -334,6 +335,7 @@ public class BuilderUtils {
     report.setProgress(progress);
     report.setApplicationType(appType);
     report.setAMRMToken(amRmToken);
+    report.setApplicationTags(tags);
     return report;
   }
   

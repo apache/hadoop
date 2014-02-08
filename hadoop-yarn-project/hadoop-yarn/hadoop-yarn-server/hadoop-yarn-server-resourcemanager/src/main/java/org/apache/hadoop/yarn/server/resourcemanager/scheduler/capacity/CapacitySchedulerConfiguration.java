@@ -140,10 +140,17 @@ public class CapacitySchedulerConfiguration extends Configuration {
   }
   
   public CapacitySchedulerConfiguration(Configuration configuration) {
-    super(configuration);
-    addResource(CS_CONFIGURATION_FILE);
+    this(configuration, true);
   }
-  
+
+  public CapacitySchedulerConfiguration(Configuration configuration,
+      boolean useLocalConfigurationProvider) {
+    super(configuration);
+    if (useLocalConfigurationProvider) {
+      addResource(CS_CONFIGURATION_FILE);
+    }
+  }
+
   private String getQueuePrefix(String queue) {
     String queueName = PREFIX + queue + DOT;
     return queueName;

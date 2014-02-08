@@ -41,7 +41,7 @@ public class TestKeyShell {
   
   @Test
   public void testKeySuccessfulKeyLifecycle() throws Exception {
-    outContent.flush();
+    outContent.reset();
     String[] args1 = {"create", "key1", "--provider", 
         "jceks://file" + tmpDir + "/keystore.jceks"};
     int rc = 0;
@@ -52,14 +52,14 @@ public class TestKeyShell {
     assertTrue(outContent.toString().contains("key1 has been successfully " +
     		"created."));
 
-    outContent.flush();
+    outContent.reset();
     String[] args2 = {"list", "--provider", 
         "jceks://file" + tmpDir + "/keystore.jceks"};
     rc = ks.run(args2);
     assertEquals(0, rc);
     assertTrue(outContent.toString().contains("key1"));
 
-    outContent.flush();
+    outContent.reset();
     String[] args3 = {"roll", "key1", "--provider", 
         "jceks://file" + tmpDir + "/keystore.jceks"};
     rc = ks.run(args3);
@@ -67,7 +67,7 @@ public class TestKeyShell {
     assertTrue(outContent.toString().contains("key1 has been successfully " +
     		"rolled."));
 
-    outContent.flush();
+    outContent.reset();
     String[] args4 = {"delete", "key1", "--provider", 
         "jceks://file" + tmpDir + "/keystore.jceks"};
     rc = ks.run(args4);
@@ -75,12 +75,12 @@ public class TestKeyShell {
     assertTrue(outContent.toString().contains("key1 has been successfully " +
     		"deleted."));
 
-    outContent.flush();
+    outContent.reset();
     String[] args5 = {"list", "--provider", 
         "jceks://file" + tmpDir + "/keystore.jceks"};
     rc = ks.run(args5);
     assertEquals(0, rc);
-    assertTrue(outContent.toString().contains("key1"));
+    assertFalse(outContent.toString(), outContent.toString().contains("key1"));
   }
   
   @Test
@@ -165,7 +165,7 @@ public class TestKeyShell {
     assertTrue(outContent.toString().contains("key1 has been successfully " +
     		"created."));
 
-    outContent.flush();
+    outContent.reset();
     String[] args2 = {"delete", "key1", "--provider", 
         "jceks://file" + tmpDir + "/keystore.jceks"};
     rc = ks.run(args2);

@@ -151,6 +151,13 @@ public class RetryPolicies {
         delayMillis, maxDelayBase);
   }
   
+  public static final RetryPolicy failoverOnNetworkException(
+      RetryPolicy fallbackPolicy, int maxFailovers, int maxRetries,
+      long delayMillis, long maxDelayBase) {
+    return new FailoverOnNetworkExceptionRetry(fallbackPolicy, maxFailovers,
+        maxRetries, delayMillis, maxDelayBase);
+  }
+  
   static class TryOnceThenFail implements RetryPolicy {
     @Override
     public RetryAction shouldRetry(Exception e, int retries, int failovers,
@@ -516,18 +523,25 @@ public class RetryPolicies {
     
     private RetryPolicy fallbackPolicy;
     private int maxFailovers;
+    private int maxRetries;
     private long delayMillis;
     private long maxDelayBase;
     
     public FailoverOnNetworkExceptionRetry(RetryPolicy fallbackPolicy,
         int maxFailovers) {
-      this(fallbackPolicy, maxFailovers, 0, 0);
+      this(fallbackPolicy, maxFailovers, 0, 0, 0);
     }
     
     public FailoverOnNetworkExceptionRetry(RetryPolicy fallbackPolicy,
         int maxFailovers, long delayMillis, long maxDelayBase) {
+      this(fallbackPolicy, maxFailovers, 0, delayMillis, maxDelayBase);
+    }
+    
+    public FailoverOnNetworkExceptionRetry(RetryPolicy fallbackPolicy,
+        int maxFailovers, int maxRetries, long delayMillis, long maxDelayBase) {
       this.fallbackPolicy = fallbackPolicy;
       this.maxFailovers = maxFailovers;
+      this.maxRetries = maxRetries;
       this.delayMillis = delayMillis;
       this.maxDelayBase = maxDelayBase;
     }
@@ -548,6 +562,10 @@ public class RetryPolicies {
         return new RetryAction(RetryAction.RetryDecision.FAIL, 0,
             "failovers (" + failovers + ") exceeded maximum allowed ("
             + maxFailovers + ")");
+      }
+      if (retries - failovers > maxRetries) {
+        return new RetryAction(RetryAction.RetryDecision.FAIL, 0, "retries ("
+            + retries + ") exceeded maximum allowed (" + maxRetries + ")");
       }
       
       if (e instanceof ConnectException ||

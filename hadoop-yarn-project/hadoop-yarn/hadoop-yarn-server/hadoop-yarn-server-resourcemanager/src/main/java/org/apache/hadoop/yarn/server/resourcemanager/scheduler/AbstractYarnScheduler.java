@@ -27,11 +27,12 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 
-public class AbstractYarnScheduler {
+public abstract class AbstractYarnScheduler implements ResourceScheduler {
 
   protected RMContext rmContext;
   protected Map<ApplicationId, SchedulerApplication> applications;
@@ -60,5 +61,12 @@ public class AbstractYarnScheduler {
 
   public Map<ApplicationId, SchedulerApplication> getSchedulerApplications() {
     return applications;
+  }
+  
+  @Override
+  public String moveApplication(ApplicationId appId, String newQueue)
+      throws YarnException {
+    throw new YarnException(getClass().getSimpleName()
+        + " does not support moving apps between queues");
   }
 }
