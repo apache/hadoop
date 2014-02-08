@@ -227,6 +227,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1661. Fixed DS ApplicationMaster to write the correct exit log. (Vinod
     Kumar Vavilapalli via zjshen)
 
+    YARN-1672. YarnConfiguration is missing a default for 
+    yarn.nodemanager.log.retain-seconds (Naren Koneru via kasha)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

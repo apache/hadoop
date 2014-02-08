@@ -145,7 +145,8 @@ public class TestNonAggregatingLogHandler {
     conf.set(YarnConfiguration.NM_LOG_DIRS, localLogDirsString);
     conf.setBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED, false);
 
-    conf.setLong(YarnConfiguration.NM_LOG_RETAIN_SECONDS, 10800l);
+    conf.setLong(YarnConfiguration.NM_LOG_RETAIN_SECONDS,
+            YarnConfiguration.DEFAULT_NM_LOG_RETAIN_SECONDS);
 
     DrainDispatcher dispatcher = createDispatcher(conf);
     EventHandler<ApplicationEvent> appEventHandler = mock(EventHandler.class);
