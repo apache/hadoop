@@ -286,6 +286,55 @@ Trunk (Unreleased)
     HDFS-5794. Fix the inconsistency of layout version number of 
     ADD_DATANODE_AND_STORAGE_UUIDS between trunk and branch-2. (jing9)
 
+  BREAKDOWN OF HDFS-5698 SUBTASKS AND RELATED JIRAS
+
+    HDFS-5717. Save FSImage header in protobuf. (Haohui Mai via jing9)
+
+    HDFS-5738. Serialize INode information in protobuf. (Haohui Mai via jing9)
+
+    HDFS-5772. Serialize under-construction file information in FSImage. (jing9)
+
+    HDFS-5783. Compute the digest before loading FSImage. (Haohui Mai via jing9)
+
+    HDFS-5785. Serialize symlink in protobuf. (Haohui Mai via jing9)
+
+    HDFS-5793. Optimize the serialization of PermissionStatus. (Haohui Mai via
+    jing9)
+
+    HDFS-5743. Use protobuf to serialize snapshot information. (jing9)
+
+    HDFS-5774. Serialize CachePool directives in protobuf. (Haohui Mai via jing9)
+
+    HDFS-5744. Serialize information for token managers in protobuf. (Haohui Mai
+    via jing9)
+
+    HDFS-5824. Add a Type field in Snapshot DiffEntry's protobuf definition.
+    (jing9)
+
+    HDFS-5808. Implement cancellation when saving FSImage. (Haohui Mai via jing9)
+
+    HDFS-5826. Update the stored edit logs to be consistent with the changes in
+    HDFS-5698 branch. (Haohui Mai via jing9)
+
+    HDFS-5797. Implement offline image viewer. (Haohui Mai via jing9)
+
+    HDFS-5771. Track progress when loading fsimage. (Haohui Mai via cnauroth)
+
+    HDFS-5871. Use PBHelper to serialize CacheDirectiveInfoExpirationProto.
+    (Haohui Mai via jing9)
+
+    HDFS-5884. LoadDelegator should use IOUtils.readFully() to read the magic
+    header. (Haohui Mai via jing9)
+
+    HDFS-5885. Add annotation for repeated fields in the protobuf definition.
+    (Haohui Mai via jing9)
+
+    HDFS-5906. Fixing findbugs and javadoc warnings in the HDFS-5698 branch.
+    (Haohui Mai via jing9)
+
+    HDFS-5911. The id of a CacheDirective instance does not get serialized in 
+    the protobuf-fsimage. (Haohui Mai via jing9)
+
 Release 2.4.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

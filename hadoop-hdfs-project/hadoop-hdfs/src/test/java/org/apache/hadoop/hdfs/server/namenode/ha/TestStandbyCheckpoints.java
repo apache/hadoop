@@ -287,7 +287,6 @@ public class TestStandbyCheckpoints {
     doEdits(0, 1000);
     nn0.getRpcServer().rollEditLog();
     answerer.waitForCall();
-    answerer.proceed();
     assertTrue("SBN is not performing checkpoint but it should be.",
         answerer.getFireCount() == 1 && answerer.getResultCount() == 0);
     
@@ -306,6 +305,7 @@ public class TestStandbyCheckpoints {
     // RPC to the SBN happened during the checkpoint.
     assertTrue("SBN should have still been checkpointing.",
         answerer.getFireCount() == 1 && answerer.getResultCount() == 0);
+    answerer.proceed();
     answerer.waitForResult();
     assertTrue("SBN should have finished checkpointing.",
         answerer.getFireCount() == 1 && answerer.getResultCount() == 1);
