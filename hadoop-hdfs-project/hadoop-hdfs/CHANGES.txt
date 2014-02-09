@@ -940,6 +940,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-5873. dfs.http.policy should have higher precedence over dfs.https.enable.
     (Haohui Mai via jing9)
 
+    HDFS-5837. dfs.namenode.replication.considerLoad should consider
+    decommissioned nodes. (Tao Luo via shv)
+
   BREAKDOWN OF HDFS-2832 SUBTASKS AND RELATED JIRAS
 
     HDFS-4985. Add storage type to the protocol and expose it in block report
