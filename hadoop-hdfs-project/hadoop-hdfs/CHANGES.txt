@@ -360,6 +360,8 @@ Release 2.4.0 - UNRELEASED
     HDFS-4911.  Reduce PeerCache timeout to be commensurate with
     dfs.datanode.socket.reuse.keepalive (cmccabe)
 
+    HDFS-4370. Fix typo Blanacer in DataNode. (Chu Tong via shv)
+
   OPTIMIZATIONS
 
     HDFS-5790. LeaseManager.findPath is very slow when many leases need recovery
