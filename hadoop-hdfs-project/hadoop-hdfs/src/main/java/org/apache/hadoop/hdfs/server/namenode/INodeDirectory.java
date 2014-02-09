@@ -167,7 +167,7 @@ public class INodeDirectory extends INodeWithAdditionalFields
     return children == null? -1: Collections.binarySearch(children, name);
   }
   
-  protected DirectoryWithSnapshotFeature addSnapshotFeature(
+  public DirectoryWithSnapshotFeature addSnapshotFeature(
       DirectoryDiffList diffs) {
     Preconditions.checkState(!isWithSnapshot(), 
         "Directory is already with snapshot");

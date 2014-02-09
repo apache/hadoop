@@ -113,7 +113,8 @@ public class LayoutVersion {
         + " Use distinct StorageUuid per storage directory."),
     ADD_LAYOUT_FLAGS(-50, "Add support for layout flags."),
     CACHING(-51, "Support for cache pools and path-based caching"),
-    EXTENDED_ACL(-52, "Extended ACL");
+    PROTOBUF_FORMAT(-52, "Use protobuf to serialize FSImage"),
+    EXTENDED_ACL(-53, "Extended ACL");
 
     final int lv;
     final int ancestorLV;

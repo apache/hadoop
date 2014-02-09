@@ -244,7 +244,7 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
       this.isSnapshotRoot = isSnapshotRoot;
     }
 
-    ChildrenDiff getChildrenDiff() {
+    public ChildrenDiff getChildrenDiff() {
       return diff;
     }
     
@@ -341,6 +341,10 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
     @Override
     public String toString() {
       return super.toString() + " childrenSize=" + childrenSize + ", " + diff;
+    }
+
+    int getChildrenSize() {
+      return childrenSize;
     }
 
     @Override

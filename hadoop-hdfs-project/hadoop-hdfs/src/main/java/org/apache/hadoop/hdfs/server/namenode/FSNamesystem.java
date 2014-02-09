@@ -181,6 +181,7 @@ import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager.AccessMode;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
+import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager.SecretManagerState;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockCollection;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
@@ -198,6 +199,8 @@ import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirType;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.common.Util;
+import org.apache.hadoop.hdfs.server.namenode.FsImageProto.SecretManagerSection;
+import org.apache.hadoop.hdfs.server.namenode.FsImageProto.SecretManagerSection.PersistToken;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.JournalSet.JournalAndStream;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
@@ -6018,6 +6021,15 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   /**
+   * @return all the under-construction files in the lease map
+   */
+  Map<String, INodeFile> getFilesUnderConstruction() {
+    synchronized (leaseManager) {
+      return leaseManager.getINodesUnderConstruction();
+    }
+  }
+
+  /**
    * Register a Backup name-node, verifying that it belongs
    * to the correct namespace, and adding it to the set of
    * active journals if necessary.
@@ -6293,11 +6305,21 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     dtSecretManager.saveSecretManagerStateCompat(out, sdPath);
   }
 
+  SecretManagerState saveSecretManagerState() {
+    return dtSecretManager.saveSecretManagerState();
+  }
+
   /**
    * @param in load the state of secret manager from input stream
    */
   void loadSecretManagerStateCompat(DataInput in) throws IOException {
     dtSecretManager.loadSecretManagerStateCompat(in);
+  }
+
+  void loadSecretManagerState(SecretManagerSection s,
+      List<SecretManagerSection.DelegationKey> keys,
+      List<SecretManagerSection.PersistToken> tokens) throws IOException {
+    dtSecretManager.loadSecretManagerState(new SecretManagerState(s, keys, tokens));
   }
 
   /**
