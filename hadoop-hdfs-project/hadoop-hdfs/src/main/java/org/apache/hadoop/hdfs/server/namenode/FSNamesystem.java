@@ -6801,7 +6801,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     return this.blockManager.getDatanodeManager()
         .shouldAvoidStaleDataNodesForWrite();
   }
-  
+
+  @Override // FSClusterStats
+  public int getNumDatanodesInService() {
+    return getNumLiveDataNodes() - getNumDecomLiveDataNodes();
+  }
+
   public SnapshotManager getSnapshotManager() {
     return snapshotManager;
   }
