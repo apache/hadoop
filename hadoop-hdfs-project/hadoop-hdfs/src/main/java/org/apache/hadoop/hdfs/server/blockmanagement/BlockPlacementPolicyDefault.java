@@ -633,9 +633,11 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     // check the communication traffic of the target machine
     if (considerLoad) {
       double avgLoad = 0;
-      int size = clusterMap.getNumOfLeaves();
-      if (size != 0 && stats != null) {
-        avgLoad = (double)stats.getTotalLoad()/size;
+      if (stats != null) {
+        int size = stats.getNumDatanodesInService();
+        if (size != 0) {
+          avgLoad = (double)stats.getTotalLoad()/size;
+        }
       }
       if (node.getXceiverCount() > (2.0 * avgLoad)) {
         logNodeIsNotChosen(storage, "the node is too busy ");
