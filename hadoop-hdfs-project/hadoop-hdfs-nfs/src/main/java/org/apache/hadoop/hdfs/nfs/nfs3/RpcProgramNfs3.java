@@ -545,7 +545,8 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
         return new READLINK3Response(Nfs3Status.NFS3ERR_SERVERFAULT);
       }
       if (MAX_READ_TRANSFER_SIZE < target.getBytes().length) {
-        return new READLINK3Response(Nfs3Status.NFS3ERR_IO, postOpAttr, null);
+        return new READLINK3Response(Nfs3Status.NFS3ERR_IO, postOpAttr,
+            new byte[0]);
       }
 
       return new READLINK3Response(Nfs3Status.NFS3_OK, postOpAttr,

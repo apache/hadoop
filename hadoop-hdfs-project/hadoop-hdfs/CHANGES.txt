@@ -404,6 +404,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-5900. Cannot set cache pool limit of "unlimited" via CacheAdmin.
     (wang)
 
+    HDFS-5886. Potential null pointer deference in RpcProgramNfs3#readlink()
+    (brandonli)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
