@@ -335,6 +335,9 @@ Trunk (Unreleased)
     HDFS-5911. The id of a CacheDirective instance does not get serialized in 
     the protobuf-fsimage. (Haohui Mai via jing9)
 
+    HDFS-5915. Refactor FSImageFormatProtobuf to simplify cross section reads.
+    (Haohui Mai via cnauroth)
+
 Release 2.4.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

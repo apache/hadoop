@@ -38,7 +38,7 @@ import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
-import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf.StringMap;
+import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf.SaverContext;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.FileSummary;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.FilesUnderConstructionSection.FileUnderConstructionEntry;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeDirectorySection;
@@ -208,7 +208,7 @@ public final class FSImageFormatPBINode {
       case FILE:
         return loadINodeFile(n);
       case DIRECTORY:
-        return loadINodeDirectory(n, parent.getStringTable());
+        return loadINodeDirectory(n, parent.getLoaderContext().getStringTable());
       case SYMLINK:
         return loadINodeSymlink(n);
       default:
@@ -228,7 +228,7 @@ public final class FSImageFormatPBINode {
         blocks[i] = new BlockInfo(PBHelper.convert(bp.get(i)), replication);
       }
       final PermissionStatus permissions = loadPermission(f.getPermission(),
-          parent.getStringTable());
+          parent.getLoaderContext().getStringTable());
 
       final INodeFile file = new INodeFile(n.getId(),
           n.getName().toByteArray(), permissions, f.getModificationTime(),
@@ -253,13 +253,14 @@ public final class FSImageFormatPBINode {
       assert n.getType() == INodeSection.INode.Type.SYMLINK;
       INodeSection.INodeSymlink s = n.getSymlink();
       final PermissionStatus permissions = loadPermission(s.getPermission(),
-          parent.getStringTable());
+          parent.getLoaderContext().getStringTable());
       return new INodeSymlink(n.getId(), n.getName().toByteArray(), permissions,
           0, 0, s.getTarget().toStringUtf8());
     }
 
     private void loadRootINode(INodeSection.INode p) {
-      INodeDirectory root = loadINodeDirectory(p, parent.getStringTable());
+      INodeDirectory root = loadINodeDirectory(p, parent.getLoaderContext()
+          .getStringTable());
       final Quota.Counts q = root.getQuotaCounts();
       final long nsQuota = q.get(Quota.NAMESPACE);
       final long dsQuota = q.get(Quota.DISKSPACE);
@@ -273,16 +274,17 @@ public final class FSImageFormatPBINode {
 
   public final static class Saver {
     private static long buildPermissionStatus(INodeAttributes n,
-        final StringMap stringMap) {
-      long userId = stringMap.getStringId(n.getUserName());
-      long groupId = stringMap.getStringId(n.getGroupName());
+        final SaverContext.DeduplicationMap<String> stringMap) {
+      long userId = stringMap.getId(n.getUserName());
+      long groupId = stringMap.getId(n.getGroupName());
       return ((userId & USER_GROUP_STRID_MASK) << USER_STRID_OFFSET)
           | ((groupId & USER_GROUP_STRID_MASK) << GROUP_STRID_OFFSET)
           | n.getFsPermissionShort();
     }
 
     public static INodeSection.INodeFile.Builder buildINodeFile(
-        INodeFileAttributes file, final StringMap stringMap) {
+        INodeFileAttributes file,
+        final SaverContext.DeduplicationMap<String> stringMap) {
       INodeSection.INodeFile.Builder b = INodeSection.INodeFile.newBuilder()
           .setAccessTime(file.getAccessTime())
           .setModificationTime(file.getModificationTime())
@@ -293,7 +295,8 @@ public final class FSImageFormatPBINode {
     }
 
     public static INodeSection.INodeDirectory.Builder buildINodeDirectory(
-        INodeDirectoryAttributes dir, final StringMap stringMap) {
+        INodeDirectoryAttributes dir,
+        final SaverContext.DeduplicationMap<String> stringMap) {
       Quota.Counts quota = dir.getQuotaCounts();
       INodeSection.INodeDirectory.Builder b = INodeSection.INodeDirectory
           .newBuilder().setModificationTime(dir.getModificationTime())
@@ -416,7 +419,7 @@ public final class FSImageFormatPBINode {
 
     private void save(OutputStream out, INodeDirectory n) throws IOException {
       INodeSection.INodeDirectory.Builder b = buildINodeDirectory(n,
-          parent.getStringMap());
+          parent.getSaverContext().getStringMap());
       INodeSection.INode r = buildINodeCommon(n)
           .setType(INodeSection.INode.Type.DIRECTORY).setDirectory(b).build();
       r.writeDelimitedTo(out);
@@ -424,7 +427,7 @@ public final class FSImageFormatPBINode {
 
     private void save(OutputStream out, INodeFile n) throws IOException {
       INodeSection.INodeFile.Builder b = buildINodeFile(n,
-          parent.getStringMap());
+          parent.getSaverContext().getStringMap());
 
       for (Block block : n.getBlocks()) {
         b.addBlocks(PBHelper.convert(block));
@@ -447,7 +450,7 @@ public final class FSImageFormatPBINode {
     private void save(OutputStream out, INodeSymlink n) throws IOException {
       INodeSection.INodeSymlink.Builder b = INodeSection.INodeSymlink
           .newBuilder()
-          .setPermission(buildPermissionStatus(n, parent.getStringMap()))
+          .setPermission(buildPermissionStatus(n, parent.getSaverContext().getStringMap()))
           .setTarget(ByteString.copyFrom(n.getSymlink()));
       INodeSection.INode r = buildINodeCommon(n)
           .setType(INodeSection.INode.Type.SYMLINK).setSymlink(b).build();
