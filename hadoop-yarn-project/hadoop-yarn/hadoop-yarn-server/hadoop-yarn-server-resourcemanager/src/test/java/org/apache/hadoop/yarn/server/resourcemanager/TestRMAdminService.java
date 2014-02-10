@@ -26,7 +26,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.authorize.AccessControlList;
@@ -105,34 +104,34 @@ public class TestRMAdminService {
       throws IOException, YarnException {
     configuration.set(YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
         "org.apache.hadoop.yarn.FileSystemBasedConfigurationProvider");
-    rm = new MockRM(configuration);
-    rm.init(configuration);
-    rm.start();
+    try {
+      rm = new MockRM(configuration);
+      rm.init(configuration);
+      rm.start();
+      fail("Should throw an exception");
+    } catch(Exception ex) {
+      // Expect exception here
+    }
 
-    // clean the remoteDirectory
-    cleanRemoteDirectory();
+    //upload default configurations
+    uploadDefaultConfiguration();
+
+    try {
+      rm = new MockRM(configuration);
+      rm.init(configuration);
+      rm.start();
+    } catch(Exception ex) {
+      fail("Should not get any exceptions");
+    }
 
     CapacityScheduler cs =
         (CapacityScheduler) rm.getRMContext().getScheduler();
     int maxAppsBefore = cs.getConfiguration().getMaximumSystemApplications();
 
-    try {
-      rm.adminService.refreshQueues(RefreshQueuesRequest.newInstance());
-      fail("FileSystemBasedConfigurationProvider is used." +
-          " Should get an exception here");
-    } catch (Exception ex) {
-      Assert.assertTrue(ex.getMessage().contains(
-          "Can not find Configuration: capacity-scheduler.xml"));
-    }
-
     CapacitySchedulerConfiguration csConf =
         new CapacitySchedulerConfiguration();
     csConf.set("yarn.scheduler.capacity.maximum-applications", "5000");
-    String csConfFile = writeConfigurationXML(csConf,
-        "capacity-scheduler.xml");
-
-    // upload the file into Remote File System
-    uploadToRemoteFileSystem(new Path(csConfFile));
+    uploadConfiguration(csConf, "capacity-scheduler.xml");
 
     rm.adminService.refreshQueues(RefreshQueuesRequest.newInstance());
 
@@ -159,20 +158,24 @@ public class TestRMAdminService {
       throws IOException, YarnException {
     configuration.set(YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
         "org.apache.hadoop.yarn.FileSystemBasedConfigurationProvider");
-    rm = new MockRM(configuration);
-    rm.init(configuration);
-    rm.start();
+    try {
+      rm = new MockRM(configuration);
+      rm.init(configuration);
+      rm.start();
+      fail("Should throw an exception");
+    } catch(Exception ex) {
+      // Expect exception here
+    }
 
-    // clean the remoteDirectory
-    cleanRemoteDirectory();
+    //upload default configurations
+    uploadDefaultConfiguration();
 
     try {
-      rm.adminService.refreshAdminAcls(RefreshAdminAclsRequest.newInstance());
-      fail("FileSystemBasedConfigurationProvider is used." +
-          " Should get an exception here");
-    } catch (Exception ex) {
-      Assert.assertTrue(ex.getMessage().contains(
-          "Can not find Configuration: yarn-site.xml"));
+      rm = new MockRM(configuration);
+      rm.init(configuration);
+      rm.start();
+    } catch(Exception ex) {
+      fail("Should not get any exceptions");
     }
 
     String aclStringBefore =
@@ -180,10 +183,8 @@ public class TestRMAdminService {
 
     YarnConfiguration yarnConf = new YarnConfiguration();
     yarnConf.set(YarnConfiguration.YARN_ADMIN_ACL, "world:anyone:rwcda");
-    String yarnConfFile = writeConfigurationXML(yarnConf, "yarn-site.xml");
+    uploadConfiguration(yarnConf, "yarn-site.xml");
 
-    // upload the file into Remote File System
-    uploadToRemoteFileSystem(new Path(yarnConfFile));
     rm.adminService.refreshAdminAcls(RefreshAdminAclsRequest.newInstance());
 
     String aclStringAfter =
@@ -214,7 +215,6 @@ public class TestRMAdminService {
     }
   }
 
-  @SuppressWarnings("resource")
   @Test
   public void testServiceAclsRefreshWithFileSystemBasedConfigurationProvider()
       throws IOException, YarnException {
@@ -224,33 +224,33 @@ public class TestRMAdminService {
         "org.apache.hadoop.yarn.FileSystemBasedConfigurationProvider");
     ResourceManager resourceManager = null;
     try {
-      resourceManager = new ResourceManager();
-      resourceManager.init(configuration);
-      resourceManager.start();
-
-      // clean the remoteDirectory
-      cleanRemoteDirectory();
-
       try {
-        resourceManager.adminService
-            .refreshServiceAcls(RefreshServiceAclsRequest
-                .newInstance());
-        fail("FileSystemBasedConfigurationProvider is used." +
-            " Should get an exception here");
+        resourceManager = new ResourceManager();
+        resourceManager.init(configuration);
+        resourceManager.start();
+        fail("Should throw an exception");
       } catch (Exception ex) {
-        Assert.assertTrue(ex.getMessage().contains(
-            "Can not find Configuration: hadoop-policy.xml"));
+        // expect to get an exception here
       }
 
-      String aclsString = "alice,bob users,wheel";
+      //upload default configurations
+      uploadDefaultConfiguration();
       Configuration conf = new Configuration();
       conf.setBoolean(
           CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION, true);
-      conf.set("security.applicationclient.protocol.acl", aclsString);
-      String hadoopConfFile = writeConfigurationXML(conf, "hadoop-policy.xml");
+      uploadConfiguration(conf, "core-site.xml");
+      try {
+        resourceManager = new ResourceManager();
+        resourceManager.init(configuration);
+        resourceManager.start();
+      } catch (Exception ex) {
+        fail("Should not get any exceptions");
+      }
 
-      // upload the file into Remote File System
-      uploadToRemoteFileSystem(new Path(hadoopConfFile));
+      String aclsString = "alice,bob users,wheel";
+      Configuration newConf = new Configuration();
+      newConf.set("security.applicationclient.protocol.acl", aclsString);
+      uploadConfiguration(newConf, "hadoop-policy.xml");
 
       resourceManager.adminService.refreshServiceAcls(RefreshServiceAclsRequest
           .newInstance());
@@ -328,31 +328,31 @@ public class TestRMAdminService {
       throws IOException, YarnException {
     configuration.set(YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
         "org.apache.hadoop.yarn.FileSystemBasedConfigurationProvider");
-    rm = new MockRM(configuration);
-    rm.init(configuration);
-    rm.start();
+    try {
+      rm = new MockRM(configuration);
+      rm.init(configuration);
+      rm.start();
+      fail("Should throw an exception");
+    } catch(Exception ex) {
+      // Expect exception here
+    }
 
-    // clean the remoteDirectory
-    cleanRemoteDirectory();
+    //upload default configurations
+    uploadDefaultConfiguration();
 
     try {
-      rm.adminService.refreshSuperUserGroupsConfiguration(
-          RefreshSuperUserGroupsConfigurationRequest.newInstance());
-      fail("FileSystemBasedConfigurationProvider is used." +
-          " Should get an exception here");
-    } catch (Exception ex) {
-      Assert.assertTrue(ex.getMessage().contains(
-          "Can not find Configuration: core-site.xml"));
+      rm = new MockRM(configuration);
+      rm.init(configuration);
+      rm.start();
+    } catch(Exception ex) {
+      fail("Should not get any exceptions");
     }
 
     Configuration coreConf = new Configuration(false);
     coreConf.set("hadoop.proxyuser.test.groups", "test_groups");
     coreConf.set("hadoop.proxyuser.test.hosts", "test_hosts");
-    String coreConfFile = writeConfigurationXML(coreConf,
-        "core-site.xml");
+    uploadConfiguration(coreConf, "core-site.xml");
 
-    // upload the file into Remote File System
-    uploadToRemoteFileSystem(new Path(coreConfFile));
     rm.adminService.refreshSuperUserGroupsConfiguration(
         RefreshSuperUserGroupsConfigurationRequest.newInstance());
     Assert.assertTrue(ProxyUsers.getProxyGroups()
@@ -393,11 +393,29 @@ public class TestRMAdminService {
     fs.copyFromLocalFile(filePath, workingPath);
   }
 
-  private void cleanRemoteDirectory() throws IOException {
-    if (fs.exists(workingPath)) {
-      for (FileStatus file : fs.listStatus(workingPath)) {
-        fs.delete(file.getPath(), true);
-      }
-    }
+  private void uploadConfiguration(Configuration conf, String confFileName)
+      throws IOException {
+    String csConfFile = writeConfigurationXML(conf, confFileName);
+    // upload the file into Remote File System
+    uploadToRemoteFileSystem(new Path(csConfFile));
+  }
+
+  private void uploadDefaultConfiguration() throws IOException {
+    Configuration conf = new Configuration();
+    uploadConfiguration(conf, "core-site.xml");
+
+    YarnConfiguration yarnConf = new YarnConfiguration();
+    yarnConf.set(YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
+        "org.apache.hadoop.yarn.FileSystemBasedConfigurationProvider");
+    uploadConfiguration(yarnConf, "yarn-site.xml");
+
+    CapacitySchedulerConfiguration csConf =
+        new CapacitySchedulerConfiguration();
+    uploadConfiguration(csConf, "capacity-scheduler.xml");
+
+    Configuration hadoopPolicyConf = new Configuration(false);
+    hadoopPolicyConf
+        .addResource(YarnConfiguration.HADOOP_POLICY_CONFIGURATION_FILE);
+    uploadConfiguration(hadoopPolicyConf, "hadoop-policy.xml");
   }
 }

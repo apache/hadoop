@@ -26,6 +26,7 @@ import java.util.Set;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -122,10 +123,11 @@ public class ServiceAuthorizationManager {
     // Make a copy of the original config, and load the policy file
     Configuration policyConf = new Configuration(conf);
     policyConf.addResource(policyFile);
-    refreshWithConfiguration(policyConf, provider);
+    refreshWithLoadedConfiguration(policyConf, provider);
   }
 
-  public synchronized void refreshWithConfiguration(Configuration conf,
+  @Private
+  public synchronized void refreshWithLoadedConfiguration(Configuration conf,
       PolicyProvider provider) {
     final Map<Class<?>, AccessControlList> newAcls =
         new IdentityHashMap<Class<?>, AccessControlList>();

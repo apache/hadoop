@@ -169,6 +169,10 @@ Release 2.4.0 - UNRELEASED
     YARN-1493. Changed ResourceManager and Scheduler interfacing to recognize
     app-attempts separately from apps. (Jian He via vinodkv)
 
+    YARN-1459. Changed ResourceManager to depend its service initialization
+    on the configuration-provider mechanism during startup too. (Xuan Gong via
+    vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES

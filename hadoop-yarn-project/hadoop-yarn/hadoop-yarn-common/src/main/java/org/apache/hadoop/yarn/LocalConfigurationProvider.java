@@ -19,7 +19,6 @@
 package org.apache.hadoop.yarn;
 
 import java.io.IOException;
-
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -31,13 +30,13 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 public class LocalConfigurationProvider extends ConfigurationProvider {
 
   @Override
-  public Configuration getConfiguration(String name)
-      throws IOException, YarnException {
-    return new Configuration();
+  public Configuration getConfiguration(Configuration bootstrapConf,
+      String name) throws IOException, YarnException {
+    return bootstrapConf;
   }
 
   @Override
-  public void initInternal(Configuration conf) throws Exception {
+  public void initInternal(Configuration bootstrapConf) throws Exception {
     // Do nothing
   }
 
