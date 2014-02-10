@@ -312,6 +312,9 @@ Release 2.4.0 - UNRELEASED
     HADOOP-10295. Allow distcp to automatically identify the checksum type of 
     source files and use it for the target. (jing9 and Laurent Goujon)
 
+    HADOOP-10333. Fix grammatical error in overview.html document.
+    (René Nyffenegger via suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES
