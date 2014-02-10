@@ -119,6 +119,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1635. Implemented a Leveldb based ApplicationTimelineStore. (Billie
     Rinaldi via zjshen)
 
+    YARN-1637. Implemented a client library for Java users to post timeline
+    entities and events. (zjshen)
+
   IMPROVEMENTS
 
     YARN-1007. Enhance History Reader interface for Containers. (Mayank Bansal via
