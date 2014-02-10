@@ -95,7 +95,6 @@ public class ResourceTrackerService extends AbstractService implements
   
   private int minAllocMb;
   private int minAllocVcores;
-  private boolean useLocalConfigurationProvider;
 
   static {
     resync.setNodeAction(NodeAction.RESYNC);
@@ -145,10 +144,6 @@ public class ResourceTrackerService extends AbstractService implements
         YarnConfiguration.RM_NODEMANAGER_MINIMUM_VERSION,
         YarnConfiguration.DEFAULT_RM_NODEMANAGER_MINIMUM_VERSION);
 
-    this.useLocalConfigurationProvider =
-        (LocalConfigurationProvider.class.isAssignableFrom(conf.getClass(
-            YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
-            LocalConfigurationProvider.class)));
     super.serviceInit(conf);
   }
 
@@ -169,7 +164,10 @@ public class ResourceTrackerService extends AbstractService implements
     if (conf.getBoolean(
         CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION, 
         false)) {
-      refreshServiceAcls(conf, new RMPolicyProvider());
+      refreshServiceAcls(
+          this.rmContext.getConfigurationProvider().getConfiguration(conf,
+              YarnConfiguration.HADOOP_POLICY_CONFIGURATION_FILE),
+          RMPolicyProvider.getInstance());
     }
 
     this.server.start();
@@ -423,10 +421,11 @@ public class ResourceTrackerService extends AbstractService implements
 
   void refreshServiceAcls(Configuration configuration, 
       PolicyProvider policyProvider) {
-    if (this.useLocalConfigurationProvider) {
+    if (this.rmContext.getConfigurationProvider() instanceof
+        LocalConfigurationProvider) {
       this.server.refreshServiceAcl(configuration, policyProvider);
     } else {
-      this.server.refreshServiceAclWithConfigration(configuration,
+      this.server.refreshServiceAclWithLoadedConfiguration(configuration,
           policyProvider);
     }
   }

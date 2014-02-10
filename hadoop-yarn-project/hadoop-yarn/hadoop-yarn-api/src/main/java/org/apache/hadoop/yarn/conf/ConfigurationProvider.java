@@ -19,7 +19,6 @@
 package org.apache.hadoop.yarn.conf;
 
 import java.io.IOException;
-
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -34,8 +33,8 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
  */
 public abstract class ConfigurationProvider {
 
-  public void init(Configuration conf) throws Exception {
-    initInternal(conf);
+  public void init(Configuration bootstrapConf) throws Exception {
+    initInternal(bootstrapConf);
   }
 
   public void close() throws Exception {
@@ -43,19 +42,21 @@ public abstract class ConfigurationProvider {
   }
 
   /**
-   * Get the configuration.
+   * Get the configuration and combine with bootstrapConf
+   * @param bootstrapConf Configuration
    * @param name The configuration file name
    * @return configuration
    * @throws YarnException
    * @throws IOException
    */
-  public abstract Configuration getConfiguration(String name)
-      throws YarnException, IOException;
+  public abstract Configuration getConfiguration(Configuration bootstrapConf,
+      String name) throws YarnException, IOException;
 
   /**
    * Derived classes initialize themselves using this method.
    */
-  public abstract void initInternal(Configuration conf) throws Exception;
+  public abstract void initInternal(Configuration bootstrapConf)
+      throws Exception;
 
   /**
    * Derived classes close themselves using this method.

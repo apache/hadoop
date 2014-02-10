@@ -196,7 +196,6 @@ public class CapacityScheduler extends AbstractYarnScheduler
 
   private ResourceCalculator calculator;
   private boolean usePortForNodeName;
-  private boolean useLocalConfigurationProvider;
 
   public CapacityScheduler() {}
 
@@ -262,14 +261,21 @@ public class CapacityScheduler extends AbstractYarnScheduler
   @Override
   public synchronized void
       reinitialize(Configuration conf, RMContext rmContext) throws IOException {
+    Configuration configuration = new Configuration(conf);
     if (!initialized) {
-      this.useLocalConfigurationProvider =
-          (LocalConfigurationProvider.class.isAssignableFrom(conf.getClass(
-              YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
-              LocalConfigurationProvider.class)));
-      this.conf =
-          new CapacitySchedulerConfiguration(conf,
-              this.useLocalConfigurationProvider);
+      if (rmContext.getConfigurationProvider() instanceof
+          LocalConfigurationProvider) {
+        this.conf = new CapacitySchedulerConfiguration(configuration, true);
+      } else {
+        try {
+          this.conf =
+              new CapacitySchedulerConfiguration(rmContext
+                  .getConfigurationProvider().getConfiguration(configuration,
+                      YarnConfiguration.CS_CONFIGURATION_FILE), false);
+        } catch (Exception e) {
+          throw new IOException(e);
+        }
+      }
       validateConf(this.conf);
       this.minimumAllocation = this.conf.getMinimumAllocation();
       this.maximumAllocation = this.conf.getMaximumAllocation();
@@ -290,7 +296,8 @@ public class CapacityScheduler extends AbstractYarnScheduler
       CapacitySchedulerConfiguration oldConf = this.conf; 
       this.conf =
           new CapacitySchedulerConfiguration(conf,
-              this.useLocalConfigurationProvider);
+              rmContext.getConfigurationProvider() instanceof
+                  LocalConfigurationProvider);
       validateConf(this.conf);
       try {
         LOG.info("Re-initializing queues...");
@@ -316,6 +323,7 @@ public class CapacityScheduler extends AbstractYarnScheduler
   @Lock(CapacityScheduler.class)
   private void initializeQueues(CapacitySchedulerConfiguration conf)
     throws IOException {
+
     root = 
         parseQueue(this, conf, null, CapacitySchedulerConfiguration.ROOT, 
             queues, queues, noop);

@@ -19,7 +19,6 @@
 package org.apache.hadoop.yarn;
 
 import java.io.IOException;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -42,24 +41,24 @@ public class FileSystemBasedConfigurationProvider
   private Path configDir;
 
   @Override
-  public synchronized Configuration getConfiguration(String name)
-      throws IOException, YarnException {
+  public synchronized Configuration getConfiguration(Configuration bootstrapConf,
+      String name) throws IOException, YarnException {
     Path configPath = new Path(this.configDir, name);
     if (!fs.exists(configPath)) {
       throw new YarnException("Can not find Configuration: " + name + " in "
           + configDir);
     }
-    Configuration conf = new Configuration(false);
-    conf.addResource(fs.open(configPath));
-    return conf;
+    bootstrapConf.addResource(fs.open(configPath));
+    return bootstrapConf;
   }
 
   @Override
-  public synchronized void initInternal(Configuration conf) throws Exception {
+  public synchronized void initInternal(Configuration bootstrapConf)
+      throws Exception {
     configDir =
-        new Path(conf.get(YarnConfiguration.FS_BASED_RM_CONF_STORE,
+        new Path(bootstrapConf.get(YarnConfiguration.FS_BASED_RM_CONF_STORE,
             YarnConfiguration.DEFAULT_FS_BASED_RM_CONF_STORE));
-    fs = configDir.getFileSystem(conf);
+    fs = configDir.getFileSystem(bootstrapConf);
     if (!fs.exists(configDir)) {
       fs.mkdirs(configDir);
     }
