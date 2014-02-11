@@ -587,6 +587,8 @@ class ClusterJspHelper {
         toXmlItemBlockWithLink(doc, nn.host, nn.httpAddress, "NameNode");
         toXmlItemBlock(doc, "Blockpool Used",
             StringUtils.byteDesc(nn.bpUsed));
+        toXmlItemBlock(doc, "Blockpool Used%",
+            DFSUtil.percent2String(DFSUtil.getPercentUsed(nn.bpUsed, total)));
         toXmlItemBlock(doc, "Files And Directories",
             Long.toString(nn.filesAndDirectories));
         toXmlItemBlock(doc, "Blocks", Long.toString(nn.blocksCount));
