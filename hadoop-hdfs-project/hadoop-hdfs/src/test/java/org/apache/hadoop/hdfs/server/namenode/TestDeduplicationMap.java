@@ -16,32 +16,21 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn;
+package org.apache.hadoop.hdfs.server.namenode;
 
-import java.io.IOException;
-import org.apache.hadoop.classification.InterfaceAudience.Private;
-import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.conf.ConfigurationProvider;
-import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf.SaverContext.DeduplicationMap;
+import org.junit.Assert;
+import org.junit.Test;
 
-@Private
-@Unstable
-public class LocalConfigurationProvider extends ConfigurationProvider {
-
-  @Override
-  public Configuration getConfiguration(Configuration bootstrapConf,
-      String name) throws IOException, YarnException {
-    return bootstrapConf;
-  }
-
-  @Override
-  public void initInternal(Configuration bootstrapConf) throws Exception {
-    // Do nothing
-  }
-
-  @Override
-  public void closeInternal() throws Exception {
-    // Do nothing
+public class TestDeduplicationMap {
+  @Test
+  public void testDeduplicationMap() {
+    DeduplicationMap<String> m = DeduplicationMap.newMap();
+    Assert.assertEquals(1, m.getId("1"));
+    Assert.assertEquals(2, m.getId("2"));
+    Assert.assertEquals(3, m.getId("3"));
+    Assert.assertEquals(1, m.getId("1"));
+    Assert.assertEquals(2, m.getId("2"));
+    Assert.assertEquals(3, m.getId("3"));
   }
 }

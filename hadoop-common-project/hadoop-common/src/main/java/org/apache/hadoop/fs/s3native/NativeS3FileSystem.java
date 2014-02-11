@@ -733,4 +733,10 @@ public class NativeS3FileSystem extends FileSystem {
   public Path getWorkingDirectory() {
     return workingDir;
   }
+
+  @Override
+  public String getCanonicalServiceName() {
+    // Does not support Token
+    return null;
+  }
 }

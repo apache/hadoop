@@ -35,8 +35,8 @@
       }
 
       if (sticky) {
-	var exec = ((parms.perm % 10) & 1) == 1;
-	res[res.length - 1] = exec ? 't' : 'T';
+        var otherExec = ((ctx.current().permission % 10) & 1) == 1;
+        res = res.substr(0, res.length - 1) + (otherExec ? 't' : 'T');
       }
 
       chunk.write(dir + res);

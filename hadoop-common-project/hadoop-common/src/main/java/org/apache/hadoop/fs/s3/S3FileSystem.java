@@ -443,6 +443,12 @@ public class S3FileSystem extends FileSystem {
     return getConf().getLong("fs.s3.block.size", 64 * 1024 * 1024);
   }
 
+  @Override
+  public String getCanonicalServiceName() {
+    // Does not support Token
+    return null;
+  }
+
   // diagnostic methods
 
   void dump() throws IOException {

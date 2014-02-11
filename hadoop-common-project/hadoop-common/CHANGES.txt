@@ -312,6 +312,9 @@ Release 2.4.0 - UNRELEASED
     HADOOP-10295. Allow distcp to automatically identify the checksum type of 
     source files and use it for the target. (jing9 and Laurent Goujon)
 
+    HADOOP-10333. Fix grammatical error in overview.html document.
+    (René Nyffenegger via suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -327,6 +330,9 @@ Release 2.4.0 - UNRELEASED
 
     HADOOP-10330. TestFrameDecoder fails if it cannot bind port 12345.
     (Arpit Agarwal)
+
+    HADOOP-10326. M/R jobs can not access S3 if Kerberos is enabled. (bc Wong
+    via atm)
 
 Release 2.3.0 - UNRELEASED
 

@@ -66,6 +66,7 @@ import javax.security.sasl.SaslServer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configuration.IntegerRanges;
@@ -454,9 +455,10 @@ public abstract class Server {
    * Refresh the service authorization ACL for the service handled by this server
    * using the specified Configuration.
    */
-  public void refreshServiceAclWithConfigration(Configuration conf,
+  @Private
+  public void refreshServiceAclWithLoadedConfiguration(Configuration conf,
       PolicyProvider provider) {
-    serviceAuthorizationManager.refreshWithConfiguration(conf, provider);
+    serviceAuthorizationManager.refreshWithLoadedConfiguration(conf, provider);
   }
   /**
    * Returns a handle to the serviceAuthorizationManager (required in tests)

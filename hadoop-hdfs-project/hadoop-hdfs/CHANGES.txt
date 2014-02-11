@@ -335,6 +335,9 @@ Trunk (Unreleased)
     HDFS-5911. The id of a CacheDirective instance does not get serialized in
     the protobuf-fsimage. (Haohui Mai via jing9)
 
+    HDFS-5915. Refactor FSImageFormatProtobuf to simplify cross section reads.
+    (Haohui Mai via cnauroth)
+
 Release 2.4.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -359,6 +362,8 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-4911.  Reduce PeerCache timeout to be commensurate with
     dfs.datanode.socket.reuse.keepalive (cmccabe)
+
+    HDFS-4370. Fix typo Blanacer in DataNode. (Chu Tong via shv)
 
   OPTIMIZATIONS
 
@@ -401,6 +406,9 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-5900. Cannot set cache pool limit of "unlimited" via CacheAdmin.
     (wang)
+
+    HDFS-5886. Potential null pointer deference in RpcProgramNfs3#readlink()
+    (brandonli)
 
 Release 2.3.0 - UNRELEASED
 
@@ -939,6 +947,12 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-5873. dfs.http.policy should have higher precedence over dfs.https.enable.
     (Haohui Mai via jing9)
+
+    HDFS-5837. dfs.namenode.replication.considerLoad should consider
+    decommissioned nodes. (Tao Luo via shv)
+
+    HDFS-5921. Cannot browse file system via NN web UI if any directory has
+    the sticky bit set. (atm)
 
   BREAKDOWN OF HDFS-2832 SUBTASKS AND RELATED JIRAS
 

@@ -382,11 +382,7 @@ public class ApplicationCLI extends YarnCLI {
   }
   
   /**
-   * Kills the application with the application id as appId
-   * 
-   * @param applicationId
-   * @throws YarnException
-   * @throws IOException
+   * Moves the application with the given ID to the given queue.
    */
   private void moveApplicationAcrossQueues(String applicationId, String queue)
       throws YarnException, IOException {

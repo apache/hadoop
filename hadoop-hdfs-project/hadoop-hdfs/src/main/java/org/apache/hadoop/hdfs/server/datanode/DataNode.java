@@ -2494,7 +2494,7 @@ public class DataNode extends Configured
   /**
    * Get current value of the max balancer bandwidth in bytes per second.
    *
-   * @return bandwidth Blanacer bandwidth in bytes per second for this datanode.
+   * @return Balancer bandwidth in bytes per second for this datanode.
    */
   public Long getBalancerBandwidth() {
     DataXceiverServer dxcs =

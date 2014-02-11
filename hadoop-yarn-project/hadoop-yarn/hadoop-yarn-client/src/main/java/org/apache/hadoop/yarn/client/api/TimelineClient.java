@@ -1,0 +1,70 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.hadoop.yarn.client.api;
+
+import java.io.IOException;
+
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.yarn.api.records.apptimeline.ATSEntity;
+import org.apache.hadoop.yarn.api.records.apptimeline.ATSPutErrors;
+import org.apache.hadoop.yarn.client.api.impl.TimelineClientImpl;
+import org.apache.hadoop.yarn.exceptions.YarnException;
+
+/**
+ * A client library that can be used to post some information in terms of a
+ * number of conceptual entities.
+ * 
+ * @See ATSEntity
+ */
+@Public
+@Unstable
+public abstract class TimelineClient extends AbstractService {
+
+  @Public
+  public static TimelineClient createTimelineClient() {
+    TimelineClient client = new TimelineClientImpl();
+    return client;
+  }
+
+  @Private
+  protected TimelineClient(String name) {
+    super(name);
+  }
+
+  /**
+   * <p>
+   * Post the information of a number of conceptual entities of an application
+   * to the timeline server. It is a blocking API. The method will not return
+   * until it gets the response from the timeline server.
+   * </p>
+   * 
+   * @param entities
+   *          the collection of {@link ATSEntity}
+   * @return the error information if the post entities are not correctly stored
+   * @throws IOException
+   * @throws YarnException
+   */
+  @Public
+  public abstract ATSPutErrors postEntities(
+      ATSEntity... entities) throws IOException, YarnException;
+
+}
