@@ -334,14 +334,26 @@ Release 2.4.0 - UNRELEASED
     HADOOP-10326. M/R jobs can not access S3 if Kerberos is enabled. (bc Wong
     via atm)
 
-Release 2.3.0 - UNRELEASED
+Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
-    HADOOP-8545. Filesystem Implementation for OpenStack Swift
-    (Dmitry Mezhensky, David Dobbins, Stevel via stevel)
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES 
+
+Release 2.3.0 - 2014-02-18
+
+  INCOMPATIBLE CHANGES
 
   NEW FEATURES
+
+    HADOOP-8545. Filesystem Implementation for OpenStack Swift
+    (Dmitry Mezhensky, David Dobbins, Stevel via stevel)
 
   IMPROVEMENTS
 

@@ -410,7 +410,19 @@ Release 2.4.0 - UNRELEASED
     HDFS-5886. Potential null pointer deference in RpcProgramNfs3#readlink()
     (brandonli)
 
-Release 2.3.0 - UNRELEASED
+Release 2.3.1 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES 
+
+Release 2.3.0 - 2014-02-18
 
   INCOMPATIBLE CHANGES
 
