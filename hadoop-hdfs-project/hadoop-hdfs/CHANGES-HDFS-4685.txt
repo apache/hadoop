@@ -70,6 +70,8 @@ HDFS-4685 (Unreleased)
     HDFS-5914. Incorporate ACLs with the changes from HDFS-5698.
     (Haohui Mai via cnauroth)
 
+    HDFS-5625. Write end user documentation for HDFS ACLs. (cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES
