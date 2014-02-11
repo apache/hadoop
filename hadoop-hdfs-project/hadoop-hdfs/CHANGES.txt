@@ -541,6 +541,9 @@ Release 2.3.0 - UNRELEASED
     HDFS-5837. dfs.namenode.replication.considerLoad should consider
     decommissioned nodes. (Tao Luo via shv)
 
+    HDFS-5921. Cannot browse file system via NN web UI if any directory has
+    the sticky bit set. (atm)
+
   BREAKDOWN OF HDFS-2832 SUBTASKS AND RELATED JIRAS
 
     HDFS-4985. Add storage type to the protocol and expose it in block report
