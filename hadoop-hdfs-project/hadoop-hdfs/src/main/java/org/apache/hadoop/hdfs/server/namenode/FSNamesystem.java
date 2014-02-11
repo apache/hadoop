@@ -7393,10 +7393,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     return results;
   }
 
-  AclConfigFlag getAclConfigFlag() {
-    return aclConfigFlag;
-  }
-
   void modifyAclEntries(String src, List<AclEntry> aclSpec) throws IOException {
     aclConfigFlag.checkForApiCall();
     HdfsFileStatus resultingStat = null;

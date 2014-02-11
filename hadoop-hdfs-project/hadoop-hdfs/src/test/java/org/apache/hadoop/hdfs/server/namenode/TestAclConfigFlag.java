@@ -23,8 +23,6 @@ import static org.apache.hadoop.fs.permission.AclEntryType.*;
 import static org.apache.hadoop.fs.permission.FsAction.*;
 import static org.junit.Assert.*;
 
-import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -34,7 +32,6 @@ import org.apache.hadoop.hdfs.protocol.AclException;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
@@ -44,9 +41,8 @@ import com.google.common.collect.Lists;
 
 /**
  * Tests that the configuration flag that controls support for ACLs is off by
- * default and causes all attempted operations related to ACLs to fail.  This
- * includes the API calls, ACLs found while loading fsimage and ACLs found while
- * applying edit log ops.
+ * default and causes all attempted operations related to ACLs to fail.  The
+ * NameNode can still load ACLs from fsimage or edits.
  */
 public class TestAclConfigFlag {
   private static final Path PATH = new Path("/path");
@@ -125,20 +121,23 @@ public class TestAclConfigFlag {
     fs.setAcl(PATH, Lists.newArrayList(
       aclEntry(DEFAULT, USER, "foo", READ_WRITE)));
 
-    // Attempt restart with ACLs disabled.
-    try {
-      restart(false, false);
-      fail("expected IOException");
-    } catch (IOException e) {
-      GenericTestUtils.assertExceptionContains(
-        DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, e);
-    }
+    // Restart with ACLs disabled.  Expect successful restart.
+    restart(false, false);
+  }
 
-    // Recover by restarting with ACLs enabled, deleting the ACL, saving a new
-    // checkpoint, and then restarting with ACLs disabled.
-    restart(false, true);
-    fs.removeAcl(PATH);
-    restart(true, false);
+  @Test
+  public void testFsImage() throws Exception {
+    // With ACLs enabled, set an ACL.
+    initCluster(true, true);
+    fs.mkdirs(PATH);
+    fs.setAcl(PATH, Lists.newArrayList(
+      aclEntry(DEFAULT, USER, "foo", READ_WRITE)));
+
+    // Save a new checkpoint and restart with ACLs still enabled.
+    restart(true, true);
+
+    // Restart with ACLs disabled.  Expect successful restart.
+    restart(false, false);
   }
 
   /**

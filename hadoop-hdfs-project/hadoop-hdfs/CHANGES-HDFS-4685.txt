@@ -72,6 +72,9 @@ HDFS-4685 (Unreleased)
 
     HDFS-5625. Write end user documentation for HDFS ACLs. (cnauroth)
 
+    HDFS-5925. ACL configuration flag must only reject ACL API calls, not ACLs
+    present in fsimage or edits. (cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES

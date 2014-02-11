@@ -24,8 +24,7 @@ import org.apache.hadoop.hdfs.protocol.AclException;
 
 /**
  * Support for ACLs is controlled by a configuration flag.  If the configuration
- * flag is false, then the NameNode will reject all ACL-related operations and
- * refuse to load an fsimage or edit log containing ACLs.
+ * flag is false, then the NameNode will reject all ACL-related operations.
  */
 final class AclConfigFlag {
   private final boolean enabled;
@@ -47,28 +46,11 @@ final class AclConfigFlag {
    * @throws AclException if ACLs are disabled
    */
   public void checkForApiCall() throws AclException {
-    check("The ACL operation has been rejected.");
-  }
-
-  /**
-   * Checks the flag on behalf of edit log loading.
-   *
-   * @throws AclException if ACLs are disabled
-   */
-  public void checkForEditLog() throws AclException {
-    check("Cannot load edit log containing an ACL.");
-  }
-
-  /**
-   * Common check method.
-   *
-   * @throws AclException if ACLs are disabled
-   */
-  private void check(String reason) throws AclException {
     if (!enabled) {
       throw new AclException(String.format(
-        "%s  Support for ACLs has been disabled by setting %s to false.",
-        reason, DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY));
+        "The ACL operation has been rejected.  "
+        + "Support for ACLs has been disabled by setting %s to false.",
+        DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY));
     }
   }
 }
