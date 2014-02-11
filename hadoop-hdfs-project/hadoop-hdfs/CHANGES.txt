@@ -365,6 +365,9 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-4370. Fix typo Blanacer in DataNode. (Chu Tong via shv)
 
+    HDFS-5929. Add blockpool % usage to HDFS federated nn page.
+    (Siqi Li via suresh)
+
   OPTIMIZATIONS
 
     HDFS-5790. LeaseManager.findPath is very slow when many leases need recovery
