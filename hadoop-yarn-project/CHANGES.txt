@@ -240,6 +240,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1672. YarnConfiguration is missing a default for 
     yarn.nodemanager.log.retain-seconds (Naren Koneru via kasha)
 
+    YARN-1698. Fixed default TimelineStore in code to match what is documented
+    in yarn-default.xml (Zhijie Shen via vinodkv)
+
 Release 2.3.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

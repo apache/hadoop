@@ -34,7 +34,7 @@ import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.apptimeline.ApplicationTimelineStore;
-import org.apache.hadoop.yarn.server.applicationhistoryservice.apptimeline.MemoryApplicationTimelineStore;
+import org.apache.hadoop.yarn.server.applicationhistoryservice.apptimeline.LeveldbApplicationTimelineStore;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.webapp.AHSWebApp;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebApps;
@@ -143,10 +143,8 @@ public class ApplicationHistoryServer extends CompositeService {
 
   protected ApplicationTimelineStore createApplicationTimelineStore(
       Configuration conf) {
-    // TODO: need to replace the MemoryApplicationTimelineStore.class with the
-    // LevelDB implementation
     return ReflectionUtils.newInstance(conf.getClass(
-        YarnConfiguration.ATS_STORE, MemoryApplicationTimelineStore.class,
+        YarnConfiguration.ATS_STORE, LeveldbApplicationTimelineStore.class,
         ApplicationTimelineStore.class), conf);
   }
 
