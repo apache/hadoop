@@ -19,18 +19,23 @@
 package org.apache.hadoop.yarn.api.records.apptimeline;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import junit.framework.Assert;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.apptimeline.ATSPutErrors.ATSPutError;
+import org.apache.hadoop.yarn.util.TimelineUtils;
 import org.junit.Test;
 
 public class TestApplicationTimelineRecords {
 
+  private static final Log LOG =
+      LogFactory.getLog(TestApplicationTimelineRecords.class);
+
   @Test
-  public void testATSEntities() {
+  public void testATSEntities() throws Exception {
     ATSEntities entities = new ATSEntities();
     for (int j = 0; j < 2; ++j) {
       ATSEntity entity = new ATSEntity();
@@ -53,6 +58,9 @@ public class TestApplicationTimelineRecords {
       entity.addOtherInfo("okey2", "oval2");
       entities.addEntity(entity);
     }
+    LOG.info("Entities in JSON:");
+    LOG.info(TimelineUtils.dumpTimelineRecordtoJSON(entities, true));
+
     Assert.assertEquals(2, entities.getEntities().size());
     ATSEntity entity1 = entities.getEntities().get(0);
     Assert.assertEquals("entity id 0", entity1.getEntityId());
@@ -71,7 +79,7 @@ public class TestApplicationTimelineRecords {
   }
 
   @Test
-  public void testATSEvents() {
+  public void testATSEvents() throws Exception {
     ATSEvents events = new ATSEvents();
     for (int j = 0; j < 2; ++j) {
       ATSEvents.ATSEventsOfOneEntity partEvents =
@@ -88,6 +96,9 @@ public class TestApplicationTimelineRecords {
       }
       events.addEvent(partEvents);
     }
+    LOG.info("Events in JSON:");
+    LOG.info(TimelineUtils.dumpTimelineRecordtoJSON(events, true));
+
     Assert.assertEquals(2, events.getAllEvents().size());
     ATSEvents.ATSEventsOfOneEntity partEvents1 = events.getAllEvents().get(0);
     Assert.assertEquals("entity id 0", partEvents1.getEntityId());
@@ -112,7 +123,7 @@ public class TestApplicationTimelineRecords {
   }
 
   @Test
-  public void testATSPutErrors() {
+  public void testATSPutErrors() throws Exception {
     ATSPutErrors atsPutErrors = new ATSPutErrors();
     ATSPutError error1 = new ATSPutError();
     error1.setEntityId("entity id 1");
@@ -127,6 +138,8 @@ public class TestApplicationTimelineRecords {
     error2.setErrorCode(ATSPutError.IO_EXCEPTION);
     errors.add(error2);
     atsPutErrors.addErrors(errors);
+    LOG.info("Errors in JSON:");
+    LOG.info(TimelineUtils.dumpTimelineRecordtoJSON(atsPutErrors, true));
 
     Assert.assertEquals(3, atsPutErrors.getErrors().size());
     ATSPutError e = atsPutErrors.getErrors().get(0);
