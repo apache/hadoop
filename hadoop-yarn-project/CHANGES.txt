@@ -173,6 +173,9 @@ Release 2.4.0 - UNRELEASED
     on the configuration-provider mechanism during startup too. (Xuan Gong via
     vinodkv)
 
+    YARN-1706. Created an utility method to dump timeline records to JSON
+    strings. (zjshen)
+
   OPTIMIZATIONS
 
   BUG FIXES
