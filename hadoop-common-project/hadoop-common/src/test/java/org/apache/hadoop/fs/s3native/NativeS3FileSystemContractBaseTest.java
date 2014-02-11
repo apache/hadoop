@@ -48,7 +48,12 @@ public abstract class NativeS3FileSystemContractBaseTest
     store.purge("test");
     super.tearDown();
   }
-  
+
+  public void testCanonicalName() throws Exception {
+    assertNull("s3n doesn't support security token and shouldn't have canonical name",
+               fs.getCanonicalServiceName());
+  }
+
   public void testListStatusForRoot() throws Exception {
     FileStatus[] paths = fs.listStatus(path("/"));
     assertEquals("Root directory is not empty; ", 0, paths.length);
@@ -60,7 +65,7 @@ public abstract class NativeS3FileSystemContractBaseTest
     assertEquals(1, paths.length);
     assertEquals(path("/test"), paths[0].getPath());
   }
-  
+
   public void testNoTrailingBackslashOnBucket() throws Exception {
     assertTrue(fs.getFileStatus(new Path(fs.getUri().toString())).isDirectory());
   }
