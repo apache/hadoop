@@ -246,7 +246,19 @@ Release 2.4.0 - UNRELEASED
     YARN-1698. Fixed default TimelineStore in code to match what is documented
     in yarn-default.xml (Zhijie Shen via vinodkv)
 
-Release 2.3.0 - UNRELEASED
+Release 2.3.1 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES 
+
+Release 2.3.0 - 2014-02-18
 
   INCOMPATIBLE CHANGES
 
