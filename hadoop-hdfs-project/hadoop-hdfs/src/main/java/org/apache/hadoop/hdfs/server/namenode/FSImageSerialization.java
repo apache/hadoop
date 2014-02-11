@@ -21,7 +21,6 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -35,8 +34,6 @@ import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
-import org.apache.hadoop.hdfs.protocol.proto.AclProtos.AclFsImageProto;
-import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
@@ -207,7 +204,6 @@ public class FSImageSerialization {
     }
 
     writePermissionStatus(file, out);
-    writeAclFeature(file, out);
   }
 
   /** Serialize an {@link INodeFileAttributes}. */
@@ -220,7 +216,6 @@ public class FSImageSerialization {
 
     out.writeShort(file.getFileReplication());
     out.writeLong(file.getPreferredBlockSize());
-    writeAclFeature(file, out);
   }
 
   private static void writeQuota(Quota.Counts quota, DataOutput out)
@@ -254,7 +249,6 @@ public class FSImageSerialization {
     }
     
     writePermissionStatus(node, out);
-    writeAclFeature(node, out);
   }
 
   /**
@@ -268,7 +262,6 @@ public class FSImageSerialization {
     writePermissionStatus(a, out);
     out.writeLong(a.getModificationTime());
     writeQuota(a.getQuotaCounts(), out);
-    writeAclFeature(a, out);
   }
 
   /**
@@ -288,20 +281,6 @@ public class FSImageSerialization {
 
     Text.writeString(out, node.getSymlinkString());
     writePermissionStatus(node, out);
-  }
-
-  private static void writeAclFeature(INodeAttributes node, DataOutput out)
-      throws IOException {
-    if (node.getFsPermission().getAclBit()) {
-      AclFsImageProto.Builder b = AclFsImageProto.newBuilder();
-      OutputStream os = (OutputStream) out;
-
-      AclFeature feature = node.getAclFeature();
-      if (feature != null)
-        b.addAllEntries(PBHelper.convertAclEntryProto(feature.getEntries()));
-
-      b.build().writeDelimitedTo(os);
-    }
   }
 
   /** Serialize a {@link INodeReference} node */

@@ -141,36 +141,6 @@ public class TestAclConfigFlag {
     restart(true, false);
   }
 
-  @Test
-  public void testFsImage() throws Exception {
-    // With ACLs enabled, set an ACL.
-    initCluster(true, true);
-    fs.mkdirs(PATH);
-    fs.setAcl(PATH, Lists.newArrayList(
-      aclEntry(DEFAULT, USER, "foo", READ_WRITE)));
-
-    // Save a new checkpoint and restart with ACLs still enabled.
-    restart(true, true);
-
-    // Attempt restart with ACLs disabled.
-    try {
-      restart(false, false);
-      fail("expected IOException");
-    } catch (IOException e) {
-      // Unfortunately, we can't assert on the message containing the
-      // configuration key here.  That message is logged, but a more generic
-      // fsimage loading exception propagates up to this layer.
-      GenericTestUtils.assertExceptionContains(
-        "Failed to load an FSImage file", e);
-    }
-
-    // Recover by restarting with ACLs enabled, deleting the ACL, saving a new
-    // checkpoint, and then restarting with ACLs disabled.
-    restart(false, true);
-    fs.removeAcl(PATH);
-    restart(true, false);
-  }
-
   /**
    * We expect an AclException, and we want the exception text to state the
    * configuration key that controls ACL support.

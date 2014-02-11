@@ -38,8 +38,11 @@ import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.hdfs.server.namenode.AclFeature;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
+import org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf;
+import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf.LoaderContext;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.FileSummary;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection;
@@ -115,7 +118,7 @@ public class FSImageFormatPBSnapshot {
         SnapshotSection.Snapshot pbs = SnapshotSection.Snapshot
             .parseDelimitedFrom(in);
         INodeDirectory root = loadINodeDirectory(pbs.getRoot(),
-            parent.getLoaderContext().getStringTable());
+            parent.getLoaderContext());
         int sid = pbs.getSnapshotId();
         INodeDirectorySnapshottable parent = (INodeDirectorySnapshottable) fsDir
             .getInode(root.getId()).asDirectory();
@@ -155,6 +158,7 @@ public class FSImageFormatPBSnapshot {
     private void loadFileDiffList(InputStream in, INodeFile file, int size)
         throws IOException {
       final FileDiffList diffs = new FileDiffList();
+      final LoaderContext state = parent.getLoaderContext();
       for (int i = 0; i < size; i++) {
         SnapshotDiffSection.FileDiff pbf = SnapshotDiffSection.FileDiff
             .parseDelimitedFrom(in);
@@ -162,10 +166,16 @@ public class FSImageFormatPBSnapshot {
         if (pbf.hasSnapshotCopy()) {
           INodeSection.INodeFile fileInPb = pbf.getSnapshotCopy();
           PermissionStatus permission = loadPermission(
-              fileInPb.getPermission(), parent.getLoaderContext()
-                  .getStringTable());
+              fileInPb.getPermission(), state.getStringTable());
+
+          AclFeature acl = null;
+          if (fileInPb.hasAclId()) {
+            acl = new AclFeature(FSImageFormatPBINode.Loader.loadAclEntries(
+                fileInPb.getAclId(), state.getExtendedAclTable()));
+          }
+
           copy = new INodeFileAttributes.SnapshotCopy(pbf.getName()
-              .toByteArray(), permission, null, fileInPb.getModificationTime(),
+              .toByteArray(), permission, acl, fileInPb.getModificationTime(),
               fileInPb.getAccessTime(), (short) fileInPb.getReplication(),
               fileInPb.getPreferredBlockSize());
         }
@@ -236,6 +246,8 @@ public class FSImageFormatPBSnapshot {
         dir.addSnapshotFeature(null);
       }
       DirectoryDiffList diffs = dir.getDiffs();
+      final LoaderContext state = parent.getLoaderContext();
+
       for (int i = 0; i < size; i++) {
         // load a directory diff
         SnapshotDiffSection.DirectoryDiff diffInPb = SnapshotDiffSection.
@@ -247,19 +259,25 @@ public class FSImageFormatPBSnapshot {
         INodeDirectoryAttributes copy = null;
         if (useRoot) {
           copy = snapshot.getRoot();
-        }else if (diffInPb.hasSnapshotCopy()) {
+        } else if (diffInPb.hasSnapshotCopy()) {
           INodeSection.INodeDirectory dirCopyInPb = diffInPb.getSnapshotCopy();
           final byte[] name = diffInPb.getName().toByteArray();
           PermissionStatus permission = loadPermission(
-              dirCopyInPb.getPermission(), parent.getLoaderContext()
-                  .getStringTable());
+              dirCopyInPb.getPermission(), state.getStringTable());
+          AclFeature acl = null;
+          if (dirCopyInPb.hasAclId()) {
+            acl = new AclFeature(FSImageFormatPBINode.Loader.loadAclEntries(
+                dirCopyInPb.getAclId(), state.getExtendedAclTable()));
+          }
+
           long modTime = dirCopyInPb.getModificationTime();
           boolean noQuota = dirCopyInPb.getNsQuota() == -1
               && dirCopyInPb.getDsQuota() == -1;
+
           copy = noQuota ? new INodeDirectoryAttributes.SnapshotCopy(name,
-              permission, null, modTime)
+              permission, acl, modTime)
               : new INodeDirectoryAttributes.CopyWithQuota(name, permission,
-                  null, modTime, dirCopyInPb.getNsQuota(),
+                  acl, modTime, dirCopyInPb.getNsQuota(),
                   dirCopyInPb.getDsQuota());
         }
         // load created list
@@ -314,7 +332,7 @@ public class FSImageFormatPBSnapshot {
           SnapshotSection.Snapshot.Builder sb = SnapshotSection.Snapshot
               .newBuilder().setSnapshotId(s.getId());
           INodeSection.INodeDirectory.Builder db = buildINodeDirectory(sroot,
-              parent.getSaverContext().getStringMap());
+              parent.getSaverContext());
           INodeSection.INode r = INodeSection.INode.newBuilder()
               .setId(sroot.getId())
               .setType(INodeSection.INode.Type.DIRECTORY)
@@ -372,7 +390,7 @@ public class FSImageFormatPBSnapshot {
           INodeFileAttributes copy = diff.snapshotINode;
           if (copy != null) {
             fb.setName(ByteString.copyFrom(copy.getLocalNameBytes()))
-                .setSnapshotCopy(buildINodeFile(copy, parent.getSaverContext().getStringMap()));
+                .setSnapshotCopy(buildINodeFile(copy, parent.getSaverContext()));
           }
           fb.build().writeDelimitedTo(out);
         }
@@ -413,7 +431,7 @@ public class FSImageFormatPBSnapshot {
           if (!diff.isSnapshotRoot() && copy != null) {
             db.setName(ByteString.copyFrom(copy.getLocalNameBytes()))
                 .setSnapshotCopy(
-                    buildINodeDirectory(copy, parent.getSaverContext().getStringMap()));
+                    buildINodeDirectory(copy, parent.getSaverContext()));
           }
           // process created list and deleted list
           List<INode> created = diff.getChildrenDiff()

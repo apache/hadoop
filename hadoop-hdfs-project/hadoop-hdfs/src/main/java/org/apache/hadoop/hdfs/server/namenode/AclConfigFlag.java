@@ -60,15 +60,6 @@ final class AclConfigFlag {
   }
 
   /**
-   * Checks the flag on behalf of fsimage loading.
-   *
-   * @throws AclException if ACLs are disabled
-   */
-  public void checkForFsImage() throws AclException {
-    check("Cannot load fsimage containing an ACL.");
-  }
-
-  /**
    * Common check method.
    *
    * @throws AclException if ACLs are disabled

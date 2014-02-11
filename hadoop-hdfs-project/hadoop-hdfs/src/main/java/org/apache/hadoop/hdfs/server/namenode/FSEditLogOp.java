@@ -93,7 +93,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.protocol.proto.AclProtos.AclEditLogProto;
-import org.apache.hadoop.hdfs.protocol.proto.AclProtos.AclFsImageProto;
+import org.apache.hadoop.hdfs.protocol.proto.AclProtos.AclFeatureProto;
 import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.util.XMLUtils;
@@ -400,7 +400,7 @@ public abstract class FSEditLogOp {
 
       if (this.opCode == OP_ADD) {
         if (permissions.getPermission().getAclBit()) {
-          AclFsImageProto.newBuilder()
+          AclFeatureProto.newBuilder()
             .addAllEntries(PBHelper.convertAclEntryProto(aclEntries))
             .build()
             .writeDelimitedTo(out);
@@ -466,7 +466,7 @@ public abstract class FSEditLogOp {
       if (this.opCode == OP_ADD) {
         if (permissions.getPermission().getAclBit()) {
           aclEntries = PBHelper.convertAclEntry(
-            AclFsImageProto.parseDelimitedFrom((DataInputStream)in)
+            AclFeatureProto.parseDelimitedFrom((DataInputStream)in)
             .getEntriesList());
         } else {
           aclEntries = null;
@@ -1305,7 +1305,7 @@ public abstract class FSEditLogOp {
       FSImageSerialization.writeLong(timestamp, out); // atime, unused at this
       permissions.write(out);
       if (permissions.getPermission().getAclBit()) {
-        AclFsImageProto.newBuilder()
+        AclFeatureProto.newBuilder()
           .addAllEntries(PBHelper.convertAclEntryProto(aclEntries))
           .build()
           .writeDelimitedTo(out);
@@ -1349,7 +1349,7 @@ public abstract class FSEditLogOp {
       this.permissions = PermissionStatus.read(in);
       if (permissions.getPermission().getAclBit()) {
         aclEntries = PBHelper.convertAclEntry(
-          AclFsImageProto.parseDelimitedFrom((DataInputStream)in)
+          AclFeatureProto.parseDelimitedFrom((DataInputStream)in)
           .getEntriesList());
       } else {
         aclEntries = null;

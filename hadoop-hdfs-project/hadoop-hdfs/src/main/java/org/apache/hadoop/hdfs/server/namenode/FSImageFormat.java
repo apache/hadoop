@@ -51,9 +51,6 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutFlags;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
-import org.apache.hadoop.hdfs.protocol.proto.AclProtos.AclFsImageProto;
-import org.apache.hadoop.hdfs.protocolPB.PBHelper;
-import org.apache.hadoop.hdfs.protocol.LayoutFlags;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
@@ -114,7 +111,6 @@ import com.google.common.annotations.VisibleForTesting;
  *   } when {@link Feature#FSIMAGE_NAME_OPTIMIZATION} is not supported
  *   replicationFactor: short, modificationTime: long,
  *   accessTime: long, preferredBlockSize: long,
- *
  *   numberOfBlocks: int (-1 for INodeDirectory, -2 for INodeSymLink),
  *   { 
  *     nsQuota: long, dsQuota: long, 
@@ -122,11 +118,7 @@ import com.google.common.annotations.VisibleForTesting;
  *       isINodeSnapshottable: byte,
  *       isINodeWithSnapshot: byte (if isINodeSnapshottable is false)
  *     } (when {@link Feature#SNAPSHOT} is supported), 
- *     fsPermission: short, PermissionStatus,
- *     AclEntries {
- *       size: int,
- *       protobuf encoding of {@link AclFsImageProto}
- *     }(when {@link Feature#EXTENDED_ACL} is supported),
+ *     fsPermission: short, PermissionStatus
  *   } for INodeDirectory
  *   or 
  *   {
@@ -141,12 +133,9 @@ import com.google.common.annotations.VisibleForTesting;
  *       {clientName: short + byte[], clientMachine: short + byte[]} (when 
  *       isINodeFileUnderConstructionSnapshot is true),
  *     } (when {@link Feature#SNAPSHOT} is supported and writing snapshotINode), 
- *     fsPermission: short, PermissionStatus,
- *     AclEntries {
- *       size: int,
- *       protobuf encoding of {@link AclFsImageProto}
- *     }(when {@link Feature#EXTENDED_ACL} is supported),
- *   } for INodeFile,
+ *     fsPermission: short, PermissionStatus
+ *   } for INodeFile
+ * }
  * 
  * INodeDirectoryInfo {
  *   fullPath of the directory: short + byte[],
@@ -783,18 +772,9 @@ public class FSImageFormat {
       if (underConstruction) {
         file.toUnderConstruction(clientName, clientMachine, null);
       }
-
-      if (permissions.getPermission().getAclBit()) {
-        AclFeature aclFeature = loadAclFeature(in, imgVersion);
-        if (aclFeature != null) {
-          file.addAclFeature(aclFeature);
-        }
-      }
-
-      return fileDiffs == null ? file : new INodeFile(file, fileDiffs);
-
-    } else if (numBlocks == -1) {
-      //directory
+        return fileDiffs == null ? file : new INodeFile(file, fileDiffs);
+      } else if (numBlocks == -1) {
+        //directory
       
       //read quotas
       final long nsQuota = in.readLong();
@@ -824,14 +804,6 @@ public class FSImageFormat {
       if (nsQuota >= 0 || dsQuota >= 0) {
         dir.addDirectoryWithQuotaFeature(nsQuota, dsQuota);
       }
-
-      if (permissions.getPermission().getAclBit()) {
-        AclFeature aclFeature = loadAclFeature(in, imgVersion);
-        if (aclFeature != null) {
-          dir.addAclFeature(aclFeature);
-        }
-      }
-
       if (withSnapshot) {
         dir.addSnapshotFeature(null);
       }
@@ -872,19 +844,6 @@ public class FSImageFormat {
     throw new IOException("Unknown inode type: numBlocks=" + numBlocks);
   }
 
-    private AclFeature loadAclFeature(DataInput in, final int imgVersion)
-        throws IOException {
-      namesystem.getAclConfigFlag().checkForFsImage();
-      AclFeature aclFeature = null;
-      if (LayoutVersion.supports(Feature.EXTENDED_ACL, imgVersion)) {
-        AclFsImageProto p = AclFsImageProto
-            .parseDelimitedFrom((DataInputStream) in);
-        aclFeature = new AclFeature(PBHelper.convertAclEntry(
-            p.getEntriesList()));
-      }
-      return aclFeature;
-    }
-
     /** Load {@link INodeFileAttributes}. */
     public INodeFileAttributes loadINodeFileAttributes(DataInput in)
         throws IOException {
@@ -902,10 +861,9 @@ public class FSImageFormat {
       final short replication = namesystem.getBlockManager().adjustReplication(
           in.readShort());
       final long preferredBlockSize = in.readLong();
-      AclFeature aclFeature = permissions.getPermission().getAclBit() ?
-          loadAclFeature(in, layoutVersion) : null;
-      return new INodeFileAttributes.SnapshotCopy(name, permissions, aclFeature,
-          modificationTime, accessTime, replication, preferredBlockSize);
+
+      return new INodeFileAttributes.SnapshotCopy(name, permissions, null, modificationTime,
+          accessTime, replication, preferredBlockSize);
     }
 
     public INodeDirectoryAttributes loadINodeDirectoryAttributes(DataInput in)
@@ -923,14 +881,11 @@ public class FSImageFormat {
       //read quotas
       final long nsQuota = in.readLong();
       final long dsQuota = in.readLong();
-      AclFeature aclFeature = permissions.getPermission().getAclBit() ?
-          loadAclFeature(in, layoutVersion) : null;
   
       return nsQuota == -1L && dsQuota == -1L?
-          new INodeDirectoryAttributes.SnapshotCopy(name, permissions,
-            aclFeature, modificationTime)
+          new INodeDirectoryAttributes.SnapshotCopy(name, permissions, null, modificationTime)
         : new INodeDirectoryAttributes.CopyWithQuota(name, permissions,
-            aclFeature, modificationTime, nsQuota, dsQuota);
+            null, modificationTime, nsQuota, dsQuota);
     }
   
     private void loadFilesUnderConstruction(DataInput in,

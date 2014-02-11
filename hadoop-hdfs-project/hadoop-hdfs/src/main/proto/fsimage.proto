@@ -22,6 +22,7 @@ option java_outer_classname = "FsImageProto";
 package hadoop.hdfs.fsimage;
 
 import "hdfs.proto";
+import "acl.proto";
 
 /**
  * This file defines the on-disk layout of the file system image. The
@@ -96,6 +97,7 @@ message INodeSection {
     optional fixed64 permission = 5;
     repeated BlockProto blocks = 6;
     optional FileUnderConstructionFeature fileUC = 7;
+    optional uint32 aclId = 8;
   }
 
   message INodeDirectory {
@@ -105,6 +107,7 @@ message INodeSection {
     // diskspace quota
     optional uint64 dsQuota = 3;
     optional fixed64 permission = 4;
+    optional uint32 aclId = 5;
   }
 
   message INodeSymlink {
@@ -278,3 +281,15 @@ message CacheManagerSection {
   // repeated CacheDirectiveInfoProto directives
 }
 
+/**
+ * This section maps string to id
+ * NAME: EXTENDED_ACL
+ */
+message ExtendedAclSection {
+  message Entry {
+    required uint32 id = 1;
+    optional AclFeatureProto acl = 2;
+  }
+  optional uint32 numEntry = 1;
+  // repeated Entry entries
+}

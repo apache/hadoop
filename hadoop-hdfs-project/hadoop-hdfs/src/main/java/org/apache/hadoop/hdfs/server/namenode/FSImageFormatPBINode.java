@@ -30,14 +30,17 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.proto.AclProtos.AclEntryProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
 import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf.LoaderContext;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf.SaverContext;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.FileSummary;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.FilesUnderConstructionSection.FileUnderConstructionEntry;
@@ -50,6 +53,7 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
 
 @InterfaceAudience.Private
@@ -67,6 +71,11 @@ public final class FSImageFormatPBINode {
       int usid = (int) ((id >> USER_STRID_OFFSET) & USER_GROUP_STRID_MASK);
       return new PermissionStatus(stringTable[usid], stringTable[gsid],
           new FsPermission(perm));
+    }
+
+    public static ImmutableList<AclEntry> loadAclEntries(int id,
+        final ImmutableList<AclEntry>[] aclTable) {
+      return aclTable[id];
     }
 
     public static INodeReference loadINodeReference(
@@ -89,18 +98,23 @@ public final class FSImageFormatPBINode {
     }
 
     public static INodeDirectory loadINodeDirectory(INodeSection.INode n,
-        final String[] stringTable) {
+        LoaderContext state) {
       assert n.getType() == INodeSection.INode.Type.DIRECTORY;
       INodeSection.INodeDirectory d = n.getDirectory();
 
       final PermissionStatus permissions = loadPermission(d.getPermission(),
-          stringTable);
+          state.getStringTable());
       final INodeDirectory dir = new INodeDirectory(n.getId(), n.getName()
           .toByteArray(), permissions, d.getModificationTime());
 
       final long nsQuota = d.getNsQuota(), dsQuota = d.getDsQuota();
       if (nsQuota >= 0 || dsQuota >= 0) {
         dir.addDirectoryWithQuotaFeature(nsQuota, dsQuota);
+      }
+
+      if (d.hasAclId()) {
+        dir.addAclFeature(new AclFeature(loadAclEntries(d.getAclId(),
+            state.getExtendedAclTable())));
       }
       return dir;
     }
@@ -208,7 +222,7 @@ public final class FSImageFormatPBINode {
       case FILE:
         return loadINodeFile(n);
       case DIRECTORY:
-        return loadINodeDirectory(n, parent.getLoaderContext().getStringTable());
+        return loadINodeDirectory(n, parent.getLoaderContext());
       case SYMLINK:
         return loadINodeSymlink(n);
       default:
@@ -222,6 +236,7 @@ public final class FSImageFormatPBINode {
       INodeSection.INodeFile f = n.getFile();
       List<BlockProto> bp = f.getBlocksList();
       short replication = (short) f.getReplication();
+      LoaderContext state = parent.getLoaderContext();
 
       BlockInfo[] blocks = new BlockInfo[bp.size()];
       for (int i = 0, e = bp.size(); i < e; ++i) {
@@ -233,6 +248,12 @@ public final class FSImageFormatPBINode {
       final INodeFile file = new INodeFile(n.getId(),
           n.getName().toByteArray(), permissions, f.getModificationTime(),
           f.getAccessTime(), blocks, replication, f.getPreferredBlockSize());
+
+      if (f.hasAclId()) {
+        file.addAclFeature(new AclFeature(loadAclEntries(f.getAclId(),
+            state.getExtendedAclTable())));
+      }
+
       // under-construction information
       if (f.hasFileUC()) {
         INodeSection.FileUnderConstructionFeature uc = f.getFileUC();
@@ -254,13 +275,15 @@ public final class FSImageFormatPBINode {
       INodeSection.INodeSymlink s = n.getSymlink();
       final PermissionStatus permissions = loadPermission(s.getPermission(),
           parent.getLoaderContext().getStringTable());
-      return new INodeSymlink(n.getId(), n.getName().toByteArray(), permissions,
-          0, 0, s.getTarget().toStringUtf8());
+
+      INodeSymlink sym = new INodeSymlink(n.getId(), n.getName().toByteArray(),
+          permissions, 0, 0, s.getTarget().toStringUtf8());
+
+      return sym;
     }
 
     private void loadRootINode(INodeSection.INode p) {
-      INodeDirectory root = loadINodeDirectory(p, parent.getLoaderContext()
-          .getStringTable());
+      INodeDirectory root = loadINodeDirectory(p, parent.getLoaderContext());
       final Quota.Counts q = root.getQuotaCounts();
       final long nsQuota = q.get(Quota.NAMESPACE);
       final long dsQuota = q.get(Quota.DISKSPACE);
@@ -282,27 +305,45 @@ public final class FSImageFormatPBINode {
           | n.getFsPermissionShort();
     }
 
+    /**
+     * Get a unique id for the AclEntry list. Notice that the code does not
+     * deduplicate the list of aclentry yet.
+     */
+    private static int buildAclEntries(AclFeature f,
+        final SaverContext.DeduplicationMap<ImmutableList<AclEntryProto>> map) {
+      return map.getId(ImmutableList.copyOf(PBHelper.convertAclEntryProto(f
+          .getEntries())));
+    }
+
     public static INodeSection.INodeFile.Builder buildINodeFile(
-        INodeFileAttributes file,
-        final SaverContext.DeduplicationMap<String> stringMap) {
+        INodeFileAttributes file, final SaverContext state) {
       INodeSection.INodeFile.Builder b = INodeSection.INodeFile.newBuilder()
           .setAccessTime(file.getAccessTime())
           .setModificationTime(file.getModificationTime())
-          .setPermission(buildPermissionStatus(file, stringMap))
+          .setPermission(buildPermissionStatus(file, state.getStringMap()))
           .setPreferredBlockSize(file.getPreferredBlockSize())
           .setReplication(file.getFileReplication());
+
+      AclFeature f = file.getAclFeature();
+      if (f != null) {
+        b.setAclId(buildAclEntries(f, state.getExtendedAclMap()));
+      }
       return b;
     }
 
     public static INodeSection.INodeDirectory.Builder buildINodeDirectory(
-        INodeDirectoryAttributes dir,
-        final SaverContext.DeduplicationMap<String> stringMap) {
+        INodeDirectoryAttributes dir, final SaverContext state) {
       Quota.Counts quota = dir.getQuotaCounts();
       INodeSection.INodeDirectory.Builder b = INodeSection.INodeDirectory
           .newBuilder().setModificationTime(dir.getModificationTime())
           .setNsQuota(quota.get(Quota.NAMESPACE))
           .setDsQuota(quota.get(Quota.DISKSPACE))
-          .setPermission(buildPermissionStatus(dir, stringMap));
+          .setPermission(buildPermissionStatus(dir, state.getStringMap()));
+
+      AclFeature f = dir.getAclFeature();
+      if (f != null) {
+        b.setAclId(buildAclEntries(f, state.getExtendedAclMap()));
+      }
       return b;
     }
 
@@ -419,7 +460,7 @@ public final class FSImageFormatPBINode {
 
     private void save(OutputStream out, INodeDirectory n) throws IOException {
       INodeSection.INodeDirectory.Builder b = buildINodeDirectory(n,
-          parent.getSaverContext().getStringMap());
+          parent.getSaverContext());
       INodeSection.INode r = buildINodeCommon(n)
           .setType(INodeSection.INode.Type.DIRECTORY).setDirectory(b).build();
       r.writeDelimitedTo(out);
@@ -427,7 +468,7 @@ public final class FSImageFormatPBINode {
 
     private void save(OutputStream out, INodeFile n) throws IOException {
       INodeSection.INodeFile.Builder b = buildINodeFile(n,
-          parent.getSaverContext().getStringMap());
+          parent.getSaverContext());
 
       for (Block block : n.getBlocks()) {
         b.addBlocks(PBHelper.convert(block));
@@ -448,10 +489,12 @@ public final class FSImageFormatPBINode {
     }
 
     private void save(OutputStream out, INodeSymlink n) throws IOException {
+      SaverContext state = parent.getSaverContext();
       INodeSection.INodeSymlink.Builder b = INodeSection.INodeSymlink
           .newBuilder()
-          .setPermission(buildPermissionStatus(n, parent.getSaverContext().getStringMap()))
+          .setPermission(buildPermissionStatus(n, state.getStringMap()))
           .setTarget(ByteString.copyFrom(n.getSymlink()));
+
       INodeSection.INode r = buildINodeCommon(n)
           .setType(INodeSection.INode.Type.SYMLINK).setSymlink(b).build();
       r.writeDelimitedTo(out);
