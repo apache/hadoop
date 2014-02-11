@@ -99,4 +99,8 @@ public class NodeManagerMetrics {
   public void addResource(Resource res) {
     availableGB.incr(res.getMemory() / 1024);
   }
+  
+  public int getRunningContainers() {
+    return containersRunning.value();
+  }
 }
