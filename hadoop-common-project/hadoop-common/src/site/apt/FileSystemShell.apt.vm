@@ -444,6 +444,8 @@ setfacl
 
       * <<<hdfs dfs -setfacl -R -m user:hadoop:r-x /dir>>>
 
+      * <<<hdfs dfs -setfacl -m default:user:hadoop:r-x /dir>>>
+
    Exit Code:
 
    Returns 0 on success and non-zero on error.
