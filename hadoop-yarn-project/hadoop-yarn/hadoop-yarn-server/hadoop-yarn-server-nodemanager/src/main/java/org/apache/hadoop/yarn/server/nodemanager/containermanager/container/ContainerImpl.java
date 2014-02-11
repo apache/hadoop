@@ -83,6 +83,7 @@ public class ContainerImpl implements Container {
   private final String user;
   private int exitCode = ContainerExitStatus.INVALID;
   private final StringBuilder diagnostics;
+  private boolean wasLaunched;
 
   /** The NM-wide configuration - not specific to this container */
   private final Configuration daemonConf;
@@ -418,7 +419,9 @@ public class ContainerImpl implements Container {
             applicationId, containerId);
         break;
       case EXITED_WITH_FAILURE:
-        metrics.endRunningContainer();
+        if (wasLaunched) {
+          metrics.endRunningContainer();
+        }
         // fall through
       case LOCALIZATION_FAILED:
         metrics.failedContainer();
@@ -428,7 +431,9 @@ public class ContainerImpl implements Container {
             applicationId, containerId);
         break;
       case CONTAINER_CLEANEDUP_AFTER_KILL:
-        metrics.endRunningContainer();
+        if (wasLaunched) {
+          metrics.endRunningContainer();
+        }
         // fall through
       case NEW:
         metrics.killedContainer();
@@ -636,6 +641,7 @@ public class ContainerImpl implements Container {
           new ContainerStartMonitoringEvent(container.containerId,
               vmemBytes, pmemBytes));
       container.metrics.runningContainer();
+      container.wasLaunched  = true;
     }
   }
 

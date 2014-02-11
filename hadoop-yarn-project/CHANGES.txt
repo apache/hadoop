@@ -246,6 +246,8 @@ Release 2.4.0 - UNRELEASED
     YARN-1698. Fixed default TimelineStore in code to match what is documented
     in yarn-default.xml (Zhijie Shen via vinodkv)
 
+    YARN=1697. NodeManager reports negative running containers (Sandy Ryza)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
