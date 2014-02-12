@@ -256,6 +256,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1719. Fixed the root path related Jersey warnings produced in
     ATSWebServices. (Billie Rinaldi via zjshen)
 
+    YARN-1692. ConcurrentModificationException in fair scheduler AppSchedulable
+    (Sangjin Lee via Sandy Ryza)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -267,9 +270,6 @@ Release 2.3.1 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
-
-    YARN-1692. ConcurrentModificationException in fair scheduler AppSchedulable
-    (Sangjin Lee via Sandy Ryza)
 
 Release 2.3.0 - 2014-02-18
 
