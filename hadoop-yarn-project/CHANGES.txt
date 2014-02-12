@@ -266,7 +266,10 @@ Release 2.3.1 - UNRELEASED
 
   OPTIMIZATIONS
 
-  BUG FIXES 
+  BUG FIXES
+
+    YARN-1692. ConcurrentModificationException in fair scheduler AppSchedulable
+    (Sangjin Lee via Sandy Ryza)
 
 Release 2.3.0 - 2014-02-18
 
