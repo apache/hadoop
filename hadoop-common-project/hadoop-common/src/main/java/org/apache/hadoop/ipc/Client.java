@@ -220,7 +220,7 @@ public class Client {
    * @param conf Configuration
    * @return the ping interval
    */
-  final static int getPingInterval(Configuration conf) {
+  final public static int getPingInterval(Configuration conf) {
     return conf.getInt(CommonConfigurationKeys.IPC_PING_INTERVAL_KEY,
         CommonConfigurationKeys.IPC_PING_INTERVAL_DEFAULT);
   }

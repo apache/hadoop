@@ -413,6 +413,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-5886. Potential null pointer deference in RpcProgramNfs3#readlink()
     (brandonli)
 
+    HDFS-4858. HDFS DataNode to NameNode RPC should timeout.
+    (Henry Wang via shv)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
