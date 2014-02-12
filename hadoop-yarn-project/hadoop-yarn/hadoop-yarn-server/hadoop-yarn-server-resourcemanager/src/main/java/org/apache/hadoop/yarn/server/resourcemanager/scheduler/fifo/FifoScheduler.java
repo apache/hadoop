@@ -184,6 +184,11 @@ public class FifoScheduler extends AbstractYarnScheduler implements
     public boolean hasAccess(QueueACL acl, UserGroupInformation user) {
       return getQueueAcls().get(acl).isUserAllowed(user);
     }
+    
+    @Override
+    public ActiveUsersManager getActiveUsersManager() {
+      return activeUsersManager;
+    }
   };
 
   @Override

@@ -96,6 +96,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1496. Protocol additions to allow moving apps between queues (Sandy
     Ryza)
 
+    YARN-1498. Common scheduler changes for moving apps between queues (Sandy
+    Ryza)
+
   IMPROVEMENTS
 
     YARN-1007. Enhance History Reader interface for Containers. (Mayank Bansal via
