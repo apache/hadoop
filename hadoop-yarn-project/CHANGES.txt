@@ -246,7 +246,7 @@ Release 2.4.0 - UNRELEASED
     YARN-1698. Fixed default TimelineStore in code to match what is documented
     in yarn-default.xml (Zhijie Shen via vinodkv)
 
-    YARN=1697. NodeManager reports negative running containers (Sandy Ryza)
+    YARN-1697. NodeManager reports negative running containers (Sandy Ryza)
 
     YARN-1719. Fixed the root path related Jersey warnings produced in
     ATSWebServices. (Billie Rinaldi via zjshen)
