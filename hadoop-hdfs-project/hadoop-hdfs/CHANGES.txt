@@ -425,6 +425,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-5938. Make BlockReaderFactory#BlockReaderPeer a static class to avoid
     a findbugs warning. (cmccabe)
 
+    HDFS-5891. webhdfs should not try connecting the DN during redirection
+    (Haohui Mai via brandonli)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
