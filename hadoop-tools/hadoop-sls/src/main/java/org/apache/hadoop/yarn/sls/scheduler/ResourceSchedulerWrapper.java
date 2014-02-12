@@ -54,6 +54,7 @@ import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
@@ -865,6 +866,12 @@ public class ResourceSchedulerWrapper implements ResourceScheduler,
   @Override
   public RMContainer getRMContainer(ContainerId containerId) {
     return null;
+  }
+
+  @Override
+  public String moveApplication(ApplicationId appId, String newQueue)
+      throws YarnException {
+    return scheduler.moveApplication(appId, newQueue);
   }
 }
 
