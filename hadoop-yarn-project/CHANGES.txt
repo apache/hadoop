@@ -93,6 +93,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1637. Implemented a client library for Java users to post timeline
     entities and events. (zjshen)
 
+    YARN-1496. Protocol additions to allow moving apps between queues (Sandy
+    Ryza)
+
   IMPROVEMENTS
 
     YARN-1007. Enhance History Reader interface for Containers. (Mayank Bansal via
