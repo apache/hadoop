@@ -158,6 +158,9 @@ Release 2.4.0 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
+    
+    MAPREDUCE-5746. Job diagnostics can implicate wrong task for a failed job.
+    (Jason Lowe via kasha)
 
 Release 2.3.1 - UNRELEASED
 
