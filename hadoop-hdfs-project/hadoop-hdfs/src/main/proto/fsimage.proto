@@ -89,6 +89,23 @@ message INodeSection {
     optional string clientMachine = 2;
   }
 
+  message AclFeatureProto {
+    /**
+     * An ACL entry is represented by a 32-bit integer in Big Endian
+     * format. The bits can be divided in four segments:
+     * [0:2) || [2:26) || [26:27) || [27:29) || [29:32)
+     *
+     * [0:2) -- reserved for futute uses.
+     * [2:26) -- the name of the entry, which is an ID that points to a
+     * string in the StringTableSection.
+     * [26:27) -- the scope of the entry (AclEntryScopeProto)
+     * [27:29) -- the type of the entry (AclEntryTypeProto)
+     * [29:32) -- the permission of the entry (FsActionProto)
+     *
+     */
+    repeated fixed32 entries = 2 [packed = true];
+  }
+
   message INodeFile {
     optional uint32 replication = 1;
     optional uint64 modificationTime = 2;
@@ -97,7 +114,7 @@ message INodeSection {
     optional fixed64 permission = 5;
     repeated BlockProto blocks = 6;
     optional FileUnderConstructionFeature fileUC = 7;
-    optional uint32 aclId = 8;
+    optional AclFeatureProto acl = 8;
   }
 
   message INodeDirectory {
@@ -107,7 +124,7 @@ message INodeSection {
     // diskspace quota
     optional uint64 dsQuota = 3;
     optional fixed64 permission = 4;
-    optional uint32 aclId = 5;
+    optional AclFeatureProto acl = 5;
   }
 
   message INodeSymlink {
@@ -279,17 +296,4 @@ message CacheManagerSection {
   required uint32 numDirectives   = 3;
   // repeated CachePoolInfoProto pools
   // repeated CacheDirectiveInfoProto directives
-}
-
-/**
- * This section maps string to id
- * NAME: EXTENDED_ACL
- */
-message ExtendedAclSection {
-  message Entry {
-    required uint32 id = 1;
-    optional AclFeatureProto acl = 2;
-  }
-  optional uint32 numEntry = 1;
-  // repeated Entry entries
 }

@@ -31,10 +31,12 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.permission.AclEntry;
+import org.apache.hadoop.fs.permission.AclEntryScope;
+import org.apache.hadoop.fs.permission.AclEntryType;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.protocol.proto.AclProtos.AclEntryProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
 import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
@@ -46,6 +48,7 @@ import org.apache.hadoop.hdfs.server.namenode.FsImageProto.FileSummary;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.FilesUnderConstructionSection.FileUnderConstructionEntry;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeDirectorySection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection;
+import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection.AclFeatureProto;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.DstReference;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithCount;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithName;
@@ -61,6 +64,20 @@ public final class FSImageFormatPBINode {
   private final static long USER_GROUP_STRID_MASK = (1 << 24) - 1;
   private final static int USER_STRID_OFFSET = 40;
   private final static int GROUP_STRID_OFFSET = 16;
+
+  private static final int ACL_ENTRY_NAME_MASK = (1 << 24) - 1;
+  private static final int ACL_ENTRY_NAME_OFFSET = 6;
+  private static final int ACL_ENTRY_TYPE_OFFSET = 3;
+  private static final int ACL_ENTRY_SCOPE_OFFSET = 5;
+  private static final int ACL_ENTRY_PERM_MASK = 7;
+  private static final int ACL_ENTRY_TYPE_MASK = 3;
+  private static final int ACL_ENTRY_SCOPE_MASK = 1;
+  private static final FsAction[] FSACTION_VALUES = FsAction.values();
+  private static final AclEntryScope[] ACL_ENTRY_SCOPE_VALUES = AclEntryScope
+      .values();
+  private static final AclEntryType[] ACL_ENTRY_TYPE_VALUES = AclEntryType
+      .values();
+
   private static final Log LOG = LogFactory.getLog(FSImageFormatProtobuf.class);
 
   public final static class Loader {
@@ -73,9 +90,21 @@ public final class FSImageFormatPBINode {
           new FsPermission(perm));
     }
 
-    public static ImmutableList<AclEntry> loadAclEntries(int id,
-        final ImmutableList<AclEntry>[] aclTable) {
-      return aclTable[id];
+    public static ImmutableList<AclEntry> loadAclEntries(
+        AclFeatureProto proto, final String[] stringTable) {
+      ImmutableList.Builder<AclEntry> b = ImmutableList.builder();
+      for (int v : proto.getEntriesList()) {
+        int p = v & ACL_ENTRY_PERM_MASK;
+        int t = (v >> ACL_ENTRY_TYPE_OFFSET) & ACL_ENTRY_TYPE_MASK;
+        int s = (v >> ACL_ENTRY_SCOPE_OFFSET) & ACL_ENTRY_SCOPE_MASK;
+        int nid = (v >> ACL_ENTRY_NAME_OFFSET) & ACL_ENTRY_NAME_MASK;
+        String name = stringTable[nid];
+        b.add(new AclEntry.Builder().setName(name)
+            .setPermission(FSACTION_VALUES[p])
+            .setScope(ACL_ENTRY_SCOPE_VALUES[s])
+            .setType(ACL_ENTRY_TYPE_VALUES[t]).build());
+      }
+      return b.build();
     }
 
     public static INodeReference loadINodeReference(
@@ -112,9 +141,9 @@ public final class FSImageFormatPBINode {
         dir.addDirectoryWithQuotaFeature(nsQuota, dsQuota);
       }
 
-      if (d.hasAclId()) {
-        dir.addAclFeature(new AclFeature(loadAclEntries(d.getAclId(),
-            state.getExtendedAclTable())));
+      if (d.hasAcl()) {
+        dir.addAclFeature(new AclFeature(loadAclEntries(d.getAcl(),
+            state.getStringTable())));
       }
       return dir;
     }
@@ -249,9 +278,9 @@ public final class FSImageFormatPBINode {
           n.getName().toByteArray(), permissions, f.getModificationTime(),
           f.getAccessTime(), blocks, replication, f.getPreferredBlockSize());
 
-      if (f.hasAclId()) {
-        file.addAclFeature(new AclFeature(loadAclEntries(f.getAclId(),
-            state.getExtendedAclTable())));
+      if (f.hasAcl()) {
+        file.addAclFeature(new AclFeature(loadAclEntries(f.getAcl(),
+            state.getStringTable())));
       }
 
       // under-construction information
@@ -305,14 +334,17 @@ public final class FSImageFormatPBINode {
           | n.getFsPermissionShort();
     }
 
-    /**
-     * Get a unique id for the AclEntry list. Notice that the code does not
-     * deduplicate the list of aclentry yet.
-     */
-    private static int buildAclEntries(AclFeature f,
-        final SaverContext.DeduplicationMap<ImmutableList<AclEntryProto>> map) {
-      return map.getId(ImmutableList.copyOf(PBHelper.convertAclEntryProto(f
-          .getEntries())));
+    private static AclFeatureProto.Builder buildAclEntries(AclFeature f,
+        final SaverContext.DeduplicationMap<String> map) {
+      AclFeatureProto.Builder b = AclFeatureProto.newBuilder();
+      for (AclEntry e : f.getEntries()) {
+        int v = ((map.getId(e.getName()) & ACL_ENTRY_NAME_MASK) << ACL_ENTRY_NAME_OFFSET)
+            | (e.getType().ordinal() << ACL_ENTRY_TYPE_OFFSET)
+            | (e.getScope().ordinal() << ACL_ENTRY_SCOPE_OFFSET)
+            | (e.getPermission().ordinal());
+        b.addEntries(v);
+      }
+      return b;
     }
 
     public static INodeSection.INodeFile.Builder buildINodeFile(
@@ -326,7 +358,7 @@ public final class FSImageFormatPBINode {
 
       AclFeature f = file.getAclFeature();
       if (f != null) {
-        b.setAclId(buildAclEntries(f, state.getExtendedAclMap()));
+        b.setAcl(buildAclEntries(f, state.getStringMap()));
       }
       return b;
     }
@@ -342,7 +374,7 @@ public final class FSImageFormatPBINode {
 
       AclFeature f = dir.getAclFeature();
       if (f != null) {
-        b.setAclId(buildAclEntries(f, state.getExtendedAclMap()));
+        b.setAcl(buildAclEntries(f, state.getStringMap()));
       }
       return b;
     }

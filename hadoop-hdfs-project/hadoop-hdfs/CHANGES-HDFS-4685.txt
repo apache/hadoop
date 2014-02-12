@@ -78,6 +78,8 @@ HDFS-4685 (Unreleased)
     HDFS-5923. Do not persist the ACL bit in the FsPermission.
     (Haohui Mai via cnauroth)
 
+    HDFS-5933. Optimize the FSImage layout for ACLs (Haohui Mai via cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES

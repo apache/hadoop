@@ -93,7 +93,6 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.protocol.proto.AclProtos.AclEditLogProto;
-import org.apache.hadoop.hdfs.protocol.proto.AclProtos.AclFeatureProto;
 import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.util.XMLUtils;
@@ -468,14 +467,7 @@ public abstract class FSEditLogOp {
       permissions.write(out);
 
       if (this.opCode == OP_ADD) {
-        boolean hasAcl = aclEntries != null;
-        out.writeBoolean(hasAcl);
-        if (hasAcl) {
-          AclFeatureProto.newBuilder()
-              .addAllEntries(PBHelper.convertAclEntryProto(aclEntries)).build()
-              .writeDelimitedTo(out);
-        }
-
+        AclEditLogUtil.write(aclEntries, out);
         FSImageSerialization.writeString(clientName,out);
         FSImageSerialization.writeString(clientMachine,out);
         // write clientId and callId
@@ -535,7 +527,6 @@ public abstract class FSEditLogOp {
       // clientname, clientMachine and block locations of last block.
       if (this.opCode == OP_ADD) {
         aclEntries = AclEditLogUtil.read(in, logVersion);
-
         this.clientName = FSImageSerialization.readString(in);
         this.clientMachine = FSImageSerialization.readString(in);
         // read clientId and callId
@@ -1364,14 +1355,7 @@ public abstract class FSEditLogOp {
       FSImageSerialization.writeLong(timestamp, out); // mtime
       FSImageSerialization.writeLong(timestamp, out); // atime, unused at this
       permissions.write(out);
-
-      boolean hasAcl = aclEntries != null;
-      out.writeBoolean(hasAcl);
-      if (hasAcl) {
-        AclFeatureProto.newBuilder()
-            .addAllEntries(PBHelper.convertAclEntryProto(aclEntries)).build()
-            .writeDelimitedTo(out);
-      }
+      AclEditLogUtil.write(aclEntries, out);
     }
     
     @Override

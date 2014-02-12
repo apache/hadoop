@@ -42,16 +42,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
-import org.apache.hadoop.hdfs.protocol.proto.AclProtos.AclEntryProto;
-import org.apache.hadoop.hdfs.protocol.proto.AclProtos.AclFeatureProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CacheDirectiveInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CachePoolInfoProto;
-import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.CacheManagerSection;
-import org.apache.hadoop.hdfs.server.namenode.FsImageProto.ExtendedAclSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.FileSummary;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.NameSystemSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.SecretManagerSection;
@@ -66,7 +61,6 @@ import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressorStream;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.LimitInputStream;
@@ -81,14 +75,9 @@ public final class FSImageFormatProtobuf {
 
   public static final class LoaderContext {
     private String[] stringTable;
-    private ImmutableList<AclEntry>[] extendedAclTable;
 
     public String[] getStringTable() {
       return stringTable;
-    }
-
-    public ImmutableList<AclEntry>[] getExtendedAclTable() {
-      return extendedAclTable;
     }
   }
 
@@ -125,15 +114,9 @@ public final class FSImageFormatProtobuf {
 
     private final DeduplicationMap<String> stringMap = DeduplicationMap
         .newMap();
-    private final DeduplicationMap<ImmutableList<AclEntryProto>> extendedAclMap = DeduplicationMap
-        .newMap();
 
     public DeduplicationMap<String> getStringMap() {
       return stringMap;
-    }
-
-    public DeduplicationMap<ImmutableList<AclEntryProto>> getExtendedAclMap() {
-      return extendedAclMap;
     }
   }
 
@@ -239,9 +222,6 @@ public final class FSImageFormatProtobuf {
         case STRING_TABLE:
           loadStringTableSection(in);
           break;
-        case EXTENDED_ACL:
-          loadExtendedAclSection(in);
-          break;
         case INODE: {
           currentStep = new Step(StepType.INODES);
           prog.beginStep(Phase.LOADING_FSIMAGE, currentStep);
@@ -298,18 +278,6 @@ public final class FSImageFormatProtobuf {
         StringTableSection.Entry e = StringTableSection.Entry
             .parseDelimitedFrom(in);
         ctx.stringTable[e.getId()] = e.getStr();
-      }
-    }
-
-    @SuppressWarnings("unchecked")
-    private void loadExtendedAclSection(InputStream in) throws IOException {
-      ExtendedAclSection s = ExtendedAclSection.parseDelimitedFrom(in);
-      ctx.extendedAclTable = new ImmutableList[s.getNumEntry() + 1];
-      for (int i = 0; i < s.getNumEntry(); ++i) {
-        ExtendedAclSection.Entry e = ExtendedAclSection.Entry
-            .parseDelimitedFrom(in);
-        ctx.extendedAclTable[e.getId()] = ImmutableList.copyOf(PBHelper
-            .convertAclEntry(e.getAcl().getEntriesList()));
       }
     }
 
@@ -481,7 +449,6 @@ public final class FSImageFormatProtobuf {
       saveCacheManagerSection(b);
       prog.endStep(Phase.SAVING_CHECKPOINT, step);
 
-      saveExtendedAclSection(b);
       saveStringTableSection(b);
 
       // We use the underlyingOutputStream to write the header. Therefore flush
@@ -559,22 +526,6 @@ public final class FSImageFormatProtobuf {
         eb.build().writeDelimitedTo(out);
       }
       commitSection(summary, SectionName.STRING_TABLE);
-    }
-
-    private void saveExtendedAclSection(FileSummary.Builder summary)
-        throws IOException {
-      OutputStream out = sectionOutputStream;
-      ExtendedAclSection.Builder b = ExtendedAclSection.newBuilder()
-          .setNumEntry(saverContext.extendedAclMap.size());
-      b.build().writeDelimitedTo(out);
-      for (Entry<ImmutableList<AclEntryProto>, Integer> e : saverContext.extendedAclMap
-          .entrySet()) {
-        ExtendedAclSection.Entry.Builder eb = ExtendedAclSection.Entry
-            .newBuilder().setId(e.getValue())
-            .setAcl(AclFeatureProto.newBuilder().addAllEntries(e.getKey()));
-        eb.build().writeDelimitedTo(out);
-      }
-      commitSection(summary, SectionName.EXTENDED_ACL);
     }
   }
 

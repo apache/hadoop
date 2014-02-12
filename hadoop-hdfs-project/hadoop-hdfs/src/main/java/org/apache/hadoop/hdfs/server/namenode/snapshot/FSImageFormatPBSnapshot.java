@@ -169,9 +169,9 @@ public class FSImageFormatPBSnapshot {
               fileInPb.getPermission(), state.getStringTable());
 
           AclFeature acl = null;
-          if (fileInPb.hasAclId()) {
+          if (fileInPb.hasAcl()) {
             acl = new AclFeature(FSImageFormatPBINode.Loader.loadAclEntries(
-                fileInPb.getAclId(), state.getExtendedAclTable()));
+                fileInPb.getAcl(), state.getStringTable()));
           }
 
           copy = new INodeFileAttributes.SnapshotCopy(pbf.getName()
@@ -265,9 +265,9 @@ public class FSImageFormatPBSnapshot {
           PermissionStatus permission = loadPermission(
               dirCopyInPb.getPermission(), state.getStringTable());
           AclFeature acl = null;
-          if (dirCopyInPb.hasAclId()) {
+          if (dirCopyInPb.hasAcl()) {
             acl = new AclFeature(FSImageFormatPBINode.Loader.loadAclEntries(
-                dirCopyInPb.getAclId(), state.getExtendedAclTable()));
+                dirCopyInPb.getAcl(), state.getStringTable()));
           }
 
           long modTime = dirCopyInPb.getModificationTime();

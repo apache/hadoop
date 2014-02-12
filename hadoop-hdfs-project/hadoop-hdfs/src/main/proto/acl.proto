@@ -60,10 +60,6 @@ message AclStatusProto {
   repeated AclEntryProto entries = 4;
 }
 
-message AclFeatureProto {
-  repeated AclEntryProto entries = 1;
-}
-
 message AclEditLogProto {
   required string src            = 1;
   repeated AclEntryProto entries = 2;
