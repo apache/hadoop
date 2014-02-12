@@ -77,7 +77,8 @@ public class TestMaxRunningAppsEnforcer {
   
   private void removeApp(FSSchedulerApp app) {
     app.getQueue().removeApp(app);
-    maxAppsEnforcer.updateRunnabilityOnAppRemoval(app);
+    maxAppsEnforcer.untrackRunnableApp(app);
+    maxAppsEnforcer.updateRunnabilityOnAppRemoval(app, app.getQueue());
   }
   
   @Test

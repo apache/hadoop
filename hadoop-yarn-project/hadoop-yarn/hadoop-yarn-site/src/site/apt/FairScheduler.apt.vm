@@ -349,16 +349,20 @@ Queue Access Control Lists (ACLs)
   
 * {Administration}
 
-  The fair scheduler provides support for administration at runtime through two mechanisms:
+  The fair scheduler provides support for administration at runtime through a few mechanisms:
 
- * It is possible to modify minimum shares, limits, weights, preemption timeouts
-   and queue scheduling policies at runtime by editing the allocation file. The
-   scheduler will reload this file 10-15 seconds after it sees that it was
-   modified.
+Modifying configuration at runtime
 
- * Current applications, queues, and fair shares can be examined through the
-   ResourceManager's web interface, at
-   http://<ResourceManager URL>/cluster/scheduler.
+  It is possible to modify minimum shares, limits, weights, preemption timeouts
+  and queue scheduling policies at runtime by editing the allocation file. The
+  scheduler will reload this file 10-15 seconds after it sees that it was
+  modified.
+
+Monitoring through web UI
+
+  Current applications, queues, and fair shares can be examined through the
+  ResourceManager's web interface, at
+  http://<ResourceManager URL>/cluster/scheduler.
 
   The following fields can be seen for each queue on the web interface:
   
@@ -381,4 +385,18 @@ Queue Access Control Lists (ACLs)
 
   In addition to the information that the ResourceManager normally displays
   about each application, the web interface includes the application's fair share.
+
+Moving applications between queues
+
+  The Fair Scheduler supports moving a running application to a different queue.
+  This can be useful for moving an important application to a higher priority
+  queue, or for moving an unimportant application to a lower priority queue.
+  Apps can be moved by running "yarn application -movetoqueue appID -queue
+  targetQueueName".
+  
+  When an application is moved to a queue, its existing allocations become
+  counted with the new queue's allocations instead of the old for purposes
+  of determining fairness. An attempt to move an application to a queue will
+  fail if the addition of the app's resources to that queue would violate the
+  its maxRunningApps or maxResources constraints.
 

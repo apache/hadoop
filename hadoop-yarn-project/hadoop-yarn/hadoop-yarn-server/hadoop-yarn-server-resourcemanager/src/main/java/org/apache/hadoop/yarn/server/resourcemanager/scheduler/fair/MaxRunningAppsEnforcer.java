@@ -105,26 +105,15 @@ public class MaxRunningAppsEnforcer {
   }
 
   /**
-   * Updates the relevant tracking variables after a runnable app with the given
-   * queue and user has been removed. Checks to see whether any other applications
-   * are now runnable and makes them so.
+   * Checks to see whether any other applications runnable now that the given
+   * application has been removed from the given queue.  And makes them so.
    * 
    * Runs in O(n log(n)) where n is the number of queues that are under the
    * highest queue that went from having no slack to having slack.
    */
-  public void updateRunnabilityOnAppRemoval(FSSchedulerApp app) {
+  public void updateRunnabilityOnAppRemoval(FSSchedulerApp app, FSLeafQueue queue) {
     AllocationConfiguration allocConf = scheduler.getAllocationConfiguration();
     
-    // Update usersRunnableApps
-    String user = app.getUser();
-    int newUserNumRunning = usersNumRunnableApps.get(user) - 1;
-    if (newUserNumRunning == 0) {
-      usersNumRunnableApps.remove(user);
-    } else {
-      usersNumRunnableApps.put(user, newUserNumRunning);
-    }
-
-    // Update runnable app bookkeeping for queues:
     // childqueueX might have no pending apps itself, but if a queue higher up
     // in the hierarchy parentqueueY has a maxRunningApps set, an app completion
     // in childqueueX could allow an app in some other distant child of
@@ -133,16 +122,14 @@ public class MaxRunningAppsEnforcer {
     // the queue was already at its max before the removal.
     // Thus we find the ancestor queue highest in the tree for which the app
     // that was at its maxRunningApps before the removal.
-    FSLeafQueue queue = app.getQueue();
     FSQueue highestQueueWithAppsNowRunnable = (queue.getNumRunnableApps() ==
         allocConf.getQueueMaxApps(queue.getName()) - 1) ? queue : null;
     FSParentQueue parent = queue.getParent();
     while (parent != null) {
       if (parent.getNumRunnableApps() == allocConf.getQueueMaxApps(parent
-          .getName())) {
+          .getName()) - 1) {
         highestQueueWithAppsNowRunnable = parent;
       }
-      parent.decrementRunnableApps();
       parent = parent.getParent();
     }
 
@@ -157,7 +144,12 @@ public class MaxRunningAppsEnforcer {
       gatherPossiblyRunnableAppLists(highestQueueWithAppsNowRunnable,
           appsNowMaybeRunnable);
     }
-    if (newUserNumRunning == allocConf.getUserMaxApps(user) - 1) {
+    String user = app.getUser();
+    Integer userNumRunning = usersNumRunnableApps.get(user);
+    if (userNumRunning == null) {
+      userNumRunning = 0;
+    }
+    if (userNumRunning == allocConf.getUserMaxApps(user) - 1) {
       List<AppSchedulable> userWaitingApps = usersNonRunnableApps.get(user);
       if (userWaitingApps != null) {
         appsNowMaybeRunnable.add(userWaitingApps);
@@ -205,6 +197,29 @@ public class MaxRunningAppsEnforcer {
         LOG.error("Waiting app " + appSched + " expected to be in "
         		+ "usersNonRunnableApps, but was not. This should never happen.");
       }
+    }
+  }
+  
+  /**
+   * Updates the relevant tracking variables after a runnable app with the given
+   * queue and user has been removed.
+   */
+  public void untrackRunnableApp(FSSchedulerApp app) {
+    // Update usersRunnableApps
+    String user = app.getUser();
+    int newUserNumRunning = usersNumRunnableApps.get(user) - 1;
+    if (newUserNumRunning == 0) {
+      usersNumRunnableApps.remove(user);
+    } else {
+      usersNumRunnableApps.put(user, newUserNumRunning);
+    }
+    
+    // Update runnable app bookkeeping for queues
+    FSLeafQueue queue = app.getQueue();
+    FSParentQueue parent = queue.getParent();
+    while (parent != null) {
+      parent.decrementRunnableApps();
+      parent = parent.getParent();
     }
   }
   
