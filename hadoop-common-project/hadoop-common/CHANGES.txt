@@ -334,6 +334,9 @@ Release 2.4.0 - UNRELEASED
     HADOOP-10326. M/R jobs can not access S3 if Kerberos is enabled. (bc Wong
     via atm)
 
+    HADOOP-10338. Cannot get the FileStatus of the root inode from the new
+    Globber (cmccabe)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
