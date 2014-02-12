@@ -179,6 +179,8 @@ Release 2.4.0 - UNRELEASED
     YARN-1641. ZK store should attempt a write periodically to ensure it is 
     still Active. (kasha)
 
+    YARN-1531. True up yarn command documentation (Akira Ajisaka via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES
