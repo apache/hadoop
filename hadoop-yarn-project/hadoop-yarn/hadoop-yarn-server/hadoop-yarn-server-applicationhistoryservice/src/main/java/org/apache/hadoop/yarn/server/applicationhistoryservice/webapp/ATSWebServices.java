@@ -107,7 +107,6 @@ public class ATSWebServices {
    * Return the description of the application timeline web services.
    */
   @GET
-  @Path("/")
   @Produces({ MediaType.APPLICATION_JSON /* , MediaType.APPLICATION_XML */})
   public AboutInfo about(
       @Context HttpServletRequest req,
@@ -235,7 +234,6 @@ public class ATSWebServices {
    * that happen during storing.
    */
   @POST
-  @Path("/")
   @Consumes({ MediaType.APPLICATION_JSON /* , MediaType.APPLICATION_XML */})
   public ATSPutErrors postEntities(
       @Context HttpServletRequest req,
