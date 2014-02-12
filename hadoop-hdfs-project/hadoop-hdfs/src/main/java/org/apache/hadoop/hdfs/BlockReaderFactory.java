@@ -663,7 +663,7 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
     return null;
   }
 
-  private class BlockReaderPeer {
+  private static class BlockReaderPeer {
     final Peer peer;
     final boolean fromCache;
     
