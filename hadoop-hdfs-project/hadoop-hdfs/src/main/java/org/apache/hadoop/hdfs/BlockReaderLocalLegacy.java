@@ -31,7 +31,6 @@ import java.util.Map;
 
 import org.apache.hadoop.fs.ReadOption;
 import org.apache.hadoop.hdfs.client.ClientMmap;
-import org.apache.hadoop.hdfs.client.ClientMmapManager;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -175,19 +174,21 @@ class BlockReaderLocalLegacy implements BlockReader {
   /**
    * The only way this object can be instantiated.
    */
-  static BlockReaderLocalLegacy newBlockReader(DFSClient dfsClient,
-      String file, ExtendedBlock blk, Token<BlockTokenIdentifier> token,
-      DatanodeInfo node, long startOffset, long length)
-      throws IOException {
-    final DFSClient.Conf conf = dfsClient.getConf();
-
+  static BlockReaderLocalLegacy newBlockReader(DFSClient.Conf conf,
+      UserGroupInformation userGroupInformation,
+      Configuration configuration, String file, ExtendedBlock blk,
+      Token<BlockTokenIdentifier> token, DatanodeInfo node, 
+      long startOffset, long length) throws IOException {
     LocalDatanodeInfo localDatanodeInfo = getLocalDatanodeInfo(node
         .getIpcPort());
     // check the cache first
     BlockLocalPathInfo pathinfo = localDatanodeInfo.getBlockLocalPathInfo(blk);
     if (pathinfo == null) {
-      pathinfo = getBlockPathInfo(dfsClient.ugi, blk, node,
-          dfsClient.getConfiguration(), dfsClient.getHdfsTimeout(), token,
+      if (userGroupInformation == null) {
+        userGroupInformation = UserGroupInformation.getCurrentUser();
+      }
+      pathinfo = getBlockPathInfo(userGroupInformation, blk, node,
+          configuration, conf.hdfsTimeout, token,
           conf.connectToDnViaHostname);
     }
 
@@ -708,8 +709,7 @@ class BlockReaderLocalLegacy implements BlockReader {
   }
 
   @Override
-  public ClientMmap getClientMmap(EnumSet<ReadOption> opts,
-        ClientMmapManager mmapManager) {
+  public ClientMmap getClientMmap(EnumSet<ReadOption> opts) {
     return null;
   }
 }

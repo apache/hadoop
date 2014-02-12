@@ -368,6 +368,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-5929. Add blockpool % usage to HDFS federated nn page.
     (Siqi Li via suresh)
 
+    HDFS-5810. Unify mmap cache and short-circuit file descriptor cache
+    (cmccabe)
+
   OPTIMIZATIONS
 
     HDFS-5790. LeaseManager.findPath is very slow when many leases need recovery
