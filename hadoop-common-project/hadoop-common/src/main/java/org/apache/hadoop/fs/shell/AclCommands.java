@@ -92,11 +92,12 @@ class AclCommands extends FsCommand {
       }
 
       FsPermission perm = item.stat.getPermission();
-      if (perm.getAclBit()) {
-        printExtendedAcl(perm, entries);
-      } else {
+      if (entries.isEmpty()) {
         printMinimalAcl(perm);
+      } else {
+        printExtendedAcl(perm, entries);
       }
+
       out.println();
     }
 

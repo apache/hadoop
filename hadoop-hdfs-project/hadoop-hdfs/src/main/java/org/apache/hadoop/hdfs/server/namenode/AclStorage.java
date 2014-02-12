@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.util.Collections;
 import java.util.List;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -67,12 +68,8 @@ final class AclStorage {
    */
   public static void copyINodeDefaultAcl(INode child) {
     INodeDirectory parent = child.getParent();
-    if (!parent.getFsPermission().getAclBit()) {
-      return;
-    }
-
-    // The default ACL is applicable to new child files and directories only.
-    if (!child.isFile() && !child.isDirectory()) {
+    AclFeature parentAclFeature = parent.getAclFeature();
+    if (parentAclFeature == null || !(child.isFile() || child.isDirectory())) {
       return;
     }
 
@@ -153,12 +150,8 @@ final class AclStorage {
    * @return List<AclEntry> containing extended inode ACL entries
    */
   public static List<AclEntry> readINodeAcl(INode inode, int snapshotId) {
-    FsPermission perm = inode.getFsPermission(snapshotId);
-    if (perm.getAclBit()) {
-      return inode.getAclFeature(snapshotId).getEntries();
-    } else {
-      return Collections.emptyList();
-    }
+    AclFeature f = inode.getAclFeature(snapshotId);
+    return f == null ? ImmutableList.<AclEntry> of() : f.getEntries();
   }
 
   /**
@@ -176,56 +169,50 @@ final class AclStorage {
    * @return List<AclEntry> containing all logical inode ACL entries
    */
   public static List<AclEntry> readINodeLogicalAcl(INode inode) {
-    final List<AclEntry> existingAcl;
     FsPermission perm = inode.getFsPermission();
-    if (perm.getAclBit()) {
-      // Split ACL entries stored in the feature into access vs. default.
-      List<AclEntry> featureEntries = inode.getAclFeature().getEntries();
-      ScopedAclEntries scoped = new ScopedAclEntries(featureEntries);
-      List<AclEntry> accessEntries = scoped.getAccessEntries();
-      List<AclEntry> defaultEntries = scoped.getDefaultEntries();
-
-      // Pre-allocate list size for the explicit entries stored in the feature
-      // plus the 3 implicit entries (owner, group and other) from the permission
-      // bits.
-      existingAcl = Lists.newArrayListWithCapacity(featureEntries.size() + 3);
-
-      if (!accessEntries.isEmpty()) {
-        // Add owner entry implied from user permission bits.
-        existingAcl.add(new AclEntry.Builder()
-          .setScope(AclEntryScope.ACCESS)
-          .setType(AclEntryType.USER)
-          .setPermission(perm.getUserAction())
-          .build());
-
-        // Next add all named user and group entries taken from the feature.
-        existingAcl.addAll(accessEntries);
-
-        // Add mask entry implied from group permission bits.
-        existingAcl.add(new AclEntry.Builder()
-          .setScope(AclEntryScope.ACCESS)
-          .setType(AclEntryType.MASK)
-          .setPermission(perm.getGroupAction())
-          .build());
-
-        // Add other entry implied from other permission bits.
-        existingAcl.add(new AclEntry.Builder()
-          .setScope(AclEntryScope.ACCESS)
-          .setType(AclEntryType.OTHER)
-          .setPermission(perm.getOtherAction())
-          .build());
-      } else {
-        // It's possible that there is a default ACL but no access ACL.  In this
-        // case, add the minimal access ACL implied by the permission bits.
-        existingAcl.addAll(getMinimalAcl(perm));
-      }
-
-      // Add all default entries after the access entries.
-      existingAcl.addAll(defaultEntries);
-    } else {
-      // If the inode doesn't have an extended ACL, then return a minimal ACL.
-      existingAcl = getMinimalAcl(perm);
+    AclFeature f = inode.getAclFeature();
+    if (f == null) {
+      return getMinimalAcl(perm);
     }
+
+    final List<AclEntry> existingAcl;
+    // Split ACL entries stored in the feature into access vs. default.
+    List<AclEntry> featureEntries = f.getEntries();
+    ScopedAclEntries scoped = new ScopedAclEntries(featureEntries);
+    List<AclEntry> accessEntries = scoped.getAccessEntries();
+    List<AclEntry> defaultEntries = scoped.getDefaultEntries();
+
+    // Pre-allocate list size for the explicit entries stored in the feature
+    // plus the 3 implicit entries (owner, group and other) from the permission
+    // bits.
+    existingAcl = Lists.newArrayListWithCapacity(featureEntries.size() + 3);
+
+    if (!accessEntries.isEmpty()) {
+      // Add owner entry implied from user permission bits.
+      existingAcl.add(new AclEntry.Builder().setScope(AclEntryScope.ACCESS)
+          .setType(AclEntryType.USER).setPermission(perm.getUserAction())
+          .build());
+
+      // Next add all named user and group entries taken from the feature.
+      existingAcl.addAll(accessEntries);
+
+      // Add mask entry implied from group permission bits.
+      existingAcl.add(new AclEntry.Builder().setScope(AclEntryScope.ACCESS)
+          .setType(AclEntryType.MASK).setPermission(perm.getGroupAction())
+          .build());
+
+      // Add other entry implied from other permission bits.
+      existingAcl.add(new AclEntry.Builder().setScope(AclEntryScope.ACCESS)
+          .setType(AclEntryType.OTHER).setPermission(perm.getOtherAction())
+          .build());
+    } else {
+      // It's possible that there is a default ACL but no access ACL. In this
+      // case, add the minimal access ACL implied by the permission bits.
+      existingAcl.addAll(getMinimalAcl(perm));
+    }
+
+    // Add all default entries after the access entries.
+    existingAcl.addAll(defaultEntries);
 
     // The above adds entries in the correct order, so no need to sort here.
     return existingAcl;
@@ -240,32 +227,28 @@ final class AclStorage {
    */
   public static void removeINodeAcl(INode inode, int snapshotId)
       throws QuotaExceededException {
-    FsPermission perm = inode.getFsPermission();
-    if (perm.getAclBit()) {
-      List<AclEntry> featureEntries = inode.getAclFeature().getEntries();
-      final FsAction groupPerm;
-      if (featureEntries.get(0).getScope() == AclEntryScope.ACCESS) {
-        // Restore group permissions from the feature's entry to permission
-        // bits, overwriting the mask, which is not part of a minimal ACL.
-        AclEntry groupEntryKey = new AclEntry.Builder()
-          .setScope(AclEntryScope.ACCESS)
-          .setType(AclEntryType.GROUP)
-          .build();
-        int groupEntryIndex = Collections.binarySearch(featureEntries,
-          groupEntryKey, AclTransformation.ACL_ENTRY_COMPARATOR);
-        assert groupEntryIndex >= 0;
-        groupPerm = featureEntries.get(groupEntryIndex).getPermission();
-      } else {
-        groupPerm = perm.getGroupAction();
-      }
+    AclFeature f = inode.getAclFeature();
+    if (f == null) {
+      return;
+    }
 
-      // Remove the feature and turn off the ACL bit.
-      inode.removeAclFeature(snapshotId);
-      FsPermission newPerm = new FsPermission(perm.getUserAction(),
-        groupPerm, perm.getOtherAction(),
-        perm.getStickyBit(), false);
+    FsPermission perm = inode.getFsPermission();
+    List<AclEntry> featureEntries = f.getEntries();
+    if (featureEntries.get(0).getScope() == AclEntryScope.ACCESS) {
+      // Restore group permissions from the feature's entry to permission
+      // bits, overwriting the mask, which is not part of a minimal ACL.
+      AclEntry groupEntryKey = new AclEntry.Builder()
+          .setScope(AclEntryScope.ACCESS).setType(AclEntryType.GROUP).build();
+      int groupEntryIndex = Collections.binarySearch(featureEntries,
+          groupEntryKey, AclTransformation.ACL_ENTRY_COMPARATOR);
+      assert groupEntryIndex >= 0;
+      FsAction groupPerm = featureEntries.get(groupEntryIndex).getPermission();
+      FsPermission newPerm = new FsPermission(perm.getUserAction(), groupPerm,
+          perm.getOtherAction(), perm.getStickyBit());
       inode.setPermission(newPerm, snapshotId);
     }
+
+    inode.removeAclFeature(snapshotId);
   }
 
   /**
@@ -297,7 +280,7 @@ final class AclStorage {
       }
 
       // Attach entries to the feature.
-      if (perm.getAclBit()) {
+      if (inode.getAclFeature() != null) {
         inode.removeAclFeature(snapshotId);
       }
       inode.addAclFeature(createAclFeature(accessEntries, defaultEntries),
@@ -305,7 +288,7 @@ final class AclStorage {
       newPerm = createFsPermissionForExtendedAcl(accessEntries, perm);
     } else {
       // This is a minimal ACL.  Remove the ACL feature if it previously had one.
-      if (perm.getAclBit()) {
+      if (inode.getAclFeature() != null) {
         inode.removeAclFeature(snapshotId);
       }
       newPerm = createFsPermissionForMinimalAcl(newAcl, perm);
@@ -363,7 +346,7 @@ final class AclStorage {
     return new FsPermission(accessEntries.get(0).getPermission(),
       accessEntries.get(accessEntries.size() - 2).getPermission(),
       accessEntries.get(accessEntries.size() - 1).getPermission(),
-      existingPerm.getStickyBit(), true);
+      existingPerm.getStickyBit());
   }
 
   /**
@@ -381,7 +364,7 @@ final class AclStorage {
     return new FsPermission(accessEntries.get(0).getPermission(),
       accessEntries.get(1).getPermission(),
       accessEntries.get(2).getPermission(),
-      existingPerm.getStickyBit(), false);
+      existingPerm.getStickyBit());
   }
 
   /**

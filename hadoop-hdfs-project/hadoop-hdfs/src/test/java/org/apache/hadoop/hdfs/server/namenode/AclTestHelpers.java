@@ -17,6 +17,12 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.junit.Assert.*;
+
+import java.io.IOException;
+
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclEntryScope;
 import org.apache.hadoop.fs.permission.AclEntryType;
@@ -92,5 +98,18 @@ public final class AclTestHelpers {
       .setScope(scope)
       .setType(type)
       .build();
+  }
+
+  /**
+   * Asserts the value of the FsPermission bits on the inode of a specific path.
+   *
+   * @param fs FileSystem to use for check
+   * @param pathToCheck Path inode to check
+   * @param perm short expected permission bits
+   * @throws IOException thrown if there is an I/O error
+   */
+  public static void assertPermission(FileSystem fs, Path pathToCheck,
+      short perm) throws IOException {
+    assertEquals(perm, fs.getFileStatus(pathToCheck).getPermission().toShort());
   }
 }

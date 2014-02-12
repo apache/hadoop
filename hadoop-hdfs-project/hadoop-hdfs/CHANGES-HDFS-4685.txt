@@ -75,6 +75,9 @@ HDFS-4685 (Unreleased)
     HDFS-5925. ACL configuration flag must only reject ACL API calls, not ACLs
     present in fsimage or edits. (cnauroth)
 
+    HDFS-5923. Do not persist the ACL bit in the FsPermission.
+    (Haohui Mai via cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES

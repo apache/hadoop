@@ -297,7 +297,76 @@ public abstract class FSEditLogOp {
     XMLUtils.addSaxString(contentHandler, "RPC_CALLID", 
         Integer.valueOf(callId).toString());
   }
-  
+
+  private static final class AclEditLogUtil {
+    private static final int ACL_EDITLOG_ENTRY_HAS_NAME_OFFSET = 6;
+    private static final int ACL_EDITLOG_ENTRY_TYPE_OFFSET = 3;
+    private static final int ACL_EDITLOG_ENTRY_SCOPE_OFFSET = 5;
+    private static final int ACL_EDITLOG_PERM_MASK = 7;
+    private static final int ACL_EDITLOG_ENTRY_TYPE_MASK = 3;
+    private static final int ACL_EDITLOG_ENTRY_SCOPE_MASK = 1;
+
+    private static final FsAction[] FSACTION_VALUES = FsAction.values();
+    private static final AclEntryScope[] ACL_ENTRY_SCOPE_VALUES = AclEntryScope
+        .values();
+    private static final AclEntryType[] ACL_ENTRY_TYPE_VALUES = AclEntryType
+        .values();
+
+    private static List<AclEntry> read(DataInputStream in, int logVersion)
+        throws IOException {
+      if (!LayoutVersion.supports(Feature.EXTENDED_ACL, logVersion)) {
+        return null;
+      }
+
+      int size = in.readInt();
+      if (size == 0) {
+        return null;
+      }
+
+      List<AclEntry> aclEntries = Lists.newArrayListWithCapacity(size);
+      for (int i = 0; i < size; ++i) {
+        int v = in.read();
+        int p = v & ACL_EDITLOG_PERM_MASK;
+        int t = (v >> ACL_EDITLOG_ENTRY_TYPE_OFFSET)
+            & ACL_EDITLOG_ENTRY_TYPE_MASK;
+        int s = (v >> ACL_EDITLOG_ENTRY_SCOPE_OFFSET)
+            & ACL_EDITLOG_ENTRY_SCOPE_MASK;
+        boolean hasName = ((v >> ACL_EDITLOG_ENTRY_HAS_NAME_OFFSET) & 1) == 1;
+        String name = hasName ? FSImageSerialization.readString(in) : null;
+        aclEntries.add(new AclEntry.Builder().setName(name)
+            .setPermission(FSACTION_VALUES[p])
+            .setScope(ACL_ENTRY_SCOPE_VALUES[s])
+            .setType(ACL_ENTRY_TYPE_VALUES[t]).build());
+      }
+
+      return aclEntries;
+    }
+
+    private static void write(List<AclEntry> aclEntries, DataOutputStream out)
+        throws IOException {
+      if (aclEntries == null) {
+        out.writeInt(0);
+        return;
+      }
+
+      out.writeInt(aclEntries.size());
+      for (AclEntry e : aclEntries) {
+        boolean hasName = e.getName() != null;
+        int v = (e.getScope().ordinal() << ACL_EDITLOG_ENTRY_SCOPE_OFFSET)
+            | (e.getType().ordinal() << ACL_EDITLOG_ENTRY_TYPE_OFFSET)
+            | e.getPermission().ordinal();
+
+        if (hasName) {
+          v |= 1 << ACL_EDITLOG_ENTRY_HAS_NAME_OFFSET;
+        }
+        out.write(v);
+        if (hasName) {
+          FSImageSerialization.writeString(e.getName(), out);
+        }
+      }
+    }
+  }
+
   @SuppressWarnings("unchecked")
   static abstract class AddCloseOp extends FSEditLogOp implements BlockListUpdatingOp {
     int length;
@@ -399,11 +468,12 @@ public abstract class FSEditLogOp {
       permissions.write(out);
 
       if (this.opCode == OP_ADD) {
-        if (permissions.getPermission().getAclBit()) {
+        boolean hasAcl = aclEntries != null;
+        out.writeBoolean(hasAcl);
+        if (hasAcl) {
           AclFeatureProto.newBuilder()
-            .addAllEntries(PBHelper.convertAclEntryProto(aclEntries))
-            .build()
-            .writeDelimitedTo(out);
+              .addAllEntries(PBHelper.convertAclEntryProto(aclEntries)).build()
+              .writeDelimitedTo(out);
         }
 
         FSImageSerialization.writeString(clientName,out);
@@ -464,13 +534,7 @@ public abstract class FSEditLogOp {
 
       // clientname, clientMachine and block locations of last block.
       if (this.opCode == OP_ADD) {
-        if (permissions.getPermission().getAclBit()) {
-          aclEntries = PBHelper.convertAclEntry(
-            AclFeatureProto.parseDelimitedFrom((DataInputStream)in)
-            .getEntriesList());
-        } else {
-          aclEntries = null;
-        }
+        aclEntries = AclEditLogUtil.read(in, logVersion);
 
         this.clientName = FSImageSerialization.readString(in);
         this.clientMachine = FSImageSerialization.readString(in);
@@ -562,7 +626,7 @@ public abstract class FSEditLogOp {
       }
       FSEditLogOp.permissionStatusToXml(contentHandler, permissions);
       if (this.opCode == OP_ADD) {
-        if (permissions.getPermission().getAclBit()) {
+        if (aclEntries != null) {
           appendAclEntriesToXml(contentHandler, aclEntries);
         }
         appendRpcIdsToXml(contentHandler, rpcClientId, rpcCallId);
@@ -590,11 +654,7 @@ public abstract class FSEditLogOp {
         this.blocks = new Block[0];
       }
       this.permissions = permissionStatusFromXml(st);
-      if (permissions.getPermission().getAclBit()) {
-        aclEntries = readAclEntriesFromXml(st);
-      } else {
-        aclEntries = null;
-      }
+      aclEntries = readAclEntriesFromXml(st);
       readRpcIdsFromXml(st);
     }
   }
@@ -1304,11 +1364,13 @@ public abstract class FSEditLogOp {
       FSImageSerialization.writeLong(timestamp, out); // mtime
       FSImageSerialization.writeLong(timestamp, out); // atime, unused at this
       permissions.write(out);
-      if (permissions.getPermission().getAclBit()) {
+
+      boolean hasAcl = aclEntries != null;
+      out.writeBoolean(hasAcl);
+      if (hasAcl) {
         AclFeatureProto.newBuilder()
-          .addAllEntries(PBHelper.convertAclEntryProto(aclEntries))
-          .build()
-          .writeDelimitedTo(out);
+            .addAllEntries(PBHelper.convertAclEntryProto(aclEntries)).build()
+            .writeDelimitedTo(out);
       }
     }
     
@@ -1347,13 +1409,7 @@ public abstract class FSEditLogOp {
       }
 
       this.permissions = PermissionStatus.read(in);
-      if (permissions.getPermission().getAclBit()) {
-        aclEntries = PBHelper.convertAclEntry(
-          AclFeatureProto.parseDelimitedFrom((DataInputStream)in)
-          .getEntriesList());
-      } else {
-        aclEntries = null;
-      }
+      aclEntries = AclEditLogUtil.read(in, logVersion);
     }
 
     @Override
@@ -1389,7 +1445,7 @@ public abstract class FSEditLogOp {
       XMLUtils.addSaxString(contentHandler, "TIMESTAMP",
           Long.valueOf(timestamp).toString());
       FSEditLogOp.permissionStatusToXml(contentHandler, permissions);
-      if (permissions.getPermission().getAclBit()) {
+      if (aclEntries != null) {
         appendAclEntriesToXml(contentHandler, aclEntries);
       }
     }
@@ -1400,11 +1456,7 @@ public abstract class FSEditLogOp {
       this.path = st.getValue("PATH");
       this.timestamp = Long.valueOf(st.getValue("TIMESTAMP"));
       this.permissions = permissionStatusFromXml(st);
-      if (permissions.getPermission().getAclBit()) {
-        aclEntries = readAclEntriesFromXml(st);
-      } else {
-        aclEntries = null;
-      }
+      aclEntries = readAclEntriesFromXml(st);
     }
   }
 
@@ -3895,7 +3947,7 @@ public abstract class FSEditLogOp {
   private static List<AclEntry> readAclEntriesFromXml(Stanza st) {
     List<AclEntry> aclEntries = Lists.newArrayList();
     if (!st.hasChildren("ENTRY"))
-      return aclEntries;
+      return null;
 
     List<Stanza> stanzas = st.getChildren("ENTRY");
     for (Stanza s : stanzas) {

@@ -1177,16 +1177,6 @@ public class FSDirectory implements Closeable {
       throw new FileNotFoundException("File does not exist: " + src);
     }
     int snapshotId = inodesInPath.getLatestSnapshotId();
-    FsPermission oldPerm = inode.getPermissionStatus(snapshotId).getPermission();
-    // This method cannot toggle the ACL bit.
-    if (oldPerm.getAclBit() != permissions.getAclBit()) {
-      permissions = new FsPermission(
-        permissions.getUserAction(),
-        permissions.getGroupAction(),
-        permissions.getOtherAction(),
-        permissions.getStickyBit(),
-        oldPerm.getAclBit());
-    }
     inode.setPermission(permissions, snapshotId);
   }
 
