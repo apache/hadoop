@@ -28,31 +28,39 @@ import java.util.EnumSet;
 import java.util.Random;
 
 import org.apache.commons.lang.SystemUtils;
+import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.BlockReaderTestUtil;
+import org.apache.hadoop.hdfs.ClientContext;
+import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.client.ClientMmap;
-import org.apache.hadoop.hdfs.client.ClientMmapManager;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
+import org.apache.hadoop.hdfs.client.ShortCircuitCache;
+import org.apache.hadoop.hdfs.client.ShortCircuitCache.CacheVisitor;
+import org.apache.hadoop.hdfs.client.ShortCircuitReplica;
+import org.apache.hadoop.hdfs.client.ShortCircuitReplica.Key;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.io.ByteBufferPool;
-import org.apache.hadoop.io.ElasticByteBufferPool;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.net.unix.DomainSocket;
 import org.apache.hadoop.net.unix.TemporarySocketDirectory;
+import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import java.util.Map;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
@@ -250,17 +258,39 @@ public class TestEnhancedByteBufferAccess {
     }
   }
 
-  private static class CountingVisitor
-      implements ClientMmapManager.ClientMmapVisitor {
-    int count = 0;
+  private static class CountingVisitor implements CacheVisitor {
+    private final int expectedNumOutstandingMmaps;
+    private final int expectedNumReplicas;
+    private final int expectedNumEvictable;
+    private final int expectedNumMmapedEvictable;
 
-    @Override
-    public void accept(ClientMmap mmap) {
-      count++;
+    CountingVisitor(int expectedNumOutstandingMmaps,
+        int expectedNumReplicas, int expectedNumEvictable,
+        int expectedNumMmapedEvictable) {
+      this.expectedNumOutstandingMmaps = expectedNumOutstandingMmaps;
+      this.expectedNumReplicas = expectedNumReplicas;
+      this.expectedNumEvictable = expectedNumEvictable;
+      this.expectedNumMmapedEvictable = expectedNumMmapedEvictable;
     }
 
-    public void reset() {
-      count = 0;
+    @Override
+    public void visit(int numOutstandingMmaps,
+        Map<Key, ShortCircuitReplica> replicas,
+        Map<Key, InvalidToken> failedLoads,
+        Map<Long, ShortCircuitReplica> evictable,
+        Map<Long, ShortCircuitReplica> evictableMmapped) {
+      if (expectedNumOutstandingMmaps >= 0) {
+        Assert.assertEquals(expectedNumOutstandingMmaps, numOutstandingMmaps);
+      }
+      if (expectedNumReplicas >= 0) {
+        Assert.assertEquals(expectedNumReplicas, replicas.size());
+      }
+      if (expectedNumEvictable >= 0) {
+        Assert.assertEquals(expectedNumEvictable, evictable.size());
+      }
+      if (expectedNumMmapedEvictable >= 0) {
+        Assert.assertEquals(expectedNumMmapedEvictable, evictableMmapped.size());
+      }
     }
   }
 
@@ -271,105 +301,98 @@ public class TestEnhancedByteBufferAccess {
     final Path TEST_PATH = new Path("/a");
     final int TEST_FILE_LENGTH = 16385;
     final int RANDOM_SEED = 23453;
+    final String CONTEXT = "testZeroCopyMmapCacheContext";
     FSDataInputStream fsIn = null;
-    ByteBuffer results[] = { null, null, null, null, null };
-    
+    ByteBuffer results[] = { null, null, null, null };
+
     DistributedFileSystem fs = null;
+    conf.set(DFSConfigKeys.DFS_CLIENT_CONTEXT, CONTEXT);
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+    cluster.waitActive();
+    fs = cluster.getFileSystem();
+    DFSTestUtil.createFile(fs, TEST_PATH,
+        TEST_FILE_LENGTH, (short)1, RANDOM_SEED);
     try {
-      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
-      cluster.waitActive();
-      fs = cluster.getFileSystem();
-      DFSTestUtil.createFile(fs, TEST_PATH,
-          TEST_FILE_LENGTH, (short)1, RANDOM_SEED);
-      try {
-        DFSTestUtil.waitReplication(fs, TEST_PATH, (short)1);
-      } catch (InterruptedException e) {
-        Assert.fail("unexpected InterruptedException during " +
-            "waitReplication: " + e);
-      } catch (TimeoutException e) {
-        Assert.fail("unexpected TimeoutException during " +
-            "waitReplication: " + e);
-      }
-      fsIn = fs.open(TEST_PATH);
-      byte original[] = new byte[TEST_FILE_LENGTH];
-      IOUtils.readFully(fsIn, original, 0, TEST_FILE_LENGTH);
-      fsIn.close();
-      fsIn = fs.open(TEST_PATH);
-      final ClientMmapManager mmapManager = fs.getClient().getMmapManager();
-      final CountingVisitor countingVisitor = new CountingVisitor();
-      mmapManager.visitMmaps(countingVisitor);
-      Assert.assertEquals(0, countingVisitor.count);
-      mmapManager.visitEvictable(countingVisitor);
-      Assert.assertEquals(0, countingVisitor.count);
-      results[0] = fsIn.read(null, 4096,
-          EnumSet.of(ReadOption.SKIP_CHECKSUMS));
-      fsIn.seek(0);
-      results[1] = fsIn.read(null, 4096,
-          EnumSet.of(ReadOption.SKIP_CHECKSUMS));
-      mmapManager.visitMmaps(countingVisitor);
-      Assert.assertEquals(1, countingVisitor.count);
-      countingVisitor.reset();
-      mmapManager.visitEvictable(countingVisitor);
-      Assert.assertEquals(0, countingVisitor.count);
-      countingVisitor.reset();
-
-      // The mmaps should be of the first block of the file.
-      final ExtendedBlock firstBlock = DFSTestUtil.getFirstBlock(fs, TEST_PATH);
-      mmapManager.visitMmaps(new ClientMmapManager.ClientMmapVisitor() {
-        @Override
-        public void accept(ClientMmap mmap) {
-          Assert.assertEquals(firstBlock, mmap.getBlock());
-        }
-      });
-
-      // Read more blocks.
-      results[2] = fsIn.read(null, 4096,
-          EnumSet.of(ReadOption.SKIP_CHECKSUMS));
-      results[3] = fsIn.read(null, 4096,
-          EnumSet.of(ReadOption.SKIP_CHECKSUMS));
-      try {
-        results[4] = fsIn.read(null, 4096,
-            EnumSet.of(ReadOption.SKIP_CHECKSUMS));
-        Assert.fail("expected UnsupportedOperationException");
-      } catch (UnsupportedOperationException e) {
-        // expected
-      }
-
-      // we should have 3 mmaps, 0 evictable
-      mmapManager.visitMmaps(countingVisitor);
-      Assert.assertEquals(3, countingVisitor.count);
-      countingVisitor.reset();
-      mmapManager.visitEvictable(countingVisitor);
-      Assert.assertEquals(0, countingVisitor.count);
-
-      // After we close the cursors, the mmaps should be evictable for 
-      // a brief period of time.  Then, they should be closed (we're 
-      // using a very quick timeout)
-      for (ByteBuffer buffer : results) {
-        if (buffer != null) {
-          fsIn.releaseBuffer(buffer);
-        }
-      }
-      GenericTestUtils.waitFor(new Supplier<Boolean>() {
-        public Boolean get() {
-          countingVisitor.reset();
-          try {
-            mmapManager.visitEvictable(countingVisitor);
-          } catch (InterruptedException e) {
-            e.printStackTrace();
-            return false;
-          }
-          return (0 == countingVisitor.count);
-        }
-      }, 10, 10000);
-      countingVisitor.reset();
-      mmapManager.visitMmaps(countingVisitor);
-      Assert.assertEquals(0, countingVisitor.count);
-    } finally {
-      if (fsIn != null) fsIn.close();
-      if (fs != null) fs.close();
-      if (cluster != null) cluster.shutdown();
+      DFSTestUtil.waitReplication(fs, TEST_PATH, (short)1);
+    } catch (InterruptedException e) {
+      Assert.fail("unexpected InterruptedException during " +
+          "waitReplication: " + e);
+    } catch (TimeoutException e) {
+      Assert.fail("unexpected TimeoutException during " +
+          "waitReplication: " + e);
     }
+    fsIn = fs.open(TEST_PATH);
+    byte original[] = new byte[TEST_FILE_LENGTH];
+    IOUtils.readFully(fsIn, original, 0, TEST_FILE_LENGTH);
+    fsIn.close();
+    fsIn = fs.open(TEST_PATH);
+    final ShortCircuitCache cache = ClientContext.get(
+        CONTEXT, new DFSClient.Conf(conf)). getShortCircuitCache();
+    cache.accept(new CountingVisitor(0, 5, 5, 0));
+    results[0] = fsIn.read(null, 4096,
+        EnumSet.of(ReadOption.SKIP_CHECKSUMS));
+    fsIn.seek(0);
+    results[1] = fsIn.read(null, 4096,
+        EnumSet.of(ReadOption.SKIP_CHECKSUMS));
+
+    // The mmap should be of the first block of the file.
+    final ExtendedBlock firstBlock =
+        DFSTestUtil.getFirstBlock(fs, TEST_PATH);
+    cache.accept(new CacheVisitor() {
+      @Override
+      public void visit(int numOutstandingMmaps,
+          Map<Key, ShortCircuitReplica> replicas,
+          Map<Key, InvalidToken> failedLoads, 
+          Map<Long, ShortCircuitReplica> evictable,
+          Map<Long, ShortCircuitReplica> evictableMmapped) {
+        ShortCircuitReplica replica = replicas.get(
+            new Key(firstBlock.getBlockId(), firstBlock.getBlockPoolId()));
+        Assert.assertNotNull(replica);
+        Assert.assertTrue(replica.hasMmap());
+        // The replica should not yet be evictable, since we have it open.
+        Assert.assertNull(replica.getEvictableTimeNs());
+      }
+    });
+
+    // Read more blocks.
+    results[2] = fsIn.read(null, 4096,
+        EnumSet.of(ReadOption.SKIP_CHECKSUMS));
+    results[3] = fsIn.read(null, 4096,
+        EnumSet.of(ReadOption.SKIP_CHECKSUMS));
+
+    // we should have 3 mmaps, 1 evictable
+    cache.accept(new CountingVisitor(3, 5, 2, 0));
+
+    // After we close the cursors, the mmaps should be evictable for 
+    // a brief period of time.  Then, they should be closed (we're 
+    // using a very quick timeout)
+    for (ByteBuffer buffer : results) {
+      if (buffer != null) {
+        fsIn.releaseBuffer(buffer);
+      }
+    }
+    fsIn.close();
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      public Boolean get() {
+        final MutableBoolean finished = new MutableBoolean(false);
+        cache.accept(new CacheVisitor() {
+          @Override
+          public void visit(int numOutstandingMmaps,
+              Map<Key, ShortCircuitReplica> replicas,
+              Map<Key, InvalidToken> failedLoads,
+              Map<Long, ShortCircuitReplica> evictable,
+              Map<Long, ShortCircuitReplica> evictableMmapped) {
+            finished.setValue(evictableMmapped.isEmpty());
+          }
+        });
+        return finished.booleanValue();
+      }
+    }, 10, 60000);
+
+    cache.accept(new CountingVisitor(0, -1, -1, -1));
+    
+    fs.close();
+    cluster.shutdown();
   }
 
   /**

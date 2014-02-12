@@ -34,6 +34,8 @@ import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
+import com.google.common.annotations.VisibleForTesting;
+
 
 
 /**
@@ -55,7 +57,8 @@ public class BlockMetadataHeader {
   private short version;
   private DataChecksum checksum = null;
     
-  BlockMetadataHeader(short version, DataChecksum checksum) {
+  @VisibleForTesting
+  public BlockMetadataHeader(short version, DataChecksum checksum) {
     this.checksum = checksum;
     this.version = version;
   }
@@ -148,7 +151,8 @@ public class BlockMetadataHeader {
    * @return 
    * @throws IOException
    */
-  private static void writeHeader(DataOutputStream out, 
+  @VisibleForTesting
+  public static void writeHeader(DataOutputStream out, 
                                   BlockMetadataHeader header) 
                                   throws IOException {
     out.writeShort(header.getVersion());

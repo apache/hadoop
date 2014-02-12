@@ -28,8 +28,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.ReadOption;
 import org.apache.hadoop.hdfs.client.ClientMmap;
+import org.apache.hadoop.hdfs.client.ShortCircuitCache;
+import org.apache.hadoop.hdfs.client.ShortCircuitReplica;
 import org.apache.hadoop.hdfs.DFSClient.Conf;
-import org.apache.hadoop.hdfs.client.ClientMmapManager;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.BlockMetadataHeader;
@@ -67,12 +68,10 @@ class BlockReaderLocal implements BlockReader {
     private boolean verifyChecksum;
     private int maxReadahead;
     private String filename;
-    private FileInputStream streams[];
+    private ShortCircuitReplica replica;
     private long dataPos;
     private DatanodeID datanodeID;
-    private FileInputStreamCache fisCache;
     private boolean mlocked;
-    private BlockMetadataHeader header;
     private ExtendedBlock block;
 
     public Builder(Conf conf) {
@@ -99,8 +98,8 @@ class BlockReaderLocal implements BlockReader {
       return this;
     }
 
-    public Builder setStreams(FileInputStream streams[]) {
-      this.streams = streams;
+    public Builder setShortCircuitReplica(ShortCircuitReplica replica) {
+      this.replica = replica;
       return this;
     }
 
@@ -114,18 +113,8 @@ class BlockReaderLocal implements BlockReader {
       return this;
     }
 
-    public Builder setFileInputStreamCache(FileInputStreamCache fisCache) {
-      this.fisCache = fisCache;
-      return this;
-    }
-
     public Builder setMlocked(boolean mlocked) {
       this.mlocked = mlocked;
-      return this;
-    }
-
-    public Builder setBlockMetadataHeader(BlockMetadataHeader header) {
-      this.header = header;
       return this;
     }
 
@@ -135,9 +124,7 @@ class BlockReaderLocal implements BlockReader {
     }
 
     public BlockReaderLocal build() {
-      Preconditions.checkNotNull(streams);
-      Preconditions.checkArgument(streams.length == 2);
-      Preconditions.checkNotNull(header);
+      Preconditions.checkNotNull(replica);
       return new BlockReaderLocal(this);
     }
   }
@@ -147,7 +134,7 @@ class BlockReaderLocal implements BlockReader {
   /**
    * Pair of streams for this block.
    */
-  private final FileInputStream streams[];
+  private final ShortCircuitReplica replica;
 
   /**
    * The data FileChannel.
@@ -208,12 +195,6 @@ class BlockReaderLocal implements BlockReader {
   private int checksumSize;
 
   /**
-   * FileInputStream cache to return the streams to upon closing,
-   * or null if we should just close them unconditionally.
-   */
-  private final FileInputStreamCache fisCache;
-
-  /**
    * Maximum number of chunks to allocate.
    *
    * This is used to allocate dataBuf and checksumBuf, in the event that
@@ -257,20 +238,18 @@ class BlockReaderLocal implements BlockReader {
    */
   private ByteBuffer checksumBuf;
 
-  private boolean mmapDisabled = false;
-
   private BlockReaderLocal(Builder builder) {
-    this.streams = builder.streams;
-    this.dataIn = builder.streams[0].getChannel();
+    this.replica = builder.replica;
+    this.dataIn = replica.getDataStream().getChannel();
     this.dataPos = builder.dataPos;
-    this.checksumIn = builder.streams[1].getChannel();
-    this.checksum = builder.header.getChecksum();
+    this.checksumIn = replica.getMetaStream().getChannel();
+    BlockMetadataHeader header = builder.replica.getMetaHeader();
+    this.checksum = header.getChecksum();
     this.verifyChecksum = builder.verifyChecksum &&
         (this.checksum.getChecksumType().id != DataChecksum.CHECKSUM_NULL);
     this.mlocked = new AtomicBoolean(builder.mlocked);
     this.filename = builder.filename;
     this.datanodeID = builder.datanodeID;
-    this.fisCache = builder.fisCache;
     this.block = builder.block;
     this.bytesPerChecksum = checksum.getBytesPerChecksum();
     this.checksumSize = checksum.getChecksumSize();
@@ -642,20 +621,7 @@ class BlockReaderLocal implements BlockReader {
     if (LOG.isTraceEnabled()) {
       LOG.trace("close(filename=" + filename + ", block=" + block + ")");
     }
-    if (clientMmap != null) {
-      clientMmap.unref();
-      clientMmap = null;
-    }
-    if (fisCache != null) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("putting FileInputStream for " + filename +
-            " back into FileInputStreamCache");
-      }
-      fisCache.put(datanodeID, block, streams);
-    } else {
-      LOG.debug("closing FileInputStream for " + filename);
-      IOUtils.cleanup(LOG, dataIn, checksumIn);
-    }
+    replica.unref();
     freeDataBufIfExists();
     freeChecksumBufIfExists();
   }
@@ -683,8 +649,7 @@ class BlockReaderLocal implements BlockReader {
   }
 
   @Override
-  public synchronized ClientMmap getClientMmap(EnumSet<ReadOption> opts,
-        ClientMmapManager mmapManager) {
+  public ClientMmap getClientMmap(EnumSet<ReadOption> opts) {
     if ((!opts.contains(ReadOption.SKIP_CHECKSUMS)) &&
           verifyChecksum && (!mlocked.get())) {
       if (LOG.isTraceEnabled()) {
@@ -694,27 +659,7 @@ class BlockReaderLocal implements BlockReader {
       }
       return null;
     }
-    if (clientMmap == null) {
-      if (mmapDisabled) {
-        return null;
-      }
-      try {
-        clientMmap = mmapManager.fetch(datanodeID, block, streams[0]);
-        if (clientMmap == null) {
-          mmapDisabled = true;
-          return null;
-        }
-      } catch (InterruptedException e) {
-        LOG.error("Interrupted while setting up mmap for " + filename, e);
-        Thread.currentThread().interrupt();
-        return null;
-      } catch (IOException e) {
-        LOG.error("unable to set up mmap for " + filename, e);
-        mmapDisabled = true;
-        return null;
-      }
-    }
-    return clientMmap;
+    return replica.getOrCreateClientMmap();
   }
 
   /**
