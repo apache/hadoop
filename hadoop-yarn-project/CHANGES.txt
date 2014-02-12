@@ -6,20 +6,6 @@ Trunk - Unreleased
 
   NEW FEATURES
 
-    YARN-1496. Protocol additions to allow moving apps between queues (Sandy
-    Ryza)
-
-    YARN-1498. Common scheduler changes for moving apps between queues (Sandy
-    Ryza)
-
-    YARN-1504. RM changes for moving apps between queues (Sandy Ryza)
-
-    YARN-1499. Fair Scheduler changes for moving apps between queues (Sandy
-    Ryza)
-
-    YARN-1497. Command line additions for moving apps between queues (Sandy
-    Ryza)
-
   IMPROVEMENTS
 
   OPTIMIZATIONS
@@ -121,6 +107,20 @@ Release 2.4.0 - UNRELEASED
 
     YARN-1637. Implemented a client library for Java users to post timeline
     entities and events. (zjshen)
+    
+    YARN-1496. Protocol additions to allow moving apps between queues (Sandy
+    Ryza)
+
+    YARN-1498. Common scheduler changes for moving apps between queues (Sandy
+    Ryza)
+
+    YARN-1504. RM changes for moving apps between queues (Sandy Ryza)
+
+    YARN-1499. Fair Scheduler changes for moving apps between queues (Sandy
+    Ryza)
+
+    YARN-1497. Command line additions for moving apps between queues (Sandy
+    Ryza)
 
   IMPROVEMENTS
 
