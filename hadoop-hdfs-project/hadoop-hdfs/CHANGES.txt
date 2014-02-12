@@ -416,6 +416,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-4858. HDFS DataNode to NameNode RPC should timeout.
     (Henry Wang via shv)
 
+    HDFS-5879. Some TestHftpFileSystem tests do not close streams.
+    (Gera Shegalov via suresh)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
