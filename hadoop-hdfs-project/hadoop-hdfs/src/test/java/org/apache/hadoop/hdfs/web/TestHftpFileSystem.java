@@ -136,6 +136,7 @@ public class TestHftpFileSystem {
       out.close();
       FSDataInputStream in = hftpFs.open(p);
       assertEquals('0', in.read());
+      in.close();
 
       // Check the file status matches the path. Hftp returns a FileStatus
       // with the entire URI, extract the path part.
@@ -250,6 +251,7 @@ public class TestHftpFileSystem {
     FSDataInputStream in = hftpFs.open(testFile);
     in.seek(7);
     assertEquals('7', in.read());
+    in.close();
   }
 
   @Test
