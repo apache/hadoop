@@ -28,7 +28,7 @@
       {"name": "nn",      "url": "/jmx?qry=Hadoop:service=NameNode,name=NameNodeInfo"},
       {"name": "nnstat",  "url": "/jmx?qry=Hadoop:service=NameNode,name=NameNodeStatus"},
       {"name": "fs",      "url": "/jmx?qry=Hadoop:service=NameNode,name=FSNamesystemState"},
-      {"name": "mem",     "url": "/jmx?qry=java.lang:type=Memory"},
+      {"name": "mem",     "url": "/jmx?qry=java.lang:type=Memory"}
     ];
 
     var HELPERS = {

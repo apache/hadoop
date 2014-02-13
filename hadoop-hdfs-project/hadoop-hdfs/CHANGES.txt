@@ -445,6 +445,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-5934. New Namenode UI back button doesn't work as expected
     (Travis Thompson via brandonli)
 
+    HDFS-5901. NameNode new UI doesn't support IE8 and IE9 on windows 7
+    (Vinayakumar B via brandonli)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
