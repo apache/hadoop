@@ -400,4 +400,10 @@ public class ResourceMgrDelegate extends YarnClient {
       IOException {
     return client.getContainers(applicationAttemptId);
   }
+
+  @Override
+  public void moveApplicationAcrossQueues(ApplicationId appId, String queue)
+      throws YarnException, IOException {
+    client.moveApplicationAcrossQueues(appId, queue);
+  }
 }

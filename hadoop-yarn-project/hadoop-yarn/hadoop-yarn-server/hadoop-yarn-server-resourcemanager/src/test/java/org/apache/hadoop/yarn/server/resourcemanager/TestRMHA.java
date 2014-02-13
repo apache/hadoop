@@ -31,6 +31,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -119,6 +120,7 @@ public class TestRMHA {
    */
   @Test (timeout = 30000)
   public void testStartAndTransitions() throws IOException {
+    configuration.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
     Configuration conf = new YarnConfiguration(configuration);
     rm = new MockRM(conf);
     rm.init(conf);
@@ -178,7 +180,6 @@ public class TestRMHA {
         "automatic failover is enabled";
 
     Configuration conf = new YarnConfiguration(configuration);
-    conf.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, true);
 
     rm = new MockRM(conf);
     rm.init(conf);
@@ -236,6 +237,7 @@ public class TestRMHA {
     String errorMessageForEventHandler =
         "Expect to get the same number of handlers";
     String errorMessageForService = "Expect to get the same number of services";
+    configuration.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
     Configuration conf = new YarnConfiguration(configuration);
     rm = new MockRM(conf) {
       @Override
@@ -310,6 +312,57 @@ public class TestRMHA {
     } catch (Exception ex) {
       Assert.assertTrue(ex.getMessage().contains(
           "Invalid configuration! Can not find valid RM_HA_ID."));
+    }
+  }
+
+  @Test
+  public void testHAWithRMHostName() {
+    //test if both RM_HOSTBANE_{rm_id} and RM_RPCADDRESS_{rm_id} are set
+    //We should only read rpc addresses from RM_RPCADDRESS_{rm_id} configuration
+    configuration.set(HAUtil.addSuffix(YarnConfiguration.RM_HOSTNAME,
+        RM1_NODE_ID), "1.1.1.1");
+    configuration.set(HAUtil.addSuffix(YarnConfiguration.RM_HOSTNAME,
+        RM2_NODE_ID), "0.0.0.0");
+    configuration.set(HAUtil.addSuffix(YarnConfiguration.RM_HOSTNAME,
+        RM3_NODE_ID), "2.2.2.2");
+    try {
+      Configuration conf = new YarnConfiguration(configuration);
+      rm = new MockRM(conf);
+      rm.init(conf);
+      for (String confKey : YarnConfiguration.RM_SERVICES_ADDRESS_CONF_KEYS) {
+        assertEquals("RPC address not set for " + confKey,
+            RM1_ADDRESS, conf.get(HAUtil.addSuffix(confKey, RM1_NODE_ID)));
+        assertEquals("RPC address not set for " + confKey,
+            RM2_ADDRESS, conf.get(HAUtil.addSuffix(confKey, RM2_NODE_ID)));
+        assertEquals("RPC address not set for " + confKey,
+            RM3_ADDRESS, conf.get(HAUtil.addSuffix(confKey, RM3_NODE_ID)));
+      }
+    } catch (YarnRuntimeException e) {
+      fail("Should not throw any exceptions.");
+    }
+
+    //test if only RM_HOSTBANE_{rm_id} is set
+    configuration.clear();
+    configuration.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
+    configuration.set(YarnConfiguration.RM_HA_IDS, RM1_NODE_ID + ","
+        + RM2_NODE_ID);
+    configuration.set(HAUtil.addSuffix(YarnConfiguration.RM_HOSTNAME,
+        RM1_NODE_ID), "1.1.1.1");
+    configuration.set(HAUtil.addSuffix(YarnConfiguration.RM_HOSTNAME,
+        RM2_NODE_ID), "0.0.0.0");
+    try {
+      Configuration conf = new YarnConfiguration(configuration);
+      rm = new MockRM(conf);
+      rm.init(conf);
+      assertEquals("RPC address not set for " + YarnConfiguration.RM_ADDRESS,
+          "1.1.1.1:8032",
+          conf.get(HAUtil.addSuffix(YarnConfiguration.RM_ADDRESS, RM1_NODE_ID)));
+      assertEquals("RPC address not set for " + YarnConfiguration.RM_ADDRESS,
+          "0.0.0.0:8032",
+          conf.get(HAUtil.addSuffix(YarnConfiguration.RM_ADDRESS, RM2_NODE_ID)));
+
+    } catch (YarnRuntimeException e) {
+      fail("Should not throw any exceptions.");
     }
   }
 

@@ -172,8 +172,6 @@ public class TestRMFailover extends ClientBaseWithFixes {
   @Test
   public void testAutomaticFailover()
       throws YarnException, InterruptedException, IOException {
-    conf.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, true);
-    conf.setBoolean(YarnConfiguration.AUTO_FAILOVER_EMBEDDED, true);
     conf.set(YarnConfiguration.RM_CLUSTER_ID, "yarn-test-cluster");
     conf.set(YarnConfiguration.RM_ZK_ADDRESS, hostPort);
     conf.setInt(YarnConfiguration.RM_ZK_TIMEOUT_MS, 2000);
@@ -193,6 +191,7 @@ public class TestRMFailover extends ClientBaseWithFixes {
   @Test
   public void testWebAppProxyInStandAloneMode() throws YarnException,
       InterruptedException, IOException {
+    conf.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
     WebAppProxyServer webAppProxyServer = new WebAppProxyServer();
     try {
       conf.set(YarnConfiguration.PROXY_ADDRESS, "0.0.0.0:9099");
@@ -227,6 +226,7 @@ public class TestRMFailover extends ClientBaseWithFixes {
   @Test
   public void testEmbeddedWebAppProxy() throws YarnException,
       InterruptedException, IOException {
+    conf.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
     cluster.init(conf);
     cluster.start();
     getAdminService(0).transitionToActive(req);

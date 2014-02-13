@@ -61,6 +61,7 @@ public class ApplicationCLI extends YarnCLI {
   private static final String APP_TYPE_CMD = "appTypes";
   private static final String APP_STATE_CMD = "appStates";
   private static final String ALLSTATES_OPTION = "ALL";
+  private static final String QUEUE_CMD = "queue";
   public static final String APPLICATION = "application";
   public static final String APPLICATION_ATTEMPT = "applicationattempt";
   public static final String CONTAINER = "container";
@@ -96,6 +97,10 @@ public class ApplicationCLI extends YarnCLI {
           + "and -appStates to filter applications based on application state");
     }
     opts.addOption(KILL_CMD, true, "Kills the application.");
+    opts.addOption(MOVE_TO_QUEUE_CMD, true, "Moves the application to a "
+        + "different queue.");
+    opts.addOption(QUEUE_CMD, true, "Works with the movetoqueue command to"
+        + " specify which queue to move an application to.");
     opts.addOption(HELP_CMD, false, "Displays help for all commands.");
     Option appTypeOpt = new Option(APP_TYPE_CMD, true, "Works with -list to "
         + "filter applications based on "
@@ -112,6 +117,8 @@ public class ApplicationCLI extends YarnCLI {
     appStateOpt.setArgName("States");
     opts.addOption(appStateOpt);
     opts.getOption(KILL_CMD).setArgName("Application ID");
+    opts.getOption(MOVE_TO_QUEUE_CMD).setArgName("Application ID");
+    opts.getOption(QUEUE_CMD).setArgName("Queue Name");
     opts.getOption(STATUS_CMD).setArgName("Application ID");
 
     int exitCode = -1;
@@ -202,6 +209,13 @@ public class ApplicationCLI extends YarnCLI {
         return exitCode;
       }
       killApplication(cliParser.getOptionValue(KILL_CMD));
+    } else if (cliParser.hasOption(MOVE_TO_QUEUE_CMD)) {
+      if (!cliParser.hasOption(QUEUE_CMD)) {
+        printUsage(opts);
+        return exitCode;
+      }
+      moveApplicationAcrossQueues(cliParser.getOptionValue(MOVE_TO_QUEUE_CMD),
+          cliParser.getOptionValue(QUEUE_CMD));
     } else if (cliParser.hasOption(HELP_CMD)) {
       printUsage(opts);
       return 0;
@@ -364,6 +378,28 @@ public class ApplicationCLI extends YarnCLI {
     } else {
       sysout.println("Killing application " + applicationId);
       client.killApplication(appId);
+    }
+  }
+  
+  /**
+   * Kills the application with the application id as appId
+   * 
+   * @param applicationId
+   * @throws YarnException
+   * @throws IOException
+   */
+  private void moveApplicationAcrossQueues(String applicationId, String queue)
+      throws YarnException, IOException {
+    ApplicationId appId = ConverterUtils.toApplicationId(applicationId);
+    ApplicationReport appReport = client.getApplicationReport(appId);
+    if (appReport.getYarnApplicationState() == YarnApplicationState.FINISHED
+        || appReport.getYarnApplicationState() == YarnApplicationState.KILLED
+        || appReport.getYarnApplicationState() == YarnApplicationState.FAILED) {
+      sysout.println("Application " + applicationId + " has already finished ");
+    } else {
+      sysout.println("Moving application " + applicationId + " to queue " + queue);
+      client.moveApplicationAcrossQueues(appId, queue);
+      sysout.println("Successfully completed move.");
     }
   }
 

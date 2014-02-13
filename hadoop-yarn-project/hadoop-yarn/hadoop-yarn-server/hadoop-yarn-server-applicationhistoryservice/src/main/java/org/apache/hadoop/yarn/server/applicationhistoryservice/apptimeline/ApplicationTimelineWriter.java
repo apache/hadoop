@@ -23,6 +23,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.yarn.api.records.apptimeline.ATSEntities;
 import org.apache.hadoop.yarn.api.records.apptimeline.ATSPutErrors;
 
+import java.io.IOException;
+
 /**
  * This interface is for storing application timeline information.
  */
@@ -37,7 +39,8 @@ public interface ApplicationTimelineWriter {
    *
    * @param data An {@link ATSEntities} object.
    * @return An {@link ATSPutErrors} object.
+   * @throws IOException
    */
-  ATSPutErrors put(ATSEntities data);
+  ATSPutErrors put(ATSEntities data) throws IOException;
 
 }
