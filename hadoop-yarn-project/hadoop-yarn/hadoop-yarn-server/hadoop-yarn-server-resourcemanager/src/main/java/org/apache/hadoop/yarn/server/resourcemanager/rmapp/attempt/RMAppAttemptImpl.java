@@ -157,6 +157,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
   private RMAppAttemptEvent eventCausingFinalSaving;
   private RMAppAttemptState targetedFinalState;
   private RMAppAttemptState recoveredFinalState;
+  private RMAppAttemptState stateBeforeFinalSaving;
   private Object transitionTodo;
 
   private static final StateMachineFactory<RMAppAttemptImpl,
@@ -885,6 +886,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       RMAppAttemptState stateToBeStored) {
 
     rememberTargetTransitions(event, transitionToDo, targetFinalState);
+    stateBeforeFinalSaving = getState();
 
     // As of today, finalState, diagnostics, final-tracking-url and
     // finalAppStatus are the only things that we store into the StateStore
@@ -1536,6 +1538,10 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
   @Override
   public YarnApplicationAttemptState createApplicationAttemptState() {
     RMAppAttemptState state = getState();
+    // If AppAttempt is in FINAL_SAVING state, return its previous state.
+    if (state.equals(RMAppAttemptState.FINAL_SAVING)) {
+      state = stateBeforeFinalSaving;
+    }
     return RMServerUtils.createApplicationAttemptState(state);
   }
 

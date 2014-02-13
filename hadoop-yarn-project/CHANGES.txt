@@ -181,6 +181,9 @@ Release 2.4.0 - UNRELEASED
 
     YARN-1531. True up yarn command documentation (Akira Ajisaka via kasha)
 
+    YARN-1345. Remove FINAL_SAVING state from YarnApplicationAttemptState
+    (Zhijie Shen via jianhe)
+
   OPTIMIZATIONS
 
   BUG FIXES
