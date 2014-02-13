@@ -20,15 +20,27 @@ package org.apache.hadoop.fs.shell;
 import static org.junit.Assert.*;
 
 import java.io.IOException;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsShell;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclEntryScope;
 import org.apache.hadoop.fs.permission.AclEntryType;
+import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.ipc.RpcNoSuchMethodException;
+import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.Before;
 import org.junit.Test;
@@ -126,6 +138,97 @@ public class TestAclCommands {
     expectedList.add(defaultUser);
     expectedList.add(defaultMask);
     assertEquals("Parsed Acl not correct", expectedList, parsedList);
+  }
+
+  @Test
+  public void testLsNoRpcForGetAclStatus() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY, "stubfs:///");
+    conf.setClass("fs.stubfs.impl", StubFileSystem.class, FileSystem.class);
+    conf.setBoolean("stubfs.noRpcForGetAclStatus", true);
+    assertEquals("ls must succeed even if getAclStatus RPC does not exist.",
+      0, ToolRunner.run(conf, new FsShell(), new String[] { "-ls", "/" }));
+  }
+
+  @Test
+  public void testLsAclsUnsupported() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY, "stubfs:///");
+    conf.setClass("fs.stubfs.impl", StubFileSystem.class, FileSystem.class);
+    assertEquals("ls must succeed even if FileSystem does not implement ACLs.",
+      0, ToolRunner.run(conf, new FsShell(), new String[] { "-ls", "/" }));
+  }
+
+  public static class StubFileSystem extends FileSystem {
+
+    public FSDataOutputStream append(Path f, int bufferSize,
+        Progressable progress) throws IOException {
+      return null;
+    }
+
+    public FSDataOutputStream create(Path f, FsPermission permission,
+        boolean overwrite, int bufferSize, short replication, long blockSize,
+        Progressable progress) throws IOException {
+      return null;
+    }
+
+    @Override
+    public boolean delete(Path f, boolean recursive) throws IOException {
+      return false;
+    }
+
+    public AclStatus getAclStatus(Path path) throws IOException {
+      if (getConf().getBoolean("stubfs.noRpcForGetAclStatus", false)) {
+        throw new RemoteException(RpcNoSuchMethodException.class.getName(),
+          "test exception");
+      }
+      return super.getAclStatus(path);
+    }
+
+    @Override
+    public FileStatus getFileStatus(Path f) throws IOException {
+      return null;
+    }
+
+    @Override
+    public URI getUri() {
+      return URI.create("stubfs:///");
+    }
+
+    @Override
+    public Path getWorkingDirectory() {
+      return null;
+    }
+
+    @Override
+    public FileStatus[] listStatus(Path f) throws IOException {
+      FsPermission perm = new FsPermission(FsAction.ALL, FsAction.READ_EXECUTE,
+        FsAction.READ_EXECUTE);
+      Path path = new Path("/foo");
+      FileStatus stat = new FileStatus(1000, true, 3, 1000, 0, 0, perm, "owner",
+        "group", path);
+      return new FileStatus[] { stat };
+    }
+
+    @Override
+    public boolean mkdirs(Path f, FsPermission permission)
+        throws IOException {
+      return false;
+    }
+
+    @Override
+    public FSDataInputStream open(Path f, int bufferSize) throws IOException {
+      return null;
+    }
+
+    @Override
+    public boolean rename(Path src, Path dst) throws IOException {
+      return false;
+    }
+
+    @Override
+    public void setWorkingDirectory(Path dir) {
+    }
   }
 
   private int runCommand(String[] commands) throws Exception {

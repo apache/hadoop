@@ -80,6 +80,8 @@ HDFS-4685 (Unreleased)
 
     HDFS-5933. Optimize the FSImage layout for ACLs (Haohui Mai via cnauroth)
 
+    HDFS-5932. Ls should display the ACL bit (Chris Nauroth via wheat9)
+
   OPTIMIZATIONS
 
   BUG FIXES

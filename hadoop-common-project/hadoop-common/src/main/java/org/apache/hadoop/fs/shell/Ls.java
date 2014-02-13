@@ -19,15 +19,22 @@
 package org.apache.hadoop.fs.shell;
 
 import java.io.IOException;
+import java.net.URI;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.LinkedList;
+import java.util.Set;
 import org.apache.hadoop.util.StringUtils;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.ipc.RpcNoSuchMethodException;
+
+import com.google.common.collect.Sets;
 
 /**
  * Get a listing of all files in that match the file patterns.
@@ -66,6 +73,8 @@ class Ls extends FsCommand {
   protected boolean dirRecurse;
 
   protected boolean humanReadable = false;
+  private Set<URI> aclNotSupportedFsSet = Sets.newHashSet();
+
   protected String formatSize(long size) {
     return humanReadable
       ? StringUtils.TraditionalBinaryPrefix.long2String(size, "", 1)
@@ -108,7 +117,7 @@ class Ls extends FsCommand {
     FileStatus stat = item.stat;
     String line = String.format(lineFormat,
         (stat.isDirectory() ? "d" : "-"),
-        stat.getPermission(),
+        stat.getPermission() + (hasAcl(item) ? "+" : ""),
         (stat.isFile() ? stat.getReplication() : "-"),
         stat.getOwner(),
         stat.getGroup(),
@@ -144,6 +153,49 @@ class Ls extends FsCommand {
     fmt.append("%"  + maxLen   + "s ");
     fmt.append("%s %s"); // mod time & path
     lineFormat = fmt.toString();
+  }
+
+  /**
+   * Calls getAclStatus to determine if the given item has an ACL.  For
+   * compatibility, this method traps errors caused by the RPC method missing
+   * from the server side.  This would happen if the client was connected to an
+   * old NameNode that didn't have the ACL APIs.  This method also traps the
+   * case of the client-side FileSystem not implementing the ACL APIs.
+   * FileSystem instances that do not support ACLs are remembered.  This
+   * prevents the client from sending multiple failing RPC calls during a
+   * recursive ls.
+   *
+   * @param item PathData item to check
+   * @return boolean true if item has an ACL
+   * @throws IOException if there is a failure
+   */
+  private boolean hasAcl(PathData item) throws IOException {
+    FileSystem fs = item.fs;
+    if (aclNotSupportedFsSet.contains(fs.getUri())) {
+      // This FileSystem failed to run the ACL API in an earlier iteration.
+      return false;
+    }
+    try {
+      return !fs.getAclStatus(item.path).getEntries().isEmpty();
+    } catch (RemoteException e) {
+      // If this is a RpcNoSuchMethodException, then the client is connected to
+      // an older NameNode that doesn't support ACLs.  Keep going.
+      IOException e2 = e.unwrapRemoteException(RpcNoSuchMethodException.class);
+      if (!(e2 instanceof RpcNoSuchMethodException)) {
+        throw e;
+      }
+    } catch (IOException e) {
+      // The NameNode supports ACLs, but they are not enabled.  Keep going.
+      String message = e.getMessage();
+      if (message != null && !message.contains("ACLs has been disabled")) {
+        throw e;
+      }
+    } catch (UnsupportedOperationException e) {
+      // The underlying FileSystem doesn't implement ACLs.  Keep going.
+    }
+    // Remember that this FileSystem cannot support ACLs.
+    aclNotSupportedFsSet.add(fs.getUri());
+    return false;
   }
 
   private int maxLength(int n, Object value) {
