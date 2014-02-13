@@ -345,6 +345,11 @@ public class SchedulerApplicationAttempt {
     for (RMContainer rmContainer : newlyAllocatedContainers) {
       rmContainer.handle(new RMContainerEvent(rmContainer.getContainerId(),
           RMContainerEventType.ACQUIRED));
+      Container container = rmContainer.getContainer();
+      rmContainer.getContainer().setContainerToken(
+        rmContext.getContainerTokenSecretManager().createContainerToken(
+          rmContainer.getContainerId(), container.getNodeId(), getUser(),
+          container.getResource()));
       returnContainerList.add(rmContainer.getContainer());
     }
     newlyAllocatedContainers.clear();

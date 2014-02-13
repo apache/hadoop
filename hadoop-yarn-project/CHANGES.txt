@@ -269,6 +269,10 @@ Release 2.4.0 - UNRELEASED
     YARN-1578. Fixed reading incomplete application attempt and container data
     in FileSystemApplicationHistoryStore. (Shinichi Yamashita via zjshen)
 
+    YARN-1417. Modified RM to generate container-tokens not at creation time, but
+    at allocation time so as to prevent RM from shelling out containers with
+    expired tokens. (Omkar Vinit Joshi and Jian He via vinodkv)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
