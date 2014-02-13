@@ -82,6 +82,8 @@ HDFS-4685 (Unreleased)
 
     HDFS-5932. Ls should display the ACL bit (Chris Nauroth via wheat9)
 
+    HDFS-5937. Fix TestOfflineEditsViewer on HDFS-4685 branch. (cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES
