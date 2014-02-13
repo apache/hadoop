@@ -20,17 +20,13 @@ package org.apache.hadoop.hdfs;
 import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hdfs.client.ClientMmap;
 import org.apache.hadoop.hdfs.client.ShortCircuitCache;
-import org.apache.hadoop.hdfs.client.ShortCircuitCache.CacheVisitor;
 import org.apache.hadoop.hdfs.client.ShortCircuitCache.ShortCircuitReplicaCreator;
 import org.apache.hadoop.hdfs.client.ShortCircuitReplica;
-import org.apache.hadoop.hdfs.client.ShortCircuitReplica.Key;
 import org.apache.hadoop.hdfs.client.ShortCircuitReplicaInfo;
 import org.apache.hadoop.hdfs.server.datanode.BlockMetadataHeader;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.unix.TemporarySocketDirectory;
-import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Time;
@@ -44,7 +40,6 @@ import java.io.DataOutputStream;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.Map;
 
 public class TestShortCircuitCache {
   static final Log LOG = LogFactory.getLog(TestShortCircuitCache.class);
@@ -105,7 +100,7 @@ public class TestShortCircuitCache {
     @Override
     public ShortCircuitReplicaInfo createShortCircuitReplicaInfo() {
       try {
-        Key key = new Key(blockId, "test_bp1");
+        ExtendedBlockId key = new ExtendedBlockId(blockId, "test_bp1");
         return new ShortCircuitReplicaInfo(
             new ShortCircuitReplica(key,
                 pair.getFileInputStreams()[0], pair.getFileInputStreams()[1],
@@ -129,14 +124,14 @@ public class TestShortCircuitCache {
         new ShortCircuitCache(10, 10000000, 10, 10000000, 1, 10000);
     final TestFileDescriptorPair pair = new TestFileDescriptorPair();
     ShortCircuitReplicaInfo replicaInfo1 =
-      cache.fetchOrCreate(new Key(123, "test_bp1"),
+      cache.fetchOrCreate(new ExtendedBlockId(123, "test_bp1"),
         new SimpleReplicaCreator(123, cache, pair));
     Preconditions.checkNotNull(replicaInfo1.getReplica());
     Preconditions.checkState(replicaInfo1.getInvalidTokenException() == null);
     pair.compareWith(replicaInfo1.getReplica().getDataStream(),
                      replicaInfo1.getReplica().getMetaStream());
     ShortCircuitReplicaInfo replicaInfo2 =
-      cache.fetchOrCreate(new Key(123, "test_bp1"),
+      cache.fetchOrCreate(new ExtendedBlockId(123, "test_bp1"),
           new ShortCircuitReplicaCreator() {
         @Override
         public ShortCircuitReplicaInfo createShortCircuitReplicaInfo() {
@@ -157,7 +152,7 @@ public class TestShortCircuitCache {
     // really long here)
     ShortCircuitReplicaInfo replicaInfo3 =
       cache.fetchOrCreate(
-          new Key(123, "test_bp1"), new ShortCircuitReplicaCreator() {
+          new ExtendedBlockId(123, "test_bp1"), new ShortCircuitReplicaCreator() {
         @Override
         public ShortCircuitReplicaInfo createShortCircuitReplicaInfo() {
           Assert.fail("expected to use existing entry.");
@@ -179,7 +174,7 @@ public class TestShortCircuitCache {
     final TestFileDescriptorPair pair = new TestFileDescriptorPair();
     ShortCircuitReplicaInfo replicaInfo1 =
       cache.fetchOrCreate(
-        new Key(123, "test_bp1"), new SimpleReplicaCreator(123, cache, pair));
+        new ExtendedBlockId(123, "test_bp1"), new SimpleReplicaCreator(123, cache, pair));
     Preconditions.checkNotNull(replicaInfo1.getReplica());
     Preconditions.checkState(replicaInfo1.getInvalidTokenException() == null);
     pair.compareWith(replicaInfo1.getReplica().getDataStream(),
@@ -190,7 +185,7 @@ public class TestShortCircuitCache {
       Thread.sleep(10);
       ShortCircuitReplicaInfo replicaInfo2 =
         cache.fetchOrCreate(
-          new Key(123, "test_bp1"), new ShortCircuitReplicaCreator() {
+          new ExtendedBlockId(123, "test_bp1"), new ShortCircuitReplicaCreator() {
           @Override
           public ShortCircuitReplicaInfo createShortCircuitReplicaInfo() {
             triedToCreate.setValue(true);
@@ -221,7 +216,7 @@ public class TestShortCircuitCache {
     };
     for (int i = 0; i < pairs.length; i++) {
       replicaInfos[i] = cache.fetchOrCreate(
-          new Key(i, "test_bp1"), 
+          new ExtendedBlockId(i, "test_bp1"), 
             new SimpleReplicaCreator(i, cache, pairs[i]));
       Preconditions.checkNotNull(replicaInfos[i].getReplica());
       Preconditions.checkState(replicaInfos[i].getInvalidTokenException() == null);
@@ -237,7 +232,7 @@ public class TestShortCircuitCache {
     for (int i = 1; i < pairs.length; i++) {
       final Integer iVal = new Integer(i);
       replicaInfos[i] = cache.fetchOrCreate(
-          new Key(i, "test_bp1"),
+          new ExtendedBlockId(i, "test_bp1"),
             new ShortCircuitReplicaCreator() {
         @Override
         public ShortCircuitReplicaInfo createShortCircuitReplicaInfo() {
@@ -253,7 +248,7 @@ public class TestShortCircuitCache {
     // The first (oldest) replica should not be cached.
     final MutableBoolean calledCreate = new MutableBoolean(false);
     replicaInfos[0] = cache.fetchOrCreate(
-        new Key(0, "test_bp1"),
+        new ExtendedBlockId(0, "test_bp1"),
           new ShortCircuitReplicaCreator() {
         @Override
         public ShortCircuitReplicaInfo createShortCircuitReplicaInfo() {
@@ -289,7 +284,7 @@ public class TestShortCircuitCache {
     final long HOUR_IN_MS = 60 * 60 * 1000;
     for (int i = 0; i < pairs.length; i++) {
       final Integer iVal = new Integer(i);
-      final Key key = new Key(i, "test_bp1");
+      final ExtendedBlockId key = new ExtendedBlockId(i, "test_bp1");
       replicaInfos[i] = cache.fetchOrCreate(key,
           new ShortCircuitReplicaCreator() {
         @Override
@@ -316,7 +311,7 @@ public class TestShortCircuitCache {
       @Override
       public Boolean get() {
         ShortCircuitReplicaInfo info = cache.fetchOrCreate(
-          new Key(0, "test_bp1"), new ShortCircuitReplicaCreator() {
+          new ExtendedBlockId(0, "test_bp1"), new ShortCircuitReplicaCreator() {
           @Override
           public ShortCircuitReplicaInfo createShortCircuitReplicaInfo() {
             return null;
@@ -332,7 +327,7 @@ public class TestShortCircuitCache {
 
     // Make sure that second replica did not go stale.
     ShortCircuitReplicaInfo info = cache.fetchOrCreate(
-        new Key(1, "test_bp1"), new ShortCircuitReplicaCreator() {
+        new ExtendedBlockId(1, "test_bp1"), new ShortCircuitReplicaCreator() {
       @Override
       public ShortCircuitReplicaInfo createShortCircuitReplicaInfo() {
         Assert.fail("second replica went stale, despite 1 " +

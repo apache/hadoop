@@ -34,7 +34,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.BlockReaderTestUtil;
+import org.apache.hadoop.hdfs.ExtendedBlockId;
 import org.apache.hadoop.hdfs.ClientContext;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -46,7 +46,6 @@ import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
 import org.apache.hadoop.hdfs.client.ShortCircuitCache;
 import org.apache.hadoop.hdfs.client.ShortCircuitCache.CacheVisitor;
 import org.apache.hadoop.hdfs.client.ShortCircuitReplica;
-import org.apache.hadoop.hdfs.client.ShortCircuitReplica.Key;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.io.ByteBufferPool;
 import org.apache.hadoop.io.IOUtils;
@@ -275,8 +274,8 @@ public class TestEnhancedByteBufferAccess {
 
     @Override
     public void visit(int numOutstandingMmaps,
-        Map<Key, ShortCircuitReplica> replicas,
-        Map<Key, InvalidToken> failedLoads,
+        Map<ExtendedBlockId, ShortCircuitReplica> replicas,
+        Map<ExtendedBlockId, InvalidToken> failedLoads,
         Map<Long, ShortCircuitReplica> evictable,
         Map<Long, ShortCircuitReplica> evictableMmapped) {
       if (expectedNumOutstandingMmaps >= 0) {
@@ -341,12 +340,12 @@ public class TestEnhancedByteBufferAccess {
     cache.accept(new CacheVisitor() {
       @Override
       public void visit(int numOutstandingMmaps,
-          Map<Key, ShortCircuitReplica> replicas,
-          Map<Key, InvalidToken> failedLoads, 
+          Map<ExtendedBlockId, ShortCircuitReplica> replicas,
+          Map<ExtendedBlockId, InvalidToken> failedLoads, 
           Map<Long, ShortCircuitReplica> evictable,
           Map<Long, ShortCircuitReplica> evictableMmapped) {
         ShortCircuitReplica replica = replicas.get(
-            new Key(firstBlock.getBlockId(), firstBlock.getBlockPoolId()));
+            new ExtendedBlockId(firstBlock.getBlockId(), firstBlock.getBlockPoolId()));
         Assert.assertNotNull(replica);
         Assert.assertTrue(replica.hasMmap());
         // The replica should not yet be evictable, since we have it open.
@@ -378,8 +377,8 @@ public class TestEnhancedByteBufferAccess {
         cache.accept(new CacheVisitor() {
           @Override
           public void visit(int numOutstandingMmaps,
-              Map<Key, ShortCircuitReplica> replicas,
-              Map<Key, InvalidToken> failedLoads,
+              Map<ExtendedBlockId, ShortCircuitReplica> replicas,
+              Map<ExtendedBlockId, InvalidToken> failedLoads,
               Map<Long, ShortCircuitReplica> evictable,
               Map<Long, ShortCircuitReplica> evictableMmapped) {
             finished.setValue(evictableMmapped.isEmpty());

@@ -373,6 +373,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-5810. Unify mmap cache and short-circuit file descriptor cache
     (cmccabe)
 
+    HDFS-5940. Minor cleanups to ShortCircuitReplica, FsDatasetCache, and
+    DomainSocketWatcher (cmccabe)
+
   OPTIMIZATIONS
 
     HDFS-5790. LeaseManager.findPath is very slow when many leases need recovery
