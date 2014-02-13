@@ -259,6 +259,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1692. ConcurrentModificationException in fair scheduler AppSchedulable
     (Sangjin Lee via Sandy Ryza)
 
+    YARN-1578. Fixed reading incomplete application attempt and container data
+    in FileSystemApplicationHistoryStore. (Shinichi Yamashita via zjshen)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

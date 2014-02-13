@@ -215,17 +215,30 @@ public class FileSystemApplicationHistoryStore extends AbstractService
       getApplicationAttempts(ApplicationId appId) throws IOException {
     Map<ApplicationAttemptId, ApplicationAttemptHistoryData> historyDataMap =
         new HashMap<ApplicationAttemptId, ApplicationAttemptHistoryData>();
-    Map<ApplicationAttemptId, StartFinishDataPair<ApplicationAttemptStartData, ApplicationAttemptFinishData>> startFinshDataMap =
-        new HashMap<ApplicationAttemptId, StartFinishDataPair<ApplicationAttemptStartData, ApplicationAttemptFinishData>>();
     HistoryFileReader hfReader = getHistoryFileReader(appId);
     try {
       while (hfReader.hasNext()) {
         HistoryFileReader.Entry entry = hfReader.next();
-        if (entry.key.id.startsWith(ConverterUtils.APPLICATION_ATTEMPT_PREFIX)) {
-          if (entry.key.suffix.equals(START_DATA_SUFFIX)) {
-            retrieveStartFinishData(appId, entry, startFinshDataMap, true);
-          } else if (entry.key.suffix.equals(FINISH_DATA_SUFFIX)) {
-            retrieveStartFinishData(appId, entry, startFinshDataMap, false);
+        if (entry.key.id.startsWith(
+            ConverterUtils.APPLICATION_ATTEMPT_PREFIX)) {
+          ApplicationAttemptId appAttemptId = 
+              ConverterUtils.toApplicationAttemptId(entry.key.id);
+          if (appAttemptId.getApplicationId().equals(appId)) {
+            ApplicationAttemptHistoryData historyData = 
+                historyDataMap.get(appAttemptId);
+            if (historyData == null) {
+              historyData = ApplicationAttemptHistoryData.newInstance(
+                  appAttemptId, null, -1, null, null, null,
+                  FinalApplicationStatus.UNDEFINED, null);
+              historyDataMap.put(appAttemptId, historyData);
+            }
+            if (entry.key.suffix.equals(START_DATA_SUFFIX)) {
+              mergeApplicationAttemptHistoryData(historyData,
+                  parseApplicationAttemptStartData(entry.value));
+            } else if (entry.key.suffix.equals(FINISH_DATA_SUFFIX)) {
+              mergeApplicationAttemptHistoryData(historyData,
+                  parseApplicationAttemptFinishData(entry.value));
+            }
           }
         }
       }
@@ -237,43 +250,7 @@ public class FileSystemApplicationHistoryStore extends AbstractService
     } finally {
       hfReader.close();
     }
-    for (Map.Entry<ApplicationAttemptId, StartFinishDataPair<ApplicationAttemptStartData, ApplicationAttemptFinishData>> entry : startFinshDataMap
-      .entrySet()) {
-      ApplicationAttemptHistoryData historyData =
-          ApplicationAttemptHistoryData.newInstance(entry.getKey(), null, -1,
-            null, null, null, FinalApplicationStatus.UNDEFINED, null);
-      mergeApplicationAttemptHistoryData(historyData,
-        entry.getValue().startData);
-      mergeApplicationAttemptHistoryData(historyData,
-        entry.getValue().finishData);
-      historyDataMap.put(entry.getKey(), historyData);
-    }
     return historyDataMap;
-  }
-
-  private
-      void
-      retrieveStartFinishData(
-          ApplicationId appId,
-          HistoryFileReader.Entry entry,
-          Map<ApplicationAttemptId, StartFinishDataPair<ApplicationAttemptStartData, ApplicationAttemptFinishData>> startFinshDataMap,
-          boolean start) throws IOException {
-    ApplicationAttemptId appAttemptId =
-        ConverterUtils.toApplicationAttemptId(entry.key.id);
-    if (appAttemptId.getApplicationId().equals(appId)) {
-      StartFinishDataPair<ApplicationAttemptStartData, ApplicationAttemptFinishData> pair =
-          startFinshDataMap.get(appAttemptId);
-      if (pair == null) {
-        pair =
-            new StartFinishDataPair<ApplicationAttemptStartData, ApplicationAttemptFinishData>();
-        startFinshDataMap.put(appAttemptId, pair);
-      }
-      if (start) {
-        pair.startData = parseApplicationAttemptStartData(entry.value);
-      } else {
-        pair.finishData = parseApplicationAttemptFinishData(entry.value);
-      }
-    }
   }
 
   @Override
@@ -391,20 +368,30 @@ public class FileSystemApplicationHistoryStore extends AbstractService
       ApplicationAttemptId appAttemptId) throws IOException {
     Map<ContainerId, ContainerHistoryData> historyDataMap =
         new HashMap<ContainerId, ContainerHistoryData>();
-    Map<ContainerId, StartFinishDataPair<ContainerStartData, ContainerFinishData>> startFinshDataMap =
-        new HashMap<ContainerId, StartFinishDataPair<ContainerStartData, ContainerFinishData>>();
     HistoryFileReader hfReader =
         getHistoryFileReader(appAttemptId.getApplicationId());
     try {
       while (hfReader.hasNext()) {
         HistoryFileReader.Entry entry = hfReader.next();
         if (entry.key.id.startsWith(ConverterUtils.CONTAINER_PREFIX)) {
-          if (entry.key.suffix.equals(START_DATA_SUFFIX)) {
-            retrieveStartFinishData(appAttemptId, entry, startFinshDataMap,
-              true);
-          } else if (entry.key.suffix.equals(FINISH_DATA_SUFFIX)) {
-            retrieveStartFinishData(appAttemptId, entry, startFinshDataMap,
-              false);
+          ContainerId containerId =
+              ConverterUtils.toContainerId(entry.key.id);
+          if (containerId.getApplicationAttemptId().equals(appAttemptId)) {
+            ContainerHistoryData historyData =
+                historyDataMap.get(containerId);
+            if (historyData == null) {
+              historyData = ContainerHistoryData.newInstance(
+                  containerId, null, null, null, Long.MIN_VALUE,
+                  Long.MAX_VALUE, null, null, Integer.MAX_VALUE, null);
+              historyDataMap.put(containerId, historyData);
+            }
+            if (entry.key.suffix.equals(START_DATA_SUFFIX)) {
+              mergeContainerHistoryData(historyData,
+                  parseContainerStartData(entry.value));
+            } else if (entry.key.suffix.equals(FINISH_DATA_SUFFIX)) {
+              mergeContainerHistoryData(historyData,
+                  parseContainerFinishData(entry.value));
+            }
           }
         }
       }
@@ -416,41 +403,7 @@ public class FileSystemApplicationHistoryStore extends AbstractService
     } finally {
       hfReader.close();
     }
-    for (Map.Entry<ContainerId, StartFinishDataPair<ContainerStartData, ContainerFinishData>> entry : startFinshDataMap
-      .entrySet()) {
-      ContainerHistoryData historyData =
-          ContainerHistoryData
-            .newInstance(entry.getKey(), null, null, null, Long.MIN_VALUE,
-              Long.MAX_VALUE, null, null, Integer.MAX_VALUE, null);
-      mergeContainerHistoryData(historyData, entry.getValue().startData);
-      mergeContainerHistoryData(historyData, entry.getValue().finishData);
-      historyDataMap.put(entry.getKey(), historyData);
-    }
     return historyDataMap;
-  }
-
-  private
-      void
-      retrieveStartFinishData(
-          ApplicationAttemptId appAttemptId,
-          HistoryFileReader.Entry entry,
-          Map<ContainerId, StartFinishDataPair<ContainerStartData, ContainerFinishData>> startFinshDataMap,
-          boolean start) throws IOException {
-    ContainerId containerId = ConverterUtils.toContainerId(entry.key.id);
-    if (containerId.getApplicationAttemptId().equals(appAttemptId)) {
-      StartFinishDataPair<ContainerStartData, ContainerFinishData> pair =
-          startFinshDataMap.get(containerId);
-      if (pair == null) {
-        pair =
-            new StartFinishDataPair<ContainerStartData, ContainerFinishData>();
-        startFinshDataMap.put(containerId, pair);
-      }
-      if (start) {
-        pair.startData = parseContainerStartData(entry.value);
-      } else {
-        pair.finishData = parseContainerFinishData(entry.value);
-      }
-    }
   }
 
   @Override
@@ -828,14 +781,5 @@ public class FileSystemApplicationHistoryStore extends AbstractService
       id = in.readUTF();
       suffix = in.readUTF();
     }
-
   }
-
-  private static class StartFinishDataPair<S, F> {
-
-    private S startData;
-    private F finishData;
-
-  }
-
 }
