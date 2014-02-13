@@ -187,6 +187,9 @@ public class TestAclCommands {
 
     @Override
     public FileStatus getFileStatus(Path f) throws IOException {
+      if (f.isRoot()) {
+        return new FileStatus(0, true, 0, 0, 0, f);
+      }
       return null;
     }
 

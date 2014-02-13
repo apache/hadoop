@@ -107,3 +107,6 @@ HDFS-4685 (Unreleased)
 
     HADOOP-10270. getfacl does not display effective permissions of masked
     entries. (cnauroth)
+
+    HADOOP-10344. Fix TestAclCommands after merging HADOOP-10338 patch.
+    (cnauroth)
