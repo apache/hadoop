@@ -24,10 +24,17 @@ import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.security.GroupMappingServiceProvider;
+import org.apache.hadoop.security.Groups;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
@@ -37,6 +44,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsRequest
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshQueuesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshServiceAclsRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshSuperUserGroupsConfigurationRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshUserToGroupsMappingsRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.junit.After;
@@ -366,6 +374,84 @@ public class TestRMAdminService {
         .get("hadoop.proxyuser.test.hosts").contains("test_hosts"));
   }
 
+  @Test
+  public void testRefreshUserToGroupsMappingsWithLocalConfigurationProvider() {
+    rm = new MockRM(configuration);
+    rm.init(configuration);
+    rm.start();
+    try {
+      rm.adminService
+          .refreshUserToGroupsMappings(RefreshUserToGroupsMappingsRequest
+              .newInstance());
+    } catch (Exception ex) {
+      fail("Using localConfigurationProvider. Should not get any exception.");
+    }
+  }
+
+  @Test
+  public void
+      testRefreshUserToGroupsMappingsWithFileSystemBasedConfigurationProvider()
+          throws IOException, YarnException {
+    configuration.set(YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
+        "org.apache.hadoop.yarn.FileSystemBasedConfigurationProvider");
+    try {
+      rm = new MockRM(configuration);
+      rm.init(configuration);
+      rm.start();
+      fail("Should throw an exception");
+    } catch (Exception ex) {
+      // Expect exception here
+    }
+
+    String user = UserGroupInformation.getCurrentUser().getUserName();
+    List<String> groupWithInit =
+        new ArrayList<String>(Groups.getUserToGroupsMappingService(
+            configuration).getGroups(user));
+
+    // upload default configurations
+    uploadDefaultConfiguration();
+    Configuration conf = new Configuration();
+    conf.setClass(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
+        MockUnixGroupsMapping.class,
+        GroupMappingServiceProvider.class);
+    uploadConfiguration(conf, "core-site.xml");
+
+    try {
+      rm = new MockRM(configuration);
+      rm.init(configuration);
+      rm.start();
+    } catch (Exception ex) {
+      fail("Should not get any exceptions");
+    }
+
+    // Make sure RM will use the updated GroupMappingServiceProvider
+    List<String> groupBefore =
+        new ArrayList<String>(Groups.getUserToGroupsMappingService(
+            configuration).getGroups(user));
+    Assert.assertTrue(groupBefore.contains("test_group_A")
+        && groupBefore.contains("test_group_B")
+        && groupBefore.contains("test_group_C") && groupBefore.size() == 3);
+    Assert.assertTrue(groupWithInit.size() != groupBefore.size());
+    Assert.assertFalse(groupWithInit.contains("test_group_A")
+        || groupWithInit.contains("test_group_B")
+        || groupWithInit.contains("test_group_C"));
+
+    // update the groups
+    MockUnixGroupsMapping.updateGroups();
+
+    rm.adminService
+        .refreshUserToGroupsMappings(RefreshUserToGroupsMappingsRequest
+            .newInstance());
+    List<String> groupAfter =
+        Groups.getUserToGroupsMappingService(configuration).getGroups(user);
+
+    // should get the updated groups
+    Assert.assertTrue(groupAfter.contains("test_group_D")
+        && groupAfter.contains("test_group_E")
+        && groupAfter.contains("test_group_F") && groupAfter.size() == 3);
+
+  }
+
   private String writeConfigurationXML(Configuration conf, String confXMLName)
       throws IOException {
     DataOutputStream output = null;
@@ -418,4 +504,38 @@ public class TestRMAdminService {
         .addResource(YarnConfiguration.HADOOP_POLICY_CONFIGURATION_FILE);
     uploadConfiguration(hadoopPolicyConf, "hadoop-policy.xml");
   }
+
+  private static class MockUnixGroupsMapping implements
+      GroupMappingServiceProvider {
+
+    @SuppressWarnings("serial")
+    private static List<String> group = new ArrayList<String>() {{
+      add("test_group_A");
+      add("test_group_B");
+      add("test_group_C");
+    }};
+
+    @Override
+    public List<String> getGroups(String user) throws IOException {
+      return group;
+    }
+
+    @Override
+    public void cacheGroupsRefresh() throws IOException {
+      // Do nothing
+    }
+
+    @Override
+    public void cacheGroupsAdd(List<String> groups) throws IOException {
+      // Do nothing
+    }
+
+    public static void updateGroups() {
+      group.clear();
+      group.add("test_group_D");
+      group.add("test_group_E");
+      group.add("test_group_F");
+    }
+  }
+
 }
