@@ -438,6 +438,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-5941. add dfs.namenode.secondary.https-address and
     dfs.namenode.secondary.https-address in hdfs-default.xml.
     (Haohui Mai via cnauroth)
+
+    HDFS-5913. Nfs3Utils#getWccAttr() should check attr parameter against null
+    (brandonli)
  
 Release 2.3.1 - UNRELEASED
 
