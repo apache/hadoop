@@ -441,7 +441,10 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-5913. Nfs3Utils#getWccAttr() should check attr parameter against null
     (brandonli)
- 
+
+    HDFS-5934. New Namenode UI back button doesn't work as expected
+    (Travis Thompson via brandonli)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
