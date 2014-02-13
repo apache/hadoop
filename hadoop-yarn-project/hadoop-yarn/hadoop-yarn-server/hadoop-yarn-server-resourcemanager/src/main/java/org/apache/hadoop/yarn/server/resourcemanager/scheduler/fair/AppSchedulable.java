@@ -151,17 +151,11 @@ public class AppSchedulable extends Schedulable {
     NodeId nodeId = node.getRMNode().getNodeID();
     ContainerId containerId = BuilderUtils.newContainerId(application
         .getApplicationAttemptId(), application.getNewContainerId());
-    org.apache.hadoop.yarn.api.records.Token containerToken =
-        containerTokenSecretManager.createContainerToken(containerId, nodeId,
-          application.getUser(), capability);
-    if (containerToken == null) {
-      return null; // Try again later.
-    }
 
     // Create the container
     Container container =
         BuilderUtils.newContainer(containerId, nodeId, node.getRMNode()
-          .getHttpAddress(), capability, priority, containerToken);
+          .getHttpAddress(), capability, priority, null);
 
     return container;
   }

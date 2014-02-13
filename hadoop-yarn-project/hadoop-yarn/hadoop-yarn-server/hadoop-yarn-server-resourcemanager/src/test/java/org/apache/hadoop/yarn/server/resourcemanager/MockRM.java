@@ -142,8 +142,15 @@ public class MockRM extends ResourceManager {
   public void waitForState(MockNM nm, ContainerId containerId,
       RMContainerState containerState) throws Exception {
     RMContainer container = getResourceScheduler().getRMContainer(containerId);
-    Assert.assertNotNull("Container shouldn't be null", container);
     int timeoutSecs = 0;
+    while(container == null && timeoutSecs++ < 20) {
+      nm.nodeHeartbeat(true);
+      container = getResourceScheduler().getRMContainer(containerId);
+      System.out.println("Waiting for container " + containerId + " to be allocated.");
+      Thread.sleep(100);
+    }
+    Assert.assertNotNull("Container shouldn't be null", container);
+    timeoutSecs = 0;
     while (!containerState.equals(container.getState()) && timeoutSecs++ < 40) {
       System.out.println("Container : " + containerId + " State is : "
           + container.getState() + " Waiting for state : " + containerState);
