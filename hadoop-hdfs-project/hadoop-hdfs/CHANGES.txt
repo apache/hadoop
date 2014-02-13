@@ -338,6 +338,8 @@ Trunk (Unreleased)
     HDFS-5915. Refactor FSImageFormatProtobuf to simplify cross section reads.
     (Haohui Mai via cnauroth)
 
+    HDFS-5847. Consolidate INodeReference into a separate section. (jing9)
+
 Release 2.4.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

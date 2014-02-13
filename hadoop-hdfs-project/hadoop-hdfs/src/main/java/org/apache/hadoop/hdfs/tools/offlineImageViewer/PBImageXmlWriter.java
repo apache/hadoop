@@ -43,6 +43,7 @@ import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeDirectorySection
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection.INodeSymlink;
+import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeReferenceSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.NameSystemSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.SecretManagerSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.SnapshotDiffSection;
@@ -131,6 +132,9 @@ public final class PBImageXmlWriter {
           break;
         case INODE:
           dumpINodeSection(is);
+          break;
+        case INODE_REFRENCE:
+          dumpINodeReferenceSection(is);
           break;
         case INODE_DIR:
           dumpINodeDirectorySection(is);
@@ -227,18 +231,27 @@ public final class PBImageXmlWriter {
       for (long id : e.getChildrenList()) {
         o("inode", id);
       }
-      for (int i = 0; i < e.getNumOfRef(); i++) {
-        INodeSection.INodeReference r = INodeSection.INodeReference
-            .parseDelimitedFrom(in);
-        dumpINodeReference(r);
-
+      for (int refId : e.getRefChildrenList()) {
+        o("inodereference-index", refId);
       }
       out.print("</directory>\n");
     }
     out.print("</INodeDirectorySection>\n");
   }
 
-  private void dumpINodeReference(INodeSection.INodeReference r) {
+  private void dumpINodeReferenceSection(InputStream in) throws IOException {
+    out.print("<INodeReferenceSection>");
+    while (true) {
+      INodeReferenceSection.INodeReference e = INodeReferenceSection
+          .INodeReference.parseDelimitedFrom(in);
+      if (e == null) {
+        break;
+      }
+      dumpINodeReference(e);
+    }
+  }
+
+  private void dumpINodeReference(INodeReferenceSection.INodeReference r) {
     out.print("<ref>");
     o("referredId", r.getReferredId()).o("name", r.getName().toStringUtf8())
         .o("dstSnapshotId", r.getDstSnapshotId())
@@ -362,10 +375,15 @@ public final class PBImageXmlWriter {
             o("name", ce.getName().toStringUtf8());
             out.print("</created>\n");
           }
-          for (int j = 0; j < d.getNumOfDeletedRef(); ++j) {
-            INodeSection.INodeReference r = INodeSection.INodeReference
-                .parseDelimitedFrom(in);
-            dumpINodeReference(r);
+          for (long did : d.getDeletedINodeList()) {
+            out.print("<deleted>");
+            o("inode", did);
+            out.print("</deleted>\n");
+          }
+          for (int dRefid : d.getDeletedINodeRefList()) {
+            out.print("<deleted>");
+            o("inodereference-index", dRefid);
+            out.print("</deleted>\n");
           }
           out.print("</dirdiff>\n");
         }

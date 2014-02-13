@@ -36,6 +36,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf.SectionName;
 import org.apache.hadoop.hdfs.server.namenode.FSImageUtil;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.FileSummary;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeDirectorySection;
+import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeReferenceSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection.INode;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection.INodeDirectory;
@@ -79,6 +80,7 @@ final class LsrPBImage {
   private String[] stringTable;
   private HashMap<Long, INodeSection.INode> inodes = Maps.newHashMap();
   private HashMap<Long, long[]> dirmap = Maps.newHashMap();
+  private ArrayList<INodeReferenceSection.INodeReference> refList = Lists.newArrayList();
 
   public LsrPBImage(Configuration conf, PrintWriter out) {
     this.conf = conf;
@@ -124,6 +126,9 @@ final class LsrPBImage {
           break;
         case INODE:
           loadINodeSection(is);
+          break;
+        case INODE_REFRENCE:
+          loadINodeReferenceSection(is);
           break;
         case INODE_DIR:
           loadINodeDirectorySection(is);
@@ -202,14 +207,26 @@ final class LsrPBImage {
       if (e == null) {
         break;
       }
-      long[] l = new long[e.getChildrenCount()];
-      for (int i = 0; i < l.length; ++i) {
+      long[] l = new long[e.getChildrenCount() + e.getRefChildrenCount()];
+      for (int i = 0; i < e.getChildrenCount(); ++i) {
         l[i] = e.getChildren(i);
       }
-      dirmap.put(e.getParent(), l);
-      for (int i = 0; i < e.getNumOfRef(); i++) {
-        INodeSection.INodeReference.parseDelimitedFrom(in);
+      for (int i = e.getChildrenCount(); i < l.length; i++) {
+        int refId = e.getRefChildren(i - e.getChildrenCount());
+        l[i] = refList.get(refId).getReferredId();
       }
+      dirmap.put(e.getParent(), l);
+    }
+  }
+
+  private void loadINodeReferenceSection(InputStream in) throws IOException {
+    while (true) {
+      INodeReferenceSection.INodeReference e = INodeReferenceSection
+          .INodeReference.parseDelimitedFrom(in);
+      if (e == null) {
+        break;
+      }
+      refList.add(e);
     }
   }
 

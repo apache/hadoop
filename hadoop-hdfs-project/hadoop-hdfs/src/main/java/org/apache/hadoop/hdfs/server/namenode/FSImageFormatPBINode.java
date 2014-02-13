@@ -43,9 +43,6 @@ import org.apache.hadoop.hdfs.server.namenode.FsImageProto.FileSummary;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.FilesUnderConstructionSection.FileUnderConstructionEntry;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeDirectorySection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection;
-import org.apache.hadoop.hdfs.server.namenode.INodeReference.DstReference;
-import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithCount;
-import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithName;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 
@@ -67,25 +64,6 @@ public final class FSImageFormatPBINode {
       int usid = (int) ((id >> USER_STRID_OFFSET) & USER_GROUP_STRID_MASK);
       return new PermissionStatus(stringTable[usid], stringTable[gsid],
           new FsPermission(perm));
-    }
-
-    public static INodeReference loadINodeReference(
-        INodeSection.INodeReference r, FSDirectory dir) throws IOException {
-      long referredId = r.getReferredId();
-      INode referred = dir.getInode(referredId);
-      WithCount withCount = (WithCount) referred.getParentReference();
-      if (withCount == null) {
-        withCount = new INodeReference.WithCount(null, referred);
-      }
-      final INodeReference ref;
-      if (r.hasDstSnapshotId()) { // DstReference
-        ref = new INodeReference.DstReference(null, withCount,
-            r.getDstSnapshotId());
-      } else {
-        ref = new INodeReference.WithName(null, withCount, r.getName()
-            .toByteArray(), r.getLastSnapshotId());
-      }
-      return ref;
     }
 
     public static INodeDirectory loadINodeDirectory(INodeSection.INode n,
@@ -126,6 +104,8 @@ public final class FSImageFormatPBINode {
     }
 
     void loadINodeDirectorySection(InputStream in) throws IOException {
+      final List<INodeReference> refList = parent.getLoaderContext()
+          .getRefList();
       while (true) {
         INodeDirectorySection.DirEntry e = INodeDirectorySection.DirEntry
             .parseDelimitedFrom(in);
@@ -138,18 +118,11 @@ public final class FSImageFormatPBINode {
           INode child = dir.getInode(id);
           addToParent(p, child);
         }
-        for (int i = 0; i < e.getNumOfRef(); i++) {
-          INodeReference ref = loadINodeReference(in);
+        for (int refId : e.getRefChildrenList()) {
+          INodeReference ref = refList.get(refId);
           addToParent(p, ref);
         }
       }
-    }
-
-    private INodeReference loadINodeReference(InputStream in)
-        throws IOException {
-      INodeSection.INodeReference ref = INodeSection.INodeReference
-          .parseDelimitedFrom(in);
-      return loadINodeReference(ref, dir);
     }
 
     void loadINodeSection(InputStream in) throws IOException {
@@ -306,19 +279,6 @@ public final class FSImageFormatPBINode {
       return b;
     }
 
-    public static INodeSection.INodeReference.Builder buildINodeReference(
-        INodeReference ref) throws IOException {
-      INodeSection.INodeReference.Builder rb = INodeSection.INodeReference
-          .newBuilder().setReferredId(ref.getId());
-      if (ref instanceof WithName) {
-        rb.setLastSnapshotId(((WithName) ref).getLastSnapshotId()).setName(
-            ByteString.copyFrom(ref.getLocalNameBytes()));
-      } else if (ref instanceof DstReference) {
-        rb.setDstSnapshotId(((DstReference) ref).getDstSnapshotId());
-      }
-      return rb;
-    }
-
     private final FSNamesystem fsn;
     private final FileSummary.Builder summary;
     private final SaveNamespaceContext context;
@@ -334,6 +294,8 @@ public final class FSImageFormatPBINode {
     void serializeINodeDirectorySection(OutputStream out) throws IOException {
       Iterator<INodeWithAdditionalFields> iter = fsn.getFSDirectory()
           .getINodeMap().getMapIterator();
+      final ArrayList<INodeReference> refList = parent.getSaverContext()
+          .getRefList();
       int i = 0;
       while (iter.hasNext()) {
         INodeWithAdditionalFields n = iter.next();
@@ -346,21 +308,16 @@ public final class FSImageFormatPBINode {
         if (children.size() > 0) {
           INodeDirectorySection.DirEntry.Builder b = INodeDirectorySection.
               DirEntry.newBuilder().setParent(n.getId());
-          List<INodeReference> refs = new ArrayList<INodeReference>();
           for (INode inode : children) {
             if (!inode.isReference()) {
               b.addChildren(inode.getId());
             } else {
-              refs.add(inode.asReference());
+              refList.add(inode.asReference());
+              b.addRefChildren(refList.size() - 1);
             }
           }
-          b.setNumOfRef(refs.size());
           INodeDirectorySection.DirEntry e = b.build();
           e.writeDelimitedTo(out);
-          for (INodeReference ref : refs) {
-            INodeSection.INodeReference.Builder rb = buildINodeReference(ref);
-            rb.build().writeDelimitedTo(out);
-          }
         }
 
         ++i;
