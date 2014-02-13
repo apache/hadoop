@@ -314,5 +314,6 @@ public class TestFileStatus {
         FileSystem.LOG.info("GOOD: getting an exception", ioe);
       }
     }
+    fs.delete(dir, true);
   }
 }
