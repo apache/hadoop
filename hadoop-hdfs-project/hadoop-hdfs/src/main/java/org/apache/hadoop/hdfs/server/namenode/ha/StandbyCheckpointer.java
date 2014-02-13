@@ -40,6 +40,7 @@ import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.server.namenode.CheckpointConf;
 import org.apache.hadoop.hdfs.server.namenode.FSImage;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.SaveNamespaceCancelledException;
 import org.apache.hadoop.hdfs.server.namenode.TransferFsImage;
@@ -163,7 +164,7 @@ public class StandbyCheckpointer {
         return;
       }
 
-      img.saveNamespace(namesystem, canceler);
+      img.saveNamespace(namesystem, NameNodeFile.IMAGE, canceler);
       txid = img.getStorage().getMostRecentCheckpointTxId();
       assert txid == thisCheckpointTxId : "expected to save checkpoint at txid=" +
         thisCheckpointTxId + " but instead saved at txid=" + txid;
@@ -179,8 +180,7 @@ public class StandbyCheckpointer {
     Future<Void> upload = executor.submit(new Callable<Void>() {
       @Override
       public Void call() throws IOException {
-        TransferFsImage.uploadImageFromStorage(
-            activeNNAddress, myNNAddress,
+        TransferFsImage.uploadImageFromStorage(activeNNAddress, myNNAddress,
             namesystem.getFSImage().getStorage(), txid);
         return null;
       }

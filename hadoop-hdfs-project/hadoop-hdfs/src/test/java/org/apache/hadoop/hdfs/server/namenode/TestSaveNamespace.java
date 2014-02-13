@@ -52,6 +52,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
+import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
 import org.apache.hadoop.hdfs.util.Canceler;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
 import org.apache.hadoop.io.IOUtils;
@@ -527,7 +528,7 @@ public class TestSaveNamespace {
         Future<Void> saverFuture = pool.submit(new Callable<Void>() {
           @Override
           public Void call() throws Exception {
-            image.saveNamespace(finalFsn, canceler);
+            image.saveNamespace(finalFsn, NameNodeFile.IMAGE, canceler);
             return null;
           }
         });

@@ -46,7 +46,6 @@ import org.apache.hadoop.hdfs.server.common.StorageErrorReporter;
 import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.util.PersistentLongFile;
-
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.util.Time;
@@ -68,12 +67,13 @@ public class NNStorage extends Storage implements Closeable,
   //
   // The filenames used for storing the images
   //
-  enum NameNodeFile {
+  public enum NameNodeFile {
     IMAGE     ("fsimage"),
     TIME      ("fstime"), // from "old" pre-HDFS-1073 format
     SEEN_TXID ("seen_txid"),
     EDITS     ("edits"),
     IMAGE_NEW ("fsimage.ckpt"),
+    IMAGE_ROLLBACK("fsimage_rollback"),
     EDITS_NEW ("edits.new"), // from "old" pre-HDFS-1073 format
     EDITS_INPROGRESS ("edits_inprogress"),
     EDITS_TMP ("edits_tmp");
@@ -971,8 +971,7 @@ public class NNStorage extends Storage implements Closeable,
    * <b>Note:</b> this can mutate the storage info fields (ctime, version, etc).
    * @throws IOException if no valid storage dirs are found or no valid layout version
    */
-  FSImageStorageInspector readAndInspectDirs()
-      throws IOException {
+  FSImageStorageInspector readAndInspectDirs(NameNodeFile nnf) throws IOException {
     Integer layoutVersion = null;
     boolean multipleLV = false;
     StringBuilder layoutVersions = new StringBuilder();
@@ -1009,7 +1008,7 @@ public class NNStorage extends Storage implements Closeable,
     FSImageStorageInspector inspector;
     if (NameNodeLayoutVersion.supports(
         LayoutVersion.Feature.TXID_BASED_LAYOUT, getLayoutVersion())) {
-      inspector = new FSImageTransactionalStorageInspector();
+      inspector = new FSImageTransactionalStorageInspector(nnf);
     } else {
       inspector = new FSImagePreTransactionalStorageInspector();
     }

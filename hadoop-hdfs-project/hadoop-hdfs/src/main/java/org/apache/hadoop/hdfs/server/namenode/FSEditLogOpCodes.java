@@ -67,7 +67,8 @@ public enum FSEditLogOpCodes {
   OP_MODIFY_CACHE_POOL                    ((byte) 37),
   OP_REMOVE_CACHE_POOL                    ((byte) 38),
   OP_MODIFY_CACHE_DIRECTIVE     ((byte) 39),
-  OP_UPGRADE_MARKER             ((byte) 40),
+  OP_ROLLING_UPGRADE_START      ((byte) 40),
+  OP_ROLLING_UPGRADE_FINALIZE   ((byte) 41),
 
   // Note that the current range of the valid OP code is 0~127
   OP_INVALID                    ((byte) -1);

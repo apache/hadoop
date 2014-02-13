@@ -45,8 +45,15 @@ class FSImageTransactionalStorageInspector extends FSImageStorageInspector {
   List<FSImageFile> foundImages = new ArrayList<FSImageFile>();
   private long maxSeenTxId = 0;
   
-  private static final Pattern IMAGE_REGEX = Pattern.compile(
-    NameNodeFile.IMAGE.getName() + "_(\\d+)");
+  private final Pattern namePattern;
+
+  FSImageTransactionalStorageInspector() {
+    this(NameNodeFile.IMAGE);
+  }
+
+  FSImageTransactionalStorageInspector(NameNodeFile nnf) {
+    namePattern = Pattern.compile(nnf.getName() + "_(\\d+)");
+  }
 
   @Override
   public void inspectDirectory(StorageDirectory sd) throws IOException {
@@ -81,7 +88,7 @@ class FSImageTransactionalStorageInspector extends FSImageStorageInspector {
       String name = f.getName();
       
       // Check for fsimage_*
-      Matcher imageMatch = IMAGE_REGEX.matcher(name);
+      Matcher imageMatch = namePattern.matcher(name);
       if (imageMatch.matches()) {
         if (sd.getStorageDirType().isOfType(NameNodeDirType.IMAGE)) {
           try {

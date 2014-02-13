@@ -68,6 +68,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenameOldOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenameOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenameSnapshotOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenewDelegationTokenOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RollingUpgradeOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetGenstampV1Op;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetGenstampV2Op;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetNSQuotaOp;
@@ -79,10 +80,9 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SymlinkOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.TimesOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.UpdateBlocksOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.UpdateMasterKeyOp;
-import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.UpgradeMarkerOp;
-import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.UpgradeMarkerOp.UpgradeMarkerException;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
+import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.Phase;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress;
@@ -225,7 +225,7 @@ public class FSEditLogLoader {
             if (lastInodeId < inodeId) {
               lastInodeId = inodeId;
             }
-          } catch (UpgradeMarkerException e) {
+          } catch (RollingUpgradeOp.RollbackException e) {
             throw e;
           } catch (Throwable e) {
             LOG.error("Encountered exception on operation " + op, e);
@@ -259,8 +259,8 @@ public class FSEditLogLoader {
           }
           numEdits++;
           totalEdits++;
-        } catch (UpgradeMarkerException e) {
-          LOG.info("Stopped at upgrade marker");
+        } catch (RollingUpgradeOp.RollbackException e) {
+          LOG.info("Stopped at OP_START_ROLLING_UPGRADE for rollback.");
           break;
         } catch (MetaRecoveryContext.RequestStopException e) {
           MetaRecoveryContext.LOG.warn("Stopped reading edit log at " +
@@ -715,29 +715,45 @@ public class FSEditLogLoader {
       fsNamesys.setLastAllocatedBlockId(allocateBlockIdOp.blockId);
       break;
     }
-    case OP_UPGRADE_MARKER: {
+    case OP_ROLLING_UPGRADE_START: {
+      boolean started = false;
       if (startOpt == StartupOption.ROLLINGUPGRADE) {
         final RollingUpgradeStartupOption rollingUpgradeOpt
             = startOpt.getRollingUpgradeStartupOption(); 
         if (rollingUpgradeOpt == RollingUpgradeStartupOption.ROLLBACK) {
-          throw new UpgradeMarkerException();
+          throw new RollingUpgradeOp.RollbackException();
         } else if (rollingUpgradeOpt == RollingUpgradeStartupOption.DOWNGRADE) {
           //ignore upgrade marker
           break;
         } else if (rollingUpgradeOpt == RollingUpgradeStartupOption.STARTED) {
-          if (totalEdits > 1) {
-            // save namespace if this is not the second edit transaction
-            // (the first must be OP_START_LOG_SEGMENT)
-            fsNamesys.getFSImage().saveNamespace(fsNamesys);
-          }
-          //rolling upgrade is already started, set info
-          final UpgradeMarkerOp upgradeOp = (UpgradeMarkerOp)op; 
-          fsNamesys.setRollingUpgradeInfo(upgradeOp.getStartTime());
-          break;
+          started = true;
         }
       }
+       
+      if (started || fsNamesys.isInStandbyState()) {
+        if (totalEdits > 1) {
+          // save namespace if this is not the second edit transaction
+          // (the first must be OP_START_LOG_SEGMENT)
+          fsNamesys.getFSImage().saveNamespace(fsNamesys,
+              NameNodeFile.IMAGE_ROLLBACK, null);
+        }
+        //rolling upgrade is already started, set info
+        final RollingUpgradeOp upgradeOp = (RollingUpgradeOp)op; 
+        fsNamesys.setRollingUpgradeInfo(upgradeOp.getTime());
+        break;
+      }
+
       throw new RollingUpgradeException(
-          "Unexpected upgrade marker in edit log: op=" + op);
+          "Unexpected OP_ROLLING_UPGRADE_START in edit log: op=" + op);
+    }
+    case OP_ROLLING_UPGRADE_FINALIZE: {
+      if (!fsNamesys.isRollingUpgrade()) {
+        throw new RollingUpgradeException(
+            "Unexpected OP_ROLLING_UPGRADE_FINALIZE "
+            + " since there is no rolling upgrade in progress.");
+      }
+      fsNamesys.getFSImage().purgeCheckpoints(NameNodeFile.IMAGE_ROLLBACK);
+      break;
     }
     case OP_ADD_CACHE_DIRECTIVE: {
       AddCacheDirectiveInfoOp addOp = (AddCacheDirectiveInfoOp) op;

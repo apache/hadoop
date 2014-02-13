@@ -28,3 +28,7 @@ HDFS-5535 subtasks:
 
     HDFS-5874. Should not compare DataNode current layout version with that of
     NameNode in DataStrorage. (brandonli)
+
+    HDFS-5889. When starting rolling upgrade, create a fs image for rollback
+    so that the standby namenode can create checkpoints during upgrade.
+    (szetszwo & jing9)

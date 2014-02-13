@@ -44,6 +44,8 @@ import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_RENAME;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_RENAME_OLD;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_RENAME_SNAPSHOT;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_RENEW_DELEGATION_TOKEN;
+import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_ROLLING_UPGRADE_FINALIZE;
+import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_ROLLING_UPGRADE_START;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_SET_GENSTAMP_V1;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_SET_GENSTAMP_V2;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_SET_NS_QUOTA;
@@ -56,7 +58,6 @@ import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_SYMLINK
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_TIMES;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_UPDATE_BLOCKS;
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_UPDATE_MASTER_KEY;
-import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.OP_UPGRADE_MARKER;
 
 import java.io.DataInput;
 import java.io.DataInputStream;
@@ -169,7 +170,10 @@ public abstract class FSEditLogOp {
       inst.put(OP_REMOVE_CACHE_POOL, new RemoveCachePoolOp());
 
       inst.put(OP_ADD_BLOCK, new AddBlockOp());
-      inst.put(OP_UPGRADE_MARKER, new UpgradeMarkerOp());
+      inst.put(OP_ROLLING_UPGRADE_START, new RollingUpgradeOp(
+          OP_ROLLING_UPGRADE_START, "start"));
+      inst.put(OP_ROLLING_UPGRADE_FINALIZE, new RollingUpgradeOp(
+          OP_ROLLING_UPGRADE_FINALIZE, "finalize"));
     }
     
     public FSEditLogOp get(FSEditLogOpCodes opcode) {
@@ -3415,54 +3419,59 @@ public abstract class FSEditLogOp {
   /**
    * Operation corresponding to upgrade
    */
-  static class UpgradeMarkerOp extends FSEditLogOp { // @Idempotent
-    private long startTime;
+  static class RollingUpgradeOp extends FSEditLogOp { // @Idempotent
+    private final String name;
+    private long time;
 
-    public UpgradeMarkerOp() {
-      super(OP_UPGRADE_MARKER);
+    public RollingUpgradeOp(FSEditLogOpCodes code, String name) {
+      super(code);
+      this.name = name.toUpperCase();
     }
 
-    static UpgradeMarkerOp getInstance(OpInstanceCache cache) {
-      return (UpgradeMarkerOp) cache.get(OP_UPGRADE_MARKER);
+    static RollingUpgradeOp getStartInstance(OpInstanceCache cache) {
+      return (RollingUpgradeOp) cache.get(OP_ROLLING_UPGRADE_START);
     }
 
-    long getStartTime() {
-      return startTime;
+    static RollingUpgradeOp getFinalizeInstance(OpInstanceCache cache) {
+      return (RollingUpgradeOp) cache.get(OP_ROLLING_UPGRADE_FINALIZE);
     }
 
-    void setStartTime(long startTime) {
-      this.startTime = startTime;
+    long getTime() {
+      return time;
+    }
+
+    void setTime(long time) {
+      this.time = time;
     }
 
     @Override
     void readFields(DataInputStream in, int logVersion) throws IOException {
-      startTime = in.readLong();
+      time = in.readLong();
     }
 
     @Override
     public void writeFields(DataOutputStream out) throws IOException {
-      FSImageSerialization.writeLong(startTime, out);
+      FSImageSerialization.writeLong(time, out);
     }
 
     @Override
     protected void toXml(ContentHandler contentHandler) throws SAXException {
-      XMLUtils.addSaxString(contentHandler, "STARTTIME",
-          Long.valueOf(startTime).toString());
+      XMLUtils.addSaxString(contentHandler, name + "TIME",
+          Long.valueOf(time).toString());
     }
 
     @Override
     void fromXml(Stanza st) throws InvalidXmlException {
-      this.startTime = Long.valueOf(st.getValue("STARTTIME"));
+      this.time = Long.valueOf(st.getValue(name + "TIME"));
     }
 
     @Override
     public String toString() {
-      StringBuilder builder = new StringBuilder();
-      builder.append("UpgradeMarkerOp");
-      return builder.toString();
+      return new StringBuilder().append("RollingUpgradeOp [").append(name)
+          .append(", time=").append(time).append("]").toString();
     }
     
-    static class UpgradeMarkerException extends IOException {
+    static class RollbackException extends IOException {
       private static final long serialVersionUID = 1L;
     }
   }

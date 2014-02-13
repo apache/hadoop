@@ -31,6 +31,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.namenode.FSImageStorageInspector.FSImageFile;
 import org.apache.hadoop.hdfs.server.namenode.FileJournalManager.EditLogFile;
+import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
 
 import com.google.common.base.Preconditions;
@@ -88,13 +89,28 @@ public class NNStorageRetentionManager {
     this(conf, storage, purgeableLogs, new DeletionStoragePurger());
   }
 
-  public void purgeOldStorage() throws IOException {
+  void purgeCheckpoints(NameNodeFile nnf) throws IOException {
     FSImageTransactionalStorageInspector inspector =
-      new FSImageTransactionalStorageInspector();
+        new FSImageTransactionalStorageInspector(nnf);
+    storage.inspectStorageDirs(inspector);
+    for (FSImageFile image : inspector.getFoundImages()) {
+      purger.purgeImage(image);
+    }
+  }
+
+  void purgeOldStorage(NameNodeFile nnf) throws IOException {
+    FSImageTransactionalStorageInspector inspector =
+        new FSImageTransactionalStorageInspector(nnf);
     storage.inspectStorageDirs(inspector);
 
     long minImageTxId = getImageTxIdToRetain(inspector);
     purgeCheckpointsOlderThan(inspector, minImageTxId);
+    
+    if (nnf == NameNodeFile.IMAGE_ROLLBACK) {
+      // do not purge edits for IMAGE_ROLLBACK.
+      return;
+    }
+
     // If fsimage_N is the image we want to keep, then we need to keep
     // all txns > N. We can remove anything < N+1, since fsimage_N
     // reflects the state up to and including N. However, we also

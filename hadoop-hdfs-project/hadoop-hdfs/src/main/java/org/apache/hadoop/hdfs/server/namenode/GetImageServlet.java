@@ -43,6 +43,7 @@ import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
+import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
@@ -190,7 +191,7 @@ public class GetImageServlet extends HttpServlet {
               
               // Now that we have a new checkpoint, we might be able to
               // remove some old ones.
-              nnImage.purgeOldStorage();
+              nnImage.purgeOldStorage(NameNodeFile.IMAGE);
             } finally {
               currentlyDownloadingCheckpoints.remove(txid);
             }
