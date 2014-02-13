@@ -96,6 +96,7 @@ public class OfflineEditsViewerHelper {
       "RULE:[2:$1@$0](JobTracker@.*FOO.COM)s/@.*//" + "DEFAULT");
     config.setBoolean(
         DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY, true);
+    config.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
     cluster =
       new MiniDFSCluster.Builder(config).manageNameDfsDirs(false).build();
     cluster.waitClusterUp();

@@ -3491,6 +3491,9 @@ public abstract class FSEditLogOp {
     void fromXml(Stanza st) throws InvalidXmlException {
       src = st.getValue("SRC");
       aclEntries = readAclEntriesFromXml(st);
+      if (aclEntries == null) {
+        aclEntries = Lists.newArrayList();
+      }
     }
   }
 

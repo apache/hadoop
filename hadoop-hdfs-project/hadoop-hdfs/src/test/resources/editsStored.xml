@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <EDITS>
-  <EDITS_VERSION>-52</EDITS_VERSION>
+  <EDITS_VERSION>-53</EDITS_VERSION>
   <RECORD>
     <OPCODE>OP_START_LOG_SEGMENT</OPCODE>
     <DATA>
@@ -920,6 +920,13 @@
     <OPCODE>OP_END_LOG_SEGMENT</OPCODE>
     <DATA>
       <TXID>72</TXID>
+    </DATA>
+  </RECORD>
+  <RECORD>
+    <OPCODE>OP_SET_ACL</OPCODE>
+    <DATA>
+      <TXID>73</TXID>
+      <SRC>/file_set_acl</SRC>
     </DATA>
   </RECORD>
 </EDITS>
