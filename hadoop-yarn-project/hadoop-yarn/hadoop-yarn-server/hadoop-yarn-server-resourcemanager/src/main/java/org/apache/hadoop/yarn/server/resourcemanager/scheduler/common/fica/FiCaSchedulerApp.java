@@ -192,7 +192,7 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
     return Math.min(((float)requiredResources / clusterNodes), 1.0f);
   }
 
-  public Resource getTotalPendingRequests() {
+  public synchronized Resource getTotalPendingRequests() {
     Resource ret = Resource.newInstance(0, 0);
     for (ResourceRequest rr : appSchedulingInfo.getAllResourceRequests()) {
       // to avoid double counting we count only "ANY" resource requests

@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.web;
 
 import java.io.File;
+import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.net.URI;
 
@@ -92,6 +93,9 @@ public class TestHttpsFileSystem {
     os.write(23);
     os.close();
     Assert.assertTrue(fs.exists(f));
+    InputStream is = fs.open(f);
+    Assert.assertEquals(23, is.read());
+    is.close();
     fs.close();
   }
 }

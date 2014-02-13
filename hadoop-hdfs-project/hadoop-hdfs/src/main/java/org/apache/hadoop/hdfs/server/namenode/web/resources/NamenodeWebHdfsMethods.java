@@ -109,6 +109,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
 import com.sun.jersey.spi.container.ResourceFilters;
 
@@ -162,9 +163,10 @@ public class NamenodeWebHdfsMethods {
     response.setContentType(null);
   }
 
+  @VisibleForTesting
   static DatanodeInfo chooseDatanode(final NameNode namenode,
       final String path, final HttpOpParam.Op op, final long openOffset,
-      final long blocksize, final Configuration conf) throws IOException {
+      final long blocksize) throws IOException {
     final BlockManager bm = namenode.getNamesystem().getBlockManager();
 
     if (op == PutOpParam.Op.CREATE) {
@@ -203,7 +205,7 @@ public class NamenodeWebHdfsMethods {
         final LocatedBlocks locations = np.getBlockLocations(path, offset, 1);
         final int count = locations.locatedBlockCount();
         if (count > 0) {
-          return JspHelper.bestNode(locations.get(0).getLocations(), false, conf);
+          return bestNode(locations.get(0).getLocations());
         }
       }
     } 
@@ -212,13 +214,26 @@ public class NamenodeWebHdfsMethods {
         ).chooseRandom(NodeBase.ROOT);
   }
 
+  /**
+   * Choose the datanode to redirect the request. Note that the nodes have been
+   * sorted based on availability and network distances, thus it is sufficient
+   * to return the first element of the node here.
+   */
+  private static DatanodeInfo bestNode(DatanodeInfo[] nodes) throws IOException {
+    if (nodes.length == 0 || nodes[0].isDecommissioned()) {
+      throw new IOException("No active nodes contain this block");
+    }
+    return nodes[0];
+  }
+
   private Token<? extends TokenIdentifier> generateDelegationToken(
       final NameNode namenode, final UserGroupInformation ugi,
       final String renewer) throws IOException {
     final Credentials c = DelegationTokenSecretManager.createCredentials(
         namenode, ugi, renewer != null? renewer: ugi.getShortUserName());
     final Token<? extends TokenIdentifier> t = c.getAllTokens().iterator().next();
-    Text kind = request.getScheme().equals("http") ? WebHdfsFileSystem.TOKEN_KIND : SWebHdfsFileSystem.TOKEN_KIND;
+    Text kind = request.getScheme().equals("http") ? WebHdfsFileSystem.TOKEN_KIND
+        : SWebHdfsFileSystem.TOKEN_KIND;
     t.setKind(kind);
     return t;
   }
@@ -229,9 +244,8 @@ public class NamenodeWebHdfsMethods {
       final String path, final HttpOpParam.Op op, final long openOffset,
       final long blocksize,
       final Param<?, ?>... parameters) throws URISyntaxException, IOException {
-    final Configuration conf = (Configuration)context.getAttribute(JspHelper.CURRENT_CONF);
     final DatanodeInfo dn = chooseDatanode(namenode, path, op, openOffset,
-        blocksize, conf);
+        blocksize);
 
     final String delegationQuery;
     if (!UserGroupInformation.isSecurityEnabled()) {

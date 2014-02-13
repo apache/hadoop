@@ -137,6 +137,7 @@ public class ZKRMStateStore extends RMStateStore {
   private String fencingNodePath;
   private Op createFencingNodePathOp;
   private Op deleteFencingNodePathOp;
+  private Thread verifyActiveStatusThread;
   private String zkRootNodeUsername;
   private final String zkRootNodePassword = Long.toString(random.nextLong());
 
@@ -258,6 +259,8 @@ public class ZKRMStateStore extends RMStateStore {
     createRootDir(zkRootNodePath);
     if (HAUtil.isHAEnabled(getConfig())){
       fence();
+      verifyActiveStatusThread = new VerifyActiveStatusThread();
+      verifyActiveStatusThread.start();
     }
     createRootDir(rmAppRoot);
     createRootDir(rmDTSecretManagerRoot);
@@ -350,6 +353,10 @@ public class ZKRMStateStore extends RMStateStore {
 
   @Override
   protected synchronized void closeInternal() throws Exception {
+    if (verifyActiveStatusThread != null) {
+      verifyActiveStatusThread.interrupt();
+      verifyActiveStatusThread.join(1000);
+    }
     closeZkClients();
   }
 
@@ -854,6 +861,32 @@ public class ZKRMStateStore extends RMStateStore {
         return zkClient.getChildren(path, watch);
       }
     }.runWithRetries();
+  }
+
+  /**
+   * Helper class that periodically attempts creating a znode to ensure that
+   * this RM continues to be the Active.
+   */
+  private class VerifyActiveStatusThread extends Thread {
+    private List<Op> emptyOpList = new ArrayList<Op>();
+
+    VerifyActiveStatusThread() {
+      super(VerifyActiveStatusThread.class.getName());
+    }
+
+    public void run() {
+      try {
+        while (true) {
+          doMultiWithRetries(emptyOpList);
+          Thread.sleep(zkSessionTimeout);
+        }
+      } catch (InterruptedException ie) {
+        LOG.info(VerifyActiveStatusThread.class.getName() + " thread " +
+            "interrupted! Exiting!");
+      } catch (Exception e) {
+        notifyStoreOperationFailed(new StoreFencedException());
+      }
+    }
   }
 
   private abstract class ZKAction<T> {

@@ -35,7 +35,7 @@ Usage: yarn [--config confdir] COMMAND
 *---------------+--------------+
 || COMMAND_OPTIONS || Description                   |
 *---------------+--------------+
-| --config confdir | Overwrites the default Configuration directory. Default is ${HADOOP_PREFIX}/conf. | 
+| --config confdir | Overwrites the default Configuration directory. Default is $\{HADOOP_PREFIX\}/conf. |
 *---------------+--------------+
 | COMMAND COMMAND_OPTIONS | Various commands with their options are described in the following sections. The commands have been grouped into {{User Commands}} and {{Administration Commands}}. |
 *---------------+--------------+
@@ -63,11 +63,22 @@ Usage: yarn [--config confdir] COMMAND
 *---------------+--------------+
 || COMMAND_OPTIONS || Description                   |
 *---------------+--------------+
-| -status  ApplicationId | Specify an application id |
+| -list | Lists applications from the RM. Supports optional use of -appTypes
+|       | to filter applications based on application type, and -appStates to
+|       | filter applications based on application state.
 *---------------+--------------+
-| -list | Lists all the Applications from RM |
+| -appStates States | Works with -list to filter applications based on input
+|                   | comma-separated list of application states. The valid
+|                   | application state can be one of the following: \
+|                   | ALL, NEW, NEW_SAVING, SUBMITTED, ACCEPTED, RUNNING,
+|                   | FINISHED, FAILED, KILLED
 *---------------+--------------+
-| -kill ApplicationId | Specify an application id |
+| -appTypes Types | Works with -list to filter applications based on input
+|                 | comma-separated list of application types.
+*---------------+--------------+
+| -status  ApplicationId | Prints the status of the application.
+*---------------+--------------+
+| -kill ApplicationId | Kills the application.
 *---------------+--------------+
 
 ** node
@@ -81,9 +92,15 @@ Usage: yarn [--config confdir] COMMAND
 *---------------+--------------+
 || COMMAND_OPTIONS || Description                   |
 *---------------+--------------+
-| -status NodeId | Specify a node id |
+| -list | Lists all running nodes. Supports optional use of -states to filter
+|       | nodes based on node state, and -all to list all nodes.
 *---------------+--------------+
-| -list | Lists all the Nodes |
+| -states States | Works with -list to filter nodes based on input
+|                | comma-separated list of node states.
+*---------------+--------------+
+| -all | Works with -list to list all nodes.
+*---------------+--------------+
+| -status NodeId | Prints the status report of the node.
 *---------------+--------------+
 
 ** logs
@@ -91,19 +108,22 @@ Usage: yarn [--config confdir] COMMAND
   Dump the container logs
 
 -------
-  Usage: yarn logs <options>
+  Usage: yarn logs -applicationId <application ID> <options>
 -------
 
 *---------------+--------------+
 || COMMAND_OPTIONS || Description                   |
 *---------------+--------------+
-| -applicationId ApplicationId | Specify an application id |
+| -applicationId \<application ID\> | Specifies an application id |
 *---------------+--------------+
-| -appOwner AppOwner | Specify an application owner |
+| -appOwner AppOwner | AppOwner (assumed to be current user if not
+|                    | specified)
 *---------------+--------------+
-| -containerId ContainerId | Specify a container id |
+| -containerId ContainerId | ContainerId (must be specified if node address is
+|                          | specified)
 *---------------+--------------+
-| -nodeAddress NodeAddress | Specify a node address |
+| -nodeAddress NodeAddress | NodeAddress in the format nodename:port (must be
+|                          | specified if container id is specified)
 *---------------+--------------+
 
 ** classpath
@@ -158,7 +178,11 @@ Usage: yarn [--config confdir] COMMAND
 -------
   Usage: yarn rmadmin [-refreshQueues] [-refreshNodes] [-refreshUserToGroupsMapping] 
                       [-refreshSuperUserGroupsConfiguration] [-refreshAdminAcls] 
-                      [-refreshServiceAcl] [-help [cmd]]
+                      [-refreshServiceAcl] [-getGroups [username]] [-help [cmd]]
+                      [-transitionToActive <serviceId>]
+                      [-transitionToStandby <serviceId>]
+                      [-getServiceState <serviceId>]
+                      [-checkHealth <serviceId>]
 -------
 
 *---------------+--------------+
@@ -176,7 +200,21 @@ Usage: yarn [--config confdir] COMMAND
 *---------------+--------------+
 | -refreshServiceAcl | Reload the service-level authorization policy file ResoureceManager will reload the authorization policy file. |
 *---------------+--------------+
+| -getGroups [username] | Get groups the specified user belongs to.
+*---------------+--------------+
 | -help [cmd] | Displays help for the given command or all commands if none is specified. |
+*---------------+--------------+
+| -transitionToActive \<serviceId\> | Transitions the service into Active
+|                                   | state.
+*---------------+--------------+
+| -transitionToStandby \<serviceId\> | Transitions the service into Standby
+|                                    | state.
+*---------------+--------------+
+| -getServiceState \<serviceId\> | Returns the state of the service.
+*---------------+--------------+
+| -checkHealth \<serviceId\> | Requests that the service perform a health
+|                            | check. The RMAdmin tool will exit with a
+|                            | non-zero exit code if the check fails.
 *---------------+--------------+
 
 ** daemonlog
@@ -191,9 +229,9 @@ Usage: yarn [--config confdir] COMMAND
 *---------------+--------------+
 || COMMAND_OPTIONS || Description                   |
 *---------------+--------------+
-| -getlevel <host:port> <name> | Prints the log level of the daemon running at <host:port>. This command internally connects to http://<host:port>/logLevel?log=<name> |
+| -getlevel \<host:port\> \<name\> | Prints the log level of the daemon running at \<host:port\>. This command internally connects to http://\<host:port\>/logLevel?log=\<name\>
 *---------------+--------------+
-| -setlevel <host:port> <name> <level>  | Sets the log level of the daemon running at <host:port>. This command internally connects to http://<host:port>/logLevel?log=<name> |
+| -setlevel \<host:port\> \<name\> \<level\> | Sets the log level of the daemon running at \<host:port\>. This command internally connects to http://\<host:port\>/logLevel?log=\<name\>
 *---------------+--------------+
 
 

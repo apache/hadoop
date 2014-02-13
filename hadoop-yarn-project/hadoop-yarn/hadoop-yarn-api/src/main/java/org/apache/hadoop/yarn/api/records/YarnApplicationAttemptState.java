@@ -51,9 +51,6 @@ public enum YarnApplicationAttemptState {
   /** AppAttempt is currently running. */
   RUNNING,
 
-  /** AppAttempt is waiting for state bing saved */
-  FINAL_SAVING,
-
   /** AppAttempt is finishing. */
   FINISHING,
 

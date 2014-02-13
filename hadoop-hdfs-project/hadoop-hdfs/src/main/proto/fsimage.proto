@@ -132,17 +132,6 @@ message INodeSection {
     optional bytes target = 2;
   }
 
-  message INodeReference {
-    // id of the referred inode
-    optional uint64 referredId = 1;
-    // local name recorded in WithName
-    optional bytes name = 2;
-    // recorded in DstReference
-    optional uint32 dstSnapshotId = 3;
-    // recorded in WithName
-    optional uint32 lastSnapshotId = 4;
-  }
-
   message INode {
     enum Type {
       FILE = 1;
@@ -183,11 +172,26 @@ message FilesUnderConstructionSection {
 message INodeDirectorySection {
   message DirEntry {
     optional uint64 parent = 1;
+    // children that are not reference nodes
     repeated uint64 children = 2 [packed = true];
-    optional uint64 numOfRef = 3;
-    // repeated INodeReference...
+    // children that are reference nodes, each element is a reference node id
+    repeated uint32 refChildren = 3 [packed = true];
   }
   // repeated DirEntry, ended at the boundary of the section.
+}
+
+message INodeReferenceSection {
+  message INodeReference {
+    // id of the referred inode
+    optional uint64 referredId = 1;
+    // local name recorded in WithName
+    optional bytes name = 2;
+    // recorded in DstReference
+    optional uint32 dstSnapshotId = 3;
+    // recorded in WithName
+    optional uint32 lastSnapshotId = 4;
+  }
+  // repeated INodeReference...
 }
 
 /**
@@ -224,10 +228,10 @@ message SnapshotDiffSection {
     optional bytes name = 4;
     optional INodeSection.INodeDirectory snapshotCopy = 5;
     optional uint32 createdListSize = 6;
-    optional uint32 numOfDeletedRef = 7; // number of reference nodes in deleted list
-    repeated uint64 deletedINode = 8 [packed = true]; // id of deleted inode
+    repeated uint64 deletedINode = 7 [packed = true]; // id of deleted inodes
+    // id of reference nodes in the deleted list
+    repeated uint32 deletedINodeRef = 8 [packed = true];
     // repeated CreatedListEntry (size is specified by createdListSize)
-    // repeated INodeReference (reference inodes in deleted list)
   }
 
   message FileDiff {

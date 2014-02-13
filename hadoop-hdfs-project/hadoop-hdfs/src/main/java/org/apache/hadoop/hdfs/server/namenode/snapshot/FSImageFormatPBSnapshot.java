@@ -18,12 +18,10 @@
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
 import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.Loader.loadINodeDirectory;
-import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.Loader.loadINodeReference;
 import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.Loader.loadPermission;
 import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.Loader.updateBlocksMap;
 import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.Saver.buildINodeDirectory;
 import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.Saver.buildINodeFile;
-import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.Saver.buildINodeReference;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -43,8 +41,10 @@ import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf.LoaderContext;
+import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf.SectionName;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.FileSummary;
+import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeReferenceSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.SnapshotDiffSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.SnapshotDiffSection.CreatedListEntry;
@@ -57,6 +57,9 @@ import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeFileAttributes;
 import org.apache.hadoop.hdfs.server.namenode.INodeMap;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference;
+import org.apache.hadoop.hdfs.server.namenode.INodeReference.DstReference;
+import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithCount;
+import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithName;
 import org.apache.hadoop.hdfs.server.namenode.INodeWithAdditionalFields;
 import org.apache.hadoop.hdfs.server.namenode.SaveNamespaceContext;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature.DirectoryDiff;
@@ -78,12 +81,48 @@ public class FSImageFormatPBSnapshot {
     private final FSImageFormatProtobuf.Loader parent;
     private final Map<Integer, Snapshot> snapshotMap;
 
-
     public Loader(FSNamesystem fsn, FSImageFormatProtobuf.Loader parent) {
       this.fsn = fsn;
       this.fsDir = fsn.getFSDirectory();
       this.snapshotMap = new HashMap<Integer, Snapshot>();
       this.parent = parent;
+    }
+
+    /**
+     * The sequence of the ref node in refList must be strictly the same with
+     * the sequence in fsimage
+     */
+    public void loadINodeReferenceSection(InputStream in) throws IOException {
+      final List<INodeReference> refList = parent.getLoaderContext()
+          .getRefList();
+      while (true) {
+        INodeReferenceSection.INodeReference e = INodeReferenceSection
+            .INodeReference.parseDelimitedFrom(in);
+        if (e == null) {
+          break;
+        }
+        INodeReference ref = loadINodeReference(e);
+        refList.add(ref);
+      }
+    }
+
+    private INodeReference loadINodeReference(
+        INodeReferenceSection.INodeReference r) throws IOException {
+      long referredId = r.getReferredId();
+      INode referred = fsDir.getInode(referredId);
+      WithCount withCount = (WithCount) referred.getParentReference();
+      if (withCount == null) {
+        withCount = new INodeReference.WithCount(null, referred);
+      }
+      final INodeReference ref;
+      if (r.hasDstSnapshotId()) { // DstReference
+        ref = new INodeReference.DstReference(null, withCount,
+            r.getDstSnapshotId());
+      } else {
+        ref = new INodeReference.WithName(null, withCount, r.getName()
+            .toByteArray(), r.getLastSnapshotId());
+      }
+      return ref;
     }
 
     /**
@@ -134,6 +173,8 @@ public class FSImageFormatPBSnapshot {
      * Load the snapshot diff section from fsimage.
      */
     public void loadSnapshotDiffSection(InputStream in) throws IOException {
+      final List<INodeReference> refList = parent.getLoaderContext()
+          .getRefList();
       while (true) {
         SnapshotDiffSection.DiffEntry entry = SnapshotDiffSection.DiffEntry
             .parseDelimitedFrom(in);
@@ -148,7 +189,8 @@ public class FSImageFormatPBSnapshot {
           loadFileDiffList(in, inode.asFile(), entry.getNumOfDiff());
           break;
         case DIRECTORYDIFF:
-          loadDirectoryDiffList(in, inode.asDirectory(), entry.getNumOfDiff());
+          loadDirectoryDiffList(in, inode.asDirectory(), entry.getNumOfDiff(),
+              refList);
           break;
         }
       }
@@ -209,13 +251,13 @@ public class FSImageFormatPBSnapshot {
 
     /**
      * Load the deleted list in a DirectoryDiff
-     * @param totalSize the total size of the deleted list
-     * @param deletedNodes non-reference inodes in the deleted list. These
-     *        inodes' ids are directly recorded in protobuf
      */
-    private List<INode> loadDeletedList(InputStream in, INodeDirectory dir,
-        int refNum, List<Long> deletedNodes) throws IOException {
-      List<INode> dlist = new ArrayList<INode>(refNum + deletedNodes.size());
+    private List<INode> loadDeletedList(final List<INodeReference> refList,
+        InputStream in, INodeDirectory dir, List<Long> deletedNodes,
+        List<Integer> deletedRefNodes)
+        throws IOException {
+      List<INode> dlist = new ArrayList<INode>(deletedRefNodes.size()
+          + deletedNodes.size());
       // load non-reference inodes
       for (long deletedId : deletedNodes) {
         INode deleted = fsDir.getInode(deletedId);
@@ -223,13 +265,12 @@ public class FSImageFormatPBSnapshot {
         addToDeletedList(deleted, dir);
       }
       // load reference nodes in the deleted list
-      for (int r = 0; r < refNum; r++) {
-        INodeSection.INodeReference ref = INodeSection.INodeReference
-            .parseDelimitedFrom(in);
-        INodeReference refNode = loadINodeReference(ref, fsDir);
-        dlist.add(refNode);
-        addToDeletedList(refNode, dir);
+      for (int refId : deletedRefNodes) {
+        INodeReference deletedRef = refList.get(refId);
+        dlist.add(deletedRef);
+        addToDeletedList(deletedRef, dir);
       }
+
       Collections.sort(dlist, new Comparator<INode>() {
         @Override
         public int compare(INode n1, INode n2) {
@@ -241,7 +282,7 @@ public class FSImageFormatPBSnapshot {
 
     /** Load DirectoryDiff list for a directory with snapshot feature */
     private void loadDirectoryDiffList(InputStream in, INodeDirectory dir,
-        int size) throws IOException {
+        int size, final List<INodeReference> refList) throws IOException {
       if (!dir.isWithSnapshot()) {
         dir.addSnapshotFeature(null);
       }
@@ -284,8 +325,8 @@ public class FSImageFormatPBSnapshot {
         List<INode> clist = loadCreatedList(in, dir,
             diffInPb.getCreatedListSize());
         // load deleted list
-        List<INode> dlist = loadDeletedList(in, dir,
-            diffInPb.getNumOfDeletedRef(), diffInPb.getDeletedINodeList());
+        List<INode> dlist = loadDeletedList(refList, in, dir,
+            diffInPb.getDeletedINodeList(), diffInPb.getDeletedINodeRefList());
         // create the directory diff
         DirectoryDiff diff = new DirectoryDiff(snapshotId, copy, null,
             childrenSize, clist, dlist, useRoot);
@@ -304,7 +345,8 @@ public class FSImageFormatPBSnapshot {
     private final SaveNamespaceContext context;
 
     public Saver(FSImageFormatProtobuf.Saver parent,
-        FileSummary.Builder headers, SaveNamespaceContext context, FSNamesystem fsn) {
+        FileSummary.Builder headers, SaveNamespaceContext context,
+        FSNamesystem fsn) {
       this.parent = parent;
       this.headers = headers;
       this.context = context;
@@ -350,11 +392,41 @@ public class FSImageFormatPBSnapshot {
     }
 
     /**
+     * This can only be called after serializing both INode_Dir and SnapshotDiff
+     */
+    public void serializeINodeReferenceSection(OutputStream out)
+        throws IOException {
+      final List<INodeReference> refList = parent.getSaverContext()
+          .getRefList();
+      for (INodeReference ref : refList) {
+        INodeReferenceSection.INodeReference.Builder rb = buildINodeReference(ref);
+        rb.build().writeDelimitedTo(out);
+      }
+      parent.commitSection(headers, SectionName.INODE_REFRENCE);
+    }
+
+    private INodeReferenceSection.INodeReference.Builder buildINodeReference(
+        INodeReference ref) throws IOException {
+      INodeReferenceSection.INodeReference.Builder rb =
+          INodeReferenceSection.INodeReference.newBuilder().
+            setReferredId(ref.getId());
+      if (ref instanceof WithName) {
+        rb.setLastSnapshotId(((WithName) ref).getLastSnapshotId()).setName(
+            ByteString.copyFrom(ref.getLocalNameBytes()));
+      } else if (ref instanceof DstReference) {
+        rb.setDstSnapshotId(((DstReference) ref).getDstSnapshotId());
+      }
+      return rb;
+    }
+
+    /**
      * save all the snapshot diff to fsimage
      */
     public void serializeSnapshotDiffSection(OutputStream out)
         throws IOException {
       INodeMap inodesMap = fsn.getFSDirectory().getINodeMap();
+      final List<INodeReference> refList = parent.getSaverContext()
+          .getRefList();
       int i = 0;
       Iterator<INodeWithAdditionalFields> iter = inodesMap.getMapIterator();
       while (iter.hasNext()) {
@@ -362,7 +434,7 @@ public class FSImageFormatPBSnapshot {
         if (inode.isFile()) {
           serializeFileDiffList(inode.asFile(), out);
         } else if (inode.isDirectory()) {
-          serializeDirDiffList(inode.asDirectory(), out);
+          serializeDirDiffList(inode.asDirectory(), refList, out);
         }
         ++i;
         if (i % FSImageFormatProtobuf.Saver.CHECK_CANCEL_INTERVAL == 0) {
@@ -397,22 +469,18 @@ public class FSImageFormatPBSnapshot {
       }
     }
 
-    private void saveCreatedDeletedList(List<INode> created,
-        List<INodeReference> deletedRefs, OutputStream out) throws IOException {
+    private void saveCreatedList(List<INode> created, OutputStream out)
+        throws IOException {
       // local names of the created list member
       for (INode c : created) {
         SnapshotDiffSection.CreatedListEntry.newBuilder()
             .setName(ByteString.copyFrom(c.getLocalNameBytes())).build()
             .writeDelimitedTo(out);
       }
-      // reference nodes in deleted list
-      for (INodeReference ref : deletedRefs) {
-        INodeSection.INodeReference.Builder rb = buildINodeReference(ref);
-        rb.build().writeDelimitedTo(out);
-      }
     }
 
-    private void serializeDirDiffList(INodeDirectory dir, OutputStream out)
+    private void serializeDirDiffList(INodeDirectory dir,
+        final List<INodeReference> refList, OutputStream out)
         throws IOException {
       DirectoryWithSnapshotFeature sf = dir.getDirectoryWithSnapshotFeature();
       if (sf != null) {
@@ -438,17 +506,16 @@ public class FSImageFormatPBSnapshot {
               .getList(ListType.CREATED);
           db.setCreatedListSize(created.size());
           List<INode> deleted = diff.getChildrenDiff().getList(ListType.DELETED);
-          List<INodeReference> refs = new ArrayList<INodeReference>();
           for (INode d : deleted) {
             if (d.isReference()) {
-              refs.add(d.asReference());
+              refList.add(d.asReference());
+              db.addDeletedINodeRef(refList.size() - 1);
             } else {
               db.addDeletedINode(d.getId());
             }
           }
-          db.setNumOfDeletedRef(refs.size());
           db.build().writeDelimitedTo(out);
-          saveCreatedDeletedList(created, refs, out);
+          saveCreatedList(created, out);
         }
       }
     }

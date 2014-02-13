@@ -338,6 +338,8 @@ Trunk (Unreleased)
     HDFS-5915. Refactor FSImageFormatProtobuf to simplify cross section reads.
     (Haohui Mai via cnauroth)
 
+    HDFS-5847. Consolidate INodeReference into a separate section. (jing9)
+
 Release 2.4.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -364,6 +366,15 @@ Release 2.4.0 - UNRELEASED
     dfs.datanode.socket.reuse.keepalive (cmccabe)
 
     HDFS-4370. Fix typo Blanacer in DataNode. (Chu Tong via shv)
+
+    HDFS-5929. Add blockpool % usage to HDFS federated nn page.
+    (Siqi Li via suresh)
+
+    HDFS-5810. Unify mmap cache and short-circuit file descriptor cache
+    (cmccabe)
+
+    HDFS-5940. Minor cleanups to ShortCircuitReplica, FsDatasetCache, and
+    DomainSocketWatcher (cmccabe)
 
   OPTIMIZATIONS
 
@@ -410,6 +421,20 @@ Release 2.4.0 - UNRELEASED
     HDFS-5886. Potential null pointer deference in RpcProgramNfs3#readlink()
     (brandonli)
 
+    HDFS-4858. HDFS DataNode to NameNode RPC should timeout.
+    (Henry Wang via shv)
+
+    HDFS-5879. Some TestHftpFileSystem tests do not close streams.
+    (Gera Shegalov via suresh)
+
+    HDFS-5938. Make BlockReaderFactory#BlockReaderPeer a static class to avoid
+    a findbugs warning. (cmccabe)
+
+    HDFS-5891. webhdfs should not try connecting the DN during redirection
+    (Haohui Mai via brandonli)
+
+    HDFS-5904. TestFileStatus fails intermittently. (Mit Desai via kihwal)
+ 
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

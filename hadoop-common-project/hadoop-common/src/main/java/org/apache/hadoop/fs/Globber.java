@@ -114,7 +114,8 @@ class Globber {
       if (fs != null) {
         scheme = fs.getUri().getScheme();
       } else {
-        scheme = fc.getDefaultFileSystem().getUri().getScheme();
+        scheme = fc.getFSofPath(fc.fixRelativePart(path)).
+                    getUri().getScheme();
       }
     }
     return scheme;
@@ -126,7 +127,8 @@ class Globber {
       if (fs != null) {
         authority = fs.getUri().getAuthority();
       } else {
-        authority = fc.getDefaultFileSystem().getUri().getAuthority();
+        authority = fc.getFSofPath(fc.fixRelativePart(path)).
+                      getUri().getAuthority();
       }
     }
     return authority ;
@@ -162,18 +164,26 @@ class Globber {
       // Starting out at the root of the filesystem, we try to match
       // filesystem entries against pattern components.
       ArrayList<FileStatus> candidates = new ArrayList<FileStatus>(1);
+      // To get the "real" FileStatus of root, we'd have to do an expensive
+      // RPC to the NameNode.  So we create a placeholder FileStatus which has
+      // the correct path, but defaults for the rest of the information.
+      // Later, if it turns out we actually want the FileStatus of root, we'll
+      // replace the placeholder with a real FileStatus obtained from the
+      // NameNode.
+      FileStatus rootPlaceholder;
       if (Path.WINDOWS && !components.isEmpty()
           && Path.isWindowsAbsolutePath(absPattern.toUri().getPath(), true)) {
         // On Windows the path could begin with a drive letter, e.g. /E:/foo.
         // We will skip matching the drive letter and start from listing the
         // root of the filesystem on that drive.
         String driveLetter = components.remove(0);
-        candidates.add(new FileStatus(0, true, 0, 0, 0, new Path(scheme,
-            authority, Path.SEPARATOR + driveLetter + Path.SEPARATOR)));
+        rootPlaceholder = new FileStatus(0, true, 0, 0, 0, new Path(scheme,
+            authority, Path.SEPARATOR + driveLetter + Path.SEPARATOR));
       } else {
-        candidates.add(new FileStatus(0, true, 0, 0, 0,
-            new Path(scheme, authority, Path.SEPARATOR)));
+        rootPlaceholder = new FileStatus(0, true, 0, 0, 0,
+            new Path(scheme, authority, Path.SEPARATOR));
       }
+      candidates.add(rootPlaceholder);
       
       for (int componentIdx = 0; componentIdx < components.size();
           componentIdx++) {
@@ -245,6 +255,12 @@ class Globber {
         candidates = newCandidates;
       }
       for (FileStatus status : candidates) {
+        // Use object equality to see if this status is the root placeholder.
+        // See the explanation for rootPlaceholder above for more information.
+        if (status == rootPlaceholder) {
+          status = getFileStatus(rootPlaceholder.getPath());
+          if (status == null) continue;
+        }
         // HADOOP-3497 semantics: the user-defined filter is applied at the
         // end, once the full path is built up.
         if (filter.accept(status.getPath())) {

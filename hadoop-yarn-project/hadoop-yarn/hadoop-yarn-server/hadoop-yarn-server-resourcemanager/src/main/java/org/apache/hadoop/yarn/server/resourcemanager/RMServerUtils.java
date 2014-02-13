@@ -214,8 +214,6 @@ public class RMServerUtils {
         return YarnApplicationAttemptState.RUNNING;
       case FINISHING:
         return YarnApplicationAttemptState.FINISHING;
-      case FINAL_SAVING:
-        return YarnApplicationAttemptState.FINAL_SAVING;
       case FINISHED:
         return YarnApplicationAttemptState.FINISHED;
       case KILLED:

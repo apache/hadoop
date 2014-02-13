@@ -348,6 +348,9 @@ public class TestContainer {
           wc.c.getContainerState());
       assertNull(wc.c.getLocalizedResources());
       verifyCleanupCall(wc);
+      wc.c.handle(new ContainerEvent(wc.c.getContainerId(),
+          ContainerEventType.CONTAINER_RESOURCES_CLEANEDUP));
+      assertEquals(0, metrics.getRunningContainers());
     } finally {
       if (wc != null) {
         wc.finished();

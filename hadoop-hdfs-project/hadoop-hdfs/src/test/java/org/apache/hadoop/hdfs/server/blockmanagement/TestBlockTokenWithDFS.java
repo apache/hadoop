@@ -38,10 +38,16 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.BlockReader;
 import org.apache.hadoop.hdfs.BlockReaderFactory;
+import org.apache.hadoop.hdfs.ClientContext;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.DFSClient.Conf;
+import org.apache.hadoop.hdfs.RemotePeerFactory;
+import org.apache.hadoop.hdfs.client.ShortCircuitCache;
+import org.apache.hadoop.hdfs.client.ShortCircuitReplica;
+import org.apache.hadoop.hdfs.net.Peer;
 import org.apache.hadoop.hdfs.net.TcpPeerServer;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -55,10 +61,13 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.datanode.CachingStrategy;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.log4j.Level;
+import org.junit.Assert;
 import org.junit.Test;
 
 public class TestBlockTokenWithDFS {
@@ -131,50 +140,70 @@ public class TestBlockTokenWithDFS {
   }
 
   // try reading a block using a BlockReader directly
-  private static void tryRead(Configuration conf, LocatedBlock lblock,
+  private static void tryRead(final Configuration conf, LocatedBlock lblock,
       boolean shouldSucceed) {
     InetSocketAddress targetAddr = null;
-    Socket s = null;
+    IOException ioe = null;
     BlockReader blockReader = null;
     ExtendedBlock block = lblock.getBlock();
     try {
       DatanodeInfo[] nodes = lblock.getLocations();
       targetAddr = NetUtils.createSocketAddr(nodes[0].getXferAddr());
-      s = NetUtils.getDefaultSocketFactory(conf).createSocket();
-      s.connect(targetAddr, HdfsServerConstants.READ_TIMEOUT);
-      s.setSoTimeout(HdfsServerConstants.READ_TIMEOUT);
 
-      String file = BlockReaderFactory.getFileName(targetAddr, 
-          "test-blockpoolid", block.getBlockId());
-      blockReader = BlockReaderFactory.newBlockReader(
-          new DFSClient.Conf(conf), file, block, lblock.getBlockToken(), 0, -1,
-          true, "TestBlockTokenWithDFS", TcpPeerServer.peerFromSocket(s),
-          nodes[0], null, null, null, false,
-          CachingStrategy.newDefaultStrategy());
-
+      blockReader = new BlockReaderFactory(new DFSClient.Conf(conf)).
+          setFileName(BlockReaderFactory.getFileName(targetAddr, 
+                        "test-blockpoolid", block.getBlockId())).
+          setBlock(block).
+          setBlockToken(lblock.getBlockToken()).
+          setInetSocketAddress(targetAddr).
+          setStartOffset(0).
+          setLength(-1).
+          setVerifyChecksum(true).
+          setClientName("TestBlockTokenWithDFS").
+          setDatanodeInfo(nodes[0]).
+          setCachingStrategy(CachingStrategy.newDefaultStrategy()).
+          setClientCacheContext(ClientContext.getFromConf(conf)).
+          setConfiguration(conf).
+          setRemotePeerFactory(new RemotePeerFactory() {
+            @Override
+            public Peer newConnectedPeer(InetSocketAddress addr)
+                throws IOException {
+              Peer peer = null;
+              Socket sock = NetUtils.getDefaultSocketFactory(conf).createSocket();
+              try {
+                sock.connect(addr, HdfsServerConstants.READ_TIMEOUT);
+                sock.setSoTimeout(HdfsServerConstants.READ_TIMEOUT);
+                peer = TcpPeerServer.peerFromSocket(sock);
+              } finally {
+                if (peer == null) {
+                  IOUtils.closeSocket(sock);
+                }
+              }
+              return peer;
+            }
+          }).
+          build();
     } catch (IOException ex) {
-      if (ex instanceof InvalidBlockTokenException) {
-        assertFalse("OP_READ_BLOCK: access token is invalid, "
-            + "when it is expected to be valid", shouldSucceed);
-        return;
-      }
-      fail("OP_READ_BLOCK failed due to reasons other than access token: "
-          + StringUtils.stringifyException(ex));
+      ioe = ex;
     } finally {
-      if (s != null) {
+      if (blockReader != null) {
         try {
-          s.close();
-        } catch (IOException iex) {
-        } finally {
-          s = null;
+          blockReader.close();
+        } catch (IOException e) {
+          throw new RuntimeException(e);
         }
       }
     }
-    if (blockReader == null) {
-      fail("OP_READ_BLOCK failed due to reasons other than access token");
+    if (shouldSucceed) {
+      Assert.assertNotNull("OP_READ_BLOCK: access token is invalid, "
+            + "when it is expected to be valid", blockReader);
+    } else {
+      Assert.assertNotNull("OP_READ_BLOCK: access token is valid, "
+          + "when it is expected to be invalid", ioe);
+      Assert.assertTrue(
+          "OP_READ_BLOCK failed due to reasons other than access token: ",
+          ioe instanceof InvalidBlockTokenException);
     }
-    assertTrue("OP_READ_BLOCK: access token is valid, "
-        + "when it is expected to be invalid", shouldSucceed);
   }
 
   // get a conf for testing
@@ -347,9 +376,13 @@ public class TestBlockTokenWithDFS {
       /*
        * testing READ interface on DN using a BlockReader
        */
-
-      new DFSClient(new InetSocketAddress("localhost",
+      DFSClient client = null;
+      try {
+        client = new DFSClient(new InetSocketAddress("localhost",
           cluster.getNameNodePort()), conf);
+      } finally {
+        if (client != null) client.close();
+      }
       List<LocatedBlock> locatedBlocks = nnProto.getBlockLocations(
           FILE_TO_READ, 0, FILE_SIZE).getLocatedBlocks();
       LocatedBlock lblock = locatedBlocks.get(0); // first block

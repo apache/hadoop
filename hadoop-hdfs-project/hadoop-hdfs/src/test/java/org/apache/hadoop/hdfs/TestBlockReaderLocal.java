@@ -30,13 +30,15 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
+import org.apache.hadoop.hdfs.client.ShortCircuitCache;
+import org.apache.hadoop.hdfs.client.ShortCircuitReplica;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.server.datanode.BlockMetadataHeader;
 import org.apache.hadoop.hdfs.server.datanode.CachingStrategy;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.unix.DomainSocket;
 import org.apache.hadoop.net.unix.TemporarySocketDirectory;
+import org.apache.hadoop.util.Time;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -155,6 +157,8 @@ public class TestBlockReaderLocal {
       File metaFile = MiniDFSCluster.getBlockMetadataFile(0, block);
 
       DatanodeID datanodeID = cluster.getDataNodes().get(0).getDatanodeId();
+      ShortCircuitCache shortCircuitCache =
+          ClientContext.getFromConf(conf).getShortCircuitCache();
       cluster.shutdown();
       cluster = null;
       test.setup(dataFile, checksum);
@@ -164,16 +168,17 @@ public class TestBlockReaderLocal {
       };
       dataIn = streams[0];
       metaIn = streams[1];
+      ExtendedBlockId key = new ExtendedBlockId(block.getBlockId(), block.getBlockPoolId());
+      ShortCircuitReplica replica = new ShortCircuitReplica(
+          key, dataIn, metaIn, shortCircuitCache, Time.now());
       blockReaderLocal = new BlockReaderLocal.Builder(
               new DFSClient.Conf(conf)).
           setFilename(TEST_PATH.getName()).
           setBlock(block).
-          setStreams(streams).
+          setShortCircuitReplica(replica).
           setDatanodeID(datanodeID).
           setCachingStrategy(new CachingStrategy(false, readahead)).
           setVerifyChecksum(checksum).
-          setBlockMetadataHeader(BlockMetadataHeader.preadHeader(
-              metaIn.getChannel())).
           build();
       dataIn = null;
       metaIn = null;
