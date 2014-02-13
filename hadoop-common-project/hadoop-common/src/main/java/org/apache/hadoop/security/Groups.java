@@ -27,6 +27,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -238,6 +239,20 @@ public class Groups {
       }
       GROUPS = new Groups(conf);
     }
+    return GROUPS;
+  }
+
+  /**
+   * Create new groups used to map user-to-groups with loaded configuration.
+   * @param conf
+   * @return the groups being used to map user-to-groups.
+   */
+  @Private
+  public static synchronized Groups
+      getUserToGroupsMappingServiceWithLoadedConfiguration(
+          Configuration conf) {
+
+    GROUPS = new Groups(conf);
     return GROUPS;
   }
 }

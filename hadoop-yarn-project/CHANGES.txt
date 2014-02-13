@@ -184,6 +184,10 @@ Release 2.4.0 - UNRELEASED
     YARN-1345. Remove FINAL_SAVING state from YarnApplicationAttemptState
     (Zhijie Shen via jianhe)
 
+    YARN-1676. Modified RM HA handling of user-to-group mappings to
+    be available across RM failover by making using of a remote
+    configuration-provider. (Xuan Gong via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES

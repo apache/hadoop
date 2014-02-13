@@ -381,21 +381,22 @@ public class AdminService extends CompositeService implements
   @Override
   public RefreshUserToGroupsMappingsResponse refreshUserToGroupsMappings(
       RefreshUserToGroupsMappingsRequest request)
-      throws YarnException, StandbyException {
-    UserGroupInformation user = checkAcls("refreshUserToGroupsMappings");
+      throws YarnException, IOException {
+    String argName = "refreshUserToGroupsMappings";
+    UserGroupInformation user = checkAcls(argName);
 
-    // TODO (YARN-1459): Revisit handling user-groups on Standby RM
     if (!isRMActive()) {
-      RMAuditLogger.logFailure(user.getShortUserName(),
-          "refreshUserToGroupsMapping",
+      RMAuditLogger.logFailure(user.getShortUserName(), argName,
           adminAcl.toString(), "AdminService",
           "ResourceManager is not active. Can not refresh user-groups.");
       throwStandbyException();
     }
 
-    Groups.getUserToGroupsMappingService().refresh();
-    RMAuditLogger.logSuccess(user.getShortUserName(), 
-        "refreshUserToGroupsMappings", "AdminService");
+    Groups.getUserToGroupsMappingService(
+        getConfiguration(getConfig(),
+            YarnConfiguration.CORE_SITE_CONFIGURATION_FILE)).refresh();
+
+    RMAuditLogger.logSuccess(user.getShortUserName(), argName, "AdminService");
 
     return recordFactory.newRecordInstance(
         RefreshUserToGroupsMappingsResponse.class);
