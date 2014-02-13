@@ -36,9 +36,9 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.ExtendedBlockId;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.client.ShortCircuitReplica;
-import org.apache.hadoop.hdfs.client.ShortCircuitReplica.Key;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
@@ -183,8 +183,9 @@ public class ShortCircuitCache implements Closeable {
    * ShortCircuitReplicaInfo objects may contain a replica, or an InvalidToken
    * exception.
    */
-  private final HashMap<Key, Waitable<ShortCircuitReplicaInfo>>
-      replicaInfoMap = new HashMap<Key, Waitable<ShortCircuitReplicaInfo>>();
+  private final HashMap<ExtendedBlockId, Waitable<ShortCircuitReplicaInfo>> 
+      replicaInfoMap = new HashMap<ExtendedBlockId,
+          Waitable<ShortCircuitReplicaInfo>>();
 
   /**
    * The CacheCleaner.  We don't create this and schedule it until it becomes
@@ -566,7 +567,7 @@ public class ShortCircuitCache implements Closeable {
    * @return             Null if no replica could be found or created.
    *                     The replica, otherwise.
    */
-  public ShortCircuitReplicaInfo fetchOrCreate(Key key,
+  public ShortCircuitReplicaInfo fetchOrCreate(ExtendedBlockId key,
       ShortCircuitReplicaCreator creator) {
     Waitable<ShortCircuitReplicaInfo> newWaitable = null;
     lock.lock();
@@ -612,7 +613,7 @@ public class ShortCircuitCache implements Closeable {
    *
    * @throws RetriableException   If the caller needs to retry.
    */
-  private ShortCircuitReplicaInfo fetch(Key key,
+  private ShortCircuitReplicaInfo fetch(ExtendedBlockId key,
       Waitable<ShortCircuitReplicaInfo> waitable) throws RetriableException {
     // Another thread is already in the process of loading this
     // ShortCircuitReplica.  So we simply wait for it to complete.
@@ -656,7 +657,7 @@ public class ShortCircuitCache implements Closeable {
     return info;
   }
 
-  private ShortCircuitReplicaInfo create(Key key,
+  private ShortCircuitReplicaInfo create(ExtendedBlockId key,
       ShortCircuitReplicaCreator creator,
       Waitable<ShortCircuitReplicaInfo> newWaitable) {
     // Handle loading a new replica.
@@ -805,8 +806,8 @@ public class ShortCircuitCache implements Closeable {
   @VisibleForTesting // ONLY for testing
   public interface CacheVisitor {
     void visit(int numOutstandingMmaps,
-        Map<Key, ShortCircuitReplica> replicas,
-        Map<Key, InvalidToken> failedLoads,
+        Map<ExtendedBlockId, ShortCircuitReplica> replicas,
+        Map<ExtendedBlockId, InvalidToken> failedLoads,
         Map<Long, ShortCircuitReplica> evictable,
         Map<Long, ShortCircuitReplica> evictableMmapped);
   }
@@ -815,11 +816,11 @@ public class ShortCircuitCache implements Closeable {
   public void accept(CacheVisitor visitor) {
     lock.lock();
     try {
-      Map<Key, ShortCircuitReplica> replicas =
-          new HashMap<Key, ShortCircuitReplica>();
-      Map<Key, InvalidToken> failedLoads =
-          new HashMap<Key, InvalidToken>();
-      for (Entry<Key, Waitable<ShortCircuitReplicaInfo>> entry :
+      Map<ExtendedBlockId, ShortCircuitReplica> replicas =
+          new HashMap<ExtendedBlockId, ShortCircuitReplica>();
+      Map<ExtendedBlockId, InvalidToken> failedLoads =
+          new HashMap<ExtendedBlockId, InvalidToken>();
+      for (Entry<ExtendedBlockId, Waitable<ShortCircuitReplicaInfo>> entry :
             replicaInfoMap.entrySet()) {
         Waitable<ShortCircuitReplicaInfo> waitable = entry.getValue();
         if (waitable.hasVal()) {
@@ -839,13 +840,13 @@ public class ShortCircuitCache implements Closeable {
             append("with outstandingMmapCount=").append(outstandingMmapCount).
             append(", replicas=");
         String prefix = "";
-        for (Entry<Key, ShortCircuitReplica> entry : replicas.entrySet()) {
+        for (Entry<ExtendedBlockId, ShortCircuitReplica> entry : replicas.entrySet()) {
           builder.append(prefix).append(entry.getValue());
           prefix = ",";
         }
         prefix = "";
         builder.append(", failedLoads=");
-        for (Entry<Key, InvalidToken> entry : failedLoads.entrySet()) {
+        for (Entry<ExtendedBlockId, InvalidToken> entry : failedLoads.entrySet()) {
           builder.append(prefix).append(entry.getValue());
           prefix = ",";
         }

@@ -25,10 +25,9 @@ import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileChannel.MapMode;
 
-import org.apache.commons.lang.builder.EqualsBuilder;
-import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hdfs.ExtendedBlockId;
 import org.apache.hadoop.hdfs.server.datanode.BlockMetadataHeader;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.nativeio.NativeIO;
@@ -50,64 +49,9 @@ public class ShortCircuitReplica {
   public static final Log LOG = LogFactory.getLog(ShortCircuitCache.class);
 
   /**
-   * Immutable class which identifies a ShortCircuitReplica object.
-   */
-  public static final class Key {
-    public Key(long blockId, String bpId) {
-      this.blockId = blockId;
-      this.bpId = bpId;
-    }
-
-    public long getBlockId() {
-      return this.blockId;
-    }
-
-    public String getBlockPoolId() {
-      return this.bpId;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-      if ((o == null) || (o.getClass() != this.getClass())) {
-        return false;
-      }
-      Key other = (Key)o;
-      return new EqualsBuilder().
-          append(blockId, other.blockId).
-          append(bpId, other.bpId).
-          isEquals();
-    }
-
-    @Override
-    public int hashCode() {
-      return new HashCodeBuilder().
-          append(this.blockId).
-          append(this.bpId).
-          toHashCode();
-    }
-
-    @Override
-    public String toString() {
-      return new StringBuilder().append(blockId).
-          append("_").append(bpId).toString();
-    }
-
-    /**
-     * The block ID for this BlockDescriptors object.
-     */
-    private final long blockId;
-
-    /**
-     * The block pool ID for this BlockDescriptors object.
-     */
-    private final String bpId;
-  }
-  
-
-  /**
    * Identifies this ShortCircuitReplica object.
    */
-  final Key key;
+  final ExtendedBlockId key;
 
   /**
    * The block data input stream.
@@ -168,7 +112,7 @@ public class ShortCircuitReplica {
    */
   private Long evictableTimeNs = null;
 
-  public ShortCircuitReplica(Key key,
+  public ShortCircuitReplica(ExtendedBlockId key,
       FileInputStream dataStream, FileInputStream metaStream,
       ShortCircuitCache cache, long creationTimeMs) throws IOException {
     this.key = key;
@@ -262,7 +206,7 @@ public class ShortCircuitReplica {
     return metaHeader;
   }
 
-  public Key getKey() {
+  public ExtendedBlockId getKey() {
     return key;
   }
 

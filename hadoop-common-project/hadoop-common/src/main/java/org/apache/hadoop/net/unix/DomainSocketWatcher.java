@@ -37,6 +37,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.util.NativeCodeLoader;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.Uninterruptibles;
 
@@ -48,7 +49,7 @@ import com.google.common.util.concurrent.Uninterruptibles;
  * See {@link DomainSocket} for more information about UNIX domain sockets.
  */
 @InterfaceAudience.LimitedPrivate("HDFS")
-public final class DomainSocketWatcher extends Thread implements Closeable {
+public final class DomainSocketWatcher implements Closeable {
   static {
     if (SystemUtils.IS_OS_WINDOWS) {
       loadingFailureReason = "UNIX Domain sockets are not available on Windows.";
@@ -281,7 +282,7 @@ public final class DomainSocketWatcher extends Thread implements Closeable {
         try {
           processedCond.await();
         } catch (InterruptedException e) {
-          this.interrupt();
+          Thread.currentThread().interrupt();
         }
         if (!toAdd.contains(entry)) {
           break;
@@ -308,7 +309,7 @@ public final class DomainSocketWatcher extends Thread implements Closeable {
         try {
           processedCond.await();
         } catch (InterruptedException e) {
-          this.interrupt();
+          Thread.currentThread().interrupt();
         }
         if (!toRemove.containsKey(sock.fd)) {
           break;
@@ -381,7 +382,8 @@ public final class DomainSocketWatcher extends Thread implements Closeable {
     }
   }
 
-  private final Thread watcherThread = new Thread(new Runnable() {
+  @VisibleForTesting
+  final Thread watcherThread = new Thread(new Runnable() {
     @Override
     public void run() {
       LOG.info(this + ": starting with interruptCheckPeriodMs = " +
@@ -443,6 +445,7 @@ public final class DomainSocketWatcher extends Thread implements Closeable {
       } catch (IOException e) {
         LOG.error(toString() + " terminating on IOException", e);
       } finally {
+        kick(); // allow the handler for notificationSockets[0] to read a byte
         for (Entry entry : entries.values()) {
           sendCallback("close", entries, fdSet, entry.getDomainSocket().fd);
         }
