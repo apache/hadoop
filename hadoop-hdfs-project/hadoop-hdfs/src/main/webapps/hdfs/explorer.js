@@ -52,6 +52,18 @@
     $('#alert-panel').show();
   }
 
+  $(window).bind('hashchange', function () {
+    $('#alert-panel').hide();
+
+    var dir = window.location.hash.slice(1);
+    if(dir == "") {
+      dir = "/";
+    }
+    if(current_directory != dir) {
+      browse_directory(dir);
+    }
+  });
+
   function network_error_handler(url) {
     return function (jqxhr, text, err) {
       var msg = '<p>Failed to retreive data from ' + url + ', cause: ' + err + '</p>';
@@ -145,6 +157,7 @@
 
       current_directory = dir;
       $('#directory').val(dir);
+      window.location.hash = dir;
       dust.render('explorer', base.push(d), function(err, out) {
         $('#panel').html(out);
 
@@ -169,7 +182,12 @@
 
     var b = function() { browse_directory($('#directory').val()); };
     $('#btn-nav-directory').click(b);
-    browse_directory('/');
+    var dir = window.location.hash.slice(1);
+    if(dir == "") {
+      window.location.hash = "/";
+    } else {
+      browse_directory(dir);
+    }
   }
 
   init();
