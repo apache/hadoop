@@ -434,6 +434,10 @@ Release 2.4.0 - UNRELEASED
     (Haohui Mai via brandonli)
 
     HDFS-5904. TestFileStatus fails intermittently. (Mit Desai via kihwal)
+
+    HDFS-5941. add dfs.namenode.secondary.https-address and
+    dfs.namenode.secondary.https-address in hdfs-default.xml.
+    (Haohui Mai via cnauroth)
  
 Release 2.3.1 - UNRELEASED
 

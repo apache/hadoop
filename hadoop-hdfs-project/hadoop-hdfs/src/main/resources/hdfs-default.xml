@@ -97,6 +97,14 @@
 </property>
 
 <property>
+  <name>dfs.namenode.secondary.https-address</name>
+  <value>0.0.0.0:50091</value>
+  <description>
+    The secondary namenode HTTPS server address and port.
+  </description>
+</property>
+
+<property>
   <name>dfs.datanode.address</name>
   <value>0.0.0.0:50010</value>
   <description>
@@ -1320,7 +1328,16 @@
   <name>dfs.journalnode.http-address</name>
   <value>0.0.0.0:8480</value>
   <description>
-    The address and port the JournalNode web UI listens on.
+    The address and port the JournalNode HTTP server listens on.
+    If the port is 0 then the server will start on a free port.
+  </description>
+</property>
+
+<property>
+  <name>dfs.journalnode.https-address</name>
+  <value>0.0.0.0:8481</value>
+  <description>
+    The address and port the JournalNode HTTPS server listens on.
     If the port is 0 then the server will start on a free port.
   </description>
 </property>
