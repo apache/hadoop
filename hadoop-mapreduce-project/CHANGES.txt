@@ -162,6 +162,9 @@ Release 2.4.0 - UNRELEASED
     MAPREDUCE-5746. Job diagnostics can implicate wrong task for a failed job.
     (Jason Lowe via kasha)
 
+    MAPREDUCE-5670. CombineFileRecordReader should report progress when moving
+    to the next file (Chen He via jlowe)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
