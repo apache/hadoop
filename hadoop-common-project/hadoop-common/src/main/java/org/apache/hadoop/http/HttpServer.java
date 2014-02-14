@@ -51,6 +51,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.ConfServlet;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.jmx.JMXJsonServlet;
 import org.apache.hadoop.log.LogLevel;
 import org.apache.hadoop.metrics.MetricsServlet;
@@ -220,7 +221,8 @@ public class HttpServer implements FilterContainer {
     
     if(connector == null) {
       listenerStartedExternally = false;
-      if (HttpConfig.isSecure()) {
+      if (conf.getBoolean(CommonConfigurationKeysPublic.HADOOP_SSL_ENABLED_KEY,
+          CommonConfigurationKeysPublic.HADOOP_SSL_ENABLED_DEFAULT)) {
         sslFactory = new SSLFactory(SSLFactory.Mode.SERVER, conf);
         try {
           sslFactory.init();
