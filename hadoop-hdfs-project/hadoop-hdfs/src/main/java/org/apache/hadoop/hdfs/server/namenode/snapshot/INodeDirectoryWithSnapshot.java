@@ -487,7 +487,7 @@ public class INodeDirectoryWithSnapshot extends INodeDirectoryWithQuota {
 
   INodeDirectoryWithSnapshot(INodeDirectory that, boolean adopt,
       DirectoryDiffList diffs) {
-    super(that, adopt, that.getNsQuota(), that.getDsQuota());
+    super(that, adopt, that.getQuotaCounts());
     this.diffs = diffs != null? diffs: new DirectoryDiffList();
   }
 

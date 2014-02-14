@@ -295,15 +295,10 @@ public abstract class INodeReference extends INode {
   }
 
   @Override
-  public final long getNsQuota() {
-    return referred.getNsQuota();
+  public Quota.Counts getQuotaCounts() {
+    return referred.getQuotaCounts();
   }
 
-  @Override
-  public final long getDsQuota() {
-    return referred.getDsQuota();
-  }
-  
   @Override
   public final void clear() {
     super.clear();

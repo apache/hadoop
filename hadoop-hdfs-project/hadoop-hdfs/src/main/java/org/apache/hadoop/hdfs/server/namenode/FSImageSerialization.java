@@ -226,6 +226,12 @@ public class FSImageSerialization {
     out.writeLong(file.getPreferredBlockSize());
   }
 
+  private static void writeQuota(Quota.Counts quota, DataOutput out)
+      throws IOException {
+    out.writeLong(quota.get(Quota.NAMESPACE));
+    out.writeLong(quota.get(Quota.DISKSPACE));
+  }
+
   /**
    * Serialize a {@link INodeDirectory}
    * @param node The node to write
@@ -241,8 +247,8 @@ public class FSImageSerialization {
     out.writeLong(0);   // preferred block size
     out.writeInt(-1);   // # of blocks
 
-    out.writeLong(node.getNsQuota());
-    out.writeLong(node.getDsQuota());
+    writeQuota(node.getQuotaCounts(), out);
+
     if (node instanceof INodeDirectorySnapshottable) {
       out.writeBoolean(true);
     } else {
@@ -263,9 +269,7 @@ public class FSImageSerialization {
     writeLocalName(a, out);
     writePermissionStatus(a, out);
     out.writeLong(a.getModificationTime());
-
-    out.writeLong(a.getNsQuota());
-    out.writeLong(a.getDsQuota());
+    writeQuota(a.getQuotaCounts(), out);
   }
 
   /**

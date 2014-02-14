@@ -2448,8 +2448,9 @@ public class FSDirectory implements Closeable {
     if (dirNode.isRoot() && nsQuota == HdfsConstants.QUOTA_RESET) {
       throw new IllegalArgumentException("Cannot clear namespace quota on root.");
     } else { // a directory inode
-      long oldNsQuota = dirNode.getNsQuota();
-      long oldDsQuota = dirNode.getDsQuota();
+      final Quota.Counts oldQuota = dirNode.getQuotaCounts();
+      final long oldNsQuota = oldQuota.get(Quota.NAMESPACE);
+      final long oldDsQuota = oldQuota.get(Quota.DISKSPACE);
       if (nsQuota == HdfsConstants.QUOTA_DONT_SET) {
         nsQuota = oldNsQuota;
       }
@@ -2501,8 +2502,9 @@ public class FSDirectory implements Closeable {
     try {
       INodeDirectory dir = unprotectedSetQuota(src, nsQuota, dsQuota);
       if (dir != null) {
-        fsImage.getEditLog().logSetQuota(src, dir.getNsQuota(), 
-                                         dir.getDsQuota());
+        final Quota.Counts q = dir.getQuotaCounts();
+        fsImage.getEditLog().logSetQuota(src,
+            q.get(Quota.NAMESPACE), q.get(Quota.DISKSPACE));
       }
     } finally {
       writeUnlock();

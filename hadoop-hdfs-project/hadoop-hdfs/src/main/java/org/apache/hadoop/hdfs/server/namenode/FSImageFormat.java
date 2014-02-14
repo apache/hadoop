@@ -383,8 +383,9 @@ public class FSImageFormat {
 
   /** Update the root node's attributes */
   private void updateRootAttr(INodeWithAdditionalFields root) {                                                           
-    long nsQuota = root.getNsQuota();
-    long dsQuota = root.getDsQuota();
+    final Quota.Counts q = root.getQuotaCounts();
+    final long nsQuota = q.get(Quota.NAMESPACE);
+    final long dsQuota = q.get(Quota.DISKSPACE);
     FSDirectory fsDir = namesystem.dir;
     if (nsQuota != -1 || dsQuota != -1) {
       fsDir.rootDir.setQuota(nsQuota, dsQuota);

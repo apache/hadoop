@@ -47,7 +47,7 @@ public enum Content {
     }
 
     private Counts() {
-      super(Content.values());
+      super(Content.class);
     }
   }
 

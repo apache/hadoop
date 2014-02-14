@@ -36,6 +36,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-5940. Minor cleanups to ShortCircuitReplica, FsDatasetCache, and
     DomainSocketWatcher (cmccabe)
 
+    HDFS-5531. Combine the getNsQuota() and getDsQuota() methods in INode.
+    (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-5790. LeaseManager.findPath is very slow when many leases need recovery
