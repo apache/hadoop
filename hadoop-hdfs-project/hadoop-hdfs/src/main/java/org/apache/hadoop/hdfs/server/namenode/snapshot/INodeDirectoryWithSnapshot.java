@@ -804,10 +804,10 @@ public class INodeDirectoryWithSnapshot extends INodeDirectory {
         // For DstReference node, since the node is not in the created list of
         // prior, we should treat it as regular file/dir
       } else if (topNode.isFile()
-          && topNode.asFile() instanceof FileWithSnapshot) {
-        FileWithSnapshot fs = (FileWithSnapshot) topNode.asFile();
-        counts.add(fs.getDiffs().deleteSnapshotDiff(post, prior,
-            topNode.asFile(), collectedBlocks, removedINodes, countDiffChange));
+          && topNode.asFile() instanceof INodeFileWithSnapshot) {
+        INodeFileWithSnapshot fs = (INodeFileWithSnapshot) topNode.asFile();
+        counts.add(fs.getDiffs().deleteSnapshotDiff(post, prior, fs,
+            collectedBlocks, removedINodes, countDiffChange));
       } else if (topNode.isDirectory()) {
         INodeDirectory dir = topNode.asDirectory();
         ChildrenDiff priorChildrenDiff = null;

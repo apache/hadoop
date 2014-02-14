@@ -46,6 +46,8 @@ Release 2.4.0 - UNRELEASED
     HDFS-5286. Flatten INodeDirectory hierarchy: Replace INodeDirectoryWithQuota
     with DirectoryWithQuotaFeature.  (szetszwo)
 
+    HDFS-5537. Remove FileWithSnapshot interface.  (jing9 via szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-5790. LeaseManager.findPath is very slow when many leases need recovery

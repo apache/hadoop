@@ -475,8 +475,8 @@ public class FSDirectory implements Closeable {
   
   boolean unprotectedRemoveBlock(String path,
       INodeFile fileNode, Block block) throws IOException {
-    Preconditions.checkArgument(fileNode.isUnderConstruction());
     // modify file-> block and blocksMap
+    // fileNode should be under construction
     boolean removed = fileNode.removeLastBlock(block);
     if (!removed) {
       return false;
