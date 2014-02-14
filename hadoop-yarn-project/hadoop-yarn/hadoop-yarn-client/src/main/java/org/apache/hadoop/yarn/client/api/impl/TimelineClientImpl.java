@@ -29,7 +29,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.yarn.api.records.apptimeline.ATSEntities;
 import org.apache.hadoop.yarn.api.records.apptimeline.ATSEntity;
 import org.apache.hadoop.yarn.api.records.apptimeline.ATSPutErrors;
@@ -65,12 +64,17 @@ public class TimelineClientImpl extends TimelineClient {
   }
 
   protected void serviceInit(Configuration conf) throws Exception {
-    resURI = new URI(JOINER.join(HttpConfig.getSchemePrefix(),
-        HttpConfig.isSecure() ? conf.get(
-            YarnConfiguration.AHS_WEBAPP_HTTPS_ADDRESS,
-            YarnConfiguration.DEFAULT_AHS_WEBAPP_HTTPS_ADDRESS) : conf.get(
-            YarnConfiguration.AHS_WEBAPP_ADDRESS,
-            YarnConfiguration.DEFAULT_AHS_WEBAPP_ADDRESS), RESOURCE_URI_STR));
+    if (YarnConfiguration.useHttps(conf)) {
+      resURI = URI
+          .create(JOINER.join("https://", conf.get(
+              YarnConfiguration.AHS_WEBAPP_HTTPS_ADDRESS,
+              YarnConfiguration.DEFAULT_AHS_WEBAPP_HTTPS_ADDRESS),
+              RESOURCE_URI_STR));
+    } else {
+      resURI = URI.create(JOINER.join("http://", conf.get(
+          YarnConfiguration.AHS_WEBAPP_ADDRESS,
+          YarnConfiguration.DEFAULT_AHS_WEBAPP_ADDRESS), RESOURCE_URI_STR));
+    }
     super.serviceInit(conf);
   }
 

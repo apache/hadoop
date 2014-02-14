@@ -503,10 +503,11 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       final String trackingUriWithoutScheme) {
     this.readLock.lock();
     try {
+      final String scheme = WebAppUtils.getHttpSchemePrefix(conf);
       URI trackingUri = StringUtils.isEmpty(trackingUriWithoutScheme) ? null :
-        ProxyUriUtils.getUriFromAMUrl(trackingUriWithoutScheme);
+        ProxyUriUtils.getUriFromAMUrl(scheme, trackingUriWithoutScheme);
       String proxy = WebAppUtils.getProxyHostAndPort(conf);
-      URI proxyUri = ProxyUriUtils.getUriFromAMUrl(proxy);
+      URI proxyUri = ProxyUriUtils.getUriFromAMUrl(scheme, proxy);
       URI result = ProxyUriUtils.getProxyUri(trackingUri, proxyUri,
           applicationAttemptId.getApplicationId());
       return result.toASCIIString();

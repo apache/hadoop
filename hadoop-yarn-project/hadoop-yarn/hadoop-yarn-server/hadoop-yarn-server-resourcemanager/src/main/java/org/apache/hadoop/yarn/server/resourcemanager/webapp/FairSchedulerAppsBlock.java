@@ -28,6 +28,7 @@ import java.util.HashSet;
 import java.util.concurrent.ConcurrentMap;
 
 import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
@@ -40,6 +41,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.FairSchedulerInf
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
+import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 
 import com.google.inject.Inject;
@@ -51,13 +53,15 @@ import com.google.inject.Inject;
 public class FairSchedulerAppsBlock extends HtmlBlock {
   final ConcurrentMap<ApplicationId, RMApp> apps;
   final FairSchedulerInfo fsinfo;
+  final Configuration conf;
   
   @Inject public FairSchedulerAppsBlock(RMContext rmContext, 
-      ResourceManager rm, ViewContext ctx) {
+      ResourceManager rm, ViewContext ctx, Configuration conf) {
     super(ctx);
     FairScheduler scheduler = (FairScheduler) rm.getResourceScheduler();
     fsinfo = new FairSchedulerInfo(scheduler);
     apps = rmContext.getRMApps();
+    this.conf = conf;
   }
   
   @Override public void render(Block html) {
@@ -91,7 +95,7 @@ public class FairSchedulerAppsBlock extends HtmlBlock {
       if (reqAppStates != null && !reqAppStates.contains(app.getState())) {
         continue;
       }
-      AppInfo appInfo = new AppInfo(app, true);
+      AppInfo appInfo = new AppInfo(app, true, WebAppUtils.getHttpSchemePrefix(conf));
       String percent = String.format("%.1f", appInfo.getProgress());
       ApplicationAttemptId attemptId = app.getCurrentAppAttempt().getAppAttemptId();
       int fairShare = fsinfo.getAppFairShare(attemptId);

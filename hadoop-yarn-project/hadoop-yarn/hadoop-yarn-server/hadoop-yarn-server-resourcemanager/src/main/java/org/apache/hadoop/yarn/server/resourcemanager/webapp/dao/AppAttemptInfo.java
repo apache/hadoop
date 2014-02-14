@@ -23,7 +23,6 @@ import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
 
-import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.util.ConverterUtils;
@@ -56,7 +55,7 @@ public class AppAttemptInfo {
         this.containerId = masterContainer.getId().toString();
         this.nodeHttpAddress = masterContainer.getNodeHttpAddress();
         this.nodeId = masterContainer.getNodeId().toString();
-        this.logsLink = join(HttpConfig.getSchemePrefix(),
+        this.logsLink = join("//",
             masterContainer.getNodeHttpAddress(),
             "/node", "/containerlogs/",
             ConverterUtils.toString(masterContainer.getId()), "/", user);

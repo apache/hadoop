@@ -1015,19 +1015,12 @@ public class ResourceManager extends CompositeService implements Recoverable {
       ShutdownHookManager.get().addShutdownHook(
         new CompositeServiceShutdownHook(resourceManager),
         SHUTDOWN_HOOK_PRIORITY);
-      setHttpPolicy(conf);
       resourceManager.init(conf);
       resourceManager.start();
     } catch (Throwable t) {
       LOG.fatal("Error starting ResourceManager", t);
       System.exit(-1);
     }
-  }
-  
-  private static void setHttpPolicy(Configuration conf) {
-    HttpConfig.setPolicy(Policy.fromString(conf.get(
-      YarnConfiguration.YARN_HTTP_POLICY_KEY,
-      YarnConfiguration.YARN_HTTP_POLICY_DEFAULT)));
   }
 
   /**

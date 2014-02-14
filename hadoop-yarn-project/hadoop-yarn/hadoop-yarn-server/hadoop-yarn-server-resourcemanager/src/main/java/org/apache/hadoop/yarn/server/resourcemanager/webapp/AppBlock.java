@@ -27,7 +27,7 @@ import static org.apache.hadoop.yarn.webapp.view.JQueryUI._TH;
 
 import java.util.Collection;
 
-import org.apache.hadoop.http.HttpConfig;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
@@ -46,6 +46,7 @@ import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.DIV;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
+import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 import org.apache.hadoop.yarn.webapp.view.InfoBlock;
 
@@ -55,13 +56,16 @@ public class AppBlock extends HtmlBlock {
 
   private ApplicationACLsManager aclsManager;
   private QueueACLsManager queueACLsManager;
+  private final Configuration conf;
 
   @Inject
   AppBlock(ResourceManager rm, ViewContext ctx,
-      ApplicationACLsManager aclsManager, QueueACLsManager queueACLsManager) {
+      ApplicationACLsManager aclsManager, QueueACLsManager queueACLsManager,
+      Configuration conf) {
     super(ctx);
     this.aclsManager = aclsManager;
     this.queueACLsManager = queueACLsManager;
+    this.conf = conf;
   }
 
   @Override
@@ -86,7 +90,7 @@ public class AppBlock extends HtmlBlock {
       puts("Application not found: "+ aid);
       return;
     }
-    AppInfo app = new AppInfo(rmApp, true);
+    AppInfo app = new AppInfo(rmApp, true, WebAppUtils.getHttpSchemePrefix(conf));
 
     // Check for the authorization.
     String remoteUser = request().getRemoteUser();
@@ -146,7 +150,7 @@ public class AppBlock extends HtmlBlock {
       table.tr((odd = !odd) ? _ODD : _EVEN).
         td(String.valueOf(attemptInfo.getAttemptId())).
         td(Times.format(attemptInfo.getStartTime())).
-        td().a(".nodelink", url(HttpConfig.getSchemePrefix(),
+        td().a(".nodelink", url("//",
             attemptInfo.getNodeHttpAddress()),
             attemptInfo.getNodeHttpAddress())._().
         td().a(".logslink", url(attemptInfo.getLogsLink()), "logs")._().

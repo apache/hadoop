@@ -273,6 +273,10 @@ Release 2.4.0 - UNRELEASED
     at allocation time so as to prevent RM from shelling out containers with
     expired tokens. (Omkar Vinit Joshi and Jian He via vinodkv)
 
+    YARN-1553. Modified YARN and MR to stop using HttpConfig.isSecure() and
+    instead rely on the http policy framework. And also fix some bugs related
+    to https handling in YARN web-apps. (Haohui Mai via vinodkv)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

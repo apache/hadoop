@@ -230,9 +230,9 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
                WebAppUtils.getRMWebAppURLWithoutScheme(getConfig()));
       LOG.info("MiniMRYARN HistoryServer address: " +
                getConfig().get(JHAdminConfig.MR_HISTORY_ADDRESS));
-      LOG.info("MiniMRYARN HistoryServer web address: " +
-          getResolvedMRHistoryWebAppURLWithoutScheme(getConfig(),
-              HttpConfig.isSecure()));
+      LOG.info("MiniMRYARN HistoryServer web address: "
+          + getResolvedMRHistoryWebAppURLWithoutScheme(getConfig(),
+              MRWebAppUtil.getJHSHttpPolicy() == HttpConfig.Policy.HTTPS_ONLY));
     }
 
     @Override
