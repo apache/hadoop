@@ -50,7 +50,7 @@ import org.junit.Test;
  * underlying file system as Hdfs.
  */
 public class TestResolveHdfsSymlink {
-  private static File TEST_ROOT_DIR = PathUtils.getTestDir(TestResolveHdfsSymlink.class);
+  private static FileContextTestHelper helper = new FileContextTestHelper();
   private static MiniDFSCluster cluster = null;
 
   @BeforeClass
@@ -82,13 +82,14 @@ public class TestResolveHdfsSymlink {
     FileContext fcHdfs = FileContext.getFileContext(cluster.getFileSystem()
         .getUri());
 
+    final String localTestRoot = helper.getAbsoluteTestRootDir(fcLocal);
     Path alphaLocalPath = new Path(fcLocal.getDefaultFileSystem().getUri()
-        .toString(), new File(TEST_ROOT_DIR, "alpha").getAbsolutePath());
+        .toString(), new File(localTestRoot, "alpha").getAbsolutePath());
     DFSTestUtil.createFile(FileSystem.getLocal(conf), alphaLocalPath, 16,
         (short) 1, 2);
 
     Path linkTarget = new Path(fcLocal.getDefaultFileSystem().getUri()
-        .toString(), TEST_ROOT_DIR.getAbsolutePath());
+        .toString(), localTestRoot);
     Path hdfsLink = new Path(fcHdfs.getDefaultFileSystem().getUri().toString(),
         "/tmp/link");
     fcHdfs.createSymlink(linkTarget, hdfsLink, true);

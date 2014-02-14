@@ -52,7 +52,7 @@ public class TestFSMainOperationsWebHdfs extends FSMainOperationsBaseTest {
   private static FileSystem fileSystem;
   
   public TestFSMainOperationsWebHdfs() {
-    super("/tmp/TestFSMainOperationsWebHdfs");
+    super();
   }
 
   @Override
