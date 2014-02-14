@@ -27,11 +27,13 @@ import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.HardLink;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.RollingUpgradeStartupOption;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
@@ -57,9 +59,19 @@ import org.apache.hadoop.util.Daemon;
  */
 @InterfaceAudience.Private
 public class BlockPoolSliceStorage extends Storage {
-  private static final Pattern BLOCK_POOL_PATH_PATTERN = Pattern
-      .compile("^(.*)"
-          + "(\\/BP-[0-9]+\\-\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\-[0-9]+\\/.*)$");
+  static final String TRASH_ROOT_DIR = "trash";
+
+  private static final String BLOCK_POOL_ID_PATTERN_BASE =
+      "/BP-\\d+-\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}-\\d+/";
+
+  private static final Pattern BLOCK_POOL_PATH_PATTERN = Pattern.compile(
+      "^(.*)(" + BLOCK_POOL_ID_PATTERN_BASE + ")(.*)$");
+
+  private static final Pattern BLOCK_POOL_CURRENT_PATH_PATTERN = Pattern.compile(
+      "^(.*)(" + BLOCK_POOL_ID_PATTERN_BASE + ")(" + STORAGE_DIR_CURRENT + ")(.*)$");
+
+  private static final Pattern BLOCK_POOL_TRASH_PATH_PATTERN = Pattern.compile(
+      "^(.*)(" + BLOCK_POOL_ID_PATTERN_BASE + ")(" + TRASH_ROOT_DIR + ")(.*)$");
 
   private String blockpoolID = ""; // id of the blockpool
 
@@ -92,6 +104,7 @@ public class BlockPoolSliceStorage extends Storage {
    */
   void recoverTransitionRead(DataNode datanode, NamespaceInfo nsInfo,
       Collection<File> dataDirs, StartupOption startOpt) throws IOException {
+    LOG.info("Analyzing storage directories for bpid " + nsInfo.getBlockPoolID());
     // 1. For each BP data directory analyze the state and
     // check whether all is consistent before transitioning.
     this.storageDirs = new ArrayList<StorageDirectory>(dataDirs.size());
@@ -231,8 +244,15 @@ public class BlockPoolSliceStorage extends Storage {
    */
   private void doTransition(StorageDirectory sd,
       NamespaceInfo nsInfo, StartupOption startOpt) throws IOException {
-    if (startOpt == StartupOption.ROLLBACK)
+    if (startOpt == StartupOption.ROLLBACK) {
       doRollback(sd, nsInfo); // rollback if applicable
+    } else if (startOpt == StartupOption.ROLLINGUPGRADE &&
+        startOpt.getRollingUpgradeStartupOption() == RollingUpgradeStartupOption.ROLLBACK) {
+      File trashRoot = getTrashRootDir(sd);
+      int filesRestored =
+          trashRoot.exists() ? restoreBlockFilesFromTrash(trashRoot) : 0;
+      LOG.info("Restored " + filesRestored + " block files from trash.");
+    }
     
     readProperties(sd);
     checkVersionUpgradable(this.layoutVersion);
@@ -356,6 +376,34 @@ public class BlockPoolSliceStorage extends Storage {
         throw new IOException("Cannot remove directory " + detachDir);
       }
     }
+  }
+
+  /**
+   * Restore all files from the trash directory to their corresponding
+   * locations under current/
+   *
+   * @param trashRoot
+   */
+  private int restoreBlockFilesFromTrash(File trashRoot) {
+    int filesRestored = 0;
+    File restoreDirectory = null;
+
+    for (File child : trashRoot.listFiles()) {
+      if (child.isDirectory()) {
+        // Recurse to process subdirectories.
+        filesRestored += restoreBlockFilesFromTrash(child);
+      }
+
+      if (restoreDirectory == null) {
+        restoreDirectory = new File(getRestoreDirectory(child));
+        restoreDirectory.mkdirs();
+      }
+
+      child.renameTo(new File(restoreDirectory, child.getName()));
+      ++filesRestored;
+    }
+
+    return filesRestored;
   }
 
   /*
@@ -504,5 +552,52 @@ public class BlockPoolSliceStorage extends Storage {
   @Override
   public boolean isPreUpgradableLayout(StorageDirectory sd) throws IOException {
     return false;
+  }
+
+  private File getTrashRootDir(StorageDirectory sd) {
+    return new File(sd.getRoot(), TRASH_ROOT_DIR);
+  }
+
+  /**
+   * Get a target subdirectory under trash/ for a given block file that is being
+   * deleted.
+   *
+   * The subdirectory structure under trash/ mirrors that under current/ to keep
+   * implicit memory of where the files are to be restored (if necessary).
+   *
+   * @param blockFile
+   * @return the trash directory for a given block file that is being deleted.
+   */
+  public String getTrashDirectory(File blockFile) {
+    Matcher matcher = BLOCK_POOL_CURRENT_PATH_PATTERN.matcher(blockFile.getParent());
+    String trashDirectory = matcher.replaceFirst("$1$2" + TRASH_ROOT_DIR + "$4");
+    return trashDirectory;
+  }
+
+  /**
+   * Get a target subdirectory under current/ for a given block file that is being
+   * restored from trash.
+   *
+   * The subdirectory structure under trash/ mirrors that under current/ to keep
+   * implicit memory of where the files are to be restored.
+   *
+   * @param blockFile
+   * @return the target directory to restore a previously deleted block file.
+   */
+  @VisibleForTesting
+  String getRestoreDirectory(File blockFile) {
+    Matcher matcher = BLOCK_POOL_TRASH_PATH_PATTERN.matcher(blockFile.getParent());
+    String restoreDirectory = matcher.replaceFirst("$1$2" + STORAGE_DIR_CURRENT + "$4");
+    LOG.info("Restoring " + blockFile + " to " + restoreDirectory);
+    return restoreDirectory;
+  }
+
+  /**
+   * Delete all files and directories in the trash directories.
+   */
+  public void emptyTrash() {
+    for (StorageDirectory sd : storageDirs) {
+      FileUtil.fullyDelete(getTrashRootDir(sd));
+    }
   }
 }

@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs.server.common;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.server.namenode.MetaRecoveryContext;
@@ -81,7 +83,10 @@ public final class HdfsServerConstants {
     FORCE("-force"),
     NONINTERACTIVE("-nonInteractive"),
     RENAMERESERVED("-renameReserved");
-    
+
+    private static final Pattern ENUM_WITH_ROLLING_UPGRADE_OPTION = Pattern.compile(
+        "(\\w+)\\((\\w+)\\)");
+
     private final String name;
     
     // Used only with format and upgrade options
@@ -166,6 +171,17 @@ public final class HdfsServerConstants {
             .toString();
       }
       return super.toString();
+    }
+
+    static public StartupOption getEnum(String value) {
+      Matcher matcher = ENUM_WITH_ROLLING_UPGRADE_OPTION.matcher(value);
+      if (matcher.matches()) {
+        StartupOption option = StartupOption.valueOf(matcher.group(1));
+        option.setRollingUpgradeStartupOption(matcher.group(2));
+        return option;
+      } else {
+        return StartupOption.valueOf(value);
+      }
     }
   }
 

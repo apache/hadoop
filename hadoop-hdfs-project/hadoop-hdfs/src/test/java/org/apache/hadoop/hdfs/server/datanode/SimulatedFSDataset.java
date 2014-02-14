@@ -1041,6 +1041,16 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   }
 
   @Override
+  public void enableDeleteToTrash(String bpid) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void disableAndPurgeTrashStorage(String bpid) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
   public void checkAndUpdate(String bpid, long blockId, File diskFile,
       File diskMetaFile, FsVolumeSpi vol) {
     throw new UnsupportedOperationException();

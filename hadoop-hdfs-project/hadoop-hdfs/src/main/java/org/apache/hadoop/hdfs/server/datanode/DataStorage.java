@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileLock;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -65,6 +66,13 @@ public class DataStorage extends Storage {
   public final static String STORAGE_DIR_FINALIZED = "finalized";
   public final static String STORAGE_DIR_TMP = "tmp";
 
+  // Set of bpids for which 'trash' is currently enabled.
+  // When trash is enabled block files are moved under a separate
+  // 'trash' folder instead of being deleted right away. This can
+  // be useful during rolling upgrades, for example.
+  // The set is backed by a concurrent HashMap.
+  private Set<String> trashEnabledBpids;
+
   /**
    * Datanode UUID that this storage is currently attached to. This
    *  is the same as the legacy StorageID for datanodes that were
@@ -83,6 +91,8 @@ public class DataStorage extends Storage {
 
   DataStorage() {
     super(NodeType.DATA_NODE);
+    trashEnabledBpids = Collections.newSetFromMap(
+        new ConcurrentHashMap<String, Boolean>());
   }
   
   public StorageInfo getBPStorage(String bpid) {
@@ -106,6 +116,49 @@ public class DataStorage extends Storage {
     if (sd.getStorageUuid() == null) {
       sd.setStorageUuid(DatanodeStorage.generateUuid());
     }
+  }
+
+  /**
+   * Enable trash for the specified block pool storage.
+   *
+   * @param bpid
+   * @param  inProgress
+   */
+  public void enableTrash(String bpid) {
+    if (trashEnabledBpids.add(bpid)) {
+      LOG.info("Enabled trash for bpid " + bpid);
+    }
+  }
+
+  /**
+   * Disable trash for the specified block pool storage.
+   * Existing files in trash are purged i.e. permanently deleted.
+   *
+   * @param bpid
+   * @param  inProgress
+   */
+  public void disableAndPurgeTrash(String bpid) {
+    if (trashEnabledBpids.remove(bpid)) {
+      LOG.info("Disabled trash for bpid " + bpid);
+    }
+    ((BlockPoolSliceStorage) getBPStorage(bpid)).emptyTrash();
+  }
+
+  /**
+   * If rolling upgrades are in progress then do not delete block files
+   * immediately. Instead we move the block files to an intermediate
+   * 'trash' directory. If there is a subsequent rollback, then the block
+   * files will be restored from trash.
+   *
+   * @param blockFile
+   * @return trash directory if rolling upgrade is in progress, null
+   *         otherwise.
+   */
+  public String getTrashDirectoryForBlockFile(String bpid, File blockFile) {
+    if (trashEnabledBpids.contains(bpid)) {
+      return ((BlockPoolSliceStorage) getBPStorage(bpid)).getTrashDirectory(blockFile);
+    }
+    return null;
   }
   
   /**

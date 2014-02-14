@@ -414,6 +414,18 @@ class BPOfferService {
   }
   
   /**
+   * Signal the current rolling upgrade status as indicated by the NN.
+   * @param inProgress true if a rolling upgrade is in progress
+   */
+  void signalRollingUpgrade(boolean inProgress) {
+    if (inProgress) {
+      dn.getFSDataset().enableDeleteToTrash(getBlockPoolId());
+    } else {
+      dn.getFSDataset().disableAndPurgeTrashStorage(getBlockPoolId());
+    }
+  }
+
+  /**
    * Update the BPOS's view of which NN is active, based on a heartbeat
    * response from one of the actors.
    * 
@@ -611,7 +623,8 @@ class BPOfferService {
       // See HDFS-2987.
       throw new UnsupportedOperationException("Received unimplemented DNA_SHUTDOWN");
     case DatanodeProtocol.DNA_FINALIZE:
-      String bp = ((FinalizeCommand) cmd).getBlockPoolId(); 
+      String bp = ((FinalizeCommand) cmd).getBlockPoolId();
+      LOG.info("Got finalize command for block pool " + bp);
       assert getBlockPoolId().equals(bp) :
         "BP " + getBlockPoolId() + " received DNA_FINALIZE " +
         "for other block pool " + bp;

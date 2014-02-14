@@ -38,7 +38,6 @@ import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
 import javax.management.StandardMBean;
 
-import com.google.common.base.Preconditions;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -193,6 +192,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   }
     
   final DataNode datanode;
+  final DataStorage dataStorage;
   final FsVolumeList volumes;
   final FsDatasetAsyncDiskService asyncDiskService;
   final FsDatasetCache cacheManager;
@@ -209,6 +209,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   FsDatasetImpl(DataNode datanode, DataStorage storage, Configuration conf
       ) throws IOException {
     this.datanode = datanode;
+    this.dataStorage = storage;
     // The number of volumes required for operation is the total number 
     // of volumes minus the number of failed volumes we can tolerate.
     final int volFailuresTolerated =
@@ -1234,7 +1235,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       // finishes.
       asyncDiskService.deleteAsync(v, f,
           FsDatasetUtil.getMetaFile(f, invalidBlks[i].getGenerationStamp()),
-          new ExtendedBlock(bpid, invalidBlks[i]));
+          new ExtendedBlock(bpid, invalidBlks[i]),
+          dataStorage.getTrashDirectoryForBlockFile(bpid, f));
     }
     if (error) {
       throw new IOException("Error in deleting blocks.");
@@ -1889,6 +1891,16 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     }
     return new HdfsBlocksMetadata(blocks.toArray(new ExtendedBlock[] {}), 
         blocksVolumeIds, blocksVolumeIndexes);
+  }
+
+  @Override
+  public void enableDeleteToTrash(String bpid) {
+    dataStorage.enableTrash(bpid);
+  }
+
+  @Override
+  public void disableAndPurgeTrashStorage(String bpid) {
+    dataStorage.disableAndPurgeTrash(bpid);
   }
 
   @Override
