@@ -23,90 +23,51 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.namenode.INode;
+import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeFileAttributes;
-import org.apache.hadoop.hdfs.server.namenode.INodeMap;
 import org.apache.hadoop.hdfs.server.namenode.Quota;
 
 /**
- * Represent an {@link INodeFile} that is snapshotted.
+ * Feature for file with snapshot-related information.
  */
 @InterfaceAudience.Private
-public class INodeFileWithSnapshot extends INodeFile {
+public class FileWithSnapshotFeature extends INodeFile.Feature {
   private final FileDiffList diffs;
   private boolean isCurrentFileDeleted = false;
-
-  public INodeFileWithSnapshot(INodeFile f) {
-    this(f, f instanceof INodeFileWithSnapshot ? 
-        ((INodeFileWithSnapshot) f).getDiffs() : null);
-  }
-
-  public INodeFileWithSnapshot(INodeFile f, FileDiffList diffs) {
-    super(f);
+  
+  public FileWithSnapshotFeature(FileDiffList diffs) {
     this.diffs = diffs != null? diffs: new FileDiffList();
   }
 
-  /** Is the current file deleted? */
   public boolean isCurrentFileDeleted() {
     return isCurrentFileDeleted;
   }
   
-  /** Delete the file from the current tree */
+  /** 
+   * We need to distinguish two scenarios:
+   * 1) the file is still in the current file directory, it has been modified 
+   *    before while it is included in some snapshot
+   * 2) the file is not in the current file directory (deleted), but it is in
+   *    some snapshot, thus we still keep this inode
+   * For both scenarios the file has snapshot feature. We set 
+   * {@link #isCurrentFileDeleted} to true for 2).
+   */
   public void deleteCurrentFile() {
     isCurrentFileDeleted = true;
   }
 
-  @Override
-  public INodeFileAttributes getSnapshotINode(Snapshot snapshot) {
-    return diffs.getSnapshotINode(snapshot, this);
+  public INodeFileAttributes getSnapshotINode(INodeFile f, Snapshot snapshot) {
+    return diffs.getSnapshotINode(snapshot, f);
   }
 
-  @Override
-  public INodeFileWithSnapshot recordModification(final Snapshot latest,
-      final INodeMap inodeMap) throws QuotaExceededException {
-    if (isInLatestSnapshot(latest) && !shouldRecordInSrcSnapshot(latest)) {
-      diffs.saveSelf2Snapshot(latest, this, null);
-    }
-    return this;
-  }
-
-  /** @return the file diff list. */
   public FileDiffList getDiffs() {
     return diffs;
   }
-
-  @Override
-  public Quota.Counts cleanSubtree(final Snapshot snapshot, Snapshot prior,
-      final BlocksMapUpdateInfo collectedBlocks,
-      final List<INode> removedINodes, final boolean countDiffChange) 
-      throws QuotaExceededException {
-    if (snapshot == null) { // delete the current file
-      if (!isCurrentFileDeleted()) {
-        recordModification(prior, null);
-        deleteCurrentFile();
-      }
-      this.collectBlocksAndClear(collectedBlocks, removedINodes);
-      return Quota.Counts.newInstance();
-    } else { // delete a snapshot
-      prior = getDiffs().updatePrior(snapshot, prior);
-      return diffs.deleteSnapshotDiff(snapshot, prior, this, collectedBlocks,
-          removedINodes, countDiffChange);
-    }
-  }
-
-  @Override
-  public String toDetailString() {
-    return super.toDetailString()
-        + (isCurrentFileDeleted()? "(DELETED), ": ", ") + diffs;
-  }
   
-  /** 
-   * @return block replication, which is the max file replication among
-   *         the file and the diff list.
-   */
-  @Override
-  public short getBlockReplication() {
-    short max = isCurrentFileDeleted() ? 0 : getFileReplication();
+  /** @return the max replication factor in diffs */
+  public short getMaxBlockRepInDiffs() {
+    short max = 0;
     for(FileDiff d : getDiffs()) {
       if (d.snapshotINode != null) {
         final short replication = d.snapshotINode.getFileReplication();
@@ -118,33 +79,79 @@ public class INodeFileWithSnapshot extends INodeFile {
     return max;
   }
   
+  public String getDetailedString() {
+    return (isCurrentFileDeleted()? "(DELETED), ": ", ") + diffs;
+  }
+  
+  public Quota.Counts cleanFile(final INodeFile file, final Snapshot snapshot,
+      Snapshot prior, final BlocksMapUpdateInfo collectedBlocks,
+      final List<INode> removedINodes, final boolean countDiffChange)
+      throws QuotaExceededException {
+    if (snapshot == null) {
+      // delete the current file while the file has snapshot feature
+      if (!isCurrentFileDeleted()) {
+        file.recordModification(prior, null);
+        deleteCurrentFile();
+      }
+      collectBlocksAndClear(file, collectedBlocks, removedINodes);
+      return Quota.Counts.newInstance();
+    } else { // delete the snapshot
+      prior = getDiffs().updatePrior(snapshot, prior);
+      return diffs.deleteSnapshotDiff(snapshot, prior, file, collectedBlocks,
+          removedINodes, countDiffChange);
+    }
+  }
+  
+  public void clearDiffs() {
+    this.diffs.clear();
+  }
+  
+  public Quota.Counts updateQuotaAndCollectBlocks(INodeFile file,
+      FileDiff removed, BlocksMapUpdateInfo collectedBlocks,
+      final List<INode> removedINodes) {
+    long oldDiskspace = file.diskspaceConsumed();
+    if (removed.snapshotINode != null) {
+      short replication = removed.snapshotINode.getFileReplication();
+      short currentRepl = file.getBlockReplication();
+      if (currentRepl == 0) {
+        oldDiskspace = file.computeFileSize(true, true) * replication;
+      } else if (replication > currentRepl) {  
+        oldDiskspace = oldDiskspace / file.getBlockReplication() * replication;
+      }
+    }
+    
+    collectBlocksAndClear(file, collectedBlocks, removedINodes);
+    
+    long dsDelta = oldDiskspace - file.diskspaceConsumed();
+    return Quota.Counts.newInstance(0, dsDelta);
+  }
+  
   /**
    * If some blocks at the end of the block list no longer belongs to
    * any inode, collect them and update the block list.
    */
-  void collectBlocksAndClear(final BlocksMapUpdateInfo info,
-      final List<INode> removedINodes) {
+  private void collectBlocksAndClear(final INodeFile file,
+      final BlocksMapUpdateInfo info, final List<INode> removedINodes) {
     // check if everything is deleted.
     if (isCurrentFileDeleted() && getDiffs().asList().isEmpty()) {
-      destroyAndCollectBlocks(info, removedINodes);
+      file.destroyAndCollectBlocks(info, removedINodes);
       return;
     }
-
     // find max file size.
     final long max;
     if (isCurrentFileDeleted()) {
       final FileDiff last = getDiffs().getLast();
       max = last == null? 0: last.getFileSize();
     } else { 
-      max = computeFileSize();
+      max = file.computeFileSize();
     }
 
-    collectBlocksBeyondMax(max, info);
+    collectBlocksBeyondMax(file, max, info);
   }
 
-  private void collectBlocksBeyondMax(final long max,
+  private void collectBlocksBeyondMax(final INodeFile file, final long max,
       final BlocksMapUpdateInfo collectedBlocks) {
-    final BlockInfo[] oldBlocks = getBlocks();
+    final BlockInfo[] oldBlocks = file.getBlocks();
     if (oldBlocks != null) {
       //find the minimum n such that the size of the first n blocks > max
       int n = 0;
@@ -164,7 +171,7 @@ public class INodeFileWithSnapshot extends INodeFile {
         }
         
         // set new blocks
-        setBlocks(newBlocks);
+        file.setBlocks(newBlocks);
 
         // collect the blocks beyond max.  
         if (collectedBlocks != null) {
@@ -174,25 +181,5 @@ public class INodeFileWithSnapshot extends INodeFile {
         }
       }
     }
-  }
-  
-  Quota.Counts updateQuotaAndCollectBlocks(FileDiff removed,
-      BlocksMapUpdateInfo collectedBlocks, final List<INode> removedINodes) {
-    long oldDiskspace = this.diskspaceConsumed();
-    if (removed.snapshotINode != null) {
-      short replication = removed.snapshotINode.getFileReplication();
-      short currentRepl = getBlockReplication();
-      if (currentRepl == 0) {
-        oldDiskspace = computeFileSize(true, true) * replication;
-      } else if (replication > currentRepl) {  
-        oldDiskspace = oldDiskspace / getBlockReplication()
-            * replication;
-      }
-    }
-    
-    this.collectBlocksAndClear(collectedBlocks, removedINodes);
-    
-    long dsDelta = oldDiskspace - diskspaceConsumed();
-    return Quota.Counts.newInstance(0, dsDelta);
   }
 }

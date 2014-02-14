@@ -48,6 +48,9 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-5537. Remove FileWithSnapshot interface.  (jing9 via szetszwo)
 
+    HDFS-5554. Flatten INodeFile hierarchy: Replace INodeFileWithSnapshot with
+    FileWithSnapshotFeature.  (jing9 via szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-5790. LeaseManager.findPath is very slow when many leases need recovery

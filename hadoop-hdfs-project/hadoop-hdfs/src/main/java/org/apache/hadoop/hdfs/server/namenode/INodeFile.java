@@ -35,7 +35,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileDiff;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileDiffList;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileWithSnapshot;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.FileWithSnapshotFeature;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -141,24 +141,11 @@ public class INodeFile extends INodeWithAdditionalFields
     this.blocks = that.blocks;
     this.headFeature = that.headFeature;
   }
-
-  /**
-   * If the inode contains a {@link FileUnderConstructionFeature}, return it;
-   * otherwise, return null.
-   */
-  public final FileUnderConstructionFeature getFileUnderConstructionFeature() {
-    for (Feature f = this.headFeature; f != null; f = f.nextFeature) {
-      if (f instanceof FileUnderConstructionFeature) {
-        return (FileUnderConstructionFeature) f;
-      }
-    }
-    return null;
-  }
-
-  /** Is this file under construction? */
-  @Override // BlockCollection
-  public boolean isUnderConstruction() {
-    return getFileUnderConstructionFeature() != null;
+  
+  public INodeFile(INodeFile that, FileDiffList diffs) {
+    this(that);
+    Preconditions.checkArgument(!that.isWithSnapshot());
+    this.addSnapshotFeature(diffs);
   }
 
   private void addFeature(Feature f) {
@@ -182,6 +169,25 @@ public class INodeFile extends INodeWithAdditionalFields
   }
 
   /* Start of Under-Construction Feature */
+
+  /**
+   * If the inode contains a {@link FileUnderConstructionFeature}, return it;
+   * otherwise, return null.
+   */
+  public final FileUnderConstructionFeature getFileUnderConstructionFeature() {
+    for (Feature f = this.headFeature; f != null; f = f.nextFeature) {
+      if (f instanceof FileUnderConstructionFeature) {
+        return (FileUnderConstructionFeature) f;
+      }
+    }
+    return null;
+  }
+
+  /** Is this file under construction? */
+  @Override // BlockCollection
+  public boolean isUnderConstruction() {
+    return getFileUnderConstructionFeature() != null;
+  }
 
   /** Convert this file to an {@link INodeFileUnderConstruction}. */
   INodeFile toUnderConstruction(String clientName, String clientMachine,
@@ -267,24 +273,75 @@ public class INodeFile extends INodeWithAdditionalFields
   }
 
   /* End of Under-Construction Feature */
+  
+  /* Start of Snapshot Feature */
+
+  private FileWithSnapshotFeature addSnapshotFeature(FileDiffList diffs) {
+    FileWithSnapshotFeature sf = new FileWithSnapshotFeature(diffs);
+    this.addFeature(sf);
+    return sf;
+  }
+  
+  /**
+   * If feature list contains a {@link FileWithSnapshotFeature}, return it;
+   * otherwise, return null.
+   */
+  public final FileWithSnapshotFeature getFileWithSnapshotFeature() {
+    for (Feature f = headFeature; f != null; f = f.nextFeature) {
+      if (f instanceof FileWithSnapshotFeature) {
+        return (FileWithSnapshotFeature) f;
+      }
+    }
+    return null;
+  }
+
+  /** Is this file has the snapshot feature? */
+  public final boolean isWithSnapshot() {
+    return getFileWithSnapshotFeature() != null;
+  }
+    
+  @Override
+  public String toDetailString() {
+    FileWithSnapshotFeature sf = this.getFileWithSnapshotFeature();
+    return super.toDetailString() + (sf == null ? "" : sf.getDetailedString()); 
+  }
 
   @Override
   public INodeFileAttributes getSnapshotINode(final Snapshot snapshot) {
-    return this;
+    FileWithSnapshotFeature sf = this.getFileWithSnapshotFeature();
+    if (sf != null) {
+      return sf.getSnapshotINode(this, snapshot);
+    } else {
+      return this;
+    }
   }
 
   @Override
   public INodeFile recordModification(final Snapshot latest,
       final INodeMap inodeMap) throws QuotaExceededException {
     if (isInLatestSnapshot(latest)) {
-      INodeFileWithSnapshot newFile = getParent()
-          .replaceChild4INodeFileWithSnapshot(this, inodeMap)
-          .recordModification(latest, inodeMap);
-      return newFile;
-    } else {
-      return this;
+      // the file is in snapshot, create a snapshot feature if it does not have
+      FileWithSnapshotFeature sf = this.getFileWithSnapshotFeature();
+      if (sf == null) {
+        sf = addSnapshotFeature(null);
+      }
+      // record self in the diff list if necessary
+      if (!shouldRecordInSrcSnapshot(latest)) {
+        sf.getDiffs().saveSelf2Snapshot(latest, this, null);
+      }
     }
+    return this;
   }
+  
+  public FileDiffList getDiffs() {
+    FileWithSnapshotFeature sf = this.getFileWithSnapshotFeature();
+    if (sf != null) {
+      return sf.getDiffs();
+    }
+    return null;
+  }
+  
+  /* End of Snapshot Feature */
 
   /** @return the replication factor of the file. */
   public final short getFileReplication(Snapshot snapshot) {
@@ -296,14 +353,23 @@ public class INodeFile extends INodeWithAdditionalFields
   }
 
   /** The same as getFileReplication(null). */
-  @Override
+  @Override // INodeFileAttributes
   public final short getFileReplication() {
     return getFileReplication(null);
   }
 
-  @Override
+  @Override // BlockCollection
   public short getBlockReplication() {
-    return getFileReplication(null);
+    short max = getFileReplication(null);
+    FileWithSnapshotFeature sf = this.getFileWithSnapshotFeature();
+    if (sf != null) {
+      short maxInSnapshot = sf.getMaxBlockRepInDiffs();
+      if (sf.isCurrentFileDeleted()) {
+        return maxInSnapshot;
+      }
+      max = maxInSnapshot > max ? maxInSnapshot : max;
+    }
+    return max;
   }
 
   /** Set the replication factor of this file. */
@@ -396,12 +462,20 @@ public class INodeFile extends INodeWithAdditionalFields
       final BlocksMapUpdateInfo collectedBlocks,
       final List<INode> removedINodes, final boolean countDiffChange)
       throws QuotaExceededException {
+    FileWithSnapshotFeature sf = getFileWithSnapshotFeature();
+    if (sf != null) {
+      return sf.cleanFile(this, snapshot, prior, collectedBlocks,
+          removedINodes, countDiffChange);
+    }
     Quota.Counts counts = Quota.Counts.newInstance();
-    if (snapshot == null && prior == null) {   
-      // this only happens when deleting the current file
+    if (snapshot == null && prior == null) {
+      // this only happens when deleting the current file and the file is not
+      // in any snapshot
       computeQuotaUsage(counts, false);
       destroyAndCollectBlocks(collectedBlocks, removedINodes);
     } else if (snapshot == null && prior != null) {
+      // when deleting the current file and the file is in snapshot, we should
+      // clean the 0-sized block if the file is UC
       FileUnderConstructionFeature uc = getFileUnderConstructionFeature();
       if (uc != null) {
         uc.cleanZeroSizeBlock(this, collectedBlocks);
@@ -423,8 +497,9 @@ public class INodeFile extends INodeWithAdditionalFields
     clear();
     removedINodes.add(this);
     
-    if (this instanceof INodeFileWithSnapshot) {
-      ((INodeFileWithSnapshot) this).getDiffs().clear();
+    FileWithSnapshotFeature sf = getFileWithSnapshotFeature();
+    if (sf != null) {
+      sf.clearDiffs();
     }
   }
   
@@ -439,8 +514,9 @@ public class INodeFile extends INodeWithAdditionalFields
       boolean useCache, int lastSnapshotId) {
     long nsDelta = 1;
     final long dsDelta;
-    if (this instanceof INodeFileWithSnapshot) {
-      FileDiffList fileDiffList = ((INodeFileWithSnapshot) this).getDiffs();
+    FileWithSnapshotFeature sf = getFileWithSnapshotFeature();
+    if (sf != null) {
+      FileDiffList fileDiffList = sf.getDiffs();
       Snapshot last = fileDiffList.getLastSnapshot();
       List<FileDiff> diffs = fileDiffList.asList();
 
@@ -472,16 +548,16 @@ public class INodeFile extends INodeWithAdditionalFields
   private void computeContentSummary4Snapshot(final Content.Counts counts) {
     // file length and diskspace only counted for the latest state of the file
     // i.e. either the current state or the last snapshot
-    if (this instanceof INodeFileWithSnapshot) {
-      final INodeFileWithSnapshot withSnapshot = (INodeFileWithSnapshot) this;
-      final FileDiffList diffs = withSnapshot.getDiffs();
+    FileWithSnapshotFeature sf = getFileWithSnapshotFeature();
+    if (sf != null) {
+      final FileDiffList diffs = sf.getDiffs();
       final int n = diffs.asList().size();
       counts.add(Content.FILE, n);
-      if (n > 0 && withSnapshot.isCurrentFileDeleted()) {
+      if (n > 0 && sf.isCurrentFileDeleted()) {
         counts.add(Content.LENGTH, diffs.getLast().getFileSize());
       }
 
-      if (withSnapshot.isCurrentFileDeleted()) {
+      if (sf.isCurrentFileDeleted()) {
         final long lastFileSize = diffs.getLast().getFileSize();
         counts.add(Content.DISKSPACE, lastFileSize * getBlockReplication());
       }
@@ -489,8 +565,8 @@ public class INodeFile extends INodeWithAdditionalFields
   }
 
   private void computeContentSummary4Current(final Content.Counts counts) {
-    if (this instanceof INodeFileWithSnapshot
-        && ((INodeFileWithSnapshot) this).isCurrentFileDeleted()) {
+    FileWithSnapshotFeature sf = this.getFileWithSnapshotFeature();
+    if (sf != null && sf.isCurrentFileDeleted()) {
       return;
     }
 
@@ -509,8 +585,9 @@ public class INodeFile extends INodeWithAdditionalFields
    * otherwise, get the file size from the given snapshot.
    */
   public final long computeFileSize(Snapshot snapshot) {
-    if (snapshot != null && this instanceof INodeFileWithSnapshot) {
-      final FileDiff d = ((INodeFileWithSnapshot) this).getDiffs().getDiff(
+    FileWithSnapshotFeature sf = this.getFileWithSnapshotFeature();
+    if (snapshot != null && sf != null) {
+      final FileDiff d = sf.getDiffs().getDiff(
           snapshot);
       if (d != null) {
         return d.getFileSize();

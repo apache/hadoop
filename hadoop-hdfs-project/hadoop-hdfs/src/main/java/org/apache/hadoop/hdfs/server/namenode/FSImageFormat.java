@@ -60,7 +60,6 @@ import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileDiffList;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotFSImageFormat;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotFSImageFormat.ReferenceMap;
@@ -713,11 +712,9 @@ public class FSImageFormat {
           modificationTime, atime, blocks, replication, blockSize);
       if (underConstruction) {
         file.toUnderConstruction(clientName, clientMachine, null);
-        return fileDiffs == null ? file : new INodeFileWithSnapshot(file,
-            fileDiffs);
+          return fileDiffs == null ? file : new INodeFile(file, fileDiffs);
       } else {
-        return fileDiffs == null ? file : 
-          new INodeFileWithSnapshot(file, fileDiffs);
+          return fileDiffs == null ? file : new INodeFile(file, fileDiffs);
       }
     } else if (numBlocks == -1) {
       //directory

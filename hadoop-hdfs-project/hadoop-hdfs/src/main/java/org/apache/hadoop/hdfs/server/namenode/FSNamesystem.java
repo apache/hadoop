@@ -201,7 +201,6 @@ import org.apache.hadoop.hdfs.server.namenode.metrics.FSNamesystemMBean;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable.SnapshotDiffInfo;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeFileWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotManager;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.Phase;
@@ -1773,7 +1772,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       throw new HadoopIllegalArgumentException("concat: target file "
           + target + " is empty");
     }
-    if (trgInode instanceof INodeFileWithSnapshot) {
+    if (trgInode.isWithSnapshot()) {
       throw new HadoopIllegalArgumentException("concat: target file "
           + target + " is in a snapshot");
     }
