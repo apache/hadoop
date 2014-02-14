@@ -49,7 +49,7 @@ public class TestFsLimits {
   static PermissionStatus perms
     = new PermissionStatus("admin", "admin", FsPermission.getDefault());
 
-  static INodeDirectoryWithQuota rootInode;
+  static INodeDirectory rootInode;
 
   static private FSNamesystem getMockNamesystem() {
     FSNamesystem fsn = mock(FSNamesystem.class);
@@ -75,8 +75,8 @@ public class TestFsLimits {
              fileAsURI(new File(MiniDFSCluster.getBaseDirectory(),
                                 "namenode")).toString());
 
-    rootInode = new INodeDirectoryWithQuota(getMockNamesystem()
-        .allocateNewInodeId(), INodeDirectory.ROOT_NAME, perms);
+    rootInode = new INodeDirectory(getMockNamesystem().allocateNewInodeId(),
+        INodeDirectory.ROOT_NAME, perms, 0L);
     inodes = new INode[]{ rootInode, null };
     fs = null;
     fsIsReady = true;

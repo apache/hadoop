@@ -43,6 +43,9 @@ Release 2.4.0 - UNRELEASED
     and INodeFileUnderConstructionWithSnapshot with FileUnderContructionFeature.
     (jing9 via szetszwo)
 
+    HDFS-5286. Flatten INodeDirectory hierarchy: Replace INodeDirectoryWithQuota
+    with DirectoryWithQuotaFeature.  (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-5790. LeaseManager.findPath is very slow when many leases need recovery

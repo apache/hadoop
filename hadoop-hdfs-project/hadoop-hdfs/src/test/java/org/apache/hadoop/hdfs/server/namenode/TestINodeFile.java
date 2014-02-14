@@ -215,9 +215,9 @@ public class TestINodeFile {
       // Call FSDirectory#unprotectedSetQuota which calls
       // INodeDirectory#replaceChild
       dfs.setQuota(dir, Long.MAX_VALUE - 1, replication * fileLen * 10);
-      INode dirNode = fsdir.getINode(dir.toString());
+      INodeDirectory dirNode = getDir(fsdir, dir);
       assertEquals(dir.toString(), dirNode.getFullPathName());
-      assertTrue(dirNode instanceof INodeDirectoryWithQuota);
+      assertTrue(dirNode.isWithQuota());
       
       final Path newDir = new Path("/newdir");
       final Path newFile = new Path(newDir, "file");
@@ -874,7 +874,13 @@ public class TestINodeFile {
       assertTrue(e instanceof FileNotFoundException);
     }
   }
-  
+
+  private static INodeDirectory getDir(final FSDirectory fsdir, final Path dir)
+      throws IOException {
+    final String dirStr = dir.toString();
+    return INodeDirectory.valueOf(fsdir.getINode(dirStr), dirStr);
+  }
+
   @Test
   public void testDotdotInodePath() throws Exception {
     final Configuration conf = new Configuration();
@@ -906,6 +912,7 @@ public class TestINodeFile {
       }
     }
   }
+
   @Test
   public void testLocationLimitInListingOps() throws Exception {
     final Configuration conf = new Configuration();

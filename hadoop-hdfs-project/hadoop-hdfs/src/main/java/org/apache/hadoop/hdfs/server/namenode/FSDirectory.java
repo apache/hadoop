@@ -87,11 +87,15 @@ import com.google.common.base.Preconditions;
  * 
  *************************************************/
 public class FSDirectory implements Closeable {
-  private static INodeDirectoryWithQuota createRoot(FSNamesystem namesystem) {
-    final INodeDirectoryWithQuota r = new INodeDirectoryWithQuota(
+  private static INodeDirectorySnapshottable createRoot(FSNamesystem namesystem) {
+    final INodeDirectory r = new INodeDirectory(
         INodeId.ROOT_INODE_ID,
         INodeDirectory.ROOT_NAME,
-        namesystem.createFsOwnerPermissions(new FsPermission((short) 0755)));
+        namesystem.createFsOwnerPermissions(new FsPermission((short) 0755)),
+        0L);
+    r.addDirectoryWithQuotaFeature(
+        DirectoryWithQuotaFeature.DEFAULT_NAMESPACE_QUOTA,
+        DirectoryWithQuotaFeature.DEFAULT_DISKSPACE_QUOTA);
     final INodeDirectorySnapshottable s = new INodeDirectorySnapshottable(r);
     s.setSnapshotQuota(0);
     return s;
@@ -107,7 +111,7 @@ public class FSDirectory implements Closeable {
   public final static String DOT_INODES_STRING = ".inodes";
   public final static byte[] DOT_INODES = 
       DFSUtil.string2Bytes(DOT_INODES_STRING);
-  INodeDirectoryWithQuota rootDir;
+  INodeDirectory rootDir;
   FSImage fsImage;  
   private final FSNamesystem namesystem;
   private volatile boolean ready = false;
@@ -201,7 +205,7 @@ public class FSDirectory implements Closeable {
   }
 
   /** @return the root directory inode. */
-  public INodeDirectoryWithQuota getRoot() {
+  public INodeDirectory getRoot() {
     return rootDir;
   }
 
@@ -1840,9 +1844,8 @@ public class FSDirectory implements Closeable {
     final INode[] inodes = inodesInPath.getINodes();
     for(int i=0; i < numOfINodes; i++) {
       if (inodes[i].isQuotaSet()) { // a directory with quota
-        INodeDirectoryWithQuota node = (INodeDirectoryWithQuota) inodes[i]
-            .asDirectory(); 
-        node.addSpaceConsumed2Cache(nsDelta, dsDelta);
+        inodes[i].asDirectory().getDirectoryWithQuotaFeature()
+            .addSpaceConsumed2Cache(nsDelta, dsDelta);
       }
     }
   }
@@ -2076,10 +2079,11 @@ public class FSDirectory implements Closeable {
         // Stop checking for quota when common ancestor is reached
         return;
       }
-      if (inodes[i].isQuotaSet()) { // a directory with quota
+      final DirectoryWithQuotaFeature q
+          = inodes[i].asDirectory().getDirectoryWithQuotaFeature();
+      if (q != null) { // a directory with quota
         try {
-          ((INodeDirectoryWithQuota) inodes[i].asDirectory()).verifyQuota(
-              nsDelta, dsDelta);
+          q.verifyQuota(nsDelta, dsDelta);
         } catch (QuotaExceededException e) {
           e.setPathName(getFullPathName(inodes, i));
           throw e;
@@ -2427,35 +2431,14 @@ public class FSDirectory implements Closeable {
       if (dsQuota == HdfsConstants.QUOTA_DONT_SET) {
         dsQuota = oldDsQuota;
       }        
+      if (oldNsQuota == nsQuota && oldDsQuota == dsQuota) {
+        return null;
+      }
 
       final Snapshot latest = iip.getLatestSnapshot();
-      if (dirNode instanceof INodeDirectoryWithQuota) {
-        INodeDirectoryWithQuota quotaNode = (INodeDirectoryWithQuota) dirNode;
-        Quota.Counts counts = null;
-        if (!quotaNode.isQuotaSet()) {
-          // dirNode must be an INodeDirectoryWithSnapshot whose quota has not
-          // been set yet
-          counts = quotaNode.computeQuotaUsage();
-        }
-        // a directory with quota; so set the quota to the new value
-        quotaNode.setQuota(nsQuota, dsQuota);
-        if (quotaNode.isQuotaSet() && counts != null) {
-          quotaNode.setSpaceConsumed(counts.get(Quota.NAMESPACE),
-              counts.get(Quota.DISKSPACE));
-        } else if (!quotaNode.isQuotaSet() && latest == null) {
-          // do not replace the node if the node is a snapshottable directory
-          // without snapshots
-          if (!(quotaNode instanceof INodeDirectoryWithSnapshot)) {
-            // will not come here for root because root is snapshottable and
-            // root's nsQuota is always set
-            return quotaNode.replaceSelf4INodeDirectory(inodeMap);
-          }
-        }
-      } else {
-        // a non-quota directory; so replace it with a directory with quota
-        return dirNode.replaceSelf4Quota(latest, nsQuota, dsQuota, inodeMap);
-      }
-      return (oldNsQuota != nsQuota || oldDsQuota != dsQuota) ? dirNode : null;
+      dirNode = dirNode.recordModification(latest, inodeMap);
+      dirNode.setQuota(nsQuota, dsQuota);
+      return dirNode;
     }
   }
   
@@ -2484,7 +2467,8 @@ public class FSDirectory implements Closeable {
   long totalInodes() {
     readLock();
     try {
-      return rootDir.numItemsInTree();
+      return rootDir.getDirectoryWithQuotaFeature().getSpaceConsumed()
+          .get(Quota.NAMESPACE);
     } finally {
       readUnlock();
     }

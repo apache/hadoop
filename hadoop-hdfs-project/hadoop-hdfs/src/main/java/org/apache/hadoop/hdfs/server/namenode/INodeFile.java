@@ -51,13 +51,15 @@ public class INodeFile extends INodeWithAdditionalFields
    * A feature contains specific information for a type of INodeFile. E.g.,
    * we can have separate features for Under-Construction and Snapshot.
    */
-  public static abstract class Feature {
+  public static abstract class Feature implements INode.Feature<Feature> {
     private Feature nextFeature;
 
+    @Override
     public Feature getNextFeature() {
       return nextFeature;
     }
 
+    @Override
     public void setNextFeature(Feature next) {
       this.nextFeature = next;
     }
@@ -161,26 +163,12 @@ public class INodeFile extends INodeWithAdditionalFields
     return getFileUnderConstructionFeature() != null;
   }
 
-  void addFeature(Feature f) {
-    f.nextFeature = headFeature;
-    headFeature = f;
+  private void addFeature(Feature f) {
+    headFeature = INode.Feature.Util.addFeature(f, headFeature);
   }
 
-  void removeFeature(Feature f) {
-    if (f == headFeature) {
-      headFeature = headFeature.nextFeature;
-      return;
-    } else if (headFeature != null) {
-      Feature prev = headFeature;
-      Feature curr = headFeature.nextFeature;
-      for (; curr != null && curr != f; prev = curr, curr = curr.nextFeature)
-        ;
-      if (curr != null) {
-        prev.nextFeature = curr.nextFeature;
-        return;
-      }
-    }
-    throw new IllegalStateException("Feature " + f + " not found.");
+  private void removeFeature(Feature f) {
+    headFeature = INode.Feature.Util.removeFeature(f, headFeature);
   }
 
   /** @return true unconditionally. */
@@ -198,7 +186,7 @@ public class INodeFile extends INodeWithAdditionalFields
   /* Start of Under-Construction Feature */
 
   /** Convert this file to an {@link INodeFileUnderConstruction}. */
-  public INodeFile toUnderConstruction(String clientName, String clientMachine,
+  INodeFile toUnderConstruction(String clientName, String clientMachine,
       DatanodeDescriptor clientNode) {
     Preconditions.checkState(!isUnderConstruction(),
         "file is already an INodeFileUnderConstruction");

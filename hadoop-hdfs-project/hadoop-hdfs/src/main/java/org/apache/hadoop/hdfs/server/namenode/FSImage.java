@@ -762,7 +762,7 @@ public class FSImage implements Closeable {
    * This is an update of existing state of the filesystem and does not
    * throw QuotaExceededException.
    */
-  static void updateCountForQuota(INodeDirectoryWithQuota root) {
+  static void updateCountForQuota(INodeDirectory root) {
     updateCountForQuotaRecursively(root, Quota.Counts.newInstance());
   }
   
@@ -802,7 +802,7 @@ public class FSImage implements Closeable {
             + " quota = " + dsQuota + " < consumed = " + diskspace);
       }
 
-      ((INodeDirectoryWithQuota)dir).setSpaceConsumed(namespace, diskspace);
+      dir.getDirectoryWithQuotaFeature().setSpaceConsumed(namespace, diskspace);
     }
   }
 

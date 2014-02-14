@@ -387,7 +387,7 @@ public class FSImageFormat {
     final long dsQuota = q.get(Quota.DISKSPACE);
     FSDirectory fsDir = namesystem.dir;
     if (nsQuota != -1 || dsQuota != -1) {
-      fsDir.rootDir.setQuota(nsQuota, dsQuota);
+      fsDir.rootDir.getDirectoryWithQuotaFeature().setQuota(nsQuota, dsQuota);
     }
     fsDir.rootDir.cloneModificationTime(root);
     fsDir.rootDir.clonePermissionStatus(root);    
@@ -745,10 +745,11 @@ public class FSImageFormat {
       if (counter != null) {
         counter.increment();
       }
-      final INodeDirectory dir = nsQuota >= 0 || dsQuota >= 0?
-          new INodeDirectoryWithQuota(inodeId, localName, permissions,
-              modificationTime, nsQuota, dsQuota)
-          : new INodeDirectory(inodeId, localName, permissions, modificationTime);
+      final INodeDirectory dir = new INodeDirectory(inodeId, localName,
+          permissions, modificationTime);
+      if (nsQuota >= 0 || dsQuota >= 0) {
+        dir.addDirectoryWithQuotaFeature(nsQuota, dsQuota);
+      }
       return snapshottable ? new INodeDirectorySnapshottable(dir)
           : withSnapshot ? new INodeDirectoryWithSnapshot(dir)
           : dir;
@@ -1140,13 +1141,14 @@ public class FSImageFormat {
       checkNotSaved();
 
       final FSNamesystem sourceNamesystem = context.getSourceNamesystem();
-      FSDirectory fsDir = sourceNamesystem.dir;
+      final INodeDirectory rootDir = sourceNamesystem.dir.rootDir;
+      final long numINodes = rootDir.getDirectoryWithQuotaFeature()
+          .getSpaceConsumed().get(Quota.NAMESPACE);
       String sdPath = newFile.getParentFile().getParentFile().getAbsolutePath();
       Step step = new Step(StepType.INODES, sdPath);
       StartupProgress prog = NameNode.getStartupProgress();
       prog.beginStep(Phase.SAVING_CHECKPOINT, step);
-      prog.setTotal(Phase.SAVING_CHECKPOINT, step,
-        fsDir.rootDir.numItemsInTree());
+      prog.setTotal(Phase.SAVING_CHECKPOINT, step, numINodes);
       Counter counter = prog.getCounter(Phase.SAVING_CHECKPOINT, step);
       long startTime = now();
       //
@@ -1166,7 +1168,7 @@ public class FSImageFormat {
         // fairness-related deadlock. See the comments on HDFS-2223.
         out.writeInt(sourceNamesystem.unprotectedGetNamespaceInfo()
             .getNamespaceID());
-        out.writeLong(fsDir.rootDir.numItemsInTree());
+        out.writeLong(numINodes);
         out.writeLong(sourceNamesystem.getGenerationStampV1());
         out.writeLong(sourceNamesystem.getGenerationStampV2());
         out.writeLong(sourceNamesystem.getGenerationStampAtblockIdSwitch());
@@ -1183,14 +1185,13 @@ public class FSImageFormat {
                  " using " + compression);
 
         // save the root
-        saveINode2Image(fsDir.rootDir, out, false, referenceMap, counter);
+        saveINode2Image(rootDir, out, false, referenceMap, counter);
         // save the rest of the nodes
-        saveImage(fsDir.rootDir, out, true, false, counter);
+        saveImage(rootDir, out, true, false, counter);
         prog.endStep(Phase.SAVING_CHECKPOINT, step);
         // Now that the step is finished, set counter equal to total to adjust
         // for possible under-counting due to reference inodes.
-        prog.setCount(Phase.SAVING_CHECKPOINT, step,
-          fsDir.rootDir.numItemsInTree());
+        prog.setCount(Phase.SAVING_CHECKPOINT, step, numINodes);
         // save files under construction
         // TODO: for HDFS-5428, since we cannot break the compatibility of 
         // fsimage, we store part of the under-construction files that are only
