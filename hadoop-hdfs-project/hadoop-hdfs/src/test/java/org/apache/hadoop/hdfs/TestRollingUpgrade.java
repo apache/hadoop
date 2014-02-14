@@ -25,6 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeException;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
@@ -261,5 +262,36 @@ public class TestRollingUpgrade {
         StartupOption.ROLLINGUPGRADE.getName(),
         RollingUpgradeStartupOption.STARTED.name()};
     SecondaryNameNode.main(args);
+  }
+
+  @Test
+  public void testDFSAdminDatanodeUpgradeControlCommands() throws Exception {
+    // start a cluster
+    final Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+      cluster.waitActive();
+      final DFSAdmin dfsadmin = new DFSAdmin(conf);
+      DataNode dn = cluster.getDataNodes().get(0);
+
+      // check the datanode
+      final String dnAddr = dn.getDatanodeId().getIpcAddr(false);
+      final String[] args1 = {"-getDatanodeInfo", dnAddr};
+      Assert.assertEquals(0, dfsadmin.run(args1));
+
+      // issue shutdown to the datanode.
+      final String[] args2 = {"-shutdownDatanode", dnAddr, "upgrade" };
+      Assert.assertEquals(0, dfsadmin.run(args2));
+
+      // the datanode should be down.
+      Thread.sleep(2000);
+      Assert.assertFalse("DataNode should exit", dn.isDatanodeUp());
+
+      // ping should fail.
+      Assert.assertEquals(-1, dfsadmin.run(args1));
+    } finally {
+      if (cluster != null) cluster.shutdown();
+    }
   }
 }

@@ -124,4 +124,22 @@ public interface ClientDatanodeProtocol {
    */
   HdfsBlocksMetadata getHdfsBlocksMetadata(List<ExtendedBlock> blocks,
       List<Token<BlockTokenIdentifier>> tokens) throws IOException; 
+
+  /**
+   * Shuts down a datanode.
+   *
+   * @param forUpgrade If true, data node does extra prep work before shutting
+   *          down. The work includes advising clients to wait and saving
+   *          certain states for quick restart. This should only be used when
+   *          the stored data will remain the same during upgrade/restart.
+   * @throws IOException 
+   */
+  void shutdownDatanode(boolean forUpgrade) throws IOException;  
+
+  /**
+   * Obtains datanode info
+   *
+   * @return software/config version and uptime of the datanode
+   */
+  DatanodeLocalInfo getDatanodeInfo() throws IOException;
 }

@@ -29,6 +29,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.lang.management.ManagementFactory;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketException;
@@ -73,6 +74,7 @@ import org.apache.hadoop.hdfs.protocol.BlockLocalPathInfo;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.DatanodeLocalInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsBlocksMetadata;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -272,6 +274,7 @@ public class DataNode extends Configured
   private SecureResources secureResources = null;
   private List<StorageLocation> dataDirs;
   private Configuration conf;
+  private String confVersion;
   private final long maxNumberOfBlocksToLog;
 
   private final List<String> usersWithLocalPathAccess;
@@ -299,6 +302,11 @@ public class DataNode extends Configured
     this.getHdfsBlockLocationsEnabled = conf.getBoolean(
         DFSConfigKeys.DFS_HDFS_BLOCKS_METADATA_ENABLED, 
         DFSConfigKeys.DFS_HDFS_BLOCKS_METADATA_ENABLED_DEFAULT);
+
+    confVersion = "core-" +
+        conf.get("hadoop.common.configuration.version", "UNSPECIFIED") +
+        ",hdfs-" +
+        conf.get("hadoop.hdfs.configuration.version", "UNSPECIFIED");
 
     // Determine whether we should try to pass file descriptors to clients.
     if (conf.getBoolean(DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_KEY,
@@ -2470,6 +2478,33 @@ public class DataNode extends Configured
     }
    
     data.deleteBlockPool(blockPoolId, force);
+  }
+
+  @Override // ClientDatanodeProtocol
+  public void shutdownDatanode(boolean forUpgrade) throws IOException {
+    LOG.info("shutdownDatanode command received (upgrade=" + forUpgrade +
+        "). Shutting down Datanode...");
+
+    // Delay start the shutdown process so that the rpc response can be
+    // sent back.
+    Thread shutdownThread = new Thread() {
+      @Override public void run() {
+        try {
+          Thread.sleep(1000);
+        } catch (InterruptedException ie) { }
+        shutdown();
+      }
+    };
+
+    shutdownThread.setDaemon(true);
+    shutdownThread.start();
+  }
+
+  @Override //ClientDatanodeProtocol
+  public DatanodeLocalInfo getDatanodeInfo() {
+    long uptime = ManagementFactory.getRuntimeMXBean().getUptime()/1000;
+    return new DatanodeLocalInfo(VersionInfo.getVersion(),
+        confVersion, uptime);
   }
 
   /**

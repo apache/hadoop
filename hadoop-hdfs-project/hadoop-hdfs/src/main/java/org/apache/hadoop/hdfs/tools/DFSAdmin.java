@@ -49,6 +49,7 @@ import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.DatanodeLocalInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
@@ -645,6 +646,8 @@ public class DFSAdmin extends FsShell {
       "\t[-fetchImage <local directory>]\n" +
       "\t[-allowSnapshot <snapshotDir>]\n" +
       "\t[-disallowSnapshot <snapshotDir>]\n" +
+      "\t[-shutdownDatanode <datanode_host:ipc_port> [upgrade]]\n" +
+      "\t[-getDatanodeInfo <datanode_host:ipc_port>\n" +
       "\t[-help [cmd]]\n";
 
     String report ="-report: \tReports basic filesystem information and statistics.\n";
@@ -741,6 +744,18 @@ public class DFSAdmin extends FsShell {
     
     String disallowSnapshot = "-disallowSnapshot <snapshotDir>:\n" +
         "\tDo not allow snapshots to be taken on a directory any more.\n";
+
+    String shutdownDatanode = "-shutdownDatanode <datanode_host:ipc_port> [upgrade]\n" +
+        "\tShut down the datanode. If an optional argument \"upgrade\" is\n" +
+        "\tpassed, the clients will be advised to wait for the datanode to\n" +
+        "\trestart and the fast start-up mode will be enabled. Clients will\n" +
+        "\ttimeout and ignore the datanode, if the restart does not happen\n" +
+        "\tin time. The fast start-up mode will also be disabled, if restart\n" +
+        "\tis delayed too much.\n";
+
+    String getDatanodeInfo = "-getDatanodeInfo <datanode_host:ipc_port>\n" +
+        "\tCheck the datanode for liveness. If the datanode responds,\n" +
+        "\timore information about the datanode is printed.\n";
     
     String help = "-help [cmd]: \tDisplays help for the given command or all commands if none\n" +
       "\t\tis specified.\n";
@@ -791,6 +806,10 @@ public class DFSAdmin extends FsShell {
       System.out.println(allowSnapshot);
     } else if ("disallowSnapshot".equalsIgnoreCase(cmd)) {
       System.out.println(disallowSnapshot);
+    } else if ("shutdownDatanode".equalsIgnoreCase(cmd)) {
+      System.out.println(shutdownDatanode);
+    } else if ("getDatanodeInfo".equalsIgnoreCase(cmd)) {
+      System.out.println(getDatanodeInfo);
     } else if ("help".equals(cmd)) {
       System.out.println(help);
     } else {
@@ -818,6 +837,8 @@ public class DFSAdmin extends FsShell {
       System.out.println(fetchImage);
       System.out.println(allowSnapshot);
       System.out.println(disallowSnapshot);
+      System.out.println(shutdownDatanode);
+      System.out.println(getDatanodeInfo);
       System.out.println(help);
       System.out.println();
       ToolRunner.printGenericCommandUsage(System.out);
@@ -1100,6 +1121,8 @@ public class DFSAdmin extends FsShell {
       System.err.println("           ["+ClearSpaceQuotaCommand.USAGE+"]");      
       System.err.println("           [-setBalancerBandwidth <bandwidth in bytes per second>]");
       System.err.println("           [-fetchImage <local directory>]");
+      System.err.println("           [-shutdownDatanode <datanode_host:ipc_port> [upgrade]]");
+      System.err.println("           [-getDatanodeInfo <datanode_host:ipc_port>]");
       System.err.println("           [-help [cmd]]");
       System.err.println();
       ToolRunner.printGenericCommandUsage(System.err);
@@ -1216,6 +1239,16 @@ public class DFSAdmin extends FsShell {
         printUsage(cmd);
         return exitCode;
       }
+    } else if ("-shutdownDatanode".equals(cmd)) {
+      if ((argv.length != 2) && (argv.length != 3)) {
+        printUsage(cmd);
+        return exitCode;
+      }
+    } else if ("-getDatanodeInfo".equals(cmd)) {
+      if (argv.length != 2) {
+        printUsage(cmd);
+        return exitCode;
+      }
     }
     
     // initialize DFSAdmin
@@ -1279,6 +1312,10 @@ public class DFSAdmin extends FsShell {
         exitCode = setBalancerBandwidth(argv, i);
       } else if ("-fetchImage".equals(cmd)) {
         exitCode = fetchImage(argv, i);
+      } else if ("-shutdownDatanode".equals(cmd)) {
+        exitCode = shutdownDatanode(argv, i);
+      } else if ("-getDatanodeInfo".equals(cmd)) {
+        exitCode = getDatanodeInfo(argv, i);
       } else if ("-help".equals(cmd)) {
         if (i < argv.length) {
           printHelp(argv[i]);
@@ -1360,6 +1397,33 @@ public class DFSAdmin extends FsShell {
     ClientDatanodeProtocol refreshProtocol = getDataNodeProxy(datanode);
     refreshProtocol.refreshNamenodes();
     
+    return 0;
+  }
+
+  private int shutdownDatanode(String[] argv, int i) throws IOException {
+    ClientDatanodeProtocol dnProxy = getDataNodeProxy(argv[i]);
+    boolean upgrade = false;
+    if (argv.length-1 == i+1) {
+      if ("upgrade".equals(argv[i+1])) {
+        upgrade = true;
+      } else {
+        printUsage("-shutdownDatanode");
+        return -1;
+      }
+    }
+    dnProxy.shutdownDatanode(upgrade);
+    return 0;
+  }
+
+  private int getDatanodeInfo(String[] argv, int i) throws IOException {
+    ClientDatanodeProtocol dnProxy = getDataNodeProxy(argv[i]);
+    try {
+      DatanodeLocalInfo dnInfo = dnProxy.getDatanodeInfo();
+      System.out.println(dnInfo.getDatanodeLocalReport());
+    } catch (IOException ioe) {
+      System.err.println("Datanode unreachable.");
+      return -1;
+    }
     return 0;
   }
 
