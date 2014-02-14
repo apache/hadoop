@@ -124,7 +124,7 @@
       $('#file-info-tail').hide();
       $('#file-info-title').text("File information - " + path);
 
-      var download_url = '/webhdfs/v1' + abs_path + '/?op=OPEN';
+      var download_url = '/webhdfs/v1' + abs_path + '?op=OPEN';
 
       $('#file-info-download').attr('href', download_url);
       $('#file-info-preview').click(function() {
