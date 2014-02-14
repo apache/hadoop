@@ -36,3 +36,6 @@ HDFS-5535 subtasks:
     HDFS-5535. Add BlockPoolSliceStorage 'trash' to handle block deletions
     during rolling upgrades. (Arpit Agarwal)
 
+    HDFS-5494. Merge Protobuf-based-FSImage code from trunk - fix build
+    break after the merge. (Jing Zhao via Arpit Agarwal)
+
