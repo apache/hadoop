@@ -17,8 +17,14 @@
 package org.apache.hadoop.security;
 
 import java.io.IOException;
+import java.security.PrivilegedAction;
+import java.util.Set;
+
+import javax.security.auth.kerberos.KerberosPrincipal;
 
 import junit.framework.Assert;
+import static org.junit.Assert.*;
+
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
@@ -70,6 +76,42 @@ public class TestUGIWithSecurityOn {
       Assert.fail("Login should have failed");
     } catch (Exception ex) {
       ex.printStackTrace();
+    }
+  }
+
+  @Test
+  public void testGetUGIFromKerberosSubject() throws IOException {
+    String user1keyTabFilepath = System.getProperty("kdc.resource.dir")
+        + "/keytabs/user1.keytab";
+
+    UserGroupInformation ugi = UserGroupInformation
+        .loginUserFromKeytabAndReturnUGI("user1@EXAMPLE.COM",
+            user1keyTabFilepath);
+    Set<KerberosPrincipal> principals = ugi.getSubject().getPrincipals(
+        KerberosPrincipal.class);
+    if (principals.isEmpty()) {
+      Assert.fail("There should be a kerberos principal in the subject.");
+    }
+    else {
+      UserGroupInformation ugi2 = UserGroupInformation.getUGIFromSubject(
+          ugi.getSubject());
+      if (ugi2 != null) {
+        ugi2.doAs(new PrivilegedAction<Object>() {
+
+          @Override
+          public Object run() {
+            try {
+              UserGroupInformation ugi3 = UserGroupInformation.getCurrentUser();
+              String doAsUserName = ugi3.getUserName();
+              assertEquals(doAsUserName, "user1@EXAMPLE.COM");
+              System.out.println("DO AS USERNAME: " + doAsUserName);
+            } catch (IOException e) {
+              e.printStackTrace();
+            }
+            return null;
+          }
+        });
+      }
     }
   }
 }

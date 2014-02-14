@@ -118,6 +118,9 @@ Trunk (Unreleased)
 
     HADOOP-10325. Improve jenkins javadoc warnings from test-patch.sh (cmccabe)
 
+    HADOOP-10342. Add a new method to UGI to use a Kerberos login subject to
+    build a new UGI. (Larry McCay via omalley)
+
   BUG FIXES
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.
