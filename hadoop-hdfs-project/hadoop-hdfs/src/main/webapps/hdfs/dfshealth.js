@@ -28,7 +28,7 @@
       {"name": "nn",      "url": "/jmx?qry=Hadoop:service=NameNode,name=NameNodeInfo"},
       {"name": "nnstat",  "url": "/jmx?qry=Hadoop:service=NameNode,name=NameNodeStatus"},
       {"name": "fs",      "url": "/jmx?qry=Hadoop:service=NameNode,name=FSNamesystemState"},
-      {"name": "mem",     "url": "/jmx?qry=java.lang:type=Memory"},
+      {"name": "mem",     "url": "/jmx?qry=java.lang:type=Memory"}
     ];
 
     var HELPERS = {
@@ -166,14 +166,29 @@
 
   $('#ui-tabs a[href="#tab-snapshot"]').click(load_snapshot_info);
 
-  var hash = window.location.hash;
-  if (hash === "#tab-datanode") {
-    load_datanode_info();
-  } else if (hash === "#tab-snapshot") {
-    load_snapshot_info();
-  } else if (hash === "#tab-startup-progress") {
-    load_startup_progress();
-  } else {
-    load_overview();
+  function load_page() {
+    var hash = window.location.hash;
+    switch(hash) {
+      case "#tab-datanode":
+        load_datanode_info();
+        break;
+      case "#tab-snapshot":
+        load_snapshot_info();
+        break;
+      case "#tab-startup-progress":
+        load_startup_progress();
+        break;
+      case "#tab-overview":
+        load_overview();
+        break;
+      default:
+        window.location.hash = "tab-overview";
+        break;
+    }
   }
+  load_page();
+
+  $(window).bind('hashchange', function () {
+    load_page();
+  });
 })();

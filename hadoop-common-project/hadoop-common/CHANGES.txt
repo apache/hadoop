@@ -315,6 +315,8 @@ Release 2.4.0 - UNRELEASED
     HADOOP-10333. Fix grammatical error in overview.html document.
     (René Nyffenegger via suresh)
 
+    HADOOP-10343. Change info to debug log in LossyRetryInvocationHandler. (arpit)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -336,6 +338,9 @@ Release 2.4.0 - UNRELEASED
 
     HADOOP-10338. Cannot get the FileStatus of the root inode from the new
     Globber (cmccabe)
+
+    HADOOP-10249. LdapGroupsMapping should trim ldap password read from file.
+    (Dilli Armugam via suresh)
 
 Release 2.3.1 - UNRELEASED
 

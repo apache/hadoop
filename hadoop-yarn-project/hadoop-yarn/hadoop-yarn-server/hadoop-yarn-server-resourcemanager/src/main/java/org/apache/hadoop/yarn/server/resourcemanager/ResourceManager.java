@@ -33,6 +33,7 @@ import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.http.HttpConfig.Policy;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
+import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.AbstractService;
@@ -198,6 +199,9 @@ public class ResourceManager extends CompositeService implements Recoverable {
       this.conf =
           this.configurationProvider.getConfiguration(this.conf,
               YarnConfiguration.CORE_SITE_CONFIGURATION_FILE);
+      // Do refreshUserToGroupsMappings with loaded core-site.xml
+      Groups.getUserToGroupsMappingServiceWithLoadedConfiguration(this.conf)
+          .refresh();
     }
 
     // register the handlers for all AlwaysOn services using setupDispatcher().

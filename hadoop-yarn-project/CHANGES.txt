@@ -184,6 +184,10 @@ Release 2.4.0 - UNRELEASED
     YARN-1345. Remove FINAL_SAVING state from YarnApplicationAttemptState
     (Zhijie Shen via jianhe)
 
+    YARN-1676. Modified RM HA handling of user-to-group mappings to
+    be available across RM failover by making using of a remote
+    configuration-provider. (Xuan Gong via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -264,6 +268,10 @@ Release 2.4.0 - UNRELEASED
 
     YARN-1578. Fixed reading incomplete application attempt and container data
     in FileSystemApplicationHistoryStore. (Shinichi Yamashita via zjshen)
+
+    YARN-1417. Modified RM to generate container-tokens not at creation time, but
+    at allocation time so as to prevent RM from shelling out containers with
+    expired tokens. (Omkar Vinit Joshi and Jian He via vinodkv)
 
 Release 2.3.1 - UNRELEASED
 
