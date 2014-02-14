@@ -6,20 +6,6 @@ Trunk - Unreleased
 
   NEW FEATURES
 
-    YARN-1496. Protocol additions to allow moving apps between queues (Sandy
-    Ryza)
-
-    YARN-1498. Common scheduler changes for moving apps between queues (Sandy
-    Ryza)
-
-    YARN-1504. RM changes for moving apps between queues (Sandy Ryza)
-
-    YARN-1499. Fair Scheduler changes for moving apps between queues (Sandy
-    Ryza)
-
-    YARN-1497. Command line additions for moving apps between queues (Sandy
-    Ryza)
-
   IMPROVEMENTS
 
   OPTIMIZATIONS
@@ -119,6 +105,23 @@ Release 2.4.0 - UNRELEASED
     YARN-1635. Implemented a Leveldb based ApplicationTimelineStore. (Billie
     Rinaldi via zjshen)
 
+    YARN-1637. Implemented a client library for Java users to post timeline
+    entities and events. (zjshen)
+    
+    YARN-1496. Protocol additions to allow moving apps between queues (Sandy
+    Ryza)
+
+    YARN-1498. Common scheduler changes for moving apps between queues (Sandy
+    Ryza)
+
+    YARN-1504. RM changes for moving apps between queues (Sandy Ryza)
+
+    YARN-1499. Fair Scheduler changes for moving apps between queues (Sandy
+    Ryza)
+
+    YARN-1497. Command line additions for moving apps between queues (Sandy
+    Ryza)
+
   IMPROVEMENTS
 
     YARN-1007. Enhance History Reader interface for Containers. (Mayank Bansal via
@@ -165,6 +168,25 @@ Release 2.4.0 - UNRELEASED
 
     YARN-1493. Changed ResourceManager and Scheduler interfacing to recognize
     app-attempts separately from apps. (Jian He via vinodkv)
+
+    YARN-1459. Changed ResourceManager to depend its service initialization
+    on the configuration-provider mechanism during startup too. (Xuan Gong via
+    vinodkv)
+
+    YARN-1706. Created an utility method to dump timeline records to JSON
+    strings. (zjshen)
+
+    YARN-1641. ZK store should attempt a write periodically to ensure it is 
+    still Active. (kasha)
+
+    YARN-1531. True up yarn command documentation (Akira Ajisaka via kasha)
+
+    YARN-1345. Remove FINAL_SAVING state from YarnApplicationAttemptState
+    (Zhijie Shen via jianhe)
+
+    YARN-1676. Modified RM HA handling of user-to-group mappings to
+    be available across RM failover by making using of a remote
+    configuration-provider. (Xuan Gong via vinodkv)
 
   OPTIMIZATIONS
 
@@ -233,7 +255,37 @@ Release 2.4.0 - UNRELEASED
     YARN-1672. YarnConfiguration is missing a default for 
     yarn.nodemanager.log.retain-seconds (Naren Koneru via kasha)
 
-Release 2.3.0 - UNRELEASED
+    YARN-1698. Fixed default TimelineStore in code to match what is documented
+    in yarn-default.xml (Zhijie Shen via vinodkv)
+
+    YARN-1697. NodeManager reports negative running containers (Sandy Ryza)
+
+    YARN-1719. Fixed the root path related Jersey warnings produced in
+    ATSWebServices. (Billie Rinaldi via zjshen)
+
+    YARN-1692. ConcurrentModificationException in fair scheduler AppSchedulable
+    (Sangjin Lee via Sandy Ryza)
+
+    YARN-1578. Fixed reading incomplete application attempt and container data
+    in FileSystemApplicationHistoryStore. (Shinichi Yamashita via zjshen)
+
+    YARN-1417. Modified RM to generate container-tokens not at creation time, but
+    at allocation time so as to prevent RM from shelling out containers with
+    expired tokens. (Omkar Vinit Joshi and Jian He via vinodkv)
+
+Release 2.3.1 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+Release 2.3.0 - 2014-02-18
 
   INCOMPATIBLE CHANGES
 

@@ -54,5 +54,10 @@ public abstract class S3FileSystemContractBaseTest
     assertEquals("Double default block size", newBlockSize,
 	fs.getFileStatus(file).getBlockSize());
   }
-  
+
+  public void testCanonicalName() throws Exception {
+    assertNull("s3 doesn't support security token and shouldn't have canonical name",
+               fs.getCanonicalServiceName());
+  }
+
 }

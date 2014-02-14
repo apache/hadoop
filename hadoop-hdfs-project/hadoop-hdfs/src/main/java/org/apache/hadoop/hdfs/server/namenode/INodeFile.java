@@ -252,7 +252,7 @@ public class INodeFile extends INodeWithAdditionalFields
   
   /* Start of Snapshot Feature */
 
-  private FileWithSnapshotFeature addSnapshotFeature(FileDiffList diffs) {
+  public FileWithSnapshotFeature addSnapshotFeature(FileDiffList diffs) {
     Preconditions.checkState(!isWithSnapshot(), 
         "File is already with snapshot");
     FileWithSnapshotFeature sf = new FileWithSnapshotFeature(diffs);

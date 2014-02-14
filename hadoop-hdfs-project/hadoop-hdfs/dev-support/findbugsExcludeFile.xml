@@ -9,6 +9,9 @@
        <Package name="org.apache.hadoop.hdfs.server.namenode.ha.proto" />
      </Match>
      <Match>
+       <Class name="~org.apache.hadoop.hdfs.server.namenode.FsImageProto.*" />
+     </Match>
+     <Match>
        <Package name="org.apache.hadoop.hdfs.qjournal.protocol" />
      </Match>
      <Match>

@@ -51,11 +51,15 @@ public class LossyRetryInvocationHandler<T> extends RetryInvocationHandler<T> {
     int retryCount = RetryCount.get();
     if (retryCount < this.numToDrop) {
       RetryCount.set(++retryCount);
-      LOG.info("Drop the response. Current retryCount == " + retryCount);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Drop the response. Current retryCount == " + retryCount);
+      }
       throw new RetriableException("Fake Exception");
     } else {
-      LOG.info("retryCount == " + retryCount
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("retryCount == " + retryCount
           + ". It's time to normally process the response");
+      }
       return result;
     }
   }

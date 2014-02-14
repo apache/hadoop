@@ -186,10 +186,26 @@ public class DFSTestUtil {
     }
   }
 
-  public static String readFile(FileSystem fs, Path fileName) throws IOException {
+  public static String readFile(FileSystem fs, Path fileName)
+      throws IOException {
+    byte buf[] = readFileBuffer(fs, fileName);
+	return new String(buf, 0, buf.length);
+  }
+
+  public static byte[] readFileBuffer(FileSystem fs, Path fileName) 
+      throws IOException {
     ByteArrayOutputStream os = new ByteArrayOutputStream();
-    IOUtils.copyBytes(fs.open(fileName), os, 1024, true);
-    return os.toString();
+    try {
+      FSDataInputStream in = fs.open(fileName);
+      try {
+        IOUtils.copyBytes(fs.open(fileName), os, 1024, true);
+        return os.toByteArray();
+      } finally {
+        in.close();
+      }
+    } finally {
+      os.close();
+    }
   }
   
   public static void createFile(FileSystem fs, Path fileName, long fileLen, 
@@ -229,6 +245,13 @@ public class DFSTestUtil {
         out.close();
       }
     }
+  }
+  
+  public static byte[] calculateFileContentsFromSeed(long seed, int length) {
+    Random rb = new Random(seed);
+    byte val[] = new byte[length];
+    rb.nextBytes(val);
+    return val;
   }
   
   /** check if the files have been copied correctly. */
@@ -550,8 +573,12 @@ public class DFSTestUtil {
   
   public static ExtendedBlock getFirstBlock(FileSystem fs, Path path) throws IOException {
     HdfsDataInputStream in = (HdfsDataInputStream) fs.open(path);
-    in.readByte();
-    return in.getCurrentBlock();
+    try {
+      in.readByte();
+      return in.getCurrentBlock();
+    } finally {
+      in.close();
+    }
   }  
 
   public static List<LocatedBlock> getAllBlocks(FSDataInputStream in)

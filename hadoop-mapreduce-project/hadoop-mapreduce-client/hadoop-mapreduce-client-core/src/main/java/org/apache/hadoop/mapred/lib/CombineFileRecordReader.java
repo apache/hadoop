@@ -140,6 +140,8 @@ public class CombineFileRecordReader<K, V> implements RecordReader<K, V> {
       return false;
     }
 
+    reporter.progress();
+
     // get a record reader for the idx-th chunk
     try {
       curReader =  rrConstructor.newInstance(new Object [] 

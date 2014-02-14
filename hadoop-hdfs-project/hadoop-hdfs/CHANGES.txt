@@ -120,31 +120,6 @@ Trunk (Unreleased)
     HDFS-5041. Add the time of last heartbeat to dead server Web UI (Shinichi
     Yamashita via brandonli)
 
-    HDFS-5531. Combine the getNsQuota() and getDsQuota() methods in INode.
-    (szetszwo)
-
-    HDFS-5285. Flatten INodeFile hierarchy: Replace INodeFileUnderConstruction
-    and INodeFileUnderConstructionWithSnapshot with FileUnderContructionFeature.
-    (jing9 via szetszwo)
-
-    HDFS-5286. Flatten INodeDirectory hierarchy: Replace INodeDirectoryWithQuota
-    with DirectoryWithQuotaFeature.  (szetszwo)
-
-    HDFS-5537. Remove FileWithSnapshot interface.  (jing9 via szetszwo)
-
-    HDFS-5554. Flatten INodeFile hierarchy: Replace INodeFileWithSnapshot with
-    FileWithSnapshotFeature.  (jing9 via szetszwo)
-
-    HDFS-5647. Merge INodeDirectory.Feature and INodeFile.Feature. (Haohui Mai
-    via jing9)
-
-    HDFS-5632. Flatten INodeDirectory hierarchy: Replace
-    INodeDirectoryWithSnapshot with DirectoryWithSnapshotFeature.
-    (jing9 via szetszwo)
-
-    HDFS-5715. Use Snapshot ID to indicate the corresponding Snapshot for a
-    FileDiff/DirectoryDiff. (jing9)
-
     HDFS-5721. sharedEditsImage in Namenode#initializeSharedEdits() should be 
     closed before method returns. (Ted Yu via junping_du)
 
@@ -275,8 +250,6 @@ Trunk (Unreleased)
     HDFS-5719. FSImage#doRollback() should close prevState before return
     (Ted Yu via brandonli)
 
-    HDFS-5726. Fix compilation error in AbstractINodeDiff for JDK7. (jing9)
-
     HDFS-5768. Consolidate the serialization code in DelegationTokenSecretManager 
     (Haohui Mai via brandonli)
 
@@ -285,6 +258,60 @@ Trunk (Unreleased)
 
     HDFS-5794. Fix the inconsistency of layout version number of 
     ADD_DATANODE_AND_STORAGE_UUIDS between trunk and branch-2. (jing9)
+
+  BREAKDOWN OF HDFS-5698 SUBTASKS AND RELATED JIRAS
+
+    HDFS-5717. Save FSImage header in protobuf. (Haohui Mai via jing9)
+
+    HDFS-5738. Serialize INode information in protobuf. (Haohui Mai via jing9)
+
+    HDFS-5772. Serialize under-construction file information in FSImage. (jing9)
+
+    HDFS-5783. Compute the digest before loading FSImage. (Haohui Mai via jing9)
+
+    HDFS-5785. Serialize symlink in protobuf. (Haohui Mai via jing9)
+
+    HDFS-5793. Optimize the serialization of PermissionStatus. (Haohui Mai via
+    jing9)
+
+    HDFS-5743. Use protobuf to serialize snapshot information. (jing9)
+
+    HDFS-5774. Serialize CachePool directives in protobuf. (Haohui Mai via jing9)
+
+    HDFS-5744. Serialize information for token managers in protobuf. (Haohui Mai
+    via jing9)
+
+    HDFS-5824. Add a Type field in Snapshot DiffEntry's protobuf definition.
+    (jing9)
+
+    HDFS-5808. Implement cancellation when saving FSImage. (Haohui Mai via jing9)
+
+    HDFS-5826. Update the stored edit logs to be consistent with the changes in
+    HDFS-5698 branch. (Haohui Mai via jing9)
+
+    HDFS-5797. Implement offline image viewer. (Haohui Mai via jing9)
+
+    HDFS-5771. Track progress when loading fsimage. (Haohui Mai via cnauroth)
+
+    HDFS-5871. Use PBHelper to serialize CacheDirectiveInfoExpirationProto.
+    (Haohui Mai via jing9)
+
+    HDFS-5884. LoadDelegator should use IOUtils.readFully() to read the magic
+    header. (Haohui Mai via jing9)
+
+    HDFS-5885. Add annotation for repeated fields in the protobuf definition.
+    (Haohui Mai via jing9)
+
+    HDFS-5906. Fixing findbugs and javadoc warnings in the HDFS-5698 branch.
+    (Haohui Mai via jing9)
+
+    HDFS-5911. The id of a CacheDirective instance does not get serialized in 
+    the protobuf-fsimage. (Haohui Mai via jing9)
+
+    HDFS-5915. Refactor FSImageFormatProtobuf to simplify cross section reads.
+    (Haohui Mai via cnauroth)
+
+    HDFS-5847. Consolidate INodeReference into a separate section. (jing9)
 
 Release 2.4.0 - UNRELEASED
 
@@ -310,6 +337,44 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-4911.  Reduce PeerCache timeout to be commensurate with
     dfs.datanode.socket.reuse.keepalive (cmccabe)
+
+    HDFS-4370. Fix typo Blanacer in DataNode. (Chu Tong via shv)
+
+    HDFS-5929. Add blockpool % usage to HDFS federated nn page.
+    (Siqi Li via suresh)
+
+    HDFS-5810. Unify mmap cache and short-circuit file descriptor cache
+    (cmccabe)
+
+    HDFS-5940. Minor cleanups to ShortCircuitReplica, FsDatasetCache, and
+    DomainSocketWatcher (cmccabe)
+
+    HDFS-5531. Combine the getNsQuota() and getDsQuota() methods in INode.
+    (szetszwo)
+
+    HDFS-5285. Flatten INodeFile hierarchy: Replace INodeFileUnderConstruction
+    and INodeFileUnderConstructionWithSnapshot with FileUnderContructionFeature.
+    (jing9 via szetszwo)
+
+    HDFS-5286. Flatten INodeDirectory hierarchy: Replace INodeDirectoryWithQuota
+    with DirectoryWithQuotaFeature.  (szetszwo)
+
+    HDFS-5537. Remove FileWithSnapshot interface.  (jing9 via szetszwo)
+
+    HDFS-5554. Flatten INodeFile hierarchy: Replace INodeFileWithSnapshot with
+    FileWithSnapshotFeature.  (jing9 via szetszwo)
+
+    HDFS-5647. Merge INodeDirectory.Feature and INodeFile.Feature. (Haohui Mai
+    via jing9)
+
+    HDFS-5632. Flatten INodeDirectory hierarchy: Replace
+    INodeDirectoryWithSnapshot with DirectoryWithSnapshotFeature.
+    (jing9 via szetszwo)
+
+    HDFS-5715. Use Snapshot ID to indicate the corresponding Snapshot for a
+    FileDiff/DirectoryDiff. (jing9)
+
+    HDFS-5726. Fix compilation error in AbstractINodeDiff for JDK7. (jing9)
 
   OPTIMIZATIONS
 
@@ -353,7 +418,52 @@ Release 2.4.0 - UNRELEASED
     HDFS-5900. Cannot set cache pool limit of "unlimited" via CacheAdmin.
     (wang)
 
-Release 2.3.0 - UNRELEASED
+    HDFS-5886. Potential null pointer deference in RpcProgramNfs3#readlink()
+    (brandonli)
+
+    HDFS-4858. HDFS DataNode to NameNode RPC should timeout.
+    (Henry Wang via shv)
+
+    HDFS-5879. Some TestHftpFileSystem tests do not close streams.
+    (Gera Shegalov via suresh)
+
+    HDFS-5938. Make BlockReaderFactory#BlockReaderPeer a static class to avoid
+    a findbugs warning. (cmccabe)
+
+    HDFS-5891. webhdfs should not try connecting the DN during redirection
+    (Haohui Mai via brandonli)
+
+    HDFS-5904. TestFileStatus fails intermittently. (Mit Desai via kihwal)
+
+    HDFS-5941. add dfs.namenode.secondary.https-address and
+    dfs.namenode.secondary.https-address in hdfs-default.xml.
+    (Haohui Mai via cnauroth)
+
+    HDFS-5913. Nfs3Utils#getWccAttr() should check attr parameter against null
+    (brandonli)
+
+    HDFS-5934. New Namenode UI back button doesn't work as expected
+    (Travis Thompson via brandonli)
+
+    HDFS-5901. NameNode new UI doesn't support IE8 and IE9 on windows 7
+    (Vinayakumar B via brandonli)
+
+    HDFS-5943. 'dfs.namenode.https-address' property is not loaded from
+    configuration in federation setup. (suresh)
+
+Release 2.3.1 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES 
+
+Release 2.3.0 - 2014-02-18
 
   INCOMPATIBLE CHANGES
 
@@ -890,6 +1000,12 @@ Release 2.3.0 - UNRELEASED
 
     HDFS-5873. dfs.http.policy should have higher precedence over dfs.https.enable.
     (Haohui Mai via jing9)
+
+    HDFS-5837. dfs.namenode.replication.considerLoad should consider
+    decommissioned nodes. (Tao Luo via shv)
+
+    HDFS-5921. Cannot browse file system via NN web UI if any directory has
+    the sticky bit set. (atm)
 
   BREAKDOWN OF HDFS-2832 SUBTASKS AND RELATED JIRAS
 

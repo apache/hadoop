@@ -18,7 +18,9 @@
 package org.apache.hadoop.yarn.server.resourcemanager.security.authorize;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.security.authorize.PolicyProvider;
@@ -36,6 +38,23 @@ import org.apache.hadoop.yarn.server.api.ResourceTrackerPB;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class RMPolicyProvider extends PolicyProvider {
+
+  private static RMPolicyProvider rmPolicyProvider = null;
+
+  private RMPolicyProvider() {}
+
+  @Private
+  @Unstable
+  public static RMPolicyProvider getInstance() {
+    if (rmPolicyProvider == null) {
+      synchronized(RMPolicyProvider.class) {
+        if (rmPolicyProvider == null) {
+          rmPolicyProvider = new RMPolicyProvider();
+        }
+      }
+    }
+    return rmPolicyProvider;
+  }
 
   private static final Service[] resourceManagerServices = 
       new Service[] {

@@ -813,8 +813,7 @@ public class FSImage implements Closeable {
    */
   private void loadFSImage(File curFile, MD5Hash expectedMd5,
       FSNamesystem target, MetaRecoveryContext recovery) throws IOException {
-    FSImageFormat.Loader loader = new FSImageFormat.Loader(
-        conf, target);
+    FSImageFormat.LoaderDelegator loader = FSImageFormat.newLoader(conf, target);
     loader.load(curFile);
     target.setBlockPoolId(this.getBlockPoolID());
 
@@ -843,7 +842,7 @@ public class FSImage implements Closeable {
     File newFile = NNStorage.getStorageFile(sd, NameNodeFile.IMAGE_NEW, txid);
     File dstFile = NNStorage.getStorageFile(sd, NameNodeFile.IMAGE, txid);
     
-    FSImageFormat.Saver saver = new FSImageFormat.Saver(context);
+    FSImageFormatProtobuf.Saver saver = new FSImageFormatProtobuf.Saver(context);
     FSImageCompression compression = FSImageCompression.createCompression(conf);
     saver.save(newFile, compression);
     

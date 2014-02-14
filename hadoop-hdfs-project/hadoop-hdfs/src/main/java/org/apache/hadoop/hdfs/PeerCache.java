@@ -89,42 +89,19 @@ class PeerCache {
     LinkedListMultimap.create();
   private final int capacity;
   private final long expiryPeriod;
-  private static PeerCache instance = null;
   
-  @VisibleForTesting
-  PeerCache(int c, long e) {
+  public PeerCache(int c, long e) {
     this.capacity = c;
     this.expiryPeriod = e;
 
     if (capacity == 0 ) {
       LOG.info("SocketCache disabled.");
-    }
-    else if (expiryPeriod == 0) {
+    } else if (expiryPeriod == 0) {
       throw new IllegalStateException("Cannot initialize expiryPeriod to " +
-         expiryPeriod + "when cache is enabled.");
+         expiryPeriod + " when cache is enabled.");
     }
   }
  
-  public static synchronized PeerCache getInstance(int c, long e) {
-    // capacity is only initialized once
-    if (instance == null) {
-      instance = new PeerCache(c, e);
-    } else { //already initialized once
-      if (instance.capacity != c || instance.expiryPeriod != e) {
-        LOG.info("capacity and expiry periods already set to " +
-          instance.capacity + " and " + instance.expiryPeriod +
-          " respectively. Cannot set it to " + c + " and " + e);
-      }
-    }
-
-    return instance;
-  }
-
-  @VisibleForTesting
-  public static synchronized void setInstance(int c, long e) {
-    instance = new PeerCache(c, e);
-  }
-
   private boolean isDaemonStarted() {
     return (daemon == null)? false: true;
   }

@@ -150,7 +150,7 @@ public class SchedulerApplicationAttempt {
     return appSchedulingInfo.getPriorities();
   }
   
-  public ResourceRequest getResourceRequest(Priority priority, String resourceName) {
+  public synchronized ResourceRequest getResourceRequest(Priority priority, String resourceName) {
     return this.appSchedulingInfo.getResourceRequest(priority, resourceName);
   }
 
@@ -158,7 +158,7 @@ public class SchedulerApplicationAttempt {
     return getResourceRequest(priority, ResourceRequest.ANY).getNumContainers();
   }
 
-  public Resource getResource(Priority priority) {
+  public synchronized Resource getResource(Priority priority) {
     return appSchedulingInfo.getResource(priority);
   }
 
@@ -345,6 +345,11 @@ public class SchedulerApplicationAttempt {
     for (RMContainer rmContainer : newlyAllocatedContainers) {
       rmContainer.handle(new RMContainerEvent(rmContainer.getContainerId(),
           RMContainerEventType.ACQUIRED));
+      Container container = rmContainer.getContainer();
+      rmContainer.getContainer().setContainerToken(
+        rmContext.getContainerTokenSecretManager().createContainerToken(
+          rmContainer.getContainerId(), container.getNodeId(), getUser(),
+          container.getResource()));
       returnContainerList.add(rmContainer.getContainer());
     }
     newlyAllocatedContainers.clear();

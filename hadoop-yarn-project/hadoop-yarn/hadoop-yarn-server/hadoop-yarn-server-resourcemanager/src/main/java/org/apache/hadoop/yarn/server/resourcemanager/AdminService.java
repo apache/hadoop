@@ -26,6 +26,7 @@ import java.util.Set;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.LocalConfigurationProvider;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HAServiceStatus;
@@ -45,11 +46,8 @@ import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.service.CompositeService;
-import org.apache.hadoop.yarn.LocalConfigurationProvider;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.ResourceOption;
-import org.apache.hadoop.yarn.conf.ConfigurationProvider;
-import org.apache.hadoop.yarn.conf.ConfigurationProviderFactory;
 import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -92,8 +90,6 @@ public class AdminService extends CompositeService implements
   private Server server;
   private InetSocketAddress masterServiceAddress;
   private AccessControlList adminAcl;
-  
-  private ConfigurationProvider configurationProvider = null;
 
   private final RecordFactory recordFactory = 
     RecordFactoryProvider.getRecordFactory(null);
@@ -115,10 +111,6 @@ public class AdminService extends CompositeService implements
       }
     }
 
-    this.configurationProvider =
-        ConfigurationProviderFactory.getConfigurationProvider(conf);
-    configurationProvider.init(conf);
-
     masterServiceAddress = conf.getSocketAddr(
         YarnConfiguration.RM_ADMIN_ADDRESS,
         YarnConfiguration.DEFAULT_RM_ADMIN_ADDRESS,
@@ -139,9 +131,6 @@ public class AdminService extends CompositeService implements
   @Override
   protected synchronized void serviceStop() throws Exception {
     stopServer();
-    if (this.configurationProvider != null) {
-      configurationProvider.close();
-    }
     super.serviceStop();
   }
 
@@ -158,7 +147,10 @@ public class AdminService extends CompositeService implements
     if (conf.getBoolean(
         CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION,
         false)) {
-      refreshServiceAcls(conf, new RMPolicyProvider());
+      refreshServiceAcls(
+          getConfiguration(conf,
+              YarnConfiguration.HADOOP_POLICY_CONFIGURATION_FILE),
+          RMPolicyProvider.getInstance());
     }
 
     if (rmContext.isHAEnabled()) {
@@ -321,8 +313,8 @@ public class AdminService extends CompositeService implements
     RefreshQueuesResponse response =
         recordFactory.newRecordInstance(RefreshQueuesResponse.class);
     try {
-      Configuration conf =
-          getConfiguration(YarnConfiguration.CS_CONFIGURATION_FILE);
+      Configuration conf = getConfiguration(getConfig(),
+          YarnConfiguration.CS_CONFIGURATION_FILE);
       rmContext.getScheduler().reinitialize(conf, this.rmContext);
       RMAuditLogger.logSuccess(user.getShortUserName(), argName,
           "AdminService");
@@ -376,7 +368,8 @@ public class AdminService extends CompositeService implements
     }
 
     Configuration conf =
-        getConfiguration(YarnConfiguration.CORE_SITE_CONFIGURATION_FILE);
+        getConfiguration(getConfig(),
+            YarnConfiguration.CORE_SITE_CONFIGURATION_FILE);
     ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
     RMAuditLogger.logSuccess(user.getShortUserName(),
         argName, "AdminService");
@@ -388,21 +381,22 @@ public class AdminService extends CompositeService implements
   @Override
   public RefreshUserToGroupsMappingsResponse refreshUserToGroupsMappings(
       RefreshUserToGroupsMappingsRequest request)
-      throws YarnException, StandbyException {
-    UserGroupInformation user = checkAcls("refreshUserToGroupsMappings");
+      throws YarnException, IOException {
+    String argName = "refreshUserToGroupsMappings";
+    UserGroupInformation user = checkAcls(argName);
 
-    // TODO (YARN-1459): Revisit handling user-groups on Standby RM
     if (!isRMActive()) {
-      RMAuditLogger.logFailure(user.getShortUserName(),
-          "refreshUserToGroupsMapping",
+      RMAuditLogger.logFailure(user.getShortUserName(), argName,
           adminAcl.toString(), "AdminService",
           "ResourceManager is not active. Can not refresh user-groups.");
       throwStandbyException();
     }
 
-    Groups.getUserToGroupsMappingService().refresh();
-    RMAuditLogger.logSuccess(user.getShortUserName(), 
-        "refreshUserToGroupsMappings", "AdminService");
+    Groups.getUserToGroupsMappingService(
+        getConfiguration(getConfig(),
+            YarnConfiguration.CORE_SITE_CONFIGURATION_FILE)).refresh();
+
+    RMAuditLogger.logSuccess(user.getShortUserName(), argName, "AdminService");
 
     return recordFactory.newRecordInstance(
         RefreshUserToGroupsMappingsResponse.class);
@@ -421,7 +415,7 @@ public class AdminService extends CompositeService implements
       throwStandbyException();
     }
     Configuration conf =
-        getConfiguration(YarnConfiguration.YARN_SITE_XML_FILE);
+        getConfiguration(getConfig(), YarnConfiguration.YARN_SITE_XML_FILE);
     adminAcl = new AccessControlList(conf.get(
         YarnConfiguration.YARN_ADMIN_ACL,
         YarnConfiguration.DEFAULT_YARN_ADMIN_ACL));
@@ -452,9 +446,10 @@ public class AdminService extends CompositeService implements
       throwStandbyException();
     }
 
-    PolicyProvider policyProvider = new RMPolicyProvider(); 
+    PolicyProvider policyProvider = RMPolicyProvider.getInstance();
     Configuration conf =
-        getConfiguration(YarnConfiguration.HADOOP_POLICY_CONFIGURATION_FILE);
+        getConfiguration(getConfig(),
+            YarnConfiguration.HADOOP_POLICY_CONFIGURATION_FILE);
 
     refreshServiceAcls(conf, policyProvider);
     rmContext.getClientRMService().refreshServiceAcls(conf, policyProvider);
@@ -466,12 +461,13 @@ public class AdminService extends CompositeService implements
     return recordFactory.newRecordInstance(RefreshServiceAclsResponse.class);
   }
 
-  synchronized void refreshServiceAcls(Configuration configuration,
+  private synchronized void refreshServiceAcls(Configuration configuration,
       PolicyProvider policyProvider) {
-    if (this.configurationProvider instanceof LocalConfigurationProvider) {
+    if (this.rmContext.getConfigurationProvider() instanceof
+        LocalConfigurationProvider) {
       this.server.refreshServiceAcl(configuration, policyProvider);
     } else {
-      this.server.refreshServiceAclWithConfigration(configuration,
+      this.server.refreshServiceAclWithLoadedConfiguration(configuration,
           policyProvider);
     }
   }
@@ -521,9 +517,10 @@ public class AdminService extends CompositeService implements
       return response;
   }
 
-  private synchronized Configuration getConfiguration(String confFileName)
-      throws YarnException, IOException {
-    return this.configurationProvider.getConfiguration(confFileName);
+  private synchronized Configuration getConfiguration(Configuration conf,
+      String confFileName) throws YarnException, IOException {
+    return this.rmContext.getConfigurationProvider().getConfiguration(conf,
+        confFileName);
   }
 
   @VisibleForTesting

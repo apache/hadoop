@@ -23,12 +23,16 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map.Entry;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.FsImageProto.SecretManagerSection;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.Phase;
@@ -45,6 +49,10 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
+
+import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
+import com.google.protobuf.ByteString;
 
 /**
  * A HDFS specific delegation token secret manager.
@@ -167,7 +175,45 @@ public class DelegationTokenSecretManager
     }
     serializerCompat.load(in);
   }
-  
+
+  public static class SecretManagerState {
+    public final SecretManagerSection section;
+    public final List<SecretManagerSection.DelegationKey> keys;
+    public final List<SecretManagerSection.PersistToken> tokens;
+
+    public SecretManagerState(
+        SecretManagerSection s,
+        List<SecretManagerSection.DelegationKey> keys,
+        List<SecretManagerSection.PersistToken> tokens) {
+      this.section = s;
+      this.keys = keys;
+      this.tokens = tokens;
+    }
+  }
+
+  public synchronized void loadSecretManagerState(SecretManagerState state)
+      throws IOException {
+    Preconditions.checkState(!running,
+        "Can't load state from image in a running SecretManager.");
+
+    currentId = state.section.getCurrentId();
+    delegationTokenSequenceNumber = state.section.getTokenSequenceNumber();
+    for (SecretManagerSection.DelegationKey k : state.keys) {
+      addKey(new DelegationKey(k.getId(), k.getExpiryDate(), k.hasKey() ? k
+          .getKey().toByteArray() : null));
+    }
+
+    for (SecretManagerSection.PersistToken t : state.tokens) {
+      DelegationTokenIdentifier id = new DelegationTokenIdentifier(new Text(
+          t.getOwner()), new Text(t.getRenewer()), new Text(t.getRealUser()));
+      id.setIssueDate(t.getIssueDate());
+      id.setMaxDate(t.getMaxDate());
+      id.setSequenceNumber(t.getSequenceNumber());
+      id.setMasterKeyId(t.getMasterKeyId());
+      addPersistedDelegationToken(id, t.getExpiryDate());
+    }
+  }
+
   /**
    * Store the current state of the SecretManager for persistence
    * 
@@ -179,7 +225,43 @@ public class DelegationTokenSecretManager
       String sdPath) throws IOException {
     serializerCompat.save(out, sdPath);
   }
-  
+
+  public synchronized SecretManagerState saveSecretManagerState() {
+    SecretManagerSection s = SecretManagerSection.newBuilder()
+        .setCurrentId(currentId)
+        .setTokenSequenceNumber(delegationTokenSequenceNumber)
+        .setNumKeys(allKeys.size()).setNumTokens(currentTokens.size()).build();
+    ArrayList<SecretManagerSection.DelegationKey> keys = Lists
+        .newArrayListWithCapacity(allKeys.size());
+    ArrayList<SecretManagerSection.PersistToken> tokens = Lists
+        .newArrayListWithCapacity(currentTokens.size());
+
+    for (DelegationKey v : allKeys.values()) {
+      SecretManagerSection.DelegationKey.Builder b = SecretManagerSection.DelegationKey
+          .newBuilder().setId(v.getKeyId()).setExpiryDate(v.getExpiryDate());
+      if (v.getEncodedKey() != null) {
+        b.setKey(ByteString.copyFrom(v.getEncodedKey()));
+      }
+      keys.add(b.build());
+    }
+
+    for (Entry<DelegationTokenIdentifier, DelegationTokenInformation> e : currentTokens
+        .entrySet()) {
+      DelegationTokenIdentifier id = e.getKey();
+      SecretManagerSection.PersistToken.Builder b = SecretManagerSection.PersistToken
+          .newBuilder().setOwner(id.getOwner().toString())
+          .setRenewer(id.getRenewer().toString())
+          .setRealUser(id.getRealUser().toString())
+          .setIssueDate(id.getIssueDate()).setMaxDate(id.getMaxDate())
+          .setSequenceNumber(id.getSequenceNumber())
+          .setMasterKeyId(id.getMasterKeyId())
+          .setExpiryDate(e.getValue().getRenewDate());
+      tokens.add(b.build());
+    }
+
+    return new SecretManagerState(s, keys, tokens);
+  }
+
   /**
    * This method is intended to be used only while reading edit logs.
    * 
@@ -431,4 +513,5 @@ public class DelegationTokenSecretManager
       prog.endStep(Phase.LOADING_FSIMAGE, step);
     }
   }
+
 }

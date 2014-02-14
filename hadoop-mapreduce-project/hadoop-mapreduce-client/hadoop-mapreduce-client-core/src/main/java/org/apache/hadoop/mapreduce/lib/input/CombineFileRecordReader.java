@@ -54,7 +54,7 @@ public class CombineFileRecordReader<K, V> extends RecordReader<K, V> {
   protected int idx;
   protected long progress;
   protected RecordReader<K, V> curReader;
-  
+
   public void initialize(InputSplit split,
       TaskAttemptContext context) throws IOException, InterruptedException {
     this.split = (CombineFileSplit)split;
@@ -143,6 +143,8 @@ public class CombineFileRecordReader<K, V> extends RecordReader<K, V> {
     if (idx == split.getNumPaths()) {
       return false;
     }
+
+    context.progress();
 
     // get a record reader for the idx-th chunk
     try {

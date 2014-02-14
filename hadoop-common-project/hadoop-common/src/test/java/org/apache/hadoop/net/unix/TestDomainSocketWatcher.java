@@ -73,9 +73,10 @@ public class TestDomainSocketWatcher {
    */
   @Test(timeout=60000)
   public void testInterruption() throws Exception {
-    DomainSocketWatcher watcher = new DomainSocketWatcher(10);
-    watcher.interrupt();
-    Uninterruptibles.joinUninterruptibly(watcher);
+    final DomainSocketWatcher watcher = new DomainSocketWatcher(10);
+    watcher.watcherThread.interrupt();
+    Uninterruptibles.joinUninterruptibly(watcher.watcherThread);
+    watcher.close();
   }
   
   @Test(timeout=300000)

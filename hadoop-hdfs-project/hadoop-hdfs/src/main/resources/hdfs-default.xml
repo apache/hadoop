@@ -97,6 +97,14 @@
 </property>
 
 <property>
+  <name>dfs.namenode.secondary.https-address</name>
+  <value>0.0.0.0:50091</value>
+  <description>
+    The secondary namenode HTTPS server address and port.
+  </description>
+</property>
+
+<property>
   <name>dfs.datanode.address</name>
   <value>0.0.0.0:50010</value>
   <description>
@@ -160,6 +168,16 @@
   <description>Whether SSL client certificate authentication is required
   </description>
 </property>
+
+<property>
+  <name>dfs.client.cached.conn.retry</name>
+  <value>3</value>
+  <description>The number of times the HDFS client will pull a socket from the
+   cache.  Once this number is exceeded, the client will try to create a new
+   socket.
+  </description>
+</property>
+
 
 <property>
   <name>dfs.https.server.keystore.resource</name>
@@ -1300,7 +1318,16 @@
   <name>dfs.journalnode.http-address</name>
   <value>0.0.0.0:8480</value>
   <description>
-    The address and port the JournalNode web UI listens on.
+    The address and port the JournalNode HTTP server listens on.
+    If the port is 0 then the server will start on a free port.
+  </description>
+</property>
+
+<property>
+  <name>dfs.journalnode.https-address</name>
+  <value>0.0.0.0:8481</value>
+  <description>
+    The address and port the JournalNode HTTPS server listens on.
     If the port is 0 then the server will start on a free port.
   </description>
 </property>
@@ -1490,6 +1517,26 @@
 </property>
 
 <property>
+  <name>dfs.client.mmap.retry.timeout.ms</name>
+  <value>300000</value>
+  <description>
+    The minimum amount of time that we will wait before retrying a failed mmap
+    operation.
+  </description>
+</property>
+
+<property>
+  <name>dfs.client.short.circuit.replica.stale.threshold.ms</name>
+  <value>3000000</value>
+  <description>
+    The maximum amount of time that we will consider a short-circuit replica to
+    be valid, if there is no communication from the DataNode.  After this time
+    has elapsed, we will re-fetch the short-circuit replica even if it is in
+    the cache.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.path.based.cache.block.map.allocation.percent</name>
   <value>0.25</value>
   <description>
@@ -1615,6 +1662,17 @@
   <value>^[A-Za-z_][A-Za-z0-9._-]*[$]?$</value>
   <description>
     Valid pattern for user and group names for webhdfs, it must be a valid java regex.
+  </description>
+</property>
+
+<property>
+  <name>dfs.client.context</name>
+  <value>default</value>
+  <description>
+    The name of the DFSClient context that we should use.  Clients that share
+    a context share a socket cache and short-circuit cache, among other things.
+    You should only change this if you don't want to share with another set of
+    threads.
   </description>
 </property>
 

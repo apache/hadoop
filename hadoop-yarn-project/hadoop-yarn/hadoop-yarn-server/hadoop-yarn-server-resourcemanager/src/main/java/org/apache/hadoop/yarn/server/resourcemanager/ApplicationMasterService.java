@@ -105,7 +105,6 @@ public class ApplicationMasterService extends AbstractService implements
   private final AllocateResponse resync =
       recordFactory.newRecordInstance(AllocateResponse.class);
   private final RMContext rmContext;
-  private boolean useLocalConfigurationProvider;
 
   public ApplicationMasterService(RMContext rmContext, YarnScheduler scheduler) {
     super(ApplicationMasterService.class.getName());
@@ -113,15 +112,6 @@ public class ApplicationMasterService extends AbstractService implements
     this.rScheduler = scheduler;
     this.resync.setAMCommand(AMCommand.AM_RESYNC);
     this.rmContext = rmContext;
-  }
-
-  @Override
-  protected void serviceInit(Configuration conf) throws Exception {
-    this.useLocalConfigurationProvider =
-        (LocalConfigurationProvider.class.isAssignableFrom(conf.getClass(
-            YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
-            LocalConfigurationProvider.class)));
-    super.serviceInit(conf);
   }
 
   @Override
@@ -150,7 +140,10 @@ public class ApplicationMasterService extends AbstractService implements
     if (conf.getBoolean(
         CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION, 
         false)) {
-      refreshServiceAcls(conf, new RMPolicyProvider());
+      refreshServiceAcls(
+          this.rmContext.getConfigurationProvider().getConfiguration(conf,
+              YarnConfiguration.HADOOP_POLICY_CONFIGURATION_FILE),
+          RMPolicyProvider.getInstance());
     }
     
     this.server.start();
@@ -591,10 +584,11 @@ public class ApplicationMasterService extends AbstractService implements
 
   public void refreshServiceAcls(Configuration configuration, 
       PolicyProvider policyProvider) {
-    if (this.useLocalConfigurationProvider) {
+    if (this.rmContext.getConfigurationProvider() instanceof
+        LocalConfigurationProvider) {
       this.server.refreshServiceAcl(configuration, policyProvider);
     } else {
-      this.server.refreshServiceAclWithConfigration(configuration,
+      this.server.refreshServiceAclWithLoadedConfiguration(configuration,
           policyProvider);
     }
   }

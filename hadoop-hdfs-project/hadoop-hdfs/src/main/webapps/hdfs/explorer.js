@@ -35,8 +35,8 @@
       }
 
       if (sticky) {
-	var exec = ((parms.perm % 10) & 1) == 1;
-	res[res.length - 1] = exec ? 't' : 'T';
+        var otherExec = ((ctx.current().permission % 10) & 1) == 1;
+        res = res.substr(0, res.length - 1) + (otherExec ? 't' : 'T');
       }
 
       chunk.write(dir + res);
@@ -51,6 +51,18 @@
     $('#alert-panel-body').html(msg);
     $('#alert-panel').show();
   }
+
+  $(window).bind('hashchange', function () {
+    $('#alert-panel').hide();
+
+    var dir = window.location.hash.slice(1);
+    if(dir == "") {
+      dir = "/";
+    }
+    if(current_directory != dir) {
+      browse_directory(dir);
+    }
+  });
 
   function network_error_handler(url) {
     return function (jqxhr, text, err) {
@@ -145,6 +157,7 @@
 
       current_directory = dir;
       $('#directory').val(dir);
+      window.location.hash = dir;
       dust.render('explorer', base.push(d), function(err, out) {
         $('#panel').html(out);
 
@@ -169,7 +182,12 @@
 
     var b = function() { browse_directory($('#directory').val()); };
     $('#btn-nav-directory').click(b);
-    browse_directory('/');
+    var dir = window.location.hash.slice(1);
+    if(dir == "") {
+      window.location.hash = "/";
+    } else {
+      browse_directory(dir);
+    }
   }
 
   init();

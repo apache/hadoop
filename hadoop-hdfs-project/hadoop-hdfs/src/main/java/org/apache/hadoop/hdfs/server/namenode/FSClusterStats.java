@@ -42,6 +42,12 @@ public interface FSClusterStats {
    *         for writing targets, and false otherwise.
    */
   public boolean isAvoidingStaleDataNodesForWrite();
+
+  /**
+   * Indicates number of datanodes that are in service.
+   * @return Number of datanodes that are both alive and not decommissioned.
+   */
+  public int getNumDatanodesInService();
 }
     
     

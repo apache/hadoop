@@ -654,20 +654,11 @@ public class FifoScheduler extends AbstractYarnScheduler implements
         NodeId nodeId = node.getRMNode().getNodeID();
         ContainerId containerId = BuilderUtils.newContainerId(application
             .getApplicationAttemptId(), application.getNewContainerId());
-        Token containerToken = null;
-
-        containerToken =
-            this.rmContext.getContainerTokenSecretManager()
-              .createContainerToken(containerId, nodeId, application.getUser(),
-                capability);
-        if (containerToken == null) {
-          return i; // Try again later.
-        }
 
         // Create the container
         Container container =
             BuilderUtils.newContainer(containerId, nodeId, node.getRMNode()
-              .getHttpAddress(), capability, priority, containerToken);
+              .getHttpAddress(), capability, priority, null);
         
         // Allocate!
         

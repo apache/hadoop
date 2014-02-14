@@ -82,10 +82,12 @@ public class AppSchedulable extends Schedulable {
     Resources.addTo(demand, app.getCurrentConsumption());
 
     // Add up outstanding resource requests
-    for (Priority p : app.getPriorities()) {
-      for (ResourceRequest r : app.getResourceRequests(p).values()) {
-        Resource total = Resources.multiply(r.getCapability(), r.getNumContainers());
-        Resources.addTo(demand, total);
+    synchronized (app) {
+      for (Priority p : app.getPriorities()) {
+        for (ResourceRequest r : app.getResourceRequests(p).values()) {
+          Resource total = Resources.multiply(r.getCapability(), r.getNumContainers());
+          Resources.addTo(demand, total);
+        }
       }
     }
   }
@@ -149,17 +151,11 @@ public class AppSchedulable extends Schedulable {
     NodeId nodeId = node.getRMNode().getNodeID();
     ContainerId containerId = BuilderUtils.newContainerId(application
         .getApplicationAttemptId(), application.getNewContainerId());
-    org.apache.hadoop.yarn.api.records.Token containerToken =
-        containerTokenSecretManager.createContainerToken(containerId, nodeId,
-          application.getUser(), capability);
-    if (containerToken == null) {
-      return null; // Try again later.
-    }
 
     // Create the container
     Container container =
         BuilderUtils.newContainer(containerId, nodeId, node.getRMNode()
-          .getHttpAddress(), capability, priority, containerToken);
+          .getHttpAddress(), capability, priority, null);
 
     return container;
   }

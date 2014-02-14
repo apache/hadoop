@@ -27,17 +27,12 @@ import static org.junit.Assert.assertTrue;
 import java.io.File;
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSImageStorageInspector.FSImageFile;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.junit.Test;
 
 public class TestFSImageStorageInspector {
-  private static final Log LOG = LogFactory.getLog(
-      TestFSImageStorageInspector.class);
-
   /**
    * Simple test with image, edits, and inprogress edits
    */

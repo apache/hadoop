@@ -312,6 +312,11 @@ Release 2.4.0 - UNRELEASED
     HADOOP-10295. Allow distcp to automatically identify the checksum type of 
     source files and use it for the target. (jing9 and Laurent Goujon)
 
+    HADOOP-10333. Fix grammatical error in overview.html document.
+    (René Nyffenegger via suresh)
+
+    HADOOP-10343. Change info to debug log in LossyRetryInvocationHandler. (arpit)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -328,14 +333,35 @@ Release 2.4.0 - UNRELEASED
     HADOOP-10330. TestFrameDecoder fails if it cannot bind port 12345.
     (Arpit Agarwal)
 
-Release 2.3.0 - UNRELEASED
+    HADOOP-10326. M/R jobs can not access S3 if Kerberos is enabled. (bc Wong
+    via atm)
+
+    HADOOP-10338. Cannot get the FileStatus of the root inode from the new
+    Globber (cmccabe)
+
+    HADOOP-10249. LdapGroupsMapping should trim ldap password read from file.
+    (Dilli Armugam via suresh)
+
+Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
-    HADOOP-8545. Filesystem Implementation for OpenStack Swift
-    (Dmitry Mezhensky, David Dobbins, Stevel via stevel)
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES 
+
+Release 2.3.0 - 2014-02-18
+
+  INCOMPATIBLE CHANGES
 
   NEW FEATURES
+
+    HADOOP-8545. Filesystem Implementation for OpenStack Swift
+    (Dmitry Mezhensky, David Dobbins, Stevel via stevel)
 
   IMPROVEMENTS
 

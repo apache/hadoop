@@ -1292,16 +1292,6 @@ public class LeafQueue implements CSQueue {
     return container;
   }
 
-  /**
-   * Create <code>ContainerToken</code>, only in secure-mode
-   */
-  Token createContainerToken(
-      FiCaSchedulerApp application, Container container) {
-    return containerTokenSecretManager.createContainerToken(
-        container.getId(), container.getNodeId(),
-        application.getUser(), container.getResource());
-  }
-
   private Resource assignContainer(Resource clusterResource, FiCaSchedulerNode node, 
       FiCaSchedulerApp application, Priority priority, 
       ResourceRequest request, NodeType type, RMContainer rmContainer) {
@@ -1345,14 +1335,6 @@ public class LeafQueue implements CSQueue {
         unreserve(application, priority, node, rmContainer);
       }
 
-      Token containerToken =
-          createContainerToken(application, container);
-      if (containerToken == null) {
-        // Something went wrong...
-        return Resources.none();
-      }
-      container.setContainerToken(containerToken);
-      
       // Inform the application
       RMContainer allocatedContainer = 
           application.allocate(type, node, priority, request, container);

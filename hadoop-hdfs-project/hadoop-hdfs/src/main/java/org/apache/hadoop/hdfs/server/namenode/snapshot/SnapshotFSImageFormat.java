@@ -27,7 +27,6 @@ import java.util.Map;
 
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormat;
-import org.apache.hadoop.hdfs.server.namenode.FSImageFormat.Loader;
 import org.apache.hadoop.hdfs.server.namenode.FSImageSerialization;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeAttributes;
@@ -137,7 +136,7 @@ public class SnapshotFSImageFormat {
    * @param parent The directory that the created list belongs to.
    * @return The created node.
    */
-  private static INode loadCreated(byte[] createdNodeName,
+  public static INode loadCreated(byte[] createdNodeName,
       INodeDirectory parent) throws IOException {
     // the INode in the created list should be a reference to another INode
     // in posterior SnapshotDiffs or one of the current children
@@ -209,11 +208,13 @@ public class SnapshotFSImageFormat {
   
   /**
    * Load snapshots and snapshotQuota for a Snapshottable directory.
-   * @param snapshottableParent The snapshottable directory for loading.
-   * @param numSnapshots The number of snapshots that the directory has.
-   * @param in The {@link DataInput} instance to read.
-   * @param loader The {@link Loader} instance that this loading procedure is 
-   *               using.
+   *
+   * @param snapshottableParent
+   *          The snapshottable directory for loading.
+   * @param numSnapshots
+   *          The number of snapshots that the directory has.
+   * @param loader
+   *          The loader
    */
   public static void loadSnapshotList(
       INodeDirectorySnapshottable snapshottableParent, int numSnapshots,
@@ -231,10 +232,13 @@ public class SnapshotFSImageFormat {
   /**
    * Load the {@link SnapshotDiff} list for the INodeDirectoryWithSnapshot
    * directory.
-   * @param dir The snapshottable directory for loading.
-   * @param in The {@link DataInput} instance to read.
-   * @param loader The {@link Loader} instance that this loading procedure is 
-   *               using.
+   *
+   * @param dir
+   *          The snapshottable directory for loading.
+   * @param in
+   *          The {@link DataInput} instance to read.
+   * @param loader
+   *          The loader
    */
   public static void loadDirectoryDiffList(INodeDirectory dir,
       DataInput in, FSImageFormat.Loader loader) throws IOException {

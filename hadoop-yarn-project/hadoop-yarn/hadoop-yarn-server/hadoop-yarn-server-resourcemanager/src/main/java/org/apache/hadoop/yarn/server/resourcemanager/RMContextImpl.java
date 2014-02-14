@@ -23,8 +23,10 @@ import java.util.concurrent.ConcurrentMap;
 
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
+import org.apache.hadoop.yarn.LocalConfigurationProvider;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.conf.ConfigurationProvider;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.server.resourcemanager.ahs.RMApplicationHistoryWriter;
@@ -78,7 +80,7 @@ public class RMContextImpl implements RMContext {
   private ResourceTrackerService resourceTrackerService;
   private ApplicationMasterService applicationMasterService;
   private RMApplicationHistoryWriter rmApplicationHistoryWriter;
-
+  private ConfigurationProvider configurationProvider;
   /**
    * Default constructor. To be used in conjunction with setter methods for
    * individual fields.
@@ -119,8 +121,11 @@ public class RMContextImpl implements RMContext {
     } catch (Exception e) {
       assert false;
     }
+
+    ConfigurationProvider provider = new LocalConfigurationProvider();
+    setConfigurationProvider(provider);
   }
-  
+
   @Override
   public Dispatcher getDispatcher() {
     return this.rmDispatcher;
@@ -334,4 +339,13 @@ public class RMContextImpl implements RMContext {
     this.rmApplicationHistoryWriter = rmApplicationHistoryWriter;
   }
 
+  @Override
+  public ConfigurationProvider getConfigurationProvider() {
+    return this.configurationProvider;
+  }
+
+  public void setConfigurationProvider(
+      ConfigurationProvider configurationProvider) {
+    this.configurationProvider = configurationProvider;
+  }
 }

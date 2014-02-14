@@ -27,6 +27,7 @@ import java.io.RandomAccessFile;
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.security.PrivilegedExceptionAction;
+import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 
 import org.apache.hadoop.conf.Configuration;
@@ -35,8 +36,9 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
+import org.apache.hadoop.hdfs.client.ShortCircuitCache;
+import org.apache.hadoop.hdfs.client.ShortCircuitReplica;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
@@ -125,8 +127,9 @@ public class TestShortCircuitLocalRead {
       throws IOException, InterruptedException {
     // Ensure short circuit is enabled
     DistributedFileSystem fs = getFileSystem(readingUser, uri, conf);
+    ClientContext getClientContext = ClientContext.getFromConf(conf);
     if (legacyShortCircuitFails) {
-      assertTrue(fs.getClient().useLegacyBlockReaderLocal());
+      assertFalse(getClientContext.getDisableLegacyBlockReaderLocal());
     }
     
     FSDataInputStream stm = fs.open(name);
@@ -155,7 +158,7 @@ public class TestShortCircuitLocalRead {
     checkData(actual, readOffset, expected, "Read 3");
     
     if (legacyShortCircuitFails) {
-      assertFalse(fs.getClient().useLegacyBlockReaderLocal());
+      assertTrue(getClientContext.getDisableLegacyBlockReaderLocal());
     }
     stm.close();
   }
@@ -175,8 +178,9 @@ public class TestShortCircuitLocalRead {
       throws IOException, InterruptedException {
     // Ensure short circuit is enabled
     DistributedFileSystem fs = getFileSystem(readingUser, uri, conf);
+    ClientContext clientContext = ClientContext.getFromConf(conf);
     if (legacyShortCircuitFails) {
-      assertTrue(fs.getClient().useLegacyBlockReaderLocal());
+      assertTrue(clientContext.getDisableLegacyBlockReaderLocal());
     }
     
     HdfsDataInputStream stm = (HdfsDataInputStream)fs.open(name);
@@ -209,7 +213,7 @@ public class TestShortCircuitLocalRead {
     }
     checkData(arrayFromByteBuffer(actual), readOffset, expected, "Read 3");
     if (legacyShortCircuitFails) {
-      assertFalse(fs.getClient().useLegacyBlockReaderLocal());
+      assertTrue(clientContext.getDisableLegacyBlockReaderLocal());
     }
     stm.close();
   }
@@ -223,7 +227,6 @@ public class TestShortCircuitLocalRead {
 
   public void doTestShortCircuitRead(boolean ignoreChecksum, int size,
       int readOffset) throws IOException, InterruptedException {
-    String shortCircuitUser = getCurrentUser();
     doTestShortCircuitReadImpl(ignoreChecksum, size, readOffset,
         null, getCurrentUser(), false);
   }
@@ -239,6 +242,10 @@ public class TestShortCircuitLocalRead {
     conf.setBoolean(DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_KEY, true);
     conf.setBoolean(DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_SKIP_CHECKSUM_KEY,
         ignoreChecksum);
+    // Set a random client context name so that we don't share a cache with
+    // other invocations of this function.
+    conf.set(DFSConfigKeys.DFS_CLIENT_CONTEXT,
+        UUID.randomUUID().toString());
     conf.set(DFSConfigKeys.DFS_DOMAIN_SOCKET_PATH_KEY,
         new File(sockDir.getDir(),
           "TestShortCircuitLocalRead._PORT.sock").getAbsolutePath());
@@ -322,18 +329,6 @@ public class TestShortCircuitLocalRead {
     doTestShortCircuitRead(true, 10*blockSize+100, 777);
   }
 
-  private ClientDatanodeProtocol getProxy(UserGroupInformation ugi,
-      final DatanodeID dnInfo, final Configuration conf) throws IOException,
-      InterruptedException {
-    return ugi.doAs(new PrivilegedExceptionAction<ClientDatanodeProtocol>() {
-      @Override
-      public ClientDatanodeProtocol run() throws Exception {
-        return DFSUtil.createClientDatanodeProtocolProxy(dnInfo, conf, 60000,
-            false);
-      }
-    });
-  }
-  
   private static DistributedFileSystem getFileSystem(String user, final URI uri,
       final Configuration conf) throws InterruptedException, IOException {
     UserGroupInformation ugi = UserGroupInformation.createRemoteUser(user);
@@ -555,8 +550,7 @@ public class TestShortCircuitLocalRead {
           for (int i = 0; i < iteration; i++) {
             try {
               String user = getCurrentUser();
-              checkFileContent(fs.getUri(), file1, dataToWrite, 0, user, conf,
-                  true);
+              checkFileContent(fs.getUri(), file1, dataToWrite, 0, user, conf, true);
             } catch (IOException e) {
               e.printStackTrace();
             } catch (InterruptedException e) {
@@ -608,7 +602,8 @@ public class TestShortCircuitLocalRead {
     stm.write(fileData);
     stm.close();
     try {
-      checkFileContent(uri, file1, fileData, readOffset, shortCircuitUser, conf, shortCircuitFails);
+      checkFileContent(uri, file1, fileData, readOffset, shortCircuitUser, 
+          conf, shortCircuitFails);
       //RemoteBlockReader have unsupported method read(ByteBuffer bf)
       assertTrue("RemoteBlockReader unsupported method read(ByteBuffer bf) error",
                     checkUnsupportedMethod(fs, file1, fileData, readOffset));

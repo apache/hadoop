@@ -675,7 +675,6 @@ public class TestYarnCLI {
     int result = spyCli.run(new String[] { "-help" });
     Assert.assertTrue(result == 0);
     verify(spyCli).printUsage(any(Options.class));
-    System.err.println(sysOutStream.toString()); //todo sandyt remove this hejfkdsl
     Assert.assertEquals(createApplicationCLIHelpMessage(),
         sysOutStream.toString());
 

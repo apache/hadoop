@@ -57,6 +57,7 @@ import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.event.InlineDispatcher;
@@ -695,6 +696,8 @@ public class TestRMAppAttemptTransitions {
     // launch AM and verify attempt failed
     applicationAttempt.handle(new RMAppAttemptRegistrationEvent(
         applicationAttempt.getAppAttemptId(), "host", 8042, "oldtrackingurl"));
+    assertEquals(YarnApplicationAttemptState.SUBMITTED,
+        applicationAttempt.createApplicationAttemptState());
     testAppAttemptSubmittedToFailedState(
         "Unmanaged AM must register after AM attempt reaches LAUNCHED state.");
   }
@@ -710,6 +713,8 @@ public class TestRMAppAttemptTransitions {
     // launch AM and verify attempt failed
     applicationAttempt.handle(new RMAppAttemptRegistrationEvent(
       applicationAttempt.getAppAttemptId(), "host", 8042, "oldtrackingurl"));
+    assertEquals(YarnApplicationAttemptState.SUBMITTED,
+        applicationAttempt.createApplicationAttemptState());
     sendAttemptUpdateSavedEvent(applicationAttempt);
     assertFalse(transferStateFromPreviousAttempt);
   }
@@ -720,6 +725,8 @@ public class TestRMAppAttemptTransitions {
         new RMAppAttemptEvent(
             applicationAttempt.getAppAttemptId(), 
             RMAppAttemptEventType.KILL));
+    assertEquals(YarnApplicationAttemptState.NEW,
+        applicationAttempt.createApplicationAttemptState());
     testAppAttemptKilledState(null, EMPTY_DIAGNOSTICS);
     verifyTokenCount(applicationAttempt.getAppAttemptId(), 1);
   } 
@@ -740,6 +747,8 @@ public class TestRMAppAttemptTransitions {
         new RMAppAttemptEvent(
             applicationAttempt.getAppAttemptId(), 
             RMAppAttemptEventType.KILL));
+    assertEquals(YarnApplicationAttemptState.SUBMITTED,
+        applicationAttempt.createApplicationAttemptState());
     testAppAttemptKilledState(null, EMPTY_DIAGNOSTICS);
   }
 
@@ -750,6 +759,8 @@ public class TestRMAppAttemptTransitions {
         new RMAppAttemptEvent(
             applicationAttempt.getAppAttemptId(), 
             RMAppAttemptEventType.KILL));
+    assertEquals(YarnApplicationAttemptState.SCHEDULED,
+        applicationAttempt.createApplicationAttemptState());
     testAppAttemptKilledState(null, EMPTY_DIAGNOSTICS);
   }
 
@@ -760,6 +771,8 @@ public class TestRMAppAttemptTransitions {
         new RMAppAttemptEvent(
             applicationAttempt.getAppAttemptId(), 
             RMAppAttemptEventType.KILL));
+    assertEquals(YarnApplicationAttemptState.ALLOCATED,
+        applicationAttempt.createApplicationAttemptState());
     testAppAttemptKilledState(amContainer, EMPTY_DIAGNOSTICS);
   }
 
@@ -771,6 +784,8 @@ public class TestRMAppAttemptTransitions {
         new RMAppAttemptLaunchFailedEvent(
             applicationAttempt.getAppAttemptId(), 
             diagnostics));
+    assertEquals(YarnApplicationAttemptState.ALLOCATED,
+        applicationAttempt.createApplicationAttemptState());
     testAppAttemptFailedState(amContainer, diagnostics);
   }
   
@@ -784,6 +799,8 @@ public class TestRMAppAttemptTransitions {
           ContainerState.COMPLETE, containerDiagMsg, exitCode);
     applicationAttempt.handle(new RMAppAttemptContainerFinishedEvent(
       applicationAttempt.getAppAttemptId(), cs));
+    assertEquals(YarnApplicationAttemptState.ALLOCATED,
+        applicationAttempt.createApplicationAttemptState());
     sendAttemptUpdateSavedEvent(applicationAttempt);
     assertEquals(RMAppAttemptState.FAILED,
       applicationAttempt.getAppAttemptState());
@@ -815,7 +832,8 @@ public class TestRMAppAttemptTransitions {
       applicationAttempt.getAppAttemptId(), RMAppAttemptEventType.EXPIRE));
     assertEquals(RMAppAttemptState.FINAL_SAVING,
       applicationAttempt.getAppAttemptState()); 
-
+    assertEquals(YarnApplicationAttemptState.RUNNING,
+        applicationAttempt.createApplicationAttemptState());
     sendAttemptUpdateSavedEvent(applicationAttempt);
     assertEquals(RMAppAttemptState.FAILED,
         applicationAttempt.getAppAttemptState());
@@ -850,7 +868,8 @@ public class TestRMAppAttemptTransitions {
       applicationAttempt.getAppAttemptId(), RMAppAttemptEventType.EXPIRE));
     assertEquals(RMAppAttemptState.FINAL_SAVING,
       applicationAttempt.getAppAttemptState()); 
-
+    assertEquals(YarnApplicationAttemptState.RUNNING,
+        applicationAttempt.createApplicationAttemptState());
     sendAttemptUpdateSavedEvent(applicationAttempt);
     assertEquals(RMAppAttemptState.KILLED,
         applicationAttempt.getAppAttemptState());
@@ -871,6 +890,8 @@ public class TestRMAppAttemptTransitions {
     launchApplicationAttempt(amContainer);
     applicationAttempt.handle(new RMAppAttemptEvent(
         applicationAttempt.getAppAttemptId(), RMAppAttemptEventType.EXPIRE));
+    assertEquals(YarnApplicationAttemptState.LAUNCHED,
+        applicationAttempt.createApplicationAttemptState());
     sendAttemptUpdateSavedEvent(applicationAttempt);
     assertEquals(RMAppAttemptState.FAILED,
         applicationAttempt.getAppAttemptState());
@@ -890,6 +911,8 @@ public class TestRMAppAttemptTransitions {
     runApplicationAttempt(amContainer, "host", 8042, "oldtrackingurl", false);
     applicationAttempt.handle(new RMAppAttemptEvent(
         applicationAttempt.getAppAttemptId(), RMAppAttemptEventType.EXPIRE));
+    assertEquals(YarnApplicationAttemptState.RUNNING,
+        applicationAttempt.createApplicationAttemptState());
     sendAttemptUpdateSavedEvent(applicationAttempt);
     assertEquals(RMAppAttemptState.FAILED,
         applicationAttempt.getAppAttemptState());
@@ -1055,6 +1078,8 @@ public class TestRMAppAttemptTransitions {
       diagnostics));
     assertEquals(RMAppAttemptState.FINAL_SAVING,
       applicationAttempt.getAppAttemptState());
+    assertEquals(YarnApplicationAttemptState.RUNNING,
+        applicationAttempt.createApplicationAttemptState());
     // Container_finished event comes before Attempt_Saved event.
     applicationAttempt.handle(new RMAppAttemptContainerFinishedEvent(
       applicationAttempt.getAppAttemptId(), BuilderUtils.newContainerStatus(
@@ -1083,6 +1108,8 @@ public class TestRMAppAttemptTransitions {
       diagnostics));
     assertEquals(RMAppAttemptState.FINAL_SAVING,
       applicationAttempt.getAppAttemptState());
+    assertEquals(YarnApplicationAttemptState.RUNNING,
+        applicationAttempt.createApplicationAttemptState());
     // Expire event comes before Attempt_saved event.
     applicationAttempt.handle(new RMAppAttemptEvent(applicationAttempt
       .getAppAttemptId(), RMAppAttemptEventType.EXPIRE));
@@ -1118,6 +1145,8 @@ public class TestRMAppAttemptTransitions {
 
     applicationAttempt.handle(new RMAppAttemptEvent(applicationAttempt
       .getAppAttemptId(), RMAppAttemptEventType.KILL));
+    assertEquals(YarnApplicationAttemptState.LAUNCHED,
+        applicationAttempt.createApplicationAttemptState());
     sendAttemptUpdateSavedEvent(applicationAttempt);
     // after attempt is killed, can not get Client Token
     token = applicationAttempt.createClientToken(null);
@@ -1140,6 +1169,8 @@ public class TestRMAppAttemptTransitions {
     ApplicationAttemptId appAttemptId = applicationAttempt.getAppAttemptId();
     applicationAttempt.handle(new RMAppAttemptContainerFinishedEvent(
       appAttemptId, cs1));
+    assertEquals(YarnApplicationAttemptState.RUNNING,
+        applicationAttempt.createApplicationAttemptState());
     sendAttemptUpdateSavedEvent(applicationAttempt);
     assertEquals(RMAppAttemptState.FAILED,
       applicationAttempt.getAppAttemptState());
@@ -1178,6 +1209,8 @@ public class TestRMAppAttemptTransitions {
     ApplicationAttemptId appAttemptId = applicationAttempt.getAppAttemptId();
     applicationAttempt.handle(new RMAppAttemptContainerFinishedEvent(
       appAttemptId, cs1));
+    assertEquals(YarnApplicationAttemptState.RUNNING,
+        applicationAttempt.createApplicationAttemptState());
     sendAttemptUpdateSavedEvent(applicationAttempt);
     assertEquals(RMAppAttemptState.FAILED,
       applicationAttempt.getAppAttemptState());

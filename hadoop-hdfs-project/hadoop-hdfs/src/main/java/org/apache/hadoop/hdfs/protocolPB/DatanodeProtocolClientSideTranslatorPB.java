@@ -103,9 +103,10 @@ public class DatanodeProtocolClientSideTranslatorPB implements
   private static DatanodeProtocolPB createNamenode(
       InetSocketAddress nameNodeAddr, Configuration conf,
       UserGroupInformation ugi) throws IOException {
-    return RPC.getProxy(DatanodeProtocolPB.class,
+    return RPC.getProtocolProxy(DatanodeProtocolPB.class,
         RPC.getProtocolVersion(DatanodeProtocolPB.class), nameNodeAddr, ugi,
-        conf, NetUtils.getSocketFactory(conf, DatanodeProtocolPB.class));
+        conf, NetUtils.getSocketFactory(conf, DatanodeProtocolPB.class),
+        org.apache.hadoop.ipc.Client.getPingInterval(conf), null).getProxy();
   }
 
   /** Create a {@link NameNode} proxy */

@@ -136,7 +136,6 @@ public class ClientRMService extends AbstractService implements
 
   private final ApplicationACLsManager applicationsACLsManager;
   private final QueueACLsManager queueACLsManager;
-  private boolean useLocalConfigurationProvider;
 
   public ClientRMService(RMContext rmContext, YarnScheduler scheduler,
       RMAppManager rmAppManager, ApplicationACLsManager applicationACLsManager,
@@ -154,10 +153,6 @@ public class ClientRMService extends AbstractService implements
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
     clientBindAddress = getBindAddress(conf);
-    this.useLocalConfigurationProvider =
-        (LocalConfigurationProvider.class.isAssignableFrom(conf.getClass(
-            YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
-            LocalConfigurationProvider.class)));
     super.serviceInit(conf);
   }
 
@@ -176,7 +171,10 @@ public class ClientRMService extends AbstractService implements
     if (conf.getBoolean(
         CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION, 
         false)) {
-      refreshServiceAcls(conf, new RMPolicyProvider());
+      refreshServiceAcls(
+          this.rmContext.getConfigurationProvider().getConfiguration(conf,
+              YarnConfiguration.HADOOP_POLICY_CONFIGURATION_FILE),
+          RMPolicyProvider.getInstance());
     }
     
     this.server.start();
@@ -809,10 +807,11 @@ public class ClientRMService extends AbstractService implements
 
   void refreshServiceAcls(Configuration configuration, 
       PolicyProvider policyProvider) {
-    if (this.useLocalConfigurationProvider) {
+    if (this.rmContext.getConfigurationProvider() instanceof
+        LocalConfigurationProvider) {
       this.server.refreshServiceAcl(configuration, policyProvider);
     } else {
-      this.server.refreshServiceAclWithConfigration(configuration,
+      this.server.refreshServiceAclWithLoadedConfiguration(configuration,
           policyProvider);
     }
   }

@@ -72,6 +72,12 @@ public class TestFileSystemApplicationHistoryStore extends
   }
 
   private void testWriteHistoryData(int num) throws IOException {
+    testWriteHistoryData(num, false, false);
+  }
+  
+  private void testWriteHistoryData(
+      int num, boolean missingContainer, boolean missingApplicationAttempt)
+          throws IOException {
     // write application history data
     for (int i = 1; i <= num; ++i) {
       ApplicationId appId = ApplicationId.newInstance(0, i);
@@ -83,21 +89,31 @@ public class TestFileSystemApplicationHistoryStore extends
             ApplicationAttemptId.newInstance(appId, j);
         writeApplicationAttemptStartData(appAttemptId);
 
+        if (missingApplicationAttempt && j == num) {
+          continue;
+        }
         // write container history data
         for (int k = 1; k <= num; ++k) {
           ContainerId containerId = ContainerId.newInstance(appAttemptId, k);
           writeContainerStartData(containerId);
+          if (missingContainer && k == num) {
+            continue;
+          }
           writeContainerFinishData(containerId);
-
-          writeApplicationAttemptFinishData(appAttemptId);
         }
+        writeApplicationAttemptFinishData(appAttemptId);
       }
-
       writeApplicationFinishData(appId);
     }
   }
 
   private void testReadHistoryData(int num) throws IOException {
+    testReadHistoryData(num, false, false);
+  }
+  
+  private void testReadHistoryData(
+      int num, boolean missingContainer, boolean missingApplicationAttempt)
+          throws IOException {
     // read application history data
     Assert.assertEquals(num, store.getAllApplications().size());
     for (int i = 1; i <= num; ++i) {
@@ -116,8 +132,14 @@ public class TestFileSystemApplicationHistoryStore extends
             store.getApplicationAttempt(appAttemptId);
         Assert.assertNotNull(attemptData);
         Assert.assertEquals(appAttemptId.toString(), attemptData.getHost());
-        Assert.assertEquals(appAttemptId.toString(),
-          attemptData.getDiagnosticsInfo());
+        
+        if (missingApplicationAttempt && j == num) {
+          Assert.assertNull(attemptData.getDiagnosticsInfo());
+          continue;
+        } else {
+          Assert.assertEquals(appAttemptId.toString(),
+              attemptData.getDiagnosticsInfo());
+        }
 
         // read container history data
         Assert.assertEquals(num, store.getContainers(appAttemptId).size());
@@ -127,8 +149,12 @@ public class TestFileSystemApplicationHistoryStore extends
           Assert.assertNotNull(containerData);
           Assert.assertEquals(Priority.newInstance(containerId.getId()),
             containerData.getPriority());
-          Assert.assertEquals(containerId.toString(),
-            containerData.getDiagnosticsInfo());
+          if (missingContainer && k == num) {
+            Assert.assertNull(containerData.getDiagnosticsInfo());
+          } else {
+            Assert.assertEquals(containerId.toString(),
+                containerData.getDiagnosticsInfo());
+          }
         }
         ContainerHistoryData masterContainer =
             store.getAMContainer(appAttemptId);
@@ -193,4 +219,15 @@ public class TestFileSystemApplicationHistoryStore extends
     Assert.assertTrue((usedDiskAfter - usedDiskBefore) < 20);
   }
 
+  @Test
+  public void testMissingContainerHistoryData() throws IOException {
+    testWriteHistoryData(3, true, false);
+    testReadHistoryData(3, true, false);
+  }
+  
+  @Test
+  public void testMissingApplicationAttemptHistoryData() throws IOException {
+    testWriteHistoryData(3, false, true);
+    testReadHistoryData(3, false, true);
+  }
 }

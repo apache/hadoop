@@ -676,11 +676,11 @@ public abstract class RMStateStore extends AbstractService {
 
   @SuppressWarnings("unchecked")
   /**
-   * In {#handleStoreEvent}, this method is called to notify the
-   * ResourceManager that the store operation has failed.
+   * This method is called to notify the ResourceManager that the store
+   * operation has failed.
    * @param failureCause the exception due to which the operation failed
    */
-  private void notifyStoreOperationFailed(Exception failureCause) {
+  protected void notifyStoreOperationFailed(Exception failureCause) {
     RMFatalEventType type;
     if (failureCause instanceof StoreFencedException) {
       type = RMFatalEventType.STATE_STORE_FENCED;

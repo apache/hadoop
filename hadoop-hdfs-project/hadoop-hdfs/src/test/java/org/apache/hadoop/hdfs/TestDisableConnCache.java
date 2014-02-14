@@ -53,7 +53,8 @@ public class TestDisableConnCache {
     FileSystem fsWithoutCache = FileSystem.newInstance(util.getConf());
     try {
       DFSTestUtil.readFile(fsWithoutCache, testFile);
-      assertEquals(0, ((DistributedFileSystem)fsWithoutCache).dfs.peerCache.size());
+      assertEquals(0, ((DistributedFileSystem)fsWithoutCache).
+          dfs.getClientContext().getPeerCache().size());
     } finally {
       fsWithoutCache.close();
       util.shutdown();

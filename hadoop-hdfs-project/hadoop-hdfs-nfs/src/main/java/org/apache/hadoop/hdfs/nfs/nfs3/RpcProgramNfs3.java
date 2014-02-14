@@ -545,7 +545,8 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
         return new READLINK3Response(Nfs3Status.NFS3ERR_SERVERFAULT);
       }
       if (MAX_READ_TRANSFER_SIZE < target.getBytes().length) {
-        return new READLINK3Response(Nfs3Status.NFS3ERR_IO, postOpAttr, null);
+        return new READLINK3Response(Nfs3Status.NFS3ERR_IO, postOpAttr,
+            new byte[0]);
       }
 
       return new READLINK3Response(Nfs3Status.NFS3_OK, postOpAttr,
@@ -1828,7 +1829,8 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       } catch (IOException e1) {
         LOG.info("Can't get postOpAttr for fileId: " + handle.getFileId());
       }
-      WccData fileWcc = new WccData(Nfs3Utils.getWccAttr(preOpAttr), postOpAttr);
+      WccData fileWcc = new WccData(preOpAttr == null ? null
+          : Nfs3Utils.getWccAttr(preOpAttr), postOpAttr);
       return new COMMIT3Response(Nfs3Status.NFS3ERR_IO, fileWcc,
           Nfs3Constant.WRITE_COMMIT_VERF);
     }

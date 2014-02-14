@@ -33,6 +33,7 @@ import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.http.HttpConfig.Policy;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
+import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.AbstractService;
@@ -42,10 +43,13 @@ import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.LocalConfigurationProvider;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.conf.ConfigurationProvider;
+import org.apache.hadoop.yarn.conf.ConfigurationProviderFactory;
 import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
@@ -154,7 +158,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
   private boolean recoveryEnabled;
 
   private String webAppAddress;
-
+  private ConfigurationProvider configurationProvider = null;
   /** End of Active services */
 
   private Configuration conf;
@@ -181,6 +185,24 @@ public class ResourceManager extends CompositeService implements Recoverable {
     validateConfigs(conf);
     this.conf = conf;
     this.rmContext = new RMContextImpl();
+
+    this.configurationProvider =
+        ConfigurationProviderFactory.getConfigurationProvider(conf);
+    this.configurationProvider.init(this.conf);
+    rmContext.setConfigurationProvider(configurationProvider);
+    if (!(this.configurationProvider instanceof LocalConfigurationProvider)) {
+      // load yarn-site.xml
+      this.conf =
+          this.configurationProvider.getConfiguration(this.conf,
+              YarnConfiguration.YARN_SITE_XML_FILE);
+      // load core-site.xml
+      this.conf =
+          this.configurationProvider.getConfiguration(this.conf,
+              YarnConfiguration.CORE_SITE_CONFIGURATION_FILE);
+      // Do refreshUserToGroupsMappings with loaded core-site.xml
+      Groups.getUserToGroupsMappingServiceWithLoadedConfiguration(this.conf)
+          .refresh();
+    }
 
     // register the handlers for all AlwaysOn services using setupDispatcher().
     rmDispatcher = setupDispatcher();
@@ -883,6 +905,9 @@ public class ResourceManager extends CompositeService implements Recoverable {
     }
     if (fetcher != null) {
       fetcher.stop();
+    }
+    if (configurationProvider != null) {
+      configurationProvider.close();
     }
     super.serviceStop();
     transitionToStandby(false);
