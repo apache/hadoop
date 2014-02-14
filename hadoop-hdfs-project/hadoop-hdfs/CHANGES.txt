@@ -120,31 +120,6 @@ Trunk (Unreleased)
     HDFS-5041. Add the time of last heartbeat to dead server Web UI (Shinichi
     Yamashita via brandonli)
 
-    HDFS-5531. Combine the getNsQuota() and getDsQuota() methods in INode.
-    (szetszwo)
-
-    HDFS-5285. Flatten INodeFile hierarchy: Replace INodeFileUnderConstruction
-    and INodeFileUnderConstructionWithSnapshot with FileUnderContructionFeature.
-    (jing9 via szetszwo)
-
-    HDFS-5286. Flatten INodeDirectory hierarchy: Replace INodeDirectoryWithQuota
-    with DirectoryWithQuotaFeature.  (szetszwo)
-
-    HDFS-5537. Remove FileWithSnapshot interface.  (jing9 via szetszwo)
-
-    HDFS-5554. Flatten INodeFile hierarchy: Replace INodeFileWithSnapshot with
-    FileWithSnapshotFeature.  (jing9 via szetszwo)
-
-    HDFS-5647. Merge INodeDirectory.Feature and INodeFile.Feature. (Haohui Mai
-    via jing9)
-
-    HDFS-5632. Flatten INodeDirectory hierarchy: Replace
-    INodeDirectoryWithSnapshot with DirectoryWithSnapshotFeature.
-    (jing9 via szetszwo)
-
-    HDFS-5715. Use Snapshot ID to indicate the corresponding Snapshot for a
-    FileDiff/DirectoryDiff. (jing9)
-
     HDFS-5721. sharedEditsImage in Namenode#initializeSharedEdits() should be 
     closed before method returns. (Ted Yu via junping_du)
 
@@ -275,8 +250,6 @@ Trunk (Unreleased)
     HDFS-5719. FSImage#doRollback() should close prevState before return
     (Ted Yu via brandonli)
 
-    HDFS-5726. Fix compilation error in AbstractINodeDiff for JDK7. (jing9)
-
     HDFS-5768. Consolidate the serialization code in DelegationTokenSecretManager 
     (Haohui Mai via brandonli)
 
@@ -375,6 +348,33 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-5940. Minor cleanups to ShortCircuitReplica, FsDatasetCache, and
     DomainSocketWatcher (cmccabe)
+
+    HDFS-5531. Combine the getNsQuota() and getDsQuota() methods in INode.
+    (szetszwo)
+
+    HDFS-5285. Flatten INodeFile hierarchy: Replace INodeFileUnderConstruction
+    and INodeFileUnderConstructionWithSnapshot with FileUnderContructionFeature.
+    (jing9 via szetszwo)
+
+    HDFS-5286. Flatten INodeDirectory hierarchy: Replace INodeDirectoryWithQuota
+    with DirectoryWithQuotaFeature.  (szetszwo)
+
+    HDFS-5537. Remove FileWithSnapshot interface.  (jing9 via szetszwo)
+
+    HDFS-5554. Flatten INodeFile hierarchy: Replace INodeFileWithSnapshot with
+    FileWithSnapshotFeature.  (jing9 via szetszwo)
+
+    HDFS-5647. Merge INodeDirectory.Feature and INodeFile.Feature. (Haohui Mai
+    via jing9)
+
+    HDFS-5632. Flatten INodeDirectory hierarchy: Replace
+    INodeDirectoryWithSnapshot with DirectoryWithSnapshotFeature.
+    (jing9 via szetszwo)
+
+    HDFS-5715. Use Snapshot ID to indicate the corresponding Snapshot for a
+    FileDiff/DirectoryDiff. (jing9)
+
+    HDFS-5726. Fix compilation error in AbstractINodeDiff for JDK7. (jing9)
 
   OPTIMIZATIONS
 
