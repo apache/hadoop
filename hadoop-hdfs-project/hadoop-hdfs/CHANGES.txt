@@ -39,6 +39,10 @@ Release 2.4.0 - UNRELEASED
     HDFS-5531. Combine the getNsQuota() and getDsQuota() methods in INode.
     (szetszwo)
 
+    HDFS-5285. Flatten INodeFile hierarchy: Replace INodeFileUnderConstruction
+    and INodeFileUnderConstructionWithSnapshot with FileUnderContructionFeature.
+    (jing9 via szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-5790. LeaseManager.findPath is very slow when many leases need recovery

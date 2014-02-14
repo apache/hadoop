@@ -399,14 +399,14 @@ public class LeaseManager {
    * @return list of inodes
    * @throws UnresolvedLinkException
    */
-  Map<String, INodeFileUnderConstruction> getINodesUnderConstruction() {
-    Map<String, INodeFileUnderConstruction> inodes =
-        new TreeMap<String, INodeFileUnderConstruction>();
+  Map<String, INodeFile> getINodesUnderConstruction() {
+    Map<String, INodeFile> inodes = new TreeMap<String, INodeFile>();
     for (String p : sortedLeasesByPath.keySet()) {
       // verify that path exists in namespace
       try {
-        INode node = fsnamesystem.dir.getINode(p);
-        inodes.put(p, INodeFileUnderConstruction.valueOf(node, p));
+        INodeFile node = INodeFile.valueOf(fsnamesystem.dir.getINode(p), p);
+        Preconditions.checkState(node.isUnderConstruction());
+        inodes.put(p, node);
       } catch (IOException ioe) {
         LOG.error(ioe);
       }

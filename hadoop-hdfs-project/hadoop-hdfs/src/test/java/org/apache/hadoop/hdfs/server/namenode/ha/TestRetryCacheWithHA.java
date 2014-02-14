@@ -69,7 +69,6 @@ import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
-import org.apache.hadoop.hdfs.server.namenode.INodeFileUnderConstruction;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.IOUtils;
@@ -726,8 +725,8 @@ public class TestRetryCacheWithHA {
 
     @Override
     boolean checkNamenodeBeforeReturn() throws Exception {
-      INodeFileUnderConstruction fileNode = (INodeFileUnderConstruction) cluster
-          .getNamesystem(0).getFSDirectory().getINode4Write(file).asFile();
+      INodeFile fileNode = cluster.getNamesystem(0).getFSDirectory()
+          .getINode4Write(file).asFile();
       BlockInfoUnderConstruction blkUC = 
           (BlockInfoUnderConstruction) (fileNode.getBlocks())[1];
       int datanodeNum = blkUC.getExpectedStorageLocations().length;

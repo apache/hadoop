@@ -82,9 +82,10 @@ public class CreateEditsLog {
          blocks[iB].setBlockId(currentBlockId++);
       }
 
-      INodeFileUnderConstruction inode = new INodeFileUnderConstruction(
-          inodeId.nextValue(), null, replication, 0, blockSize, blocks, p, "",
-          "", null);
+      final INodeFile inode = new INodeFile(inodeId.nextValue(), null,
+          p, 0L, 0L, blocks, replication, blockSize);
+      inode.toUnderConstruction("", "", null);
+
      // Append path to filename with information about blockIDs 
       String path = "_" + iF + "_B" + blocks[0].getBlockId() + 
                     "_to_B" + blocks[blocksPerFile-1].getBlockId() + "_";
@@ -96,9 +97,10 @@ public class CreateEditsLog {
         dirInode = new INodeDirectory(inodeId.nextValue(), null, p, 0L);
         editLog.logMkDir(currentDir, dirInode);
       }
-      editLog.logOpenFile(filePath,
-          new INodeFileUnderConstruction(inodeId.nextValue(), p, replication,
-              0, blockSize, "", "", null), false);
+      INodeFile fileUc = new INodeFile(inodeId.nextValue(), null,
+          p, 0L, 0L, BlockInfo.EMPTY_ARRAY, replication, blockSize);
+      fileUc.toUnderConstruction("", "", null);
+      editLog.logOpenFile(filePath, fileUc, false);
       editLog.logCloseFile(filePath, inode);
 
       if (currentBlockId - bidAtSync >= 2000) { // sync every 2K blocks

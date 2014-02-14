@@ -679,8 +679,8 @@ public class FSEditLog implements LogsPurgeable {
    * Add open lease record to edit log. 
    * Records the block locations of the last block.
    */
-  public void logOpenFile(String path, INodeFileUnderConstruction newNode,
-      boolean toLogRpcIds) {
+  public void logOpenFile(String path, INodeFile newNode, boolean toLogRpcIds) {
+    Preconditions.checkArgument(newNode.isUnderConstruction());
     AddOp op = AddOp.getInstance(cache.get())
       .setInodeId(newNode.getId())
       .setPath(path)
@@ -690,8 +690,8 @@ public class FSEditLog implements LogsPurgeable {
       .setBlockSize(newNode.getPreferredBlockSize())
       .setBlocks(newNode.getBlocks())
       .setPermissionStatus(newNode.getPermissionStatus())
-      .setClientName(newNode.getClientName())
-      .setClientMachine(newNode.getClientMachine());
+      .setClientName(newNode.getFileUnderConstructionFeature().getClientName())
+      .setClientMachine(newNode.getFileUnderConstructionFeature().getClientMachine());
     logRpcIds(op, toLogRpcIds);
     logEdit(op);
   }
@@ -712,7 +712,8 @@ public class FSEditLog implements LogsPurgeable {
     logEdit(op);
   }
   
-  public void logAddBlock(String path, INodeFileUnderConstruction file) {
+  public void logAddBlock(String path, INodeFile file) {
+    Preconditions.checkArgument(file.isUnderConstruction());
     BlockInfo[] blocks = file.getBlocks();
     Preconditions.checkState(blocks != null && blocks.length > 0);
     BlockInfo pBlock = blocks.length > 1 ? blocks[blocks.length - 2] : null;
@@ -722,8 +723,8 @@ public class FSEditLog implements LogsPurgeable {
     logEdit(op);
   }
   
-  public void logUpdateBlocks(String path, INodeFileUnderConstruction file, 
-      boolean toLogRpcIds) {
+  public void logUpdateBlocks(String path, INodeFile file, boolean toLogRpcIds) {
+    Preconditions.checkArgument(file.isUnderConstruction());
     UpdateBlocksOp op = UpdateBlocksOp.getInstance(cache.get())
       .setPath(path)
       .setBlocks(file.getBlocks());

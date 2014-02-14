@@ -314,7 +314,9 @@ public class TestSnapshotBlocksMap {
     assertEquals(BLOCKSIZE, blks[0].getNumBytes());
   }
 
-  /** Make sure we delete 0-sized block when deleting an INodeFileUC */
+  /**
+   * Make sure we delete 0-sized block when deleting an under-construction file
+   */
   @Test
   public void testDeletionWithZeroSizeBlock2() throws Exception {
     final Path foo = new Path("/foo");

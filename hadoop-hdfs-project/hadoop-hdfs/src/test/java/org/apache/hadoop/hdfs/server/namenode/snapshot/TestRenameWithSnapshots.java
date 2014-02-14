@@ -1227,8 +1227,9 @@ public class TestRenameWithSnapshots {
       out.write(content);
       fooRef = fsdir.getINode4Write(foo2.toString());
       assertTrue(fooRef instanceof INodeReference.DstReference);
-      INode fooNode = fooRef.asFile();
-      assertTrue(fooNode instanceof INodeFileUnderConstructionWithSnapshot);
+      INodeFile fooNode = fooRef.asFile();
+      assertTrue(fooNode instanceof INodeFileWithSnapshot);
+      assertTrue(fooNode.isUnderConstruction());
     } finally {
       if (out != null) {
         out.close();
@@ -1237,8 +1238,9 @@ public class TestRenameWithSnapshots {
     
     fooRef = fsdir.getINode4Write(foo2.toString());
     assertTrue(fooRef instanceof INodeReference.DstReference);
-    INode fooNode = fooRef.asFile();
+    INodeFile fooNode = fooRef.asFile();
     assertTrue(fooNode instanceof INodeFileWithSnapshot);
+    assertFalse(fooNode.isUnderConstruction());
     
     restartClusterAndCheckImage(true);
   }

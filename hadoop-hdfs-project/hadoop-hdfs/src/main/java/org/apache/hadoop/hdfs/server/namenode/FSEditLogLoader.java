@@ -25,7 +25,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
 import java.util.EnumMap;
-import java.util.EnumSet;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -33,21 +32,20 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
-import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.AddBlockOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.AddCacheDirectiveInfoOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.AddCachePoolOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.AddCloseOp;
-import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.AddCacheDirectiveInfoOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.AllocateBlockIdOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.AllowSnapshotOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.BlockListUpdatingOp;
@@ -60,11 +58,11 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.DeleteSnapshotOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.DisallowSnapshotOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.GetDelegationTokenOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.MkdirOp;
-import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.ModifyCachePoolOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.ModifyCacheDirectiveInfoOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.ModifyCachePoolOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.ReassignLeaseOp;
-import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RemoveCachePoolOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RemoveCacheDirectiveInfoOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RemoveCachePoolOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenameOldOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenameOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenameSnapshotOp;
@@ -88,7 +86,6 @@ import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress.Co
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.Step;
 import org.apache.hadoop.hdfs.util.ChunkedArrayList;
 import org.apache.hadoop.hdfs.util.Holder;
-import org.apache.jasper.tagplugins.jstl.core.Remove;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
@@ -379,15 +376,15 @@ public class FSEditLogLoader {
       }
 
       final INodesInPath iip = fsDir.getLastINodeInPath(path);
-      final INodeFile oldFile = INodeFile.valueOf(iip.getINode(0), path);
+      final INodeFile file = INodeFile.valueOf(iip.getINode(0), path);
 
       // Update the salient file attributes.
-      oldFile.setAccessTime(addCloseOp.atime, null, fsDir.getINodeMap());
-      oldFile.setModificationTime(addCloseOp.mtime, null, fsDir.getINodeMap());
-      updateBlocks(fsDir, addCloseOp, oldFile);
+      file.setAccessTime(addCloseOp.atime, null, fsDir.getINodeMap());
+      file.setModificationTime(addCloseOp.mtime, null, fsDir.getINodeMap());
+      updateBlocks(fsDir, addCloseOp, file);
 
       // Now close the file
-      if (!oldFile.isUnderConstruction() &&
+      if (!file.isUnderConstruction() &&
           logVersion <= LayoutVersion.BUGFIX_HDFS_2991_VERSION) {
         // There was a bug (HDFS-2991) in hadoop < 0.23.1 where OP_CLOSE
         // could show up twice in a row. But after that version, this
@@ -397,11 +394,9 @@ public class FSEditLogLoader {
       }
       // One might expect that you could use removeLease(holder, path) here,
       // but OP_CLOSE doesn't serialize the holder. So, remove by path.
-      if (oldFile.isUnderConstruction()) {
-        INodeFileUnderConstruction ucFile = (INodeFileUnderConstruction) oldFile;
+      if (file.isUnderConstruction()) {
         fsNamesys.leaseManager.removeLeaseWithPrefixPath(path);
-        INodeFile newFile = ucFile.toINodeFile(ucFile.getModificationTime());
-        fsDir.unprotectedReplaceINodeFile(path, ucFile, newFile);
+        file.toCompleteFile(file.getModificationTime());
       }
       break;
     }
@@ -608,9 +603,8 @@ public class FSEditLogLoader {
           reassignLeaseOp.leaseHolder);
       final String path =
           renameReservedPathsOnUpgrade(reassignLeaseOp.path, logVersion);
-      INodeFileUnderConstruction pendingFile =
-          INodeFileUnderConstruction.valueOf( 
-              fsDir.getINode(path), path);
+      INodeFile pendingFile = fsDir.getINode(path).asFile();
+      Preconditions.checkState(pendingFile.isUnderConstruction());
       fsNamesys.reassignLeaseInternal(lease,
           path, reassignLeaseOp.newHolder, pendingFile);
       break;
@@ -795,8 +789,7 @@ public class FSEditLogLoader {
       
       oldLastBlock.setNumBytes(pBlock.getNumBytes());
       if (oldLastBlock instanceof BlockInfoUnderConstruction) {
-        fsNamesys.getBlockManager().forceCompleteBlock(
-            (INodeFileUnderConstruction) file,
+        fsNamesys.getBlockManager().forceCompleteBlock(file,
             (BlockInfoUnderConstruction) oldLastBlock);
         fsNamesys.getBlockManager().processQueuedMessagesForBlock(pBlock);
       }
@@ -848,9 +841,8 @@ public class FSEditLogLoader {
       if (oldBlock instanceof BlockInfoUnderConstruction &&
           (!isLastBlock || op.shouldCompleteLastBlock())) {
         changeMade = true;
-        fsNamesys.getBlockManager().forceCompleteBlock(
-            (INodeFileUnderConstruction)file,
-            (BlockInfoUnderConstruction)oldBlock);
+        fsNamesys.getBlockManager().forceCompleteBlock(file,
+            (BlockInfoUnderConstruction) oldBlock);
       }
       if (changeMade) {
         // The state or gen-stamp of the block has changed. So, we may be
@@ -871,8 +863,7 @@ public class FSEditLogLoader {
             + path);
       }
       Block oldBlock = oldBlocks[oldBlocks.length - 1];
-      boolean removed = fsDir.unprotectedRemoveBlock(path,
-          (INodeFileUnderConstruction) file, oldBlock);
+      boolean removed = fsDir.unprotectedRemoveBlock(path, file, oldBlock);
       if (!removed && !(op instanceof UpdateBlocksOp)) {
         throw new IOException("Trying to delete non-existant block " + oldBlock);
       }
