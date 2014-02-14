@@ -456,6 +456,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-5948. TestBackupNode flakes with port in use error. (Haohui Mai
     via Arpit Agarwal)
 
+    HDFS-5949. New Namenode UI when trying to download a file, the browser
+    doesn't know the file name. (Haohui Mai via brandonli)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
