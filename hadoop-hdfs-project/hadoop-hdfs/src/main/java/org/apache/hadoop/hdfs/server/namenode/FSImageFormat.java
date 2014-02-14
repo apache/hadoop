@@ -889,7 +889,7 @@ public class FSImageFormat {
         //This must not happen if security is turned on.
         return; 
       }
-      namesystem.loadSecretManagerState(in);
+      namesystem.loadSecretManagerStateCompat(in);
     }
 
     private void loadCacheManagerState(DataInput in) throws IOException {
@@ -1201,7 +1201,7 @@ public class FSImageFormat {
         sourceNamesystem.saveFilesUnderConstruction(out, snapshotUCMap);
         
         context.checkCancelled();
-        sourceNamesystem.saveSecretManagerState(out, sdPath);
+        sourceNamesystem.saveSecretManagerStateCompat(out, sdPath);
         context.checkCancelled();
         sourceNamesystem.getCacheManager().saveState(out, sdPath);
         context.checkCancelled();
