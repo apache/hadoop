@@ -54,6 +54,10 @@ Release 2.4.0 - UNRELEASED
     HDFS-5647. Merge INodeDirectory.Feature and INodeFile.Feature. (Haohui Mai
     via jing9)
 
+    HDFS-5632. Flatten INodeDirectory hierarchy: Replace
+    INodeDirectoryWithSnapshot with DirectoryWithSnapshotFeature.
+    (jing9 via szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-5790. LeaseManager.findPath is very slow when many leases need recovery

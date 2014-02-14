@@ -31,7 +31,6 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -206,8 +205,7 @@ public class TestSnapshotPathINodes {
     // Check the INode for file1 (snapshot file)
     INode snapshotFileNode = inodes[inodes.length - 1]; 
     assertINodeFile(snapshotFileNode, file1);
-    assertTrue(snapshotFileNode.getParent() instanceof 
-        INodeDirectoryWithSnapshot);
+    assertTrue(snapshotFileNode.getParent().isWithSnapshot());
     
     // Call getExistingPathINodes and request only one INode.
     nodesInPath = INodesInPath.resolve(fsdir.rootDir, components, 1, false);

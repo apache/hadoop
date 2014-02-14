@@ -38,7 +38,6 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotFSImageFormat;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotFSImageFormat.ReferenceMap;
 import org.apache.hadoop.hdfs.util.XMLUtils;
@@ -246,7 +245,7 @@ public class FSImageSerialization {
       out.writeBoolean(true);
     } else {
       out.writeBoolean(false);
-      out.writeBoolean(node instanceof INodeDirectoryWithSnapshot);
+      out.writeBoolean(node.isWithSnapshot());
     }
     
     writePermissionStatus(node, out);

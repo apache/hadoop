@@ -785,7 +785,7 @@ public class TestINodeFile {
       }
       System.out.println("Adding component " + DFSUtil.bytes2String(component));
       dir = new INodeDirectory(++id, component, permstatus, 0);
-      prev.addChild(dir, false, null, null);
+      prev.addChild(dir, false, null);
       prev = dir;
     }
     return dir; // Last Inode in the chain

@@ -117,9 +117,8 @@ public class Snapshot implements Comparable<byte[]> {
     for(; inode != null; inode = inode.getParent()) {
       if (inode.isDirectory()) {
         final INodeDirectory dir = inode.asDirectory();
-        if (dir instanceof INodeDirectoryWithSnapshot) {
-          latest = ((INodeDirectoryWithSnapshot) dir).getDiffs().updatePrior(
-              anchor, latest);
+        if (dir.isWithSnapshot()) {
+          latest = dir.getDiffs().updatePrior(anchor, latest);
         }
       }
     }

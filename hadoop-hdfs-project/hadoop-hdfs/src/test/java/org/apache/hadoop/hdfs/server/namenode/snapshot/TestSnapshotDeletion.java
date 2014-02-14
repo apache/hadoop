@@ -51,7 +51,7 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.namenode.Quota;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot.DirectoryDiffList;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature.DirectoryDiffList;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
@@ -311,9 +311,9 @@ public class TestSnapshotDeletion {
     // make sure the whole subtree of sub is stored correctly in snapshot
     Path snapshotSub = SnapshotTestHelper.getSnapshotPath(dir, "s1",
         sub.getName());
-    INodeDirectoryWithSnapshot snapshotNode4Sub = 
-        (INodeDirectoryWithSnapshot) fsdir.getINode(snapshotSub.toString());
-    assertEquals(INodeDirectoryWithSnapshot.class, snapshotNode4Sub.getClass());
+    INodeDirectory snapshotNode4Sub = fsdir.getINode(snapshotSub.toString())
+        .asDirectory();
+    assertTrue(snapshotNode4Sub.isWithSnapshot());
     // the snapshot copy of sub has only one child subsub.
     // newFile should have been destroyed
     assertEquals(1, snapshotNode4Sub.getChildrenList(null).size());
@@ -323,8 +323,7 @@ public class TestSnapshotDeletion {
     // check the snapshot copy of subsub, which is contained in the subtree of
     // sub's snapshot copy
     INode snapshotNode4Subsub = snapshotNode4Sub.getChildrenList(null).get(0);
-    assertEquals(INodeDirectoryWithSnapshot.class,
-        snapshotNode4Subsub.getClass());
+    assertTrue(snapshotNode4Subsub.asDirectory().isWithSnapshot());
     assertTrue(snapshotNode4Sub == snapshotNode4Subsub.getParent());
     // check the children of subsub
     INodeDirectory snapshotSubsubDir = (INodeDirectory) snapshotNode4Subsub;
@@ -478,8 +477,8 @@ public class TestSnapshotDeletion {
     DirectoryDiffList diffList = dirNode.getDiffs();
     assertEquals(1, diffList.asList().size());
     assertEquals("s1", diffList.getLast().snapshot.getRoot().getLocalName());
-    diffList = ((INodeDirectoryWithSnapshot) fsdir.getINode(
-        metaChangeDir.toString())).getDiffs();
+    diffList = fsdir.getINode(metaChangeDir.toString()).asDirectory()
+        .getDiffs();
     assertEquals(0, diffList.asList().size());
     
     // check 2. noChangeDir and noChangeFile are still there

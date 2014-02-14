@@ -2311,7 +2311,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       String leaseHolder, String clientMachine, DatanodeDescriptor clientNode,
       boolean writeToEditLog, Snapshot latestSnapshot, boolean logRetryCache)
       throws IOException {
-    file = file.recordModification(latestSnapshot, dir.getINodeMap());
+    file = file.recordModification(latestSnapshot);
     final INodeFile cons = file.toUnderConstruction(leaseHolder, clientMachine,
         clientNode);
 
@@ -3801,8 +3801,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     Preconditions.checkArgument(uc != null);
     leaseManager.removeLease(uc.getClientName(), src);
     
-    pendingFile = pendingFile.recordModification(latestSnapshot,
-        dir.getINodeMap());
+    pendingFile = pendingFile.recordModification(latestSnapshot);
 
     // The file is no longer pending.
     // Create permanent INode, update blocks. No need to replace the inode here

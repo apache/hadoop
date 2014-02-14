@@ -57,9 +57,9 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.FileDiffList;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable;
-import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectoryWithSnapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotFSImageFormat;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotFSImageFormat.ReferenceMap;
@@ -747,9 +747,10 @@ public class FSImageFormat {
       if (nsQuota >= 0 || dsQuota >= 0) {
         dir.addDirectoryWithQuotaFeature(nsQuota, dsQuota);
       }
-      return snapshottable ? new INodeDirectorySnapshottable(dir)
-          : withSnapshot ? new INodeDirectoryWithSnapshot(dir)
-          : dir;
+      if (withSnapshot) {
+        dir.addSnapshotFeature(null);
+      }
+      return snapshottable ? new INodeDirectorySnapshottable(dir) : dir;
     } else if (numBlocks == -2) {
       //symlink
       if (!FileSystem.areSymlinksEnabled()) {
@@ -1282,10 +1283,10 @@ public class FSImageFormat {
       final ReadOnlyList<INode> children = current.getChildrenList(null);
       int dirNum = 0;
       List<INodeDirectory> snapshotDirs = null;
-      if (current instanceof INodeDirectoryWithSnapshot) {
+      DirectoryWithSnapshotFeature sf = current.getDirectoryWithSnapshotFeature();
+      if (sf != null) {
         snapshotDirs = new ArrayList<INodeDirectory>();
-        ((INodeDirectoryWithSnapshot) current).getSnapshotDirectory(
-            snapshotDirs);
+        sf.getSnapshotDirectory(snapshotDirs);
         dirNum += snapshotDirs.size();
       }
       
