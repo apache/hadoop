@@ -453,6 +453,9 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-3128. Unit tests should not use a test root in /tmp. (wang)
 
+    HDFS-5948. TestBackupNode flakes with port in use error. (Haohui Mai
+    via Arpit Agarwal)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

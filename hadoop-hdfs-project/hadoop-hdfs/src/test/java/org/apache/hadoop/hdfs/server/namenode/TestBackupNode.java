@@ -282,6 +282,7 @@ public class TestBackupNode {
     HAUtil.setAllowStandbyReads(conf, true);
     short replication = (short)conf.getInt("dfs.replication", 3);
     int numDatanodes = Math.max(3, replication);
+    conf.set(DFSConfigKeys.DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY, "localhost:0");
     conf.set(DFSConfigKeys.DFS_BLOCKREPORT_INITIAL_DELAY_KEY, "0");
     conf.setInt(DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, -1); // disable block scanner
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_KEY, 1);
