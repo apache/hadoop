@@ -53,7 +53,6 @@ import org.apache.hadoop.fs.InvalidRequestException;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.CacheDirective;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
@@ -69,6 +68,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.CachedBlocksList;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.CachedBlocksList.Type;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.Phase;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress.Counter;
@@ -410,7 +410,8 @@ public final class CacheManager {
       requestedBytes = file.computeFileSize();
     } else if (node.isDirectory()) {
       INodeDirectory dir = node.asDirectory();
-      ReadOnlyList<INode> children = dir.getChildrenList(null);
+      ReadOnlyList<INode> children = dir
+          .getChildrenList(Snapshot.CURRENT_STATE_ID);
       requestedFiles = children.size();
       for (INode child : children) {
         if (child.isFile()) {

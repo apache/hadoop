@@ -25,8 +25,8 @@ public class FileDiffList extends
     AbstractINodeDiffList<INodeFile, INodeFileAttributes, FileDiff> {
   
   @Override
-  FileDiff createDiff(Snapshot snapshot, INodeFile file) {
-    return new FileDiff(snapshot, file);
+  FileDiff createDiff(int snapshotId, INodeFile file) {
+    return new FileDiff(snapshotId, file);
   }
   
   @Override

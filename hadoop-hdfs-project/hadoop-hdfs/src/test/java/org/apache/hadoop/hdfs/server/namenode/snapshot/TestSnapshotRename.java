@@ -101,7 +101,8 @@ public class TestSnapshotRename {
     List<DirectoryDiff> listByTime = srcRoot.getDiffs().asList();
     assertEquals(names.length, listByTime.size());
     for (int i = 0; i < listByTime.size(); i++) {
-      assertEquals(names[i], listByTime.get(i).getSnapshot().getRoot().getLocalName());
+      Snapshot s = srcRoot.getSnapshotById(listByTime.get(i).getSnapshotId());
+      assertEquals(names[i], s.getRoot().getLocalName());
     }
   }
   

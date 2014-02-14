@@ -118,7 +118,7 @@ public class SnapshotFSImageFormat {
 
   private static FileDiff loadFileDiff(FileDiff posterior, DataInput in,
       FSImageFormat.Loader loader) throws IOException {
-    // 1. Read the full path of the Snapshot root to identify the Snapshot
+    // 1. Read the id of the Snapshot root to identify the Snapshot
     final Snapshot snapshot = loader.getSnapshot(in);
 
     // 2. Load file size
@@ -128,7 +128,7 @@ public class SnapshotFSImageFormat {
     final INodeFileAttributes snapshotINode = in.readBoolean()?
         loader.loadINodeFileAttributes(in): null;
     
-    return new FileDiff(snapshot, snapshotINode, posterior, fileSize);
+    return new FileDiff(snapshot.getId(), snapshotINode, posterior, fileSize);
   }
 
   /**
@@ -149,7 +149,8 @@ public class SnapshotFSImageFormat {
       } // else go to the next SnapshotDiff
     } 
     // use the current child
-    INode currentChild = parent.getChild(createdNodeName, null);
+    INode currentChild = parent.getChild(createdNodeName,
+        Snapshot.CURRENT_STATE_ID);
     if (currentChild == null) {
       throw new IOException("Cannot find an INode associated with the INode "
           + DFSUtil.bytes2String(createdNodeName)
@@ -295,9 +296,9 @@ public class SnapshotFSImageFormat {
     
     // 6. Compose the SnapshotDiff
     List<DirectoryDiff> diffs = parent.getDiffs().asList();
-    DirectoryDiff sdiff = new DirectoryDiff(snapshot, snapshotINode,
-        diffs.isEmpty() ? null : diffs.get(0),
-        childrenSize, createdList, deletedList);
+    DirectoryDiff sdiff = new DirectoryDiff(snapshot.getId(), snapshotINode,
+        diffs.isEmpty() ? null : diffs.get(0), childrenSize, createdList,
+        deletedList, snapshotINode == snapshot.getRoot());
     return sdiff;
   }
   

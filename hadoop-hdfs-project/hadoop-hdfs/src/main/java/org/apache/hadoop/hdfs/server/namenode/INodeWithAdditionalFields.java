@@ -154,9 +154,9 @@ public abstract class INodeWithAdditionalFields extends INode
   }
 
   @Override
-  final PermissionStatus getPermissionStatus(Snapshot snapshot) {
-    return new PermissionStatus(getUserName(snapshot), getGroupName(snapshot),
-        getFsPermission(snapshot));
+  final PermissionStatus getPermissionStatus(int snapshotId) {
+    return new PermissionStatus(getUserName(snapshotId), getGroupName(snapshotId),
+        getFsPermission(snapshotId));
   }
 
   private final void updatePermissionStatus(PermissionStatusFormat f, long n) {
@@ -164,9 +164,9 @@ public abstract class INodeWithAdditionalFields extends INode
   }
 
   @Override
-  final String getUserName(Snapshot snapshot) {
-    if (snapshot != null) {
-      return getSnapshotINode(snapshot).getUserName();
+  final String getUserName(int snapshotId) {
+    if (snapshotId != Snapshot.CURRENT_STATE_ID) {
+      return getSnapshotINode(snapshotId).getUserName();
     }
 
     int n = (int)PermissionStatusFormat.USER.retrieve(permission);
@@ -180,9 +180,9 @@ public abstract class INodeWithAdditionalFields extends INode
   }
 
   @Override
-  final String getGroupName(Snapshot snapshot) {
-    if (snapshot != null) {
-      return getSnapshotINode(snapshot).getGroupName();
+  final String getGroupName(int snapshotId) {
+    if (snapshotId != Snapshot.CURRENT_STATE_ID) {
+      return getSnapshotINode(snapshotId).getGroupName();
     }
 
     int n = (int)PermissionStatusFormat.GROUP.retrieve(permission);
@@ -196,9 +196,9 @@ public abstract class INodeWithAdditionalFields extends INode
   }
 
   @Override
-  final FsPermission getFsPermission(Snapshot snapshot) {
-    if (snapshot != null) {
-      return getSnapshotINode(snapshot).getFsPermission();
+  final FsPermission getFsPermission(int snapshotId) {
+    if (snapshotId != Snapshot.CURRENT_STATE_ID) {
+      return getSnapshotINode(snapshotId).getFsPermission();
     }
 
     return new FsPermission(getFsPermissionShort());
@@ -220,9 +220,9 @@ public abstract class INodeWithAdditionalFields extends INode
   }
 
   @Override
-  final long getModificationTime(Snapshot snapshot) {
-    if (snapshot != null) {
-      return getSnapshotINode(snapshot).getModificationTime();
+  final long getModificationTime(int snapshotId) {
+    if (snapshotId != Snapshot.CURRENT_STATE_ID) {
+      return getSnapshotINode(snapshotId).getModificationTime();
     }
 
     return this.modificationTime;
@@ -231,13 +231,13 @@ public abstract class INodeWithAdditionalFields extends INode
 
   /** Update modification time if it is larger than the current value. */
   @Override
-  public final INode updateModificationTime(long mtime, Snapshot latest) 
+  public final INode updateModificationTime(long mtime, int latestSnapshotId) 
       throws QuotaExceededException {
     Preconditions.checkState(isDirectory());
     if (mtime <= modificationTime) {
       return this;
     }
-    return setModificationTime(mtime, latest);
+    return setModificationTime(mtime, latestSnapshotId);
   }
 
   final void cloneModificationTime(INodeWithAdditionalFields that) {
@@ -250,11 +250,10 @@ public abstract class INodeWithAdditionalFields extends INode
   }
 
   @Override
-  final long getAccessTime(Snapshot snapshot) {
-    if (snapshot != null) {
-      return getSnapshotINode(snapshot).getAccessTime();
+  final long getAccessTime(int snapshotId) {
+    if (snapshotId != Snapshot.CURRENT_STATE_ID) {
+      return getSnapshotINode(snapshotId).getAccessTime();
     }
-
     return accessTime;
   }
 

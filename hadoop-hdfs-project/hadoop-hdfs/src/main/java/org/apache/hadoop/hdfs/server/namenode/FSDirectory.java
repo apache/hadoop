@@ -633,14 +633,14 @@ public class FSDirectory implements Closeable {
     INode srcChild = srcIIP.getLastINode();
     final byte[] srcChildName = srcChild.getLocalNameBytes();
     final boolean isSrcInSnapshot = srcChild.isInLatestSnapshot(
-        srcIIP.getLatestSnapshot());
+        srcIIP.getLatestSnapshotId());
     final boolean srcChildIsReference = srcChild.isReference();
     
     // Record the snapshot on srcChild. After the rename, before any new 
     // snapshot is taken on the dst tree, changes will be recorded in the latest
     // snapshot of the src tree.
     if (isSrcInSnapshot) {
-      srcChild = srcChild.recordModification(srcIIP.getLatestSnapshot());
+      srcChild = srcChild.recordModification(srcIIP.getLatestSnapshotId());
       srcIIP.setLastINode(srcChild);
     }
     
@@ -648,17 +648,16 @@ public class FSDirectory implements Closeable {
     final INodeReference.WithCount withCount;
     Quota.Counts oldSrcCounts = Quota.Counts.newInstance();
     int srcRefDstSnapshot = srcChildIsReference ? srcChild.asReference()
-        .getDstSnapshotId() : Snapshot.INVALID_ID;
+        .getDstSnapshotId() : Snapshot.CURRENT_STATE_ID;
     if (isSrcInSnapshot) {
       final INodeReference.WithName withName = 
           srcIIP.getINode(-2).asDirectory().replaceChild4ReferenceWithName(
-              srcChild, srcIIP.getLatestSnapshot()); 
+              srcChild, srcIIP.getLatestSnapshotId()); 
       withCount = (INodeReference.WithCount) withName.getReferredINode();
       srcChild = withName;
       srcIIP.setLastINode(srcChild);
       // get the counts before rename
-      withCount.getReferredINode().computeQuotaUsage(oldSrcCounts, true,
-          Snapshot.INVALID_ID);
+      withCount.getReferredINode().computeQuotaUsage(oldSrcCounts, true);
     } else if (srcChildIsReference) {
       // srcChild is reference but srcChild is not in latest snapshot
       withCount = (WithCount) srcChild.asReference().getReferredINode();
@@ -694,10 +693,9 @@ public class FSDirectory implements Closeable {
         toDst = srcChild;
       } else {
         withCount.getReferredINode().setLocalName(dstChildName);
-        Snapshot dstSnapshot = dstIIP.getLatestSnapshot();
+        int dstSnapshotId = dstIIP.getLatestSnapshotId();
         final INodeReference.DstReference ref = new INodeReference.DstReference(
-            dstParent.asDirectory(), withCount,
-            dstSnapshot == null ? Snapshot.INVALID_ID : dstSnapshot.getId());
+            dstParent.asDirectory(), withCount, dstSnapshotId);
         toDst = ref;
       }
       
@@ -709,9 +707,9 @@ public class FSDirectory implements Closeable {
         }
         // update modification time of dst and the parent of src
         final INode srcParent = srcIIP.getINode(-2);
-        srcParent.updateModificationTime(timestamp, srcIIP.getLatestSnapshot());
+        srcParent.updateModificationTime(timestamp, srcIIP.getLatestSnapshotId());
         dstParent = dstIIP.getINode(-2); // refresh dstParent
-        dstParent.updateModificationTime(timestamp, dstIIP.getLatestSnapshot());
+        dstParent.updateModificationTime(timestamp, dstIIP.getLatestSnapshotId());
         // update moved leases with new filename
         getFSNamesystem().unprotectedChangeLease(src, dst);     
 
@@ -719,7 +717,7 @@ public class FSDirectory implements Closeable {
         if (isSrcInSnapshot) {
           // get the counts after rename
           Quota.Counts newSrcCounts = srcChild.computeQuotaUsage(
-              Quota.Counts.newInstance(), false, Snapshot.INVALID_ID);
+              Quota.Counts.newInstance(), false);
           newSrcCounts.subtract(oldSrcCounts);
           srcParent.addSpaceConsumed(newSrcCounts.get(Quota.NAMESPACE),
               newSrcCounts.get(Quota.DISKSPACE), false);
@@ -751,8 +749,7 @@ public class FSDirectory implements Closeable {
         if (isSrcInSnapshot) {
           // srcParent must have snapshot feature since isSrcInSnapshot is true
           // and src node has been removed from srcParent 
-          srcParent.undoRename4ScrParent(oldSrcChild.asReference(), srcChild,
-              srcIIP.getLatestSnapshot());
+          srcParent.undoRename4ScrParent(oldSrcChild.asReference(), srcChild);
         } else {
           // original srcChild is not in latest snapshot, we only need to add
           // the srcChild back
@@ -855,7 +852,7 @@ public class FSDirectory implements Closeable {
       }
       if (dstInode.isDirectory()) {
         final ReadOnlyList<INode> children = dstInode.asDirectory()
-            .getChildrenList(null);
+            .getChildrenList(Snapshot.CURRENT_STATE_ID);
         if (!children.isEmpty()) {
           error = "rename destination directory is not empty: " + dst;
           NameNode.stateChangeLog.warn(
@@ -886,31 +883,30 @@ public class FSDirectory implements Closeable {
     INode srcChild = srcIIP.getLastINode();
     final byte[] srcChildName = srcChild.getLocalNameBytes();
     final boolean isSrcInSnapshot = srcChild.isInLatestSnapshot(
-        srcIIP.getLatestSnapshot());
+        srcIIP.getLatestSnapshotId());
     final boolean srcChildIsReference = srcChild.isReference();
     
     // Record the snapshot on srcChild. After the rename, before any new 
     // snapshot is taken on the dst tree, changes will be recorded in the latest
     // snapshot of the src tree.
     if (isSrcInSnapshot) {
-      srcChild = srcChild.recordModification(srcIIP.getLatestSnapshot());
+      srcChild = srcChild.recordModification(srcIIP.getLatestSnapshotId());
       srcIIP.setLastINode(srcChild);
     }
     
     // check srcChild for reference
     final INodeReference.WithCount withCount;
     int srcRefDstSnapshot = srcChildIsReference ? srcChild.asReference()
-        .getDstSnapshotId() : Snapshot.INVALID_ID;
+        .getDstSnapshotId() : Snapshot.CURRENT_STATE_ID;
     Quota.Counts oldSrcCounts = Quota.Counts.newInstance();    
     if (isSrcInSnapshot) {
       final INodeReference.WithName withName = srcIIP.getINode(-2).asDirectory()
-          .replaceChild4ReferenceWithName(srcChild, srcIIP.getLatestSnapshot()); 
+          .replaceChild4ReferenceWithName(srcChild, srcIIP.getLatestSnapshotId()); 
       withCount = (INodeReference.WithCount) withName.getReferredINode();
       srcChild = withName;
       srcIIP.setLastINode(srcChild);
       // get the counts before rename
-      withCount.getReferredINode().computeQuotaUsage(oldSrcCounts, true,
-          Snapshot.INVALID_ID);
+      withCount.getReferredINode().computeQuotaUsage(oldSrcCounts, true);
     } else if (srcChildIsReference) {
       // srcChild is reference but srcChild is not in latest snapshot
       withCount = (WithCount) srcChild.asReference().getReferredINode();
@@ -954,10 +950,9 @@ public class FSDirectory implements Closeable {
         toDst = srcChild;
       } else {
         withCount.getReferredINode().setLocalName(dstChildName);
-        Snapshot dstSnapshot = dstIIP.getLatestSnapshot();
+        int dstSnapshotId = dstIIP.getLatestSnapshotId();
         final INodeReference.DstReference ref = new INodeReference.DstReference(
-            dstIIP.getINode(-2).asDirectory(), withCount,
-            dstSnapshot == null ? Snapshot.INVALID_ID : dstSnapshot.getId());
+            dstIIP.getINode(-2).asDirectory(), withCount, dstSnapshotId);
         toDst = ref;
       }
 
@@ -971,9 +966,9 @@ public class FSDirectory implements Closeable {
         }
 
         final INode srcParent = srcIIP.getINode(-2);
-        srcParent.updateModificationTime(timestamp, srcIIP.getLatestSnapshot());
+        srcParent.updateModificationTime(timestamp, srcIIP.getLatestSnapshotId());
         dstParent = dstIIP.getINode(-2);
-        dstParent.updateModificationTime(timestamp, dstIIP.getLatestSnapshot());
+        dstParent.updateModificationTime(timestamp, dstIIP.getLatestSnapshotId());
         // update moved lease with new filename
         getFSNamesystem().unprotectedChangeLease(src, dst);
 
@@ -983,8 +978,8 @@ public class FSDirectory implements Closeable {
           undoRemoveDst = false;
           BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
           List<INode> removedINodes = new ChunkedArrayList<INode>();
-          filesDeleted = removedDst.cleanSubtree(null,
-              dstIIP.getLatestSnapshot(), collectedBlocks, removedINodes, true)
+          filesDeleted = removedDst.cleanSubtree(Snapshot.CURRENT_STATE_ID,
+              dstIIP.getLatestSnapshotId(), collectedBlocks, removedINodes, true)
               .get(Quota.NAMESPACE);
           getFSNamesystem().removePathAndBlocks(src, collectedBlocks,
               removedINodes);
@@ -1000,7 +995,7 @@ public class FSDirectory implements Closeable {
         if (isSrcInSnapshot) {
           // get the counts after rename
           Quota.Counts newSrcCounts = srcChild.computeQuotaUsage(
-              Quota.Counts.newInstance(), false, Snapshot.INVALID_ID);
+              Quota.Counts.newInstance(), false);
           newSrcCounts.subtract(oldSrcCounts);
           srcParent.addSpaceConsumed(newSrcCounts.get(Quota.NAMESPACE),
               newSrcCounts.get(Quota.DISKSPACE), false);
@@ -1031,8 +1026,7 @@ public class FSDirectory implements Closeable {
         }
         
         if (srcParent.isWithSnapshot()) {
-          srcParent.undoRename4ScrParent(oldSrcChild.asReference(), srcChild,
-              srcIIP.getLatestSnapshot());
+          srcParent.undoRename4ScrParent(oldSrcChild.asReference(), srcChild);
         } else {
           // srcParent is not an INodeDirectoryWithSnapshot, we only need to add
           // the srcChild back
@@ -1043,7 +1037,7 @@ public class FSDirectory implements Closeable {
         // Rename failed - restore dst
         if (dstParent.isDirectory() && dstParent.asDirectory().isWithSnapshot()) {
           dstParent.asDirectory().undoRename4DstParent(removedDst,
-              dstIIP.getLatestSnapshot());
+              dstIIP.getLatestSnapshotId());
         } else {
           addLastINodeNoQuotaCheck(dstIIP, removedDst);
         }
@@ -1107,7 +1101,7 @@ public class FSDirectory implements Closeable {
       updateCount(iip, 0, dsDelta, true);
     }
 
-    file = file.setFileReplication(replication, iip.getLatestSnapshot(),
+    file = file.setFileReplication(replication, iip.getLatestSnapshotId(),
         inodeMap);
     
     final short newBR = file.getBlockReplication(); 
@@ -1174,7 +1168,7 @@ public class FSDirectory implements Closeable {
     if (inode == null) {
       throw new FileNotFoundException("File does not exist: " + src);
     }
-    inode.setPermission(permissions, inodesInPath.getLatestSnapshot());
+    inode.setPermission(permissions, inodesInPath.getLatestSnapshotId());
   }
 
   void setOwner(String src, String username, String groupname)
@@ -1199,10 +1193,10 @@ public class FSDirectory implements Closeable {
       throw new FileNotFoundException("File does not exist: " + src);
     }
     if (username != null) {
-      inode = inode.setUser(username, inodesInPath.getLatestSnapshot());
+      inode = inode.setUser(username, inodesInPath.getLatestSnapshotId());
     }
     if (groupname != null) {
-      inode.setGroup(groupname, inodesInPath.getLatestSnapshot());
+      inode.setGroup(groupname, inodesInPath.getLatestSnapshotId());
     }
   }
 
@@ -1244,12 +1238,12 @@ public class FSDirectory implements Closeable {
     final INode[] trgINodes = trgIIP.getINodes();
     final INodeFile trgInode = trgIIP.getLastINode().asFile();
     INodeDirectory trgParent = trgINodes[trgINodes.length-2].asDirectory();
-    final Snapshot trgLatestSnapshot = trgIIP.getLatestSnapshot();
+    final int trgLatestSnapshot = trgIIP.getLatestSnapshotId();
     
     final INodeFile [] allSrcInodes = new INodeFile[srcs.length];
     for(int i = 0; i < srcs.length; i++) {
       final INodesInPath iip = getINodesInPath4Write(srcs[i]);
-      final Snapshot latest = iip.getLatestSnapshot();
+      final int latest = iip.getLatestSnapshotId();
       final INode inode = iip.getLastINode();
 
       // check if the file in the latest snapshot
@@ -1373,7 +1367,7 @@ public class FSDirectory implements Closeable {
         //not found or not a directory
         return false;
       }
-      final Snapshot s = inodesInPath.getPathSnapshot();
+      final int s = inodesInPath.getPathSnapshotId();
       return !inode.asDirectory().getChildrenList(s).isEmpty();
     } finally {
       readUnlock();
@@ -1427,7 +1421,7 @@ public class FSDirectory implements Closeable {
     }
 
     // record modification
-    final Snapshot latestSnapshot = iip.getLatestSnapshot();
+    final int latestSnapshot = iip.getLatestSnapshotId();
     targetNode = targetNode.recordModification(latestSnapshot);
     iip.setLastINode(targetNode);
 
@@ -1448,8 +1442,8 @@ public class FSDirectory implements Closeable {
     if (!targetNode.isInLatestSnapshot(latestSnapshot)) {
       targetNode.destroyAndCollectBlocks(collectedBlocks, removedINodes);
     } else {
-      Quota.Counts counts = targetNode.cleanSubtree(null, latestSnapshot,
-          collectedBlocks, removedINodes, true);
+      Quota.Counts counts = targetNode.cleanSubtree(Snapshot.CURRENT_STATE_ID,
+          latestSnapshot, collectedBlocks, removedINodes, true);
       parent.addSpaceConsumed(-counts.get(Quota.NAMESPACE),
           -counts.get(Quota.DISKSPACE), true);
       removed = counts.get(Quota.NAMESPACE);
@@ -1486,7 +1480,7 @@ public class FSDirectory implements Closeable {
           }
         }
       } 
-      for (INode child : targetDir.getChildrenList(null)) {
+      for (INode child : targetDir.getChildrenList(Snapshot.CURRENT_STATE_ID)) {
         checkSnapshot(child, snapshottableDirs);
       }
     }
@@ -1515,7 +1509,7 @@ public class FSDirectory implements Closeable {
         return getSnapshotsListing(srcs, startAfter);
       }
       final INodesInPath inodesInPath = rootDir.getLastINodeInPath(srcs, true);
-      final Snapshot snapshot = inodesInPath.getPathSnapshot();
+      final int snapshot = inodesInPath.getPathSnapshotId();
       final INode targetNode = inodesInPath.getINode(0);
       if (targetNode == null)
         return null;
@@ -1583,7 +1577,8 @@ public class FSDirectory implements Closeable {
     final HdfsFileStatus listing[] = new HdfsFileStatus[numOfListing];
     for (int i = 0; i < numOfListing; i++) {
       Root sRoot = snapshots.get(i + skipSize).getRoot();
-      listing[i] = createFileStatus(sRoot.getLocalNameBytes(), sRoot, null);
+      listing[i] = createFileStatus(sRoot.getLocalNameBytes(), sRoot,
+          Snapshot.CURRENT_STATE_ID);
     }
     return new DirectoryListing(
         listing, snapshots.size() - skipSize - numOfListing);
@@ -1606,7 +1601,7 @@ public class FSDirectory implements Closeable {
       final INodesInPath inodesInPath = rootDir.getLastINodeInPath(srcs, resolveLink);
       final INode i = inodesInPath.getINode(0);
       return i == null? null: createFileStatus(HdfsFileStatus.EMPTY_NAME, i,
-          inodesInPath.getPathSnapshot());
+          inodesInPath.getPathSnapshotId());
     } finally {
       readUnlock();
     }
@@ -2170,7 +2165,7 @@ public class FSDirectory implements Closeable {
     }
 
     final INodeDirectory parent = pathComponents[pos-1].asDirectory();
-    final int count = parent.getChildrenList(null).size();
+    final int count = parent.getChildrenList(Snapshot.CURRENT_STATE_ID).size();
     if (count >= maxDirItems) {
       final MaxDirectoryItemsExceededException e
           = new MaxDirectoryItemsExceededException(maxDirItems, count);
@@ -2234,7 +2229,7 @@ public class FSDirectory implements Closeable {
     final INodeDirectory parent = inodes[pos-1].asDirectory();
     boolean added = false;
     try {
-      added = parent.addChild(child, true, iip.getLatestSnapshot());
+      added = parent.addChild(child, true, iip.getLatestSnapshotId());
     } catch (QuotaExceededException e) {
       updateCountNoQuotaCheck(iip, pos,
           -counts.get(Quota.NAMESPACE), -counts.get(Quota.DISKSPACE));
@@ -2269,7 +2264,7 @@ public class FSDirectory implements Closeable {
    */
   private long removeLastINode(final INodesInPath iip)
       throws QuotaExceededException {
-    final Snapshot latestSnapshot = iip.getLatestSnapshot();
+    final int latestSnapshot = iip.getLatestSnapshotId();
     final INode last = iip.getLastINode();
     final INodeDirectory parent = iip.getINode(-2).asDirectory();
     if (!parent.removeChild(last, latestSnapshot)) {
@@ -2424,7 +2419,7 @@ public class FSDirectory implements Closeable {
         return null;
       }
 
-      final Snapshot latest = iip.getLatestSnapshot();
+      final int latest = iip.getLatestSnapshotId();
       dirNode = dirNode.recordModification(latest);
       dirNode.setQuota(nsQuota, dsQuota);
       return dirNode;
@@ -2467,11 +2462,11 @@ public class FSDirectory implements Closeable {
    * Sets the access time on the file/directory. Logs it in the transaction log.
    */
   void setTimes(String src, INode inode, long mtime, long atime, boolean force,
-      Snapshot latest) throws QuotaExceededException {
+      int latestSnapshotId) throws QuotaExceededException {
     boolean status = false;
     writeLock();
     try {
-      status = unprotectedSetTimes(inode, mtime, atime, force, latest);
+      status = unprotectedSetTimes(inode, mtime, atime, force, latestSnapshotId);
     } finally {
       writeUnlock();
     }
@@ -2485,11 +2480,11 @@ public class FSDirectory implements Closeable {
     assert hasWriteLock();
     final INodesInPath i = getLastINodeInPath(src); 
     return unprotectedSetTimes(i.getLastINode(), mtime, atime, force,
-        i.getLatestSnapshot());
+        i.getLatestSnapshotId());
   }
 
   private boolean unprotectedSetTimes(INode inode, long mtime,
-      long atime, boolean force, Snapshot latest) throws QuotaExceededException {
+      long atime, boolean force, int latest) throws QuotaExceededException {
     assert hasWriteLock();
     boolean status = false;
     if (mtime != -1) {
@@ -2497,7 +2492,7 @@ public class FSDirectory implements Closeable {
       status = true;
     }
     if (atime != -1) {
-      long inodeTime = inode.getAccessTime(null);
+      long inodeTime = inode.getAccessTime();
 
       // if the last access time update was within the last precision interval, then
       // no need to store access time
@@ -2537,7 +2532,7 @@ public class FSDirectory implements Closeable {
    * @throws IOException if any error occurs
    */
   private HdfsFileStatus createFileStatus(byte[] path, INode node,
-      boolean needLocation, Snapshot snapshot) throws IOException {
+      boolean needLocation, int snapshot) throws IOException {
     if (needLocation) {
       return createLocatedFileStatus(path, node, snapshot);
     } else {
@@ -2548,7 +2543,7 @@ public class FSDirectory implements Closeable {
    * Create FileStatus by file INode 
    */
    HdfsFileStatus createFileStatus(byte[] path, INode node,
-       Snapshot snapshot) {
+       int snapshot) {
      long size = 0;     // length is zero for directories
      short replication = 0;
      long blocksize = 0;
@@ -2581,7 +2576,7 @@ public class FSDirectory implements Closeable {
    * Create FileStatus with location info by file INode
    */
   private HdfsLocatedFileStatus createLocatedFileStatus(byte[] path,
-      INode node, Snapshot snapshot) throws IOException {
+      INode node, int snapshot) throws IOException {
     assert hasReadLock();
     long size = 0; // length is zero for directories
     short replication = 0;
@@ -2593,7 +2588,7 @@ public class FSDirectory implements Closeable {
       replication = fileNode.getFileReplication(snapshot);
       blocksize = fileNode.getPreferredBlockSize();
 
-      final boolean inSnapshot = snapshot != null; 
+      final boolean inSnapshot = snapshot != Snapshot.CURRENT_STATE_ID; 
       final boolean isUc = inSnapshot ? false : fileNode.isUnderConstruction();
       final long fileSize = !inSnapshot && isUc ? 
           fileNode.computeFileSizeNotIncludingLastUcBlock() : size;

@@ -1280,7 +1280,8 @@ public class FSImageFormat {
         return;
       }
       
-      final ReadOnlyList<INode> children = current.getChildrenList(null);
+      final ReadOnlyList<INode> children = current
+          .getChildrenList(Snapshot.CURRENT_STATE_ID);
       int dirNum = 0;
       List<INodeDirectory> snapshotDirs = null;
       DirectoryWithSnapshotFeature sf = current.getDirectoryWithSnapshotFeature();
