@@ -28,6 +28,7 @@ import java.util.HashSet;
 import java.util.concurrent.ConcurrentMap;
 
 import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
@@ -36,16 +37,19 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
+import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 
 import com.google.inject.Inject;
 
 class AppsBlock extends HtmlBlock {
   final ConcurrentMap<ApplicationId, RMApp> apps;
+  private final Configuration conf;
 
-@Inject AppsBlock(RMContext rmContext, ViewContext ctx) {
+@Inject AppsBlock(RMContext rmContext, ViewContext ctx, Configuration conf) {
     super(ctx);
     apps = rmContext.getRMApps();
+    this.conf = conf;
   }
 
   @Override public void render(Block html) {
@@ -79,7 +83,7 @@ class AppsBlock extends HtmlBlock {
       if (reqAppStates != null && !reqAppStates.contains(app.createApplicationState())) {
         continue;
       }
-      AppInfo appInfo = new AppInfo(app, true);
+      AppInfo appInfo = new AppInfo(app, true, WebAppUtils.getHttpSchemePrefix(conf));
       String percent = String.format("%.1f", appInfo.getProgress());
       //AppID numerical value parsed by parseHadoopID in yarn.dt.plugins.js
       appsTableData.append("[\"<a href='")

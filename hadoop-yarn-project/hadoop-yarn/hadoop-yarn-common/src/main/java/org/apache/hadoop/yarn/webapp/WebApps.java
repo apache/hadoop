@@ -37,7 +37,9 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.security.AdminACLsManager;
+import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -216,9 +218,11 @@ public class WebApps {
             System.exit(1);
           }
         }
-        HttpServer2.Builder builder = new HttpServer2.Builder().setName(name)
-            .addEndpoint(URI.create("http://" + bindAddress + ":" + port))
-            .setConf(conf).setFindPort(findPort)
+        HttpServer2.Builder builder = new HttpServer2.Builder()
+            .setName(name)
+            .addEndpoint(
+                URI.create(WebAppUtils.getHttpSchemePrefix(conf) + bindAddress
+                    + ":" + port)).setConf(conf).setFindPort(findPort)
             .setACL(new AdminACLsManager(conf).getAdminAcl())
             .setPathSpec(pathList.toArray(new String[0]));
 
@@ -231,6 +235,11 @@ public class WebApps {
               .setKeytabConfKey(spnegoKeytabKey)
               .setSecurityEnabled(UserGroupInformation.isSecurityEnabled());
         }
+
+        if (YarnConfiguration.useHttps(conf)) {
+          WebAppUtils.loadSslConfiguration(builder);
+        }
+
         HttpServer2 server = builder.build();
 
         for(ServletStruct struct: servlets) {

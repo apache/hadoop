@@ -25,7 +25,6 @@ import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
 
 import com.google.common.base.Joiner;
-import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -53,6 +52,8 @@ public class AppInfo {
   protected boolean amContainerLogsExist = false;
   @XmlTransient
   protected ApplicationId applicationId;
+  @XmlTransient
+  private String schemePrefix;
 
   // these are ok for any user to see
   protected String id;
@@ -82,12 +83,8 @@ public class AppInfo {
   public AppInfo() {
   } // JAXB needs this
 
-  public AppInfo(RMApp app, Boolean hasAccess, String host) {
-    this(app, hasAccess);
-  }
-
-  public AppInfo(RMApp app, Boolean hasAccess) {
-
+  public AppInfo(RMApp app, Boolean hasAccess, String schemePrefix) {
+    this.schemePrefix = schemePrefix;
     if (app != null) {
       String trackingUrl = app.getTrackingUrl();
       this.state = app.createApplicationState();
@@ -100,7 +97,7 @@ public class AppInfo {
           .getFinishTime() == 0 ? "ApplicationMaster" : "History");
       if (!trackingUrlIsNotReady) {
         this.trackingUrl =
-            WebAppUtils.getURLWithScheme(HttpConfig.getSchemePrefix(),
+            WebAppUtils.getURLWithScheme(schemePrefix,
                 trackingUrl);
         this.trackingUrlPretty = this.trackingUrl;
       } else {
@@ -134,7 +131,7 @@ public class AppInfo {
           Container masterContainer = attempt.getMasterContainer();
           if (masterContainer != null) {
             this.amContainerLogsExist = true;
-            String url = join(HttpConfig.getSchemePrefix(),
+            String url = join(schemePrefix,
                 masterContainer.getNodeHttpAddress(),
                 "/node", "/containerlogs/",
                 ConverterUtils.toString(masterContainer.getId()),

@@ -163,7 +163,7 @@ public class AppBlock extends HtmlBlock {
         .append(startTime)
         .append("\",\"<a href='")
         .append(
-          nodeLink == null ? "#" : url(HttpConfig.getSchemePrefix(), nodeLink))
+          nodeLink == null ? "#" : url("//", nodeLink))
         .append("'>")
         .append(
           nodeLink == null ? "N/A" : StringEscapeUtils

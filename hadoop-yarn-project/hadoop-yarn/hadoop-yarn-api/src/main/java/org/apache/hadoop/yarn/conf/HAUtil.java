@@ -100,7 +100,7 @@ public class HAUtil {
     StringBuilder setValue = new StringBuilder();
     for (String id: ids) {
       // verify the RM service addresses configurations for every RMIds
-      for (String prefix : YarnConfiguration.RM_SERVICES_ADDRESS_CONF_KEYS) {
+      for (String prefix : YarnConfiguration.getServiceAddressConfKeys(conf)) {
         checkAndSetRMRPCAddress(prefix, id, conf);
       }
       setValue.append(id);
@@ -158,7 +158,7 @@ public class HAUtil {
   }
 
   public static void verifyAndSetAllServiceAddresses(Configuration conf) {
-    for (String confKey : YarnConfiguration.RM_SERVICES_ADDRESS_CONF_KEYS) {
+    for (String confKey : YarnConfiguration.getServiceAddressConfKeys(conf)) {
      verifyAndSetConfValue(confKey, conf);
     }
   }
@@ -236,7 +236,7 @@ public class HAUtil {
   @InterfaceAudience.Private
   @VisibleForTesting
   static String getConfKeyForRMInstance(String prefix, Configuration conf) {
-    if (!YarnConfiguration.RM_SERVICES_ADDRESS_CONF_KEYS.contains(prefix)) {
+    if (!YarnConfiguration.getServiceAddressConfKeys(conf).contains(prefix)) {
       return prefix;
     } else {
       String RMId = getRMHAId(conf);
@@ -289,7 +289,7 @@ public class HAUtil {
               hostNameConfKey + " or " + addSuffix(prefix, RMId)));
         } else {
           conf.set(addSuffix(prefix, RMId), confVal + ":"
-              + YarnConfiguration.getRMDefaultPortNumber(prefix));
+              + YarnConfiguration.getRMDefaultPortNumber(prefix, conf));
         }
       }
     } catch (IllegalArgumentException iae) {

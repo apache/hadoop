@@ -63,8 +63,10 @@ public class TestRMHA {
   @Before
   public void setUp() throws Exception {
     configuration.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
-    configuration.set(YarnConfiguration.RM_HA_IDS, RM1_NODE_ID + "," + RM2_NODE_ID);
-    for (String confKey : YarnConfiguration.RM_SERVICES_ADDRESS_CONF_KEYS) {
+    configuration.set(YarnConfiguration.RM_HA_IDS, RM1_NODE_ID + ","
+        + RM2_NODE_ID);
+    for (String confKey : YarnConfiguration
+        .getServiceAddressConfKeys(configuration)) {
       configuration.set(HAUtil.addSuffix(confKey, RM1_NODE_ID), RM1_ADDRESS);
       configuration.set(HAUtil.addSuffix(confKey, RM2_NODE_ID), RM2_ADDRESS);
       configuration.set(HAUtil.addSuffix(confKey, RM3_NODE_ID), RM3_ADDRESS);
@@ -329,7 +331,7 @@ public class TestRMHA {
       Configuration conf = new YarnConfiguration(configuration);
       rm = new MockRM(conf);
       rm.init(conf);
-      for (String confKey : YarnConfiguration.RM_SERVICES_ADDRESS_CONF_KEYS) {
+      for (String confKey : YarnConfiguration.getServiceAddressConfKeys(conf)) {
         assertEquals("RPC address not set for " + confKey,
             RM1_ADDRESS, conf.get(HAUtil.addSuffix(confKey, RM1_NODE_ID)));
         assertEquals("RPC address not set for " + confKey,

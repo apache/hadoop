@@ -285,13 +285,14 @@ public class TestRMAppAttemptTransitions {
 
   private String getProxyUrl(RMAppAttempt appAttempt) {
     String url = null;
+    final String scheme = WebAppUtils.getHttpSchemePrefix(conf);
     try {
       URI trackingUri =
           StringUtils.isEmpty(appAttempt.getOriginalTrackingUrl()) ? null :
               ProxyUriUtils
-                  .getUriFromAMUrl(appAttempt.getOriginalTrackingUrl());
+                  .getUriFromAMUrl(scheme, appAttempt.getOriginalTrackingUrl());
       String proxy = WebAppUtils.getProxyHostAndPort(conf);
-      URI proxyUri = ProxyUriUtils.getUriFromAMUrl(proxy);
+      URI proxyUri = ProxyUriUtils.getUriFromAMUrl(scheme, proxy);
       URI result = ProxyUriUtils.getProxyUri(trackingUri, proxyUri,
           appAttempt.getAppAttemptId().getApplicationId());
       url = result.toASCIIString();

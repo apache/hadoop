@@ -1373,7 +1373,8 @@ public class MRAppMaster extends CompositeService {
       // RM/NM to issue SSL certificates but definitely not MR-AM as it is
       // running in user-land.
       MRWebAppUtil.initialize(conf);
-      HttpConfig.setPolicy(HttpConfig.Policy.HTTP_ONLY);
+      conf.set(YarnConfiguration.YARN_HTTP_POLICY_KEY,
+          HttpConfig.Policy.HTTP_ONLY.name());
       String jobUserName = System
           .getenv(ApplicationConstants.Environment.USER.name());
       conf.set(MRJobConfig.USER_NAME, jobUserName);

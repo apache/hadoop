@@ -1606,8 +1606,7 @@ public class TestRMWebServicesApps extends JerseyTest {
         .getMasterContainer().getNodeHttpAddress(), nodeHttpAddress);
     WebServicesTestUtils.checkStringMatch("nodeId", appAttempt
         .getMasterContainer().getNodeId().toString(), nodeId);
-    assertTrue("logsLink doesn't match",
-        logsLink.startsWith("http://"));
+    assertTrue("logsLink doesn't match", logsLink.startsWith("//"));
     assertTrue(
         "logsLink doesn't contain user info", logsLink.endsWith("/"
         + user));

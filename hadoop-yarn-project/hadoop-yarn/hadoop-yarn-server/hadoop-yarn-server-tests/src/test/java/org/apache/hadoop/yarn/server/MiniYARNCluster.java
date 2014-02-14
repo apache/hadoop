@@ -253,7 +253,7 @@ public class MiniYARNCluster extends CompositeService {
 
   private void setHARMConfiguration(final int index, Configuration conf) {
     String hostname = MiniYARNCluster.getHostname();
-    for (String confKey : YarnConfiguration.RM_SERVICES_ADDRESS_CONF_KEYS) {
+    for (String confKey : YarnConfiguration.getServiceAddressConfKeys(conf)) {
       conf.set(HAUtil.addSuffix(confKey, rmIds[index]), hostname + ":0");
     }
   }

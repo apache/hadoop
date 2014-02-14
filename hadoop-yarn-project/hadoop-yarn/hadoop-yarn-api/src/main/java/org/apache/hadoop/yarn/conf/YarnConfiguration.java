@@ -26,10 +26,8 @@ import java.util.List;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.StringUtils;
@@ -187,6 +185,8 @@ public class YarnConfiguration extends Configuration {
   /** The https address of the RM web application.*/
   public static final String RM_WEBAPP_HTTPS_ADDRESS =
       RM_PREFIX + "webapp.https.address";
+  public static final boolean YARN_SSL_CLIENT_HTTPS_NEED_AUTH_DEFAULT = false;
+  public static final String YARN_SSL_SERVER_RESOURCE_DEFAULT = "ssl-server.xml";
   
   public static final int DEFAULT_RM_WEBAPP_HTTPS_PORT = 8090;
   public static final String DEFAULT_RM_WEBAPP_HTTPS_ADDRESS = "0.0.0.0:"
@@ -361,15 +361,21 @@ public class YarnConfiguration extends Configuration {
   public static final String DEFAULT_RM_CONFIGURATION_PROVIDER_CLASS =
       "org.apache.hadoop.yarn.LocalConfigurationProvider";
 
-  @Private
-  public static final List<String> RM_SERVICES_ADDRESS_CONF_KEYS =
+  private static final List<String> RM_SERVICES_ADDRESS_CONF_KEYS_HTTP =
       Collections.unmodifiableList(Arrays.asList(
           RM_ADDRESS,
           RM_SCHEDULER_ADDRESS,
           RM_ADMIN_ADDRESS,
           RM_RESOURCE_TRACKER_ADDRESS,
-          HttpConfig.isSecure() ? RM_WEBAPP_HTTPS_ADDRESS
-              : RM_WEBAPP_ADDRESS));
+          RM_WEBAPP_ADDRESS));
+
+  private static final List<String> RM_SERVICES_ADDRESS_CONF_KEYS_HTTPS =
+      Collections.unmodifiableList(Arrays.asList(
+          RM_ADDRESS,
+          RM_SCHEDULER_ADDRESS,
+          RM_ADMIN_ADDRESS,
+          RM_RESOURCE_TRACKER_ADDRESS,
+          RM_WEBAPP_HTTPS_ADDRESS));
 
   public static final String AUTO_FAILOVER_PREFIX =
       RM_HA_PREFIX + "automatic-failover.";
@@ -1102,10 +1108,9 @@ public class YarnConfiguration extends Configuration {
       YARN_PREFIX + "client.max-nodemanagers-proxies";
   public static final int DEFAULT_NM_CLIENT_MAX_NM_PROXIES = 500;
 
-  public static final String YARN_HTTP_POLICY_KEY =
-          YARN_PREFIX + "http.policy";
-  public static final String YARN_HTTP_POLICY_DEFAULT =
-          CommonConfigurationKeysPublic.HTTP_POLICY_HTTP_ONLY;
+  public static final String YARN_HTTP_POLICY_KEY = YARN_PREFIX + "http.policy";
+  public static final String YARN_HTTP_POLICY_DEFAULT = HttpConfig.Policy.HTTP_ONLY
+      .name();
 
   public YarnConfiguration() {
     super();
@@ -1116,6 +1121,12 @@ public class YarnConfiguration extends Configuration {
     if (! (conf instanceof YarnConfiguration)) {
       this.reloadConfiguration();
     }
+  }
+
+  @Private
+  public static List<String> getServiceAddressConfKeys(Configuration conf) {
+    return useHttps(conf) ? RM_SERVICES_ADDRESS_CONF_KEYS_HTTPS
+        : RM_SERVICES_ADDRESS_CONF_KEYS_HTTP;
   }
 
   /**
@@ -1130,7 +1141,7 @@ public class YarnConfiguration extends Configuration {
   public InetSocketAddress getSocketAddr(
       String name, String defaultAddress, int defaultPort) {
     String address;
-    if (HAUtil.isHAEnabled(this) && RM_SERVICES_ADDRESS_CONF_KEYS.contains(name)) {
+    if (HAUtil.isHAEnabled(this) && getServiceAddressConfKeys(this).contains(name)) {
       address = HAUtil.getConfValueForRMInstance(name, defaultAddress, this);
     } else {
       address = get(name, defaultAddress);
@@ -1149,7 +1160,8 @@ public class YarnConfiguration extends Configuration {
   }
 
   @Private
-  public static int getRMDefaultPortNumber(String addressPrefix) {
+  public static int getRMDefaultPortNumber(String addressPrefix,
+      Configuration conf) {
     if (addressPrefix.equals(YarnConfiguration.RM_ADDRESS)) {
       return YarnConfiguration.DEFAULT_RM_PORT;
     } else if (addressPrefix.equals(YarnConfiguration.RM_SCHEDULER_ADDRESS)) {
@@ -1167,7 +1179,13 @@ public class YarnConfiguration extends Configuration {
       throw new HadoopIllegalArgumentException(
           "Invalid RM RPC address Prefix: " + addressPrefix
               + ". The valid value should be one of "
-              + YarnConfiguration.RM_SERVICES_ADDRESS_CONF_KEYS);
+              + getServiceAddressConfKeys(conf));
     }
+  }
+
+  public static boolean useHttps(Configuration conf) {
+    return HttpConfig.Policy.HTTPS_ONLY == HttpConfig.Policy.fromString(conf
+        .get(YARN_HTTP_POLICY_KEY,
+            YARN_HTTP_POLICY_DEFAULT));
   }
 }
