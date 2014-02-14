@@ -897,7 +897,7 @@ public class FSImageFormat {
       if (!LayoutVersion.supports(Feature.CACHING, imgVersion)) {
         return;
       }
-      namesystem.getCacheManager().loadState(in);
+      namesystem.getCacheManager().loadStateCompat(in);
     }
 
     private int getLayoutVersion() {
@@ -1203,7 +1203,7 @@ public class FSImageFormat {
         context.checkCancelled();
         sourceNamesystem.saveSecretManagerStateCompat(out, sdPath);
         context.checkCancelled();
-        sourceNamesystem.getCacheManager().saveState(out, sdPath);
+        sourceNamesystem.getCacheManager().saveStateCompat(out, sdPath);
         context.checkCancelled();
         out.flush();
         context.checkCancelled();
