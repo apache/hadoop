@@ -40,7 +40,7 @@ public class TestFcHdfsCreateMkdir extends
   
   @Override
   protected FileContextTestHelper createFileContextHelper() {
-    return new FileContextTestHelper("/tmp/TestFcHdfsCreateMkdir");
+    return new FileContextTestHelper();
   }
 
 

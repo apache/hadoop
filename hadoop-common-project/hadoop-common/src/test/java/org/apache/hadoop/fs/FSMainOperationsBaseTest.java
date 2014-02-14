@@ -90,10 +90,6 @@ public abstract class FSMainOperationsBaseTest extends FileSystemTestHelper {
   public FSMainOperationsBaseTest() {
   }
   
-  public FSMainOperationsBaseTest(String testRootDir) {
-      super(testRootDir);
-  }
-  
   @Before
   public void setUp() throws Exception {
     fSys = createFileSystem();

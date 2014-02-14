@@ -49,7 +49,7 @@ public final class FileContextTestHelper {
   /**
    * Create a context with the given test root
    */
-  public FileContextTestHelper(String testRootDir) {
+  private FileContextTestHelper(String testRootDir) {
     this.testRootDir = testRootDir;
   }
   

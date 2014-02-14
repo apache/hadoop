@@ -451,6 +451,8 @@ Release 2.4.0 - UNRELEASED
     HDFS-5943. 'dfs.namenode.https-address' property is not loaded from
     configuration in federation setup. (suresh)
 
+    HDFS-3128. Unit tests should not use a test root in /tmp. (wang)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

@@ -52,7 +52,7 @@ public class FileSystemTestHelper {
   /**
    * Create helper with the specified test root dir
    */
-  public FileSystemTestHelper(String testRootDir) {
+  private FileSystemTestHelper(String testRootDir) {
       this.testRootDir = testRootDir;
   }
 
