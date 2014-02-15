@@ -140,7 +140,7 @@ public class TestFSImageWithSnapshot {
   private File saveFSImageToTempFile() throws IOException {
     SaveNamespaceContext context = new SaveNamespaceContext(fsn, txid,
         new Canceler());
-    FSImageFormat.Saver saver = new FSImageFormat.Saver(context);
+    FSImageFormatProtobuf.Saver saver = new FSImageFormatProtobuf.Saver(context);
     FSImageCompression compression = FSImageCompression.createCompression(conf);
     File imageFile = getImageFile(testDir, txid);
     fsn.readLock();
@@ -154,7 +154,7 @@ public class TestFSImageWithSnapshot {
   
   /** Load the fsimage from a temp file */
   private void loadFSImageFromTempFile(File imageFile) throws IOException {
-    FSImageFormat.Loader loader = new FSImageFormat.Loader(conf, fsn);
+    FSImageFormat.LoaderDelegator loader = FSImageFormat.newLoader(conf, fsn);
     fsn.writeLock();
     fsn.getFSDirectory().writeLock();
     try {

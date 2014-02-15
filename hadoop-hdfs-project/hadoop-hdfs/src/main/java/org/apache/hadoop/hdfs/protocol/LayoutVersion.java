@@ -112,7 +112,8 @@ public class LayoutVersion {
     ADD_DATANODE_AND_STORAGE_UUIDS(-49, "Replace StorageID with DatanodeUuid."
         + " Use distinct StorageUuid per storage directory."),
     ADD_LAYOUT_FLAGS(-50, "Add support for layout flags."),
-    CACHING(-51, "Support for cache pools and path-based caching");
+    CACHING(-51, "Support for cache pools and path-based caching"),
+    PROTOBUF_FORMAT(-52, "Use protobuf to serialize FSImage");
 
     final int lv;
     final int ancestorLV;

@@ -57,6 +57,10 @@ class FSImageCompression {
     imageCodec = codec;
   }
 
+  public CompressionCodec getImageCodec() {
+    return imageCodec;
+  }
+
   /**
    * Create a "noop" compression - i.e. uncompressed
    */
@@ -89,7 +93,7 @@ class FSImageCompression {
    * Create a compression instance using the codec specified by
    * <code>codecClassName</code>
    */
-  private static FSImageCompression createCompression(Configuration conf,
+  static FSImageCompression createCompression(Configuration conf,
                                                       String codecClassName)
     throws IOException {
 

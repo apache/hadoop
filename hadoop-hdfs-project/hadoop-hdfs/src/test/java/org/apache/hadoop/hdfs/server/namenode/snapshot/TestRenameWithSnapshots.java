@@ -73,7 +73,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
-;
 
 /** Testing rename with snapshots. */
 public class TestRenameWithSnapshots {
