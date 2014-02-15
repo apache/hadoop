@@ -6,6 +6,9 @@ Release 2.4.0 - UNRELEASED
 
   NEW FEATURES
 
+    HDFS-5698. Use protobuf to serialize / deserialize FSImage. (See breakdown
+    of tasks below for features and contributors)
+
   IMPROVEMENTS
 
     HDFS-5781. Use an array to record the mapping between FSEditLogOpCode and 
