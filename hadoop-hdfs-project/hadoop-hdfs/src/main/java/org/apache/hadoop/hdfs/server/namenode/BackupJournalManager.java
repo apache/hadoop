@@ -127,6 +127,11 @@ class BackupJournalManager implements JournalManager {
   }
 
   @Override
+  public void discardSegments(long startTxId) throws IOException {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
   public long getJournalCTime() throws IOException {
     throw new UnsupportedOperationException();
   }

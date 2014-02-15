@@ -693,6 +693,11 @@ public class BookKeeperJournalManager implements JournalManager {
   }
 
   @Override
+  public void discardSegments(long startTxId) throws IOException {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
   public void close() throws IOException {
     try {
       bkc.close();

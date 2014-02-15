@@ -621,7 +621,18 @@ public class IPCLoggerChannel implements AsyncLogger {
       }
     });
   }
-  
+
+  @Override
+  public ListenableFuture<Void> discardSegments(final long startTxId) {
+    return executor.submit(new Callable<Void>() {
+      @Override
+      public Void call() throws IOException {
+        getProxy().discardSegments(journalId, startTxId);
+        return null;
+      }
+    });
+  }
+
   @Override
   public ListenableFuture<Long> getJournalCTime() {
     return executor.submit(new Callable<Long>() {

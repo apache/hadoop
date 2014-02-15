@@ -40,3 +40,6 @@ HDFS-5535 subtasks:
     break after the merge. (Jing Zhao via Arpit Agarwal)
 
     HDFS-5585. Provide admin commands for data node upgrade (kihwal)
+
+    HDFS-5920. Support rollback of rolling upgrade in NameNode and JournalNodes.
+    (jing9)

@@ -234,6 +234,12 @@ class JournalNodeRpcServer implements QJournalProtocol {
   }
 
   @Override
+  public void discardSegments(String journalId, long startTxId)
+      throws IOException {
+    jn.discardSegments(journalId, startTxId);
+  }
+
+  @Override
   public Long getJournalCTime(String journalId) throws IOException {
     return jn.getJournalCTime(journalId);
   }

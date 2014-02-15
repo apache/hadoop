@@ -700,6 +700,12 @@ public class JournalSet implements JournalManager {
   }
 
   @Override
+  public void discardSegments(long startTxId) throws IOException {
+    // This operation is handled by FSEditLog directly.
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
   public long getJournalCTime() throws IOException {
     // This operation is handled by FSEditLog directly.
     throw new UnsupportedOperationException();

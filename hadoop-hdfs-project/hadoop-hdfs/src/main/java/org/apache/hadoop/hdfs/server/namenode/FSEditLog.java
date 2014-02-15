@@ -1406,7 +1406,14 @@ public class FSEditLog implements LogsPurgeable {
       }
     }
   }
-  
+
+  public synchronized void discardSegments(long markerTxid)
+      throws IOException {
+    for (JournalAndStream jas : journalSet.getAllJournalStreams()) {
+      jas.getManager().discardSegments(markerTxid);
+    }
+  }
+
   @Override
   public void selectInputStreams(Collection<EditLogInputStream> streams,
       long fromTxId, boolean inProgressOk) throws IOException {

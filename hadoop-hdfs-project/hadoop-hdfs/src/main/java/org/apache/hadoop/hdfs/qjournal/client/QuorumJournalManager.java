@@ -86,6 +86,7 @@ public class QuorumJournalManager implements JournalManager {
   private static final int FINALIZE_TIMEOUT_MS          = 60000;
   private static final int PRE_UPGRADE_TIMEOUT_MS       = 60000;
   private static final int ROLL_BACK_TIMEOUT_MS         = 60000;
+  private static final int DISCARD_SEGMENTS_TIMEOUT_MS  = 60000;
   private static final int UPGRADE_TIMEOUT_MS           = 60000;
   private static final int GET_JOURNAL_CTIME_TIMEOUT_MS = 60000;
   
@@ -597,6 +598,25 @@ public class QuorumJournalManager implements JournalManager {
       throw new IOException("Interrupted waiting for doFinalize() response");
     } catch (TimeoutException e) {
       throw new IOException("Timed out waiting for doFinalize() response");
+    }
+  }
+  
+  @Override
+  public void discardSegments(long startTxId) throws IOException {
+    QuorumCall<AsyncLogger, Void> call = loggers.discardSegments(startTxId);
+    try {
+      call.waitFor(loggers.size(), loggers.size(), 0,
+          DISCARD_SEGMENTS_TIMEOUT_MS, "discardSegments");
+      if (call.countExceptions() > 0) {
+        call.rethrowException(
+            "Could not perform discardSegments of one or more JournalNodes");
+      }
+    } catch (InterruptedException e) {
+      throw new IOException(
+          "Interrupted waiting for discardSegments() response");
+    } catch (TimeoutException e) {
+      throw new IOException(
+          "Timed out waiting for discardSegments() response");
     }
   }
   

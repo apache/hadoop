@@ -90,11 +90,18 @@ public class NNStorageRetentionManager {
   }
 
   void purgeCheckpoints(NameNodeFile nnf) throws IOException {
+    purgeCheckpoinsAfter(nnf, -1);
+  }
+
+  void purgeCheckpoinsAfter(NameNodeFile nnf, long fromTxId)
+      throws IOException {
     FSImageTransactionalStorageInspector inspector =
         new FSImageTransactionalStorageInspector(nnf);
     storage.inspectStorageDirs(inspector);
     for (FSImageFile image : inspector.getFoundImages()) {
-      purger.purgeImage(image);
+      if (image.getCheckpointTxId() > fromTxId) {
+        purger.purgeImage(image);
+      }
     }
   }
 

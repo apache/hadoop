@@ -89,7 +89,8 @@ public class NNStorage extends Storage implements Closeable,
    * or of type EDITS which stores edits or of type IMAGE_AND_EDITS which
    * stores both fsimage and edits.
    */
-  static enum NameNodeDirType implements StorageDirType {
+  @VisibleForTesting
+  public static enum NameNodeDirType implements StorageDirType {
     UNDEFINED,
     IMAGE,
     EDITS,
@@ -657,20 +658,27 @@ public class NNStorage extends Storage implements Closeable,
 
   @VisibleForTesting
   public static String getCheckpointImageFileName(long txid) {
-    return String.format("%s_%019d",
-                         NameNodeFile.IMAGE_NEW.getName(), txid);
+    return getNameNodeFileName(NameNodeFile.IMAGE_NEW, txid);
   }
 
   @VisibleForTesting
   public static String getImageFileName(long txid) {
-    return String.format("%s_%019d",
-                         NameNodeFile.IMAGE.getName(), txid);
+    return getNameNodeFileName(NameNodeFile.IMAGE, txid);
   }
-  
+
+  @VisibleForTesting
+  public static String getRollbackImageFileName(long txid) {
+    return getNameNodeFileName(NameNodeFile.IMAGE_ROLLBACK, txid);
+  }
+
+  @VisibleForTesting
+  private static String getNameNodeFileName(NameNodeFile nnf, long txid) {
+    return String.format("%s_%019d", nnf.getName(), txid);
+  }
+
   @VisibleForTesting
   public static String getInProgressEditsFileName(long startTxId) {
-    return String.format("%s_%019d", NameNodeFile.EDITS_INPROGRESS.getName(),
-                         startTxId);
+    return getNameNodeFileName(NameNodeFile.EDITS_INPROGRESS, startTxId);
   }
   
   static File getInProgressEditsFile(StorageDirectory sd, long startTxId) {

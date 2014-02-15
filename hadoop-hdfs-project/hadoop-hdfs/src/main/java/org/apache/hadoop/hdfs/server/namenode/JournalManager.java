@@ -109,7 +109,15 @@ public interface JournalManager extends Closeable, FormatConfirmable,
    * roll back their state should just return without error.
    */
   void doRollback() throws IOException;
-  
+
+  /**
+   * Discard the segments whose first txid is >= the given txid.
+   * @param startTxId The given txid should be right at the segment boundary, 
+   * i.e., it should be the first txid of some segment, if segment corresponding
+   * to the txid exists.
+   */
+  void discardSegments(long startTxId) throws IOException;
+
   /**
    * @return the CTime of the journal manager.
    */

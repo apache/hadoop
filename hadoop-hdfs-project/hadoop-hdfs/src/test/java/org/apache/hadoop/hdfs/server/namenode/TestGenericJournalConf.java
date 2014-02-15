@@ -213,6 +213,9 @@ public class TestGenericJournalConf {
     public void doRollback() throws IOException {}
 
     @Override
+    public void discardSegments(long startTxId) throws IOException {}
+
+    @Override
     public long getJournalCTime() throws IOException {
       return -1;
     }

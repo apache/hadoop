@@ -141,7 +141,7 @@ public class TestSaveNamespace {
       doAnswer(new FaultySaveImage(true)).
         when(spyImage).saveFSImage(
             (SaveNamespaceContext)anyObject(),
-            (StorageDirectory)anyObject());
+            (StorageDirectory)anyObject(), (NameNodeFile) anyObject());
       shouldFail = false;
       break;
     case SAVE_SECOND_FSIMAGE_IOE:
@@ -149,7 +149,7 @@ public class TestSaveNamespace {
       doAnswer(new FaultySaveImage(false)).
         when(spyImage).saveFSImage(
             (SaveNamespaceContext)anyObject(),
-            (StorageDirectory)anyObject());
+            (StorageDirectory)anyObject(), (NameNodeFile) anyObject());
       shouldFail = false;
       break;
     case SAVE_ALL_FSIMAGES:
@@ -157,7 +157,7 @@ public class TestSaveNamespace {
       doThrow(new RuntimeException("Injected")).
       when(spyImage).saveFSImage(
           (SaveNamespaceContext)anyObject(),
-          (StorageDirectory)anyObject());
+          (StorageDirectory)anyObject(), (NameNodeFile) anyObject());
       shouldFail = true;
       break;
     case WRITE_STORAGE_ALL:
@@ -382,7 +382,7 @@ public class TestSaveNamespace {
     doThrow(new IOException("Injected fault: saveFSImage")).
         when(spyImage).saveFSImage(
             (SaveNamespaceContext)anyObject(),
-            (StorageDirectory)anyObject());
+            (StorageDirectory)anyObject(), (NameNodeFile) anyObject());
 
     try {
       doAnEdit(fsn, 1);
