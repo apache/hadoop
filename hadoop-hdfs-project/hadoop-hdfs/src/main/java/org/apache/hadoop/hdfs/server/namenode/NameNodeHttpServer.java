@@ -32,7 +32,6 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress;
 import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMethods;
-import org.apache.hadoop.hdfs.web.AuthFilter;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.hdfs.web.resources.Param;
 import org.apache.hadoop.hdfs.web.resources.UserParam;
@@ -70,21 +69,27 @@ public class NameNodeHttpServer {
   private void initWebHdfs(Configuration conf) throws IOException {
     if (WebHdfsFileSystem.isEnabled(conf, HttpServer2.LOG)) {
       // set user pattern based on configuration file
-      UserParam.setUserPattern(conf.get(DFSConfigKeys.DFS_WEBHDFS_USER_PATTERN_KEY, DFSConfigKeys.DFS_WEBHDFS_USER_PATTERN_DEFAULT));
+      UserParam.setUserPattern(conf.get(
+          DFSConfigKeys.DFS_WEBHDFS_USER_PATTERN_KEY,
+          DFSConfigKeys.DFS_WEBHDFS_USER_PATTERN_DEFAULT));
 
-      // add SPNEGO authentication filter for webhdfs
-      final String name = "SPNEGO";
-      final String classname = AuthFilter.class.getName();
+      // add authentication filter for webhdfs
+      final String className = conf.get(
+          DFSConfigKeys.DFS_WEBHDFS_AUTHENTICATION_FILTER_KEY,
+          DFSConfigKeys.DFS_WEBHDFS_AUTHENTICATION_FILTER_DEFAULT);
+      final String name = className;
+
       final String pathSpec = WebHdfsFileSystem.PATH_PREFIX + "/*";
       Map<String, String> params = getAuthFilterParams(conf);
-      HttpServer2.defineFilter(httpServer.getWebAppContext(), name, classname, params,
-          new String[]{pathSpec});
-      HttpServer2.LOG.info("Added filter '" + name + "' (class=" + classname + ")");
+      HttpServer2.defineFilter(httpServer.getWebAppContext(), name, className,
+          params, new String[] { pathSpec });
+      HttpServer2.LOG.info("Added filter '" + name + "' (class=" + className
+          + ")");
 
       // add webhdfs packages
-      httpServer.addJerseyResourcePackage(
-          NamenodeWebHdfsMethods.class.getPackage().getName()
-              + ";" + Param.class.getPackage().getName(), pathSpec);
+      httpServer.addJerseyResourcePackage(NamenodeWebHdfsMethods.class
+          .getPackage().getName() + ";" + Param.class.getPackage().getName(),
+          pathSpec);
     }
   }
 
