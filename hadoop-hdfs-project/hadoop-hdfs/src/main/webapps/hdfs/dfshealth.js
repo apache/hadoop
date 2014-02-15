@@ -50,24 +50,23 @@
     var data = {};
 
     // Workarounds for the fact that JMXJsonServlet returns non-standard JSON strings
-    function data_workaround(d) {
-      d.nn.JournalTransactionInfo = JSON.parse(d.nn.JournalTransactionInfo);
-      d.nn.NameJournalStatus = JSON.parse(d.nn.NameJournalStatus);
-      d.nn.NameDirStatuses = JSON.parse(d.nn.NameDirStatuses);
-      d.nn.NodeUsage = JSON.parse(d.nn.NodeUsage);
-      d.nn.CorruptFiles = JSON.parse(d.nn.CorruptFiles);
-      return d;
+    function workaround(nn) {
+      nn.JournalTransactionInfo = JSON.parse(nn.JournalTransactionInfo);
+      nn.NameJournalStatus = JSON.parse(nn.NameJournalStatus);
+      nn.NameDirStatuses = JSON.parse(nn.NameDirStatuses);
+      nn.NodeUsage = JSON.parse(nn.NodeUsage);
+      nn.CorruptFiles = JSON.parse(nn.CorruptFiles);
+      return nn;
     }
 
     load_json(
       BEANS,
-      function(d) {
+      guard_with_startup_progress(function(d) {
         for (var k in d) {
-          data[k] = d[k].beans[0];
+          data[k] = k === 'nn' ? workaround(d[k].beans[0]) : d[k].beans[0];
         }
-        data = data_workaround(data);
         render();
-      },
+      }),
       function (url, jqxhr, text, err) {
         show_err_msg('<p>Failed to retrieve data from ' + url + ', cause: ' + err + '</p>');
       });
@@ -90,6 +89,19 @@
 
   function ajax_error_handler(url, jqxhr, text, err) {
     show_err_msg('<p>Failed to retrieve data from ' + url + ', cause: ' + err + '</p>');
+  }
+
+  function guard_with_startup_progress(fn) {
+    return function() {
+      try {
+        fn.apply(this, arguments);
+      } catch (err) {
+        if (err instanceof TypeError) {
+          show_err_msg('NameNode is still loading. Redirecting to the Startup Progress page.');
+          load_startup_progress();
+        }
+      }
+    };
   }
 
   function load_startup_progress() {
@@ -143,25 +155,29 @@
       return r;
     }
 
-    $.get('/jmx?qry=Hadoop:service=NameNode,name=NameNodeInfo', function (resp) {
-      var data = workaround(resp.beans[0]);
-      dust.render('datanode-info', data, function(err, out) {
-        $('#tab-datanode').html(out);
-        $('#ui-tabs a[href="#tab-datanode"]').tab('show');
-      });
-    }).error(ajax_error_handler);
+    $.get(
+      '/jmx?qry=Hadoop:service=NameNode,name=NameNodeInfo',
+      guard_with_startup_progress(function (resp) {
+        var data = workaround(resp.beans[0]);
+        dust.render('datanode-info', data, function(err, out) {
+          $('#tab-datanode').html(out);
+          $('#ui-tabs a[href="#tab-datanode"]').tab('show');
+        });
+      })).error(ajax_error_handler);
   }
 
   $('a[href="#tab-datanode"]').click(load_datanode_info);
 
   function load_snapshot_info() {
-    $.get('/jmx?qry=Hadoop:service=NameNode,name=FSNamesystemState', function (resp) {
-      var data = JSON.parse(resp.beans[0].SnapshotStats);
-      dust.render('snapshot-info', data, function(err, out) {
-        $('#tab-snapshot').html(out);
-        $('#ui-tabs a[href="#tab-snapshot"]').tab('show');
-      });
-    }).error(ajax_error_handler);
+    $.get(
+      '/jmx?qry=Hadoop:service=NameNode,name=FSNamesystemState',
+      guard_with_startup_progress(function (resp) {
+        var data = JSON.parse(resp.beans[0].SnapshotStats);
+        dust.render('snapshot-info', data, function(err, out) {
+          $('#tab-snapshot').html(out);
+          $('#ui-tabs a[href="#tab-snapshot"]').tab('show');
+        });
+      })).error(ajax_error_handler);
   }
 
   $('#ui-tabs a[href="#tab-snapshot"]').click(load_snapshot_info);
