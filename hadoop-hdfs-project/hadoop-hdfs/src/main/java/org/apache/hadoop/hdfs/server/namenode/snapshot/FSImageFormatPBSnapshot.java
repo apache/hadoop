@@ -115,7 +115,7 @@ public class FSImageFormatPBSnapshot {
         SnapshotSection.Snapshot pbs = SnapshotSection.Snapshot
             .parseDelimitedFrom(in);
         INodeDirectory root = loadINodeDirectory(pbs.getRoot(),
-            parent.getStringTable());
+            parent.getLoaderContext().getStringTable());
         int sid = pbs.getSnapshotId();
         INodeDirectorySnapshottable parent = (INodeDirectorySnapshottable) fsDir
             .getInode(root.getId()).asDirectory();
@@ -162,7 +162,8 @@ public class FSImageFormatPBSnapshot {
         if (pbf.hasSnapshotCopy()) {
           INodeSection.INodeFile fileInPb = pbf.getSnapshotCopy();
           PermissionStatus permission = loadPermission(
-              fileInPb.getPermission(), parent.getStringTable());
+              fileInPb.getPermission(), parent.getLoaderContext()
+                  .getStringTable());
           copy = new INodeFileAttributes.SnapshotCopy(pbf.getName()
               .toByteArray(), permission, fileInPb.getModificationTime(),
               fileInPb.getAccessTime(), (short) fileInPb.getReplication(),
@@ -249,8 +250,9 @@ public class FSImageFormatPBSnapshot {
         }else if (diffInPb.hasSnapshotCopy()) {
           INodeSection.INodeDirectory dirCopyInPb = diffInPb.getSnapshotCopy();
           final byte[] name = diffInPb.getName().toByteArray();
-          PermissionStatus permission = loadPermission(dirCopyInPb
-              .getPermission(), parent.getStringTable());
+          PermissionStatus permission = loadPermission(
+              dirCopyInPb.getPermission(), parent.getLoaderContext()
+                  .getStringTable());
           long modTime = dirCopyInPb.getModificationTime();
           boolean noQuota = dirCopyInPb.getNsQuota() == -1
               && dirCopyInPb.getDsQuota() == -1;
@@ -311,7 +313,7 @@ public class FSImageFormatPBSnapshot {
           SnapshotSection.Snapshot.Builder sb = SnapshotSection.Snapshot
               .newBuilder().setSnapshotId(s.getId());
           INodeSection.INodeDirectory.Builder db = buildINodeDirectory(sroot,
-              parent.getStringMap());
+              parent.getSaverContext().getStringMap());
           INodeSection.INode r = INodeSection.INode.newBuilder()
               .setId(sroot.getId())
               .setType(INodeSection.INode.Type.DIRECTORY)
@@ -369,7 +371,7 @@ public class FSImageFormatPBSnapshot {
           INodeFileAttributes copy = diff.snapshotINode;
           if (copy != null) {
             fb.setName(ByteString.copyFrom(copy.getLocalNameBytes()))
-                .setSnapshotCopy(buildINodeFile(copy, parent.getStringMap()));
+                .setSnapshotCopy(buildINodeFile(copy, parent.getSaverContext().getStringMap()));
           }
           fb.build().writeDelimitedTo(out);
         }
@@ -410,7 +412,7 @@ public class FSImageFormatPBSnapshot {
           if (!diff.isSnapshotRoot() && copy != null) {
             db.setName(ByteString.copyFrom(copy.getLocalNameBytes()))
                 .setSnapshotCopy(
-                    buildINodeDirectory(copy, parent.getStringMap()));
+                    buildINodeDirectory(copy, parent.getSaverContext().getStringMap()));
           }
           // process created list and deleted list
           List<INode> created = diff.getChildrenDiff()
