@@ -462,6 +462,8 @@ Release 2.4.0 - UNRELEASED
     HDFS-5716. Allow WebHDFS to use pluggable authentication filter
     (Haohui Mai via brandonli)
 
+    HDFS-5953. TestBlockReaderFactory fails in trunk. (Akira Ajisaka via wang)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
