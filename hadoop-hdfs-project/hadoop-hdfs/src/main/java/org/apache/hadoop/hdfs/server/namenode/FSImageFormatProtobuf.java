@@ -75,9 +75,14 @@ public final class FSImageFormatProtobuf {
 
   public static final class LoaderContext {
     private String[] stringTable;
+    private final ArrayList<INodeReference> refList = Lists.newArrayList();
 
     public String[] getStringTable() {
       return stringTable;
+    }
+
+    public ArrayList<INodeReference> getRefList() {
+      return refList;
     }
   }
 
@@ -112,9 +117,14 @@ public final class FSImageFormatProtobuf {
       }
     }
     private final DeduplicationMap<String> stringMap = DeduplicationMap.newMap();
+    private final ArrayList<INodeReference> refList = Lists.newArrayList();
 
     public DeduplicationMap<String> getStringMap() {
       return stringMap;
+    }
+
+    public ArrayList<INodeReference> getRefList() {
+      return refList;
     }
   }
 
@@ -123,7 +133,6 @@ public final class FSImageFormatProtobuf {
     private final Configuration conf;
     private final FSNamesystem fsn;
     private final LoaderContext ctx;
-
     /** The MD5 sum of the loaded file */
     private MD5Hash imgDigest;
     /** The transaction ID of the last edit represented by the loaded file */
@@ -226,6 +235,9 @@ public final class FSImageFormatProtobuf {
           inodeLoader.loadINodeSection(in);
         }
           break;
+        case INODE_REFRENCE:
+          snapshotLoader.loadINodeReferenceSection(in);
+          break;
         case INODE_DIR:
           inodeLoader.loadINodeDirectorySection(in);
           break;
@@ -313,9 +325,10 @@ public final class FSImageFormatProtobuf {
   }
 
   public static final class Saver {
+    public static final int CHECK_CANCEL_INTERVAL = 4096;
+
     private final SaveNamespaceContext context;
     private final SaverContext saverContext;
-
     private long currentOffset = FSImageUtil.MAGIC_HEADER.length;
     private MD5Hash savedDigest;
 
@@ -324,7 +337,6 @@ public final class FSImageFormatProtobuf {
     private OutputStream sectionOutputStream;
     private CompressionCodec codec;
     private OutputStream underlyingOutputStream;
-    public static final int CHECK_CANCEL_INTERVAL = 4096;
 
     Saver(SaveNamespaceContext context) {
       this.context = context;
@@ -400,6 +412,7 @@ public final class FSImageFormatProtobuf {
 
       snapshotSaver.serializeSnapshotSection(sectionOutputStream);
       snapshotSaver.serializeSnapshotDiffSection(sectionOutputStream);
+      snapshotSaver.serializeINodeReferenceSection(sectionOutputStream);
     }
 
     private void saveInternal(FileOutputStream fout,
@@ -535,6 +548,7 @@ public final class FSImageFormatProtobuf {
     NS_INFO("NS_INFO"),
     STRING_TABLE("STRING_TABLE"),
     INODE("INODE"),
+    INODE_REFRENCE("INODE_REFRENCE"),
     SNAPSHOT("SNAPSHOT"),
     INODE_DIR("INODE_DIR"),
     FILES_UNDERCONSTRUCTION("FILES_UNDERCONSTRUCTION"),
