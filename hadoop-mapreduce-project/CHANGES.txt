@@ -165,6 +165,9 @@ Release 2.4.0 - UNRELEASED
     MAPREDUCE-5670. CombineFileRecordReader should report progress when moving
     to the next file (Chen He via jlowe)
 
+    MAPREDUCE-5757. ConcurrentModificationException in JobControl.toList
+    (jlowe)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

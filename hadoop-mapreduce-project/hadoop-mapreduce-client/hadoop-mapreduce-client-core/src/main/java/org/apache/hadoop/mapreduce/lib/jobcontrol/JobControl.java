@@ -79,7 +79,7 @@ public class JobControl implements Runnable {
     this.runnerState = ThreadState.READY;
   }
 	
-  synchronized private static List<ControlledJob> toList(
+  private static List<ControlledJob> toList(
                    LinkedList<ControlledJob> jobs) {
     ArrayList<ControlledJob> retv = new ArrayList<ControlledJob>();
     for (ControlledJob job : jobs) {
@@ -122,11 +122,11 @@ public class JobControl implements Runnable {
   /**
    * @return the jobs in the success state
    */
-  public List<ControlledJob> getSuccessfulJobList() {
+  synchronized public List<ControlledJob> getSuccessfulJobList() {
     return toList(this.successfulJobs);
   }
 	
-  public List<ControlledJob> getFailedJobList() {
+  synchronized public List<ControlledJob> getFailedJobList() {
     return toList(this.failedJobs);
   }
 	
