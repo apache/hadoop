@@ -416,6 +416,8 @@ Release 2.4.0 - UNRELEASED
     HDFS-5759. Web UI does not show up during the period of loading FSImage.
     (Haohui Mai via Arpit Agarwal)
 
+    HDFS-5942. Fix javadoc in OfflineImageViewer. (Akira Ajisaka via cnauroth)
+
   BREAKDOWN OF HDFS-5698 SUBTASKS AND RELATED JIRAS
 
     HDFS-5717. Save FSImage header in protobuf. (Haohui Mai via jing9)
