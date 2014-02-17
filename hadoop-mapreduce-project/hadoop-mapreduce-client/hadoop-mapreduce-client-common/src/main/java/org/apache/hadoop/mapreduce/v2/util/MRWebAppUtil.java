@@ -71,11 +71,13 @@ public class MRWebAppUtil {
   }
 
   public static String getYARNWebappScheme() {
-    return HttpConfig.getScheme(httpPolicyInYarn);
+    return httpPolicyInYarn == HttpConfig.Policy.HTTPS_ONLY ? "https://"
+        : "http://";
   }
-  
+
   public static String getJHSWebappScheme() {
-    return HttpConfig.getScheme(httpPolicyInJHS);
+    return httpPolicyInJHS == HttpConfig.Policy.HTTPS_ONLY ? "https://"
+        : "http://";
   }
   
   public static void setJHSWebappURLWithoutScheme(Configuration conf,

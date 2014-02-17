@@ -55,28 +55,8 @@ import com.google.common.collect.Lists;
 import com.google.common.io.LimitInputStream;
 
 /**
- * This is the tool for analyzing file sizes in the namespace image. In order to
- * run the tool one should define a range of integers <tt>[0, maxSize]</tt> by
- * specifying <tt>maxSize</tt> and a <tt>step</tt>. The range of integers is
- * divided into segments of size <tt>step</tt>:
- * <tt>[0, s<sub>1</sub>, ..., s<sub>n-1</sub>, maxSize]</tt>, and the visitor
- * calculates how many files in the system fall into each segment
- * <tt>[s<sub>i-1</sub>, s<sub>i</sub>)</tt>. Note that files larger than
- * <tt>maxSize</tt> always fall into the very last segment.
- *
- * <h3>Input.</h3>
- * <ul>
- * <li><tt>filename</tt> specifies the location of the image file;</li>
- * <li><tt>maxSize</tt> determines the range <tt>[0, maxSize]</tt> of files
- * sizes considered by the visitor;</li>
- * <li><tt>step</tt> the range is divided into segments of size step.</li>
- * </ul>
- *
- * <h3>Output.</h3> The output file is formatted as a tab separated two column
- * table: Size and NumFiles. Where Size represents the start of the segment, and
- * numFiles is the number of files form the image which size falls in this
- * segment.
- *
+ * PBImageXmlWriter walks over an fsimage structure and writes out
+ * an equivalent XML document that contains the fsimage's components.
  */
 @InterfaceAudience.Private
 public final class PBImageXmlWriter {

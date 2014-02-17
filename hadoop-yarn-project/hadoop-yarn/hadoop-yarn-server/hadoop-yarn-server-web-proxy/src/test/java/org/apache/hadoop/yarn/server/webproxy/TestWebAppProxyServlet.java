@@ -288,8 +288,9 @@ public class TestWebAppProxyServlet {
             YarnConfiguration.DEFAULT_YARN_ADMIN_ACL));
         proxyServer = new HttpServer2.Builder()
             .setName("proxy")
-            .addEndpoint(URI.create("http://" + bindAddress + ":0"))
-            .setFindPort(true)
+            .addEndpoint(
+                URI.create(WebAppUtils.getHttpSchemePrefix(conf) + bindAddress
+                    + ":0")).setFindPort(true)
             .setConf(conf)
             .setACL(acl)
             .build();

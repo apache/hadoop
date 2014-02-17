@@ -45,6 +45,7 @@ import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.JobInfo;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.TaskInfo;
 import org.apache.hadoop.mapreduce.util.HostUtil;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 /**
  * HistoryViewer is used to parse and view the JobHistory files 
@@ -231,7 +232,8 @@ public class HistoryViewer {
           taskList.append("\t"); 
           taskList.append(attempt.getHostname()).append("\t");
           taskList.append(attempt.getError());
-          String taskLogsUrl = getTaskLogsUrl(attempt);
+          String taskLogsUrl = getTaskLogsUrl(
+              WebAppUtils.getHttpSchemePrefix(fs.getConf()), attempt);
           taskList.append(taskLogsUrl != null ? taskLogsUrl : "n/a");
           System.out.println(taskList.toString());
         }
@@ -446,7 +448,7 @@ public class HistoryViewer {
    * @return the taskLogsUrl. null if http-port or tracker-name or
    *         task-attempt-id are unavailable.
    */
-  public static String getTaskLogsUrl(
+  public static String getTaskLogsUrl(String scheme,
       JobHistoryParser.TaskAttemptInfo attempt) {
     if (attempt.getHttpPort() == -1
         || attempt.getTrackerName().equals("")
@@ -457,7 +459,7 @@ public class HistoryViewer {
     String taskTrackerName =
       HostUtil.convertTrackerNameToHostName(
         attempt.getTrackerName());
-    return HostUtil.getTaskLogUrl(taskTrackerName,
+    return HostUtil.getTaskLogUrl(scheme, taskTrackerName,
         Integer.toString(attempt.getHttpPort()),
         attempt.getAttemptId().toString());
   }

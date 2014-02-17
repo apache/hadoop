@@ -24,7 +24,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.v2.hs.HistoryServerStateStoreService.HistoryServerState;
@@ -121,7 +120,6 @@ public class JobHistoryServer extends CompositeService {
 
     // This is required for WebApps to use https if enabled.
     MRWebAppUtil.initialize(getConfig());
-    HttpConfig.setPolicy(MRWebAppUtil.getJHSHttpPolicy());
     try {
       doSecureLogin(conf);
     } catch(IOException ie) {

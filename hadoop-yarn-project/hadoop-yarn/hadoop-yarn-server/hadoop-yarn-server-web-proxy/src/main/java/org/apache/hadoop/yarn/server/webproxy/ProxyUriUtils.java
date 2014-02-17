@@ -137,27 +137,6 @@ public class ProxyUriUtils {
   
   /**
    * Create a URI form a no scheme Url, such as is returned by the AM.
-   * @param url the URL format returned by an AM. This may or may not contain
-   * scheme.
-   * @return a URI with an http scheme
-   * @throws URISyntaxException if the url is not formatted correctly.
-   */
-  public static URI getUriFromAMUrl(String url)
-    throws URISyntaxException {
-    if (getSchemeFromUrl(url).isEmpty()) {
-      /*
-       * check is made to make sure if AM reports with scheme then it will be
-       * used by default otherwise it will default to the one configured using
-       * "yarn.http.policy".
-       */
-      return new URI(HttpConfig.getSchemePrefix() + url);
-    } else {
-      return new URI(url);
-    }
-  }
-  
-  /**
-   * Create a URI form a no scheme Url, such as is returned by the AM.
    * @param noSchemeUrl the URL formate returned by an AM
    * @return a URI with an http scheme
    * @throws URISyntaxException if the url is not formatted correctly.
@@ -170,7 +149,7 @@ public class ProxyUriUtils {
          * used by default otherwise it will default to the one configured using
          * "yarn.http.policy".
          */
-        return new URI(scheme + "://" + noSchemeUrl);
+        return new URI(scheme + noSchemeUrl);
       } else {
         return new URI(noSchemeUrl);
       }

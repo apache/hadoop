@@ -26,7 +26,6 @@ import static org.apache.hadoop.yarn.webapp.view.JQueryUI.tableInit;
 
 import java.util.Collection;
 
-import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
@@ -119,7 +118,7 @@ class NodesPage extends RmView {
           row.td()._("N/A")._();
         } else {
           String httpAddress = info.getNodeHTTPAddress();
-          row.td().a(HttpConfig.getSchemePrefix() + httpAddress,
+          row.td().a("//" + httpAddress,
               httpAddress)._();
         }
         row.td().br().$title(String.valueOf(info.getLastHealthUpdate()))._().
