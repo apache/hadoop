@@ -289,6 +289,9 @@ Release 2.4.0 - UNRELEASED
     instead rely on the http policy framework. And also fix some bugs related
     to https handling in YARN web-apps. (Haohui Mai via vinodkv)
 
+    YARN-1721. When moving app between queues in Fair Scheduler, grab lock on
+    FSSchedulerApp (Sandy Ryza)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
