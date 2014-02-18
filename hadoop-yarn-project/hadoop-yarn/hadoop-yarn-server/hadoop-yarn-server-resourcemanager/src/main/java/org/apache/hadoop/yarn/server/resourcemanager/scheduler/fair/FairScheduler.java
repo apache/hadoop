@@ -1366,24 +1366,26 @@ public class FairScheduler extends AbstractYarnScheduler {
       throw new YarnException("App to be moved " + appId + " not found.");
     }
     FSSchedulerApp attempt = (FSSchedulerApp) app.getCurrentAppAttempt();
-    
-    FSLeafQueue oldQueue = (FSLeafQueue) app.getQueue();
-    FSLeafQueue targetQueue = queueMgr.getLeafQueue(queueName, false);
-    if (targetQueue == null) {
-      throw new YarnException("Target queue " + queueName
-          + " not found or is not a leaf queue.");
+    // To serialize with FairScheduler#allocate, synchronize on app attempt
+    synchronized (attempt) {
+      FSLeafQueue oldQueue = (FSLeafQueue) app.getQueue();
+      FSLeafQueue targetQueue = queueMgr.getLeafQueue(queueName, false);
+      if (targetQueue == null) {
+        throw new YarnException("Target queue " + queueName
+            + " not found or is not a leaf queue.");
+      }
+      if (targetQueue == oldQueue) {
+        return oldQueue.getQueueName();
+      }
+      
+      if (oldQueue.getRunnableAppSchedulables().contains(
+          attempt.getAppSchedulable())) {
+        verifyMoveDoesNotViolateConstraints(attempt, oldQueue, targetQueue);
+      }
+      
+      executeMove(app, attempt, oldQueue, targetQueue);
+      return targetQueue.getQueueName();
     }
-    if (targetQueue == oldQueue) {
-      return oldQueue.getQueueName();
-    }
-    
-    if (oldQueue.getRunnableAppSchedulables().contains(
-        attempt.getAppSchedulable())) {
-      verifyMoveDoesNotViolateConstraints(attempt, oldQueue, targetQueue);
-    }
-    
-    executeMove(app, attempt, oldQueue, targetQueue);
-    return targetQueue.getQueueName();
   }
   
   private void verifyMoveDoesNotViolateConstraints(FSSchedulerApp app,
@@ -1420,8 +1422,8 @@ public class FairScheduler extends AbstractYarnScheduler {
   }
   
   /**
-   * Helper for moveApplication, which is synchronized, so all operations will
-   * be atomic.
+   * Helper for moveApplication, which has appropriate synchronization, so all
+   * operations will be atomic.
    */
   private void executeMove(SchedulerApplication app, FSSchedulerApp attempt,
       FSLeafQueue oldQueue, FSLeafQueue newQueue) {
