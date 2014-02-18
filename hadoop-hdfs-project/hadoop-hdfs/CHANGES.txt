@@ -185,6 +185,10 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-5803. TestBalancer.testBalancer0 fails. (Chen He via kihwal)
 
+    HDFS-5893. HftpFileSystem.RangeHeaderUrlOpener uses the default
+    URLConnectionFactory which does not import SSL certificates. (Haohui Mai via
+    jing9)
+
   BREAKDOWN OF HDFS-5698 SUBTASKS AND RELATED JIRAS
 
     HDFS-5717. Save FSImage header in protobuf. (Haohui Mai via jing9)
