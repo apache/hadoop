@@ -989,7 +989,13 @@ public class FairScheduler extends AbstractYarnScheduler {
   private void continuousScheduling() {
     while (true) {
       List<NodeId> nodeIdList = new ArrayList<NodeId>(nodes.keySet());
-      Collections.sort(nodeIdList, nodeAvailableResourceComparator);
+      // Sort the nodes by space available on them, so that we offer
+      // containers on emptier nodes first, facilitating an even spread. This
+      // requires holding the scheduler lock, so that the space available on a
+      // node doesn't change during the sort.
+      synchronized (this) {
+        Collections.sort(nodeIdList, nodeAvailableResourceComparator);
+      }
 
       // iterate all nodes
       for (NodeId nodeId : nodeIdList) {
