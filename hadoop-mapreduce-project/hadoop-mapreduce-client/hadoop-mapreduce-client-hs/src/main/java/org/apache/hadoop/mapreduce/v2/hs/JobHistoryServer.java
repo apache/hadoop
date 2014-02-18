@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapreduce.v2.hs;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -169,8 +170,21 @@ public class JobHistoryServer extends CompositeService {
   }
 
   protected void doSecureLogin(Configuration conf) throws IOException {
+    InetSocketAddress socAddr = getBindAddress(conf);
     SecurityUtil.login(conf, JHAdminConfig.MR_HISTORY_KEYTAB,
-        JHAdminConfig.MR_HISTORY_PRINCIPAL);
+        JHAdminConfig.MR_HISTORY_PRINCIPAL, socAddr.getHostName());
+  }
+
+  /**
+   * Retrieve JHS bind address from configuration
+   *
+   * @param conf
+   * @return InetSocketAddress
+   */
+  public static InetSocketAddress getBindAddress(Configuration conf) {
+    return conf.getSocketAddr(JHAdminConfig.MR_HISTORY_ADDRESS,
+      JHAdminConfig.DEFAULT_MR_HISTORY_ADDRESS,
+      JHAdminConfig.DEFAULT_MR_HISTORY_PORT);
   }
 
   @Override
