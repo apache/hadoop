@@ -69,6 +69,7 @@ public class WebAppProxyServlet extends HttpServlet {
 
   private final List<TrackingUriPlugin> trackingUriPlugins;
   private final String rmAppPageUrlBase;
+  private final transient YarnConfiguration conf;
 
   private static class _ implements Hamlet._ {
     //Empty
@@ -90,7 +91,7 @@ public class WebAppProxyServlet extends HttpServlet {
   public WebAppProxyServlet()
   {
     super();
-    YarnConfiguration conf = new YarnConfiguration();
+    conf = new YarnConfiguration();
     this.trackingUriPlugins =
         conf.getInstances(YarnConfiguration.YARN_TRACKING_URL_GENERATOR,
             TrackingUriPlugin.class);
@@ -300,7 +301,8 @@ public class WebAppProxyServlet extends HttpServlet {
         return;
       } else {
         if (ProxyUriUtils.getSchemeFromUrl(original).isEmpty()) {
-          trackingUri = ProxyUriUtils.getUriFromAMUrl("http", original);
+          trackingUri = ProxyUriUtils.getUriFromAMUrl(
+              WebAppUtils.getHttpSchemePrefix(conf), original);
         } else {
           trackingUri = new URI(original);
         }

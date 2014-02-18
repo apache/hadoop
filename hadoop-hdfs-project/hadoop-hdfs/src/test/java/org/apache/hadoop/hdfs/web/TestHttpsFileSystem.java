@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.web;
 
 import java.io.File;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.URI;
 
@@ -30,6 +31,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.http.HttpConfig;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -65,9 +67,11 @@ public class TestHttpsFileSystem {
 
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     cluster.waitActive();
-    cluster.getFileSystem().create(new Path("/test")).close();
+    OutputStream os = cluster.getFileSystem().create(new Path("/test"));
+    os.write(23);
+    os.close();
     InetSocketAddress addr = cluster.getNameNode().getHttpsAddress();
-    nnAddr = addr.getHostName() + ":" + addr.getPort();
+    nnAddr = NetUtils.getHostPortString(addr);
     conf.set(DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY, nnAddr);
   }
 
@@ -82,6 +86,9 @@ public class TestHttpsFileSystem {
   public void testHsftpFileSystem() throws Exception {
     FileSystem fs = FileSystem.get(new URI("hsftp://" + nnAddr), conf);
     Assert.assertTrue(fs.exists(new Path("/test")));
+    InputStream is = fs.open(new Path("/test"));
+    Assert.assertEquals(23, is.read());
+    is.close();
     fs.close();
   }
 

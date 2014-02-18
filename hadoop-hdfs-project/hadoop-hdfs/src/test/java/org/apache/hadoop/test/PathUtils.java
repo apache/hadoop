@@ -19,6 +19,7 @@ package org.apache.hadoop.test;
 
 import java.io.File;
 
+import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.fs.Path;
 
 public class PathUtils {
@@ -36,7 +37,10 @@ public class PathUtils {
   }
   
   public static File getTestDir(Class<?> caller, boolean create) {
-    File dir = new File(System.getProperty("test.build.data", "/tmp"), caller.getSimpleName());
+    File dir =
+        new File(System.getProperty("test.build.data", "target/test/data")
+            + "/" + RandomStringUtils.randomAlphanumeric(10),
+            caller.getSimpleName());
     if (create) {
       dir.mkdirs();
     }

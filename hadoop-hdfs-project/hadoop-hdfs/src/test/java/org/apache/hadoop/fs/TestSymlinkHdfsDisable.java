@@ -42,8 +42,7 @@ public class TestSymlinkHdfsDisable {
     DistributedFileSystem dfs = cluster.getFileSystem();
     FileContext fc = FileContext.getFileContext(cluster.getURI(0), conf);
     // Create test files/links
-    FileContextTestHelper helper = new FileContextTestHelper(
-        "/tmp/TestSymlinkHdfsDisable");
+    FileContextTestHelper helper = new FileContextTestHelper();
     Path root = helper.getTestRootPath(fc);
     Path target = new Path(root, "target");
     Path link = new Path(root, "link");

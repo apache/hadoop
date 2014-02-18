@@ -18,23 +18,17 @@
 
 package org.apache.hadoop.yarn.server;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.ha.HAServiceProtocol;
-import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.server.resourcemanager.AdminService;
-import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
-import org.junit.Before;
-import org.junit.Test;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ha.HAServiceProtocol;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.junit.Before;
+import org.junit.Test;
 
 public class TestMiniYARNClusterForHA {
   MiniYARNCluster cluster;
@@ -43,6 +37,8 @@ public class TestMiniYARNClusterForHA {
   public void setup() throws IOException, InterruptedException {
     Configuration conf = new YarnConfiguration();
     conf.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
+    conf.set(YarnConfiguration.RM_WEBAPP_ADDRESS, "localhost:0");
+
     cluster = new MiniYARNCluster(TestMiniYARNClusterForHA.class.getName(),
         2, 1, 1, 1);
     cluster.init(conf);

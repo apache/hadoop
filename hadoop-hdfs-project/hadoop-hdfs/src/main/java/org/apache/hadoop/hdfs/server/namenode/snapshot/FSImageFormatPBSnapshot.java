@@ -383,7 +383,7 @@ public class FSImageFormatPBSnapshot {
         INodeReferenceSection.INodeReference.Builder rb = buildINodeReference(ref);
         rb.build().writeDelimitedTo(out);
       }
-      parent.commitSection(headers, SectionName.INODE_REFRENCE);
+      parent.commitSection(headers, SectionName.INODE_REFERENCE);
     }
 
     private INodeReferenceSection.INodeReference.Builder buildINodeReference(

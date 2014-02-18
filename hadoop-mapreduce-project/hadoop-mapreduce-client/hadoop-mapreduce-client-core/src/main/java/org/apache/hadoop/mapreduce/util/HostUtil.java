@@ -20,7 +20,6 @@ package org.apache.hadoop.mapreduce.util;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.http.HttpConfig;
 
 @Private
 @Unstable
@@ -33,9 +32,9 @@ public class HostUtil {
    * @param taskAttemptID
    * @return the taskLogUrl
    */
-  public static String getTaskLogUrl(String taskTrackerHostName,
+  public static String getTaskLogUrl(String scheme, String taskTrackerHostName,
     String httpPort, String taskAttemptID) {
-    return (HttpConfig.getSchemePrefix() + taskTrackerHostName + ":" +
+    return (scheme + taskTrackerHostName + ":" +
         httpPort + "/tasklog?attemptid=" + taskAttemptID);
   }
 

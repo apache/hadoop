@@ -15,6 +15,18 @@ Trunk - Unreleased
     YARN-524 TestYarnVersionInfo failing if generated properties doesn't
     include an SVN URL. (stevel)
 
+Release 2.5.0 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES 
+
 Release 2.4.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -272,6 +284,16 @@ Release 2.4.0 - UNRELEASED
     YARN-1417. Modified RM to generate container-tokens not at creation time, but
     at allocation time so as to prevent RM from shelling out containers with
     expired tokens. (Omkar Vinit Joshi and Jian He via vinodkv)
+
+    YARN-1553. Modified YARN and MR to stop using HttpConfig.isSecure() and
+    instead rely on the http policy framework. And also fix some bugs related
+    to https handling in YARN web-apps. (Haohui Mai via vinodkv)
+
+    YARN-1721. When moving app between queues in Fair Scheduler, grab lock on
+    FSSchedulerApp (Sandy Ryza)
+
+    YARN-1724. Race condition in Fair Scheduler when continuous scheduling is
+    turned on (Sandy Ryza)
 
 Release 2.3.1 - UNRELEASED
 

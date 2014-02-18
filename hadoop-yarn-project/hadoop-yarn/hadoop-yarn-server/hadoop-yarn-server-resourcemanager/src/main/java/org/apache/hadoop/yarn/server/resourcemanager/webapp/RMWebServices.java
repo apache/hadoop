@@ -41,6 +41,7 @@ import javax.ws.rs.core.MediaType;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
@@ -85,6 +86,7 @@ import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
+import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
@@ -101,16 +103,18 @@ public class RMWebServices {
       .getRecordFactory(null);
   private final ApplicationACLsManager aclsManager;
   private final QueueACLsManager queueACLsManager;
-
+  private final Configuration conf;
   private @Context HttpServletResponse response;
 
   @Inject
   public RMWebServices(final ResourceManager rm,
       final ApplicationACLsManager aclsManager,
-      final QueueACLsManager queueACLsManager) {
+      final QueueACLsManager queueACLsManager,
+      Configuration conf) {
     this.rm = rm;
     this.aclsManager = aclsManager;
     this.queueACLsManager = queueACLsManager;
+    this.conf = conf;
   }
 
   protected Boolean hasAccess(RMApp app, HttpServletRequest hsr) {
@@ -415,7 +419,8 @@ public class RMWebServices {
         }
       }
 
-      AppInfo app = new AppInfo(rmapp, hasAccess(rmapp, hsr));
+      AppInfo app = new AppInfo(rmapp, hasAccess(rmapp, hsr),
+          WebAppUtils.getHttpSchemePrefix(conf));
       allApps.add(app);
     }
     return allApps;
@@ -555,7 +560,7 @@ public class RMWebServices {
     if (app == null) {
       throw new NotFoundException("app with id: " + appId + " not found");
     }
-    return new AppInfo(app, hasAccess(app, hsr));
+    return new AppInfo(app, hasAccess(app, hsr), hsr.getScheme() + "://");
   }
 
   @GET

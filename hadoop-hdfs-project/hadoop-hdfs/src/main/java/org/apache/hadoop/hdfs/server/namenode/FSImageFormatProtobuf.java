@@ -234,7 +234,7 @@ public final class FSImageFormatProtobuf {
           inodeLoader.loadINodeSection(in);
         }
           break;
-        case INODE_REFRENCE:
+        case INODE_REFERENCE:
           snapshotLoader.loadINodeReferenceSection(in);
           break;
         case INODE_DIR:
@@ -553,7 +553,7 @@ public final class FSImageFormatProtobuf {
     NS_INFO("NS_INFO"),
     STRING_TABLE("STRING_TABLE"),
     INODE("INODE"),
-    INODE_REFRENCE("INODE_REFRENCE"),
+    INODE_REFERENCE("INODE_REFERENCE"),
     SNAPSHOT("SNAPSHOT"),
     INODE_DIR("INODE_DIR"),
     FILES_UNDERCONSTRUCTION("FILES_UNDERCONSTRUCTION"),

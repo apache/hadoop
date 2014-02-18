@@ -28,6 +28,7 @@ import org.apache.hadoop.util.Shell;
 import org.junit.*;
 
 import javax.security.auth.Subject;
+import javax.security.auth.kerberos.KerberosPrincipal;
 import javax.security.auth.login.AppConfigurationEntry;
 import javax.security.auth.login.LoginContext;
 import java.io.BufferedReader;
@@ -766,6 +767,16 @@ public class TestUserGroupInformation {
           return null;
         }
       });
+  }
+
+  @Test (timeout = 30000)
+  public void testGetUGIFromSubject() throws Exception {
+    KerberosPrincipal p = new KerberosPrincipal("guest");
+    Subject subject = new Subject();
+    subject.getPrincipals().add(p);
+    UserGroupInformation ugi = UserGroupInformation.getUGIFromSubject(subject);
+    assertNotNull(ugi);
+    assertEquals("guest@DEFAULT.REALM", ugi.getUserName());
   }
 
   /** Test hasSufficientTimeElapsed method */

@@ -259,65 +259,26 @@ Trunk (Unreleased)
     HDFS-5794. Fix the inconsistency of layout version number of 
     ADD_DATANODE_AND_STORAGE_UUIDS between trunk and branch-2. (jing9)
 
-  BREAKDOWN OF HDFS-5698 SUBTASKS AND RELATED JIRAS
+Release 2.5.0 - UNRELEASED
 
-    HDFS-5717. Save FSImage header in protobuf. (Haohui Mai via jing9)
+  INCOMPATIBLE CHANGES
 
-    HDFS-5738. Serialize INode information in protobuf. (Haohui Mai via jing9)
+  NEW FEATURES
 
-    HDFS-5772. Serialize under-construction file information in FSImage. (jing9)
+  IMPROVEMENTS
 
-    HDFS-5783. Compute the digest before loading FSImage. (Haohui Mai via jing9)
+  OPTIMIZATIONS
 
-    HDFS-5785. Serialize symlink in protobuf. (Haohui Mai via jing9)
-
-    HDFS-5793. Optimize the serialization of PermissionStatus. (Haohui Mai via
-    jing9)
-
-    HDFS-5743. Use protobuf to serialize snapshot information. (jing9)
-
-    HDFS-5774. Serialize CachePool directives in protobuf. (Haohui Mai via jing9)
-
-    HDFS-5744. Serialize information for token managers in protobuf. (Haohui Mai
-    via jing9)
-
-    HDFS-5824. Add a Type field in Snapshot DiffEntry's protobuf definition.
-    (jing9)
-
-    HDFS-5808. Implement cancellation when saving FSImage. (Haohui Mai via jing9)
-
-    HDFS-5826. Update the stored edit logs to be consistent with the changes in
-    HDFS-5698 branch. (Haohui Mai via jing9)
-
-    HDFS-5797. Implement offline image viewer. (Haohui Mai via jing9)
-
-    HDFS-5771. Track progress when loading fsimage. (Haohui Mai via cnauroth)
-
-    HDFS-5871. Use PBHelper to serialize CacheDirectiveInfoExpirationProto.
-    (Haohui Mai via jing9)
-
-    HDFS-5884. LoadDelegator should use IOUtils.readFully() to read the magic
-    header. (Haohui Mai via jing9)
-
-    HDFS-5885. Add annotation for repeated fields in the protobuf definition.
-    (Haohui Mai via jing9)
-
-    HDFS-5906. Fixing findbugs and javadoc warnings in the HDFS-5698 branch.
-    (Haohui Mai via jing9)
-
-    HDFS-5911. The id of a CacheDirective instance does not get serialized in 
-    the protobuf-fsimage. (Haohui Mai via jing9)
-
-    HDFS-5915. Refactor FSImageFormatProtobuf to simplify cross section reads.
-    (Haohui Mai via cnauroth)
-
-    HDFS-5847. Consolidate INodeReference into a separate section. (jing9)
+  BUG FIXES 
 
 Release 2.4.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
   NEW FEATURES
+
+    HDFS-5698. Use protobuf to serialize / deserialize FSImage. (See breakdown
+    of tasks below for features and contributors)
 
   IMPROVEMENTS
 
@@ -450,6 +411,90 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-5943. 'dfs.namenode.https-address' property is not loaded from
     configuration in federation setup. (suresh)
+
+    HDFS-3128. Unit tests should not use a test root in /tmp. (wang)
+
+    HDFS-5948. TestBackupNode flakes with port in use error. (Haohui Mai
+    via Arpit Agarwal)
+
+    HDFS-5949. New Namenode UI when trying to download a file, the browser
+    doesn't know the file name. (Haohui Mai via brandonli)
+
+    HDFS-5716. Allow WebHDFS to use pluggable authentication filter
+    (Haohui Mai via brandonli)
+
+    HDFS-5953. TestBlockReaderFactory fails in trunk. (Akira Ajisaka via wang)
+
+    HDFS-5759. Web UI does not show up during the period of loading FSImage.
+    (Haohui Mai via Arpit Agarwal)
+
+    HDFS-5942. Fix javadoc in OfflineImageViewer. (Akira Ajisaka via cnauroth)
+
+    HDFS-5780. TestRBWBlockInvalidation times out intemittently. (Mit Desai
+    via kihwal)
+
+    HDFS-5803. TestBalancer.testBalancer0 fails. (Chen He via kihwal)
+
+    HDFS-5893. HftpFileSystem.RangeHeaderUrlOpener uses the default
+    URLConnectionFactory which does not import SSL certificates. (Haohui Mai via
+    jing9)
+
+  BREAKDOWN OF HDFS-5698 SUBTASKS AND RELATED JIRAS
+
+    HDFS-5717. Save FSImage header in protobuf. (Haohui Mai via jing9)
+
+    HDFS-5738. Serialize INode information in protobuf. (Haohui Mai via jing9)
+
+    HDFS-5772. Serialize under-construction file information in FSImage. (jing9)
+
+    HDFS-5783. Compute the digest before loading FSImage. (Haohui Mai via jing9)
+
+    HDFS-5785. Serialize symlink in protobuf. (Haohui Mai via jing9)
+
+    HDFS-5793. Optimize the serialization of PermissionStatus. (Haohui Mai via
+    jing9)
+
+    HDFS-5743. Use protobuf to serialize snapshot information. (jing9)
+
+    HDFS-5774. Serialize CachePool directives in protobuf. (Haohui Mai via jing9)
+
+    HDFS-5744. Serialize information for token managers in protobuf. (Haohui Mai
+    via jing9)
+
+    HDFS-5824. Add a Type field in Snapshot DiffEntry's protobuf definition.
+    (jing9)
+
+    HDFS-5808. Implement cancellation when saving FSImage. (Haohui Mai via jing9)
+
+    HDFS-5826. Update the stored edit logs to be consistent with the changes in
+    HDFS-5698 branch. (Haohui Mai via jing9)
+
+    HDFS-5797. Implement offline image viewer. (Haohui Mai via jing9)
+
+    HDFS-5771. Track progress when loading fsimage. (Haohui Mai via cnauroth)
+
+    HDFS-5871. Use PBHelper to serialize CacheDirectiveInfoExpirationProto.
+    (Haohui Mai via jing9)
+
+    HDFS-5884. LoadDelegator should use IOUtils.readFully() to read the magic
+    header. (Haohui Mai via jing9)
+
+    HDFS-5885. Add annotation for repeated fields in the protobuf definition.
+    (Haohui Mai via jing9)
+
+    HDFS-5906. Fixing findbugs and javadoc warnings in the HDFS-5698 branch.
+    (Haohui Mai via jing9)
+
+    HDFS-5911. The id of a CacheDirective instance does not get serialized in 
+    the protobuf-fsimage. (Haohui Mai via jing9)
+
+    HDFS-5915. Refactor FSImageFormatProtobuf to simplify cross section reads.
+    (Haohui Mai via cnauroth)
+
+    HDFS-5847. Consolidate INodeReference into a separate section. (jing9)
+
+    HDFS-5959. Fix typo at section name in FSImageFormatProtobuf.java.
+    (Akira Ajisaka via suresh)
 
 Release 2.3.1 - UNRELEASED
 

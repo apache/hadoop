@@ -279,7 +279,10 @@ public class CommonConfigurationKeysPublic {
           60;
 
   // HTTP policies to be used in configuration
+  // Use HttpPolicy.name() instead
+  @Deprecated
   public static final String HTTP_POLICY_HTTP_ONLY = "HTTP_ONLY";
+  @Deprecated
   public static final String HTTP_POLICY_HTTPS_ONLY = "HTTPS_ONLY";
 }
 

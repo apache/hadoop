@@ -21,6 +21,7 @@ package org.apache.hadoop.mapreduce.v2.jobhistory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.http.HttpConfig;
 
 /**
  * Stores Job History configuration keys that can be set by administrators of
@@ -135,7 +136,7 @@ public class JHAdminConfig {
   public static final String MR_HS_HTTP_POLICY = MR_HISTORY_PREFIX
       + "http.policy";
   public static String DEFAULT_MR_HS_HTTP_POLICY =
-          CommonConfigurationKeysPublic.HTTP_POLICY_HTTP_ONLY;
+          HttpConfig.Policy.HTTP_ONLY.name();
   
   /**The address the history server webapp is on.*/
   public static final String MR_HISTORY_WEBAPP_ADDRESS =

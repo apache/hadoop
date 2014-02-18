@@ -26,20 +26,16 @@ import java.net.UnknownHostException;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.http.HttpConfig.Policy;
+import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
-import com.google.common.base.Joiner;
-
 @Private
 @Evolving
 public class WebAppUtils {
-  private static final Joiner JOINER = Joiner.on("");
-
   public static void setRMWebAppPort(Configuration conf, int port) {
     String hostname = getRMWebAppURLWithoutScheme(conf);
     hostname =
@@ -51,7 +47,7 @@ public class WebAppUtils {
   public static void setRMWebAppHostnameAndPort(Configuration conf,
       String hostname, int port) {
     String resolvedAddress = hostname + ":" + port;
-    if (HttpConfig.isSecure()) {
+    if (YarnConfiguration.useHttps(conf)) {
       conf.set(YarnConfiguration.RM_WEBAPP_HTTPS_ADDRESS, resolvedAddress);
     } else {
       conf.set(YarnConfiguration.RM_WEBAPP_ADDRESS, resolvedAddress);
@@ -60,7 +56,7 @@ public class WebAppUtils {
   
   public static void setNMWebAppHostNameAndPort(Configuration conf,
       String hostName, int port) {
-    if (HttpConfig.isSecure()) {
+    if (YarnConfiguration.useHttps(conf)) {
       conf.set(YarnConfiguration.NM_WEBAPP_HTTPS_ADDRESS,
           hostName + ":" + port);
     } else {
@@ -70,16 +66,11 @@ public class WebAppUtils {
   }
   
   public static String getRMWebAppURLWithScheme(Configuration conf) {
-    return JOINER.join(HttpConfig.getSchemePrefix(),
-        HttpConfig.isSecure() ? conf.get(
-            YarnConfiguration.RM_WEBAPP_HTTPS_ADDRESS,
-            YarnConfiguration.DEFAULT_RM_WEBAPP_HTTPS_ADDRESS) : conf.get(
-            YarnConfiguration.RM_WEBAPP_ADDRESS,
-            YarnConfiguration.DEFAULT_RM_WEBAPP_ADDRESS));
+    return getHttpSchemePrefix(conf) + getRMWebAppURLWithoutScheme(conf);
   }
   
   public static String getRMWebAppURLWithoutScheme(Configuration conf) {
-    if (HttpConfig.isSecure()) {
+    if (YarnConfiguration.useHttps(conf)) {
       return conf.get(YarnConfiguration.RM_WEBAPP_HTTPS_ADDRESS,
           YarnConfiguration.DEFAULT_RM_WEBAPP_HTTPS_ADDRESS);
     }else {
@@ -97,13 +88,13 @@ public class WebAppUtils {
   }
 
   public static String getResolvedRMWebAppURLWithScheme(Configuration conf) {
-    return HttpConfig.getSchemePrefix()
+    return getHttpSchemePrefix(conf)
         + getResolvedRMWebAppURLWithoutScheme(conf);
   }
   
   public static String getResolvedRMWebAppURLWithoutScheme(Configuration conf) {
     return getResolvedRMWebAppURLWithoutScheme(conf,
-        HttpConfig.isSecure() ? Policy.HTTPS_ONLY : Policy.HTTP_ONLY);
+        YarnConfiguration.useHttps(conf) ? Policy.HTTPS_ONLY : Policy.HTTP_ONLY);
   }
   
   public static String getResolvedRMWebAppURLWithoutScheme(Configuration conf,
@@ -140,7 +131,7 @@ public class WebAppUtils {
   }
   
   public static String getNMWebAppURLWithoutScheme(Configuration conf) {
-    if (HttpConfig.isSecure()) {
+    if (YarnConfiguration.useHttps(conf)) {
       return conf.get(YarnConfiguration.NM_WEBAPP_HTTPS_ADDRESS,
         YarnConfiguration.DEFAULT_NM_WEBAPP_HTTPS_ADDRESS);
     } else {
@@ -150,7 +141,7 @@ public class WebAppUtils {
   }
 
   public static String getAHSWebAppURLWithoutScheme(Configuration conf) {
-    if (HttpConfig.isSecure()) {
+    if (YarnConfiguration.useHttps(conf)) {
       return conf.get(YarnConfiguration.AHS_WEBAPP_HTTPS_ADDRESS,
         YarnConfiguration.DEFAULT_AHS_WEBAPP_HTTPS_ADDRESS);
     } else {
@@ -177,8 +168,38 @@ public class WebAppUtils {
   
   public static String getLogUrl(String nodeHttpAddress, String allocatedNode,
       ContainerId containerId, String user) {
-    return join(HttpConfig.getSchemePrefix(), nodeHttpAddress, "/logs", "/",
+    return join("//", nodeHttpAddress, "/logs", "/",
         allocatedNode, "/", ConverterUtils.toString(containerId), "/",
         ConverterUtils.toString(containerId), "/", user);
+  }
+
+  /**
+   * Choose which scheme (HTTP or HTTPS) to use when generating a URL based on
+   * the configuration.
+   * 
+   * @return the schmeme (HTTP / HTTPS)
+   */
+  public static String getHttpSchemePrefix(Configuration conf) {
+    return YarnConfiguration.useHttps(conf) ? "https://" : "http://";
+  }
+
+  /**
+   * Load the SSL keystore / truststore into the HttpServer builder.
+   */
+  public static HttpServer2.Builder loadSslConfiguration(
+      HttpServer2.Builder builder) {
+    Configuration sslConf = new Configuration(false);
+    boolean needsClientAuth = YarnConfiguration.YARN_SSL_CLIENT_HTTPS_NEED_AUTH_DEFAULT;
+    sslConf.addResource(YarnConfiguration.YARN_SSL_SERVER_RESOURCE_DEFAULT);
+
+    return builder
+        .needsClientAuth(needsClientAuth)
+        .keyPassword(sslConf.get("ssl.server.keystore.keypassword"))
+        .keyStore(sslConf.get("ssl.server.keystore.location"),
+            sslConf.get("ssl.server.keystore.password"),
+            sslConf.get("ssl.server.keystore.type", "jks"))
+        .trustStore(sslConf.get("ssl.server.truststore.location"),
+            sslConf.get("ssl.server.truststore.password"),
+            sslConf.get("ssl.server.truststore.type", "jks"));
   }
 }
