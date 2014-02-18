@@ -74,7 +74,7 @@ public class TestBalancer {
 
   ClientProtocol client;
 
-  static final long TIMEOUT = 20000L; //msec
+  static final long TIMEOUT = 40000L; //msec
   static final double CAPACITY_ALLOWED_VARIANCE = 0.005;  // 0.5%
   static final double BALANCE_ALLOWED_VARIANCE = 0.11;    // 10%+delta
   static final int DEFAULT_BLOCK_SIZE = 10;
