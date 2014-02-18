@@ -314,8 +314,9 @@ public class FSImage implements Closeable {
     return isFormatted;
   }
 
-  void doUpgrade(FSNamesystem target) throws IOException {
-    // Upgrade is allowed only if there are 
+  /** Check if upgrade is in progress. */
+  void checkUpgrade(FSNamesystem target) throws IOException {
+    // Upgrade or rolling upgrade is allowed only if there are 
     // no previous fs states in any of the local directories
     for (Iterator<StorageDirectory> it = storage.dirIterator(false); it.hasNext();) {
       StorageDirectory sd = it.next();
@@ -324,11 +325,16 @@ public class FSImage implements Closeable {
             "previous fs state should not exist during upgrade. "
             + "Finalize or rollback first.");
     }
+  }
+
+  void doUpgrade(FSNamesystem target) throws IOException {
+    checkUpgrade(target);
 
     // load the latest image
 
     // Do upgrade for each directory
     this.loadFSImage(target, StartupOption.UPGRADE, null);
+    target.checkRollingUpgrade("upgrade namenode");
     
     long oldCTime = storage.getCTime();
     storage.cTime = now();  // generate new cTime for the state

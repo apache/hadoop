@@ -63,7 +63,7 @@ public class NameNodeLayoutVersion {
    * </ul>
    */
   public static enum Feature implements LayoutFeature {
-    ROLLING_UPGRADE_MARKER(-52, "Upgrade marker for rolling upgrade");
+    ROLLING_UPGRADE(-52, "Support rolling upgrade");
     
     private final FeatureInfo info;
 

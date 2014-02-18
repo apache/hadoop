@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs;
 
 import java.io.File;
+import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -27,15 +28,13 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
-import org.apache.hadoop.hdfs.protocol.RollingUpgradeException;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.qjournal.MiniJournalCluster;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.RollingUpgradeStartupOption;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
-import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.namenode.SecondaryNameNode;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
-import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ExitUtil.ExitException;
 import org.junit.Assert;
@@ -100,9 +99,13 @@ public class TestRollingUpgrade {
         Assert.assertTrue(dfs.exists(foo));
         Assert.assertTrue(dfs.exists(bar));
         Assert.assertTrue(dfs.exists(baz));
+
+        dfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+        dfs.saveNamespace();
+        dfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
       }
 
-      cluster.restartNameNode();
+      cluster.restartNameNode("-rollingupgrade", "started");
       {
         final DistributedFileSystem dfs = cluster.getFileSystem();
         Assert.assertTrue(dfs.exists(foo));
@@ -182,24 +185,6 @@ public class TestRollingUpgrade {
         Assert.assertEquals(info1, dfs.rollingUpgrade(RollingUpgradeAction.QUERY));
   
         dfs.mkdirs(bar);
-        
-        //save namespace should fail
-        try {
-          dfs.saveNamespace();
-          Assert.fail();
-        } catch(RemoteException re) {
-          Assert.assertEquals(RollingUpgradeException.class.getName(),
-              re.getClassName());
-          LOG.info("The exception is expected.", re);
-        }
-
-        //start checkpoint should fail
-        try {
-          NameNodeAdapter.startCheckpoint(cluster.getNameNode(), null, null);
-          Assert.fail();
-        } catch(RollingUpgradeException re) {
-          LOG.info("The exception is expected.", re);
-        }
       }
 
       // cluster2 takes over QJM
@@ -231,8 +216,15 @@ public class TestRollingUpgrade {
       Assert.assertTrue(dfs2.exists(bar));
       Assert.assertTrue(dfs2.exists(baz));
 
+      //restart cluster with -upgrade should fail.
+      try {
+        cluster2.restartNameNode("-upgrade");
+      } catch(IOException e) {
+        LOG.info("The exception is expected.", e);
+      }
+
       LOG.info("RESTART cluster 2 with -rollingupgrade started again");
-      cluster2.restartNameNode();
+      cluster2.restartNameNode("-rollingupgrade", "started");
       Assert.assertEquals(info1, dfs2.rollingUpgrade(RollingUpgradeAction.QUERY));
       Assert.assertTrue(dfs2.exists(foo));
       Assert.assertTrue(dfs2.exists(bar));

@@ -78,7 +78,7 @@ public class TestLayoutVersion {
   @Test
   public void testNameNodeFeature() {
     assertTrue(NameNodeLayoutVersion.supports(LayoutVersion.Feature.CACHING,
-        NameNodeLayoutVersion.Feature.ROLLING_UPGRADE_MARKER.getInfo().getLayoutVersion()));
+        NameNodeLayoutVersion.Feature.ROLLING_UPGRADE.getInfo().getLayoutVersion()));
   }
   
   /**

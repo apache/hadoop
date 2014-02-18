@@ -43,3 +43,6 @@ HDFS-5535 subtasks:
 
     HDFS-5920. Support rollback of rolling upgrade in NameNode and JournalNodes.
     (jing9)
+
+    HDFS-5945. Add rolling upgrade information to fsimage; and disallow upgrade
+    and rolling upgrade to be started simultaneously.  (szetszwo & jing9)

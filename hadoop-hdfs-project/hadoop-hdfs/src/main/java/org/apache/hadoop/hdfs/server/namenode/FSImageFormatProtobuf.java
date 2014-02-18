@@ -42,7 +42,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CacheDirectiveInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CachePoolInfoProto;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
@@ -279,6 +278,9 @@ public final class FSImageFormatProtobuf {
       fsn.setGenerationStampV1Limit(s.getGenstampV1Limit());
       fsn.setLastAllocatedBlockId(s.getLastAllocatedBlockId());
       imgTxId = s.getTransactionId();
+      if (s.hasRollingUpgradeStartTime()) {
+        fsn.setRollingUpgradeInfo(s.getRollingUpgradeStartTime());
+      }
     }
 
     private void loadStringTableSection(InputStream in) throws IOException {
@@ -519,6 +521,9 @@ public final class FSImageFormatProtobuf {
       // from the actual saver thread, there's a potential of a
       // fairness-related deadlock. See the comments on HDFS-2223.
       b.setNamespaceId(fsn.unprotectedGetNamespaceInfo().getNamespaceID());
+      if (fsn.isRollingUpgrade()) {
+        b.setRollingUpgradeStartTime(fsn.getRollingUpgradeInfo().getStartTime());
+      }
       NameSystemSection s = b.build();
       s.writeDelimitedTo(out);
 
