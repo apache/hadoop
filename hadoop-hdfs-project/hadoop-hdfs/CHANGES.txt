@@ -472,6 +472,9 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-5847. Consolidate INodeReference into a separate section. (jing9)
 
+    HDFS-5959. Fix typo at section name in FSImageFormatProtobuf.java.
+    (Akira Ajisaka via suresh)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
