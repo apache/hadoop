@@ -277,6 +277,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1721. When moving app between queues in Fair Scheduler, grab lock on
     FSSchedulerApp (Sandy Ryza)
 
+    YARN-1724. Race condition in Fair Scheduler when continuous scheduling is
+    turned on (Sandy Ryza)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
