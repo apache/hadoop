@@ -43,7 +43,6 @@ import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.service.AbstractService;
-import org.apache.hadoop.yarn.LocalConfigurationProvider;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.ApplicationsRequestScope;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenRequest;
@@ -170,10 +169,10 @@ public class ClientRMService extends AbstractService implements
     if (conf.getBoolean(
         CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION, 
         false)) {
-      refreshServiceAcls(
-          this.rmContext.getConfigurationProvider().getConfiguration(conf,
-              YarnConfiguration.HADOOP_POLICY_CONFIGURATION_FILE),
-          RMPolicyProvider.getInstance());
+      conf.addResource(this.rmContext.getConfigurationProvider()
+          .getConfigurationInputStream(conf,
+              YarnConfiguration.HADOOP_POLICY_CONFIGURATION_FILE));
+      refreshServiceAcls(conf, RMPolicyProvider.getInstance());
     }
     
     this.server.start();
@@ -806,13 +805,8 @@ public class ClientRMService extends AbstractService implements
 
   void refreshServiceAcls(Configuration configuration, 
       PolicyProvider policyProvider) {
-    if (this.rmContext.getConfigurationProvider() instanceof
-        LocalConfigurationProvider) {
-      this.server.refreshServiceAcl(configuration, policyProvider);
-    } else {
-      this.server.refreshServiceAclWithLoadedConfiguration(configuration,
-          policyProvider);
-    }
+    this.server.refreshServiceAclWithLoadedConfiguration(configuration,
+        policyProvider);
   }
 
   private boolean isAllowedDelegationTokenOp() throws IOException {
