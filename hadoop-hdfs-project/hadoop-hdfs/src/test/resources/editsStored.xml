@@ -1310,4 +1310,11 @@
 >>>>>>> .merge-right.r1559304
     </DATA>
   </RECORD>
+  <RECORD>
+    <OPCODE>OP_SET_ACL</OPCODE>
+    <DATA>
+      <TXID>73</TXID>
+      <SRC>/file_set_acl</SRC>
+    </DATA>
+  </RECORD>
 </EDITS>

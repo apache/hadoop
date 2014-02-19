@@ -22,6 +22,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -34,6 +35,8 @@ import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.UnresolvedLinkException;
+import org.apache.hadoop.fs.permission.AclEntry;
+import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
@@ -57,6 +60,12 @@ import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
+import org.apache.hadoop.hdfs.protocol.proto.AclProtos.GetAclStatusRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.AclProtos.ModifyAclEntriesRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.AclProtos.RemoveAclEntriesRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.AclProtos.RemoveAclRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.AclProtos.RemoveDefaultAclRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.AclProtos.SetAclRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AbandonBlockRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AddBlockRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AddCacheDirectiveRequestProto;
@@ -1179,6 +1188,78 @@ public class ClientNamenodeProtocolTranslatorPB implements
         rpcProxy.listCachePools(null,
           ListCachePoolsRequestProto.newBuilder().
             setPrevPoolName(prevKey).build()));
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+
+  @Override
+  public void modifyAclEntries(String src, List<AclEntry> aclSpec)
+      throws IOException {
+    ModifyAclEntriesRequestProto req = ModifyAclEntriesRequestProto
+        .newBuilder().setSrc(src)
+        .addAllAclSpec(PBHelper.convertAclEntryProto(aclSpec)).build();
+    try {
+      rpcProxy.modifyAclEntries(null, req);
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+
+  @Override
+  public void removeAclEntries(String src, List<AclEntry> aclSpec)
+      throws IOException {
+    RemoveAclEntriesRequestProto req = RemoveAclEntriesRequestProto
+        .newBuilder().setSrc(src)
+        .addAllAclSpec(PBHelper.convertAclEntryProto(aclSpec)).build();
+    try {
+      rpcProxy.removeAclEntries(null, req);
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+
+  @Override
+  public void removeDefaultAcl(String src) throws IOException {
+    RemoveDefaultAclRequestProto req = RemoveDefaultAclRequestProto
+        .newBuilder().setSrc(src).build();
+    try {
+      rpcProxy.removeDefaultAcl(null, req);
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+
+  @Override
+  public void removeAcl(String src) throws IOException {
+    RemoveAclRequestProto req = RemoveAclRequestProto.newBuilder()
+        .setSrc(src).build();
+    try {
+      rpcProxy.removeAcl(null, req);
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+
+  @Override
+  public void setAcl(String src, List<AclEntry> aclSpec) throws IOException {
+    SetAclRequestProto req = SetAclRequestProto.newBuilder()
+        .setSrc(src)
+        .addAllAclSpec(PBHelper.convertAclEntryProto(aclSpec))
+        .build();
+    try {
+      rpcProxy.setAcl(null, req);
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+
+  @Override
+  public AclStatus getAclStatus(String src) throws IOException {
+    GetAclStatusRequestProto req = GetAclStatusRequestProto.newBuilder()
+        .setSrc(src).build();
+    try {
+      return PBHelper.convert(rpcProxy.getAclStatus(null, req));
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }

@@ -22,6 +22,8 @@ Release 2.5.0 - UNRELEASED
   NEW FEATURES
 
   IMPROVEMENTS
+    YARN-1479. Invalid NaN values in Hadoop REST API JSON response (Chen He via
+    jeagles)
 
   OPTIMIZATIONS
 
@@ -200,6 +202,10 @@ Release 2.4.0 - UNRELEASED
     be available across RM failover by making using of a remote
     configuration-provider. (Xuan Gong via vinodkv)
 
+    YARN-1666. Modified RM HA handling of include/exclude node-lists to be
+    available across RM failover by making using of a remote
+    configuration-provider. (Xuan Gong via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -294,6 +300,14 @@ Release 2.4.0 - UNRELEASED
 
     YARN-1724. Race condition in Fair Scheduler when continuous scheduling is
     turned on (Sandy Ryza)
+
+    YARN-1590. Fixed ResourceManager, web-app proxy and MR JobHistoryServer to
+    expand _HOST properly in their kerberos principles. (Mohammad Kamrul Islam
+    va vinodkv)
+
+    YARN-1428. Fixed RM to write the final state of RMApp/RMAppAttempt to the 
+    application history store in the transition to the final state. (Contributed
+    by Zhijie Shen)
 
 Release 2.3.1 - UNRELEASED
 

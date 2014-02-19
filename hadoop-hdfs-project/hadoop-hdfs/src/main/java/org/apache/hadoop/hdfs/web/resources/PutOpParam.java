@@ -37,6 +37,12 @@ public class PutOpParam extends HttpOpParam<PutOpParam.Op> {
     RENEWDELEGATIONTOKEN(false, HttpURLConnection.HTTP_OK, true),
     CANCELDELEGATIONTOKEN(false, HttpURLConnection.HTTP_OK, true),
     
+    MODIFYACLENTRIES(false, HttpURLConnection.HTTP_OK),
+    REMOVEACLENTRIES(false, HttpURLConnection.HTTP_OK),
+    REMOVEDEFAULTACL(false, HttpURLConnection.HTTP_OK),
+    REMOVEACL(false, HttpURLConnection.HTTP_OK),
+    SETACL(false, HttpURLConnection.HTTP_OK),
+    
     NULL(false, HttpURLConnection.HTTP_NOT_IMPLEMENTED);
 
     final boolean doOutputAndRedirect;

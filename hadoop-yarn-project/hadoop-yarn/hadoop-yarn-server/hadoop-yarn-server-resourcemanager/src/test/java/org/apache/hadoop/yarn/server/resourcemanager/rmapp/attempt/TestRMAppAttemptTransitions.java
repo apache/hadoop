@@ -103,6 +103,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import org.mockito.ArgumentCaptor;
 
 @RunWith(value = Parameterized.class)
 public class TestRMAppAttemptTransitions {
@@ -367,6 +368,7 @@ public class TestRMAppAttemptTransitions {
     // verify(application).handle(anyObject());
     verify(application).handle(any(RMAppRejectedEvent.class));
     verifyTokenCount(applicationAttempt.getAppAttemptId(), 1);
+    verifyApplicationAttemptFinished(RMAppAttemptState.FAILED);
   }
 
   /**
@@ -384,9 +386,9 @@ public class TestRMAppAttemptTransitions {
     assertEquals(0, applicationAttempt.getRanNodes().size());
     assertNull(applicationAttempt.getFinalApplicationStatus());
     verifyTokenCount(applicationAttempt.getAppAttemptId(), 1);
-    verify(writer).applicationAttemptFinished(any(RMAppAttempt.class));
     verifyAttemptFinalStateSaved();
     assertFalse(transferStateFromPreviousAttempt);
+    verifyApplicationAttemptFinished(RMAppAttemptState.KILLED);
   }
   
   /**
@@ -460,8 +462,8 @@ public class TestRMAppAttemptTransitions {
     // Check events
     verify(application, times(1)).handle(any(RMAppFailedAttemptEvent.class));
     verifyTokenCount(applicationAttempt.getAppAttemptId(), 1);
-    verify(writer).applicationAttemptFinished(any(RMAppAttempt.class));
     verifyAttemptFinalStateSaved();
+    verifyApplicationAttemptFinished(RMAppAttemptState.FAILED);
   }
 
   /**
@@ -496,7 +498,6 @@ public class TestRMAppAttemptTransitions {
       assertEquals(getProxyUrl(applicationAttempt), 
           applicationAttempt.getTrackingUrl());
     }
-    verify(writer).applicationAttemptStarted(any(RMAppAttempt.class));
     // TODO - need to add more checks relevant to this state
   }
 
@@ -544,6 +545,7 @@ public class TestRMAppAttemptTransitions {
     assertEquals(finalStatus, applicationAttempt.getFinalApplicationStatus());
     verifyTokenCount(applicationAttempt.getAppAttemptId(), 1);
     assertFalse(transferStateFromPreviousAttempt);
+    verifyApplicationAttemptFinished(RMAppAttemptState.FINISHED);
   }
   
   
@@ -806,7 +808,7 @@ public class TestRMAppAttemptTransitions {
     assertEquals(RMAppAttemptState.FAILED,
       applicationAttempt.getAppAttemptState());
     verifyTokenCount(applicationAttempt.getAppAttemptId(), 1);
-    verify(writer).applicationAttemptFinished(any(RMAppAttempt.class));
+    verifyApplicationAttemptFinished(RMAppAttemptState.FAILED);
   }
   
   @Test
@@ -846,6 +848,7 @@ public class TestRMAppAttemptTransitions {
     assertEquals(rmAppPageUrl, applicationAttempt.getOriginalTrackingUrl());
     assertEquals(rmAppPageUrl, applicationAttempt.getTrackingUrl());
     verifyAMHostAndPortInvalidated();
+    verifyApplicationAttemptFinished(RMAppAttemptState.FAILED);
   }
 
   @Test
@@ -883,6 +886,7 @@ public class TestRMAppAttemptTransitions {
     assertEquals(rmAppPageUrl, applicationAttempt.getTrackingUrl());
     verifyTokenCount(applicationAttempt.getAppAttemptId(), 1);
     verifyAMHostAndPortInvalidated();
+    verifyApplicationAttemptFinished(RMAppAttemptState.KILLED);
   }
 
   @Test(timeout=10000)
@@ -903,6 +907,7 @@ public class TestRMAppAttemptTransitions {
     assertEquals(rmAppPageUrl, applicationAttempt.getOriginalTrackingUrl());
     assertEquals(rmAppPageUrl, applicationAttempt.getTrackingUrl());
     verifyTokenCount(applicationAttempt.getAppAttemptId(), 1);
+    verifyApplicationAttemptFinished(RMAppAttemptState.FAILED);
   }
 
   @Test(timeout=20000)
@@ -925,6 +930,7 @@ public class TestRMAppAttemptTransitions {
     assertEquals(rmAppPageUrl, applicationAttempt.getTrackingUrl());
     verifyTokenCount(applicationAttempt.getAppAttemptId(), 1);
     verifyAMHostAndPortInvalidated();
+    verifyApplicationAttemptFinished(RMAppAttemptState.FAILED);
   }
 
   @Test 
@@ -1177,6 +1183,7 @@ public class TestRMAppAttemptTransitions {
       applicationAttempt.getAppAttemptState());
     // should not kill containers when attempt fails.
     assertTrue(transferStateFromPreviousAttempt);
+    verifyApplicationAttemptFinished(RMAppAttemptState.FAILED);
 
     // failed attempt captured the container finished event.
     assertEquals(0, applicationAttempt.getJustFinishedContainers().size());
@@ -1216,6 +1223,7 @@ public class TestRMAppAttemptTransitions {
     assertEquals(RMAppAttemptState.FAILED,
       applicationAttempt.getAppAttemptState());
     assertFalse(transferStateFromPreviousAttempt);
+    verifyApplicationAttemptFinished(RMAppAttemptState.FAILED);
   }
 
   private void verifyTokenCount(ApplicationAttemptId appAttemptId, int count) {
@@ -1245,4 +1253,13 @@ public class TestRMAppAttemptTransitions {
     assertEquals("N/A", applicationAttempt.getHost());
     assertEquals(-1, applicationAttempt.getRpcPort());
   }
+
+  private void verifyApplicationAttemptFinished(RMAppAttemptState state) {
+    ArgumentCaptor<RMAppAttemptState> finalState =
+        ArgumentCaptor.forClass(RMAppAttemptState.class);
+    verify(writer).applicationAttemptFinished(
+        any(RMAppAttempt.class), finalState.capture());
+    Assert.assertEquals(state, finalState.getValue());
+  }
+
 }

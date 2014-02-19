@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -29,8 +30,6 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
-import org.apache.hadoop.http.HttpConfig;
-import org.apache.hadoop.http.HttpConfig.Policy;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.security.Groups;
@@ -43,7 +42,6 @@ import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.LocalConfigurationProvider;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -190,19 +188,18 @@ public class ResourceManager extends CompositeService implements Recoverable {
         ConfigurationProviderFactory.getConfigurationProvider(conf);
     this.configurationProvider.init(this.conf);
     rmContext.setConfigurationProvider(configurationProvider);
-    if (!(this.configurationProvider instanceof LocalConfigurationProvider)) {
-      // load yarn-site.xml
-      this.conf =
-          this.configurationProvider.getConfiguration(this.conf,
-              YarnConfiguration.YARN_SITE_XML_FILE);
-      // load core-site.xml
-      this.conf =
-          this.configurationProvider.getConfiguration(this.conf,
-              YarnConfiguration.CORE_SITE_CONFIGURATION_FILE);
-      // Do refreshUserToGroupsMappings with loaded core-site.xml
-      Groups.getUserToGroupsMappingServiceWithLoadedConfiguration(this.conf)
-          .refresh();
-    }
+
+    // load yarn-site.xml
+    this.conf.addResource(this.configurationProvider
+        .getConfigurationInputStream(this.conf,
+            YarnConfiguration.YARN_SITE_CONFIGURATION_FILE));
+    // load core-site.xml
+    this.conf.addResource(this.configurationProvider
+        .getConfigurationInputStream(this.conf,
+            YarnConfiguration.CORE_SITE_CONFIGURATION_FILE));
+    // Do refreshUserToGroupsMappings with loaded core-site.xml
+    Groups.getUserToGroupsMappingServiceWithLoadedConfiguration(this.conf)
+        .refresh();
 
     // register the handlers for all AlwaysOn services using setupDispatcher().
     rmDispatcher = setupDispatcher();
@@ -894,8 +891,9 @@ public class ResourceManager extends CompositeService implements Recoverable {
   }
   
   protected void doSecureLogin() throws IOException {
+	InetSocketAddress socAddr = getBindAddress(conf);
     SecurityUtil.login(this.conf, YarnConfiguration.RM_KEYTAB,
-        YarnConfiguration.RM_PRINCIPAL);
+        YarnConfiguration.RM_PRINCIPAL, socAddr.getHostName());
   }
 
   @Override
@@ -1041,5 +1039,18 @@ public class ResourceManager extends CompositeService implements Recoverable {
     rmDispatcher = dispatcher;
     addIfService(rmDispatcher);
     rmContext.setDispatcher(rmDispatcher);
+  }
+
+
+  /**
+   * Retrieve RM bind address from configuration
+   *
+   * @param conf
+   * @return InetSocketAddress
+   */
+public static InetSocketAddress getBindAddress(Configuration conf) {
+    return conf.getSocketAddr(YarnConfiguration.RM_ADDRESS,
+      YarnConfiguration.DEFAULT_RM_ADDRESS,
+      YarnConfiguration.DEFAULT_RM_PORT);
   }
 }

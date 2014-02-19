@@ -38,6 +38,18 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
+import org.apache.hadoop.hdfs.protocol.proto.AclProtos.GetAclStatusRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.AclProtos.GetAclStatusResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.AclProtos.ModifyAclEntriesRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.AclProtos.ModifyAclEntriesResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.AclProtos.RemoveAclEntriesRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.AclProtos.RemoveAclEntriesResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.AclProtos.RemoveAclRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.AclProtos.RemoveAclResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.AclProtos.RemoveDefaultAclRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.AclProtos.RemoveDefaultAclResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.AclProtos.SetAclRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.AclProtos.SetAclResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AbandonBlockRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AbandonBlockResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AddBlockRequestProto;
@@ -272,6 +284,24 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   private static final SetBalancerBandwidthResponseProto 
       VOID_SETBALANCERBANDWIDTH_RESPONSE = 
         SetBalancerBandwidthResponseProto.newBuilder().build();
+
+  private static final SetAclResponseProto
+    VOID_SETACL_RESPONSE = SetAclResponseProto.getDefaultInstance();
+
+  private static final ModifyAclEntriesResponseProto
+    VOID_MODIFYACLENTRIES_RESPONSE = ModifyAclEntriesResponseProto
+      .getDefaultInstance();
+
+  private static final RemoveAclEntriesResponseProto
+    VOID_REMOVEACLENTRIES_RESPONSE = RemoveAclEntriesResponseProto
+      .getDefaultInstance();
+
+  private static final RemoveDefaultAclResponseProto
+    VOID_REMOVEDEFAULTACL_RESPONSE = RemoveDefaultAclResponseProto
+      .getDefaultInstance();
+
+  private static final RemoveAclResponseProto
+    VOID_REMOVEACL_RESPONSE = RemoveAclResponseProto.getDefaultInstance();
 
   /**
    * Constructor
@@ -1158,6 +1188,75 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
         responseBuilder.addEntries(PBHelper.convert(entries.get(i)));
       }
       return responseBuilder.build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public ModifyAclEntriesResponseProto modifyAclEntries(
+      RpcController controller, ModifyAclEntriesRequestProto req)
+      throws ServiceException {
+    try {
+      server.modifyAclEntries(req.getSrc(), PBHelper.convertAclEntry(req.getAclSpecList()));
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return VOID_MODIFYACLENTRIES_RESPONSE;
+  }
+
+  @Override
+  public RemoveAclEntriesResponseProto removeAclEntries(
+      RpcController controller, RemoveAclEntriesRequestProto req)
+      throws ServiceException {
+    try {
+      server.removeAclEntries(req.getSrc(),
+          PBHelper.convertAclEntry(req.getAclSpecList()));
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return VOID_REMOVEACLENTRIES_RESPONSE;
+  }
+
+  @Override
+  public RemoveDefaultAclResponseProto removeDefaultAcl(
+      RpcController controller, RemoveDefaultAclRequestProto req)
+      throws ServiceException {
+    try {
+      server.removeDefaultAcl(req.getSrc());
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return VOID_REMOVEDEFAULTACL_RESPONSE;
+  }
+
+  @Override
+  public RemoveAclResponseProto removeAcl(RpcController controller,
+      RemoveAclRequestProto req) throws ServiceException {
+    try {
+      server.removeAcl(req.getSrc());
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return VOID_REMOVEACL_RESPONSE;
+  }
+
+  @Override
+  public SetAclResponseProto setAcl(RpcController controller,
+      SetAclRequestProto req) throws ServiceException {
+    try {
+      server.setAcl(req.getSrc(), PBHelper.convertAclEntry(req.getAclSpecList()));
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return VOID_SETACL_RESPONSE;
+  }
+
+  @Override
+  public GetAclStatusResponseProto getAclStatus(RpcController controller,
+      GetAclStatusRequestProto req) throws ServiceException {
+    try {
+      return PBHelper.convert(server.getAclStatus(req.getSrc()));
     } catch (IOException e) {
       throw new ServiceException(e);
     }

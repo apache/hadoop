@@ -231,6 +231,29 @@ get
 
    Returns 0 on success and -1 on error.
 
+getfacl
+
+   Usage: <<<hdfs dfs -getfacl [-R] <path> >>>
+
+   Displays the Access Control Lists (ACLs) of files and directories. If a
+   directory has a default ACL, then getfacl also displays the default ACL.
+
+   Options:
+
+     * -R: List the ACLs of all files and directories recursively.
+
+     * <path>: File or directory to list.
+
+   Examples:
+
+     * <<<hdfs dfs -getfacl /file>>>
+
+     * <<<hdfs dfs -getfacl -R /dir>>>
+
+   Exit Code:
+
+   Returns 0 on success and non-zero on error.
+
 getmerge
 
    Usage: <<<hdfs dfs -getmerge <src> <localdst> [addnl]>>>
@@ -378,6 +401,54 @@ rmr
    Exit Code:
 
    Returns 0 on success and -1 on error.
+
+setfacl
+
+   Usage: <<<hdfs dfs -setfacl [-R] [{-b|-k} {-m|-x <acl_spec>} <path>]|[--set <acl_spec> <path>] >>>
+
+   Sets Access Control Lists (ACLs) of files and directories.
+
+   Options:
+
+     * -b: Remove all but the base ACL entries. The entries for user, group and
+       others are retained for compatibility with permission bits.
+
+     * -k: Remove the default ACL.
+
+     * -R: Apply operations to all files and directories recursively.
+
+     * -m: Modify ACL. New entries are added to the ACL, and existing entries
+       are retained.
+
+     * -x: Remove specified ACL entries. Other ACL entries are retained.
+
+     * --set: Fully replace the ACL, discarding all existing entries. The
+       <acl_spec> must include entries for user, group, and others for
+       compatibility with permission bits.
+
+     * <acl_spec>: Comma separated list of ACL entries.
+
+     * <path>: File or directory to modify.
+
+   Examples:
+
+      * <<<hdfs dfs -setfacl -m user:hadoop:rw- /file>>>
+
+      * <<<hdfs dfs -setfacl -x user:hadoop /file>>>
+
+      * <<<hdfs dfs -setfacl -b /file>>>
+
+      * <<<hdfs dfs -setfacl -k /dir>>>
+
+      * <<<hdfs dfs -setfacl --set user::rw-,user:hadoop:rw-,group::r--,other::r-- /file>>>
+
+      * <<<hdfs dfs -setfacl -R -m user:hadoop:r-x /dir>>>
+
+      * <<<hdfs dfs -setfacl -m default:user:hadoop:r-x /dir>>>
+
+   Exit Code:
+
+   Returns 0 on success and non-zero on error.
 
 setrep
 

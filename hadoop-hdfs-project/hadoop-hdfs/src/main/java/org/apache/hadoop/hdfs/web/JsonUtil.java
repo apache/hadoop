@@ -18,6 +18,8 @@
 package org.apache.hadoop.hdfs.web;
 
 import org.apache.hadoop.fs.*;
+import org.apache.hadoop.fs.permission.AclEntry;
+import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.*;
@@ -612,5 +614,45 @@ public class JsonUtil {
     }
 
     return checksum;
+  }
+  /** Convert a AclStatus object to a Json string. */
+  public static String toJsonString(final AclStatus status) {
+    if (status == null) {
+      return null;
+    }
+
+    final Map<String, Object> m = new TreeMap<String, Object>();
+    m.put("owner", status.getOwner());
+    m.put("group", status.getGroup());
+    m.put("stickyBit", status.isStickyBit());
+    m.put("entries", status.getEntries());
+    final Map<String, Map<String, Object>> finalMap =
+        new TreeMap<String, Map<String, Object>>();
+    finalMap.put(AclStatus.class.getSimpleName(), m);
+    return JSON.toString(finalMap);
+  }
+
+  /** Convert a Json map to a AclStatus object. */
+  public static AclStatus toAclStatus(final Map<?, ?> json) {
+    if (json == null) {
+      return null;
+    }
+
+    final Map<?, ?> m = (Map<?, ?>) json.get(AclStatus.class.getSimpleName());
+
+    AclStatus.Builder aclStatusBuilder = new AclStatus.Builder();
+    aclStatusBuilder.owner((String) m.get("owner"));
+    aclStatusBuilder.group((String) m.get("group"));
+    aclStatusBuilder.stickyBit((Boolean) m.get("stickyBit"));
+
+    final Object[] entries = (Object[]) m.get("entries");
+
+    List<AclEntry> aclEntryList = new ArrayList<AclEntry>();
+    for (int i = 0; i < entries.length; i++) {
+      AclEntry aclEntry = AclEntry.parseAclEntry((String) entries[i], true);
+      aclEntryList.add(aclEntry);
+    }
+    aclStatusBuilder.addEntries(aclEntryList);
+    return aclStatusBuilder.build();
   }
 }

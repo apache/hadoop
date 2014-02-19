@@ -364,6 +364,16 @@
 -->
 
 <property>
+  <name>dfs.namenode.acls.enabled</name>
+  <value>false</value>
+  <description>
+    Set to true to enable support for HDFS ACLs (Access Control Lists).  By
+    default, ACLs are disabled.  When ACLs are disabled, the NameNode rejects
+    all RPCs related to setting or getting ACLs.
+  </description>
+</property>
+
+<property>
   <name>dfs.block.access.token.enable</name>
   <value>false</value>
   <description>

@@ -25,8 +25,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -40,7 +38,6 @@ import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.Stack;
 import java.util.TreeSet;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
@@ -51,6 +48,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.Options.Rename;
+import org.apache.hadoop.fs.permission.AclEntry;
+import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.io.Text;
@@ -2269,6 +2268,88 @@ public abstract class FileSystem extends Configured implements Closeable {
         + " doesn't support deleteSnapshot");
   }
   
+  /**
+   * Modifies ACL entries of files and directories.  This method can add new ACL
+   * entries or modify the permissions on existing ACL entries.  All existing
+   * ACL entries that are not specified in this call are retained without
+   * changes.  (Modifications are merged into the current ACL.)
+   *
+   * @param path Path to modify
+   * @param aclSpec List<AclEntry> describing modifications
+   * @throws IOException if an ACL could not be modified
+   */
+  public void modifyAclEntries(Path path, List<AclEntry> aclSpec)
+      throws IOException {
+    throw new UnsupportedOperationException(getClass().getSimpleName()
+        + " doesn't support modifyAclEntries");
+  }
+
+  /**
+   * Removes ACL entries from files and directories.  Other ACL entries are
+   * retained.
+   *
+   * @param path Path to modify
+   * @param aclSpec List<AclEntry> describing entries to remove
+   * @throws IOException if an ACL could not be modified
+   */
+  public void removeAclEntries(Path path, List<AclEntry> aclSpec)
+      throws IOException {
+    throw new UnsupportedOperationException(getClass().getSimpleName()
+        + " doesn't support removeAclEntries");
+  }
+
+  /**
+   * Removes all default ACL entries from files and directories.
+   *
+   * @param path Path to modify
+   * @throws IOException if an ACL could not be modified
+   */
+  public void removeDefaultAcl(Path path)
+      throws IOException {
+    throw new UnsupportedOperationException(getClass().getSimpleName()
+        + " doesn't support removeDefaultAcl");
+  }
+
+  /**
+   * Removes all but the base ACL entries of files and directories.  The entries
+   * for user, group, and others are retained for compatibility with permission
+   * bits.
+   *
+   * @param path Path to modify
+   * @throws IOException if an ACL could not be removed
+   */
+  public void removeAcl(Path path)
+      throws IOException {
+    throw new UnsupportedOperationException(getClass().getSimpleName()
+        + " doesn't support removeAcl");
+  }
+
+  /**
+   * Fully replaces ACL of files and directories, discarding all existing
+   * entries.
+   *
+   * @param path Path to modify
+   * @param aclSpec List<AclEntry> describing modifications, must include entries
+   *   for user, group, and others for compatibility with permission bits.
+   * @throws IOException if an ACL could not be modified
+   */
+  public void setAcl(Path path, List<AclEntry> aclSpec) throws IOException {
+    throw new UnsupportedOperationException(getClass().getSimpleName()
+        + " doesn't support setAcl");
+  }
+
+  /**
+   * Gets the ACL of a file or directory.
+   *
+   * @param path Path to get
+   * @return AclStatus describing the ACL of the file or directory
+   * @throws IOException if an ACL could not be read
+   */
+  public AclStatus getAclStatus(Path path) throws IOException {
+    throw new UnsupportedOperationException(getClass().getSimpleName()
+        + " doesn't support getAclStatus");
+  }
+
   // making it volatile to be able to do a double checked locking
   private volatile static boolean FILE_SYSTEMS_LOADED = false;
 

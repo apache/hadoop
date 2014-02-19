@@ -45,10 +45,21 @@ public class YarnConfiguration extends Configuration {
       "hadoop-policy.xml";
 
   @Private
-  public static final String YARN_SITE_XML_FILE = "yarn-site.xml";
+  public static final String YARN_SITE_CONFIGURATION_FILE = "yarn-site.xml";
+
+  private static final String YARN_DEFAULT_CONFIGURATION_FILE =
+      "yarn-default.xml";
 
   @Private
   public static final String CORE_SITE_CONFIGURATION_FILE = "core-site.xml";
+
+  @Private
+  public static final List<String> RM_CONFIGURATION_FILES =
+      Collections.unmodifiableList(Arrays.asList(
+          CS_CONFIGURATION_FILE,
+          HADOOP_POLICY_CONFIGURATION_FILE,
+          YARN_SITE_CONFIGURATION_FILE,
+          CORE_SITE_CONFIGURATION_FILE));
 
   @Evolving
   public static final int APPLICATION_MAX_TAGS = 10;
@@ -56,11 +67,9 @@ public class YarnConfiguration extends Configuration {
   @Evolving
   public static final int APPLICATION_MAX_TAG_LENGTH = 100;
 
-  private static final String YARN_DEFAULT_XML_FILE = "yarn-default.xml";
-
   static {
-    Configuration.addDefaultResource(YARN_DEFAULT_XML_FILE);
-    Configuration.addDefaultResource(YARN_SITE_XML_FILE);
+    Configuration.addDefaultResource(YARN_DEFAULT_CONFIGURATION_FILE);
+    Configuration.addDefaultResource(YARN_SITE_CONFIGURATION_FILE);
   }
 
   //Configurations
@@ -861,6 +870,9 @@ public class YarnConfiguration extends Configuration {
   /** The address for the web proxy.*/
   public static final String PROXY_ADDRESS =
     PROXY_PREFIX + "address";
+  public static final int DEFAULT_PROXY_PORT = 9099;
+  public static final String DEFAULT_PROXY_ADDRESS =
+    "0.0.0.0:" + DEFAULT_RM_PORT;
   
   /**
    * YARN Service Level Authorization

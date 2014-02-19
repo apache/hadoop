@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
+import com.google.common.collect.Lists;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
@@ -29,6 +30,7 @@ import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.fs.Options.Rename;
+import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.MiniDFSCluster.NameNodeInfo;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
@@ -1076,6 +1078,8 @@ public class DFSTestUtil {
     filesystem.removeCacheDirective(id);
     // OP_REMOVE_CACHE_POOL
     filesystem.removeCachePool("pool1");
+    // OP_SET_ACL
+    filesystem.setAcl(pathConcatTarget, Lists.<AclEntry> newArrayList());
   }
 
   public static void abortStream(DFSOutputStream out) throws IOException {

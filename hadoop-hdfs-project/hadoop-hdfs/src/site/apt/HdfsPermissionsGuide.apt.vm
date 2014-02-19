@@ -47,6 +47,10 @@ HDFS Permissions Guide
    client process, and its group is the group of the parent directory (the
    BSD rule).
 
+   HDFS also provides optional support for POSIX ACLs (Access Control Lists) to
+   augment file permissions with finer-grained rules for specific named users or
+   named groups.  ACLs are discussed in greater detail later in this document.
+
    Each client process that accesses HDFS has a two-part identity composed
    of the user name, and groups list. Whenever HDFS must do a permissions
    check for a file or directory foo accessed by a client process,
@@ -219,9 +223,173 @@ HDFS Permissions Guide
    identity matches the super-user, parts of the name space may be
    inaccessible to the web server.
 
+* ACLs (Access Control Lists)
+
+   In addition to the traditional POSIX permissions model, HDFS also supports
+   POSIX ACLs (Access Control Lists).  ACLs are useful for implementing
+   permission requirements that differ from the natural organizational hierarchy
+   of users and groups.  An ACL provides a way to set different permissions for
+   specific named users or named groups, not only the file's owner and the
+   file's group.
+
+   By default, support for ACLs is disabled, and the NameNode disallows creation
+   of ACLs.  To enable support for ACLs, set <<<dfs.namenode.acls.enabled>>> to
+   true in the NameNode configuration.
+
+   An ACL consists of a set of ACL entries.  Each ACL entry names a specific
+   user or group and grants or denies read, write and execute permissions for
+   that specific user or group.  For example:
+
++--
+   user::rw-
+   user:bruce:rwx                  #effective:r--
+   group::r-x                      #effective:r--
+   group:sales:rwx                 #effective:r--
+   mask::r--
+   other::r--
++--
+
+   ACL entries consist of a type, an optional name and a permission string.
+   For display purposes, ':' is used as the delimiter between each field.  In
+   this example ACL, the file owner has read-write access, the file group has
+   read-execute access and others have read access.  So far, this is equivalent
+   to setting the file's permission bits to 654.
+
+   Additionally, there are 2 extended ACL entries for the named user bruce and
+   the named group sales, both granted full access.  The mask is a special ACL
+   entry that filters the permissions granted to all named user entries and
+   named group entries, and also the unnamed group entry.  In the example, the
+   mask has only read permissions, and we can see that the effective permissions
+   of several ACL entries have been filtered accordingly.
+
+   Every ACL must have a mask.  If the user doesn't supply a mask while setting
+   an ACL, then a mask is inserted automatically by calculating the union of
+   permissions on all entries that would be filtered by the mask.
+
+   Running <<<chmod>>> on a file that has an ACL actually changes the
+   permissions of the mask.  Since the mask acts as a filter, this effectively
+   constrains the permissions of all extended ACL entries instead of changing
+   just the group entry and possibly missing other extended ACL entries.
+
+   The model also differentiates between an "access ACL", which defines the
+   rules to enforce during permission checks, and a "default ACL", which defines
+   the ACL entries that new child files or sub-directories receive automatically
+   during creation.  For example:
+
++--
+   user::rwx
+   group::r-x
+   other::r-x
+   default:user::rwx
+   default:user:bruce:rwx          #effective:r-x
+   default:group::r-x
+   default:group:sales:rwx         #effective:r-x
+   default:mask::r-x
+   default:other::r-x
++--
+
+   Only directories may have a default ACL.  When a new file or sub-directory is
+   created, it automatically copies the default ACL of its parent into its own
+   access ACL.  A new sub-directory also copies it to its own default ACL.  In
+   this way, the default ACL will be copied down through arbitrarily deep levels
+   of the file system tree as new sub-directories get created.
+
+   The exact permission values in the new child's access ACL are subject to
+   filtering by the mode parameter.  Considering the default umask of 022, this
+   is typically 755 for new directories and 644 for new files.  The mode
+   parameter filters the copied permission values for the unnamed user (file
+   owner), the mask and other.  Using this particular example ACL, and creating
+   a new sub-directory with 755 for the mode, this mode filtering has no effect
+   on the final result.  However, if we consider creation of a file with 644 for
+   the mode, then mode filtering causes the new file's ACL to receive read-write
+   for the unnamed user (file owner), read for the mask and read for others.
+   This mask also means that effective permissions for named user bruce and
+   named group sales are only read.
+
+   Note that the copy occurs at time of creation of the new file or
+   sub-directory.  Subsequent changes to the parent's default ACL do not change
+   existing children.
+
+   The default ACL must have all minimum required ACL entries, including the
+   unnamed user (file owner), unnamed group (file group) and other entries.  If
+   the user doesn't supply one of these entries while setting a default ACL,
+   then the entries are inserted automatically by copying the corresponding
+   permissions from the access ACL, or permission bits if there is no access
+   ACL.  The default ACL also must have mask.  As described above, if the mask
+   is unspecified, then a mask is inserted automatically by calculating the
+   union of permissions on all entries that would be filtered by the mask.
+
+   When considering a file that has an ACL, the algorithm for permission checks
+   changes to:
+
+     * If the user name matches the owner of file, then the owner
+       permissions are tested;
+
+     * Else if the user name matches the name in one of the named user entries,
+       then these permissions are tested, filtered by the mask permissions;
+
+     * Else if the group of file matches any member of the groups list,
+       and if these permissions filtered by the mask grant access, then these
+       permissions are used;
+
+     * Else if there is a named group entry matching a member of the groups list,
+       and if these permissions filtered by the mask grant access, then these
+       permissions are used;
+
+     * Else if the file group or any named group entry matches a member of the
+       groups list, but access was not granted by any of those permissions, then
+       access is denied;
+
+     * Otherwise the other permissions of file are tested.
+
+   Best practice is to rely on traditional permission bits to implement most
+   permission requirements, and define a smaller number of ACLs to augment the
+   permission bits with a few exceptional rules.  A file with an ACL incurs an
+   additional cost in memory in the NameNode compared to a file that has only
+   permission bits.
+
+* ACLs File System API
+
+   New methods:
+
+     * <<<public void modifyAclEntries(Path path, List<AclEntry> aclSpec) throws
+       IOException;>>>
+
+     * <<<public void removeAclEntries(Path path, List<AclEntry> aclSpec) throws
+       IOException;>>>
+
+     * <<<public void public void removeDefaultAcl(Path path) throws
+       IOException;>>>
+
+     * <<<public void removeAcl(Path path) throws IOException;>>>
+
+     * <<<public void setAcl(Path path, List<AclEntry> aclSpec) throws
+       IOException;>>>
+
+     * <<<public AclStatus getAclStatus(Path path) throws IOException;>>>
+
+* ACLs Shell Commands
+
+     * <<<hdfs dfs -getfacl [-R] <path> >>>
+
+       Displays the Access Control Lists (ACLs) of files and directories. If a
+       directory has a default ACL, then getfacl also displays the default ACL.
+
+     * <<<hdfs dfs -setfacl [-R] [{-b|-k} {-m|-x <acl_spec>} <path>]|[--set <acl_spec> <path>] >>>
+
+       Sets Access Control Lists (ACLs) of files and directories.
+
+     * <<<hdfs dfs -ls <args> >>>
+
+       The output of <<<ls>>> will append a '+' character to the permissions
+       string of any file or directory that has an ACL.
+
+       See the {{{../hadoop-common/FileSystemShell.html}File System Shell}}
+       documentation for full coverage of these commands.
+
 * Configuration Parameters
 
-     * <<<dfs.permissions = true>>>
+     * <<<dfs.permissions.enabled = true>>>
 
        If yes use the permissions system as described here. If no,
        permission checking is turned off, but all other behavior is
@@ -255,3 +423,9 @@ HDFS Permissions Guide
 
        The administrators for the cluster specified as an ACL. This
        controls who can access the default servlets, etc. in the HDFS.
+
+     * <<<dfs.namenode.acls.enabled = true>>>
+
+       Set to true to enable support for HDFS ACLs (Access Control Lists).  By
+       default, ACLs are disabled.  When ACLs are disabled, the NameNode rejects
+       all attempts to set an ACL.

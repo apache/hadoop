@@ -115,8 +115,10 @@ public final class FSImageFormatProtobuf {
         return map.entrySet();
       }
     }
-    private final DeduplicationMap<String> stringMap = DeduplicationMap.newMap();
     private final ArrayList<INodeReference> refList = Lists.newArrayList();
+
+    private final DeduplicationMap<String> stringMap = DeduplicationMap
+        .newMap();
 
     public DeduplicationMap<String> getStringMap() {
       return stringMap;
@@ -552,6 +554,7 @@ public final class FSImageFormatProtobuf {
   public enum SectionName {
     NS_INFO("NS_INFO"),
     STRING_TABLE("STRING_TABLE"),
+    EXTENDED_ACL("EXTENDED_ACL"),
     INODE("INODE"),
     INODE_REFERENCE("INODE_REFERENCE"),
     SNAPSHOT("SNAPSHOT"),

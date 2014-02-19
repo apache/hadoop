@@ -109,9 +109,12 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.VolumeId;
+import org.apache.hadoop.fs.permission.AclEntry;
+import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
+import org.apache.hadoop.hdfs.protocol.AclException;
 import org.apache.hadoop.hdfs.net.Peer;
 import org.apache.hadoop.hdfs.net.TcpPeerServer;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
@@ -2605,6 +2608,95 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
 
   public ClientContext getClientContext() {
     return clientContext;
+  }
+
+  void modifyAclEntries(String src, List<AclEntry> aclSpec)
+      throws IOException {
+    checkOpen();
+    try {
+      namenode.modifyAclEntries(src, aclSpec);
+    } catch(RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class,
+                                     AclException.class,
+                                     FileNotFoundException.class,
+                                     NSQuotaExceededException.class,
+                                     SafeModeException.class,
+                                     SnapshotAccessControlException.class,
+                                     UnresolvedPathException.class);
+    }
+  }
+
+  void removeAclEntries(String src, List<AclEntry> aclSpec)
+      throws IOException {
+    checkOpen();
+    try {
+      namenode.removeAclEntries(src, aclSpec);
+    } catch(RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class,
+                                     AclException.class,
+                                     FileNotFoundException.class,
+                                     NSQuotaExceededException.class,
+                                     SafeModeException.class,
+                                     SnapshotAccessControlException.class,
+                                     UnresolvedPathException.class);
+    }
+  }
+
+  void removeDefaultAcl(String src) throws IOException {
+    checkOpen();
+    try {
+      namenode.removeDefaultAcl(src);
+    } catch(RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class,
+                                     AclException.class,
+                                     FileNotFoundException.class,
+                                     NSQuotaExceededException.class,
+                                     SafeModeException.class,
+                                     SnapshotAccessControlException.class,
+                                     UnresolvedPathException.class);
+    }
+  }
+
+  void removeAcl(String src) throws IOException {
+    checkOpen();
+    try {
+      namenode.removeAcl(src);
+    } catch(RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class,
+                                     AclException.class,
+                                     FileNotFoundException.class,
+                                     NSQuotaExceededException.class,
+                                     SafeModeException.class,
+                                     SnapshotAccessControlException.class,
+                                     UnresolvedPathException.class);
+    }
+  }
+
+  void setAcl(String src, List<AclEntry> aclSpec) throws IOException {
+    checkOpen();
+    try {
+      namenode.setAcl(src, aclSpec);
+    } catch(RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class,
+                                     AclException.class,
+                                     FileNotFoundException.class,
+                                     NSQuotaExceededException.class,
+                                     SafeModeException.class,
+                                     SnapshotAccessControlException.class,
+                                     UnresolvedPathException.class);
+    }
+  }
+
+  AclStatus getAclStatus(String src) throws IOException {
+    checkOpen();
+    try {
+      return namenode.getAclStatus(src);
+    } catch(RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class,
+                                     AclException.class,
+                                     FileNotFoundException.class,
+                                     UnresolvedPathException.class);
+    }
   }
 
   @Override // RemotePeerFactory

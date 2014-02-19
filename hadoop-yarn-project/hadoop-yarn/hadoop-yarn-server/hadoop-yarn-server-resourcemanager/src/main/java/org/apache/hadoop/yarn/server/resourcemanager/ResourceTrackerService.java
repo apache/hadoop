@@ -29,7 +29,6 @@ import org.apache.hadoop.net.Node;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.VersionUtil;
-import org.apache.hadoop.yarn.LocalConfigurationProvider;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
@@ -164,10 +163,10 @@ public class ResourceTrackerService extends AbstractService implements
     if (conf.getBoolean(
         CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION, 
         false)) {
-      refreshServiceAcls(
-          this.rmContext.getConfigurationProvider().getConfiguration(conf,
-              YarnConfiguration.HADOOP_POLICY_CONFIGURATION_FILE),
-          RMPolicyProvider.getInstance());
+      conf.addResource(this.rmContext.getConfigurationProvider()
+          .getConfigurationInputStream(conf,
+              YarnConfiguration.HADOOP_POLICY_CONFIGURATION_FILE));
+      refreshServiceAcls(conf, RMPolicyProvider.getInstance());
     }
 
     this.server.start();
@@ -421,13 +420,8 @@ public class ResourceTrackerService extends AbstractService implements
 
   void refreshServiceAcls(Configuration configuration, 
       PolicyProvider policyProvider) {
-    if (this.rmContext.getConfigurationProvider() instanceof
-        LocalConfigurationProvider) {
-      this.server.refreshServiceAcl(configuration, policyProvider);
-    } else {
-      this.server.refreshServiceAclWithLoadedConfiguration(configuration,
-          policyProvider);
-    }
+    this.server.refreshServiceAclWithLoadedConfiguration(configuration,
+        policyProvider);
   }
 
   @VisibleForTesting

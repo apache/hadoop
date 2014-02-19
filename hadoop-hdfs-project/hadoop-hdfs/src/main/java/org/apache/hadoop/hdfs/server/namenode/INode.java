@@ -154,6 +154,31 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
     return nodeToUpdate;
   }
 
+  abstract AclFeature getAclFeature(int snapshotId);
+
+  @Override
+  public final AclFeature getAclFeature() {
+    return getAclFeature(Snapshot.CURRENT_STATE_ID);
+  }
+
+  abstract void addAclFeature(AclFeature aclFeature);
+
+  final INode addAclFeature(AclFeature aclFeature, int latestSnapshotId)
+      throws QuotaExceededException {
+    final INode nodeToUpdate = recordModification(latestSnapshotId);
+    nodeToUpdate.addAclFeature(aclFeature);
+    return nodeToUpdate;
+  }
+
+  abstract void removeAclFeature();
+
+  final INode removeAclFeature(int latestSnapshotId)
+      throws QuotaExceededException {
+    final INode nodeToUpdate = recordModification(latestSnapshotId);
+    nodeToUpdate.removeAclFeature();
+    return nodeToUpdate;
+  }
+  
   /**
    * @return if the given snapshot id is {@link Snapshot#CURRENT_STATE_ID},
    *         return this; otherwise return the corresponding snapshot inode.

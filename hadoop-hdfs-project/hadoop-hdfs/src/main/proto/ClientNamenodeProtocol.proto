@@ -30,6 +30,7 @@ package hadoop.hdfs;
 
 import "Security.proto";
 import "hdfs.proto";
+import "acl.proto";
 
 /**
  * The ClientNamenodeProtocol Service defines the interface between a client 
@@ -741,4 +742,16 @@ service ClientNamenodeProtocol {
       returns(GetSnapshotDiffReportResponseProto);
   rpc isFileClosed(IsFileClosedRequestProto)
       returns(IsFileClosedResponseProto);
+  rpc modifyAclEntries(ModifyAclEntriesRequestProto)
+      returns(ModifyAclEntriesResponseProto);
+  rpc removeAclEntries(RemoveAclEntriesRequestProto)
+      returns(RemoveAclEntriesResponseProto);
+  rpc removeDefaultAcl(RemoveDefaultAclRequestProto)
+      returns(RemoveDefaultAclResponseProto);
+  rpc removeAcl(RemoveAclRequestProto)
+      returns(RemoveAclResponseProto);
+  rpc setAcl(SetAclRequestProto)
+      returns(SetAclResponseProto);
+  rpc getAclStatus(GetAclStatusRequestProto)
+      returns(GetAclStatusResponseProto);
 }

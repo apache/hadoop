@@ -21,6 +21,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
+import org.apache.hadoop.hdfs.server.namenode.INode.Feature;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.util.LightWeightGSet.LinkedElement;
 
@@ -220,6 +221,15 @@ public abstract class INodeWithAdditionalFields extends INode
   }
 
   @Override
+  final AclFeature getAclFeature(int snapshotId) {
+    if (snapshotId != Snapshot.CURRENT_STATE_ID) {
+      return getSnapshotINode(snapshotId).getAclFeature();
+    }
+
+    return getFeature(AclFeature.class);
+  }
+
+  @Override
   final long getModificationTime(int snapshotId) {
     if (snapshotId != Snapshot.CURRENT_STATE_ID) {
       return getSnapshotINode(snapshotId).getModificationTime();
@@ -304,5 +314,34 @@ public abstract class INodeWithAdditionalFields extends INode
     Preconditions.checkState(!overflow && j == size - 1, "Feature "
         + f.getClass().getSimpleName() + " not found.");
     features = arr;
+  }
+
+  protected <T extends Feature> T getFeature(Class<? extends Feature> clazz) {
+    for (Feature f : features) {
+      if (f.getClass() == clazz) {
+        @SuppressWarnings("unchecked")
+        T ret = (T) f;
+        return ret;
+      }
+    }
+    return null;
+  }
+
+  public void removeAclFeature() {
+    AclFeature f = getAclFeature();
+    Preconditions.checkNotNull(f);
+    removeFeature(f);
+  }
+
+  public void addAclFeature(AclFeature f) {
+    AclFeature f1 = getAclFeature();
+    if (f1 != null)
+      throw new IllegalStateException("Duplicated ACLFeature");
+
+    addFeature(f);
+  }
+
+  public final Feature[] getFeatures() {
+    return features;
   }
 }

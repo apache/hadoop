@@ -30,6 +30,10 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.fs.permission.AclEntry;
+import org.apache.hadoop.fs.permission.AclEntryScope;
+import org.apache.hadoop.fs.permission.AclEntryType;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -38,15 +42,18 @@ import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf.LoaderContext;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf.SaverContext;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.FileSummary;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.FilesUnderConstructionSection.FileUnderConstructionEntry;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeDirectorySection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection;
+import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection.AclFeatureProto;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.util.ReadOnlyList;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
 
 @InterfaceAudience.Private
@@ -54,6 +61,20 @@ public final class FSImageFormatPBINode {
   private final static long USER_GROUP_STRID_MASK = (1 << 24) - 1;
   private final static int USER_STRID_OFFSET = 40;
   private final static int GROUP_STRID_OFFSET = 16;
+
+  private static final int ACL_ENTRY_NAME_MASK = (1 << 24) - 1;
+  private static final int ACL_ENTRY_NAME_OFFSET = 6;
+  private static final int ACL_ENTRY_TYPE_OFFSET = 3;
+  private static final int ACL_ENTRY_SCOPE_OFFSET = 5;
+  private static final int ACL_ENTRY_PERM_MASK = 7;
+  private static final int ACL_ENTRY_TYPE_MASK = 3;
+  private static final int ACL_ENTRY_SCOPE_MASK = 1;
+  private static final FsAction[] FSACTION_VALUES = FsAction.values();
+  private static final AclEntryScope[] ACL_ENTRY_SCOPE_VALUES = AclEntryScope
+      .values();
+  private static final AclEntryType[] ACL_ENTRY_TYPE_VALUES = AclEntryType
+      .values();
+
   private static final Log LOG = LogFactory.getLog(FSImageFormatProtobuf.class);
 
   public final static class Loader {
@@ -66,19 +87,41 @@ public final class FSImageFormatPBINode {
           new FsPermission(perm));
     }
 
+    public static ImmutableList<AclEntry> loadAclEntries(
+        AclFeatureProto proto, final String[] stringTable) {
+      ImmutableList.Builder<AclEntry> b = ImmutableList.builder();
+      for (int v : proto.getEntriesList()) {
+        int p = v & ACL_ENTRY_PERM_MASK;
+        int t = (v >> ACL_ENTRY_TYPE_OFFSET) & ACL_ENTRY_TYPE_MASK;
+        int s = (v >> ACL_ENTRY_SCOPE_OFFSET) & ACL_ENTRY_SCOPE_MASK;
+        int nid = (v >> ACL_ENTRY_NAME_OFFSET) & ACL_ENTRY_NAME_MASK;
+        String name = stringTable[nid];
+        b.add(new AclEntry.Builder().setName(name)
+            .setPermission(FSACTION_VALUES[p])
+            .setScope(ACL_ENTRY_SCOPE_VALUES[s])
+            .setType(ACL_ENTRY_TYPE_VALUES[t]).build());
+      }
+      return b.build();
+    }
+
     public static INodeDirectory loadINodeDirectory(INodeSection.INode n,
-        final String[] stringTable) {
+        LoaderContext state) {
       assert n.getType() == INodeSection.INode.Type.DIRECTORY;
       INodeSection.INodeDirectory d = n.getDirectory();
 
       final PermissionStatus permissions = loadPermission(d.getPermission(),
-          stringTable);
+          state.getStringTable());
       final INodeDirectory dir = new INodeDirectory(n.getId(), n.getName()
           .toByteArray(), permissions, d.getModificationTime());
 
       final long nsQuota = d.getNsQuota(), dsQuota = d.getDsQuota();
       if (nsQuota >= 0 || dsQuota >= 0) {
         dir.addDirectoryWithQuotaFeature(nsQuota, dsQuota);
+      }
+
+      if (d.hasAcl()) {
+        dir.addAclFeature(new AclFeature(loadAclEntries(d.getAcl(),
+            state.getStringTable())));
       }
       return dir;
     }
@@ -181,7 +224,7 @@ public final class FSImageFormatPBINode {
       case FILE:
         return loadINodeFile(n);
       case DIRECTORY:
-        return loadINodeDirectory(n, parent.getLoaderContext().getStringTable());
+        return loadINodeDirectory(n, parent.getLoaderContext());
       case SYMLINK:
         return loadINodeSymlink(n);
       default:
@@ -195,6 +238,7 @@ public final class FSImageFormatPBINode {
       INodeSection.INodeFile f = n.getFile();
       List<BlockProto> bp = f.getBlocksList();
       short replication = (short) f.getReplication();
+      LoaderContext state = parent.getLoaderContext();
 
       BlockInfo[] blocks = new BlockInfo[bp.size()];
       for (int i = 0, e = bp.size(); i < e; ++i) {
@@ -206,6 +250,12 @@ public final class FSImageFormatPBINode {
       final INodeFile file = new INodeFile(n.getId(),
           n.getName().toByteArray(), permissions, f.getModificationTime(),
           f.getAccessTime(), blocks, replication, f.getPreferredBlockSize());
+
+      if (f.hasAcl()) {
+        file.addAclFeature(new AclFeature(loadAclEntries(f.getAcl(),
+            state.getStringTable())));
+      }
+
       // under-construction information
       if (f.hasFileUC()) {
         INodeSection.FileUnderConstructionFeature uc = f.getFileUC();
@@ -227,13 +277,15 @@ public final class FSImageFormatPBINode {
       INodeSection.INodeSymlink s = n.getSymlink();
       final PermissionStatus permissions = loadPermission(s.getPermission(),
           parent.getLoaderContext().getStringTable());
-      return new INodeSymlink(n.getId(), n.getName().toByteArray(), permissions,
-          0, 0, s.getTarget().toStringUtf8());
+
+      INodeSymlink sym = new INodeSymlink(n.getId(), n.getName().toByteArray(),
+          permissions, 0, 0, s.getTarget().toStringUtf8());
+
+      return sym;
     }
 
     private void loadRootINode(INodeSection.INode p) {
-      INodeDirectory root = loadINodeDirectory(p, parent.getLoaderContext()
-          .getStringTable());
+      INodeDirectory root = loadINodeDirectory(p, parent.getLoaderContext());
       final Quota.Counts q = root.getQuotaCounts();
       final long nsQuota = q.get(Quota.NAMESPACE);
       final long dsQuota = q.get(Quota.DISKSPACE);
@@ -255,27 +307,48 @@ public final class FSImageFormatPBINode {
           | n.getFsPermissionShort();
     }
 
+    private static AclFeatureProto.Builder buildAclEntries(AclFeature f,
+        final SaverContext.DeduplicationMap<String> map) {
+      AclFeatureProto.Builder b = AclFeatureProto.newBuilder();
+      for (AclEntry e : f.getEntries()) {
+        int v = ((map.getId(e.getName()) & ACL_ENTRY_NAME_MASK) << ACL_ENTRY_NAME_OFFSET)
+            | (e.getType().ordinal() << ACL_ENTRY_TYPE_OFFSET)
+            | (e.getScope().ordinal() << ACL_ENTRY_SCOPE_OFFSET)
+            | (e.getPermission().ordinal());
+        b.addEntries(v);
+      }
+      return b;
+    }
+
     public static INodeSection.INodeFile.Builder buildINodeFile(
-        INodeFileAttributes file,
-        final SaverContext.DeduplicationMap<String> stringMap) {
+        INodeFileAttributes file, final SaverContext state) {
       INodeSection.INodeFile.Builder b = INodeSection.INodeFile.newBuilder()
           .setAccessTime(file.getAccessTime())
           .setModificationTime(file.getModificationTime())
-          .setPermission(buildPermissionStatus(file, stringMap))
+          .setPermission(buildPermissionStatus(file, state.getStringMap()))
           .setPreferredBlockSize(file.getPreferredBlockSize())
           .setReplication(file.getFileReplication());
+
+      AclFeature f = file.getAclFeature();
+      if (f != null) {
+        b.setAcl(buildAclEntries(f, state.getStringMap()));
+      }
       return b;
     }
 
     public static INodeSection.INodeDirectory.Builder buildINodeDirectory(
-        INodeDirectoryAttributes dir,
-        final SaverContext.DeduplicationMap<String> stringMap) {
+        INodeDirectoryAttributes dir, final SaverContext state) {
       Quota.Counts quota = dir.getQuotaCounts();
       INodeSection.INodeDirectory.Builder b = INodeSection.INodeDirectory
           .newBuilder().setModificationTime(dir.getModificationTime())
           .setNsQuota(quota.get(Quota.NAMESPACE))
           .setDsQuota(quota.get(Quota.DISKSPACE))
-          .setPermission(buildPermissionStatus(dir, stringMap));
+          .setPermission(buildPermissionStatus(dir, state.getStringMap()));
+
+      AclFeature f = dir.getAclFeature();
+      if (f != null) {
+        b.setAcl(buildAclEntries(f, state.getStringMap()));
+      }
       return b;
     }
 
@@ -376,7 +449,7 @@ public final class FSImageFormatPBINode {
 
     private void save(OutputStream out, INodeDirectory n) throws IOException {
       INodeSection.INodeDirectory.Builder b = buildINodeDirectory(n,
-          parent.getSaverContext().getStringMap());
+          parent.getSaverContext());
       INodeSection.INode r = buildINodeCommon(n)
           .setType(INodeSection.INode.Type.DIRECTORY).setDirectory(b).build();
       r.writeDelimitedTo(out);
@@ -384,7 +457,7 @@ public final class FSImageFormatPBINode {
 
     private void save(OutputStream out, INodeFile n) throws IOException {
       INodeSection.INodeFile.Builder b = buildINodeFile(n,
-          parent.getSaverContext().getStringMap());
+          parent.getSaverContext());
 
       for (Block block : n.getBlocks()) {
         b.addBlocks(PBHelper.convert(block));
@@ -405,10 +478,12 @@ public final class FSImageFormatPBINode {
     }
 
     private void save(OutputStream out, INodeSymlink n) throws IOException {
+      SaverContext state = parent.getSaverContext();
       INodeSection.INodeSymlink.Builder b = INodeSection.INodeSymlink
           .newBuilder()
-          .setPermission(buildPermissionStatus(n, parent.getSaverContext().getStringMap()))
+          .setPermission(buildPermissionStatus(n, state.getStringMap()))
           .setTarget(ByteString.copyFrom(n.getSymlink()));
+
       INodeSection.INode r = buildINodeCommon(n)
           .setType(INodeSection.INode.Type.SYMLINK).setSymlink(b).build();
       r.writeDelimitedTo(out);
