@@ -31,11 +31,16 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
+import org.apache.hadoop.yarn.util.resource.Resources;
 
 public abstract class AbstractYarnScheduler implements ResourceScheduler {
 
   protected RMContext rmContext;
   protected Map<ApplicationId, SchedulerApplication> applications;
+  protected final static List<Container> EMPTY_CONTAINER_LIST =
+      new ArrayList<Container>();
+  protected static final Allocation EMPTY_ALLOCATION = new Allocation(
+    EMPTY_CONTAINER_LIST, Resources.createResource(0), null, null, null);
 
   public synchronized List<Container> getTransferredContainers(
       ApplicationAttemptId currentAttempt) {

@@ -340,7 +340,7 @@ public class RMContainerImpl implements RMContainer {
     @Override
     public void transition(RMContainerImpl container, RMContainerEvent event) {
       container.eventHandler.handle(new RMAppAttemptContainerAllocatedEvent(
-          container.appAttemptId, container.container));
+          container.appAttemptId));
     }
   }
 
