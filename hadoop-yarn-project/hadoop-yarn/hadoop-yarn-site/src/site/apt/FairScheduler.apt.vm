@@ -265,7 +265,15 @@ Allocation file format
    its fair share before it will try to preempt containers to take resources from
    other queues.
 
- * <<A defaultQueueSchedulingPolicy element>>, which sets the default scheduling 
+ * <<A defaultMinSharePreemptionTimeout element>>, which sets the default number
+   of seconds the queue is under its minimum share before it will try to preempt
+   containers to take resources from other queues; overriden by
+   minSharePreemptionTimeout element in each queue if specified.
+
+ * <<A queueMaxAppsDefault element>>, which sets the default running app limit
+   for queues; overriden by maxRunningApps element in each queue.
+
+ * <<A defaultQueueSchedulingPolicy element>>, which sets the default scheduling
    policy for queues; overriden by the schedulingPolicy element in each queue
    if specified. Defaults to "fair".
 
