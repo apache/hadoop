@@ -418,6 +418,9 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-5973. add DomainSocket#shutdown method (cmccabe)
 
+    HDFS-5318. Support read-only and read-write paths to shared replicas.
+    (Eric Sirianni via Arpit Agarwal)
+
   OPTIMIZATIONS
 
     HDFS-5790. LeaseManager.findPath is very slow when many leases need recovery

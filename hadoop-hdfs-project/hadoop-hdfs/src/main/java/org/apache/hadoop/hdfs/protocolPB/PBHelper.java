@@ -1520,8 +1520,8 @@ public class PBHelper {
 
   private static StorageState convertState(State state) {
     switch(state) {
-    case READ_ONLY:
-      return StorageState.READ_ONLY;
+    case READ_ONLY_SHARED:
+      return StorageState.READ_ONLY_SHARED;
     case NORMAL:
     default:
       return StorageState.NORMAL;
@@ -1549,8 +1549,8 @@ public class PBHelper {
 
   private static State convertState(StorageState state) {
     switch(state) {
-    case READ_ONLY:
-      return DatanodeStorage.State.READ_ONLY;
+    case READ_ONLY_SHARED:
+      return DatanodeStorage.State.READ_ONLY_SHARED;
     case NORMAL:
     default:
       return DatanodeStorage.State.NORMAL;

@@ -605,7 +605,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
               + storageType);
       return false;
     }
-    if (storage.getState() == State.READ_ONLY) {
+    if (storage.getState() == State.READ_ONLY_SHARED) {
       logNodeIsNotChosen(storage, "storage is read-only");
       return false;
     }
