@@ -737,6 +737,7 @@ class ImageLoaderCurrent implements ImageLoader {
       processPermission(in, v);
     } else if (numBlocks == -2) {
       v.visit(ImageElement.SYMLINK, Text.readString(in));
+      processPermission(in, v);
     } else if (numBlocks == -3) { // reference node
       final boolean isWithName = in.readBoolean();
       int snapshotId = in.readInt();

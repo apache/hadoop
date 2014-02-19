@@ -440,6 +440,8 @@ Release 2.4.0 - UNRELEASED
     URLConnectionFactory which does not import SSL certificates. (Haohui Mai via
     jing9)
 
+    HDFS-5961. OIV cannot load fsimages containing a symbolic link. (kihwal)
+
   BREAKDOWN OF HDFS-5698 SUBTASKS AND RELATED JIRAS
 
     HDFS-5717. Save FSImage header in protobuf. (Haohui Mai via jing9)
