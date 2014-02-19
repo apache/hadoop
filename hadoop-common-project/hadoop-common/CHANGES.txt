@@ -319,6 +319,9 @@ Release 2.4.0 - UNRELEASED
 
   NEW FEATURES
 
+    HADOOP-10184. Hadoop Common changes required to support HDFS ACLs. (See
+    breakdown of tasks below for features and contributors)
+
   IMPROVEMENTS
 
     HADOOP-10139. Update and improve the Single Cluster Setup document.
@@ -358,6 +361,34 @@ Release 2.4.0 - UNRELEASED
     (Dilli Armugam via suresh)
 
     HADOOP-10346. Deadlock while logging tokens (jlowe)
+
+  BREAKDOWN OF HADOOP-10184 SUBTASKS AND RELATED JIRAS
+
+    HADOOP-10185. FileSystem API for ACLs. (cnauroth)
+
+    HADOOP-10186. Remove AclReadFlag and AclWriteFlag in FileSystem API.
+    (Haohui Mai via cnauroth)
+
+    HADOOP-10187. FsShell CLI: add getfacl and setfacl with minimal support for
+    getting and setting ACLs. (Vinay via cnauroth)
+
+    HADOOP-10192. FileSystem#getAclStatus has incorrect JavaDocs. (cnauroth)
+
+    HADOOP-10220. Add ACL indicator bit to FsPermission. (cnauroth)
+
+    HADOOP-10241. Clean up output of FsShell getfacl. (Chris Nauroth via wheat9)
+
+    HADOOP-10213. Fix bugs parsing ACL spec in FsShell setfacl.
+    (Vinay via cnauroth)
+
+    HADOOP-10277. setfacl -x fails to parse ACL spec if trying to remove the
+    mask entry. (Vinay via cnauroth)
+
+    HADOOP-10270. getfacl does not display effective permissions of masked
+    entries. (cnauroth)
+
+    HADOOP-10344. Fix TestAclCommands after merging HADOOP-10338 patch.
+    (cnauroth)
 
 Release 2.3.1 - UNRELEASED
 

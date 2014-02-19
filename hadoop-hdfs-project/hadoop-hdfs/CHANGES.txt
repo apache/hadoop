@@ -280,6 +280,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-5698. Use protobuf to serialize / deserialize FSImage. (See breakdown
     of tasks below for features and contributors)
 
+    HDFS-4685. Implementation of ACLs in HDFS. (See breakdown of tasks below for
+    features and contributors)
+
   IMPROVEMENTS
 
     HDFS-5781. Use an array to record the mapping between FSEditLogOpCode and 
@@ -498,6 +501,82 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-5959. Fix typo at section name in FSImageFormatProtobuf.java.
     (Akira Ajisaka via suresh)
+
+  BREAKDOWN OF HDFS-4685 SUBTASKS AND RELATED JIRAS
+
+    HDFS-5596. Implement RPC stubs. (Haohui Mai via cnauroth)
+
+    HDFS-5685. Implement ACL as a INode feature. (Haohui Mai via cnauroth)
+
+    HDFS-5618. NameNode: persist ACLs in fsimage. (Haohui Mai via cnauroth)
+
+    HDFS-5619. NameNode: record ACL modifications to edit log.
+    (Haohui Mai via cnauroth)
+
+    HDFS-5673. Implement logic for modification of ACLs. (cnauroth)
+
+    HDFS-5758. NameNode: complete implementation of inode modifications for
+    ACLs. (Chris Nauroth via wheat9)
+
+    HDFS-5612. NameNode: change all permission checks to enforce ACLs in
+    addition to permissions. (Chris Nauroth via wheat9)
+
+    HDFS-5613. NameNode: implement handling of ACLs in combination with
+    symlinks. (Chris Nauroth via wheat9)
+
+    HDFS-5615. NameNode: implement handling of ACLs in combination with sticky
+    bit. (Chris Nauroth via wheat9)
+
+    HDFS-5702. FsShell Cli: Add XML based End-to-End test for getfacl and
+    setfacl commands. (Vinay via cnauroth)
+
+    HDFS-5608. WebHDFS: implement ACL APIs.
+    (Sachin Jose and Renil Joseph via cnauroth)
+
+    HDFS-5614. NameNode: implement handling of ACLs in combination with
+    snapshots. (cnauroth)
+
+    HDFS-5858. Refactor common ACL test cases to be run through multiple
+    FileSystem implementations. (cnauroth)
+
+    HDFS-5860. Refactor INodeDirectory getDirectoryXFeature methods to use
+    common getFeature helper method. (Jing Zhao via cnauroth)
+
+    HDFS-5861. Add CLI test for Ls output for extended ACL marker.
+    (Vinay via cnauroth)
+
+    HDFS-5616. NameNode: implement default ACL handling. (cnauroth)
+
+    HDFS-5899. Add configuration flag to disable/enable support for ACLs.
+    (cnauroth)
+
+    HDFS-5914. Incorporate ACLs with the changes from HDFS-5698.
+    (Haohui Mai via cnauroth)
+
+    HDFS-5625. Write end user documentation for HDFS ACLs. (cnauroth)
+
+    HDFS-5925. ACL configuration flag must only reject ACL API calls, not ACLs
+    present in fsimage or edits. (cnauroth)
+
+    HDFS-5923. Do not persist the ACL bit in the FsPermission.
+    (Haohui Mai via cnauroth)
+
+    HDFS-5933. Optimize the FSImage layout for ACLs (Haohui Mai via cnauroth)
+
+    HDFS-5932. Ls should display the ACL bit (Chris Nauroth via wheat9)
+
+    HDFS-5937. Fix TestOfflineEditsViewer on HDFS-4685 branch. (cnauroth)
+
+    HDFS-5737. Replacing only the default ACL can fail to copy unspecified base
+    entries from the access ACL. (cnauroth)
+
+    HDFS-5739. ACL RPC must allow null name or unspecified permissions in ACL
+    entries. (cnauroth)
+
+    HDFS-5799. Make audit logging consistent across ACL APIs. (cnauroth)
+
+    HDFS-5849. Removing ACL from an inode fails if it has only a default ACL.
+    (cnauroth)
 
 Release 2.3.1 - UNRELEASED
 
