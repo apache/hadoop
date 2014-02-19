@@ -22,6 +22,8 @@ Release 2.5.0 - UNRELEASED
   NEW FEATURES
 
   IMPROVEMENTS
+    YARN-1479. Invalid NaN values in Hadoop REST API JSON response (Chen He via
+    jeagles)
 
   OPTIMIZATIONS
 
@@ -198,6 +200,10 @@ Release 2.4.0 - UNRELEASED
 
     YARN-1676. Modified RM HA handling of user-to-group mappings to
     be available across RM failover by making using of a remote
+    configuration-provider. (Xuan Gong via vinodkv)
+
+    YARN-1666. Modified RM HA handling of include/exclude node-lists to be
+    available across RM failover by making using of a remote
     configuration-provider. (Xuan Gong via vinodkv)
 
   OPTIMIZATIONS

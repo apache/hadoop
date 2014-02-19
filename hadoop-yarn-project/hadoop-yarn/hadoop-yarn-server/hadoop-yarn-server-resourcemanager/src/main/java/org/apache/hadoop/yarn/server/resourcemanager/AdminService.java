@@ -26,7 +26,6 @@ import java.util.Set;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.LocalConfigurationProvider;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HAServiceStatus;
@@ -313,9 +312,7 @@ public class AdminService extends CompositeService implements
     RefreshQueuesResponse response =
         recordFactory.newRecordInstance(RefreshQueuesResponse.class);
     try {
-      Configuration conf = getConfiguration(getConfig(),
-          YarnConfiguration.CS_CONFIGURATION_FILE);
-      rmContext.getScheduler().reinitialize(conf, this.rmContext);
+      rmContext.getScheduler().reinitialize(getConfig(), this.rmContext);
       RMAuditLogger.logSuccess(user.getShortUserName(), argName,
           "AdminService");
       return response;
@@ -331,23 +328,27 @@ public class AdminService extends CompositeService implements
   @Override
   public RefreshNodesResponse refreshNodes(RefreshNodesRequest request)
       throws YarnException, StandbyException {
+    String argName = "refreshNodes";
     UserGroupInformation user = checkAcls("refreshNodes");
 
     if (!isRMActive()) {
-      RMAuditLogger.logFailure(user.getShortUserName(), "refreshNodes",
+      RMAuditLogger.logFailure(user.getShortUserName(), argName,
           adminAcl.toString(), "AdminService",
           "ResourceManager is not active. Can not refresh nodes.");
       throwStandbyException();
     }
 
     try {
-      rmContext.getNodesListManager().refreshNodes(new YarnConfiguration());
-      RMAuditLogger.logSuccess(user.getShortUserName(), "refreshNodes",
+      Configuration conf =
+          getConfiguration(new Configuration(false),
+              YarnConfiguration.YARN_SITE_CONFIGURATION_FILE);
+      rmContext.getNodesListManager().refreshNodes(conf);
+      RMAuditLogger.logSuccess(user.getShortUserName(), argName,
           "AdminService");
       return recordFactory.newRecordInstance(RefreshNodesResponse.class);
     } catch (IOException ioe) {
       LOG.info("Exception refreshing nodes ", ioe);
-      RMAuditLogger.logFailure(user.getShortUserName(), "refreshNodes",
+      RMAuditLogger.logFailure(user.getShortUserName(), argName,
           adminAcl.toString(), "AdminService", "Exception refreshing nodes");
       throw RPCUtil.getRemoteException(ioe);
     }
@@ -368,7 +369,7 @@ public class AdminService extends CompositeService implements
     }
 
     Configuration conf =
-        getConfiguration(getConfig(),
+        getConfiguration(new Configuration(false),
             YarnConfiguration.CORE_SITE_CONFIGURATION_FILE);
     ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
     RMAuditLogger.logSuccess(user.getShortUserName(),
@@ -393,7 +394,7 @@ public class AdminService extends CompositeService implements
     }
 
     Groups.getUserToGroupsMappingService(
-        getConfiguration(getConfig(),
+        getConfiguration(new Configuration(false),
             YarnConfiguration.CORE_SITE_CONFIGURATION_FILE)).refresh();
 
     RMAuditLogger.logSuccess(user.getShortUserName(), argName, "AdminService");
@@ -415,7 +416,8 @@ public class AdminService extends CompositeService implements
       throwStandbyException();
     }
     Configuration conf =
-        getConfiguration(getConfig(), YarnConfiguration.YARN_SITE_XML_FILE);
+        getConfiguration(new Configuration(false),
+            YarnConfiguration.YARN_SITE_CONFIGURATION_FILE);
     adminAcl = new AccessControlList(conf.get(
         YarnConfiguration.YARN_ADMIN_ACL,
         YarnConfiguration.DEFAULT_YARN_ADMIN_ACL));
@@ -448,7 +450,7 @@ public class AdminService extends CompositeService implements
 
     PolicyProvider policyProvider = RMPolicyProvider.getInstance();
     Configuration conf =
-        getConfiguration(getConfig(),
+        getConfiguration(new Configuration(false),
             YarnConfiguration.HADOOP_POLICY_CONFIGURATION_FILE);
 
     refreshServiceAcls(conf, policyProvider);
@@ -463,13 +465,8 @@ public class AdminService extends CompositeService implements
 
   private synchronized void refreshServiceAcls(Configuration configuration,
       PolicyProvider policyProvider) {
-    if (this.rmContext.getConfigurationProvider() instanceof
-        LocalConfigurationProvider) {
-      this.server.refreshServiceAcl(configuration, policyProvider);
-    } else {
-      this.server.refreshServiceAclWithLoadedConfiguration(configuration,
-          policyProvider);
-    }
+    this.server.refreshServiceAclWithLoadedConfiguration(configuration,
+        policyProvider);
   }
 
   @Override
@@ -519,8 +516,9 @@ public class AdminService extends CompositeService implements
 
   private synchronized Configuration getConfiguration(Configuration conf,
       String confFileName) throws YarnException, IOException {
-    return this.rmContext.getConfigurationProvider().getConfiguration(conf,
-        confFileName);
+    conf.addResource(this.rmContext.getConfigurationProvider()
+        .getConfigurationInputStream(conf, confFileName));
+    return conf;
   }
 
   @VisibleForTesting
