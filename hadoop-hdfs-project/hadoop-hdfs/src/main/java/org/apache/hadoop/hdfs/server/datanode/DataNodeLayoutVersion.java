@@ -33,7 +33,7 @@ public class DataNodeLayoutVersion {
     new HashMap<Integer, SortedSet<LayoutFeature>>();
   
   public static final int CURRENT_LAYOUT_VERSION
-      = LayoutVersion.getCurrentLayoutVersion(FEATURES, Feature.values());
+      = LayoutVersion.getCurrentLayoutVersion(Feature.values());
 
   static{
     LayoutVersion.updateMap(FEATURES, LayoutVersion.Feature.values());
@@ -62,7 +62,7 @@ public class DataNodeLayoutVersion {
    * </ul>
    */
   public static enum Feature implements LayoutFeature {
-    FIRST_LAYOUT(-52, "First datenode layout");
+    FIRST_LAYOUT(-55, -53, "First datenode layout", false);
    
     private final FeatureInfo info;
 

@@ -44,7 +44,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class LayoutVersion {
- 
   /**
    * Version in which HDFS-2991 was fixed. This bug caused OP_ADD to
    * sometimes be skipped for append() calls. If we see such a case when
@@ -279,12 +278,15 @@ public class LayoutVersion {
   /**
    * Get the current layout version
    */
-  public static int getCurrentLayoutVersion(
-      Map<Integer, SortedSet<LayoutFeature>> map, LayoutFeature[] values) {
-    for (int i = values.length -1; i >= 0; i--) {
-      final FeatureInfo info = values[i].getInfo();
+  public static int getCurrentLayoutVersion(LayoutFeature[] features) {
+    return getLastNonReservedFeature(features).getInfo().getLayoutVersion();
+  }
+
+  static LayoutFeature getLastNonReservedFeature(LayoutFeature[] features) {
+    for (int i = features.length -1; i >= 0; i--) {
+      final FeatureInfo info = features[i].getInfo();
       if (!info.isReservedForOldRelease()) {
-        return info.getLayoutVersion();
+        return features[i];
       }
     }
     throw new AssertionError("All layout versions are reserved.");

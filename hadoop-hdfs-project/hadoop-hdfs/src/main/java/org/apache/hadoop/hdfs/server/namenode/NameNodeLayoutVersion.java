@@ -34,7 +34,7 @@ public class NameNodeLayoutVersion {
       = new HashMap<Integer, SortedSet<LayoutFeature>>();
 
   public static final int CURRENT_LAYOUT_VERSION
-      = LayoutVersion.getCurrentLayoutVersion(FEATURES, Feature.values());
+      = LayoutVersion.getCurrentLayoutVersion(Feature.values());
 
   static {
     LayoutVersion.updateMap(FEATURES, LayoutVersion.Feature.values());
@@ -63,7 +63,7 @@ public class NameNodeLayoutVersion {
    * </ul>
    */
   public static enum Feature implements LayoutFeature {
-    ROLLING_UPGRADE(-52, "Support rolling upgrade");
+    ROLLING_UPGRADE(-55, -53, "Support rolling upgrade", false);
     
     private final FeatureInfo info;
 

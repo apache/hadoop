@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.protocol;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
 
 import java.util.SortedSet;
 
@@ -33,6 +34,13 @@ import org.junit.Test;
  * Test for {@link LayoutVersion}
  */
 public class TestLayoutVersion {
+  public static final LayoutFeature LAST_NON_RESERVED_COMMON_FEATURE;
+  public static final LayoutFeature LAST_COMMON_FEATURE;
+  static {
+    final Feature[] features = Feature.values();
+    LAST_COMMON_FEATURE = features[features.length - 1];
+    LAST_NON_RESERVED_COMMON_FEATURE = LayoutVersion.getLastNonReservedFeature(features);
+  }
   
   /**
    * Tests to make sure a given layout version supports all the
@@ -77,8 +85,11 @@ public class TestLayoutVersion {
    */
   @Test
   public void testNameNodeFeature() {
-    assertTrue(NameNodeLayoutVersion.supports(LayoutVersion.Feature.CACHING,
-        NameNodeLayoutVersion.Feature.ROLLING_UPGRADE.getInfo().getLayoutVersion()));
+    final LayoutFeature first = NameNodeLayoutVersion.Feature.ROLLING_UPGRADE; 
+    assertTrue(NameNodeLayoutVersion.supports(LAST_NON_RESERVED_COMMON_FEATURE,
+        first.getInfo().getLayoutVersion()));
+    assertEquals(LAST_COMMON_FEATURE.getInfo().getLayoutVersion() - 1,
+        first.getInfo().getLayoutVersion());
   }
   
   /**
@@ -86,8 +97,11 @@ public class TestLayoutVersion {
    */
   @Test
   public void testDataNodeFeature() {
-    assertTrue(DataNodeLayoutVersion.supports(LayoutVersion.Feature.CACHING,
-        DataNodeLayoutVersion.Feature.FIRST_LAYOUT.getInfo().getLayoutVersion()));
+    final LayoutFeature first = DataNodeLayoutVersion.Feature.FIRST_LAYOUT; 
+    assertTrue(DataNodeLayoutVersion.supports(LAST_NON_RESERVED_COMMON_FEATURE,
+        first.getInfo().getLayoutVersion()));
+    assertEquals(LAST_COMMON_FEATURE.getInfo().getLayoutVersion() - 1,
+        first.getInfo().getLayoutVersion());
   }
   
   /**

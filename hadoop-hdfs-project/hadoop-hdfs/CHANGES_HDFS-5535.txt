@@ -49,3 +49,6 @@ HDFS-5535 subtasks:
 
     HDFS-5966. Fix rollback of rolling upgrade in NameNode HA setup.  (jing9
     via szetszwo)
+
+    HDFS-5974. Fix compilation error, NameNodeLayoutVersion and
+    DataNodeLayoutVersion after merge from trunk.  (szetszwo)

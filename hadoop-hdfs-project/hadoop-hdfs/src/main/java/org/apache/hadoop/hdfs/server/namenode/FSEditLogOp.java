@@ -93,6 +93,7 @@ import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
+import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.protocol.proto.AclProtos.AclEditLogProto;
 import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
@@ -319,7 +320,7 @@ public abstract class FSEditLogOp {
 
     private static List<AclEntry> read(DataInputStream in, int logVersion)
         throws IOException {
-      if (!LayoutVersion.supports(Feature.EXTENDED_ACL, logVersion)) {
+      if (!NameNodeLayoutVersion.supports(Feature.EXTENDED_ACL, logVersion)) {
         return null;
       }
 
