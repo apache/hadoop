@@ -106,6 +106,17 @@ public class TestQueuePlacementPolicy {
     parse(sb.toString());
   }
   
+  @Test
+  public void testTerminals() throws Exception {
+    // Should make it through without an exception
+    StringBuffer sb = new StringBuffer();
+    sb.append("<queuePlacementPolicy>");
+    sb.append("  <rule name='secondaryGroupExistingQueue' create='true'/>");
+    sb.append("  <rule name='default' create='false'/>");
+    sb.append("</queuePlacementPolicy>");
+    parse(sb.toString());
+  }
+  
   private QueuePlacementPolicy parse(String str) throws Exception {
     // Read and parse the allocations file.
     DocumentBuilderFactory docBuilderFactory =

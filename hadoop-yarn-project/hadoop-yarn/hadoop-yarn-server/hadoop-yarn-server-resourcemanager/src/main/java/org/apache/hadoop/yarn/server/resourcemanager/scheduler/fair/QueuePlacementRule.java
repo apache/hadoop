@@ -162,7 +162,7 @@ public abstract class QueuePlacementRule {
         
     @Override
     public boolean isTerminal() {
-      return create;
+      return false;
     }
   }
 
@@ -201,7 +201,7 @@ public abstract class QueuePlacementRule {
     
     @Override
     public boolean isTerminal() {
-      return create;
+      return true;
     }
   }
   
