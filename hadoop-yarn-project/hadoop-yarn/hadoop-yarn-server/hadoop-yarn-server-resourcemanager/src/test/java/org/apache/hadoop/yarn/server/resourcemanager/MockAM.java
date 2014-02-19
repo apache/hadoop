@@ -197,6 +197,29 @@ public class MockAM {
     }
   }
 
+  public AllocateResponse allocate(AllocateRequest allocateRequest)
+            throws Exception {
+    final AllocateRequest req = allocateRequest;
+    req.setResponseId(++responseId);
+
+    UserGroupInformation ugi =
+        UserGroupInformation.createRemoteUser(attemptId.toString());
+    Token<AMRMTokenIdentifier> token =
+        context.getRMApps().get(attemptId.getApplicationId())
+            .getRMAppAttempt(attemptId).getAMRMToken();
+    ugi.addTokenIdentifier(token.decodeIdentifier());
+    try {
+      return ugi.doAs(new PrivilegedExceptionAction<AllocateResponse>() {
+        @Override
+        public AllocateResponse run() throws Exception {
+          return amRMProtocol.allocate(req);
+        }
+      });
+    } catch (UndeclaredThrowableException e) {
+      throw (Exception) e.getCause();
+    }
+  }
+
   public void unregisterAppAttempt() throws Exception {
     waitForState(RMAppAttemptState.RUNNING);
     final FinishApplicationMasterRequest req =

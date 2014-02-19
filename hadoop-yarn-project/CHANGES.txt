@@ -22,6 +22,8 @@ Release 2.5.0 - UNRELEASED
   NEW FEATURES
 
   IMPROVEMENTS
+    YARN-1479. Invalid NaN values in Hadoop REST API JSON response (Chen He via
+    jeagles)
 
   OPTIMIZATIONS
 
