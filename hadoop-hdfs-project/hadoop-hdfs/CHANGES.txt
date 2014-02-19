@@ -173,7 +173,8 @@ Release 2.4.0 - UNRELEASED
     HDFS-5716. Allow WebHDFS to use pluggable authentication filter
     (Haohui Mai via brandonli)
 
-    HDFS-5953. TestBlockReaderFactory fails in trunk. (Akira Ajisaka via wang)
+    HDFS-5953. TestBlockReaderFactory fails if libhadoop.so has not been built.
+    (Akira Ajisaka via wang)
 
     HDFS-5759. Web UI does not show up during the period of loading FSImage.
     (Haohui Mai via Arpit Agarwal)
