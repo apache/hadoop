@@ -49,7 +49,7 @@ message DatanodeRegistrationProto {
 message DatanodeStorageProto {
   enum StorageState {
     NORMAL = 0;
-    READ_ONLY = 1;
+    READ_ONLY_SHARED = 1;
   }
 
   required string storageUuid = 1;

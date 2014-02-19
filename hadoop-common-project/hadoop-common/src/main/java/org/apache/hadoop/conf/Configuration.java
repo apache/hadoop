@@ -765,6 +765,19 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     addResourceObject(new Resource(in, name));
   }
   
+  /**
+   * Add a configuration resource.
+   *
+   * The properties of this resource will override properties of previously
+   * added resources, unless they were marked <a href="#Final">final</a>.
+   *
+   * @param conf Configuration object from which to load properties
+   */
+  public void addResource(Configuration conf) {
+    addResourceObject(new Resource(conf.getProps()));
+  }
+
+  
   
   /**
    * Reload configuration from previously added resources.
