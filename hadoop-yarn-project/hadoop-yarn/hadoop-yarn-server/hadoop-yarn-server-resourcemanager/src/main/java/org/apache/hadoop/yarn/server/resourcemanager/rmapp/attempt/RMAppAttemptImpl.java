@@ -1053,7 +1053,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       appAttempt.removeCredentials(appAttempt);
 
       appAttempt.rmContext.getRMApplicationHistoryWriter()
-          .applicationAttemptFinished(appAttempt);
+          .applicationAttemptFinished(appAttempt, finalAttemptState);
     }
   }
 

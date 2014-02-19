@@ -259,6 +259,18 @@ Trunk (Unreleased)
     HDFS-5794. Fix the inconsistency of layout version number of 
     ADD_DATANODE_AND_STORAGE_UUIDS between trunk and branch-2. (jing9)
 
+Release 2.5.0 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES 
+
 Release 2.4.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -411,12 +423,24 @@ Release 2.4.0 - UNRELEASED
     HDFS-5716. Allow WebHDFS to use pluggable authentication filter
     (Haohui Mai via brandonli)
 
-    HDFS-5953. TestBlockReaderFactory fails in trunk. (Akira Ajisaka via wang)
+    HDFS-5953. TestBlockReaderFactory fails if libhadoop.so has not been built.
+    (Akira Ajisaka via wang)
 
     HDFS-5759. Web UI does not show up during the period of loading FSImage.
     (Haohui Mai via Arpit Agarwal)
 
     HDFS-5942. Fix javadoc in OfflineImageViewer. (Akira Ajisaka via cnauroth)
+
+    HDFS-5780. TestRBWBlockInvalidation times out intemittently. (Mit Desai
+    via kihwal)
+
+    HDFS-5803. TestBalancer.testBalancer0 fails. (Chen He via kihwal)
+
+    HDFS-5893. HftpFileSystem.RangeHeaderUrlOpener uses the default
+    URLConnectionFactory which does not import SSL certificates. (Haohui Mai via
+    jing9)
+
+    HDFS-5961. OIV cannot load fsimages containing a symbolic link. (kihwal)
 
   BREAKDOWN OF HDFS-5698 SUBTASKS AND RELATED JIRAS
 
@@ -471,6 +495,9 @@ Release 2.4.0 - UNRELEASED
     (Haohui Mai via cnauroth)
 
     HDFS-5847. Consolidate INodeReference into a separate section. (jing9)
+
+    HDFS-5959. Fix typo at section name in FSImageFormatProtobuf.java.
+    (Akira Ajisaka via suresh)
 
 Release 2.3.1 - UNRELEASED
 

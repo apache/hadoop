@@ -301,6 +301,18 @@ Trunk (Unreleased)
 
     HADOOP-8589. ViewFs tests fail when tests and home dirs are nested (sanjay Radia)
 
+Release 2.5.0 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES 
+
 Release 2.4.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -344,6 +356,8 @@ Release 2.4.0 - UNRELEASED
 
     HADOOP-10249. LdapGroupsMapping should trim ldap password read from file.
     (Dilli Armugam via suresh)
+
+    HADOOP-10346. Deadlock while logging tokens (jlowe)
 
 Release 2.3.1 - UNRELEASED
 

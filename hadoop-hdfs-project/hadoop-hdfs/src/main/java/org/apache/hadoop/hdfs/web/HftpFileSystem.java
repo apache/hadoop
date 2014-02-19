@@ -344,14 +344,15 @@ public class HftpFileSystem extends FileSystem
   }
 
   static class RangeHeaderUrlOpener extends ByteRangeInputStream.URLOpener {
-    URLConnectionFactory connectionFactory = URLConnectionFactory.DEFAULT_SYSTEM_CONNECTION_FACTORY;
+    private final URLConnectionFactory connFactory;
 
-    RangeHeaderUrlOpener(final URL url) {
+    RangeHeaderUrlOpener(URLConnectionFactory connFactory, final URL url) {
       super(url);
+      this.connFactory = connFactory;
     }
 
     protected HttpURLConnection openConnection() throws IOException {
-      return (HttpURLConnection)connectionFactory.openConnection(url);
+      return (HttpURLConnection)connFactory.openConnection(url);
     }
 
     /** Use HTTP Range header for specifying offset. */
@@ -381,8 +382,9 @@ public class HftpFileSystem extends FileSystem
       super(o, r);
     }
 
-    RangeHeaderInputStream(final URL url) {
-      this(new RangeHeaderUrlOpener(url), new RangeHeaderUrlOpener(null));
+    RangeHeaderInputStream(URLConnectionFactory connFactory, final URL url) {
+      this(new RangeHeaderUrlOpener(connFactory, url),
+          new RangeHeaderUrlOpener(connFactory, null));
     }
 
     @Override
@@ -397,7 +399,7 @@ public class HftpFileSystem extends FileSystem
     String path = "/data" + ServletUtil.encodePath(f.toUri().getPath());
     String query = addDelegationTokenParam("ugi=" + getEncodedUgiParameter());
     URL u = getNamenodeURL(path, query);
-    return new FSDataInputStream(new RangeHeaderInputStream(u));
+    return new FSDataInputStream(new RangeHeaderInputStream(connectionFactory, u));
   }
 
   @Override

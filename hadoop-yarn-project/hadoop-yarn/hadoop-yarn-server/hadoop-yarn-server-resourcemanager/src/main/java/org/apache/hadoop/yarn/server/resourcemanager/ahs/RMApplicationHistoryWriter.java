@@ -43,9 +43,12 @@ import org.apache.hadoop.yarn.server.applicationhistoryservice.records.Applicati
 import org.apache.hadoop.yarn.server.applicationhistoryservice.records.ApplicationStartData;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.records.ContainerFinishData;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.records.ContainerStartData;
+import org.apache.hadoop.yarn.server.resourcemanager.RMServerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 
 /**
@@ -219,12 +222,13 @@ public class RMApplicationHistoryWriter extends CompositeService {
   }
 
   @SuppressWarnings("unchecked")
-  public void applicationFinished(RMApp app) {
+  public void applicationFinished(RMApp app, RMAppState finalState) {
     dispatcher.getEventHandler().handle(
       new WritingApplicationFinishEvent(app.getApplicationId(),
         ApplicationFinishData.newInstance(app.getApplicationId(),
           app.getFinishTime(), app.getDiagnostics().toString(),
-          app.getFinalApplicationStatus(), app.createApplicationState())));
+          app.getFinalApplicationStatus(),
+          RMServerUtils.createApplicationState(finalState))));
   }
 
   @SuppressWarnings("unchecked")
@@ -239,15 +243,16 @@ public class RMApplicationHistoryWriter extends CompositeService {
   }
 
   @SuppressWarnings("unchecked")
-  public void applicationAttemptFinished(RMAppAttempt appAttempt) {
+  public void applicationAttemptFinished(RMAppAttempt appAttempt,
+      RMAppAttemptState finalState) {
     if (historyServiceEnabled) {
       dispatcher.getEventHandler().handle(
         new WritingApplicationAttemptFinishEvent(appAttempt.getAppAttemptId(),
           ApplicationAttemptFinishData.newInstance(
             appAttempt.getAppAttemptId(), appAttempt.getDiagnostics()
               .toString(), appAttempt.getTrackingUrl(), appAttempt
-              .getFinalApplicationStatus(), appAttempt
-              .createApplicationAttemptState())));
+              .getFinalApplicationStatus(),
+              RMServerUtils.createApplicationAttemptState(finalState))));
     }
   }
 

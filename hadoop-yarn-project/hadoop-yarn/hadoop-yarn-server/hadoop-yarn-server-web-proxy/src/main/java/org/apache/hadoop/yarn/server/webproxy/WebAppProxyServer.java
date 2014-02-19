@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.webproxy;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -69,8 +70,21 @@ public class WebAppProxyServer extends CompositeService {
    * @throws IOException on any error.
    */
   protected void doSecureLogin(Configuration conf) throws IOException {
+    InetSocketAddress socAddr = getBindAddress(conf);  
     SecurityUtil.login(conf, YarnConfiguration.PROXY_KEYTAB,
-        YarnConfiguration.PROXY_PRINCIPAL);
+        YarnConfiguration.PROXY_PRINCIPAL, socAddr.getHostName());
+  }
+
+  /**
+   * Retrieve PROXY bind address from configuration
+   *
+   * @param conf
+   * @return InetSocketAddress
+   */
+  public static InetSocketAddress getBindAddress(Configuration conf) {
+    return conf.getSocketAddr(YarnConfiguration.PROXY_ADDRESS,
+      YarnConfiguration.DEFAULT_PROXY_ADDRESS,
+      YarnConfiguration.DEFAULT_PROXY_PORT);
   }
 
   public static void main(String[] args) {

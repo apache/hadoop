@@ -66,7 +66,7 @@ public class TestRBWBlockInvalidation {
    * datanode, namenode should ask to invalidate that corrupted block and
    * schedule replication for one more replica for that under replicated block.
    */
-  @Test(timeout=60000)
+  @Test(timeout=600000)
   public void testBlockInvalidationWhenRBWReplicaMissedInDN()
       throws IOException, InterruptedException {
     // This test cannot pass on Windows due to file locking enforcement.  It will
@@ -75,7 +75,7 @@ public class TestRBWBlockInvalidation {
 
     Configuration conf = new HdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, 2);
-    conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 100);
+    conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 300);
     conf.setLong(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY, 1);
     conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2)
@@ -104,23 +104,24 @@ public class TestRBWBlockInvalidation {
           metaFile.delete());
 
       out.close();
-
-      // Check datanode has reported the corrupt block.
-      int corruptReplicas = 0;
+      
+      int liveReplicas = 0;
       while (true) {
-        if ((corruptReplicas = countReplicas(namesystem, blk).corruptReplicas()) > 0) {
+        if ((liveReplicas = countReplicas(namesystem, blk).liveReplicas()) < 2) {
+          // This confirms we have a corrupt replica
+          LOG.info("Live Replicas after corruption: " + liveReplicas);
           break;
         }
         Thread.sleep(100);
       }
-      assertEquals("There should be 1 replica in the corruptReplicasMap", 1,
-          corruptReplicas);
-
-      // Check the block has got replicated to another datanode.
-      blk = DFSTestUtil.getFirstBlock(fs, testPath);
-      int liveReplicas = 0;
+      assertEquals("There should be less than 2 replicas in the "
+          + "liveReplicasMap", 1, liveReplicas);
+      
       while (true) {
-        if ((liveReplicas = countReplicas(namesystem, blk).liveReplicas()) > 1) {
+        if ((liveReplicas =
+              countReplicas(namesystem, blk).liveReplicas()) > 1) {
+          //Wait till the live replica count becomes equal to Replication Factor
+          LOG.info("Live Replicas after Rereplication: " + liveReplicas);
           break;
         }
         Thread.sleep(100);
@@ -128,9 +129,9 @@ public class TestRBWBlockInvalidation {
       assertEquals("There should be two live replicas", 2,
           liveReplicas);
 
-      // sleep for 1 second, so that by this time datanode reports the corrupt
+      // sleep for 2 seconds, so that by this time datanode reports the corrupt
       // block after a live replica of block got replicated.
-      Thread.sleep(1000);
+      Thread.sleep(2000);
 
       // Check that there is no corrupt block in the corruptReplicasMap.
       assertEquals("There should not be any replica in the corruptReplicasMap",

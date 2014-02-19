@@ -15,6 +15,18 @@ Trunk - Unreleased
     YARN-524 TestYarnVersionInfo failing if generated properties doesn't
     include an SVN URL. (stevel)
 
+Release 2.5.0 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES 
+
 Release 2.4.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -276,6 +288,20 @@ Release 2.4.0 - UNRELEASED
     YARN-1553. Modified YARN and MR to stop using HttpConfig.isSecure() and
     instead rely on the http policy framework. And also fix some bugs related
     to https handling in YARN web-apps. (Haohui Mai via vinodkv)
+
+    YARN-1721. When moving app between queues in Fair Scheduler, grab lock on
+    FSSchedulerApp (Sandy Ryza)
+
+    YARN-1724. Race condition in Fair Scheduler when continuous scheduling is
+    turned on (Sandy Ryza)
+
+    YARN-1590. Fixed ResourceManager, web-app proxy and MR JobHistoryServer to
+    expand _HOST properly in their kerberos principles. (Mohammad Kamrul Islam
+    va vinodkv)
+
+    YARN-1428. Fixed RM to write the final state of RMApp/RMAppAttempt to the 
+    application history store in the transition to the final state. (Contributed
+    by Zhijie Shen)
 
 Release 2.3.1 - UNRELEASED
 
