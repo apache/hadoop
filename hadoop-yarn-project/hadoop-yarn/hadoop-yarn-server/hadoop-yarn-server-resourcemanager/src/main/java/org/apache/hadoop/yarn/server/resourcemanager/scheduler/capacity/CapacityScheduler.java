@@ -35,7 +35,6 @@ import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.yarn.LocalConfigurationProvider;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
@@ -263,19 +262,8 @@ public class CapacityScheduler extends AbstractYarnScheduler
       reinitialize(Configuration conf, RMContext rmContext) throws IOException {
     Configuration configuration = new Configuration(conf);
     if (!initialized) {
-      if (rmContext.getConfigurationProvider() instanceof
-          LocalConfigurationProvider) {
-        this.conf = new CapacitySchedulerConfiguration(configuration, true);
-      } else {
-        try {
-          this.conf =
-              new CapacitySchedulerConfiguration(rmContext
-                  .getConfigurationProvider().getConfiguration(configuration,
-                      YarnConfiguration.CS_CONFIGURATION_FILE), false);
-        } catch (Exception e) {
-          throw new IOException(e);
-        }
-      }
+      this.rmContext = rmContext;
+      this.conf = loadCapacitySchedulerConfiguration(configuration);
       validateConf(this.conf);
       this.minimumAllocation = this.conf.getMinimumAllocation();
       this.maximumAllocation = this.conf.getMaximumAllocation();
@@ -283,7 +271,6 @@ public class CapacityScheduler extends AbstractYarnScheduler
       this.usePortForNodeName = this.conf.getUsePortForNodeName();
       this.applications =
           new ConcurrentHashMap<ApplicationId, SchedulerApplication>();
-      this.rmContext = rmContext;
 
       initializeQueues(this.conf);
       
@@ -294,10 +281,7 @@ public class CapacityScheduler extends AbstractYarnScheduler
           "maximumAllocation=<" + getMaximumResourceCapability() + ">");
     } else {
       CapacitySchedulerConfiguration oldConf = this.conf; 
-      this.conf =
-          new CapacitySchedulerConfiguration(conf,
-              rmContext.getConfigurationProvider() instanceof
-                  LocalConfigurationProvider);
+      this.conf = loadCapacitySchedulerConfiguration(configuration);
       validateConf(this.conf);
       try {
         LOG.info("Re-initializing queues...");
@@ -1041,5 +1025,17 @@ public class CapacityScheduler extends AbstractYarnScheduler
     List<ApplicationAttemptId> apps = new ArrayList<ApplicationAttemptId>();
     queue.collectSchedulerApplications(apps);
     return apps;
+  }
+
+  private CapacitySchedulerConfiguration loadCapacitySchedulerConfiguration(
+      Configuration configuration) throws IOException {
+    try {
+      configuration.addResource(this.rmContext.getConfigurationProvider()
+          .getConfigurationInputStream(configuration,
+              YarnConfiguration.CS_CONFIGURATION_FILE));
+      return new CapacitySchedulerConfiguration(configuration, false);
+    } catch (Exception e) {
+      throw new IOException(e);
+    }
   }
 }

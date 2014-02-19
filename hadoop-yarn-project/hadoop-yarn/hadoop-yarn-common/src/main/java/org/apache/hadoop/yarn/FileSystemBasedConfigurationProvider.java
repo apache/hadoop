@@ -19,6 +19,8 @@
 package org.apache.hadoop.yarn;
 
 import java.io.IOException;
+import java.io.InputStream;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -41,15 +43,27 @@ public class FileSystemBasedConfigurationProvider
   private Path configDir;
 
   @Override
-  public synchronized Configuration getConfiguration(Configuration bootstrapConf,
-      String name) throws IOException, YarnException {
-    Path configPath = new Path(this.configDir, name);
-    if (!fs.exists(configPath)) {
-      throw new YarnException("Can not find Configuration: " + name + " in "
-          + configDir);
+  public synchronized InputStream getConfigurationInputStream(
+      Configuration bootstrapConf, String name) throws IOException,
+      YarnException {
+    if (name == null || name.isEmpty()) {
+      throw new YarnException(
+          "Illegal argument! The parameter should not be null or empty");
     }
-    bootstrapConf.addResource(fs.open(configPath));
-    return bootstrapConf;
+    Path filePath;
+    if (YarnConfiguration.RM_CONFIGURATION_FILES.contains(name)) {
+      filePath = new Path(this.configDir, name);
+      if (!fs.exists(filePath)) {
+        throw new YarnException("Can not find Configuration: " + name + " in "
+            + configDir);
+      }
+    } else {
+      filePath = new Path(name);
+      if (!fs.exists(filePath)) {
+        throw new YarnException("Can not find file: " + name);
+      }
+    }
+    return fs.open(filePath);
   }
 
   @Override

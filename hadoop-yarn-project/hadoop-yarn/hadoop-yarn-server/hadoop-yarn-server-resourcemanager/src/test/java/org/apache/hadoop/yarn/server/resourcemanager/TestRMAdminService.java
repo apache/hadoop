@@ -24,8 +24,10 @@ import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -41,6 +43,7 @@ import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshQueuesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshServiceAclsRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshSuperUserGroupsConfigurationRequest;
@@ -450,6 +453,69 @@ public class TestRMAdminService {
         && groupAfter.contains("test_group_E")
         && groupAfter.contains("test_group_F") && groupAfter.size() == 3);
 
+  }
+
+  @Test
+  public void testRefreshNodesWithLocalConfigurationProvider() {
+    rm = new MockRM(configuration);
+    rm.init(configuration);
+    rm.start();
+
+    try {
+      rm.adminService.refreshNodes(RefreshNodesRequest.newInstance());
+    } catch (Exception ex) {
+      fail("Using localConfigurationProvider. Should not get any exception.");
+    }
+  }
+
+  @Test
+  public void testRefreshNodesWithFileSystemBasedConfigurationProvider()
+      throws IOException, YarnException {
+    configuration.set(YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
+        "org.apache.hadoop.yarn.FileSystemBasedConfigurationProvider");
+    try {
+      rm = new MockRM(configuration);
+      rm.init(configuration);
+      rm.start();
+      fail("Should throw an exception");
+    } catch (Exception ex) {
+      // Expect exception here
+    }
+
+    // upload default configurations
+    uploadDefaultConfiguration();
+
+    try {
+      rm = new MockRM(configuration);
+      rm.init(configuration);
+      rm.start();
+    } catch (Exception ex) {
+      fail("Should not get any exceptions");
+    }
+
+    final File excludeHostsFile = new File(tmpDir.toString(), "excludeHosts");
+    if (excludeHostsFile.exists()) {
+      excludeHostsFile.delete();
+    }
+    if (!excludeHostsFile.createNewFile()) {
+      Assert.fail("Can not create " + "excludeHosts");
+    }
+    PrintWriter fileWriter = new PrintWriter(excludeHostsFile);
+    fileWriter.write("0.0.0.0:123");
+    fileWriter.close();
+
+    uploadToRemoteFileSystem(new Path(excludeHostsFile.getAbsolutePath()));
+
+    Configuration yarnConf = new YarnConfiguration();
+    yarnConf.set(YarnConfiguration.RM_NODES_EXCLUDE_FILE_PATH, this.workingPath
+        + "/excludeHosts");
+    uploadConfiguration(yarnConf, YarnConfiguration.YARN_SITE_CONFIGURATION_FILE);
+
+    rm.adminService.refreshNodes(RefreshNodesRequest.newInstance());
+    Set<String> excludeHosts =
+        rm.getNodesListManager().getHostsReader().getExcludedHosts();
+    Assert.assertTrue(excludeHosts.size() == 1);
+    Assert.assertTrue(excludeHosts.contains("0.0.0.0:123"));
   }
 
   private String writeConfigurationXML(Configuration conf, String confXMLName)
