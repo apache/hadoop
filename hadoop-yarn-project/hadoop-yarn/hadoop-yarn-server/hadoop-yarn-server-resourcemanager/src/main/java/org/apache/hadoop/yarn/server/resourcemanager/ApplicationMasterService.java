@@ -39,7 +39,6 @@ import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.LocalConfigurationProvider;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
@@ -140,10 +139,10 @@ public class ApplicationMasterService extends AbstractService implements
     if (conf.getBoolean(
         CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION, 
         false)) {
-      refreshServiceAcls(
-          this.rmContext.getConfigurationProvider().getConfiguration(conf,
-              YarnConfiguration.HADOOP_POLICY_CONFIGURATION_FILE),
-          RMPolicyProvider.getInstance());
+      conf.addResource(this.rmContext.getConfigurationProvider()
+          .getConfigurationInputStream(conf,
+              YarnConfiguration.HADOOP_POLICY_CONFIGURATION_FILE));
+      refreshServiceAcls(conf, RMPolicyProvider.getInstance());
     }
     
     this.server.start();
@@ -593,13 +592,8 @@ public class ApplicationMasterService extends AbstractService implements
 
   public void refreshServiceAcls(Configuration configuration, 
       PolicyProvider policyProvider) {
-    if (this.rmContext.getConfigurationProvider() instanceof
-        LocalConfigurationProvider) {
-      this.server.refreshServiceAcl(configuration, policyProvider);
-    } else {
-      this.server.refreshServiceAclWithLoadedConfiguration(configuration,
-          policyProvider);
-    }
+    this.server.refreshServiceAclWithLoadedConfiguration(configuration,
+        policyProvider);
   }
   
   @Override

@@ -32,11 +32,14 @@ import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.HostsFileReader;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppNodeUpdateEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppNodeUpdateEvent.RMAppNodeUpdateType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+
+import com.google.common.annotations.VisibleForTesting;
 
 @SuppressWarnings("unchecked")
 public class NodesListManager extends AbstractService implements
@@ -51,6 +54,9 @@ public class NodesListManager extends AbstractService implements
   
   private final RMContext rmContext;
 
+  private String includesFile;
+  private String excludesFile;
+
   public NodesListManager(RMContext rmContext) {
     super(NodesListManager.class.getName());
     this.rmContext = rmContext;
@@ -63,25 +69,17 @@ public class NodesListManager extends AbstractService implements
 
     // Read the hosts/exclude files to restrict access to the RM
     try {
-      this.hostsReader = 
-        new HostsFileReader(
-            conf.get(YarnConfiguration.RM_NODES_INCLUDE_FILE_PATH, 
-                YarnConfiguration.DEFAULT_RM_NODES_INCLUDE_FILE_PATH),
-            conf.get(YarnConfiguration.RM_NODES_EXCLUDE_FILE_PATH, 
-                YarnConfiguration.DEFAULT_RM_NODES_EXCLUDE_FILE_PATH)
-                );
+      this.includesFile = conf.get(YarnConfiguration.RM_NODES_INCLUDE_FILE_PATH,
+          YarnConfiguration.DEFAULT_RM_NODES_INCLUDE_FILE_PATH);
+      this.excludesFile = conf.get(YarnConfiguration.RM_NODES_EXCLUDE_FILE_PATH,
+          YarnConfiguration.DEFAULT_RM_NODES_EXCLUDE_FILE_PATH);
+      this.hostsReader =
+          createHostsFileReader(this.includesFile, this.excludesFile);
       printConfiguredHosts();
+    } catch (YarnException ex) {
+      disableHostsFileReader(ex);
     } catch (IOException ioe) {
-      LOG.warn("Failed to init hostsReader, disabling", ioe);
-      try {
-        this.hostsReader = 
-          new HostsFileReader(YarnConfiguration.DEFAULT_RM_NODES_INCLUDE_FILE_PATH, 
-              YarnConfiguration.DEFAULT_RM_NODES_EXCLUDE_FILE_PATH);
-      } catch (IOException ioe2) {
-        // Should *never* happen
-        this.hostsReader = null;
-        throw new YarnRuntimeException(ioe2);
-      }
+      disableHostsFileReader(ioe);
     }
     super.serviceInit(conf);
   }
@@ -103,17 +101,25 @@ public class NodesListManager extends AbstractService implements
     }
   }
 
-  public void refreshNodes(Configuration yarnConf) throws IOException {
+  public void refreshNodes(Configuration yarnConf) throws IOException,
+      YarnException {
     synchronized (hostsReader) {
       if (null == yarnConf) {
         yarnConf = new YarnConfiguration();
       }
-      hostsReader.updateFileNames(yarnConf.get(
-          YarnConfiguration.RM_NODES_INCLUDE_FILE_PATH,
-          YarnConfiguration.DEFAULT_RM_NODES_INCLUDE_FILE_PATH), yarnConf.get(
-          YarnConfiguration.RM_NODES_EXCLUDE_FILE_PATH,
-          YarnConfiguration.DEFAULT_RM_NODES_EXCLUDE_FILE_PATH));
-      hostsReader.refresh();
+      includesFile =
+          yarnConf.get(YarnConfiguration.RM_NODES_INCLUDE_FILE_PATH,
+              YarnConfiguration.DEFAULT_RM_NODES_INCLUDE_FILE_PATH);
+      excludesFile =
+          yarnConf.get(YarnConfiguration.RM_NODES_EXCLUDE_FILE_PATH,
+              YarnConfiguration.DEFAULT_RM_NODES_EXCLUDE_FILE_PATH);
+      hostsReader.updateFileNames(includesFile, excludesFile);
+      hostsReader.refresh(
+          includesFile.isEmpty() ? null : this.rmContext
+              .getConfigurationProvider().getConfigurationInputStream(
+                  this.conf, includesFile), excludesFile.isEmpty() ? null
+              : this.rmContext.getConfigurationProvider()
+                  .getConfigurationInputStream(this.conf, excludesFile));
       printConfiguredHosts();
     }
   }
@@ -173,5 +179,44 @@ public class NodesListManager extends AbstractService implements
     default:
       LOG.error("Ignoring invalid eventtype " + event.getType());
     }
+  }
+
+  private void disableHostsFileReader(Exception ex) {
+    LOG.warn("Failed to init hostsReader, disabling", ex);
+    try {
+      this.includesFile =
+          conf.get(YarnConfiguration.DEFAULT_RM_NODES_INCLUDE_FILE_PATH);
+      this.excludesFile =
+          conf.get(YarnConfiguration.DEFAULT_RM_NODES_EXCLUDE_FILE_PATH);
+      this.hostsReader =
+          createHostsFileReader(this.includesFile, this.excludesFile);
+    } catch (IOException ioe2) {
+      // Should *never* happen
+      this.hostsReader = null;
+      throw new YarnRuntimeException(ioe2);
+    } catch (YarnException e) {
+      // Should *never* happen
+      this.hostsReader = null;
+      throw new YarnRuntimeException(e);
+    }
+  }
+
+  @VisibleForTesting
+  public HostsFileReader getHostsReader() {
+    return this.hostsReader;
+  }
+
+  private HostsFileReader createHostsFileReader(String includesFile,
+      String excludesFile) throws IOException, YarnException {
+    HostsFileReader hostsReader =
+        new HostsFileReader(includesFile,
+            (includesFile == null || includesFile.isEmpty()) ? null
+                : this.rmContext.getConfigurationProvider()
+                    .getConfigurationInputStream(this.conf, includesFile),
+            excludesFile,
+            (excludesFile == null || excludesFile.isEmpty()) ? null
+                : this.rmContext.getConfigurationProvider()
+                    .getConfigurationInputStream(this.conf, excludesFile));
+    return hostsReader;
   }
 }
