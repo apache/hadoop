@@ -104,9 +104,6 @@ public class CapacityScheduler extends AbstractYarnScheduler
 
   private CSQueue root;
 
-  private final static List<Container> EMPTY_CONTAINER_LIST = 
-    new ArrayList<Container>();
-
   static final Comparator<CSQueue> queueComparator = new Comparator<CSQueue>() {
     @Override
     public int compare(CSQueue q1, CSQueue q2) {
@@ -556,9 +553,6 @@ public class CapacityScheduler extends AbstractYarnScheduler
       queue.finishApplicationAttempt(attempt, queue.getQueueName());
     }
   }
-
-  private static final Allocation EMPTY_ALLOCATION = 
-      new Allocation(EMPTY_CONTAINER_LIST, Resources.createResource(0, 0));
 
   @Override
   @Lock(Lock.NoLock.class)

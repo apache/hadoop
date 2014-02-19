@@ -300,6 +300,9 @@ Release 2.4.0 - UNRELEASED
     application history store in the transition to the final state. (Contributed
     by Zhijie Shen)
 
+    YARN-713. Fixed ResourceManager to not crash while building tokens when DNS
+    issues happen transmittently. (Jian He via vinodkv)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

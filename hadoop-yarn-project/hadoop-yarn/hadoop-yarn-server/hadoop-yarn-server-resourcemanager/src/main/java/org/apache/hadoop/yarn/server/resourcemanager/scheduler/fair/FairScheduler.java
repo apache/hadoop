@@ -78,6 +78,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplication;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt.ContainersAndNMTokensAllocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
@@ -142,12 +143,6 @@ public class FairScheduler extends AbstractYarnScheduler {
 
   // How often fair shares are re-calculated (ms)
   protected long UPDATE_INTERVAL = 500;
-
-  private final static List<Container> EMPTY_CONTAINER_LIST =
-      new ArrayList<Container>();
-
-  private static final Allocation EMPTY_ALLOCATION =
-      new Allocation(EMPTY_CONTAINER_LIST, Resources.createResource(0));
 
   // Aggregate metrics
   FSQueueMetrics rootMetrics;
@@ -922,9 +917,11 @@ public class FairScheduler extends AbstractYarnScheduler {
       }
 
       application.updateBlacklist(blacklistAdditions, blacklistRemovals);
-      
-      return new Allocation(application.pullNewlyAllocatedContainers(),
-          application.getHeadroom(), preemptionContainerIds);
+      ContainersAndNMTokensAllocation allocation =
+          application.pullNewlyAllocatedContainersAndNMTokens();
+      return new Allocation(allocation.getContainerList(),
+        application.getHeadroom(), preemptionContainerIds, null, null,
+        allocation.getNMTokenList());
     }
   }
 
