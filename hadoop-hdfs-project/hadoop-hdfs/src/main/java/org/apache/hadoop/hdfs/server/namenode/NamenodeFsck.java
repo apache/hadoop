@@ -58,6 +58,8 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicy;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementStatus;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
+import org.apache.hadoop.hdfs.server.blockmanagement.NumberReplicas;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.datanode.CachingStrategy;
 import org.apache.hadoop.net.NetUtils;
@@ -378,11 +380,13 @@ public class NamenodeFsck {
       boolean isCorrupt = lBlk.isCorrupt();
       String blkName = block.toString();
       DatanodeInfo[] locs = lBlk.getLocations();
-      res.totalReplicas += locs.length;
+      NumberReplicas numberReplicas = namenode.getNamesystem().getBlockManager().countNodes(block.getLocalBlock());
+      int liveReplicas = numberReplicas.liveReplicas();
+      res.totalReplicas += liveReplicas;
       short targetFileReplication = file.getReplication();
       res.numExpectedReplicas += targetFileReplication;
-      if (locs.length > targetFileReplication) {
-        res.excessiveReplicas += (locs.length - targetFileReplication);
+      if (liveReplicas > targetFileReplication) {
+        res.excessiveReplicas += (liveReplicas - targetFileReplication);
         res.numOverReplicatedBlocks += 1;
       }
       // Check if block is Corrupt
@@ -392,10 +396,10 @@ public class NamenodeFsck {
         out.print("\n" + path + ": CORRUPT blockpool " + block.getBlockPoolId() + 
             " block " + block.getBlockName()+"\n");
       }
-      if (locs.length >= minReplication)
+      if (liveReplicas >= minReplication)
         res.numMinReplicatedBlocks++;
-      if (locs.length < targetFileReplication && locs.length > 0) {
-        res.missingReplicas += (targetFileReplication - locs.length);
+      if (liveReplicas < targetFileReplication && liveReplicas > 0) {
+        res.missingReplicas += (targetFileReplication - liveReplicas);
         res.numUnderReplicatedBlocks += 1;
         underReplicatedPerFile++;
         if (!showFiles) {
@@ -404,7 +408,7 @@ public class NamenodeFsck {
         out.println(" Under replicated " + block +
                     ". Target Replicas is " +
                     targetFileReplication + " but found " +
-                    locs.length + " replica(s).");
+                    liveReplicas + " replica(s).");
       }
       // verify block placement policy
       BlockPlacementStatus blockPlacementStatus = bpPolicy
@@ -421,13 +425,13 @@ public class NamenodeFsck {
                     block + ". " + blockPlacementStatus.getErrorDescription());
       }
       report.append(i + ". " + blkName + " len=" + block.getNumBytes());
-      if (locs.length == 0) {
+      if (liveReplicas == 0) {
         report.append(" MISSING!");
         res.addMissing(block.toString(), block.getNumBytes());
         missing++;
         missize += block.getNumBytes();
       } else {
-        report.append(" repl=" + locs.length);
+        report.append(" repl=" + liveReplicas);
         if (showLocations || showRacks) {
           StringBuilder sb = new StringBuilder("[");
           for (int j = 0; j < locs.length; j++) {
