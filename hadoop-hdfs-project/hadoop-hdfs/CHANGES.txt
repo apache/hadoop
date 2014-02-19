@@ -416,6 +416,8 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-5726. Fix compilation error in AbstractINodeDiff for JDK7. (jing9)
 
+    HDFS-5973. add DomainSocket#shutdown method (cmccabe)
+
   OPTIMIZATIONS
 
     HDFS-5790. LeaseManager.findPath is very slow when many leases need recovery
