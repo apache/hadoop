@@ -137,8 +137,6 @@ public class TestRMApplicationHistoryWriter {
       new StringBuilder("test diagnostics info"));
     when(app.getFinalApplicationStatus()).thenReturn(
       FinalApplicationStatus.UNDEFINED);
-    when(app.createApplicationState())
-      .thenReturn(YarnApplicationState.FINISHED);
     return app;
   }
 
@@ -156,8 +154,6 @@ public class TestRMApplicationHistoryWriter {
     when(appAttempt.getTrackingUrl()).thenReturn("test url");
     when(appAttempt.getFinalApplicationStatus()).thenReturn(
       FinalApplicationStatus.UNDEFINED);
-    when(appAttempt.createApplicationAttemptState()).thenReturn(
-      YarnApplicationAttemptState.FINISHED);
     return appAttempt;
   }
 
@@ -200,7 +196,7 @@ public class TestRMApplicationHistoryWriter {
     Assert.assertEquals(0L, appHD.getSubmitTime());
     Assert.assertEquals(1L, appHD.getStartTime());
 
-    writer.applicationFinished(app);
+    writer.applicationFinished(app, RMAppState.FINISHED);
     for (int i = 0; i < MAX_RETRIES; ++i) {
       appHD = store.getApplication(ApplicationId.newInstance(0, 1));
       if (appHD.getYarnApplicationState() != null) {
@@ -241,7 +237,7 @@ public class TestRMApplicationHistoryWriter {
       ApplicationAttemptId.newInstance(ApplicationId.newInstance(0, 1), 1), 1),
       appAttemptHD.getMasterContainerId());
 
-    writer.applicationAttemptFinished(appAttempt);
+    writer.applicationAttemptFinished(appAttempt, RMAppAttemptState.FINISHED);
     for (int i = 0; i < MAX_RETRIES; ++i) {
       appAttemptHD =
           store.getApplicationAttempt(ApplicationAttemptId.newInstance(
@@ -326,9 +322,10 @@ public class TestRMApplicationHistoryWriter {
           writer.containerStarted(container);
           writer.containerFinished(container);
         }
-        writer.applicationAttemptFinished(appAttempt);
+        writer.applicationAttemptFinished(
+            appAttempt, RMAppAttemptState.FINISHED);
       }
-      writer.applicationFinished(app);
+      writer.applicationFinished(app, RMAppState.FINISHED);
     }
     for (int i = 0; i < MAX_RETRIES; ++i) {
       if (allEventsHandled(20 * 10 * 10 + 20 * 10 + 20)) {
@@ -369,7 +366,7 @@ public class TestRMApplicationHistoryWriter {
           }
 
           @Override
-          public void applicationFinished(RMApp app) {
+          public void applicationFinished(RMApp app, RMAppState finalState) {
           }
 
           @Override
@@ -377,7 +374,8 @@ public class TestRMApplicationHistoryWriter {
           }
 
           @Override
-          public void applicationAttemptFinished(RMAppAttempt appAttempt) {
+          public void applicationAttemptFinished(
+              RMAppAttempt appAttempt, RMAppAttemptState finalState) {
           }
 
           @Override

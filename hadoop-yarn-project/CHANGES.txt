@@ -299,6 +299,10 @@ Release 2.4.0 - UNRELEASED
     expand _HOST properly in their kerberos principles. (Mohammad Kamrul Islam
     va vinodkv)
 
+    YARN-1428. Fixed RM to write the final state of RMApp/RMAppAttempt to the 
+    application history store in the transition to the final state. (Contributed
+    by Zhijie Shen)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
