@@ -861,6 +861,9 @@ public class YarnConfiguration extends Configuration {
   /** The address for the web proxy.*/
   public static final String PROXY_ADDRESS =
     PROXY_PREFIX + "address";
+  public static final int DEFAULT_PROXY_PORT = 9099;
+  public static final String DEFAULT_PROXY_ADDRESS =
+    "0.0.0.0:" + DEFAULT_RM_PORT;
   
   /**
    * YARN Service Level Authorization
