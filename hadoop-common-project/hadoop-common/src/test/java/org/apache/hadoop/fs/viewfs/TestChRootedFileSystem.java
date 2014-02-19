@@ -20,6 +20,8 @@ package org.apache.hadoop.fs.viewfs;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
+import java.util.Collections;
+import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -29,6 +31,7 @@ import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.viewfs.ChRootedFileSystem;
 import org.junit.After;
 import org.junit.Assert;
@@ -352,6 +355,44 @@ public class TestChRootedFileSystem {
 
     URI chrootUri = URI.create("mockfs://foo");
     new ChRootedFileSystem(chrootUri, conf);
+  }
+
+  /**
+   * Tests that ChRootedFileSystem delegates calls for every ACL method to the
+   * underlying FileSystem with all Path arguments translated as required to
+   * enforce chroot.
+   */
+  @Test
+  public void testAclMethodsPathTranslation() throws IOException {
+    Configuration conf = new Configuration();
+    conf.setClass("fs.mockfs.impl", MockFileSystem.class, FileSystem.class);
+
+    URI chrootUri = URI.create("mockfs://foo/a/b");
+    ChRootedFileSystem chrootFs = new ChRootedFileSystem(chrootUri, conf);
+    FileSystem mockFs = ((FilterFileSystem)chrootFs.getRawFileSystem())
+        .getRawFileSystem();
+
+    Path chrootPath = new Path("/c");
+    Path rawPath = new Path("/a/b/c");
+    List<AclEntry> entries = Collections.emptyList();
+
+    chrootFs.modifyAclEntries(chrootPath, entries);
+    verify(mockFs).modifyAclEntries(rawPath, entries);
+
+    chrootFs.removeAclEntries(chrootPath, entries);
+    verify(mockFs).removeAclEntries(rawPath, entries);
+
+    chrootFs.removeDefaultAcl(chrootPath);
+    verify(mockFs).removeDefaultAcl(rawPath);
+
+    chrootFs.removeAcl(chrootPath);
+    verify(mockFs).removeAcl(rawPath);
+
+    chrootFs.setAcl(chrootPath, entries);
+    verify(mockFs).setAcl(rawPath, entries);
+
+    chrootFs.getAclStatus(chrootPath);
+    verify(mockFs).getAclStatus(rawPath);
   }
 
   static class MockFileSystem extends FilterFileSystem {

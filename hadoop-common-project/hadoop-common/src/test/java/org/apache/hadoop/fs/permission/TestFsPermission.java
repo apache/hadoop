@@ -54,7 +54,7 @@ public class TestFsPermission extends TestCase {
    * the expected values back out for all combinations
    */
   public void testConvertingPermissions() {
-    for(short s = 0; s < 01777; s++) {
+    for(short s = 0; s <= 01777; s++) {
       assertEquals(s, new FsPermission(s).toShort());
     }
 
@@ -64,10 +64,12 @@ public class TestFsPermission extends TestCase {
       for(FsAction u : FsAction.values()) {
         for(FsAction g : FsAction.values()) {
           for(FsAction o : FsAction.values()) {
+            // Cover constructor with sticky bit.
             FsPermission f = new FsPermission(u, g, o, sb);
             assertEquals(s, f.toShort());
             FsPermission f2 = new FsPermission(f);
             assertEquals(s, f2.toShort());
+
             s++;
           }
         }
@@ -75,48 +77,57 @@ public class TestFsPermission extends TestCase {
     }
   }
 
-  public void testStickyBitToString() {
-    // Check that every permission has its sticky bit represented correctly
-    for(boolean sb : new boolean [] { false, true }) {
-      for(FsAction u : FsAction.values()) {
-        for(FsAction g : FsAction.values()) {
-          for(FsAction o : FsAction.values()) {
+  public void testSpecialBitsToString() {
+    for (boolean sb : new boolean[] { false, true }) {
+      for (FsAction u : FsAction.values()) {
+        for (FsAction g : FsAction.values()) {
+          for (FsAction o : FsAction.values()) {
             FsPermission f = new FsPermission(u, g, o, sb);
-            if(f.getStickyBit() && f.getOtherAction().implies(EXECUTE))
-              assertEquals('t', f.toString().charAt(8));
-            else if(f.getStickyBit() && !f.getOtherAction().implies(EXECUTE))
-              assertEquals('T', f.toString().charAt(8));
-            else if(!f.getStickyBit()  && f.getOtherAction().implies(EXECUTE))
-              assertEquals('x', f.toString().charAt(8));
+            String fString = f.toString();
+
+            // Check that sticky bit is represented correctly.
+            if (f.getStickyBit() && f.getOtherAction().implies(EXECUTE))
+              assertEquals('t', fString.charAt(8));
+            else if (f.getStickyBit() && !f.getOtherAction().implies(EXECUTE))
+              assertEquals('T', fString.charAt(8));
+            else if (!f.getStickyBit() && f.getOtherAction().implies(EXECUTE))
+              assertEquals('x', fString.charAt(8));
             else
-              assertEquals('-', f.toString().charAt(8));
+              assertEquals('-', fString.charAt(8));
+
+            assertEquals(9, fString.length());
           }
         }
+
       }
     }
   }
 
   public void testFsPermission() {
-      String symbolic = "-rwxrwxrwx";
-      StringBuilder b = new StringBuilder("-123456789");
+    String symbolic = "-rwxrwxrwx";
 
-      for(int i = 0; i < (1<<9); i++) {
-        for(int j = 1; j < 10; j++) {
-          b.setCharAt(j, '-');
+    for(int i = 0; i < (1 << 10); i++) {
+      StringBuilder b = new StringBuilder("----------");
+      String binary = String.format("%11s", Integer.toBinaryString(i));
+      String permBinary = binary.substring(2, binary.length());
+
+      int len = permBinary.length();
+      for(int j = 0; j < len; j++) {
+        if (permBinary.charAt(j) == '1') {
+          int k = 9 - (len - 1 - j);
+          b.setCharAt(k, symbolic.charAt(k));
         }
-        String binary = Integer.toBinaryString(i);
-
-        int len = binary.length();
-        for(int j = 0; j < len; j++) {
-          if (binary.charAt(j) == '1') {
-            int k = 9 - (len - 1 - j);
-            b.setCharAt(k, symbolic.charAt(k));
-          }
-        }
-
-        assertEquals(i, FsPermission.valueOf(b.toString()).toShort());
       }
+
+      // Check for sticky bit.
+      if (binary.charAt(1) == '1') {
+        char replacement = b.charAt(9) == 'x' ? 't' : 'T';
+        b.setCharAt(9, replacement);
+      }
+
+      assertEquals(i, FsPermission.valueOf(b.toString()).toShort());
     }
+  }
 
   public void testUMaskParser() throws IOException {
     Configuration conf = new Configuration();

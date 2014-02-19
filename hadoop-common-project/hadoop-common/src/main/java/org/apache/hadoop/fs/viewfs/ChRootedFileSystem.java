@@ -20,6 +20,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.util.EnumSet;
+import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -36,6 +37,8 @@ import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.AclEntry;
+import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Progressable;
 
@@ -277,7 +280,39 @@ class ChRootedFileSystem extends FilterFileSystem {
       throws IOException {
     super.setTimes(fullPath(f), mtime, atime);
   }
-  
+
+  @Override
+  public void modifyAclEntries(Path path, List<AclEntry> aclSpec)
+      throws IOException {
+    super.modifyAclEntries(fullPath(path), aclSpec);
+  }
+
+  @Override
+  public void removeAclEntries(Path path, List<AclEntry> aclSpec)
+      throws IOException {
+    super.removeAclEntries(fullPath(path), aclSpec);
+  }
+
+  @Override
+  public void removeDefaultAcl(Path path) throws IOException {
+    super.removeDefaultAcl(fullPath(path));
+  }
+
+  @Override
+  public void removeAcl(Path path) throws IOException {
+    super.removeAcl(fullPath(path));
+  }
+
+  @Override
+  public void setAcl(Path path, List<AclEntry> aclSpec) throws IOException {
+    super.setAcl(fullPath(path), aclSpec);
+  }
+
+  @Override
+  public AclStatus getAclStatus(Path path) throws IOException {
+    return super.getAclStatus(fullPath(path));
+  }
+
   @Override
   public Path resolvePath(final Path p) throws IOException {
     return super.resolvePath(fullPath(p));

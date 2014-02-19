@@ -32,6 +32,11 @@ import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.AclEntry;
+import org.apache.hadoop.fs.permission.AclEntryScope;
+import org.apache.hadoop.fs.permission.AclEntryType;
+import org.apache.hadoop.fs.permission.AclStatus;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.proto.HAServiceProtocolProtos;
@@ -61,6 +66,12 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffReportEntry;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffType;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
+import org.apache.hadoop.hdfs.protocol.proto.AclProtos.AclEntryProto;
+import org.apache.hadoop.hdfs.protocol.proto.AclProtos.AclStatusProto;
+import org.apache.hadoop.hdfs.protocol.proto.AclProtos.AclEntryProto.AclEntryScopeProto;
+import org.apache.hadoop.hdfs.protocol.proto.AclProtos.AclEntryProto.AclEntryTypeProto;
+import org.apache.hadoop.hdfs.protocol.proto.AclProtos.AclEntryProto.FsActionProto;
+import org.apache.hadoop.hdfs.protocol.proto.AclProtos.GetAclStatusResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CacheDirectiveEntryProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CacheDirectiveInfoExpirationProto;
@@ -190,12 +201,23 @@ public class PBHelper {
       RegisterCommandProto.newBuilder().build();
   private static final RegisterCommand REG_CMD = new RegisterCommand();
 
+  private static final AclEntryScope[] ACL_ENTRY_SCOPE_VALUES =
+      AclEntryScope.values();
+  private static final AclEntryType[] ACL_ENTRY_TYPE_VALUES =
+      AclEntryType.values();
+  private static final FsAction[] FSACTION_VALUES =
+      FsAction.values();
+
   private PBHelper() {
     /** Hidden constructor */
   }
 
   public static ByteString getByteString(byte[] bytes) {
     return ByteString.copyFrom(bytes);
+  }
+
+  private static <T extends Enum<T>, U extends Enum<U>> U castEnum(T from, U[] to) {
+    return to[from.ordinal()];
   }
 
   public static NamenodeRole convert(NamenodeRoleProto role) {
@@ -750,8 +772,9 @@ public class PBHelper {
       return REG_CMD;
     case BlockIdCommand:
       return PBHelper.convert(proto.getBlkIdCmd());
+    default:
+      return null;
     }
-    return null;
   }
   
   public static BalancerBandwidthCommandProto convert(
@@ -1886,6 +1909,75 @@ public class PBHelper {
     int size = CodedInputStream.readRawVarint32(firstByte, input);
     assert size >= 0;
     return new ExactSizeInputStream(input, size);
+  }
+
+  private static AclEntryScopeProto convert(AclEntryScope v) {
+    return AclEntryScopeProto.valueOf(v.ordinal());
+  }
+
+  private static AclEntryScope convert(AclEntryScopeProto v) {
+    return castEnum(v, ACL_ENTRY_SCOPE_VALUES);
+  }
+
+  private static AclEntryTypeProto convert(AclEntryType e) {
+    return AclEntryTypeProto.valueOf(e.ordinal());
+  }
+
+  private static AclEntryType convert(AclEntryTypeProto v) {
+    return castEnum(v, ACL_ENTRY_TYPE_VALUES);
+  }
+
+  private static FsActionProto convert(FsAction v) {
+    return FsActionProto.valueOf(v != null ? v.ordinal() : 0);
+  }
+
+  private static FsAction convert(FsActionProto v) {
+    return castEnum(v, FSACTION_VALUES);
+  }
+
+  public static List<AclEntryProto> convertAclEntryProto(
+      List<AclEntry> aclSpec) {
+    ArrayList<AclEntryProto> r = Lists.newArrayListWithCapacity(aclSpec.size());
+    for (AclEntry e : aclSpec) {
+      AclEntryProto.Builder builder = AclEntryProto.newBuilder();
+      builder.setType(convert(e.getType()));
+      builder.setScope(convert(e.getScope()));
+      builder.setPermissions(convert(e.getPermission()));
+      if (e.getName() != null) {
+        builder.setName(e.getName());
+      }
+      r.add(builder.build());
+    }
+    return r;
+  }
+
+  public static List<AclEntry> convertAclEntry(List<AclEntryProto> aclSpec) {
+    ArrayList<AclEntry> r = Lists.newArrayListWithCapacity(aclSpec.size());
+    for (AclEntryProto e : aclSpec) {
+      AclEntry.Builder builder = new AclEntry.Builder();
+      builder.setType(convert(e.getType()));
+      builder.setScope(convert(e.getScope()));
+      builder.setPermission(convert(e.getPermissions()));
+      if (e.hasName()) {
+        builder.setName(e.getName());
+      }
+      r.add(builder.build());
+    }
+    return r;
+  }
+
+  public static AclStatus convert(GetAclStatusResponseProto e) {
+    AclStatusProto r = e.getResult();
+    return new AclStatus.Builder().owner(r.getOwner()).group(r.getGroup())
+        .stickyBit(r.getSticky())
+        .addEntries(convertAclEntry(r.getEntriesList())).build();
+  }
+
+  public static GetAclStatusResponseProto convert(AclStatus e) {
+    AclStatusProto r = AclStatusProto.newBuilder().setOwner(e.getOwner())
+        .setGroup(e.getGroup()).setSticky(e.isStickyBit())
+        .addAllEntries(convertAclEntryProto(e.getEntries())).build();
+    return GetAclStatusResponseProto.newBuilder().setResult(r).build();
   }
 }
 

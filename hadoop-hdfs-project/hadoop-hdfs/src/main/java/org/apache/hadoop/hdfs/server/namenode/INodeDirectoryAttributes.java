@@ -35,8 +35,8 @@ public interface INodeDirectoryAttributes extends INodeAttributes {
   public static class SnapshotCopy extends INodeAttributes.SnapshotCopy
       implements INodeDirectoryAttributes {
     public SnapshotCopy(byte[] name, PermissionStatus permissions,
-        long modificationTime) {
-      super(name, permissions, modificationTime, 0L);
+        AclFeature aclFeature, long modificationTime) {
+      super(name, permissions, aclFeature, modificationTime, 0L);
     }
 
     public SnapshotCopy(INodeDirectory dir) {
@@ -62,8 +62,9 @@ public interface INodeDirectoryAttributes extends INodeAttributes {
 
 
     public CopyWithQuota(byte[] name, PermissionStatus permissions,
-        long modificationTime, long nsQuota, long dsQuota) {
-      super(name, permissions, modificationTime);
+        AclFeature aclFeature, long modificationTime, long nsQuota,
+        long dsQuota) {
+      super(name, permissions, aclFeature, modificationTime);
       this.nsQuota = nsQuota;
       this.dsQuota = dsQuota;
     }

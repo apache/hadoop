@@ -184,7 +184,7 @@ public class INodeDirectorySnapshottable extends INodeDirectory {
   private int snapshotQuota = SNAPSHOT_LIMIT;
 
   public INodeDirectorySnapshottable(INodeDirectory dir) {
-    super(dir, true, true);
+    super(dir, true, dir.getFeatures());
     // add snapshot feature if the original directory does not have it
     if (!isWithSnapshot()) {
       addSnapshotFeature(null);

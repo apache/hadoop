@@ -66,6 +66,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenameOldOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenameOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenameSnapshotOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenewDelegationTokenOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetAclOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetGenstampV1Op;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetGenstampV2Op;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetNSQuotaOp;
@@ -322,9 +323,10 @@ public class FSEditLogLoader {
         inodeId = getAndUpdateLastInodeId(addCloseOp.inodeId, logVersion,
             lastInodeId);
         newFile = fsDir.unprotectedAddFile(inodeId,
-            path, addCloseOp.permissions, replication,
-            addCloseOp.mtime, addCloseOp.atime, addCloseOp.blockSize, true,
-            addCloseOp.clientName, addCloseOp.clientMachine);
+            path, addCloseOp.permissions, addCloseOp.aclEntries,
+            replication, addCloseOp.mtime, addCloseOp.atime,
+            addCloseOp.blockSize, true, addCloseOp.clientName,
+            addCloseOp.clientMachine);
         fsNamesys.leaseManager.addLease(addCloseOp.clientName, path);
 
         // add the op into retry cache if necessary
@@ -484,7 +486,7 @@ public class FSEditLogLoader {
           lastInodeId);
       fsDir.unprotectedMkdir(inodeId,
           renameReservedPathsOnUpgrade(mkdirOp.path, logVersion),
-          mkdirOp.permissions, mkdirOp.timestamp);
+          mkdirOp.permissions, mkdirOp.aclEntries, mkdirOp.timestamp);
       break;
     }
     case OP_SET_GENSTAMP_V1: {
@@ -738,6 +740,11 @@ public class FSEditLogLoader {
       if (toAddRetryCache) {
         fsNamesys.addCacheEntry(op.rpcClientId, op.rpcCallId);
       }
+      break;
+    }
+    case OP_SET_ACL: {
+      SetAclOp setAclOp = (SetAclOp) op;
+      fsDir.unprotectedSetAcl(setAclOp.src, setAclOp.aclEntries);
       break;
     }
     default:
