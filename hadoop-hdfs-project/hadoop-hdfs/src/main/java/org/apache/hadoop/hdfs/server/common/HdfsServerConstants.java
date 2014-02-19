@@ -87,6 +87,12 @@ public final class HdfsServerConstants {
     private static final Pattern ENUM_WITH_ROLLING_UPGRADE_OPTION = Pattern.compile(
         "(\\w+)\\((\\w+)\\)");
 
+    public static boolean isRollingUpgradeRollback(StartupOption option) {
+      return option == ROLLINGUPGRADE
+          && option.getRollingUpgradeStartupOption() 
+               == RollingUpgradeStartupOption.ROLLBACK;
+    }
+
     private final String name;
     
     // Used only with format and upgrade options

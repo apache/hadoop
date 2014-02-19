@@ -374,6 +374,19 @@ public class TestDFSUpgrade {
       log("Normal NameNode upgrade", numDirs);
       UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "current");
       cluster = createCluster();
+
+      // make sure that rolling upgrade cannot be started
+      try {
+        final DistributedFileSystem dfs = cluster.getFileSystem();
+        dfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+        dfs.rollingUpgrade(RollingUpgradeAction.START);
+        fail();
+      } catch(RemoteException re) {
+        assertEquals(InconsistentFSStateException.class.getName(),
+            re.getClassName());
+        LOG.info("The exception is expected.", re);
+      }
+
       checkNameNode(nameNodeDirs, EXPECTED_TXID);
       TestParallelImageWrite.checkImages(cluster.getNamesystem(), numDirs);
       cluster.shutdown();

@@ -246,8 +246,7 @@ public class BlockPoolSliceStorage extends Storage {
       NamespaceInfo nsInfo, StartupOption startOpt) throws IOException {
     if (startOpt == StartupOption.ROLLBACK) {
       doRollback(sd, nsInfo); // rollback if applicable
-    } else if (startOpt == StartupOption.ROLLINGUPGRADE &&
-        startOpt.getRollingUpgradeStartupOption() == RollingUpgradeStartupOption.ROLLBACK) {
+    } else if (StartupOption.isRollingUpgradeRollback(startOpt)) {
       File trashRoot = getTrashRootDir(sd);
       int filesRestored =
           trashRoot.exists() ? restoreBlockFilesFromTrash(trashRoot) : 0;

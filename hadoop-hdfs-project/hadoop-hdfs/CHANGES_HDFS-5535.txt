@@ -46,3 +46,6 @@ HDFS-5535 subtasks:
 
     HDFS-5945. Add rolling upgrade information to fsimage; and disallow upgrade
     and rolling upgrade to be started simultaneously.  (szetszwo & jing9)
+
+    HDFS-5966. Fix rollback of rolling upgrade in NameNode HA setup.  (jing9
+    via szetszwo)

@@ -135,15 +135,44 @@ public abstract class MD5FileUtils {
    */
   public static void saveMD5File(File dataFile, MD5Hash digest)
       throws IOException {
+    final String digestString = StringUtils.byteToHexString(digest.getDigest());
+    saveMD5File(dataFile, digestString);
+  }
+
+  private static void saveMD5File(File dataFile, String digestString)
+      throws IOException {
     File md5File = getDigestFileForFile(dataFile);
-    String digestString = StringUtils.byteToHexString(
-        digest.getDigest());
     String md5Line = digestString + " *" + dataFile.getName() + "\n";
-    
+
     AtomicFileOutputStream afos = new AtomicFileOutputStream(md5File);
     afos.write(md5Line.getBytes(Charsets.UTF_8));
     afos.close();
-    LOG.debug("Saved MD5 " + digest + " to " + md5File);
+
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Saved MD5 " + digestString + " to " + md5File);
+    }
+  }
+
+  public static void renameMD5File(File oldDataFile, File newDataFile)
+      throws IOException {
+    File fromFile = getDigestFileForFile(oldDataFile);
+    BufferedReader in = null;
+    final String digestString;
+    try {
+      in = new BufferedReader(new InputStreamReader(new FileInputStream(
+          fromFile), Charsets.UTF_8));
+      String line = in.readLine();
+      String[] split = line.split(" \\*");
+      digestString = split[0];
+    } finally {
+      IOUtils.cleanup(LOG, in);
+    }
+
+    saveMD5File(newDataFile, digestString);
+
+    if (!fromFile.delete()) {
+      LOG.warn("deleting  " + fromFile.getAbsolutePath() + " FAILED");
+    }
   }
 
   /**

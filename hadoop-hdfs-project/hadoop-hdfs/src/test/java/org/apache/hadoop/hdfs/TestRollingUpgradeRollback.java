@@ -22,7 +22,10 @@ import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
+import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.qjournal.MiniJournalCluster;
+import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster;
 import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
@@ -188,9 +191,74 @@ public class TestRollingUpgradeRollback {
   }
 
   /**
-   * TODO: Test rollback scenarios where StandbyNameNode does checkpoints during
+   * Test rollback scenarios where StandbyNameNode does checkpoints during
    * rolling upgrade.
    */
-  
+  @Test
+  public void testRollbackWithHAQJM() throws Exception {
+    final Configuration conf = new HdfsConfiguration();
+    MiniQJMHACluster cluster = null;
+    final Path foo = new Path("/foo");
+    final Path bar = new Path("/bar");
+
+    try {
+      cluster = new MiniQJMHACluster.Builder(conf).build();
+      MiniDFSCluster dfsCluster = cluster.getDfsCluster();
+      dfsCluster.waitActive();
+
+      // let NN1 do checkpoints as fast as possible
+      dfsCluster.getConfiguration(1).setInt(
+          DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PERIOD_KEY, 0);
+      dfsCluster.restartNameNode(1);
+
+      dfsCluster.transitionToActive(0);
+      DistributedFileSystem dfs = dfsCluster.getFileSystem(0);
+      dfs.mkdirs(foo);
+
+      // start rolling upgrade
+      RollingUpgradeInfo info = dfs.rollingUpgrade(RollingUpgradeAction.START);
+      Assert.assertTrue(info.isStarted());
+
+      // create new directory
+      dfs.mkdirs(bar);
+      dfs.close();
+
+      // rollback NN0
+      dfsCluster.restartNameNode(0, true, "-rollingUpgrade",
+          "rollback");
+      // shutdown NN1
+      dfsCluster.shutdownNameNode(1);
+      dfsCluster.transitionToActive(0);
+
+      // make sure /foo is still there, but /bar is not
+      dfs = dfsCluster.getFileSystem(0);
+      Assert.assertTrue(dfs.exists(foo));
+      Assert.assertFalse(dfs.exists(bar));
+
+      // check the details of NNStorage
+      NNStorage storage = dfsCluster.getNamesystem(0).getFSImage()
+          .getStorage();
+      // (startSegment, upgrade marker, mkdir, endSegment)
+      checkNNStorage(storage, 3, 7);
+
+      // check storage in JNs
+      for (int i = 0; i < NUM_JOURNAL_NODES; i++) {
+        File dir = cluster.getJournalCluster().getCurrentDir(0,
+            MiniQJMHACluster.NAMESERVICE);
+        // segments:(startSegment, mkdir, endSegment), (startSegment, upgrade
+        // marker, mkdir, endSegment)
+        checkJNStorage(dir, 4, 7);
+      }
+
+      // restart NN0 again to make sure we can start using the new fsimage and
+      // the corresponding md5 checksum
+      dfsCluster.restartNameNode(0);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
   // TODO: rollback could not succeed in all JN
 }
