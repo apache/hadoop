@@ -87,6 +87,8 @@ Release 2.4.0 - UNRELEASED
     HDFS-5768. Consolidate the serialization code in DelegationTokenSecretManager
     (Haohui Mai via brandonli)
 
+    HDFS-5973. add DomainSocket#shutdown method (cmccabe)
+
   OPTIMIZATIONS
 
     HDFS-5790. LeaseManager.findPath is very slow when many leases need recovery

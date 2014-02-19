@@ -377,6 +377,22 @@ public class DomainSocket implements Closeable {
       Thread.currentThread().interrupt();
     }
   }
+  
+  /**
+   * Call shutdown(SHUT_RDWR) on the UNIX domain socket.
+   *
+   * @throws IOException
+   */
+  public void shutdown() throws IOException {
+    refCount.reference();
+    boolean exc = true;
+    try {
+      shutdown0(fd);
+      exc = false;
+    } finally {
+      unreference(exc);
+    }
+  }
 
   private native static void sendFileDescriptors0(int fd,
       FileDescriptor descriptors[],
