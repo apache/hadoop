@@ -18,7 +18,9 @@
 package org.apache.hadoop.hdfs.server.datanode.fsdataset;
 
 import java.io.Closeable;
+import java.io.FileOutputStream;
 import java.io.OutputStream;
+import java.io.IOException;
 
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.DataChecksum;
@@ -62,4 +64,23 @@ public class ReplicaOutputStreams implements Closeable {
     IOUtils.closeStream(dataOut);
     IOUtils.closeStream(checksumOut);
   }
+
+  /**
+   * Sync the data stream if it supports it.
+   */
+  public void syncDataOut() throws IOException {
+    if (dataOut instanceof FileOutputStream) {
+      ((FileOutputStream)dataOut).getChannel().force(true);
+    }
+  }
+  
+  /**
+   * Sync the checksum stream if it supports it.
+   */
+  public void syncChecksumOut() throws IOException {
+    if (checksumOut instanceof FileOutputStream) {
+      ((FileOutputStream)checksumOut).getChannel().force(true);
+    }
+  }
+
 }
