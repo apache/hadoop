@@ -402,6 +402,15 @@ public class ApplicationMasterService extends AbstractService implements
         return resync;
       }
 
+      //filter illegal progress values
+      float filteredProgress = request.getProgress();
+      if (Float.isNaN(filteredProgress) || filteredProgress == Float.NEGATIVE_INFINITY
+        || filteredProgress < 0) {
+         request.setProgress(0);
+      } else if (filteredProgress > 1 || filteredProgress == Float.POSITIVE_INFINITY) {
+        request.setProgress(1);
+      }
+
       // Send the status update to the appAttempt.
       this.rmContext.getDispatcher().getEventHandler().handle(
           new RMAppAttemptStatusupdateEvent(appAttemptId, request

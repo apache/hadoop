@@ -18,23 +18,58 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import com.google.common.collect.Maps;
 import junit.framework.Assert;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
-import org.apache.hadoop.yarn.api.records.Container;
-import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.AllocateRequestPBImpl;
+import org.apache.hadoop.yarn.api.records.*;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.event.InlineDispatcher;
 import org.apache.hadoop.yarn.exceptions.InvalidContainerReleaseException;
+import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.*;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.ahs.RMApplicationHistoryWriter;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptStatusupdateEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.MockRMApp;
+
+import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.security.PrivilegedExceptionAction;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.ConcurrentMap;
+
+import static java.lang.Thread.sleep;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyList;
+import static org.mockito.Mockito.*;
 
 public class TestApplicationMasterService {
   private static final Log LOG = LogFactory.getLog(TestFifoScheduler.class);
@@ -73,7 +108,7 @@ public class TestApplicationMasterService {
     nm1.nodeHeartbeat(true);
     while (alloc1Response.getAllocatedContainers().size() < 1) {
       LOG.info("Waiting for containers to be created for app 1...");
-      Thread.sleep(1000);
+      sleep(1000);
       alloc1Response = am1.schedule();
     }
 
@@ -113,7 +148,7 @@ public class TestApplicationMasterService {
       nm1.nodeHeartbeat(true);
       while (alloc1Response.getAllocatedContainers().size() < 1) {
         LOG.info("Waiting for containers to be created for app 1...");
-        Thread.sleep(1000);
+        sleep(1000);
         alloc1Response = am1.schedule();
       }
       
@@ -143,6 +178,72 @@ public class TestApplicationMasterService {
       if (rm != null) {
         rm.stop();
       }
+    }
+  }
+
+  @Test(timeout=1200000)
+  public void testProgressFilter() throws Exception{
+    MockRM rm = new MockRM(conf);
+    rm.start();
+
+    // Register node1
+    MockNM nm1 = rm.registerNode("127.0.0.1:1234", 6 * GB);
+
+      // Submit an application
+    RMApp app1 = rm.submitApp(2048);
+
+    nm1.nodeHeartbeat(true);
+    RMAppAttempt attempt1 = app1.getCurrentAppAttempt();
+    MockAM am1 = rm.sendAMLaunched(attempt1.getAppAttemptId());
+    am1.registerAppAttempt();
+    am1.setAMRMProtocol(rm.getApplicationMasterService());
+
+    AllocateRequestPBImpl allocateRequest = new AllocateRequestPBImpl();
+    List<ContainerId> release = new ArrayList<ContainerId>();
+    List<ResourceRequest> ask = new ArrayList<ResourceRequest>();
+    allocateRequest.setReleaseList(release);
+    allocateRequest.setAskList(ask);
+
+    allocateRequest.setProgress(Float.POSITIVE_INFINITY);
+    am1.allocate(allocateRequest);
+    while(attempt1.getProgress()!=1){
+      LOG.info("Waiting for allocate event to be handled ...");
+      sleep(100);
+    }
+
+    allocateRequest.setProgress(Float.NaN);
+    am1.allocate(allocateRequest);
+    while(attempt1.getProgress()!=0){
+      LOG.info("Waiting for allocate event to be handled ...");
+      sleep(100);
+    }
+
+    allocateRequest.setProgress((float)9);
+    am1.allocate(allocateRequest);
+    while(attempt1.getProgress()!=1){
+      LOG.info("Waiting for allocate event to be handled ...");
+      sleep(100);
+    }
+
+    allocateRequest.setProgress(Float.NEGATIVE_INFINITY);
+    am1.allocate(allocateRequest);
+    while(attempt1.getProgress()!=0){
+      LOG.info("Waiting for allocate event to be handled ...");
+      sleep(100);
+    }
+
+    allocateRequest.setProgress((float)0.5);
+    am1.allocate(allocateRequest);
+    while(attempt1.getProgress()!=0.5){
+      LOG.info("Waiting for allocate event to be handled ...");
+      sleep(100);
+    }
+
+    allocateRequest.setProgress((float)-1);
+    am1.allocate(allocateRequest);
+    while(attempt1.getProgress()!=0){
+      LOG.info("Waiting for allocate event to be handled ...");
+      sleep(100);
     }
   }
 }
