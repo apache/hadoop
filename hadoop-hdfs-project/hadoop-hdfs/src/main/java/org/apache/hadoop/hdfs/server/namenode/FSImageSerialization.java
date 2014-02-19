@@ -250,7 +250,7 @@ public class FSImageSerialization {
     
     writePermissionStatus(node, out);
   }
-
+  
   /**
    * Serialize a {@link INodeDirectory}
    * @param a The node to write
@@ -282,7 +282,7 @@ public class FSImageSerialization {
     Text.writeString(out, node.getSymlinkString());
     writePermissionStatus(node, out);
   }
-
+  
   /** Serialize a {@link INodeReference} node */
   private static void writeINodeReference(INodeReference ref, DataOutput out,
       boolean writeUnderConstruction, ReferenceMap referenceMap
