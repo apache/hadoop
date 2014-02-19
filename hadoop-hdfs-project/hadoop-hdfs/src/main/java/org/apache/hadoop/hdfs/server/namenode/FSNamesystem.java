@@ -7146,25 +7146,38 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
-      final String action = "start rolling upgrade";
-      checkNameNodeSafeMode("Failed to " + action);
-      checkRollingUpgrade(action);
-      getFSImage().checkUpgrade(this);
-
-      getFSImage().saveNamespace(this, NameNodeFile.IMAGE_ROLLBACK, null);
-      LOG.info("Successfully saved namespace for preparing rolling upgrade.");
-
-      setRollingUpgradeInfo(now());
+      checkNameNodeSafeMode("Failed to start rolling upgrade");
+      startRollingUpgradeInternal(now(), true);
       getEditLog().logStartRollingUpgrade(rollingUpgradeInfo.getStartTime());
     } finally {
       writeUnlock();
     }
+
     getEditLog().logSync();
 
     if (auditLog.isInfoEnabled() && isExternalInvocation()) {
       logAuditEvent(true, "startRollingUpgrade", null, null, null);
     }
     return rollingUpgradeInfo;
+  }
+
+  /**
+   * Update internal state to indicate that a rolling upgrade is in progress.
+   * Ootionally create a checkpoint before starting the RU.
+   * @param startTime
+   * @param saveNamespace If true then a checkpoint is created before initiating
+   *                   the rolling upgrade.
+   */
+  void startRollingUpgradeInternal(long startTime, boolean saveNamespace)
+      throws IOException {
+    checkRollingUpgrade("start rolling upgrade");
+    getFSImage().checkUpgrade(this);
+
+    if (saveNamespace) {
+      getFSImage().saveNamespace(this, NameNodeFile.IMAGE_ROLLBACK, null);
+      LOG.info("Successfully saved namespace for preparing rolling upgrade.");
+    }
+    setRollingUpgradeInfo(startTime);
   }
 
   void setRollingUpgradeInfo(long startTime) {
@@ -7187,7 +7200,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           + " Existing rolling upgrade info:\n" + rollingUpgradeInfo);
     }
   }
-  
+
   RollingUpgradeInfo finalizeRollingUpgrade() throws IOException {
     checkSuperuserPrivilege();
     checkOperation(OperationCategory.WRITE);
@@ -7195,17 +7208,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     final RollingUpgradeInfo returnInfo;
     try {
       checkOperation(OperationCategory.WRITE);
-      final String err = "Failed to finalize rolling upgrade";
-      checkNameNodeSafeMode(err);
+      checkNameNodeSafeMode("Failed to finalize rolling upgrade");
 
-      if (!isRollingUpgrade()) {
-        throw new RollingUpgradeException(err
-            + " since there is no rolling upgrade in progress.");
-      }
-
-      returnInfo = new RollingUpgradeInfo(blockPoolId,
-          rollingUpgradeInfo.getStartTime(), now());
-      rollingUpgradeInfo = null;
+      returnInfo = finalizeRollingUpgradeInternal(now());
       getEditLog().logFinalizeRollingUpgrade(returnInfo.getFinalizeTime());
       getFSImage().saveNamespace(this);
       getFSImage().purgeCheckpoints(NameNodeFile.IMAGE_ROLLBACK);
@@ -7213,10 +7218,24 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       writeUnlock();
     }
 
+    // getEditLog().logSync() is not needed since it does saveNamespace 
+
     if (auditLog.isInfoEnabled() && isExternalInvocation()) {
       logAuditEvent(true, "finalizeRollingUpgrade", null, null, null);
     }
     return returnInfo;
+  }
+
+  RollingUpgradeInfo finalizeRollingUpgradeInternal(long finalizeTime)
+      throws RollingUpgradeException {
+    if (!isRollingUpgrade()) {
+      throw new RollingUpgradeException(
+          "Failed to finalize rolling upgrade since there is no rolling upgrade in progress.");
+    }
+
+    final long startTime = rollingUpgradeInfo.getStartTime();
+    rollingUpgradeInfo = null;
+    return new RollingUpgradeInfo(blockPoolId, startTime, finalizeTime);
   }
 
   long addCacheDirective(CacheDirectiveInfo directive, EnumSet<CacheFlag> flags)

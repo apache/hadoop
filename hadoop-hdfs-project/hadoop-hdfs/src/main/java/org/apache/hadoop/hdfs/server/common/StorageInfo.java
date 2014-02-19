@@ -163,10 +163,14 @@ public class StorageInfo {
   /** Validate and set storage type from {@link Properties}*/
   protected void checkStorageType(Properties props, StorageDirectory sd)
       throws InconsistentFSStateException {
+    if (storageType == null) { //don't care about storage type
+      return;
+    }
     NodeType type = NodeType.valueOf(getProperty(props, sd, "storageType"));
     if (!storageType.equals(type)) {
       throw new InconsistentFSStateException(sd.root,
-          "node type is incompatible with others.");
+          "Incompatible node types: storageType=" + storageType
+          + " but StorageDirectory type=" + type);
     }
   }
   

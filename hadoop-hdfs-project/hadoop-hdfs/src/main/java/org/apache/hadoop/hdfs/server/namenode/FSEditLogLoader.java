@@ -37,7 +37,6 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
-import org.apache.hadoop.hdfs.protocol.RollingUpgradeException;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.RollingUpgradeStartupOption;
@@ -718,7 +717,6 @@ public class FSEditLogLoader {
       break;
     }
     case OP_ROLLING_UPGRADE_START: {
-      boolean started = false;
       if (startOpt == StartupOption.ROLLINGUPGRADE) {
         final RollingUpgradeStartupOption rollingUpgradeOpt
             = startOpt.getRollingUpgradeStartupOption(); 
@@ -727,33 +725,19 @@ public class FSEditLogLoader {
         } else if (rollingUpgradeOpt == RollingUpgradeStartupOption.DOWNGRADE) {
           //ignore upgrade marker
           break;
-        } else if (rollingUpgradeOpt == RollingUpgradeStartupOption.STARTED) {
-          started = true;
         }
       }
        
-      if (started || fsNamesys.isInStandbyState()) {
-        if (totalEdits > 1) {
-          // save namespace if this is not the second edit transaction
-          // (the first must be OP_START_LOG_SEGMENT)
-          fsNamesys.getFSImage().saveNamespace(fsNamesys,
-              NameNodeFile.IMAGE_ROLLBACK, null);
-        }
-        //rolling upgrade is already started, set info
-        final RollingUpgradeOp upgradeOp = (RollingUpgradeOp)op; 
-        fsNamesys.setRollingUpgradeInfo(upgradeOp.getTime());
-        break;
-      }
-
-      throw new RollingUpgradeException(
-          "Unexpected OP_ROLLING_UPGRADE_START in edit log: op=" + op);
+      // save namespace if this is not the second edit transaction
+      // (the first must be OP_START_LOG_SEGMENT)
+      final boolean saveNamespace = totalEdits > 1;
+      final long startTime = ((RollingUpgradeOp) op).getTime();
+      fsNamesys.startRollingUpgradeInternal(startTime, saveNamespace);
+      break;
     }
     case OP_ROLLING_UPGRADE_FINALIZE: {
-      if (!fsNamesys.isRollingUpgrade()) {
-        throw new RollingUpgradeException(
-            "Unexpected OP_ROLLING_UPGRADE_FINALIZE "
-            + " since there is no rolling upgrade in progress.");
-      }
+      final long finalizeTime = ((RollingUpgradeOp) op).getTime();
+      fsNamesys.finalizeRollingUpgradeInternal(finalizeTime);
       fsNamesys.getFSImage().purgeCheckpoints(NameNodeFile.IMAGE_ROLLBACK);
       break;
     }

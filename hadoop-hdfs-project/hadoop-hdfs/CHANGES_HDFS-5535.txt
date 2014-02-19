@@ -52,3 +52,7 @@ HDFS-5535 subtasks:
 
     HDFS-5974. Fix compilation error, NameNodeLayoutVersion and
     DataNodeLayoutVersion after merge from trunk.  (szetszwo)
+
+    HDFS-5963. TestRollingUpgrade#testSecondaryNameNode causes subsequent
+    tests to fail. (szetszwo via Arpit Agarwal)
+

@@ -26,17 +26,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.qjournal.MiniJournalCluster;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.RollingUpgradeStartupOption;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
-import org.apache.hadoop.hdfs.server.namenode.SecondaryNameNode;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
-import org.apache.hadoop.util.ExitUtil;
-import org.apache.hadoop.util.ExitUtil.ExitException;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -105,7 +101,7 @@ public class TestRollingUpgrade {
         dfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
       }
 
-      cluster.restartNameNode("-rollingupgrade", "started");
+      cluster.restartNameNode();
       {
         final DistributedFileSystem dfs = cluster.getFileSystem();
         Assert.assertTrue(dfs.exists(foo));
@@ -189,13 +185,10 @@ public class TestRollingUpgrade {
 
       // cluster2 takes over QJM
       final Configuration conf2 = setConf(new Configuration(), nn2Dir, mjc);
-      // use "started" option for ignoring upgrade marker in editlog
-      StartupOption.ROLLINGUPGRADE.setRollingUpgradeStartupOption("started");
       cluster2 = new MiniDFSCluster.Builder(conf2)
         .numDataNodes(0)
         .format(false)
         .manageNameDfsDirs(false)
-        .startupOption(StartupOption.ROLLINGUPGRADE)
         .build();
       final DistributedFileSystem dfs2 = cluster2.getFileSystem(); 
       
@@ -209,7 +202,7 @@ public class TestRollingUpgrade {
 
       dfs2.mkdirs(baz);
 
-      LOG.info("RESTART cluster 2 with -rollingupgrade started");
+      LOG.info("RESTART cluster 2");
       cluster2.restartNameNode();
       Assert.assertEquals(info1, dfs2.rollingUpgrade(RollingUpgradeAction.QUERY));
       Assert.assertTrue(dfs2.exists(foo));
@@ -223,8 +216,8 @@ public class TestRollingUpgrade {
         LOG.info("The exception is expected.", e);
       }
 
-      LOG.info("RESTART cluster 2 with -rollingupgrade started again");
-      cluster2.restartNameNode("-rollingupgrade", "started");
+      LOG.info("RESTART cluster 2 again");
+      cluster2.restartNameNode();
       Assert.assertEquals(info1, dfs2.rollingUpgrade(RollingUpgradeAction.QUERY));
       Assert.assertTrue(dfs2.exists(foo));
       Assert.assertTrue(dfs2.exists(bar));
@@ -246,14 +239,43 @@ public class TestRollingUpgrade {
     }
   }
 
-  @Test(expected=ExitException.class)
-  public void testSecondaryNameNode() throws Exception {
-    ExitUtil.disableSystemExit();
+  @Test
+  public void testRollback() throws IOException {
+    // start a cluster 
+    final Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
+      cluster.waitActive();
 
-    final String[] args = {
-        StartupOption.ROLLINGUPGRADE.getName(),
-        RollingUpgradeStartupOption.STARTED.name()};
-    SecondaryNameNode.main(args);
+      final Path foo = new Path("/foo");
+      final Path bar = new Path("/bar");
+
+      {
+        final DistributedFileSystem dfs = cluster.getFileSystem();
+        dfs.mkdirs(foo);
+  
+        //start rolling upgrade
+        dfs.rollingUpgrade(RollingUpgradeAction.START);
+  
+        dfs.mkdirs(bar);
+        
+        Assert.assertTrue(dfs.exists(foo));
+        Assert.assertTrue(dfs.exists(bar));
+      }
+
+      // Restart should succeed!
+//      cluster.restartNameNode();
+
+      cluster.restartNameNode("-rollingUpgrade", "rollback");
+      {
+        final DistributedFileSystem dfs = cluster.getFileSystem();
+        Assert.assertTrue(dfs.exists(foo));
+        Assert.assertFalse(dfs.exists(bar));
+      }
+    } finally {
+      if(cluster != null) cluster.shutdown();
+    }
   }
 
   @Test

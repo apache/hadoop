@@ -568,7 +568,7 @@ public class FileJournalManager implements JournalManager {
 
   @Override
   public long getJournalCTime() throws IOException {
-    StorageInfo sInfo = new StorageInfo(NodeType.NAME_NODE);
+    StorageInfo sInfo = new StorageInfo((NodeType)null);
     sInfo.readProperties(sd);
     return sInfo.getCTime();
   }

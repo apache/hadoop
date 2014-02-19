@@ -278,7 +278,7 @@ public class QJournalProtocolServerSideTranslatorPB implements QJournalProtocolP
   @Override
   public DoUpgradeResponseProto doUpgrade(RpcController controller,
       DoUpgradeRequestProto request) throws ServiceException {
-    StorageInfo si = PBHelper.convert(request.getSInfo(), NodeType.NAME_NODE);
+    StorageInfo si = PBHelper.convert(request.getSInfo(), NodeType.JOURNAL_NODE);
     try {
       impl.doUpgrade(convert(request.getJid()), si);
       return DoUpgradeResponseProto.getDefaultInstance();
@@ -302,9 +302,9 @@ public class QJournalProtocolServerSideTranslatorPB implements QJournalProtocolP
   public CanRollBackResponseProto canRollBack(RpcController controller,
       CanRollBackRequestProto request) throws ServiceException {
     try {
-      StorageInfo si = PBHelper.convert(request.getStorage(), NodeType.NAME_NODE);
+      StorageInfo si = PBHelper.convert(request.getStorage(), NodeType.JOURNAL_NODE);
       Boolean result = impl.canRollBack(convert(request.getJid()), si,
-          PBHelper.convert(request.getPrevStorage(), NodeType.NAME_NODE),
+          PBHelper.convert(request.getPrevStorage(), NodeType.JOURNAL_NODE),
           request.getTargetLayoutVersion());
       return CanRollBackResponseProto.newBuilder()
           .setCanRollBack(result)
