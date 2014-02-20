@@ -186,7 +186,7 @@ public class TestInjectionForSimulatedStorage {
       // Insert all the blocks in the first data node
       
       LOG.info("Inserting " + uniqueBlocks.size() + " blocks");
-      cluster.injectBlocks(0, uniqueBlocks);
+      cluster.injectBlocks(0, uniqueBlocks, null);
       
       dfsClient = new DFSClient(new InetSocketAddress("localhost",
                                   cluster.getNameNodePort()),

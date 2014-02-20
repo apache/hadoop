@@ -203,6 +203,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-5483. NN should gracefully handle multiple block replicas on same DN.
     (Arpit Agarwal)
 
+    HDFS-5742. DatanodeCluster (mini cluster of DNs) fails to start.
+    (Arpit Agarwal)
+
   BREAKDOWN OF HDFS-5698 SUBTASKS AND RELATED JIRAS
 
     HDFS-5717. Save FSImage header in protobuf. (Haohui Mai via jing9)
