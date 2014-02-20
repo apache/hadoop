@@ -268,7 +268,11 @@ public class CommonConfigurationKeysPublic {
   public static final String  HADOOP_SECURITY_AUTH_TO_LOCAL =
     "hadoop.security.auth_to_local";
 
+  @Deprecated
+  /** Only used by HttpServer. */
   public static final String HADOOP_SSL_ENABLED_KEY = "hadoop.ssl.enabled";
+  @Deprecated
+  /** Only used by HttpServer. */
   public static final boolean HADOOP_SSL_ENABLED_DEFAULT = false;
 
 
