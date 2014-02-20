@@ -10,6 +10,9 @@ Release 2.5.0 - UNRELEASED
     YARN-1479. Invalid NaN values in Hadoop REST API JSON response (Chen He via
     jeagles)
 
+    YARN-1736. FS: AppSchedulable.assignContainer's priority argument is 
+    redundant. (Naren Koneru via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES 
