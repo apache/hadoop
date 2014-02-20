@@ -1061,7 +1061,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
 
   @Override
   public void disableAndPurgeTrashStorage(String bpid) {
-    throw new UnsupportedOperationException();
+    // do nothing
   }
 
   @Override

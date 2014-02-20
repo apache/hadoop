@@ -62,3 +62,6 @@ HDFS-5535 subtasks:
     HDFS-5980. Rollback does not need to load edits.  (jing9 via szetszwo)
 
     HDFS-5984. Fix TestEditLog and TestStandbyCheckpoints.  (jing9 via szetszwo)
+
+    HDFS-5985. SimulatedFSDataset#disableAndPurgeTrashStorage should not throw
+    UnsupportedOperationException. (jing9 via kihwal)
