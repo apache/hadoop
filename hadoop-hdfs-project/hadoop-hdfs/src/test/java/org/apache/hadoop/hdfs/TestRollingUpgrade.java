@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs;
 
 import java.io.File;
+import java.io.FilenameFilter;
 import java.io.IOException;
 
 import org.apache.commons.logging.Log;
@@ -30,8 +31,10 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.qjournal.MiniJournalCluster;
+import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.namenode.NNStorage;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.junit.Assert;
 import org.junit.Test;
@@ -306,6 +309,101 @@ public class TestRollingUpgrade {
       Assert.assertEquals(-1, dfsadmin.run(args1));
     } finally {
       if (cluster != null) cluster.shutdown();
+    }
+  }
+
+  @Test
+  public void testDowngrade() throws Exception {
+    final Configuration conf = new HdfsConfiguration();
+    MiniQJMHACluster cluster = null;
+    final Path foo = new Path("/foo");
+    final Path bar = new Path("/bar");
+
+    try {
+      cluster = new MiniQJMHACluster.Builder(conf).build();
+      MiniDFSCluster dfsCluster = cluster.getDfsCluster();
+      dfsCluster.waitActive();
+
+      dfsCluster.transitionToActive(0);
+      DistributedFileSystem dfs = dfsCluster.getFileSystem(0);
+      dfs.mkdirs(foo);
+
+      // start rolling upgrade
+      RollingUpgradeInfo info = dfs.rollingUpgrade(RollingUpgradeAction.START);
+      Assert.assertTrue(info.isStarted());
+      dfs.mkdirs(bar);
+      dfs.close();
+
+      dfsCluster.restartNameNode(0, true, "-rollingUpgrade", "downgrade");
+      // shutdown NN1
+      dfsCluster.shutdownNameNode(1);
+      dfsCluster.transitionToActive(0);
+
+      dfs = dfsCluster.getFileSystem(0);
+      Assert.assertTrue(dfs.exists(foo));
+      Assert.assertTrue(dfs.exists(bar));
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  private static boolean existRollbackFsImage(NNStorage storage)
+      throws IOException {
+    final FilenameFilter filter = new FilenameFilter() {
+
+      @Override
+      public boolean accept(File dir, String name) {
+        return name.indexOf(NNStorage.NameNodeFile.IMAGE_ROLLBACK.getName()) != -1;
+      }
+    };
+    for (int i = 0; i < storage.getNumStorageDirs(); i++) {
+      File dir = storage.getStorageDir(i).getCurrentDir();
+      int l = dir.list(filter).length;
+      if (l > 0) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  @Test
+  public void testFinalize() throws Exception {
+    final Configuration conf = new HdfsConfiguration();
+    MiniQJMHACluster cluster = null;
+    final Path foo = new Path("/foo");
+    final Path bar = new Path("/bar");
+
+    try {
+      cluster = new MiniQJMHACluster.Builder(conf).build();
+      MiniDFSCluster dfsCluster = cluster.getDfsCluster();
+      dfsCluster.waitActive();
+
+      dfsCluster.transitionToActive(0);
+      DistributedFileSystem dfs = dfsCluster.getFileSystem(0);
+      dfs.mkdirs(foo);
+
+      NNStorage storage = dfsCluster.getNamesystem(0).getFSImage()
+          .getStorage();
+
+      // start rolling upgrade
+      RollingUpgradeInfo info = dfs.rollingUpgrade(RollingUpgradeAction.START);
+      Assert.assertTrue(info.isStarted());
+      dfs.mkdirs(bar);
+      // The NN should have a copy of the fsimage in case of rollbacks.
+      Assert.assertTrue(existRollbackFsImage(storage));
+
+      info = dfs.rollingUpgrade(RollingUpgradeAction.FINALIZE);
+      Assert.assertTrue(info.isFinalized());
+      Assert.assertTrue(dfs.exists(foo));
+
+      // Once finalized, there should be no more fsimage for rollbacks.
+      Assert.assertFalse(existRollbackFsImage(storage));
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
     }
   }
 }

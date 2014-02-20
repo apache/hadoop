@@ -80,7 +80,8 @@ public class NNStorage extends Storage implements Closeable,
 
     private String fileName = null;
     private NameNodeFile(String name) { this.fileName = name; }
-    String getName() { return fileName; }
+    @VisibleForTesting
+    public String getName() { return fileName; }
   }
 
   /**

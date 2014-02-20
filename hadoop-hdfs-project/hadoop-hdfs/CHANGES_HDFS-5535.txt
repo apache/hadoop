@@ -56,3 +56,6 @@ HDFS-5535 subtasks:
     HDFS-5963. TestRollingUpgrade#testSecondaryNameNode causes subsequent
     tests to fail. (szetszwo via Arpit Agarwal)
 
+    HDFS-5976. Create unit tests for downgrade and finalize rolling upgrade.
+    (Haohui Mai via Arpit Agarwal)
+
