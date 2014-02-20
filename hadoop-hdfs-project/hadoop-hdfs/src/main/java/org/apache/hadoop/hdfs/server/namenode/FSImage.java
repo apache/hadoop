@@ -623,10 +623,9 @@ public class FSImage implements Closeable {
       throw new IOException("Failed to load an FSImage file!");
     }
     prog.endPhase(Phase.LOADING_FSIMAGE);
-    long txnsAdvanced = 0;
     
     if (!rollingRollback) {
-      loadEdits(editStreams, target, startOpt, recovery);
+      long txnsAdvanced = loadEdits(editStreams, target, startOpt, recovery);
       needToSave |= needsResaveBasedOnStaleCheckpoint(imageFile.getFile(),
           txnsAdvanced);
     } else {

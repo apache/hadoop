@@ -192,9 +192,9 @@ public class TestStandbyCheckpoints {
     Thread.sleep(2000);
     
     // We should make exactly one checkpoint at this new txid. 
-    Mockito.verify(spyImage1, Mockito.times(1))
-      .saveNamespace((FSNamesystem) Mockito.anyObject(), NameNodeFile.IMAGE,
-          (Canceler)Mockito.anyObject());       
+    Mockito.verify(spyImage1, Mockito.times(1)).saveNamespace(
+        (FSNamesystem) Mockito.anyObject(), Mockito.eq(NameNodeFile.IMAGE),
+        (Canceler) Mockito.anyObject());
   }
   
   /**
@@ -281,9 +281,9 @@ public class TestStandbyCheckpoints {
     FSImage spyImage1 = NameNodeAdapter.spyOnFsImage(nn1);
     DelayAnswer answerer = new DelayAnswer(LOG);
     Mockito.doAnswer(answerer).when(spyImage1)
-        .saveNamespace(Mockito.any(FSNamesystem.class), NameNodeFile.IMAGE,
-            Mockito.any(Canceler.class));
-    
+        .saveNamespace(Mockito.any(FSNamesystem.class),
+            Mockito.eq(NameNodeFile.IMAGE), Mockito.any(Canceler.class));
+
     // Perform some edits and wait for a checkpoint to start on the SBN.
     doEdits(0, 1000);
     nn0.getRpcServer().rollEditLog();
