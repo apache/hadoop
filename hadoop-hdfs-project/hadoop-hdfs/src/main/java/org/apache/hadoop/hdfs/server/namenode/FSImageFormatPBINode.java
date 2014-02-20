@@ -54,7 +54,7 @@ public final class FSImageFormatPBINode {
   private final static long USER_GROUP_STRID_MASK = (1 << 24) - 1;
   private final static int USER_STRID_OFFSET = 40;
   private final static int GROUP_STRID_OFFSET = 16;
-  private static final Log LOG = LogFactory.getLog(FSImageFormatProtobuf.class);
+  private static final Log LOG = LogFactory.getLog(FSImageFormatPBINode.class);
 
   public final static class Loader {
     public static PermissionStatus loadPermission(long id,
