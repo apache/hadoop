@@ -59,3 +59,4 @@ HDFS-5535 subtasks:
     HDFS-5976. Create unit tests for downgrade and finalize rolling upgrade.
     (Haohui Mai via Arpit Agarwal)
 
+    HDFS-5980. Rollback does not need to load edits.  (jing9 via szetszwo)

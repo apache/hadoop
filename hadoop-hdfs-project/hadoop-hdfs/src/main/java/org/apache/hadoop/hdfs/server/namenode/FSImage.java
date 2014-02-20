@@ -624,16 +624,15 @@ public class FSImage implements Closeable {
     prog.endPhase(Phase.LOADING_FSIMAGE);
     long txnsAdvanced = 0;
     
-    loadEdits(editStreams, target, startOpt, recovery);
-    if (rollingRollback) {
-      // Trigger the rollback for rolling upgrade. 
-      // Here lastAppliedTxId == (markerTxId - 1), and we should decrease 1 from
-      // lastAppliedTxId for the start-segment transaction.
-      rollingRollback(lastAppliedTxId--, imageFiles.get(0).getCheckpointTxId());
-      needToSave = false;
-    } else {
+    if (!rollingRollback) {
+      loadEdits(editStreams, target, startOpt, recovery);
       needToSave |= needsResaveBasedOnStaleCheckpoint(imageFile.getFile(),
           txnsAdvanced);
+    } else {
+      // Trigger the rollback for rolling upgrade. Here lastAppliedTxId equals
+      // to the last txid in rollback fsimage.
+      rollingRollback(lastAppliedTxId + 1, imageFiles.get(0).getCheckpointTxId());
+      needToSave = false;
     }
     editLog.setNextTxId(lastAppliedTxId + 1);
     return needToSave;
@@ -768,11 +767,8 @@ public class FSImage implements Closeable {
           // have been successfully applied before the error.
           lastAppliedTxId = loader.getLastAppliedTxId();
         }
-        boolean rollingRollback = StartupOption
-            .isRollingUpgradeRollback(startOpt);
         // If we are in recovery mode, we may have skipped over some txids.
-        if (editIn.getLastTxId() != HdfsConstants.INVALID_TXID
-            && !rollingRollback) {
+        if (editIn.getLastTxId() != HdfsConstants.INVALID_TXID) {
           lastAppliedTxId = editIn.getLastTxId();
         }
       }
