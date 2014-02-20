@@ -393,6 +393,9 @@ Release 2.4.0 - UNRELEASED
 
     HADOOP-10346. Deadlock while logging tokens (jlowe)
 
+    HADOOP-10328. loadGenerator exit code is not reliable.
+    (Haohui Mai via cnauroth)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
