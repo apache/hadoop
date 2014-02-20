@@ -170,8 +170,9 @@ final class LsrPBImage {
       PermissionStatus p = FSImageFormatPBINode.Loader.loadPermission(
           d.getPermission(), stringTable);
       out.print(String.format("-%s  - %8s %10s %10s %10d %s%s -> %s\n", p
-          .getPermission().toString(), p.getUserName(), p.getGroupName(), 0, 0,
-          parent, inode.getName().toStringUtf8(), d.getTarget().toStringUtf8()));
+          .getPermission().toString(), p.getUserName(), p.getGroupName(), d
+          .getModificationTime(), 0, parent, inode.getName().toStringUtf8(),
+          d.getTarget().toStringUtf8()));
     }
       break;
     default:

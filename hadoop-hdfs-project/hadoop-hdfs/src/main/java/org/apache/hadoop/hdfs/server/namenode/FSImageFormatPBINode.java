@@ -279,7 +279,8 @@ public final class FSImageFormatPBINode {
           parent.getLoaderContext().getStringTable());
 
       INodeSymlink sym = new INodeSymlink(n.getId(), n.getName().toByteArray(),
-          permissions, 0, 0, s.getTarget().toStringUtf8());
+          permissions, s.getModificationTime(), s.getAccessTime(),
+          s.getTarget().toStringUtf8());
 
       return sym;
     }
@@ -482,7 +483,9 @@ public final class FSImageFormatPBINode {
       INodeSection.INodeSymlink.Builder b = INodeSection.INodeSymlink
           .newBuilder()
           .setPermission(buildPermissionStatus(n, state.getStringMap()))
-          .setTarget(ByteString.copyFrom(n.getSymlink()));
+          .setTarget(ByteString.copyFrom(n.getSymlink()))
+          .setModificationTime(n.getModificationTime())
+          .setAccessTime(n.getAccessTime());
 
       INodeSection.INode r = buildINodeCommon(n)
           .setType(INodeSection.INode.Type.SYMLINK).setSymlink(b).build();

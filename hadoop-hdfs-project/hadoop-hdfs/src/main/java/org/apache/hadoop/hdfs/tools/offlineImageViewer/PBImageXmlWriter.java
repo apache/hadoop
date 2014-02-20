@@ -289,8 +289,9 @@ public final class PBImageXmlWriter {
   }
 
   private void dumpINodeSymlink(INodeSymlink s) {
-    o("permission", dumpPermission(s.getPermission())).o("target",
-        s.getTarget().toStringUtf8());
+    o("permission", dumpPermission(s.getPermission()))
+        .o("target", s.getTarget().toStringUtf8())
+        .o("mtime", s.getModificationTime()).o("atime", s.getAccessTime());
   }
 
   private void dumpNameSection(InputStream in) throws IOException {
