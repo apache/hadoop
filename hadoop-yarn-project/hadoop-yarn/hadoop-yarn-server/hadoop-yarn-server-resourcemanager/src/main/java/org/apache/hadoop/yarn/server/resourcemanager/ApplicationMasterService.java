@@ -464,9 +464,11 @@ public class ApplicationMasterService extends AbstractService implements
               blacklistAdditions, blacklistRemovals);
 
       RMAppAttempt appAttempt = app.getRMAppAttempt(appAttemptId);
-      
       AllocateResponse allocateResponse =
           recordFactory.newRecordInstance(AllocateResponse.class);
+      if (!allocation.getContainers().isEmpty()) {
+        allocateResponse.setNMTokens(allocation.getNMTokens());
+      }
 
       // update the response with the deltas of node status changes
       List<RMNode> updatedNodes = new ArrayList<RMNode>();
@@ -505,12 +507,6 @@ public class ApplicationMasterService extends AbstractService implements
       allocateResponse
           .setPreemptionMessage(generatePreemptionMessage(allocation));
 
-      // Adding NMTokens for allocated containers.
-      if (!allocation.getContainers().isEmpty()) {
-        allocateResponse.setNMTokens(rmContext.getNMTokenSecretManager()
-            .createAndGetNMTokens(app.getUser(), appAttemptId,
-                allocation.getContainers()));
-      }
       /*
        * As we are updating the response inside the lock object so we don't
        * need to worry about unregister call occurring in between (which

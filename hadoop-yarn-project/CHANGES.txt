@@ -29,6 +29,9 @@ Release 2.5.0 - UNRELEASED
 
   BUG FIXES 
 
+    YARN-1718. Fix a couple isTerminals in Fair Scheduler queue placement rules
+    (Sandy Ryza)
+
 Release 2.4.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -206,6 +209,9 @@ Release 2.4.0 - UNRELEASED
     available across RM failover by making using of a remote
     configuration-provider. (Xuan Gong via vinodkv)
 
+    YARN-1171. Add default queue properties to Fair Scheduler documentation
+    (Naren Koneru via Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -308,6 +314,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1428. Fixed RM to write the final state of RMApp/RMAppAttempt to the 
     application history store in the transition to the final state. (Contributed
     by Zhijie Shen)
+
+    YARN-713. Fixed ResourceManager to not crash while building tokens when DNS
+    issues happen transmittently. (Jian He via vinodkv)
 
 Release 2.3.1 - UNRELEASED
 

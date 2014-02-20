@@ -73,6 +73,7 @@ import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage.State;
 import org.apache.hadoop.hdfs.server.protocol.KeyUpdateCommand;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
 import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
@@ -501,7 +502,10 @@ public class BlockManager {
     chooseSourceDatanode(block, containingNodes,
         containingLiveReplicasNodes, numReplicas,
         UnderReplicatedBlocks.LEVEL);
-    assert containingLiveReplicasNodes.size() == numReplicas.liveReplicas();
+    
+    // containingLiveReplicasNodes can include READ_ONLY_SHARED replicas which are 
+    // not included in the numReplicas.liveReplicas() count
+    assert containingLiveReplicasNodes.size() >= numReplicas.liveReplicas();
     int usableReplicas = numReplicas.liveReplicas() +
                          numReplicas.decommissionedReplicas();
     
@@ -1040,7 +1044,7 @@ public class BlockManager {
    */
   private void addToInvalidates(Block b) {
     StringBuilder datanodes = new StringBuilder();
-    for(DatanodeStorageInfo storage : blocksMap.getStorages(b)) {
+    for(DatanodeStorageInfo storage : blocksMap.getStorages(b, State.NORMAL)) {
       final DatanodeDescriptor node = storage.getDatanodeDescriptor();
       invalidateBlocks.add(b, node, false);
       datanodes.append(node).append(" ");
@@ -1254,7 +1258,10 @@ public class BlockManager {
               continue;
             }
 
-            assert liveReplicaNodes.size() == numReplicas.liveReplicas();
+            // liveReplicaNodes can include READ_ONLY_SHARED replicas which are 
+            // not included in the numReplicas.liveReplicas() count
+            assert liveReplicaNodes.size() >= numReplicas.liveReplicas();
+
             // do not schedule more if enough replicas is already pending
             numEffectiveReplicas = numReplicas.liveReplicas() +
                                     pendingReplications.getNumReplicas(block);
@@ -1494,15 +1501,16 @@ public class BlockManager {
       final DatanodeDescriptor node = storage.getDatanodeDescriptor();
       LightWeightLinkedSet<Block> excessBlocks =
         excessReplicateMap.get(node.getDatanodeUuid());
+      int countableReplica = storage.getState() == State.NORMAL ? 1 : 0; 
       if ((nodesCorrupt != null) && (nodesCorrupt.contains(node)))
-        corrupt++;
+        corrupt += countableReplica;
       else if (node.isDecommissionInProgress() || node.isDecommissioned())
-        decommissioned++;
+        decommissioned += countableReplica;
       else if (excessBlocks != null && excessBlocks.contains(block)) {
-        excess++;
+        excess += countableReplica;
       } else {
         nodesContainingLiveReplicas.add(storage);
-        live++;
+        live += countableReplica;
       }
       containingNodes.add(node);
       // Check if this replica is corrupt
@@ -1880,7 +1888,8 @@ public class BlockManager {
           iblk, iState, toAdd, toInvalidate, toCorrupt, toUC);
 
       // move block to the head of the list
-      if (storedBlock != null && (curIndex = storedBlock.findDatanode(dn)) >= 0) {
+      if (storedBlock != null &&
+          (curIndex = storedBlock.findStorageInfo(storageInfo)) >= 0) {
         headIndex = storageInfo.moveBlockToHead(storedBlock, curIndex, headIndex);
       }
     }
@@ -2581,7 +2590,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
     Collection<DatanodeDescriptor> nonExcess = new ArrayList<DatanodeDescriptor>();
     Collection<DatanodeDescriptor> corruptNodes = corruptReplicas
         .getNodes(block);
-    for(DatanodeStorageInfo storage : blocksMap.getStorages(block)) {
+    for(DatanodeStorageInfo storage : blocksMap.getStorages(block, State.NORMAL)) {
       final DatanodeDescriptor cur = storage.getDatanodeDescriptor();
       if (storage.areBlockContentsStale()) {
         LOG.info("BLOCK* processOverReplicatedBlock: " +
@@ -2910,7 +2919,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
     int excess = 0;
     int stale = 0;
     Collection<DatanodeDescriptor> nodesCorrupt = corruptReplicas.getNodes(b);
-    for(DatanodeStorageInfo storage : blocksMap.getStorages(b)) {
+    for(DatanodeStorageInfo storage : blocksMap.getStorages(b, State.NORMAL)) {
       final DatanodeDescriptor node = storage.getDatanodeDescriptor();
       if ((nodesCorrupt != null) && (nodesCorrupt.contains(node))) {
         corrupt++;
@@ -2949,7 +2958,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
     // else proceed with fast case
     int live = 0;
     Collection<DatanodeDescriptor> nodesCorrupt = corruptReplicas.getNodes(b);
-    for(DatanodeStorageInfo storage : blocksMap.getStorages(b)) {
+    for(DatanodeStorageInfo storage : blocksMap.getStorages(b, State.NORMAL)) {
       final DatanodeDescriptor node = storage.getDatanodeDescriptor();
       if ((nodesCorrupt == null) || (!nodesCorrupt.contains(node)))
         live++;

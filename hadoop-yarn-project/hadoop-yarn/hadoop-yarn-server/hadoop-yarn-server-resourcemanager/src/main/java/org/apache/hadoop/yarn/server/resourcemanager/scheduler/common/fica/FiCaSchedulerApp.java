@@ -237,9 +237,11 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
     ResourceRequest rr = ResourceRequest.newInstance(
         Priority.UNDEFINED, ResourceRequest.ANY,
         minimumAllocation, numCont);
-    return new Allocation(pullNewlyAllocatedContainers(), getHeadroom(),
-                          null, currentContPreemption,
-                          Collections.singletonList(rr));
+    ContainersAndNMTokensAllocation allocation =
+        pullNewlyAllocatedContainersAndNMTokens();
+    return new Allocation(allocation.getContainerList(), getHeadroom(), null,
+      currentContPreemption, Collections.singletonList(rr),
+      allocation.getNMTokenList());
   }
 
 }

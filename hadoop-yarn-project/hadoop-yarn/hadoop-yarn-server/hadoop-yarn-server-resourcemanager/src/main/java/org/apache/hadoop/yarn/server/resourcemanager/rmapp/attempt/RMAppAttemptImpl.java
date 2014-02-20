@@ -78,6 +78,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppFailedAttemptEve
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppFinishedAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerAcquiredEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerAllocatedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerFinishedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptLaunchFailedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptNewSavedEvent;
@@ -202,7 +203,8 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
           
        // Transitions from SCHEDULED State
       .addTransition(RMAppAttemptState.SCHEDULED,
-                     RMAppAttemptState.ALLOCATED_SAVING,
+          EnumSet.of(RMAppAttemptState.ALLOCATED_SAVING,
+            RMAppAttemptState.SCHEDULED),
           RMAppAttemptEventType.CONTAINER_ALLOCATED,
           new AMContainerAllocatedTransition())
       .addTransition(RMAppAttemptState.SCHEDULED, RMAppAttemptState.FINAL_SAVING,
@@ -769,8 +771,9 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
 
   private static final List<ContainerId> EMPTY_CONTAINER_RELEASE_LIST =
       new ArrayList<ContainerId>();
+
   private static final List<ResourceRequest> EMPTY_CONTAINER_REQUEST_LIST =
-    new ArrayList<ResourceRequest>();
+      new ArrayList<ResourceRequest>();
 
   private static final class ScheduleTransition
       implements
@@ -803,29 +806,57 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     }
   }
 
-  private static final class AMContainerAllocatedTransition 
-                                                      extends BaseTransition {
+  private static final class AMContainerAllocatedTransition
+      implements
+      MultipleArcTransition<RMAppAttemptImpl, RMAppAttemptEvent, RMAppAttemptState> {
     @Override
-    public void transition(RMAppAttemptImpl appAttempt,
-                                                     RMAppAttemptEvent event) {
+    public RMAppAttemptState transition(RMAppAttemptImpl appAttempt,
+        RMAppAttemptEvent event) {
       // Acquire the AM container from the scheduler.
-      Allocation amContainerAllocation = appAttempt.scheduler.allocate(
-          appAttempt.applicationAttemptId, EMPTY_CONTAINER_REQUEST_LIST,
-          EMPTY_CONTAINER_RELEASE_LIST, null, null);
+      Allocation amContainerAllocation =
+          appAttempt.scheduler.allocate(appAttempt.applicationAttemptId,
+            EMPTY_CONTAINER_REQUEST_LIST, EMPTY_CONTAINER_RELEASE_LIST, null,
+            null);
       // There must be at least one container allocated, because a
       // CONTAINER_ALLOCATED is emitted after an RMContainer is constructed,
-      // and is put in SchedulerApplication#newlyAllocatedContainers. Then,
-      // YarnScheduler#allocate will fetch it.
-      assert amContainerAllocation.getContainers().size() != 0;
+      // and is put in SchedulerApplication#newlyAllocatedContainers.
+
+      // Note that YarnScheduler#allocate is not guaranteed to be able to
+      // fetch it since container may not be fetchable for some reason like
+      // DNS unavailable causing container token not generated. As such, we
+      // return to the previous state and keep retry until am container is
+      // fetched.
+      if (amContainerAllocation.getContainers().size() == 0) {
+        appAttempt.retryFetchingAMContainer(appAttempt);
+        return RMAppAttemptState.SCHEDULED;
+      }
       // Set the masterContainer
-      appAttempt.setMasterContainer(amContainerAllocation.getContainers().get(
-                                                                           0));
+      appAttempt.setMasterContainer(amContainerAllocation.getContainers()
+        .get(0));
       appAttempt.getSubmissionContext().setResource(
-          appAttempt.getMasterContainer().getResource());
+        appAttempt.getMasterContainer().getResource());
       appAttempt.storeAttempt();
+      return RMAppAttemptState.ALLOCATED_SAVING;
     }
   }
-  
+
+  private void retryFetchingAMContainer(final RMAppAttemptImpl appAttempt) {
+    // start a new thread so that we are not blocking main dispatcher thread.
+    new Thread() {
+      @Override
+      public void run() {
+        try {
+          Thread.sleep(500);
+        } catch (InterruptedException e) {
+          LOG.warn("Interrupted while waiting to resend the"
+              + " ContainerAllocated Event.");
+        }
+        appAttempt.eventHandler.handle(new RMAppAttemptContainerAllocatedEvent(
+          appAttempt.applicationAttemptId));
+      }
+    }.start();
+  }
+
   private static final class AttemptStoredTransition extends BaseTransition {
     @Override
     public void transition(RMAppAttemptImpl appAttempt,

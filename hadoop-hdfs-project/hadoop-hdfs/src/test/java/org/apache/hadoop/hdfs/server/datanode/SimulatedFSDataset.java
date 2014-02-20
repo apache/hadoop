@@ -34,6 +34,7 @@ import javax.management.StandardMBean;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.BlockLocalPathInfo;
@@ -95,6 +96,11 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   
   public static final long DEFAULT_CAPACITY = 2L<<40; // 1 terabyte
   public static final byte DEFAULT_DATABYTE = 9;
+  
+  public static final String CONFIG_PROPERTY_STATE =
+      "dfs.datanode.simulateddatastorage.state";
+  private static final DatanodeStorage.State DEFAULT_STATE =
+      DatanodeStorage.State.NORMAL;
   
   static final byte[] nullCrcFileData;
   static {
@@ -325,9 +331,9 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   private static class SimulatedStorage {
     private Map<String, SimulatedBPStorage> map = 
       new HashMap<String, SimulatedBPStorage>();
-    private final String storageUuid = "SimulatedStroage-" + DatanodeStorage.generateUuid();
 
     private final long capacity;  // in bytes
+    private final DatanodeStorage dnStorage;
     
     synchronized long getFree() {
       return capacity - getUsed();
@@ -365,8 +371,11 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
       getBPStorage(bpid).free(amount);
     }
     
-    SimulatedStorage(long cap) {
+    SimulatedStorage(long cap, DatanodeStorage.State state) {
       capacity = cap;
+      dnStorage = new DatanodeStorage(
+          "SimulatedStorage-" + DatanodeStorage.generateUuid(),
+          state, StorageType.DEFAULT);
     }
     
     synchronized void addBlockPool(String bpid) {
@@ -390,11 +399,15 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
     }
 
     String getStorageUuid() {
-      return storageUuid;
+      return dnStorage.getStorageID();
+    }
+    
+    DatanodeStorage getDnStorage() {
+      return dnStorage;
     }
 
     synchronized StorageReport getStorageReport(String bpid) {
-      return new StorageReport(new DatanodeStorage(getStorageUuid()),
+      return new StorageReport(dnStorage,
           false, getCapacity(), getUsed(), getFree(),
           map.get(bpid).getUsed());
     }
@@ -417,7 +430,8 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
 
     registerMBean(datanodeUuid);
     this.storage = new SimulatedStorage(
-        conf.getLong(CONFIG_PROPERTY_CAPACITY, DEFAULT_CAPACITY));
+        conf.getLong(CONFIG_PROPERTY_CAPACITY, DEFAULT_CAPACITY),
+        conf.getEnum(CONFIG_PROPERTY_STATE, DEFAULT_STATE));
   }
 
   public synchronized void injectBlocks(String bpid,
@@ -488,7 +502,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   @Override
   public synchronized Map<DatanodeStorage, BlockListAsLongs> getBlockReports(
       String bpid) {
-    return Collections.singletonMap(new DatanodeStorage(storage.storageUuid), getBlockReport(bpid));
+    return Collections.singletonMap(storage.getDnStorage(), getBlockReport(bpid));
   }
 
   @Override // FsDatasetSpi

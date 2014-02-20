@@ -75,7 +75,7 @@ public final class FSImageFormatPBINode {
   private static final AclEntryType[] ACL_ENTRY_TYPE_VALUES = AclEntryType
       .values();
 
-  private static final Log LOG = LogFactory.getLog(FSImageFormatProtobuf.class);
+  private static final Log LOG = LogFactory.getLog(FSImageFormatPBINode.class);
 
   public final static class Loader {
     public static PermissionStatus loadPermission(long id,

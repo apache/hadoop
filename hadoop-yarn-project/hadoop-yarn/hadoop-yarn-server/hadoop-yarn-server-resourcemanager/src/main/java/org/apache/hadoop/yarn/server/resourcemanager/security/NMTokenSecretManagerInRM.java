@@ -18,10 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.security;
 
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
@@ -177,35 +175,39 @@ public class NMTokenSecretManagerInRM extends BaseNMTokenSecretManager {
       activateNextMasterKey();
     }
   }
-  
-  public List<NMToken> createAndGetNMTokens(String applicationSubmitter,
-      ApplicationAttemptId appAttemptId, List<Container> containers) {
+
+  public NMToken createAndGetNMToken(String applicationSubmitter,
+      ApplicationAttemptId appAttemptId, Container container) {
     try {
       this.readLock.lock();
-      List<NMToken> nmTokens = new ArrayList<NMToken>();
       HashSet<NodeId> nodeSet = this.appAttemptToNodeKeyMap.get(appAttemptId);
+      NMToken nmToken = null;
       if (nodeSet != null) {
-        for (Container container : containers) {
-          if (!nodeSet.contains(container.getNodeId())) {
+        if (!nodeSet.contains(container.getNodeId())) {
+          if (LOG.isDebugEnabled()) {
             LOG.debug("Sending NMToken for nodeId : "
                 + container.getNodeId().toString()
                 + " for application attempt : " + appAttemptId.toString());
-            Token token = createNMToken(appAttemptId, container.getNodeId(),
-                applicationSubmitter);
-            NMToken nmToken =
-                NMToken.newInstance(container.getNodeId(), token);
-            nmTokens.add(nmToken);
-            // This will update the nmToken set.
+          }
+          Token token =
+              createNMToken(container.getId().getApplicationAttemptId(),
+                container.getNodeId(), applicationSubmitter);
+          nmToken = NMToken.newInstance(container.getNodeId(), token);
+          // The node set here is used for differentiating whether the NMToken
+          // has been issued for this node from the client's perspective. If
+          // this is an AM container, the NMToken is issued only for RM and so
+          // we should not update the node set.
+          if (container.getId().getId() != 1) {
             nodeSet.add(container.getNodeId());
           }
         }
       }
-      return nmTokens;
+      return nmToken;
     } finally {
       this.readLock.unlock();
     }
   }
-  
+
   public void registerApplicationAttempt(ApplicationAttemptId appAttemptId) {
     try {
       this.writeLock.lock();

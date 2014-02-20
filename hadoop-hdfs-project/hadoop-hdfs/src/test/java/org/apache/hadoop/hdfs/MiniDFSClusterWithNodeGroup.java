@@ -210,7 +210,8 @@ public class MiniDFSClusterWithNodeGroup extends MiniDFSCluster {
       long[] simulatedCapacities,
       boolean setupHostsFile,
       boolean checkDataNodeAddrConfig,
-      boolean checkDataNodeHostConfig) throws IOException {
+      boolean checkDataNodeHostConfig,
+      Configuration[] dnConfOverlays) throws IOException {
     startDataNodes(conf, numDataNodes, storageType, manageDfsDirs, operation, racks,
         NODE_GROUPS, hosts, simulatedCapacities, setupHostsFile, 
         checkDataNodeAddrConfig, checkDataNodeHostConfig);

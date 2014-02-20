@@ -416,6 +416,14 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-5726. Fix compilation error in AbstractINodeDiff for JDK7. (jing9)
 
+    HDFS-5973. add DomainSocket#shutdown method (cmccabe)
+
+    HDFS-5318. Support read-only and read-write paths to shared replicas.
+    (Eric Sirianni via Arpit Agarwal)
+
+    HDFS-5868. Make hsync implementation pluggable on the DataNode.
+    (Buddy Taylor via Arpit Agarwal)
+
   OPTIMIZATIONS
 
     HDFS-5790. LeaseManager.findPath is very slow when many leases need recovery
@@ -520,6 +528,14 @@ Release 2.4.0 - UNRELEASED
     jing9)
 
     HDFS-5961. OIV cannot load fsimages containing a symbolic link. (kihwal)
+
+    HDFS-5483. NN should gracefully handle multiple block replicas on same DN.
+    (Arpit Agarwal)
+
+    HDFS-5742. DatanodeCluster (mini cluster of DNs) fails to start.
+    (Arpit Agarwal)
+
+    HDFS-5979. Typo and logger fix for fsimage PB code. (wang)
 
   BREAKDOWN OF HDFS-5698 SUBTASKS AND RELATED JIRAS
 

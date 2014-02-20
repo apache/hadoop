@@ -267,7 +267,7 @@ public final class FSImageFormatProtobuf {
         }
           break;
         default:
-          LOG.warn("Unregconized section " + n);
+          LOG.warn("Unrecognized section " + n);
           break;
         }
       }
