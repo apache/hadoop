@@ -57,7 +57,7 @@ public class CreateEditsLog {
       GenerationStamp.LAST_RESERVED_STAMP;
   
   static void addFiles(FSEditLog editLog, int numFiles, short replication, 
-                         int blocksPerFile, long startingBlockId,
+                         int blocksPerFile, long startingBlockId, long blockSize,
                          FileNameGenerator nameGenerator) {
     
     PermissionStatus p = new PermissionStatus("joeDoe", "people",
@@ -66,7 +66,6 @@ public class CreateEditsLog {
     INodeDirectory dirInode = new INodeDirectory(inodeId.nextValue(), null, p,
       0L);
     editLog.logMkDir(BASE_PATH, dirInode);
-    long blockSize = 10;
     BlockInfo[] blocks = new BlockInfo[blocksPerFile];
     for (int iB = 0; iB < blocksPerFile; ++iB) {
       blocks[iB] = 
@@ -144,6 +143,7 @@ public class CreateEditsLog {
     int numFiles = 0;
     short replication = 1;
     int numBlocksPerFile = 0;
+    long blockSize = 10;
 
     if (args.length == 0) {
       printUsageExit();
@@ -164,10 +164,16 @@ public class CreateEditsLog {
        if (numFiles <=0 || numBlocksPerFile <= 0) {
          printUsageExit("numFiles and numBlocksPerFile most be greater than 0");
        }
+      } else if (args[i].equals("-l")) {
+        if (i + 1 >= args.length) {
+          printUsageExit(
+              "Missing block length");
+        }
+        blockSize = Long.parseLong(args[++i]);
       } else if (args[i].equals("-r") || args[i+1].startsWith("-")) {
         if (i + 1 >= args.length) {
           printUsageExit(
-              "Missing num files, starting block and/or number of blocks");
+              "Missing replication factor");
         }
         replication = Short.parseShort(args[++i]);
       } else if (args[i].equals("-d")) {
@@ -202,7 +208,7 @@ public class CreateEditsLog {
     FSEditLog editLog = FSImageTestUtil.createStandaloneEditLog(editsLogDir);
     editLog.openForWrite();
     addFiles(editLog, numFiles, replication, numBlocksPerFile, startingBlockId,
-             nameGenerator);
+             blockSize, nameGenerator);
     editLog.logSync();
     editLog.close();
   }

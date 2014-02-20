@@ -141,7 +141,7 @@ public class TestReadOnlySharedStorage {
     validateNumberReplicas(1);
     
     // Inject the block into the datanode with READ_ONLY_SHARED storage 
-    cluster.injectBlocks(RO_NODE_INDEX, Collections.singleton(block));
+    cluster.injectBlocks(0, RO_NODE_INDEX, Collections.singleton(block));
     
     // There should now be 2 *locations* for the block
     // Must wait until the NameNode has processed the block report for the injected blocks

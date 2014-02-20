@@ -140,6 +140,7 @@ public class FSImage implements Closeable {
         "FSImage.format should be called with an uninitialized namesystem, has " +
         fileCount + " files");
     NamespaceInfo ns = NNStorage.newNamespaceInfo();
+    LOG.info("Allocated new BlockPoolId: " + ns.getBlockPoolID());
     ns.clusterID = clusterId;
     
     storage.format(ns);
