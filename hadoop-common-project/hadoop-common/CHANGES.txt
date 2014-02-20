@@ -340,9 +340,6 @@ Release 2.5.0 - UNRELEASED
 
   IMPROVEMENTS
 
-    HADOOP-10348. Deprecate hadoop.ssl.configuration in branch-2, and remove
-    it in trunk. (Haohui Mai via jing9)
-
   OPTIMIZATIONS
 
   BUG FIXES 
@@ -365,6 +362,9 @@ Release 2.4.0 - UNRELEASED
     (René Nyffenegger via suresh)
 
     HADOOP-10343. Change info to debug log in LossyRetryInvocationHandler. (arpit)
+
+    HADOOP-10348. Deprecate hadoop.ssl.configuration in branch-2, and remove
+    it in trunk. (Haohui Mai via jing9)
 
   OPTIMIZATIONS
 
