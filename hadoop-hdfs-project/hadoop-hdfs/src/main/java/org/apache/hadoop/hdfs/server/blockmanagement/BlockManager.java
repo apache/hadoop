@@ -1872,7 +1872,8 @@ public class BlockManager {
           iblk, iState, toAdd, toInvalidate, toCorrupt, toUC);
 
       // move block to the head of the list
-      if (storedBlock != null && (curIndex = storedBlock.findDatanode(dn)) >= 0) {
+      if (storedBlock != null &&
+          (curIndex = storedBlock.findStorageInfo(storageInfo)) >= 0) {
         headIndex = storageInfo.moveBlockToHead(storedBlock, curIndex, headIndex);
       }
     }
