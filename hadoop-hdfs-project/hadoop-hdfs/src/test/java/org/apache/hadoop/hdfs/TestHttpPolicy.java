@@ -17,12 +17,8 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.apache.hadoop.http.HttpConfig.Policy.HTTP_AND_HTTPS;
-import static org.apache.hadoop.http.HttpConfig.Policy.HTTP_ONLY;
-
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
-import org.junit.Assert;
 import org.junit.Test;
 
 public final class TestHttpPolicy {
@@ -32,23 +28,5 @@ public final class TestHttpPolicy {
     Configuration conf = new Configuration();
     conf.set(DFSConfigKeys.DFS_HTTP_POLICY_KEY, "invalid");
     DFSUtil.getHttpPolicy(conf);
-  }
-
-  @Test
-  public void testDeprecatedConfiguration() {
-    Configuration conf = new Configuration(false);
-    Assert.assertSame(HTTP_ONLY, DFSUtil.getHttpPolicy(conf));
-
-    conf.setBoolean(DFSConfigKeys.DFS_HTTPS_ENABLE_KEY, true);
-    Assert.assertSame(HTTP_AND_HTTPS, DFSUtil.getHttpPolicy(conf));
-
-    conf = new Configuration(false);
-    conf.setBoolean(DFSConfigKeys.HADOOP_SSL_ENABLED_KEY, true);
-    Assert.assertSame(HTTP_AND_HTTPS, DFSUtil.getHttpPolicy(conf));
-
-    conf = new Configuration(false);
-    conf.set(DFSConfigKeys.DFS_HTTP_POLICY_KEY, HTTP_ONLY.name());
-    conf.setBoolean(DFSConfigKeys.DFS_HTTPS_ENABLE_KEY, true);
-    Assert.assertSame(HTTP_ONLY, DFSUtil.getHttpPolicy(conf));
   }
 }
