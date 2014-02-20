@@ -46,6 +46,7 @@ public class TestLeaseManager extends TestCase {
     throws IOException, InterruptedException {
     Configuration conf = new Configuration();
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 3, true, null);
+    cluster.waitActive();
     NameNode namenode = cluster.getNameNode();
     FSNamesystem spyNamesystem = spy(namenode.getNamesystem());
     LeaseManager leaseManager = new LeaseManager(spyNamesystem);
@@ -77,6 +78,37 @@ public class TestLeaseManager extends TestCase {
     
     assertTrue("internalReleaseOne not called", internalReleaseOneCalled.isCalled());
     assertFalse("internalRelease called", internalReleaseCalled.isCalled());
+    cluster.shutdown();
+  }
+
+  public void testRemoveLeaseWithPrefixPath() throws IOException {
+    Configuration conf = new Configuration();
+    MiniDFSCluster cluster = new MiniDFSCluster(conf, 3, true, null);
+    cluster.waitActive();
+    
+    NameNode namenode = cluster.getNameNode();
+    FSNamesystem spyNamesystem = spy(namenode.getNamesystem());
+    LeaseManager leaseManager = new LeaseManager(spyNamesystem);
+
+    leaseManager.addLease("holder1", "/a/b");
+    leaseManager.addLease("holder1", "/a/c");
+    assertNotNull(leaseManager.getLeaseByPath("/a/b"));
+    assertNotNull(leaseManager.getLeaseByPath("/a/c"));
+
+    leaseManager.removeLeaseWithPrefixPath("/a");
+
+    assertNull(leaseManager.getLeaseByPath("/a/b"));
+    assertNull(leaseManager.getLeaseByPath("/a/c"));
+
+    leaseManager.addLease("holder1", "/a/b");
+    leaseManager.addLease("holder1", "/a/c");
+
+    leaseManager.removeLeaseWithPrefixPath("/a/");
+
+    assertNull(leaseManager.getLeaseByPath("/a/b"));
+    assertNull(leaseManager.getLeaseByPath("/a/c"));
+    
+    cluster.shutdown();
   }
   
   private static class CalledAnswer<T> implements Answer<T>{
