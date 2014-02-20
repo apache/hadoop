@@ -253,32 +253,56 @@ public class TestRollingUpgrade {
 
       final Path foo = new Path("/foo");
       final Path bar = new Path("/bar");
+      cluster.getFileSystem().mkdirs(foo);
 
-      {
-        final DistributedFileSystem dfs = cluster.getFileSystem();
-        dfs.mkdirs(foo);
-  
-        //start rolling upgrade
-        dfs.rollingUpgrade(RollingUpgradeAction.START);
-  
-        dfs.mkdirs(bar);
-        
-        Assert.assertTrue(dfs.exists(foo));
-        Assert.assertTrue(dfs.exists(bar));
-      }
+      startRollingUpgrade(foo, bar, cluster);
+      cluster.getFileSystem().rollEdits();
+      cluster.getFileSystem().rollEdits();
+      rollbackRollingUpgrade(foo, bar, cluster);
 
-      // Restart should succeed!
+      startRollingUpgrade(foo, bar, cluster);
+      cluster.getFileSystem().rollEdits();
+      cluster.getFileSystem().rollEdits();
+      rollbackRollingUpgrade(foo, bar, cluster);
+
+      startRollingUpgrade(foo, bar, cluster);
       cluster.restartNameNode();
+      rollbackRollingUpgrade(foo, bar, cluster);
 
-      cluster.restartNameNode("-rollingUpgrade", "rollback");
-      {
-        final DistributedFileSystem dfs = cluster.getFileSystem();
-        Assert.assertTrue(dfs.exists(foo));
-        Assert.assertFalse(dfs.exists(bar));
-      }
+      startRollingUpgrade(foo, bar, cluster);
+      cluster.restartNameNode();
+      rollbackRollingUpgrade(foo, bar, cluster);
+
+      startRollingUpgrade(foo, bar, cluster);
+      rollbackRollingUpgrade(foo, bar, cluster);
+
+      startRollingUpgrade(foo, bar, cluster);
+      rollbackRollingUpgrade(foo, bar, cluster);
     } finally {
       if(cluster != null) cluster.shutdown();
     }
+  }
+  
+  private static void startRollingUpgrade(Path foo, Path bar,
+      MiniDFSCluster cluster) throws IOException {
+    final DistributedFileSystem dfs = cluster.getFileSystem();
+
+    //start rolling upgrade
+    dfs.rollingUpgrade(RollingUpgradeAction.START);
+
+    dfs.mkdirs(bar);
+    
+    Assert.assertTrue(dfs.exists(foo));
+    Assert.assertTrue(dfs.exists(bar));
+  }
+  
+  private static void rollbackRollingUpgrade(Path foo, Path bar,
+      MiniDFSCluster cluster) throws IOException {
+    cluster.restartNameNode("-rollingUpgrade", "rollback");
+
+    final DistributedFileSystem dfs = cluster.getFileSystem();
+    Assert.assertTrue(dfs.exists(foo));
+    Assert.assertFalse(dfs.exists(bar));
   }
 
   @Test

@@ -198,7 +198,10 @@ class FsDatasetAsyncDiskService {
     private boolean moveFiles() {
       File newBlockFile = new File(trashDirectory, blockFile.getName());
       File newMetaFile = new File(trashDirectory, metaFile.getName());
-      (new File(trashDirectory)).mkdirs();
+      if (!new File(trashDirectory).mkdirs()) {
+        LOG.error("Failed to create trash directory " + trashDirectory);
+        return false;
+      }
 
       if (LOG.isDebugEnabled()) {
         LOG.debug("Moving files " + blockFile.getName() + " and " +

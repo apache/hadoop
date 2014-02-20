@@ -65,16 +65,13 @@ public abstract class MD5FileUtils {
   }
   
   /**
-   * Read the md5 checksum stored alongside the given file, or null
-   * if no md5 is stored.
+   * Read the md5 file stored alongside the given data file
+   * and match the md5 file content.
    * @param dataFile the file containing data
-   * @return the checksum stored in dataFile.md5
+   * @return a matcher with two matched groups
+   *   where group(1) is the md5 string and group(2) is the data file path.
    */
-  public static MD5Hash readStoredMd5ForFile(File dataFile) throws IOException {
-    File md5File = getDigestFileForFile(dataFile);
-
-    String md5Line;
-    
+  private static Matcher readStoredMd5(File md5File) throws IOException {
     if (!md5File.exists()) {
       return null;
     }
@@ -82,6 +79,7 @@ public abstract class MD5FileUtils {
     BufferedReader reader =
         new BufferedReader(new InputStreamReader(new FileInputStream(
             md5File), Charsets.UTF_8));
+    String md5Line;
     try {
       md5Line = reader.readLine();
       if (md5Line == null) { md5Line = ""; }
@@ -94,9 +92,20 @@ public abstract class MD5FileUtils {
     
     Matcher matcher = LINE_REGEX.matcher(md5Line);
     if (!matcher.matches()) {
-      throw new IOException("Invalid MD5 file at " + md5File
-          + " (does not match expected pattern)");
+      throw new IOException("Invalid MD5 file " + md5File + ": the content \""
+          + md5Line + "\" does not match the expected pattern.");
     }
+    return matcher;
+  }
+
+  /**
+   * Read the md5 checksum stored alongside the given data file.
+   * @param dataFile the file containing data
+   * @return the checksum stored in dataFile.md5
+   */
+  public static MD5Hash readStoredMd5ForFile(File dataFile) throws IOException {
+    final File md5File = getDigestFileForFile(dataFile);
+    final Matcher matcher = readStoredMd5(md5File);
     String storedHash = matcher.group(1);
     File referencedFile = new File(matcher.group(2));
 
@@ -155,19 +164,8 @@ public abstract class MD5FileUtils {
 
   public static void renameMD5File(File oldDataFile, File newDataFile)
       throws IOException {
-    File fromFile = getDigestFileForFile(oldDataFile);
-    BufferedReader in = null;
-    final String digestString;
-    try {
-      in = new BufferedReader(new InputStreamReader(new FileInputStream(
-          fromFile), Charsets.UTF_8));
-      String line = in.readLine();
-      String[] split = line.split(" \\*");
-      digestString = split[0];
-    } finally {
-      IOUtils.cleanup(LOG, in);
-    }
-
+    final File fromFile = getDigestFileForFile(oldDataFile);
+    final String digestString = readStoredMd5(fromFile).group(1);
     saveMD5File(newDataFile, digestString);
 
     if (!fromFile.delete()) {

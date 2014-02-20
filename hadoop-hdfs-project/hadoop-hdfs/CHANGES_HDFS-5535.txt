@@ -65,3 +65,7 @@ HDFS-5535 subtasks:
 
     HDFS-5985. SimulatedFSDataset#disableAndPurgeTrashStorage should not throw
     UnsupportedOperationException. (jing9 via kihwal)
+
+    HDFS-5987. Fix findbugs warnings in Rolling Upgrade branch. (seztszwo via
+    Arpit Agarwal)
+

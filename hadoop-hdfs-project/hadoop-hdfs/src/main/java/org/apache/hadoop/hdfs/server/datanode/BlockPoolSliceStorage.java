@@ -27,20 +27,20 @@ import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.HardLink;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.RollingUpgradeStartupOption;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.util.Daemon;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * Manages storage for the set of BlockPoolSlices which share a particular 
@@ -382,8 +382,9 @@ public class BlockPoolSliceStorage extends Storage {
    * locations under current/
    *
    * @param trashRoot
+   * @throws IOException 
    */
-  private int restoreBlockFilesFromTrash(File trashRoot) {
+  private int restoreBlockFilesFromTrash(File trashRoot) throws IOException {
     int filesRestored = 0;
     File restoreDirectory = null;
 
@@ -395,10 +396,15 @@ public class BlockPoolSliceStorage extends Storage {
 
       if (restoreDirectory == null) {
         restoreDirectory = new File(getRestoreDirectory(child));
-        restoreDirectory.mkdirs();
+        if (!restoreDirectory.mkdirs()) {
+          throw new IOException("Failed to create directory " + restoreDirectory);
+        }
       }
 
-      child.renameTo(new File(restoreDirectory, child.getName()));
+      final File newChild = new File(restoreDirectory, child.getName());
+      if (!child.renameTo(newChild)) {
+        throw new IOException("Failed to rename " + child + " to " + newChild);
+      }
       ++filesRestored;
     }
 
