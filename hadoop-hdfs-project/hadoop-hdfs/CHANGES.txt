@@ -253,12 +253,6 @@ Trunk (Unreleased)
     HDFS-5719. FSImage#doRollback() should close prevState before return
     (Ted Yu via brandonli)
 
-    HDFS-5768. Consolidate the serialization code in DelegationTokenSecretManager 
-    (Haohui Mai via brandonli)
-
-    HDFS-5775. Consolidate the code for serialization in CacheManager
-    (Haohui Mai via brandonli)
-
     HDFS-5794. Fix the inconsistency of layout version number of 
     ADD_DATANODE_AND_STORAGE_UUIDS between trunk and branch-2. (jing9)
 
@@ -423,6 +417,12 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-5868. Make hsync implementation pluggable on the DataNode.
     (Buddy Taylor via Arpit Agarwal)
+
+    HDFS-5768. Consolidate the serialization code in DelegationTokenSecretManager 
+    (Haohui Mai via brandonli)
+
+    HDFS-5775. Consolidate the code for serialization in CacheManager
+    (Haohui Mai via brandonli)
 
   OPTIMIZATIONS
 
