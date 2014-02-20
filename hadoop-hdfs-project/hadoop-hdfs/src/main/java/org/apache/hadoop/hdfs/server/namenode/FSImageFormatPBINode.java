@@ -227,8 +227,10 @@ public final class FSImageFormatPBINode {
       INodeSection.INodeSymlink s = n.getSymlink();
       final PermissionStatus permissions = loadPermission(s.getPermission(),
           parent.getLoaderContext().getStringTable());
-      return new INodeSymlink(n.getId(), n.getName().toByteArray(), permissions,
-          0, 0, s.getTarget().toStringUtf8());
+      INodeSymlink sym = new INodeSymlink(n.getId(), n.getName().toByteArray(),
+          permissions, s.getModificationTime(), s.getAccessTime(),
+          s.getTarget().toStringUtf8());
+      return sym;
     }
 
     private void loadRootINode(INodeSection.INode p) {
@@ -408,7 +410,9 @@ public final class FSImageFormatPBINode {
       INodeSection.INodeSymlink.Builder b = INodeSection.INodeSymlink
           .newBuilder()
           .setPermission(buildPermissionStatus(n, parent.getSaverContext().getStringMap()))
-          .setTarget(ByteString.copyFrom(n.getSymlink()));
+          .setTarget(ByteString.copyFrom(n.getSymlink()))
+          .setModificationTime(n.getModificationTime())
+          .setAccessTime(n.getAccessTime());
       INodeSection.INode r = buildINodeCommon(n)
           .setType(INodeSection.INode.Type.SYMLINK).setSymlink(b).build();
       r.writeDelimitedTo(out);

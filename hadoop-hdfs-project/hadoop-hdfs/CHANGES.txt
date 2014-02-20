@@ -208,6 +208,9 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-5979. Typo and logger fix for fsimage PB code. (wang)
 
+    HDFS-5962. Mtime and atime are not persisted for symbolic links. (Akira
+    Ajisaka via kihwal)
+
   BREAKDOWN OF HDFS-5698 SUBTASKS AND RELATED JIRAS
 
     HDFS-5717. Save FSImage header in protobuf. (Haohui Mai via jing9)
