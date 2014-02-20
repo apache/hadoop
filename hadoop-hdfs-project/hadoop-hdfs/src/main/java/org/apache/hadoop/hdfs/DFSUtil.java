@@ -1553,44 +1553,11 @@ public class DFSUtil {
   }
 
   /**
-   * Get http policy. Http Policy is chosen as follows:
-   * <ol>
-   * <li>If hadoop.ssl.enabled is set, http endpoints are not started. Only
-   * https endpoints are started on configured https ports</li>
-   * <li>This configuration is overridden by dfs.https.enable configuration, if
-   * it is set to true. In that case, both http and https endpoints are stared.</li>
-   * <li>All the above configurations are overridden by dfs.http.policy
-   * configuration. With this configuration you can set http-only, https-only
-   * and http-and-https endpoints.</li>
-   * </ol>
-   * See hdfs-default.xml documentation for more details on each of the above
-   * configuration settings.
+   * Get http policy.
    */
   public static HttpConfig.Policy getHttpPolicy(Configuration conf) {
-    String policyStr = conf.get(DFSConfigKeys.DFS_HTTP_POLICY_KEY);
-    if (policyStr == null) {
-      boolean https = conf.getBoolean(DFSConfigKeys.DFS_HTTPS_ENABLE_KEY,
-          DFSConfigKeys.DFS_HTTPS_ENABLE_DEFAULT);
-
-      boolean hadoopSsl = conf.getBoolean(
-          CommonConfigurationKeys.HADOOP_SSL_ENABLED_KEY,
-          CommonConfigurationKeys.HADOOP_SSL_ENABLED_DEFAULT);
-
-      if (hadoopSsl) {
-        LOG.warn(CommonConfigurationKeys.HADOOP_SSL_ENABLED_KEY
-            + " is deprecated. Please use " + DFSConfigKeys.DFS_HTTP_POLICY_KEY
-            + ".");
-      }
-      if (https) {
-        LOG.warn(DFSConfigKeys.DFS_HTTPS_ENABLE_KEY
-            + " is deprecated. Please use " + DFSConfigKeys.DFS_HTTP_POLICY_KEY
-            + ".");
-      }
-
-      return (hadoopSsl || https) ? HttpConfig.Policy.HTTP_AND_HTTPS
-          : HttpConfig.Policy.HTTP_ONLY;
-    }
-
+    String policyStr = conf.get(DFSConfigKeys.DFS_HTTP_POLICY_KEY,
+        DFSConfigKeys.DFS_HTTP_POLICY_DEFAULT);
     HttpConfig.Policy policy = HttpConfig.Policy.fromString(policyStr);
     if (policy == null) {
       throw new HadoopIllegalArgumentException("Unregonized value '"

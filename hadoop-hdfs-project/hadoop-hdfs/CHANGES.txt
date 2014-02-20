@@ -253,12 +253,6 @@ Trunk (Unreleased)
     HDFS-5719. FSImage#doRollback() should close prevState before return
     (Ted Yu via brandonli)
 
-    HDFS-5768. Consolidate the serialization code in DelegationTokenSecretManager 
-    (Haohui Mai via brandonli)
-
-    HDFS-5775. Consolidate the code for serialization in CacheManager
-    (Haohui Mai via brandonli)
-
     HDFS-5794. Fix the inconsistency of layout version number of 
     ADD_DATANODE_AND_STORAGE_UUIDS between trunk and branch-2. (jing9)
 
@@ -424,6 +418,12 @@ Release 2.4.0 - UNRELEASED
     HDFS-5868. Make hsync implementation pluggable on the DataNode.
     (Buddy Taylor via Arpit Agarwal)
 
+    HDFS-5768. Consolidate the serialization code in DelegationTokenSecretManager 
+    (Haohui Mai via brandonli)
+
+    HDFS-5775. Consolidate the code for serialization in CacheManager
+    (Haohui Mai via brandonli)
+
   OPTIMIZATIONS
 
     HDFS-5790. LeaseManager.findPath is very slow when many leases need recovery
@@ -536,6 +536,12 @@ Release 2.4.0 - UNRELEASED
     (Arpit Agarwal)
 
     HDFS-5979. Typo and logger fix for fsimage PB code. (wang)
+
+    HDFS-5962. Mtime and atime are not persisted for symbolic links. (Akira
+    Ajisaka via kihwal)
+
+    HDFS-5944. LeaseManager:findLeaseWithPrefixPath can't handle path like /a/b/
+    and cause SecondaryNameNode failed do checkpoint (Yunjiong Zhao via brandonli)
 
   BREAKDOWN OF HDFS-5698 SUBTASKS AND RELATED JIRAS
 
