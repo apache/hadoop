@@ -339,7 +339,12 @@ public class LeaseManager {
     }
 
     final Map<String, Lease> entries = new HashMap<String, Lease>();
-    final int srclen = prefix.length();
+    int srclen = prefix.length();
+    
+    // prefix may ended with '/'
+    if (prefix.charAt(srclen - 1) == Path.SEPARATOR_CHAR) {
+      srclen -= 1;
+    }
 
     for(Map.Entry<String, Lease> entry : path2lease.tailMap(prefix).entrySet()) {
       final String p = entry.getKey();
