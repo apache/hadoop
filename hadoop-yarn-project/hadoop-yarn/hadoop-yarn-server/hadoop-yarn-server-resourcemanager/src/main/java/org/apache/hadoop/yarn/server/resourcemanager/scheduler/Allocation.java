@@ -29,9 +29,6 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 
 public class Allocation {
   
-  private final RecordFactory recordFactory =
-      RecordFactoryProvider.getRecordFactory(null);
-
   final List<Container> containers;
   final Resource resourceLimit;
   final Set<ContainerId> strictContainers;
