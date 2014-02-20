@@ -110,6 +110,8 @@ message INodeSection {
   message INodeSymlink {
     optional fixed64 permission = 1;
     optional bytes target = 2;
+    optional uint64 modificationTime = 3;
+    optional uint64 accessTime = 4;
   }
 
   message INode {
@@ -281,4 +283,3 @@ message CacheManagerSection {
   // repeated CachePoolInfoProto pools
   // repeated CacheDirectiveInfoProto directives
 }
-
