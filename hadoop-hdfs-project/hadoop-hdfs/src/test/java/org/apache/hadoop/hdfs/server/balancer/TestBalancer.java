@@ -209,7 +209,7 @@ public class TestBalancer {
         ClientProtocol.class).getProxy();
 
     for(int i = 0; i < blocksDN.length; i++)
-      cluster.injectBlocks(i, Arrays.asList(blocksDN[i]));
+      cluster.injectBlocks(i, Arrays.asList(blocksDN[i]), null);
 
     final long totalCapacity = sum(capacities);
     runBalancer(conf, totalUsedSpace, totalCapacity);

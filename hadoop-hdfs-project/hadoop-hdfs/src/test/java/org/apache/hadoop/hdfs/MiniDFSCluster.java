@@ -2045,17 +2045,19 @@ public class MiniDFSCluster {
     return result;
   }
   
-  
   /**
    * This method is valid only if the data nodes have simulated data
    * @param dataNodeIndex - data node i which to inject - the index is same as for getDataNodes()
    * @param blocksToInject - the blocks
+   * @param bpid - (optional) the block pool id to use for injecting blocks.
+   *             If not supplied then it is queried from the in-process NameNode.
    * @throws IOException
    *              if not simulatedFSDataset
    *             if any of blocks already exist in the data node
    *   
    */
-  public void injectBlocks(int dataNodeIndex, Iterable<Block> blocksToInject) throws IOException {
+  public void injectBlocks(int dataNodeIndex,
+      Iterable<Block> blocksToInject, String bpid) throws IOException {
     if (dataNodeIndex < 0 || dataNodeIndex > dataNodes.size()) {
       throw new IndexOutOfBoundsException();
     }
@@ -2064,7 +2066,9 @@ public class MiniDFSCluster {
     if (!(dataSet instanceof SimulatedFSDataset)) {
       throw new IOException("injectBlocks is valid only for SimilatedFSDataset");
     }
-    String bpid = getNamesystem().getBlockPoolId();
+    if (bpid == null) {
+      bpid = getNamesystem().getBlockPoolId();
+    }
     SimulatedFSDataset sdataset = (SimulatedFSDataset) dataSet;
     sdataset.injectBlocks(bpid, blocksToInject);
     dataNodes.get(dataNodeIndex).datanode.scheduleAllBlockReport(0);
@@ -2087,25 +2091,6 @@ public class MiniDFSCluster {
     SimulatedFSDataset sdataset = (SimulatedFSDataset) dataSet;
     sdataset.injectBlocks(bpid, blocksToInject);
     dataNodes.get(dataNodeIndex).datanode.scheduleAllBlockReport(0);
-  }
-
-  /**
-   * This method is valid only if the data nodes have simulated data
-   * @param blocksToInject - blocksToInject[] is indexed in the same order as the list 
-   *             of datanodes returned by getDataNodes()
-   * @throws IOException
-   *             if not simulatedFSDataset
-   *             if any of blocks already exist in the data nodes
-   *             Note the rest of the blocks are not injected.
-   */
-  public void injectBlocks(Iterable<Block>[] blocksToInject)
-      throws IOException {
-    if (blocksToInject.length >  dataNodes.size()) {
-      throw new IndexOutOfBoundsException();
-    }
-    for (int i = 0; i < blocksToInject.length; ++i) {
-     injectBlocks(i, blocksToInject[i]);
-    }
   }
 
   /**
@@ -2154,11 +2139,13 @@ public class MiniDFSCluster {
    * @return the base directory for this instance.
    */
   protected String determineDfsBaseDir() {
-    String dfsdir = conf.get(HDFS_MINIDFS_BASEDIR, null);
-    if (dfsdir == null) {
-      dfsdir = getBaseDirectory();
+    if (conf != null) {
+      final String dfsdir = conf.get(HDFS_MINIDFS_BASEDIR, null);
+      if (dfsdir != null) {
+        return dfsdir;
+      }
     }
-    return dfsdir;
+    return getBaseDirectory();
   }
 
   /**
