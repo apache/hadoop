@@ -29,6 +29,7 @@ import java.util.concurrent.ConcurrentMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
@@ -84,6 +85,8 @@ import com.google.common.annotations.VisibleForTesting;
  * the <code>hostname:port</code> of the namenodes. In such case, the AM must
  * do resource request using <code>hostname:port</code> as the location.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class MiniYARNCluster extends CompositeService {
 
   private static final Log LOG = LogFactory.getLog(MiniYARNCluster.class);
