@@ -50,7 +50,6 @@ import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
-import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
@@ -1410,12 +1409,14 @@ public class LeafQueue implements CSQueue {
       FiCaSchedulerApp application, FiCaSchedulerNode node, RMContainer rmContainer, 
       ContainerStatus containerStatus, RMContainerEventType event, CSQueue childQueue) {
     if (application != null) {
+
+      boolean removed = false;
+
       // Careful! Locking order is important!
       synchronized (this) {
 
         Container container = rmContainer.getContainer();
 
-        boolean removed = false;
         // Inform the application & the node
         // Note: It's safe to assume that all state changes to RMContainer
         // happen under scheduler's lock... 
@@ -1441,13 +1442,14 @@ public class LeafQueue implements CSQueue {
               " absoluteUsedCapacity=" + getAbsoluteUsedCapacity() +
               " used=" + usedResources +
               " cluster=" + clusterResource);
-          // Inform the parent queue
-          getParent().completedContainer(clusterResource, application,
-              node, rmContainer, null, event, this);
         }
       }
 
-
+      if (removed) {
+        // Inform the parent queue _outside_ of the leaf-queue lock
+        getParent().completedContainer(clusterResource, application, node,
+          rmContainer, null, event, this);
+      }
     }
   }
 
