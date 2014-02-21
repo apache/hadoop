@@ -543,6 +543,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-5944. LeaseManager:findLeaseWithPrefixPath can't handle path like /a/b/
     and cause SecondaryNameNode failed do checkpoint (Yunjiong Zhao via brandonli)
 
+    HDFS-5982. Need to update snapshot manager when applying editlog for deleting
+    a snapshottable directory. (jing9)
+
   BREAKDOWN OF HDFS-5698 SUBTASKS AND RELATED JIRAS
 
     HDFS-5717. Save FSImage header in protobuf. (Haohui Mai via jing9)
