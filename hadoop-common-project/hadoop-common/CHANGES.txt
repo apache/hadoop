@@ -329,6 +329,8 @@ Trunk (Unreleased)
     HADOOP-10352. Recursive setfacl erroneously attempts to apply default ACL to
     files. (cnauroth)
 
+    HADOOP-10354. TestWebHDFS fails after merge of HDFS-4685 to trunk. (cnauroth)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
