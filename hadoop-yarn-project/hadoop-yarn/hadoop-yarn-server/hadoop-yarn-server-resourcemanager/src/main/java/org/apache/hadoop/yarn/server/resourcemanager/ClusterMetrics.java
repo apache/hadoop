@@ -91,7 +91,11 @@ public class ClusterMetrics {
   public void incrDecommisionedNMs() {
     numDecommissionedNMs.incr();
   }
-  
+
+  public void setDecommisionedNMs(int num) {
+    numDecommissionedNMs.set(num);
+  }
+
   public void decrDecommisionedNMs() {
     numDecommissionedNMs.decr();
   }

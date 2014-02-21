@@ -30,6 +30,7 @@ import java.util.List;
 
 import junit.framework.Assert;
 
+import org.apache.hadoop.util.HostsFileReader;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
@@ -102,6 +103,10 @@ public class TestRMNodeTransitions {
     rmContext =
         new RMContextImpl(rmDispatcher, null, null, null,
             mock(DelegationTokenRenewer.class), null, null, null, null, null);
+    NodesListManager nodesListManager = mock(NodesListManager.class);
+    HostsFileReader reader = mock(HostsFileReader.class);
+    when(nodesListManager.getHostsReader()).thenReturn(reader);
+    ((RMContextImpl) rmContext).setNodesListManager(nodesListManager);
     scheduler = mock(YarnScheduler.class);
     doAnswer(
         new Answer<Void>() {

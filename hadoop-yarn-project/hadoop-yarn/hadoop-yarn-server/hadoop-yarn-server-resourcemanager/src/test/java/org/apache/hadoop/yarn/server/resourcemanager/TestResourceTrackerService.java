@@ -150,7 +150,6 @@ public class TestResourceTrackerService {
     MockNM nm3 = rm.registerNode("localhost:4433", 1024);
 
     int metricCount = ClusterMetrics.getMetrics().getNumDecommisionedNMs();
-
     NodeHeartbeatResponse nodeHeartbeat = nm1.nodeHeartbeat(true);
     Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
     nodeHeartbeat = nm2.nodeHeartbeat(true);
@@ -161,18 +160,17 @@ public class TestResourceTrackerService {
     writeToHostsFile("host2", ip);
 
     rm.getNodesListManager().refreshNodes(conf);
+    checkDecommissionedNMCount(rm, metricCount + 2);
 
     nodeHeartbeat = nm1.nodeHeartbeat(true);
     Assert.assertTrue(NodeAction.NORMAL.equals(nodeHeartbeat.getNodeAction()));
     nodeHeartbeat = nm2.nodeHeartbeat(true);
     Assert.assertTrue("The decommisioned metrics are not updated",
         NodeAction.SHUTDOWN.equals(nodeHeartbeat.getNodeAction()));
-    checkDecommissionedNMCount(rm, ++metricCount);
 
     nodeHeartbeat = nm3.nodeHeartbeat(true);
     Assert.assertTrue("The decommisioned metrics are not updated",
         NodeAction.SHUTDOWN.equals(nodeHeartbeat.getNodeAction()));
-    checkDecommissionedNMCount(rm, ++metricCount);
   }
 
   /**
