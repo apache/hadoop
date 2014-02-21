@@ -46,7 +46,8 @@ public class TestDataNodeRollingUpgrade {
   private static final Log LOG = LogFactory.getLog(TestDataNodeRollingUpgrade.class);
 
   private static final short REPL_FACTOR = 1;
-  private static final long FILE_SIZE = 1024L;
+  private static final int BLOCK_SIZE = 1024 * 1024;
+  private static final long FILE_SIZE = BLOCK_SIZE * 4;
   private static final long SEED = 0x1BADF00DL;
 
   Configuration conf;
@@ -139,7 +140,7 @@ public class TestDataNodeRollingUpgrade {
       Path testFile1 = new Path("/TestDataNodeRollingUpgrade1.dat");
 
       // Create files in DFS.
-      DFSTestUtil.createFile(fs, testFile1, FILE_SIZE, REPL_FACTOR, SEED);
+      DFSTestUtil.createFile(fs, testFile1, BLOCK_SIZE, BLOCK_SIZE, FILE_SIZE, REPL_FACTOR, SEED);
       String fileContents1 = DFSTestUtil.readFile(fs, testFile1);
 
       startRollingUpgrade();

@@ -71,3 +71,5 @@ HDFS-5535 subtasks:
 
     HDFS-5992. Fix NPE in MD5FileUtils and update editsStored for
     TestOfflineEditsViewer.  (szetszwo)
+
+    HDFS-5994. Fix TestDataNodeRollingUpgrade.  (Arpit Agarwal via szetszwo)

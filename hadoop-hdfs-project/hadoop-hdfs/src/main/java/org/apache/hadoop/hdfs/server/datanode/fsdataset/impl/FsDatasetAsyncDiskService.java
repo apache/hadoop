@@ -196,9 +196,8 @@ class FsDatasetAsyncDiskService {
     }
 
     private boolean moveFiles() {
-      File newBlockFile = new File(trashDirectory, blockFile.getName());
-      File newMetaFile = new File(trashDirectory, metaFile.getName());
-      if (!new File(trashDirectory).mkdirs()) {
+      File trashDirFile = new File(trashDirectory);
+      if (!trashDirFile.exists() && !trashDirFile.mkdirs()) {
         LOG.error("Failed to create trash directory " + trashDirectory);
         return false;
       }
@@ -207,6 +206,9 @@ class FsDatasetAsyncDiskService {
         LOG.debug("Moving files " + blockFile.getName() + " and " +
             metaFile.getName() + " to trash.");
       }
+
+      File newBlockFile = new File(trashDirectory, blockFile.getName());
+      File newMetaFile = new File(trashDirectory, metaFile.getName());
       return (blockFile.renameTo(newBlockFile) &&
               metaFile.renameTo(newMetaFile));
     }

@@ -392,11 +392,12 @@ public class BlockPoolSliceStorage extends Storage {
       if (child.isDirectory()) {
         // Recurse to process subdirectories.
         filesRestored += restoreBlockFilesFromTrash(child);
+        continue;
       }
 
       if (restoreDirectory == null) {
         restoreDirectory = new File(getRestoreDirectory(child));
-        if (!restoreDirectory.mkdirs()) {
+        if (!restoreDirectory.exists() && !restoreDirectory.mkdirs()) {
           throw new IOException("Failed to create directory " + restoreDirectory);
         }
       }
