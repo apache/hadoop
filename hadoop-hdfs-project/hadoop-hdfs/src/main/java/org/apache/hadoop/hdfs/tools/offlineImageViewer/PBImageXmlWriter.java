@@ -78,7 +78,7 @@ public final class PBImageXmlWriter {
     FileInputStream fin = null;
     try {
       fin = new FileInputStream(file.getFD());
-      out.print("<?xml version=\"1.0\"?>\n");
+      out.print("<?xml version=\"1.0\"?>\n<fsimage>");
 
       ArrayList<FileSummary.Section> sections = Lists.newArrayList(summary
           .getSectionsList());
@@ -138,6 +138,7 @@ public final class PBImageXmlWriter {
           break;
         }
       }
+      out.print("</fsimage>\n");
     } finally {
       IOUtils.cleanup(null, fin);
     }
@@ -229,6 +230,7 @@ public final class PBImageXmlWriter {
       }
       dumpINodeReference(e);
     }
+    out.print("</INodeReferenceSection>");
   }
 
   private void dumpINodeReference(INodeReferenceSection.INodeReference r) {
@@ -301,7 +303,7 @@ public final class PBImageXmlWriter {
         .o("genstampV1Limit", s.getGenstampV1Limit())
         .o("lastAllocatedBlockId", s.getLastAllocatedBlockId())
         .o("txid", s.getTransactionId());
-    out.print("<NameSection>\n");
+    out.print("</NameSection>\n");
   }
 
   private String dumpPermission(long permission) {
@@ -375,7 +377,7 @@ public final class PBImageXmlWriter {
       }
       out.print("</diff>");
     }
-    out.print("<SnapshotDiffSection>\n");
+    out.print("</SnapshotDiffSection>\n");
   }
 
   private void dumpSnapshotSection(InputStream in) throws IOException {

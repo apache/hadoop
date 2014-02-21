@@ -605,6 +605,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-5959. Fix typo at section name in FSImageFormatProtobuf.java.
     (Akira Ajisaka via suresh)
 
+    HDFS-5981. PBImageXmlWriter generates malformed XML.
+    (Haohui Mai via cnauroth)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
