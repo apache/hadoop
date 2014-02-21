@@ -28,6 +28,8 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
@@ -63,6 +65,9 @@ import com.google.common.io.LimitInputStream;
  * output of the lsr command.
  */
 final class LsrPBImage {
+
+  private static final Log LOG = LogFactory.getLog(LsrPBImage.class);
+
   private final Configuration conf;
   private final PrintWriter out;
   private String[] stringTable;
@@ -133,6 +138,10 @@ final class LsrPBImage {
 
   private void list(String parent, long dirId) {
     INode inode = inodes.get(dirId);
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Listing directory id " + dirId + " parent '" + parent
+          + "' (INode is " + inode + ")");
+    }
     listINode(parent.isEmpty() ? "/" : parent, inode);
     long[] children = dirmap.get(dirId);
     if (children == null) {
@@ -189,6 +198,9 @@ final class LsrPBImage {
   }
 
   private void loadINodeDirectorySection(InputStream in) throws IOException {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Loading directory section");
+    }
     while (true) {
       INodeDirectorySection.DirEntry e = INodeDirectorySection.DirEntry
           .parseDelimitedFrom(in);
@@ -205,10 +217,21 @@ final class LsrPBImage {
         l[i] = refList.get(refId).getReferredId();
       }
       dirmap.put(e.getParent(), l);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Loaded directory (parent " + e.getParent()
+            + ") with " + e.getChildrenCount() + " children and "
+            + e.getRefChildrenCount() + " reference children");
+      }
+    }
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Loaded " + dirmap.size() + " directories");
     }
   }
 
   private void loadINodeReferenceSection(InputStream in) throws IOException {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Loading inode reference section");
+    }
     while (true) {
       INodeReferenceSection.INodeReference e = INodeReferenceSection
           .INodeReference.parseDelimitedFrom(in);
@@ -216,24 +239,44 @@ final class LsrPBImage {
         break;
       }
       refList.add(e);
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Loaded inode reference named '" + e.getName()
+            + "' referring to id " + e.getReferredId() + "");
+      }
+    }
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Loaded " + refList.size() + " inode references");
     }
   }
 
   private void loadINodeSection(InputStream in) throws IOException {
     INodeSection s = INodeSection.parseDelimitedFrom(in);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Found " + s.getNumInodes() + " inodes in inode section");
+    }
     for (int i = 0; i < s.getNumInodes(); ++i) {
       INodeSection.INode p = INodeSection.INode.parseDelimitedFrom(in);
       inodes.put(p.getId(), p);
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Loaded inode id " + p.getId() + " type " + p.getType()
+            + " name '" + p.getName().toStringUtf8() + "'");
+      }
     }
   }
 
   private void loadStringTable(InputStream in) throws IOException {
     StringTableSection s = StringTableSection.parseDelimitedFrom(in);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Found " + s.getNumEntry() + " strings in string section");
+    }
     stringTable = new String[s.getNumEntry() + 1];
     for (int i = 0; i < s.getNumEntry(); ++i) {
       StringTableSection.Entry e = StringTableSection.Entry
           .parseDelimitedFrom(in);
       stringTable[e.getId()] = e.getStr();
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Loaded string " + e.getStr());
+      }
     }
   }
 }
