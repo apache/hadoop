@@ -200,6 +200,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1171. Add default queue properties to Fair Scheduler documentation
     (Naren Koneru via Sandy Ryza)
 
+    YARN-1470. Add audience annotations to MiniYARNCluster. (Anubhav Dhoot
+    via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES
