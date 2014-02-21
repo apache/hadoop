@@ -160,6 +160,31 @@ public class Progress {
 
   /** Called during execution on a leaf node to set its progress. */
   public synchronized void set(float progress) {
+    if (Float.isNaN(progress)) {
+      progress = 0;
+      LOG.warn("Illegal progress value found, progress is Float.NaN. " +
+        "Progress will be changed to 0");
+    }
+    else if (progress == Float.NEGATIVE_INFINITY) {
+      progress = 0;
+      LOG.warn("Illegal progress value found, progress is " +
+        "Float.NEGATIVE_INFINITY. Progress will be changed to 0");
+    }
+    else if (progress < 0) {
+      progress = 0;
+      LOG.warn("Illegal progress value found, progress is less than 0." +
+        " Progress will be changed to 0");
+    }
+    else if (progress > 1) {
+      progress = 1;
+      LOG.warn("Illegal progress value found, progress is larger than 1." +
+        " Progress will be changed to 1");
+    }
+    else if (progress == Float.POSITIVE_INFINITY) {
+      progress = 1;
+      LOG.warn("Illegal progress value found, progress is " +
+        "Float.POSITIVE_INFINITY. Progress will be changed to 1");
+    }
     this.progress = progress;
   }
 
