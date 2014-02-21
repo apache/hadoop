@@ -75,6 +75,7 @@ public class NodesListManager extends AbstractService implements
           YarnConfiguration.DEFAULT_RM_NODES_EXCLUDE_FILE_PATH);
       this.hostsReader =
           createHostsFileReader(this.includesFile, this.excludesFile);
+      setDecomissionedNMsMetrics();
       printConfiguredHosts();
     } catch (YarnException ex) {
       disableHostsFileReader(ex);
@@ -120,8 +121,14 @@ public class NodesListManager extends AbstractService implements
                   this.conf, includesFile), excludesFile.isEmpty() ? null
               : this.rmContext.getConfigurationProvider()
                   .getConfigurationInputStream(this.conf, excludesFile));
+      setDecomissionedNMsMetrics();
       printConfiguredHosts();
     }
+  }
+
+  private void setDecomissionedNMsMetrics() {
+    Set<String> excludeList = hostsReader.getExcludedHosts();
+    ClusterMetrics.getMetrics().setDecommisionedNMs(excludeList.size());
   }
 
   public boolean isValidNode(String hostName) {
@@ -190,6 +197,7 @@ public class NodesListManager extends AbstractService implements
           conf.get(YarnConfiguration.DEFAULT_RM_NODES_EXCLUDE_FILE_PATH);
       this.hostsReader =
           createHostsFileReader(this.includesFile, this.excludesFile);
+      setDecomissionedNMsMetrics();
     } catch (IOException ioe2) {
       // Should *never* happen
       this.hostsReader = null;
