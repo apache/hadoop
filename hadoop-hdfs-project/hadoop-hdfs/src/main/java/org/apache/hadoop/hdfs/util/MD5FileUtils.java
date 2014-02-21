@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.util;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -72,10 +73,6 @@ public abstract class MD5FileUtils {
    *   where group(1) is the md5 string and group(2) is the data file path.
    */
   private static Matcher readStoredMd5(File md5File) throws IOException {
-    if (!md5File.exists()) {
-      return null;
-    }
-    
     BufferedReader reader =
         new BufferedReader(new InputStreamReader(new FileInputStream(
             md5File), Charsets.UTF_8));
@@ -105,6 +102,10 @@ public abstract class MD5FileUtils {
    */
   public static MD5Hash readStoredMd5ForFile(File dataFile) throws IOException {
     final File md5File = getDigestFileForFile(dataFile);
+    if (!md5File.exists()) {
+      return null;
+    }
+
     final Matcher matcher = readStoredMd5(md5File);
     String storedHash = matcher.group(1);
     File referencedFile = new File(matcher.group(2));
@@ -165,6 +166,10 @@ public abstract class MD5FileUtils {
   public static void renameMD5File(File oldDataFile, File newDataFile)
       throws IOException {
     final File fromFile = getDigestFileForFile(oldDataFile);
+    if (!fromFile.exists()) {
+      throw new FileNotFoundException(fromFile + " does not exist.");
+    }
+
     final String digestString = readStoredMd5(fromFile).group(1);
     saveMD5File(newDataFile, digestString);
 

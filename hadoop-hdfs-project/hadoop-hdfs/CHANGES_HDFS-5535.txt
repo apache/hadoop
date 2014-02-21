@@ -69,3 +69,5 @@ HDFS-5535 subtasks:
     HDFS-5987. Fix findbugs warnings in Rolling Upgrade branch. (seztszwo via
     Arpit Agarwal)
 
+    HDFS-5992. Fix NPE in MD5FileUtils and update editsStored for
+    TestOfflineEditsViewer.  (szetszwo)
