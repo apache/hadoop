@@ -695,8 +695,7 @@ public class FSImageFormat {
       localName =
           renameReservedComponentOnUpgrade(localName, getLayoutVersion());
       INode inode = loadINode(localName, isSnapshotINode, in, counter);
-      if (updateINodeMap
-          && LayoutVersion.supports(Feature.ADD_INODE_ID, getLayoutVersion())) {
+      if (updateINodeMap) {
         namesystem.dir.addToInodeMap(inode);
       }
       return inode;
