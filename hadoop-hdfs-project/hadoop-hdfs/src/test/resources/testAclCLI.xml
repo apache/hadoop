@@ -911,5 +911,66 @@
         </comparator>
       </comparators>
     </test>
+    <test>
+      <description>setfacl: recursive modify entries with mix of files and directories</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir -p /dir1</command>
+        <command>-fs NAMENODE -touchz /dir1/file1</command>
+        <command>-fs NAMENODE -mkdir -p /dir1/dir2</command>
+        <command>-fs NAMENODE -touchz /dir1/dir2/file2</command>
+        <command>-fs NAMENODE -setfacl -R -m user:charlie:rwx,default:user:charlie:r-x /dir1</command>
+        <command>-fs NAMENODE -getfacl -R /dir1</command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -R /dir1</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>ExactComparator</type>
+          <expected-output># file: /dir1#LF## owner: USERNAME#LF## group: supergroup#LF#user::rwx#LF#user:charlie:rwx#LF#group::r-x#LF#mask::rwx#LF#other::r-x#LF#default:user::rwx#LF#default:user:charlie:r-x#LF#default:group::r-x#LF#default:mask::r-x#LF#default:other::r-x#LF##LF## file: /dir1/dir2#LF## owner: USERNAME#LF## group: supergroup#LF#user::rwx#LF#user:charlie:rwx#LF#group::r-x#LF#mask::rwx#LF#other::r-x#LF#default:user::rwx#LF#default:user:charlie:r-x#LF#default:group::r-x#LF#default:mask::r-x#LF#default:other::r-x#LF##LF## file: /dir1/dir2/file2#LF## owner: USERNAME#LF## group: supergroup#LF#user::rw-#LF#user:charlie:rwx#LF#group::r--#LF#mask::rwx#LF#other::r--#LF##LF## file: /dir1/file1#LF## owner: USERNAME#LF## group: supergroup#LF#user::rw-#LF#user:charlie:rwx#LF#group::r--#LF#mask::rwx#LF#other::r--#LF##LF#</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+    <test>
+      <description>setfacl: recursive remove entries with mix of files and directories</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir -p /dir1</command>
+        <command>-fs NAMENODE -touchz /dir1/file1</command>
+        <command>-fs NAMENODE -mkdir -p /dir1/dir2</command>
+        <command>-fs NAMENODE -touchz /dir1/dir2/file2</command>
+        <command>-fs NAMENODE -setfacl -R -m user:bob:rwx,user:charlie:rwx,default:user:bob:rwx,default:user:charlie:r-x /dir1</command>
+        <command>-fs NAMENODE -setfacl -R -x user:bob,default:user:bob /dir1</command>
+        <command>-fs NAMENODE -getfacl -R /dir1</command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -R /dir1</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>ExactComparator</type>
+          <expected-output># file: /dir1#LF## owner: USERNAME#LF## group: supergroup#LF#user::rwx#LF#user:charlie:rwx#LF#group::r-x#LF#mask::rwx#LF#other::r-x#LF#default:user::rwx#LF#default:user:charlie:r-x#LF#default:group::r-x#LF#default:mask::r-x#LF#default:other::r-x#LF##LF## file: /dir1/dir2#LF## owner: USERNAME#LF## group: supergroup#LF#user::rwx#LF#user:charlie:rwx#LF#group::r-x#LF#mask::rwx#LF#other::r-x#LF#default:user::rwx#LF#default:user:charlie:r-x#LF#default:group::r-x#LF#default:mask::r-x#LF#default:other::r-x#LF##LF## file: /dir1/dir2/file2#LF## owner: USERNAME#LF## group: supergroup#LF#user::rw-#LF#user:charlie:rwx#LF#group::r--#LF#mask::rwx#LF#other::r--#LF##LF## file: /dir1/file1#LF## owner: USERNAME#LF## group: supergroup#LF#user::rw-#LF#user:charlie:rwx#LF#group::r--#LF#mask::rwx#LF#other::r--#LF##LF#</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+    <test>
+      <description>setfacl: recursive set with mix of files and directories</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir -p /dir1</command>
+        <command>-fs NAMENODE -touchz /dir1/file1</command>
+        <command>-fs NAMENODE -mkdir -p /dir1/dir2</command>
+        <command>-fs NAMENODE -touchz /dir1/dir2/file2</command>
+        <command>-fs NAMENODE -setfacl -R --set user::rwx,user:charlie:rwx,group::r-x,other::r-x,default:user:charlie:r-x /dir1</command>
+        <command>-fs NAMENODE -getfacl -R /dir1</command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -R /dir1</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>ExactComparator</type>
+          <expected-output># file: /dir1#LF## owner: USERNAME#LF## group: supergroup#LF#user::rwx#LF#user:charlie:rwx#LF#group::r-x#LF#mask::rwx#LF#other::r-x#LF#default:user::rwx#LF#default:user:charlie:r-x#LF#default:group::r-x#LF#default:mask::r-x#LF#default:other::r-x#LF##LF## file: /dir1/dir2#LF## owner: USERNAME#LF## group: supergroup#LF#user::rwx#LF#user:charlie:rwx#LF#group::r-x#LF#mask::rwx#LF#other::r-x#LF#default:user::rwx#LF#default:user:charlie:r-x#LF#default:group::r-x#LF#default:mask::r-x#LF#default:other::r-x#LF##LF## file: /dir1/dir2/file2#LF## owner: USERNAME#LF## group: supergroup#LF#user::rwx#LF#user:charlie:rwx#LF#group::r-x#LF#mask::rwx#LF#other::r-x#LF##LF## file: /dir1/file1#LF## owner: USERNAME#LF## group: supergroup#LF#user::rwx#LF#user:charlie:rwx#LF#group::r-x#LF#mask::rwx#LF#other::r-x#LF##LF#</expected-output>
+        </comparator>
+      </comparators>
+    </test>
   </tests>
 </configuration>
