@@ -424,6 +424,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-5775. Consolidate the code for serialization in CacheManager
     (Haohui Mai via brandonli)
 
+    HDFS-5935. New Namenode UI FS browser should throw smarter error messages.
+    (Travis Thompson via jing9)
+
   OPTIMIZATIONS
 
     HDFS-5790. LeaseManager.findPath is very slow when many leases need recovery

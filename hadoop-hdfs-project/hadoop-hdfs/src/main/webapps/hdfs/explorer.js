@@ -66,10 +66,23 @@
 
   function network_error_handler(url) {
     return function (jqxhr, text, err) {
-      var msg = '<p>Failed to retreive data from ' + url + ', cause: ' + err + '</p>';
-      if (url.indexOf('/webhdfs/v1') === 0)  {
-        msg += '<p>WebHDFS might be disabled. WebHDFS is required to browse the filesystem.</p>';
-      }
+      switch(jqxhr.status) {
+        case 401:
+          var msg = '<p>Authentication failed when trying to open ' + url + ': Unauthrozied.</p>';
+          break;
+        case 403:
+          if(jqxhr.responseJSON !== undefined && jqxhr.responseJSON.RemoteException !== undefined) {
+            var msg = '<p>' + jqxhr.responseJSON.RemoteException.message + "</p>";
+            break;
+          }
+          var msg = '<p>Permission denied when trying to open ' + url + ': ' + err + '</p>';
+          break;
+        case 404:
+          var msg = '<p>Path does not exist on HDFS or WebHDFS is disabled.  Please check your path or enable WebHDFS</p>';
+          break;
+        default:
+          var msg = '<p>Failed to retreive data from ' + url + ': ' + err + '</p>';
+        }
       show_err_msg(msg);
     };
   }
