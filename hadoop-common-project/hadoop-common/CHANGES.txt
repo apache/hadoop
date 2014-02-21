@@ -64,6 +64,8 @@ Release 2.4.0 - UNRELEASED
     HADOOP-10328. loadGenerator exit code is not reliable.
     (Haohui Mai via cnauroth)
 
+    HADOOP-10355. Fix TestLoadGenerator#testLoadGenerator. (Haohui Mai via jing9)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
