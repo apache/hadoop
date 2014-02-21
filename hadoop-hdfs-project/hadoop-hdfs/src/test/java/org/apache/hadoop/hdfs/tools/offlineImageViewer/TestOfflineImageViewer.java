@@ -18,22 +18,23 @@
 package org.apache.hadoop.hdfs.tools.offlineImageViewer;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.RandomAccessFile;
+import java.io.StringReader;
 import java.io.StringWriter;
 import java.util.HashMap;
-import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.parsers.SAXParser;
+import javax.xml.parsers.SAXParserFactory;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -43,21 +44,23 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.DFSTestUtil;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.test.PathUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
+import org.xml.sax.helpers.DefaultHandler;
+
+import com.google.common.collect.Maps;
 
 /**
  * Test function of OfflineImageViewer by: * confirming it can correctly process
@@ -85,7 +88,7 @@ public class TestOfflineImageViewer {
   }
 
   // namespace as written to dfs, to be compared with viewer's output
-  final static HashMap<String, FileStatus> writtenFiles = new HashMap<String, FileStatus>();
+  final static HashMap<String, FileStatus> writtenFiles = Maps.newHashMap();
 
   @Rule
   public TemporaryFolder folder = new TemporaryFolder();
@@ -98,7 +101,7 @@ public class TestOfflineImageViewer {
   public static void createOriginalFSImage() throws IOException {
     MiniDFSCluster cluster = null;
     try {
-      Configuration conf = new HdfsConfiguration();
+      Configuration conf = new Configuration();
       conf.setLong(
           DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_MAX_LIFETIME_KEY, 10000);
       conf.setLong(
@@ -107,11 +110,9 @@ public class TestOfflineImageViewer {
           DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY, true);
       conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTH_TO_LOCAL,
           "RULE:[2:$1@$0](JobTracker@.*FOO.COM)s/@.*//" + "DEFAULT");
-      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(4).build();
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
       cluster.waitActive();
-      FileSystem hdfs = cluster.getFileSystem();
-
-      int filesize = 256;
+      DistributedFileSystem hdfs = cluster.getFileSystem();
 
       // Create a reasonable namespace
       for (int i = 0; i < NUM_DIRS; i++) {
@@ -121,7 +122,7 @@ public class TestOfflineImageViewer {
         for (int j = 0; j < FILES_PER_DIR; j++) {
           Path file = new Path(dir, "file" + j);
           FSDataOutputStream o = hdfs.create(file);
-          o.write(new byte[filesize++]);
+          o.write(23);
           o.close();
 
           writtenFiles.put(file.toString(),
@@ -136,10 +137,15 @@ public class TestOfflineImageViewer {
         LOG.debug("got token " + t);
       }
 
+      final Path snapshot = new Path("/snapshot");
+      hdfs.mkdirs(snapshot);
+      hdfs.allowSnapshot(snapshot);
+      hdfs.mkdirs(new Path("/snapshot/1"));
+      hdfs.delete(snapshot, true);
+
       // Write results to the fsimage file
-      cluster.getNameNodeRpc()
-          .setSafeMode(SafeModeAction.SAFEMODE_ENTER, false);
-      cluster.getNameNodeRpc().saveNamespace();
+      hdfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER, false);
+      hdfs.saveNamespace();
 
       // Determine location of fsimage file
       originalFsimage = FSImageTestUtil.findLatestImageFile(FSImageTestUtil
@@ -248,5 +254,18 @@ public class TestOfflineImageViewer {
     assertTrue(matcher.find() && matcher.groupCount() == 1);
     int totalFiles = Integer.parseInt(matcher.group(1));
     assertEquals(totalFiles, NUM_DIRS * FILES_PER_DIR);
+  }
+
+  @Test
+  public void testPBImageXmlWriter() throws IOException, SAXException,
+      ParserConfigurationException {
+    StringWriter output = new StringWriter();
+    PrintWriter o = new PrintWriter(output);
+    PBImageXmlWriter v = new PBImageXmlWriter(new Configuration(), o);
+    v.visit(new RandomAccessFile(originalFsimage, "r"));
+    SAXParserFactory spf = SAXParserFactory.newInstance();
+    SAXParser parser = spf.newSAXParser();
+    final String xml = output.getBuffer().toString();
+    parser.parse(new InputSource(new StringReader(xml)), new DefaultHandler());
   }
 }

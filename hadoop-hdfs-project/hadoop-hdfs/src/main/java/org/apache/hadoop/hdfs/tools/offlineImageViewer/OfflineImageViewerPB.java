@@ -33,6 +33,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.IOUtils;
 
 /**
  * OfflineImageViewer to dump the contents of an Hadoop image file to XML or the
@@ -164,7 +165,7 @@ public class OfflineImageViewerPB {
     } catch (IOException e) {
       System.err.println("Encountered exception.  Exiting: " + e.getMessage());
     } finally {
-      out.close();
+      IOUtils.cleanup(null, out);
     }
 
   }
