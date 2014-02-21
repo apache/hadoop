@@ -546,6 +546,8 @@ Release 2.4.0 - UNRELEASED
     HDFS-5982. Need to update snapshot manager when applying editlog for deleting
     a snapshottable directory. (jing9)
 
+    HDFS-5988. Bad fsimage always generated after upgrade. (wang)
+
   BREAKDOWN OF HDFS-5698 SUBTASKS AND RELATED JIRAS
 
     HDFS-5717. Save FSImage header in protobuf. (Haohui Mai via jing9)

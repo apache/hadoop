@@ -330,13 +330,14 @@ public class TestDFSUpgradeFromImage {
    * paths to test renaming on upgrade
    */
   @Test
-  public void testUpgradeFromRel2ReservedImage() throws IOException {
+  public void testUpgradeFromRel2ReservedImage() throws Exception {
     unpackStorage(HADOOP2_RESERVED_IMAGE);
     MiniDFSCluster cluster = null;
     // Try it once without setting the upgrade flag to ensure it fails
+    final Configuration conf = new Configuration();
     try {
       cluster =
-          new MiniDFSCluster.Builder(new Configuration())
+          new MiniDFSCluster.Builder(conf)
               .format(false)
               .startupOption(StartupOption.UPGRADE)
               .numDataNodes(0).build();
@@ -355,28 +356,15 @@ public class TestDFSUpgradeFromImage {
           ".snapshot=.user-snapshot," +
           ".reserved=.my-reserved");
       cluster =
-          new MiniDFSCluster.Builder(new Configuration())
+          new MiniDFSCluster.Builder(conf)
               .format(false)
               .startupOption(StartupOption.UPGRADE)
               .numDataNodes(0).build();
-      // Make sure the paths were renamed as expected
       DistributedFileSystem dfs = cluster.getFileSystem();
-      ArrayList<Path> toList = new ArrayList<Path>();
-      ArrayList<String> found = new ArrayList<String>();
-      toList.add(new Path("/"));
-      while (!toList.isEmpty()) {
-        Path p = toList.remove(0);
-        FileStatus[] statuses = dfs.listStatus(p);
-        for (FileStatus status: statuses) {
-          final String path = status.getPath().toUri().getPath();
-          System.out.println("Found path " + path);
-          found.add(path);
-          if (status.isDirectory()) {
-            toList.add(status.getPath());
-          }
-        }
-      }
-      String[] expected = new String[] {
+      // Make sure the paths were renamed as expected
+      // Also check that paths are present after a restart, checks that the
+      // upgraded fsimage has the same state.
+      final String[] expected = new String[] {
           "/edits",
           "/edits/.reserved",
           "/edits/.user-snapshot",
@@ -393,12 +381,33 @@ public class TestDFSUpgradeFromImage {
           "/.my-reserved/edits-touch",
           "/.my-reserved/image-touch"
       };
-
-      for (String s: expected) {
-        assertTrue("Did not find expected path " + s, found.contains(s));
+      for (int i=0; i<2; i++) {
+        // Restart the second time through this loop
+        if (i==1) {
+          cluster.finalizeCluster(conf);
+          cluster.restartNameNode(true);
+        }
+        ArrayList<Path> toList = new ArrayList<Path>();
+        toList.add(new Path("/"));
+        ArrayList<String> found = new ArrayList<String>();
+        while (!toList.isEmpty()) {
+          Path p = toList.remove(0);
+          FileStatus[] statuses = dfs.listStatus(p);
+          for (FileStatus status: statuses) {
+            final String path = status.getPath().toUri().getPath();
+            System.out.println("Found path " + path);
+            found.add(path);
+            if (status.isDirectory()) {
+              toList.add(status.getPath());
+            }
+          }
+        }
+        for (String s: expected) {
+          assertTrue("Did not find expected path " + s, found.contains(s));
+        }
+        assertEquals("Found an unexpected path while listing filesystem",
+            found.size(), expected.length);
       }
-      assertEquals("Found an unexpected path while listing filesystem",
-          found.size(), expected.length);
     } finally {
       if (cluster != null) {
         cluster.shutdown();
