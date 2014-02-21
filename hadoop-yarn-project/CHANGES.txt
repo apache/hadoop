@@ -321,6 +321,9 @@ Release 2.4.0 - UNRELEASED
     YARN-713. Fixed ResourceManager to not crash while building tokens when DNS
     issues happen transmittently. (Jian He via vinodkv)
 
+    YARN-1398. Fixed a deadlock in ResourceManager between users requesting
+    queue-acls and completing containers. (vinodkv)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
