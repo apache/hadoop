@@ -23,6 +23,8 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
@@ -38,7 +40,9 @@ import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
 import org.apache.hadoop.security.SecurityUtil;
@@ -90,12 +94,16 @@ import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 public class TestRMRestart {
 
+  private final static File TEMP_DIR = new File(System.getProperty(
+    "test.build.data", "/tmp"), "decommision");
+  private File hostFile = new File(TEMP_DIR + File.separator + "hostFile.txt");
   private YarnConfiguration conf;
 
   // Fake rmAddr for token-renewal
@@ -111,6 +119,11 @@ public class TestRMRestart {
     conf.set(YarnConfiguration.RM_STORE, MemoryRMStateStore.class.getName());
     rmAddr = new InetSocketAddress("localhost", 8032);
     Assert.assertTrue(YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS > 1);
+  }
+
+  @After
+  public void tearDown() {
+    TEMP_DIR.delete();
   }
 
   @SuppressWarnings("rawtypes")
@@ -1664,6 +1677,56 @@ public class TestRMRestart {
         appsRunning + appsRunningCarryOn);
     Assert.assertEquals(qm.getAppsCompleted(),
         appsCompleted + appsCompletedCarryOn);
+  }
+
+  @Test
+  public void testDecomissionedNMsMetricsOnRMRestart() throws Exception {
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.set(YarnConfiguration.RM_NODES_EXCLUDE_FILE_PATH,
+      hostFile.getAbsolutePath());
+    writeToHostsFile("");
+    MockRM rm1 = new MockRM(conf);
+    rm1.start();
+    rm1.registerNode("localhost:1234", 8000);
+    rm1.registerNode("host2:1234", 8000);
+    Assert
+      .assertEquals(0, ClusterMetrics.getMetrics().getNumDecommisionedNMs());
+    String ip = NetUtils.normalizeHostName("localhost");
+    // Add 2 hosts to exclude list.
+    writeToHostsFile("host2", ip);
+
+    // refresh nodes
+    rm1.getNodesListManager().refreshNodes(conf);
+    Assert
+      .assertEquals(2, ClusterMetrics.getMetrics().getNumDecommisionedNMs());
+
+    // restart RM.
+    MockRM rm2 = new MockRM(conf);
+    rm2.start();
+    Assert
+      .assertEquals(2, ClusterMetrics.getMetrics().getNumDecommisionedNMs());
+    rm1.stop();
+    rm2.stop();
+  }
+
+  private void writeToHostsFile(String... hosts) throws IOException {
+    if (!hostFile.exists()) {
+      TEMP_DIR.mkdirs();
+      hostFile.createNewFile();
+    }
+    FileOutputStream fStream = null;
+    try {
+      fStream = new FileOutputStream(hostFile);
+      for (int i = 0; i < hosts.length; i++) {
+        fStream.write(hosts[i].getBytes());
+        fStream.write(System.getProperty("line.separator").getBytes());
+      }
+    } finally {
+      if (fStream != null) {
+        IOUtils.closeStream(fStream);
+        fStream = null;
+      }
+    }
   }
 
   public class TestMemoryRMStateStore extends MemoryRMStateStore {
