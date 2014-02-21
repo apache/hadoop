@@ -1317,20 +1317,12 @@ public class FSDirectory implements Closeable {
       if (!deleteAllowed(inodesInPath, src) ) {
         filesRemoved = -1;
       } else {
-        // Before removing the node, first check if the targetNode is for a
-        // snapshottable dir with snapshots, or its descendants have
-        // snapshottable dir with snapshots
-        final INode targetNode = inodesInPath.getLastINode();
         List<INodeDirectorySnapshottable> snapshottableDirs = 
             new ArrayList<INodeDirectorySnapshottable>();
-        checkSnapshot(targetNode, snapshottableDirs);
+        checkSnapshot(inodesInPath.getLastINode(), snapshottableDirs);
         filesRemoved = unprotectedDelete(inodesInPath, collectedBlocks,
             removedINodes, now);
-        if (snapshottableDirs.size() > 0) {
-          // There are some snapshottable directories without snapshots to be
-          // deleted. Need to update the SnapshotManager.
-          namesystem.removeSnapshottableDirs(snapshottableDirs);
-        }
+        namesystem.removeSnapshottableDirs(snapshottableDirs);
       }
     } finally {
       writeUnlock();
@@ -1392,18 +1384,25 @@ public class FSDirectory implements Closeable {
    * @param src a string representation of a path to an inode
    * @param mtime the time the inode is removed
    * @throws SnapshotAccessControlException if path is in RO snapshot
-   */ 
+   */
   void unprotectedDelete(String src, long mtime) throws UnresolvedLinkException,
-      QuotaExceededException, SnapshotAccessControlException {
+      QuotaExceededException, SnapshotAccessControlException, IOException {
     assert hasWriteLock();
     BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
     List<INode> removedINodes = new ChunkedArrayList<INode>();
 
     final INodesInPath inodesInPath = rootDir.getINodesInPath4Write(
         normalizePath(src), false);
-    final long filesRemoved = deleteAllowed(inodesInPath, src) ? 
-        unprotectedDelete(inodesInPath, collectedBlocks, 
-            removedINodes, mtime) : -1;
+    long filesRemoved = -1;
+    if (deleteAllowed(inodesInPath, src)) {
+      List<INodeDirectorySnapshottable> snapshottableDirs = 
+          new ArrayList<INodeDirectorySnapshottable>();
+      checkSnapshot(inodesInPath.getLastINode(), snapshottableDirs);
+      filesRemoved = unprotectedDelete(inodesInPath, collectedBlocks,
+          removedINodes, mtime);
+      namesystem.removeSnapshottableDirs(snapshottableDirs); 
+    }
+
     if (filesRemoved >= 0) {
       getFSNamesystem().removePathAndBlocks(src, collectedBlocks, 
           removedINodes);

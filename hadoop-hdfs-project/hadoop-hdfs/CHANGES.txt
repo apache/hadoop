@@ -424,6 +424,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-5775. Consolidate the code for serialization in CacheManager
     (Haohui Mai via brandonli)
 
+    HDFS-5935. New Namenode UI FS browser should throw smarter error messages.
+    (Travis Thompson via jing9)
+
   OPTIMIZATIONS
 
     HDFS-5790. LeaseManager.findPath is very slow when many leases need recovery
@@ -543,6 +546,11 @@ Release 2.4.0 - UNRELEASED
     HDFS-5944. LeaseManager:findLeaseWithPrefixPath can't handle path like /a/b/
     and cause SecondaryNameNode failed do checkpoint (Yunjiong Zhao via brandonli)
 
+    HDFS-5982. Need to update snapshot manager when applying editlog for deleting
+    a snapshottable directory. (jing9)
+
+    HDFS-5988. Bad fsimage always generated after upgrade. (wang)
+
   BREAKDOWN OF HDFS-5698 SUBTASKS AND RELATED JIRAS
 
     HDFS-5717. Save FSImage header in protobuf. (Haohui Mai via jing9)
@@ -599,6 +607,9 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-5959. Fix typo at section name in FSImageFormatProtobuf.java.
     (Akira Ajisaka via suresh)
+
+    HDFS-5981. PBImageXmlWriter generates malformed XML.
+    (Haohui Mai via cnauroth)
 
 Release 2.3.1 - UNRELEASED
 

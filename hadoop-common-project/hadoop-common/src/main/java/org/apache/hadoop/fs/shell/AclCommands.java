@@ -22,6 +22,8 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 
+import com.google.common.collect.Lists;
+
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -231,6 +233,7 @@ class AclCommands extends FsCommand {
     CommandFormat cf = new CommandFormat(0, Integer.MAX_VALUE, "b", "k", "R",
         "m", "x", "-set");
     List<AclEntry> aclEntries = null;
+    List<AclEntry> accessAclEntries = null;
 
     @Override
     protected void processOptions(LinkedList<String> args) throws IOException {
@@ -263,6 +266,19 @@ class AclCommands extends FsCommand {
       if (args.size() > 1) {
         throw new HadoopIllegalArgumentException("Too many arguments");
       }
+
+      // In recursive mode, save a separate list of just the access ACL entries.
+      // Only directories may have a default ACL.  When a recursive operation
+      // encounters a file under the specified path, it must pass only the
+      // access ACL entries.
+      if (isRecursive() && (oneModifyOption || setOption)) {
+        accessAclEntries = Lists.newArrayList();
+        for (AclEntry entry: aclEntries) {
+          if (entry.getScope() == AclEntryScope.ACCESS) {
+            accessAclEntries.add(entry);
+          }
+        }
+      }
     }
 
     @Override
@@ -272,11 +288,37 @@ class AclCommands extends FsCommand {
       } else if (cf.getOpt("k")) {
         item.fs.removeDefaultAcl(item.path);
       } else if (cf.getOpt("m")) {
-        item.fs.modifyAclEntries(item.path, aclEntries);
+        List<AclEntry> entries = getAclEntries(item);
+        if (!entries.isEmpty()) {
+          item.fs.modifyAclEntries(item.path, entries);
+        }
       } else if (cf.getOpt("x")) {
-        item.fs.removeAclEntries(item.path, aclEntries);
+        List<AclEntry> entries = getAclEntries(item);
+        if (!entries.isEmpty()) {
+          item.fs.removeAclEntries(item.path, entries);
+        }
       } else if (cf.getOpt("-set")) {
-        item.fs.setAcl(item.path, aclEntries);
+        List<AclEntry> entries = getAclEntries(item);
+        if (!entries.isEmpty()) {
+          item.fs.setAcl(item.path, entries);
+        }
+      }
+    }
+
+    /**
+     * Returns the ACL entries to use in the API call for the given path.  For a
+     * recursive operation, returns all specified ACL entries if the item is a
+     * directory or just the access ACL entries if the item is a file.  For a
+     * non-recursive operation, returns all specified ACL entries.
+     *
+     * @param item PathData path to check
+     * @return List<AclEntry> ACL entries to use in the API call
+     */
+    private List<AclEntry> getAclEntries(PathData item) {
+      if (isRecursive()) {
+        return item.stat.isDirectory() ? aclEntries : accessAclEntries;
+      } else {
+        return aclEntries;
       }
     }
   }

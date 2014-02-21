@@ -34,6 +34,7 @@ import junit.framework.TestCase;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TypeConverter;
@@ -124,7 +125,7 @@ import org.junit.Test;
      when(fs.exists(stagingDir)).thenReturn(true);
      ApplicationId appId = ApplicationId.newInstance(System.currentTimeMillis(),
         0);
-     ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(appId, 0);
+     ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(appId, 1);
      JobId jobid = recordFactory.newRecordInstance(JobId.class);
      jobid.setAppId(appId);
      ContainerAllocator mockAlloc = mock(ContainerAllocator.class);
@@ -149,7 +150,7 @@ import org.junit.Test;
      when(fs.exists(stagingDir)).thenReturn(true);
      ApplicationId appId = ApplicationId.newInstance(System.currentTimeMillis(),
          0);
-     ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(appId, 0);
+     ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(appId, 1);
      ContainerAllocator mockAlloc = mock(ContainerAllocator.class);
      Assert.assertTrue(MRJobConfig.DEFAULT_MR_AM_MAX_ATTEMPTS > 1);
      MRAppMaster appMaster = new TestMRApp(attemptId, mockAlloc,
@@ -282,6 +283,7 @@ import org.junit.Test;
          String diagnostic) {
        JobImpl jobImpl = mock(JobImpl.class);
        when(jobImpl.getInternalState()).thenReturn(this.jobStateInternal);
+       when(jobImpl.getAllCounters()).thenReturn(new Counters());
        JobID jobID = JobID.forName("job_1234567890000_0001");
        JobId jobId = TypeConverter.toYarn(jobID);
        when(jobImpl.getID()).thenReturn(jobId);

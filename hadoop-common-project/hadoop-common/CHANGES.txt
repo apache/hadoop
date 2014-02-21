@@ -326,6 +326,11 @@ Trunk (Unreleased)
     HADOOP-10344. Fix TestAclCommands after merging HADOOP-10338 patch.
     (cnauroth)
 
+    HADOOP-10352. Recursive setfacl erroneously attempts to apply default ACL to
+    files. (cnauroth)
+
+    HADOOP-10354. TestWebHDFS fails after merge of HDFS-4685 to trunk. (cnauroth)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
@@ -395,6 +400,8 @@ Release 2.4.0 - UNRELEASED
 
     HADOOP-10328. loadGenerator exit code is not reliable.
     (Haohui Mai via cnauroth)
+
+    HADOOP-10355. Fix TestLoadGenerator#testLoadGenerator. (Haohui Mai via jing9)
 
 Release 2.3.1 - UNRELEASED
 

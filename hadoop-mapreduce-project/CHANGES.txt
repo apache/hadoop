@@ -147,6 +147,12 @@ Release 2.5.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    MAPREDUCE-5671. NaN can be created by client and assign to Progress (Chen
+    He via jeagles)
+
+    MAPREDUCE-5688. TestStagingCleanup fails intermittently with JDK7 (Mit
+    Desai via jeagles)
+
   OPTIMIZATIONS
 
   BUG FIXES 
