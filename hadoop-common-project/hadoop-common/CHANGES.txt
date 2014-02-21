@@ -8,6 +8,9 @@ Release 2.5.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    HADOOP-10278. Refactor to make CallQueue pluggable. (Chris Li via
+    Arpit Agarwal)
+
   OPTIMIZATIONS
 
   BUG FIXES 
