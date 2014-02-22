@@ -542,8 +542,11 @@ public class Client {
     
     private synchronized AuthMethod setupSaslConnection(final InputStream in2, 
         final OutputStream out2) throws IOException, InterruptedException {
+      // Do not use Client.conf here! We must use ConnectionId.conf, since the
+      // Client object is cached and shared between all RPC clients, even those
+      // for separate services.
       saslRpcClient = new SaslRpcClient(remoteId.getTicket(),
-          remoteId.getProtocol(), remoteId.getAddress(), conf);
+          remoteId.getProtocol(), remoteId.getAddress(), remoteId.conf);
       return saslRpcClient.saslConnect(in2, out2);
     }
 
@@ -1480,21 +1483,31 @@ public class Client {
     private final boolean doPing; //do we need to send ping message
     private final int pingInterval; // how often sends ping to the server in msecs
     private String saslQop; // here for testing
+    private final Configuration conf; // used to get the expected kerberos principal name
     
     ConnectionId(InetSocketAddress address, Class<?> protocol, 
-                 UserGroupInformation ticket, int rpcTimeout, int maxIdleTime, 
-                 RetryPolicy connectionRetryPolicy, int maxRetriesOnSocketTimeouts,
-                 boolean tcpNoDelay, boolean doPing, int pingInterval) {
+                 UserGroupInformation ticket, int rpcTimeout,
+                 RetryPolicy connectionRetryPolicy, Configuration conf) {
       this.protocol = protocol;
       this.address = address;
       this.ticket = ticket;
       this.rpcTimeout = rpcTimeout;
-      this.maxIdleTime = maxIdleTime;
       this.connectionRetryPolicy = connectionRetryPolicy;
-      this.maxRetriesOnSocketTimeouts = maxRetriesOnSocketTimeouts;
-      this.tcpNoDelay = tcpNoDelay;
-      this.doPing = doPing;
-      this.pingInterval = pingInterval;
+
+      this.maxIdleTime = conf.getInt(
+          CommonConfigurationKeysPublic.IPC_CLIENT_CONNECTION_MAXIDLETIME_KEY,
+          CommonConfigurationKeysPublic.IPC_CLIENT_CONNECTION_MAXIDLETIME_DEFAULT);
+      this.maxRetriesOnSocketTimeouts = conf.getInt(
+          CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SOCKET_TIMEOUTS_KEY,
+          CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SOCKET_TIMEOUTS_DEFAULT);
+      this.tcpNoDelay = conf.getBoolean(
+          CommonConfigurationKeysPublic.IPC_CLIENT_TCPNODELAY_KEY,
+          CommonConfigurationKeysPublic.IPC_CLIENT_TCPNODELAY_DEFAULT);
+      this.doPing = conf.getBoolean(
+          CommonConfigurationKeys.IPC_CLIENT_PING_KEY,
+          CommonConfigurationKeys.IPC_CLIENT_PING_DEFAULT);
+      this.pingInterval = (doPing ? Client.getPingInterval(conf) : 0);
+      this.conf = conf;
     }
     
     InetSocketAddress getAddress() {
@@ -1572,19 +1585,8 @@ public class Client {
             max, retryInterval, TimeUnit.MILLISECONDS);
       }
 
-      boolean doPing =
-        conf.getBoolean(CommonConfigurationKeys.IPC_CLIENT_PING_KEY, true);
       return new ConnectionId(addr, protocol, ticket, rpcTimeout,
-          conf.getInt(CommonConfigurationKeysPublic.IPC_CLIENT_CONNECTION_MAXIDLETIME_KEY,
-              CommonConfigurationKeysPublic.IPC_CLIENT_CONNECTION_MAXIDLETIME_DEFAULT),
-          connectionRetryPolicy,
-          conf.getInt(
-            CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SOCKET_TIMEOUTS_KEY,
-            CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SOCKET_TIMEOUTS_DEFAULT),
-          conf.getBoolean(CommonConfigurationKeysPublic.IPC_CLIENT_TCPNODELAY_KEY,
-              CommonConfigurationKeysPublic.IPC_CLIENT_TCPNODELAY_DEFAULT),
-          doPing, 
-          (doPing ? Client.getPingInterval(conf) : 0));
+          connectionRetryPolicy, conf);
     }
     
     static boolean isEqual(Object a, Object b) {
