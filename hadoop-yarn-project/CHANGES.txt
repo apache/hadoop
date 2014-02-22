@@ -221,6 +221,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1732. Changed types of related-entities and primary-filters in the
     timeline-service to be sets instead of maps. (Billie Rinaldi via vinodkv)
 
+    YARN-1687. Renamed user-facing records for the timeline-service to be simply
+    named after 'timeline' instead of 'apptimeline'. (Zhijie Shen via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES

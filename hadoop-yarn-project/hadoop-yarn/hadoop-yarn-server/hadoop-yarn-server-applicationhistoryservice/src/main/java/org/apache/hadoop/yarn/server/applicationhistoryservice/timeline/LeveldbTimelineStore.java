@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.applicationhistoryservice.apptimeline;
+package org.apache.hadoop.yarn.server.applicationhistoryservice.timeline;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -44,13 +44,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.service.AbstractService;
-import org.apache.hadoop.yarn.api.records.apptimeline.ATSEntities;
-import org.apache.hadoop.yarn.api.records.apptimeline.ATSEntity;
-import org.apache.hadoop.yarn.api.records.apptimeline.ATSEvent;
-import org.apache.hadoop.yarn.api.records.apptimeline.ATSEvents;
-import org.apache.hadoop.yarn.api.records.apptimeline.ATSEvents.ATSEventsOfOneEntity;
-import org.apache.hadoop.yarn.api.records.apptimeline.ATSPutErrors;
-import org.apache.hadoop.yarn.api.records.apptimeline.ATSPutErrors.ATSPutError;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineEvent;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineEvents;
+import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineEvents.EventsOfOneEntity;
+import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse.TimelinePutError;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.fusesource.leveldbjni.JniDBFactory;
 import org.iq80.leveldb.DB;
@@ -58,22 +58,20 @@ import org.iq80.leveldb.DBIterator;
 import org.iq80.leveldb.Options;
 import org.iq80.leveldb.WriteBatch;
 
-import static org.apache.hadoop.yarn.server.applicationhistoryservice
-    .apptimeline.GenericObjectMapper.readReverseOrderedLong;
-import static org.apache.hadoop.yarn.server.applicationhistoryservice
-    .apptimeline.GenericObjectMapper.writeReverseOrderedLong;
+import static org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.GenericObjectMapper.readReverseOrderedLong;
+import static org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.GenericObjectMapper.writeReverseOrderedLong;
 
 /**
- * An implementation of an application timeline store backed by leveldb.
+ * An implementation of a timeline store backed by leveldb.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public class LeveldbApplicationTimelineStore extends AbstractService
-    implements ApplicationTimelineStore {
+public class LeveldbTimelineStore extends AbstractService
+    implements TimelineStore {
   private static final Log LOG = LogFactory
-      .getLog(LeveldbApplicationTimelineStore.class);
+      .getLog(LeveldbTimelineStore.class);
 
-  private static final String FILENAME = "leveldb-apptimeline-store.ldb";
+  private static final String FILENAME = "leveldb-timeline-store.ldb";
 
   private static final byte[] START_TIME_LOOKUP_PREFIX = "k".getBytes();
   private static final byte[] ENTITY_ENTRY_PREFIX = "e".getBytes();
@@ -94,8 +92,8 @@ public class LeveldbApplicationTimelineStore extends AbstractService
 
   private DB db;
 
-  public LeveldbApplicationTimelineStore() {
-    super(LeveldbApplicationTimelineStore.class.getName());
+  public LeveldbTimelineStore() {
+    super(LeveldbTimelineStore.class.getName());
   }
 
   @Override
@@ -103,12 +101,12 @@ public class LeveldbApplicationTimelineStore extends AbstractService
     Options options = new Options();
     options.createIfMissing(true);
     JniDBFactory factory = new JniDBFactory();
-    String path = conf.get(YarnConfiguration.ATS_LEVELDB_PATH_PROPERTY);
+    String path = conf.get(YarnConfiguration.TIMELINE_SERVICE_LEVELDB_PATH);
     File p = new File(path);
     if (!p.exists())
       if (!p.mkdirs())
         throw new IOException("Couldn't create directory for leveldb " +
-            "application timeline store " + path);
+            "timeline store " + path);
     LOG.info("Using leveldb path " + path);
     db = factory.open(new File(path, FILENAME), options);
     super.serviceInit(conf);
@@ -212,20 +210,20 @@ public class LeveldbApplicationTimelineStore extends AbstractService
   }
 
   @Override
-  public ATSEntity getEntity(String entity, String entityType,
+  public TimelineEntity getEntity(String entityId, String entityType,
       EnumSet<Field> fields) throws IOException {
     DBIterator iterator = null;
     try {
-      byte[] revStartTime = getStartTime(entity, entityType, null, null, null);
+      byte[] revStartTime = getStartTime(entityId, entityType, null, null, null);
       if (revStartTime == null)
         return null;
       byte[] prefix = KeyBuilder.newInstance().add(ENTITY_ENTRY_PREFIX)
-          .add(entityType).add(revStartTime).add(entity).getBytesForLookup();
+          .add(entityType).add(revStartTime).add(entityId).getBytesForLookup();
 
       iterator = db.iterator();
       iterator.seek(prefix);
 
-      return getEntity(entity, entityType,
+      return getEntity(entityId, entityType,
           readReverseOrderedLong(revStartTime, 0), fields, iterator, prefix,
           prefix.length);
     } finally {
@@ -237,43 +235,43 @@ public class LeveldbApplicationTimelineStore extends AbstractService
    * Read entity from a db iterator.  If no information is found in the
    * specified fields for this entity, return null.
    */
-  private static ATSEntity getEntity(String entity, String entityType,
+  private static TimelineEntity getEntity(String entityId, String entityType,
       Long startTime, EnumSet<Field> fields, DBIterator iterator,
       byte[] prefix, int prefixlen) throws IOException {
     if (fields == null)
       fields = EnumSet.allOf(Field.class);
 
-    ATSEntity atsEntity = new ATSEntity();
+    TimelineEntity entity = new TimelineEntity();
     boolean events = false;
     boolean lastEvent = false;
     if (fields.contains(Field.EVENTS)) {
       events = true;
-      atsEntity.setEvents(new ArrayList<ATSEvent>());
+      entity.setEvents(new ArrayList<TimelineEvent>());
     } else if (fields.contains(Field.LAST_EVENT_ONLY)) {
       lastEvent = true;
-      atsEntity.setEvents(new ArrayList<ATSEvent>());
+      entity.setEvents(new ArrayList<TimelineEvent>());
     }
     else {
-      atsEntity.setEvents(null);
+      entity.setEvents(null);
     }
     boolean relatedEntities = false;
     if (fields.contains(Field.RELATED_ENTITIES)) {
       relatedEntities = true;
     } else {
-      atsEntity.setRelatedEntities(null);
+      entity.setRelatedEntities(null);
     }
     boolean primaryFilters = false;
     if (fields.contains(Field.PRIMARY_FILTERS)) {
       primaryFilters = true;
     } else {
-      atsEntity.setPrimaryFilters(null);
+      entity.setPrimaryFilters(null);
     }
     boolean otherInfo = false;
     if (fields.contains(Field.OTHER_INFO)) {
       otherInfo = true;
-      atsEntity.setOtherInfo(new HashMap<String, Object>());
+      entity.setOtherInfo(new HashMap<String, Object>());
     } else {
-      atsEntity.setOtherInfo(null);
+      entity.setOtherInfo(null);
     }
 
     // iterate through the entity's entry, parsing information if it is part
@@ -284,48 +282,48 @@ public class LeveldbApplicationTimelineStore extends AbstractService
         break;
       if (key[prefixlen] == PRIMARY_FILTER_COLUMN[0]) {
         if (primaryFilters) {
-          addPrimaryFilter(atsEntity, key,
+          addPrimaryFilter(entity, key,
               prefixlen + PRIMARY_FILTER_COLUMN.length);
         }
       } else if (key[prefixlen] == OTHER_INFO_COLUMN[0]) {
         if (otherInfo) {
-          atsEntity.addOtherInfo(parseRemainingKey(key,
+          entity.addOtherInfo(parseRemainingKey(key,
               prefixlen + OTHER_INFO_COLUMN.length),
               GenericObjectMapper.read(iterator.peekNext().getValue()));
         }
       } else if (key[prefixlen] == RELATED_COLUMN[0]) {
         if (relatedEntities) {
-          addRelatedEntity(atsEntity, key,
+          addRelatedEntity(entity, key,
               prefixlen + RELATED_COLUMN.length);
         }
       } else if (key[prefixlen] == TIME_COLUMN[0]) {
-        if (events || (lastEvent && atsEntity.getEvents().size() == 0)) {
-          ATSEvent event = getEntityEvent(null, key, prefixlen +
+        if (events || (lastEvent && entity.getEvents().size() == 0)) {
+          TimelineEvent event = getEntityEvent(null, key, prefixlen +
               TIME_COLUMN.length, iterator.peekNext().getValue());
           if (event != null) {
-            atsEntity.addEvent(event);
+            entity.addEvent(event);
           }
         }
       } else {
         LOG.warn(String.format("Found unexpected column for entity %s of " +
-            "type %s (0x%02x)", entity, entityType, key[prefixlen]));
+            "type %s (0x%02x)", entityId, entityType, key[prefixlen]));
       }
     }
 
-    atsEntity.setEntityId(entity);
-    atsEntity.setEntityType(entityType);
-    atsEntity.setStartTime(startTime);
+    entity.setEntityId(entityId);
+    entity.setEntityType(entityType);
+    entity.setStartTime(startTime);
 
-    return atsEntity;
+    return entity;
   }
 
   @Override
-  public ATSEvents getEntityTimelines(String entityType,
+  public TimelineEvents getEntityTimelines(String entityType,
       SortedSet<String> entityIds, Long limit, Long windowStart,
       Long windowEnd, Set<String> eventType) throws IOException {
-    ATSEvents atsEvents = new ATSEvents();
+    TimelineEvents events = new TimelineEvents();
     if (entityIds == null || entityIds.isEmpty())
-      return atsEvents;
+      return events;
     // create a lexicographically-ordered map from start time to entities
     Map<byte[], List<EntityIdentifier>> startTimeMap = new TreeMap<byte[],
         List<EntityIdentifier>>(new Comparator<byte[]>() {
@@ -356,13 +354,13 @@ public class LeveldbApplicationTimelineStore extends AbstractService
         // start time, end time, event types) for entities whose start times
         // were found and add the entities to the return list
         byte[] revStartTime = entry.getKey();
-        for (EntityIdentifier entity : entry.getValue()) {
-          ATSEventsOfOneEntity atsEntity = new ATSEventsOfOneEntity();
-          atsEntity.setEntityId(entity.getId());
-          atsEntity.setEntityType(entityType);
-          atsEvents.addEvent(atsEntity);
+        for (EntityIdentifier entityID : entry.getValue()) {
+          EventsOfOneEntity entity = new EventsOfOneEntity();
+          entity.setEntityId(entityID.getId());
+          entity.setEntityType(entityType);
+          events.addEvent(entity);
           KeyBuilder kb = KeyBuilder.newInstance().add(ENTITY_ENTRY_PREFIX)
-              .add(entityType).add(revStartTime).add(entity.getId())
+              .add(entityType).add(revStartTime).add(entityID.getId())
               .add(TIME_COLUMN);
           byte[] prefix = kb.getBytesForLookup();
           if (windowEnd == null) {
@@ -380,24 +378,24 @@ public class LeveldbApplicationTimelineStore extends AbstractService
             limit = DEFAULT_LIMIT;
           }
           iterator = db.iterator();
-          for (iterator.seek(first); atsEntity.getEvents().size() < limit &&
+          for (iterator.seek(first); entity.getEvents().size() < limit &&
               iterator.hasNext(); iterator.next()) {
             byte[] key = iterator.peekNext().getKey();
             if (!prefixMatches(prefix, prefix.length, key) || (last != null &&
                 WritableComparator.compareBytes(key, 0, key.length, last, 0,
                     last.length) > 0))
               break;
-            ATSEvent event = getEntityEvent(eventType, key, prefix.length,
+            TimelineEvent event = getEntityEvent(eventType, key, prefix.length,
                 iterator.peekNext().getValue());
             if (event != null)
-              atsEntity.addEvent(event);
+              entity.addEvent(event);
           }
         }
       }
     } finally {
       IOUtils.cleanup(LOG, iterator);
     }
-    return atsEvents;
+    return events;
   }
 
   /**
@@ -412,7 +410,7 @@ public class LeveldbApplicationTimelineStore extends AbstractService
   }
 
   @Override
-  public ATSEntities getEntities(String entityType,
+  public TimelineEntities getEntities(String entityType,
       Long limit, Long windowStart, Long windowEnd,
       NameValuePair primaryFilter, Collection<NameValuePair> secondaryFilters,
       EnumSet<Field> fields) throws IOException {
@@ -447,7 +445,7 @@ public class LeveldbApplicationTimelineStore extends AbstractService
    * @return A list of entities
    * @throws IOException
    */
-  private ATSEntities getEntityByTime(byte[] base,
+  private TimelineEntities getEntityByTime(byte[] base,
       String entityType, Long limit, Long starttime, Long endtime,
       Collection<NameValuePair> secondaryFilters, EnumSet<Field> fields)
       throws IOException {
@@ -476,36 +474,36 @@ public class LeveldbApplicationTimelineStore extends AbstractService
         limit = DEFAULT_LIMIT;
       }
 
-      ATSEntities atsEntities = new ATSEntities();
+      TimelineEntities entities = new TimelineEntities();
       iterator = db.iterator();
       iterator.seek(first);
       // iterate until one of the following conditions is met: limit is
       // reached, there are no more keys, the key prefix no longer matches,
       // or a start time has been specified and reached/exceeded
-      while (atsEntities.getEntities().size() < limit && iterator.hasNext()) {
+      while (entities.getEntities().size() < limit && iterator.hasNext()) {
         byte[] key = iterator.peekNext().getKey();
         if (!prefixMatches(prefix, prefix.length, key) || (last != null &&
             WritableComparator.compareBytes(key, 0, key.length, last, 0,
                 last.length) > 0))
           break;
-        // read the start time and entity from the current key
+        // read the start time and entityId from the current key
         KeyParser kp = new KeyParser(key, prefix.length);
         Long startTime = kp.getNextLong();
-        String entity = kp.getNextString();
+        String entityId = kp.getNextString();
         // parse the entity that owns this key, iterating over all keys for
         // the entity
-        ATSEntity atsEntity = getEntity(entity, entityType, startTime,
+        TimelineEntity entity = getEntity(entityId, entityType, startTime,
             fields, iterator, key, kp.getOffset());
-        if (atsEntity == null)
+        if (entity == null)
           continue;
         // determine if the retrieved entity matches the provided secondary
         // filters, and if so add it to the list of entities to return
         boolean filterPassed = true;
         if (secondaryFilters != null) {
           for (NameValuePair filter : secondaryFilters) {
-            Object v = atsEntity.getOtherInfo().get(filter.getName());
+            Object v = entity.getOtherInfo().get(filter.getName());
             if (v == null) {
-              Set<Object> vs = atsEntity.getPrimaryFilters()
+              Set<Object> vs = entity.getPrimaryFilters()
                   .get(filter.getName());
               if (vs != null && !vs.contains(filter.getValue())) {
                 filterPassed = false;
@@ -518,45 +516,45 @@ public class LeveldbApplicationTimelineStore extends AbstractService
           }
         }
         if (filterPassed)
-          atsEntities.addEntity(atsEntity);
+          entities.addEntity(entity);
       }
-      return atsEntities;
+      return entities;
     } finally {
       IOUtils.cleanup(LOG, iterator);
     }
   }
 
   /**
-   * Put a single entity.  If there is an error, add a PutError to the given
+   * Put a single entity.  If there is an error, add a TimelinePutError to the given
    * response.
    */
-  private void put(ATSEntity atsEntity, ATSPutErrors response) {
+  private void put(TimelineEntity entity, TimelinePutResponse response) {
     WriteBatch writeBatch = null;
     try {
       writeBatch = db.createWriteBatch();
-      List<ATSEvent> events = atsEntity.getEvents();
+      List<TimelineEvent> events = entity.getEvents();
       // look up the start time for the entity
-      byte[] revStartTime = getStartTime(atsEntity.getEntityId(),
-          atsEntity.getEntityType(), atsEntity.getStartTime(), events,
+      byte[] revStartTime = getStartTime(entity.getEntityId(),
+          entity.getEntityType(), entity.getStartTime(), events,
           writeBatch);
       if (revStartTime == null) {
         // if no start time is found, add an error and return
-        ATSPutError error = new ATSPutError();
-        error.setEntityId(atsEntity.getEntityId());
-        error.setEntityType(atsEntity.getEntityType());
-        error.setErrorCode(ATSPutError.NO_START_TIME);
+        TimelinePutError error = new TimelinePutError();
+        error.setEntityId(entity.getEntityId());
+        error.setEntityType(entity.getEntityType());
+        error.setErrorCode(TimelinePutError.NO_START_TIME);
         response.addError(error);
         return;
       }
       Long revStartTimeLong = readReverseOrderedLong(revStartTime, 0);
-      Map<String, Set<Object>> primaryFilters = atsEntity.getPrimaryFilters();
+      Map<String, Set<Object>> primaryFilters = entity.getPrimaryFilters();
 
       // write event entries
       if (events != null && !events.isEmpty()) {
-        for (ATSEvent event : events) {
+        for (TimelineEvent event : events) {
           byte[] revts = writeReverseOrderedLong(event.getTimestamp());
-          byte[] key = createEntityEventKey(atsEntity.getEntityId(),
-              atsEntity.getEntityType(), revStartTime, revts,
+          byte[] key = createEntityEventKey(entity.getEntityId(),
+              entity.getEntityType(), revStartTime, revts,
               event.getEventType());
           byte[] value = GenericObjectMapper.write(event.getEventInfo());
           writeBatch.put(key, value);
@@ -566,7 +564,7 @@ public class LeveldbApplicationTimelineStore extends AbstractService
 
       // write related entity entries
       Map<String, Set<String>> relatedEntities =
-          atsEntity.getRelatedEntities();
+          entity.getRelatedEntities();
       if (relatedEntities != null && !relatedEntities.isEmpty()) {
         for (Entry<String, Set<String>> relatedEntityList :
             relatedEntities.entrySet()) {
@@ -588,7 +586,7 @@ public class LeveldbApplicationTimelineStore extends AbstractService
             // write reverse entry (related entity -> entity)
             byte[] key = createReleatedEntityKey(relatedEntityId,
                 relatedEntityType, relatedEntityStartTime,
-                atsEntity.getEntityId(), atsEntity.getEntityType());
+                entity.getEntityId(), entity.getEntityType());
             writeBatch.put(key, EMPTY_BYTES);
             // TODO: write forward entry (entity -> related entity)?
           }
@@ -600,8 +598,8 @@ public class LeveldbApplicationTimelineStore extends AbstractService
         for (Entry<String, Set<Object>> primaryFilter :
             primaryFilters.entrySet()) {
           for (Object primaryFilterValue : primaryFilter.getValue()) {
-            byte[] key = createPrimaryFilterKey(atsEntity.getEntityId(),
-                atsEntity.getEntityType(), revStartTime,
+            byte[] key = createPrimaryFilterKey(entity.getEntityId(),
+                entity.getEntityType(), revStartTime,
                 primaryFilter.getKey(), primaryFilterValue);
             writeBatch.put(key, EMPTY_BYTES);
             writePrimaryFilterEntries(writeBatch, primaryFilters, key,
@@ -611,11 +609,11 @@ public class LeveldbApplicationTimelineStore extends AbstractService
       }
 
       // write other info entries
-      Map<String, Object> otherInfo = atsEntity.getOtherInfo();
+      Map<String, Object> otherInfo = entity.getOtherInfo();
       if (otherInfo != null && !otherInfo.isEmpty()) {
         for (Entry<String, Object> i : otherInfo.entrySet()) {
-          byte[] key = createOtherInfoKey(atsEntity.getEntityId(),
-              atsEntity.getEntityType(), revStartTime, i.getKey());
+          byte[] key = createOtherInfoKey(entity.getEntityId(),
+              entity.getEntityType(), revStartTime, i.getKey());
           byte[] value = GenericObjectMapper.write(i.getValue());
           writeBatch.put(key, value);
           writePrimaryFilterEntries(writeBatch, primaryFilters, key, value);
@@ -623,12 +621,12 @@ public class LeveldbApplicationTimelineStore extends AbstractService
       }
       db.write(writeBatch);
     } catch (IOException e) {
-      LOG.error("Error putting entity " + atsEntity.getEntityId() +
-          " of type " + atsEntity.getEntityType(), e);
-      ATSPutError error = new ATSPutError();
-      error.setEntityId(atsEntity.getEntityId());
-      error.setEntityType(atsEntity.getEntityType());
-      error.setErrorCode(ATSPutError.IO_EXCEPTION);
+      LOG.error("Error putting entity " + entity.getEntityId() +
+          " of type " + entity.getEntityType(), e);
+      TimelinePutError error = new TimelinePutError();
+      error.setEntityId(entity.getEntityId());
+      error.setEntityType(entity.getEntityType());
+      error.setErrorCode(TimelinePutError.IO_EXCEPTION);
       response.addError(error);
     } finally {
       IOUtils.cleanup(LOG, writeBatch);
@@ -653,10 +651,10 @@ public class LeveldbApplicationTimelineStore extends AbstractService
   }
 
   @Override
-  public ATSPutErrors put(ATSEntities atsEntities) {
-    ATSPutErrors response = new ATSPutErrors();
-    for (ATSEntity atsEntity : atsEntities.getEntities()) {
-      put(atsEntity, response);
+  public TimelinePutResponse put(TimelineEntities entities) {
+    TimelinePutResponse response = new TimelinePutResponse();
+    for (TimelineEntity entity : entities.getEntities()) {
+      put(entity, response);
     }
     return response;
   }
@@ -676,7 +674,7 @@ public class LeveldbApplicationTimelineStore extends AbstractService
    * @throws IOException
    */
   private byte[] getStartTime(String entityId, String entityType,
-      Long startTime, List<ATSEvent> events, WriteBatch writeBatch)
+      Long startTime, List<TimelineEvent> events, WriteBatch writeBatch)
       throws IOException {
     EntityIdentifier entity = new EntityIdentifier(entityId, entityType);
     if (startTime == null) {
@@ -696,7 +694,7 @@ public class LeveldbApplicationTimelineStore extends AbstractService
             return null;
           }
           Long min = Long.MAX_VALUE;
-          for (ATSEvent e : events)
+          for (TimelineEvent e : events)
             if (min > e.getTimestamp())
               min = e.getTimestamp();
           startTime = min;
@@ -772,13 +770,13 @@ public class LeveldbApplicationTimelineStore extends AbstractService
    * event type is not contained in the specified set of event types,
    * returns null.
    */
-  private static ATSEvent getEntityEvent(Set<String> eventTypes, byte[] key,
+  private static TimelineEvent getEntityEvent(Set<String> eventTypes, byte[] key,
       int offset, byte[] value) throws IOException {
     KeyParser kp = new KeyParser(key, offset);
     long ts = kp.getNextLong();
     String tstype = kp.getNextString();
     if (eventTypes == null || eventTypes.contains(tstype)) {
-      ATSEvent event = new ATSEvent();
+      TimelineEvent event = new TimelineEvent();
       event.setTimestamp(ts);
       event.setEventType(tstype);
       Object o = GenericObjectMapper.read(value);
@@ -812,12 +810,12 @@ public class LeveldbApplicationTimelineStore extends AbstractService
    * Parses the primary filter from the given key at the given offset and
    * adds it to the given entity.
    */
-  private static void addPrimaryFilter(ATSEntity atsEntity, byte[] key,
+  private static void addPrimaryFilter(TimelineEntity entity, byte[] key,
       int offset) throws IOException {
     KeyParser kp = new KeyParser(key, offset);
     String name = kp.getNextString();
     Object value = GenericObjectMapper.read(key, kp.getOffset());
-    atsEntity.addPrimaryFilter(name, value);
+    entity.addPrimaryFilter(name, value);
   }
 
   /**
@@ -856,12 +854,12 @@ public class LeveldbApplicationTimelineStore extends AbstractService
    * Parses the related entity from the given key at the given offset and
    * adds it to the given entity.
    */
-  private static void addRelatedEntity(ATSEntity atsEntity, byte[] key,
+  private static void addRelatedEntity(TimelineEntity entity, byte[] key,
       int offset) throws IOException {
     KeyParser kp = new KeyParser(key, offset);
     String type = kp.getNextString();
     String id = kp.getNextString();
-    atsEntity.addRelatedEntity(type, id);
+    entity.addRelatedEntity(type, id);
   }
 
   /**

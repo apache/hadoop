@@ -15,23 +15,39 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.yarn.server.applicationhistoryservice.timeline;
 
-package org.apache.hadoop.yarn.server.applicationhistoryservice.apptimeline;
+import java.io.File;
+import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.IOException;
-
-public class TestMemoryApplicationTimelineStore
-    extends ApplicationTimelineStoreTestUtils {
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
+public class TestLeveldbTimelineStore
+    extends TimelineStoreTestUtils {
+  private FileContext fsContext;
+  private File fsPath;
 
   @Before
   public void setup() throws Exception {
-    store = new MemoryApplicationTimelineStore();
-    store.init(new YarnConfiguration());
+    fsContext = FileContext.getLocalFSFileContext();
+    Configuration conf = new Configuration();
+    fsPath = new File("target", this.getClass().getSimpleName() +
+        "-tmpDir").getAbsoluteFile();
+    fsContext.delete(new Path(fsPath.getAbsolutePath()), true);
+    conf.set(YarnConfiguration.TIMELINE_SERVICE_LEVELDB_PATH,
+        fsPath.getAbsolutePath());
+    store = new LeveldbTimelineStore();
+    store.init(conf);
     store.start();
     loadTestData();
     loadVerificationData();
@@ -40,14 +56,13 @@ public class TestMemoryApplicationTimelineStore
   @After
   public void tearDown() throws Exception {
     store.stop();
-  }
-
-  public ApplicationTimelineStore getApplicationTimelineStore() {
-    return store;
+    fsContext.delete(new Path(fsPath.getAbsolutePath()), true);
   }
 
   @Test
   public void testGetSingleEntity() throws IOException {
+    super.testGetSingleEntity();
+    ((LeveldbTimelineStore)store).clearStartTimeCache();
     super.testGetSingleEntity();
   }
 

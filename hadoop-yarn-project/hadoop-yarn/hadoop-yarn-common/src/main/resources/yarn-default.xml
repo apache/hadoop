@@ -1140,18 +1140,18 @@
 	<value>org.apache.hadoop.yarn.server.applicationhistoryservice.FileSystemApplicationHistoryStore</value>
   </property>
 
-  <!-- Application Timeline Service's Configuration-->
+  <!-- Timeline Service's Configuration-->
 
   <property>
-    <description>Store class name for application timeline store</description>
-    <name>yarn.ats.store.class</name>
-    <value>org.apache.hadoop.yarn.server.applicationhistoryservice.apptimeline.LeveldbApplicationTimelineStore</value>
+    <description>Store class name for timeline store</description>
+    <name>yarn.timeline-service.store-class</name>
+    <value>org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.LeveldbTimelineStore</value>
   </property>
 
   <property>
-    <description>Store file name for leveldb application timeline store</description>
-    <name>yarn.ats.leveldb-apptimeline-store.path</name>
-    <value>${yarn.log.dir}/ats</value>
+    <description>Store file name for leveldb timeline store</description>
+    <name>yarn.timeline-service.leveldb-timeline-store.path</name>
+    <value>${yarn.log.dir}/timeline</value>
   </property>
 
   <!-- Other configuration -->

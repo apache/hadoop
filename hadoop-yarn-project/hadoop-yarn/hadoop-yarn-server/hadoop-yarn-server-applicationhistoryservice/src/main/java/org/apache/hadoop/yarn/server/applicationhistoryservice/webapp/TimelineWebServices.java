@@ -50,29 +50,29 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.yarn.api.records.apptimeline.ATSEntities;
-import org.apache.hadoop.yarn.api.records.apptimeline.ATSEntity;
-import org.apache.hadoop.yarn.api.records.apptimeline.ATSEvents;
-import org.apache.hadoop.yarn.api.records.apptimeline.ATSPutErrors;
-import org.apache.hadoop.yarn.server.applicationhistoryservice.apptimeline.ApplicationTimelineReader.Field;
-import org.apache.hadoop.yarn.server.applicationhistoryservice.apptimeline.ApplicationTimelineStore;
-import org.apache.hadoop.yarn.server.applicationhistoryservice.apptimeline.NameValuePair;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineEvents;
+import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
+import org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.TimelineStore;
+import org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.NameValuePair;
+import org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.TimelineReader.Field;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 
 @Singleton
-@Path("/ws/v1/apptimeline")
+@Path("/ws/v1/timeline")
 //TODO: support XML serialization/deserialization
-public class ATSWebServices {
+public class TimelineWebServices {
 
-  private static final Log LOG = LogFactory.getLog(ATSWebServices.class);
+  private static final Log LOG = LogFactory.getLog(TimelineWebServices.class);
 
-  private ApplicationTimelineStore store;
+  private TimelineStore store;
 
   @Inject
-  public ATSWebServices(ApplicationTimelineStore store) {
+  public TimelineWebServices(TimelineStore store) {
     this.store = store;
   }
 
@@ -104,7 +104,7 @@ public class ATSWebServices {
   }
 
   /**
-   * Return the description of the application timeline web services.
+   * Return the description of the timeline web services.
    */
   @GET
   @Produces({ MediaType.APPLICATION_JSON /* , MediaType.APPLICATION_XML */})
@@ -112,7 +112,7 @@ public class ATSWebServices {
       @Context HttpServletRequest req,
       @Context HttpServletResponse res) {
     init(res);
-    return new AboutInfo("Application Timeline API");
+    return new AboutInfo("Timeline API");
   }
 
   /**
@@ -121,7 +121,7 @@ public class ATSWebServices {
   @GET
   @Path("/{entityType}")
   @Produces({ MediaType.APPLICATION_JSON /* , MediaType.APPLICATION_XML */})
-  public ATSEntities getEntities(
+  public TimelineEntities getEntities(
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
       @PathParam("entityType") String entityType,
@@ -132,7 +132,7 @@ public class ATSWebServices {
       @QueryParam("limit") String limit,
       @QueryParam("fields") String fields) {
     init(res);
-    ATSEntities entities = null;
+    TimelineEntities entities = null;
     try {
       entities = store.getEntities(
           parseStr(entityType),
@@ -153,7 +153,7 @@ public class ATSWebServices {
           Response.Status.INTERNAL_SERVER_ERROR);
     }
     if (entities == null) {
-      return new ATSEntities();
+      return new TimelineEntities();
     }
     return entities;
   }
@@ -164,14 +164,14 @@ public class ATSWebServices {
   @GET
   @Path("/{entityType}/{entityId}")
   @Produces({ MediaType.APPLICATION_JSON /* , MediaType.APPLICATION_XML */})
-  public ATSEntity getEntity(
+  public TimelineEntity getEntity(
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
       @PathParam("entityType") String entityType,
       @PathParam("entityId") String entityId,
       @QueryParam("fields") String fields) {
     init(res);
-    ATSEntity entity = null;
+    TimelineEntity entity = null;
     try {
       entity =
           store.getEntity(parseStr(entityId), parseStr(entityType),
@@ -196,7 +196,7 @@ public class ATSWebServices {
   @GET
   @Path("/{entityType}/events")
   @Produces({ MediaType.APPLICATION_JSON /* , MediaType.APPLICATION_XML */})
-  public ATSEvents getEvents(
+  public TimelineEvents getEvents(
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
       @PathParam("entityType") String entityType,
@@ -206,7 +206,7 @@ public class ATSWebServices {
       @QueryParam("windowEnd") String windowEnd,
       @QueryParam("limit") String limit) {
     init(res);
-    ATSEvents events = null;
+    TimelineEvents events = null;
     try {
       events = store.getEntityTimelines(
           parseStr(entityType),
@@ -224,7 +224,7 @@ public class ATSWebServices {
           Response.Status.INTERNAL_SERVER_ERROR);
     }
     if (events == null) {
-      return new ATSEvents();
+      return new TimelineEvents();
     }
     return events;
   }
@@ -235,13 +235,13 @@ public class ATSWebServices {
    */
   @POST
   @Consumes({ MediaType.APPLICATION_JSON /* , MediaType.APPLICATION_XML */})
-  public ATSPutErrors postEntities(
+  public TimelinePutResponse postEntities(
       @Context HttpServletRequest req,
       @Context HttpServletResponse res,
-      ATSEntities entities) {
+      TimelineEntities entities) {
     init(res);
     if (entities == null) {
-      return new ATSPutErrors();
+      return new TimelinePutResponse();
     }
     try {
       return store.put(entities);
