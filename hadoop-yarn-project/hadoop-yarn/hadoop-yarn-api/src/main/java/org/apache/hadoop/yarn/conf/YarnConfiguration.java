@@ -1051,17 +1051,19 @@ public class YarnConfiguration extends Configuration {
       AHS_PREFIX + "webapp.spnego-keytab-file";
 
   ////////////////////////////////
-  // ATS Configs
+  // Timeline Service Configs
   ////////////////////////////////
 
-  public static final String ATS_PREFIX = YARN_PREFIX + "ats.";
+  public static final String TIMELINE_SERVICE_PREFIX =
+      YARN_PREFIX + "timeline-service.";
 
-  /** ATS store class */
-  public static final String ATS_STORE = ATS_PREFIX + "store.class";
+  /** Timeline service store class */
+  public static final String TIMELINE_SERVICE_STORE =
+      TIMELINE_SERVICE_PREFIX + "store-class";
 
-  /** ATS leveldb path */
-  public static final String ATS_LEVELDB_PATH_PROPERTY =
-      ATS_PREFIX + "leveldb-apptimeline-store.path";
+  /** Timeline service leveldb path */
+  public static final String TIMELINE_SERVICE_LEVELDB_PATH =
+      TIMELINE_SERVICE_PREFIX + "leveldb-timeline-store.path";
 
   ////////////////////////////////
   // Other Configs

@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.server.applicationhistoryservice.apptimeline;
+package org.apache.hadoop.yarn.server.applicationhistoryservice.timeline;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -37,7 +37,7 @@ import org.codehaus.jackson.map.ObjectMapper;
  * objects. The {@link #write(Object)}, {@link #read(byte[])} and {@link
  * #write(java.io.DataOutputStream, Object)}, {@link
  * #read(java.io.DataInputStream)} methods are used by the
- * {@link LeveldbApplicationTimelineStore} to store and retrieve arbitrary
+ * {@link LeveldbTimelineStore} to store and retrieve arbitrary
  * JSON, while the {@link #writeReverseOrderedLong} and {@link
  * #readReverseOrderedLong} methods are used to sort entities in descending
  * start time order.

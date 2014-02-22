@@ -21,7 +21,7 @@ import static org.apache.hadoop.yarn.util.StringHelper.pajoin;
 
 import org.apache.hadoop.yarn.server.api.ApplicationContext;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryManager;
-import org.apache.hadoop.yarn.server.applicationhistoryservice.apptimeline.ApplicationTimelineStore;
+import org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.TimelineStore;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
@@ -30,22 +30,22 @@ import org.apache.hadoop.yarn.webapp.YarnWebParams;
 public class AHSWebApp extends WebApp implements YarnWebParams {
 
   private final ApplicationHistoryManager applicationHistoryManager;
-  private final ApplicationTimelineStore applicationTimelineStore;
+  private final TimelineStore timelineStore;
 
   public AHSWebApp(ApplicationHistoryManager applicationHistoryManager,
-      ApplicationTimelineStore applicationTimelineStore) {
+      TimelineStore timelineStore) {
     this.applicationHistoryManager = applicationHistoryManager;
-    this.applicationTimelineStore = applicationTimelineStore;
+    this.timelineStore = timelineStore;
   }
 
   @Override
   public void setup() {
     bind(YarnJacksonJaxbJsonProvider.class);
     bind(AHSWebServices.class);
-    bind(ATSWebServices.class);
+    bind(TimelineWebServices.class);
     bind(GenericExceptionHandler.class);
     bind(ApplicationContext.class).toInstance(applicationHistoryManager);
-    bind(ApplicationTimelineStore.class).toInstance(applicationTimelineStore);
+    bind(TimelineStore.class).toInstance(timelineStore);
     route("/", AHSController.class);
     route(pajoin("/apps", APP_STATE), AHSController.class);
     route(pajoin("/app", APPLICATION_ID), AHSController.class, "app");

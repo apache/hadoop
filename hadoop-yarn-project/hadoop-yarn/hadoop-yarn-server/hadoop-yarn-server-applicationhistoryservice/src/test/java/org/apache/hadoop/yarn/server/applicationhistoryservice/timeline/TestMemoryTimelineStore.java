@@ -15,45 +15,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.server.applicationhistoryservice.apptimeline;
 
-import java.io.File;
-import java.io.IOException;
+package org.apache.hadoop.yarn.server.applicationhistoryservice.timeline;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileContext;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.yarn.api.records.apptimeline.ATSEntities;
-import org.apache.hadoop.yarn.api.records.apptimeline.ATSEntity;
-import org.apache.hadoop.yarn.api.records.apptimeline.ATSPutErrors;
-import org.apache.hadoop.yarn.api.records.apptimeline.ATSPutErrors.ATSPutError;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.TimelineStore;
+import org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.MemoryTimelineStore;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import static org.junit.Assert.assertEquals;
+import java.io.IOException;
 
-@InterfaceAudience.Private
-@InterfaceStability.Unstable
-public class TestLeveldbApplicationTimelineStore
-    extends ApplicationTimelineStoreTestUtils {
-  private FileContext fsContext;
-  private File fsPath;
+public class TestMemoryTimelineStore
+    extends TimelineStoreTestUtils {
 
   @Before
   public void setup() throws Exception {
-    fsContext = FileContext.getLocalFSFileContext();
-    Configuration conf = new Configuration();
-    fsPath = new File("target", this.getClass().getSimpleName() +
-        "-tmpDir").getAbsoluteFile();
-    fsContext.delete(new Path(fsPath.getAbsolutePath()), true);
-    conf.set(YarnConfiguration.ATS_LEVELDB_PATH_PROPERTY,
-        fsPath.getAbsolutePath());
-    store = new LeveldbApplicationTimelineStore();
-    store.init(conf);
+    store = new MemoryTimelineStore();
+    store.init(new YarnConfiguration());
     store.start();
     loadTestData();
     loadVerificationData();
@@ -62,13 +42,14 @@ public class TestLeveldbApplicationTimelineStore
   @After
   public void tearDown() throws Exception {
     store.stop();
-    fsContext.delete(new Path(fsPath.getAbsolutePath()), true);
+  }
+
+  public TimelineStore getTimelineStore() {
+    return store;
   }
 
   @Test
   public void testGetSingleEntity() throws IOException {
-    super.testGetSingleEntity();
-    ((LeveldbApplicationTimelineStore)store).clearStartTimeCache();
     super.testGetSingleEntity();
   }
 

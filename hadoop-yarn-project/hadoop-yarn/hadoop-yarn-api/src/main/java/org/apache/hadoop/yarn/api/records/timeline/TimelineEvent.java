@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.api.records.apptimeline;
+package org.apache.hadoop.yarn.api.records.timeline;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -39,13 +39,13 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 @XmlAccessorType(XmlAccessType.NONE)
 @Public
 @Unstable
-public class ATSEvent implements Comparable<ATSEvent> {
+public class TimelineEvent implements Comparable<TimelineEvent> {
 
   private long timestamp;
   private String eventType;
   private Map<String, Object> eventInfo = new HashMap<String, Object>();
 
-  public ATSEvent() {
+  public TimelineEvent() {
   }
 
   /**
@@ -132,7 +132,7 @@ public class ATSEvent implements Comparable<ATSEvent> {
   }
 
   @Override
-  public int compareTo(ATSEvent other) {
+  public int compareTo(TimelineEvent other) {
     if (timestamp > other.timestamp) {
       return -1;
     } else if (timestamp < other.timestamp) {
@@ -149,14 +149,14 @@ public class ATSEvent implements Comparable<ATSEvent> {
     if (o == null || getClass() != o.getClass())
       return false;
 
-    ATSEvent atsEvent = (ATSEvent) o;
+    TimelineEvent event = (TimelineEvent) o;
 
-    if (timestamp != atsEvent.timestamp)
+    if (timestamp != event.timestamp)
       return false;
-    if (!eventType.equals(atsEvent.eventType))
+    if (!eventType.equals(event.eventType))
       return false;
-    if (eventInfo != null ? !eventInfo.equals(atsEvent.eventInfo) :
-        atsEvent.eventInfo != null)
+    if (eventInfo != null ? !eventInfo.equals(event.eventInfo) :
+        event.eventInfo != null)
       return false;
 
     return true;

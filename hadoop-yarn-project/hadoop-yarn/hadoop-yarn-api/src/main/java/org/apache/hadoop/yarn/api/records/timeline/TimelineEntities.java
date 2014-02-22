@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.api.records.apptimeline;
+package org.apache.hadoop.yarn.api.records.timeline;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,18 +30,18 @@ import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 
 /**
- * The class that hosts a list of application timeline entities.
+ * The class that hosts a list of timeline entities.
  */
 @XmlRootElement(name = "entities")
 @XmlAccessorType(XmlAccessType.NONE)
 @Public
 @Unstable
-public class ATSEntities {
+public class TimelineEntities {
 
-  private List<ATSEntity> entities =
-      new ArrayList<ATSEntity>();
+  private List<TimelineEntity> entities =
+      new ArrayList<TimelineEntity>();
 
-  public ATSEntities() {
+  public TimelineEntities() {
 
   }
 
@@ -51,7 +51,7 @@ public class ATSEntities {
    * @return a list of entities
    */
   @XmlElement(name = "entities")
-  public List<ATSEntity> getEntities() {
+  public List<TimelineEntity> getEntities() {
     return entities;
   }
 
@@ -61,7 +61,7 @@ public class ATSEntities {
    * @param entity
    *          a single entity
    */
-  public void addEntity(ATSEntity entity) {
+  public void addEntity(TimelineEntity entity) {
     entities.add(entity);
   }
 
@@ -71,7 +71,7 @@ public class ATSEntities {
    * @param entities
    *          a list of entities
    */
-  public void addEntities(List<ATSEntity> entities) {
+  public void addEntities(List<TimelineEntity> entities) {
     this.entities.addAll(entities);
   }
 
@@ -81,7 +81,7 @@ public class ATSEntities {
    * @param entities
    *          a list of entities
    */
-  public void setEntities(List<ATSEntity> entities) {
+  public void setEntities(List<TimelineEntity> entities) {
     this.entities = entities;
   }
 
