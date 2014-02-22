@@ -309,6 +309,10 @@ public class SaslRpcClient {
       // check that the server advertised principal matches our conf
       String confPrincipal = SecurityUtil.getServerPrincipal(
           conf.get(serverKey), serverAddr.getAddress());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("getting serverKey: " + serverKey + " conf value: " + conf.get(serverKey)
+            + " principal: " + confPrincipal);
+      }
       if (confPrincipal == null || confPrincipal.isEmpty()) {
         throw new IllegalArgumentException(
             "Failed to specify server's Kerberos principal name");
