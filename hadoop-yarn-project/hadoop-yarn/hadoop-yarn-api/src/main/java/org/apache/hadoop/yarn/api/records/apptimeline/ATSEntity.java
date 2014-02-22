@@ -20,9 +20,11 @@ package org.apache.hadoop.yarn.api.records.apptimeline;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
@@ -56,10 +58,10 @@ public class ATSEntity implements Comparable<ATSEntity> {
   private String entityId;
   private Long startTime;
   private List<ATSEvent> events = new ArrayList<ATSEvent>();
-  private Map<String, List<String>> relatedEntities =
-      new HashMap<String, List<String>>();
-  private Map<String, Object> primaryFilters =
-      new HashMap<String, Object>();
+  private Map<String, Set<String>> relatedEntities =
+      new HashMap<String, Set<String>>();
+  private Map<String, Set<Object>> primaryFilters =
+      new HashMap<String, Set<Object>>();
   private Map<String, Object> otherInfo =
       new HashMap<String, Object>();
 
@@ -173,7 +175,7 @@ public class ATSEntity implements Comparable<ATSEntity> {
    * @return the related entities
    */
   @XmlElement(name = "relatedentities")
-  public Map<String, List<String>> getRelatedEntities() {
+  public Map<String, Set<String>> getRelatedEntities() {
     return relatedEntities;
   }
 
@@ -186,9 +188,9 @@ public class ATSEntity implements Comparable<ATSEntity> {
    *          the entity Id
    */
   public void addRelatedEntity(String entityType, String entityId) {
-    List<String> thisRelatedEntity = relatedEntities.get(entityType);
+    Set<String> thisRelatedEntity = relatedEntities.get(entityType);
     if (thisRelatedEntity == null) {
-      thisRelatedEntity = new ArrayList<String>();
+      thisRelatedEntity = new HashSet<String>();
       relatedEntities.put(entityType, thisRelatedEntity);
     }
     thisRelatedEntity.add(entityId);
@@ -200,10 +202,10 @@ public class ATSEntity implements Comparable<ATSEntity> {
    * @param relatedEntities
    *          a map of related entities
    */
-  public void addRelatedEntities(Map<String, List<String>> relatedEntities) {
-    for (Entry<String, List<String>> relatedEntity :
+  public void addRelatedEntities(Map<String, Set<String>> relatedEntities) {
+    for (Entry<String, Set<String>> relatedEntity :
         relatedEntities.entrySet()) {
-      List<String> thisRelatedEntity =
+      Set<String> thisRelatedEntity =
           this.relatedEntities.get(relatedEntity.getKey());
       if (thisRelatedEntity == null) {
         this.relatedEntities.put(
@@ -221,7 +223,7 @@ public class ATSEntity implements Comparable<ATSEntity> {
    *          a map of related entities
    */
   public void setRelatedEntities(
-      Map<String, List<String>> relatedEntities) {
+      Map<String, Set<String>> relatedEntities) {
     this.relatedEntities = relatedEntities;
   }
 
@@ -231,7 +233,7 @@ public class ATSEntity implements Comparable<ATSEntity> {
    * @return the primary filters
    */
   @XmlElement(name = "primaryfilters")
-  public Map<String, Object> getPrimaryFilters() {
+  public Map<String, Set<Object>> getPrimaryFilters() {
     return primaryFilters;
   }
 
@@ -244,7 +246,12 @@ public class ATSEntity implements Comparable<ATSEntity> {
    *          the primary filter value
    */
   public void addPrimaryFilter(String key, Object value) {
-    primaryFilters.put(key, value);
+    Set<Object> thisPrimaryFilter = primaryFilters.get(key);
+    if (thisPrimaryFilter == null) {
+      thisPrimaryFilter = new HashSet<Object>();
+      primaryFilters.put(key, thisPrimaryFilter);
+    }
+    thisPrimaryFilter.add(value);
   }
 
   /**
@@ -253,8 +260,18 @@ public class ATSEntity implements Comparable<ATSEntity> {
    * @param primaryFilters
    *          a map of primary filters
    */
-  public void addPrimaryFilters(Map<String, Object> primaryFilters) {
-    this.primaryFilters.putAll(primaryFilters);
+  public void addPrimaryFilters(Map<String, Set<Object>> primaryFilters) {
+    for (Entry<String, Set<Object>> primaryFilter :
+        primaryFilters.entrySet()) {
+      Set<Object> thisPrimaryFilter =
+          this.primaryFilters.get(primaryFilter.getKey());
+      if (thisPrimaryFilter == null) {
+        this.primaryFilters.put(
+            primaryFilter.getKey(), primaryFilter.getValue());
+      } else {
+        thisPrimaryFilter.addAll(primaryFilter.getValue());
+      }
+    }
   }
 
   /**
@@ -263,7 +280,7 @@ public class ATSEntity implements Comparable<ATSEntity> {
    * @param primaryFilters
    *          a map of primary filters
    */
-  public void setPrimaryFilters(Map<String, Object> primaryFilters) {
+  public void setPrimaryFilters(Map<String, Set<Object>> primaryFilters) {
     this.primaryFilters = primaryFilters;
   }
 
