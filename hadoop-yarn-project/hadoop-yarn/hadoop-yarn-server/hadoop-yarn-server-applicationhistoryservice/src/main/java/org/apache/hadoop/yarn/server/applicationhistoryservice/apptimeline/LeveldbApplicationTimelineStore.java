@@ -259,14 +259,12 @@ public class LeveldbApplicationTimelineStore extends AbstractService
     boolean relatedEntities = false;
     if (fields.contains(Field.RELATED_ENTITIES)) {
       relatedEntities = true;
-      atsEntity.setRelatedEntities(new HashMap<String, List<String>>());
     } else {
       atsEntity.setRelatedEntities(null);
     }
     boolean primaryFilters = false;
     if (fields.contains(Field.PRIMARY_FILTERS)) {
       primaryFilters = true;
-      atsEntity.setPrimaryFilters(new HashMap<String, Object>());
     } else {
       atsEntity.setPrimaryFilters(null);
     }
@@ -286,9 +284,8 @@ public class LeveldbApplicationTimelineStore extends AbstractService
         break;
       if (key[prefixlen] == PRIMARY_FILTER_COLUMN[0]) {
         if (primaryFilters) {
-          atsEntity.addPrimaryFilter(parseRemainingKey(key,
-              prefixlen + PRIMARY_FILTER_COLUMN.length),
-              GenericObjectMapper.read(iterator.peekNext().getValue()));
+          addPrimaryFilter(atsEntity, key,
+              prefixlen + PRIMARY_FILTER_COLUMN.length);
         }
       } else if (key[prefixlen] == OTHER_INFO_COLUMN[0]) {
         if (otherInfo) {
@@ -507,9 +504,14 @@ public class LeveldbApplicationTimelineStore extends AbstractService
         if (secondaryFilters != null) {
           for (NameValuePair filter : secondaryFilters) {
             Object v = atsEntity.getOtherInfo().get(filter.getName());
-            if (v == null)
-              v = atsEntity.getPrimaryFilters().get(filter.getName());
-            if (v == null || !v.equals(filter.getValue())) {
+            if (v == null) {
+              Set<Object> vs = atsEntity.getPrimaryFilters()
+                  .get(filter.getName());
+              if (vs != null && !vs.contains(filter.getValue())) {
+                filterPassed = false;
+                break;
+              }
+            } else if (!v.equals(filter.getValue())) {
               filterPassed = false;
               break;
             }
@@ -547,7 +549,7 @@ public class LeveldbApplicationTimelineStore extends AbstractService
         return;
       }
       Long revStartTimeLong = readReverseOrderedLong(revStartTime, 0);
-      Map<String, Object> primaryFilters = atsEntity.getPrimaryFilters();
+      Map<String, Set<Object>> primaryFilters = atsEntity.getPrimaryFilters();
 
       // write event entries
       if (events != null && !events.isEmpty()) {
@@ -563,10 +565,10 @@ public class LeveldbApplicationTimelineStore extends AbstractService
       }
 
       // write related entity entries
-      Map<String,List<String>> relatedEntities =
+      Map<String, Set<String>> relatedEntities =
           atsEntity.getRelatedEntities();
       if (relatedEntities != null && !relatedEntities.isEmpty()) {
-        for (Entry<String, List<String>> relatedEntityList :
+        for (Entry<String, Set<String>> relatedEntityList :
             relatedEntities.entrySet()) {
           String relatedEntityType = relatedEntityList.getKey();
           for (String relatedEntityId : relatedEntityList.getValue()) {
@@ -595,12 +597,16 @@ public class LeveldbApplicationTimelineStore extends AbstractService
 
       // write primary filter entries
       if (primaryFilters != null && !primaryFilters.isEmpty()) {
-        for (Entry<String, Object> primaryFilter : primaryFilters.entrySet()) {
-          byte[] key = createPrimaryFilterKey(atsEntity.getEntityId(),
-              atsEntity.getEntityType(), revStartTime, primaryFilter.getKey());
-          byte[] value = GenericObjectMapper.write(primaryFilter.getValue());
-          writeBatch.put(key, value);
-          writePrimaryFilterEntries(writeBatch, primaryFilters, key, value);
+        for (Entry<String, Set<Object>> primaryFilter :
+            primaryFilters.entrySet()) {
+          for (Object primaryFilterValue : primaryFilter.getValue()) {
+            byte[] key = createPrimaryFilterKey(atsEntity.getEntityId(),
+                atsEntity.getEntityType(), revStartTime,
+                primaryFilter.getKey(), primaryFilterValue);
+            writeBatch.put(key, EMPTY_BYTES);
+            writePrimaryFilterEntries(writeBatch, primaryFilters, key,
+                EMPTY_BYTES);
+          }
         }
       }
 
@@ -634,12 +640,14 @@ public class LeveldbApplicationTimelineStore extends AbstractService
    * write additional entries to the db for each primary filter.
    */
   private static void writePrimaryFilterEntries(WriteBatch writeBatch,
-      Map<String, Object> primaryFilters, byte[] key, byte[] value)
+      Map<String, Set<Object>> primaryFilters, byte[] key, byte[] value)
       throws IOException {
     if (primaryFilters != null && !primaryFilters.isEmpty()) {
-      for (Entry<String, Object> p : primaryFilters.entrySet()) {
-        writeBatch.put(addPrimaryFilterToKey(p.getKey(), p.getValue(),
-            key), value);
+      for (Entry<String, Set<Object>> pf : primaryFilters.entrySet()) {
+        for (Object pfval : pf.getValue()) {
+          writeBatch.put(addPrimaryFilterToKey(pf.getKey(), pfval,
+              key), value);
+        }
       }
     }
   }
@@ -790,13 +798,26 @@ public class LeveldbApplicationTimelineStore extends AbstractService
 
   /**
    * Creates a primary filter key, serializing ENTITY_ENTRY_PREFIX +
-   * entitytype + revstarttime + entity + PRIMARY_FILTER_COLUMN + name.
+   * entitytype + revstarttime + entity + PRIMARY_FILTER_COLUMN + name + value.
    */
   private static byte[] createPrimaryFilterKey(String entity,
-      String entitytype, byte[] revStartTime, String name) throws IOException {
+      String entitytype, byte[] revStartTime, String name, Object value)
+      throws IOException {
     return KeyBuilder.newInstance().add(ENTITY_ENTRY_PREFIX).add(entitytype)
         .add(revStartTime).add(entity).add(PRIMARY_FILTER_COLUMN).add(name)
-        .getBytes();
+        .add(GenericObjectMapper.write(value)).getBytes();
+  }
+
+  /**
+   * Parses the primary filter from the given key at the given offset and
+   * adds it to the given entity.
+   */
+  private static void addPrimaryFilter(ATSEntity atsEntity, byte[] key,
+      int offset) throws IOException {
+    KeyParser kp = new KeyParser(key, offset);
+    String name = kp.getNextString();
+    Object value = GenericObjectMapper.read(key, kp.getOffset());
+    atsEntity.addPrimaryFilter(name, value);
   }
 
   /**

@@ -203,6 +203,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1470. Add audience annotations to MiniYARNCluster. (Anubhav Dhoot
     via kasha)
 
+    YARN-1732. Changed types of related-entities and primary-filters in the
+    timeline-service to be sets instead of maps. (Billie Rinaldi via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES

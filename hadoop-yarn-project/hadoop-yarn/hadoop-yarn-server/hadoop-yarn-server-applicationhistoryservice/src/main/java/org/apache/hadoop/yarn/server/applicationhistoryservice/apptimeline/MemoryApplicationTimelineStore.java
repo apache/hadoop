@@ -91,7 +91,7 @@ public class MemoryApplicationTimelineStore
         continue;
       }
       if (primaryFilter != null &&
-          !matchFilter(entity.getPrimaryFilters(), primaryFilter)) {
+          !matchPrimaryFilter(entity.getPrimaryFilters(), primaryFilter)) {
         continue;
       }
       if (secondaryFilters != null) { // OR logic
@@ -236,7 +236,7 @@ public class MemoryApplicationTimelineStore
       if (entity.getRelatedEntities() == null) {
         continue;
       }
-      for (Map.Entry<String, List<String>> partRelatedEntities : entity
+      for (Map.Entry<String, Set<String>> partRelatedEntities : entity
           .getRelatedEntities().entrySet()) {
         if (partRelatedEntities == null) {
           continue;
@@ -291,6 +291,16 @@ public class MemoryApplicationTimelineStore
       return false;
     }
     return true;
+  }
+
+  private static boolean matchPrimaryFilter(Map<String, Set<Object>> tags,
+      NameValuePair filter) {
+    Set<Object> value = tags.get(filter.getName());
+    if (value == null) { // doesn't have the filter
+      return false;
+    } else {
+      return value.contains(filter.getValue());
+    }
   }
 
 }
