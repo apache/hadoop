@@ -406,6 +406,9 @@ Release 2.4.0 - UNRELEASED
 
     HADOOP-10355. Fix TestLoadGenerator#testLoadGenerator. (Haohui Mai via jing9)
 
+    HADOOP-10070. RPC client doesn't use per-connection conf to determine
+    server's expected Kerberos principal name. (atm)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
