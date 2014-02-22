@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.api.records.apptimeline;
+package org.apache.hadoop.yarn.api.records.timeline;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -37,52 +37,52 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 @XmlAccessorType(XmlAccessType.NONE)
 @Public
 @Unstable
-public class ATSEvents {
+public class TimelineEvents {
 
-  private List<ATSEventsOfOneEntity> allEvents =
-      new ArrayList<ATSEventsOfOneEntity>();
+  private List<EventsOfOneEntity> allEvents =
+      new ArrayList<EventsOfOneEntity>();
 
-  public ATSEvents() {
+  public TimelineEvents() {
 
   }
 
   /**
-   * Get a list of {@link ATSEventsOfOneEntity} instances
+   * Get a list of {@link EventsOfOneEntity} instances
    * 
-   * @return a list of {@link ATSEventsOfOneEntity} instances
+   * @return a list of {@link EventsOfOneEntity} instances
    */
   @XmlElement(name = "events")
-  public List<ATSEventsOfOneEntity> getAllEvents() {
+  public List<EventsOfOneEntity> getAllEvents() {
     return allEvents;
   }
 
   /**
-   * Add a single {@link ATSEventsOfOneEntity} instance into the existing list
+   * Add a single {@link EventsOfOneEntity} instance into the existing list
    * 
    * @param eventsOfOneEntity
-   *          a single {@link ATSEventsOfOneEntity} instance
+   *          a single {@link EventsOfOneEntity} instance
    */
-  public void addEvent(ATSEventsOfOneEntity eventsOfOneEntity) {
+  public void addEvent(EventsOfOneEntity eventsOfOneEntity) {
     allEvents.add(eventsOfOneEntity);
   }
 
   /**
-   * Add a list of {@link ATSEventsOfOneEntity} instances into the existing list
+   * Add a list of {@link EventsOfOneEntity} instances into the existing list
    * 
    * @param allEvents
-   *          a list of {@link ATSEventsOfOneEntity} instances
+   *          a list of {@link EventsOfOneEntity} instances
    */
-  public void addEvents(List<ATSEventsOfOneEntity> allEvents) {
+  public void addEvents(List<EventsOfOneEntity> allEvents) {
     this.allEvents.addAll(allEvents);
   }
 
   /**
-   * Set the list to the given list of {@link ATSEventsOfOneEntity} instances
+   * Set the list to the given list of {@link EventsOfOneEntity} instances
    * 
    * @param allEvents
-   *          a list of {@link ATSEventsOfOneEntity} instances
+   *          a list of {@link EventsOfOneEntity} instances
    */
-  public void setEvents(List<ATSEventsOfOneEntity> allEvents) {
+  public void setEvents(List<EventsOfOneEntity> allEvents) {
     this.allEvents.clear();
     this.allEvents.addAll(allEvents);
   }
@@ -94,13 +94,13 @@ public class ATSEvents {
   @XmlAccessorType(XmlAccessType.NONE)
   @Public
   @Unstable
-  public static class ATSEventsOfOneEntity {
+  public static class EventsOfOneEntity {
 
     private String entityId;
     private String entityType;
-    private List<ATSEvent> events = new ArrayList<ATSEvent>();
+    private List<TimelineEvent> events = new ArrayList<TimelineEvent>();
 
-    public ATSEventsOfOneEntity() {
+    public EventsOfOneEntity() {
 
     }
 
@@ -150,7 +150,7 @@ public class ATSEvents {
      * @return a list of events
      */
     @XmlElement(name = "events")
-    public List<ATSEvent> getEvents() {
+    public List<TimelineEvent> getEvents() {
       return events;
     }
 
@@ -160,7 +160,7 @@ public class ATSEvents {
      * @param event
      *          a single event
      */
-    public void addEvent(ATSEvent event) {
+    public void addEvent(TimelineEvent event) {
       events.add(event);
     }
 
@@ -170,7 +170,7 @@ public class ATSEvents {
      * @param events
      *          a list of events
      */
-    public void addEvents(List<ATSEvent> events) {
+    public void addEvents(List<TimelineEvent> events) {
       this.events.addAll(events);
     }
 
@@ -180,7 +180,7 @@ public class ATSEvents {
      * @param events
      *          a list of events
      */
-    public void setEvents(List<ATSEvent> events) {
+    public void setEvents(List<TimelineEvent> events) {
       this.events = events;
     }
 

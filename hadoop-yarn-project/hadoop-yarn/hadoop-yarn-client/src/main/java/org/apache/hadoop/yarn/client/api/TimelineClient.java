@@ -24,8 +24,8 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.service.AbstractService;
-import org.apache.hadoop.yarn.api.records.apptimeline.ATSEntity;
-import org.apache.hadoop.yarn.api.records.apptimeline.ATSPutErrors;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
+import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
 import org.apache.hadoop.yarn.client.api.impl.TimelineClientImpl;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 
@@ -33,7 +33,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
  * A client library that can be used to post some information in terms of a
  * number of conceptual entities.
  * 
- * @See ATSEntity
+ * @See Entity
  */
 @Public
 @Unstable
@@ -52,19 +52,19 @@ public abstract class TimelineClient extends AbstractService {
 
   /**
    * <p>
-   * Post the information of a number of conceptual entities of an application
-   * to the timeline server. It is a blocking API. The method will not return
-   * until it gets the response from the timeline server.
+   * Send the information of a number of conceptual entities to the timeline
+   * server. It is a blocking API. The method will not return until it gets the
+   * response from the timeline server.
    * </p>
    * 
    * @param entities
-   *          the collection of {@link ATSEntity}
-   * @return the error information if the post entities are not correctly stored
+   *          the collection of {@link TimelineEntity}
+   * @return the error information if the sent entities are not correctly stored
    * @throws IOException
    * @throws YarnException
    */
   @Public
-  public abstract ATSPutErrors postEntities(
-      ATSEntity... entities) throws IOException, YarnException;
+  public abstract TimelinePutResponse putEntities(
+      TimelineEntity... entities) throws IOException, YarnException;
 
 }

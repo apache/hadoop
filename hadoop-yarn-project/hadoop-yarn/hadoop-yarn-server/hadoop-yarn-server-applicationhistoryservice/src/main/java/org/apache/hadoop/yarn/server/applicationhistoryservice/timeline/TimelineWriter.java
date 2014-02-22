@@ -16,14 +16,31 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.applicationhistoryservice.apptimeline;
+package org.apache.hadoop.yarn.server.applicationhistoryservice.timeline;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.service.Service;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
+import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
 
+import java.io.IOException;
+
+/**
+ * This interface is for storing timeline information.
+ */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public interface ApplicationTimelineStore extends
-    Service, ApplicationTimelineReader, ApplicationTimelineWriter {
+public interface TimelineWriter {
+
+  /**
+   * Stores entity information to the timeline store. Any errors occurring for
+   * individual put request objects will be reported in the response.
+   * 
+   * @param data
+   *          An {@link TimelineEntities} object.
+   * @return An {@link TimelinePutResponse} object.
+   * @throws IOException
+   */
+  TimelinePutResponse put(TimelineEntities data) throws IOException;
+
 }
