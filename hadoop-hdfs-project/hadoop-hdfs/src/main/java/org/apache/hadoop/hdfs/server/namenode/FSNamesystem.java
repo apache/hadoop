@@ -7147,7 +7147,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Failed to start rolling upgrade");
-      startRollingUpgradeInternal(now(), true);
+      startRollingUpgradeInternal(now(), -1);
       getEditLog().logStartRollingUpgrade(rollingUpgradeInfo.getStartTime());
     } finally {
       writeUnlock();
@@ -7165,15 +7165,14 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * Update internal state to indicate that a rolling upgrade is in progress.
    * Ootionally create a checkpoint before starting the RU.
    * @param startTime
-   * @param saveNamespace If true then a checkpoint is created before initiating
-   *                   the rolling upgrade.
    */
-  void startRollingUpgradeInternal(long startTime, boolean saveNamespace)
+  void startRollingUpgradeInternal(long startTime, long txid)
       throws IOException {
     checkRollingUpgrade("start rolling upgrade");
     getFSImage().checkUpgrade(this);
 
-    if (saveNamespace) {
+    // if we have not made a rollback image, do it
+    if (txid < 0 || !getFSImage().hasRollbackFSImage(txid)) {
       getFSImage().saveNamespace(this, NameNodeFile.IMAGE_ROLLBACK, null);
       LOG.info("Successfully saved namespace for preparing rolling upgrade.");
     }

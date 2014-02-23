@@ -327,6 +327,21 @@ public class FSImage implements Closeable {
     }
   }
 
+  /**
+   * @return true if there is rollback fsimage (for rolling upgrade) for the
+   * given txid in storage.
+   */
+  boolean hasRollbackFSImage(long txid) {
+    for (StorageDirectory sd : storage.dirIterable(NameNodeDirType.IMAGE)) {
+      final File rollbackImageFile = NNStorage.getStorageFile(sd,
+          NameNodeFile.IMAGE_ROLLBACK, txid);
+      if (rollbackImageFile.exists()) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   void doUpgrade(FSNamesystem target) throws IOException {
     checkUpgrade(target);
 
@@ -1071,7 +1086,7 @@ public class FSImage implements Closeable {
   }
 
   /**
-   * Renames new image
+   * Rename FSImage
    */
   private void renameCheckpoint(long txid, NameNodeFile fromNnf,
       NameNodeFile toNnf, boolean renameMD5) throws IOException {

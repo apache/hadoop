@@ -727,12 +727,10 @@ public class FSEditLogLoader {
           break;
         }
       }
-       
-      // save namespace if this is not the second edit transaction
-      // (the first must be OP_START_LOG_SEGMENT)
-      final boolean saveNamespace = totalEdits > 1;
+
+      // save namespace if there is no rollback image existing
       final long startTime = ((RollingUpgradeOp) op).getTime();
-      fsNamesys.startRollingUpgradeInternal(startTime, saveNamespace);
+      fsNamesys.startRollingUpgradeInternal(startTime, op.txid - 2);
       break;
     }
     case OP_ROLLING_UPGRADE_FINALIZE: {
