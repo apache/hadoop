@@ -324,6 +324,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1071. Enabled ResourceManager to recover cluster metrics
     numDecommissionedNMs after restarting. (Jian He via zjshen)
 
+    YARN-1742. Fixed javadoc of configuration parameter
+    DEFAULT_NM_MIN_HEALTHY_DISKS_FRACTION. (Akira Ajisaka via vinodkv)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

@@ -736,7 +736,7 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_MIN_HEALTHY_DISKS_FRACTION =
     NM_PREFIX + "disk-health-checker.min-healthy-disks";
   /**
-   * By default, at least 5% of disks are to be healthy to say that the node
+   * By default, at least 25% of disks are to be healthy to say that the node
    * is healthy in terms of disks.
    */
   public static final float DEFAULT_NM_MIN_HEALTHY_DISKS_FRACTION
