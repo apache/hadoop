@@ -77,7 +77,7 @@ public class TestRMApplicationHistoryWriter {
   public void setup() {
     store = new MemoryApplicationHistoryStore();
     Configuration conf = new Configuration();
-    conf.setBoolean(YarnConfiguration.YARN_HISTORY_SERVICE_ENABLED, true);
+    conf.setBoolean(YarnConfiguration.APPLICATION_HISTORY_ENABLED, true);
     writer = new RMApplicationHistoryWriter() {
 
       @Override
