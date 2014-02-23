@@ -113,7 +113,7 @@ public class FileSystemApplicationHistoryStore extends AbstractService
   @Override
   public void serviceInit(Configuration conf) throws Exception {
     Path fsWorkingPath =
-        new Path(conf.get(YarnConfiguration.FS_HISTORY_STORE_URI));
+        new Path(conf.get(YarnConfiguration.FS_APPLICATION_HISTORY_STORE_URI));
     rootDirPath = new Path(fsWorkingPath, ROOT_DIR_NAME);
     try {
       fs = fsWorkingPath.getFileSystem(conf);
@@ -727,8 +727,8 @@ public class FileSystemApplicationHistoryStore extends AbstractService
       fs.setPermission(historyFile, HISTORY_FILE_UMASK);
       writer =
           new TFile.Writer(fsdos, MIN_BLOCK_SIZE, getConfig().get(
-            YarnConfiguration.FS_HISTORY_STORE_COMPRESSION_TYPE,
-            YarnConfiguration.DEFAULT_FS_HISTORY_STORE_COMPRESSION_TYPE), null,
+            YarnConfiguration.FS_APPLICATION_HISTORY_STORE_COMPRESSION_TYPE,
+            YarnConfiguration.DEFAULT_FS_APPLICATION_HISTORY_STORE_COMPRESSION_TYPE), null,
             getConfig());
     }
 

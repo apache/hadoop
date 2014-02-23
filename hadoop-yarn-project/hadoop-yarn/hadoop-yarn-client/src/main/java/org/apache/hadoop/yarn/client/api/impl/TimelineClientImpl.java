@@ -67,13 +67,13 @@ public class TimelineClientImpl extends TimelineClient {
     if (YarnConfiguration.useHttps(conf)) {
       resURI = URI
           .create(JOINER.join("https://", conf.get(
-              YarnConfiguration.AHS_WEBAPP_HTTPS_ADDRESS,
-              YarnConfiguration.DEFAULT_AHS_WEBAPP_HTTPS_ADDRESS),
+              YarnConfiguration.TIMELINE_SERVICE_WEBAPP_HTTPS_ADDRESS,
+              YarnConfiguration.DEFAULT_TIMELINE_SERVICE_WEBAPP_HTTPS_ADDRESS),
               RESOURCE_URI_STR));
     } else {
       resURI = URI.create(JOINER.join("http://", conf.get(
-          YarnConfiguration.AHS_WEBAPP_ADDRESS,
-          YarnConfiguration.DEFAULT_AHS_WEBAPP_ADDRESS), RESOURCE_URI_STR));
+          YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS,
+          YarnConfiguration.DEFAULT_TIMELINE_SERVICE_WEBAPP_ADDRESS), RESOURCE_URI_STR));
     }
     super.serviceInit(conf);
   }

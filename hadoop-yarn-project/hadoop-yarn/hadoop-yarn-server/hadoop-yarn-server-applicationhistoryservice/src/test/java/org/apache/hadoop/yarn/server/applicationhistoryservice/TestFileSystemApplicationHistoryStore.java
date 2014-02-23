@@ -52,7 +52,7 @@ public class TestFileSystemApplicationHistoryStore extends
     fs.initialize(new URI("/"), conf);
     fsWorkingPath = new Path("Test");
     fs.delete(fsWorkingPath, true);
-    conf.set(YarnConfiguration.FS_HISTORY_STORE_URI, fsWorkingPath.toString());
+    conf.set(YarnConfiguration.FS_APPLICATION_HISTORY_STORE_URI, fsWorkingPath.toString());
     store = new FileSystemApplicationHistoryStore();
     store.init(conf);
     store.start();

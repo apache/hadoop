@@ -79,7 +79,8 @@ public class ApplicationHistoryManagerImpl extends AbstractService implements
   protected ApplicationHistoryStore createApplicationHistoryStore(
       Configuration conf) {
     return ReflectionUtils.newInstance(conf.getClass(
-      YarnConfiguration.AHS_STORE, FileSystemApplicationHistoryStore.class,
+      YarnConfiguration.APPLICATION_HISTORY_STORE,
+      FileSystemApplicationHistoryStore.class,
       ApplicationHistoryStore.class), conf);
   }
 

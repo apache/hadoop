@@ -142,11 +142,11 @@ public class WebAppUtils {
 
   public static String getAHSWebAppURLWithoutScheme(Configuration conf) {
     if (YarnConfiguration.useHttps(conf)) {
-      return conf.get(YarnConfiguration.AHS_WEBAPP_HTTPS_ADDRESS,
-        YarnConfiguration.DEFAULT_AHS_WEBAPP_HTTPS_ADDRESS);
+      return conf.get(YarnConfiguration.TIMELINE_SERVICE_WEBAPP_HTTPS_ADDRESS,
+        YarnConfiguration.DEFAULT_TIMELINE_SERVICE_WEBAPP_HTTPS_ADDRESS);
     } else {
-      return conf.get(YarnConfiguration.AHS_WEBAPP_ADDRESS,
-        YarnConfiguration.DEFAULT_AHS_WEBAPP_ADDRESS);
+      return conf.get(YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS,
+        YarnConfiguration.DEFAULT_TIMELINE_SERVICE_WEBAPP_ADDRESS);
     }
   }
   
