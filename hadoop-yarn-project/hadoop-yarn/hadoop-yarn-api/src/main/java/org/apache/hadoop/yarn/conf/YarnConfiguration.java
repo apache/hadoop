@@ -300,11 +300,6 @@ public class YarnConfiguration extends Configuration {
   public static final int DEFAULT_RM_HISTORY_WRITER_MULTI_THREADED_DISPATCHER_POOL_SIZE =
       10;
 
-  /** The implementation class of ApplicationHistoryStore, which is to be used
-   *  by RMApplicationHistoryWriter. */
-  public static final String RM_HISTORY_WRITER_CLASS = RM_PREFIX
-      + "history-writer.class";
-
   //Delegation token related keys
   public static final String  DELEGATION_KEY_UPDATE_INTERVAL_KEY = 
     RM_PREFIX + "delegation.key.update-interval";
@@ -994,68 +989,83 @@ public class YarnConfiguration extends Configuration {
       YARN_PREFIX + "app.container.log.backups";
 
   ////////////////////////////////
-  // AHS Configs
-  ////////////////////////////////
-
-  public static final String AHS_PREFIX = YARN_PREFIX + "ahs.";
-
-  /** The setting that controls whether history-service is enabled or not.. */
-  public static final String YARN_HISTORY_SERVICE_ENABLED = AHS_PREFIX
-      + "enabled";
-  public static final boolean DEFAULT_YARN_HISTORY_SERVICE_ENABLED = false;
-
-  /** URI for FileSystemApplicationHistoryStore */
-  public static final String FS_HISTORY_STORE_URI = AHS_PREFIX + "fs-history-store.uri";
-
-  /** T-file compression types used to compress history data.*/
-  public static final String FS_HISTORY_STORE_COMPRESSION_TYPE = AHS_PREFIX + "fs-history-store.compression-type";
-  public static final String DEFAULT_FS_HISTORY_STORE_COMPRESSION_TYPE = "none";
-
-  /** AHS store class */
-  public static final String AHS_STORE = AHS_PREFIX + "store.class";
-
-  /** host:port address for Application History Server API. */
-  public static final String AHS_ADDRESS = AHS_PREFIX + "address";
-  public static final int DEFAULT_AHS_PORT = 10200;
-  public static final String DEFAULT_AHS_ADDRESS = "0.0.0.0:"
-      + DEFAULT_AHS_PORT;
-
-  /** The number of threads to handle client API requests. */
-  public static final String AHS_CLIENT_THREAD_COUNT = AHS_PREFIX
-      + "client.thread-count";
-  public static final int DEFAULT_AHS_CLIENT_THREAD_COUNT = 10;
-  
-
-  /** The address of the AHS web application.*/
-  public static final String AHS_WEBAPP_ADDRESS = AHS_PREFIX
-      + "webapp.address";
-
-  public static final int DEFAULT_AHS_WEBAPP_PORT = 8188;
-  public static final String DEFAULT_AHS_WEBAPP_ADDRESS = "0.0.0.0:"
-      + DEFAULT_AHS_WEBAPP_PORT;
-
-  /** The https address of the AHS web application.*/
-  public static final String AHS_WEBAPP_HTTPS_ADDRESS = AHS_PREFIX
-      + "webapp.https.address";
-
-  public static final int DEFAULT_AHS_WEBAPP_HTTPS_PORT = 8190;
-  public static final String DEFAULT_AHS_WEBAPP_HTTPS_ADDRESS = "0.0.0.0:"
-      + DEFAULT_AHS_WEBAPP_HTTPS_PORT;
-
-  /**The kerberos principal to be used for spnego filter for AHS.*/
-  public static final String AHS_WEBAPP_SPNEGO_USER_NAME_KEY =
-      AHS_PREFIX + "webapp.spnego-principal";
-
-  /**The kerberos keytab to be used for spnego filter for AHS.*/
-  public static final String AHS_WEBAPP_SPNEGO_KEYTAB_FILE_KEY =
-      AHS_PREFIX + "webapp.spnego-keytab-file";
-
-  ////////////////////////////////
   // Timeline Service Configs
   ////////////////////////////////
 
   public static final String TIMELINE_SERVICE_PREFIX =
       YARN_PREFIX + "timeline-service.";
+
+
+  // mark app-history related configs @Private as application history is going
+  // to be integrated into the timeline service
+  @Private
+  public static final String APPLICATION_HISTORY_PREFIX =
+      TIMELINE_SERVICE_PREFIX + "generic-application-history.";
+
+  /**
+   *  The setting that controls whether application history service is
+   *  enabled or not.
+   */
+  @Private
+  public static final String APPLICATION_HISTORY_ENABLED =
+      APPLICATION_HISTORY_PREFIX + "enabled";
+  @Private
+  public static final boolean DEFAULT_APPLICATION_HISTORY_ENABLED = false;
+
+  /** Application history store class */
+  @Private
+  public static final String APPLICATION_HISTORY_STORE =
+      APPLICATION_HISTORY_PREFIX + "store-class";
+
+  /** URI for FileSystemApplicationHistoryStore */
+  @Private
+  public static final String FS_APPLICATION_HISTORY_STORE_URI =
+      APPLICATION_HISTORY_PREFIX + "fs-history-store.uri";
+
+  /** T-file compression types used to compress history data.*/
+  @Private
+  public static final String FS_APPLICATION_HISTORY_STORE_COMPRESSION_TYPE =
+      APPLICATION_HISTORY_PREFIX + "fs-history-store.compression-type";
+  @Private
+  public static final String DEFAULT_FS_APPLICATION_HISTORY_STORE_COMPRESSION_TYPE =
+      "none";
+
+  /** host:port address for timeline service RPC APIs. */
+  public static final String TIMELINE_SERVICE_ADDRESS =
+      TIMELINE_SERVICE_PREFIX + "address";
+  public static final int DEFAULT_TIMELINE_SERVICE_PORT = 10200;
+  public static final String DEFAULT_TIMELINE_SERVICE_ADDRESS = "0.0.0.0:"
+      + DEFAULT_TIMELINE_SERVICE_PORT;
+
+  /** The number of threads to handle client RPC API requests. */
+  public static final String TIMELINE_SERVICE_HANDLER_THREAD_COUNT =
+      TIMELINE_SERVICE_PREFIX + "handler-thread-count";
+  public static final int DEFAULT_TIMELINE_SERVICE_CLIENT_THREAD_COUNT = 10;
+  
+
+  /** The address of the timeline service web application.*/
+  public static final String TIMELINE_SERVICE_WEBAPP_ADDRESS =
+      TIMELINE_SERVICE_PREFIX  + "webapp.address";
+
+  public static final int DEFAULT_TIMELINE_SERVICE_WEBAPP_PORT = 8188;
+  public static final String DEFAULT_TIMELINE_SERVICE_WEBAPP_ADDRESS =
+      "0.0.0.0:" + DEFAULT_TIMELINE_SERVICE_WEBAPP_PORT;
+
+  /** The https address of the timeline service web application.*/
+  public static final String TIMELINE_SERVICE_WEBAPP_HTTPS_ADDRESS =
+      TIMELINE_SERVICE_PREFIX + "webapp.https.address";
+
+  public static final int DEFAULT_TIMELINE_SERVICE_WEBAPP_HTTPS_PORT = 8190;
+  public static final String DEFAULT_TIMELINE_SERVICE_WEBAPP_HTTPS_ADDRESS =
+      "0.0.0.0:" + DEFAULT_TIMELINE_SERVICE_WEBAPP_HTTPS_PORT;
+
+  /**The kerberos principal to be used for spnego filter for timeline service.*/
+  public static final String TIMELINE_SERVICE_WEBAPP_SPNEGO_USER_NAME_KEY =
+      TIMELINE_SERVICE_PREFIX + "webapp.spnego-principal";
+
+  /**The kerberos keytab to be used for spnego filter for timeline service.*/
+  public static final String TIMELINE_SERVICE_WEBAPP_SPNEGO_KEYTAB_FILE_KEY =
+      TIMELINE_SERVICE_PREFIX + "webapp.spnego-keytab-file";
 
   /** Timeline service store class */
   public static final String TIMELINE_SERVICE_STORE =

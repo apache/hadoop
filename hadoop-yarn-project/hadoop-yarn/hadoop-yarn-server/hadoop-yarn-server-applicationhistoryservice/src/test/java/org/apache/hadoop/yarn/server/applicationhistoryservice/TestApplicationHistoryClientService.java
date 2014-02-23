@@ -57,7 +57,7 @@ public class TestApplicationHistoryClientService extends
   public void setup() {
     historyServer = new ApplicationHistoryServer();
     Configuration config = new YarnConfiguration();
-    config.setClass(YarnConfiguration.AHS_STORE,
+    config.setClass(YarnConfiguration.APPLICATION_HISTORY_STORE,
       MemoryApplicationHistoryStore.class, ApplicationHistoryStore.class);
     historyServer.init(config);
     historyServer.start();

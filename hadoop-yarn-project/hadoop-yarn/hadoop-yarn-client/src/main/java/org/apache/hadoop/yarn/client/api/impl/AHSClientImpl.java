@@ -63,9 +63,9 @@ public class AHSClientImpl extends AHSClient {
   }
 
   private static InetSocketAddress getAHSAddress(Configuration conf) {
-    return conf.getSocketAddr(YarnConfiguration.AHS_ADDRESS,
-        YarnConfiguration.DEFAULT_AHS_ADDRESS,
-        YarnConfiguration.DEFAULT_AHS_PORT);
+    return conf.getSocketAddr(YarnConfiguration.TIMELINE_SERVICE_ADDRESS,
+        YarnConfiguration.DEFAULT_TIMELINE_SERVICE_ADDRESS,
+        YarnConfiguration.DEFAULT_TIMELINE_SERVICE_PORT);
   }
 
   @Override

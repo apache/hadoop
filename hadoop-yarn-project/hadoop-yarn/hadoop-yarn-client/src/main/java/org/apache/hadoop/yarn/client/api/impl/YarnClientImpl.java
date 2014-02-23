@@ -114,8 +114,8 @@ public class YarnClientImpl extends YarnClient {
         YarnConfiguration.DEFAULT_YARN_CLIENT_APPLICATION_CLIENT_PROTOCOL_POLL_INTERVAL_MS);
     }
 
-    if (conf.getBoolean(YarnConfiguration.YARN_HISTORY_SERVICE_ENABLED,
-      YarnConfiguration.DEFAULT_YARN_HISTORY_SERVICE_ENABLED)) {
+    if (conf.getBoolean(YarnConfiguration.APPLICATION_HISTORY_ENABLED,
+      YarnConfiguration.DEFAULT_APPLICATION_HISTORY_ENABLED)) {
       historyServiceEnabled = true;
       historyClient = AHSClientImpl.createAHSClient();
       historyClient.init(getConfig());
