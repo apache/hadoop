@@ -224,11 +224,16 @@ public class NodeManager extends CompositeService
     new Thread() {
       @Override
       public void run() {
-        LOG.info("Notifying ContainerManager to block new container-requests");
-        containerManager.setBlockNewContainerRequests(true);
-        LOG.info("Cleaning up running containers on resync");
-        containerManager.cleanupContainersOnNMResync();
-        ((NodeStatusUpdaterImpl) nodeStatusUpdater ).rebootNodeStatusUpdater();
+        try {
+          LOG.info("Notifying ContainerManager to block new container-requests");
+          containerManager.setBlockNewContainerRequests(true);
+          LOG.info("Cleaning up running containers on resync");
+          containerManager.cleanupContainersOnNMResync();
+          ((NodeStatusUpdaterImpl) nodeStatusUpdater).rebootNodeStatusUpdater();
+        } catch (YarnRuntimeException e) {
+          LOG.fatal("Error while rebooting NodeStatusUpdater.", e);
+          shutDown();
+        }
       }
     }.start();
   }
