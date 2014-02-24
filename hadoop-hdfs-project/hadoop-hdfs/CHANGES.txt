@@ -21,6 +21,8 @@ Release 2.4.0 - UNRELEASED
     HDFS-5698. Use protobuf to serialize / deserialize FSImage. (See breakdown
     of tasks below for features and contributors)
 
+    HDFS-5776 Support 'hedged' reads in DFSClient (Liang Xie via stack)
+
   IMPROVEMENTS
 
     HDFS-5781. Use an array to record the mapping between FSEditLogOpCode and 

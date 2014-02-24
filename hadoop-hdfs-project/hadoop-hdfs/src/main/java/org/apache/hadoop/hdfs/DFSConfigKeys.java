@@ -589,4 +589,14 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final int     DFS_HTTP_CLIENT_FAILOVER_SLEEPTIME_BASE_DEFAULT = 500;
   public static final String  DFS_HTTP_CLIENT_FAILOVER_SLEEPTIME_MAX_KEY = "dfs.http.client.failover.sleep.max.millis";
   public static final int     DFS_HTTP_CLIENT_FAILOVER_SLEEPTIME_MAX_DEFAULT = 15000;
+
+  // hedged read properties
+  public static final String DFS_DFSCLIENT_HEDGED_READ_THRESHOLD_MILLIS =
+      "dfs.client.hedged.read.threshold.millis";
+  public static final long DEFAULT_DFSCLIENT_HEDGED_READ_THRESHOLD_MILLIS =
+      500;
+
+  public static final String DFS_DFSCLIENT_HEDGED_READ_THREADPOOL_SIZE =
+      "dfs.client.hedged.read.threadpool.size";
+  public static final int DEFAULT_DFSCLIENT_HEDGED_READ_THREADPOOL_SIZE = 0;
 }
