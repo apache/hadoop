@@ -20,9 +20,14 @@ package org.apache.hadoop.hdfs;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Random;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
@@ -33,6 +38,9 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtocol;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.log4j.Level;
 import org.junit.Test;
+import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 /**
  * This class tests the DFS positional read functionality in a single node
@@ -44,9 +52,10 @@ public class TestPread {
   boolean simulatedStorage = false;
 
   private void writeFile(FileSystem fileSys, Path name) throws IOException {
+    int replication = 3;// We need > 1 blocks to test out the hedged reads.
     // test empty file open and read
     DFSTestUtil.createFile(fileSys, name, 12 * blockSize, 0,
-        blockSize, (short) 1, seed);
+      blockSize, (short)replication, seed);
     FSDataInputStream in = fileSys.open(name);
     byte[] buffer = new byte[12 * blockSize];
     in.readFully(0, buffer, 0, 0);
@@ -191,26 +200,128 @@ public class TestPread {
     assertTrue(fileSys.delete(name, true));
     assertTrue(!fileSys.exists(name));
   }
-  
+
+  private Callable<Void> getPReadFileCallable(final FileSystem fileSys,
+      final Path file) {
+    return new Callable<Void>() {
+      public Void call() throws IOException {
+        pReadFile(fileSys, file);
+        return null;
+      }
+    };
+  }
+
   /**
    * Tests positional read in DFS.
    */
   @Test
   public void testPreadDFS() throws IOException {
-    dfsPreadTest(false, true); //normal pread
-    dfsPreadTest(true, true); //trigger read code path without transferTo.
+    Configuration conf = new Configuration();
+    dfsPreadTest(conf, false, true); // normal pread
+    dfsPreadTest(conf, true, true); // trigger read code path without
+                                    // transferTo.
   }
   
   @Test
   public void testPreadDFSNoChecksum() throws IOException {
+    Configuration conf = new Configuration();
     ((Log4JLogger)DataTransferProtocol.LOG).getLogger().setLevel(Level.ALL);
-    dfsPreadTest(false, false);
-    dfsPreadTest(true, false);
+    dfsPreadTest(conf, false, false);
+    dfsPreadTest(conf, true, false);
   }
   
-  private void dfsPreadTest(boolean disableTransferTo, boolean verifyChecksum)
+  /**
+   * Tests positional read in DFS, with hedged reads enabled.
+   */
+  @Test
+  public void testHedgedPreadDFSBasic() throws IOException {
+    Configuration conf = new Configuration();
+    conf.setInt(DFSConfigKeys.DFS_DFSCLIENT_HEDGED_READ_THREADPOOL_SIZE, 5);
+    conf.setLong(DFSConfigKeys.DFS_DFSCLIENT_HEDGED_READ_THRESHOLD_MILLIS, 100);
+    dfsPreadTest(conf, false, true); // normal pread
+    dfsPreadTest(conf, true, true); // trigger read code path without
+                                    // transferTo.
+  }
+
+  @Test
+  public void testMaxOutHedgedReadPool() throws IOException,
+      InterruptedException, ExecutionException {
+    Configuration conf = new Configuration();
+    int numHedgedReadPoolThreads = 5;
+    final int initialHedgedReadTimeoutMillis = 500;
+    final int fixedSleepIntervalMillis = 50;
+    conf.setInt(DFSConfigKeys.DFS_DFSCLIENT_HEDGED_READ_THREADPOOL_SIZE,
+        numHedgedReadPoolThreads);
+    conf.setLong(DFSConfigKeys.DFS_DFSCLIENT_HEDGED_READ_THRESHOLD_MILLIS,
+        initialHedgedReadTimeoutMillis);
+
+    // Set up the InjectionHandler
+    DFSClientFaultInjector.instance = Mockito
+        .mock(DFSClientFaultInjector.class);
+    DFSClientFaultInjector injector = DFSClientFaultInjector.instance;
+    // make preads sleep for 50ms
+    Mockito.doAnswer(new Answer<Void>() {
+      @Override
+      public Void answer(InvocationOnMock invocation) throws Throwable {
+        Thread.sleep(fixedSleepIntervalMillis);
+        return null;
+      }
+    }).when(injector).startFetchFromDatanode();
+
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3)
+        .format(true).build();
+    DistributedFileSystem fileSys = cluster.getFileSystem();
+    DFSClient dfsClient = fileSys.getClient();
+    DFSHedgedReadMetrics metrics = dfsClient.getHedgedReadMetrics();
+
+    try {
+      Path file1 = new Path("hedgedReadMaxOut.dat");
+      writeFile(fileSys, file1);
+      // Basic test. Reads complete within timeout. Assert that there were no
+      // hedged reads.
+      pReadFile(fileSys, file1);
+      // assert that there were no hedged reads. 50ms + delta < 500ms
+      assertTrue(metrics.getHedgedReadOps() == 0);
+      assertTrue(metrics.getHedgedReadOpsInCurThread() == 0);
+      /*
+       * Reads take longer than timeout. But, only one thread reading. Assert
+       * that there were hedged reads. But, none of the reads had to run in the
+       * current thread.
+       */
+      dfsClient.setHedgedReadTimeout(50); // 50ms
+      pReadFile(fileSys, file1);
+      // assert that there were hedged reads
+      assertTrue(metrics.getHedgedReadOps() > 0);
+      assertTrue(metrics.getHedgedReadOpsInCurThread() == 0);
+      /*
+       * Multiple threads reading. Reads take longer than timeout. Assert that
+       * there were hedged reads. And that reads had to run in the current
+       * thread.
+       */
+      int factor = 10;
+      int numHedgedReads = numHedgedReadPoolThreads * factor;
+      long initialReadOpsValue = metrics.getHedgedReadOps();
+      ExecutorService executor = Executors.newFixedThreadPool(numHedgedReads);
+      ArrayList<Future<Void>> futures = new ArrayList<Future<Void>>();
+      for (int i = 0; i < numHedgedReads; i++) {
+        futures.add(executor.submit(getPReadFileCallable(fileSys, file1)));
+      }
+      for (int i = 0; i < numHedgedReads; i++) {
+        futures.get(i).get();
+      }
+      assertTrue(metrics.getHedgedReadOps() > initialReadOpsValue);
+      assertTrue(metrics.getHedgedReadOpsInCurThread() > 0);
+      cleanupFile(fileSys, file1);
+      executor.shutdown();
+    } finally {
+      fileSys.close();
+      cluster.shutdown();
+      Mockito.reset(injector);
+    }
+  }
+
+  private void dfsPreadTest(Configuration conf, boolean disableTransferTo, boolean verifyChecksum)
       throws IOException {
-    Configuration conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 4096);
     conf.setLong(DFSConfigKeys.DFS_CLIENT_READ_PREFETCH_SIZE_KEY, 4096);
     if (simulatedStorage) {

@@ -80,6 +80,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.net.SocketFactory;
 
@@ -173,6 +177,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenRenewer;
+import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.DataChecksum.Type;
 import org.apache.hadoop.util.Progressable;
@@ -222,6 +227,10 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
   private final CachingStrategy defaultReadCachingStrategy;
   private final CachingStrategy defaultWriteCachingStrategy;
   private final ClientContext clientContext;
+  private volatile long hedgedReadThresholdMillis;
+  private static DFSHedgedReadMetrics HEDGED_READ_METRIC =
+      new DFSHedgedReadMetrics();
+  private static ThreadPoolExecutor HEDGED_READ_THREAD_POOL;
   
   /**
    * DFSClient configuration 
@@ -574,6 +583,15 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
     this.clientContext = ClientContext.get(
         conf.get(DFS_CLIENT_CONTEXT, DFS_CLIENT_CONTEXT_DEFAULT),
         dfsClientConf);
+    this.hedgedReadThresholdMillis = conf.getLong(
+        DFSConfigKeys.DFS_DFSCLIENT_HEDGED_READ_THRESHOLD_MILLIS,
+        DFSConfigKeys.DEFAULT_DFSCLIENT_HEDGED_READ_THRESHOLD_MILLIS);
+    int numThreads = conf.getInt(
+        DFSConfigKeys.DFS_DFSCLIENT_HEDGED_READ_THREADPOOL_SIZE,
+        DFSConfigKeys.DEFAULT_DFSCLIENT_HEDGED_READ_THREADPOOL_SIZE);
+    if (numThreads > 0) {
+      this.initThreadsNumForHedgedReads(numThreads);
+    }
   }
   
   /**
@@ -2713,5 +2731,65 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
         IOUtils.closeSocket(sock);
       }
     }
+  }
+
+  /**
+   * Create hedged reads thread pool, HEDGED_READ_THREAD_POOL, if
+   * it does not already exist.
+   * @param num Number of threads for hedged reads thread pool.
+   * If zero, skip hedged reads thread pool creation.
+   */
+  private synchronized void initThreadsNumForHedgedReads(int num) {
+    if (num <= 0 || HEDGED_READ_THREAD_POOL != null) return;
+    HEDGED_READ_THREAD_POOL = new ThreadPoolExecutor(1, num, 60,
+        TimeUnit.SECONDS, new SynchronousQueue<Runnable>(),
+        new Daemon.DaemonFactory() {
+          private final AtomicInteger threadIndex =
+            new AtomicInteger(0); 
+          @Override
+          public Thread newThread(Runnable r) {
+            Thread t = super.newThread(r);
+            t.setName("hedgedRead-" +
+              threadIndex.getAndIncrement());
+            return t;
+          }
+        },
+        new ThreadPoolExecutor.CallerRunsPolicy() {
+
+      @Override
+      public void rejectedExecution(Runnable runnable,
+          ThreadPoolExecutor e) {
+        LOG.info("Execution rejected, Executing in current thread");
+        HEDGED_READ_METRIC.incHedgedReadOpsInCurThread();
+        // will run in the current thread
+        super.rejectedExecution(runnable, e);
+      }
+    });
+    HEDGED_READ_THREAD_POOL.allowCoreThreadTimeOut(true);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Using hedged reads; pool threads=" + num);
+    }
+  }
+
+  long getHedgedReadTimeout() {
+    return this.hedgedReadThresholdMillis;
+  }
+
+  @VisibleForTesting
+  void setHedgedReadTimeout(long timeoutMillis) {
+    this.hedgedReadThresholdMillis = timeoutMillis;
+  }
+
+  ThreadPoolExecutor getHedgedReadsThreadPool() {
+    return HEDGED_READ_THREAD_POOL;
+  }
+
+  boolean isHedgedReadsEnabled() {
+    return (HEDGED_READ_THREAD_POOL != null) &&
+      HEDGED_READ_THREAD_POOL.getMaximumPoolSize() > 0;
+  }
+
+  DFSHedgedReadMetrics getHedgedReadMetrics() {
+    return HEDGED_READ_METRIC;
   }
 }

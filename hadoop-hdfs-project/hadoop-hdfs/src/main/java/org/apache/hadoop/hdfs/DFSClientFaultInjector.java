@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hdfs;
-import java.io.IOException;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -46,4 +45,6 @@ public class DFSClientFaultInjector {
   public boolean failPacket() {
     return false;
   }
+
+  public void startFetchFromDatanode() {}
 }
