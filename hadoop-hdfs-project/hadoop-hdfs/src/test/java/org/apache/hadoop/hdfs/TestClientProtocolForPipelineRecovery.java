@@ -24,8 +24,10 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.LeaseExpiredException;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
+import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.io.IOUtils;
 import org.junit.Assert;
@@ -154,6 +156,41 @@ public class TestClientProtocolForPipelineRecovery {
       }
     } finally {
       DFSClientFaultInjector.instance = oldInjector;
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  /** Test recovery on restart OOB message */
+  @Test
+  public void testPipelineRecoveryOnOOB() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = null;
+    try {
+      int numDataNodes = 3;
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDataNodes).build();
+      cluster.waitActive();
+      FileSystem fileSys = cluster.getFileSystem();
+
+      Path file = new Path("dataprotocol2.dat");
+      DFSTestUtil.createFile(fileSys, file, 10240L, (short)2, 0L);
+      DFSOutputStream out = (DFSOutputStream)(fileSys.append(file).
+          getWrappedStream());
+      out.write(1);
+      out.hflush();
+
+      DFSAdmin dfsadmin = new DFSAdmin(conf);
+      DataNode dn = cluster.getDataNodes().get(0);
+      final String dnAddr = dn.getDatanodeId().getIpcAddr(false);
+      // issue shutdown to the datanode.
+      final String[] args1 = {"-shutdownDatanode", dnAddr, "upgrade" };
+      Assert.assertEquals(0, dfsadmin.run(args1));
+      out.close();
+      Thread.sleep(3000);
+      final String[] args2 = {"-getDatanodeInfo", dnAddr };
+      Assert.assertEquals(-1, dfsadmin.run(args2));
+    } finally {
       if (cluster != null) {
         cluster.shutdown();
       }

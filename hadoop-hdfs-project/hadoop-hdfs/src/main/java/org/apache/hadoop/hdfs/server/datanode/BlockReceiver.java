@@ -723,14 +723,40 @@ class BlockReceiver implements Closeable {
       }
 
     } catch (IOException ioe) {
-      LOG.info("Exception for " + block, ioe);
-      throw ioe;
+      if (datanode.isRestarting()) {
+        // Do not throw if shutting down for restart. Otherwise, it will cause
+        // premature termination of responder.
+        LOG.info("Shutting down for restart (" + block + ").");
+      } else {
+        LOG.info("Exception for " + block, ioe);
+        throw ioe;
+      }
     } finally {
-      if (!responderClosed) { // Abnormal termination of the flow above
-        IOUtils.closeStream(this);
+      // Clear the previous interrupt state of this thread.
+      Thread.interrupted();
+
+      // If a shutdown for restart was initiated, upstream needs to be notified.
+      // There is no need to do anything special if the responder was closed
+      // normally.
+      if (!responderClosed) { // Data transfer was not complete.
         if (responder != null) {
+          // In case this datanode is shutting down for quick restart,
+          // send a special ack upstream.
+          if (datanode.isRestarting()) {
+            try {
+              ((PacketResponder) responder.getRunnable()).
+                  sendOOBResponse(PipelineAck.getRestartOOBStatus());
+            } catch (InterruptedException ie) {
+              // It is already going down. Ignore this.
+            } catch (IOException ioe) {
+              LOG.info("Error sending OOB Ack.", ioe);
+              // The OOB ack could not be sent. Since the datanode is going
+              // down, this is ignored.
+            }
+          }
           responder.interrupt();
         }
+        IOUtils.closeStream(this);
         cleanupBlock();
       }
       if (responder != null) {
@@ -744,7 +770,10 @@ class BlockReceiver implements Closeable {
           }
         } catch (InterruptedException e) {
           responder.interrupt();
-          throw new IOException("Interrupted receiveBlock");
+          // do not throw if shutting down for restart.
+          if (!datanode.isRestarting()) {
+            throw new IOException("Interrupted receiveBlock");
+          }
         }
         responder = null;
       }
@@ -862,6 +891,7 @@ class BlockReceiver implements Closeable {
     private final PacketResponderType type;
     /** for log and error messages */
     private final String myString; 
+    private boolean sending = false;
 
     @Override
     public String toString() {
@@ -887,7 +917,9 @@ class BlockReceiver implements Closeable {
     }
 
     private boolean isRunning() {
-      return running && datanode.shouldRun;
+      // When preparing for a restart, it should continue to run until
+      // interrupted by the receiver thread.
+      return running && (datanode.shouldRun || datanode.isRestarting());
     }
     
     /**
@@ -903,44 +935,96 @@ class BlockReceiver implements Closeable {
       if(LOG.isDebugEnabled()) {
         LOG.debug(myString + ": enqueue " + p);
       }
-      synchronized(this) {
+      synchronized(ackQueue) {
         if (running) {
           ackQueue.addLast(p);
-          notifyAll();
+          ackQueue.notifyAll();
+        }
+      }
+    }
+
+    /**
+     * Send an OOB response. If all acks have been sent already for the block
+     * and the responder is about to close, the delivery is not guaranteed.
+     * This is because the other end can close the connection independently.
+     * An OOB coming from downstream will be automatically relayed upstream
+     * by the responder. This method is used only by originating datanode.
+     *
+     * @param ackStatus the type of ack to be sent
+     */
+    void sendOOBResponse(final Status ackStatus) throws IOException,
+        InterruptedException {
+      if (!running) {
+        LOG.info("Cannot send OOB response " + ackStatus + 
+            ". Responder not running.");
+        return;
+      }
+
+      synchronized(this) {
+        if (sending) {
+          wait(PipelineAck.getOOBTimeout(ackStatus));
+          // Didn't get my turn in time. Give up.
+          if (sending) {
+            throw new IOException("Could not send OOB reponse in time: "
+                + ackStatus);
+          }
+        }
+        sending = true;
+      }
+
+      LOG.info("Sending an out of band ack of type " + ackStatus);
+      try {
+        sendAckUpstreamUnprotected(null, PipelineAck.UNKOWN_SEQNO, 0L, 0L,
+            ackStatus);
+      } finally {
+        // Let others send ack. Unless there are miltiple OOB send
+        // calls, there can be only one waiter, the responder thread.
+        // In any case, only one needs to be notified.
+        synchronized(this) {
+          sending = false;
+          notify();
         }
       }
     }
     
     /** Wait for a packet with given {@code seqno} to be enqueued to ackQueue */
-    synchronized Packet waitForAckHead(long seqno) throws InterruptedException {
-      while (isRunning() && ackQueue.size() == 0) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug(myString + ": seqno=" + seqno +
-                    " waiting for local datanode to finish write.");
+    Packet waitForAckHead(long seqno) throws InterruptedException {
+      synchronized(ackQueue) {
+        while (isRunning() && ackQueue.size() == 0) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug(myString + ": seqno=" + seqno +
+                      " waiting for local datanode to finish write.");
+          }
+          ackQueue.wait();
         }
-        wait();
+        return isRunning() ? ackQueue.getFirst() : null;
       }
-      return isRunning() ? ackQueue.getFirst() : null;
     }
 
     /**
      * wait for all pending packets to be acked. Then shutdown thread.
      */
     @Override
-    public synchronized void close() {
-      while (isRunning() && ackQueue.size() != 0) {
-        try {
-          wait();
-        } catch (InterruptedException e) {
-          running = false;
-          Thread.currentThread().interrupt();
+    public void close() {
+      synchronized(ackQueue) {
+        while (isRunning() && ackQueue.size() != 0) {
+          try {
+            ackQueue.wait();
+          } catch (InterruptedException e) {
+            running = false;
+            Thread.currentThread().interrupt();
+          }
         }
+        if(LOG.isDebugEnabled()) {
+          LOG.debug(myString + ": closing");
+        }
+        running = false;
+        ackQueue.notifyAll();
       }
-      if(LOG.isDebugEnabled()) {
-        LOG.debug(myString + ": closing");
+
+      synchronized(this) {
+        notifyAll();
       }
-      running = false;
-      notifyAll();
     }
 
     /**
@@ -967,6 +1051,14 @@ class BlockReceiver implements Closeable {
               ackRecvNanoTime = System.nanoTime();
               if (LOG.isDebugEnabled()) {
                 LOG.debug(myString + " got " + ack);
+              }
+              // Process an OOB ACK.
+              Status oobStatus = ack.getOOBStatus();
+              if (oobStatus != null) {
+                LOG.info("Relaying an out of band ack of type " + oobStatus);
+                sendAckUpstream(ack, PipelineAck.UNKOWN_SEQNO, 0L, 0L,
+                    Status.SUCCESS);
+                continue;
               }
               seqno = ack.getSeqno();
             }
@@ -1025,6 +1117,9 @@ class BlockReceiver implements Closeable {
              * status back to the client because this datanode has a problem.
              * The upstream datanode will detect that this datanode is bad, and
              * rightly so.
+             *
+             * The receiver thread can also interrupt this thread for sending
+             * an out-of-band response upstream.
              */
             LOG.info(myString + ": Thread is interrupted.");
             running = false;
@@ -1094,17 +1189,64 @@ class BlockReceiver implements Closeable {
     }
     
     /**
+     * The wrapper for the unprotected version. This is only called by
+     * the responder's run() method.
+     *
      * @param ack Ack received from downstream
      * @param seqno sequence number of ack to be sent upstream
      * @param totalAckTimeNanos total ack time including all the downstream
      *          nodes
      * @param offsetInBlock offset in block for the data in packet
+     * @param myStatus the local ack status
      */
     private void sendAckUpstream(PipelineAck ack, long seqno,
         long totalAckTimeNanos, long offsetInBlock,
         Status myStatus) throws IOException {
+      try {
+        // Wait for other sender to finish. Unless there is an OOB being sent,
+        // the responder won't have to wait.
+        synchronized(this) {
+          while(sending) {
+            wait();
+          }
+          sending = true;
+        }
+
+        try {
+          if (!running) return;
+          sendAckUpstreamUnprotected(ack, seqno, totalAckTimeNanos,
+              offsetInBlock, myStatus);
+        } finally {
+          synchronized(this) {
+            sending = false;
+            notify();
+          }
+        }
+      } catch (InterruptedException ie) {
+        // The responder was interrupted. Make it go down without
+        // interrupting the receiver(writer) thread.  
+        running = false;
+      }
+    }
+
+    /**
+     * @param ack Ack received from downstream
+     * @param seqno sequence number of ack to be sent upstream
+     * @param totalAckTimeNanos total ack time including all the downstream
+     *          nodes
+     * @param offsetInBlock offset in block for the data in packet
+     * @param myStatus the local ack status
+     */
+    private void sendAckUpstreamUnprotected(PipelineAck ack, long seqno,
+        long totalAckTimeNanos, long offsetInBlock, Status myStatus)
+        throws IOException {
       Status[] replies = null;
-      if (mirrorError) { // ack read error
+      if (ack == null) {
+        // A new OOB response is being sent from this node. Regardless of
+        // downstream nodes, reply should contain one reply.
+        replies = new Status[1];
+        replies[0] = myStatus;
+      } else if (mirrorError) { // ack read error
         replies = MIRROR_ERROR_STATUS;
       } else {
         short ackLen = type == PacketResponderType.LAST_IN_PIPELINE ? 0 : ack
@@ -1152,9 +1294,11 @@ class BlockReceiver implements Closeable {
      * 
      * This should be called only when the ack queue is not empty
      */
-    private synchronized void removeAckHead() {
-      ackQueue.removeFirst();
-      notifyAll();
+    private void removeAckHead() {
+      synchronized(ackQueue) {
+        ackQueue.removeFirst();
+        ackQueue.notifyAll();
+      }
     }
   }
   

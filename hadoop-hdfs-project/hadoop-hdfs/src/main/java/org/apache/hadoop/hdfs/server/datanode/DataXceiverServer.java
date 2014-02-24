@@ -20,8 +20,7 @@ package org.apache.hadoop.hdfs.server.datanode;
 import java.io.IOException;
 import java.net.SocketTimeoutException;
 import java.nio.channels.AsynchronousCloseException;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.HashMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configuration;
@@ -45,7 +44,8 @@ class DataXceiverServer implements Runnable {
   
   private final PeerServer peerServer;
   private final DataNode datanode;
-  private final Set<Peer> peers = new HashSet<Peer>();
+  private final HashMap<Peer, Thread> peers = new HashMap<Peer, Thread>();
+  private boolean closed = false;
   
   /**
    * Maximal number of concurrent xceivers per node.
@@ -127,7 +127,7 @@ class DataXceiverServer implements Runnable {
   @Override
   public void run() {
     Peer peer = null;
-    while (datanode.shouldRun) {
+    while (datanode.shouldRun && !datanode.shutdownForUpgrade) {
       try {
         peer = peerServer.accept();
 
@@ -147,7 +147,7 @@ class DataXceiverServer implements Runnable {
       } catch (AsynchronousCloseException ace) {
         // another thread closed our listener socket - that's expected during shutdown,
         // but not in other circumstances
-        if (datanode.shouldRun) {
+        if (datanode.shouldRun && !datanode.shutdownForUpgrade) {
           LOG.warn(datanode.getDisplayName() + ":DataXceiverServer: ", ace);
         }
       } catch (IOException ie) {
@@ -170,35 +170,82 @@ class DataXceiverServer implements Runnable {
         datanode.shouldRun = false;
       }
     }
-    synchronized (this) {
-      for (Peer p : peers) {
-        IOUtils.cleanup(LOG, p);
-      }
-    }
+
+    // Close the server to stop reception of more requests.
     try {
       peerServer.close();
+      closed = true;
     } catch (IOException ie) {
       LOG.warn(datanode.getDisplayName()
           + " :DataXceiverServer: close exception", ie);
     }
+
+    // if in restart prep stage, notify peers before closing them.
+    if (datanode.shutdownForUpgrade) {
+      restartNotifyPeers();
+      // Each thread needs some time to process it. If a thread needs
+      // to send an OOB message to the client, but blocked on network for
+      // long time, we need to force its termination.
+      LOG.info("Shutting down DataXceiverServer before restart");
+      // Allow roughly up to 2 seconds.
+      for (int i = 0; getNumPeers() > 0 && i < 10; i++) {
+        try {
+          Thread.sleep(200);
+        } catch (InterruptedException e) {
+          // ignore
+        }
+      }
+    }
+    // Close all peers.
+    closeAllPeers();
   }
 
   void kill() {
-    assert datanode.shouldRun == false :
-      "shoudRun should be set to false before killing";
+    assert (datanode.shouldRun == false || datanode.shutdownForUpgrade) :
+      "shoudRun should be set to false or restarting should be true"
+      + " before killing";
     try {
       this.peerServer.close();
+      this.closed = true;
     } catch (IOException ie) {
       LOG.warn(datanode.getDisplayName() + ":DataXceiverServer.kill(): ", ie);
     }
   }
   
-  synchronized void addPeer(Peer peer) {
-    peers.add(peer);
+  synchronized void addPeer(Peer peer, Thread t) throws IOException {
+    if (closed) {
+      throw new IOException("Server closed.");
+    }
+    peers.put(peer, t);
   }
 
   synchronized void closePeer(Peer peer) {
     peers.remove(peer);
     IOUtils.cleanup(null, peer);
+  }
+
+  // Notify all peers of the shutdown and restart.
+  // datanode.shouldRun should still be true and datanode.restarting should
+  // be set true before calling this method.
+  synchronized void restartNotifyPeers() {
+    assert (datanode.shouldRun == true && datanode.shutdownForUpgrade);
+    for (Peer p : peers.keySet()) {
+      // interrupt each and every DataXceiver thread.
+      peers.get(p).interrupt();
+    }
+  }
+
+  // Close all peers and clear the map.
+  synchronized void closeAllPeers() {
+    LOG.info("Closing all peers.");
+    for (Peer p : peers.keySet()) {
+      IOUtils.cleanup(LOG, p);
+    }
+    peers.clear();
+  }
+
+  // Return the number of peers.
+  synchronized int getNumPeers() {
+    return peers.size();
   }
 }

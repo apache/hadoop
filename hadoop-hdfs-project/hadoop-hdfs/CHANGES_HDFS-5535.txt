@@ -82,3 +82,4 @@ HDFS-5535 subtasks:
     HDFS-6004. Change DFSAdmin for rolling upgrade commands. (szetszwo via
     Arpit Agarwal)
 
+    HDFS-5583. Make DN send an OOB Ack on shutdown before restarting. (kihwal)
