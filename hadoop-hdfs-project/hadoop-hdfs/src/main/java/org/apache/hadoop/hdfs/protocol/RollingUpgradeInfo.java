@@ -28,19 +28,22 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class RollingUpgradeInfo extends RollingUpgradeStatus {
-  private long startTime;
-  private long finalizeTime;
+  private final long startTime;
+  private final long finalizeTime;
+  private final boolean createdRollbackImages;
   
-  public RollingUpgradeInfo(String blockPoolId, long startTime) {
-    this(blockPoolId, startTime, 0L);
-  }
-
-  public RollingUpgradeInfo(String blockPoolId, long startTime, long finalizeTime) {
+  public RollingUpgradeInfo(String blockPoolId, boolean createdRollbackImages,
+      long startTime, long finalizeTime) {
     super(blockPoolId);
+    this.createdRollbackImages = createdRollbackImages;
     this.startTime = startTime;
     this.finalizeTime = finalizeTime;
   }
   
+  public boolean createdRollbackImages() {
+    return createdRollbackImages;
+  }
+
   public boolean isStarted() {
     return startTime != 0;
   }

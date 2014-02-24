@@ -347,6 +347,7 @@ message RollingUpgradeInfoProto {
   required RollingUpgradeStatusProto status = 1;
   required uint64 startTime = 2;
   required uint64 finalizeTime = 3;
+  required bool createdRollbackImages = 4;
 }
 
 message RollingUpgradeResponseProto {

@@ -868,7 +868,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
     switch(action) {
     case QUERY:
       return namesystem.queryRollingUpgrade();
-    case START:
+    case PREPARE:
       return namesystem.startRollingUpgrade();
     case FINALIZE:
       return namesystem.finalizeRollingUpgrade();

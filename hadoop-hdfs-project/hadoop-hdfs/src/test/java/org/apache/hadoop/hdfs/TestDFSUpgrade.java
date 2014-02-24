@@ -236,7 +236,7 @@ public class TestDFSUpgrade {
       try {
         final DistributedFileSystem dfs = cluster.getFileSystem();
         dfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
-        dfs.rollingUpgrade(RollingUpgradeAction.START);
+        dfs.rollingUpgrade(RollingUpgradeAction.PREPARE);
         fail();
       } catch(RemoteException re) {
         assertEquals(InconsistentFSStateException.class.getName(),
@@ -379,7 +379,7 @@ public class TestDFSUpgrade {
       try {
         final DistributedFileSystem dfs = cluster.getFileSystem();
         dfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
-        dfs.rollingUpgrade(RollingUpgradeAction.START);
+        dfs.rollingUpgrade(RollingUpgradeAction.PREPARE);
         fail();
       } catch(RemoteException re) {
         assertEquals(InconsistentFSStateException.class.getName(),

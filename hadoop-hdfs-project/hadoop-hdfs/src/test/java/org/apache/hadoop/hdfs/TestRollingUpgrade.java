@@ -83,7 +83,7 @@ public class TestRollingUpgrade {
         runCmd(dfsadmin, true, "-rollingUpgrade");
 
         //start rolling upgrade
-        runCmd(dfsadmin, true, "-rollingUpgrade", "start");
+        runCmd(dfsadmin, true, "-rollingUpgrade", "prepare");
 
         //query rolling upgrade
         runCmd(dfsadmin, true, "-rollingUpgrade", "query");
@@ -182,7 +182,7 @@ public class TestRollingUpgrade {
         dfs.mkdirs(foo);
   
         //start rolling upgrade
-        info1 = dfs.rollingUpgrade(RollingUpgradeAction.START);
+        info1 = dfs.rollingUpgrade(RollingUpgradeAction.PREPARE);
         LOG.info("START\n" + info1);
 
         //query rolling upgrade
@@ -293,7 +293,7 @@ public class TestRollingUpgrade {
     final DistributedFileSystem dfs = cluster.getFileSystem();
 
     //start rolling upgrade
-    dfs.rollingUpgrade(RollingUpgradeAction.START);
+    dfs.rollingUpgrade(RollingUpgradeAction.PREPARE);
 
     dfs.mkdirs(bar);
     
@@ -358,7 +358,7 @@ public class TestRollingUpgrade {
       dfs.mkdirs(foo);
 
       // start rolling upgrade
-      RollingUpgradeInfo info = dfs.rollingUpgrade(RollingUpgradeAction.START);
+      RollingUpgradeInfo info = dfs.rollingUpgrade(RollingUpgradeAction.PREPARE);
       Assert.assertTrue(info.isStarted());
       dfs.mkdirs(bar);
       dfs.close();
@@ -417,7 +417,7 @@ public class TestRollingUpgrade {
           .getStorage();
 
       // start rolling upgrade
-      RollingUpgradeInfo info = dfs.rollingUpgrade(RollingUpgradeAction.START);
+      RollingUpgradeInfo info = dfs.rollingUpgrade(RollingUpgradeAction.PREPARE);
       Assert.assertTrue(info.isStarted());
       dfs.mkdirs(bar);
       // The NN should have a copy of the fsimage in case of rollbacks.

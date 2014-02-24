@@ -7176,11 +7176,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       getFSImage().saveNamespace(this, NameNodeFile.IMAGE_ROLLBACK, null);
       LOG.info("Successfully saved namespace for preparing rolling upgrade.");
     }
-    setRollingUpgradeInfo(startTime);
+    setRollingUpgradeInfo(true, startTime);
   }
 
-  void setRollingUpgradeInfo(long startTime) {
-    rollingUpgradeInfo = new RollingUpgradeInfo(blockPoolId, startTime);
+  void setRollingUpgradeInfo(boolean createdRollbackImages, long startTime) {
+    rollingUpgradeInfo = new RollingUpgradeInfo(blockPoolId,
+        createdRollbackImages, startTime, 0L);
   }
 
   RollingUpgradeInfo getRollingUpgradeInfo() {
@@ -7234,7 +7235,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
     final long startTime = rollingUpgradeInfo.getStartTime();
     rollingUpgradeInfo = null;
-    return new RollingUpgradeInfo(blockPoolId, startTime, finalizeTime);
+    return new RollingUpgradeInfo(blockPoolId, true, startTime, finalizeTime);
   }
 
   long addCacheDirective(CacheDirectiveInfo directive, EnumSet<CacheFlag> flags)

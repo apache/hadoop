@@ -79,3 +79,6 @@ HDFS-5535 subtasks:
     HDFS-6005. Simplify Datanode rollback and downgrade. (Suresh Srinivas via
     Arpit Agarwal)
 
+    HDFS-6004. Change DFSAdmin for rolling upgrade commands. (szetszwo via
+    Arpit Agarwal)
+

@@ -102,7 +102,7 @@ public class TestRollingUpgradeRollback {
 
       // start rolling upgrade
       Assert.assertEquals(0,
-          dfsadmin.run(new String[] { "-rollingUpgrade", "start" }));
+          dfsadmin.run(new String[] { "-rollingUpgrade", "prepare" }));
       // create new directory
       dfs.mkdirs(bar);
 
@@ -161,7 +161,7 @@ public class TestRollingUpgradeRollback {
 
       // start rolling upgrade
       Assert.assertEquals(0,
-          dfsadmin.run(new String[] { "-rollingUpgrade", "start" }));
+          dfsadmin.run(new String[] { "-rollingUpgrade", "prepare" }));
       // create new directory
       dfs.mkdirs(bar);
       dfs.close();
@@ -216,7 +216,7 @@ public class TestRollingUpgradeRollback {
       dfs.mkdirs(foo);
 
       // start rolling upgrade
-      RollingUpgradeInfo info = dfs.rollingUpgrade(RollingUpgradeAction.START);
+      RollingUpgradeInfo info = dfs.rollingUpgrade(RollingUpgradeAction.PREPARE);
       Assert.assertTrue(info.isStarted());
 
       // create new directory

@@ -281,7 +281,7 @@ public final class FSImageFormatProtobuf {
       fsn.setLastAllocatedBlockId(s.getLastAllocatedBlockId());
       imgTxId = s.getTransactionId();
       if (s.hasRollingUpgradeStartTime()) {
-        fsn.setRollingUpgradeInfo(s.getRollingUpgradeStartTime());
+        fsn.setRollingUpgradeInfo(true, s.getRollingUpgradeStartTime());
       }
     }
 

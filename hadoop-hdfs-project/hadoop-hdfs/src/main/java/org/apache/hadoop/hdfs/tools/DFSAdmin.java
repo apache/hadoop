@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.tools;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URL;
@@ -280,11 +281,11 @@ public class DFSAdmin extends FsShell {
 
   private static class RollingUpgradeCommand {
     static final String NAME = "rollingUpgrade";
-    static final String USAGE = "-"+NAME+" [<query|start|finalize>]";
+    static final String USAGE = "-"+NAME+" [<query|prepare|finalize>]";
     static final String DESCRIPTION = USAGE + ":\n"
-        + "     query: query current rolling upgrade status.\n"
-        + "     start: start rolling upgrade."
-        + "  finalize: finalize rolling upgrade.";
+        + "     query: query the current rolling upgrade status.\n"
+        + "   prepare: prepare a new rolling upgrade."
+        + "  finalize: finalize the current rolling upgrade.";
 
     /** Check if a command is the rollingUpgrade command
      * 
@@ -293,6 +294,27 @@ public class DFSAdmin extends FsShell {
      */
     static boolean matches(String cmd) {
       return ("-"+NAME).equals(cmd); 
+    }
+
+    private static void printMessage(RollingUpgradeInfo info,
+        PrintStream out) {
+      if (info != null && info.isStarted()) {
+        if (!info.createdRollbackImages()) {
+          out.println(
+              "Preparing for upgrade. Data is being saved for rollback."
+              + "\nRun \"dfsadmin -rollingUpgrade query\" to check the status"
+              + "\nfor proceeding with rolling upgrade");
+            out.println(info);
+        } else if (!info.isFinalized()) {
+          out.println("Proceed with rolling upgrade:");
+          out.println(info);
+        } else {
+          out.println("Rolling upgrade is finalized.");
+          out.println(info);
+        }
+      } else {
+        out.println("There is no rolling upgrade in progress.");
+      }
     }
 
     static int run(DistributedFileSystem dfs, String[] argv, int idx) throws IOException {
@@ -308,24 +330,15 @@ public class DFSAdmin extends FsShell {
       final RollingUpgradeInfo info = dfs.rollingUpgrade(action);
       switch(action){
       case QUERY:
-        if (info != null && info.isStarted()) {
-          System.out.println("Rolling upgrade is in progress:");
-          System.out.println(info);
-        } else {
-          System.out.println("There is no rolling upgrade in progress.");
-        }
         break;
-      case START:
+      case PREPARE:
         Preconditions.checkState(info.isStarted());
-        System.out.println("Rolling upgrade is started:");
-        System.out.println(info);
         break;
       case FINALIZE:
         Preconditions.checkState(info.isFinalized());
-        System.out.println("Rolling upgrade is finalized:");
-        System.out.println(info);
         break;
       }
+      printMessage(info, System.out);
       return 0;
     }
   }
@@ -745,17 +758,17 @@ public class DFSAdmin extends FsShell {
     String disallowSnapshot = "-disallowSnapshot <snapshotDir>:\n" +
         "\tDo not allow snapshots to be taken on a directory any more.\n";
 
-    String shutdownDatanode = "-shutdownDatanode <datanode_host:ipc_port> [upgrade]\n" +
-        "\tShut down the datanode. If an optional argument \"upgrade\" is\n" +
-        "\tpassed, the clients will be advised to wait for the datanode to\n" +
-        "\trestart and the fast start-up mode will be enabled. Clients will\n" +
-        "\ttimeout and ignore the datanode, if the restart does not happen\n" +
-        "\tin time. The fast start-up mode will also be disabled, if restart\n" +
-        "\tis delayed too much.\n";
+    String shutdownDatanode = "-shutdownDatanode <datanode_host:ipc_port> [upgrade]\n"
+        + "\tSubmit a shutdown request for the given datanode. If an optional\n"
+        + "\t\"upgrade\" argument is specified, clients accessing the datanode\n"
+        + "\twill be advised to wait for it to restart and the fast start-up\n"
+        + "\tmode will be enabled. When the restart does not happen in time,\n"
+        + "\tclients will timeout and ignore the datanode. In such case, the\n"
+        + "\tfast start-up mode will also be disabled.\n";
 
-    String getDatanodeInfo = "-getDatanodeInfo <datanode_host:ipc_port>\n" +
-        "\tCheck the datanode for liveness. If the datanode responds,\n" +
-        "\timore information about the datanode is printed.\n";
+    String getDatanodeInfo = "-getDatanodeInfo <datanode_host:ipc_port>\n"
+        + "\tGet the information about the given datanode. This command can\n"
+        + "\tbe used for checking if a datanode is alive.\n";
     
     String help = "-help [cmd]: \tDisplays help for the given command or all commands if none\n" +
       "\t\tis specified.\n";
@@ -1401,10 +1414,11 @@ public class DFSAdmin extends FsShell {
   }
 
   private int shutdownDatanode(String[] argv, int i) throws IOException {
-    ClientDatanodeProtocol dnProxy = getDataNodeProxy(argv[i]);
+    final String dn = argv[i];
+    ClientDatanodeProtocol dnProxy = getDataNodeProxy(dn);
     boolean upgrade = false;
     if (argv.length-1 == i+1) {
-      if ("upgrade".equals(argv[i+1])) {
+      if ("upgrade".equalsIgnoreCase(argv[i+1])) {
         upgrade = true;
       } else {
         printUsage("-shutdownDatanode");
@@ -1412,6 +1426,7 @@ public class DFSAdmin extends FsShell {
       }
     }
     dnProxy.shutdownDatanode(upgrade);
+    System.out.println("Submitted a shutdown request to datanode " + dn);
     return 0;
   }
 
