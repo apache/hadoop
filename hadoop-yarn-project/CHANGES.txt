@@ -28,6 +28,8 @@ Release 2.5.0 - UNRELEASED
     YARN-1736. FS: AppSchedulable.assignContainer's priority argument is 
     redundant. (Naren Koneru via kasha)
 
+    YARN-1678. Fair scheduler gabs incessantly about reservations (Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES 
