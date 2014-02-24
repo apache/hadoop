@@ -18,22 +18,10 @@
 
 package org.apache.hadoop.hdfs.server.datanode;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.RandomAccessFile;
-import java.nio.channels.FileLock;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.fs.HardLink;
-import org.apache.hadoop.fs.LocalFileSystem;
-import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -49,6 +37,11 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.DiskChecker;
+
+import java.io.*;
+import java.nio.channels.FileLock;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /** 
  * Data storage information file.
@@ -95,7 +88,7 @@ public class DataStorage extends Storage {
         new ConcurrentHashMap<String, Boolean>());
   }
   
-  public StorageInfo getBPStorage(String bpid) {
+  public BlockPoolSliceStorage getBPStorage(String bpid) {
     return bpStorageMap.get(bpid);
   }
   
@@ -120,9 +113,6 @@ public class DataStorage extends Storage {
 
   /**
    * Enable trash for the specified block pool storage.
-   *
-   * @param bpid
-   * @param  inProgress
    */
   public void enableTrash(String bpid) {
     if (trashEnabledBpids.add(bpid)) {
@@ -130,18 +120,16 @@ public class DataStorage extends Storage {
     }
   }
 
-  /**
-   * Disable trash for the specified block pool storage.
-   * Existing files in trash are purged i.e. permanently deleted.
-   *
-   * @param bpid
-   * @param  inProgress
-   */
-  public void disableAndPurgeTrash(String bpid) {
-    if (trashEnabledBpids.remove(bpid)) {
-      LOG.info("Disabled trash for bpid " + bpid);
+  public void restoreTrash(String bpid) {
+    if (trashEnabledBpids.contains(bpid)) {
+      getBPStorage(bpid).restoreTrash();
+      trashEnabledBpids.remove(bpid);
+      LOG.info("Restored trash for bpid " + bpid);
     }
-    ((BlockPoolSliceStorage) getBPStorage(bpid)).emptyTrash();
+  }
+
+  public boolean trashEnabled(String bpid) {
+    return trashEnabledBpids.contains(bpid);
   }
 
   /**
@@ -150,7 +138,6 @@ public class DataStorage extends Storage {
    * 'trash' directory. If there is a subsequent rollback, then the block
    * files will be restored from trash.
    *
-   * @param blockFile
    * @return trash directory if rolling upgrade is in progress, null
    *         otherwise.
    */
@@ -242,7 +229,7 @@ public class DataStorage extends Storage {
     // 3. Update all storages. Some of them might have just been formatted.
     this.writeAll();
     
-    // 4. mark DN storage is initilized
+    // 4. mark DN storage is initialized
     this.initialized = true;
   }
 
@@ -724,9 +711,11 @@ public class DataStorage extends Storage {
   
   /*
    * Finalize the upgrade for a block pool
+   * This also empties trash created during rolling upgrade and disables
+   * trash functionality.
    */
   void finalizeUpgrade(String bpID) throws IOException {
-    // To handle finalizing a snapshot taken at datanode level while 
+    // To handle finalizing a snapshot taken at datanode level while
     // upgrading to federation, if datanode level snapshot previous exists, 
     // then finalize it. Else finalize the corresponding BP.
     for (StorageDirectory sd : storageDirs) {

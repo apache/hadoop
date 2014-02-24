@@ -18,15 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.datanode;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.Properties;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.HardLink;
@@ -40,7 +32,14 @@ import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.util.Daemon;
 
-import com.google.common.annotations.VisibleForTesting;
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.Properties;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Manages storage for the set of BlockPoolSlices which share a particular 
@@ -174,7 +173,7 @@ public class BlockPoolSliceStorage extends Storage {
 
   /**
    * Format a block pool slice storage. 
-   * @param sd the block pool storage
+   * @param bpSdir the block pool storage
    * @param nsInfo the name space info
    * @throws IOException Signals that an I/O exception has occurred.
    */
@@ -212,7 +211,7 @@ public class BlockPoolSliceStorage extends Storage {
     
     if (!blockpoolID.equals("") && !blockpoolID.equals(bpid)) {
       throw new InconsistentFSStateException(storage,
-          "Unexepcted blockpoolID " + bpid + " . Expected " + blockpoolID);
+          "Unexpected blockpoolID " + bpid + ". Expected " + blockpoolID);
     }
     blockpoolID = bpid;
   }
@@ -236,7 +235,6 @@ public class BlockPoolSliceStorage extends Storage {
    * Upgrade if this.LV > LAYOUT_VERSION || this.cTime < namenode.cTime Regular
    * startup if this.LV = LAYOUT_VERSION && this.cTime = namenode.cTime
    * 
-   * @param dn DataNode to which this storage belongs to
    * @param sd storage directory <SD>/current/<bpid>
    * @param nsInfo namespace info
    * @param startOpt startup option
@@ -246,13 +244,13 @@ public class BlockPoolSliceStorage extends Storage {
       NamespaceInfo nsInfo, StartupOption startOpt) throws IOException {
     if (startOpt == StartupOption.ROLLBACK) {
       doRollback(sd, nsInfo); // rollback if applicable
-    } else if (StartupOption.isRollingUpgradeRollback(startOpt)) {
-      File trashRoot = getTrashRootDir(sd);
-      int filesRestored =
-          trashRoot.exists() ? restoreBlockFilesFromTrash(trashRoot) : 0;
-      LOG.info("Restored " + filesRestored + " block files from trash.");
+    } else {
+      // Restore all the files in the trash. The restored files are retained
+      // during rolling upgrade rollback. They are deleted during rolling
+      // upgrade downgrade.
+      int restored = restoreBlockFilesFromTrash(getTrashRootDir(sd));
+      LOG.info("Restored " + restored + " block files from trash.");
     }
-    
     readProperties(sd);
     checkVersionUpgradable(this.layoutVersion);
     assert this.layoutVersion >= HdfsConstants.DATANODE_LAYOUT_VERSION 
@@ -335,7 +333,8 @@ public class BlockPoolSliceStorage extends Storage {
     File bpTmpDir = bpSd.getPreviousTmp();
     assert !bpTmpDir.exists() : "previous.tmp directory must not exist.";
     
-    // 2. Rename <SD>/curernt/<bpid>/current to <SD>/curernt/<bpid>/previous.tmp
+    // 2. Rename <SD>/current/<bpid>/current to
+    //    <SD>/current/<bpid>/previous.tmp
     rename(bpCurDir, bpTmpDir);
     
     // 3. Create new <SD>/current with block files hardlinks and VERSION
@@ -346,7 +345,8 @@ public class BlockPoolSliceStorage extends Storage {
     this.cTime = nsInfo.getCTime();
     writeProperties(bpSd);
     
-    // 4.rename <SD>/curernt/<bpid>/previous.tmp to <SD>/curernt/<bpid>/previous
+    // 4.rename <SD>/current/<bpid>/previous.tmp to
+    // <SD>/current/<bpid>/previous
     rename(bpTmpDir, bpPrevDir);
     LOG.info("Upgrade of block pool " + blockpoolID + " at " + bpSd.getRoot()
         + " is complete");
@@ -380,15 +380,17 @@ public class BlockPoolSliceStorage extends Storage {
   /**
    * Restore all files from the trash directory to their corresponding
    * locations under current/
-   *
-   * @param trashRoot
-   * @throws IOException 
    */
-  private int restoreBlockFilesFromTrash(File trashRoot) throws IOException {
+  private int restoreBlockFilesFromTrash(File trashRoot)
+      throws  IOException {
     int filesRestored = 0;
-    File restoreDirectory = null;
+    File[] children = trashRoot.exists() ? trashRoot.listFiles() : null;
+    if (children == null) {
+      return 0;
+    }
 
-    for (File child : trashRoot.listFiles()) {
+    File restoreDirectory = null;
+    for (File child : children) {
       if (child.isDirectory()) {
         // Recurse to process subdirectories.
         filesRestored += restoreBlockFilesFromTrash(child);
@@ -408,7 +410,7 @@ public class BlockPoolSliceStorage extends Storage {
       }
       ++filesRestored;
     }
-
+    FileUtil.fullyDelete(trashRoot);
     return filesRestored;
   }
 
@@ -527,9 +529,6 @@ public class BlockPoolSliceStorage extends Storage {
 
   /**
    * gets the data node storage directory based on block pool storage
-   * 
-   * @param bpRoot
-   * @return
    */
   private static String getDataNodeStorageRoot(String bpRoot) {
     Matcher matcher = BLOCK_POOL_PATH_PATTERN.matcher(bpRoot);
@@ -571,7 +570,6 @@ public class BlockPoolSliceStorage extends Storage {
    * The subdirectory structure under trash/ mirrors that under current/ to keep
    * implicit memory of where the files are to be restored (if necessary).
    *
-   * @param blockFile
    * @return the trash directory for a given block file that is being deleted.
    */
   public String getTrashDirectory(File blockFile) {
@@ -587,7 +585,6 @@ public class BlockPoolSliceStorage extends Storage {
    * The subdirectory structure under trash/ mirrors that under current/ to keep
    * implicit memory of where the files are to be restored.
    *
-   * @param blockFile
    * @return the target directory to restore a previously deleted block file.
    */
   @VisibleForTesting
@@ -601,9 +598,26 @@ public class BlockPoolSliceStorage extends Storage {
   /**
    * Delete all files and directories in the trash directories.
    */
-  public void emptyTrash() {
+  public void restoreTrash() {
     for (StorageDirectory sd : storageDirs) {
-      FileUtil.fullyDelete(getTrashRootDir(sd));
+      File trashRoot = getTrashRootDir(sd);
+      try {
+        restoreBlockFilesFromTrash(trashRoot);
+        FileUtil.fullyDelete(getTrashRootDir(sd));
+      } catch (IOException ioe) {
+        LOG.warn("Restoring trash failed for storage directory " + sd);
+      }
     }
+  }
+
+  /** trash is enabled if at least one storage directory contains trash root */
+  @VisibleForTesting
+  public boolean trashEnabled() {
+    for (StorageDirectory sd : storageDirs) {
+      if (getTrashRootDir(sd).exists()) {
+        return true;
+      }
+    }
+    return false;
   }
 }

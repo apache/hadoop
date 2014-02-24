@@ -75,3 +75,7 @@ HDFS-5535 subtasks:
     HDFS-5994. Fix TestDataNodeRollingUpgrade.  (Arpit Agarwal via szetszwo)
 
     HDFS-5999. Do not create rollback fsimage when it already exists. (jing9)
+
+    HDFS-6005. Simplify Datanode rollback and downgrade. (Suresh Srinivas via
+    Arpit Agarwal)
+

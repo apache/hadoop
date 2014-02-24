@@ -17,10 +17,6 @@
  */
 package org.apache.hadoop.hdfs;
 
-import java.io.File;
-import java.io.FilenameFilter;
-import java.io.IOException;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -39,6 +35,10 @@ import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.File;
+import java.io.FilenameFilter;
+import java.io.IOException;
+
 
 /**
  * This class tests rolling upgrade.
@@ -46,8 +46,13 @@ import org.junit.Test;
 public class TestRollingUpgrade {
   private static final Log LOG = LogFactory.getLog(TestRollingUpgrade.class);
 
-  private void runCmd(DFSAdmin dfsadmin, String... args) throws Exception {
-    Assert.assertEquals(0, dfsadmin.run(args));
+  public static void runCmd(DFSAdmin dfsadmin, boolean success,
+      String... args) throws  Exception {
+    if (success) {
+      Assert.assertEquals(0, dfsadmin.run(args));
+    } else {
+      Assert.assertTrue(dfsadmin.run(args) != 0);
+    }
   }
 
   /**
@@ -71,30 +76,29 @@ public class TestRollingUpgrade {
         final DFSAdmin dfsadmin = new DFSAdmin(conf);
         dfs.mkdirs(foo);
 
-        {
-          //illegal argument
-          final String[] args = {"-rollingUpgrade", "abc"};
-          Assert.assertTrue(dfsadmin.run(args) != 0);
-        }
+        //illegal argument "abc" to rollingUpgrade option
+        runCmd(dfsadmin, false, "-rollingUpgrade", "abc");
 
         //query rolling upgrade
-        runCmd(dfsadmin, "-rollingUpgrade");
+        runCmd(dfsadmin, true, "-rollingUpgrade");
 
         //start rolling upgrade
-        runCmd(dfsadmin, "-rollingUpgrade", "start");
+        runCmd(dfsadmin, true, "-rollingUpgrade", "start");
 
         //query rolling upgrade
-        runCmd(dfsadmin, "-rollingUpgrade", "query");
+        runCmd(dfsadmin, true, "-rollingUpgrade", "query");
 
         dfs.mkdirs(bar);
         
         //finalize rolling upgrade
-        runCmd(dfsadmin, "-rollingUpgrade", "finalize");
+        runCmd(dfsadmin, true, "-rollingUpgrade", "finalize");
 
         dfs.mkdirs(baz);
 
-        runCmd(dfsadmin, "-rollingUpgrade");
+        runCmd(dfsadmin, true, "-rollingUpgrade");
 
+        // All directories created before upgrade, when upgrade in progress and
+        // after upgrade finalize exists
         Assert.assertTrue(dfs.exists(foo));
         Assert.assertTrue(dfs.exists(bar));
         Assert.assertTrue(dfs.exists(baz));
@@ -104,6 +108,7 @@ public class TestRollingUpgrade {
         dfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
       }
 
+      // Ensure directories exist after restart
       cluster.restartNameNode();
       {
         final DistributedFileSystem dfs = cluster.getFileSystem();

@@ -1055,13 +1055,17 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   }
 
   @Override
-  public void enableDeleteToTrash(String bpid) {
+  public void enableTrash(String bpid) {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public void disableAndPurgeTrashStorage(String bpid) {
-    // do nothing
+  public void restoreTrash(String bpid) {
+  }
+
+  @Override
+  public boolean trashEnabled(String bpid) {
+    return false;
   }
 
   @Override

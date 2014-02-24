@@ -417,11 +417,16 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
    * moved to a separate trash directory instead of being deleted immediately.
    * This can be useful for example during rolling upgrades.
    */
-  public void enableDeleteToTrash(String bpid);
+  public void enableTrash(String bpid);
 
   /**
-   * Disable 'trash' for the given dataset and purge existing files in 'trash'.
+   * Restore trash
    */
-  public void disableAndPurgeTrashStorage(String bpid);
+  public void restoreTrash(String bpid);
+
+  /**
+   * @return true when trash is enabled
+   */
+  public boolean trashEnabled(String bpid);
 }
 

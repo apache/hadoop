@@ -83,8 +83,6 @@ public class TestDatanodeStartupOptions {
     checkExpected(true, StartupOption.REGULAR, conf, "-regular");
     checkExpected(true, StartupOption.REGULAR, conf, "-REGULAR");
     checkExpected(true, StartupOption.ROLLBACK, conf, "-rollback");
-    checkExpected(true, StartupOption.ROLLINGUPGRADE, conf, "-rollingupgrade", "rollback");
-    checkExpected(true, StartupOption.ROLLINGUPGRADE, conf, "-rollingupgraDE", "ROLLBack");
   }
 
   /**
@@ -94,7 +92,5 @@ public class TestDatanodeStartupOptions {
   public void testStartupFailure() {
     checkExpected(false, StartupOption.REGULAR, conf, "unknownoption");
     checkExpected(false, StartupOption.REGULAR, conf, "-regular -rollback");
-    checkExpected(false, StartupOption.REGULAR, conf, "-rollingupgrade", "downgrade");
-    checkExpected(false, StartupOption.REGULAR, conf, "-rollingupgrade", "unknownoption");
   }
 }
