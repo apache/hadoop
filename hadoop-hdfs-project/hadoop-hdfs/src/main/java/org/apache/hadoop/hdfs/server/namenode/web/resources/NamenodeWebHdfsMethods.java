@@ -101,6 +101,7 @@ import org.apache.hadoop.hdfs.web.resources.UriFsPathParam;
 import org.apache.hadoop.hdfs.web.resources.UserParam;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.Server;
+import org.apache.hadoop.net.NetworkTopology.InvalidTopologyException;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -242,8 +243,12 @@ public class NamenodeWebHdfsMethods {
       final String path, final HttpOpParam.Op op, final long openOffset,
       final long blocksize,
       final Param<?, ?>... parameters) throws URISyntaxException, IOException {
-    final DatanodeInfo dn = chooseDatanode(namenode, path, op, openOffset,
-        blocksize);
+    final DatanodeInfo dn;
+    try {
+      dn = chooseDatanode(namenode, path, op, openOffset, blocksize);
+    } catch (InvalidTopologyException ite) {
+      throw new IOException("Failed to find datanode, suggest to check cluster health.", ite);
+    }
 
     final String delegationQuery;
     if (!UserGroupInformation.isSecurityEnabled()) {
