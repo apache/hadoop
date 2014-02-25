@@ -76,19 +76,19 @@ public class ApplicationHistoryClientService extends AbstractService {
     Configuration conf = getConfig();
     YarnRPC rpc = YarnRPC.create(conf);
     InetSocketAddress address =
-        conf.getSocketAddr(YarnConfiguration.AHS_ADDRESS,
-          YarnConfiguration.DEFAULT_AHS_ADDRESS,
-          YarnConfiguration.DEFAULT_AHS_PORT);
+        conf.getSocketAddr(YarnConfiguration.TIMELINE_SERVICE_ADDRESS,
+          YarnConfiguration.DEFAULT_TIMELINE_SERVICE_ADDRESS,
+          YarnConfiguration.DEFAULT_TIMELINE_SERVICE_PORT);
 
     server =
         rpc.getServer(ApplicationHistoryProtocol.class, protocolHandler,
           address, conf, null, conf.getInt(
-            YarnConfiguration.AHS_CLIENT_THREAD_COUNT,
-            YarnConfiguration.DEFAULT_AHS_CLIENT_THREAD_COUNT));
+            YarnConfiguration.TIMELINE_SERVICE_HANDLER_THREAD_COUNT,
+            YarnConfiguration.DEFAULT_TIMELINE_SERVICE_CLIENT_THREAD_COUNT));
 
     server.start();
     this.bindAddress =
-        conf.updateConnectAddr(YarnConfiguration.AHS_ADDRESS,
+        conf.updateConnectAddr(YarnConfiguration.TIMELINE_SERVICE_ADDRESS,
           server.getListenerAddress());
     LOG.info("Instantiated ApplicationHistoryClientService at "
         + this.bindAddress);

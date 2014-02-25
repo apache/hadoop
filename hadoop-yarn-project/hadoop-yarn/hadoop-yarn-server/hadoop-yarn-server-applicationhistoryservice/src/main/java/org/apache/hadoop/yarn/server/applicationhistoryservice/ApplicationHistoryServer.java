@@ -33,8 +33,8 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
-import org.apache.hadoop.yarn.server.applicationhistoryservice.apptimeline.ApplicationTimelineStore;
-import org.apache.hadoop.yarn.server.applicationhistoryservice.apptimeline.LeveldbApplicationTimelineStore;
+import org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.TimelineStore;
+import org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.LeveldbTimelineStore;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.webapp.AHSWebApp;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebApps;
@@ -54,7 +54,7 @@ public class ApplicationHistoryServer extends CompositeService {
 
   ApplicationHistoryClientService ahsClientService;
   ApplicationHistoryManager historyManager;
-  ApplicationTimelineStore timelineStore;
+  TimelineStore timelineStore;
   private WebApp webApp;
 
   public ApplicationHistoryServer() {
@@ -67,7 +67,7 @@ public class ApplicationHistoryServer extends CompositeService {
     ahsClientService = createApplicationHistoryClientService(historyManager);
     addService(ahsClientService);
     addService((Service) historyManager);
-    timelineStore = createApplicationTimelineStore(conf);
+    timelineStore = createTimelineStore(conf);
     addIfService(timelineStore);
     super.serviceInit(conf);
   }
@@ -141,11 +141,11 @@ public class ApplicationHistoryServer extends CompositeService {
     return new ApplicationHistoryManagerImpl();
   }
 
-  protected ApplicationTimelineStore createApplicationTimelineStore(
+  protected TimelineStore createTimelineStore(
       Configuration conf) {
     return ReflectionUtils.newInstance(conf.getClass(
-        YarnConfiguration.ATS_STORE, LeveldbApplicationTimelineStore.class,
-        ApplicationTimelineStore.class), conf);
+        YarnConfiguration.TIMELINE_SERVICE_STORE, LeveldbTimelineStore.class,
+        TimelineStore.class), conf);
   }
 
   protected void startWebApp() {
@@ -158,9 +158,9 @@ public class ApplicationHistoryServer extends CompositeService {
               ahsClientService, "ws")
             .with(getConfig())
             .withHttpSpnegoPrincipalKey(
-              YarnConfiguration.AHS_WEBAPP_SPNEGO_USER_NAME_KEY)
+              YarnConfiguration.TIMELINE_SERVICE_WEBAPP_SPNEGO_USER_NAME_KEY)
             .withHttpSpnegoKeytabKey(
-              YarnConfiguration.AHS_WEBAPP_SPNEGO_KEYTAB_FILE_KEY)
+              YarnConfiguration.TIMELINE_SERVICE_WEBAPP_SPNEGO_KEYTAB_FILE_KEY)
             .at(bindAddress)
             .start(new AHSWebApp(historyManager, timelineStore));
     } catch (Exception e) {

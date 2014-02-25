@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.applicationhistoryservice.apptimeline;
+package org.apache.hadoop.yarn.server.applicationhistoryservice.timeline;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -33,16 +33,16 @@ import java.util.SortedSet;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.service.AbstractService;
-import org.apache.hadoop.yarn.api.records.apptimeline.ATSEntities;
-import org.apache.hadoop.yarn.api.records.apptimeline.ATSEntity;
-import org.apache.hadoop.yarn.api.records.apptimeline.ATSEvent;
-import org.apache.hadoop.yarn.api.records.apptimeline.ATSEvents;
-import org.apache.hadoop.yarn.api.records.apptimeline.ATSEvents.ATSEventsOfOneEntity;
-import org.apache.hadoop.yarn.api.records.apptimeline.ATSPutErrors;
-import org.apache.hadoop.yarn.api.records.apptimeline.ATSPutErrors.ATSPutError;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineEvent;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineEvents;
+import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineEvents.EventsOfOneEntity;
+import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse.TimelinePutError;
 
 /**
- * In-memory implementation of {@link ApplicationTimelineStore}. This
+ * In-memory implementation of {@link TimelineStore}. This
  * implementation is for test purpose only. If users improperly instantiate it,
  * they may encounter reading and writing history data in different memory
  * store.
@@ -50,18 +50,18 @@ import org.apache.hadoop.yarn.api.records.apptimeline.ATSPutErrors.ATSPutError;
  */
 @Private
 @Unstable
-public class MemoryApplicationTimelineStore
-    extends AbstractService implements ApplicationTimelineStore {
+public class MemoryTimelineStore
+    extends AbstractService implements TimelineStore {
 
-  private Map<EntityIdentifier, ATSEntity> entities =
-      new HashMap<EntityIdentifier, ATSEntity>();
+  private Map<EntityIdentifier, TimelineEntity> entities =
+      new HashMap<EntityIdentifier, TimelineEntity>();
 
-  public MemoryApplicationTimelineStore() {
-    super(MemoryApplicationTimelineStore.class.getName());
+  public MemoryTimelineStore() {
+    super(MemoryTimelineStore.class.getName());
   }
 
   @Override
-  public ATSEntities getEntities(String entityType, Long limit,
+  public TimelineEntities getEntities(String entityType, Long limit,
       Long windowStart, Long windowEnd, NameValuePair primaryFilter,
       Collection<NameValuePair> secondaryFilters, EnumSet<Field> fields) {
     if (limit == null) {
@@ -76,8 +76,8 @@ public class MemoryApplicationTimelineStore
     if (fields == null) {
       fields = EnumSet.allOf(Field.class);
     }
-    List<ATSEntity> entitiesSelected = new ArrayList<ATSEntity>();
-    for (ATSEntity entity : new PriorityQueue<ATSEntity>(entities.values())) {
+    List<TimelineEntity> entitiesSelected = new ArrayList<TimelineEntity>();
+    for (TimelineEntity entity : new PriorityQueue<TimelineEntity>(entities.values())) {
       if (entitiesSelected.size() >= limit) {
         break;
       }
@@ -91,7 +91,7 @@ public class MemoryApplicationTimelineStore
         continue;
       }
       if (primaryFilter != null &&
-          !matchFilter(entity.getPrimaryFilters(), primaryFilter)) {
+          !matchPrimaryFilter(entity.getPrimaryFilters(), primaryFilter)) {
         continue;
       }
       if (secondaryFilters != null) { // OR logic
@@ -109,23 +109,23 @@ public class MemoryApplicationTimelineStore
       }
       entitiesSelected.add(entity);
     }
-    List<ATSEntity> entitiesToReturn = new ArrayList<ATSEntity>();
-    for (ATSEntity entitySelected : entitiesSelected) {
+    List<TimelineEntity> entitiesToReturn = new ArrayList<TimelineEntity>();
+    for (TimelineEntity entitySelected : entitiesSelected) {
       entitiesToReturn.add(maskFields(entitySelected, fields));
     }
     Collections.sort(entitiesToReturn);
-    ATSEntities entitiesWrapper = new ATSEntities();
+    TimelineEntities entitiesWrapper = new TimelineEntities();
     entitiesWrapper.setEntities(entitiesToReturn);
     return entitiesWrapper;
   }
 
   @Override
-  public ATSEntity getEntity(String entityId, String entityType,
+  public TimelineEntity getEntity(String entityId, String entityType,
       EnumSet<Field> fieldsToRetrieve) {
     if (fieldsToRetrieve == null) {
       fieldsToRetrieve = EnumSet.allOf(Field.class);
     }
-    ATSEntity entity = entities.get(new EntityIdentifier(entityId, entityType));
+    TimelineEntity entity = entities.get(new EntityIdentifier(entityId, entityType));
     if (entity == null) {
       return null;
     } else {
@@ -134,11 +134,11 @@ public class MemoryApplicationTimelineStore
   }
 
   @Override
-  public ATSEvents getEntityTimelines(String entityType,
+  public TimelineEvents getEntityTimelines(String entityType,
       SortedSet<String> entityIds, Long limit, Long windowStart,
       Long windowEnd,
       Set<String> eventTypes) {
-    ATSEvents allEvents = new ATSEvents();
+    TimelineEvents allEvents = new TimelineEvents();
     if (entityIds == null) {
       return allEvents;
     }
@@ -153,14 +153,14 @@ public class MemoryApplicationTimelineStore
     }
     for (String entityId : entityIds) {
       EntityIdentifier entityID = new EntityIdentifier(entityId, entityType);
-      ATSEntity entity = entities.get(entityID);
+      TimelineEntity entity = entities.get(entityID);
       if (entity == null) {
         continue;
       }
-      ATSEventsOfOneEntity events = new ATSEventsOfOneEntity();
+      EventsOfOneEntity events = new EventsOfOneEntity();
       events.setEntityId(entityId);
       events.setEntityType(entityType);
-      for (ATSEvent event : entity.getEvents()) {
+      for (TimelineEvent event : entity.getEvents()) {
         if (events.getEvents().size() >= limit) {
           break;
         }
@@ -181,15 +181,15 @@ public class MemoryApplicationTimelineStore
   }
 
   @Override
-  public ATSPutErrors put(ATSEntities data) {
-    ATSPutErrors errors = new ATSPutErrors();
-    for (ATSEntity entity : data.getEntities()) {
+  public TimelinePutResponse put(TimelineEntities data) {
+    TimelinePutResponse response = new TimelinePutResponse();
+    for (TimelineEntity entity : data.getEntities()) {
       EntityIdentifier entityId =
           new EntityIdentifier(entity.getEntityId(), entity.getEntityType());
       // store entity info in memory
-      ATSEntity existingEntity = entities.get(entityId);
+      TimelineEntity existingEntity = entities.get(entityId);
       if (existingEntity == null) {
-        existingEntity = new ATSEntity();
+        existingEntity = new TimelineEntity();
         existingEntity.setEntityId(entity.getEntityId());
         existingEntity.setEntityType(entity.getEntityType());
         existingEntity.setStartTime(entity.getStartTime());
@@ -207,11 +207,11 @@ public class MemoryApplicationTimelineStore
       if (existingEntity.getStartTime() == null) {
         if (existingEntity.getEvents() == null
             || existingEntity.getEvents().isEmpty()) {
-          ATSPutError error = new ATSPutError();
+          TimelinePutError error = new TimelinePutError();
           error.setEntityId(entityId.getId());
           error.setEntityType(entityId.getType());
-          error.setErrorCode(ATSPutError.NO_START_TIME);
-          errors.addError(error);
+          error.setErrorCode(TimelinePutError.NO_START_TIME);
+          response.addError(error);
           entities.remove(entityId);
           continue;
         } else {
@@ -236,7 +236,7 @@ public class MemoryApplicationTimelineStore
       if (entity.getRelatedEntities() == null) {
         continue;
       }
-      for (Map.Entry<String, List<String>> partRelatedEntities : entity
+      for (Map.Entry<String, Set<String>> partRelatedEntities : entity
           .getRelatedEntities().entrySet()) {
         if (partRelatedEntities == null) {
           continue;
@@ -244,12 +244,12 @@ public class MemoryApplicationTimelineStore
         for (String idStr : partRelatedEntities.getValue()) {
           EntityIdentifier relatedEntityId =
               new EntityIdentifier(idStr, partRelatedEntities.getKey());
-          ATSEntity relatedEntity = entities.get(relatedEntityId);
+          TimelineEntity relatedEntity = entities.get(relatedEntityId);
           if (relatedEntity != null) {
             relatedEntity.addRelatedEntity(
                 existingEntity.getEntityType(), existingEntity.getEntityId());
           } else {
-            relatedEntity = new ATSEntity();
+            relatedEntity = new TimelineEntity();
             relatedEntity.setEntityId(relatedEntityId.getId());
             relatedEntity.setEntityType(relatedEntityId.getType());
             relatedEntity.setStartTime(existingEntity.getStartTime());
@@ -260,13 +260,13 @@ public class MemoryApplicationTimelineStore
         }
       }
     }
-    return errors;
+    return response;
   }
 
-  private static ATSEntity maskFields(
-      ATSEntity entity, EnumSet<Field> fields) {
+  private static TimelineEntity maskFields(
+      TimelineEntity entity, EnumSet<Field> fields) {
     // Conceal the fields that are not going to be exposed
-    ATSEntity entityToReturn = new ATSEntity();
+    TimelineEntity entityToReturn = new TimelineEntity();
     entityToReturn.setEntityId(entity.getEntityId());
     entityToReturn.setEntityType(entity.getEntityType());
     entityToReturn.setStartTime(entity.getStartTime());
@@ -291,6 +291,16 @@ public class MemoryApplicationTimelineStore
       return false;
     }
     return true;
+  }
+
+  private static boolean matchPrimaryFilter(Map<String, Set<Object>> tags,
+      NameValuePair filter) {
+    Set<Object> value = tags.get(filter.getName());
+    if (value == null) { // doesn't have the filter
+      return false;
+    } else {
+      return value.contains(filter.getValue());
+    }
   }
 
 }

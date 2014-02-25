@@ -25,10 +25,10 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 import junit.framework.Assert;
 
-import org.apache.hadoop.yarn.api.records.apptimeline.ATSEntities;
-import org.apache.hadoop.yarn.api.records.apptimeline.ATSEntity;
-import org.apache.hadoop.yarn.api.records.apptimeline.ATSEvent;
-import org.apache.hadoop.yarn.api.records.apptimeline.ATSPutErrors;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineEvent;
+import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
 import org.apache.hadoop.yarn.client.api.TimelineClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -58,8 +58,8 @@ public class TestTimelineClient {
   public void testPostEntities() throws Exception {
     mockClientResponse(ClientResponse.Status.OK, false);
     try {
-      ATSPutErrors errors = client.postEntities(generateATSEntity());
-      Assert.assertEquals(0, errors.getErrors().size());
+      TimelinePutResponse response = client.putEntities(generateEntity());
+      Assert.assertEquals(0, response.getErrors().size());
     } catch (YarnException e) {
       Assert.fail("Exception is not expected");
     }
@@ -69,14 +69,14 @@ public class TestTimelineClient {
   public void testPostEntitiesWithError() throws Exception {
     mockClientResponse(ClientResponse.Status.OK, true);
     try {
-      ATSPutErrors errors = client.postEntities(generateATSEntity());
-      Assert.assertEquals(1, errors.getErrors().size());
-      Assert.assertEquals("test entity id", errors.getErrors().get(0)
+      TimelinePutResponse response = client.putEntities(generateEntity());
+      Assert.assertEquals(1, response.getErrors().size());
+      Assert.assertEquals("test entity id", response.getErrors().get(0)
           .getEntityId());
-      Assert.assertEquals("test entity type", errors.getErrors().get(0)
+      Assert.assertEquals("test entity type", response.getErrors().get(0)
           .getEntityType());
-      Assert.assertEquals(ATSPutErrors.ATSPutError.IO_EXCEPTION,
-          errors.getErrors().get(0).getErrorCode());
+      Assert.assertEquals(TimelinePutResponse.TimelinePutError.IO_EXCEPTION,
+          response.getErrors().get(0).getErrorCode());
     } catch (YarnException e) {
       Assert.fail("Exception is not expected");
     }
@@ -86,7 +86,7 @@ public class TestTimelineClient {
   public void testPostEntitiesNoResponse() throws Exception {
     mockClientResponse(ClientResponse.Status.INTERNAL_SERVER_ERROR, false);
     try {
-      client.postEntities(generateATSEntity());
+      client.putEntities(generateEntity());
       Assert.fail("Exception is expected");
     } catch (YarnException e) {
       Assert.assertTrue(e.getMessage().contains(
@@ -98,27 +98,28 @@ public class TestTimelineClient {
       boolean hasError) {
     ClientResponse response = mock(ClientResponse.class);
     doReturn(response).when(client)
-        .doPostingEntities(any(ATSEntities.class));
+        .doPostingEntities(any(TimelineEntities.class));
     when(response.getClientResponseStatus()).thenReturn(status);
-    ATSPutErrors.ATSPutError error = new ATSPutErrors.ATSPutError();
+    TimelinePutResponse.TimelinePutError error =
+        new TimelinePutResponse.TimelinePutError();
     error.setEntityId("test entity id");
     error.setEntityType("test entity type");
-    error.setErrorCode(ATSPutErrors.ATSPutError.IO_EXCEPTION);
-    ATSPutErrors errors = new ATSPutErrors();
+    error.setErrorCode(TimelinePutResponse.TimelinePutError.IO_EXCEPTION);
+    TimelinePutResponse putResponse = new TimelinePutResponse();
     if (hasError) {
-      errors.addError(error);
+      putResponse.addError(error);
     }
-    when(response.getEntity(ATSPutErrors.class)).thenReturn(errors);
+    when(response.getEntity(TimelinePutResponse.class)).thenReturn(putResponse);
     return response;
   }
 
-  private static ATSEntity generateATSEntity() {
-    ATSEntity entity = new ATSEntity();
+  private static TimelineEntity generateEntity() {
+    TimelineEntity entity = new TimelineEntity();
     entity.setEntityId("entity id");
     entity.setEntityType("entity type");
     entity.setStartTime(System.currentTimeMillis());
     for (int i = 0; i < 2; ++i) {
-      ATSEvent event = new ATSEvent();
+      TimelineEvent event = new TimelineEvent();
       event.setTimestamp(System.currentTimeMillis());
       event.setEventType("test event type " + i);
       event.addEventInfo("key1", "val1");

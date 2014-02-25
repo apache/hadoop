@@ -36,6 +36,7 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryStore;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryWriter;
+import org.apache.hadoop.yarn.server.applicationhistoryservice.FileSystemApplicationHistoryStore;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.NullApplicationHistoryStore;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.records.ApplicationAttemptFinishData;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.records.ApplicationAttemptStartData;
@@ -81,8 +82,8 @@ public class RMApplicationHistoryWriter extends CompositeService {
   protected synchronized void serviceInit(Configuration conf) throws Exception {
 
     historyServiceEnabled =
-        conf.getBoolean(YarnConfiguration.YARN_HISTORY_SERVICE_ENABLED,
-          YarnConfiguration.DEFAULT_YARN_HISTORY_SERVICE_ENABLED);
+        conf.getBoolean(YarnConfiguration.APPLICATION_HISTORY_ENABLED,
+          YarnConfiguration.DEFAULT_APPLICATION_HISTORY_ENABLED);
 
     writer = createApplicationHistoryStore(conf);
     addIfService(writer);
@@ -112,14 +113,15 @@ public class RMApplicationHistoryWriter extends CompositeService {
     if (historyServiceEnabled) {
       try {
         Class<? extends ApplicationHistoryStore> storeClass =
-            conf.getClass(YarnConfiguration.RM_HISTORY_WRITER_CLASS,
-              NullApplicationHistoryStore.class, ApplicationHistoryStore.class);
+            conf.getClass(YarnConfiguration.APPLICATION_HISTORY_STORE,
+              FileSystemApplicationHistoryStore.class,
+              ApplicationHistoryStore.class);
         return storeClass.newInstance();
       } catch (Exception e) {
         String msg =
             "Could not instantiate ApplicationHistoryWriter: "
-                + conf.get(YarnConfiguration.RM_HISTORY_WRITER_CLASS,
-                  NullApplicationHistoryStore.class.getName());
+                + conf.get(YarnConfiguration.APPLICATION_HISTORY_STORE,
+                  FileSystemApplicationHistoryStore.class.getName());
         LOG.error(msg, e);
         throw new YarnRuntimeException(msg, e);
       }
@@ -214,21 +216,25 @@ public class RMApplicationHistoryWriter extends CompositeService {
 
   @SuppressWarnings("unchecked")
   public void applicationStarted(RMApp app) {
-    dispatcher.getEventHandler().handle(
-      new WritingApplicationStartEvent(app.getApplicationId(),
-        ApplicationStartData.newInstance(app.getApplicationId(), app.getName(),
-          app.getApplicationType(), app.getQueue(), app.getUser(),
-          app.getSubmitTime(), app.getStartTime())));
+    if (historyServiceEnabled) {
+      dispatcher.getEventHandler().handle(
+        new WritingApplicationStartEvent(app.getApplicationId(),
+          ApplicationStartData.newInstance(app.getApplicationId(), app.getName(),
+            app.getApplicationType(), app.getQueue(), app.getUser(),
+            app.getSubmitTime(), app.getStartTime())));
+    }
   }
 
   @SuppressWarnings("unchecked")
   public void applicationFinished(RMApp app, RMAppState finalState) {
-    dispatcher.getEventHandler().handle(
-      new WritingApplicationFinishEvent(app.getApplicationId(),
-        ApplicationFinishData.newInstance(app.getApplicationId(),
-          app.getFinishTime(), app.getDiagnostics().toString(),
-          app.getFinalApplicationStatus(),
-          RMServerUtils.createApplicationState(finalState))));
+    if (historyServiceEnabled) {
+      dispatcher.getEventHandler().handle(
+        new WritingApplicationFinishEvent(app.getApplicationId(),
+          ApplicationFinishData.newInstance(app.getApplicationId(),
+            app.getFinishTime(), app.getDiagnostics().toString(),
+            app.getFinalApplicationStatus(),
+            RMServerUtils.createApplicationState(finalState))));
+    }
   }
 
   @SuppressWarnings("unchecked")

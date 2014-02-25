@@ -15,12 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.server.applicationhistoryservice.apptimeline;
-
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.io.WritableUtils;
-import org.codehaus.jackson.map.ObjectMapper;
+package org.apache.hadoop.yarn.server.applicationhistoryservice.timeline;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -31,14 +26,18 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.io.WritableUtils;
+import org.codehaus.jackson.map.ObjectMapper;
 
 /**
  * A utility class providing methods for serializing and deserializing
  * objects. The {@link #write(Object)}, {@link #read(byte[])} and {@link
  * #write(java.io.DataOutputStream, Object)}, {@link
  * #read(java.io.DataInputStream)} methods are used by the
- * {@link LeveldbApplicationTimelineStore} to store and retrieve arbitrary
+ * {@link LeveldbTimelineStore} to store and retrieve arbitrary
  * JSON, while the {@link #writeReverseOrderedLong} and {@link
  * #readReverseOrderedLong} methods are used to sort entities in descending
  * start time order.
@@ -132,9 +131,24 @@ public class GenericObjectMapper {
    * @throws IOException
    */
   public static Object read(byte[] b) throws IOException {
-    if (b == null || b.length == 0)
+    return read(b, 0);
+  }
+
+  /**
+   * Deserializes an Object from a byte array at a specified offset, assuming
+   * the bytes were created with {@link #write(Object)}.
+   *
+   * @param b A byte array
+   * @param offset Offset into the array
+   * @return An Object
+   * @throws IOException
+   */
+  public static Object read(byte[] b, int offset) throws IOException {
+    if (b == null || b.length == 0) {
       return null;
-    ByteArrayInputStream bais = new ByteArrayInputStream(b);
+    }
+    ByteArrayInputStream bais = new ByteArrayInputStream(b, offset,
+        b.length - offset);
     return read(new DataInputStream(bais));
   }
 

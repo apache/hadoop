@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.yarn.api.records.apptimeline;
+package org.apache.hadoop.yarn.api.records.timeline;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -28,60 +28,60 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * A class that holds a list of put errors.  This is the response returned
- * when a list of {@link ATSEntity} objects is added to the application
- * timeline.  If there are errors in storing individual entity objects,
- * they will be indicated in the list of errors.
+ * A class that holds a list of put errors. This is the response returned when a
+ * list of {@link TimelineEntity} objects is added to the timeline. If there are errors
+ * in storing individual entity objects, they will be indicated in the list of
+ * errors.
  */
-@XmlRootElement(name = "errors")
+@XmlRootElement(name = "response")
 @XmlAccessorType(XmlAccessType.NONE)
 @Public
 @Unstable
-public class ATSPutErrors {
+public class TimelinePutResponse {
 
-  private List<ATSPutError> errors = new ArrayList<ATSPutError>();
+  private List<TimelinePutError> errors = new ArrayList<TimelinePutError>();
 
-  public ATSPutErrors() {
+  public TimelinePutResponse() {
 
   }
 
   /**
-   * Get a list of {@link ATSPutError} instances
-   *
-   * @return a list of {@link ATSPutError} instances
+   * Get a list of {@link TimelinePutError} instances
+   * 
+   * @return a list of {@link TimelinePutError} instances
    */
   @XmlElement(name = "errors")
-  public List<ATSPutError> getErrors() {
+  public List<TimelinePutError> getErrors() {
     return errors;
   }
 
   /**
-   * Add a single {@link ATSPutError} instance into the existing list
-   *
+   * Add a single {@link TimelinePutError} instance into the existing list
+   * 
    * @param error
-   *          a single {@link ATSPutError} instance
+   *          a single {@link TimelinePutError} instance
    */
-  public void addError(ATSPutError error) {
+  public void addError(TimelinePutError error) {
     errors.add(error);
   }
 
   /**
-   * Add a list of {@link ATSPutError} instances into the existing list
-   *
+   * Add a list of {@link TimelinePutError} instances into the existing list
+   * 
    * @param errors
-   *          a list of {@link ATSPutError} instances
+   *          a list of {@link TimelinePutError} instances
    */
-  public void addErrors(List<ATSPutError> errors) {
+  public void addErrors(List<TimelinePutError> errors) {
     this.errors.addAll(errors);
   }
 
   /**
-   * Set the list to the given list of {@link ATSPutError} instances
-   *
+   * Set the list to the given list of {@link TimelinePutError} instances
+   * 
    * @param errors
-   *          a list of {@link ATSPutError} instances
+   *          a list of {@link TimelinePutError} instances
    */
-  public void setErrors(List<ATSPutError> errors) {
+  public void setErrors(List<TimelinePutError> errors) {
     this.errors.clear();
     this.errors.addAll(errors);
   }
@@ -93,11 +93,12 @@ public class ATSPutErrors {
   @XmlAccessorType(XmlAccessType.NONE)
   @Public
   @Unstable
-  public static class ATSPutError {
+  public static class TimelinePutError {
+
     /**
      * Error code returned when no start time can be found when putting an
-     * entity. This occurs when the entity does not already exist in the
-     * store and it is put with no start time or events specified.
+     * entity. This occurs when the entity does not already exist in the store
+     * and it is put with no start time or events specified.
      */
     public static final int NO_START_TIME = 1;
     /**
@@ -112,7 +113,7 @@ public class ATSPutErrors {
 
     /**
      * Get the entity Id
-     *
+     * 
      * @return the entity Id
      */
     @XmlElement(name = "entity")
@@ -122,7 +123,7 @@ public class ATSPutErrors {
 
     /**
      * Set the entity Id
-     *
+     * 
      * @param entityId
      *          the entity Id
      */
@@ -132,7 +133,7 @@ public class ATSPutErrors {
 
     /**
      * Get the entity type
-     *
+     * 
      * @return the entity type
      */
     @XmlElement(name = "entitytype")
@@ -142,7 +143,7 @@ public class ATSPutErrors {
 
     /**
      * Set the entity type
-     *
+     * 
      * @param entityType
      *          the entity type
      */
@@ -152,7 +153,7 @@ public class ATSPutErrors {
 
     /**
      * Get the error code
-     *
+     * 
      * @return an error code
      */
     @XmlElement(name = "errorcode")
@@ -162,7 +163,7 @@ public class ATSPutErrors {
 
     /**
      * Set the error code to the given error code
-     *
+     * 
      * @param errorCode
      *          an error code
      */

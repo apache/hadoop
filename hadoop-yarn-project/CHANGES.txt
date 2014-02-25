@@ -28,6 +28,8 @@ Release 2.5.0 - UNRELEASED
     YARN-1736. FS: AppSchedulable.assignContainer's priority argument is 
     redundant. (Naren Koneru via kasha)
 
+    YARN-1678. Fair scheduler gabs incessantly about reservations (Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES 
@@ -218,6 +220,15 @@ Release 2.4.0 - UNRELEASED
     YARN-1470. Add audience annotations to MiniYARNCluster. (Anubhav Dhoot
     via kasha)
 
+    YARN-1732. Changed types of related-entities and primary-filters in the
+    timeline-service to be sets instead of maps. (Billie Rinaldi via vinodkv)
+
+    YARN-1687. Renamed user-facing records for the timeline-service to be simply
+    named after 'timeline' instead of 'apptimeline'. (Zhijie Shen via vinodkv)
+
+    YARN-1749. Updated application-history related configs to reflect the latest
+    reality and to be consistently named. (Zhijie Shen via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -329,6 +340,13 @@ Release 2.4.0 - UNRELEASED
 
     YARN-1071. Enabled ResourceManager to recover cluster metrics
     numDecommissionedNMs after restarting. (Jian He via zjshen)
+
+    YARN-1742. Fixed javadoc of configuration parameter
+    DEFAULT_NM_MIN_HEALTHY_DISKS_FRACTION. (Akira Ajisaka via vinodkv)
+
+    YARN-1686. Fixed NodeManager to properly handle any errors during
+    re-registration after a RESYNC and thus avoid hanging. (Rohith Sharma via
+    vinodkv)
 
 Release 2.3.1 - UNRELEASED
 

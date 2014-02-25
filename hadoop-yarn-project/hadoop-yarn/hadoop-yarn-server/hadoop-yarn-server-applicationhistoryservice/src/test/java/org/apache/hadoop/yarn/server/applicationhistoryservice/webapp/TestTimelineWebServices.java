@@ -24,13 +24,13 @@ import javax.ws.rs.core.MediaType;
 
 import junit.framework.Assert;
 
-import org.apache.hadoop.yarn.api.records.apptimeline.ATSEntities;
-import org.apache.hadoop.yarn.api.records.apptimeline.ATSEntity;
-import org.apache.hadoop.yarn.api.records.apptimeline.ATSEvent;
-import org.apache.hadoop.yarn.api.records.apptimeline.ATSEvents;
-import org.apache.hadoop.yarn.api.records.apptimeline.ATSPutErrors;
-import org.apache.hadoop.yarn.server.applicationhistoryservice.apptimeline.ApplicationTimelineStore;
-import org.apache.hadoop.yarn.server.applicationhistoryservice.apptimeline.TestMemoryApplicationTimelineStore;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineEvent;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineEvents;
+import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
+import org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.TimelineStore;
+import org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.TestMemoryTimelineStore;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
 import org.junit.Test;
@@ -47,23 +47,23 @@ import com.sun.jersey.test.framework.JerseyTest;
 import com.sun.jersey.test.framework.WebAppDescriptor;
 
 
-public class TestATSWebServices extends JerseyTest {
+public class TestTimelineWebServices extends JerseyTest {
 
-  private static ApplicationTimelineStore store;
+  private static TimelineStore store;
 
   private Injector injector = Guice.createInjector(new ServletModule() {
 
     @Override
     protected void configureServlets() {
       bind(YarnJacksonJaxbJsonProvider.class);
-      bind(ATSWebServices.class);
+      bind(TimelineWebServices.class);
       bind(GenericExceptionHandler.class);
       try{
-        store = mockApplicationTimelineStore();
+        store = mockTimelineStore();
       } catch (Exception e) {
         Assert.fail();
       }
-      bind(ApplicationTimelineStore.class).toInstance(store);
+      bind(TimelineStore.class).toInstance(store);
       serve("/*").with(GuiceContainer.class);
     }
 
@@ -77,15 +77,15 @@ public class TestATSWebServices extends JerseyTest {
     }
   }
 
-  private ApplicationTimelineStore mockApplicationTimelineStore()
+  private TimelineStore mockTimelineStore()
       throws Exception {
-    TestMemoryApplicationTimelineStore store =
-        new TestMemoryApplicationTimelineStore();
+    TestMemoryTimelineStore store =
+        new TestMemoryTimelineStore();
     store.setup();
-    return store.getApplicationTimelineStore();
+    return store.getTimelineStore();
   }
 
-  public TestATSWebServices() {
+  public TestTimelineWebServices() {
     super(new WebAppDescriptor.Builder(
         "org.apache.hadoop.yarn.server.applicationhistoryservice.webapp")
         .contextListenerClass(GuiceServletConfig.class)
@@ -99,28 +99,28 @@ public class TestATSWebServices extends JerseyTest {
   @Test
   public void testAbout() throws Exception {
     WebResource r = resource();
-    ClientResponse response = r.path("ws").path("v1").path("apptimeline")
+    ClientResponse response = r.path("ws").path("v1").path("timeline")
         .accept(MediaType.APPLICATION_JSON)
         .get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
-    ATSWebServices.AboutInfo about =
-        response.getEntity(ATSWebServices.AboutInfo.class);
+    TimelineWebServices.AboutInfo about =
+        response.getEntity(TimelineWebServices.AboutInfo.class);
     Assert.assertNotNull(about);
-    Assert.assertEquals("Application Timeline API", about.getAbout());
+    Assert.assertEquals("Timeline API", about.getAbout());
   }
 
   @Test
   public void testGetEntities() throws Exception {
     WebResource r = resource();
-    ClientResponse response = r.path("ws").path("v1").path("apptimeline")
+    ClientResponse response = r.path("ws").path("v1").path("timeline")
         .path("type_1")
         .accept(MediaType.APPLICATION_JSON)
         .get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
-    ATSEntities entities = response.getEntity(ATSEntities.class);
+    TimelineEntities entities = response.getEntity(TimelineEntities.class);
     Assert.assertNotNull(entities);
     Assert.assertEquals(2, entities.getEntities().size());
-    ATSEntity entity1 = entities.getEntities().get(0);
+    TimelineEntity entity1 = entities.getEntities().get(0);
     Assert.assertNotNull(entity1);
     Assert.assertEquals("id_1", entity1.getEntityId());
     Assert.assertEquals("type_1", entity1.getEntityType());
@@ -128,7 +128,7 @@ public class TestATSWebServices extends JerseyTest {
     Assert.assertEquals(2, entity1.getEvents().size());
     Assert.assertEquals(2, entity1.getPrimaryFilters().size());
     Assert.assertEquals(4, entity1.getOtherInfo().size());
-    ATSEntity entity2 = entities.getEntities().get(1);
+    TimelineEntity entity2 = entities.getEntities().get(1);
     Assert.assertNotNull(entity2);
     Assert.assertEquals("id_2", entity2.getEntityId());
     Assert.assertEquals("type_1", entity2.getEntityType());
@@ -141,12 +141,12 @@ public class TestATSWebServices extends JerseyTest {
   @Test
   public void testGetEntity() throws Exception {
     WebResource r = resource();
-    ClientResponse response = r.path("ws").path("v1").path("apptimeline")
+    ClientResponse response = r.path("ws").path("v1").path("timeline")
         .path("type_1").path("id_1")
         .accept(MediaType.APPLICATION_JSON)
         .get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
-    ATSEntity entity = response.getEntity(ATSEntity.class);
+    TimelineEntity entity = response.getEntity(TimelineEntity.class);
     Assert.assertNotNull(entity);
     Assert.assertEquals("id_1", entity.getEntityId());
     Assert.assertEquals("type_1", entity.getEntityType());
@@ -159,12 +159,12 @@ public class TestATSWebServices extends JerseyTest {
   @Test
   public void testGetEntityFields1() throws Exception {
     WebResource r = resource();
-    ClientResponse response = r.path("ws").path("v1").path("apptimeline")
+    ClientResponse response = r.path("ws").path("v1").path("timeline")
         .path("type_1").path("id_1").queryParam("fields", "events,otherinfo")
         .accept(MediaType.APPLICATION_JSON)
         .get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
-    ATSEntity entity = response.getEntity(ATSEntity.class);
+    TimelineEntity entity = response.getEntity(TimelineEntity.class);
     Assert.assertNotNull(entity);
     Assert.assertEquals("id_1", entity.getEntityId());
     Assert.assertEquals("type_1", entity.getEntityType());
@@ -177,13 +177,13 @@ public class TestATSWebServices extends JerseyTest {
   @Test
   public void testGetEntityFields2() throws Exception {
     WebResource r = resource();
-    ClientResponse response = r.path("ws").path("v1").path("apptimeline")
+    ClientResponse response = r.path("ws").path("v1").path("timeline")
         .path("type_1").path("id_1").queryParam("fields", "lasteventonly," +
             "primaryfilters,relatedentities")
         .accept(MediaType.APPLICATION_JSON)
         .get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
-    ATSEntity entity = response.getEntity(ATSEntity.class);
+    TimelineEntity entity = response.getEntity(TimelineEntity.class);
     Assert.assertNotNull(entity);
     Assert.assertEquals("id_1", entity.getEntityId());
     Assert.assertEquals("type_1", entity.getEntityType());
@@ -196,22 +196,22 @@ public class TestATSWebServices extends JerseyTest {
   @Test
   public void testGetEvents() throws Exception {
     WebResource r = resource();
-    ClientResponse response = r.path("ws").path("v1").path("apptimeline")
+    ClientResponse response = r.path("ws").path("v1").path("timeline")
         .path("type_1").path("events")
         .queryParam("entityId", "id_1")
         .accept(MediaType.APPLICATION_JSON)
         .get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
-    ATSEvents events = response.getEntity(ATSEvents.class);
+    TimelineEvents events = response.getEntity(TimelineEvents.class);
     Assert.assertNotNull(events);
     Assert.assertEquals(1, events.getAllEvents().size());
-    ATSEvents.ATSEventsOfOneEntity partEvents = events.getAllEvents().get(0);
+    TimelineEvents.EventsOfOneEntity partEvents = events.getAllEvents().get(0);
     Assert.assertEquals(2, partEvents.getEvents().size());
-    ATSEvent event1 = partEvents.getEvents().get(0);
+    TimelineEvent event1 = partEvents.getEvents().get(0);
     Assert.assertEquals(456l, event1.getTimestamp());
     Assert.assertEquals("end_event", event1.getEventType());
     Assert.assertEquals(1, event1.getEventInfo().size());
-    ATSEvent event2 = partEvents.getEvents().get(1);
+    TimelineEvent event2 = partEvents.getEvents().get(1);
     Assert.assertEquals(123l, event2.getTimestamp());
     Assert.assertEquals("start_event", event2.getEventType());
     Assert.assertEquals(0, event2.getEventInfo().size());
@@ -219,28 +219,28 @@ public class TestATSWebServices extends JerseyTest {
 
   @Test
   public void testPostEntities() throws Exception {
-    ATSEntities entities = new ATSEntities();
-    ATSEntity entity = new ATSEntity();
+    TimelineEntities entities = new TimelineEntities();
+    TimelineEntity entity = new TimelineEntity();
     entity.setEntityId("test id");
     entity.setEntityType("test type");
     entity.setStartTime(System.currentTimeMillis());
     entities.addEntity(entity);
     WebResource r = resource();
-    ClientResponse response = r.path("ws").path("v1").path("apptimeline")
+    ClientResponse response = r.path("ws").path("v1").path("timeline")
         .accept(MediaType.APPLICATION_JSON)
         .type(MediaType.APPLICATION_JSON)
         .post(ClientResponse.class, entities);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
-    ATSPutErrors errors = response.getEntity(ATSPutErrors.class);
-    Assert.assertNotNull(errors);
-    Assert.assertEquals(0, errors.getErrors().size());
+    TimelinePutResponse putResposne = response.getEntity(TimelinePutResponse.class);
+    Assert.assertNotNull(putResposne);
+    Assert.assertEquals(0, putResposne.getErrors().size());
     // verify the entity exists in the store
-    response = r.path("ws").path("v1").path("apptimeline")
+    response = r.path("ws").path("v1").path("timeline")
         .path("test type").path("test id")
         .accept(MediaType.APPLICATION_JSON)
         .get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
-    entity = response.getEntity(ATSEntity.class);
+    entity = response.getEntity(TimelineEntity.class);
     Assert.assertNotNull(entity);
     Assert.assertEquals("test id", entity.getEntityId());
     Assert.assertEquals("test type", entity.getEntityType());

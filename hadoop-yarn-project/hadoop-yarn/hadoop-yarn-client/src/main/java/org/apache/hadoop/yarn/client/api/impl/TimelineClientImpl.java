@@ -29,9 +29,9 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.api.records.apptimeline.ATSEntities;
-import org.apache.hadoop.yarn.api.records.apptimeline.ATSEntity;
-import org.apache.hadoop.yarn.api.records.apptimeline.ATSPutErrors;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
+import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
 import org.apache.hadoop.yarn.client.api.TimelineClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -50,7 +50,7 @@ import com.sun.jersey.api.client.config.DefaultClientConfig;
 public class TimelineClientImpl extends TimelineClient {
 
   private static final Log LOG = LogFactory.getLog(TimelineClientImpl.class);
-  private static final String RESOURCE_URI_STR = "/ws/v1/apptimeline/";
+  private static final String RESOURCE_URI_STR = "/ws/v1/timeline/";
   private static final Joiner JOINER = Joiner.on("");
 
   private Client client;
@@ -67,21 +67,21 @@ public class TimelineClientImpl extends TimelineClient {
     if (YarnConfiguration.useHttps(conf)) {
       resURI = URI
           .create(JOINER.join("https://", conf.get(
-              YarnConfiguration.AHS_WEBAPP_HTTPS_ADDRESS,
-              YarnConfiguration.DEFAULT_AHS_WEBAPP_HTTPS_ADDRESS),
+              YarnConfiguration.TIMELINE_SERVICE_WEBAPP_HTTPS_ADDRESS,
+              YarnConfiguration.DEFAULT_TIMELINE_SERVICE_WEBAPP_HTTPS_ADDRESS),
               RESOURCE_URI_STR));
     } else {
       resURI = URI.create(JOINER.join("http://", conf.get(
-          YarnConfiguration.AHS_WEBAPP_ADDRESS,
-          YarnConfiguration.DEFAULT_AHS_WEBAPP_ADDRESS), RESOURCE_URI_STR));
+          YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS,
+          YarnConfiguration.DEFAULT_TIMELINE_SERVICE_WEBAPP_ADDRESS), RESOURCE_URI_STR));
     }
     super.serviceInit(conf);
   }
 
   @Override
-  public ATSPutErrors postEntities(
-      ATSEntity... entities) throws IOException, YarnException {
-    ATSEntities entitiesContainer = new ATSEntities();
+  public TimelinePutResponse putEntities(
+      TimelineEntity... entities) throws IOException, YarnException {
+    TimelineEntities entitiesContainer = new TimelineEntities();
     entitiesContainer.addEntities(Arrays.asList(entities));
     ClientResponse resp = doPostingEntities(entitiesContainer);
     if (resp.getClientResponseStatus() != ClientResponse.Status.OK) {
@@ -95,12 +95,12 @@ public class TimelineClientImpl extends TimelineClient {
       }
       throw new YarnException(msg);
     }
-    return resp.getEntity(ATSPutErrors.class);
+    return resp.getEntity(TimelinePutResponse.class);
   }
 
   @Private
   @VisibleForTesting
-  public ClientResponse doPostingEntities(ATSEntities entities) {
+  public ClientResponse doPostingEntities(TimelineEntities entities) {
     WebResource webResource = client.resource(resURI);
     return webResource.accept(MediaType.APPLICATION_JSON)
         .type(MediaType.APPLICATION_JSON)

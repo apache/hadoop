@@ -15,36 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs;
-
-import com.google.common.annotations.VisibleForTesting;
-
+@InterfaceAudience.Public
+package org.apache.hadoop.yarn.api.records.timeline;
 import org.apache.hadoop.classification.InterfaceAudience;
 
-/**
- * Used for injecting faults in DFSClient and DFSOutputStream tests.
- * Calls into this are a no-op in production code. 
- */
-@VisibleForTesting
-@InterfaceAudience.Private
-public class DFSClientFaultInjector {
-  public static DFSClientFaultInjector instance = new DFSClientFaultInjector();
-
-  public static DFSClientFaultInjector get() {
-    return instance;
-  }
-
-  public boolean corruptPacket() {
-    return false;
-  }
-
-  public boolean uncorruptPacket() {
-    return false;
-  }
-
-  public boolean failPacket() {
-    return false;
-  }
-
-  public void startFetchFromDatanode() {}
-}

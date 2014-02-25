@@ -38,7 +38,7 @@ public class TestApplicationHistoryManagerImpl extends
   @Before
   public void setup() throws Exception {
     Configuration config = new Configuration();
-    config.setClass(YarnConfiguration.AHS_STORE,
+    config.setClass(YarnConfiguration.APPLICATION_HISTORY_STORE,
       MemoryApplicationHistoryStore.class, ApplicationHistoryStore.class);
     applicationHistoryManagerImpl = new ApplicationHistoryManagerImpl();
     applicationHistoryManagerImpl.init(config);

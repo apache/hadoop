@@ -16,13 +16,15 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.api.records.apptimeline;
+package org.apache.hadoop.yarn.api.records.timeline;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
@@ -34,36 +36,36 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 
 /**
  * <p>
- * The class that contains the the meta information of some conceptual entity of
- * an application and its related events. The entity can be an application, an
- * application attempt, a container or whatever the user-defined object.
+ * The class that contains the the meta information of some conceptual entity
+ * and its related events. The entity can be an application, an application
+ * attempt, a container or whatever the user-defined object.
  * </p>
  * 
  * <p>
  * Primary filters will be used to index the entities in
- * <code>ApplicationTimelineStore</code>, such that users should carefully
- * choose the information they want to store as the primary filters. The
- * remaining can be stored as other information.
+ * <code>TimelineStore</code>, such that users should carefully choose the
+ * information they want to store as the primary filters. The remaining can be
+ * stored as other information.
  * </p>
  */
 @XmlRootElement(name = "entity")
 @XmlAccessorType(XmlAccessType.NONE)
 @Public
 @Unstable
-public class ATSEntity implements Comparable<ATSEntity> {
+public class TimelineEntity implements Comparable<TimelineEntity> {
 
   private String entityType;
   private String entityId;
   private Long startTime;
-  private List<ATSEvent> events = new ArrayList<ATSEvent>();
-  private Map<String, List<String>> relatedEntities =
-      new HashMap<String, List<String>>();
-  private Map<String, Object> primaryFilters =
-      new HashMap<String, Object>();
+  private List<TimelineEvent> events = new ArrayList<TimelineEvent>();
+  private Map<String, Set<String>> relatedEntities =
+      new HashMap<String, Set<String>>();
+  private Map<String, Set<Object>> primaryFilters =
+      new HashMap<String, Set<Object>>();
   private Map<String, Object> otherInfo =
       new HashMap<String, Object>();
 
-  public ATSEntity() {
+  public TimelineEntity() {
 
   }
 
@@ -133,7 +135,7 @@ public class ATSEntity implements Comparable<ATSEntity> {
    * @return a list of events related to the entity
    */
   @XmlElement(name = "events")
-  public List<ATSEvent> getEvents() {
+  public List<TimelineEvent> getEvents() {
     return events;
   }
 
@@ -143,7 +145,7 @@ public class ATSEntity implements Comparable<ATSEntity> {
    * @param event
    *          a single event related to the entity
    */
-  public void addEvent(ATSEvent event) {
+  public void addEvent(TimelineEvent event) {
     events.add(event);
   }
 
@@ -153,7 +155,7 @@ public class ATSEntity implements Comparable<ATSEntity> {
    * @param events
    *          a list of events related to the entity
    */
-  public void addEvents(List<ATSEvent> events) {
+  public void addEvents(List<TimelineEvent> events) {
     this.events.addAll(events);
   }
 
@@ -163,7 +165,7 @@ public class ATSEntity implements Comparable<ATSEntity> {
    * @param events
    *          events a list of events related to the entity
    */
-  public void setEvents(List<ATSEvent> events) {
+  public void setEvents(List<TimelineEvent> events) {
     this.events = events;
   }
 
@@ -173,7 +175,7 @@ public class ATSEntity implements Comparable<ATSEntity> {
    * @return the related entities
    */
   @XmlElement(name = "relatedentities")
-  public Map<String, List<String>> getRelatedEntities() {
+  public Map<String, Set<String>> getRelatedEntities() {
     return relatedEntities;
   }
 
@@ -186,9 +188,9 @@ public class ATSEntity implements Comparable<ATSEntity> {
    *          the entity Id
    */
   public void addRelatedEntity(String entityType, String entityId) {
-    List<String> thisRelatedEntity = relatedEntities.get(entityType);
+    Set<String> thisRelatedEntity = relatedEntities.get(entityType);
     if (thisRelatedEntity == null) {
-      thisRelatedEntity = new ArrayList<String>();
+      thisRelatedEntity = new HashSet<String>();
       relatedEntities.put(entityType, thisRelatedEntity);
     }
     thisRelatedEntity.add(entityId);
@@ -200,10 +202,9 @@ public class ATSEntity implements Comparable<ATSEntity> {
    * @param relatedEntities
    *          a map of related entities
    */
-  public void addRelatedEntities(Map<String, List<String>> relatedEntities) {
-    for (Entry<String, List<String>> relatedEntity :
-        relatedEntities.entrySet()) {
-      List<String> thisRelatedEntity =
+  public void addRelatedEntities(Map<String, Set<String>> relatedEntities) {
+    for (Entry<String, Set<String>> relatedEntity : relatedEntities.entrySet()) {
+      Set<String> thisRelatedEntity =
           this.relatedEntities.get(relatedEntity.getKey());
       if (thisRelatedEntity == null) {
         this.relatedEntities.put(
@@ -221,7 +222,7 @@ public class ATSEntity implements Comparable<ATSEntity> {
    *          a map of related entities
    */
   public void setRelatedEntities(
-      Map<String, List<String>> relatedEntities) {
+      Map<String, Set<String>> relatedEntities) {
     this.relatedEntities = relatedEntities;
   }
 
@@ -231,7 +232,7 @@ public class ATSEntity implements Comparable<ATSEntity> {
    * @return the primary filters
    */
   @XmlElement(name = "primaryfilters")
-  public Map<String, Object> getPrimaryFilters() {
+  public Map<String, Set<Object>> getPrimaryFilters() {
     return primaryFilters;
   }
 
@@ -244,7 +245,12 @@ public class ATSEntity implements Comparable<ATSEntity> {
    *          the primary filter value
    */
   public void addPrimaryFilter(String key, Object value) {
-    primaryFilters.put(key, value);
+    Set<Object> thisPrimaryFilter = primaryFilters.get(key);
+    if (thisPrimaryFilter == null) {
+      thisPrimaryFilter = new HashSet<Object>();
+      primaryFilters.put(key, thisPrimaryFilter);
+    }
+    thisPrimaryFilter.add(value);
   }
 
   /**
@@ -253,8 +259,17 @@ public class ATSEntity implements Comparable<ATSEntity> {
    * @param primaryFilters
    *          a map of primary filters
    */
-  public void addPrimaryFilters(Map<String, Object> primaryFilters) {
-    this.primaryFilters.putAll(primaryFilters);
+  public void addPrimaryFilters(Map<String, Set<Object>> primaryFilters) {
+    for (Entry<String, Set<Object>> primaryFilter : primaryFilters.entrySet()) {
+      Set<Object> thisPrimaryFilter =
+          this.primaryFilters.get(primaryFilter.getKey());
+      if (thisPrimaryFilter == null) {
+        this.primaryFilters.put(
+            primaryFilter.getKey(), primaryFilter.getValue());
+      } else {
+        thisPrimaryFilter.addAll(primaryFilter.getValue());
+      }
+    }
   }
 
   /**
@@ -263,7 +278,7 @@ public class ATSEntity implements Comparable<ATSEntity> {
    * @param primaryFilters
    *          a map of primary filters
    */
-  public void setPrimaryFilters(Map<String, Object> primaryFilters) {
+  public void setPrimaryFilters(Map<String, Set<Object>> primaryFilters) {
     this.primaryFilters = primaryFilters;
   }
 
@@ -339,7 +354,7 @@ public class ATSEntity implements Comparable<ATSEntity> {
       return false;
     if (getClass() != obj.getClass())
       return false;
-    ATSEntity other = (ATSEntity) obj;
+    TimelineEntity other = (TimelineEntity) obj;
     if (entityId == null) {
       if (other.entityId != null)
         return false;
@@ -379,7 +394,7 @@ public class ATSEntity implements Comparable<ATSEntity> {
   }
 
   @Override
-  public int compareTo(ATSEntity other) {
+  public int compareTo(TimelineEntity other) {
     int comparison = entityType.compareTo(other.entityType);
     if (comparison == 0) {
       long thisStartTime =

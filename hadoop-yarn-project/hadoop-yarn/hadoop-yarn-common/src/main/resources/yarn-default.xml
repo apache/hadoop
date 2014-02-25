@@ -573,27 +573,9 @@
   </property>
 
   <property>
-    <description>Indicate to ResourceManager as well as clients whether
-    history-service is enabled or not. If enabled, ResourceManager starts
-    recording historical data that ApplicationHistory service can consume.
-    Similarly, clients can redirect to the history service when applications
-    finish if this is enabled.</description>
-    <name>yarn.ahs.enabled</name>
-    <value>false</value>
-  </property>
-
-  <property>
     <description>Number of worker threads that write the history data.</description>
     <name>yarn.resourcemanager.history-writer.multi-threaded-dispatcher.pool-size</name>
     <value>10</value>
-  </property>
-
-  <property>
-    <description>The implementation class of ApplicationHistoryStore, which is
-    to be used by RMApplicationHistoryWriter.
-    </description>
-    <name>yarn.resourcemanager.history-writer.class</name>
-    <value>org.apache.hadoop.yarn.server.applicationhistoryservice.NullApplicationHistoryStore</value>
   </property>
 
   <property>
@@ -1085,73 +1067,81 @@
     <value></value>
   </property>
 
-  <!-- Application History Service's Configuration-->
+  <!-- Timeline Service's Configuration-->
 
   <property>
-    <description>The hostname of the AHS.</description>
-    <name>yarn.ahs.hostname</name>
+    <description>The hostname of the timeline service web application.</description>
+    <name>yarn.timeline-service.hostname</name>
     <value>0.0.0.0</value>
   </property>
 
   <property>
-    <description>The http address of the AHS web application.</description>
-    <name>yarn.ahs.webapp.address</name>
-    <value>${yarn.ahs.hostname}:8188</value>
+    <description>This is default address for the timeline server to start the
+    RPC server.</description>
+    <name>yarn.timeline-service.address</name>
+    <value>0.0.0.0:10200</value>
   </property>
 
   <property>
-    <description>The https adddress of the AHS web application.</description>
-    <name>yarn.ahs.webapp.https.address</name>
-    <value>${yarn.ahs.hostname}:8190</value>
+    <description>The http address of the timeline service web application.</description>
+    <name>yarn.timeline-service.webapp.address</name>
+    <value>${yarn.timeline-service.hostname}:8188</value>
+  </property>
+
+  <property>
+    <description>The https adddress of the timeline service web application.</description>
+    <name>yarn.timeline-service.webapp.https.address</name>
+    <value>${yarn.timeline-service.hostname}:8190</value>
+  </property>
+
+  <property>
+    <description>Store class name for timeline store</description>
+    <name>yarn.timeline-service.store-class</name>
+    <value>org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.LeveldbTimelineStore</value>
+  </property>
+
+  <property>
+    <description>Store file name for leveldb timeline store</description>
+    <name>yarn.timeline-service.leveldb-timeline-store.path</name>
+    <value>${yarn.log.dir}/timeline</value>
+  </property>
+
+  <property>
+    <description>Handler thread count to serve the client RPC requests.</description>
+    <name>yarn.timeline-service.handler-thread-count</name>
+    <value>10</value>
+  </property>
+
+  <property>
+    <description>Indicate to ResourceManager as well as clients whether
+    history-service is enabled or not. If enabled, ResourceManager starts
+    recording historical data that ApplicationHistory service can consume.
+    Similarly, clients can redirect to the history service when applications
+    finish if this is enabled.</description>
+    <name>yarn.timeline-service.generic-application-history.enabled</name>
+    <value>false</value>
   </property>
 
   <property>
     <description>URI pointing to the location of the FileSystem path where
     the history will be persisted. This must be supplied when using
     org.apache.hadoop.yarn.server.applicationhistoryservice.FileSystemApplicationHistoryStore
-    as the value for yarn.resourcemanager.history-writer.store.class</description>
-    <name>yarn.ahs.fs-history-store.uri</name>
-    <value>${hadoop.log.dir}/yarn/system/ahstore</value>
+    as the value for yarn.timeline-service.generic-application-history.store-class</description>
+    <name>yarn.timeline-service.generic-application-history.fs-history-store.uri</name>
+    <value>${hadoop.log.dir}/yarn/system/history</value>
   </property>
 
-  <property>
-    <description>This is default address for the Application History server
-    to start the RPC server.</description>
-    <name>yarn.ahs.address</name>
-    <value>0.0.0.0:10200</value>
-  </property>
-
-  <property>
-    <description>CLient thread count to serve the client requests.</description>
-    <name>yarn.ahs.client.thread-count</name>
-    <value>10</value>
-  </property>
-  
   <property>
     <description>T-file compression types used to compress history data.</description>
-    <name>yarn.ahs.fs-history-store.compression-type</name>
+    <name>yarn.timeline-service.generic-application-history.fs-history-store.compression-type</name>
     <value>none</value>
   </property>
   
   <property>
-	<description> Store class name for history store, defaulting to file
-		system store </description>
-	<name>yarn.ahs.store.class</name>
+	<description>Store class name for history store, defaulting to file
+	system store </description>
+	<name>yarn.timeline-service.generic-application-history.store-class</name>
 	<value>org.apache.hadoop.yarn.server.applicationhistoryservice.FileSystemApplicationHistoryStore</value>
-  </property>
-
-  <!-- Application Timeline Service's Configuration-->
-
-  <property>
-    <description>Store class name for application timeline store</description>
-    <name>yarn.ats.store.class</name>
-    <value>org.apache.hadoop.yarn.server.applicationhistoryservice.apptimeline.LeveldbApplicationTimelineStore</value>
-  </property>
-
-  <property>
-    <description>Store file name for leveldb application timeline store</description>
-    <name>yarn.ats.leveldb-apptimeline-store.path</name>
-    <value>${yarn.log.dir}/ats</value>
   </property>
 
   <!-- Other configuration -->
