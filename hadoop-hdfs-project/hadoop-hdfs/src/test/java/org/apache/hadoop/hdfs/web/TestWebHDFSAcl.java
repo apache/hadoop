@@ -17,12 +17,11 @@
  */
 package org.apache.hadoop.hdfs.web;
 
-import static org.junit.Assert.*;
-
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.FSAclBaseTest;
+import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -34,12 +33,10 @@ public class TestWebHDFSAcl extends FSAclBaseTest {
 
   @BeforeClass
   public static void init() throws Exception {
-    Configuration conf = WebHdfsTestUtil.createConf();
+    conf = WebHdfsTestUtil.createConf();
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     cluster.waitActive();
-    fs = WebHdfsTestUtil.getWebHdfsFileSystem(conf, WebHdfsFileSystem.SCHEME);
-    assertTrue(fs instanceof WebHdfsFileSystem);
   }
 
   /**
@@ -50,5 +47,30 @@ public class TestWebHDFSAcl extends FSAclBaseTest {
   @Test
   @Ignore
   public void testDefaultAclNewSymlinkIntermediate() {
+  }
+
+  /**
+   * Overridden to provide a WebHdfsFileSystem wrapper for the super-user.
+   *
+   * @return WebHdfsFileSystem for super-user
+   * @throws Exception if creation fails
+   */
+  @Override
+  protected WebHdfsFileSystem createFileSystem() throws Exception {
+    return WebHdfsTestUtil.getWebHdfsFileSystem(conf, WebHdfsFileSystem.SCHEME);
+  }
+
+  /**
+   * Overridden to provide a WebHdfsFileSystem wrapper for a specific user.
+   *
+   * @param user UserGroupInformation specific user
+   * @return WebHdfsFileSystem for specific user
+   * @throws Exception if creation fails
+   */
+  @Override
+  protected WebHdfsFileSystem createFileSystem(UserGroupInformation user)
+      throws Exception {
+    return WebHdfsTestUtil.getWebHdfsFileSystemAs(user, conf,
+      WebHdfsFileSystem.SCHEME);
   }
 }

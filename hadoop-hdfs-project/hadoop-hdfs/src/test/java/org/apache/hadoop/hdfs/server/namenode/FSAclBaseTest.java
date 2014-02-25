@@ -27,18 +27,26 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.List;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.AclException;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import com.google.common.collect.Lists;
 
@@ -47,24 +55,42 @@ import com.google.common.collect.Lists;
  * also covers interaction of setPermission with inodes that have ACLs.
  */
 public abstract class FSAclBaseTest {
+  private static final UserGroupInformation BRUCE =
+    UserGroupInformation.createUserForTesting("bruce", new String[] { });
+  private static final UserGroupInformation DIANA =
+    UserGroupInformation.createUserForTesting("diana", new String[] { });
+  private static final UserGroupInformation SUPERGROUP_MEMBER =
+    UserGroupInformation.createUserForTesting("super", new String[] {
+      DFSConfigKeys.DFS_PERMISSIONS_SUPERUSERGROUP_DEFAULT });
 
   protected static MiniDFSCluster cluster;
-  protected static FileSystem fs;
+  protected static Configuration conf;
   private static int pathCount = 0;
   private static Path path;
 
+  @Rule
+  public ExpectedException exception = ExpectedException.none();
+
+  private FileSystem fs, fsAsBruce, fsAsDiana, fsAsSupergroupMember;
+
   @AfterClass
-  public static void shutdown() throws Exception {
-    IOUtils.cleanup(null, fs);
+  public static void shutdown() {
     if (cluster != null) {
       cluster.shutdown();
     }
   }
 
   @Before
-  public void setUp() {
+  public void setUp() throws Exception {
     pathCount += 1;
     path = new Path("/p" + pathCount);
+    initFileSystems();
+  }
+
+  @After
+  public void destroyFileSystems() {
+    IOUtils.cleanup(null, fs, fsAsBruce, fsAsDiana, fsAsSupergroupMember);
+    fs = fsAsBruce = fsAsDiana = fsAsSupergroupMember = null;
   }
 
   @Test
@@ -1036,6 +1062,188 @@ public abstract class FSAclBaseTest {
     assertAclFeature(dirPath, true);
   }
 
+  @Test
+  public void testSkipAclEnforcementPermsDisabled() throws Exception {
+    Path bruceDir = new Path(path, "bruce");
+    Path bruceFile = new Path(bruceDir, "file");
+    fs.mkdirs(bruceDir);
+    fs.setOwner(bruceDir, "bruce", null);
+    fsAsBruce.create(bruceFile).close();
+    fsAsBruce.modifyAclEntries(bruceFile, Lists.newArrayList(
+      aclEntry(ACCESS, USER, "diana", NONE)));
+    assertFilePermissionDenied(fsAsDiana, DIANA, bruceFile);
+    try {
+      conf.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, false);
+      destroyFileSystems();
+      restartCluster();
+      initFileSystems();
+      assertFilePermissionGranted(fsAsDiana, DIANA, bruceFile);
+    } finally {
+      conf.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, true);
+      restartCluster();
+    }
+  }
+
+  @Test
+  public void testSkipAclEnforcementSuper() throws Exception {
+    Path bruceDir = new Path(path, "bruce");
+    Path bruceFile = new Path(bruceDir, "file");
+    fs.mkdirs(bruceDir);
+    fs.setOwner(bruceDir, "bruce", null);
+    fsAsBruce.create(bruceFile).close();
+    fsAsBruce.modifyAclEntries(bruceFile, Lists.newArrayList(
+      aclEntry(ACCESS, USER, "diana", NONE)));
+    assertFilePermissionGranted(fs, DIANA, bruceFile);
+    assertFilePermissionGranted(fsAsBruce, DIANA, bruceFile);
+    assertFilePermissionDenied(fsAsDiana, DIANA, bruceFile);
+    assertFilePermissionGranted(fsAsSupergroupMember, SUPERGROUP_MEMBER,
+      bruceFile);
+  }
+
+  @Test
+  public void testModifyAclEntriesMustBeOwnerOrSuper() throws Exception {
+    Path bruceDir = new Path(path, "bruce");
+    Path bruceFile = new Path(bruceDir, "file");
+    fs.mkdirs(bruceDir);
+    fs.setOwner(bruceDir, "bruce", null);
+    fsAsBruce.create(bruceFile).close();
+    List<AclEntry> aclSpec = Lists.newArrayList(
+      aclEntry(ACCESS, USER, "diana", ALL));
+    fsAsBruce.modifyAclEntries(bruceFile, aclSpec);
+    fs.modifyAclEntries(bruceFile, aclSpec);
+    fsAsSupergroupMember.modifyAclEntries(bruceFile, aclSpec);
+    exception.expect(AccessControlException.class);
+    fsAsDiana.modifyAclEntries(bruceFile, aclSpec);
+  }
+
+  @Test
+  public void testRemoveAclEntriesMustBeOwnerOrSuper() throws Exception {
+    Path bruceDir = new Path(path, "bruce");
+    Path bruceFile = new Path(bruceDir, "file");
+    fs.mkdirs(bruceDir);
+    fs.setOwner(bruceDir, "bruce", null);
+    fsAsBruce.create(bruceFile).close();
+    List<AclEntry> aclSpec = Lists.newArrayList(
+      aclEntry(ACCESS, USER, "diana"));
+    fsAsBruce.removeAclEntries(bruceFile, aclSpec);
+    fs.removeAclEntries(bruceFile, aclSpec);
+    fsAsSupergroupMember.removeAclEntries(bruceFile, aclSpec);
+    exception.expect(AccessControlException.class);
+    fsAsDiana.removeAclEntries(bruceFile, aclSpec);
+  }
+
+  @Test
+  public void testRemoveDefaultAclMustBeOwnerOrSuper() throws Exception {
+    Path bruceDir = new Path(path, "bruce");
+    Path bruceFile = new Path(bruceDir, "file");
+    fs.mkdirs(bruceDir);
+    fs.setOwner(bruceDir, "bruce", null);
+    fsAsBruce.create(bruceFile).close();
+    fsAsBruce.removeDefaultAcl(bruceFile);
+    fs.removeDefaultAcl(bruceFile);
+    fsAsSupergroupMember.removeDefaultAcl(bruceFile);
+    exception.expect(AccessControlException.class);
+    fsAsDiana.removeDefaultAcl(bruceFile);
+  }
+
+  @Test
+  public void testRemoveAclMustBeOwnerOrSuper() throws Exception {
+    Path bruceDir = new Path(path, "bruce");
+    Path bruceFile = new Path(bruceDir, "file");
+    fs.mkdirs(bruceDir);
+    fs.setOwner(bruceDir, "bruce", null);
+    fsAsBruce.create(bruceFile).close();
+    fsAsBruce.removeAcl(bruceFile);
+    fs.removeAcl(bruceFile);
+    fsAsSupergroupMember.removeAcl(bruceFile);
+    exception.expect(AccessControlException.class);
+    fsAsDiana.removeAcl(bruceFile);
+  }
+
+  @Test
+  public void testSetAclMustBeOwnerOrSuper() throws Exception {
+    Path bruceDir = new Path(path, "bruce");
+    Path bruceFile = new Path(bruceDir, "file");
+    fs.mkdirs(bruceDir);
+    fs.setOwner(bruceDir, "bruce", null);
+    fsAsBruce.create(bruceFile).close();
+    List<AclEntry> aclSpec = Lists.newArrayList(
+      aclEntry(ACCESS, USER, READ_WRITE),
+      aclEntry(ACCESS, USER, "diana", READ_WRITE),
+      aclEntry(ACCESS, GROUP, READ),
+      aclEntry(ACCESS, OTHER, READ));
+    fsAsBruce.setAcl(bruceFile, aclSpec);
+    fs.setAcl(bruceFile, aclSpec);
+    fsAsSupergroupMember.setAcl(bruceFile, aclSpec);
+    exception.expect(AccessControlException.class);
+    fsAsDiana.setAcl(bruceFile, aclSpec);
+  }
+
+  @Test
+  public void testGetAclStatusRequiresTraverseOrSuper() throws Exception {
+    Path bruceDir = new Path(path, "bruce");
+    Path bruceFile = new Path(bruceDir, "file");
+    fs.mkdirs(bruceDir);
+    fs.setOwner(bruceDir, "bruce", null);
+    fsAsBruce.create(bruceFile).close();
+    fsAsBruce.setAcl(bruceDir, Lists.newArrayList(
+      aclEntry(ACCESS, USER, ALL),
+      aclEntry(ACCESS, USER, "diana", READ),
+      aclEntry(ACCESS, GROUP, NONE),
+      aclEntry(ACCESS, OTHER, NONE)));
+    fsAsBruce.getAclStatus(bruceFile);
+    fs.getAclStatus(bruceFile);
+    fsAsSupergroupMember.getAclStatus(bruceFile);
+    exception.expect(AccessControlException.class);
+    fsAsDiana.getAclStatus(bruceFile);
+  }
+
+  /**
+   * Creates a FileSystem for the super-user.
+   *
+   * @return FileSystem for super-user
+   * @throws Exception if creation fails
+   */
+  protected FileSystem createFileSystem() throws Exception {
+    return cluster.getFileSystem();
+  }
+
+  /**
+   * Creates a FileSystem for a specific user.
+   *
+   * @param user UserGroupInformation specific user
+   * @return FileSystem for specific user
+   * @throws Exception if creation fails
+   */
+  protected FileSystem createFileSystem(UserGroupInformation user)
+      throws Exception {
+    return DFSTestUtil.getFileSystemAs(user, cluster.getConfiguration(0));
+  }
+
+  /**
+   * Initializes all FileSystem instances used in the tests.
+   *
+   * @throws Exception if initialization fails
+   */
+  private void initFileSystems() throws Exception {
+    fs = createFileSystem();
+    fsAsBruce = createFileSystem(BRUCE);
+    fsAsDiana = createFileSystem(DIANA);
+    fsAsSupergroupMember = createFileSystem(SUPERGROUP_MEMBER);
+  }
+
+  /**
+   * Restarts the cluster without formatting, so all data is preserved.
+   *
+   * @throws Exception if restart fails
+   */
+  private void restartCluster() throws Exception {
+    shutdown();
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).format(false)
+      .build();
+    cluster.waitActive();
+  }
+
   /**
    * Asserts whether or not the inode for the test path has an AclFeature.
    *
@@ -1075,7 +1283,7 @@ public abstract class FSAclBaseTest {
    * @param perm short expected permission bits
    * @throws IOException thrown if there is an I/O error
    */
-  private static void assertPermission(short perm) throws IOException {
+  private void assertPermission(short perm) throws IOException {
     assertPermission(path, perm);
   }
 
@@ -1086,7 +1294,7 @@ public abstract class FSAclBaseTest {
    * @param perm short expected permission bits
    * @throws IOException thrown if there is an I/O error
    */
-  private static void assertPermission(Path pathToCheck, short perm)
+  private void assertPermission(Path pathToCheck, short perm)
       throws IOException {
     AclTestHelpers.assertPermission(fs, pathToCheck, perm);
   }
