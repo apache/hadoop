@@ -348,6 +348,10 @@ Release 2.4.0 - UNRELEASED
     re-registration after a RESYNC and thus avoid hanging. (Rohith Sharma via
     vinodkv)
 
+    YARN-1734. Fixed ResourceManager to update the configurations when it
+    transits from standby to active mode so as to assimilate any changes that
+    happened while it was in standby mode. (Xuan Gong via vinodkv)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
