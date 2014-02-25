@@ -96,10 +96,41 @@ class FsVolumeList {
     }
   }
   
-  void getAllVolumesMap(String bpid, ReplicaMap volumeMap) throws IOException {
+  void getAllVolumesMap(final String bpid, final ReplicaMap volumeMap) throws IOException {
     long totalStartTime = System.currentTimeMillis();
-    for (FsVolumeImpl v : volumes) {
-      getVolumeMap(bpid, v, volumeMap);
+    final List<IOException> exceptions = Collections.synchronizedList(
+        new ArrayList<IOException>());
+    List<Thread> replicaAddingThreads = new ArrayList<Thread>();
+    for (final FsVolumeImpl v : volumes) {
+      Thread t = new Thread() {
+        public void run() {
+          try {
+            FsDatasetImpl.LOG.info("Adding replicas to map for block pool " +
+                bpid + " on volume " + v + "...");
+            long startTime = System.currentTimeMillis();
+            v.getVolumeMap(bpid, volumeMap);
+            long timeTaken = System.currentTimeMillis() - startTime;
+            FsDatasetImpl.LOG.info("Time to add replicas to map for block pool"
+                + " " + bpid + " on volume " + v + ": " + timeTaken + "ms");
+          } catch (IOException ioe) {
+            FsDatasetImpl.LOG.info("Caught exception while adding replicas " +
+                "from " + v + ". Will throw later.", ioe);
+            exceptions.add(ioe);
+          }
+        }
+      };
+      replicaAddingThreads.add(t);
+      t.start();
+    }
+    for (Thread t : replicaAddingThreads) {
+      try {
+        t.join();
+      } catch (InterruptedException ie) {
+        throw new IOException(ie);
+      }
+    }
+    if (!exceptions.isEmpty()) {
+      throw exceptions.get(0);
     }
     long totalTimeTaken = System.currentTimeMillis() - totalStartTime;
     FsDatasetImpl.LOG.info("Total time to add all replicas to map: "

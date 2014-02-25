@@ -95,3 +95,5 @@ HDFS-5535 subtasks:
     #testRaceBetweenReplicaRecoveryAndFinalizeBlock. (kihwal)
 
     HDFS-5924. Utilize OOB upgrade message processing for writes. (kihwal)
+
+    HDFS-5498. Improve datanode startup time. (kihwal)

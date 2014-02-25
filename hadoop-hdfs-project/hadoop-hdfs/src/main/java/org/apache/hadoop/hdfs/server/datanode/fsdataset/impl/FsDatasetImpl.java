@@ -1727,11 +1727,13 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   }
   
   @Override
-  public synchronized void addBlockPool(String bpid, Configuration conf)
+  public void addBlockPool(String bpid, Configuration conf)
       throws IOException {
     LOG.info("Adding block pool " + bpid);
-    volumes.addBlockPool(bpid, conf);
-    volumeMap.initBlockPool(bpid);
+    synchronized(this) {
+      volumes.addBlockPool(bpid, conf);
+      volumeMap.initBlockPool(bpid);
+    }
     volumes.getAllVolumesMap(bpid, volumeMap);
   }
 

@@ -22,6 +22,7 @@ import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
@@ -44,6 +45,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
+import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.Time;
 
 /**
@@ -60,6 +62,9 @@ class BlockPoolSlice {
   private final LDir finalizedDir; // directory store Finalized replica
   private final File rbwDir; // directory store RBW replica
   private final File tmpDir; // directory store Temporary replica
+  private static String DU_CACHE_FILE = "dfsUsed";
+  private volatile boolean dfsUsedSaved = false;
+  private static final int SHUTDOWN_HOOK_PRIORITY = 30;
   
   // TODO:FEDERATION scalability issue - a thread per DU is needed
   private final DU dfsUsage;
@@ -110,8 +115,21 @@ class BlockPoolSlice {
         throw new IOException("Mkdirs failed to create " + tmpDir.toString());
       }
     }
-    this.dfsUsage = new DU(bpDir, conf);
+    // Use cached value initially if available. Or the following call will
+    // block until the initial du command completes.
+    this.dfsUsage = new DU(bpDir, conf, loadDfsUsed());
     this.dfsUsage.start();
+
+    // Make the dfs usage to be saved during shutdown.
+    ShutdownHookManager.get().addShutdownHook(
+      new Runnable() {
+        @Override
+        public void run() {
+          if (!dfsUsedSaved) {
+            saveDfsUsed();
+          }
+        }
+      }, SHUTDOWN_HOOK_PRIORITY);
   }
 
   File getDirectory() {
@@ -135,6 +153,74 @@ class BlockPoolSlice {
     return dfsUsage.getUsed();
   }
   
+   /**
+   * Read in the cached DU value and return it if it is less than 600 seconds
+   * old (DU update interval). Slight imprecision of dfsUsed is not critical
+   * and skipping DU can significantly shorten the startup time.
+   * If the cached value is not available or too old, -1 is returned.
+   */
+  long loadDfsUsed() {
+    long cachedDfsUsed;
+    long mtime;
+    Scanner sc;
+
+    try {
+      sc = new Scanner(new File(currentDir, DU_CACHE_FILE));
+    } catch (FileNotFoundException fnfe) {
+      return -1;
+    }
+
+    try {
+      // Get the recorded dfsUsed from the file.
+      if (sc.hasNextLong()) {
+        cachedDfsUsed = sc.nextLong();
+      } else {
+        return -1;
+      }
+      // Get the recorded mtime from the file.
+      if (sc.hasNextLong()) {
+        mtime = sc.nextLong();
+      } else {
+        return -1;
+      }
+
+      // Return the cached value if mtime is okay.
+      if (mtime > 0 && (Time.now() - mtime < 600000L)) {
+        FsDatasetImpl.LOG.info("Cached dfsUsed found for " + currentDir + ": " +
+            cachedDfsUsed);
+        return cachedDfsUsed;
+      }
+      return -1;
+    } finally {
+      sc.close();
+    }
+  }
+
+  /**
+   * Write the current dfsUsed to the cache file.
+   */
+  void saveDfsUsed() {
+    File outFile = new File(currentDir, DU_CACHE_FILE);
+    if (outFile.exists()) {
+      outFile.delete();
+    }
+
+    try {
+      long used = getDfsUsed();
+      if (used > 0) {
+        FileWriter out = new FileWriter(outFile);
+        // mtime is written last, so that truncated writes won't be valid.
+        out.write(Long.toString(used) + " " + Long.toString(Time.now()));
+        out.flush();
+        out.close();
+      }
+    } catch (IOException ioe) {
+      // If write failed, the volume might be bad. Since the cache file is
+      // not critical, log the error and continue.
+      FsDatasetImpl.LOG.warn("Failed to write dfsUsed to " + outFile, ioe);
+    }
+  }
+
   /**
    * Temporary files. They get moved to the finalized block directory when
    * the block is finalized.
@@ -210,6 +296,7 @@ class BlockPoolSlice {
                 genStamp, volume, blockFile.getParentFile(), null);
             loadRwr = false;
           }
+          sc.close();
           restartMeta.delete();
         } catch (FileNotFoundException fnfe) {
           // nothing to do here
@@ -326,6 +413,8 @@ class BlockPoolSlice {
   }
   
   void shutdown() {
+    saveDfsUsed();
+    dfsUsedSaved = true;
     dfsUsage.shutdown();
   }
 }

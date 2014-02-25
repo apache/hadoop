@@ -290,10 +290,14 @@ public class UpgradeUtilities {
       if (!list[i].isFile()) {
         continue;
       }
-      // skip VERSION file for DataNodes
-      if (nodeType == DATA_NODE && list[i].getName().equals("VERSION")) {
+
+      // skip VERSION and dfsUsed file for DataNodes
+      if (nodeType == DATA_NODE && 
+         (list[i].getName().equals("VERSION") || 
+         list[i].getName().equals("dfsUsed"))) {
         continue; 
       }
+
       FileInputStream fis = null;
       try {
         fis = new FileInputStream(list[i]);
