@@ -250,10 +250,20 @@ public class AdminService extends CompositeService implements
   @Override
   public synchronized void transitionToActive(
       HAServiceProtocol.StateChangeRequestInfo reqInfo) throws IOException {
+    // call refreshAdminAcls before HA state transition
+    // for the case that adminAcls have been updated in previous active RM
+    try {
+      refreshAdminAcls(false);
+    } catch (YarnException ex) {
+      throw new ServiceFailedException("Can not execute refreshAdminAcls", ex);
+    }
+
     UserGroupInformation user = checkAccess("transitionToActive");
     checkHaStateChange(reqInfo);
     try {
       rm.transitionToActive();
+      // call all refresh*s for active RM to get the updated configurations.
+      refreshAll();
       RMAuditLogger.logSuccess(user.getShortUserName(),
           "transitionToActive", "RMHAProtocolService");
     } catch (Exception e) {
@@ -268,6 +278,13 @@ public class AdminService extends CompositeService implements
   @Override
   public synchronized void transitionToStandby(
       HAServiceProtocol.StateChangeRequestInfo reqInfo) throws IOException {
+    // call refreshAdminAcls before HA state transition
+    // for the case that adminAcls have been updated in previous active RM
+    try {
+      refreshAdminAcls(false);
+    } catch (YarnException ex) {
+      throw new ServiceFailedException("Can not execute refreshAdminAcls", ex);
+    }
     UserGroupInformation user = checkAccess("transitionToStandby");
     checkHaStateChange(reqInfo);
     try {
@@ -406,10 +423,15 @@ public class AdminService extends CompositeService implements
   @Override
   public RefreshAdminAclsResponse refreshAdminAcls(
       RefreshAdminAclsRequest request) throws YarnException, IOException {
+    return refreshAdminAcls(true);
+  }
+
+  private RefreshAdminAclsResponse refreshAdminAcls(boolean checkRMHAState)
+      throws YarnException, IOException {
     String argName = "refreshAdminAcls";
     UserGroupInformation user = checkAcls(argName);
-    
-    if (!isRMActive()) {
+
+    if (checkRMHAState && !isRMActive()) {
       RMAuditLogger.logFailure(user.getShortUserName(), argName,
           adminAcl.toString(), "AdminService",
           "ResourceManager is not active. Can not refresh user-groups.");
@@ -519,6 +541,24 @@ public class AdminService extends CompositeService implements
     conf.addResource(this.rmContext.getConfigurationProvider()
         .getConfigurationInputStream(conf, confFileName));
     return conf;
+  }
+
+  private void refreshAll() throws ServiceFailedException {
+    try {
+      refreshQueues(RefreshQueuesRequest.newInstance());
+      refreshNodes(RefreshNodesRequest.newInstance());
+      refreshSuperUserGroupsConfiguration(
+          RefreshSuperUserGroupsConfigurationRequest.newInstance());
+      refreshUserToGroupsMappings(
+          RefreshUserToGroupsMappingsRequest.newInstance());
+      if (getConfig().getBoolean(
+          CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION,
+          false)) {
+        refreshServiceAcls(RefreshServiceAclsRequest.newInstance());
+      }
+    } catch (Exception ex) {
+      throw new ServiceFailedException(ex.getMessage());
+    }
   }
 
   @VisibleForTesting
