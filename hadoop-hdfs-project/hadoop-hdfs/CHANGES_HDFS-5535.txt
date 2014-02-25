@@ -83,3 +83,5 @@ HDFS-5535 subtasks:
     Arpit Agarwal)
 
     HDFS-5583. Make DN send an OOB Ack on shutdown before restarting. (kihwal)
+
+    HDFS-5778. Add rolling upgrade user document. (szetszwo)
