@@ -337,6 +337,8 @@ Release 2.4.0 - UNRELEASED
     transits from standby to active mode so as to assimilate any changes that
     happened while it was in standby mode. (Xuan Gong via vinodkv)
 
+    YARN-1760. TestRMAdminService assumes CapacityScheduler. (kasha)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
