@@ -761,7 +761,13 @@ class BlockReceiver implements Closeable {
       }
       if (responder != null) {
         try {
-          responder.join(datanode.getDnConf().getXceiverStopTimeout());
+          responder.interrupt();
+          // join() on the responder should timeout a bit earlier than the
+          // configured deadline. Otherwise, the join() on this thread will
+          // likely timeout as well.
+          long joinTimeout = datanode.getDnConf().getXceiverStopTimeout();
+          joinTimeout = joinTimeout > 1  ? joinTimeout*8/10 : joinTimeout;
+          responder.join(joinTimeout);
           if (responder.isAlive()) {
             String msg = "Join on responder thread " + responder
                 + " timed out";

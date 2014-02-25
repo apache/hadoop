@@ -90,3 +90,6 @@ HDFS-5535 subtasks:
     usage message. (Vinayakumar B via szetszwo)
 
     HDFS-6014. Fix findbug warnings introduced by HDFS-5583. (kihwal)
+
+    HDFS-6015. Fix TestBlockRecovery
+    #testRaceBetweenReplicaRecoveryAndFinalizeBlock. (kihwal)
