@@ -445,8 +445,9 @@ public class SecondaryNameNode implements Runnable {
             } else {
               LOG.info("Image has changed. Downloading updated image from NN.");
               MD5Hash downloadedHash = TransferFsImage.downloadImageToStorage(
-                  nnHostPort, sig.mostRecentCheckpointTxId, dstImage.getStorage(), true);
-              dstImage.saveDigestAndRenameCheckpointImage(
+                  nnHostPort, NameNodeFile.IMAGE, sig.mostRecentCheckpointTxId,
+                  dstImage.getStorage(), true);
+              dstImage.saveDigestAndRenameCheckpointImage(NameNodeFile.IMAGE,
                   sig.mostRecentCheckpointTxId, downloadedHash);
             }
         
@@ -555,7 +556,7 @@ public class SecondaryNameNode implements Runnable {
     //
     long txid = checkpointImage.getLastAppliedTxId();
     TransferFsImage.uploadImageFromStorage(fsName, getImageListenAddress(),
-        dstStorage, txid);
+        dstStorage, NameNodeFile.IMAGE, txid);
 
     // error simulation code for junit test
     CheckpointFaultInjector.getInstance().afterSecondaryUploadsNewImage();
@@ -997,7 +998,8 @@ public class SecondaryNameNode implements Runnable {
     
     dstStorage.setStorageInfo(sig);
     if (loadImage) {
-      File file = dstStorage.findImageFile(sig.mostRecentCheckpointTxId);
+      File file = dstStorage.findImageFile(NameNodeFile.IMAGE,
+          sig.mostRecentCheckpointTxId);
       if (file == null) {
         throw new IOException("Couldn't find image file at txid " + 
             sig.mostRecentCheckpointTxId + " even though it should have " +

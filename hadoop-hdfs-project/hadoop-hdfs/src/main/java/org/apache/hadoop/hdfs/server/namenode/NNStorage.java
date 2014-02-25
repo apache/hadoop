@@ -25,6 +25,7 @@ import java.net.URI;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -50,8 +51,8 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.util.Time;
 
-import com.google.common.base.Preconditions;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 
 /**
@@ -499,21 +500,24 @@ public class NNStorage extends Storage implements Closeable,
   }
 
   /**
-   * Return the name of the image file.
-   * @return The name of the first image file.
+   * @return The first image file with the given txid and image type.
    */
-  public File getFsImageName(long txid) {
-    StorageDirectory sd = null;
-    for (Iterator<StorageDirectory> it =
-      dirIterator(NameNodeDirType.IMAGE); it.hasNext();) {
-      sd = it.next();
-      File fsImage = getStorageFile(sd, NameNodeFile.IMAGE, txid);
-      if(FileUtil.canRead(sd.getRoot()) && fsImage.exists())
+  public File getFsImageName(long txid, NameNodeFile nnf) {
+    for (Iterator<StorageDirectory> it = dirIterator(NameNodeDirType.IMAGE);
+        it.hasNext();) {
+      StorageDirectory sd = it.next();
+      File fsImage = getStorageFile(sd, nnf, txid);
+      if (FileUtil.canRead(sd.getRoot()) && fsImage.exists()) {
         return fsImage;
+      }
     }
     return null;
+  }  
+
+  public File getFsImageName(long txid) {
+    return getFsImageName(txid, NameNodeFile.IMAGE);
   }
-  
+
   public File getHighestFsImageName() {
     return getFsImageName(getMostRecentCheckpointTxId());
   }
@@ -697,12 +701,11 @@ public class NNStorage extends Storage implements Closeable,
     return new File(sd.getCurrentDir(),
         getTemporaryEditsFileName(startTxId, endTxId, timestamp));
   }
-  
-  static File getImageFile(StorageDirectory sd, long txid) {
-    return new File(sd.getCurrentDir(),
-        getImageFileName(txid));
+
+  static File getImageFile(StorageDirectory sd, NameNodeFile nnf, long txid) {
+    return new File(sd.getCurrentDir(), getNameNodeFileName(nnf, txid));
   }
-  
+
   @VisibleForTesting
   public static String getFinalizedEditsFileName(long startTxId, long endTxId) {
     return String.format("%s_%019d-%019d", NameNodeFile.EDITS.getName(),
@@ -730,12 +733,12 @@ public class NNStorage extends Storage implements Closeable,
   }
     
   /**
-   * Return the first readable image file for the given txid, or null
-   * if no such image can be found
+   * Return the first readable image file for the given txid and image type, or
+   * null if no such image can be found
    */
-  File findImageFile(long txid) {
+  File findImageFile(NameNodeFile nnf, long txid) {
     return findFile(NameNodeDirType.IMAGE,
-        getImageFileName(txid));
+        getNameNodeFileName(nnf, txid));
   }
 
   /**
@@ -980,7 +983,8 @@ public class NNStorage extends Storage implements Closeable,
    * <b>Note:</b> this can mutate the storage info fields (ctime, version, etc).
    * @throws IOException if no valid storage dirs are found or no valid layout version
    */
-  FSImageStorageInspector readAndInspectDirs(NameNodeFile nnf) throws IOException {
+  FSImageStorageInspector readAndInspectDirs(EnumSet<NameNodeFile> fileTypes)
+      throws IOException {
     Integer layoutVersion = null;
     boolean multipleLV = false;
     StringBuilder layoutVersions = new StringBuilder();
@@ -1017,7 +1021,7 @@ public class NNStorage extends Storage implements Closeable,
     FSImageStorageInspector inspector;
     if (NameNodeLayoutVersion.supports(
         LayoutVersion.Feature.TXID_BASED_LAYOUT, getLayoutVersion())) {
-      inspector = new FSImageTransactionalStorageInspector(nnf);
+      inspector = new FSImageTransactionalStorageInspector(fileTypes);
     } else {
       inspector = new FSImagePreTransactionalStorageInspector();
     }

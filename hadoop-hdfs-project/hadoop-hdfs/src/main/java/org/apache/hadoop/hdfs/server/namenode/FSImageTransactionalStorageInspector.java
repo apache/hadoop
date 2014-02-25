@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -33,7 +34,9 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
+
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 
 class FSImageTransactionalStorageInspector extends FSImageStorageInspector {
   public static final Log LOG = LogFactory.getLog(
@@ -45,14 +48,27 @@ class FSImageTransactionalStorageInspector extends FSImageStorageInspector {
   List<FSImageFile> foundImages = new ArrayList<FSImageFile>();
   private long maxSeenTxId = 0;
   
-  private final Pattern namePattern;
+  private final List<Pattern> namePatterns = Lists.newArrayList();
 
   FSImageTransactionalStorageInspector() {
-    this(NameNodeFile.IMAGE);
+    this(EnumSet.of(NameNodeFile.IMAGE));
   }
 
-  FSImageTransactionalStorageInspector(NameNodeFile nnf) {
-    namePattern = Pattern.compile(nnf.getName() + "_(\\d+)");
+  FSImageTransactionalStorageInspector(EnumSet<NameNodeFile> nnfs) {
+    for (NameNodeFile nnf : nnfs) {
+      Pattern pattern = Pattern.compile(nnf.getName() + "_(\\d+)");
+      namePatterns.add(pattern);
+    }
+  }
+
+  private Matcher matchPattern(String name) {
+    for (Pattern p : namePatterns) {
+      Matcher m = p.matcher(name);
+      if (m.matches()) {
+        return m;
+      }
+    }
+    return null;
   }
 
   @Override
@@ -88,8 +104,8 @@ class FSImageTransactionalStorageInspector extends FSImageStorageInspector {
       String name = f.getName();
       
       // Check for fsimage_*
-      Matcher imageMatch = namePattern.matcher(name);
-      if (imageMatch.matches()) {
+      Matcher imageMatch = this.matchPattern(name);
+      if (imageMatch != null) {
         if (sd.getStorageDirType().isOfType(NameNodeDirType.IMAGE)) {
           try {
             long txid = Long.valueOf(imageMatch.group(1));

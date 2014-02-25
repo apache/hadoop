@@ -97,3 +97,5 @@ HDFS-5535 subtasks:
     HDFS-5924. Utilize OOB upgrade message processing for writes. (kihwal)
 
     HDFS-5498. Improve datanode startup time. (kihwal)
+
+    HDFS-6000. Avoid saving namespace when starting rolling upgrade. (jing9)

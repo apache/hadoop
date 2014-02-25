@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.TreeSet;
 
@@ -96,7 +97,7 @@ public class NNStorageRetentionManager {
   void purgeCheckpoinsAfter(NameNodeFile nnf, long fromTxId)
       throws IOException {
     FSImageTransactionalStorageInspector inspector =
-        new FSImageTransactionalStorageInspector(nnf);
+        new FSImageTransactionalStorageInspector(EnumSet.of(nnf));
     storage.inspectStorageDirs(inspector);
     for (FSImageFile image : inspector.getFoundImages()) {
       if (image.getCheckpointTxId() > fromTxId) {
@@ -107,7 +108,7 @@ public class NNStorageRetentionManager {
 
   void purgeOldStorage(NameNodeFile nnf) throws IOException {
     FSImageTransactionalStorageInspector inspector =
-        new FSImageTransactionalStorageInspector(nnf);
+        new FSImageTransactionalStorageInspector(EnumSet.of(nnf));
     storage.inspectStorageDirs(inspector);
 
     long minImageTxId = getImageTxIdToRetain(inspector);

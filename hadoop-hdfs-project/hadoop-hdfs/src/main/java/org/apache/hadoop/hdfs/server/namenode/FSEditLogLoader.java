@@ -727,10 +727,10 @@ public class FSEditLogLoader {
           break;
         }
       }
-
-      // save namespace if there is no rollback image existing
+      // start rolling upgrade
       final long startTime = ((RollingUpgradeOp) op).getTime();
-      fsNamesys.startRollingUpgradeInternal(startTime, op.txid - 2);
+      fsNamesys.startRollingUpgradeInternal(startTime);
+      fsNamesys.triggerRollbackCheckpoint();
       break;
     }
     case OP_ROLLING_UPGRADE_FINALIZE: {

@@ -93,6 +93,12 @@ public final class HdfsServerConstants {
                == RollingUpgradeStartupOption.ROLLBACK;
     }
 
+    public static boolean isRollingUpgradeDowngrade(StartupOption option) {
+      return option == ROLLINGUPGRADE
+          && option.getRollingUpgradeStartupOption() 
+               == RollingUpgradeStartupOption.DOWNGRADE;
+    }
+
     private final String name;
     
     // Used only with format and upgrade options

@@ -83,7 +83,9 @@ public class TestRollingUpgrade {
         runCmd(dfsadmin, true, "-rollingUpgrade");
 
         //start rolling upgrade
+        dfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
         runCmd(dfsadmin, true, "-rollingUpgrade", "prepare");
+        dfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
 
         //query rolling upgrade
         runCmd(dfsadmin, true, "-rollingUpgrade", "query");
@@ -182,7 +184,9 @@ public class TestRollingUpgrade {
         dfs.mkdirs(foo);
   
         //start rolling upgrade
+        dfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
         info1 = dfs.rollingUpgrade(RollingUpgradeAction.PREPARE);
+        dfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
         LOG.info("START\n" + info1);
 
         //query rolling upgrade
@@ -293,7 +297,9 @@ public class TestRollingUpgrade {
     final DistributedFileSystem dfs = cluster.getFileSystem();
 
     //start rolling upgrade
+    dfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
     dfs.rollingUpgrade(RollingUpgradeAction.PREPARE);
+    dfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
 
     dfs.mkdirs(bar);
     
@@ -378,26 +384,33 @@ public class TestRollingUpgrade {
     }
   }
 
-  private static boolean existRollbackFsImage(NNStorage storage)
+  public static boolean existRollbackFsImage(NNStorage storage)
       throws IOException {
     final FilenameFilter filter = new FilenameFilter() {
-
       @Override
       public boolean accept(File dir, String name) {
         return name.indexOf(NNStorage.NameNodeFile.IMAGE_ROLLBACK.getName()) != -1;
       }
     };
-    for (int i = 0; i < storage.getNumStorageDirs(); i++) {
-      File dir = storage.getStorageDir(i).getCurrentDir();
-      int l = dir.list(filter).length;
-      if (l > 0) {
-        return true;
+    final int total = 10;
+    int retry = 0;
+    while (retry++ < total) {
+      for (int i = 0; i < storage.getNumStorageDirs(); i++) {
+        File dir = storage.getStorageDir(i).getCurrentDir();
+        int l = dir.list(filter).length;
+        if (l > 0) {
+          return true;
+        }
+      }
+      try {
+        Thread.sleep(1000);
+      } catch (InterruptedException e) {
       }
     }
     return false;
   }
 
-  @Test
+  @Test (timeout = 300000)
   public void testFinalize() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     MiniQJMHACluster cluster = null;
@@ -408,6 +421,11 @@ public class TestRollingUpgrade {
       cluster = new MiniQJMHACluster.Builder(conf).build();
       MiniDFSCluster dfsCluster = cluster.getDfsCluster();
       dfsCluster.waitActive();
+
+      // let NN1 tail editlog every 1s
+      dfsCluster.getConfiguration(1).setInt(
+          DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
+      dfsCluster.restartNameNode(1);
 
       dfsCluster.transitionToActive(0);
       DistributedFileSystem dfs = dfsCluster.getFileSystem(0);

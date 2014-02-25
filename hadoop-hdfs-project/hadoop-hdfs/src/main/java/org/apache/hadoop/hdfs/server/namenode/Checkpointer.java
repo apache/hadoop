@@ -33,6 +33,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
+import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
 import org.apache.hadoop.hdfs.server.protocol.CheckpointCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
@@ -220,9 +221,9 @@ class Checkpointer extends Daemon {
         LOG.info("Unable to roll forward using only logs. Downloading " +
             "image with txid " + sig.mostRecentCheckpointTxId);
         MD5Hash downloadedHash = TransferFsImage.downloadImageToStorage(
-            backupNode.nnHttpAddress, sig.mostRecentCheckpointTxId,
-            bnStorage, true);
-        bnImage.saveDigestAndRenameCheckpointImage(
+            backupNode.nnHttpAddress, NameNodeFile.IMAGE,
+            sig.mostRecentCheckpointTxId, bnStorage, true);
+        bnImage.saveDigestAndRenameCheckpointImage(NameNodeFile.IMAGE,
             sig.mostRecentCheckpointTxId, downloadedHash);
         lastApplied = sig.mostRecentCheckpointTxId;
         needReloadImage = true;
@@ -240,7 +241,8 @@ class Checkpointer extends Daemon {
 
       if(needReloadImage) {
         LOG.info("Loading image with txid " + sig.mostRecentCheckpointTxId);
-        File file = bnStorage.findImageFile(sig.mostRecentCheckpointTxId);
+        File file = bnStorage.findImageFile(NameNodeFile.IMAGE,
+            sig.mostRecentCheckpointTxId);
         bnImage.reloadFromImageFile(file, backupNode.getNamesystem());
       }
       rollForwardByApplyingLogs(manifest, bnImage, backupNode.getNamesystem());
@@ -263,7 +265,7 @@ class Checkpointer extends Daemon {
     if(cpCmd.needToReturnImage()) {
       TransferFsImage.uploadImageFromStorage(
           backupNode.nnHttpAddress, getImageListenAddress(),
-          bnStorage, txid);
+          bnStorage, NameNodeFile.IMAGE, txid);
     }
 
     getRemoteNamenodeProxy().endCheckpoint(backupNode.getRegistration(), sig);

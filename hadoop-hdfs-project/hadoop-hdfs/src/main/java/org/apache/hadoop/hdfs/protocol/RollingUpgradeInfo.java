@@ -30,7 +30,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 public class RollingUpgradeInfo extends RollingUpgradeStatus {
   private final long startTime;
   private final long finalizeTime;
-  private final boolean createdRollbackImages;
+  private boolean createdRollbackImages;
   
   public RollingUpgradeInfo(String blockPoolId, boolean createdRollbackImages,
       long startTime, long finalizeTime) {
@@ -42,6 +42,10 @@ public class RollingUpgradeInfo extends RollingUpgradeStatus {
   
   public boolean createdRollbackImages() {
     return createdRollbackImages;
+  }
+
+  public void setCreatedRollbackImages(boolean created) {
+    this.createdRollbackImages = created;
   }
 
   public boolean isStarted() {

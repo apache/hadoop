@@ -280,7 +280,10 @@ public final class FSImageFormatProtobuf {
       fsn.setGenerationStampV1Limit(s.getGenstampV1Limit());
       fsn.setLastAllocatedBlockId(s.getLastAllocatedBlockId());
       imgTxId = s.getTransactionId();
-      if (s.hasRollingUpgradeStartTime()) {
+      if (s.hasRollingUpgradeStartTime()
+          && fsn.getFSImage().hasRollbackFSImage()) {
+        // we set the rollingUpgradeInfo only when we make sure we have the
+        // rollback image
         fsn.setRollingUpgradeInfo(true, s.getRollingUpgradeStartTime());
       }
     }

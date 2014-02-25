@@ -23,6 +23,7 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.qjournal.MiniJournalCluster;
 import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster;
@@ -101,8 +102,10 @@ public class TestRollingUpgradeRollback {
       dfs.mkdirs(foo);
 
       // start rolling upgrade
+      dfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
       Assert.assertEquals(0,
           dfsadmin.run(new String[] { "-rollingUpgrade", "prepare" }));
+      dfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
       // create new directory
       dfs.mkdirs(bar);
 
@@ -160,8 +163,10 @@ public class TestRollingUpgradeRollback {
       dfs.mkdirs(foo);
 
       // start rolling upgrade
+      dfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
       Assert.assertEquals(0,
           dfsadmin.run(new String[] { "-rollingUpgrade", "prepare" }));
+      dfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
       // create new directory
       dfs.mkdirs(bar);
       dfs.close();
@@ -206,9 +211,9 @@ public class TestRollingUpgradeRollback {
       MiniDFSCluster dfsCluster = cluster.getDfsCluster();
       dfsCluster.waitActive();
 
-      // let NN1 do checkpoints as fast as possible
+      // let NN1 tail editlog every 1s
       dfsCluster.getConfiguration(1).setInt(
-          DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PERIOD_KEY, 0);
+          DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
       dfsCluster.restartNameNode(1);
 
       dfsCluster.transitionToActive(0);
@@ -223,6 +228,11 @@ public class TestRollingUpgradeRollback {
       dfs.mkdirs(bar);
       dfs.close();
 
+      NNStorage storage0 = dfsCluster.getNameNode(0).getFSImage().getStorage();
+      NNStorage storage1 = dfsCluster.getNameNode(1).getFSImage().getStorage();
+      Assert.assertTrue(TestRollingUpgrade.existRollbackFsImage(storage0));
+      Assert.assertTrue(TestRollingUpgrade.existRollbackFsImage(storage1));
+      
       // rollback NN0
       dfsCluster.restartNameNode(0, true, "-rollingUpgrade",
           "rollback");
@@ -238,21 +248,24 @@ public class TestRollingUpgradeRollback {
       // check the details of NNStorage
       NNStorage storage = dfsCluster.getNamesystem(0).getFSImage()
           .getStorage();
-      // (startSegment, upgrade marker, mkdir, endSegment)
-      checkNNStorage(storage, 3, 7);
+      // segments:(startSegment, mkdir, start upgrade endSegment), 
+      // (startSegment, mkdir, endSegment)
+      checkNNStorage(storage, 4, 7);
 
       // check storage in JNs
       for (int i = 0; i < NUM_JOURNAL_NODES; i++) {
         File dir = cluster.getJournalCluster().getCurrentDir(0,
             MiniQJMHACluster.NAMESERVICE);
-        // segments:(startSegment, mkdir, endSegment), (startSegment, upgrade
-        // marker, mkdir, endSegment)
-        checkJNStorage(dir, 4, 7);
+        checkJNStorage(dir, 5, 7);
       }
 
       // restart NN0 again to make sure we can start using the new fsimage and
       // the corresponding md5 checksum
       dfsCluster.restartNameNode(0);
+      // start the rolling upgrade again to make sure we do not load upgrade
+      // status after the rollback
+      dfsCluster.transitionToActive(0);
+      dfs.rollingUpgrade(RollingUpgradeAction.PREPARE);
     } finally {
       if (cluster != null) {
         cluster.shutdown();

@@ -21,11 +21,13 @@ import static org.apache.hadoop.util.Time.now;
 
 import java.io.Closeable;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -328,18 +330,19 @@ public class FSImage implements Closeable {
   }
 
   /**
-   * @return true if there is rollback fsimage (for rolling upgrade) for the
-   * given txid in storage.
+   * @return true if there is rollback fsimage (for rolling upgrade) in NameNode
+   * directory.
    */
-  boolean hasRollbackFSImage(long txid) {
-    for (StorageDirectory sd : storage.dirIterable(NameNodeDirType.IMAGE)) {
-      final File rollbackImageFile = NNStorage.getStorageFile(sd,
-          NameNodeFile.IMAGE_ROLLBACK, txid);
-      if (rollbackImageFile.exists()) {
-        return true;
-      }
+  public boolean hasRollbackFSImage() throws IOException {
+    final FSImageStorageInspector inspector = new FSImageTransactionalStorageInspector(
+        EnumSet.of(NameNodeFile.IMAGE_ROLLBACK));
+    storage.inspectStorageDirs(inspector);
+    try {
+      List<FSImageFile> images = inspector.getLatestImages();
+      return images != null && !images.isEmpty();
+    } catch (FileNotFoundException e) {
+      return false;
     }
-    return false;
   }
 
   void doUpgrade(FSNamesystem target) throws IOException {
@@ -566,9 +569,15 @@ public class FSImage implements Closeable {
       throws IOException {
     final boolean rollingRollback = StartupOption
         .isRollingUpgradeRollback(startOpt);
-    final NameNodeFile nnf = rollingRollback ? NameNodeFile.IMAGE_ROLLBACK
-        : NameNodeFile.IMAGE;
-    final FSImageStorageInspector inspector = storage.readAndInspectDirs(nnf);
+    final EnumSet<NameNodeFile> nnfs;
+    if (rollingRollback) {
+      // if it is rollback of rolling upgrade, only load from the rollback image
+      nnfs = EnumSet.of(NameNodeFile.IMAGE_ROLLBACK);
+    } else {
+      // otherwise we can load from both IMAGE and IMAGE_ROLLBACK
+      nnfs = EnumSet.of(NameNodeFile.IMAGE, NameNodeFile.IMAGE_ROLLBACK);
+    }
+    final FSImageStorageInspector inspector = storage.readAndInspectDirs(nnfs);
 
     isUpgradeFinalized = inspector.isUpgradeFinalized();
     List<FSImageFile> imageFiles = inspector.getLatestImages();
@@ -643,6 +652,10 @@ public class FSImage implements Closeable {
       long txnsAdvanced = loadEdits(editStreams, target, startOpt, recovery);
       needToSave |= needsResaveBasedOnStaleCheckpoint(imageFile.getFile(),
           txnsAdvanced);
+      if (StartupOption.isRollingUpgradeDowngrade(startOpt)) {
+        // purge rollback image if it is downgrade
+        archivalManager.purgeCheckpoints(NameNodeFile.IMAGE_ROLLBACK);
+      }
     } else {
       // Trigger the rollback for rolling upgrade. Here lastAppliedTxId equals
       // to the last txid in rollback fsimage.
@@ -973,10 +986,10 @@ public class FSImage implements Closeable {
   /**
    * Save the contents of the FS image to a new image file in each of the
    * current storage directories.
-   * @param canceler 
+   * @param canceler
    */
-  public synchronized void saveNamespace(FSNamesystem source,
-      NameNodeFile nnf, Canceler canceler) throws IOException {
+  public synchronized void saveNamespace(FSNamesystem source, NameNodeFile nnf,
+      Canceler canceler) throws IOException {
     assert editLog != null : "editLog must be initialized";
     LOG.info("Save namespace ...");
     storage.attemptRestoreRemovedStorage();
@@ -1222,13 +1235,13 @@ public class FSImage implements Closeable {
    * renames the image from fsimage_N.ckpt to fsimage_N and also
    * saves the related .md5 file into place.
    */
-  public synchronized void saveDigestAndRenameCheckpointImage(
+  public synchronized void saveDigestAndRenameCheckpointImage(NameNodeFile nnf,
       long txid, MD5Hash digest) throws IOException {
     // Write and rename MD5 file
     List<StorageDirectory> badSds = Lists.newArrayList();
     
     for (StorageDirectory sd : storage.dirIterable(NameNodeDirType.IMAGE)) {
-      File imageFile = NNStorage.getImageFile(sd, txid);
+      File imageFile = NNStorage.getImageFile(sd, nnf, txid);
       try {
         MD5FileUtils.saveMD5File(imageFile, digest);
       } catch (IOException ioe) {
@@ -1240,7 +1253,7 @@ public class FSImage implements Closeable {
     CheckpointFaultInjector.getInstance().afterMD5Rename();
     
     // Rename image from tmp file
-    renameCheckpoint(txid, NameNodeFile.IMAGE_NEW, NameNodeFile.IMAGE, false);
+    renameCheckpoint(txid, NameNodeFile.IMAGE_NEW, nnf, false);
     // So long as this is the newest image available,
     // advertise it as such to other checkpointers
     // from now on

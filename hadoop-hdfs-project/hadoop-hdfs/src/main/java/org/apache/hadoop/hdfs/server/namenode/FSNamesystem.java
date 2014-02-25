@@ -885,6 +885,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       MetaRecoveryContext recovery = startOpt.createRecoveryContext();
       final boolean staleImage
           = fsImage.recoverTransitionRead(startOpt, this, recovery);
+      if (StartupOption.isRollingUpgradeRollback(startOpt)) {
+        rollingUpgradeInfo = null;
+      }
       final boolean needToSave = staleImage && !haEnabled && !isRollingUpgrade(); 
       LOG.info("Need to save fs image? " + needToSave
           + " (staleImage=" + staleImage + ", haEnabled=" + haEnabled
@@ -1141,6 +1144,15 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
   }
 
+  /**
+   * Called when the NN is in Standby state and the editlog tailer tails the
+   * OP_ROLLING_UPGRADE_START.
+   */
+  void triggerRollbackCheckpoint() {
+    if (standbyCheckpointer != null) {
+      standbyCheckpointer.triggerRollbackCheckpoint();
+    }
+  }
 
   /**
    * Called while the NN is in Standby state, but just about to be
@@ -7131,6 +7143,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     checkOperation(OperationCategory.READ);
     readLock();
     try {
+      if (rollingUpgradeInfo != null) {
+        boolean hasRollbackImage = this.getFSImage().hasRollbackFSImage();
+        rollingUpgradeInfo.setCreatedRollbackImages(hasRollbackImage);
+      }
       return rollingUpgradeInfo;
     } finally {
       readUnlock();
@@ -7143,15 +7159,24 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
-      checkNameNodeSafeMode("Failed to start rolling upgrade");
-      startRollingUpgradeInternal(now(), -1);
+      long startTime = now();
+      if (!haEnabled) { // for non-HA, we require NN to be in safemode
+        startRollingUpgradeInternalForNonHA(startTime);
+      } else { // for HA, NN cannot be in safemode
+        checkNameNodeSafeMode("Failed to start rolling upgrade");
+        startRollingUpgradeInternal(startTime);
+      }
+
       getEditLog().logStartRollingUpgrade(rollingUpgradeInfo.getStartTime());
+      if (haEnabled) {
+        // roll the edit log to make sure the standby NameNode can tail
+        getFSImage().rollEditLog();
+      }
     } finally {
       writeUnlock();
     }
 
     getEditLog().logSync();
-
     if (auditLog.isInfoEnabled() && isExternalInvocation()) {
       logAuditEvent(true, "startRollingUpgrade", null, null, null);
     }
@@ -7160,19 +7185,35 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   /**
    * Update internal state to indicate that a rolling upgrade is in progress.
-   * Ootionally create a checkpoint before starting the RU.
    * @param startTime
    */
-  void startRollingUpgradeInternal(long startTime, long txid)
+  void startRollingUpgradeInternal(long startTime)
       throws IOException {
     checkRollingUpgrade("start rolling upgrade");
     getFSImage().checkUpgrade(this);
+    setRollingUpgradeInfo(false, startTime);
+  }
 
-    // if we have not made a rollback image, do it
-    if (txid < 0 || !getFSImage().hasRollbackFSImage(txid)) {
-      getFSImage().saveNamespace(this, NameNodeFile.IMAGE_ROLLBACK, null);
-      LOG.info("Successfully saved namespace for preparing rolling upgrade.");
+  /**
+   * Update internal state to indicate that a rolling upgrade is in progress for
+   * non-HA setup. This requires the namesystem is in SafeMode and after doing a
+   * checkpoint for rollback the namesystem will quit the safemode automatically 
+   */
+  private void startRollingUpgradeInternalForNonHA(long startTime)
+      throws IOException {
+    Preconditions.checkState(!haEnabled);
+    if (!isInSafeMode()) {
+      throw new IOException("Safe mode should be turned ON "
+          + "in order to create namespace image.");
     }
+    checkRollingUpgrade("start rolling upgrade");
+    getFSImage().checkUpgrade(this);
+    // in non-HA setup, we do an extra ckpt to generate a rollback image
+    getFSImage().saveNamespace(this, NameNodeFile.IMAGE_ROLLBACK, null);
+    LOG.info("Successfully saved namespace for preparing rolling upgrade.");
+
+    // leave SafeMode automatically
+    setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
     setRollingUpgradeInfo(true, startTime);
   }
 
@@ -7181,7 +7222,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         createdRollbackImages, startTime, 0L);
   }
 
-  RollingUpgradeInfo getRollingUpgradeInfo() {
+  public void setCreatedRollbackImages(boolean created) {
+    if (rollingUpgradeInfo != null) {
+      rollingUpgradeInfo.setCreatedRollbackImages(created);
+    }
+  }
+
+  public RollingUpgradeInfo getRollingUpgradeInfo() {
     return rollingUpgradeInfo;
   }
 
@@ -7232,7 +7279,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
     final long startTime = rollingUpgradeInfo.getStartTime();
     rollingUpgradeInfo = null;
-    return new RollingUpgradeInfo(blockPoolId, true, startTime, finalizeTime);
+    return new RollingUpgradeInfo(blockPoolId, false, startTime, finalizeTime);
   }
 
   long addCacheDirective(CacheDirectiveInfo directive, EnumSet<CacheFlag> flags)

@@ -142,9 +142,15 @@ public class StandbyCheckpointer {
     }
   }
 
+  public void triggerRollbackCheckpoint() {
+    thread.setNeedRollbackCheckpoint(true);
+    thread.interrupt();
+  }
+
   private void doCheckpoint() throws InterruptedException, IOException {
     assert canceler != null;
     final long txid;
+    final NameNodeFile imageType;
     
     namesystem.writeLockInterruptibly();
     try {
@@ -164,7 +170,15 @@ public class StandbyCheckpointer {
         return;
       }
 
-      img.saveNamespace(namesystem, NameNodeFile.IMAGE, canceler);
+      if (namesystem.isRollingUpgrade()
+          && !namesystem.getFSImage().hasRollbackFSImage()) {
+        // if we will do rolling upgrade but have not created the rollback image
+        // yet, name this checkpoint as fsimage_rollback
+        imageType = NameNodeFile.IMAGE_ROLLBACK;
+      } else {
+        imageType = NameNodeFile.IMAGE;
+      }
+      img.saveNamespace(namesystem, imageType, canceler);
       txid = img.getStorage().getMostRecentCheckpointTxId();
       assert txid == thisCheckpointTxId : "expected to save checkpoint at txid=" +
         thisCheckpointTxId + " but instead saved at txid=" + txid;
@@ -181,7 +195,7 @@ public class StandbyCheckpointer {
       @Override
       public Void call() throws IOException {
         TransferFsImage.uploadImageFromStorage(activeNNAddress, myNNAddress,
-            namesystem.getFSImage().getStorage(), txid);
+            namesystem.getFSImage().getStorage(), imageType, txid);
         return null;
       }
     });
@@ -228,6 +242,9 @@ public class StandbyCheckpointer {
   private class CheckpointerThread extends Thread {
     private volatile boolean shouldRun = true;
     private volatile long preventCheckpointsUntil = 0;
+    // Indicate that a rollback checkpoint is required immediately. It will be
+    // reset to false after the checkpoint is done
+    private volatile boolean needRollbackCheckpoint = false;
 
     private CheckpointerThread() {
       super("Standby State Checkpointer");
@@ -235,6 +252,10 @@ public class StandbyCheckpointer {
     
     private void setShouldRun(boolean shouldRun) {
       this.shouldRun = shouldRun;
+    }
+
+    private void setNeedRollbackCheckpoint(boolean need) {
+      this.needRollbackCheckpoint = need;
     }
 
     @Override
@@ -266,16 +287,19 @@ public class StandbyCheckpointer {
     }
 
     private void doWork() {
+      final long checkPeriod = 1000 * checkpointConf.getCheckPeriod();
       // Reset checkpoint time so that we don't always checkpoint
       // on startup.
       lastCheckpointTime = now();
       while (shouldRun) {
-        try {
-          Thread.sleep(1000 * checkpointConf.getCheckPeriod());
-        } catch (InterruptedException ie) {
-        }
-        if (!shouldRun) {
-          break;
+        if (!needRollbackCheckpoint) {
+          try {
+            Thread.sleep(checkPeriod);
+          } catch (InterruptedException ie) {
+          }
+          if (!shouldRun) {
+            break;
+          }
         }
         try {
           // We may have lost our ticket since last checkpoint, log in again, just in case
@@ -287,8 +311,10 @@ public class StandbyCheckpointer {
           long uncheckpointed = countUncheckpointedTxns();
           long secsSinceLast = (now - lastCheckpointTime)/1000;
           
-          boolean needCheckpoint = false;
-          if (uncheckpointed >= checkpointConf.getTxnCount()) {
+          boolean needCheckpoint = needRollbackCheckpoint;
+          if (needCheckpoint) {
+            LOG.info("Triggering a rollback fsimage for rolling upgrade.");
+          } else if (uncheckpointed >= checkpointConf.getTxnCount()) {
             LOG.info("Triggering checkpoint because there have been " + 
                 uncheckpointed + " txns since the last checkpoint, which " +
                 "exceeds the configured threshold " +
@@ -313,6 +339,13 @@ public class StandbyCheckpointer {
           
           if (needCheckpoint) {
             doCheckpoint();
+            // reset needRollbackCheckpoint to false only when we finish a ckpt
+            // for rollback image
+            if (needRollbackCheckpoint
+                && namesystem.getFSImage().hasRollbackFSImage()) {
+              namesystem.setCreatedRollbackImages(true);
+              needRollbackCheckpoint = false;
+            }
             lastCheckpointTime = now;
           }
         } catch (SaveNamespaceCancelledException ce) {

@@ -46,6 +46,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.TransferFsImage;
+import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.tools.DFSHAAdmin;
@@ -207,9 +208,10 @@ public class BootstrapStandby implements Tool, Configurable {
 
       // Download that checkpoint into our storage directories.
       MD5Hash hash = TransferFsImage.downloadImageToStorage(
-        otherHttpAddr, imageTxId,
+        otherHttpAddr, NameNodeFile.IMAGE, imageTxId,
         storage, true);
-      image.saveDigestAndRenameCheckpointImage(imageTxId, hash);
+      image.saveDigestAndRenameCheckpointImage(NameNodeFile.IMAGE, imageTxId,
+          hash);
     } catch (IOException ioe) {
       image.close();
       throw ioe;
