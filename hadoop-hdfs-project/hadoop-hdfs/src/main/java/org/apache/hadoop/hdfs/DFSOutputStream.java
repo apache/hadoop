@@ -1108,6 +1108,7 @@ public class DFSOutputStream extends FSOutputSummer
             excluded.length > 0 ? excluded : null);
         block = lb.getBlock();
         block.setNumBytes(0);
+        bytesSent = 0;
         accessToken = lb.getBlockToken();
         nodes = lb.getLocations();
 
