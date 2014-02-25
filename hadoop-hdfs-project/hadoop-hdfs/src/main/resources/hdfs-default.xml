@@ -1031,6 +1031,18 @@
 </property>
 
 <property>
+  <name>dfs.client.datanode-restart.timeout</name>
+  <value>30</value>
+  <description>
+    Expert only. The time to wait, in seconds, from reception of an
+    datanode shutdown notification for quick restart, until declaring
+    the datanode dead and invoking the normal recovery mechanisms.
+    The notification is sent by a datanode when it is being shutdown
+    using the shutdownDatanode admin command with the upgrade option.
+  </description>
+</property>
+
+<property>
   <name>dfs.nameservices</name>
   <value></value>
   <description>

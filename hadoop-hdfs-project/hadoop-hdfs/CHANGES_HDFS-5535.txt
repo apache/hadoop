@@ -93,3 +93,5 @@ HDFS-5535 subtasks:
 
     HDFS-6015. Fix TestBlockRecovery
     #testRaceBetweenReplicaRecoveryAndFinalizeBlock. (kihwal)
+
+    HDFS-5924. Utilize OOB upgrade message processing for writes. (kihwal)

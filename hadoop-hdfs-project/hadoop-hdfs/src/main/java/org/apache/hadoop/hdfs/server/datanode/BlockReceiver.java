@@ -23,8 +23,10 @@ import java.io.BufferedOutputStream;
 import java.io.Closeable;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.File;
 import java.io.FileDescriptor;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
@@ -45,6 +47,7 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.PipelineAck;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.ReplicaInputStreams;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.ReplicaOutputStreams;
+import org.apache.hadoop.hdfs.server.datanode.ReplicaInPipeline;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.io.IOUtils;
@@ -52,6 +55,7 @@ import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Time;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -116,6 +120,7 @@ class BlockReceiver implements Closeable {
   private final boolean isTransfer;
 
   private boolean syncOnClose;
+  private long restartBudget;
 
   BlockReceiver(final ExtendedBlock block, final DataInputStream in,
       final String inAddr, final String myAddr,
@@ -135,6 +140,7 @@ class BlockReceiver implements Closeable {
       this.clientname = clientname;
       this.isDatanode = clientname.length() == 0;
       this.isClient = !this.isDatanode;
+      this.restartBudget = datanode.getDnConf().restartReplicaExpiry;
 
       //for datanode, we have
       //1: clientName.length() == 0, and
@@ -742,16 +748,35 @@ class BlockReceiver implements Closeable {
         if (responder != null) {
           // In case this datanode is shutting down for quick restart,
           // send a special ack upstream.
-          if (datanode.isRestarting()) {
+          if (datanode.isRestarting() && isClient && !isTransfer) {
+            File blockFile = ((ReplicaInPipeline)replicaInfo).getBlockFile();
+            File restartMeta = new File(blockFile.getParent()  + 
+                File.pathSeparator + "." + blockFile.getName() + ".restart");
+            if (restartMeta.exists()) {
+              restartMeta.delete();
+            }
+            try {
+              FileWriter out = new FileWriter(restartMeta);
+              // write out the current time.
+              out.write(Long.toString(Time.now() + restartBudget));
+              out.flush();
+              out.close();
+            } catch (IOException ioe) {
+              // The worst case is not recovering this RBW replica. 
+              // Client will fall back to regular pipeline recovery.
+            }
             try {
               ((PacketResponder) responder.getRunnable()).
                   sendOOBResponse(PipelineAck.getRestartOOBStatus());
+              // Even if the connection is closed after the ack packet is
+              // flushed, the client can react to the connection closure 
+              // first. Insert a delay to lower the chance of client 
+              // missing the OOB ack.
+              Thread.sleep(1000);
             } catch (InterruptedException ie) {
               // It is already going down. Ignore this.
             } catch (IOException ioe) {
               LOG.info("Error sending OOB Ack.", ioe);
-              // The OOB ack could not be sent. Since the datanode is going
-              // down, this is ignored.
             }
           }
           responder.interrupt();
@@ -1279,7 +1304,6 @@ class BlockReceiver implements Closeable {
           && offsetInBlock > replicaInfo.getBytesAcked()) {
         replicaInfo.setBytesAcked(offsetInBlock);
       }
-
       // send my ack back to upstream datanode
       replyAck.write(upstreamOut);
       upstreamOut.flush();

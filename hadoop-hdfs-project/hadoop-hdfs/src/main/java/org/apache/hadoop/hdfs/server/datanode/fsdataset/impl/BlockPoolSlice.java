@@ -21,9 +21,11 @@ import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
+import java.util.Scanner;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.DU;
@@ -36,11 +38,13 @@ import org.apache.hadoop.hdfs.server.datanode.DataStorage;
 import org.apache.hadoop.hdfs.server.datanode.DatanodeUtil;
 import org.apache.hadoop.hdfs.server.datanode.FinalizedReplica;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
+import org.apache.hadoop.hdfs.server.datanode.ReplicaBeingWritten;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaWaitingToBeRecovered;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
+import org.apache.hadoop.util.Time;
 
 /**
  * A block pool slice represents a portion of a block pool stored on a volume.  
@@ -191,9 +195,35 @@ class BlockPoolSlice {
         newReplica = new FinalizedReplica(blockId, 
             blockFile.length(), genStamp, volume, blockFile.getParentFile());
       } else {
-        newReplica = new ReplicaWaitingToBeRecovered(blockId,
-            validateIntegrityAndSetLength(blockFile, genStamp), 
-            genStamp, volume, blockFile.getParentFile());
+
+        boolean loadRwr = true;
+        File restartMeta = new File(blockFile.getParent()  +
+            File.pathSeparator + "." + blockFile.getName() + ".restart");
+        Scanner sc = null;
+        try {
+          sc = new Scanner(restartMeta);
+          // The restart meta file exists
+          if (sc.hasNextLong() && (sc.nextLong() > Time.now())) {
+            // It didn't expire. Load the replica as a RBW.
+            newReplica = new ReplicaBeingWritten(blockId,
+                validateIntegrityAndSetLength(blockFile, genStamp), 
+                genStamp, volume, blockFile.getParentFile(), null);
+            loadRwr = false;
+          }
+          restartMeta.delete();
+        } catch (FileNotFoundException fnfe) {
+          // nothing to do here
+        } finally {
+          if (sc != null) {
+            sc.close();
+          }
+        }
+        // Restart meta doesn't exist or expired.
+        if (loadRwr) {
+          newReplica = new ReplicaWaitingToBeRecovered(blockId,
+              validateIntegrityAndSetLength(blockFile, genStamp), 
+              genStamp, volume, blockFile.getParentFile());
+        }
       }
 
       ReplicaInfo oldReplica = volumeMap.add(bpid, newReplica);
