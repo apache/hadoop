@@ -712,6 +712,11 @@ public class NetworkTopology {
         numOfDatanodes -= ((InnerNode)node).getNumOfLeaves();
       }
     }
+    if (numOfDatanodes == 0) {
+      throw new InvalidTopologyException(
+          "Failed to find datanode (scope=\"" + String.valueOf(scope) +
+          "\" excludedScope=\"" + String.valueOf(excludedScope) + "\").");
+    }
     int leaveIndex = r.nextInt(numOfDatanodes);
     return innerNode.getLeaf(leaveIndex, node);
   }
