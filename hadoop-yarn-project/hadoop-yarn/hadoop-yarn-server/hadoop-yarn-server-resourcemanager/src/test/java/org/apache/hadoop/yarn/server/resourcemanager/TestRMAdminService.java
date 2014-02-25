@@ -34,12 +34,16 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.ha.HAServiceProtocol;
+import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
+import org.apache.hadoop.ha.HAServiceProtocol.StateChangeRequestInfo;
 import org.apache.hadoop.security.GroupMappingServiceProvider;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
+import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshAdminAclsRequest;
@@ -516,6 +520,94 @@ public class TestRMAdminService {
         rm.getNodesListManager().getHostsReader().getExcludedHosts();
     Assert.assertTrue(excludeHosts.size() == 1);
     Assert.assertTrue(excludeHosts.contains("0.0.0.0:123"));
+  }
+
+  @Test
+  public void testRMHAWithFileSystemBasedConfiguration() throws IOException,
+      YarnException {
+    StateChangeRequestInfo requestInfo = new StateChangeRequestInfo(
+        HAServiceProtocol.RequestSource.REQUEST_BY_USER);
+    configuration.set(YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
+        "org.apache.hadoop.yarn.FileSystemBasedConfigurationProvider");
+    configuration.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
+    configuration.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
+    configuration.set(YarnConfiguration.RM_HA_IDS, "rm1,rm2");
+    int base = 100;
+    for (String confKey : YarnConfiguration
+        .getServiceAddressConfKeys(configuration)) {
+      configuration.set(HAUtil.addSuffix(confKey, "rm1"), "0.0.0.0:"
+          + (base + 20));
+      configuration.set(HAUtil.addSuffix(confKey, "rm2"), "0.0.0.0:"
+          + (base + 40));
+      base = base * 2;
+    }
+    Configuration conf1 = new Configuration(configuration);
+    conf1.set(YarnConfiguration.RM_HA_ID, "rm1");
+    Configuration conf2 = new Configuration(configuration);
+    conf2.set(YarnConfiguration.RM_HA_ID, "rm2");
+
+    // upload default configurations
+    uploadDefaultConfiguration();
+
+    MockRM rm1 = null;
+    MockRM rm2 = null;
+    try {
+      rm1 = new MockRM(conf1);
+      rm1.init(conf1);
+      rm1.start();
+      Assert.assertTrue(rm1.getRMContext().getHAServiceState()
+          == HAServiceState.STANDBY);
+
+      rm2 = new MockRM(conf2);
+      rm2.init(conf1);
+      rm2.start();
+      Assert.assertTrue(rm2.getRMContext().getHAServiceState()
+          == HAServiceState.STANDBY);
+
+      rm1.adminService.transitionToActive(requestInfo);
+      Assert.assertTrue(rm1.getRMContext().getHAServiceState()
+          == HAServiceState.ACTIVE);
+
+      CapacitySchedulerConfiguration csConf =
+          new CapacitySchedulerConfiguration();
+      csConf.set("yarn.scheduler.capacity.maximum-applications", "5000");
+      uploadConfiguration(csConf, "capacity-scheduler.xml");
+
+      rm1.adminService.refreshQueues(RefreshQueuesRequest.newInstance());
+
+      int maxApps =
+          ((CapacityScheduler) rm1.getRMContext().getScheduler())
+              .getConfiguration().getMaximumSystemApplications();
+      Assert.assertEquals(maxApps, 5000);
+
+      // Before failover happens, the maxApps is
+      // still the default value on the standby rm : rm2
+      int maxAppsBeforeFailOver =
+          ((CapacityScheduler) rm2.getRMContext().getScheduler())
+              .getConfiguration().getMaximumSystemApplications();
+      Assert.assertEquals(maxAppsBeforeFailOver, 10000);
+
+      // Do the failover
+      rm1.adminService.transitionToStandby(requestInfo);
+      rm2.adminService.transitionToActive(requestInfo);
+      Assert.assertTrue(rm1.getRMContext().getHAServiceState()
+          == HAServiceState.STANDBY);
+      Assert.assertTrue(rm2.getRMContext().getHAServiceState()
+          == HAServiceState.ACTIVE);
+
+      int maxAppsAfter =
+          ((CapacityScheduler) rm2.getRMContext().getScheduler())
+              .getConfiguration().getMaximumSystemApplications();
+
+      Assert.assertEquals(maxAppsAfter, 5000);
+    } finally {
+      if (rm1 != null) {
+        rm1.stop();
+      }
+      if (rm2 != null) {
+        rm2.stop();
+      }
+    }
   }
 
   private String writeConfigurationXML(Configuration conf, String confXMLName)
