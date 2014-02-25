@@ -85,3 +85,6 @@ HDFS-5535 subtasks:
     HDFS-5583. Make DN send an OOB Ack on shutdown before restarting. (kihwal)
 
     HDFS-5778. Add rolling upgrade user document. (szetszwo)
+
+    HDFS-6003. Add the new -rollingUpgrade startup option to the namenode
+    usage message. (Vinayakumar B via szetszwo)
