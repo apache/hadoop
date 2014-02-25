@@ -846,15 +846,15 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^user:charlie:rwx\s+#effective:r-x$</expected-output>
+          <expected-output>^user:charlie:rwx\t#effective:r-x$</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^group::-wx\s+#effective:--x$</expected-output>
+          <expected-output>^group::-wx\t#effective:--x$</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^group:sales:rwx\s+#effective:r-x$</expected-output>
+          <expected-output>^group:sales:rwx\t#effective:r-x$</expected-output>
         </comparator>
         <comparator>
           <type>SubstringComparator</type>
@@ -870,15 +870,15 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^default:user:charlie:rwx\s+#effective:rw-$</expected-output>
+          <expected-output>^default:user:charlie:rwx\t#effective:rw-$</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^default:group::r-x\s+#effective:r--$</expected-output>
+          <expected-output>^default:group::r-x\t#effective:r--$</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^default:group:sales:rwx\s+#effective:rw-$</expected-output>
+          <expected-output>^default:group:sales:rwx\t#effective:rw-$</expected-output>
         </comparator>
         <comparator>
           <type>SubstringComparator</type>

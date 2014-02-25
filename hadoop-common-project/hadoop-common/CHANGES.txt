@@ -333,6 +333,8 @@ Trunk (Unreleased)
 
     HADOOP-10354. TestWebHDFS fails after merge of HDFS-4685 to trunk. (cnauroth)
 
+    HADOOP-10361. Correct alignment in CLI output for ACLs. (cnauroth)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)

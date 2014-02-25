@@ -171,7 +171,7 @@ class AclCommands extends FsCommand {
         FsAction entryPerm = entry.getPermission();
         FsAction effectivePerm = entryPerm.and(maskPerm);
         if (entryPerm != effectivePerm) {
-          out.println(String.format("%-31s #effective:%s", entry,
+          out.println(String.format("%s\t#effective:%s", entry,
             effectivePerm.SYMBOL));
         } else {
           out.println(entry);
