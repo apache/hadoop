@@ -1023,6 +1023,7 @@ class BlockReceiver implements Closeable {
       }
 
       synchronized(this) {
+        running = false;
         notifyAll();
       }
     }

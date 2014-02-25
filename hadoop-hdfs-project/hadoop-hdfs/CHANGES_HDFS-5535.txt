@@ -88,3 +88,5 @@ HDFS-5535 subtasks:
 
     HDFS-6003. Add the new -rollingUpgrade startup option to the namenode
     usage message. (Vinayakumar B via szetszwo)
+
+    HDFS-6014. Fix findbug warnings introduced by HDFS-5583. (kihwal)

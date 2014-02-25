@@ -1305,6 +1305,8 @@ public class DataNode extends Configured
     }
     LOG.info("Shutdown complete.");
     synchronized(this) {
+      // it is already false, but setting it again to avoid a findbug warning.
+      this.shouldRun = false;
       // Notify the main thread.
       notifyAll();
     }
