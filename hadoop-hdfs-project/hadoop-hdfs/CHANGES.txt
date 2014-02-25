@@ -332,6 +332,10 @@ Trunk (Unreleased)
     HDFS-5849. Removing ACL from an inode fails if it has only a default ACL.
     (cnauroth)
 
+    HDFS-5623. NameNode: add tests for skipping ACL enforcement when permission
+    checks are disabled, user is superuser or user is member of supergroup.
+    (cnauroth)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -428,6 +432,12 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-5935. New Namenode UI FS browser should throw smarter error messages.
     (Travis Thompson via jing9)
+
+    HDFS-5939. WebHdfs returns misleading error code and logs nothing if trying
+    to create a file with no DNs in cluster. (Yongjun Zhang via jing9)
+
+    HDFS-6006. Remove duplicate code in FSNameSystem#getFileInfo.
+    (Akira Ajisaka via cnauroth)
 
   OPTIMIZATIONS
 

@@ -696,43 +696,6 @@ public class TestAclWithSnapshot {
   }
 
   /**
-   * Asserts that permission is denied to the given fs/user for the given file.
-   *
-   * @param fs FileSystem to check
-   * @param user UserGroupInformation owner of fs
-   * @param pathToCheck Path file to check
-   * @throws Exception if there is an unexpected error
-   */
-  private static void assertFilePermissionDenied(FileSystem fs,
-      UserGroupInformation user, Path pathToCheck) throws Exception {
-    try {
-      fs.open(pathToCheck).close();
-      fail("expected AccessControlException for user " + user + ", path = " +
-        pathToCheck);
-    } catch (AccessControlException e) {
-      // expected
-    }
-  }
-
-  /**
-   * Asserts that permission is granted to the given fs/user for the given file.
-   *
-   * @param fs FileSystem to check
-   * @param user UserGroupInformation owner of fs
-   * @param pathToCheck Path file to check
-   * @throws Exception if there is an unexpected error
-   */
-  private static void assertFilePermissionGranted(FileSystem fs,
-      UserGroupInformation user, Path pathToCheck) throws Exception {
-    try {
-      fs.open(pathToCheck).close();
-    } catch (AccessControlException e) {
-      fail("expected permission granted for user " + user + ", path = " +
-        pathToCheck);
-    }
-  }
-
-  /**
    * Asserts the value of the FsPermission bits on the inode of the test path.
    *
    * @param perm short expected permission bits
