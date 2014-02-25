@@ -436,6 +436,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-5939. WebHdfs returns misleading error code and logs nothing if trying
     to create a file with no DNs in cluster. (Yongjun Zhang via jing9)
 
+    HDFS-6006. Remove duplicate code in FSNameSystem#getFileInfo.
+    (Akira Ajisaka via cnauroth)
+
   OPTIMIZATIONS
 
     HDFS-5790. LeaseManager.findPath is very slow when many leases need recovery
