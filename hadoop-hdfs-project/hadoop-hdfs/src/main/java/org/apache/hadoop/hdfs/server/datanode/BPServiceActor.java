@@ -101,7 +101,10 @@ class BPServiceActor implements Runnable {
   private final Map<String, PerStoragePendingIncrementalBR>
       pendingIncrementalBRperStorage = Maps.newHashMap();
 
-  private volatile int pendingReceivedRequests = 0;
+  // IBR = Incremental Block Report. If this flag is set then an IBR will be
+  // sent immediately by the actor thread without waiting for the IBR timer
+  // to elapse.
+  private volatile boolean sendImmediateIBR = false;
   private volatile boolean shouldServiceRun = true;
   private final DataNode dn;
   private final DNConf dnConf;
@@ -275,12 +278,10 @@ class BPServiceActor implements Runnable {
         if (perStorageMap.getBlockInfoCount() > 0) {
           // Send newly-received and deleted blockids to namenode
           ReceivedDeletedBlockInfo[] rdbi = perStorageMap.dequeueBlockInfos();
-          pendingReceivedRequests =
-              (pendingReceivedRequests > rdbi.length ?
-                  (pendingReceivedRequests - rdbi.length) : 0);
           reports.add(new StorageReceivedDeletedBlocks(storageUuid, rdbi));
         }
       }
+      sendImmediateIBR = false;
     }
 
     if (reports.size() == 0) {
@@ -304,8 +305,8 @@ class BPServiceActor implements Runnable {
             // didn't put something newer in the meantime.
             PerStoragePendingIncrementalBR perStorageMap =
                 pendingIncrementalBRperStorage.get(report.getStorageID());
-            pendingReceivedRequests +=
-                perStorageMap.putMissingBlockInfos(report.getBlocks());
+            perStorageMap.putMissingBlockInfos(report.getBlocks());
+            sendImmediateIBR = true;
           }
         }
       }
@@ -363,7 +364,7 @@ class BPServiceActor implements Runnable {
       ReceivedDeletedBlockInfo bInfo, String storageUuid) {
     synchronized (pendingIncrementalBRperStorage) {
       addPendingReplicationBlockInfo(bInfo, storageUuid);
-      pendingReceivedRequests++;
+      sendImmediateIBR = true;
       pendingIncrementalBRperStorage.notifyAll();
     }
   }
@@ -423,6 +424,11 @@ class BPServiceActor implements Runnable {
         }
       }
     }
+  }
+
+  @VisibleForTesting
+  boolean hasPendingIBR() {
+    return sendImmediateIBR;
   }
 
   /**
@@ -686,8 +692,8 @@ class BPServiceActor implements Runnable {
             }
           }
         }
-        if (pendingReceivedRequests > 0
-            || (startTime - lastDeletedReport > dnConf.deleteReportInterval)) {
+        if (sendImmediateIBR ||
+            (startTime - lastDeletedReport > dnConf.deleteReportInterval)) {
           reportReceivedDeletedBlocks();
           lastDeletedReport = startTime;
         }
@@ -711,7 +717,7 @@ class BPServiceActor implements Runnable {
         long waitTime = dnConf.heartBeatInterval - 
         (Time.now() - lastHeartbeat);
         synchronized(pendingIncrementalBRperStorage) {
-          if (waitTime > 0 && pendingReceivedRequests == 0) {
+          if (waitTime > 0 && !sendImmediateIBR) {
             try {
               pendingIncrementalBRperStorage.wait(waitTime);
             } catch (InterruptedException ie) {

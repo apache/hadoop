@@ -173,6 +173,9 @@ Release 2.4.0 - UNRELEASED
 
     MAPREDUCE-5699. Allow setting tags on MR jobs (kasha)
 
+    MAPREDUCE-5761. Added a simple log message to denote when encrypted shuffle
+    is on in the shuffle-handler. (Jian He via vinodkv) 
+
   OPTIMIZATIONS
 
   BUG FIXES

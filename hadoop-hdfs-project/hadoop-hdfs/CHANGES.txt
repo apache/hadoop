@@ -613,6 +613,8 @@ Release 2.4.0 - UNRELEASED
     HDFS-5981. PBImageXmlWriter generates malformed XML.
     (Haohui Mai via cnauroth)
 
+    HDFS-5922. DN heartbeat thread can get stuck in tight loop. (Arpit Agarwal)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
