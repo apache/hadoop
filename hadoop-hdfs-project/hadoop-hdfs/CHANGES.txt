@@ -292,6 +292,9 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-5922. DN heartbeat thread can get stuck in tight loop. (Arpit Agarwal)
 
+    HDFS-6008. Namenode dead node link is giving HTTP error 500.
+    (Benoy Antony via cnauroth)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
