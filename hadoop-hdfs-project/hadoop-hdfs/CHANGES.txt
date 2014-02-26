@@ -11,7 +11,11 @@ Release 0.23.11 - UNRELEASED
   OPTIMIZATIONS
     
   BUG FIXES
+
     HDFS-5881. Fix skip() of the short-circuit local reader(legacy). (kihwal)
+
+    HDFS-5806. balancer should set SoTimeout to avoid indefinite hangs (Nathan
+    Roberts via jlowe)
 
 Release 0.23.10 - 2013-12-09
 
