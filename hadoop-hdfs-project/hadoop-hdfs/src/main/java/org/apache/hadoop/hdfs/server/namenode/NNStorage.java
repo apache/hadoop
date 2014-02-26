@@ -676,7 +676,6 @@ public class NNStorage extends Storage implements Closeable,
     return getNameNodeFileName(NameNodeFile.IMAGE_ROLLBACK, txid);
   }
 
-  @VisibleForTesting
   private static String getNameNodeFileName(NameNodeFile nnf, long txid) {
     return String.format("%s_%019d", nnf.getName(), txid);
   }

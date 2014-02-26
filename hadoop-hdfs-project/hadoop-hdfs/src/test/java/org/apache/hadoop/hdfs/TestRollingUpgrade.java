@@ -34,6 +34,7 @@ import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.FSImage;
+import org.apache.hadoop.hdfs.server.namenode.NNStorage;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.junit.Assert;
 import org.junit.Test;
@@ -467,17 +468,66 @@ public class TestRollingUpgrade {
     }
   }
 
+  @Test(timeout = 300000)
+  public void testCheckpoint() throws IOException, InterruptedException {
+    final Configuration conf = new Configuration();
+    conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PERIOD_KEY, 1);
+
+    MiniQJMHACluster cluster = null;
+    final Path foo = new Path("/foo");
+
+    try {
+      cluster = new MiniQJMHACluster.Builder(conf).build();
+      MiniDFSCluster dfsCluster = cluster.getDfsCluster();
+      dfsCluster.waitActive();
+
+      dfsCluster.transitionToActive(0);
+      DistributedFileSystem dfs = dfsCluster.getFileSystem(0);
+
+      // start rolling upgrade
+      RollingUpgradeInfo info = dfs
+          .rollingUpgrade(RollingUpgradeAction.PREPARE);
+      Assert.assertTrue(info.isStarted());
+
+      queryForPreparation(dfs);
+
+      dfs.mkdirs(foo);
+      long txid = dfs.rollEdits();
+      Assert.assertTrue(txid > 0);
+
+      int retries = 0;
+      while (++retries < 5) {
+        NNStorage storage = dfsCluster.getNamesystem(1).getFSImage()
+            .getStorage();
+        if (storage.getFsImageName(txid - 1) != null) {
+          return;
+        }
+        Thread.sleep(1000);
+      }
+      Assert.fail("new checkpoint does not exist");
+
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
   static void queryForPreparation(DistributedFileSystem dfs) throws IOException,
       InterruptedException {
     RollingUpgradeInfo info;
     int retries = 0;
-    while (retries < 10) {
+    while (++retries < 10) {
       info = dfs.rollingUpgrade(RollingUpgradeAction.QUERY);
       if (info.createdRollbackImages()) {
         break;
       }
       Thread.sleep(1000);
-      ++retries;
+    }
+
+    if (retries >= 10) {
+      Assert.fail("Query return false");
     }
   }
 }

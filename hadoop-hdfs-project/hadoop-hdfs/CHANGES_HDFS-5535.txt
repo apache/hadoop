@@ -108,3 +108,6 @@ HDFS-5535 subtasks:
 
     HDFS-6019. Standby NN might not checkpoint when processing the rolling
     upgrade marker. (Haohui Mai via jing9)
+
+    HDFS-6023. Test whether the standby NN continues to checkpoint after the
+    prepare stage. (Haohui Mai via jing9)
