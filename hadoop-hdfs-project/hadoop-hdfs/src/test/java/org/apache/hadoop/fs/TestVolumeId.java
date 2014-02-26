@@ -123,56 +123,19 @@ public class TestVolumeId {
   @Test
   public void testIdEmptyBytes() {
     final VolumeId idEmpty1   = new HdfsVolumeId(new byte[0]);
-    assertTrue(idEmpty1.isValid());
     final VolumeId idEmpty2   = new HdfsVolumeId(new byte[0]);
-    assertTrue(idEmpty2.isValid());
     final VolumeId idNotEmpty = new HdfsVolumeId(new byte[] { (byte)1 });
-    assertTrue(idNotEmpty.isValid());
     
     testEq(true, idEmpty1, idEmpty2);
     testEq(false, idEmpty1, idNotEmpty);
     testEq(false, idEmpty2, idNotEmpty);
   }
-  
-  /*
-   * Test the VolumeId.INVALID_VOLUME_ID singleton.
-   */
-  @Test
-  public void testInvalidId() {
-    try {
-      new HdfsVolumeId(null);
-      assertTrue("NPE expected.", false);
-    } catch (NullPointerException npe) {
-      // okay
-    }
-    final VolumeId idEmpty   = new HdfsVolumeId(new byte[] {});
-    final VolumeId idNotEmpty = new HdfsVolumeId(new byte[] { (byte)1 });
-    
-    testEq(false, VolumeId.INVALID_VOLUME_ID, idNotEmpty);
-    testEq(false, VolumeId.INVALID_VOLUME_ID, idEmpty);
-    
-    testEqMany(true, 
-        new VolumeId[] { 
-          VolumeId.INVALID_VOLUME_ID, 
-          VolumeId.INVALID_VOLUME_ID, 
-          VolumeId.INVALID_VOLUME_ID } );
-    testEqMany(false, 
-        new VolumeId[] {
-          VolumeId.INVALID_VOLUME_ID, 
-          idEmpty, 
-          idNotEmpty });
-  }
-  
+
   /*
    * test #toString() for typical VolumeId equality classes
    */
   @Test
   public void testToString() {
-    // The #toString() return value is only checked for != null.
-    // We cannot assert more.
-    String strInvalid = VolumeId.INVALID_VOLUME_ID.toString();
-    assertNotNull(strInvalid);
-    
     String strEmpty = new HdfsVolumeId(new byte[] {}).toString();
     assertNotNull(strEmpty);
     

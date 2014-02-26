@@ -230,9 +230,9 @@ public class DistributedFileSystem extends FileSystem {
    * The returned array of {@link BlockStorageLocation} augments
    * {@link BlockLocation} with a {@link VolumeId} per block replica. The
    * VolumeId specifies the volume on the datanode on which the replica resides.
-   * The VolumeId has to be checked via {@link VolumeId#isValid()} before being
-   * used because volume information can be unavailable if the corresponding
-   * datanode is down or if the requested block is not found.
+   * The VolumeId associated with a replica may be null because volume
+   * information can be unavailable if the corresponding datanode is down or
+   * if the requested block is not found.
    * 
    * This API is unstable, and datanode-side support is disabled by default. It
    * can be enabled by setting "dfs.datanode.hdfs-blocks-metadata.enabled" to

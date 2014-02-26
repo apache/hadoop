@@ -390,13 +390,15 @@ public class MiniDFSCluster {
     Configuration conf;
     String[] dnArgs;
     SecureResources secureResources;
+    int ipcPort;
 
     DataNodeProperties(DataNode node, Configuration conf, String[] args,
-                       SecureResources secureResources) {
+                       SecureResources secureResources, int ipcPort) {
       this.datanode = node;
       this.conf = conf;
       this.dnArgs = args;
       this.secureResources = secureResources;
+      this.ipcPort = ipcPort;
     }
   }
 
@@ -1269,7 +1271,8 @@ public class MiniDFSCluster {
                                   racks[i-curDatanodesNum]);
       }
       dn.runDatanodeDaemon();
-      dataNodes.add(new DataNodeProperties(dn, newconf, dnArgs, secureResources));
+      dataNodes.add(new DataNodeProperties(dn, newconf, dnArgs,
+          secureResources, dn.getIpcPort()));
     }
     curDatanodesNum += numDataNodes;
     this.numDataNodes += numDataNodes;
@@ -1719,10 +1722,12 @@ public class MiniDFSCluster {
       InetSocketAddress addr = dnprop.datanode.getXferAddress();
       conf.set(DFS_DATANODE_ADDRESS_KEY, 
           addr.getAddress().getHostAddress() + ":" + addr.getPort());
+      conf.set(DFS_DATANODE_IPC_ADDRESS_KEY,
+          addr.getAddress().getHostAddress() + ":" + dnprop.ipcPort); 
     }
+    DataNode newDn = DataNode.createDataNode(args, conf, secureResources);
     dataNodes.add(new DataNodeProperties(
-        DataNode.createDataNode(args, conf, secureResources),
-        newconf, args, secureResources));
+        newDn, newconf, args, secureResources, newDn.getIpcPort()));
     numDataNodes++;
     return true;
   }
