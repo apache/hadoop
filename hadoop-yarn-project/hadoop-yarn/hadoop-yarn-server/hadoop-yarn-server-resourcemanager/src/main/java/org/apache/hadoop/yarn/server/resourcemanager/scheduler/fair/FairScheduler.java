@@ -175,7 +175,7 @@ public class FairScheduler extends AbstractYarnScheduler {
   protected WeightAdjuster weightAdjuster; // Can be null for no weight adjuster
   protected boolean continuousSchedulingEnabled; // Continuous Scheduling enabled or not
   protected int continuousSchedulingSleepMs; // Sleep time for each pass in continuous scheduling
-  private Comparator nodeAvailableResourceComparator =
+  private Comparator<NodeId> nodeAvailableResourceComparator =
           new NodeAvailableResourceComparator(); // Node available resource comparator
   protected double nodeLocalityThreshold; // Cluster threshold for node locality
   protected double rackLocalityThreshold; // Cluster threshold for rack locality
