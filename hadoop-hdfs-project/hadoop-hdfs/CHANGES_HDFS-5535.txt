@@ -99,3 +99,8 @@ HDFS-5535 subtasks:
     HDFS-5498. Improve datanode startup time. (kihwal)
 
     HDFS-6000. Avoid saving namespace when starting rolling upgrade. (jing9)
+
+    HDFS-6017. Query the status of rolling upgrade in the preparation stage in
+    TestRollingUpgrade and TestRollingUpgradeRollback. (Haohui Mai via
+    Arpit Agarwal)
+

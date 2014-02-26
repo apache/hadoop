@@ -228,10 +228,14 @@ public class TestRollingUpgradeRollback {
       dfs.mkdirs(bar);
       dfs.close();
 
-      NNStorage storage0 = dfsCluster.getNameNode(0).getFSImage().getStorage();
-      NNStorage storage1 = dfsCluster.getNameNode(1).getFSImage().getStorage();
-      Assert.assertTrue(TestRollingUpgrade.existRollbackFsImage(storage0));
-      Assert.assertTrue(TestRollingUpgrade.existRollbackFsImage(storage1));
+      TestRollingUpgrade.queryForPreparation(dfs);
+
+      // If the query returns true, both active and the standby NN should have
+      // rollback fsimage ready.
+      Assert.assertTrue(dfsCluster.getNameNode(0).getFSImage()
+          .hasRollbackFSImage());
+      Assert.assertTrue(dfsCluster.getNameNode(1).getFSImage()
+          .hasRollbackFSImage());
       
       // rollback NN0
       dfsCluster.restartNameNode(0, true, "-rollingUpgrade",

@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hdfs;
 
+import java.io.File;
+import java.io.IOException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -30,14 +33,10 @@ import org.apache.hadoop.hdfs.qjournal.MiniJournalCluster;
 import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.namenode.NNStorage;
+import org.apache.hadoop.hdfs.server.namenode.FSImage;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.junit.Assert;
 import org.junit.Test;
-
-import java.io.File;
-import java.io.FilenameFilter;
-import java.io.IOException;
 
 
 /**
@@ -384,32 +383,6 @@ public class TestRollingUpgrade {
     }
   }
 
-  public static boolean existRollbackFsImage(NNStorage storage)
-      throws IOException {
-    final FilenameFilter filter = new FilenameFilter() {
-      @Override
-      public boolean accept(File dir, String name) {
-        return name.indexOf(NNStorage.NameNodeFile.IMAGE_ROLLBACK.getName()) != -1;
-      }
-    };
-    final int total = 10;
-    int retry = 0;
-    while (retry++ < total) {
-      for (int i = 0; i < storage.getNumStorageDirs(); i++) {
-        File dir = storage.getStorageDir(i).getCurrentDir();
-        int l = dir.list(filter).length;
-        if (l > 0) {
-          return true;
-        }
-      }
-      try {
-        Thread.sleep(1000);
-      } catch (InterruptedException e) {
-      }
-    }
-    return false;
-  }
-
   @Test (timeout = 300000)
   public void testFinalize() throws Exception {
     final Configuration conf = new HdfsConfiguration();
@@ -431,26 +404,42 @@ public class TestRollingUpgrade {
       DistributedFileSystem dfs = dfsCluster.getFileSystem(0);
       dfs.mkdirs(foo);
 
-      NNStorage storage = dfsCluster.getNamesystem(0).getFSImage()
-          .getStorage();
+      FSImage fsimage = dfsCluster.getNamesystem(0).getFSImage();
 
       // start rolling upgrade
       RollingUpgradeInfo info = dfs.rollingUpgrade(RollingUpgradeAction.PREPARE);
       Assert.assertTrue(info.isStarted());
       dfs.mkdirs(bar);
+
+      queryForPreparation(dfs);
+
       // The NN should have a copy of the fsimage in case of rollbacks.
-      Assert.assertTrue(existRollbackFsImage(storage));
+      Assert.assertTrue(fsimage.hasRollbackFSImage());
 
       info = dfs.rollingUpgrade(RollingUpgradeAction.FINALIZE);
       Assert.assertTrue(info.isFinalized());
       Assert.assertTrue(dfs.exists(foo));
 
       // Once finalized, there should be no more fsimage for rollbacks.
-      Assert.assertFalse(existRollbackFsImage(storage));
+      Assert.assertFalse(fsimage.hasRollbackFSImage());
     } finally {
       if (cluster != null) {
         cluster.shutdown();
       }
+    }
+  }
+
+  static void queryForPreparation(DistributedFileSystem dfs) throws IOException,
+      InterruptedException {
+    RollingUpgradeInfo info;
+    int retries = 0;
+    while (retries < 10) {
+      info = dfs.rollingUpgrade(RollingUpgradeAction.QUERY);
+      if (info.createdRollbackImages()) {
+        break;
+      }
+      Thread.sleep(1000);
+      ++retries;
     }
   }
 }
