@@ -135,7 +135,8 @@
           {"name": "finishTime", "type": "long"},
           {"name": "finishedMaps", "type": "int"},
           {"name": "finishedReduces", "type": "int"},
-          {"name": "jobStatus", "type": "string"}
+          {"name": "jobStatus", "type": "string"},
+          {"name": "diagnostics", "type": "string"}
       ]
      },
 
