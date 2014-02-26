@@ -57,6 +57,9 @@ Release 2.4.0 - UNRELEASED
 
     HADOOP-10355. Fix TestLoadGenerator#testLoadGenerator. (Haohui Mai via jing9)
 
+    HADOOP-10368. InputStream is not closed in VersionInfo ctor.
+    (Tsuyoshi OZAWA via szetszwo)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
