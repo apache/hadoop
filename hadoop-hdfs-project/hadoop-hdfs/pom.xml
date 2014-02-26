@@ -477,6 +477,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                 <includes>
                   <include>ClientNamenodeProtocol.proto</include>
                   <include>NamenodeProtocol.proto</include>
+                  <include>acl.proto</include>
                 </includes>
               </source>
               <output>${project.build.directory}/generated-sources/java</output>

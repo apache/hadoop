@@ -43,6 +43,7 @@ abstract public class FsCommand extends Command {
    * @param factory where to register the class
    */
   public static void registerCommands(CommandFactory factory) {
+    factory.registerCommands(AclCommands.class);
     factory.registerCommands(CopyCommands.class);
     factory.registerCommands(Count.class);
     factory.registerCommands(Delete.class);

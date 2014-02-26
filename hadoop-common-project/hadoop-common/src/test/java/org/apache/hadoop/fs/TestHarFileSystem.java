@@ -21,6 +21,8 @@ package org.apache.hadoop.fs;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.permission.AclEntry;
+import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
@@ -33,6 +35,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.EnumSet;
 import java.util.Iterator;
+import java.util.List;
 
 import static org.apache.hadoop.fs.Options.ChecksumOpt;
 import static org.apache.hadoop.fs.Options.CreateOpts;
@@ -165,6 +168,20 @@ public class TestHarFileSystem {
         String snapshotNewName) throws IOException;
     public void deleteSnapshot(Path path, String snapshotName)
         throws IOException;
+
+    public void modifyAclEntries(Path path, List<AclEntry> aclSpec)
+        throws IOException;
+
+    public void removeAclEntries(Path path, List<AclEntry> aclSpec)
+        throws IOException;
+
+    public void removeDefaultAcl(Path path) throws IOException;
+
+    public void removeAcl(Path path) throws IOException;
+
+    public void setAcl(Path path, List<AclEntry> aclSpec) throws IOException;
+
+    public AclStatus getAclStatus(Path path) throws IOException;
   }
 
   @Test

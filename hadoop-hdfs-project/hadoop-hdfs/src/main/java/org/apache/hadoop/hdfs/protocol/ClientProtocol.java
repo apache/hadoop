@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.protocol;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.EnumSet;
+import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -34,6 +35,8 @@ import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedEntries;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.UnresolvedLinkException;
+import org.apache.hadoop.fs.permission.AclEntry;
+import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
@@ -1184,4 +1187,49 @@ public interface ClientProtocol {
   @Idempotent
   public BatchedEntries<CachePoolEntry> listCachePools(String prevPool)
       throws IOException;
+
+  /**
+   * Modifies ACL entries of files and directories.  This method can add new ACL
+   * entries or modify the permissions on existing ACL entries.  All existing
+   * ACL entries that are not specified in this call are retained without
+   * changes.  (Modifications are merged into the current ACL.)
+   */
+  @Idempotent
+  public void modifyAclEntries(String src, List<AclEntry> aclSpec)
+      throws IOException;
+
+  /**
+   * Removes ACL entries from files and directories.  Other ACL entries are
+   * retained.
+   */
+  @Idempotent
+  public void removeAclEntries(String src, List<AclEntry> aclSpec)
+      throws IOException;
+
+  /**
+   * Removes all default ACL entries from files and directories.
+   */
+  @Idempotent
+  public void removeDefaultAcl(String src) throws IOException;
+
+  /**
+   * Removes all but the base ACL entries of files and directories.  The entries
+   * for user, group, and others are retained for compatibility with permission
+   * bits.
+   */
+  @Idempotent
+  public void removeAcl(String src) throws IOException;
+
+  /**
+   * Fully replaces ACL of files and directories, discarding all existing
+   * entries.
+   */
+  @Idempotent
+  public void setAcl(String src, List<AclEntry> aclSpec) throws IOException;
+
+  /**
+   * Gets the ACLs of files and directories.
+   */
+  @Idempotent
+  public AclStatus getAclStatus(String src) throws IOException;
 }
