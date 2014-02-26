@@ -72,6 +72,9 @@ Release 2.4.0 - UNRELEASED
     HADOOP-10070. RPC client doesn't use per-connection conf to determine
     server's expected Kerberos principal name. (atm)
 
+    HADOOP-10368. InputStream is not closed in VersionInfo ctor.
+    (Tsuyoshi OZAWA via szetszwo)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

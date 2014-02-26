@@ -31,6 +31,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
+import org.apache.hadoop.io.IOUtils;
 
 /**
  * This class returns build information about Hadoop components.
@@ -45,16 +46,19 @@ public class VersionInfo {
   protected VersionInfo(String component) {
     info = new Properties();
     String versionInfoFile = component + "-version-info.properties";
+    InputStream is = null;
     try {
-      InputStream is = Thread.currentThread().getContextClassLoader()
+      is = Thread.currentThread().getContextClassLoader()
         .getResourceAsStream(versionInfoFile);
       if (is == null) {
         throw new IOException("Resource not found");
       }
       info.load(is);
     } catch (IOException ex) {
-      LogFactory.getLog(getClass()).warn("Could not read '" + 
-        versionInfoFile + "', " + ex.toString(), ex);
+      LogFactory.getLog(getClass()).warn("Could not read '" +
+          versionInfoFile + "', " + ex.toString(), ex);
+    } finally {
+      IOUtils.closeStream(is);
     }
   }
 
