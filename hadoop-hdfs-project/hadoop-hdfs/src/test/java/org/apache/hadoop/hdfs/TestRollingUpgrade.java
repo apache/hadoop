@@ -347,44 +347,6 @@ public class TestRollingUpgrade {
     }
   }
 
-  @Test
-  public void testDowngrade() throws Exception {
-    final Configuration conf = new HdfsConfiguration();
-    MiniQJMHACluster cluster = null;
-    final Path foo = new Path("/foo");
-    final Path bar = new Path("/bar");
-
-    try {
-      cluster = new MiniQJMHACluster.Builder(conf).build();
-      MiniDFSCluster dfsCluster = cluster.getDfsCluster();
-      dfsCluster.waitActive();
-
-      dfsCluster.transitionToActive(0);
-      DistributedFileSystem dfs = dfsCluster.getFileSystem(0);
-      dfs.mkdirs(foo);
-
-      // start rolling upgrade
-      RollingUpgradeInfo info = dfs
-          .rollingUpgrade(RollingUpgradeAction.PREPARE);
-      Assert.assertTrue(info.isStarted());
-      dfs.mkdirs(bar);
-      dfs.close();
-
-      dfsCluster.restartNameNode(0, true, "-rollingUpgrade", "downgrade");
-      // shutdown NN1
-      dfsCluster.shutdownNameNode(1);
-      dfsCluster.transitionToActive(0);
-
-      dfs = dfsCluster.getFileSystem(0);
-      Assert.assertTrue(dfs.exists(foo));
-      Assert.assertTrue(dfs.exists(bar));
-    } finally {
-      if (cluster != null) {
-        cluster.shutdown();
-      }
-    }
-  }
-
   @Test (timeout = 300000)
   public void testFinalize() throws Exception {
     final Configuration conf = new HdfsConfiguration();

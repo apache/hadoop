@@ -111,3 +111,6 @@ HDFS-5535 subtasks:
 
     HDFS-6023. Test whether the standby NN continues to checkpoint after the
     prepare stage. (Haohui Mai via jing9)
+
+    HDFS-6024. Test whether the NN will reject the downgrade if it has a
+    fsimage from a newer release. (Haohui Mai via jing9)
