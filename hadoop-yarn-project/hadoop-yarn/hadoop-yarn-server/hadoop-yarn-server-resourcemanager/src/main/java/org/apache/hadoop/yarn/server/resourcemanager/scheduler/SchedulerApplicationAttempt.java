@@ -385,9 +385,8 @@ public class SchedulerApplicationAttempt {
         }
       } catch (IllegalArgumentException e) {
         // DNS might be down, skip returning this container.
-        LOG.error(
-          "Error trying to assign container token to allocated container "
-              + container.getId(), e);
+        LOG.error("Error trying to assign container token and NM token to" +
+            " an allocated container " + container.getId(), e);
         continue;
       }
       returnContainerList.add(container);

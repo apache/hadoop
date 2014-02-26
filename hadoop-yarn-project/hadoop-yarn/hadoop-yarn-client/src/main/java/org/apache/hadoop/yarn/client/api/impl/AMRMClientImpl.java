@@ -195,6 +195,12 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
           appTrackingUrl);
     RegisterApplicationMasterResponse response =
         rmClient.registerApplicationMaster(request);
+
+    synchronized (this) {
+      if(!response.getNMTokensFromPreviousAttempts().isEmpty()) {
+        populateNMTokens(response.getNMTokensFromPreviousAttempts());
+      }
+    }
     return response;
   }
 
@@ -250,7 +256,7 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
         lastResponseId = allocateResponse.getResponseId();
         clusterAvailableResources = allocateResponse.getAvailableResources();
         if (!allocateResponse.getNMTokens().isEmpty()) {
-          populateNMTokens(allocateResponse);
+          populateNMTokens(allocateResponse.getNMTokens());
         }
       }
     } finally {
@@ -284,13 +290,17 @@ public class AMRMClientImpl<T extends ContainerRequest> extends AMRMClient<T> {
 
   @Private
   @VisibleForTesting
-  protected void populateNMTokens(AllocateResponse allocateResponse) {
-    for (NMToken token : allocateResponse.getNMTokens()) {
+  protected void populateNMTokens(List<NMToken> nmTokens) {
+    for (NMToken token : nmTokens) {
       String nodeId = token.getNodeId().toString();
       if (getNMTokenCache().containsToken(nodeId)) {
-        LOG.debug("Replacing token for : " + nodeId);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Replacing token for : " + nodeId);
+        }
       } else {
-        LOG.debug("Received new token for : " + nodeId);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Received new token for : " + nodeId);
+        }
       }
       getNMTokenCache().setToken(nodeId, token.getToken());
     }

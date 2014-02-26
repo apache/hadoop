@@ -44,8 +44,9 @@ message RegisterApplicationMasterResponseProto {
   optional ResourceProto maximumCapability = 1;
   optional bytes client_to_am_token_master_key = 2;
   repeated ApplicationACLMapProto application_ACLs = 3;
-  repeated ContainerProto containers_from_previous_attempt = 4;
+  repeated ContainerProto containers_from_previous_attempts = 4;
   optional string queue = 5;
+  repeated NMTokenProto nm_tokens_from_previous_attempts = 6;
 }
 
 message FinishApplicationMasterRequestProto {

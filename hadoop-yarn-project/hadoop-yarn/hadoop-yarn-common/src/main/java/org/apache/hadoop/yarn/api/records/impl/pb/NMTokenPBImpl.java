@@ -47,7 +47,7 @@ public class NMTokenPBImpl extends NMToken{
     this.proto = proto;
     viaProto = true;
   }
-  
+
   @Override
   public synchronized NodeId getNodeId() {
     NMTokenProtoOrBuilder p = viaProto ? proto : builder;
