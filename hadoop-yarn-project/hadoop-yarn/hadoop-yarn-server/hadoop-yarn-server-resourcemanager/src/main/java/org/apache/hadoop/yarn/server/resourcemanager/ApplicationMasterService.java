@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -51,6 +52,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.PreemptionContainer;
 import org.apache.hadoop.yarn.api.records.PreemptionContract;
@@ -280,10 +282,32 @@ public class ApplicationMasterService extends AbstractService implements
             .getMasterKey(applicationAttemptId).getEncoded()));        
       }
 
-      List<Container> containerList =
+      // For work-preserving AM restart, retrieve previous attempts' containers
+      // and corresponding NM tokens.
+      List<Container> transferredContainers =
           ((AbstractYarnScheduler) rScheduler)
             .getTransferredContainers(applicationAttemptId);
-      response.setContainersFromPreviousAttempt(containerList);
+      if (!transferredContainers.isEmpty()) {
+        response.setContainersFromPreviousAttempts(transferredContainers);
+        List<NMToken> nmTokens = new ArrayList<NMToken>();
+        for (Container container : transferredContainers) {
+          try {
+            nmTokens.add(rmContext.getNMTokenSecretManager()
+              .createAndGetNMToken(app.getUser(), applicationAttemptId,
+                container));
+          } catch (IllegalArgumentException e) {
+            // if it's a DNS issue, throw UnknowHostException directly and that
+            // will be automatically retried by RMProxy in RPC layer.
+            if (e.getCause() instanceof UnknownHostException) {
+              throw (UnknownHostException) e.getCause();
+            }
+          }
+        }
+        response.setNMTokensFromPreviousAttempts(nmTokens);
+        LOG.info("Application " + appID + " retrieved "
+            + transferredContainers.size() + " containers from previous"
+            + " attempts and " + nmTokens.size() + " NM tokens.");
+      }
       return response;
     }
   }

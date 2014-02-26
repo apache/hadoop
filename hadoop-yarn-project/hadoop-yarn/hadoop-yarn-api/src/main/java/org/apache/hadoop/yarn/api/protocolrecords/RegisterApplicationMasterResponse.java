@@ -29,6 +29,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.util.Records;
 
@@ -55,13 +56,15 @@ public abstract class RegisterApplicationMasterResponse {
   public static RegisterApplicationMasterResponse newInstance(
       Resource minCapability, Resource maxCapability,
       Map<ApplicationAccessType, String> acls, ByteBuffer key,
-      List<Container> containersFromPreviousAttempt, String queue) {
+      List<Container> containersFromPreviousAttempt, String queue,
+      List<NMToken> nmTokensFromPreviousAttempts) {
     RegisterApplicationMasterResponse response =
         Records.newRecord(RegisterApplicationMasterResponse.class);
     response.setMaximumResourceCapability(maxCapability);
     response.setApplicationACLs(acls);
     response.setClientToAMTokenMasterKey(key);
-    response.setContainersFromPreviousAttempt(containersFromPreviousAttempt);
+    response.setContainersFromPreviousAttempts(containersFromPreviousAttempt);
+    response.setNMTokensFromPreviousAttempts(nmTokensFromPreviousAttempts);
     response.setQueue(queue);
     return response;
   }
@@ -129,26 +132,52 @@ public abstract class RegisterApplicationMasterResponse {
   /**
    * <p>
    * Get the list of running containers as viewed by
-   * <code>ResourceManager</code> from previous application attempt.
+   * <code>ResourceManager</code> from previous application attempts.
    * </p>
    * 
    * @return the list of running containers as viewed by
-   *         <code>ResourceManager</code> from previous application attempt
+   *         <code>ResourceManager</code> from previous application attempts
+   * @see RegisterApplicationMasterResponse#getNMTokensFromPreviousAttempts()
    */
   @Public
   @Unstable
-  public abstract List<Container> getContainersFromPreviousAttempt();
+  public abstract List<Container> getContainersFromPreviousAttempts();
 
   /**
    * Set the list of running containers as viewed by
-   * <code>ResourceManager</code> from previous application attempt.
+   * <code>ResourceManager</code> from previous application attempts.
    * 
    * @param containersFromPreviousAttempt
    *          the list of running containers as viewed by
-   *          <code>ResourceManager</code> from previous application attempt.
+   *          <code>ResourceManager</code> from previous application attempts.
    */
   @Private
   @Unstable
-  public abstract void setContainersFromPreviousAttempt(
+  public abstract void setContainersFromPreviousAttempts(
       List<Container> containersFromPreviousAttempt);
+
+  /**
+   * Get the list of NMTokens for communicating with the NMs where the
+   * containers of previous application attempts are running.
+   * 
+   * @return the list of NMTokens for communicating with the NMs where the
+   *         containers of previous application attempts are running.
+   * 
+   * @see RegisterApplicationMasterResponse#getContainersFromPreviousAttempts()
+   */
+  @Public
+  @Stable
+  public abstract List<NMToken> getNMTokensFromPreviousAttempts();
+
+  /**
+   * Set the list of NMTokens for communicating with the NMs where the the
+   * containers of previous application attempts are running.
+   * 
+   * @param nmTokens
+   *          the list of NMTokens for communicating with the NMs where the
+   *          containers of previous application attempts are running.
+   */
+  @Private
+  @Unstable
+  public abstract void setNMTokensFromPreviousAttempts(List<NMToken> nmTokens);
 }

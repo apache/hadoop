@@ -8,9 +8,6 @@ Trunk (Unreleased)
     FSDataOutputStream.sync() and Syncable.sync().  (szetszwo)
 
   NEW FEATURES
-
-    HADOOP-10184. Hadoop Common changes required to support HDFS ACLs. (See
-    breakdown of tasks below for features and contributors)
     
   IMPROVEMENTS
 
@@ -300,41 +297,6 @@ Trunk (Unreleased)
 
     HADOOP-10044 Improve the javadoc of rpc code (sanjay Radia)
 
-  BREAKDOWN OF HADOOP-10184 SUBTASKS AND RELATED JIRAS
-
-    HADOOP-10185. FileSystem API for ACLs. (cnauroth)
-
-    HADOOP-10186. Remove AclReadFlag and AclWriteFlag in FileSystem API.
-    (Haohui Mai via cnauroth)
-
-    HADOOP-10187. FsShell CLI: add getfacl and setfacl with minimal support for
-    getting and setting ACLs. (Vinay via cnauroth)
-
-    HADOOP-10192. FileSystem#getAclStatus has incorrect JavaDocs. (cnauroth)
-
-    HADOOP-10220. Add ACL indicator bit to FsPermission. (cnauroth)
-
-    HADOOP-10241. Clean up output of FsShell getfacl. (Chris Nauroth via wheat9)
-
-    HADOOP-10213. Fix bugs parsing ACL spec in FsShell setfacl.
-    (Vinay via cnauroth)
-
-    HADOOP-10277. setfacl -x fails to parse ACL spec if trying to remove the
-    mask entry. (Vinay via cnauroth)
-
-    HADOOP-10270. getfacl does not display effective permissions of masked
-    entries. (cnauroth)
-
-    HADOOP-10344. Fix TestAclCommands after merging HADOOP-10338 patch.
-    (cnauroth)
-
-    HADOOP-10352. Recursive setfacl erroneously attempts to apply default ACL to
-    files. (cnauroth)
-
-    HADOOP-10354. TestWebHDFS fails after merge of HDFS-4685 to trunk. (cnauroth)
-
-    HADOOP-10361. Correct alignment in CLI output for ACLs. (cnauroth)
-
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
@@ -362,6 +324,9 @@ Release 2.4.0 - UNRELEASED
 
   NEW FEATURES
 
+    HADOOP-10184. Hadoop Common changes required to support HDFS ACLs. (See
+    breakdown of tasks below for features and contributors)
+
   IMPROVEMENTS
 
     HADOOP-10139. Update and improve the Single Cluster Setup document.
@@ -377,6 +342,9 @@ Release 2.4.0 - UNRELEASED
 
     HADOOP-10348. Deprecate hadoop.ssl.configuration in branch-2, and remove
     it in trunk. (Haohui Mai via jing9)
+
+    HADOOP-9454. Support multipart uploads for s3native. (Jordan Mendelson and
+    Akira AJISAKA via atm)
 
   OPTIMIZATIONS
 
@@ -412,6 +380,44 @@ Release 2.4.0 - UNRELEASED
 
     HADOOP-10070. RPC client doesn't use per-connection conf to determine
     server's expected Kerberos principal name. (atm)
+
+    HADOOP-10368. InputStream is not closed in VersionInfo ctor.
+    (Tsuyoshi OZAWA via szetszwo)
+
+  BREAKDOWN OF HADOOP-10184 SUBTASKS AND RELATED JIRAS
+
+    HADOOP-10185. FileSystem API for ACLs. (cnauroth)
+
+    HADOOP-10186. Remove AclReadFlag and AclWriteFlag in FileSystem API.
+    (Haohui Mai via cnauroth)
+
+    HADOOP-10187. FsShell CLI: add getfacl and setfacl with minimal support for
+    getting and setting ACLs. (Vinay via cnauroth)
+
+    HADOOP-10192. FileSystem#getAclStatus has incorrect JavaDocs. (cnauroth)
+
+    HADOOP-10220. Add ACL indicator bit to FsPermission. (cnauroth)
+
+    HADOOP-10241. Clean up output of FsShell getfacl. (Chris Nauroth via wheat9)
+
+    HADOOP-10213. Fix bugs parsing ACL spec in FsShell setfacl.
+    (Vinay via cnauroth)
+
+    HADOOP-10277. setfacl -x fails to parse ACL spec if trying to remove the
+    mask entry. (Vinay via cnauroth)
+
+    HADOOP-10270. getfacl does not display effective permissions of masked
+    entries. (cnauroth)
+
+    HADOOP-10344. Fix TestAclCommands after merging HADOOP-10338 patch.
+    (cnauroth)
+
+    HADOOP-10352. Recursive setfacl erroneously attempts to apply default ACL to
+    files. (cnauroth)
+
+    HADOOP-10354. TestWebHDFS fails after merge of HDFS-4685 to trunk. (cnauroth)
+
+    HADOOP-10361. Correct alignment in CLI output for ACLs. (cnauroth)
 
 Release 2.3.1 - UNRELEASED
 

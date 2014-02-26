@@ -48,6 +48,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
 /**
@@ -1272,6 +1273,12 @@ public abstract class FSAclBaseTest {
     AclFeature aclFeature = inode.getAclFeature();
     if (expectAclFeature) {
       assertNotNull(aclFeature);
+      // Intentionally capturing a reference to the entries, not using nested
+      // calls.  This way, we get compile-time enforcement that the entries are
+      // stored in an ImmutableList.
+      ImmutableList<AclEntry> entries = aclFeature.getEntries();
+      assertNotNull(entries);
+      assertFalse(entries.isEmpty());
     } else {
       assertNull(aclFeature);
     }
