@@ -79,6 +79,7 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage;
+import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.DataStorage;
@@ -811,6 +812,14 @@ public class MiniDFSCluster {
             File nameDir = new File(nameDirUri);
             if (nameDir.exists() && !FileUtil.fullyDelete(nameDir)) {
               throw new IOException("Could not fully delete " + nameDir);
+            }
+          }
+          Collection<URI> checkpointDirs = Util.stringCollectionAsURIs(conf
+              .getTrimmedStringCollection(DFS_NAMENODE_CHECKPOINT_DIR_KEY));
+          for (URI checkpointDirUri : checkpointDirs) {
+            File checkpointDir = new File(checkpointDirUri);
+            if (checkpointDir.exists() && !FileUtil.fullyDelete(checkpointDir)) {
+              throw new IOException("Could not fully delete " + checkpointDir);
             }
           }
         }

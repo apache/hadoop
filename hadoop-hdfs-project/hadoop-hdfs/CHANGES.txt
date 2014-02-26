@@ -631,6 +631,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-6008. Namenode dead node link is giving HTTP error 500.
     (Benoy Antony via cnauroth)
 
+    HDFS-5936. MiniDFSCluster does not clean data left behind by
+    SecondaryNameNode. (Binglin Chang via cnauroth)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
