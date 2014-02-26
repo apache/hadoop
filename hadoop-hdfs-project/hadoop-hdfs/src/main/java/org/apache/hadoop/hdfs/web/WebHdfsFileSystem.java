@@ -49,6 +49,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.AclEntry;
+import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -57,6 +59,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
 import org.apache.hadoop.hdfs.web.resources.AccessTimeParam;
+import org.apache.hadoop.hdfs.web.resources.AclPermissionParam;
 import org.apache.hadoop.hdfs.web.resources.BlockSizeParam;
 import org.apache.hadoop.hdfs.web.resources.BufferSizeParam;
 import org.apache.hadoop.hdfs.web.resources.ConcatSourcesParam;
@@ -698,6 +701,17 @@ public class WebHdfsFileSystem extends FileSystem
   }
 
   @Override
+  public AclStatus getAclStatus(Path f) throws IOException {
+    final HttpOpParam.Op op = GetOpParam.Op.GETACLSTATUS;
+    final Map<?, ?> json = run(op, f);
+    AclStatus status = JsonUtil.toAclStatus(json);
+    if (status == null) {
+      throw new FileNotFoundException("File does not exist: " + f);
+    }
+    return status;
+  }
+
+  @Override
   public boolean mkdirs(Path f, FsPermission permission) throws IOException {
     statistics.incrementWriteOps(1);
     final HttpOpParam.Op op = PutOpParam.Op.MKDIRS;
@@ -755,6 +769,44 @@ public class WebHdfsFileSystem extends FileSystem
     statistics.incrementWriteOps(1);
     final HttpOpParam.Op op = PutOpParam.Op.SETPERMISSION;
     run(op, p, new PermissionParam(permission));
+  }
+
+  @Override
+  public void modifyAclEntries(Path path, List<AclEntry> aclSpec)
+      throws IOException {
+    statistics.incrementWriteOps(1);
+    final HttpOpParam.Op op = PutOpParam.Op.MODIFYACLENTRIES;
+    run(op, path, new AclPermissionParam(aclSpec));
+  }
+
+  @Override
+  public void removeAclEntries(Path path, List<AclEntry> aclSpec)
+      throws IOException {
+    statistics.incrementWriteOps(1);
+    final HttpOpParam.Op op = PutOpParam.Op.REMOVEACLENTRIES;
+    run(op, path, new AclPermissionParam(aclSpec));
+  }
+
+  @Override
+  public void removeDefaultAcl(Path path) throws IOException {
+    statistics.incrementWriteOps(1);
+    final HttpOpParam.Op op = PutOpParam.Op.REMOVEDEFAULTACL;
+    run(op, path);
+  }
+
+  @Override
+  public void removeAcl(Path path) throws IOException {
+    statistics.incrementWriteOps(1);
+    final HttpOpParam.Op op = PutOpParam.Op.REMOVEACL;
+    run(op, path);
+  }
+
+  @Override
+  public void setAcl(final Path p, final List<AclEntry> aclSpec)
+      throws IOException {
+    statistics.incrementWriteOps(1);
+    final HttpOpParam.Op op = PutOpParam.Op.SETACL;
+    run(op, p, new AclPermissionParam(aclSpec));
   }
 
   @Override

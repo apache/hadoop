@@ -48,6 +48,9 @@ public class FsPermission implements Writable {
     WritableFactories.setFactory(ImmutableFsPermission.class, FACTORY);
   }
 
+  /** Maximum acceptable length of a permission string to parse */
+  public static final int MAX_PERMISSION_LENGTH = 10;
+
   /** Create an immutable {@link FsPermission} object. */
   public static FsPermission createImmutable(short permission) {
     return new ImmutableFsPermission(permission);
@@ -319,9 +322,10 @@ public class FsPermission implements Writable {
     if (unixSymbolicPermission == null) {
       return null;
     }
-    else if (unixSymbolicPermission.length() != 10) {
-      throw new IllegalArgumentException("length != 10(unixSymbolicPermission="
-          + unixSymbolicPermission + ")");
+    else if (unixSymbolicPermission.length() != MAX_PERMISSION_LENGTH) {
+      throw new IllegalArgumentException(String.format(
+        "length != %d(unixSymbolicPermission=%s)", MAX_PERMISSION_LENGTH,
+        unixSymbolicPermission));
     }
 
     int n = 0;

@@ -772,12 +772,10 @@ public class FSImageFormat {
           modificationTime, atime, blocks, replication, blockSize);
       if (underConstruction) {
         file.toUnderConstruction(clientName, clientMachine, null);
-          return fileDiffs == null ? file : new INodeFile(file, fileDiffs);
-      } else {
-          return fileDiffs == null ? file : new INodeFile(file, fileDiffs);
       }
-    } else if (numBlocks == -1) {
-      //directory
+        return fileDiffs == null ? file : new INodeFile(file, fileDiffs);
+      } else if (numBlocks == -1) {
+        //directory
       
       //read quotas
       final long nsQuota = in.readLong();
@@ -867,8 +865,8 @@ public class FSImageFormat {
       final short replication = namesystem.getBlockManager().adjustReplication(
           in.readShort());
       final long preferredBlockSize = in.readLong();
-      
-      return new INodeFileAttributes.SnapshotCopy(name, permissions, modificationTime,
+
+      return new INodeFileAttributes.SnapshotCopy(name, permissions, null, modificationTime,
           accessTime, replication, preferredBlockSize);
     }
 
@@ -889,9 +887,9 @@ public class FSImageFormat {
       final long dsQuota = in.readLong();
   
       return nsQuota == -1L && dsQuota == -1L?
-          new INodeDirectoryAttributes.SnapshotCopy(name, permissions, modificationTime)
+          new INodeDirectoryAttributes.SnapshotCopy(name, permissions, null, modificationTime)
         : new INodeDirectoryAttributes.CopyWithQuota(name, permissions,
-            modificationTime, nsQuota, dsQuota);
+            null, modificationTime, nsQuota, dsQuota);
     }
   
     private void loadFilesUnderConstruction(DataInput in,

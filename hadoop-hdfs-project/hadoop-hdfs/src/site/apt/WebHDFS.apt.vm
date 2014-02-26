@@ -752,6 +752,148 @@ Content-Length: 0
    {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.setTimes
 
 
+** {Modify ACL Entries}
+
+  * Submit a HTTP PUT request.
+
++---------------------------------
+curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=MODIFYACLENTRIES
+                              &aclspec=<ACLSPEC>"
++---------------------------------
+
+  The client receives a response with zero content length:
+
++---------------------------------
+HTTP/1.1 200 OK
+Content-Length: 0
++---------------------------------
+
+  []
+
+  See also:
+  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.modifyAclEntries
+
+
+** {Remove ACL Entries}
+
+  * Submit a HTTP PUT request.
+
++---------------------------------
+curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=REMOVEACLENTRIES
+                              &aclspec=<ACLSPEC>"
++---------------------------------
+
+  The client receives a response with zero content length:
+
++---------------------------------
+HTTP/1.1 200 OK
+Content-Length: 0
++---------------------------------
+
+  []
+
+  See also:
+  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.removeAclEntries
+
+
+** {Remove Default ACL}
+
+  * Submit a HTTP PUT request.
+
++---------------------------------
+curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=REMOVEDEFAULTACL"
++---------------------------------
+
+  The client receives a response with zero content length:
+
++---------------------------------
+HTTP/1.1 200 OK
+Content-Length: 0
++---------------------------------
+
+  []
+
+  See also:
+  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.removeDefaultAcl
+
+
+** {Remove ACL}
+
+  * Submit a HTTP PUT request.
+
++---------------------------------
+curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=REMOVEACL"
++---------------------------------
+
+  The client receives a response with zero content length:
+
++---------------------------------
+HTTP/1.1 200 OK
+Content-Length: 0
++---------------------------------
+
+  []
+
+  See also:
+  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.removeAcl
+
+
+** {Set ACL}
+
+  * Submit a HTTP PUT request.
+
++---------------------------------
+curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=SETACL
+                              &aclspec=<ACLSPEC>"
++---------------------------------
+
+  The client receives a response with zero content length:
+
++---------------------------------
+HTTP/1.1 200 OK
+Content-Length: 0
++---------------------------------
+
+  []
+
+  See also:
+  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.setAcl
+
+
+** {Get ACL Status}
+
+  * Submit a HTTP GET request.
+
++---------------------------------
+curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETACLSTATUS"
++---------------------------------
+
+  The client receives a response with a {{{ACL Status JSON Schema}<<<AclStatus>>> JSON object}}:
+
++---------------------------------
+HTTP/1.1 200 OK
+Content-Type: application/json
+Transfer-Encoding: chunked
+
+{
+    "AclStatus": {
+        "entries": [
+            "user:carla:rw-", 
+            "group::r-x"
+        ], 
+        "group": "supergroup", 
+        "owner": "hadoop", 
+        "stickyBit": false
+    }
+}
++---------------------------------
+
+  []
+
+  See also:
+  {{{../../api/org/apache/hadoop/fs/FileSystem.html}FileSystem}}.getAclStatus
+
+
 * {Delegation Token Operations}
 
 ** {Get Delegation Token}
@@ -979,6 +1121,52 @@ Transfer-Encoding: chunked
   Therefore, all WebHDFS JSON responses allow any additional property.
   However, if additional properties are included in the responses, they are
   considered as optional properties in order to maintain compatibility.
+
+** {ACL Status JSON Schema}
+
++---------------------------------
+{
+  "name"      : "AclStatus",
+  "properties":
+  {
+    "AclStatus":
+    {
+      "type"      : "object",
+      "properties":
+      {
+        "entries":
+        {
+          "type": "array"
+          "items":
+          {
+            "description": "ACL entry.",
+            "type": "string"
+          }
+        },
+        "group":
+        {
+          "description": "The group owner.",
+          "type"       : "string",
+          "required"   : true
+        },
+        "owner":
+        {
+          "description": "The user who is the owner.",
+          "type"       : "string",
+          "required"   : true
+        },
+        "stickyBit":
+        {
+          "description": "True if the sticky bit is on.",
+          "type"       : "boolean",
+          "required"   : true
+        },
+      }
+    }
+  }
+}
++---------------------------------
+
 
 ** {Boolean JSON Schema}
 
@@ -1386,6 +1574,23 @@ var tokenProperties =
 
 
 * {HTTP Query Parameter Dictionary}
+
+** {ACL Spec}
+
+*----------------+-------------------------------------------------------------------+
+|| Name          | <<<aclspec>>> |
+*----------------+-------------------------------------------------------------------+
+|| Description   | The ACL spec included in ACL modification operations. |
+*----------------+-------------------------------------------------------------------+
+|| Type          | String |
+*----------------+-------------------------------------------------------------------+
+|| Default Value | \<empty\> |
+*----------------+-------------------------------------------------------------------+
+|| Valid Values  | See {{{./HdfsPermissionsGuide.html}Permissions and HDFS}}. |
+*----------------+-------------------------------------------------------------------+
+|| Syntax        | See {{{./HdfsPermissionsGuide.html}Permissions and HDFS}}. |
+*----------------+-------------------------------------------------------------------+
+
 
 ** {Access Time}
 

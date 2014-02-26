@@ -26,6 +26,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import org.apache.hadoop.fs.permission.AclEntry;
+import org.apache.hadoop.fs.permission.AclEntryScope;
+import org.apache.hadoop.fs.permission.AclEntryType;
+import org.apache.hadoop.fs.permission.AclStatus;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -68,6 +73,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.DataChecksum;
+import org.junit.Assert;
 import org.junit.Test;
 
 import com.google.common.base.Joiner;
@@ -579,5 +585,40 @@ public class TestPBHelper {
         HdfsProtos.ChecksumTypeProto.CHECKSUM_CRC32);
     assertEquals(PBHelper.convert(DataChecksum.Type.CRC32C),
         HdfsProtos.ChecksumTypeProto.CHECKSUM_CRC32C);
+  }
+
+  @Test
+  public void testAclEntryProto() {
+    // All fields populated.
+    AclEntry e1 = new AclEntry.Builder().setName("test")
+        .setPermission(FsAction.READ_EXECUTE).setScope(AclEntryScope.DEFAULT)
+        .setType(AclEntryType.OTHER).build();
+    // No name.
+    AclEntry e2 = new AclEntry.Builder().setScope(AclEntryScope.ACCESS)
+        .setType(AclEntryType.USER).setPermission(FsAction.ALL).build();
+    // No permission, which will default to the 0'th enum element.
+    AclEntry e3 = new AclEntry.Builder().setScope(AclEntryScope.ACCESS)
+        .setType(AclEntryType.USER).setName("test").build();
+    AclEntry[] expected = new AclEntry[] { e1, e2,
+        new AclEntry.Builder()
+            .setScope(e3.getScope())
+            .setType(e3.getType())
+            .setName(e3.getName())
+            .setPermission(FsAction.NONE)
+            .build() };
+    AclEntry[] actual = Lists.newArrayList(
+        PBHelper.convertAclEntry(PBHelper.convertAclEntryProto(Lists
+            .newArrayList(e1, e2, e3)))).toArray(new AclEntry[0]);
+    Assert.assertArrayEquals(expected, actual);
+  }
+
+  @Test
+  public void testAclStatusProto() {
+    AclEntry e = new AclEntry.Builder().setName("test")
+        .setPermission(FsAction.READ_EXECUTE).setScope(AclEntryScope.DEFAULT)
+        .setType(AclEntryType.OTHER).build();
+    AclStatus s = new AclStatus.Builder().owner("foo").group("bar").addEntry(e)
+        .build();
+    Assert.assertEquals(s, PBHelper.convert(PBHelper.convert(s)));
   }
 }

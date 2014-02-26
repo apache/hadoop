@@ -33,7 +33,9 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Options;
+import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -70,6 +72,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenameOldOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenameOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenameSnapshotOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenewDelegationTokenOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetAclOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetGenstampV1Op;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetGenstampV2Op;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetOwnerOp;
@@ -681,6 +684,7 @@ public class FSEditLog implements LogsPurgeable {
    */
   public void logOpenFile(String path, INodeFile newNode, boolean toLogRpcIds) {
     Preconditions.checkArgument(newNode.isUnderConstruction());
+    PermissionStatus permissions = newNode.getPermissionStatus();
     AddOp op = AddOp.getInstance(cache.get())
       .setInodeId(newNode.getId())
       .setPath(path)
@@ -689,9 +693,14 @@ public class FSEditLog implements LogsPurgeable {
       .setAccessTime(newNode.getAccessTime())
       .setBlockSize(newNode.getPreferredBlockSize())
       .setBlocks(newNode.getBlocks())
-      .setPermissionStatus(newNode.getPermissionStatus())
+      .setPermissionStatus(permissions)
       .setClientName(newNode.getFileUnderConstructionFeature().getClientName())
       .setClientMachine(newNode.getFileUnderConstructionFeature().getClientMachine());
+
+    AclFeature f = newNode.getAclFeature();
+    if (f != null) {
+      op.setAclEntries(AclStorage.readINodeLogicalAcl(newNode));
+    }
     logRpcIds(op, toLogRpcIds);
     logEdit(op);
   }
@@ -736,11 +745,17 @@ public class FSEditLog implements LogsPurgeable {
    * Add create directory record to edit log
    */
   public void logMkDir(String path, INode newNode) {
+    PermissionStatus permissions = newNode.getPermissionStatus();
     MkdirOp op = MkdirOp.getInstance(cache.get())
       .setInodeId(newNode.getId())
       .setPath(path)
       .setTimestamp(newNode.getModificationTime())
-      .setPermissionStatus(newNode.getPermissionStatus());
+      .setPermissionStatus(permissions);
+
+    AclFeature f = newNode.getAclFeature();
+    if (f != null) {
+      op.setAclEntries(AclStorage.readINodeLogicalAcl(newNode));
+    }
     logEdit(op);
   }
   
@@ -1011,6 +1026,13 @@ public class FSEditLog implements LogsPurgeable {
     RemoveCachePoolOp op =
         RemoveCachePoolOp.getInstance(cache.get()).setPoolName(poolName);
     logRpcIds(op, toLogRpcIds);
+    logEdit(op);
+  }
+
+  void logSetAcl(String src, List<AclEntry> entries) {
+    SetAclOp op = SetAclOp.getInstance();
+    op.src = src;
+    op.aclEntries = entries;
     logEdit(op);
   }
 
