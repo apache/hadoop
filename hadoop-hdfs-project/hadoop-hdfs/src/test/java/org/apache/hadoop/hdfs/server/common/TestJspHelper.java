@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.common;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -641,5 +642,20 @@ public class TestJspHelper {
     assertTrue(upgradeStatusReport.getStatusText(true).equals(
         MessageFormat.format(EXPECTED__NOTF_PATTERN, version)));
   }  
+  
+  @Test 
+  public void testAuthority(){
+    DatanodeID dnWithIp = new DatanodeID("127.0.0.1", "hostName", null,
+        50020, 50075, 50076, 50010);
+    assertNotNull(JspHelper.Url.authority("http", dnWithIp));
+
+    DatanodeID dnWithNullIp = new DatanodeID(null, "hostName", null,
+        50020, 50075, 50076, 50010);
+    assertNotNull(JspHelper.Url.authority("http", dnWithNullIp));
+
+    DatanodeID dnWithEmptyIp = new DatanodeID("", "hostName", null,
+        50020, 50075, 50076, 50010);
+    assertNotNull(JspHelper.Url.authority("http", dnWithEmptyIp));
+  }
 }
 

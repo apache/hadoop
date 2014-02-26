@@ -147,7 +147,9 @@ public class JspHelper {
    */
   public static final class Url {
     public static String authority(String scheme, DatanodeID d) {
-      String fqdn = canonicalize(d.getIpAddr());
+      String fqdn = (d.getIpAddr() != null && !d.getIpAddr().isEmpty())?
+          canonicalize(d.getIpAddr()): 
+          d.getHostName();
       if (scheme.equals("http")) {
         return fqdn + ":" + d.getInfoPort();
       } else if (scheme.equals("https")) {
