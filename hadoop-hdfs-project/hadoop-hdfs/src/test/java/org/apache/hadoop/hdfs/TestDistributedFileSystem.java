@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.eq;
@@ -43,6 +45,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.BlockStorageLocation;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -56,14 +59,21 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.VolumeId;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
+import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.hdfs.web.HftpFileSystem;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
+import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Time;
 import org.apache.log4j.Level;
 import org.junit.Test;
 import org.mockito.InOrder;
+
+import com.google.common.base.Supplier;
+import com.google.common.collect.Lists;
 
 public class TestDistributedFileSystem {
   private static final Random RAN = new Random();
@@ -684,20 +694,47 @@ public class TestDistributedFileSystem {
    * {@link DistributedFileSystem#getFileBlockStorageLocations(java.util.List)}
    * call
    */
-  @Test
+  @Test(timeout=60000)
   public void testGetFileBlockStorageLocationsBatching() throws Exception {
     final Configuration conf = getTestConfiguration();
+    ((Log4JLogger)ProtobufRpcEngine.LOG).getLogger().setLevel(Level.TRACE);
+    ((Log4JLogger)BlockStorageLocationUtil.LOG).getLogger().setLevel(Level.TRACE);
+    ((Log4JLogger)DFSClient.LOG).getLogger().setLevel(Level.TRACE);
+
     conf.setBoolean(DFSConfigKeys.DFS_HDFS_BLOCKS_METADATA_ENABLED,
         true);
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(2).build();
     try {
-      DistributedFileSystem fs = cluster.getFileSystem();
+      final DistributedFileSystem fs = cluster.getFileSystem();
       // Create two files
-      Path tmpFile1 = new Path("/tmpfile1.dat");
-      Path tmpFile2 = new Path("/tmpfile2.dat");
+      final Path tmpFile1 = new Path("/tmpfile1.dat");
+      final Path tmpFile2 = new Path("/tmpfile2.dat");
       DFSTestUtil.createFile(fs, tmpFile1, 1024, (short) 2, 0xDEADDEADl);
       DFSTestUtil.createFile(fs, tmpFile2, 1024, (short) 2, 0xDEADDEADl);
+      // Make sure files are fully replicated before continuing
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override
+        public Boolean get() {
+          try {
+            List<BlockLocation> list = Lists.newArrayList();
+            list.addAll(Arrays.asList(fs.getFileBlockLocations(tmpFile1, 0,
+                1024)));
+            list.addAll(Arrays.asList(fs.getFileBlockLocations(tmpFile2, 0,
+                1024)));
+            int totalRepl = 0;
+            for (BlockLocation loc : list) {
+              totalRepl += loc.getHosts().length;
+            }
+            if (totalRepl == 4) {
+              return true;
+            }
+          } catch(IOException e) {
+            // swallow
+          }
+          return false;
+        }
+      }, 500, 30000);
       // Get locations of blocks of both files and concat together
       BlockLocation[] blockLocs1 = fs.getFileBlockLocations(tmpFile1, 0, 1024);
       BlockLocation[] blockLocs2 = fs.getFileBlockLocations(tmpFile2, 0, 1024);
@@ -728,7 +765,7 @@ public class TestDistributedFileSystem {
           VolumeId id = l.getVolumeIds()[i];
           String name = l.getNames()[i];
           assertTrue("Expected block to be valid on datanode " + name,
-              id.isValid());
+              id != null);
         }
       }
     } finally {
@@ -740,38 +777,97 @@ public class TestDistributedFileSystem {
    * Tests error paths for
    * {@link DistributedFileSystem#getFileBlockStorageLocations(java.util.List)}
    */
-  @Test
+  @Test(timeout=60000)
   public void testGetFileBlockStorageLocationsError() throws Exception {
     final Configuration conf = getTestConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_HDFS_BLOCKS_METADATA_ENABLED,
         true);
-    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
-        .numDataNodes(2).build();
+    conf.setInt(
+        CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY, 0);
+    MiniDFSCluster cluster = null;
     try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
       cluster.getDataNodes();
-      DistributedFileSystem fs = cluster.getFileSystem();
-      // Create a file
-      Path tmpFile = new Path("/tmpfile1.dat");
-      DFSTestUtil.createFile(fs, tmpFile, 1024, (short) 2, 0xDEADDEADl);
-      // Get locations of blocks of the file
-      BlockLocation[] blockLocs = fs.getFileBlockLocations(tmpFile, 0, 1024);
-      // Stop a datanode to simulate a failure
-      cluster.stopDataNode(0);
+      final DistributedFileSystem fs = cluster.getFileSystem();
+      
+      // Create a few files and add together their block locations into
+      // a list.
+      final Path tmpFile1 = new Path("/errorfile1.dat");
+      final Path tmpFile2 = new Path("/errorfile2.dat");
+
+      DFSTestUtil.createFile(fs, tmpFile1, 1024, (short) 2, 0xDEADDEADl);
+      DFSTestUtil.createFile(fs, tmpFile2, 1024, (short) 2, 0xDEADDEADl);
+
+      // Make sure files are fully replicated before continuing
+      GenericTestUtils.waitFor(new Supplier<Boolean>() {
+        @Override
+        public Boolean get() {
+          try {
+            List<BlockLocation> list = Lists.newArrayList();
+            list.addAll(Arrays.asList(fs.getFileBlockLocations(tmpFile1, 0,
+                1024)));
+            list.addAll(Arrays.asList(fs.getFileBlockLocations(tmpFile2, 0,
+                1024)));
+            int totalRepl = 0;
+            for (BlockLocation loc : list) {
+              totalRepl += loc.getHosts().length;
+            }
+            if (totalRepl == 4) {
+              return true;
+            }
+          } catch(IOException e) {
+            // swallow
+          }
+          return false;
+        }
+      }, 500, 30000);
+      
+      BlockLocation[] blockLocs1 = fs.getFileBlockLocations(tmpFile1, 0, 1024);
+      BlockLocation[] blockLocs2 = fs.getFileBlockLocations(tmpFile2, 0, 1024);
+
+      List<BlockLocation> allLocs = Lists.newArrayList();
+      allLocs.addAll(Arrays.asList(blockLocs1));
+      allLocs.addAll(Arrays.asList(blockLocs2));
+          
+      // Stop a datanode to simulate a failure.
+      DataNodeProperties stoppedNode = cluster.stopDataNode(0);
+      
       // Fetch VolumeBlockLocations
-      BlockStorageLocation[] locs = fs.getFileBlockStorageLocations(Arrays
-          .asList(blockLocs));
-
-      assertEquals("Expected one HdfsBlockLocation for one 1-block file", 1,
+      BlockStorageLocation[] locs = fs.getFileBlockStorageLocations(allLocs);
+      assertEquals("Expected two HdfsBlockLocation for two 1-block files", 2,
           locs.length);
-
+  
       for (BlockStorageLocation l : locs) {
         assertEquals("Expected two replicas for each block", 2,
+            l.getHosts().length);
+        assertEquals("Expected two VolumeIDs for each block", 2,
             l.getVolumeIds().length);
-        assertTrue("Expected one valid and one invalid replica",
-            (l.getVolumeIds()[0].isValid()) ^ (l.getVolumeIds()[1].isValid()));
+        assertTrue("Expected one valid and one invalid volume",
+            (l.getVolumeIds()[0] == null) ^ (l.getVolumeIds()[1] == null));
       }
+      
+      // Start the datanode again, and remove one of the blocks.
+      // This is a different type of failure where the block itself
+      // is invalid.
+      cluster.restartDataNode(stoppedNode, true /*keepPort*/);
+      cluster.waitActive();
+      
+      fs.delete(tmpFile2, true);
+      HATestUtil.waitForNNToIssueDeletions(cluster.getNameNode());
+      cluster.triggerHeartbeats();
+      HATestUtil.waitForDNDeletions(cluster);
+  
+      locs = fs.getFileBlockStorageLocations(allLocs);
+      assertEquals("Expected two HdfsBlockLocations for two 1-block files", 2,
+          locs.length);
+      assertNotNull(locs[0].getVolumeIds()[0]);
+      assertNotNull(locs[0].getVolumeIds()[1]);
+      assertNull(locs[1].getVolumeIds()[0]);
+      assertNull(locs[1].getVolumeIds()[1]);
     } finally {
-      cluster.shutdown();
+      if (cluster != null) {
+        cluster.shutdown();
+      }
     }
   }
 

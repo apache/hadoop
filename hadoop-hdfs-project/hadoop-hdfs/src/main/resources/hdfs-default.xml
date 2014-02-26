@@ -1309,10 +1309,10 @@
 </property>
 
 <property>
-  <name>dfs.client.file-block-storage-locations.timeout</name>
-  <value>60</value>
+  <name>dfs.client.file-block-storage-locations.timeout.millis</name>
+  <value>1000</value>
   <description>
-    Timeout (in seconds) for the parallel RPCs made in DistributedFileSystem#getFileBlockStorageLocations().
+    Timeout (in milliseconds) for the parallel RPCs made in DistributedFileSystem#getFileBlockStorageLocations().
   </description>
 </property>
 

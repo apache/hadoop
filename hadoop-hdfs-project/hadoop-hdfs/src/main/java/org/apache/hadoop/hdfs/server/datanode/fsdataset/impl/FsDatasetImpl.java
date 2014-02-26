@@ -1855,31 +1855,35 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   }
 
   @Override // FsDatasetSpi
-  public HdfsBlocksMetadata getHdfsBlocksMetadata(List<ExtendedBlock> blocks)
-      throws IOException {
+  public HdfsBlocksMetadata getHdfsBlocksMetadata(String poolId,
+      long[] blockIds) throws IOException {
     // List of VolumeIds, one per volume on the datanode
     List<byte[]> blocksVolumeIds = new ArrayList<byte[]>(volumes.volumes.size());
     // List of indexes into the list of VolumeIds, pointing at the VolumeId of
     // the volume that the block is on
-    List<Integer> blocksVolumeIndexes = new ArrayList<Integer>(blocks.size());
+    List<Integer> blocksVolumeIndexes = new ArrayList<Integer>(blockIds.length);
     // Initialize the list of VolumeIds simply by enumerating the volumes
     for (int i = 0; i < volumes.volumes.size(); i++) {
       blocksVolumeIds.add(ByteBuffer.allocate(4).putInt(i).array());
     }
     // Determine the index of the VolumeId of each block's volume, by comparing 
     // the block's volume against the enumerated volumes
-    for (int i = 0; i < blocks.size(); i++) {
-      ExtendedBlock block = blocks.get(i);
-      FsVolumeSpi blockVolume = getReplicaInfo(block).getVolume();
+    for (int i = 0; i < blockIds.length; i++) {
+      long blockId = blockIds[i];
       boolean isValid = false;
+
+      ReplicaInfo info = volumeMap.get(poolId, blockId);
       int volumeIndex = 0;
-      for (FsVolumeImpl volume : volumes.volumes) {
-        // This comparison of references should be safe
-        if (blockVolume == volume) {
-          isValid = true;
-          break;
+      if (info != null) {
+        FsVolumeSpi blockVolume = info.getVolume();
+        for (FsVolumeImpl volume : volumes.volumes) {
+          // This comparison of references should be safe
+          if (blockVolume == volume) {
+            isValid = true;
+            break;
+          }
+          volumeIndex++;
         }
-        volumeIndex++;
       }
       // Indicates that the block is not present, or not found in a data dir
       if (!isValid) {
@@ -1887,7 +1891,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       }
       blocksVolumeIndexes.add(volumeIndex);
     }
-    return new HdfsBlocksMetadata(blocks.toArray(new ExtendedBlock[] {}), 
+    return new HdfsBlocksMetadata(poolId, blockIds,
         blocksVolumeIds, blocksVolumeIndexes);
   }
 

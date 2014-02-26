@@ -111,7 +111,7 @@ public abstract class HATestUtil {
    * Wait for the NameNode to issue any deletions that are already
    * pending (i.e. for the pendingDeletionBlocksCount to go to 0)
    */
-  static void waitForNNToIssueDeletions(final NameNode nn)
+  public static void waitForNNToIssueDeletions(final NameNode nn)
       throws Exception {
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
       @Override

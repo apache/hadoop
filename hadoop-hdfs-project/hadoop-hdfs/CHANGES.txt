@@ -362,6 +362,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-6018. Exception recorded in LOG when IPCLoggerChannel#close is called.
     (jing9)
 
+    HDFS-3969. Small bug fixes and improvements for disk locations API.
+    (Todd Lipcon and Andrew Wang)
+
   OPTIMIZATIONS
 
     HDFS-5790. LeaseManager.findPath is very slow when many leases need recovery

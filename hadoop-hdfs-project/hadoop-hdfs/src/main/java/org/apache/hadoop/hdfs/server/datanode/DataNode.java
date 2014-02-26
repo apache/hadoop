@@ -1175,22 +1175,23 @@ public class DataNode extends Configured
   }
 
   @Override
-  public HdfsBlocksMetadata getHdfsBlocksMetadata(List<ExtendedBlock> blocks,
+  public HdfsBlocksMetadata getHdfsBlocksMetadata(
+      String bpId, long[] blockIds,
       List<Token<BlockTokenIdentifier>> tokens) throws IOException, 
       UnsupportedOperationException {
     if (!getHdfsBlockLocationsEnabled) {
       throw new UnsupportedOperationException("Datanode#getHdfsBlocksMetadata "
           + " is not enabled in datanode config");
     }
-    if (blocks.size() != tokens.size()) {
+    if (blockIds.length != tokens.size()) {
       throw new IOException("Differing number of blocks and tokens");
     }
     // Check access for each block
-    for (int i = 0; i < blocks.size(); i++) {
-      checkBlockToken(blocks.get(i), tokens.get(i), 
-          BlockTokenSecretManager.AccessMode.READ);
+    for (int i = 0; i < blockIds.length; i++) {
+      checkBlockToken(new ExtendedBlock(bpId, blockIds[i]),
+          tokens.get(i), BlockTokenSecretManager.AccessMode.READ);
     }
-    return data.getHdfsBlocksMetadata(blocks);
+    return data.getHdfsBlocksMetadata(bpId, blockIds);
   }
   
   private void checkBlockToken(ExtendedBlock block, Token<BlockTokenIdentifier> token,

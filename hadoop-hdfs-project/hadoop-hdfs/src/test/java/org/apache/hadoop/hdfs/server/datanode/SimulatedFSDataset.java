@@ -1049,7 +1049,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   }
 
   @Override
-  public HdfsBlocksMetadata getHdfsBlocksMetadata(List<ExtendedBlock> blocks)
+  public HdfsBlocksMetadata getHdfsBlocksMetadata(String bpid, long[] blockIds)
       throws IOException {
     throw new UnsupportedOperationException();
   }
