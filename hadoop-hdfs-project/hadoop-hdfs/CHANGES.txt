@@ -336,6 +336,9 @@ Trunk (Unreleased)
     checks are disabled, user is superuser or user is member of supergroup.
     (cnauroth)
 
+    HDFS-5908. Change AclFeature to capture list of ACL entries in an
+    ImmutableList. (cnauroth)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

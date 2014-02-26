@@ -328,7 +328,7 @@ final class AclStorage {
 
     // Add all default entries to the feature.
     featureEntries.addAll(defaultEntries);
-    return new AclFeature(Collections.unmodifiableList(featureEntries));
+    return new AclFeature(ImmutableList.copyOf(featureEntries));
   }
 
   /**

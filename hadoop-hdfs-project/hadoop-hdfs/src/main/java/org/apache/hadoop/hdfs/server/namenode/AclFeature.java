@@ -18,26 +18,26 @@
 
 package org.apache.hadoop.hdfs.server.namenode;
 
-import java.util.Collections;
-import java.util.List;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.permission.AclEntry;
+
+import com.google.common.collect.ImmutableList;
 
 /**
  * Feature that represents the ACLs of the inode.
  */
 @InterfaceAudience.Private
 public class AclFeature implements INode.Feature {
-  public static final List<AclEntry> EMPTY_ENTRY_LIST = Collections.emptyList();
+  public static final ImmutableList<AclEntry> EMPTY_ENTRY_LIST =
+    ImmutableList.of();
 
-  private final List<AclEntry> entries;
+  private final ImmutableList<AclEntry> entries;
 
-  public AclFeature(List<AclEntry> entries) {
+  public AclFeature(ImmutableList<AclEntry> entries) {
     this.entries = entries;
   }
 
-  public List<AclEntry> getEntries() {
+  public ImmutableList<AclEntry> getEntries() {
     return entries;
   }
 }
