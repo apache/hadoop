@@ -182,7 +182,6 @@ public class IPCLoggerChannel implements AsyncLogger {
   
   @Override
   public void close() {
-    QuorumJournalManager.LOG.info("Closing", new Exception());
     // No more tasks may be submitted after this point.
     executor.shutdown();
     if (proxy != null) {
