@@ -105,3 +105,6 @@ HDFS-5535 subtasks:
     Arpit Agarwal)
 
     HDFS-6020. Fix the five findbugs warnings. (kihwal)
+
+    HDFS-6019. Standby NN might not checkpoint when processing the rolling
+    upgrade marker. (Haohui Mai via jing9)

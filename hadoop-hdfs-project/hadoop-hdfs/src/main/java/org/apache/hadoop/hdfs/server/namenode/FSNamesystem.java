@@ -406,6 +406,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   private final DatanodeStatistics datanodeStatistics;
 
   private RollingUpgradeInfo rollingUpgradeInfo = null;
+  /**
+   * A flag that indicates whether the checkpointer should checkpoint a rollback
+   * fsimage. The edit log tailer sets this flag. The checkpoint will create a
+   * rollback fsimage if the flag is true, and then change the flag to false.
+   */
+  private volatile boolean needRollbackFsImage;
 
   // Block pool ID used by this namenode
   private String blockPoolId;
@@ -1149,6 +1155,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * OP_ROLLING_UPGRADE_START.
    */
   void triggerRollbackCheckpoint() {
+    setNeedRollbackFsImage(true);
     if (standbyCheckpointer != null) {
       standbyCheckpointer.triggerRollbackCheckpoint();
     }
@@ -7230,6 +7237,14 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   public RollingUpgradeInfo getRollingUpgradeInfo() {
     return rollingUpgradeInfo;
+  }
+
+  public boolean isNeedRollbackFsImage() {
+    return needRollbackFsImage;
+  }
+
+  public void setNeedRollbackFsImage(boolean needRollbackFsImage) {
+    this.needRollbackFsImage = needRollbackFsImage;
   }
 
   /** Is rolling upgrade in progress? */

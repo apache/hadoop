@@ -143,7 +143,6 @@ public class StandbyCheckpointer {
   }
 
   public void triggerRollbackCheckpoint() {
-    thread.setNeedRollbackCheckpoint(true);
     thread.interrupt();
   }
 
@@ -242,9 +241,6 @@ public class StandbyCheckpointer {
   private class CheckpointerThread extends Thread {
     private volatile boolean shouldRun = true;
     private volatile long preventCheckpointsUntil = 0;
-    // Indicate that a rollback checkpoint is required immediately. It will be
-    // reset to false after the checkpoint is done
-    private volatile boolean needRollbackCheckpoint = false;
 
     private CheckpointerThread() {
       super("Standby State Checkpointer");
@@ -252,10 +248,6 @@ public class StandbyCheckpointer {
     
     private void setShouldRun(boolean shouldRun) {
       this.shouldRun = shouldRun;
-    }
-
-    private void setNeedRollbackCheckpoint(boolean need) {
-      this.needRollbackCheckpoint = need;
     }
 
     @Override
@@ -292,6 +284,7 @@ public class StandbyCheckpointer {
       // on startup.
       lastCheckpointTime = now();
       while (shouldRun) {
+        boolean needRollbackCheckpoint = namesystem.isNeedRollbackFsImage();
         if (!needRollbackCheckpoint) {
           try {
             Thread.sleep(checkPeriod);
@@ -344,7 +337,7 @@ public class StandbyCheckpointer {
             if (needRollbackCheckpoint
                 && namesystem.getFSImage().hasRollbackFSImage()) {
               namesystem.setCreatedRollbackImages(true);
-              needRollbackCheckpoint = false;
+              namesystem.setNeedRollbackFsImage(false);
             }
             lastCheckpointTime = now;
           }
