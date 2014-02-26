@@ -115,7 +115,8 @@ public interface ClientDatanodeProtocol {
    * This is in the form of an opaque {@link VolumeId} for each configured
    * data directory, which is not guaranteed to be the same across DN restarts.
    * 
-   * @param blocks
+   * @param blockPoolId the pool to query
+   * @param blockIds
    *          list of blocks on the local datanode
    * @param tokens
    *          block access tokens corresponding to the requested blocks
@@ -124,6 +125,6 @@ public interface ClientDatanodeProtocol {
    * @throws IOException
    *           if datanode is unreachable, or replica is not found on datanode
    */
-  HdfsBlocksMetadata getHdfsBlocksMetadata(List<ExtendedBlock> blocks,
-      List<Token<BlockTokenIdentifier>> tokens) throws IOException; 
+  HdfsBlocksMetadata getHdfsBlocksMetadata(String blockPoolId,
+      long []blockIds, List<Token<BlockTokenIdentifier>> tokens) throws IOException; 
 }

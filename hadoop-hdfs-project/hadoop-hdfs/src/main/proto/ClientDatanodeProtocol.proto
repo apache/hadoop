@@ -102,12 +102,18 @@ message GetBlockLocalPathInfoResponseProto {
 }
 
 /**
- * blocks - list of ExtendedBlocks on which we are querying additional info
- * tokens - list of access tokens corresponding to list of ExtendedBlocks
+ * Query for the disk locations of a number of blocks on this DN.
+ * blockPoolId - the pool to query
+ * blockIds - list of block IDs to query
+ * tokens - list of access tokens corresponding to list of block IDs
  */
 message GetHdfsBlockLocationsRequestProto {
-  repeated ExtendedBlockProto blocks = 1;
+  // Removed: HDFS-3969
+  // repeated ExtendedBlockProto blocks = 1;
   repeated hadoop.common.TokenProto tokens = 2;
+
+  required string blockPoolId = 3;
+  repeated sfixed64 blockIds = 4 [ packed = true ];
 }
 
 /**
@@ -118,7 +124,7 @@ message GetHdfsBlockLocationsRequestProto {
  */
 message GetHdfsBlockLocationsResponseProto {
   repeated bytes volumeIds = 1;
-  repeated uint32 volumeIndexes = 2;
+  repeated uint32 volumeIndexes = 2 [ packed = true ];
 }
 
 /**
