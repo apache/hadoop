@@ -201,23 +201,28 @@ class BlockPoolSlice {
    */
   void saveDfsUsed() {
     File outFile = new File(currentDir, DU_CACHE_FILE);
-    if (outFile.exists()) {
-      outFile.delete();
+    if (outFile.exists() && !outFile.delete()) {
+      FsDatasetImpl.LOG.warn("Failed to delete old dfsUsed file in " +
+        outFile.getParent());
     }
 
+    FileWriter out = null;
     try {
       long used = getDfsUsed();
       if (used > 0) {
-        FileWriter out = new FileWriter(outFile);
+        out = new FileWriter(outFile);
         // mtime is written last, so that truncated writes won't be valid.
         out.write(Long.toString(used) + " " + Long.toString(Time.now()));
         out.flush();
         out.close();
+        out = null;
       }
     } catch (IOException ioe) {
       // If write failed, the volume might be bad. Since the cache file is
       // not critical, log the error and continue.
       FsDatasetImpl.LOG.warn("Failed to write dfsUsed to " + outFile, ioe);
+    } finally {
+      IOUtils.cleanup(null, out);
     }
   }
 
@@ -297,7 +302,10 @@ class BlockPoolSlice {
             loadRwr = false;
           }
           sc.close();
-          restartMeta.delete();
+          if (restartMeta.delete()) {
+            FsDatasetImpl.LOG.warn("Failed to delete restart meta file: " +
+              restartMeta.getPath());
+          }
         } catch (FileNotFoundException fnfe) {
           // nothing to do here
         } finally {

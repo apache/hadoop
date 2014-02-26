@@ -752,8 +752,9 @@ class BlockReceiver implements Closeable {
             File blockFile = ((ReplicaInPipeline)replicaInfo).getBlockFile();
             File restartMeta = new File(blockFile.getParent()  + 
                 File.pathSeparator + "." + blockFile.getName() + ".restart");
-            if (restartMeta.exists()) {
-              restartMeta.delete();
+            if (restartMeta.exists() && !restartMeta.delete()) {
+              LOG.warn("Failed to delete restart meta file: " +
+                  restartMeta.getPath());
             }
             try {
               FileWriter out = new FileWriter(restartMeta);

@@ -104,3 +104,4 @@ HDFS-5535 subtasks:
     TestRollingUpgrade and TestRollingUpgradeRollback. (Haohui Mai via
     Arpit Agarwal)
 
+    HDFS-6020. Fix the five findbugs warnings. (kihwal)
