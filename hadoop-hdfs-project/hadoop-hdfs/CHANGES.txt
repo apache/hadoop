@@ -106,6 +106,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-6006. Remove duplicate code in FSNameSystem#getFileInfo.
     (Akira Ajisaka via cnauroth)
 
+    HDFS-6018. Exception recorded in LOG when IPCLoggerChannel#close is called.
+    (jing9)
+
   OPTIMIZATIONS
 
     HDFS-5790. LeaseManager.findPath is very slow when many leases need recovery
