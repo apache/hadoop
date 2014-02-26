@@ -48,6 +48,7 @@ import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
+import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.jobhistory.FileNameIndexUtils;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobIndexInfo;
@@ -343,11 +344,12 @@ public class JobHistoryEventHandler extends AbstractService
           LOG.warn("Found jobId " + toClose
             + " to have not been closed. Will close");
           //Create a JobFinishEvent so that it is written to the job history
+          final Job job = context.getJob(toClose);
           JobUnsuccessfulCompletionEvent jucEvent =
             new JobUnsuccessfulCompletionEvent(TypeConverter.fromYarn(toClose),
-              System.currentTimeMillis(), context.getJob(toClose)
-              .getCompletedMaps(), context.getJob(toClose).getCompletedReduces(),
-              JobState.KILLED.toString());
+                System.currentTimeMillis(), job.getCompletedMaps(),
+                job.getCompletedReduces(), JobState.KILLED.toString(),
+                job.getDiagnostics());
           JobHistoryEvent jfEvent = new JobHistoryEvent(toClose, jucEvent);
           //Bypass the queue mechanism which might wait. Call the method directly
           handleEvent(jfEvent);
