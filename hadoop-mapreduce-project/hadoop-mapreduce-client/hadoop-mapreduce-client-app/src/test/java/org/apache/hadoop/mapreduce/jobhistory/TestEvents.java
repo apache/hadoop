@@ -34,6 +34,7 @@ import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapreduce.TaskType;
+import org.apache.hadoop.mapreduce.v2.app.job.impl.JobImpl;
 import org.junit.Test;
 
 public class TestEvents {
@@ -334,11 +335,12 @@ public class TestEvents {
   private FakeEvent getJobKilledEvent() {
     FakeEvent result = new FakeEvent(EventType.JOB_KILLED);
     JobUnsuccessfulCompletion datum = new JobUnsuccessfulCompletion();
-    datum.finishedMaps = 1;
-    datum.finishedReduces = 2;
-    datum.finishTime = 3;
-    datum.jobid = "ID";
-    datum.jobStatus = "STATUS";
+    datum.setFinishedMaps(1);
+    datum.setFinishedReduces(2);
+    datum.setFinishTime(3L);
+    datum.setJobid("ID");
+    datum.setJobStatus("STATUS");
+    datum.setDiagnostics(JobImpl.JOB_KILLED_DIAG);
     result.setDatum(datum);
     return result;
   }
