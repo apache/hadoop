@@ -72,4 +72,37 @@ public abstract class NMToken {
   @Stable
   public abstract void setToken(Token token);
 
+
+  @Override
+  public int hashCode() {
+    final int prime = 31;
+    int result = 1;
+    result =
+        prime * result + ((getNodeId() == null) ? 0 : getNodeId().hashCode());
+    result =
+        prime * result + ((getToken() == null) ? 0 : getToken().hashCode());
+    return result;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj)
+      return true;
+    if (obj == null)
+      return false;
+    if (getClass() != obj.getClass())
+      return false;
+    NMToken other = (NMToken) obj;
+    if (getNodeId() == null) {
+      if (other.getNodeId() != null)
+        return false;
+    } else if (!getNodeId().equals(other.getNodeId()))
+      return false;
+    if (getToken() == null) {
+      if (other.getToken() != null)
+        return false;
+    } else if (!getToken().equals(other.getToken()))
+      return false;
+    return true;
+  }
 }
