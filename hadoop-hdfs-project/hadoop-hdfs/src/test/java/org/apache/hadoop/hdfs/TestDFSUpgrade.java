@@ -235,7 +235,7 @@ public class TestDFSUpgrade {
       // make sure that rolling upgrade cannot be started
       try {
         final DistributedFileSystem dfs = cluster.getFileSystem();
-        dfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+        dfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
         dfs.rollingUpgrade(RollingUpgradeAction.PREPARE);
         fail();
       } catch(RemoteException re) {
@@ -378,7 +378,7 @@ public class TestDFSUpgrade {
       // make sure that rolling upgrade cannot be started
       try {
         final DistributedFileSystem dfs = cluster.getFileSystem();
-        dfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+        dfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
         dfs.rollingUpgrade(RollingUpgradeAction.PREPARE);
         fail();
       } catch(RemoteException re) {

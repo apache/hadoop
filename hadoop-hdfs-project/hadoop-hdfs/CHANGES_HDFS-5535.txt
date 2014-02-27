@@ -114,3 +114,6 @@ HDFS-5535 subtasks:
 
     HDFS-6024. Test whether the NN will reject the downgrade if it has a
     fsimage from a newer release. (Haohui Mai via jing9)
+
+    HDFS-6026. Fix TestDFSUpgrade and TestDataNodeRollingUpgrade.
+    (jing9 via szetszwo)

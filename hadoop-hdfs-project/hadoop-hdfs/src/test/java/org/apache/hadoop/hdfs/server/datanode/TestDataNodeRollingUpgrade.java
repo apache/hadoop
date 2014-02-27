@@ -41,6 +41,7 @@ import org.apache.hadoop.hdfs.TestRollingUpgrade;
 import org.apache.hadoop.hdfs.protocol.BlockLocalPathInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.junit.Test;
@@ -194,6 +195,7 @@ public class TestDataNodeRollingUpgrade {
       DFSTestUtil.createFile(fs, testFile1, FILE_SIZE, REPL_FACTOR, SEED);
       DFSTestUtil.createFile(fs, testFile2, FILE_SIZE, REPL_FACTOR, SEED);
 
+      fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
       startRollingUpgrade();
       File blockFile = getBlockForFile(testFile2, true);
       File trashFile = getTrashFileForBlock(blockFile, false);
@@ -220,6 +222,7 @@ public class TestDataNodeRollingUpgrade {
       DFSTestUtil.createFile(fs, testFile1, FILE_SIZE, REPL_FACTOR, SEED);
       String fileContents1 = DFSTestUtil.readFile(fs, testFile1);
 
+      fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
       startRollingUpgrade();
 
       File blockFile = getBlockForFile(testFile1, true);
