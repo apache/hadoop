@@ -36,6 +36,9 @@ import org.apache.hadoop.yarn.util.ConverterUtils;
 @Private
 @Evolving
 public class WebAppUtils {
+  public static final String HTTPS_PREFIX = "https://";
+  public static final String HTTP_PREFIX = "http://";
+
   public static void setRMWebAppPort(Configuration conf, int port) {
     String hostname = getRMWebAppURLWithoutScheme(conf);
     hostname =
@@ -180,7 +183,7 @@ public class WebAppUtils {
    * @return the schmeme (HTTP / HTTPS)
    */
   public static String getHttpSchemePrefix(Configuration conf) {
-    return YarnConfiguration.useHttps(conf) ? "https://" : "http://";
+    return YarnConfiguration.useHttps(conf) ? HTTPS_PREFIX : HTTP_PREFIX;
   }
 
   /**

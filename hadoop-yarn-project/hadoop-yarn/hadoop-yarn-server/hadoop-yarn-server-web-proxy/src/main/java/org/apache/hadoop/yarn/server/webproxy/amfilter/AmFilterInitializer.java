@@ -27,6 +27,8 @@ import org.apache.hadoop.http.FilterInitializer;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
+import com.google.common.annotations.VisibleForTesting;
+
 public class AmFilterInitializer extends FilterInitializer {
   private static final String FILTER_NAME = "AM_PROXY_FILTER";
   private static final String FILTER_CLASS = AmIpFilter.class.getCanonicalName();
@@ -37,10 +39,13 @@ public class AmFilterInitializer extends FilterInitializer {
     String proxy = WebAppUtils.getProxyHostAndPort(conf);
     String[] parts = proxy.split(":");
     params.put(AmIpFilter.PROXY_HOST, parts[0]);
-    params.put(AmIpFilter.PROXY_URI_BASE,
-        WebAppUtils.getHttpSchemePrefix(conf) + proxy +
-        System.getenv(ApplicationConstants.APPLICATION_WEB_PROXY_BASE_ENV));
+    params.put(AmIpFilter.PROXY_URI_BASE, WebAppUtils.getHttpSchemePrefix(conf)
+        + proxy + getApplicationWebProxyBase());
     container.addFilter(FILTER_NAME, FILTER_CLASS, params);
   }
 
+  @VisibleForTesting
+  protected String getApplicationWebProxyBase() {
+    return System.getenv(ApplicationConstants.APPLICATION_WEB_PROXY_BASE_ENV);
+  }
 }

@@ -27,6 +27,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.http.HttpConfig.Policy;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.MRJobConfig;
@@ -133,8 +134,13 @@ public class MRClientService extends AbstractService implements ClientService {
     this.bindAddress = NetUtils.getConnectAddress(server);
     LOG.info("Instantiated MRClientService at " + this.bindAddress);
     try {
-      webApp = WebApps.$for("mapreduce", AppContext.class, appContext, "ws").with(conf).
-          start(new AMWebApp());
+      // Explicitly disabling SSL for map reduce task as we can't allow MR users
+      // to gain access to keystore file for opening SSL listener. We can trust
+      // RM/NM to issue SSL certificates but definitely not MR-AM as it is
+      // running in user-land.
+      webApp =
+          WebApps.$for("mapreduce", AppContext.class, appContext, "ws")
+            .withHttpPolicy(conf, Policy.HTTP_ONLY).start(new AMWebApp());
     } catch (Exception e) {
       LOG.error("Webapps failed to start. Ignoring for now:", e);
     }
@@ -411,5 +417,9 @@ public class MRClientService extends AbstractService implements ClientService {
       throw new IOException("MR AM not authorized to cancel delegation" +
           " token");
     }
+  }
+
+  public WebApp getWebApp() {
+    return webApp;
   }
 }
