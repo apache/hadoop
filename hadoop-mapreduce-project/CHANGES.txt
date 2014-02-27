@@ -195,6 +195,10 @@ Release 2.4.0 - UNRELEASED
     MAPREDUCE-5757. ConcurrentModificationException in JobControl.toList
     (jlowe)
 
+    MAPREDUCE-5770. Fixed MapReduce ApplicationMaster to correctly redirect
+    to the YARN's web-app proxy with the correct scheme prefix. (Jian He via
+    vinodkv)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
