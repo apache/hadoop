@@ -19,8 +19,8 @@ package org.apache.hadoop.fs;
 
 import java.io.IOException;
 import java.net.URLStreamHandlerFactory;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -45,7 +45,8 @@ public class FsUrlStreamHandlerFactory implements
   private Configuration conf;
 
   // This map stores whether a protocol is know or not by FileSystem
-  private Map<String, Boolean> protocols = new HashMap<String, Boolean>();
+  private Map<String, Boolean> protocols =
+      new ConcurrentHashMap<String, Boolean>();
 
   // The URL Stream handler
   private java.net.URLStreamHandler handler;
