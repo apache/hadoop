@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -447,10 +448,10 @@ public class ApplicationMasterService extends AbstractService implements
           request.getResourceBlacklistRequest();
       List<String> blacklistAdditions =
           (blacklistRequest != null) ?
-              blacklistRequest.getBlacklistAdditions() : null;
+              blacklistRequest.getBlacklistAdditions() : Collections.EMPTY_LIST;
       List<String> blacklistRemovals =
           (blacklistRequest != null) ?
-              blacklistRequest.getBlacklistRemovals() : null;
+              blacklistRequest.getBlacklistRemovals() : Collections.EMPTY_LIST;
 
       // sanity check
       try {
@@ -487,6 +488,11 @@ public class ApplicationMasterService extends AbstractService implements
           this.rScheduler.allocate(appAttemptId, ask, release, 
               blacklistAdditions, blacklistRemovals);
 
+      if (!blacklistAdditions.isEmpty() || !blacklistRemovals.isEmpty()) {
+        LOG.info("blacklist are updated in Scheduler." +
+            "blacklistAdditions: " + blacklistAdditions + ", " +
+            "blacklistRemovals: " + blacklistRemovals);
+      }
       RMAppAttempt appAttempt = app.getRMAppAttempt(appAttemptId);
       AllocateResponse allocateResponse =
           recordFactory.newRecordInstance(AllocateResponse.class);

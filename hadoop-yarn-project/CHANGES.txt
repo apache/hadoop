@@ -32,6 +32,9 @@ Release 2.5.0 - UNRELEASED
 
     YARN-1561. Fix a generic type warning in FairScheduler. (Chen He via junping_du)
 
+    YARN-1429. *nix: Allow a way for users to augment classpath of YARN daemons.
+    (Jarek Jarcec Cecho via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES 
@@ -234,6 +237,9 @@ Release 2.4.0 - UNRELEASED
 
     YARN-1749. Updated application-history related configs to reflect the latest
     reality and to be consistently named. (Zhijie Shen via vinodkv)
+
+    YARN-1301. Added the INFO level log of the non-empty blacklist additions
+    and removals inside ApplicationMasterService. (Tsuyoshi Ozawa via zjshen)
 
   OPTIMIZATIONS
 

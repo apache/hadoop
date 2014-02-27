@@ -176,6 +176,12 @@ Release 2.4.0 - UNRELEASED
     MAPREDUCE-5761. Added a simple log message to denote when encrypted shuffle
     is on in the shuffle-handler. (Jian He via vinodkv) 
 
+    MAPREDUCE-5754. Preserve Job diagnostics in history (Gera Shegalov via
+    jlowe)
+
+    MAPREDUCE-5766. Moved ping messages from TaskAttempts to be at DEBUG level
+    inside the ApplicationMaster log. (Jian He via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES

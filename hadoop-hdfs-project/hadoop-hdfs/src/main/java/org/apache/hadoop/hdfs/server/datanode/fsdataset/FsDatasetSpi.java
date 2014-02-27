@@ -405,12 +405,13 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
    * Get a {@link HdfsBlocksMetadata} corresponding to the list of blocks in 
    * <code>blocks</code>.
    * 
-   * @param blocks List of blocks for which to return metadata
+   * @param bpid pool to query
+   * @param blockIds List of block ids for which to return metadata
    * @return metadata Metadata for the list of blocks
    * @throws IOException
    */
-  public HdfsBlocksMetadata getHdfsBlocksMetadata(List<ExtendedBlock> blocks)
-      throws IOException;
+  public HdfsBlocksMetadata getHdfsBlocksMetadata(String bpid,
+      long[] blockIds) throws IOException;
 
   /**
    * Enable 'trash' for the given dataset. When trash is enabled, files are

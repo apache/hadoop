@@ -47,6 +47,7 @@ import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.VersionInfo;
 
+import com.google.common.primitives.Longs;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
@@ -132,19 +133,17 @@ public class ClientDatanodeProtocolServerSideTranslatorPB implements
       throws ServiceException {
     HdfsBlocksMetadata resp;
     try {
-      // Construct the Lists to make the actual call
-      List<ExtendedBlock> blocks = 
-          new ArrayList<ExtendedBlock>(request.getBlocksCount());
-      for (ExtendedBlockProto b : request.getBlocksList()) {
-        blocks.add(PBHelper.convert(b));
-      }
+      String poolId = request.getBlockPoolId();
+
       List<Token<BlockTokenIdentifier>> tokens = 
           new ArrayList<Token<BlockTokenIdentifier>>(request.getTokensCount());
       for (TokenProto b : request.getTokensList()) {
         tokens.add(PBHelper.convert(b));
       }
+      long[] blockIds = Longs.toArray(request.getBlockIdsList());
+      
       // Call the real implementation
-      resp = impl.getHdfsBlocksMetadata(blocks, tokens);
+      resp = impl.getHdfsBlocksMetadata(poolId, blockIds, tokens);
     } catch (IOException e) {
       throw new ServiceException(e);
     }

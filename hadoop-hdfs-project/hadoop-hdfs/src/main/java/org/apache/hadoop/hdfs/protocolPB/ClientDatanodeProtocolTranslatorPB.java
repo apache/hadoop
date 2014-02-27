@@ -21,6 +21,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import javax.net.SocketFactory;
@@ -61,6 +62,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.security.token.Token;
 
+import com.google.common.primitives.Longs;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
@@ -223,23 +225,19 @@ public class ClientDatanodeProtocolTranslatorPB implements
   }
 
   @Override
-  public HdfsBlocksMetadata getHdfsBlocksMetadata(List<ExtendedBlock> blocks,
+  public HdfsBlocksMetadata getHdfsBlocksMetadata(String blockPoolId,
+      long[] blockIds,
       List<Token<BlockTokenIdentifier>> tokens) throws IOException {
-    // Convert to proto objects
-    List<ExtendedBlockProto> blocksProtos = 
-        new ArrayList<ExtendedBlockProto>(blocks.size());
     List<TokenProto> tokensProtos = 
         new ArrayList<TokenProto>(tokens.size());
-    for (ExtendedBlock b : blocks) {
-      blocksProtos.add(PBHelper.convert(b));
-    }
     for (Token<BlockTokenIdentifier> t : tokens) {
       tokensProtos.add(PBHelper.convert(t));
     }
     // Build the request
     GetHdfsBlockLocationsRequestProto request = 
         GetHdfsBlockLocationsRequestProto.newBuilder()
-        .addAllBlocks(blocksProtos)
+        .setBlockPoolId(blockPoolId)
+        .addAllBlockIds(Longs.asList(blockIds))
         .addAllTokens(tokensProtos)
         .build();
     // Send the RPC
@@ -258,7 +256,7 @@ public class ClientDatanodeProtocolTranslatorPB implements
     // Array of indexes into the list of volumes, one per block
     List<Integer> volumeIndexes = response.getVolumeIndexesList();
     // Parsed HdfsVolumeId values, one per block
-    return new HdfsBlocksMetadata(blocks.toArray(new ExtendedBlock[] {}), 
+    return new HdfsBlocksMetadata(blockPoolId, blockIds,
         volumeIds, volumeIndexes);
   }
 
