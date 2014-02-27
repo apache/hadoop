@@ -35,6 +35,8 @@ import javax.servlet.http.HttpServlet;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.http.HttpConfig.Policy;
+import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -86,6 +88,7 @@ public class WebApps {
     int port = 0;
     boolean findPort = false;
     Configuration conf;
+    Policy httpPolicy = null;
     boolean devMode = false;
     private String spnegoPrincipalKey;
     private String spnegoKeytabKey;
@@ -142,7 +145,13 @@ public class WebApps {
       this.conf = conf;
       return this;
     }
-    
+
+    public Builder<T> withHttpPolicy(Configuration conf, Policy httpPolicy) {
+      this.conf = conf;
+      this.httpPolicy = httpPolicy;
+      return this;
+    }
+
     public Builder<T> withHttpSpnegoPrincipalKey(String spnegoPrincipalKey) {
       this.spnegoPrincipalKey = spnegoPrincipalKey;
       return this;
@@ -218,10 +227,18 @@ public class WebApps {
             System.exit(1);
           }
         }
+        String httpScheme;
+        if (this.httpPolicy == null) {
+          httpScheme = WebAppUtils.getHttpSchemePrefix(conf);
+        } else {
+          httpScheme =
+              (httpPolicy == Policy.HTTPS_ONLY) ? WebAppUtils.HTTPS_PREFIX
+                  : WebAppUtils.HTTP_PREFIX;
+        }
         HttpServer2.Builder builder = new HttpServer2.Builder()
             .setName(name)
             .addEndpoint(
-                URI.create(WebAppUtils.getHttpSchemePrefix(conf) + bindAddress
+                URI.create(httpScheme + bindAddress
                     + ":" + port)).setConf(conf).setFindPort(findPort)
             .setACL(new AdminACLsManager(conf).getAdminAcl())
             .setPathSpec(pathList.toArray(new String[0]));
@@ -236,7 +253,7 @@ public class WebApps {
               .setSecurityEnabled(UserGroupInformation.isSecurityEnabled());
         }
 
-        if (YarnConfiguration.useHttps(conf)) {
+        if (httpScheme.equals(WebAppUtils.HTTPS_PREFIX)) {
           WebAppUtils.loadSslConfiguration(builder);
         }
 
