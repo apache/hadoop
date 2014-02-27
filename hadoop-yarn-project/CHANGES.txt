@@ -220,6 +220,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1749. Updated application-history related configs to reflect the latest
     reality and to be consistently named. (Zhijie Shen via vinodkv)
 
+    YARN-1301. Added the INFO level log of the non-empty blacklist additions
+    and removals inside ApplicationMasterService. (Tsuyoshi Ozawa via zjshen)
+
   OPTIMIZATIONS
 
   BUG FIXES
