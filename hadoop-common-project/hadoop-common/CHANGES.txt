@@ -346,6 +346,9 @@ Release 2.4.0 - UNRELEASED
     HADOOP-9454. Support multipart uploads for s3native. (Jordan Mendelson and
     Akira AJISAKA via atm)
 
+    HADOOP-10374. InterfaceAudience annotations should have
+    RetentionPolicy.RUNTIME (Enis Soztutar via Arpit Agarwal)
+
   OPTIMIZATIONS
 
   BUG FIXES
