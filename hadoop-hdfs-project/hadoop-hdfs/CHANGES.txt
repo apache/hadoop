@@ -642,6 +642,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-5908. Change AclFeature to capture list of ACL entries in an
     ImmutableList. (cnauroth)
 
+    HDFS-6028. Print clearer error message when user attempts to delete required
+    mask entry from ACL. (cnauroth)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
