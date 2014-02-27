@@ -32,6 +32,9 @@ Release 2.5.0 - UNRELEASED
 
     YARN-1561. Fix a generic type warning in FairScheduler. (Chen He via junping_du)
 
+    YARN-1429. *nix: Allow a way for users to augment classpath of YARN daemons.
+    (Jarek Jarcec Cecho via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES 
