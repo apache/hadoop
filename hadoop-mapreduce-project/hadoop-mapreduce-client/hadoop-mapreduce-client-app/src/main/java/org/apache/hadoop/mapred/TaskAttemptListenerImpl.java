@@ -360,12 +360,13 @@ public class TaskAttemptListenerImpl extends CompositeService
 
     if (taskStatus == null) {
       //We are using statusUpdate only as a simple ping
-      LOG.info("Ping from " + taskAttemptID.toString());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Ping from " + taskAttemptID.toString());
+      }
       return feedback;
     }
 
     // if we are here there is an actual status update to be processed
-    LOG.info("Status update from " + taskAttemptID.toString());
 
     taskHeartbeatHandler.progressing(yarnAttemptID);
     TaskAttemptStatus taskAttemptStatus =
@@ -453,7 +454,7 @@ public class TaskAttemptListenerImpl extends CompositeService
 
     JVMId jvmId = context.jvmId;
     LOG.info("JVM with ID : " + jvmId + " asked for a task");
-    
+
     JvmTask jvmTask = null;
     // TODO: Is it an authorized container to get a task? Otherwise return null.
 
