@@ -22,7 +22,12 @@
 #
 #   JAVA_HOME        The java implementation to use.  Overrides JAVA_HOME.
 #
-#   YARN_CLASSPATH Extra Java CLASSPATH entries.
+#   YARN_USER_CLASSPATH Additional user CLASSPATH entries.
+#
+#   YARN_USER_CLASSPATH_FIRST  If set to non empty value then the user classpath
+#                              specified in YARN_USER_CLASSPATH will be
+#                              appended at the beginning of YARN's final
+#                              classpath instead of at the end.
 #
 #   YARN_HEAPSIZE  The maximum amount of heap to use, in MB. 
 #                    Default is 1000.
@@ -163,6 +168,17 @@ fi
 CLASSPATH=${CLASSPATH}:$HADOOP_YARN_HOME/${YARN_DIR}/*
 CLASSPATH=${CLASSPATH}:$HADOOP_YARN_HOME/${YARN_LIB_JARS_DIR}/*
 
+# Add user defined YARN_USER_CLASSPATH to the class path (if defined)
+if [ -n "$YARN_USER_CLASSPATH" ]; then
+  if [ -n "$YARN_USER_CLASSPATH_FIRST" ]; then
+    # User requested to add the custom entries at the beginning
+    CLASSPATH=${YARN_USER_CLASSPATH}:${CLASSPATH}
+  else
+    # By default we will just append the extra entries at the end
+    CLASSPATH=${CLASSPATH}:${YARN_USER_CLASSPATH}
+  fi
+fi
+
 # so that filenames w/ spaces are handled correctly in loops below
 IFS=
 
@@ -249,4 +265,3 @@ if [ "x$JAVA_LIBRARY_PATH" != "x" ]; then
 fi  
 
 exec "$JAVA" -Dproc_$COMMAND $JAVA_HEAP_MAX $YARN_OPTS -classpath "$CLASSPATH" $CLASS "$@"
-fi
