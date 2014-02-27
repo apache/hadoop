@@ -291,7 +291,9 @@ public class TaskAttemptListenerImpl extends CompositeService
 
   @Override
   public boolean ping(TaskAttemptID taskAttemptID) throws IOException {
-    LOG.info("Ping from " + taskAttemptID.toString());
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Ping from " + taskAttemptID.toString());
+    }
     return true;
   }
 
@@ -319,7 +321,6 @@ public class TaskAttemptListenerImpl extends CompositeService
   @Override
   public boolean statusUpdate(TaskAttemptID taskAttemptID,
       TaskStatus taskStatus) throws IOException, InterruptedException {
-    LOG.info("Status update from " + taskAttemptID.toString());
     org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId yarnAttemptID =
         TypeConverter.toYarn(taskAttemptID);
     taskHeartbeatHandler.progressing(yarnAttemptID);
