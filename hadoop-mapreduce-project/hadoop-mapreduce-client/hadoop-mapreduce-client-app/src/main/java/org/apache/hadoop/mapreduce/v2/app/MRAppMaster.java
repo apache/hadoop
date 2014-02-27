@@ -1382,13 +1382,7 @@ public class MRAppMaster extends CompositeService {
       JobConf conf = new JobConf(new YarnConfiguration());
       conf.addResource(new Path(MRJobConfig.JOB_CONF_FILE));
       
-      // Explicitly disabling SSL for map reduce task as we can't allow MR users
-      // to gain access to keystore file for opening SSL listener. We can trust
-      // RM/NM to issue SSL certificates but definitely not MR-AM as it is
-      // running in user-land.
       MRWebAppUtil.initialize(conf);
-      conf.set(YarnConfiguration.YARN_HTTP_POLICY_KEY,
-          HttpConfig.Policy.HTTP_ONLY.name());
       // log the system properties
       String systemPropsToLog = MRApps.getSystemPropertiesToLog(conf);
       if (systemPropsToLog != null) {
@@ -1490,4 +1484,7 @@ public class MRAppMaster extends CompositeService {
     LogManager.shutdown();
   }
 
+  public ClientService getClientService() {
+    return clientService;
+  }
 }

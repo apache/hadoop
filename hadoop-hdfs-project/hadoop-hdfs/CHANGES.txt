@@ -365,6 +365,8 @@ Release 2.4.0 - UNRELEASED
     HDFS-3969. Small bug fixes and improvements for disk locations API.
     (Todd Lipcon and Andrew Wang)
 
+    HDFS-6025. Update findbugsExcludeFile.xml. (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-5790. LeaseManager.findPath is very slow when many leases need recovery

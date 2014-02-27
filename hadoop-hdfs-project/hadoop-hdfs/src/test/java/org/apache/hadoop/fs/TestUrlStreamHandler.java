@@ -35,7 +35,7 @@ import org.apache.hadoop.test.PathUtils;
 import org.junit.Test;
 
 /**
- * Test of the URL stream handler factory.
+ * Test of the URL stream handler.
  */
 public class TestUrlStreamHandler {
 
