@@ -221,8 +221,8 @@ class Checkpointer extends Daemon {
         LOG.info("Unable to roll forward using only logs. Downloading " +
             "image with txid " + sig.mostRecentCheckpointTxId);
         MD5Hash downloadedHash = TransferFsImage.downloadImageToStorage(
-            backupNode.nnHttpAddress, NameNodeFile.IMAGE,
-            sig.mostRecentCheckpointTxId, bnStorage, true);
+            backupNode.nnHttpAddress, sig.mostRecentCheckpointTxId, bnStorage,
+            true);
         bnImage.saveDigestAndRenameCheckpointImage(NameNodeFile.IMAGE,
             sig.mostRecentCheckpointTxId, downloadedHash);
         lastApplied = sig.mostRecentCheckpointTxId;

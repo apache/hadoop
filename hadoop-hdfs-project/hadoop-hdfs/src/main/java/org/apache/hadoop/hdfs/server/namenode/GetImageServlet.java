@@ -122,14 +122,14 @@ public class GetImageServlet extends HttpServlet {
         public Void run() throws Exception {
           if (parsedParams.isGetImage()) {
             long txid = parsedParams.getTxId();
-            final NameNodeFile nnf = parsedParams.getNameNodeFile();
             File imageFile = null;
             String errorMessage = "Could not find image";
             if (parsedParams.shouldFetchLatest()) {
               imageFile = nnImage.getStorage().getHighestFsImageName();
             } else {
               errorMessage += " with txid " + txid;
-              imageFile = nnImage.getStorage().getFsImageName(txid, nnf);
+              imageFile = nnImage.getStorage().getFsImage(txid,
+                  EnumSet.of(NameNodeFile.IMAGE, NameNodeFile.IMAGE_ROLLBACK));
             }
             if (imageFile == null) {
               throw new IOException(errorMessage);
@@ -183,7 +183,7 @@ public class GetImageServlet extends HttpServlet {
               // issue a HTTP get request to download the new fsimage 
               MD5Hash downloadImageDigest = TransferFsImage
                   .downloadImageToStorage(parsedParams.getInfoServer(conf),
-                      nnf, txid, nnImage.getStorage(), true);
+                      txid, nnImage.getStorage(), true);
               nnImage.saveDigestAndRenameCheckpointImage(nnf, txid,
                   downloadImageDigest);
               if (nnf == NameNodeFile.IMAGE_ROLLBACK) {
@@ -324,8 +324,10 @@ public class GetImageServlet extends HttpServlet {
 
   static String getParamStringForImage(NameNodeFile nnf, long txid,
       StorageInfo remoteStorageInfo) {
+    final String imageType = nnf == null ? "" : "&" + IMAGE_FILE_TYPE + "="
+        + nnf.name();
     return "getimage=1&" + TXID_PARAM + "=" + txid
-      + "&" + IMAGE_FILE_TYPE + "=" + nnf.name()
+      + imageType
       + "&" + STORAGEINFO_PARAM + "=" +
       remoteStorageInfo.toColonSeparatedString();
   }

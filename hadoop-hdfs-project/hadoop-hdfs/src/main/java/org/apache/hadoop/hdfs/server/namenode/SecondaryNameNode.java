@@ -445,7 +445,7 @@ public class SecondaryNameNode implements Runnable {
             } else {
               LOG.info("Image has changed. Downloading updated image from NN.");
               MD5Hash downloadedHash = TransferFsImage.downloadImageToStorage(
-                  nnHostPort, NameNodeFile.IMAGE, sig.mostRecentCheckpointTxId,
+                  nnHostPort, sig.mostRecentCheckpointTxId,
                   dstImage.getStorage(), true);
               dstImage.saveDigestAndRenameCheckpointImage(NameNodeFile.IMAGE,
                   sig.mostRecentCheckpointTxId, downloadedHash);

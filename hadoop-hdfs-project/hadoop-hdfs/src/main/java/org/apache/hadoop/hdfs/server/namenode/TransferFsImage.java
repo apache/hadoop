@@ -87,10 +87,9 @@ public class TransferFsImage {
         null, false);
   }
 
-  public static MD5Hash downloadImageToStorage(URL fsName, NameNodeFile nnf,
-      long imageTxId, Storage dstStorage, boolean needDigest)
-      throws IOException {
-    String fileid = GetImageServlet.getParamStringForImage(nnf,
+  public static MD5Hash downloadImageToStorage(URL fsName, long imageTxId,
+      Storage dstStorage, boolean needDigest) throws IOException {
+    String fileid = GetImageServlet.getParamStringForImage(null,
         imageTxId, dstStorage);
     String fileName = NNStorage.getCheckpointImageFileName(imageTxId);
     

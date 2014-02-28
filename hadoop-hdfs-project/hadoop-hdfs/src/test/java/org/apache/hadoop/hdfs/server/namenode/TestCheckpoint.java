@@ -1980,8 +1980,7 @@ public class TestCheckpoint {
         .when(dstImage).toColonSeparatedString();
 
       try {
-        TransferFsImage.downloadImageToStorage(fsName, NameNodeFile.IMAGE, 0,
-            dstImage, false);
+        TransferFsImage.downloadImageToStorage(fsName, 0, dstImage, false);
         fail("Storage info was not verified");
       } catch (IOException ioe) {
         String msg = StringUtils.stringifyException(ioe);

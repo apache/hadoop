@@ -35,7 +35,9 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.FSImage;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage;
+import org.apache.hadoop.hdfs.server.namenode.SecondaryNameNode;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
+import org.apache.hadoop.io.IOUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -490,6 +492,49 @@ public class TestRollingUpgrade {
 
     if (retries >= 10) {
       Assert.fail("Query return false");
+    }
+  }
+
+  /**
+   * In non-HA setup, after rolling upgrade prepare, the Secondary NN should
+   * still be able to do checkpoint
+   */
+  @Test
+  public void testCheckpointWithSNN() throws Exception {
+    MiniDFSCluster cluster = null;
+    DistributedFileSystem dfs = null;
+    SecondaryNameNode snn = null;
+
+    try {
+      Configuration conf = new HdfsConfiguration();
+      cluster = new MiniDFSCluster.Builder(conf).build();
+      cluster.waitActive();
+
+      conf.set(DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY,
+          "0.0.0.0:0");
+      snn = new SecondaryNameNode(conf);
+
+      dfs = cluster.getFileSystem();
+      dfs.mkdirs(new Path("/test/foo"));
+
+      snn.doCheckpoint();
+
+      //start rolling upgrade
+      dfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      dfs.rollingUpgrade(RollingUpgradeAction.PREPARE);
+      dfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+
+      dfs.mkdirs(new Path("/test/bar"));
+      // do checkpoint in SNN again
+      snn.doCheckpoint();
+    } finally {
+      IOUtils.cleanup(null, dfs);
+      if (snn != null) {
+        snn.shutdown();
+      }
+      if (cluster != null) {
+        cluster.shutdown();
+      }
     }
   }
 }

@@ -512,7 +512,25 @@ public class NNStorage extends Storage implements Closeable,
       }
     }
     return null;
-  }  
+  }
+
+  /**
+   * @return The first image file whose txid is the same with the given txid and
+   * image type is one of the given types.
+   */
+  public File getFsImage(long txid, EnumSet<NameNodeFile> nnfs) {
+    for (Iterator<StorageDirectory> it = dirIterator(NameNodeDirType.IMAGE);
+        it.hasNext();) {
+      StorageDirectory sd = it.next();
+      for (NameNodeFile nnf : nnfs) {
+        File fsImage = getStorageFile(sd, nnf, txid);
+        if (FileUtil.canRead(sd.getRoot()) && fsImage.exists()) {
+          return fsImage;
+        }
+      }
+    }
+    return null;
+  }
 
   public File getFsImageName(long txid) {
     return getFsImageName(txid, NameNodeFile.IMAGE);
