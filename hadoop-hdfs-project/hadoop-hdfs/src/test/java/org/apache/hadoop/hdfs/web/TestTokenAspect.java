@@ -48,9 +48,8 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.security.SecurityUtilTestHelper;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -122,14 +121,9 @@ public class TestTokenAspect {
     public void initialize(URI name, Configuration conf) throws IOException {
       super.initialize(name, conf);
       setConf(conf);
-      try {
-        this.uri = new URI(name.getScheme(), name.getAuthority(), null, null,
-            null);
-      } catch (URISyntaxException e) {
-        throw new IllegalArgumentException(e);
-      }
-
-      tokenAspect = new TokenAspect<DummyFs>(this, DummyFs.TOKEN_KIND);
+      this.uri = URI.create(name.getScheme() + "://" + name.getAuthority());
+      tokenAspect = new TokenAspect<DummyFs>(this,
+          SecurityUtil.buildTokenService(uri), TOKEN_KIND);
       if (emulateSecurityEnabled || UserGroupInformation.isSecurityEnabled()) {
         tokenAspect.initDelegationToken(ugi);
       }
@@ -293,9 +287,10 @@ public class TestTokenAspect {
     doThrow(new IOException("get failed")).when(fs).addDelegationTokens(null,
         null);
 
+    final URI uri = new URI("dummyfs://127.0.0.1:1234");
     TokenAspect<DummyFs> tokenAspect = new TokenAspect<DummyFs>(fs,
-        DummyFs.TOKEN_KIND);
-    fs.initialize(new URI("dummyfs://127.0.0.1:1234"), conf);
+        SecurityUtil.buildTokenService(uri), DummyFs.TOKEN_KIND);
+    fs.initialize(uri, conf);
     tokenAspect.initDelegationToken(ugi);
 
     // trigger token acquisition
@@ -317,59 +312,5 @@ public class TestTokenAspect {
 
     action = getActionFromTokenAspect(tokenAspect);
     assertTrue(action.isValid());
-  }
-
-  @Test
-  public void testTokenSelectionPreferences() throws IOException,
-      URISyntaxException {
-    Configuration conf = new Configuration();
-    DummyFs fs = spy(new DummyFs());
-    doReturn(null).when(fs).getDelegationToken(anyString());
-    fs.initialize(new URI("dummyfs://localhost:1234"), conf);
-    TokenAspect<DummyFs> aspect = new TokenAspect<DummyFs>(fs,
-        DummyFs.TOKEN_KIND);
-    UserGroupInformation ugi = UserGroupInformation.createUserForTesting("foo",
-        new String[] { "bar" });
-
-    // use ip-based tokens
-    SecurityUtilTestHelper.setTokenServiceUseIp(true);
-
-    // test fallback to hdfs token
-    Token<TokenIdentifier> hdfsToken = new Token<TokenIdentifier>(new byte[0],
-        new byte[0], DelegationTokenIdentifier.HDFS_DELEGATION_KIND, new Text(
-            "127.0.0.1:8020"));
-    ugi.addToken(hdfsToken);
-
-    // test fallback to hdfs token
-    Token<?> token = aspect.selectDelegationToken(ugi);
-    assertEquals(hdfsToken, token);
-
-    // test dummyfs is favored over hdfs
-    Token<TokenIdentifier> dummyFsToken = new Token<TokenIdentifier>(
-        new byte[0], new byte[0], DummyFs.TOKEN_KIND,
-        new Text("127.0.0.1:1234"));
-    ugi.addToken(dummyFsToken);
-    token = aspect.selectDelegationToken(ugi);
-    assertEquals(dummyFsToken, token);
-
-    // switch to using host-based tokens, no token should match
-    SecurityUtilTestHelper.setTokenServiceUseIp(false);
-    token = aspect.selectDelegationToken(ugi);
-    assertNull(token);
-
-    // test fallback to hdfs token
-    hdfsToken = new Token<TokenIdentifier>(new byte[0], new byte[0],
-        DelegationTokenIdentifier.HDFS_DELEGATION_KIND, new Text(
-            "localhost:8020"));
-    ugi.addToken(hdfsToken);
-    token = aspect.selectDelegationToken(ugi);
-    assertEquals(hdfsToken, token);
-
-    // test dummyfs is favored over hdfs
-    dummyFsToken = new Token<TokenIdentifier>(new byte[0], new byte[0],
-        DummyFs.TOKEN_KIND, new Text("localhost:1234"));
-    ugi.addToken(dummyFsToken);
-    token = aspect.selectDelegationToken(ugi);
-    assertEquals(dummyFsToken, token);
   }
 }
