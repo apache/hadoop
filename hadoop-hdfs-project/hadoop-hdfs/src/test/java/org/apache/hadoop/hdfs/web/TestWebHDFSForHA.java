@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs.web;
 
+import java.io.IOException;
 import java.net.URI;
 
 import org.apache.hadoop.conf.Configuration;
@@ -27,35 +28,34 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
+import org.apache.hadoop.security.token.Token;
 import org.junit.Assert;
 import org.junit.Test;
 
 /** Test whether WebHDFS can connect to an HA cluster */
 public class TestWebHDFSForHA {
-
   private static final String LOGICAL_NAME = "minidfs";
+  private static final MiniDFSNNTopology topo = new MiniDFSNNTopology()
+      .addNameservice(new MiniDFSNNTopology.NSConf(LOGICAL_NAME).addNN(
+          new MiniDFSNNTopology.NNConf("nn1")).addNN(
+          new MiniDFSNNTopology.NNConf("nn2")));
 
   @Test
-  public void test() throws Exception {
+  public void testHA() throws IOException {
     Configuration conf = new Configuration();
-    conf.setBoolean(DFSConfigKeys.DFS_WEBHDFS_ENABLED_KEY, true);
-
-    MiniDFSNNTopology topo = new MiniDFSNNTopology()
-        .addNameservice(new MiniDFSNNTopology.NSConf(LOGICAL_NAME).addNN(
-            new MiniDFSNNTopology.NNConf("nn1")).addNN(
-            new MiniDFSNNTopology.NNConf("nn2")));
-
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).nnTopology(topo)
-        .numDataNodes(3).build();
-
-    HATestUtil.setFailoverConfigurations(cluster, conf, LOGICAL_NAME);
-
+    conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, 1);
+    MiniDFSCluster cluster = null;
     FileSystem fs = null;
     try {
+      cluster = new MiniDFSCluster.Builder(conf).nnTopology(topo)
+          .numDataNodes(0).build();
+
+      HATestUtil.setFailoverConfigurations(cluster, conf, LOGICAL_NAME);
+
       cluster.waitActive();
 
       final String uri = WebHdfsFileSystem.SCHEME + "://" + LOGICAL_NAME;
-      fs = (WebHdfsFileSystem) FileSystem.get(new URI(uri), conf);
+      fs = FileSystem.get(URI.create(uri), conf);
       cluster.transitionToActive(0);
 
       final Path dir = new Path("/test");
@@ -66,12 +66,50 @@ public class TestWebHDFSForHA {
 
       final Path dir2 = new Path("/test2");
       Assert.assertTrue(fs.mkdirs(dir2));
-
     } finally {
       if (fs != null) {
         fs.close();
       }
-      cluster.shutdown();
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  @Test
+  public void testSecureHA() throws IOException {
+    Configuration conf = new Configuration();
+    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY,
+        true);
+    conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, 1);
+
+    MiniDFSCluster cluster = null;
+    WebHdfsFileSystem fs = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).nnTopology(topo)
+          .numDataNodes(0).build();
+
+      HATestUtil.setFailoverConfigurations(cluster, conf, LOGICAL_NAME);
+      cluster.waitActive();
+
+      final String uri = WebHdfsFileSystem.SCHEME + "://" + LOGICAL_NAME;
+      fs = (WebHdfsFileSystem) FileSystem.get(URI.create(uri), conf);
+
+      cluster.transitionToActive(0);
+      Token<?> token = fs.getDelegationToken(null);
+
+      cluster.shutdownNameNode(0);
+      cluster.transitionToActive(1);
+
+      fs.renewDelegationToken(token);
+      fs.cancelDelegationToken(token);
+    } finally {
+      if (fs != null) {
+        fs.close();
+      }
+      if (cluster != null) {
+        cluster.shutdown();
+      }
     }
   }
 }
