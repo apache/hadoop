@@ -48,6 +48,7 @@ import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.Appli
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.ApplicationStateDataProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.RMStateVersionProto;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
+import org.apache.hadoop.yarn.server.resourcemanager.RMZKUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.RMStateVersion;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationAttemptStateDataPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationStateDataPBImpl;
@@ -91,6 +92,7 @@ public class ZKRMStateStore extends RMStateStore {
   private int zkSessionTimeout;
   private long zkRetryInterval;
   private List<ACL> zkAcl;
+  private List<ZKUtil.ZKAuthInfo> zkAuths;
 
   /**
    *
@@ -200,18 +202,9 @@ public class ZKRMStateStore extends RMStateStore {
     zkRetryInterval =
         conf.getLong(YarnConfiguration.RM_ZK_RETRY_INTERVAL_MS,
           YarnConfiguration.DEFAULT_RM_ZK_RETRY_INTERVAL_MS);
-    // Parse authentication from configuration.
-    String zkAclConf =
-        conf.get(YarnConfiguration.RM_ZK_ACL,
-            YarnConfiguration.DEFAULT_RM_ZK_ACL);
-    zkAclConf = ZKUtil.resolveConfIndirection(zkAclConf);
 
-    try {
-      zkAcl = ZKUtil.parseACLs(zkAclConf);
-    } catch (ZKUtil.BadAclFormatException bafe) {
-      LOG.error("Invalid format for " + YarnConfiguration.RM_ZK_ACL);
-      throw bafe;
-    }
+    zkAcl = RMZKUtils.getZKAcls(conf);
+    zkAuths = RMZKUtils.getZKAuths(conf);
 
     zkRootNodePath = getNodePath(znodeWorkingPath, ROOT_ZNODE_NAME);
     rmAppRoot = getNodePath(zkRootNodePath, RM_APP_ROOT);
@@ -952,6 +945,9 @@ public class ZKRMStateStore extends RMStateStore {
         retries++) {
       try {
         zkClient = getNewZooKeeper();
+        for (ZKUtil.ZKAuthInfo zkAuth : zkAuths) {
+          zkClient.addAuthInfo(zkAuth.getScheme(), zkAuth.getAuth());
+        }
         if (useDefaultFencingScheme) {
           zkClient.addAuthInfo(zkRootNodeAuthScheme,
               (zkRootNodeUsername + ":" + zkRootNodePassword).getBytes());

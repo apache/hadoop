@@ -31,14 +31,12 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ZKUtil;
 import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.data.ACL;
 
 import java.io.IOException;
-import java.util.Collections;
 import java.util.List;
 
 @InterfaceAudience.Private
@@ -88,18 +86,8 @@ public class EmbeddedElectorService extends AbstractService
     long zkSessionTimeout = conf.getLong(YarnConfiguration.RM_ZK_TIMEOUT_MS,
         YarnConfiguration.DEFAULT_RM_ZK_TIMEOUT_MS);
 
-    String zkAclConf = conf.get(YarnConfiguration.RM_ZK_ACL,
-        YarnConfiguration.DEFAULT_RM_ZK_ACL);
-    List<ACL> zkAcls;
-    try {
-      zkAcls = ZKUtil.parseACLs(ZKUtil.resolveConfIndirection(zkAclConf));
-    } catch (ZKUtil.BadAclFormatException bafe) {
-      throw new YarnRuntimeException(
-          YarnConfiguration.RM_ZK_ACL + "has ill-formatted ACLs");
-    }
-
-    // TODO (YARN-1528): ZKAuthInfo to be set for rm-store and elector
-    List<ZKUtil.ZKAuthInfo> zkAuths = Collections.emptyList();
+    List<ACL> zkAcls = RMZKUtils.getZKAcls(conf);
+    List<ZKUtil.ZKAuthInfo> zkAuths = RMZKUtils.getZKAuths(conf);
 
     elector = new ActiveStandbyElector(zkQuorum, (int) zkSessionTimeout,
         electionZNode, zkAcls, zkAuths, this);
