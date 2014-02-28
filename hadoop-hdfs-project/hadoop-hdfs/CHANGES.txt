@@ -109,9 +109,6 @@ Trunk (Unreleased)
     HDFS-4052. BlockManager#invalidateWork should print log outside the lock.
     (Jing Zhao via suresh)
 
-    HDFS-4200. Reduce the size of synchronized sections in PacketResponder.
-    (suresh)
-
     HDFS-3358. Specify explicitly that the NN UI status total is talking
     of persistent objects on heap. (harsh)
 
@@ -369,6 +366,9 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-6030. Remove an unused constructor in INode.java.  (yzhang via
     cmccabe)
+
+    HDFS-4200. Reduce the size of synchronized sections in PacketResponder.
+    (suresh)
 
   OPTIMIZATIONS
 
