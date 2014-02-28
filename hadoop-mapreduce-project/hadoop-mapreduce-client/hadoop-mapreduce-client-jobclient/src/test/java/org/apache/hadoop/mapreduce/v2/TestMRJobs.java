@@ -23,7 +23,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.InputStreamReader;
 import java.io.IOException;
 import java.io.StringReader;
 import java.net.URI;
@@ -82,8 +81,10 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.JarFinder;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
+import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.log4j.Level;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -492,27 +493,16 @@ public class TestMRJobs {
         LOG.info("Checking for glob: " + absSyslogGlob);
         final FileStatus[] syslogs = localFs.globStatus(absSyslogGlob);
         for (FileStatus slog : syslogs) {
-          // check all syslogs for the container
-          //
-          final FileStatus[] sysSiblings = localFs.globStatus(new Path(
-              slog.getPath().getParent(), TaskLog.LogName.SYSLOG + "*"));
-          boolean foundAppMaster = false;
-          floop:
-          for (FileStatus f : sysSiblings) {
-            final BufferedReader reader = new BufferedReader(
-                new InputStreamReader(localFs.open(f.getPath())));
-            String line;
-            try {
-              while ((line = reader.readLine()) != null) {
-                if (line.contains(MRJobConfig.APPLICATION_MASTER_CLASS)) {
-                  foundAppMaster = true;
-                  break floop;
-                }
-              }
-            } finally {
-              reader.close();
-            }
+          boolean foundAppMaster = job.isUber();
+          final Path containerPathComponent = slog.getPath().getParent();
+          if (!foundAppMaster) {
+            final ContainerId cid = ConverterUtils.toContainerId(
+                containerPathComponent.getName());
+            foundAppMaster = (cid.getId() == 1);
           }
+
+          final FileStatus[] sysSiblings = localFs.globStatus(new Path(
+              containerPathComponent, TaskLog.LogName.SYSLOG + "*"));
 
           if (foundAppMaster) {
             numAppMasters++;
