@@ -314,6 +314,9 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10278. Refactor to make CallQueue pluggable. (Chris Li via
     Arpit Agarwal)
 
+    HADOOP-10285. Admin interface to swap callqueue at runtime. (Chris Li via
+    Arpit Agarwal)
+
   OPTIMIZATIONS
 
   BUG FIXES 
