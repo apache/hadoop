@@ -117,6 +117,9 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-6025. Update findbugsExcludeFile.xml. (szetszwo)
 
+    HDFS-6030. Remove an unused constructor in INode.java.  (yzhang via
+    cmccabe)
+
   OPTIMIZATIONS
 
     HDFS-5790. LeaseManager.findPath is very slow when many leases need recovery
