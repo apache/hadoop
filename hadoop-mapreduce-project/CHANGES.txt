@@ -60,6 +60,9 @@ Release 2.4.0 - UNRELEASED
     to the YARN's web-app proxy with the correct scheme prefix. (Jian He via
     vinodkv)
 
+    MAPREDUCE-5768. TestMRJobs.testContainerRollingLog fails on trunk (Gera
+    Shegalov via jlowe)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
