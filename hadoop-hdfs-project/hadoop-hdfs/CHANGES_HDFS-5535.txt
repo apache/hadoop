@@ -33,7 +33,7 @@ HDFS-5535 subtasks:
     so that the standby namenode can create checkpoints during upgrade.
     (szetszwo & jing9)
 
-    HDFS-5535. Add BlockPoolSliceStorage 'trash' to handle block deletions
+    HDFS-5907. Add BlockPoolSliceStorage 'trash' to handle block deletions
     during rolling upgrades. (Arpit Agarwal)
 
     HDFS-5494. Merge Protobuf-based-FSImage code from trunk - fix build
@@ -123,3 +123,7 @@ HDFS-5535 subtasks:
 
     HDFS-6032. -rollingUpgrade query hits NPE after the NN restarts. (Haohui Mai
     via jing9)
+
+    HDFS-6031. Add back the "-rollingUpgrade started" namenode startup option;
+    otherwise, namenode cannot start when the layout version is changed.
+    (szetszwo)

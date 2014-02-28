@@ -75,10 +75,14 @@
       </li>
     </ul></li>
     <li>Upgrade Active and Standby <em>NNs</em><ol>
-      <li>Shutdown, upgrade and restart <em>NN2</em> as standby.</li>
+      <li>Shutdown and upgrade <em>NN2</em>.</li>
+      <li>Start <em>NN2</em> as standby with the
+        "<a href="#namenode_-rollingUpgrade"><code>-rollingUpgrade started</code></a>" option.</li>
       <li>Failover from <em>NN1</em> to <em>NN2</em>
-       	so that <em>NN2</em> becomes active and <em>NN1</em> becomes standby.</li>
-      <li>Shutdown, upgrade and restart <em>NN1</em> as standby.</li>
+               so that <em>NN2</em> becomes active and <em>NN1</em> becomes standby.</li>
+      <li>Shutdown and upgrade <em>NN1</em>.</li>
+      <li>Start <em>NN1</em> as standby with the
+        "<a href="#namenode_-rollingUpgrade"><code>-rollingUpgrade started</code></a>" option.</li>
     </ol></li>
     <li>Upgrade <em>DNs</em><ol>
       <li>Choose a small subset of datanodes (e.g. all datanodes under a particular rack).</li>
@@ -132,7 +136,9 @@
   <ul>
     <li>Upgrade <em>NN</em> and <em>SNN</em><ol>
       <li>Shutdown <em>SNN</em></li>
-      <li>Shutdown, upgrade and restart <em>NN</em></li>
+      <li>Shutdown and upgrade <em>NN</em>.</li>
+      <li>Start <em>NN</em> as standby with the
+        "<a href="#namenode_-rollingUpgrade"><code>-rollingUpgrade started</code></a>" option.</li>
       <li>Upgrade and restart <em>SNN</em></li>
     </ol></li>
   </ul>
@@ -174,7 +180,7 @@
       <li>Shutdown all <em>NNs</em> and <em>DNs</em>.</li>
       <li>Restore the pre-upgrade release in all machines.</li>
       <li>Start <em>NNs</em> with the 
-	"<a href="#namenode_-rollingUpgrade"><code>-rollingUpgrade downgrade</code></a>" option.</li>
+        "<a href="#namenode_-rollingUpgrade"><code>-rollingUpgrade downgrade</code></a>" option.</li>
       <li>Start <em>DNs</em> normally.</li>
     </ol></li>
   </ul>
@@ -198,7 +204,7 @@
       <li>Shutdown all <em>NNs</em> and <em>DNs</em>.</li>
       <li>Restore the pre-upgrade release in all machines.</li>
       <li>Start <em>NNs</em> with the
-	"<a href="#namenode_-rollingUpgrade"><code>-rollingUpgrade rollback</code></a>" option.</li>
+        "<a href="#namenode_-rollingUpgrade"><code>-rollingUpgrade rollback</code></a>" option.</li>
       <li>Start <em>DNs</em> normally.</li>
     </ol></li>
   </ul>
@@ -248,9 +254,11 @@
   <subsection name="NameNode Startup Options" id="dfsadminCommands">
 
   <h4><code>namenode -rollingUpgrade</code></h4>
-  <source>hdfs namenode -rollingUpgrade &lt;downgrade|rollback&gt;</source>
+  <source>hdfs namenode -rollingUpgrade &lt;downgrade|rollback|started&gt;</source>
   <p>
-    Downgrade or rollback an ongoing rolling upgrade.
+    When a rolling upgrade is in progress,
+    the <code>-rollingUpgrade</code> namenode startup option is used to specify
+    various rolling upgrade options.
   </p>
     <ul><li>Options:<table>
       <tr><td><code>downgrade</code></td>
@@ -260,6 +268,11 @@
       <tr><td><code>rollback</code></td>
         <td>Restores the namenode back to the pre-upgrade release
             but also reverts the user data back to the pre-upgrade state.</td>
+      </tr>
+      <tr><td><code>started</code></td>
+        <td>Specifies a rolling upgrade already started
+          so that the namenode should allow image directories
+          with different layout versions during startup.</td>
       </tr>
     </table></li></ul>
 
