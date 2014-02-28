@@ -28,6 +28,8 @@ import java.io.PrintWriter;
 import java.io.RandomAccessFile;
 import java.io.StringReader;
 import java.io.StringWriter;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -241,7 +243,7 @@ public class TestOfflineImageViewer {
   }
 
   @Test
-  public void testFileDistributionVisitor() throws IOException {
+  public void testFileDistributionCalculator() throws IOException {
     StringWriter output = new StringWriter();
     PrintWriter o = new PrintWriter(output);
     new FileDistributionCalculator(new Configuration(), 0, 0, o)
@@ -250,10 +252,29 @@ public class TestOfflineImageViewer {
 
     Pattern p = Pattern.compile("totalFiles = (\\d+)\n");
     Matcher matcher = p.matcher(output.getBuffer());
-
     assertTrue(matcher.find() && matcher.groupCount() == 1);
     int totalFiles = Integer.parseInt(matcher.group(1));
-    assertEquals(totalFiles, NUM_DIRS * FILES_PER_DIR);
+    assertEquals(NUM_DIRS * FILES_PER_DIR, totalFiles);
+
+    p = Pattern.compile("totalDirectories = (\\d+)\n");
+    matcher = p.matcher(output.getBuffer());
+    assertTrue(matcher.find() && matcher.groupCount() == 1);
+    int totalDirs = Integer.parseInt(matcher.group(1));
+    // totalDirs includes root directory
+    assertEquals(NUM_DIRS + 1, totalDirs);
+
+    FileStatus maxFile = Collections.max(writtenFiles.values(),
+        new Comparator<FileStatus>() {
+      @Override
+      public int compare(FileStatus first, FileStatus second) {
+        return first.getLen() < second.getLen() ? -1 :
+            ((first.getLen() == second.getLen()) ? 0 : 1);
+      }
+    });
+    p = Pattern.compile("maxFileSize = (\\d+)\n");
+    matcher = p.matcher(output.getBuffer());
+    assertTrue(matcher.find() && matcher.groupCount() == 1);
+    assertEquals(maxFile.getLen(), Long.parseLong(matcher.group(1)));
   }
 
   @Test
