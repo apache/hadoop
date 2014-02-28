@@ -508,6 +508,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-6033. PBImageXmlWriter incorrectly handles processing cache
     directives. (atm)
 
+    HDFS-5821. TestHDFSCLI fails for user names with the dash character.
+    (Gera Shegalov via Arpit Agarwal)
+
   BREAKDOWN OF HDFS-5698 SUBTASKS AND RELATED JIRAS
 
     HDFS-5717. Save FSImage header in protobuf. (Haohui Mai via jing9)
