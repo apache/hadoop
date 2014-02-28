@@ -120,3 +120,6 @@ HDFS-5535 subtasks:
 
     HDFS-6029. Secondary NN fails to checkpoint after -rollingUpgrade prepare.
     (jing9)
+
+    HDFS-6032. -rollingUpgrade query hits NPE after the NN restarts. (Haohui Mai
+    via jing9)

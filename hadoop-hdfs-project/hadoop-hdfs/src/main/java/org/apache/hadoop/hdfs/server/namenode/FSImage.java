@@ -881,9 +881,12 @@ public class FSImage implements Closeable {
    */
   private void loadFSImage(File curFile, MD5Hash expectedMd5,
       FSNamesystem target, MetaRecoveryContext recovery) throws IOException {
+    // BlockPoolId is required when the FsImageLoader loads the rolling upgrade
+    // information. Make sure the ID is properly set.
+    target.setBlockPoolId(this.getBlockPoolID());
+
     FSImageFormat.LoaderDelegator loader = FSImageFormat.newLoader(conf, target);
     loader.load(curFile);
-    target.setBlockPoolId(this.getBlockPoolID());
 
     // Check that the image digest we loaded matches up with what
     // we expected

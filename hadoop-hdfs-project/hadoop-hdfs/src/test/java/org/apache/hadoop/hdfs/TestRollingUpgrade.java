@@ -432,6 +432,32 @@ public class TestRollingUpgrade {
     }
   }
 
+  @Test (timeout = 300000)
+  public void testQueryAfterRestart() throws IOException, InterruptedException {
+    final Configuration conf = new Configuration();
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
+      cluster.waitActive();
+      DistributedFileSystem dfs = cluster.getFileSystem();
+
+      dfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      // start rolling upgrade
+      dfs.rollingUpgrade(RollingUpgradeAction.PREPARE);
+      queryForPreparation(dfs);
+      dfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      dfs.saveNamespace();
+      dfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+
+      cluster.restartNameNodes();
+      dfs.rollingUpgrade(RollingUpgradeAction.QUERY);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
   @Test(timeout = 300000)
   public void testCheckpoint() throws IOException, InterruptedException {
     final Configuration conf = new Configuration();
