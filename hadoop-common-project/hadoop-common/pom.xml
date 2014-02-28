@@ -333,6 +333,7 @@
                   <include>GetUserMappingsProtocol.proto</include>
                   <include>RefreshAuthorizationPolicyProtocol.proto</include>
                   <include>RefreshUserMappingsProtocol.proto</include>
+                  <include>RefreshCallQueueProtocol.proto</include>
                 </includes>
               </source>
               <output>${project.build.directory}/generated-sources/java</output>

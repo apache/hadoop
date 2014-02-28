@@ -75,6 +75,9 @@ import org.apache.hadoop.security.protocolPB.RefreshAuthorizationPolicyProtocolC
 import org.apache.hadoop.security.protocolPB.RefreshAuthorizationPolicyProtocolPB;
 import org.apache.hadoop.security.protocolPB.RefreshUserMappingsProtocolClientSideTranslatorPB;
 import org.apache.hadoop.security.protocolPB.RefreshUserMappingsProtocolPB;
+import org.apache.hadoop.ipc.RefreshCallQueueProtocol;
+import org.apache.hadoop.ipc.protocolPB.RefreshCallQueueProtocolPB;
+import org.apache.hadoop.ipc.protocolPB.RefreshCallQueueProtocolClientSideTranslatorPB;
 import org.apache.hadoop.tools.GetUserMappingsProtocol;
 import org.apache.hadoop.tools.protocolPB.GetUserMappingsProtocolClientSideTranslatorPB;
 import org.apache.hadoop.tools.protocolPB.GetUserMappingsProtocolPB;
@@ -252,13 +255,16 @@ public class NameNodeProxies {
     } else if (xface == RefreshAuthorizationPolicyProtocol.class) {
       proxy = (T) createNNProxyWithRefreshAuthorizationPolicyProtocol(nnAddr,
           conf, ugi);
+    } else if (xface == RefreshCallQueueProtocol.class) {
+      proxy = (T) createNNProxyWithRefreshCallQueueProtocol(nnAddr, conf, ugi);
     } else {
-      String message = "Upsupported protocol found when creating the proxy " +
+      String message = "Unsupported protocol found when creating the proxy " +
           "connection to NameNode: " +
           ((xface != null) ? xface.getClass().getName() : "null");
       LOG.error(message);
       throw new IllegalStateException(message);
     }
+
     return new ProxyAndInfo<T>(proxy, dtService);
   }
   
@@ -284,6 +290,14 @@ public class NameNodeProxies {
     RefreshUserMappingsProtocolPB proxy = (RefreshUserMappingsProtocolPB)
         createNameNodeProxy(address, conf, ugi, RefreshUserMappingsProtocolPB.class);
     return new RefreshUserMappingsProtocolClientSideTranslatorPB(proxy);
+  }
+
+  private static RefreshCallQueueProtocol
+      createNNProxyWithRefreshCallQueueProtocol(InetSocketAddress address,
+          Configuration conf, UserGroupInformation ugi) throws IOException {
+    RefreshCallQueueProtocolPB proxy = (RefreshCallQueueProtocolPB)
+        createNameNodeProxy(address, conf, ugi, RefreshCallQueueProtocolPB.class);
+    return new RefreshCallQueueProtocolClientSideTranslatorPB(proxy);
   }
 
   private static GetUserMappingsProtocol createNNProxyWithGetUserMappingsProtocol(
