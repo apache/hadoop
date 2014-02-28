@@ -367,6 +367,9 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-6025. Update findbugsExcludeFile.xml. (szetszwo)
 
+    HDFS-6030. Remove an unused constructor in INode.java.  (yzhang via
+    cmccabe)
+
   OPTIMIZATIONS
 
     HDFS-5790. LeaseManager.findPath is very slow when many leases need recovery
@@ -498,6 +501,9 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-5936. MiniDFSCluster does not clean data left behind by
     SecondaryNameNode. (Binglin Chang via cnauroth)
+
+    HDFS-5339. WebHDFS URI does not accept logical nameservices when security is
+    enabled. (Haohui Mai via jing9)
 
   BREAKDOWN OF HDFS-5698 SUBTASKS AND RELATED JIRAS
 
@@ -641,6 +647,9 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-5908. Change AclFeature to capture list of ACL entries in an
     ImmutableList. (cnauroth)
+
+    HDFS-6028. Print clearer error message when user attempts to delete required
+    mask entry from ACL. (cnauroth)
 
 Release 2.3.1 - UNRELEASED
 

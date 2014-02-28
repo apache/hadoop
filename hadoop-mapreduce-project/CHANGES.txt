@@ -153,6 +153,9 @@ Release 2.5.0 - UNRELEASED
     MAPREDUCE-5688. TestStagingCleanup fails intermittently with JDK7 (Mit
     Desai via jeagles)
 
+    MAPREDUCE-5665. Add audience annotations to MiniMRYarnCluster and 
+    MiniMRCluster. (Anubhav Dhoot via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES 
@@ -198,6 +201,9 @@ Release 2.4.0 - UNRELEASED
     MAPREDUCE-5770. Fixed MapReduce ApplicationMaster to correctly redirect
     to the YARN's web-app proxy with the correct scheme prefix. (Jian He via
     vinodkv)
+
+    MAPREDUCE-5768. TestMRJobs.testContainerRollingLog fails on trunk (Gera
+    Shegalov via jlowe)
 
 Release 2.3.1 - UNRELEASED
 

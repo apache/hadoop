@@ -97,9 +97,10 @@ public class HftpFileSystem extends FileSystem
   public static final String HFTP_TIMEZONE = "UTC";
   public static final String HFTP_DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ssZ";
 
-  protected TokenAspect<HftpFileSystem> tokenAspect;
+  protected TokenAspect<? extends HftpFileSystem> tokenAspect;
   private Token<?> delegationToken;
   private Token<?> renewToken;
+  protected Text tokenServiceName;
 
   @Override
   public URI getCanonicalUri() {
@@ -175,9 +176,8 @@ public class HftpFileSystem extends FileSystem
    * Initialize connectionFactory and tokenAspect. This function is intended to
    * be overridden by HsFtpFileSystem.
    */
-  protected void initTokenAspect(Configuration conf)
-      throws IOException {
-    tokenAspect = new TokenAspect<HftpFileSystem>(this, TOKEN_KIND);
+  protected void initTokenAspect() {
+    tokenAspect = new TokenAspect<HftpFileSystem>(this, tokenServiceName, TOKEN_KIND);
   }
 
   @Override
@@ -189,6 +189,7 @@ public class HftpFileSystem extends FileSystem
         .newDefaultURLConnectionFactory(conf);
     this.ugi = UserGroupInformation.getCurrentUser();
     this.nnUri = getNamenodeUri(name);
+    this.tokenServiceName = SecurityUtil.buildTokenService(nnUri);
 
     try {
       this.hftpURI = new URI(name.getScheme(), name.getAuthority(),
@@ -197,7 +198,7 @@ public class HftpFileSystem extends FileSystem
       throw new IllegalArgumentException(e);
     }
 
-    initTokenAspect(conf);
+    initTokenAspect();
     if (UserGroupInformation.isSecurityEnabled()) {
       tokenAspect.initDelegationToken(ugi);
     }

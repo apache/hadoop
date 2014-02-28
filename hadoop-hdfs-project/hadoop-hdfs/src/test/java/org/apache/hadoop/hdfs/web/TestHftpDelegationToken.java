@@ -35,6 +35,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.token.Token;
@@ -73,14 +74,15 @@ public class TestHftpDelegationToken {
     doReturn(conn).when(factory).openConnection(Mockito.<URL> any(),
         anyBoolean());
 
-    fs.initialize(new URI("hftp://127.0.0.1:8020"), conf);
+    final URI uri = new URI("hftp://127.0.0.1:8020");
+    fs.initialize(uri, conf);
     fs.connectionFactory = factory;
 
     UserGroupInformation ugi = UserGroupInformation.createUserForTesting("foo",
         new String[] { "bar" });
 
     TokenAspect<HftpFileSystem> tokenAspect = new TokenAspect<HftpFileSystem>(
-        fs, HftpFileSystem.TOKEN_KIND);
+        fs, SecurityUtil.buildTokenService(uri), HftpFileSystem.TOKEN_KIND);
 
     tokenAspect.initDelegationToken(ugi);
     tokenAspect.ensureTokenInitialized();

@@ -365,7 +365,7 @@ final class AclTransformation {
           maskDirty.contains(scope)) {
         // Caller explicitly removed mask entry, but it's required.
         throw new AclException(
-          "Invalid ACL: mask is required, but it was deleted.");
+          "Invalid ACL: mask is required and cannot be deleted.");
       } else if (providedMask.containsKey(scope) &&
           (!scopeDirty.contains(scope) || maskDirty.contains(scope))) {
         // Caller explicitly provided new mask, or we are preserving the existing

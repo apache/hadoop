@@ -752,11 +752,6 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
      */
     private List<Block> toDeleteList;
     
-    public BlocksMapUpdateInfo(List<Block> toDeleteList) {
-      this.toDeleteList = toDeleteList == null ? new ArrayList<Block>()
-          : toDeleteList;
-    }
-    
     public BlocksMapUpdateInfo() {
       toDeleteList = new ChunkedArrayList<Block>();
     }

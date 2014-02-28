@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.web;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
-import java.util.Collection;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -31,7 +30,6 @@ import org.apache.hadoop.fs.DelegationTokenRenewer.Renewable;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
-import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSelector;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -93,22 +91,10 @@ final class TokenAspect<T extends FileSystem & Renewable> {
     }
   }
 
-  static class DTSelecorByKind extends
+  private static class DTSelecorByKind extends
       AbstractDelegationTokenSelector<DelegationTokenIdentifier> {
-    private static final DelegationTokenSelector selector = new DelegationTokenSelector();
-
     public DTSelecorByKind(final Text kind) {
       super(kind);
-    }
-
-    Token<DelegationTokenIdentifier> selectToken(URI nnUri,
-        Collection<Token<?>> tokens, Configuration conf) {
-      Token<DelegationTokenIdentifier> token = selectToken(
-          SecurityUtil.buildTokenService(nnUri), tokens);
-      if (token == null) {
-        token = selector.selectToken(nnUri, tokens, conf);
-      }
-      return token;
     }
   }
 
@@ -117,9 +103,6 @@ final class TokenAspect<T extends FileSystem & Renewable> {
    */
   interface TokenManagementDelegator {
     void cancelDelegationToken(final Token<?> token) throws IOException;
-
-    URI getCanonicalUri();
-
     long renewDelegationToken(final Token<?> token) throws IOException;
   }
 
@@ -129,11 +112,13 @@ final class TokenAspect<T extends FileSystem & Renewable> {
   private final T fs;
   private boolean hasInitedToken;
   private final Log LOG;
+  private final Text serviceName;
 
-  TokenAspect(T fs, final Text kind) {
+  TokenAspect(T fs, final Text serviceName, final Text kind) {
     this.LOG = LogFactory.getLog(fs.getClass());
     this.fs = fs;
     this.dtSelector = new DTSelecorByKind(kind);
+    this.serviceName = serviceName;
   }
 
   synchronized void ensureTokenInitialized() throws IOException {
@@ -173,9 +158,7 @@ final class TokenAspect<T extends FileSystem & Renewable> {
   @VisibleForTesting
   Token<DelegationTokenIdentifier> selectDelegationToken(
       UserGroupInformation ugi) {
-    return dtSelector.selectToken(
-        ((TokenManagementDelegator)fs).getCanonicalUri(), ugi.getTokens(),
-        fs.getConf());
+    return dtSelector.selectToken(serviceName, ugi.getTokens());
   }
 
   private synchronized void addRenewAction(final T webhdfs) {
