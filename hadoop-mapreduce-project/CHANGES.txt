@@ -14,6 +14,9 @@ Release 2.5.0 - UNRELEASED
     MAPREDUCE-5688. TestStagingCleanup fails intermittently with JDK7 (Mit
     Desai via jeagles)
 
+    MAPREDUCE-5665. Add audience annotations to MiniMRYarnCluster and 
+    MiniMRCluster. (Anubhav Dhoot via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES 
