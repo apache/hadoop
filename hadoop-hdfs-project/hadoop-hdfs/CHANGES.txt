@@ -505,6 +505,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-5339. WebHDFS URI does not accept logical nameservices when security is
     enabled. (Haohui Mai via jing9)
 
+    HDFS-6033. PBImageXmlWriter incorrectly handles processing cache
+    directives. (atm)
+
   BREAKDOWN OF HDFS-5698 SUBTASKS AND RELATED JIRAS
 
     HDFS-5717. Save FSImage header in protobuf. (Haohui Mai via jing9)
