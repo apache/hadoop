@@ -157,7 +157,7 @@ public final class PBImageXmlWriter {
           .o("maxRelativeExpiry", p.getMaxRelativeExpiry());
       out.print("</pool>\n");
     }
-    for (int i = 0; i < s.getNumPools(); ++i) {
+    for (int i = 0; i < s.getNumDirectives(); ++i) {
       CacheDirectiveInfoProto p = CacheDirectiveInfoProto
           .parseDelimitedFrom(is);
       out.print("<directive>");
