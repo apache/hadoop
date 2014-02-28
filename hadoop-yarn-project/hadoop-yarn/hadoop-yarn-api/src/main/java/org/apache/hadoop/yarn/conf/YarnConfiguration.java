@@ -335,6 +335,8 @@ public class YarnConfiguration extends Configuration {
   public static final String RM_ZK_ACL = RM_ZK_PREFIX + "acl";
   public static final String DEFAULT_RM_ZK_ACL = "world:anyone:rwcda";
 
+  public static final String RM_ZK_AUTH = RM_ZK_PREFIX + "auth";
+
   public static final String ZK_STATE_STORE_PREFIX =
       RM_PREFIX + "zk-state-store.";
 

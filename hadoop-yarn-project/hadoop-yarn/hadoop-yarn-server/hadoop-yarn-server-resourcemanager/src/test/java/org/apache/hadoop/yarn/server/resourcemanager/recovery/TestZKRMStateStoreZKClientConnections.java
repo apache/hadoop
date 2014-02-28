@@ -32,10 +32,12 @@ import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.ZooKeeper;
+import org.apache.zookeeper.server.auth.DigestAuthenticationProvider;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -48,6 +50,20 @@ public class TestZKRMStateStoreZKClientConnections extends
   private static final int ZK_OP_WAIT_TIME = 3000;
   private Log LOG =
       LogFactory.getLog(TestZKRMStateStoreZKClientConnections.class);
+
+  private static final String DIGEST_USER_PASS="test-user:test-password";
+  private static final String TEST_AUTH_GOOD = "digest:" + DIGEST_USER_PASS;
+  private static final String DIGEST_USER_HASH;
+  static {
+    try {
+      DIGEST_USER_HASH = DigestAuthenticationProvider.generateDigest(
+          DIGEST_USER_PASS);
+    } catch (NoSuchAlgorithmException e) {
+      throw new RuntimeException(e);
+    }
+  }
+  private static final String TEST_ACL = "digest:" + DIGEST_USER_HASH + ":rwcda";
+
 
   class TestZKClient {
 
@@ -251,5 +267,17 @@ public class TestZKRMStateStoreZKClientConnections extends
       LOG.error(error, e);
       fail(error);
     }
+  }
+
+  @Test
+  public void testZKAuths() throws Exception {
+    TestZKClient zkClientTester = new TestZKClient();
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.setInt(YarnConfiguration.RM_ZK_NUM_RETRIES, 1);
+    conf.setInt(YarnConfiguration.RM_ZK_TIMEOUT_MS, 100);
+    conf.set(YarnConfiguration.RM_ZK_ACL, TEST_ACL);
+    conf.set(YarnConfiguration.RM_ZK_AUTH, TEST_AUTH_GOOD);
+
+    zkClientTester.getRMStateStore(conf);
   }
 }
