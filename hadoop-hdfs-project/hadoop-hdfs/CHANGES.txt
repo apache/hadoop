@@ -120,6 +120,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-6030. Remove an unused constructor in INode.java.  (yzhang via
     cmccabe)
 
+    HDFS-4200. Reduce the size of synchronized sections in PacketResponder.
+    (Suresh Srinivas, backported by Andrew Wang, committed by jing9)
+
   OPTIMIZATIONS
 
     HDFS-5790. LeaseManager.findPath is very slow when many leases need recovery
