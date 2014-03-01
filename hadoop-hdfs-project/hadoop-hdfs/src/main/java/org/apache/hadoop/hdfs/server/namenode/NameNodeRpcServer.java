@@ -104,6 +104,7 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifie
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeLayoutVersion;
 import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMethods;
@@ -1076,12 +1077,29 @@ class NameNodeRpcServer implements NamenodeProtocols {
    * @param nodeReg node registration
    * @throws UnregisteredNodeException if the registration is invalid
    */
-  void verifyRequest(NodeRegistration nodeReg) throws IOException {
-    if (!namesystem.getRegistrationID().equals(nodeReg.getRegistrationID())) {
-      LOG.warn("Invalid registrationID - expected: "
-          + namesystem.getRegistrationID() + " received: "
-          + nodeReg.getRegistrationID());
-      throw new UnregisteredNodeException(nodeReg);
+  private void verifyRequest(NodeRegistration nodeReg) throws IOException {
+    // verify registration ID
+    final String id = nodeReg.getRegistrationID();
+    final String expectedID = namesystem.getRegistrationID();
+    if (!expectedID.equals(id)) {
+      LOG.warn("Registration IDs mismatched: the "
+          + nodeReg.getClass().getSimpleName() + " ID is " + id
+          + " but the expected ID is " + expectedID);
+       throw new UnregisteredNodeException(nodeReg);
+    }
+
+    // verify layout version if there is no rolling upgrade.
+    if (!namesystem.isRollingUpgrade()) {
+      final int lv = nodeReg.getVersion();
+      final int expectedLV = nodeReg instanceof NamenodeRegistration?
+          NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION
+          : DataNodeLayoutVersion.CURRENT_LAYOUT_VERSION;
+      if (expectedLV != nodeReg.getVersion()) {
+        LOG.warn("Layout versions mismatched: the "
+            + nodeReg.getClass().getSimpleName() + " LV is " + lv
+            + " but the expected LV is " + expectedLV);
+         throw new UnregisteredNodeException(nodeReg);
+      }
     }
   }
 

@@ -127,3 +127,6 @@ HDFS-5535 subtasks:
     HDFS-6031. Add back the "-rollingUpgrade started" namenode startup option;
     otherwise, namenode cannot start when the layout version is changed.
     (szetszwo)
+
+    HDFS-6034. Use DataNodeLayoutVersion for DN registration check and do not
+    verify layout version if there is a rolling upgrade in progress.  (szetszwo)
