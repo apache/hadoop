@@ -109,9 +109,6 @@ Trunk (Unreleased)
     HDFS-4052. BlockManager#invalidateWork should print log outside the lock.
     (Jing Zhao via suresh)
 
-    HDFS-4200. Reduce the size of synchronized sections in PacketResponder.
-    (suresh)
-
     HDFS-3358. Specify explicitly that the NN UI status total is talking
     of persistent objects on heap. (harsh)
 
@@ -370,6 +367,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-6030. Remove an unused constructor in INode.java.  (yzhang via
     cmccabe)
 
+    HDFS-4200. Reduce the size of synchronized sections in PacketResponder.
+    (suresh)
+
   OPTIMIZATIONS
 
     HDFS-5790. LeaseManager.findPath is very slow when many leases need recovery
@@ -504,6 +504,15 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-5339. WebHDFS URI does not accept logical nameservices when security is
     enabled. (Haohui Mai via jing9)
+
+    HDFS-6033. PBImageXmlWriter incorrectly handles processing cache
+    directives. (atm)
+
+    HDFS-5821. TestHDFSCLI fails for user names with the dash character.
+    (Gera Shegalov via Arpit Agarwal)
+
+    HDFS-5956. A file size is multiplied by the replication factor in 'hdfs oiv
+    -p FileDistribution' option. (Akira Ajisaka via wheat9)
 
   BREAKDOWN OF HDFS-5698 SUBTASKS AND RELATED JIRAS
 

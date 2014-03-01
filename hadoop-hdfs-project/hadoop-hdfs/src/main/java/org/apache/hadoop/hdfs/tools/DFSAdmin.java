@@ -66,6 +66,7 @@ import org.apache.hadoop.security.RefreshUserMappingsProtocol;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
+import org.apache.hadoop.ipc.RefreshCallQueueProtocol;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -652,6 +653,7 @@ public class DFSAdmin extends FsShell {
       "\t[-refreshServiceAcl]\n" +
       "\t[-refreshUserToGroupsMappings]\n" +
       "\t[-refreshSuperUserGroupsConfiguration]\n" +
+      "\t[-refreshCallQueue]\n" +
       "\t[-printTopology]\n" +
       "\t[-refreshNamenodes datanodehost:port]\n"+
       "\t[-deleteBlockPool datanodehost:port blockpoolId [force]]\n"+
@@ -722,6 +724,8 @@ public class DFSAdmin extends FsShell {
     
     String refreshSuperUserGroupsConfiguration = 
       "-refreshSuperUserGroupsConfiguration: Refresh superuser proxy groups mappings\n";
+
+    String refreshCallQueue = "-refreshCallQueue: Reload the call queue from config\n";
 
     String printTopology = "-printTopology: Print a tree of the racks and their\n" +
                            "\t\tnodes as reported by the Namenode\n";
@@ -805,6 +809,8 @@ public class DFSAdmin extends FsShell {
       System.out.println(refreshUserToGroupsMappings);
     } else if ("refreshSuperUserGroupsConfiguration".equals(cmd)) {
       System.out.println(refreshSuperUserGroupsConfiguration);
+    } else if ("refreshCallQueue".equals(cmd)) {
+      System.out.println(refreshCallQueue);
     } else if ("printTopology".equals(cmd)) {
       System.out.println(printTopology);
     } else if ("refreshNamenodes".equals(cmd)) {
@@ -843,6 +849,7 @@ public class DFSAdmin extends FsShell {
       System.out.println(refreshServiceAcl);
       System.out.println(refreshUserToGroupsMappings);
       System.out.println(refreshSuperUserGroupsConfiguration);
+      System.out.println(refreshCallQueue);
       System.out.println(printTopology);
       System.out.println(refreshNamenodes);
       System.out.println(deleteBlockPool);
@@ -1034,6 +1041,27 @@ public class DFSAdmin extends FsShell {
     return 0;
   }
 
+  public int refreshCallQueue() throws IOException {
+    // Get the current configuration
+    Configuration conf = getConf();
+    
+    // for security authorization
+    // server principal for this call   
+    // should be NN's one.
+    conf.set(CommonConfigurationKeys.HADOOP_SECURITY_SERVICE_USER_NAME_KEY, 
+        conf.get(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY, ""));
+ 
+    // Create the client
+    RefreshCallQueueProtocol refreshProtocol =
+      NameNodeProxies.createProxy(conf, FileSystem.getDefaultUri(conf),
+          RefreshCallQueueProtocol.class).getProxy();
+
+    // Refresh the user-to-groups mappings
+    refreshProtocol.refreshCallQueue();
+    
+    return 0;
+  }
+
   /**
    * Displays format of commands.
    * @param cmd The command that is being executed.
@@ -1093,6 +1121,9 @@ public class DFSAdmin extends FsShell {
     } else if ("-refreshSuperUserGroupsConfiguration".equals(cmd)) {
       System.err.println("Usage: java DFSAdmin"
                          + " [-refreshSuperUserGroupsConfiguration]");
+    } else if ("-refreshCallQueue".equals(cmd)) {
+      System.err.println("Usage: java DFSAdmin"
+                         + " [-refreshCallQueue]");
     } else if ("-printTopology".equals(cmd)) {
       System.err.println("Usage: java DFSAdmin"
                          + " [-printTopology]");
@@ -1125,6 +1156,7 @@ public class DFSAdmin extends FsShell {
       System.err.println("           [-refreshServiceAcl]");
       System.err.println("           [-refreshUserToGroupsMappings]");
       System.err.println("           [-refreshSuperUserGroupsConfiguration]");
+      System.err.println("           [-refreshCallQueue]");
       System.err.println("           [-printTopology]");
       System.err.println("           [-refreshNamenodes datanodehost:port]");
       System.err.println("           [-deleteBlockPool datanode-host:port blockpoolId [force]]");
@@ -1315,6 +1347,8 @@ public class DFSAdmin extends FsShell {
         exitCode = refreshUserToGroupsMappings();
       } else if ("-refreshSuperUserGroupsConfiguration".equals(cmd)) {
         exitCode = refreshSuperUserGroupsConfiguration();
+      } else if ("-refreshCallQueue".equals(cmd)) {
+        exitCode = refreshCallQueue();
       } else if ("-printTopology".equals(cmd)) {
         exitCode = printTopology();
       } else if ("-refreshNamenodes".equals(cmd)) {

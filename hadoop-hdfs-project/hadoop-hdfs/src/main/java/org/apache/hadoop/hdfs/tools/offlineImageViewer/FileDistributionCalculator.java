@@ -123,10 +123,10 @@ final class FileDistributionCalculator {
         totalBlocks += f.getBlocksCount();
         long fileSize = 0;
         for (BlockProto b : f.getBlocksList()) {
-          fileSize += b.getNumBytes() * f.getReplication();
+          fileSize += b.getNumBytes();
         }
         maxFileSize = Math.max(fileSize, maxFileSize);
-        totalSpace += fileSize;
+        totalSpace += fileSize * f.getReplication();
 
         int bucket = fileSize > maxSize ? distribution.length - 1 : (int) Math
             .ceil((double)fileSize / steps);

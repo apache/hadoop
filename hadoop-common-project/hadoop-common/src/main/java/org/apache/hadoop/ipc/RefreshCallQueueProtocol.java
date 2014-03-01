@@ -15,26 +15,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.ipc;
 
-package org.apache.hadoop.hdfs.server.protocol;
+import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.ha.HAServiceProtocol;
-import org.apache.hadoop.hdfs.protocol.ClientProtocol;
-import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
-import org.apache.hadoop.security.RefreshUserMappingsProtocol;
-import org.apache.hadoop.ipc.RefreshCallQueueProtocol;
-import org.apache.hadoop.tools.GetUserMappingsProtocol;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.io.retry.Idempotent;
+import org.apache.hadoop.security.KerberosInfo;
 
-/** The full set of RPC methods implemented by the Namenode.  */
-@InterfaceAudience.Private
-public interface NamenodeProtocols
-  extends ClientProtocol,
-          DatanodeProtocol,
-          NamenodeProtocol,
-          RefreshAuthorizationPolicyProtocol,
-          RefreshUserMappingsProtocol,
-          RefreshCallQueueProtocol,
-          GetUserMappingsProtocol,
-          HAServiceProtocol {
+/**
+ * Protocol which is used to refresh the call queue in use currently.
+ */
+@KerberosInfo(
+    serverPrincipal=CommonConfigurationKeys.HADOOP_SECURITY_SERVICE_USER_NAME_KEY)
+@InterfaceAudience.LimitedPrivate({"HDFS"})
+@InterfaceStability.Evolving
+public interface RefreshCallQueueProtocol {
+  
+  /**
+   * Version 1: Initial version
+   */
+  public static final long versionID = 1L;
+
+  /**
+   * Refresh the callqueue.
+   * @throws IOException
+   */
+  @Idempotent
+  void refreshCallQueue() throws IOException;
 }
