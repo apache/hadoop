@@ -816,6 +816,14 @@
 </property>
 
 <property>
+  <name>yarn.app.mapreduce.am.container.log.limit.kb</name>
+  <value>0</value>
+  <description>The maximum size of the MRAppMaster attempt container logs in KB.
+    0 disables the cap.
+  </description>
+</property>
+
+<property>
   <name>yarn.app.mapreduce.task.container.log.backups</name>
   <value>0</value>
   <description>Number of backup files for task logs when using

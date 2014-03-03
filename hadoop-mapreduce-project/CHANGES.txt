@@ -43,6 +43,9 @@ Release 2.4.0 - UNRELEASED
     MAPREDUCE-5754. Preserve Job diagnostics in history (Gera Shegalov via
     jlowe)
 
+    MAPREDUCE-5773. Provide dedicated MRAppMaster syslog length limit (Gera
+    Shegalov via jlowe)
+
   OPTIMIZATIONS
 
   BUG FIXES

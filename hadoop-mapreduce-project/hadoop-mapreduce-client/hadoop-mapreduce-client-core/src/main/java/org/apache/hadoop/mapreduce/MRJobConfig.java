@@ -409,9 +409,13 @@ public interface MRJobConfig {
     MR_AM_PREFIX+"log.level";
   public static final String DEFAULT_MR_AM_LOG_LEVEL = "INFO";
 
+  public static final String MR_AM_LOG_KB =
+      MR_AM_PREFIX + "container.log.limit.kb";
+  public static final int DEFAULT_MR_AM_LOG_KB = 0; // don't roll
+
   public static final String MR_AM_LOG_BACKUPS =
       MR_AM_PREFIX + "container.log.backups";
-  public static final int DEFAULT_MR_AM_LOG_BACKUPS = 0; // don't roll
+  public static final int DEFAULT_MR_AM_LOG_BACKUPS = 0;
 
   /**The number of splits when reporting progress in MR*/
   public static final String MR_AM_NUM_PROGRESS_SPLITS = 
