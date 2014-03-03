@@ -1138,6 +1138,27 @@
 </property>
 
 <property>
+  <name>dfs.datanode.shared.file.descriptor.path</name>
+  <value>/dev/shm</value>
+  <description>
+    The path to use when creating file descriptors that will be shared
+    between the DataNode and the DFSClient.  Typically we use /dev/shm, so
+    that the file descriptors will not be written to disk.  Systems that
+    don't have /dev/shm should use /tmp.
+  </description>
+</property>
+
+<property>
+  <name>dfs.short.circuit.shared.memory.watcher.interrupt.check.ms</name>
+  <value>60000</value>
+  <description>
+    The length of time in milliseconds that the short-circuit shared memory
+    watcher will go between checking for java interruptions sent from other
+    threads.  This is provided mainly for unit tests.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.kerberos.internal.spnego.principal</name>
   <value>${dfs.web.authentication.kerberos.principal}</value>
 </property>

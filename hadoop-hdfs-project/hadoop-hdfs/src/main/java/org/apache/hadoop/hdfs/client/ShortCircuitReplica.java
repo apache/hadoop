@@ -28,6 +28,7 @@ import java.nio.channels.FileChannel.MapMode;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.ExtendedBlockId;
+import org.apache.hadoop.hdfs.ShortCircuitShm.Slot;
 import org.apache.hadoop.hdfs.server.datanode.BlockMetadataHeader;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.nativeio.NativeIO;
@@ -81,6 +82,11 @@ public class ShortCircuitReplica {
   private final long creationTimeMs;
 
   /**
+   * If non-null, the shared memory slot associated with this replica.
+   */
+  private final Slot slot;
+  
+  /**
    * Current mmap state.
    *
    * Protected by the cache lock.
@@ -114,7 +120,7 @@ public class ShortCircuitReplica {
 
   public ShortCircuitReplica(ExtendedBlockId key,
       FileInputStream dataStream, FileInputStream metaStream,
-      ShortCircuitCache cache, long creationTimeMs) throws IOException {
+      ShortCircuitCache cache, long creationTimeMs, Slot slot) throws IOException {
     this.key = key;
     this.dataStream = dataStream;
     this.metaStream = metaStream;
@@ -126,6 +132,7 @@ public class ShortCircuitReplica {
     }
     this.cache = cache;
     this.creationTimeMs = creationTimeMs;
+    this.slot = slot;
   }
 
   /**
@@ -141,20 +148,60 @@ public class ShortCircuitReplica {
    * Must be called with the cache lock held.
    */
   boolean isStale() {
-    long deltaMs = Time.monotonicNow() - creationTimeMs;
-    long staleThresholdMs = cache.getStaleThresholdMs();
-    if (deltaMs > staleThresholdMs) {
+    if (slot != null) {
+      // Check staleness by looking at the shared memory area we use to
+      // communicate with the DataNode.
+      boolean stale = !slot.isValid();
       if (LOG.isTraceEnabled()) {
-        LOG.trace(this + " is stale because it's " + deltaMs +
-            " ms old, and staleThresholdMs = " + staleThresholdMs);
+        LOG.trace(this + ": checked shared memory segment.  isStale=" + stale);
       }
-      return true;
+      return stale;
     } else {
-      if (LOG.isTraceEnabled()) {
-        LOG.trace(this + " is not stale because it's only " + deltaMs +
-            " ms old, and staleThresholdMs = " + staleThresholdMs);
+      // Fall back to old, time-based staleness method.
+      long deltaMs = Time.monotonicNow() - creationTimeMs;
+      long staleThresholdMs = cache.getStaleThresholdMs();
+      if (deltaMs > staleThresholdMs) {
+        if (LOG.isTraceEnabled()) {
+          LOG.trace(this + " is stale because it's " + deltaMs +
+              " ms old, and staleThresholdMs = " + staleThresholdMs);
+        }
+        return true;
+      } else {
+        if (LOG.isTraceEnabled()) {
+          LOG.trace(this + " is not stale because it's only " + deltaMs +
+              " ms old, and staleThresholdMs = " + staleThresholdMs);
+        }
+        return false;
       }
+    }
+  }
+  
+  /**
+   * Try to add a no-checksum anchor to our shared memory slot.
+   *
+   * It is only possible to add this anchor when the block is mlocked on the Datanode.
+   * The DataNode will not munlock the block until the number of no-checksum anchors
+   * for the block reaches zero.
+   * 
+   * This method does not require any synchronization.
+   *
+   * @return     True if we successfully added a no-checksum anchor.
+   */
+  public boolean addNoChecksumAnchor() {
+    if (slot == null) {
       return false;
+    }
+    return slot.addAnchor();
+  }
+
+  /**
+   * Remove a no-checksum anchor for our shared memory slot.
+   *
+   * This method does not require any synchronization.
+   */
+  public void removeNoChecksumAnchor() {
+    if (slot != null) {
+      slot.removeAnchor();
     }
   }
 
@@ -165,7 +212,7 @@ public class ShortCircuitReplica {
    */
   @VisibleForTesting
   public boolean hasMmap() {
-    return ((mmapData != null) && (mmapData instanceof ClientMmap));
+    return ((mmapData != null) && (mmapData instanceof MappedByteBuffer));
   }
 
   /**
@@ -174,8 +221,8 @@ public class ShortCircuitReplica {
    * Must be called with the cache lock held.
    */
   void munmap() {
-    ClientMmap clientMmap = (ClientMmap)mmapData;
-    NativeIO.POSIX.munmap(clientMmap.getMappedByteBuffer());
+    MappedByteBuffer mmap = (MappedByteBuffer)mmapData;
+    NativeIO.POSIX.munmap(mmap);
     mmapData = null;
   }
 
@@ -186,12 +233,25 @@ public class ShortCircuitReplica {
    * cache or elsewhere.
    */
   void close() {
+    String suffix = "";
+    
     Preconditions.checkState(refCount == 0,
         "tried to close replica with refCount " + refCount + ": " + this);
+    refCount = -1;
     Preconditions.checkState(purged,
         "tried to close unpurged replica " + this);
-    if (hasMmap()) munmap();
+    if (hasMmap()) {
+      munmap();
+      suffix += "  munmapped.";
+    }
     IOUtils.cleanup(LOG, dataStream, metaStream);
+    if (slot != null) {
+      cache.scheduleSlotReleaser(slot);
+      suffix += "  scheduling " + slot + " for later release.";
+    }
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("closed " + this + suffix);
+    }
   }
 
   public FileInputStream getDataStream() {
@@ -210,8 +270,8 @@ public class ShortCircuitReplica {
     return key;
   }
 
-  public ClientMmap getOrCreateClientMmap() {
-    return cache.getOrCreateClientMmap(this);
+  public ClientMmap getOrCreateClientMmap(boolean anchor) {
+    return cache.getOrCreateClientMmap(this, anchor);
   }
 
   MappedByteBuffer loadMmapInternal() {
@@ -248,6 +308,11 @@ public class ShortCircuitReplica {
    */
   void setEvictableTimeNs(Long evictableTimeNs) {
     this.evictableTimeNs = evictableTimeNs;
+  }
+
+  @VisibleForTesting
+  public Slot getSlot() {
+    return slot;
   }
 
   /**

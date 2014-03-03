@@ -19,26 +19,23 @@ package org.apache.hadoop.hdfs.client;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 
+import java.io.Closeable;
 import java.nio.MappedByteBuffer;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 /**
- * A memory-mapped region used by an HDFS client.
- * 
- * This class includes a reference count and some other information used by
- * ClientMmapManager to track and cache mmaps.
+ * A reference to a memory-mapped region used by an HDFS client.
  */
 @InterfaceAudience.Private
-public class ClientMmap {
+public class ClientMmap implements Closeable {
   static final Log LOG = LogFactory.getLog(ClientMmap.class);
   
   /**
    * A reference to the block replica which this mmap relates to.
    */
-  private final ShortCircuitReplica replica;
+  private ShortCircuitReplica replica;
   
   /**
    * The java ByteBuffer object.
@@ -46,33 +43,30 @@ public class ClientMmap {
   private final MappedByteBuffer map;
 
   /**
-   * Reference count of this ClientMmap object.
+   * Whether or not this ClientMmap anchors the replica into memory while
+   * it exists.  Closing an anchored ClientMmap unanchors the replica.
    */
-  private final AtomicInteger refCount = new AtomicInteger(1);
+  private final boolean anchored;
 
-  ClientMmap(ShortCircuitReplica replica, MappedByteBuffer map) {
+  ClientMmap(ShortCircuitReplica replica, MappedByteBuffer map,
+      boolean anchored) {
     this.replica = replica;
     this.map = map;
+    this.anchored = anchored;
   }
 
   /**
-   * Increment the reference count.
-   *
-   * @return   The new reference count.
+   * Close the ClientMmap object.
    */
-  void ref() {
-    refCount.addAndGet(1);
-  }
-
-  /**
-   * Decrement the reference count.
-   *
-   * The parent replica gets unreferenced each time the reference count 
-   * of this object goes to 0.
-   */
-  public void unref() {
-    refCount.addAndGet(-1);
-    replica.unref();
+  @Override
+  public void close() {
+    if (replica != null) {
+      if (anchored) {
+        replica.removeNoChecksumAnchor();
+      }
+      replica.unref();
+    }
+    replica = null;
   }
 
   public MappedByteBuffer getMappedByteBuffer() {

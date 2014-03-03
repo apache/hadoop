@@ -266,6 +266,15 @@ public class FsDatasetCache {
     ExtendedBlockId key = new ExtendedBlockId(blockId, bpid);
     Value prevValue = mappableBlockMap.get(key);
 
+    if (!dataset.datanode.getShortCircuitRegistry().
+            processBlockMunlockRequest(key)) {
+      // TODO: we probably want to forcibly uncache the block (and close the 
+      // shm) after a certain timeout has elapsed.
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(key + " is anchored, and can't be uncached now.");
+      }
+      return;
+    }
     if (prevValue == null) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Block with id " + blockId + ", pool " + bpid + " " +
@@ -380,6 +389,7 @@ public class FsDatasetCache {
           LOG.debug("Successfully cached " + key + ".  We are now caching " +
               newUsedBytes + " bytes in total.");
         }
+        dataset.datanode.getShortCircuitRegistry().processBlockMlockEvent(key);
         numBlocksCached.addAndGet(1);
         success = true;
       } finally {

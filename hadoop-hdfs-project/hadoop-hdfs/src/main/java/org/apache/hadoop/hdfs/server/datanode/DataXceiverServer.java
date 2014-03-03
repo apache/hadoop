@@ -201,4 +201,8 @@ class DataXceiverServer implements Runnable {
     peers.remove(peer);
     IOUtils.cleanup(null, peer);
   }
+
+  synchronized void releasePeer(Peer peer) {
+    peers.remove(peer);
+  }
 }

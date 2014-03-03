@@ -128,6 +128,22 @@ message OpBlockChecksumProto {
   required BaseHeaderProto header = 1;
 }
 
+/**
+ * An ID uniquely identifying a shared memory segment.
+ */
+message ShortCircuitShmIdProto { 
+  required int64 hi = 1;
+  required int64 lo = 2;
+}
+
+/**
+ * An ID uniquely identifying a slot within a shared memory segment.
+ */
+message ShortCircuitShmSlotProto {
+  required ShortCircuitShmIdProto shmId = 1;
+  required int32 slotIdx = 2; 
+}
+
 message OpRequestShortCircuitAccessProto { 
   required BaseHeaderProto header = 1;
 
@@ -137,6 +153,32 @@ message OpRequestShortCircuitAccessProto {
    * if the on-disk format changes.
    */
   required uint32 maxVersion = 2;
+
+  /**
+   * The shared memory slot to use, if we are using one.
+   */
+  optional ShortCircuitShmSlotProto slotId = 3;
+}
+
+message ReleaseShortCircuitAccessRequestProto {
+  required ShortCircuitShmSlotProto slotId = 1;
+}
+
+message ReleaseShortCircuitAccessResponseProto {
+  required Status status = 1;
+  optional string error = 2;
+}
+
+message ShortCircuitShmRequestProto { 
+  // The name of the client requesting the shared memory segment.  This is
+  // purely for logging / debugging purposes.
+  required string clientName = 1;
+}
+
+message ShortCircuitShmResponseProto { 
+  required Status status = 1;
+  optional string error = 2;
+  optional ShortCircuitShmIdProto id = 3;
 }
 
 message PacketHeaderProto {

@@ -66,14 +66,18 @@ public class SharedFileDescriptorFactory {
   /**
    * Create a shared file descriptor which will be both readable and writable.
    *
+   * @param info           Information to include in the path of the 
+   *                         generated descriptor.
    * @param length         The starting file length.
    *
    * @return               The file descriptor, wrapped in a FileInputStream.
    * @throws IOException   If there was an I/O or configuration error creating
-   *                       the descriptor.
+   *                         the descriptor.
    */
-  public FileInputStream createDescriptor(int length) throws IOException {
-    return new FileInputStream(createDescriptor0(prefix, path, length));
+  public FileInputStream createDescriptor(String info, int length)
+      throws IOException {
+    return new FileInputStream(
+        createDescriptor0(prefix + info, path, length));
   }
 
   /**
