@@ -44,6 +44,7 @@ import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.RollingUpgradeStartupOption;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.common.Storage;
@@ -217,14 +218,18 @@ public class FSImage implements Closeable {
       NNStorage.checkVersionUpgradable(storage.getLayoutVersion());
     }
     if (startOpt != StartupOption.UPGRADE
-        && !StartupOption.isRollingUpgradeStarted(startOpt)
+        && !RollingUpgradeStartupOption.STARTED.matches(startOpt)
         && layoutVersion < Storage.LAST_PRE_UPGRADE_LAYOUT_VERSION
         && layoutVersion != HdfsConstants.NAMENODE_LAYOUT_VERSION) {
       throw new IOException(
           "\nFile system image contains an old layout version " 
           + storage.getLayoutVersion() + ".\nAn upgrade to version "
           + HdfsConstants.NAMENODE_LAYOUT_VERSION + " is required.\n"
-          + "Please restart NameNode with -upgrade option.");
+          + "Please restart NameNode with the \""
+          + RollingUpgradeStartupOption.STARTED.getOptionString()
+          + "\" option if a rolling upgraded is already started;"
+          + " or restart NameNode with the \""
+          + StartupOption.UPGRADE + "\" to start a new upgrade.");
     }
     
     storage.processStartupOptionsForUpgrade(startOpt, layoutVersion);
@@ -568,8 +573,8 @@ public class FSImage implements Closeable {
   private boolean loadFSImage(FSNamesystem target, StartupOption startOpt,
       MetaRecoveryContext recovery)
       throws IOException {
-    final boolean rollingRollback = StartupOption
-        .isRollingUpgradeRollback(startOpt);
+    final boolean rollingRollback
+        = RollingUpgradeStartupOption.ROLLBACK.matches(startOpt);
     final EnumSet<NameNodeFile> nnfs;
     if (rollingRollback) {
       // if it is rollback of rolling upgrade, only load from the rollback image
@@ -653,7 +658,7 @@ public class FSImage implements Closeable {
       long txnsAdvanced = loadEdits(editStreams, target, startOpt, recovery);
       needToSave |= needsResaveBasedOnStaleCheckpoint(imageFile.getFile(),
           txnsAdvanced);
-      if (StartupOption.isRollingUpgradeDowngrade(startOpt)) {
+      if (RollingUpgradeStartupOption.DOWNGRADE.matches(startOpt)) {
         // purge rollback image if it is downgrade
         archivalManager.purgeCheckpoints(NameNodeFile.IMAGE_ROLLBACK);
       }
@@ -724,8 +729,8 @@ public class FSImage implements Closeable {
       editLog.initJournalsForWrite();
       editLog.recoverUnclosedStreams();
     } else if (HAUtil.isHAEnabled(conf, nameserviceId)
-        && (startOpt == StartupOption.UPGRADE || StartupOption
-            .isRollingUpgradeRollback(startOpt))) {
+        && (startOpt == StartupOption.UPGRADE
+            || RollingUpgradeStartupOption.ROLLBACK.matches(startOpt))) {
       // This NN is HA, but we're doing an upgrade or a rollback of rolling
       // upgrade so init the edit log for write.
       editLog.initJournalsForWrite();

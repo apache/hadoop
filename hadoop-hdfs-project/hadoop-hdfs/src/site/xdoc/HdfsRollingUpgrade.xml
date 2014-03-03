@@ -65,15 +65,16 @@
     The following are the steps for upgrading a HA cluster:
   </p>
   <ol>
-    <li>Prepare Rolling Upgrade<ul>
+    <li>Prepare Rolling Upgrade<ol>
       <li>Run "<code><a href="#dfsadmin_-rollingUpgrade">hdfs dfsadmin -rollingUpgrade prepare</a></code>"
         to create a fsimage for rollback.
       </li>
       <li>Run "<code><a href="#dfsadmin_-rollingUpgrade">hdfs dfsadmin -rollingUpgrade query</a></code>"
         to check the status of the rollback image.
-        Wait and re-run the command until the "Proceed with rolling upgrade" message is shown.
+        Wait and re-run the command until
+        the "<tt>Proceed with rolling upgrade</tt>" message is shown.
       </li>
-    </ul></li>
+    </ol></li>
     <li>Upgrade Active and Standby <em>NNs</em><ol>
       <li>Shutdown and upgrade <em>NN2</em>.</li>
       <li>Start <em>NN2</em> as standby with the
@@ -92,7 +93,7 @@
         <li>Run "<code><a href="#dfsadmin_-getDatanodeInfo">hdfs dfsadmin -getDatanodeInfo &lt;DATANODE_HOST:IPC_PORT&gt;</a></code>"
           to check and wait for the datanode to shutdown.</li>
         <li>Upgrade and restart the datanode.</li>
-        <li>Repeat the above steps for all the chosen datanodes in the subset.</li>
+        <li>Perform the above steps for all the chosen datanodes in the subset in parallel.</li>
       </ol>
       <li>Repeat the above steps until all datanodes in the cluster are upgraded.</li>
     </ol></li>
@@ -137,7 +138,7 @@
     <li>Upgrade <em>NN</em> and <em>SNN</em><ol>
       <li>Shutdown <em>SNN</em></li>
       <li>Shutdown and upgrade <em>NN</em>.</li>
-      <li>Start <em>NN</em> as standby with the
+      <li>Start <em>NN</em> with the
         "<a href="#namenode_-rollingUpgrade"><code>-rollingUpgrade started</code></a>" option.</li>
       <li>Upgrade and restart <em>SNN</em></li>
     </ol></li>
@@ -149,7 +150,7 @@
   <p>
     When the upgraded release is undesirable
     or, in some unlikely case, the upgrade fails (due to bugs in the newer release),
-    administrators may choose to downgrade HDFS back to the pre-upgrade release
+    administrators may choose to downgrade HDFS back to the pre-upgrade release,
     or rollback HDFS to the pre-upgrade release and the pre-upgrade state.
     Both downgrade and rollback require cluster downtime and are not done in a rolling fashion.
   </p>
@@ -157,8 +158,8 @@
     Note that downgrade and rollback are possible only after a rolling upgrade is started and
     before the upgrade is terminated.
     An upgrade can be terminated by either finalize, downgrade or rollback.
-    Therefore, it is impossible to run rollback after finalize or downgrade,
-    or to run downgrade after finalize.
+    Therefore, it may not be possible to perform rollback after finalize or downgrade,
+    or to perform downgrade after finalize.
   </p>
 
   <subsection name="Downgrade" id="Downgrade">

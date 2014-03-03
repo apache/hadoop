@@ -134,3 +134,6 @@ HDFS-5535 subtasks:
     HDFS-6013. add rollingUpgrade information to latest UI.
     (Vinayakumar B via wheat9)
 
+    HDFS-6042. Fix rolling upgrade documentation and error messages. (szetszwo
+    via Arpit Agarwal)
+

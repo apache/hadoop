@@ -50,7 +50,17 @@ public final class HdfsServerConstants {
   /** Startup options for rolling upgrade. */
   public static enum RollingUpgradeStartupOption{
     ROLLBACK, DOWNGRADE, STARTED;
-    
+
+    public String getOptionString() {
+      return StartupOption.ROLLINGUPGRADE.getName() + " "
+          + name().toLowerCase();
+    }
+
+    public boolean matches(StartupOption option) {
+      return option == StartupOption.ROLLINGUPGRADE
+          && option.getRollingUpgradeStartupOption() == this;
+    }
+
     private static final RollingUpgradeStartupOption[] VALUES = values();
 
     static RollingUpgradeStartupOption fromString(String s) {
@@ -86,24 +96,6 @@ public final class HdfsServerConstants {
 
     private static final Pattern ENUM_WITH_ROLLING_UPGRADE_OPTION = Pattern.compile(
         "(\\w+)\\((\\w+)\\)");
-
-    public static boolean isRollingUpgradeRollback(StartupOption option) {
-      return option == ROLLINGUPGRADE
-          && option.getRollingUpgradeStartupOption() 
-               == RollingUpgradeStartupOption.ROLLBACK;
-    }
-
-    public static boolean isRollingUpgradeDowngrade(StartupOption option) {
-      return option == ROLLINGUPGRADE
-          && option.getRollingUpgradeStartupOption()
-               == RollingUpgradeStartupOption.DOWNGRADE;
-    }
-
-    public static boolean isRollingUpgradeStarted(StartupOption option) {
-      return option == ROLLINGUPGRADE
-          && option.getRollingUpgradeStartupOption() 
-               == RollingUpgradeStartupOption.STARTED;
-    }
 
     private final String name;
     
