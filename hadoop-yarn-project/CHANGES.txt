@@ -378,6 +378,9 @@ Release 2.4.0 - UNRELEASED
     configuration files and thus fix failures in downstream tests. (Xuan Gong via
     vinodkv)
 
+    YARN-1748. Excluded core-site.xml from hadoop-yarn-server-tests package's jar
+    and thus avoid breaking downstream tests. (Sravya Tirukkovalur via vinodkv)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
