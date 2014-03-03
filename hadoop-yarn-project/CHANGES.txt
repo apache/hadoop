@@ -228,6 +228,9 @@ Release 2.4.0 - UNRELEASED
 
     YARN-1528. Allow setting auth for ZK connections. (kasha)
 
+    YARN-1704. Modified LICENSE and NOTICE files to reflect newly used levelDB
+    related libraries. (Billie Rinaldi via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
