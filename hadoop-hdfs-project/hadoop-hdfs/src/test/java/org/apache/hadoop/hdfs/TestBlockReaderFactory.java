@@ -18,7 +18,9 @@
 package org.apache.hadoop.hdfs;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -29,8 +31,11 @@ import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.client.DfsClientShmManager.PerDatanodeVisitorInfo;
+import org.apache.hadoop.hdfs.client.DfsClientShmManager.Visitor;
 import org.apache.hadoop.hdfs.client.ShortCircuitCache;
 import org.apache.hadoop.hdfs.client.ShortCircuitReplicaInfo;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.net.unix.DomainSocket;
 import org.apache.hadoop.net.unix.TemporarySocketDirectory;
@@ -47,6 +52,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_CONTEXT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DOMAIN_SOCKET_PATH_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_SKIP_CHECKSUM_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SHORT_CIRCUIT_SHARED_MEMORY_WATCHER_INTERRUPT_CHECK_MS;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC;
 import static org.hamcrest.CoreMatchers.equalTo;
 
@@ -56,10 +62,6 @@ public class TestBlockReaderFactory {
   @Before
   public void init() {
     DomainSocket.disableBindPathValidation();
-  }
-
-  @Before
-  public void before() {
     Assume.assumeThat(DomainSocket.getLoadingFailureReason(), equalTo(null));
   }
 
@@ -69,7 +71,7 @@ public class TestBlockReaderFactory {
     BlockReaderFactory.createShortCircuitReplicaInfoCallback = null;
   }
 
-  private static Configuration createShortCircuitConf(String testName,
+  public static Configuration createShortCircuitConf(String testName,
       TemporarySocketDirectory sockDir) {
     Configuration conf = new Configuration();
     conf.set(DFS_CLIENT_CONTEXT, testName);
@@ -99,6 +101,8 @@ public class TestBlockReaderFactory {
     // the client is.  Both support UNIX domain reads.
     Configuration clientConf = createShortCircuitConf(
         "testFallbackFromShortCircuitToUnixDomainTraffic", sockDir);
+    clientConf.set(DFS_CLIENT_CONTEXT,
+        "testFallbackFromShortCircuitToUnixDomainTraffic_clientContext");
     clientConf.setBoolean(DFS_CLIENT_DOMAIN_SOCKET_DATA_TRAFFIC, true);
     Configuration serverConf = new Configuration(clientConf);
     serverConf.setBoolean(DFS_CLIENT_READ_SHORTCIRCUIT_KEY, false);
@@ -288,5 +292,88 @@ public class TestBlockReaderFactory {
     cluster.shutdown();
     sockDir.close();
     Assert.assertFalse(testFailed.get());
+  }
+
+   /**
+   * Test that a client which supports short-circuit reads using
+   * shared memory can fall back to not using shared memory when
+   * the server doesn't support it.
+   */
+  @Test
+  public void testShortCircuitReadFromServerWithoutShm() throws Exception {
+    TemporarySocketDirectory sockDir = new TemporarySocketDirectory();
+    Configuration clientConf = createShortCircuitConf(
+        "testShortCircuitReadFromServerWithoutShm", sockDir);
+    Configuration serverConf = new Configuration(clientConf);
+    serverConf.setInt(
+        DFS_SHORT_CIRCUIT_SHARED_MEMORY_WATCHER_INTERRUPT_CHECK_MS, 0);
+    DFSInputStream.tcpReadsDisabledForTesting = true;
+    final MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(serverConf).numDataNodes(1).build();
+    cluster.waitActive();
+    clientConf.set(DFS_CLIENT_CONTEXT,
+        "testShortCircuitReadFromServerWithoutShm_clientContext");
+    final DistributedFileSystem fs =
+        (DistributedFileSystem)FileSystem.get(cluster.getURI(0), clientConf);
+    final String TEST_FILE = "/test_file";
+    final int TEST_FILE_LEN = 4000;
+    final int SEED = 0xFADEC;
+    DFSTestUtil.createFile(fs, new Path(TEST_FILE), TEST_FILE_LEN,
+        (short)1, SEED);
+    byte contents[] = DFSTestUtil.readFileBuffer(fs, new Path(TEST_FILE));
+    byte expected[] = DFSTestUtil.
+        calculateFileContentsFromSeed(SEED, TEST_FILE_LEN);
+    Assert.assertTrue(Arrays.equals(contents, expected));
+    final ShortCircuitCache cache =
+        fs.dfs.getClientContext().getShortCircuitCache();
+    final DatanodeInfo datanode =
+        new DatanodeInfo(cluster.getDataNodes().get(0).getDatanodeId());
+    cache.getDfsClientShmManager().visit(new Visitor() {
+      @Override
+      public void visit(HashMap<DatanodeInfo, PerDatanodeVisitorInfo> info)
+          throws IOException {
+        Assert.assertEquals(1,  info.size());
+        PerDatanodeVisitorInfo vinfo = info.get(datanode);
+        Assert.assertTrue(vinfo.disabled);
+        Assert.assertEquals(0, vinfo.full.size());
+        Assert.assertEquals(0, vinfo.notFull.size());
+      }
+    });
+    cluster.shutdown();
+  }
+ 
+  /**
+   * Test that a client which does not support short-circuit reads using
+   * shared memory can talk with a server which supports it.
+   */
+  @Test
+  public void testShortCircuitReadFromClientWithoutShm() throws Exception {
+    TemporarySocketDirectory sockDir = new TemporarySocketDirectory();
+    Configuration clientConf = createShortCircuitConf(
+        "testShortCircuitReadWithoutShm", sockDir);
+    Configuration serverConf = new Configuration(clientConf);
+    DFSInputStream.tcpReadsDisabledForTesting = true;
+    final MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(serverConf).numDataNodes(1).build();
+    cluster.waitActive();
+    clientConf.setInt(
+        DFS_SHORT_CIRCUIT_SHARED_MEMORY_WATCHER_INTERRUPT_CHECK_MS, 0);
+    clientConf.set(DFS_CLIENT_CONTEXT,
+        "testShortCircuitReadFromClientWithoutShm_clientContext");
+    final DistributedFileSystem fs =
+        (DistributedFileSystem)FileSystem.get(cluster.getURI(0), clientConf);
+    final String TEST_FILE = "/test_file";
+    final int TEST_FILE_LEN = 4000;
+    final int SEED = 0xFADEC;
+    DFSTestUtil.createFile(fs, new Path(TEST_FILE), TEST_FILE_LEN,
+        (short)1, SEED);
+    byte contents[] = DFSTestUtil.readFileBuffer(fs, new Path(TEST_FILE));
+    byte expected[] = DFSTestUtil.
+        calculateFileContentsFromSeed(SEED, TEST_FILE_LEN);
+    Assert.assertTrue(Arrays.equals(contents, expected));
+    final ShortCircuitCache cache =
+        fs.dfs.getClientContext().getShortCircuitCache();
+    Assert.assertEquals(null, cache.getDfsClientShmManager());
+    cluster.shutdown();
   }
 }

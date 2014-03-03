@@ -99,7 +99,8 @@ public class ClientContext {
         conf.shortCircuitMmapCacheSize,
         conf.shortCircuitMmapCacheExpiryMs,
         conf.shortCircuitMmapCacheRetryTimeout,
-        conf.shortCircuitCacheStaleThresholdMs);
+        conf.shortCircuitCacheStaleThresholdMs,
+        conf.shortCircuitSharedMemoryWatcherInterruptCheckMs);
     this.peerCache =
           new PeerCache(conf.socketCacheCapacity, conf.socketCacheExpiry);
     this.useLegacyBlockReaderLocal = conf.useLegacyBlockReaderLocal;
@@ -129,7 +130,9 @@ public class ClientContext {
       append(", useLegacyBlockReaderLocal = ").
       append(conf.useLegacyBlockReaderLocal).
       append(", domainSocketDataTraffic = ").
-      append(conf.domainSocketDataTraffic);
+      append(conf.domainSocketDataTraffic).
+      append(", shortCircuitSharedMemoryWatcherInterruptCheckMs = ").
+      append(conf.shortCircuitSharedMemoryWatcherInterruptCheckMs);
 
     return builder.toString();
   }

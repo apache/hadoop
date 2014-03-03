@@ -81,7 +81,7 @@ public final class DomainSocketWatcher implements Closeable {
    */
   private static native void anchorNative();
 
-  interface Handler {
+  public interface Handler {
     /**
      * Handles an event on a socket.  An event may be the socket becoming
      * readable, or the remote end being closed.
@@ -228,9 +228,9 @@ public final class DomainSocketWatcher implements Closeable {
     if (loadingFailureReason != null) {
       throw new UnsupportedOperationException(loadingFailureReason);
     }
-    notificationSockets = DomainSocket.socketpair();
-    this.interruptCheckPeriodMs = interruptCheckPeriodMs;
     Preconditions.checkArgument(interruptCheckPeriodMs > 0);
+    this.interruptCheckPeriodMs = interruptCheckPeriodMs;
+    notificationSockets = DomainSocket.socketpair();
     watcherThread.start();
   }
 
@@ -241,8 +241,8 @@ public final class DomainSocketWatcher implements Closeable {
    */
   @Override
   public void close() throws IOException {
+    lock.lock();
     try {
-      lock.lock();
       if (closed) return;
       LOG.info(this + ": closing");
       closed = true;
@@ -266,15 +266,17 @@ public final class DomainSocketWatcher implements Closeable {
    *                   called any time after this function is called.
    */
   public void add(DomainSocket sock, Handler handler) {
+    lock.lock();
     try {
-      lock.lock();
       checkNotClosed();
       Entry entry = new Entry(sock, handler);
       try {
         sock.refCount.reference();
-      } catch (ClosedChannelException e) {
-        Preconditions.checkArgument(false,
-            "tried to add a closed DomainSocket to " + this);
+      } catch (ClosedChannelException e1) {
+        // If the socket is already closed before we add it, invoke the
+        // handler immediately.  Then we're done.
+        handler.handle(sock);
+        return;
       }
       toAdd.add(entry);
       kick();
@@ -300,8 +302,8 @@ public final class DomainSocketWatcher implements Closeable {
    * @param sock     The socket to remove.
    */
   public void remove(DomainSocket sock) {
+    lock.lock();
     try {
-      lock.lock();
       checkNotClosed();
       toRemove.put(sock.fd, sock);
       kick();
@@ -328,7 +330,9 @@ public final class DomainSocketWatcher implements Closeable {
     try {
       notificationSockets[0].getOutputStream().write(0);
     } catch (IOException e) {
-      LOG.error(this + ": error writing to notificationSockets[0]", e);
+      if (!closed) {
+        LOG.error(this + ": error writing to notificationSockets[0]", e);
+      }
     }
   }
 

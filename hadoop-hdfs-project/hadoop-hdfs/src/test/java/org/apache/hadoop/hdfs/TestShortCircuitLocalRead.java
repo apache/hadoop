@@ -421,7 +421,7 @@ public class TestShortCircuitLocalRead {
     }
   }
 
-  @Test
+  @Test(timeout=120000)
   public void testHandleTruncatedBlockFile() throws IOException {
     MiniDFSCluster cluster = null;
     HdfsConfiguration conf = new HdfsConfiguration();

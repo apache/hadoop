@@ -231,6 +231,7 @@ public class DataNode extends Configured
   AtomicInteger xmitsInProgress = new AtomicInteger();
   Daemon dataXceiverServer = null;
   Daemon localDataXceiverServer = null;
+  ShortCircuitRegistry shortCircuitRegistry = null;
   ThreadGroup threadGroup = null;
   private DNConf dnConf;
   private volatile boolean heartbeatsDisabledForTests = false;
@@ -580,6 +581,7 @@ public class DataNode extends Configured
             domainPeerServer.getBindPath());
       }
     }
+    this.shortCircuitRegistry = new ShortCircuitRegistry(conf);
   }
 
   static DomainPeerServer getDomainPeerServer(Configuration conf,
@@ -1318,6 +1320,7 @@ public class DataNode extends Configured
       MBeans.unregister(dataNodeInfoBeanName);
       dataNodeInfoBeanName = null;
     }
+    if (shortCircuitRegistry != null) shortCircuitRegistry.shutdown();
   }
   
   
@@ -1954,7 +1957,8 @@ public class DataNode extends Configured
    * 
    * @return the fsdataset that stores the blocks
    */
-  FsDatasetSpi<?> getFSDataset() {
+  @VisibleForTesting
+  public FsDatasetSpi<?> getFSDataset() {
     return data;
   }
 
@@ -2514,5 +2518,9 @@ public class DataNode extends Configured
 
   boolean shouldRun() {
     return shouldRun;
+  }
+
+  public ShortCircuitRegistry getShortCircuitRegistry() {
+    return shortCircuitRegistry;
   }
 }

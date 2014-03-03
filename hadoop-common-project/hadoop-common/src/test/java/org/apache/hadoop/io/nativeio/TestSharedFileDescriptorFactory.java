@@ -44,7 +44,8 @@ public class TestSharedFileDescriptorFactory {
     path.mkdirs();
     SharedFileDescriptorFactory factory =
         new SharedFileDescriptorFactory("woot_", path.getAbsolutePath());
-    FileInputStream inStream = factory.createDescriptor(4096);
+    FileInputStream inStream =
+        factory.createDescriptor("testReadAndWrite", 4096);
     FileOutputStream outStream = new FileOutputStream(inStream.getFD());
     outStream.write(101);
     inStream.getChannel().position(0);

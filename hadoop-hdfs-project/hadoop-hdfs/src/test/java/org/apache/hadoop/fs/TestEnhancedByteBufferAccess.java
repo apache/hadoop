@@ -17,9 +17,15 @@
  */
 package org.apache.hadoop.fs;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CACHEREPORT_INTERVAL_MSEC_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_LOCKED_MEMORY_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_PATH_BASED_CACHE_REFRESH_INTERVAL_MS;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.concurrent.TimeoutException;
@@ -34,6 +40,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.BlockReaderTestUtil;
 import org.apache.hadoop.hdfs.ExtendedBlockId;
 import org.apache.hadoop.hdfs.ClientContext;
 import org.apache.hadoop.hdfs.DFSClient;
@@ -42,18 +49,24 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.ShortCircuitShm.Slot;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
 import org.apache.hadoop.hdfs.client.ShortCircuitCache;
 import org.apache.hadoop.hdfs.client.ShortCircuitCache.CacheVisitor;
 import org.apache.hadoop.hdfs.client.ShortCircuitReplica;
+import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
+import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.io.ByteBufferPool;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.nativeio.NativeIO;
+import org.apache.hadoop.io.nativeio.NativeIO.POSIX.CacheManipulator;
 import org.apache.hadoop.net.unix.DomainSocket;
 import org.apache.hadoop.net.unix.TemporarySocketDirectory;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.BeforeClass;
@@ -71,12 +84,28 @@ public class TestEnhancedByteBufferAccess {
   private static final Log LOG =
       LogFactory.getLog(TestEnhancedByteBufferAccess.class.getName());
 
-  static TemporarySocketDirectory sockDir;
+  static private TemporarySocketDirectory sockDir;
+
+  static private CacheManipulator prevCacheManipulator;
 
   @BeforeClass
   public static void init() {
     sockDir = new TemporarySocketDirectory();
     DomainSocket.disableBindPathValidation();
+    prevCacheManipulator = NativeIO.POSIX.getCacheManipulator();
+    NativeIO.POSIX.setCacheManipulator(new CacheManipulator() {
+      @Override
+      public void mlock(String identifier,
+          ByteBuffer mmap, long length) throws IOException {
+        LOG.info("mlocking " + identifier);
+      }
+    });
+  }
+
+  @AfterClass
+  public static void teardown() {
+    // Restore the original CacheManipulator
+    NativeIO.POSIX.setCacheManipulator(prevCacheManipulator);
   }
 
   private static byte[] byteBufferToArray(ByteBuffer buf) {
@@ -86,12 +115,14 @@ public class TestEnhancedByteBufferAccess {
     return resultArray;
   }
   
+  private static int BLOCK_SIZE = 4096;
+  
   public static HdfsConfiguration initZeroCopyTest() {
     Assume.assumeTrue(NativeIO.isAvailable());
     Assume.assumeTrue(SystemUtils.IS_OS_UNIX);
     HdfsConfiguration conf = new HdfsConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_KEY, true);
-    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 4096);
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
     conf.setInt(DFSConfigKeys.DFS_CLIENT_MMAP_CACHE_SIZE, 3);
     conf.setLong(DFSConfigKeys.DFS_CLIENT_MMAP_CACHE_TIMEOUT_MS, 100);
     conf.set(DFSConfigKeys.DFS_DOMAIN_SOCKET_PATH_KEY,
@@ -99,6 +130,9 @@ public class TestEnhancedByteBufferAccess {
           "TestRequestMmapAccess._PORT.sock").getAbsolutePath());
     conf.setBoolean(DFSConfigKeys.
         DFS_CLIENT_READ_SHORTCIRCUIT_SKIP_CHECKSUM_KEY, true);
+    conf.setLong(DFS_HEARTBEAT_INTERVAL_KEY, 1);
+    conf.setLong(DFS_CACHEREPORT_INTERVAL_MSEC_KEY, 1000);
+    conf.setLong(DFS_NAMENODE_PATH_BASED_CACHE_REFRESH_INTERVAL_MS, 1000);
     return conf;
   }
 
@@ -548,5 +582,120 @@ public class TestEnhancedByteBufferAccess {
       IOUtils.cleanup(LOG, fos, fis);
       new File(TEST_PATH).delete();
     }
+  }
+
+  /**
+   * Test that we can zero-copy read cached data even without disabling
+   * checksums.
+   */
+  @Test(timeout=120000)
+  public void testZeroCopyReadOfCachedData() throws Exception {
+    BlockReaderTestUtil.enableShortCircuitShmTracing();
+    BlockReaderTestUtil.enableBlockReaderFactoryTracing();
+    BlockReaderTestUtil.enableHdfsCachingTracing();
+
+    final int TEST_FILE_LENGTH = 16385;
+    final Path TEST_PATH = new Path("/a");
+    final int RANDOM_SEED = 23453;
+    HdfsConfiguration conf = initZeroCopyTest();
+    conf.setBoolean(DFSConfigKeys.
+        DFS_CLIENT_READ_SHORTCIRCUIT_SKIP_CHECKSUM_KEY, false);
+    final String CONTEXT = "testZeroCopyReadOfCachedData";
+    conf.set(DFSConfigKeys.DFS_CLIENT_CONTEXT, CONTEXT);
+    conf.setLong(DFS_DATANODE_MAX_LOCKED_MEMORY_KEY,
+        DFSTestUtil.roundUpToMultiple(TEST_FILE_LENGTH, 4096));
+    MiniDFSCluster cluster = null;
+    ByteBuffer result = null;
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+    cluster.waitActive();
+    FsDatasetSpi<?> fsd = cluster.getDataNodes().get(0).getFSDataset();
+    DistributedFileSystem fs = cluster.getFileSystem();
+    DFSTestUtil.createFile(fs, TEST_PATH,
+        TEST_FILE_LENGTH, (short)1, RANDOM_SEED);
+    DFSTestUtil.waitReplication(fs, TEST_PATH, (short)1);
+    byte original[] = DFSTestUtil.
+        calculateFileContentsFromSeed(RANDOM_SEED, TEST_FILE_LENGTH);
+
+    // Prior to caching, the file can't be read via zero-copy
+    FSDataInputStream fsIn = fs.open(TEST_PATH);
+    try {
+      result = fsIn.read(null, TEST_FILE_LENGTH / 2,
+          EnumSet.noneOf(ReadOption.class));
+      Assert.fail("expected UnsupportedOperationException");
+    } catch (UnsupportedOperationException e) {
+      // expected
+    }
+    // Cache the file
+    fs.addCachePool(new CachePoolInfo("pool1"));
+    long directiveId = fs.addCacheDirective(new CacheDirectiveInfo.Builder().
+        setPath(TEST_PATH).
+        setReplication((short)1).
+        setPool("pool1").
+        build());
+    int numBlocks = (int)Math.ceil((double)TEST_FILE_LENGTH / BLOCK_SIZE);
+    DFSTestUtil.verifyExpectedCacheUsage(
+        DFSTestUtil.roundUpToMultiple(TEST_FILE_LENGTH, BLOCK_SIZE),
+        numBlocks, cluster.getDataNodes().get(0).getFSDataset());
+    try {
+      result = fsIn.read(null, TEST_FILE_LENGTH,
+          EnumSet.noneOf(ReadOption.class));
+    } catch (UnsupportedOperationException e) {
+      Assert.fail("expected to be able to read cached file via zero-copy");
+    }
+    // Verify result
+    Assert.assertArrayEquals(Arrays.copyOfRange(original, 0,
+        BLOCK_SIZE), byteBufferToArray(result));
+    // check that the replica is anchored 
+    final ExtendedBlock firstBlock =
+        DFSTestUtil.getFirstBlock(fs, TEST_PATH);
+    final ShortCircuitCache cache = ClientContext.get(
+        CONTEXT, new DFSClient.Conf(conf)). getShortCircuitCache();
+    waitForReplicaAnchorStatus(cache, firstBlock, true, true, 1);
+    // Uncache the replica
+    fs.removeCacheDirective(directiveId);
+    waitForReplicaAnchorStatus(cache, firstBlock, false, true, 1);
+    fsIn.releaseBuffer(result);
+    waitForReplicaAnchorStatus(cache, firstBlock, false, false, 1);
+    DFSTestUtil.verifyExpectedCacheUsage(0, 0, fsd);
+
+    fsIn.close();
+    fs.close();
+    cluster.shutdown();
+  }
+  
+  private void waitForReplicaAnchorStatus(final ShortCircuitCache cache,
+      final ExtendedBlock block, final boolean expectedIsAnchorable,
+        final boolean expectedIsAnchored, final int expectedOutstandingMmaps)
+          throws Exception {
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        final MutableBoolean result = new MutableBoolean(false);
+        cache.accept(new CacheVisitor() {
+          @Override
+          public void visit(int numOutstandingMmaps,
+              Map<ExtendedBlockId, ShortCircuitReplica> replicas,
+              Map<ExtendedBlockId, InvalidToken> failedLoads,
+              Map<Long, ShortCircuitReplica> evictable,
+              Map<Long, ShortCircuitReplica> evictableMmapped) {
+            Assert.assertEquals(expectedOutstandingMmaps, numOutstandingMmaps);
+            ShortCircuitReplica replica =
+                replicas.get(ExtendedBlockId.fromExtendedBlock(block));
+            Assert.assertNotNull(replica);
+            Slot slot = replica.getSlot();
+            if ((expectedIsAnchorable != slot.isAnchorable()) ||
+                (expectedIsAnchored != slot.isAnchored())) {
+              LOG.info("replica " + replica + " has isAnchorable = " +
+                slot.isAnchorable() + ", isAnchored = " + slot.isAnchored() + 
+                ".  Waiting for isAnchorable = " + expectedIsAnchorable + 
+                ", isAnchored = " + expectedIsAnchored);
+              return;
+            }
+            result.setValue(true);
+          }
+        });
+        return result.toBoolean();
+      }
+    }, 10, 60000);
   }
 }
