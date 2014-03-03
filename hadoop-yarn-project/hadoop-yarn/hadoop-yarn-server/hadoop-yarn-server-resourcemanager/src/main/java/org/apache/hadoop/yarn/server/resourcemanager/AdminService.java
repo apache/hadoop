@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.util.Map;
 import java.util.Set;
@@ -538,8 +539,11 @@ public class AdminService extends CompositeService implements
 
   private synchronized Configuration getConfiguration(Configuration conf,
       String confFileName) throws YarnException, IOException {
-    conf.addResource(this.rmContext.getConfigurationProvider()
-        .getConfigurationInputStream(conf, confFileName));
+    InputStream confFileInputStream = this.rmContext.getConfigurationProvider()
+        .getConfigurationInputStream(conf, confFileName);
+    if (confFileInputStream != null) {
+      conf.addResource(confFileInputStream);
+    }
     return conf;
   }
 
