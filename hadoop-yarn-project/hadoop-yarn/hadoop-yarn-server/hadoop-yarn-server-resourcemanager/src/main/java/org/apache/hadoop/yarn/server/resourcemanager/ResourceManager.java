@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
@@ -190,13 +191,20 @@ public class ResourceManager extends CompositeService implements Recoverable {
     rmContext.setConfigurationProvider(configurationProvider);
 
     // load yarn-site.xml
-    this.conf.addResource(this.configurationProvider
-        .getConfigurationInputStream(this.conf,
-            YarnConfiguration.YARN_SITE_CONFIGURATION_FILE));
+    InputStream yarnSiteXMLInputStream =
+        this.configurationProvider.getConfigurationInputStream(this.conf,
+            YarnConfiguration.YARN_SITE_CONFIGURATION_FILE);
+    if (yarnSiteXMLInputStream != null) {
+      this.conf.addResource(yarnSiteXMLInputStream);
+    }
     // load core-site.xml
-    this.conf.addResource(this.configurationProvider
-        .getConfigurationInputStream(this.conf,
-            YarnConfiguration.CORE_SITE_CONFIGURATION_FILE));
+    InputStream coreSiteXMLInputStream =
+        this.configurationProvider.getConfigurationInputStream(this.conf,
+            YarnConfiguration.CORE_SITE_CONFIGURATION_FILE);
+    if (coreSiteXMLInputStream != null) {
+      this.conf.addResource(coreSiteXMLInputStream);
+    }
+
     // Do refreshUserToGroupsMappings with loaded core-site.xml
     Groups.getUserToGroupsMappingServiceWithLoadedConfiguration(this.conf)
         .refresh();

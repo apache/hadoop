@@ -54,13 +54,14 @@ public class FileSystemBasedConfigurationProvider
     if (YarnConfiguration.RM_CONFIGURATION_FILES.contains(name)) {
       filePath = new Path(this.configDir, name);
       if (!fs.exists(filePath)) {
-        throw new YarnException("Can not find Configuration: " + name + " in "
-            + configDir);
+        LOG.info(filePath + " not found");
+        return null;
       }
     } else {
       filePath = new Path(name);
       if (!fs.exists(filePath)) {
-        throw new YarnException("Can not find file: " + name);
+        LOG.info(filePath + " not found");
+        return null;
       }
     }
     return fs.open(filePath);
