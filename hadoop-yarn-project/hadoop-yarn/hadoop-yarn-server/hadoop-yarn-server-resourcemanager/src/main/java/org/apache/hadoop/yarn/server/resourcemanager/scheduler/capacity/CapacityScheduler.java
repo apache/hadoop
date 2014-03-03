@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -1024,10 +1025,15 @@ public class CapacityScheduler extends AbstractYarnScheduler
   private CapacitySchedulerConfiguration loadCapacitySchedulerConfiguration(
       Configuration configuration) throws IOException {
     try {
-      configuration.addResource(this.rmContext.getConfigurationProvider()
-          .getConfigurationInputStream(configuration,
-              YarnConfiguration.CS_CONFIGURATION_FILE));
-      return new CapacitySchedulerConfiguration(configuration, false);
+      InputStream CSInputStream =
+          this.rmContext.getConfigurationProvider()
+              .getConfigurationInputStream(configuration,
+                  YarnConfiguration.CS_CONFIGURATION_FILE);
+      if (CSInputStream != null) {
+        configuration.addResource(CSInputStream);
+        return new CapacitySchedulerConfiguration(configuration, false);
+      }
+      return new CapacitySchedulerConfiguration(configuration, true);
     } catch (Exception e) {
       throw new IOException(e);
     }
