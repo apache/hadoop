@@ -278,6 +278,14 @@ public class TestOfflineImageViewer {
   }
 
   @Test
+  public void testFileDistributionCalculatorWithOptions() throws IOException {
+    int status = OfflineImageViewerPB.run(new String[] {"-i",
+        originalFsimage.getAbsolutePath(), "-o", "-", "-p", "FileDistribution",
+        "-maxSize", "512", "-step", "8"});
+    assertEquals(0, status);
+  }
+
+  @Test
   public void testPBImageXmlWriter() throws IOException, SAXException,
       ParserConfigurationException {
     StringWriter output = new StringWriter();
