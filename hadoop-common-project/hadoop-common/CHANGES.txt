@@ -315,6 +315,9 @@ Release 2.5.0 - UNRELEASED
 
   BUG FIXES 
 
+    HADOOP-10378. Typo in help printed by hdfs dfs -help.
+    (Mit Desai via suresh)
+
 Release 2.4.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

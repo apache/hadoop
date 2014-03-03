@@ -48,7 +48,7 @@ public class Count extends FsCommand {
       "Count the number of directories, files and bytes under the paths\n" +
       "that match the specified file pattern.  The output columns are:\n" +
       "DIR_COUNT FILE_COUNT CONTENT_SIZE FILE_NAME or\n" +
-      "QUOTA REMAINING_QUATA SPACE_QUOTA REMAINING_SPACE_QUOTA \n" +
+      "QUOTA REMAINING_QUOTA SPACE_QUOTA REMAINING_SPACE_QUOTA \n" +
       "      DIR_COUNT FILE_COUNT CONTENT_SIZE FILE_NAME";
   
   private boolean showQuotas;
