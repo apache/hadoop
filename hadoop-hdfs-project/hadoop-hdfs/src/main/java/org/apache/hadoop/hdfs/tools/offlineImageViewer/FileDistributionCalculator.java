@@ -62,6 +62,7 @@ import com.google.common.io.LimitInputStream;
 final class FileDistributionCalculator {
   private final static long MAX_SIZE_DEFAULT = 0x2000000000L; // 1/8 TB = 2^37
   private final static int INTERVAL_DEFAULT = 0x200000; // 2 MB = 2^21
+  private final static int MAX_INTERVALS = 0x8000000; // 128 M = 2^27
 
   private final Configuration conf;
   private final long maxSize;
@@ -82,9 +83,11 @@ final class FileDistributionCalculator {
     this.steps = steps == 0 ? INTERVAL_DEFAULT : steps;
     this.out = out;
     long numIntervals = this.maxSize / this.steps;
+    // avoid OutOfMemoryError when allocating an array
+    Preconditions.checkState(numIntervals <= MAX_INTERVALS,
+        "Too many distribution intervals (maxSize/step): " + numIntervals +
+        ", should be less than " + (MAX_INTERVALS+1) + ".");
     this.distribution = new int[1 + (int) (numIntervals)];
-    Preconditions.checkState(numIntervals < Integer.MAX_VALUE,
-        "Too many distribution intervals");
   }
 
   void visit(RandomAccessFile file) throws IOException {
