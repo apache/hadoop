@@ -51,18 +51,18 @@ class Ls extends FsCommand {
   public static final String NAME = "ls";
   public static final String USAGE = "[-d] [-h] [-R] [<path> ...]";
   public static final String DESCRIPTION =
-    "List the contents that match the specified file pattern. If\n" + 
-    "path is not specified, the contents of /user/<currentUser>\n" +
-    "will be listed. Directory entries are of the form \n" +
-    "\tdirName (full path) <dir> \n" +
-    "and file entries are of the form \n" + 
-    "\tfileName(full path) <r n> size \n" +
-    "where n is the number of replicas specified for the file \n" + 
-    "and size is the size of the file, in bytes.\n" +
-    "  -d  Directories are listed as plain files.\n" +
-    "  -h  Formats the sizes of files in a human-readable fashion\n" +
-    "      rather than a number of bytes.\n" +
-    "  -R  Recursively list the contents of directories.";
+		    "List the contents that match the specified file pattern. If\n" + 
+		    "path is not specified, the contents of /user/<currentUser>\n" +
+		    "will be listed. Directory entries are of the form \n" +
+		    "\tpermissions - userid groupid size_of_directory(in bytes) modification_date(yyyy-MM-dd HH:mm) directoryName \n" +
+		    "and file entries are of the form \n" + 
+		    "\tpermissions number_of_replicas userid groupid size_of_file(in bytes) modification_date(yyyy-MM-dd HH:mm) fileName \n" +
+		    "  -d  Directories are listed as plain files.\n" +
+		    "  -h  Formats the sizes of files in a human-readable fashion\n" +
+		    "      rather than a number of bytes.\n" +
+		    "  -R  Recursively list the contents of directories.";
+		  
+  
 
   protected static final SimpleDateFormat dateFormat = 
     new SimpleDateFormat("yyyy-MM-dd HH:mm");
