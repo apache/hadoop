@@ -231,6 +231,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1704. Modified LICENSE and NOTICE files to reflect newly used levelDB
     related libraries. (Billie Rinaldi via vinodkv)
 
+    YARN-1765. Added test cases to verify that killApplication API works across
+    ResourceManager failover. (Xuan Gong via vinodkv) 
+
   OPTIMIZATIONS
 
   BUG FIXES
