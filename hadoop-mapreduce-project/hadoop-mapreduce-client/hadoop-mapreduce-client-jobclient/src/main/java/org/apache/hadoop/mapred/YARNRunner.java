@@ -391,7 +391,8 @@ public class YARNRunner implements ClientProtocol {
     vargs.add(Environment.JAVA_HOME.$() + "/bin/java");
 
     // TODO: why do we use 'conf' some places and 'jobConf' others?
-    long logSize = TaskLog.getTaskLogLength(new JobConf(conf));
+    long logSize = jobConf.getLong(MRJobConfig.MR_AM_LOG_KB,
+        MRJobConfig.DEFAULT_MR_AM_LOG_KB) << 10;
     String logLevel = jobConf.get(
         MRJobConfig.MR_AM_LOG_LEVEL, MRJobConfig.DEFAULT_MR_AM_LOG_LEVEL);
     int numBackups = jobConf.getInt(MRJobConfig.MR_AM_LOG_BACKUPS,
