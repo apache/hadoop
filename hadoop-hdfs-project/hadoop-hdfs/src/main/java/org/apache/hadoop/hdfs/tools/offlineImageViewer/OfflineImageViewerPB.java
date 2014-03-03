@@ -101,9 +101,8 @@ public class OfflineImageViewerPB {
 
     options.addOption("p", "processor", true, "");
     options.addOption("h", "help", false, "");
-    options.addOption("skipBlocks", false, "");
-    options.addOption("printToScreen", false, "");
-    options.addOption("delimiter", true, "");
+    options.addOption("maxSize", true, "");
+    options.addOption("step", true, "");
 
     return options;
   }
@@ -118,10 +117,15 @@ public class OfflineImageViewerPB {
    * @throws IOException
    */
   public static void main(String[] args) throws IOException {
+    int status = run(args);
+    System.exit(status);
+  }
+
+  public static int run(String[] args) throws IOException {
     Options options = buildOptions();
     if (args.length == 0) {
       printUsage();
-      return;
+      return 0;
     }
 
     CommandLineParser parser = new PosixParser();
@@ -132,12 +136,12 @@ public class OfflineImageViewerPB {
     } catch (ParseException e) {
       System.out.println("Error parsing command-line options: ");
       printUsage();
-      return;
+      return -1;
     }
 
     if (cmd.hasOption("h")) { // print help and exit
       printUsage();
-      return;
+      return 0;
     }
 
     String inputFile = cmd.getOptionValue("i");
@@ -160,6 +164,7 @@ public class OfflineImageViewerPB {
       } else {
         new LsrPBImage(conf, out).visit(new RandomAccessFile(inputFile, "r"));
       }
+      return 0;
     } catch (EOFException e) {
       System.err.println("Input file ended unexpectedly. Exiting");
     } catch (IOException e) {
@@ -167,7 +172,7 @@ public class OfflineImageViewerPB {
     } finally {
       IOUtils.cleanup(null, out);
     }
-
+    return -1;
   }
 
   /**
