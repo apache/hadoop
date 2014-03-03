@@ -248,4 +248,8 @@ class DataXceiverServer implements Runnable {
   synchronized int getNumPeers() {
     return peers.size();
   }
+
+  synchronized void releasePeer(Peer peer) {
+    peers.remove(peer);
+  }
 }

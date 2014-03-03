@@ -24,6 +24,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
+import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -32,6 +33,8 @@ import org.apache.hadoop.hdfs.client.ShortCircuitCache;
 import org.apache.hadoop.hdfs.client.ShortCircuitCache.ShortCircuitReplicaCreator;
 import org.apache.hadoop.hdfs.client.ShortCircuitReplica;
 import org.apache.hadoop.hdfs.client.ShortCircuitReplicaInfo;
+import org.apache.hadoop.hdfs.ShortCircuitShm.Slot;
+import org.apache.hadoop.hdfs.ShortCircuitShm.SlotId;
 import org.apache.hadoop.hdfs.net.DomainPeer;
 import org.apache.hadoop.hdfs.net.Peer;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -410,7 +413,6 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
         setBlock(block).
         setStartOffset(startOffset).
         setShortCircuitReplica(info.getReplica()).
-        setDatanodeID(datanode).
         setVerifyChecksum(verifyChecksum).
         setCachingStrategy(cachingStrategy).
         build();
@@ -438,12 +440,31 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
     while (true) {
       curPeer = nextDomainPeer();
       if (curPeer == null) break;
+      if (curPeer.fromCache) remainingCacheTries--;
       DomainPeer peer = (DomainPeer)curPeer.peer;
+      Slot slot = null;
+      ShortCircuitCache cache = clientContext.getShortCircuitCache();
       try {
-        ShortCircuitReplicaInfo info = requestFileDescriptors(peer);
+        MutableBoolean usedPeer = new MutableBoolean(false);
+        slot = cache.allocShmSlot(datanode, peer, usedPeer,
+            new ExtendedBlockId(block.getBlockId(), block.getBlockPoolId()),
+            clientName);
+        if (usedPeer.booleanValue()) {
+          if (LOG.isTraceEnabled()) {
+            LOG.trace(this + ": allocShmSlot used up our previous socket " +
+              peer.getDomainSocket() + ".  Allocating a new one...");
+          }
+          curPeer = nextDomainPeer();
+          if (curPeer == null) break;
+          peer = (DomainPeer)curPeer.peer;
+        }
+        ShortCircuitReplicaInfo info = requestFileDescriptors(peer, slot);
         clientContext.getPeerCache().put(datanode, peer);
         return info;
       } catch (IOException e) {
+        if (slot != null) {
+          cache.freeSlot(slot);
+        }
         if (curPeer.fromCache) {
           // Handle an I/O error we got when using a cached socket.
           // These are considered less serious, because the socket may be stale.
@@ -470,16 +491,22 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
   /**
    * Request file descriptors from a DomainPeer.
    *
+   * @param peer   The peer to use for communication.
+   * @param slot   If non-null, the shared memory slot to associate with the 
+   *               new ShortCircuitReplica.
+   * 
    * @return  A ShortCircuitReplica object if we could communicate with the
    *          datanode; null, otherwise. 
    * @throws  IOException If we encountered an I/O exception while communicating
    *          with the datanode.
    */
-  private ShortCircuitReplicaInfo requestFileDescriptors(DomainPeer peer)
-        throws IOException {
+  private ShortCircuitReplicaInfo requestFileDescriptors(DomainPeer peer,
+          Slot slot) throws IOException {
+    ShortCircuitCache cache = clientContext.getShortCircuitCache();
     final DataOutputStream out =
         new DataOutputStream(new BufferedOutputStream(peer.getOutputStream()));
-    new Sender(out).requestShortCircuitFds(block, token, 1);
+    SlotId slotId = slot == null ? null : slot.getSlotId();
+    new Sender(out).requestShortCircuitFds(block, token, slotId, 1);
     DataInputStream in = new DataInputStream(peer.getInputStream());
     BlockOpResponseProto resp = BlockOpResponseProto.parseFrom(
         PBHelper.vintPrefixed(in));
@@ -491,9 +518,10 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
       sock.recvFileInputStreams(fis, buf, 0, buf.length);
       ShortCircuitReplica replica = null;
       try {
-        ExtendedBlockId key = new ExtendedBlockId(block.getBlockId(), block.getBlockPoolId());
-        replica = new ShortCircuitReplica(key, fis[0], fis[1],
-            clientContext.getShortCircuitCache(), Time.monotonicNow());
+        ExtendedBlockId key =
+            new ExtendedBlockId(block.getBlockId(), block.getBlockPoolId());
+        replica = new ShortCircuitReplica(key, fis[0], fis[1], cache,
+            Time.monotonicNow(), slot);
       } catch (IOException e) {
         // This indicates an error reading from disk, or a format error.  Since
         // it's not a socket communication problem, we return null rather than
@@ -527,8 +555,9 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
       }
       return new ShortCircuitReplicaInfo(new InvalidToken(msg));
     default:
-      LOG.warn(this + "unknown response code " + resp.getStatus() + " while " +
-          "attempting to set up short-circuit access. " + resp.getMessage());
+      LOG.warn(this + ": unknown response code " + resp.getStatus() +
+          " while attempting to set up short-circuit access. " +
+          resp.getMessage());
       clientContext.getDomainSocketFactory()
           .disableShortCircuitForPath(pathInfo.getPath());
       return null;
@@ -565,6 +594,7 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
     while (true) {
       BlockReaderPeer curPeer = nextDomainPeer();
       if (curPeer == null) break;
+      if (curPeer.fromCache) remainingCacheTries--;
       DomainPeer peer = (DomainPeer)curPeer.peer;
       BlockReader blockReader = null;
       try {
@@ -630,6 +660,7 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
       try {
         curPeer = nextTcpPeer();
         if (curPeer == null) break;
+        if (curPeer.fromCache) remainingCacheTries--;
         peer = curPeer.peer;
         blockReader = getRemoteBlockReader(peer);
         return blockReader;
@@ -662,7 +693,7 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
     return null;
   }
 
-  private static class BlockReaderPeer {
+  public static class BlockReaderPeer {
     final Peer peer;
     final boolean fromCache;
     
@@ -681,7 +712,6 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
     if (remainingCacheTries > 0) {
       Peer peer = clientContext.getPeerCache().get(datanode, true);
       if (peer != null) {
-        remainingCacheTries--;
         if (LOG.isTraceEnabled()) {
           LOG.trace("nextDomainPeer: reusing existing peer " + peer);
         }
@@ -706,7 +736,6 @@ public class BlockReaderFactory implements ShortCircuitReplicaCreator {
     if (remainingCacheTries > 0) {
       Peer peer = clientContext.getPeerCache().get(datanode, false);
       if (peer != null) {
-        remainingCacheTries--;
         if (LOG.isTraceEnabled()) {
           LOG.trace("nextTcpPeer: reusing existing peer " + peer);
         }

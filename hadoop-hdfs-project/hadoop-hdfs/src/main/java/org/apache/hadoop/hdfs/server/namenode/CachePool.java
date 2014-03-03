@@ -47,8 +47,6 @@ import com.google.common.base.Preconditions;
  */
 @InterfaceAudience.Private
 public final class CachePool {
-  public static final Log LOG = LogFactory.getLog(CachePool.class);
-
   @Nonnull
   private final String poolName;
 

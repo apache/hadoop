@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
@@ -142,9 +143,13 @@ public class ApplicationMasterService extends AbstractService implements
     if (conf.getBoolean(
         CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION, 
         false)) {
-      conf.addResource(this.rmContext.getConfigurationProvider()
-          .getConfigurationInputStream(conf,
-              YarnConfiguration.HADOOP_POLICY_CONFIGURATION_FILE));
+      InputStream inputStream =
+          this.rmContext.getConfigurationProvider()
+              .getConfigurationInputStream(conf,
+                  YarnConfiguration.HADOOP_POLICY_CONFIGURATION_FILE);
+      if (inputStream != null) {
+        conf.addResource(inputStream);
+      }
       refreshServiceAcls(conf, RMPolicyProvider.getInstance());
     }
     

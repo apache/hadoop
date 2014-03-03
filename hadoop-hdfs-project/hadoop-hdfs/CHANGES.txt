@@ -370,6 +370,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-4200. Reduce the size of synchronized sections in PacketResponder.
     (suresh)
 
+    HDFS-5950. The DFSClient and DataNode should use shared memory segments to
+    communicate short-circuit information. (cmccabe)
+
   OPTIMIZATIONS
 
     HDFS-5790. LeaseManager.findPath is very slow when many leases need recovery
@@ -513,6 +516,9 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-5956. A file size is multiplied by the replication factor in 'hdfs oiv
     -p FileDistribution' option. (Akira Ajisaka via wheat9)
+
+    HDFS-5866. '-maxSize' and '-step' option fail in OfflineImageViewer.
+    (Akira Ajisaka via wheat9)
 
   BREAKDOWN OF HDFS-5698 SUBTASKS AND RELATED JIRAS
 

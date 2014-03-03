@@ -315,6 +315,9 @@ Release 2.5.0 - UNRELEASED
 
   BUG FIXES 
 
+    HADOOP-10378. Typo in help printed by hdfs dfs -help.
+    (Mit Desai via suresh)
+
 Release 2.4.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -351,6 +354,9 @@ Release 2.4.0 - UNRELEASED
 
     HADOOP-10285. Admin interface to swap callqueue at runtime. (Chris Li via
     Arpit Agarwal)
+
+    HADOOP-10314. The ls command help still shows outdated 0.16 format.
+    (Rushabh S Shah via kihwal)
 
   OPTIMIZATIONS
 

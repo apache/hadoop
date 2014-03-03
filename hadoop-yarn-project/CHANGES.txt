@@ -243,6 +243,12 @@ Release 2.4.0 - UNRELEASED
 
     YARN-1528. Allow setting auth for ZK connections. (kasha)
 
+    YARN-1704. Modified LICENSE and NOTICE files to reflect newly used levelDB
+    related libraries. (Billie Rinaldi via vinodkv)
+
+    YARN-1765. Added test cases to verify that killApplication API works across
+    ResourceManager failover. (Xuan Gong via vinodkv) 
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -367,6 +373,13 @@ Release 2.4.0 - UNRELEASED
     happened while it was in standby mode. (Xuan Gong via vinodkv)
 
     YARN-1760. TestRMAdminService assumes CapacityScheduler. (kasha)
+
+    YARN-1758. Fixed ResourceManager to not mandate the presence of site specific
+    configuration files and thus fix failures in downstream tests. (Xuan Gong via
+    vinodkv)
+
+    YARN-1748. Excluded core-site.xml from hadoop-yarn-server-tests package's jar
+    and thus avoid breaking downstream tests. (Sravya Tirukkovalur via vinodkv)
 
 Release 2.3.1 - UNRELEASED
 

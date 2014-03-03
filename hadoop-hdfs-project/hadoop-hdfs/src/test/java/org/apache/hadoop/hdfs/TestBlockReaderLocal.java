@@ -23,19 +23,21 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
+import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.ShortCircuitShm.ShmId;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
 import org.apache.hadoop.hdfs.client.ShortCircuitCache;
 import org.apache.hadoop.hdfs.client.ShortCircuitReplica;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.CachingStrategy;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.nativeio.SharedFileDescriptorFactory;
 import org.apache.hadoop.net.unix.DomainSocket;
 import org.apache.hadoop.net.unix.TemporarySocketDirectory;
 import org.apache.hadoop.util.Time;
@@ -132,6 +134,8 @@ public class TestBlockReaderLocal {
     byte original[] = new byte[BlockReaderLocalTest.TEST_LENGTH];
     
     FileSystem fs = null;
+    ShortCircuitShm shm = null;
+    RandomAccessFile raf = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
       cluster.waitActive();
@@ -156,7 +160,6 @@ public class TestBlockReaderLocal {
       File dataFile = MiniDFSCluster.getBlockFile(0, block);
       File metaFile = MiniDFSCluster.getBlockMetadataFile(0, block);
 
-      DatanodeID datanodeID = cluster.getDataNodes().get(0).getDatanodeId();
       ShortCircuitCache shortCircuitCache =
           ClientContext.getFromConf(conf).getShortCircuitCache();
       cluster.shutdown();
@@ -168,15 +171,23 @@ public class TestBlockReaderLocal {
       };
       dataIn = streams[0];
       metaIn = streams[1];
-      ExtendedBlockId key = new ExtendedBlockId(block.getBlockId(), block.getBlockPoolId());
-      ShortCircuitReplica replica = new ShortCircuitReplica(
-          key, dataIn, metaIn, shortCircuitCache, Time.now());
+      ExtendedBlockId key = new ExtendedBlockId(block.getBlockId(),
+          block.getBlockPoolId());
+      raf = new RandomAccessFile(
+          new File(sockDir.getDir().getAbsolutePath(),
+            UUID.randomUUID().toString()), "rw");
+      raf.setLength(8192);
+      FileInputStream shmStream = new FileInputStream(raf.getFD());
+      shm = new ShortCircuitShm(ShmId.createRandom(), shmStream);
+      ShortCircuitReplica replica = 
+          new ShortCircuitReplica(key, dataIn, metaIn, shortCircuitCache,
+              Time.now(), shm.allocAndRegisterSlot(
+                  ExtendedBlockId.fromExtendedBlock(block)));
       blockReaderLocal = new BlockReaderLocal.Builder(
               new DFSClient.Conf(conf)).
           setFilename(TEST_PATH.getName()).
           setBlock(block).
           setShortCircuitReplica(replica).
-          setDatanodeID(datanodeID).
           setCachingStrategy(new CachingStrategy(false, readahead)).
           setVerifyChecksum(checksum).
           build();
@@ -193,6 +204,8 @@ public class TestBlockReaderLocal {
       if (dataIn != null) dataIn.close();
       if (metaIn != null) metaIn.close();
       if (blockReaderLocal != null) blockReaderLocal.close();
+      if (shm != null) shm.free();
+      if (raf != null) raf.close();
     }
   }
   
@@ -369,13 +382,13 @@ public class TestBlockReaderLocal {
       assertArrayRegionsEqual(original, 6657,
           DFSTestUtil.asArray(buf), 0,
           1);
-      reader.setMlocked(true);
+      reader.forceAnchorable();
       readFully(reader, buf, 0, 5120);
       buf.flip();
       assertArrayRegionsEqual(original, 6658,
           DFSTestUtil.asArray(buf), 0,
           5120);
-      reader.setMlocked(false);
+      reader.forceUnanchorable();
       readFully(reader, buf, 0, 513);
       buf.flip();
       assertArrayRegionsEqual(original, 11778,
@@ -544,10 +557,10 @@ public class TestBlockReaderLocal {
       assertArrayRegionsEqual(original, 1, buf.array(), 1, 9);
       readFully(reader, buf, 10, 100);
       assertArrayRegionsEqual(original, 10, buf.array(), 10, 100);
-      reader.setMlocked(true);
+      reader.forceAnchorable();
       readFully(reader, buf, 110, 700);
       assertArrayRegionsEqual(original, 110, buf.array(), 110, 700);
-      reader.setMlocked(false);
+      reader.forceUnanchorable();
       reader.skip(1); // skip from offset 810 to offset 811
       readFully(reader, buf, 811, 5);
       assertArrayRegionsEqual(original, 811, buf.array(), 811, 5);
@@ -599,10 +612,10 @@ public class TestBlockReaderLocal {
       assertArrayRegionsEqual(original, 1, buf.array(), 1, 9);
       readFully(reader, buf, 10, 100);
       assertArrayRegionsEqual(original, 10, buf.array(), 10, 100);
-      reader.setMlocked(true);
+      reader.forceAnchorable();
       readFully(reader, buf, 110, 700);
       assertArrayRegionsEqual(original, 110, buf.array(), 110, 700);
-      reader.setMlocked(false);
+      reader.forceUnanchorable();
       reader.skip(1); // skip from offset 810 to offset 811
       readFully(reader, buf, 811, 5);
       assertArrayRegionsEqual(original, 811, buf.array(), 811, 5);

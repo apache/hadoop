@@ -70,23 +70,15 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*dirName \(full path\) &lt;dir&gt;( )*</expected-output>
+          <expected-output>^( |\t)*permissions - userid groupid size_of_directory\(in bytes\) modification_date\(yyyy-MM-dd HH:mm\) directoryName( )*</expected-output>
         </comparator>
-        <comparator>
+         <comparator>
           <type>RegexpComparator</type>
           <expected-output>^( |\t)*and file entries are of the form( )*</expected-output>
         </comparator>
-        <comparator>
+          <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*fileName\(full path\) &lt;r n&gt; size( )*</expected-output>
-        </comparator>
-        <comparator>
-          <type>RegexpComparator</type>
-          <expected-output>^( |\t)*where n is the number of replicas specified for the file( )*</expected-output>
-        </comparator>
-        <comparator>
-          <type>RegexpComparator</type>
-          <expected-output>^( |\t)*and size is the size of the file, in bytes.( )*</expected-output>
+          <expected-output>^( |\t)*permissions number_of_replicas userid groupid size_of_file\(in bytes\) modification_date\(yyyy-MM-dd HH:mm\) fileName( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
@@ -242,7 +234,7 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*QUOTA REMAINING_QUATA SPACE_QUOTA REMAINING_SPACE_QUOTA( )*</expected-output>
+          <expected-output>^( |\t)*QUOTA REMAINING_QUOTA SPACE_QUOTA REMAINING_SPACE_QUOTA( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>

@@ -208,41 +208,11 @@ public class TestFsDatasetCache {
     return sizes;
   }
 
-  /**
-   * Blocks until cache usage hits the expected new value.
-   */
-  private long verifyExpectedCacheUsage(final long expectedCacheUsed,
-      final long expectedBlocks) throws Exception {
-    GenericTestUtils.waitFor(new Supplier<Boolean>() {
-      private int tries = 0;
-      
-      @Override
-      public Boolean get() {
-        long curCacheUsed = fsd.getCacheUsed();
-        long curBlocks = fsd.getNumBlocksCached();
-        if ((curCacheUsed != expectedCacheUsed) ||
-            (curBlocks != expectedBlocks)) {
-          if (tries++ > 10) {
-            LOG.info("verifyExpectedCacheUsage: have " +
-                curCacheUsed + "/" + expectedCacheUsed + " bytes cached; " +
-                curBlocks + "/" + expectedBlocks + " blocks cached. " +
-                "memlock limit = " +
-                NativeIO.POSIX.getCacheManipulator().getMemlockLimit() +
-                ".  Waiting...");
-          }
-          return false;
-        }
-        return true;
-      }
-    }, 100, 60000);
-    return expectedCacheUsed;
-  }
-
   private void testCacheAndUncacheBlock() throws Exception {
     LOG.info("beginning testCacheAndUncacheBlock");
     final int NUM_BLOCKS = 5;
 
-    verifyExpectedCacheUsage(0, 0);
+    DFSTestUtil.verifyExpectedCacheUsage(0, 0, fsd);
     assertEquals(0, fsd.getNumBlocksCached());
 
     // Write a test file
@@ -270,7 +240,8 @@ public class TestFsDatasetCache {
     // Cache each block in succession, checking each time
     for (int i=0; i<NUM_BLOCKS; i++) {
       setHeartbeatResponse(cacheBlock(locs[i]));
-      current = verifyExpectedCacheUsage(current + blockSizes[i], i + 1);
+      current = DFSTestUtil.verifyExpectedCacheUsage(
+          current + blockSizes[i], i + 1, fsd);
       dnMetrics = getMetrics(dn.getMetrics().name());
       long cmds = MetricsAsserts.getLongCounter("BlocksCached", dnMetrics);
       assertTrue("Expected more cache requests from the NN ("
@@ -282,8 +253,9 @@ public class TestFsDatasetCache {
     // Uncache each block in succession, again checking each time
     for (int i=0; i<NUM_BLOCKS; i++) {
       setHeartbeatResponse(uncacheBlock(locs[i]));
-      current = verifyExpectedCacheUsage(current - blockSizes[i],
-          NUM_BLOCKS - 1 - i);
+      current = DFSTestUtil.
+          verifyExpectedCacheUsage(current - blockSizes[i],
+              NUM_BLOCKS - 1 - i, fsd);
       dnMetrics = getMetrics(dn.getMetrics().name());
       long cmds = MetricsAsserts.getLongCounter("BlocksUncached", dnMetrics);
       assertTrue("Expected more uncache requests from the NN",
@@ -350,11 +322,11 @@ public class TestFsDatasetCache {
 
     // Cache the first n-1 files
     long total = 0;
-    verifyExpectedCacheUsage(0, 0);
+    DFSTestUtil.verifyExpectedCacheUsage(0, 0, fsd);
     for (int i=0; i<numFiles-1; i++) {
       setHeartbeatResponse(cacheBlocks(fileLocs[i]));
-      total = verifyExpectedCacheUsage(
-          rounder.round(total + fileSizes[i]), 4 * (i + 1));
+      total = DFSTestUtil.verifyExpectedCacheUsage(
+          rounder.round(total + fileSizes[i]), 4 * (i + 1), fsd);
     }
 
     // nth file should hit a capacity exception
@@ -380,7 +352,7 @@ public class TestFsDatasetCache {
     for (int i=0; i<numFiles-1; i++) {
       setHeartbeatResponse(uncacheBlocks(fileLocs[i]));
       total -= rounder.round(fileSizes[i]);
-      verifyExpectedCacheUsage(total, 4 * (numFiles - 2 - i));
+      DFSTestUtil.verifyExpectedCacheUsage(total, 4 * (numFiles - 2 - i), fsd);
     }
     LOG.info("finishing testFilesExceedMaxLockedMemory");
   }
@@ -390,7 +362,7 @@ public class TestFsDatasetCache {
     LOG.info("beginning testUncachingBlocksBeforeCachingFinishes");
     final int NUM_BLOCKS = 5;
 
-    verifyExpectedCacheUsage(0, 0);
+    DFSTestUtil.verifyExpectedCacheUsage(0, 0, fsd);
 
     // Write a test file
     final Path testFile = new Path("/testCacheBlock");
@@ -426,7 +398,8 @@ public class TestFsDatasetCache {
     // should increase, even though caching doesn't complete on any of them.
     for (int i=0; i<NUM_BLOCKS; i++) {
       setHeartbeatResponse(cacheBlock(locs[i]));
-      current = verifyExpectedCacheUsage(current + blockSizes[i], i + 1);
+      current = DFSTestUtil.verifyExpectedCacheUsage(
+          current + blockSizes[i], i + 1, fsd);
     }
     
     setHeartbeatResponse(new DatanodeCommand[] {
@@ -434,7 +407,7 @@ public class TestFsDatasetCache {
     });
 
     // wait until all caching jobs are finished cancelling.
-    current = verifyExpectedCacheUsage(0, 0);
+    current = DFSTestUtil.verifyExpectedCacheUsage(0, 0, fsd);
     LOG.info("finishing testUncachingBlocksBeforeCachingFinishes");
   }
 
@@ -475,10 +448,10 @@ public class TestFsDatasetCache {
         fileName, 0, fileLen);
     // Cache the file and check the sizes match the page size
     setHeartbeatResponse(cacheBlocks(locs));
-    verifyExpectedCacheUsage(PAGE_SIZE * numBlocks, numBlocks);
+    DFSTestUtil.verifyExpectedCacheUsage(PAGE_SIZE * numBlocks, numBlocks, fsd);
     // Uncache and check that it decrements by the page size too
     setHeartbeatResponse(uncacheBlocks(locs));
-    verifyExpectedCacheUsage(0, 0);
+    DFSTestUtil.verifyExpectedCacheUsage(0, 0, fsd);
   }
 
   @Test(timeout=60000)

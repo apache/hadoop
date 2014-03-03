@@ -68,9 +68,16 @@ public class TestRMAdminService {
   private Path workingPath;
   private Path tmpDir;
 
+  static {
+    YarnConfiguration.addDefaultResource(
+        YarnConfiguration.CS_CONFIGURATION_FILE);
+  }
+
   @Before
   public void setup() throws IOException {
     configuration = new YarnConfiguration();
+    configuration.set(YarnConfiguration.RM_SCHEDULER,
+        CapacityScheduler.class.getCanonicalName());
     fs = FileSystem.get(configuration);
     workingPath =
         new Path(new File("target", this.getClass().getSimpleName()
@@ -94,16 +101,9 @@ public class TestRMAdminService {
     fs.delete(tmpDir, true);
   }
 
-  private void useCapacityScheduler() {
-    configuration.set(YarnConfiguration.RM_SCHEDULER,
-        CapacityScheduler.class.getCanonicalName());
-    configuration.addResource(YarnConfiguration.CS_CONFIGURATION_FILE);
-  }
-
   @Test
   public void testAdminRefreshQueuesWithLocalConfigurationProvider()
       throws IOException, YarnException {
-    useCapacityScheduler();
     rm = new MockRM(configuration);
     rm.init(configuration);
     rm.start();
@@ -126,15 +126,6 @@ public class TestRMAdminService {
       throws IOException, YarnException {
     configuration.set(YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
         "org.apache.hadoop.yarn.FileSystemBasedConfigurationProvider");
-    useCapacityScheduler();
-    try {
-      rm = new MockRM(configuration);
-      rm.init(configuration);
-      rm.start();
-      fail("Should throw an exception");
-    } catch(Exception ex) {
-      // Expect exception here
-    }
 
     //upload default configurations
     uploadDefaultConfiguration();
@@ -181,14 +172,6 @@ public class TestRMAdminService {
       throws IOException, YarnException {
     configuration.set(YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
         "org.apache.hadoop.yarn.FileSystemBasedConfigurationProvider");
-    try {
-      rm = new MockRM(configuration);
-      rm.init(configuration);
-      rm.start();
-      fail("Should throw an exception");
-    } catch(Exception ex) {
-      // Expect exception here
-    }
 
     //upload default configurations
     uploadDefaultConfiguration();
@@ -247,14 +230,6 @@ public class TestRMAdminService {
         "org.apache.hadoop.yarn.FileSystemBasedConfigurationProvider");
     ResourceManager resourceManager = null;
     try {
-      try {
-        resourceManager = new ResourceManager();
-        resourceManager.init(configuration);
-        resourceManager.start();
-        fail("Should throw an exception");
-      } catch (Exception ex) {
-        // expect to get an exception here
-      }
 
       //upload default configurations
       uploadDefaultConfiguration();
@@ -351,14 +326,6 @@ public class TestRMAdminService {
       throws IOException, YarnException {
     configuration.set(YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
         "org.apache.hadoop.yarn.FileSystemBasedConfigurationProvider");
-    try {
-      rm = new MockRM(configuration);
-      rm.init(configuration);
-      rm.start();
-      fail("Should throw an exception");
-    } catch(Exception ex) {
-      // Expect exception here
-    }
 
     //upload default configurations
     uploadDefaultConfiguration();
@@ -409,14 +376,6 @@ public class TestRMAdminService {
           throws IOException, YarnException {
     configuration.set(YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
         "org.apache.hadoop.yarn.FileSystemBasedConfigurationProvider");
-    try {
-      rm = new MockRM(configuration);
-      rm.init(configuration);
-      rm.start();
-      fail("Should throw an exception");
-    } catch (Exception ex) {
-      // Expect exception here
-    }
 
     String user = UserGroupInformation.getCurrentUser().getUserName();
     List<String> groupWithInit =
@@ -485,14 +444,6 @@ public class TestRMAdminService {
       throws IOException, YarnException {
     configuration.set(YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
         "org.apache.hadoop.yarn.FileSystemBasedConfigurationProvider");
-    try {
-      rm = new MockRM(configuration);
-      rm.init(configuration);
-      rm.start();
-      fail("Should throw an exception");
-    } catch (Exception ex) {
-      // Expect exception here
-    }
 
     // upload default configurations
     uploadDefaultConfiguration();
@@ -616,6 +567,27 @@ public class TestRMAdminService {
         rm2.stop();
       }
     }
+  }
+
+  @Test
+  public void testRMStartsWithoutConfigurationFilesProvided() {
+    // enable FileSystemBasedConfigurationProvider without uploading
+    // any configuration files into Remote File System.
+    configuration.set(YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
+        "org.apache.hadoop.yarn.FileSystemBasedConfigurationProvider");
+
+    // The configurationProvider will return NULL instead of
+    // throwing out Exceptions, if there are no configuration files provided.
+    // RM will not load the remote Configuration files,
+    // and should start successfully.
+    try {
+      rm = new MockRM(configuration);
+      rm.init(configuration);
+      rm.start();
+    } catch (Exception ex) {
+      fail("Should not get any exceptions");
+    }
+
   }
 
   private String writeConfigurationXML(Configuration conf, String confXMLName)
