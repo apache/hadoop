@@ -130,3 +130,7 @@ HDFS-5535 subtasks:
 
     HDFS-6034. Use DataNodeLayoutVersion for DN registration check and do not
     verify layout version if there is a rolling upgrade in progress.  (szetszwo)
+
+    HDFS-6013. add rollingUpgrade information to latest UI.
+    (Vinayakumar B via wheat9)
+

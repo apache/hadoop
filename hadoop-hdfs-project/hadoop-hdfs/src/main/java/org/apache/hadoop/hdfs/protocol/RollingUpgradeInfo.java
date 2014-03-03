@@ -94,4 +94,34 @@ public class RollingUpgradeInfo extends RollingUpgradeStatus {
   private static String timestamp2String(long timestamp) {
     return new Date(timestamp) + " (=" + timestamp + ")";
   }
+
+  public static class Bean {
+    private final String blockPoolId;
+    private final long startTime;
+    private final long finalizeTime;
+    private final boolean createdRollbackImages;
+
+    public Bean(RollingUpgradeInfo f) {
+      this.blockPoolId = f.getBlockPoolId();
+      this.startTime = f.startTime;
+      this.finalizeTime = f.finalizeTime;
+      this.createdRollbackImages = f.createdRollbackImages();
+    }
+
+    public String getBlockPoolId() {
+      return blockPoolId;
+    }
+
+    public long getStartTime() {
+      return startTime;
+    }
+
+    public long getFinalizeTime() {
+      return finalizeTime;
+    }
+
+    public boolean isCreatedRollbackImages() {
+      return createdRollbackImages;
+    }
+  }
 }

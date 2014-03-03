@@ -7247,6 +7247,20 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     this.needRollbackFsImage = needRollbackFsImage;
   }
 
+  @Override  // NameNodeMXBean
+  public RollingUpgradeInfo.Bean getRollingUpgradeStatus() {
+    readLock();
+    try {
+      RollingUpgradeInfo upgradeInfo = getRollingUpgradeInfo();
+      if (upgradeInfo != null) {
+        return new RollingUpgradeInfo.Bean(upgradeInfo);
+      }
+      return null;
+    } finally {
+      readUnlock();
+    }
+  }
+
   /** Is rolling upgrade in progress? */
   public boolean isRollingUpgrade() {
     return rollingUpgradeInfo != null;
