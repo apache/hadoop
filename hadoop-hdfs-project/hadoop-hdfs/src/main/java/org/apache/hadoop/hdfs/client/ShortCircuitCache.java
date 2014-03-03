@@ -17,7 +17,10 @@
  */
 package org.apache.hadoop.hdfs.client;
 
+import java.io.BufferedOutputStream;
 import java.io.Closeable;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 
@@ -33,14 +36,23 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
+import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.ExtendedBlockId;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.client.ShortCircuitReplica;
+import org.apache.hadoop.hdfs.ShortCircuitShm.Slot;
+import org.apache.hadoop.hdfs.net.DomainPeer;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
+import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ReleaseShortCircuitAccessResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
+import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RetriableException;
+import org.apache.hadoop.net.unix.DomainSocket;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
@@ -154,6 +166,69 @@ public class ShortCircuitCache implements Closeable {
     }
   }
 
+  /**
+   * A task which asks the DataNode to release a short-circuit shared memory
+   * slot.  If successful, this will tell the DataNode to stop monitoring
+   * changes to the mlock status of the replica associated with the slot.
+   * It will also allow us (the client) to re-use this slot for another
+   * replica.  If we can't communicate with the DataNode for some reason,
+   * we tear down the shared memory segment to avoid being in an inconsistent
+   * state.
+   */
+  private class SlotReleaser implements Runnable {
+    /**
+     * The slot that we need to release.
+     */
+    private final Slot slot;
+
+    SlotReleaser(Slot slot) {
+      this.slot = slot;
+    }
+
+    @Override
+    public void run() {
+      if (LOG.isTraceEnabled()) {
+        LOG.trace(ShortCircuitCache.this + ": about to release " + slot);
+      }
+      final DfsClientShm shm = (DfsClientShm)slot.getShm();
+      final DomainSocket shmSock = shm.getPeer().getDomainSocket();
+      DomainSocket sock = null;
+      DataOutputStream out = null;
+      final String path = shmSock.getPath();
+      boolean success = false;
+      try {
+        sock = DomainSocket.connect(path);
+        out = new DataOutputStream(
+            new BufferedOutputStream(sock.getOutputStream()));
+        new Sender(out).releaseShortCircuitFds(slot.getSlotId());
+        DataInputStream in = new DataInputStream(sock.getInputStream());
+        ReleaseShortCircuitAccessResponseProto resp =
+            ReleaseShortCircuitAccessResponseProto.parseFrom(
+                PBHelper.vintPrefixed(in));
+        if (resp.getStatus() != Status.SUCCESS) {
+          String error = resp.hasError() ? resp.getError() : "(unknown)";
+          throw new IOException(resp.getStatus().toString() + ": " + error);
+        }
+        if (LOG.isTraceEnabled()) {
+          LOG.trace(ShortCircuitCache.this + ": released " + slot);
+        }
+        success = true;
+      } catch (IOException e) {
+        LOG.error(ShortCircuitCache.this + ": failed to release " +
+            "short-circuit shared memory slot " + slot + " by sending " +
+            "ReleaseShortCircuitAccessRequestProto to " + path +
+            ".  Closing shared memory segment.", e);
+      } finally {
+        if (success) {
+          shmManager.freeSlot(slot);
+        } else {
+          shm.getEndpointShmManager().shutdown(shm);
+        }
+        IOUtils.cleanup(LOG, sock, out);
+      }
+    }
+  }
+
   public interface ShortCircuitReplicaCreator {
     /**
      * Attempt to create a ShortCircuitReplica object.
@@ -173,9 +248,17 @@ public class ShortCircuitCache implements Closeable {
   /**
    * The executor service that runs the cacheCleaner.
    */
-  private final ScheduledThreadPoolExecutor executor
+  private final ScheduledThreadPoolExecutor cleanerExecutor
+  = new ScheduledThreadPoolExecutor(1, new ThreadFactoryBuilder().
+          setDaemon(true).setNameFormat("ShortCircuitCache_Cleaner").
+          build());
+
+  /**
+   * The executor service that runs the cacheCleaner.
+   */
+  private final ScheduledThreadPoolExecutor releaserExecutor
       = new ScheduledThreadPoolExecutor(1, new ThreadFactoryBuilder().
-          setDaemon(true).setNameFormat("ShortCircuitCache Cleaner").
+          setDaemon(true).setNameFormat("ShortCircuitCache_SlotReleaser").
           build());
 
   /**
@@ -253,6 +336,11 @@ public class ShortCircuitCache implements Closeable {
   private int outstandingMmapCount = 0;
 
   /**
+   * Manages short-circuit shared memory segments for the client.
+   */
+  private final DfsClientShmManager shmManager;
+
+  /**
    * Create a {@link ShortCircuitCache} object from a {@link Configuration}
    */
   public static ShortCircuitCache fromConf(Configuration conf) {
@@ -268,12 +356,14 @@ public class ShortCircuitCache implements Closeable {
         conf.getLong(DFSConfigKeys.DFS_CLIENT_MMAP_RETRY_TIMEOUT_MS,
             DFSConfigKeys.DFS_CLIENT_MMAP_RETRY_TIMEOUT_MS_DEFAULT),
         conf.getLong(DFSConfigKeys.DFS_CLIENT_SHORT_CIRCUIT_REPLICA_STALE_THRESHOLD_MS,
-            DFSConfigKeys.DFS_CLIENT_SHORT_CIRCUIT_REPLICA_STALE_THRESHOLD_MS_DEFAULT));
+            DFSConfigKeys.DFS_CLIENT_SHORT_CIRCUIT_REPLICA_STALE_THRESHOLD_MS_DEFAULT),
+        conf.getInt(DFSConfigKeys.DFS_SHORT_CIRCUIT_SHARED_MEMORY_WATCHER_INTERRUPT_CHECK_MS,
+            DFSConfigKeys.DFS_SHORT_CIRCUIT_SHARED_MEMORY_WATCHER_INTERRUPT_CHECK_MS_DEFAULT));
   }
 
   public ShortCircuitCache(int maxTotalSize, long maxNonMmappedEvictableLifespanMs,
       int maxEvictableMmapedSize, long maxEvictableMmapedLifespanMs,
-      long mmapRetryTimeoutMs, long staleThresholdMs) {
+      long mmapRetryTimeoutMs, long staleThresholdMs, int shmInterruptCheckMs) {
     Preconditions.checkArgument(maxTotalSize >= 0);
     this.maxTotalSize = maxTotalSize;
     Preconditions.checkArgument(maxNonMmappedEvictableLifespanMs >= 0);
@@ -284,6 +374,15 @@ public class ShortCircuitCache implements Closeable {
     this.maxEvictableMmapedLifespanMs = maxEvictableMmapedLifespanMs;
     this.mmapRetryTimeoutMs = mmapRetryTimeoutMs;
     this.staleThresholdMs = staleThresholdMs;
+    DfsClientShmManager shmManager = null;
+    if (shmInterruptCheckMs > 0) {
+      try {
+        shmManager = new DfsClientShmManager(shmInterruptCheckMs);
+      } catch (IOException e) {
+        LOG.error("failed to create ShortCircuitShmManager", e);
+      }
+    }
+    this.shmManager = shmManager;
   }
 
   public long getMmapRetryTimeoutMs() {
@@ -339,7 +438,14 @@ public class ShortCircuitCache implements Closeable {
   void unref(ShortCircuitReplica replica) {
     lock.lock();
     try {
+      // If the replica is stale, but we haven't purged it yet, let's do that.
+      // It would be a shame to evict a non-stale replica so that we could put
+      // a stale one into the cache.
+      if ((!replica.purged) && replica.isStale()) {
+        purge(replica);
+      }
       String addedString = "";
+      boolean shouldTrimEvictionMaps = false;
       int newRefCount = --replica.refCount;
       if (newRefCount == 0) {
         // Close replica, since there are no remaining references to it.
@@ -362,7 +468,7 @@ public class ShortCircuitCache implements Closeable {
             insertEvictable(System.nanoTime(), replica, evictable);
             addedString = "added to evictable, ";
           }
-          trimEvictionMaps();
+          shouldTrimEvictionMaps = true;
         }
       } else {
         Preconditions.checkArgument(replica.refCount >= 0,
@@ -374,6 +480,9 @@ public class ShortCircuitCache implements Closeable {
             ": " + addedString + " refCount " +
             (newRefCount + 1) + " -> " + newRefCount +
             StringUtils.getStackTrace(Thread.currentThread()));
+      }
+      if (shouldTrimEvictionMaps) {
+        trimEvictionMaps();
       }
     } finally {
       lock.unlock();
@@ -442,7 +551,7 @@ public class ShortCircuitCache implements Closeable {
        replica = evictable.firstEntry().getValue();
       }
       if (LOG.isTraceEnabled()) {
-        LOG.trace(this + ": trimEvictionMaps is purging " +
+        LOG.trace(this + ": trimEvictionMaps is purging " + replica +
           StringUtils.getStackTrace(Thread.currentThread()));
       }
       purge(replica);
@@ -542,7 +651,7 @@ public class ShortCircuitCache implements Closeable {
     }
     if (LOG.isTraceEnabled()) {
       StringBuilder builder = new StringBuilder();
-      builder.append(this).append(": ").append(": removed ").
+      builder.append(this).append(": ").append(": purged ").
           append(replica).append(" from the cache.");
       if (removedFromInfoMap) {
         builder.append("  Removed from the replicaInfoMap.");
@@ -706,7 +815,7 @@ public class ShortCircuitCache implements Closeable {
       cacheCleaner = new CacheCleaner();
       long rateMs = cacheCleaner.getRateInMs();
       ScheduledFuture<?> future =
-          executor.scheduleAtFixedRate(cacheCleaner, rateMs, rateMs,
+          cleanerExecutor.scheduleAtFixedRate(cacheCleaner, rateMs, rateMs,
               TimeUnit.MILLISECONDS);
       cacheCleaner.setFuture(future);
       if (LOG.isDebugEnabled()) {
@@ -716,16 +825,16 @@ public class ShortCircuitCache implements Closeable {
     }
   }
 
-  ClientMmap getOrCreateClientMmap(ShortCircuitReplica replica) {
+  ClientMmap getOrCreateClientMmap(ShortCircuitReplica replica,
+      boolean anchored) {
     Condition newCond;
     lock.lock();
     try {
       while (replica.mmapData != null) {
-        if (replica.mmapData instanceof ClientMmap) {
+        if (replica.mmapData instanceof MappedByteBuffer) {
           ref(replica);
-          ClientMmap clientMmap = (ClientMmap)replica.mmapData;
-          clientMmap.ref();
-          return clientMmap;
+          MappedByteBuffer mmap = (MappedByteBuffer)replica.mmapData;
+          return new ClientMmap(replica, mmap, anchored);
         } else if (replica.mmapData instanceof Long) {
           long lastAttemptTimeMs = (Long)replica.mmapData;
           long delta = Time.monotonicNow() - lastAttemptTimeMs;
@@ -762,12 +871,11 @@ public class ShortCircuitCache implements Closeable {
         newCond.signalAll();
         return null;
       } else {
-        ClientMmap clientMmap = new ClientMmap(replica, map);
         outstandingMmapCount++;
-        replica.mmapData = clientMmap;
+        replica.mmapData = map;
         ref(replica);
         newCond.signalAll();
-        return clientMmap;
+        return new ClientMmap(replica, map, anchored);
       }
     } finally {
       lock.unlock();
@@ -877,5 +985,59 @@ public class ShortCircuitCache implements Closeable {
   public String toString() {
     return "ShortCircuitCache(0x" +
         Integer.toHexString(System.identityHashCode(this)) + ")";
+  }
+
+  /**
+   * Allocate a new shared memory slot.
+   *
+   * @param datanode       The datanode to allocate a shm slot with.
+   * @param peer           A peer connected to the datanode.
+   * @param usedPeer       Will be set to true if we use up the provided peer.
+   * @param blockId        The block id and block pool id of the block we're 
+   *                         allocating this slot for.
+   * @param clientName     The name of the DFSClient allocating the shared
+   *                         memory.
+   * @return               Null if short-circuit shared memory is disabled;
+   *                         a short-circuit memory slot otherwise.
+   * @throws IOException   An exception if there was an error talking to 
+   *                         the datanode.
+   */
+  public Slot allocShmSlot(DatanodeInfo datanode,
+        DomainPeer peer, MutableBoolean usedPeer,
+        ExtendedBlockId blockId, String clientName) throws IOException {
+    if (shmManager != null) {
+      return shmManager.allocSlot(datanode, peer, usedPeer,
+          blockId, clientName);
+    } else {
+      return null;
+    }
+  }
+
+  /**
+   * Free a slot immediately.
+   *
+   * ONLY use this if the DataNode is not yet aware of the slot.
+   * 
+   * @param slot           The slot to free.
+   */
+  public void freeSlot(Slot slot) {
+    Preconditions.checkState(shmManager != null);
+    slot.makeInvalid();
+    shmManager.freeSlot(slot);
+  }
+  
+  /**
+   * Schedule a shared memory slot to be released.
+   *
+   * @param slot           The slot to release.
+   */
+  public void scheduleSlotReleaser(Slot slot) {
+    Preconditions.checkState(shmManager != null);
+    releaserExecutor.execute(new SlotReleaser(slot));
+  }
+
+  @VisibleForTesting
+  public DfsClientShmManager getDfsClientShmManager() {
+    return shmManager;
   }
 }

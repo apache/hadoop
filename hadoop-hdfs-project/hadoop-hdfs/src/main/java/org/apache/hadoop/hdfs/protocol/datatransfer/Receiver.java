@@ -25,6 +25,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hdfs.ShortCircuitShm.SlotId;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpBlockChecksumProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpCopyBlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpReadBlockProto;
@@ -33,6 +34,8 @@ import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpTransferBlockP
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpRequestShortCircuitAccessProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.CachingStrategyProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpWriteBlockProto;
+import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ReleaseShortCircuitAccessRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ShortCircuitShmRequestProto;
 import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.server.datanode.CachingStrategy;
 
@@ -81,6 +84,12 @@ public abstract class Receiver implements DataTransferProtocol {
       break;
     case REQUEST_SHORT_CIRCUIT_FDS:
       opRequestShortCircuitFds(in);
+      break;
+    case RELEASE_SHORT_CIRCUIT_FDS:
+      opReleaseShortCircuitFds(in);
+      break;
+    case REQUEST_SHORT_CIRCUIT_SHM:
+      opRequestShortCircuitShm(in);
       break;
     default:
       throw new IOException("Unknown op " + op + " in data stream");
@@ -141,9 +150,26 @@ public abstract class Receiver implements DataTransferProtocol {
   private void opRequestShortCircuitFds(DataInputStream in) throws IOException {
     final OpRequestShortCircuitAccessProto proto =
       OpRequestShortCircuitAccessProto.parseFrom(vintPrefixed(in));
+    SlotId slotId = (proto.hasSlotId()) ? 
+        PBHelper.convert(proto.getSlotId()) : null;
     requestShortCircuitFds(PBHelper.convert(proto.getHeader().getBlock()),
         PBHelper.convert(proto.getHeader().getToken()),
-        proto.getMaxVersion());
+        slotId, proto.getMaxVersion());
+  }
+
+  /** Receive {@link Op#RELEASE_SHORT_CIRCUIT_FDS} */
+  private void opReleaseShortCircuitFds(DataInputStream in)
+      throws IOException {
+    final ReleaseShortCircuitAccessRequestProto proto =
+      ReleaseShortCircuitAccessRequestProto.parseFrom(vintPrefixed(in));
+    releaseShortCircuitFds(PBHelper.convert(proto.getSlotId()));
+  }
+
+  /** Receive {@link Op#REQUEST_SHORT_CIRCUIT_SHM} */
+  private void opRequestShortCircuitShm(DataInputStream in) throws IOException {
+    final ShortCircuitShmRequestProto proto =
+        ShortCircuitShmRequestProto.parseFrom(vintPrefixed(in));
+    requestShortCircuitShm(proto.getClientName());
   }
 
   /** Receive OP_REPLACE_BLOCK */

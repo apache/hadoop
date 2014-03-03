@@ -277,6 +277,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
     final boolean domainSocketDataTraffic;
     final int shortCircuitStreamsCacheSize;
     final long shortCircuitStreamsCacheExpiryMs; 
+    final int shortCircuitSharedMemoryWatcherInterruptCheckMs;
     
     final int shortCircuitMmapCacheSize;
     final long shortCircuitMmapCacheExpiryMs;
@@ -409,6 +410,9 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
       shortCircuitCacheStaleThresholdMs = conf.getLong(
           DFSConfigKeys.DFS_CLIENT_SHORT_CIRCUIT_REPLICA_STALE_THRESHOLD_MS,
           DFSConfigKeys.DFS_CLIENT_SHORT_CIRCUIT_REPLICA_STALE_THRESHOLD_MS_DEFAULT);
+      shortCircuitSharedMemoryWatcherInterruptCheckMs = conf.getInt(
+          DFSConfigKeys.DFS_SHORT_CIRCUIT_SHARED_MEMORY_WATCHER_INTERRUPT_CHECK_MS,
+          DFSConfigKeys.DFS_SHORT_CIRCUIT_SHARED_MEMORY_WATCHER_INTERRUPT_CHECK_MS_DEFAULT);
     }
 
     private DataChecksum.Type getChecksumType(Configuration conf) {
