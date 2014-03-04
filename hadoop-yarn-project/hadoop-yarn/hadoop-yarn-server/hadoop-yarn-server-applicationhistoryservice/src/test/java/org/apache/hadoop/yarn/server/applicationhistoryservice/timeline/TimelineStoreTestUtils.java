@@ -66,6 +66,9 @@ public class TimelineStoreTestUtils {
   protected Map<String, Object> otherInfo;
   protected Map<String, Set<String>> relEntityMap;
   protected NameValuePair userFilter;
+  protected NameValuePair numericFilter1;
+  protected NameValuePair numericFilter2;
+  protected NameValuePair numericFilter3;
   protected Collection<NameValuePair> goodTestingFilters;
   protected Collection<NameValuePair> badTestingFilters;
   protected TimelineEvent ev1;
@@ -86,9 +89,15 @@ public class TimelineStoreTestUtils {
     Set<Object> l1 = new HashSet<Object>();
     l1.add("username");
     Set<Object> l2 = new HashSet<Object>();
-    l2.add(12345l);
+    l2.add((long)Integer.MAX_VALUE);
+    Set<Object> l3 = new HashSet<Object>();
+    l3.add("123abc");
+    Set<Object> l4 = new HashSet<Object>();
+    l4.add((long)Integer.MAX_VALUE + 1l);
     primaryFilters.put("user", l1);
     primaryFilters.put("appname", l2);
+    primaryFilters.put("other", l3);
+    primaryFilters.put("long", l4);
     Map<String, Object> secondaryFilters = new HashMap<String, Object>();
     secondaryFilters.put("startTime", 123456l);
     secondaryFilters.put("status", "RUNNING");
@@ -158,24 +167,32 @@ public class TimelineStoreTestUtils {
    * Load verification data
    */
   protected void loadVerificationData() throws Exception {
-    userFilter = new NameValuePair("user",
-        "username");
+    userFilter = new NameValuePair("user", "username");
+    numericFilter1 = new NameValuePair("appname", Integer.MAX_VALUE);
+    numericFilter2 = new NameValuePair("long", (long)Integer.MAX_VALUE + 1l);
+    numericFilter3 = new NameValuePair("other", "123abc");
     goodTestingFilters = new ArrayList<NameValuePair>();
-    goodTestingFilters.add(new NameValuePair("appname", 12345l));
+    goodTestingFilters.add(new NameValuePair("appname", Integer.MAX_VALUE));
     goodTestingFilters.add(new NameValuePair("status", "RUNNING"));
     badTestingFilters = new ArrayList<NameValuePair>();
-    badTestingFilters.add(new NameValuePair("appname", 12345l));
+    badTestingFilters.add(new NameValuePair("appname", Integer.MAX_VALUE));
     badTestingFilters.add(new NameValuePair("status", "FINISHED"));
 
     primaryFilters = new HashMap<String, Set<Object>>();
     Set<Object> l1 = new HashSet<Object>();
     l1.add("username");
     Set<Object> l2 = new HashSet<Object>();
-    l2.add(12345l);
+    l2.add(Integer.MAX_VALUE);
+    Set<Object> l3 = new HashSet<Object>();
+    l3.add("123abc");
+    Set<Object> l4 = new HashSet<Object>();
+    l4.add((long)Integer.MAX_VALUE + 1l);
     primaryFilters.put("user", l1);
     primaryFilters.put("appname", l2);
+    primaryFilters.put("other", l3);
+    primaryFilters.put("long", l4);
     secondaryFilters = new HashMap<String, Object>();
-    secondaryFilters.put("startTime", 123456l);
+    secondaryFilters.put("startTime", 123456);
     secondaryFilters.put("status", "RUNNING");
     allFilters = new HashMap<String, Object>();
     allFilters.putAll(secondaryFilters);
@@ -347,6 +364,30 @@ public class TimelineStoreTestUtils {
 
     List<TimelineEntity> entities = store.getEntities("type_1", null, null, null,
         userFilter, null, EnumSet.allOf(Field.class)).getEntities();
+    assertEquals(2, entities.size());
+    verifyEntityInfo(entityId1, entityType1, events1, EMPTY_REL_ENTITIES,
+        primaryFilters, otherInfo, entities.get(0));
+    verifyEntityInfo(entityId1b, entityType1, events1, EMPTY_REL_ENTITIES,
+        primaryFilters, otherInfo, entities.get(1));
+
+    store.getEntities("type_1", null, null, null,
+        numericFilter1, null, EnumSet.allOf(Field.class)).getEntities();
+    assertEquals(2, entities.size());
+    verifyEntityInfo(entityId1, entityType1, events1, EMPTY_REL_ENTITIES,
+        primaryFilters, otherInfo, entities.get(0));
+    verifyEntityInfo(entityId1b, entityType1, events1, EMPTY_REL_ENTITIES,
+        primaryFilters, otherInfo, entities.get(1));
+
+    store.getEntities("type_1", null, null, null,
+        numericFilter2, null, EnumSet.allOf(Field.class)).getEntities();
+    assertEquals(2, entities.size());
+    verifyEntityInfo(entityId1, entityType1, events1, EMPTY_REL_ENTITIES,
+        primaryFilters, otherInfo, entities.get(0));
+    verifyEntityInfo(entityId1b, entityType1, events1, EMPTY_REL_ENTITIES,
+        primaryFilters, otherInfo, entities.get(1));
+
+    store.getEntities("type_1", null, null, null,
+        numericFilter3, null, EnumSet.allOf(Field.class)).getEntities();
     assertEquals(2, entities.size());
     verifyEntityInfo(entityId1, entityType1, events1, EMPTY_REL_ENTITIES,
         primaryFilters, otherInfo, entities.get(0));

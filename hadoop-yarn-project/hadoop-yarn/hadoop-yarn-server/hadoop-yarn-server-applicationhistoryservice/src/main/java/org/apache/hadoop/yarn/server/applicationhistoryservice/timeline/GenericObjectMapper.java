@@ -17,27 +17,18 @@
  */
 package org.apache.hadoop.yarn.server.applicationhistoryservice.timeline;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.io.WritableUtils;
 import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.map.ObjectReader;
+import org.codehaus.jackson.map.ObjectWriter;
 
 /**
  * A utility class providing methods for serializing and deserializing
- * objects. The {@link #write(Object)}, {@link #read(byte[])} and {@link
- * #write(java.io.DataOutputStream, Object)}, {@link
- * #read(java.io.DataInputStream)} methods are used by the
- * {@link LeveldbTimelineStore} to store and retrieve arbitrary
+ * objects. The {@link #write(Object)} and {@link #read(byte[])} methods are
+ * used by the {@link LeveldbTimelineStore} to store and retrieve arbitrary
  * JSON, while the {@link #writeReverseOrderedLong} and {@link
  * #readReverseOrderedLong} methods are used to sort entities in descending
  * start time order.
@@ -47,79 +38,31 @@ import org.codehaus.jackson.map.ObjectMapper;
 public class GenericObjectMapper {
   private static final byte[] EMPTY_BYTES = new byte[0];
 
-  private static final byte LONG = 0x1;
-  private static final byte INTEGER = 0x2;
-  private static final byte DOUBLE = 0x3;
-  private static final byte STRING = 0x4;
-  private static final byte BOOLEAN = 0x5;
-  private static final byte LIST = 0x6;
-  private static final byte MAP = 0x7;
+  public static final ObjectReader OBJECT_READER;
+  public static final ObjectWriter OBJECT_WRITER;
+
+  static {
+    ObjectMapper mapper = new ObjectMapper();
+    OBJECT_READER = mapper.reader(Object.class);
+    OBJECT_WRITER = mapper.writer();
+  }
 
   /**
-   * Serializes an Object into a byte array. Along with {@link #read(byte[]) },
+   * Serializes an Object into a byte array. Along with {@link #read(byte[])},
    * can be used to serialize an Object and deserialize it into an Object of
    * the same type without needing to specify the Object's type,
-   * as long as it is one of the JSON-compatible objects Long, Integer,
-   * Double, String, Boolean, List, or Map.  The current implementation uses
-   * ObjectMapper to serialize complex objects (List and Map) while using
-   * Writable to serialize simpler objects, to produce fewer bytes.
+   * as long as it is one of the JSON-compatible objects understood by
+   * ObjectMapper.
    *
    * @param o An Object
    * @return A byte array representation of the Object
    * @throws IOException
    */
   public static byte[] write(Object o) throws IOException {
-    if (o == null)
+    if (o == null) {
       return EMPTY_BYTES;
-    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    write(new DataOutputStream(baos), o);
-    return baos.toByteArray();
-  }
-
-  /**
-   * Serializes an Object and writes it to a DataOutputStream. Along with
-   * {@link #read(java.io.DataInputStream)}, can be used to serialize an Object
-   * and deserialize it into an Object of the same type without needing to
-   * specify the Object's type, as long as it is one of the JSON-compatible
-   * objects Long, Integer, Double, String, Boolean, List, or Map. The current
-   * implementation uses ObjectMapper to serialize complex objects (List and
-   * Map) while using Writable to serialize simpler objects, to produce fewer
-   * bytes.
-   *
-   * @param dos A DataOutputStream
-   * @param o An Object
-   * @throws IOException
-   */
-  public static void write(DataOutputStream dos, Object o)
-      throws IOException {
-    if (o == null)
-      return;
-    if (o instanceof Long) {
-      dos.write(LONG);
-      WritableUtils.writeVLong(dos, (Long) o);
-    } else if(o instanceof Integer) {
-      dos.write(INTEGER);
-      WritableUtils.writeVInt(dos, (Integer) o);
-    } else if(o instanceof Double) {
-      dos.write(DOUBLE);
-      dos.writeDouble((Double) o);
-    } else if (o instanceof String) {
-      dos.write(STRING);
-      WritableUtils.writeString(dos, (String) o);
-    } else if (o instanceof Boolean) {
-      dos.write(BOOLEAN);
-      dos.writeBoolean((Boolean) o);
-    } else if (o instanceof List) {
-      dos.write(LIST);
-      ObjectMapper mapper = new ObjectMapper();
-      mapper.writeValue(dos, o);
-    } else if (o instanceof Map) {
-      dos.write(MAP);
-      ObjectMapper mapper = new ObjectMapper();
-      mapper.writeValue(dos, o);
-    } else {
-      throw new IOException("Couldn't serialize object");
     }
+    return OBJECT_WRITER.writeValueAsBytes(o);
   }
 
   /**
@@ -147,42 +90,7 @@ public class GenericObjectMapper {
     if (b == null || b.length == 0) {
       return null;
     }
-    ByteArrayInputStream bais = new ByteArrayInputStream(b, offset,
-        b.length - offset);
-    return read(new DataInputStream(bais));
-  }
-
-  /**
-   * Reads an Object from a DataInputStream whose data has been written with
-   * {@link #write(java.io.DataOutputStream, Object)}.
-   *
-   * @param dis A DataInputStream
-   * @return An Object, null if an unrecognized type
-   * @throws IOException
-   */
-  public static Object read(DataInputStream dis) throws IOException {
-    byte code = (byte)dis.read();
-    ObjectMapper mapper;
-    switch (code) {
-      case LONG:
-        return WritableUtils.readVLong(dis);
-      case INTEGER:
-        return WritableUtils.readVInt(dis);
-      case DOUBLE:
-        return dis.readDouble();
-      case STRING:
-        return WritableUtils.readString(dis);
-      case BOOLEAN:
-        return dis.readBoolean();
-      case LIST:
-        mapper = new ObjectMapper();
-        return mapper.readValue(dis, ArrayList.class);
-      case MAP:
-        mapper = new ObjectMapper();
-        return mapper.readValue(dis, HashMap.class);
-      default:
-        return null;
-    }
+    return OBJECT_READER.readValue(b, offset, b.length - offset);
   }
 
   /**
@@ -195,8 +103,9 @@ public class GenericObjectMapper {
   public static byte[] writeReverseOrderedLong(long l) {
     byte[] b = new byte[8];
     b[0] = (byte)(0x7f ^ ((l >> 56) & 0xff));
-    for (int i = 1; i < 7; i++)
+    for (int i = 1; i < 7; i++) {
       b[i] = (byte)(0xff ^ ((l >> 8*(7-i)) & 0xff));
+    }
     b[7] = (byte)(0xff ^ (l & 0xff));
     return b;
   }
