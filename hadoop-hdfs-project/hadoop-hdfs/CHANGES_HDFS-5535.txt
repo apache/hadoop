@@ -137,3 +137,5 @@ HDFS-5535 subtasks:
     HDFS-6042. Fix rolling upgrade documentation and error messages. (szetszwo
     via Arpit Agarwal)
 
+    HDFS-6041. Downgrade/Finalize should rename the rollback image instead of
+    purging it. (jing9)

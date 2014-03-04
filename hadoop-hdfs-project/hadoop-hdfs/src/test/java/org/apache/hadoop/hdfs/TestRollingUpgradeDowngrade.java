@@ -37,7 +37,7 @@ import org.junit.Test;
 public class TestRollingUpgradeDowngrade {
 
   @Test(timeout = 300000)
-  public void testDowngrade() throws IOException {
+  public void testDowngrade() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     MiniQJMHACluster cluster = null;
     final Path foo = new Path("/foo");
@@ -48,6 +48,11 @@ public class TestRollingUpgradeDowngrade {
       MiniDFSCluster dfsCluster = cluster.getDfsCluster();
       dfsCluster.waitActive();
 
+      // let NN1 tail editlog every 1s
+      dfsCluster.getConfiguration(1).setInt(
+          DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
+      dfsCluster.restartNameNode(1);
+
       dfsCluster.transitionToActive(0);
       DistributedFileSystem dfs = dfsCluster.getFileSystem(0);
       dfs.mkdirs(foo);
@@ -57,9 +62,14 @@ public class TestRollingUpgradeDowngrade {
           .rollingUpgrade(RollingUpgradeAction.PREPARE);
       Assert.assertTrue(info.isStarted());
       dfs.mkdirs(bar);
+
+      TestRollingUpgrade.queryForPreparation(dfs);
       dfs.close();
 
       dfsCluster.restartNameNode(0, true, "-rollingUpgrade", "downgrade");
+      // Once downgraded, there should be no more fsimage for rollbacks.
+      Assert.assertFalse(dfsCluster.getNamesystem(0).getFSImage()
+          .hasRollbackFSImage());
       // shutdown NN1
       dfsCluster.shutdownNameNode(1);
       dfsCluster.transitionToActive(0);

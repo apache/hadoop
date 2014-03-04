@@ -736,7 +736,8 @@ public class FSEditLogLoader {
     case OP_ROLLING_UPGRADE_FINALIZE: {
       final long finalizeTime = ((RollingUpgradeOp) op).getTime();
       fsNamesys.finalizeRollingUpgradeInternal(finalizeTime);
-      fsNamesys.getFSImage().purgeCheckpoints(NameNodeFile.IMAGE_ROLLBACK);
+      fsNamesys.getFSImage().renameCheckpoint(NameNodeFile.IMAGE_ROLLBACK,
+          NameNodeFile.IMAGE);
       break;
     }
     case OP_ADD_CACHE_DIRECTIVE: {

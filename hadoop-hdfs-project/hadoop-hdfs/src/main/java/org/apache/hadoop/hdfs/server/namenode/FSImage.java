@@ -659,8 +659,8 @@ public class FSImage implements Closeable {
       needToSave |= needsResaveBasedOnStaleCheckpoint(imageFile.getFile(),
           txnsAdvanced);
       if (RollingUpgradeStartupOption.DOWNGRADE.matches(startOpt)) {
-        // purge rollback image if it is downgrade
-        archivalManager.purgeCheckpoints(NameNodeFile.IMAGE_ROLLBACK);
+        // rename rollback image if it is downgrade
+        renameCheckpoint(NameNodeFile.IMAGE_ROLLBACK, NameNodeFile.IMAGE);
       }
     } else {
       // Trigger the rollback for rolling upgrade. Here lastAppliedTxId equals
@@ -1097,18 +1097,7 @@ public class FSImage implements Closeable {
   }
 
   /**
-   * Purge all the checkpoints with the name style.
-   */
-  void purgeCheckpoints(NameNodeFile nnf) {
-    try {
-      archivalManager.purgeCheckpoints(nnf);
-    } catch (Exception e) {
-      LOG.warn("Unable to purge checkpoints with name " + nnf.getName(), e);
-    }
-  }
-
-  /**
-   * Rename FSImage
+   * Rename FSImage with the specific txid
    */
   private void renameCheckpoint(long txid, NameNodeFile fromNnf,
       NameNodeFile toNnf, boolean renameMD5) throws IOException {
@@ -1127,7 +1116,33 @@ public class FSImage implements Closeable {
     }
     if(al != null) storage.reportErrorsOnDirectories(al);
   }
-  
+
+  /**
+   * Rename all the fsimage files with the specific NameNodeFile type. The
+   * associated checksum files will also be renamed.
+   */
+  void renameCheckpoint(NameNodeFile fromNnf, NameNodeFile toNnf)
+      throws IOException {
+    ArrayList<StorageDirectory> al = null;
+    FSImageTransactionalStorageInspector inspector =
+        new FSImageTransactionalStorageInspector(EnumSet.of(fromNnf));
+    storage.inspectStorageDirs(inspector);
+    for (FSImageFile image : inspector.getFoundImages()) {
+      try {
+        renameImageFileInDir(image.sd, fromNnf, toNnf, image.txId, true);
+      } catch (IOException ioe) {
+        LOG.warn("Unable to rename checkpoint in " + image.sd, ioe);
+        if (al == null) {
+          al = Lists.newArrayList();
+        }
+        al.add(image.sd);
+      }
+    }
+    if(al != null) {
+      storage.reportErrorsOnDirectories(al);
+    }
+  }
+
   /**
    * Deletes the checkpoint file in every storage directory,
    * since the checkpoint was cancelled.
@@ -1149,8 +1164,7 @@ public class FSImage implements Closeable {
       NameNodeFile toNnf, long txid, boolean renameMD5) throws IOException {
     final File fromFile = NNStorage.getStorageFile(sd, fromNnf, txid);
     final File toFile = NNStorage.getStorageFile(sd, toNnf, txid);
-    // renameTo fails on Windows if the destination file 
-    // already exists.
+    // renameTo fails on Windows if the destination file already exists.
     if(LOG.isDebugEnabled()) {
       LOG.debug("renaming  " + fromFile.getAbsolutePath() 
                 + " to " + toFile.getAbsolutePath());

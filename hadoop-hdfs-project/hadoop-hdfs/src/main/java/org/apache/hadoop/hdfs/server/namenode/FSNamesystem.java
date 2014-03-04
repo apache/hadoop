@@ -7287,7 +7287,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       returnInfo = finalizeRollingUpgradeInternal(now());
       getEditLog().logFinalizeRollingUpgrade(returnInfo.getFinalizeTime());
       getFSImage().saveNamespace(this);
-      getFSImage().purgeCheckpoints(NameNodeFile.IMAGE_ROLLBACK);
+      getFSImage().renameCheckpoint(NameNodeFile.IMAGE_ROLLBACK,
+          NameNodeFile.IMAGE);
     } finally {
       writeUnlock();
     }
