@@ -19,7 +19,6 @@
 package org.apache.hadoop.mapred;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
@@ -56,6 +55,7 @@ import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
+import org.apache.hadoop.yarn.client.ClientRMProxy;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.client.api.YarnClientApplication;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -74,7 +74,7 @@ public class ResourceMgrDelegate extends YarnClient {
   @Private
   @VisibleForTesting
   protected YarnClient client;
-  private InetSocketAddress rmAddress;
+  private Text rmDTService;
 
   /**
    * Delegate responsible for communicating with the Resource Manager's
@@ -91,9 +91,6 @@ public class ResourceMgrDelegate extends YarnClient {
 
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
-    this.rmAddress = conf.getSocketAddr(YarnConfiguration.RM_ADDRESS,
-          YarnConfiguration.DEFAULT_RM_ADDRESS,
-          YarnConfiguration.DEFAULT_RM_PORT);
     client.init(conf);
     super.serviceInit(conf);
   }
@@ -155,8 +152,11 @@ public class ResourceMgrDelegate extends YarnClient {
     }
   }
 
-  InetSocketAddress getConnectAddress() {
-    return rmAddress;
+  public Text getRMDelegationTokenService() {
+    if (rmDTService == null) {
+      rmDTService = ClientRMProxy.getRMDelegationTokenService(conf);
+    }
+    return rmDTService;
   }
   
   @SuppressWarnings("rawtypes")
@@ -164,7 +164,7 @@ public class ResourceMgrDelegate extends YarnClient {
       InterruptedException {
     try {
       return ConverterUtils.convertFromYarn(
-          client.getRMDelegationToken(renewer), rmAddress);
+          client.getRMDelegationToken(renewer), getRMDelegationTokenService());
     } catch (YarnException e) {
       throw new IOException(e);
     }

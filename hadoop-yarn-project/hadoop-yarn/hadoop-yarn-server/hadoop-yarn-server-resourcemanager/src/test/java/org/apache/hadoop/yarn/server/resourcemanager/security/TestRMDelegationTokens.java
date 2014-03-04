@@ -27,6 +27,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
@@ -102,7 +103,7 @@ public class TestRMDelegationTokens {
     org.apache.hadoop.yarn.api.records.Token delegationToken =
         response.getRMDelegationToken();
     Token<RMDelegationTokenIdentifier> token1 =
-        ConverterUtils.convertFromYarn(delegationToken, null);
+        ConverterUtils.convertFromYarn(delegationToken, (Text) null);
     RMDelegationTokenIdentifier dtId1 = token1.decodeIdentifier();
 
     // wait for the first rollMasterKey
