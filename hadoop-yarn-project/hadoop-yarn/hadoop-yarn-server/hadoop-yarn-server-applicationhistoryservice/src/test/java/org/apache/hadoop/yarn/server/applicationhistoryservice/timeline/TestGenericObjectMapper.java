@@ -72,7 +72,19 @@ public class TestGenericObjectMapper {
 
   @Test
   public void testValueTypes() throws IOException {
-    verify(42l);
+    verify(Integer.MAX_VALUE);
+    verify(Integer.MIN_VALUE);
+    assertEquals(Integer.MAX_VALUE, GenericObjectMapper.read(
+        GenericObjectMapper.write((long) Integer.MAX_VALUE)));
+    assertEquals(Integer.MIN_VALUE, GenericObjectMapper.read(
+        GenericObjectMapper.write((long) Integer.MIN_VALUE)));
+    verify((long)Integer.MAX_VALUE + 1l);
+    verify((long)Integer.MIN_VALUE - 1l);
+
+    verify(Long.MAX_VALUE);
+    verify(Long.MIN_VALUE);
+
+    assertEquals(42, GenericObjectMapper.read(GenericObjectMapper.write(42l)));
     verify(42);
     verify(1.23);
     verify("abc");
