@@ -149,23 +149,29 @@ public class ShortCircuitRegistry {
     SharedFileDescriptorFactory shmFactory = null;
     DomainSocketWatcher watcher = null;
     try {
-      if (!NativeIO.isAvailable()) {
-        LOG.debug("Disabling ShortCircuitRegistry because NativeIO is " +
-            "not available.");
+      String loadingFailureReason =
+          SharedFileDescriptorFactory.getLoadingFailureReason();
+      if (loadingFailureReason != null) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Disabling ShortCircuitRegistry because " +
+                    loadingFailureReason);
+        }
         return;
       }
       String shmPath = conf.get(DFS_DATANODE_SHARED_FILE_DESCRIPTOR_PATH,
           DFS_DATANODE_SHARED_FILE_DESCRIPTOR_PATH_DEFAULT);
       if (shmPath.isEmpty()) {
-        LOG.info("Disabling ShortCircuitRegistry because shmPath was not set.");
+        LOG.debug("Disabling ShortCircuitRegistry because shmPath was not set.");
         return;
       }
       int interruptCheck = conf.getInt(
           DFS_SHORT_CIRCUIT_SHARED_MEMORY_WATCHER_INTERRUPT_CHECK_MS,
           DFS_SHORT_CIRCUIT_SHARED_MEMORY_WATCHER_INTERRUPT_CHECK_MS_DEFAULT);
       if (interruptCheck <= 0) {
-        LOG.info("Disabling ShortCircuitRegistry because interruptCheckMs " +
-            "was set to " + interruptCheck);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Disabling ShortCircuitRegistry because " +
+                    "interruptCheckMs was set to " + interruptCheck);
+        }
         return;
       }
       shmFactory = 
@@ -174,7 +180,7 @@ public class ShortCircuitRegistry {
       enabled = true;
       if (LOG.isDebugEnabled()) {
         LOG.debug("created new ShortCircuitRegistry with interruptCheck=" +
-          interruptCheck + ", shmPath=" + shmPath);
+                  interruptCheck + ", shmPath=" + shmPath);
       }
     } finally {
       this.enabled = enabled;
