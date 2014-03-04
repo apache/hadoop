@@ -48,6 +48,16 @@ public class SharedFileDescriptorFactory {
   private final String prefix;
   private final String path;
 
+  public static String getLoadingFailureReason() {
+    if (!NativeIO.isAvailable()) {
+      return "NativeIO is not available.";
+    }
+    if (!SystemUtils.IS_OS_UNIX) {
+      return "The OS is not UNIX.";
+    }
+    return null;
+  }
+
   /**
    * Create a SharedFileDescriptorFactory.
    *
@@ -56,8 +66,7 @@ public class SharedFileDescriptorFactory {
    */
   public SharedFileDescriptorFactory(String prefix, String path)
       throws IOException {
-    Preconditions.checkArgument(NativeIO.isAvailable());
-    Preconditions.checkArgument(SystemUtils.IS_OS_UNIX);
+    Preconditions.checkState(getLoadingFailureReason() == null);
     this.prefix = prefix;
     this.path = path;
     deleteStaleTemporaryFiles0(prefix, path);
