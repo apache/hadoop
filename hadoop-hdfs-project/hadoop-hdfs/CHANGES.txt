@@ -373,6 +373,8 @@ Release 2.4.0 - UNRELEASED
     HDFS-5950. The DFSClient and DataNode should use shared memory segments to
     communicate short-circuit information. (cmccabe)
 
+    HDFS-6046. add dfs.client.mmap.enabled (cmccabe)
+
   OPTIMIZATIONS
 
     HDFS-5790. LeaseManager.findPath is very slow when many leases need recovery
@@ -520,6 +522,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-5866. '-maxSize' and '-step' option fail in OfflineImageViewer.
     (Akira Ajisaka via wheat9)
 
+    HDFS-6040. fix DFSClient issue without libhadoop.so and some other
+    ShortCircuitShm cleanups (cmccabe)
+
   BREAKDOWN OF HDFS-5698 SUBTASKS AND RELATED JIRAS
 
     HDFS-5717. Save FSImage header in protobuf. (Haohui Mai via jing9)
@@ -665,6 +670,9 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-6028. Print clearer error message when user attempts to delete required
     mask entry from ACL. (cnauroth)
+
+    HDFS-6039. Uploading a File under a Dir with default acls throws "Duplicated
+    ACLFeature". (cnauroth)
 
 Release 2.3.1 - UNRELEASED
 

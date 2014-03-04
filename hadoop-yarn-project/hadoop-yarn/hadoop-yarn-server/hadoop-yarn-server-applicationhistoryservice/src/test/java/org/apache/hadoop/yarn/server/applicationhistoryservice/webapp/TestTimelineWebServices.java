@@ -109,15 +109,7 @@ public class TestTimelineWebServices extends JerseyTest {
     Assert.assertEquals("Timeline API", about.getAbout());
   }
 
-  @Test
-  public void testGetEntities() throws Exception {
-    WebResource r = resource();
-    ClientResponse response = r.path("ws").path("v1").path("timeline")
-        .path("type_1")
-        .accept(MediaType.APPLICATION_JSON)
-        .get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
-    TimelineEntities entities = response.getEntity(TimelineEntities.class);
+  private static void verifyEntities(TimelineEntities entities) {
     Assert.assertNotNull(entities);
     Assert.assertEquals(2, entities.getEntities().size());
     TimelineEntity entity1 = entities.getEntities().get(0);
@@ -126,7 +118,7 @@ public class TestTimelineWebServices extends JerseyTest {
     Assert.assertEquals("type_1", entity1.getEntityType());
     Assert.assertEquals(123l, entity1.getStartTime().longValue());
     Assert.assertEquals(2, entity1.getEvents().size());
-    Assert.assertEquals(2, entity1.getPrimaryFilters().size());
+    Assert.assertEquals(4, entity1.getPrimaryFilters().size());
     Assert.assertEquals(4, entity1.getOtherInfo().size());
     TimelineEntity entity2 = entities.getEntities().get(1);
     Assert.assertNotNull(entity2);
@@ -134,8 +126,92 @@ public class TestTimelineWebServices extends JerseyTest {
     Assert.assertEquals("type_1", entity2.getEntityType());
     Assert.assertEquals(123l, entity2.getStartTime().longValue());
     Assert.assertEquals(2, entity2.getEvents().size());
-    Assert.assertEquals(2, entity2.getPrimaryFilters().size());
+    Assert.assertEquals(4, entity2.getPrimaryFilters().size());
     Assert.assertEquals(4, entity2.getOtherInfo().size());
+  }
+
+  @Test
+  public void testGetEntities() throws Exception {
+    WebResource r = resource();
+    ClientResponse response = r.path("ws").path("v1").path("timeline")
+        .path("type_1")
+        .accept(MediaType.APPLICATION_JSON)
+        .get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    verifyEntities(response.getEntity(TimelineEntities.class));
+  }
+
+  @Test
+  public void testPrimaryFilterString() {
+    WebResource r = resource();
+    ClientResponse response = r.path("ws").path("v1").path("timeline")
+        .path("type_1").queryParam("primaryFilter", "user:username")
+        .accept(MediaType.APPLICATION_JSON)
+        .get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    verifyEntities(response.getEntity(TimelineEntities.class));
+  }
+
+  @Test
+  public void testPrimaryFilterInteger() {
+    WebResource r = resource();
+    ClientResponse response = r.path("ws").path("v1").path("timeline")
+        .path("type_1").queryParam("primaryFilter",
+            "appname:" + Integer.toString(Integer.MAX_VALUE))
+        .accept(MediaType.APPLICATION_JSON)
+        .get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    verifyEntities(response.getEntity(TimelineEntities.class));
+  }
+
+  @Test
+  public void testPrimaryFilterLong() {
+    WebResource r = resource();
+    ClientResponse response = r.path("ws").path("v1").path("timeline")
+        .path("type_1").queryParam("primaryFilter",
+            "long:" + Long.toString((long)Integer.MAX_VALUE + 1l))
+        .accept(MediaType.APPLICATION_JSON)
+        .get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    verifyEntities(response.getEntity(TimelineEntities.class));
+  }
+
+  @Test
+  public void testPrimaryFilterNumericString() {
+    // without quotes, 123abc is interpreted as the number 123,
+    // which finds no entities
+    WebResource r = resource();
+    ClientResponse response = r.path("ws").path("v1").path("timeline")
+        .path("type_1").queryParam("primaryFilter", "other:123abc")
+        .accept(MediaType.APPLICATION_JSON)
+        .get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    assertEquals(0, response.getEntity(TimelineEntities.class).getEntities()
+        .size());
+  }
+
+  @Test
+  public void testPrimaryFilterNumericStringWithQuotes() {
+    WebResource r = resource();
+    ClientResponse response = r.path("ws").path("v1").path("timeline")
+        .path("type_1").queryParam("primaryFilter", "other:\"123abc\"")
+        .accept(MediaType.APPLICATION_JSON)
+        .get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    verifyEntities(response.getEntity(TimelineEntities.class));
+  }
+
+  @Test
+  public void testSecondaryFilters() {
+    WebResource r = resource();
+    ClientResponse response = r.path("ws").path("v1").path("timeline")
+        .path("type_1")
+        .queryParam("secondaryFilter",
+            "user:username,appname:" + Integer.toString(Integer.MAX_VALUE))
+        .accept(MediaType.APPLICATION_JSON)
+        .get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    verifyEntities(response.getEntity(TimelineEntities.class));
   }
 
   @Test
@@ -152,7 +228,7 @@ public class TestTimelineWebServices extends JerseyTest {
     Assert.assertEquals("type_1", entity.getEntityType());
     Assert.assertEquals(123l, entity.getStartTime().longValue());
     Assert.assertEquals(2, entity.getEvents().size());
-    Assert.assertEquals(2, entity.getPrimaryFilters().size());
+    Assert.assertEquals(4, entity.getPrimaryFilters().size());
     Assert.assertEquals(4, entity.getOtherInfo().size());
   }
 
@@ -189,7 +265,7 @@ public class TestTimelineWebServices extends JerseyTest {
     Assert.assertEquals("type_1", entity.getEntityType());
     Assert.assertEquals(123l, entity.getStartTime().longValue());
     Assert.assertEquals(1, entity.getEvents().size());
-    Assert.assertEquals(2, entity.getPrimaryFilters().size());
+    Assert.assertEquals(4, entity.getPrimaryFilters().size());
     Assert.assertEquals(0, entity.getOtherInfo().size());
   }
 
