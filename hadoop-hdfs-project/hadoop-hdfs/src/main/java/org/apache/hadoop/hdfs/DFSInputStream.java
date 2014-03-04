@@ -1571,7 +1571,10 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
             "at position " + pos);
       }
     }
-    ByteBuffer buffer = tryReadZeroCopy(maxLength, opts);
+    ByteBuffer buffer = null;
+    if (dfsClient.getConf().shortCircuitMmapEnabled) {
+      buffer = tryReadZeroCopy(maxLength, opts);
+    }
     if (buffer != null) {
       return buffer;
     }

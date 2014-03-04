@@ -279,6 +279,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
     final long shortCircuitStreamsCacheExpiryMs; 
     final int shortCircuitSharedMemoryWatcherInterruptCheckMs;
     
+    final boolean shortCircuitMmapEnabled;
     final int shortCircuitMmapCacheSize;
     final long shortCircuitMmapCacheExpiryMs;
     final long shortCircuitMmapCacheRetryTimeout;
@@ -398,6 +399,9 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
       shortCircuitStreamsCacheExpiryMs = conf.getLong(
           DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_STREAMS_CACHE_EXPIRY_MS_KEY,
           DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_STREAMS_CACHE_EXPIRY_MS_DEFAULT);
+      shortCircuitMmapEnabled = conf.getBoolean(
+          DFSConfigKeys.DFS_CLIENT_MMAP_ENABLED,
+          DFSConfigKeys.DFS_CLIENT_MMAP_ENABLED_DEFAULT);
       shortCircuitMmapCacheSize = conf.getInt(
           DFSConfigKeys.DFS_CLIENT_MMAP_CACHE_SIZE,
           DFSConfigKeys.DFS_CLIENT_MMAP_CACHE_SIZE_DEFAULT);

@@ -373,6 +373,8 @@ Release 2.4.0 - UNRELEASED
     HDFS-5950. The DFSClient and DataNode should use shared memory segments to
     communicate short-circuit information. (cmccabe)
 
+    HDFS-6046. add dfs.client.mmap.enabled (cmccabe)
+
   OPTIMIZATIONS
 
     HDFS-5790. LeaseManager.findPath is very slow when many leases need recovery
