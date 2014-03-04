@@ -590,6 +590,140 @@ public class TestRMAdminService {
 
   }
 
+  @Test
+  public void testRMInitialsWithFileSystemBasedConfigurationProvider()
+      throws Exception {
+    configuration.set(YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
+        "org.apache.hadoop.yarn.FileSystemBasedConfigurationProvider");
+
+    // upload configurations
+    final File excludeHostsFile = new File(tmpDir.toString(), "excludeHosts");
+    if (excludeHostsFile.exists()) {
+      excludeHostsFile.delete();
+    }
+    if (!excludeHostsFile.createNewFile()) {
+      Assert.fail("Can not create " + "excludeHosts");
+    }
+    PrintWriter fileWriter = new PrintWriter(excludeHostsFile);
+    fileWriter.write("0.0.0.0:123");
+    fileWriter.close();
+    uploadToRemoteFileSystem(new Path(excludeHostsFile.getAbsolutePath()));
+
+    YarnConfiguration yarnConf = new YarnConfiguration();
+    yarnConf.set(YarnConfiguration.YARN_ADMIN_ACL, "world:anyone:rwcda");
+    yarnConf.set(YarnConfiguration.RM_NODES_EXCLUDE_FILE_PATH, this.workingPath
+        + "/excludeHosts");
+    uploadConfiguration(yarnConf, "yarn-site.xml");
+
+    CapacitySchedulerConfiguration csConf =
+        new CapacitySchedulerConfiguration();
+    csConf.set("yarn.scheduler.capacity.maximum-applications", "5000");
+    uploadConfiguration(csConf, "capacity-scheduler.xml");
+
+    String aclsString = "alice,bob users,wheel";
+    Configuration newConf = new Configuration();
+    newConf.set("security.applicationclient.protocol.acl", aclsString);
+    uploadConfiguration(newConf, "hadoop-policy.xml");
+
+    Configuration conf = new Configuration();
+    conf.setBoolean(
+        CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION, true);
+    conf.set("hadoop.proxyuser.test.groups", "test_groups");
+    conf.set("hadoop.proxyuser.test.hosts", "test_hosts");
+    conf.setClass(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
+        MockUnixGroupsMapping.class,
+        GroupMappingServiceProvider.class);
+    uploadConfiguration(conf, "core-site.xml");
+
+    // update the groups
+    MockUnixGroupsMapping.updateGroups();
+
+    ResourceManager resourceManager = null;
+    try {
+      try {
+        resourceManager = new ResourceManager();
+        resourceManager.init(configuration);
+        resourceManager.start();
+      } catch (Exception ex) {
+        fail("Should not get any exceptions");
+      }
+
+      // validate values for excludeHosts
+      Set<String> excludeHosts =
+          resourceManager.getRMContext().getNodesListManager()
+              .getHostsReader().getExcludedHosts();
+      Assert.assertTrue(excludeHosts.size() == 1);
+      Assert.assertTrue(excludeHosts.contains("0.0.0.0:123"));
+
+      // validate values for admin-acls
+      String aclStringAfter =
+          resourceManager.adminService.getAccessControlList()
+              .getAclString().trim();
+      Assert.assertEquals(aclStringAfter, "world:anyone:rwcda");
+
+      // validate values for queue configuration
+      CapacityScheduler cs =
+          (CapacityScheduler) resourceManager.getRMContext().getScheduler();
+      int maxAppsAfter = cs.getConfiguration().getMaximumSystemApplications();
+      Assert.assertEquals(maxAppsAfter, 5000);
+
+      // verify service Acls for AdminService
+      ServiceAuthorizationManager adminServiceServiceManager =
+          resourceManager.adminService.getServer()
+              .getServiceAuthorizationManager();
+      verifyServiceACLsRefresh(adminServiceServiceManager,
+          org.apache.hadoop.yarn.api.ApplicationClientProtocolPB.class,
+          aclsString);
+
+      // verify service ACLs for ClientRMService
+      ServiceAuthorizationManager clientRMServiceServiceManager =
+          resourceManager.getRMContext().getClientRMService().getServer()
+              .getServiceAuthorizationManager();
+      verifyServiceACLsRefresh(clientRMServiceServiceManager,
+          org.apache.hadoop.yarn.api.ApplicationClientProtocolPB.class,
+          aclsString);
+
+      // verify service ACLs for ApplicationMasterService
+      ServiceAuthorizationManager appMasterService =
+          resourceManager.getRMContext().getApplicationMasterService()
+              .getServer().getServiceAuthorizationManager();
+      verifyServiceACLsRefresh(appMasterService,
+          org.apache.hadoop.yarn.api.ApplicationClientProtocolPB.class,
+          aclsString);
+
+      // verify service ACLs for ResourceTrackerService
+      ServiceAuthorizationManager RTService =
+          resourceManager.getRMContext().getResourceTrackerService()
+              .getServer().getServiceAuthorizationManager();
+      verifyServiceACLsRefresh(RTService,
+          org.apache.hadoop.yarn.api.ApplicationClientProtocolPB.class,
+          aclsString);
+
+      // verify ProxyUsers and ProxyHosts
+      Assert.assertTrue(ProxyUsers.getProxyGroups()
+          .get("hadoop.proxyuser.test.groups").size() == 1);
+      Assert.assertTrue(ProxyUsers.getProxyGroups()
+          .get("hadoop.proxyuser.test.groups").contains("test_groups"));
+
+      Assert.assertTrue(ProxyUsers.getProxyHosts()
+          .get("hadoop.proxyuser.test.hosts").size() == 1);
+      Assert.assertTrue(ProxyUsers.getProxyHosts()
+          .get("hadoop.proxyuser.test.hosts").contains("test_hosts"));
+
+      // verify UserToGroupsMappings
+      List<String> groupAfter =
+          Groups.getUserToGroupsMappingService(configuration).getGroups(
+              UserGroupInformation.getCurrentUser().getUserName());
+      Assert.assertTrue(groupAfter.contains("test_group_D")
+          && groupAfter.contains("test_group_E")
+          && groupAfter.contains("test_group_F") && groupAfter.size() == 3);
+    } finally {
+      if (resourceManager != null) {
+        resourceManager.stop();
+      }
+    }
+  }
+
   private String writeConfigurationXML(Configuration conf, String confXMLName)
       throws IOException {
     DataOutputStream output = null;

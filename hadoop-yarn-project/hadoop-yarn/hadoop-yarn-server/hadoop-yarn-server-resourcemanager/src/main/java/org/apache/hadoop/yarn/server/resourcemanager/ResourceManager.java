@@ -36,6 +36,7 @@ import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.service.Service;
@@ -181,7 +182,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
-    validateConfigs(conf);
     this.conf = conf;
     this.rmContext = new RMContextImpl();
 
@@ -190,13 +190,6 @@ public class ResourceManager extends CompositeService implements Recoverable {
     this.configurationProvider.init(this.conf);
     rmContext.setConfigurationProvider(configurationProvider);
 
-    // load yarn-site.xml
-    InputStream yarnSiteXMLInputStream =
-        this.configurationProvider.getConfigurationInputStream(this.conf,
-            YarnConfiguration.YARN_SITE_CONFIGURATION_FILE);
-    if (yarnSiteXMLInputStream != null) {
-      this.conf.addResource(yarnSiteXMLInputStream);
-    }
     // load core-site.xml
     InputStream coreSiteXMLInputStream =
         this.configurationProvider.getConfigurationInputStream(this.conf,
@@ -209,6 +202,19 @@ public class ResourceManager extends CompositeService implements Recoverable {
     Groups.getUserToGroupsMappingServiceWithLoadedConfiguration(this.conf)
         .refresh();
 
+    // Do refreshSuperUserGroupsConfiguration with loaded core-site.xml
+    ProxyUsers.refreshSuperUserGroupsConfiguration(this.conf);
+
+    // load yarn-site.xml
+    InputStream yarnSiteXMLInputStream =
+        this.configurationProvider.getConfigurationInputStream(this.conf,
+            YarnConfiguration.YARN_SITE_CONFIGURATION_FILE);
+    if (yarnSiteXMLInputStream != null) {
+      this.conf.addResource(yarnSiteXMLInputStream);
+    }
+
+    validateConfigs(this.conf);
+
     // register the handlers for all AlwaysOn services using setupDispatcher().
     rmDispatcher = setupDispatcher();
     addIfService(rmDispatcher);
@@ -218,15 +224,15 @@ public class ResourceManager extends CompositeService implements Recoverable {
     addService(adminService);
     rmContext.setRMAdminService(adminService);
 
-    this.rmContext.setHAEnabled(HAUtil.isHAEnabled(conf));
+    this.rmContext.setHAEnabled(HAUtil.isHAEnabled(this.conf));
     if (this.rmContext.isHAEnabled()) {
-      HAUtil.verifyAndSetConfiguration(conf);
+      HAUtil.verifyAndSetConfiguration(this.conf);
     }
     createAndInitActiveServices();
 
-    webAppAddress = WebAppUtils.getRMWebAppURLWithoutScheme(conf);
+    webAppAddress = WebAppUtils.getRMWebAppURLWithoutScheme(this.conf);
 
-    super.serviceInit(conf);
+    super.serviceInit(this.conf);
   }
   
   protected QueueACLsManager createQueueACLsManager(ResourceScheduler scheduler,
