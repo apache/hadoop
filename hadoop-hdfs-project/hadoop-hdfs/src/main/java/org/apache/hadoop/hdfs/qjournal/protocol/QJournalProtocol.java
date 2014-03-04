@@ -32,6 +32,7 @@ import org.apache.hadoop.hdfs.qjournal.server.JournalNode;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.namenode.JournalManager;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
+import org.apache.hadoop.io.retry.Idempotent;
 import org.apache.hadoop.security.KerberosInfo;
 
 /**
@@ -155,6 +156,14 @@ public interface QJournalProtocol {
       StorageInfo prevStorage, int targetLayoutVersion) throws IOException;
 
   public void doRollback(String journalId) throws IOException;
+
+  /**
+   * Discard journal segments whose first TxId is greater than or equal to the
+   * given txid.
+   */
+  @Idempotent
+  public void discardSegments(String journalId, long startTxId)
+      throws IOException;
 
   public Long getJournalCTime(String journalId) throws IOException;
 }

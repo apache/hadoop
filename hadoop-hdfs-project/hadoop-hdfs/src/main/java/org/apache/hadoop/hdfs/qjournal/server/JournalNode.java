@@ -309,6 +309,11 @@ public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
     getOrCreateJournal(journalId).doRollback();
   }
 
+  public void discardSegments(String journalId, long startTxId)
+      throws IOException {
+    getOrCreateJournal(journalId).discardSegments(startTxId);
+  }
+
   public Long getJournalCTime(String journalId) throws IOException {
     return getOrCreateJournal(journalId).getJournalCTime();
   }

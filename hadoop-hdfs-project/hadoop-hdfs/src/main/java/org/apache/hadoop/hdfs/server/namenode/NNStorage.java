@@ -25,6 +25,7 @@ import java.net.URI;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -38,7 +39,6 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
-import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
@@ -47,13 +47,12 @@ import org.apache.hadoop.hdfs.server.common.StorageErrorReporter;
 import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.util.PersistentLongFile;
-
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.util.Time;
 
-import com.google.common.base.Preconditions;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 
 /**
@@ -69,19 +68,21 @@ public class NNStorage extends Storage implements Closeable,
   //
   // The filenames used for storing the images
   //
-  enum NameNodeFile {
+  public enum NameNodeFile {
     IMAGE     ("fsimage"),
     TIME      ("fstime"), // from "old" pre-HDFS-1073 format
     SEEN_TXID ("seen_txid"),
     EDITS     ("edits"),
     IMAGE_NEW ("fsimage.ckpt"),
+    IMAGE_ROLLBACK("fsimage_rollback"),
     EDITS_NEW ("edits.new"), // from "old" pre-HDFS-1073 format
     EDITS_INPROGRESS ("edits_inprogress"),
     EDITS_TMP ("edits_tmp");
 
     private String fileName = null;
     private NameNodeFile(String name) { this.fileName = name; }
-    String getName() { return fileName; }
+    @VisibleForTesting
+    public String getName() { return fileName; }
   }
 
   /**
@@ -90,7 +91,8 @@ public class NNStorage extends Storage implements Closeable,
    * or of type EDITS which stores edits or of type IMAGE_AND_EDITS which
    * stores both fsimage and edits.
    */
-  static enum NameNodeDirType implements StorageDirType {
+  @VisibleForTesting
+  public static enum NameNodeDirType implements StorageDirType {
     UNDEFINED,
     IMAGE,
     EDITS,
@@ -498,21 +500,42 @@ public class NNStorage extends Storage implements Closeable,
   }
 
   /**
-   * Return the name of the image file.
-   * @return The name of the first image file.
+   * @return The first image file with the given txid and image type.
    */
-  public File getFsImageName(long txid) {
-    StorageDirectory sd = null;
-    for (Iterator<StorageDirectory> it =
-      dirIterator(NameNodeDirType.IMAGE); it.hasNext();) {
-      sd = it.next();
-      File fsImage = getStorageFile(sd, NameNodeFile.IMAGE, txid);
-      if(FileUtil.canRead(sd.getRoot()) && fsImage.exists())
+  public File getFsImageName(long txid, NameNodeFile nnf) {
+    for (Iterator<StorageDirectory> it = dirIterator(NameNodeDirType.IMAGE);
+        it.hasNext();) {
+      StorageDirectory sd = it.next();
+      File fsImage = getStorageFile(sd, nnf, txid);
+      if (FileUtil.canRead(sd.getRoot()) && fsImage.exists()) {
         return fsImage;
+      }
     }
     return null;
   }
-  
+
+  /**
+   * @return The first image file whose txid is the same with the given txid and
+   * image type is one of the given types.
+   */
+  public File getFsImage(long txid, EnumSet<NameNodeFile> nnfs) {
+    for (Iterator<StorageDirectory> it = dirIterator(NameNodeDirType.IMAGE);
+        it.hasNext();) {
+      StorageDirectory sd = it.next();
+      for (NameNodeFile nnf : nnfs) {
+        File fsImage = getStorageFile(sd, nnf, txid);
+        if (FileUtil.canRead(sd.getRoot()) && fsImage.exists()) {
+          return fsImage;
+        }
+      }
+    }
+    return null;
+  }
+
+  public File getFsImageName(long txid) {
+    return getFsImageName(txid, NameNodeFile.IMAGE);
+  }
+
   public File getHighestFsImageName() {
     return getFsImageName(getMostRecentCheckpointTxId());
   }
@@ -533,7 +556,7 @@ public class NNStorage extends Storage implements Closeable,
    */
   public void format(NamespaceInfo nsInfo) throws IOException {
     Preconditions.checkArgument(nsInfo.getLayoutVersion() == 0 ||
-        nsInfo.getLayoutVersion() == HdfsConstants.LAYOUT_VERSION,
+        nsInfo.getLayoutVersion() == HdfsConstants.NAMENODE_LAYOUT_VERSION,
         "Bad layout version: %s", nsInfo.getLayoutVersion());
     
     this.setStorageInfo(nsInfo);
@@ -552,7 +575,7 @@ public class NNStorage extends Storage implements Closeable,
   }
   
   public void format() throws IOException {
-    this.layoutVersion = HdfsConstants.LAYOUT_VERSION;
+    this.layoutVersion = HdfsConstants.NAMENODE_LAYOUT_VERSION;
     for (Iterator<StorageDirectory> it =
                            dirIterator(); it.hasNext();) {
       StorageDirectory sd = it.next();
@@ -589,7 +612,8 @@ public class NNStorage extends Storage implements Closeable,
     }
 
     // Set Block pool ID in version with federation support
-    if (versionSupportsFederation()) {
+    if (NameNodeLayoutVersion.supports(
+        LayoutVersion.Feature.FEDERATION, getLayoutVersion())) {
       String sbpid = props.getProperty("blockpoolID");
       setBlockPoolID(sd.getRoot(), sbpid);
     }
@@ -614,7 +638,7 @@ public class NNStorage extends Storage implements Closeable,
    * This should only be used during upgrades.
    */
   String getDeprecatedProperty(String prop) {
-    assert getLayoutVersion() > HdfsConstants.LAYOUT_VERSION :
+    assert getLayoutVersion() > HdfsConstants.NAMENODE_LAYOUT_VERSION :
       "getDeprecatedProperty should only be done when loading " +
       "storage from past versions during upgrade.";
     return deprecatedProperties.get(prop);
@@ -636,7 +660,8 @@ public class NNStorage extends Storage implements Closeable,
                            ) throws IOException {
     super.setPropertiesFromFields(props, sd);
     // Set blockpoolID in version with federation support
-    if (versionSupportsFederation()) {
+    if (NameNodeLayoutVersion.supports(
+        LayoutVersion.Feature.FEDERATION, getLayoutVersion())) {
       props.setProperty("blockpoolID", blockpoolID);
     }
   }
@@ -656,20 +681,26 @@ public class NNStorage extends Storage implements Closeable,
 
   @VisibleForTesting
   public static String getCheckpointImageFileName(long txid) {
-    return String.format("%s_%019d",
-                         NameNodeFile.IMAGE_NEW.getName(), txid);
+    return getNameNodeFileName(NameNodeFile.IMAGE_NEW, txid);
   }
 
   @VisibleForTesting
   public static String getImageFileName(long txid) {
-    return String.format("%s_%019d",
-                         NameNodeFile.IMAGE.getName(), txid);
+    return getNameNodeFileName(NameNodeFile.IMAGE, txid);
   }
-  
+
+  @VisibleForTesting
+  public static String getRollbackImageFileName(long txid) {
+    return getNameNodeFileName(NameNodeFile.IMAGE_ROLLBACK, txid);
+  }
+
+  private static String getNameNodeFileName(NameNodeFile nnf, long txid) {
+    return String.format("%s_%019d", nnf.getName(), txid);
+  }
+
   @VisibleForTesting
   public static String getInProgressEditsFileName(long startTxId) {
-    return String.format("%s_%019d", NameNodeFile.EDITS_INPROGRESS.getName(),
-                         startTxId);
+    return getNameNodeFileName(NameNodeFile.EDITS_INPROGRESS, startTxId);
   }
   
   static File getInProgressEditsFile(StorageDirectory sd, long startTxId) {
@@ -687,12 +718,11 @@ public class NNStorage extends Storage implements Closeable,
     return new File(sd.getCurrentDir(),
         getTemporaryEditsFileName(startTxId, endTxId, timestamp));
   }
-  
-  static File getImageFile(StorageDirectory sd, long txid) {
-    return new File(sd.getCurrentDir(),
-        getImageFileName(txid));
+
+  static File getImageFile(StorageDirectory sd, NameNodeFile nnf, long txid) {
+    return new File(sd.getCurrentDir(), getNameNodeFileName(nnf, txid));
   }
-  
+
   @VisibleForTesting
   public static String getFinalizedEditsFileName(long startTxId, long endTxId) {
     return String.format("%s_%019d-%019d", NameNodeFile.EDITS.getName(),
@@ -720,12 +750,12 @@ public class NNStorage extends Storage implements Closeable,
   }
     
   /**
-   * Return the first readable image file for the given txid, or null
-   * if no such image can be found
+   * Return the first readable image file for the given txid and image type, or
+   * null if no such image can be found
    */
-  File findImageFile(long txid) {
+  File findImageFile(NameNodeFile nnf, long txid) {
     return findFile(NameNodeDirType.IMAGE,
-        getImageFileName(txid));
+        getNameNodeFileName(nnf, txid));
   }
 
   /**
@@ -808,7 +838,8 @@ public class NNStorage extends Storage implements Closeable,
       // If upgrade from a release that does not support federation,
       // if clusterId is provided in the startupOptions use it.
       // Else generate a new cluster ID      
-      if (!LayoutVersion.supports(Feature.FEDERATION, layoutVersion)) {
+      if (!NameNodeLayoutVersion.supports(
+          LayoutVersion.Feature.FEDERATION, layoutVersion)) {
         if (startOpt.getClusterId() == null) {
           startOpt.setClusterId(newClusterID());
         }
@@ -969,7 +1000,7 @@ public class NNStorage extends Storage implements Closeable,
    * <b>Note:</b> this can mutate the storage info fields (ctime, version, etc).
    * @throws IOException if no valid storage dirs are found or no valid layout version
    */
-  FSImageStorageInspector readAndInspectDirs()
+  FSImageStorageInspector readAndInspectDirs(EnumSet<NameNodeFile> fileTypes)
       throws IOException {
     Integer layoutVersion = null;
     boolean multipleLV = false;
@@ -1005,8 +1036,9 @@ public class NNStorage extends Storage implements Closeable,
     // (ie edits_<txnid>) then use the new inspector, which will ignore
     // the old format dirs.
     FSImageStorageInspector inspector;
-    if (LayoutVersion.supports(Feature.TXID_BASED_LAYOUT, getLayoutVersion())) {
-      inspector = new FSImageTransactionalStorageInspector();
+    if (NameNodeLayoutVersion.supports(
+        LayoutVersion.Feature.TXID_BASED_LAYOUT, getLayoutVersion())) {
+      inspector = new FSImageTransactionalStorageInspector(fileTypes);
     } else {
       inspector = new FSImagePreTransactionalStorageInspector();
     }

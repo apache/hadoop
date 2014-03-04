@@ -1037,6 +1037,12 @@ public class Journal implements Closeable {
     storage.getJournalManager().doRollback();
   }
 
+  synchronized void discardSegments(long startTxId) throws IOException {
+    storage.getJournalManager().discardSegments(startTxId);
+    // we delete all the segments after the startTxId. let's reset committedTxnId 
+    committedTxnId.set(startTxId - 1);
+  }
+
   public Long getJournalCTime() throws IOException {
     return storage.getJournalManager().getJournalCTime();
   }

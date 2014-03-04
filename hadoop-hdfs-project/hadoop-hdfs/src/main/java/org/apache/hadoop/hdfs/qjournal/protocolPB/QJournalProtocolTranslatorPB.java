@@ -30,6 +30,7 @@ import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.AcceptRecoveryRequestProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.CanRollBackRequestProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.CanRollBackResponseProto;
+import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.DiscardSegmentsRequestProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.DoFinalizeRequestProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.DoPreUpgradeRequestProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.DoRollbackRequestProto;
@@ -348,6 +349,19 @@ public class QJournalProtocolTranslatorPB implements ProtocolMetaInterface,
       rpcProxy.doRollback(NULL_CONTROLLER,
           DoRollbackRequestProto.newBuilder()
             .setJid(convertJournalId(journalId))
+            .build());
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+
+  @Override
+  public void discardSegments(String journalId, long startTxId)
+      throws IOException {
+    try {
+      rpcProxy.discardSegments(NULL_CONTROLLER,
+          DiscardSegmentsRequestProto.newBuilder()
+            .setJid(convertJournalId(journalId)).setStartTxId(startTxId)
             .build());
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);

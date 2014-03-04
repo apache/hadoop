@@ -43,6 +43,7 @@ import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
+import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
@@ -77,7 +78,8 @@ public class GetImageServlet extends HttpServlet {
   private static final String END_TXID_PARAM = "endTxId";
   private static final String STORAGEINFO_PARAM = "storageInfo";
   private static final String LATEST_FSIMAGE_VALUE = "latest";
-  
+  private static final String IMAGE_FILE_TYPE = "imageFile";
+
   private static Set<Long> currentlyDownloadingCheckpoints =
     Collections.<Long>synchronizedSet(new HashSet<Long>());
   
@@ -86,7 +88,7 @@ public class GetImageServlet extends HttpServlet {
                     final HttpServletResponse response
                     ) throws ServletException, IOException {
     try {
-      ServletContext context = getServletContext();
+      final ServletContext context = getServletContext();
       final FSImage nnImage = NameNodeHttpServer.getFsImageFromContext(context);
       final GetImageParams parsedParams = new GetImageParams(request, response);
       final Configuration conf = (Configuration) context
@@ -126,7 +128,8 @@ public class GetImageServlet extends HttpServlet {
               imageFile = nnImage.getStorage().getHighestFsImageName();
             } else {
               errorMessage += " with txid " + txid;
-              imageFile = nnImage.getStorage().getFsImageName(txid);
+              imageFile = nnImage.getStorage().getFsImage(txid,
+                  EnumSet.of(NameNodeFile.IMAGE, NameNodeFile.IMAGE_ROLLBACK));
             }
             if (imageFile == null) {
               throw new IOException(errorMessage);
@@ -154,6 +157,7 @@ public class GetImageServlet extends HttpServlet {
             }
           } else if (parsedParams.isPutImage()) {
             final long txid = parsedParams.getTxId();
+            final NameNodeFile nnf = parsedParams.getNameNodeFile();
 
             if (! currentlyDownloadingCheckpoints.add(txid)) {
               response.sendError(HttpServletResponse.SC_CONFLICT,
@@ -163,7 +167,7 @@ public class GetImageServlet extends HttpServlet {
             }
 
             try {
-              if (nnImage.getStorage().findImageFile(txid) != null) {
+              if (nnImage.getStorage().findImageFile(nnf, txid) != null) {
                 response.sendError(HttpServletResponse.SC_CONFLICT,
                     "Another checkpointer already uploaded an checkpoint " +
                     "for txid " + txid);
@@ -177,11 +181,15 @@ public class GetImageServlet extends HttpServlet {
               
               long start = now();
               // issue a HTTP get request to download the new fsimage 
-              MD5Hash downloadImageDigest =
-                TransferFsImage.downloadImageToStorage(
-                        parsedParams.getInfoServer(conf), txid,
-                        nnImage.getStorage(), true);
-              nnImage.saveDigestAndRenameCheckpointImage(txid, downloadImageDigest);
+              MD5Hash downloadImageDigest = TransferFsImage
+                  .downloadImageToStorage(parsedParams.getInfoServer(conf),
+                      txid, nnImage.getStorage(), true);
+              nnImage.saveDigestAndRenameCheckpointImage(nnf, txid,
+                  downloadImageDigest);
+              if (nnf == NameNodeFile.IMAGE_ROLLBACK) {
+                    NameNodeHttpServer.getNameNodeFromContext(context)
+                        .getNamesystem().setCreatedRollbackImages(true);
+              }
 
               if (metrics != null) { // Metrics non-null only when used inside name node
                 long elapsed = now() - start;
@@ -190,7 +198,7 @@ public class GetImageServlet extends HttpServlet {
               
               // Now that we have a new checkpoint, we might be able to
               // remove some old ones.
-              nnImage.purgeOldStorage();
+              nnImage.purgeOldStorage(nnf);
             } finally {
               currentlyDownloadingCheckpoints.remove(txid);
             }
@@ -314,9 +322,12 @@ public class GetImageServlet extends HttpServlet {
     return "getimage=1&" + TXID_PARAM + "=" + LATEST_FSIMAGE_VALUE;
   }
 
-  static String getParamStringForImage(long txid,
+  static String getParamStringForImage(NameNodeFile nnf, long txid,
       StorageInfo remoteStorageInfo) {
+    final String imageType = nnf == null ? "" : "&" + IMAGE_FILE_TYPE + "="
+        + nnf.name();
     return "getimage=1&" + TXID_PARAM + "=" + txid
+      + imageType
       + "&" + STORAGEINFO_PARAM + "=" +
       remoteStorageInfo.toColonSeparatedString();
   }
@@ -329,7 +340,7 @@ public class GetImageServlet extends HttpServlet {
           remoteStorageInfo.toColonSeparatedString();
   }
   
-  static String getParamStringToPutImage(long txid,
+  static String getParamStringToPutImage(NameNodeFile nnf, long txid,
       URL url, Storage storage) {
     InetSocketAddress imageListenAddress = NetUtils.createSocketAddr(url
         .getAuthority());
@@ -338,6 +349,7 @@ public class GetImageServlet extends HttpServlet {
         : imageListenAddress.getHostName();
     return "putimage=1" +
       "&" + TXID_PARAM + "=" + txid +
+      "&" + IMAGE_FILE_TYPE + "=" + nnf.name() +
       "&port=" + imageListenAddress.getPort() +
       (machine != null ? "&machine=" + machine : "")
       + "&" + STORAGEINFO_PARAM + "=" +
@@ -351,6 +363,7 @@ public class GetImageServlet extends HttpServlet {
     private boolean isPutImage;
     private int remoteport;
     private String machineName;
+    private NameNodeFile nnf;
     private long startTxId, endTxId, txId;
     private String storageInfoString;
     private boolean fetchLatest;
@@ -375,6 +388,9 @@ public class GetImageServlet extends HttpServlet {
           isGetImage = true;
           try {
             txId = ServletUtil.parseLongParam(request, TXID_PARAM);
+            String imageType = ServletUtil.getParameter(request, IMAGE_FILE_TYPE);
+            nnf = imageType == null ? NameNodeFile.IMAGE : NameNodeFile
+                .valueOf(imageType);
           } catch (NumberFormatException nfe) {
             if (request.getParameter(TXID_PARAM).equals(LATEST_FSIMAGE_VALUE)) {
               fetchLatest = true;
@@ -389,6 +405,9 @@ public class GetImageServlet extends HttpServlet {
         } else if (key.equals("putimage")) { 
           isPutImage = true;
           txId = ServletUtil.parseLongParam(request, TXID_PARAM);
+          String imageType = ServletUtil.getParameter(request, IMAGE_FILE_TYPE);
+          nnf = imageType == null ? NameNodeFile.IMAGE : NameNodeFile
+              .valueOf(imageType);
         } else if (key.equals("port")) { 
           remoteport = new Integer(val[0]).intValue();
         } else if (key.equals("machine")) {
@@ -419,7 +438,12 @@ public class GetImageServlet extends HttpServlet {
       Preconditions.checkState(isGetImage || isPutImage);
       return txId;
     }
-    
+
+    public NameNodeFile getNameNodeFile() {
+      Preconditions.checkState(isPutImage || isGetImage);
+      return nnf;
+    }
+
     public long getStartTxId() {
       Preconditions.checkState(isGetEdit);
       return startTxId;

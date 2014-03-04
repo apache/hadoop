@@ -128,6 +128,28 @@ message GetHdfsBlockLocationsResponseProto {
 }
 
 /**
+ * forUpgrade - if true, clients are advised to wait for restart and quick
+ *              upgrade restart is instrumented. Otherwise, datanode does
+ *              the regular shutdown.
+ */
+message ShutdownDatanodeRequestProto {
+  required bool forUpgrade = 1;
+}
+
+message ShutdownDatanodeResponseProto {
+}
+
+/**
+ * Ping datanode for liveness and quick info
+ */
+message GetDatanodeInfoRequestProto {
+}
+
+message GetDatanodeInfoResponseProto {
+  required DatanodeLocalInfoProto localInfo = 1;
+}
+
+/**
  * Protocol used from client to the Datanode.
  * See the request and response for details of rpc call.
  */
@@ -164,4 +186,10 @@ service ClientDatanodeProtocolService {
    */
   rpc getHdfsBlockLocations(GetHdfsBlockLocationsRequestProto)
       returns(GetHdfsBlockLocationsResponseProto);
+
+  rpc shutdownDatanode(ShutdownDatanodeRequestProto)
+      returns(ShutdownDatanodeResponseProto);
+
+  rpc getDatanodeInfo(GetDatanodeInfoRequestProto)
+      returns(GetDatanodeInfoResponseProto);
 }

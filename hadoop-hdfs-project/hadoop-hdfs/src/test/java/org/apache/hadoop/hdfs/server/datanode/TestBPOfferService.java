@@ -153,7 +153,7 @@ public class TestBPOfferService {
     public HeartbeatResponse answer(InvocationOnMock invocation) throws Throwable {
       heartbeatCounts[nnIdx]++;
       return new HeartbeatResponse(new DatanodeCommand[0],
-          mockHaStatuses[nnIdx]);
+          mockHaStatuses[nnIdx], null);
     }
   }
 

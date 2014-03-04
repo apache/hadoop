@@ -34,6 +34,7 @@ import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSImageStorageInspector.FSImageFile;
 import org.apache.hadoop.hdfs.server.namenode.FileJournalManager.EditLogFile;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
+import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
 import org.apache.hadoop.hdfs.server.namenode.NNStorageRetentionManager.StoragePurger;
 import org.junit.Assert;
 import org.junit.Before;
@@ -239,7 +240,7 @@ public class TestNNStorageRetentionManager {
     // Ask the manager to purge files we don't need any more
     new NNStorageRetentionManager(conf,
         tc.mockStorage(), tc.mockEditLog(mockPurger), mockPurger)
-      .purgeOldStorage();
+      .purgeOldStorage(NameNodeFile.IMAGE);
     
     // Verify that it asked the purger to remove the correct files
     Mockito.verify(mockPurger, Mockito.atLeast(0))

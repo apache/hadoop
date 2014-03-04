@@ -234,6 +234,22 @@ public class BlockManager {
    */
   private boolean shouldPostponeBlocksFromFuture = false;
 
+  /**
+   * Process replication queues asynchronously to allow namenode safemode exit
+   * and failover to be faster. HDFS-5496
+   */
+  private Daemon replicationQueuesInitializer = null;
+  /**
+   * Number of blocks to process asychronously for replication queues
+   * initialization once aquired the namesystem lock. Remaining blocks will be
+   * processed again after aquiring lock again.
+   */
+  private int numBlocksPerIteration;
+  /**
+   * Progress of the Replication queues initialisation.
+   */
+  private double replicationQueuesInitProgress = 0.0;
+
   /** for block replicas placement */
   private BlockPlacementPolicy blockplacement;
 
@@ -310,6 +326,9 @@ public class BlockManager {
     this.maxNumBlocksToLog =
         conf.getLong(DFSConfigKeys.DFS_MAX_NUM_BLOCKS_TO_LOG_KEY,
             DFSConfigKeys.DFS_MAX_NUM_BLOCKS_TO_LOG_DEFAULT);
+    this.numBlocksPerIteration = conf.getInt(
+        DFSConfigKeys.DFS_BLOCK_MISREPLICATION_PROCESSING_LIMIT,
+        DFSConfigKeys.DFS_BLOCK_MISREPLICATION_PROCESSING_LIMIT_DEFAULT);
     
     LOG.info("defaultReplication         = " + defaultReplication);
     LOG.info("maxReplication             = " + maxReplication);
@@ -2361,45 +2380,127 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
    */
   public void processMisReplicatedBlocks() {
     assert namesystem.hasWriteLock();
-
-    long nrInvalid = 0, nrOverReplicated = 0, nrUnderReplicated = 0, nrPostponed = 0,
-         nrUnderConstruction = 0;
+    stopReplicationInitializer();
     neededReplications.clear();
-    for (BlockInfo block : blocksMap.getBlocks()) {
-      MisReplicationResult res = processMisReplicatedBlock(block);
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("block " + block + ": " + res);
+    replicationQueuesInitializer = new Daemon() {
+
+      @Override
+      public void run() {
+        try {
+          processMisReplicatesAsync();
+        } catch (InterruptedException ie) {
+          LOG.info("Interrupted while processing replication queues.");
+        } catch (Exception e) {
+          LOG.error("Error while processing replication queues async", e);
+        }
       }
-      switch (res) {
-      case UNDER_REPLICATED:
-        nrUnderReplicated++;
-        break;
-      case OVER_REPLICATED:
-        nrOverReplicated++;
-        break;
-      case INVALID:
-        nrInvalid++;
-        break;
-      case POSTPONE:
-        nrPostponed++;
-        postponeBlock(block);
-        break;
-      case UNDER_CONSTRUCTION:
-        nrUnderConstruction++;
-        break;
-      case OK:
-        break;
-      default:
-        throw new AssertionError("Invalid enum value: " + res);
+    };
+    replicationQueuesInitializer.setName("Replication Queue Initializer");
+    replicationQueuesInitializer.start();
+  }
+
+  /*
+   * Stop the ongoing initialisation of replication queues
+   */
+  private void stopReplicationInitializer() {
+    if (replicationQueuesInitializer != null) {
+      replicationQueuesInitializer.interrupt();
+      try {
+        replicationQueuesInitializer.join();
+      } catch (final InterruptedException e) {
+        LOG.warn("Interrupted while waiting for replicationQueueInitializer. Returning..");
+        return;
+      } finally {
+        replicationQueuesInitializer = null;
       }
     }
-    
-    LOG.info("Total number of blocks            = " + blocksMap.size());
-    LOG.info("Number of invalid blocks          = " + nrInvalid);
-    LOG.info("Number of under-replicated blocks = " + nrUnderReplicated);
-    LOG.info("Number of  over-replicated blocks = " + nrOverReplicated +
-        ((nrPostponed > 0) ? ( " (" + nrPostponed + " postponed)") : ""));
-    LOG.info("Number of blocks being written    = " + nrUnderConstruction);
+  }
+
+  /*
+   * Since the BlocksMapGset does not throw the ConcurrentModificationException
+   * and supports further iteration after modification to list, there is a
+   * chance of missing the newly added block while iterating. Since every
+   * addition to blocksMap will check for mis-replication, missing mis-replication
+   * check for new blocks will not be a problem.
+   */
+  private void processMisReplicatesAsync() throws InterruptedException {
+    long nrInvalid = 0, nrOverReplicated = 0;
+    long nrUnderReplicated = 0, nrPostponed = 0, nrUnderConstruction = 0;
+    long startTimeMisReplicatedScan = Time.now();
+    Iterator<BlockInfo> blocksItr = blocksMap.getBlocks().iterator();
+    long totalBlocks = blocksMap.size();
+    replicationQueuesInitProgress = 0;
+    long totalProcessed = 0;
+    while (namesystem.isRunning() && !Thread.currentThread().isInterrupted()) {
+      int processed = 0;
+      namesystem.writeLockInterruptibly();
+      try {
+        while (processed < numBlocksPerIteration && blocksItr.hasNext()) {
+          BlockInfo block = blocksItr.next();
+          MisReplicationResult res = processMisReplicatedBlock(block);
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("block " + block + ": " + res);
+          }
+          switch (res) {
+          case UNDER_REPLICATED:
+            nrUnderReplicated++;
+            break;
+          case OVER_REPLICATED:
+            nrOverReplicated++;
+            break;
+          case INVALID:
+            nrInvalid++;
+            break;
+          case POSTPONE:
+            nrPostponed++;
+            postponeBlock(block);
+            break;
+          case UNDER_CONSTRUCTION:
+            nrUnderConstruction++;
+            break;
+          case OK:
+            break;
+          default:
+            throw new AssertionError("Invalid enum value: " + res);
+          }
+          processed++;
+        }
+        totalProcessed += processed;
+        // there is a possibility that if any of the blocks deleted/added during
+        // initialisation, then progress might be different.
+        replicationQueuesInitProgress = Math.min((double) totalProcessed
+            / totalBlocks, 1.0);
+
+        if (!blocksItr.hasNext()) {
+          LOG.info("Total number of blocks            = " + blocksMap.size());
+          LOG.info("Number of invalid blocks          = " + nrInvalid);
+          LOG.info("Number of under-replicated blocks = " + nrUnderReplicated);
+          LOG.info("Number of  over-replicated blocks = " + nrOverReplicated
+              + ((nrPostponed > 0) ? (" (" + nrPostponed + " postponed)") : ""));
+          LOG.info("Number of blocks being written    = " + nrUnderConstruction);
+          NameNode.stateChangeLog
+              .info("STATE* Replication Queue initialization "
+                  + "scan for invalid, over- and under-replicated blocks "
+                  + "completed in " + (Time.now() - startTimeMisReplicatedScan)
+                  + " msec");
+          break;
+        }
+      } finally {
+        namesystem.writeUnlock();
+      }
+    }
+    if (Thread.currentThread().isInterrupted()) {
+      LOG.info("Interrupted while processing replication queues.");
+    }
+  }
+
+  /**
+   * Get the progress of the Replication queues initialisation
+   * 
+   * @return Returns values between 0 and 1 for the progress.
+   */
+  public double getReplicationQueuesInitProgress() {
+    return replicationQueuesInitProgress;
   }
 
   /**
@@ -3365,6 +3466,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
   }
 
   public void shutdown() {
+    stopReplicationInitializer();
     blocksMap.close();
   }
 }

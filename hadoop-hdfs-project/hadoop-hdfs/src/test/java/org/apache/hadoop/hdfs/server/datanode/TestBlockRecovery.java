@@ -163,7 +163,8 @@ public class TestBlockRecovery {
             Mockito.anyInt()))
         .thenReturn(new HeartbeatResponse(
             new DatanodeCommand[0],
-            new NNHAStatusHeartbeat(HAServiceState.ACTIVE, 1)));
+            new NNHAStatusHeartbeat(HAServiceState.ACTIVE, 1),
+            null));
 
     dn = new DataNode(conf, locations, null) {
       @Override
@@ -585,6 +586,7 @@ public class TestBlockRecovery {
     tearDown();// Stop the Mocked DN started in startup()
 
     Configuration conf = new HdfsConfiguration();
+    conf.set(DFSConfigKeys.DFS_DATANODE_XCEIVER_STOP_TIMEOUT_MILLIS_KEY, "1000");
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
         .nnTopology(MiniDFSNNTopology.simpleSingleNN(8020, 50070))
         .numDataNodes(1).build();

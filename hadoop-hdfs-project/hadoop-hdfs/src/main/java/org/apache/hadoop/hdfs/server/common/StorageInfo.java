@@ -21,13 +21,19 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.util.Map;
 import java.util.Properties;
+import java.util.SortedSet;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
+import org.apache.hadoop.hdfs.protocol.LayoutVersion.LayoutFeature;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeLayoutVersion;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion;
 
 import com.google.common.base.Joiner;
 
@@ -42,22 +48,26 @@ public class StorageInfo {
   public int   namespaceID;     // id of the file system
   public String clusterID;      // id of the cluster
   public long  cTime;           // creation time of the file system state
+
+  protected final NodeType storageType; // Type of the node using this storage 
   
   protected static final String STORAGE_FILE_VERSION    = "VERSION";
- 
-  public StorageInfo () {
-    this(0, 0, "", 0L);
+
+  public StorageInfo(NodeType type) {
+    this(0, 0, "", 0L, type);
   }
 
-  public StorageInfo(int layoutV, int nsID, String cid, long cT) {
+  public StorageInfo(int layoutV, int nsID, String cid, long cT, NodeType type) {
     layoutVersion = layoutV;
     clusterID = cid;
     namespaceID = nsID;
     cTime = cT;
+    storageType = type;
   }
   
   public StorageInfo(StorageInfo from) {
-    setStorageInfo(from);
+    this(from.layoutVersion, from.namespaceID, from.clusterID, from.cTime,
+        from.storageType);
   }
 
   /**
@@ -90,8 +100,10 @@ public class StorageInfo {
     cTime = from.cTime;
   }
 
-  public boolean versionSupportsFederation() {
-    return LayoutVersion.supports(Feature.FEDERATION, layoutVersion);
+  public boolean versionSupportsFederation(
+      Map<Integer, SortedSet<LayoutFeature>> map) {
+    return LayoutVersion.supports(map, LayoutVersion.Feature.FEDERATION,
+        layoutVersion);
   }
   
   @Override
@@ -145,6 +157,21 @@ public class StorageInfo {
     setNamespaceID(props, sd);
     setcTime(props, sd);
     setClusterId(props, layoutVersion, sd);
+    checkStorageType(props, sd);
+  }
+  
+  /** Validate and set storage type from {@link Properties}*/
+  protected void checkStorageType(Properties props, StorageDirectory sd)
+      throws InconsistentFSStateException {
+    if (storageType == null) { //don't care about storage type
+      return;
+    }
+    NodeType type = NodeType.valueOf(getProperty(props, sd, "storageType"));
+    if (!storageType.equals(type)) {
+      throw new InconsistentFSStateException(sd.root,
+          "Incompatible node types: storageType=" + storageType
+          + " but StorageDirectory type=" + type);
+    }
   }
   
   /** Validate and set ctime from {@link Properties}*/
@@ -157,7 +184,8 @@ public class StorageInfo {
   protected void setClusterId(Properties props, int layoutVersion,
       StorageDirectory sd) throws InconsistentFSStateException {
     // Set cluster ID in version that supports federation
-    if (LayoutVersion.supports(Feature.FEDERATION, layoutVersion)) {
+    if (LayoutVersion.supports(getServiceLayoutFeatureMap(),
+        Feature.FEDERATION, layoutVersion)) {
       String cid = getProperty(props, sd, "clusterID");
       if (!(clusterID.equals("") || cid.equals("") || clusterID.equals(cid))) {
         throw new InconsistentFSStateException(sd.getRoot(),
@@ -171,9 +199,9 @@ public class StorageInfo {
   protected void setLayoutVersion(Properties props, StorageDirectory sd)
       throws IncorrectVersionException, InconsistentFSStateException {
     int lv = Integer.parseInt(getProperty(props, sd, "layoutVersion"));
-    if (lv < HdfsConstants.LAYOUT_VERSION) { // future version
-      throw new IncorrectVersionException(lv, "storage directory "
-          + sd.root.getAbsolutePath());
+    if (lv < getServiceLayoutVersion()) { // future version
+      throw new IncorrectVersionException(getServiceLayoutVersion(), lv,
+          "storage directory " + sd.root.getAbsolutePath());
     }
     layoutVersion = lv;
   }
@@ -189,6 +217,16 @@ public class StorageInfo {
     namespaceID = nsId;
   }
   
+  public int getServiceLayoutVersion() {
+    return storageType == NodeType.DATA_NODE ? HdfsConstants.DATANODE_LAYOUT_VERSION
+        : HdfsConstants.NAMENODE_LAYOUT_VERSION;
+  }
+
+  public Map<Integer, SortedSet<LayoutFeature>> getServiceLayoutFeatureMap() {
+    return storageType == NodeType.DATA_NODE? DataNodeLayoutVersion.FEATURES
+        : NameNodeLayoutVersion.FEATURES;
+  }
+  
   static String getProperty(Properties props, StorageDirectory sd,
       String name) throws InconsistentFSStateException {
     String property = props.getProperty(name);
@@ -198,7 +236,7 @@ public class StorageInfo {
     }
     return property;
   }
-  
+
   public static Properties readPropertiesFile(File from) throws IOException {
     RandomAccessFile file = new RandomAccessFile(from, "rws");
     FileInputStream in = null;

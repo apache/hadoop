@@ -27,6 +27,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.test.PathUtils;
@@ -87,7 +88,8 @@ public class TestReplicationPolicyConsiderLoad {
     // Register DNs
     for (int i=0; i < 6; i++) {
       DatanodeRegistration dnr = new DatanodeRegistration(dataNodes[i],
-          new StorageInfo(), new ExportedBlockKeys(), VersionInfo.getVersion());
+          new StorageInfo(NodeType.DATA_NODE), new ExportedBlockKeys(),
+          VersionInfo.getVersion());
       dnrList.add(dnr);
       dnManager.registerDatanode(dnr);
       dataNodes[i].getStorageInfos()[0].setUtilizationForTesting(

@@ -21,6 +21,7 @@ import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 
 /**
  * This is the JMX management interface for namenode information
@@ -78,7 +79,14 @@ public interface NameNodeMXBean {
    * @return true, if upgrade is finalized
    */
   public boolean isUpgradeFinalized();
-  
+
+  /**
+   * Gets the RollingUpgrade information
+   *
+   * @return Rolling upgrade information
+   */
+  public RollingUpgradeInfo.Bean getRollingUpgradeStatus();
+
   /**
    * Gets total used space by data nodes for non DFS purposes such as storing
    * temporary files on the local file system

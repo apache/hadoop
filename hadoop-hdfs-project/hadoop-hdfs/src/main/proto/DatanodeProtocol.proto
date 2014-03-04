@@ -221,6 +221,7 @@ message NNHAStatusHeartbeatProto {
 message HeartbeatResponseProto {
   repeated DatanodeCommandProto cmds = 1; // Returned commands can be null
   required NNHAStatusHeartbeatProto haStatus = 2;
+  optional RollingUpgradeStatusProto rollingUpgradeStatus = 3;
 }
 
 /**

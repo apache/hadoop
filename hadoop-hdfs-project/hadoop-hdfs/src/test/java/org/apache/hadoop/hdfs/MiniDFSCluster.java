@@ -32,8 +32,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_STANDBY_CHECKPOINTS_KE
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HOSTS;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_DIR_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_INTERVAL_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SAFEMODE_EXTENSION_KEY;
@@ -408,6 +408,10 @@ public class MiniDFSCluster {
       this.dnArgs = args;
       this.secureResources = secureResources;
       this.ipcPort = ipcPort;
+    }
+
+    public void setDnArgs(String ... args) {
+      dnArgs = args;
     }
   }
 
@@ -941,6 +945,10 @@ public class MiniDFSCluster {
   }
   
   private static String[] createArgs(StartupOption operation) {
+    if (operation == StartupOption.ROLLINGUPGRADE) {
+      return new String[]{operation.getName(),
+          operation.getRollingUpgradeStartupOption().name()};
+    }
     String[] args = (operation == null ||
         operation == StartupOption.FORMAT ||
         operation == StartupOption.REGULAR) ?
@@ -1582,11 +1590,11 @@ public class MiniDFSCluster {
   /**
    * Restart the namenode.
    */
-  public synchronized void restartNameNode() throws IOException {
+  public synchronized void restartNameNode(String... args) throws IOException {
     checkSingleNameNode();
-    restartNameNode(true);
+    restartNameNode(0, true, args);
   }
-  
+
   /**
    * Restart the namenode. Optionally wait for the cluster to become active.
    */
@@ -1607,14 +1615,19 @@ public class MiniDFSCluster {
    * Restart the namenode at a given index. Optionally wait for the cluster
    * to become active.
    */
-  public synchronized void restartNameNode(int nnIndex, boolean waitActive)
-      throws IOException {
+  public synchronized void restartNameNode(int nnIndex, boolean waitActive,
+      String... args) throws IOException {
     String nameserviceId = nameNodes[nnIndex].nameserviceId;
     String nnId = nameNodes[nnIndex].nnId;
     StartupOption startOpt = nameNodes[nnIndex].startOpt;
     Configuration conf = nameNodes[nnIndex].conf;
     shutdownNameNode(nnIndex);
-    NameNode nn = NameNode.createNameNode(createArgs(startOpt), conf);
+    if (args.length != 0) {
+      startOpt = null;
+    } else {
+      args = createArgs(startOpt);
+    }
+    NameNode nn = NameNode.createNameNode(args, conf);
     nameNodes[nnIndex] = new NameNodeInfo(nn, nameserviceId, nnId, startOpt,
         conf);
     if (waitActive) {
@@ -1959,7 +1972,8 @@ public class MiniDFSCluster {
 
   /** Wait until the given namenode gets registration from all the datanodes */
   public void waitActive(int nnIndex) throws IOException {
-    if (nameNodes.length == 0 || nameNodes[nnIndex] == null) {
+    if (nameNodes.length == 0 || nameNodes[nnIndex] == null
+        || nameNodes[nnIndex].nameNode == null) {
       return;
     }
     InetSocketAddress addr = nameNodes[nnIndex].nameNode.getServiceRpcAddress();

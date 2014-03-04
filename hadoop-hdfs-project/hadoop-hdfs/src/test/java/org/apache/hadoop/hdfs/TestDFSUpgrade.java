@@ -34,10 +34,16 @@ import java.util.regex.Pattern;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
+import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.namenode.TestParallelImageWrite;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
@@ -212,7 +218,7 @@ public class TestDFSUpgrade {
    * This test attempts to upgrade the NameNode and DataNode under
    * a number of valid and invalid conditions.
    */
-  @Test
+  @Test(timeout = 60000)
   public void testUpgrade() throws Exception {
     File[] baseDirs;
     StorageInfo storageInfo = null;
@@ -225,6 +231,19 @@ public class TestDFSUpgrade {
       log("Normal NameNode upgrade", numDirs);
       UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "current");
       cluster = createCluster();
+
+      // make sure that rolling upgrade cannot be started
+      try {
+        final DistributedFileSystem dfs = cluster.getFileSystem();
+        dfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+        dfs.rollingUpgrade(RollingUpgradeAction.PREPARE);
+        fail();
+      } catch(RemoteException re) {
+        assertEquals(InconsistentFSStateException.class.getName(),
+            re.getClassName());
+        LOG.info("The exception is expected.", re);
+      }
+
       checkNameNode(nameNodeDirs, EXPECTED_TXID);
       if (numDirs > 1)
         TestParallelImageWrite.checkImages(cluster.getNamesystem(), numDirs);
@@ -262,10 +281,10 @@ public class TestDFSUpgrade {
       UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "current");
       cluster = createCluster();
       baseDirs = UpgradeUtilities.createDataNodeStorageDirs(dataNodeDirs, "current");
-      storageInfo = new StorageInfo(Integer.MIN_VALUE, 
+      storageInfo = new StorageInfo(Integer.MIN_VALUE,
           UpgradeUtilities.getCurrentNamespaceID(cluster),
           UpgradeUtilities.getCurrentClusterID(cluster),
-          UpgradeUtilities.getCurrentFsscTime(cluster));
+          UpgradeUtilities.getCurrentFsscTime(cluster), NodeType.DATA_NODE);
       
       UpgradeUtilities.createDataNodeVersionFile(baseDirs, storageInfo,
           UpgradeUtilities.getCurrentBlockPoolID(cluster));
@@ -280,9 +299,10 @@ public class TestDFSUpgrade {
       UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "current");
       cluster = createCluster();
       baseDirs = UpgradeUtilities.createDataNodeStorageDirs(dataNodeDirs, "current");
-      storageInfo = new StorageInfo(UpgradeUtilities.getCurrentLayoutVersion(), 
+      storageInfo = new StorageInfo(HdfsConstants.DATANODE_LAYOUT_VERSION,
           UpgradeUtilities.getCurrentNamespaceID(cluster),
-          UpgradeUtilities.getCurrentClusterID(cluster), Long.MAX_VALUE);
+          UpgradeUtilities.getCurrentClusterID(cluster), Long.MAX_VALUE,
+          NodeType.DATA_NODE);
           
       UpgradeUtilities.createDataNodeVersionFile(baseDirs, storageInfo, 
           UpgradeUtilities.getCurrentBlockPoolID(cluster));
@@ -321,7 +341,7 @@ public class TestDFSUpgrade {
       storageInfo = new StorageInfo(Storage.LAST_UPGRADABLE_LAYOUT_VERSION + 1, 
           UpgradeUtilities.getCurrentNamespaceID(null),
           UpgradeUtilities.getCurrentClusterID(null),
-          UpgradeUtilities.getCurrentFsscTime(null));
+          UpgradeUtilities.getCurrentFsscTime(null), NodeType.NAME_NODE);
       
       UpgradeUtilities.createNameNodeVersionFile(conf, baseDirs, storageInfo,
           UpgradeUtilities.getCurrentBlockPoolID(cluster));
@@ -334,7 +354,7 @@ public class TestDFSUpgrade {
       storageInfo = new StorageInfo(Integer.MIN_VALUE, 
           UpgradeUtilities.getCurrentNamespaceID(null),
           UpgradeUtilities.getCurrentClusterID(null),
-          UpgradeUtilities.getCurrentFsscTime(null));
+          UpgradeUtilities.getCurrentFsscTime(null), NodeType.NAME_NODE);
       
       UpgradeUtilities.createNameNodeVersionFile(conf, baseDirs, storageInfo,
           UpgradeUtilities.getCurrentBlockPoolID(cluster));
@@ -354,6 +374,19 @@ public class TestDFSUpgrade {
       log("Normal NameNode upgrade", numDirs);
       UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "current");
       cluster = createCluster();
+
+      // make sure that rolling upgrade cannot be started
+      try {
+        final DistributedFileSystem dfs = cluster.getFileSystem();
+        dfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+        dfs.rollingUpgrade(RollingUpgradeAction.PREPARE);
+        fail();
+      } catch(RemoteException re) {
+        assertEquals(InconsistentFSStateException.class.getName(),
+            re.getClassName());
+        LOG.info("The exception is expected.", re);
+      }
+
       checkNameNode(nameNodeDirs, EXPECTED_TXID);
       TestParallelImageWrite.checkImages(cluster.getNamesystem(), numDirs);
       cluster.shutdown();

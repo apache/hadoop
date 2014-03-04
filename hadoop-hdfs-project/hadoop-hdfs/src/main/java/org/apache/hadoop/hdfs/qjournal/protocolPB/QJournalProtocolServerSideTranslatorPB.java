@@ -30,6 +30,8 @@ import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.AcceptRec
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.AcceptRecoveryResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.CanRollBackRequestProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.CanRollBackResponseProto;
+import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.DiscardSegmentsRequestProto;
+import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.DiscardSegmentsResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.DoFinalizeRequestProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.DoFinalizeResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.DoPreUpgradeRequestProto;
@@ -64,6 +66,8 @@ import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.PurgeLogs
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.StartLogSegmentRequestProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.StartLogSegmentResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.RequestInfo;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
+import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.protocol.JournalProtocol;
 
 import com.google.protobuf.RpcController;
@@ -274,9 +278,9 @@ public class QJournalProtocolServerSideTranslatorPB implements QJournalProtocolP
   @Override
   public DoUpgradeResponseProto doUpgrade(RpcController controller,
       DoUpgradeRequestProto request) throws ServiceException {
+    StorageInfo si = PBHelper.convert(request.getSInfo(), NodeType.JOURNAL_NODE);
     try {
-      impl.doUpgrade(convert(request.getJid()),
-          PBHelper.convert(request.getSInfo()));
+      impl.doUpgrade(convert(request.getJid()), si);
       return DoUpgradeResponseProto.getDefaultInstance();
     } catch (IOException e) {
       throw new ServiceException(e);
@@ -298,9 +302,9 @@ public class QJournalProtocolServerSideTranslatorPB implements QJournalProtocolP
   public CanRollBackResponseProto canRollBack(RpcController controller,
       CanRollBackRequestProto request) throws ServiceException {
     try {
-      Boolean result = impl.canRollBack(convert(request.getJid()),
-          PBHelper.convert(request.getStorage()),
-          PBHelper.convert(request.getPrevStorage()),
+      StorageInfo si = PBHelper.convert(request.getStorage(), NodeType.JOURNAL_NODE);
+      Boolean result = impl.canRollBack(convert(request.getJid()), si,
+          PBHelper.convert(request.getPrevStorage(), NodeType.JOURNAL_NODE),
           request.getTargetLayoutVersion());
       return CanRollBackResponseProto.newBuilder()
           .setCanRollBack(result)
@@ -316,6 +320,18 @@ public class QJournalProtocolServerSideTranslatorPB implements QJournalProtocolP
     try {
       impl.doRollback(convert(request.getJid()));
       return DoRollbackResponseProto.getDefaultInstance();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public DiscardSegmentsResponseProto discardSegments(
+      RpcController controller, DiscardSegmentsRequestProto request)
+      throws ServiceException {
+    try {
+      impl.discardSegments(convert(request.getJid()), request.getStartTxId());
+      return DiscardSegmentsResponseProto.getDefaultInstance();
     } catch (IOException e) {
       throw new ServiceException(e);
     }

@@ -84,6 +84,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SymlinkOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.TimesOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.UpdateBlocksOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.UpdateMasterKeyOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RollingUpgradeOp;
 import org.apache.hadoop.hdfs.server.namenode.JournalSet.JournalAndStream;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
@@ -1031,6 +1032,18 @@ public class FSEditLog implements LogsPurgeable {
     logEdit(op);
   }
 
+  void logStartRollingUpgrade(long startTime) {
+    RollingUpgradeOp op = RollingUpgradeOp.getStartInstance(cache.get());
+    op.setTime(startTime);
+    logEdit(op);
+  }
+
+  void logFinalizeRollingUpgrade(long finalizeTime) {
+    RollingUpgradeOp op = RollingUpgradeOp.getFinalizeInstance(cache.get());
+    op.setTime(finalizeTime);
+    logEdit(op);
+  }
+
   void logSetAcl(String src, List<AclEntry> entries) {
     SetAclOp op = SetAclOp.getInstance();
     op.src = src;
@@ -1415,7 +1428,14 @@ public class FSEditLog implements LogsPurgeable {
       }
     }
   }
-  
+
+  public synchronized void discardSegments(long markerTxid)
+      throws IOException {
+    for (JournalAndStream jas : journalSet.getAllJournalStreams()) {
+      jas.getManager().discardSegments(markerTxid);
+    }
+  }
+
   @Override
   public void selectInputStreams(Collection<EditLogInputStream> streams,
       long fromTxId, boolean inProgressOk) throws IOException {

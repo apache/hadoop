@@ -46,6 +46,7 @@ import org.apache.hadoop.hdfs.ShortCircuitShm.SlotId;
 import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
+import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveStats;
 import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
@@ -54,17 +55,20 @@ import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
-import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
+import org.apache.hadoop.hdfs.protocol.DatanodeLocalInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
+import org.apache.hadoop.hdfs.protocol.RollingUpgradeStatus;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffReportEntry;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffType;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
@@ -77,6 +81,7 @@ import org.apache.hadoop.hdfs.protocol.proto.AclProtos.GetAclStatusResponseProto
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CacheDirectiveEntryProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CacheDirectiveInfoExpirationProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CacheDirectiveInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CacheDirectiveStatsProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CacheFlagProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CachePoolEntryProto;
@@ -85,8 +90,9 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CacheP
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CreateFlagProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.DatanodeReportTypeProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsStatsResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RollingUpgradeActionProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RollingUpgradeInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.SafeModeActionProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CacheDirectiveInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ShortCircuitShmSlotProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ShortCircuitShmIdProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BalancerBandwidthCommandProto;
@@ -117,6 +123,7 @@ import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfoProto.AdminState;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfosProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeLocalInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DirectoryListingProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ExportedBlockKeysProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ExtendedBlockProto;
@@ -135,6 +142,7 @@ import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.RecoveringBlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.RemoteEditLogManifestProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.RemoteEditLogProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ReplicaStateProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.RollingUpgradeStatusProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.SnapshotDiffReportEntryProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.SnapshotDiffReportProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.SnapshottableDirectoryListingProto;
@@ -149,6 +157,7 @@ import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.namenode.CheckpointSignature;
@@ -254,9 +263,9 @@ public class PBHelper {
         .setNamespceID(info.getNamespaceID()).build();
   }
 
-  public static StorageInfo convert(StorageInfoProto info) {
+  public static StorageInfo convert(StorageInfoProto info, NodeType type) {
     return new StorageInfo(info.getLayoutVersion(), info.getNamespceID(),
-        info.getClusterID(), info.getCTime());
+        info.getClusterID(), info.getCTime(), type);
   }
 
   public static NamenodeRegistrationProto convert(NamenodeRegistration reg) {
@@ -267,8 +276,9 @@ public class PBHelper {
   }
 
   public static NamenodeRegistration convert(NamenodeRegistrationProto reg) {
+    StorageInfo si = convert(reg.getStorageInfo(), NodeType.NAME_NODE);
     return new NamenodeRegistration(reg.getRpcAddress(), reg.getHttpAddress(),
-        convert(reg.getStorageInfo()), convert(reg.getRole()));
+        si, convert(reg.getRole()));
   }
 
   // DatanodeId
@@ -400,9 +410,9 @@ public class PBHelper {
   }
 
   public static CheckpointSignature convert(CheckpointSignatureProto s) {
-    return new CheckpointSignature(PBHelper.convert(s.getStorageInfo()),
-        s.getBlockPoolId(), s.getMostRecentCheckpointTxId(),
-        s.getCurSegmentTxId());
+    StorageInfo si = PBHelper.convert(s.getStorageInfo(), NodeType.NAME_NODE);
+    return new CheckpointSignature(si, s.getBlockPoolId(),
+        s.getMostRecentCheckpointTxId(), s.getCurSegmentTxId());
   }
 
   public static RemoteEditLogProto convert(RemoteEditLog log) {
@@ -755,9 +765,9 @@ public class PBHelper {
   }
 
   public static DatanodeRegistration convert(DatanodeRegistrationProto proto) {
+    StorageInfo si = convert(proto.getStorageInfo(), NodeType.DATA_NODE);
     return new DatanodeRegistration(PBHelper.convert(proto.getDatanodeID()),
-        PBHelper.convert(proto.getStorageInfo()), PBHelper.convert(proto
-            .getKeys()), proto.getSoftwareVersion());
+        si, PBHelper.convert(proto.getKeys()), proto.getSoftwareVersion());
   }
 
   public static DatanodeCommand convert(DatanodeCommandProto proto) {
@@ -1448,6 +1458,59 @@ public class PBHelper {
     }
   }
   
+  public static RollingUpgradeActionProto convert(RollingUpgradeAction a) {
+    switch (a) {
+    case QUERY:
+      return RollingUpgradeActionProto.QUERY;
+    case PREPARE:
+      return RollingUpgradeActionProto.START;
+    case FINALIZE:
+      return RollingUpgradeActionProto.FINALIZE;
+    default:
+      throw new IllegalArgumentException("Unexpected value: " + a);
+    }
+  }
+  
+  public static RollingUpgradeAction convert(RollingUpgradeActionProto a) {
+    switch (a) {
+    case QUERY:
+      return RollingUpgradeAction.QUERY;
+    case START:
+      return RollingUpgradeAction.PREPARE;
+    case FINALIZE:
+      return RollingUpgradeAction.FINALIZE;
+    default:
+      throw new IllegalArgumentException("Unexpected value: " + a);
+    }
+  }
+
+  public static RollingUpgradeStatusProto convertRollingUpgradeStatus(
+      RollingUpgradeStatus status) {
+    return RollingUpgradeStatusProto.newBuilder()
+        .setBlockPoolId(status.getBlockPoolId())
+        .build();
+  }
+
+  public static RollingUpgradeStatus convert(RollingUpgradeStatusProto proto) {
+    return new RollingUpgradeStatus(proto.getBlockPoolId());
+  }
+
+  public static RollingUpgradeInfoProto convert(RollingUpgradeInfo info) {
+    return RollingUpgradeInfoProto.newBuilder()
+        .setStatus(convertRollingUpgradeStatus(info))
+        .setCreatedRollbackImages(info.createdRollbackImages())
+        .setStartTime(info.getStartTime())
+        .setFinalizeTime(info.getFinalizeTime())
+        .build();
+  }
+
+  public static RollingUpgradeInfo convert(RollingUpgradeInfoProto proto) {
+    RollingUpgradeStatusProto status = proto.getStatus();
+    return new RollingUpgradeInfo(status.getBlockPoolId(),
+        proto.getCreatedRollbackImages(),
+        proto.getStartTime(), proto.getFinalizeTime());
+  }
+
   public static CorruptFileBlocks convert(CorruptFileBlocksProto c) {
     if (c == null)
       return null;
@@ -1901,6 +1964,19 @@ public class PBHelper {
   
   public static HdfsProtos.ChecksumTypeProto convert(DataChecksum.Type type) {
     return HdfsProtos.ChecksumTypeProto.valueOf(type.id);
+  }
+
+  public static DatanodeLocalInfoProto convert(DatanodeLocalInfo info) {
+    DatanodeLocalInfoProto.Builder builder = DatanodeLocalInfoProto.newBuilder();
+    builder.setSoftwareVersion(info.getSoftwareVersion());
+    builder.setConfigVersion(info.getConfigVersion());
+    builder.setUptime(info.getUptime());
+    return builder.build();
+  }
+
+  public static DatanodeLocalInfo convert(DatanodeLocalInfoProto proto) {
+    return new DatanodeLocalInfo(proto.getSoftwareVersion(),
+        proto.getConfigVersion(), proto.getUptime());
   }
 
   public static InputStream vintPrefixed(final InputStream input)

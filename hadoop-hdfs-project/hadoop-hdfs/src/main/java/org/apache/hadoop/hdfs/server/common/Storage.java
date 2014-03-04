@@ -34,7 +34,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.util.ToolRunner;
@@ -116,7 +115,6 @@ public abstract class Storage extends StorageInfo {
     public boolean isOfType(StorageDirType type);
   }
   
-  protected NodeType storageType;    // Type of the node using this storage 
   protected List<StorageDirectory> storageDirs = new ArrayList<StorageDirectory>();
   
   private class DirIterator implements Iterator<StorageDirectory> {
@@ -781,13 +779,11 @@ public abstract class Storage extends StorageInfo {
    * Create empty storage info of the specified type
    */
   protected Storage(NodeType type) {
-    super();
-    this.storageType = type;
+    super(type);
   }
   
-  protected Storage(NodeType type, StorageInfo storageInfo) {
+  protected Storage(StorageInfo storageInfo) {
     super(storageInfo);
-    this.storageType = type;
   }
   
   public int getNumStorageDirs() {
@@ -931,34 +927,10 @@ public abstract class Storage extends StorageInfo {
     props.setProperty("storageType", storageType.toString());
     props.setProperty("namespaceID", String.valueOf(namespaceID));
     // Set clusterID in version with federation support
-    if (versionSupportsFederation()) {
+    if (versionSupportsFederation(getServiceLayoutFeatureMap())) {
       props.setProperty("clusterID", clusterID);
     }
     props.setProperty("cTime", String.valueOf(cTime));
-  }
-  
-  /**
-   * Get common storage fields.
-   * Should be overloaded if additional fields need to be get.
-   * 
-   * @param props
-   * @throws IOException
-   */
-  protected void setFieldsFromProperties(
-      Properties props, StorageDirectory sd) throws IOException {
-    super.setFieldsFromProperties(props, sd);
-    setStorageType(props, sd);
-  }
-  
-  /** Validate and set storage type from {@link Properties}*/
-  protected void setStorageType(Properties props, StorageDirectory sd)
-      throws InconsistentFSStateException {
-    NodeType type = NodeType.valueOf(getProperty(props, sd, "storageType"));
-    if (!storageType.equals(type)) {
-      throw new InconsistentFSStateException(sd.root,
-          "node type is incompatible with others.");
-    }
-    storageType = type;
   }
 
   /**
@@ -1025,7 +997,7 @@ public abstract class Storage extends StorageInfo {
    * @throws IOException
    */
   public void writeAll() throws IOException {
-    this.layoutVersion = HdfsConstants.LAYOUT_VERSION;
+    this.layoutVersion = getServiceLayoutVersion();
     for (Iterator<StorageDirectory> it = storageDirs.iterator(); it.hasNext();) {
       writeProperties(it.next());
     }
@@ -1048,7 +1020,6 @@ public abstract class Storage extends StorageInfo {
   public static String getRegistrationID(StorageInfo storage) {
     return "NS-" + Integer.toString(storage.getNamespaceID())
       + "-" + storage.getClusterID()
-      + "-" + Integer.toString(storage.getLayoutVersion())
       + "-" + Long.toString(storage.getCTime());
   }
   
