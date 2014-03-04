@@ -419,6 +419,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-6028. Print clearer error message when user attempts to delete required
     mask entry from ACL. (cnauroth)
 
+    HDFS-6039. Uploading a File under a Dir with default acls throws "Duplicated
+    ACLFeature". (cnauroth)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

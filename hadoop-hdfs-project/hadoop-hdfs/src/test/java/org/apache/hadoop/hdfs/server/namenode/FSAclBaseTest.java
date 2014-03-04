@@ -1064,6 +1064,45 @@ public abstract class FSAclBaseTest {
   }
 
   @Test
+  public void testDefaultAclRenamedFile() throws Exception {
+    Path dirPath = new Path(path, "dir");
+    FileSystem.mkdirs(fs, dirPath, FsPermission.createImmutable((short)0750));
+    List<AclEntry> aclSpec = Lists.newArrayList(
+      aclEntry(DEFAULT, USER, "foo", ALL));
+    fs.setAcl(dirPath, aclSpec);
+    Path filePath = new Path(path, "file1");
+    fs.create(filePath).close();
+    fs.setPermission(filePath, FsPermission.createImmutable((short)0640));
+    Path renamedFilePath = new Path(dirPath, "file1");
+    fs.rename(filePath, renamedFilePath);
+    AclEntry[] expected = new AclEntry[] { };
+    AclStatus s = fs.getAclStatus(renamedFilePath);
+    AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
+    assertArrayEquals(expected, returned);
+    assertPermission(renamedFilePath, (short)0640);
+    assertAclFeature(renamedFilePath, false);
+  }
+
+  @Test
+  public void testDefaultAclRenamedDir() throws Exception {
+    Path dirPath = new Path(path, "dir");
+    FileSystem.mkdirs(fs, dirPath, FsPermission.createImmutable((short)0750));
+    List<AclEntry> aclSpec = Lists.newArrayList(
+      aclEntry(DEFAULT, USER, "foo", ALL));
+    fs.setAcl(dirPath, aclSpec);
+    Path subdirPath = new Path(path, "subdir");
+    FileSystem.mkdirs(fs, subdirPath, FsPermission.createImmutable((short)0750));
+    Path renamedSubdirPath = new Path(dirPath, "subdir");
+    fs.rename(subdirPath, renamedSubdirPath);
+    AclEntry[] expected = new AclEntry[] { };
+    AclStatus s = fs.getAclStatus(renamedSubdirPath);
+    AclEntry[] returned = s.getEntries().toArray(new AclEntry[0]);
+    assertArrayEquals(expected, returned);
+    assertPermission(renamedSubdirPath, (short)0750);
+    assertAclFeature(renamedSubdirPath, false);
+  }
+
+  @Test
   public void testSkipAclEnforcementPermsDisabled() throws Exception {
     Path bruceDir = new Path(path, "bruce");
     Path bruceFile = new Path(bruceDir, "file");
