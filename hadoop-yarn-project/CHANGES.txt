@@ -234,6 +234,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1765. Added test cases to verify that killApplication API works across
     ResourceManager failover. (Xuan Gong via vinodkv) 
 
+    YARN-1730. Implemented simple write-locking in the LevelDB based timeline-
+    store. (Billie Rinaldi via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES

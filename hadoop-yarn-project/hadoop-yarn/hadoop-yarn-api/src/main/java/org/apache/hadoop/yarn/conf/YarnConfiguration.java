@@ -1073,9 +1073,22 @@ public class YarnConfiguration extends Configuration {
   public static final String TIMELINE_SERVICE_STORE =
       TIMELINE_SERVICE_PREFIX + "store-class";
 
+  public static final String TIMELINE_SERVICE_LEVELDB_PREFIX =
+      TIMELINE_SERVICE_PREFIX + "leveldb-timeline-store.";
+
   /** Timeline service leveldb path */
   public static final String TIMELINE_SERVICE_LEVELDB_PATH =
-      TIMELINE_SERVICE_PREFIX + "leveldb-timeline-store.path";
+      TIMELINE_SERVICE_LEVELDB_PREFIX + "path";
+
+  /** Timeline service leveldb start time read cache (number of entities) */
+  public static final String
+      TIMELINE_SERVICE_LEVELDB_START_TIME_READ_CACHE_SIZE =
+      TIMELINE_SERVICE_LEVELDB_PREFIX + "start-time-read-cache-size";
+
+  /** Timeline service leveldb start time write cache (number of entities) */
+  public static final String
+      TIMELINE_SERVICE_LEVELDB_START_TIME_WRITE_CACHE_SIZE =
+      TIMELINE_SERVICE_LEVELDB_PREFIX + "start-time-write-cache-size";
 
   ////////////////////////////////
   // Other Configs
