@@ -290,7 +290,7 @@ public class YarnClientImpl extends YarnClient {
     org.apache.hadoop.security.token.Token<AMRMTokenIdentifier> amrmToken =
         null;
     if (token != null) {
-      amrmToken = ConverterUtils.convertFromYarn(token, null);
+      amrmToken = ConverterUtils.convertFromYarn(token, (Text) null);
     }
     return amrmToken;
   }

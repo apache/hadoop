@@ -252,6 +252,10 @@ Release 2.4.0 - UNRELEASED
     YARN-1730. Implemented simple write-locking in the LevelDB based timeline-
     store. (Billie Rinaldi via vinodkv)
 
+    YARN-986. Changed client side to be able to figure out the right RM Delegation
+    token for the right ResourceManager when HA is enabled. (Karthik Kambatla via
+    vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES

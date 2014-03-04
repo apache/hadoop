@@ -299,7 +299,7 @@ public class TestYARNRunner extends TestCase {
           any(GetDelegationTokenRequest.class));
 
       ResourceMgrDelegate rmDelegate = mock(ResourceMgrDelegate.class);
-      doReturn(mockRmAddress).when(rmDelegate).getConnectAddress();
+      doReturn(rmTokenSevice).when(rmDelegate).getRMDelegationTokenService();
 
       ClientCache clientCache = mock(ClientCache.class);
       doReturn(mockHsProxy).when(clientCache).getInitializedHSProxy();

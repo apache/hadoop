@@ -188,8 +188,7 @@ public class YARNRunner implements ClientProtocol {
        * to make sure we add history server delegation tokens to the credentials
        */
       RMDelegationTokenSelector tokenSelector = new RMDelegationTokenSelector();
-      Text service = SecurityUtil.buildTokenService(resMgrDelegate
-          .getConnectAddress());
+      Text service = resMgrDelegate.getRMDelegationTokenService();
       if (tokenSelector.selectToken(service, ts.getAllTokens()) != null) {
         Text hsService = SecurityUtil.buildTokenService(hsProxy
             .getConnectAddress());
