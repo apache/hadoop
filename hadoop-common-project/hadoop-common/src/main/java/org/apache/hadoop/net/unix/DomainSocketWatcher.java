@@ -81,6 +81,10 @@ public final class DomainSocketWatcher implements Closeable {
    */
   private static native void anchorNative();
 
+  public static String getLoadingFailureReason() {
+    return loadingFailureReason;
+  }
+
   public interface Handler {
     /**
      * Handles an event on a socket.  An event may be the socket becoming
@@ -244,7 +248,9 @@ public final class DomainSocketWatcher implements Closeable {
     lock.lock();
     try {
       if (closed) return;
-      LOG.info(this + ": closing");
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(this + ": closing");
+      }
       closed = true;
     } finally {
       lock.unlock();
@@ -390,8 +396,10 @@ public final class DomainSocketWatcher implements Closeable {
   final Thread watcherThread = new Thread(new Runnable() {
     @Override
     public void run() {
-      LOG.info(this + ": starting with interruptCheckPeriodMs = " +
-          interruptCheckPeriodMs);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(this + ": starting with interruptCheckPeriodMs = " +
+            interruptCheckPeriodMs);
+      }
       final TreeMap<Integer, Entry> entries = new TreeMap<Integer, Entry>();
       FdSet fdSet = new FdSet();
       addNotificationSocket(entries, fdSet);
@@ -431,7 +439,9 @@ public final class DomainSocketWatcher implements Closeable {
             // toRemove are now empty and processedCond has been notified if it
             // needed to be.
             if (closed) {
-              LOG.info(toString() + " thread terminating.");
+              if (LOG.isDebugEnabled()) {
+                LOG.debug(toString() + " thread terminating.");
+              }
               return;
             }
             // Check if someone sent our thread an InterruptedException while we

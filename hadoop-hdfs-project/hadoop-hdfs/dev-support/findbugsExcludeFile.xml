@@ -165,13 +165,13 @@
        <Bug pattern="DM_STRING_CTOR" />
      </Match>
     <Match>
-      <Class name="org.apache.hadoop.hdfs.client.ClientMmapManager" />
-      <Method name="create" />
+      <Class name="org.apache.hadoop.hdfs.client.DfsClientShmManager$EndpointShmManager" />
+      <Method name="allocSlot" />
       <Bug pattern="UL_UNRELEASED_LOCK_EXCEPTION_PATH" />
     </Match>
     <Match>
-      <Class name="org.apache.hadoop.hdfs.client.ClientMmapManager" />
-      <Method name="create" />
+      <Class name="org.apache.hadoop.hdfs.client.DfsClientShmManager$EndpointShmManager" />
+      <Method name="allocSlot" />
       <Bug pattern="UL_UNRELEASED_LOCK" />
     </Match>
     <!-- Manually verified to be okay, we want to throw away the top bit here -->
