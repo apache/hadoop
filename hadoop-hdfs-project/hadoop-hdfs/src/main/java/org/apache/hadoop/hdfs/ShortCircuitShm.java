@@ -30,7 +30,6 @@ import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.InvalidRequestException;
-import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.io.nativeio.NativeIO.POSIX;
 import org.apache.hadoop.util.Shell;
@@ -514,7 +513,9 @@ public class ShortCircuitShm {
    * @return          The base address of the slot.
    */
   private final long calculateSlotAddress(int slotIdx) {
-    return this.baseAddress + (slotIdx * BYTES_PER_SLOT);
+    long offset = slotIdx;
+    offset *= BYTES_PER_SLOT;
+    return this.baseAddress + offset;
   }
 
   /**
@@ -536,7 +537,6 @@ public class ShortCircuitShm {
     slot.makeValid();
     slots[idx] = slot;
     if (LOG.isTraceEnabled()) {
-      //LOG.trace(this + ": allocAndRegisterSlot " + idx);
       LOG.trace(this + ": allocAndRegisterSlot " + idx + ": allocatedSlots=" + allocatedSlots +
                   StringUtils.getStackTrace(Thread.currentThread()));
     }
@@ -567,6 +567,14 @@ public class ShortCircuitShm {
    */
   synchronized public final Slot registerSlot(int slotIdx,
       ExtendedBlockId blockId) throws InvalidRequestException {
+    if (slotIdx < 0) {
+      throw new InvalidRequestException(this + ": invalid negative slot " +
+          "index " + slotIdx);
+    }
+    if (slotIdx >= slots.length) {
+      throw new InvalidRequestException(this + ": invalid slot " +
+          "index " + slotIdx);
+    }
     if (allocatedSlots.get(slotIdx)) {
       throw new InvalidRequestException(this + ": slot " + slotIdx +
           " is already in use.");
@@ -579,7 +587,6 @@ public class ShortCircuitShm {
     slots[slotIdx] = slot;
     allocatedSlots.set(slotIdx, true);
     if (LOG.isTraceEnabled()) {
-      //LOG.trace(this + ": registerSlot " + slotIdx);
       LOG.trace(this + ": registerSlot " + slotIdx + ": allocatedSlots=" + allocatedSlots +
                   StringUtils.getStackTrace(Thread.currentThread()));
     }

@@ -53,6 +53,7 @@ import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.net.unix.DomainSocket;
+import org.apache.hadoop.net.unix.DomainSocketWatcher;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
@@ -375,7 +376,8 @@ public class ShortCircuitCache implements Closeable {
     this.mmapRetryTimeoutMs = mmapRetryTimeoutMs;
     this.staleThresholdMs = staleThresholdMs;
     DfsClientShmManager shmManager = null;
-    if (shmInterruptCheckMs > 0) {
+    if ((shmInterruptCheckMs > 0) &&
+        (DomainSocketWatcher.getLoadingFailureReason() == null)) {
       try {
         shmManager = new DfsClientShmManager(shmInterruptCheckMs);
       } catch (IOException e) {

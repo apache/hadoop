@@ -273,6 +273,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-5866. '-maxSize' and '-step' option fail in OfflineImageViewer.
     (Akira Ajisaka via wheat9)
 
+    HDFS-6040. fix DFSClient issue without libhadoop.so and some other
+    ShortCircuitShm cleanups (cmccabe)
+
   BREAKDOWN OF HDFS-5698 SUBTASKS AND RELATED JIRAS
 
     HDFS-5717. Save FSImage header in protobuf. (Haohui Mai via jing9)
