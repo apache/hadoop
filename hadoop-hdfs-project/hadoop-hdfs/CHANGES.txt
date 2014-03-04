@@ -281,6 +281,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-6053. Fix TestDecommissioningStatus and TestDecommission in branch-2.
     (jing9)
 
+    HDFS-6047 TestPread NPE inside in DFSInputStream hedgedFetchBlockByteRange
+    (stack)
+
   BREAKDOWN OF HDFS-5698 SUBTASKS AND RELATED JIRAS
 
     HDFS-5717. Save FSImage header in protobuf. (Haohui Mai via jing9)
