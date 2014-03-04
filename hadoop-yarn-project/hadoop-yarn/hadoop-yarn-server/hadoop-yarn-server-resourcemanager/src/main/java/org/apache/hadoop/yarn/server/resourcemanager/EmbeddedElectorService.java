@@ -72,11 +72,7 @@ public class EmbeddedElectorService extends AbstractService
     }
 
     String rmId = HAUtil.getRMHAId(conf);
-    String clusterId = conf.get(YarnConfiguration.RM_CLUSTER_ID);
-    if (clusterId == null) {
-      throw new YarnRuntimeException(YarnConfiguration.RM_CLUSTER_ID +
-          " is not specified!");
-    }
+    String clusterId = YarnConfiguration.getClusterId(conf);
     localActiveNodeInfo = createActiveNodeInfo(clusterId, rmId);
 
     String zkBasePath = conf.get(YarnConfiguration.AUTO_FAILOVER_ZK_BASE_PATH,

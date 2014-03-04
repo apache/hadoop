@@ -548,7 +548,7 @@ public abstract class RMStateStore extends AbstractService {
       ApplicationState appState) throws Exception;
 
   // TODO: This should eventually become cluster-Id + "AM_RM_TOKEN_SERVICE". See
-  // YARN-986 
+  // YARN-1779
   public static final Text AM_RM_TOKEN_SERVICE = new Text(
     "AM_RM_TOKEN_SERVICE");
 

@@ -20,23 +20,30 @@ package org.apache.hadoop.yarn.client;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 
+import com.google.common.base.Joiner;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
+import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.ResourceManagerAdministrationProtocol;
 
 import com.google.common.base.Preconditions;
 
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class ClientRMProxy<T> extends RMProxy<T>  {
   private static final Log LOG = LogFactory.getLog(ClientRMProxy.class);
   private static final ClientRMProxy INSTANCE = new ClientRMProxy();
@@ -67,7 +74,7 @@ public class ClientRMProxy<T> extends RMProxy<T>  {
       throws IOException {
     // It is assumed for now that the only AMRMToken in AM's UGI is for this
     // cluster/RM. TODO: Fix later when we have some kind of cluster-ID as
-    // default service-address, see YARN-986.
+    // default service-address, see YARN-1779.
     for (Token<? extends TokenIdentifier> token : UserGroupInformation
       .getCurrentUser().getTokens()) {
       if (token.getKind().equals(AMRMTokenIdentifier.KIND_NAME)) {
@@ -114,5 +121,38 @@ public class ClientRMProxy<T> extends RMProxy<T>  {
     Preconditions.checkArgument(
         protocol.isAssignableFrom(ClientRMProtocols.class),
         "RM does not support this client protocol");
+  }
+
+  /**
+   * Get the token service name to be used for RMDelegationToken. Depending
+   * on whether HA is enabled or not, this method generates the appropriate
+   * service name as a comma-separated list of service addresses.
+   *
+   * @param conf Configuration corresponding to the cluster we need the
+   *             RMDelegationToken for
+   * @return - Service name for RMDelegationToken
+   */
+  @InterfaceStability.Unstable
+  public static Text getRMDelegationTokenService(Configuration conf) {
+    if (HAUtil.isHAEnabled(conf)) {
+      // Build a list of service addresses to form the service name
+      ArrayList<String> services = new ArrayList<String>();
+      YarnConfiguration yarnConf = new YarnConfiguration(conf);
+      for (String rmId : HAUtil.getRMHAIds(conf)) {
+        // Set RM_ID to get the corresponding RM_ADDRESS
+        yarnConf.set(YarnConfiguration.RM_HA_ID, rmId);
+        services.add(SecurityUtil.buildTokenService(
+            yarnConf.getSocketAddr(YarnConfiguration.RM_ADDRESS,
+                YarnConfiguration.DEFAULT_RM_ADDRESS,
+                YarnConfiguration.DEFAULT_RM_PORT)).toString());
+      }
+      return new Text(Joiner.on(',').join(services));
+    }
+
+    // Non-HA case - no need to set RM_ID
+    return SecurityUtil.buildTokenService(
+        conf.getSocketAddr(YarnConfiguration.RM_ADDRESS,
+            YarnConfiguration.DEFAULT_RM_ADDRESS,
+            YarnConfiguration.DEFAULT_RM_PORT));
   }
 }

@@ -216,8 +216,12 @@ public class ConverterUtils {
   }
 
   /**
-   * Convert a protobuf token into a rpc token and set its service
-   * 
+   * Convert a protobuf token into a rpc token and set its service. Supposed
+   * to be used for tokens other than RMDelegationToken. For
+   * RMDelegationToken, use
+   * {@link #convertFromYarn(org.apache.hadoop.yarn.api.records.Token,
+   * org.apache.hadoop.io.Text)} instead.
+   *
    * @param protoToken the yarn token
    * @param serviceAddr the connect address for the service
    * @return rpc token
@@ -231,6 +235,26 @@ public class ConverterUtils {
                                   new Text(protoToken.getService()));
     if (serviceAddr != null) {
       SecurityUtil.setTokenService(token, serviceAddr);
+    }
+    return token;
+  }
+
+  /**
+   * Convert a protobuf token into a rpc token and set its service.
+   *
+   * @param protoToken the yarn token
+   * @param service the service for the token
+   */
+  public static <T extends TokenIdentifier> Token<T> convertFromYarn(
+      org.apache.hadoop.yarn.api.records.Token protoToken,
+      Text service) {
+    Token<T> token = new Token<T>(protoToken.getIdentifier().array(),
+        protoToken.getPassword().array(),
+        new Text(protoToken.getKind()),
+        new Text(protoToken.getService()));
+
+    if (service != null) {
+      token.setService(service);
     }
     return token;
   }
