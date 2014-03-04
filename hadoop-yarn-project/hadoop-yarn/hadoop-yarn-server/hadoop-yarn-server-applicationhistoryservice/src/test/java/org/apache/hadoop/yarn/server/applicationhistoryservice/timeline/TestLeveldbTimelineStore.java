@@ -30,6 +30,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import static org.junit.Assert.assertEquals;
+
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class TestLeveldbTimelineStore
@@ -64,6 +66,7 @@ public class TestLeveldbTimelineStore
     super.testGetSingleEntity();
     ((LeveldbTimelineStore)store).clearStartTimeCache();
     super.testGetSingleEntity();
+    loadTestData();
   }
 
   @Test
@@ -84,6 +87,22 @@ public class TestLeveldbTimelineStore
   @Test
   public void testGetEvents() throws IOException {
     super.testGetEvents();
+  }
+
+  @Test
+  public void testCacheSizes() {
+    Configuration conf = new Configuration();
+    assertEquals(10000, LeveldbTimelineStore.getStartTimeReadCacheSize(conf));
+    assertEquals(10000, LeveldbTimelineStore.getStartTimeWriteCacheSize(conf));
+    conf.setInt(
+        YarnConfiguration.TIMELINE_SERVICE_LEVELDB_START_TIME_READ_CACHE_SIZE,
+        10001);
+    assertEquals(10001, LeveldbTimelineStore.getStartTimeReadCacheSize(conf));
+    conf = new Configuration();
+    conf.setInt(
+        YarnConfiguration.TIMELINE_SERVICE_LEVELDB_START_TIME_WRITE_CACHE_SIZE,
+        10002);
+    assertEquals(10002, LeveldbTimelineStore.getStartTimeWriteCacheSize(conf));
   }
 
 }
