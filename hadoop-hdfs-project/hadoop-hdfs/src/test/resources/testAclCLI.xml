@@ -972,5 +972,55 @@
         </comparator>
       </comparators>
     </test>
+    <test>
+      <description>copyFromLocal: copying file into a directory with a default ACL</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /dir1</command>
+        <command>-fs NAMENODE -setfacl -m default:user:charlie:rwx /dir1</command>
+        <command>-fs NAMENODE -copyFromLocal CLITEST_DATA/data15bytes /dir1/data15bytes</command>
+        <command>-fs NAMENODE -getfacl /dir1/data15bytes</command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -R /dir1</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^# file: /dir1/data15bytes$</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^# owner: USERNAME$</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^# group: supergroup$</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^user::rw-$</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^user:charlie:rwx\t#effective:r--$</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^group::r-x\t#effective:r--$</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^mask::r--$</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^other::r--$</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpAcrossOutputComparator</type>
+          <expected-output>.*(?!default).*</expected-output>
+        </comparator>
+      </comparators>
+    </test>
   </tests>
 </configuration>
