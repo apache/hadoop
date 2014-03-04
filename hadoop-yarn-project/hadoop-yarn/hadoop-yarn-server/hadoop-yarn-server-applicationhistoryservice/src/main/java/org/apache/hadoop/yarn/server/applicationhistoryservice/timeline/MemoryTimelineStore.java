@@ -26,6 +26,7 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.SortedSet;
@@ -94,12 +95,13 @@ public class MemoryTimelineStore
           !matchPrimaryFilter(entity.getPrimaryFilters(), primaryFilter)) {
         continue;
       }
-      if (secondaryFilters != null) { // OR logic
-        boolean flag = false;
+      if (secondaryFilters != null) { // AND logic
+        boolean flag = true;
         for (NameValuePair secondaryFilter : secondaryFilters) {
-          if (secondaryFilter != null &&
-              matchFilter(entity.getOtherInfo(), secondaryFilter)) {
-            flag = true;
+          if (secondaryFilter != null && !matchPrimaryFilter(
+              entity.getPrimaryFilters(), secondaryFilter) &&
+              !matchFilter(entity.getOtherInfo(), secondaryFilter)) {
+            flag = false;
             break;
           }
         }
@@ -220,16 +222,22 @@ public class MemoryTimelineStore
       }
       if (entity.getPrimaryFilters() != null) {
         if (existingEntity.getPrimaryFilters() == null) {
-          existingEntity.setPrimaryFilters(entity.getPrimaryFilters());
-        } else {
-          existingEntity.addPrimaryFilters(entity.getPrimaryFilters());
+          existingEntity.setPrimaryFilters(new HashMap<String, Set<Object>>());
+        }
+        for (Entry<String, Set<Object>> pf :
+            entity.getPrimaryFilters().entrySet()) {
+          for (Object pfo : pf.getValue()) {
+            existingEntity.addPrimaryFilter(pf.getKey(), maybeConvert(pfo));
+          }
         }
       }
       if (entity.getOtherInfo() != null) {
         if (existingEntity.getOtherInfo() == null) {
-          existingEntity.setOtherInfo(entity.getOtherInfo());
-        } else {
-          existingEntity.addOtherInfo(entity.getOtherInfo());
+          existingEntity.setOtherInfo(new HashMap<String, Object>());
+        }
+        for (Entry<String, Object> info : entity.getOtherInfo().entrySet()) {
+          existingEntity.addOtherInfo(info.getKey(),
+              maybeConvert(info.getValue()));
         }
       }
       // relate it to other entities
@@ -301,6 +309,16 @@ public class MemoryTimelineStore
     } else {
       return value.contains(filter.getValue());
     }
+  }
+
+  private static Object maybeConvert(Object o) {
+    if (o instanceof Long) {
+      Long l = (Long)o;
+      if (l >= Integer.MIN_VALUE && l <= Integer.MAX_VALUE) {
+        return l.intValue();
+      }
+    }
+    return o;
   }
 
 }

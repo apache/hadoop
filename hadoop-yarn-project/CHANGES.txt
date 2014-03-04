@@ -381,6 +381,11 @@ Release 2.4.0 - UNRELEASED
     YARN-1748. Excluded core-site.xml from hadoop-yarn-server-tests package's jar
     and thus avoid breaking downstream tests. (Sravya Tirukkovalur via vinodkv)
 
+    YARN-1729. Made TimelineWebServices deserialize the string primary- and
+    secondary-filters param into the JSON-compatible object. (Billie Rinaldi via
+    zjshen)
+    
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

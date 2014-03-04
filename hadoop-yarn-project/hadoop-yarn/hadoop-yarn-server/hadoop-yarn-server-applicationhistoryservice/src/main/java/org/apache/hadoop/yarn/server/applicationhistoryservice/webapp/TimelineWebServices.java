@@ -54,6 +54,7 @@ import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEvents;
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
+import org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.GenericObjectMapper;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.TimelineStore;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.NameValuePair;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.TimelineReader.Field;
@@ -273,7 +274,13 @@ public class TimelineWebServices {
       return null;
     }
     String[] strs = str.split(delimiter, 2);
-    return new NameValuePair(strs[0].trim(), strs[1].trim());
+    try {
+      return new NameValuePair(strs[0].trim(),
+          GenericObjectMapper.OBJECT_READER.readValue(strs[1].trim()));
+    } catch (Exception e) {
+      // didn't work as an Object, keep it as a String
+      return new NameValuePair(strs[0].trim(), strs[1].trim());
+    }
   }
 
   private static Collection<NameValuePair> parsePairsStr(
@@ -297,24 +304,29 @@ public class TimelineWebServices {
     List<Field> fieldList = new ArrayList<Field>();
     for (String s : strs) {
       s = s.trim().toUpperCase();
-      if (s.equals("EVENTS"))
+      if (s.equals("EVENTS")) {
         fieldList.add(Field.EVENTS);
-      else if (s.equals("LASTEVENTONLY"))
+      } else if (s.equals("LASTEVENTONLY")) {
         fieldList.add(Field.LAST_EVENT_ONLY);
-      else if (s.equals("RELATEDENTITIES"))
+      } else if (s.equals("RELATEDENTITIES")) {
         fieldList.add(Field.RELATED_ENTITIES);
-      else if (s.equals("PRIMARYFILTERS"))
+      } else if (s.equals("PRIMARYFILTERS")) {
         fieldList.add(Field.PRIMARY_FILTERS);
-      else if (s.equals("OTHERINFO"))
+      } else if (s.equals("OTHERINFO")) {
         fieldList.add(Field.OTHER_INFO);
+      } else {
+        throw new IllegalArgumentException("Requested nonexistent field " + s);
+      }
     }
-    if (fieldList.size() == 0)
+    if (fieldList.size() == 0) {
       return null;
+    }
     Field f1 = fieldList.remove(fieldList.size() - 1);
-    if (fieldList.size() == 0)
+    if (fieldList.size() == 0) {
       return EnumSet.of(f1);
-    else
+    } else {
       return EnumSet.of(f1, fieldList.toArray(new Field[fieldList.size()]));
+    }
   }
 
   private static Long parseLongStr(String str) {
