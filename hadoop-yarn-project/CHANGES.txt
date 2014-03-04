@@ -376,6 +376,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1729. Made TimelineWebServices deserialize the string primary- and
     secondary-filters param into the JSON-compatible object. (Billie Rinaldi via
     zjshen)
+
+    YARN-1766. Fixed a bug in ResourceManager to use configuration loaded from the
+    configuration-provider when booting up. (Xuan Gong via vinodkv)
     
 
 Release 2.3.1 - UNRELEASED
