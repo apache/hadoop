@@ -1177,8 +1177,11 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
           // exception already handled in the call method. getFirstToComplete
           // will remove the failing future from the list. nothing more to do.
         }
-        // We got here if exception.  Ignore this node on next go around.
-        ignored.add(chosenNode.info);
+        // We got here if exception.  Ignore this node on next go around IFF
+        // we found a chosenNode to hedge read against.
+        if (chosenNode != null && chosenNode.info != null) {
+          ignored.add(chosenNode.info);
+        }
       }
       // executed if we get an error from a data node
       block = getBlockAt(block.getStartOffset(), false);
