@@ -2936,7 +2936,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
                 
         if (isNeededReplication(block, curExpectedReplicas, curReplicas)) {
           if (curExpectedReplicas > curReplicas) {
-            if (bc instanceof MutableBlockCollection) {
+            if (bc.isUnderConstruction()) {
               if (block.equals(bc.getLastBlock()) && curReplicas > minReplication) {
                 continue;
               }
