@@ -27,6 +27,7 @@ import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.never;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -54,6 +55,7 @@ public class TestRMAdminCLI {
   private ResourceManagerAdministrationProtocol admin;
   private HAServiceProtocol haadmin;
   private RMAdminCLI rmAdminCLI;
+  private RMAdminCLI rmAdminCLIWithHAEnabled;
 
   @Before
   public void configure() throws IOException {
@@ -66,7 +68,23 @@ public class TestRMAdminCLI {
     final HAServiceTarget haServiceTarget = mock(HAServiceTarget.class);
     when(haServiceTarget.getProxy(any(Configuration.class), anyInt()))
         .thenReturn(haadmin);
-    rmAdminCLI = new RMAdminCLI() {
+    rmAdminCLI = new RMAdminCLI(new Configuration()) {
+
+      @Override
+      protected ResourceManagerAdministrationProtocol createAdminProtocol()
+          throws IOException {
+        return admin;
+      }
+
+      @Override
+      protected HAServiceTarget resolveTarget(String rmId) {
+        return haServiceTarget;
+      }
+    };
+
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.setBoolean(YarnConfiguration.RM_HA_ENABLED, true);
+    rmAdminCLIWithHAEnabled = new RMAdminCLI(conf) {
 
       @Override
       protected ResourceManagerAdministrationProtocol createAdminProtocol()
@@ -150,7 +168,16 @@ public class TestRMAdminCLI {
   @Test(timeout = 500)
   public void testTransitionToActive() throws Exception {
     String[] args = {"-transitionToActive", "rm1"};
-    assertEquals(0, rmAdminCLI.run(args));
+
+    // RM HA is disabled.
+    // transitionToActive should not be executed
+    assertEquals(-1, rmAdminCLI.run(args));
+    verify(haadmin, never()).transitionToActive(
+        any(HAServiceProtocol.StateChangeRequestInfo.class));
+
+    // Now RM HA is enabled.
+    // transitionToActive should be executed
+    assertEquals(0, rmAdminCLIWithHAEnabled.run(args));
     verify(haadmin).transitionToActive(
         any(HAServiceProtocol.StateChangeRequestInfo.class));
   }
@@ -158,7 +185,16 @@ public class TestRMAdminCLI {
   @Test(timeout = 500)
   public void testTransitionToStandby() throws Exception {
     String[] args = {"-transitionToStandby", "rm1"};
-    assertEquals(0, rmAdminCLI.run(args));
+
+    // RM HA is disabled.
+    // transitionToStandby should not be executed
+    assertEquals(-1, rmAdminCLI.run(args));
+    verify(haadmin, never()).transitionToStandby(
+        any(HAServiceProtocol.StateChangeRequestInfo.class));
+
+    // Now RM HA is enabled.
+    // transitionToActive should be executed
+    assertEquals(0, rmAdminCLIWithHAEnabled.run(args));
     verify(haadmin).transitionToStandby(
         any(HAServiceProtocol.StateChangeRequestInfo.class));
   }
@@ -166,14 +202,30 @@ public class TestRMAdminCLI {
   @Test(timeout = 500)
   public void testGetServiceState() throws Exception {
     String[] args = {"-getServiceState", "rm1"};
-    assertEquals(0, rmAdminCLI.run(args));
+
+    // RM HA is disabled.
+    // getServiceState should not be executed
+    assertEquals(-1, rmAdminCLI.run(args));
+    verify(haadmin, never()).getServiceStatus();
+
+    // Now RM HA is enabled.
+    // getServiceState should be executed
+    assertEquals(0, rmAdminCLIWithHAEnabled.run(args));
     verify(haadmin).getServiceStatus();
   }
 
   @Test(timeout = 500)
   public void testCheckHealth() throws Exception {
     String[] args = {"-checkHealth", "rm1"};
-    assertEquals(0, rmAdminCLI.run(args));
+
+    // RM HA is disabled.
+    // getServiceState should not be executed
+    assertEquals(-1, rmAdminCLI.run(args));
+    verify(haadmin, never()).monitorHealth();
+
+    // Now RM HA is enabled.
+    // getServiceState should be executed
+    assertEquals(0, rmAdminCLIWithHAEnabled.run(args));
     verify(haadmin).monitorHealth();
   }
 
@@ -202,11 +254,7 @@ public class TestRMAdminCLI {
               "yarn rmadmin [-refreshQueues] [-refreshNodes] [-refreshSuper" +
               "UserGroupsConfiguration] [-refreshUserToGroupsMappings] " +
               "[-refreshAdminAcls] [-refreshServiceAcl] [-getGroup" +
-              " [username]] [-help [cmd]] [-transitionToActive <serviceId>]" +
-              " [-transitionToStandby <serviceId>] [-failover [--forcefence] " +
-                  "[--forceactive] <serviceId> <serviceId>] " +
-                  "[-getServiceState <serviceId>] [-checkHealth <serviceId>]"
-          ));
+              " [username]] [-help [cmd]]"));
       assertTrue(dataOut
           .toString()
           .contains(
@@ -273,7 +321,21 @@ public class TestRMAdminCLI {
       testError(new String[] { "-help", "-badParameter" },
           "Usage: yarn rmadmin", dataErr, 0);
       testError(new String[] { "-badParameter" },
-          "badParameter: Unknown command", dataErr, -1); 
+          "badParameter: Unknown command", dataErr, -1);
+
+      // Test -help when RM HA is enabled
+      assertEquals(0, rmAdminCLIWithHAEnabled.run(args));
+      oldOutPrintStream.println(dataOut);
+      assertTrue(dataOut
+          .toString()
+          .contains(
+              "yarn rmadmin [-refreshQueues] [-refreshNodes] [-refreshSuper" +
+              "UserGroupsConfiguration] [-refreshUserToGroupsMappings] " +
+              "[-refreshAdminAcls] [-refreshServiceAcl] [-getGroup" +
+              " [username]] [-help [cmd]] [-transitionToActive <serviceId>]" +
+              " [-transitionToStandby <serviceId>] [-failover [--forcefence]" +
+              " [--forceactive] <serviceId> <serviceId>] " +
+              "[-getServiceState <serviceId>] [-checkHealth <serviceId>]"));
     } finally {
       System.setOut(oldOutPrintStream);
       System.setErr(oldErrPrintStream);
