@@ -40,6 +40,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
@@ -208,7 +209,11 @@ public class ApplicationCLI extends YarnCLI {
         printUsage(opts);
         return exitCode;
       }
-      killApplication(cliParser.getOptionValue(KILL_CMD));
+      try{
+        killApplication(cliParser.getOptionValue(KILL_CMD));
+      } catch (ApplicationNotFoundException e) {
+        return exitCode;
+      }
     } else if (cliParser.hasOption(MOVE_TO_QUEUE_CMD)) {
       if (!cliParser.hasOption(QUEUE_CMD)) {
         printUsage(opts);
@@ -370,7 +375,15 @@ public class ApplicationCLI extends YarnCLI {
   private void killApplication(String applicationId) throws YarnException,
       IOException {
     ApplicationId appId = ConverterUtils.toApplicationId(applicationId);
-    ApplicationReport appReport = client.getApplicationReport(appId);
+    ApplicationReport  appReport = null;
+    try {
+      appReport = client.getApplicationReport(appId);
+    } catch (ApplicationNotFoundException e) {
+      sysout.println("Application with id '" + applicationId +
+          "' doesn't exist in RM.");
+      throw e;
+    }
+
     if (appReport.getYarnApplicationState() == YarnApplicationState.FINISHED
         || appReport.getYarnApplicationState() == YarnApplicationState.KILLED
         || appReport.getYarnApplicationState() == YarnApplicationState.FAILED) {
@@ -380,7 +393,7 @@ public class ApplicationCLI extends YarnCLI {
       client.killApplication(appId);
     }
   }
-  
+
   /**
    * Moves the application with the given ID to the given queue.
    */
@@ -470,12 +483,12 @@ public class ApplicationCLI extends YarnCLI {
    * @throws YarnException
    * @throws IOException
    */
-  private void listApplicationAttempts(String appId) throws YarnException,
+  private void listApplicationAttempts(String applicationId) throws YarnException,
       IOException {
     PrintWriter writer = new PrintWriter(sysout);
 
     List<ApplicationAttemptReport> appAttemptsReport = client
-        .getApplicationAttempts(ConverterUtils.toApplicationId(appId));
+        .getApplicationAttempts(ConverterUtils.toApplicationId(applicationId));
     writer.println("Total number of application attempts " + ":"
         + appAttemptsReport.size());
     writer.printf(APPLICATION_ATTEMPTS_PATTERN, "ApplicationAttempt-Id",
