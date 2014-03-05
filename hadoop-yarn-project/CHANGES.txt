@@ -244,6 +244,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1785. FairScheduler treats app lookup failures as ERRORs. 
     (bc Wong via kasha)
 
+    YARN-1752. Fixed ApplicationMasterService to reject unregister request if
+    AM did not register before. (Rohith Sharma via jianhe)
+
   OPTIMIZATIONS
 
   BUG FIXES
