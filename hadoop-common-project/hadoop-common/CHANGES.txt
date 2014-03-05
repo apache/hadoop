@@ -61,6 +61,9 @@ Release 2.4.0 - UNRELEASED
     HADOOP-10379. Protect authentication cookies with the HttpOnly and Secure
     flags. (wheat9)
 
+    HADOOP-10211. Enable RPC protocol to negotiate SASL-QOP values between
+    clients and servers. (Benoy Antony via Arpit Agarwal)
+
   OPTIMIZATIONS
 
   BUG FIXES

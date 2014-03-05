@@ -19,8 +19,15 @@
 package org.apache.hadoop.ipc;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION;
-import static org.apache.hadoop.security.SaslRpcServer.AuthMethod.*;
-import static org.junit.Assert.*;
+import static org.apache.hadoop.security.SaslRpcServer.AuthMethod.KERBEROS;
+import static org.apache.hadoop.security.SaslRpcServer.AuthMethod.SIMPLE;
+import static org.apache.hadoop.security.SaslRpcServer.AuthMethod.TOKEN;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -87,15 +94,21 @@ public class TestSaslRPC {
   public static Collection<Object[]> data() {
     Collection<Object[]> params = new ArrayList<Object[]>();
     for (QualityOfProtection qop : QualityOfProtection.values()) {
-      params.add(new Object[]{ qop });
+      params.add(new Object[]{ new QualityOfProtection[]{qop},qop });
     }
+    params.add(new Object[]{ new QualityOfProtection[]{
+        QualityOfProtection.PRIVACY,QualityOfProtection.AUTHENTICATION },
+        QualityOfProtection.PRIVACY });
     return params;
   }
 
+  QualityOfProtection[] qop;
   QualityOfProtection expectedQop;
   
-  public TestSaslRPC(QualityOfProtection qop) {
-    expectedQop = qop;
+  public TestSaslRPC(QualityOfProtection[] qop,
+      QualityOfProtection expectedQop) {
+    this.qop=qop;
+    this.expectedQop = expectedQop;
   }
   
   private static final String ADDRESS = "0.0.0.0";
@@ -134,17 +147,29 @@ public class TestSaslRPC {
   @Before
   public void setup() {
     LOG.info("---------------------------------");
-    LOG.info("Testing QOP:"+expectedQop);
+    LOG.info("Testing QOP:"+ getQOPNames(qop));
     LOG.info("---------------------------------");
     conf = new Configuration();
     // the specific tests for kerberos will enable kerberos.  forcing it
     // for all tests will cause tests to fail if the user has a TGT
     conf.set(HADOOP_SECURITY_AUTHENTICATION, SIMPLE.toString());
-    conf.set("hadoop.rpc.protection", expectedQop.name().toLowerCase());
+    conf.set("hadoop.rpc.protection", getQOPNames(qop));
     UserGroupInformation.setConfiguration(conf);
     enableSecretManager = null;
     forceSecretManager = null;
     clientFallBackToSimpleAllowed = true;
+  }
+
+  static String getQOPNames (QualityOfProtection[] qops){
+    StringBuilder sb = new StringBuilder();
+    int i = 0;
+    for (QualityOfProtection qop:qops){
+     sb.append(qop.name().toLowerCase());
+     if (++i < qops.length){
+       sb.append(",");
+     }
+    }
+    return sb.toString();
   }
 
   static {

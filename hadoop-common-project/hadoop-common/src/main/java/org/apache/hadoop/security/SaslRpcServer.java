@@ -57,6 +57,7 @@ import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * A utility class for dealing with SASL on RPC server
@@ -179,18 +180,14 @@ public class SaslRpcServer {
   }
 
   public static void init(Configuration conf) {
-    QualityOfProtection saslQOP = QualityOfProtection.AUTHENTICATION;
-    String rpcProtection = conf.get("hadoop.rpc.protection",
-        QualityOfProtection.AUTHENTICATION.name().toLowerCase());
-    if (QualityOfProtection.INTEGRITY.name().toLowerCase()
-        .equals(rpcProtection)) {
-      saslQOP = QualityOfProtection.INTEGRITY;
-    } else if (QualityOfProtection.PRIVACY.name().toLowerCase().equals(
-        rpcProtection)) {
-      saslQOP = QualityOfProtection.PRIVACY;
+    String[] qop = conf.getStrings("hadoop.rpc.protection",
+        QualityOfProtection.AUTHENTICATION.toString());
+    
+    for (int i=0; i < qop.length; i++) {
+        qop[i] = QualityOfProtection.valueOf(qop[i].toUpperCase()).getSaslQop();
     }
     
-    SASL_PROPS.put(Sasl.QOP, saslQOP.getSaslQop());
+    SASL_PROPS.put(Sasl.QOP, StringUtils.join(",", qop));
     SASL_PROPS.put(Sasl.SERVER_AUTH, "true");
     Security.addProvider(new SaslPlainServer.SecurityProvider());
     saslFactory = new FastSaslServerFactory(SASL_PROPS);
