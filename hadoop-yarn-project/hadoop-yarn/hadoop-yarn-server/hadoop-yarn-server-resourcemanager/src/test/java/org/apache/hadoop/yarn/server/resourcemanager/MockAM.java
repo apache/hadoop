@@ -225,17 +225,19 @@ public class MockAM {
     final FinishApplicationMasterRequest req =
         FinishApplicationMasterRequest.newInstance(
           FinalApplicationStatus.SUCCEEDED, "", "");
-    unregisterAppAttempt(req);
+    unregisterAppAttempt(req,true);
   }
 
-  public void unregisterAppAttempt(final FinishApplicationMasterRequest req)
-      throws Exception {
-    waitForState(RMAppAttemptState.RUNNING);
+  public void unregisterAppAttempt(final FinishApplicationMasterRequest req,
+      boolean waitForStateRunning) throws Exception {
+    if (waitForStateRunning) {
+      waitForState(RMAppAttemptState.RUNNING);
+    }
     UserGroupInformation ugi =
         UserGroupInformation.createRemoteUser(attemptId.toString());
     Token<AMRMTokenIdentifier> token =
         context.getRMApps().get(attemptId.getApplicationId())
-          .getRMAppAttempt(attemptId).getAMRMToken();
+            .getRMAppAttempt(attemptId).getAMRMToken();
     ugi.addTokenIdentifier(token.decodeIdentifier());
     ugi.doAs(new PrivilegedExceptionAction<Object>() {
       @Override

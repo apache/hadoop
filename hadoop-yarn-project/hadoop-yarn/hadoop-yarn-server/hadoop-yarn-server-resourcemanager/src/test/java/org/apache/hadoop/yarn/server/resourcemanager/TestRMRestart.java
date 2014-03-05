@@ -928,7 +928,7 @@ public class TestRMRestart {
         ((MemoryRMStateStore) rm.getRMContext().getStateStore()).getState();
     Map<ApplicationId, ApplicationState> rmAppState =
         rmState.getApplicationState();
-    am.unregisterAppAttempt(req);
+    am.unregisterAppAttempt(req,true);
     am.waitForState(RMAppAttemptState.FINISHING);
     nm.nodeHeartbeat(am.getApplicationAttemptId(), 1, ContainerState.COMPLETE);
     am.waitForState(RMAppAttemptState.FINISHED);
