@@ -740,12 +740,16 @@ public class TestYarnCLI {
         .getApplicationReport(applicationId);
     cli = createAndGetAppCLI();
     try {
-      cli.run(new String[] { "application","-kill", applicationId.toString() });
-      Assert.fail();
-    } catch (Exception ex) {
-      Assert.assertTrue(ex instanceof ApplicationNotFoundException);
-      Assert.assertEquals("Application with id '" + applicationId +
-          "' doesn't exist in RM.", ex.getMessage());
+      int exitCode =
+          cli.run(new String[] { "application","-kill", applicationId.toString() });
+      verify(sysOut).println("Application with id '" + applicationId +
+              "' doesn't exist in RM.");
+      Assert.assertNotSame("should return non-zero exit code.", 0, exitCode);
+    } catch (ApplicationNotFoundException appEx) {
+      Assert.fail("application -kill should not throw" +
+          "ApplicationNotFoundException. " + appEx);
+    } catch (Exception e) {
+      Assert.fail("Unexpected exception: " + e);
     }
   }
   
