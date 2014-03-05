@@ -43,8 +43,8 @@ public class DefaultFailoverProxyProvider<T> implements FailoverProxyProvider<T>
   }
 
   @Override
-  public T getProxy() {
-    return proxy;
+  public ProxyInfo<T> getProxy() {
+    return new ProxyInfo<T>(proxy, null);
   }
 
   @Override

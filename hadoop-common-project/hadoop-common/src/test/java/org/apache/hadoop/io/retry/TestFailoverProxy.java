@@ -48,8 +48,8 @@ public class TestFailoverProxy {
     }
     
     @Override
-    public T getProxy() {
-      return currentlyActive;
+    public ProxyInfo<T> getProxy() {
+      return new ProxyInfo<T>(currentlyActive, currentlyActive.toString());
     }
 
     @Override
