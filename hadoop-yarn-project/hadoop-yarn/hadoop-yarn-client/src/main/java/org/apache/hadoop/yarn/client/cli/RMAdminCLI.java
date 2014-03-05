@@ -27,13 +27,11 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ha.HAAdmin;
 import org.apache.hadoop.ha.HAServiceTarget;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.yarn.client.ClientRMProxy;
 import org.apache.hadoop.yarn.client.RMHAServiceTarget;
@@ -115,34 +113,42 @@ public class RMAdminCLI extends HAAdmin {
 
   private static void buildIndividualUsageMsg(String cmd,
                                               StringBuilder builder ) {
+    boolean isHACommand = false;
     UsageInfo usageInfo = ADMIN_USAGE.get(cmd);
     if (usageInfo == null) {
       usageInfo = USAGE.get(cmd);
       if (usageInfo == null) {
         return;
       }
+      isHACommand = true;
     }
     String space = (usageInfo.args == "") ? "" : " ";
     builder.append("Usage: yarn rmadmin ["
         + cmd + space + usageInfo.args
         + "]\n");
+    if (isHACommand) {
+      builder.append(cmd + " can only be used when RM HA is enabled");
+    }
   }
 
-  private static void buildUsageMsg(StringBuilder builder) {
+  private static void buildUsageMsg(StringBuilder builder,
+      boolean isHAEnabled) {
     builder.append("Usage: yarn rmadmin\n");
     for (String cmdKey : ADMIN_USAGE.keySet()) {
       UsageInfo usageInfo = ADMIN_USAGE.get(cmdKey);
       builder.append("   " + cmdKey + " " + usageInfo.args + "\n");
     }
-    for (String cmdKey : USAGE.keySet()) {
-      if (!cmdKey.equals("-help")) {
-        UsageInfo usageInfo = USAGE.get(cmdKey);
-        builder.append("   " + cmdKey + " " + usageInfo.args + "\n");
+    if (isHAEnabled) {
+      for (String cmdKey : USAGE.keySet()) {
+        if (!cmdKey.equals("-help")) {
+          UsageInfo usageInfo = USAGE.get(cmdKey);
+          builder.append("   " + cmdKey + " " + usageInfo.args + "\n");
+        }
       }
     }
   }
 
-  private static void printHelp(String cmd) {
+  private static void printHelp(String cmd, boolean isHAEnabled) {
     StringBuilder summary = new StringBuilder();
     summary.append("rmadmin is the command to execute YARN administrative " +
         "commands.\n");
@@ -156,7 +162,9 @@ public class RMAdminCLI extends HAAdmin {
       " [-refreshServiceAcl]" +
       " [-getGroup [username]]" +
       " [-help [cmd]]");
-    appendHAUsage(summary);
+    if (isHAEnabled) {
+      appendHAUsage(summary);
+    }
     summary.append("\n");
 
     StringBuilder helpBuilder = new StringBuilder();
@@ -165,10 +173,12 @@ public class RMAdminCLI extends HAAdmin {
       buildHelpMsg(cmdKey, helpBuilder);
       helpBuilder.append("\n");
     }
-    for (String cmdKey : USAGE.keySet()) {
-      if (!cmdKey.equals("-help")) {
-        buildHelpMsg(cmdKey, helpBuilder);
-        helpBuilder.append("\n");
+    if (isHAEnabled) {
+      for (String cmdKey : USAGE.keySet()) {
+        if (!cmdKey.equals("-help")) {
+          buildHelpMsg(cmdKey, helpBuilder);
+          helpBuilder.append("\n");
+        }
       }
     }
     System.out.println(helpBuilder);
@@ -180,12 +190,12 @@ public class RMAdminCLI extends HAAdmin {
    * Displays format of commands.
    * @param cmd The command that is being executed.
    */
-  private static void printUsage(String cmd) {
+  private static void printUsage(String cmd, boolean isHAEnabled) {
     StringBuilder usageBuilder = new StringBuilder();
     if (ADMIN_USAGE.containsKey(cmd) || USAGE.containsKey(cmd)) {
       buildIndividualUsageMsg(cmd, usageBuilder);
     } else {
-      buildUsageMsg(usageBuilder);
+      buildUsageMsg(usageBuilder, isHAEnabled);
     }
     System.err.println(usageBuilder);
     ToolRunner.printGenericCommandUsage(System.err);
@@ -277,8 +287,15 @@ public class RMAdminCLI extends HAAdmin {
   
   @Override
   public int run(String[] args) throws Exception {
+    YarnConfiguration yarnConf =
+        getConf() == null ? new YarnConfiguration() : new YarnConfiguration(
+            getConf());
+    boolean isHAEnabled =
+        yarnConf.getBoolean(YarnConfiguration.RM_HA_ENABLED,
+            YarnConfiguration.DEFAULT_RM_HA_ENABLED);
+
     if (args.length < 1) {
-      printUsage("");
+      printUsage("", isHAEnabled);
       return -1;
     }
 
@@ -289,15 +306,20 @@ public class RMAdminCLI extends HAAdmin {
     exitCode = 0;
     if ("-help".equals(cmd)) {
       if (i < args.length) {
-        printUsage(args[i]);
+        printUsage(args[i], isHAEnabled);
       } else {
-        printHelp("");
+        printHelp("", isHAEnabled);
       }
       return exitCode;
     }
 
     if (USAGE.containsKey(cmd)) {
-      return super.run(args);
+      if (isHAEnabled) {
+        return super.run(args);
+      }
+      System.out.println("Cannot run " + cmd
+          + " when ResourceManager HA is not enabled");
+      return -1;
     }
 
     //
@@ -308,7 +330,7 @@ public class RMAdminCLI extends HAAdmin {
         "-refreshUserToGroupsMappings".equals(cmd) ||
         "-refreshSuperUserGroupsConfiguration".equals(cmd)) {
       if (args.length != 1) {
-        printUsage(cmd);
+        printUsage(cmd, isHAEnabled);
         return exitCode;
       }
     }
@@ -332,14 +354,13 @@ public class RMAdminCLI extends HAAdmin {
       } else {
         exitCode = -1;
         System.err.println(cmd.substring(1) + ": Unknown command");
-        printUsage("");
-        printUsage("");
+        printUsage("", isHAEnabled);
       }
 
     } catch (IllegalArgumentException arge) {
       exitCode = -1;
       System.err.println(cmd.substring(1) + ": " + arge.getLocalizedMessage());
-      printUsage(cmd);
+      printUsage(cmd, isHAEnabled);
     } catch (RemoteException e) {
       //
       // This is a error returned by hadoop server. Print

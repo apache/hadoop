@@ -247,6 +247,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1752. Fixed ApplicationMasterService to reject unregister request if
     AM did not register before. (Rohith Sharma via jianhe)
 
+    YARN-1761. Modified RMAdmin CLI to check whether HA is enabled or not before
+    it executes any of the HA admin related commands. (Xuan Gong via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
