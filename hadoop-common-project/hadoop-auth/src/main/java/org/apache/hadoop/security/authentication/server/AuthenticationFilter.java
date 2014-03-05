@@ -13,6 +13,8 @@
  */
 package org.apache.hadoop.security.authentication.server;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authentication.util.Signer;
@@ -32,9 +34,8 @@ import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.security.Principal;
-import java.util.Enumeration;
-import java.util.Properties;
-import java.util.Random;
+import java.text.SimpleDateFormat;
+import java.util.*;
 
 /**
  * The {@link AuthenticationFilter} enables protecting web application resources with different (pluggable)
@@ -69,6 +70,9 @@ import java.util.Random;
  * the prefix from it and it will pass them to the the authentication handler for initialization. Properties that do
  * not start with the prefix will not be passed to the authentication handler initialization.
  */
+
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 public class AuthenticationFilter implements Filter {
 
   private static Logger LOG = LoggerFactory.getLogger(AuthenticationFilter.class);
@@ -331,6 +335,7 @@ public class AuthenticationFilter implements Filter {
     String unauthorizedMsg = "";
     HttpServletRequest httpRequest = (HttpServletRequest) request;
     HttpServletResponse httpResponse = (HttpServletResponse) response;
+    boolean isHttps = "https".equals(httpRequest.getScheme());
     try {
       boolean newToken = false;
       AuthenticationToken token;
@@ -378,8 +383,8 @@ public class AuthenticationFilter implements Filter {
           };
           if (newToken && !token.isExpired() && token != AuthenticationToken.ANONYMOUS) {
             String signedToken = signer.sign(token.toString());
-            Cookie cookie = createCookie(signedToken);
-            httpResponse.addCookie(cookie);
+            createAuthCookie(httpResponse, signedToken, getCookieDomain(),
+                    getCookiePath(), token.getExpires(), isHttps);
           }
           filterChain.doFilter(httpRequest, httpResponse);
         }
@@ -392,31 +397,52 @@ public class AuthenticationFilter implements Filter {
     }
     if (unauthorizedResponse) {
       if (!httpResponse.isCommitted()) {
-        Cookie cookie = createCookie("");
-        cookie.setMaxAge(0);
-        httpResponse.addCookie(cookie);
-        httpResponse.sendError(HttpServletResponse.SC_UNAUTHORIZED, unauthorizedMsg);
+        createAuthCookie(httpResponse, "", getCookieDomain(),
+                getCookiePath(), 0, isHttps);
+        httpResponse.sendError(HttpServletResponse.SC_UNAUTHORIZED,
+                unauthorizedMsg);
       }
     }
   }
 
   /**
-   * Creates the Hadoop authentiation HTTP cookie.
-   * <p/>
-   * It sets the domain and path specified in the configuration.
+   * Creates the Hadoop authentication HTTP cookie.
    *
    * @param token authentication token for the cookie.
+   * @param expires UNIX timestamp that indicates the expire date of the
+   *                cookie. It has no effect if its value < 0.
    *
-   * @return the HTTP cookie.
+   * XXX the following code duplicate some logic in Jetty / Servlet API,
+   * because of the fact that Hadoop is stuck at servlet 3.0 and jetty 6
+   * right now.
    */
-  protected Cookie createCookie(String token) {
-    Cookie cookie = new Cookie(AuthenticatedURL.AUTH_COOKIE, token);
-    if (getCookieDomain() != null) {
-      cookie.setDomain(getCookieDomain());
+  public static void createAuthCookie(HttpServletResponse resp, String token,
+                                      String domain, String path, long expires,
+                                      boolean isSecure) {
+    StringBuilder sb = new StringBuilder(AuthenticatedURL.AUTH_COOKIE).append
+            ("=").append(token);
+
+    if (path != null) {
+      sb.append("; Path=").append(path);
     }
-    if (getCookiePath() != null) {
-      cookie.setPath(getCookiePath());
+
+    if (domain != null) {
+      sb.append("; Domain=").append(domain);
     }
-    return cookie;
+
+    if (expires >= 0) {
+      Date date = new Date(expires);
+      SimpleDateFormat df = new SimpleDateFormat("EEE, " +
+              "dd-MMM-yyyy HH:mm:ss zzz");
+      df.setTimeZone(TimeZone.getTimeZone("GMT"));
+      sb.append("; Expires=").append(df.format(date));
+    }
+
+    if (isSecure) {
+      sb.append("; Secure");
+    }
+
+    sb.append("; HttpOnly");
+    resp.addHeader("Set-Cookie", sb.toString());
   }
 }

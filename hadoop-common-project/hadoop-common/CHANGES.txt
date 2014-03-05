@@ -361,6 +361,9 @@ Release 2.4.0 - UNRELEASED
     HADOOP-8691. FsShell can print "Found xxx items" unnecessarily often.
     (Daryn Sharp via wheat9)
 
+    HADOOP-10379. Protect authentication cookies with the HttpOnly and Secure
+    flags. (wheat9)
+
   OPTIMIZATIONS
 
   BUG FIXES
