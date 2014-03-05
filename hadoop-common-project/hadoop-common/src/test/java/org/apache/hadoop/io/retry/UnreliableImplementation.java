@@ -22,7 +22,7 @@ import java.io.IOException;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.StandbyException;
 
-public class UnreliableImplementation implements UnreliableInterface {
+class UnreliableImplementation implements UnreliableInterface {
 
   private int failsOnceInvocationCount,
     failsOnceWithValueInvocationCount,
@@ -152,6 +152,11 @@ public class UnreliableImplementation implements UnreliableInterface {
           identifier + "'";
       throwAppropriateException(exceptionToFailWith, message);
     }
+  }
+
+  @Override
+  public String toString() {
+    return getClass().getSimpleName() + "[" + identifier + "]";
   }
 
   private static void throwAppropriateException(TypeOfExceptionToFailWith eType,
