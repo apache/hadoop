@@ -32,7 +32,6 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMESERVICES;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMESERVICE_ID;
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.hamcrest.CoreMatchers.not;
-import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
@@ -577,25 +576,6 @@ public class TestDFSUtil {
 
     assertEquals(NS1_NN1_ADDR, map.get("ns1").get("nn1").toString());
     assertEquals(NS1_NN2_ADDR, map.get("ns1").get("nn2").toString());
-  }
-
-  @Test
-  public void testResolve() throws IOException, URISyntaxException {
-    final String LOGICAL_HOST_NAME = "ns1";
-    final String NS1_NN1_HOST      = "ns1-nn1.example.com";
-    final String NS1_NN2_HOST      = "ns1-nn2.example.com";
-    final String NS1_NN1_ADDR      = "ns1-nn1.example.com:8020";
-    final String NS1_NN2_ADDR      = "ns1-nn2.example.com:8020";
-    final int DEFAULT_PORT         = NameNode.DEFAULT_PORT;
-
-    Configuration conf = createWebHDFSHAConfiguration(LOGICAL_HOST_NAME, NS1_NN1_ADDR, NS1_NN2_ADDR);
-    URI uri = new URI("webhdfs://ns1");
-    assertTrue(HAUtil.isLogicalUri(conf, uri));
-    InetSocketAddress[] addrs = DFSUtil.resolveWebHdfsUri(uri, conf);
-    assertArrayEquals(new InetSocketAddress[] {
-      new InetSocketAddress(NS1_NN1_HOST, DEFAULT_PORT),
-      new InetSocketAddress(NS1_NN2_HOST, DEFAULT_PORT),
-    }, addrs);
   }
 
   private static Configuration createWebHDFSHAConfiguration(String logicalHostName, String nnaddr1, String nnaddr2) {
