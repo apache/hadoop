@@ -300,6 +300,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-5857. TestWebHDFS#testNamenodeRestart fails intermittently with NPE.
     (Mit Desai via wheat9)
 
+    HDFS-5898. Allow NFS gateway to login/relogin from its kerberos keytab.
+    (Abin Shahab via atm)
+
   BREAKDOWN OF HDFS-5698 SUBTASKS AND RELATED JIRAS
 
     HDFS-5717. Save FSImage header in protobuf. (Haohui Mai via jing9)

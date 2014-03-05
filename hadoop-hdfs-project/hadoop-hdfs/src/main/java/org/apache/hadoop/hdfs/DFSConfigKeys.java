@@ -607,4 +607,6 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String DFS_DFSCLIENT_HEDGED_READ_THREADPOOL_SIZE =
       "dfs.client.hedged.read.threadpool.size";
   public static final int DEFAULT_DFSCLIENT_HEDGED_READ_THREADPOOL_SIZE = 0;
+  public static final String DFS_NFS_KEYTAB_FILE_KEY = "dfs.nfs.keytab.file";
+  public static final String DFS_NFS_USER_NAME_KEY = "dfs.nfs.kerberos.principal";
 }
