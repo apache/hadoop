@@ -794,7 +794,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       retryCache.addCacheEntry(clientId, callId);
     }
   }
-  
+
   @VisibleForTesting
   static RetryCache initRetryCache(Configuration conf) {
     boolean enable = conf.getBoolean(DFS_NAMENODE_ENABLE_RETRY_CACHE_KEY,
@@ -811,7 +811,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           + " of total heap and retry cache entry expiry time is "
           + entryExpiryMillis + " millis");
       long entryExpiryNanos = entryExpiryMillis * 1000 * 1000;
-      return new RetryCache("Namenode Retry Cache", heapPercent,
+      return new RetryCache("NameNodeRetryCache", heapPercent,
           entryExpiryNanos);
     }
     return null;
