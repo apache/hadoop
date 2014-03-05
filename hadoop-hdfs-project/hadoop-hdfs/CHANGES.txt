@@ -519,6 +519,9 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-5321. Clean up the HTTP-related configuration in HDFS (wheat9)
 
+    HDFS-5167. Add metrics about the NameNode retry cache. (Tsuyoshi OZAWA via
+    jing9)
+
   OPTIMIZATIONS
 
     HDFS-5790. LeaseManager.findPath is very slow when many leases need recovery
