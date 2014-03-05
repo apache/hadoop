@@ -133,6 +133,8 @@ Release 2.4.0 - UNRELEASED
     HDFS-5167. Add metrics about the NameNode retry cache. (Tsuyoshi OZAWA via
     jing9)
 
+    HDFS-6043. Give HDFS daemons NFS3 and Portmap their own OPTS (brandonli)
+
   OPTIMIZATIONS
 
     HDFS-5790. LeaseManager.findPath is very slow when many leases need recovery
