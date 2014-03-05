@@ -23,9 +23,12 @@ import junit.framework.Assert;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.InvalidApplicationMasterRequestException;
 import org.apache.hadoop.yarn.exceptions.InvalidContainerReleaseException;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
@@ -139,6 +142,41 @@ public class TestApplicationMasterService {
         sb.append(attempt2.getAppAttemptId().toString());
         Assert.assertTrue(e.getMessage().contains(sb.toString()));
       }
+    } finally {
+      if (rm != null) {
+        rm.stop();
+      }
+    }
+  }
+  
+  @Test(timeout=1200000)
+  public void testFinishApplicationMasterBeforeRegistering() throws Exception {
+    MockRM rm = new MockRM(conf);
+    try {
+      rm.start();
+      // Register node1
+      MockNM nm1 = rm.registerNode("127.0.0.1:1234", 6 * GB);
+      // Submit an application
+      RMApp app1 = rm.submitApp(2048);
+      MockAM am1 = MockRM.launchAM(app1, rm, nm1);
+      FinishApplicationMasterRequest req =
+          FinishApplicationMasterRequest.newInstance(
+              FinalApplicationStatus.FAILED, "", "");
+      Throwable cause = null;
+      try {
+        am1.unregisterAppAttempt(req, false);
+      } catch (Exception e) {
+        cause = e.getCause();
+      }
+      Assert.assertNotNull(cause);
+      Assert
+          .assertTrue(cause instanceof InvalidApplicationMasterRequestException);
+      Assert.assertNotNull(cause.getMessage());
+      Assert
+          .assertTrue(cause
+              .getMessage()
+              .contains(
+                  "Application Master is trying to unregister before registering for:"));
     } finally {
       if (rm != null) {
         rm.stop();

@@ -24,10 +24,12 @@ import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterReque
 
 /**
  * This exception is thrown when an ApplicationMaster asks for resources by
- * calling {@link ApplicationMasterProtocol#allocate(AllocateRequest)} API
- * without first registering by calling
+ * calling {@link ApplicationMasterProtocol#allocate(AllocateRequest)} or tries
+ * to unregister by calling
+ * {@link ApplicationMasterProtocol#finishApplicationMaster(FinishApplicationMasterRequest)}
+ * API without first registering by calling
  * {@link ApplicationMasterProtocol#registerApplicationMaster(RegisterApplicationMasterRequest)}
- * or if it tries to register more then once.
+ * or if it tries to register more than once.
  */
 public class InvalidApplicationMasterRequestException extends YarnException {
 

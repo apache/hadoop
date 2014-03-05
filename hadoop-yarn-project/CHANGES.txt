@@ -358,6 +358,9 @@ Release 2.4.0 - UNRELEASED
 
     YARN-1768. Fixed error message being too verbose when killing a non-existent
     application
+
+    YARN-1752. Fixed ApplicationMasterService to reject unregister request
+    if AM did not register before. (Rohith Sharma via jianhe)
     
 
 Release 2.3.1 - UNRELEASED

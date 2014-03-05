@@ -332,6 +332,19 @@ public class ApplicationMasterService extends AbstractService implements
 
     // Allow only one thread in AM to do finishApp at a time.
     synchronized (lock) {
+      if (!hasApplicationMasterRegistered(applicationAttemptId)) {
+        String message =
+            "Application Master is trying to unregister before registering for: "
+                + applicationAttemptId.getApplicationId();
+        LOG.error(message);
+        RMAuditLogger.logFailure(
+            this.rmContext.getRMApps()
+                .get(applicationAttemptId.getApplicationId()).getUser(),
+            AuditConstants.UNREGISTER_AM, "", "ApplicationMasterService",
+            message, applicationAttemptId.getApplicationId(),
+            applicationAttemptId);
+        throw new InvalidApplicationMasterRequestException(message);
+      }
       
       this.amLivelinessMonitor.receivedPing(applicationAttemptId);
 
