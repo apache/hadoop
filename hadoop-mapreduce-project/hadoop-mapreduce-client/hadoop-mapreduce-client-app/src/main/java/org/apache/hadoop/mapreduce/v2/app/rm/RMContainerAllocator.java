@@ -213,7 +213,8 @@ public class RMContainerAllocator extends RMContainerRequestor
 
     int completedMaps = getJob().getCompletedMaps();
     int completedTasks = completedMaps + getJob().getCompletedReduces();
-    if (lastCompletedTasks != completedTasks) {
+    if ((lastCompletedTasks != completedTasks) ||
+          (scheduledRequests.maps.size() > 0)) {
       lastCompletedTasks = completedTasks;
       recalculateReduceSchedule = true;
     }

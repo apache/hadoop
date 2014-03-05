@@ -28,6 +28,9 @@ Release 0.23.11 - UNRELEASED
     RMContainerAllocator$AssignedRequests.preemptReduce() violates the 
     comparator contract (Gera Shegalov via kasha)
 
+    MAPREDUCE-5689. MRAppMaster does not preempt reducers when scheduled maps 
+    cannot be fulfilled. (lohit via kasha)
+
 Release 0.23.10 - 2013-12-09
 
   INCOMPATIBLE CHANGES
