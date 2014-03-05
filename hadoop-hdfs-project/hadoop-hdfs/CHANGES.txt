@@ -135,6 +135,9 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-6043. Give HDFS daemons NFS3 and Portmap their own OPTS (brandonli)
 
+    HDFS-6044. Add property for setting the NFS look up time for users
+    (brandonli)
+
   OPTIMIZATIONS
 
     HDFS-5790. LeaseManager.findPath is very slow when many leases need recovery

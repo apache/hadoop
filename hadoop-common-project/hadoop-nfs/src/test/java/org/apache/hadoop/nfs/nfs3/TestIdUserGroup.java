@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 
+import org.apache.hadoop.conf.Configuration;
 import org.junit.Test;
 
 import com.google.common.collect.BiMap;
@@ -63,5 +64,21 @@ public class TestIdUserGroup {
     assertEquals(gMap.get(11501), "hdfs");
     assertEquals(gMap.get(497), "mapred");
     assertEquals(gMap.get(498), "mapred3");    
+  }
+  
+  @Test
+  public void testUserUpdateSetting() throws IOException {
+    IdUserGroup iug = new IdUserGroup();
+    assertEquals(iug.getTimeout(), IdUserGroup.TIMEOUT_DEFAULT);
+
+    Configuration conf = new Configuration();
+    conf.setLong(IdUserGroup.NFS_USERUPDATE_MILLY, 0);
+    iug = new IdUserGroup(conf);
+    assertEquals(iug.getTimeout(), IdUserGroup.TIMEOUT_MIN);
+
+    conf.setLong(IdUserGroup.NFS_USERUPDATE_MILLY,
+        IdUserGroup.TIMEOUT_DEFAULT * 2);
+    iug = new IdUserGroup(conf);
+    assertEquals(iug.getTimeout(), IdUserGroup.TIMEOUT_DEFAULT * 2);
   }
 }
