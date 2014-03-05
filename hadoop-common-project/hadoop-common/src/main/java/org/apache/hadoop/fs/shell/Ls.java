@@ -104,7 +104,7 @@ class Ls extends FsCommand {
   @Override
   protected void processPaths(PathData parent, PathData ... items)
   throws IOException {
-    if (!isRecursive() && items.length != 0) {
+    if (parent != null && !isRecursive() && items.length != 0) {
       out.println("Found " + items.length + " items");
     }
     adjustColumnWidths(items);

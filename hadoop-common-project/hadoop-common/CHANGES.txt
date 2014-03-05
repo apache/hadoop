@@ -55,6 +55,9 @@ Release 2.4.0 - UNRELEASED
     HADOOP-10314. The ls command help still shows outdated 0.16 format.
     (Rushabh S Shah via kihwal)
 
+    HADOOP-8691. FsShell can print "Found xxx items" unnecessarily often.
+    (Daryn Sharp via wheat9)
+
   OPTIMIZATIONS
 
   BUG FIXES
