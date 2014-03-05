@@ -1094,7 +1094,9 @@ public class FairScheduler extends AbstractYarnScheduler {
       ApplicationAttemptId appAttemptId) {
     FSSchedulerApp attempt = getSchedulerApp(appAttemptId);
     if (attempt == null) {
-      LOG.error("Request for appInfo of unknown attempt" + appAttemptId);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Request for appInfo of unknown attempt " + appAttemptId);
+      }
       return null;
     }
     return new SchedulerAppReport(attempt);
@@ -1105,7 +1107,9 @@ public class FairScheduler extends AbstractYarnScheduler {
       ApplicationAttemptId appAttemptId) {
     FSSchedulerApp attempt = getSchedulerApp(appAttemptId);
     if (attempt == null) {
-      LOG.error("Request for appInfo of unknown attempt" + appAttemptId);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Request for appInfo of unknown attempt " + appAttemptId);
+      }
       return null;
     }
     return attempt.getResourceUsageReport();

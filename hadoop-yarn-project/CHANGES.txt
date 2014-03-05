@@ -256,6 +256,9 @@ Release 2.4.0 - UNRELEASED
     token for the right ResourceManager when HA is enabled. (Karthik Kambatla via
     vinodkv)
 
+    YARN-1785. FairScheduler treats app lookup failures as ERRORs. 
+    (bc Wong via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES
