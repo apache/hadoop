@@ -394,6 +394,9 @@ Release 2.4.0 - UNRELEASED
 
     YARN-1766. Fixed a bug in ResourceManager to use configuration loaded from the
     configuration-provider when booting up. (Xuan Gong via vinodkv)
+
+    YARN-1768. Fixed error message being too verbose when killing a non-existent
+    application
     
 
 Release 2.3.1 - UNRELEASED
