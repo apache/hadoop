@@ -1252,6 +1252,26 @@
     non-zero integer.
   </description>
 </property>
+<property>
+  <name>dfs.nfs.keytab.file</name>
+  <value></value>
+  <description>
+    *Note*: Advanced property. Change with caution.
+    This is the path to the keytab file for the hdfs-nfs gateway.
+    This is required when the cluster is kerberized.
+  </description>
+</property>
+
+<property>
+  <name>dfs.nfs.kerberos.principal</name>
+  <value></value>
+  <description>
+    *Note*: Advanced property. Change with caution.
+    This is the name of the kerberos principal. This is required when
+    the cluster is kerberized.It must be of this format:
+    nfs-gateway-user/nfs-gateway-host@kerberos-realm
+  </description>
+</property>
 
 <property>
   <name>dfs.webhdfs.enabled</name>

@@ -121,12 +121,17 @@ import org.apache.hadoop.oncrpc.security.SysSecurityHandler;
 import org.apache.hadoop.oncrpc.security.Verifier;
 import org.apache.hadoop.oncrpc.security.VerifierNone;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 
 import com.google.common.annotations.VisibleForTesting;
+
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NFS_KEYTAB_FILE_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NFS_USER_NAME_KEY;
 
 /**
  * RPC program corresponding to nfs daemon. See {@link Nfs3}.
@@ -187,6 +192,10 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
         Nfs3Constant.FILE_DUMP_DIR_DEFAULT);
     boolean enableDump = config.getBoolean(Nfs3Constant.ENABLE_FILE_DUMP_KEY,
         Nfs3Constant.ENABLE_FILE_DUMP_DEFAULT);
+    UserGroupInformation.setConfiguration(config);
+    SecurityUtil.login(config, DFS_NFS_KEYTAB_FILE_KEY,
+            DFS_NFS_USER_NAME_KEY);
+
     if (!enableDump) {
       writeDumpDir = null;
     } else {
