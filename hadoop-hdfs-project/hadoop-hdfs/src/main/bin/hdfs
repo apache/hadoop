@@ -154,8 +154,10 @@ elif [ "$COMMAND" = "lsSnapshottableDir" ] ; then
   CLASS=org.apache.hadoop.hdfs.tools.snapshot.LsSnapshottableDir
 elif [ "$COMMAND" = "portmap" ] ; then
   CLASS=org.apache.hadoop.portmap.Portmap
+  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_PORTMAP_OPTS"
 elif [ "$COMMAND" = "nfs3" ] ; then
   CLASS=org.apache.hadoop.hdfs.nfs.nfs3.Nfs3
+  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_NFS3_OPTS"
 elif [ "$COMMAND" = "cacheadmin" ] ; then
   CLASS=org.apache.hadoop.hdfs.tools.CacheAdmin
 else
