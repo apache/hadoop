@@ -67,12 +67,14 @@ import org.mortbay.jetty.Handler;
 import org.mortbay.jetty.MimeTypes;
 import org.mortbay.jetty.RequestLog;
 import org.mortbay.jetty.Server;
+import org.mortbay.jetty.SessionManager;
 import org.mortbay.jetty.handler.ContextHandler;
 import org.mortbay.jetty.handler.ContextHandlerCollection;
 import org.mortbay.jetty.handler.HandlerCollection;
 import org.mortbay.jetty.handler.RequestLogHandler;
 import org.mortbay.jetty.nio.SelectChannelConnector;
 import org.mortbay.jetty.security.SslSocketConnector;
+import org.mortbay.jetty.servlet.AbstractSessionManager;
 import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.DefaultServlet;
 import org.mortbay.jetty.servlet.FilterHolder;
@@ -355,6 +357,13 @@ public final class HttpServer2 implements FilterContainer {
         : new QueuedThreadPool(maxThreads);
     threadPool.setDaemon(true);
     webServer.setThreadPool(threadPool);
+
+    SessionManager sm = webAppContext.getSessionHandler().getSessionManager();
+    if (sm instanceof AbstractSessionManager) {
+      AbstractSessionManager asm = (AbstractSessionManager)sm;
+      asm.setHttpOnly(true);
+      asm.setSecureCookies(true);
+    }
 
     ContextHandlerCollection contexts = new ContextHandlerCollection();
     RequestLog requestLog = HttpRequestLog.getRequestLog(name);
