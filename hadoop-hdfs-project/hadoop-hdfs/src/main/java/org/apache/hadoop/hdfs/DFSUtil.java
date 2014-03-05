@@ -42,7 +42,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.SecureRandom;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -717,46 +716,6 @@ public class DFSUtil {
     }
   }
 
-  /**
-   * Resolve an HDFS URL into real INetSocketAddress. It works like a DNS resolver
-   * when the URL points to an non-HA cluster. When the URL points to an HA
-   * cluster, the resolver further resolves the logical name (i.e., the authority
-   * in the URL) into real namenode addresses.
-   */
-  public static InetSocketAddress[] resolveWebHdfsUri(URI uri, Configuration conf)
-      throws IOException {
-    int defaultPort;
-    String scheme = uri.getScheme();
-    if (WebHdfsFileSystem.SCHEME.equals(scheme)) {
-      defaultPort = DFSConfigKeys.DFS_NAMENODE_HTTP_PORT_DEFAULT;
-    } else if (SWebHdfsFileSystem.SCHEME.equals(scheme)) {
-      defaultPort = DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_DEFAULT;
-    } else {
-      throw new IllegalArgumentException("Unsupported scheme: " + scheme);
-    }
-
-    ArrayList<InetSocketAddress> ret = new ArrayList<InetSocketAddress>();
-
-    if (!HAUtil.isLogicalUri(conf, uri)) {
-      InetSocketAddress addr = NetUtils.createSocketAddr(uri.getAuthority(),
-          defaultPort);
-      ret.add(addr);
-
-    } else {
-      Map<String, Map<String, InetSocketAddress>> addresses = DFSUtil
-          .getHaNnWebHdfsAddresses(conf, scheme);
-
-      for (Map<String, InetSocketAddress> addrs : addresses.values()) {
-        for (InetSocketAddress addr : addrs.values()) {
-          ret.add(addr);
-        }
-      }
-    }
-
-    InetSocketAddress[] r = new InetSocketAddress[ret.size()];
-    return ret.toArray(r);
-  }
-  
   /**
    * Returns list of InetSocketAddress corresponding to  backup node rpc 
    * addresses from the configuration.

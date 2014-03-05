@@ -128,6 +128,8 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-6046. add dfs.client.mmap.enabled (cmccabe)
 
+    HDFS-5321. Clean up the HTTP-related configuration in HDFS (wheat9)
+
   OPTIMIZATIONS
 
     HDFS-5790. LeaseManager.findPath is very slow when many leases need recovery

@@ -29,6 +29,7 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.security.PrivilegedExceptionAction;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.StringTokenizer;
@@ -172,7 +173,7 @@ public class WebHdfsFileSystem extends FileSystem
 
     ugi = UserGroupInformation.getCurrentUser();
     this.uri = URI.create(uri.getScheme() + "://" + uri.getAuthority());
-    this.nnAddrs = DFSUtil.resolveWebHdfsUri(this.uri, conf);
+    this.nnAddrs = resolveNNAddr();
 
     boolean isHA = HAUtil.isLogicalUri(conf, this.uri);
     // In non-HA case, the code needs to call getCanonicalUri() in order to
@@ -237,8 +238,7 @@ public class WebHdfsFileSystem extends FileSystem
 
   @Override
   protected int getDefaultPort() {
-    return getConf().getInt(DFSConfigKeys.DFS_NAMENODE_HTTP_PORT_KEY,
-        DFSConfigKeys.DFS_NAMENODE_HTTP_PORT_DEFAULT);
+    return DFSConfigKeys.DFS_NAMENODE_HTTP_PORT_DEFAULT;
   }
 
   @Override
@@ -1081,5 +1081,37 @@ public class WebHdfsFileSystem extends FileSystem
     final HttpOpParam.Op op = GetOpParam.Op.GETFILECHECKSUM;
     final Map<?, ?> m = run(op, p);
     return JsonUtil.toMD5MD5CRC32FileChecksum(m);
+  }
+
+  /**
+   * Resolve an HDFS URL into real INetSocketAddress. It works like a DNS
+   * resolver when the URL points to an non-HA cluster. When the URL points to
+   * an HA cluster, the resolver further resolves the logical name (i.e., the
+   * authority in the URL) into real namenode addresses.
+   */
+  private InetSocketAddress[] resolveNNAddr() throws IOException {
+    Configuration conf = getConf();
+    final String scheme = uri.getScheme();
+
+    ArrayList<InetSocketAddress> ret = new ArrayList<InetSocketAddress>();
+
+    if (!HAUtil.isLogicalUri(conf, uri)) {
+      InetSocketAddress addr = NetUtils.createSocketAddr(uri.getAuthority(),
+          getDefaultPort());
+      ret.add(addr);
+
+    } else {
+      Map<String, Map<String, InetSocketAddress>> addresses = DFSUtil
+          .getHaNnWebHdfsAddresses(conf, scheme);
+
+      for (Map<String, InetSocketAddress> addrs : addresses.values()) {
+        for (InetSocketAddress addr : addrs.values()) {
+          ret.add(addr);
+        }
+      }
+    }
+
+    InetSocketAddress[] r = new InetSocketAddress[ret.size()];
+    return ret.toArray(r);
   }
 }
