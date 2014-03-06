@@ -698,6 +698,8 @@ Release 2.4.0 - UNRELEASED
     HDFS-6058. Fix TestHDFSCLI failures after HADOOP-8691 change.
     (Akira Ajisaka via wheat9)
 
+    HDFS-6062. TestRetryCacheWithHA#testConcat is flaky. (Jing Zhao via wheat9)
+
   BREAKDOWN OF HDFS-5698 SUBTASKS AND RELATED JIRAS
 
     HDFS-5717. Save FSImage header in protobuf. (Haohui Mai via jing9)

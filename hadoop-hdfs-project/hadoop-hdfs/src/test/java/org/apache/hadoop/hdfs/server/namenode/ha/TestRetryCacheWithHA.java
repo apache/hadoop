@@ -562,10 +562,12 @@ public class TestRetryCacheWithHA {
 
     @Override
     void prepare() throws Exception {
-      DFSTestUtil.createFile(dfs, new Path(target), BlockSize, DataNodes, 0);
+      final Path targetPath = new Path(target);
+      DFSTestUtil.createFile(dfs, targetPath, BlockSize, DataNodes, 0);
       for (int i = 0; i < srcPaths.length; i++) {
         DFSTestUtil.createFile(dfs, srcPaths[i], BlockSize, DataNodes, 0);
       }
+      assertEquals(BlockSize, dfs.getFileStatus(targetPath).getLen());
     }
 
     @Override
@@ -576,10 +578,12 @@ public class TestRetryCacheWithHA {
     @Override
     boolean checkNamenodeBeforeReturn() throws Exception {
       Path targetPath = new Path(target);
-      boolean done = dfs.exists(targetPath);
+      boolean done = dfs.getFileStatus(targetPath).getLen() == BlockSize
+          * (srcs.length + 1);
       for (int i = 0; i < CHECKTIMES && !done; i++) {
         Thread.sleep(1000);
-        done = dfs.exists(targetPath);
+        done = dfs.getFileStatus(targetPath).getLen() == BlockSize
+            * (srcs.length + 1);
       }
       return done;
     }
