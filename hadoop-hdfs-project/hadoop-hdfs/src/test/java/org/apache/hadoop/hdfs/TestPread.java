@@ -248,7 +248,7 @@ public class TestPread {
       InterruptedException, ExecutionException {
     Configuration conf = new Configuration();
     int numHedgedReadPoolThreads = 5;
-    final int initialHedgedReadTimeoutMillis = 500;
+    final int initialHedgedReadTimeoutMillis = 50000;
     final int fixedSleepIntervalMillis = 50;
     conf.setInt(DFSConfigKeys.DFS_DFSCLIENT_HEDGED_READ_THREADPOOL_SIZE,
         numHedgedReadPoolThreads);
