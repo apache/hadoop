@@ -887,6 +887,7 @@ public class ShortCircuitCache implements Closeable {
   /**
    * Close the cache and free all associated resources.
    */
+  @Override
   public void close() {
     try {
       lock.lock();
@@ -911,6 +912,7 @@ public class ShortCircuitCache implements Closeable {
     } finally {
       lock.unlock();
     }
+    IOUtils.cleanup(LOG, shmManager);
   }
 
   @VisibleForTesting // ONLY for testing

@@ -376,4 +376,37 @@ public class TestBlockReaderFactory {
     Assert.assertEquals(null, cache.getDfsClientShmManager());
     cluster.shutdown();
   }
+  
+  /**
+   * Test shutting down the ShortCircuitCache while there are things in it.
+   */
+  @Test
+  public void testShortCircuitCacheShutdown() throws Exception {
+    TemporarySocketDirectory sockDir = new TemporarySocketDirectory();
+    Configuration conf = createShortCircuitConf(
+        "testShortCircuitCacheShutdown", sockDir);
+    conf.set(DFS_CLIENT_CONTEXT, "testShortCircuitCacheShutdown");
+    Configuration serverConf = new Configuration(conf);
+    DFSInputStream.tcpReadsDisabledForTesting = true;
+    final MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(serverConf).numDataNodes(1).build();
+    cluster.waitActive();
+    final DistributedFileSystem fs =
+        (DistributedFileSystem)FileSystem.get(cluster.getURI(0), conf);
+    final String TEST_FILE = "/test_file";
+    final int TEST_FILE_LEN = 4000;
+    final int SEED = 0xFADEC;
+    DFSTestUtil.createFile(fs, new Path(TEST_FILE), TEST_FILE_LEN,
+        (short)1, SEED);
+    byte contents[] = DFSTestUtil.readFileBuffer(fs, new Path(TEST_FILE));
+    byte expected[] = DFSTestUtil.
+        calculateFileContentsFromSeed(SEED, TEST_FILE_LEN);
+    Assert.assertTrue(Arrays.equals(contents, expected));
+    final ShortCircuitCache cache =
+        fs.dfs.getClientContext().getShortCircuitCache();
+    cache.close();
+    Assert.assertTrue(cache.getDfsClientShmManager().
+        getDomainSocketWatcher().isClosed());
+    cluster.shutdown();
+  }
 }
