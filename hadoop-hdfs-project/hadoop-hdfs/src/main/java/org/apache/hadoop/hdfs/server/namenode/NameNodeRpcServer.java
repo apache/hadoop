@@ -104,7 +104,6 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifie
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
-import org.apache.hadoop.hdfs.server.datanode.DataNodeLayoutVersion;
 import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMethods;
@@ -1099,20 +1098,6 @@ class NameNodeRpcServer implements NamenodeProtocols {
           + nodeReg.getClass().getSimpleName() + " ID is " + id
           + " but the expected ID is " + expectedID);
        throw new UnregisteredNodeException(nodeReg);
-    }
-
-    // verify layout version if there is no rolling upgrade.
-    if (!namesystem.isRollingUpgrade()) {
-      final int lv = nodeReg.getVersion();
-      final int expectedLV = nodeReg instanceof NamenodeRegistration?
-          NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION
-          : DataNodeLayoutVersion.CURRENT_LAYOUT_VERSION;
-      if (expectedLV != nodeReg.getVersion()) {
-        LOG.warn("Layout versions mismatched: the "
-            + nodeReg.getClass().getSimpleName() + " LV is " + lv
-            + " but the expected LV is " + expectedLV);
-         throw new UnregisteredNodeException(nodeReg);
-      }
     }
   }
 
