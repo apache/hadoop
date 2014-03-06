@@ -17,14 +17,15 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SHARED_FILE_DESCRIPTOR_PATH;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SHARED_FILE_DESCRIPTOR_PATH_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SHARED_FILE_DESCRIPTOR_PATHS;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SHARED_FILE_DESCRIPTOR_PATHS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SHORT_CIRCUIT_SHARED_MEMORY_WATCHER_INTERRUPT_CHECK_MS;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SHORT_CIRCUIT_SHARED_MEMORY_WATCHER_INTERRUPT_CHECK_MS_DEFAULT;
 
 import java.io.Closeable;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Set;
@@ -45,7 +46,9 @@ import org.apache.hadoop.net.unix.DomainSocket;
 import org.apache.hadoop.net.unix.DomainSocketWatcher;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Splitter;
 import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Iterables;
 
 /*
  * Manages client short-circuit memory segments on the DataNode.
@@ -149,38 +152,35 @@ public class ShortCircuitRegistry {
     SharedFileDescriptorFactory shmFactory = null;
     DomainSocketWatcher watcher = null;
     try {
-      String loadingFailureReason =
-          SharedFileDescriptorFactory.getLoadingFailureReason();
-      if (loadingFailureReason != null) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Disabling ShortCircuitRegistry because " +
-                    loadingFailureReason);
-        }
-        return;
-      }
-      String shmPath = conf.get(DFS_DATANODE_SHARED_FILE_DESCRIPTOR_PATH,
-          DFS_DATANODE_SHARED_FILE_DESCRIPTOR_PATH_DEFAULT);
-      if (shmPath.isEmpty()) {
-        LOG.debug("Disabling ShortCircuitRegistry because shmPath was not set.");
-        return;
-      }
       int interruptCheck = conf.getInt(
           DFS_SHORT_CIRCUIT_SHARED_MEMORY_WATCHER_INTERRUPT_CHECK_MS,
           DFS_SHORT_CIRCUIT_SHARED_MEMORY_WATCHER_INTERRUPT_CHECK_MS_DEFAULT);
       if (interruptCheck <= 0) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Disabling ShortCircuitRegistry because " +
-                    "interruptCheckMs was set to " + interruptCheck);
-        }
-        return;
+        throw new IOException(
+            DFS_SHORT_CIRCUIT_SHARED_MEMORY_WATCHER_INTERRUPT_CHECK_MS +
+            " was set to " + interruptCheck);
       }
-      shmFactory = 
-          new SharedFileDescriptorFactory("HadoopShortCircuitShm_", shmPath);
+      String shmPaths[] =
+          conf.getTrimmedStrings(DFS_DATANODE_SHARED_FILE_DESCRIPTOR_PATHS);
+      if (shmPaths.length == 0) {
+        shmPaths =
+            DFS_DATANODE_SHARED_FILE_DESCRIPTOR_PATHS_DEFAULT.split(",");
+      }
+      shmFactory = SharedFileDescriptorFactory.
+          create("HadoopShortCircuitShm_", shmPaths);
+      String dswLoadingFailure = DomainSocketWatcher.getLoadingFailureReason();
+      if (dswLoadingFailure != null) {
+        throw new IOException(dswLoadingFailure);
+      }
       watcher = new DomainSocketWatcher(interruptCheck);
       enabled = true;
       if (LOG.isDebugEnabled()) {
         LOG.debug("created new ShortCircuitRegistry with interruptCheck=" +
-                  interruptCheck + ", shmPath=" + shmPath);
+                  interruptCheck + ", shmPath=" + shmFactory.getPath());
+      }
+    } catch (IOException e) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Disabling ShortCircuitRegistry", e);
       }
     } finally {
       this.enabled = enabled;

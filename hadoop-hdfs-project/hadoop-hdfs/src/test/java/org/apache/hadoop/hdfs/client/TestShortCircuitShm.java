@@ -22,11 +22,9 @@ import java.io.FileInputStream;
 import java.util.ArrayList;
 import java.util.Iterator;
 
-import org.apache.commons.lang.SystemUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.io.nativeio.SharedFileDescriptorFactory;
 import org.apache.hadoop.hdfs.ExtendedBlockId;
 import org.apache.hadoop.hdfs.ShortCircuitShm;
@@ -45,8 +43,8 @@ public class TestShortCircuitShm {
 
   @Before
   public void before() {
-    Assume.assumeTrue(NativeIO.isAvailable());
-    Assume.assumeTrue(SystemUtils.IS_OS_UNIX);
+    Assume.assumeTrue(null == 
+        SharedFileDescriptorFactory.getLoadingFailureReason());
   }
 
   @Test(timeout=60000)
@@ -54,7 +52,8 @@ public class TestShortCircuitShm {
     File path = new File(TEST_BASE, "testStartupShutdown");
     path.mkdirs();
     SharedFileDescriptorFactory factory =
-        new SharedFileDescriptorFactory("shm_", path.getAbsolutePath());
+        SharedFileDescriptorFactory.create("shm_",
+            new String[] { path.getAbsolutePath() } );
     FileInputStream stream =
         factory.createDescriptor("testStartupShutdown", 4096);
     ShortCircuitShm shm = new ShortCircuitShm(ShmId.createRandom(), stream);
@@ -68,7 +67,8 @@ public class TestShortCircuitShm {
     File path = new File(TEST_BASE, "testAllocateSlots");
     path.mkdirs();
     SharedFileDescriptorFactory factory =
-        new SharedFileDescriptorFactory("shm_", path.getAbsolutePath());
+        SharedFileDescriptorFactory.create("shm_", 
+            new String[] { path.getAbsolutePath() });
     FileInputStream stream =
         factory.createDescriptor("testAllocateSlots", 4096);
     ShortCircuitShm shm = new ShortCircuitShm(ShmId.createRandom(), stream);

@@ -22,10 +22,10 @@ import java.io.IOException;
 import java.io.FileDescriptor;
 
 import org.apache.commons.lang.SystemUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-
-import com.google.common.base.Preconditions;
 
 /**
  * A factory for creating shared file descriptors inside a given directory.
@@ -45,6 +45,7 @@ import com.google.common.base.Preconditions;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class SharedFileDescriptorFactory {
+  public static final Log LOG = LogFactory.getLog(SharedFileDescriptorFactory.class);
   private final String prefix;
   private final String path;
 
@@ -59,17 +60,57 @@ public class SharedFileDescriptorFactory {
   }
 
   /**
+   * Create a new SharedFileDescriptorFactory.
+   *
+   * @param prefix       The prefix to prepend to all the file names created
+   *                       by this factory.
+   * @param paths        An array of paths to use.  We will try each path in 
+   *                       succession, and return a factory using the first 
+   *                       usable path.
+   * @return             The factory.
+   * @throws IOException If a factory could not be created for any reason.
+   */
+  public static SharedFileDescriptorFactory create(String prefix,
+      String paths[]) throws IOException {
+    String loadingFailureReason = getLoadingFailureReason();
+    if (loadingFailureReason != null) {
+      throw new IOException(loadingFailureReason);
+    }
+    if (paths.length == 0) {
+      throw new IOException("no SharedFileDescriptorFactory paths were " +
+          "configured.");
+    }
+    StringBuilder errors = new StringBuilder();
+    String strPrefix = "";
+    for (String path : paths) {
+      try {
+        FileInputStream fis = 
+            new FileInputStream(createDescriptor0(prefix + "test", path, 1));
+        fis.close();
+        deleteStaleTemporaryFiles0(prefix, path);
+        return new SharedFileDescriptorFactory(prefix, path);
+      } catch (IOException e) {
+        errors.append(strPrefix).append("Error creating file descriptor in ").
+               append(path).append(": ").append(e.getMessage());
+        strPrefix = ", ";
+      }
+    }
+    throw new IOException(errors.toString());
+  }
+
+  /**
    * Create a SharedFileDescriptorFactory.
    *
    * @param prefix    Prefix to add to all file names we use.
    * @param path      Path to use.
    */
-  public SharedFileDescriptorFactory(String prefix, String path)
-      throws IOException {
-    Preconditions.checkState(getLoadingFailureReason() == null);
+  private SharedFileDescriptorFactory(String prefix, String path) {
     this.prefix = prefix;
     this.path = path;
-    deleteStaleTemporaryFiles0(prefix, path);
+  }
+
+  public String getPath() {
+    return path;
   }
 
   /**

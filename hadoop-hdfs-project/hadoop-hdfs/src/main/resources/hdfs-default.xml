@@ -1150,13 +1150,13 @@
 </property>
 
 <property>
-  <name>dfs.datanode.shared.file.descriptor.path</name>
-  <value>/dev/shm</value>
+  <name>dfs.datanode.shared.file.descriptor.paths</name>
+  <value>/dev/shm,/tmp</value>
   <description>
-    The path to use when creating file descriptors that will be shared
-    between the DataNode and the DFSClient.  Typically we use /dev/shm, so
-    that the file descriptors will not be written to disk.  Systems that
-    don't have /dev/shm should use /tmp.
+    A comma-separated list of paths to use when creating file descriptors that
+    will be shared between the DataNode and the DFSClient.  Typically we use
+    /dev/shm, so that the file descriptors will not be written to disk.
+    Systems that don't have /dev/shm will fall back to /tmp by default.
   </description>
 </property>
 

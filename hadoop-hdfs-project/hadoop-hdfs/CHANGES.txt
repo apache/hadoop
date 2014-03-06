@@ -527,6 +527,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-6044. Add property for setting the NFS look up time for users
     (brandonli)
 
+    HDFS-6061. Allow dfs.datanode.shared.file.descriptor.path to contain
+    multiple entries and fall back when needed (cmccabe)
+
   OPTIMIZATIONS
 
     HDFS-5790. LeaseManager.findPath is very slow when many leases need recovery
