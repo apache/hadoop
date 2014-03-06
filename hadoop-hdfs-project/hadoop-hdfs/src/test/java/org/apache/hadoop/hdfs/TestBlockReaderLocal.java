@@ -47,6 +47,8 @@ import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import static org.hamcrest.CoreMatchers.equalTo;
+
 public class TestBlockReaderLocal {
   private static TemporarySocketDirectory sockDir;
   
@@ -117,6 +119,7 @@ public class TestBlockReaderLocal {
   
   public void runBlockReaderLocalTest(BlockReaderLocalTest test,
       boolean checksum, long readahead) throws IOException {
+    Assume.assumeThat(DomainSocket.getLoadingFailureReason(), equalTo(null));
     MiniDFSCluster cluster = null;
     HdfsConfiguration conf = new HdfsConfiguration();
     conf.setBoolean(DFSConfigKeys.
