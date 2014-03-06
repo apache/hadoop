@@ -321,6 +321,8 @@ Release 2.4.0 - UNRELEASED
     not updated with latest block report interval of 6 hrs.
     (Vinayakumar B via wheat9)
 
+    HDFS-6067. TestPread.testMaxOutHedgedReadPool is flaky (cmccabe)
+
   BREAKDOWN OF HDFS-5698 SUBTASKS AND RELATED JIRAS
 
     HDFS-5717. Save FSImage header in protobuf. (Haohui Mai via jing9)
