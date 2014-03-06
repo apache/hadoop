@@ -20,9 +20,11 @@ package org.apache.hadoop.io.nativeio;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.IOException;
 
 import org.junit.Assert;
 import org.junit.Assume;
+import org.junit.Before;
 import org.junit.Test;
 import org.apache.commons.lang.SystemUtils;
 import org.apache.commons.logging.Log;
@@ -36,14 +38,19 @@ public class TestSharedFileDescriptorFactory {
   private static final File TEST_BASE =
       new File(System.getProperty("test.build.data", "/tmp"));
 
+  @Before
+  public void setup() throws Exception {
+    Assume.assumeTrue(null ==
+        SharedFileDescriptorFactory.getLoadingFailureReason());
+  }
+
   @Test(timeout=10000)
   public void testReadAndWrite() throws Exception {
-    Assume.assumeTrue(NativeIO.isAvailable());
-    Assume.assumeTrue(SystemUtils.IS_OS_UNIX);
     File path = new File(TEST_BASE, "testReadAndWrite");
     path.mkdirs();
     SharedFileDescriptorFactory factory =
-        new SharedFileDescriptorFactory("woot_", path.getAbsolutePath());
+        SharedFileDescriptorFactory.create("woot_",
+            new String[] { path.getAbsolutePath() });
     FileInputStream inStream =
         factory.createDescriptor("testReadAndWrite", 4096);
     FileOutputStream outStream = new FileOutputStream(inStream.getFD());
@@ -73,11 +80,34 @@ public class TestSharedFileDescriptorFactory {
         Path.SEPARATOR + "woot2_remainder2";
     createTempFile(remainder1);
     createTempFile(remainder2);
-    new SharedFileDescriptorFactory("woot2_", path.getAbsolutePath());
+    SharedFileDescriptorFactory.create("woot2_", 
+        new String[] { path.getAbsolutePath() });
     // creating the SharedFileDescriptorFactory should have removed 
     // the remainders
     Assert.assertFalse(new File(remainder1).exists());
     Assert.assertFalse(new File(remainder2).exists());
     FileUtil.fullyDelete(path);
+  }
+  
+  @Test(timeout=60000)
+  public void testDirectoryFallbacks() throws Exception {
+    File nonExistentPath = new File(TEST_BASE, "nonexistent");
+    File permissionDeniedPath = new File("/");
+    File goodPath = new File(TEST_BASE, "testDirectoryFallbacks");
+    goodPath.mkdirs();
+    try {
+      SharedFileDescriptorFactory.create("shm_", 
+          new String[] { nonExistentPath.getAbsolutePath(),
+                          permissionDeniedPath.getAbsolutePath() });
+      Assert.fail();
+    } catch (IOException e) {
+    }
+    SharedFileDescriptorFactory factory =
+        SharedFileDescriptorFactory.create("shm_", 
+            new String[] { nonExistentPath.getAbsolutePath(),
+                            permissionDeniedPath.getAbsolutePath(),
+                            goodPath.getAbsolutePath() } );
+    Assert.assertEquals(goodPath.getAbsolutePath(), factory.getPath());
+    FileUtil.fullyDelete(goodPath);
   }
 }
