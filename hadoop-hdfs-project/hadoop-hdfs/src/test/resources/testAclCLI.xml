@@ -902,10 +902,6 @@
       </cleanup-commands>
       <comparators>
         <comparator>
-          <type>TokenComparator</type>
-          <expected-output>Found 1 items</expected-output>
-        </comparator>
-        <comparator>
           <type>RegexpComparator</type>
           <expected-output>^drwxr-xr-x\+( )*-( )*[a-zA-z0-9]*( )*supergroup( )*0( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/dir1/dir2</expected-output>
         </comparator>
