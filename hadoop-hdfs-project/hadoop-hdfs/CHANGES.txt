@@ -298,6 +298,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-6058. Fix TestHDFSCLI failures after HADOOP-8691 change.
     (Akira Ajisaka via wheat9)
 
+    HDFS-6059. TestBlockReaderLocal fails if native library is not available.
+    (Akira AJISAKA via Colin Patrick McCabe)
+
   BREAKDOWN OF HDFS-5698 SUBTASKS AND RELATED JIRAS
 
     HDFS-5717. Save FSImage header in protobuf. (Haohui Mai via jing9)
