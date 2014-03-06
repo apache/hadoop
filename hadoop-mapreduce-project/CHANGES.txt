@@ -208,6 +208,9 @@ Release 2.4.0 - UNRELEASED
     MAPREDUCE-5768. TestMRJobs.testContainerRollingLog fails on trunk (Gera
     Shegalov via jlowe)
 
+    MAPREDUCE-5780. SliveTest should use the specified path to get the
+    particular FileSystem instead of using the default FileSystem.  (szetszwo)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

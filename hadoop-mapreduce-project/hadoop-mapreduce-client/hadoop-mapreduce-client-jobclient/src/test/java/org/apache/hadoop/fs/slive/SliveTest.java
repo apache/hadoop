@@ -58,7 +58,6 @@ import org.apache.hadoop.util.ToolRunner;
  * The number of maps is specified by "slive.maps".
  * The number of reduces is specified by "slive.reduces".
  */
-@SuppressWarnings("deprecation")
 public class SliveTest implements Tool {
 
   private static final Log LOG = LogFactory.getLog(SliveTest.class);
@@ -221,7 +220,7 @@ public class SliveTest implements Tool {
   private void writeReport(ConfigExtractor cfg) throws Exception {
     Path dn = cfg.getOutputPath();
     LOG.info("Writing report using contents of " + dn);
-    FileSystem fs = FileSystem.get(cfg.getConfig());
+    FileSystem fs = dn.getFileSystem(cfg.getConfig());
     FileStatus[] reduceFiles = fs.listStatus(dn);
     BufferedReader fileReader = null;
     PrintWriter reportWriter = null;
@@ -292,10 +291,10 @@ public class SliveTest implements Tool {
    * @throws IOException
    */
   private void cleanup(ConfigExtractor cfg) throws IOException {
-    FileSystem fs = FileSystem.get(cfg.getConfig());
     Path base = cfg.getBaseDirectory();
     if (base != null) {
       LOG.info("Attempting to recursively delete " + base);
+      FileSystem fs = base.getFileSystem(cfg.getConfig());
       fs.delete(base, true);
     }
   }
