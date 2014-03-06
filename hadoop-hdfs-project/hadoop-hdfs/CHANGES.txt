@@ -303,6 +303,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-5898. Allow NFS gateway to login/relogin from its kerberos keytab.
     (Abin Shahab via atm)
 
+    HDFS-6057. DomainSocketWatcher.watcherThread should be marked as daemon
+    thread (cmccabe)
+
   BREAKDOWN OF HDFS-5698 SUBTASKS AND RELATED JIRAS
 
     HDFS-5717. Save FSImage header in protobuf. (Haohui Mai via jing9)
