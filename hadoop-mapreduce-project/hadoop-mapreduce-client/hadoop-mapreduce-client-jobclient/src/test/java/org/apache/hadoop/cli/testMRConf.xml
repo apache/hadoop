@@ -313,10 +313,6 @@
       </cleanup-commands>
       <comparators>
         <comparator>
-          <type>TokenComparator</type>
-          <expected-output>Found 1 items</expected-output>
-        </comparator>
-        <comparator>
           <type>RegexpComparator</type>
           <expected-output>^[drwx-]+( )*[0-9\-]+( )*[a-zA-Z0-9]+( )*supergroup( )*0( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/dir1/test.har</expected-output>
         </comparator>
@@ -340,10 +336,6 @@
       </cleanup-commands>
       <comparators>
         <comparator>
-          <type>TokenComparator</type>
-          <expected-output>Found 1 items</expected-output>
-        </comparator>
-        <comparator>
           <type>RegexpComparator</type>
           <expected-output>^[drwx-]+( )*[0-9\-]+( )*[a-zA-Z0-9]+( )*supergroup( )*0( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/dest/test.har</expected-output>
         </comparator>
@@ -363,10 +355,6 @@
       </cleanup-commands>
       <comparators>
         <comparator>
-          <type>TokenComparator</type>
-          <expected-output>Found 1 items</expected-output>
-        </comparator>
-        <comparator>
           <type>RegexpComparator</type>
           <expected-output>^[drwx-]+( )*[0-9\-]+( )*[a-zA-Z0-9]+( )*supergroup( )*0( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/dir1/test.har</expected-output>
         </comparator>
@@ -385,10 +373,6 @@
         <command>-fs NAMENODE -rmr /*</command>
       </cleanup-commands>
       <comparators>
-        <comparator>
-          <type>TokenComparator</type>
-          <expected-output>Found 1 items</expected-output>
-        </comparator>
         <comparator>
            <type>RegexpComparator</type>
           <expected-output>^[drwx-]+( )*[0-9\-]+( )*[a-zA-Z0-9]+( )*supergroup( )*0( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/dest/test.har</expected-output>
@@ -467,10 +451,6 @@
         <command>-fs NAMENODE -rmr /*</command>
       </cleanup-commands>
       <comparators>
-        <comparator>
-          <type>TokenComparator</type>
-          <expected-output>Found 1 items</expected-output>
-        </comparator>
         <comparator>
           <type>RegexpComparator</type>
           <expected-output>^[drwx-]+( )*[0-9\-]+( )*[a-zA-Z0-9]+( )*supergroup( )*0( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/dest/test1.har</expected-output>
