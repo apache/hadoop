@@ -392,6 +392,8 @@ BREAKDOWN OF HDFS-5535 ROLLING UPGRADE SUBTASKS AND RELATED JIRAS
     HDFS-6041. Downgrade/Finalize should rename the rollback image instead of
     purging it. (jing9)
 
+    HDFS-6060. NameNode should not check DataNode layout version (brandonli)
+
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -702,8 +704,6 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-6059. TestBlockReaderLocal fails if native library is not available.
     (Akira AJISAKA via Colin Patrick McCabe)
-
-    HDFS-6060. NameNode should not check DataNode layout version (brandonli)
 
   BREAKDOWN OF HDFS-5698 SUBTASKS AND RELATED JIRAS
 
