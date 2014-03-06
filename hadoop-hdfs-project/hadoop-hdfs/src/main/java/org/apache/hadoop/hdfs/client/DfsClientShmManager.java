@@ -21,6 +21,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
 import java.io.BufferedOutputStream;
+import java.io.Closeable;
 import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.FileInputStream;
@@ -59,7 +60,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
  * See {@link ShortCircuitRegistry} for more information on the communication protocol.
  */
 @InterfaceAudience.Private
-public class DfsClientShmManager {
+public class DfsClientShmManager implements Closeable {
   private static final Log LOG = LogFactory.getLog(DfsClientShmManager.class);
 
   /**
@@ -225,6 +226,12 @@ public class DfsClientShmManager {
     Slot allocSlot(DomainPeer peer, MutableBoolean usedPeer,
         String clientName, ExtendedBlockId blockId) throws IOException {
       while (true) {
+        if (closed) {
+          if (LOG.isTraceEnabled()) {
+            LOG.trace(this + ": the DfsClientShmManager has been closed.");
+          }
+          return null;
+        }
         if (disabled) {
           if (LOG.isTraceEnabled()) {
             LOG.trace(this + ": shared memory segment access is disabled.");
@@ -374,6 +381,8 @@ public class DfsClientShmManager {
     }
   }
 
+  private boolean closed = false;
+
   private final ReentrantLock lock = new ReentrantLock();
 
   /**
@@ -409,6 +418,10 @@ public class DfsClientShmManager {
       String clientName) throws IOException {
     lock.lock();
     try {
+      if (closed) {
+        LOG.trace(this + ": the DfsClientShmManager isclosed.");
+        return null;
+      }
       EndpointShmManager shmManager = datanodes.get(datanode);
       if (shmManager == null) {
         shmManager = new EndpointShmManager(datanode);
@@ -466,9 +479,32 @@ public class DfsClientShmManager {
     }
   }
 
+  /**
+   * Close the DfsClientShmManager.
+   */
+  @Override
+  public void close() throws IOException {
+    lock.lock();
+    try {
+      if (closed) return;
+      closed = true;
+    } finally {
+      lock.unlock();
+    }
+    // When closed, the domainSocketWatcher will issue callbacks that mark
+    // all the outstanding DfsClientShm segments as stale.
+    IOUtils.cleanup(LOG, domainSocketWatcher);
+  }
+
+
   @Override
   public String toString() {
     return String.format("ShortCircuitShmManager(%08x)",
         System.identityHashCode(this));
+  }
+
+  @VisibleForTesting
+  public DomainSocketWatcher getDomainSocketWatcher() {
+    return domainSocketWatcher;
   }
 }
