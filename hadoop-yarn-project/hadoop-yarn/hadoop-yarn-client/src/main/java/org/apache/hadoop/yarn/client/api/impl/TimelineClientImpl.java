@@ -75,6 +75,7 @@ public class TimelineClientImpl extends TimelineClient {
           YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS,
           YarnConfiguration.DEFAULT_TIMELINE_SERVICE_WEBAPP_ADDRESS), RESOURCE_URI_STR));
     }
+    LOG.info("Timeline service address: " + resURI);
     super.serviceInit(conf);
   }
 
@@ -83,12 +84,22 @@ public class TimelineClientImpl extends TimelineClient {
       TimelineEntity... entities) throws IOException, YarnException {
     TimelineEntities entitiesContainer = new TimelineEntities();
     entitiesContainer.addEntities(Arrays.asList(entities));
-    ClientResponse resp = doPostingEntities(entitiesContainer);
-    if (resp.getClientResponseStatus() != ClientResponse.Status.OK) {
+    ClientResponse resp;
+    try {
+      resp = doPostingEntities(entitiesContainer);
+    } catch (RuntimeException re) {
+      // runtime exception is expected if the client cannot connect the server
+      String msg =
+          "Failed to get the response from the timeline server.";
+      LOG.error(msg, re);
+      throw re;
+    }
+    if (resp == null ||
+        resp.getClientResponseStatus() != ClientResponse.Status.OK) {
       String msg =
           "Failed to get the response from the timeline server.";
       LOG.error(msg);
-      if (LOG.isDebugEnabled()) {
+      if (LOG.isDebugEnabled() && resp != null) {
         String output = resp.getEntity(String.class);
         LOG.debug("HTTP error code: " + resp.getStatus()
             + " Server response : \n" + output);

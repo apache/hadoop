@@ -265,6 +265,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1761. Modified RMAdmin CLI to check whether HA is enabled or not before
     it executes any of the HA admin related commands. (Xuan Gong via vinodkv)
 
+    YARN-1780. Improved logging in the Timeline client and server. (Zhijie Shen
+    via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
