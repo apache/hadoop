@@ -611,9 +611,6 @@ public class FairScheduler extends AbstractYarnScheduler {
     RMApp rmApp = rmContext.getRMApps().get(applicationId);
     FSLeafQueue queue = assignToQueue(rmApp, queueName, user);
     if (queue == null) {
-      rmContext.getDispatcher().getEventHandler().handle(
-          new RMAppRejectedEvent(applicationId,
-              "Application rejected by queue placement policy"));
       return;
     }
 
@@ -679,27 +676,43 @@ public class FairScheduler extends AbstractYarnScheduler {
         new RMAppAttemptEvent(applicationAttemptId,
             RMAppAttemptEventType.ATTEMPT_ADDED));
   }
-  
+
+  /**
+   * Helper method that attempts to assign the app to a queue. The method is
+   * responsible to call the appropriate event-handler if the app is rejected.
+   */
   @VisibleForTesting
   FSLeafQueue assignToQueue(RMApp rmApp, String queueName, String user) {
     FSLeafQueue queue = null;
+    String appRejectMsg = null;
+
     try {
       QueuePlacementPolicy placementPolicy = allocConf.getPlacementPolicy();
       queueName = placementPolicy.assignAppToQueue(queueName, user);
       if (queueName == null) {
-        return null;
+        appRejectMsg = "Application rejected by queue placement policy";
+      } else {
+        queue = queueMgr.getLeafQueue(queueName, true);
+        if (queue == null) {
+          appRejectMsg = queueName + " is not a leaf queue";
+        }
       }
-      queue = queueMgr.getLeafQueue(queueName, true);
-    } catch (IOException ex) {
-      LOG.error("Error assigning app to queue, rejecting", ex);
+    } catch (IOException ioe) {
+      appRejectMsg = "Error assigning app to queue " + queueName;
     }
-    
+
+    if (appRejectMsg != null && rmApp != null) {
+      LOG.error(appRejectMsg);
+      rmContext.getDispatcher().getEventHandler().handle(
+          new RMAppRejectedEvent(rmApp.getApplicationId(), appRejectMsg));
+      return null;
+    }
+
     if (rmApp != null) {
       rmApp.setQueue(queue.getName());
     } else {
-      LOG.warn("Couldn't find RM app to set queue name on");
+      LOG.error("Couldn't find RM app to set queue name on");
     }
-    
     return queue;
   }
 

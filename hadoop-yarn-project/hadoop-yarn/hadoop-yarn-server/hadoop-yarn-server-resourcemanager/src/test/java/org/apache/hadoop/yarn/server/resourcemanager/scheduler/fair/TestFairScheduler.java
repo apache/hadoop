@@ -704,6 +704,22 @@ public class TestFairScheduler {
     assertEquals(rmApp2.getQueue(), queue2.getName());
     assertEquals("root.notdefault", rmApp2.getQueue());
   }
+
+  @Test
+  public void testAssignToNonLeafQueueReturnsNull() throws Exception {
+    conf.set(FairSchedulerConfiguration.USER_AS_DEFAULT_QUEUE, "true");
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    scheduler.getQueueManager().getLeafQueue("root.child1.granchild", true);
+    scheduler.getQueueManager().getLeafQueue("root.child2", true);
+
+    RMApp rmApp1 = new MockRMApp(0, 0, RMAppState.NEW);
+    RMApp rmApp2 = new MockRMApp(1, 1, RMAppState.NEW);
+
+    // Trying to assign to non leaf queue would return null
+    assertNull(scheduler.assignToQueue(rmApp1, "root.child1", "tintin"));
+    assertNotNull(scheduler.assignToQueue(rmApp2, "root.child2", "snowy"));
+  }
   
   @Test
   public void testQueuePlacementWithPolicy() throws Exception {

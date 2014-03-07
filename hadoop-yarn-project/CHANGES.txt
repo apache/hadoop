@@ -371,6 +371,8 @@ Release 2.4.0 - UNRELEASED
     YARN-1752. Fixed ApplicationMasterService to reject unregister request
     if AM did not register before. (Rohith Sharma via jianhe)
     
+    YARN-1774. FS: Submitting to non-leaf queue throws NPE. (Anubhav Dhoot and
+    Karthik Kambatla via kasha)
 
 Release 2.3.1 - UNRELEASED
 
