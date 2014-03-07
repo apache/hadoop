@@ -973,8 +973,8 @@
       <test-commands>
         <command>-fs NAMENODE -mkdir /dir1</command>
         <command>-fs NAMENODE -setfacl -m default:user:charlie:rwx /dir1</command>
-        <command>-fs NAMENODE -copyFromLocal CLITEST_DATA/data15bytes /dir1/data15bytes</command>
-        <command>-fs NAMENODE -getfacl /dir1/data15bytes</command>
+        <command>-fs NAMENODE -copyFromLocal CLITEST_DATA/data1k /dir1/data1k</command>
+        <command>-fs NAMENODE -getfacl /dir1/data1k</command>
       </test-commands>
       <cleanup-commands>
         <command>-fs NAMENODE -rm -R /dir1</command>
@@ -982,7 +982,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^# file: /dir1/data15bytes$</expected-output>
+          <expected-output>^# file: /dir1/data1k$</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
