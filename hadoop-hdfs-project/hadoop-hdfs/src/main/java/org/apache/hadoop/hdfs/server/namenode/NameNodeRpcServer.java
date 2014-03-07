@@ -62,6 +62,7 @@ import org.apache.hadoop.ha.protocolPB.HAServiceProtocolServerSideTranslatorPB;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HDFSPolicyProvider;
+import org.apache.hadoop.hdfs.protocol.AclException;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
@@ -356,7 +357,8 @@ class NameNodeRpcServer implements NamenodeProtocols {
         InvalidToken.class,
         LeaseExpiredException.class,
         NSQuotaExceededException.class,
-        DSQuotaExceededException.class);
+        DSQuotaExceededException.class,
+        AclException.class);
  }
 
   /** Allow access to the client RPC server for testing */
