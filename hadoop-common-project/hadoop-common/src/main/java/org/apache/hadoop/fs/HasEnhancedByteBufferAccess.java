@@ -50,13 +50,15 @@ public interface HasEnhancedByteBufferAccess {
    *            Options to use when reading.
    *
    * @return
-   *            We will return null on EOF (and only on EOF).
-   *            Otherwise, we will return a direct ByteBuffer containing at
-   *            least one byte.  You must free this ByteBuffer when you are 
-   *            done with it by calling releaseBuffer on it.
-   *            The buffer will continue to be readable until it is released 
-   *            in this manner.  However, the input stream's close method may
-   *            warn about unclosed buffers.
+   *            We will always return an empty buffer if maxLength was 0,
+   *            whether or not we are at EOF.
+   *            If maxLength > 0, we will return null if the stream has
+   *            reached EOF.
+   *            Otherwise, we will return a ByteBuffer containing at least one 
+   *            byte.  You must free this ByteBuffer when you are done with it 
+   *            by calling releaseBuffer on it.  The buffer will continue to be
+   *            readable until it is released in this manner.  However, the
+   *            input stream's close method may warn about unclosed buffers.
    * @throws
    *            IOException: if there was an error reading.
    *            UnsupportedOperationException: if factory was null, and we

@@ -753,6 +753,10 @@ public class TestEnhancedByteBufferAccess {
       fsIn = fs.open(TEST_PATH);
       ByteBuffer buf = fsIn.read(null, 1, EnumSet.of(ReadOption.SKIP_CHECKSUMS));
       fsIn.releaseBuffer(buf);
+      // Test EOF behavior
+      IOUtils.skipFully(fsIn, TEST_FILE_LENGTH - 1);
+      buf = fsIn.read(null, 1, EnumSet.of(ReadOption.SKIP_CHECKSUMS));
+      Assert.assertEquals(null, buf);
     } finally {
       if (fsIn != null) fsIn.close();
       if (fs != null) fs.close();
