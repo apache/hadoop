@@ -38,6 +38,9 @@
 #define TEST_ZEROCOPY_LAST_BLOCK_SIZE 3215
 #define TEST_ZEROCOPY_NUM_BLOCKS 6
 #define SMALL_READ_LEN 16
+#define TEST_ZEROCOPY_FILE_LEN \
+  (((TEST_ZEROCOPY_NUM_BLOCKS - 1) * TEST_ZEROCOPY_FULL_BLOCK_SIZE) + \
+    TEST_ZEROCOPY_LAST_BLOCK_SIZE)
 
 #define ZC_BUF_LEN 32768
 
@@ -165,6 +168,22 @@ static int doTestZeroCopyReads(hdfsFS fs, const char *fileName)
     EXPECT_ZERO(memcmp(block, hadoopRzBufferGet(buffer) +
         (TEST_ZEROCOPY_FULL_BLOCK_SIZE - SMALL_READ_LEN), SMALL_READ_LEN));
     hadoopRzBufferFree(file, buffer);
+
+    /* Check the result of a zero-length read. */
+    buffer = hadoopReadZero(file, opts, 0);
+    EXPECT_NONNULL(buffer);
+    EXPECT_NONNULL(hadoopRzBufferGet(buffer));
+    EXPECT_INT_EQ(0, hadoopRzBufferLength(buffer));
+    hadoopRzBufferFree(file, buffer);
+
+    /* Check the result of reading past EOF */
+    EXPECT_INT_EQ(0, hdfsSeek(fs, file, TEST_ZEROCOPY_FILE_LEN));
+    buffer = hadoopReadZero(file, opts, 1);
+    EXPECT_NONNULL(buffer);
+    EXPECT_NULL(hadoopRzBufferGet(buffer));
+    hadoopRzBufferFree(file, buffer);
+
+    /* Cleanup */
     free(block);
     hadoopRzOptionsFree(opts);
     EXPECT_ZERO(hdfsCloseFile(fs, file));

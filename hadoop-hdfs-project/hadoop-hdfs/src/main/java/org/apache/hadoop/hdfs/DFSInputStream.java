@@ -1556,13 +1556,27 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
     closeCurrentBlockReader();
   }
 
+  /**
+   * The immutable empty buffer we return when we reach EOF when doing a
+   * zero-copy read.
+   */
+  private static final ByteBuffer EMPTY_BUFFER =
+    ByteBuffer.allocateDirect(0).asReadOnlyBuffer();
+
   @Override
   public synchronized ByteBuffer read(ByteBufferPool bufferPool,
       int maxLength, EnumSet<ReadOption> opts) 
           throws IOException, UnsupportedOperationException {
-    assert(maxLength > 0);
-    if (((blockReader == null) || (blockEnd == -1)) &&
-          (pos < getFileLength())) {
+    if (maxLength == 0) {
+      return EMPTY_BUFFER;
+    } else if (maxLength < 0) {
+      throw new IllegalArgumentException("can't read a negative " +
+          "number of bytes.");
+    }
+    if ((blockReader == null) || (blockEnd == -1)) {
+      if (pos >= getFileLength()) {
+        return null;
+      }
       /*
        * If we don't have a blockReader, or the one we have has no more bytes
        * left to read, we call seekToBlockSource to get a new blockReader and
@@ -1645,6 +1659,7 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
 
   @Override
   public synchronized void releaseBuffer(ByteBuffer buffer) {
+    if (buffer == EMPTY_BUFFER) return;
     Object val = extendedReadBuffers.remove(buffer);
     if (val == null) {
       throw new IllegalArgumentException("tried to release a buffer " +
