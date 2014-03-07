@@ -863,6 +863,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-6039. Uploading a File under a Dir with default acls throws "Duplicated
     ACLFeature". (cnauroth)
 
+    HDFS-6063. TestAclCLI fails intermittently when running test 24:
+    copyFromLocal. (cnauroth)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
