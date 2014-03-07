@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 import java.lang.management.ManagementFactory;
 import java.util.Map;
@@ -63,6 +63,10 @@ public class TestFSNamesystemMBean {
       assertTrue(stat.containsKey("Snapshots")
           && (Long) stat.get("Snapshots") == fsn.getNumSnapshots());
 
+      Object pendingDeletionBlocks = mbs.getAttribute(mxbeanName,
+        "PendingDeletionBlocks");
+      assertNotNull(pendingDeletionBlocks);
+      assertTrue(pendingDeletionBlocks instanceof Long);
     } finally {
       if (cluster != null) {
         cluster.shutdown();
