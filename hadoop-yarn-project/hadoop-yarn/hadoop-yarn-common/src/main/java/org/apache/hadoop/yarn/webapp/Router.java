@@ -44,7 +44,7 @@ import com.google.common.collect.Maps;
  * Manages path info to controller#action routing.
  */
 @InterfaceAudience.LimitedPrivate({"YARN", "MapReduce"})
-class Router {
+public class Router {
   static final Logger LOG = LoggerFactory.getLogger(Router.class);
   static final ImmutableList<String> EMPTY_LIST = ImmutableList.of();
   static final CharMatcher SLASH = CharMatcher.is('/');

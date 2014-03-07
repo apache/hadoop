@@ -268,6 +268,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1780. Improved logging in the Timeline client and server. (Zhijie Shen
     via vinodkv)
 
+    YARN-1525. Web UI should redirect to active RM when HA is enabled. (Cindy Li
+    via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES

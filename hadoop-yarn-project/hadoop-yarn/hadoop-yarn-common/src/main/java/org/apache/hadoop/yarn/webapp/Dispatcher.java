@@ -57,11 +57,11 @@ public class Dispatcher extends HttpServlet {
 
   private transient final Injector injector;
   private transient final Router router;
-  private transient final WebApp webApp;
+  protected transient final WebApp webApp;
   private volatile boolean devMode = false;
 
   @Inject
-  Dispatcher(WebApp webApp, Injector injector, Router router) {
+  protected Dispatcher(WebApp webApp, Injector injector, Router router) {
     this.webApp = webApp;
     this.injector = injector;
     this.router = router;
