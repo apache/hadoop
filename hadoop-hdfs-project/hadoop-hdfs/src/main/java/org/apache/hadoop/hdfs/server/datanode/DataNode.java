@@ -21,6 +21,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.protobuf.BlockingService;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -47,6 +48,7 @@ import org.apache.hadoop.hdfs.protocolPB.*;
 import org.apache.hadoop.hdfs.security.token.block.*;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager.AccessMode;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
@@ -88,6 +90,7 @@ import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
 import org.mortbay.util.ajax.JSON;
 
 import javax.management.ObjectName;
+
 import java.io.*;
 import java.lang.management.ManagementFactory;
 import java.net.*;
@@ -771,12 +774,14 @@ public class DataNode extends Configured
    * Create a DatanodeRegistration for a specific block pool.
    * @param nsInfo the namespace info from the first part of the NN handshake
    */
-  DatanodeRegistration createBPRegistration(NamespaceInfo nsInfo)
-      throws IOException {
+  DatanodeRegistration createBPRegistration(NamespaceInfo nsInfo) {
     StorageInfo storageInfo = storage.getBPStorage(nsInfo.getBlockPoolID());
     if (storageInfo == null) {
       // it's null in the case of SimulatedDataSet
-      storageInfo = new StorageInfo(nsInfo);
+      storageInfo = new StorageInfo(
+          DataNodeLayoutVersion.CURRENT_LAYOUT_VERSION,
+          nsInfo.getNamespaceID(), nsInfo.clusterID, nsInfo.getCTime(),
+          NodeType.DATA_NODE);
     }
 
     DatanodeID dnId = new DatanodeID(
