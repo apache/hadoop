@@ -5501,6 +5501,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     return blockManager.getScheduledReplicationBlocksCount();
   }
 
+  @Override
   @Metric
   public long getPendingDeletionBlocks() {
     return blockManager.getPendingDeletionBlocksCount();

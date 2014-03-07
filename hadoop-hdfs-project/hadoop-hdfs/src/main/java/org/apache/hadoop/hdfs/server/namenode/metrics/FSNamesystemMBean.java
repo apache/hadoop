@@ -145,4 +145,10 @@ public interface FSNamesystemMBean {
    * Return the maximum number of inodes in the file system
    */
   public long getMaxObjects();
+
+  /**
+   * Number of blocks pending deletion
+   * @return number of blocks pending deletion
+   */
+  long getPendingDeletionBlocks();
 }
