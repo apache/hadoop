@@ -20,9 +20,13 @@ package org.apache.hadoop.yarn.client.api.impl;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
+
+import java.net.ConnectException;
+
 import junit.framework.Assert;
 
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
@@ -36,6 +40,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.ClientResponse;
 
 public class TestTimelineClient {
@@ -56,7 +61,7 @@ public class TestTimelineClient {
 
   @Test
   public void testPostEntities() throws Exception {
-    mockClientResponse(ClientResponse.Status.OK, false);
+    mockClientResponse(ClientResponse.Status.OK, false, false);
     try {
       TimelinePutResponse response = client.putEntities(generateEntity());
       Assert.assertEquals(0, response.getErrors().size());
@@ -67,7 +72,7 @@ public class TestTimelineClient {
 
   @Test
   public void testPostEntitiesWithError() throws Exception {
-    mockClientResponse(ClientResponse.Status.OK, true);
+    mockClientResponse(ClientResponse.Status.OK, true, false);
     try {
       TimelinePutResponse response = client.putEntities(generateEntity());
       Assert.assertEquals(1, response.getErrors().size());
@@ -84,7 +89,8 @@ public class TestTimelineClient {
 
   @Test
   public void testPostEntitiesNoResponse() throws Exception {
-    mockClientResponse(ClientResponse.Status.INTERNAL_SERVER_ERROR, false);
+    mockClientResponse(
+        ClientResponse.Status.INTERNAL_SERVER_ERROR, false, false);
     try {
       client.putEntities(generateEntity());
       Assert.fail("Exception is expected");
@@ -94,9 +100,25 @@ public class TestTimelineClient {
     }
   }
 
+  @Test
+  public void testPostEntitiesConnectionRefused() throws Exception {
+    mockClientResponse(null, false, true);
+    try {
+      client.putEntities(generateEntity());
+      Assert.fail("RuntimeException is expected");
+    } catch (RuntimeException re) {
+      Assert.assertTrue(re instanceof ClientHandlerException);
+    }
+  }
+
   private ClientResponse mockClientResponse(ClientResponse.Status status,
-      boolean hasError) {
+      boolean hasError, boolean hasRuntimeError) {
     ClientResponse response = mock(ClientResponse.class);
+    if (hasRuntimeError) {
+      doThrow(new ClientHandlerException(new ConnectException())).when(client)
+          .doPostingEntities(any(TimelineEntities.class));
+      return response;
+    }
     doReturn(response).when(client)
         .doPostingEntities(any(TimelineEntities.class));
     when(response.getClientResponseStatus()).thenReturn(status);

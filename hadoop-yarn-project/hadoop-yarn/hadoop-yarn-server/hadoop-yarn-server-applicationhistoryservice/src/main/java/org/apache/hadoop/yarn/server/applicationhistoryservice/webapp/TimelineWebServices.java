@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.applicationhistoryservice.webapp;
 
+import static org.apache.hadoop.yarn.util.StringHelper.CSV_JOINER;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -54,10 +56,12 @@ import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEvents;
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
+import org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.EntityIdentifier;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.GenericObjectMapper;
-import org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.TimelineStore;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.NameValuePair;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.TimelineReader.Field;
+import org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.TimelineStore;
+import org.apache.hadoop.yarn.util.timeline.TimelineUtils;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
 
 import com.google.inject.Inject;
@@ -245,6 +249,17 @@ public class TimelineWebServices {
       return new TimelinePutResponse();
     }
     try {
+      List<EntityIdentifier> entityIDs = new ArrayList<EntityIdentifier>();
+      for (TimelineEntity entity : entities.getEntities()) {
+        EntityIdentifier entityID =
+            new EntityIdentifier(entity.getEntityId(), entity.getEntityType());
+        entityIDs.add(entityID);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Storing the entity " + entityID + ", JSON-style content: "
+              + TimelineUtils.dumpTimelineRecordtoJSON(entity));
+        }
+      }
+      LOG.info("Storing entities: " + CSV_JOINER.join(entityIDs));
       return store.put(entities);
     } catch (IOException e) {
       LOG.error("Error putting entities", e);
