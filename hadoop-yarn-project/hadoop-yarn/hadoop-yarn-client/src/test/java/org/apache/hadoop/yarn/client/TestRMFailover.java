@@ -26,13 +26,14 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.ClientBaseWithFixes;
 import org.apache.hadoop.ha.HAServiceProtocol;
-import org.apache.hadoop.ha.proto.HAServiceProtocolProtos;
 import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.client.api.YarnClient;
@@ -251,5 +252,38 @@ public class TestRMFailover extends ClientBaseWithFixes {
     assertTrue(exceptionMessage
         .contains("Application with id '" + fakeAppId + "' " +
             "doesn't exist in RM."));
+  }
+
+  @Test
+  public void testRMWebAppRedirect() throws YarnException,
+      InterruptedException, IOException {
+    cluster = new MiniYARNCluster(TestRMFailover.class.getName(), 2, 0, 1, 1);
+    conf.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
+
+    cluster.init(conf);
+    cluster.start();
+    getAdminService(0).transitionToActive(req);
+    String rm1Url = "http://0.0.0.0:18088";
+    String rm2Url = "http://0.0.0.0:28088";
+    String header = getHeader("Refresh", rm2Url);
+    assertTrue(header.contains("; url=" + rm1Url));
+
+    header = getHeader("Refresh", rm2Url + "/cluster/cluster");
+    assertEquals(null, header);
+
+    // Due to the limitation of MiniYARNCluster and dispatcher is a singleton,
+    // we couldn't add the test case after explicitFailover();
+  }
+
+  static String getHeader(String field, String url) {
+    String fieldHeader = null;
+    try {
+      Map<String, List<String>> map =
+          new URL(url).openConnection().getHeaderFields();
+      fieldHeader = map.get(field).get(0);
+    } catch (Exception e) {
+      // throw new RuntimeException(e);
+    }
+    return fieldHeader;
   }
 }

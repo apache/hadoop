@@ -55,7 +55,7 @@ public abstract class WebApp extends ServletModule {
 
   private volatile String name;
   private volatile List<String> servePathSpecs = new ArrayList<String>();
-  // path to redirect to if user goes to "/"
+  // path to redirect to
   private volatile String redirectPath;
   private volatile String wsName;
   private volatile Configuration conf;
@@ -134,7 +134,9 @@ public abstract class WebApp extends ServletModule {
    * more easily differentiate the different webapps.
    * @param path  the path to redirect to
    */
-  void setRedirectPath(String path) { this.redirectPath = path; }
+  protected void setRedirectPath(String path) {
+    this.redirectPath = path;
+  }
 
   void setWebServices (String name) { this.wsName = name; }
 
@@ -158,6 +160,10 @@ public abstract class WebApp extends ServletModule {
       serve(path).with(Dispatcher.class);
     }
 
+    configureRSServlets();
+  }
+
+  protected void configureRSServlets() {
     // Add in the web services filters/serves if app has them.
     // Using Jersey/guice integration module. If user has web services
     // they must have also bound a default one in their webapp code.
