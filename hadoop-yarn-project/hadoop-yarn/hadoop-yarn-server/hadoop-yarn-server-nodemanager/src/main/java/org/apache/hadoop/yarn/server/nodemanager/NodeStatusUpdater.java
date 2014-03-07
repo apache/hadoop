@@ -20,13 +20,10 @@ package org.apache.hadoop.yarn.server.nodemanager;
 
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 
 public interface NodeStatusUpdater extends Service {
 
   void sendOutofBandHeartBeat();
-
-  NodeStatus getNodeStatusAndUpdateContainersInContext(int responseId);
 
   long getRMIdentifier();
   
