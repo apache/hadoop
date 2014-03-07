@@ -746,12 +746,16 @@ extern  "C" {
      * @param maxLength  The maximum length to read.  We may read fewer bytes
      *                   than this length.
      *
-     * @return           On success, returns a new hadoopRzBuffer.
+     * @return           On success, we will return a new hadoopRzBuffer.
      *                   This buffer will continue to be valid and readable
      *                   until it is released by readZeroBufferFree.  Failure to
      *                   release a buffer will lead to a memory leak.
+     *                   You can access the data within the hadoopRzBuffer with
+     *                   hadoopRzBufferGet.  If you have reached EOF, the data
+     *                   within the hadoopRzBuffer will be NULL.  You must still
+     *                   free hadoopRzBuffer instances containing NULL.
      *
-     *                   NULL plus an errno code on an error.
+     *                   On failure, we will return NULL plus an errno code.
      *                   errno = EOPNOTSUPP indicates that we could not do a
      *                   zero-copy read, and there was no ByteBufferPool
      *                   supplied.

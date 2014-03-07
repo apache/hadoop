@@ -711,6 +711,9 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-6067. TestPread.testMaxOutHedgedReadPool is flaky (cmccabe)
 
+    HDFS-6065. HDFS zero-copy reads should return null on EOF when doing ZCR
+    (cmccabe)
+
   BREAKDOWN OF HDFS-5698 SUBTASKS AND RELATED JIRAS
 
     HDFS-5717. Save FSImage header in protobuf. (Haohui Mai via jing9)
