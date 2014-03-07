@@ -411,10 +411,14 @@ Release 2.4.0 - UNRELEASED
     configuration-provider when booting up. (Xuan Gong via vinodkv)
 
     YARN-1768. Fixed error message being too verbose when killing a non-existent
-    application
+    application. (Tsuyoshi OZAWA via raviprak)
     
     YARN-1774. FS: Submitting to non-leaf queue throws NPE. (Anubhav Dhoot and
     Karthik Kambatla via kasha)
+
+    YARN-1783. Fixed a bug in NodeManager's status-updater that was losing
+    completed container statuses when NodeManager is forced to resync by the
+    ResourceManager. (Jian He via vinodkv) 
 
 Release 2.3.1 - UNRELEASED
 
