@@ -322,6 +322,9 @@ Release 2.4.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
+    HADOOP-8691. FsShell can print "Found xxx items" unnecessarily often.
+    (Daryn Sharp via wheat9)
+
   NEW FEATURES
 
     HADOOP-10184. Hadoop Common changes required to support HDFS ACLs. (See
@@ -357,9 +360,6 @@ Release 2.4.0 - UNRELEASED
 
     HADOOP-10314. The ls command help still shows outdated 0.16 format.
     (Rushabh S Shah via kihwal)
-
-    HADOOP-8691. FsShell can print "Found xxx items" unnecessarily often.
-    (Daryn Sharp via wheat9)
 
     HADOOP-10379. Protect authentication cookies with the HttpOnly and Secure
     flags. (wheat9)
