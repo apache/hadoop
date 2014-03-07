@@ -478,6 +478,8 @@ Release 2.4.0 - UNRELEASED
     HDFS-6063. TestAclCLI fails intermittently when running test 24:
     copyFromLocal. (cnauroth)
 
+    HDFS-6069. Quash stack traces when ACLs are disabled. (cnauroth)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
