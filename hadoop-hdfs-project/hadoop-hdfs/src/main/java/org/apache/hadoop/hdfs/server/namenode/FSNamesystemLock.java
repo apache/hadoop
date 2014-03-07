@@ -21,6 +21,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -32,6 +33,24 @@ import com.google.common.annotations.VisibleForTesting;
 class FSNamesystemLock implements ReadWriteLock {
   @VisibleForTesting
   protected ReentrantReadWriteLock coarseLock;
+  
+  /**
+   * When locking the FSNS for a read that may take a long time, we take this
+   * lock before taking the regular FSNS read lock. All writers also take this
+   * lock before taking the FSNS write lock. Regular (short) readers do not
+   * take this lock at all, instead relying solely on the synchronization of the
+   * regular FSNS lock.
+   * 
+   * This scheme ensures that:
+   * 1) In the case of normal (fast) ops, readers proceed concurrently and
+   *    writers are not starved.
+   * 2) In the case of long read ops, short reads are allowed to proceed
+   *    concurrently during the duration of the long read.
+   * 
+   * See HDFS-5064 for more context.
+   */
+  @VisibleForTesting
+  protected ReentrantLock longReadLock = new ReentrantLock(true);
   
   FSNamesystemLock(boolean fair) {
     this.coarseLock = new ReentrantReadWriteLock(fair);
@@ -45,6 +64,10 @@ class FSNamesystemLock implements ReadWriteLock {
   @Override
   public Lock writeLock() {
     return coarseLock.writeLock();
+  }
+
+  public Lock longReadLock() {
+    return longReadLock;
   }
   
   public int getReadHoldCount() {

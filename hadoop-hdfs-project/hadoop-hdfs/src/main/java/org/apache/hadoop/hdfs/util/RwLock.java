@@ -21,6 +21,15 @@ package org.apache.hadoop.hdfs.util;
 public interface RwLock {
   /** Acquire read lock. */
   public void readLock();
+  
+  /**
+   * Acquire the long read lock, unless interrupted while waiting. The long
+   * read lock should also serve to block all concurrent writers.
+   **/
+  void longReadLockInterruptibly() throws InterruptedException;
+  
+  /** Release the long read lock. */
+  public void longReadUnlock();
 
   /** Release read lock. */
   public void readUnlock();

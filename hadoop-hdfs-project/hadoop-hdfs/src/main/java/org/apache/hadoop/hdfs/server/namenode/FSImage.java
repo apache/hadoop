@@ -1355,7 +1355,11 @@ public class FSImage implements Closeable {
     this.lastAppliedTxId = editLog.getLastWrittenTxId();
   }
 
-  public synchronized long getMostRecentCheckpointTxId() {
+  // Should be OK for this to not be synchronized since all of the places which
+  // mutate this value are themselves synchronized so it shouldn't be possible
+  // to see this flop back and forth. In the worst case this will just return an
+  // old value.
+  public long getMostRecentCheckpointTxId() {
     return storage.getMostRecentCheckpointTxId();
   }
 }
