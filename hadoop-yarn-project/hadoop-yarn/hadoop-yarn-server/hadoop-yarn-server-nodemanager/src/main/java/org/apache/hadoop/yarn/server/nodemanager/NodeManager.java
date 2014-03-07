@@ -229,7 +229,8 @@ public class NodeManager extends CompositeService
           containerManager.setBlockNewContainerRequests(true);
           LOG.info("Cleaning up running containers on resync");
           containerManager.cleanupContainersOnNMResync();
-          ((NodeStatusUpdaterImpl) nodeStatusUpdater).rebootNodeStatusUpdater();
+          ((NodeStatusUpdaterImpl) nodeStatusUpdater)
+            .rebootNodeStatusUpdaterAndRegisterWithRM();
         } catch (YarnRuntimeException e) {
           LOG.fatal("Error while rebooting NodeStatusUpdater.", e);
           shutDown();
@@ -243,7 +244,7 @@ public class NodeManager extends CompositeService
     private NodeId nodeId = null;
     private final ConcurrentMap<ApplicationId, Application> applications =
         new ConcurrentHashMap<ApplicationId, Application>();
-    private final ConcurrentMap<ContainerId, Container> containers =
+    protected final ConcurrentMap<ContainerId, Container> containers =
         new ConcurrentSkipListMap<ContainerId, Container>();
 
     private final NMContainerTokenSecretManager containerTokenSecretManager;

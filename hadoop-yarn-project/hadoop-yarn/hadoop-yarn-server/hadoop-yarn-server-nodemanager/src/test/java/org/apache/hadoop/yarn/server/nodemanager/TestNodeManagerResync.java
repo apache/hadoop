@@ -36,6 +36,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainersRequest;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
+import org.apache.hadoop.yarn.api.records.ContainerState;
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.exceptions.NMNotYetReadyException;
@@ -43,9 +45,17 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.server.api.ResourceTracker;
+import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResponse;
+import org.apache.hadoop.yarn.server.api.records.NodeAction;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
+import org.apache.hadoop.yarn.server.utils.YarnServerBuilderUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -162,6 +172,118 @@ public class TestNodeManagerResync {
     }
     
     Assert.assertTrue("NM shutdown not called.",isNMShutdownCalled.get());
+    nm.stop();
+  }
+
+
+  // This is to test when NM gets the resync response from last heart beat, it
+  // should be able to send the already-sent-via-last-heart-beat container
+  // statuses again when it re-register with RM.
+  @Test
+  public void testNMSentContainerStatusOnResync() throws Exception {
+    final ContainerStatus testCompleteContainer =
+        TestNodeStatusUpdater.createContainerStatus(2, ContainerState.COMPLETE);
+    final Container container =
+        TestNodeStatusUpdater.getMockContainer(testCompleteContainer);
+    NodeManager nm = new NodeManager() {
+      int registerCount = 0;
+
+      @Override
+      protected NodeStatusUpdater createNodeStatusUpdater(Context context,
+          Dispatcher dispatcher, NodeHealthCheckerService healthChecker) {
+        return new TestNodeStatusUpdaterResync(context, dispatcher,
+          healthChecker, metrics) {
+          @Override
+          protected ResourceTracker createResourceTracker() {
+            return new MockResourceTracker() {
+              @Override
+              public RegisterNodeManagerResponse registerNodeManager(
+                  RegisterNodeManagerRequest request) throws YarnException,
+                  IOException {
+                if (registerCount == 0) {
+                  // first register, no containers info.
+                  try {
+                    Assert.assertEquals(0, request.getContainerStatuses()
+                      .size());
+                  } catch (AssertionError error) {
+                    error.printStackTrace();
+                    assertionFailedInThread.set(true);
+                  }
+                  // put the completed container into the context
+                  getNMContext().getContainers().put(
+                    testCompleteContainer.getContainerId(), container);
+                } else {
+                  // second register contains the completed container info.
+                  List<ContainerStatus> statuses =
+                      request.getContainerStatuses();
+                  try {
+                    Assert.assertEquals(1, statuses.size());
+                    Assert.assertEquals(testCompleteContainer.getContainerId(),
+                      statuses.get(0).getContainerId());
+                  } catch (AssertionError error) {
+                    error.printStackTrace();
+                    assertionFailedInThread.set(true);
+                  }
+                }
+                registerCount++;
+                return super.registerNodeManager(request);
+              }
+
+              @Override
+              public NodeHeartbeatResponse nodeHeartbeat(
+                  NodeHeartbeatRequest request) {
+                // first heartBeat contains the completed container info
+                List<ContainerStatus> statuses =
+                    request.getNodeStatus().getContainersStatuses();
+                try {
+                  Assert.assertEquals(1, statuses.size());
+                  Assert.assertEquals(testCompleteContainer.getContainerId(),
+                    statuses.get(0).getContainerId());
+                } catch (AssertionError error) {
+                  error.printStackTrace();
+                  assertionFailedInThread.set(true);
+                }
+
+                // notify RESYNC on first heartbeat.
+                return YarnServerBuilderUtils.newNodeHeartbeatResponse(1,
+                  NodeAction.RESYNC, null, null, null, null, 1000L);
+              }
+            };
+          }
+        };
+      }
+    };
+    YarnConfiguration conf = createNMConfig();
+    nm.init(conf);
+    nm.start();
+
+    try {
+      syncBarrier.await();
+    } catch (BrokenBarrierException e) {
+    }
+    Assert.assertFalse(assertionFailedInThread.get());
+    nm.stop();
+  }
+
+  // This can be used as a common base class for testing NM resync behavior.
+  class TestNodeStatusUpdaterResync extends MockNodeStatusUpdater {
+    public TestNodeStatusUpdaterResync(Context context, Dispatcher dispatcher,
+        NodeHealthCheckerService healthChecker, NodeManagerMetrics metrics) {
+      super(context, dispatcher, healthChecker, metrics);
+    }
+    @Override
+    protected void rebootNodeStatusUpdaterAndRegisterWithRM() {
+      try {
+        // Wait here so as to sync with the main test thread.
+        super.rebootNodeStatusUpdaterAndRegisterWithRM();
+        syncBarrier.await();
+      } catch (InterruptedException e) {
+      } catch (BrokenBarrierException e) {
+      } catch (AssertionError ae) {
+        ae.printStackTrace();
+        assertionFailedInThread.set(true);
+      }
+    }
   }
 
   private YarnConfiguration createNMConfig() {
@@ -206,14 +328,14 @@ public class TestNodeManagerResync {
       }
 
       @Override
-      protected void rebootNodeStatusUpdater() {
+      protected void rebootNodeStatusUpdaterAndRegisterWithRM() {
         ConcurrentMap<ContainerId, org.apache.hadoop.yarn.server.nodemanager
         .containermanager.container.Container> containers =
             getNMContext().getContainers();
         try {
           // ensure that containers are empty before restart nodeStatusUpdater
           Assert.assertTrue(containers.isEmpty());
-          super.rebootNodeStatusUpdater();
+          super.rebootNodeStatusUpdaterAndRegisterWithRM();
           syncBarrier.await();
         } catch (InterruptedException e) {
         } catch (BrokenBarrierException e) {
@@ -278,7 +400,7 @@ public class TestNodeManagerResync {
       }
 
       @Override
-      protected void rebootNodeStatusUpdater() {
+      protected void rebootNodeStatusUpdaterAndRegisterWithRM() {
         ConcurrentMap<ContainerId, org.apache.hadoop.yarn.server.nodemanager
         .containermanager.container.Container> containers =
             getNMContext().getContainers();
@@ -286,7 +408,7 @@ public class TestNodeManagerResync {
         try {
           // ensure that containers are empty before restart nodeStatusUpdater
           Assert.assertTrue(containers.isEmpty());
-          super.rebootNodeStatusUpdater();
+          super.rebootNodeStatusUpdaterAndRegisterWithRM();
           // After this point new containers are free to be launched, except
           // containers from previous RM
           // Wait here so as to sync with the main test thread.

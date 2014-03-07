@@ -54,7 +54,11 @@ public class MockNodeStatusUpdater extends NodeStatusUpdaterImpl {
   public MockNodeStatusUpdater(Context context, Dispatcher dispatcher,
       NodeHealthCheckerService healthChecker, NodeManagerMetrics metrics) {
     super(context, dispatcher, healthChecker, metrics);
-    resourceTracker = new MockResourceTracker();
+    resourceTracker = createResourceTracker();
+  }
+
+  protected ResourceTracker createResourceTracker() {
+    return new MockResourceTracker();
   }
 
   @Override
@@ -66,7 +70,7 @@ public class MockNodeStatusUpdater extends NodeStatusUpdaterImpl {
     return;
   }
   
-  private static class MockResourceTracker implements ResourceTracker {
+  protected static class MockResourceTracker implements ResourceTracker {
     private int heartBeatID;
 
     @Override

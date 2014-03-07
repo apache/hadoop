@@ -23,12 +23,14 @@ import java.net.ConnectException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -93,11 +95,19 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   private Map<ApplicationId, Long> appTokenKeepAliveMap =
       new HashMap<ApplicationId, Long>();
   private Random keepAliveDelayRandom = new Random();
-  // It will be used to track recently stopped containers on node manager.
+  // It will be used to track recently stopped containers on node manager, this
+  // is to avoid the misleading no-such-container exception messages on NM, when
+  // the AM finishes it informs the RM to stop the may-be-already-completed
+  // containers.
   private final Map<ContainerId, Long> recentlyStoppedContainers;
   // Duration for which to track recently stopped container.
   private long durationToTrackStoppedContainers;
 
+  // This is used to track the current completed containers when nodeheartBeat
+  // is called. These completed containers will be removed from NM context after
+  // nodeHeartBeat succeeds and the response from the nodeHeartBeat is
+  // processed.
+  private final Set<ContainerId> previousCompletedContainers;
   private final NodeHealthCheckerService healthChecker;
   private final NodeManagerMetrics metrics;
 
@@ -114,6 +124,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     this.metrics = metrics;
     this.recentlyStoppedContainers =
         new LinkedHashMap<ContainerId, Long>();
+    this.previousCompletedContainers = new HashSet<ContainerId>();
   }
 
   @Override
@@ -194,7 +205,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     super.serviceStop();
   }
 
-  protected void rebootNodeStatusUpdater() {
+  protected void rebootNodeStatusUpdaterAndRegisterWithRM() {
     // Interrupt the updater.
     this.isStopped = true;
 
@@ -235,8 +246,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   @VisibleForTesting
   protected void registerWithRM()
       throws YarnException, IOException {
-    List<ContainerStatus> containerStatuses =
-        this.updateAndGetContainerStatuses();
+    List<ContainerStatus> containerStatuses = getContainerStatuses();
     RegisterNodeManagerRequest request =
         RegisterNodeManagerRequest.newInstance(nodeId, httpPort, totalResource,
           nodeManagerVersionId, containerStatuses);
@@ -321,60 +331,70 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     return appList;
   }
 
-  @Override
-  public NodeStatus getNodeStatusAndUpdateContainersInContext(
-      int responseId) {
+  private NodeStatus getNodeStatus(int responseId) {
 
     NodeHealthStatus nodeHealthStatus = this.context.getNodeHealthStatus();
     nodeHealthStatus.setHealthReport(healthChecker.getHealthReport());
     nodeHealthStatus.setIsNodeHealthy(healthChecker.isHealthy());
-    nodeHealthStatus.setLastHealthReportTime(
-        healthChecker.getLastHealthReportTime());
+    nodeHealthStatus.setLastHealthReportTime(healthChecker
+      .getLastHealthReportTime());
     if (LOG.isDebugEnabled()) {
       LOG.debug("Node's health-status : " + nodeHealthStatus.getIsNodeHealthy()
-                + ", " + nodeHealthStatus.getHealthReport());
+          + ", " + nodeHealthStatus.getHealthReport());
     }
-    List<ContainerStatus> containersStatuses = updateAndGetContainerStatuses();
-    LOG.debug(this.nodeId + " sending out status for "
-        + containersStatuses.size() + " containers");
-    NodeStatus nodeStatus = NodeStatus.newInstance(nodeId, responseId,
-      containersStatuses, createKeepAliveApplicationList(), nodeHealthStatus);
+    List<ContainerStatus> containersStatuses = getContainerStatuses();
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(this.nodeId + " sending out status for "
+          + containersStatuses.size() + " containers");
+    }
+    NodeStatus nodeStatus =
+        NodeStatus.newInstance(nodeId, responseId, containersStatuses,
+          createKeepAliveApplicationList(), nodeHealthStatus);
 
     return nodeStatus;
   }
 
-  /*
-   * It will return current container statuses. If any container has
-   * COMPLETED then it will be removed from context. 
-   */
-  private List<ContainerStatus> updateAndGetContainerStatuses() {
+  // Iterate through the NMContext and clone and get all the containers'
+  // statuses. If it's a completed container, add into the
+  // recentlyStoppedContainers and previousCompletedContainers collections.
+  @VisibleForTesting
+  protected List<ContainerStatus> getContainerStatuses() {
     List<ContainerStatus> containerStatuses = new ArrayList<ContainerStatus>();
-    for (Iterator<Entry<ContainerId, Container>> i =
-        this.context.getContainers().entrySet().iterator(); i.hasNext();) {
-      Entry<ContainerId, Container> e = i.next();
-      ContainerId containerId = e.getKey();
-      Container container = e.getValue();
-
-      // Clone the container to send it to the RM
-      org.apache.hadoop.yarn.api.records.ContainerStatus containerStatus = 
+    for (Container container : this.context.getContainers().values()) {
+      org.apache.hadoop.yarn.api.records.ContainerStatus containerStatus =
           container.cloneAndGetContainerStatus();
       containerStatuses.add(containerStatus);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Sending out status for container: " + containerStatus);
-      }
-
-      if (containerStatus.getState() == ContainerState.COMPLETE) {
-        // Remove
-        i.remove();
+      if (containerStatus.getState().equals(ContainerState.COMPLETE)) {
         // Adding to finished containers cache. Cache will keep it around at
         // least for #durationToTrackStoppedContainers duration. In the
         // subsequent call to stop container it will get removed from cache.
-        addStoppedContainersToCache(containerId);
-        
-        LOG.info("Removed completed container " + containerId);
+        updateStoppedContainersInCache(container.getContainerId());
+        addCompletedContainer(container);
       }
     }
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Sending out container statuses: " + containerStatuses);
+    }
     return containerStatuses;
+  }
+
+  private void addCompletedContainer(Container container) {
+    synchronized (previousCompletedContainers) {
+      previousCompletedContainers.add(container.getContainerId());
+    }
+  }
+
+  private void removeCompletedContainersFromContext() {
+    synchronized (previousCompletedContainers) {
+      if (!previousCompletedContainers.isEmpty()) {
+        for (ContainerId containerId : previousCompletedContainers) {
+          this.context.getContainers().remove(containerId);
+        }
+        LOG.info("Removed completed containers from NM context: "
+            + previousCompletedContainers);
+        previousCompletedContainers.clear();
+      }
+    }
   }
 
   private void trackAppsForKeepAlive(List<ApplicationId> appIds) {
@@ -409,7 +429,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   
   @Private
   @VisibleForTesting
-  public void addStoppedContainersToCache(ContainerId containerId) {
+  public void updateStoppedContainersInCache(ContainerId containerId) {
     synchronized (recentlyStoppedContainers) {
       removeVeryOldStoppedContainersFromCache();
       recentlyStoppedContainers.put(containerId,
@@ -457,8 +477,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
           // Send heartbeat
           try {
             NodeHeartbeatResponse response = null;
-            NodeStatus nodeStatus =
-                getNodeStatusAndUpdateContainersInContext(lastHeartBeatID);
+            NodeStatus nodeStatus = getNodeStatus(lastHeartBeatID);
             
             NodeHeartbeatRequest request =
                 NodeHeartbeatRequest.newInstance(nodeStatus,
@@ -493,6 +512,12 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
                   new NodeManagerEvent(NodeManagerEventType.RESYNC));
               break;
             }
+
+            // Explicitly put this method after checking the resync response. We
+            // don't want to remove the completed containers before resync
+            // because these completed containers will be reported back to RM
+            // when NM re-registers with RM.
+            removeCompletedContainersFromContext();
 
             lastHeartBeatID = response.getResponseId();
             List<ContainerId> containersToCleanup = response
