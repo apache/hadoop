@@ -413,6 +413,8 @@ Release 2.4.0 - UNRELEASED
     YARN-1768. Fixed error message being too verbose when killing a non-existent
     application
     
+    YARN-1774. FS: Submitting to non-leaf queue throws NPE. (Anubhav Dhoot and
+    Karthik Kambatla via kasha)
 
 Release 2.3.1 - UNRELEASED
 
