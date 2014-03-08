@@ -94,7 +94,7 @@ public class TestYarnCLI {
         FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.53789f, "YARN", null);
     when(client.getApplicationReport(any(ApplicationId.class))).thenReturn(
         newApplicationReport);
-    int result = cli.run(new String[] { "-status", applicationId.toString() });
+    int result = cli.run(new String[] { "application", "-status", applicationId.toString() });
     assertEquals(0, result);
     verify(client).getApplicationReport(applicationId);
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -289,7 +289,7 @@ public class TestYarnCLI {
         new ApplicationNotFoundException("History file for application"
             + applicationId + " is not found"));
     try {
-      cli.run(new String[] { "-status", applicationId.toString() });
+      cli.run(new String[] { "application", "-status", applicationId.toString() });
       Assert.fail();
     } catch (Exception ex) {
       Assert.assertTrue(ex instanceof ApplicationNotFoundException);
@@ -368,7 +368,7 @@ public class TestYarnCLI {
     appState1.add(YarnApplicationState.SUBMITTED);
     when(client.getApplications(appType1, appState1)).thenReturn(
         getApplicationReports(applicationReports, appType1, appState1, false));
-    int result = cli.run(new String[] { "-list" });
+    int result = cli.run(new String[] { "application", "-list" });
     assertEquals(0, result);
     verify(client).getApplications(appType1, appState1);
 
@@ -423,8 +423,8 @@ public class TestYarnCLI {
     when(client.getApplications(appType2, appState2)).thenReturn(
         getApplicationReports(applicationReports, appType2, appState2, false));
     result =
-        cli.run(new String[] { "-list", "-appTypes", "YARN, ,,  NON-YARN",
-            "   ,, ,," });
+        cli.run(new String[] { "application", "-list", "-appTypes",
+            "YARN, ,,  NON-YARN", "   ,, ,," });
     assertEquals(0, result);
     verify(client).getApplications(appType2, appState2);
     baos = new ByteArrayOutputStream();
@@ -458,8 +458,8 @@ public class TestYarnCLI {
     when(client.getApplications(appType3, appState3)).thenReturn(
         getApplicationReports(applicationReports, appType3, appState3, false));
     result =
-        cli.run(new String[] { "-list", "--appStates", "FINISHED ,, , FAILED",
-            ",,FINISHED" });
+        cli.run(new String[] { "application", "-list", "--appStates",
+            "FINISHED ,, , FAILED", ",,FINISHED" });
     assertEquals(0, result);
     verify(client).getApplications(appType3, appState3);
     baos = new ByteArrayOutputStream();
@@ -501,8 +501,8 @@ public class TestYarnCLI {
     when(client.getApplications(appType4, appState4)).thenReturn(
         getApplicationReports(applicationReports, appType4, appState4, false));
     result =
-        cli.run(new String[] { "-list", "--appTypes", "YARN,NON-YARN",
-        "--appStates", "FINISHED ,, , FAILED" });
+        cli.run(new String[] { "application", "-list", "--appTypes",
+            "YARN,NON-YARN", "--appStates", "FINISHED ,, , FAILED" });
     assertEquals(0, result);
     verify(client).getApplications(appType2, appState2);
     baos = new ByteArrayOutputStream();
@@ -527,7 +527,8 @@ public class TestYarnCLI {
     //Test command yarn application -list --appStates with invalid appStates
     sysOutStream.reset();
     result =
-        cli.run(new String[] { "-list", "--appStates", "FINISHED ,, , INVALID" });
+        cli.run(new String[] { "application", "-list", "--appStates",
+            "FINISHED ,, , INVALID" });
     assertEquals(-1, result);
     baos = new ByteArrayOutputStream();
     pw = new PrintWriter(baos);
@@ -555,7 +556,8 @@ public class TestYarnCLI {
     when(client.getApplications(appType5, appState5)).thenReturn(
         getApplicationReports(applicationReports, appType5, appState5, true));
     result =
-        cli.run(new String[] { "-list", "--appStates", "FINISHED ,, , ALL" });
+        cli.run(new String[] { "application", "-list", "--appStates",
+            "FINISHED ,, , ALL" });
     assertEquals(0, result);
     verify(client).getApplications(appType5, appState5);
     baos = new ByteArrayOutputStream();
@@ -614,8 +616,8 @@ public class TestYarnCLI {
     when(client.getApplications(appType6, appState6)).thenReturn(
         getApplicationReports(applicationReports, appType6, appState6, false));
     result =
-        cli.run(new String[] { "-list", "-appTypes", "YARN, ,,  NON-YARN",
-            "--appStates", "finished" });
+        cli.run(new String[] { "application", "-list", "-appTypes",
+            "YARN, ,,  NON-YARN", "--appStates", "finished" });
     assertEquals(0, result);
     verify(client).getApplications(appType6, appState6);
     baos = new ByteArrayOutputStream();
@@ -672,25 +674,85 @@ public class TestYarnCLI {
   public void testAppsHelpCommand() throws Exception {
     ApplicationCLI cli = createAndGetAppCLI();
     ApplicationCLI spyCli = spy(cli);
-    int result = spyCli.run(new String[] { "-help" });
+    int result = spyCli.run(new String[] { "application", "-help" });
     Assert.assertTrue(result == 0);
-    verify(spyCli).printUsage(any(Options.class));
+    verify(spyCli).printUsage(any(String.class), any(Options.class));
     Assert.assertEquals(createApplicationCLIHelpMessage(),
         sysOutStream.toString());
 
     sysOutStream.reset();
     ApplicationId applicationId = ApplicationId.newInstance(1234, 5);
-    result =
-        cli.run(new String[] {"application", "-kill", applicationId.toString(), "args" });
-    verify(spyCli).printUsage(any(Options.class));
+    result = cli.run(
+        new String[] {"application", "-kill", applicationId.toString(), "args" });
+    verify(spyCli).printUsage(any(String.class), any(Options.class));
     Assert.assertEquals(createApplicationCLIHelpMessage(),
         sysOutStream.toString());
 
     sysOutStream.reset();
     NodeId nodeId = NodeId.newInstance("host0", 0);
-    result = cli.run(new String[] { "-status", nodeId.toString(), "args" });
-    verify(spyCli).printUsage(any(Options.class));
+    result = cli.run(
+        new String[] { "application", "-status", nodeId.toString(), "args" });
+    verify(spyCli).printUsage(any(String.class), any(Options.class));
     Assert.assertEquals(createApplicationCLIHelpMessage(),
+        sysOutStream.toString());
+  }
+
+  @Test (timeout = 10000)
+  public void testAppAttemptsHelpCommand() throws Exception {
+    ApplicationCLI cli = createAndGetAppCLI();
+    ApplicationCLI spyCli = spy(cli);
+    int result = spyCli.run(new String[] { "applicationattempt", "-help" });
+    Assert.assertTrue(result == 0);
+    verify(spyCli).printUsage(any(String.class), any(Options.class));
+    Assert.assertEquals(createApplicationAttemptCLIHelpMessage(),
+        sysOutStream.toString());
+
+    sysOutStream.reset();
+    ApplicationId applicationId = ApplicationId.newInstance(1234, 5);
+    result = cli.run(
+        new String[] {"applicationattempt", "-list", applicationId.toString(),
+            "args" });
+    verify(spyCli).printUsage(any(String.class), any(Options.class));
+    Assert.assertEquals(createApplicationAttemptCLIHelpMessage(),
+        sysOutStream.toString());
+
+    sysOutStream.reset();
+    ApplicationAttemptId appAttemptId =
+        ApplicationAttemptId.newInstance(applicationId, 6);
+    result = cli.run(
+        new String[] { "applicationattempt", "-status", appAttemptId.toString(),
+            "args" });
+    verify(spyCli).printUsage(any(String.class), any(Options.class));
+    Assert.assertEquals(createApplicationAttemptCLIHelpMessage(),
+        sysOutStream.toString());
+  }
+
+  @Test (timeout = 10000)
+  public void testContainersHelpCommand() throws Exception {
+    ApplicationCLI cli = createAndGetAppCLI();
+    ApplicationCLI spyCli = spy(cli);
+    int result = spyCli.run(new String[] { "container", "-help" });
+    Assert.assertTrue(result == 0);
+    verify(spyCli).printUsage(any(String.class), any(Options.class));
+    Assert.assertEquals(createContainerCLIHelpMessage(),
+        sysOutStream.toString());
+
+    sysOutStream.reset();
+    ApplicationId applicationId = ApplicationId.newInstance(1234, 5);
+    ApplicationAttemptId appAttemptId =
+        ApplicationAttemptId.newInstance(applicationId, 6);
+    result = cli.run(
+        new String[] {"container", "-list", appAttemptId.toString(), "args" });
+    verify(spyCli).printUsage(any(String.class), any(Options.class));
+    Assert.assertEquals(createContainerCLIHelpMessage(),
+        sysOutStream.toString());
+
+    sysOutStream.reset();
+    ContainerId containerId = ContainerId.newInstance(appAttemptId, 7);
+    result = cli.run(
+        new String[] { "container", "-status", containerId.toString(), "args" });
+    verify(spyCli).printUsage(any(String.class), any(Options.class));
+    Assert.assertEquals(createContainerCLIHelpMessage(),
         sysOutStream.toString());
   }
 
@@ -765,8 +827,8 @@ public class TestYarnCLI {
         FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.53789f, "YARN", null);
     when(client.getApplicationReport(any(ApplicationId.class))).thenReturn(
         newApplicationReport2);
-    int result = cli.run(new String[] { "-movetoqueue", applicationId.toString(),
-        "-queue", "targetqueue"});
+    int result = cli.run(new String[] { "application", "-movetoqueue",
+        applicationId.toString(), "-queue", "targetqueue"});
     assertEquals(0, result);
     verify(client, times(0)).moveApplicationAcrossQueues(
         any(ApplicationId.class), any(String.class));
@@ -780,8 +842,8 @@ public class TestYarnCLI {
         FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.53789f, "YARN", null);
     when(client.getApplicationReport(any(ApplicationId.class))).thenReturn(
         newApplicationReport);
-    result = cli.run(new String[] { "-movetoqueue", applicationId.toString(),
-        "-queue", "targetqueue"});
+    result = cli.run(new String[] { "application", "-movetoqueue",
+        applicationId.toString(), "-queue", "targetqueue"});
     assertEquals(0, result);
     verify(client).moveApplicationAcrossQueues(any(ApplicationId.class),
         any(String.class));
@@ -793,8 +855,8 @@ public class TestYarnCLI {
         .moveApplicationAcrossQueues(applicationId, "targetqueue");
     cli = createAndGetAppCLI();
     try {
-      result = cli.run(new String[] { "-movetoqueue", applicationId.toString(),
-          "-queue", "targetqueue"});
+      result = cli.run(new String[] { "application", "-movetoqueue",
+          applicationId.toString(), "-queue", "targetqueue"});
       Assert.fail();
     } catch (Exception ex) {
       Assert.assertTrue(ex instanceof ApplicationNotFoundException);
@@ -1095,10 +1157,22 @@ public class TestYarnCLI {
   @Test
   public void testMissingArguments() throws Exception {
     ApplicationCLI cli = createAndGetAppCLI();
-    int result = cli.run(new String[] { "-status" });
+    int result = cli.run(new String[] { "application", "-status" });
     Assert.assertEquals(result, -1);
     Assert.assertEquals(String.format("Missing argument for options%n%1s",
         createApplicationCLIHelpMessage()), sysOutStream.toString());
+
+    sysOutStream.reset();
+    result = cli.run(new String[] { "applicationattempt", "-status" });
+    Assert.assertEquals(result, -1);
+    Assert.assertEquals(String.format("Missing argument for options%n%1s",
+        createApplicationAttemptCLIHelpMessage()), sysOutStream.toString());
+
+    sysOutStream.reset();
+    result = cli.run(new String[] { "container", "-status" });
+    Assert.assertEquals(result, -1);
+    Assert.assertEquals(String.format("Missing argument for options%n%1s",
+        createContainerCLIHelpMessage()), sysOutStream.toString());
 
     sysOutStream.reset();
     NodeCLI nodeCLI = new NodeCLI();
@@ -1113,7 +1187,7 @@ public class TestYarnCLI {
 
   private void verifyUsageInfo(YarnCLI cli) throws Exception {
     cli.setSysErrPrintStream(sysErr);
-    cli.run(new String[0]);
+    cli.run(new String[] { "application" });
     verify(sysErr).println("Invalid Command Usage : ");
   }
 
@@ -1152,17 +1226,43 @@ public class TestYarnCLI {
     pw.println("                                 application types.");
     pw.println(" -help                           Displays help for all commands.");
     pw.println(" -kill <Application ID>          Kills the application.");
-    pw.println(" -list                           List applications from the RM. Supports");
-    pw.println("                                 optional use of -appTypes to filter");
-    pw.println("                                 applications based on application type,");
-    pw.println("                                 and -appStates to filter applications");
-    pw.println("                                 based on application state");
+    pw.println(" -list                           List applications. Supports optional use");
+    pw.println("                                 of -appTypes to filter applications based");
+    pw.println("                                 on application type, and -appStates to");
+    pw.println("                                 filter applications based on application");
+    pw.println("                                 state.");
     pw.println(" -movetoqueue <Application ID>   Moves the application to a different");
     pw.println("                                 queue.");
     pw.println(" -queue <Queue Name>             Works with the movetoqueue command to");
     pw.println("                                 specify which queue to move an");
     pw.println("                                 application to.");
     pw.println(" -status <Application ID>        Prints the status of the application.");
+    pw.close();
+    String appsHelpStr = baos.toString("UTF-8");
+    return appsHelpStr;
+  }
+
+  private String createApplicationAttemptCLIHelpMessage() throws IOException {
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    PrintWriter pw = new PrintWriter(baos);
+    pw.println("usage: applicationattempt");
+    pw.println(" -help                              Displays help for all commands.");
+    pw.println(" -list <Application ID>             List application attempts for");
+    pw.println("                                    aplication.");
+    pw.println(" -status <Application Attempt ID>   Prints the status of the application");
+    pw.println("                                    attempt.");
+    pw.close();
+    String appsHelpStr = baos.toString("UTF-8");
+    return appsHelpStr;
+  }
+
+  private String createContainerCLIHelpMessage() throws IOException {
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    PrintWriter pw = new PrintWriter(baos);
+    pw.println("usage: container");
+    pw.println(" -help                            Displays help for all commands.");
+    pw.println(" -list <Application Attempt ID>   List containers for application attempt.");
+    pw.println(" -status <Container ID>           Prints the status of the container.");
     pw.close();
     String appsHelpStr = baos.toString("UTF-8");
     return appsHelpStr;

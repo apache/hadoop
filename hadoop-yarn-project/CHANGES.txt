@@ -413,6 +413,9 @@ Release 2.4.0 - UNRELEASED
     completed container statuses when NodeManager is forced to resync by the
     ResourceManager. (Jian He via vinodkv) 
 
+    YARN-1787. Fixed help messages for applicationattempt and container
+    sub-commands in bin/yarn. (Zhijie Shen via vinodkv)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
