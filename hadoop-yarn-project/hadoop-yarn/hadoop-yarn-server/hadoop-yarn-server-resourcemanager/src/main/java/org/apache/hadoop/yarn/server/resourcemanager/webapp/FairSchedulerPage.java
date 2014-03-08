@@ -246,7 +246,7 @@ public class FairSchedulerPage extends RmView {
       .append("{'sType':'numeric', 'aTargets': [0]")
       .append(", 'mRender': parseHadoopID }")
 
-      .append("\n, {'sType':'numeric', 'aTargets': [5, 6]")
+      .append("\n, {'sType':'numeric', 'aTargets': [6, 7]")
       .append(", 'mRender': renderHadoopDate }")
 
       .append("\n, {'sType':'numeric', bSearchable:false, 'aTargets': [9]")

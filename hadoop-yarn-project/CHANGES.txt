@@ -42,6 +42,8 @@ Release 2.5.0 - UNRELEASED
     YARN-1718. Fix a couple isTerminals in Fair Scheduler queue placement rules
     (Sandy Ryza)
 
+    YARN-1790. Fair Scheduler UI not showing apps table (bc Wong via Sandy Ryza)
+
 Release 2.4.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
