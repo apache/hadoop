@@ -57,7 +57,7 @@ public class TestKerberosAuthenticator extends KerberosSecurityTestcase {
     Properties props = new Properties();
     props.setProperty(AuthenticationFilter.AUTH_TYPE, "simple");
     props.setProperty(PseudoAuthenticationHandler.ANONYMOUS_ALLOWED, "false");
-    auth.setAuthenticationHandlerConfig(props);
+    AuthenticatorTestCase.setAuthenticationHandlerConfig(props);
     auth._testAuthentication(new KerberosAuthenticator(), false);
   }
 
@@ -67,14 +67,14 @@ public class TestKerberosAuthenticator extends KerberosSecurityTestcase {
     Properties props = new Properties();
     props.setProperty(AuthenticationFilter.AUTH_TYPE, "simple");
     props.setProperty(PseudoAuthenticationHandler.ANONYMOUS_ALLOWED, "true");
-    auth.setAuthenticationHandlerConfig(props);
+    AuthenticatorTestCase.setAuthenticationHandlerConfig(props);
     auth._testAuthentication(new KerberosAuthenticator(), false);
   }
 
   @Test(timeout=60000)
   public void testNotAuthenticated() throws Exception {
     AuthenticatorTestCase auth = new AuthenticatorTestCase();
-    auth.setAuthenticationHandlerConfig(getAuthenticationHandlerConfiguration());
+    AuthenticatorTestCase.setAuthenticationHandlerConfig(getAuthenticationHandlerConfiguration());
     auth.start();
     try {
       URL url = new URL(auth.getBaseURL());
@@ -90,7 +90,7 @@ public class TestKerberosAuthenticator extends KerberosSecurityTestcase {
   @Test(timeout=60000)
   public void testAuthentication() throws Exception {
     final AuthenticatorTestCase auth = new AuthenticatorTestCase();
-    auth.setAuthenticationHandlerConfig(
+    AuthenticatorTestCase.setAuthenticationHandlerConfig(
             getAuthenticationHandlerConfiguration());
     KerberosTestUtils.doAsClient(new Callable<Void>() {
       @Override
@@ -104,7 +104,7 @@ public class TestKerberosAuthenticator extends KerberosSecurityTestcase {
   @Test(timeout=60000)
   public void testAuthenticationPost() throws Exception {
     final AuthenticatorTestCase auth = new AuthenticatorTestCase();
-    auth.setAuthenticationHandlerConfig(
+    AuthenticatorTestCase.setAuthenticationHandlerConfig(
             getAuthenticationHandlerConfiguration());
     KerberosTestUtils.doAsClient(new Callable<Void>() {
       @Override

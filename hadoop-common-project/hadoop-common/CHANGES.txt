@@ -411,6 +411,8 @@ Release 2.4.0 - UNRELEASED
     HADOOP-10353. FsUrlStreamHandlerFactory is not thread safe.
     (Tudor Scurtu via cnauroth)
 
+    HADOOP-10393. Fix the javac warnings in hadoop-auth.  (szetszwo)
+
   BREAKDOWN OF HADOOP-10184 SUBTASKS AND RELATED JIRAS
 
     HADOOP-10185. FileSystem API for ACLs. (cnauroth)
