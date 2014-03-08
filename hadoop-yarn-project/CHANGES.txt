@@ -275,6 +275,10 @@ Release 2.4.0 - UNRELEASED
     utilization for local disks so as to be able to offline full disks. (Varun
     Vasudev via vinodkv)
 
+    YARN-1410. Added tests to validate that clients can fail-over to a new RM
+    after getting an application-ID but before submission and can still submit to
+    the newly active RM with no issues. (Xuan Gong via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES

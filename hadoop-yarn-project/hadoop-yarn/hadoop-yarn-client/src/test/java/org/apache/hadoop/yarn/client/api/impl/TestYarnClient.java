@@ -59,6 +59,7 @@ import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.client.api.YarnClientApplication;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.ApplicationIdNotProvidedException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
@@ -110,6 +111,24 @@ public class TestYarnClient {
           YarnApplicationState.FAILED,
           YarnApplicationState.KILLED
         };
+
+    // Submit an application without ApplicationId provided
+    // Should get ApplicationIdNotProvidedException
+    ApplicationSubmissionContext contextWithoutApplicationId =
+        mock(ApplicationSubmissionContext.class);
+    try {
+      client.submitApplication(contextWithoutApplicationId);
+      Assert.fail("Should throw the ApplicationIdNotProvidedException");
+    } catch (YarnException e) {
+      Assert.assertTrue(e instanceof ApplicationIdNotProvidedException);
+      Assert.assertTrue(e.getMessage().contains(
+          "ApplicationId is not provided in ApplicationSubmissionContext"));
+    } catch (IOException e) {
+      Assert.fail("IOException is not expected.");
+    }
+
+    // Submit the application with applicationId provided
+    // Should be successful
     for (int i = 0; i < exitStates.length; ++i) {
       ApplicationSubmissionContext context =
           mock(ApplicationSubmissionContext.class);

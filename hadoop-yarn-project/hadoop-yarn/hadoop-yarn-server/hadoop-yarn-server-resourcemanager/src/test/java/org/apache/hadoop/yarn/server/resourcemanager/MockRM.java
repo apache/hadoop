@@ -31,6 +31,8 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
@@ -40,6 +42,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
@@ -221,13 +224,24 @@ public class MockRM extends ResourceManager {
   public RMApp submitApp(int masterMemory, String name, String user,
       Map<ApplicationAccessType, String> acls, boolean unmanaged, String queue,
       int maxAppAttempts, Credentials ts, String appType,
-      boolean waitForAccepted, boolean keepContainers)
-      throws Exception {
-    ApplicationClientProtocol client = getClientRMService();
-    GetNewApplicationResponse resp = client.getNewApplication(Records
-        .newRecord(GetNewApplicationRequest.class));
-    ApplicationId appId = resp.getApplicationId();
+      boolean waitForAccepted, boolean keepContainers) throws Exception {
+    return submitApp(masterMemory, name, user, acls, unmanaged, queue,
+        maxAppAttempts, ts, appType, waitForAccepted, keepContainers,
+        false, null);
+  }
 
+  public RMApp submitApp(int masterMemory, String name, String user,
+      Map<ApplicationAccessType, String> acls, boolean unmanaged, String queue,
+      int maxAppAttempts, Credentials ts, String appType,
+      boolean waitForAccepted, boolean keepContainers, boolean isAppIdProvided,
+      ApplicationId applicationId) throws Exception {
+    ApplicationId appId = isAppIdProvided ? applicationId : null;
+    ApplicationClientProtocol client = getClientRMService();
+    if (! isAppIdProvided) {
+      GetNewApplicationResponse resp = client.getNewApplication(Records
+          .newRecord(GetNewApplicationRequest.class));
+      appId = resp.getApplicationId();
+    }
     SubmitApplicationRequest req = Records
         .newRecord(SubmitApplicationRequest.class);
     ApplicationSubmissionContext sub = Records
@@ -502,4 +516,12 @@ public class MockRM extends ResourceManager {
     return am;
   }
 
+  public ApplicationReport getApplicationReport(ApplicationId appId)
+      throws YarnException, IOException {
+    ApplicationClientProtocol client = getClientRMService();
+    GetApplicationReportResponse response =
+        client.getApplicationReport(GetApplicationReportRequest
+            .newInstance(appId));
+    return response.getApplicationReport();
+  }
 }
