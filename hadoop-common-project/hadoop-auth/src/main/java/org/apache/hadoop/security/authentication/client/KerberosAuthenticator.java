@@ -313,7 +313,7 @@ public class KerberosAuthenticator implements Authenticator {
   /*
   * Sends the Kerberos token to the server.
   */
-  private void sendToken(byte[] outToken) throws IOException, AuthenticationException {
+  private void sendToken(byte[] outToken) throws IOException {
     String token = base64.encodeToString(outToken);
     conn = (HttpURLConnection) url.openConnection();
     if (connConfigurator != null) {

@@ -40,7 +40,7 @@ public class TestPseudoAuthenticator {
   @Test
   public void testAnonymousAllowed() throws Exception {
     AuthenticatorTestCase auth = new AuthenticatorTestCase();
-    auth.setAuthenticationHandlerConfig(
+    AuthenticatorTestCase.setAuthenticationHandlerConfig(
             getAuthenticationHandlerConfiguration(true));
     auth.start();
     try {
@@ -56,7 +56,7 @@ public class TestPseudoAuthenticator {
   @Test
   public void testAnonymousDisallowed() throws Exception {
     AuthenticatorTestCase auth = new AuthenticatorTestCase();
-    auth.setAuthenticationHandlerConfig(
+    AuthenticatorTestCase.setAuthenticationHandlerConfig(
             getAuthenticationHandlerConfiguration(false));
     auth.start();
     try {
@@ -72,7 +72,7 @@ public class TestPseudoAuthenticator {
   @Test
   public void testAuthenticationAnonymousAllowed() throws Exception {
     AuthenticatorTestCase auth = new AuthenticatorTestCase();
-    auth.setAuthenticationHandlerConfig(
+    AuthenticatorTestCase.setAuthenticationHandlerConfig(
             getAuthenticationHandlerConfiguration(true));
     auth._testAuthentication(new PseudoAuthenticator(), false);
   }
@@ -80,7 +80,7 @@ public class TestPseudoAuthenticator {
   @Test
   public void testAuthenticationAnonymousDisallowed() throws Exception {
     AuthenticatorTestCase auth = new AuthenticatorTestCase();
-    auth.setAuthenticationHandlerConfig(
+    AuthenticatorTestCase.setAuthenticationHandlerConfig(
             getAuthenticationHandlerConfiguration(false));
     auth._testAuthentication(new PseudoAuthenticator(), false);
   }
@@ -88,7 +88,7 @@ public class TestPseudoAuthenticator {
   @Test
   public void testAuthenticationAnonymousAllowedWithPost() throws Exception {
     AuthenticatorTestCase auth = new AuthenticatorTestCase();
-    auth.setAuthenticationHandlerConfig(
+    AuthenticatorTestCase.setAuthenticationHandlerConfig(
             getAuthenticationHandlerConfiguration(true));
     auth._testAuthentication(new PseudoAuthenticator(), true);
   }
@@ -96,7 +96,7 @@ public class TestPseudoAuthenticator {
   @Test
   public void testAuthenticationAnonymousDisallowedWithPost() throws Exception {
     AuthenticatorTestCase auth = new AuthenticatorTestCase();
-    auth.setAuthenticationHandlerConfig(
+    AuthenticatorTestCase.setAuthenticationHandlerConfig(
             getAuthenticationHandlerConfiguration(false));
     auth._testAuthentication(new PseudoAuthenticator(), true);
   }
