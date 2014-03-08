@@ -41,6 +41,7 @@ import org.apache.directory.server.kerberos.shared.keytab.Keytab;
 import org.apache.directory.server.kerberos.shared.keytab.KeytabEntry;
 import org.apache.directory.server.protocol.shared.transport.TcpTransport;
 import org.apache.directory.server.protocol.shared.transport.UdpTransport;
+import org.apache.directory.server.xdbm.Index;
 import org.apache.directory.shared.kerberos.KerberosTime;
 import org.apache.directory.shared.kerberos.codec.types.EncryptionType;
 import org.apache.directory.shared.kerberos.components.EncryptionKey;
@@ -134,7 +135,7 @@ public class MiniKdc {
         r.close();
       }
     }
-    for (Map.Entry entry : userConf.entrySet()) {
+    for (Map.Entry<?, ?> entry : userConf.entrySet()) {
       conf.put(entry.getKey(), entry.getValue());
     }
     final MiniKdc miniKdc = new MiniKdc(conf, workDir);
@@ -250,7 +251,7 @@ public class MiniKdc {
     }
     LOG.info("Configuration:");
     LOG.info("---------------------------------------------------------------");
-    for (Map.Entry entry : conf.entrySet()) {
+    for (Map.Entry<?, ?> entry : conf.entrySet()) {
       LOG.info("  {}: {}", entry.getKey(), entry.getValue());
     }
     LOG.info("---------------------------------------------------------------");
@@ -311,7 +312,6 @@ public class MiniKdc {
     initKDCServer();
   }
 
-  @SuppressWarnings("unchecked")
   private void initDirectoryService() throws Exception {
     ds = new DefaultDirectoryService();
     ds.setInstanceLayout(new InstanceLayout(workDir));
@@ -364,7 +364,7 @@ public class MiniKdc {
     partition.setSuffixDn(new Dn("dc=" + orgName + ",dc=" + orgDomain));
     ds.addPartition(partition);
     // indexes
-    Set indexedAttributes = new HashSet();
+    Set<Index<?, ?, String>> indexedAttributes = new HashSet<Index<?, ?, String>>();
     indexedAttributes.add(new JdbmIndex<String, Entry>("objectClass", false));
     indexedAttributes.add(new JdbmIndex<String, Entry>("dc", false));
     indexedAttributes.add(new JdbmIndex<String, Entry>("ou", false));
@@ -398,9 +398,13 @@ public class MiniKdc {
     SchemaManager schemaManager = ds.getSchemaManager();
     final String content = StrSubstitutor.replace(IOUtils.toString(is), map);
     LdifReader reader = new LdifReader(new StringReader(content));
-    for (LdifEntry ldifEntry : reader) {
-      ds.getAdminSession().add(new DefaultEntry(schemaManager,
-              ldifEntry.getEntry()));
+    try {
+      for (LdifEntry ldifEntry : reader) {
+        ds.getAdminSession().add(new DefaultEntry(schemaManager,
+                ldifEntry.getEntry()));
+      }
+    } finally {
+      reader.close();
     }
 
     kdc = new KdcServer();
