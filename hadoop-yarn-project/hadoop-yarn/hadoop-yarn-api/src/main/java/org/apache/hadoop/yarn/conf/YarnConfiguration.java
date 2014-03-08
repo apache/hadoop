@@ -717,32 +717,59 @@ public class YarnConfiguration extends Configuration {
   /** Class that calculates process tree resource utilization.*/
   public static final String NM_CONTAINER_MON_PROCESS_TREE =
     NM_PREFIX + "container-monitor.process-tree.class";
-
+  
+  /** Prefix for all node manager disk health checker configs. */
+  private static final String NM_DISK_HEALTH_CHECK_PREFIX =
+      "yarn.nodemanager.disk-health-checker.";
   /**
-   * Enable/Disable disks' health checker. Default is true.
-   * An expert level configuration property.
+   * Enable/Disable disks' health checker. Default is true. An expert level
+   * configuration property.
    */
   public static final String NM_DISK_HEALTH_CHECK_ENABLE =
-    NM_PREFIX + "disk-health-checker.enable";
-  /** Frequency of running disks' health checker.*/
+      NM_DISK_HEALTH_CHECK_PREFIX + "enable";
+  /** Frequency of running disks' health checker. */
   public static final String NM_DISK_HEALTH_CHECK_INTERVAL_MS =
-    NM_PREFIX + "disk-health-checker.interval-ms";
+      NM_DISK_HEALTH_CHECK_PREFIX + "interval-ms";
   /** By default, disks' health is checked every 2 minutes. */
   public static final long DEFAULT_NM_DISK_HEALTH_CHECK_INTERVAL_MS =
-    2 * 60 * 1000;
+      2 * 60 * 1000;
 
   /**
    * The minimum fraction of number of disks to be healthy for the nodemanager
    * to launch new containers. This applies to nm-local-dirs and nm-log-dirs.
    */
   public static final String NM_MIN_HEALTHY_DISKS_FRACTION =
-    NM_PREFIX + "disk-health-checker.min-healthy-disks";
+      NM_DISK_HEALTH_CHECK_PREFIX + "min-healthy-disks";
   /**
-   * By default, at least 25% of disks are to be healthy to say that the node
-   * is healthy in terms of disks.
+   * By default, at least 25% of disks are to be healthy to say that the node is
+   * healthy in terms of disks.
    */
-  public static final float DEFAULT_NM_MIN_HEALTHY_DISKS_FRACTION
-    = 0.25F;
+  public static final float DEFAULT_NM_MIN_HEALTHY_DISKS_FRACTION = 0.25F;
+
+  /**
+   * The maximum percentage of disk space that can be used after which a disk is
+   * marked as offline. Values can range from 0.0 to 100.0. If the value is
+   * greater than or equal to 100, NM will check for full disk. This applies to
+   * nm-local-dirs and nm-log-dirs.
+   */
+  public static final String NM_MAX_PER_DISK_UTILIZATION_PERCENTAGE =
+      NM_DISK_HEALTH_CHECK_PREFIX + "max-disk-utilization-per-disk-percentage";
+  /**
+   * By default, 100% of the disk can be used before it is marked as offline.
+   */
+  public static final float DEFAULT_NM_MAX_PER_DISK_UTILIZATION_PERCENTAGE =
+      100.0F;
+
+  /**
+   * The minimum space that must be available on a local dir for it to be used.
+   * This applies to nm-local-dirs and nm-log-dirs.
+   */
+  public static final String NM_MIN_PER_DISK_FREE_SPACE_MB =
+      NM_DISK_HEALTH_CHECK_PREFIX + "min-free-space-per-disk-mb";
+  /**
+   * By default, all of the disk can be used before it is marked as offline.
+   */
+  public static final long DEFAULT_NM_MIN_PER_DISK_FREE_SPACE_MB = 0;
 
   /** Frequency of running node health script.*/
   public static final String NM_HEALTH_CHECK_INTERVAL_MS = 

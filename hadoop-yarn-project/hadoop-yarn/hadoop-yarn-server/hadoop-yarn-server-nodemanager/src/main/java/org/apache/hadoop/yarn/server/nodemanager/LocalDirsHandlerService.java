@@ -89,10 +89,22 @@ public class LocalDirsHandlerService extends AbstractService {
   private final class MonitoringTimerTask extends TimerTask {
 
     public MonitoringTimerTask(Configuration conf) throws YarnRuntimeException {
-      localDirs = new DirectoryCollection(
-          validatePaths(conf.getTrimmedStrings(YarnConfiguration.NM_LOCAL_DIRS)));
-      logDirs = new DirectoryCollection(
-          validatePaths(conf.getTrimmedStrings(YarnConfiguration.NM_LOG_DIRS)));
+      float maxUsableSpacePercentagePerDisk =
+          conf.getFloat(
+            YarnConfiguration.NM_MAX_PER_DISK_UTILIZATION_PERCENTAGE,
+            YarnConfiguration.DEFAULT_NM_MAX_PER_DISK_UTILIZATION_PERCENTAGE);
+      long minFreeSpacePerDiskMB =
+          conf.getLong(YarnConfiguration.NM_MIN_PER_DISK_FREE_SPACE_MB,
+            YarnConfiguration.DEFAULT_NM_MIN_PER_DISK_FREE_SPACE_MB);
+      localDirs =
+          new DirectoryCollection(
+            validatePaths(conf
+              .getTrimmedStrings(YarnConfiguration.NM_LOCAL_DIRS)),
+            maxUsableSpacePercentagePerDisk, minFreeSpacePerDiskMB);
+      logDirs =
+          new DirectoryCollection(
+            validatePaths(conf.getTrimmedStrings(YarnConfiguration.NM_LOG_DIRS)),
+            maxUsableSpacePercentagePerDisk, minFreeSpacePerDiskMB);
       localDirsAllocator = new LocalDirAllocator(
           YarnConfiguration.NM_LOCAL_DIRS);
       logDirsAllocator = new LocalDirAllocator(YarnConfiguration.NM_LOG_DIRS);

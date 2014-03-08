@@ -871,6 +871,24 @@
   </property>
 
   <property>
+    <description>The maximum percentage of disk space utilization allowed after 
+    which a disk is marked as bad. Values can range from 0.0 to 100.0. 
+    If the value is greater than or equal to 100, the nodemanager will check 
+    for full disk. This applies to yarn-nodemanager.local-dirs and 
+    yarn.nodemanager.log-dirs.</description>
+    <name>yarn.nodemanager.disk-health-checker.max-disk-utilization-per-disk-percentage</name>
+    <value>100.0</value>
+  </property>
+
+  <property>
+    <description>The minimum space that must be available on a disk for
+    it to be used. This applies to yarn-nodemanager.local-dirs and 
+    yarn.nodemanager.log-dirs.</description>
+    <name>yarn.nodemanager.disk-health-checker.min-free-space-per-disk-mb</name>
+    <value>0</value>
+  </property>
+
+  <property>
     <description>The path to the Linux container executor.</description>
     <name>yarn.nodemanager.linux-container-executor.path</name>
   </property>

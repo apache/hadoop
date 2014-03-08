@@ -256,6 +256,10 @@ Release 2.4.0 - UNRELEASED
     YARN-1525. Web UI should redirect to active RM when HA is enabled. (Cindy Li
     via kasha)
 
+    YARN-1781. Modified NodeManagers to allow admins to specify max disk
+    utilization for local disks so as to be able to offline full disks. (Varun
+    Vasudev via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
