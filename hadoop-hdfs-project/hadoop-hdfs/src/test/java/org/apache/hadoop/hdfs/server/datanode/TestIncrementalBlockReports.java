@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.datanode;
 import static junit.framework.Assert.assertFalse;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.times;
 
 import java.io.IOException;
@@ -195,7 +196,7 @@ public class TestIncrementalBlockReports {
       Thread.sleep(2000);
 
       // Ensure that the received block is reported.
-      Mockito.verify(nnSpy, times(1)).blockReceivedAndDeleted(
+      Mockito.verify(nnSpy, atLeastOnce()).blockReceivedAndDeleted(
           any(DatanodeRegistration.class),
           anyString(),
           any(StorageReceivedDeletedBlocks[].class));
