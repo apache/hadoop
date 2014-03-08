@@ -63,6 +63,7 @@ public class StandbyCheckpointer {
   private static final Log LOG = LogFactory.getLog(StandbyCheckpointer.class);
   private static final long PREVENT_AFTER_CANCEL_MS = 2*60*1000L;
   private final CheckpointConf checkpointConf;
+  private final Configuration conf;
   private final FSNamesystem namesystem;
   private long lastCheckpointTime;
   private final CheckpointerThread thread;
@@ -80,6 +81,7 @@ public class StandbyCheckpointer {
   public StandbyCheckpointer(Configuration conf, FSNamesystem ns)
       throws IOException {
     this.namesystem = ns;
+    this.conf = conf;
     this.checkpointConf = new CheckpointConf(conf); 
     this.thread = new CheckpointerThread();
     this.uploadThreadFactory = new ThreadFactoryBuilder().setDaemon(true)
@@ -193,7 +195,7 @@ public class StandbyCheckpointer {
     Future<Void> upload = executor.submit(new Callable<Void>() {
       @Override
       public Void call() throws IOException {
-        TransferFsImage.uploadImageFromStorage(activeNNAddress, myNNAddress,
+        TransferFsImage.uploadImageFromStorage(activeNNAddress, conf,
             namesystem.getFSImage().getStorage(), imageType, txid);
         return null;
       }
