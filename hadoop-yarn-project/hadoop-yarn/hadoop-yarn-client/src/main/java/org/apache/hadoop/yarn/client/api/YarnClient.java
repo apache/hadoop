@@ -44,6 +44,7 @@ import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.client.api.impl.YarnClientImpl;
+import org.apache.hadoop.yarn.exceptions.ApplicationIdNotProvidedException;
 import org.apache.hadoop.yarn.exceptions.ContainerNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
@@ -88,6 +89,11 @@ public abstract class YarnClient extends AbstractService {
    * application has been submitted and accepted by the ResourceManager.
    * </p>
    * 
+   * <p>
+   * Should provide an {@link ApplicationId} when submits a new application,
+   * otherwise, it will throw the {@link ApplicationIdNotProvidedException}
+   * </p>
+   *
    * @param appContext
    *          {@link ApplicationSubmissionContext} containing all the details
    *          needed to submit a new application

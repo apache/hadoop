@@ -69,6 +69,7 @@ import org.apache.hadoop.yarn.client.api.AHSClient;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.client.api.YarnClientApplication;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.ApplicationIdNotProvidedException;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -172,15 +173,21 @@ public class YarnClientImpl extends YarnClient {
       submitApplication(ApplicationSubmissionContext appContext)
           throws YarnException, IOException {
     ApplicationId applicationId = appContext.getApplicationId();
-    appContext.setApplicationId(applicationId);
+    if (applicationId == null) {
+      throw new ApplicationIdNotProvidedException(
+          "ApplicationId is not provided in ApplicationSubmissionContext");
+    }
     SubmitApplicationRequest request =
         Records.newRecord(SubmitApplicationRequest.class);
     request.setApplicationSubmissionContext(appContext);
+
+    //TODO: YARN-1763:Handle RM failovers during the submitApplication call.
     rmClient.submitApplication(request);
 
     int pollCount = 0;
     long startTime = System.currentTimeMillis();
 
+    //TODO: YARN-1764:Handle RM fail overs after the submitApplication call.
     while (true) {
       YarnApplicationState state =
           getApplicationReport(applicationId).getYarnApplicationState();
