@@ -114,6 +114,7 @@ public class SecondaryNameNode implements Runnable {
   private InetSocketAddress nameNodeAddr;
   private volatile boolean shouldRun;
   private HttpServer2 infoServer;
+  private URL imageListenURL;
 
   private Collection<URI> checkpointDirs;
   private List<URI> checkpointEditsDirs;
@@ -266,11 +267,13 @@ public class SecondaryNameNode implements Runnable {
     infoServer.setAttribute("secondary.name.node", this);
     infoServer.setAttribute("name.system.image", checkpointImage);
     infoServer.setAttribute(JspHelper.CURRENT_CONF, conf);
-    infoServer.addInternalServlet("imagetransfer", ImageServlet.PATH_SPEC,
-        ImageServlet.class, true);
+    infoServer.addInternalServlet("getimage", "/getimage",
+                                  GetImageServlet.class, true);
     infoServer.start();
 
     LOG.info("Web server init done");
+    imageListenURL = new URL(DFSUtil.getHttpClientScheme(conf) + "://"
+        + NetUtils.getHostPortString(infoServer.getConnectorAddress(0)));
 
     HttpConfig.Policy policy = DFSUtil.getHttpPolicy(conf);
     int connIdx = 0;
@@ -484,6 +487,14 @@ public class SecondaryNameNode implements Runnable {
     LOG.debug("Will connect to NameNode at " + address);
     return address.toURL();
   }
+  
+  /**
+   * Return the host:port of where this SecondaryNameNode is listening
+   * for image transfers
+   */
+  private URL getImageListenAddress() {
+    return imageListenURL;
+  }
 
   /**
    * Create a new checkpoint
@@ -544,8 +555,8 @@ public class SecondaryNameNode implements Runnable {
     // to make this new uploaded image as the most current image.
     //
     long txid = checkpointImage.getLastAppliedTxId();
-    TransferFsImage.uploadImageFromStorage(fsName, conf, dstStorage,
-        NameNodeFile.IMAGE, txid);
+    TransferFsImage.uploadImageFromStorage(fsName, getImageListenAddress(),
+        dstStorage, NameNodeFile.IMAGE, txid);
 
     // error simulation code for junit test
     CheckpointFaultInjector.getInstance().afterSecondaryUploadsNewImage();

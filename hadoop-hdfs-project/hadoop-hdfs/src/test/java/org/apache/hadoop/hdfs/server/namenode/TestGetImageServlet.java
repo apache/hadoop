@@ -69,7 +69,7 @@ public class TestGetImageServlet {
     Mockito.when(context.getAttribute(HttpServer2.ADMINS_ACL)).thenReturn(acls);
     
     // Make sure that NN2 is considered a valid fsimage/edits requestor.
-    assertTrue(ImageServlet.isValidRequestor(context,
+    assertTrue(GetImageServlet.isValidRequestor(context,
         "hdfs/host2@TEST-REALM.COM", conf));
     
     // Mark atm as an admin.
@@ -81,15 +81,15 @@ public class TestGetImageServlet {
     }))).thenReturn(true);
     
     // Make sure that NN2 is still considered a valid requestor.
-    assertTrue(ImageServlet.isValidRequestor(context,
+    assertTrue(GetImageServlet.isValidRequestor(context,
         "hdfs/host2@TEST-REALM.COM", conf));
     
     // Make sure an admin is considered a valid requestor.
-    assertTrue(ImageServlet.isValidRequestor(context,
+    assertTrue(GetImageServlet.isValidRequestor(context,
         "atm@TEST-REALM.COM", conf));
     
     // Make sure other users are *not* considered valid requestors.
-    assertFalse(ImageServlet.isValidRequestor(context,
+    assertFalse(GetImageServlet.isValidRequestor(context,
         "todd@TEST-REALM.COM", conf));
   }
 }

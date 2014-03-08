@@ -858,13 +858,15 @@
 
 <property>
   <name>dfs.image.transfer.timeout</name>
-  <value>60000</value>
+  <value>600000</value>
   <description>
-        Socket timeout for image transfer in milliseconds. This timeout and the related
+        Timeout for image transfer in milliseconds. This timeout and the related
         dfs.image.transfer.bandwidthPerSec parameter should be configured such
-        that normal image transfer can complete successfully.
+        that normal image transfer can complete within the timeout.
         This timeout prevents client hangs when the sender fails during
-        image transfer. This is socket timeout during image tranfer.
+        image transfer, which is particularly important during checkpointing.
+        Note that this timeout applies to the entirety of image transfer, and
+        is not a socket timeout.
   </description>
 </property>
 
@@ -878,16 +880,6 @@
         dfs.image.transfer.timeout should be set such that normal image
         transfers can complete successfully.
         A default value of 0 indicates that throttling is disabled. 
-  </description>
-</property>
-
-<property>
-  <name>dfs.image.transfer.chunksize</name>
-  <value>65536</value>
-  <description>
-        Chunksize in bytes to upload the checkpoint.
-        Chunked streaming is used to avoid internal buffering of contents
-        of image file of huge size.
   </description>
 </property>
 

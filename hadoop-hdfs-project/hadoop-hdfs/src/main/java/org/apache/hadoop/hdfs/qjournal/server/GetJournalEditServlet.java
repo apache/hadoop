@@ -43,7 +43,7 @@ import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.namenode.FileJournalManager;
 import org.apache.hadoop.hdfs.server.namenode.FileJournalManager.EditLogFile;
-import org.apache.hadoop.hdfs.server.namenode.ImageServlet;
+import org.apache.hadoop.hdfs.server.namenode.GetImageServlet;
 import org.apache.hadoop.hdfs.server.namenode.SecondaryNameNode;
 import org.apache.hadoop.hdfs.server.namenode.TransferFsImage;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
@@ -205,16 +205,15 @@ public class GetJournalEditServlet extends HttpServlet {
           return;
         }
         editFile = elf.getFile();
-        ImageServlet.setVerificationHeadersForGet(response, editFile);
-        ImageServlet.setFileNameHeaders(response, editFile);
+        GetImageServlet.setVerificationHeaders(response, editFile);
+        GetImageServlet.setFileNameHeaders(response, editFile);
         editFileIn = new FileInputStream(editFile);
       }
       
-      DataTransferThrottler throttler = ImageServlet.getThrottler(conf);
+      DataTransferThrottler throttler = GetImageServlet.getThrottler(conf);
 
       // send edits
-      TransferFsImage.copyFileToStream(response.getOutputStream(), editFile,
-          editFileIn, throttler);
+      TransferFsImage.getFileServer(response, editFile, editFileIn, throttler);
 
     } catch (Throwable t) {
       String errMsg = "getedit failed. " + StringUtils.stringifyException(t);

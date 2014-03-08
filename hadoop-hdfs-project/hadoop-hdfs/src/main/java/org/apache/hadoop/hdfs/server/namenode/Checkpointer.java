@@ -263,7 +263,8 @@ class Checkpointer extends Daemon {
     }
 
     if(cpCmd.needToReturnImage()) {
-      TransferFsImage.uploadImageFromStorage(backupNode.nnHttpAddress, conf,
+      TransferFsImage.uploadImageFromStorage(
+          backupNode.nnHttpAddress, getImageListenAddress(),
           bnStorage, NameNodeFile.IMAGE, txid);
     }
 
