@@ -122,6 +122,9 @@ Trunk (Unreleased)
 
     HDFS-5138. Support HDFS upgrade in HA. (atm via todd)
 
+    HDFS-3405. Checkpointing should use HTTP POST or PUT instead of GET-GET
+    to send merged fsimages. (Vinayakumar B via wang)
+
   OPTIMIZATIONS
 
   BUG FIXES
