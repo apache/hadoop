@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -55,8 +56,11 @@ public class TestDirectoryCollection {
   @Test
   public void testConcurrentAccess() throws IOException {
     // Initialize DirectoryCollection with a file instead of a directory
+    Configuration conf = new Configuration();
     String[] dirs = {testFile.getPath()};
-    DirectoryCollection dc = new DirectoryCollection(dirs);
+    DirectoryCollection dc = new DirectoryCollection(dirs,
+      conf.getFloat(YarnConfiguration.NM_MAX_PER_DISK_UTILIZATION_PERCENTAGE, 
+        YarnConfiguration.DEFAULT_NM_MAX_PER_DISK_UTILIZATION_PERCENTAGE));
 
     // Create an iterator before checkDirs is called to reliable test case
     List<String> list = dc.getGoodDirs();
@@ -88,7 +92,9 @@ public class TestDirectoryCollection {
     localFs.setPermission(pathC, permDirC);
 
     String[] dirs = { dirA, dirB, dirC };
-    DirectoryCollection dc = new DirectoryCollection(dirs);
+    DirectoryCollection dc = new DirectoryCollection(dirs,
+      conf.getFloat(YarnConfiguration.NM_MAX_PER_DISK_UTILIZATION_PERCENTAGE, 
+        YarnConfiguration.DEFAULT_NM_MAX_PER_DISK_UTILIZATION_PERCENTAGE));
     FsPermission defaultPerm = FsPermission.getDefault()
         .applyUMask(new FsPermission((short)FsPermission.DEFAULT_UMASK));
     boolean createResult = dc.createNonExistentDirs(localFs, defaultPerm);
@@ -103,5 +109,86 @@ public class TestDirectoryCollection {
     status = localFs.getFileStatus(pathC);
     Assert.assertEquals("existing local directory permissions modified",
         permDirC, status.getPermission());
+  }
+  
+  @Test
+  public void testDiskSpaceUtilizationLimit() throws IOException {
+
+    String dirA = new File(testDir, "dirA").getPath();
+    String[] dirs = { dirA };
+    DirectoryCollection dc = new DirectoryCollection(dirs, 0.0F);
+    dc.checkDirs();
+    Assert.assertEquals(0, dc.getGoodDirs().size());
+    Assert.assertEquals(1, dc.getFailedDirs().size());
+
+    dc = new DirectoryCollection(dirs, 100.0F);
+    dc.checkDirs();
+    Assert.assertEquals(1, dc.getGoodDirs().size());
+    Assert.assertEquals(0, dc.getFailedDirs().size());
+
+    dc = new DirectoryCollection(dirs, testDir.getTotalSpace() / (1024 * 1024));
+    dc.checkDirs();
+    Assert.assertEquals(0, dc.getGoodDirs().size());
+    Assert.assertEquals(1, dc.getFailedDirs().size());
+
+    dc = new DirectoryCollection(dirs, 100.0F, 0);
+    dc.checkDirs();
+    Assert.assertEquals(1, dc.getGoodDirs().size());
+    Assert.assertEquals(0, dc.getFailedDirs().size());
+  }
+
+  @Test
+  public void testDiskLimitsCutoffSetters() {
+
+    String[] dirs = { "dir" };
+    DirectoryCollection dc = new DirectoryCollection(dirs, 0.0F, 100);
+    float testValue = 57.5F;
+    float delta = 0.1F;
+    dc.setDiskUtilizationPercentageCutoff(testValue);
+    Assert.assertEquals(testValue, dc.getDiskUtilizationPercentageCutoff(),
+      delta);
+    testValue = -57.5F;
+    dc.setDiskUtilizationPercentageCutoff(testValue);
+    Assert.assertEquals(0.0F, dc.getDiskUtilizationPercentageCutoff(), delta);
+    testValue = 157.5F;
+    dc.setDiskUtilizationPercentageCutoff(testValue);
+    Assert.assertEquals(100.0F, dc.getDiskUtilizationPercentageCutoff(), delta);
+
+    long spaceValue = 57;
+    dc.setDiskUtilizationSpaceCutoff(spaceValue);
+    Assert.assertEquals(spaceValue, dc.getDiskUtilizationSpaceCutoff());
+    spaceValue = -57;
+    dc.setDiskUtilizationSpaceCutoff(spaceValue);
+    Assert.assertEquals(0, dc.getDiskUtilizationSpaceCutoff());
+  }
+
+  @Test
+  public void testConstructors() {
+
+    String[] dirs = { "dir" };
+    float delta = 0.1F;
+    DirectoryCollection dc = new DirectoryCollection(dirs);
+    Assert.assertEquals(100.0F, dc.getDiskUtilizationPercentageCutoff(), delta);
+    Assert.assertEquals(0, dc.getDiskUtilizationSpaceCutoff());
+
+    dc = new DirectoryCollection(dirs, 57.5F);
+    Assert.assertEquals(57.5F, dc.getDiskUtilizationPercentageCutoff(), delta);
+    Assert.assertEquals(0, dc.getDiskUtilizationSpaceCutoff());
+
+    dc = new DirectoryCollection(dirs, 57);
+    Assert.assertEquals(100.0F, dc.getDiskUtilizationPercentageCutoff(), delta);
+    Assert.assertEquals(57, dc.getDiskUtilizationSpaceCutoff());
+
+    dc = new DirectoryCollection(dirs, 57.5F, 67);
+    Assert.assertEquals(57.5F, dc.getDiskUtilizationPercentageCutoff(), delta);
+    Assert.assertEquals(67, dc.getDiskUtilizationSpaceCutoff());
+
+    dc = new DirectoryCollection(dirs, -57.5F, -67);
+    Assert.assertEquals(0.0F, dc.getDiskUtilizationPercentageCutoff(), delta);
+    Assert.assertEquals(0, dc.getDiskUtilizationSpaceCutoff());
+
+    dc = new DirectoryCollection(dirs, 157.5F, -67);
+    Assert.assertEquals(100.0F, dc.getDiskUtilizationPercentageCutoff(), delta);
+    Assert.assertEquals(0, dc.getDiskUtilizationSpaceCutoff());
   }
 }
