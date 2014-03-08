@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -43,10 +44,80 @@ class DirectoryCollection {
   private List<String> localDirs;
   private List<String> failedDirs;
   private int numFailures;
+  
+  private float diskUtilizationPercentageCutoff;
+  private long diskUtilizationSpaceCutoff;
 
+  /**
+   * Create collection for the directories specified. No check for free space.
+   * 
+   * @param dirs
+   *          directories to be monitored
+   */
   public DirectoryCollection(String[] dirs) {
+    this(dirs, 100.0F, 0);
+  }
+
+  /**
+   * Create collection for the directories specified. Users must specify the
+   * maximum percentage of disk utilization allowed. Minimum amount of disk
+   * space is not checked.
+   * 
+   * @param dirs
+   *          directories to be monitored
+   * @param utilizationPercentageCutOff
+   *          percentage of disk that can be used before the dir is taken out of
+   *          the good dirs list
+   * 
+   */
+  public DirectoryCollection(String[] dirs, float utilizationPercentageCutOff) {
+    this(dirs, utilizationPercentageCutOff, 0);
+  }
+
+  /**
+   * Create collection for the directories specified. Users must specify the
+   * minimum amount of free space that must be available for the dir to be used.
+   * 
+   * @param dirs
+   *          directories to be monitored
+   * @param utilizationSpaceCutOff
+   *          minimum space, in MB, that must be available on the disk for the
+   *          dir to be marked as good
+   * 
+   */
+  public DirectoryCollection(String[] dirs, long utilizationSpaceCutOff) {
+    this(dirs, 100.0F, utilizationSpaceCutOff);
+  }
+
+  /**
+   * Create collection for the directories specified. Users must specify the
+   * maximum percentage of disk utilization allowed and the minimum amount of
+   * free space that must be available for the dir to be used. If either check
+   * fails the dir is removed from the good dirs list.
+   * 
+   * @param dirs
+   *          directories to be monitored
+   * @param utilizationPercentageCutOff
+   *          percentage of disk that can be used before the dir is taken out of
+   *          the good dirs list
+   * @param utilizationSpaceCutOff
+   *          minimum space, in MB, that must be available on the disk for the
+   *          dir to be marked as good
+   * 
+   */
+  public DirectoryCollection(String[] dirs, 
+      float utilizationPercentageCutOff,
+      long utilizationSpaceCutOff) {
     localDirs = new CopyOnWriteArrayList<String>(dirs);
     failedDirs = new CopyOnWriteArrayList<String>();
+    diskUtilizationPercentageCutoff = utilizationPercentageCutOff;
+    diskUtilizationSpaceCutoff = utilizationSpaceCutOff;
+    diskUtilizationPercentageCutoff =
+        utilizationPercentageCutOff < 0.0F ? 0.0F
+            : (utilizationPercentageCutOff > 100.0F ? 100.0F
+                : utilizationPercentageCutOff);
+    diskUtilizationSpaceCutoff =
+        utilizationSpaceCutOff < 0 ? 0 : utilizationSpaceCutOff;
   }
 
   /**
@@ -103,18 +174,54 @@ class DirectoryCollection {
    */
   synchronized boolean checkDirs() {
     int oldNumFailures = numFailures;
+    HashSet<String> checkFailedDirs = new HashSet<String>();
     for (final String dir : localDirs) {
       try {
-        DiskChecker.checkDir(new File(dir));
+        File testDir = new File(dir);
+        DiskChecker.checkDir(testDir);
+        if (isDiskUsageUnderPercentageLimit(testDir)) {
+          LOG.warn("Directory " + dir
+              + " error, used space above threshold of "
+              + diskUtilizationPercentageCutoff
+              + "%, removing from the list of valid directories.");
+          checkFailedDirs.add(dir);
+        } else if (isDiskFreeSpaceWithinLimit(testDir)) {
+          LOG.warn("Directory " + dir + " error, free space below limit of "
+              + diskUtilizationSpaceCutoff
+              + "MB, removing from the list of valid directories.");
+          checkFailedDirs.add(dir);
+        }
       } catch (DiskErrorException de) {
-        LOG.warn("Directory " + dir + " error " +
-            de.getMessage() + ", removing from the list of valid directories.");
-        localDirs.remove(dir);
-        failedDirs.add(dir);
-        numFailures++;
+        LOG.warn("Directory " + dir + " error " + de.getMessage()
+            + ", removing from the list of valid directories.");
+        checkFailedDirs.add(dir);
       }
     }
+    for (String dir : checkFailedDirs) {
+      localDirs.remove(dir);
+      failedDirs.add(dir);
+      numFailures++;
+    }
     return numFailures > oldNumFailures;
+  }
+  
+  private boolean isDiskUsageUnderPercentageLimit(File dir) {
+    float freePercentage =
+        100 * (dir.getUsableSpace() / (float) dir.getTotalSpace());
+    float usedPercentage = 100.0F - freePercentage;
+    if (usedPercentage > diskUtilizationPercentageCutoff
+        || usedPercentage >= 100.0F) {
+      return true;
+    }
+    return false;
+  }
+
+  private boolean isDiskFreeSpaceWithinLimit(File dir) {
+    long freeSpace = dir.getUsableSpace() / (1024 * 1024);
+    if (freeSpace < this.diskUtilizationSpaceCutoff) {
+      return true;
+    }
+    return false;
   }
 
   private void createDir(FileContext localFs, Path dir, FsPermission perm)
@@ -131,5 +238,27 @@ class DirectoryCollection {
         localFs.setPermission(dir, perm);
       }
     }
+  }
+  
+  public float getDiskUtilizationPercentageCutoff() {
+    return diskUtilizationPercentageCutoff;
+  }
+
+  public void setDiskUtilizationPercentageCutoff(
+      float diskUtilizationPercentageCutoff) {
+    this.diskUtilizationPercentageCutoff =
+        diskUtilizationPercentageCutoff < 0.0F ? 0.0F
+            : (diskUtilizationPercentageCutoff > 100.0F ? 100.0F
+                : diskUtilizationPercentageCutoff);
+  }
+
+  public long getDiskUtilizationSpaceCutoff() {
+    return diskUtilizationSpaceCutoff;
+  }
+
+  public void setDiskUtilizationSpaceCutoff(long diskUtilizationSpaceCutoff) {
+    diskUtilizationSpaceCutoff =
+        diskUtilizationSpaceCutoff < 0 ? 0 : diskUtilizationSpaceCutoff;
+    this.diskUtilizationSpaceCutoff = diskUtilizationSpaceCutoff;
   }
 }
