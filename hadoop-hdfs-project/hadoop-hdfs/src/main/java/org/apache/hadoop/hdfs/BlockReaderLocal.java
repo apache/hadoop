@@ -478,7 +478,7 @@ class BlockReaderLocal implements BlockReader {
       total += bb;
       if (buf.remaining() == 0) return total;
     }
-    boolean eof = false;
+    boolean eof = true, done = false;
     do {
       if (buf.isDirect() && (buf.remaining() >= maxReadaheadLength)
             && ((dataPos % bytesPerChecksum) == 0)) {
@@ -493,20 +493,24 @@ class BlockReaderLocal implements BlockReader {
           buf.limit(oldLimit);
         }
         if (nRead < maxReadaheadLength) {
-          eof = true;
+          done = true;
+        }
+        if (nRead > 0) {
+          eof = false;
         }
         total += nRead;
       } else {
         // Slow lane: refill bounce buffer.
         if (fillDataBuf(canSkipChecksum)) {
-          eof = true;
+          done = true;
         }
         bb = drainDataBuf(buf); // drain bounce buffer if possible
         if (bb >= 0) {
+          eof = false;
           total += bb;
         }
       }
-    } while ((!eof) && (buf.remaining() > 0));
+    } while ((!done) && (buf.remaining() > 0));
     return (eof && total == 0) ? -1 : total;
   }
 
