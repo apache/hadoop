@@ -134,6 +134,17 @@ message IsFormattedResponseProto {
 }
 
 /**
+ * discardSegments()
+ */
+message DiscardSegmentsRequestProto {
+  required JournalIdProto jid = 1;
+  required uint64 startTxId = 2;
+}
+
+message DiscardSegmentsResponseProto {
+}
+
+/**
  * getJournalState()
  */
 message GetJournalStateRequestProto {
@@ -235,6 +246,8 @@ message AcceptRecoveryResponseProto {
  */
 service QJournalProtocolService {
   rpc isFormatted(IsFormattedRequestProto) returns (IsFormattedResponseProto);
+
+  rpc discardSegments(DiscardSegmentsRequestProto) returns (DiscardSegmentsResponseProto);
 
   rpc getJournalState(GetJournalStateRequestProto) returns (GetJournalStateResponseProto);
 

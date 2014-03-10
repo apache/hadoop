@@ -132,7 +132,7 @@ public class EditLogFileOutputStream extends EditLogOutputStream {
    */
   @VisibleForTesting
   public static void writeHeader(DataOutputStream out) throws IOException {
-    out.writeInt(HdfsConstants.LAYOUT_VERSION);
+    out.writeInt(HdfsConstants.NAMENODE_LAYOUT_VERSION);
     LayoutFlags.write(out);
   }
 

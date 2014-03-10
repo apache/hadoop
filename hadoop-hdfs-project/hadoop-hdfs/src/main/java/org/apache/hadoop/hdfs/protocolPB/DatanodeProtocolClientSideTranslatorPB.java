@@ -34,6 +34,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.RollingUpgradeStatus;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockReceivedAndDeletedRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockReportRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockReportResponseProto;
@@ -184,7 +185,12 @@ public class DatanodeProtocolClientSideTranslatorPB implements
       cmds[index] = PBHelper.convert(p);
       index++;
     }
-    return new HeartbeatResponse(cmds, PBHelper.convert(resp.getHaStatus()));
+    RollingUpgradeStatus rollingUpdateStatus = null;
+    if (resp.hasRollingUpgradeStatus()) {
+      rollingUpdateStatus = PBHelper.convert(resp.getRollingUpgradeStatus());
+    }
+    return new HeartbeatResponse(cmds, PBHelper.convert(resp.getHaStatus()),
+        rollingUpdateStatus);
   }
 
   @Override

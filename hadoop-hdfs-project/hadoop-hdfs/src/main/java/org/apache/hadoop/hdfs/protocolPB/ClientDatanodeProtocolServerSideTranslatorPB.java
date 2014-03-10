@@ -30,6 +30,8 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.Delete
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.DeleteBlockPoolResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetBlockLocalPathInfoRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetBlockLocalPathInfoResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetDatanodeInfoRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetDatanodeInfoResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetHdfsBlockLocationsRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetHdfsBlockLocationsResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetHdfsBlockLocationsResponseProto.Builder;
@@ -37,10 +39,13 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetRep
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetReplicaVisibleLengthResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.RefreshNamenodesRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.RefreshNamenodesResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.ShutdownDatanodeRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.ShutdownDatanodeResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ExtendedBlockProto;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.VersionInfo;
 
 import com.google.common.primitives.Longs;
 import com.google.protobuf.ByteString;
@@ -59,6 +64,8 @@ public class ClientDatanodeProtocolServerSideTranslatorPB implements
       RefreshNamenodesResponseProto.newBuilder().build();
   private final static DeleteBlockPoolResponseProto DELETE_BLOCKPOOL_RESP =
       DeleteBlockPoolResponseProto.newBuilder().build();
+  private final static ShutdownDatanodeResponseProto SHUTDOWN_DATANODE_RESP =
+      ShutdownDatanodeResponseProto.newBuilder().build();
   
   private final ClientDatanodeProtocol impl;
 
@@ -150,5 +157,29 @@ public class ClientDatanodeProtocolServerSideTranslatorPB implements
     builder.addAllVolumeIds(volumeIdsByteStrings);
     builder.addAllVolumeIndexes(resp.getVolumeIndexes());
     return builder.build();
+  }
+
+  @Override
+  public ShutdownDatanodeResponseProto shutdownDatanode(
+      RpcController unused, ShutdownDatanodeRequestProto request)
+      throws ServiceException {
+    try {
+      impl.shutdownDatanode(request.getForUpgrade());
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return SHUTDOWN_DATANODE_RESP;
+  }
+
+  public GetDatanodeInfoResponseProto getDatanodeInfo(RpcController unused,
+      GetDatanodeInfoRequestProto request) throws ServiceException {
+    GetDatanodeInfoResponseProto res;
+    try {
+      res = GetDatanodeInfoResponseProto.newBuilder()
+          .setLocalInfo(PBHelper.convert(impl.getDatanodeInfo())).build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return res;
   }
 }

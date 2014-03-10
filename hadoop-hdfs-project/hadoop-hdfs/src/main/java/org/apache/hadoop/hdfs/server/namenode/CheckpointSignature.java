@@ -21,6 +21,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.namenode.FSImage;
 
 import com.google.common.collect.ComparisonChain;
@@ -47,6 +48,7 @@ public class CheckpointSignature extends StorageInfo
   }
 
   CheckpointSignature(String str) {
+    super(NodeType.NAME_NODE);
     String[] fields = str.split(FIELD_SEPARATOR);
     assert fields.length == NUM_FIELDS :
       "Must be " + NUM_FIELDS + " fields in CheckpointSignature";

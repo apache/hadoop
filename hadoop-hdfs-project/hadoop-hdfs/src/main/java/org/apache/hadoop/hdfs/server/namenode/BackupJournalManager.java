@@ -97,4 +97,9 @@ class BackupJournalManager implements JournalManager {
   public String toString() {
     return "BackupJournalManager";
   }
+
+  @Override
+  public void discardSegments(long startTxId) throws IOException {
+    throw new UnsupportedOperationException();
+  }
 }

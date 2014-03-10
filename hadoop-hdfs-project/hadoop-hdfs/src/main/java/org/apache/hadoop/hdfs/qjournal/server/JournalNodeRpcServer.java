@@ -205,4 +205,9 @@ class JournalNodeRpcServer implements QJournalProtocol {
         .acceptRecovery(reqInfo, log, fromUrl);
   }
 
+  @Override
+  public void discardSegments(String journalId, long startTxId)
+      throws IOException {
+    jn.discardSegments(journalId, startTxId);
+  }
 }

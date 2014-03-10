@@ -244,13 +244,14 @@ public class LightWeightGSet<K, E extends K> implements GSet<K, E> {
     out.println("\n]");
   }
 
-  private class SetIterator implements Iterator<E> {
+  public class SetIterator implements Iterator<E> {
     /** The starting modification for fail-fast. */
     private int iterModification = modification;
     /** The current index of the entry array. */
     private int index = -1;
     private LinkedElement cur = null;
     private LinkedElement next = nextNonemptyEntry();
+    private boolean trackModification = true;
 
     /** Find the next nonempty entry starting at (index + 1). */
     private LinkedElement nextNonemptyEntry() {
@@ -259,7 +260,7 @@ public class LightWeightGSet<K, E extends K> implements GSet<K, E> {
     }
 
     private void ensureNext() {
-      if (modification != iterModification) {
+      if (trackModification && modification != iterModification) {
         throw new ConcurrentModificationException("modification=" + modification
             + " != iterModification = " + iterModification);
       }
@@ -303,6 +304,10 @@ public class LightWeightGSet<K, E extends K> implements GSet<K, E> {
       LightWeightGSet.this.remove((K)cur);
       iterModification++;
       cur = null;
+    }
+
+    public void setTrackModification(boolean trackModification) {
+      this.trackModification = trackModification;
     }
   }
   

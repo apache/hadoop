@@ -43,6 +43,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.JournalSet;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage;
+import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.util.Canceler;
@@ -194,9 +195,9 @@ public class TestStandbyCheckpoints {
     Thread.sleep(2000);
     
     // We should make exactly one checkpoint at this new txid. 
-    Mockito.verify(spyImage1, Mockito.times(1))
-      .saveNamespace((FSNamesystem) Mockito.anyObject(),
-          (Canceler)Mockito.anyObject());       
+    Mockito.verify(spyImage1, Mockito.times(1)).saveNamespace(
+        (FSNamesystem) Mockito.anyObject(), Mockito.eq(NameNodeFile.IMAGE),
+        (Canceler) Mockito.anyObject());
   }
   
   /**
@@ -284,8 +285,8 @@ public class TestStandbyCheckpoints {
     DelayAnswer answerer = new DelayAnswer(LOG);
     Mockito.doAnswer(answerer).when(spyImage1)
         .saveNamespace(Mockito.any(FSNamesystem.class),
-            Mockito.any(Canceler.class));
-    
+            Mockito.eq(NameNodeFile.IMAGE), Mockito.any(Canceler.class));
+
     // Perform some edits and wait for a checkpoint to start on the SBN.
     doEdits(0, 1000);
     nn0.getRpcServer().rollEditLog();
@@ -322,6 +323,7 @@ public class TestStandbyCheckpoints {
     DelayAnswer answerer = new DelayAnswer(LOG);
     Mockito.doAnswer(answerer).when(spyImage1)
         .saveNamespace(Mockito.any(FSNamesystem.class),
+            Mockito.any(NameNodeFile.class),
             Mockito.any(Canceler.class));
     
     // Perform some edits and wait for a checkpoint to start on the SBN.

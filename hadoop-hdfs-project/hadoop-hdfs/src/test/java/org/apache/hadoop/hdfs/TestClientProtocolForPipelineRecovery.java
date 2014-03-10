@@ -24,8 +24,10 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.LeaseExpiredException;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
+import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.io.IOUtils;
 import org.junit.Assert;
@@ -154,6 +156,103 @@ public class TestClientProtocolForPipelineRecovery {
       }
     } finally {
       DFSClientFaultInjector.instance = oldInjector;
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  /**
+   * Test recovery on restart OOB message. It also tests the delivery of 
+   * OOB ack originating from the primary datanode. Since there is only
+   * one node in the cluster, failure of restart-recovery will fail the
+   * test.
+   */
+  @Test
+  public void testPipelineRecoveryOnOOB() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    conf.set(DFSConfigKeys.DFS_CLIENT_DATANODE_RESTART_TIMEOUT_KEY, "15");
+    MiniDFSCluster cluster = null;
+    try {
+      int numDataNodes = 1;
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDataNodes).build();
+      cluster.waitActive();
+      FileSystem fileSys = cluster.getFileSystem();
+
+      Path file = new Path("dataprotocol2.dat");
+      DFSTestUtil.createFile(fileSys, file, 10240L, (short)1, 0L);
+      DFSOutputStream out = (DFSOutputStream)(fileSys.append(file).
+          getWrappedStream());
+      out.write(1);
+      out.hflush();
+
+      DFSAdmin dfsadmin = new DFSAdmin(conf);
+      DataNode dn = cluster.getDataNodes().get(0);
+      final String dnAddr = dn.getDatanodeId().getIpcAddr(false);
+      // issue shutdown to the datanode.
+      final String[] args1 = {"-shutdownDatanode", dnAddr, "upgrade" };
+      Assert.assertEquals(0, dfsadmin.run(args1));
+      // Wait long enough to receive an OOB ack before closing the file.
+      Thread.sleep(4000);
+      // Retart the datanode 
+      cluster.restartDataNode(0, true);
+      // The following forces a data packet and end of block packets to be sent. 
+      out.close();
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  /** Test restart timeout */
+  @Test
+  public void testPipelineRecoveryOnRestartFailure() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    conf.set(DFSConfigKeys.DFS_CLIENT_DATANODE_RESTART_TIMEOUT_KEY, "5");
+    MiniDFSCluster cluster = null;
+    try {
+      int numDataNodes = 2;
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDataNodes).build();
+      cluster.waitActive();
+      FileSystem fileSys = cluster.getFileSystem();
+
+      Path file = new Path("dataprotocol3.dat");
+      DFSTestUtil.createFile(fileSys, file, 10240L, (short)2, 0L);
+      DFSOutputStream out = (DFSOutputStream)(fileSys.append(file).
+          getWrappedStream());
+      out.write(1);
+      out.hflush();
+
+      DFSAdmin dfsadmin = new DFSAdmin(conf);
+      DataNode dn = cluster.getDataNodes().get(0);
+      final String dnAddr1 = dn.getDatanodeId().getIpcAddr(false);
+      // issue shutdown to the datanode.
+      final String[] args1 = {"-shutdownDatanode", dnAddr1, "upgrade" };
+      Assert.assertEquals(0, dfsadmin.run(args1));
+      Thread.sleep(4000);
+      // This should succeed without restarting the node. The restart will
+      // expire and regular pipeline recovery will kick in. 
+      out.close();
+
+      // At this point there is only one node in the cluster. 
+      out = (DFSOutputStream)(fileSys.append(file).
+          getWrappedStream());
+      out.write(1);
+      out.hflush();
+
+      dn = cluster.getDataNodes().get(1);
+      final String dnAddr2 = dn.getDatanodeId().getIpcAddr(false);
+      // issue shutdown to the datanode.
+      final String[] args2 = {"-shutdownDatanode", dnAddr2, "upgrade" };
+      Assert.assertEquals(0, dfsadmin.run(args2));
+      Thread.sleep(4000);
+      try {
+        // close should fail
+        out.close();
+        assert false;
+      } catch (IOException ioe) { }
+    } finally {
       if (cluster != null) {
         cluster.shutdown();
       }

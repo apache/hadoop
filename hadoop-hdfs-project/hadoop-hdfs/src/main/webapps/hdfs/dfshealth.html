@@ -72,14 +72,26 @@
 <script type="text/x-dust-template" id="tmpl-dfshealth">
 
 {#nn}
-{@if cond="{DistinctVersionCount} > 1"}
+{@if cond="{DistinctVersionCount} > 1 || '{RollingUpgradeStatus}'.length"}
 <div class="alert alert-dismissable alert-info">
   <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
 
-  There are {DistinctVersionCount} versions of datanodes currently live: 
-  {#DistinctVersions}
-  {key} ({value}) {@sep},{/sep}
-  {/DistinctVersions}
+  {#RollingUpgradeStatus}
+    <p>Rolling upgrade started at {#helper_date_tostring value="{startTime}"/}. </br>
+    {#createdRollbackImages}
+      Rollback image has been created. Proceed to upgrade daemons.
+      {:else}
+      Rollback image has not been created.
+    {/createdRollbackImages}
+    </p>
+  {/RollingUpgradeStatus}
+
+  {@if cond="{DistinctVersionCount} > 1"}
+    There are {DistinctVersionCount} versions of datanodes currently live:
+    {#DistinctVersions}
+    {key} ({value}) {@sep},{/sep}
+    {/DistinctVersions}
+  {/if}
 </div>
 {/if}
 

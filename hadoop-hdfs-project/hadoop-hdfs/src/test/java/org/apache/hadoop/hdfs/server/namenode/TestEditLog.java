@@ -218,7 +218,7 @@ public class TestEditLog {
   
   private long testLoad(byte[] data, FSNamesystem namesys) throws IOException {
     FSEditLogLoader loader = new FSEditLogLoader(namesys, 0);
-    return loader.loadFSEdits(new EditLogByteInputStream(data), 1, null);
+    return loader.loadFSEdits(new EditLogByteInputStream(data), 1);
   }
 
   /**
@@ -369,7 +369,7 @@ public class TestEditLog {
         
         System.out.println("Verifying file: " + editFile);
         long numEdits = loader.loadFSEdits(
-            new EditLogFileInputStream(editFile), 3, null);
+            new EditLogFileInputStream(editFile), 3);
         int numLeases = namesystem.leaseManager.countLease();
         System.out.println("Number of outstanding leases " + numLeases);
         assertEquals(0, numLeases);

@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.tools;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.net.URL;
 import java.security.PrivilegedExceptionAction;
@@ -47,9 +48,12 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.DatanodeLocalInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
+import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.TransferFsImage;
@@ -63,6 +67,8 @@ import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
 import org.apache.hadoop.ipc.RefreshCallQueueProtocol;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
+
+import com.google.common.base.Preconditions;
 
 /**
  * This class provides some DFS administrative access shell commands.
@@ -271,7 +277,71 @@ public class DFSAdmin extends FsShell {
       dfs.setQuota(path, HdfsConstants.QUOTA_DONT_SET, quota);
     }
   }
-  
+
+  private static class RollingUpgradeCommand {
+    static final String NAME = "rollingUpgrade";
+    static final String USAGE = "-"+NAME+" [<query|prepare|finalize>]";
+    static final String DESCRIPTION = USAGE + ":\n"
+        + "     query: query the current rolling upgrade status.\n"
+        + "   prepare: prepare a new rolling upgrade."
+        + "  finalize: finalize the current rolling upgrade.";
+
+    /** Check if a command is the rollingUpgrade command
+     * 
+     * @param cmd A string representation of a command starting with "-"
+     * @return true if this is a clrQuota command; false otherwise
+     */
+    static boolean matches(String cmd) {
+      return ("-"+NAME).equals(cmd); 
+    }
+
+    private static void printMessage(RollingUpgradeInfo info,
+        PrintStream out) {
+      if (info != null && info.isStarted()) {
+        if (!info.createdRollbackImages()) {
+          out.println(
+              "Preparing for upgrade. Data is being saved for rollback."
+              + "\nRun \"dfsadmin -rollingUpgrade query\" to check the status"
+              + "\nfor proceeding with rolling upgrade");
+            out.println(info);
+        } else if (!info.isFinalized()) {
+          out.println("Proceed with rolling upgrade:");
+          out.println(info);
+        } else {
+          out.println("Rolling upgrade is finalized.");
+          out.println(info);
+        }
+      } else {
+        out.println("There is no rolling upgrade in progress.");
+      }
+    }
+
+    static int run(DistributedFileSystem dfs, String[] argv, int idx) throws IOException {
+      final RollingUpgradeAction action = RollingUpgradeAction.fromString(
+          argv.length >= 2? argv[1]: "");
+      if (action == null) {
+        throw new IllegalArgumentException("Failed to covert \"" + argv[1]
+            +"\" to " + RollingUpgradeAction.class.getSimpleName());
+      }
+
+      System.out.println(action + " rolling upgrade ...");
+
+      final RollingUpgradeInfo info = dfs.rollingUpgrade(action);
+      switch(action){
+      case QUERY:
+        break;
+      case PREPARE:
+        Preconditions.checkState(info.isStarted());
+        break;
+      case FINALIZE:
+        Preconditions.checkState(info.isFinalized());
+        break;
+      }
+      printMessage(info, System.out);
+      return 0;
+    }
+  }
+
   /**
    * Construct a DFSAdmin object.
    */
@@ -576,9 +646,11 @@ public class DFSAdmin extends FsShell {
       "\t[" + ClearQuotaCommand.USAGE +"]\n" +
       "\t[" + SetSpaceQuotaCommand.USAGE + "]\n" +
       "\t[" + ClearSpaceQuotaCommand.USAGE +"]\n" +
+      "\t[-finalizeUpgrade]\n" +
+      "\t[" + RollingUpgradeCommand.USAGE +"]\n" +
       "\t[-refreshServiceAcl]\n" +
       "\t[-refreshUserToGroupsMappings]\n" +
-      "\t[refreshSuperUserGroupsConfiguration]\n" +
+      "\t[-refreshSuperUserGroupsConfiguration]\n" +
       "\t[-refreshCallQueue]\n" +
       "\t[-printTopology]\n" +
       "\t[-refreshNamenodes datanodehost:port]\n"+
@@ -587,6 +659,8 @@ public class DFSAdmin extends FsShell {
       "\t[-fetchImage <local directory>]\n" +
       "\t[-allowSnapshot <snapshotDir>]\n" +
       "\t[-disallowSnapshot <snapshotDir>]\n" +
+      "\t[-shutdownDatanode <datanode_host:ipc_port> [upgrade]]\n" +
+      "\t[-getDatanodeInfo <datanode_host:ipc_port>\n" +
       "\t[-help [cmd]]\n";
 
     String report ="-report: \tReports basic filesystem information and statistics.\n";
@@ -685,6 +759,18 @@ public class DFSAdmin extends FsShell {
     
     String disallowSnapshot = "-disallowSnapshot <snapshotDir>:\n" +
         "\tDo not allow snapshots to be taken on a directory any more.\n";
+
+    String shutdownDatanode = "-shutdownDatanode <datanode_host:ipc_port> [upgrade]\n"
+        + "\tSubmit a shutdown request for the given datanode. If an optional\n"
+        + "\t\"upgrade\" argument is specified, clients accessing the datanode\n"
+        + "\twill be advised to wait for it to restart and the fast start-up\n"
+        + "\tmode will be enabled. When the restart does not happen in time,\n"
+        + "\tclients will timeout and ignore the datanode. In such case, the\n"
+        + "\tfast start-up mode will also be disabled.\n";
+
+    String getDatanodeInfo = "-getDatanodeInfo <datanode_host:ipc_port>\n"
+        + "\tGet the information about the given datanode. This command can\n"
+        + "\tbe used for checking if a datanode is alive.\n";
     
     String help = "-help [cmd]: \tDisplays help for the given command or all commands if none\n" +
       "\t\tis specified.\n";
@@ -703,6 +789,8 @@ public class DFSAdmin extends FsShell {
       System.out.println(refreshNodes);
     } else if ("finalizeUpgrade".equals(cmd)) {
       System.out.println(finalizeUpgrade);
+    } else if (RollingUpgradeCommand.matches("-"+cmd)) {
+      System.out.println(RollingUpgradeCommand.DESCRIPTION);
     } else if ("metasave".equals(cmd)) {
       System.out.println(metaSave);
     } else if (SetQuotaCommand.matches("-"+cmd)) {
@@ -735,6 +823,10 @@ public class DFSAdmin extends FsShell {
       System.out.println(allowSnapshot);
     } else if ("disallowSnapshot".equalsIgnoreCase(cmd)) {
       System.out.println(disallowSnapshot);
+    } else if ("shutdownDatanode".equalsIgnoreCase(cmd)) {
+      System.out.println(shutdownDatanode);
+    } else if ("getDatanodeInfo".equalsIgnoreCase(cmd)) {
+      System.out.println(getDatanodeInfo);
     } else if ("help".equals(cmd)) {
       System.out.println(help);
     } else {
@@ -746,6 +838,7 @@ public class DFSAdmin extends FsShell {
       System.out.println(restoreFailedStorage);
       System.out.println(refreshNodes);
       System.out.println(finalizeUpgrade);
+      System.out.println(RollingUpgradeCommand.DESCRIPTION);
       System.out.println(metaSave);
       System.out.println(SetQuotaCommand.DESCRIPTION);
       System.out.println(ClearQuotaCommand.DESCRIPTION);
@@ -762,6 +855,8 @@ public class DFSAdmin extends FsShell {
       System.out.println(fetchImage);
       System.out.println(allowSnapshot);
       System.out.println(disallowSnapshot);
+      System.out.println(shutdownDatanode);
+      System.out.println(getDatanodeInfo);
       System.out.println(help);
       System.out.println();
       ToolRunner.printGenericCommandUsage(System.out);
@@ -980,6 +1075,9 @@ public class DFSAdmin extends FsShell {
     } else if ("-finalizeUpgrade".equals(cmd)) {
       System.err.println("Usage: java DFSAdmin"
                          + " [-finalizeUpgrade]");
+    } else if (RollingUpgradeCommand.matches(cmd)) {
+      System.err.println("Usage: java DFSAdmin"
+          + " [" + RollingUpgradeCommand.USAGE+"]");
     } else if ("-metasave".equals(cmd)) {
       System.err.println("Usage: java DFSAdmin"
           + " [-metasave filename]");
@@ -1034,6 +1132,7 @@ public class DFSAdmin extends FsShell {
       System.err.println("           [-restoreFailedStorage true|false|check]");
       System.err.println("           [-refreshNodes]");
       System.err.println("           [-finalizeUpgrade]");
+      System.err.println("           ["+RollingUpgradeCommand.USAGE+"]");
       System.err.println("           [-metasave filename]");
       System.err.println("           [-refreshServiceAcl]");
       System.err.println("           [-refreshUserToGroupsMappings]");
@@ -1048,6 +1147,8 @@ public class DFSAdmin extends FsShell {
       System.err.println("           ["+ClearSpaceQuotaCommand.USAGE+"]");      
       System.err.println("           [-setBalancerBandwidth <bandwidth in bytes per second>]");
       System.err.println("           [-fetchImage <local directory>]");
+      System.err.println("           [-shutdownDatanode <datanode_host:ipc_port> [upgrade]]");
+      System.err.println("           [-getDatanodeInfo <datanode_host:ipc_port>]");
       System.err.println("           [-help [cmd]]");
       System.err.println();
       ToolRunner.printGenericCommandUsage(System.err);
@@ -1119,6 +1220,11 @@ public class DFSAdmin extends FsShell {
         printUsage(cmd);
         return exitCode;
       }
+    } else if (RollingUpgradeCommand.matches(cmd)) {
+      if (argv.length < 1 || argv.length > 2) {
+        printUsage(cmd);
+        return exitCode;
+      }
     } else if ("-metasave".equals(cmd)) {
       if (argv.length != 2) {
         printUsage(cmd);
@@ -1159,6 +1265,16 @@ public class DFSAdmin extends FsShell {
         printUsage(cmd);
         return exitCode;
       }
+    } else if ("-shutdownDatanode".equals(cmd)) {
+      if ((argv.length != 2) && (argv.length != 3)) {
+        printUsage(cmd);
+        return exitCode;
+      }
+    } else if ("-getDatanodeInfo".equals(cmd)) {
+      if (argv.length != 2) {
+        printUsage(cmd);
+        return exitCode;
+      }
     }
     
     // initialize DFSAdmin
@@ -1194,6 +1310,8 @@ public class DFSAdmin extends FsShell {
         exitCode = refreshNodes();
       } else if ("-finalizeUpgrade".equals(cmd)) {
         exitCode = finalizeUpgrade();
+      } else if (RollingUpgradeCommand.matches(cmd)) {
+        exitCode = RollingUpgradeCommand.run(getDFS(), argv, i);
       } else if ("-metasave".equals(cmd)) {
         exitCode = metaSave(argv, i);
       } else if (ClearQuotaCommand.matches(cmd)) {
@@ -1222,6 +1340,10 @@ public class DFSAdmin extends FsShell {
         exitCode = setBalancerBandwidth(argv, i);
       } else if ("-fetchImage".equals(cmd)) {
         exitCode = fetchImage(argv, i);
+      } else if ("-shutdownDatanode".equals(cmd)) {
+        exitCode = shutdownDatanode(argv, i);
+      } else if ("-getDatanodeInfo".equals(cmd)) {
+        exitCode = getDatanodeInfo(argv, i);
       } else if ("-help".equals(cmd)) {
         if (i < argv.length) {
           printHelp(argv[i]);
@@ -1303,6 +1425,35 @@ public class DFSAdmin extends FsShell {
     ClientDatanodeProtocol refreshProtocol = getDataNodeProxy(datanode);
     refreshProtocol.refreshNamenodes();
     
+    return 0;
+  }
+
+  private int shutdownDatanode(String[] argv, int i) throws IOException {
+    final String dn = argv[i];
+    ClientDatanodeProtocol dnProxy = getDataNodeProxy(dn);
+    boolean upgrade = false;
+    if (argv.length-1 == i+1) {
+      if ("upgrade".equalsIgnoreCase(argv[i+1])) {
+        upgrade = true;
+      } else {
+        printUsage("-shutdownDatanode");
+        return -1;
+      }
+    }
+    dnProxy.shutdownDatanode(upgrade);
+    System.out.println("Submitted a shutdown request to datanode " + dn);
+    return 0;
+  }
+
+  private int getDatanodeInfo(String[] argv, int i) throws IOException {
+    ClientDatanodeProtocol dnProxy = getDataNodeProxy(argv[i]);
+    try {
+      DatanodeLocalInfo dnInfo = dnProxy.getDatanodeInfo();
+      System.out.println(dnInfo.getDatanodeLocalReport());
+    } catch (IOException ioe) {
+      System.err.println("Datanode unreachable.");
+      return -1;
+    }
     return 0;
   }
 

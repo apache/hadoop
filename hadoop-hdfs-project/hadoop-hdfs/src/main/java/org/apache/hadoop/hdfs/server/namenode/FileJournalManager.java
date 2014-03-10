@@ -196,6 +196,32 @@ public class FileJournalManager implements JournalManager {
     
     return ret;
   }
+  
+  /**
+   * Discard all editlog segments whose first txid is greater than or equal to
+   * the given txid, by renaming them with suffix ".trash".
+   */
+  private void discardEditLogSegments(long startTxId) throws IOException {
+    File currentDir = sd.getCurrentDir();
+    List<EditLogFile> allLogFiles = matchEditLogs(currentDir);
+    List<EditLogFile> toTrash = Lists.newArrayList();
+    LOG.info("Discard the EditLog files, the given start txid is " + startTxId);
+    // go through the editlog files to make sure the startTxId is right at the
+    // segment boundary
+    for (EditLogFile elf : allLogFiles) {
+      if (elf.getFirstTxId() >= startTxId) {
+        toTrash.add(elf);
+      } else {
+        Preconditions.checkState(elf.getLastTxId() < startTxId);
+      }
+    }
+
+    for (EditLogFile elf : toTrash) {
+      // rename these editlog file as .trash
+      elf.moveAsideTrashFile(startTxId);
+      LOG.info("Trash the EditLog file " + elf);
+    }
+  }
 
   /**
    * returns matching edit logs via the log directory. Simple helper function
@@ -465,6 +491,11 @@ public class FileJournalManager implements JournalManager {
       renameSelf(".corrupt");
     }
 
+    void moveAsideTrashFile(long markerTxid) throws IOException {
+      assert this.getFirstTxId() >= markerTxid;
+      renameSelf(".trash");
+    }
+
     public void moveAsideEmptyFile() throws IOException {
       assert lastTxId == HdfsConstants.INVALID_TXID;
       renameSelf(".empty");
@@ -488,5 +519,10 @@ public class FileJournalManager implements JournalManager {
                            file.toString(), firstTxId, lastTxId,
                            isInProgress(), hasCorruptHeader);
     }
+  }
+
+  @Override
+  public void discardSegments(long startTxid) throws IOException {
+    discardEditLogSegments(startTxid);
   }
 }

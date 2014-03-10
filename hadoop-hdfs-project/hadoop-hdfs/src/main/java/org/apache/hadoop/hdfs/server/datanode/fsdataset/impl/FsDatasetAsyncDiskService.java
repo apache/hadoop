@@ -153,29 +153,34 @@ class FsDatasetAsyncDiskService {
    * dfsUsed statistics accordingly.
    */
   void deleteAsync(FsVolumeImpl volume, File blockFile, File metaFile,
-      ExtendedBlock block) {
+      ExtendedBlock block, String trashDirectory) {
     LOG.info("Scheduling " + block.getLocalBlock()
         + " file " + blockFile + " for deletion");
     ReplicaFileDeleteTask deletionTask = new ReplicaFileDeleteTask(
-        volume, blockFile, metaFile, block);
+        volume, blockFile, metaFile, block, trashDirectory);
     execute(volume.getCurrentDir(), deletionTask);
   }
   
   /** A task for deleting a block file and its associated meta file, as well
-   *  as decrement the dfs usage of the volume. 
+   *  as decrement the dfs usage of the volume.
+   *  Optionally accepts a trash directory. If one is specified then the files
+   *  are moved to trash instead of being deleted. If none is specified then the
+   *  files are deleted immediately.
    */
   class ReplicaFileDeleteTask implements Runnable {
     final FsVolumeImpl volume;
     final File blockFile;
     final File metaFile;
     final ExtendedBlock block;
+    final String trashDirectory;
     
     ReplicaFileDeleteTask(FsVolumeImpl volume, File blockFile,
-        File metaFile, ExtendedBlock block) {
+        File metaFile, ExtendedBlock block, String trashDirectory) {
       this.volume = volume;
       this.blockFile = blockFile;
       this.metaFile = metaFile;
       this.block = block;
+      this.trashDirectory = trashDirectory;
     }
 
     @Override
@@ -186,12 +191,39 @@ class FsDatasetAsyncDiskService {
           + " and meta file " + metaFile + " from volume " + volume;
     }
 
+    private boolean deleteFiles() {
+      return blockFile.delete() && (metaFile.delete() || !metaFile.exists());
+    }
+
+    private boolean moveFiles() {
+      File trashDirFile = new File(trashDirectory);
+      if (!trashDirFile.exists() && !trashDirFile.mkdirs()) {
+        LOG.error("Failed to create trash directory " + trashDirectory);
+        return false;
+      }
+
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Moving files " + blockFile.getName() + " and " +
+            metaFile.getName() + " to trash.");
+      }
+
+      File newBlockFile = new File(trashDirectory, blockFile.getName());
+      File newMetaFile = new File(trashDirectory, metaFile.getName());
+      return (blockFile.renameTo(newBlockFile) &&
+              metaFile.renameTo(newMetaFile));
+    }
+
     @Override
     public void run() {
       long dfsBytes = blockFile.length() + metaFile.length();
-      if (!blockFile.delete() || (!metaFile.delete() && metaFile.exists())) {
-        LOG.warn("Unexpected error trying to delete block "
-            + block.getBlockPoolId() + " " + block.getLocalBlock()
+      boolean result;
+
+      result = (trashDirectory == null) ? deleteFiles() : moveFiles();
+
+      if (!result) {
+        LOG.warn("Unexpected error trying to "
+            + (trashDirectory == null ? "delete" : "move")
+            + " block " + block.getBlockPoolId() + " " + block.getLocalBlock()
             + " at file " + blockFile + ". Ignored.");
       } else {
         if(block.getLocalBlock().getNumBytes() != BlockCommand.NO_ACK){

@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.spy;
 
 import java.io.File;
@@ -41,6 +39,8 @@ import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
 import org.apache.hadoop.hdfs.server.namenode.ha.EditLogTailer;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.HeartbeatResponse;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeCommand;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.AccessControlException;
@@ -229,19 +229,20 @@ public class NameNodeAdapter {
   }
   
   /**
-   * @return true if safemode is not running, or if safemode has already
-   * initialized the replication queues
+   * @return Replication queue initialization status
    */
   public static boolean safeModeInitializedReplQueues(NameNode nn) {
-    SafeModeInfo smi = nn.getNamesystem().getSafeModeInfoForTests();
-    if (smi == null) {
-      return true;
-    }
-    return smi.initializedReplQueues;
+    return nn.getNamesystem().isPopulatingReplQueues();
   }
   
   public static File getInProgressEditsFile(StorageDirectory sd, long startTxId) {
     return NNStorage.getInProgressEditsFile(sd, startTxId);
+  }
+
+  public static NamenodeCommand startCheckpoint(NameNode nn,
+      NamenodeRegistration backupNode, NamenodeRegistration activeNamenode)
+          throws IOException {
+    return nn.getNamesystem().startCheckpoint(backupNode, activeNamenode);
   }
 }
 

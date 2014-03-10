@@ -395,7 +395,7 @@ public class BookKeeperJournalManager implements JournalManager {
     try {
       String znodePath = inprogressZNode(txId);
       EditLogLedgerMetadata l = new EditLogLedgerMetadata(znodePath,
-          HdfsConstants.LAYOUT_VERSION, currentLedger.getId(), txId);
+          HdfsConstants.NAMENODE_LAYOUT_VERSION, currentLedger.getId(), txId);
       /* Write the ledger metadata out to the inprogress ledger znode
        * This can fail if for some reason our write lock has
        * expired (@see WriteLock) and another process has managed to
@@ -657,6 +657,11 @@ public class BookKeeperJournalManager implements JournalManager {
         }
       }
     }
+  }
+
+  @Override
+  public void discardSegments(long startTxId) throws IOException {
+    throw new UnsupportedOperationException();
   }
 
   @Override

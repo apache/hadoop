@@ -52,6 +52,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
+import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
 import org.apache.hadoop.hdfs.util.Canceler;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
 import org.apache.hadoop.io.IOUtils;
@@ -140,7 +141,7 @@ public class TestSaveNamespace {
       doAnswer(new FaultySaveImage(true)).
         when(spyImage).saveFSImage(
             (SaveNamespaceContext)anyObject(),
-            (StorageDirectory)anyObject());
+            (StorageDirectory)anyObject(), (NameNodeFile) anyObject());
       shouldFail = false;
       break;
     case SAVE_SECOND_FSIMAGE_IOE:
@@ -148,7 +149,7 @@ public class TestSaveNamespace {
       doAnswer(new FaultySaveImage(false)).
         when(spyImage).saveFSImage(
             (SaveNamespaceContext)anyObject(),
-            (StorageDirectory)anyObject());
+            (StorageDirectory)anyObject(), (NameNodeFile) anyObject());
       shouldFail = false;
       break;
     case SAVE_ALL_FSIMAGES:
@@ -156,7 +157,7 @@ public class TestSaveNamespace {
       doThrow(new RuntimeException("Injected")).
       when(spyImage).saveFSImage(
           (SaveNamespaceContext)anyObject(),
-          (StorageDirectory)anyObject());
+          (StorageDirectory)anyObject(), (NameNodeFile) anyObject());
       shouldFail = true;
       break;
     case WRITE_STORAGE_ALL:
@@ -381,7 +382,7 @@ public class TestSaveNamespace {
     doThrow(new IOException("Injected fault: saveFSImage")).
         when(spyImage).saveFSImage(
             (SaveNamespaceContext)anyObject(),
-            (StorageDirectory)anyObject());
+            (StorageDirectory)anyObject(), (NameNodeFile) anyObject());
 
     try {
       doAnEdit(fsn, 1);
@@ -555,7 +556,7 @@ public class TestSaveNamespace {
         Future<Void> saverFuture = pool.submit(new Callable<Void>() {
           @Override
           public Void call() throws Exception {
-            image.saveNamespace(finalFsn, canceler);
+            image.saveNamespace(finalFsn, NameNodeFile.IMAGE, canceler);
             return null;
           }
         });

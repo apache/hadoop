@@ -37,10 +37,11 @@ import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
-import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.RollingUpgradeStartupOption;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.AddBlockOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.AddCacheDirectiveInfoOp;
@@ -68,6 +69,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenameOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenameSnapshotOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenewDelegationTokenOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetAclOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RollingUpgradeOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetGenstampV1Op;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetGenstampV2Op;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetNSQuotaOp;
@@ -81,6 +83,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.UpdateBlocksOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.UpdateMasterKeyOp;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
+import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.Phase;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress;
@@ -96,22 +99,30 @@ import com.google.common.base.Preconditions;
 @InterfaceStability.Evolving
 public class FSEditLogLoader {
   static final Log LOG = LogFactory.getLog(FSEditLogLoader.class.getName());
-  static long REPLAY_TRANSACTION_LOG_INTERVAL = 1000; // 1sec
+  static final long REPLAY_TRANSACTION_LOG_INTERVAL = 1000; // 1sec
+
   private final FSNamesystem fsNamesys;
   private long lastAppliedTxId;
+  /** Total number of end transactions loaded. */
+  private int totalEdits = 0;
   
   public FSEditLogLoader(FSNamesystem fsNamesys, long lastAppliedTxId) {
     this.fsNamesys = fsNamesys;
     this.lastAppliedTxId = lastAppliedTxId;
   }
   
+  long loadFSEdits(EditLogInputStream edits, long expectedStartingTxId)
+      throws IOException {
+    return loadFSEdits(edits, expectedStartingTxId, null, null);
+  }
+
   /**
    * Load an edit log, and apply the changes to the in-memory structure
    * This is where we apply edits that we've been writing to disk all
    * along.
    */
   long loadFSEdits(EditLogInputStream edits, long expectedStartingTxId,
-      MetaRecoveryContext recovery) throws IOException {
+      StartupOption startOpt, MetaRecoveryContext recovery) throws IOException {
     StartupProgress prog = NameNode.getStartupProgress();
     Step step = createStartupProgressStep(edits);
     prog.beginStep(Phase.LOADING_EDITS, step);
@@ -119,8 +130,8 @@ public class FSEditLogLoader {
     try {
       long startTime = now();
       FSImage.LOG.info("Start loading edits file " + edits.getName());
-      long numEdits = loadEditRecords(edits, false, 
-                                 expectedStartingTxId, recovery);
+      long numEdits = loadEditRecords(edits, false, expectedStartingTxId,
+          startOpt, recovery);
       FSImage.LOG.info("Edits file " + edits.getName() 
           + " of size " + edits.length() + " edits # " + numEdits 
           + " loaded in " + (now()-startTime)/1000 + " seconds");
@@ -133,8 +144,8 @@ public class FSEditLogLoader {
   }
 
   long loadEditRecords(EditLogInputStream in, boolean closeOnExit,
-                      long expectedStartingTxId, MetaRecoveryContext recovery)
-      throws IOException {
+      long expectedStartingTxId, StartupOption startOpt,
+      MetaRecoveryContext recovery) throws IOException {
     FSDirectory fsDir = fsNamesys.dir;
 
     EnumMap<FSEditLogOpCodes, Holder<Integer>> opCounts =
@@ -206,12 +217,23 @@ public class FSEditLogLoader {
             }
           }
           try {
-            long inodeId = applyEditLogOp(op, fsDir, in.getVersion(), lastInodeId);
+            if (LOG.isTraceEnabled()) {
+              LOG.trace("op=" + op + ", startOpt=" + startOpt
+                  + ", numEdits=" + numEdits + ", totalEdits=" + totalEdits);
+            }
+            long inodeId = applyEditLogOp(op, fsDir, startOpt,
+                in.getVersion(), lastInodeId);
             if (lastInodeId < inodeId) {
               lastInodeId = inodeId;
             }
+          } catch (RollingUpgradeOp.RollbackException e) {
+            throw e;
           } catch (Throwable e) {
             LOG.error("Encountered exception on operation " + op, e);
+            if (recovery == null) {
+              throw e instanceof IOException? (IOException)e: new IOException(e);
+            }
+
             MetaRecoveryContext.editLogLoaderPrompt("Failed to " +
              "apply edit log operation " + op + ": error " +
              e.getMessage(), recovery, "applying edits");
@@ -237,6 +259,10 @@ public class FSEditLogLoader {
             }
           }
           numEdits++;
+          totalEdits++;
+        } catch (RollingUpgradeOp.RollbackException e) {
+          LOG.info("Stopped at OP_START_ROLLING_UPGRADE for rollback.");
+          break;
         } catch (MetaRecoveryContext.RequestStopException e) {
           MetaRecoveryContext.LOG.warn("Stopped reading edit log at " +
               in.getPosition() + "/"  + in.length());
@@ -268,7 +294,8 @@ public class FSEditLogLoader {
     long inodeId = inodeIdFromOp;
 
     if (inodeId == INodeId.GRANDFATHER_INODE_ID) {
-      if (LayoutVersion.supports(Feature.ADD_INODE_ID, logVersion)) {
+      if (NameNodeLayoutVersion.supports(
+          LayoutVersion.Feature.ADD_INODE_ID, logVersion)) {
         throw new IOException("The layout version " + logVersion
             + " supports inodeId but gave bogus inodeId");
       }
@@ -285,7 +312,7 @@ public class FSEditLogLoader {
 
   @SuppressWarnings("deprecation")
   private long applyEditLogOp(FSEditLogOp op, FSDirectory fsDir,
-      int logVersion, long lastInodeId) throws IOException {
+      StartupOption startOpt, int logVersion, long lastInodeId) throws IOException {
     long inodeId = INodeId.GRANDFATHER_INODE_ID;
     if (LOG.isTraceEnabled()) {
       LOG.trace("replaying edit log: " + op);
@@ -693,6 +720,30 @@ public class FSEditLogLoader {
       fsNamesys.setLastAllocatedBlockId(allocateBlockIdOp.blockId);
       break;
     }
+    case OP_ROLLING_UPGRADE_START: {
+      if (startOpt == StartupOption.ROLLINGUPGRADE) {
+        final RollingUpgradeStartupOption rollingUpgradeOpt
+            = startOpt.getRollingUpgradeStartupOption(); 
+        if (rollingUpgradeOpt == RollingUpgradeStartupOption.ROLLBACK) {
+          throw new RollingUpgradeOp.RollbackException();
+        } else if (rollingUpgradeOpt == RollingUpgradeStartupOption.DOWNGRADE) {
+          //ignore upgrade marker
+          break;
+        }
+      }
+      // start rolling upgrade
+      final long startTime = ((RollingUpgradeOp) op).getTime();
+      fsNamesys.startRollingUpgradeInternal(startTime);
+      fsNamesys.triggerRollbackCheckpoint();
+      break;
+    }
+    case OP_ROLLING_UPGRADE_FINALIZE: {
+      final long finalizeTime = ((RollingUpgradeOp) op).getTime();
+      fsNamesys.finalizeRollingUpgradeInternal(finalizeTime);
+      fsNamesys.getFSImage().renameCheckpoint(NameNodeFile.IMAGE_ROLLBACK,
+          NameNodeFile.IMAGE);
+      break;
+    }
     case OP_ADD_CACHE_DIRECTIVE: {
       AddCacheDirectiveInfoOp addOp = (AddCacheDirectiveInfoOp) op;
       CacheDirectiveInfo result = fsNamesys.
@@ -931,7 +982,7 @@ public class FSEditLogLoader {
     // The editlog must be emptied by restarting the namenode, before proceeding
     // with the upgrade.
     if (Storage.is203LayoutVersion(logVersion)
-        && logVersion != HdfsConstants.LAYOUT_VERSION) {
+        && logVersion != HdfsConstants.NAMENODE_LAYOUT_VERSION) {
       String msg = "During upgrade failed to load the editlog version "
           + logVersion + " from release 0.20.203. Please go back to the old "
           + " release and restart the namenode. This empties the editlog "

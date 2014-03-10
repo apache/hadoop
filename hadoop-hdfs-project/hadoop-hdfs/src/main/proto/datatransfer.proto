@@ -199,6 +199,10 @@ enum Status {
   ERROR_ACCESS_TOKEN = 5;
   CHECKSUM_OK = 6;
   ERROR_UNSUPPORTED = 7;
+  OOB_RESTART = 8;            // Quick restart
+  OOB_RESERVED1 = 9;          // Reserved
+  OOB_RESERVED2 = 10;         // Reserved
+  OOB_RESERVED3 = 11;         // Reserved
 }
 
 message PipelineAckProto {

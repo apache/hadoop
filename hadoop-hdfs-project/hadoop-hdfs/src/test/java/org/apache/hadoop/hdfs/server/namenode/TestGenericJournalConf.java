@@ -195,6 +195,9 @@ public class TestGenericJournalConf {
       shouldPromptCalled = true;
       return false;
     }
+
+    @Override
+    public void discardSegments(long startTxId) throws IOException {}
   }
 
   public static class BadConstructorJournalManager extends DummyJournalManager {

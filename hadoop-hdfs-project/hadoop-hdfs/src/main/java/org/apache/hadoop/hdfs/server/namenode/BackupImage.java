@@ -221,7 +221,7 @@ public class BackupImage extends FSImage {
       backupInputStream.setBytes(data, logVersion);
 
       long numTxnsAdvanced = logLoader.loadEditRecords(
-          backupInputStream, true, lastAppliedTxId + 1, null);
+          backupInputStream, true, lastAppliedTxId + 1, null, null);
       if (numTxnsAdvanced != numTxns) {
         throw new IOException("Batch of txns starting at txnid " +
             firstTxId + " was supposed to contain " + numTxns +
@@ -279,7 +279,7 @@ public class BackupImage extends FSImage {
           editStreams.add(s);
         }
       }
-      loadEdits(editStreams, namesystem, null);
+      loadEdits(editStreams, namesystem);
     }
     
     // now, need to load the in-progress file
@@ -315,7 +315,7 @@ public class BackupImage extends FSImage {
         
         FSEditLogLoader loader =
             new FSEditLogLoader(namesystem, lastAppliedTxId);
-        loader.loadFSEdits(stream, lastAppliedTxId + 1, null);
+        loader.loadFSEdits(stream, lastAppliedTxId + 1);
         lastAppliedTxId = loader.getLastAppliedTxId();
         assert lastAppliedTxId == getEditLog().getLastWrittenTxId();
       } finally {

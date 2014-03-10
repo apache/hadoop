@@ -308,4 +308,13 @@ class AsyncLoggerSet {
     }
     return QuorumCall.create(calls);
   }
+
+  public QuorumCall<AsyncLogger, Void> discardSegments(long startTxId) {
+    Map<AsyncLogger, ListenableFuture<Void>> calls = Maps.newHashMap();
+    for (AsyncLogger logger : loggers) {
+      ListenableFuture<Void> future = logger.discardSegments(startTxId);
+      calls.put(logger, future);
+    }
+    return QuorumCall.create(calls);
+  }
 }

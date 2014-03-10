@@ -25,7 +25,6 @@ import java.util.Arrays;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf.Loader;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.FileSummary;
@@ -71,7 +70,7 @@ public final class FSImageUtil {
           + summary.getOndiskVersion());
     }
 
-    if (!LayoutVersion.supports(Feature.PROTOBUF_FORMAT,
+    if (!NameNodeLayoutVersion.supports(Feature.PROTOBUF_FORMAT,
         summary.getLayoutVersion())) {
       throw new IOException("Unsupported layout version "
           + summary.getLayoutVersion());

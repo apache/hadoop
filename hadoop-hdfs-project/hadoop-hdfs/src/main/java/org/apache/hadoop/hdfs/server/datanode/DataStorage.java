@@ -18,27 +18,15 @@
 
 package org.apache.hadoop.hdfs.server.datanode;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.RandomAccessFile;
-import java.nio.channels.FileLock;
-import java.util.*;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.fs.HardLink;
-import org.apache.hadoop.fs.LocalFileSystem;
-import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
-import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
@@ -49,6 +37,11 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.DiskChecker;
+
+import java.io.*;
+import java.nio.channels.FileLock;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /** 
  * Data storage information file.
@@ -65,6 +58,13 @@ public class DataStorage extends Storage {
   public final static String STORAGE_DIR_RBW = "rbw";
   public final static String STORAGE_DIR_FINALIZED = "finalized";
   public final static String STORAGE_DIR_TMP = "tmp";
+
+  // Set of bpids for which 'trash' is currently enabled.
+  // When trash is enabled block files are moved under a separate
+  // 'trash' folder instead of being deleted right away. This can
+  // be useful during rolling upgrades, for example.
+  // The set is backed by a concurrent HashMap.
+  private Set<String> trashEnabledBpids;
 
   /**
    * Datanode UUID that this storage is currently attached to. This
@@ -84,14 +84,16 @@ public class DataStorage extends Storage {
 
   DataStorage() {
     super(NodeType.DATA_NODE);
+    trashEnabledBpids = Collections.newSetFromMap(
+        new ConcurrentHashMap<String, Boolean>());
   }
   
-  public StorageInfo getBPStorage(String bpid) {
+  public BlockPoolSliceStorage getBPStorage(String bpid) {
     return bpStorageMap.get(bpid);
   }
   
   public DataStorage(StorageInfo storageInfo) {
-    super(NodeType.DATA_NODE, storageInfo);
+    super(storageInfo);
   }
 
   public synchronized String getDatanodeUuid() {
@@ -107,6 +109,43 @@ public class DataStorage extends Storage {
     if (sd.getStorageUuid() == null) {
       sd.setStorageUuid(DatanodeStorage.generateUuid());
     }
+  }
+
+  /**
+   * Enable trash for the specified block pool storage.
+   */
+  public void enableTrash(String bpid) {
+    if (trashEnabledBpids.add(bpid)) {
+      LOG.info("Enabled trash for bpid " + bpid);
+    }
+  }
+
+  public void restoreTrash(String bpid) {
+    if (trashEnabledBpids.contains(bpid)) {
+      getBPStorage(bpid).restoreTrash();
+      trashEnabledBpids.remove(bpid);
+      LOG.info("Restored trash for bpid " + bpid);
+    }
+  }
+
+  public boolean trashEnabled(String bpid) {
+    return trashEnabledBpids.contains(bpid);
+  }
+
+  /**
+   * If rolling upgrades are in progress then do not delete block files
+   * immediately. Instead we move the block files to an intermediate
+   * 'trash' directory. If there is a subsequent rollback, then the block
+   * files will be restored from trash.
+   *
+   * @return trash directory if rolling upgrade is in progress, null
+   *         otherwise.
+   */
+  public String getTrashDirectoryForBlockFile(String bpid, File blockFile) {
+    if (trashEnabledBpids.contains(bpid)) {
+      return ((BlockPoolSliceStorage) getBPStorage(bpid)).getTrashDirectory(blockFile);
+    }
+    return null;
   }
   
   /**
@@ -131,10 +170,8 @@ public class DataStorage extends Storage {
       // DN storage has been initialized, no need to do anything
       return;
     }
-    assert HdfsConstants.LAYOUT_VERSION == nsInfo.getLayoutVersion() :
-      "Data-node version " + HdfsConstants.LAYOUT_VERSION + 
-      " and name-node layout version " + nsInfo.getLayoutVersion() + 
-      " must be the same.";
+    LOG.info("Data-node version: " + HdfsConstants.DATANODE_LAYOUT_VERSION
+        + " and name-node layout version: " + nsInfo.getLayoutVersion());
     
     // 1. For each data directory calculate its state and 
     // check whether all is consistent before transitioning.
@@ -186,15 +223,13 @@ public class DataStorage extends Storage {
     // while others could be uptodate for the regular startup.
     for(int idx = 0; idx < getNumStorageDirs(); idx++) {
       doTransition(datanode, getStorageDir(idx), nsInfo, startOpt);
-      assert this.getLayoutVersion() == nsInfo.getLayoutVersion() :
-        "Data-node and name-node layout versions must be the same.";
       createStorageID(getStorageDir(idx));
     }
     
     // 3. Update all storages. Some of them might have just been formatted.
     this.writeAll();
     
-    // 4. mark DN storage is initilized
+    // 4. mark DN storage is initialized
     this.initialized = true;
   }
 
@@ -261,7 +296,7 @@ public class DataStorage extends Storage {
   void format(StorageDirectory sd, NamespaceInfo nsInfo,
               String datanodeUuid) throws IOException {
     sd.clearDirectory(); // create directory
-    this.layoutVersion = HdfsConstants.LAYOUT_VERSION;
+    this.layoutVersion = HdfsConstants.DATANODE_LAYOUT_VERSION;
     this.clusterID = nsInfo.getClusterID();
     this.namespaceID = nsInfo.getNamespaceID();
     this.cTime = 0;
@@ -297,7 +332,8 @@ public class DataStorage extends Storage {
     }
 
     // Set NamespaceID in version before federation
-    if (!LayoutVersion.supports(Feature.FEDERATION, layoutVersion)) {
+    if (!DataNodeLayoutVersion.supports(
+        LayoutVersion.Feature.FEDERATION, layoutVersion)) {
       props.setProperty("namespaceID", String.valueOf(namespaceID));
     }
   }
@@ -321,11 +357,12 @@ public class DataStorage extends Storage {
       setLayoutVersion(props, sd);
     }
     setcTime(props, sd);
-    setStorageType(props, sd);
+    checkStorageType(props, sd);
     setClusterId(props, layoutVersion, sd);
     
     // Read NamespaceID in version before federation
-    if (!LayoutVersion.supports(Feature.FEDERATION, layoutVersion)) {
+    if (!DataNodeLayoutVersion.supports(
+        LayoutVersion.Feature.FEDERATION, layoutVersion)) {
       setNamespaceID(props, sd);
     }
     
@@ -414,11 +451,12 @@ public class DataStorage extends Storage {
     }
     readProperties(sd);
     checkVersionUpgradable(this.layoutVersion);
-    assert this.layoutVersion >= HdfsConstants.LAYOUT_VERSION :
+    assert this.layoutVersion >= HdfsConstants.DATANODE_LAYOUT_VERSION :
       "Future version is not allowed";
     
     boolean federationSupported = 
-      LayoutVersion.supports(Feature.FEDERATION, layoutVersion);
+      DataNodeLayoutVersion.supports(
+          LayoutVersion.Feature.FEDERATION, layoutVersion);
     // For pre-federation version - validate the namespaceID
     if (!federationSupported &&
         getNamespaceID() != nsInfo.getNamespaceID()) {
@@ -440,24 +478,22 @@ public class DataStorage extends Storage {
     // meaningful at BlockPoolSliceStorage level. 
 
     // regular start up. 
-    if (this.layoutVersion == HdfsConstants.LAYOUT_VERSION)
+    if (this.layoutVersion == HdfsConstants.DATANODE_LAYOUT_VERSION)
       return; // regular startup
     
     // do upgrade
-    if (this.layoutVersion > HdfsConstants.LAYOUT_VERSION) {
+    if (this.layoutVersion > HdfsConstants.DATANODE_LAYOUT_VERSION) {
       doUpgrade(sd, nsInfo);  // upgrade
       return;
     }
     
-    // layoutVersion < LAYOUT_VERSION. I.e. stored layout version is newer
+    // layoutVersion < DATANODE_LAYOUT_VERSION. I.e. stored layout version is newer
     // than the version supported by datanode. This should have been caught
     // in readProperties(), even if rollback was not carried out or somehow
     // failed.
     throw new IOException("BUG: The stored LV = " + this.getLayoutVersion()
-                          + " is newer than the supported LV = "
-                          + HdfsConstants.LAYOUT_VERSION
-                          + " or name node LV = "
-                          + nsInfo.getLayoutVersion());
+        + " is newer than the supported LV = "
+        + HdfsConstants.DATANODE_LAYOUT_VERSION);
   }
 
   /**
@@ -485,12 +521,14 @@ public class DataStorage extends Storage {
   void doUpgrade(StorageDirectory sd, NamespaceInfo nsInfo) throws IOException {
     // If the existing on-disk layout version supportes federation, simply
     // update its layout version.
-    if (LayoutVersion.supports(Feature.FEDERATION, layoutVersion)) {
+    if (DataNodeLayoutVersion.supports(
+        LayoutVersion.Feature.FEDERATION, layoutVersion)) {
       // The VERSION file is already read in. Override the layoutVersion 
       // field and overwrite the file.
       LOG.info("Updating layout version from " + layoutVersion + " to "
-          + nsInfo.getLayoutVersion() + " for storage " + sd.getRoot());
-      layoutVersion = nsInfo.getLayoutVersion();
+          + HdfsConstants.DATANODE_LAYOUT_VERSION + " for storage "
+          + sd.getRoot());
+      layoutVersion = HdfsConstants.DATANODE_LAYOUT_VERSION;
       writeProperties(sd);
       return;
     }
@@ -498,7 +536,7 @@ public class DataStorage extends Storage {
     LOG.info("Upgrading storage directory " + sd.getRoot()
              + ".\n   old LV = " + this.getLayoutVersion()
              + "; old CTime = " + this.getCTime()
-             + ".\n   new LV = " + nsInfo.getLayoutVersion()
+             + ".\n   new LV = " + HdfsConstants.DATANODE_LAYOUT_VERSION
              + "; new CTime = " + nsInfo.getCTime());
     
     File curDir = sd.getCurrentDir();
@@ -528,7 +566,7 @@ public class DataStorage extends Storage {
     linkAllBlocks(tmpDir, bbwDir, new File(curBpDir, STORAGE_DIR_CURRENT));
     
     // 4. Write version file under <SD>/current
-    layoutVersion = HdfsConstants.LAYOUT_VERSION;
+    layoutVersion = HdfsConstants.DATANODE_LAYOUT_VERSION;
     clusterID = nsInfo.getClusterID();
     writeProperties(sd);
     
@@ -548,7 +586,8 @@ public class DataStorage extends Storage {
    * @throws IOException if the directory is not empty or it can not be removed
    */
   private void cleanupDetachDir(File detachDir) throws IOException {
-    if (!LayoutVersion.supports(Feature.APPEND_RBW_DIR, layoutVersion) &&
+    if (!DataNodeLayoutVersion.supports(
+        LayoutVersion.Feature.APPEND_RBW_DIR, layoutVersion) &&
         detachDir.exists() && detachDir.isDirectory() ) {
       
         if (FileUtil.list(detachDir).length != 0 ) {
@@ -584,19 +623,13 @@ public class DataStorage extends Storage {
     File prevDir = sd.getPreviousDir();
     // This is a regular startup or a post-federation rollback
     if (!prevDir.exists()) {
-      // The current datanode version supports federation and the layout
-      // version from namenode matches what the datanode supports. An invalid
-      // rollback may happen if namenode didn't rollback and datanode is
-      // running a wrong version.  But this will be detected in block pool
-      // level and the invalid VERSION content will be overwritten when
-      // the error is corrected and rollback is retried.
-      if (LayoutVersion.supports(Feature.FEDERATION,
-          HdfsConstants.LAYOUT_VERSION) && 
-          HdfsConstants.LAYOUT_VERSION == nsInfo.getLayoutVersion()) {
-        readProperties(sd, nsInfo.getLayoutVersion());
+      if (DataNodeLayoutVersion.supports(LayoutVersion.Feature.FEDERATION,
+          HdfsConstants.DATANODE_LAYOUT_VERSION)) {
+        readProperties(sd, HdfsConstants.DATANODE_LAYOUT_VERSION);
         writeProperties(sd);
-        LOG.info("Layout version rolled back to " +
-            nsInfo.getLayoutVersion() + " for storage " + sd.getRoot());
+        LOG.info("Layout version rolled back to "
+            + HdfsConstants.DATANODE_LAYOUT_VERSION + " for storage "
+            + sd.getRoot());
       }
       return;
     }
@@ -605,16 +638,17 @@ public class DataStorage extends Storage {
 
     // We allow rollback to a state, which is either consistent with
     // the namespace state or can be further upgraded to it.
-    if (!(prevInfo.getLayoutVersion() >= HdfsConstants.LAYOUT_VERSION
+    if (!(prevInfo.getLayoutVersion() >= HdfsConstants.DATANODE_LAYOUT_VERSION
           && prevInfo.getCTime() <= nsInfo.getCTime()))  // cannot rollback
       throw new InconsistentFSStateException(sd.getRoot(),
           "Cannot rollback to a newer state.\nDatanode previous state: LV = "
               + prevInfo.getLayoutVersion() + " CTime = " + prevInfo.getCTime()
               + " is newer than the namespace state: LV = "
-              + nsInfo.getLayoutVersion() + " CTime = " + nsInfo.getCTime());
+              + HdfsConstants.DATANODE_LAYOUT_VERSION + " CTime = "
+              + nsInfo.getCTime());
     LOG.info("Rolling back storage directory " + sd.getRoot()
-             + ".\n   target LV = " + nsInfo.getLayoutVersion()
-             + "; target CTime = " + nsInfo.getCTime());
+        + ".\n   target LV = " + HdfsConstants.DATANODE_LAYOUT_VERSION
+        + "; target CTime = " + nsInfo.getCTime());
     File tmpDir = sd.getRemovedTmp();
     assert !tmpDir.exists() : "removed.tmp directory must not exist.";
     // rename current to tmp
@@ -677,9 +711,11 @@ public class DataStorage extends Storage {
   
   /*
    * Finalize the upgrade for a block pool
+   * This also empties trash created during rolling upgrade and disables
+   * trash functionality.
    */
   void finalizeUpgrade(String bpID) throws IOException {
-    // To handle finalizing a snapshot taken at datanode level while 
+    // To handle finalizing a snapshot taken at datanode level while
     // upgrading to federation, if datanode level snapshot previous exists, 
     // then finalize it. Else finalize the corresponding BP.
     for (StorageDirectory sd : storageDirs) {
@@ -710,7 +746,8 @@ public class DataStorage extends Storage {
     HardLink hardLink = new HardLink();
     // do the link
     int diskLayoutVersion = this.getLayoutVersion();
-    if (LayoutVersion.supports(Feature.APPEND_RBW_DIR, diskLayoutVersion)) {
+    if (DataNodeLayoutVersion.supports(
+        LayoutVersion.Feature.APPEND_RBW_DIR, diskLayoutVersion)) {
       // hardlink finalized blocks in tmpDir/finalized
       linkBlocks(new File(fromDir, STORAGE_DIR_FINALIZED), 
           new File(toDir, STORAGE_DIR_FINALIZED), diskLayoutVersion, hardLink);
