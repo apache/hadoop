@@ -62,6 +62,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptE
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
@@ -519,7 +520,13 @@ public class TestRM {
       }
     };
 
+    // test metrics
+    QueueMetrics metrics = rm.getResourceScheduler().getRootQueueMetrics();
+    int appsKilled = metrics.getAppsKilled();
+    int appsSubmitted = metrics.getAppsSubmitted();
+
     rm.start();
+    
     MockNM nm1 =
         new MockNM("127.0.0.1:1234", 15120, rm.getResourceTrackerService());
     nm1.registerNode();
@@ -552,6 +559,11 @@ public class TestRM {
         new RMAppEvent(application.getApplicationId(),
           RMAppEventType.ATTEMPT_KILLED));
     rm.waitForState(application.getApplicationId(), RMAppState.KILLED);
+
+    // test metrics
+    metrics = rm.getResourceScheduler().getRootQueueMetrics();
+    Assert.assertEquals(appsKilled + 1, metrics.getAppsKilled());
+    Assert.assertEquals(appsSubmitted + 1, metrics.getAppsSubmitted());
   }
 
   public static void main(String[] args) throws Exception {
