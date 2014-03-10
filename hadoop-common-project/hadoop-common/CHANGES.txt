@@ -24,6 +24,9 @@ Release 0.23.11 - UNRELEASED
     HADOOP-10112. har file listing doesn't work with wild card (Brandon Li via
     jlowe)
 
+    HADOOP-10110. hadoop-auth has a build break due to missing dependency.
+    (Chuan Liu via arp)
+
 Release 0.23.10 - 2013-12-09
 
   INCOMPATIBLE CHANGES
