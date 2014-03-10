@@ -544,6 +544,9 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-6070. Cleanup use of ReadStatistics in DFSInputStream. (wang)
 
+    HDFS-6055. Change default configuration to limit file name length in HDFS.
+    (cnauroth)
+
   OPTIMIZATIONS
 
     HDFS-5790. LeaseManager.findPath is very slow when many leases need recovery
