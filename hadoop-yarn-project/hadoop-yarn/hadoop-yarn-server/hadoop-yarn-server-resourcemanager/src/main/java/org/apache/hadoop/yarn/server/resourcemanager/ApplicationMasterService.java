@@ -351,27 +351,18 @@ public class ApplicationMasterService extends AbstractService implements
       RMApp rmApp =
           rmContext.getRMApps().get(applicationAttemptId.getApplicationId());
 
-      if (rmApp.getApplicationSubmissionContext().getUnmanagedAM()) {
-        // No recovery supported yet for unmanaged AM. Send the unregister event
-        // and (falsely) acknowledge state-store write immediately.
-        rmContext.getDispatcher().getEventHandler().handle(
-          new RMAppAttemptUnregistrationEvent(applicationAttemptId, request
-              .getTrackingUrl(), request.getFinalApplicationStatus(), request
-              .getDiagnostics()));
+      if (rmApp.isAppFinalStateStored()) {
         return FinishApplicationMasterResponse.newInstance(true);
       }
 
-      // Not an unmanaged-AM.
-      if (rmApp.isAppSafeToTerminate()) {
-        return FinishApplicationMasterResponse.newInstance(true);
-      } else {
-        // keep sending the unregister event as RM may crash in the meanwhile.
-        rmContext.getDispatcher().getEventHandler().handle(
+      rmContext.getDispatcher().getEventHandler().handle(
           new RMAppAttemptUnregistrationEvent(applicationAttemptId, request
               .getTrackingUrl(), request.getFinalApplicationStatus(), request
               .getDiagnostics()));
-        return FinishApplicationMasterResponse.newInstance(false);
-      }
+
+      // For UnmanagedAMs, return true so they don't retry
+      return FinishApplicationMasterResponse.newInstance(
+          rmApp.getApplicationSubmissionContext().getUnmanagedAM());
     }
   }
 

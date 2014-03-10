@@ -233,7 +233,7 @@ public class TestKillApplicationWithRMHA extends RMHATestBase{
         KillApplicationRequest request) throws YarnException {
       ApplicationId applicationId = request.getApplicationId();
       RMApp application = this.rmContext.getRMApps().get(applicationId);
-      if (application.isAppSafeToTerminate()) {
+      if (application.isAppFinalStateStored()) {
         return KillApplicationResponse.newInstance(true);
       } else {
         return KillApplicationResponse.newInstance(false);

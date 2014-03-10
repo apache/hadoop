@@ -19,6 +19,8 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyString;
@@ -34,6 +36,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -61,6 +64,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.MoveApplicationAcrossQueuesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
@@ -218,7 +222,7 @@ public class TestClientRMService {
   }
   
   @Test
-  public void testForceKillApplication() throws YarnException {
+  public void testForceKillNonExistingApplication() throws YarnException {
     RMContext rmContext = mock(RMContext.class);
     when(rmContext.getRMApps()).thenReturn(
         new ConcurrentHashMap<ApplicationId, RMApp>());
@@ -236,6 +240,58 @@ public class TestClientRMService {
           "Trying to kill an absent " +
               "application " + request.getApplicationId());
     }
+  }
+
+  @Test
+  public void testForceKillApplication() throws Exception {
+    YarnConfiguration conf = new YarnConfiguration();
+    MockRM rm = new MockRM();
+    rm.init(conf);
+    rm.start();
+
+    ClientRMService rmService = rm.getClientRMService();
+    GetApplicationsRequest getRequest = GetApplicationsRequest.newInstance(
+        EnumSet.of(YarnApplicationState.KILLED));
+
+    RMApp app1 = rm.submitApp(1024);
+    RMApp app2 = rm.submitApp(1024, true);
+
+    assertEquals("Incorrect number of apps in the RM", 0,
+        rmService.getApplications(getRequest).getApplicationList().size());
+
+    KillApplicationRequest killRequest1 =
+        KillApplicationRequest.newInstance(app1.getApplicationId());
+    KillApplicationRequest killRequest2 =
+        KillApplicationRequest.newInstance(app2.getApplicationId());
+
+    int killAttemptCount = 0;
+    for (int i = 0; i < 100; i++) {
+      KillApplicationResponse killResponse1 =
+          rmService.forceKillApplication(killRequest1);
+      killAttemptCount++;
+      if (killResponse1.getIsKillCompleted()) {
+        break;
+      }
+      Thread.sleep(10);
+    }
+    assertTrue("Kill attempt count should be greater than 1 for managed AMs",
+        killAttemptCount > 1);
+    assertEquals("Incorrect number of apps in the RM", 1,
+        rmService.getApplications(getRequest).getApplicationList().size());
+
+    KillApplicationResponse killResponse2 =
+        rmService.forceKillApplication(killRequest2);
+    assertTrue("Killing UnmanagedAM should falsely acknowledge true",
+        killResponse2.getIsKillCompleted());
+    for (int i = 0; i < 100; i++) {
+      if (2 ==
+          rmService.getApplications(getRequest).getApplicationList().size()) {
+        break;
+      }
+      Thread.sleep(10);
+    }
+    assertEquals("Incorrect number of apps in the RM", 2,
+        rmService.getApplications(getRequest).getApplicationList().size());
   }
   
   @Test (expected = ApplicationNotFoundException.class)
@@ -629,6 +685,12 @@ public class TestClientRMService {
 
   private SubmitApplicationRequest mockSubmitAppRequest(ApplicationId appId,
       String name, String queue, Set<String> tags) {
+    return mockSubmitAppRequest(appId, name, queue, tags, false);
+  }
+
+  private SubmitApplicationRequest mockSubmitAppRequest(ApplicationId appId,
+        String name, String queue, Set<String> tags, boolean unmanaged) {
+
     ContainerLaunchContext amContainerSpec = mock(ContainerLaunchContext.class);
 
     Resource resource = Resources.createResource(
@@ -643,6 +705,7 @@ public class TestClientRMService {
     submissionContext.setResource(resource);
     submissionContext.setApplicationType(appType);
     submissionContext.setApplicationTags(tags);
+    submissionContext.setUnmanagedAM(unmanaged);
 
     SubmitApplicationRequest submitRequest =
         recordFactory.newRecordInstance(SubmitApplicationRequest.class);

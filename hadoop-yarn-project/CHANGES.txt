@@ -433,6 +433,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1787. Fixed help messages for applicationattempt and container
     sub-commands in bin/yarn. (Zhijie Shen via vinodkv)
 
+    YARN-1793. Fixed ClientRMService#forceKillApplication not killing unmanaged
+    application. (Karthik Kambatla via jianhe)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
