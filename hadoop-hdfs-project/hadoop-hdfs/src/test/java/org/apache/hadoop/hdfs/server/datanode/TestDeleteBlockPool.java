@@ -50,7 +50,8 @@ public class TestDeleteBlockPool {
       conf.set(DFSConfigKeys.DFS_NAMESERVICES,
           "namesServerId1,namesServerId2");
       cluster = new MiniDFSCluster.Builder(conf)
-        .nnTopology(MiniDFSNNTopology.simpleFederatedTopology(2))
+        .nnTopology(MiniDFSNNTopology.simpleFederatedTopology
+            (conf.get(DFSConfigKeys.DFS_NAMESERVICES)))
         .numDataNodes(2).build();
 
       cluster.waitActive();
