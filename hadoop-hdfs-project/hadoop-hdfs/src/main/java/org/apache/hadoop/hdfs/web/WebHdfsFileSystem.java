@@ -1082,4 +1082,10 @@ public class WebHdfsFileSystem extends FileSystem
     final Map<?, ?> m = run(op, p);
     return JsonUtil.toMD5MD5CRC32FileChecksum(m);
   }
+
+  @Override
+  public String getCanonicalServiceName() {
+    return tokenServiceName == null ? super.getCanonicalServiceName()
+        : tokenServiceName.toString();
+  }
 }
