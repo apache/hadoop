@@ -736,6 +736,9 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-5892. TestDeleteBlockPool fails in branch-2. (Ted Yu via wheat9)
 
+    HDFS-6077. Running slive with webhdfs on secure HA cluster fails with unkown
+    host exception. (jing9)
+
   BREAKDOWN OF HDFS-5698 SUBTASKS AND RELATED JIRAS
 
     HDFS-5717. Save FSImage header in protobuf. (Haohui Mai via jing9)
