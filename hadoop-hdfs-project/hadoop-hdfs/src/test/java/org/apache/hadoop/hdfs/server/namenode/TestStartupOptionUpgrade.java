@@ -67,7 +67,7 @@ public class TestStartupOptionUpgrade {
    */
   @Test
   public void testStartupOptUpgradeFrom204() throws Exception {
-    layoutVersion = Feature.RESERVED_REL20_204.getLayoutVersion();
+    layoutVersion = Feature.RESERVED_REL20_204.getInfo().getLayoutVersion();
     storage.processStartupOptionsForUpgrade(startOpt, layoutVersion);
     assertTrue("Clusterid should start with CID", storage.getClusterID()
         .startsWith("CID"));
@@ -83,7 +83,7 @@ public class TestStartupOptionUpgrade {
   @Test
   public void testStartupOptUpgradeFrom22WithCID() throws Exception {
     startOpt.setClusterId("cid");
-    layoutVersion = Feature.RESERVED_REL22.getLayoutVersion();
+    layoutVersion = Feature.RESERVED_REL22.getInfo().getLayoutVersion();
     storage.processStartupOptionsForUpgrade(startOpt, layoutVersion);
     assertEquals("Clusterid should match with the given clusterid",
         "cid", storage.getClusterID());
@@ -101,7 +101,7 @@ public class TestStartupOptionUpgrade {
       throws Exception {
     // Test assumes clusterid already exists, set the clusterid
     storage.setClusterID("currentcid");
-    layoutVersion = Feature.FEDERATION.getLayoutVersion();
+    layoutVersion = Feature.FEDERATION.getInfo().getLayoutVersion();
     storage.processStartupOptionsForUpgrade(startOpt, layoutVersion);
     assertEquals("Clusterid should match with the existing one",
         "currentcid", storage.getClusterID());
@@ -119,7 +119,7 @@ public class TestStartupOptionUpgrade {
       throws Exception {
     startOpt.setClusterId("wrong-cid");
     storage.setClusterID("currentcid");
-    layoutVersion = Feature.FEDERATION.getLayoutVersion();
+    layoutVersion = Feature.FEDERATION.getInfo().getLayoutVersion();
     storage.processStartupOptionsForUpgrade(startOpt, layoutVersion);
     assertEquals("Clusterid should match with the existing one",
         "currentcid", storage.getClusterID());
@@ -137,7 +137,7 @@ public class TestStartupOptionUpgrade {
       throws Exception {
     startOpt.setClusterId("currentcid");
     storage.setClusterID("currentcid");
-    layoutVersion = Feature.FEDERATION.getLayoutVersion();
+    layoutVersion = Feature.FEDERATION.getInfo().getLayoutVersion();
     storage.processStartupOptionsForUpgrade(startOpt, layoutVersion);
     assertEquals("Clusterid should match with the existing one",
         "currentcid", storage.getClusterID());

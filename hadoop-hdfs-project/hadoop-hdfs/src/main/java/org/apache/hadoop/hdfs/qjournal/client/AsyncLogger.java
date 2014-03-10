@@ -151,4 +151,6 @@ interface AsyncLogger {
    * StringBuilder. This is displayed on the NN web UI.
    */
   public void appendReport(StringBuilder sb);
+
+  public ListenableFuture<Void> discardSegments(long startTxId);
 }

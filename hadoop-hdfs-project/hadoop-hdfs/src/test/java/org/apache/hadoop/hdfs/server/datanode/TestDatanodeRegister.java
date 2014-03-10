@@ -67,7 +67,8 @@ public class TestDatanodeRegister {
     // Return a a good software version.
     doReturn(VersionInfo.getVersion()).when(fakeNsInfo).getSoftwareVersion();
     // Return a good layout version for now.
-    doReturn(HdfsConstants.LAYOUT_VERSION).when(fakeNsInfo).getLayoutVersion();
+    doReturn(HdfsConstants.DATANODE_LAYOUT_VERSION).when(fakeNsInfo)
+        .getLayoutVersion();
     
     DatanodeProtocolClientSideTranslatorPB fakeDnProt = 
         mock(DatanodeProtocolClientSideTranslatorPB.class);
@@ -103,20 +104,17 @@ public class TestDatanodeRegister {
   @Test
   public void testDifferentLayoutVersions() throws Exception {
     // We expect no exceptions to be thrown when the layout versions match.
-    assertEquals(HdfsConstants.LAYOUT_VERSION,
+    assertEquals(HdfsConstants.NAMENODE_LAYOUT_VERSION,
         actor.retrieveNamespaceInfo().getLayoutVersion());
     
     // We expect an exception to be thrown when the NN reports a layout version
     // different from that of the DN.
-    doReturn(HdfsConstants.LAYOUT_VERSION * 1000).when(fakeNsInfo)
+    doReturn(HdfsConstants.NAMENODE_LAYOUT_VERSION * 1000).when(fakeNsInfo)
         .getLayoutVersion();
     try {
       actor.retrieveNamespaceInfo();
-      fail("Should have failed to retrieve NS info from DN with bad layout version");
-    } catch (IncorrectVersionException ive) {
-      GenericTestUtils.assertExceptionContains(
-          "Unexpected version of namenode", ive);
-      LOG.info("Got expected exception", ive);
+    } catch (IOException e) {
+      fail("Should not fail to retrieve NS info from DN with different layout version");
     }
   }
 }

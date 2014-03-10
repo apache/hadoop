@@ -333,6 +333,27 @@ message FinalizeUpgradeRequestProto { // no parameters
 message FinalizeUpgradeResponseProto { // void response
 }
 
+enum RollingUpgradeActionProto {
+  QUERY = 1;
+  START = 2;
+  FINALIZE = 3;
+}
+
+message RollingUpgradeRequestProto {
+  required RollingUpgradeActionProto action = 1;
+}
+
+message RollingUpgradeInfoProto {
+  required RollingUpgradeStatusProto status = 1;
+  required uint64 startTime = 2;
+  required uint64 finalizeTime = 3;
+  required bool createdRollbackImages = 4;
+}
+
+message RollingUpgradeResponseProto {
+  optional RollingUpgradeInfoProto rollingUpgradeInfo= 1;
+}
+
 message ListCorruptFileBlocksRequestProto {
   required string path = 1;
   optional string cookie = 2;
@@ -659,6 +680,8 @@ service ClientNamenodeProtocol {
   rpc refreshNodes(RefreshNodesRequestProto) returns(RefreshNodesResponseProto);
   rpc finalizeUpgrade(FinalizeUpgradeRequestProto)
       returns(FinalizeUpgradeResponseProto);
+  rpc rollingUpgrade(RollingUpgradeRequestProto)
+      returns(RollingUpgradeResponseProto);
   rpc listCorruptFileBlocks(ListCorruptFileBlocksRequestProto)
       returns(ListCorruptFileBlocksResponseProto);
   rpc metaSave(MetaSaveRequestProto) returns(MetaSaveResponseProto);

@@ -33,8 +33,8 @@ import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.RollingUpgradeStatus;
 import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
 import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
@@ -203,14 +203,6 @@ class BPServiceActor implements Runnable {
       LOG.info("Reported NameNode version '" + nnVersion + "' does not match " +
           "DataNode version '" + dnVersion + "' but is within acceptable " +
           "limits. Note: This is normal during a rolling upgrade.");
-    }
-
-    if (HdfsConstants.LAYOUT_VERSION != nsInfo.getLayoutVersion()) {
-      LOG.warn("DataNode and NameNode layout versions must be the same." +
-        " Expected: "+ HdfsConstants.LAYOUT_VERSION +
-        " actual "+ nsInfo.getLayoutVersion());
-      throw new IncorrectVersionException(
-          nsInfo.getLayoutVersion(), "namenode");
     }
   }
 
@@ -625,6 +617,20 @@ class BPServiceActor implements Runnable {
     bpos.shutdownActor(this);
   }
 
+  private void handleRollingUpgradeStatus(HeartbeatResponse resp) {
+    RollingUpgradeStatus rollingUpgradeStatus = resp.getRollingUpdateStatus();
+    if (rollingUpgradeStatus != null &&
+        rollingUpgradeStatus.getBlockPoolId().compareTo(bpos.getBlockPoolId()) != 0) {
+      // Can this ever occur?
+      LOG.error("Invalid BlockPoolId " +
+          rollingUpgradeStatus.getBlockPoolId() +
+          " in HeartbeatResponse. Expected " +
+          bpos.getBlockPoolId());
+    } else {
+      bpos.signalRollingUpgrade(rollingUpgradeStatus != null);
+    }
+  }
+
   /**
    * Main loop for each BP thread. Run until shutdown,
    * forever calling remote NameNode functions.
@@ -670,6 +676,10 @@ class BPServiceActor implements Runnable {
             bpos.updateActorStatesFromHeartbeat(
                 this, resp.getNameNodeHaState());
             state = resp.getNameNodeHaState().getState();
+
+            if (state == HAServiceState.ACTIVE) {
+              handleRollingUpgradeStatus(resp);
+            }
 
             long startProcessCommands = now();
             if (!processCommand(resp.getCommands()))

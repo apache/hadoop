@@ -656,4 +656,10 @@ public class JournalSet implements JournalManager {
     }
     return buf.toString();
   }
+
+  @Override
+  public void discardSegments(long startTxId) throws IOException {
+    // This operation is handled by FSEditLog directly.
+    throw new UnsupportedOperationException();
+  }
 }

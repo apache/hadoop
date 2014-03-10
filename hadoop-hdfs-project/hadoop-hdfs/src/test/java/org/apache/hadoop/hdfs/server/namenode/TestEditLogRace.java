@@ -236,8 +236,8 @@ public class TestEditLogRace {
         
       System.out.println("Verifying file: " + editFile);
       FSEditLogLoader loader = new FSEditLogLoader(namesystem, startTxId);
-      long numEditsThisLog = loader.loadFSEdits(new EditLogFileInputStream(editFile), 
-          startTxId, null);
+      long numEditsThisLog = loader.loadFSEdits(
+          new EditLogFileInputStream(editFile), startTxId);
       
       System.out.println("Number of edits: " + numEditsThisLog);
       assertTrue(numEdits == -1 || numEditsThisLog == numEdits);

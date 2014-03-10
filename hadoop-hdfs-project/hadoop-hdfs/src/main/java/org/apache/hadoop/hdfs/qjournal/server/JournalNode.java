@@ -285,4 +285,9 @@ public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
     StringUtils.startupShutdownMessage(JournalNode.class, args, LOG);
     System.exit(ToolRunner.run(new JournalNode(), args));
   }
+
+  public void discardSegments(String journalId, long startTxId)
+      throws IOException {
+    getOrCreateJournal(journalId).discardSegments(startTxId);
+  }
 }

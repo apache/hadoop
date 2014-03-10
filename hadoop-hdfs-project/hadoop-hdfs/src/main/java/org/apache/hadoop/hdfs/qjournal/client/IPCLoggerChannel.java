@@ -565,6 +565,17 @@ public class IPCLoggerChannel implements AsyncLogger {
   }
 
   @Override
+  public ListenableFuture<Void> discardSegments(final long startTxId) {
+    return executor.submit(new Callable<Void>() {
+      @Override
+      public Void call() throws IOException {
+        getProxy().discardSegments(journalId, startTxId);
+        return null;
+      }
+    });
+  }
+
+  @Override
   public String toString() {
     return InetAddresses.toAddrString(addr.getAddress()) + ':' +
         addr.getPort();

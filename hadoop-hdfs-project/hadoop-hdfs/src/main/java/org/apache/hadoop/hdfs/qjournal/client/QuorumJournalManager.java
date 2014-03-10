@@ -79,6 +79,7 @@ public class QuorumJournalManager implements JournalManager {
   // configurable.
   private static final int FORMAT_TIMEOUT_MS = 60000;
   private static final int HASDATA_TIMEOUT_MS = 60000;
+  private static final int DISCARD_SEGMENTS_TIMEOUT_MS  = 60000;
   
   private final Configuration conf;
   private final URI uri;
@@ -492,4 +493,22 @@ public class QuorumJournalManager implements JournalManager {
     return loggers;
   }
 
+  @Override
+  public void discardSegments(long startTxId) throws IOException {
+    QuorumCall<AsyncLogger, Void> call = loggers.discardSegments(startTxId);
+    try {
+      call.waitFor(loggers.size(), loggers.size(), 0,
+          DISCARD_SEGMENTS_TIMEOUT_MS, "discardSegments");
+      if (call.countExceptions() > 0) {
+        call.rethrowException(
+            "Could not perform discardSegments of one or more JournalNodes");
+      }
+    } catch (InterruptedException e) {
+      throw new IOException(
+          "Interrupted waiting for discardSegments() response");
+    } catch (TimeoutException e) {
+      throw new IOException(
+          "Timed out waiting for discardSegments() response");
+    }
+  }
 }

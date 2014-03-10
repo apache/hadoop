@@ -23,7 +23,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
-import java.net.InetSocketAddress;
 import java.net.URL;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
@@ -39,10 +38,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.http.HttpConfig;
-import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.authentication.client.AuthenticationException;
-import org.apache.hadoop.util.Time;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -50,11 +45,13 @@ import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.common.StorageErrorReporter;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
+import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.hdfs.web.URLConnectionFactory;
 import org.apache.hadoop.io.MD5Hash;
-import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.util.Time;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -90,10 +87,9 @@ public class TransferFsImage {
         null, false);
   }
 
-  public static MD5Hash downloadImageToStorage(
-      URL fsName, long imageTxId, Storage dstStorage, boolean needDigest)
-      throws IOException {
-    String fileid = GetImageServlet.getParamStringForImage(
+  public static MD5Hash downloadImageToStorage(URL fsName, long imageTxId,
+      Storage dstStorage, boolean needDigest) throws IOException {
+    String fileid = GetImageServlet.getParamStringForImage(null,
         imageTxId, dstStorage);
     String fileName = NNStorage.getCheckpointImageFileName(imageTxId);
     
@@ -166,14 +162,14 @@ public class TransferFsImage {
    * @param myNNAddress the host/port where the local node is running an
    *                           HTTPServer hosting GetImageServlet
    * @param storage the storage directory to transfer the image from
+   * @param nnf the NameNodeFile type of the image
    * @param txid the transaction ID of the image to be uploaded
    */
-  public static void uploadImageFromStorage(URL fsName,
-      URL myNNAddress,
-      Storage storage, long txid) throws IOException {
+  public static void uploadImageFromStorage(URL fsName, URL myNNAddress,
+      Storage storage, NameNodeFile nnf, long txid) throws IOException {
     
-    String fileid = GetImageServlet.getParamStringToPutImage(
-        txid, myNNAddress, storage);
+    String fileid = GetImageServlet.getParamStringToPutImage(nnf, txid,
+        myNNAddress, storage);
     // this doesn't directly upload an image, but rather asks the NN
     // to connect back to the 2NN to download the specified image.
     try {

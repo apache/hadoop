@@ -980,4 +980,10 @@ class Journal implements Closeable {
       }
     }
   }
+
+  synchronized void discardSegments(long startTxId) throws IOException {
+    storage.getJournalManager().discardSegments(startTxId);
+    // we delete all the segments after the startTxId. let's reset committedTxnId 
+    committedTxnId.set(startTxId - 1);
+  }
 }

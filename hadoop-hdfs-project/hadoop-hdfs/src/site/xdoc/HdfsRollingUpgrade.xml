@@ -1,0 +1,284 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Licensed to the Apache Software Foundation (ASF) under one or more
+  contributor license agreements.  See the NOTICE file distributed with
+  this work for additional information regarding copyright ownership.
+  The ASF licenses this file to You under the Apache License, Version 2.0
+  (the "License"); you may not use this file except in compliance with
+  the License.  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<document xmlns="http://maven.apache.org/XDOC/2.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
+
+  <properties>
+    <title>HDFS Rolling Upgrade</title>
+  </properties>
+
+  <body>
+
+  <h1>HDFS Rolling Upgrade</h1>
+  <macro name="toc">
+    <param name="section" value="0"/>
+    <param name="fromDepth" value="0"/>
+    <param name="toDepth" value="4"/>
+  </macro>
+
+  <section name="Introduction" id="Introduction">
+  <p>
+    <em>HDFS rolling upgrade</em> allows upgrading individual HDFS daemons.
+    For examples, the datanodes can be upgraded independent of the namenodes.
+    A namenode can be upgraded independent of the other namenodes.
+    The namenodes can be upgraded independent of datanods and journal nodes.
+  </p>
+  </section>
+
+  <section name="Upgrade" id="Upgrade">
+  <p>
+    In Hadoop v2, HDFS supports highly-available (HA) namenode services and wire compatibility.
+    These two capabilities make it feasible to upgrade HDFS without incurring HDFS downtime.
+    In order to upgrade a HDFS cluster without downtime, the cluster must be setup with HA.
+  </p>
+
+  <subsection name="Upgrade without Downtime" id="UpgradeWithoutDowntime">
+  <p>
+    In a HA cluster, there are two or more <em>NameNodes (NNs)</em>, many <em>DataNodes (DNs)</em>,
+    a few <em>JournalNodes (JNs)</em> and a few <em>ZooKeeperNodes (ZKNs)</em>.
+    <em>JNs</em> is relatively stable and does not require upgrade when upgrading HDFS in most of the cases.
+    In the rolling upgrade procedure described here,
+    only <em>NNs</em> and <em>DNs</em> are considered but <em>JNs</em> and <em>ZKNs</em> are not.
+    Upgrading <em>JNs</em> and <em>ZKNs</em> may incur cluster downtime.
+  </p>
+
+  <h4>Upgrading Non-Federated Clusters</h4>
+  <p>
+    Suppose there are two namenodes <em>NN1</em> and <em>NN2</em>,
+    where <em>NN1</em> and <em>NN2</em> are respectively in active and standby states.
+    The following are the steps for upgrading a HA cluster:
+  </p>
+  <ol>
+    <li>Prepare Rolling Upgrade<ol>
+      <li>Run "<code><a href="#dfsadmin_-rollingUpgrade">hdfs dfsadmin -rollingUpgrade prepare</a></code>"
+        to create a fsimage for rollback.
+      </li>
+      <li>Run "<code><a href="#dfsadmin_-rollingUpgrade">hdfs dfsadmin -rollingUpgrade query</a></code>"
+        to check the status of the rollback image.
+        Wait and re-run the command until
+        the "<tt>Proceed with rolling upgrade</tt>" message is shown.
+      </li>
+    </ol></li>
+    <li>Upgrade Active and Standby <em>NNs</em><ol>
+      <li>Shutdown and upgrade <em>NN2</em>.</li>
+      <li>Start <em>NN2</em> as standby with the
+        "<a href="#namenode_-rollingUpgrade"><code>-rollingUpgrade started</code></a>" option.</li>
+      <li>Failover from <em>NN1</em> to <em>NN2</em>
+               so that <em>NN2</em> becomes active and <em>NN1</em> becomes standby.</li>
+      <li>Shutdown and upgrade <em>NN1</em>.</li>
+      <li>Start <em>NN1</em> as standby with the
+        "<a href="#namenode_-rollingUpgrade"><code>-rollingUpgrade started</code></a>" option.</li>
+    </ol></li>
+    <li>Upgrade <em>DNs</em><ol>
+      <li>Choose a small subset of datanodes (e.g. all datanodes under a particular rack).</li>
+      <ol>
+        <li>Run "<code><a href="#dfsadmin_-shutdownDatanode">hdfs dfsadmin -shutdownDatanode &lt;DATANODE_HOST:IPC_PORT&gt; upgrade</a></code>"
+          to shutdown one of the chosen datanodes.</li>
+        <li>Run "<code><a href="#dfsadmin_-getDatanodeInfo">hdfs dfsadmin -getDatanodeInfo &lt;DATANODE_HOST:IPC_PORT&gt;</a></code>"
+          to check and wait for the datanode to shutdown.</li>
+        <li>Upgrade and restart the datanode.</li>
+        <li>Perform the above steps for all the chosen datanodes in the subset in parallel.</li>
+      </ol>
+      <li>Repeat the above steps until all datanodes in the cluster are upgraded.</li>
+    </ol></li>
+    <li>Finalize Rolling Upgrade<ul>
+      <li>Run "<code><a href="#dfsadmin_-rollingUpgrade">hdfs dfsadmin -rollingUpgrade finalize</a></code>"
+       to finalize the rolling upgrade.</li>
+    </ul></li>
+  </ol>
+
+  <h4>Upgrading Federated Clusters</h4>
+  <p>
+    In a federated cluster, there are multiple namespaces
+    and a pair of active and standby <em>NNs</em> for each namespace.
+    The procedure for upgrading a federated cluster is similar to upgrading a non-federated cluster
+    except that Step 1 and Step 4 are performed on each namespace
+    and Step 2 is performed on each pair of active and standby <em>NNs</em>, i.e.
+  </p>
+  <ol>
+    <li>Prepare Rolling Upgrade for Each Namespace</li>
+    <li>Upgrade Active and Standby <em>NN</em> pairs for Each Namespace</li>
+    <li>Upgrade <em>DNs</em></li>
+    <li>Finalize Rolling Upgrade for Each Namespace</li>
+  </ol>
+
+  </subsection>
+
+  <subsection name="Upgrade with Downtime" id="UpgradeWithDowntime">
+  <p>
+    For non-HA clusters,
+    it is impossible to upgrade HDFS without downtime since it requires restarting the namenodes.
+    However, datanodes can still be upgraded in a rolling manner.
+  </p>
+
+  <h4>Upgrading Non-HA Clusters</h4>
+  <p>
+    In a non-HA cluster, there are a <em>NameNode (NN)</em>, a <em>SecondaryNameNode (SNN)</em>
+    and many <em>DataNodes (DNs)</em>.
+    The procedure for upgrading a non-HA cluster is similar to upgrading a HA cluster
+    except that Step 2 "Upgrade Active and Standby <em>NNs</em>" is changed to below:
+  </p>
+  <ul>
+    <li>Upgrade <em>NN</em> and <em>SNN</em><ol>
+      <li>Shutdown <em>SNN</em></li>
+      <li>Shutdown and upgrade <em>NN</em>.</li>
+      <li>Start <em>NN</em> with the
+        "<a href="#namenode_-rollingUpgrade"><code>-rollingUpgrade started</code></a>" option.</li>
+      <li>Upgrade and restart <em>SNN</em></li>
+    </ol></li>
+  </ul>
+  </subsection>
+  </section>
+
+  <section name="Downgrade and Rollback" id="DowngradeAndRollback">
+  <p>
+    When the upgraded release is undesirable
+    or, in some unlikely case, the upgrade fails (due to bugs in the newer release),
+    administrators may choose to downgrade HDFS back to the pre-upgrade release,
+    or rollback HDFS to the pre-upgrade release and the pre-upgrade state.
+    Both downgrade and rollback require cluster downtime and are not done in a rolling fashion.
+  </p>
+  <p>
+    Note that downgrade and rollback are possible only after a rolling upgrade is started and
+    before the upgrade is terminated.
+    An upgrade can be terminated by either finalize, downgrade or rollback.
+    Therefore, it may not be possible to perform rollback after finalize or downgrade,
+    or to perform downgrade after finalize.
+  </p>
+
+  <subsection name="Downgrade" id="Downgrade">
+  <p>
+    <em>Downgrade</em> restores the software back to the pre-upgrade release
+    and preserves the user data.
+    Suppose time <em>T</em> is the rolling upgrade start time and the upgrade is terminated by downgrade.
+    Then, the files created before or after <em>T</em> remain available in HDFS.
+    The files deleted before or after <em>T</em> remain deleted in HDFS.
+  </p>
+  <p>
+    A newer release is downgradable to the pre-upgrade release
+    only if both the namenode layout version and the datenode layout version
+    are not changed between these two releases.
+    Below are the steps for downgrade:
+  </p>
+  <ul>
+    <li>Downgrade HDFS<ol>
+      <li>Shutdown all <em>NNs</em> and <em>DNs</em>.</li>
+      <li>Restore the pre-upgrade release in all machines.</li>
+      <li>Start <em>NNs</em> with the 
+        "<a href="#namenode_-rollingUpgrade"><code>-rollingUpgrade downgrade</code></a>" option.</li>
+      <li>Start <em>DNs</em> normally.</li>
+    </ol></li>
+  </ul>
+
+  </subsection>
+
+  <subsection name="Rollback" id="Rollback">
+  <p>
+    <em>Rollback</em> restores the software back to the pre-upgrade release
+    but also reverts the user data back to the pre-upgrade state.
+    Suppose time <em>T</em> is the rolling upgrade start time and the upgrade is terminated by rollback.
+    The files created before <em>T</em> remain available in HDFS but the files created after <em>T</em> become unavailable.
+    The files deleted before <em>T</em> remain deleted in HDFS but the files deleted after <em>T</em> are restored.
+  </p>
+  <p>
+    Rollback from a newer release to the pre-upgrade release is always supported.
+    Below are the steps for rollback:
+  </p>
+  <ul>
+    <li>Rollback HDFS<ol>
+      <li>Shutdown all <em>NNs</em> and <em>DNs</em>.</li>
+      <li>Restore the pre-upgrade release in all machines.</li>
+      <li>Start <em>NNs</em> with the
+        "<a href="#namenode_-rollingUpgrade"><code>-rollingUpgrade rollback</code></a>" option.</li>
+      <li>Start <em>DNs</em> normally.</li>
+    </ol></li>
+  </ul>
+
+  </subsection>
+  </section>
+  
+  <section name="Commands and Startup Options for Rolling Upgrade" id="dfsadminCommands">
+    
+  <subsection name="DFSAdmin Commands" id="dfsadminCommands">
+  <h4><code>dfsadmin -rollingUpgrade</code></h4>
+  <source>hdfs dfsadmin -rollingUpgrade &lt;query|start|finalize&gt;</source>
+  <p>
+    Execute a rolling upgrade action.
+    <ul><li>Options:<table>
+      <tr><td><code>query</code></td><td>Query the current rolling upgrade status.</td></tr>
+      <tr><td><code>prepare</code></td><td>Prepare a new rolling upgrade.</td></tr>
+      <tr><td><code>finalize</code></td><td>Finalize the current rolling upgrade.</td></tr>
+    </table></li></ul>
+  </p>
+
+  <h4><code>dfsadmin -getDatanodeInfo</code></h4>
+  <source>hdfs dfsadmin -getDatanodeInfo &lt;DATANODE_HOST:IPC_PORT&gt;</source>
+  <p>
+    Get the information about the given datanode.
+    This command can be used for checking if a datanode is alive
+    like the Unix <code>ping</code> command.
+  </p>
+
+  <h4><code>dfsadmin -shutdownDatanode</code></h4>
+  <source>hdfs dfsadmin -shutdownDatanode &lt;DATANODE_HOST:IPC_PORT&gt; [upgrade]</source>
+  <p>
+    Submit a shutdown request for the given datanode.
+    If the optional <code>upgrade</code> argument is specified,
+    clients accessing the datanode will be advised to wait for it to restart
+    and the fast start-up mode will be enabled.
+    When the restart does not happen in time, clients will timeout and ignore the datanode.
+    In such case, the fast start-up mode will also be disabled.
+  </p>
+  <p>
+    Note that the command does not wait for the datanode shutdown to complete.
+    The "<a href="#dfsadmin_-getDatanodeInfo">dfsadmin -getDatanodeInfo</a>"
+   command can be used for checking if the datanode shutdown is complete.
+  </p>
+  </subsection>
+
+  <subsection name="NameNode Startup Options" id="dfsadminCommands">
+
+  <h4><code>namenode -rollingUpgrade</code></h4>
+  <source>hdfs namenode -rollingUpgrade &lt;downgrade|rollback|started&gt;</source>
+  <p>
+    When a rolling upgrade is in progress,
+    the <code>-rollingUpgrade</code> namenode startup option is used to specify
+    various rolling upgrade options.
+  </p>
+    <ul><li>Options:<table>
+      <tr><td><code>downgrade</code></td>
+        <td>Restores the namenode back to the pre-upgrade release
+            and preserves the user data.</td>
+      </tr>
+      <tr><td><code>rollback</code></td>
+        <td>Restores the namenode back to the pre-upgrade release
+            but also reverts the user data back to the pre-upgrade state.</td>
+      </tr>
+      <tr><td><code>started</code></td>
+        <td>Specifies a rolling upgrade already started
+          so that the namenode should allow image directories
+          with different layout versions during startup.</td>
+      </tr>
+    </table></li></ul>
+
+  </subsection>
+
+  </section>
+  </body>
+</document>
