@@ -24,7 +24,6 @@ import java.io.OutputStream;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
@@ -43,6 +42,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.fs.Options.CreateOpts;
+import org.apache.hadoop.fs.permission.AclEntry;
+import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_DEFAULT;
@@ -2204,5 +2205,128 @@ public final class FileContext {
       tokenList.addAll(afsTokens);
     }
     return tokenList;
+  }
+
+  /**
+   * Modifies ACL entries of files and directories.  This method can add new ACL
+   * entries or modify the permissions on existing ACL entries.  All existing
+   * ACL entries that are not specified in this call are retained without
+   * changes.  (Modifications are merged into the current ACL.)
+   *
+   * @param path Path to modify
+   * @param aclSpec List<AclEntry> describing modifications
+   * @throws IOException if an ACL could not be modified
+   */
+  public void modifyAclEntries(final Path path, final List<AclEntry> aclSpec)
+      throws IOException {
+    Path absF = fixRelativePart(path);
+    new FSLinkResolver<Void>() {
+      @Override
+      public Void next(final AbstractFileSystem fs, final Path p)
+          throws IOException {
+        fs.modifyAclEntries(p, aclSpec);
+        return null;
+      }
+    }.resolve(this, absF);
+  }
+
+  /**
+   * Removes ACL entries from files and directories.  Other ACL entries are
+   * retained.
+   *
+   * @param path Path to modify
+   * @param aclSpec List<AclEntry> describing entries to remove
+   * @throws IOException if an ACL could not be modified
+   */
+  public void removeAclEntries(final Path path, final List<AclEntry> aclSpec)
+      throws IOException {
+    Path absF = fixRelativePart(path);
+    new FSLinkResolver<Void>() {
+      @Override
+      public Void next(final AbstractFileSystem fs, final Path p)
+          throws IOException {
+        fs.removeAclEntries(p, aclSpec);
+        return null;
+      }
+    }.resolve(this, absF);
+  }
+
+  /**
+   * Removes all default ACL entries from files and directories.
+   *
+   * @param path Path to modify
+   * @throws IOException if an ACL could not be modified
+   */
+  public void removeDefaultAcl(Path path)
+      throws IOException {
+    Path absF = fixRelativePart(path);
+    new FSLinkResolver<Void>() {
+      @Override
+      public Void next(final AbstractFileSystem fs, final Path p)
+          throws IOException {
+        fs.removeDefaultAcl(p);
+        return null;
+      }
+    }.resolve(this, absF);
+  }
+
+  /**
+   * Removes all but the base ACL entries of files and directories.  The entries
+   * for user, group, and others are retained for compatibility with permission
+   * bits.
+   *
+   * @param path Path to modify
+   * @throws IOException if an ACL could not be removed
+   */
+  public void removeAcl(Path path) throws IOException {
+    Path absF = fixRelativePart(path);
+    new FSLinkResolver<Void>() {
+      @Override
+      public Void next(final AbstractFileSystem fs, final Path p)
+          throws IOException {
+        fs.removeAcl(p);
+        return null;
+      }
+    }.resolve(this, absF);
+  }
+
+  /**
+   * Fully replaces ACL of files and directories, discarding all existing
+   * entries.
+   *
+   * @param path Path to modify
+   * @param aclSpec List<AclEntry> describing modifications, must include entries
+   *   for user, group, and others for compatibility with permission bits.
+   * @throws IOException if an ACL could not be modified
+   */
+  public void setAcl(Path path, final List<AclEntry> aclSpec)
+      throws IOException {
+    Path absF = fixRelativePart(path);
+    new FSLinkResolver<Void>() {
+      @Override
+      public Void next(final AbstractFileSystem fs, final Path p)
+          throws IOException {
+        fs.setAcl(p, aclSpec);
+        return null;
+      }
+    }.resolve(this, absF);
+  }
+
+  /**
+   * Gets the ACLs of files and directories.
+   *
+   * @param path Path to get
+   * @return RemoteIterator<AclStatus> which returns each AclStatus
+   * @throws IOException if an ACL could not be read
+   */
+  public AclStatus getAclStatus(Path path) throws IOException {
+    Path absF = fixRelativePart(path);
+    return new FSLinkResolver<AclStatus>() {
+      @Override
+      public AclStatus next(final AbstractFileSystem fs, final Path p)
+          throws IOException {
+        return fs.getAclStatus(p);
+      }
+    }.resolve(this, absF);
   }
 }

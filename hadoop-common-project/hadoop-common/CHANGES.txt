@@ -448,6 +448,8 @@ Release 2.4.0 - UNRELEASED
 
     HADOOP-10361. Correct alignment in CLI output for ACLs. (cnauroth)
 
+    HADOOP-10399. FileContext API for ACLs. (Vinayakumar B via cnauroth)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
