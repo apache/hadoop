@@ -1103,14 +1103,11 @@ public class RMAppImpl implements RMApp, Recoverable {
   }
 
   @Override
-  public boolean isAppSafeToTerminate() {
+  public boolean isAppFinalStateStored() {
     RMAppState state = getState();
     return state.equals(RMAppState.FINISHING)
         || state.equals(RMAppState.FINISHED) || state.equals(RMAppState.FAILED)
-        || state.equals(RMAppState.KILLED) ||
-        // If this is an unmanaged AM, we are safe to unregister since unmanaged
-        // AM will immediately go to FINISHED state on AM unregistration
-        getApplicationSubmissionContext().getUnmanagedAM();
+        || state.equals(RMAppState.KILLED);
   }
 
   @Override

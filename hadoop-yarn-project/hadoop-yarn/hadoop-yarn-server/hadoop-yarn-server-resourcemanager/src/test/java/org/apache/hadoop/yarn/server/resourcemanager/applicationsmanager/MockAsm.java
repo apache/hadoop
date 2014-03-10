@@ -151,7 +151,7 @@ public abstract class MockAsm extends MockApps {
     }
 
     @Override
-    public boolean isAppSafeToTerminate() {
+    public boolean isAppFinalStateStored() {
       throw new UnsupportedOperationException("Not supported yet.");
     }
 

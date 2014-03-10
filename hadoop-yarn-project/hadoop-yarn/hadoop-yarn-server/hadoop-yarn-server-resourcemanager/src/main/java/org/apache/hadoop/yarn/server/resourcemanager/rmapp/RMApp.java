@@ -204,13 +204,10 @@ public interface RMApp extends EventHandler<RMAppEvent> {
   Set<String> getApplicationTags();
 
   /**
-   * Check whether this application is safe to terminate.
-   * An application is deemed to be safe to terminate if it is an unmanaged
-   * AM or its state has been saved in state store.
-   * @return the flag which indicates whether this application is safe to
-   *         terminate.
+   * Check whether this application's state has been saved to the state store.
+   * @return the flag indicating whether the applications's state is stored.
    */
-  boolean isAppSafeToTerminate();
+  boolean isAppFinalStateStored();
 
   /**
    * Create the external user-facing state of ApplicationMaster from the

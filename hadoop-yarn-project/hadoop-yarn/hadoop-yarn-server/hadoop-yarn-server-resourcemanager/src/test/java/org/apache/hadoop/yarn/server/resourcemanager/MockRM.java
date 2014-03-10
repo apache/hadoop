@@ -173,17 +173,28 @@ public class MockRM extends ResourceManager {
   }
 
   public RMApp submitApp(int masterMemory) throws Exception {
+    return submitApp(masterMemory, false);
+  }
+
+  public RMApp submitApp(int masterMemory, boolean unmanaged)
+      throws Exception {
     return submitApp(masterMemory, "", UserGroupInformation.getCurrentUser()
-      .getShortUserName());
+        .getShortUserName(), unmanaged);
   }
 
   // client
   public RMApp submitApp(int masterMemory, String name, String user) throws Exception {
-    return submitApp(masterMemory, name, user, null, false, null,
-      super.getConfig().getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
-        YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS), null);
+    return submitApp(masterMemory, name, user, false);
   }
-  
+
+  public RMApp submitApp(int masterMemory, String name, String user,
+      boolean unmanaged)
+      throws Exception {
+    return submitApp(masterMemory, name, user, null, unmanaged, null,
+        super.getConfig().getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
+            YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS), null);
+  }
+
   public RMApp submitApp(int masterMemory, String name, String user,
       Map<ApplicationAccessType, String> acls) throws Exception {
     return submitApp(masterMemory, name, user, acls, false, null,
