@@ -224,7 +224,7 @@ public class MockRMApp implements RMApp {
   }
 
   @Override
-  public boolean isAppSafeToTerminate() {
+  public boolean isAppFinalStateStored() {
     return true;
   }
 

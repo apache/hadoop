@@ -396,15 +396,18 @@ public class ClientRMService extends AbstractService implements
           + ApplicationAccessType.MODIFY_APP.name() + " on " + applicationId));
     }
 
-    if (application.isAppSafeToTerminate()) {
+    if (application.isAppFinalStateStored()) {
       RMAuditLogger.logSuccess(callerUGI.getShortUserName(),
-        AuditConstants.KILL_APP_REQUEST, "ClientRMService", applicationId);
+          AuditConstants.KILL_APP_REQUEST, "ClientRMService", applicationId);
       return KillApplicationResponse.newInstance(true);
-    } else {
-      this.rmContext.getDispatcher().getEventHandler()
-        .handle(new RMAppEvent(applicationId, RMAppEventType.KILL));
-      return KillApplicationResponse.newInstance(false);
     }
+
+    this.rmContext.getDispatcher().getEventHandler()
+        .handle(new RMAppEvent(applicationId, RMAppEventType.KILL));
+
+    // For UnmanagedAMs, return true so they don't retry
+    return KillApplicationResponse.newInstance(
+        application.getApplicationSubmissionContext().getUnmanagedAM());
   }
 
   @Override
