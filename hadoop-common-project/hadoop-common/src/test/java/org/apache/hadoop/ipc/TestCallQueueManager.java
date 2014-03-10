@@ -190,8 +190,6 @@ public class TestCallQueueManager {
 
     Thread.sleep(10);
 
-    assertTrue(manager.size() > 0);
-
     for (int i=0; i < 5; i++) {
       manager.swapQueue(LinkedBlockingQueue.class, 5000, "", null);
     }
