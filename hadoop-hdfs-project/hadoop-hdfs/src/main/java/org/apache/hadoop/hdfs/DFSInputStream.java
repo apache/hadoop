@@ -659,14 +659,11 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
         int nRead, BlockReader blockReader) {
     if (nRead <= 0) return;
     if (blockReader.isShortCircuit()) {
-      readStatistics.totalBytesRead += nRead;
-      readStatistics.totalLocalBytesRead += nRead;
-      readStatistics.totalShortCircuitBytesRead += nRead;
+      readStatistics.addShortCircuitBytes(nRead);
     } else if (blockReader.isLocal()) {
-      readStatistics.totalBytesRead += nRead;
-      readStatistics.totalLocalBytesRead += nRead;
+      readStatistics.addLocalBytes(nRead);
     } else {
-      readStatistics.totalBytesRead += nRead;
+      readStatistics.addRemoteBytes(nRead);
     }
   }
   

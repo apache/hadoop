@@ -144,6 +144,8 @@ Release 2.4.0 - UNRELEASED
     HDFS-5986. Capture the number of blocks pending deletion on namenode webUI.
     (cnauroth)
 
+    HDFS-6070. Cleanup use of ReadStatistics in DFSInputStream. (wang)
+
   OPTIMIZATIONS
 
     HDFS-5790. LeaseManager.findPath is very slow when many leases need recovery
