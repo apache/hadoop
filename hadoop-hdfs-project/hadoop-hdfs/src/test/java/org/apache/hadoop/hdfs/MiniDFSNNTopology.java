@@ -78,6 +78,21 @@ public class MiniDFSNNTopology {
   }
 
   /**
+   * Set up federated cluster with the given nameservices, each
+   * of which has only a single NameNode.
+   */
+  public static MiniDFSNNTopology simpleFederatedTopology(String nameservicesIds) {
+    MiniDFSNNTopology topology = new MiniDFSNNTopology();
+    String nsIds[] = nameservicesIds.split(",");
+    for (String nsId : nsIds) {
+      topology.addNameservice(new MiniDFSNNTopology.NSConf(nsId)
+        .addNN(new MiniDFSNNTopology.NNConf(null)));
+    }
+    topology.setFederation(true);
+    return topology;
+  }
+
+  /**
    * Set up federated cluster with the given number of nameservices, each
    * of which has two NameNodes.
    */
