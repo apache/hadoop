@@ -729,6 +729,9 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-6078. TestIncrementalBlockReports is flaky. (Arpit Agarwal)
 
+    HDFS-6071. BlockReaderLocal doesn't return -1 on EOF when doing a
+    zero-length read on a short file (cmccabe)
+
   BREAKDOWN OF HDFS-5698 SUBTASKS AND RELATED JIRAS
 
     HDFS-5717. Save FSImage header in protobuf. (Haohui Mai via jing9)

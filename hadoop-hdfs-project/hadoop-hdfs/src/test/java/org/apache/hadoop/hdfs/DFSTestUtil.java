@@ -58,11 +58,14 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.net.unix.DomainSocket;
+import org.apache.hadoop.net.unix.TemporarySocketDirectory;
 import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.VersionInfo;
+import org.junit.Assume;
 
 import java.io.*;
 import java.net.*;
@@ -1137,5 +1140,44 @@ public class DFSTestUtil {
     assert (factor > 1);
     long c = (val + factor - 1) / factor;
     return c * factor;
+  }
+  
+  /**
+   * A short-circuit test context which makes it easier to get a short-circuit
+   * configuration and set everything up.
+   */
+  public static class ShortCircuitTestContext implements Closeable {
+    private final String testName;
+    private final TemporarySocketDirectory sockDir;
+    private boolean closed = false;
+    private boolean formerTcpReadsDisabled;
+    
+    public ShortCircuitTestContext(String testName) {
+      this.testName = testName;
+      this.sockDir = new TemporarySocketDirectory();
+      DomainSocket.disableBindPathValidation();
+      formerTcpReadsDisabled = DFSInputStream.tcpReadsDisabledForTesting;
+      Assume.assumeTrue(DomainSocket.getLoadingFailureReason() == null);
+    }
+    
+    public Configuration newConfiguration() {
+      Configuration conf = new Configuration();
+      conf.setBoolean(DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_KEY, true);
+      conf.set(DFSConfigKeys.DFS_DOMAIN_SOCKET_PATH_KEY,
+          new File(sockDir.getDir(),
+            testName + "._PORT.sock").getAbsolutePath());
+      return conf;
+    }
+
+    public String getTestName() {
+      return testName;
+    }
+
+    public void close() throws IOException {
+      if (closed) return;
+      closed = true;
+      DFSInputStream.tcpReadsDisabledForTesting = formerTcpReadsDisabled;
+      sockDir.close();
+    }
   }
 }
