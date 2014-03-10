@@ -110,6 +110,8 @@ Release 2.4.0 - UNRELEASED
 
     HADOOP-10393. Fix the javac warnings in hadoop-auth.  (szetszwo)
 
+    HADOOP-10395. TestCallQueueManager is flaky. (Arpit Agarwal)
+
   BREAKDOWN OF HADOOP-10184 SUBTASKS AND RELATED JIRAS
 
     HADOOP-10185. FileSystem API for ACLs. (cnauroth)
