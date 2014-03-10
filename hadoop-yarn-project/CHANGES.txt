@@ -436,6 +436,10 @@ Release 2.4.0 - UNRELEASED
     YARN-1793. Fixed ClientRMService#forceKillApplication not killing unmanaged
     application. (Karthik Kambatla via jianhe)
 
+    YARN-1788. Fixed a bug in ResourceManager to set the apps-completed and
+    apps-killed metrics correctly for killed applications. (Varun Vasudev via
+    vinodkv)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

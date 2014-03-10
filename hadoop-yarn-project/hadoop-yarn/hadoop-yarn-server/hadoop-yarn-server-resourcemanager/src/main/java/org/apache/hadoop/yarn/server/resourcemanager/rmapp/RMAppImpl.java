@@ -1043,8 +1043,8 @@ public class RMAppImpl implements RMApp, Recoverable {
       if (app.finishTime == 0 ) {
         app.finishTime = System.currentTimeMillis();
       }
-      app.handler.handle(new AppRemovedSchedulerEvent(app.applicationId, app
-        .getState()));
+      app.handler.handle(new AppRemovedSchedulerEvent(app.applicationId,
+        finalState));
       app.handler.handle(
           new RMAppManagerEvent(app.applicationId,
           RMAppManagerEventType.APP_COMPLETED));
