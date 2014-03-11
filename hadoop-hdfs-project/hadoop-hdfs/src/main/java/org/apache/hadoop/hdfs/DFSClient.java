@@ -2647,7 +2647,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
     return clientContext;
   }
 
-  void modifyAclEntries(String src, List<AclEntry> aclSpec)
+  public void modifyAclEntries(String src, List<AclEntry> aclSpec)
       throws IOException {
     checkOpen();
     try {
@@ -2663,7 +2663,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
     }
   }
 
-  void removeAclEntries(String src, List<AclEntry> aclSpec)
+  public void removeAclEntries(String src, List<AclEntry> aclSpec)
       throws IOException {
     checkOpen();
     try {
@@ -2679,7 +2679,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
     }
   }
 
-  void removeDefaultAcl(String src) throws IOException {
+  public void removeDefaultAcl(String src) throws IOException {
     checkOpen();
     try {
       namenode.removeDefaultAcl(src);
@@ -2694,7 +2694,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
     }
   }
 
-  void removeAcl(String src) throws IOException {
+  public void removeAcl(String src) throws IOException {
     checkOpen();
     try {
       namenode.removeAcl(src);
@@ -2709,7 +2709,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
     }
   }
 
-  void setAcl(String src, List<AclEntry> aclSpec) throws IOException {
+  public void setAcl(String src, List<AclEntry> aclSpec) throws IOException {
     checkOpen();
     try {
       namenode.setAcl(src, aclSpec);
@@ -2724,7 +2724,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
     }
   }
 
-  AclStatus getAclStatus(String src) throws IOException {
+  public AclStatus getAclStatus(String src) throws IOException {
     checkOpen();
     try {
       return namenode.getAclStatus(src);

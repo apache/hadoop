@@ -750,6 +750,9 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-6069. Quash stack traces when ACLs are disabled. (cnauroth)
 
+    HDFS-5638. HDFS implementation of FileContext API for ACLs.
+    (Vinayakumar B via cnauroth)
+
 BREAKDOWN OF HDFS-5535 ROLLING UPGRADE SUBTASKS AND RELATED JIRAS
 
     HDFS-5496. Make replication queue initialization asynchronous. (Vinay via
