@@ -187,35 +187,43 @@ public class YarnClientImpl extends YarnClient {
     int pollCount = 0;
     long startTime = System.currentTimeMillis();
 
-    //TODO: YARN-1764:Handle RM fail overs after the submitApplication call.
     while (true) {
-      YarnApplicationState state =
-          getApplicationReport(applicationId).getYarnApplicationState();
-      if (!state.equals(YarnApplicationState.NEW) &&
-          !state.equals(YarnApplicationState.NEW_SAVING)) {
-        LOG.info("Submitted application " + applicationId);
-        break;
-      }
-
-      long elapsedMillis = System.currentTimeMillis() - startTime;
-      if (enforceAsyncAPITimeout() &&
-          elapsedMillis >= asyncApiPollTimeoutMillis) {
-        throw new YarnException("Timed out while waiting for application " +
-          applicationId + " to be submitted successfully");
-      }
-
-      // Notify the client through the log every 10 poll, in case the client
-      // is blocked here too long.
-      if (++pollCount % 10 == 0) {
-        LOG.info("Application submission is not finished, " +
-            "submitted application " + applicationId +
-            " is still in " + state);
-      }
       try {
-        Thread.sleep(submitPollIntervalMillis);
-      } catch (InterruptedException ie) {
-        LOG.error("Interrupted while waiting for application " + applicationId
-            + " to be successfully submitted.");
+        YarnApplicationState state =
+            getApplicationReport(applicationId).getYarnApplicationState();
+        if (!state.equals(YarnApplicationState.NEW) &&
+            !state.equals(YarnApplicationState.NEW_SAVING)) {
+          LOG.info("Submitted application " + applicationId);
+          break;
+        }
+
+        long elapsedMillis = System.currentTimeMillis() - startTime;
+        if (enforceAsyncAPITimeout() &&
+            elapsedMillis >= asyncApiPollTimeoutMillis) {
+          throw new YarnException("Timed out while waiting for application " +
+              applicationId + " to be submitted successfully");
+        }
+
+        // Notify the client through the log every 10 poll, in case the client
+        // is blocked here too long.
+        if (++pollCount % 10 == 0) {
+          LOG.info("Application submission is not finished, " +
+              "submitted application " + applicationId +
+              " is still in " + state);
+        }
+        try {
+          Thread.sleep(submitPollIntervalMillis);
+        } catch (InterruptedException ie) {
+          LOG.error("Interrupted while waiting for application "
+              + applicationId
+              + " to be successfully submitted.");
+        }
+      } catch (ApplicationNotFoundException ex) {
+        // FailOver or RM restart happens before RMStateStore saves
+        // ApplicationState
+        LOG.info("Re-submit application " + applicationId + "with the " +
+            "same ApplicationSubmissionContext");
+        rmClient.submitApplication(request);
       }
     }
 

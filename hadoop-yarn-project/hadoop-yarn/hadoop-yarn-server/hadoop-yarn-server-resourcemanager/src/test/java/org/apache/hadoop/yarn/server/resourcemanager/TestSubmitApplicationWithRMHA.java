@@ -24,8 +24,10 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.junit.Test;
 
@@ -80,10 +82,141 @@ public class TestSubmitApplicationWithRMHA extends RMHATestBase{
       count++;
     }
     // Verify submittion is successful
-    Assert.assertFalse(rm.getApplicationReport(app.getApplicationId())
-        .getYarnApplicationState() == YarnApplicationState.NEW);
-    Assert.assertFalse(rm.getApplicationReport(app.getApplicationId())
-        .getYarnApplicationState() == YarnApplicationState.NEW_SAVING);
+    YarnApplicationState state =
+        rm.getApplicationReport(app.getApplicationId())
+            .getYarnApplicationState();
+    Assert.assertTrue(state == YarnApplicationState.ACCEPTED
+        || state == YarnApplicationState.SUBMITTED);
     Assert.assertEquals(expectedAppId, app.getApplicationId());
+  }
+
+  // There are two scenarios when RM failover happens
+  // after SubmitApplication Call:
+  // 1) RMStateStore already saved the ApplicationState when failover happens
+  // 2) RMStateStore did not save the ApplicationState when failover happens
+
+  @Test
+  public void
+      testHandleRMHAafterSubmitApplicationCallWithSavedApplicationState()
+          throws Exception {
+    // Test scenario 1 when RM failover happens
+    // after SubmitApplication Call:
+    // RMStateStore already saved the ApplicationState when failover happens
+    startRMs();
+
+    // Submit Application
+    // After submission, the applicationState will be saved in RMStateStore.
+    RMApp app0 = rm1.submitApp(200);
+
+    // Do the failover
+    explicitFailover();
+
+    // Since the applicationState has already been saved in RMStateStore
+    // before failover happens, the current active rm can load the previous
+    // applicationState.
+    ApplicationReport appReport =
+        rm2.getApplicationReport(app0.getApplicationId());
+
+    // verify previous submission is successful.
+    Assert.assertTrue(appReport.getYarnApplicationState()
+        == YarnApplicationState.ACCEPTED ||
+        appReport.getYarnApplicationState()
+        == YarnApplicationState.SUBMITTED);
+  }
+
+  @Test
+  public void
+      testHandleRMHAafterSubmitApplicationCallWithoutSavedApplicationState()
+          throws Exception {
+    // Test scenario 2 when RM failover happens
+    // after SubmitApplication Call:
+    // RMStateStore did not save the ApplicationState when failover happens.
+    // Using customized RMAppManager.
+    startRMsWithCustomizedRMAppManager();
+
+    // Submit Application
+    // After submission, the applicationState will
+    // not be saved in RMStateStore
+    RMApp app0 =
+        rm1.submitApp(200, "", UserGroupInformation
+            .getCurrentUser().getShortUserName(), null, false, null,
+            configuration.getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
+                YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS), null, null,
+            false, false);
+
+    // Do the failover
+    explicitFailover();
+
+    // Since the applicationState is not saved in RMStateStore
+    // when failover happens. The current active RM can not load
+    // previous applicationState.
+    // Expect ApplicationNotFoundException by calling getApplicationReport().
+    try {
+      rm2.getApplicationReport(app0.getApplicationId());
+      Assert.fail("Should get ApplicationNotFoundException here");
+    } catch (ApplicationNotFoundException ex) {
+      // expected ApplicationNotFoundException
+    }
+
+    // Submit the application with previous ApplicationId to current active RM
+    // This will mimic the similar behavior of YarnClient which will re-submit
+    // Application with previous applicationId
+    // when catches the ApplicationNotFoundException
+    RMApp app1 =
+        rm2.submitApp(200, "", UserGroupInformation
+            .getCurrentUser().getShortUserName(), null, false, null,
+            configuration.getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
+                YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS), null, null,
+            false, false, true, app0.getApplicationId());
+
+    verifySubmitApp(rm2, app1, app0.getApplicationId());
+  }
+
+  /**
+   * Test multiple calls of getApplicationReport, to make sure
+   * it is idempotent
+   */
+  @Test
+  public void testGetApplicationReportIdempotent() throws Exception{
+    // start two RMs, and transit rm1 to active, rm2 to standby
+    startRMs();
+
+    // Submit Application
+    // After submission, the applicationState will be saved in RMStateStore.
+    RMApp app = rm1.submitApp(200);
+
+    ApplicationReport appReport1 =
+        rm1.getApplicationReport(app.getApplicationId());
+    Assert.assertTrue(appReport1.getYarnApplicationState() ==
+        YarnApplicationState.ACCEPTED ||
+        appReport1.getYarnApplicationState() ==
+        YarnApplicationState.SUBMITTED);
+
+    // call getApplicationReport again
+    ApplicationReport appReport2 =
+        rm1.getApplicationReport(app.getApplicationId());
+    Assert.assertEquals(appReport1.getApplicationId(),
+        appReport2.getApplicationId());
+    Assert.assertEquals(appReport1.getYarnApplicationState(),
+        appReport2.getYarnApplicationState());
+
+    // Do the failover
+    explicitFailover();
+
+    // call getApplicationReport
+    ApplicationReport appReport3 =
+        rm2.getApplicationReport(app.getApplicationId());
+    Assert.assertEquals(appReport1.getApplicationId(),
+        appReport3.getApplicationId());
+    Assert.assertEquals(appReport1.getYarnApplicationState(),
+        appReport3.getYarnApplicationState());
+
+    // call getApplicationReport again
+    ApplicationReport appReport4 =
+        rm2.getApplicationReport(app.getApplicationId());
+    Assert.assertEquals(appReport3.getApplicationId(),
+        appReport4.getApplicationId());
+    Assert.assertEquals(appReport3.getYarnApplicationState(),
+        appReport4.getYarnApplicationState());
   }
 }
