@@ -154,6 +154,8 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-6085. Improve CacheReplicationMonitor log messages a bit (cmccabe)
 
+    HDFS-6072. Clean up dead code of FSImage. (wheat9)
+
   OPTIMIZATIONS
 
     HDFS-5790. LeaseManager.findPath is very slow when many leases need recovery
