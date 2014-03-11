@@ -21,6 +21,8 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
@@ -29,7 +31,11 @@ import junit.framework.Assert;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
@@ -42,6 +48,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResponse;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
@@ -49,6 +56,8 @@ import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.junit.After;
 import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
 
 public class TestResourceTrackerService {
 
@@ -455,6 +464,28 @@ public class TestResourceTrackerService {
         .getState() != NodeState.UNHEALTHY) == health);
     Assert.assertEquals("Unhealthy metrics not incremented", count,
         ClusterMetrics.getMetrics().getUnhealthyNMs());
+  }
+
+  @Test
+  public void testNodeRegistrationWithContainers() throws Exception {
+    MockRM rm = new MockRM();
+    rm.init(new YarnConfiguration());
+    rm.start();
+    RMApp app = rm.submitApp(1024);
+
+    MockNM nm = rm.registerNode("host1:1234", 8192);
+    nm.nodeHeartbeat(true);
+
+    // Register node with some container statuses
+    ContainerStatus status = ContainerStatus.newInstance(
+        ContainerId.newInstance(ApplicationAttemptId.newInstance(
+            app.getApplicationId(), 2), 1),
+        ContainerState.COMPLETE, "Dummy Completed", 0);
+
+    // The following shouldn't throw NPE
+    nm.registerNode(Collections.singletonList(status));
+    assertEquals("Incorrect number of nodes", 1,
+        rm.getRMContext().getRMNodes().size());
   }
 
   @Test
