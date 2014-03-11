@@ -44,6 +44,7 @@ import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
@@ -683,9 +684,16 @@ public class ResourceLocalizationService extends CompositeService
             }
           } catch (IOException e) {
             rsrc.unlock();
-            // TODO Need to Fix IO Exceptions - Notifying resource
+            publicRsrc.handle(new ResourceFailedLocalizationEvent(request
+              .getResource().getRequest(), e.getMessage()));
             LOG.error("Local path for public localization is not found. "
                 + " May be disks failed.", e);
+          } catch (RejectedExecutionException re) {
+            rsrc.unlock();
+            publicRsrc.handle(new ResourceFailedLocalizationEvent(request
+              .getResource().getRequest(), re.getMessage()));
+            LOG.error("Failed to submit rsrc " + rsrc + " for download."
+                + " Either queue is full or threadpool is shutdown.", re);
           }
         } else {
           rsrc.unlock();
