@@ -287,12 +287,12 @@ public class ShortCircuitRegistry {
     return info;
   }
   
-  public synchronized void registerSlot(ExtendedBlockId blockId, SlotId slotId)
-      throws InvalidRequestException {
+  public synchronized void registerSlot(ExtendedBlockId blockId, SlotId slotId,
+      boolean isCached) throws InvalidRequestException {
     if (!enabled) {
       if (LOG.isTraceEnabled()) {
-        LOG.trace("registerSlot: ShortCircuitRegistry is " +
-            "not enabled.");
+        LOG.trace(this + " can't register a slot because the " +
+            "ShortCircuitRegistry is not enabled.");
       }
       throw new UnsupportedOperationException();
     }
@@ -303,8 +303,17 @@ public class ShortCircuitRegistry {
           "registered with shmId " + shmId);
     }
     Slot slot = shm.registerSlot(slotId.getSlotIdx(), blockId);
+    if (isCached) {
+      slot.makeAnchorable();
+    } else {
+      slot.makeUnanchorable();
+    }
     boolean added = slots.put(blockId, slot);
     Preconditions.checkState(added);
+    if (LOG.isTraceEnabled()) {
+      LOG.trace(this + ": registered " + blockId + " with slot " +
+        slotId + " (isCached=" + isCached + ")");
+    }
   }
   
   public synchronized void unregisterSlot(SlotId slotId)

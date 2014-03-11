@@ -607,7 +607,7 @@ public class TestEnhancedByteBufferAccess {
     conf.setLong(DFS_DATANODE_MAX_LOCKED_MEMORY_KEY,
         DFSTestUtil.roundUpToMultiple(TEST_FILE_LENGTH, 4096));
     MiniDFSCluster cluster = null;
-    ByteBuffer result = null;
+    ByteBuffer result = null, result2 = null;
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     cluster.waitActive();
     FsDatasetSpi<?> fsd = cluster.getDataNodes().get(0).getFSDataset();
@@ -644,9 +644,22 @@ public class TestEnhancedByteBufferAccess {
     } catch (UnsupportedOperationException e) {
       Assert.fail("expected to be able to read cached file via zero-copy");
     }
-    // Verify result
     Assert.assertArrayEquals(Arrays.copyOfRange(original, 0,
         BLOCK_SIZE), byteBufferToArray(result));
+    // Test that files opened after the cache operation has finished
+    // still get the benefits of zero-copy (regression test for HDFS-6086)
+    FSDataInputStream fsIn2 = fs.open(TEST_PATH);
+    try {
+      result2 = fsIn2.read(null, TEST_FILE_LENGTH,
+          EnumSet.noneOf(ReadOption.class));
+    } catch (UnsupportedOperationException e) {
+      Assert.fail("expected to be able to read cached file via zero-copy");
+    }
+    Assert.assertArrayEquals(Arrays.copyOfRange(original, 0,
+        BLOCK_SIZE), byteBufferToArray(result2));
+    fsIn2.releaseBuffer(result2);
+    fsIn2.close();
+    
     // check that the replica is anchored 
     final ExtendedBlock firstBlock =
         DFSTestUtil.getFirstBlock(fs, TEST_PATH);

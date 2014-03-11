@@ -191,7 +191,15 @@ public class ShortCircuitReplica {
     if (slot == null) {
       return false;
     }
-    return slot.addAnchor();
+    boolean result = slot.addAnchor();
+    if (LOG.isTraceEnabled()) {
+      if (result) {
+        LOG.trace(this + ": added no-checksum anchor to slot " + slot);
+      } else {
+        LOG.trace(this + ": could not add no-checksum anchor to slot " + slot);
+      }
+    }
+    return result;
   }
 
   /**

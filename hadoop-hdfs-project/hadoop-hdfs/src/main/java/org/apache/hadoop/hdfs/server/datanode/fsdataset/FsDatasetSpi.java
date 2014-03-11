@@ -320,6 +320,14 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
    */
   public void uncache(String bpid, long[] blockIds);
 
+  /**
+   * Determine if the specified block is cached.
+   * @param bpid Block pool id
+   * @param blockIds - block id
+   * @returns true if the block is cached
+   */
+  public boolean isCached(String bpid, long blockId);
+
     /**
      * Check if all the data directories are healthy
      * @throws DiskErrorException
