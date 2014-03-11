@@ -18,8 +18,7 @@
 package org.apache.hadoop.metrics.util;
 
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 
@@ -32,7 +31,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
  */
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 public class MetricsRegistry {
-  private Map<String, MetricsBase> metricsList = new HashMap<String, MetricsBase>();
+  private ConcurrentHashMap<String, MetricsBase> metricsList =
+      new ConcurrentHashMap<String, MetricsBase>();
 
   public MetricsRegistry() {
   }
@@ -51,11 +51,11 @@ public class MetricsRegistry {
    * @param theMetricsObj - the metrics
    * @throws IllegalArgumentException if a name is already registered
    */
-  public synchronized void add(final String metricsName, final MetricsBase theMetricsObj) {
-    if (metricsList.containsKey(metricsName)) {
-      throw new IllegalArgumentException("Duplicate metricsName:" + metricsName);
+  public void add(final String metricsName, final MetricsBase theMetricsObj) {
+    if (metricsList.putIfAbsent(metricsName, theMetricsObj) != null) {
+      throw new IllegalArgumentException("Duplicate metricsName:" +
+          metricsName);
     }
-    metricsList.put(metricsName, theMetricsObj);
   }
 
   
@@ -65,7 +65,7 @@ public class MetricsRegistry {
    * @return the metrics if there is one registered by the supplied name.
    *         Returns null if none is registered
    */
-  public synchronized MetricsBase get(final String metricsName) {
+  public MetricsBase get(final String metricsName) {
     return metricsList.get(metricsName);
   }
   
@@ -74,7 +74,7 @@ public class MetricsRegistry {
    * 
    * @return the list of metrics names
    */
-  public synchronized Collection<String> getKeyList() {
+  public Collection<String> getKeyList() {
     return metricsList.keySet();
   }
   
@@ -82,7 +82,7 @@ public class MetricsRegistry {
    * 
    * @return the list of metrics
    */
-  public synchronized Collection<MetricsBase> getMetricsList() {
+  public Collection<MetricsBase> getMetricsList() {
     return metricsList.values();
   }
 }
