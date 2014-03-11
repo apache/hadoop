@@ -594,6 +594,11 @@ class FSDataset implements FSDatasetInterface {
       }
       return (remaining > 0) ? remaining : 0;
     }
+
+    @Override
+    public String getBasePath() {
+      return currentDir.getParent();
+    }
       
     long getReserved(){
       return reserved;

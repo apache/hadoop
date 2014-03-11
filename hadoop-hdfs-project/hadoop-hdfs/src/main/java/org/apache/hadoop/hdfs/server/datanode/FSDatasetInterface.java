@@ -86,6 +86,9 @@ public interface FSDatasetInterface extends FSDatasetMBean {
     /** @return the available storage space in bytes. */
     public long getAvailable() throws IOException;
 
+    /** @return the base path to the volume */
+    public String getBasePath();
+
     /** @return the directory for the block pool. */
     public File getDirectory(String bpid) throws IOException;
 

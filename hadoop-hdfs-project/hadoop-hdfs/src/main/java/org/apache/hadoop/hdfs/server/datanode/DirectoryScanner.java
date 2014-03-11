@@ -33,6 +33,8 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -152,12 +154,73 @@ public class DirectoryScanner implements Runnable {
    * Tracks the files and other information related to a block on the disk
    * Missing file is indicated by setting the corresponding member
    * to null.
+   * 
+   * Because millions of these structures may be created, we try to save
+   * memory here.  So instead of storing full paths, we store path suffixes.
+   * The block file, if it exists, will have a path like this:
+   * <volume_base_path>/<block_path>
+   * So we don't need to store the volume path, since we already know what the
+   * volume is.
+   * 
+   * The metadata file, if it exists, will have a path like this:
+   * <volume_base_path>/<block_path>_<genstamp>.meta
+   * So if we have a block file, there isn't any need to store the block path
+   * again.
+   * 
+   * The accessor functions take care of these manipulations.
    */
   static class ScanInfo implements Comparable<ScanInfo> {
     private final long blockId;
-    private final File metaFile;
-    private final File blockFile;
+    
+    /**
+     * The block file path, relative to the volume's base directory.
+     * If there was no block file found, this may be null. If 'vol'
+     * is null, then this is the full path of the block file.
+     */
+    private final String blockSuffix;
+    
+    /**
+     * The suffix of the meta file path relative to the block file.
+     * If blockSuffix is null, then this will be the entire path relative
+     * to the volume base directory, or an absolute path if vol is also
+     * null.
+     */
+    private final String metaSuffix;
+
     private final FSVolumeInterface volume;
+    private final static Pattern CONDENSED_PATH_REGEX =
+        Pattern.compile("(?<!^)(\\\\|/){2,}");
+    
+    private final static String QUOTED_FILE_SEPARATOR = 
+        Matcher.quoteReplacement(File.separator);
+    
+    /**
+     * Get the most condensed version of the path.
+     *
+     * For example, the condensed version of /foo//bar is /foo/bar
+     * Unlike {@link File#getCanonicalPath()}, this will never perform I/O
+     * on the filesystem.
+     */
+    private static String getCondensedPath(String path) {
+      return CONDENSED_PATH_REGEX.matcher(path).
+          replaceAll(QUOTED_FILE_SEPARATOR);
+    }
+
+    /**
+     * Get a path suffix.
+     *
+     * @param f            The file to get the suffix for.
+     * @param prefix       The prefix we're stripping off.
+     *
+     * @return             A suffix such that prefix + suffix = path to f
+     */
+    private static String getSuffix(File f, String prefix) {
+      String fullPath = getCondensedPath(f.getAbsolutePath());
+      if (fullPath.startsWith(prefix)) {
+        return fullPath.substring(prefix.length());
+      }
+      throw new RuntimeException(prefix + " is not a prefix of " + fullPath);
+    }
 
     ScanInfo(long blockId) {
       this(blockId, null, null, null);
@@ -165,17 +228,34 @@ public class DirectoryScanner implements Runnable {
 
     ScanInfo(long blockId, File blockFile, File metaFile, FSVolumeInterface vol) {
       this.blockId = blockId;
-      this.metaFile = metaFile;
-      this.blockFile = blockFile;
+      String condensedVolPath = vol == null ? null :
+        getCondensedPath(vol.getBasePath());
+      this.blockSuffix = blockFile == null ? null :
+        getSuffix(blockFile, condensedVolPath);
+      if (metaFile == null) {
+        this.metaSuffix = null;
+      } else if (blockFile == null) {
+        this.metaSuffix = getSuffix(metaFile, condensedVolPath);
+      } else {
+        this.metaSuffix = getSuffix(metaFile,
+            condensedVolPath + blockSuffix);
+      }
       this.volume = vol;
     }
 
-    File getMetaFile() {
-      return metaFile;
+    File getBlockFile() {
+      return (blockSuffix == null) ? null :
+        new File(volume.getBasePath(), blockSuffix);
     }
 
-    File getBlockFile() {
-      return blockFile;
+    File getMetaFile() {
+      if (metaSuffix == null) {
+        return null;
+      } else if (blockSuffix == null) {
+        return new File(volume.getBasePath(), metaSuffix);
+      } else {
+        return new File(volume.getBasePath(), blockSuffix + metaSuffix);
+      }
     }
 
     long getBlockId() {
@@ -214,8 +294,9 @@ public class DirectoryScanner implements Runnable {
     }
 
     public long getGenStamp() {
-      return metaFile != null ? Block.getGenerationStamp(metaFile.getName()) :
-        GenerationStamp.GRANDFATHER_GENERATION_STAMP;
+      return metaSuffix != null ? Block.getGenerationStamp(
+          getMetaFile().getName()) : 
+            GenerationStamp.GRANDFATHER_GENERATION_STAMP;
     }
   }
 
