@@ -416,6 +416,9 @@ Release 2.4.0 - UNRELEASED
     HADOOP-10395. TestCallQueueManager is flaky. (Arpit Agarwal)
 
     HADOOP-10394. TestAuthenticationFilter is flaky. (Arpit Agarwal)
+    
+    HADOOP-10337 ConcurrentModificationException from
+    MetricsDynamicMBeanBase.createMBeanInfo() (Liang Xie via stack)
 
   BREAKDOWN OF HADOOP-10184 SUBTASKS AND RELATED JIRAS
 
