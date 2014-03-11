@@ -210,14 +210,16 @@ public class ResourceTrackerService extends AbstractService implements
             rmContext.getRMApps().get(appAttemptId.getApplicationId());
         if (rmApp != null) {
           RMAppAttempt rmAppAttempt = rmApp.getRMAppAttempt(appAttemptId);
-          if (rmAppAttempt.getMasterContainer().getId()
-              .equals(containerStatus.getContainerId())
-              && containerStatus.getState() == ContainerState.COMPLETE) {
-            // sending master container finished event.
-            RMAppAttemptContainerFinishedEvent evt =
-                new RMAppAttemptContainerFinishedEvent(appAttemptId,
-                    containerStatus);
-            rmContext.getDispatcher().getEventHandler().handle(evt);
+          if (rmAppAttempt != null) {
+            if (rmAppAttempt.getMasterContainer().getId()
+                .equals(containerStatus.getContainerId())
+                && containerStatus.getState() == ContainerState.COMPLETE) {
+              // sending master container finished event.
+              RMAppAttemptContainerFinishedEvent evt =
+                  new RMAppAttemptContainerFinishedEvent(appAttemptId,
+                      containerStatus);
+              rmContext.getDispatcher().getEventHandler().handle(evt);
+            }
           }
         } else {
           LOG.error("Received finished container :"

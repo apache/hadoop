@@ -443,6 +443,9 @@ Release 2.4.0 - UNRELEASED
     apps-killed metrics correctly for killed applications. (Varun Vasudev via
     vinodkv)
 
+    YARN-1821. NPE on registerNodeManager if the request has containers for 
+    UnmanagedAMs. (kasha)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
