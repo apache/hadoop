@@ -253,154 +253,6 @@ Trunk (Unreleased)
     HDFS-5794. Fix the inconsistency of layout version number of 
     ADD_DATANODE_AND_STORAGE_UUIDS between trunk and branch-2. (jing9)
 
-BREAKDOWN OF HDFS-5535 ROLLING UPGRADE SUBTASKS AND RELATED JIRAS
-
-    HDFS-5496. Make replication queue initialization asynchronous. (Vinay via
-    jing9)
-
-    HDFS-5645. Support upgrade marker in editlog streams. (szetszwo)
-
-    HDFS-5752. Add a new DFSAdmin command to query, start and finalize rolling
-    upgrade. (szetszwo)
-
-    HDFS-5786. Support QUERY and FINALIZE actions of rolling upgrade. (szetszwo)
-
-    HDFS-5753. Add new Namenode startup options for downgrade and rollback using
-    upgrade marker. (szetszwo)
-
-    HDFS-5835. Add a new option for starting Namenode when rolling upgrade is
-    in progress. (szetszwo)
-
-    HDFS-5754. Split LayoutVerion into NameNodeLayoutVersion and
-    DataNodeLayoutVersion. (Brandon Li via szetszwo)
-
-    HDFS-5848. Add rolling upgrade status to heartbeat response. (szetszwo)
-
-    HDFS-5890. Avoid NPE in Datanode heartbeat. (Vinay via brandonli)
-
-    HDFS-5869. When starting rolling upgrade or NN restarts, NN should create
-    a checkpoint right before the upgrade marker.  (szetszwo)
-
-    HDFS-5874. Should not compare DataNode current layout version with that of
-    NameNode in DataStrorage. (brandonli)
-
-    HDFS-5889. When starting rolling upgrade, create a fs image for rollback
-    so that the standby namenode can create checkpoints during upgrade.
-    (szetszwo & jing9)
-
-    HDFS-5907. Add BlockPoolSliceStorage 'trash' to handle block deletions
-    during rolling upgrades. (Arpit Agarwal)
-
-    HDFS-5494. Merge Protobuf-based-FSImage code from trunk - fix build
-    break after the merge. (Jing Zhao via Arpit Agarwal)
-
-    HDFS-5585. Provide admin commands for data node upgrade (kihwal)
-
-    HDFS-5920. Support rollback of rolling upgrade in NameNode and JournalNodes.
-    (jing9)
-
-    HDFS-5945. Add rolling upgrade information to fsimage; and disallow upgrade
-    and rolling upgrade to be started simultaneously.  (szetszwo & jing9)
-
-    HDFS-5966. Fix rollback of rolling upgrade in NameNode HA setup.  (jing9
-    via szetszwo)
-
-    HDFS-5974. Fix compilation error, NameNodeLayoutVersion and
-    DataNodeLayoutVersion after merge from trunk.  (szetszwo)
-
-    HDFS-5963. TestRollingUpgrade#testSecondaryNameNode causes subsequent
-    tests to fail. (szetszwo via Arpit Agarwal)
-
-    HDFS-5976. Create unit tests for downgrade and finalize rolling upgrade.
-    (Haohui Mai via Arpit Agarwal)
-
-    HDFS-5980. Rollback does not need to load edits.  (jing9 via szetszwo)
-
-    HDFS-5984. Fix TestEditLog and TestStandbyCheckpoints.  (jing9 via szetszwo)
-
-    HDFS-5985. SimulatedFSDataset#disableAndPurgeTrashStorage should not throw
-    UnsupportedOperationException. (jing9 via kihwal)
-
-    HDFS-5987. Fix findbugs warnings in Rolling Upgrade branch. (seztszwo via
-    Arpit Agarwal)
-
-    HDFS-5992. Fix NPE in MD5FileUtils and update editsStored for
-    TestOfflineEditsViewer.  (szetszwo)
-
-    HDFS-5994. Fix TestDataNodeRollingUpgrade.  (Arpit Agarwal via szetszwo)
-
-    HDFS-5999. Do not create rollback fsimage when it already exists. (jing9)
-
-    HDFS-6005. Simplify Datanode rollback and downgrade. (Suresh Srinivas via
-    Arpit Agarwal)
-
-    HDFS-6004. Change DFSAdmin for rolling upgrade commands. (szetszwo via
-    Arpit Agarwal)
-
-    HDFS-5583. Make DN send an OOB Ack on shutdown before restarting. (kihwal)
-
-    HDFS-5778. Add rolling upgrade user document. (szetszwo)
-
-    HDFS-6003. Add the new -rollingUpgrade startup option to the namenode
-    usage message. (Vinayakumar B via szetszwo)
-
-    HDFS-6014. Fix findbug warnings introduced by HDFS-5583. (kihwal)
-
-    HDFS-6015. Fix TestBlockRecovery
-    #testRaceBetweenReplicaRecoveryAndFinalizeBlock. (kihwal)
-
-    HDFS-5924. Utilize OOB upgrade message processing for writes. (kihwal)
-
-    HDFS-5498. Improve datanode startup time. (kihwal)
-
-    HDFS-6000. Avoid saving namespace when starting rolling upgrade. (jing9)
-
-    HDFS-6017. Query the status of rolling upgrade in the preparation stage in
-    TestRollingUpgrade and TestRollingUpgradeRollback. (Haohui Mai via
-    Arpit Agarwal)
-
-    HDFS-6020. Fix the five findbugs warnings. (kihwal)
-
-    HDFS-6019. Standby NN might not checkpoint when processing the rolling
-    upgrade marker. (Haohui Mai via jing9)
-
-    HDFS-6023. Test whether the standby NN continues to checkpoint after the
-    prepare stage. (Haohui Mai via jing9)
-
-    HDFS-6024. Test whether the NN will reject the downgrade if it has a
-    fsimage from a newer release. (Haohui Mai via jing9)
-
-    HDFS-6026. Fix TestDFSUpgrade and TestDataNodeRollingUpgrade.
-    (jing9 via szetszwo)
-
-    HDFS-6029. Secondary NN fails to checkpoint after -rollingUpgrade prepare.
-    (jing9)
-
-    HDFS-6032. -rollingUpgrade query hits NPE after the NN restarts. (Haohui Mai
-    via jing9)
-
-    HDFS-6031. Add back the "-rollingUpgrade started" namenode startup option;
-    otherwise, namenode cannot start when the layout version is changed.
-    (szetszwo)
-
-    HDFS-6034. Use DataNodeLayoutVersion for DN registration check and do not
-    verify layout version if there is a rolling upgrade in progress.  (szetszwo)
-
-    HDFS-6013. add rollingUpgrade information to latest UI.
-    (Vinayakumar B via wheat9)
-
-    HDFS-6042. Fix rolling upgrade documentation and error messages. (szetszwo
-    via Arpit Agarwal)
-
-    HDFS-6041. Downgrade/Finalize should rename the rollback image instead of
-    purging it. (jing9)
-
-    HDFS-6060. NameNode should not check DataNode layout version (brandonli)
-
-    HDFS-6076. DataNode with SimulatedDataSet should not create
-    DatanodeRegistration with namenode layout version and namenode node type.
-    (szetszwo)
-
 Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -895,6 +747,154 @@ Release 2.4.0 - UNRELEASED
     copyFromLocal. (cnauroth)
 
     HDFS-6069. Quash stack traces when ACLs are disabled. (cnauroth)
+
+BREAKDOWN OF HDFS-5535 ROLLING UPGRADE SUBTASKS AND RELATED JIRAS
+
+    HDFS-5496. Make replication queue initialization asynchronous. (Vinay via
+    jing9)
+
+    HDFS-5645. Support upgrade marker in editlog streams. (szetszwo)
+
+    HDFS-5752. Add a new DFSAdmin command to query, start and finalize rolling
+    upgrade. (szetszwo)
+
+    HDFS-5786. Support QUERY and FINALIZE actions of rolling upgrade. (szetszwo)
+
+    HDFS-5753. Add new Namenode startup options for downgrade and rollback using
+    upgrade marker. (szetszwo)
+
+    HDFS-5835. Add a new option for starting Namenode when rolling upgrade is
+    in progress. (szetszwo)
+
+    HDFS-5754. Split LayoutVerion into NameNodeLayoutVersion and
+    DataNodeLayoutVersion. (Brandon Li via szetszwo)
+
+    HDFS-5848. Add rolling upgrade status to heartbeat response. (szetszwo)
+
+    HDFS-5890. Avoid NPE in Datanode heartbeat. (Vinay via brandonli)
+
+    HDFS-5869. When starting rolling upgrade or NN restarts, NN should create
+    a checkpoint right before the upgrade marker.  (szetszwo)
+
+    HDFS-5874. Should not compare DataNode current layout version with that of
+    NameNode in DataStrorage. (brandonli)
+
+    HDFS-5889. When starting rolling upgrade, create a fs image for rollback
+    so that the standby namenode can create checkpoints during upgrade.
+    (szetszwo & jing9)
+
+    HDFS-5907. Add BlockPoolSliceStorage 'trash' to handle block deletions
+    during rolling upgrades. (Arpit Agarwal)
+
+    HDFS-5494. Merge Protobuf-based-FSImage code from trunk - fix build
+    break after the merge. (Jing Zhao via Arpit Agarwal)
+
+    HDFS-5585. Provide admin commands for data node upgrade (kihwal)
+
+    HDFS-5920. Support rollback of rolling upgrade in NameNode and JournalNodes.
+    (jing9)
+
+    HDFS-5945. Add rolling upgrade information to fsimage; and disallow upgrade
+    and rolling upgrade to be started simultaneously.  (szetszwo & jing9)
+
+    HDFS-5966. Fix rollback of rolling upgrade in NameNode HA setup.  (jing9
+    via szetszwo)
+
+    HDFS-5974. Fix compilation error, NameNodeLayoutVersion and
+    DataNodeLayoutVersion after merge from trunk.  (szetszwo)
+
+    HDFS-5963. TestRollingUpgrade#testSecondaryNameNode causes subsequent
+    tests to fail. (szetszwo via Arpit Agarwal)
+
+    HDFS-5976. Create unit tests for downgrade and finalize rolling upgrade.
+    (Haohui Mai via Arpit Agarwal)
+
+    HDFS-5980. Rollback does not need to load edits.  (jing9 via szetszwo)
+
+    HDFS-5984. Fix TestEditLog and TestStandbyCheckpoints.  (jing9 via szetszwo)
+
+    HDFS-5985. SimulatedFSDataset#disableAndPurgeTrashStorage should not throw
+    UnsupportedOperationException. (jing9 via kihwal)
+
+    HDFS-5987. Fix findbugs warnings in Rolling Upgrade branch. (seztszwo via
+    Arpit Agarwal)
+
+    HDFS-5992. Fix NPE in MD5FileUtils and update editsStored for
+    TestOfflineEditsViewer.  (szetszwo)
+
+    HDFS-5994. Fix TestDataNodeRollingUpgrade.  (Arpit Agarwal via szetszwo)
+
+    HDFS-5999. Do not create rollback fsimage when it already exists. (jing9)
+
+    HDFS-6005. Simplify Datanode rollback and downgrade. (Suresh Srinivas via
+    Arpit Agarwal)
+
+    HDFS-6004. Change DFSAdmin for rolling upgrade commands. (szetszwo via
+    Arpit Agarwal)
+
+    HDFS-5583. Make DN send an OOB Ack on shutdown before restarting. (kihwal)
+
+    HDFS-5778. Add rolling upgrade user document. (szetszwo)
+
+    HDFS-6003. Add the new -rollingUpgrade startup option to the namenode
+    usage message. (Vinayakumar B via szetszwo)
+
+    HDFS-6014. Fix findbug warnings introduced by HDFS-5583. (kihwal)
+
+    HDFS-6015. Fix TestBlockRecovery
+    #testRaceBetweenReplicaRecoveryAndFinalizeBlock. (kihwal)
+
+    HDFS-5924. Utilize OOB upgrade message processing for writes. (kihwal)
+
+    HDFS-5498. Improve datanode startup time. (kihwal)
+
+    HDFS-6000. Avoid saving namespace when starting rolling upgrade. (jing9)
+
+    HDFS-6017. Query the status of rolling upgrade in the preparation stage in
+    TestRollingUpgrade and TestRollingUpgradeRollback. (Haohui Mai via
+    Arpit Agarwal)
+
+    HDFS-6020. Fix the five findbugs warnings. (kihwal)
+
+    HDFS-6019. Standby NN might not checkpoint when processing the rolling
+    upgrade marker. (Haohui Mai via jing9)
+
+    HDFS-6023. Test whether the standby NN continues to checkpoint after the
+    prepare stage. (Haohui Mai via jing9)
+
+    HDFS-6024. Test whether the NN will reject the downgrade if it has a
+    fsimage from a newer release. (Haohui Mai via jing9)
+
+    HDFS-6026. Fix TestDFSUpgrade and TestDataNodeRollingUpgrade.
+    (jing9 via szetszwo)
+
+    HDFS-6029. Secondary NN fails to checkpoint after -rollingUpgrade prepare.
+    (jing9)
+
+    HDFS-6032. -rollingUpgrade query hits NPE after the NN restarts. (Haohui Mai
+    via jing9)
+
+    HDFS-6031. Add back the "-rollingUpgrade started" namenode startup option;
+    otherwise, namenode cannot start when the layout version is changed.
+    (szetszwo)
+
+    HDFS-6034. Use DataNodeLayoutVersion for DN registration check and do not
+    verify layout version if there is a rolling upgrade in progress.  (szetszwo)
+
+    HDFS-6013. add rollingUpgrade information to latest UI.
+    (Vinayakumar B via wheat9)
+
+    HDFS-6042. Fix rolling upgrade documentation and error messages. (szetszwo
+    via Arpit Agarwal)
+
+    HDFS-6041. Downgrade/Finalize should rename the rollback image instead of
+    purging it. (jing9)
+
+    HDFS-6060. NameNode should not check DataNode layout version (brandonli)
+
+    HDFS-6076. DataNode with SimulatedDataSet should not create
+    DatanodeRegistration with namenode layout version and namenode node type.
+    (szetszwo)
 
 Release 2.3.1 - UNRELEASED
 
