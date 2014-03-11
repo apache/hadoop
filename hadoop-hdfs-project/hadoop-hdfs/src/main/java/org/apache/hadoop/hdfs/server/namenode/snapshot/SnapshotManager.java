@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
 import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -285,22 +284,6 @@ public class SnapshotManager implements SnapshotStats {
   INodeDirectorySnapshottable[] getSnapshottableDirs() {
     return snapshottables.values().toArray(
         new INodeDirectorySnapshottable[snapshottables.size()]);
-  }
-
-  /**
-   * Write {@link #snapshotCounter}, {@link #numSnapshots},
-   * and all snapshots to the DataOutput.
-   */
-  public void write(DataOutput out) throws IOException {
-    out.writeInt(snapshotCounter);
-    out.writeInt(numSnapshots.get());
-
-    // write all snapshots.
-    for(INodeDirectorySnapshottable snapshottableDir : snapshottables.values()) {
-      for(Snapshot s : snapshottableDir.getSnapshotsByNames()) {
-        s.write(out);
-      }
-    }
   }
   
   /**
