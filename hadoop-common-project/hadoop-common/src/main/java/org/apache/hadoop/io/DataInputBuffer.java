@@ -90,7 +90,10 @@ public class DataInputBuffer extends DataInputStream {
   /** Returns the current position in the input. */
   public int getPosition() { return buffer.getPosition(); }
 
-  /** Returns the length of the input. */
+  /**
+   * Returns the index one greater than the last valid character in the input
+   * stream buffer.
+   */
   public int getLength() { return buffer.getLength(); }
 
 }
