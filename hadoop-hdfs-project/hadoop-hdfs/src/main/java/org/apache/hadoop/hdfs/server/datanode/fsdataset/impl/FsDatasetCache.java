@@ -473,4 +473,10 @@ public class FsDatasetCache {
   public long getNumBlocksCached() {
     return numBlocksCached.get();
   }
+
+  public synchronized boolean isCached(String bpid, long blockId) {
+    ExtendedBlockId block = new ExtendedBlockId(blockId, bpid);
+    Value val = mappableBlockMap.get(block);
+    return (val != null) && val.state.shouldAdvertise();
+  }
 }

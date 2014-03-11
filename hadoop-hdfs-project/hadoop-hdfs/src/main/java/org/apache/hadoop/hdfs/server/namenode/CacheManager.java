@@ -916,9 +916,11 @@ public final class CacheManager {
     if (metrics != null) {
       metrics.addCacheBlockReport((int) (endTime - startTime));
     }
-    LOG.info("Processed cache report from "
-        + datanodeID + ", blocks: " + blockIds.size()
-        + ", processing time: " + (endTime - startTime) + " msecs");
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Processed cache report from "
+          + datanodeID + ", blocks: " + blockIds.size()
+          + ", processing time: " + (endTime - startTime) + " msecs");
+    }
   }
 
   private void processCacheReportImpl(final DatanodeDescriptor datanode,
