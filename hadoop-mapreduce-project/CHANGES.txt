@@ -69,6 +69,9 @@ Release 2.4.0 - UNRELEASED
     MAPREDUCE-5780. SliveTest should use the specified path to get the
     particular FileSystem instead of using the default FileSystem.  (szetszwo)
 
+    MAPREDUCE-5028. Fixed a bug in MapTask that was causing mappers to fail
+    when a large value of io.sort.mb is set. (Karthik Kambatla via vinodkv)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

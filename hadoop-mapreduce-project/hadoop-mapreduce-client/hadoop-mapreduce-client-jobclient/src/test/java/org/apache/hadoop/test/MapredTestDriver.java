@@ -29,6 +29,7 @@ import org.apache.hadoop.mapred.TestSequenceFileInputFormat;
 import org.apache.hadoop.mapred.TestTextInputFormat;
 import org.apache.hadoop.mapred.ThreadedMapBenchmark;
 import org.apache.hadoop.mapreduce.FailJob;
+import org.apache.hadoop.mapreduce.LargeSorter;
 import org.apache.hadoop.mapreduce.MiniHadoopClusterManager;
 import org.apache.hadoop.mapreduce.SleepJob;
 import org.apache.hadoop.util.ProgramDriver;
@@ -104,6 +105,8 @@ public class MapredTestDriver {
           "HDFS Stress Test and Live Data Verification.");
       pgd.addClass("minicluster", MiniHadoopClusterManager.class,
       "Single process HDFS and MR cluster.");
+      pgd.addClass("largesorter", LargeSorter.class,
+          "Large-Sort tester");
     } catch(Throwable e) {
       e.printStackTrace();
     }
