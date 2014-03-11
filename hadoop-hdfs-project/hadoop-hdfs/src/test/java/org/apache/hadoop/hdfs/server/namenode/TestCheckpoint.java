@@ -31,7 +31,6 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -565,9 +564,23 @@ public class TestCheckpoint {
   }
 
   /**
-   * Simulate a secondary node failure to transfer image. Uses an unchecked
-   * error and fail transfer before even setting the length header. This used to
-   * cause image truncation. Regression test for HDFS-3330.
+   * Simulate a secondary node failure to transfer image
+   * back to the name-node.
+   * Used to truncate primary fsimage file.
+   */
+  @Test
+  public void testSecondaryFailsToReturnImage() throws IOException {
+    Mockito.doThrow(new IOException("If this exception is not caught by the " +
+        "name-node, fs image will be truncated."))
+        .when(faultInjector).aboutToSendFile(filePathContaining("secondary"));
+
+    doSecondaryFailsToReturnImage();
+  }
+  
+  /**
+   * Similar to above test, but uses an unchecked Error, and causes it
+   * before even setting the length header. This used to cause image
+   * truncation. Regression test for HDFS-3330.
    */
   @Test
   public void testSecondaryFailsWithErrorBeforeSettingHeaders()
@@ -1965,14 +1978,7 @@ public class TestCheckpoint {
       Mockito.doReturn(Lists.newArrayList(new File("/wont-be-written")))
         .when(dstImage).getFiles(
             Mockito.<NameNodeDirType>anyObject(), Mockito.anyString());
-
-      File mockImageFile = File.createTempFile("image", "");
-      FileOutputStream imageFile = new FileOutputStream(mockImageFile);
-      imageFile.write("data".getBytes());
-      imageFile.close();
-      Mockito.doReturn(mockImageFile).when(dstImage)
-          .findImageFile(Mockito.any(NameNodeFile.class), Mockito.anyLong());
-
+      
       Mockito.doReturn(new StorageInfo(1, 1, "X", 1, NodeType.NAME_NODE).toColonSeparatedString())
         .when(dstImage).toColonSeparatedString();
 
@@ -1993,8 +1999,8 @@ public class TestCheckpoint {
       }
 
       try {
-        TransferFsImage.uploadImageFromStorage(fsName, conf, dstImage,
-            NameNodeFile.IMAGE, 0);
+        TransferFsImage.uploadImageFromStorage(fsName, new URL(
+            "http://localhost:1234"), dstImage, NameNodeFile.IMAGE, 0);
         fail("Storage info was not verified");
       } catch (IOException ioe) {
         String msg = StringUtils.stringifyException(ioe);
