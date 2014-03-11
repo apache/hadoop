@@ -24,6 +24,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.io.retry.Idempotent;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
@@ -58,7 +59,9 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
+import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 
 /**
  * <p>The protocol between clients and the <code>ResourceManager</code>
@@ -107,7 +110,16 @@ public interface ApplicationClientProtocol {
    * {@link SubmitApplicationResponse} on accepting the submission and throws 
    * an exception if it rejects the submission. However, this call needs to be
    * followed by {@link #getApplicationReport(GetApplicationReportRequest)}
-   * to make sure that the application gets properly submitted.</p>
+   * to make sure that the application gets properly submitted - obtaining a
+   * {@link SubmitApplicationResponse} from ResourceManager doesn't guarantee
+   * that RM 'remembers' this application beyond failover or restart. If RM
+   * failover or RM restart happens before ResourceManager saves the
+   * application's state successfully, the subsequent
+   * {@link #getApplicationReport(GetApplicationReportRequest)} will throw
+   * a {@link ApplicationNotFoundException}. The Clients need to re-submit
+   * the application with the same {@link ApplicationSubmissionContext} when
+   * it encounters the {@link ApplicationNotFoundException} on the
+   * {@link #getApplicationReport(GetApplicationReportRequest)} call.</p>
    * 
    * <p> In secure mode,the <code>ResourceManager</code> verifies access to
    * queues etc. before accepting the application submission.</p>
@@ -186,6 +198,7 @@ public interface ApplicationClientProtocol {
    */
   @Public
   @Stable
+  @Idempotent
   public GetApplicationReportResponse getApplicationReport(
       GetApplicationReportRequest request) 
   throws YarnException, IOException;

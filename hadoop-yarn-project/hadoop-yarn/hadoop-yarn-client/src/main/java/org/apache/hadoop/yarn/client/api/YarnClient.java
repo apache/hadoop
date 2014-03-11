@@ -29,6 +29,9 @@ import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -45,7 +48,7 @@ import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.client.api.impl.YarnClientImpl;
 import org.apache.hadoop.yarn.exceptions.ApplicationIdNotProvidedException;
-import org.apache.hadoop.yarn.exceptions.ContainerNotFoundException;
+import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 
@@ -84,15 +87,28 @@ public abstract class YarnClient extends AbstractService {
 
   /**
    * <p>
-   * Submit a new application to <code>YARN.</code> It is a blocking call, such
-   * that it will not return {@link ApplicationId} until the submitted
-   * application has been submitted and accepted by the ResourceManager.
+   * Submit a new application to <code>YARN.</code> It is a blocking call - it
+   * will not return {@link ApplicationId} until the submitted application is
+   * submitted successfully and accepted by the ResourceManager.
    * </p>
    * 
    * <p>
-   * Should provide an {@link ApplicationId} when submits a new application,
-   * otherwise, it will throw the {@link ApplicationIdNotProvidedException}
+   * Users should provide an {@link ApplicationId} as part of the parameter
+   * {@link ApplicationSubmissionContext} when submitting a new application,
+   * otherwise it will throw the {@link ApplicationIdNotProvidedException}.
    * </p>
+   *
+   * <p>This internally calls {@link ApplicationClientProtocol#submitApplication
+   * (SubmitApplicationRequest)}, and after that, it internally invokes
+   * {@link ApplicationClientProtocol#getApplicationReport
+   * (GetApplicationReportRequest)} and waits till it can make sure that the
+   * application gets properly submitted. If RM fails over or RM restart
+   * happens before ResourceManager saves the application's state,
+   * {@link ApplicationClientProtocol
+   * #getApplicationReport(GetApplicationReportRequest)} will throw
+   * the {@link ApplicationNotFoundException}. This API automatically resubmits
+   * the application with the same {@link ApplicationSubmissionContext} when it
+   * catches the {@link ApplicationNotFoundException}</p>
    *
    * @param appContext
    *          {@link ApplicationSubmissionContext} containing all the details
@@ -102,8 +118,9 @@ public abstract class YarnClient extends AbstractService {
    * @throws IOException
    * @see #createApplication()
    */
-  public abstract ApplicationId submitApplication(ApplicationSubmissionContext appContext)
-      throws YarnException, IOException;
+  public abstract ApplicationId submitApplication(
+      ApplicationSubmissionContext appContext) throws YarnException,
+      IOException;
 
   /**
    * <p>

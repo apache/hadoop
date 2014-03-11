@@ -281,6 +281,9 @@ Release 2.4.0 - UNRELEASED
     after getting an application-ID but before submission and can still submit to
     the newly active RM with no issues. (Xuan Gong via vinodkv)
 
+    YARN-1764. Modified YarnClient to correctly handle failover of ResourceManager
+    after the submitApplication call goes through. (Xuan Gong via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
