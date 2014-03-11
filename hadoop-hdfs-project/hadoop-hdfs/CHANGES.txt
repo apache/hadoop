@@ -354,6 +354,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-6077. Running slive with webhdfs on secure HA cluster fails with unkown
     host exception. (jing9)
 
+    HDFS-6086. Fix a case where zero-copy or no-checksum reads were not allowed
+    even when the block was cached (cmccabe)
+
   BREAKDOWN OF HDFS-5698 SUBTASKS AND RELATED JIRAS
 
     HDFS-5717. Save FSImage header in protobuf. (Haohui Mai via jing9)

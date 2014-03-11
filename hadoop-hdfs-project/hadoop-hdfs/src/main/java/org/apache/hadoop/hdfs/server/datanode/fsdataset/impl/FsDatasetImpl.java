@@ -1271,6 +1271,10 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     }
   }
 
+  public boolean isCached(String bpid, long blockId) {
+    return cacheManager.isCached(bpid, blockId);
+  }
+
   @Override // FsDatasetSpi
   public synchronized boolean contains(final ExtendedBlock block) {
     final long blockId = block.getLocalBlock().getBlockId();

@@ -641,6 +641,11 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
         "SimulatedFSDataset does not support uncache operation!");
   }
 
+  @Override // FSDatasetSpi
+  public boolean isCached(String bpid, long blockId) {
+    return false;
+  }
+
   private BInfo getBInfo(final ExtendedBlock b) {
     final Map<Block, BInfo> map = blockMap.get(b.getBlockPoolId());
     return map == null? null: map.get(b.getLocalBlock());

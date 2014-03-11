@@ -261,8 +261,10 @@ class DataXceiver extends Receiver implements Runnable {
             "anything but a UNIX domain socket.");
       }
       if (slotId != null) {
+        boolean isCached = datanode.data.
+            isCached(blk.getBlockPoolId(), blk.getBlockId());
         datanode.shortCircuitRegistry.registerSlot(
-            ExtendedBlockId.fromExtendedBlock(blk), slotId);
+            ExtendedBlockId.fromExtendedBlock(blk), slotId, isCached);
       }
       try {
         fis = datanode.requestShortCircuitFdsForRead(blk, token, maxVersion);
