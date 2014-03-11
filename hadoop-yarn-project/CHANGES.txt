@@ -446,6 +446,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1821. NPE on registerNodeManager if the request has containers for 
     UnmanagedAMs. (kasha)
 
+    YARN-1800. Fixed NodeManager to gracefully handle RejectedExecutionException
+    in the public-localizer thread-pool. (Varun Vasudev via vinodkv)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
