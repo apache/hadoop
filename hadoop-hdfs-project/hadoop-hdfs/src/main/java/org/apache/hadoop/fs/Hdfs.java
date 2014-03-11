@@ -30,11 +30,12 @@ import java.util.NoSuchElementException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.permission.AclEntry;
+import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.hdfs.CorruptFileBlockIterator;
 import org.apache.hadoop.hdfs.DFSClient;
-import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
@@ -381,6 +382,38 @@ public class Hdfs extends AbstractFileSystem {
     List<Token<?>> tokenList = new ArrayList<Token<?>>();
     tokenList.add(result);
     return tokenList;
+  }
+
+  @Override
+  public void modifyAclEntries(Path path, List<AclEntry> aclSpec)
+      throws IOException {
+    dfs.modifyAclEntries(getUriPath(path), aclSpec);
+  }
+
+  @Override
+  public void removeAclEntries(Path path, List<AclEntry> aclSpec)
+      throws IOException {
+    dfs.removeAclEntries(getUriPath(path), aclSpec);
+  }
+
+  @Override
+  public void removeDefaultAcl(Path path) throws IOException {
+    dfs.removeDefaultAcl(getUriPath(path));
+  }
+
+  @Override
+  public void removeAcl(Path path) throws IOException {
+    dfs.removeAcl(getUriPath(path));
+  }
+
+  @Override
+  public void setAcl(Path path, List<AclEntry> aclSpec) throws IOException {
+    dfs.setAcl(getUriPath(path), aclSpec);
+  }
+
+  @Override
+  public AclStatus getAclStatus(Path path) throws IOException {
+    return dfs.getAclStatus(getUriPath(path));
   }
 
   /**
