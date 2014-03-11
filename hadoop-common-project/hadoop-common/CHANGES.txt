@@ -415,6 +415,8 @@ Release 2.4.0 - UNRELEASED
 
     HADOOP-10395. TestCallQueueManager is flaky. (Arpit Agarwal)
 
+    HADOOP-10394. TestAuthenticationFilter is flaky. (Arpit Agarwal)
+
   BREAKDOWN OF HADOOP-10184 SUBTASKS AND RELATED JIRAS
 
     HADOOP-10185. FileSystem API for ACLs. (cnauroth)
