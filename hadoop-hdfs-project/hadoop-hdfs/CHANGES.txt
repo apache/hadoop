@@ -643,6 +643,8 @@ HDFS-5535 subtasks:
     HDFS-6041. Downgrade/Finalize should rename the rollback image instead of
     purging it. (jing9)
 
+    HDFS-6060. NameNode should not check DataNode layout version (brandonli)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
