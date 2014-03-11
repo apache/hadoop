@@ -149,6 +149,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-6055. Change default configuration to limit file name length in HDFS.
     (cnauroth)
 
+    HDFS-3405. Checkpointing should use HTTP POST or PUT instead of GET-GET
+    to send merged fsimages. (Vinayakumar B via wang)
+
   OPTIMIZATIONS
 
     HDFS-5790. LeaseManager.findPath is very slow when many leases need recovery
