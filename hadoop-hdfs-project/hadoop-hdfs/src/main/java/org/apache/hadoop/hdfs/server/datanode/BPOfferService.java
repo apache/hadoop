@@ -329,7 +329,7 @@ class BPOfferService {
     }
   }
 
-  synchronized DatanodeRegistration createRegistration() throws IOException {
+  synchronized DatanodeRegistration createRegistration() {
     Preconditions.checkState(bpNSInfo != null,
         "getRegistration() can only be called after initial handshake");
     return dn.createBPRegistration(bpNSInfo);

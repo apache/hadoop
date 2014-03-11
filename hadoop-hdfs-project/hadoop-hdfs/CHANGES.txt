@@ -645,6 +645,10 @@ HDFS-5535 subtasks:
 
     HDFS-6060. NameNode should not check DataNode layout version (brandonli)
 
+    HDFS-6076. DataNode with SimulatedDataSet should not create
+    DatanodeRegistration with namenode layout version and namenode node type.
+    (szetszwo)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
