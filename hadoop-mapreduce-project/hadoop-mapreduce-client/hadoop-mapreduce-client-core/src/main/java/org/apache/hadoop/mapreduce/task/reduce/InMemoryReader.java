@@ -37,9 +37,9 @@ import org.apache.hadoop.mapreduce.TaskAttemptID;
 public class InMemoryReader<K, V> extends Reader<K, V> {
   private final TaskAttemptID taskAttemptId;
   private final MergeManagerImpl<K,V> merger;
-  DataInputBuffer memDataIn = new DataInputBuffer();
-  private int start;
-  private int length;
+  private final DataInputBuffer memDataIn = new DataInputBuffer();
+  private final int start;
+  private final int length;
   
   public InMemoryReader(MergeManagerImpl<K,V> merger, TaskAttemptID taskAttemptId,
                         byte[] data, int start, int length, Configuration conf)
@@ -50,14 +50,14 @@ public class InMemoryReader<K, V> extends Reader<K, V> {
 
     buffer = data;
     bufferSize = (int)fileLength;
-    memDataIn.reset(buffer, start, length);
+    memDataIn.reset(buffer, start, length - start);
     this.start = start;
     this.length = length;
   }
 
   @Override
   public void reset(int offset) {
-    memDataIn.reset(buffer, start + offset, length);
+    memDataIn.reset(buffer, start + offset, length - start - offset);
     bytesRead = offset;
     eof = false;
   }
