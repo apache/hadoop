@@ -601,7 +601,63 @@ public class TestRMRestart {
         RMAppAttemptState.SCHEDULED);
     Assert.assertEquals(RMAppAttemptState.SCHEDULED, app2
         .getCurrentAppAttempt().getAppAttemptState());
+  }
 
+  // Test RM restarts after previous attempt succeeded and was saved into state
+  // store but before the RMAppAttempt notifies RMApp that it has succeeded. On
+  // recovery, RMAppAttempt should send the AttemptFinished event to RMApp so
+  // that RMApp can recover its state.
+  @Test
+  public void testRMRestartWaitForPreviousSucceededAttempt() throws Exception {
+    conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 2);
+    MemoryRMStateStore memStore = new MemoryRMStateStore() {
+      int count = 0;
+
+      @Override
+      public void updateApplicationStateInternal(ApplicationId appId,
+          ApplicationStateDataPBImpl appStateData) throws Exception {
+        if (count == 0) {
+          // do nothing; simulate app final state is not saved.
+          LOG.info(appId + " final state is not saved.");
+          count++;
+        } else {
+          super.updateApplicationStateInternal(appId, appStateData);
+        }
+      }
+    };
+    memStore.init(conf);
+    RMState rmState = memStore.getState();
+    Map<ApplicationId, ApplicationState> rmAppState =
+        rmState.getApplicationState();
+
+    // start RM
+    MockRM rm1 = new MockRM(conf, memStore);
+    rm1.start();
+    MockNM nm1 = rm1.registerNode("127.0.0.1:1234", 15120);
+    RMApp app0 = rm1.submitApp(200);
+    MockAM am0 = MockRM.launchAndRegisterAM(app0, rm1, nm1);
+
+    FinishApplicationMasterRequest req =
+        FinishApplicationMasterRequest.newInstance(
+          FinalApplicationStatus.SUCCEEDED, "", "");
+    am0.unregisterAppAttempt(req, true);
+    am0.waitForState(RMAppAttemptState.FINISHING);
+    // app final state is not saved. This guarantees that RMApp cannot be
+    // recovered via its own saved state, but only via the event notification
+    // from the RMAppAttempt on recovery.
+    Assert.assertNull(rmAppState.get(app0.getApplicationId()).getState());
+
+    // start RM
+    MockRM rm2 = new MockRM(conf, memStore);
+    nm1.setResourceTrackerService(rm2.getResourceTrackerService());
+    rm2.start();
+
+    rm2.waitForState(app0.getCurrentAppAttempt().getAppAttemptId(),
+      RMAppAttemptState.FINISHED);
+    rm2.waitForState(app0.getApplicationId(), RMAppState.FINISHED);
+    // app final state is saved via the finish event from attempt.
+    Assert.assertEquals(RMAppState.FINISHED,
+      rmAppState.get(app0.getApplicationId()).getState());
   }
 
   @Test

@@ -457,6 +457,10 @@ Release 2.4.0 - UNRELEASED
     and thus recover app itself synchronously and avoid races with resyncing
     NodeManagers. (Jian He via vinodkv)
 
+    YARN-1816. Fixed ResourceManager to get RMApp correctly handle
+    ATTEMPT_FINISHED event at ACCEPTED state that can happen after RM restarts.
+    (Jian He via vinodkv)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

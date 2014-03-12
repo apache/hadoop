@@ -189,11 +189,14 @@ public class RMAppImpl implements RMApp, Recoverable {
         RMAppEventType.ATTEMPT_REGISTERED)
     .addTransition(RMAppState.ACCEPTED,
         EnumSet.of(RMAppState.ACCEPTED, RMAppState.FINAL_SAVING),
-        // ACCEPTED state is possible to receive ATTEMPT_FAILED event because
-        // RMAppRecoveredTransition is returning ACCEPTED state directly and
-        // waiting for the previous AM to exit.
+        // ACCEPTED state is possible to receive ATTEMPT_FAILED/ATTEMPT_FINISHED
+        // event because RMAppRecoveredTransition is returning ACCEPTED state
+        // directly and waiting for the previous AM to exit.
         RMAppEventType.ATTEMPT_FAILED,
         new AttemptFailedTransition(RMAppState.ACCEPTED))
+    .addTransition(RMAppState.ACCEPTED, RMAppState.FINAL_SAVING,
+        RMAppEventType.ATTEMPT_FINISHED,
+        new FinalSavingTransition(FINISHED_TRANSITION, RMAppState.FINISHED))
     .addTransition(RMAppState.ACCEPTED, RMAppState.KILLING,
         RMAppEventType.KILL, new KillAttemptTransition())
     // ACCECPTED state can once again receive APP_ACCEPTED event, because on
@@ -725,11 +728,7 @@ public class RMAppImpl implements RMApp, Recoverable {
 
     @Override
     public RMAppState transition(RMAppImpl app, RMAppEvent event) {
-      /*
-       * If last attempt recovered final state is null .. it means attempt was
-       * started but AM container may or may not have started / finished.
-       * Therefore we should wait for it to finish.
-       */
+
       for (RMAppAttempt attempt : app.getAppAttempts().values()) {
         // synchronously recover attempt to ensure any incoming external events
         // to be processed after the attempt processes the recover event.
@@ -742,6 +741,17 @@ public class RMAppImpl implements RMApp, Recoverable {
       if (app.recoveredFinalState != null) {
         new FinalTransition(app.recoveredFinalState).transition(app, event);
         return app.recoveredFinalState;
+      }
+
+      // Last attempt is in final state, do not add to scheduler and just return
+      // ACCEPTED waiting for last RMAppAttempt to send finished or failed event
+      // back.
+      if (app.currentAttempt != null
+          && (app.currentAttempt.getState() == RMAppAttemptState.KILLED
+              || app.currentAttempt.getState() == RMAppAttemptState.FINISHED
+              || (app.currentAttempt.getState() == RMAppAttemptState.FAILED
+                  && app.attempts.size() == app.maxAppAttempts))) {
+        return RMAppState.ACCEPTED;
       }
 
       // Notify scheduler about the app on recovery
