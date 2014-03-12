@@ -263,48 +263,75 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
   @SuppressWarnings("unchecked")
   protected void submitApplication(
       ApplicationSubmissionContext submissionContext, long submitTime,
-      String user, boolean isRecovered, RMState state) throws YarnException {
+      String user) throws YarnException {
     ApplicationId applicationId = submissionContext.getApplicationId();
 
     RMAppImpl application =
         createAndPopulateNewRMApp(submissionContext, submitTime, user);
+    ApplicationId appId = submissionContext.getApplicationId();
 
-    if (isRecovered) {
-      recoverApplication(state, application);
-      RMAppState rmAppState =
-          state.getApplicationState().get(applicationId).getState();
-      if (isApplicationInFinalState(rmAppState)) {
-        // We are synchronously moving the application into final state so that
-        // momentarily client will not see this application in NEW state. Also
-        // for finished applications we will avoid renewing tokens.
-        application
-            .handle(new RMAppEvent(applicationId, RMAppEventType.RECOVER));
-        return;
-      }
-    }
-    
     if (UserGroupInformation.isSecurityEnabled()) {
       Credentials credentials = null;
       try {
         credentials = parseCredentials(submissionContext);
+        this.rmContext.getDelegationTokenRenewer().addApplicationAsync(appId,
+          credentials, submissionContext.getCancelTokensWhenComplete());
       } catch (Exception e) {
-        LOG.warn(
-            "Unable to parse credentials.", e);
+        LOG.warn("Unable to parse credentials.", e);
         // Sending APP_REJECTED is fine, since we assume that the
         // RMApp is in NEW state and thus we haven't yet informed the
         // scheduler about the existence of the application
         assert application.getState() == RMAppState.NEW;
-        this.rmContext.getDispatcher().getEventHandler().handle(
-            new RMAppRejectedEvent(applicationId, e.getMessage()));
+        this.rmContext.getDispatcher().getEventHandler()
+          .handle(new RMAppRejectedEvent(applicationId, e.getMessage()));
         throw RPCUtil.getRemoteException(e);
       }
-      this.rmContext.getDelegationTokenRenewer().addApplication(
-          applicationId, credentials,
-          submissionContext.getCancelTokensWhenComplete(), isRecovered);
     } else {
+      // Dispatcher is not yet started at this time, so these START events
+      // enqueued should be guaranteed to be first processed when dispatcher
+      // gets started.
       this.rmContext.getDispatcher().getEventHandler()
-          .handle(new RMAppEvent(applicationId,
-              isRecovered ? RMAppEventType.RECOVER : RMAppEventType.START));
+        .handle(new RMAppEvent(applicationId, RMAppEventType.START));
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  protected void
+      recoverApplication(ApplicationState appState, RMState rmState)
+          throws Exception {
+    ApplicationSubmissionContext appContext =
+        appState.getApplicationSubmissionContext();
+    ApplicationId appId = appState.getAppId();
+
+    // create and recover app.
+    RMAppImpl application =
+        createAndPopulateNewRMApp(appContext, appState.getSubmitTime(),
+          appState.getUser());
+    application.recover(rmState);
+    if (isApplicationInFinalState(appState.getState())) {
+      // We are synchronously moving the application into final state so that
+      // momentarily client will not see this application in NEW state. Also
+      // for finished applications we will avoid renewing tokens.
+      application.handle(new RMAppEvent(appId, RMAppEventType.RECOVER));
+      return;
+    }
+
+    if (UserGroupInformation.isSecurityEnabled()) {
+      Credentials credentials = null;
+      try {
+        credentials = parseCredentials(appContext);
+        // synchronously renew delegation token on recovery.
+        rmContext.getDelegationTokenRenewer().addApplicationSync(appId,
+          credentials, appContext.getCancelTokensWhenComplete());
+        application.handle(new RMAppEvent(appId, RMAppEventType.RECOVER));
+      } catch (Exception e) {
+        LOG.warn("Unable to parse and renew delegation tokens.", e);
+        this.rmContext.getDispatcher().getEventHandler()
+          .handle(new RMAppRejectedEvent(appId, e.getMessage()));
+        throw e;
+      }
+    } else {
+      application.handle(new RMAppEvent(appId, RMAppEventType.RECOVER));
     }
   }
 
@@ -363,16 +390,6 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     }
   }
 
-  private void recoverApplication(RMState state, RMAppImpl application)
-      throws YarnException {
-    try {
-      application.recover(state);
-    } catch (Exception e) {
-      LOG.error("Error recovering application", e);
-      throw new YarnException(e);
-    }
-  }
-
   private boolean isApplicationInFinalState(RMAppState rmAppState) {
     if (rmAppState == RMAppState.FINISHED || rmAppState == RMAppState.FAILED
         || rmAppState == RMAppState.KILLED) {
@@ -403,8 +420,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     Map<ApplicationId, ApplicationState> appStates = state.getApplicationState();
     LOG.info("Recovering " + appStates.size() + " applications");
     for (ApplicationState appState : appStates.values()) {
-      submitApplication(appState.getApplicationSubmissionContext(),
-        appState.getSubmitTime(), appState.getUser(), true, state);
+      recoverApplication(appState, state);
     }
   }
 

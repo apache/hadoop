@@ -414,7 +414,7 @@ public class TestRM {
         new MockNM("127.0.0.1:1234", 15120, rm1.getResourceTrackerService());
     nm1.registerNode();
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
-    MockRM.finishApplicationMaster(app1, rm1, nm1, am1);
+    MockRM.finishAMAndVerifyAppState(app1, rm1, nm1, am1);
 
     // a failed app
     RMApp app2 = rm1.submitApp(200);
