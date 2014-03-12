@@ -30,7 +30,6 @@ import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.ZKRMStateStore;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
@@ -142,7 +141,7 @@ public class RMHATestBase extends ClientBaseWithFixes{
     @Override
     protected void submitApplication(
         ApplicationSubmissionContext submissionContext, long submitTime,
-        String user, boolean isRecovered, RMState state) throws YarnException {
+        String user) throws YarnException {
       //Do nothing, just add the application to RMContext
       RMAppImpl application =
           new RMAppImpl(submissionContext.getApplicationId(), this.rmContext,

@@ -223,7 +223,7 @@ public class TestAMRestart {
         ((CapacityScheduler) rm1.getResourceScheduler())
           .getCurrentAttemptForContainer(containerId2);
     // finish this application
-    MockRM.finishApplicationMaster(app1, rm1, nm1, am2);
+    MockRM.finishAMAndVerifyAppState(app1, rm1, nm1, am2);
 
     // the 2nd attempt released the 1st attempt's running container, when the
     // 2nd attempt finishes.

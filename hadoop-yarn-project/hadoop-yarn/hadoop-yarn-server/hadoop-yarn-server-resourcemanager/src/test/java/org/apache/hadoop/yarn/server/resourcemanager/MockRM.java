@@ -497,7 +497,7 @@ public class MockRM extends ResourceManager {
     // override to disable webapp
   }
 
-  public static void finishApplicationMaster(RMApp rmApp, MockRM rm, MockNM nm,
+  public static void finishAMAndVerifyAppState(RMApp rmApp, MockRM rm, MockNM nm,
       MockAM am) throws Exception {
     FinishApplicationMasterRequest req =
         FinishApplicationMasterRequest.newInstance(

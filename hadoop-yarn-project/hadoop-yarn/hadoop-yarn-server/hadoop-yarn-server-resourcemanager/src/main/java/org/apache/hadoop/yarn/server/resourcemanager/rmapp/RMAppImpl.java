@@ -731,7 +731,9 @@ public class RMAppImpl implements RMApp, Recoverable {
        * Therefore we should wait for it to finish.
        */
       for (RMAppAttempt attempt : app.getAppAttempts().values()) {
-        app.dispatcher.getEventHandler().handle(
+        // synchronously recover attempt to ensure any incoming external events
+        // to be processed after the attempt processes the recover event.
+        attempt.handle(
           new RMAppAttemptEvent(attempt.getAppAttemptId(),
             RMAppAttemptEventType.RECOVER));
       }
