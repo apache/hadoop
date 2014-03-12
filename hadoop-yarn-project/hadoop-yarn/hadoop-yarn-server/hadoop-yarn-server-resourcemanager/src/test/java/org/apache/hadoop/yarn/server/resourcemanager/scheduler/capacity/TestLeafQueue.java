@@ -34,10 +34,13 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import junit.framework.Assert;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -2011,6 +2014,55 @@ public class TestLeafQueue {
     a.updateClusterResource(newClusterResource);
     //  100 * 20 * 0.2 = 400
     assertEquals(400, a.getMaximumActiveApplications());
+  }
+  
+  @Test
+  public void testAllocateContainerOnNodeWithoutOffSwitchSpecified()
+      throws Exception {
+    // Manipulate queue 'a'
+    LeafQueue a = stubLeafQueue((LeafQueue) queues.get(B));
+
+    // Users
+    final String user_0 = "user_0";
+
+    // Submit applications
+    final ApplicationAttemptId appAttemptId_0 =
+        TestUtils.getMockApplicationAttemptId(0, 0);
+    FiCaSchedulerApp app_0 =
+        new FiCaSchedulerApp(appAttemptId_0, user_0, a,
+            mock(ActiveUsersManager.class), rmContext);
+    a.submitApplicationAttempt(app_0, user_0);
+
+    final ApplicationAttemptId appAttemptId_1 =
+        TestUtils.getMockApplicationAttemptId(1, 0);
+    FiCaSchedulerApp app_1 =
+        new FiCaSchedulerApp(appAttemptId_1, user_0, a,
+            mock(ActiveUsersManager.class), rmContext);
+    a.submitApplicationAttempt(app_1, user_0); // same user
+
+    // Setup some nodes
+    String host_0 = "127.0.0.1";
+    FiCaSchedulerNode node_0 =
+        TestUtils.getMockNode(host_0, DEFAULT_RACK, 0, 8 * GB);
+
+    final int numNodes = 1;
+    Resource clusterResource =
+        Resources.createResource(numNodes * (8 * GB), numNodes * 16);
+    when(csContext.getNumClusterNodes()).thenReturn(numNodes);
+
+    // Setup resource-requests
+    Priority priority = TestUtils.createMockPriority(1);
+    app_0.updateResourceRequests(Arrays.asList(TestUtils.createResourceRequest(
+        "127.0.0.1", 1 * GB, 3, true, priority, recordFactory), TestUtils
+        .createResourceRequest(DEFAULT_RACK, 1 * GB, 3, true, priority,
+            recordFactory)));
+
+    try {
+      a.assignContainers(clusterResource, node_0);
+    } catch (NullPointerException e) {
+      Assert.fail("NPE when allocating container on node but "
+          + "forget to set off-switch request should be handled");
+    }
   }
 
   private CapacitySchedulerContext mockCSContext(
