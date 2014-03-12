@@ -241,9 +241,6 @@ Trunk (Unreleased)
     HDFS-4366. Block Replication Policy Implementation May Skip Higher-Priority
     Blocks for Lower-Priority Blocks (Derek Dagit via kihwal)
 
-    HDFS-5705. TestSecondaryNameNodeUpgrade#testChangeNsIDFails may fail due
-    to ConcurrentModificationException. (Ted Yu via brandonli)
-
     HDFS-5719. FSImage#doRollback() should close prevState before return
     (Ted Yu via brandonli)
 
@@ -602,6 +599,9 @@ Release 2.4.0 - UNRELEASED
     even when the block was cached (cmccabe)
 
     HDFS-6079. Timeout for getFileBlockStorageLocations does not work. (wang)
+
+    HDFS-5705. TestSecondaryNameNodeUpgrade#testChangeNsIDFails may fail due
+    to ConcurrentModificationException. (Ted Yu via brandonli)
 
   BREAKDOWN OF HDFS-5698 SUBTASKS AND RELATED JIRAS
 
