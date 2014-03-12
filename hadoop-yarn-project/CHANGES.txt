@@ -446,6 +446,9 @@ Release 2.4.0 - UNRELEASED
     ATTEMPT_FINISHED event at ACCEPTED state that can happen after RM restarts.
     (Jian He via vinodkv)
 
+    YARN-1789. ApplicationSummary does not escape newlines in the app name
+    (Tsuyoshi OZAWA via jlowe)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

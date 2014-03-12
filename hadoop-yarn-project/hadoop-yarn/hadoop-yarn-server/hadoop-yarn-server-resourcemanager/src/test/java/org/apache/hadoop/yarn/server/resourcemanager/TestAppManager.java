@@ -19,6 +19,9 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import static org.mockito.Matchers.isA;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -74,6 +77,7 @@ import com.google.common.collect.Maps;
  */
 
 public class TestAppManager{
+  private Log LOG = LogFactory.getLog(TestAppManager.class);
   private static RMAppEventType appEventType = RMAppEventType.KILL; 
 
   public synchronized RMAppEventType getAppEventType() {
@@ -546,6 +550,29 @@ public class TestAppManager{
           " InvalidResourceRequestException",
           e.getMessage().contains("Invalid resource request"));
     }
+  }
+
+  @Test (timeout = 30000)
+  public void testEscapeApplicationSummary() {
+    RMApp app = mock(RMAppImpl.class);
+    when(app.getApplicationId()).thenReturn(
+        ApplicationId.newInstance(100L, 1));
+    when(app.getName()).thenReturn("Multiline\n\n\r\rAppName");
+    when(app.getUser()).thenReturn("Multiline\n\n\r\rUserName");
+    when(app.getQueue()).thenReturn("Multiline\n\n\r\rQueueName");
+    when(app.getState()).thenReturn(RMAppState.RUNNING);
+
+    RMAppManager.ApplicationSummary.SummaryBuilder summary =
+        new RMAppManager.ApplicationSummary().createAppSummary(app);
+    String msg = summary.toString();
+    LOG.info("summary: " + msg);
+    Assert.assertFalse(msg.contains("\n"));
+    Assert.assertFalse(msg.contains("\r"));
+
+    String escaped = "\\n\\n\\r\\r";
+    Assert.assertTrue(msg.contains("Multiline" + escaped +"AppName"));
+    Assert.assertTrue(msg.contains("Multiline" + escaped +"UserName"));
+    Assert.assertTrue(msg.contains("Multiline" + escaped +"QueueName"));
   }
 
   private static ResourceScheduler mockResourceScheduler() {

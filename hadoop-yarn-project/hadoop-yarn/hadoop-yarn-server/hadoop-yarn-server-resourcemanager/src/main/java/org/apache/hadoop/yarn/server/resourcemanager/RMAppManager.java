@@ -116,8 +116,10 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
       }
 
       <T> SummaryBuilder add(String key, T value) {
-        return _add(key, StringUtils.escapeString(String.valueOf(value),
-                    StringUtils.ESCAPE_CHAR, charsToEscape));
+        String escapedString = StringUtils.escapeString(String.valueOf(value),
+            StringUtils.ESCAPE_CHAR, charsToEscape).replaceAll("\n", "\\\\n")
+            .replaceAll("\r", "\\\\r");
+        return _add(key, escapedString);
       }
 
       SummaryBuilder add(SummaryBuilder summary) {
