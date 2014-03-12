@@ -31,6 +31,9 @@ Release 0.23.11 - UNRELEASED
     MAPREDUCE-5689. MRAppMaster does not preempt reducers when scheduled maps 
     cannot be fulfilled. (lohit via kasha)
 
+    MAPREDUCE-5778. JobSummary does not escape newlines in the job name (Akira
+    AJISAKA via jlowe)
+
 Release 0.23.10 - 2013-12-09
 
   INCOMPATIBLE CHANGES
