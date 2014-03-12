@@ -37,6 +37,7 @@ import org.apache.hadoop.mapreduce.filecache.DistributedCache;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
@@ -460,4 +461,13 @@ public class TestMRApps {
     public void initialize(URI name, Configuration conf) throws IOException {}
   }
   
+
+  @Test
+  public void testTaskStateUI() {
+    assertTrue(MRApps.TaskStateUI.PENDING.correspondsTo(TaskState.SCHEDULED));
+    assertTrue(MRApps.TaskStateUI.COMPLETED.correspondsTo(TaskState.SUCCEEDED));
+    assertTrue(MRApps.TaskStateUI.COMPLETED.correspondsTo(TaskState.FAILED));
+    assertTrue(MRApps.TaskStateUI.COMPLETED.correspondsTo(TaskState.KILLED));
+    assertTrue(MRApps.TaskStateUI.RUNNING.correspondsTo(TaskState.RUNNING));
+  }
 }
