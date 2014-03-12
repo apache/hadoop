@@ -72,6 +72,9 @@ Release 2.4.0 - UNRELEASED
     MAPREDUCE-5028. Fixed a bug in MapTask that was causing mappers to fail
     when a large value of io.sort.mb is set. (Karthik Kambatla via vinodkv)
 
+    MAPREDUCE-5778. JobSummary does not escape newlines in the job name (Akira
+    AJISAKA via jlowe)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
