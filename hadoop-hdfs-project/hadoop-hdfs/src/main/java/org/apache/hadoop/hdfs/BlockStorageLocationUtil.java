@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -158,6 +159,9 @@ class BlockStorageLocationUtil {
       try {
         HdfsBlocksMetadata metadata = future.get();
         metadatas.put(callable.getDatanodeInfo(), metadata);
+      } catch (CancellationException e) {
+        LOG.info("Cancelled while waiting for datanode "
+            + datanode.getIpcAddr(false) + ": " + e.toString());
       } catch (ExecutionException e) {
         Throwable t = e.getCause();
         if (t instanceof InvalidBlockTokenException) {
