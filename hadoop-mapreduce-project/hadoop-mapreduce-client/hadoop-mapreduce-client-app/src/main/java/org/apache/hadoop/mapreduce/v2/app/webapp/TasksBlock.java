@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce.v2.app.webapp;
 
+import static org.apache.hadoop.mapreduce.v2.app.webapp.AMParams.TASK_STATE;
 import static org.apache.hadoop.mapreduce.v2.app.webapp.AMParams.TASK_TYPE;
 import static org.apache.hadoop.yarn.util.StringHelper.join;
 import static org.apache.hadoop.yarn.util.StringHelper.percent;
@@ -71,6 +72,25 @@ public class TasksBlock extends HtmlBlock {
       if (type != null && task.getType() != type) {
         continue;
       }
+      String taskStateStr = $(TASK_STATE);
+      if (taskStateStr == null || taskStateStr.trim().equals("")) {
+        taskStateStr = "ALL";
+      }
+
+      if (!taskStateStr.equalsIgnoreCase("ALL"))
+      {
+        try {
+          // get stateUI enum
+          MRApps.TaskStateUI stateUI = MRApps.taskState(taskStateStr);
+          if (!stateUI.correspondsTo(task.getState()))
+          {
+            continue;
+          }
+        } catch (IllegalArgumentException e) {
+          continue; // not supported state, ignore
+        }
+      }
+
       TaskInfo info = new TaskInfo(task);
       String tid = info.getId();
       String pct = percent(info.getProgress() / 100);

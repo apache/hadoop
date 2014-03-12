@@ -48,6 +48,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.ContainerLogAppender;
@@ -125,6 +126,23 @@ public class MRApps extends Apps {
     }
   }
 
+  public static enum TaskStateUI {
+    RUNNING(
+        new TaskState[]{TaskState.RUNNING}),
+    PENDING(new TaskState[]{TaskState.SCHEDULED}),
+    COMPLETED(new TaskState[]{TaskState.SUCCEEDED, TaskState.FAILED, TaskState.KILLED});
+
+    private final List<TaskState> correspondingStates;
+
+    private TaskStateUI(TaskState[] correspondingStates) {
+      this.correspondingStates = Arrays.asList(correspondingStates);
+    }
+
+    public boolean correspondsTo(TaskState state) {
+      return this.correspondingStates.contains(state);
+    }
+  }
+
   public static TaskType taskType(String symbol) {
     // JDK 7 supports switch on strings
     if (symbol.equals("m")) return TaskType.MAP;
@@ -134,6 +152,10 @@ public class MRApps extends Apps {
 
   public static TaskAttemptStateUI taskAttemptState(String attemptStateStr) {
     return TaskAttemptStateUI.valueOf(attemptStateStr);
+  }
+
+  public static TaskStateUI taskState(String taskStateStr) {
+    return TaskStateUI.valueOf(taskStateStr);
   }
 
   // gets the base name of the MapReduce framework or null if no
