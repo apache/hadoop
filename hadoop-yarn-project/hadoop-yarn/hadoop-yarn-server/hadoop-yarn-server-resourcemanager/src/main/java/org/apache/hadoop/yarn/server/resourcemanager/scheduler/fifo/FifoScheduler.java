@@ -503,9 +503,13 @@ public class FifoScheduler extends AbstractYarnScheduler implements
 
   private int getMaxAllocatableContainers(FiCaSchedulerApp application,
       Priority priority, FiCaSchedulerNode node, NodeType type) {
+    int maxContainers = 0;
+    
     ResourceRequest offSwitchRequest = 
       application.getResourceRequest(priority, ResourceRequest.ANY);
-    int maxContainers = offSwitchRequest.getNumContainers();
+    if (offSwitchRequest != null) {
+      maxContainers = offSwitchRequest.getNumContainers();
+    }
 
     if (type == NodeType.OFF_SWITCH) {
       return maxContainers;

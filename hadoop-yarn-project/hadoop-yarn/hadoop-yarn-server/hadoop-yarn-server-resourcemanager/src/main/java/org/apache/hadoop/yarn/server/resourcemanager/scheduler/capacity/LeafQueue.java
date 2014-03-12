@@ -836,10 +836,14 @@ public class LeafQueue implements CSQueue {
         
         // Schedule in priority order
         for (Priority priority : application.getPriorities()) {
+          ResourceRequest anyRequest =
+              application.getResourceRequest(priority, ResourceRequest.ANY);
+          if (null == anyRequest) {
+            continue;
+          }
+          
           // Required resource
-          Resource required = 
-              application.getResourceRequest(
-                  priority, ResourceRequest.ANY).getCapability();
+          Resource required = anyRequest.getCapability();
 
           // Do we need containers at this 'priority'?
           if (!needContainers(application, priority, required)) {
