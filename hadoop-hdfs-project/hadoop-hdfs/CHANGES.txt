@@ -603,6 +603,8 @@ Release 2.4.0 - UNRELEASED
     HDFS-5705. TestSecondaryNameNodeUpgrade#testChangeNsIDFails may fail due
     to ConcurrentModificationException. (Ted Yu via brandonli)
 
+    HDFS-6096. TestWebHdfsTokens may timeout. (szetszwo via Arpit Agarwal)
+
   BREAKDOWN OF HDFS-5698 SUBTASKS AND RELATED JIRAS
 
     HDFS-5717. Save FSImage header in protobuf. (Haohui Mai via jing9)
