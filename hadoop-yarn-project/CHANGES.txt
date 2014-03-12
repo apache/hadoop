@@ -434,6 +434,10 @@ Release 2.4.0 - UNRELEASED
     YARN-1800. Fixed NodeManager to gracefully handle RejectedExecutionException
     in the public-localizer thread-pool. (Varun Vasudev via vinodkv)
 
+    YARN-1444. Fix CapacityScheduler to deal with cases where applications
+    specify host/rack requests without off-switch request. (Wangda Tan via
+    acmurthy)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
