@@ -1709,6 +1709,63 @@ public class TestRMRestart {
     rm2.stop();
   }
 
+  // Test Delegation token is renewed synchronously so that recover events
+  // can be processed before any other external incoming events, specifically
+  // the ContainerFinished event on NM re-registraton.
+  @Test (timeout = 20000)
+  public void testSynchronouslyRenewDTOnRecovery() throws Exception {
+    conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS, 2);
+    conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
+      "kerberos");
+    MemoryRMStateStore memStore = new MemoryRMStateStore();
+    memStore.init(conf);
+
+    // start RM
+    MockRM rm1 = new MockRM(conf, memStore);
+    rm1.start();
+    final MockNM nm1 =
+        new MockNM("127.0.0.1:1234", 15120, rm1.getResourceTrackerService());
+    nm1.registerNode();
+    RMApp app0 = rm1.submitApp(200);
+    final MockAM am0 = MockRM.launchAndRegisterAM(app0, rm1, nm1);
+
+    MockRM rm2 = new MockRM(conf, memStore) {
+      @Override
+      protected ResourceTrackerService createResourceTrackerService() {
+        return new ResourceTrackerService(this.rmContext,
+          this.nodesListManager, this.nmLivelinessMonitor,
+          this.rmContext.getContainerTokenSecretManager(),
+          this.rmContext.getNMTokenSecretManager()) {
+          @Override
+          protected void serviceStart() throws Exception {
+            // send the container_finished event as soon as the
+            // ResourceTrackerService is started.
+            super.serviceStart();
+            nm1.setResourceTrackerService(getResourceTrackerService());
+            List<ContainerStatus> status = new ArrayList<ContainerStatus>();
+            ContainerId amContainer =
+                ContainerId.newInstance(am0.getApplicationAttemptId(), 1);
+            status.add(ContainerStatus.newInstance(amContainer,
+              ContainerState.COMPLETE, "AM container exit", 143));
+            nm1.registerNode(status);
+          }
+        };
+      }
+    };
+    // Re-start RM
+    rm2.start();
+
+    // wait for the 2nd attempt to be started.
+    RMApp loadedApp0 =
+        rm2.getRMContext().getRMApps().get(app0.getApplicationId());
+    int timeoutSecs = 0;
+    while (loadedApp0.getAppAttempts().size() != 2 && timeoutSecs++ < 40) {
+      Thread.sleep(200);
+    }
+    MockAM am1 = MockRM.launchAndRegisterAM(loadedApp0, rm2, nm1);
+    MockRM.finishAMAndVerifyAppState(loadedApp0, rm2, nm1, am1);
+  }
+
   private void writeToHostsFile(String... hosts) throws IOException {
     if (!hostFile.exists()) {
       TEMP_DIR.mkdirs();

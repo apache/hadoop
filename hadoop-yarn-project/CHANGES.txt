@@ -438,6 +438,10 @@ Release 2.4.0 - UNRELEASED
     specify host/rack requests without off-switch request. (Wangda Tan via
     acmurthy)
 
+    YARN-1812. Fixed ResourceManager to synchrously renew tokens after recovery
+    and thus recover app itself synchronously and avoid races with resyncing
+    NodeManagers. (Jian He via vinodkv)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
