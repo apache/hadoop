@@ -359,6 +359,9 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-6079. Timeout for getFileBlockStorageLocations does not work. (wang)
 
+    HDFS-5705. TestSecondaryNameNodeUpgrade#testChangeNsIDFails may fail due
+    to ConcurrentModificationException. (Ted Yu via brandonli)
+
   BREAKDOWN OF HDFS-5698 SUBTASKS AND RELATED JIRAS
 
     HDFS-5717. Save FSImage header in protobuf. (Haohui Mai via jing9)
