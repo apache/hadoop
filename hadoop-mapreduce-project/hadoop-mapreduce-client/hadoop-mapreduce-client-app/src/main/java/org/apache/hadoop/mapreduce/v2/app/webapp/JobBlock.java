@@ -127,31 +127,28 @@ public class JobBlock extends HtmlBlock {
             th(_TH, "Running").
             th(_TH, "Complete")._().
           tr(_ODD).
-            th().
-              a(url("tasks", jid, "m"), "Map")._().
+            th("Map").
             td().
               div(_PROGRESSBAR).
                 $title(join(jinfo.getMapProgressPercent(), '%')). // tooltip
                 div(_PROGRESSBAR_VALUE).
                   $style(join("width:", jinfo.getMapProgressPercent(), '%'))._()._()._().
-            td(String.valueOf(jinfo.getMapsTotal())).
-            td(String.valueOf(jinfo.getMapsPending())).
-            td(String.valueOf(jinfo.getMapsRunning())).
-            td(String.valueOf(jinfo.getMapsCompleted()))._().
+            td().a(url("tasks", jid, "m", "ALL"),String.valueOf(jinfo.getMapsTotal()))._().
+            td().a(url("tasks", jid, "m", "PENDING"),String.valueOf(jinfo.getMapsPending()))._().
+            td().a(url("tasks", jid, "m", "RUNNING"),String.valueOf(jinfo.getMapsRunning()))._().
+            td().a(url("tasks", jid, "m", "COMPLETED"),String.valueOf(jinfo.getMapsCompleted()))._()._().
           tr(_EVEN).
-            th().
-              a(url("tasks", jid, "r"), "Reduce")._().
+            th("Reduce").
             td().
               div(_PROGRESSBAR).
                 $title(join(jinfo.getReduceProgressPercent(), '%')). // tooltip
                 div(_PROGRESSBAR_VALUE).
                   $style(join("width:", jinfo.getReduceProgressPercent(), '%'))._()._()._().
-            td(String.valueOf(jinfo.getReducesTotal())).
-            td(String.valueOf(jinfo.getReducesPending())).
-            td(String.valueOf(jinfo.getReducesRunning())).
-            td(String.valueOf(jinfo.getReducesCompleted()))._()
+            td().a(url("tasks", jid, "r", "ALL"),String.valueOf(jinfo.getReducesTotal()))._().
+            td().a(url("tasks", jid, "r", "PENDING"),String.valueOf(jinfo.getReducesPending()))._().
+            td().a(url("tasks", jid, "r", "RUNNING"),String.valueOf(jinfo.getReducesRunning()))._().
+            td().a(url("tasks", jid, "r", "COMPLETED"),String.valueOf(jinfo.getReducesCompleted()))._()._()
           ._().
-
         // Attempts table
         table("#job").
         tr().

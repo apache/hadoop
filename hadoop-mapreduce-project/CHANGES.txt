@@ -188,6 +188,10 @@ Release 2.4.0 - UNRELEASED
     MAPREDUCE-5773. Provide dedicated MRAppMaster syslog length limit (Gera
     Shegalov via jlowe)
 
+    MAPREDUCE-5553. Allow users to easily access
+    completed/pending/successful/failed tasks on MR AM web-ui. (Paul Han via
+    acmurthy)
+
   OPTIMIZATIONS
 
   BUG FIXES
