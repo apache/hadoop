@@ -38,6 +38,7 @@ import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.CancellationException;
 
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.logging.impl.Log4JLogger;
@@ -60,6 +61,7 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.VolumeId;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.hdfs.web.HftpFileSystem;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
@@ -71,6 +73,9 @@ import org.apache.hadoop.util.Time;
 import org.apache.log4j.Level;
 import org.junit.Test;
 import org.mockito.InOrder;
+import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
@@ -783,7 +788,10 @@ public class TestDistributedFileSystem {
     conf.setBoolean(DFSConfigKeys.DFS_HDFS_BLOCKS_METADATA_ENABLED,
         true);
     conf.setInt(
+        DFSConfigKeys.DFS_CLIENT_FILE_BLOCK_STORAGE_LOCATIONS_TIMEOUT_MS, 1500);
+    conf.setInt(
         CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY, 0);
+    
     MiniDFSCluster cluster = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
@@ -828,12 +836,33 @@ public class TestDistributedFileSystem {
       List<BlockLocation> allLocs = Lists.newArrayList();
       allLocs.addAll(Arrays.asList(blockLocs1));
       allLocs.addAll(Arrays.asList(blockLocs2));
-          
+
+      // Stall on the DN to test the timeout
+      DataNodeFaultInjector injector = Mockito.mock(DataNodeFaultInjector.class);
+      Mockito.doAnswer(new Answer<Void>() {
+        @Override
+        public Void answer(InvocationOnMock invocation) throws Throwable {
+          Thread.sleep(3000);
+          return null;
+        }
+      }).when(injector).getHdfsBlocksMetadata();
+      DataNodeFaultInjector.instance = injector;
+
+      BlockStorageLocation[] locs = fs.getFileBlockStorageLocations(allLocs);
+      for (BlockStorageLocation loc: locs) {
+        assertEquals(
+            "Found more than 0 cached hosts although RPCs supposedly timed out",
+            0, loc.getCachedHosts().length);
+      }
+
+      // Restore a default injector
+      DataNodeFaultInjector.instance = new DataNodeFaultInjector();
+
       // Stop a datanode to simulate a failure.
       DataNodeProperties stoppedNode = cluster.stopDataNode(0);
       
       // Fetch VolumeBlockLocations
-      BlockStorageLocation[] locs = fs.getFileBlockStorageLocations(allLocs);
+      locs = fs.getFileBlockStorageLocations(allLocs);
       assertEquals("Expected two HdfsBlockLocation for two 1-block files", 2,
           locs.length);
   

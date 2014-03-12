@@ -1224,7 +1224,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
             getConf().connectToDnViaHostname);
     
     if (LOG.isTraceEnabled()) {
-      LOG.trace("metadata returned: " + Joiner.on("\n").withKeyValueSeparator("=").join(metadatas));
+      LOG.trace("metadata returned: "
+          + Joiner.on("\n").withKeyValueSeparator("=").join(metadatas));
     }
     
     // Regroup the returned VolumeId metadata to again be grouped by
