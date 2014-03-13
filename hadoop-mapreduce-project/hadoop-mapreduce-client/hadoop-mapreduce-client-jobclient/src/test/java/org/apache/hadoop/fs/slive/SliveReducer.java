@@ -35,7 +35,6 @@ import org.apache.hadoop.util.StringUtils;
  * The slive reducer which iterates over the given input values and merges them
  * together into a final output value.
  */
-@SuppressWarnings("deprecation")
 public class SliveReducer extends MapReduceBase implements
     Reducer<Text, Text, Text, Text> {
 

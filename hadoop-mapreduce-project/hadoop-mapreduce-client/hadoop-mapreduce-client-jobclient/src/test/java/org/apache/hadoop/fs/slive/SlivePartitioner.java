@@ -26,7 +26,6 @@ import org.apache.hadoop.mapred.Partitioner;
  * The partition number is the hash of the operation type modular the total
  * number of the reducers.
  */
-@SuppressWarnings("deprecation")
 public class SlivePartitioner implements Partitioner<Text, Text> {
   @Override // JobConfigurable
   public void configure(JobConf conf) {}
