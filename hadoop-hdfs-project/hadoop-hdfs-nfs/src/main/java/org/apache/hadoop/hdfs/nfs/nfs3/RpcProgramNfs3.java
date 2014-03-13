@@ -142,9 +142,6 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       (short) DEFAULT_UMASK);
   
   static final Log LOG = LogFactory.getLog(RpcProgramNfs3.class);
-  private static final int MAX_READ_TRANSFER_SIZE = 64 * 1024;
-  private static final int MAX_WRITE_TRANSFER_SIZE = 64 * 1024;
-  private static final int MAX_READDIR_TRANSFER_SIZE = 64 * 1024;
 
   private final Configuration config = new Configuration();
   private final WriteManager writeManager;
@@ -553,7 +550,11 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
             + handle.getFileId());
         return new READLINK3Response(Nfs3Status.NFS3ERR_SERVERFAULT);
       }
-      if (MAX_READ_TRANSFER_SIZE < target.getBytes().length) {
+      int rtmax = config.getInt(Nfs3Constant.MAX_READ_TRANSFER_SIZE_KEY,
+              Nfs3Constant.MAX_READ_TRANSFER_SIZE_DEFAULT);
+      if (rtmax < target.getBytes().length) {
+        LOG.error("Link size: " + target.getBytes().length
+            + " is larger than max transfer size: " + rtmax);
         return new READLINK3Response(Nfs3Status.NFS3ERR_IO, postOpAttr,
             new byte[0]);
       }
@@ -649,7 +650,9 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     }
 
     try {
-      int buffSize = Math.min(MAX_READ_TRANSFER_SIZE, count);
+      int rtmax = config.getInt(Nfs3Constant.MAX_READ_TRANSFER_SIZE_KEY,
+              Nfs3Constant.MAX_READ_TRANSFER_SIZE_DEFAULT);
+      int buffSize = Math.min(rtmax, count);
       byte[] readbuffer = new byte[buffSize];
 
       int readCount = 0;
@@ -1714,9 +1717,12 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     }
 
     try {
-      int rtmax = MAX_READ_TRANSFER_SIZE;
-      int wtmax = MAX_WRITE_TRANSFER_SIZE;
-      int dtperf = MAX_READDIR_TRANSFER_SIZE;
+      int rtmax = config.getInt(Nfs3Constant.MAX_READ_TRANSFER_SIZE_KEY,
+              Nfs3Constant.MAX_READ_TRANSFER_SIZE_DEFAULT);
+      int wtmax = config.getInt(Nfs3Constant.MAX_WRITE_TRANSFER_SIZE_KEY,
+              Nfs3Constant.MAX_WRITE_TRANSFER_SIZE_DEFAULT);
+      int dtperf = config.getInt(Nfs3Constant.MAX_READDIR_TRANSFER_SIZE_KEY,
+              Nfs3Constant.MAX_READDIR_TRANSFER_SIZE_DEFAULT);
 
       Nfs3FileAttributes attrs = Nfs3Utils.getFileAttr(dfsClient,
           Nfs3Utils.getFileIdPath(handle), iug);

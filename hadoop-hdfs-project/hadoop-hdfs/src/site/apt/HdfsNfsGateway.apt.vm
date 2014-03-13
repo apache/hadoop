@@ -48,35 +48,48 @@ HDFS NFS Gateway
 
    The user running the NFS-gateway must be able to proxy all the users using the NFS mounts. 
    For instance, if user 'nfsserver' is running the gateway, and users belonging to the groups 'nfs-users1'
-   and 'nfs-users2' use the NFS mounts, then in core-site.xml of the namenode, the following must be set:
+   and 'nfs-users2' use the NFS mounts, then in core-site.xml of the namenode, the following must be set
+   (NOTE: replace 'nfsserver' with the user name starting the gateway in your cluster):
+
 ----
 <property>
   <name>hadoop.proxyuser.nfsserver.groups</name>
   <value>nfs-users1,nfs-users2</value>
   <description>
-         The 'nfsserver' user is allowed to proxy all members of the 'nfs-users1' and 'nfs-users2' groups. Set this to '*' to allow nfsserver user to proxy any group.
+         The 'nfsserver' user is allowed to proxy all members of the 'nfs-users1' and 
+         'nfs-users2' groups. Set this to '*' to allow nfsserver user to proxy any group.
   </description>
 </property>
+----
+
+----
 <property>
   <name>hadoop.proxyuser.nfsserver.hosts</name>
   <value>nfs-client-host1.com</value>
   <description>
-         This is the host where the nfs gateway is running. Set this to '*' to allow requests from any hosts to be proxied.
+         This is the host where the nfs gateway is running. Set this to '*' to allow
+         requests from any hosts to be proxied.
   </description>
 </property>
 ----
+
    The above are the only required configuration for the NFS gateway in non-secure mode. For Kerberized
    hadoop clusters, the following configurations need to be added to hdfs-site.xml:
+
 ----
-<property>
-  <name>dfs.nfsgateway.keytab.file</name>
-  <value>/etc/hadoop/conf/nfsserver.keytab</value> <!-- path to the nfs gateway keytab -->
-</property>
-<property>
-  <name>dfs.nfsgateway.kerberos.principal</name>
-  <value>nfsserver/_HOST@YOUR-REALM.COM</value>
-</property>
+  <property>
+    <name>dfs.nfsgateway.keytab.file</name>
+    <value>/etc/hadoop/conf/nfsserver.keytab</value> <!-- path to the nfs gateway keytab -->
+  </property>
 ----
+
+----
+  <property>
+    <name>dfs.nfsgateway.kerberos.principal</name>
+    <value>nfsserver/_HOST@YOUR-REALM.COM</value>
+  </property>
+----
+
    It's strongly recommended for the users to update a few configuration properties based on their use
    cases. All the related configuration properties can be added or updated in hdfs-site.xml.
   
@@ -90,30 +103,60 @@ HDFS NFS Gateway
 <property>
   <name>dfs.namenode.accesstime.precision</name>
   <value>3600000</value>
-  <description>The access time for HDFS file is precise upto this value. 
+  <description>The access time for HDFS file is precise upto this value.
     The default value is 1 hour. Setting a value of 0 disables
     access times for HDFS.
   </description>
 </property>
 ----
 
-   * Users are expected to update the file dump directory. NFS client often 
+   * Users are expected to update the file dump directory. NFS client often
       reorders writes. Sequential writes can arrive at the NFS gateway at random
       order. This directory is used to temporarily save out-of-order writes
-      before writing to HDFS. For each file, the out-of-order writes are dumped after 
+      before writing to HDFS. For each file, the out-of-order writes are dumped after
       they are accumulated to exceed certain threshold (e.g., 1MB) in memory.
       One needs to make sure the directory has enough
-      space. For example, if the application uploads 10 files with each having 
+      space. For example, if the application uploads 10 files with each having
       100MB, it is recommended for this directory to have roughly 1GB space in case if a
-      worst-case write reorder happens to every file. Only NFS gateway needs to restart after 
+      worst-case write reorder happens to every file. Only NFS gateway needs to restart after
       this property is updated.
 
 ----
   <property>    
-    <name>dfs.nfs3.dump.dir</name>    
+    <name>dfs.nfs3.dump.dir</name>
     <value>/tmp/.hdfs-nfs</value>
   </property>
 ---- 
+
+   * For optimal performance, it is recommended that rtmax be updated to
+     1MB. However, note that this 1MB is a per client allocation, and not
+     from a shared memory pool, and therefore a larger value may adversely 
+     affect small reads, consuming a lot of memory. The maximum value of 
+     this property is 1MB.
+
+----
+<property>
+  <name>dfs.nfs.rtmax</name>
+  <value>1048576</value>
+  <description>This is the maximum size in bytes of a READ request
+    supported by the NFS gateway. If you change this, make sure you
+    also update the nfs mount's rsize(add rsize= # of bytes to the 
+    mount directive).
+  </description>
+</property>
+----
+
+----
+<property>
+  <name>dfs.nfs.wtmax</name>
+  <value>65536</value>
+  <description>This is the maximum size in bytes of a WRITE request
+    supported by the NFS gateway. If you change this, make sure you
+    also update the nfs mount's wsize(add wsize= # of bytes to the 
+    mount directive).
+  </description>
+</property>
+----
 
   * By default, the export can be mounted by any client. To better control the access,
     users can update the following property. The value string contains machine name and

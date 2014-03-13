@@ -400,6 +400,9 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-6072. Clean up dead code of FSImage. (wheat9)
 
+    HDFS-6080. Improve NFS gateway performance by making rtmax and wtmax
+    configurable. (Abin Shahab via brandonli)
+
   OPTIMIZATIONS
 
     HDFS-5790. LeaseManager.findPath is very slow when many leases need recovery
