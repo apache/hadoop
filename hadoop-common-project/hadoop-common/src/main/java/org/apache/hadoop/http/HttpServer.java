@@ -233,7 +233,7 @@ public class HttpServer implements FilterContainer {
       RequestLogHandler requestLogHandler = new RequestLogHandler();
       requestLogHandler.setRequestLog(requestLog);
       HandlerCollection handlers = new HandlerCollection();
-      handlers.setHandlers(new Handler[] {requestLogHandler, contexts});
+      handlers.setHandlers(new Handler[] {contexts, requestLogHandler});
       webServer.setHandler(handlers);
     }
     else {
