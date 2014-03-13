@@ -2675,6 +2675,8 @@ Release 0.23.11 - UNRELEASED
 
     HADOOP-10129. Distcp may succeed when it fails (daryn)
 
+    HADOOP-10332. HttpServer's jetty audit log always logs 200 OK (jeagles)
+
 Release 0.23.10 - UNRELEASED
 
   INCOMPATIBLE CHANGES
