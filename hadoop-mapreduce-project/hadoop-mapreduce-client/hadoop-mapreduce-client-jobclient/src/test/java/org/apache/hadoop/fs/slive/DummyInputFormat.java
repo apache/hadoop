@@ -31,7 +31,6 @@ import org.apache.hadoop.mapred.Reporter;
 /**
  * A input format which returns one dummy key and value
  */
-@SuppressWarnings("deprecation")
 class DummyInputFormat implements InputFormat<Object, Object> {
 
   static class EmptySplit implements InputSplit {
