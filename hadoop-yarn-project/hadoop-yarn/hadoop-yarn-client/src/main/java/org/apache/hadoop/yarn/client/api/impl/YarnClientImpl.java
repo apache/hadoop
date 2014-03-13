@@ -32,6 +32,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
@@ -40,6 +44,10 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerReportRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerReportResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainersRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainersResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
@@ -282,18 +290,15 @@ public class YarnClientImpl extends YarnClient {
       request.setApplicationId(appId);
       response = rmClient.getApplicationReport(request);
     } catch (YarnException e) {
-
       if (!historyServiceEnabled) {
         // Just throw it as usual if historyService is not enabled.
         throw e;
       }
-
       // Even if history-service is enabled, treat all exceptions still the same
       // except the following
       if (!(e.getClass() == ApplicationNotFoundException.class)) {
         throw e;
       }
-
       return historyClient.getApplicationReport(appId);
     }
     return response.getApplicationReport();
@@ -461,40 +466,99 @@ public class YarnClientImpl extends YarnClient {
   @Override
   public ApplicationAttemptReport getApplicationAttemptReport(
       ApplicationAttemptId appAttemptId) throws YarnException, IOException {
-    if (historyServiceEnabled) {
+    try {
+      GetApplicationAttemptReportRequest request = Records
+          .newRecord(GetApplicationAttemptReportRequest.class);
+      request.setApplicationAttemptId(appAttemptId);
+      GetApplicationAttemptReportResponse response = rmClient
+          .getApplicationAttemptReport(request);
+      return response.getApplicationAttemptReport();
+    } catch (YarnException e) {
+      if (!historyServiceEnabled) {
+        // Just throw it as usual if historyService is not enabled.
+        throw e;
+      }
+      // Even if history-service is enabled, treat all exceptions still the same
+      // except the following
+      if (e.getClass() != ApplicationNotFoundException.class) {
+        throw e;
+      }
       return historyClient.getApplicationAttemptReport(appAttemptId);
     }
-    throw new YarnException("History service is not enabled.");
   }
 
   @Override
   public List<ApplicationAttemptReport> getApplicationAttempts(
       ApplicationId appId) throws YarnException, IOException {
-    if (historyServiceEnabled) {
+    try {
+      GetApplicationAttemptsRequest request = Records
+          .newRecord(GetApplicationAttemptsRequest.class);
+      request.setApplicationId(appId);
+      GetApplicationAttemptsResponse response = rmClient
+          .getApplicationAttempts(request);
+      return response.getApplicationAttemptList();
+    } catch (YarnException e) {
+      if (!historyServiceEnabled) {
+        // Just throw it as usual if historyService is not enabled.
+        throw e;
+      }
+      // Even if history-service is enabled, treat all exceptions still the same
+      // except the following
+      if (e.getClass() != ApplicationNotFoundException.class) {
+        throw e;
+      }
       return historyClient.getApplicationAttempts(appId);
     }
-    throw new YarnException("History service is not enabled.");
   }
 
   @Override
   public ContainerReport getContainerReport(ContainerId containerId)
       throws YarnException, IOException {
-    if (historyServiceEnabled) {
+    try {
+      GetContainerReportRequest request = Records
+          .newRecord(GetContainerReportRequest.class);
+      request.setContainerId(containerId);
+      GetContainerReportResponse response = rmClient
+          .getContainerReport(request);
+      return response.getContainerReport();
+    } catch (YarnException e) {
+      if (!historyServiceEnabled) {
+        // Just throw it as usual if historyService is not enabled.
+        throw e;
+      }
+      // Even if history-service is enabled, treat all exceptions still the same
+      // except the following
+      if (e.getClass() != ApplicationNotFoundException.class) {
+        throw e;
+      }
       return historyClient.getContainerReport(containerId);
     }
-    throw new YarnException("History service is not enabled.");
   }
 
   @Override
   public List<ContainerReport> getContainers(
       ApplicationAttemptId applicationAttemptId) throws YarnException,
       IOException {
-    if (historyServiceEnabled) {
+    try {
+      GetContainersRequest request = Records
+          .newRecord(GetContainersRequest.class);
+      request.setApplicationAttemptId(applicationAttemptId);
+      GetContainersResponse response = rmClient.getContainers(request);
+      return response.getContainerList();
+    } catch (YarnException e) {
+      if (!historyServiceEnabled) {
+        // Just throw it as usual if historyService is not enabled.
+        throw e;
+      }
+      // Even if history-service is enabled, treat all exceptions still the same
+      // except the following
+      if (e.getClass() != ApplicationNotFoundException.class) {
+        throw e;
+      }
       return historyClient.getContainers(applicationAttemptId);
     }
-    throw new YarnException("History service is not enabled.");
   }
-  
+
   @Override
   public void moveApplicationAcrossQueues(ApplicationId appId,
       String queue) throws YarnException, IOException {

@@ -72,6 +72,10 @@ import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
@@ -80,6 +84,10 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerReportRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerReportResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainersRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainersResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
@@ -361,6 +369,32 @@ public class TestClientRedirect {
     @Override
     public MoveApplicationAcrossQueuesResponse moveApplicationAcrossQueues(
         MoveApplicationAcrossQueuesRequest request) throws YarnException, IOException {
+      return null;
+    }
+
+    @Override
+    public GetApplicationAttemptReportResponse getApplicationAttemptReport(
+        GetApplicationAttemptReportRequest request) throws YarnException,
+        IOException {
+      return null;
+    }
+
+    @Override
+    public GetApplicationAttemptsResponse getApplicationAttempts(
+        GetApplicationAttemptsRequest request) throws YarnException,
+        IOException {
+      return null;
+    }
+
+    @Override
+    public GetContainerReportResponse getContainerReport(
+        GetContainerReportRequest request) throws YarnException, IOException {
+      return null;
+    }
+
+    @Override
+    public GetContainersResponse getContainers(GetContainersRequest request)
+        throws YarnException, IOException {
       return null;
     }
   }

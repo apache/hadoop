@@ -28,6 +28,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -151,6 +152,8 @@ public class RMContainerImpl implements RMContainer {
   private ContainerStatus finishedStatus;
 
 
+
+
   public RMContainerImpl(Container container,
       ApplicationAttemptId appAttemptId, NodeId nodeId,
       String user, RMContext rmContext) {
@@ -247,7 +250,11 @@ public class RMContainerImpl implements RMContainer {
   public String getDiagnosticsInfo() {
     try {
       readLock.lock();
-      return finishedStatus.getDiagnostics();
+      if (getFinishedStatus() != null) {
+        return getFinishedStatus().getDiagnostics();
+      } else {
+        return null;
+      }
     } finally {
       readLock.unlock();
     }
@@ -267,7 +274,11 @@ public class RMContainerImpl implements RMContainer {
   public int getContainerExitStatus() {
     try {
       readLock.lock();
-      return finishedStatus.getExitStatus();
+      if (getFinishedStatus() != null) {
+        return getFinishedStatus().getExitStatus();
+      } else {
+        return 0;
+      }
     } finally {
       readLock.unlock();
     }
@@ -277,7 +288,11 @@ public class RMContainerImpl implements RMContainer {
   public ContainerState getContainerState() {
     try {
       readLock.lock();
-      return finishedStatus.getState();
+      if (getFinishedStatus() != null) {
+        return getFinishedStatus().getState();
+      } else {
+        return ContainerState.RUNNING;
+      }
     } finally {
       readLock.unlock();
     }
@@ -310,6 +325,10 @@ public class RMContainerImpl implements RMContainer {
     finally {
       writeLock.unlock();
     }
+  }
+  
+  public ContainerStatus getFinishedStatus() {
+    return finishedStatus;
   }
   
   private static class BaseTransition implements
@@ -422,6 +441,22 @@ public class RMContainerImpl implements RMContainer {
       // Inform appAttempt
       super.transition(container, event);
     }
+  }
+
+  @Override
+  public ContainerReport createContainerReport() {
+    this.readLock.lock();
+    ContainerReport containerReport = null;
+    try {
+      containerReport = ContainerReport.newInstance(this.getContainerId(),
+          this.getAllocatedResource(), this.getAllocatedNode(),
+          this.getAllocatedPriority(), this.getStartTime(),
+          this.getFinishTime(), this.getDiagnosticsInfo(), this.getLogURL(),
+          this.getContainerExitStatus(), this.getContainerState());
+    } finally {
+      this.readLock.unlock();
+    }
+    return containerReport;
   }
 
 }
