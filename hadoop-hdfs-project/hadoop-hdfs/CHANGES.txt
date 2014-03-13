@@ -364,6 +364,9 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-6096. TestWebHdfsTokens may timeout. (szetszwo via Arpit Agarwal)
 
+    HDFS-5244. TestNNStorageRetentionManager#testPurgeMultipleDirs fails.
+    (Jinghui Wang via suresh)
+
   BREAKDOWN OF HDFS-5698 SUBTASKS AND RELATED JIRAS
 
     HDFS-5717. Save FSImage header in protobuf. (Haohui Mai via jing9)
