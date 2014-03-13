@@ -1,16 +1,16 @@
 To run the examples, first compile them:
 
-% mvn install 
+% mvn install -Pdist,native
 
 and then copy the binaries to dfs:
 
-% hadoop fs -put target/native/wordcount-simple /examples/bin/
+% hdfs dfs -put target/native/examples/wordcount-simple /examples/bin/
 
 create an input directory with text files:
 
-% hadoop fs -put my-data in-dir
+% hdfs dfs -put my-data in-dir
 
 and run the word count example:
 
-% hadoop pipes -conf src/main/native/examples/conf/word.xml \
+% mapred pipes -conf src/main/native/examples/conf/word.xml \
                    -input in-dir -output out-dir
