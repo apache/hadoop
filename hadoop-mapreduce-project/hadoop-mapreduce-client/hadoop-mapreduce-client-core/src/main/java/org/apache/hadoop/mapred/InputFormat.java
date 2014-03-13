@@ -54,7 +54,7 @@ import org.apache.hadoop.fs.FileSystem;
  * mapreduce.input.fileinputformat.split.minsize</a>.</p>
  * 
  * <p>Clearly, logical splits based on input-size is insufficient for many 
- * applications since record boundaries are to respected. In such cases, the
+ * applications since record boundaries are to be respected. In such cases, the
  * application has to also implement a {@link RecordReader} on whom lies the
  * responsibilty to respect record-boundaries and present a record-oriented
  * view of the logical <code>InputSplit</code> to the individual task.

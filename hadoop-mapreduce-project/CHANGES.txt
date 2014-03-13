@@ -158,6 +158,8 @@ Release 2.5.0 - UNRELEASED
 
     MAPREDUCE-5765. Update hadoop-pipes examples README (Mit Desai via jeagles)
 
+    MAPREDUCE-5713. InputFormat and JobConf JavaDoc Fixes (Chen He via jeagles)
+
   OPTIMIZATIONS
 
   BUG FIXES 
