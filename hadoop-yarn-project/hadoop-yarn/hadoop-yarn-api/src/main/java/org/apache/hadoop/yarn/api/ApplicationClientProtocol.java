@@ -27,6 +27,10 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.io.retry.Idempotent;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
@@ -35,6 +39,10 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerReportRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerReportResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainersRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainersResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
@@ -51,9 +59,13 @@ import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationResponse;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
+import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -367,4 +379,148 @@ public interface ApplicationClientProtocol {
   @Unstable
   public MoveApplicationAcrossQueuesResponse moveApplicationAcrossQueues(
       MoveApplicationAcrossQueuesRequest request) throws YarnException, IOException;
+
+  /**
+   * <p>
+   * The interface used by clients to get a report of an Application Attempt
+   * from the <code>ResourceManager</code> 
+   * </p>
+   * 
+   * <p>
+   * The client, via {@link GetApplicationAttemptReportRequest} provides the
+   * {@link ApplicationAttemptId} of the application attempt.
+   * </p>
+   * 
+   * <p>
+   * In secure mode,the <code>ResourceManager</code> verifies access to
+   * the method before accepting the request.
+   * </p>
+   * 
+   * <p>
+   * The <code>ResourceManager</code> responds with a
+   * {@link GetApplicationAttemptReportResponse} which includes the
+   * {@link ApplicationAttemptReport} for the application attempt.
+   * </p>
+   * 
+   * <p>
+   * If the user does not have <code>VIEW_APP</code> access then the following
+   * fields in the report will be set to stubbed values:
+   * <ul>
+   * <li>host</li>
+   * <li>RPC port</li>
+   * <li>client token</li>
+   * <li>diagnostics - set to "N/A"</li>
+   * <li>tracking URL</li>
+   * </ul>
+   * </p>
+   * 
+   * @param request
+   *          request for an application attempt report
+   * @return application attempt report
+   * @throws YarnException
+   * @throws IOException
+   */
+  @Public
+  @Unstable
+  public GetApplicationAttemptReportResponse getApplicationAttemptReport(
+      GetApplicationAttemptReportRequest request) throws YarnException,
+      IOException;
+
+  /**
+   * <p>
+   * The interface used by clients to get a report of all Application attempts
+   * in the cluster from the <code>ResourceManager</code>
+   * </p>
+   * 
+   * <p>
+   * The <code>ResourceManager</code> responds with a
+   * {@link GetApplicationAttemptsRequest} which includes the
+   * {@link ApplicationAttemptReport} for all the applications attempts of a
+   * specified application attempt.
+   * </p>
+   * 
+   * <p>
+   * If the user does not have <code>VIEW_APP</code> access for an application
+   * then the corresponding report will be filtered as described in
+   * {@link #getApplicationAttemptReport(GetApplicationAttemptReportRequest)}.
+   * </p>
+   * 
+   * @param request
+   *          request for reports on all application attempts of an application
+   * @return reports on all application attempts of an application
+   * @throws YarnException
+   * @throws IOException
+   */
+  @Public
+  @Unstable
+  public GetApplicationAttemptsResponse getApplicationAttempts(
+      GetApplicationAttemptsRequest request) throws YarnException, IOException;
+
+  /**
+   * <p>
+   * The interface used by clients to get a report of an Container from the
+   * <code>ResourceManager</code>
+   * </p>
+   * 
+   * <p>
+   * The client, via {@link GetContainerReportRequest} provides the
+   * {@link ContainerId} of the container.
+   * </p>
+   * 
+   * <p>
+   * In secure mode,the <code>ResourceManager</code> verifies access to the
+   * method before accepting the request.
+   * </p>
+   * 
+   * <p>
+   * The <code>ResourceManager</code> responds with a
+   * {@link GetContainerReportResponse} which includes the
+   * {@link ContainerReport} for the container.
+   * </p>
+   * 
+   * @param request
+   *          request for a container report
+   * @return container report
+   * @throws YarnException
+   * @throws IOException
+   */
+  @Public
+  @Unstable
+  public GetContainerReportResponse getContainerReport(
+      GetContainerReportRequest request) throws YarnException, IOException;
+
+  /**
+   * <p>
+   * The interface used by clients to get a report of Containers for an
+   * application attempt from the <code>ResourceManager</code>
+   * </p>
+   * 
+   * <p>
+   * The client, via {@link GetContainersRequest} provides the
+   * {@link ApplicationAttemptId} of the application attempt.
+   * </p>
+   * 
+   * <p>
+   * In secure mode,the <code>ResourceManager</code> verifies access to the
+   * method before accepting the request.
+   * </p>
+   * 
+   * <p>
+   * The <code>ResourceManager</code> responds with a
+   * {@link GetContainersResponse} which includes a list of
+   * {@link ContainerReport} for all the containers of a specific application
+   * attempt.
+   * </p>
+   * 
+   * @param request
+   *          request for a list of container reports of an application attempt.
+   * @return reports on all containers of an application attempt
+   * @throws YarnException
+   * @throws IOException
+   */
+  @Public
+  @Unstable
+  public GetContainersResponse getContainers(GetContainersRequest request)
+      throws YarnException, IOException;
+
 }

@@ -19,7 +19,6 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyBoolean;
@@ -35,8 +34,8 @@ import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -44,10 +43,8 @@ import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CyclicBarrier;
 
-import com.google.common.collect.Sets;
 import junit.framework.Assert;
 
-import org.apache.commons.lang.math.LongRange;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -57,10 +54,18 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.MockApps;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.ApplicationsRequestScope;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerReportRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerReportResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainersRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainersResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
@@ -73,7 +78,11 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
+import org.apache.hadoop.yarn.api.records.ContainerState;
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.QueueACL;
@@ -96,7 +105,12 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.QueueACLsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMDelegationTokenSecretManager;
@@ -107,6 +121,8 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import com.google.common.collect.Sets;
 
 public class TestClientRMService {
 
@@ -221,6 +237,113 @@ public class TestClientRMService {
     }
   }
   
+  @Test
+  public void testGetApplicationAttemptReport() throws YarnException,
+      IOException {
+    ClientRMService rmService = createRMService();
+    RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
+    GetApplicationAttemptReportRequest request = recordFactory
+        .newRecordInstance(GetApplicationAttemptReportRequest.class);
+    ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(
+        ApplicationId.newInstance(123456, 1), 1);
+    request.setApplicationAttemptId(attemptId);
+
+    try {
+      GetApplicationAttemptReportResponse response = rmService
+          .getApplicationAttemptReport(request);
+      Assert.assertEquals(attemptId, response.getApplicationAttemptReport()
+          .getApplicationAttemptId());
+    } catch (ApplicationNotFoundException ex) {
+      Assert.fail(ex.getMessage());
+    }
+  }
+
+  @Test
+  public void testGetApplicationAttempts() throws YarnException, IOException {
+    ClientRMService rmService = createRMService();
+    RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
+    GetApplicationAttemptsRequest request = recordFactory
+        .newRecordInstance(GetApplicationAttemptsRequest.class);
+    ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(
+        ApplicationId.newInstance(123456, 1), 1);
+    request.setApplicationId(ApplicationId.newInstance(123456, 1));
+
+    try {
+      GetApplicationAttemptsResponse response = rmService
+          .getApplicationAttempts(request);
+      Assert.assertEquals(1, response.getApplicationAttemptList().size());
+      Assert.assertEquals(attemptId, response.getApplicationAttemptList()
+          .get(0).getApplicationAttemptId());
+
+    } catch (ApplicationNotFoundException ex) {
+      Assert.fail(ex.getMessage());
+    }
+  }
+
+  @Test
+  public void testGetContainerReport() throws YarnException, IOException {
+    ClientRMService rmService = createRMService();
+    RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
+    GetContainerReportRequest request = recordFactory
+        .newRecordInstance(GetContainerReportRequest.class);
+    ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(
+        ApplicationId.newInstance(123456, 1), 1);
+    ContainerId containerId = ContainerId.newInstance(attemptId, 1);
+    request.setContainerId(containerId);
+
+    try {
+      GetContainerReportResponse response = rmService
+          .getContainerReport(request);
+      Assert.assertEquals(containerId, response.getContainerReport()
+          .getContainerId());
+    } catch (ApplicationNotFoundException ex) {
+      Assert.fail(ex.getMessage());
+    }
+  }
+
+  @Test
+  public void testGetContainers() throws YarnException, IOException {
+    ClientRMService rmService = createRMService();
+    RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
+    GetContainersRequest request = recordFactory
+        .newRecordInstance(GetContainersRequest.class);
+    ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(
+        ApplicationId.newInstance(123456, 1), 1);
+    ContainerId containerId = ContainerId.newInstance(attemptId, 1);
+    request.setApplicationAttemptId(attemptId);
+    try {
+      GetContainersResponse response = rmService.getContainers(request);
+      Assert.assertEquals(containerId, response.getContainerList().get(0)
+          .getContainerId());
+    } catch (ApplicationNotFoundException ex) {
+      Assert.fail(ex.getMessage());
+    }
+  }
+
+  public ClientRMService createRMService() throws IOException {
+    YarnScheduler yarnScheduler = mockYarnScheduler();
+    RMContext rmContext = mock(RMContext.class);
+    mockRMContext(yarnScheduler, rmContext);
+    ConcurrentHashMap<ApplicationId, RMApp> apps = getRMApps(rmContext,
+        yarnScheduler);
+    when(rmContext.getRMApps()).thenReturn(apps);
+    RMAppManager appManager = new RMAppManager(rmContext, yarnScheduler, null,
+        mock(ApplicationACLsManager.class), new Configuration());
+    when(rmContext.getDispatcher().getEventHandler()).thenReturn(
+        new EventHandler<Event>() {
+          public void handle(Event event) {
+          }
+        });
+
+    ApplicationACLsManager mockAclsManager = mock(ApplicationACLsManager.class);
+    QueueACLsManager mockQueueACLsManager = mock(QueueACLsManager.class);
+    when(
+        mockQueueACLsManager.checkAccess(any(UserGroupInformation.class),
+            any(QueueACL.class), anyString())).thenReturn(true);
+    return new ClientRMService(rmContext, yarnScheduler, appManager,
+        mockAclsManager, mockQueueACLsManager, null);
+  }
+
   @Test
   public void testForceKillNonExistingApplication() throws YarnException {
     RMContext rmContext = mock(RMContext.class);
@@ -732,6 +855,8 @@ public class TestClientRMService {
     when(rmContext.getRMApps()).thenReturn(apps);
     when(yarnScheduler.getAppsInQueue(eq("testqueue"))).thenReturn(
         getSchedulerApps(apps));
+     ResourceScheduler rs = mock(ResourceScheduler.class);
+     when(rmContext.getScheduler()).thenReturn(rs);
   }
 
   private ConcurrentHashMap<ApplicationId, RMApp> getRMApps(
@@ -772,13 +897,41 @@ public class TestClientRMService {
       ApplicationId applicationId3, YarnConfiguration config, String queueName) {
     ApplicationSubmissionContext asContext = mock(ApplicationSubmissionContext.class);
     when(asContext.getMaxAppAttempts()).thenReturn(1);
-    RMAppImpl app =  spy(new RMAppImpl(applicationId3, rmContext, config, null, null,
-        queueName, asContext, yarnScheduler, null , System
-            .currentTimeMillis(), "YARN", null));
-    ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(applicationId3, 1);
-    RMAppAttemptImpl rmAppAttemptImpl = new RMAppAttemptImpl(attemptId,
-        rmContext, yarnScheduler, null, asContext, config, false);
+    RMAppImpl app = spy(new RMAppImpl(applicationId3, rmContext, config, null,
+        null, queueName, asContext, yarnScheduler, null,
+        System.currentTimeMillis(), "YARN", null));
+    ApplicationAttemptId attemptId = ApplicationAttemptId.newInstance(
+        ApplicationId.newInstance(123456, 1), 1);
+    RMAppAttemptImpl rmAppAttemptImpl = spy(new RMAppAttemptImpl(attemptId,
+        rmContext, yarnScheduler, null, asContext, config, false));
+    Container container = Container.newInstance(
+        ContainerId.newInstance(attemptId, 1), null, "", null, null, null);
+    RMContainerImpl containerimpl = spy(new RMContainerImpl(container,
+        attemptId, null, "", rmContext));
+    Map<ApplicationAttemptId, RMAppAttempt> attempts = 
+      new HashMap<ApplicationAttemptId, RMAppAttempt>();
+    attempts.put(attemptId, rmAppAttemptImpl);
     when(app.getCurrentAppAttempt()).thenReturn(rmAppAttemptImpl);
+    when(app.getAppAttempts()).thenReturn(attempts);
+    when(rmAppAttemptImpl.getMasterContainer()).thenReturn(container);
+    ResourceScheduler rs = mock(ResourceScheduler.class);
+    when(rmContext.getScheduler()).thenReturn(rs);
+    when(rmContext.getScheduler().getRMContainer(any(ContainerId.class)))
+        .thenReturn(containerimpl);
+    SchedulerAppReport sAppReport = mock(SchedulerAppReport.class);
+    when(
+        rmContext.getScheduler().getSchedulerAppInfo(
+            any(ApplicationAttemptId.class))).thenReturn(sAppReport);
+    List<RMContainer> rmContainers = new ArrayList<RMContainer>();
+    rmContainers.add(containerimpl);
+    when(
+        rmContext.getScheduler().getSchedulerAppInfo(attemptId)
+            .getLiveContainers()).thenReturn(rmContainers);
+    ContainerStatus cs = mock(ContainerStatus.class);
+    when(containerimpl.getFinishedStatus()).thenReturn(cs);
+    when(containerimpl.getDiagnosticsInfo()).thenReturn("N/A");
+    when(containerimpl.getContainerExitStatus()).thenReturn(0);
+    when(containerimpl.getContainerState()).thenReturn(ContainerState.COMPLETE);
     return app;
   }
 

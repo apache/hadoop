@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.client.api.impl;
 
-import static org.junit.Assert.assertFalse;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -40,21 +39,35 @@ import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerReportRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerReportResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainersRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainersResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
+import org.apache.hadoop.yarn.api.records.ContainerReport;
+import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.client.api.YarnClientApplication;
@@ -251,11 +264,103 @@ public class TestYarnClient {
     client.stop();
   }
 
+  @Test(timeout = 10000)
+  public void testGetApplicationAttempts() throws YarnException, IOException {
+    Configuration conf = new Configuration();
+    final YarnClient client = new MockYarnClient();
+    client.init(conf);
+    client.start();
+
+    ApplicationId applicationId = ApplicationId.newInstance(1234, 5);
+    List<ApplicationAttemptReport> reports = client
+        .getApplicationAttempts(applicationId);
+    Assert.assertNotNull(reports);
+    Assert.assertEquals(reports.get(0).getApplicationAttemptId(),
+        ApplicationAttemptId.newInstance(applicationId, 1));
+    Assert.assertEquals(reports.get(1).getApplicationAttemptId(),
+        ApplicationAttemptId.newInstance(applicationId, 2));
+    client.stop();
+  }
+
+  @Test(timeout = 10000)
+  public void testGetApplicationAttempt() throws YarnException, IOException {
+    Configuration conf = new Configuration();
+    final YarnClient client = new MockYarnClient();
+    client.init(conf);
+    client.start();
+
+    List<ApplicationReport> expectedReports = ((MockYarnClient) client)
+        .getReports();
+
+    ApplicationId applicationId = ApplicationId.newInstance(1234, 5);
+    ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(
+        applicationId, 1);
+    ApplicationAttemptReport report = client
+        .getApplicationAttemptReport(appAttemptId);
+    Assert.assertNotNull(report);
+    Assert.assertEquals(report.getApplicationAttemptId().toString(),
+        expectedReports.get(0).getCurrentApplicationAttemptId().toString());
+    client.stop();
+  }
+
+  @Test(timeout = 10000)
+  public void testGetContainers() throws YarnException, IOException {
+    Configuration conf = new Configuration();
+    final YarnClient client = new MockYarnClient();
+    client.init(conf);
+    client.start();
+
+    ApplicationId applicationId = ApplicationId.newInstance(1234, 5);
+    ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(
+        applicationId, 1);
+    List<ContainerReport> reports = client.getContainers(appAttemptId);
+    Assert.assertNotNull(reports);
+    Assert.assertEquals(reports.get(0).getContainerId(),
+        (ContainerId.newInstance(appAttemptId, 1)));
+    Assert.assertEquals(reports.get(1).getContainerId(),
+        (ContainerId.newInstance(appAttemptId, 2)));
+    client.stop();
+  }
+
+  @Test(timeout = 10000)
+  public void testGetContainerReport() throws YarnException, IOException {
+    Configuration conf = new Configuration();
+    final YarnClient client = new MockYarnClient();
+    client.init(conf);
+    client.start();
+
+    List<ApplicationReport> expectedReports = ((MockYarnClient) client)
+        .getReports();
+
+    ApplicationId applicationId = ApplicationId.newInstance(1234, 5);
+    ApplicationAttemptId appAttemptId = ApplicationAttemptId.newInstance(
+        applicationId, 1);
+    ContainerId containerId = ContainerId.newInstance(appAttemptId, 1);
+    ContainerReport report = client.getContainerReport(containerId);
+    Assert.assertNotNull(report);
+    Assert.assertEquals(report.getContainerId().toString(),
+        (ContainerId.newInstance(expectedReports.get(0)
+            .getCurrentApplicationAttemptId(), 1)).toString());
+    client.stop();
+  }
+
   private static class MockYarnClient extends YarnClientImpl {
     private ApplicationReport mockReport;
     private List<ApplicationReport> reports;
+    private HashMap<ApplicationId, List<ApplicationAttemptReport>> attempts = 
+      new HashMap<ApplicationId, List<ApplicationAttemptReport>>();
+    private HashMap<ApplicationAttemptId, List<ContainerReport>> containers = 
+      new HashMap<ApplicationAttemptId, List<ContainerReport>>();
     GetApplicationsResponse mockAppResponse =
-        mock(GetApplicationsResponse.class);
+      mock(GetApplicationsResponse.class);
+    GetApplicationAttemptsResponse mockAppAttemptsResponse = 
+      mock(GetApplicationAttemptsResponse.class);
+    GetApplicationAttemptReportResponse mockAttemptResponse = 
+      mock(GetApplicationAttemptReportResponse.class);
+    GetContainersResponse mockContainersResponse = 
+      mock(GetContainersResponse.class);
+    GetContainerReportResponse mockContainerResponse = 
+      mock(GetContainerReportResponse.class);
 
     public MockYarnClient() {
       super();
@@ -278,6 +383,19 @@ public class TestYarnClient {
           KillApplicationRequest.class)))
           .thenReturn(KillApplicationResponse.newInstance(false)).thenReturn(
             KillApplicationResponse.newInstance(true));
+        when(
+            rmClient
+                .getApplicationAttemptReport(any(GetApplicationAttemptReportRequest.class)))
+            .thenReturn(mockAttemptResponse);
+        when(
+            rmClient
+                .getApplicationAttempts(any(GetApplicationAttemptsRequest.class)))
+            .thenReturn(mockAppAttemptsResponse);
+        when(rmClient.getContainers(any(GetContainersRequest.class)))
+            .thenReturn(mockContainersResponse);
+
+        when(rmClient.getContainerReport(any(GetContainerReportRequest.class)))
+            .thenReturn(mockContainerResponse);
       } catch (YarnException e) {
         Assert.fail("Exception is not expected.");
       } catch (IOException e) {
@@ -320,9 +438,44 @@ public class TestYarnClient {
           "user", "queue", "appname", "host", 124, null,
           YarnApplicationState.RUNNING, "diagnostics", "url", 0, 0,
           FinalApplicationStatus.SUCCEEDED, null, "N/A", 0.53789f, "YARN", null);
-      List<ApplicationReport> applicationReports =
-          new ArrayList<ApplicationReport>();
+      List<ApplicationReport> applicationReports = new ArrayList<ApplicationReport>();
       applicationReports.add(newApplicationReport);
+      List<ApplicationAttemptReport> appAttempts = new ArrayList<ApplicationAttemptReport>();
+      ApplicationAttemptReport attempt = ApplicationAttemptReport.newInstance(
+          ApplicationAttemptId.newInstance(applicationId, 1),
+          "host",
+          124,
+          "url",
+          "diagnostics",
+          YarnApplicationAttemptState.FINISHED,
+          ContainerId.newInstance(
+              newApplicationReport.getCurrentApplicationAttemptId(), 1));
+      appAttempts.add(attempt);
+      ApplicationAttemptReport attempt1 = ApplicationAttemptReport.newInstance(
+          ApplicationAttemptId.newInstance(applicationId, 2),
+          "host",
+          124,
+          "url",
+          "diagnostics",
+          YarnApplicationAttemptState.FINISHED,
+          ContainerId.newInstance(
+              newApplicationReport.getCurrentApplicationAttemptId(), 2));
+      appAttempts.add(attempt1);
+      attempts.put(applicationId, appAttempts);
+
+      List<ContainerReport> containerReports = new ArrayList<ContainerReport>();
+      ContainerReport container = ContainerReport.newInstance(
+          ContainerId.newInstance(attempt.getApplicationAttemptId(), 1), null,
+          NodeId.newInstance("host", 1234), Priority.UNDEFINED, 1234, 5678,
+          "diagnosticInfo", "logURL", 0, ContainerState.COMPLETE);
+      containerReports.add(container);
+
+      ContainerReport container1 = ContainerReport.newInstance(
+          ContainerId.newInstance(attempt.getApplicationAttemptId(), 2), null,
+          NodeId.newInstance("host", 1234), Priority.UNDEFINED, 1234, 5678,
+          "diagnosticInfo", "logURL", 0, ContainerState.COMPLETE);
+      containerReports.add(container1);
+      containers.put(attempt.getApplicationAttemptId(), containerReports);
 
       ApplicationId applicationId2 = ApplicationId.newInstance(1234, 6);
       ApplicationReport newApplicationReport2 = ApplicationReport.newInstance(
@@ -375,6 +528,57 @@ public class TestYarnClient {
         appReports.add(appReport);
       }
       return appReports;
+    }
+   
+    @Override
+    public List<ApplicationAttemptReport> getApplicationAttempts(
+        ApplicationId appId) throws YarnException, IOException {
+      when(mockAppAttemptsResponse.getApplicationAttemptList()).thenReturn(
+        getAttempts(appId));
+      return super.getApplicationAttempts(appId);
+    }
+
+    @Override
+    public ApplicationAttemptReport getApplicationAttemptReport(
+        ApplicationAttemptId appAttemptId) throws YarnException, IOException {
+      when(mockAttemptResponse.getApplicationAttemptReport()).thenReturn(
+        getAttempt(appAttemptId));
+      return super.getApplicationAttemptReport(appAttemptId);
+    }
+
+    @Override
+    public List<ContainerReport>
+        getContainers(ApplicationAttemptId appAttemptId) throws YarnException,
+            IOException {
+      when(mockContainersResponse.getContainerList()).thenReturn(
+        getContainersReport(appAttemptId));
+      return super.getContainers(appAttemptId);
+    }
+
+    @Override
+    public ContainerReport getContainerReport(ContainerId containerId)
+        throws YarnException, IOException {
+      when(mockContainerResponse.getContainerReport()).thenReturn(
+        getContainer(containerId));
+      return super.getContainerReport(containerId);
+    }
+    
+    public List<ApplicationAttemptReport> getAttempts(ApplicationId appId) {
+      return attempts.get(appId);
+    }
+
+    public ApplicationAttemptReport
+        getAttempt(ApplicationAttemptId appAttemptId) {
+      return attempts.get(appAttemptId.getApplicationId()).get(0);
+    }
+
+    public List<ContainerReport> getContainersReport(
+        ApplicationAttemptId appAttemptId) {
+      return containers.get(appAttemptId);
+    }
+
+    public ContainerReport getContainer(ContainerId containerId) {
+      return containers.get(containerId.getApplicationAttemptId()).get(0);
     }
   }
 

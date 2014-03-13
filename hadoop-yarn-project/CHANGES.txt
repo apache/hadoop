@@ -284,6 +284,10 @@ Release 2.4.0 - UNRELEASED
     YARN-1764. Modified YarnClient to correctly handle failover of ResourceManager
     after the submitApplication call goes through. (Xuan Gong via vinodkv)
 
+    YARN-1389. Made ApplicationClientProtocol and ApplicationHistoryProtocol
+    expose analogous getApplication(s)/Attempt(s)/Container(s) APIs. (Mayank
+    Bansal via zjshen)
+
   OPTIMIZATIONS
 
   BUG FIXES
