@@ -295,7 +295,7 @@ public class JobInfo {
             avgMergeTime += attempt.getSortFinishTime()
                 - attempt.getShuffleFinishTime();
             avgReduceTime += (attempt.getFinishTime() - attempt
-                .getShuffleFinishTime());
+                .getSortFinishTime());
           }
           break;
         }
