@@ -24,6 +24,7 @@ import java.net.InetSocketAddress;
 import java.security.AccessControlException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
@@ -48,6 +49,10 @@ import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.ApplicationsRequestScope;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationsRequest;
@@ -56,6 +61,10 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerReportRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerReportResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainersRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainersResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
@@ -74,9 +83,12 @@ import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.QueueACL;
@@ -85,7 +97,9 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.ApplicationAttemptNotFoundException;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
+import org.apache.hadoop.yarn.exceptions.ContainerNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -98,7 +112,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMoveEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.QueueACLsManager;
@@ -277,6 +294,189 @@ public class ClientRMService extends AbstractService implements
     GetApplicationReportResponse response = recordFactory
         .newRecordInstance(GetApplicationReportResponse.class);
     response.setApplicationReport(report);
+    return response;
+  }
+
+  @Override
+  public GetApplicationAttemptReportResponse getApplicationAttemptReport(
+      GetApplicationAttemptReportRequest request) throws YarnException,
+      IOException {
+    ApplicationAttemptId appAttemptId = request.getApplicationAttemptId();
+    UserGroupInformation callerUGI;
+    try {
+      callerUGI = UserGroupInformation.getCurrentUser();
+    } catch (IOException ie) {
+      LOG.info("Error getting UGI ", ie);
+      throw RPCUtil.getRemoteException(ie);
+    }
+    RMApp application = this.rmContext.getRMApps().get(
+        appAttemptId.getApplicationId());
+    if (application == null) {
+      // If the RM doesn't have the application, throw
+      // ApplicationNotFoundException and let client to handle.
+      throw new ApplicationNotFoundException("Application with id '"
+          + request.getApplicationAttemptId().getApplicationId()
+          + "' doesn't exist in RM.");
+    }
+
+    boolean allowAccess = checkAccess(callerUGI, application.getUser(),
+        ApplicationAccessType.VIEW_APP, application);
+    GetApplicationAttemptReportResponse response = null;
+    if (allowAccess) {
+      RMAppAttempt appAttempt = application.getAppAttempts().get(appAttemptId);
+      if (appAttempt == null) {
+        throw new ApplicationAttemptNotFoundException("ApplicationAttempt "
+            + appAttemptId + " Not Found in RM");
+      }
+      ApplicationAttemptReport attemptReport = appAttempt
+          .createApplicationAttemptReport();
+      response = GetApplicationAttemptReportResponse.newInstance(attemptReport);
+    }else{
+      throw new YarnException("User " + callerUGI.getShortUserName()
+          + " does not have privilage to see this attempt " + appAttemptId);
+    }
+    return response;
+  }
+  
+  @Override
+  public GetApplicationAttemptsResponse getApplicationAttempts(
+      GetApplicationAttemptsRequest request) throws YarnException, IOException {
+    ApplicationId appId = request.getApplicationId();
+    UserGroupInformation callerUGI;
+    try {
+      callerUGI = UserGroupInformation.getCurrentUser();
+    } catch (IOException ie) {
+      LOG.info("Error getting UGI ", ie);
+      throw RPCUtil.getRemoteException(ie);
+    }
+    RMApp application = this.rmContext.getRMApps().get(appId);
+    if (application == null) {
+      // If the RM doesn't have the application, throw
+      // ApplicationNotFoundException and let client to handle.
+      throw new ApplicationNotFoundException("Application with id '" + appId
+          + "' doesn't exist in RM.");
+    }
+    boolean allowAccess = checkAccess(callerUGI, application.getUser(),
+        ApplicationAccessType.VIEW_APP, application);
+    GetApplicationAttemptsResponse response = null;
+    if (allowAccess) {
+      Map<ApplicationAttemptId, RMAppAttempt> attempts = application
+          .getAppAttempts();
+      List<ApplicationAttemptReport> listAttempts = 
+        new ArrayList<ApplicationAttemptReport>();
+      Iterator<Map.Entry<ApplicationAttemptId, RMAppAttempt>> iter = attempts
+          .entrySet().iterator();
+      while (iter.hasNext()) {
+        listAttempts.add(iter.next().getValue()
+            .createApplicationAttemptReport());
+      }
+      response = GetApplicationAttemptsResponse.newInstance(listAttempts);
+    } else {
+      throw new YarnException("User " + callerUGI.getShortUserName()
+          + " does not have privilage to see this aplication " + appId);
+    }
+    return response;
+  }
+  
+  /*
+   * (non-Javadoc)
+   * 
+   * we're going to fix the issue of showing non-running containers of the
+   * running application in YARN-1794
+   */
+  @Override
+  public GetContainerReportResponse getContainerReport(
+      GetContainerReportRequest request) throws YarnException, IOException {
+    ContainerId containerId = request.getContainerId();
+    ApplicationAttemptId appAttemptId = containerId.getApplicationAttemptId();
+    ApplicationId appId = appAttemptId.getApplicationId();
+    UserGroupInformation callerUGI;
+    try {
+      callerUGI = UserGroupInformation.getCurrentUser();
+    } catch (IOException ie) {
+      LOG.info("Error getting UGI ", ie);
+      throw RPCUtil.getRemoteException(ie);
+    }
+    RMApp application = this.rmContext.getRMApps().get(appId);
+    if (application == null) {
+      // If the RM doesn't have the application, throw
+      // ApplicationNotFoundException and let client to handle.
+      throw new ApplicationNotFoundException("Application with id '" + appId
+          + "' doesn't exist in RM.");
+    }
+    boolean allowAccess = checkAccess(callerUGI, application.getUser(),
+        ApplicationAccessType.VIEW_APP, application);
+    GetContainerReportResponse response = null;
+    if (allowAccess) {
+      RMAppAttempt appAttempt = application.getAppAttempts().get(appAttemptId);
+      if (appAttempt == null) {
+        throw new ApplicationAttemptNotFoundException("ApplicationAttempt "
+            + appAttemptId + " Not Found in RM");
+      }
+      RMContainer rmConatiner = this.rmContext.getScheduler().getRMContainer(
+          containerId);
+      if (rmConatiner == null) {
+        throw new ContainerNotFoundException("Container with id " + containerId
+            + " not found");
+      }
+      response = GetContainerReportResponse.newInstance(rmConatiner
+          .createContainerReport());
+    } else {
+      throw new YarnException("User " + callerUGI.getShortUserName()
+          + " does not have privilage to see this aplication " + appId);
+    }
+    return response;
+  }
+  
+  /*
+   * (non-Javadoc)
+   * 
+   * we're going to fix the issue of showing non-running containers of the
+   * running application in YARN-1794"
+   */
+  @Override
+  public GetContainersResponse getContainers(GetContainersRequest request)
+      throws YarnException, IOException {
+    ApplicationAttemptId appAttemptId = request.getApplicationAttemptId();
+    ApplicationId appId = appAttemptId.getApplicationId();
+    UserGroupInformation callerUGI;
+    try {
+      callerUGI = UserGroupInformation.getCurrentUser();
+    } catch (IOException ie) {
+      LOG.info("Error getting UGI ", ie);
+      throw RPCUtil.getRemoteException(ie);
+    }
+    RMApp application = this.rmContext.getRMApps().get(appId);
+    if (application == null) {
+      // If the RM doesn't have the application, throw
+      // ApplicationNotFoundException and let client to handle.
+      throw new ApplicationNotFoundException("Application with id '" + appId
+          + "' doesn't exist in RM.");
+    }
+    boolean allowAccess = checkAccess(callerUGI, application.getUser(),
+        ApplicationAccessType.VIEW_APP, application);
+    GetContainersResponse response = null;
+    if (allowAccess) {
+      RMAppAttempt appAttempt = application.getAppAttempts().get(appAttemptId);
+      if (appAttempt == null) {
+        throw new ApplicationAttemptNotFoundException("ApplicationAttempt "
+            + appAttemptId + " Not Found in RM");
+      }
+      Collection<RMContainer> rmContainers = Collections.emptyList();
+      SchedulerAppReport schedulerAppReport =
+          this.rmContext.getScheduler().getSchedulerAppInfo(appAttemptId);
+      if (schedulerAppReport != null) {
+        rmContainers = schedulerAppReport.getLiveContainers();
+      }
+      List<ContainerReport> listContainers = new ArrayList<ContainerReport>();
+      for (RMContainer rmContainer : rmContainers) {
+        listContainers.add(rmContainer.createContainerReport());
+      }
+      response = GetContainersResponse.newInstance(listContainers);
+    } else {
+      throw new YarnException("User " + callerUGI.getShortUserName()
+          + " does not have privilage to see this aplication " + appId);
+    }
     return response;
   }
 

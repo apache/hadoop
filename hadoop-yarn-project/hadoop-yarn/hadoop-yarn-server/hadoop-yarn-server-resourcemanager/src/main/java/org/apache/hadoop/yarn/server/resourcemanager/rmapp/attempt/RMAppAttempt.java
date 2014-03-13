@@ -26,6 +26,7 @@ import javax.crypto.SecretKey;
 import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -195,5 +196,12 @@ public interface RMAppAttempt extends EventHandler<RMAppAttemptEvent> {
    * @return the external user-facing state of the attempt ApplicationMaster.
    */
   YarnApplicationAttemptState createApplicationAttemptState();
+  
+  /**
+   * Create the Application attempt report from the {@link RMAppAttempt}
+   * 
+   * @return {@link ApplicationAttemptReport}
+   */
+  ApplicationAttemptReport createApplicationAttemptReport();
 
 }

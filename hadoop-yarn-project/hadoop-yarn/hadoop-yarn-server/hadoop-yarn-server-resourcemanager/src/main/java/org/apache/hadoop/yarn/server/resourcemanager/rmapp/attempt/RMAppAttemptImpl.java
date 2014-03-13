@@ -44,6 +44,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -1629,5 +1630,21 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
 
   private static String sanitizeTrackingUrl(String url) {
     return (url == null || url.trim().isEmpty()) ? "N/A" : url;
+  }
+
+  @Override
+  public ApplicationAttemptReport createApplicationAttemptReport() {
+    this.readLock.lock();
+    ApplicationAttemptReport attemptReport = null;
+    try {
+      attemptReport = ApplicationAttemptReport.newInstance(this
+          .getAppAttemptId(), this.getHost(), this.getRpcPort(), this
+          .getTrackingUrl(), this.getDiagnostics(), YarnApplicationAttemptState
+          .valueOf(this.getState().toString()), this.getMasterContainer()
+          .getId());
+    } finally {
+      this.readLock.unlock();
+    }
+    return attemptReport;
   }
 }
