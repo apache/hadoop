@@ -268,7 +268,7 @@ public class TestNNStorageRetentionManager {
   }
   
   private class TestCaseDescription {
-    private Map<File, FakeRoot> dirRoots = Maps.newHashMap();
+    private Map<File, FakeRoot> dirRoots = Maps.newLinkedHashMap();
     private Set<File> expectedPurgedLogs = Sets.newLinkedHashSet();
     private Set<File> expectedPurgedImages = Sets.newLinkedHashSet();
     
