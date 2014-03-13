@@ -206,6 +206,12 @@ public class Nfs3Constant {
   public static final String FILE_DUMP_DIR_DEFAULT = "/tmp/.hdfs-nfs";
   public static final String ENABLE_FILE_DUMP_KEY = "dfs.nfs3.enableDump";
   public static final boolean ENABLE_FILE_DUMP_DEFAULT = true;
+  public static final String MAX_READ_TRANSFER_SIZE_KEY = "dfs.nfs.rtmax";
+  public static final int MAX_READ_TRANSFER_SIZE_DEFAULT = 1024 * 1024;
+  public static final String MAX_WRITE_TRANSFER_SIZE_KEY = "dfs.nfs.wtmax";
+  public static final int MAX_WRITE_TRANSFER_SIZE_DEFAULT = 1024 * 1024;
+  public static final String MAX_READDIR_TRANSFER_SIZE_KEY = "dfs.nfs.dtmax";
+  public static final int MAX_READDIR_TRANSFER_SIZE_DEFAULT = 64 * 1024;
   public static final String MAX_OPEN_FILES = "dfs.nfs3.max.open.files";
   public static final int MAX_OPEN_FILES_DEFAULT = 256;
   public static final String OUTPUT_STREAM_TIMEOUT = "dfs.nfs3.stream.timeout";
