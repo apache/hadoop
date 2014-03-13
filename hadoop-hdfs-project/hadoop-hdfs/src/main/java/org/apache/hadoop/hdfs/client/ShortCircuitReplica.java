@@ -285,7 +285,8 @@ public class ShortCircuitReplica {
   MappedByteBuffer loadMmapInternal() {
     try {
       FileChannel channel = dataStream.getChannel();
-      MappedByteBuffer mmap = channel.map(MapMode.READ_ONLY, 0, channel.size());
+      MappedByteBuffer mmap = channel.map(MapMode.READ_ONLY, 0, 
+          Math.min(Integer.MAX_VALUE, channel.size()));
       if (LOG.isTraceEnabled()) {
         LOG.trace(this + ": created mmap of size " + channel.size());
       }

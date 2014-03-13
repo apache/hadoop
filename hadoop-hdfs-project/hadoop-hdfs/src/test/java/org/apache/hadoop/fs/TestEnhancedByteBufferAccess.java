@@ -776,4 +776,80 @@ public class TestEnhancedByteBufferAccess {
       if (cluster != null) cluster.shutdown();
     }
   }
+  
+  @Test
+  public void test2GBMmapLimit() throws Exception {
+    Assume.assumeTrue(BlockReaderTestUtil.shouldTestLargeFiles());
+    HdfsConfiguration conf = initZeroCopyTest();
+    final long TEST_FILE_LENGTH = 2469605888L;
+    conf.set(DFSConfigKeys.DFS_CHECKSUM_TYPE_KEY, "NULL");
+    conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, TEST_FILE_LENGTH);
+    MiniDFSCluster cluster = null;
+    final Path TEST_PATH = new Path("/a");
+    final String CONTEXT = "test2GBMmapLimit";
+    conf.set(DFSConfigKeys.DFS_CLIENT_CONTEXT, CONTEXT);
+
+    FSDataInputStream fsIn = null, fsIn2 = null;
+    ByteBuffer buf1 = null, buf2 = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+      cluster.waitActive();
+      DistributedFileSystem fs = cluster.getFileSystem();
+      DFSTestUtil.createFile(fs, TEST_PATH, TEST_FILE_LENGTH, (short)1, 0xB);
+      DFSTestUtil.waitReplication(fs, TEST_PATH, (short)1);
+      
+      fsIn = fs.open(TEST_PATH);
+      buf1 = fsIn.read(null, 1, EnumSet.of(ReadOption.SKIP_CHECKSUMS));
+      Assert.assertEquals(1, buf1.remaining());
+      fsIn.releaseBuffer(buf1);
+      buf1 = null;
+      fsIn.seek(2147483640L);
+      buf1 = fsIn.read(null, 1024, EnumSet.of(ReadOption.SKIP_CHECKSUMS));
+      Assert.assertEquals(7, buf1.remaining());
+      Assert.assertEquals(Integer.MAX_VALUE, buf1.limit());
+      fsIn.releaseBuffer(buf1);
+      buf1 = null;
+      Assert.assertEquals(2147483647L, fsIn.getPos());
+      try {
+        buf1 = fsIn.read(null, 1024,
+            EnumSet.of(ReadOption.SKIP_CHECKSUMS));
+        Assert.fail("expected UnsupportedOperationException");
+      } catch (UnsupportedOperationException e) {
+        // expected; can't read past 2GB boundary.
+      }
+      fsIn.close();
+      fsIn = null;
+
+      // Now create another file with normal-sized blocks, and verify we
+      // can read past 2GB
+      final Path TEST_PATH2 = new Path("/b");
+      conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 268435456L);
+      DFSTestUtil.createFile(fs, TEST_PATH2, 1024 * 1024, TEST_FILE_LENGTH,
+          268435456L, (short)1, 0xA);
+      
+      fsIn2 = fs.open(TEST_PATH2);
+      fsIn2.seek(2147483640L);
+      buf2 = fsIn2.read(null, 1024, EnumSet.of(ReadOption.SKIP_CHECKSUMS));
+      Assert.assertEquals(8, buf2.remaining());
+      Assert.assertEquals(2147483648L, fsIn2.getPos());
+      fsIn2.releaseBuffer(buf2);
+      buf2 = null;
+      buf2 = fsIn2.read(null, 1024, EnumSet.of(ReadOption.SKIP_CHECKSUMS));
+      Assert.assertEquals(1024, buf2.remaining());
+      Assert.assertEquals(2147484672L, fsIn2.getPos());
+      fsIn2.releaseBuffer(buf2);
+      buf2 = null;
+    } finally {
+      if (buf1 != null) {
+        fsIn.releaseBuffer(buf1);
+      }
+      if (buf2 != null) {
+        fsIn2.releaseBuffer(buf2);
+      }
+      IOUtils.cleanup(null, fsIn, fsIn2);
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
 }

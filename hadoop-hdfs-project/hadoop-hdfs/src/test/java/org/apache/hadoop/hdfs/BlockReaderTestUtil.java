@@ -54,6 +54,15 @@ import org.apache.log4j.LogManager;
  * A helper class to setup the cluster, and get to BlockReader and DataNode for a block.
  */
 public class BlockReaderTestUtil {
+  /**
+   * Returns true if we should run tests that generate large files (> 1GB)
+   */
+  static public boolean shouldTestLargeFiles() {
+    String property = System.getProperty("hdfs.test.large.files");
+    if (property == null) return false;
+    if (property.isEmpty()) return true;
+    return Boolean.parseBoolean(property);
+  }
 
   private HdfsConfiguration conf = null;
   private MiniDFSCluster cluster = null;

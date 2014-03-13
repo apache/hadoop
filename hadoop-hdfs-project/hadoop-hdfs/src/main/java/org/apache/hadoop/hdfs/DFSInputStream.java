@@ -1601,28 +1601,63 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
 
   private synchronized ByteBuffer tryReadZeroCopy(int maxLength,
       EnumSet<ReadOption> opts) throws IOException {
-    // Java ByteBuffers can't be longer than 2 GB, because they use
-    // 4-byte signed integers to represent capacity, etc.
-    // So we can't mmap the parts of the block higher than the 2 GB offset.
-    // FIXME: we could work around this with multiple memory maps.
-    // See HDFS-5101.
-    long blockEnd32 = Math.min(Integer.MAX_VALUE, blockEnd);
-    long curPos = pos;
-    long blockLeft = blockEnd32 - curPos + 1;
-    if (blockLeft <= 0) {
-      if (DFSClient.LOG.isDebugEnabled()) {
-        DFSClient.LOG.debug("unable to perform a zero-copy read from offset " +
-          curPos + " of " + src + "; blockLeft = " + blockLeft +
-          "; blockEnd32 = " + blockEnd32 + ", blockEnd = " + blockEnd +
-          "; maxLength = " + maxLength);
+    // Copy 'pos' and 'blockEnd' to local variables to make it easier for the
+    // JVM to optimize this function.
+    final long curPos = pos;
+    final long curEnd = blockEnd;
+    final long blockStartInFile = currentLocatedBlock.getStartOffset();
+    final long blockPos = curPos - blockStartInFile;
+
+    // Shorten this read if the end of the block is nearby.
+    long length63;
+    if ((curPos + maxLength) <= (curEnd + 1)) {
+      length63 = maxLength;
+    } else {
+      length63 = 1 + curEnd - curPos;
+      if (length63 <= 0) {
+        if (DFSClient.LOG.isDebugEnabled()) {
+          DFSClient.LOG.debug("Unable to perform a zero-copy read from offset " +
+            curPos + " of " + src + "; " + length63 + " bytes left in block.  " +
+            "blockPos=" + blockPos + "; curPos=" + curPos +
+            "; curEnd=" + curEnd);
+        }
+        return null;
       }
-      return null;
+      if (DFSClient.LOG.isDebugEnabled()) {
+        DFSClient.LOG.debug("Reducing read length from " + maxLength +
+            " to " + length63 + " to avoid going more than one byte " +
+            "past the end of the block.  blockPos=" + blockPos +
+            "; curPos=" + curPos + "; curEnd=" + curEnd);
+      }
     }
-    int length = Math.min((int)blockLeft, maxLength);
-    long blockStartInFile = currentLocatedBlock.getStartOffset();
-    long blockPos = curPos - blockStartInFile;
-    long limit = blockPos + length;
-    ClientMmap clientMmap = blockReader.getClientMmap(opts);
+    // Make sure that don't go beyond 31-bit offsets in the MappedByteBuffer.
+    int length;
+    if (blockPos + length63 <= Integer.MAX_VALUE) {
+      length = (int)length63;
+    } else {
+      long length31 = Integer.MAX_VALUE - blockPos;
+      if (length31 <= 0) {
+        // Java ByteBuffers can't be longer than 2 GB, because they use
+        // 4-byte signed integers to represent capacity, etc.
+        // So we can't mmap the parts of the block higher than the 2 GB offset.
+        // FIXME: we could work around this with multiple memory maps.
+        // See HDFS-5101.
+        if (DFSClient.LOG.isDebugEnabled()) {
+          DFSClient.LOG.debug("Unable to perform a zero-copy read from offset " +
+            curPos + " of " + src + "; 31-bit MappedByteBuffer limit " +
+            "exceeded.  blockPos=" + blockPos + ", curEnd=" + curEnd);
+        }
+        return null;
+      }
+      length = (int)length31;
+      if (DFSClient.LOG.isDebugEnabled()) {
+        DFSClient.LOG.debug("Reducing read length from " + maxLength +
+            " to " + length + " to avoid 31-bit limit.  " +
+            "blockPos=" + blockPos + "; curPos=" + curPos +
+            "; curEnd=" + curEnd);
+      }
+    }
+    final ClientMmap clientMmap = blockReader.getClientMmap(opts);
     if (clientMmap == null) {
       if (DFSClient.LOG.isDebugEnabled()) {
         DFSClient.LOG.debug("unable to perform a zero-copy read from offset " +
@@ -1634,16 +1669,16 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
     boolean success = false;
     ByteBuffer buffer;
     try {
-      seek(pos + length);
+      seek(curPos + length);
       buffer = clientMmap.getMappedByteBuffer().asReadOnlyBuffer();
       buffer.position((int)blockPos);
-      buffer.limit((int)limit);
+      buffer.limit((int)(blockPos + length));
       extendedReadBuffers.put(buffer, clientMmap);
       readStatistics.addZeroCopyBytes(length);
       if (DFSClient.LOG.isDebugEnabled()) {
-        DFSClient.LOG.debug("readZeroCopy read " + maxLength + " bytes from " +
-            "offset " + curPos + " via the zero-copy read path.  " +
-            "blockEnd = " + blockEnd);
+        DFSClient.LOG.debug("readZeroCopy read " + length + 
+            " bytes from offset " + curPos + " via the zero-copy read " +
+            "path.  blockEnd = " + blockEnd);
       }
       success = true;
     } finally {
