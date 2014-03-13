@@ -223,6 +223,9 @@ Release 2.4.0 - UNRELEASED
     MAPREDUCE-5778. JobSummary does not escape newlines in the job name (Akira
     AJISAKA via jlowe)
 
+    MAPREDUCE-5789. Average Reduce time is incorrect on Job Overview page
+    (Rushabh S Shah via jlowe)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

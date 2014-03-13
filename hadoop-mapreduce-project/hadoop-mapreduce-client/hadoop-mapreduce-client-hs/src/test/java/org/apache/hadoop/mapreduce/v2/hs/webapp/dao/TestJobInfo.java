@@ -22,6 +22,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.util.HashMap;
 
 import junit.framework.Assert;
 
@@ -29,11 +30,21 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobACLsManager;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
+import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
+import org.apache.hadoop.mapreduce.v2.api.records.JobState;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
+import org.apache.hadoop.mapreduce.v2.app.job.Job;
+import org.apache.hadoop.mapreduce.v2.app.job.Task;
+import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.mapreduce.v2.hs.HistoryFileManager.HistoryFileInfo;
 import org.apache.hadoop.mapreduce.v2.hs.CompletedJob;
 import org.apache.hadoop.mapreduce.v2.hs.TestJobHistoryEntities;
 import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 import org.junit.Test;
+
 
 public class TestJobInfo {
 
@@ -66,4 +77,63 @@ public class TestJobInfo {
     // merge time should be 50.
     Assert.assertEquals(50L, jobInfo.getAvgMergeTime().longValue());
   }
+  
+  @Test
+  public void testAverageReduceTime() {
+	  
+    Job job = mock(CompletedJob.class);
+    final Task task1 = mock(Task.class);
+    final Task task2 = mock(Task.class);
+  
+    JobId  jobId = MRBuilderUtils.newJobId(1L, 1, 1);
+  
+    final TaskId taskId1 = MRBuilderUtils.newTaskId(jobId, 1, TaskType.REDUCE);
+    final TaskId taskId2 = MRBuilderUtils.newTaskId(jobId, 2, TaskType.REDUCE);
+  
+    final TaskAttemptId taskAttemptId1  = MRBuilderUtils.
+    		newTaskAttemptId(taskId1, 1);
+    final TaskAttemptId taskAttemptId2  = MRBuilderUtils.
+    		newTaskAttemptId(taskId2, 2);
+  
+    final TaskAttempt taskAttempt1 = mock(TaskAttempt.class);
+    final TaskAttempt taskAttempt2 = mock(TaskAttempt.class);
+  
+    JobReport jobReport = mock(JobReport.class);
+  
+    when(taskAttempt1.getState()).thenReturn(TaskAttemptState.SUCCEEDED);
+    when(taskAttempt1.getLaunchTime()).thenReturn(0L);
+    when(taskAttempt1.getShuffleFinishTime()).thenReturn(4L);
+    when(taskAttempt1.getSortFinishTime()).thenReturn(6L);
+    when(taskAttempt1.getFinishTime()).thenReturn(8L);
+  
+    when(taskAttempt2.getState()).thenReturn(TaskAttemptState.SUCCEEDED);
+    when(taskAttempt2.getLaunchTime()).thenReturn(5L);
+    when(taskAttempt2.getShuffleFinishTime()).thenReturn(10L);
+    when(taskAttempt2.getSortFinishTime()).thenReturn(22L);
+    when(taskAttempt2.getFinishTime()).thenReturn(42L);
+  
+  
+    when(task1.getType()).thenReturn(TaskType.REDUCE);
+    when(task2.getType()).thenReturn(TaskType.REDUCE);
+    when(task1.getAttempts()).thenReturn
+      (new HashMap<TaskAttemptId, TaskAttempt>() 
+    		{{put(taskAttemptId1,taskAttempt1); }});
+    when(task2.getAttempts()).thenReturn
+      (new HashMap<TaskAttemptId, TaskAttempt>() 
+    		  {{put(taskAttemptId2,taskAttempt2); }});
+  
+    when(job.getTasks()).thenReturn
+      (new HashMap<TaskId, Task>() 
+    		{{ put(taskId1,task1); put(taskId2, task2);  }});
+    when(job.getID()).thenReturn(jobId);
+  
+    when(job.getReport()).thenReturn(jobReport);
+  
+    when(job.getName()).thenReturn("TestJobInfo");	  
+    when(job.getState()).thenReturn(JobState.SUCCEEDED);	  
+  
+    JobInfo jobInfo = new JobInfo(job);
+  
+    Assert.assertEquals(11L, jobInfo.getAvgReduceTime().longValue());
+  }  
 }
