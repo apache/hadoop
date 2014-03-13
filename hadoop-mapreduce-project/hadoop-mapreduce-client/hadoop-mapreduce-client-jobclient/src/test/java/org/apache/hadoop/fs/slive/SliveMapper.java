@@ -42,7 +42,6 @@ import org.apache.hadoop.util.StringUtils;
  * that have been selected and upon operation completion output the collected
  * output from that operation (and repeat until finished).
  */
-@SuppressWarnings("deprecation")
 public class SliveMapper extends MapReduceBase implements
     Mapper<Object, Object, Text, Text> {
 
@@ -64,14 +63,9 @@ public class SliveMapper extends MapReduceBase implements
   @Override // MapReduceBase
   public void configure(JobConf conf) {
     try {
-      filesystem = FileSystem.get(conf);
-    } catch (Exception e) {
-      throw new RuntimeException(
-          "Unable to get the filesystem from provided configuration", e);
-    }
-    try {
       config = new ConfigExtractor(conf);
       ConfigExtractor.dumpOptions(config);
+      filesystem = config.getBaseDirectory().getFileSystem(conf);
     } catch (Exception e) {
       LOG.error("Unable to setup slive " + StringUtils.stringifyException(e));
       throw new RuntimeException("Unable to setup slive configuration", e);

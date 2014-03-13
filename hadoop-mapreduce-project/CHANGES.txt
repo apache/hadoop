@@ -228,6 +228,9 @@ Release 2.4.0 - UNRELEASED
     MAPREDUCE-5789. Average Reduce time is incorrect on Job Overview page
     (Rushabh S Shah via jlowe)
 
+    MAPREDUCE-5794. SliveMapper always uses default FileSystem. (szetszwo via
+    Arpit Agarwal)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
