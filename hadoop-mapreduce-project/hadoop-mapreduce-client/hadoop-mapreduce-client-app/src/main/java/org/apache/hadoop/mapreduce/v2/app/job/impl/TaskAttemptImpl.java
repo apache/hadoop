@@ -1774,8 +1774,6 @@ public abstract class TaskAttemptImpl implements
           .checkArgument(taskAttempt.getID().getTaskId().getTaskType() == TaskType.MAP);
       //add to diagnostic
       taskAttempt.addDiagnosticInfo("Too Many fetch failures.Failing the attempt");
-      //set the finish time
-      taskAttempt.setFinishTime();
       
       if (taskAttempt.getLaunchTime() != 0) {
         taskAttempt.eventHandler

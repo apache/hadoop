@@ -240,6 +240,9 @@ Release 2.4.0 - UNRELEASED
     MAPREDUCE-5769. Unregistration to RM should not be called if AM is crashed
     before registering with RM (Rohith via jlowe)
 
+    MAPREDUCE-5570. Map task attempt with fetch failure has incorrect attempt
+    finish time (Rushabh S Shah via jlowe)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
