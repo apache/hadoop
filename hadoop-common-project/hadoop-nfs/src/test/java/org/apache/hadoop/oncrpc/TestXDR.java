@@ -21,24 +21,26 @@ import org.junit.Assert;
 import org.junit.Test;
 
 public class TestXDR {
+  static final int WRITE_VALUE=23;
   private void serializeInt(int times) {
     XDR w = new XDR();
     for (int i = 0; i < times; ++i)
-      w.writeInt(23);
+      w.writeInt(WRITE_VALUE);
 
     XDR r = w.asReadOnlyWrap();
     for (int i = 0; i < times; ++i)
-      Assert.assertEquals(r.readInt(), 23);
+      Assert.assertEquals(
+              WRITE_VALUE,r.readInt());
   }
 
   private void serializeLong(int times) {
     XDR w = new XDR();
     for (int i = 0; i < times; ++i)
-      w.writeLongAsHyper(23);
+      w.writeLongAsHyper(WRITE_VALUE);
 
     XDR r = w.asReadOnlyWrap();
     for (int i = 0; i < times; ++i)
-      Assert.assertEquals(r.readHyper(), 23);
+      Assert.assertEquals(WRITE_VALUE, r.readHyper());
   }
 
   @Test

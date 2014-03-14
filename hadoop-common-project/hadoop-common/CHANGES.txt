@@ -370,6 +370,9 @@ Release 2.4.0 - UNRELEASED
     HADOOP-10386. Log proxy hostname in various exceptions being thrown in a HA
     setup. (wheat9)
 
+    HADOOP-3679. Fixup assert ordering in unit tests to yield meaningful error
+    messages. (Jay Vyas via cdouglas)
+
   OPTIMIZATIONS
 
   BUG FIXES

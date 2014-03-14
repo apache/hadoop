@@ -28,100 +28,107 @@ import org.apache.hadoop.conf.Configuration;
 public class TestGenericsUtil extends TestCase {
 
   public void testToArray() {
-    
+
     //test a list of size 10
-    List<Integer> list = new ArrayList<Integer>(); 
-    
+    List<Integer> list = new ArrayList<Integer>();
+
     for(int i=0; i<10; i++) {
       list.add(i);
     }
-    
+
     Integer[] arr = GenericsUtil.toArray(list);
-    
+
     for (int i = 0; i < arr.length; i++) {
-      assertEquals(list.get(i), arr[i]);
+      assertEquals(
+              "Array has identical elements as input list",
+              list.get(i), arr[i]);
     }
   }
-  
+
   public void testWithEmptyList() {
     try {
       List<String> list = new ArrayList<String>();
       String[] arr = GenericsUtil.toArray(list);
       fail("Empty array should throw exception");
       System.out.println(arr); //use arr so that compiler will not complain
-      
+
     }catch (IndexOutOfBoundsException ex) {
       //test case is successful
     }
   }
- 
+
   public void testWithEmptyList2() {
     List<String> list = new ArrayList<String>();
     //this method should not throw IndexOutOfBoundsException
     String[] arr = GenericsUtil.<String>toArray(String.class, list);
-    
-    assertEquals(0, arr.length);
+
+    assertEquals("Assert list creation w/ no elements results in length 0",
+            0, arr.length);
   }
-  
+
   /** This class uses generics */
   private class GenericClass<T> {
     T dummy;
     List<T> list = new ArrayList<T>();
-    
+
     void add(T item) {
       list.add(item);
     }
-    
+
     T[] funcThatUsesToArray() {
       T[] arr = GenericsUtil.toArray(list);
       return arr;
     }
   }
-  
+
   public void testWithGenericClass() {
-    
+
     GenericClass<String> testSubject = new GenericClass<String>();
-    
+
     testSubject.add("test1");
     testSubject.add("test2");
-    
+
     try {
-      //this cast would fail, if we had not used GenericsUtil.toArray, since the 
+      //this cast would fail, if we had not used GenericsUtil.toArray, since the
       //rmethod would return Object[] rather than String[]
       String[] arr = testSubject.funcThatUsesToArray();
-      
+
       assertEquals("test1", arr[0]);
       assertEquals("test2", arr[1]);
-      
+
     }catch (ClassCastException ex) {
       fail("GenericsUtil#toArray() is not working for generic classes");
     }
-    
+
   }
-  
+
   public void testGenericOptionsParser() throws Exception {
      GenericOptionsParser parser = new GenericOptionsParser(
         new Configuration(), new String[] {"-jt"});
-    assertEquals(parser.getRemainingArgs().length, 0);
-    
+    assertEquals(0, parser.getRemainingArgs().length);
+
     //  test if -D accepts -Dx=y=z
-    parser = 
-      new GenericOptionsParser(new Configuration(), 
+    parser =
+      new GenericOptionsParser(new Configuration(),
                                new String[] {"-Dx=y=z"});
-    assertEquals(parser.getConfiguration().get("x"), "y=z");
+    assertEquals(
+            "Options parser gets entire ='s expresion",
+            "y=z", parser.getConfiguration().get("x"));
   }
-  
+
   public void testGetClass() {
-    
+
     //test with Integer
-    Integer x = new Integer(42); 
+    Integer x = new Integer(42);
     Class<Integer> c = GenericsUtil.getClass(x);
-    assertEquals(Integer.class, c);
-    
+    assertEquals("Correct generic type is acquired from object",
+            Integer.class, c);
+
     //test with GenericClass<Integer>
     GenericClass<Integer> testSubject = new GenericClass<Integer>();
     Class<GenericClass<Integer>> c2 = GenericsUtil.getClass(testSubject);
-    assertEquals(GenericClass.class, c2);
+    assertEquals("Inner generics are acquired from object.",
+            GenericClass.class, c2);
   }
-  
+
 }

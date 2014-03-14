@@ -221,16 +221,16 @@ public class TestIOUtils {
         IOUtils.skipFully(in, 2);
         fail("expected to get a PrematureEOFException");
       } catch (EOFException e) {
-        assertEquals(e.getMessage(), "Premature EOF from inputStream " +
-            "after skipping 1 byte(s).");
+        assertEquals("Premature EOF from inputStream " +
+                "after skipping 1 byte(s).",e.getMessage());
       }
       in.reset();
       try {
         IOUtils.skipFully(in, 20);
         fail("expected to get a PrematureEOFException");
       } catch (EOFException e) {
-        assertEquals(e.getMessage(), "Premature EOF from inputStream " +
-            "after skipping 5 byte(s).");
+        assertEquals("Premature EOF from inputStream " +
+                "after skipping 5 byte(s).",e.getMessage());
       }
       in.reset();
       IOUtils.skipFully(in, 5);
@@ -238,8 +238,8 @@ public class TestIOUtils {
         IOUtils.skipFully(in, 10);
         fail("expected to get a PrematureEOFException");
       } catch (EOFException e) {
-        assertEquals(e.getMessage(), "Premature EOF from inputStream " +
-            "after skipping 0 byte(s).");
+        assertEquals("Premature EOF from inputStream " +
+                "after skipping 0 byte(s).",e.getMessage());
       }
     } finally {
       in.close();

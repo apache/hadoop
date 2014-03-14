@@ -123,10 +123,10 @@ public class TestStat extends FileSystemTestHelper {
       // expected
     }
   }
-  
+
   @Test(timeout=10000)
   public void testStatEnvironment() throws Exception {
-    assertEquals(stat.getEnvironment("LANG"), "C");
+    assertEquals("C", stat.getEnvironment("LANG"));
   }
 
   @Test(timeout=10000)

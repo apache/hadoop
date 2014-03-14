@@ -278,11 +278,11 @@ public class TestPath extends TestCase {
     Path child  = new Path("foo2://bar2/baz2");
     assertEquals(child, new Path(parent, child));
   }
-  
+
   @Test (timeout = 30000)
   public void testScheme() throws java.io.IOException {
-    assertEquals("foo:/bar", new Path("foo:/","/bar").toString()); 
-    assertEquals("foo://bar/baz", new Path("foo://bar/","/baz").toString()); 
+    assertEquals("foo:/bar", new Path("foo:/","/bar").toString());
+    assertEquals("foo://bar/baz", new Path("foo://bar/","/baz").toString());
   }
 
   @Test (timeout = 30000)
@@ -311,12 +311,19 @@ public class TestPath extends TestCase {
   @Test (timeout = 30000)
   public void testPathToUriConversion() throws URISyntaxException, IOException {
     // Path differs from URI in that it ignores the query part..
-    assertEquals(new URI(null, null, "/foo?bar", null, null),  new Path("/foo?bar").toUri());
-    assertEquals(new URI(null, null, "/foo\"bar", null, null), new Path("/foo\"bar").toUri());
-    assertEquals(new URI(null, null, "/foo bar", null, null),  new Path("/foo bar").toUri());
-    // therefore "foo?bar" is a valid Path, so a URI created from a Path has path "foo?bar" 
-    // where in a straight URI the path part is just "foo"
-    assertEquals("/foo?bar", new Path("http://localhost/foo?bar").toUri().getPath());
+    assertEquals("? mark char in to URI",
+            new URI(null, null, "/foo?bar", null, null),
+            new Path("/foo?bar").toUri());
+    assertEquals("escape slashes chars in to URI",
+            new URI(null, null, "/foo\"bar", null, null),
+            new Path("/foo\"bar").toUri());
+    assertEquals("spaces in chars to URI",
+            new URI(null, null, "/foo bar", null, null),
+            new Path("/foo bar").toUri());
+    // therefore "foo?bar" is a valid Path, so a URI created from a Path
+    // has path "foo?bar" where in a straight URI the path part is just "foo"
+    assertEquals("/foo?bar",
+            new Path("http://localhost/foo?bar").toUri().getPath());
     assertEquals("/foo",     new URI("http://localhost/foo?bar").getPath());
 
     // The path part handling in Path is equivalent to URI
@@ -332,11 +339,14 @@ public class TestPath extends TestCase {
   @Test (timeout = 30000)
   public void testReservedCharacters() throws URISyntaxException, IOException {
     // URI encodes the path
-    assertEquals("/foo%20bar", new URI(null, null, "/foo bar", null, null).getRawPath());
+    assertEquals("/foo%20bar",
+            new URI(null, null, "/foo bar", null, null).getRawPath());
     // URI#getPath decodes the path
-    assertEquals("/foo bar",   new URI(null, null, "/foo bar", null, null).getPath());
+    assertEquals("/foo bar",
+            new URI(null, null, "/foo bar", null, null).getPath());
     // URI#toString returns an encoded path
-    assertEquals("/foo%20bar", new URI(null, null, "/foo bar", null, null).toString());
+    assertEquals("/foo%20bar",
+            new URI(null, null, "/foo bar", null, null).toString());
     assertEquals("/foo%20bar", new Path("/foo bar").toUri().toString());
     // Reserved chars are not encoded
     assertEquals("/foo;bar",   new URI("/foo;bar").getPath());
@@ -345,12 +355,17 @@ public class TestPath extends TestCase {
     assertEquals("/foo+bar",   new URI("/foo+bar").getRawPath());
 
     // URI#getPath decodes the path part (and URL#getPath does not decode)
-    assertEquals("/foo bar",   new Path("http://localhost/foo bar").toUri().getPath());
-    assertEquals("/foo%20bar", new Path("http://localhost/foo bar").toUri().toURL().getPath());
-    assertEquals("/foo?bar",   new URI("http", "localhost", "/foo?bar", null, null).getPath());
-    assertEquals("/foo%3Fbar", new URI("http", "localhost", "/foo?bar", null, null).toURL().getPath());
+    assertEquals("/foo bar",
+            new Path("http://localhost/foo bar").toUri().getPath());
+    assertEquals("/foo%20bar",
+            new Path("http://localhost/foo bar").toUri().toURL().getPath());
+    assertEquals("/foo?bar",
+            new URI("http", "localhost", "/foo?bar", null, null).getPath());
+    assertEquals("/foo%3Fbar",
+            new URI("http", "localhost", "/foo?bar", null, null).
+                toURL().getPath());
   }
-  
+
   @Test (timeout = 30000)
   public void testMakeQualified() throws URISyntaxException {
     URI defaultUri = new URI("hdfs://host1/dir1");
