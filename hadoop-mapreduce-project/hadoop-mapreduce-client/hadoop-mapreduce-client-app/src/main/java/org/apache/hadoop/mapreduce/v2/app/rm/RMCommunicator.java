@@ -87,6 +87,7 @@ public abstract class RMCommunicator extends AbstractService
   // Has a signal (SIGTERM etc) been issued?
   protected volatile boolean isSignalled = false;
   private volatile boolean shouldUnregister = true;
+  private boolean isApplicationMasterRegistered = false;
 
   public RMCommunicator(ClientService clientService, AppContext context) {
     super("RMCommunicator");
@@ -153,6 +154,7 @@ public abstract class RMCommunicator extends AbstractService
       }
       RegisterApplicationMasterResponse response =
         scheduler.registerApplicationMaster(request);
+      isApplicationMasterRegistered = true;
       maxContainerCapability = response.getMaximumResourceCapability();
       this.context.getClusterInfo().setMaxContainerCapability(
           maxContainerCapability);
@@ -249,7 +251,7 @@ public abstract class RMCommunicator extends AbstractService
         LOG.warn("InterruptedException while stopping", ie);
       }
     }
-    if(shouldUnregister) {
+    if (isApplicationMasterRegistered && shouldUnregister) {
       unregister();
     }
     super.serviceStop();
@@ -327,5 +329,10 @@ public abstract class RMCommunicator extends AbstractService
     this.isSignalled = isSignalled;
     LOG.info("RMCommunicator notified that iSignalled is: " 
         + isSignalled);
+  }
+
+  @VisibleForTesting
+  protected boolean isApplicationMasterRegistered() {
+    return isApplicationMasterRegistered;
   }
 }
