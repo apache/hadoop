@@ -271,6 +271,12 @@ public class TestRMFailover extends ClientBaseWithFixes {
     header = getHeader("Refresh", rm2Url + "/cluster/cluster");
     assertEquals(null, header);
 
+    header = getHeader("Refresh", rm2Url + "/ws/v1/cluster/info");
+    assertEquals(null, header);
+
+    header = getHeader("Refresh", rm2Url + "/ws/v1/cluster/apps");
+    assertTrue(header.contains("; url=" + rm1Url));
+
     // Due to the limitation of MiniYARNCluster and dispatcher is a singleton,
     // we couldn't add the test case after explicitFailover();
   }
@@ -286,4 +292,5 @@ public class TestRMFailover extends ClientBaseWithFixes {
     }
     return fieldHeader;
   }
+
 }

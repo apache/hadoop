@@ -21,59 +21,63 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 import java.io.IOException;
 import java.io.PrintWriter;
 
+import javax.inject.Inject;
+import javax.inject.Singleton;
+import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.http.HtmlQuoting;
-import org.apache.hadoop.yarn.webapp.Dispatcher;
-import org.apache.hadoop.yarn.webapp.Router;
-import org.apache.hadoop.yarn.webapp.WebApp;
 
-import com.google.inject.Inject;
 import com.google.inject.Injector;
-import com.google.inject.Singleton;
+import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
 
-@InterfaceAudience.LimitedPrivate({ "YARN", "MapReduce" })
 @Singleton
-public class RMDispatcher extends Dispatcher {
+public class RMWebAppFilter extends GuiceContainer {
 
+  private Injector injector;
   /**
-   *
+   * 
    */
   private static final long serialVersionUID = 1L;
 
   @Inject
-  RMDispatcher(WebApp webApp, Injector injector, Router router) {
-    super(webApp, injector, router);
+  public RMWebAppFilter(Injector injector) {
+    super(injector);
+    this.injector=injector;
   }
 
   @Override
-  public void service(HttpServletRequest req, HttpServletResponse res)
-      throws ServletException, IOException {
-    res.setCharacterEncoding("UTF-8");
-    String uri = HtmlQuoting.quoteHtmlChars(req.getRequestURI());
+  public void doFilter(HttpServletRequest request,
+      HttpServletResponse response, FilterChain chain) throws IOException,
+      ServletException {
+    response.setCharacterEncoding("UTF-8");
+    String uri = HtmlQuoting.quoteHtmlChars(request.getRequestURI());
 
     if (uri == null) {
       uri = "/";
     }
-
-    RMWebApp rmWebApp = (RMWebApp) webApp;
+    RMWebApp rmWebApp = injector.getInstance(RMWebApp.class);
     rmWebApp.checkIfStandbyRM();
     if (rmWebApp.isStandby()
+        && !uri.equals("/" + rmWebApp.wsName() + "/v1/cluster/info")
         && !uri.equals("/" + rmWebApp.name() + "/cluster")) {
       String redirectPath = rmWebApp.getRedirectPath() + uri;
+
       if (redirectPath != null && !redirectPath.isEmpty()) {
         String redirectMsg =
             "This is standby RM. Redirecting to the current active RM: "
                 + redirectPath;
-        res.addHeader("Refresh", "3; url=" + redirectPath);
-        PrintWriter out = res.getWriter();
+        response.addHeader("Refresh", "3; url=" + redirectPath);
+        PrintWriter out = response.getWriter();
         out.println(redirectMsg);
         return;
       }
     }
-    super.service(req, res);
+
+    super.doFilter(request, response, chain);
+
   }
+
 }
