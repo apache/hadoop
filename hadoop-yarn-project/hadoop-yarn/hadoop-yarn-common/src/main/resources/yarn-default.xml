@@ -1107,21 +1107,57 @@
   </property>
 
   <property>
-    <description>The https adddress of the timeline service web application.</description>
+    <description>The https address of the timeline service web application.</description>
     <name>yarn.timeline-service.webapp.https.address</name>
     <value>${yarn.timeline-service.hostname}:8190</value>
   </property>
 
   <property>
-    <description>Store class name for timeline store</description>
+    <description>Store class name for timeline store.</description>
     <name>yarn.timeline-service.store-class</name>
     <value>org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.LeveldbTimelineStore</value>
   </property>
 
   <property>
-    <description>Store file name for leveldb timeline store</description>
+    <description>Enable age off of timeline store data.</description>
+    <name>yarn.timeline-service.ttl-enable</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <description>Time to live for timeline store data in milliseconds.</description>
+    <name>yarn.timeline-service.ttl-ms</name>
+    <value>604800000</value>
+  </property>
+
+  <property>
+    <description>Store file name for leveldb timeline store.</description>
     <name>yarn.timeline-service.leveldb-timeline-store.path</name>
     <value>${yarn.log.dir}/timeline</value>
+  </property>
+
+  <property>
+    <description>Length of time to wait between deletion cycles of leveldb timeline store in milliseconds.</description>
+    <name>yarn.timeline-service.leveldb-timeline-store.ttl-interval-ms</name>
+    <value>300000</value>
+  </property>
+
+  <property>
+    <description>Size of read cache for uncompressed blocks for leveldb timeline store in bytes.</description>
+    <name>yarn.timeline-service.leveldb-timeline-store.read-cache-size</name>
+    <value>104857600</value>
+  </property>
+
+  <property>
+    <description>Size of cache for recently read entity start times for leveldb timeline store in number of entities.</description>
+    <name>yarn.timeline-service.leveldb-timeline-store.start-time-read-cache-size</name>
+    <value>10000</value>
+  </property>
+
+  <property>
+    <description>Size of cache for recently written entity start times for leveldb timeline store in number of entities.</description>
+    <name>yarn.timeline-service.leveldb-timeline-store.start-time-write-cache-size</name>
+    <value>10000</value>
   </property>
 
   <property>

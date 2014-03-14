@@ -140,6 +140,9 @@ Release 2.4.0 - UNRELEASED
     transferred containers from previous app-attempts to new AMs after YARN-1490.
     (Jian He via vinodkv)
 
+    YARN-1717. Enabled periodically discarding old data in LeveldbTimelineStore.
+    (Billie Rinaldi via zjshen)
+
   IMPROVEMENTS
 
     YARN-1007. Enhance History Reader interface for Containers. (Mayank Bansal via
