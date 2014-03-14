@@ -21,27 +21,35 @@ package org.apache.hadoop.yarn.util;
 import static org.apache.hadoop.fs.CreateFlag.CREATE;
 import static org.apache.hadoop.fs.CreateFlag.OVERWRITE;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
+import java.util.zip.GZIPOutputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
-import java.util.zip.GZIPOutputStream;
 
 import junit.framework.Assert;
 
@@ -64,9 +72,12 @@ import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.junit.AfterClass;
 import org.junit.Test;
+
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 
 public class TestFSDownload {
 
@@ -88,6 +99,18 @@ public class TestFSDownload {
 
   static LocalResource createFile(FileContext files, Path p, int len,
       Random r, LocalResourceVisibility vis) throws IOException {
+    createFile(files, p, len, r);
+    LocalResource ret = recordFactory.newRecordInstance(LocalResource.class);
+    ret.setResource(ConverterUtils.getYarnUrlFromPath(p));
+    ret.setSize(len);
+    ret.setType(LocalResourceType.FILE);
+    ret.setVisibility(vis);
+    ret.setTimestamp(files.getFileStatus(p).getModificationTime());
+    return ret;
+  }
+
+  static void createFile(FileContext files, Path p, int len, Random r)
+      throws IOException {
     FSDataOutputStream out = null;
     try {
       byte[] bytes = new byte[len];
@@ -97,13 +120,6 @@ public class TestFSDownload {
     } finally {
       if (out != null) out.close();
     }
-    LocalResource ret = recordFactory.newRecordInstance(LocalResource.class);
-    ret.setResource(ConverterUtils.getYarnUrlFromPath(p));
-    ret.setSize(len);
-    ret.setType(LocalResourceType.FILE);
-    ret.setVisibility(vis);
-    ret.setTimestamp(files.getFileStatus(p).getModificationTime());
-    return ret;
   }
 
   static LocalResource createJar(FileContext files, Path p,
@@ -282,6 +298,76 @@ public class TestFSDownload {
       }
     } catch (ExecutionException e) {
       Assert.assertTrue(e.getCause() instanceof IOException);
+    }
+  }
+
+  @Test (timeout=60000)
+  public void testDownloadPublicWithStatCache() throws IOException,
+      URISyntaxException, InterruptedException, ExecutionException {
+    final Configuration conf = new Configuration();
+    FileContext files = FileContext.getLocalFSFileContext(conf);
+    Path basedir = files.makeQualified(new Path("target",
+      TestFSDownload.class.getSimpleName()));
+    files.mkdir(basedir, null, true);
+    conf.setStrings(TestFSDownload.class.getName(), basedir.toString());
+
+    int size = 512;
+
+    final ConcurrentMap<Path,AtomicInteger> counts =
+        new ConcurrentHashMap<Path,AtomicInteger>();
+    final CacheLoader<Path,Future<FileStatus>> loader =
+        FSDownload.createStatusCacheLoader(conf);
+    final LoadingCache<Path,Future<FileStatus>> statCache =
+        CacheBuilder.newBuilder().build(new CacheLoader<Path,Future<FileStatus>>() {
+      public Future<FileStatus> load(Path path) throws Exception {
+        // increment the count
+        AtomicInteger count = counts.get(path);
+        if (count == null) {
+          count = new AtomicInteger(0);
+          AtomicInteger existing = counts.putIfAbsent(path, count);
+          if (existing != null) {
+            count = existing;
+          }
+        }
+        count.incrementAndGet();
+
+        // use the default loader
+        return loader.load(path);
+      }
+    });
+
+    // test FSDownload.isPublic() concurrently
+    final int fileCount = 3;
+    List<Callable<Boolean>> tasks = new ArrayList<Callable<Boolean>>();
+    for (int i = 0; i < fileCount; i++) {
+      Random rand = new Random();
+      long sharedSeed = rand.nextLong();
+      rand.setSeed(sharedSeed);
+      System.out.println("SEED: " + sharedSeed);
+      final Path path = new Path(basedir, "test-file-" + i);
+      createFile(files, path, size, rand);
+      final FileSystem fs = path.getFileSystem(conf);
+      final FileStatus sStat = fs.getFileStatus(path);
+      tasks.add(new Callable<Boolean>() {
+        public Boolean call() throws IOException {
+          return FSDownload.isPublic(fs, path, sStat, statCache);
+        }
+      });
+    }
+
+    ExecutorService exec = Executors.newFixedThreadPool(fileCount);
+    try {
+      List<Future<Boolean>> futures = exec.invokeAll(tasks);
+      // files should be public
+      for (Future<Boolean> future: futures) {
+        assertTrue(future.get());
+      }
+      // for each path exactly one file status call should be made
+      for (AtomicInteger count: counts.values()) {
+        assertSame(count.get(), 1);
+      }
+    } finally {
+      exec.shutdown();
     }
   }
 

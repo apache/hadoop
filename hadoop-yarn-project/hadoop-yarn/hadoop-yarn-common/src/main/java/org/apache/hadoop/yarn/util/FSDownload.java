@@ -24,6 +24,8 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.security.PrivilegedExceptionAction;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
@@ -43,6 +45,11 @@ import org.apache.hadoop.util.RunJar;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
+import com.google.common.util.concurrent.Futures;
+
 /**
  * Download a single URL to the local disk.
  *
@@ -56,6 +63,7 @@ public class FSDownload implements Callable<Path> {
   private final UserGroupInformation userUgi;
   private Configuration conf;
   private LocalResource resource;
+  private final LoadingCache<Path,Future<FileStatus>> statCache;
   
   /** The local FS dir path under which this resource is to be localized to */
   private Path destDirPath;
@@ -71,11 +79,18 @@ public class FSDownload implements Callable<Path> {
 
   public FSDownload(FileContext files, UserGroupInformation ugi, Configuration conf,
       Path destDirPath, LocalResource resource) {
+    this(files, ugi, conf, destDirPath, resource, null);
+  }
+
+  public FSDownload(FileContext files, UserGroupInformation ugi, Configuration conf,
+      Path destDirPath, LocalResource resource,
+      LoadingCache<Path,Future<FileStatus>> statCache) {
     this.conf = conf;
     this.destDirPath = destDirPath;
     this.files = files;
     this.userUgi = ugi;
     this.resource = resource;
+    this.statCache = statCache;
   }
 
   LocalResource getResource() {
@@ -90,28 +105,43 @@ public class FSDownload implements Callable<Path> {
   }
 
   /**
-   * Returns a boolean to denote whether a cache file is visible to all(public)
-   * or not
-   * @param conf
-   * @param uri
-   * @return true if the path in the uri is visible to all, false otherwise
-   * @throws IOException
+   * Creates the cache loader for the status loading cache. This should be used
+   * to create an instance of the status cache that is passed into the
+   * FSDownload constructor.
    */
-  private static boolean isPublic(FileSystem fs, Path current) throws IOException {
-    current = fs.makeQualified(current);
-    //the leaf level file should be readable by others
-    if (!checkPublicPermsForAll(fs, current, FsAction.READ_EXECUTE, FsAction.READ)) {
-      return false;
-    }
-    return ancestorsHaveExecutePermissions(fs, current.getParent());
+  public static CacheLoader<Path,Future<FileStatus>>
+      createStatusCacheLoader(final Configuration conf) {
+    return new CacheLoader<Path,Future<FileStatus>>() {
+      public Future<FileStatus> load(Path path) {
+        try {
+          FileSystem fs = path.getFileSystem(conf);
+          return Futures.immediateFuture(fs.getFileStatus(path));
+        } catch (Throwable th) {
+          // report failures so it can be memoized
+          return Futures.immediateFailedFuture(th);
+        }
+      }
+    };
   }
 
-  private static boolean checkPublicPermsForAll(FileSystem fs, Path current, 
-      FsAction dir, FsAction file) 
-    throws IOException {
-    return checkPublicPermsForAll(fs, fs.getFileStatus(current), dir, file);
+  /**
+   * Returns a boolean to denote whether a cache file is visible to all (public)
+   * or not
+   *
+   * @return true if the path in the current path is visible to all, false
+   * otherwise
+   */
+  @VisibleForTesting
+  static boolean isPublic(FileSystem fs, Path current, FileStatus sStat,
+      LoadingCache<Path,Future<FileStatus>> statCache) throws IOException {
+    current = fs.makeQualified(current);
+    //the leaf level file should be readable by others
+    if (!checkPublicPermsForAll(fs, sStat, FsAction.READ_EXECUTE, FsAction.READ)) {
+      return false;
+    }
+    return ancestorsHaveExecutePermissions(fs, current.getParent(), statCache);
   }
-    
+
   private static boolean checkPublicPermsForAll(FileSystem fs, 
         FileStatus status, FsAction dir, FsAction file) 
     throws IOException {
@@ -137,12 +167,13 @@ public class FSDownload implements Callable<Path> {
    * permission set for all users (i.e. that other users can traverse
    * the directory heirarchy to the given path)
    */
-  private static boolean ancestorsHaveExecutePermissions(FileSystem fs, Path path)
-    throws IOException {
+  private static boolean ancestorsHaveExecutePermissions(FileSystem fs,
+      Path path, LoadingCache<Path,Future<FileStatus>> statCache)
+      throws IOException {
     Path current = path;
     while (current != null) {
       //the subdirs in the path should have execute permissions for others
-      if (!checkPermissionOfOther(fs, current, FsAction.EXECUTE)) {
+      if (!checkPermissionOfOther(fs, current, FsAction.EXECUTE, statCache)) {
         return false;
       }
       current = current.getParent();
@@ -160,14 +191,46 @@ public class FSDownload implements Callable<Path> {
    * @throws IOException
    */
   private static boolean checkPermissionOfOther(FileSystem fs, Path path,
-      FsAction action) throws IOException {
-    FileStatus status = fs.getFileStatus(path);
+      FsAction action, LoadingCache<Path,Future<FileStatus>> statCache)
+      throws IOException {
+    FileStatus status = getFileStatus(fs, path, statCache);
     FsPermission perms = status.getPermission();
     FsAction otherAction = perms.getOtherAction();
     return otherAction.implies(action);
   }
 
-  
+  /**
+   * Obtains the file status, first by checking the stat cache if it is
+   * available, and then by getting it explicitly from the filesystem. If we got
+   * the file status from the filesystem, it is added to the stat cache.
+   *
+   * The stat cache is expected to be managed by callers who provided it to
+   * FSDownload.
+   */
+  private static FileStatus getFileStatus(final FileSystem fs, final Path path,
+      LoadingCache<Path,Future<FileStatus>> statCache) throws IOException {
+    // if the stat cache does not exist, simply query the filesystem
+    if (statCache == null) {
+      return fs.getFileStatus(path);
+    }
+
+    try {
+      // get or load it from the cache
+      return statCache.get(path).get();
+    } catch (ExecutionException e) {
+      Throwable cause = e.getCause();
+      // the underlying exception should normally be IOException
+      if (cause instanceof IOException) {
+        throw (IOException)cause;
+      } else {
+        throw new IOException(cause);
+      }
+    } catch (InterruptedException e) { // should not happen
+      Thread.currentThread().interrupt();
+      throw new IOException(e);
+    }
+  }
+
   private Path copy(Path sCopy, Path dstdir) throws IOException {
     FileSystem sourceFs = sCopy.getFileSystem(conf);
     Path dCopy = new Path(dstdir, "tmp_"+sCopy.getName());
@@ -178,14 +241,15 @@ public class FSDownload implements Callable<Path> {
           ", was " + sStat.getModificationTime());
     }
     if (resource.getVisibility() == LocalResourceVisibility.PUBLIC) {
-      if (!isPublic(sourceFs, sCopy)) {
+      if (!isPublic(sourceFs, sCopy, sStat, statCache)) {
         throw new IOException("Resource " + sCopy +
             " is not publicly accessable and as such cannot be part of the" +
             " public cache.");
       }
     }
-    
-    sourceFs.copyToLocalFile(sCopy, dCopy);
+
+    FileUtil.copy(sourceFs, sStat, FileSystem.getLocal(conf), dCopy, false,
+        true, conf);
     return dCopy;
   }
 

@@ -339,11 +339,11 @@ public class FileUtil {
   }
 
   /** Copy files between FileSystems. */
-  private static boolean copy(FileSystem srcFS, FileStatus srcStatus,
-                              FileSystem dstFS, Path dst,
-                              boolean deleteSource,
-                              boolean overwrite,
-                              Configuration conf) throws IOException {
+  public static boolean copy(FileSystem srcFS, FileStatus srcStatus,
+                             FileSystem dstFS, Path dst,
+                             boolean deleteSource,
+                             boolean overwrite,
+                             Configuration conf) throws IOException {
     Path src = srcStatus.getPath();
     dst = checkDest(src.getName(), dstFS, dst, overwrite);
     if (srcStatus.isDirectory()) {
