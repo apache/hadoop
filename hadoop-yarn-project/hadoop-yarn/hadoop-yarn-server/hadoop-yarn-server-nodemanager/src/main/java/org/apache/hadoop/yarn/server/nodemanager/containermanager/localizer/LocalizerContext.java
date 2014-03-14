@@ -18,20 +18,34 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer;
 
+import java.util.concurrent.Future;
+
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+
+import com.google.common.cache.LoadingCache;
 
 public class LocalizerContext {
 
   private final String user;
   private final ContainerId containerId;
   private final Credentials credentials;
+  private final LoadingCache<Path,Future<FileStatus>> statCache;
 
   public LocalizerContext(String user, ContainerId containerId,
       Credentials credentials) {
+    this(user, containerId, credentials, null);
+  }
+
+  public LocalizerContext(String user, ContainerId containerId,
+      Credentials credentials,
+      LoadingCache<Path,Future<FileStatus>> statCache) {
     this.user = user;
     this.containerId = containerId;
     this.credentials = credentials;
+    this.statCache = statCache;
   }
 
   public String getUser() {
@@ -46,4 +60,7 @@ public class LocalizerContext {
     return credentials;
   }
 
+  public LoadingCache<Path,Future<FileStatus>> getStatCache() {
+    return statCache;
+  }
 }

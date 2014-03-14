@@ -273,6 +273,9 @@ Release 2.4.0 - UNRELEASED
     expose analogous getApplication(s)/Attempt(s)/Container(s) APIs. (Mayank
     Bansal via zjshen)
 
+    YARN-1771. Reduce the number of NameNode operations during localization of
+    public resources using a cache. (Sangjin Lee via cdouglas)
+
   OPTIMIZATIONS
 
   BUG FIXES
