@@ -18,15 +18,13 @@
 
 package org.apache.hadoop.ipc;
 
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.TimeUnit;
-
 import java.lang.reflect.Constructor;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.apache.hadoop.conf.Configuration;
 
 /**
@@ -35,13 +33,19 @@ import org.apache.hadoop.conf.Configuration;
 public class CallQueueManager<E> {
   public static final Log LOG = LogFactory.getLog(CallQueueManager.class);
 
+  @SuppressWarnings("unchecked")
+  static <E> Class<? extends BlockingQueue<E>> convertQueueClass(
+      Class<?> queneClass, Class<E> elementClass) {
+    return (Class<? extends BlockingQueue<E>>)queneClass;
+  }
+  
   // Atomic refs point to active callQueue
   // We have two so we can better control swapping
   private final AtomicReference<BlockingQueue<E>> putRef;
   private final AtomicReference<BlockingQueue<E>> takeRef;
 
-  public CallQueueManager(Class backingClass, int maxQueueSize,
-    String namespace, Configuration conf) {
+  public CallQueueManager(Class<? extends BlockingQueue<E>> backingClass,
+      int maxQueueSize, String namespace, Configuration conf) {
     BlockingQueue<E> bq = createCallQueueInstance(backingClass,
       maxQueueSize, namespace, conf);
     this.putRef = new AtomicReference<BlockingQueue<E>>(bq);
@@ -49,15 +53,14 @@ public class CallQueueManager<E> {
     LOG.info("Using callQueue " + backingClass);
   }
 
-  @SuppressWarnings("unchecked")
-  private BlockingQueue<E> createCallQueueInstance(Class theClass, int maxLen,
-    String ns, Configuration conf) {
+  private <T extends BlockingQueue<E>> T createCallQueueInstance(
+      Class<T> theClass, int maxLen, String ns, Configuration conf) {
 
     // Used for custom, configurable callqueues
     try {
-      Constructor ctor = theClass.getDeclaredConstructor(int.class, String.class,
+      Constructor<T> ctor = theClass.getDeclaredConstructor(int.class, String.class,
         Configuration.class);
-      return (BlockingQueue<E>)ctor.newInstance(maxLen, ns, conf);
+      return ctor.newInstance(maxLen, ns, conf);
     } catch (RuntimeException e) {
       throw e;
     } catch (Exception e) {
@@ -65,8 +68,8 @@ public class CallQueueManager<E> {
 
     // Used for LinkedBlockingQueue, ArrayBlockingQueue, etc
     try {
-      Constructor ctor = theClass.getDeclaredConstructor(int.class);
-      return (BlockingQueue<E>)ctor.newInstance(maxLen);
+      Constructor<T> ctor = theClass.getDeclaredConstructor(int.class);
+      return ctor.newInstance(maxLen);
     } catch (RuntimeException e) {
       throw e;
     } catch (Exception e) {
@@ -74,8 +77,8 @@ public class CallQueueManager<E> {
 
     // Last attempt
     try {
-      Constructor ctor = theClass.getDeclaredConstructor();
-      return (BlockingQueue<E>)ctor.newInstance();
+      Constructor<T> ctor = theClass.getDeclaredConstructor();
+      return ctor.newInstance();
     } catch (RuntimeException e) {
       throw e;
     } catch (Exception e) {
@@ -117,8 +120,9 @@ public class CallQueueManager<E> {
    * Replaces active queue with the newly requested one and transfers
    * all calls to the newQ before returning.
    */
-  public synchronized void swapQueue(Class queueClassToUse, int maxSize,
-    String ns, Configuration conf) {
+  public synchronized void swapQueue(
+      Class<? extends BlockingQueue<E>> queueClassToUse, int maxSize,
+      String ns, Configuration conf) {
     BlockingQueue<E> newQ = createCallQueueInstance(queueClassToUse, maxSize,
       ns, conf);
 
@@ -143,7 +147,7 @@ public class CallQueueManager<E> {
    * This doesn't mean the queue might not fill up at some point later, but
    * it should decrease the probability that we lose a call this way.
    */
-  private boolean queueIsReallyEmpty(BlockingQueue q) {
+  private boolean queueIsReallyEmpty(BlockingQueue<?> q) {
     boolean wasEmpty = q.isEmpty();
     try {
       Thread.sleep(10);

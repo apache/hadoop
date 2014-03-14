@@ -18,22 +18,15 @@
 
 package org.apache.hadoop.ipc;
 
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.HashMap;
-import java.util.ArrayList;
-
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
-import org.junit.Assert;
-import org.junit.Assume;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+
 import org.junit.Test;
-import org.junit.Before;
-import org.junit.After;
 
 public class TestCallQueueManager {
   private CallQueueManager<FakeCall> manager;
@@ -146,23 +139,26 @@ public class TestCallQueueManager {
   }
 
 
+  private static final Class<? extends BlockingQueue<FakeCall>> queueClass
+      = CallQueueManager.convertQueueClass(LinkedBlockingQueue.class, FakeCall.class);
+
   @Test
   public void testCallQueueCapacity() throws InterruptedException {
-    manager = new CallQueueManager<FakeCall>(LinkedBlockingQueue.class, 10, "", null);
+    manager = new CallQueueManager<FakeCall>(queueClass, 10, "", null);
 
     assertCanPut(manager, 10, 20); // Will stop at 10 due to capacity
   }
 
   @Test
   public void testEmptyConsume() throws InterruptedException {
-    manager = new CallQueueManager<FakeCall>(LinkedBlockingQueue.class, 10, "", null);
+    manager = new CallQueueManager<FakeCall>(queueClass, 10, "", null);
 
     assertCanTake(manager, 0, 1); // Fails since it's empty
   }
 
   @Test(timeout=60000)
   public void testSwapUnderContention() throws InterruptedException {
-    manager = new CallQueueManager<FakeCall>(LinkedBlockingQueue.class, 5000, "", null);
+    manager = new CallQueueManager<FakeCall>(queueClass, 5000, "", null);
 
     ArrayList<Putter> producers = new ArrayList<Putter>();
     ArrayList<Taker> consumers = new ArrayList<Taker>();
@@ -191,7 +187,7 @@ public class TestCallQueueManager {
     Thread.sleep(10);
 
     for (int i=0; i < 5; i++) {
-      manager.swapQueue(LinkedBlockingQueue.class, 5000, "", null);
+      manager.swapQueue(queueClass, 5000, "", null);
     }
 
     // Stop the producers

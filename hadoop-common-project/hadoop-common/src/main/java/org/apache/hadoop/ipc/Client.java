@@ -541,7 +541,7 @@ public class Client {
     }
     
     private synchronized AuthMethod setupSaslConnection(final InputStream in2, 
-        final OutputStream out2) throws IOException, InterruptedException {
+        final OutputStream out2) throws IOException {
       saslRpcClient = new SaslRpcClient(remoteId.getTicket(),
           remoteId.getProtocol(), remoteId.getAddress(), conf);
       return saslRpcClient.saslConnect(in2, out2);
