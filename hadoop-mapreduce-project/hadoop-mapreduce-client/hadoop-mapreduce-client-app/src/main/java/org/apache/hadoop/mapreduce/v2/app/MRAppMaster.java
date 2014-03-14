@@ -1066,6 +1066,8 @@ public class MRAppMaster extends CompositeService {
     //start all the components
     super.serviceStart();
 
+    // set job classloader if configured
+    MRApps.setJobClassLoader(getConfig());
     // All components have started, start the job.
     startJobs();
   }
@@ -1376,8 +1378,6 @@ public class MRAppMaster extends CompositeService {
       // SIGTERM I have a chance to write out the job history. I'll be closing
       // the objects myself.
       conf.setBoolean("fs.automatic.close", false);
-      // set job classloader if configured
-      MRApps.setJobClassLoader(conf);
       initAndStartAppMaster(appMaster, conf, jobUserName);
     } catch (Throwable t) {
       LOG.fatal("Error starting MRAppMaster", t);
