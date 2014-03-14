@@ -241,6 +241,9 @@ Release 2.4.0 - UNRELEASED
     expose analogous getApplication(s)/Attempt(s)/Container(s) APIs. (Mayank
     Bansal via zjshen)
 
+    YARN-1658. Modified web-app framework to let standby RMs redirect
+    web-service calls to the active RM. (Cindy Li via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
