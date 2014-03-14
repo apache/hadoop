@@ -228,7 +228,7 @@ public class TestRPC {
         assertTrue("Exception from RPC exchange() "  + e, false);
       }
       assertEquals(indata.length, outdata.length);
-      assertEquals(val, 3);
+      assertEquals(3, val);
       for (int i = 0; i < outdata.length; i++) {
         assertEquals(outdata[i], i);
       }
@@ -468,17 +468,17 @@ public class TestRPC {
     assertTrue(Arrays.equals(stringResults, null));
 
     UTF8 utf8Result = (UTF8)proxy.echo(new UTF8("hello world"));
-    assertEquals(utf8Result, new UTF8("hello world"));
+    assertEquals(new UTF8("hello world"), utf8Result );
 
     utf8Result = (UTF8)proxy.echo((UTF8)null);
-    assertEquals(utf8Result, null);
+    assertEquals(null, utf8Result);
 
     int intResult = proxy.add(1, 2);
     assertEquals(intResult, 3);
 
     intResult = proxy.add(new int[] {1, 2});
     assertEquals(intResult, 3);
-    
+
     // Test protobufs
     EnumDescriptorProto sendProto =
       EnumDescriptorProto.newBuilder().setName("test").build();
@@ -603,28 +603,28 @@ public class TestRPC {
     } finally {
       server.stop();
     }
-    assertEquals(bindAddr.getAddress(), InetAddress.getLocalHost());
+    assertEquals(InetAddress.getLocalHost(), bindAddr.getAddress());
   }
-  
+
   @Test
   public void testAuthorization() throws IOException {
     Configuration conf = new Configuration();
     conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION,
         true);
-    
+
     // Expect to succeed
     conf.set(ACL_CONFIG, "*");
     doRPCs(conf, false);
-    
+
     // Reset authorization to expect failure
     conf.set(ACL_CONFIG, "invalid invalid");
     doRPCs(conf, true);
-    
+
     conf.setInt(CommonConfigurationKeys.IPC_SERVER_RPC_READ_THREADS_KEY, 2);
     // Expect to succeed
     conf.set(ACL_CONFIG, "*");
     doRPCs(conf, false);
-    
+
     // Reset authorization to expect failure
     conf.set(ACL_CONFIG, "invalid invalid");
     doRPCs(conf, true);
@@ -659,42 +659,42 @@ public class TestRPC {
    */
   @Test
   public void testStopMockObject() throws IOException {
-    RPC.stopProxy(MockitoUtil.mockProtocol(TestProtocol.class)); 
+    RPC.stopProxy(MockitoUtil.mockProtocol(TestProtocol.class));
   }
-  
+
   @Test
   public void testStopProxy() throws IOException {
     StoppedProtocol proxy = RPC.getProxy(StoppedProtocol.class,
         StoppedProtocol.versionID, null, conf);
     StoppedInvocationHandler invocationHandler = (StoppedInvocationHandler)
         Proxy.getInvocationHandler(proxy);
-    assertEquals(invocationHandler.getCloseCalled(), 0);
+    assertEquals(0, invocationHandler.getCloseCalled());
     RPC.stopProxy(proxy);
-    assertEquals(invocationHandler.getCloseCalled(), 1);
+    assertEquals(1, invocationHandler.getCloseCalled());
   }
-  
+
   @Test
   public void testWrappedStopProxy() throws IOException {
     StoppedProtocol wrappedProxy = RPC.getProxy(StoppedProtocol.class,
         StoppedProtocol.versionID, null, conf);
     StoppedInvocationHandler invocationHandler = (StoppedInvocationHandler)
         Proxy.getInvocationHandler(wrappedProxy);
-    
+
     StoppedProtocol proxy = (StoppedProtocol) RetryProxy.create(StoppedProtocol.class,
         wrappedProxy, RetryPolicies.RETRY_FOREVER);
-    
-    assertEquals(invocationHandler.getCloseCalled(), 0);
+
+    assertEquals(0, invocationHandler.getCloseCalled());
     RPC.stopProxy(proxy);
-    assertEquals(invocationHandler.getCloseCalled(), 1);
+    assertEquals(1, invocationHandler.getCloseCalled());
   }
-  
+
   @Test
   public void testErrorMsgForInsecureClient() throws IOException {
     Configuration serverConf = new Configuration(conf);
     SecurityUtil.setAuthenticationMethod(AuthenticationMethod.KERBEROS,
                                          serverConf);
     UserGroupInformation.setConfiguration(serverConf);
-    
+
     final Server server = new RPC.Builder(serverConf).setProtocol(TestProtocol.class)
         .setInstance(new TestImpl()).setBindAddress(ADDRESS).setPort(0)
         .setNumHandlers(5).setVerbose(true).build();

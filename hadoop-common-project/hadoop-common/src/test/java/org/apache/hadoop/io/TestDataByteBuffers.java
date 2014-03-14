@@ -139,24 +139,25 @@ public class TestDataByteBuffers {
     writeJunk(dob, r, seed, 1000);
     writeJunk(dobb, r, seed, 1000);
     byte[] check = toBytes(dobb.getData(), dobb.getLength());
-    assertEquals(dob.getLength(), check.length);
-    assertArrayEquals(Arrays.copyOf(dob.getData(), dob.getLength()), check);
+    assertEquals(check.length, dob.getLength());
+    assertArrayEquals(check, Arrays.copyOf(dob.getData(), dob.getLength()));
 
     dob.reset();
     dobb.reset();
     writeJunk(dob, r, seed, 3000);
     writeJunk(dobb, r, seed, 3000);
     check = toBytes(dobb.getData(), dobb.getLength());
-    assertEquals(dob.getLength(), check.length);
-    assertArrayEquals(Arrays.copyOf(dob.getData(), dob.getLength()), check);
+    assertEquals(check.length, dob.getLength());
+    assertArrayEquals(check, Arrays.copyOf(dob.getData(), dob.getLength()));
 
     dob.reset();
     dobb.reset();
     writeJunk(dob, r, seed, 1000);
     writeJunk(dobb, r, seed, 1000);
     check = toBytes(dobb.getData(), dobb.getLength());
-    assertEquals(dob.getLength(), check.length);
-    assertArrayEquals(Arrays.copyOf(dob.getData(), dob.getLength()), check);
+    assertEquals("Failed Checking length = " + check.length,
+            check.length, dob.getLength());
+    assertArrayEquals(check, Arrays.copyOf(dob.getData(), dob.getLength()));
   }
 
   @Test

@@ -53,19 +53,19 @@ public class TestIdUserGroup {
 
     IdUserGroup.updateMapInternal(uMap, "user", GET_ALL_USERS_CMD, ":");
     assertTrue(uMap.size() == 5);
-    assertEquals(uMap.get(0), "root");
-    assertEquals(uMap.get(11501), "hdfs");
-    assertEquals(uMap.get(11502), "hdfs2");
-    assertEquals(uMap.get(2), "bin");
-    assertEquals(uMap.get(1), "daemon");
-    
+    assertEquals("root", uMap.get(0));
+    assertEquals("hdfs", uMap.get(11501));
+    assertEquals("hdfs2",uMap.get(11502));
+    assertEquals("bin", uMap.get(2));
+    assertEquals("daemon", uMap.get(1));
+
     IdUserGroup.updateMapInternal(gMap, "group", GET_ALL_GROUPS_CMD, ":");
     assertTrue(gMap.size() == 3);
-    assertEquals(gMap.get(11501), "hdfs");
-    assertEquals(gMap.get(497), "mapred");
-    assertEquals(gMap.get(498), "mapred3");    
+    assertEquals("hdfs",gMap.get(11501));
+    assertEquals("mapred", gMap.get(497));
+    assertEquals("mapred3", gMap.get(498));
   }
-  
+
   @Test
   public void testUserUpdateSetting() throws IOException {
     IdUserGroup iug = new IdUserGroup();

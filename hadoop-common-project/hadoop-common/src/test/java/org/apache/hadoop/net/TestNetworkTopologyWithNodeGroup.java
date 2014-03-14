@@ -54,17 +54,17 @@ public class TestNetworkTopologyWithNodeGroup {
 
   @Test
   public void testNumOfChildren() throws Exception {
-    assertEquals(cluster.getNumOfLeaves(), dataNodes.length);
+    assertEquals(dataNodes.length, cluster.getNumOfLeaves());
   }
 
   @Test
   public void testNumOfRacks() throws Exception {
-    assertEquals(cluster.getNumOfRacks(), 3);
+    assertEquals(3, cluster.getNumOfRacks());
   }
 
   @Test
   public void testRacks() throws Exception {
-    assertEquals(cluster.getNumOfRacks(), 3);
+    assertEquals(3, cluster.getNumOfRacks());
     assertTrue(cluster.isOnSameRack(dataNodes[0], dataNodes[1]));
     assertTrue(cluster.isOnSameRack(dataNodes[1], dataNodes[2]));
     assertFalse(cluster.isOnSameRack(dataNodes[2], dataNodes[3]));
@@ -76,7 +76,7 @@ public class TestNetworkTopologyWithNodeGroup {
 
   @Test
   public void testNodeGroups() throws Exception {
-    assertEquals(cluster.getNumOfRacks(), 3);
+    assertEquals(3, cluster.getNumOfRacks());
     assertTrue(cluster.isOnSameNodeGroup(dataNodes[0], dataNodes[1]));
     assertFalse(cluster.isOnSameNodeGroup(dataNodes[1], dataNodes[2]));
     assertFalse(cluster.isOnSameNodeGroup(dataNodes[2], dataNodes[3]));
@@ -88,11 +88,11 @@ public class TestNetworkTopologyWithNodeGroup {
 
   @Test
   public void testGetDistance() throws Exception {
-    assertEquals(cluster.getDistance(dataNodes[0], dataNodes[0]), 0);
-    assertEquals(cluster.getDistance(dataNodes[0], dataNodes[1]), 2);
-    assertEquals(cluster.getDistance(dataNodes[0], dataNodes[2]), 4);
-    assertEquals(cluster.getDistance(dataNodes[0], dataNodes[3]), 6);
-    assertEquals(cluster.getDistance(dataNodes[0], dataNodes[6]), 8);
+    assertEquals(0, cluster.getDistance(dataNodes[0], dataNodes[0]));
+    assertEquals(2, cluster.getDistance(dataNodes[0], dataNodes[1]));
+    assertEquals(4, cluster.getDistance(dataNodes[0], dataNodes[2]));
+    assertEquals(6, cluster.getDistance(dataNodes[0], dataNodes[3]));
+    assertEquals(8, cluster.getDistance(dataNodes[0], dataNodes[6]));
   }
 
   @Test
