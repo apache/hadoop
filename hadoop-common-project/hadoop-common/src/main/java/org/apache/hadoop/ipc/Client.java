@@ -541,7 +541,7 @@ public class Client {
     }
     
     private synchronized AuthMethod setupSaslConnection(final InputStream in2, 
-        final OutputStream out2) throws IOException, InterruptedException {
+        final OutputStream out2) throws IOException {
       // Do not use Client.conf here! We must use ConnectionId.conf, since the
       // Client object is cached and shared between all RPC clients, even those
       // for separate services.
