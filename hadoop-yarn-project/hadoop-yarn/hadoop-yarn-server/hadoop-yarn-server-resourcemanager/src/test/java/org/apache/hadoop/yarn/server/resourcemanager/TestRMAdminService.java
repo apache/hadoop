@@ -377,10 +377,15 @@ public class TestRMAdminService {
     configuration.set(YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
         "org.apache.hadoop.yarn.FileSystemBasedConfigurationProvider");
 
-    String user = UserGroupInformation.getCurrentUser().getUserName();
-    List<String> groupWithInit =
-        new ArrayList<String>(Groups.getUserToGroupsMappingService(
-            configuration).getGroups(user));
+    String[] defaultTestUserGroups = {"dummy_group1", "dummy_group2"};
+    UserGroupInformation ugi = UserGroupInformation.createUserForTesting
+        ("dummyUser", defaultTestUserGroups);
+
+    String user = ugi.getUserName();
+    List<String> groupWithInit = new ArrayList<String>(2);
+     for(int i = 0; i < ugi.getGroupNames().length; i++ ) {
+       groupWithInit.add(ugi.getGroupNames()[i]);
+     }
 
     // upload default configurations
     uploadDefaultConfiguration();
