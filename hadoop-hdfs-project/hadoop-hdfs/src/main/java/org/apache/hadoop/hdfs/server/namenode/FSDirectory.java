@@ -188,6 +188,14 @@ public class FSDirectory implements Closeable {
     this.maxDirItems = conf.getInt(
         DFSConfigKeys.DFS_NAMENODE_MAX_DIRECTORY_ITEMS_KEY,
         DFSConfigKeys.DFS_NAMENODE_MAX_DIRECTORY_ITEMS_DEFAULT);
+    // We need a maximum maximum because by default, PB limits message sizes
+    // to 64MB. This means we can only store approximately 6.7 million entries
+    // per directory, but let's use 6.4 million for some safety.
+    final int MAX_DIR_ITEMS = 64 * 100 * 1000;
+    Preconditions.checkArgument(
+        maxDirItems > 0 && maxDirItems <= MAX_DIR_ITEMS, "Cannot set "
+            + DFSConfigKeys.DFS_NAMENODE_MAX_DIRECTORY_ITEMS_KEY
+            + " to a value less than 0 or greater than " + MAX_DIR_ITEMS);
 
     int threshold = conf.getInt(
         DFSConfigKeys.DFS_NAMENODE_NAME_CACHE_THRESHOLD_KEY,
@@ -2180,9 +2188,6 @@ public class FSDirectory implements Closeable {
    */
   void verifyMaxDirItems(INode[] pathComponents, int pos)
       throws MaxDirectoryItemsExceededException {
-    if (maxDirItems == 0) {
-      return;
-    }
 
     final INodeDirectory parent = pathComponents[pos-1].asDirectory();
     final int count = parent.getChildrenList(Snapshot.CURRENT_STATE_ID).size();

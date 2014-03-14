@@ -173,6 +173,10 @@ message FilesUnderConstructionSection {
  * NAME: INODE_DIR
  */
 message INodeDirectorySection {
+  /**
+   * A single DirEntry needs to fit in the default PB max message size of
+   * 64MB. Please be careful when adding more fields to a DirEntry!
+   */
   message DirEntry {
     optional uint64 parent = 1;
     // children that are not reference nodes
