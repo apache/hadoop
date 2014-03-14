@@ -237,6 +237,9 @@ Release 2.4.0 - UNRELEASED
     MAPREDUCE-5688. TestStagingCleanup fails intermittently with JDK7 (Mit
     Desai via jeagles)
 
+    MAPREDUCE-5769. Unregistration to RM should not be called if AM is crashed
+    before registering with RM (Rohith via jlowe)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
