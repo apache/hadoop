@@ -288,7 +288,7 @@
 
 <property>
   <name>dfs.namenode.fs-limits.max-directory-items</name>
-  <value>0</value>
+  <value>1048576</value>
   <description>Defines the maximum number of items that a directory may
       contain.  A value of 0 will disable the check.</description>
 </property>
