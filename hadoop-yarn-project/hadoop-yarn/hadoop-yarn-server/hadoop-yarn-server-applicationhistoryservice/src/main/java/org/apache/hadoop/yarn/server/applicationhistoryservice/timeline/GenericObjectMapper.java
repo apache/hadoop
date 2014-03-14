@@ -56,7 +56,7 @@ public class GenericObjectMapper {
    *
    * @param o An Object
    * @return A byte array representation of the Object
-   * @throws IOException
+   * @throws IOException if there is a write error
    */
   public static byte[] write(Object o) throws IOException {
     if (o == null) {
@@ -71,7 +71,7 @@ public class GenericObjectMapper {
    *
    * @param b A byte array
    * @return An Object
-   * @throws IOException
+   * @throws IOException if there is a read error
    */
   public static Object read(byte[] b) throws IOException {
     return read(b, 0);
@@ -84,7 +84,7 @@ public class GenericObjectMapper {
    * @param b A byte array
    * @param offset Offset into the array
    * @return An Object
-   * @throws IOException
+   * @throws IOException if there is a read error
    */
   public static Object read(byte[] b, int offset) throws IOException {
     if (b == null || b.length == 0) {
