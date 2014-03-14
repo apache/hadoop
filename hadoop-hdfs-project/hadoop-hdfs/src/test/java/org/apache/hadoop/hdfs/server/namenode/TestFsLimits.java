@@ -37,6 +37,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.FSLimitException.MaxDirectoryItemsExceededException;
 import org.apache.hadoop.hdfs.protocol.FSLimitException.PathComponentTooLongException;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -83,22 +84,6 @@ public class TestFsLimits {
   }
 
   @Test
-  public void testDefaultMaxComponentLength() {
-    int maxComponentLength = conf.getInt(
-        DFSConfigKeys.DFS_NAMENODE_MAX_COMPONENT_LENGTH_KEY,
-        DFSConfigKeys.DFS_NAMENODE_MAX_COMPONENT_LENGTH_DEFAULT);
-    assertEquals(0, maxComponentLength);
-  }
-  
-  @Test
-  public void testDefaultMaxDirItems() {
-    int maxDirItems = conf.getInt(
-        DFSConfigKeys.DFS_NAMENODE_MAX_DIRECTORY_ITEMS_KEY,
-        DFSConfigKeys.DFS_NAMENODE_MAX_DIRECTORY_ITEMS_DEFAULT);
-    assertEquals(0, maxDirItems);
-  }
-
-  @Test
   public void testNoLimits() throws Exception {
     addChildWithName("1", null);
     addChildWithName("22", null);
@@ -127,6 +112,22 @@ public class TestFsLimits {
     addChildWithName("22", null);
     addChildWithName("333", MaxDirectoryItemsExceededException.class);
     addChildWithName("4444", MaxDirectoryItemsExceededException.class);
+  }
+
+  @Test
+  public void testMaxDirItemsLimits() throws Exception {
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_MAX_DIRECTORY_ITEMS_KEY, 0);
+    try {
+      addChildWithName("1", null);
+    } catch (IllegalArgumentException e) {
+      GenericTestUtils.assertExceptionContains("Cannot set dfs", e);
+    }
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_MAX_DIRECTORY_ITEMS_KEY, 64*100*1024);
+    try {
+      addChildWithName("1", null);
+    } catch (IllegalArgumentException e) {
+      GenericTestUtils.assertExceptionContains("Cannot set dfs", e);
+    }
   }
 
   @Test
