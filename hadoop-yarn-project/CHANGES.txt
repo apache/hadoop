@@ -291,6 +291,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1771. Reduce the number of NameNode operations during localization of
     public resources using a cache. (Sangjin Lee via cdouglas)
 
+    YARN-1658. Modified web-app framework to let standby RMs redirect
+    web-service calls to the active RM. (Cindy Li via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
