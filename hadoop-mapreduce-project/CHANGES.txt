@@ -150,9 +150,6 @@ Release 2.5.0 - UNRELEASED
     MAPREDUCE-5671. NaN can be created by client and assign to Progress (Chen
     He via jeagles)
 
-    MAPREDUCE-5688. TestStagingCleanup fails intermittently with JDK7 (Mit
-    Desai via jeagles)
-
     MAPREDUCE-5665. Add audience annotations to MiniMRYarnCluster and 
     MiniMRCluster. (Anubhav Dhoot via kasha)
 
@@ -236,6 +233,9 @@ Release 2.4.0 - UNRELEASED
 
     MAPREDUCE-5751. MR app master fails to start in some cases if
     mapreduce.job.classloader is true (Sangjin Lee via jlowe)
+
+    MAPREDUCE-5688. TestStagingCleanup fails intermittently with JDK7 (Mit
+    Desai via jeagles)
 
 Release 2.3.1 - UNRELEASED
 
