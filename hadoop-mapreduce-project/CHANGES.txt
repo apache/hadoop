@@ -92,6 +92,9 @@ Release 2.4.0 - UNRELEASED
     MAPREDUCE-5794. SliveMapper always uses default FileSystem. (szetszwo via
     Arpit Agarwal)
 
+    MAPREDUCE-5751. MR app master fails to start in some cases if
+    mapreduce.job.classloader is true (Sangjin Lee via jlowe)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
