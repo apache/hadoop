@@ -259,7 +259,9 @@ public class TimelineWebServices {
               + TimelineUtils.dumpTimelineRecordtoJSON(entity));
         }
       }
-      LOG.info("Storing entities: " + CSV_JOINER.join(entityIDs));
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Storing entities: " + CSV_JOINER.join(entityIDs));
+      }
       return store.put(entities);
     } catch (IOException e) {
       LOG.error("Error putting entities", e);

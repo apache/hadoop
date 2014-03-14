@@ -1100,6 +1100,17 @@ public class YarnConfiguration extends Configuration {
   public static final String TIMELINE_SERVICE_STORE =
       TIMELINE_SERVICE_PREFIX + "store-class";
 
+  /** Timeline service enable data age off */
+  public static final String TIMELINE_SERVICE_TTL_ENABLE =
+      TIMELINE_SERVICE_PREFIX + "ttl-enable";
+
+  /** Timeline service length of time to retain data */
+  public static final String TIMELINE_SERVICE_TTL_MS =
+      TIMELINE_SERVICE_PREFIX + "ttl-ms";
+
+  public static final long DEFAULT_TIMELINE_SERVICE_TTL_MS =
+      1000 * 60 * 60 * 24 * 7;
+
   public static final String TIMELINE_SERVICE_LEVELDB_PREFIX =
       TIMELINE_SERVICE_PREFIX + "leveldb-timeline-store.";
 
@@ -1107,15 +1118,35 @@ public class YarnConfiguration extends Configuration {
   public static final String TIMELINE_SERVICE_LEVELDB_PATH =
       TIMELINE_SERVICE_LEVELDB_PREFIX + "path";
 
+  /** Timeline service leveldb read cache (uncompressed blocks) */
+  public static final String TIMELINE_SERVICE_LEVELDB_READ_CACHE_SIZE =
+      TIMELINE_SERVICE_LEVELDB_PREFIX + "read-cache-size";
+
+  public static final long DEFAULT_TIMELINE_SERVICE_LEVELDB_READ_CACHE_SIZE =
+      100 * 1024 * 1024;
+
   /** Timeline service leveldb start time read cache (number of entities) */
   public static final String
       TIMELINE_SERVICE_LEVELDB_START_TIME_READ_CACHE_SIZE =
       TIMELINE_SERVICE_LEVELDB_PREFIX + "start-time-read-cache-size";
 
+  public static final int
+      DEFAULT_TIMELINE_SERVICE_LEVELDB_START_TIME_READ_CACHE_SIZE = 10000;
+
   /** Timeline service leveldb start time write cache (number of entities) */
   public static final String
       TIMELINE_SERVICE_LEVELDB_START_TIME_WRITE_CACHE_SIZE =
       TIMELINE_SERVICE_LEVELDB_PREFIX + "start-time-write-cache-size";
+
+  public static final int
+      DEFAULT_TIMELINE_SERVICE_LEVELDB_START_TIME_WRITE_CACHE_SIZE = 10000;
+
+  /** Timeline service leveldb interval to wait between deletion rounds */
+  public static final String TIMELINE_SERVICE_LEVELDB_TTL_INTERVAL_MS =
+      TIMELINE_SERVICE_LEVELDB_PREFIX + "ttl-interval-ms";
+
+  public static final long DEFAULT_TIMELINE_SERVICE_LEVELDB_TTL_INTERVAL_MS =
+      1000 * 60 * 5;
 
   ////////////////////////////////
   // Other Configs
