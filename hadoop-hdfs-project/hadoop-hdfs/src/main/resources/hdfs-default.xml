@@ -1662,19 +1662,19 @@
 
 <property>
   <name>dfs.namenode.path.based.cache.refresh.interval.ms</name>
-  <value>300000</value>
+  <value>30000</value>
   <description>
     The amount of milliseconds between subsequent path cache rescans.  Path
     cache rescans are when we calculate which blocks should be cached, and on
     what datanodes.
 
-    By default, this parameter is set to 300000, which is five minutes.
+    By default, this parameter is set to 30 seconds.
   </description>
 </property>
 
 <property>
   <name>dfs.namenode.path.based.cache.retry.interval.ms</name>
-  <value>60000</value>
+  <value>30000</value>
   <description>
     When the NameNode needs to uncache something that is cached, or cache
     something that is not cached, it must direct the DataNodes to do so by
