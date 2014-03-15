@@ -162,6 +162,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-6084. Namenode UI - "Hadoop" logo link shouldn't go to hadoop
     homepage. (Travis Thompson via wheat9)
 
+    HDFS-6106. Reduce default for
+    dfs.namenode.path.based.cache.refresh.interval.ms (cmccabe)
+
   OPTIMIZATIONS
 
     HDFS-5790. LeaseManager.findPath is very slow when many leases need recovery
