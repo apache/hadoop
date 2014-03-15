@@ -297,18 +297,48 @@ Hadoop MapReduce Next Generation - Capacity Scheduler
     <Note:> An <ACL> is of the form <user1>, <user2><space><group1>, <group2>.
     The special value of <<*>> implies <anyone>. The special value of <space>
     implies <no one>. The default is <<*>> for the root queue if not specified.
-     
-    * Reviewing the configuration of the CapacityScheduler
+
+  * Other Properties
+
+    * Resource Calculator
+
+
+*--------------------------------------+--------------------------------------+
+|| Property                            || Description                         |
+*--------------------------------------+--------------------------------------+
+| <<<yarn.scheduler.capacity.resource-calculator>>> | |
+| | The ResourceCalculator implementation to be used to compare Resources in the |
+| | scheduler. The default i.e. org.apache.hadoop.yarn.util.resource.DefaultResourseCalculator |
+| | only uses Memory while DominantResourceCalculator uses Dominant-resource |
+| | to compare multi-dimensional resources such as Memory, CPU etc. A Java |
+| | ResourceCalculator class name is expected. |
+*--------------------------------------+--------------------------------------+
+
+
+    * Data Locality
+
+*--------------------------------------+--------------------------------------+
+|| Property                            || Description                         |
+*--------------------------------------+--------------------------------------+
+| <<<yarn.scheduler.capacity.node-locality-delay>>> | |
+| | Number of missed scheduling opportunities after which the CapacityScheduler |
+| | attempts to schedule rack-local containers. Typically, this should be set to |
+| | number of nodes in the cluster. By default is setting approximately number |
+| | of nodes in one rack which is 40. Positive integer value is expected.|
+*--------------------------------------+--------------------------------------+
+
+
+  * Reviewing the configuration of the CapacityScheduler
 
       Once the installation and configuration is completed, you can review it 
       after starting the YARN cluster from the web-ui.
 
-      * Start the YARN cluster in the normal manner.
+    * Start the YARN cluster in the normal manner.
 
-      * Open the <<<ResourceManager>>> web UI.
+    * Open the <<<ResourceManager>>> web UI.
 
-      * The </scheduler> web-page should show the resource usages of individual 
-        queues.
+    * The </scheduler> web-page should show the resource usages of individual 
+      queues.
       
       []
       
