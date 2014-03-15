@@ -23,6 +23,9 @@ Release 2.5.0 - UNRELEASED
     YARN-1833. TestRMAdminService Fails in trunk and branch-2 (Mit Desais via
     jeagles)
 
+    YARN-1520. update capacity scheduler docs to include necessary parameters
+    (Chen He via jeagles)
+
   OPTIMIZATIONS
 
   BUG FIXES 
