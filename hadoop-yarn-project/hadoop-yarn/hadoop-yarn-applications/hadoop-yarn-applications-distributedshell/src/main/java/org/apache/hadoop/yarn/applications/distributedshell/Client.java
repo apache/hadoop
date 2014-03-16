@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.applications.distributedshell;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -49,7 +48,6 @@ import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
@@ -177,8 +175,7 @@ public class Client {
   // Hardcoded path to custom log_properties
   private static final String log4jPath = "log4j.properties";
 
-  private static final String linuxShellPath = "ExecShellScript.sh";
-  private static final String windowBatPath = "ExecBatScript.bat";
+  public static final String SCRIPT_PATH = "ExecScript";
 
   /**
    * @param args Command line arguments 
@@ -492,8 +489,7 @@ public class Client {
     if (!shellScriptPath.isEmpty()) {
       Path shellSrc = new Path(shellScriptPath);
       String shellPathSuffix =
-          appName + "/" + appId.getId() + "/"
-              + (Shell.WINDOWS ? windowBatPath : linuxShellPath);
+          appName + "/" + appId.getId() + "/" + SCRIPT_PATH;
       Path shellDst =
           new Path(fs.getHomeDirectory(), shellPathSuffix);
       fs.copyFromLocalFile(false, true, shellSrc, shellDst);
@@ -535,15 +531,16 @@ public class Client {
     // It should be provided out of the box. 
     // For now setting all required classpaths including
     // the classpath to "." for the application jar
-    StringBuilder classPathEnv = new StringBuilder(Environment.CLASSPATH.$())
-      .append(File.pathSeparatorChar).append("./*");
+    StringBuilder classPathEnv = new StringBuilder(Environment.CLASSPATH.$$())
+      .append(ApplicationConstants.CLASS_PATH_SEPARATOR).append("./*");
     for (String c : conf.getStrings(
         YarnConfiguration.YARN_APPLICATION_CLASSPATH,
-        YarnConfiguration.DEFAULT_YARN_APPLICATION_CLASSPATH)) {
-      classPathEnv.append(File.pathSeparatorChar);
+        YarnConfiguration.DEFAULT_YARN_CROSS_PLATFORM_APPLICATION_CLASSPATH)) {
+      classPathEnv.append(ApplicationConstants.CLASS_PATH_SEPARATOR);
       classPathEnv.append(c.trim());
     }
-    classPathEnv.append(File.pathSeparatorChar).append("./log4j.properties");
+    classPathEnv.append(ApplicationConstants.CLASS_PATH_SEPARATOR).append(
+      "./log4j.properties");
 
     // add the runtime classpath needed for tests to work
     if (conf.getBoolean(YarnConfiguration.IS_MINI_YARN_CLUSTER, false)) {
@@ -560,7 +557,7 @@ public class Client {
 
     // Set java executable command 
     LOG.info("Setting up app master command");
-    vargs.add(Environment.JAVA_HOME.$() + "/bin/java");
+    vargs.add(Environment.JAVA_HOME.$$() + "/bin/java");
     // Set Xmx based on am memory size
     vargs.add("-Xmx" + amMemory + "m");
     // Set class name 

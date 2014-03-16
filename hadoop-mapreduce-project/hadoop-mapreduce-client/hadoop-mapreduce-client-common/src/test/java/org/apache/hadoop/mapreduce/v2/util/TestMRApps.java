@@ -18,6 +18,15 @@
 
 package org.apache.hadoop.mapreduce.v2.util;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -32,6 +41,7 @@ import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobID;
+import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.filecache.DistributedCache;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
@@ -51,9 +61,6 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
 
 public class TestMRApps {
   private static File testWorkDir = null;
@@ -179,27 +186,32 @@ public class TestMRApps {
 
   @Test (timeout = 120000)
   public void testSetClasspath() throws IOException {
-    Job job = Job.getInstance();
+    Configuration conf = new Configuration();
+    conf.setBoolean(MRConfig.MAPREDUCE_APP_SUBMISSION_CROSS_PLATFORM, true);
+    Job job = Job.getInstance(conf);
     Map<String, String> environment = new HashMap<String, String>();
     MRApps.setClasspath(environment, job.getConfiguration());
     assertTrue(environment.get("CLASSPATH").startsWith(
-      ApplicationConstants.Environment.PWD.$() + File.pathSeparator));
+      ApplicationConstants.Environment.PWD.$$()
+          + ApplicationConstants.CLASS_PATH_SEPARATOR));
     String yarnAppClasspath = job.getConfiguration().get(
         YarnConfiguration.YARN_APPLICATION_CLASSPATH,
         StringUtils.join(",",
-            YarnConfiguration.DEFAULT_YARN_APPLICATION_CLASSPATH));
+            YarnConfiguration.DEFAULT_YARN_CROSS_PLATFORM_APPLICATION_CLASSPATH));
     if (yarnAppClasspath != null) {
-      yarnAppClasspath = yarnAppClasspath.replaceAll(",\\s*", File.pathSeparator)
-        .trim();
+      yarnAppClasspath =
+          yarnAppClasspath.replaceAll(",\\s*",
+            ApplicationConstants.CLASS_PATH_SEPARATOR).trim();
     }
     assertTrue(environment.get("CLASSPATH").contains(yarnAppClasspath));
     String mrAppClasspath = 
         job.getConfiguration().get(
             MRJobConfig.MAPREDUCE_APPLICATION_CLASSPATH,
-            MRJobConfig.DEFAULT_MAPREDUCE_APPLICATION_CLASSPATH);
+            MRJobConfig.DEFAULT_MAPREDUCE_CROSS_PLATFORM_APPLICATION_CLASSPATH);
     if (mrAppClasspath != null) {
-      mrAppClasspath = mrAppClasspath.replaceAll(",\\s*", File.pathSeparator)
-        .trim();
+      mrAppClasspath =
+          mrAppClasspath.replaceAll(",\\s*",
+            ApplicationConstants.CLASS_PATH_SEPARATOR).trim();
     }
     assertTrue(environment.get("CLASSPATH").contains(mrAppClasspath));
   }
@@ -210,8 +222,10 @@ public class TestMRApps {
     FileOutputStream out = new FileOutputStream(testTGZ);
     out.write(0);
     out.close();
-    Job job = Job.getInstance();
-    Configuration conf = job.getConfiguration();
+    Configuration conf = new Configuration();
+    conf.setBoolean(MRConfig.MAPREDUCE_APP_SUBMISSION_CROSS_PLATFORM, true);
+    Job job = Job.getInstance(conf);
+    conf = job.getConfiguration();
     String testTGZQualifiedPath = FileSystem.getLocal(conf).makeQualified(new Path(
       testTGZ.getAbsolutePath())).toString();
     conf.set(MRJobConfig.CLASSPATH_ARCHIVES, testTGZQualifiedPath);
@@ -219,13 +233,13 @@ public class TestMRApps {
     Map<String, String> environment = new HashMap<String, String>();
     MRApps.setClasspath(environment, conf);
     assertTrue(environment.get("CLASSPATH").startsWith(
-      ApplicationConstants.Environment.PWD.$() + File.pathSeparator));
+      ApplicationConstants.Environment.PWD.$$() + ApplicationConstants.CLASS_PATH_SEPARATOR));
     String confClasspath = job.getConfiguration().get(
         YarnConfiguration.YARN_APPLICATION_CLASSPATH,
         StringUtils.join(",",
-            YarnConfiguration.DEFAULT_YARN_APPLICATION_CLASSPATH));
+            YarnConfiguration.DEFAULT_YARN_CROSS_PLATFORM_APPLICATION_CLASSPATH));
     if (confClasspath != null) {
-      confClasspath = confClasspath.replaceAll(",\\s*", File.pathSeparator)
+      confClasspath = confClasspath.replaceAll(",\\s*", ApplicationConstants.CLASS_PATH_SEPARATOR)
         .trim();
     }
     assertTrue(environment.get("CLASSPATH").contains(confClasspath));
@@ -235,6 +249,7 @@ public class TestMRApps {
  @Test (timeout = 120000)
  public void testSetClasspathWithUserPrecendence() {
     Configuration conf = new Configuration();
+    conf.setBoolean(MRConfig.MAPREDUCE_APP_SUBMISSION_CROSS_PLATFORM, true);
     conf.setBoolean(MRJobConfig.MAPREDUCE_JOB_USER_CLASSPATH_FIRST, true);
     Map<String, String> env = new HashMap<String, String>();
     try {
@@ -243,10 +258,10 @@ public class TestMRApps {
       fail("Got exception while setting classpath");
     }
     String env_str = env.get("CLASSPATH");
-    String expectedClasspath = StringUtils.join(File.pathSeparator,
-      Arrays.asList(ApplicationConstants.Environment.PWD.$(), "job.jar/job.jar",
+    String expectedClasspath = StringUtils.join(ApplicationConstants.CLASS_PATH_SEPARATOR,
+      Arrays.asList(ApplicationConstants.Environment.PWD.$$(), "job.jar/job.jar",
         "job.jar/classes/", "job.jar/lib/*",
-        ApplicationConstants.Environment.PWD.$() + "/*"));
+        ApplicationConstants.Environment.PWD.$$() + "/*"));
     assertTrue("MAPREDUCE_JOB_USER_CLASSPATH_FIRST set, but not taking effect!",
       env_str.startsWith(expectedClasspath));
   }
@@ -254,6 +269,7 @@ public class TestMRApps {
   @Test (timeout = 120000)
   public void testSetClasspathWithNoUserPrecendence() {
     Configuration conf = new Configuration();
+    conf.setBoolean(MRConfig.MAPREDUCE_APP_SUBMISSION_CROSS_PLATFORM, true);
     conf.setBoolean(MRJobConfig.MAPREDUCE_JOB_USER_CLASSPATH_FIRST, false);
     Map<String, String> env = new HashMap<String, String>();
     try {
@@ -262,9 +278,9 @@ public class TestMRApps {
       fail("Got exception while setting classpath");
     }
     String env_str = env.get("CLASSPATH");
-    String expectedClasspath = StringUtils.join(File.pathSeparator,
+    String expectedClasspath = StringUtils.join(ApplicationConstants.CLASS_PATH_SEPARATOR,
       Arrays.asList("job.jar/job.jar", "job.jar/classes/", "job.jar/lib/*",
-        ApplicationConstants.Environment.PWD.$() + "/*"));
+        ApplicationConstants.Environment.PWD.$$() + "/*"));
     assertTrue("MAPREDUCE_JOB_USER_CLASSPATH_FIRST false, and job.jar is not in"
       + " the classpath!", env_str.contains(expectedClasspath));
     assertFalse("MAPREDUCE_JOB_USER_CLASSPATH_FIRST false, but taking effect!",
@@ -274,19 +290,20 @@ public class TestMRApps {
   @Test (timeout = 120000)
   public void testSetClasspathWithJobClassloader() throws IOException {
     Configuration conf = new Configuration();
+    conf.setBoolean(MRConfig.MAPREDUCE_APP_SUBMISSION_CROSS_PLATFORM, true);
     conf.setBoolean(MRJobConfig.MAPREDUCE_JOB_CLASSLOADER, true);
     Map<String, String> env = new HashMap<String, String>();
     MRApps.setClasspath(env, conf);
     String cp = env.get("CLASSPATH");
     String appCp = env.get("APP_CLASSPATH");
     assertFalse("MAPREDUCE_JOB_CLASSLOADER true, but job.jar is in the"
-      + " classpath!", cp.contains("jar" + File.pathSeparator + "job"));
+      + " classpath!", cp.contains("jar" + ApplicationConstants.CLASS_PATH_SEPARATOR + "job"));
     assertFalse("MAPREDUCE_JOB_CLASSLOADER true, but PWD is in the classpath!",
       cp.contains("PWD"));
-    String expectedAppClasspath = StringUtils.join(File.pathSeparator,
-      Arrays.asList(ApplicationConstants.Environment.PWD.$(), "job.jar/job.jar",
+    String expectedAppClasspath = StringUtils.join(ApplicationConstants.CLASS_PATH_SEPARATOR,
+      Arrays.asList(ApplicationConstants.Environment.PWD.$$(), "job.jar/job.jar",
         "job.jar/classes/", "job.jar/lib/*",
-        ApplicationConstants.Environment.PWD.$() + "/*"));
+        ApplicationConstants.Environment.PWD.$$() + "/*"));
     assertEquals("MAPREDUCE_JOB_CLASSLOADER true, but job.jar is not in the app"
       + " classpath!", expectedAppClasspath, appCp);
   }
@@ -296,6 +313,7 @@ public class TestMRApps {
     final String FRAMEWORK_NAME = "some-framework-name";
     final String FRAMEWORK_PATH = "some-framework-path#" + FRAMEWORK_NAME;
     Configuration conf = new Configuration();
+    conf.setBoolean(MRConfig.MAPREDUCE_APP_SUBMISSION_CROSS_PLATFORM, true);
     conf.set(MRJobConfig.MAPREDUCE_APPLICATION_FRAMEWORK_PATH, FRAMEWORK_PATH);
     Map<String, String> env = new HashMap<String, String>();
     try {
@@ -311,11 +329,11 @@ public class TestMRApps {
     final String FRAMEWORK_CLASSPATH = FRAMEWORK_NAME + "/*.jar";
     conf.set(MRJobConfig.MAPREDUCE_APPLICATION_CLASSPATH, FRAMEWORK_CLASSPATH);
     MRApps.setClasspath(env, conf);
-    final String stdClasspath = StringUtils.join(File.pathSeparator,
+    final String stdClasspath = StringUtils.join(ApplicationConstants.CLASS_PATH_SEPARATOR,
         Arrays.asList("job.jar/job.jar", "job.jar/classes/", "job.jar/lib/*",
-            ApplicationConstants.Environment.PWD.$() + "/*"));
-    String expectedClasspath = StringUtils.join(File.pathSeparator,
-        Arrays.asList(ApplicationConstants.Environment.PWD.$(),
+            ApplicationConstants.Environment.PWD.$$() + "/*"));
+    String expectedClasspath = StringUtils.join(ApplicationConstants.CLASS_PATH_SEPARATOR,
+        Arrays.asList(ApplicationConstants.Environment.PWD.$$(),
             FRAMEWORK_CLASSPATH, stdClasspath));
     assertEquals("Incorrect classpath with framework and no user precedence",
         expectedClasspath, env.get("CLASSPATH"));
@@ -323,8 +341,8 @@ public class TestMRApps {
     env.clear();
     conf.setBoolean(MRJobConfig.MAPREDUCE_JOB_USER_CLASSPATH_FIRST, true);
     MRApps.setClasspath(env, conf);
-    expectedClasspath = StringUtils.join(File.pathSeparator,
-        Arrays.asList(ApplicationConstants.Environment.PWD.$(),
+    expectedClasspath = StringUtils.join(ApplicationConstants.CLASS_PATH_SEPARATOR,
+        Arrays.asList(ApplicationConstants.Environment.PWD.$$(),
             stdClasspath, FRAMEWORK_CLASSPATH));
     assertEquals("Incorrect classpath with framework and user precedence",
         expectedClasspath, env.get("CLASSPATH"));

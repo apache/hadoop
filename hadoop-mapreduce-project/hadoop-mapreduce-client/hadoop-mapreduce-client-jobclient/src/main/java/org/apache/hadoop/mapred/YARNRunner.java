@@ -387,7 +387,8 @@ public class YARNRunner implements ClientProtocol {
 
     // Setup the command to run the AM
     List<String> vargs = new ArrayList<String>(8);
-    vargs.add(Environment.JAVA_HOME.$() + "/bin/java");
+    vargs.add(MRApps.crossPlatformifyMREnv(jobConf, Environment.JAVA_HOME)
+        + "/bin/java");
 
     // TODO: why do we use 'conf' some places and 'jobConf' others?
     long logSize = jobConf.getLong(MRJobConfig.MR_AM_LOG_KB,
@@ -445,13 +446,13 @@ public class YARNRunner implements ClientProtocol {
     // i.e. add { Hadoop jars, job jar, CWD } to classpath.
     Map<String, String> environment = new HashMap<String, String>();
     MRApps.setClasspath(environment, conf);
-    
+
     // Setup the environment variables for Admin first
     MRApps.setEnvFromInputString(environment, 
-        conf.get(MRJobConfig.MR_AM_ADMIN_USER_ENV));
+        conf.get(MRJobConfig.MR_AM_ADMIN_USER_ENV), conf);
     // Setup the environment variables (LD_LIBRARY_PATH, etc)
     MRApps.setEnvFromInputString(environment, 
-        conf.get(MRJobConfig.MR_AM_ENV));
+        conf.get(MRJobConfig.MR_AM_ENV), conf);
 
     // Parse distributed cache
     MRApps.setupDistributedCache(jobConf, localResources);

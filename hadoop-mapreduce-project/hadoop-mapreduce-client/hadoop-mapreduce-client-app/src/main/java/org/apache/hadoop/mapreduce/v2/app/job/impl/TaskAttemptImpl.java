@@ -24,6 +24,7 @@ import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -31,7 +32,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.Collection;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -132,7 +132,6 @@ import org.apache.hadoop.yarn.state.MultipleArcTransition;
 import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
-import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.RackResolver;
@@ -627,7 +626,6 @@ public abstract class TaskAttemptImpl implements
       Token<JobTokenIdentifier> jobToken,
       final org.apache.hadoop.mapred.JobID oldJobId,
       Credentials credentials) {
-
     // Application resources
     Map<String, LocalResource> localResources = 
         new HashMap<String, LocalResource>();
@@ -743,16 +741,16 @@ public abstract class TaskAttemptImpl implements
         }
       }
 
-      Apps.addToEnvironment(
+      MRApps.addToEnvironment(
           environment,  
           Environment.CLASSPATH.name(), 
-          getInitialClasspath(conf));
+          getInitialClasspath(conf), conf);
 
       if (initialAppClasspath != null) {
-        Apps.addToEnvironment(
+        MRApps.addToEnvironment(
             environment,  
             Environment.APP_CLASSPATH.name(), 
-            initialAppClasspath);
+            initialAppClasspath, conf);
       }
     } catch (IOException e) {
       throw new YarnRuntimeException(e);
@@ -767,17 +765,17 @@ public abstract class TaskAttemptImpl implements
             );
 
     // Add pwd to LD_LIBRARY_PATH, add this before adding anything else
-    Apps.addToEnvironment(
+    MRApps.addToEnvironment(
         environment, 
         Environment.LD_LIBRARY_PATH.name(), 
-        Environment.PWD.$());
+        MRApps.crossPlatformifyMREnv(conf, Environment.PWD), conf);
 
     // Add the env variables passed by the admin
-    Apps.setEnvFromInputString(
+    MRApps.setEnvFromInputString(
         environment, 
         conf.get(
             MRJobConfig.MAPRED_ADMIN_USER_ENV, 
-            MRJobConfig.DEFAULT_MAPRED_ADMIN_USER_ENV)
+            MRJobConfig.DEFAULT_MAPRED_ADMIN_USER_ENV), conf
         );
 
     // Construct the actual Container

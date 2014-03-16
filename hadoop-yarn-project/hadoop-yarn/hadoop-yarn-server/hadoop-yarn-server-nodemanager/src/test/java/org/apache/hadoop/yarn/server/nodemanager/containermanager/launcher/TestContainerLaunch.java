@@ -21,7 +21,6 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.spy;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -48,6 +47,7 @@ import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
@@ -73,12 +73,12 @@ import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.ExitCode;
 import org.apache.hadoop.yarn.server.nodemanager.DefaultContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.BaseContainerManagerTest;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerExitEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.AuxiliaryServiceHelper;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.LinuxResourceCalculatorPlugin;
@@ -285,6 +285,31 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
         shellFile.delete();
       }
     }
+  }
+
+  @Test(timeout = 10000)
+  public void testEnvExpansion() throws IOException {
+    Path logPath = new Path("/nm/container/logs");
+    String input =
+        Apps.crossPlatformify("HADOOP_HOME") + "/share/hadoop/common/*"
+            + ApplicationConstants.CLASS_PATH_SEPARATOR
+            + Apps.crossPlatformify("HADOOP_HOME") + "/share/hadoop/common/lib/*"
+            + ApplicationConstants.CLASS_PATH_SEPARATOR
+            + Apps.crossPlatformify("HADOOP_LOG_HOME")
+            + ApplicationConstants.LOG_DIR_EXPANSION_VAR;
+
+    String res = ContainerLaunch.expandEnvironment(input, logPath);
+
+    if (Shell.WINDOWS) {
+      Assert.assertEquals("%HADOOP_HOME%/share/hadoop/common/*;"
+          + "%HADOOP_HOME%/share/hadoop/common/lib/*;"
+          + "%HADOOP_LOG_HOME%/nm/container/logs", res);
+    } else {
+      Assert.assertEquals("$HADOOP_HOME/share/hadoop/common/*:"
+          + "$HADOOP_HOME/share/hadoop/common/lib/*:"
+          + "$HADOOP_LOG_HOME/nm/container/logs", res);
+    }
+    System.out.println(res);
   }
 
   @Test (timeout = 20000)
