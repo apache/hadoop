@@ -76,6 +76,8 @@ import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.AuxiliaryServiceHelper;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
+import com.google.common.annotations.VisibleForTesting;
+
 public class ContainerLaunch implements Callable<Integer> {
 
   private static final Log LOG = LogFactory.getLog(ContainerLaunch.class);
@@ -124,6 +126,25 @@ public class ContainerLaunch implements Callable<Integer> {
             YarnConfiguration.DEFAULT_NM_PROCESS_KILL_WAIT_MS);
   }
 
+  @VisibleForTesting
+  public static String expandEnvironment(String var,
+      Path containerLogDir) {
+    var = var.replace(ApplicationConstants.LOG_DIR_EXPANSION_VAR,
+      containerLogDir.toString());
+    var =  var.replace(ApplicationConstants.CLASS_PATH_SEPARATOR,
+      File.pathSeparator);
+
+    // replace parameter expansion marker. e.g. {{VAR}} on Windows is replaced
+    // as %VAR% and on Linux replaced as "$VAR"
+    if (Shell.WINDOWS) {
+      var = var.replaceAll("(\\{\\{)|(\\}\\})", "%");
+    } else {
+      var = var.replace(ApplicationConstants.PARAMETER_EXPANSION_LEFT, "$");
+      var = var.replace(ApplicationConstants.PARAMETER_EXPANSION_RIGHT, "");
+    }
+    return var;
+  }
+
   @Override
   @SuppressWarnings("unchecked") // dispatcher not typed
   public Integer call() {
@@ -165,8 +186,7 @@ public class ContainerLaunch implements Callable<Integer> {
           dirsHandler.getLogPathForWrite(relativeContainerLogDir, false);
       for (String str : command) {
         // TODO: Should we instead work via symlinks without this grammar?
-        newCmds.add(str.replace(ApplicationConstants.LOG_DIR_EXPANSION_VAR,
-            containerLogDir.toString()));
+        newCmds.add(expandEnvironment(str, containerLogDir));
       }
       launchContext.setCommands(newCmds);
 
@@ -174,11 +194,8 @@ public class ContainerLaunch implements Callable<Integer> {
       // Make a copy of env to iterate & do variable expansion
       for (Entry<String, String> entry : environment.entrySet()) {
         String value = entry.getValue();
-        entry.setValue(
-            value.replace(
-                ApplicationConstants.LOG_DIR_EXPANSION_VAR,
-                containerLogDir.toString())
-            );
+        value = expandEnvironment(value, containerLogDir);
+        entry.setValue(value);
       }
       // /////////////////////////// End of variable expansion
 
@@ -647,12 +664,9 @@ public class ContainerLaunch implements Callable<Integer> {
     }
 
     // variables here will be forced in, even if the container has specified them.
-    Apps.setEnvFromInputString(
-      environment,
-      conf.get(
-        YarnConfiguration.NM_ADMIN_USER_ENV,
-        YarnConfiguration.DEFAULT_NM_ADMIN_USER_ENV)
-    );
+    Apps.setEnvFromInputString(environment, conf.get(
+      YarnConfiguration.NM_ADMIN_USER_ENV,
+      YarnConfiguration.DEFAULT_NM_ADMIN_USER_ENV), File.pathSeparator);
 
     // TODO: Remove Windows check and use this approach on all platforms after
     // additional testing.  See YARN-358.

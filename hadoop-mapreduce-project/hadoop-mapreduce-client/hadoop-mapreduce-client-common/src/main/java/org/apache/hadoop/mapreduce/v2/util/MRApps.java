@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce.v2.util;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -29,16 +30,20 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.InvalidJobConfException;
 import org.apache.hadoop.mapreduce.JobID;
+import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TaskID;
@@ -50,6 +55,8 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
+import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.util.StringInterner;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.ContainerLogAppender;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
@@ -186,29 +193,33 @@ public class MRApps extends Apps {
       Map<String, String> environment, Configuration conf) throws IOException {
     // Propagate the system classpath when using the mini cluster
     if (conf.getBoolean(YarnConfiguration.IS_MINI_YARN_CLUSTER, false)) {
-      Apps.addToEnvironment(environment, Environment.CLASSPATH.name(),
-          System.getProperty("java.class.path"));
+      MRApps.addToEnvironment(environment, Environment.CLASSPATH.name(),
+          System.getProperty("java.class.path"), conf);
     }
+    boolean crossPlatform =
+        conf.getBoolean(MRConfig.MAPREDUCE_APP_SUBMISSION_CROSS_PLATFORM,
+          MRConfig.DEFAULT_MAPREDUCE_APP_SUBMISSION_CROSS_PLATFORM);
 
     // if the framework is specified then only use the MR classpath
     String frameworkName = getMRFrameworkName(conf);
     if (frameworkName == null) {
       // Add standard Hadoop classes
-      for (String c : conf.getStrings(
-          YarnConfiguration.YARN_APPLICATION_CLASSPATH,
-          YarnConfiguration.DEFAULT_YARN_APPLICATION_CLASSPATH)) {
-        Apps.addToEnvironment(environment, Environment.CLASSPATH.name(), c
-            .trim());
+      for (String c : conf.getStrings(YarnConfiguration.YARN_APPLICATION_CLASSPATH,
+          crossPlatform
+              ? YarnConfiguration.DEFAULT_YARN_CROSS_PLATFORM_APPLICATION_CLASSPATH
+              : YarnConfiguration.DEFAULT_YARN_APPLICATION_CLASSPATH)) {
+        MRApps.addToEnvironment(environment, Environment.CLASSPATH.name(),
+          c.trim(), conf);
       }
     }
 
     boolean foundFrameworkInClasspath = (frameworkName == null);
-    for (String c : conf.getStrings(
-        MRJobConfig.MAPREDUCE_APPLICATION_CLASSPATH,
-        StringUtils.getStrings(
-            MRJobConfig.DEFAULT_MAPREDUCE_APPLICATION_CLASSPATH))){
-      Apps.addToEnvironment(environment, Environment.CLASSPATH.name(), c
-          .trim());
+    for (String c : conf.getStrings(MRJobConfig.MAPREDUCE_APPLICATION_CLASSPATH,
+        crossPlatform ?
+            StringUtils.getStrings(MRJobConfig.DEFAULT_MAPREDUCE_CROSS_PLATFORM_APPLICATION_CLASSPATH)
+            : StringUtils.getStrings(MRJobConfig.DEFAULT_MAPREDUCE_APPLICATION_CLASSPATH))) {
+      MRApps.addToEnvironment(environment, Environment.CLASSPATH.name(),
+        c.trim(), conf);
       if (!foundFrameworkInClasspath) {
         foundFrameworkInClasspath = c.contains(frameworkName);
       }
@@ -232,28 +243,27 @@ public class MRApps extends Apps {
       conf.getBoolean(MRJobConfig.MAPREDUCE_JOB_CLASSLOADER, false)
         ? Environment.APP_CLASSPATH.name() : Environment.CLASSPATH.name();
 
-    Apps.addToEnvironment(environment,
-      classpathEnvVar,
-      Environment.PWD.$());
+    MRApps.addToEnvironment(environment,
+      classpathEnvVar, crossPlatformifyMREnv(conf, Environment.PWD), conf);
     if (!userClassesTakesPrecedence) {
       MRApps.setMRFrameworkClasspath(environment, conf);
     }
-    Apps.addToEnvironment(
+    MRApps.addToEnvironment(
         environment,
         classpathEnvVar,
-        MRJobConfig.JOB_JAR + Path.SEPARATOR + MRJobConfig.JOB_JAR);
-    Apps.addToEnvironment(
+        MRJobConfig.JOB_JAR + Path.SEPARATOR + MRJobConfig.JOB_JAR, conf);
+    MRApps.addToEnvironment(
         environment,
         classpathEnvVar,
-        MRJobConfig.JOB_JAR + Path.SEPARATOR + "classes" + Path.SEPARATOR);
-    Apps.addToEnvironment(
+        MRJobConfig.JOB_JAR + Path.SEPARATOR + "classes" + Path.SEPARATOR, conf);
+    MRApps.addToEnvironment(
         environment,
         classpathEnvVar,
-        MRJobConfig.JOB_JAR + Path.SEPARATOR + "lib" + Path.SEPARATOR + "*");
-    Apps.addToEnvironment(
+        MRJobConfig.JOB_JAR + Path.SEPARATOR + "lib" + Path.SEPARATOR + "*", conf);
+    MRApps.addToEnvironment(
         environment,
         classpathEnvVar,
-        Environment.PWD.$() + Path.SEPARATOR + "*");
+        crossPlatformifyMREnv(conf, Environment.PWD) + Path.SEPARATOR + "*", conf);
     // a * in the classpath will only find a .jar, so we need to filter out
     // all .jars and add everything else
     addToClasspathIfNotJar(DistributedCache.getFileClassPaths(conf),
@@ -306,10 +316,10 @@ public class MRApps extends Apps {
           name = p.getName();
         }
         if(!name.toLowerCase().endsWith(".jar")) {
-          Apps.addToEnvironment(
+          MRApps.addToEnvironment(
               environment,
               classpathEnvVar,
-              Environment.PWD.$() + Path.SEPARATOR + name);
+              crossPlatformifyMREnv(conf, Environment.PWD) + Path.SEPARATOR + name, conf);
         }
       }
     }
@@ -548,5 +558,32 @@ public class MRApps extends Apps {
       }
     }
     return null;
+  }
+
+  public static void setEnvFromInputString(Map<String, String> env,
+      String envString, Configuration conf) {
+    String classPathSeparator =
+        conf.getBoolean(MRConfig.MAPREDUCE_APP_SUBMISSION_CROSS_PLATFORM,
+          MRConfig.DEFAULT_MAPREDUCE_APP_SUBMISSION_CROSS_PLATFORM)
+            ? ApplicationConstants.CLASS_PATH_SEPARATOR : File.pathSeparator;
+    Apps.setEnvFromInputString(env, envString, classPathSeparator);
+  }
+
+  @Public
+  @Unstable
+  public static void addToEnvironment(Map<String, String> environment,
+      String variable, String value, Configuration conf) {
+    String classPathSeparator =
+        conf.getBoolean(MRConfig.MAPREDUCE_APP_SUBMISSION_CROSS_PLATFORM,
+          MRConfig.DEFAULT_MAPREDUCE_APP_SUBMISSION_CROSS_PLATFORM)
+            ? ApplicationConstants.CLASS_PATH_SEPARATOR : File.pathSeparator;
+    Apps.addToEnvironment(environment, variable, value, classPathSeparator);
+  }
+
+  public static String crossPlatformifyMREnv(Configuration conf, Environment env) {
+    boolean crossPlatform =
+        conf.getBoolean(MRConfig.MAPREDUCE_APP_SUBMISSION_CROSS_PLATFORM,
+          MRConfig.DEFAULT_MAPREDUCE_APP_SUBMISSION_CROSS_PLATFORM);
+    return crossPlatform ? env.$$() : env.$();
   }
 }

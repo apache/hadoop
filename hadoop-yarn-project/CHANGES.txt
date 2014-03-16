@@ -303,6 +303,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1658. Modified web-app framework to let standby RMs redirect
     web-service calls to the active RM. (Cindy Li via vinodkv)
 
+    YARN-1824. Improved NodeManager and clients to be able to handle cross
+    platform application submissions. (Jian He via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES

@@ -18,8 +18,11 @@
 package org.apache.hadoop.mapreduce;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.yarn.util.Apps;
 
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -692,14 +695,31 @@ public interface MRJobConfig {
       "mapreduce.application.framework.path";
 
   /**
-   * Default CLASSPATH for all YARN MapReduce applications.
+   * Default CLASSPATH for all YARN MapReduce applications constructed with
+   * platform-agnostic syntax.
    */
-  public final String 
-  DEFAULT_MAPREDUCE_APPLICATION_CLASSPATH = Shell.WINDOWS ?
-      "%HADOOP_MAPRED_HOME%\\share\\hadoop\\mapreduce\\*," 
-      + "%HADOOP_MAPRED_HOME%\\share\\hadoop\\mapreduce\\lib\\*" :
-      "$HADOOP_MAPRED_HOME/share/hadoop/mapreduce/*,"
-      + "$HADOOP_MAPRED_HOME/share/hadoop/mapreduce/lib/*";
+  @Public
+  @Unstable
+  public final String DEFAULT_MAPREDUCE_CROSS_PLATFORM_APPLICATION_CLASSPATH = Apps
+    .crossPlatformify("HADOOP_MAPRED_HOME")
+      + "/share/hadoop/mapreduce/*,"
+      + Apps.crossPlatformify("HADOOP_MAPRED_HOME")
+      + "/share/hadoop/mapreduce/lib/*";
+
+  /**
+   * Default platform-specific CLASSPATH for all YARN MapReduce applications
+   * constructed based on client OS syntax.
+   * <p>
+   * Note: Use {@link DEFAULT_MAPREDUCE_CROSS_PLATFORM_APPLICATION_CLASSPATH}
+   * for cross-platform practice i.e. submit an application from a Windows
+   * client to a Linux/Unix server or vice versa.
+   * </p>
+   */
+  public final String DEFAULT_MAPREDUCE_APPLICATION_CLASSPATH =
+      Shell.WINDOWS ? "%HADOOP_MAPRED_HOME%\\share\\hadoop\\mapreduce\\*,"
+          + "%HADOOP_MAPRED_HOME%\\share\\hadoop\\mapreduce\\lib\\*"
+          : "$HADOOP_MAPRED_HOME/share/hadoop/mapreduce/*,"
+              + "$HADOOP_MAPRED_HOME/share/hadoop/mapreduce/lib/*";
 
   public static final String WORKFLOW_ID = "mapreduce.workflow.id";
 
@@ -732,5 +752,4 @@ public interface MRJobConfig {
   
   public static final String TASK_PREEMPTION =
       "mapreduce.job.preemption";
-
 }

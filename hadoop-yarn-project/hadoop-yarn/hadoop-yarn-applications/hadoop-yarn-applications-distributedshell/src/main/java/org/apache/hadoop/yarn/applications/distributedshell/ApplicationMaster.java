@@ -47,6 +47,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
@@ -74,7 +76,6 @@ import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
-import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -85,6 +86,7 @@ import org.apache.hadoop.yarn.client.api.async.NMClientAsync;
 import org.apache.hadoop.yarn.client.api.async.impl.NMClientAsyncImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
@@ -223,8 +225,9 @@ public class ApplicationMaster {
   private long shellScriptPathLen = 0;
 
   // Hardcoded path to shell script in launch container's local env
-  private static final String ExecShellStringPath = "ExecShellScript.sh";
-  private static final String ExecBatScripStringtPath = "ExecBatScript.bat";
+  private static final String ExecShellStringPath = Client.SCRIPT_PATH + ".sh";
+  private static final String ExecBatScripStringtPath = Client.SCRIPT_PATH
+      + ".bat";
 
   // Hardcoded path to custom log_properties
   private static final String log4jPath = "log4j.properties";
@@ -846,15 +849,29 @@ public class ApplicationMaster {
       // In this scenario, if a shell script is specified, we need to have it
       // copied and made available to the container.
       if (!shellScriptPath.isEmpty()) {
+        Path renamedSchellScriptPath = null;
+        if (Shell.WINDOWS) {
+          renamedSchellScriptPath = new Path(shellScriptPath + ".bat");
+        } else {
+          renamedSchellScriptPath = new Path(shellScriptPath + ".sh");
+        }
+        try {
+          FileSystem fs = renamedSchellScriptPath.getFileSystem(conf);
+          fs.rename(new Path(shellScriptPath), renamedSchellScriptPath);
+        } catch (IOException e) {
+          LOG.warn("Not able to add suffix (.bat/.sh) to the shell script filename");
+          throw new YarnRuntimeException(e);
+        }
+
         LocalResource shellRsrc = Records.newRecord(LocalResource.class);
         shellRsrc.setType(LocalResourceType.FILE);
         shellRsrc.setVisibility(LocalResourceVisibility.APPLICATION);
         try {
           shellRsrc.setResource(ConverterUtils.getYarnUrlFromURI(new URI(
-              shellScriptPath)));
+            renamedSchellScriptPath.toString())));
         } catch (URISyntaxException e) {
           LOG.error("Error when trying to use shell script path specified"
-              + " in env, path=" + shellScriptPath);
+              + " in env, path=" + renamedSchellScriptPath);
           e.printStackTrace();
 
           // A failure scenario on bad input such as invalid shell script path

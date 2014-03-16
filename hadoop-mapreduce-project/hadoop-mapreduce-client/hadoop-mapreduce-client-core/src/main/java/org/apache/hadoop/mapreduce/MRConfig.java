@@ -18,6 +18,8 @@
 package org.apache.hadoop.mapreduce;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 
 /**
  * Place holder for cluster level configuration keys.
@@ -113,5 +115,14 @@ public interface MRConfig {
       = "mapreduce.minicluster.control-resource-monitoring";
   public static final boolean
       DEFAULT_MAPREDUCE_MINICLUSTER_CONTROL_RESOURCE_MONITORING = false;
+
+  @Public
+  @Unstable
+  public static final String MAPREDUCE_APP_SUBMISSION_CROSS_PLATFORM =
+      "mapreduce.app-submission.cross-platform";
+  @Public
+  @Unstable
+  public static final boolean DEFAULT_MAPREDUCE_APP_SUBMISSION_CROSS_PLATFORM =
+      false;
 }
   

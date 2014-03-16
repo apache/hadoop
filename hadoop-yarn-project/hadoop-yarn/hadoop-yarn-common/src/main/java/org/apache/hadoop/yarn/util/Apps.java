@@ -33,6 +33,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringInterner;
+import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
@@ -70,7 +71,7 @@ public class Apps {
   }
 
   public static void setEnvFromInputString(Map<String, String> env,
-      String envString) {
+      String envString,  String classPathSeparator) {
     if (envString != null && envString.length() > 0) {
       String childEnvs[] = envString.split(",");
       Pattern p = Pattern.compile(Shell.getEnvironmentVariableRegex());
@@ -92,7 +93,7 @@ public class Apps {
           m.appendReplacement(sb, Matcher.quoteReplacement(replace));
         }
         m.appendTail(sb);
-        addToEnvironment(env, parts[0], sb.toString());
+        addToEnvironment(env, parts[0], sb.toString(), classPathSeparator);
       }
     }
   }
@@ -101,14 +102,19 @@ public class Apps {
   @Unstable
   public static void addToEnvironment(
       Map<String, String> environment,
-      String variable, String value) {
+      String variable, String value, String classPathSeparator) {
     String val = environment.get(variable);
     if (val == null) {
       val = value;
     } else {
-      val = val + File.pathSeparator + value;
+      val = val + classPathSeparator + value;
     }
     environment.put(StringInterner.weakIntern(variable), 
         StringInterner.weakIntern(val));
+  }
+
+  public static String crossPlatformify(String var) {
+    return ApplicationConstants.PARAMETER_EXPANSION_LEFT + var
+        + ApplicationConstants.PARAMETER_EXPANSION_RIGHT;
   }
 }
