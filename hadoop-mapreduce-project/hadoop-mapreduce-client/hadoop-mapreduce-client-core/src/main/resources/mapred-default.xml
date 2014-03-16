@@ -1542,18 +1542,35 @@
   <description>CLASSPATH for MR applications. A comma-separated list
   of CLASSPATH entries. If mapreduce.application.framework is set then this
   must specify the appropriate classpath for that archive, and the name of
-  the archive must be present in the classpath. 
-  When this value is empty, the following default CLASSPATH for MR 
-  applications would be used. 
+  the archive must be present in the classpath.
+  If mapreduce.app-submission.cross-platform is false, platform-specific
+  environment vairable expansion syntax would be used to construct the default
+  CLASSPATH entries.
   For Linux:
   $HADOOP_MAPRED_HOME/share/hadoop/mapreduce/*,
   $HADOOP_MAPRED_HOME/share/hadoop/mapreduce/lib/*.
   For Windows:
   %HADOOP_MAPRED_HOME%/share/hadoop/mapreduce/*,
   %HADOOP_MAPRED_HOME%/share/hadoop/mapreduce/lib/*.
+
+  If mapreduce.app-submission.cross-platform is true, platform-agnostic default
+  CLASSPATH for MR applications would be used:
+  {{HADOOP_MAPRED_HOME}}/share/hadoop/mapreduce/*,
+  {{HADOOP_MAPRED_HOME}}/share/hadoop/mapreduce/lib/*
+  Parameter expansion marker will be replaced by NodeManager on container
+  launch based on the underlying OS accordingly.
   </description>
    <name>mapreduce.application.classpath</name>
    <value></value>
+</property>
+
+<property>
+  <description>If enabled, user can submit an application cross-platform
+  i.e. submit an application from a Windows client to a Linux/Unix server or
+  vice versa.
+  </description>
+  <name>mapreduce.app-submission.cross-platform</name>
+  <value>false</value>
 </property>
 
 <property>

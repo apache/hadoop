@@ -32,7 +32,6 @@ import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.util.Apps;
 
 @SuppressWarnings("deprecation")
 public class MapReduceChildJVM {
@@ -69,10 +68,9 @@ public class MapReduceChildJVM {
       Task task) {
 
     JobConf conf = task.conf;
-
     // Add the env variables passed by the user
     String mapredChildEnv = getChildEnv(conf, task.isMapTask());
-    Apps.setEnvFromInputString(environment, mapredChildEnv);
+    MRApps.setEnvFromInputString(environment, mapredChildEnv, conf);
 
     // Set logging level in the environment.
     // This is so that, if the child forks another "bin/hadoop" (common in
@@ -164,7 +162,8 @@ public class MapReduceChildJVM {
 
     Vector<String> vargs = new Vector<String>(8);
 
-    vargs.add(Environment.JAVA_HOME.$() + "/bin/java");
+    vargs.add(MRApps.crossPlatformifyMREnv(task.conf, Environment.JAVA_HOME)
+        + "/bin/java");
 
     // Add child (task) java-vm options.
     //
@@ -201,7 +200,7 @@ public class MapReduceChildJVM {
       vargs.add(javaOptsSplit[i]);
     }
 
-    Path childTmpDir = new Path(Environment.PWD.$(),
+    Path childTmpDir = new Path(MRApps.crossPlatformifyMREnv(conf, Environment.PWD),
         YarnConfiguration.DEFAULT_CONTAINER_TEMP_DIR);
     vargs.add("-Djava.io.tmpdir=" + childTmpDir);
 
