@@ -30,6 +30,8 @@ import org.junit.Assert;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.metrics2.MetricsSystem;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -63,7 +65,7 @@ public class TestResourceTrackerService {
 
   private final static File TEMP_DIR = new File(System.getProperty(
       "test.build.data", "/tmp"), "decommision");
-  private File hostFile = new File(TEMP_DIR + File.separator + "hostFile.txt");
+  private final File hostFile = new File(TEMP_DIR + File.separator + "hostFile.txt");
   private MockRM rm;
 
   /**
@@ -468,7 +470,7 @@ public class TestResourceTrackerService {
 
   @Test
   public void testNodeRegistrationWithContainers() throws Exception {
-    MockRM rm = new MockRM();
+    rm = new MockRM();
     rm.init(new YarnConfiguration());
     rm.start();
     RMApp app = rm.submitApp(1024);
@@ -491,7 +493,7 @@ public class TestResourceTrackerService {
   @Test
   public void testReconnectNode() throws Exception {
     final DrainDispatcher dispatcher = new DrainDispatcher();
-    MockRM rm = new MockRM() {
+    rm = new MockRM() {
       @Override
       protected EventHandler<SchedulerEvent> createSchedulerEventDispatcher() {
         return new SchedulerEventDispatcher(this.scheduler) {
@@ -593,9 +595,15 @@ public class TestResourceTrackerService {
     if (hostFile != null && hostFile.exists()) {
       hostFile.delete();
     }
+
     ClusterMetrics.destroy();
     if (rm != null) {
       rm.stop();
+    }
+
+    MetricsSystem ms = DefaultMetricsSystem.instance();
+    if (ms.getSource("ClusterMetrics") != null) {
+      DefaultMetricsSystem.shutdown();
     }
   }
 }
