@@ -174,12 +174,13 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
       } else {
         throw new Exception("No handler for registered for " + type);
       }
-    }
-    catch (Throwable t) {
+    } catch (Throwable t) {
       //TODO Maybe log the state of the queue
       LOG.fatal("Error in dispatcher thread", t);
+      // If serviceStop is called, we should exit this thread gracefully.
       if (exitOnDispatchException
-          && (ShutdownHookManager.get().isShutdownInProgress()) == false) {
+          && (ShutdownHookManager.get().isShutdownInProgress()) == false
+          && stopped == false) {
         LOG.info("Exiting, bbye..");
         System.exit(-1);
       }

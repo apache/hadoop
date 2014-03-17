@@ -630,7 +630,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
         }
         this.eventQueue.put(event);
       } catch (InterruptedException e) {
-        throw new YarnRuntimeException(e);
+        LOG.info("Interrupted. Trying to exit gracefully.");
       }
     }
   }
