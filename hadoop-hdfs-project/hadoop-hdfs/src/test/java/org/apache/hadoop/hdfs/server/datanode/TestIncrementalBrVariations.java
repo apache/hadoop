@@ -21,11 +21,11 @@ import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getLongCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.UUID;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -38,10 +38,12 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.*;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.*;
+import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo.BlockStatus;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
 import org.junit.After;
@@ -53,6 +55,7 @@ import org.junit.Test;
  * correctly handled by NN. Tests the following variations:
  *  #1 - Incremental BRs from all storages combined in a single call.
  *  #2 - Incremental BRs from separate storages sent in separate calls.
+ *  #3 - Incremental BR from an unknown storage should be rejected.
  *
  *  We also verify that the DataNode is not splitting the reports (it may do so
  *  in the future).
@@ -71,6 +74,9 @@ public class TestIncrementalBrVariations {
   private DistributedFileSystem fs;
   private DFSClient client;
   private static Configuration conf;
+  private String poolId;
+  private DataNode dn0;           // DataNode at index0 in the MiniDFSCluster
+  private DatanodeRegistration dn0Reg;  // DataNodeRegistration for dn0
 
   static {
     ((Log4JLogger) NameNode.stateChangeLog).getLogger().setLevel(Level.ALL);
@@ -88,6 +94,9 @@ public class TestIncrementalBrVariations {
     fs = cluster.getFileSystem();
     client = new DFSClient(new InetSocketAddress("localhost", cluster.getNameNodePort()),
                            cluster.getConfiguration(0));
+    dn0 = cluster.getDataNodes().get(0);
+    poolId = cluster.getNamesystem().getBlockPoolId();
+    dn0Reg = dn0.getDNRegistrationForBP(poolId);
   }
 
   @After
@@ -132,19 +141,14 @@ public class TestIncrementalBrVariations {
     // Get the block list for the file with the block locations.
     LocatedBlocks blocks = createFileGetBlocks(GenericTestUtils.getMethodName());
 
-    // A blocks belong to the same file, hence same BP
-    DataNode dn = cluster.getDataNodes().get(0);
-    String poolId = cluster.getNamesystem().getBlockPoolId();
-    DatanodeRegistration dnR = dn.getDNRegistrationForBP(poolId);
-
     // We will send 'fake' incremental block reports to the NN that look
     // like they originated from DN 0.
     StorageReceivedDeletedBlocks reports[] =
-        new StorageReceivedDeletedBlocks[dn.getFSDataset().getVolumes().size()];
+        new StorageReceivedDeletedBlocks[dn0.getFSDataset().getVolumes().size()];
 
     // Lie to the NN that one block on each storage has been deleted.
     for (int i = 0; i < reports.length; ++i) {
-      FsVolumeSpi volume = dn.getFSDataset().getVolumes().get(i);
+      FsVolumeSpi volume = dn0.getFSDataset().getVolumes().get(i);
 
       boolean foundBlockOnStorage = false;
       ReceivedDeletedBlockInfo rdbi[] = new ReceivedDeletedBlockInfo[1];
@@ -166,13 +170,14 @@ public class TestIncrementalBrVariations {
       if (splitReports) {
         // If we are splitting reports then send the report for this storage now.
         StorageReceivedDeletedBlocks singletonReport[] = { reports[i] };
-        cluster.getNameNodeRpc().blockReceivedAndDeleted(dnR, poolId, singletonReport);
+        cluster.getNameNodeRpc().blockReceivedAndDeleted(
+            dn0Reg, poolId, singletonReport);
       }
     }
 
     if (!splitReports) {
       // Send a combined report.
-      cluster.getNameNodeRpc().blockReceivedAndDeleted(dnR, poolId, reports);
+      cluster.getNameNodeRpc().blockReceivedAndDeleted(dn0Reg, poolId, reports);
     }
 
     // Make sure that the deleted block from each storage was picked up
@@ -191,11 +196,10 @@ public class TestIncrementalBrVariations {
       throws IOException, InterruptedException {
     LocatedBlocks blocks = createFileGetBlocks(GenericTestUtils.getMethodName());
     assertThat(cluster.getDataNodes().size(), is(1));
-    DataNode dn = cluster.getDataNodes().get(0);
 
     // Remove all blocks from the DataNode.
     for (LocatedBlock block : blocks.getLocatedBlocks()) {
-      dn.notifyNamenodeDeletedBlock(
+      dn0.notifyNamenodeDeletedBlock(
           block.getBlock(), block.getStorageIDs()[0]);
     }
 
@@ -203,11 +207,55 @@ public class TestIncrementalBrVariations {
     long ops = getLongCounter("BlockReceivedAndDeletedOps", getMetrics(NN_METRICS));
 
     // Trigger a report to the NameNode and give it a few seconds.
-    DataNodeTestUtils.triggerBlockReport(dn);
+    DataNodeTestUtils.triggerBlockReport(dn0);
     Thread.sleep(5000);
 
     // Ensure that NameNodeRpcServer.blockReceivedAndDeletes is invoked
     // exactly once after we triggered the report.
     assertCounter("BlockReceivedAndDeletedOps", ops+1, getMetrics(NN_METRICS));
+  }
+
+  private static Block getDummyBlock() {
+    return new Block(10000000L, 100L, 1048576L);
+  }
+
+  private static StorageReceivedDeletedBlocks[] makeReportForReceivedBlock(
+      Block block, DatanodeStorage storage) {
+    ReceivedDeletedBlockInfo[] receivedBlocks = new ReceivedDeletedBlockInfo[1];
+    receivedBlocks[0] = new ReceivedDeletedBlockInfo(block, BlockStatus.RECEIVED_BLOCK, null);
+    StorageReceivedDeletedBlocks[] reports = new StorageReceivedDeletedBlocks[1];
+    reports[0] = new StorageReceivedDeletedBlocks(storage, receivedBlocks);
+    return reports;
+  }
+
+  /**
+   * Verify that the NameNode can learn about new storages from incremental
+   * block reports.
+   * This tests the fix for the error condition seen in HDFS-6904.
+   *
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  @Test (timeout=60000)
+  public void testNnLearnsNewStorages()
+      throws IOException, InterruptedException {
+
+    // Generate a report for a fake block on a fake storage.
+    final String newStorageUuid = UUID.randomUUID().toString();
+    final DatanodeStorage newStorage = new DatanodeStorage(newStorageUuid);
+    StorageReceivedDeletedBlocks[] reports = makeReportForReceivedBlock(
+        getDummyBlock(), newStorage);
+
+    // Send the report to the NN.
+    cluster.getNameNodeRpc().blockReceivedAndDeleted(dn0Reg, poolId, reports);
+
+    // Make sure that the NN has learned of the new storage.
+    DatanodeStorageInfo storageInfo = cluster.getNameNode()
+                                             .getNamesystem()
+                                             .getBlockManager()
+                                             .getDatanodeManager()
+                                             .getDatanode(dn0.getDatanodeId())
+                                             .getStorageInfo(newStorageUuid);
+    assertNotNull(storageInfo);
   }
 }

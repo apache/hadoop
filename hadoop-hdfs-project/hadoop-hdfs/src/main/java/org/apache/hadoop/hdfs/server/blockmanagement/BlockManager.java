@@ -1671,9 +1671,6 @@ public class BlockManager {
       if (storageInfo == null) {
         // We handle this for backwards compatibility.
         storageInfo = node.updateStorage(storage);
-        LOG.warn("Unknown storageId " + storage.getStorageID() +
-                    ", updating storageMap. This indicates a buggy " +
-                    "DataNode that isn't heartbeating correctly.");
       }
       if (namesystem.isInStartupSafeMode()
           && storageInfo.getBlockReportCount() > 0) {
@@ -2280,7 +2277,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
     if(storedBlock.getBlockUCState() == BlockUCState.COMMITTED &&
         numLiveReplicas >= minReplication) {
       storedBlock = completeBlock(bc, storedBlock, false);
-    } else if (storedBlock.isComplete()) {
+    } else if (storedBlock.isComplete() && added) {
       // check whether safe replication is reached for the block
       // only complete blocks are counted towards that
       // Is no-op if not in safe mode.
@@ -2861,8 +2858,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
    * This method must be called with FSNamesystem lock held.
    */
   public void processIncrementalBlockReport(final DatanodeID nodeID,
-      final String poolId, final StorageReceivedDeletedBlocks srdb)
-      throws IOException {
+      final StorageReceivedDeletedBlocks srdb) throws IOException {
     assert namesystem.hasWriteLock();
     int received = 0;
     int deleted = 0;
@@ -2877,6 +2873,15 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
           "Got incremental block report from unregistered or dead node");
     }
 
+    if (node.getStorageInfo(srdb.getStorage().getStorageID()) == null) {
+      // The DataNode is reporting an unknown storage. Usually the NN learns
+      // about new storages from heartbeats but during NN restart we may
+      // receive a block report or incremental report before the heartbeat.
+      // We must handle this for protocol compatibility. This issue was
+      // uncovered by HDFS-6904.
+      node.updateStorage(srdb.getStorage());
+    }
+
     for (ReceivedDeletedBlockInfo rdbi : srdb.getBlocks()) {
       switch (rdbi.getStatus()) {
       case DELETED_BLOCK:
@@ -2884,13 +2889,14 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
         deleted++;
         break;
       case RECEIVED_BLOCK:
-        addBlock(node, srdb.getStorageID(), rdbi.getBlock(), rdbi.getDelHints());
+        addBlock(node, srdb.getStorage().getStorageID(),
+            rdbi.getBlock(), rdbi.getDelHints());
         received++;
         break;
       case RECEIVING_BLOCK:
         receiving++;
-        processAndHandleReportedBlock(node, srdb.getStorageID(), rdbi.getBlock(),
-            ReplicaState.RBW, null);
+        processAndHandleReportedBlock(node, srdb.getStorage().getStorageID(),
+            rdbi.getBlock(), ReplicaState.RBW, null);
         break;
       default:
         String msg = 

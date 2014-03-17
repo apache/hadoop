@@ -23,20 +23,32 @@ package org.apache.hadoop.hdfs.server.protocol;
  * storage.
  */
 public class StorageReceivedDeletedBlocks {
-  private final String storageID;
+  DatanodeStorage storage;
   private final ReceivedDeletedBlockInfo[] blocks;
-  
+
+  @Deprecated
   public String getStorageID() {
-    return storageID;
+    return storage.getStorageID();
+  }
+
+  public DatanodeStorage getStorage() {
+    return storage;
   }
 
   public ReceivedDeletedBlockInfo[] getBlocks() {
     return blocks;
   }
 
+  @Deprecated
   public StorageReceivedDeletedBlocks(final String storageID,
       final ReceivedDeletedBlockInfo[] blocks) {
-    this.storageID = storageID;
+    this.storage = new DatanodeStorage(storageID);
+    this.blocks = blocks;
+  }
+
+  public StorageReceivedDeletedBlocks(final DatanodeStorage storage,
+      final ReceivedDeletedBlockInfo[] blocks) {
+    this.storage = storage;
     this.blocks = blocks;
   }
 }
