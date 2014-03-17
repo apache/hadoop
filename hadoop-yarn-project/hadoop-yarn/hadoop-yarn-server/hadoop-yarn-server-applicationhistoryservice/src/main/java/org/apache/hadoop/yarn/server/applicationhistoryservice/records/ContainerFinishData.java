@@ -35,14 +35,13 @@ public abstract class ContainerFinishData {
   @Public
   @Unstable
   public static ContainerFinishData newInstance(ContainerId containerId,
-      long finishTime, String diagnosticsInfo, String logURL,
-      int containerExitCode, ContainerState containerState) {
+      long finishTime, String diagnosticsInfo, int containerExitCode,
+      ContainerState containerState) {
     ContainerFinishData containerFD =
         Records.newRecord(ContainerFinishData.class);
     containerFD.setContainerId(containerId);
     containerFD.setFinishTime(finishTime);
     containerFD.setDiagnosticsInfo(diagnosticsInfo);
-    containerFD.setLogURL(logURL);
     containerFD.setContainerExitStatus(containerExitCode);
     containerFD.setContainerState(containerState);
     return containerFD;
@@ -71,14 +70,6 @@ public abstract class ContainerFinishData {
   @Public
   @Unstable
   public abstract void setDiagnosticsInfo(String diagnosticsInfo);
-
-  @Public
-  @Unstable
-  public abstract String getLogURL();
-
-  @Public
-  @Unstable
-  public abstract void setLogURL(String logURL);
 
   @Public
   @Unstable

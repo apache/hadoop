@@ -233,7 +233,7 @@ public class MemoryApplicationHistoryStore extends AbstractService implements
           ContainerHistoryData.newInstance(containerStart.getContainerId(),
             containerStart.getAllocatedResource(),
             containerStart.getAssignedNode(), containerStart.getPriority(),
-            containerStart.getStartTime(), Long.MAX_VALUE, null, null,
+            containerStart.getStartTime(), Long.MAX_VALUE, null,
             Integer.MAX_VALUE, null));
     if (oldData != null) {
       throw new IOException("The start information of container "
@@ -260,7 +260,6 @@ public class MemoryApplicationHistoryStore extends AbstractService implements
     }
     data.setFinishTime(containerFinish.getFinishTime());
     data.setDiagnosticsInfo(containerFinish.getDiagnosticsInfo());
-    data.setLogURL(containerFinish.getLogURL());
     data.setContainerExitStatus(containerFinish.getContainerExitStatus());
     data.setContainerState(containerFinish.getContainerState());
   }

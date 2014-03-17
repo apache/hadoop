@@ -104,8 +104,7 @@ public class TestRMContainerImpl {
         RMContainerEventType.LAUNCHED));
     drainDispatcher.await();
     assertEquals(RMContainerState.RUNNING, rmContainer.getState());
-    assertEquals(
-        "//host:3465/logs/host:3425/container_1_0001_01_000001/container_1_0001_01_000001/user",
+    assertEquals("//host:3465/node/containerlogs/container_1_0001_01_000001/user",
         rmContainer.getLogURL());
 
     // In RUNNING state. Verify RELEASED and associated actions.
@@ -191,8 +190,7 @@ public class TestRMContainerImpl {
         RMContainerEventType.LAUNCHED));
     drainDispatcher.await();
     assertEquals(RMContainerState.RUNNING, rmContainer.getState());
-    assertEquals(
-        "//host:3465/logs/host:3425/container_1_0001_01_000001/container_1_0001_01_000001/user",
+    assertEquals("//host:3465/node/containerlogs/container_1_0001_01_000001/user",
         rmContainer.getLogURL());
 
     // In RUNNING state. Verify EXPIRE and associated actions.

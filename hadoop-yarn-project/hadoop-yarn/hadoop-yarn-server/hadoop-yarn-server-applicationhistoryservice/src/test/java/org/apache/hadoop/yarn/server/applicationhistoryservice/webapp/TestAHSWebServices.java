@@ -25,6 +25,7 @@ import javax.ws.rs.core.MediaType;
 
 import org.junit.Assert;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -34,12 +35,14 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.api.ApplicationContext;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryManager;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryStore;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.MemoryApplicationHistoryStore;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
+import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
@@ -287,7 +290,12 @@ public class TestAHSWebServices extends JerseyTest {
       container.getString("assignedNodeId"));
     assertEquals(Priority.newInstance(containerId.getId()).toString(),
       container.getString("priority"));
-    assertEquals("http://localhost:0/log", container.getString("logUrl"));
+    Configuration conf = new YarnConfiguration();
+    assertEquals(WebAppUtils.getHttpSchemePrefix(conf) +
+        WebAppUtils.getAHSWebAppURLWithoutScheme(conf) +
+        "/applicationhistory/logs/localhost:0/container_0_0001_01_000001/" +
+        "container_0_0001_01_000001/test user",
+        container.getString("logUrl"));
     assertEquals(ContainerState.COMPLETE.toString(),
       container.getString("containerState"));
   }

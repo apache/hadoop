@@ -495,6 +495,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1830. Fixed TestRMRestart#testQueueMetricsOnRMRestart failure due to
     race condition when app is submitted. (Zhijie Shen via jianhe)
 
+    YARN-1685. Fixed few bugs related to handling of containers' log-URLs on
+    ResourceManager and history-service. (Zhijie Shen via vinodkv)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

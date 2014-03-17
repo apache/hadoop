@@ -39,6 +39,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.records.ApplicationAttemptHistoryData;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.records.ApplicationHistoryData;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.records.ContainerHistoryData;
+import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -49,6 +50,7 @@ public class ApplicationHistoryManagerImpl extends AbstractService implements
   private static final String UNAVAILABLE = "N/A";
 
   private ApplicationHistoryStore historyStore;
+  private String serverHttpAddress;
 
   public ApplicationHistoryManagerImpl() {
     super(ApplicationHistoryManagerImpl.class.getName());
@@ -59,6 +61,8 @@ public class ApplicationHistoryManagerImpl extends AbstractService implements
     LOG.info("ApplicationHistory Init");
     historyStore = createApplicationHistoryStore(conf);
     historyStore.init(conf);
+    serverHttpAddress = WebAppUtils.getHttpSchemePrefix(conf) +
+        WebAppUtils.getAHSWebAppURLWithoutScheme(conf);
     super.serviceInit(conf);
   }
 
@@ -87,7 +91,10 @@ public class ApplicationHistoryManagerImpl extends AbstractService implements
   @Override
   public ContainerReport getAMContainer(ApplicationAttemptId appAttemptId)
       throws IOException {
-    return convertToContainerReport(historyStore.getAMContainer(appAttemptId));
+    ApplicationReport app =
+        getApplication(appAttemptId.getApplicationId());
+    return convertToContainerReport(historyStore.getAMContainer(appAttemptId),
+        app == null ? null : app.getUser());
   }
 
   @Override
@@ -187,16 +194,26 @@ public class ApplicationHistoryManagerImpl extends AbstractService implements
   @Override
   public ContainerReport getContainer(ContainerId containerId)
       throws IOException {
-    return convertToContainerReport(historyStore.getContainer(containerId));
+    ApplicationReport app =
+        getApplication(containerId.getApplicationAttemptId().getApplicationId());
+    return convertToContainerReport(historyStore.getContainer(containerId),
+        app == null ? null: app.getUser());
   }
 
   private ContainerReport convertToContainerReport(
-      ContainerHistoryData containerHistory) {
+      ContainerHistoryData containerHistory, String user) {
+    // If the container has the aggregated log, add the server root url
+    String logUrl = WebAppUtils.getAggregatedLogURL(
+        serverHttpAddress,
+        containerHistory.getAssignedNode().toString(),
+        containerHistory.getContainerId().toString(),
+        containerHistory.getContainerId().toString(),
+        user);
     return ContainerReport.newInstance(containerHistory.getContainerId(),
       containerHistory.getAllocatedResource(),
       containerHistory.getAssignedNode(), containerHistory.getPriority(),
       containerHistory.getStartTime(), containerHistory.getFinishTime(),
-      containerHistory.getDiagnosticsInfo(), containerHistory.getLogURL(),
+      containerHistory.getDiagnosticsInfo(), logUrl,
       containerHistory.getContainerExitStatus(),
       containerHistory.getContainerState());
   }
@@ -204,13 +221,16 @@ public class ApplicationHistoryManagerImpl extends AbstractService implements
   @Override
   public Map<ContainerId, ContainerReport> getContainers(
       ApplicationAttemptId appAttemptId) throws IOException {
+    ApplicationReport app =
+        getApplication(appAttemptId.getApplicationId());
     Map<ContainerId, ContainerHistoryData> histData =
         historyStore.getContainers(appAttemptId);
     HashMap<ContainerId, ContainerReport> containersReport =
         new HashMap<ContainerId, ContainerReport>();
     for (Entry<ContainerId, ContainerHistoryData> entry : histData.entrySet()) {
       containersReport.put(entry.getKey(),
-        convertToContainerReport(entry.getValue()));
+        convertToContainerReport(entry.getValue(),
+            app == null ? null : app.getUser()));
     }
     return containersReport;
   }
