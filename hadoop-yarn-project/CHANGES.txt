@@ -486,6 +486,10 @@ Release 2.4.0 - UNRELEASED
     YARN-1206. Fixed AM container log to show on NM web page after application
     finishes if log-aggregation is disabled. (Rohith Sharmaks via jianhe)
 
+    YARN-1591. Fixed AsyncDispatcher to handle interrupts on shutdown in a sane
+    manner and thus fix failure of TestResourceTrackerService. (Tsuyoshi Ozawa
+    via vinodkv)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
