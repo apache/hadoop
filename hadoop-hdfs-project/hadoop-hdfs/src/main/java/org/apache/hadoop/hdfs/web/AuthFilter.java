@@ -64,8 +64,10 @@ public class AuthFilter extends AuthenticationFilter {
     // set authentication type
     p.setProperty(AUTH_TYPE, UserGroupInformation.isSecurityEnabled()?
         KerberosAuthenticationHandler.TYPE: PseudoAuthenticationHandler.TYPE);
-    //For Pseudo Authentication, allow anonymous.
-    p.setProperty(PseudoAuthenticationHandler.ANONYMOUS_ALLOWED, "true");
+    // if not set, enable anonymous for pseudo authentication
+    if (p.getProperty(PseudoAuthenticationHandler.ANONYMOUS_ALLOWED) == null) {
+      p.setProperty(PseudoAuthenticationHandler.ANONYMOUS_ALLOWED, "true");
+    }
     //set cookie path
     p.setProperty(COOKIE_PATH, "/");
     return p;

@@ -75,4 +75,27 @@ public class TestAuthFilter {
     Assert.assertEquals("true",
         p.getProperty(PseudoAuthenticationHandler.ANONYMOUS_ALLOWED));
   }
+  
+  @Test
+  public void testGetSimpleAuthDisabledConfiguration() throws ServletException {
+    AuthFilter filter = new AuthFilter();
+    Map<String, String> m = new HashMap<String,String>();
+    m.put(DFSConfigKeys.DFS_WEB_AUTHENTICATION_SIMPLE_ANONYMOUS_ALLOWED,
+        "false");
+    FilterConfig config = new DummyFilterConfig(m);
+    Properties p = filter.getConfiguration("random", config);
+    Assert.assertEquals("false",
+        p.getProperty(PseudoAuthenticationHandler.ANONYMOUS_ALLOWED));
+  }
+  
+  @Test
+  public void testGetSimpleAuthDefaultConfiguration() throws ServletException {
+    AuthFilter filter = new AuthFilter();
+    Map<String, String> m = new HashMap<String,String>();
+    
+    FilterConfig config = new DummyFilterConfig(m);
+    Properties p = filter.getConfiguration("random", config);
+    Assert.assertEquals("true",
+        p.getProperty(PseudoAuthenticationHandler.ANONYMOUS_ALLOWED));
+  }
 }
