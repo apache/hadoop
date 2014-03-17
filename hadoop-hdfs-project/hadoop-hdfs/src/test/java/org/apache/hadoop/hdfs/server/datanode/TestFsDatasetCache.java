@@ -546,7 +546,7 @@ public class TestFsDatasetCache {
         MetricsAsserts.getLongCounter("BlocksCached", dnMetrics));
     
     // Uncache the big file and verify that the small file can now be
-    // cached (regression test for HDFS-XXXX)
+    // cached (regression test for HDFS-6107)
     dfs.removeCacheDirective(bigCacheDirectiveId);
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
       @Override
