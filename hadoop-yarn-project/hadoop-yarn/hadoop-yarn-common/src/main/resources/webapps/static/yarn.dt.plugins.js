@@ -75,7 +75,7 @@ jQuery.fn.dataTableExt.oApi.fnSetFilteringDelay = function ( oSettings, iDelay )
 
 function renderHadoopDate(data, type, full) {
   if (type === 'display' || type === 'filter') {
-    if(data === '0') {
+    if(data === '0'|| data === '-1') {
       return "N/A";
     }
     return new Date(parseInt(data)).toUTCString();
