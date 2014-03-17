@@ -503,6 +503,13 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
                     DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_KEYTAB_KEY,
                     httpKeytab);
               }
+              String anonymousAllowed = conf
+                  .get(DFSConfigKeys.DFS_WEB_AUTHENTICATION_SIMPLE_ANONYMOUS_ALLOWED);
+              if (anonymousAllowed != null && !anonymousAllowed.isEmpty()) {
+                params.put(
+                    DFSConfigKeys.DFS_WEB_AUTHENTICATION_SIMPLE_ANONYMOUS_ALLOWED,
+                    anonymousAllowed);
+              }
               return params;
             }
           };

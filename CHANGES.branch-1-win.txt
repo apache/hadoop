@@ -510,3 +510,6 @@ Branch-hadoop-1-win (branched from branch-1 at r1293509 on 2012-02-24 17:46:42)
 
     HADOOP-10142. Avoid groups lookup for unprivileged users such as "dr.who"
     (vinay, backported by Xi Fang via cnauroth)
+
+    HDFS-5516. WebHDFS does not require user name when anonymous http requests
+    are disallowed. (Miodrag Radulovic via cnauroth)
