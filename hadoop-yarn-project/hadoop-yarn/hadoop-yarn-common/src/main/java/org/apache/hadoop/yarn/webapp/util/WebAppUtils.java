@@ -17,7 +17,7 @@
 */
 package org.apache.hadoop.yarn.webapp.util;
 
-import static org.apache.hadoop.yarn.util.StringHelper.join;
+import static org.apache.hadoop.yarn.util.StringHelper.PATH_JOINER;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -29,9 +29,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpConfig.Policy;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 
 @Private
 @Evolving
@@ -169,18 +167,35 @@ public class WebAppUtils {
     }
   }
   
-  public static String getLogUrl(String nodeHttpAddress, String allocatedNode,
-      ContainerId containerId, String user) {
-    return join("//", nodeHttpAddress, "/logs", "/",
-        allocatedNode, "/", ConverterUtils.toString(containerId), "/",
-        ConverterUtils.toString(containerId), "/", user);
+  public static String getRunningLogURL(
+      String nodeHttpAddress, String containerId, String user) {
+    if (nodeHttpAddress == null || nodeHttpAddress.isEmpty() ||
+        containerId == null || containerId.isEmpty() ||
+        user == null || user.isEmpty()) {
+      return null;
+    }
+    return PATH_JOINER.join(
+        nodeHttpAddress, "node", "containerlogs", containerId, user);
+  }
+
+  public static String getAggregatedLogURL(String serverHttpAddress,
+      String allocatedNode, String containerId, String entity, String user) {
+    if (serverHttpAddress == null || serverHttpAddress.isEmpty() ||
+        allocatedNode == null || allocatedNode.isEmpty() ||
+        containerId == null || containerId.isEmpty() ||
+        entity == null || entity.isEmpty() ||
+        user == null || user.isEmpty()) {
+      return null;
+    }
+    return PATH_JOINER.join(serverHttpAddress, "applicationhistory", "logs",
+        allocatedNode, containerId, entity, user);
   }
 
   /**
    * Choose which scheme (HTTP or HTTPS) to use when generating a URL based on
    * the configuration.
    * 
-   * @return the schmeme (HTTP / HTTPS)
+   * @return the scheme (HTTP / HTTPS)
    */
   public static String getHttpSchemePrefix(Configuration conf) {
     return YarnConfiguration.useHttps(conf) ? HTTPS_PREFIX : HTTP_PREFIX;

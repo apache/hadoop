@@ -18,7 +18,6 @@
 package org.apache.hadoop.yarn.server.webapp;
 
 import static org.apache.hadoop.yarn.util.StringHelper.join;
-import static org.apache.hadoop.yarn.util.StringHelper.getPartUrl;
 import static org.apache.hadoop.yarn.webapp.YarnWebParams.CONTAINER_ID;
 
 import java.io.IOException;
@@ -79,8 +78,6 @@ public class ContainerBlock extends HtmlBlock {
     }
 
     ContainerInfo container = new ContainerInfo(containerReport);
-    String logURL = containerReport.getLogUrl();
-    logURL = getPartUrl(logURL, "log");
     setTitle(join("Container ", containerid));
 
     info("Container Overview")
@@ -97,7 +94,8 @@ public class ContainerBlock extends HtmlBlock {
         "Resource:",
         container.getAllocatedMB() + " Memory, "
             + container.getAllocatedVCores() + " VCores")
-      ._("Logs:", logURL == null ? "#" : url(logURL), "Logs")
+      ._("Logs:", container.getLogUrl() == null ? "#" : container.getLogUrl(),
+          container.getLogUrl() == null ? "N/A" : "Logs")
       ._("Diagnostics:", container.getDiagnosticsInfo());
 
     html._(InfoBlock.class);

@@ -280,7 +280,7 @@ public class RMApplicationHistoryWriter extends CompositeService {
         new WritingContainerFinishEvent(container.getContainerId(),
           ContainerFinishData.newInstance(container.getContainerId(),
             container.getFinishTime(), container.getDiagnosticsInfo(),
-            container.getLogURL(), container.getContainerExitStatus(),
+            container.getContainerExitStatus(),
             container.getContainerState())));
     }
   }

@@ -102,25 +102,6 @@ public class ContainerFinishDataPBImpl extends ContainerFinishData {
   }
 
   @Override
-  public String getLogURL() {
-    ContainerFinishDataProtoOrBuilder p = viaProto ? proto : builder;
-    if (!p.hasLogUrl()) {
-      return null;
-    }
-    return p.getLogUrl();
-  }
-
-  @Override
-  public void setLogURL(String logURL) {
-    maybeInitBuilder();
-    if (logURL == null) {
-      builder.clearLogUrl();
-      return;
-    }
-    builder.setLogUrl(logURL);
-  }
-
-  @Override
   public int getContainerExitStatus() {
     ContainerFinishDataProtoOrBuilder p = viaProto ? proto : builder;
     return p.getContainerExitStatus();

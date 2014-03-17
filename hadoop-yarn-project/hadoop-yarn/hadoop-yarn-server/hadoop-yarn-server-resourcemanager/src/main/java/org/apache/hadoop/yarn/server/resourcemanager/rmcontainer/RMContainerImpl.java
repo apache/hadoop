@@ -44,6 +44,7 @@ import org.apache.hadoop.yarn.state.InvalidStateTransitonException;
 import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
+import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 @SuppressWarnings({"unchecked", "rawtypes"})
@@ -148,7 +149,6 @@ public class RMContainerImpl implements RMContainer {
   private Priority reservedPriority;
   private long startTime;
   private long finishTime;
-  private String logURL;
   private ContainerStatus finishedStatus;
 
 
@@ -264,7 +264,8 @@ public class RMContainerImpl implements RMContainer {
   public String getLogURL() {
     try {
       readLock.lock();
-      return logURL;
+      return WebAppUtils.getRunningLogURL("//" + container.getNodeHttpAddress(),
+          ConverterUtils.toString(containerId), user);
     } finally {
       readLock.unlock();
     }
@@ -380,11 +381,6 @@ public class RMContainerImpl implements RMContainer {
 
     @Override
     public void transition(RMContainerImpl container, RMContainerEvent event) {
-      // The logs of running containers should be found on NM webUI
-      // The logs should be accessible after the container is launched
-      container.logURL = WebAppUtils.getLogUrl(container.container
-          .getNodeHttpAddress(), container.getAllocatedNode().toString(),
-          container.containerId, container.user);
       // Unregister from containerAllocationExpirer.
       container.containerAllocationExpirer.unregister(container
           .getContainerId());
@@ -399,9 +395,6 @@ public class RMContainerImpl implements RMContainer {
 
       container.finishTime = System.currentTimeMillis();
       container.finishedStatus = finishedEvent.getRemoteContainerStatus();
-      // TODO: when AHS webUI is ready, logURL should be updated to point to
-      // the web page that will show the aggregated logs
-
       // Inform AppAttempt
       container.eventHandler.handle(new RMAppAttemptContainerFinishedEvent(
           container.appAttemptId, finishedEvent.getRemoteContainerStatus()));
@@ -415,7 +408,6 @@ public class RMContainerImpl implements RMContainer {
       FinishedTransition {
     @Override
     public void transition(RMContainerImpl container, RMContainerEvent event) {
-
       // Unregister from containerAllocationExpirer.
       container.containerAllocationExpirer.unregister(container
           .getContainerId());

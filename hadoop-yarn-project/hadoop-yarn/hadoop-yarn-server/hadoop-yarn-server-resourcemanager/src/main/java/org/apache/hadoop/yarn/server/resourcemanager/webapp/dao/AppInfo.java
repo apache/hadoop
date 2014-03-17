@@ -17,14 +17,11 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
 
-import static org.apache.hadoop.yarn.util.StringHelper.join;
-
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
 
-import com.google.common.base.Joiner;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -37,6 +34,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
+
+import com.google.common.base.Joiner;
 
 @XmlRootElement(name = "app")
 @XmlAccessorType(XmlAccessType.FIELD)
@@ -131,12 +130,10 @@ public class AppInfo {
           Container masterContainer = attempt.getMasterContainer();
           if (masterContainer != null) {
             this.amContainerLogsExist = true;
-            String url = join(schemePrefix,
-                masterContainer.getNodeHttpAddress(),
-                "/node", "/containerlogs/",
+            this.amContainerLogs = WebAppUtils.getRunningLogURL(
+                schemePrefix + masterContainer.getNodeHttpAddress(),
                 ConverterUtils.toString(masterContainer.getId()),
-                "/", app.getUser());
-            this.amContainerLogs = url;
+                app.getUser());
             this.amHostHttpAddress = masterContainer.getNodeHttpAddress();
           }
           

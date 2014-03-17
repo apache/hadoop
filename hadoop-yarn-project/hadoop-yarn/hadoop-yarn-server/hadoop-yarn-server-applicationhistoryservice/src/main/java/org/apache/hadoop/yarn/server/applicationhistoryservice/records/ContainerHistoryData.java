@@ -48,8 +48,6 @@ public class ContainerHistoryData {
 
   private String diagnosticsInfo;
 
-  private String logURL;
-
   private int containerExitStatus;
 
   private ContainerState containerState;
@@ -58,7 +56,7 @@ public class ContainerHistoryData {
   @Unstable
   public static ContainerHistoryData newInstance(ContainerId containerId,
       Resource allocatedResource, NodeId assignedNode, Priority priority,
-      long startTime, long finishTime, String diagnosticsInfo, String logURL,
+      long startTime, long finishTime, String diagnosticsInfo,
       int containerExitCode, ContainerState containerState) {
     ContainerHistoryData containerHD = new ContainerHistoryData();
     containerHD.setContainerId(containerId);
@@ -68,7 +66,6 @@ public class ContainerHistoryData {
     containerHD.setStartTime(startTime);
     containerHD.setFinishTime(finishTime);
     containerHD.setDiagnosticsInfo(diagnosticsInfo);
-    containerHD.setLogURL(logURL);
     containerHD.setContainerExitStatus(containerExitCode);
     containerHD.setContainerState(containerState);
     return containerHD;
@@ -156,18 +153,6 @@ public class ContainerHistoryData {
   @Unstable
   public void setDiagnosticsInfo(String diagnosticsInfo) {
     this.diagnosticsInfo = diagnosticsInfo;
-  }
-
-  @Public
-  @Unstable
-  public String getLogURL() {
-    return logURL;
-  }
-
-  @Public
-  @Unstable
-  public void setLogURL(String logURL) {
-    this.logURL = logURL;
   }
 
   @Public

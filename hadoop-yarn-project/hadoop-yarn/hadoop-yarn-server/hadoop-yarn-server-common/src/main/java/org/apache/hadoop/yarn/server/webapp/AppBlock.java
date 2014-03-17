@@ -19,14 +19,12 @@
 package org.apache.hadoop.yarn.server.webapp;
 
 import static org.apache.hadoop.yarn.util.StringHelper.join;
-import static org.apache.hadoop.yarn.util.StringHelper.getPartUrl;
 import static org.apache.hadoop.yarn.webapp.YarnWebParams.APPLICATION_ID;
 
 import java.io.IOException;
 import java.util.Collection;
 
 import org.apache.commons.lang.StringEscapeUtils;
-import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -145,7 +143,6 @@ public class AppBlock extends HtmlBlock {
         ContainerInfo container = new ContainerInfo(containerReport);
         startTime = container.getStartedTime();
         logsLink = containerReport.getLogUrl();
-        logsLink = getPartUrl(logsLink, "log");
       }
       String nodeLink = null;
       if (appAttempt.getHost() != null && appAttempt.getRpcPort() >= 0
@@ -169,8 +166,8 @@ public class AppBlock extends HtmlBlock {
           nodeLink == null ? "N/A" : StringEscapeUtils
             .escapeJavaScript(StringEscapeUtils.escapeHtml(nodeLink)))
         .append("</a>\",\"<a href='")
-        .append(logsLink == null ? "#" : url(logsLink)).append("'>")
-        .append(nodeLink == null ? "N/A" : "Logs").append("</a>\"],\n");
+        .append(logsLink == null ? "#" : logsLink).append("'>")
+        .append(logsLink == null ? "N/A" : "Logs").append("</a>\"],\n");
     }
     if (attemptsTableData.charAt(attemptsTableData.length() - 2) == ',') {
       attemptsTableData.delete(attemptsTableData.length() - 2,
