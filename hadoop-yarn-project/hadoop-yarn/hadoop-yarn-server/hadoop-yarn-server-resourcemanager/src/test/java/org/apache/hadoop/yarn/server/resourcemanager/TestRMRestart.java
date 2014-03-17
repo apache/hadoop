@@ -1614,7 +1614,7 @@ public class TestRMRestart {
   }
 
   @SuppressWarnings("resource")
-  @Test
+  @Test (timeout = 60000)
   public void testQueueMetricsOnRMRestart() throws Exception {
     conf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
         YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
@@ -1674,15 +1674,14 @@ public class TestRMRestart {
             ContainerState.COMPLETE, "Killed AM container", 143);
     containerStatuses.add(containerStatus);
     nm1.registerNode(containerStatuses);
-    int timeoutSecs = 0;
-    while (loadedApp1.getAppAttempts().size() != 2 && timeoutSecs++ < 40) {;
+    while (loadedApp1.getAppAttempts().size() != 2) {
       Thread.sleep(200);
     }
-
-    assertQueueMetrics(qm2, 1, 1, 0, 0);
-    nm1.nodeHeartbeat(true);
     attempt1 = loadedApp1.getCurrentAppAttempt();
     attemptId1 = attempt1.getAppAttemptId();
+    rm2.waitForState(attemptId1, RMAppAttemptState.SCHEDULED);
+    assertQueueMetrics(qm2, 1, 1, 0, 0);
+    nm1.nodeHeartbeat(true);
     rm2.waitForState(attemptId1, RMAppAttemptState.ALLOCATED);
     assertQueueMetrics(qm2, 1, 0, 1, 0);
     am1 = rm2.sendAMLaunched(attempt1.getAppAttemptId());
