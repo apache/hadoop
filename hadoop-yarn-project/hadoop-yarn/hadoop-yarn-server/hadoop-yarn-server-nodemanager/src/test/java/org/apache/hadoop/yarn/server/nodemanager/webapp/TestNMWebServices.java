@@ -352,6 +352,16 @@ public class TestNMWebServices extends JerseyTest {
     Assert.assertEquals(Status.NOT_FOUND.getStatusCode(), response.getStatus());
     responseText = response.getEntity(String.class);
     assertTrue(responseText.contains("Cannot find this log on the local disk."));
+    
+    // After container is completed, it is removed from nmContext
+    nmContext.getContainers().remove(containerId);
+    Assert.assertNull(nmContext.getContainers().get(containerId));
+    response =
+        r.path("ws").path("v1").path("node").path("containerlogs")
+            .path(containerIdStr).path(filename).accept(MediaType.TEXT_PLAIN)
+            .get(ClientResponse.class);
+    responseText = response.getEntity(String.class);
+    assertEquals(logMessage, responseText);
   }
 
   public void verifyNodesXML(NodeList nodes) throws JSONException, Exception {

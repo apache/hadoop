@@ -49,10 +49,13 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.NodeHealthCheckerService;
+import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
+import org.apache.hadoop.yarn.server.nodemanager.NodeManager.NMContext;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.ContainerLogsPage.ContainersLogsBlock;
+import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.webapp.YarnWebParams;
 import org.apache.hadoop.yarn.webapp.test.WebAppTests;
@@ -74,6 +77,7 @@ public class TestContainerLogsPage {
     NodeHealthCheckerService healthChecker = new NodeHealthCheckerService();
     healthChecker.init(conf);
     LocalDirsHandlerService dirsHandler = healthChecker.getDiskHandler();
+    NMContext nmContext = new NodeManager.NMContext(null, null, dirsHandler, new ApplicationACLsManager(conf));
     // Add an application and the corresponding containers
     RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(conf);
     String user = "nobody";
@@ -87,9 +91,21 @@ public class TestContainerLogsPage {
         appId, 1);
     ContainerId container1 = BuilderUtils.newContainerId(recordFactory, appId,
         appAttemptId, 0);
+    nmContext.getApplications().put(appId, app);
+
+    MockContainer container =
+        new MockContainer(appAttemptId, new AsyncDispatcher(), conf, user,
+            appId, 1);
+    container.setState(ContainerState.RUNNING);
+    nmContext.getContainers().put(container1, container);   
     List<File> files = null;
-    files = ContainerLogsUtils.getContainerLogDirs(
-        container1, dirsHandler);
+    files = ContainerLogsUtils.getContainerLogDirs(container1, user, nmContext);
+    Assert.assertTrue(!(files.get(0).toString().contains("file:")));
+    
+    // After container is completed, it is removed from nmContext
+    nmContext.getContainers().remove(container1);
+    Assert.assertNull(nmContext.getContainers().get(container1));
+    files = ContainerLogsUtils.getContainerLogDirs(container1, user, nmContext);
     Assert.assertTrue(!(files.get(0).toString().contains("file:")));
   }
   
