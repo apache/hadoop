@@ -138,6 +138,19 @@ public class NMTokenSecretManagerInRM extends BaseNMTokenSecretManager {
     }
   }
 
+  public void clearNodeSetForAttempt(ApplicationAttemptId attemptId) {
+    super.writeLock.lock();
+    try {
+      HashSet<NodeId> nodeSet = this.appAttemptToNodeKeyMap.get(attemptId);
+      if (nodeSet != null) {
+        LOG.info("Clear node set for " + attemptId);
+        nodeSet.clear();
+      }
+    } finally {
+      super.writeLock.unlock();
+    }
+  }
+
   private void clearApplicationNMTokenKeys() {
     // We should clear all node entries from this set.
     // TODO : Once we have per node master key then it will change to only
@@ -184,22 +197,13 @@ public class NMTokenSecretManagerInRM extends BaseNMTokenSecretManager {
       NMToken nmToken = null;
       if (nodeSet != null) {
         if (!nodeSet.contains(container.getNodeId())) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Sending NMToken for nodeId : "
-                + container.getNodeId().toString()
-                + " for application attempt : " + appAttemptId.toString());
-          }
+          LOG.info("Sending NMToken for nodeId : " + container.getNodeId()
+              + " for container : " + container.getId());
           Token token =
               createNMToken(container.getId().getApplicationAttemptId(),
                 container.getNodeId(), applicationSubmitter);
           nmToken = NMToken.newInstance(container.getNodeId(), token);
-          // The node set here is used for differentiating whether the NMToken
-          // has been issued for this node from the client's perspective. If
-          // this is an AM container, the NMToken is issued only for RM and so
-          // we should not update the node set.
-          if (container.getId().getId() != 1) {
-            nodeSet.add(container.getNodeId());
-          }
+          nodeSet.add(container.getNodeId());
         }
       }
       return nmToken;
