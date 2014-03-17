@@ -623,6 +623,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-6102. Lower the default maximum items per directory to fix PB fsimage
     loading. (wang)
 
+    HDFS-6094. The same block can be counted twice towards safe mode
+    threshold. (Arpit Agarwal)
+
   BREAKDOWN OF HDFS-5698 SUBTASKS AND RELATED JIRAS
 
     HDFS-5717. Save FSImage header in protobuf. (Haohui Mai via jing9)

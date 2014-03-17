@@ -79,7 +79,7 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
 
   /**
    * Create rolling logs.
-   * 
+   *
    * @param prefix the prefix of the log names.
    * @return rolling logs
    */
@@ -88,6 +88,9 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
 
   /** @return a list of volumes. */
   public List<V> getVolumes();
+
+  /** @return a storage with the given storage ID */
+  public DatanodeStorage getStorage(final String storageUuid);
 
   /** @return one or more storage reports for attached volumes. */
   public StorageReport[] getStorageReports(String bpid)

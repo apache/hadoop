@@ -289,8 +289,9 @@ message ReceivedDeletedBlockInfoProto {
  * List of blocks received and deleted for a storage.
  */
 message StorageReceivedDeletedBlocksProto {
-  required string storageUuid = 1;
+  required string storageUuid = 1 [ deprecated = true ];
   repeated ReceivedDeletedBlockInfoProto blocks = 2;
+  optional DatanodeStorageProto storage = 3;   // supersedes storageUuid.
 }
 
 /**

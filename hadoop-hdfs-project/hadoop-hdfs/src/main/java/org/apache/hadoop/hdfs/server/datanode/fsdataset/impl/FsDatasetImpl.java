@@ -75,6 +75,11 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     return volumes.volumes;
   }
 
+  @Override
+  public DatanodeStorage getStorage(final String storageUuid) {
+    return storageMap.get(storageUuid);
+  }
+
   @Override // FsDatasetSpi
   public StorageReport[] getStorageReports(String bpid)
       throws IOException {
@@ -157,6 +162,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   final DataNode datanode;
   final DataStorage dataStorage;
   final FsVolumeList volumes;
+  final Map<String, DatanodeStorage> storageMap;
   final FsDatasetAsyncDiskService asyncDiskService;
   final FsDatasetCache cacheManager;
   private final int validVolsRequired;
@@ -198,6 +204,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
           + ", volume failures tolerated: " + volFailuresTolerated);
     }
 
+    storageMap = new HashMap<String, DatanodeStorage>();
     final List<FsVolumeImpl> volArray = new ArrayList<FsVolumeImpl>(
         storage.getNumStorageDirs());
     for (int idx = 0; idx < storage.getNumStorageDirs(); idx++) {
@@ -207,6 +214,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       volArray.add(new FsVolumeImpl(this, sd.getStorageUuid(), dir, conf,
           storageType));
       LOG.info("Added volume - " + dir + ", StorageType: " + storageType);
+      storageMap.put(sd.getStorageUuid(),
+          new DatanodeStorage(sd.getStorageUuid(), DatanodeStorage.State.NORMAL, storageType));
     }
     volumeMap = new ReplicaMap(this);
 
