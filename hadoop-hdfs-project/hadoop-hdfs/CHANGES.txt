@@ -385,6 +385,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-6094. The same block can be counted twice towards safe mode
     threshold. (Arpit Agarwal)
 
+    HDFS-5516. WebHDFS does not require user name when anonymous http requests
+    are disallowed. (Miodrag Radulovic via cnauroth)
+
   BREAKDOWN OF HDFS-5698 SUBTASKS AND RELATED JIRAS
 
     HDFS-5717. Save FSImage header in protobuf. (Haohui Mai via jing9)
