@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.conf;
 
-import junit.framework.Assert;
+import org.junit.Assert;
 
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.junit.Test;

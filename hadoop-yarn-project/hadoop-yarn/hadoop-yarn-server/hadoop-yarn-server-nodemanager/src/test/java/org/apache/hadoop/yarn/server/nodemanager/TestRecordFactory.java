@@ -24,7 +24,7 @@ import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.LocalizerHe
 import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.impl.pb.LocalizerHeartbeatResponsePBImpl;
 
 import org.junit.Test;
-import junit.framework.Assert;
+import org.junit.Assert;
 
 public class TestRecordFactory {
   

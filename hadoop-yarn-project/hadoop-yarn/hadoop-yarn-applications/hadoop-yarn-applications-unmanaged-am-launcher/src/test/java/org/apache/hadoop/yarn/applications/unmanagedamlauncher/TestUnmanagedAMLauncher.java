@@ -28,7 +28,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URL;
 
-import junit.framework.Assert;
+import org.junit.Assert;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;

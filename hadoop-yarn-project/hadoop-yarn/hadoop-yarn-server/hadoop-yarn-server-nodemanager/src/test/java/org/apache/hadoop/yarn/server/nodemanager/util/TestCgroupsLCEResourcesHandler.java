@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.yarn.server.nodemanager.util;
 
-import junit.framework.Assert;
+import org.junit.Assert;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.util.Clock;
 import org.junit.Test;

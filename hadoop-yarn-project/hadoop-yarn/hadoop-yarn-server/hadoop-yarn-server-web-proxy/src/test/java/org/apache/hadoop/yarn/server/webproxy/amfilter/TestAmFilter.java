@@ -27,7 +27,7 @@ import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import static junit.framework.Assert.*;
+import static org.junit.Assert.*;
 
 import org.apache.hadoop.yarn.server.webproxy.WebAppProxyServlet;
 import org.glassfish.grizzly.servlet.HttpServletResponseImpl;
