@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
 
-import static org.apache.hadoop.yarn.util.StringHelper.join;
-
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
@@ -26,6 +24,7 @@ import javax.xml.bind.annotation.XmlRootElement;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 @XmlRootElement(name = "appAttempt")
 @XmlAccessorType(XmlAccessType.FIELD)
@@ -55,10 +54,9 @@ public class AppAttemptInfo {
         this.containerId = masterContainer.getId().toString();
         this.nodeHttpAddress = masterContainer.getNodeHttpAddress();
         this.nodeId = masterContainer.getNodeId().toString();
-        this.logsLink = join("//",
-            masterContainer.getNodeHttpAddress(),
-            "/node", "/containerlogs/",
-            ConverterUtils.toString(masterContainer.getId()), "/", user);
+        this.logsLink =
+            WebAppUtils.getRunningLogURL("//" + masterContainer.getNodeHttpAddress(),
+                ConverterUtils.toString(masterContainer.getId()), user);
       }
     }
   }

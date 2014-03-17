@@ -296,7 +296,6 @@ public class TestRMApplicationHistoryWriter {
     }
     Assert.assertEquals("test diagnostics info",
       containerHD.getDiagnosticsInfo());
-    Assert.assertEquals("test log url", containerHD.getLogURL());
     Assert.assertEquals(-1, containerHD.getContainerExitStatus());
     Assert.assertEquals(ContainerState.COMPLETE,
       containerHD.getContainerState());

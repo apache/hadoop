@@ -44,6 +44,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -52,11 +53,16 @@ public class TestApplicationHistoryClientService extends
     ApplicationHistoryStoreTestUtils {
 
   ApplicationHistoryServer historyServer = null;
+  String expectedLogUrl = null;
 
   @Before
   public void setup() {
     historyServer = new ApplicationHistoryServer();
     Configuration config = new YarnConfiguration();
+    expectedLogUrl = WebAppUtils.getHttpSchemePrefix(config) +
+        WebAppUtils.getAHSWebAppURLWithoutScheme(config) +
+        "/applicationhistory/logs/localhost:0/container_0_0001_01_000001/" +
+        "container_0_0001_01_000001/test user";
     config.setClass(YarnConfiguration.APPLICATION_HISTORY_STORE,
       MemoryApplicationHistoryStore.class, ApplicationHistoryStore.class);
     historyServer.init(config);
@@ -156,11 +162,13 @@ public class TestApplicationHistoryClientService extends
   @Test
   public void testContainerReport() throws IOException, YarnException {
     ApplicationId appId = ApplicationId.newInstance(0, 1);
+    writeApplicationStartData(appId);
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(appId, 1);
     ContainerId containerId = ContainerId.newInstance(appAttemptId, 1);
     writeContainerStartData(containerId);
     writeContainerFinishData(containerId);
+    writeApplicationFinishData(appId);
     GetContainerReportRequest request =
         GetContainerReportRequest.newInstance(containerId);
     GetContainerReportResponse response =
@@ -169,11 +177,13 @@ public class TestApplicationHistoryClientService extends
     ContainerReport container = response.getContainerReport();
     Assert.assertNotNull(container);
     Assert.assertEquals(containerId, container.getContainerId());
+    Assert.assertEquals(expectedLogUrl, container.getLogUrl());
   }
 
   @Test
   public void testContainers() throws IOException, YarnException {
     ApplicationId appId = ApplicationId.newInstance(0, 1);
+    writeApplicationStartData(appId);
     ApplicationAttemptId appAttemptId =
         ApplicationAttemptId.newInstance(appId, 1);
     ContainerId containerId = ContainerId.newInstance(appAttemptId, 1);
@@ -182,6 +192,7 @@ public class TestApplicationHistoryClientService extends
     writeContainerFinishData(containerId);
     writeContainerStartData(containerId1);
     writeContainerFinishData(containerId1);
+    writeApplicationFinishData(appId);
     GetContainersRequest request =
         GetContainersRequest.newInstance(appAttemptId);
     GetContainersResponse response =

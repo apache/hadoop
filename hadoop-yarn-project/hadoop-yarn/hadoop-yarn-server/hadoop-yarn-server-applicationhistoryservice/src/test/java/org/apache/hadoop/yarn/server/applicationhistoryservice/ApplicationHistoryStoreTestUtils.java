@@ -78,8 +78,7 @@ public class ApplicationHistoryStoreTestUtils {
   protected void writeContainerFinishData(ContainerId containerId)
       throws IOException {
     store.containerFinished(ContainerFinishData.newInstance(containerId, 0,
-      containerId.toString(), "http://localhost:0/log", 0,
-      ContainerState.COMPLETE));
+      containerId.toString(), 0, ContainerState.COMPLETE));
   }
 
 }

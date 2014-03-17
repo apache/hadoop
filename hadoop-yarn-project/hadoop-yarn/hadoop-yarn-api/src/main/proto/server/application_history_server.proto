@@ -90,9 +90,8 @@ message ContainerHistoryDataProto {
   optional int64 start_time = 5;
   optional int64 finish_time = 6;
   optional string diagnostics_info = 7;
-  optional string log_url = 8;
-  optional int32 container_exit_status = 9;
-  optional ContainerStateProto container_state = 10;
+  optional int32 container_exit_status = 8;
+  optional ContainerStateProto container_state = 9;
 }
 
 message ContainerStartDataProto {
@@ -107,7 +106,6 @@ message ContainerFinishDataProto {
   optional ContainerIdProto container_id = 1;
   optional int64 finish_time = 2;
   optional string diagnostics_info = 3;
-  optional string log_url = 4;
-  optional int32 container_exit_status = 5;
-  optional ContainerStateProto container_state = 6;
+  optional int32 container_exit_status = 4;
+  optional ContainerStateProto container_state = 5;
 }
