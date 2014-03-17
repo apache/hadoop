@@ -169,7 +169,7 @@ public class TestMiniMRClasspath {
       final int jobTrackerPort = 60050;
 
       Configuration conf = new Configuration();
-      dfs = new MiniDFSCluster(conf, 1, true, null);
+      dfs = new MiniDFSCluster.Builder(conf).build();
       fileSys = dfs.getFileSystem();
       namenode = fileSys.getUri().toString();
       mr = new MiniMRCluster(taskTrackers, namenode, 3);
@@ -201,7 +201,7 @@ public class TestMiniMRClasspath {
       final int taskTrackers = 4;
 
       Configuration conf = new Configuration();
-      dfs = new MiniDFSCluster(conf, 1, true, null);
+      dfs = new MiniDFSCluster.Builder(conf).build();
       fileSys = dfs.getFileSystem();
       namenode = fileSys.getUri().toString();
       mr = new MiniMRCluster(taskTrackers, namenode, 3);      

@@ -58,7 +58,8 @@ public class TestMRCredentials {
   public static void setUp() throws Exception {
     System.setProperty("hadoop.log.dir", "logs");
     Configuration conf = new Configuration();
-    dfsCluster = new MiniDFSCluster(conf, numSlaves, true, null);  
+    dfsCluster = new MiniDFSCluster.Builder(conf).numDataNodes(numSlaves)
+        .build();
     jConf = new JobConf(conf);
     FileSystem.setDefaultUri(conf, dfsCluster.getFileSystem().getUri().toString());
     mrCluster = MiniMRClientClusterFactory.create(TestMRCredentials.class, 1, jConf);

@@ -141,7 +141,8 @@ public class TestLazyOutput extends TestCase {
       Configuration conf = new Configuration();
 
       // Start the mini-MR and mini-DFS clusters
-      dfs = new MiniDFSCluster(conf, NUM_HADOOP_SLAVES, true, null);
+      dfs = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_HADOOP_SLAVES)
+          .build();
       fileSys = dfs.getFileSystem();
       mr = new MiniMRCluster(NUM_HADOOP_SLAVES, fileSys.getUri().toString(), 1);
 

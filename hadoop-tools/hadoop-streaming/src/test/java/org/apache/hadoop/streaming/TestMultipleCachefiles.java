@@ -69,7 +69,7 @@ public class TestMultipleCachefiles
     MiniDFSCluster dfs = null; 
     try{
       Configuration conf = new Configuration();
-      dfs = new MiniDFSCluster(conf, 1, true, null);
+      dfs = new MiniDFSCluster.Builder(conf).build();
       FileSystem fileSys = dfs.getFileSystem();
       String namenode = fileSys.getUri().toString();
 

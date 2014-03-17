@@ -49,7 +49,7 @@ public class TestGlobbedCopyListing {
 
   @BeforeClass
   public static void setup() throws Exception {
-    cluster = new MiniDFSCluster(new Configuration(), 1, true, null);
+    cluster = new MiniDFSCluster.Builder(new Configuration()).build();
     createSourceData();
   }
 

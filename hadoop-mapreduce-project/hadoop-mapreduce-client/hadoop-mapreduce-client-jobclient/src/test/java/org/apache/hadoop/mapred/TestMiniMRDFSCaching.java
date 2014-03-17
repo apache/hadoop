@@ -38,7 +38,7 @@ public class TestMiniMRDFSCaching extends TestCase {
     FileSystem fileSys = null;
     try {
       JobConf conf = new JobConf();
-      dfs = new MiniDFSCluster(conf, 1, true, null);
+      dfs = new MiniDFSCluster.Builder(conf).build();
       fileSys = dfs.getFileSystem();
       mr = new MiniMRCluster(2, fileSys.getUri().toString(), 4);
       MRCaching.setupCache("/cachedir", fileSys);

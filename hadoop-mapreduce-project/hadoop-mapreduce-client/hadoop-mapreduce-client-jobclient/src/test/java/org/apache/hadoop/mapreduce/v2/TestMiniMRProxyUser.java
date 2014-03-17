@@ -70,7 +70,8 @@ public class TestMiniMRProxyUser extends TestCase {
     UserGroupInformation.createUserForTesting("u1", userGroups);
     UserGroupInformation.createUserForTesting("u2", new String[]{"gg"});
 
-    dfsCluster = new MiniDFSCluster(conf, dataNodes, true, null);
+    dfsCluster = new MiniDFSCluster.Builder(conf).numDataNodes(dataNodes)
+        .build();
     FileSystem fileSystem = dfsCluster.getFileSystem();
     fileSystem.mkdirs(new Path("/tmp"));
     fileSystem.mkdirs(new Path("/user"));

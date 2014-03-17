@@ -50,7 +50,7 @@ public class TestJoinProperties extends TestCase {
     TestSetup setup = new TestSetup(new TestSuite(TestJoinProperties.class)) {
       protected void setUp() throws Exception {
         Configuration conf = new Configuration();
-        cluster = new MiniDFSCluster(conf, 2, true, null);
+        cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
         base = cluster.getFileSystem().makeQualified(new Path("/nested"));
         src = generateSources(conf);
       }

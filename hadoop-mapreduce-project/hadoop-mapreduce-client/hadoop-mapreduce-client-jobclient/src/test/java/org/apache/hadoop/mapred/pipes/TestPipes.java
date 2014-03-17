@@ -79,7 +79,7 @@ public class TestPipes extends TestCase {
     try {
       final int numSlaves = 2;
       Configuration conf = new Configuration();
-      dfs = new MiniDFSCluster(conf, numSlaves, true, null);
+      dfs = new MiniDFSCluster.Builder(conf).numDataNodes(numSlaves).build();
       mr = new MiniMRCluster(numSlaves, dfs.getFileSystem().getUri().toString(), 1);
       writeInputFile(dfs.getFileSystem(), inputPath);
       runProgram(mr, dfs, wordCountSimple, 
