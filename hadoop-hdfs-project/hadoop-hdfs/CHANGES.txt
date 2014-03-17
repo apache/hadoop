@@ -626,6 +626,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-6094. The same block can be counted twice towards safe mode
     threshold. (Arpit Agarwal)
 
+    HDFS-6107. When a block can't be cached due to limited space on the
+    DataNode, that block becomes uncacheable (cmccabe)
+
   BREAKDOWN OF HDFS-5698 SUBTASKS AND RELATED JIRAS
 
     HDFS-5717. Save FSImage header in protobuf. (Haohui Mai via jing9)

@@ -1123,6 +1123,11 @@ public class DFSTestUtil {
           }
           return false;
         }
+        LOG.info("verifyExpectedCacheUsage: got " +
+            curCacheUsed + "/" + expectedCacheUsed + " bytes cached; " +
+            curBlocks + "/" + expectedBlocks + " blocks cached. " +
+            "memlock limit = " +
+            NativeIO.POSIX.getCacheManipulator().getMemlockLimit());
         return true;
       }
     }, 100, 60000);
