@@ -33,7 +33,7 @@ import java.util.Map;
 
 import javax.crypto.SecretKey;
 
-import junit.framework.Assert;
+import org.junit.Assert;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;

@@ -22,7 +22,7 @@ import static org.junit.Assert.assertEquals;
 
 import java.io.File;
 
-import junit.framework.Assert;
+import org.junit.Assert;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;

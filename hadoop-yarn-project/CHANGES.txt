@@ -29,6 +29,9 @@ Release 2.5.0 - UNRELEASED
     YARN-1845. Elapsed time for failed tasks that never started is wrong
     (Rushabh S Shah via jeagles)
 
+    YARN-1136. Replace junit.framework.Assert with org.junit.Assert (Chen He
+    via jeagles)
+
   OPTIMIZATIONS
 
   BUG FIXES 

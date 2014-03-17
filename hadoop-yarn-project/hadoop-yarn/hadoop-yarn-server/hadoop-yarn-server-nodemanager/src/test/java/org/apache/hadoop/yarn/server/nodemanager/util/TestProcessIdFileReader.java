@@ -23,7 +23,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 
-import junit.framework.Assert;
+import org.junit.Assert;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.Shell;

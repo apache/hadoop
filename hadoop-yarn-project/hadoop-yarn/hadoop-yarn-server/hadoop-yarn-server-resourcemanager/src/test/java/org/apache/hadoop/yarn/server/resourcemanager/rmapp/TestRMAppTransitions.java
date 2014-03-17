@@ -28,7 +28,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 
-import junit.framework.Assert;
+import org.junit.Assert;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -256,7 +256,7 @@ public class TestRMAppTransitions {
     Assert.assertEquals("application id is not correct",
         applicationId, application.getApplicationId());
     Assert.assertEquals("application progress is not correct",
-        (float)0.0, application.getProgress());
+        (float)0.0, application.getProgress(), (float)0.0);
     Assert.assertEquals("application queue is not correct",
         queue, application.getQueue());
     Assert.assertEquals("application name is not correct",

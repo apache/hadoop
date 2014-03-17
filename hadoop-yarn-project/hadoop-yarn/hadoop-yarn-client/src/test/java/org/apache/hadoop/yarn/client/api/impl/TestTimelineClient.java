@@ -27,7 +27,7 @@ import static org.mockito.Mockito.when;
 
 import java.net.ConnectException;
 
-import junit.framework.Assert;
+import org.junit.Assert;
 
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
