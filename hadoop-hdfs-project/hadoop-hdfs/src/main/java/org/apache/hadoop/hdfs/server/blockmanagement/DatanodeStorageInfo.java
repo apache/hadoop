@@ -71,6 +71,11 @@ public class DatanodeStorageInfo {
     return storageTypes;
   }
 
+  public void updateFromStorage(DatanodeStorage storage) {
+    state = storage.getState();
+    storageType = storage.getStorageType();
+  }
+
   /**
    * Iterates over the list of blocks belonging to the data-node.
    */
@@ -98,8 +103,8 @@ public class DatanodeStorageInfo {
 
   private final DatanodeDescriptor dn;
   private final String storageID;
-  private final StorageType storageType;
-  private final State state;
+  private StorageType storageType;
+  private State state;
 
   private long capacity;
   private long dfsUsed;

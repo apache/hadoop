@@ -98,7 +98,7 @@ class BPServiceActor implements Runnable {
    * keyed by block ID, contains the pending changes which have yet to be
    * reported to the NN. Access should be synchronized on this object.
    */
-  private final Map<String, PerStoragePendingIncrementalBR>
+  private final Map<DatanodeStorage, PerStoragePendingIncrementalBR>
       pendingIncrementalBRperStorage = Maps.newHashMap();
 
   // IBR = Incremental Block Report. If this flag is set then an IBR will be
@@ -270,15 +270,15 @@ class BPServiceActor implements Runnable {
     ArrayList<StorageReceivedDeletedBlocks> reports =
         new ArrayList<StorageReceivedDeletedBlocks>(pendingIncrementalBRperStorage.size());
     synchronized (pendingIncrementalBRperStorage) {
-      for (Map.Entry<String, PerStoragePendingIncrementalBR> entry :
+      for (Map.Entry<DatanodeStorage, PerStoragePendingIncrementalBR> entry :
            pendingIncrementalBRperStorage.entrySet()) {
-        final String storageUuid = entry.getKey();
+        final DatanodeStorage storage = entry.getKey();
         final PerStoragePendingIncrementalBR perStorageMap = entry.getValue();
 
         if (perStorageMap.getBlockInfoCount() > 0) {
           // Send newly-received and deleted blockids to namenode
           ReceivedDeletedBlockInfo[] rdbi = perStorageMap.dequeueBlockInfos();
-          reports.add(new StorageReceivedDeletedBlocks(storageUuid, rdbi));
+          reports.add(new StorageReceivedDeletedBlocks(storage, rdbi));
         }
       }
       sendImmediateIBR = false;
@@ -304,7 +304,7 @@ class BPServiceActor implements Runnable {
             // blocks back onto our queue, but only in the case where we
             // didn't put something newer in the meantime.
             PerStoragePendingIncrementalBR perStorageMap =
-                pendingIncrementalBRperStorage.get(report.getStorageID());
+                pendingIncrementalBRperStorage.get(report.getStorage());
             perStorageMap.putMissingBlockInfos(report.getBlocks());
             sendImmediateIBR = true;
           }
@@ -319,16 +319,16 @@ class BPServiceActor implements Runnable {
    * @return
    */
   private PerStoragePendingIncrementalBR getIncrementalBRMapForStorage(
-      String storageUuid) {
+      DatanodeStorage storage) {
     PerStoragePendingIncrementalBR mapForStorage =
-        pendingIncrementalBRperStorage.get(storageUuid);
+        pendingIncrementalBRperStorage.get(storage);
 
     if (mapForStorage == null) {
       // This is the first time we are adding incremental BR state for
       // this storage so create a new map. This is required once per
       // storage, per service actor.
       mapForStorage = new PerStoragePendingIncrementalBR();
-      pendingIncrementalBRperStorage.put(storageUuid, mapForStorage);
+      pendingIncrementalBRperStorage.put(storage, mapForStorage);
     }
 
     return mapForStorage;
@@ -343,16 +343,16 @@ class BPServiceActor implements Runnable {
    * @param storageUuid
    */
   void addPendingReplicationBlockInfo(ReceivedDeletedBlockInfo bInfo,
-      String storageUuid) {
+      DatanodeStorage storage) {
     // Make sure another entry for the same block is first removed.
     // There may only be one such entry.
-    for (Map.Entry<String, PerStoragePendingIncrementalBR> entry :
+    for (Map.Entry<DatanodeStorage, PerStoragePendingIncrementalBR> entry :
           pendingIncrementalBRperStorage.entrySet()) {
       if (entry.getValue().removeBlockInfo(bInfo)) {
         break;
       }
     }
-    getIncrementalBRMapForStorage(storageUuid).putBlockInfo(bInfo);
+    getIncrementalBRMapForStorage(storage).putBlockInfo(bInfo);
   }
 
   /*
@@ -363,7 +363,8 @@ class BPServiceActor implements Runnable {
   void notifyNamenodeBlockImmediately(
       ReceivedDeletedBlockInfo bInfo, String storageUuid) {
     synchronized (pendingIncrementalBRperStorage) {
-      addPendingReplicationBlockInfo(bInfo, storageUuid);
+      addPendingReplicationBlockInfo(
+          bInfo, dn.getFSDataset().getStorage(storageUuid));
       sendImmediateIBR = true;
       pendingIncrementalBRperStorage.notifyAll();
     }
@@ -372,7 +373,8 @@ class BPServiceActor implements Runnable {
   void notifyNamenodeDeletedBlock(
       ReceivedDeletedBlockInfo bInfo, String storageUuid) {
     synchronized (pendingIncrementalBRperStorage) {
-      addPendingReplicationBlockInfo(bInfo, storageUuid);
+      addPendingReplicationBlockInfo(
+          bInfo, dn.getFSDataset().getStorage(storageUuid));
     }
   }
 

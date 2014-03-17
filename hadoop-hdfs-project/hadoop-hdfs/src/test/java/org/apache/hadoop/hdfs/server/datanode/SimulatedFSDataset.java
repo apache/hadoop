@@ -1085,6 +1085,13 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   }
 
   @Override
+  public DatanodeStorage getStorage(final String storageUuid) {
+    return storageUuid.equals(storage.getStorageUuid()) ?
+        storage.dnStorage :
+        null;
+  }
+
+  @Override
   public StorageReport[] getStorageReports(String bpid) {
     return new StorageReport[] {storage.getStorageReport(bpid)};
   }
