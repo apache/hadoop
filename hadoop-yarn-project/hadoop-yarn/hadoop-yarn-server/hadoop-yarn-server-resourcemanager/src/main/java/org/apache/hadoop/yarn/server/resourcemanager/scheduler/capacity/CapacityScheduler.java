@@ -902,7 +902,8 @@ public class CapacityScheduler extends AbstractYarnScheduler
   }
 
   @Lock(Lock.NoLock.class)
-  FiCaSchedulerApp getApplicationAttempt(
+  @VisibleForTesting
+  public FiCaSchedulerApp getApplicationAttempt(
       ApplicationAttemptId applicationAttemptId) {
     SchedulerApplication app =
         applications.get(applicationAttemptId.getApplicationId());

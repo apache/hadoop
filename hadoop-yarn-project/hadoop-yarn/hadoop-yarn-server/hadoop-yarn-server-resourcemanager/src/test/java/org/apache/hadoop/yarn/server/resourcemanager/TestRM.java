@@ -63,6 +63,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptE
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
@@ -171,7 +172,60 @@ public class TestRM {
 
     rm.stop();
   }
-  
+
+  // Test even if AM container is allocated with containerId not equal to 1, the
+  // following allocate requests from AM should be able to retrieve the
+  // corresponding NM Token.
+  @Test (timeout = 20000)
+  public void testNMTokenSentForNormalContainer() throws Exception {
+
+    MockRM rm = new MockRM();
+    rm.start();
+    MockNM nm1 = rm.registerNode("h1:1234", 5120);
+    RMApp app = rm.submitApp(2000);
+    RMAppAttempt attempt = app.getCurrentAppAttempt();
+
+    // Call getNewContainerId to increase container Id so that the AM container
+    // Id doesn't equal to one.
+    CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+    cs.getApplicationAttempt(attempt.getAppAttemptId()).getNewContainerId();
+
+    // kick the scheduling
+    nm1.nodeHeartbeat(true);
+    MockAM am = MockRM.launchAM(app, rm, nm1);
+    // am container Id not equal to 1.
+    Assert.assertTrue(attempt.getMasterContainer().getId().getId() != 1);
+    // NMSecretManager doesn't record the node on which the am is allocated.
+    Assert.assertFalse(rm.getRMNMTokenSecretManager()
+      .isApplicationAttemptNMTokenPresent(attempt.getAppAttemptId(),
+        nm1.getNodeId()));
+    am.registerAppAttempt();
+    rm.waitForState(app.getApplicationId(), RMAppState.RUNNING);
+
+    int NUM_CONTAINERS = 1;
+    List<Container> containers = new ArrayList<Container>();
+    // nmTokens keeps track of all the nmTokens issued in the allocate call.
+    List<NMToken> expectedNMTokens = new ArrayList<NMToken>();
+
+    // am1 allocate 1 container on nm1.
+    while (true) {
+      AllocateResponse response =
+          am.allocate("127.0.0.1", 2000, NUM_CONTAINERS,
+            new ArrayList<ContainerId>());
+      nm1.nodeHeartbeat(true);
+      containers.addAll(response.getAllocatedContainers());
+      expectedNMTokens.addAll(response.getNMTokens());
+      if (containers.size() == NUM_CONTAINERS) {
+        break;
+      }
+      Thread.sleep(200);
+      System.out.println("Waiting for container to be allocated.");
+    }
+    NodeId nodeId = expectedNMTokens.get(0).getNodeId();
+    // NMToken is sent for the allocated container.
+    Assert.assertEquals(nm1.getNodeId(), nodeId);
+  }
+
   @Test (timeout = 40000)
   public void testNMToken() throws Exception {
     MockRM rm = new MockRM();

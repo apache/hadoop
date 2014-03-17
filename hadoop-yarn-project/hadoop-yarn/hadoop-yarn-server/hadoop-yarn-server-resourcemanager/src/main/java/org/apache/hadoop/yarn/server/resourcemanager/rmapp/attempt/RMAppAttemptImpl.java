@@ -831,9 +831,18 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
         appAttempt.retryFetchingAMContainer(appAttempt);
         return RMAppAttemptState.SCHEDULED;
       }
+
       // Set the masterContainer
       appAttempt.setMasterContainer(amContainerAllocation.getContainers()
         .get(0));
+      // The node set in NMTokenSecrentManager is used for marking whether the
+      // NMToken has been issued for this node to the AM.
+      // When AM container was allocated to RM itself, the node which allocates
+      // this AM container was marked as the NMToken already sent. Thus,
+      // clear this node set so that the following allocate requests from AM are
+      // able to retrieve the corresponding NMToken.
+      appAttempt.rmContext.getNMTokenSecretManager()
+        .clearNodeSetForAttempt(appAttempt.applicationAttemptId);
       appAttempt.getSubmissionContext().setResource(
         appAttempt.getMasterContainer().getResource());
       appAttempt.storeAttempt();

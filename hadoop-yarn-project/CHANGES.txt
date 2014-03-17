@@ -490,6 +490,10 @@ Release 2.4.0 - UNRELEASED
     manner and thus fix failure of TestResourceTrackerService. (Tsuyoshi Ozawa
     via vinodkv)
 
+    YARN-1839. Fixed handling of NMTokens in ResourceManager such that containers
+    launched by AMs running on the same machine as the AM are correctly
+    propagated. (Jian He via vinodkv)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
