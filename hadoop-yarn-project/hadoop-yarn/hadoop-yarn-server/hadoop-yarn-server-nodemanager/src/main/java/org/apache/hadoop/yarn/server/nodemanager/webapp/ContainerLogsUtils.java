@@ -56,13 +56,18 @@ public class ContainerLogsUtils {
   public static List<File> getContainerLogDirs(ContainerId containerId,
       String remoteUser, Context context) throws YarnException {
     Container container = context.getContainers().get(containerId);
-    if (container == null) {
-      throw new YarnException("Container does not exist.");
-    }
 
     Application application = getApplicationForContainer(containerId, context);
     checkAccess(remoteUser, application, context);
-    checkState(container.getContainerState());
+    // It is not required to have null check for container ( container == null )
+    // and throw back exception.Because when container is completed, NodeManager
+    // remove container information from its NMContext.Configuring log
+    // aggregation to false, container log view request is forwarded to NM. NM
+    // does not have completed container information,but still NM serve request for
+    // reading container logs. 
+    if (container != null) {
+      checkState(container.getContainerState());
+    }
     
     return getContainerLogDirs(containerId, context.getLocalDirsHandler());
   }
@@ -91,14 +96,12 @@ public class ContainerLogsUtils {
   public static File getContainerLogFile(ContainerId containerId,
       String fileName, String remoteUser, Context context) throws YarnException {
     Container container = context.getContainers().get(containerId);
-    if (container == null) {
-      throw new NotFoundException("Container with id " + containerId
-          + " not found.");
-    }
     
     Application application = getApplicationForContainer(containerId, context);
     checkAccess(remoteUser, application, context);
-    checkState(container.getContainerState());
+    if (container != null) {
+      checkState(container.getContainerState());
+    }
     
     try {
       LocalDirsHandlerService dirsHandler = context.getLocalDirsHandler();
