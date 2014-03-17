@@ -37,7 +37,7 @@ public class Times {
   }
 
   public static long elapsed(long started, long finished, boolean isRunning) {
-    if (finished > 0) {
+    if (finished > 0 && started > 0) {
       return finished - started;
     }
     if (isRunning) {

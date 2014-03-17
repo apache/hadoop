@@ -26,6 +26,9 @@ Release 2.5.0 - UNRELEASED
     YARN-1520. update capacity scheduler docs to include necessary parameters
     (Chen He via jeagles)
 
+    YARN-1845. Elapsed time for failed tasks that never started is wrong
+    (Rushabh S Shah via jeagles)
+
   OPTIMIZATIONS
 
   BUG FIXES 
