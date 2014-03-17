@@ -337,15 +337,16 @@ public class FsDatasetCache {
       ExtendedBlock extBlk = new ExtendedBlock(key.getBlockPoolId(),
           key.getBlockId(), length, genstamp);
       long newUsedBytes = usedBytesCount.reserve(length);
-      if (newUsedBytes < 0) {
-        LOG.warn("Failed to cache " + key + ": could not reserve " + length +
-            " more bytes in the cache: " +
-            DFSConfigKeys.DFS_DATANODE_MAX_LOCKED_MEMORY_KEY +
-            " of " + maxBytes + " exceeded.");
-        numBlocksFailedToCache.incrementAndGet();
-        return;
-      }
+      boolean reservedBytes = false;
       try {
+        if (newUsedBytes < 0) {
+          LOG.warn("Failed to cache " + key + ": could not reserve " + length +
+              " more bytes in the cache: " +
+              DFSConfigKeys.DFS_DATANODE_MAX_LOCKED_MEMORY_KEY +
+              " of " + maxBytes + " exceeded.");
+          return;
+        }
+        reservedBytes = true;
         try {
           blockIn = (FileInputStream)dataset.getBlockInputStream(extBlk, 0);
           metaIn = (FileInputStream)dataset.getMetaDataInputStream(extBlk)
@@ -391,10 +392,13 @@ public class FsDatasetCache {
         }
         dataset.datanode.getShortCircuitRegistry().processBlockMlockEvent(key);
         numBlocksCached.addAndGet(1);
+        dataset.datanode.getMetrics().incrBlocksCached(1);
         success = true;
       } finally {
         if (!success) {
-          newUsedBytes = usedBytesCount.release(length);
+          if (reservedBytes) {
+            newUsedBytes = usedBytesCount.release(length);
+          }
           if (LOG.isDebugEnabled()) {
             LOG.debug("Caching of " + key + " was aborted.  We are now " +
                 "caching only " + newUsedBytes + " + bytes in total.");
@@ -439,6 +443,7 @@ public class FsDatasetCache {
       long newUsedBytes =
           usedBytesCount.release(value.mappableBlock.getLength());
       numBlocksCached.addAndGet(-1);
+      dataset.datanode.getMetrics().incrBlocksUncached(1);
       if (LOG.isDebugEnabled()) {
         LOG.debug("Uncaching of " + key + " completed.  " +
             "usedBytes = " + newUsedBytes);
