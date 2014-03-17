@@ -161,6 +161,30 @@ public class TestWebApp {
     app.stop();
   }
 
+  @Test(expected=org.apache.hadoop.yarn.webapp.WebAppException.class)
+  public void testCreateWithBindAddressNonZeroPort() {
+    WebApp app = WebApps.$for(this).at("0.0.0.0:50000").start();
+    int port = app.getListenerAddress().getPort();
+    assertEquals(50000, port);
+    // start another WebApp with same NonZero port
+    WebApp app2 = WebApps.$for(this).at("0.0.0.0:50000").start();
+    // An exception occurs (findPort disabled)
+    app.stop();
+    app2.stop();
+  }
+
+  @Test(expected=org.apache.hadoop.yarn.webapp.WebAppException.class)
+  public void testCreateWithNonZeroPort() {
+    WebApp app = WebApps.$for(this).at(50000).start();
+    int port = app.getListenerAddress().getPort();
+    assertEquals(50000, port);
+    // start another WebApp with same NonZero port
+    WebApp app2 = WebApps.$for(this).at(50000).start();
+    // An exception occurs (findPort disabled)
+    app.stop();
+    app2.stop();
+  }
+
   @Test public void testServePaths() {
     WebApp app = WebApps.$for("test", this).start();
     assertEquals("/test", app.getRedirectPath());

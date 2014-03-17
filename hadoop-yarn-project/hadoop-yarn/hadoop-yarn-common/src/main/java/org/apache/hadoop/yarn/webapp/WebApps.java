@@ -97,13 +97,14 @@ public class WebApps {
     public Builder<T> at(String bindAddress) {
       String[] parts = StringUtils.split(bindAddress, ':');
       if (parts.length == 2) {
-        return at(parts[0], Integer.parseInt(parts[1]), true);
+        int port = Integer.parseInt(parts[1]);
+        return at(parts[0], port, port == 0);
       }
       return at(bindAddress, 0, true);
     }
 
     public Builder<T> at(int port) {
-      return at("0.0.0.0", port, false);
+      return at("0.0.0.0", port, port == 0);
     }
 
     public Builder<T> at(String address, int port, boolean findPort) {

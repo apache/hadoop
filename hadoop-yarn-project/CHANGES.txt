@@ -27,6 +27,9 @@ Release 0.23.11 - UNRELEASED
     YARN-1575. Public localizer crashes with "Localized unkown resource"
     (jlowe)
 
+    YARN-500. Fixed YARN webapps to not roll-over ports when explicitly asked
+    to use non-ephemeral ports. (Kenji Kikushima via vinodkv)
+
 Release 0.23.10 - 2013-12-09
 
   INCOMPATIBLE CHANGES
