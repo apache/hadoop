@@ -133,6 +133,8 @@ public class TestRMAppAttemptTransitions {
   private AMRMTokenSecretManager amRMTokenManager = spy(new AMRMTokenSecretManager(conf));
   private ClientToAMTokenSecretManagerInRM clientToAMTokenManager =
       spy(new ClientToAMTokenSecretManagerInRM());
+  private NMTokenSecretManagerInRM nmTokenManager =
+      spy(new NMTokenSecretManagerInRM(conf));
   private boolean transferStateFromPreviousAttempt = false;
 
   private final class TestApplicationAttemptEventDispatcher implements
@@ -224,7 +226,7 @@ public class TestRMAppAttemptTransitions {
           containerAllocationExpirer, amLivelinessMonitor, amFinishingMonitor,
           null, amRMTokenManager,
           new RMContainerTokenSecretManager(conf),
-          new NMTokenSecretManagerInRM(conf),
+          nmTokenManager,
           clientToAMTokenManager,
           writer);
     
@@ -443,6 +445,8 @@ public class TestRMAppAttemptTransitions {
             any(
                 ApplicationAttemptId.class), any(List.class), any(List.class), 
                 any(List.class), any(List.class));
+    verify(nmTokenManager).clearNodeSetForAttempt(
+      applicationAttempt.getAppAttemptId());
   }
   
   /**
