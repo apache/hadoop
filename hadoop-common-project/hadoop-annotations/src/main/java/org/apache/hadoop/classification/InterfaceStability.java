@@ -18,6 +18,8 @@
 package org.apache.hadoop.classification;
 
 import java.lang.annotation.Documented;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 
 import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -43,12 +45,14 @@ public class InterfaceStability {
    * can break compatibility only at major release (ie. at m.0).
    */
   @Documented
+  @Retention(RetentionPolicy.RUNTIME)
   public @interface Stable {};
   
   /**
    * Evolving, but can break compatibility at minor release (i.e. m.x)
    */
   @Documented
+  @Retention(RetentionPolicy.RUNTIME)
   public @interface Evolving {};
   
   /**
@@ -56,5 +60,6 @@ public class InterfaceStability {
    * level of release granularity.
    */
   @Documented
+  @Retention(RetentionPolicy.RUNTIME)
   public @interface Unstable {};
 }
