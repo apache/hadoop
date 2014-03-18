@@ -415,6 +415,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-6090. Use MiniDFSCluster.Builder instead of deprecated constructors.
     (Akira AJISAKA via jing9)
 
+    HDFS-6068. Disallow snapshot names that are also invalid directory names.
+    (sathish via szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-5790. LeaseManager.findPath is very slow when many leases need recovery

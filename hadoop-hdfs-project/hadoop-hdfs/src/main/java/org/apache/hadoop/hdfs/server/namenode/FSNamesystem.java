@@ -6933,6 +6933,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       if (snapshotName == null || snapshotName.isEmpty()) {
         snapshotName = Snapshot.generateDefaultSnapshotName();
       }
+      if(snapshotName != null){
+        if (!DFSUtil.isValidNameForComponent(snapshotName)) {
+            throw new InvalidPathException("Invalid snapshot name: "
+                + snapshotName);
+        }
+      }
       dir.verifySnapshotName(snapshotName, snapshotRoot);
       dir.writeLock();
       try {
