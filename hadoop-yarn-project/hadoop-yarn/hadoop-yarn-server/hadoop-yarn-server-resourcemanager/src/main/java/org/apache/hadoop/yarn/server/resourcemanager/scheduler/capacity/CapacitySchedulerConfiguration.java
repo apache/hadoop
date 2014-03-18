@@ -135,6 +135,17 @@ public class CapacitySchedulerConfiguration extends Configuration {
   @Private 
   public static final int DEFAULT_NODE_LOCALITY_DELAY = -1;
 
+  @Private
+  public static final String SCHEDULE_ASYNCHRONOUSLY_PREFIX =
+      PREFIX + "schedule-asynchronously";
+
+  @Private
+  public static final String SCHEDULE_ASYNCHRONOUSLY_ENABLE =
+      SCHEDULE_ASYNCHRONOUSLY_PREFIX + ".enable";
+
+  @Private
+  public static final boolean DEFAULT_SCHEDULE_ASYNCHRONOUSLY_ENABLE = false;
+  
   public CapacitySchedulerConfiguration() {
     this(new Configuration());
   }
@@ -357,4 +368,14 @@ public class CapacitySchedulerConfiguration extends Configuration {
         resourceCalculatorClass, 
         ResourceCalculator.class);
   }
+
+  public boolean getScheduleAynschronously() {
+    return getBoolean(SCHEDULE_ASYNCHRONOUSLY_ENABLE,
+      DEFAULT_SCHEDULE_ASYNCHRONOUSLY_ENABLE);
+  }
+
+  public void setScheduleAynschronously(boolean async) {
+    setBoolean(SCHEDULE_ASYNCHRONOUSLY_ENABLE, async);
+  }
+
 }
