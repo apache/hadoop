@@ -155,6 +155,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1717. Enabled periodically discarding old data in LeveldbTimelineStore.
     (Billie Rinaldi via zjshen)
 
+    YARN-1846. TestRM#testNMTokenSentForNormalContainer assumes CapacityScheduler.
+    (Robert Kanter via kasha)
+
   IMPROVEMENTS
 
     YARN-1007. Enhance History Reader interface for Containers. (Mayank Bansal via

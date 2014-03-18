@@ -178,8 +178,10 @@ public class TestRM {
   // corresponding NM Token.
   @Test (timeout = 20000)
   public void testNMTokenSentForNormalContainer() throws Exception {
-
-    MockRM rm = new MockRM();
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.set(YarnConfiguration.RM_SCHEDULER,
+        CapacityScheduler.class.getCanonicalName());
+    MockRM rm = new MockRM(conf);
     rm.start();
     MockNM nm1 = rm.registerNode("h1:1234", 5120);
     RMApp app = rm.submitApp(2000);
