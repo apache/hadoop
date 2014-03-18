@@ -61,7 +61,7 @@ public class TestSymLink
     MiniDFSCluster dfs = null; 
     try {
       Configuration conf = new Configuration();
-      dfs = new MiniDFSCluster(conf, 1, true, null);
+      dfs = new MiniDFSCluster.Builder(conf).build();
       FileSystem fileSys = dfs.getFileSystem();
       String namenode = fileSys.getUri().toString();
       mr  = new MiniMRCluster(1, namenode, 3);

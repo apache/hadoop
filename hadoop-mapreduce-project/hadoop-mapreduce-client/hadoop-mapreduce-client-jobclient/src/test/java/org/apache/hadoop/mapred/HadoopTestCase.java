@@ -146,7 +146,8 @@ public abstract class HadoopTestCase extends TestCase {
       fileSystem = FileSystem.getLocal(new JobConf());
     }
     else {
-      dfsCluster = new MiniDFSCluster(new JobConf(), dataNodes, true, null);
+      dfsCluster = new MiniDFSCluster.Builder(new JobConf())
+          .numDataNodes(dataNodes).build();
       fileSystem = dfsCluster.getFileSystem();
     }
     if (localMR) {

@@ -54,7 +54,7 @@ public class TestFileArgs extends TestStreaming
   {
     // Set up mini cluster
     conf = new Configuration();
-    dfs = new MiniDFSCluster(conf, 1, true, null);
+    dfs = new MiniDFSCluster.Builder(conf).build();
     fileSys = dfs.getFileSystem();
     namenode = fileSys.getUri().getAuthority();
     mr  = new MiniMRCluster(1, namenode, 1);

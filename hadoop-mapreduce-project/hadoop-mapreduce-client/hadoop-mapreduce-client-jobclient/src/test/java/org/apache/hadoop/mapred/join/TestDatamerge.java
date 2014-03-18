@@ -62,7 +62,7 @@ public class TestDatamerge extends TestCase {
     TestSetup setup = new TestSetup(new TestSuite(TestDatamerge.class)) {
       protected void setUp() throws Exception {
         Configuration conf = new Configuration();
-        cluster = new MiniDFSCluster(conf, 2, true, null);
+        cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
       }
       protected void tearDown() throws Exception {
         if (cluster != null) {

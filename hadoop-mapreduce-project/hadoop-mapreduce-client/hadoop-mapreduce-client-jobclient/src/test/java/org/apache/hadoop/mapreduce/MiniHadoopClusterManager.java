@@ -151,8 +151,8 @@ public class MiniHadoopClusterManager {
   public void start() throws IOException, FileNotFoundException,
       URISyntaxException {
     if (!noDFS) {
-      dfs = new MiniDFSCluster(nnPort, conf, numDataNodes, true, true,
-          dfsOpts, null, null);
+      dfs = new MiniDFSCluster.Builder(conf).nameNodePort(nnPort)
+          .numDataNodes(numDataNodes).startupOption(dfsOpts).build();
       LOG.info("Started MiniDFSCluster -- namenode on port "
           + dfs.getNameNodePort());
     }

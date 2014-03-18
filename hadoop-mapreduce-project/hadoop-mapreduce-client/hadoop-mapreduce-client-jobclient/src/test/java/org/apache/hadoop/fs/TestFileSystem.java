@@ -523,7 +523,8 @@ public class TestFileSystem extends TestCase {
     Configuration conf = new Configuration();
     MiniDFSCluster cluster = null;
     try {
-      cluster = new MiniDFSCluster(port, conf, 2, true, true, null, null);
+      cluster = new MiniDFSCluster.Builder(conf).nameNodePort(port)
+          .numDataNodes(2).build();
       URI uri = cluster.getFileSystem().getUri();
       LOG.info("uri=" + uri);
 

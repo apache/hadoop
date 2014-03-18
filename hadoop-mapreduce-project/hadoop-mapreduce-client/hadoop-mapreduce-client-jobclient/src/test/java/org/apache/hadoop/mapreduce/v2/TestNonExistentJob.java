@@ -57,7 +57,8 @@ public class TestNonExistentJob extends TestCase {
     conf.set("dfs.permissions", "true");
     conf.set("hadoop.security.authentication", "simple");
 
-    dfsCluster = new MiniDFSCluster(conf, dataNodes, true, null);
+    dfsCluster = new MiniDFSCluster.Builder(conf).numDataNodes(dataNodes)
+        .build();
     FileSystem fileSystem = dfsCluster.getFileSystem();
     fileSystem.mkdirs(new Path("/tmp"));
     fileSystem.mkdirs(new Path("/user"));

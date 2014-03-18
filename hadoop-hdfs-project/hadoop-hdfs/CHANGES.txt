@@ -165,6 +165,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-6106. Reduce default for
     dfs.namenode.path.based.cache.refresh.interval.ms (cmccabe)
 
+    HDFS-6090. Use MiniDFSCluster.Builder instead of deprecated constructors.
+    (Akira AJISAKA via jing9)
+
   OPTIMIZATIONS
 
     HDFS-5790. LeaseManager.findPath is very slow when many leases need recovery
