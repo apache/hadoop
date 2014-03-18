@@ -127,7 +127,7 @@ public class QueueMetrics implements MetricsSource {
   }
 
   /**
-   * Helper method to clear cache - used only for unit tests.
+   * Helper method to clear cache.
    */
   @Private
   public synchronized static void clearQueueMetrics() {
