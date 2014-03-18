@@ -39,9 +39,10 @@ public class TestDelegatingInputFormat extends TestCase {
     JobConf conf = new JobConf();
     MiniDFSCluster dfs = null;
     try {
-      dfs = new MiniDFSCluster(conf, 4, true, new String[] { "/rack0",
-         "/rack0", "/rack1", "/rack1" }, new String[] { "host0", "host1",
-         "host2", "host3" });
+      dfs = new MiniDFSCluster.Builder(conf).numDataNodes(4)
+          .racks(new String[] { "/rack0", "/rack0", "/rack1", "/rack1" })
+          .hosts(new String[] { "host0", "host1", "host2", "host3" })
+          .build();
       FileSystem fs = dfs.getFileSystem();
 
       Path path = getPath("/foo/bar", fs);

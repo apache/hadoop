@@ -313,7 +313,8 @@ public class TestCombineFileInputFormat extends TestCase {
        */
       Configuration conf = new Configuration();
       conf.setBoolean("dfs.replication.considerLoad", false);
-      dfs = new MiniDFSCluster(conf, 1, true, rack1, hosts1);
+      dfs = new MiniDFSCluster.Builder(conf).racks(rack1).hosts(hosts1)
+          .build();
       dfs.waitActive();
 
       fileSys = dfs.getFileSystem();
@@ -855,7 +856,8 @@ public class TestCombineFileInputFormat extends TestCase {
        */
       Configuration conf = new Configuration();
       conf.setBoolean("dfs.replication.considerLoad", false);
-      dfs = new MiniDFSCluster(conf, 1, true, rack1, hosts1);
+      dfs = new MiniDFSCluster.Builder(conf).racks(rack1).hosts(hosts1)
+          .build();
       dfs.waitActive();
 
       fileSys = dfs.getFileSystem();
@@ -1197,7 +1199,8 @@ public class TestCombineFileInputFormat extends TestCase {
       Configuration conf = new Configuration();
       conf.set("fs.hdfs.impl", MissingBlockFileSystem.class.getName());
       conf.setBoolean("dfs.replication.considerLoad", false);
-      dfs = new MiniDFSCluster(conf, 1, true, rack1, hosts1);
+      dfs = new MiniDFSCluster.Builder(conf).racks(rack1).hosts(hosts1)
+          .build();
       dfs.waitActive();
 
       namenode = (dfs.getFileSystem()).getUri().getHost() + ":" +

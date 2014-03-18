@@ -125,7 +125,7 @@ public class TestJobSysDirWithDFS extends TestCase {
 
       JobConf conf = new JobConf();
       conf.set(JTConfig.JT_SYSTEM_DIR, "/tmp/custom/mapred/system");
-      dfs = new MiniDFSCluster(conf, 4, true, null);
+      dfs = new MiniDFSCluster.Builder(conf).numDataNodes(4).build();
       fileSys = dfs.getFileSystem();
       mr = new MiniMRCluster(taskTrackers, fileSys.getUri().toString(), 1, null, null, conf);
 

@@ -44,11 +44,10 @@ public class TestMRCJCFileInputFormat extends TestCase {
   MiniDFSCluster dfs = null;
 
   private MiniDFSCluster newDFSCluster(JobConf conf) throws Exception {
-    return new MiniDFSCluster(conf, 4, true,
-                         new String[]{"/rack0", "/rack0",
-                                      "/rack1", "/rack1"},
-                         new String[]{"host0", "host1",
-                                      "host2", "host3"});
+    return new MiniDFSCluster.Builder(conf).numDataNodes(4)
+        .racks(new String[]{"/rack0", "/rack0", "/rack1", "/rack1"})
+        .hosts(new String[]{"host0", "host1", "host2", "host3"})
+        .build();
   }
 
   public void testLocality() throws Exception {
@@ -162,7 +161,7 @@ public class TestMRCJCFileInputFormat extends TestCase {
     JobConf job = new JobConf(conf);
 
     job.setBoolean("dfs.replication.considerLoad", false);
-    dfs = new MiniDFSCluster(job, 1, true, rack1, hosts1);
+    dfs = new MiniDFSCluster.Builder(job).racks(rack1).hosts(hosts1).build();
     dfs.waitActive();
 
     String namenode = (dfs.getFileSystem()).getUri().getHost() + ":" +

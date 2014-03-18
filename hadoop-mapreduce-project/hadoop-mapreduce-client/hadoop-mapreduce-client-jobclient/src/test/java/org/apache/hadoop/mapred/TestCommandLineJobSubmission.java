@@ -51,7 +51,7 @@ public class TestCommandLineJobSubmission extends TestCase {
     try {
       Configuration conf = new Configuration();
       //start the mini mr and dfs cluster.
-      dfs = new MiniDFSCluster(conf, 2 , true, null);
+      dfs = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
       fs = dfs.getFileSystem();
       FSDataOutputStream stream = fs.create(testFile);
       stream.write("teststring".getBytes());

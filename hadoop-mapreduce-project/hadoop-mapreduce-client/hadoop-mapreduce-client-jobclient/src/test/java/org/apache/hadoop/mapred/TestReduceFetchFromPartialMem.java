@@ -57,7 +57,7 @@ public class TestReduceFetchFromPartialMem extends TestCase {
     TestSetup setup = new TestSetup(mySuite) {
       protected void setUp() throws Exception {
         Configuration conf = new Configuration();
-        dfsCluster = new MiniDFSCluster(conf, 2, true, null);
+        dfsCluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
         mrCluster = new MiniMRCluster(2,
             dfsCluster.getFileSystem().getUri().toString(), 1);
       }

@@ -65,7 +65,7 @@ public class TestMultipleArchiveFiles extends TestStreaming
     input = "HADOOP";
     expectedOutput = "HADOOP\t\nHADOOP\t\n";
     conf = new Configuration();
-    dfs = new MiniDFSCluster(conf, 1, true, null);
+    dfs = new MiniDFSCluster.Builder(conf).build();
     fileSys = dfs.getFileSystem();
     namenode = fileSys.getUri().getAuthority();
     mr  = new MiniMRCluster(1, namenode, 1);
