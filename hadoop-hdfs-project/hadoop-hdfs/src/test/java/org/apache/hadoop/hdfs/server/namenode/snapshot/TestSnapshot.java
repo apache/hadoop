@@ -337,12 +337,11 @@ public class TestSnapshot {
       hdfs.createSnapshot(dir, name1);
       fail("Exception expected when an illegal name is given");
     } catch (RemoteException e) {
-      String errorMsg = "\"" + HdfsConstants.DOT_SNAPSHOT_DIR
-          + "\" is a reserved name.";
+      String errorMsg = "Invalid path name Invalid snapshot name: " + name1; 
       GenericTestUtils.assertExceptionContains(errorMsg, e);
     }
     
-    String errorMsg = "Snapshot name cannot contain \"" + Path.SEPARATOR + "\"";
+    
     final String[] badNames = new String[] { "foo" + Path.SEPARATOR,
         Path.SEPARATOR + "foo", Path.SEPARATOR, "foo" + Path.SEPARATOR + "bar" };
     for (String badName : badNames) {
@@ -350,6 +349,7 @@ public class TestSnapshot {
         hdfs.createSnapshot(dir, badName);
         fail("Exception expected when an illegal name is given");
       } catch (RemoteException e) {
+    String errorMsg = "Invalid path name Invalid snapshot name: " + badName ;
         GenericTestUtils.assertExceptionContains(errorMsg, e);
       }
     }
