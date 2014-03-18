@@ -1417,17 +1417,6 @@
 </property>
 
 <property>
-  <name>dfs.domain.socket.path</name>
-  <value></value>
-  <description>
-    Optional.  This is a path to a UNIX domain socket that will be used for
-    communication between the DataNode and local HDFS clients.
-    If the string "_PORT" is present in this path, it will be replaced by the
-    TCP port of the DataNode.
-  </description>
-</property>
-
-<property>
   <name>dfs.datanode.available-space-volume-choosing-policy.balanced-space-threshold</name>
   <value>10737418240</value> <!-- 10 GB -->
   <description>
@@ -1752,6 +1741,103 @@
     a context share a socket cache and short-circuit cache, among other things.
     You should only change this if you don't want to share with another set of
     threads.
+  </description>
+</property>
+
+<property>
+  <name>dfs.client.read.shortcircuit</name>
+  <value>false</value>
+  <description>
+    This configuration parameter turns on short-circuit local reads.
+  </description>
+</property>
+
+<property>
+  <name>dfs.domain.socket.path</name>
+  <value></value>
+  <description>
+    Optional.  This is a path to a UNIX domain socket that will be used for
+    communication between the DataNode and local HDFS clients.
+    If the string "_PORT" is present in this path, it will be replaced by the
+    TCP port of the DataNode.
+  </description>
+</property>
+
+<property>
+  <name>dfs.client.read.shortcircuit.skip.checksum</name>
+  <value>false</value>
+  <description>
+    If this configuration parameter is set,
+    short-circuit local reads will skip checksums.
+    This is normally not recommended,
+    but it may be useful for special setups.
+    You might consider using this
+    if you are doing your own checksumming outside of HDFS.
+  </description>
+</property>
+
+<property>
+  <name>dfs.client.read.shortcircuit.streams.cache.size</name>
+  <value>256</value>
+  <description>
+    The DFSClient maintains a cache of recently opened file descriptors.
+    This parameter controls the size of that cache.
+    Setting this higher will use more file descriptors,
+    but potentially provide better performance on workloads
+    involving lots of seeks.
+  </description>
+</property>
+
+<property>
+  <name>dfs.client.read.shortcircuit.streams.cache.expiry.ms</name>
+  <value>300000</value>
+  <description>
+    This controls the minimum amount of time
+    file descriptors need to sit in the client cache context
+    before they can be closed for being inactive for too long.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.shared.file.descriptor.paths</name>
+  <value>/dev/shm,/tmp</value>
+  <description>
+    Comma separated paths to the directory on which
+    shared memory segments are created.
+    The client and the DataNode exchange information via
+    this shared memory segment.
+    It tries paths in order until creation of shared memory segment succeeds.
+  </description>
+</property>
+
+<property>
+  <name>dfs.client.use.legacy.blockreader.local</name>
+  <value>false</value>
+  <description>
+    Legacy short-circuit reader implementation based on HDFS-2246 is used
+    if this configuration parameter is true.
+    This is for the platforms other than Linux
+    where the new implementation based on HDFS-347 is not available.
+  </description>
+</property>
+
+<property>
+  <name>dfs.block.local-path-access.user</name>
+  <value></value>
+  <description>
+    Comma separated list of the users allowd to open block files
+    on legacy short-circuit local read.
+  </description>
+</property>
+
+<property>
+  <name>dfs.client.domain.socket.data.traffic</name>
+  <value>false</value>
+  <description>
+    This control whether we will try to pass normal data traffic
+    over UNIX domain socket rather than over TCP socket
+    on node-local data transfer.
+    This is currently experimental and turned off by default.
   </description>
 </property>
 

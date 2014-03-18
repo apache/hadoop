@@ -255,6 +255,9 @@ Release 2.5.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    HDFS-6007. Update documentation about short-circuit local reads (iwasakims
+    via cmccabe)
+
   OPTIMIZATIONS
 
   BUG FIXES 
