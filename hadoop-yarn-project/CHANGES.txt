@@ -173,6 +173,8 @@ Release 2.4.0 - UNRELEASED
     YARN-1846. TestRM#testNMTokenSentForNormalContainer assumes CapacityScheduler.
     (Robert Kanter via kasha)
 
+    YARN-1705. Reset cluster-metrics on transition to standby. (Rohith via kasha)
+
   IMPROVEMENTS
 
     YARN-1007. Enhance History Reader interface for Containers. (Mayank Bansal via
