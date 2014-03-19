@@ -52,6 +52,10 @@ Release 2.4.0 - UNRELEASED
     HADOOP-10386. Log proxy hostname in various exceptions being thrown in a HA
     setup. (wheat9)
 
+    HADOOP-10221. Add a plugin to specify SaslProperties for RPC protocol
+    based on connection properties. (Benoy Antony and Daryn Sharp via
+    Arpit Agarwal)
+
   OPTIMIZATIONS
 
   BUG FIXES

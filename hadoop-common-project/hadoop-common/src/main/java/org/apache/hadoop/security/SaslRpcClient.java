@@ -89,6 +89,7 @@ public class SaslRpcClient {
   private final Configuration conf;
 
   private SaslClient saslClient;
+  private SaslPropertiesResolver saslPropsResolver;
   private AuthMethod authMethod;
   
   private static final RpcRequestHeaderProto saslHeader = ProtoUtil
@@ -112,6 +113,7 @@ public class SaslRpcClient {
     this.protocol = protocol;
     this.serverAddr = serverAddr;
     this.conf = conf;
+    this.saslPropsResolver = SaslPropertiesResolver.getInstance(conf);
   }
   
   @VisibleForTesting
@@ -207,7 +209,8 @@ public class SaslRpcClient {
     // if necessary, auth types below will verify they are valid
     final String saslProtocol = authType.getProtocol();
     final String saslServerName = authType.getServerId();
-    Map<String, String> saslProperties = SaslRpcServer.SASL_PROPS;
+    Map<String, String> saslProperties =
+      saslPropsResolver.getClientProperties(serverAddr.getAddress());  
     CallbackHandler saslCallback = null;
     
     final AuthMethod method = AuthMethod.valueOf(authType.getMethod());
