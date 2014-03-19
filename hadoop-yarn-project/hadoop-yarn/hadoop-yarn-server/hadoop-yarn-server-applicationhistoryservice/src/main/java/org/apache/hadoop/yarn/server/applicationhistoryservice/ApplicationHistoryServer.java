@@ -169,5 +169,12 @@ public class ApplicationHistoryServer extends CompositeService {
       throw new YarnRuntimeException(msg, e);
     }
   }
-
+  /**
+   * @return ApplicationTimelineStore
+   */
+  @Private
+  @VisibleForTesting
+  public TimelineStore getTimelineStore() {
+    return timelineStore;
+  }
 }

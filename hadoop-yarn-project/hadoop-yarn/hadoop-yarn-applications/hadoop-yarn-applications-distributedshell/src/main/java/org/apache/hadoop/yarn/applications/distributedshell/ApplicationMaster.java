@@ -45,6 +45,7 @@ import org.apache.commons.cli.ParseException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -55,6 +56,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
@@ -80,7 +82,10 @@ import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineEvent;
 import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
+import org.apache.hadoop.yarn.client.api.TimelineClient;
 import org.apache.hadoop.yarn.client.api.async.AMRMClientAsync;
 import org.apache.hadoop.yarn.client.api.async.NMClientAsync;
 import org.apache.hadoop.yarn.client.api.async.impl.NMClientAsyncImpl;
@@ -90,6 +95,7 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
+import org.apache.log4j.LogManager;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -159,6 +165,18 @@ import com.google.common.annotations.VisibleForTesting;
 public class ApplicationMaster {
 
   private static final Log LOG = LogFactory.getLog(ApplicationMaster.class);
+
+  @VisibleForTesting
+  @Private
+  public static enum DSEvent {
+    DS_APP_ATTEMPT_START, DS_APP_ATTEMPT_END, DS_CONTAINER_START, DS_CONTAINER_END
+  }
+  
+  @VisibleForTesting
+  @Private
+  public static enum DSEntity {
+    DS_APP_ATTEMPT, DS_CONTAINER
+  }
 
   // Configuration
   private Configuration conf;
@@ -242,6 +260,9 @@ public class ApplicationMaster {
   // Launch threads
   private List<Thread> launchThreads = new ArrayList<Thread>();
 
+  // Timeline Client
+  private TimelineClient timelineClient;
+
   private final String linux_bash_command = "bash";
   private final String windows_command = "cmd /c";
 
@@ -261,7 +282,8 @@ public class ApplicationMaster {
       result = appMaster.finish();
     } catch (Throwable t) {
       LOG.fatal("Error running ApplicationMaster", t);
-      System.exit(1);
+      LogManager.shutdown();
+      ExitUtil.terminate(1, t);
     }
     if (result) {
       LOG.info("Application Master completed successfully. exiting");
@@ -316,7 +338,6 @@ public class ApplicationMaster {
    * @throws IOException
    */
   public boolean init(String[] args) throws ParseException, IOException {
-
     Options opts = new Options();
     opts.addOption("app_attempt_id", true,
         "App Attempt ID. Not to be used unless for testing purposes");
@@ -464,6 +485,11 @@ public class ApplicationMaster {
     requestPriority = Integer.parseInt(cliParser
         .getOptionValue("priority", "0"));
 
+    // Creating the Timeline Client
+    timelineClient = TimelineClient.createTimelineClient();
+    timelineClient.init(conf);
+    timelineClient.start();
+
     return true;
   }
 
@@ -485,6 +511,13 @@ public class ApplicationMaster {
   @SuppressWarnings({ "unchecked" })
   public void run() throws YarnException, IOException {
     LOG.info("Starting ApplicationMaster");
+    try {
+      publishApplicationAttemptEvent(timelineClient, appAttemptID.toString(),
+          DSEvent.DS_APP_ATTEMPT_START);
+    } catch (Exception e) {
+      LOG.error("App Attempt start event coud not be pulished for "
+          + appAttemptID.toString(), e);
+    }
 
     Credentials credentials =
         UserGroupInformation.getCurrentUser().getCredentials();
@@ -564,6 +597,13 @@ public class ApplicationMaster {
       amRMClient.addContainerRequest(containerAsk);
     }
     numRequestedContainers.set(numTotalContainersToRequest);
+    try {
+      publishApplicationAttemptEvent(timelineClient, appAttemptID.toString(),
+          DSEvent.DS_APP_ATTEMPT_END);
+    } catch (Exception e) {
+      LOG.error("App Attempt start event coud not be pulished for "
+          + appAttemptID.toString(), e);
+    }
   }
 
   @VisibleForTesting
@@ -667,6 +707,12 @@ public class ApplicationMaster {
           numCompletedContainers.incrementAndGet();
           LOG.info("Container completed successfully." + ", containerId="
               + containerStatus.getContainerId());
+        }
+        try {
+          publishContainerEndEvent(timelineClient, containerStatus);
+        } catch (Exception e) {
+          LOG.error("Container start event could not be pulished for "
+              + containerStatus.getContainerId().toString(), e);
         }
       }
       
@@ -781,6 +827,13 @@ public class ApplicationMaster {
       Container container = containers.get(containerId);
       if (container != null) {
         applicationMaster.nmClientAsync.getContainerStatusAsync(containerId, container.getNodeId());
+      }
+      try {
+        ApplicationMaster.publishContainerStartEvent(
+            applicationMaster.timelineClient, container);
+      } catch (Exception e) {
+        LOG.error("Container start event coud not be pulished for "
+            + container.getId().toString(), e);
       }
     }
 
@@ -967,5 +1020,55 @@ public class ApplicationMaster {
     } finally {
       org.apache.commons.io.IOUtils.closeQuietly(ds);
     }
+  }
+  
+  private static void publishContainerStartEvent(TimelineClient timelineClient,
+      Container container) throws IOException, YarnException {
+    TimelineEntity entity = new TimelineEntity();
+    entity.setEntityId(container.getId().toString());
+    entity.setEntityType(DSEntity.DS_CONTAINER.toString());
+    entity.addPrimaryFilter("user", UserGroupInformation.getCurrentUser()
+        .toString());
+    TimelineEvent event = new TimelineEvent();
+    event.setTimestamp(System.currentTimeMillis());
+    event.setEventType(DSEvent.DS_CONTAINER_START.toString());
+    event.addEventInfo("Node", container.getNodeId().toString());
+    event.addEventInfo("Resources", container.getResource().toString());
+    entity.addEvent(event);
+
+    timelineClient.putEntities(entity);
+  }
+
+  private static void publishContainerEndEvent(TimelineClient timelineClient,
+      ContainerStatus container) throws IOException, YarnException {
+    TimelineEntity entity = new TimelineEntity();
+    entity.setEntityId(container.getContainerId().toString());
+    entity.setEntityType(DSEntity.DS_CONTAINER.toString());
+    entity.addPrimaryFilter("user", UserGroupInformation.getCurrentUser()
+        .toString());
+    TimelineEvent event = new TimelineEvent();
+    event.setTimestamp(System.currentTimeMillis());
+    event.setEventType(DSEvent.DS_CONTAINER_END.toString());
+    event.addEventInfo("State", container.getState().name());
+    event.addEventInfo("Exit Status", container.getExitStatus());
+    entity.addEvent(event);
+
+    timelineClient.putEntities(entity);
+  }
+
+  private static void publishApplicationAttemptEvent(
+      TimelineClient timelineClient, String appAttemptId, DSEvent appEvent)
+      throws IOException, YarnException {
+    TimelineEntity entity = new TimelineEntity();
+    entity.setEntityId(appAttemptId);
+    entity.setEntityType(DSEntity.DS_APP_ATTEMPT.toString());
+    entity.addPrimaryFilter("user", UserGroupInformation.getCurrentUser()
+        .toString());
+    TimelineEvent event = new TimelineEvent();
+    event.setEventType(appEvent.toString());
+    event.setTimestamp(System.currentTimeMillis());
+    entity.addEvent(event);
+
+    timelineClient.putEntities(entity);
   }
 }

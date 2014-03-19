@@ -36,11 +36,14 @@ import org.junit.Assert;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.JarFinder;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
@@ -68,6 +71,7 @@ public class TestDistributedShell {
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, 128);
     conf.setClass(YarnConfiguration.RM_SCHEDULER, 
         FifoScheduler.class, ResourceScheduler.class);
+    conf.set("yarn.log.dir", "target");
     if (yarnCluster == null) {
       yarnCluster = new MiniYARNCluster(
         TestDistributedShell.class.getSimpleName(), 1, 1, 1);
@@ -92,6 +96,12 @@ public class TestDistributedShell {
       os.write(bytesOut.toByteArray());
       os.close();
     }
+    FileContext fsContext = FileContext.getLocalFSFileContext();
+    fsContext
+        .delete(
+            new Path(conf
+                .get("yarn.timeline-service.leveldb-timeline-store.path")),
+            true);
     try {
       Thread.sleep(2000);
     } catch (InterruptedException e) {
@@ -108,6 +118,12 @@ public class TestDistributedShell {
         yarnCluster = null;
       }
     }
+    FileContext fsContext = FileContext.getLocalFSFileContext();
+    fsContext
+        .delete(
+            new Path(conf
+                .get("yarn.timeline-service.leveldb-timeline-store.path")),
+            true);
   }
   
   @Test(timeout=90000)
@@ -171,7 +187,27 @@ public class TestDistributedShell {
     t.join();
     LOG.info("Client run completed. Result=" + result);
     Assert.assertTrue(result.get());
-
+    
+    TimelineEntities entitiesAttempts = yarnCluster
+        .getApplicationHistoryServer()
+        .getTimelineStore()
+        .getEntities(ApplicationMaster.DSEntity.DS_APP_ATTEMPT.toString(),
+            null, null, null, null, null, null);
+    Assert.assertNotNull(entitiesAttempts);
+    Assert.assertEquals(1, entitiesAttempts.getEntities().size());
+    Assert.assertEquals(2, entitiesAttempts.getEntities().get(0).getEvents()
+        .size());
+    Assert.assertEquals(entitiesAttempts.getEntities().get(0).getEntityType()
+        .toString(), ApplicationMaster.DSEntity.DS_APP_ATTEMPT.toString());
+    TimelineEntities entities = yarnCluster
+        .getApplicationHistoryServer()
+        .getTimelineStore()
+        .getEntities(ApplicationMaster.DSEntity.DS_CONTAINER.toString(), null,
+            null, null, null, null, null);
+    Assert.assertNotNull(entities);
+    Assert.assertEquals(2, entities.getEntities().size());
+    Assert.assertEquals(entities.getEntities().get(0).getEntityType()
+        .toString(), ApplicationMaster.DSEntity.DS_CONTAINER.toString());
   }
 
   @Test(timeout=90000)

@@ -175,6 +175,9 @@ Release 2.4.0 - UNRELEASED
 
     YARN-1705. Reset cluster-metrics on transition to standby. (Rohith via kasha)
 
+    YARN-1690. Made DistributedShell send timeline entities+events. (Mayank Bansal
+    via zjshen)
+
   IMPROVEMENTS
 
     YARN-1007. Enhance History Reader interface for Containers. (Mayank Bansal via
