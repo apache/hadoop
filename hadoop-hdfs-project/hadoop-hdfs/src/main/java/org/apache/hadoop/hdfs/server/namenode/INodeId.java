@@ -52,7 +52,7 @@ public class INodeId extends SequentialNumber {
     if (requestId != GRANDFATHER_INODE_ID && requestId != inode.getId()) {
       throw new FileNotFoundException(
           "ID mismatch. Request id and saved id: " + requestId + " , "
-              + inode.getId());
+              + inode.getId() + " for file " + inode.getFullPathName());
     }
   }
   
