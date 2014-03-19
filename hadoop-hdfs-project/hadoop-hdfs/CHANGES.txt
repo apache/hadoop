@@ -403,6 +403,8 @@ Release 2.4.0 - UNRELEASED
     HDFS-6117. Print file path information in FileNotFoundException on INode
     ID mismatch. (suresh)
 
+    HDFS-6099. HDFS file system limits not enforced on renames. (cnauroth)
+
   BREAKDOWN OF HDFS-5698 SUBTASKS AND RELATED JIRAS
 
     HDFS-5717. Save FSImage header in protobuf. (Haohui Mai via jing9)
