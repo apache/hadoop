@@ -54,6 +54,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResponse;
+import org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryServer;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.NodeHealthCheckerService;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
@@ -99,6 +100,9 @@ public class MiniYARNCluster extends CompositeService {
   private NodeManager[] nodeManagers;
   private ResourceManager[] resourceManagers;
   private String[] rmIds;
+
+  private ApplicationHistoryServer appHistoryServer;
+  private ApplicationHistoryServerWrapper appHistoryServerWrapper;
 
   private boolean useFixedPorts;
   private boolean useRpc = false;
@@ -241,6 +245,8 @@ public class MiniYARNCluster extends CompositeService {
       addService(new NodeManagerWrapper(index));
     }
 
+    addService(new ApplicationHistoryServerWrapper());
+    
     super.serviceInit(
         conf instanceof YarnConfiguration ? conf : new YarnConfiguration(conf));
   }
@@ -648,5 +654,68 @@ public class MiniYARNCluster extends CompositeService {
       Thread.sleep(100);
     }
     return false;
+  }
+  
+  private class ApplicationHistoryServerWrapper extends AbstractService {
+    public ApplicationHistoryServerWrapper() {
+      super(ApplicationHistoryServerWrapper.class.getName());
+    }
+
+    @Override
+    protected synchronized void serviceInit(Configuration conf)
+        throws Exception {
+      if (!conf.getBoolean(YarnConfiguration.YARN_MINICLUSTER_FIXED_PORTS,
+          YarnConfiguration.DEFAULT_YARN_MINICLUSTER_FIXED_PORTS)) {
+        conf.set(YarnConfiguration.TIMELINE_SERVICE_ADDRESS,
+            YarnConfiguration.DEFAULT_TIMELINE_SERVICE_ADDRESS);
+        conf.set(YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS,
+            YarnConfiguration.DEFAULT_TIMELINE_SERVICE_WEBAPP_ADDRESS);
+      }
+      appHistoryServer = new ApplicationHistoryServer();
+      appHistoryServer.init(conf);
+      super.serviceInit(conf);
+    }
+
+    @Override
+    protected synchronized void serviceStart() throws Exception {
+      try {
+        new Thread() {
+          public void run() {
+            appHistoryServer.start();
+          };
+        }.start();
+        int waitCount = 0;
+        while (appHistoryServer.getServiceState() == STATE.INITED
+            && waitCount++ < 60) {
+          LOG.info("Waiting for Timeline Server to start...");
+          Thread.sleep(1500);
+        }
+        if (appHistoryServer.getServiceState() != STATE.STARTED) {
+          // AHS could have failed.
+          throw new IOException(
+              "ApplicationHistoryServer failed to start. Final state is "
+                  + appHistoryServer.getServiceState());
+        }
+        super.serviceStart();
+      } catch (Throwable t) {
+        throw new YarnRuntimeException(t);
+      }
+      LOG.info("MiniYARN ApplicationHistoryServer address: "
+          + getConfig().get(YarnConfiguration.TIMELINE_SERVICE_ADDRESS));
+      LOG.info("MiniYARN ApplicationHistoryServer web address: "
+          + getConfig().get(YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS));
+    }
+
+    @Override
+    protected synchronized void serviceStop() throws Exception {
+      if (appHistoryServer != null) {
+        appHistoryServer.stop();
+      }
+      super.serviceStop();
+    }
+  }
+
+  public ApplicationHistoryServer getApplicationHistoryServer() {
+    return this.appHistoryServer;
   }
 }
