@@ -75,6 +75,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.FSLimitException;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
@@ -358,7 +359,9 @@ class NameNodeRpcServer implements NamenodeProtocols {
         LeaseExpiredException.class,
         NSQuotaExceededException.class,
         DSQuotaExceededException.class,
-        AclException.class);
+        AclException.class,
+        FSLimitException.PathComponentTooLongException.class,
+        FSLimitException.MaxDirectoryItemsExceededException.class);
  }
 
   /** Allow access to the client RPC server for testing */
