@@ -18,23 +18,25 @@
 
 package org.apache.hadoop.hdfs.web;
 
-import java.io.IOException;
-import java.net.URI;
-
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.MiniDFSNNTopology;
+import org.apache.hadoop.hdfs.*;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.token.Token;
 import org.junit.Assert;
 import org.junit.Test;
 
-/** Test whether WebHDFS can connect to an HA cluster */
+import java.io.IOException;
+import java.net.URI;
+
 public class TestWebHDFSForHA {
   private static final String LOGICAL_NAME = "minidfs";
+  private static final URI WEBHDFS_URI = URI.create(WebHdfsFileSystem.SCHEME +
+          "://" + LOGICAL_NAME);
   private static final MiniDFSNNTopology topo = new MiniDFSNNTopology()
       .addNameservice(new MiniDFSNNTopology.NSConf(LOGICAL_NAME).addNN(
           new MiniDFSNNTopology.NNConf("nn1")).addNN(
@@ -42,8 +44,7 @@ public class TestWebHDFSForHA {
 
   @Test
   public void testHA() throws IOException {
-    Configuration conf = new Configuration();
-    conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, 1);
+    Configuration conf = DFSTestUtil.newHAConfiguration(LOGICAL_NAME);
     MiniDFSCluster cluster = null;
     FileSystem fs = null;
     try {
@@ -54,8 +55,7 @@ public class TestWebHDFSForHA {
 
       cluster.waitActive();
 
-      final String uri = WebHdfsFileSystem.SCHEME + "://" + LOGICAL_NAME;
-      fs = FileSystem.get(URI.create(uri), conf);
+      fs = FileSystem.get(WEBHDFS_URI, conf);
       cluster.transitionToActive(0);
 
       final Path dir = new Path("/test");
@@ -67,9 +67,7 @@ public class TestWebHDFSForHA {
       final Path dir2 = new Path("/test2");
       Assert.assertTrue(fs.mkdirs(dir2));
     } finally {
-      if (fs != null) {
-        fs.close();
-      }
+      IOUtils.cleanup(null, fs);
       if (cluster != null) {
         cluster.shutdown();
       }
@@ -78,10 +76,9 @@ public class TestWebHDFSForHA {
 
   @Test
   public void testSecureHA() throws IOException {
-    Configuration conf = new Configuration();
+    Configuration conf = DFSTestUtil.newHAConfiguration(LOGICAL_NAME);
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY,
         true);
-    conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, 1);
 
     MiniDFSCluster cluster = null;
     WebHdfsFileSystem fs = null;
@@ -92,8 +89,7 @@ public class TestWebHDFSForHA {
       HATestUtil.setFailoverConfigurations(cluster, conf, LOGICAL_NAME);
       cluster.waitActive();
 
-      final String uri = WebHdfsFileSystem.SCHEME + "://" + LOGICAL_NAME;
-      fs = (WebHdfsFileSystem) FileSystem.get(URI.create(uri), conf);
+      fs = (WebHdfsFileSystem) FileSystem.get(WEBHDFS_URI, conf);
 
       cluster.transitionToActive(0);
       Token<?> token = fs.getDelegationToken(null);
@@ -104,9 +100,44 @@ public class TestWebHDFSForHA {
       fs.renewDelegationToken(token);
       fs.cancelDelegationToken(token);
     } finally {
-      if (fs != null) {
-        fs.close();
+      IOUtils.cleanup(null, fs);
+      if (cluster != null) {
+        cluster.shutdown();
       }
+    }
+  }
+
+  @Test
+  public void testFailoverAfterOpen() throws IOException {
+    Configuration conf = DFSTestUtil.newHAConfiguration(LOGICAL_NAME);
+    MiniDFSCluster cluster = null;
+    FileSystem fs = null;
+    final Path p = new Path("/test");
+    final byte[] data = "Hello".getBytes();
+
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).nnTopology(topo)
+              .numDataNodes(1).build();
+
+      HATestUtil.setFailoverConfigurations(cluster, conf, LOGICAL_NAME);
+
+      cluster.waitActive();
+
+      fs = FileSystem.get(WEBHDFS_URI, conf);
+      cluster.transitionToActive(1);
+
+      FSDataOutputStream out = fs.create(p);
+      cluster.shutdownNameNode(1);
+      cluster.transitionToActive(0);
+
+      out.write(data);
+      out.close();
+      FSDataInputStream in = fs.open(p);
+      byte[] buf = new byte[data.length];
+      IOUtils.readFully(in, buf, 0, buf.length);
+      Assert.assertArrayEquals(data, buf);
+    } finally {
+      IOUtils.cleanup(null, fs);
       if (cluster != null) {
         cluster.shutdown();
       }

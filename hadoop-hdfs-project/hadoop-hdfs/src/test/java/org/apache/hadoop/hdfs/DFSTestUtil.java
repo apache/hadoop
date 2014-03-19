@@ -53,8 +53,11 @@ import org.apache.hadoop.hdfs.server.datanode.TestTransferRbw;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.ha
+        .ConfiguredFailoverProxyProvider;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
+import org.apache.hadoop.hdfs.web.TestWebHDFSForHA;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.net.NetUtils;
@@ -136,7 +139,22 @@ public class DFSTestUtil {
 
     NameNode.format(conf);
   }
-  
+
+  /**
+   * Create a new HA-enabled configuration.
+   */
+  public static Configuration newHAConfiguration(final String logicalName) {
+    Configuration conf = new Configuration();
+    conf.set(DFSConfigKeys.DFS_NAMESERVICES, logicalName);
+    conf.set(DFSUtil.addKeySuffixes(DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX,
+            logicalName), "nn1,nn2");
+    conf.set(DFSConfigKeys.DFS_CLIENT_FAILOVER_PROXY_PROVIDER_KEY_PREFIX + "" +
+            "." + logicalName,
+            ConfiguredFailoverProxyProvider.class.getName());
+    conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, 1);
+    return conf;
+  }
+
   /** class MyFile contains enough information to recreate the contents of
    * a single file.
    */
