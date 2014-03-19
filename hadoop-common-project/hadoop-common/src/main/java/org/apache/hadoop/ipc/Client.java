@@ -732,6 +732,7 @@ public class Client {
               // for testing
               remoteId.saslQop =
                   (String)saslRpcClient.getNegotiatedProperty(Sasl.QOP);
+              LOG.debug("Negotiated QOP is :" + remoteId.saslQop);
             } else if (UserGroupInformation.isSecurityEnabled() &&
                        !fallbackAllowed) {
               throw new IOException("Server asks us to fall back to SIMPLE " +

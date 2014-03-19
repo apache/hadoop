@@ -282,5 +282,11 @@ public class CommonConfigurationKeysPublic {
   public static final String HTTP_POLICY_HTTP_ONLY = "HTTP_ONLY";
   @Deprecated
   public static final String HTTP_POLICY_HTTPS_ONLY = "HTTPS_ONLY";
+  /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
+  public static final String  HADOOP_RPC_PROTECTION =
+    "hadoop.rpc.protection";
+  /** Class to override Sasl Properties for a connection */
+  public static final String  HADOOP_SECURITY_SASL_PROPS_RESOLVER_CLASS =
+    "hadoop.security.saslproperties.resolver.class";
 }
 

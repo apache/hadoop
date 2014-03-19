@@ -70,6 +70,7 @@ public class SaslRpcServer {
   public static final Map<String, String> SASL_PROPS = 
       new TreeMap<String, String>();
   private static SaslServerFactory saslFactory;
+  private static SaslPropertiesResolver resolver;
 
   public static enum QualityOfProtection {
     AUTHENTICATION("auth"),
@@ -129,7 +130,8 @@ public class SaslRpcServer {
   
   @InterfaceAudience.Private
   @InterfaceStability.Unstable
-  public SaslServer create(Connection connection,
+  public SaslServer create(final Connection connection,
+                           final Map<String,?> saslProperties,
                            SecretManager<TokenIdentifier> secretManager
       ) throws IOException, InterruptedException {
     UserGroupInformation ugi = null;
@@ -162,12 +164,12 @@ public class SaslRpcServer {
           @Override
           public SaslServer run() throws SaslException  {
             return saslFactory.createSaslServer(mechanism, protocol, serverId,
-                SaslRpcServer.SASL_PROPS, callback);
+                saslProperties, callback);
           }
         });
     } else {
       saslServer = saslFactory.createSaslServer(mechanism, protocol, serverId,
-          SaslRpcServer.SASL_PROPS, callback);
+          saslProperties, callback);
     }
     if (saslServer == null) {
       throw new AccessControlException(
@@ -180,17 +182,10 @@ public class SaslRpcServer {
   }
 
   public static void init(Configuration conf) {
-    String[] qop = conf.getStrings("hadoop.rpc.protection",
-        QualityOfProtection.AUTHENTICATION.toString());
-    
-    for (int i=0; i < qop.length; i++) {
-        qop[i] = QualityOfProtection.valueOf(qop[i].toUpperCase()).getSaslQop();
-    }
-    
-    SASL_PROPS.put(Sasl.QOP, StringUtils.join(",", qop));
-    SASL_PROPS.put(Sasl.SERVER_AUTH, "true");
     Security.addProvider(new SaslPlainServer.SecurityProvider());
-    saslFactory = new FastSaslServerFactory(SASL_PROPS);
+    // passing null so factory is populated with all possibilities.  the
+    // properties passed when instantiating a server are what really matter
+    saslFactory = new FastSaslServerFactory(null);
   }
   
   static String encodeIdentifier(byte[] identifier) {
