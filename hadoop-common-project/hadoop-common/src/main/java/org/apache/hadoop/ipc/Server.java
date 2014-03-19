@@ -1570,7 +1570,7 @@ public abstract class Server {
         throws IOException, InterruptedException {
       final Map<String,?> saslProps =
                   saslPropsResolver.getServerProperties(addr);
-      return new SaslRpcServer(authMethod).create(this ,saslProps, secretManager);
+      return new SaslRpcServer(authMethod).create(this, saslProps, secretManager);
     }
     
     /**
