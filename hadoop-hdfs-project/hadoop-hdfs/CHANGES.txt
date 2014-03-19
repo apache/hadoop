@@ -262,6 +262,9 @@ Release 2.5.0 - UNRELEASED
 
   BUG FIXES 
 
+    HDFS-6112. NFS Gateway docs are incorrect for allowed hosts configuration.
+    (atm)
+
 Release 2.4.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

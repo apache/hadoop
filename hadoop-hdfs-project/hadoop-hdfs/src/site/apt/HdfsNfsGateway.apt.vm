@@ -161,10 +161,10 @@ HDFS NFS Gateway
   * By default, the export can be mounted by any client. To better control the access,
     users can update the following property. The value string contains machine name and
     access privilege, separated by whitespace
-    characters. Machine name format can be single host, wildcards, and IPv4 networks.The
-    access privilege uses rw or ro to specify readwrite or readonly access of the machines to exports. If the access
+    characters. The machine name format can be a single host, a Java regular expression, or an IPv4 address. The
+    access privilege uses rw or ro to specify read/write or read-only access of the machines to exports. If the access
     privilege is not provided, the default is read-only. Entries are separated by ";".
-    For example: "192.168.0.0/22 rw ; host*.example.com ; host1.test.org ro;". Only NFS gateway needs to restart after 
+    For example: "192.168.0.0/22 rw ; host.*\.example\.com ; host1.test.org ro;". Only the NFS gateway needs to restart after 
     this property is updated.
 
 ----
