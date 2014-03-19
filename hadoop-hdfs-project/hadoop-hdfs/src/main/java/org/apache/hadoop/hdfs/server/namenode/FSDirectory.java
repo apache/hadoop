@@ -643,6 +643,7 @@ public class FSDirectory implements Closeable {
     }
     
     // Ensure dst has quota to accommodate rename
+    verifyFsLimitsForRename(srcIIP, dstIIP);
     verifyQuotaForRename(srcIIP.getINodes(), dstIIP.getINodes());
     
     boolean added = false;
@@ -894,6 +895,7 @@ public class FSDirectory implements Closeable {
     }
 
     // Ensure dst has quota to accommodate rename
+    verifyFsLimitsForRename(srcIIP, dstIIP);
     verifyQuotaForRename(srcIIP.getINodes(), dstIIP.getINodes());
 
     INode srcChild = srcIIP.getLastINode();
@@ -2134,6 +2136,27 @@ public class FSDirectory implements Closeable {
         delta.get(Quota.DISKSPACE), src[i - 1]);
   }
 
+  /**
+   * Checks file system limits (max component length and max directory items)
+   * during a rename operation.
+   *
+   * @param srcIIP INodesInPath containing every inode in the rename source
+   * @param dstIIP INodesInPath containing every inode in the rename destination
+   * @throws PathComponentTooLongException child's name is too long.
+   * @throws MaxDirectoryItemsExceededException too many children.
+   */
+  private void verifyFsLimitsForRename(INodesInPath srcIIP, INodesInPath dstIIP)
+      throws PathComponentTooLongException, MaxDirectoryItemsExceededException {
+    byte[] dstChildName = dstIIP.getLastLocalName();
+    INode[] dstInodes = dstIIP.getINodes();
+    int pos = dstInodes.length - 1;
+    verifyMaxComponentLength(dstChildName, dstInodes, pos);
+    // Do not enforce max directory items if renaming within same directory.
+    if (srcIIP.getINode(-2) != dstIIP.getINode(-2)) {
+      verifyMaxDirItems(dstInodes, pos);
+    }
+  }
+
   /** Verify if the snapshot name is legal. */
   void verifySnapshotName(String snapshotName, String path)
       throws PathComponentTooLongException {
@@ -2159,10 +2182,14 @@ public class FSDirectory implements Closeable {
 
   /**
    * Verify child's name for fs limit.
+   *
+   * @param childName byte[] containing new child name
+   * @param parentPath Object either INode[] or String containing parent path
+   * @param pos int position of new child in path
    * @throws PathComponentTooLongException child's name is too long.
    */
-  void verifyMaxComponentLength(byte[] childName, Object parentPath, int pos)
-      throws PathComponentTooLongException {
+  private void verifyMaxComponentLength(byte[] childName, Object parentPath,
+      int pos) throws PathComponentTooLongException {
     if (maxComponentLength == 0) {
       return;
     }
@@ -2184,9 +2211,12 @@ public class FSDirectory implements Closeable {
 
   /**
    * Verify children size for fs limit.
+   *
+   * @param pathComponents INode[] containing full path of inodes to new child
+   * @param pos int position of new child in pathComponents
    * @throws MaxDirectoryItemsExceededException too many children.
    */
-  void verifyMaxDirItems(INode[] pathComponents, int pos)
+  private void verifyMaxDirItems(INode[] pathComponents, int pos)
       throws MaxDirectoryItemsExceededException {
 
     final INodeDirectory parent = pathComponents[pos-1].asDirectory();
