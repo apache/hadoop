@@ -177,6 +177,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-6068. Disallow snapshot names that are also invalid directory names.
     (sathish via szetszwo)
 
+    HDFS-6123. Do not log stack trace for ReplicaAlreadyExistsException and
+    SocketTimeoutException.  (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-5790. LeaseManager.findPath is very slow when many leases need recovery

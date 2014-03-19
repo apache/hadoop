@@ -560,7 +560,11 @@ class BlockSender implements java.io.Closeable {
          * part of a block and then decides not to read the rest (but leaves
          * the socket open).
          */
-          LOG.info("exception: ", e);
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Failed to send data:", e);
+        } else {
+          LOG.info("Failed to send data: " + e);
+        }
       } else {
         /* Exception while writing to the client. Connection closure from
          * the other end is mostly the case and we do not care much about
