@@ -274,5 +274,11 @@ public class CommonConfigurationKeysPublic {
   /** Default value for HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN */
   public static final int HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN_DEFAULT =
           60;
+  /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
+  public static final String  HADOOP_RPC_PROTECTION =
+    "hadoop.rpc.protection";
+  /** Class to override Sasl Properties for a connection */
+  public static final String  HADOOP_SECURITY_SASL_PROPS_RESOLVER_CLASS =
+    "hadoop.security.saslproperties.resolver.class";
 }
 

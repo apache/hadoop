@@ -98,6 +98,7 @@ import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcSaslProto.SaslAuth;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcSaslProto.SaslState;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.SaslPropertiesResolver;
 import org.apache.hadoop.security.SaslRpcServer;
 import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
 import org.apache.hadoop.security.SecurityUtil;
@@ -360,6 +361,7 @@ public abstract class Server {
   private Configuration conf;
   private String portRangeConfig = null;
   private SecretManager<TokenIdentifier> secretManager;
+  private SaslPropertiesResolver saslPropsResolver;
   private ServiceAuthorizationManager serviceAuthorizationManager = new ServiceAuthorizationManager();
 
   private int maxQueueSize;
@@ -1637,7 +1639,9 @@ public abstract class Server {
     
     private SaslServer createSaslServer(AuthMethod authMethod)
         throws IOException, InterruptedException {
-      return new SaslRpcServer(authMethod).create(this, secretManager);
+      final Map<String,?> saslProps =
+                  saslPropsResolver.getServerProperties(addr);
+      return new SaslRpcServer(authMethod).create(this ,saslProps, secretManager);
     }
     
     /**
@@ -2254,6 +2258,7 @@ public abstract class Server {
     
     if (secretManager != null || UserGroupInformation.isSecurityEnabled()) {
       SaslRpcServer.init(conf);
+      saslPropsResolver = SaslPropertiesResolver.getInstance(conf);
     }
     
     this.exceptionsHandler.addTerseExceptions(StandbyException.class);

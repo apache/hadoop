@@ -261,6 +261,19 @@
       authentication means authentication only and no integrity or privacy; 
       integrity implies authentication and integrity are enabled; and privacy 
       implies all of authentication, integrity and privacy are enabled.
+      hadoop.security.saslproperties.resolver.class can be used to override
+      the hadoop.rpc.protection for a connection at the server side.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.saslproperties.resolver.class</name>
+  <value></value>
+  <description>SaslPropertiesResolver used to resolve the QOP used for a 
+      connection. If not specified, the full set of values specified in 
+      hadoop.rpc.protection is used while determining the QOP used for the 
+      connection. If a class is specified, then the QOP values returned by 
+      the class will be used while determining the QOP used for the connection.
   </description>
 </property>
 

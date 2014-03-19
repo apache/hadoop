@@ -373,6 +373,10 @@ Release 2.4.0 - UNRELEASED
     HADOOP-3679. Fixup assert ordering in unit tests to yield meaningful error
     messages. (Jay Vyas via cdouglas)
 
+    HADOOP-10221. Add a plugin to specify SaslProperties for RPC protocol
+    based on connection properties. (Benoy Antony and Daryn Sharp via
+    Arpit Agarwal)
+
   OPTIMIZATIONS
 
   BUG FIXES
