@@ -1152,43 +1152,39 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
    */
   @Override // FsDatasetSpi
   public void invalidate(String bpid, Block invalidBlks[]) throws IOException {
-    boolean error = false;
+    final List<String> errors = new ArrayList<String>();
     for (int i = 0; i < invalidBlks.length; i++) {
       final File f;
       final FsVolumeImpl v;
       synchronized (this) {
-        f = getFile(bpid, invalidBlks[i].getBlockId());
-        ReplicaInfo info = volumeMap.get(bpid, invalidBlks[i]);
+        final ReplicaInfo info = volumeMap.get(bpid, invalidBlks[i]);
         if (info == null) {
-          LOG.warn("Failed to delete replica " + invalidBlks[i]
+          // It is okay if the block is not found -- it may be deleted earlier.
+          LOG.info("Failed to delete replica " + invalidBlks[i]
               + ": ReplicaInfo not found.");
-          error = true;
           continue;
         }
         if (info.getGenerationStamp() != invalidBlks[i].getGenerationStamp()) {
-          LOG.warn("Failed to delete replica " + invalidBlks[i]
+          errors.add("Failed to delete replica " + invalidBlks[i]
               + ": GenerationStamp not matched, info=" + info);
-          error = true;
           continue;
         }
+        f = info.getBlockFile();
         v = (FsVolumeImpl)info.getVolume();
         if (f == null) {
-          LOG.warn("Failed to delete replica " + invalidBlks[i]
+          errors.add("Failed to delete replica " + invalidBlks[i]
               +  ": File not found, volume=" + v);
-          error = true;
           continue;
         }
         if (v == null) {
-          LOG.warn("Failed to delete replica " + invalidBlks[i]
-              +  ". No volume for this replica, file=" + f + ".");
-          error = true;
+          errors.add("Failed to delete replica " + invalidBlks[i]
+              +  ". No volume for this replica, file=" + f);
           continue;
         }
         File parent = f.getParentFile();
         if (parent == null) {
-          LOG.warn("Failed to delete replica " + invalidBlks[i]
-              +  ". Parent not found for file " + f + ".");
-          error = true;
+          errors.add("Failed to delete replica " + invalidBlks[i]
+              +  ". Parent not found for file " + f);
           continue;
         }
         ReplicaState replicaState = info.getState();
@@ -1210,8 +1206,14 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
           new ExtendedBlock(bpid, invalidBlks[i]),
           dataStorage.getTrashDirectoryForBlockFile(bpid, f));
     }
-    if (error) {
-      throw new IOException("Error in deleting blocks.");
+    if (!errors.isEmpty()) {
+      StringBuilder b = new StringBuilder("Failed to delete ")
+        .append(errors.size()).append(" (out of ").append(invalidBlks.length)
+        .append(") replica(s):");
+      for(int i = 0; i < errors.size(); i++) {
+        b.append("\n").append(i).append(") ").append(errors.get(i));
+      }
+      throw new IOException(b.toString());
     }
   }
 
