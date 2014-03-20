@@ -19,7 +19,12 @@ package org.apache.hadoop.mapred;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileStatus;
@@ -29,15 +34,58 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.RawLocalFileSystem;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
+import com.google.common.collect.Lists;
+
+@RunWith(value = Parameterized.class)
 public class TestFileInputFormat {
-
+  
+  private static final Log LOG = LogFactory.getLog(TestFileInputFormat.class);
+  
+  private static String testTmpDir = System.getProperty("test.build.data", "/tmp");
+  private static final Path TEST_ROOT_DIR = new Path(testTmpDir, "TestFIF");
+  
+  private static FileSystem localFs;
+  
+  private int numThreads;
+  
+  public TestFileInputFormat(int numThreads) {
+    this.numThreads = numThreads;
+    LOG.info("Running with numThreads: " + numThreads);
+  }
+  
+  @Parameters
+  public static Collection<Object[]> data() {
+    Object[][] data = new Object[][] { { 1 }, { 5 }};
+    return Arrays.asList(data);
+  }
+  
+  @Before
+  public void setup() throws IOException {
+    LOG.info("Using Test Dir: " + TEST_ROOT_DIR);
+    localFs = FileSystem.getLocal(new Configuration());
+    localFs.delete(TEST_ROOT_DIR, true);
+    localFs.mkdirs(TEST_ROOT_DIR);
+  }
+  
+  @After
+  public void cleanup() throws IOException {
+    localFs.delete(TEST_ROOT_DIR, true);
+  }
+  
   @Test
   public void testListLocatedStatus() throws Exception {
     Configuration conf = getConfiguration();
     conf.setBoolean("fs.test.impl.disable.cache", false);
+    conf.setInt(FileInputFormat.LIST_STATUS_NUM_THREADS, numThreads);
     conf.set(org.apache.hadoop.mapreduce.lib.input.FileInputFormat.INPUT_DIR,
         "test:///a1/a2");
     MockFileSystem mockFs =
@@ -51,6 +99,82 @@ public class TestFileInputFormat {
     Assert.assertEquals("Input splits are not correct", 2, splits.length);
     Assert.assertEquals("listLocatedStatuss calls",
         1, mockFs.numListLocatedStatusCalls);
+    FileSystem.closeAll();
+  }
+  
+  @Test
+  public void testListStatusSimple() throws IOException {
+    Configuration conf = new Configuration();
+    conf.setInt(FileInputFormat.LIST_STATUS_NUM_THREADS, numThreads);
+
+    List<Path> expectedPaths = org.apache.hadoop.mapreduce.lib.input.TestFileInputFormat
+        .configureTestSimple(conf, localFs);
+
+    JobConf jobConf = new JobConf(conf);
+    TextInputFormat fif = new TextInputFormat();
+    fif.configure(jobConf);
+    FileStatus[] statuses = fif.listStatus(jobConf);
+
+    org.apache.hadoop.mapreduce.lib.input.TestFileInputFormat
+        .verifyFileStatuses(expectedPaths, Lists.newArrayList(statuses),
+            localFs);
+  }
+
+  @Test
+  public void testListStatusNestedRecursive() throws IOException {
+    Configuration conf = new Configuration();
+    conf.setInt(FileInputFormat.LIST_STATUS_NUM_THREADS, numThreads);
+
+    List<Path> expectedPaths = org.apache.hadoop.mapreduce.lib.input.TestFileInputFormat
+        .configureTestNestedRecursive(conf, localFs);
+    JobConf jobConf = new JobConf(conf);
+    TextInputFormat fif = new TextInputFormat();
+    fif.configure(jobConf);
+    FileStatus[] statuses = fif.listStatus(jobConf);
+
+    org.apache.hadoop.mapreduce.lib.input.TestFileInputFormat
+        .verifyFileStatuses(expectedPaths, Lists.newArrayList(statuses),
+            localFs);
+  }
+
+  @Test
+  public void testListStatusNestedNonRecursive() throws IOException {
+    Configuration conf = new Configuration();
+    conf.setInt(FileInputFormat.LIST_STATUS_NUM_THREADS, numThreads);
+
+    List<Path> expectedPaths = org.apache.hadoop.mapreduce.lib.input.TestFileInputFormat
+        .configureTestNestedNonRecursive(conf, localFs);
+    JobConf jobConf = new JobConf(conf);
+    TextInputFormat fif = new TextInputFormat();
+    fif.configure(jobConf);
+    FileStatus[] statuses = fif.listStatus(jobConf);
+
+    org.apache.hadoop.mapreduce.lib.input.TestFileInputFormat
+        .verifyFileStatuses(expectedPaths, Lists.newArrayList(statuses),
+            localFs);
+  }
+
+  @Test
+  public void testListStatusErrorOnNonExistantDir() throws IOException {
+    Configuration conf = new Configuration();
+    conf.setInt(FileInputFormat.LIST_STATUS_NUM_THREADS, numThreads);
+
+    org.apache.hadoop.mapreduce.lib.input.TestFileInputFormat
+        .configureTestErrorOnNonExistantDir(conf, localFs);
+    JobConf jobConf = new JobConf(conf);
+    TextInputFormat fif = new TextInputFormat();
+    fif.configure(jobConf);
+    try {
+      fif.listStatus(jobConf);
+      Assert.fail("Expecting an IOException for a missing Input path");
+    } catch (IOException e) {
+      Path expectedExceptionPath = new Path(TEST_ROOT_DIR, "input2");
+      expectedExceptionPath = localFs.makeQualified(expectedExceptionPath);
+      Assert.assertTrue(e instanceof InvalidInputException);
+      Assert.assertEquals(
+          "Input path does not exist: " + expectedExceptionPath.toString(),
+          e.getMessage());
+    }
   }
 
   private Configuration getConfiguration() {
