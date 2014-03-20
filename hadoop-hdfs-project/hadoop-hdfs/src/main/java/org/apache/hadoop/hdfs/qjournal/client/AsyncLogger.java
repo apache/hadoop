@@ -67,8 +67,9 @@ interface AsyncLogger {
    * Begin writing a new log segment.
    * 
    * @param txid the first txid to be written to the new log
+   * @param layoutVersion the LayoutVersion of the log
    */
-  public ListenableFuture<Void> startLogSegment(long txid);
+  public ListenableFuture<Void> startLogSegment(long txid, int layoutVersion);
 
   /**
    * Finalize a log segment.

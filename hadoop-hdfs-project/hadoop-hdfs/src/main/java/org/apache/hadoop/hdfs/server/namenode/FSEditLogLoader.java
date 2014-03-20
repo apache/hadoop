@@ -182,7 +182,7 @@ public class FSEditLogLoader {
             }
           } catch (Throwable e) {
             // Handle a problem with our input
-            check203UpgradeFailure(in.getVersion(), e);
+            check203UpgradeFailure(in.getVersion(true), e);
             String errorMessage =
               formatEditLogReplayError(in, recentOpcodeOffsets, expectedTxId);
             FSImage.LOG.error(errorMessage, e);
@@ -221,7 +221,7 @@ public class FSEditLogLoader {
                   + ", numEdits=" + numEdits + ", totalEdits=" + totalEdits);
             }
             long inodeId = applyEditLogOp(op, fsDir, startOpt,
-                in.getVersion(), lastInodeId);
+                in.getVersion(true), lastInodeId);
             if (lastInodeId < inodeId) {
               lastInodeId = inodeId;
             }
@@ -1005,6 +1005,34 @@ public class FSEditLogLoader {
       lastPos = in.getPosition();
       try {
         if ((op = in.readOp()) == null) {
+          break;
+        }
+      } catch (Throwable t) {
+        FSImage.LOG.warn("Caught exception after reading " + numValid +
+            " ops from " + in + " while determining its valid length." +
+            "Position was " + lastPos, t);
+        in.resync();
+        FSImage.LOG.warn("After resync, position is " + in.getPosition());
+        continue;
+      }
+      if (lastTxId == HdfsConstants.INVALID_TXID
+          || op.getTransactionId() > lastTxId) {
+        lastTxId = op.getTransactionId();
+      }
+      numValid++;
+    }
+    return new EditLogValidation(lastPos, lastTxId, false);
+  }
+
+  static EditLogValidation scanEditLog(EditLogInputStream in) {
+    long lastPos = 0;
+    long lastTxId = HdfsConstants.INVALID_TXID;
+    long numValid = 0;
+    FSEditLogOp op = null;
+    while (true) {
+      lastPos = in.getPosition();
+      try {
+        if ((op = in.readOp()) == null) { // TODO
           break;
         }
       } catch (Throwable t) {

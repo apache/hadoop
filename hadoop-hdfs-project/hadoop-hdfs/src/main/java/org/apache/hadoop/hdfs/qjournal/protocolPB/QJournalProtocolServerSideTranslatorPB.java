@@ -68,6 +68,7 @@ import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.StartLogS
 import org.apache.hadoop.hdfs.qjournal.protocol.RequestInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion;
 import org.apache.hadoop.hdfs.server.protocol.JournalProtocol;
 
 import com.google.protobuf.RpcController;
@@ -180,8 +181,10 @@ public class QJournalProtocolServerSideTranslatorPB implements QJournalProtocolP
   public StartLogSegmentResponseProto startLogSegment(RpcController controller,
       StartLogSegmentRequestProto req) throws ServiceException {
     try {
-      impl.startLogSegment(convert(req.getReqInfo()),
-          req.getTxid());
+      int layoutVersion = req.hasLayoutVersion() ? req.getLayoutVersion()
+          : NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION;
+      impl.startLogSegment(convert(req.getReqInfo()), req.getTxid(),
+          layoutVersion);
     } catch (IOException e) {
       throw new ServiceException(e);
     }

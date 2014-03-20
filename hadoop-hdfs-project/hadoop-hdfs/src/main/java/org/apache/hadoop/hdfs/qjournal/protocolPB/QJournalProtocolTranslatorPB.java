@@ -194,11 +194,11 @@ public class QJournalProtocolTranslatorPB implements ProtocolMetaInterface,
   }
 
   @Override
-  public void startLogSegment(RequestInfo reqInfo, long txid)
+  public void startLogSegment(RequestInfo reqInfo, long txid, int layoutVersion)
       throws IOException {
     StartLogSegmentRequestProto req = StartLogSegmentRequestProto.newBuilder()
         .setReqInfo(convert(reqInfo))
-        .setTxid(txid)
+        .setTxid(txid).setLayoutVersion(layoutVersion)
         .build();
     try {
       rpcProxy.startLogSegment(NULL_CONTROLLER, req);

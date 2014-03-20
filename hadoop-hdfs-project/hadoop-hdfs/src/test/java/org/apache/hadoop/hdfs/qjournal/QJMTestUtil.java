@@ -36,6 +36,8 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion;
+import org.apache.hadoop.hdfs.server.namenode.TestEditLog;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.IOUtils;
@@ -59,11 +61,28 @@ public abstract class QJMTestUtil {
     
     return Arrays.copyOf(buf.getData(), buf.getLength());
   }
-  
+
+  /**
+   * Generate byte array representing a set of GarbageMkdirOp
+   */
+  public static byte[] createGabageTxns(long startTxId, int numTxns)
+      throws IOException {
+    DataOutputBuffer buf = new DataOutputBuffer();
+    FSEditLogOp.Writer writer = new FSEditLogOp.Writer(buf);
+
+    for (long txid = startTxId; txid < startTxId + numTxns; txid++) {
+      FSEditLogOp op = new TestEditLog.GarbageMkdirOp();
+      op.setTransactionId(txid);
+      writer.writeOp(op);
+    }
+    return Arrays.copyOf(buf.getData(), buf.getLength());
+  }
+
   public static EditLogOutputStream writeSegment(MiniJournalCluster cluster,
       QuorumJournalManager qjm, long startTxId, int numTxns,
       boolean finalize) throws IOException {
-    EditLogOutputStream stm = qjm.startLogSegment(startTxId);
+    EditLogOutputStream stm = qjm.startLogSegment(startTxId,
+        NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
     // Should create in-progress
     assertExistsInQuorum(cluster,
         NNStorage.getInProgressEditsFileName(startTxId));

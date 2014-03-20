@@ -32,6 +32,7 @@ import org.apache.hadoop.hdfs.qjournal.client.IPCLoggerChannel;
 import org.apache.hadoop.hdfs.qjournal.client.LoggerTooFarBehindException;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocol;
 import org.apache.hadoop.hdfs.qjournal.protocol.RequestInfo;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.DelayAnswer;
@@ -172,7 +173,7 @@ public class TestIPCLoggerChannel {
         Mockito.<RequestInfo>any());
     
     // After a roll, sending new edits should not fail.
-    ch.startLogSegment(3L).get();
+    ch.startLogSegment(3L, NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION).get();
     assertFalse(ch.isOutOfSync());
 
     ch.sendEdits(3L, 3L, 1, FAKE_DATA).get();

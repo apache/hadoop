@@ -56,7 +56,8 @@ class BackupJournalManager implements JournalManager {
 
   
   @Override
-  public EditLogOutputStream startLogSegment(long txId) throws IOException {
+  public EditLogOutputStream startLogSegment(long txId, int layoutVersion)
+      throws IOException {
     EditLogBackupOutputStream stm = new EditLogBackupOutputStream(bnReg,
         journalInfo);
     stm.startLogSegment(txId);

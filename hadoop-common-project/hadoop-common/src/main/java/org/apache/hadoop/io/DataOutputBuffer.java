@@ -23,6 +23,8 @@ import java.io.*;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
+import com.google.common.base.Preconditions;
+
 /** A reusable {@link DataOutput} implementation that writes to an in-memory
  * buffer.
  *
@@ -68,6 +70,18 @@ public class DataOutputBuffer extends DataOutputStream {
       in.readFully(buf, count, len);
       count = newcount;
     }
+
+    /**
+     * Set the count for the current buf.
+     * @param newCount the new count to set
+     * @return the original count
+     */
+    private int setCount(int newCount) {
+      Preconditions.checkArgument(newCount >= 0 && newCount <= buf.length);
+      int oldCount = count;
+      count = newCount;
+      return oldCount;
+    }
   }
 
   private Buffer buffer;
@@ -109,5 +123,22 @@ public class DataOutputBuffer extends DataOutputStream {
   /** Write to a file stream */
   public void writeTo(OutputStream out) throws IOException {
     buffer.writeTo(out);
+  }
+
+  /**
+   * Overwrite an integer into the internal buffer. Note that this call can only
+   * be used to overwrite existing data in the buffer, i.e., buffer#count cannot
+   * be increased, and DataOutputStream#written cannot be increased.
+   */
+  public void writeInt(int v, int offset) throws IOException {
+    Preconditions.checkState(offset + 4 <= buffer.getLength());
+    byte[] b = new byte[4];
+    b[0] = (byte) ((v >>> 24) & 0xFF);
+    b[1] = (byte) ((v >>> 16) & 0xFF);
+    b[2] = (byte) ((v >>> 8) & 0xFF);
+    b[3] = (byte) ((v >>> 0) & 0xFF);
+    int oldCount = buffer.setCount(offset);
+    buffer.write(b);
+    buffer.setCount(oldCount);
   }
 }

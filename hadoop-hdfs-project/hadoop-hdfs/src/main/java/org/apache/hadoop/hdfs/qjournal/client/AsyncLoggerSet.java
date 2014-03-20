@@ -233,10 +233,10 @@ class AsyncLoggerSet {
   }
 
   public QuorumCall<AsyncLogger, Void> startLogSegment(
-      long txid) {
+      long txid, int layoutVersion) {
     Map<AsyncLogger, ListenableFuture<Void>> calls = Maps.newHashMap();
     for (AsyncLogger logger : loggers) {
-      calls.put(logger, logger.startLogSegment(txid));
+      calls.put(logger, logger.startLogSegment(txid, layoutVersion));
     }
     return QuorumCall.create(calls);
   }

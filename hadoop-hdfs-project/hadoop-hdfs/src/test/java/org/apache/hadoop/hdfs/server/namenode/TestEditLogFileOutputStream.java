@@ -81,7 +81,7 @@ public class TestEditLogFileOutputStream {
         TEST_EDITS, 0);
     try {
       byte[] small = new byte[] { 1, 2, 3, 4, 5, 8, 7 };
-      elos.create();
+      elos.create(NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
       // The first (small) write we make extends the file by 1 MB due to
       // preallocation.
       elos.writeRaw(small, 0, small.length);

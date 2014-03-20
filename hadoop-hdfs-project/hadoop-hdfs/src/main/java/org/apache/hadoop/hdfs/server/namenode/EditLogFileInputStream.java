@@ -37,6 +37,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutFlags;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.server.common.Storage;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogLoader.EditLogValidation;
 import org.apache.hadoop.hdfs.server.namenode.TransferFsImage.HttpGetFailedException;
 import org.apache.hadoop.hdfs.web.URLConnectionFactory;
 import org.apache.hadoop.io.IOUtils;
@@ -135,7 +136,8 @@ public class EditLogFileInputStream extends EditLogInputStream {
     this.maxOpSize = DFSConfigKeys.DFS_NAMENODE_MAX_OP_SIZE_DEFAULT;
   }
 
-  private void init() throws LogHeaderCorruptException, IOException {
+  private void init(boolean verifyLayoutVersion)
+      throws LogHeaderCorruptException, IOException {
     Preconditions.checkState(state == State.UNINIT);
     BufferedInputStream bin = null;
     try {
@@ -144,12 +146,14 @@ public class EditLogFileInputStream extends EditLogInputStream {
       tracker = new FSEditLogLoader.PositionTrackingInputStream(bin);
       dataIn = new DataInputStream(tracker);
       try {
-        logVersion = readLogVersion(dataIn);
+        logVersion = readLogVersion(dataIn, verifyLayoutVersion);
       } catch (EOFException eofe) {
         throw new LogHeaderCorruptException("No header found in log");
       }
+      // We assume future layout will also support ADD_LAYOUT_FLAGS
       if (NameNodeLayoutVersion.supports(
-          LayoutVersion.Feature.ADD_LAYOUT_FLAGS, logVersion)) {
+          LayoutVersion.Feature.ADD_LAYOUT_FLAGS, logVersion) ||
+          logVersion < NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION) {
         try {
           LayoutFlags.read(dataIn);
         } catch (EOFException eofe) {
@@ -188,7 +192,7 @@ public class EditLogFileInputStream extends EditLogInputStream {
     switch (state) {
     case UNINIT:
       try {
-        init();
+        init(true);
       } catch (Throwable e) {
         LOG.error("caught exception initializing " + this, e);
         if (skipBrokenEdits) {
@@ -238,6 +242,13 @@ public class EditLogFileInputStream extends EditLogInputStream {
   }
 
   @Override
+  protected long scanNextOp() throws IOException {
+    Preconditions.checkState(state == State.OPEN);
+    FSEditLogOp cachedNext = getCachedOp();
+    return cachedNext == null ? reader.scanOp() : cachedNext.txid;
+  }
+
+  @Override
   protected FSEditLogOp nextOp() throws IOException {
     return nextOpImpl(false);
   }
@@ -253,9 +264,9 @@ public class EditLogFileInputStream extends EditLogInputStream {
   }
 
   @Override
-  public int getVersion() throws IOException {
+  public int getVersion(boolean verifyVersion) throws IOException {
     if (state == State.UNINIT) {
-      init();
+      init(verifyVersion);
     }
     return logVersion;
   }
@@ -293,11 +304,12 @@ public class EditLogFileInputStream extends EditLogInputStream {
     return getName();
   }
 
-  static FSEditLogLoader.EditLogValidation validateEditLog(File file) throws IOException {
+  static FSEditLogLoader.EditLogValidation validateEditLog(File file)
+      throws IOException {
     EditLogFileInputStream in;
     try {
       in = new EditLogFileInputStream(file);
-      in.getVersion(); // causes us to read the header
+      in.getVersion(true); // causes us to read the header
     } catch (LogHeaderCorruptException e) {
       // If the header is malformed or the wrong value, this indicates a corruption
       LOG.warn("Log file " + file + " has no valid header", e);
@@ -312,6 +324,51 @@ public class EditLogFileInputStream extends EditLogInputStream {
     }
   }
 
+  static FSEditLogLoader.EditLogValidation scanEditLog(File file)
+      throws IOException {
+    EditLogFileInputStream in;
+    try {
+      in = new EditLogFileInputStream(file);
+      // read the header, initialize the inputstream, but do not check the
+      // layoutversion
+      in.getVersion(false);
+    } catch (LogHeaderCorruptException e) {
+      LOG.warn("Log file " + file + " has no valid header", e);
+      return new FSEditLogLoader.EditLogValidation(0,
+          HdfsConstants.INVALID_TXID, true);
+    }
+
+    long lastPos = 0;
+    long lastTxId = HdfsConstants.INVALID_TXID;
+    long numValid = 0;
+    try {
+      while (true) {
+        long txid = HdfsConstants.INVALID_TXID;
+        lastPos = in.getPosition();
+        try {
+          if ((txid = in.scanNextOp()) == HdfsConstants.INVALID_TXID) {
+            break;
+          }
+        } catch (Throwable t) {
+          FSImage.LOG.warn("Caught exception after scanning through "
+              + numValid + " ops from " + in
+              + " while determining its valid length. Position was "
+              + lastPos, t);
+          in.resync();
+          FSImage.LOG.warn("After resync, position is " + in.getPosition());
+          continue;
+        }
+        if (lastTxId == HdfsConstants.INVALID_TXID || txid > lastTxId) {
+          lastTxId = txid;
+        }
+        numValid++;
+      }
+      return new EditLogValidation(lastPos, lastTxId, false);
+    } finally {
+      IOUtils.closeStream(in);
+    }
+  }
+
   /**
    * Read the header of fsedit log
    * @param in fsedit stream
@@ -319,7 +376,7 @@ public class EditLogFileInputStream extends EditLogInputStream {
    * @throws IOException if error occurs
    */
   @VisibleForTesting
-  static int readLogVersion(DataInputStream in)
+  static int readLogVersion(DataInputStream in, boolean verifyLayoutVersion)
       throws IOException, LogHeaderCorruptException {
     int logVersion;
     try {
@@ -328,8 +385,9 @@ public class EditLogFileInputStream extends EditLogInputStream {
       throw new LogHeaderCorruptException(
           "Reached EOF when reading log header");
     }
-    if (logVersion < HdfsConstants.NAMENODE_LAYOUT_VERSION || // future version
-        logVersion > Storage.LAST_UPGRADABLE_LAYOUT_VERSION) { // unsupported
+    if (verifyLayoutVersion &&
+        (logVersion < HdfsConstants.NAMENODE_LAYOUT_VERSION || // future version
+         logVersion > Storage.LAST_UPGRADABLE_LAYOUT_VERSION)) { // unsupported
       throw new LogHeaderCorruptException(
           "Unexpected version of the file system log file: "
           + logVersion + ". Current version = "

@@ -67,7 +67,7 @@ public class TestDatanodeRegister {
     // Return a a good software version.
     doReturn(VersionInfo.getVersion()).when(fakeNsInfo).getSoftwareVersion();
     // Return a good layout version for now.
-    doReturn(HdfsConstants.DATANODE_LAYOUT_VERSION).when(fakeNsInfo)
+    doReturn(HdfsConstants.NAMENODE_LAYOUT_VERSION).when(fakeNsInfo)
         .getLayoutVersion();
     
     DatanodeProtocolClientSideTranslatorPB fakeDnProt = 

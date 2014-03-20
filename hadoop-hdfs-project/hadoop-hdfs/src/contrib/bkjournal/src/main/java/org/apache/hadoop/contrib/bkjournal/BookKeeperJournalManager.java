@@ -364,7 +364,8 @@ public class BookKeeperJournalManager implements JournalManager {
    * @param txId First transaction id to be written to the stream
    */
   @Override
-  public EditLogOutputStream startLogSegment(long txId) throws IOException {
+  public EditLogOutputStream startLogSegment(long txId, int layoutVersion)
+      throws IOException {
     checkEnv();
 
     if (txId <= maxTxId.get()) {
@@ -397,7 +398,7 @@ public class BookKeeperJournalManager implements JournalManager {
     try {
       String znodePath = inprogressZNode(txId);
       EditLogLedgerMetadata l = new EditLogLedgerMetadata(znodePath,
-          HdfsConstants.NAMENODE_LAYOUT_VERSION, currentLedger.getId(), txId);
+          layoutVersion, currentLedger.getId(), txId);
       /* Write the ledger metadata out to the inprogress ledger znode
        * This can fail if for some reason our write lock has
        * expired (@see WriteLock) and another process has managed to

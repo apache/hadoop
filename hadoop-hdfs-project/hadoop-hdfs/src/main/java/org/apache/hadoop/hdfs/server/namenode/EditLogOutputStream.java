@@ -65,9 +65,10 @@ public abstract class EditLogOutputStream implements Closeable {
   /**
    * Create and initialize underlying persistent edits log storage.
    * 
+   * @param layoutVersion The LayoutVersion of the journal
    * @throws IOException
    */
-  abstract public void create() throws IOException;
+  abstract public void create(int layoutVersion) throws IOException;
 
   /**
    * Close the journal.

@@ -394,10 +394,12 @@ public class QuorumJournalManager implements JournalManager {
   }
   
   @Override
-  public EditLogOutputStream startLogSegment(long txId) throws IOException {
+  public EditLogOutputStream startLogSegment(long txId, int layoutVersion)
+      throws IOException {
     Preconditions.checkState(isActiveWriter,
         "must recover segments before starting a new one");
-    QuorumCall<AsyncLogger,Void> q = loggers.startLogSegment(txId);
+    QuorumCall<AsyncLogger, Void> q = loggers.startLogSegment(txId,
+        layoutVersion);
     loggers.waitForWriteQuorum(q, startSegmentTimeoutMs,
         "startLogSegment(" + txId + ")");
     return new QuorumOutputStream(loggers, txId,

@@ -258,8 +258,7 @@ public class IPCLoggerChannel implements AsyncLogger {
 
   private synchronized RequestInfo createReqInfo() {
     Preconditions.checkState(epoch > 0, "bad epoch: " + epoch);
-    return new RequestInfo(journalId, epoch, ipcSerial++,
-        committedTxId);
+    return new RequestInfo(journalId, epoch, ipcSerial++, committedTxId);
   }
 
   @VisibleForTesting
@@ -475,11 +474,12 @@ public class IPCLoggerChannel implements AsyncLogger {
   }
   
   @Override
-  public ListenableFuture<Void> startLogSegment(final long txid) {
+  public ListenableFuture<Void> startLogSegment(final long txid,
+      final int layoutVersion) {
     return executor.submit(new Callable<Void>() {
       @Override
       public Void call() throws IOException {
-        getProxy().startLogSegment(createReqInfo(), txid);
+        getProxy().startLogSegment(createReqInfo(), txid, layoutVersion);
         synchronized (IPCLoggerChannel.this) {
           if (outOfSync) {
             outOfSync = false;

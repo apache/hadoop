@@ -100,9 +100,10 @@ public interface QJournalProtocol {
    * using {@link #finalizeLogSegment(RequestInfo, long, long)}.
    * 
    * @param txid the first txid in the new log
+   * @param layoutVersion the LayoutVersion of the new log
    */
   public void startLogSegment(RequestInfo reqInfo,
-      long txid) throws IOException;
+      long txid, int layoutVersion) throws IOException;
 
   /**
    * Finalize the given log segment on the JournalNode. The segment

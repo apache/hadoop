@@ -17,13 +17,17 @@
  */
 package org.apache.hadoop.hdfs.qjournal.client;
 
-import static org.junit.Assert.*;
-import static org.apache.hadoop.hdfs.qjournal.QJMTestUtil.JID;
 import static org.apache.hadoop.hdfs.qjournal.QJMTestUtil.FAKE_NSINFO;
+import static org.apache.hadoop.hdfs.qjournal.QJMTestUtil.JID;
+import static org.apache.hadoop.hdfs.qjournal.QJMTestUtil.verifyEdits;
 import static org.apache.hadoop.hdfs.qjournal.QJMTestUtil.writeSegment;
 import static org.apache.hadoop.hdfs.qjournal.QJMTestUtil.writeTxns;
-import static org.apache.hadoop.hdfs.qjournal.QJMTestUtil.verifyEdits;
 import static org.apache.hadoop.hdfs.qjournal.client.TestQuorumJournalManagerUnit.futureThrows;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.Closeable;
 import java.io.File;
@@ -49,6 +53,7 @@ import org.apache.hadoop.hdfs.server.namenode.EditLogOutputStream;
 import org.apache.hadoop.hdfs.server.namenode.FileJournalManager;
 import org.apache.hadoop.hdfs.server.namenode.FileJournalManager.EditLogFile;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
@@ -259,7 +264,8 @@ public class TestQuorumJournalManager {
     writeSegment(cluster, qjm, 1, 3, true);
     waitForAllPendingCalls(qjm.getLoggerSetForTests());
     
-    EditLogOutputStream stm = qjm.startLogSegment(4);
+    EditLogOutputStream stm = qjm.startLogSegment(4,
+        NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
     try {
       waitForAllPendingCalls(qjm.getLoggerSetForTests());
     } finally {
@@ -306,7 +312,8 @@ public class TestQuorumJournalManager {
     cluster.getJournalNode(nodeMissingSegment).stopAndJoin(0);
     
     // Open segment on 2/3 nodes
-    EditLogOutputStream stm = qjm.startLogSegment(4);
+    EditLogOutputStream stm = qjm.startLogSegment(4,
+        NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
     try {
       waitForAllPendingCalls(qjm.getLoggerSetForTests());
       
@@ -456,13 +463,15 @@ public class TestQuorumJournalManager {
     futureThrows(new IOException("injected")).when(spies.get(0))
       .finalizeLogSegment(Mockito.eq(1L), Mockito.eq(3L));
     futureThrows(new IOException("injected")).when(spies.get(0))
-      .startLogSegment(Mockito.eq(4L));
+        .startLogSegment(Mockito.eq(4L),
+            Mockito.eq(NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION));
     
     // Logger 1: fail at txn id 4
     failLoggerAtTxn(spies.get(1), 4L);
     
     writeSegment(cluster, qjm, 1, 3, true);
-    EditLogOutputStream stm = qjm.startLogSegment(4);
+    EditLogOutputStream stm = qjm.startLogSegment(4,
+        NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
     try {
       writeTxns(stm, 4, 1);
       fail("Did not fail to write");
@@ -544,7 +553,8 @@ public class TestQuorumJournalManager {
    * None of the loggers have any associated paxos info.
    */
   private void setupLoggers345() throws Exception {
-    EditLogOutputStream stm = qjm.startLogSegment(1);
+    EditLogOutputStream stm = qjm.startLogSegment(1,
+        NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
     
     failLoggerAtTxn(spies.get(0), 4);
     failLoggerAtTxn(spies.get(1), 5);

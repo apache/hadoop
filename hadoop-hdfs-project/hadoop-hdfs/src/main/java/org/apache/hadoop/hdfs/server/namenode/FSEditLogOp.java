@@ -116,6 +116,7 @@ import org.xml.sax.ContentHandler;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.AttributesImpl;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
@@ -206,7 +207,8 @@ public abstract class FSEditLogOp {
    * Constructor for an EditLog Op. EditLog ops cannot be constructed
    * directly, but only through Reader#readOp.
    */
-  private FSEditLogOp(FSEditLogOpCodes opCode) {
+  @VisibleForTesting
+  protected FSEditLogOp(FSEditLogOpCodes opCode) {
     this.opCode = opCode;
   }
 
@@ -3504,6 +3506,9 @@ public abstract class FSEditLogOp {
     @Override
     void readFields(DataInputStream in, int logVersion) throws IOException {
       AclEditLogProto p = AclEditLogProto.parseDelimitedFrom((DataInputStream)in);
+      if (p == null) {
+        throw new IOException("Failed to read fields from SetAclOp");
+      }
       src = p.getSrc();
       aclEntries = PBHelper.convertAclEntry(p.getEntriesList());
     }
@@ -3658,10 +3663,18 @@ public abstract class FSEditLogOp {
      */
     public void writeOp(FSEditLogOp op) throws IOException {
       int start = buf.getLength();
+      // write the op code first to make padding and terminator verification
+      // work
       buf.writeByte(op.opCode.getOpCode());
+      buf.writeInt(0); // write 0 for the length first
       buf.writeLong(op.txid);
       op.writeFields(buf);
       int end = buf.getLength();
+      
+      // write the length back: content of the op + 4 bytes checksum - op_code
+      int length = end - start - 1;
+      buf.writeInt(length, start + 1);
+
       checksum.reset();
       checksum.update(buf.getData(), start, end-start);
       int sum = (int)checksum.getValue();
@@ -3679,6 +3692,7 @@ public abstract class FSEditLogOp {
     private final Checksum checksum;
     private final OpInstanceCache cache;
     private int maxOpSize;
+    private final boolean supportEditLogLength;
 
     /**
      * Construct the reader
@@ -3693,6 +3707,12 @@ public abstract class FSEditLogOp {
       } else {
         this.checksum = null;
       }
+      // It is possible that the logVersion is actually a future layoutversion
+      // during the rolling upgrade (e.g., the NN gets upgraded first). We
+      // assume future layout will also support length of editlog op.
+      this.supportEditLogLength = NameNodeLayoutVersion.supports(
+          NameNodeLayoutVersion.Feature.EDITLOG_LENGTH, logVersion)
+          || logVersion < NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION;
 
       if (this.checksum != null) {
         this.in = new DataInputStream(
@@ -3827,6 +3847,10 @@ public abstract class FSEditLogOp {
         throw new IOException("Read invalid opcode " + opCode);
       }
 
+      if (supportEditLogLength) {
+        in.readInt();
+      }
+
       if (NameNodeLayoutVersion.supports(
           LayoutVersion.Feature.STORED_TXIDS, logVersion)) {
         // Read the txid
@@ -3839,6 +3863,42 @@ public abstract class FSEditLogOp {
 
       validateChecksum(in, checksum, op.txid);
       return op;
+    }
+
+    /**
+     * Similar with decodeOp(), but instead of doing the real decoding, we skip
+     * the content of the op if the length of the editlog is supported.
+     * @return the last txid of the segment, or INVALID_TXID on exception
+     */
+    public long scanOp() throws IOException {
+      if (supportEditLogLength) {
+        limiter.setLimit(maxOpSize);
+        in.mark(maxOpSize);
+
+        final byte opCodeByte;
+        try {
+          opCodeByte = in.readByte(); // op code
+        } catch (EOFException e) {
+          return HdfsConstants.INVALID_TXID;
+        }
+
+        FSEditLogOpCodes opCode = FSEditLogOpCodes.fromByte(opCodeByte);
+        if (opCode == OP_INVALID) {
+          verifyTerminator();
+          return HdfsConstants.INVALID_TXID;
+        }
+
+        int length = in.readInt(); // read the length of the op
+        long txid = in.readLong(); // read the txid
+
+        // skip the remaining content
+        IOUtils.skipFully(in, length - 8); 
+        // TODO: do we want to verify checksum for JN? For now we don't.
+        return txid;
+      } else {
+        FSEditLogOp op = decodeOp();
+        return op == null ? HdfsConstants.INVALID_TXID : op.getTransactionId();
+      }
     }
 
     /**
