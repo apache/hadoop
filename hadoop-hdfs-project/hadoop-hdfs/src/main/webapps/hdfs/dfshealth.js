@@ -80,12 +80,10 @@
       var base = dust.makeBase(HELPERS);
       dust.render('dfshealth', base.push(data), function(err, out) {
         $('#tab-overview').html(out);
-        $('a[href="#tab-datanode"]').click(load_datanode_info);
         $('#ui-tabs a[href="#tab-overview"]').tab('show');
       });
     }
   }
-  $('#ui-tabs a[href="#tab-overview"]').click(load_overview);
 
   function show_err_msg(msg) {
     $('#alert-panel-body').html(msg);
@@ -140,8 +138,6 @@
     }).error(ajax_error_handler);
   }
 
-  $('#ui-tabs a[href="#tab-startup-progress"]').click(load_startup_progress);
-
   function load_datanode_info() {
     function workaround(r) {
       function node_map_to_array(nodes) {
@@ -171,8 +167,6 @@
       })).error(ajax_error_handler);
   }
 
-  $('a[href="#tab-datanode"]').click(load_datanode_info);
-
   function load_snapshot_info() {
     $.get(
       '/jmx?qry=Hadoop:service=NameNode,name=FSNamesystemState',
@@ -184,8 +178,6 @@
         });
       })).error(ajax_error_handler);
   }
-
-  $('#ui-tabs a[href="#tab-snapshot"]').click(load_snapshot_info);
 
   function load_page() {
     var hash = window.location.hash;
