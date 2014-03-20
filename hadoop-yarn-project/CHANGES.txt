@@ -505,6 +505,9 @@ Release 2.4.0 - UNRELEASED
     launched by AMs running on the same machine as the AM are correctly
     propagated. (Jian He via vinodkv)
 
+    YARN-1640. Fixed manual failover of ResourceManagers to work correctly in
+    secure clusters. (Xuan Gong via vinodkv)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
