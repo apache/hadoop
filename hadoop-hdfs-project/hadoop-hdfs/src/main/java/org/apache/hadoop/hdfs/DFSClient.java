@@ -1054,7 +1054,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
     private static ClientProtocol getNNProxy(
         Token<DelegationTokenIdentifier> token, Configuration conf)
         throws IOException {
-      URI uri = HAUtil.getServiceUriFromToken(token);
+      URI uri = HAUtil.getServiceUriFromToken(HdfsConstants.HDFS_URI_SCHEME,
+              token);
       if (HAUtil.isTokenForLogicalUri(token) &&
           !HAUtil.isLogicalUri(conf, uri)) {
         // If the token is for a logical nameservice, but the configuration

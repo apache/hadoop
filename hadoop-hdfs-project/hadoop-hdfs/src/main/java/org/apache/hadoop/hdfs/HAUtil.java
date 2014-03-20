@@ -17,31 +17,12 @@
  */
 package org.apache.hadoop.hdfs;
 
-import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.HadoopIllegalArgumentException;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.UnresolvedLinkException;
-import org.apache.hadoop.hdfs.protocol.ClientProtocol;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
-import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSelector;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.ipc.RPC;
-import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.ipc.StandbyException;
-import org.apache.hadoop.security.AccessControlException;
-import org.apache.hadoop.security.SecurityUtil;
-import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.token.Token;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_FAILOVER_PROXY_PROVIDER_KEY_PREFIX;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NAMENODE_ID_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY;
+import static org.apache.hadoop.hdfs.protocol.HdfsConstants.HA_DT_SERVICE_PREFIX;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
@@ -51,8 +32,28 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
-import static org.apache.hadoop.hdfs.protocol.HdfsConstants.HA_DT_SERVICE_PREFIX;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.HadoopIllegalArgumentException;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.protocol.ClientProtocol;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSelector;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.ipc.StandbyException;
+import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
+
+import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 
 public class HAUtil {
   
@@ -216,25 +217,16 @@ public class HAUtil {
   }
 
   /**
-   * Parse the HDFS URI out of the provided token.
-   * @throws IOException if the token is invalid
+   * Parse the file system URI out of the provided token.
    */
-  public static URI getServiceUriFromToken(
-      Token<DelegationTokenIdentifier> token)
-      throws IOException {
+  public static URI getServiceUriFromToken(final String scheme,
+                                           Token<?> token) {
     String tokStr = token.getService().toString();
 
     if (tokStr.startsWith(HA_DT_SERVICE_PREFIX)) {
       tokStr = tokStr.replaceFirst(HA_DT_SERVICE_PREFIX, "");
     }
-    
-    try {
-      return new URI(HdfsConstants.HDFS_URI_SCHEME + "://" +
-          tokStr);
-    } catch (URISyntaxException e) {
-      throw new IOException("Invalid token contents: '" +
-          tokStr + "'");
-    }
+    return URI.create(scheme + "://" + tokStr);
   }
   
   /**
@@ -251,8 +243,7 @@ public class HAUtil {
    * @return true if this token corresponds to a logical nameservice
    * rather than a specific namenode.
    */
-  public static boolean isTokenForLogicalUri(
-      Token<DelegationTokenIdentifier> token) {
+  public static boolean isTokenForLogicalUri(Token<?> token) {
     return token.getService().toString().startsWith(HA_DT_SERVICE_PREFIX);
   }
   
@@ -300,7 +291,6 @@ public class HAUtil {
    * @return the internet address of the currently-active NN.
    * @throws IOException if an error occurs while resolving the active NN.
    */
-  @SuppressWarnings("deprecation")
   public static InetSocketAddress getAddressOfActive(FileSystem fs)
       throws IOException {
     if (!(fs instanceof DistributedFileSystem)) {
