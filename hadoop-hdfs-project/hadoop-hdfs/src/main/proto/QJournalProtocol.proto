@@ -94,6 +94,7 @@ message HeartbeatResponseProto { // void response
 message StartLogSegmentRequestProto {
   required RequestInfoProto reqInfo = 1;
   required uint64 txid = 2; // Transaction ID
+  optional sint32 layoutVersion = 3; // the LayoutVersion in the client
 }
 
 message StartLogSegmentResponseProto { 

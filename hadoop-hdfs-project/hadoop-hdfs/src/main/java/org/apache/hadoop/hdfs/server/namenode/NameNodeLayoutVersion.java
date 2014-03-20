@@ -63,7 +63,8 @@ public class NameNodeLayoutVersion {
    * </ul>
    */
   public static enum Feature implements LayoutFeature {
-    ROLLING_UPGRADE(-55, -53, "Support rolling upgrade", false);
+    ROLLING_UPGRADE(-55, -53, "Support rolling upgrade", false),
+    EDITLOG_LENGTH(-56, "Add length field to every edit log op");
     
     private final FeatureInfo info;
 

@@ -77,7 +77,7 @@ class BookKeeperEditLogOutputStream
   }
 
   @Override
-  public void create() throws IOException {
+  public void create(int layoutVersion) throws IOException {
     // noop
   }
 

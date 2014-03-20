@@ -19,6 +19,8 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+
 import java.io.Closeable;
 import java.io.IOException;
 
@@ -103,6 +105,15 @@ public abstract class EditLogInputStream implements Closeable {
    * @throws IOException if there is an error reading from the stream
    */
   protected abstract FSEditLogOp nextOp() throws IOException;
+
+  /**
+   * Go through the next operation from the stream storage.
+   * @return the txid of the next operation.
+   */
+  protected long scanNextOp() throws IOException {
+    FSEditLogOp next = readOp();
+    return next != null ? next.txid : HdfsConstants.INVALID_TXID;
+  }
   
   /** 
    * Get the next valid operation from the stream storage.
@@ -147,13 +158,22 @@ public abstract class EditLogInputStream implements Closeable {
       }
     }
   }
+
+  /**
+   * return the cachedOp, and reset it to null. 
+   */
+  FSEditLogOp getCachedOp() {
+    FSEditLogOp op = this.cachedOp;
+    cachedOp = null;
+    return op;
+  }
   
   /** 
    * Get the layout version of the data in the stream.
    * @return the layout version of the ops in the stream.
    * @throws IOException if there is an error reading the version
    */
-  public abstract int getVersion() throws IOException;
+  public abstract int getVersion(boolean verifyVersion) throws IOException;
 
   /**
    * Get the "position" of in the stream. This is useful for 

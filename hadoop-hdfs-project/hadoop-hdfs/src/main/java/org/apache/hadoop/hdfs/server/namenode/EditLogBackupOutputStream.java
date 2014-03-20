@@ -86,7 +86,7 @@ class EditLogBackupOutputStream extends EditLogOutputStream {
    * There is no persistent storage. Just clear the buffers.
    */
   @Override // EditLogOutputStream
-  public void create() throws IOException {
+  public void create(int layoutVersion) throws IOException {
     assert doubleBuf.isFlushed() : "previous data is not flushed yet";
     this.doubleBuf = new EditsDoubleBuffer(DEFAULT_BUFFER_SIZE);
   }

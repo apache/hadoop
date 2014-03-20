@@ -101,13 +101,13 @@ public class FileJournalManager implements JournalManager {
   }
 
   @Override
-  synchronized public EditLogOutputStream startLogSegment(long txid) 
-      throws IOException {
+  synchronized public EditLogOutputStream startLogSegment(long txid,
+      int layoutVersion) throws IOException {
     try {
       currentInProgress = NNStorage.getInProgressEditsFile(sd, txid);
       EditLogOutputStream stm = new EditLogFileOutputStream(conf,
           currentInProgress, outputBufferCapacity);
-      stm.create();
+      stm.create(layoutVersion);
       return stm;
     } catch (IOException e) {
       LOG.warn("Unable to start log segment " + txid +
@@ -470,6 +470,12 @@ public class FileJournalManager implements JournalManager {
      */
     public void validateLog() throws IOException {
       EditLogValidation val = EditLogFileInputStream.validateEditLog(file);
+      this.lastTxId = val.getEndTxId();
+      this.hasCorruptHeader = val.hasCorruptHeader();
+    }
+
+    public void scanLog() throws IOException {
+      EditLogValidation val = EditLogFileInputStream.scanEditLog(file);
       this.lastTxId = val.getEndTxId();
       this.hasCorruptHeader = val.hasCorruptHeader();
     }

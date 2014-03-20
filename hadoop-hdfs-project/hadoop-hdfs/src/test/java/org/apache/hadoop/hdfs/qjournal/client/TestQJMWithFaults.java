@@ -46,6 +46,7 @@ import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocol;
 import org.apache.hadoop.hdfs.qjournal.server.JournalFaultInjector;
 import org.apache.hadoop.hdfs.server.namenode.EditLogFileOutputStream;
 import org.apache.hadoop.hdfs.server.namenode.EditLogOutputStream;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.util.Holder;
 import org.apache.hadoop.io.IOUtils;
@@ -287,7 +288,8 @@ public class TestQJMWithFaults {
     long firstTxId = txid;
     long lastAcked = txid - 1;
     try {
-      EditLogOutputStream stm = qjm.startLogSegment(txid);
+      EditLogOutputStream stm = qjm.startLogSegment(txid,
+          NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
       
       for (int i = 0; i < numTxns; i++) {
         QJMTestUtil.writeTxns(stm, txid++, 1);

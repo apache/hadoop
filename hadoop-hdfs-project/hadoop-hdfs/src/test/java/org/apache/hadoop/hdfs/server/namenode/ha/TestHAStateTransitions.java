@@ -48,6 +48,7 @@ import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.EditLogFileOutputStream;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -444,7 +445,8 @@ public class TestHAStateTransitions {
     if (writeHeader) {
       DataOutputStream out = new DataOutputStream(new FileOutputStream(
           inProgressFile));
-      EditLogFileOutputStream.writeHeader(out);
+      EditLogFileOutputStream.writeHeader(
+          NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION, out);
       out.close();
     }
   }

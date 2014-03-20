@@ -97,7 +97,7 @@ class BookKeeperEditLogInputStream extends EditLogInputStream {
   }
   
   @Override
-  public int getVersion() throws IOException {
+  public int getVersion(boolean verifyVersion) throws IOException {
     return logVersion;
   }
 

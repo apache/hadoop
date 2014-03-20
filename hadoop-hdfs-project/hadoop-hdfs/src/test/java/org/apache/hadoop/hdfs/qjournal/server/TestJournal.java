@@ -17,7 +17,10 @@
  */
 package org.apache.hadoop.hdfs.qjournal.server;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.IOException;
@@ -26,18 +29,23 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.qjournal.QJMTestUtil;
-import org.apache.hadoop.hdfs.qjournal.protocol.RequestInfo;
 import org.apache.hadoop.hdfs.qjournal.protocol.JournalOutOfSyncException;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.NewEpochResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.NewEpochResponseProtoOrBuilder;
-import org.apache.hadoop.hdfs.qjournal.server.Journal;
-import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
+import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.SegmentStateProto;
+import org.apache.hadoop.hdfs.qjournal.protocol.RequestInfo;
 import org.apache.hadoop.hdfs.server.common.Storage;
+import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.common.StorageErrorReporter;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.*;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Assume;
+import org.junit.Before;
+import org.junit.Test;
 import org.mockito.Mockito;
 
 public class TestJournal {
@@ -77,7 +85,36 @@ public class TestJournal {
   public void cleanup() {
     IOUtils.closeStream(journal);
   }
-  
+
+  /**
+   * Test whether JNs can correctly handle editlog that cannot be decoded.
+   */
+  @Test
+  public void testScanEditLog() throws Exception {
+    // use a future layout version
+    journal.startLogSegment(makeRI(1), 1,
+        NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION - 1);
+
+    // in the segment we write garbage editlog, which can be scanned but
+    // cannot be decoded
+    final int numTxns = 5;
+    byte[] ops = QJMTestUtil.createGabageTxns(1, 5);
+    journal.journal(makeRI(2), 1, 1, numTxns, ops);
+
+    // verify the in-progress editlog segment
+    SegmentStateProto segmentState = journal.getSegmentInfo(1);
+    assertTrue(segmentState.getIsInProgress());
+    Assert.assertEquals(numTxns, segmentState.getEndTxId());
+    Assert.assertEquals(1, segmentState.getStartTxId());
+    
+    // finalize the segment and verify it again
+    journal.finalizeLogSegment(makeRI(3), 1, numTxns);
+    segmentState = journal.getSegmentInfo(1);
+    assertFalse(segmentState.getIsInProgress());
+    Assert.assertEquals(numTxns, segmentState.getEndTxId());
+    Assert.assertEquals(1, segmentState.getStartTxId());
+  }
+
   @Test (timeout = 10000)
   public void testEpochHandling() throws Exception {
     assertEquals(0, journal.getLastPromisedEpoch());
@@ -96,7 +133,8 @@ public class TestJournal {
           "Proposed epoch 3 <= last promise 3", ioe);
     }
     try {
-      journal.startLogSegment(makeRI(1), 12345L);
+      journal.startLogSegment(makeRI(1), 12345L,
+          NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
       fail("Should have rejected call from prior epoch");
     } catch (IOException ioe) {
       GenericTestUtils.assertExceptionContains(
@@ -114,7 +152,8 @@ public class TestJournal {
   @Test (timeout = 10000)
   public void testMaintainCommittedTxId() throws Exception {
     journal.newEpoch(FAKE_NSINFO, 1);
-    journal.startLogSegment(makeRI(1), 1);
+    journal.startLogSegment(makeRI(1), 1,
+        NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
     // Send txids 1-3, with a request indicating only 0 committed
     journal.journal(new RequestInfo(JID, 1, 2, 0), 1, 1, 3,
         QJMTestUtil.createTxnData(1, 3));
@@ -129,7 +168,8 @@ public class TestJournal {
   @Test (timeout = 10000)
   public void testRestartJournal() throws Exception {
     journal.newEpoch(FAKE_NSINFO, 1);
-    journal.startLogSegment(makeRI(1), 1);
+    journal.startLogSegment(makeRI(1), 1,
+        NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
     journal.journal(makeRI(2), 1, 1, 2, 
         QJMTestUtil.createTxnData(1, 2));
     // Don't finalize.
@@ -153,7 +193,8 @@ public class TestJournal {
   @Test (timeout = 10000)
   public void testFormatResetsCachedValues() throws Exception {
     journal.newEpoch(FAKE_NSINFO, 12345L);
-    journal.startLogSegment(new RequestInfo(JID, 12345L, 1L, 0L), 1L);
+    journal.startLogSegment(new RequestInfo(JID, 12345L, 1L, 0L), 1L,
+        NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
 
     assertEquals(12345L, journal.getLastPromisedEpoch());
     assertEquals(12345L, journal.getLastWriterEpoch());
@@ -176,11 +217,13 @@ public class TestJournal {
   @Test (timeout = 10000)
   public void testNewEpochAtBeginningOfSegment() throws Exception {
     journal.newEpoch(FAKE_NSINFO, 1);
-    journal.startLogSegment(makeRI(1), 1);
+    journal.startLogSegment(makeRI(1), 1,
+        NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
     journal.journal(makeRI(2), 1, 1, 2, 
         QJMTestUtil.createTxnData(1, 2));
     journal.finalizeLogSegment(makeRI(3), 1, 2);
-    journal.startLogSegment(makeRI(4), 3);
+    journal.startLogSegment(makeRI(4), 3,
+        NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
     NewEpochResponseProto resp = journal.newEpoch(FAKE_NSINFO, 2);
     assertEquals(1, resp.getLastSegmentTxId());
   }
@@ -219,7 +262,8 @@ public class TestJournal {
   @Test (timeout = 10000)
   public void testFinalizeWhenEditsAreMissed() throws Exception {
     journal.newEpoch(FAKE_NSINFO, 1);
-    journal.startLogSegment(makeRI(1), 1);
+    journal.startLogSegment(makeRI(1), 1,
+        NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
     journal.journal(makeRI(2), 1, 1, 3,
         QJMTestUtil.createTxnData(1, 3));
     
@@ -276,7 +320,8 @@ public class TestJournal {
     journal.newEpoch(FAKE_NSINFO, 1);
     
     // Start a segment at txid 1, and write a batch of 3 txns.
-    journal.startLogSegment(makeRI(1), 1);
+    journal.startLogSegment(makeRI(1), 1,
+        NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
     journal.journal(makeRI(2), 1, 1, 3,
         QJMTestUtil.createTxnData(1, 3));
 
@@ -285,7 +330,8 @@ public class TestJournal {
     
     // Try to start new segment at txid 6, this should abort old segment and
     // then succeed, allowing us to write txid 6-9.
-    journal.startLogSegment(makeRI(3), 6);
+    journal.startLogSegment(makeRI(3), 6,
+        NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
     journal.journal(makeRI(4), 6, 6, 3,
         QJMTestUtil.createTxnData(6, 3));
 
@@ -306,14 +352,16 @@ public class TestJournal {
     
     // Start a segment at txid 1, and write just 1 transaction. This
     // would normally be the START_LOG_SEGMENT transaction.
-    journal.startLogSegment(makeRI(1), 1);
+    journal.startLogSegment(makeRI(1), 1,
+        NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
     journal.journal(makeRI(2), 1, 1, 1,
         QJMTestUtil.createTxnData(1, 1));
     
     // Try to start new segment at txid 1, this should succeed, because
     // we are allowed to re-start a segment if we only ever had the
     // START_LOG_SEGMENT transaction logged.
-    journal.startLogSegment(makeRI(3), 1);
+    journal.startLogSegment(makeRI(3), 1,
+        NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
     journal.journal(makeRI(4), 1, 1, 1,
         QJMTestUtil.createTxnData(1, 1));
 
@@ -323,7 +371,8 @@ public class TestJournal {
         QJMTestUtil.createTxnData(2, 3));
 
     try {
-      journal.startLogSegment(makeRI(6), 1);
+      journal.startLogSegment(makeRI(6), 1,
+          NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
       fail("Did not fail to start log segment which would overwrite " +
           "an existing one");
     } catch (IllegalStateException ise) {
@@ -335,7 +384,8 @@ public class TestJournal {
     
     // Ensure that we cannot overwrite a finalized segment
     try {
-      journal.startLogSegment(makeRI(8), 1);
+      journal.startLogSegment(makeRI(8), 1,
+          NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
       fail("Did not fail to start log segment which would overwrite " +
           "an existing one");
     } catch (IllegalStateException ise) {
