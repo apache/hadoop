@@ -186,7 +186,7 @@ class Journal implements Closeable {
     
     while (!files.isEmpty()) {
       EditLogFile latestLog = files.remove(files.size() - 1);
-      latestLog.validateLog();
+      latestLog.scanLog();
       LOG.info("Latest log is " + latestLog);
       if (latestLog.getLastTxId() == HdfsConstants.INVALID_TXID) {
         // the log contains no transactions
@@ -487,8 +487,8 @@ class Journal implements Closeable {
    * Start a new segment at the given txid. The previous segment
    * must have already been finalized.
    */
-  public synchronized void startLogSegment(RequestInfo reqInfo, long txid)
-      throws IOException {
+  public synchronized void startLogSegment(RequestInfo reqInfo, long txid,
+      int layoutVersion) throws IOException {
     assert fjm != null;
     checkFormatted();
     checkRequest(reqInfo);
@@ -516,7 +516,7 @@ class Journal implements Closeable {
       // If it's in-progress, it should only contain one transaction,
       // because the "startLogSegment" transaction is written alone at the
       // start of each segment. 
-      existing.validateLog();
+      existing.scanLog();
       if (existing.getLastTxId() != existing.getFirstTxId()) {
         throw new IllegalStateException("The log file " +
             existing + " seems to contain valid transactions");
@@ -537,7 +537,7 @@ class Journal implements Closeable {
     // remove the record of the older segment here.
     purgePaxosDecision(txid);
     
-    curSegment = fjm.startLogSegment(txid);
+    curSegment = fjm.startLogSegment(txid, layoutVersion);
     curSegmentTxId = txid;
     nextTxId = txid;
   }
@@ -579,7 +579,7 @@ class Journal implements Closeable {
       if (needsValidation) {
         LOG.info("Validating log segment " + elf.getFile() + " about to be " +
             "finalized");
-        elf.validateLog();
+        elf.scanLog();
   
         checkSync(elf.getLastTxId() == endTxId,
             "Trying to finalize in-progress log segment %s to end at " +
@@ -658,14 +658,15 @@ class Journal implements Closeable {
    * @return the current state of the given segment, or null if the
    * segment does not exist.
    */
-  private SegmentStateProto getSegmentInfo(long segmentTxId)
+  @VisibleForTesting
+  SegmentStateProto getSegmentInfo(long segmentTxId)
       throws IOException {
     EditLogFile elf = fjm.getLogFile(segmentTxId);
     if (elf == null) {
       return null;
     }
     if (elf.isInProgress()) {
-      elf.validateLog();
+      elf.scanLog();
     }
     if (elf.getLastTxId() == HdfsConstants.INVALID_TXID) {
       LOG.info("Edit log file " + elf + " appears to be empty. " +

@@ -30,7 +30,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.ArrayList;
 import java.util.Random;
 
 import java.util.concurrent.Executors;
@@ -47,6 +46,7 @@ import org.apache.hadoop.hdfs.server.namenode.EditLogOutputStream;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.JournalManager;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 
 import org.apache.bookkeeper.proto.BookieServer;
@@ -101,7 +101,8 @@ public class TestBookKeeperJournalManager {
         BKJMUtil.createJournalURI("/hdfsjournal-simplewrite"), nsi);
     bkjm.format(nsi);
 
-    EditLogOutputStream out = bkjm.startLogSegment(1);
+    EditLogOutputStream out = bkjm.startLogSegment(1,
+        NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
     for (long i = 1 ; i <= 100; i++) {
       FSEditLogOp op = FSEditLogTestUtil.getNoOpInstance();
       op.setTransactionId(i);
@@ -124,7 +125,8 @@ public class TestBookKeeperJournalManager {
         BKJMUtil.createJournalURI("/hdfsjournal-txncount"), nsi);
     bkjm.format(nsi);
 
-    EditLogOutputStream out = bkjm.startLogSegment(1);
+    EditLogOutputStream out = bkjm.startLogSegment(1,
+        NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
     for (long i = 1 ; i <= 100; i++) {
       FSEditLogOp op = FSEditLogTestUtil.getNoOpInstance();
       op.setTransactionId(i);
@@ -147,7 +149,8 @@ public class TestBookKeeperJournalManager {
     long txid = 1;
     for (long i = 0; i < 3; i++) {
       long start = txid;
-      EditLogOutputStream out = bkjm.startLogSegment(start);
+      EditLogOutputStream out = bkjm.startLogSegment(start,
+          NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
       for (long j = 1 ; j <= DEFAULT_SEGMENT_SIZE; j++) {
         FSEditLogOp op = FSEditLogTestUtil.getNoOpInstance();
         op.setTransactionId(txid++);
@@ -185,7 +188,8 @@ public class TestBookKeeperJournalManager {
     long txid = 1;
     for (long i = 0; i < 3; i++) {
       long start = txid;
-      EditLogOutputStream out = bkjm.startLogSegment(start);
+      EditLogOutputStream out = bkjm.startLogSegment(start,
+          NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
       for (long j = 1 ; j <= DEFAULT_SEGMENT_SIZE; j++) {
         FSEditLogOp op = FSEditLogTestUtil.getNoOpInstance();
         op.setTransactionId(txid++);
@@ -198,7 +202,8 @@ public class TestBookKeeperJournalManager {
           zkc.exists(bkjm.finalizedLedgerZNode(start, (txid-1)), false));
     }
     long start = txid;
-    EditLogOutputStream out = bkjm.startLogSegment(start);
+    EditLogOutputStream out = bkjm.startLogSegment(start,
+        NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
     for (long j = 1 ; j <= DEFAULT_SEGMENT_SIZE/2; j++) {
       FSEditLogOp op = FSEditLogTestUtil.getNoOpInstance();
       op.setTransactionId(txid++);
@@ -226,7 +231,8 @@ public class TestBookKeeperJournalManager {
 
     long txid = 1;
     long start = txid;
-    EditLogOutputStream out = bkjm.startLogSegment(txid);
+    EditLogOutputStream out = bkjm.startLogSegment(txid,
+        NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
     for (long j = 1 ; j <= DEFAULT_SEGMENT_SIZE; j++) {
       FSEditLogOp op = FSEditLogTestUtil.getNoOpInstance();
       op.setTransactionId(txid++);
@@ -237,7 +243,8 @@ public class TestBookKeeperJournalManager {
     
     txid = 1;
     try {
-      out = bkjm.startLogSegment(txid);
+      out = bkjm.startLogSegment(txid,
+        NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
       fail("Shouldn't be able to start another journal from " + txid
           + " when one already exists");
     } catch (Exception ioe) {
@@ -247,7 +254,8 @@ public class TestBookKeeperJournalManager {
     // test border case
     txid = DEFAULT_SEGMENT_SIZE;
     try {
-      out = bkjm.startLogSegment(txid);
+      out = bkjm.startLogSegment(txid,
+        NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
       fail("Shouldn't be able to start another journal from " + txid
           + " when one already exists");
     } catch (IOException ioe) {
@@ -257,7 +265,8 @@ public class TestBookKeeperJournalManager {
     // open journal continuing from before
     txid = DEFAULT_SEGMENT_SIZE + 1;
     start = txid;
-    out = bkjm.startLogSegment(start);
+    out = bkjm.startLogSegment(start,
+        NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
     assertNotNull(out);
 
     for (long j = 1 ; j <= DEFAULT_SEGMENT_SIZE; j++) {
@@ -270,7 +279,8 @@ public class TestBookKeeperJournalManager {
 
     // open journal arbitarily far in the future
     txid = DEFAULT_SEGMENT_SIZE * 4;
-    out = bkjm.startLogSegment(txid);
+    out = bkjm.startLogSegment(txid,
+        NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
     assertNotNull(out);
   }
 
@@ -287,9 +297,11 @@ public class TestBookKeeperJournalManager {
         BKJMUtil.createJournalURI("/hdfsjournal-dualWriter"), nsi);
 
 
-    EditLogOutputStream out1 = bkjm1.startLogSegment(start);
+    EditLogOutputStream out1 = bkjm1.startLogSegment(start,
+        NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
     try {
-      bkjm2.startLogSegment(start);
+      bkjm2.startLogSegment(start,
+        NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
       fail("Shouldn't have been able to open the second writer");
     } catch (IOException ioe) {
       LOG.info("Caught exception as expected", ioe);
@@ -307,7 +319,8 @@ public class TestBookKeeperJournalManager {
     bkjm.format(nsi);
 
     final long numTransactions = 10000;
-    EditLogOutputStream out = bkjm.startLogSegment(1);
+    EditLogOutputStream out = bkjm.startLogSegment(1,
+        NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);;
     for (long i = 1 ; i <= numTransactions; i++) {
       FSEditLogOp op = FSEditLogTestUtil.getNoOpInstance();
       op.setTransactionId(i);
@@ -334,7 +347,8 @@ public class TestBookKeeperJournalManager {
         nsi);
     bkjm.format(nsi);
 
-    EditLogOutputStream out = bkjm.startLogSegment(1);
+    EditLogOutputStream out = bkjm.startLogSegment(1,
+        NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);;
     for (long i = 1 ; i <= 100; i++) {
       FSEditLogOp op = FSEditLogTestUtil.getNoOpInstance();
       op.setTransactionId(i);
@@ -384,7 +398,8 @@ public class TestBookKeeperJournalManager {
           BKJMUtil.createJournalURI("/hdfsjournal-allbookiefailure"),
           nsi);
       bkjm.format(nsi);
-      EditLogOutputStream out = bkjm.startLogSegment(txid);
+      EditLogOutputStream out = bkjm.startLogSegment(txid,
+        NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
 
       for (long i = 1 ; i <= 3; i++) {
         FSEditLogOp op = FSEditLogTestUtil.getNoOpInstance();
@@ -416,7 +431,8 @@ public class TestBookKeeperJournalManager {
       assertEquals("New bookie didn't start",
                    numBookies+1, bkutil.checkBookiesUp(numBookies+1, 10));
       bkjm.recoverUnfinalizedSegments();
-      out = bkjm.startLogSegment(txid);
+      out = bkjm.startLogSegment(txid,
+        NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
       for (long i = 1 ; i <= 3; i++) {
         FSEditLogOp op = FSEditLogTestUtil.getNoOpInstance();
         op.setTransactionId(txid++);
@@ -471,7 +487,8 @@ public class TestBookKeeperJournalManager {
           nsi);
       bkjm.format(nsi);
 
-      EditLogOutputStream out = bkjm.startLogSegment(txid);
+      EditLogOutputStream out = bkjm.startLogSegment(txid,
+        NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
       for (long i = 1 ; i <= 3; i++) {
         FSEditLogOp op = FSEditLogTestUtil.getNoOpInstance();
         op.setTransactionId(txid++);
@@ -522,7 +539,8 @@ public class TestBookKeeperJournalManager {
                                                                  nsi);
     bkjm.format(nsi);
 
-    EditLogOutputStream out = bkjm.startLogSegment(1);
+    EditLogOutputStream out = bkjm.startLogSegment(1,
+        NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);;
     for (long i = 1; i <= 100; i++) {
       FSEditLogOp op = FSEditLogTestUtil.getNoOpInstance();
       op.setTransactionId(i);
@@ -531,7 +549,8 @@ public class TestBookKeeperJournalManager {
     out.close();
     bkjm.finalizeLogSegment(1, 100);
 
-    out = bkjm.startLogSegment(101);
+    out = bkjm.startLogSegment(101,
+        NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
     out.close();
     bkjm.close();
     String inprogressZNode = bkjm.inprogressZNode(101);
@@ -564,7 +583,8 @@ public class TestBookKeeperJournalManager {
                                                                  nsi);
     bkjm.format(nsi);
 
-    EditLogOutputStream out = bkjm.startLogSegment(1);
+    EditLogOutputStream out = bkjm.startLogSegment(1,
+        NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);;
     for (long i = 1; i <= 100; i++) {
       FSEditLogOp op = FSEditLogTestUtil.getNoOpInstance();
       op.setTransactionId(i);
@@ -573,7 +593,8 @@ public class TestBookKeeperJournalManager {
     out.close();
     bkjm.finalizeLogSegment(1, 100);
 
-    out = bkjm.startLogSegment(101);
+    out = bkjm.startLogSegment(101,
+        NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
     out.close();
     bkjm.close();
 
@@ -607,7 +628,8 @@ public class TestBookKeeperJournalManager {
                                                                  nsi);
     bkjm.format(nsi);
 
-    EditLogOutputStream out = bkjm.startLogSegment(1);
+    EditLogOutputStream out = bkjm.startLogSegment(1,
+        NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);;
     for (long i = 1; i <= 100; i++) {
       FSEditLogOp op = FSEditLogTestUtil.getNoOpInstance();
       op.setTransactionId(i);
@@ -616,13 +638,15 @@ public class TestBookKeeperJournalManager {
     out.close();
     bkjm.finalizeLogSegment(1, 100);
 
-    out = bkjm.startLogSegment(101);
+    out = bkjm.startLogSegment(101,
+        NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
     out.close();
     bkjm.close();
 
     bkjm = new BookKeeperJournalManager(conf, uri, nsi);
     bkjm.recoverUnfinalizedSegments();
-    out = bkjm.startLogSegment(101);
+    out = bkjm.startLogSegment(101,
+        NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
     for (long i = 1; i <= 100; i++) {
       FSEditLogOp op = FSEditLogTestUtil.getNoOpInstance();
       op.setTransactionId(i);
@@ -647,7 +671,8 @@ public class TestBookKeeperJournalManager {
                                                                  nsi);
     bkjm.format(nsi);
 
-    EditLogOutputStream out = bkjm.startLogSegment(1);
+    EditLogOutputStream out = bkjm.startLogSegment(1,
+        NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);;
     for (long i = 1; i <= 100; i++) {
       FSEditLogOp op = FSEditLogTestUtil.getNoOpInstance();
       op.setTransactionId(i);
@@ -739,7 +764,7 @@ public class TestBookKeeperJournalManager {
       = new BookKeeperJournalManager(conf, uri, nsi);
     bkjm.format(nsi);
     for (int i = 1; i < 100*2; i += 2) {
-      bkjm.startLogSegment(i);
+      bkjm.startLogSegment(i, NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
       bkjm.finalizeLogSegment(i, i+1);
     }
     bkjm.close();
@@ -800,7 +825,8 @@ public class TestBookKeeperJournalManager {
   private String startAndFinalizeLogSegment(BookKeeperJournalManager bkjm,
       int startTxid, int endTxid) throws IOException, KeeperException,
       InterruptedException {
-    EditLogOutputStream out = bkjm.startLogSegment(startTxid);
+    EditLogOutputStream out = bkjm.startLogSegment(startTxid,
+        NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
     for (long i = startTxid; i <= endTxid; i++) {
       FSEditLogOp op = FSEditLogTestUtil.getNoOpInstance();
       op.setTransactionId(i);

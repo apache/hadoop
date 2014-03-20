@@ -155,10 +155,10 @@ class JournalNodeRpcServer implements QJournalProtocol {
   }
 
   @Override
-  public void startLogSegment(RequestInfo reqInfo, long txid)
+  public void startLogSegment(RequestInfo reqInfo, long txid, int layoutVersion)
       throws IOException {
     jn.getOrCreateJournal(reqInfo.getJournalId())
-      .startLogSegment(reqInfo, txid);
+      .startLogSegment(reqInfo, txid, layoutVersion);
   }
 
   @Override

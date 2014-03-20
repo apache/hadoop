@@ -55,7 +55,7 @@ class QuorumOutputStream extends EditLogOutputStream {
   }
 
   @Override
-  public void create() throws IOException {
+  public void create(int layoutVersion) throws IOException {
     throw new UnsupportedOperationException();
   }
 

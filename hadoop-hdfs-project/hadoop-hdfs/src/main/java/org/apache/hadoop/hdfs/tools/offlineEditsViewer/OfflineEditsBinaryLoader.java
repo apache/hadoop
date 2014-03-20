@@ -61,7 +61,7 @@ class OfflineEditsBinaryLoader implements OfflineEditsLoader {
   @Override
   public void loadEdits() throws IOException {
     try {
-      visitor.start(inputStream.getVersion());
+      visitor.start(inputStream.getVersion(true));
       while (true) {
         try {
           FSEditLogOp op = inputStream.readOp();

@@ -47,7 +47,8 @@ public interface JournalManager extends Closeable, LogsPurgeable,
    * Begin writing to a new segment of the log stream, which starts at
    * the given transaction ID.
    */
-  EditLogOutputStream startLogSegment(long txId) throws IOException;
+  EditLogOutputStream startLogSegment(long txId, int layoutVersion)
+      throws IOException;
 
   /**
    * Mark the log segment that spans from firstTxId to lastTxId

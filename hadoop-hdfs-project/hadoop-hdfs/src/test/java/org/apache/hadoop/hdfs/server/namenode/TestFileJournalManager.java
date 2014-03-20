@@ -22,7 +22,6 @@ import static org.apache.hadoop.hdfs.server.namenode.TestEditLog.TXNS_PER_ROLL;
 import static org.apache.hadoop.hdfs.server.namenode.TestEditLog.setupEdits;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.FilenameFilter;
@@ -43,7 +42,6 @@ import org.apache.hadoop.hdfs.server.namenode.JournalManager.CorruptionException
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.TestEditLog.AbortSpec;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -224,7 +222,7 @@ public class TestFileJournalManager {
    */
   private void corruptAfterStartSegment(File f) throws IOException {
     RandomAccessFile raf = new RandomAccessFile(f, "rw");
-    raf.seek(0x16); // skip version and first tranaction and a bit of next transaction
+    raf.seek(0x20); // skip version and first tranaction and a bit of next transaction
     for (int i = 0; i < 1000; i++) {
       raf.writeInt(0xdeadbeef);
     }

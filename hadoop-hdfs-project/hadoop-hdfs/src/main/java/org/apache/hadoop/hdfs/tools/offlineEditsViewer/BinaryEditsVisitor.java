@@ -25,6 +25,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp;
 import org.apache.hadoop.hdfs.server.namenode.EditLogFileOutputStream;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion;
 
 /**
  * BinaryEditsVisitor implements a binary EditsVisitor
@@ -42,7 +43,7 @@ public class BinaryEditsVisitor implements OfflineEditsVisitor {
   public BinaryEditsVisitor(String outputName) throws IOException {
     this.elfos = new EditLogFileOutputStream(new Configuration(),
       new File(outputName), 0);
-    elfos.create();
+    elfos.create(NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
   }
 
   /**

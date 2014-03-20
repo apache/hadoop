@@ -734,6 +734,9 @@ HDFS-5535 subtasks:
     DatanodeRegistration with namenode layout version and namenode node type.
     (szetszwo)
 
+    HDFS-6038. Allow JournalNode to handle editlog produced by new release with
+    future layoutversion. (jing9)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

@@ -162,7 +162,8 @@ public class TestGenericJournalConf {
     }
     
     @Override
-    public EditLogOutputStream startLogSegment(long txId) throws IOException {
+    public EditLogOutputStream startLogSegment(long txId, int layoutVersion)
+        throws IOException {
       return mock(EditLogOutputStream.class);
     }
     

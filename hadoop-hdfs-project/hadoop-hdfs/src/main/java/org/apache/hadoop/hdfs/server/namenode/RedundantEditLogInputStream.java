@@ -247,8 +247,8 @@ class RedundantEditLogInputStream extends EditLogInputStream {
   }
 
   @Override
-  public int getVersion() throws IOException {
-    return streams[curIdx].getVersion();
+  public int getVersion(boolean verifyVersion) throws IOException {
+    return streams[curIdx].getVersion(verifyVersion);
   }
 
   @Override

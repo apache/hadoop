@@ -40,6 +40,7 @@ import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.NewEpochR
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.PrepareRecoveryResponseProto;
 import org.apache.hadoop.hdfs.qjournal.server.Journal;
 import org.apache.hadoop.hdfs.qjournal.server.JournalNode;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
@@ -111,7 +112,7 @@ public class TestJournalNode {
         conf, FAKE_NSINFO, journalId, jn.getBoundIpcAddress());
     ch.newEpoch(1).get();
     ch.setEpoch(1);
-    ch.startLogSegment(1).get();
+    ch.startLogSegment(1, NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION).get();
     ch.sendEdits(1L, 1, 1, "hello".getBytes(Charsets.UTF_8)).get();
     
     metrics = MetricsAsserts.getMetrics(
@@ -136,7 +137,7 @@ public class TestJournalNode {
   public void testReturnsSegmentInfoAtEpochTransition() throws Exception {
     ch.newEpoch(1).get();
     ch.setEpoch(1);
-    ch.startLogSegment(1).get();
+    ch.startLogSegment(1, NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION).get();
     ch.sendEdits(1L, 1, 2, QJMTestUtil.createTxnData(1, 2)).get();
     
     // Switch to a new epoch without closing earlier segment
@@ -152,7 +153,7 @@ public class TestJournalNode {
     assertEquals(1, response.getLastSegmentTxId());
     
     // Start a segment but don't write anything, check newEpoch segment info
-    ch.startLogSegment(3).get();
+    ch.startLogSegment(3, NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION).get();
     response = ch.newEpoch(4).get();
     ch.setEpoch(4);
     // Because the new segment is empty, it is equivalent to not having
@@ -181,7 +182,7 @@ public class TestJournalNode {
         conf, FAKE_NSINFO, journalId, jn.getBoundIpcAddress());
     ch.newEpoch(1).get();
     ch.setEpoch(1);
-    ch.startLogSegment(1).get();
+    ch.startLogSegment(1, NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION).get();
     ch.sendEdits(1L, 1, 3, EDITS_DATA).get();
     ch.finalizeLogSegment(1, 3).get();
 
@@ -233,7 +234,7 @@ public class TestJournalNode {
     
     // Make a log segment, and prepare again -- this time should see the
     // segment existing.
-    ch.startLogSegment(1L).get();
+    ch.startLogSegment(1L, NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION).get();
     ch.sendEdits(1L, 1L, 1, QJMTestUtil.createTxnData(1, 1)).get();
 
     prep = ch.prepareRecovery(1L).get();
@@ -322,7 +323,7 @@ public class TestJournalNode {
     byte[] data = new byte[editsSize];
     ch.newEpoch(1).get();
     ch.setEpoch(1);
-    ch.startLogSegment(1).get();
+    ch.startLogSegment(1, NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION).get();
     
     Stopwatch sw = new Stopwatch().start();
     for (int i = 1; i < numEdits; i++) {
