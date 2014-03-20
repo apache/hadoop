@@ -135,9 +135,12 @@ public class EditLogTailer {
   
   private NamenodeProtocol getActiveNodeProxy() throws IOException {
     if (cachedActiveProxy == null) {
-      NamenodeProtocolPB proxy = 
-        RPC.waitForProxy(NamenodeProtocolPB.class,
-            RPC.getProtocolVersion(NamenodeProtocolPB.class), activeAddr, conf);
+      int rpcTimeout = conf.getInt(
+          DFSConfigKeys.DFS_HA_LOGROLL_RPC_TIMEOUT_KEY,
+          DFSConfigKeys.DFS_HA_LOGROLL_RPC_TIMEOUT_DEFAULT);
+      NamenodeProtocolPB proxy = RPC.waitForProxy(NamenodeProtocolPB.class,
+          RPC.getProtocolVersion(NamenodeProtocolPB.class), activeAddr, conf,
+          rpcTimeout, Long.MAX_VALUE);
       cachedActiveProxy = new NamenodeProtocolTranslatorPB(proxy);
     }
     assert cachedActiveProxy != null;

@@ -482,6 +482,10 @@ Release 2.4.0 - UNRELEASED
     HDFS-6107. When a block can't be cached due to limited space on the
     DataNode, that block becomes uncacheable (cmccabe)
 
+    HDFS-6089. Standby NN while transitioning to active throws a connection
+    refused error when the prior active NN process is suspended.
+    (Jing Zhao via Andrew Wang)
+
   BREAKDOWN OF HDFS-4685 SUBTASKS AND RELATED JIRAS
 
     HDFS-5596. Implement RPC stubs. (Haohui Mai via cnauroth)
