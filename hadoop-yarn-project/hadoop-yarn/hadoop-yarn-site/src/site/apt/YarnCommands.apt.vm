@@ -24,20 +24,26 @@ Yarn Commands
 
 * Overview
 
-  Yarn commands are invoked by the bin/yarn script. Running the yarn script without any arguments prints the description for all commands.
+  Yarn commands are invoked by the bin/yarn script. Running the yarn script
+  without any arguments prints the description for all commands.
 
 ------
 Usage: yarn [--config confdir] COMMAND
 ------
 
-  Yarn has an option parsing framework that employs parsing generic options as well as running classes.
+  Yarn has an option parsing framework that employs parsing generic options as
+  well as running classes.
 
 *---------------+--------------+
 || COMMAND_OPTIONS || Description                   |
 *---------------+--------------+
-| --config confdir | Overwrites the default Configuration directory. Default is $\{HADOOP_PREFIX\}/conf. |
+| --config confdir | Overwrites the default Configuration directory. Default
+|                  | is $\{HADOOP_PREFIX\}/conf.
 *---------------+--------------+
-| COMMAND COMMAND_OPTIONS | Various commands with their options are described in the following sections. The commands have been grouped into {{User Commands}} and {{Administration Commands}}. |
+| COMMAND COMMAND_OPTIONS | Various commands with their options are described
+|                         | in the following sections. The commands have been
+|                         | grouped into {{User Commands}} and
+|                         | {{Administration Commands}}.
 *---------------+--------------+
 
 * {User Commands}
@@ -46,7 +52,8 @@ Usage: yarn [--config confdir] COMMAND
 
 ** jar
 
-  Runs a jar file. Users can bundle their Yarn code in a jar file and execute it using this command.
+  Runs a jar file. Users can bundle their Yarn code in a jar file and execute
+  it using this command.
 
 -------
   Usage: yarn jar <jar> [mainClass] args...
@@ -188,21 +195,27 @@ Usage: yarn [--config confdir] COMMAND
 *---------------+--------------+
 || COMMAND_OPTIONS || Description                   |
 *---------------+--------------+
-| -refreshQueues | Reload the queues' acls, states and scheduler specific properties. ResourceManager will reload the mapred-queues configuration file. |
+| -refreshQueues | Reload the queues' acls, states and scheduler specific
+|                | properties. ResourceManager will reload the mapred-queues
+|                | configuration file.
 *---------------+--------------+
 | -refreshNodes | Refresh the hosts information at the ResourceManager. |
 *---------------+--------------+
 | -refreshUserToGroupsMappings| Refresh user-to-groups mappings. |
 *---------------+--------------+
-| -refreshSuperUserGroupsConfiguration| Refresh superuser proxy groups mappings. |
+| -refreshSuperUserGroupsConfiguration | Refresh superuser proxy groups
+|                                      | mappings.
 *---------------+--------------+
 | -refreshAdminAcls | Refresh acls for administration of ResourceManager |
 *---------------+--------------+
-| -refreshServiceAcl | Reload the service-level authorization policy file ResoureceManager will reload the authorization policy file. |
+| -refreshServiceAcl | Reload the service-level authorization policy file
+|                    | ResourceManager will reload the authorization policy
+|                    | file.
 *---------------+--------------+
 | -getGroups [username] | Get groups the specified user belongs to.
 *---------------+--------------+
-| -help [cmd] | Displays help for the given command or all commands if none is specified. |
+| -help [cmd] | Displays help for the given command or all commands if none is
+|             | specified.
 *---------------+--------------+
 | -transitionToActive \<serviceId\> | Transitions the service into Active
 |                                   | state.
@@ -229,9 +242,13 @@ Usage: yarn [--config confdir] COMMAND
 *---------------+--------------+
 || COMMAND_OPTIONS || Description                   |
 *---------------+--------------+
-| -getlevel \<host:port\> \<name\> | Prints the log level of the daemon running at \<host:port\>. This command internally connects to http://\<host:port\>/logLevel?log=\<name\>
+| -getlevel \<host:port\> \<name\> | Prints the log level of the daemon running
+| | at \<host:port\>. This command internally connects to
+| | http://\<host:port\>/logLevel?log=\<name\>
 *---------------+--------------+
-| -setlevel \<host:port\> \<name\> \<level\> | Sets the log level of the daemon running at \<host:port\>. This command internally connects to http://\<host:port\>/logLevel?log=\<name\>
+| -setlevel \<host:port\> \<name\> \<level\> | Sets the log level of the daemon
+| | running at \<host:port\>. This command internally connects to
+| | http://\<host:port\>/logLevel?log=\<name\>
 *---------------+--------------+
 
 

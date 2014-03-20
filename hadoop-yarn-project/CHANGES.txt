@@ -308,6 +308,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1512. Enhanced CapacityScheduler to be able to decouple scheduling from
     node-heartbeats. (Arun C Murthy via vinodkv)
 
+    YARN-1570. Fixed formatting of the lines in YarnCommands.apt.vm docs source.
+    (Akira Ajisaka via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
