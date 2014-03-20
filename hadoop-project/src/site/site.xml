@@ -66,8 +66,8 @@
     
     <menu name="HDFS" inherit="top">
       <item name="HDFS User Guide" href="hadoop-project-dist/hadoop-hdfs/HdfsUserGuide.html"/>
-      <item name="High Availability With QJM" href="hadoop-yarn/hadoop-yarn-site/HDFSHighAvailabilityWithQJM.html"/>
-      <item name="High Availability With NFS" href="hadoop-yarn/hadoop-yarn-site/HDFSHighAvailabilityWithNFS.html"/>
+      <item name="High Availability With QJM" href="hadoop-project-dist/hadoop-hdfs/HDFSHighAvailabilityWithQJM.html"/>
+      <item name="High Availability With NFS" href="hadoop-project-dist/hadoop-hdfs/HDFSHighAvailabilityWithNFS.html"/>
       <item name="Federation" href="hadoop-project-dist/hadoop-hdfs/Federation.html"/>
       <item name="HDFS Snapshots" href="hadoop-project-dist/hadoop-hdfs/HdfsSnapshots.html"/>
       <item name="HDFS Architecture" href="hadoop-project-dist/hadoop-hdfs/HdfsDesign.html"/>
