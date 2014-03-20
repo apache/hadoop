@@ -180,6 +180,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-6123. Do not log stack trace for ReplicaAlreadyExistsException and
     SocketTimeoutException.  (szetszwo)
 
+    HDFS-6129.  When a replica is not found for deletion, do not throw an
+    exception.  (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-5790. LeaseManager.findPath is very slow when many leases need recovery
