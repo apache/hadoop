@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.web;
 
+import static org.apache.hadoop.hdfs.protocol.HdfsConstants.HA_DT_SERVICE_PREFIX;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
@@ -28,9 +30,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.DelegationTokenRenewer;
 import org.apache.hadoop.fs.DelegationTokenRenewer.Renewable;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -71,23 +74,32 @@ final class TokenAspect<T extends FileSystem & Renewable> {
     }
 
     private TokenManagementDelegator getInstance(Token<?> token,
-        Configuration conf) throws IOException {
-      final InetSocketAddress address = SecurityUtil.getTokenServiceAddr(token);
-      Text kind = token.getKind();
+                                                 Configuration conf)
+            throws IOException {
       final URI uri;
+      final String scheme = getSchemeByKind(token.getKind());
+      if (HAUtil.isTokenForLogicalUri(token)) {
+        uri = HAUtil.getServiceUriFromToken(scheme, token);
+      } else {
+        final InetSocketAddress address = SecurityUtil.getTokenServiceAddr
+                (token);
+        uri = URI.create(scheme + "://" + NetUtils.getHostPortString(address));
+      }
+      return (TokenManagementDelegator) FileSystem.get(uri, conf);
+    }
 
+    private static String getSchemeByKind(Text kind) {
       if (kind.equals(HftpFileSystem.TOKEN_KIND)) {
-        uri = DFSUtil.createUri(HftpFileSystem.SCHEME, address);
+        return HftpFileSystem.SCHEME;
       } else if (kind.equals(HsftpFileSystem.TOKEN_KIND)) {
-        uri = DFSUtil.createUri(HsftpFileSystem.SCHEME, address);
+        return HsftpFileSystem.SCHEME;
       } else if (kind.equals(WebHdfsFileSystem.TOKEN_KIND)) {
-        uri = DFSUtil.createUri(WebHdfsFileSystem.SCHEME, address);
+        return WebHdfsFileSystem.SCHEME;
       } else if (kind.equals(SWebHdfsFileSystem.TOKEN_KIND)) {
-        uri = DFSUtil.createUri(SWebHdfsFileSystem.SCHEME, address);
+        return SWebHdfsFileSystem.SCHEME;
       } else {
         throw new IllegalArgumentException("Unsupported scheme");
       }
-      return (TokenManagementDelegator) FileSystem.get(uri, conf);
     }
   }
 
