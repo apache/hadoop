@@ -267,6 +267,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1833. TestRMAdminService Fails in trunk and branch-2 (Mit Desais via
     jeagles)
 
+    YARN-1570. Fixed formatting of the lines in YarnCommands.apt.vm docs source.
+    (Akira Ajisaka via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
