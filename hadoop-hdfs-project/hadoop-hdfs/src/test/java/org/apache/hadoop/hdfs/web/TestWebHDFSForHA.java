@@ -22,8 +22,12 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.*;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.token.Token;
@@ -32,6 +36,9 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.net.URI;
+
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
 
 public class TestWebHDFSForHA {
   private static final String LOGICAL_NAME = "minidfs";
@@ -75,10 +82,10 @@ public class TestWebHDFSForHA {
   }
 
   @Test
-  public void testSecureHA() throws IOException {
+  public void testSecureHAToken() throws IOException, InterruptedException {
     Configuration conf = DFSTestUtil.newHAConfiguration(LOGICAL_NAME);
-    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY,
-        true);
+    conf.setBoolean(DFSConfigKeys
+            .DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY, true);
 
     MiniDFSCluster cluster = null;
     WebHdfsFileSystem fs = null;
@@ -89,16 +96,18 @@ public class TestWebHDFSForHA {
       HATestUtil.setFailoverConfigurations(cluster, conf, LOGICAL_NAME);
       cluster.waitActive();
 
-      fs = (WebHdfsFileSystem) FileSystem.get(WEBHDFS_URI, conf);
+      fs = spy((WebHdfsFileSystem) FileSystem.get(WEBHDFS_URI, conf));
+      FileSystemTestHelper.addFileSystemForTesting(WEBHDFS_URI, conf, fs);
 
       cluster.transitionToActive(0);
       Token<?> token = fs.getDelegationToken(null);
 
       cluster.shutdownNameNode(0);
       cluster.transitionToActive(1);
-
-      fs.renewDelegationToken(token);
-      fs.cancelDelegationToken(token);
+      token.renew(conf);
+      token.cancel(conf);
+      verify(fs).renewDelegationToken(token);
+      verify(fs).cancelDelegationToken(token);
     } finally {
       IOUtils.cleanup(null, fs);
       if (cluster != null) {
