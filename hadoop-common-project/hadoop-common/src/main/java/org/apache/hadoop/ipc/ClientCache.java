@@ -59,6 +59,9 @@ public class ClientCache {
     } else {
       client.incCount();
     }
+    if (Client.LOG.isDebugEnabled()) {
+      Client.LOG.debug("getting client out of cache: " + client);
+    }
     return client;
   }
 
@@ -90,13 +93,23 @@ public class ClientCache {
    * A RPC client is closed only when its reference count becomes zero.
    */
   public void stopClient(Client client) {
+    if (Client.LOG.isDebugEnabled()) {
+      Client.LOG.debug("stopping client from cache: " + client);
+    }
     synchronized (this) {
       client.decCount();
       if (client.isZeroReference()) {
+        if (Client.LOG.isDebugEnabled()) {
+          Client.LOG.debug("removing client from cache: " + client);
+        }
         clients.remove(client.getSocketFactory());
       }
     }
     if (client.isZeroReference()) {
+      if (Client.LOG.isDebugEnabled()) {
+        Client.LOG.debug("stopping actual client because no more references remain: "
+            + client);
+      }
       client.stop();
     }
   }

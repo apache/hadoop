@@ -106,6 +106,9 @@ Release 2.4.0 - UNRELEASED
     HADOOP-10407. Fix the javac warnings in org.apache.hadoop.ipc package.
     (szetszwo)
 
+    HADOOP-10070. RPC client doesn't use per-connection conf to determine
+    server's expected Kerberos principal name. (atm)
+
   BREAKDOWN OF HADOOP-10184 SUBTASKS AND RELATED JIRAS
 
     HADOOP-10185. FileSystem API for ACLs. (cnauroth)
