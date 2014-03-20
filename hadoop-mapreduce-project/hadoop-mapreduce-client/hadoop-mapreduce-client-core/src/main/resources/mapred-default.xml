@@ -430,6 +430,16 @@
   take priority over this setting.</description>
 </property>
 
+<property>
+  <name>mapreduce.input.fileinputformat.list-status.num-threads</name>
+  <value>1</value>
+  <description>The number of threads to use to list and fetch block locations
+  for the specified input paths. Note: multiple threads should not be used
+  if a custom non thread-safe path filter is used.
+  </description>
+</property>
+
+
 
 <property>
   <name>mapreduce.client.submit.file.replication</name>

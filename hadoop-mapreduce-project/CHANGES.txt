@@ -199,6 +199,9 @@ Release 2.4.0 - UNRELEASED
     MAPREDUCE-4052. Improved MapReduce clients to use NodeManagers' ability to
     handle cross platform application submissions. (Jian He via vinodkv)
 
+    MAPREDUCE-2349. Modified FileInputFormat to be able to issue file and block
+    location calls in parallel. (Siddharth Seth via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
