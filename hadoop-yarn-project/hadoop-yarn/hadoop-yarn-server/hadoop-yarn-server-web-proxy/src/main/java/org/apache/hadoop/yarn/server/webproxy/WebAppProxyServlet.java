@@ -50,6 +50,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.StringHelper;
@@ -274,7 +275,12 @@ public class WebAppProxyServlet extends HttpServlet {
       
       boolean checkUser = securityEnabled && (!userWasWarned || !userApproved);
 
-      ApplicationReport applicationReport = getApplicationReport(id);
+      ApplicationReport applicationReport = null;
+      try {
+        applicationReport = getApplicationReport(id);
+      } catch (ApplicationNotFoundException e) {
+        applicationReport = null;
+      }
       if(applicationReport == null) {
         LOG.warn(req.getRemoteUser()+" Attempting to access "+id+
             " that was not found");
