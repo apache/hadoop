@@ -52,6 +52,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationReportPBImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
@@ -149,8 +150,17 @@ public class TestWebAppProxyServlet {
       assertEquals(HttpURLConnection.HTTP_OK, proxyConn.getResponseCode());
       assertTrue(isResponseCookiePresent(
           proxyConn, "checked_application_0_0000", "true"));
-      // cannot found application
+      // cannot found application 1: null
       appReportFetcher.answer = 1;
+      proxyConn = (HttpURLConnection) url.openConnection();
+      proxyConn.setRequestProperty("Cookie", "checked_application_0_0000=true");
+      proxyConn.connect();
+      assertEquals(HttpURLConnection.HTTP_NOT_FOUND,
+          proxyConn.getResponseCode());
+      assertFalse(isResponseCookiePresent(
+          proxyConn, "checked_application_0_0000", "true"));
+      // cannot found application 2: ApplicationNotFoundException
+      appReportFetcher.answer = 4;
       proxyConn = (HttpURLConnection) url.openConnection();
       proxyConn.setRequestProperty("Cookie", "checked_application_0_0000=true");
       proxyConn.connect();
@@ -340,6 +350,8 @@ public class TestWebAppProxyServlet {
         ApplicationReport result =  getDefaultApplicationReport(appId);
         result.setYarnApplicationState(YarnApplicationState.KILLED);
         return result;
+      } else if (answer == 4) {
+        throw new ApplicationNotFoundException("Application is not found");
       }
       return null;
     }
