@@ -180,8 +180,11 @@ Release 2.4.0 - UNRELEASED
     HDFS-6123. Do not log stack trace for ReplicaAlreadyExistsException and
     SocketTimeoutException.  (szetszwo)
 
-    HDFS-6129.  When a replica is not found for deletion, do not throw an
+    HDFS-6129. When a replica is not found for deletion, do not throw an
     exception.  (szetszwo)
+
+    HDFS-6138. Add a user guide for how to use viewfs with federation.
+    (sanjay and szetszwo via szetszwo)
 
   OPTIMIZATIONS
 
