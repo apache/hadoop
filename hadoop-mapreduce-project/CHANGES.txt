@@ -21,6 +21,9 @@ Release 2.5.0 - UNRELEASED
     MAPREDUCE-5456. TestFetcher.testCopyFromHostExtraBytes is missing (Jason
     Lowe via jeagles)
 
+    MAPREDUCE-5804. TestMRJobsWithProfiler#testProfiler timesout (Mit Desai
+    via kihwal)
+
   OPTIMIZATIONS
 
   BUG FIXES 
