@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.webproxy.amfilter;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
@@ -36,11 +37,23 @@ public class AmFilterInitializer extends FilterInitializer {
   @Override
   public void initFilter(FilterContainer container, Configuration conf) {
     Map<String, String> params = new HashMap<String, String>();
-    String proxy = WebAppUtils.getProxyHostAndPort(conf);
-    String[] parts = proxy.split(":");
-    params.put(AmIpFilter.PROXY_HOST, parts[0]);
-    params.put(AmIpFilter.PROXY_URI_BASE, WebAppUtils.getHttpSchemePrefix(conf)
-        + proxy + getApplicationWebProxyBase());
+    List<String> proxies = WebAppUtils.getProxyHostsAndPortsForAmFilter(conf);
+    StringBuilder sb = new StringBuilder();
+    for (String proxy : proxies) {
+      sb.append(proxy.split(":")[0]).append(AmIpFilter.PROXY_HOSTS_DELIMITER);
+    }
+    sb.setLength(sb.length() - 1);
+    params.put(AmIpFilter.PROXY_HOSTS, sb.toString());
+
+    String prefix = WebAppUtils.getHttpSchemePrefix(conf);
+    String proxyBase = getApplicationWebProxyBase();
+    sb = new StringBuilder();
+    for (String proxy : proxies) {
+      sb.append(prefix).append(proxy).append(proxyBase)
+          .append(AmIpFilter.PROXY_HOSTS_DELIMITER);
+    }
+    sb.setLength(sb.length() - 1);
+    params.put(AmIpFilter.PROXY_URI_BASES, sb.toString());
     container.addFilter(FILTER_NAME, FILTER_CLASS, params);
   }
 

@@ -264,7 +264,6 @@ public class HAUtil {
   }
 
   /** Add non empty and non null suffix to a key */
-  @VisibleForTesting
   public static String addSuffix(String key, String suffix) {
     if (suffix == null || suffix.isEmpty()) {
       return key;

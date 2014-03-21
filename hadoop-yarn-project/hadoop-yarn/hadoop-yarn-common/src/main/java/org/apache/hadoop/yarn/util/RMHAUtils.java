@@ -16,10 +16,11 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager;
+package org.apache.hadoop.yarn.util;
 
+import java.util.ArrayList;
 import java.util.Collection;
-
+import java.util.List;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -66,5 +67,29 @@ public class RMHAUtils {
         haServiceTarget.getProxy(yarnConf, rpcTimeoutForChecks);
     HAServiceState haState = proto.getServiceStatus().getState();
     return haState;
+  }
+
+  public static List<String> getRMHAWebappAddresses(
+      final YarnConfiguration conf) {
+    Collection<String> rmIds =
+        conf.getStringCollection(YarnConfiguration.RM_HA_IDS);
+    List<String> addrs = new ArrayList<String>();
+    if (YarnConfiguration.useHttps(conf)) {
+      for (String id : rmIds) {
+        String addr = conf.get(
+            YarnConfiguration.RM_WEBAPP_HTTPS_ADDRESS + "." + id);
+        if (addr != null) {
+          addrs.add(addr);
+        }
+      }
+    } else {
+      for (String id : rmIds) {
+        String addr = conf.get(YarnConfiguration.RM_WEBAPP_ADDRESS + "." + id);
+        if (addr != null) {
+          addrs.add(addr);
+        }
+      }
+    }
+    return addrs;
   }
 }

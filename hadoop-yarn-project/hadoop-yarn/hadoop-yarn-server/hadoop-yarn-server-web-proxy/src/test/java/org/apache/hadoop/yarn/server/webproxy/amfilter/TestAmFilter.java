@@ -88,6 +88,7 @@ public class TestAmFilter {
   }
 
   @Test(timeout = 5000)
+  @SuppressWarnings("deprecation")
   public void filterNullCookies() throws Exception {
     HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
 
@@ -120,6 +121,7 @@ public class TestAmFilter {
    * Test AmIpFilter
    */
   @Test(timeout = 1000)
+  @SuppressWarnings("deprecation")
   public void testFilter() throws Exception {
     Map<String, String> params = new HashMap<String, String>();
     params.put(AmIpFilter.PROXY_HOST, proxyHost);
