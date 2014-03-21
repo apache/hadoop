@@ -23,7 +23,6 @@ import static org.jboss.netty.handler.codec.http.HttpHeaders.Names.CONTENT_TYPE;
 import static org.jboss.netty.handler.codec.http.HttpMethod.GET;
 import static org.jboss.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
 import static org.jboss.netty.handler.codec.http.HttpResponseStatus.FORBIDDEN;
-import static org.jboss.netty.handler.codec.http.HttpResponseStatus.HTTP_VERSION_NOT_SUPPORTED;
 import static org.jboss.netty.handler.codec.http.HttpResponseStatus.INTERNAL_SERVER_ERROR;
 import static org.jboss.netty.handler.codec.http.HttpResponseStatus.METHOD_NOT_ALLOWED;
 import static org.jboss.netty.handler.codec.http.HttpResponseStatus.NOT_FOUND;
@@ -41,6 +40,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -110,6 +110,7 @@ import org.jboss.netty.handler.codec.http.QueryStringDecoder;
 import org.jboss.netty.handler.ssl.SslHandler;
 import org.jboss.netty.handler.stream.ChunkedWriteHandler;
 import org.jboss.netty.util.CharsetUtil;
+import org.mortbay.jetty.HttpHeaders;
 
 import com.google.common.base.Charsets;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -156,6 +157,21 @@ public class ShuffleHandler extends AuxiliaryService {
   public static final String SHUFFLE_PORT_CONFIG_KEY = "mapreduce.shuffle.port";
   public static final int DEFAULT_SHUFFLE_PORT = 13562;
 
+  public static final String SHUFFLE_CONNECTION_KEEP_ALIVE_ENABLED =
+      "mapreduce.shuffle.connection-keep-alive.enable";
+  public static final boolean DEFAULT_SHUFFLE_CONNECTION_KEEP_ALIVE_ENABLED = false;
+
+  public static final String SHUFFLE_CONNECTION_KEEP_ALIVE_TIME_OUT =
+      "mapreduce.shuffle.connection-keep-alive.timeout";
+  public static final int DEFAULT_SHUFFLE_CONNECTION_KEEP_ALIVE_TIME_OUT = 5; //seconds
+
+  public static final String SHUFFLE_MAPOUTPUT_META_INFO_CACHE_SIZE =
+      "mapreduce.shuffle.mapoutput-info.meta.cache.size";
+  public static final int DEFAULT_SHUFFLE_MAPOUTPUT_META_INFO_CACHE_SIZE =
+      1000;
+
+  public static final String CONNECTION_CLOSE = "close";
+
   public static final String SUFFLE_SSL_FILE_BUFFER_SIZE_KEY =
     "mapreduce.shuffle.ssl.file.buffer.size";
 
@@ -167,6 +183,9 @@ public class ShuffleHandler extends AuxiliaryService {
   public static final String MAX_SHUFFLE_THREADS = "mapreduce.shuffle.max.threads";
   // 0 implies Netty default of 2 * number of available processors
   public static final int DEFAULT_MAX_SHUFFLE_THREADS = 0;
+  boolean connectionKeepAliveEnabled = false;
+  int connectionKeepAliveTimeOut;
+  int mapOutputMetaInfoCacheSize;
 
   @Metrics(about="Shuffle output metrics", context="mapred")
   static class ShuffleMetrics implements ChannelFutureListener {
@@ -328,6 +347,15 @@ public class ShuffleHandler extends AuxiliaryService {
 
     sslFileBufferSize = conf.getInt(SUFFLE_SSL_FILE_BUFFER_SIZE_KEY,
                                     DEFAULT_SUFFLE_SSL_FILE_BUFFER_SIZE);
+    connectionKeepAliveEnabled =
+        conf.getBoolean(SHUFFLE_CONNECTION_KEEP_ALIVE_ENABLED,
+          DEFAULT_SHUFFLE_CONNECTION_KEEP_ALIVE_ENABLED);
+    connectionKeepAliveTimeOut =
+        Math.max(1, conf.getInt(SHUFFLE_CONNECTION_KEEP_ALIVE_TIME_OUT,
+          DEFAULT_SHUFFLE_CONNECTION_KEEP_ALIVE_TIME_OUT));
+    mapOutputMetaInfoCacheSize =
+        Math.max(1, conf.getInt(SHUFFLE_MAPOUTPUT_META_INFO_CACHE_SIZE,
+          DEFAULT_SHUFFLE_MAPOUTPUT_META_INFO_CACHE_SIZE));
   }
 
   @Override
@@ -459,6 +487,15 @@ public class ShuffleHandler extends AuxiliaryService {
       }
       final Map<String,List<String>> q =
         new QueryStringDecoder(request.getUri()).getParameters();
+      final List<String> keepAliveList = q.get("keepAlive");
+      boolean keepAliveParam = false;
+      if (keepAliveList != null && keepAliveList.size() == 1) {
+        keepAliveParam = Boolean.valueOf(keepAliveList.get(0));
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("KeepAliveParam : " + keepAliveList
+            + " : " + keepAliveParam);
+        }
+      }
       final List<String> mapIds = splitMaps(q.get("map"));
       final List<String> reduceQ = q.get("reduce");
       final List<String> jobQ = q.get("job");
@@ -466,7 +503,8 @@ public class ShuffleHandler extends AuxiliaryService {
         LOG.debug("RECV: " + request.getUri() +
             "\n  mapId: " + mapIds +
             "\n  reduceId: " + reduceQ +
-            "\n  jobId: " + jobQ);
+            "\n  jobId: " + jobQ +
+            "\n  keepAlive: " + keepAliveParam);
       }
 
       if (mapIds == null || reduceQ == null || jobQ == null) {
@@ -505,32 +543,144 @@ public class ShuffleHandler extends AuxiliaryService {
         return;
       }
 
+      Map<String, MapOutputInfo> mapOutputInfoMap =
+          new HashMap<String, MapOutputInfo>();
       Channel ch = evt.getChannel();
+      String user = userRsrc.get(jobId);
+
+      // $x/$user/appcache/$appId/output/$mapId
+      // TODO: Once Shuffle is out of NM, this can use MR APIs to convert
+      // between App and Job
+      String outputBasePathStr = getBaseLocation(jobId, user);
+
+      try {
+        populateHeaders(mapIds, outputBasePathStr, user, reduceId, request,
+          response, keepAliveParam, mapOutputInfoMap);
+      } catch(IOException e) {
+        ch.write(response);
+        LOG.error("Shuffle error in populating headers :", e);
+        String errorMessage = getErrorMessage(e);
+        sendError(ctx,errorMessage , INTERNAL_SERVER_ERROR);
+        return;
+      }
       ch.write(response);
       // TODO refactor the following into the pipeline
       ChannelFuture lastMap = null;
       for (String mapId : mapIds) {
         try {
+          MapOutputInfo info = mapOutputInfoMap.get(mapId);
+          if (info == null) {
+            info = getMapOutputInfo(outputBasePathStr, mapId, reduceId, user);
+          }
           lastMap =
-            sendMapOutput(ctx, ch, userRsrc.get(jobId), jobId, mapId, reduceId);
+              sendMapOutput(ctx, ch, user, mapId,
+                reduceId, info);
           if (null == lastMap) {
             sendError(ctx, NOT_FOUND);
             return;
           }
         } catch (IOException e) {
           LOG.error("Shuffle error :", e);
-          StringBuffer sb = new StringBuffer(e.getMessage());
-          Throwable t = e;
-          while (t.getCause() != null) {
-            sb.append(t.getCause().getMessage());
-            t = t.getCause();
-          }
-          sendError(ctx,sb.toString() , INTERNAL_SERVER_ERROR);
+          String errorMessage = getErrorMessage(e);
+          sendError(ctx,errorMessage , INTERNAL_SERVER_ERROR);
           return;
         }
       }
       lastMap.addListener(metrics);
       lastMap.addListener(ChannelFutureListener.CLOSE);
+    }
+
+    private String getErrorMessage(Throwable t) {
+      StringBuffer sb = new StringBuffer(t.getMessage());
+      while (t.getCause() != null) {
+        sb.append(t.getCause().getMessage());
+        t = t.getCause();
+      }
+      return sb.toString();
+    }
+
+    private String getBaseLocation(String jobId, String user) {
+      final JobID jobID = JobID.forName(jobId);
+      final ApplicationId appID =
+          ApplicationId.newInstance(Long.parseLong(jobID.getJtIdentifier()),
+            jobID.getId());
+      final String baseStr =
+          ContainerLocalizer.USERCACHE + "/" + user + "/"
+              + ContainerLocalizer.APPCACHE + "/"
+              + ConverterUtils.toString(appID) + "/output" + "/";
+      return baseStr;
+    }
+
+    protected MapOutputInfo getMapOutputInfo(String base, String mapId,
+        int reduce, String user) throws IOException {
+      // Index file
+      Path indexFileName =
+          lDirAlloc.getLocalPathToRead(base + "/file.out.index", conf);
+      IndexRecord info =
+          indexCache.getIndexInformation(mapId, reduce, indexFileName, user);
+
+      Path mapOutputFileName =
+          lDirAlloc.getLocalPathToRead(base + "/file.out", conf);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(base + " : " + mapOutputFileName + " : " + indexFileName);
+      }
+      MapOutputInfo outputInfo = new MapOutputInfo(mapOutputFileName, info);
+      return outputInfo;
+    }
+
+    protected void populateHeaders(List<String> mapIds, String outputBaseStr,
+        String user, int reduce, HttpRequest request, HttpResponse response,
+        boolean keepAliveParam, Map<String, MapOutputInfo> mapOutputInfoMap)
+        throws IOException {
+
+      long contentLength = 0;
+      for (String mapId : mapIds) {
+        String base = outputBaseStr + mapId;
+        MapOutputInfo outputInfo = getMapOutputInfo(base, mapId, reduce, user);
+        if (mapOutputInfoMap.size() < mapOutputMetaInfoCacheSize) {
+          mapOutputInfoMap.put(mapId, outputInfo);
+        }
+        // Index file
+        Path indexFileName =
+            lDirAlloc.getLocalPathToRead(base + "/file.out.index", conf);
+        IndexRecord info =
+            indexCache.getIndexInformation(mapId, reduce, indexFileName, user);
+        ShuffleHeader header =
+            new ShuffleHeader(mapId, info.partLength, info.rawLength, reduce);
+        DataOutputBuffer dob = new DataOutputBuffer();
+        header.write(dob);
+
+        contentLength += info.partLength;
+        contentLength += dob.getLength();
+      }
+
+      // Now set the response headers.
+      setResponseHeaders(response, keepAliveParam, contentLength);
+    }
+
+    protected void setResponseHeaders(HttpResponse response,
+        boolean keepAliveParam, long contentLength) {
+      if (!connectionKeepAliveEnabled && !keepAliveParam) {
+        LOG.info("Setting connection close header...");
+        response.setHeader(HttpHeaders.CONNECTION, CONNECTION_CLOSE);
+      } else {
+        response.setHeader(HttpHeaders.CONTENT_LENGTH,
+          String.valueOf(contentLength));
+        response.setHeader(HttpHeaders.CONNECTION, HttpHeaders.KEEP_ALIVE);
+        response.setHeader(HttpHeaders.KEEP_ALIVE, "timeout="
+            + connectionKeepAliveTimeOut);
+        LOG.info("Content Length in shuffle : " + contentLength);
+      }
+    }
+
+    class MapOutputInfo {
+      final Path mapOutputFileName;
+      final IndexRecord indexRecord;
+
+      MapOutputInfo(Path mapOutputFileName, IndexRecord indexRecord) {
+        this.mapOutputFileName = mapOutputFileName;
+        this.indexRecord = indexRecord;
+      }
     }
 
     protected void verifyRequest(String appid, ChannelHandlerContext ctx,
@@ -575,39 +725,16 @@ public class ShuffleHandler extends AuxiliaryService {
     }
 
     protected ChannelFuture sendMapOutput(ChannelHandlerContext ctx, Channel ch,
-        String user, String jobId, String mapId, int reduce)
+        String user, String mapId, int reduce, MapOutputInfo mapOutputInfo)
         throws IOException {
-      // TODO replace w/ rsrc alloc
-      // $x/$user/appcache/$appId/output/$mapId
-      // TODO: Once Shuffle is out of NM, this can use MR APIs to convert between App and Job
-      JobID jobID = JobID.forName(jobId);
-      ApplicationId appID = ApplicationId.newInstance(
-          Long.parseLong(jobID.getJtIdentifier()), jobID.getId());
-      final String base =
-          ContainerLocalizer.USERCACHE + "/" + user + "/"
-              + ContainerLocalizer.APPCACHE + "/"
-              + ConverterUtils.toString(appID) + "/output" + "/" + mapId;
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("DEBUG0 " + base);
-      }
-      // Index file
-      Path indexFileName = lDirAlloc.getLocalPathToRead(
-          base + "/file.out.index", conf);
-      // Map-output file
-      Path mapOutputFileName = lDirAlloc.getLocalPathToRead(
-          base + "/file.out", conf);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("DEBUG1 " + base + " : " + mapOutputFileName + " : "
-            + indexFileName);
-      }
-      final IndexRecord info = 
-        indexCache.getIndexInformation(mapId, reduce, indexFileName, user);
+      final IndexRecord info = mapOutputInfo.indexRecord;
       final ShuffleHeader header =
         new ShuffleHeader(mapId, info.partLength, info.rawLength, reduce);
       final DataOutputBuffer dob = new DataOutputBuffer();
       header.write(dob);
       ch.write(wrappedBuffer(dob.getData(), 0, dob.getLength()));
-      final File spillfile = new File(mapOutputFileName.toString());
+      final File spillfile =
+          new File(mapOutputInfo.mapOutputFileName.toString());
       RandomAccessFile spill;
       try {
         spill = SecureIOUtils.openForRandomRead(spillfile, "r", user, null);
