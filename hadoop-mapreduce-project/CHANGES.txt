@@ -34,6 +34,9 @@ Release 2.4.0 - UNRELEASED
 
   NEW FEATURES
 
+    MAPREDUCE-5787. Added the ability to keep alive shuffle connections in the
+    MapReduce shuffle-handler. (Rajesh Balamohan via vinodkv)
+
   IMPROVEMENTS
 
     MAPREDUCE-5464. Add analogs of the SLOTS_MILLIS counters that jive with the

@@ -363,6 +363,21 @@
 </property>
 
 <property>
+  <name>mapreduce.shuffle.connection-keep-alive.enable</name>
+  <value>false</value>
+  <description>set to true to support keep-alive connections.</description>
+</property>
+
+<property>
+  <name>mapreduce.shuffle.connection-keep-alive.timeout</name>
+  <value>5</value>
+  <description>The number of seconds a shuffle client attempts to retain
+   http connection. Refer "Keep-Alive: timeout=" header in
+   Http specification
+  </description>
+</property>
+
+<property>
   <name>mapreduce.task.timeout</name>
   <value>600000</value>
   <description>The number of milliseconds before a task will be
