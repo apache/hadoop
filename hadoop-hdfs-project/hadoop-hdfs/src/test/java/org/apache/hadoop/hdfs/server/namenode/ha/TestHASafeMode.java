@@ -495,7 +495,8 @@ public class TestHASafeMode {
             "Safe mode is ON. The reported blocks " + safe + " has reached the "
             + "threshold 0.9990 of total blocks " + total + ". The number of "
             + "live datanodes " + numNodes + " has reached the minimum number "
-            + nodeThresh + ". Safe mode will be turned off automatically"));
+            + nodeThresh + ". In safe mode extension. "
+            + "Safe mode will be turned off automatically"));
     } else {
       int additional = total - safe;
       assertTrue("Bad safemode status: '" + status + "'",
@@ -565,8 +566,8 @@ public class TestHASafeMode {
       status.startsWith(
         "Safe mode is ON. The reported blocks 10 has reached the threshold "
         + "0.9990 of total blocks 10. The number of live datanodes 3 has "
-        + "reached the minimum number 0. Safe mode will be turned off "
-        + "automatically"));
+        + "reached the minimum number 0. In safe mode extension. "
+        + "Safe mode will be turned off automatically"));
 
     // Delete those blocks while the SBN is in safe mode.
     // Immediately roll the edit log before the actual deletions are sent
