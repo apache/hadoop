@@ -186,6 +186,8 @@ Release 2.4.0 - UNRELEASED
     HDFS-6138. Add a user guide for how to use viewfs with federation.
     (sanjay and szetszwo via szetszwo)
 
+    HDFS-6120. Fix and improve safe mode log messages. (Arpit Agarwal)
+
   OPTIMIZATIONS
 
     HDFS-5790. LeaseManager.findPath is very slow when many leases need recovery

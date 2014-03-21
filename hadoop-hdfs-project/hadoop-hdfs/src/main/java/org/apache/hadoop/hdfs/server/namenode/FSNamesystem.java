@@ -91,7 +91,6 @@ import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
 import java.io.DataInput;
 import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -4803,13 +4802,21 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
      * @return true if can leave or false otherwise.
      */
     private synchronized boolean canLeave() {
-      if (reached == 0)
-        return false;
-      if (now() - reached < extension) {
-        reportStatus("STATE* Safe mode ON.", false);
+      if (reached == 0) {
         return false;
       }
-      return !needEnter();
+
+      if (now() - reached < extension) {
+        reportStatus("STATE* Safe mode ON, in safe mode extension.", false);
+        return false;
+      }
+
+      if (needEnter()) {
+        reportStatus("STATE* Safe mode ON, thresholds not met.", false);
+        return false;
+      }
+
+      return true;
     }
       
     /** 
@@ -4953,56 +4960,59 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
      * A tip on how safe mode is to be turned off: manually or automatically.
      */
     String getTurnOffTip() {
-      if(!isOn())
+      if(!isOn()) {
         return "Safe mode is OFF.";
+      }
 
       //Manual OR low-resource safemode. (Admin intervention required)
-      String leaveMsg = "It was turned on manually. ";
+      String adminMsg = "It was turned on manually. ";
       if (areResourcesLow()) {
-        leaveMsg = "Resources are low on NN. Please add or free up more "
+        adminMsg = "Resources are low on NN. Please add or free up more "
           + "resources then turn off safe mode manually. NOTE:  If you turn off"
           + " safe mode before adding resources, "
           + "the NN will immediately return to safe mode. ";
       }
       if (isManual() || areResourcesLow()) {
-        return leaveMsg
+        return adminMsg
           + "Use \"hdfs dfsadmin -safemode leave\" to turn safe mode off.";
       }
 
-      //Automatic safemode. System will come out of safemode automatically.
-      leaveMsg = "Safe mode will be turned off automatically";
+      boolean thresholdsMet = true;
       int numLive = getNumLiveDataNodes();
       String msg = "";
-      if (reached == 0) {
-        if (blockSafe < blockThreshold) {
-          msg += String.format(
-            "The reported blocks %d needs additional %d"
-            + " blocks to reach the threshold %.4f of total blocks %d.\n",
-            blockSafe, (blockThreshold - blockSafe) + 1, threshold, blockTotal);
-        }
-        if (numLive < datanodeThreshold) {
-          msg += String.format(
-            "The number of live datanodes %d needs an additional %d live "
-            + "datanodes to reach the minimum number %d.\n",
-            numLive, (datanodeThreshold - numLive), datanodeThreshold);
-        }
+      if (blockSafe < blockThreshold) {
+        msg += String.format(
+          "The reported blocks %d needs additional %d"
+          + " blocks to reach the threshold %.4f of total blocks %d.\n",
+          blockSafe, (blockThreshold - blockSafe) + 1, threshold, blockTotal);
+        thresholdsMet = false;
       } else {
-        msg = String.format("The reported blocks %d has reached the threshold"
+        msg += String.format("The reported blocks %d has reached the threshold"
             + " %.4f of total blocks %d. ", blockSafe, threshold, blockTotal);
-
+      }
+      if (numLive < datanodeThreshold) {
+        msg += String.format(
+          "The number of live datanodes %d needs an additional %d live "
+          + "datanodes to reach the minimum number %d.\n",
+          numLive, (datanodeThreshold - numLive), datanodeThreshold);
+        thresholdsMet = false;
+      } else {
         msg += String.format("The number of live datanodes %d has reached "
-                               + "the minimum number %d. ",
-                               numLive, datanodeThreshold);
+            + "the minimum number %d. ",
+            numLive, datanodeThreshold);
       }
-      msg += leaveMsg;
-      // threshold is not reached or manual or resources low
-      if(reached == 0 || (isManual() && !areResourcesLow())) {
-        return msg;
+      msg += (reached > 0) ? "In safe mode extension. " : "";
+      msg += "Safe mode will be turned off automatically ";
+
+      if (!thresholdsMet) {
+        msg += "once the thresholds have been reached.";
+      } else if (reached + extension - now() > 0) {
+        msg += ("in " + (reached + extension - now()) / 1000 + " seconds.");
+      } else {
+        msg += "soon.";
       }
-      // extension period is in progress
-      return msg + (reached + extension - now() > 0 ?
-        " in " + (reached + extension - now()) / 1000 + " seconds."
-        : " soon.");
+
+      return msg;
     }
 
     /**
