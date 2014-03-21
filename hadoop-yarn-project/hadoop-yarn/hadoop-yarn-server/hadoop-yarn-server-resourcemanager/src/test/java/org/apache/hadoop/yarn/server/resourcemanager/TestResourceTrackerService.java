@@ -26,8 +26,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
-import org.junit.Assert;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.metrics2.MetricsSystem;
@@ -45,21 +43,29 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
+import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResponse;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
+
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
 
 public class TestResourceTrackerService {
 
@@ -468,26 +474,64 @@ public class TestResourceTrackerService {
         ClusterMetrics.getMetrics().getUnhealthyNMs());
   }
 
+  @SuppressWarnings("unchecked")
   @Test
-  public void testNodeRegistrationWithContainers() throws Exception {
-    rm = new MockRM();
-    rm.init(new YarnConfiguration());
+  public void testHandleContainerStatusInvalidCompletions() throws Exception {
+    rm = new MockRM(new YarnConfiguration());
     rm.start();
-    RMApp app = rm.submitApp(1024);
 
-    MockNM nm = rm.registerNode("host1:1234", 8192);
-    nm.nodeHeartbeat(true);
+    EventHandler handler =
+        spy(rm.getRMContext().getDispatcher().getEventHandler());
 
-    // Register node with some container statuses
+    // Case 1: Unmanaged AM
+    RMApp app = rm.submitApp(1024, true);
+
+    // Case 1.1: AppAttemptId is null
     ContainerStatus status = ContainerStatus.newInstance(
         ContainerId.newInstance(ApplicationAttemptId.newInstance(
             app.getApplicationId(), 2), 1),
         ContainerState.COMPLETE, "Dummy Completed", 0);
+    rm.getResourceTrackerService().handleContainerStatus(status);
+    verify(handler, never()).handle((Event) any());
 
-    // The following shouldn't throw NPE
-    nm.registerNode(Collections.singletonList(status));
-    assertEquals("Incorrect number of nodes", 1,
-        rm.getRMContext().getRMNodes().size());
+    // Case 1.2: Master container is null
+    RMAppAttemptImpl currentAttempt =
+        (RMAppAttemptImpl) app.getCurrentAppAttempt();
+    currentAttempt.setMasterContainer(null);
+    status = ContainerStatus.newInstance(
+        ContainerId.newInstance(currentAttempt.getAppAttemptId(), 0),
+        ContainerState.COMPLETE, "Dummy Completed", 0);
+    rm.getResourceTrackerService().handleContainerStatus(status);
+    verify(handler, never()).handle((Event)any());
+
+    // Case 2: Managed AM
+    app = rm.submitApp(1024);
+
+    // Case 2.1: AppAttemptId is null
+    status = ContainerStatus.newInstance(
+        ContainerId.newInstance(ApplicationAttemptId.newInstance(
+            app.getApplicationId(), 2), 1),
+        ContainerState.COMPLETE, "Dummy Completed", 0);
+    try {
+      rm.getResourceTrackerService().handleContainerStatus(status);
+    } catch (Exception e) {
+      // expected - ignore
+    }
+    verify(handler, never()).handle((Event)any());
+
+    // Case 2.2: Master container is null
+    currentAttempt =
+        (RMAppAttemptImpl) app.getCurrentAppAttempt();
+    currentAttempt.setMasterContainer(null);
+    status = ContainerStatus.newInstance(
+        ContainerId.newInstance(currentAttempt.getAppAttemptId(), 0),
+        ContainerState.COMPLETE, "Dummy Completed", 0);
+    try {
+      rm.getResourceTrackerService().handleContainerStatus(status);
+    } catch (Exception e) {
+      // expected - ignore
+    }
+    verify(handler, never()).handle((Event)any());
   }
 
   @Test

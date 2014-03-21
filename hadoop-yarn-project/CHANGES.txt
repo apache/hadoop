@@ -524,6 +524,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1670. Fixed a bug in log-aggregation that can cause the writer to write
     more log-data than the log-length that it records. (Mit Desai via vinodk)
 
+    YARN-1849. Fixed NPE in ResourceTrackerService#registerNodeManager for UAM
+    (Karthik Kambatla via jianhe )
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
