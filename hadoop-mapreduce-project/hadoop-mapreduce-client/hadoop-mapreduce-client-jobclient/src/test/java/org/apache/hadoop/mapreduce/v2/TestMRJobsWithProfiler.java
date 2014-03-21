@@ -104,7 +104,7 @@ public class TestMRJobsWithProfiler {
   }
 
 
-  @Test (timeout = 120000)
+  @Test (timeout = 150000)
   public void testProfiler() throws IOException, InterruptedException,
       ClassNotFoundException {
     if (!(new File(MiniMRYarnCluster.APPJAR)).exists()) {
