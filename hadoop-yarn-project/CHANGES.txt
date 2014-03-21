@@ -526,6 +526,10 @@ Release 2.4.0 - UNRELEASED
     YARN-1640. Fixed manual failover of ResourceManagers to work correctly in
     secure clusters. (Xuan Gong via vinodkv)
 
+    YARN-1855. Made Application-history server to be optional in MiniYARNCluster
+    and thus avoid the failure of TestRMFailover#testRMWebAppRedirect. (Zhijie
+    Shen via vinodkv)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

@@ -74,7 +74,7 @@ public class TestDistributedShell {
     conf.set("yarn.log.dir", "target");
     if (yarnCluster == null) {
       yarnCluster = new MiniYARNCluster(
-        TestDistributedShell.class.getSimpleName(), 1, 1, 1);
+        TestDistributedShell.class.getSimpleName(), 1, 1, 1, 1, true);
       yarnCluster.init(conf);
       yarnCluster.start();
       NodeManager  nm = yarnCluster.getNodeManager(0);
