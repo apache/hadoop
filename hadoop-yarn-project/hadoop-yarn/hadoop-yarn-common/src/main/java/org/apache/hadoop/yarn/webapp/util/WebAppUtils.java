@@ -22,6 +22,9 @@ import static org.apache.hadoop.yarn.util.StringHelper.PATH_JOINER;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
@@ -30,6 +33,8 @@ import org.apache.hadoop.http.HttpConfig.Policy;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.conf.HAUtil;
+import org.apache.hadoop.yarn.util.RMHAUtils;
 
 @Private
 @Evolving
@@ -79,6 +84,36 @@ public class WebAppUtils {
           YarnConfiguration.DEFAULT_RM_WEBAPP_ADDRESS);
     }
   }
+
+  public static List<String> getProxyHostsAndPortsForAmFilter(
+      Configuration conf) {
+    List<String> addrs = new ArrayList<String>();
+    String proxyAddr = conf.get(YarnConfiguration.PROXY_ADDRESS);
+    // If PROXY_ADDRESS isn't set, fallback to RM_WEBAPP(_HTTPS)_ADDRESS
+    // There could be multiple if using RM HA
+    if (proxyAddr == null || proxyAddr.isEmpty()) {
+      // If RM HA is enabled, try getting those addresses
+      if (HAUtil.isHAEnabled(conf)) {
+        List<String> haAddrs =
+            RMHAUtils.getRMHAWebappAddresses(new YarnConfiguration(conf));
+        for (String addr : haAddrs) {
+          try {
+            InetSocketAddress socketAddr = NetUtils.createSocketAddr(addr);
+            addrs.add(getResolvedAddress(socketAddr));
+          } catch(IllegalArgumentException e) {
+            // skip if can't resolve
+          }
+        }
+      }
+      // If couldn't resolve any of the addresses or not using RM HA, fallback
+      if (addrs.isEmpty()) {
+        addrs.add(getResolvedRMWebAppURLWithoutScheme(conf));
+      }
+    } else {
+      addrs.add(proxyAddr);
+    }
+    return addrs;
+  }
   
   public static String getProxyHostAndPort(Configuration conf) {
     String addr = conf.get(YarnConfiguration.PROXY_ADDRESS);
@@ -112,10 +147,14 @@ public class WebAppUtils {
               YarnConfiguration.DEFAULT_RM_WEBAPP_ADDRESS,
               YarnConfiguration.DEFAULT_RM_WEBAPP_PORT);      
     }
+    return getResolvedAddress(address);
+  }
+
+  private static String getResolvedAddress(InetSocketAddress address) {
     address = NetUtils.getConnectAddress(address);
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
     InetAddress resolved = address.getAddress();
-    if (resolved == null || resolved.isAnyLocalAddress() || 
+    if (resolved == null || resolved.isAnyLocalAddress() ||
         resolved.isLoopbackAddress()) {
       String lh = address.getHostName();
       try {
