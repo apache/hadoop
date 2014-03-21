@@ -182,7 +182,9 @@ public class TestSafeMode {
     String status = nn.getNamesystem().getSafemode();
     assertEquals("Safe mode is ON. The reported blocks 0 needs additional " +
         "15 blocks to reach the threshold 0.9990 of total blocks 15.\n" +
-        "Safe mode will be turned off automatically", status);
+        "The number of live datanodes 0 has reached the minimum number 0. " +
+        "Safe mode will be turned off automatically once the thresholds " +
+        "have been reached.", status);
     assertFalse("Mis-replicated block queues should not be initialized " +
         "until threshold is crossed",
         NameNodeAdapter.safeModeInitializedReplQueues(nn));
