@@ -536,6 +536,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1811. Fixed AMFilters in YARN to correctly accept requests from either
     web-app proxy or the RMs when HA is enabled. (Robert Kanter via vinodkv)
 
+    YARN-1670. Fixed a bug in log-aggregation that can cause the writer to write
+    more log-data than the log-length that it records. (Mit Desai via vinodk)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
