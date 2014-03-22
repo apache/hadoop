@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.fs.viewfs;
 
-import static org.apache.hadoop.fs.viewfs.Constants.PERMISSION_RRR;
+import static org.apache.hadoop.fs.viewfs.Constants.PERMISSION_555;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -676,8 +676,8 @@ public class ViewFs extends AbstractFileSystem {
     @Override
     public FileStatus getFileStatus(final Path f) throws IOException {
       checkPathIsSlash(f);
-      return new FileStatus(0, true, 0, 0, creationTime, creationTime, 
-          PERMISSION_RRR, ugi.getUserName(), ugi.getGroupNames()[0],
+      return new FileStatus(0, true, 0, 0, creationTime, creationTime,
+          PERMISSION_555, ugi.getUserName(), ugi.getGroupNames()[0],
           new Path(theInternalDir.fullPath).makeQualified(
               myUri, null));
     }
@@ -697,13 +697,13 @@ public class ViewFs extends AbstractFileSystem {
         INodeLink<AbstractFileSystem> inodelink = 
           (INodeLink<AbstractFileSystem>) inode;
         result = new FileStatus(0, false, 0, 0, creationTime, creationTime,
-            PERMISSION_RRR, ugi.getUserName(), ugi.getGroupNames()[0],
+            PERMISSION_555, ugi.getUserName(), ugi.getGroupNames()[0],
             inodelink.getTargetLink(),
             new Path(inode.fullPath).makeQualified(
                 myUri, null));
       } else {
         result = new FileStatus(0, true, 0, 0, creationTime, creationTime,
-          PERMISSION_RRR, ugi.getUserName(), ugi.getGroupNames()[0],
+          PERMISSION_555, ugi.getUserName(), ugi.getGroupNames()[0],
           new Path(inode.fullPath).makeQualified(
               myUri, null));
       }
@@ -742,14 +742,14 @@ public class ViewFs extends AbstractFileSystem {
 
           result[i++] = new FileStatus(0, false, 0, 0,
             creationTime, creationTime,
-            PERMISSION_RRR, ugi.getUserName(), ugi.getGroupNames()[0],
+            PERMISSION_555, ugi.getUserName(), ugi.getGroupNames()[0],
             link.getTargetLink(),
             new Path(inode.fullPath).makeQualified(
                 myUri, null));
         } else {
           result[i++] = new FileStatus(0, true, 0, 0,
             creationTime, creationTime,
-            PERMISSION_RRR, ugi.getUserName(), ugi.getGroupNames()[0],
+            PERMISSION_555, ugi.getUserName(), ugi.getGroupNames()[0],
             new Path(inode.fullPath).makeQualified(
                 myUri, null));
         }

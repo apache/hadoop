@@ -127,6 +127,9 @@ Release 2.4.0 - UNRELEASED
     HADOOP-10407. Fix the javac warnings in org.apache.hadoop.ipc package.
     (szetszwo)
 
+    HADOOP-10191. Missing executable permission on viewfs internal dirs.
+    (Gera Shegalov via cnauroth)
+
   BREAKDOWN OF HADOOP-10184 SUBTASKS AND RELATED JIRAS
 
     HADOOP-10185. FileSystem API for ACLs. (cnauroth)

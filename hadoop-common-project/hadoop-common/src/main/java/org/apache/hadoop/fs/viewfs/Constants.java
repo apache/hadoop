@@ -64,6 +64,6 @@ public interface Constants {
    */
   public static final String CONFIG_VIEWFS_LINK_MERGE_SLASH = "linkMergeSlash";
 
-  static public final FsPermission PERMISSION_RRR = 
-    new FsPermission((short) 0444);
+  static public final FsPermission PERMISSION_555 =
+      new FsPermission((short) 0555);
 }
