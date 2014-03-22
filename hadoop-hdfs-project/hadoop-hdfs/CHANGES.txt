@@ -668,6 +668,9 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-6127. WebHDFS tokens cannot be renewed in HA setup. (wheat9)
 
+    HDFS-6140. WebHDFS cannot create a file with spaces in the name after HA
+    failover changes. (cnauroth)
+
   BREAKDOWN OF HDFS-5698 SUBTASKS AND RELATED JIRAS
 
     HDFS-5717. Save FSImage header in protobuf. (Haohui Mai via jing9)
