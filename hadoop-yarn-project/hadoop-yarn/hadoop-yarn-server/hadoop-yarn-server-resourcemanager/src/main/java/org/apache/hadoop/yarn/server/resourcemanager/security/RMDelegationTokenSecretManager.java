@@ -122,9 +122,7 @@ public class RMDelegationTokenSecretManager extends
     try {
       LOG.info("updating RMDelegation token with sequence number: "
           + id.getSequenceNumber());
-      rmContext.getStateStore().removeRMDelegationToken(id,
-        delegationTokenSequenceNumber);
-      rmContext.getStateStore().storeRMDelegationTokenAndSequenceNumber(id,
+      rmContext.getStateStore().updateRMDelegationTokenAndSequenceNumber(id,
         renewDate, id.getSequenceNumber());
     } catch (Exception e) {
       LOG.error("Error in updating persisted RMDelegationToken with sequence number: "

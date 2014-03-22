@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.io.DataInputByteBuffer;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
@@ -73,7 +74,9 @@ public class FileSystemRMStateStore extends RMStateStore {
   protected FileSystem fs;
 
   private Path rootDirPath;
-  private Path rmDTSecretManagerRoot;
+  @Private
+  @VisibleForTesting
+  Path rmDTSecretManagerRoot;
   private Path rmAppRoot;
   private Path dtSequenceNumberPath = null;
 
@@ -157,6 +160,7 @@ public class FileSystemRMStateStore extends RMStateStore {
           new ArrayList<ApplicationAttemptState>();
 
       for (FileStatus appDir : fs.listStatus(rmAppRoot)) {
+        checkAndResumeUpdateOperation(appDir.getPath());
         for (FileStatus childNodeStatus : fs.listStatus(appDir.getPath())) {
           assert childNodeStatus.isFile();
           String childNodeName = childNodeStatus.getPath().getName();
@@ -250,7 +254,29 @@ public class FileSystemRMStateStore extends RMStateStore {
     return false;
   }
 
+  private void checkAndResumeUpdateOperation(Path path) throws Exception {
+    // Before loading the state information, check whether .new file exists.
+    // If it does, the prior updateFile is failed on half way. We need to
+    // complete replacing the old file first.
+    FileStatus[] newChildNodes =
+        fs.listStatus(path, new PathFilter() {
+      @Override
+      public boolean accept(Path path) {
+        return path.getName().endsWith(".new");
+      }
+    });
+    for(FileStatus newChildNodeStatus : newChildNodes) {
+      assert newChildNodeStatus.isFile();
+      String newChildNodeName = newChildNodeStatus.getPath().getName();
+      String childNodeName = newChildNodeName.substring(
+          0, newChildNodeName.length() - ".new".length());
+      Path childNodePath =
+          new Path(newChildNodeStatus.getPath().getParent(), childNodeName);
+      replaceFile(newChildNodeStatus.getPath(), childNodePath);
+    }
+  }
   private void loadRMDTSecretManagerState(RMState rmState) throws Exception {
+    checkAndResumeUpdateOperation(rmDTSecretManagerRoot);
     FileStatus[] childNodes = fs.listStatus(rmDTSecretManagerRoot);
 
     for(FileStatus childNodeStatus : childNodes) {
@@ -380,15 +406,44 @@ public class FileSystemRMStateStore extends RMStateStore {
   public synchronized void storeRMDelegationTokenAndSequenceNumberState(
       RMDelegationTokenIdentifier identifier, Long renewDate,
       int latestSequenceNumber) throws Exception {
+    storeOrUpdateRMDelegationTokenAndSequenceNumberState(
+        identifier, renewDate,latestSequenceNumber, false);
+  }
+
+  @Override
+  public synchronized void removeRMDelegationTokenState(
+      RMDelegationTokenIdentifier identifier) throws Exception {
+    Path nodeCreatePath = getNodePath(rmDTSecretManagerRoot,
+      DELEGATION_TOKEN_PREFIX + identifier.getSequenceNumber());
+    LOG.info("Removing RMDelegationToken_" + identifier.getSequenceNumber());
+    deleteFile(nodeCreatePath);
+  }
+
+  @Override
+  protected void updateRMDelegationTokenAndSequenceNumberInternal(
+      RMDelegationTokenIdentifier rmDTIdentifier, Long renewDate,
+      int latestSequenceNumber) throws Exception {
+    storeOrUpdateRMDelegationTokenAndSequenceNumberState(
+        rmDTIdentifier, renewDate,latestSequenceNumber, true);
+  }
+
+  private void storeOrUpdateRMDelegationTokenAndSequenceNumberState(
+      RMDelegationTokenIdentifier identifier, Long renewDate,
+      int latestSequenceNumber, boolean isUpdate) throws Exception {
     Path nodeCreatePath =
         getNodePath(rmDTSecretManagerRoot,
           DELEGATION_TOKEN_PREFIX + identifier.getSequenceNumber());
     ByteArrayOutputStream os = new ByteArrayOutputStream();
     DataOutputStream fsOut = new DataOutputStream(os);
-    LOG.info("Storing RMDelegationToken_" + identifier.getSequenceNumber());
     identifier.write(fsOut);
     fsOut.writeLong(renewDate);
-    writeFile(nodeCreatePath, os.toByteArray());
+    if (isUpdate) {
+      LOG.info("Updating RMDelegationToken_" + identifier.getSequenceNumber());
+      updateFile(nodeCreatePath, os.toByteArray());
+    } else {
+      LOG.info("Storing RMDelegationToken_" + identifier.getSequenceNumber());
+      writeFile(nodeCreatePath, os.toByteArray());
+    }
     fsOut.close();
 
     // store sequence number
@@ -406,15 +461,6 @@ public class FileSystemRMStateStore extends RMStateStore {
       }
     }
     dtSequenceNumberPath = latestSequenceNumberPath;
-  }
-
-  @Override
-  public synchronized void removeRMDelegationTokenState(
-      RMDelegationTokenIdentifier identifier) throws Exception {
-    Path nodeCreatePath = getNodePath(rmDTSecretManagerRoot,
-      DELEGATION_TOKEN_PREFIX + identifier.getSequenceNumber());
-    LOG.info("Removing RMDelegationToken_" + identifier.getSequenceNumber());
-    deleteFile(nodeCreatePath);
   }
 
   @Override
@@ -477,14 +523,28 @@ public class FileSystemRMStateStore extends RMStateStore {
     fs.rename(tempPath, outputPath);
   }
 
+  /*
+   * In order to make this update atomic as a part of write we will first write
+   * data to .new file and then rename it. Here we are assuming that rename is
+   * atomic for underlying file system.
+   */
   protected void updateFile(Path outputPath, byte[] data) throws Exception {
-    if (fs.exists(outputPath)) {
-      deleteFile(outputPath);
-    }
-    writeFile(outputPath, data);
+    Path newPath = new Path(outputPath.getParent(), outputPath.getName() + ".new");
+    // use writeFile to make sure .new file is created atomically
+    writeFile(newPath, data);
+    replaceFile(newPath, outputPath);
   }
 
-  private boolean renameFile(Path src, Path dst) throws Exception {
+  protected void replaceFile(Path srcPath, Path dstPath) throws Exception {
+    if (fs.exists(dstPath)) {
+      deleteFile(dstPath);
+    }
+    fs.rename(srcPath, dstPath);
+  }
+
+  @Private
+  @VisibleForTesting
+  boolean renameFile(Path src, Path dst) throws Exception {
     return fs.rename(src, dst);
   }
 
@@ -492,7 +552,10 @@ public class FileSystemRMStateStore extends RMStateStore {
     return fs.createNewFile(newFile);
   }
 
-  private Path getNodePath(Path root, String nodeName) {
+  @Private
+  @VisibleForTesting
+  Path getNodePath(Path root, String nodeName) {
     return new Path(root, nodeName);
   }
+
 }
