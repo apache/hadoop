@@ -1206,4 +1206,17 @@
     <name>yarn.client.application-client-protocol.poll-interval-ms</name>
     <value>200</value>
   </property>
+
+  <property>
+    <description>RSS usage of a process computed via 
+    /proc/pid/stat is not very accurate as it includes shared pages of a
+    process. /proc/pid/smaps provides useful information like
+    Private_Dirty, Private_Clean, Shared_Dirty, Shared_Clean which can be used
+    for computing more accurate RSS. When this flag is enabled, RSS is computed
+    as Min(Shared_Dirty, Pss) + Private_Clean + Private_Dirty. It excludes
+    read-only shared mappings in RSS computation.  
+    </description>
+    <name>yarn.nodemanager.container-monitor.procfs-tree.smaps-based-rss.enabled</name>
+    <value>false</value>
+  </property>
 </configuration>
