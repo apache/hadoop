@@ -28,8 +28,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URL;
 
-import org.junit.Assert;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -38,11 +36,15 @@ import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
 import org.apache.hadoop.yarn.client.ClientRMProxy;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -122,7 +124,7 @@ public class TestUnmanagedAMLauncher {
   }
 
   @Test(timeout=30000)
-  public void testDSShell() throws Exception {
+  public void testUMALauncher() throws Exception {
     String classpath = getTestRuntimeClasspath();
     String javaHome = System.getenv("JAVA_HOME");
     if (javaHome == null) {
@@ -141,8 +143,18 @@ public class TestUnmanagedAMLauncher {
             + " success" };
 
     LOG.info("Initializing Launcher");
-    UnmanagedAMLauncher launcher = new UnmanagedAMLauncher(new Configuration(
-        yarnCluster.getConfig()));
+    UnmanagedAMLauncher launcher =
+        new UnmanagedAMLauncher(new Configuration(yarnCluster.getConfig())) {
+          public void launchAM(ApplicationAttemptId attemptId)
+              throws IOException, YarnException {
+            YarnApplicationAttemptState attemptState =
+                rmClient.getApplicationAttemptReport(attemptId)
+                  .getYarnApplicationAttemptState();
+            Assert.assertTrue(attemptState
+              .equals(YarnApplicationAttemptState.LAUNCHED));
+            super.launchAM(attemptId);
+          }
+        };
     boolean initSuccess = launcher.init(args);
     Assert.assertTrue(initSuccess);
     LOG.info("Running Launcher");
@@ -154,7 +166,7 @@ public class TestUnmanagedAMLauncher {
   }
 
   @Test(timeout=30000)
-  public void testDSShellError() throws Exception {
+  public void testUMALauncherError() throws Exception {
     String classpath = getTestRuntimeClasspath();
     String javaHome = System.getenv("JAVA_HOME");
     if (javaHome == null) {
