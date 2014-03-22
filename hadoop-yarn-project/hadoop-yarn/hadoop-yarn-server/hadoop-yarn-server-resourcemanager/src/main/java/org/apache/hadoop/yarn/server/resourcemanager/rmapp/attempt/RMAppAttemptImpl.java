@@ -1650,11 +1650,14 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
     this.readLock.lock();
     ApplicationAttemptReport attemptReport = null;
     try {
+      // AM container maybe not yet allocated. and also unmangedAM doesn't have
+      // am container.
+      ContainerId amId =
+          masterContainer == null ? null : masterContainer.getId();
       attemptReport = ApplicationAttemptReport.newInstance(this
           .getAppAttemptId(), this.getHost(), this.getRpcPort(), this
           .getTrackingUrl(), this.getDiagnostics(), YarnApplicationAttemptState
-          .valueOf(this.getState().toString()), this.getMasterContainer()
-          .getId());
+          .valueOf(this.getState().toString()), amId);
     } finally {
       this.readLock.unlock();
     }
