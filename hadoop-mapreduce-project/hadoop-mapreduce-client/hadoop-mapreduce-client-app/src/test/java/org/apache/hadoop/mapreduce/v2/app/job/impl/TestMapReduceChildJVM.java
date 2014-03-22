@@ -18,11 +18,14 @@
 
 package org.apache.hadoop.mapreduce.v2.app.job.impl;
 
+import java.util.Map;
+
 import junit.framework.Assert;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
@@ -65,11 +68,20 @@ public class TestMapReduceChildJVM {
       " 0" +
       " 1><LOG_DIR>/stdout" +
       " 2><LOG_DIR>/stderr ]", app.myCommandLine);
+    
+    Assert.assertTrue("HADOOP_ROOT_LOGGER not set for job",
+      app.cmdEnvironment.containsKey("HADOOP_ROOT_LOGGER"));
+    Assert.assertEquals("INFO,console",
+      app.cmdEnvironment.get("HADOOP_ROOT_LOGGER"));
+    Assert.assertTrue("HADOOP_CLIENT_OPTS not set for job",
+      app.cmdEnvironment.containsKey("HADOOP_CLIENT_OPTS"));
+    Assert.assertEquals("", app.cmdEnvironment.get("HADOOP_CLIENT_OPTS"));
   }
 
   private static final class MyMRApp extends MRApp {
 
     private String myCommandLine;
+    private Map<String, String> cmdEnvironment;
 
     public MyMRApp(int maps, int reduces, boolean autoComplete,
         String testName, boolean cleanOnStart) {
@@ -88,10 +100,44 @@ public class TestMapReduceChildJVM {
             String cmdString = launchContext.getCommands().toString();
             LOG.info("launchContext " + cmdString);
             myCommandLine = cmdString;
+            cmdEnvironment = launchContext.getEnvironment();
           }
           super.handle(event);
         }
       };
     }
+  }
+  
+  @Test
+  public void testEnvironmentVariables() throws Exception {
+    MyMRApp app = new MyMRApp(1, 0, true, this.getClass().getName(), true);
+    Configuration conf = new Configuration();
+    conf.set(JobConf.MAPRED_MAP_TASK_ENV, "HADOOP_CLIENT_OPTS=test");
+    conf.setStrings(MRJobConfig.MAP_LOG_LEVEL, "WARN");
+    conf.setBoolean(MRConfig.MAPREDUCE_APP_SUBMISSION_CROSS_PLATFORM, false);
+    Job job = app.submit(conf);
+    app.waitForState(job, JobState.SUCCEEDED);
+    app.verifyCompleted();
+    
+    Assert.assertTrue("HADOOP_ROOT_LOGGER not set for job",
+      app.cmdEnvironment.containsKey("HADOOP_ROOT_LOGGER"));
+    Assert.assertEquals("WARN,console",
+      app.cmdEnvironment.get("HADOOP_ROOT_LOGGER"));
+    Assert.assertTrue("HADOOP_CLIENT_OPTS not set for job",
+      app.cmdEnvironment.containsKey("HADOOP_CLIENT_OPTS"));
+    Assert.assertEquals("test", app.cmdEnvironment.get("HADOOP_CLIENT_OPTS"));
+
+    // Try one more.
+    app = new MyMRApp(1, 0, true, this.getClass().getName(), true);
+    conf = new Configuration();
+    conf.set(JobConf.MAPRED_MAP_TASK_ENV, "HADOOP_ROOT_LOGGER=trace");
+    job = app.submit(conf);
+    app.waitForState(job, JobState.SUCCEEDED);
+    app.verifyCompleted();
+    
+    Assert.assertTrue("HADOOP_ROOT_LOGGER not set for job",
+      app.cmdEnvironment.containsKey("HADOOP_ROOT_LOGGER"));
+    Assert.assertEquals("trace",
+      app.cmdEnvironment.get("HADOOP_ROOT_LOGGER"));
   }
 }

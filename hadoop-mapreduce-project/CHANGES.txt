@@ -255,6 +255,10 @@ Release 2.4.0 - UNRELEASED
     MAPREDUCE-5570. Map task attempt with fetch failure has incorrect attempt
     finish time (Rushabh S Shah via jlowe)
 
+    MAPREDUCE-5806. Fixed a bug in MRAppMaster so as to enable users to properly
+    override HADOOP_ROOT_LOGGER or HADOOP_CLIENT_OPTS. (Varun Vasudev via
+    vinodkv)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
