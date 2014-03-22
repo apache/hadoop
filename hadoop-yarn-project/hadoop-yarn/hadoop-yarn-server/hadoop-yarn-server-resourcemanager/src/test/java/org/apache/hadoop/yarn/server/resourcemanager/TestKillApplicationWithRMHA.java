@@ -195,7 +195,7 @@ public class TestKillApplicationWithRMHA extends RMHATestBase{
       protected ClientRMService createClientRMService() {
         return new MyClientRMService(this.rmContext, this.scheduler,
             this.rmAppManager, this.applicationACLsManager,
-            this.queueACLsManager, getRMDTSecretManager());
+            this.queueACLsManager, getRMContext().getRMDelegationTokenSecretManager());
       }
     };
 
