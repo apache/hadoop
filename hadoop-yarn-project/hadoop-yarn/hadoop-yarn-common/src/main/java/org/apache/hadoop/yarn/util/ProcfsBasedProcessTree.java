@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.util;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
@@ -32,13 +33,16 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 /**
  * A Proc file-system based ProcessTree. Works only on Linux.
@@ -61,7 +65,46 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
   public static final String PROCFS_CMDLINE_FILE = "cmdline";
   public static final long PAGE_SIZE;
   public static final long JIFFY_LENGTH_IN_MILLIS; // in millisecond
-  
+
+  enum MemInfo {
+    SIZE("Size"), RSS("Rss"), PSS("Pss"), SHARED_CLEAN("Shared_Clean"),
+    SHARED_DIRTY("Shared_Dirty"), PRIVATE_CLEAN("Private_Clean"),
+    PRIVATE_DIRTY("Private_Dirty"), REFERENCED("Referenced"), ANONYMOUS(
+        "Anonymous"), ANON_HUGE_PAGES("AnonHugePages"), SWAP("swap"),
+    KERNEL_PAGE_SIZE("kernelPageSize"), MMU_PAGE_SIZE("mmuPageSize"), INVALID(
+        "invalid");
+
+    private String name;
+
+    private MemInfo(String name) {
+      this.name = name;
+    }
+
+    public static MemInfo getMemInfoByName(String name) {
+      for (MemInfo info : MemInfo.values()) {
+        if (info.name.trim().equalsIgnoreCase(name.trim())) {
+          return info;
+        }
+      }
+      return INVALID;
+    }
+  }
+
+  public static final String SMAPS = "smaps";
+  public static final int KB_TO_BYTES = 1024;
+  private static final String KB = "kB";
+  private static final String READ_ONLY_WITH_SHARED_PERMISSION = "r--s";
+  private static final String READ_EXECUTE_WITH_SHARED_PERMISSION = "r-xs";
+  private static final Pattern ADDRESS_PATTERN = Pattern
+    .compile("([[a-f]|(0-9)]*)-([[a-f]|(0-9)]*)(\\s)*([rxwps\\-]*)");
+  private static final Pattern MEM_INFO_PATTERN = Pattern
+    .compile("(^[A-Z].*):[\\s ]*(.*)");
+
+  private boolean smapsEnabled;
+
+  protected Map<String, ProcessTreeSmapMemInfo> processSMAPTree =
+      new HashMap<String, ProcessTreeSmapMemInfo>();
+
   static {
     long jiffiesPerSecond = -1;
     long pageSize = -1;
@@ -101,6 +144,16 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
 
   public ProcfsBasedProcessTree(String pid) {
     this(pid, PROCFS);
+  }
+
+  @Override
+  public void setConf(Configuration conf) {
+    super.setConf(conf);
+    if (conf != null) {
+      smapsEnabled =
+          conf.getBoolean(YarnConfiguration.PROCFS_USE_SMAPS_BASED_RSS_ENABLED,
+            YarnConfiguration.DEFAULT_PROCFS_USE_SMAPS_BASED_RSS_ENABLED);
+    }
   }
 
   /**
@@ -210,6 +263,18 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
         // Log.debug the ProcfsBasedProcessTree
         LOG.debug(this.toString());
       }
+      if (smapsEnabled) {
+        //Update smaps info
+        processSMAPTree.clear();
+        for (ProcessInfo p : processTree.values()) {
+          if (p != null) {
+            // Get information for each process
+            ProcessTreeSmapMemInfo memInfo = new ProcessTreeSmapMemInfo(p.getPid());
+            constructProcessSMAPInfo(memInfo, procfsDir);
+            processSMAPTree.put(p.getPid(), memInfo);
+          }
+        }
+      }
     }
   }
 
@@ -300,6 +365,9 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
     if (PAGE_SIZE < 0) {
       return 0;
     }
+    if (smapsEnabled) {
+      return getSmapBasedCumulativeRssmem(olderThanAge);
+    }
     long totalPages = 0;
     for (ProcessInfo p : processTree.values()) {
       if ((p != null) && (p.getAge() > olderThanAge)) {
@@ -307,6 +375,53 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
       }
     }
     return totalPages * PAGE_SIZE; // convert # pages to byte
+  }
+
+  /**
+   * Get the cumulative resident set size (RSS) memory used by all the processes
+   * in the process-tree that are older than the passed in age. RSS is
+   * calculated based on SMAP information. Skip mappings with "r--s", "r-xs"
+   * permissions to get real RSS usage of the process.
+   *
+   * @param olderThanAge
+   *          processes above this age are included in the memory addition
+   * @return cumulative rss memory used by the process-tree in bytes, for
+   *         processes older than this age. return 0 if it cannot be calculated
+   */
+  private long getSmapBasedCumulativeRssmem(int olderThanAge) {
+    long total = 0;
+    for (ProcessInfo p : processTree.values()) {
+      if ((p != null) && (p.getAge() > olderThanAge)) {
+        ProcessTreeSmapMemInfo procMemInfo = processSMAPTree.get(p.getPid());
+        if (procMemInfo != null) {
+          for (ProcessSmapMemoryInfo info : procMemInfo.getMemoryInfoList()) {
+            // Do not account for r--s or r-xs mappings
+            if (info.getPermission().trim()
+              .equalsIgnoreCase(READ_ONLY_WITH_SHARED_PERMISSION)
+                || info.getPermission().trim()
+                  .equalsIgnoreCase(READ_EXECUTE_WITH_SHARED_PERMISSION)) {
+              continue;
+            }
+            total +=
+                Math.min(info.sharedDirty, info.pss) + info.privateDirty
+                    + info.privateClean;
+            if (LOG.isDebugEnabled()) {
+              LOG.debug(" total(" + olderThanAge + "): PID : " + p.getPid()
+                  + ", SharedDirty : " + info.sharedDirty + ", PSS : "
+                  + info.pss + ", Private_Dirty : " + info.privateDirty
+                  + ", Private_Clean : " + info.privateClean + ", total : "
+                  + (total * KB_TO_BYTES));
+            }
+          }
+        }
+        if (LOG.isDebugEnabled()) {
+          LOG.debug(procMemInfo.toString());
+        }
+      }
+    }
+    total = (total * KB_TO_BYTES); // convert to bytes
+    LOG.info("SmapBasedCumulativeRssmem (bytes) : " + total);
+    return total; // size
   }
 
   /**
@@ -599,6 +714,247 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
       }
 
       return ret;
+    }
+  }
+
+  /**
+   * Update memory related information
+   *
+   * @param pInfo
+   * @param procfsDir
+   */
+  private static void constructProcessSMAPInfo(ProcessTreeSmapMemInfo pInfo,
+      String procfsDir) {
+    BufferedReader in = null;
+    FileReader fReader = null;
+    try {
+      File pidDir = new File(procfsDir, pInfo.getPid());
+      File file = new File(pidDir, SMAPS);
+      if (!file.exists()) {
+        return;
+      }
+      fReader = new FileReader(file);
+      in = new BufferedReader(fReader);
+      ProcessSmapMemoryInfo memoryMappingInfo = null;
+      List<String> lines = IOUtils.readLines(new FileInputStream(file));
+      for (String line : lines) {
+        line = line.trim();
+        try {
+          Matcher address = ADDRESS_PATTERN.matcher(line);
+          if (address.find()) {
+            memoryMappingInfo = new ProcessSmapMemoryInfo(line);
+            memoryMappingInfo.setPermission(address.group(4));
+            pInfo.getMemoryInfoList().add(memoryMappingInfo);
+            continue;
+          }
+          Matcher memInfo = MEM_INFO_PATTERN.matcher(line);
+          if (memInfo.find()) {
+            String key = memInfo.group(1).trim();
+            String value = memInfo.group(2).replace(KB, "").trim();
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("MemInfo : " + key + " : Value  : " + value);
+            }
+            memoryMappingInfo.setMemInfo(key, value);
+          }
+        } catch (Throwable t) {
+          LOG
+            .warn("Error parsing smaps line : " + line + "; " + t.getMessage());
+        }
+      }
+    } catch (FileNotFoundException f) {
+      LOG.error(f.getMessage());
+    } catch (IOException e) {
+      LOG.error(e.getMessage());
+    } catch (Throwable t) {
+      LOG.error(t.getMessage());
+    } finally {
+      IOUtils.closeQuietly(in);
+    }
+  }
+
+  /**
+   * Placeholder for process's SMAPS information
+   */
+  static class ProcessTreeSmapMemInfo {
+    private String pid;
+    private List<ProcessSmapMemoryInfo> memoryInfoList;
+
+    public ProcessTreeSmapMemInfo(String pid) {
+      this.pid = pid;
+      this.memoryInfoList = new LinkedList<ProcessSmapMemoryInfo>();
+    }
+
+    public List<ProcessSmapMemoryInfo> getMemoryInfoList() {
+      return memoryInfoList;
+    }
+
+    public String getPid() {
+      return pid;
+    }
+
+    public String toString() {
+      StringBuilder sb = new StringBuilder();
+      for (ProcessSmapMemoryInfo info : memoryInfoList) {
+        sb.append("\n");
+        sb.append(info.toString());
+      }
+      return sb.toString();
+    }
+  }
+
+  /**
+   * <pre>
+   * Private Pages : Pages that were mapped only by the process
+   * Shared Pages : Pages that were shared with other processes
+   *
+   * Clean Pages : Pages that have not been modified since they were mapped
+   * Dirty Pages : Pages that have been modified since they were mapped
+   *
+   * Private RSS = Private Clean Pages + Private Dirty Pages
+   * Shared RSS = Shared Clean Pages + Shared Dirty Pages
+   * RSS = Private RSS + Shared RSS
+   * PSS = The count of all pages mapped uniquely by the process, 
+   *  plus a fraction of each shared page, said fraction to be 
+   *  proportional to the number of processes which have mapped the page.
+   * 
+   * </pre>
+   */
+  static class ProcessSmapMemoryInfo {
+    private int size;
+    private int rss;
+    private int pss;
+    private int sharedClean;
+    private int sharedDirty;
+    private int privateClean;
+    private int privateDirty;
+    private int referenced;
+    private String regionName;
+    private String permission;
+
+    public ProcessSmapMemoryInfo(String name) {
+      this.regionName = name;
+    }
+
+    public String getName() {
+      return regionName;
+    }
+
+    public void setPermission(String permission) {
+      this.permission = permission;
+    }
+
+    public String getPermission() {
+      return permission;
+    }
+
+    public int getSize() {
+      return size;
+    }
+
+    public int getRss() {
+      return rss;
+    }
+
+    public int getPss() {
+      return pss;
+    }
+
+    public int getSharedClean() {
+      return sharedClean;
+    }
+
+    public int getSharedDirty() {
+      return sharedDirty;
+    }
+
+    public int getPrivateClean() {
+      return privateClean;
+    }
+
+    public int getPrivateDirty() {
+      return privateDirty;
+    }
+
+    public int getReferenced() {
+      return referenced;
+    }
+
+    public void setMemInfo(String key, String value) {
+      MemInfo info = MemInfo.getMemInfoByName(key);
+      int val = 0;
+      try {
+        val = Integer.parseInt(value.trim());
+      } catch (NumberFormatException ne) {
+        LOG.error("Error in parsing : " + info + " : value" + value.trim());
+        return;
+      }
+      if (info == null) {
+        return;
+      }
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("setMemInfo : memInfo : " + info);
+      }
+      switch (info) {
+      case SIZE:
+        size = val;
+        break;
+      case RSS:
+        rss = val;
+        break;
+      case PSS:
+        pss = val;
+        break;
+      case SHARED_CLEAN:
+        sharedClean = val;
+        break;
+      case SHARED_DIRTY:
+        sharedDirty = val;
+        break;
+      case PRIVATE_CLEAN:
+        privateClean = val;
+        break;
+      case PRIVATE_DIRTY:
+        privateDirty = val;
+        break;
+      case REFERENCED:
+        referenced = val;
+        break;
+      default:
+        break;
+      }
+    }
+
+    public String toString() {
+      StringBuilder sb = new StringBuilder();
+      sb.append("\t").append(this.getName()).append("\n");
+      sb.append("\t").append(MemInfo.SIZE.name + ":" + this.getSize())
+        .append(" kB\n");
+      sb.append("\t").append(MemInfo.PSS.name + ":" + this.getPss())
+        .append(" kB\n");
+      sb.append("\t").append(MemInfo.RSS.name + ":" + this.getRss())
+        .append(" kB\n");
+      sb.append("\t")
+        .append(MemInfo.SHARED_CLEAN.name + ":" + this.getSharedClean())
+        .append(" kB\n");
+      sb.append("\t")
+        .append(MemInfo.SHARED_DIRTY.name + ":" + this.getSharedDirty())
+        .append(" kB\n");
+      sb.append("\t")
+        .append(MemInfo.PRIVATE_CLEAN.name + ":" + this.getPrivateClean())
+        .append(" kB\n");
+      sb.append("\t")
+        .append(MemInfo.PRIVATE_DIRTY.name + ":" + this.getPrivateDirty())
+        .append(" kB\n");
+      sb.append("\t")
+        .append(MemInfo.REFERENCED.name + ":" + this.getReferenced())
+        .append(" kB\n");
+      sb.append("\t")
+        .append(MemInfo.PRIVATE_DIRTY.name + ":" + this.getPrivateDirty())
+        .append(" kB\n");
+      sb.append("\t")
+        .append(MemInfo.PRIVATE_DIRTY.name + ":" + this.getPrivateDirty())
+        .append(" kB\n");
+      return sb.toString();
     }
   }
 }

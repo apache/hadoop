@@ -131,7 +131,7 @@ public class TestContainersMonitor extends BaseContainerManagerTest {
       procs[6] = new TestProcfsBasedProcessTree.ProcessStatInfo(
           new String[] { "700", "proc7", "600", "600", "600", "100000" });
       // write stat files.
-      TestProcfsBasedProcessTree.writeStatFiles(procfsRootDir, pids, procs);
+      TestProcfsBasedProcessTree.writeStatFiles(procfsRootDir, pids, procs, null);
 
       // vmem limit
       long limit = 700000;
