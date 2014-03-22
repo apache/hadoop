@@ -163,6 +163,10 @@ Release 2.4.0 - UNRELEASED
     YARN-1690. Made DistributedShell send timeline entities+events. (Mayank Bansal
     via zjshen)
 
+    YARN-1775. Enhanced ProcfsBasedProcessTree to optionally add the ability to
+    use smaps for obtaining used memory information. (Rajesh Balamohan via
+    vinodkv)
+
   IMPROVEMENTS
 
     YARN-1007. Enhance History Reader interface for Containers. (Mayank Bansal via
