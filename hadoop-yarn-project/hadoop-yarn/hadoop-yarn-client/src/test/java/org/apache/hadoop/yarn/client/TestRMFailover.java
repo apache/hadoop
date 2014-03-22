@@ -39,7 +39,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.client.api.YarnClient;
 import org.apache.hadoop.yarn.conf.HAUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
 import org.apache.hadoop.yarn.server.resourcemanager.AdminService;
@@ -208,17 +207,19 @@ public class TestRMFailover extends ClientBaseWithFixes {
       webAppProxyServer.start();
       Assert.assertEquals(STATE.STARTED, webAppProxyServer.getServiceState());
 
+      // send httpRequest with fakeApplicationId
+      // expect to get "Not Found" response and 404 response code
       URL wrongUrl = new URL("http://0.0.0.0:9099/proxy/" + fakeAppId);
       HttpURLConnection proxyConn = (HttpURLConnection) wrongUrl
           .openConnection();
 
       proxyConn.connect();
-      verifyExpectedException(proxyConn.getResponseMessage());
+      verifyResponse(proxyConn);
 
       explicitFailover();
       verifyConnections();
       proxyConn.connect();
-      verifyExpectedException(proxyConn.getResponseMessage());
+      verifyResponse(proxyConn);
     } finally {
       webAppProxyServer.stop();
     }
@@ -233,25 +234,26 @@ public class TestRMFailover extends ClientBaseWithFixes {
     getAdminService(0).transitionToActive(req);
     assertFalse("RM never turned active", -1 == cluster.getActiveRMIndex());
     verifyConnections();
+
+    // send httpRequest with fakeApplicationId
+    // expect to get "Not Found" response and 404 response code
     URL wrongUrl = new URL("http://0.0.0.0:18088/proxy/" + fakeAppId);
     HttpURLConnection proxyConn = (HttpURLConnection) wrongUrl
         .openConnection();
 
     proxyConn.connect();
-    verifyExpectedException(proxyConn.getResponseMessage());
+    verifyResponse(proxyConn);
 
     explicitFailover();
     verifyConnections();
     proxyConn.connect();
-    verifyExpectedException(proxyConn.getResponseMessage());
+    verifyResponse(proxyConn);
   }
 
-  private void verifyExpectedException(String exceptionMessage){
-    assertTrue(exceptionMessage.contains(ApplicationNotFoundException.class
-        .getName()));
-    assertTrue(exceptionMessage
-        .contains("Application with id '" + fakeAppId + "' " +
-            "doesn't exist in RM."));
+  private void verifyResponse(HttpURLConnection response)
+      throws IOException {
+    assertEquals("Not Found", response.getResponseMessage());
+    assertEquals(404, response.getResponseCode());
   }
 
   @Test
