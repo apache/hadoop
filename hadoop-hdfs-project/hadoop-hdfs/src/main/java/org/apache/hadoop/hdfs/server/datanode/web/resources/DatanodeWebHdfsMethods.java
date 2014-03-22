@@ -247,8 +247,7 @@ public class DatanodeWebHdfsMethods {
       }
       final String scheme = "http".equals(request.getScheme()) ?
       WebHdfsFileSystem.SCHEME : SWebHdfsFileSystem.SCHEME;
-      final URI uri = URI.create(String.format("%s://%s/%s", scheme,
-              nnId, fullpath));
+      final URI uri = new URI(scheme, nnId, fullpath, null, null);
       return Response.created(uri).type(MediaType.APPLICATION_OCTET_STREAM).build();
     }
     default:
