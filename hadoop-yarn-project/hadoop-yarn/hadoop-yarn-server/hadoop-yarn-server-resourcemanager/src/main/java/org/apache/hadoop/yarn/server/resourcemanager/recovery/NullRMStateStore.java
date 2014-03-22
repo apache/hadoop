@@ -84,6 +84,13 @@ public class NullRMStateStore extends RMStateStore {
   }
 
   @Override
+  protected void updateRMDelegationTokenAndSequenceNumberInternal(
+      RMDelegationTokenIdentifier rmDTIdentifier, Long renewDate,
+      int latestSequenceNumber) throws Exception {
+    // Do nothing
+  }
+
+  @Override
   public void storeRMDTMasterKeyState(DelegationKey delegationKey) throws Exception {
     // Do nothing
   }
@@ -125,4 +132,5 @@ public class NullRMStateStore extends RMStateStore {
     // Do nothing
     return null;
   }
+
 }

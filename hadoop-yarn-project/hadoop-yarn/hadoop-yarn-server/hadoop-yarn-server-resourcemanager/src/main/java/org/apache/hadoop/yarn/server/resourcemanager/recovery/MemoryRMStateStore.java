@@ -35,7 +35,6 @@ import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.RMStateVersion;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationAttemptStateDataPBImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.impl.pb.ApplicationStateDataPBImpl;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -202,6 +201,15 @@ public class MemoryRMStateStore extends RMStateStore {
   }
 
   @Override
+  protected void updateRMDelegationTokenAndSequenceNumberInternal(
+      RMDelegationTokenIdentifier rmDTIdentifier, Long renewDate,
+      int latestSequenceNumber) throws Exception {
+    removeRMDelegationTokenState(rmDTIdentifier);
+    storeRMDelegationTokenAndSequenceNumberState(
+        rmDTIdentifier, renewDate, latestSequenceNumber);
+  }
+
+  @Override
   public synchronized void storeRMDTMasterKeyState(DelegationKey delegationKey)
       throws Exception {
     Set<DelegationKey> rmDTMasterKeyState =
@@ -239,4 +247,5 @@ public class MemoryRMStateStore extends RMStateStore {
   protected RMStateVersion getCurrentVersion() {
     return null;
   }
+
 }

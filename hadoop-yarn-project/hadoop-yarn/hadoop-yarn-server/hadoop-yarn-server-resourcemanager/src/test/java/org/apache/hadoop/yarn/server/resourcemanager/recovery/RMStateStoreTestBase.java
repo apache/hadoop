@@ -244,6 +244,9 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
     Thread.sleep(1000);
     store.close();
 
+    // give tester a chance to modify app state in the store
+    modifyAppState();
+
     // load state
     store = stateStoreHelper.getRMStateStore();
     store.setRMDispatcher(dispatcher);
@@ -363,6 +366,7 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
     int sequenceNumber = 1111;
     store.storeRMDelegationTokenAndSequenceNumber(dtId1, renewDate1,
       sequenceNumber);
+    modifyRMDelegationTokenState();
     Map<RMDelegationTokenIdentifier, Long> token1 =
         new HashMap<RMDelegationTokenIdentifier, Long>();
     token1.put(dtId1, renewDate1);
@@ -379,6 +383,20 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
     Assert.assertEquals(keySet, secretManagerState.getMasterKeyState());
     Assert.assertEquals(sequenceNumber,
         secretManagerState.getDTSequenceNumber());
+
+    // update RM delegation token;
+    renewDate1 = new Long(System.currentTimeMillis());
+    ++sequenceNumber;
+    store.updateRMDelegationTokenAndSequenceNumber(
+        dtId1, renewDate1, sequenceNumber);
+    token1.put(dtId1, renewDate1);
+
+    RMDTSecretManagerState updateSecretManagerState =
+        store.loadState().getRMDTSecretManagerState();
+    Assert.assertEquals(token1, updateSecretManagerState.getTokenState());
+    Assert.assertEquals(keySet, updateSecretManagerState.getMasterKeyState());
+    Assert.assertEquals(sequenceNumber,
+        updateSecretManagerState.getDTSequenceNumber());
 
     // check to delete delegationKey
     store.removeRMDTMasterKey(key);
@@ -487,4 +505,13 @@ public class RMStateStoreTestBase extends ClientBaseWithFixes{
       }
     }
   }
+
+  protected void modifyAppState() throws Exception {
+
+  }
+
+  protected void modifyRMDelegationTokenState() throws Exception {
+
+  }
+
 }

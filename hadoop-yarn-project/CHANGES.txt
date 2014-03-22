@@ -555,6 +555,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1854. Fixed test failure in TestRMHA#testStartAndTransitions. (Rohith
     Sharma KS via vinodkv)
 
+    YARN-1776. Fixed DelegationToken renewal to survive RM failover. (Zhijie
+    Shen via jianhe)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
