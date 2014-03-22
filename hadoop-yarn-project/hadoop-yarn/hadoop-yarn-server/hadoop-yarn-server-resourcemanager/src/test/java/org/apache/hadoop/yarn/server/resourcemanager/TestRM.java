@@ -198,7 +198,7 @@ public class TestRM {
     // am container Id not equal to 1.
     Assert.assertTrue(attempt.getMasterContainer().getId().getId() != 1);
     // NMSecretManager doesn't record the node on which the am is allocated.
-    Assert.assertFalse(rm.getRMNMTokenSecretManager()
+    Assert.assertFalse(rm.getRMContext().getNMTokenSecretManager()
       .isApplicationAttemptNMTokenPresent(attempt.getAppAttemptId(),
         nm1.getNodeId()));
     am.registerAppAttempt();

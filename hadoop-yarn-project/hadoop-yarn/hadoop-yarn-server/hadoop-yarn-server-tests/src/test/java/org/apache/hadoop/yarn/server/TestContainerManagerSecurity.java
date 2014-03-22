@@ -164,7 +164,8 @@ public class TestContainerManagerSecurity extends KerberosSecurityTestcase {
     NMTokenSecretManagerInNM nmTokenSecretManagerNM =
         yarnCluster.getNodeManager(0).getNMContext().getNMTokenSecretManager();
     RMContainerTokenSecretManager containerTokenSecretManager =
-        yarnCluster.getResourceManager().getRMContainerTokenSecretManager();
+        yarnCluster.getResourceManager().getRMContext().
+            getContainerTokenSecretManager();
     
     NodeManager nm = yarnCluster.getNodeManager(0);
     
@@ -573,7 +574,8 @@ public class TestContainerManagerSecurity extends KerberosSecurityTestcase {
     
     // Creating a tampered Container Token
     RMContainerTokenSecretManager containerTokenSecretManager =
-        yarnCluster.getResourceManager().getRMContainerTokenSecretManager();
+        yarnCluster.getResourceManager().getRMContext().
+            getContainerTokenSecretManager();
     
     RMContainerTokenSecretManager tamperedContainerTokenSecretManager =
         new RMContainerTokenSecretManager(conf);

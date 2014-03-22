@@ -109,8 +109,8 @@ public class TestCapacityScheduler {
     conf.setClass(YarnConfiguration.RM_SCHEDULER, 
         CapacityScheduler.class, ResourceScheduler.class);
     resourceManager.init(conf);
-    resourceManager.getRMContainerTokenSecretManager().rollMasterKey();
-    resourceManager.getRMNMTokenSecretManager().rollMasterKey();
+    resourceManager.getRMContext().getContainerTokenSecretManager().rollMasterKey();
+    resourceManager.getRMContext().getNMTokenSecretManager().rollMasterKey();
     ((AsyncDispatcher)resourceManager.getRMContext().getDispatcher()).start();
     mockContext = mock(RMContext.class);
     when(mockContext.getConfigurationProvider()).thenReturn(

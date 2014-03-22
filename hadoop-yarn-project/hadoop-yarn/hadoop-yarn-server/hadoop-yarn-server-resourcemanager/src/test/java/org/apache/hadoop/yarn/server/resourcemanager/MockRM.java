@@ -386,7 +386,7 @@ public class MockRM extends ResourceManager {
   protected ClientRMService createClientRMService() {
     return new ClientRMService(getRMContext(), getResourceScheduler(),
         rmAppManager, applicationACLsManager, queueACLsManager,
-        getRMDTSecretManager()) {
+        getRMContext().getRMDelegationTokenSecretManager()) {
       @Override
       protected void serviceStart() {
         // override to not start rpc handler
@@ -404,10 +404,10 @@ public class MockRM extends ResourceManager {
     Configuration conf = new Configuration();
 
     RMContainerTokenSecretManager containerTokenSecretManager =
-        getRMContainerTokenSecretManager();
+        getRMContext().getContainerTokenSecretManager();
     containerTokenSecretManager.rollMasterKey();
     NMTokenSecretManagerInRM nmTokenSecretManager =
-        getRMNMTokenSecretManager();
+        getRMContext().getNMTokenSecretManager();
     nmTokenSecretManager.rollMasterKey();
     return new ResourceTrackerService(getRMContext(), nodesListManager,
         this.nmLivelinessMonitor, containerTokenSecretManager,

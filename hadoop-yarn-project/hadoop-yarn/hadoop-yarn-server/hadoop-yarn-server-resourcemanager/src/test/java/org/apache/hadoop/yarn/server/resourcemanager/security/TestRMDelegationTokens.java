@@ -85,7 +85,8 @@ public class TestRMDelegationTokens {
     // the other is created on the first run of
     // tokenRemoverThread.rollMasterKey()
 
-    RMDelegationTokenSecretManager dtSecretManager = rm1.getRMDTSecretManager();
+    RMDelegationTokenSecretManager dtSecretManager =
+        rm1.getRMContext().getRMDelegationTokenSecretManager();
     // assert all master keys are saved
     Assert.assertEquals(dtSecretManager.getAllMasterKeys(), rmDTMasterKeyState);
     Set<DelegationKey> expiringKeys = new HashSet<DelegationKey>();
@@ -140,7 +141,8 @@ public class TestRMDelegationTokens {
 
     MockRM rm1 = new MyMockRM(conf, memStore);
     rm1.start();
-    RMDelegationTokenSecretManager dtSecretManager = rm1.getRMDTSecretManager();
+    RMDelegationTokenSecretManager dtSecretManager =
+        rm1.getRMContext().getRMDelegationTokenSecretManager();
 
     // assert all master keys are saved
     Assert.assertEquals(dtSecretManager.getAllMasterKeys(), rmDTMasterKeyState);

@@ -149,7 +149,7 @@ public class TestFairScheduler {
     resourceManager.getRMContext().getStateStore().start();
 
     // to initialize the master key
-    resourceManager.getRMContainerTokenSecretManager().rollMasterKey();
+    resourceManager.getRMContext().getContainerTokenSecretManager().rollMasterKey();
   }
 
   @After

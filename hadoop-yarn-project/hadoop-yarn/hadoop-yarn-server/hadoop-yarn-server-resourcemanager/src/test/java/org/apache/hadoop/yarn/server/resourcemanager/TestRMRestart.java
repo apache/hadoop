@@ -1101,7 +1101,7 @@ public class TestRMRestart {
           userText1);
     Token<RMDelegationTokenIdentifier> token1 =
         new Token<RMDelegationTokenIdentifier>(dtId1,
-          rm1.getRMDTSecretManager());
+          rm1.getRMContext().getRMDelegationTokenSecretManager());
     SecurityUtil.setTokenService(token1, rmAddr);
     ts.addToken(userText1, token1);
     tokenSet.add(token1);
@@ -1112,7 +1112,7 @@ public class TestRMRestart {
           userText2);
     Token<RMDelegationTokenIdentifier> token2 =
         new Token<RMDelegationTokenIdentifier>(dtId2,
-          rm1.getRMDTSecretManager());
+          rm1.getRMContext().getRMDelegationTokenSecretManager());
     SecurityUtil.setTokenService(token2, rmAddr);
     ts.addToken(userText2, token2);
     tokenSet.add(token2);
@@ -1255,7 +1255,7 @@ public class TestRMRestart {
     // assert AMRMTokenSecretManager also knows about the AMRMToken password
     Token<AMRMTokenIdentifier> amrmToken = loadedAttempt1.getAMRMToken();
     Assert.assertArrayEquals(amrmToken.getPassword(),
-      rm2.getAMRMTokenSecretManager().retrievePassword(
+      rm2.getRMContext().getAMRMTokenSecretManager().retrievePassword(
         amrmToken.decodeIdentifier()));
     rm1.stop();
     rm2.stop();
@@ -1314,19 +1314,20 @@ public class TestRMRestart {
     Assert.assertNotNull(appState);
 
     // assert all master keys are saved
-    Set<DelegationKey> allKeysRM1 = rm1.getRMDTSecretManager().getAllMasterKeys();
+    Set<DelegationKey> allKeysRM1 = rm1.getRMContext()
+      .getRMDelegationTokenSecretManager().getAllMasterKeys();
     Assert.assertEquals(allKeysRM1, rmDTMasterKeyState);
 
     // assert all tokens are saved
     Map<RMDelegationTokenIdentifier, Long> allTokensRM1 =
-        rm1.getRMDTSecretManager().getAllTokens();
+        rm1.getRMContext().getRMDelegationTokenSecretManager().getAllTokens();
     Assert.assertEquals(tokenIdentSet, allTokensRM1.keySet());
     Assert.assertEquals(allTokensRM1, rmDTState);
     
     // assert sequence number is saved
-    Assert.assertEquals(
-      rm1.getRMDTSecretManager().getLatestDTSequenceNumber(),
-      rmState.getRMDTSecretManagerState().getDTSequenceNumber());
+    Assert.assertEquals(rm1.getRMContext().getRMDelegationTokenSecretManager()
+      .getLatestDTSequenceNumber(), rmState.getRMDTSecretManagerState()
+      .getDTSequenceNumber());
 
     // request one more token
     GetDelegationTokenRequest request2 =
@@ -1341,16 +1342,15 @@ public class TestRMRestart {
 
     // cancel token2
     try{
-      rm1.getRMDTSecretManager().cancelToken(token2,
+      rm1.getRMContext().getRMDelegationTokenSecretManager().cancelToken(token2,
         UserGroupInformation.getCurrentUser().getUserName());
     } catch(Exception e) {
       Assert.fail();
     }
 
     // Assert the token which has the latest delegationTokenSequenceNumber is removed
-    Assert.assertEquals(
-      rm1.getRMDTSecretManager().getLatestDTSequenceNumber(),
-      dtId2.getSequenceNumber());
+    Assert.assertEquals(rm1.getRMContext().getRMDelegationTokenSecretManager()
+      .getLatestDTSequenceNumber(), dtId2.getSequenceNumber());
     Assert.assertFalse(rmDTState.containsKey(dtId2));
 
     // start new RM
@@ -1359,16 +1359,17 @@ public class TestRMRestart {
 
     // assert master keys and tokens are populated back to DTSecretManager
     Map<RMDelegationTokenIdentifier, Long> allTokensRM2 =
-        rm2.getRMDTSecretManager().getAllTokens();
+        rm2.getRMContext().getRMDelegationTokenSecretManager().getAllTokens();
     Assert.assertEquals(allTokensRM2.keySet(), allTokensRM1.keySet());
     // rm2 has its own master keys when it starts, we use containsAll here
-    Assert.assertTrue(rm2.getRMDTSecretManager().getAllMasterKeys()
-      .containsAll(allKeysRM1));
+    Assert.assertTrue(rm2.getRMContext().getRMDelegationTokenSecretManager()
+      .getAllMasterKeys().containsAll(allKeysRM1));
 
     // assert sequenceNumber is properly recovered,
     // even though the token which has max sequenceNumber is not stored
-    Assert.assertEquals(rm1.getRMDTSecretManager().getLatestDTSequenceNumber(),
-      rm2.getRMDTSecretManager().getLatestDTSequenceNumber());
+    Assert.assertEquals(rm1.getRMContext().getRMDelegationTokenSecretManager()
+      .getLatestDTSequenceNumber(), rm2.getRMContext()
+      .getRMDelegationTokenSecretManager().getLatestDTSequenceNumber());
 
     // renewDate before renewing
     Long renewDateBeforeRenew = allTokensRM2.get(dtId1);
@@ -1376,12 +1377,14 @@ public class TestRMRestart {
       // Sleep for one millisecond to make sure renewDataAfterRenew is greater
       Thread.sleep(1);
       // renew recovered token
-      rm2.getRMDTSecretManager().renewToken(token1, "renewer1");
+      rm2.getRMContext().getRMDelegationTokenSecretManager().renewToken(
+          token1, "renewer1");
     } catch(Exception e) {
       Assert.fail();
     }
 
-    allTokensRM2 = rm2.getRMDTSecretManager().getAllTokens();
+    allTokensRM2 = rm2.getRMContext().getRMDelegationTokenSecretManager()
+      .getAllTokens();
     Long renewDateAfterRenew = allTokensRM2.get(dtId1);
     // assert token is renewed
     Assert.assertTrue(renewDateAfterRenew > renewDateBeforeRenew);
@@ -1392,14 +1395,15 @@ public class TestRMRestart {
     Assert.assertFalse(rmDTState.containsValue(renewDateBeforeRenew));
 
     try{
-      rm2.getRMDTSecretManager().cancelToken(token1,
+      rm2.getRMContext().getRMDelegationTokenSecretManager().cancelToken(token1,
         UserGroupInformation.getCurrentUser().getUserName());
     } catch(Exception e) {
       Assert.fail();
     }
 
     // assert token is removed from state after its cancelled
-    allTokensRM2 = rm2.getRMDTSecretManager().getAllTokens();
+    allTokensRM2 = rm2.getRMContext().getRMDelegationTokenSecretManager()
+      .getAllTokens();
     Assert.assertFalse(allTokensRM2.containsKey(dtId1));
     Assert.assertFalse(rmDTState.containsKey(dtId1));
 
@@ -1874,7 +1878,8 @@ public class TestRMRestart {
     @Override
     protected ClientRMService createClientRMService() {
       return new ClientRMService(getRMContext(), getResourceScheduler(),
-          rmAppManager, applicationACLsManager, null, getRMDTSecretManager()){
+          rmAppManager, applicationACLsManager, null,
+          getRMContext().getRMDelegationTokenSecretManager()){
         @Override
         protected void serviceStart() throws Exception {
           // do nothing
