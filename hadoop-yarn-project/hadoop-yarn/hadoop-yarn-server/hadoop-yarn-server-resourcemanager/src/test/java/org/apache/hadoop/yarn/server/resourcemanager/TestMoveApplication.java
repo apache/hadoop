@@ -53,8 +53,8 @@ public class TestMoveApplication {
     conf.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);
     resourceManager = new ResourceManager();
     resourceManager.init(conf);
-    resourceManager.getRMContainerTokenSecretManager().rollMasterKey();
-    resourceManager.getRMNMTokenSecretManager().rollMasterKey();
+    resourceManager.getRMContext().getContainerTokenSecretManager().rollMasterKey();
+    resourceManager.getRMContext().getNMTokenSecretManager().rollMasterKey();
     resourceManager.start();
     failMove = false;
   }

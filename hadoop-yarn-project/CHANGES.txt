@@ -315,6 +315,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1570. Fixed formatting of the lines in YarnCommands.apt.vm docs source.
     (Akira Ajisaka via vinodkv)
 
+    YARN-1536. Cleanup: Get rid of ResourceManager#get*SecretManager() methods 
+    and use the RMContext methods instead. (Anubhav Dhoot via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES

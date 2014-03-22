@@ -86,12 +86,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.security.AMRMTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer;
-import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.QueueACLsManager;
-import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
-import org.apache.hadoop.yarn.server.resourcemanager.security.RMDelegationTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebApp;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.server.webproxy.AppReportFetcher;
@@ -960,7 +956,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
   protected ClientRMService createClientRMService() {
     return new ClientRMService(this.rmContext, scheduler, this.rmAppManager,
         this.applicationACLsManager, this.queueACLsManager,
-        getRMDTSecretManager());
+        this.rmContext.getRMDelegationTokenSecretManager());
   }
 
   protected ApplicationMasterService createApplicationMasterService() {
@@ -1013,30 +1009,10 @@ public class ResourceManager extends CompositeService implements Recoverable {
     return this.queueACLsManager;
   }
 
-  @Private
-  public RMContainerTokenSecretManager getRMContainerTokenSecretManager() {
-    return this.rmContext.getContainerTokenSecretManager();
-  }
-
-  @Private
-  public NMTokenSecretManagerInRM getRMNMTokenSecretManager() {
-    return this.rmContext.getNMTokenSecretManager();
-  }
-  
-  @Private
-  public AMRMTokenSecretManager getAMRMTokenSecretManager(){
-    return this.rmContext.getAMRMTokenSecretManager();
-  }
-
-  @Private
-  public RMDelegationTokenSecretManager getRMDTSecretManager(){
-    return this.rmContext.getRMDelegationTokenSecretManager();
-  }
-
   @Override
   public void recover(RMState state) throws Exception {
     // recover RMdelegationTokenSecretManager
-    getRMDTSecretManager().recover(state);
+    rmContext.getRMDelegationTokenSecretManager().recover(state);
 
     // recover applications
     rmAppManager.recover(state);

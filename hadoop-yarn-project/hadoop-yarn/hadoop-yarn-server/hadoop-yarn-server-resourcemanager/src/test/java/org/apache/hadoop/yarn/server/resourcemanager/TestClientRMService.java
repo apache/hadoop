@@ -159,7 +159,7 @@ public class TestClientRMService {
       protected ClientRMService createClientRMService() {
         return new ClientRMService(this.rmContext, scheduler,
           this.rmAppManager, this.applicationACLsManager, this.queueACLsManager,
-          this.getRMDTSecretManager());
+          this.getRMContext().getRMDelegationTokenSecretManager());
       };
     };
     rm.start();
