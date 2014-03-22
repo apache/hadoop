@@ -546,6 +546,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1849. Fixed NPE in ResourceTrackerService#registerNodeManager for UAM
     (Karthik Kambatla via jianhe )
 
+    YARN-1863. Fixed test failure in TestRMFailover after YARN-1859. (Xuan Gong
+    via vinodkv)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
