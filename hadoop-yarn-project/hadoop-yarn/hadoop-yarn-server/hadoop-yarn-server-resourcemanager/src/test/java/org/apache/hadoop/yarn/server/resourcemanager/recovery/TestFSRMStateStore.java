@@ -49,6 +49,8 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
 
   public static final Log LOG = LogFactory.getLog(TestFSRMStateStore.class);
 
+  private TestFSRMStateStoreTester fsTester;
+
   class TestFSRMStateStoreTester implements RMStateStoreHelper {
 
     Path workingDirPathURI;
@@ -134,7 +136,7 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
     MiniDFSCluster cluster =
         new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     try {
-      TestFSRMStateStoreTester fsTester = new TestFSRMStateStoreTester(cluster);
+      fsTester = new TestFSRMStateStoreTester(cluster);
       // If the state store is FileSystemRMStateStore then add corrupted entry.
       // It should discard the entry and remove it from file system.
       FSDataOutputStream fsOut = null;
@@ -160,6 +162,36 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
     } finally {
       cluster.shutdown();
     }
+  }
+
+  @Override
+  protected void modifyAppState() throws Exception {
+    // imitate appAttemptFile1 is still .new, but old one is deleted
+    String appAttemptIdStr1 = "appattempt_1352994193343_0001_000001";
+    ApplicationAttemptId attemptId1 =
+        ConverterUtils.toApplicationAttemptId(appAttemptIdStr1);
+    Path appDir =
+        fsTester.store.getAppDir(attemptId1.getApplicationId().toString());
+    Path appAttemptFile1 =
+        new Path(appDir, attemptId1.toString() + ".new");
+    FileSystemRMStateStore fileSystemRMStateStore =
+        (FileSystemRMStateStore) fsTester.getRMStateStore();
+    fileSystemRMStateStore.renameFile(appAttemptFile1,
+        new Path(appAttemptFile1.getParent(),
+            appAttemptFile1.getName() + ".new"));
+  }
+
+  @Override
+  protected void modifyRMDelegationTokenState() throws Exception {
+    // imitate dt file is still .new, but old one is deleted
+    Path nodeCreatePath =
+        fsTester.store.getNodePath(fsTester.store.rmDTSecretManagerRoot,
+            FileSystemRMStateStore.DELEGATION_TOKEN_PREFIX + 0);
+    FileSystemRMStateStore fileSystemRMStateStore =
+        (FileSystemRMStateStore) fsTester.getRMStateStore();
+    fileSystemRMStateStore.renameFile(nodeCreatePath,
+        new Path(nodeCreatePath.getParent(),
+            nodeCreatePath.getName() + ".new"));
   }
 
   @Test (timeout = 30000)
