@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.fs.viewfs;
 
-import static org.apache.hadoop.fs.viewfs.Constants.PERMISSION_RRR;
+import static org.apache.hadoop.fs.viewfs.Constants.PERMISSION_555;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -714,7 +714,7 @@ public class ViewFileSystem extends FileSystem {
     public FileStatus getFileStatus(Path f) throws IOException {
       checkPathIsSlash(f);
       return new FileStatus(0, true, 0, 0, creationTime, creationTime,
-          PERMISSION_RRR, ugi.getUserName(), ugi.getGroupNames()[0],
+          PERMISSION_555, ugi.getUserName(), ugi.getGroupNames()[0],
 
           new Path(theInternalDir.fullPath).makeQualified(
               myUri, ROOT_PATH));
@@ -734,14 +734,14 @@ public class ViewFileSystem extends FileSystem {
           INodeLink<FileSystem> link = (INodeLink<FileSystem>) inode;
 
           result[i++] = new FileStatus(0, false, 0, 0,
-            creationTime, creationTime, PERMISSION_RRR,
+            creationTime, creationTime, PERMISSION_555,
             ugi.getUserName(), ugi.getGroupNames()[0],
             link.getTargetLink(),
             new Path(inode.fullPath).makeQualified(
                 myUri, null));
         } else {
           result[i++] = new FileStatus(0, true, 0, 0,
-            creationTime, creationTime, PERMISSION_RRR,
+            creationTime, creationTime, PERMISSION_555,
             ugi.getUserName(), ugi.getGroupNames()[0],
             new Path(inode.fullPath).makeQualified(
                 myUri, null));

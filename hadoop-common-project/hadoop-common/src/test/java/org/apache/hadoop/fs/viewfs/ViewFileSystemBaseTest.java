@@ -31,6 +31,8 @@ import static org.apache.hadoop.fs.FileSystemTestHelper.*;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.viewfs.ConfigUtil;
 import org.apache.hadoop.fs.viewfs.ViewFileSystem;
 import org.apache.hadoop.fs.viewfs.ViewFileSystem.MountPoint;
@@ -401,38 +403,41 @@ public class ViewFileSystemBaseTest {
     
     FileStatus[] dirPaths = fsView.listStatus(new Path("/"));
     FileStatus fs;
-    Assert.assertEquals(getExpectedDirPaths(), dirPaths.length);
-    fs = fileSystemTestHelper.containsPath(fsView, "/user", dirPaths);
-      Assert.assertNotNull(fs);
-      Assert.assertTrue("A mount should appear as symlink", fs.isSymlink());
-    fs = fileSystemTestHelper.containsPath(fsView, "/data", dirPaths);
-      Assert.assertNotNull(fs);
-      Assert.assertTrue("A mount should appear as symlink", fs.isSymlink());
-    fs = fileSystemTestHelper.containsPath(fsView, "/internalDir", dirPaths);
+    verifyRootChildren(dirPaths);
+
+    // list on internal dir
+    dirPaths = fsView.listStatus(new Path("/internalDir"));
+    Assert.assertEquals(2, dirPaths.length);
+
+    fs = fileSystemTestHelper.containsPath(fsView, "/internalDir/internalDir2", dirPaths);
       Assert.assertNotNull(fs);
       Assert.assertTrue("A mount should appear as symlink", fs.isDirectory());
-    fs = fileSystemTestHelper.containsPath(fsView, "/danglingLink", dirPaths);
+    fs = fileSystemTestHelper.containsPath(fsView, "/internalDir/linkToDir2",
+        dirPaths);
       Assert.assertNotNull(fs);
       Assert.assertTrue("A mount should appear as symlink", fs.isSymlink());
-    fs = fileSystemTestHelper.containsPath(fsView, "/linkToAFile", dirPaths);
-      Assert.assertNotNull(fs);
-      Assert.assertTrue("A mount should appear as symlink", fs.isSymlink());
-      
-      
-      
-      // list on internal dir
-      dirPaths = fsView.listStatus(new Path("/internalDir"));
-      Assert.assertEquals(2, dirPaths.length);
-
-      fs = fileSystemTestHelper.containsPath(fsView, "/internalDir/internalDir2", dirPaths);
-        Assert.assertNotNull(fs);
-        Assert.assertTrue("A mount should appear as symlink", fs.isDirectory());
-      fs = fileSystemTestHelper.containsPath(fsView, "/internalDir/linkToDir2",
-          dirPaths);
-        Assert.assertNotNull(fs);
-        Assert.assertTrue("A mount should appear as symlink", fs.isSymlink());
   }
-  
+
+  private void verifyRootChildren(FileStatus[] dirPaths) throws IOException {
+    FileStatus fs;
+    Assert.assertEquals(getExpectedDirPaths(), dirPaths.length);
+    fs = fileSystemTestHelper.containsPath(fsView, "/user", dirPaths);
+    Assert.assertNotNull(fs);
+    Assert.assertTrue("A mount should appear as symlink", fs.isSymlink());
+    fs = fileSystemTestHelper.containsPath(fsView, "/data", dirPaths);
+    Assert.assertNotNull(fs);
+    Assert.assertTrue("A mount should appear as symlink", fs.isSymlink());
+    fs = fileSystemTestHelper.containsPath(fsView, "/internalDir", dirPaths);
+    Assert.assertNotNull(fs);
+    Assert.assertTrue("A mount should appear as symlink", fs.isDirectory());
+    fs = fileSystemTestHelper.containsPath(fsView, "/danglingLink", dirPaths);
+    Assert.assertNotNull(fs);
+    Assert.assertTrue("A mount should appear as symlink", fs.isSymlink());
+    fs = fileSystemTestHelper.containsPath(fsView, "/linkToAFile", dirPaths);
+    Assert.assertNotNull(fs);
+    Assert.assertTrue("A mount should appear as symlink", fs.isSymlink());
+  }
+
   int getExpectedDirPaths() {
     return 7;
   }
@@ -680,5 +685,39 @@ public class ViewFileSystemBaseTest {
         fsView.isFile(new Path("/user/foo")));
     Assert.assertTrue("Target of created file should be type file",
         fsTarget.isFile(new Path(targetTestRoot,"user/foo")));
+  }
+
+  @Test
+  public void testRootReadableExecutable() throws IOException {
+    // verify executable permission on root: cd /
+    //
+    Assert.assertFalse("In root before cd",
+        fsView.getWorkingDirectory().isRoot());
+    fsView.setWorkingDirectory(new Path("/"));
+    Assert.assertTrue("Not in root dir after cd",
+      fsView.getWorkingDirectory().isRoot());
+
+    // verify readable
+    //
+    verifyRootChildren(fsView.listStatus(fsView.getWorkingDirectory()));
+
+    // verify permissions
+    //
+    final FileStatus rootStatus =
+        fsView.getFileStatus(fsView.getWorkingDirectory());
+    final FsPermission perms = rootStatus.getPermission();
+
+    Assert.assertTrue("User-executable permission not set!",
+        perms.getUserAction().implies(FsAction.EXECUTE));
+    Assert.assertTrue("User-readable permission not set!",
+        perms.getUserAction().implies(FsAction.READ));
+    Assert.assertTrue("Group-executable permission not set!",
+        perms.getGroupAction().implies(FsAction.EXECUTE));
+    Assert.assertTrue("Group-readable permission not set!",
+        perms.getGroupAction().implies(FsAction.READ));
+    Assert.assertTrue("Other-executable permission not set!",
+        perms.getOtherAction().implies(FsAction.EXECUTE));
+    Assert.assertTrue("Other-readable permission not set!",
+        perms.getOtherAction().implies(FsAction.READ));
   }
 }
