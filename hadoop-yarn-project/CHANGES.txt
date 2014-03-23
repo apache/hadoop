@@ -22,6 +22,7 @@ Release 2.5.0 - UNRELEASED
   NEW FEATURES
 
   IMPROVEMENTS
+
     YARN-1479. Invalid NaN values in Hadoop REST API JSON response (Chen He via
     jeagles)
 
@@ -170,11 +171,6 @@ Release 2.4.0 - UNRELEASED
     YARN-1717. Enabled periodically discarding old data in LeveldbTimelineStore.
     (Billie Rinaldi via zjshen)
 
-    YARN-1846. TestRM#testNMTokenSentForNormalContainer assumes CapacityScheduler.
-    (Robert Kanter via kasha)
-
-    YARN-1705. Reset cluster-metrics on transition to standby. (Rohith via kasha)
-
     YARN-1690. Made DistributedShell send timeline entities+events. (Mayank Bansal
     via zjshen)
 
@@ -285,12 +281,6 @@ Release 2.4.0 - UNRELEASED
     token for the right ResourceManager when HA is enabled. (Karthik Kambatla via
     vinodkv)
 
-    YARN-1785. FairScheduler treats app lookup failures as ERRORs. 
-    (bc Wong via kasha)
-
-    YARN-1752. Fixed ApplicationMasterService to reject unregister request if
-    AM did not register before. (Rohith Sharma via jianhe)
-
     YARN-1761. Modified RMAdmin CLI to check whether HA is enabled or not before
     it executes any of the HA admin related commands. (Xuan Gong via vinodkv)
 
@@ -315,9 +305,6 @@ Release 2.4.0 - UNRELEASED
     expose analogous getApplication(s)/Attempt(s)/Container(s) APIs. (Mayank
     Bansal via zjshen)
 
-    YARN-1771. Reduce the number of NameNode operations during localization of
-    public resources using a cache. (Sangjin Lee via cdouglas)
-
     YARN-1658. Modified web-app framework to let standby RMs redirect
     web-service calls to the active RM. (Cindy Li via vinodkv)
 
@@ -334,6 +321,9 @@ Release 2.4.0 - UNRELEASED
     and use the RMContext methods instead. (Anubhav Dhoot via kasha)
 
   OPTIMIZATIONS
+
+    YARN-1771. Reduce the number of NameNode operations during localization of
+    public resources using a cache. (Sangjin Lee via cdouglas)
 
   BUG FIXES
 
@@ -560,6 +550,17 @@ Release 2.4.0 - UNRELEASED
 
     YARN-1577. Made UnmanagedAMLauncher do launchAM after the attempt reaches
     the LAUNCHED state. (Jian He via zjshen)
+
+    YARN-1785. FairScheduler treats app lookup failures as ERRORs. 
+    (bc Wong via kasha)
+
+    YARN-1752. Fixed ApplicationMasterService to reject unregister request if
+    AM did not register before. (Rohith Sharma via jianhe)
+
+    YARN-1846. TestRM#testNMTokenSentForNormalContainer assumes CapacityScheduler.
+    (Robert Kanter via kasha)
+
+    YARN-1705. Reset cluster-metrics on transition to standby. (Rohith via kasha)
 
 Release 2.3.1 - UNRELEASED
 
