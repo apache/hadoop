@@ -15,6 +15,9 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10378. Typo in help printed by hdfs dfs -help.
     (Mit Desai via suresh)
 
+    HADOOP-10418. SaslRpcClient should not assume that remote principals are in
+    the default_realm. (atm)
+
 Release 2.4.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

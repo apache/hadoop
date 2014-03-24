@@ -300,7 +300,9 @@ public class SaslRpcClient {
     }
     // construct server advertised principal for comparision
     String serverPrincipal = new KerberosPrincipal(
-        authType.getProtocol() + "/" + authType.getServerId()).getName();
+        authType.getProtocol() + "/" + authType.getServerId(),
+        KerberosPrincipal.KRB_NT_SRV_HST).getName();
+
     boolean isPrincipalValid = false;
 
     // use the pattern if defined
