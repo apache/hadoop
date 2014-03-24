@@ -18,6 +18,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6112. NFS Gateway docs are incorrect for allowed hosts configuration.
     (atm)
 
+    HDFS-3087. Decomissioning on NN restart can complete without blocks being
+    replicated. (Rushabh S Shah via kihwal)
+
 Release 2.4.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

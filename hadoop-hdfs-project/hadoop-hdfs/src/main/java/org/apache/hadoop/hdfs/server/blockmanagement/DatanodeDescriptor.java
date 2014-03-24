@@ -697,5 +697,20 @@ public class DatanodeDescriptor extends DatanodeInfo {
   public void setLastCachingDirectiveSentTimeMs(long time) {
     this.lastCachingDirectiveSentTimeMs = time;
   }
+  
+  /**
+   * checks whether atleast first block report has been received
+   * @return
+   */
+  public boolean checkBlockReportReceived() {
+    if(this.getStorageInfos().length == 0) {
+      return false;
+    }
+    for(DatanodeStorageInfo storageInfo: this.getStorageInfos()) {
+      if(storageInfo.getBlockReportCount() == 0 )
+        return false;
+    }
+    return true;
+ }
 }
 
