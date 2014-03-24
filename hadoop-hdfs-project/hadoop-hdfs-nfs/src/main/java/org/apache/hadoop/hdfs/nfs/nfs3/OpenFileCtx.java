@@ -365,7 +365,7 @@ class OpenFileCtx {
           }
         } catch (Throwable t) {
           LOG.info("Dumper get Throwable: " + t + ". dumpFilePath: "
-              + OpenFileCtx.this.dumpFilePath);
+              + OpenFileCtx.this.dumpFilePath, t);
         }
       }
     }
@@ -660,8 +660,8 @@ class OpenFileCtx {
       // Sync file data and length to avoid partial read failure
       fos.hsync(EnumSet.of(SyncFlag.UPDATE_LENGTH));
     } catch (ClosedChannelException closedException) {
-      LOG.info("The FSDataOutputStream has been closed. " +
-      		"Continue processing the perfect overwrite.");
+      LOG.info("The FSDataOutputStream has been closed. "
+          + "Continue processing the perfect overwrite.");
     } catch (IOException e) {
       LOG.info("hsync failed when processing possible perfect overwrite, path="
           + path + " error:" + e);
@@ -680,7 +680,7 @@ class OpenFileCtx {
       }
     } catch (IOException e) {
       LOG.info("Read failed when processing possible perfect overwrite, path="
-          + path + " error:" + e);
+          + path, e);
       return new WRITE3Response(Nfs3Status.NFS3ERR_IO, wccData, 0, stableHow,
           Nfs3Constant.WRITE_COMMIT_VERF);
     } finally {
@@ -914,7 +914,7 @@ class OpenFileCtx {
   /** Invoked by AsynDataService to write back to HDFS */
   void executeWriteBack() {
     Preconditions.checkState(asyncStatus,
-        "openFileCtx has false asyncStatus, fileId:" + latestAttr.getFileid());
+        "openFileCtx has false asyncStatus, fileId:" + latestAttr.getFileId());
     final long startOffset = asyncWriteBackStartOffset;  
     try {
       while (activeState) {
@@ -940,7 +940,7 @@ class OpenFileCtx {
           asyncStatus = false;
         } else {
           LOG.info("Another asyn task is already started before this one"
-              + " is finalized. fileId:" + latestAttr.getFileid()
+              + " is finalized. fileId:" + latestAttr.getFileId()
               + " asyncStatus:" + asyncStatus + " original startOffset:"
               + startOffset + " new startOffset:" + asyncWriteBackStartOffset
               + ". Won't change asyncStatus here.");
@@ -969,11 +969,11 @@ class OpenFileCtx {
     } catch (ClosedChannelException cce) {
       if (!pendingWrites.isEmpty()) {
         LOG.error("Can't sync for fileId: " + latestAttr.getFileId()
-            + ". Channel closed with writes pending");
+            + ". Channel closed with writes pending.", cce);
       }
       status = Nfs3Status.NFS3ERR_IO;
     } catch (IOException e) {
-      LOG.error("Got stream error during data sync:" + e);
+      LOG.error("Got stream error during data sync:", e);
       // Do nothing. Stream will be closed eventually by StreamMonitor.
       status = Nfs3Status.NFS3ERR_IO;
     }
@@ -983,7 +983,7 @@ class OpenFileCtx {
       latestAttr = Nfs3Utils.getFileAttr(client,
           Nfs3Utils.getFileIdPath(latestAttr.getFileId()), iug);
     } catch (IOException e) {
-      LOG.error("Can't get new file attr for fileId: " + latestAttr.getFileId());
+      LOG.error("Can't get new file attr, fileId: " + latestAttr.getFileId(), e);
       status = Nfs3Status.NFS3ERR_IO;
     }
 
@@ -1006,7 +1006,7 @@ class OpenFileCtx {
               new VerifierNone()), commit.getXid());
       
       if (LOG.isDebugEnabled()) {
-        LOG.debug("FileId: " + latestAttr.getFileid() + " Service time:"
+        LOG.debug("FileId: " + latestAttr.getFileId() + " Service time:"
             + (System.currentTimeMillis() - commit.getStartTime())
             + "ms. Sent response for commit:" + commit);
       }
@@ -1069,7 +1069,7 @@ class OpenFileCtx {
               fos.hsync(EnumSet.of(SyncFlag.UPDATE_LENGTH));
             }
           } catch (IOException e) {
-            LOG.error("hsync failed with writeCtx:" + writeCtx + " error:" + e);
+            LOG.error("hsync failed with writeCtx:" + writeCtx, e);
             throw e;
           }
         }
@@ -1101,7 +1101,7 @@ class OpenFileCtx {
       }
 
       LOG.info("Clean up open file context for fileId: "
-          + latestAttr.getFileid());
+          + latestAttr.getFileId());
       cleanup();
     }
   }
@@ -1128,7 +1128,7 @@ class OpenFileCtx {
         fos.close();
       }
     } catch (IOException e) {
-      LOG.info("Can't close stream for fileId:" + latestAttr.getFileid()
+      LOG.info("Can't close stream for fileId:" + latestAttr.getFileId()
           + ", error:" + e);
     }
     
@@ -1156,7 +1156,7 @@ class OpenFileCtx {
       try {
         dumpOut.close();
       } catch (IOException e) {
-        e.printStackTrace();
+        LOG.error("Failed to close outputstream of dump file" + dumpFilePath, e);
       }
       File dumpFile = new File(dumpFilePath);
       if (dumpFile.exists() && !dumpFile.delete()) {
@@ -1167,7 +1167,7 @@ class OpenFileCtx {
       try {
         raf.close();
       } catch (IOException e) {
-        e.printStackTrace();
+        LOG.error("Got exception when closing input stream of dump file.", e);
       }
     }
   }

@@ -65,7 +65,7 @@ final class Portmap {
       pm.start(DEFAULT_IDLE_TIME_MILLISECONDS,
           new InetSocketAddress(port), new InetSocketAddress(port));
     } catch (Throwable e) {
-      LOG.fatal("Failed to start the server. Cause:" + e.getMessage());
+      LOG.fatal("Failed to start the server. Cause:", e);
       pm.shutdown();
       System.exit(-1);
     }

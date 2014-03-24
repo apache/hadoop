@@ -94,7 +94,8 @@ public class Nfs3Utils {
   }
 
   public static WccAttr getWccAttr(Nfs3FileAttributes attr) {
-    return new WccAttr(attr.getSize(), attr.getMtime(), attr.getCtime());
+    return attr == null ? new WccAttr() : new WccAttr(attr.getSize(),
+        attr.getMtime(), attr.getCtime());
   }
 
   // TODO: maybe not efficient
