@@ -383,6 +383,9 @@ Release 2.4.0 - UNRELEASED
     HADOOP-10015. UserGroupInformation prints out excessive warnings.
     (Nicolas Liochon via szetszwo)
 
+    HADOOP-10423. Clarify compatibility policy document for combination of 
+    new client and old server. (Chris Nauroth via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES
