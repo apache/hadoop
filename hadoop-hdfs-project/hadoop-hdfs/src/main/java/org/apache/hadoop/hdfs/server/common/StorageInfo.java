@@ -227,7 +227,7 @@ public class StorageInfo {
         : NameNodeLayoutVersion.FEATURES;
   }
   
-  static String getProperty(Properties props, StorageDirectory sd,
+  protected static String getProperty(Properties props, StorageDirectory sd,
       String name) throws InconsistentFSStateException {
     String property = props.getProperty(name);
     if (property == null) {
