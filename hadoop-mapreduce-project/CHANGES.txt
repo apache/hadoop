@@ -117,6 +117,10 @@ Release 2.4.0 - UNRELEASED
     override HADOOP_ROOT_LOGGER or HADOOP_CLIENT_OPTS. (Varun Vasudev via
     vinodkv)
 
+    MAPREDUCE-5791. Shuffle phase is slow in Windows -
+    FadviseFileRegion::transferTo does not read disks efficiently.
+    (Nikola Vujic via cnauroth)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
