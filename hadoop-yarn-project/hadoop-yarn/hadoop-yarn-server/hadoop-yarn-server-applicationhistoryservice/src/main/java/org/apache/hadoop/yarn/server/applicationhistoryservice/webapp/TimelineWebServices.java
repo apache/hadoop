@@ -134,6 +134,8 @@ public class TimelineWebServices {
       @QueryParam("secondaryFilter") String secondaryFilter,
       @QueryParam("windowStart") String windowStart,
       @QueryParam("windowEnd") String windowEnd,
+      @QueryParam("fromId") String fromId,
+      @QueryParam("fromTs") String fromTs,
       @QueryParam("limit") String limit,
       @QueryParam("fields") String fields) {
     init(res);
@@ -144,6 +146,8 @@ public class TimelineWebServices {
           parseLongStr(limit),
           parseLongStr(windowStart),
           parseLongStr(windowEnd),
+          parseStr(fromId),
+          parseLongStr(fromTs),
           parsePairStr(primaryFilter, ":"),
           parsePairsStr(secondaryFilter, ",", ":"),
           parseFieldsStr(fields, ","));

@@ -50,6 +50,7 @@ import com.sun.jersey.test.framework.WebAppDescriptor;
 public class TestTimelineWebServices extends JerseyTest {
 
   private static TimelineStore store;
+  private long beforeTime;
 
   private Injector injector = Guice.createInjector(new ServletModule() {
 
@@ -79,6 +80,7 @@ public class TestTimelineWebServices extends JerseyTest {
 
   private TimelineStore mockTimelineStore()
       throws Exception {
+    beforeTime = System.currentTimeMillis() - 1;
     TestMemoryTimelineStore store =
         new TestMemoryTimelineStore();
     store.setup();
@@ -139,6 +141,47 @@ public class TestTimelineWebServices extends JerseyTest {
         .get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
     verifyEntities(response.getEntity(TimelineEntities.class));
+  }
+
+  @Test
+  public void testFromId() throws Exception {
+    WebResource r = resource();
+    ClientResponse response = r.path("ws").path("v1").path("timeline")
+        .path("type_1").queryParam("fromId", "id_2")
+        .accept(MediaType.APPLICATION_JSON)
+        .get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    assertEquals(1, response.getEntity(TimelineEntities.class).getEntities()
+        .size());
+
+    response = r.path("ws").path("v1").path("timeline")
+        .path("type_1").queryParam("fromId", "id_1")
+        .accept(MediaType.APPLICATION_JSON)
+        .get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    assertEquals(2, response.getEntity(TimelineEntities.class).getEntities()
+        .size());
+  }
+
+  @Test
+  public void testFromTs() throws Exception {
+    WebResource r = resource();
+    ClientResponse response = r.path("ws").path("v1").path("timeline")
+        .path("type_1").queryParam("fromTs", Long.toString(beforeTime))
+        .accept(MediaType.APPLICATION_JSON)
+        .get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    assertEquals(0, response.getEntity(TimelineEntities.class).getEntities()
+        .size());
+
+    response = r.path("ws").path("v1").path("timeline")
+        .path("type_1").queryParam("fromTs", Long.toString(
+            System.currentTimeMillis()))
+        .accept(MediaType.APPLICATION_JSON)
+        .get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    assertEquals(2, response.getEntity(TimelineEntities.class).getEntities()
+        .size());
   }
 
   @Test

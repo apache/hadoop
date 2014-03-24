@@ -135,7 +135,7 @@ public class LeveldbTimelineStore extends AbstractService
 
   private static final byte[] EMPTY_BYTES = new byte[0];
 
-  private Map<EntityIdentifier, Long> startTimeWriteCache;
+  private Map<EntityIdentifier, StartAndInsertTime> startTimeWriteCache;
   private Map<EntityIdentifier, Long> startTimeReadCache;
 
   /**
@@ -203,6 +203,16 @@ public class LeveldbTimelineStore extends AbstractService
     }
     IOUtils.cleanup(LOG, db);
     super.serviceStop();
+  }
+
+  private static class StartAndInsertTime {
+    final long startTime;
+    final long insertTime;
+
+    public StartAndInsertTime(long startTime, long insertTime) {
+      this.startTime = startTime;
+      this.insertTime = insertTime;
+    }
   }
 
   private class EntityDeletionThread extends Thread {
@@ -585,14 +595,14 @@ public class LeveldbTimelineStore extends AbstractService
 
   @Override
   public TimelineEntities getEntities(String entityType,
-      Long limit, Long windowStart, Long windowEnd,
+      Long limit, Long windowStart, Long windowEnd, String fromId, Long fromTs,
       NameValuePair primaryFilter, Collection<NameValuePair> secondaryFilters,
       EnumSet<Field> fields) throws IOException {
     if (primaryFilter == null) {
       // if no primary filter is specified, prefix the lookup with
       // ENTITY_ENTRY_PREFIX
       return getEntityByTime(ENTITY_ENTRY_PREFIX, entityType, limit,
-          windowStart, windowEnd, secondaryFilters, fields);
+          windowStart, windowEnd, fromId, fromTs, secondaryFilters, fields);
     } else {
       // if a primary filter is specified, prefix the lookup with
       // INDEXED_ENTRY_PREFIX + primaryFilterName + primaryFilterValue +
@@ -602,7 +612,7 @@ public class LeveldbTimelineStore extends AbstractService
           .add(GenericObjectMapper.write(primaryFilter.getValue()), true)
           .add(ENTITY_ENTRY_PREFIX).getBytesForLookup();
       return getEntityByTime(base, entityType, limit, windowStart, windowEnd,
-          secondaryFilters, fields);
+          fromId, fromTs, secondaryFilters, fields);
     }
   }
 
@@ -614,6 +624,8 @@ public class LeveldbTimelineStore extends AbstractService
    * @param limit A limit on the number of entities to return
    * @param starttime The earliest entity start time to retrieve (exclusive)
    * @param endtime The latest entity start time to retrieve (inclusive)
+   * @param fromId Retrieve entities starting with this entity
+   * @param fromTs Ignore entities with insert timestamp later than this ts
    * @param secondaryFilters Filter pairs that the entities should match
    * @param fields The set of fields to retrieve
    * @return A list of entities
@@ -621,8 +633,8 @@ public class LeveldbTimelineStore extends AbstractService
    */
   private TimelineEntities getEntityByTime(byte[] base,
       String entityType, Long limit, Long starttime, Long endtime,
-      Collection<NameValuePair> secondaryFilters, EnumSet<Field> fields)
-      throws IOException {
+      String fromId, Long fromTs, Collection<NameValuePair> secondaryFilters,
+      EnumSet<Field> fields) throws IOException {
     DBIterator iterator = null;
     try {
       KeyBuilder kb = KeyBuilder.newInstance().add(base).add(entityType);
@@ -632,10 +644,25 @@ public class LeveldbTimelineStore extends AbstractService
         // if end time is null, place no restriction on end time
         endtime = Long.MAX_VALUE;
       }
-      // using end time, construct a first key that will be seeked to
-      byte[] revts = writeReverseOrderedLong(endtime);
-      kb.add(revts);
-      byte[] first = kb.getBytesForLookup();
+      // construct a first key that will be seeked to using end time or fromId
+      byte[] first = null;
+      if (fromId != null) {
+        Long fromIdStartTime = getStartTimeLong(fromId, entityType);
+        if (fromIdStartTime == null) {
+          // no start time for provided id, so return empty entities
+          return new TimelineEntities();
+        }
+        if (fromIdStartTime <= endtime) {
+          // if provided id's start time falls before the end of the window,
+          // use it to construct the seek key
+          first = kb.add(writeReverseOrderedLong(fromIdStartTime))
+              .add(fromId).getBytesForLookup();
+        }
+      }
+      // if seek key wasn't constructed using fromId, construct it using end ts
+      if (first == null) {
+        first = kb.add(writeReverseOrderedLong(endtime)).getBytesForLookup();
+      }
       byte[] last = null;
       if (starttime != null) {
         // if start time is not null, set a last key that will not be
@@ -665,6 +692,21 @@ public class LeveldbTimelineStore extends AbstractService
         KeyParser kp = new KeyParser(key, prefix.length);
         Long startTime = kp.getNextLong();
         String entityId = kp.getNextString();
+
+        if (fromTs != null) {
+          long insertTime = readReverseOrderedLong(iterator.peekNext()
+              .getValue(), 0);
+          if (insertTime > fromTs) {
+            byte[] firstKey = key;
+            while (iterator.hasNext() && prefixMatches(firstKey,
+                kp.getOffset(), key)) {
+              iterator.next();
+              key = iterator.peekNext().getKey();
+            }
+            continue;
+          }
+        }
+
         // parse the entity that owns this key, iterating over all keys for
         // the entity
         TimelineEntity entity = getEntity(entityId, entityType, startTime,
@@ -715,9 +757,10 @@ public class LeveldbTimelineStore extends AbstractService
       writeBatch = db.createWriteBatch();
       List<TimelineEvent> events = entity.getEvents();
       // look up the start time for the entity
-      revStartTime = getAndSetStartTime(entity.getEntityId(),
-          entity.getEntityType(), entity.getStartTime(), events);
-      if (revStartTime == null) {
+      StartAndInsertTime startAndInsertTime = getAndSetStartTime(
+          entity.getEntityId(), entity.getEntityType(),
+          entity.getStartTime(), events);
+      if (startAndInsertTime == null) {
         // if no start time is found, add an error and return
         TimelinePutError error = new TimelinePutError();
         error.setEntityId(entity.getEntityId());
@@ -726,11 +769,19 @@ public class LeveldbTimelineStore extends AbstractService
         response.addError(error);
         return;
       }
+      revStartTime = writeReverseOrderedLong(startAndInsertTime
+          .startTime);
+
       Map<String, Set<Object>> primaryFilters = entity.getPrimaryFilters();
 
       // write entity marker
-      writeBatch.put(createEntityMarkerKey(entity.getEntityId(),
-          entity.getEntityType(), revStartTime), EMPTY_BYTES);
+      byte[] markerKey = createEntityMarkerKey(entity.getEntityId(),
+          entity.getEntityType(), revStartTime);
+      byte[] markerValue = writeReverseOrderedLong(startAndInsertTime
+          .insertTime);
+      writeBatch.put(markerKey, markerValue);
+      writePrimaryFilterEntries(writeBatch, primaryFilters, markerKey,
+          markerValue);
 
       // write event entries
       if (events != null && !events.isEmpty()) {
@@ -821,17 +872,21 @@ public class LeveldbTimelineStore extends AbstractService
       lock = writeLocks.getLock(relatedEntity);
       lock.lock();
       try {
-        byte[] relatedEntityStartTime = getAndSetStartTime(
-            relatedEntity.getId(), relatedEntity.getType(),
+        StartAndInsertTime relatedEntityStartAndInsertTime =
+            getAndSetStartTime(relatedEntity.getId(), relatedEntity.getType(),
             readReverseOrderedLong(revStartTime, 0), null);
-        if (relatedEntityStartTime == null) {
+        if (relatedEntityStartAndInsertTime == null) {
           throw new IOException("Error setting start time for related entity");
         }
+        byte[] relatedEntityStartTime = writeReverseOrderedLong(
+            relatedEntityStartAndInsertTime.startTime);
         db.put(createRelatedEntityKey(relatedEntity.getId(),
             relatedEntity.getType(), relatedEntityStartTime,
             entity.getEntityId(), entity.getEntityType()), EMPTY_BYTES);
         db.put(createEntityMarkerKey(relatedEntity.getId(),
-            relatedEntity.getType(), relatedEntityStartTime), EMPTY_BYTES);
+            relatedEntity.getType(), relatedEntityStartTime),
+            writeReverseOrderedLong(relatedEntityStartAndInsertTime
+                .insertTime));
       } catch (IOException e) {
         LOG.error("Error putting related entity " + relatedEntity.getId() +
             " of type " + relatedEntity.getType() + " for entity " +
@@ -937,19 +992,18 @@ public class LeveldbTimelineStore extends AbstractService
    * @param entityType The type of the entity
    * @param startTime The start time of the entity, or null
    * @param events A list of events for the entity, or null
-   * @return A byte array
+   * @return A StartAndInsertTime
    * @throws IOException
    */
-  private byte[] getAndSetStartTime(String entityId, String entityType,
-      Long startTime, List<TimelineEvent> events)
+  private StartAndInsertTime getAndSetStartTime(String entityId,
+      String entityType, Long startTime, List<TimelineEvent> events)
       throws IOException {
     EntityIdentifier entity = new EntityIdentifier(entityId, entityType);
     if (startTime == null) {
       // start time is not provided, so try to look it up
       if (startTimeWriteCache.containsKey(entity)) {
         // found the start time in the cache
-        startTime = startTimeWriteCache.get(entity);
-        return writeReverseOrderedLong(startTime);
+        return startTimeWriteCache.get(entity);
       } else {
         if (events != null) {
           // prepare a start time from events in case it is needed
@@ -966,14 +1020,8 @@ public class LeveldbTimelineStore extends AbstractService
     } else {
       // start time is provided
       if (startTimeWriteCache.containsKey(entity)) {
-        // check the provided start time matches the cache
-        if (!startTime.equals(startTimeWriteCache.get(entity))) {
-          // the start time is already in the cache,
-          // and it is different from the provided start time,
-          // so use the one from the cache
-          startTime = startTimeWriteCache.get(entity);
-        }
-        return writeReverseOrderedLong(startTime);
+        // always use start time from cache if it exists
+        return startTimeWriteCache.get(entity);
       } else {
         // check the provided start time matches the db
         return checkStartTimeInDb(entity, startTime);
@@ -988,31 +1036,36 @@ public class LeveldbTimelineStore extends AbstractService
    * so it adds it back into the cache if it is found. Should only be called
    * when a lock has been obtained on the entity.
    */
-  private byte[] checkStartTimeInDb(EntityIdentifier entity,
+  private StartAndInsertTime checkStartTimeInDb(EntityIdentifier entity,
       Long suggestedStartTime) throws IOException {
+    StartAndInsertTime startAndInsertTime = null;
     // create lookup key for start time
     byte[] b = createStartTimeLookupKey(entity.getId(), entity.getType());
     // retrieve value for key
     byte[] v = db.get(b);
-    byte[] revStartTime;
     if (v == null) {
       // start time doesn't exist in db
       if (suggestedStartTime == null) {
         return null;
       }
+      startAndInsertTime = new StartAndInsertTime(suggestedStartTime,
+          System.currentTimeMillis());
+
       // write suggested start time
-      revStartTime = writeReverseOrderedLong(suggestedStartTime);
+      v = new byte[16];
+      writeReverseOrderedLong(suggestedStartTime, v, 0);
+      writeReverseOrderedLong(startAndInsertTime.insertTime, v, 8);
       WriteOptions writeOptions = new WriteOptions();
       writeOptions.sync(true);
-      db.put(b, revStartTime, writeOptions);
+      db.put(b, v, writeOptions);
     } else {
       // found start time in db, so ignore suggested start time
-      suggestedStartTime = readReverseOrderedLong(v, 0);
-      revStartTime = v;
+      startAndInsertTime = new StartAndInsertTime(readReverseOrderedLong(v, 0),
+          readReverseOrderedLong(v, 8));
     }
-    startTimeWriteCache.put(entity, suggestedStartTime);
-    startTimeReadCache.put(entity, suggestedStartTime);
-    return revStartTime;
+    startTimeWriteCache.put(entity, startAndInsertTime);
+    startTimeReadCache.put(entity, startAndInsertTime.startTime);
+    return startAndInsertTime;
   }
 
   /**
@@ -1245,8 +1298,6 @@ public class LeveldbTimelineStore extends AbstractService
     }
   }
 
-  // warning is suppressed to prevent eclipse from noting unclosed resource
-  @SuppressWarnings("resource")
   @VisibleForTesting
   boolean deleteNextEntity(String entityType, byte[] reverseTimestamp,
       DBIterator iterator, DBIterator pfIterator, boolean seeked)

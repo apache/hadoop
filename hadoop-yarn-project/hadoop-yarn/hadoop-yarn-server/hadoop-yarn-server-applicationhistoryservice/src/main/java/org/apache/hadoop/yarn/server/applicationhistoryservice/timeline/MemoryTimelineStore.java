@@ -24,12 +24,14 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.SortedSet;
+import java.util.TreeSet;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -56,6 +58,8 @@ public class MemoryTimelineStore
 
   private Map<EntityIdentifier, TimelineEntity> entities =
       new HashMap<EntityIdentifier, TimelineEntity>();
+  private Map<EntityIdentifier, Long> entityInsertTimes =
+      new HashMap<EntityIdentifier, Long>();
 
   public MemoryTimelineStore() {
     super(MemoryTimelineStore.class.getName());
@@ -63,8 +67,9 @@ public class MemoryTimelineStore
 
   @Override
   public TimelineEntities getEntities(String entityType, Long limit,
-      Long windowStart, Long windowEnd, NameValuePair primaryFilter,
-      Collection<NameValuePair> secondaryFilters, EnumSet<Field> fields) {
+      Long windowStart, Long windowEnd, String fromId, Long fromTs,
+      NameValuePair primaryFilter, Collection<NameValuePair> secondaryFilters,
+      EnumSet<Field> fields) {
     if (limit == null) {
       limit = DEFAULT_LIMIT;
     }
@@ -77,8 +82,26 @@ public class MemoryTimelineStore
     if (fields == null) {
       fields = EnumSet.allOf(Field.class);
     }
+
+    Iterator<TimelineEntity> entityIterator = null;
+    if (fromId != null) {
+      TimelineEntity firstEntity = entities.get(new EntityIdentifier(fromId,
+          entityType));
+      if (firstEntity == null) {
+        return new TimelineEntities();
+      } else {
+        entityIterator = new TreeSet<TimelineEntity>(entities.values())
+            .tailSet(firstEntity, true).iterator();
+      }
+    }
+    if (entityIterator == null) {
+      entityIterator = new PriorityQueue<TimelineEntity>(entities.values())
+          .iterator();
+    }
+
     List<TimelineEntity> entitiesSelected = new ArrayList<TimelineEntity>();
-    for (TimelineEntity entity : new PriorityQueue<TimelineEntity>(entities.values())) {
+    while (entityIterator.hasNext()) {
+      TimelineEntity entity = entityIterator.next();
       if (entitiesSelected.size() >= limit) {
         break;
       }
@@ -89,6 +112,10 @@ public class MemoryTimelineStore
         continue;
       }
       if (entity.getStartTime() > windowEnd) {
+        continue;
+      }
+      if (fromTs != null && entityInsertTimes.get(new EntityIdentifier(
+          entity.getEntityId(), entity.getEntityType())) > fromTs) {
         continue;
       }
       if (primaryFilter != null &&
@@ -196,6 +223,7 @@ public class MemoryTimelineStore
         existingEntity.setEntityType(entity.getEntityType());
         existingEntity.setStartTime(entity.getStartTime());
         entities.put(entityId, existingEntity);
+        entityInsertTimes.put(entityId, System.currentTimeMillis());
       }
       if (entity.getEvents() != null) {
         if (existingEntity.getEvents() == null) {
@@ -215,9 +243,16 @@ public class MemoryTimelineStore
           error.setErrorCode(TimelinePutError.NO_START_TIME);
           response.addError(error);
           entities.remove(entityId);
+          entityInsertTimes.remove(entityId);
           continue;
         } else {
-          existingEntity.setStartTime(entity.getEvents().get(0).getTimestamp());
+          Long min = Long.MAX_VALUE;
+          for (TimelineEvent e : entity.getEvents()) {
+            if (min > e.getTimestamp()) {
+              min = e.getTimestamp();
+            }
+          }
+          existingEntity.setStartTime(min);
         }
       }
       if (entity.getPrimaryFilters() != null) {
@@ -264,6 +299,7 @@ public class MemoryTimelineStore
             relatedEntity.addRelatedEntity(existingEntity.getEntityType(),
                 existingEntity.getEntityId());
             entities.put(relatedEntityId, relatedEntity);
+            entityInsertTimes.put(relatedEntityId, System.currentTimeMillis());
           }
         }
       }

@@ -163,6 +163,9 @@ Release 2.4.0 - UNRELEASED
     use smaps for obtaining used memory information. (Rajesh Balamohan via
     vinodkv)
 
+    YARN-1838. Enhanced timeline service getEntities API to get entities from a
+    given entity ID or insertion timestamp. (Billie Rinaldi via zjshen)
+
   IMPROVEMENTS
 
     YARN-1007. Enhance History Reader interface for Containers. (Mayank Bansal via
