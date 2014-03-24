@@ -124,6 +124,15 @@ hand-in-hand to address this.
     (cluster) to a later version (or vice versa).  For example, a
     Hadoop 2.1.0 client talking to a Hadoop 2.3.0 cluster.
 
+    * Client-Server compatibility is also required to allow users to upgrade the
+    client before upgrading the server (cluster).  For example, a Hadoop 2.4.0
+    client talking to a Hadoop 2.3.0 cluster.  This allows deployment of
+    client-side bug fixes ahead of full cluster upgrades.  Note that new cluster
+    features invoked by new client APIs or shell commands will not be usable.
+    YARN applications that attempt to use new APIs (including new fields in data
+    structures) that have not yet deployed to the cluster can expect link
+    exceptions.
+
     * Client-Server compatibility is also required to allow upgrading
     individual components without upgrading others. For example,
     upgrade HDFS from version 2.1.0 to 2.2.0 without upgrading MapReduce.
