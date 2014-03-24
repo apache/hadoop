@@ -29,6 +29,7 @@ import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.NewEpochR
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.PrepareRecoveryResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.SegmentStateProto;
 import org.apache.hadoop.hdfs.qjournal.server.JournalNode;
+import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.namenode.JournalManager;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.io.retry.Idempotent;
@@ -145,6 +146,19 @@ public interface QJournalProtocol {
    */
   public void acceptRecovery(RequestInfo reqInfo,
       SegmentStateProto stateToAccept, URL fromUrl) throws IOException;
+
+  public void doPreUpgrade(String journalId) throws IOException;
+
+  public void doUpgrade(String journalId, StorageInfo sInfo) throws IOException;
+
+  public void doFinalize(String journalId) throws IOException;
+
+  public Boolean canRollBack(String journalId, StorageInfo storage,
+      StorageInfo prevStorage, int targetLayoutVersion) throws IOException;
+
+  public void doRollback(String journalId) throws IOException;
+
+  public Long getJournalCTime(String journalId) throws IOException;
 
   /**
    * Discard journal segments whose first TxId is greater than or equal to the

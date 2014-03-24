@@ -61,6 +61,7 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Shell;
 import org.junit.Assume;
 import org.junit.Before;
@@ -757,5 +758,38 @@ public class TestDFSUtil {
     assertEquals(25*60*60*1000, DFSUtil.parseRelativeTime("25h"));
     assertEquals(4*24*60*60*1000l, DFSUtil.parseRelativeTime("4d"));
     assertEquals(999*24*60*60*1000l, DFSUtil.parseRelativeTime("999d"));
+  }
+  
+  @Test
+  public void testAssertAllResultsEqual() {
+    checkAllResults(new Long[]{}, true);
+    checkAllResults(new Long[]{1l}, true);
+    checkAllResults(new Long[]{1l, 1l}, true);
+    checkAllResults(new Long[]{1l, 1l, 1l}, true);
+    checkAllResults(new Long[]{new Long(1), new Long(1)}, true);
+    checkAllResults(new Long[]{null, null, null}, true);
+    
+    checkAllResults(new Long[]{1l, 2l}, false);
+    checkAllResults(new Long[]{2l, 1l}, false);
+    checkAllResults(new Long[]{1l, 2l, 1l}, false);
+    checkAllResults(new Long[]{2l, 1l, 1l}, false);
+    checkAllResults(new Long[]{1l, 1l, 2l}, false);
+    checkAllResults(new Long[]{1l, null}, false);
+    checkAllResults(new Long[]{null, 1l}, false);
+    checkAllResults(new Long[]{1l, null, 1l}, false);
+  }
+  
+  private static void checkAllResults(Long[] toCheck, boolean shouldSucceed) {
+    if (shouldSucceed) {
+      DFSUtil.assertAllResultsEqual(Arrays.asList(toCheck));
+    } else {
+      try {
+        DFSUtil.assertAllResultsEqual(Arrays.asList(toCheck));
+        fail("Should not have succeeded with input: " +
+            Arrays.toString(toCheck));
+      } catch (AssertionError ae) {
+        GenericTestUtils.assertExceptionContains("Not all elements match", ae);
+      }
+    }
   }
 }

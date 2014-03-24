@@ -415,7 +415,8 @@ public class BackupNode extends NameNode {
     return DFSUtil.getBackupNameServiceId(conf);
   }
 
-  protected HAState createHAState() {
+  @Override
+  protected HAState createHAState(StartupOption startOpt) {
     return new BackupState();
   }
 

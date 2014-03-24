@@ -204,7 +204,7 @@ public class TestRollingUpgrade {
         .format(false)
         .manageNameDfsDirs(false)
         .build();
-      DistributedFileSystem dfs2 = cluster2.getFileSystem();
+      final DistributedFileSystem dfs2 = cluster2.getFileSystem();
       
       // Check that cluster2 sees the edits made on cluster1
       Assert.assertTrue(dfs2.exists(foo));
@@ -243,7 +243,8 @@ public class TestRollingUpgrade {
       Assert.assertEquals(info1.getStartTime(), finalize.getStartTime());
 
       LOG.info("RESTART cluster 2 with regular startup option");
-      cluster2.restartNameNode(StartupOption.REGULAR.getName());
+      cluster2.getNameNodeInfos()[0].setStartOpt(StartupOption.REGULAR);
+      cluster2.restartNameNode();
       Assert.assertTrue(dfs2.exists(foo));
       Assert.assertTrue(dfs2.exists(bar));
       Assert.assertTrue(dfs2.exists(baz));

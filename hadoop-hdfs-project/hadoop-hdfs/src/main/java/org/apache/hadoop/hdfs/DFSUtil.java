@@ -42,6 +42,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.SecureRandom;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -52,7 +53,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 
 import javax.net.SocketFactory;
 
@@ -71,7 +71,6 @@ import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -634,10 +633,24 @@ public class DFSUtil {
     }
     return ret;
   }
+  
+  /**
+   * Get all of the RPC addresses of the individual NNs in a given nameservice.
+   * 
+   * @param conf Configuration
+   * @param nsId the nameservice whose NNs addresses we want.
+   * @param defaultValue default address to return in case key is not found.
+   * @return A map from nnId -> RPC address of each NN in the nameservice.
+   */
+  public static Map<String, InetSocketAddress> getRpcAddressesForNameserviceId(
+      Configuration conf, String nsId, String defaultValue) {
+    return getAddressesForNameserviceId(conf, nsId, defaultValue,
+        DFS_NAMENODE_RPC_ADDRESS_KEY);
+  }
 
   private static Map<String, InetSocketAddress> getAddressesForNameserviceId(
       Configuration conf, String nsId, String defaultValue,
-      String[] keys) {
+      String... keys) {
     Collection<String> nnIds = getNameNodeIds(conf, nsId);
     Map<String, InetSocketAddress> ret = Maps.newHashMap();
     for (String nnId : emptyAsSingletonNull(nnIds)) {
@@ -1692,5 +1705,33 @@ public class DFSUtil {
           + ": unknown time unit " + relTime.charAt(relTime.length() - 1));
     }
     return ttl*1000;
+  }
+
+  /**
+   * Assert that all objects in the collection are equal. Returns silently if
+   * so, throws an AssertionError if any object is not equal. All null values
+   * are considered equal.
+   * 
+   * @param objects the collection of objects to check for equality.
+   */
+  public static void assertAllResultsEqual(Collection<?> objects) {
+    Object[] resultsArray = objects.toArray();
+    
+    if (resultsArray.length == 0)
+      return;
+    
+    for (int i = 0; i < resultsArray.length; i++) {
+      if (i == 0)
+        continue;
+      else {
+        Object currElement = resultsArray[i];
+        Object lastElement = resultsArray[i - 1];
+        if ((currElement == null && currElement != lastElement) ||
+            (currElement != null && !currElement.equals(lastElement))) {
+          throw new AssertionError("Not all elements match in results: " +
+            Arrays.toString(resultsArray));
+        }
+      }
+    }
   }
 }

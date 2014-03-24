@@ -194,6 +194,8 @@ Release 2.4.0 - UNRELEASED
     HDFS-6050. NFS does not handle exceptions correctly in a few places 
     (brandonli)
 
+    HDFS-5138. Support HDFS upgrade in HA. (atm via todd)
+
   OPTIMIZATIONS
 
     HDFS-5790. LeaseManager.findPath is very slow when many leases need recovery

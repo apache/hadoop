@@ -21,6 +21,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
+import java.net.URI;
 import java.net.URL;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
@@ -47,6 +48,7 @@ import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
+import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeLocalInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -871,7 +873,24 @@ public class DFSAdmin extends FsShell {
    */
   public int finalizeUpgrade() throws IOException {
     DistributedFileSystem dfs = getDFS();
-    dfs.finalizeUpgrade();
+    
+    Configuration dfsConf = dfs.getConf();
+    URI dfsUri = dfs.getUri();
+    boolean isHaEnabled = HAUtil.isLogicalUri(dfsConf, dfsUri);
+    if (isHaEnabled) {
+      // In the case of HA, run finalizeUpgrade for all NNs in this nameservice
+      String nsId = dfsUri.getHost();
+      List<ClientProtocol> namenodes =
+          HAUtil.getProxiesForAllNameNodesInNameservice(dfsConf, nsId);
+      if (!HAUtil.isAtLeastOneActive(namenodes)) {
+        throw new IOException("Cannot finalize with no NameNode active");
+      }
+      for (ClientProtocol haNn : namenodes) {
+        haNn.finalizeUpgrade();
+      }
+    } else {
+      dfs.finalizeUpgrade();
+    }
     
     return 0;
   }

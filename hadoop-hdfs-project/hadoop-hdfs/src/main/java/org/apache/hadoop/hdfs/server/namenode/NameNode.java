@@ -662,7 +662,7 @@ public class NameNode implements NameNodeStatusMXBean {
     String nsId = getNameServiceId(conf);
     String namenodeId = HAUtil.getNameNodeId(conf, nsId);
     this.haEnabled = HAUtil.isHAEnabled(conf, nsId);
-    state = createHAState();
+    state = createHAState(getStartupOption(conf));
     this.allowStaleStandbyReads = HAUtil.shouldAllowStandbyReads(conf);
     this.haContext = createHAContext();
     try {
@@ -684,8 +684,12 @@ public class NameNode implements NameNodeStatusMXBean {
     }
   }
 
-  protected HAState createHAState() {
-    return !haEnabled ? ACTIVE_STATE : STANDBY_STATE;
+  protected HAState createHAState(StartupOption startOpt) {
+    if (!haEnabled || startOpt == StartupOption.UPGRADE) {
+      return ACTIVE_STATE;
+    } else {
+      return STANDBY_STATE;
+    }
   }
 
   protected HAContext createHAContext() {
@@ -1037,26 +1041,28 @@ public class NameNode implements NameNodeStatusMXBean {
       }
     }
   }
-
-  private static boolean finalize(Configuration conf,
-                               boolean isConfirmationNeeded
-                               ) throws IOException {
+  
+  @VisibleForTesting
+  public static boolean doRollback(Configuration conf,
+      boolean isConfirmationNeeded) throws IOException {
     String nsId = DFSUtil.getNamenodeNameServiceId(conf);
     String namenodeId = HAUtil.getNameNodeId(conf, nsId);
     initializeGenericKeys(conf, nsId, namenodeId);
 
     FSNamesystem nsys = new FSNamesystem(conf, new FSImage(conf));
     System.err.print(
-        "\"finalize\" will remove the previous state of the files system.\n"
-        + "Recent upgrade will become permanent.\n"
-        + "Rollback option will not be available anymore.\n");
+        "\"rollBack\" will remove the current state of the file system,\n"
+        + "returning you to the state prior to initiating your recent.\n"
+        + "upgrade. This action is permanent and cannot be undone. If you\n"
+        + "are performing a rollback in an HA environment, you should be\n"
+        + "certain that no NameNode process is running on any host.");
     if (isConfirmationNeeded) {
-      if (!confirmPrompt("Finalize filesystem state?")) {
-        System.err.println("Finalize aborted.");
+      if (!confirmPrompt("Roll back file system state?")) {
+        System.err.println("Rollback aborted.");
         return true;
       }
     }
-    nsys.dir.fsImage.finalizeUpgrade();
+    nsys.dir.fsImage.doRollback(nsys);
     return false;
   }
 
@@ -1244,14 +1250,6 @@ public class NameNode implements NameNodeStatusMXBean {
       return null;
     }
     setStartupOption(conf, startOpt);
-    
-    if (HAUtil.isHAEnabled(conf, DFSUtil.getNamenodeNameServiceId(conf)) &&
-        (startOpt == StartupOption.UPGRADE ||
-         startOpt == StartupOption.ROLLBACK ||
-         startOpt == StartupOption.FINALIZE)) {
-      throw new HadoopIllegalArgumentException("Invalid startup option. " +
-          "Cannot perform DFS upgrade with HA enabled.");
-    }
 
     switch (startOpt) {
       case FORMAT: {
@@ -1267,9 +1265,16 @@ public class NameNode implements NameNodeStatusMXBean {
         return null;
       }
       case FINALIZE: {
-        boolean aborted = finalize(conf, true);
-        terminate(aborted ? 1 : 0);
+        System.err.println("Use of the argument '" + StartupOption.FINALIZE +
+            "' is no longer supported. To finalize an upgrade, start the NN " +
+            " and then run `hdfs dfsadmin -finalizeUpgrade'");
+        terminate(1);
         return null; // avoid javac warning
+      }
+      case ROLLBACK: {
+        boolean aborted = doRollback(conf, true);
+        terminate(aborted ? 1 : 0);
+        return null; // avoid warning
       }
       case BOOTSTRAPSTANDBY: {
         String toolArgs[] = Arrays.copyOfRange(argv, 1, argv.length);
