@@ -441,6 +441,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-6135. In HDFS upgrade with HA setup, JournalNode cannot handle layout
     version bump when rolling back. (jing9)
 
+    HDFS-5846. Assigning DEFAULT_RACK in resolveNetworkLocation method can break
+    data resiliency. (Nikola Vujic via cnauroth)
+
   BREAKDOWN OF HDFS-5698 SUBTASKS AND RELATED JIRAS
 
     HDFS-5717. Save FSImage header in protobuf. (Haohui Mai via jing9)
