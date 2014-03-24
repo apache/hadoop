@@ -37,7 +37,7 @@ import org.junit.Test;
  * Tests if DataNode process exits if all Block Pool services exit. 
  */
 public class TestDataNodeExit {
-  private static long WAIT_TIME_IN_MILLIS = 10;
+  private static final long WAIT_TIME_IN_MILLIS = 10;
   Configuration conf;
   MiniDFSCluster cluster = null;
   

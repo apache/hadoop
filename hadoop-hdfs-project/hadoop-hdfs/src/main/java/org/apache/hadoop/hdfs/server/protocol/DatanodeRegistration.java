@@ -35,9 +35,9 @@ import org.apache.hadoop.hdfs.server.common.StorageInfo;
 public class DatanodeRegistration extends DatanodeID
     implements NodeRegistration {
 
-  private StorageInfo storageInfo;
+  private final StorageInfo storageInfo;
   private ExportedBlockKeys exportedKeys;
-  private String softwareVersion;
+  private final String softwareVersion;
 
   public DatanodeRegistration(DatanodeID dn, StorageInfo info,
       ExportedBlockKeys keys, String softwareVersion) {

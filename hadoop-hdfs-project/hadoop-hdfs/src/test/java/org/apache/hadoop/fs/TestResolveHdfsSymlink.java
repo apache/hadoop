@@ -50,7 +50,7 @@ import org.junit.Test;
  * underlying file system as Hdfs.
  */
 public class TestResolveHdfsSymlink {
-  private static FileContextTestHelper helper = new FileContextTestHelper();
+  private static final FileContextTestHelper helper = new FileContextTestHelper();
   private static MiniDFSCluster cluster = null;
 
   @BeforeClass

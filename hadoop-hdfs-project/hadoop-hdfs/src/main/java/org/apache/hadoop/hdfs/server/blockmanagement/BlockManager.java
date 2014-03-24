@@ -116,8 +116,8 @@ public class BlockManager {
   private volatile long corruptReplicaBlocksCount = 0L;
   private volatile long underReplicatedBlocksCount = 0L;
   private volatile long scheduledReplicationBlocksCount = 0L;
-  private AtomicLong excessBlocksCount = new AtomicLong(0L);
-  private AtomicLong postponedMisreplicatedBlocksCount = new AtomicLong(0L);
+  private final AtomicLong excessBlocksCount = new AtomicLong(0L);
+  private final AtomicLong postponedMisreplicatedBlocksCount = new AtomicLong(0L);
   
   /** Used by metrics */
   public long getPendingReplicationBlocksCount() {
@@ -3416,16 +3416,16 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
 
   private static class ReplicationWork {
 
-    private Block block;
-    private BlockCollection bc;
+    private final Block block;
+    private final BlockCollection bc;
 
-    private DatanodeDescriptor srcNode;
-    private List<DatanodeDescriptor> containingNodes;
-    private List<DatanodeStorageInfo> liveReplicaStorages;
-    private int additionalReplRequired;
+    private final DatanodeDescriptor srcNode;
+    private final List<DatanodeDescriptor> containingNodes;
+    private final List<DatanodeStorageInfo> liveReplicaStorages;
+    private final int additionalReplRequired;
 
     private DatanodeStorageInfo targets[];
-    private int priority;
+    private final int priority;
 
     public ReplicationWork(Block block,
         BlockCollection bc,

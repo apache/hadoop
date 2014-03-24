@@ -93,7 +93,7 @@ public abstract class BlockReportTestBase {
   protected MiniDFSCluster cluster;
   private DistributedFileSystem fs;
 
-  private static Random rand = new Random(RAND_LIMIT);
+  private static final Random rand = new Random(RAND_LIMIT);
 
   private static Configuration conf;
 
@@ -832,7 +832,7 @@ public abstract class BlockReportTestBase {
   }
 
   private class BlockChecker extends Thread {
-    Path filePath;
+    final Path filePath;
 
     public BlockChecker(final Path filePath) {
       this.filePath = filePath;

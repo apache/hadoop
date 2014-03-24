@@ -37,7 +37,7 @@ public class TestLightWeightLinkedSet {
 
   private static final Log LOG = LogFactory
 	  .getLog("org.apache.hadoop.hdfs.TestLightWeightLinkedSet");
-  private ArrayList<Integer> list = new ArrayList<Integer>();
+  private final ArrayList<Integer> list = new ArrayList<Integer>();
   private final int NUM = 100;
   private LightWeightLinkedSet<Integer> set;
   private Random rand;

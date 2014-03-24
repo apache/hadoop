@@ -68,7 +68,7 @@ public class TestWebHdfsTimeouts {
   private InetSocketAddress nnHttpAddress;
   private ServerSocket serverSocket;
   private Thread serverThread;
-  private URLConnectionFactory connectionFactory = new URLConnectionFactory(new ConnectionConfigurator() {
+  private final URLConnectionFactory connectionFactory = new URLConnectionFactory(new ConnectionConfigurator() {
     @Override
     public HttpURLConnection configure(HttpURLConnection conn) throws IOException {
       conn.setReadTimeout(SHORT_SOCKET_TIMEOUT);

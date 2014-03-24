@@ -85,7 +85,7 @@ public final class CachePool {
 
   public final static class DirectiveList
       extends IntrusiveCollection<CacheDirective> {
-    private CachePool cachePool;
+    private final CachePool cachePool;
 
     private DirectiveList(CachePool cachePool) {
       this.cachePool = cachePool;

@@ -31,8 +31,8 @@ import static org.junit.Assert.*;
 
 public class TestPacketReceiver {
 
-  private static long OFFSET_IN_BLOCK = 12345L;
-  private static int SEQNO = 54321;
+  private static final long OFFSET_IN_BLOCK = 12345L;
+  private static final int SEQNO = 54321;
 
   private byte[] prepareFakePacket(byte[] data, byte[] sums) throws IOException {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();

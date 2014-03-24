@@ -79,11 +79,11 @@ public class TestDataTransferProtocol {
   
   DatanodeID datanode;
   InetSocketAddress dnAddr;
-  ByteArrayOutputStream sendBuf = new ByteArrayOutputStream(128);
+  final ByteArrayOutputStream sendBuf = new ByteArrayOutputStream(128);
   final DataOutputStream sendOut = new DataOutputStream(sendBuf);
   final Sender sender = new Sender(sendOut);
-  ByteArrayOutputStream recvBuf = new ByteArrayOutputStream(128);
-  DataOutputStream recvOut = new DataOutputStream(recvBuf);
+  final ByteArrayOutputStream recvBuf = new ByteArrayOutputStream(128);
+  final DataOutputStream recvOut = new DataOutputStream(recvBuf);
 
   private void sendRecvData(String testDescription,
                             boolean eofExpected) throws IOException {

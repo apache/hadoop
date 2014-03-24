@@ -97,13 +97,13 @@ public class TestBlockToken {
   }
 
   /** Directory where we can count our open file descriptors under Linux */
-  static File FD_DIR = new File("/proc/self/fd/");
+  static final File FD_DIR = new File("/proc/self/fd/");
 
-  long blockKeyUpdateInterval = 10 * 60 * 1000; // 10 mins
-  long blockTokenLifetime = 2 * 60 * 1000; // 2 mins
-  ExtendedBlock block1 = new ExtendedBlock("0", 0L);
-  ExtendedBlock block2 = new ExtendedBlock("10", 10L);
-  ExtendedBlock block3 = new ExtendedBlock("-10", -108L);
+  final long blockKeyUpdateInterval = 10 * 60 * 1000; // 10 mins
+  final long blockTokenLifetime = 2 * 60 * 1000; // 2 mins
+  final ExtendedBlock block1 = new ExtendedBlock("0", 0L);
+  final ExtendedBlock block2 = new ExtendedBlock("10", 10L);
+  final ExtendedBlock block3 = new ExtendedBlock("-10", -108L);
   
   @Before
   public void disableKerberos() {
@@ -114,8 +114,8 @@ public class TestBlockToken {
 
   private static class GetLengthAnswer implements
       Answer<GetReplicaVisibleLengthResponseProto> {
-    BlockTokenSecretManager sm;
-    BlockTokenIdentifier ident;
+    final BlockTokenSecretManager sm;
+    final BlockTokenIdentifier ident;
 
     public GetLengthAnswer(BlockTokenSecretManager sm,
         BlockTokenIdentifier ident) {

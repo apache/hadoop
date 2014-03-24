@@ -60,7 +60,7 @@ public class TestDecommissioningStatus {
   private static Configuration conf;
   private static Path dir;
 
-  ArrayList<String> decommissionedNodes = new ArrayList<String>(numDatanodes);
+  final ArrayList<String> decommissionedNodes = new ArrayList<String>(numDatanodes);
   
   @BeforeClass
   public static void setUp() throws Exception {

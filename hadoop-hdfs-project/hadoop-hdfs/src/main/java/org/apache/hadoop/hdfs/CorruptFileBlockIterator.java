@@ -31,7 +31,7 @@ import org.apache.hadoop.fs.RemoteIterator;
  */
 public class CorruptFileBlockIterator implements RemoteIterator<Path> {
   private final DFSClient dfs;
-  private String path;
+  private final String path;
 
   private String[] files = null;
   private int fileIdx = 0;

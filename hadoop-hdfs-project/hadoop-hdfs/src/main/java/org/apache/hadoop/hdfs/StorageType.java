@@ -31,5 +31,5 @@ public enum StorageType {
   DISK,
   SSD;
 
-  public static StorageType DEFAULT = DISK;
+  public static final StorageType DEFAULT = DISK;
 }

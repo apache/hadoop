@@ -35,7 +35,7 @@ import org.apache.hadoop.ipc.Server;
 
 @InterfaceAudience.Private
 public class TcpPeerServer implements PeerServer {
-  static Log LOG = LogFactory.getLog(TcpPeerServer.class);
+  static final Log LOG = LogFactory.getLog(TcpPeerServer.class);
 
   private final ServerSocket serverSocket;
 

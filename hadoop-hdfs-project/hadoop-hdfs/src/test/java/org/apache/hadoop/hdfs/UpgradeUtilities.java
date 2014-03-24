@@ -67,10 +67,10 @@ import com.google.common.primitives.Bytes;
 public class UpgradeUtilities {
 
   // Root scratch directory on local filesystem 
-  private static File TEST_ROOT_DIR = 
+  private static final File TEST_ROOT_DIR =
                       new File(MiniDFSCluster.getBaseDirectory());
   // The singleton master storage directory for Namenode
-  private static File namenodeStorage = new File(TEST_ROOT_DIR, "namenodeMaster");
+  private static final File namenodeStorage = new File(TEST_ROOT_DIR, "namenodeMaster");
   // A checksum of the contents in namenodeStorage directory
   private static long namenodeStorageChecksum;
   // The namespaceId of the namenodeStorage directory
@@ -82,7 +82,7 @@ public class UpgradeUtilities {
   // The fsscTime of the namenodeStorage directory
   private static long namenodeStorageFsscTime;
   // The singleton master storage directory for Datanode
-  private static File datanodeStorage = new File(TEST_ROOT_DIR, "datanodeMaster");
+  private static final File datanodeStorage = new File(TEST_ROOT_DIR, "datanodeMaster");
   // A checksum of the contents in datanodeStorage directory
   private static long datanodeStorageChecksum;
   // A checksum of the contents in blockpool storage directory

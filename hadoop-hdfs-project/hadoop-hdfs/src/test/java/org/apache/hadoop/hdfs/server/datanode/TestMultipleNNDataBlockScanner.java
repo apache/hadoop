@@ -44,8 +44,8 @@ public class TestMultipleNNDataBlockScanner {
     LogFactory.getLog(TestMultipleNNDataBlockScanner.class);
   Configuration conf;
   MiniDFSCluster cluster = null;
-  String bpids[] = new String[3];
-  FileSystem fs[] = new FileSystem[3];
+  final String[] bpids = new String[3];
+  final FileSystem[] fs = new FileSystem[3];
   
   public void setUp() throws IOException {
     conf = new HdfsConfiguration();

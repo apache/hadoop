@@ -39,7 +39,7 @@ import org.junit.Test;
  */
 public class TestUrlStreamHandler {
 
-  private static File TEST_ROOT_DIR = PathUtils.getTestDir(TestUrlStreamHandler.class);
+  private static final File TEST_ROOT_DIR = PathUtils.getTestDir(TestUrlStreamHandler.class);
     
   /**
    * Test opening and reading from an InputStream through a hdfs:// URL.

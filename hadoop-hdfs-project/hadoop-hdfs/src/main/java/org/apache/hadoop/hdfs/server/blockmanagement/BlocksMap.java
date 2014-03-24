@@ -35,7 +35,7 @@ import com.google.common.collect.Iterables;
  */
 class BlocksMap {
   private static class StorageIterator implements Iterator<DatanodeStorageInfo> {
-    private BlockInfo blockInfo;
+    private final BlockInfo blockInfo;
     private int nextIdx = 0;
       
     StorageIterator(BlockInfo blkInfo) {

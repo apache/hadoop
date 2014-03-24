@@ -903,7 +903,7 @@ public class FSImageFormat {
   }
 
   @VisibleForTesting
-  public static TreeMap<String, String> renameReservedMap =
+  public static final TreeMap<String, String> renameReservedMap =
       new TreeMap<String, String>();
 
   /**

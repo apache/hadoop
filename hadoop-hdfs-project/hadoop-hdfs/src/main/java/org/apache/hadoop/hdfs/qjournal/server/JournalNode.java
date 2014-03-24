@@ -63,7 +63,7 @@ public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
   private Configuration conf;
   private JournalNodeRpcServer rpcServer;
   private JournalNodeHttpServer httpServer;
-  private Map<String, Journal> journalsById = Maps.newHashMap();
+  private final Map<String, Journal> journalsById = Maps.newHashMap();
   private ObjectName journalNodeInfoBeanName;
   private String httpServerURI;
   private File localDir;

@@ -125,8 +125,8 @@ public class FSDirectory implements Closeable {
   private long yieldCount = 0; // keep track of lock yield count.
 
   // lock to protect the directory and BlockMap
-  private ReentrantReadWriteLock dirLock;
-  private Condition cond;
+  private final ReentrantReadWriteLock dirLock;
+  private final Condition cond;
 
   // utility methods to acquire and release read lock and write lock
   void readLock() {

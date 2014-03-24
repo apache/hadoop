@@ -249,11 +249,11 @@ public class NameNode implements NameNodeStatusMXBean {
   
   protected FSNamesystem namesystem; 
   protected final Configuration conf;
-  protected NamenodeRole role;
+  protected final NamenodeRole role;
   private volatile HAState state;
   private final boolean haEnabled;
   private final HAContext haContext;
-  protected boolean allowStaleStandbyReads;
+  protected final boolean allowStaleStandbyReads;
 
   
   /** httpServer */

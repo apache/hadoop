@@ -168,7 +168,7 @@ public class HostFileManager {
      * The different indexing strategies reflect the fact that we may or may
      * not have a port or IP address for each entry.
      */
-    TreeMap<String, Entry> index = new TreeMap<String, Entry>();
+    final TreeMap<String, Entry> index = new TreeMap<String, Entry>();
 
     public boolean isEmpty() {
       return index.isEmpty();

@@ -27,7 +27,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class BlockLocalPathInfo {
-  private ExtendedBlock block;
+  private final ExtendedBlock block;
   private String localBlockPath = "";  // local file storing the data
   private String localMetaPath = "";   // local file storing the checksum
 

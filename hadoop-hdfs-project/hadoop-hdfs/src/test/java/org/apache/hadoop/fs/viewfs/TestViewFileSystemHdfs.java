@@ -44,7 +44,7 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
   private static MiniDFSCluster cluster;
   private static Path defaultWorkingDirectory;
   private static Path defaultWorkingDirectory2;
-  private static Configuration CONF = new Configuration();
+  private static final Configuration CONF = new Configuration();
   private static FileSystem fHdfs;
   private static FileSystem fHdfs2;
   private FileSystem fsTarget2;

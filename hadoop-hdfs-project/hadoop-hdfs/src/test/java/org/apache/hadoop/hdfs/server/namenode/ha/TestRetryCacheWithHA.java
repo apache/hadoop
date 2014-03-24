@@ -92,7 +92,7 @@ public class TestRetryCacheWithHA {
   
   private MiniDFSCluster cluster;
   private DistributedFileSystem dfs;
-  private Configuration conf = new HdfsConfiguration();
+  private final Configuration conf = new HdfsConfiguration();
   
   /** 
    * A dummy invocation handler extending RetryInvocationHandler. We can use
@@ -100,7 +100,7 @@ public class TestRetryCacheWithHA {
    */
   private static class DummyRetryInvocationHandler extends
       RetryInvocationHandler<ClientProtocol> {
-    static AtomicBoolean block = new AtomicBoolean(false);
+    static final AtomicBoolean block = new AtomicBoolean(false);
 
     DummyRetryInvocationHandler(
         FailoverProxyProvider<ClientProtocol> proxyProvider,
@@ -226,8 +226,8 @@ public class TestRetryCacheWithHA {
   /** createSnapshot operaiton */
   class CreateSnapshotOp extends AtMostOnceOp {
     private String snapshotPath;
-    private String dir;
-    private String snapshotName;
+    private final String dir;
+    private final String snapshotName;
     
     CreateSnapshotOp(DFSClient client, String dir, String snapshotName) {
       super("createSnapshot", client);
@@ -269,8 +269,8 @@ public class TestRetryCacheWithHA {
   
   /** deleteSnapshot */
   class DeleteSnapshotOp extends AtMostOnceOp {
-    private String dir;
-    private String snapshotName;
+    private final String dir;
+    private final String snapshotName;
     
     DeleteSnapshotOp(DFSClient client, String dir, String snapshotName) {
       super("deleteSnapshot", client);
@@ -317,9 +317,9 @@ public class TestRetryCacheWithHA {
   
   /** renameSnapshot */
   class RenameSnapshotOp extends AtMostOnceOp {
-    private String dir;
-    private String oldName;
-    private String newName;
+    private final String dir;
+    private final String oldName;
+    private final String newName;
     
     RenameSnapshotOp(DFSClient client, String dir, String oldName,
         String newName) {
@@ -368,7 +368,7 @@ public class TestRetryCacheWithHA {
   
   /** create file operation (without OverWrite) */
   class CreateOp extends AtMostOnceOp {
-    private String fileName;
+    private final String fileName;
     private HdfsFileStatus status;
     
     CreateOp(DFSClient client, String fileName) {
@@ -416,7 +416,7 @@ public class TestRetryCacheWithHA {
   
   /** append operation */
   class AppendOp extends AtMostOnceOp {
-    private String fileName;
+    private final String fileName;
     private LocatedBlock lbk;
     
     AppendOp(DFSClient client, String fileName) {
@@ -460,8 +460,8 @@ public class TestRetryCacheWithHA {
   
   /** rename */
   class RenameOp extends AtMostOnceOp {
-    private String oldName;
-    private String newName;
+    private final String oldName;
+    private final String newName;
     private boolean renamed;
     
     RenameOp(DFSClient client, String oldName, String newName) {
@@ -503,8 +503,8 @@ public class TestRetryCacheWithHA {
   
   /** rename2 */
   class Rename2Op extends AtMostOnceOp {
-    private String oldName;
-    private String newName;
+    private final String oldName;
+    private final String newName;
     
     Rename2Op(DFSClient client, String oldName, String newName) {
       super("rename2", client);
@@ -544,9 +544,9 @@ public class TestRetryCacheWithHA {
   
   /** concat */
   class ConcatOp extends AtMostOnceOp {
-    private String target;
-    private String[] srcs;
-    private Path[] srcPaths;
+    private final String target;
+    private final String[] srcs;
+    private final Path[] srcPaths;
     
     ConcatOp(DFSClient client, Path target, int numSrc) {
       super("concat", client);
@@ -596,7 +596,7 @@ public class TestRetryCacheWithHA {
   
   /** delete */
   class DeleteOp extends AtMostOnceOp {
-    private String target;
+    private final String target;
     private boolean deleted;
     
     DeleteOp(DFSClient client, String target) {
@@ -636,8 +636,8 @@ public class TestRetryCacheWithHA {
   
   /** createSymlink */
   class CreateSymlinkOp extends AtMostOnceOp {
-    private String target;
-    private String link;
+    private final String target;
+    private final String link;
     
     public CreateSymlinkOp(DFSClient client, String target, String link) {
       super("createSymlink", client);
@@ -681,7 +681,7 @@ public class TestRetryCacheWithHA {
   
   /** updatePipeline */
   class UpdatePipelineOp extends AtMostOnceOp {
-    private String file;
+    private final String file;
     private ExtendedBlock oldBlock;
     private ExtendedBlock newBlock;
     private DatanodeInfo[] nodes;
@@ -750,7 +750,7 @@ public class TestRetryCacheWithHA {
   
   /** addCacheDirective */
   class AddCacheDirectiveInfoOp extends AtMostOnceOp {
-    private CacheDirectiveInfo directive;
+    private final CacheDirectiveInfo directive;
     private Long result;
 
     AddCacheDirectiveInfoOp(DFSClient client,
@@ -849,7 +849,7 @@ public class TestRetryCacheWithHA {
 
   /** removeCacheDirective */
   class RemoveCacheDirectiveInfoOp extends AtMostOnceOp {
-    private CacheDirectiveInfo directive;
+    private final CacheDirectiveInfo directive;
     private long id;
 
     RemoveCacheDirectiveInfoOp(DFSClient client, String pool,
@@ -897,7 +897,7 @@ public class TestRetryCacheWithHA {
 
   /** addCachePool */
   class AddCachePoolOp extends AtMostOnceOp {
-    private String pool;
+    private final String pool;
 
     AddCachePoolOp(DFSClient client, String pool) {
       super("addCachePool", client);
@@ -933,7 +933,7 @@ public class TestRetryCacheWithHA {
 
   /** modifyCachePool */
   class ModifyCachePoolOp extends AtMostOnceOp {
-    String pool;
+    final String pool;
 
     ModifyCachePoolOp(DFSClient client, String pool) {
       super("modifyCachePool", client);
@@ -970,7 +970,7 @@ public class TestRetryCacheWithHA {
 
   /** removeCachePool */
   class RemoveCachePoolOp extends AtMostOnceOp {
-    private String pool;
+    private final String pool;
 
     RemoveCachePoolOp(DFSClient client, String pool) {
       super("removeCachePool", client);

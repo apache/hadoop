@@ -47,7 +47,7 @@ public class TestCorruptReplicaInfo {
   private static final Log LOG = 
                            LogFactory.getLog(TestCorruptReplicaInfo.class);
   
-  private Map<Long, Block> block_map =
+  private final Map<Long, Block> block_map =
     new HashMap<Long, Block>();  
     
   // Allow easy block creation by block id

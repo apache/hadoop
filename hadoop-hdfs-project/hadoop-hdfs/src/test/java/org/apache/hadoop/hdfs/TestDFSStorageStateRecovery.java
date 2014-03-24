@@ -77,7 +77,7 @@ public class TestDFSStorageStateRecovery {
    *  5) current directory should exist after recovery but before startup
    *  6) previous directory should exist after recovery but before startup
    */
-  static boolean[][] testCases = new boolean[][] {
+  static final boolean[][] testCases = new boolean[][] {
     new boolean[] {true,  false, false, false, true,  true,  false}, // 1
     new boolean[] {true,  true,  false, false, true,  true,  true }, // 2
     new boolean[] {true,  false, true,  false, true,  true,  true }, // 3

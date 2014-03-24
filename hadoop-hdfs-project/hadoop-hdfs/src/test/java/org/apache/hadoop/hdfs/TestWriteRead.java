@@ -62,7 +62,7 @@ public class TestWriteRead {
   private boolean verboseOption = true;
   private boolean positionReadOption = false;
   private boolean truncateOption = false;
-  private boolean abortTestOnFailure = true; 
+  private final boolean abortTestOnFailure = true;
 
   static private Log LOG = LogFactory.getLog(TestWriteRead.class);
 

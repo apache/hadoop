@@ -117,7 +117,7 @@ public class NNStorage extends Storage implements Closeable,
    * flag that controls if we try to restore failed storages
    */
   private boolean restoreFailedStorage = false;
-  private Object restorationLock = new Object();
+  private final Object restorationLock = new Object();
   private boolean disablePreUpgradableLayoutCheck = false;
 
 

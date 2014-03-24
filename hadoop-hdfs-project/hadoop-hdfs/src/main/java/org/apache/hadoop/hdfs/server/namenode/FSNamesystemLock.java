@@ -50,7 +50,7 @@ class FSNamesystemLock implements ReadWriteLock {
    * See HDFS-5064 for more context.
    */
   @VisibleForTesting
-  protected ReentrantLock longReadLock = new ReentrantLock(true);
+  protected final ReentrantLock longReadLock = new ReentrantLock(true);
   
   FSNamesystemLock(boolean fair) {
     this.coarseLock = new ReentrantReadWriteLock(fair);

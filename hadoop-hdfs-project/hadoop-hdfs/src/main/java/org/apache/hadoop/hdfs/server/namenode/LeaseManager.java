@@ -77,15 +77,15 @@ public class LeaseManager {
   // Used for handling lock-leases
   // Mapping: leaseHolder -> Lease
   //
-  private SortedMap<String, Lease> leases = new TreeMap<String, Lease>();
+  private final SortedMap<String, Lease> leases = new TreeMap<String, Lease>();
   // Set of: Lease
-  private SortedSet<Lease> sortedLeases = new TreeSet<Lease>();
+  private final SortedSet<Lease> sortedLeases = new TreeSet<Lease>();
 
   // 
   // Map path names to leases. It is protected by the sortedLeases lock.
   // The map stores pathnames in lexicographical order.
   //
-  private SortedMap<String, Lease> sortedLeasesByPath = new TreeMap<String, Lease>();
+  private final SortedMap<String, Lease> sortedLeasesByPath = new TreeMap<String, Lease>();
 
   private Daemon lmthread;
   private volatile boolean shouldRunMonitor;

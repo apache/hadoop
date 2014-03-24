@@ -69,7 +69,7 @@ public class TestInterDatanodeProtocol {
   private static final String ADDRESS = "0.0.0.0";
   final static private int PING_INTERVAL = 1000;
   final static private int MIN_SLEEP_TIME = 1000;
-  private static Configuration conf = new HdfsConfiguration();
+  private static final Configuration conf = new HdfsConfiguration();
 
 
   private static class TestServer extends Server {

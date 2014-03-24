@@ -28,12 +28,12 @@ import org.apache.hadoop.hdfs.protocol.RollingUpgradeStatus;
  */
 public class HeartbeatResponse {
   /** Commands returned from the namenode to the datanode */
-  private DatanodeCommand[] commands;
+  private final DatanodeCommand[] commands;
   
   /** Information about the current HA-related state of the NN */
-  private NNHAStatusHeartbeat haStatus;
+  private final NNHAStatusHeartbeat haStatus;
 
-  private RollingUpgradeStatus rollingUpdateStatus;
+  private final RollingUpgradeStatus rollingUpdateStatus;
   
   public HeartbeatResponse(DatanodeCommand[] cmds,
       NNHAStatusHeartbeat haStatus, RollingUpgradeStatus rollingUpdateStatus) {

@@ -49,7 +49,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 @InterfaceAudience.Private
 public class StartupProgress {
   // package-private for access by StartupProgressView
-  Map<Phase, PhaseTracking> phases =
+  final Map<Phase, PhaseTracking> phases =
     new ConcurrentHashMap<Phase, PhaseTracking>();
 
   /**

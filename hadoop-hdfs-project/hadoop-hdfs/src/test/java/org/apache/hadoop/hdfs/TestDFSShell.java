@@ -63,7 +63,7 @@ import static org.junit.Assert.*;
  */
 public class TestDFSShell {
   private static final Log LOG = LogFactory.getLog(TestDFSShell.class);
-  private static AtomicInteger counter = new AtomicInteger();
+  private static final AtomicInteger counter = new AtomicInteger();
   private final int SUCCESS = 0;
   private final int ERROR = 1;
 
@@ -1475,7 +1475,7 @@ public class TestDFSShell {
 
     TestGetRunner runner = new TestGetRunner() {
     	private int count = 0;
-    	private FsShell shell = new FsShell(conf);
+    	private final FsShell shell = new FsShell(conf);
 
     	public String run(int exitcode, String... options) throws IOException {
     	  String dst = TEST_ROOT_DIR + "/" + fname+ ++count;

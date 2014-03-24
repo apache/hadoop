@@ -177,7 +177,7 @@ public class JournalSet implements JournalManager {
   // COW implementation is necessary since some users (eg the web ui) call
   // getAllJournalStreams() and then iterate. Since this is rarely
   // mutated, there is no performance concern.
-  private List<JournalAndStream> journals =
+  private final List<JournalAndStream> journals =
       new CopyOnWriteArrayList<JournalSet.JournalAndStream>();
   final int minimumRedundantJournals;
   

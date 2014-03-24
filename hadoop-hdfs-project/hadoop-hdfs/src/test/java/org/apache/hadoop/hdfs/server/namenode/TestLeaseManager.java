@@ -28,7 +28,7 @@ import org.mockito.Mockito;
 
 
 public class TestLeaseManager {
-  Configuration conf = new HdfsConfiguration();
+  final Configuration conf = new HdfsConfiguration();
   
   @Test
   public void testRemoveLeaseWithPrefixPath() throws Exception {

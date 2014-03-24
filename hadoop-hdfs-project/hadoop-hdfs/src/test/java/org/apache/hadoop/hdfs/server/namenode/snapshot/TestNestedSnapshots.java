@@ -59,12 +59,12 @@ public class TestNestedSnapshots {
   }
 
   private static final long SEED = 0;
-  private static Random RANDOM = new Random(SEED);
+  private static final Random RANDOM = new Random(SEED);
 
   private static final short REPLICATION = 3;
   private static final long BLOCKSIZE = 1024;
   
-  private static Configuration conf = new Configuration();
+  private static final Configuration conf = new Configuration();
   private static MiniDFSCluster cluster;
   private static DistributedFileSystem hdfs;
   

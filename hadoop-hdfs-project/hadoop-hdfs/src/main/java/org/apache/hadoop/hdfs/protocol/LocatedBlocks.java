@@ -30,9 +30,9 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class LocatedBlocks {
-  private long fileLength;
-  private List<LocatedBlock> blocks; // array of blocks with prioritized locations
-  private boolean underConstruction;
+  private final long fileLength;
+  private final List<LocatedBlock> blocks; // array of blocks with prioritized locations
+  private final boolean underConstruction;
   private LocatedBlock lastLocatedBlock = null;
   private boolean isLastBlockComplete = false;
 

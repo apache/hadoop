@@ -23,7 +23,7 @@ package org.apache.hadoop.hdfs.server.protocol;
  * storage.
  */
 public class StorageReceivedDeletedBlocks {
-  DatanodeStorage storage;
+  final DatanodeStorage storage;
   private final ReceivedDeletedBlockInfo[] blocks;
 
   @Deprecated

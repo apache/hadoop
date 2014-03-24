@@ -60,18 +60,18 @@ public class TestDatanodeDeath {
   static final int numDatanodes = 15;
   static final short replication = 3;
 
-  int numberOfFiles = 3;
-  int numThreads = 5;
+  final int numberOfFiles = 3;
+  final int numThreads = 5;
   Workload[] workload = null;
 
   //
   // an object that does a bunch of transactions
   //
   static class Workload extends Thread {
-    private short replication;
-    private int numberOfFiles;
-    private int id;
-    private FileSystem fs;
+    private final short replication;
+    private final int numberOfFiles;
+    private final int id;
+    private final FileSystem fs;
     private long stamp;
     private final long myseed;
 
@@ -220,8 +220,8 @@ public class TestDatanodeDeath {
    */
   class Modify extends Thread {
     volatile boolean running;
-    MiniDFSCluster cluster;
-    Configuration conf;
+    final MiniDFSCluster cluster;
+    final Configuration conf;
 
     Modify(Configuration conf, MiniDFSCluster cluster) {
       running = true;

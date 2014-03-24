@@ -53,7 +53,7 @@ import org.junit.Test;
  */
 public class TestIsMethodSupported {
   private static MiniDFSCluster cluster = null;
-  private static HdfsConfiguration conf = new HdfsConfiguration();
+  private static final HdfsConfiguration conf = new HdfsConfiguration();
   private static InetSocketAddress nnAddress = null;
   private static InetSocketAddress dnAddress = null;
   

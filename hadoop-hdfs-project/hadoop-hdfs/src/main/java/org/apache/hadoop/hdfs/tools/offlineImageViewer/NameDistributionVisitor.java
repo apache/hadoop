@@ -34,7 +34,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class NameDistributionVisitor extends TextWriterImageVisitor {
-  HashMap<String, Integer> counts = new HashMap<String, Integer>();
+  final HashMap<String, Integer> counts = new HashMap<String, Integer>();
 
   public NameDistributionVisitor(String filename, boolean printToScreen)
       throws IOException {

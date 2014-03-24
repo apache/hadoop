@@ -44,16 +44,16 @@ public class SnapshottableDirectoryStatus {
   };
 
   /** Basic information of the snapshottable directory */
-  private HdfsFileStatus dirStatus;
+  private final HdfsFileStatus dirStatus;
   
   /** Number of snapshots that have been taken*/
-  private int snapshotNumber;
+  private final int snapshotNumber;
   
   /** Number of snapshots allowed. */
-  private int snapshotQuota;
+  private final int snapshotQuota;
   
   /** Full path of the parent. */
-  private byte[] parentFullPath;
+  private final byte[] parentFullPath;
   
   public SnapshottableDirectoryStatus(long modification_time, long access_time,
       FsPermission permission, String owner, String group, byte[] localName,

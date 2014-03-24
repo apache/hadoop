@@ -457,7 +457,7 @@ public class TestDFSClientRetries {
    */
   private static class FailNTimesAnswer implements Answer<LocatedBlocks> {
     private int failuresLeft;
-    private NamenodeProtocols realNN;
+    private final NamenodeProtocols realNN;
 
     public FailNTimesAnswer(NamenodeProtocols preSpyNN, int timesToFail) {
       failuresLeft = timesToFail;
@@ -675,13 +675,13 @@ public class TestDFSClientRetries {
   class DFSClientReader implements Runnable {
     
     DFSClient client;
-    Configuration conf;
-    byte[] expected_sha;
+    final Configuration conf;
+    final byte[] expected_sha;
     FileSystem  fs;
-    Path filePath;
-    MiniDFSCluster cluster;
-    int len;
-    Counter counter;
+    final Path filePath;
+    final MiniDFSCluster cluster;
+    final int len;
+    final Counter counter;
 
     DFSClientReader(Path file, MiniDFSCluster cluster, byte[] hash_sha, int fileLen, Counter cnt) {
       filePath = file;

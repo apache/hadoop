@@ -53,7 +53,7 @@ public class DFSZKFailoverController extends ZKFailoverController {
 
   private static final Log LOG =
     LogFactory.getLog(DFSZKFailoverController.class);
-  private AccessControlList adminAcl;
+  private final AccessControlList adminAcl;
   /* the same as superclass's localTarget, but with the more specfic NN type */
   private final NNHAServiceTarget localNNTarget;
 

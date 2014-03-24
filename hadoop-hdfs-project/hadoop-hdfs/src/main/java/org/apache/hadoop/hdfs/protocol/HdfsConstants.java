@@ -48,7 +48,7 @@ public class HdfsConstants {
       "org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol";
   
   
-  public static int MIN_BLOCKS_FOR_WRITE = 5;
+  public static final int MIN_BLOCKS_FOR_WRITE = 5;
 
   // Long that indicates "leave current quota unchanged"
   public static final long QUOTA_DONT_SET = Long.MAX_VALUE;
@@ -65,8 +65,8 @@ public class HdfsConstants {
   // HADOOP-438
   // Currently we set the maximum length to 8k characters and the maximum depth
   // to 1k.
-  public static int MAX_PATH_LENGTH = 8000;
-  public static int MAX_PATH_DEPTH = 1000;
+  public static final int MAX_PATH_LENGTH = 8000;
+  public static final int MAX_PATH_DEPTH = 1000;
 
   // TODO should be conf injected?
   public static final int DEFAULT_DATA_SOCKET_SIZE = 128 * 1024;

@@ -78,7 +78,7 @@ class UnderReplicatedBlocks implements Iterable<Block> {
   /** The queue for corrupt blocks: {@value} */
   static final int QUEUE_WITH_CORRUPT_BLOCKS = 4;
   /** the queues themselves */
-  private List<LightWeightLinkedSet<Block>> priorityQueues
+  private final List<LightWeightLinkedSet<Block>> priorityQueues
       = new ArrayList<LightWeightLinkedSet<Block>>(LEVEL);
 
   /** Create an object. */
@@ -378,7 +378,7 @@ class UnderReplicatedBlocks implements Iterable<Block> {
   class BlockIterator implements Iterator<Block> {
     private int level;
     private boolean isIteratorForLevel = false;
-    private List<Iterator<Block>> iterators = new ArrayList<Iterator<Block>>();
+    private final List<Iterator<Block>> iterators = new ArrayList<Iterator<Block>>();
 
     /**
      * Construct an iterator over all queues.

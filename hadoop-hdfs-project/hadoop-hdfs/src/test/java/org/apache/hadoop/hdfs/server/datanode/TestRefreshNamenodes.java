@@ -39,10 +39,10 @@ import com.google.common.collect.Sets;
  * Tests datanode refresh namenode list functionality.
  */
 public class TestRefreshNamenodes {
-  private int nnPort1 = 2221;
-  private int nnPort2 = 2224;
-  private int nnPort3 = 2227;
-  private int nnPort4 = 2230;
+  private final int nnPort1 = 2221;
+  private final int nnPort2 = 2224;
+  private final int nnPort3 = 2227;
+  private final int nnPort4 = 2230;
 
   @Test
   public void testRefreshNamenodes() throws IOException {

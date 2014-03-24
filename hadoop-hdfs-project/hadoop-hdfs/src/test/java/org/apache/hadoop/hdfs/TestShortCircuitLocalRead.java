@@ -88,7 +88,7 @@ public class TestShortCircuitLocalRead {
   
   static final long seed = 0xDEADBEEFL;
   static final int blockSize = 5120;
-  boolean simulatedStorage = false;
+  final boolean simulatedStorage = false;
   
   // creates a file but does not close it
   static FSDataOutputStream createFile(FileSystem fileSys, Path name, int repl)

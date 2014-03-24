@@ -45,7 +45,7 @@ public class TestHDFSFileContextMainOperations extends
     FileContextMainOperationsBaseTest {
   private static MiniDFSCluster cluster;
   private static Path defaultWorkingDirectory;
-  private static HdfsConfiguration CONF = new HdfsConfiguration();
+  private static final HdfsConfiguration CONF = new HdfsConfiguration();
   
   @Override
   protected FileContextTestHelper createFileContextHelper() {

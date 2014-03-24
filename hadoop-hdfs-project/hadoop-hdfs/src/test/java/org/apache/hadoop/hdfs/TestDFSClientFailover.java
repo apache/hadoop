@@ -66,7 +66,7 @@ public class TestDFSClientFailover {
   private static final Path TEST_FILE = new Path("/tmp/failover-test-file");
   private static final int FILE_LENGTH_TO_VERIFY = 100;
   
-  private Configuration conf = new Configuration();
+  private final Configuration conf = new Configuration();
   private MiniDFSCluster cluster;
   
   @Before
@@ -136,7 +136,7 @@ public class TestDFSClientFailover {
   
   private static class InjectingSocketFactory extends StandardSocketFactory {
 
-    static SocketFactory defaultFactory = SocketFactory.getDefault();
+    static final SocketFactory defaultFactory = SocketFactory.getDefault();
 
     static int portToInjectOn;
     

@@ -75,7 +75,7 @@ public class TestReplicationPolicy {
     ((Log4JLogger)BlockPlacementPolicy.LOG).getLogger().setLevel(Level.ALL);
   }
 
-  private Random random = DFSUtil.getRandom();
+  private final Random random = DFSUtil.getRandom();
   private static final int BLOCK_SIZE = 1024;
   private static final int NUM_OF_DATANODES = 6;
   private static NetworkTopology cluster;
@@ -85,7 +85,7 @@ public class TestReplicationPolicy {
   private static DatanodeDescriptor dataNodes[];
   private static DatanodeStorageInfo[] storages;
   // The interval for marking a datanode as stale,
-  private static long staleInterval = 
+  private static final long staleInterval =
       DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_DEFAULT;
 
   @Rule

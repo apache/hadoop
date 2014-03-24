@@ -60,7 +60,7 @@ public class TestNameEditsConfigs {
   static final String FILE_EDITS = "current/edits";
 
   short replication = 3;
-  private File base_dir = new File(
+  private final File base_dir = new File(
       PathUtils.getTestDir(TestNameEditsConfigs.class), "dfs");
 
   @Before

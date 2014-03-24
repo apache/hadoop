@@ -39,7 +39,7 @@ public class JournalNodeHttpServer {
   public static final String JN_ATTRIBUTE_KEY = "localjournal";
 
   private HttpServer2 httpServer;
-  private JournalNode localJournalNode;
+  private final JournalNode localJournalNode;
 
   private final Configuration conf;
 

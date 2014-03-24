@@ -75,7 +75,7 @@ import com.google.common.base.Strings;
 
 public class TestJspHelper {
 
-  private Configuration conf = new HdfsConfiguration();
+  private final Configuration conf = new HdfsConfiguration();
   private String jspWriterOutput = "";
 
   public static class DummySecretManager extends

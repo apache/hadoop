@@ -62,7 +62,7 @@ class BlockPoolSlice {
   private final LDir finalizedDir; // directory store Finalized replica
   private final File rbwDir; // directory store RBW replica
   private final File tmpDir; // directory store Temporary replica
-  private static String DU_CACHE_FILE = "dfsUsed";
+  private static final String DU_CACHE_FILE = "dfsUsed";
   private volatile boolean dfsUsedSaved = false;
   private static final int SHUTDOWN_HOOK_PRIORITY = 30;
   

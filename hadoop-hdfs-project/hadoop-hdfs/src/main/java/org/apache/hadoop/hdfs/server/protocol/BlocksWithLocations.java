@@ -78,7 +78,7 @@ public class BlocksWithLocations {
     }
   }
 
-  private BlockWithLocations[] blocks;
+  private final BlockWithLocations[] blocks;
 
   /** Constructor with one parameter */
   public BlocksWithLocations(BlockWithLocations[] blocks) {

@@ -62,7 +62,7 @@ public class TestViewFsDefaultValue {
   static final String testFileName = testFileDir + "testFileStatusSerialziation";
   private static MiniDFSCluster cluster;
   private static final FileSystemTestHelper fileSystemTestHelper = new FileSystemTestHelper(); 
-  private static Configuration CONF = new Configuration();
+  private static final Configuration CONF = new Configuration();
   private static FileSystem fHdfs;
   private static FileSystem vfs;
   private static Path testFilePath;

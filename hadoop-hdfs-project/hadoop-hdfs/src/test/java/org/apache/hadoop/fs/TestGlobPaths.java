@@ -60,7 +60,7 @@ public class TestGlobPaths {
   static private FileContext unprivilegedFc;
   static final private int NUM_OF_PATHS = 4;
   static private String USER_DIR;
-  private Path[] path = new Path[NUM_OF_PATHS];
+  private final Path[] path = new Path[NUM_OF_PATHS];
 
   @BeforeClass
   public static void setUp() throws Exception {

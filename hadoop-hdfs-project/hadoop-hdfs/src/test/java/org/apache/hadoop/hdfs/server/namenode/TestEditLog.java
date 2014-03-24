@@ -173,11 +173,11 @@ public class TestEditLog {
   // an object that does a bunch of transactions
   //
   static class Transactions implements Runnable {
-    FSNamesystem namesystem;
-    int numTransactions;
-    short replication = 3;
-    long blockSize = 64;
-    int startIndex;
+    final FSNamesystem namesystem;
+    final int numTransactions;
+    final short replication = 3;
+    final long blockSize = 64;
+    final int startIndex;
 
     Transactions(FSNamesystem ns, int numTx, int startIdx) {
       namesystem = ns;
@@ -848,8 +848,8 @@ public class TestEditLog {
 
   
   private static class EditLogByteInputStream extends EditLogInputStream {
-    private InputStream input;
-    private long len;
+    private final InputStream input;
+    private final long len;
     private int version;
     private FSEditLogOp.Reader reader = null;
     private FSEditLogLoader.PositionTrackingInputStream tracker = null;

@@ -91,7 +91,7 @@ public class TestNameNodeMetrics {
   
   private MiniDFSCluster cluster;
   private DistributedFileSystem fs;
-  private Random rand = new Random();
+  private final Random rand = new Random();
   private FSNamesystem namesystem;
   private BlockManager bm;
 

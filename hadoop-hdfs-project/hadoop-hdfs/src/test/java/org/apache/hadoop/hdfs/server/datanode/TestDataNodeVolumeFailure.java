@@ -70,9 +70,9 @@ public class TestDataNodeVolumeFailure {
   final private int block_size = 512;
   MiniDFSCluster cluster = null;
   private Configuration conf;
-  int dn_num = 2;
-  int blocks_num = 30;
-  short repl=2;
+  final int dn_num = 2;
+  final int blocks_num = 30;
+  final short repl=2;
   File dataDir = null;
   File data_fail = null;
   File failedDir = null;
@@ -83,7 +83,7 @@ public class TestDataNodeVolumeFailure {
     public int num_locs = 0;
   }
   // block id to BlockLocs
-  Map<String, BlockLocs> block_map = new HashMap<String, BlockLocs> ();
+  final Map<String, BlockLocs> block_map = new HashMap<String, BlockLocs> ();
 
   @Before
   public void setUp() throws Exception {

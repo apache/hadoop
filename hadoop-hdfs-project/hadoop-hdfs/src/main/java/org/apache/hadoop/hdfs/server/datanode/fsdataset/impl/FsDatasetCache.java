@@ -145,7 +145,7 @@ public class FsDatasetCache {
   private class UsedBytesCount {
     private final AtomicLong usedBytes = new AtomicLong(0);
     
-    private PageRounder rounder = new PageRounder();
+    private final PageRounder rounder = new PageRounder();
 
     /**
      * Try to reserve more bytes.
@@ -196,11 +196,11 @@ public class FsDatasetCache {
   /**
    * Number of cache commands that could not be completed successfully
    */
-  AtomicLong numBlocksFailedToCache = new AtomicLong(0);
+  final AtomicLong numBlocksFailedToCache = new AtomicLong(0);
   /**
    * Number of uncache commands that could not be completed successfully
    */
-  AtomicLong numBlocksFailedToUncache = new AtomicLong(0);
+  final AtomicLong numBlocksFailedToUncache = new AtomicLong(0);
 
   public FsDatasetCache(FsDatasetImpl dataset) {
     this.dataset = dataset;

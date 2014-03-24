@@ -37,10 +37,10 @@ import org.mockito.stubbing.Answer;
 
 
 public class TestBlockPoolManager {
-  private Log LOG = LogFactory.getLog(TestBlockPoolManager.class);
-  private DataNode mockDN = Mockito.mock(DataNode.class);
+  private final Log LOG = LogFactory.getLog(TestBlockPoolManager.class);
+  private final DataNode mockDN = Mockito.mock(DataNode.class);
   private BlockPoolManager bpm;
-  private StringBuilder log = new StringBuilder();
+  private final StringBuilder log = new StringBuilder();
   private int mockIdx = 1;
   
   @Before

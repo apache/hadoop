@@ -55,8 +55,8 @@ public class TestDFSHAAdmin {
   private static final Log LOG = LogFactory.getLog(TestDFSHAAdmin.class);
   
   private DFSHAAdmin tool;
-  private ByteArrayOutputStream errOutBytes = new ByteArrayOutputStream();
-  private ByteArrayOutputStream outBytes = new ByteArrayOutputStream();
+  private final ByteArrayOutputStream errOutBytes = new ByteArrayOutputStream();
+  private final ByteArrayOutputStream outBytes = new ByteArrayOutputStream();
   private String errOutput;
   private String output;
   private HAServiceProtocol mockProtocol;
@@ -68,22 +68,22 @@ public class TestDFSHAAdmin {
     new HAServiceStatus(HAServiceState.STANDBY)
     .setReadyToBecomeActive();
   
-  private ArgumentCaptor<StateChangeRequestInfo> reqInfoCaptor =
+  private final ArgumentCaptor<StateChangeRequestInfo> reqInfoCaptor =
     ArgumentCaptor.forClass(StateChangeRequestInfo.class);
   
-  private static String HOST_A = "1.2.3.1";
-  private static String HOST_B = "1.2.3.2";
+  private static final String HOST_A = "1.2.3.1";
+  private static final String HOST_B = "1.2.3.2";
 
   // Fencer shell commands that always return true and false respectively
   // on Unix.
-  private static String FENCER_TRUE_COMMAND_UNIX = "shell(true)";
-  private static String FENCER_FALSE_COMMAND_UNIX = "shell(false)";
+  private static final String FENCER_TRUE_COMMAND_UNIX = "shell(true)";
+  private static final String FENCER_FALSE_COMMAND_UNIX = "shell(false)";
 
   // Fencer shell commands that always return true and false respectively
   // on Windows. Lacking POSIX 'true' and 'false' commands we use the DOS
   // commands 'rem' and 'help.exe'.
-  private static String FENCER_TRUE_COMMAND_WINDOWS = "shell(rem)";
-  private static String FENCER_FALSE_COMMAND_WINDOWS = "shell(help.exe /? >NUL)";
+  private static final String FENCER_TRUE_COMMAND_WINDOWS = "shell(rem)";
+  private static final String FENCER_FALSE_COMMAND_WINDOWS = "shell(help.exe /? >NUL)";
 
   private HdfsConfiguration getHAConf() {
     HdfsConfiguration conf = new HdfsConfiguration();

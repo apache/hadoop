@@ -38,7 +38,7 @@ import org.junit.Test;
 public class TestCheckpointsWithSnapshots {
   
   private static final Path TEST_PATH = new Path("/foo");
-  private static Configuration conf = new HdfsConfiguration();
+  private static final Configuration conf = new HdfsConfiguration();
   static {
     conf.set(DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY, "0.0.0.0:0");
   }

@@ -438,6 +438,9 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-5138. Support HDFS upgrade in HA. (atm via todd)
 
+    HDFS-6124. Add final modifier to class members. (Suresh Srinivas via
+    Arpit Agarwal)
+
   OPTIMIZATIONS
 
     HDFS-5790. LeaseManager.findPath is very slow when many leases need recovery

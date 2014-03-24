@@ -144,13 +144,13 @@ public class NamenodeFsck {
   // We return back N files that are corrupt; the list of files returned is
   // ordered by block id; to allow continuation support, pass in the last block
   // # from previous call
-  private String[] currentCookie = new String[] { null };
+  private final String[] currentCookie = new String[] { null };
 
   private final Configuration conf;
   private final PrintWriter out;
   private List<String> snapshottableDirs = null;
 
-  private BlockPlacementPolicy bpPolicy;
+  private final BlockPlacementPolicy bpPolicy;
 
   /**
    * Filesystem checker.
@@ -716,7 +716,7 @@ public class NamenodeFsck {
    */
   @VisibleForTesting
   static class Result {
-    List<String> missingIds = new ArrayList<String>();
+    final List<String> missingIds = new ArrayList<String>();
     long missingSize = 0L;
     long corruptFiles = 0L;
     long corruptBlocks = 0L;

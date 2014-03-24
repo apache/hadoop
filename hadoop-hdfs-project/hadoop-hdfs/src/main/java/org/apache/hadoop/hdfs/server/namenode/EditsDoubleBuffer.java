@@ -132,7 +132,7 @@ public class EditsDoubleBuffer {
   private static class TxnBuffer extends DataOutputBuffer {
     long firstTxId;
     int numTxns;
-    private Writer writer;
+    private final Writer writer;
     
     public TxnBuffer(int initBufferSize) {
       super(initBufferSize);

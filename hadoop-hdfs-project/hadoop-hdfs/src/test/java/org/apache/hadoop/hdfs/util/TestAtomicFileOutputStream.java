@@ -41,9 +41,9 @@ public class TestAtomicFileOutputStream {
   private static final String TEST_STRING = "hello world";
   private static final String TEST_STRING_2 = "goodbye world";
 
-  private static File TEST_DIR = PathUtils.getTestDir(TestAtomicFileOutputStream.class);
+  private static final File TEST_DIR = PathUtils.getTestDir(TestAtomicFileOutputStream.class);
   
-  private static File DST_FILE = new File(TEST_DIR, "test.txt");
+  private static final File DST_FILE = new File(TEST_DIR, "test.txt");
   
   @Before
   public void cleanupTestDir() throws IOException {

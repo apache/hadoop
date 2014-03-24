@@ -76,13 +76,13 @@ public class NameNodeMetrics {
 
   @Metric("Journal transactions") MutableRate transactions;
   @Metric("Journal syncs") MutableRate syncs;
-  MutableQuantiles[] syncsQuantiles;
+  final MutableQuantiles[] syncsQuantiles;
   @Metric("Journal transactions batched in sync")
   MutableCounterLong transactionsBatchedInSync;
   @Metric("Block report") MutableRate blockReport;
-  MutableQuantiles[] blockReportQuantiles;
+  final MutableQuantiles[] blockReportQuantiles;
   @Metric("Cache report") MutableRate cacheReport;
-  MutableQuantiles[] cacheReportQuantiles;
+  final MutableQuantiles[] cacheReportQuantiles;
 
   @Metric("Duration in SafeMode at startup in msec")
   MutableGaugeInt safeModeTime;

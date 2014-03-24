@@ -395,11 +395,11 @@ public class MiniDFSCluster {
   }
   
   public class DataNodeProperties {
-    DataNode datanode;
-    Configuration conf;
+    final DataNode datanode;
+    final Configuration conf;
     String[] dnArgs;
-    SecureResources secureResources;
-    int ipcPort;
+    final SecureResources secureResources;
+    final int ipcPort;
 
     DataNodeProperties(DataNode node, Configuration conf, String[] args,
                        SecureResources secureResources, int ipcPort) {
@@ -418,7 +418,7 @@ public class MiniDFSCluster {
   private Configuration conf;
   private NameNodeInfo[] nameNodes;
   protected int numDataNodes;
-  protected List<DataNodeProperties> dataNodes = 
+  protected final List<DataNodeProperties> dataNodes =
                          new ArrayList<DataNodeProperties>();
   private File base_dir;
   private File data_dir;

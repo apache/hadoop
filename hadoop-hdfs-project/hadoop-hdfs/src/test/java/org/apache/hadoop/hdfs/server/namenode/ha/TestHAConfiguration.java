@@ -44,7 +44,7 @@ import org.mockito.Mockito;
  */
 public class TestHAConfiguration {
 
-  private FSNamesystem fsn = Mockito.mock(FSNamesystem.class);
+  private final FSNamesystem fsn = Mockito.mock(FSNamesystem.class);
 
   @Test
   public void testCheckpointerValidityChecks() throws Exception {

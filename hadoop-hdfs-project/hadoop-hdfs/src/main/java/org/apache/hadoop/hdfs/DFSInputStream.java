@@ -1508,8 +1508,8 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
 
   /** Utility class to encapsulate data node info and its address. */
   static class DNAddrPair {
-    DatanodeInfo info;
-    InetSocketAddress addr;
+    final DatanodeInfo info;
+    final InetSocketAddress addr;
     DNAddrPair(DatanodeInfo info, InetSocketAddress addr) {
       this.info = info;
       this.addr = addr;

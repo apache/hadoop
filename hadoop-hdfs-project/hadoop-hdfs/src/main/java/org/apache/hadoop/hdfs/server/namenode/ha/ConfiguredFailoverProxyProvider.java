@@ -141,7 +141,7 @@ public class ConfiguredFailoverProxyProvider<T> implements
    * an NN. Note that {@link AddressRpcProxyPair#namenode} may be null.
    */
   private static class AddressRpcProxyPair<T> {
-    public InetSocketAddress address;
+    public final InetSocketAddress address;
     public T namenode;
     
     public AddressRpcProxyPair(InetSocketAddress address) {

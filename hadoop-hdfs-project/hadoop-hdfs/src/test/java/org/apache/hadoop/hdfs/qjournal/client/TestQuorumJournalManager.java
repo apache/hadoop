@@ -81,7 +81,7 @@ public class TestQuorumJournalManager {
   private QuorumJournalManager qjm;
   private List<AsyncLogger> spies;
 
-  private List<QuorumJournalManager> toClose = Lists.newLinkedList();
+  private final List<QuorumJournalManager> toClose = Lists.newLinkedList();
   
   static {
     ((Log4JLogger)ProtobufRpcEngine.LOG).getLogger().setLevel(Level.ALL);

@@ -183,7 +183,7 @@ public class DFSUtil {
    */ 
   @InterfaceAudience.Private 
   public static class DecomStaleComparator implements Comparator<DatanodeInfo> {
-    private long staleInterval;
+    private final long staleInterval;
 
     /**
      * Constructor of DecomStaleComparator
@@ -1416,8 +1416,8 @@ public class DFSUtil {
     }
   }
   
-  public static Options helpOptions = new Options();
-  public static Option helpOpt = new Option("h", "help", false,
+  public static final Options helpOptions = new Options();
+  public static final Option helpOpt = new Option("h", "help", false,
       "get help information");
 
   static {

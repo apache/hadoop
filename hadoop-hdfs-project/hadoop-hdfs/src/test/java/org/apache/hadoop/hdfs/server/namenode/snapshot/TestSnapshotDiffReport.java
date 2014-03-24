@@ -55,7 +55,7 @@ public class TestSnapshotDiffReport {
   protected MiniDFSCluster cluster;
   protected DistributedFileSystem hdfs;
   
-  private HashMap<Path, Integer> snapshotNumberMap = new HashMap<Path, Integer>();
+  private final HashMap<Path, Integer> snapshotNumberMap = new HashMap<Path, Integer>();
 
   @Before
   public void setUp() throws Exception {

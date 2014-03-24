@@ -172,7 +172,7 @@ public class FSEditLog implements LogsPurgeable {
   
   private final List<URI> editsDirs;
 
-  private ThreadLocal<OpInstanceCache> cache =
+  private final ThreadLocal<OpInstanceCache> cache =
       new ThreadLocal<OpInstanceCache>() {
     @Override
     protected OpInstanceCache initialValue() {

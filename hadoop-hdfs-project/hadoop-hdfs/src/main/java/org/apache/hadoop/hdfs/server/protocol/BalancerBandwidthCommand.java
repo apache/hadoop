@@ -36,7 +36,7 @@ package org.apache.hadoop.hdfs.server.protocol;
 public class BalancerBandwidthCommand extends DatanodeCommand {
   private final static long BBC_DEFAULTBANDWIDTH = 0L;
 
-  private long bandwidth;
+  private final long bandwidth;
 
   /**
    * Balancer Bandwidth Command constructor. Sets bandwidth to 0.

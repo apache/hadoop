@@ -25,7 +25,7 @@ import org.junit.Test;
 
 public class TestBalancerWithEncryptedTransfer {
   
-  private Configuration conf = new HdfsConfiguration();
+  private final Configuration conf = new HdfsConfiguration();
   
   @Before
   public void setUpConf() {

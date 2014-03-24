@@ -72,7 +72,7 @@ import com.google.common.base.Joiner;
  * See HDFS-2904 for more info.
  **/
 public class TestDelegationTokensWithHA {
-  private static Configuration conf = new Configuration();
+  private static final Configuration conf = new Configuration();
   private static final Log LOG =
     LogFactory.getLog(TestDelegationTokensWithHA.class);
   private static MiniDFSCluster cluster;

@@ -49,7 +49,7 @@ public class TestNameNodeRetryCacheMetrics {
   private MiniDFSCluster cluster;
   private FSNamesystem namesystem;
   private DistributedFileSystem filesystem;
-  private int namenodeId = 0;
+  private final int namenodeId = 0;
   private Configuration conf;
   private RetryCacheMetrics metrics;
 

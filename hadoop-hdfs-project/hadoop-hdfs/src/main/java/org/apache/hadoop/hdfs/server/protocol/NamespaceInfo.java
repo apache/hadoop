@@ -37,7 +37,7 @@ import org.apache.hadoop.util.VersionInfo;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class NamespaceInfo extends StorageInfo {
-  String  buildVersion;
+  final String  buildVersion;
   String blockPoolID = "";    // id of the block pool
   String softwareVersion;
 

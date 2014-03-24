@@ -51,7 +51,7 @@ import com.google.common.collect.Sets;
 
 
 public class TestNNStorageRetentionManager {
-  Configuration conf = new Configuration();
+  final Configuration conf = new Configuration();
 
   /**
    * For the purpose of this test, purge as many edits as we can 
@@ -268,13 +268,13 @@ public class TestNNStorageRetentionManager {
   }
   
   private class TestCaseDescription {
-    private Map<File, FakeRoot> dirRoots = Maps.newLinkedHashMap();
-    private Set<File> expectedPurgedLogs = Sets.newLinkedHashSet();
-    private Set<File> expectedPurgedImages = Sets.newLinkedHashSet();
+    private final Map<File, FakeRoot> dirRoots = Maps.newLinkedHashMap();
+    private final Set<File> expectedPurgedLogs = Sets.newLinkedHashSet();
+    private final Set<File> expectedPurgedImages = Sets.newLinkedHashSet();
     
     private class FakeRoot {
-      NameNodeDirType type;
-      List<File> files;
+      final NameNodeDirType type;
+      final List<File> files;
       
       FakeRoot(NameNodeDirType type) {
         this.type = type;

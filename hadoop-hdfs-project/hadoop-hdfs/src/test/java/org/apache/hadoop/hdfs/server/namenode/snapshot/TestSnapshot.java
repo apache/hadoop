@@ -98,7 +98,7 @@ public class TestSnapshot {
   protected static FSDirectory fsdir;
   protected DistributedFileSystem hdfs;
   
-  private static String testDir =
+  private static final String testDir =
       System.getProperty("test.build.data", "build/test/data");
   
   @Rule
@@ -108,7 +108,7 @@ public class TestSnapshot {
    * The list recording all previous snapshots. Each element in the array
    * records a snapshot root.
    */
-  protected static ArrayList<Path> snapshotList = new ArrayList<Path>();
+  protected static final ArrayList<Path> snapshotList = new ArrayList<Path>();
   /**
    * Check {@link SnapshotTestHelper.TestDirectoryTree}
    */

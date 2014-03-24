@@ -33,7 +33,7 @@ class ReplicaMap {
   private final Object mutex;
   
   // Map of block pool Id to another map of block Id to ReplicaInfo.
-  private Map<String, Map<Long, ReplicaInfo>> map = 
+  private final Map<String, Map<Long, ReplicaInfo>> map =
     new HashMap<String, Map<Long, ReplicaInfo>>();
   
   ReplicaMap(Object mutex) {

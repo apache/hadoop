@@ -35,7 +35,7 @@ import org.junit.Test;
 
 public class TestFetchImage {
   
-  private static File FETCHED_IMAGE_FILE = new File(
+  private static final File FETCHED_IMAGE_FILE = new File(
       System.getProperty("build.test.dir"), "fetched-image-dir");
   // Shamelessly stolen from NNStorage.
   private static final Pattern IMAGE_REGEX = Pattern.compile("fsimage_(\\d+)");

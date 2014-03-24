@@ -137,7 +137,7 @@ class BlockReaderLocalLegacy implements BlockReader {
   
   // Multiple datanodes could be running on the local machine. Store proxies in
   // a map keyed by the ipc port of the datanode.
-  private static Map<Integer, LocalDatanodeInfo> localDatanodeInfoMap = new HashMap<Integer, LocalDatanodeInfo>();
+  private static final Map<Integer, LocalDatanodeInfo> localDatanodeInfoMap = new HashMap<Integer, LocalDatanodeInfo>();
 
   private final FileInputStream dataIn; // reader for the data file
   private final FileInputStream checksumIn;   // reader for the checksum file
@@ -162,7 +162,7 @@ class BlockReaderLocalLegacy implements BlockReader {
   private DataChecksum checksum;
   private final boolean verifyChecksum;
 
-  private static DirectBufferPool bufferPool = new DirectBufferPool();
+  private static final DirectBufferPool bufferPool = new DirectBufferPool();
 
   private final int bytesPerChecksum;
   private final int checksumSize;

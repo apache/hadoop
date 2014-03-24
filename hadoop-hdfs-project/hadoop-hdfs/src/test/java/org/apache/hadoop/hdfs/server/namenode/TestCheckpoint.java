@@ -120,7 +120,7 @@ public class TestCheckpoint {
   static final int numDatanodes = 3;
   short replication = 3;
 
-  static FilenameFilter tmpEditsFilter = new FilenameFilter() {
+  static final FilenameFilter tmpEditsFilter = new FilenameFilter() {
     @Override
     public boolean accept(File dir, String name) {
       return name.startsWith(NameNodeFile.EDITS_TMP.getName());

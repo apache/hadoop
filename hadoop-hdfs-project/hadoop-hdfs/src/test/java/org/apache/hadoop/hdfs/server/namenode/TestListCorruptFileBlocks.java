@@ -52,7 +52,7 @@ import org.junit.Test;
  * blocks/files are also returned.
  */
 public class TestListCorruptFileBlocks {
-  static Log LOG = NameNode.stateChangeLog;
+  static final Log LOG = NameNode.stateChangeLog;
 
   /** check if nn.getCorruptFiles() returns a file that has corrupted blocks */
   @Test (timeout=300000)

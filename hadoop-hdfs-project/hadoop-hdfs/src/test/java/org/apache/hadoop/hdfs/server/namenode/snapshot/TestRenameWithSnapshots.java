@@ -87,12 +87,12 @@ public class TestRenameWithSnapshots {
   private static final short REPL_2 = 1;
   private static final long BLOCKSIZE = 1024;
   
-  private static Configuration conf = new Configuration();
+  private static final Configuration conf = new Configuration();
   private static MiniDFSCluster cluster;
   private static FSNamesystem fsn;
   private static FSDirectory fsdir;
   private static DistributedFileSystem hdfs;
-  private static String testDir =
+  private static final String testDir =
       System.getProperty("test.build.data", "build/test/data");
   static private final Path dir = new Path("/testRenameWithSnapshots");
   static private final Path sub1 = new Path(dir, "sub1");

@@ -74,11 +74,11 @@ public class BlockTokenSecretManager extends
   private int serialNo;
   private BlockKey currentKey;
   private BlockKey nextKey;
-  private Map<Integer, BlockKey> allKeys;
+  private final Map<Integer, BlockKey> allKeys;
   private String blockPoolId;
-  private String encryptionAlgorithm;
+  private final String encryptionAlgorithm;
   
-  private SecureRandom nonceGenerator = new SecureRandom();
+  private final SecureRandom nonceGenerator = new SecureRandom();
 
   public static enum AccessMode {
     READ, WRITE, COPY, REPLACE

@@ -46,14 +46,14 @@ import org.junit.Test;
 public class TestPipelines {
   public static final Log LOG = LogFactory.getLog(TestPipelines.class);
 
-  private static short REPL_FACTOR = 3;
+  private static final short REPL_FACTOR = 3;
   private static final int RAND_LIMIT = 2000;
   private static final int FILE_SIZE = 10000;
 
   private MiniDFSCluster cluster;
   private DistributedFileSystem fs;
   private static Configuration conf;
-  static Random rand = new Random(RAND_LIMIT);
+  static final Random rand = new Random(RAND_LIMIT);
 
   static {
     initLoggers();

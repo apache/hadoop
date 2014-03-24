@@ -59,7 +59,7 @@ class Checkpointer extends Daemon {
   public static final Log LOG = 
     LogFactory.getLog(Checkpointer.class.getName());
 
-  private BackupNode backupNode;
+  private final BackupNode backupNode;
   volatile boolean shouldRun;
 
   private String infoBindAddress;

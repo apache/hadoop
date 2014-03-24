@@ -30,7 +30,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class DomainPeerServer implements PeerServer {
-  static Log LOG = LogFactory.getLog(DomainPeerServer.class);
+  static final Log LOG = LogFactory.getLog(DomainPeerServer.class);
   private final DomainSocket sock;
 
   DomainPeerServer(DomainSocket sock) {

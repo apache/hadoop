@@ -91,7 +91,7 @@ public class LightWeightHashSet<T> implements Collection<T> {
 
   private float maxLoadFactor;
   private float minLoadFactor;
-  private int expandMultiplier = 2;
+  private final int expandMultiplier = 2;
 
   private int expandThreshold;
   private int shrinkThreshold;

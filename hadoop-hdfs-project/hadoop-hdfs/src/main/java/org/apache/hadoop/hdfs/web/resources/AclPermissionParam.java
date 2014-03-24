@@ -32,7 +32,7 @@ public class AclPermissionParam extends StringParam {
   /** Default parameter value. */
   public static final String DEFAULT = "";
 
-  private static Domain DOMAIN = new Domain(NAME,
+  private static final Domain DOMAIN = new Domain(NAME,
       Pattern.compile(DFS_WEBHDFS_ACL_PERMISSION_PATTERN_DEFAULT));
 
   /**
