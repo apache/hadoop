@@ -513,3 +513,6 @@ Branch-hadoop-1-win (branched from branch-1 at r1293509 on 2012-02-24 17:46:42)
 
     HDFS-5516. WebHDFS does not require user name when anonymous http requests
     are disallowed. (Miodrag Radulovic via cnauroth)
+
+    MAPREDUCE-5808. Port output replication factor configurable for terasort to
+    Hadoop 1.x. (Chuan Liu via cnauroth)
