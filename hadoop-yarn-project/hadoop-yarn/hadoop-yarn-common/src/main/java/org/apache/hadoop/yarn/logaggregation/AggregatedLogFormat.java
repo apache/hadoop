@@ -169,11 +169,13 @@ public class AggregatedLogFormat {
         Arrays.sort(logFiles);
         for (File logFile : logFiles) {
 
+          final long fileLength = logFile.length();
+
           // Write the logFile Type
           out.writeUTF(logFile.getName());
 
           // Write the log length as UTF so that it is printable
-          out.writeUTF(String.valueOf(logFile.length()));
+          out.writeUTF(String.valueOf(fileLength));
 
           // Write the log itself
           FileInputStream in = null;
@@ -181,8 +183,23 @@ public class AggregatedLogFormat {
             in = new FileInputStream(logFile);
             byte[] buf = new byte[65535];
             int len = 0;
+            long bytesLeft = fileLength;
             while ((len = in.read(buf)) != -1) {
-              out.write(buf, 0, len);
+              //If buffer contents within fileLength, write
+              if (len <= bytesLeft) {
+                out.write(buf, 0, len);
+                bytesLeft -= len;
+              }
+              //else only write contents that are within fileLength, then exit early
+              else {
+                out.write(buf, 0, (int)(bytesLeft));
+                break;
+              }
+            }
+            long newLength = logFile.length();
+            if(fileLength < newLength) {
+              LOG.warn("Aggregated logs truncated by approximately " +
+                  (newLength-fileLength) + " bytes.");
             }
           } finally {
             if (in != null) {
@@ -523,7 +540,7 @@ public class AggregatedLogFormat {
       out.println(fileLengthStr);
       out.println("Log Contents:");
 
-      int curRead = 0;
+      long curRead = 0;
       long pendingRead = fileLength - curRead;
       int toRead =
                 pendingRead > buf.length ? buf.length : (int) pendingRead;
