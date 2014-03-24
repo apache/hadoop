@@ -55,8 +55,11 @@ public interface TimelineReader {
   final long DEFAULT_LIMIT = 100;
 
   /**
-   * This method retrieves a list of entity information, {@link TimelineEntity}, sorted
-   * by the starting timestamp for the entity, descending.
+   * This method retrieves a list of entity information, {@link TimelineEntity},
+   * sorted by the starting timestamp for the entity, descending. The starting
+   * timestamp of an entity is a timestamp specified by the client. If it is not
+   * explicitly specified, it will be chosen by the store to be the earliest
+   * timestamp of the events received in the first put for the entity.
    * 
    * @param entityType
    *          The type of entities to return (required).
@@ -69,6 +72,17 @@ public interface TimelineReader {
    * @param windowEnd
    *          The latest start timestamp to retrieve (inclusive). If null,
    *          defaults to {@link Long#MAX_VALUE}
+   * @param fromId
+   *          If fromId is not null, retrieve entities earlier than and
+   *          including the specified ID. If no start time is found for the
+   *          specified ID, an empty list of entities will be returned. The
+   *          windowEnd parameter will take precedence if the start time of this
+   *          entity falls later than windowEnd.
+   * @param fromTs
+   *          If fromTs is not null, ignore entities that were inserted into the
+   *          store after the given timestamp. The entity's insert timestamp
+   *          used for this comparison is the store's system time when the first
+   *          put for the entity was received (not the entity's start time).
    * @param primaryFilter
    *          Retrieves only entities that have the specified primary filter. If
    *          null, retrieves all entities. This is an indexed retrieval, and no
@@ -88,7 +102,7 @@ public interface TimelineReader {
    * @throws IOException
    */
   TimelineEntities getEntities(String entityType,
-      Long limit, Long windowStart, Long windowEnd,
+      Long limit, Long windowStart, Long windowEnd, String fromId, Long fromTs,
       NameValuePair primaryFilter, Collection<NameValuePair> secondaryFilters,
       EnumSet<Field> fieldsToRetrieve) throws IOException;
 

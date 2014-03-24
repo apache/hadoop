@@ -41,12 +41,12 @@ import org.apache.hadoop.yarn.api.records.timeline.TimelineEvent;
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEvents.EventsOfOneEntity;
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse.TimelinePutError;
-import org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.TimelineStore;
-import org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.NameValuePair;
 import org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.TimelineReader.Field;
 
 public class TimelineStoreTestUtils {
 
+  protected static final List<TimelineEvent> EMPTY_EVENTS =
+      Collections.emptyList();
   protected static final Map<String, Object> EMPTY_MAP =
       Collections.emptyMap();
   protected static final Map<String, Set<Object>> EMPTY_PRIMARY_FILTERS =
@@ -60,11 +60,16 @@ public class TimelineStoreTestUtils {
   protected String entityId1b;
   protected String entityId2;
   protected String entityType2;
+  protected String entityId4;
+  protected String entityType4;
+  protected String entityId5;
+  protected String entityType5;
   protected Map<String, Set<Object>> primaryFilters;
   protected Map<String, Object> secondaryFilters;
   protected Map<String, Object> allFilters;
   protected Map<String, Object> otherInfo;
   protected Map<String, Set<String>> relEntityMap;
+  protected Map<String, Set<String>> relEntityMap2;
   protected NameValuePair userFilter;
   protected NameValuePair numericFilter1;
   protected NameValuePair numericFilter2;
@@ -78,11 +83,13 @@ public class TimelineStoreTestUtils {
   protected Map<String, Object> eventInfo;
   protected List<TimelineEvent> events1;
   protected List<TimelineEvent> events2;
+  protected long beforeTs;
 
   /**
    * Load test data into the given store
    */
   protected void loadTestData() throws IOException {
+    beforeTs = System.currentTimeMillis()-1;
     TimelineEntities entities = new TimelineEntities();
     Map<String, Set<Object>> primaryFilters =
         new HashMap<String, Set<Object>>();
@@ -110,6 +117,10 @@ public class TimelineStoreTestUtils {
     String entityId1b = "id_2";
     String entityId2 = "id_2";
     String entityType2 = "type_2";
+    String entityId4 = "id_4";
+    String entityType4 = "type_4";
+    String entityId5 = "id_5";
+    String entityType5 = "type_5";
 
     Map<String, Set<String>> relatedEntities =
         new HashMap<String, Set<String>>();
@@ -161,6 +172,13 @@ public class TimelineStoreTestUtils {
     assertEquals("badentityid", error.getEntityId());
     assertEquals("badentity", error.getEntityType());
     assertEquals(TimelinePutError.NO_START_TIME, error.getErrorCode());
+
+    relatedEntities.clear();
+    relatedEntities.put(entityType5, Collections.singleton(entityId5));
+    entities.setEntities(Collections.singletonList(createEntity(entityId4,
+        entityType4, 42l, null, relatedEntities, null, null)));
+    response = store.put(entities);
+    assertEquals(0, response.getErrors().size());
   }
 
   /**
@@ -211,6 +229,10 @@ public class TimelineStoreTestUtils {
     entityId1b = "id_2";
     entityId2 = "id_2";
     entityType2 = "type_2";
+    entityId4 = "id_4";
+    entityType4 = "type_4";
+    entityId5 = "id_5";
+    entityType5 = "type_5";
 
     ev1 = createEvent(123l, "start_event", null);
 
@@ -228,6 +250,10 @@ public class TimelineStoreTestUtils {
     ids.add(entityId1b);
     relEntityMap.put(entityType1, ids);
 
+    relEntityMap2 =
+        new HashMap<String, Set<String>>();
+    relEntityMap2.put(entityType4, Collections.singleton(entityId4));
+
     ev3 = createEvent(789l, "launch_event", null);
     ev4 = createEvent(-123l, "init_event", null);
     events2 = new ArrayList<TimelineEvent>();
@@ -241,16 +267,24 @@ public class TimelineStoreTestUtils {
         store.getEntity("id_1", "type_2", EnumSet.allOf(Field.class)));
 
     verifyEntityInfo(entityId1, entityType1, events1, EMPTY_REL_ENTITIES,
-        primaryFilters, otherInfo, store.getEntity(entityId1, entityType1,
-        EnumSet.allOf(Field.class)));
+        primaryFilters, otherInfo, 123l, store.getEntity(entityId1,
+        entityType1, EnumSet.allOf(Field.class)));
 
     verifyEntityInfo(entityId1b, entityType1, events1, EMPTY_REL_ENTITIES,
-        primaryFilters, otherInfo, store.getEntity(entityId1b, entityType1,
-        EnumSet.allOf(Field.class)));
+        primaryFilters, otherInfo, 123l, store.getEntity(entityId1b,
+        entityType1, EnumSet.allOf(Field.class)));
 
     verifyEntityInfo(entityId2, entityType2, events2, relEntityMap,
-        EMPTY_PRIMARY_FILTERS, EMPTY_MAP, store.getEntity(entityId2, entityType2,
-        EnumSet.allOf(Field.class)));
+        EMPTY_PRIMARY_FILTERS, EMPTY_MAP, -123l, store.getEntity(entityId2,
+        entityType2, EnumSet.allOf(Field.class)));
+
+    verifyEntityInfo(entityId4, entityType4, EMPTY_EVENTS, EMPTY_REL_ENTITIES,
+        EMPTY_PRIMARY_FILTERS, EMPTY_MAP, 42l, store.getEntity(entityId4,
+        entityType4, EnumSet.allOf(Field.class)));
+
+    verifyEntityInfo(entityId5, entityType5, EMPTY_EVENTS, relEntityMap2,
+        EMPTY_PRIMARY_FILTERS, EMPTY_MAP, 42l, store.getEntity(entityId5,
+        entityType5, EnumSet.allOf(Field.class)));
 
     // test getting single fields
     verifyEntityInfo(entityId1, entityType1, events1, null, null, null,
@@ -276,70 +310,132 @@ public class TimelineStoreTestUtils {
             EnumSet.of(Field.RELATED_ENTITIES)));
   }
 
+  protected List<TimelineEntity> getEntities(String entityType)
+      throws IOException {
+    return store.getEntities(entityType, null, null, null, null, null,
+        null, null, null).getEntities();
+  }
+
+  protected List<TimelineEntity> getEntitiesWithPrimaryFilter(
+      String entityType, NameValuePair primaryFilter) throws IOException {
+    return store.getEntities(entityType, null, null, null, null, null,
+        primaryFilter, null, null).getEntities();
+  }
+
+  protected List<TimelineEntity> getEntitiesFromId(String entityType,
+      String fromId) throws IOException {
+    return store.getEntities(entityType, null, null, null, fromId, null,
+        null, null, null).getEntities();
+  }
+
+  protected List<TimelineEntity> getEntitiesFromTs(String entityType,
+      long fromTs) throws IOException {
+    return store.getEntities(entityType, null, null, null, null, fromTs,
+        null, null, null).getEntities();
+  }
+
+  protected List<TimelineEntity> getEntitiesFromIdWithPrimaryFilter(
+      String entityType, NameValuePair primaryFilter, String fromId)
+      throws IOException {
+    return store.getEntities(entityType, null, null, null, fromId, null,
+        primaryFilter, null, null).getEntities();
+  }
+
+  protected List<TimelineEntity> getEntitiesFromTsWithPrimaryFilter(
+      String entityType, NameValuePair primaryFilter, long fromTs)
+      throws IOException {
+    return store.getEntities(entityType, null, null, null, null, fromTs,
+        primaryFilter, null, null).getEntities();
+  }
+
+  protected List<TimelineEntity> getEntitiesFromIdWithWindow(String entityType,
+      Long windowEnd, String fromId) throws IOException {
+    return store.getEntities(entityType, null, null, windowEnd, fromId, null,
+        null, null, null).getEntities();
+  }
+
+  protected List<TimelineEntity> getEntitiesFromIdWithPrimaryFilterAndWindow(
+      String entityType, Long windowEnd, String fromId,
+      NameValuePair primaryFilter) throws IOException {
+    return store.getEntities(entityType, null, null, windowEnd, fromId, null,
+        primaryFilter, null, null).getEntities();
+  }
+
+  protected List<TimelineEntity> getEntitiesWithFilters(String entityType,
+      NameValuePair primaryFilter, Collection<NameValuePair> secondaryFilters)
+      throws IOException {
+    return store.getEntities(entityType, null, null, null, null, null,
+        primaryFilter, secondaryFilters, null).getEntities();
+  }
+
+  protected List<TimelineEntity> getEntities(String entityType, Long limit,
+      Long windowStart, Long windowEnd, NameValuePair primaryFilter,
+      EnumSet<Field> fields) throws IOException {
+    return store.getEntities(entityType, limit, windowStart, windowEnd, null,
+        null, primaryFilter, null, fields).getEntities();
+  }
+
   public void testGetEntities() throws IOException {
     // test getting entities
     assertEquals("nonzero entities size for nonexistent type", 0,
-        store.getEntities("type_0", null, null, null, null, null,
-            null).getEntities().size());
+        getEntities("type_0").size());
     assertEquals("nonzero entities size for nonexistent type", 0,
-        store.getEntities("type_3", null, null, null, null, null,
-            null).getEntities().size());
+        getEntities("type_3").size());
     assertEquals("nonzero entities size for nonexistent type", 0,
-        store.getEntities("type_0", null, null, null, userFilter,
-            null, null).getEntities().size());
+        getEntities("type_6").size());
     assertEquals("nonzero entities size for nonexistent type", 0,
-        store.getEntities("type_3", null, null, null, userFilter,
-            null, null).getEntities().size());
+        getEntitiesWithPrimaryFilter("type_0", userFilter).size());
+    assertEquals("nonzero entities size for nonexistent type", 0,
+        getEntitiesWithPrimaryFilter("type_3", userFilter).size());
+    assertEquals("nonzero entities size for nonexistent type", 0,
+        getEntitiesWithPrimaryFilter("type_6", userFilter).size());
 
-    List<TimelineEntity> entities =
-        store.getEntities("type_1", null, null, null, null, null,
-            EnumSet.allOf(Field.class)).getEntities();
+    List<TimelineEntity> entities = getEntities("type_1");
     assertEquals(2, entities.size());
     verifyEntityInfo(entityId1, entityType1, events1, EMPTY_REL_ENTITIES,
         primaryFilters, otherInfo, entities.get(0));
     verifyEntityInfo(entityId1b, entityType1, events1, EMPTY_REL_ENTITIES,
         primaryFilters, otherInfo, entities.get(1));
 
-    entities = store.getEntities("type_2", null, null, null, null, null,
-        EnumSet.allOf(Field.class)).getEntities();
+    entities = getEntities("type_2");
     assertEquals(1, entities.size());
     verifyEntityInfo(entityId2, entityType2, events2, relEntityMap,
         EMPTY_PRIMARY_FILTERS, EMPTY_MAP, entities.get(0));
 
-    entities = store.getEntities("type_1", 1l, null, null, null, null,
-        EnumSet.allOf(Field.class)).getEntities();
+    entities = getEntities("type_1", 1l, null, null, null,
+        EnumSet.allOf(Field.class));
     assertEquals(1, entities.size());
     verifyEntityInfo(entityId1, entityType1, events1, EMPTY_REL_ENTITIES,
         primaryFilters, otherInfo, entities.get(0));
 
-    entities = store.getEntities("type_1", 1l, 0l, null, null, null,
-        EnumSet.allOf(Field.class)).getEntities();
+    entities = getEntities("type_1", 1l, 0l, null, null,
+        EnumSet.allOf(Field.class));
     assertEquals(1, entities.size());
     verifyEntityInfo(entityId1, entityType1, events1, EMPTY_REL_ENTITIES,
         primaryFilters, otherInfo, entities.get(0));
 
-    entities = store.getEntities("type_1", null, 234l, null, null, null,
-        EnumSet.allOf(Field.class)).getEntities();
+    entities = getEntities("type_1", null, 234l, null, null,
+        EnumSet.allOf(Field.class));
     assertEquals(0, entities.size());
 
-    entities = store.getEntities("type_1", null, 123l, null, null, null,
-        EnumSet.allOf(Field.class)).getEntities();
+    entities = getEntities("type_1", null, 123l, null, null,
+        EnumSet.allOf(Field.class));
     assertEquals(0, entities.size());
 
-    entities = store.getEntities("type_1", null, 234l, 345l, null, null,
-        EnumSet.allOf(Field.class)).getEntities();
+    entities = getEntities("type_1", null, 234l, 345l, null,
+        EnumSet.allOf(Field.class));
     assertEquals(0, entities.size());
 
-    entities = store.getEntities("type_1", null, null, 345l, null, null,
-        EnumSet.allOf(Field.class)).getEntities();
+    entities = getEntities("type_1", null, null, 345l, null,
+        EnumSet.allOf(Field.class));
     assertEquals(2, entities.size());
     verifyEntityInfo(entityId1, entityType1, events1, EMPTY_REL_ENTITIES,
         primaryFilters, otherInfo, entities.get(0));
     verifyEntityInfo(entityId1b, entityType1, events1, EMPTY_REL_ENTITIES,
         primaryFilters, otherInfo, entities.get(1));
 
-    entities = store.getEntities("type_1", null, null, 123l, null, null,
-        EnumSet.allOf(Field.class)).getEntities();
+    entities = getEntities("type_1", null, null, 123l, null,
+        EnumSet.allOf(Field.class));
     assertEquals(2, entities.size());
     verifyEntityInfo(entityId1, entityType1, events1, EMPTY_REL_ENTITIES,
         primaryFilters, otherInfo, entities.get(0));
@@ -347,79 +443,152 @@ public class TimelineStoreTestUtils {
         primaryFilters, otherInfo, entities.get(1));
   }
 
+  public void testGetEntitiesWithFromId() throws IOException {
+    List<TimelineEntity> entities = getEntitiesFromId("type_1", entityId1);
+    assertEquals(2, entities.size());
+    verifyEntityInfo(entityId1, entityType1, events1, EMPTY_REL_ENTITIES,
+        primaryFilters, otherInfo, entities.get(0));
+    verifyEntityInfo(entityId1b, entityType1, events1, EMPTY_REL_ENTITIES,
+        primaryFilters, otherInfo, entities.get(1));
+
+    entities = getEntitiesFromId("type_1", entityId1b);
+    assertEquals(1, entities.size());
+    verifyEntityInfo(entityId1b, entityType1, events1, EMPTY_REL_ENTITIES,
+        primaryFilters, otherInfo, entities.get(0));
+
+    entities = getEntitiesFromIdWithWindow("type_1", 0l, entityId1);
+    assertEquals(0, entities.size());
+
+    entities = getEntitiesFromId("type_2", "a");
+    assertEquals(0, entities.size());
+
+    entities = getEntitiesFromId("type_2", entityId2);
+    assertEquals(1, entities.size());
+    verifyEntityInfo(entityId2, entityType2, events2, relEntityMap,
+        EMPTY_PRIMARY_FILTERS, EMPTY_MAP, entities.get(0));
+
+    entities = getEntitiesFromIdWithWindow("type_2", -456l, null);
+    assertEquals(0, entities.size());
+
+    entities = getEntitiesFromIdWithWindow("type_2", -456l, "a");
+    assertEquals(0, entities.size());
+
+    entities = getEntitiesFromIdWithWindow("type_2", 0l, null);
+    assertEquals(1, entities.size());
+
+    entities = getEntitiesFromIdWithWindow("type_2", 0l, entityId2);
+    assertEquals(1, entities.size());
+
+    // same tests with primary filters
+    entities = getEntitiesFromIdWithPrimaryFilter("type_1", userFilter,
+        entityId1);
+    assertEquals(2, entities.size());
+    verifyEntityInfo(entityId1, entityType1, events1, EMPTY_REL_ENTITIES,
+        primaryFilters, otherInfo, entities.get(0));
+    verifyEntityInfo(entityId1b, entityType1, events1, EMPTY_REL_ENTITIES,
+        primaryFilters, otherInfo, entities.get(1));
+
+    entities = getEntitiesFromIdWithPrimaryFilter("type_1", userFilter,
+        entityId1b);
+    assertEquals(1, entities.size());
+    verifyEntityInfo(entityId1b, entityType1, events1, EMPTY_REL_ENTITIES,
+        primaryFilters, otherInfo, entities.get(0));
+
+    entities = getEntitiesFromIdWithPrimaryFilterAndWindow("type_1", 0l,
+        entityId1, userFilter);
+    assertEquals(0, entities.size());
+
+    entities = getEntitiesFromIdWithPrimaryFilter("type_2", userFilter, "a");
+    assertEquals(0, entities.size());
+  }
+
+  public void testGetEntitiesWithFromTs() throws IOException {
+    assertEquals(0, getEntitiesFromTs("type_1", beforeTs).size());
+    assertEquals(0, getEntitiesFromTs("type_2", beforeTs).size());
+    assertEquals(0, getEntitiesFromTsWithPrimaryFilter("type_1", userFilter,
+        beforeTs).size());
+    long afterTs = System.currentTimeMillis();
+    assertEquals(2, getEntitiesFromTs("type_1", afterTs).size());
+    assertEquals(1, getEntitiesFromTs("type_2", afterTs).size());
+    assertEquals(2, getEntitiesFromTsWithPrimaryFilter("type_1", userFilter,
+        afterTs).size());
+    assertEquals(2, getEntities("type_1").size());
+    assertEquals(1, getEntities("type_2").size());
+    assertEquals(2, getEntitiesWithPrimaryFilter("type_1", userFilter).size());
+    // check insert time is not overwritten
+    long beforeTs = this.beforeTs;
+    loadTestData();
+    assertEquals(0, getEntitiesFromTs("type_1", beforeTs).size());
+    assertEquals(0, getEntitiesFromTs("type_2", beforeTs).size());
+    assertEquals(0, getEntitiesFromTsWithPrimaryFilter("type_1", userFilter,
+        beforeTs).size());
+    assertEquals(2, getEntitiesFromTs("type_1", afterTs).size());
+    assertEquals(1, getEntitiesFromTs("type_2", afterTs).size());
+    assertEquals(2, getEntitiesFromTsWithPrimaryFilter("type_1", userFilter,
+        afterTs).size());
+  }
+
   public void testGetEntitiesWithPrimaryFilters() throws IOException {
     // test using primary filter
     assertEquals("nonzero entities size for primary filter", 0,
-        store.getEntities("type_1", null, null, null,
-            new NameValuePair("none", "none"), null,
-            EnumSet.allOf(Field.class)).getEntities().size());
+        getEntitiesWithPrimaryFilter("type_1",
+            new NameValuePair("none", "none")).size());
     assertEquals("nonzero entities size for primary filter", 0,
-        store.getEntities("type_2", null, null, null,
-            new NameValuePair("none", "none"), null,
-            EnumSet.allOf(Field.class)).getEntities().size());
+        getEntitiesWithPrimaryFilter("type_2",
+            new NameValuePair("none", "none")).size());
     assertEquals("nonzero entities size for primary filter", 0,
-        store.getEntities("type_3", null, null, null,
-            new NameValuePair("none", "none"), null,
-            EnumSet.allOf(Field.class)).getEntities().size());
+        getEntitiesWithPrimaryFilter("type_3",
+            new NameValuePair("none", "none")).size());
 
-    List<TimelineEntity> entities = store.getEntities("type_1", null, null, null,
-        userFilter, null, EnumSet.allOf(Field.class)).getEntities();
+    List<TimelineEntity> entities = getEntitiesWithPrimaryFilter("type_1",
+        userFilter);
     assertEquals(2, entities.size());
     verifyEntityInfo(entityId1, entityType1, events1, EMPTY_REL_ENTITIES,
         primaryFilters, otherInfo, entities.get(0));
     verifyEntityInfo(entityId1b, entityType1, events1, EMPTY_REL_ENTITIES,
         primaryFilters, otherInfo, entities.get(1));
 
-    store.getEntities("type_1", null, null, null,
-        numericFilter1, null, EnumSet.allOf(Field.class)).getEntities();
+    entities = getEntitiesWithPrimaryFilter("type_1", numericFilter1);
     assertEquals(2, entities.size());
     verifyEntityInfo(entityId1, entityType1, events1, EMPTY_REL_ENTITIES,
         primaryFilters, otherInfo, entities.get(0));
     verifyEntityInfo(entityId1b, entityType1, events1, EMPTY_REL_ENTITIES,
         primaryFilters, otherInfo, entities.get(1));
 
-    store.getEntities("type_1", null, null, null,
-        numericFilter2, null, EnumSet.allOf(Field.class)).getEntities();
+    entities = getEntitiesWithPrimaryFilter("type_1", numericFilter2);
     assertEquals(2, entities.size());
     verifyEntityInfo(entityId1, entityType1, events1, EMPTY_REL_ENTITIES,
         primaryFilters, otherInfo, entities.get(0));
     verifyEntityInfo(entityId1b, entityType1, events1, EMPTY_REL_ENTITIES,
         primaryFilters, otherInfo, entities.get(1));
 
-    store.getEntities("type_1", null, null, null,
-        numericFilter3, null, EnumSet.allOf(Field.class)).getEntities();
+    entities = getEntitiesWithPrimaryFilter("type_1", numericFilter3);
     assertEquals(2, entities.size());
     verifyEntityInfo(entityId1, entityType1, events1, EMPTY_REL_ENTITIES,
         primaryFilters, otherInfo, entities.get(0));
     verifyEntityInfo(entityId1b, entityType1, events1, EMPTY_REL_ENTITIES,
         primaryFilters, otherInfo, entities.get(1));
 
-    entities = store.getEntities("type_2", null, null, null, userFilter, null,
-        EnumSet.allOf(Field.class)).getEntities();
+    entities = getEntitiesWithPrimaryFilter("type_2", userFilter);
     assertEquals(0, entities.size());
 
-    entities = store.getEntities("type_1", 1l, null, null, userFilter, null,
-        EnumSet.allOf(Field.class)).getEntities();
+    entities = getEntities("type_1", 1l, null, null, userFilter, null);
     assertEquals(1, entities.size());
     verifyEntityInfo(entityId1, entityType1, events1, EMPTY_REL_ENTITIES,
         primaryFilters, otherInfo, entities.get(0));
 
-    entities = store.getEntities("type_1", 1l, 0l, null, userFilter, null,
-        EnumSet.allOf(Field.class)).getEntities();
+    entities = getEntities("type_1", 1l, 0l, null, userFilter, null);
     assertEquals(1, entities.size());
     verifyEntityInfo(entityId1, entityType1, events1, EMPTY_REL_ENTITIES,
         primaryFilters, otherInfo, entities.get(0));
 
-    entities = store.getEntities("type_1", null, 234l, null, userFilter, null,
-        EnumSet.allOf(Field.class)).getEntities();
+    entities = getEntities("type_1", null, 234l, null, userFilter, null);
     assertEquals(0, entities.size());
 
-    entities = store.getEntities("type_1", null, 234l, 345l, userFilter, null,
-        EnumSet.allOf(Field.class)).getEntities();
+    entities = getEntities("type_1", null, 234l, 345l, userFilter, null);
     assertEquals(0, entities.size());
 
-    entities = store.getEntities("type_1", null, null, 345l, userFilter, null,
-        EnumSet.allOf(Field.class)).getEntities();
+    entities = getEntities("type_1", null, null, 345l, userFilter, null);
     assertEquals(2, entities.size());
     verifyEntityInfo(entityId1, entityType1, events1, EMPTY_REL_ENTITIES,
         primaryFilters, otherInfo, entities.get(0));
@@ -429,28 +598,29 @@ public class TimelineStoreTestUtils {
 
   public void testGetEntitiesWithSecondaryFilters() throws IOException {
     // test using secondary filter
-    List<TimelineEntity> entities = store.getEntities("type_1", null, null, null,
-        null, goodTestingFilters, EnumSet.allOf(Field.class)).getEntities();
+    List<TimelineEntity> entities = getEntitiesWithFilters("type_1", null,
+        goodTestingFilters);
     assertEquals(2, entities.size());
     verifyEntityInfo(entityId1, entityType1, events1, EMPTY_REL_ENTITIES,
         primaryFilters, otherInfo, entities.get(0));
     verifyEntityInfo(entityId1b, entityType1, events1, EMPTY_REL_ENTITIES,
         primaryFilters, otherInfo, entities.get(1));
 
-    entities = store.getEntities("type_1", null, null, null, userFilter,
-        goodTestingFilters, EnumSet.allOf(Field.class)).getEntities();
+    entities = getEntitiesWithFilters("type_1", userFilter, goodTestingFilters);
     assertEquals(2, entities.size());
     verifyEntityInfo(entityId1, entityType1, events1, EMPTY_REL_ENTITIES,
         primaryFilters, otherInfo, entities.get(0));
     verifyEntityInfo(entityId1b, entityType1, events1, EMPTY_REL_ENTITIES,
         primaryFilters, otherInfo, entities.get(1));
 
-    entities = store.getEntities("type_1", null, null, null, null,
-        badTestingFilters, EnumSet.allOf(Field.class)).getEntities();
+    entities = getEntitiesWithFilters("type_1", null,
+        Collections.singleton(new NameValuePair("user", "none")));
     assertEquals(0, entities.size());
 
-    entities = store.getEntities("type_1", null, null, null, userFilter,
-        badTestingFilters, EnumSet.allOf(Field.class)).getEntities();
+    entities = getEntitiesWithFilters("type_1", null, badTestingFilters);
+    assertEquals(0, entities.size());
+
+    entities = getEntitiesWithFilters("type_1", userFilter, badTestingFilters);
     assertEquals(0, entities.size());
   }
 
@@ -512,6 +682,19 @@ public class TimelineStoreTestUtils {
         null, null, null).getAllEvents();
     assertEquals(1, timelines.size());
     verifyEntityTimeline(timelines.get(0), entityId2, entityType2, ev3, ev4);
+  }
+
+  /**
+   * Verify a single entity and its start time
+   */
+  protected static void verifyEntityInfo(String entityId, String entityType,
+      List<TimelineEvent> events, Map<String, Set<String>> relatedEntities,
+      Map<String, Set<Object>> primaryFilters, Map<String, Object> otherInfo,
+      Long startTime, TimelineEntity retrievedEntityInfo) {
+
+    verifyEntityInfo(entityId, entityType, events, relatedEntities,
+        primaryFilters, otherInfo, retrievedEntityInfo);
+    assertEquals(startTime, retrievedEntityInfo.getStartTime());
   }
 
   /**

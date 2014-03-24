@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.server.applicationhistoryservice.timeline;
 import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -35,7 +34,6 @@ import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.TimelineReader.Field;
 import org.iq80.leveldb.DBIterator;
 import org.junit.After;
 import org.junit.Before;
@@ -46,8 +44,7 @@ import static org.junit.Assert.assertEquals;
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public class TestLeveldbTimelineStore
-    extends TimelineStoreTestUtils {
+public class TestLeveldbTimelineStore extends TimelineStoreTestUtils {
   private FileContext fsContext;
   private File fsPath;
 
@@ -85,6 +82,16 @@ public class TestLeveldbTimelineStore
   @Test
   public void testGetEntities() throws IOException {
     super.testGetEntities();
+  }
+
+  @Test
+  public void testGetEntitiesWithFromId() throws IOException {
+    super.testGetEntitiesWithFromId();
+  }
+
+  @Test
+  public void testGetEntitiesWithFromTs() throws IOException {
+    super.testGetEntitiesWithFromTs();
   }
 
   @Test
@@ -135,55 +142,45 @@ public class TestLeveldbTimelineStore
   @Test
   public void testGetEntityTypes() throws IOException {
     List<String> entityTypes = ((LeveldbTimelineStore)store).getEntityTypes();
-    assertEquals(2, entityTypes.size());
+    assertEquals(4, entityTypes.size());
     assertEquals(entityType1, entityTypes.get(0));
     assertEquals(entityType2, entityTypes.get(1));
+    assertEquals(entityType4, entityTypes.get(2));
+    assertEquals(entityType5, entityTypes.get(3));
   }
 
   @Test
   public void testDeleteEntities() throws IOException, InterruptedException {
-    assertEquals(2, store.getEntities("type_1", null, null, null, null, null,
-        null).getEntities().size());
-    assertEquals(1, store.getEntities("type_2", null, null, null, null, null,
-        null).getEntities().size());
+    assertEquals(2, getEntities("type_1").size());
+    assertEquals(1, getEntities("type_2").size());
 
     assertEquals(false, deleteNextEntity(entityType1,
         writeReverseOrderedLong(122l)));
-    assertEquals(2, store.getEntities("type_1", null, null, null, null, null,
-        null).getEntities().size());
-    assertEquals(1, store.getEntities("type_2", null, null, null, null, null,
-        null).getEntities().size());
+    assertEquals(2, getEntities("type_1").size());
+    assertEquals(1, getEntities("type_2").size());
 
     assertEquals(true, deleteNextEntity(entityType1,
         writeReverseOrderedLong(123l)));
-    List<TimelineEntity> entities =
-        store.getEntities("type_2", null, null, null, null, null,
-            EnumSet.allOf(Field.class)).getEntities();
+    List<TimelineEntity> entities = getEntities("type_2");
     assertEquals(1, entities.size());
     verifyEntityInfo(entityId2, entityType2, events2, Collections.singletonMap(
         entityType1, Collections.singleton(entityId1b)), EMPTY_PRIMARY_FILTERS,
         EMPTY_MAP, entities.get(0));
-    entities = store.getEntities("type_1", null, null, null, userFilter, null,
-        EnumSet.allOf(Field.class)).getEntities();
+    entities = getEntitiesWithPrimaryFilter("type_1", userFilter);
     assertEquals(1, entities.size());
     verifyEntityInfo(entityId1b, entityType1, events1, EMPTY_REL_ENTITIES,
         primaryFilters, otherInfo, entities.get(0));
 
     ((LeveldbTimelineStore)store).discardOldEntities(-123l);
-    assertEquals(1, store.getEntities("type_1", null, null, null, null, null,
-        null).getEntities().size());
-    assertEquals(0, store.getEntities("type_2", null, null, null, null, null,
-        null).getEntities().size());
-    assertEquals(1, ((LeveldbTimelineStore)store).getEntityTypes().size());
+    assertEquals(1, getEntities("type_1").size());
+    assertEquals(0, getEntities("type_2").size());
+    assertEquals(3, ((LeveldbTimelineStore)store).getEntityTypes().size());
 
     ((LeveldbTimelineStore)store).discardOldEntities(123l);
-    assertEquals(0, store.getEntities("type_1", null, null, null, null, null,
-        null).getEntities().size());
-    assertEquals(0, store.getEntities("type_2", null, null, null, null, null,
-        null).getEntities().size());
+    assertEquals(0, getEntities("type_1").size());
+    assertEquals(0, getEntities("type_2").size());
     assertEquals(0, ((LeveldbTimelineStore)store).getEntityTypes().size());
-    assertEquals(0, store.getEntities("type_1", null, null, null, userFilter,
-        null, null).getEntities().size());
+    assertEquals(0, getEntitiesWithPrimaryFilter("type_1", userFilter).size());
   }
 
   @Test
@@ -200,14 +197,13 @@ public class TestLeveldbTimelineStore
     assertEquals(0, response.getErrors().size());
 
     NameValuePair pfPair = new NameValuePair("user", "otheruser");
-    List<TimelineEntity> entities = store.getEntities("type_1", null, null,
-        null, pfPair, null, null).getEntities();
+    List<TimelineEntity> entities = getEntitiesWithPrimaryFilter("type_1",
+        pfPair);
     assertEquals(1, entities.size());
     verifyEntityInfo(entityId1b, entityType1, Collections.singletonList(ev2),
         EMPTY_REL_ENTITIES, primaryFilter, EMPTY_MAP, entities.get(0));
 
-    entities = store.getEntities("type_1", null, null, null,
-        userFilter, null, null).getEntities();
+    entities = getEntitiesWithPrimaryFilter("type_1", userFilter);
     assertEquals(2, entities.size());
     verifyEntityInfo(entityId1, entityType1, events1, EMPTY_REL_ENTITIES,
         primaryFilters, otherInfo, entities.get(0));
@@ -215,22 +211,43 @@ public class TestLeveldbTimelineStore
         primaryFilters, otherInfo, entities.get(1));
 
     ((LeveldbTimelineStore)store).discardOldEntities(-123l);
-    assertEquals(1, store.getEntities("type_1", null, null, null, pfPair, null,
-        null).getEntities().size());
-    assertEquals(2, store.getEntities("type_1", null, null, null, userFilter,
-        null, null).getEntities().size());
+    assertEquals(1, getEntitiesWithPrimaryFilter("type_1", pfPair).size());
+    assertEquals(2, getEntitiesWithPrimaryFilter("type_1", userFilter).size());
 
     ((LeveldbTimelineStore)store).discardOldEntities(123l);
-    assertEquals(0, store.getEntities("type_1", null, null, null, null, null,
-        null).getEntities().size());
-    assertEquals(0, store.getEntities("type_2", null, null, null, null, null,
-        null).getEntities().size());
+    assertEquals(0, getEntities("type_1").size());
+    assertEquals(0, getEntities("type_2").size());
     assertEquals(0, ((LeveldbTimelineStore)store).getEntityTypes().size());
 
-    assertEquals(0, store.getEntities("type_1", null, null, null, pfPair, null,
-        null).getEntities().size());
-    assertEquals(0, store.getEntities("type_1", null, null, null, userFilter,
-        null, null).getEntities().size());
+    assertEquals(0, getEntitiesWithPrimaryFilter("type_1", pfPair).size());
+    assertEquals(0, getEntitiesWithPrimaryFilter("type_1", userFilter).size());
+  }
+
+  @Test
+  public void testFromTsWithDeletion()
+      throws IOException, InterruptedException {
+    long l = System.currentTimeMillis();
+    assertEquals(2, getEntitiesFromTs("type_1", l).size());
+    assertEquals(1, getEntitiesFromTs("type_2", l).size());
+    assertEquals(2, getEntitiesFromTsWithPrimaryFilter("type_1", userFilter,
+        l).size());
+    ((LeveldbTimelineStore)store).discardOldEntities(123l);
+    assertEquals(0, getEntitiesFromTs("type_1", l).size());
+    assertEquals(0, getEntitiesFromTs("type_2", l).size());
+    assertEquals(0, getEntitiesFromTsWithPrimaryFilter("type_1", userFilter,
+        l).size());
+    assertEquals(0, getEntities("type_1").size());
+    assertEquals(0, getEntities("type_2").size());
+    assertEquals(0, getEntitiesFromTsWithPrimaryFilter("type_1", userFilter,
+        l).size());
+    loadTestData();
+    assertEquals(0, getEntitiesFromTs("type_1", l).size());
+    assertEquals(0, getEntitiesFromTs("type_2", l).size());
+    assertEquals(0, getEntitiesFromTsWithPrimaryFilter("type_1", userFilter,
+        l).size());
+    assertEquals(2, getEntities("type_1").size());
+    assertEquals(1, getEntities("type_2").size());
+    assertEquals(2, getEntitiesWithPrimaryFilter("type_1", userFilter).size());
   }
 
 }
