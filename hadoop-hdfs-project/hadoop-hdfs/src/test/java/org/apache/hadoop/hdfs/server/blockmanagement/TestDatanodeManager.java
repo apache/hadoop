@@ -21,21 +21,29 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
+import org.apache.hadoop.net.DNSToSwitchMapping;
+import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
-import org.mortbay.log.Log;
 
 import static org.junit.Assert.*;
 
 public class TestDatanodeManager {
-
+  
+  public static final Log LOG = LogFactory.getLog(TestDatanodeManager.class);
+  
   //The number of times the registration / removal of nodes should happen
   final int NUM_ITERATIONS = 500;
 
@@ -57,7 +65,7 @@ public class TestDatanodeManager {
     Random rng = new Random();
     int seed = rng.nextInt();
     rng = new Random(seed);
-    Log.info("Using seed " + seed + " for testing");
+    LOG.info("Using seed " + seed + " for testing");
 
     //A map of the Storage IDs to the DN registration it was registered with
     HashMap <String, DatanodeRegistration> sIdToDnReg =
@@ -76,7 +84,7 @@ public class TestDatanodeManager {
           it.next();
         }
         DatanodeRegistration toRemove = it.next().getValue();
-        Log.info("Removing node " + toRemove.getDatanodeUuid() + " ip " +
+        LOG.info("Removing node " + toRemove.getDatanodeUuid() + " ip " +
         toRemove.getXferAddr() + " version : " + toRemove.getSoftwareVersion());
 
         //Remove that random node
@@ -110,7 +118,7 @@ public class TestDatanodeManager {
         Mockito.when(dr.getSoftwareVersion()).thenReturn(
           "version" + rng.nextInt(5));
 
-        Log.info("Registering node storageID: " + dr.getDatanodeUuid() +
+        LOG.info("Registering node storageID: " + dr.getDatanodeUuid() +
           ", version: " + dr.getSoftwareVersion() + ", IP address: "
           + dr.getXferAddr());
 
@@ -136,7 +144,7 @@ public class TestDatanodeManager {
         }
       }
       for(Entry <String, Integer> entry: mapToCheck.entrySet()) {
-        Log.info("Still in map: " + entry.getKey() + " has "
+        LOG.info("Still in map: " + entry.getKey() + " has "
           + entry.getValue());
       }
       assertEquals("The map of version counts returned by DatanodeManager was"
@@ -144,5 +152,62 @@ public class TestDatanodeManager {
         mapToCheck.size());
     }
   }
+  
+  @Test (timeout = 100000)
+  public void testRejectUnresolvedDatanodes() throws IOException {
+    //Create the DatanodeManager which will be tested
+    FSNamesystem fsn = Mockito.mock(FSNamesystem.class);
+    Mockito.when(fsn.hasWriteLock()).thenReturn(true);
+    
+    Configuration conf = new Configuration();
+    
+    //Set configuration property for rejecting unresolved topology mapping
+    conf.setBoolean(
+        DFSConfigKeys.DFS_REJECT_UNRESOLVED_DN_TOPOLOGY_MAPPING_KEY, true);
+    
+    //set TestDatanodeManager.MyResolver to be used for topology resolving
+    conf.setClass(
+        CommonConfigurationKeysPublic.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
+        TestDatanodeManager.MyResolver.class, DNSToSwitchMapping.class);
+    
+    //create DatanodeManager
+    DatanodeManager dm = new DatanodeManager(Mockito.mock(BlockManager.class),
+        fsn, conf);
+    
+    //storageID to register.
+    String storageID = "someStorageID-123";
+    
+    DatanodeRegistration dr = Mockito.mock(DatanodeRegistration.class);
+    Mockito.when(dr.getDatanodeUuid()).thenReturn(storageID);
+    
+    try {
+      //Register this node
+      dm.registerDatanode(dr);
+      Assert.fail("Expected an UnresolvedTopologyException");
+    } catch (UnresolvedTopologyException ute) {
+      LOG.info("Expected - topology is not resolved and " +
+          "registration is rejected.");
+    } catch (Exception e) {
+      Assert.fail("Expected an UnresolvedTopologyException");
+    }
+  }
+  
+  /**
+   * MyResolver class provides resolve method which always returns null 
+   * in order to simulate unresolved topology mapping.
+   */
+  public static class MyResolver implements DNSToSwitchMapping {
+    @Override
+    public List<String> resolve(List<String> names) {
+      return null;
+    }
 
+    @Override
+    public void reloadCachedMappings() {
+    }
+
+    @Override
+    public void reloadCachedMappings(List<String> names) {  
+    }
+  }
 }
