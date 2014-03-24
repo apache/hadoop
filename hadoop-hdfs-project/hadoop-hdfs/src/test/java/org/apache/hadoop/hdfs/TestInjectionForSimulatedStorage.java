@@ -48,11 +48,11 @@ import org.junit.Test;
  * This class tests the replication and injection of blocks of a DFS file for simulated storage.
  */
 public class TestInjectionForSimulatedStorage {
-  private int checksumSize = 16;
-  private int blockSize = checksumSize*2;
-  private int numBlocks = 4;
-  private int filesize = blockSize*numBlocks;
-  private int numDataNodes = 4;
+  private final int checksumSize = 16;
+  private final int blockSize = checksumSize*2;
+  private final int numBlocks = 4;
+  private final int filesize = blockSize*numBlocks;
+  private final int numDataNodes = 4;
   private static final Log LOG = LogFactory.getLog(
       "org.apache.hadoop.hdfs.TestInjectionForSimulatedStorage");
 

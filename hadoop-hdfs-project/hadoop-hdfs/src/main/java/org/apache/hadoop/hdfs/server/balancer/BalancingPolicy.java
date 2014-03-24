@@ -75,7 +75,7 @@ abstract class BalancingPolicy {
    * Cluster is balanced if each node is balanced.
    */
   static class Node extends BalancingPolicy {
-    static Node INSTANCE = new Node();
+    static final Node INSTANCE = new Node();
     private Node() {}
 
     @Override
@@ -99,7 +99,7 @@ abstract class BalancingPolicy {
    * Cluster is balanced if each pool in each node is balanced.
    */
   static class Pool extends BalancingPolicy {
-    static Pool INSTANCE = new Pool();
+    static final Pool INSTANCE = new Pool();
     private Pool() {}
 
     @Override

@@ -191,8 +191,8 @@ public class TableListing {
   private final Column columns[];
 
   private int numRows;
-  private boolean showHeader;
-  private int wrapWidth;
+  private final boolean showHeader;
+  private final int wrapWidth;
 
   TableListing(Column columns[], boolean showHeader, int wrapWidth) {
     this.columns = columns;

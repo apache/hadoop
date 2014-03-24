@@ -66,7 +66,7 @@ public class TestTokenAspect {
     private static final Text TOKEN_KIND = new Text("DummyFS Token");
     private boolean emulateSecurityEnabled;
     private TokenAspect<DummyFs> tokenAspect;
-    private UserGroupInformation ugi = UserGroupInformation
+    private final UserGroupInformation ugi = UserGroupInformation
         .createUserForTesting("foo", new String[] { "bar" });
     private URI uri;
 

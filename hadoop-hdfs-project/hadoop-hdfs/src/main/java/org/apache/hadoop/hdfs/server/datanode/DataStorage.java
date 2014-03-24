@@ -78,7 +78,7 @@ public class DataStorage extends Storage {
   private boolean initialized = false;
   
   // Maps block pool IDs to block pool storage
-  private Map<String, BlockPoolSliceStorage> bpStorageMap
+  private final Map<String, BlockPoolSliceStorage> bpStorageMap
       = Collections.synchronizedMap(new HashMap<String, BlockPoolSliceStorage>());
 
 

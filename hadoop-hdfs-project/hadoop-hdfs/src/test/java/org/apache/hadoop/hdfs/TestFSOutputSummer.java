@@ -41,8 +41,8 @@ public class TestFSOutputSummer {
   private static final int HALF_CHUNK_SIZE = BYTES_PER_CHECKSUM/2;
   private static final int FILE_SIZE = 2*BLOCK_SIZE-1;
   private static final short NUM_OF_DATANODES = 2;
-  private byte[] expected = new byte[FILE_SIZE];
-  private byte[] actual = new byte[FILE_SIZE];
+  private final byte[] expected = new byte[FILE_SIZE];
+  private final byte[] actual = new byte[FILE_SIZE];
   private FileSystem fileSys;
 
   /* create a file, write all data at once */

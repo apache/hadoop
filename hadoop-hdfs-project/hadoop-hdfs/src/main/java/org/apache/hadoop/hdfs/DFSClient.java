@@ -223,18 +223,18 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
   private volatile FsServerDefaults serverDefaults;
   private volatile long serverDefaultsLastUpdate;
   final String clientName;
-  SocketFactory socketFactory;
+  final SocketFactory socketFactory;
   final ReplaceDatanodeOnFailure dtpReplaceDatanodeOnFailure;
   final FileSystem.Statistics stats;
   private final String authority;
-  private Random r = new Random();
+  private final Random r = new Random();
   private SocketAddress[] localInterfaceAddrs;
   private DataEncryptionKey encryptionKey;
   private final CachingStrategy defaultReadCachingStrategy;
   private final CachingStrategy defaultWriteCachingStrategy;
   private final ClientContext clientContext;
   private volatile long hedgedReadThresholdMillis;
-  private static DFSHedgedReadMetrics HEDGED_READ_METRIC =
+  private static final DFSHedgedReadMetrics HEDGED_READ_METRIC =
       new DFSHedgedReadMetrics();
   private static ThreadPoolExecutor HEDGED_READ_THREAD_POOL;
   
@@ -953,7 +953,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
     }
   }
   
-  private static Map<String, Boolean> localAddrMap = Collections
+  private static final Map<String, Boolean> localAddrMap = Collections
       .synchronizedMap(new HashMap<String, Boolean>());
   
   static boolean isLocalAddress(InetSocketAddress targetAddr) {

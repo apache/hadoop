@@ -162,7 +162,7 @@ public class NNThroughputBenchmark implements Tool {
     protected static final String OP_ALL_NAME = "all";
     protected static final String OP_ALL_USAGE = "-op all <other ops options>";
 
-    protected String baseDir;
+    protected final String baseDir;
     protected short replication;
     protected int  numThreads = 0;        // number of threads
     protected int  numOpsRequired = 0;    // number of operations requested
@@ -380,12 +380,12 @@ public class NNThroughputBenchmark implements Tool {
    * One of the threads that perform stats operations.
    */
   private class StatsDaemon extends Thread {
-    private int daemonId;
+    private final int daemonId;
     private int opsPerThread;
     private String arg1;      // argument passed to executeOp()
     private volatile int  localNumOpsExecuted = 0;
     private volatile long localCumulativeTime = 0;
-    private OperationStatsBase statsOp;
+    private final OperationStatsBase statsOp;
 
     StatsDaemon(int daemonId, int nrOps, OperationStatsBase op) {
       this.daemonId = daemonId;
@@ -890,10 +890,10 @@ public class NNThroughputBenchmark implements Tool {
     NamespaceInfo nsInfo;
     DatanodeRegistration dnRegistration;
     DatanodeStorage storage; //only one storage 
-    ArrayList<Block> blocks;
+    final ArrayList<Block> blocks;
     int nrBlocks; // actual number of blocks
     long[] blockReportList;
-    int dnIdx;
+    final int dnIdx;
 
     /**
      * Return a a 6 digit integer port.
@@ -1222,7 +1222,7 @@ public class NNThroughputBenchmark implements Tool {
       "-op replication [-datanodes T] [-nodesToDecommission D] " +
       "[-nodeReplicationLimit C] [-totalBlocks B] [-replication R]";
 
-    private BlockReportStats blockReportObject;
+    private final BlockReportStats blockReportObject;
     private int numDatanodes;
     private int nodesToDecommission;
     private int nodeReplicationLimit;

@@ -42,14 +42,14 @@ import com.google.common.annotations.VisibleForTesting;
  */
 @InterfaceAudience.Private
 public class EditLogFileOutputStream extends EditLogOutputStream {
-  private static Log LOG = LogFactory.getLog(EditLogFileOutputStream.class);
+  private static final Log LOG = LogFactory.getLog(EditLogFileOutputStream.class);
   public static final int MIN_PREALLOCATION_LENGTH = 1024 * 1024;
 
   private File file;
   private FileOutputStream fp; // file stream for storing edit logs
   private FileChannel fc; // channel of the file stream for sync
   private EditsDoubleBuffer doubleBuf;
-  static ByteBuffer fill = ByteBuffer.allocateDirect(MIN_PREALLOCATION_LENGTH);
+  static final ByteBuffer fill = ByteBuffer.allocateDirect(MIN_PREALLOCATION_LENGTH);
   private boolean shouldSyncWritesAndSkipFsync = false;
 
   private static boolean shouldSkipFsyncForTests = false;

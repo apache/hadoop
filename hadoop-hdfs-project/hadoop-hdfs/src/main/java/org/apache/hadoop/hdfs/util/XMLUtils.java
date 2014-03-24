@@ -88,7 +88,7 @@ public class XMLUtils {
     return false;
   }
 
-  private static int NUM_SLASH_POSITIONS = 4;
+  private static final int NUM_SLASH_POSITIONS = 4;
 
   private static String mangleCodePoint(int cp) {
     return String.format("\\%0" + NUM_SLASH_POSITIONS + "x;", cp);
@@ -200,7 +200,7 @@ public class XMLUtils {
    * file.
    */
   static public class Stanza {
-    private TreeMap<String, LinkedList <Stanza > > subtrees;
+    private final TreeMap<String, LinkedList <Stanza > > subtrees;
 
     /** The unmangled value of this stanza. */
     private String value;

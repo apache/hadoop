@@ -38,7 +38,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 public class TestOpenFilesWithSnapshot {
-  private Configuration conf = new Configuration();
+  private final Configuration conf = new Configuration();
   MiniDFSCluster cluster = null;
   DistributedFileSystem fs = null;
 

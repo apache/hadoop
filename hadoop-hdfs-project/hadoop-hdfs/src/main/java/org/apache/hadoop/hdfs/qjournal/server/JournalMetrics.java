@@ -52,7 +52,7 @@ class JournalMetrics {
       60*60 // 1h
   };
   
-  MutableQuantiles[] syncsQuantiles;
+  final MutableQuantiles[] syncsQuantiles;
   
   private final Journal journal;
 

@@ -37,7 +37,7 @@ import org.junit.Test;
  * directories, and generally behaves as expected.
  */
 public class TestDFSMkdirs {
-  private Configuration conf = new HdfsConfiguration();
+  private final Configuration conf = new HdfsConfiguration();
 
   private static final String[] NON_CANONICAL_PATHS = new String[] {
       "//test1",

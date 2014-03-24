@@ -940,7 +940,7 @@ public class FSImage implements Closeable {
    */
   private class FSImageSaver implements Runnable {
     private final SaveNamespaceContext context;
-    private StorageDirectory sd;
+    private final StorageDirectory sd;
     private final NameNodeFile nnf;
 
     public FSImageSaver(SaveNamespaceContext context, StorageDirectory sd,

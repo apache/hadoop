@@ -42,7 +42,7 @@ import com.google.common.collect.Lists;
 @InterfaceAudience.Private
 public class BackupImage extends FSImage {
   /** Backup input stream for loading edits into memory */
-  private EditLogBackupInputStream backupInputStream =
+  private final EditLogBackupInputStream backupInputStream =
     new EditLogBackupInputStream("Data from remote NameNode");
   
   /**

@@ -114,7 +114,7 @@ public class CreateEditsLog {
         startingBlockId + " to " + (currentBlockId-1));
   }
   
-  static String usage = "Usage: createditlogs " +
+  static final String usage = "Usage: createditlogs " +
   " -f  numFiles startingBlockIds NumBlocksPerFile  [-r replicafactor] " + 
   		"[-d editsLogDirectory]\n" + 
   		"      Default replication factor is 1\n" +

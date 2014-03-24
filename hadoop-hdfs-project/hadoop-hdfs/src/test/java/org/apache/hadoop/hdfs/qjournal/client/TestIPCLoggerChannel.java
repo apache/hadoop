@@ -46,7 +46,7 @@ public class TestIPCLoggerChannel {
   private static final Log LOG = LogFactory.getLog(
       TestIPCLoggerChannel.class);
   
-  private Configuration conf = new Configuration();
+  private final Configuration conf = new Configuration();
   private static final NamespaceInfo FAKE_NSINFO = new NamespaceInfo(
       12345, "mycluster", "my-bp", 0L);
   private static final String JID = "test-journalid";
@@ -54,7 +54,7 @@ public class TestIPCLoggerChannel {
       new InetSocketAddress(0);
   private static final byte[] FAKE_DATA = new byte[4096];
   
-  private QJournalProtocol mockProxy = Mockito.mock(QJournalProtocol.class);
+  private final QJournalProtocol mockProxy = Mockito.mock(QJournalProtocol.class);
   private IPCLoggerChannel ch;
   
   private static final int LIMIT_QUEUE_SIZE_MB = 1;

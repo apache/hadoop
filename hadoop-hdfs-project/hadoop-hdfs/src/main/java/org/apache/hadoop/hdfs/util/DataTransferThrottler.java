@@ -26,8 +26,8 @@ import static org.apache.hadoop.util.Time.monotonicNow;
  * threads.
  */
 public class DataTransferThrottler {
-  private long period;          // period over which bw is imposed
-  private long periodExtension; // Max period over which bw accumulates.
+  private final long period;          // period over which bw is imposed
+  private final long periodExtension; // Max period over which bw accumulates.
   private long bytesPerPeriod;  // total number of bytes can be sent in each period
   private long curPeriodStart;  // current period starting time
   private long curReserve;      // remaining bytes can be sent in the period

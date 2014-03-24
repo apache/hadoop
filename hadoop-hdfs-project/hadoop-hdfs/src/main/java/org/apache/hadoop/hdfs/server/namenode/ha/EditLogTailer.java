@@ -91,13 +91,13 @@ public class EditLogTailer {
    * from finalized log segments, the Standby will only be as up-to-date as how
    * often the logs are rolled.
    */
-  private long logRollPeriodMs;
+  private final long logRollPeriodMs;
 
   /**
    * How often the Standby should check if there are new finalized segment(s)
    * available to be read from.
    */
-  private long sleepTimeMs;
+  private final long sleepTimeMs;
   
   public EditLogTailer(FSNamesystem namesystem, Configuration conf) {
     this.tailerThread = new EditLogTailerThread();

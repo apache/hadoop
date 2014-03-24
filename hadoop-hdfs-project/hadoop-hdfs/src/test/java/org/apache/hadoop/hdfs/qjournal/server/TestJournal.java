@@ -59,7 +59,7 @@ public class TestJournal {
   private static final File TEST_LOG_DIR = new File(
       new File(MiniDFSCluster.getBaseDirectory()), "TestJournal");
 
-  private StorageErrorReporter mockErrorReporter = Mockito.mock(
+  private final StorageErrorReporter mockErrorReporter = Mockito.mock(
       StorageErrorReporter.class);
 
   private Configuration conf;

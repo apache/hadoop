@@ -91,7 +91,7 @@ public class RemoteBlockReader2  implements BlockReader {
   private final ReadableByteChannel in;
   private DataChecksum checksum;
   
-  private PacketReceiver packetReceiver = new PacketReceiver(true);
+  private final PacketReceiver packetReceiver = new PacketReceiver(true);
   private ByteBuffer curDataSlice = null;
 
   /** offset in block of the last chunk received */

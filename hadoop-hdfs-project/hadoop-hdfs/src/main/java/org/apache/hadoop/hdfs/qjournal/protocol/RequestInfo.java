@@ -22,10 +22,10 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 
 @InterfaceAudience.Private
 public class RequestInfo {
-  private String jid;
+  private final String jid;
   private long epoch;
   private long ipcSerialNumber;
-  private long committedTxId;
+  private final long committedTxId;
   
   public RequestInfo(String jid, long epoch, long ipcSerialNumber,
       long committedTxId) {

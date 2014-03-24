@@ -64,8 +64,8 @@ public class DirectoryScanner implements Runnable {
   private volatile boolean shouldRun = false;
   private boolean retainDiffs = false;
 
-  ScanInfoPerBlockPool diffs = new ScanInfoPerBlockPool();
-  Map<String, Stats> stats = new HashMap<String, Stats>();
+  final ScanInfoPerBlockPool diffs = new ScanInfoPerBlockPool();
+  final Map<String, Stats> stats = new HashMap<String, Stats>();
   
   /**
    * Allow retaining diffs for unit test and analysis
@@ -77,7 +77,7 @@ public class DirectoryScanner implements Runnable {
 
   /** Stats tracked for reporting and testing, per blockpool */
   static class Stats {
-    String bpid;
+    final String bpid;
     long totalBlocks = 0;
     long missingMetaFile = 0;
     long missingBlockFile = 0;
@@ -570,7 +570,7 @@ public class DirectoryScanner implements Runnable {
 
   private static class ReportCompiler 
   implements Callable<ScanInfoPerBlockPool> {
-    private FsVolumeSpi volume;
+    private final FsVolumeSpi volume;
 
     public ReportCompiler(FsVolumeSpi volume) {
       this.volume = volume;

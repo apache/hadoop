@@ -33,7 +33,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class HdfsLocatedFileStatus extends HdfsFileStatus {
-  private LocatedBlocks locations;
+  private final LocatedBlocks locations;
   
   /**
    * Constructor

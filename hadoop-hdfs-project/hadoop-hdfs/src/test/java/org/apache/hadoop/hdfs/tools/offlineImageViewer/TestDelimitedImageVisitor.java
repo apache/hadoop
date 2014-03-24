@@ -35,7 +35,7 @@ import org.junit.Test;
  * on predetermined inputs
  */
 public class TestDelimitedImageVisitor {
-  private static String ROOT = PathUtils.getTestDirName(TestDelimitedImageVisitor.class);
+  private static final String ROOT = PathUtils.getTestDirName(TestDelimitedImageVisitor.class);
   private static final String delim = "--";
   
   // Record an element in the visitor and build the expected line in the output

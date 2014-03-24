@@ -77,7 +77,7 @@ public class BlockListAsLongs implements Iterable<Block> {
             + (blockIndex - finalizedSize) * LONGS_PER_UC_BLOCK;
   }
 
-  private long[] blockList;
+  private final long[] blockList;
   
   /**
    * Create block report from finalized and under construction lists of blocks.
@@ -141,7 +141,7 @@ public class BlockListAsLongs implements Iterable<Block> {
   @InterfaceStability.Evolving
   public class BlockReportIterator implements Iterator<Block> {
     private int currentBlockIndex;
-    private Block block;
+    private final Block block;
     private ReplicaState currentReplicaState;
 
     BlockReportIterator() {

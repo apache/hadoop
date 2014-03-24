@@ -47,9 +47,9 @@ import com.google.common.base.Joiner;
  */
 public class TestNNStorageRetentionFunctional {
 
-  private static File TEST_ROOT_DIR =
+  private static final File TEST_ROOT_DIR =
     new File(MiniDFSCluster.getBaseDirectory());
-  private static Log LOG = LogFactory.getLog(
+  private static final Log LOG = LogFactory.getLog(
       TestNNStorageRetentionFunctional.class);
 
  /**

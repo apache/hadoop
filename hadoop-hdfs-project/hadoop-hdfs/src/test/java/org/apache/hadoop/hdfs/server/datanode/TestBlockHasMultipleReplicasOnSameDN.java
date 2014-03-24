@@ -49,7 +49,7 @@ import static org.junit.Assert.assertThat;
 public class TestBlockHasMultipleReplicasOnSameDN {
   public static final Log LOG = LogFactory.getLog(TestBlockHasMultipleReplicasOnSameDN.class);
 
-  private static short NUM_DATANODES = 2;
+  private static final short NUM_DATANODES = 2;
   private static final int BLOCK_SIZE = 1024;
   private static final long NUM_BLOCKS = 5;
   private static final long seed = 0x1BADF00DL;

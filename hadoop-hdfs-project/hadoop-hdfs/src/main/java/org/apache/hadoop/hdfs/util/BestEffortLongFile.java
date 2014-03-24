@@ -53,7 +53,7 @@ public class BestEffortLongFile implements Closeable {
   
   private FileChannel ch = null;
   
-  private ByteBuffer buf = ByteBuffer.allocate(Long.SIZE/8);
+  private final ByteBuffer buf = ByteBuffer.allocate(Long.SIZE/8);
   
   public BestEffortLongFile(File file, long defaultVal) {
     this.file = file;

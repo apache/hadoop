@@ -42,7 +42,7 @@ public class TestPeerCache {
     private boolean closed = false;
     private final boolean hasDomain;
 
-    private DatanodeID dnId;
+    private final DatanodeID dnId;
 
     public FakePeer(DatanodeID dnId, boolean hasDomain) {
       this.dnId = dnId;

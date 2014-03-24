@@ -69,8 +69,8 @@ public abstract class ByteRangeInputStream extends FSInputStream {
     NORMAL, SEEK, CLOSED
   }
   protected InputStream in;
-  protected URLOpener originalURL;
-  protected URLOpener resolvedURL;
+  protected final URLOpener originalURL;
+  protected final URLOpener resolvedURL;
   protected long startPos = 0;
   protected long currentPos = 0;
   protected Long fileLength = null;

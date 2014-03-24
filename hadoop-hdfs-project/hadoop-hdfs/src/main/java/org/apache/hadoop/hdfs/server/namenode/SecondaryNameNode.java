@@ -794,8 +794,8 @@ public class SecondaryNameNode implements Runnable {
     private int mergeErrorCount;
     private static class CheckpointLogPurger implements LogsPurgeable {
       
-      private NNStorage storage;
-      private StoragePurger purger
+      private final NNStorage storage;
+      private final StoragePurger purger
           = new NNStorageRetentionManager.DeletionStoragePurger();
       
       public CheckpointLogPurger(NNStorage storage) {

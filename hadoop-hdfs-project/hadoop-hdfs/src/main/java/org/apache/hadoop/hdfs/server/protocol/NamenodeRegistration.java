@@ -32,9 +32,9 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 @InterfaceStability.Evolving
 public class NamenodeRegistration extends StorageInfo
 implements NodeRegistration {
-  String rpcAddress;          // RPC address of the node
-  String httpAddress;         // HTTP address of the node
-  NamenodeRole role;          // node role
+  final String rpcAddress;          // RPC address of the node
+  final String httpAddress;         // HTTP address of the node
+  final NamenodeRole role;          // node role
 
   public NamenodeRegistration(String address,
                               String httpAddress,

@@ -82,11 +82,11 @@ public class AvailableSpaceVolumeChoosingPolicy<V extends FsVolumeSpi>
     return null;
   }
   
-  private VolumeChoosingPolicy<V> roundRobinPolicyBalanced =
+  private final VolumeChoosingPolicy<V> roundRobinPolicyBalanced =
       new RoundRobinVolumeChoosingPolicy<V>();
-  private VolumeChoosingPolicy<V> roundRobinPolicyHighAvailable =
+  private final VolumeChoosingPolicy<V> roundRobinPolicyHighAvailable =
       new RoundRobinVolumeChoosingPolicy<V>();
-  private VolumeChoosingPolicy<V> roundRobinPolicyLowAvailable =
+  private final VolumeChoosingPolicy<V> roundRobinPolicyLowAvailable =
       new RoundRobinVolumeChoosingPolicy<V>();
 
   @Override

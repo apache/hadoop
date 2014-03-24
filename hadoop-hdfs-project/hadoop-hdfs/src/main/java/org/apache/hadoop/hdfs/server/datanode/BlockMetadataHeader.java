@@ -54,7 +54,7 @@ public class BlockMetadataHeader {
    * Version is two bytes. Following it is the DataChecksum
    * that occupies 5 bytes. 
    */
-  private short version;
+  private final short version;
   private DataChecksum checksum = null;
     
   @VisibleForTesting

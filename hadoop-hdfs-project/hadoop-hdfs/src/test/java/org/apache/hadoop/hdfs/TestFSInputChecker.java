@@ -52,10 +52,10 @@ public class TestFSInputChecker {
   static final int HALF_CHUNK_SIZE = BYTES_PER_SUM/2;
   static final int FILE_SIZE = 2*BLOCK_SIZE-1;
   static final short NUM_OF_DATANODES = 2;
-  byte[] expected = new byte[FILE_SIZE];
+  final byte[] expected = new byte[FILE_SIZE];
   byte[] actual;
   FSDataInputStream stm;
-  Random rand = new Random(seed);
+  final Random rand = new Random(seed);
 
   /* create a file */
   private void writeFile(FileSystem fileSys, Path name) throws IOException {

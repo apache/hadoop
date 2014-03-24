@@ -24,7 +24,7 @@ import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class KeyUpdateCommand extends DatanodeCommand {
-  private ExportedBlockKeys keys;
+  private final ExportedBlockKeys keys;
 
   KeyUpdateCommand() {
     this(new ExportedBlockKeys());

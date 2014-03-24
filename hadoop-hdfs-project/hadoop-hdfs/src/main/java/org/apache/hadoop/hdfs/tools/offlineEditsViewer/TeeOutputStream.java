@@ -24,7 +24,7 @@ import java.io.OutputStream;
  * A TeeOutputStream writes its output to multiple output streams.
  */
 public class TeeOutputStream extends OutputStream {
-  private OutputStream outs[];
+  private final OutputStream[] outs;
 
   public TeeOutputStream(OutputStream outs[]) {
     this.outs = outs;

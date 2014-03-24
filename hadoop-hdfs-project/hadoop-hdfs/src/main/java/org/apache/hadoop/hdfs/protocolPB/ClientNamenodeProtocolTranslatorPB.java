@@ -1078,7 +1078,7 @@ public class ClientNamenodeProtocolTranslatorPB implements
 
   private static class BatchedCacheEntries
       implements BatchedEntries<CacheDirectiveEntry> {
-    private ListCacheDirectivesResponseProto response;
+    private final ListCacheDirectivesResponseProto response;
 
     BatchedCacheEntries(
         ListCacheDirectivesResponseProto response) {

@@ -78,18 +78,18 @@ public class DataNodeMetrics {
   @Metric MutableRate blockReports;
   @Metric MutableRate cacheReports;
   @Metric MutableRate packetAckRoundTripTimeNanos;
-  MutableQuantiles[] packetAckRoundTripTimeNanosQuantiles;
+  final MutableQuantiles[] packetAckRoundTripTimeNanosQuantiles;
   
   @Metric MutableRate flushNanos;
-  MutableQuantiles[] flushNanosQuantiles;
+  final MutableQuantiles[] flushNanosQuantiles;
   
   @Metric MutableRate fsyncNanos;
-  MutableQuantiles[] fsyncNanosQuantiles;
+  final MutableQuantiles[] fsyncNanosQuantiles;
   
   @Metric MutableRate sendDataPacketBlockedOnNetworkNanos;
-  MutableQuantiles[] sendDataPacketBlockedOnNetworkNanosQuantiles;
+  final MutableQuantiles[] sendDataPacketBlockedOnNetworkNanosQuantiles;
   @Metric MutableRate sendDataPacketTransferNanos;
-  MutableQuantiles[] sendDataPacketTransferNanosQuantiles;
+  final MutableQuantiles[] sendDataPacketTransferNanosQuantiles;
   
 
   final MetricsRegistry registry = new MetricsRegistry("datanode");

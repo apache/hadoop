@@ -54,7 +54,7 @@ public class TestClientProtocolWithDelegationToken {
   public static final Log LOG = LogFactory
       .getLog(TestClientProtocolWithDelegationToken.class);
 
-  private static Configuration conf;
+  private static final Configuration conf;
   static {
     conf = new Configuration();
     conf.set(HADOOP_SECURITY_AUTHENTICATION, "kerberos");

@@ -39,7 +39,7 @@ import com.sun.org.apache.xml.internal.serialize.XMLSerializer;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class XmlEditsVisitor implements OfflineEditsVisitor {
-  private OutputStream out;
+  private final OutputStream out;
   private ContentHandler contentHandler;
 
   /**

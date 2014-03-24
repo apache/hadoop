@@ -193,7 +193,7 @@ public class MiniDFSNNTopology {
   }
   
   public static class NNConf {
-    private String nnId;
+    private final String nnId;
     private int httpPort;
     private int ipcPort;
     

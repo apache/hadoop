@@ -56,10 +56,10 @@ import com.google.common.base.Preconditions;
 class BlockReaderLocal implements BlockReader {
   static final Log LOG = LogFactory.getLog(BlockReaderLocal.class);
 
-  private static DirectBufferPool bufferPool = new DirectBufferPool();
+  private static final DirectBufferPool bufferPool = new DirectBufferPool();
 
   public static class Builder {
-    private int bufferSize;
+    private final int bufferSize;
     private boolean verifyChecksum;
     private int maxReadahead;
     private String filename;
@@ -160,12 +160,12 @@ class BlockReaderLocal implements BlockReader {
   /**
    * Cache of Checksum#bytesPerChecksum.
    */
-  private int bytesPerChecksum;
+  private final int bytesPerChecksum;
 
   /**
    * Cache of Checksum#checksumSize.
    */
-  private int checksumSize;
+  private final int checksumSize;
 
   /**
    * Maximum number of chunks to allocate.
@@ -191,7 +191,7 @@ class BlockReaderLocal implements BlockReader {
    * The rationale is that allocating a lot of buffers of different sizes would
    * make it very difficult for the DirectBufferPool to re-use buffers. 
    */
-  private int maxReadaheadLength;
+  private final int maxReadaheadLength;
 
   /**
    * Buffers data starting at the current dataPos and extending on

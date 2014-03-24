@@ -35,11 +35,11 @@ import org.mockito.stubbing.Answer;
 import com.google.common.base.Supplier;
 
 public class TestLeaseRenewer {
-  private String FAKE_AUTHORITY="hdfs://nn1/";
-  private UserGroupInformation FAKE_UGI_A =
+  private final String FAKE_AUTHORITY="hdfs://nn1/";
+  private final UserGroupInformation FAKE_UGI_A =
     UserGroupInformation.createUserForTesting(
       "myuser", new String[]{"group1"});
-  private UserGroupInformation FAKE_UGI_B =
+  private final UserGroupInformation FAKE_UGI_B =
     UserGroupInformation.createUserForTesting(
       "myuser", new String[]{"group1"});
 

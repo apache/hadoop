@@ -41,7 +41,7 @@ public class MiniJournalCluster {
     private String baseDir;
     private int numJournalNodes = 3;
     private boolean format = true;
-    private Configuration conf;
+    private final Configuration conf;
     
     public Builder(Configuration conf) {
       this.conf = conf;
@@ -69,8 +69,8 @@ public class MiniJournalCluster {
 
   private static final class JNInfo {
     private JournalNode node;
-    private InetSocketAddress ipcAddr;
-    private String httpServerURI;
+    private final InetSocketAddress ipcAddr;
+    private final String httpServerURI;
 
     private JNInfo(JournalNode node) {
       this.node = node;
@@ -80,8 +80,8 @@ public class MiniJournalCluster {
   }
 
   private static final Log LOG = LogFactory.getLog(MiniJournalCluster.class);
-  private File baseDir;
-  private JNInfo nodes[];
+  private final File baseDir;
+  private final JNInfo[] nodes;
   
   private MiniJournalCluster(Builder b) throws IOException {
     LOG.info("Starting MiniJournalCluster with " +

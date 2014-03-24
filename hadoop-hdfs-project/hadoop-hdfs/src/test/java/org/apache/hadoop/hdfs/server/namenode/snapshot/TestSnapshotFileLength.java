@@ -44,7 +44,7 @@ public class TestSnapshotFileLength {
   private static final short REPLICATION = 1;
   private static final int BLOCKSIZE = 1024;
 
-  private static Configuration conf = new Configuration();
+  private static final Configuration conf = new Configuration();
   private static MiniDFSCluster cluster;
   private static DistributedFileSystem hdfs;
 

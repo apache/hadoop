@@ -49,9 +49,9 @@ import org.junit.Test;
 
 public class TestStickyBit {
 
-  static UserGroupInformation user1 = 
+  static final UserGroupInformation user1 =
     UserGroupInformation.createUserForTesting("theDoctor", new String[] {"tardis"});
-  static UserGroupInformation user2 = 
+  static final UserGroupInformation user2 =
     UserGroupInformation.createUserForTesting("rose", new String[] {"powellestates"});
 
   private static MiniDFSCluster cluster;

@@ -45,7 +45,7 @@ import static org.mockito.Matchers.anyLong;
 public class TestStorageReport {
   public static final Log LOG = LogFactory.getLog(TestStorageReport.class);
 
-  private static short REPL_FACTOR = 1;
+  private static final short REPL_FACTOR = 1;
   private static final StorageType storageType = StorageType.SSD; // pick non-default.
 
   private static Configuration conf;

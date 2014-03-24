@@ -45,7 +45,7 @@ public class TestEpochsAreUnique {
   private static final String JID = "testEpochsAreUnique-jid";
   private static final NamespaceInfo FAKE_NSINFO = new NamespaceInfo(
       12345, "mycluster", "my-bp", 0L);
-  private Random r = new Random();
+  private final Random r = new Random();
   
   @Test
   public void testSingleThreaded() throws IOException {
@@ -121,7 +121,7 @@ public class TestEpochsAreUnique {
   }
 
   private class SometimesFaulty<T> implements Answer<ListenableFuture<T>> {
-    private float faultProbability;
+    private final float faultProbability;
 
     public SometimesFaulty(float faultProbability) {
       this.faultProbability = faultProbability;

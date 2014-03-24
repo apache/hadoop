@@ -46,7 +46,7 @@ class RollingLogsImpl implements RollingLogs {
   private final File prev;
   private PrintWriter out; //require synchronized access
 
-  private Appender appender = new Appender() {
+  private final Appender appender = new Appender() {
     @Override
     public Appendable append(CharSequence csq) {
       synchronized(RollingLogsImpl.this) {

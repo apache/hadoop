@@ -28,8 +28,8 @@ public class CorruptFileBlocks {
   // used for hashCode
   private static final int PRIME = 16777619;
 
-  private String[] files;
-  private String cookie;
+  private final String[] files;
+  private final String cookie;
 
   public CorruptFileBlocks() {
     this(new String[0], "");

@@ -186,7 +186,7 @@ public class DataNode extends Configured
   private String clusterId = null;
 
   public final static String EMPTY_DEL_HINT = "";
-  AtomicInteger xmitsInProgress = new AtomicInteger();
+  final AtomicInteger xmitsInProgress = new AtomicInteger();
   Daemon dataXceiverServer = null;
   Daemon localDataXceiverServer = null;
   ShortCircuitRegistry shortCircuitRegistry = null;
@@ -224,11 +224,11 @@ public class DataNode extends Configured
   private SecureResources secureResources = null;
   private List<StorageLocation> dataDirs;
   private Configuration conf;
-  private String confVersion;
+  private final String confVersion;
   private final long maxNumberOfBlocksToLog;
 
   private final List<String> usersWithLocalPathAccess;
-  private boolean connectToDnViaHostname;
+  private final boolean connectToDnViaHostname;
   ReadaheadPool readaheadPool;
   private final boolean getHdfsBlockLocationsEnabled;
   private ObjectName dataNodeInfoBeanName;
@@ -1837,7 +1837,7 @@ public class DataNode extends Configured
   // Small wrapper around the DiskChecker class that provides means to mock
   // DiskChecker static methods and unittest DataNode#getDataDirsFromURIs.
   static class DataNodeDiskChecker {
-    private FsPermission expectedPermission;
+    private final FsPermission expectedPermission;
 
     public DataNodeDiskChecker(FsPermission expectedPermission) {
       this.expectedPermission = expectedPermission;

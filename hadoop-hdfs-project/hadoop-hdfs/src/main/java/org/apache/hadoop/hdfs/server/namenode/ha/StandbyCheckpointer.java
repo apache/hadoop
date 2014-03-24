@@ -71,7 +71,7 @@ public class StandbyCheckpointer {
   private URL activeNNAddress;
   private URL myNNAddress;
 
-  private Object cancelLock = new Object();
+  private final Object cancelLock = new Object();
   private Canceler canceler;
   
   // Keep track of how many checkpoints were canceled.

@@ -62,8 +62,8 @@ public class TestSecurityTokenEditLog {
   // an object that does a bunch of transactions
   //
   static class Transactions implements Runnable {
-    FSNamesystem namesystem;
-    int numTransactions;
+    final FSNamesystem namesystem;
+    final int numTransactions;
     short replication = 3;
     long blockSize = 64;
 

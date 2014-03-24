@@ -29,7 +29,7 @@ import org.junit.Test;
 import com.google.common.collect.Lists;
 
 public class TestDirectBufferPool {
-  DirectBufferPool pool = new DirectBufferPool();
+  final DirectBufferPool pool = new DirectBufferPool();
   
   @Test
   public void testBasics() {

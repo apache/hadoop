@@ -361,7 +361,7 @@ class BlockPoolSliceScanner {
      * This simple text and easily extendable and easily parseable with a
      * regex.
      */
-    private static Pattern entryPattern = 
+    private static final Pattern entryPattern =
       Pattern.compile("\\G\\s*([^=\\p{Space}]+)=\"(.*?)\"\\s*");
     
     static String toString(long verificationTime, long genStamp, long blockId,

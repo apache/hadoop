@@ -203,23 +203,23 @@ public class Balancer {
   private final double threshold;
   
   // all data node lists
-  private Collection<Source> overUtilizedDatanodes
+  private final Collection<Source> overUtilizedDatanodes
                                = new LinkedList<Source>();
-  private Collection<Source> aboveAvgUtilizedDatanodes
+  private final Collection<Source> aboveAvgUtilizedDatanodes
                                = new LinkedList<Source>();
-  private Collection<BalancerDatanode> belowAvgUtilizedDatanodes
+  private final Collection<BalancerDatanode> belowAvgUtilizedDatanodes
                                = new LinkedList<BalancerDatanode>();
-  private Collection<BalancerDatanode> underUtilizedDatanodes
+  private final Collection<BalancerDatanode> underUtilizedDatanodes
                                = new LinkedList<BalancerDatanode>();
   
-  private Collection<Source> sources
+  private final Collection<Source> sources
                                = new HashSet<Source>();
-  private Collection<BalancerDatanode> targets
+  private final Collection<BalancerDatanode> targets
                                = new HashSet<BalancerDatanode>();
   
-  private Map<Block, BalancerBlock> globalBlockList
+  private final Map<Block, BalancerBlock> globalBlockList
                  = new HashMap<Block, BalancerBlock>();
-  private MovedBlocks movedBlocks = new MovedBlocks();
+  private final MovedBlocks movedBlocks = new MovedBlocks();
   /** Map (datanodeUuid -> BalancerDatanodes) */
   private final Map<String, BalancerDatanode> datanodeMap
       = new HashMap<String, BalancerDatanode>();
@@ -421,8 +421,8 @@ public class Balancer {
   
   /* A class for keeping track of blocks in the Balancer */
   static private class BalancerBlock {
-    private Block block; // the block
-    private List<BalancerDatanode> locations
+    private final Block block; // the block
+    private final List<BalancerDatanode> locations
             = new ArrayList<BalancerDatanode>(3); // its locations
     
     /* Constructor */
@@ -469,7 +469,7 @@ public class Balancer {
    * An object of this class is stored in a source node. 
    */
   static private class NodeTask {
-    private BalancerDatanode datanode; //target node
+    private final BalancerDatanode datanode; //target node
     private long size;  //bytes scheduled to move
     
     /* constructor */
@@ -498,7 +498,7 @@ public class Balancer {
     final long maxSize2Move;
     private long scheduledSize = 0L;
     //  blocks being moved but not confirmed yet
-    private List<PendingBlockMove> pendingBlocks = 
+    private final List<PendingBlockMove> pendingBlocks =
       new ArrayList<PendingBlockMove>(MAX_NUM_CONCURRENT_MOVES); 
     
     @Override
@@ -615,13 +615,13 @@ public class Balancer {
       }
     }
     
-    private ArrayList<NodeTask> nodeTasks = new ArrayList<NodeTask>(2);
+    private final ArrayList<NodeTask> nodeTasks = new ArrayList<NodeTask>(2);
     private long blocksToReceive = 0L;
     /* source blocks point to balancerBlocks in the global list because
      * we want to keep one copy of a block in balancer and be aware that
      * the locations are changing over time.
      */
-    private List<BalancerBlock> srcBlockList
+    private final List<BalancerBlock> srcBlockList
             = new ArrayList<BalancerBlock>();
     
     /* constructor */
@@ -1092,7 +1092,7 @@ public class Balancer {
       return bytesMoved;
     }
   };
-  private BytesMoved bytesMoved = new BytesMoved();
+  private final BytesMoved bytesMoved = new BytesMoved();
   
   /* Start a thread to dispatch block moves for each source. 
    * The thread selects blocks to move & sends request to proxy source to

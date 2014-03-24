@@ -26,7 +26,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 @InterfaceStability.Evolving
 public class NNHAStatusHeartbeat {
 
-  private HAServiceState state;
+  private final HAServiceState state;
   private long txid = HdfsConstants.INVALID_TXID;
   
   public NNHAStatusHeartbeat(HAServiceState state, long txid) {

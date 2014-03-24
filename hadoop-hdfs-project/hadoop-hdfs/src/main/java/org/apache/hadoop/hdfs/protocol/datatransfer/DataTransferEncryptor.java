@@ -299,7 +299,7 @@ public class DataTransferEncryptor {
    */
   private static class SaslServerCallbackHandler implements CallbackHandler {
     
-    private BlockPoolTokenSecretManager blockPoolTokenSecretManager;
+    private final BlockPoolTokenSecretManager blockPoolTokenSecretManager;
     
     public SaslServerCallbackHandler(BlockPoolTokenSecretManager
         blockPoolTokenSecretManager) {
@@ -347,8 +347,8 @@ public class DataTransferEncryptor {
    */
   private static class SaslClientCallbackHandler implements CallbackHandler {
     
-    private byte[] encryptionKey;
-    private String userName;
+    private final byte[] encryptionKey;
+    private final String userName;
     
     public SaslClientCallbackHandler(byte[] encryptionKey, String userName) {
       this.encryptionKey = encryptionKey;

@@ -50,7 +50,7 @@ public class TestNNMetricFilesInGetListingOps {
      
   private MiniDFSCluster cluster;
   private DistributedFileSystem fs;
-  private Random rand = new Random();
+  private final Random rand = new Random();
 
   @Before
   public void setUp() throws Exception {

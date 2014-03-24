@@ -56,10 +56,10 @@ public class TestDFSPermission {
   final private static String USER2_NAME = "user2";
   final private static String USER3_NAME = "user3";
 
-  private static UserGroupInformation SUPERUSER;
-  private static UserGroupInformation USER1;
-  private static UserGroupInformation USER2;
-  private static UserGroupInformation USER3;
+  private static final UserGroupInformation SUPERUSER;
+  private static final UserGroupInformation USER1;
+  private static final UserGroupInformation USER2;
+  private static final UserGroupInformation USER3;
 
   final private static short MAX_PERMISSION = 511;
   final private static short DEFAULT_UMASK = 022;
@@ -75,7 +75,7 @@ public class TestDFSPermission {
 
   private FileSystem fs;
   private MiniDFSCluster cluster;
-  private static Random r;
+  private static final Random r;
 
   static {
     try {
@@ -472,8 +472,8 @@ public class TestDFSPermission {
    * value is generated only once.
    */
   static private class PermissionGenerator {
-    private Random r;
-    private short permissions[] = new short[MAX_PERMISSION + 1];
+    private final Random r;
+    private final short[] permissions = new short[MAX_PERMISSION + 1];
     private int numLeft = MAX_PERMISSION + 1;
 
     PermissionGenerator(Random r) {
@@ -642,7 +642,7 @@ public class TestDFSPermission {
     }
   }
 
-  private CreatePermissionVerifier createVerifier =
+  private final CreatePermissionVerifier createVerifier =
     new CreatePermissionVerifier();
   /* test if the permission checking of create/mkdir is correct */
   private void testCreateMkdirs(UserGroupInformation ugi, Path path,
@@ -672,7 +672,7 @@ public class TestDFSPermission {
     }
   }
 
-  private OpenPermissionVerifier openVerifier = new OpenPermissionVerifier();
+  private final OpenPermissionVerifier openVerifier = new OpenPermissionVerifier();
   /* test if the permission checking of open is correct */
   private void testOpen(UserGroupInformation ugi, Path path,
       short ancestorPermission, short parentPermission, short filePermission)
@@ -697,7 +697,7 @@ public class TestDFSPermission {
     }
   }
 
-  private SetReplicationPermissionVerifier replicatorVerifier =
+  private final SetReplicationPermissionVerifier replicatorVerifier =
     new SetReplicationPermissionVerifier();
   /* test if the permission checking of setReplication is correct */
   private void testSetReplication(UserGroupInformation ugi, Path path,
@@ -725,7 +725,7 @@ public class TestDFSPermission {
     }
   }
 
-  private SetTimesPermissionVerifier timesVerifier =
+  private final SetTimesPermissionVerifier timesVerifier =
     new SetTimesPermissionVerifier();
   /* test if the permission checking of setReplication is correct */
   private void testSetTimes(UserGroupInformation ugi, Path path,
@@ -780,7 +780,7 @@ public class TestDFSPermission {
     }
   }
 
-  private StatsPermissionVerifier statsVerifier = new StatsPermissionVerifier();
+  private final StatsPermissionVerifier statsVerifier = new StatsPermissionVerifier();
   /* test if the permission checking of isDirectory, exist,
    * getFileInfo, getContentSummary is correct */
   private void testStats(UserGroupInformation ugi, Path path,
@@ -840,7 +840,7 @@ public class TestDFSPermission {
     }
   }
 
-  ListPermissionVerifier listVerifier = new ListPermissionVerifier();
+  final ListPermissionVerifier listVerifier = new ListPermissionVerifier();
   /* test if the permission checking of list is correct */
   private void testList(UserGroupInformation ugi, Path file, Path dir,
       short ancestorPermission, short parentPermission, short filePermission)
@@ -896,7 +896,7 @@ public class TestDFSPermission {
     }
   }
 
-  RenamePermissionVerifier renameVerifier = new RenamePermissionVerifier();
+  final RenamePermissionVerifier renameVerifier = new RenamePermissionVerifier();
   /* test if the permission checking of rename is correct */
   private void testRename(UserGroupInformation ugi, Path src, Path dst,
       short srcAncestorPermission, short srcParentPermission,
@@ -958,7 +958,7 @@ public class TestDFSPermission {
     }
   }
 
-  DeletePermissionVerifier fileDeletionVerifier =
+  final DeletePermissionVerifier fileDeletionVerifier =
     new DeletePermissionVerifier();
 
   /* test if the permission checking of file deletion is correct */
@@ -968,7 +968,7 @@ public class TestDFSPermission {
     fileDeletionVerifier.verifyPermission(ugi);
   }
 
-  DeleteDirPermissionVerifier dirDeletionVerifier =
+  final DeleteDirPermissionVerifier dirDeletionVerifier =
     new DeleteDirPermissionVerifier();
 
   /* test if the permission checking of directory deletion is correct */

@@ -47,7 +47,7 @@ public class SnapshotDiffReport {
     DELETE("-"), 
     RENAME("R");
     
-    private String label;
+    private final String label;
     
     private DiffType(String label) {
       this.label = label;

@@ -27,9 +27,9 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class DatanodeLocalInfo {
-  private String softwareVersion;
-  private String configVersion;
-  private long uptime; // datanode uptime in seconds.
+  private final String softwareVersion;
+  private final String configVersion;
+  private final long uptime; // datanode uptime in seconds.
 
   public DatanodeLocalInfo(String softwareVersion,
       String configVersion, long uptime) {

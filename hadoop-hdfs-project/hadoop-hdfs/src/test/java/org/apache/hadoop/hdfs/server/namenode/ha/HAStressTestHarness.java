@@ -38,10 +38,10 @@ import org.apache.hadoop.test.MultithreadedTestUtil.TestContext;
  * processing, etc.
  */
 public class HAStressTestHarness {
-  Configuration conf;
+  final Configuration conf;
   private MiniDFSCluster cluster;
   static final int BLOCK_SIZE = 1024;
-  TestContext testCtx = new TestContext();
+  final TestContext testCtx = new TestContext();
   
   public HAStressTestHarness() {
     conf = new Configuration();

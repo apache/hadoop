@@ -41,7 +41,7 @@ public class SaveNamespaceContext {
     Collections.synchronizedList(new ArrayList<StorageDirectory>());
   
   private final Canceler canceller;
-  private CountDownLatch completionLatch = new CountDownLatch(1);
+  private final CountDownLatch completionLatch = new CountDownLatch(1);
 
   SaveNamespaceContext(
       FSNamesystem sourceNamesystem,

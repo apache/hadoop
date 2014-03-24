@@ -79,8 +79,8 @@ public class TransferFsImage {
 
   @VisibleForTesting
   static int timeout = 0;
-  private static URLConnectionFactory connectionFactory;
-  private static boolean isSpnegoEnabled;
+  private static final URLConnectionFactory connectionFactory;
+  private static final boolean isSpnegoEnabled;
 
   static {
     Configuration conf = new Configuration();

@@ -50,8 +50,8 @@ public class TestListPathServlet {
   private static FileSystem fs;
   private static URI hftpURI;
   private static HftpFileSystem hftpFs;
-  private Random r = new Random();
-  private List<String> filelist = new ArrayList<String>();
+  private final Random r = new Random();
+  private final List<String> filelist = new ArrayList<String>();
 
   @BeforeClass
   public static void setup() throws Exception {

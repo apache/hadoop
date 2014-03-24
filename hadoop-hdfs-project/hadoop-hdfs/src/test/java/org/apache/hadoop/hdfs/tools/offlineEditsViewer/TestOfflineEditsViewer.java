@@ -45,7 +45,7 @@ public class TestOfflineEditsViewer {
   private static final Log LOG = LogFactory
       .getLog(TestOfflineEditsViewer.class);
 
-  private static String buildDir = PathUtils
+  private static final String buildDir = PathUtils
       .getTestDirName(TestOfflineEditsViewer.class);
 
   // to create edits and get edits filename

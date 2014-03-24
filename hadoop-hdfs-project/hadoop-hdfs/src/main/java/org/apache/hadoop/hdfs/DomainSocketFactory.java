@@ -86,7 +86,7 @@ class DomainSocketFactory {
   /**
    * Information about domain socket paths.
    */
-  Cache<String, PathState> pathMap =
+  final Cache<String, PathState> pathMap =
       CacheBuilder.newBuilder()
       .expireAfterWrite(10, TimeUnit.MINUTES)
       .build();

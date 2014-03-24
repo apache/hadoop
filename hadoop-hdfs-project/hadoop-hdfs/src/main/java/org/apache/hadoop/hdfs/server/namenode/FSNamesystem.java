@@ -474,7 +474,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   private final long accessTimePrecision;
 
   /** Lock to protect FSNamesystem. */
-  private FSNamesystemLock fsLock;
+  private final FSNamesystemLock fsLock;
 
   /**
    * Used when this NN is in standby state to read from the shared edit log.
@@ -4641,15 +4641,15 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   public class SafeModeInfo {
     // configuration fields
     /** Safe mode threshold condition %.*/
-    private double threshold;
+    private final double threshold;
     /** Safe mode minimum number of datanodes alive */
-    private int datanodeThreshold;
+    private final int datanodeThreshold;
     /** Safe mode extension after the threshold. */
     private int extension;
     /** Min replication required by safe mode. */
-    private int safeReplication;
+    private final int safeReplication;
     /** threshold for populating needed replication queues */
-    private double replQueueThreshold;
+    private final double replQueueThreshold;
     // internal fields
     /** Time when threshold was reached.
      * <br> -1 safe mode is off
@@ -6085,8 +6085,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   static class CorruptFileBlockInfo {
-    String path;
-    Block block;
+    final String path;
+    final Block block;
     
     public CorruptFileBlockInfo(String p, Block b) {
       path = p;

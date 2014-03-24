@@ -57,7 +57,7 @@ import com.google.common.collect.Sets;
  */
 public class TestNameNodeRecovery {
   private static final Log LOG = LogFactory.getLog(TestNameNodeRecovery.class);
-  private static StartupOption recoverStartOpt = StartupOption.RECOVER;
+  private static final StartupOption recoverStartOpt = StartupOption.RECOVER;
   private static final File TEST_DIR = PathUtils.getTestDir(TestNameNodeRecovery.class);
 
   static {
@@ -205,7 +205,7 @@ public class TestNameNodeRecovery {
    * throwing an exception.
    */
   private static class EltsTestEmptyLog extends EditLogTestSetup {
-    private int paddingLength;
+    private final int paddingLength;
 
     public EltsTestEmptyLog(int paddingLength) {
       this.paddingLength = paddingLength;
@@ -289,7 +289,7 @@ public class TestNameNodeRecovery {
    * with recovery mode.
    */
   private static class EltsTestOpcodesAfterPadding extends EditLogTestSetup {
-    private int paddingLength;
+    private final int paddingLength;
 
     public EltsTestOpcodesAfterPadding(int paddingLength) {
       this.paddingLength = paddingLength;
@@ -448,7 +448,7 @@ public class TestNameNodeRecovery {
   }
 
   static class SafePaddingCorruptor implements Corruptor {
-    private byte padByte;
+    private final byte padByte;
 
     public SafePaddingCorruptor(byte padByte) {
       this.padByte = padByte;

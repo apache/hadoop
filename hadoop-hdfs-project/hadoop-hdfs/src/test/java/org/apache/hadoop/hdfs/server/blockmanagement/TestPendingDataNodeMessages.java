@@ -32,7 +32,7 @@ import com.google.common.base.Joiner;
 
 
 public class TestPendingDataNodeMessages {
-  PendingDataNodeMessages msgs = new PendingDataNodeMessages();
+  final PendingDataNodeMessages msgs = new PendingDataNodeMessages();
   
   private final Block block1Gs1 = new Block(1, 0, 1);
   private final Block block1Gs2 = new Block(1, 0, 2);

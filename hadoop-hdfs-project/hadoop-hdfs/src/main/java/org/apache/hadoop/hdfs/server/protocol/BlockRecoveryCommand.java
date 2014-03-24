@@ -41,7 +41,7 @@ import com.google.common.base.Joiner;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class BlockRecoveryCommand extends DatanodeCommand {
-  Collection<RecoveringBlock> recoveringBlocks;
+  final Collection<RecoveringBlock> recoveringBlocks;
 
   /**
    * This is a block with locations from which it should be recovered
@@ -53,7 +53,7 @@ public class BlockRecoveryCommand extends DatanodeCommand {
   @InterfaceAudience.Private
   @InterfaceStability.Evolving
   public static class RecoveringBlock extends LocatedBlock {
-    private long newGenerationStamp;
+    private final long newGenerationStamp;
 
     /**
      * Create RecoveringBlock.

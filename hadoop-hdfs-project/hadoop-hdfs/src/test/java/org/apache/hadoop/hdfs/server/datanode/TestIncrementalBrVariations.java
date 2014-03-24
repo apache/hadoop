@@ -63,7 +63,7 @@ import org.junit.Test;
 public class TestIncrementalBrVariations {
   public static final Log LOG = LogFactory.getLog(TestIncrementalBrVariations.class);
 
-  private static short NUM_DATANODES = 1;
+  private static final short NUM_DATANODES = 1;
   static final int BLOCK_SIZE = 1024;
   static final int NUM_BLOCKS = 10;
   private static final long seed = 0xFACEFEEDL;

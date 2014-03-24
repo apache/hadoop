@@ -61,10 +61,10 @@ public class TestDatanodeBlockScanner {
   
   private static final long TIMEOUT = 20000; // 20 sec.
   
-  private static Pattern pattern = 
+  private static final Pattern pattern =
              Pattern.compile(".*?(blk_[-]*\\d+).*?scan time\\s*:\\s*(\\d+)");
   
-  private static Pattern pattern_blockVerify = 
+  private static final Pattern pattern_blockVerify =
              Pattern.compile(".*?(SCAN_PERIOD)\\s*:\\s*(\\d+.*?)");
   
   static {

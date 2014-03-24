@@ -47,7 +47,7 @@ public class PacketReceiver implements Closeable {
    */
   private static final int MAX_PACKET_SIZE = 16 * 1024 * 1024;
 
-  static Log LOG = LogFactory.getLog(PacketReceiver.class);
+  static final Log LOG = LogFactory.getLog(PacketReceiver.class);
   
   private static final DirectBufferPool bufferPool = new DirectBufferPool();
   private final boolean useDirectBuffers;

@@ -52,7 +52,7 @@ class FSImageTransactionalStorageInspector extends FSImageStorageInspector {
   private boolean needToSave = false;
   private boolean isUpgradeFinalized = true;
   
-  List<FSImageFile> foundImages = new ArrayList<FSImageFile>();
+  final List<FSImageFile> foundImages = new ArrayList<FSImageFile>();
   private long maxSeenTxId = 0;
   
   private final List<Pattern> namePatterns = Lists.newArrayList();

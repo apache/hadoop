@@ -50,7 +50,7 @@ public class NameNodeResourceChecker {
   private static final Log LOG = LogFactory.getLog(NameNodeResourceChecker.class.getName());
 
   // Space (in bytes) reserved per volume.
-  private long duReserved;
+  private final long duReserved;
 
   private final Configuration conf;
   private Map<String, CheckedVolume> volumes;

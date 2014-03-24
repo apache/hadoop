@@ -104,7 +104,7 @@ public class TestFsDatasetCache {
   private static DataNode dn;
   private static FsDatasetSpi<?> fsd;
   private static DatanodeProtocolClientSideTranslatorPB spyNN;
-  private static PageRounder rounder = new PageRounder();
+  private static final PageRounder rounder = new PageRounder();
   private static CacheManipulator prevCacheManipulator;
 
   static {

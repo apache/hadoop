@@ -92,7 +92,7 @@ class DataXceiverServer implements Runnable {
    }
   }
 
-  BlockBalanceThrottler balanceThrottler;
+  final BlockBalanceThrottler balanceThrottler;
   
   /**
    * We need an estimate for block size to check if the disk partition has
@@ -102,7 +102,7 @@ class DataXceiverServer implements Runnable {
    * A better solution is to include in the header the estimated block size,
    * i.e. either the actual block size or the default block size.
    */
-  long estimateBlockSize;
+  final long estimateBlockSize;
   
   
   DataXceiverServer(PeerServer peerServer, Configuration conf,

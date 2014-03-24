@@ -61,8 +61,8 @@ public class TestDirectoryScanner {
   private String bpid;
   private FsDatasetSpi<? extends FsVolumeSpi> fds = null;
   private DirectoryScanner scanner = null;
-  private Random rand = new Random();
-  private Random r = new Random();
+  private final Random rand = new Random();
+  private final Random r = new Random();
 
   static {
     CONF.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 100);

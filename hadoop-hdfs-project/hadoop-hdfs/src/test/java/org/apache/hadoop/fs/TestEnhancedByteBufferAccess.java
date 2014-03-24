@@ -117,7 +117,7 @@ public class TestEnhancedByteBufferAccess {
     return resultArray;
   }
   
-  private static int BLOCK_SIZE = 4096;
+  private static final int BLOCK_SIZE = 4096;
   
   public static HdfsConfiguration initZeroCopyTest() {
     Assume.assumeTrue(NativeIO.isAvailable());

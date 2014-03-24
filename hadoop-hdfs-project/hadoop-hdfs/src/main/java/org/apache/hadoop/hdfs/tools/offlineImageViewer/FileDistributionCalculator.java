@@ -69,7 +69,7 @@ final class FileDistributionCalculator {
   private final int steps;
   private final PrintWriter out;
 
-  private int[] distribution;
+  private final int[] distribution;
   private int totalFiles;
   private int totalDirectories;
   private int totalBlocks;

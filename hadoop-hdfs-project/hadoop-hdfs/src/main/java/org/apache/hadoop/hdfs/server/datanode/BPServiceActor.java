@@ -74,7 +74,7 @@ class BPServiceActor implements Runnable {
   final InetSocketAddress nnAddr;
   HAServiceState state;
 
-  BPOfferService bpos;
+  final BPOfferService bpos;
   
   // lastBlockReport, lastDeletedReport and lastHeartbeat may be assigned/read
   // by testing threads (through BPServiceActor#triggerXXX), while also 
@@ -893,7 +893,7 @@ class BPServiceActor implements Runnable {
   }
 
   private static class PerStoragePendingIncrementalBR {
-    private Map<Long, ReceivedDeletedBlockInfo> pendingIncrementalBR =
+    private final Map<Long, ReceivedDeletedBlockInfo> pendingIncrementalBR =
         Maps.newHashMap();
 
     /**

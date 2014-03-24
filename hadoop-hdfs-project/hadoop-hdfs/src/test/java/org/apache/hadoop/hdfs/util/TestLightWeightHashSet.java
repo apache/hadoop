@@ -40,7 +40,7 @@ public class TestLightWeightHashSet{
 
   private static final Log LOG = LogFactory
       .getLog("org.apache.hadoop.hdfs.TestLightWeightHashSet");
-  private ArrayList<Integer> list = new ArrayList<Integer>();
+  private final ArrayList<Integer> list = new ArrayList<Integer>();
   private final int NUM = 100;
   private LightWeightHashSet<Integer> set;
   private Random rand;

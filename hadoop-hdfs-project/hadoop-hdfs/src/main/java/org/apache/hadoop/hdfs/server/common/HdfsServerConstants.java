@@ -196,10 +196,10 @@ public final class HdfsServerConstants {
   }
 
   // Timeouts for communicating with DataNode for streaming writes/reads
-  public static int READ_TIMEOUT = 60 * 1000;
-  public static int READ_TIMEOUT_EXTENSION = 5 * 1000;
-  public static int WRITE_TIMEOUT = 8 * 60 * 1000;
-  public static int WRITE_TIMEOUT_EXTENSION = 5 * 1000; //for write pipeline
+  public static final int READ_TIMEOUT = 60 * 1000;
+  public static final int READ_TIMEOUT_EXTENSION = 5 * 1000;
+  public static final int WRITE_TIMEOUT = 8 * 60 * 1000;
+  public static final int WRITE_TIMEOUT_EXTENSION = 5 * 1000; //for write pipeline
 
   /**
    * Defines the NameNode role.
@@ -233,7 +233,7 @@ public final class HdfsServerConstants {
     /** Temporary replica: created for replication and relocation only. */
     TEMPORARY(4);
 
-    private int value;
+    private final int value;
 
     private ReplicaState(int v) {
       value = v;

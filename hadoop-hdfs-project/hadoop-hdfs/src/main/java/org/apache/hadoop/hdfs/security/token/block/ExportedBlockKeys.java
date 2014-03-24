@@ -36,7 +36,7 @@ public class ExportedBlockKeys implements Writable {
   private boolean isBlockTokenEnabled;
   private long keyUpdateInterval;
   private long tokenLifetime;
-  private BlockKey currentKey;
+  private final BlockKey currentKey;
   private BlockKey[] allKeys;
 
   public ExportedBlockKeys() {

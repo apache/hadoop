@@ -59,14 +59,14 @@ public class TestFileAppend2 {
   }
 
   static final int numBlocks = 5;
-  boolean simulatedStorage = false;
+  final boolean simulatedStorage = false;
 
   private byte[] fileContents = null;
 
-  int numDatanodes = 6;
-  int numberOfFiles = 50;
-  int numThreads = 10;
-  int numAppendsPerThread = 20;
+  final int numDatanodes = 6;
+  final int numberOfFiles = 50;
+  final int numThreads = 10;
+  final int numAppendsPerThread = 20;
 /***
   int numberOfFiles = 1;
   int numThreads = 1;
@@ -233,8 +233,8 @@ public class TestFileAppend2 {
   // an object that does a bunch of appends to files
   //
   class Workload extends Thread {
-    private int id;
-    private MiniDFSCluster cluster;
+    private final int id;
+    private final MiniDFSCluster cluster;
 
     Workload(MiniDFSCluster cluster, int threadIndex) {
       id = threadIndex;
