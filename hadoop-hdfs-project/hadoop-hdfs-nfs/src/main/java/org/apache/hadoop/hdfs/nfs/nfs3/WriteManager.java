@@ -156,7 +156,7 @@ public class WriteManager {
         }
         throw e;
       } catch (IOException e) {
-        LOG.error("Can't apapend to file:" + fileIdPath + ", error:" + e);
+        LOG.error("Can't apapend to file:" + fileIdPath, e);
         if (fos != null) {
           fos.close();
         }
@@ -181,7 +181,7 @@ public class WriteManager {
         try {
           fos.close();
         } catch (IOException e) {
-          LOG.error("Can't close stream for fileId:" + handle.getFileId());
+          LOG.error("Can't close stream for fileId:" + handle.getFileId(), e);
         }
         // Notify client to retry
         WccData fileWcc = new WccData(latestAttr.getWccAttr(), latestAttr);
@@ -284,10 +284,10 @@ public class WriteManager {
     // Send out the response
     Nfs3FileAttributes postOpAttr = null;
     try {
-      String fileIdPath = Nfs3Utils.getFileIdPath(preOpAttr.getFileid());
+      String fileIdPath = Nfs3Utils.getFileIdPath(preOpAttr.getFileId());
       postOpAttr = Nfs3Utils.getFileAttr(dfsClient, fileIdPath, iug);
     } catch (IOException e1) {
-      LOG.info("Can't get postOpAttr for fileId: " + preOpAttr.getFileid());
+      LOG.info("Can't get postOpAttr for fileId: " + preOpAttr.getFileId(), e1);
     }
     WccData fileWcc = new WccData(Nfs3Utils.getWccAttr(preOpAttr), postOpAttr);
     COMMIT3Response response = new COMMIT3Response(status, fileWcc,

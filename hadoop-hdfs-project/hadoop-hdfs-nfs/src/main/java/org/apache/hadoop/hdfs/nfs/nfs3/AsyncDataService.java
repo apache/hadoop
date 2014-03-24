@@ -135,8 +135,7 @@ public class AsyncDataService {
       try {
         openFileCtx.executeWriteBack();
       } catch (Throwable t) {
-        LOG.error("Asyn data service got error:"
-            + ExceptionUtils.getFullStackTrace(t));
+        LOG.error("Asyn data service got error:", t);
       }
     }
   }

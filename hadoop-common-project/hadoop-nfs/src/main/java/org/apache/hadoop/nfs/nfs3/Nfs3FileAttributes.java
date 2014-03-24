@@ -35,7 +35,7 @@ public class Nfs3FileAttributes {
   private long used;
   private Specdata3 rdev;
   private long fsid;
-  private long fileid;
+  private long fileId;
   private NfsTime atime;
   private NfsTime mtime;
   private NfsTime ctime;
@@ -76,7 +76,7 @@ public class Nfs3FileAttributes {
   }
 
   public Nfs3FileAttributes(NfsFileType nfsType, int nlink, short mode, int uid,
-      int gid, long size, long fsid, long fileid, long mtime, long atime) {
+      int gid, long size, long fsid, long fileId, long mtime, long atime) {
     this.type = nfsType.toValue();
     this.mode = mode;
     this.nlink = (type == NfsFileType.NFSDIR.toValue()) ? (nlink + 2) : 1;
@@ -89,7 +89,7 @@ public class Nfs3FileAttributes {
     this.used = this.size;
     this.rdev = new Specdata3();
     this.fsid = fsid;
-    this.fileid = fileid;
+    this.fileId = fileId;
     this.mtime = new NfsTime(mtime);
     this.atime = atime != 0 ? new NfsTime(atime) : this.mtime;
     this.ctime = this.mtime;
@@ -105,7 +105,7 @@ public class Nfs3FileAttributes {
     this.used = other.getUsed();
     this.rdev = new Specdata3();
     this.fsid = other.getFsid();
-    this.fileid = other.getFileid();
+    this.fileId = other.getFileId();
     this.mtime = new NfsTime(other.getMtime());
     this.atime = new NfsTime(other.getAtime());
     this.ctime = new NfsTime(other.getCtime());
@@ -122,7 +122,7 @@ public class Nfs3FileAttributes {
     xdr.writeInt(rdev.getSpecdata1());
     xdr.writeInt(rdev.getSpecdata2());
     xdr.writeLongAsHyper(fsid);
-    xdr.writeLongAsHyper(fileid);
+    xdr.writeLongAsHyper(fileId);
     atime.serialize(xdr);
     mtime.serialize(xdr);
     ctime.serialize(xdr);
@@ -142,7 +142,7 @@ public class Nfs3FileAttributes {
     xdr.readInt();
     attr.rdev = new Specdata3();
     attr.fsid = xdr.readHyper();
-    attr.fileid = xdr.readHyper();
+    attr.fileId = xdr.readHyper();
     attr.atime = NfsTime.deserialize(xdr);
     attr.mtime = NfsTime.deserialize(xdr);
     attr.ctime = NfsTime.deserialize(xdr);
@@ -154,7 +154,7 @@ public class Nfs3FileAttributes {
     return String.format("type:%d, mode:%d, nlink:%d, uid:%d, gid:%d, " + 
             "size:%d, used:%d, rdev:%s, fsid:%d, fileid:%d, atime:%s, " + 
             "mtime:%s, ctime:%s",
-            type, mode, nlink, uid, gid, size, used, rdev, fsid, fileid, atime,
+            type, mode, nlink, uid, gid, size, used, rdev, fsid, fileId, atime,
             mtime, ctime);
   }
 
@@ -170,8 +170,8 @@ public class Nfs3FileAttributes {
     return fsid;
   }
 
-  public long getFileid() {
-    return fileid;
+  public long getFileId() {
+    return fileId;
   }
 
   public NfsTime getAtime() {
@@ -192,10 +192,6 @@ public class Nfs3FileAttributes {
   
   public WccAttr getWccAttr() {
     return new WccAttr(size, mtime, ctime);
-  }
-  
-  public long getFileId() {
-    return fileid;
   }
   
   public long getSize() {

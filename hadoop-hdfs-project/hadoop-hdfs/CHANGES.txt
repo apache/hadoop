@@ -191,6 +191,9 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-6120. Fix and improve safe mode log messages. (Arpit Agarwal)
 
+    HDFS-6050. NFS does not handle exceptions correctly in a few places 
+    (brandonli)
+
   OPTIMIZATIONS
 
     HDFS-5790. LeaseManager.findPath is very slow when many leases need recovery

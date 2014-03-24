@@ -131,7 +131,7 @@ public class RpcProgramMountd extends RpcProgram implements MountInterface {
       
       handle = new FileHandle(exFileStatus.getFileId());
     } catch (IOException e) {
-      LOG.error("Can't get handle for export:" + path + ", exception:" + e);
+      LOG.error("Can't get handle for export:" + path, e);
       MountResponse.writeMNTResponse(Nfs3Status.NFS3ERR_NOENT, out, xid, null);
       return out;
     }
