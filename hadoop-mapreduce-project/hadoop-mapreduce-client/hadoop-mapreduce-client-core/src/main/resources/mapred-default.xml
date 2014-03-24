@@ -343,6 +343,30 @@
 </property>
 
 <property>
+  <name>mapreduce.shuffle.transferTo.allowed</name>
+  <value></value>
+  <description>This option can enable/disable using nio transferTo method in 
+  the shuffle phase. NIO transferTo does not perform well on windows in the 
+  shuffle phase. Thus, with this configuration property it is possible to 
+  disable it, in which case custom transfer method will be used. Recommended 
+  value is false when running Hadoop on Windows. For Linux, it is recommended 
+  to set it to true. If nothing is set then the default value is false for 
+  Windows, and true for Linux.
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.shuffle.transfer.buffer.size</name>
+  <value>131072</value>
+  <description>This property is used only if 
+  mapreduce.shuffle.transferTo.allowed is set to false. In that case, 
+  this property defines the size of the buffer used in the buffer copy code
+  for the shuffle phase. The size of this buffer determines the size of the IO
+  requests.
+  </description>
+</property>
+
+<property>
   <name>mapreduce.reduce.markreset.buffer.percent</name>
   <value>0.0</value>
   <description>The percentage of memory -relative to the maximum heap size- to
