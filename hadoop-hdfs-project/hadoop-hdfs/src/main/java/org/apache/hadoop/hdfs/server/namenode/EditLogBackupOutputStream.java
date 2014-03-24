@@ -43,8 +43,8 @@ import org.apache.hadoop.security.UserGroupInformation;
  *  int, int, byte[])
  */
 class EditLogBackupOutputStream extends EditLogOutputStream {
-  private static Log LOG = LogFactory.getLog(EditLogFileOutputStream.class);
-  static int DEFAULT_BUFFER_SIZE = 256;
+  private static final Log LOG = LogFactory.getLog(EditLogFileOutputStream.class);
+  static final int DEFAULT_BUFFER_SIZE = 256;
 
   private final JournalProtocol backupNode;  // RPC proxy to backup node
   private final NamenodeRegistration bnRegistration;  // backup node registration

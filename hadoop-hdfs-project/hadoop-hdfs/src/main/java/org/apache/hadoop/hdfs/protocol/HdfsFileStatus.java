@@ -32,21 +32,21 @@ import org.apache.hadoop.hdfs.DFSUtil;
 @InterfaceStability.Evolving
 public class HdfsFileStatus {
 
-  private byte[] path;  // local name of the inode that's encoded in java UTF8
-  private byte[] symlink; // symlink target encoded in java UTF8 or null
-  private long length;
-  private boolean isdir;
-  private short block_replication;
-  private long blocksize;
-  private long modification_time;
-  private long access_time;
-  private FsPermission permission;
-  private String owner;
-  private String group;
-  private long fileId;
+  private final byte[] path;  // local name of the inode that's encoded in java UTF8
+  private final byte[] symlink; // symlink target encoded in java UTF8 or null
+  private final long length;
+  private final boolean isdir;
+  private final short block_replication;
+  private final long blocksize;
+  private final long modification_time;
+  private final long access_time;
+  private final FsPermission permission;
+  private final String owner;
+  private final String group;
+  private final long fileId;
   
   // Used by dir, not including dot and dotdot. Always zero for a regular file.
-  private int childrenNum;
+  private final int childrenNum;
   
   public static final byte[] EMPTY_NAME = new byte[0];
 

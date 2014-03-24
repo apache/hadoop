@@ -33,8 +33,8 @@ public class BlockMissingException extends IOException {
 
   private static final long serialVersionUID = 1L;
 
-  private String filename;
-  private long   offset;
+  private final String filename;
+  private final long   offset;
 
   /**
    * An exception that indicates that file was corrupted.

@@ -55,10 +55,10 @@ public class TestHDFSConcat {
   private NamenodeProtocols nn;
   private DistributedFileSystem dfs;
 
-  private static long blockSize = 512;
+  private static final long blockSize = 512;
 
   
-  private static Configuration conf;
+  private static final Configuration conf;
 
   static {
     conf = new Configuration();

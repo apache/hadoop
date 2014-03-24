@@ -50,7 +50,7 @@ import com.google.protobuf.BlockingService;
 class JournalNodeRpcServer implements QJournalProtocol {
 
   private static final int HANDLER_COUNT = 5;
-  private JournalNode jn;
+  private final JournalNode jn;
   private Server server;
 
   JournalNodeRpcServer(Configuration conf, JournalNode jn) throws IOException {

@@ -54,7 +54,7 @@ import com.google.common.collect.Lists;
  * and then the under replicated block gets replicated to the datanode.
  */
 public class TestRBWBlockInvalidation {
-  private static Log LOG = LogFactory.getLog(TestRBWBlockInvalidation.class);
+  private static final Log LOG = LogFactory.getLog(TestRBWBlockInvalidation.class);
   
   private static NumberReplicas countReplicas(final FSNamesystem namesystem,
       ExtendedBlock block) {

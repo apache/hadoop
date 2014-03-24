@@ -46,8 +46,8 @@ import org.apache.hadoop.util.Daemon;
 class PendingReplicationBlocks {
   private static final Log LOG = BlockManager.LOG;
 
-  private Map<Block, PendingBlockInfo> pendingReplications;
-  private ArrayList<Block> timedOutItems;
+  private final Map<Block, PendingBlockInfo> pendingReplications;
+  private final ArrayList<Block> timedOutItems;
   Daemon timerThread = null;
   private volatile boolean fsRunning = true;
 
@@ -56,7 +56,7 @@ class PendingReplicationBlocks {
   // a request is timed out.
   //
   private long timeout = 5 * 60 * 1000;
-  private long defaultRecheckInterval = 5 * 60 * 1000;
+  private final static long DEFAULT_RECHECK_INTERVAL = 5 * 60 * 1000;
 
   PendingReplicationBlocks(long timeoutPeriod) {
     if ( timeoutPeriod > 0 ) {
@@ -215,7 +215,7 @@ class PendingReplicationBlocks {
     @Override
     public void run() {
       while (fsRunning) {
-        long period = Math.min(defaultRecheckInterval, timeout);
+        long period = Math.min(DEFAULT_RECHECK_INTERVAL, timeout);
         try {
           pendingReplicationCheck();
           Thread.sleep(period);

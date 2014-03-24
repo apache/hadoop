@@ -26,7 +26,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class RollingUpgradeStatus {
-  private String blockPoolId;
+  private final String blockPoolId;
 
   public RollingUpgradeStatus(String blockPoolId) {
     this.blockPoolId = blockPoolId;

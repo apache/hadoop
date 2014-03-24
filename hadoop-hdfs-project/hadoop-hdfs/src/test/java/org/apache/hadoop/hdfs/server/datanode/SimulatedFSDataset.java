@@ -117,7 +117,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
 
   // information about a single block
   private class BInfo implements ReplicaInPipelineInterface {
-    Block theBlock;
+    final Block theBlock;
     private boolean finalized = false; // if not finalized => ongoing creation
     SimulatedOutputStream oStream = null;
     private long bytesAcked;
@@ -329,7 +329,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
    * to {@link FSVolumeSet}
    */
   private static class SimulatedStorage {
-    private Map<String, SimulatedBPStorage> map = 
+    private final Map<String, SimulatedBPStorage> map =
       new HashMap<String, SimulatedBPStorage>();
 
     private final long capacity;  // in bytes
@@ -827,7 +827,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
     
 
     byte theRepeatedData = 7;
-    long length; // bytes
+    final long length; // bytes
     int currentPos = 0;
     byte[] data = null;
     

@@ -26,7 +26,7 @@ import org.apache.hadoop.util.ProgramDriver;
  */
 public class HdfsTestDriver {
 
-  private ProgramDriver pgd;
+  private final ProgramDriver pgd;
 
   public HdfsTestDriver() {
     this(new ProgramDriver());

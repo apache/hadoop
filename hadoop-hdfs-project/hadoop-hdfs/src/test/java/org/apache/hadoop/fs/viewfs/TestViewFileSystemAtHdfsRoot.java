@@ -40,7 +40,7 @@ import org.junit.BeforeClass;
 public class TestViewFileSystemAtHdfsRoot extends ViewFileSystemBaseTest {
 
   private static MiniDFSCluster cluster;
-  private static Configuration CONF = new Configuration();
+  private static final Configuration CONF = new Configuration();
   private static FileSystem fHdfs;
   
   @Override

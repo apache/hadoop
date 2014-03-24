@@ -62,11 +62,11 @@ public class TestJournalNode {
   private static final NamespaceInfo FAKE_NSINFO = new NamespaceInfo(
       12345, "mycluster", "my-bp", 0L);
 
-  private static File TEST_BUILD_DATA = PathUtils.getTestDir(TestJournalNode.class);
+  private static final File TEST_BUILD_DATA = PathUtils.getTestDir(TestJournalNode.class);
 
   private JournalNode jn;
   private Journal journal; 
-  private Configuration conf = new Configuration();
+  private final Configuration conf = new Configuration();
   private IPCLoggerChannel ch;
   private String journalId;
 

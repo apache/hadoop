@@ -64,7 +64,7 @@ public class TestClientReportBadBlock {
   private static int buffersize;
   private static MiniDFSCluster cluster;
   private static DistributedFileSystem dfs;
-  private static int numDataNodes = 3;
+  private static final int numDataNodes = 3;
   private static final Configuration conf = new HdfsConfiguration();
 
   Random rand = new Random();

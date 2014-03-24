@@ -44,7 +44,7 @@ import com.google.common.annotations.VisibleForTesting;
 public class DirectBufferPool {
 
   // Essentially implement a multimap with weak values.
-  ConcurrentMap<Integer, Queue<WeakReference<ByteBuffer>>> buffersBySize =
+  final ConcurrentMap<Integer, Queue<WeakReference<ByteBuffer>>> buffersBySize =
     new ConcurrentHashMap<Integer, Queue<WeakReference<ByteBuffer>>>();
  
   /**

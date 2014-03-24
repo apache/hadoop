@@ -32,10 +32,10 @@ import java.util.Arrays;
 public class FileNameGenerator {
   private static final int DEFAULT_FILES_PER_DIRECTORY = 32;
   
-  private int[] pathIndecies = new int[20]; // this will support up to 32**20 = 2**100 = 10**30 files
-  private String baseDir;
+  private final int[] pathIndecies = new int[20]; // this will support up to 32**20 = 2**100 = 10**30 files
+  private final String baseDir;
   private String currentDir;
-  private int filesPerDirectory;
+  private final int filesPerDirectory;
   private long fileCount;
 
   FileNameGenerator(String baseDir) {

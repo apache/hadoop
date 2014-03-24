@@ -78,7 +78,7 @@ class BPOfferService {
    * The list of all actors for namenodes in this nameservice, regardless
    * of their active or standby states.
    */
-  private List<BPServiceActor> bpServices =
+  private final List<BPServiceActor> bpServices =
     new CopyOnWriteArrayList<BPServiceActor>();
 
   /**

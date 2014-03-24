@@ -59,7 +59,7 @@ public class TestDFSHAAdminMiniCluster {
   private MiniDFSCluster cluster;
   private Configuration conf; 
   private DFSHAAdmin tool;
-  private ByteArrayOutputStream errOutBytes = new ByteArrayOutputStream();
+  private final ByteArrayOutputStream errOutBytes = new ByteArrayOutputStream();
 
   private String errOutput;
 

@@ -78,7 +78,7 @@ public class TestNamenodeRetryCache {
   private static final byte[] CLIENT_ID = ClientId.getClientId();
   private static MiniDFSCluster cluster;
   private static FSNamesystem namesystem;
-  private static PermissionStatus perm = new PermissionStatus(
+  private static final PermissionStatus perm = new PermissionStatus(
       "TestNamenodeRetryCache", null, FsPermission.getDefault());
   private static DistributedFileSystem filesystem;
   private static int callId = 100;

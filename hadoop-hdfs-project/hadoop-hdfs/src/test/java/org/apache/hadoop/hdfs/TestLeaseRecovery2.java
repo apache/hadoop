@@ -67,10 +67,10 @@ public class TestLeaseRecovery2 {
   static final private long BLOCK_SIZE = 1024;
   static final private int FILE_SIZE = (int)BLOCK_SIZE*2;
   static final short REPLICATION_NUM = (short)3;
-  static byte[] buffer = new byte[FILE_SIZE];
+  static final byte[] buffer = new byte[FILE_SIZE];
   
-  static private String fakeUsername = "fakeUser1";
-  static private String fakeGroup = "supergroup";
+  static private final String fakeUsername = "fakeUser1";
+  static private final String fakeGroup = "supergroup";
 
   static private MiniDFSCluster cluster;
   static private DistributedFileSystem dfs;

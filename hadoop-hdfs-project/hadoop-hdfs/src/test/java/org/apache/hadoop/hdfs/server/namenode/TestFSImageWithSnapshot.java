@@ -68,7 +68,7 @@ public class TestFSImageWithSnapshot {
   static final long txid = 1;
 
   private final Path dir = new Path("/TestSnapshot");
-  private static String testDir =
+  private static final String testDir =
       System.getProperty("test.build.data", "build/test/data");
   
   Configuration conf;

@@ -27,9 +27,9 @@ import org.apache.hadoop.classification.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class UpgradeStatusReport {
-  protected int version;
-  protected short upgradeStatus;
-  protected boolean finalized;
+  protected final int version;
+  protected final short upgradeStatus;
+  protected final boolean finalized;
 
   public UpgradeStatusReport(int version, short status, boolean isFinalized) {
     this.version = version;

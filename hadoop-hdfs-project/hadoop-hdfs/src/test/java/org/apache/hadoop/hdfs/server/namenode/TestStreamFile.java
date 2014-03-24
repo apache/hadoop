@@ -80,16 +80,16 @@ class MockFSInputStream extends FSInputStream {
 
 
 public class TestStreamFile {
-  private HdfsConfiguration CONF = new HdfsConfiguration();
-  private DFSClient clientMock = Mockito.mock(DFSClient.class);
-  private HttpServletRequest mockHttpServletRequest = 
+  private final HdfsConfiguration CONF = new HdfsConfiguration();
+  private final DFSClient clientMock = Mockito.mock(DFSClient.class);
+  private final HttpServletRequest mockHttpServletRequest =
     Mockito.mock(HttpServletRequest.class);
-  private HttpServletResponse mockHttpServletResponse = 
+  private final HttpServletResponse mockHttpServletResponse =
     Mockito.mock(HttpServletResponse.class);
   private final ServletContext mockServletContext = 
     Mockito.mock(ServletContext.class);
 
-  StreamFile sfile = new StreamFile() {
+  final StreamFile sfile = new StreamFile() {
     private static final long serialVersionUID = -5513776238875189473L;
   
     @Override
@@ -298,7 +298,7 @@ public class TestStreamFile {
   }
 
   public static class ServletOutputStreamExtn extends ServletOutputStream {
-    private StringBuffer buffer = new StringBuffer(3);
+    private final StringBuffer buffer = new StringBuffer(3);
 
     public String getResult() {
       return buffer.toString();

@@ -48,9 +48,9 @@ public class OfflineEditsViewerHelper {
   private static final Log LOG = 
     LogFactory.getLog(OfflineEditsViewerHelper.class);
 
-    long           blockSize = 512;
+    final long           blockSize = 512;
     MiniDFSCluster cluster   = null;
-    Configuration  config    = new Configuration();
+    final Configuration  config    = new Configuration();
 
   /**
    * Generates edits with all op codes and returns the edits filename

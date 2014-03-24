@@ -35,8 +35,8 @@ import org.apache.hadoop.io.IOUtils;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 class OfflineEditsBinaryLoader implements OfflineEditsLoader {
-  private OfflineEditsVisitor visitor;
-  private EditLogInputStream inputStream;
+  private final OfflineEditsVisitor visitor;
+  private final EditLogInputStream inputStream;
   private final boolean fixTxIds;
   private final boolean recoveryMode;
   private long nextTxId;

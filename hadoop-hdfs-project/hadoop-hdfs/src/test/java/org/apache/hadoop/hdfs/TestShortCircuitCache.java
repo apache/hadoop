@@ -69,8 +69,8 @@ public class TestShortCircuitCache {
   static final Log LOG = LogFactory.getLog(TestShortCircuitCache.class);
   
   private static class TestFileDescriptorPair {
-    TemporarySocketDirectory dir = new TemporarySocketDirectory();
-    FileInputStream fis[];
+    final TemporarySocketDirectory dir = new TemporarySocketDirectory();
+    final FileInputStream[] fis;
 
     public TestFileDescriptorPair() throws IOException {
       fis = new FileInputStream[2];

@@ -289,7 +289,7 @@ public class ShortCircuitCache implements Closeable {
    * Maximum total size of the cache, including both mmapped and
    * no$-mmapped elements.
    */
-  private int maxTotalSize;
+  private final int maxTotalSize;
 
   /**
    * Non-mmaped elements older than this will be closed.

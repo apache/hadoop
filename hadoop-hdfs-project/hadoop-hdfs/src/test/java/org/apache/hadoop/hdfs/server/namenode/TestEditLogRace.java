@@ -82,7 +82,7 @@ public class TestEditLogRace {
    */
   static final int NUM_SAVE_IMAGE = 30;
 
-  private List<Transactions> workers = new ArrayList<Transactions>();
+  private final List<Transactions> workers = new ArrayList<Transactions>();
 
   private static final int NUM_DATA_NODES = 1;
 
@@ -99,12 +99,12 @@ public class TestEditLogRace {
   // an object that does a bunch of transactions
   //
   static class Transactions implements Runnable {
-    FSNamesystem namesystem;
+    final FSNamesystem namesystem;
     short replication = 3;
     long blockSize = 64;
     volatile boolean stopped = false;
     volatile Thread thr;
-    AtomicReference<Throwable> caught;
+    final AtomicReference<Throwable> caught;
 
     Transactions(FSNamesystem ns, AtomicReference<Throwable> caught) {
       namesystem = ns;

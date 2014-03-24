@@ -52,7 +52,7 @@ public class NameNodeHttpServer {
   
   private InetSocketAddress httpAddress;
   private InetSocketAddress httpsAddress;
-  private InetSocketAddress bindAddress;
+  private final InetSocketAddress bindAddress;
   
   public static final String NAMENODE_ADDRESS_ATTRIBUTE_KEY = "name.node.address";
   public static final String FSIMAGE_ATTRIBUTE_KEY = "name.system.image";

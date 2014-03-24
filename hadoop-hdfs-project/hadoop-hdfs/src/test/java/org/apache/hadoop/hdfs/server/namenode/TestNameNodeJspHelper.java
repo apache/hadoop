@@ -272,7 +272,7 @@ public class TestNameNodeJspHelper {
     LIVE("[Live Datanodes(| +):(| +)]\\d"), 
     DEAD("[Dead Datanodes(| +):(| +)]\\d");
 
-    private Pattern pattern;
+    private final Pattern pattern;
 
     public Pattern getPattern() {
       return pattern;

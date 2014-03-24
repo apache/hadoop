@@ -29,7 +29,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 final class PhaseTracking extends AbstractTracking {
   String file;
   long size = Long.MIN_VALUE;
-  ConcurrentMap<Step, StepTracking> steps =
+  final ConcurrentMap<Step, StepTracking> steps =
     new ConcurrentHashMap<Step, StepTracking>();
 
   @Override

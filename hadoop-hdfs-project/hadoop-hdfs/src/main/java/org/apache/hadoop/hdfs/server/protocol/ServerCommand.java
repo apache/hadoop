@@ -31,7 +31,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public abstract class ServerCommand {
-  private int action;
+  private final int action;
 
   /**
    * Create a command for the specified action.

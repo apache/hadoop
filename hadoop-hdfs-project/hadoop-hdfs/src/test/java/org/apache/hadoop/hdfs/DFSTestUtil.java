@@ -86,8 +86,8 @@ public class DFSTestUtil {
 
   private static final Log LOG = LogFactory.getLog(DFSTestUtil.class);
   
-  private static Random gen = new Random();
-  private static String[] dirNames = {
+  private static final Random gen = new Random();
+  private static final String[] dirNames = {
     "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"
   };
   
@@ -161,8 +161,8 @@ public class DFSTestUtil {
   private class MyFile {
     
     private String name = "";
-    private int size;
-    private long seed;
+    private final int size;
+    private final long seed;
     
     MyFile() {
       int nLevels = gen.nextInt(maxLevels);
@@ -1193,7 +1193,7 @@ public class DFSTestUtil {
     private final String testName;
     private final TemporarySocketDirectory sockDir;
     private boolean closed = false;
-    private boolean formerTcpReadsDisabled;
+    private final boolean formerTcpReadsDisabled;
     
     public ShortCircuitTestContext(String testName) {
       this.testName = testName;

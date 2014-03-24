@@ -411,7 +411,7 @@ public class HftpFileSystem extends FileSystem
   /** Class to parse and store a listing reply from the server. */
   class LsParser extends DefaultHandler {
 
-    ArrayList<FileStatus> fslist = new ArrayList<FileStatus>();
+    final ArrayList<FileStatus> fslist = new ArrayList<FileStatus>();
 
     @Override
     public void startElement(String ns, String localname, String qname,

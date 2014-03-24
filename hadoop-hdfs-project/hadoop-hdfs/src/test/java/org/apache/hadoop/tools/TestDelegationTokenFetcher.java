@@ -48,7 +48,7 @@ public class TestDelegationTokenFetcher {
   private Configuration conf;
   private URI uri;
   private static final String SERVICE_VALUE = "localhost:2005";
-  private static String tokenFile = "file.dta";
+  private static final String tokenFile = "file.dta";
 
   @Before 
   public void init() throws URISyntaxException, IOException {

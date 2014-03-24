@@ -31,9 +31,9 @@ import org.apache.hadoop.hdfs.DFSUtil;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 class Host2NodesMap {
-  private HashMap<String, DatanodeDescriptor[]> map
+  private final HashMap<String, DatanodeDescriptor[]> map
     = new HashMap<String, DatanodeDescriptor[]>();
-  private ReadWriteLock hostmapLock = new ReentrantReadWriteLock();
+  private final ReadWriteLock hostmapLock = new ReentrantReadWriteLock();
 
   /** Check if node is already in the map. */
   boolean contains(DatanodeDescriptor node) {

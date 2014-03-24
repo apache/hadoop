@@ -36,7 +36,7 @@ import static org.junit.Assert.assertThat;
 public class TestBlockPoolSliceStorage {
   public static final Log LOG = LogFactory.getLog(TestBlockPoolSliceStorage.class);
 
-  Random rand = new Random();
+  final Random rand = new Random();
   BlockPoolSliceStorage storage;
 
   /**

@@ -27,8 +27,8 @@ class SerialNumberManager {
   /** This is the only instance of {@link SerialNumberManager}.*/
   static final SerialNumberManager INSTANCE = new SerialNumberManager();
 
-  private SerialNumberMap<String> usermap = new SerialNumberMap<String>();
-  private SerialNumberMap<String> groupmap = new SerialNumberMap<String>();
+  private final SerialNumberMap<String> usermap = new SerialNumberMap<String>();
+  private final SerialNumberMap<String> groupmap = new SerialNumberMap<String>();
 
   private SerialNumberManager() {}
 
@@ -43,9 +43,9 @@ class SerialNumberManager {
   }
 
   private static class SerialNumberMap<T> {
-    private AtomicInteger max = new AtomicInteger(1);
-    private ConcurrentMap<T, Integer> t2i = new ConcurrentHashMap<T, Integer>();
-    private ConcurrentMap<Integer, T> i2t = new ConcurrentHashMap<Integer, T>();
+    private final AtomicInteger max = new AtomicInteger(1);
+    private final ConcurrentMap<T, Integer> t2i = new ConcurrentHashMap<T, Integer>();
+    private final ConcurrentMap<Integer, T> i2t = new ConcurrentHashMap<Integer, T>();
 
     int get(T t) {
       if (t == null) {

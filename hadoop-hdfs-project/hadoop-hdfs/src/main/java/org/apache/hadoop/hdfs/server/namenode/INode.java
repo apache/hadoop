@@ -750,7 +750,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
     /**
      * The list of blocks that need to be removed from blocksMap
      */
-    private List<Block> toDeleteList;
+    private final List<Block> toDeleteList;
     
     public BlocksMapUpdateInfo() {
       toDeleteList = new ChunkedArrayList<Block>();

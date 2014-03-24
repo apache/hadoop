@@ -48,7 +48,7 @@ import org.junit.Test;
  * support HDFS appends.
  */
 public class TestFileAppend{
-  boolean simulatedStorage = false;
+  final boolean simulatedStorage = false;
 
   private static byte[] fileContents = null;
 

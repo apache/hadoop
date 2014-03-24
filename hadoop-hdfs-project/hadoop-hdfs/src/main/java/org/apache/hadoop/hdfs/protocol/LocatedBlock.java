@@ -39,13 +39,13 @@ import com.google.common.collect.Lists;
 @InterfaceStability.Evolving
 public class LocatedBlock {
 
-  private ExtendedBlock b;
+  private final ExtendedBlock b;
   private long offset;  // offset of the first byte of the block in the file
-  private DatanodeInfo[] locs;
+  private final DatanodeInfo[] locs;
   /** Storage ID for each replica */
-  private String[] storageIDs;
+  private final String[] storageIDs;
   // Storage type for each replica, if reported.
-  private StorageType[] storageTypes;
+  private final StorageType[] storageTypes;
   // corrupt flag is true if all of the replicas of a block are corrupt.
   // else false. If block has few corrupt replicas, they are filtered and 
   // their locations are not part of this object

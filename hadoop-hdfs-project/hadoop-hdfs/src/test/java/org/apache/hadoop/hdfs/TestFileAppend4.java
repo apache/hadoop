@@ -64,7 +64,7 @@ public class TestFileAppend4 {
   MiniDFSCluster cluster;
   Path file1;
   FSDataOutputStream stm;
-  boolean simulatedStorage = false;
+  final boolean simulatedStorage = false;
 
   {
     ((Log4JLogger)NameNode.stateChangeLog).getLogger().setLevel(Level.ALL);

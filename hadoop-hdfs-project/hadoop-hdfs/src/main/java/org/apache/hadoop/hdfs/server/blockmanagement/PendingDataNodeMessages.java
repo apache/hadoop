@@ -34,7 +34,7 @@ import com.google.common.collect.Maps;
  * */  
 class PendingDataNodeMessages {
   
-  Map<Block, Queue<ReportedBlockInfo>> queueByBlockId =
+  final Map<Block, Queue<ReportedBlockInfo>> queueByBlockId =
     Maps.newHashMap();
   private int count = 0;
   

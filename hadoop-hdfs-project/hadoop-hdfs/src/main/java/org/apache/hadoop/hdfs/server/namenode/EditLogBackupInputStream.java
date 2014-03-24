@@ -33,8 +33,8 @@ import com.google.common.base.Preconditions;
  *  int, int, byte[])
  */
 class EditLogBackupInputStream extends EditLogInputStream {
-  String address; // sender address 
-  private ByteBufferInputStream inner;
+  final String address; // sender address
+  private final ByteBufferInputStream inner;
   private DataInputStream in;
   private FSEditLogOp.Reader reader = null;
   private FSEditLogLoader.PositionTrackingInputStream tracker = null;

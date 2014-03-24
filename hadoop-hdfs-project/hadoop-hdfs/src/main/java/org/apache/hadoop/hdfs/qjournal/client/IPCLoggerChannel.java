@@ -133,7 +133,7 @@ public class IPCLoggerChannel implements AsyncLogger {
   /**
    * Stopwatch which starts counting on each heartbeat that is sent
    */
-  private Stopwatch lastHeartbeatStopwatch = new Stopwatch();
+  private final Stopwatch lastHeartbeatStopwatch = new Stopwatch();
   
   private static final long HEARTBEAT_INTERVAL_MILLIS = 1000;
 

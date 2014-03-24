@@ -62,8 +62,8 @@ public class TestReadOnlySharedStorage {
 
   public static final Log LOG = LogFactory.getLog(TestReadOnlySharedStorage.class);
 
-  private static short NUM_DATANODES = 3;
-  private static int RO_NODE_INDEX = 0;
+  private static final short NUM_DATANODES = 3;
+  private static final int RO_NODE_INDEX = 0;
   private static final int BLOCK_SIZE = 1024;
   private static final long seed = 0x1BADF00DL;
   private static final Path PATH = new Path("/" + TestReadOnlySharedStorage.class.getName() + ".dat");

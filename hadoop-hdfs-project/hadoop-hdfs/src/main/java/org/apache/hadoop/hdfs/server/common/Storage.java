@@ -118,8 +118,8 @@ public abstract class Storage extends StorageInfo {
   protected List<StorageDirectory> storageDirs = new ArrayList<StorageDirectory>();
   
   private class DirIterator implements Iterator<StorageDirectory> {
-    StorageDirType dirType;
-    boolean includeShared;
+    final StorageDirType dirType;
+    final boolean includeShared;
     int prevIndex; // for remove()
     int nextIndex; // for next()
     

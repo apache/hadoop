@@ -68,7 +68,7 @@ import org.junit.runners.Parameterized.Parameters;
 @RunWith(Parameterized.class)
 public class TestAuditLogs {
   static final String auditLogFile = PathUtils.getTestDirName(TestAuditLogs.class) + "/TestAuditLogs-audit.log";
-  boolean useAsyncLog;
+  final boolean useAsyncLog;
   
   @Parameters
   public static Collection<Object[]> data() {

@@ -86,7 +86,7 @@ class BlockReceiver implements Closeable {
   private int bytesPerChecksum;
   private int checksumSize;
   
-  private PacketReceiver packetReceiver =
+  private final PacketReceiver packetReceiver =
       new PacketReceiver(false);
   
   protected final String inAddr;
@@ -902,7 +902,7 @@ class BlockReceiver implements Closeable {
     NON_PIPELINE, LAST_IN_PIPELINE, HAS_DOWNSTREAM_IN_PIPELINE
   }
   
-  private static Status[] MIRROR_ERROR_STATUS = {Status.SUCCESS, Status.ERROR};
+  private static final Status[] MIRROR_ERROR_STATUS = {Status.SUCCESS, Status.ERROR};
   
   /**
    * Processes responses from downstream datanodes in the pipeline

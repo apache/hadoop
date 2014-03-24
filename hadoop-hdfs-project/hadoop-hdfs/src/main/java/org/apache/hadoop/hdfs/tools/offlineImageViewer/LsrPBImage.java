@@ -71,9 +71,9 @@ final class LsrPBImage {
   private final Configuration conf;
   private final PrintWriter out;
   private String[] stringTable;
-  private HashMap<Long, INodeSection.INode> inodes = Maps.newHashMap();
-  private HashMap<Long, long[]> dirmap = Maps.newHashMap();
-  private ArrayList<INodeReferenceSection.INodeReference> refList = Lists.newArrayList();
+  private final HashMap<Long, INodeSection.INode> inodes = Maps.newHashMap();
+  private final HashMap<Long, long[]> dirmap = Maps.newHashMap();
+  private final ArrayList<INodeReferenceSection.INodeReference> refList = Lists.newArrayList();
 
   public LsrPBImage(Configuration conf, PrintWriter out) {
     this.conf = conf;

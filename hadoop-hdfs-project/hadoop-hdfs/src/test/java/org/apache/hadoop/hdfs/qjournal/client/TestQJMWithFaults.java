@@ -75,7 +75,7 @@ public class TestQJMWithFaults {
   private static final int NUM_WRITER_ITERS = 500;
   private static final int SEGMENTS_PER_WRITER = 2;
 
-  private static Configuration conf = new Configuration();
+  private static final Configuration conf = new Configuration();
 
 
   static {
@@ -87,7 +87,7 @@ public class TestQJMWithFaults {
   }
 
   // Set up fault injection mock.
-  private static JournalFaultInjector faultInjector =
+  private static final JournalFaultInjector faultInjector =
       JournalFaultInjector.instance = Mockito.mock(JournalFaultInjector.class); 
 
   /**
@@ -335,7 +335,7 @@ public class TestQJMWithFaults {
   
   private static class RandomFaultyChannel extends IPCLoggerChannel {
     private final Random random;
-    private float injectionProbability = 0.1f;
+    private final float injectionProbability = 0.1f;
     private boolean isUp = true;
     
     public RandomFaultyChannel(Configuration conf, NamespaceInfo nsInfo,
@@ -389,7 +389,7 @@ public class TestQJMWithFaults {
 
   private static class InvocationCountingChannel extends IPCLoggerChannel {
     private int rpcCount = 0;
-    private Map<Integer, Callable<Void>> injections = Maps.newHashMap();
+    private final Map<Integer, Callable<Void>> injections = Maps.newHashMap();
     
     public InvocationCountingChannel(Configuration conf, NamespaceInfo nsInfo,
         String journalId, InetSocketAddress addr) {

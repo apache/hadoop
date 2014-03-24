@@ -94,7 +94,7 @@ public enum FSEditLogOpCodes {
     return opCode;
   }
 
-  private static FSEditLogOpCodes[] VALUES;
+  private static final FSEditLogOpCodes[] VALUES;
   
   static {
     byte max = 0;

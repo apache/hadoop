@@ -45,8 +45,8 @@ import org.junit.Test;
 
 public class TestCachingStrategy {
   private static final Log LOG = LogFactory.getLog(TestCachingStrategy.class);
-  private static int MAX_TEST_FILE_LEN = 1024 * 1024;
-  private static int WRITE_PACKET_SIZE = DFSConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT;
+  private static final int MAX_TEST_FILE_LEN = 1024 * 1024;
+  private static final int WRITE_PACKET_SIZE = DFSConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT;
   
   private final static TestRecordingCacheTracker tracker =
       new TestRecordingCacheTracker();

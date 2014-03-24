@@ -1032,7 +1032,7 @@ public class CacheAdmin extends Configured implements Tool {
     }
   }
 
-  private static Command[] COMMANDS = {
+  private static final Command[] COMMANDS = {
     new AddCacheDirectiveInfoCommand(),
     new ModifyCacheDirectiveInfoCommand(),
     new ListCacheDirectiveInfoCommand(),

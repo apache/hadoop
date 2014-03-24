@@ -61,7 +61,7 @@ public class TestQuorumJournalManagerUnit {
   private static final NamespaceInfo FAKE_NSINFO = new NamespaceInfo(
       12345, "mycluster", "my-bp", 0L);
 
-  private Configuration conf = new Configuration();
+  private final Configuration conf = new Configuration();
   private List<AsyncLogger> spyLoggers;
   private QuorumJournalManager qjm;
   

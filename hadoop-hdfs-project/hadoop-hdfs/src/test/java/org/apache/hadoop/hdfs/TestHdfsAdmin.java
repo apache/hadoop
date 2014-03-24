@@ -35,7 +35,7 @@ import org.junit.Test;
 public class TestHdfsAdmin {
   
   private static final Path TEST_PATH = new Path("/test");
-  private Configuration conf = new Configuration();
+  private final Configuration conf = new Configuration();
   private MiniDFSCluster cluster;
   
   @Before

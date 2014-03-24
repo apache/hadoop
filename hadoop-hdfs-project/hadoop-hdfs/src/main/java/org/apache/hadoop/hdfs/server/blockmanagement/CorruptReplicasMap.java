@@ -46,7 +46,7 @@ public class CorruptReplicasMap{
     CORRUPTION_REPORTED  // client or datanode reported the corruption
   }
 
-  private SortedMap<Block, Map<DatanodeDescriptor, Reason>> corruptReplicasMap =
+  private final SortedMap<Block, Map<DatanodeDescriptor, Reason>> corruptReplicasMap =
     new TreeMap<Block, Map<DatanodeDescriptor, Reason>>();
   
   /**

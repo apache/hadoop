@@ -49,7 +49,7 @@ import com.google.common.base.Supplier;
  * Static utility functions useful for testing HA.
  */
 public abstract class HATestUtil {
-  private static Log LOG = LogFactory.getLog(HATestUtil.class);
+  private static final Log LOG = LogFactory.getLog(HATestUtil.class);
   
   private static final String LOGICAL_HOSTNAME = "ha-nn-uri-%d";
   

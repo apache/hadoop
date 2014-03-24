@@ -42,10 +42,10 @@ import org.junit.Before;
 import org.junit.Test;
 
 public class TestNNWithQJM {
-  Configuration conf = new HdfsConfiguration();
+  final Configuration conf = new HdfsConfiguration();
   private MiniJournalCluster mjc = null;
-  private Path TEST_PATH = new Path("/test-dir");
-  private Path TEST_PATH_2 = new Path("/test-dir");
+  private final Path TEST_PATH = new Path("/test-dir");
+  private final Path TEST_PATH_2 = new Path("/test-dir");
 
   @Before
   public void resetSystemExit() {

@@ -38,7 +38,7 @@ public class MiniQJMHACluster {
   private MiniJournalCluster journalCluster;
   private final Configuration conf;
   
-  public static String NAMESERVICE = "ns1";
+  public static final String NAMESERVICE = "ns1";
   private static final String NN1 = "nn1";
   private static final String NN2 = "nn2";
   private static final int NN1_IPC_PORT = 10000;

@@ -49,7 +49,7 @@ public class TestFsLimits {
   static FSDirectory fs;
   static boolean fsIsReady;
   
-  static PermissionStatus perms
+  static final PermissionStatus perms
     = new PermissionStatus("admin", "admin", FsPermission.getDefault());
 
   static private FSImage getMockFSImage() {

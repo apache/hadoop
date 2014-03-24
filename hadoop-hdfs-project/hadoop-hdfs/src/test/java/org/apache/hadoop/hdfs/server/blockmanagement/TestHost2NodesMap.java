@@ -28,7 +28,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 public class TestHost2NodesMap {
-  private Host2NodesMap map = new Host2NodesMap();
+  private final Host2NodesMap map = new Host2NodesMap();
   private DatanodeDescriptor dataNodes[];
   
   @Before

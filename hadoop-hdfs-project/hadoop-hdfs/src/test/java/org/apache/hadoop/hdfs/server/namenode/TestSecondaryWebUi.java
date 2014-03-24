@@ -35,7 +35,7 @@ public class TestSecondaryWebUi {
   
   private static MiniDFSCluster cluster;
   private static SecondaryNameNode snn;
-  private static Configuration conf = new Configuration();
+  private static final Configuration conf = new Configuration();
   
   @BeforeClass
   public static void setUpCluster() throws IOException {

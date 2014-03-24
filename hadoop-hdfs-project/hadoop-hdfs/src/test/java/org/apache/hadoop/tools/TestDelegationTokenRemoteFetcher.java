@@ -294,7 +294,7 @@ public class TestDelegationTokenRemoteFetcher {
 
     private final Token<DelegationTokenIdentifier> token;
     private final String serviceUrl;
-    private ImmutableMap<String, Handler> routes = ImmutableMap.of(
+    private final ImmutableMap<String, Handler> routes = ImmutableMap.of(
         "/exception", new ExceptionHandler(),
         "/cancelDelegationToken", new CancelHandler(),
         "/getDelegationToken", new FetchHandler() , 

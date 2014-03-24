@@ -64,7 +64,7 @@ public class TestHftpFileSystem {
   private FileSystem hdfs = null;
   private HftpFileSystem hftpFs = null;
 
-  private static Path[] TEST_PATHS = new Path[] {
+  private static final Path[] TEST_PATHS = new Path[] {
       // URI does not encode, Request#getPathInfo returns /foo
       new Path("/foo;bar"),
 

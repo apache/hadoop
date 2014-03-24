@@ -50,7 +50,7 @@ import org.junit.Test;
 public class TestRefreshUserMappings {
   private MiniDFSCluster cluster;
   Configuration config;
-  private static long groupRefreshTimeoutSec = 1;
+  private static final long groupRefreshTimeoutSec = 1;
   private String tempResource = null;
   
   public static class MockUnixGroupsMapping implements GroupMappingServiceProvider {

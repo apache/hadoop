@@ -50,10 +50,10 @@ import org.junit.Test;
 import com.google.common.io.NullOutputStream;
 
 public class TestDataTransferKeepalive {
-  Configuration conf = new HdfsConfiguration();
+  final Configuration conf = new HdfsConfiguration();
   private MiniDFSCluster cluster;
   private DataNode dn;
-  private static Path TEST_FILE = new Path("/test");
+  private static final Path TEST_FILE = new Path("/test");
   
   private static final int KEEPALIVE_TIMEOUT = 1000;
   private static final int WRITE_TIMEOUT = 3000;

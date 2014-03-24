@@ -73,7 +73,7 @@ import org.xml.sax.SAXException;
 
 public class TestJspHelper {
 
-  private Configuration conf = new HdfsConfiguration();
+  private final Configuration conf = new HdfsConfiguration();
   private String jspWriterOutput = "";
 
   public static class DummySecretManager extends

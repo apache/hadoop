@@ -40,7 +40,7 @@ public class BlockTokenIdentifier extends TokenIdentifier {
   private String userId;
   private String blockPoolId;
   private long blockId;
-  private EnumSet<AccessMode> modes;
+  private final EnumSet<AccessMode> modes;
 
   private byte [] cache;
   

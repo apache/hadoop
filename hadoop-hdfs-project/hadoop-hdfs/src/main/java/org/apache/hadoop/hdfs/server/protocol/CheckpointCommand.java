@@ -39,8 +39,8 @@ import org.apache.hadoop.hdfs.server.namenode.CheckpointSignature;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class CheckpointCommand extends NamenodeCommand {
-  private CheckpointSignature cSig;
-  private boolean needToReturnImage;
+  private final CheckpointSignature cSig;
+  private final boolean needToReturnImage;
 
   public CheckpointCommand() {
     this(null, false);
