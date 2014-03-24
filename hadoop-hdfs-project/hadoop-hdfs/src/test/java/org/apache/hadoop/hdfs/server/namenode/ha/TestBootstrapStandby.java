@@ -91,7 +91,7 @@ public class TestBootstrapStandby {
       fail("Did not throw");
     } catch (IOException ioe) {
       GenericTestUtils.assertExceptionContains(
-          "Cannot start an HA namenode with name dirs that need recovery",
+          "storage directory does not exist or is not accessible",
           ioe);
     }
     

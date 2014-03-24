@@ -29,6 +29,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider;
 
@@ -47,6 +48,7 @@ public class MiniQJMHACluster {
 
   public static class Builder {
     private final Configuration conf;
+    private StartupOption startOpt = null;
     private final MiniDFSCluster.Builder dfsBuilder;
     
     public Builder(Configuration conf) {
@@ -60,6 +62,10 @@ public class MiniQJMHACluster {
     
     public MiniQJMHACluster build() throws IOException {
       return new MiniQJMHACluster(this);
+    }
+
+    public void startupOption(StartupOption startOpt) {
+      this.startOpt = startOpt;
     }
   }
   
@@ -94,6 +100,9 @@ public class MiniQJMHACluster {
     // initialize the journal nodes
     Configuration confNN0 = cluster.getConfiguration(0);
     NameNode.initializeSharedEdits(confNN0, true);
+    
+    cluster.getNameNodeInfos()[0].setStartOpt(builder.startOpt);
+    cluster.getNameNodeInfos()[1].setStartOpt(builder.startOpt);
     
     // restart the cluster
     cluster.restartNameNodes();

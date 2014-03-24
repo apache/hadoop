@@ -35,6 +35,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.qjournal.client.QuorumJournalManager;
 import org.apache.hadoop.hdfs.server.common.StorageErrorReporter;
+import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
@@ -290,4 +291,31 @@ public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
       throws IOException {
     getOrCreateJournal(journalId).discardSegments(startTxId);
   }
+
+  public void doPreUpgrade(String journalId) throws IOException {
+    getOrCreateJournal(journalId).doPreUpgrade();
+  }
+
+  public void doUpgrade(String journalId, StorageInfo sInfo) throws IOException {
+    getOrCreateJournal(journalId).doUpgrade(sInfo);
+  }
+
+  public void doFinalize(String journalId) throws IOException {
+    getOrCreateJournal(journalId).doFinalize();
+  }
+
+  public Boolean canRollBack(String journalId, StorageInfo storage,
+      StorageInfo prevStorage, int targetLayoutVersion) throws IOException {
+    return getOrCreateJournal(journalId).canRollBack(storage, prevStorage,
+        targetLayoutVersion);
+  }
+
+  public void doRollback(String journalId) throws IOException {
+    getOrCreateJournal(journalId).doRollback();
+  }
+
+  public Long getJournalCTime(String journalId) throws IOException {
+    return getOrCreateJournal(journalId).getJournalCTime();
+  }
+
 }
