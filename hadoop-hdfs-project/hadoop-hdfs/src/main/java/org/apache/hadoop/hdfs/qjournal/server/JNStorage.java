@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.qjournal.server;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
+import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -27,6 +28,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
+import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
+import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageErrorReporter;
 import org.apache.hadoop.hdfs.server.namenode.FileJournalManager;
@@ -201,6 +204,16 @@ class JNStorage extends Storage {
     if (state == StorageState.NORMAL) {
       readProperties(sd);
     }
+  }
+
+  @Override
+  protected void setLayoutVersion(Properties props, StorageDirectory sd)
+      throws IncorrectVersionException, InconsistentFSStateException {
+    int lv = Integer.parseInt(getProperty(props, sd, "layoutVersion"));
+    // For journal node, since it now does not decode but just scan through the
+    // edits, it can handle edits with future version in most of the cases.
+    // Thus currently we may skip the layoutVersion check here.
+    layoutVersion = lv;
   }
 
   void checkConsistentNamespace(NamespaceInfo nsInfo)
