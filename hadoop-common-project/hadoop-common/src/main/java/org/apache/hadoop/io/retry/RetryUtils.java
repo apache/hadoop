@@ -106,8 +106,6 @@ public class RetryUtils {
             LOG.debug("RETRY " + retries + ") policy="
                 + p.getClass().getSimpleName() + ", exception=" + e);
           }
-          LOG.info("RETRY " + retries + ") policy="
-              + p.getClass().getSimpleName() + ", exception=" + e);
           return p.shouldRetry(e, retries, failovers, isMethodIdempotent);
         }
 
