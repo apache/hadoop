@@ -380,6 +380,9 @@ Release 2.4.0 - UNRELEASED
     based on connection properties. (Benoy Antony and Daryn Sharp via
     Arpit Agarwal)
 
+    HADOOP-10015. UserGroupInformation prints out excessive warnings.
+    (Nicolas Liochon via szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES
