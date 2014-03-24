@@ -182,28 +182,36 @@ public class AggregatedLogFormat {
         Arrays.sort(logFiles);
         for (File logFile : logFiles) {
 
-          long fileLength = 0;
+          final long fileLength = logFile.length();
 
           // Write the logFile Type
           out.writeUTF(logFile.getName());
 
           // Write the log length as UTF so that it is printable
-          out.writeUTF(String.valueOf(fileLength = logFile.length()));
+          out.writeUTF(String.valueOf(fileLength));
 
           // Write the log itself
           FileInputStream in = null;
           try {
             in = SecureIOUtils.openForRead(logFile, getUser(), null);
             byte[] buf = new byte[65535];
-            long curRead = 0;
             int len = 0;
-            while ( ((len = in.read(buf)) != -1) && (curRead < fileLength) ) {
-              out.write(buf, 0, len);
-              curRead += len;
+            long bytesLeft = fileLength;
+            while ((len = in.read(buf)) != -1) {
+              //If buffer contents within fileLength, write
+              if (len < bytesLeft) {
+                out.write(buf, 0, len);
+                bytesLeft-=len;
+              }
+              //else only write contents within fileLength, then exit early
+              else {
+                out.write(buf, 0, (int)bytesLeft);
+                break;
+              }
             }
             long newLength = logFile.length();
             if(fileLength < newLength) {
-              LOG.warn("Aggregated Logs Truncated by "+
+              LOG.warn("Aggregated logs truncated by approximately "+
                   (newLength-fileLength) +" bytes.");
             }
           } catch (IOException e) {
