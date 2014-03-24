@@ -268,7 +268,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
     try {
       attrs = writeManager.getFileAttr(dfsClient, handle, iug);
     } catch (IOException e) {
-      LOG.info("Can't get file attribute, fileId=" + handle.getFileId());
+      LOG.info("Can't get file attribute, fileId=" + handle.getFileId(), e);
       response.setStatus(Nfs3Status.NFS3ERR_IO);
       return response;
     }
@@ -381,7 +381,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
         wccData = Nfs3Utils.createWccData(Nfs3Utils.getWccAttr(preOpAttr),
             dfsClient, fileIdPath, iug);
       } catch (IOException e1) {
-        LOG.info("Can't get postOpAttr for fileIdPath: " + fileIdPath);
+        LOG.info("Can't get postOpAttr for fileIdPath: " + fileIdPath, e1);
       }
       if (e instanceof AccessControlException) {
         return new SETATTR3Response(Nfs3Status.NFS3ERR_ACCES, wccData);
@@ -614,13 +614,11 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       // Only do access check.
       try {
         // Don't read from cache. Client may not have read permission.
-        attrs = Nfs3Utils.getFileAttr(
-                  dfsClient,
-                  Nfs3Utils.getFileIdPath(handle),
-                  iug);
+        attrs = Nfs3Utils.getFileAttr(dfsClient,
+            Nfs3Utils.getFileIdPath(handle), iug);
       } catch (IOException e) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Get error accessing file, fileId:" + handle.getFileId());
+          LOG.debug("Get error accessing file, fileId:" + handle.getFileId(), e);
         }
         return new READ3Response(Nfs3Status.NFS3ERR_IO);
       }
@@ -764,7 +762,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       try {
         postOpAttr = writeManager.getFileAttr(dfsClient, handle, iug);
       } catch (IOException e1) {
-        LOG.info("Can't get postOpAttr for fileId: " + handle.getFileId());
+        LOG.info("Can't get postOpAttr for fileId: " + handle.getFileId(), e1);
       }
       WccAttr attr = preOpAttr == null ? null : Nfs3Utils.getWccAttr(preOpAttr);
       WccData fileWcc = new WccData(attr, postOpAttr);
@@ -881,7 +879,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
           fos.close();
         } catch (IOException e1) {
           LOG.error("Can't close stream for dirFileId:" + dirHandle.getFileId()
-              + " filename: " + fileName);
+              + " filename: " + fileName, e1);
         }
       }
       if (dirWcc == null) {
@@ -890,7 +888,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
               dfsClient, dirFileIdPath, iug);
         } catch (IOException e1) {
           LOG.error("Can't get postOpDirAttr for dirFileId:"
-              + dirHandle.getFileId());
+              + dirHandle.getFileId(), e1);
         }
       }
       if (e instanceof AccessControlException) {
@@ -982,7 +980,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
         try {
           postOpDirAttr = Nfs3Utils.getFileAttr(dfsClient, dirFileIdPath, iug);
         } catch (IOException e1) {
-          LOG.info("Can't get postOpDirAttr for " + dirFileIdPath);
+          LOG.info("Can't get postOpDirAttr for " + dirFileIdPath, e);
         }
       }
       WccData dirWcc = new WccData(Nfs3Utils.getWccAttr(preOpDirAttr),
@@ -1064,7 +1062,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
         try {
           postOpDirAttr = Nfs3Utils.getFileAttr(dfsClient, dirFileIdPath, iug);
         } catch (IOException e1) {
-          LOG.info("Can't get postOpDirAttr for " + dirFileIdPath);
+          LOG.info("Can't get postOpDirAttr for " + dirFileIdPath, e1);
         }
       }
       WccData dirWcc = new WccData(Nfs3Utils.getWccAttr(preOpDirAttr),
@@ -1146,7 +1144,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
         try {
           postOpDirAttr = Nfs3Utils.getFileAttr(dfsClient, dirFileIdPath, iug);
         } catch (IOException e1) {
-          LOG.info("Can't get postOpDirAttr for " + dirFileIdPath);
+          LOG.info("Can't get postOpDirAttr for " + dirFileIdPath, e1);
         }
       }
       WccData dirWcc = new WccData(Nfs3Utils.getWccAttr(preOpDirAttr),
@@ -1236,7 +1234,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
             dfsClient, toDirFileIdPath, iug);
       } catch (IOException e1) {
         LOG.info("Can't get postOpDirAttr for " + fromDirFileIdPath + " or"
-            + toDirFileIdPath);
+            + toDirFileIdPath, e1);
       }
       if (e instanceof AccessControlException) {
         return new RENAME3Response(Nfs3Status.NFS3ERR_PERM, fromDirWcc,
@@ -1298,7 +1296,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
           .setPostOpAttr(Nfs3Utils.getFileAttr(dfsClient, linkDirIdPath, iug));
 
       return new SYMLINK3Response(Nfs3Status.NFS3_OK, new FileHandle(
-          objAttr.getFileid()), objAttr, dirWcc);
+          objAttr.getFileId()), objAttr, dirWcc);
 
     } catch (IOException e) {
       LOG.warn("Exception:" + e);
@@ -1585,7 +1583,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       
       entries[0] = new READDIRPLUS3Response.EntryPlus3(
           postOpDirAttr.getFileId(), ".", 0, postOpDirAttr, new FileHandle(
-              postOpDirAttr.getFileid()));
+              postOpDirAttr.getFileId()));
       entries[1] = new READDIRPLUS3Response.EntryPlus3(dotdotFileId, "..",
           dotdotFileId, postOpDirAttr, new FileHandle(dotdotFileId));
 
@@ -1596,8 +1594,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
         try {
           attr = writeManager.getFileAttr(dfsClient, childHandle, iug);
         } catch (IOException e) {
-          LOG.error("Can't get file attributes for fileId:" + fileId
-              + " error:" + e);
+          LOG.error("Can't get file attributes for fileId:" + fileId, e);
           continue;
         }
         entries[i] = new READDIRPLUS3Response.EntryPlus3(fileId,
@@ -1614,8 +1611,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
         try {
           attr = writeManager.getFileAttr(dfsClient, childHandle, iug);
         } catch (IOException e) {
-          LOG.error("Can't get file attributes for fileId:" + fileId
-              + " error:" + e);
+          LOG.error("Can't get file attributes for fileId:" + fileId, e);
           continue;
         }
         entries[i] = new READDIRPLUS3Response.EntryPlus3(fileId,
@@ -1842,10 +1838,9 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
       try {
         postOpAttr = writeManager.getFileAttr(dfsClient, handle, iug);
       } catch (IOException e1) {
-        LOG.info("Can't get postOpAttr for fileId: " + handle.getFileId());
+        LOG.info("Can't get postOpAttr for fileId: " + handle.getFileId(), e1);
       }
-      WccData fileWcc = new WccData(preOpAttr == null ? null
-          : Nfs3Utils.getWccAttr(preOpAttr), postOpAttr);
+      WccData fileWcc = new WccData(Nfs3Utils.getWccAttr(preOpAttr), postOpAttr);
       return new COMMIT3Response(Nfs3Status.NFS3ERR_IO, fileWcc,
           Nfs3Constant.WRITE_COMMIT_VERF);
     }
