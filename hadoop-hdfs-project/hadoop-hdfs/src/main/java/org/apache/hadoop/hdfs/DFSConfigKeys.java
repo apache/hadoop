@@ -610,7 +610,13 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final int     DFS_HTTP_CLIENT_FAILOVER_SLEEPTIME_BASE_DEFAULT = 500;
   public static final String  DFS_HTTP_CLIENT_FAILOVER_SLEEPTIME_MAX_KEY = "dfs.http.client.failover.sleep.max.millis";
   public static final int     DFS_HTTP_CLIENT_FAILOVER_SLEEPTIME_MAX_DEFAULT = 15000;
-
+  
+  // Handling unresolved DN topology mapping
+  public static final String  DFS_REJECT_UNRESOLVED_DN_TOPOLOGY_MAPPING_KEY = 
+      "dfs.namenode.reject-unresolved-dn-topology-mapping";
+  public static final boolean DFS_REJECT_UNRESOLVED_DN_TOPOLOGY_MAPPING_DEFAULT =
+      false;
+  
   // hedged read properties
   public static final String DFS_DFSCLIENT_HEDGED_READ_THRESHOLD_MILLIS =
       "dfs.client.hedged.read.threshold.millis";

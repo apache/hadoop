@@ -98,6 +98,7 @@ public class DatanodeManager {
   private final Host2NodesMap host2DatanodeMap = new Host2NodesMap();
 
   private final DNSToSwitchMapping dnsToSwitchMapping;
+  private final boolean rejectUnresolvedTopologyDN;
 
   private final int defaultXferPort;
   
@@ -200,6 +201,10 @@ public class DatanodeManager {
     this.dnsToSwitchMapping = ReflectionUtils.newInstance(
         conf.getClass(DFSConfigKeys.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY, 
             ScriptBasedMapping.class, DNSToSwitchMapping.class), conf);
+    
+    this.rejectUnresolvedTopologyDN = conf.getBoolean(
+        DFSConfigKeys.DFS_REJECT_UNRESOLVED_DN_TOPOLOGY_MAPPING_KEY,
+        DFSConfigKeys.DFS_REJECT_UNRESOLVED_DN_TOPOLOGY_MAPPING_DEFAULT);
     
     // If the dns to switch mapping supports cache, resolve network
     // locations of those hosts in the include list and store the mapping
@@ -391,7 +396,8 @@ public class DatanodeManager {
       node = getDatanodeByHost(host);
     }
     if (node == null) {
-      String networkLocation = resolveNetworkLocation(dnId);
+      String networkLocation = 
+          resolveNetworkLocationWithFallBackToDefaultLocation(dnId);
 
       // If the current cluster doesn't contain the node, fallback to
       // something machine local and then rack local.
@@ -626,9 +632,36 @@ public class DatanodeManager {
       return new HashMap<String, Integer> (this.datanodesSoftwareVersions);
     }
   }
-
-  /* Resolve a node's network location */
-  private String resolveNetworkLocation (DatanodeID node) {
+  
+  /**
+   *  Resolve a node's network location. If the DNS to switch mapping fails 
+   *  then this method guarantees default rack location. 
+   *  @param node to resolve to network location
+   *  @return network location path
+   */
+  private String resolveNetworkLocationWithFallBackToDefaultLocation (
+      DatanodeID node) {
+    String networkLocation;
+    try {
+      networkLocation = resolveNetworkLocation(node);
+    } catch (UnresolvedTopologyException e) {
+      LOG.error("Unresolved topology mapping. Using " +
+          NetworkTopology.DEFAULT_RACK + " for host " + node.getHostName());
+      networkLocation = NetworkTopology.DEFAULT_RACK;
+    }
+    return networkLocation;
+  }
+  
+  /**
+   * Resolve a node's network location. If the DNS to switch mapping fails, 
+   * then this method throws UnresolvedTopologyException. 
+   * @param node to resolve to network location
+   * @return network location path.
+   * @throws UnresolvedTopologyException if the DNS to switch mapping fails 
+   *    to resolve network location.
+   */
+  private String resolveNetworkLocation (DatanodeID node) 
+      throws UnresolvedTopologyException {
     List<String> names = new ArrayList<String>(1);
     if (dnsToSwitchMapping instanceof CachedDNSToSwitchMapping) {
       names.add(node.getIpAddr());
@@ -640,9 +673,9 @@ public class DatanodeManager {
     List<String> rName = dnsToSwitchMapping.resolve(names);
     String networkLocation;
     if (rName == null) {
-      LOG.error("The resolve call returned null! Using " + 
-          NetworkTopology.DEFAULT_RACK + " for host " + names);
-      networkLocation = NetworkTopology.DEFAULT_RACK;
+      LOG.error("The resolve call returned null!");
+        throw new UnresolvedTopologyException(
+            "Unresolved topology mapping for host " + node.getHostName());
     } else {
       networkLocation = rName.get(0);
     }
@@ -755,9 +788,11 @@ public class DatanodeManager {
    * @param nodeReg the datanode registration
    * @throws DisallowedDatanodeException if the registration request is
    *    denied because the datanode does not match includes/excludes
+   * @throws UnresolvedTopologyException if the registration request is 
+   *    denied because resolving datanode network location fails.
    */
   public void registerDatanode(DatanodeRegistration nodeReg)
-      throws DisallowedDatanodeException {
+      throws DisallowedDatanodeException, UnresolvedTopologyException {
     InetAddress dnAddress = Server.getRemoteIp();
     if (dnAddress != null) {
       // Mostly called inside an RPC, update ip and peer hostname
@@ -839,7 +874,13 @@ public class DatanodeManager {
           nodeS.setDisallowed(false); // Node is in the include list
 
           // resolve network location
-          nodeS.setNetworkLocation(resolveNetworkLocation(nodeS));
+          if(this.rejectUnresolvedTopologyDN)
+          {
+            nodeS.setNetworkLocation(resolveNetworkLocation(nodeS));  
+          } else {
+            nodeS.setNetworkLocation(
+                resolveNetworkLocationWithFallBackToDefaultLocation(nodeS));
+          }
           getNetworkTopology().add(nodeS);
             
           // also treat the registration message as a heartbeat
@@ -861,7 +902,13 @@ public class DatanodeManager {
         = new DatanodeDescriptor(nodeReg, NetworkTopology.DEFAULT_RACK);
       boolean success = false;
       try {
-        nodeDescr.setNetworkLocation(resolveNetworkLocation(nodeDescr));
+        // resolve network location
+        if(this.rejectUnresolvedTopologyDN) {
+          nodeDescr.setNetworkLocation(resolveNetworkLocation(nodeDescr));
+        } else {
+          nodeDescr.setNetworkLocation(
+              resolveNetworkLocationWithFallBackToDefaultLocation(nodeDescr));
+        }
         networktopology.add(nodeDescr);
         nodeDescr.setSoftwareVersion(nodeReg.getSoftwareVersion());
   
