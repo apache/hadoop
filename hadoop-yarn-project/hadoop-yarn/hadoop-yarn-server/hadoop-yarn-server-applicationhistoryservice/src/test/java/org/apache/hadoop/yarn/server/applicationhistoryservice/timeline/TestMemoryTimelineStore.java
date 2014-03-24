@@ -19,16 +19,13 @@
 package org.apache.hadoop.yarn.server.applicationhistoryservice.timeline;
 
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.TimelineStore;
-import org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.MemoryTimelineStore;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
 
-public class TestMemoryTimelineStore
-    extends TimelineStoreTestUtils {
+public class TestMemoryTimelineStore extends TimelineStoreTestUtils {
 
   @Before
   public void setup() throws Exception {
@@ -56,6 +53,16 @@ public class TestMemoryTimelineStore
   @Test
   public void testGetEntities() throws IOException {
     super.testGetEntities();
+  }
+
+  @Test
+  public void testGetEntitiesWithFromId() throws IOException {
+    super.testGetEntitiesWithFromId();
+  }
+
+  @Test
+  public void testGetEntitiesWithFromTs() throws IOException {
+    super.testGetEntitiesWithFromTs();
   }
 
   @Test

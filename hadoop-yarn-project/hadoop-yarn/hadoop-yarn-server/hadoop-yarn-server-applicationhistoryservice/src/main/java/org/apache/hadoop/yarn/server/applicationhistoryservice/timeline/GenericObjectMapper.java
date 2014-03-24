@@ -102,11 +102,15 @@ public class GenericObjectMapper {
    */
   public static byte[] writeReverseOrderedLong(long l) {
     byte[] b = new byte[8];
-    b[0] = (byte)(0x7f ^ ((l >> 56) & 0xff));
-    for (int i = 1; i < 7; i++) {
+    return writeReverseOrderedLong(l, b, 0);
+  }
+
+  public static byte[] writeReverseOrderedLong(long l, byte[] b, int offset) {
+    b[offset] = (byte)(0x7f ^ ((l >> 56) & 0xff));
+    for (int i = offset+1; i < offset+7; i++) {
       b[i] = (byte)(0xff ^ ((l >> 8*(7-i)) & 0xff));
     }
-    b[7] = (byte)(0xff ^ (l & 0xff));
+    b[offset+7] = (byte)(0xff ^ (l & 0xff));
     return b;
   }
 
