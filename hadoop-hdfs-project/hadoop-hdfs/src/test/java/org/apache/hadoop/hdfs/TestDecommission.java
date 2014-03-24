@@ -23,6 +23,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -828,5 +829,64 @@ public class TestDecommission {
     }           
 
     fdos.close();
+  }
+  
+  /**
+   * Tests restart of namenode while datanode hosts are added to exclude file
+   **/
+  @Test(timeout=360000)
+  public void testDecommissionWithNamenodeRestart()throws IOException, InterruptedException {
+    LOG.info("Starting test testDecommissionWithNamenodeRestart");
+    int numNamenodes = 1;
+    int numDatanodes = 1;
+    int replicas = 1;
+    
+    startCluster(numNamenodes, numDatanodes, conf);
+    Path file1 = new Path("testDecommission.dat");
+    FileSystem fileSys = cluster.getFileSystem();
+    writeFile(fileSys, file1, replicas);
+        
+    DFSClient client = getDfsClient(cluster.getNameNode(), conf);
+    DatanodeInfo[] info = client.datanodeReport(DatanodeReportType.LIVE);
+    DatanodeID excludedDatanodeID = info[0];
+    String excludedDatanodeName = info[0].getXferAddr();
+
+    writeConfigFile(excludeFile, new ArrayList<String>(Arrays.asList(excludedDatanodeName)));
+    
+    //Add a new datanode to cluster
+    cluster.startDataNodes(conf, 1, true, null, null, null, null);
+    numDatanodes+=1;
+    
+    assertEquals("Number of datanodes should be 2 ", 2, cluster.getDataNodes().size());
+    //Restart the namenode
+    cluster.restartNameNode();
+    DatanodeInfo datanodeInfo = NameNodeAdapter.getDatanode(
+        cluster.getNamesystem(), excludedDatanodeID);
+    waitNodeState(datanodeInfo, AdminStates.DECOMMISSIONED);
+    
+    // Ensure decommissioned datanode is not automatically shutdown
+    assertEquals("All datanodes must be alive", numDatanodes, 
+        client.datanodeReport(DatanodeReportType.LIVE).length);
+    // wait for the block to be replicated
+    int tries = 0;
+    while (tries++ < 20) {
+      try {
+        Thread.sleep(1000);
+        if (checkFile(fileSys, file1, replicas, datanodeInfo.getXferAddr(),
+            numDatanodes) == null) {
+          break;
+        }
+      } catch (InterruptedException ie) {
+      }
+    }
+    assertTrue("Checked if block was replicated after decommission, tried "
+        + tries + " times.", tries < 20);
+    cleanupFile(fileSys, file1);
+
+    // Restart the cluster and ensure recommissioned datanodes
+    // are allowed to register with the namenode
+    cluster.shutdown();
+    startCluster(numNamenodes, numDatanodes, conf);
+    cluster.shutdown();
   }
 }

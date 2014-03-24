@@ -711,7 +711,7 @@ public class DatanodeManager {
   boolean checkDecommissionState(DatanodeDescriptor node) {
     // Check to see if all blocks in this decommissioned
     // node has reached their target replication factor.
-    if (node.isDecommissionInProgress()) {
+    if (node.isDecommissionInProgress() && node.checkBlockReportReceived()) {
       if (!blockManager.isReplicationInProgress(node)) {
         node.setDecommissioned();
         LOG.info("Decommission complete for " + node);
