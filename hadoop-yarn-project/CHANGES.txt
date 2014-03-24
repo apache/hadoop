@@ -565,6 +565,9 @@ Release 2.4.0 - UNRELEASED
 
     YARN-1705. Reset cluster-metrics on transition to standby. (Rohith via kasha)
 
+    YARN-1852. Fixed RMAppAttempt to not resend AttemptFailed/AttemptKilled
+    events to already recovered Failed/Killed RMApps. (Rohith via jianhe)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

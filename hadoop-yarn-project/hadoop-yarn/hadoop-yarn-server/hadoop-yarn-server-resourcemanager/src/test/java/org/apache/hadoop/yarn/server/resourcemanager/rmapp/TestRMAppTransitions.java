@@ -27,6 +27,7 @@ import static org.mockito.Mockito.verify;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Map;
 
 import org.junit.Assert;
 
@@ -53,6 +54,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.ahs.RMApplicationHistoryWriter;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.ApplicationState;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
@@ -862,7 +864,57 @@ public class TestRMAppTransitions {
     assertTimesAtFinish(application);
     assertAppState(RMAppState.KILLED, application);
   }
+  
+  @Test(timeout = 30000)
+  public void testAppsRecoveringStates() throws Exception {
+    RMState state = new RMState();
+    Map<ApplicationId, ApplicationState> applicationState =
+        state.getApplicationState();
+    createRMStateForApplications(applicationState, RMAppState.FINISHED);
+    createRMStateForApplications(applicationState, RMAppState.KILLED);
+    createRMStateForApplications(applicationState, RMAppState.FAILED);
+    for (ApplicationState appState : applicationState.values()) {
+      testRecoverApplication(appState, state);
+    }
+  }
+  
+  public void testRecoverApplication(ApplicationState appState, RMState rmState)
+      throws Exception {
+    ApplicationSubmissionContext submissionContext =
+        appState.getApplicationSubmissionContext();
+    RMAppImpl application =
+        new RMAppImpl(appState.getAppId(), rmContext, conf,
+            submissionContext.getApplicationName(), null,
+            submissionContext.getQueue(), submissionContext, null, null,
+            appState.getSubmitTime(), submissionContext.getApplicationType(),
+            submissionContext.getApplicationTags());
+    Assert.assertEquals(RMAppState.NEW, application.getState());
+    application.recover(rmState);
 
+    // Application final status looked from recoveredFinalStatus
+    Assert.assertTrue("Application is not in recoveredFinalStatus.",
+        RMAppImpl.isAppInFinalState(application));
+
+    // Trigger RECOVER event.
+    application.handle(new RMAppEvent(appState.getAppId(),
+        RMAppEventType.RECOVER));
+    rmDispatcher.await();
+    RMAppState finalState = appState.getState();
+    Assert.assertEquals("Application is not in finalState.", finalState,
+        application.getState());
+  }
+  
+  public void createRMStateForApplications(
+      Map<ApplicationId, ApplicationState> applicationState,
+      RMAppState rmAppState) {
+    RMApp app = createNewTestApp(null);
+    ApplicationState appState =
+        new ApplicationState(app.getSubmitTime(), app.getStartTime(),
+            app.getApplicationSubmissionContext(), app.getUser(), rmAppState,
+            null, app.getFinishTime());
+    applicationState.put(app.getApplicationId(), appState);
+  }
+  
   @Test
   public void testGetAppReport() {
     RMApp app = createNewTestApp(null);
