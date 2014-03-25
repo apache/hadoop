@@ -87,6 +87,9 @@ Release 2.4.0 - UNRELEASED
     HADOOP-10423. Clarify compatibility policy document for combination of 
     new client and old server. (Chris Nauroth via kasha)
 
+    HADOOP-10280. Make Schedulables return a configurable identity of user
+    or group. (Chris Li via Arpit Agarwal)
+
   OPTIMIZATIONS
 
   BUG FIXES
