@@ -448,6 +448,9 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-5846. Assigning DEFAULT_RACK in resolveNetworkLocation method can break
     data resiliency. (Nikola Vujic via cnauroth)
+    
+    HDFS-5840. Follow-up to HDFS-5138 to improve error handling during partial
+    upgrade failures. (atm, jing9 and suresh via jing9)
 
   BREAKDOWN OF HDFS-5698 SUBTASKS AND RELATED JIRAS
 

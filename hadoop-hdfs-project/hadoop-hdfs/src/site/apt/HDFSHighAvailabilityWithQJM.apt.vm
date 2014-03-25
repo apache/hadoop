@@ -780,14 +780,19 @@ digest:hdfs-zkfcs:vlUvLnd8MlacsE80rDuu6ONESbM=:rwcda
 
     [[1]] Shut down all of the NNs as normal, and install the newer software.
 
-    [[2]] Start one of the NNs with the <<<'-upgrade'>>> flag.
+    [[2]] Start up all of the JNs. Note that it is <<critical>> that all the
+    JNs be running when performing the upgrade, rollback, or finalization
+    operations. If any of the JNs are down at the time of running any of these
+    operations, the operation will fail.
+
+    [[3]] Start one of the NNs with the <<<'-upgrade'>>> flag.
   
-    [[3]] On start, this NN will not enter the standby state as usual in an HA
+    [[4]] On start, this NN will not enter the standby state as usual in an HA
     setup. Rather, this NN will immediately enter the active state, perform an
     upgrade of its local storage dirs, and also perform an upgrade of the shared
     edit log.
   
-    [[4]] At this point the other NN in the HA pair will be out of sync with
+    [[5]] At this point the other NN in the HA pair will be out of sync with
     the upgraded NN. In order to bring it back in sync and once again have a highly
     available setup, you should re-bootstrap this NameNode by running the NN with
     the <<<'-bootstrapStandby'>>> flag. It is an error to start this second NN with

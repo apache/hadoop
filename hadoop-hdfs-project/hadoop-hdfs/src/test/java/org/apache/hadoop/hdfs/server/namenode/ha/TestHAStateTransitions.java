@@ -28,6 +28,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.logging.Log;
@@ -41,8 +42,12 @@ import org.apache.hadoop.ha.HAServiceProtocol.RequestSource;
 import org.apache.hadoop.ha.HAServiceProtocol.StateChangeRequestInfo;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.HAUtil;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
+import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.EditLogFileOutputStream;
@@ -555,6 +560,45 @@ public class TestHAStateTransitions {
       }
     } finally {
       cluster.shutdown();
+    }
+  }
+  
+  /**
+   * This test also serves to test
+   * {@link HAUtil#getProxiesForAllNameNodesInNameservice(Configuration, String)} and
+   * {@link DFSUtil#getRpcAddressesForNameserviceId(Configuration, String, String)}
+   * by virtue of the fact that it wouldn't work properly if the proxies
+   * returned were not for the correct NNs.
+   */
+  @Test
+  public void testIsAtLeastOneActive() throws Exception {
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(new HdfsConfiguration())
+        .nnTopology(MiniDFSNNTopology.simpleHATopology())
+        .numDataNodes(0)
+        .build();
+    try {
+      Configuration conf = new HdfsConfiguration();
+      HATestUtil.setFailoverConfigurations(cluster, conf);
+      
+      List<ClientProtocol> namenodes =
+          HAUtil.getProxiesForAllNameNodesInNameservice(conf,
+              HATestUtil.getLogicalHostname(cluster));
+      
+      assertEquals(2, namenodes.size());
+      
+      assertFalse(HAUtil.isAtLeastOneActive(namenodes));
+      cluster.transitionToActive(0);
+      assertTrue(HAUtil.isAtLeastOneActive(namenodes));
+      cluster.transitionToStandby(0);
+      assertFalse(HAUtil.isAtLeastOneActive(namenodes));
+      cluster.transitionToActive(1);
+      assertTrue(HAUtil.isAtLeastOneActive(namenodes));
+      cluster.transitionToStandby(1);
+      assertFalse(HAUtil.isAtLeastOneActive(namenodes));
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
     }
   }
   
