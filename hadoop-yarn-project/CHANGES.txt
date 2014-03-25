@@ -571,6 +571,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1852. Fixed RMAppAttempt to not resend AttemptFailed/AttemptKilled
     events to already recovered Failed/Killed RMApps. (Rohith via jianhe)
 
+    YARN-1866. Fixed an issue with renewal of RM-delegation tokens on restart or
+    fail-over. (Jian He via vinodkv)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

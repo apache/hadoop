@@ -112,6 +112,8 @@ public class DelegationTokenRenewer extends AbstractService {
     this.tokenRemovalDelayMs =
         conf.getInt(YarnConfiguration.RM_NM_EXPIRY_INTERVAL_MS,
             YarnConfiguration.DEFAULT_RM_NM_EXPIRY_INTERVAL_MS);
+
+    setLocalSecretManagerAndServiceAddr();
     renewerService = createNewThreadPoolService(conf);
     pendingEventQueue = new LinkedBlockingQueue<DelegationTokenRenewerEvent>();
     renewalTimer = new Timer(true);
@@ -134,6 +136,13 @@ public class DelegationTokenRenewer extends AbstractService {
     return pool;
   }
 
+  // enable RM to short-circuit token operations directly to itself
+  private void setLocalSecretManagerAndServiceAddr() {
+    RMDelegationTokenIdentifier.Renewer.setSecretManager(rmContext
+      .getRMDelegationTokenSecretManager(), rmContext.getClientRMService()
+      .getBindAddress());
+  }
+
   @Override
   protected void serviceStart() throws Exception {
     dtCancelThread.start();
@@ -143,10 +152,8 @@ public class DelegationTokenRenewer extends AbstractService {
               "DelayedTokenCanceller");
       delayedRemovalThread.start();
     }
-    // enable RM to short-circuit token operations directly to itself
-    RMDelegationTokenIdentifier.Renewer.setSecretManager(
-        rmContext.getRMDelegationTokenSecretManager(),
-        rmContext.getClientRMService().getBindAddress());
+
+    setLocalSecretManagerAndServiceAddr();
     serviceStateLock.writeLock().lock();
     isServiceStarted = true;
     serviceStateLock.writeLock().unlock();
