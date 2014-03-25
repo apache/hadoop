@@ -43,7 +43,6 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import junit.framework.Assert;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -82,6 +81,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -179,7 +179,6 @@ public class TestDelegationTokenRenewer {
     dispatcher = new AsyncDispatcher(eventQueue);
     Renewer.reset();
     delegationTokenRenewer = createNewDelegationTokenRenewer(conf, counter);
-    delegationTokenRenewer.init(conf);
     RMContext mockContext = mock(RMContext.class);
     ClientRMService mockClientRMService = mock(ClientRMService.class);
     when(mockContext.getDelegationTokenRenewer()).thenReturn(
@@ -190,6 +189,7 @@ public class TestDelegationTokenRenewer {
         InetSocketAddress.createUnresolved("localhost", 1234);
     when(mockClientRMService.getBindAddress()).thenReturn(sockAddr);
     delegationTokenRenewer.setRMContext(mockContext);
+    delegationTokenRenewer.init(conf);
     delegationTokenRenewer.start();
   }
   
@@ -515,7 +515,6 @@ public class TestDelegationTokenRenewer {
         1000l);
     DelegationTokenRenewer localDtr =
         createNewDelegationTokenRenewer(lconf, counter);
-    localDtr.init(lconf);
     RMContext mockContext = mock(RMContext.class);
     ClientRMService mockClientRMService = mock(ClientRMService.class);
     when(mockContext.getClientRMService()).thenReturn(mockClientRMService);
@@ -526,6 +525,7 @@ public class TestDelegationTokenRenewer {
         InetSocketAddress.createUnresolved("localhost", 1234);
     when(mockClientRMService.getBindAddress()).thenReturn(sockAddr);
     localDtr.setRMContext(mockContext);
+    localDtr.init(lconf);
     localDtr.start();
     
     MyFS dfs = (MyFS)FileSystem.get(lconf);
@@ -592,7 +592,6 @@ public class TestDelegationTokenRenewer {
         1000l);
     DelegationTokenRenewer localDtr =
         createNewDelegationTokenRenewer(conf, counter);
-    localDtr.init(lconf);
     RMContext mockContext = mock(RMContext.class);
     ClientRMService mockClientRMService = mock(ClientRMService.class);
     when(mockContext.getClientRMService()).thenReturn(mockClientRMService);
@@ -603,6 +602,7 @@ public class TestDelegationTokenRenewer {
         InetSocketAddress.createUnresolved("localhost", 1234);
     when(mockClientRMService.getBindAddress()).thenReturn(sockAddr);
     localDtr.setRMContext(mockContext);
+    localDtr.init(lconf);
     localDtr.start();
     
     MyFS dfs = (MyFS)FileSystem.get(lconf);
@@ -704,7 +704,6 @@ public class TestDelegationTokenRenewer {
     // fire up the renewer                                                     
     final DelegationTokenRenewer dtr =
         createNewDelegationTokenRenewer(conf, counter);           
-    dtr.init(conf);                                                            
     RMContext mockContext = mock(RMContext.class);                             
     ClientRMService mockClientRMService = mock(ClientRMService.class);         
     when(mockContext.getClientRMService()).thenReturn(mockClientRMService);    
@@ -713,6 +712,7 @@ public class TestDelegationTokenRenewer {
     when(mockClientRMService.getBindAddress()).thenReturn(sockAddr);           
     dtr.setRMContext(mockContext);  
     when(mockContext.getDelegationTokenRenewer()).thenReturn(dtr);
+    dtr.init(conf);
     dtr.start();                                                                           
     // submit a job that blocks during renewal                                 
     Thread submitThread = new Thread() {                                       
