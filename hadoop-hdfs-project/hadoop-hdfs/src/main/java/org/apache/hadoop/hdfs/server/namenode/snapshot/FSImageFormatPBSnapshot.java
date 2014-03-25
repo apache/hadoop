@@ -414,7 +414,7 @@ public class FSImageFormatPBSnapshot {
         rb.setLastSnapshotId(((WithName) ref).getLastSnapshotId()).setName(
             ByteString.copyFrom(ref.getLocalNameBytes()));
       } else if (ref instanceof DstReference) {
-        rb.setDstSnapshotId(((DstReference) ref).getDstSnapshotId());
+        rb.setDstSnapshotId(ref.getDstSnapshotId());
       }
       return rb;
     }

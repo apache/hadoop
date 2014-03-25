@@ -421,7 +421,7 @@ public class TestLightWeightHashSet{
     assertEquals(NUM - 10, array2.length);
 
     for (int i = 0; i < array2.length; i++) {
-      assertTrue(sub2.contains((Integer) array2[i]));
+      assertTrue(sub2.contains(array2[i]));
     }
 
     LOG.info("Test other - DONE");

@@ -197,7 +197,7 @@ public class TestStartup {
   private void corruptNameNodeFiles() throws IOException {
     // now corrupt/delete the directrory
     List<URI> nameDirs = (List<URI>)FSNamesystem.getNamespaceDirs(config);
-    List<URI> nameEditsDirs = (List<URI>)FSNamesystem.getNamespaceEditsDirs(config);
+    List<URI> nameEditsDirs = FSNamesystem.getNamespaceEditsDirs(config);
 
     // get name dir and its length, then delete and recreate the directory
     File dir = new File(nameDirs.get(0).getPath()); // has only one

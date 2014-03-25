@@ -256,6 +256,8 @@ Release 2.5.0 - UNRELEASED
     HDFS-6007. Update documentation about short-circuit local reads (iwasakims
     via cmccabe)
 
+    HDFS-6125. Cleanup unnecessary cast in HDFS code base. (suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES 

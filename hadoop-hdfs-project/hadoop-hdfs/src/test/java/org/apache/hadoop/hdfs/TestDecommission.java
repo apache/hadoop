@@ -155,7 +155,7 @@ public class TestDecommission {
     assertTrue("Not HDFS:"+fileSys.getUri(),
         fileSys instanceof DistributedFileSystem);
     HdfsDataInputStream dis = (HdfsDataInputStream)
-        ((DistributedFileSystem)fileSys).open(name);
+        fileSys.open(name);
     Collection<LocatedBlock> dinfo = dis.getAllBlocks();
     for (LocatedBlock blk : dinfo) { // for each block
       int hasdown = 0;

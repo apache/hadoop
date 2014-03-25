@@ -367,7 +367,7 @@ public class TestLightWeightLinkedSet {
     Object[] array2 = set.toArray();
     assertEquals(NUM, array2.length);
     for (int i = 0; i < array2.length; i++) {
-      assertTrue(list.contains((Integer) array2[i]));
+      assertTrue(list.contains(array2[i]));
     }
     LOG.info("Test capacity - DONE");
   }

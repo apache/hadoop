@@ -317,7 +317,7 @@ public class JsonUtil {
     if (value == null) {
       return defaultValue;
     }
-    return (long) (Long) value;
+    return (Long) value;
   }
 
   private static String getString(Map<?, ?> m, String key,

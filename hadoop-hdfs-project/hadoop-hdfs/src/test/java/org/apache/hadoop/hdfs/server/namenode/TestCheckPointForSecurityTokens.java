@@ -71,7 +71,7 @@ public class TestCheckPointForSecurityTokens {
           DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY, true);
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDatanodes).build();
       cluster.waitActive();
-      fs = (DistributedFileSystem)(cluster.getFileSystem());
+      fs = cluster.getFileSystem();
       FSNamesystem namesystem = cluster.getNamesystem();
       String renewer = UserGroupInformation.getLoginUser().getUserName();
       Token<DelegationTokenIdentifier> token1 = namesystem

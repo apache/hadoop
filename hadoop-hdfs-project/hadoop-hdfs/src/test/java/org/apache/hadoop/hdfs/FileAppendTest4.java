@@ -62,7 +62,7 @@ public class FileAppendTest4 {
     conf = new HdfsConfiguration();
     init(conf);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(DATANODE_NUM).build();
-    fs = (DistributedFileSystem)cluster.getFileSystem();
+    fs = cluster.getFileSystem();
   }
 
   @AfterClass

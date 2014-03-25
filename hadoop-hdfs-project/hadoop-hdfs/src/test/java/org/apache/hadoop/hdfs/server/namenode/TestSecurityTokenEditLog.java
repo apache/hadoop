@@ -191,9 +191,9 @@ public class TestSecurityTokenEditLog {
       Token<DelegationTokenIdentifier> token1 = fsn.getDelegationToken(renewer);
       Token<DelegationTokenIdentifier> token2 = fsn.getDelegationToken(renewer);
       DelegationTokenIdentifier ident1 =
-          (DelegationTokenIdentifier)token1.decodeIdentifier();
+          token1.decodeIdentifier();
       DelegationTokenIdentifier ident2 =
-          (DelegationTokenIdentifier)token2.decodeIdentifier();
+          token2.decodeIdentifier();
       
       // verify we got the tokens
       verify(log, times(1)).logGetDelegationToken(eq(ident1), anyLong());

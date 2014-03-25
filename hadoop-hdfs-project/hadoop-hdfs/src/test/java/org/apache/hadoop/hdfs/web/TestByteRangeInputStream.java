@@ -103,7 +103,7 @@ public static class MockHttpURLConnection extends HttpURLConnection {
     doReturn(new MockHttpURLConnection(ospy.getURL())).when(ospy)
         .openConnection();
     HftpFileSystem.RangeHeaderUrlOpener rspy = spy(
-        new HftpFileSystem.RangeHeaderUrlOpener(factory, (URL) null));
+        new HftpFileSystem.RangeHeaderUrlOpener(factory, null));
     doReturn(new MockHttpURLConnection(rspy.getURL())).when(rspy)
         .openConnection();
     ByteRangeInputStream is = new HftpFileSystem.RangeHeaderInputStream(ospy, rspy);

@@ -349,8 +349,7 @@ public class DelegationTokenFetcher {
          Class.forName(exceptionClass).asSubclass(Exception.class);
       // we are interested in constructor with String arguments
       java.lang.reflect.Constructor<? extends Exception> constructor =
-        (java.lang.reflect.Constructor<? extends Exception>) 
-        ec.getConstructor (new Class[] {String.class});
+          ec.getConstructor (new Class[] {String.class});
 
       // create an instance
       e =  (IOException) constructor.newInstance (exceptionMsg);

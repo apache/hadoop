@@ -70,7 +70,7 @@ public class TestHDFSConcat {
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(REPL_FACTOR).build();
     assertNotNull("Failed Cluster Creation", cluster);
     cluster.waitClusterUp();
-    dfs = (DistributedFileSystem) cluster.getFileSystem();
+    dfs = cluster.getFileSystem();
     assertNotNull("Failed to get FileSystem", dfs);
     nn = cluster.getNameNodeRpc();
     assertNotNull("Failed to get NameNode", nn);

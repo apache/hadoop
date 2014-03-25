@@ -175,7 +175,7 @@ public class TestNameEditsConfigs {
     try {
       assertTrue(!fileSys.exists(file1));
       DFSTestUtil.createFile(fileSys, file1, FILE_SIZE, FILE_SIZE, BLOCK_SIZE,
-          (short) replication, SEED);
+          replication, SEED);
       checkFile(fileSys, file1, replication);
       secondary.doCheckpoint();
     } finally {
@@ -213,7 +213,7 @@ public class TestNameEditsConfigs {
       checkFile(fileSys, file1, replication);
       cleanupFile(fileSys, file1);
       DFSTestUtil.createFile(fileSys, file2, FILE_SIZE, FILE_SIZE, BLOCK_SIZE,
-          (short) replication, SEED);
+          replication, SEED);
       checkFile(fileSys, file2, replication);
       secondary.doCheckpoint();
     } finally {
@@ -250,7 +250,7 @@ public class TestNameEditsConfigs {
       checkFile(fileSys, file2, replication);
       cleanupFile(fileSys, file2);
       DFSTestUtil.createFile(fileSys, file3, FILE_SIZE, FILE_SIZE, BLOCK_SIZE,
-          (short) replication, SEED);
+          replication, SEED);
       checkFile(fileSys, file3, replication);
       secondary.doCheckpoint();
     } finally {
@@ -444,7 +444,7 @@ public class TestNameEditsConfigs {
 
       assertTrue(!fileSys.exists(file1));
       DFSTestUtil.createFile(fileSys, file1, FILE_SIZE, FILE_SIZE, BLOCK_SIZE,
-          (short) replication, SEED);
+          replication, SEED);
       checkFile(fileSys, file1, replication);
     } finally  {
       fileSys.close();
@@ -483,7 +483,7 @@ public class TestNameEditsConfigs {
       checkFile(fileSys, file1, replication);
       cleanupFile(fileSys, file1);
       DFSTestUtil.createFile(fileSys, file2, FILE_SIZE, FILE_SIZE, BLOCK_SIZE,
-          (short) replication, SEED);
+          replication, SEED);
       checkFile(fileSys, file2, replication);
     } finally {
       fileSys.close();
@@ -511,7 +511,7 @@ public class TestNameEditsConfigs {
       checkFile(fileSys, file2, replication);
       cleanupFile(fileSys, file2);
       DFSTestUtil.createFile(fileSys, file3, FILE_SIZE, FILE_SIZE, BLOCK_SIZE,
-          (short) replication, SEED);
+          replication, SEED);
       checkFile(fileSys, file3, replication);
     } finally {
       fileSys.close();
@@ -566,7 +566,7 @@ public class TestNameEditsConfigs {
       checkFile(fileSys, file3, replication);
       cleanupFile(fileSys, file3);
       DFSTestUtil.createFile(fileSys, file3, FILE_SIZE, FILE_SIZE, BLOCK_SIZE,
-          (short) replication, SEED);
+          replication, SEED);
       checkFile(fileSys, file3, replication);
     } finally {
       fileSys.close();

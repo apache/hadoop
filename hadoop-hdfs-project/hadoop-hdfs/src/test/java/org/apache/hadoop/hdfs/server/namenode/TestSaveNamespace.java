@@ -586,7 +586,7 @@ public class TestSaveNamespace {
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(new Configuration())
         .numDataNodes(1).build();
     cluster.waitActive();
-    DistributedFileSystem fs = (DistributedFileSystem) cluster.getFileSystem();
+    DistributedFileSystem fs = cluster.getFileSystem();
     OutputStream out = null;
     try {
       fs.mkdirs(new Path("/test-target"));
@@ -609,7 +609,7 @@ public class TestSaveNamespace {
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(new Configuration())
         .numDataNodes(1).build();
     cluster.waitActive();
-    DistributedFileSystem fs = (DistributedFileSystem) cluster.getFileSystem();
+    DistributedFileSystem fs = cluster.getFileSystem();
     try {
       cluster.getNamesystem().leaseManager.addLease("me", "/non-existent");      
       fs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);

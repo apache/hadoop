@@ -513,7 +513,7 @@ public class TestDistributedFileSystem {
         current.getShortUserName() + "x", new String[]{"user"});
     
     try {
-      ((DistributedFileSystem) hdfs).getFileChecksum(new Path(
+      hdfs.getFileChecksum(new Path(
           "/test/TestNonExistingFile"));
       fail("Expecting FileNotFoundException");
     } catch (FileNotFoundException e) {
@@ -524,7 +524,7 @@ public class TestDistributedFileSystem {
     try {
       Path path = new Path("/test/TestExistingDir/");
       hdfs.mkdirs(path);
-      ((DistributedFileSystem) hdfs).getFileChecksum(path);
+      hdfs.getFileChecksum(path);
       fail("Expecting FileNotFoundException");
     } catch (FileNotFoundException e) {
       assertTrue("Not throwing the intended exception message", e.getMessage()

@@ -128,7 +128,7 @@ public class ConfiguredFailoverProxyProvider<T> implements
         throw new RuntimeException(e);
       }
     }
-    return new ProxyInfo<T>((T)current.namenode, current.address.toString());
+    return new ProxyInfo<T>(current.namenode, current.address.toString());
   }
 
   @Override

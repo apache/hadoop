@@ -3923,7 +3923,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     assert hasReadLock();
     final BlockCollection bc = blockUC.getBlockCollection();
     if (bc == null || !(bc instanceof INodeFile)
-        || !((INodeFile) bc).isUnderConstruction()) {
+        || !bc.isUnderConstruction()) {
       return false;
     }
 
