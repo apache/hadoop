@@ -169,10 +169,9 @@
 
   function load_snapshot_info() {
     $.get(
-      '/jmx?qry=Hadoop:service=NameNode,name=FSNamesystemState',
+      '/jmx?qry=Hadoop:service=NameNode,name=SnapshotInfo',
       guard_with_startup_progress(function (resp) {
-        var data = JSON.parse(resp.beans[0].SnapshotStats);
-        dust.render('snapshot-info', data, function(err, out) {
+      dust.render('snapshot-info', resp.beans[0], function(err, out) {
           $('#tab-snapshot').html(out);
           $('#ui-tabs a[href="#tab-snapshot"]').tab('show');
         });

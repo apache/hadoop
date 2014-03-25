@@ -26,8 +26,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import javax.management.ObjectName;
+
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
+import org.apache.hadoop.hdfs.protocol.SnapshotInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormat;
@@ -37,6 +40,7 @@ import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodesInPath;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottable.SnapshotDiffInfo;
+import org.apache.hadoop.metrics2.util.MBeans;
 
 /**
  * Manage snapshottable directories and their snapshots.
@@ -50,7 +54,7 @@ import org.apache.hadoop.hdfs.server.namenode.snapshot.INodeDirectorySnapshottab
  * 2. Lock the {@link FSDirectory} lock for the {@link SnapshotManager} methods
  * if necessary.
  */
-public class SnapshotManager implements SnapshotStats {
+public class SnapshotManager implements SnapshotStatsMXBean {
   private boolean allowNestedSnapshots = false;
   private final FSDirectory fsdir;
   private static final int SNAPSHOT_ID_BIT_WIDTH = 24;
@@ -259,12 +263,10 @@ public class SnapshotManager implements SnapshotStats {
     srcRoot.renameSnapshot(path, oldSnapshotName, newSnapshotName);
   }
   
-  @Override
   public int getNumSnapshottableDirs() {
     return snapshottables.size();
   }
 
-  @Override
   public int getNumSnapshots() {
     return numSnapshots.get();
   }
@@ -371,5 +373,58 @@ public class SnapshotManager implements SnapshotStats {
    */
    public int getMaxSnapshotID() {
     return ((1 << SNAPSHOT_ID_BIT_WIDTH) - 1);
+  }
+
+  private ObjectName mxBeanName;
+
+  public void registerMXBean() {
+    mxBeanName = MBeans.register("NameNode", "SnapshotInfo", this);
+  }
+
+  public void shutdown() {
+    MBeans.unregister(mxBeanName);
+    mxBeanName = null;
+  }
+
+  @Override // SnapshotStatsMXBean
+  public SnapshotDirectoryMXBean getSnapshotStats() {
+    SnapshottableDirectoryStatus[] stats = getSnapshottableDirListing(null);
+    if (stats == null) {
+      return null;
+    }
+    return new SnapshotDirectoryMXBean(stats);
+  }
+
+  public class SnapshotDirectoryMXBean {
+    private List<SnapshottableDirectoryStatus.Bean> directory =
+        new ArrayList<SnapshottableDirectoryStatus.Bean>();
+    private List<SnapshotInfo.Bean> snapshots =
+        new ArrayList<SnapshotInfo.Bean>();
+
+    public SnapshotDirectoryMXBean(SnapshottableDirectoryStatus[] stats) {
+      set(stats);
+    }
+
+    public void set(SnapshottableDirectoryStatus[] stats) {
+      for (SnapshottableDirectoryStatus s : stats) {
+        directory.add(new SnapshottableDirectoryStatus.Bean(s));
+        try {
+          for (Snapshot shot : getSnapshottableRoot(
+              s.getFullPath().toString()).getSnapshotList()) {
+            snapshots.add(new SnapshotInfo.Bean(shot));
+          }
+        } catch (IOException e) {
+          continue;
+        }
+      }
+    }
+
+    public List<SnapshottableDirectoryStatus.Bean> getDirectory() {
+      return directory;
+    }
+
+    public List<SnapshotInfo.Bean> getSnapshots() {
+      return snapshots;
+    }
   }
 }

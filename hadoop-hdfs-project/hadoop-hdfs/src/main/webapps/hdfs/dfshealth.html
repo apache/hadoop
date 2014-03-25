@@ -189,8 +189,54 @@
 
 <script type="text/x-dust-template" id="tmpl-snapshot">
 <div class="page-header"><h1>Snapshot Summary</h1></div>
-<p><b>Snapshottable directories</b>: {SnapshottableDirectories}</p>
-<p><b>Snapshotted directories</b>: {Snapshots}</p>
+<div class="page-header"><h1><small>Snapshottable directories: {@size key=SnapshotStats.directory}{/size}</small></div>
+<small>
+<table class="table">
+  <thead>
+    <tr>
+      <th>Path</th>
+      <th>Snapshot Number</th>
+      <th>Snapshot Quota</th>
+      <th>Modification Time</th>
+      <th>Permission</th>
+      <th>Owner</th>
+      <th>Group</th>
+    </tr>
+  </thead>
+  {#SnapshotStats.directory}
+  <tr>
+    <td>{path}</td>
+    <td>{snapshotNumber}</td>
+    <td>{snapshotQuota}</td>
+    <td>{modificationTime|date_tostring}</td>
+    <td>{permission|helper_to_permission}</td>
+    <td>{owner}</td>
+    <td>{group}</td>
+  </tr>
+  {/SnapshotStats.directory}
+</table>
+</small>
+
+<div class="page-header"><h1><small>Snapshotted directories: {@size key=SnapshotStats.snapshots}{/size}</small></div>
+
+<small>
+<table class="table">
+  <thead>
+    <tr>
+      <th>Snapshot ID</th>
+      <th>Snapshot Directory</th>
+      <th>Modification Time</th>
+    </tr>
+  </thead>
+  {#SnapshotStats.snapshots}
+  <tr>
+    <td>{snapshotID}</td>
+    <td>{snapshotDirectory}</td>
+    <td>{modificationTime|date_tostring}</td>
+  </tr>
+  {/SnapshotStats.snapshots}
+</table>
+</small>
 </script>
 
 <script type="text/x-dust-template" id="tmpl-datanode">

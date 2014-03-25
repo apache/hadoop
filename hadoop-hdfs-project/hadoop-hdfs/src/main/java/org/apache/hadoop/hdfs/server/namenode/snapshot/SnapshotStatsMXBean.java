@@ -17,20 +17,18 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.snapshot;
 
+import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotManager.SnapshotDirectoryMXBean;
+
 /**
  * This is an interface used to retrieve statistic information related to
  * snapshots
  */
-public interface SnapshotStats {
+public interface SnapshotStatsMXBean {
 
   /**
-   * @return The number of snapshottale directories in the system 
+   * Return the list of snapshottable directories
+   *
+   * @return the list of snapshottable directories
    */
-  public int getNumSnapshottableDirs();
-  
-  /**
-   * @return The number of directories that have been snapshotted
-   */
-  public int getNumSnapshots();
-  
+  public SnapshotDirectoryMXBean getSnapshotStats();
 }
