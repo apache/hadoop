@@ -44,7 +44,7 @@ public class TestFileLengthOnClusterRestart {
     HdfsDataInputStream in = null;
     try {
       Path path = new Path("/tmp/TestFileLengthOnClusterRestart", "test");
-      DistributedFileSystem dfs = (DistributedFileSystem) cluster
+      DistributedFileSystem dfs = cluster
           .getFileSystem();
       FSDataOutputStream out = dfs.create(path);
       int fileLength = 1030;

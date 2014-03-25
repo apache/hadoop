@@ -3507,7 +3507,7 @@ public abstract class FSEditLogOp {
 
     @Override
     void readFields(DataInputStream in, int logVersion) throws IOException {
-      AclEditLogProto p = AclEditLogProto.parseDelimitedFrom((DataInputStream)in);
+      AclEditLogProto p = AclEditLogProto.parseDelimitedFrom(in);
       if (p == null) {
         throw new IOException("Failed to read fields from SetAclOp");
       }

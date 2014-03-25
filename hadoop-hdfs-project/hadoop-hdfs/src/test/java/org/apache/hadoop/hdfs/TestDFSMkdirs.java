@@ -92,7 +92,7 @@ public class TestDFSMkdirs {
   public void testMkdir() throws IOException {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
-    DistributedFileSystem dfs = (DistributedFileSystem) cluster.getFileSystem();
+    DistributedFileSystem dfs = cluster.getFileSystem();
     try {
       // Create a dir in root dir, should succeed
       assertTrue(dfs.mkdir(new Path("/mkdir-" + Time.now()),

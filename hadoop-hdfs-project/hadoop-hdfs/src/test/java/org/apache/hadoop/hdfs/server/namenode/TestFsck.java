@@ -464,7 +464,7 @@ public class TestFsck {
             len = (int)(in.getFileLength() % blockSize);
             if (len == 0) len = blockBuffer.length;
           }
-          IOUtils.readFully(in, blockBuffer, 0, (int)len);
+          IOUtils.readFully(in, blockBuffer, 0, len);
           int startIdx = blockIdx * blockSize;
           for (int i = 0; i < len; i++) {
             if (initialContents[startIdx + i] != blockBuffer[i]) {
@@ -851,7 +851,7 @@ public class TestFsck {
           new MiniDFSCluster.Builder(conf).numDataNodes(NUM_REPLICAS).build();
       assertNotNull("Failed Cluster Creation", cluster);
       cluster.waitClusterUp();
-      dfs = (DistributedFileSystem) cluster.getFileSystem();
+      dfs = cluster.getFileSystem();
       assertNotNull("Failed to get FileSystem", dfs);
       
       // Create a file that will be intentionally under-replicated
@@ -923,7 +923,7 @@ public class TestFsck {
           .racks(racks).build();
       assertNotNull("Failed Cluster Creation", cluster);
       cluster.waitClusterUp();
-      dfs = (DistributedFileSystem) cluster.getFileSystem();
+      dfs = cluster.getFileSystem();
       assertNotNull("Failed to get FileSystem", dfs);
       
       // Create a file that will be intentionally under-replicated
@@ -946,7 +946,7 @@ public class TestFsck {
       PrintWriter out = new PrintWriter(result, true);
       InetAddress remoteAddress = InetAddress.getLocalHost();
       NamenodeFsck fsck = new NamenodeFsck(conf, namenode, nettop, pmap, out, 
-          NUM_DN, (short)REPL_FACTOR, remoteAddress);
+          NUM_DN, REPL_FACTOR, remoteAddress);
       
       // Run the fsck and check the Result
       final HdfsFileStatus file = 

@@ -143,7 +143,7 @@ public class DataStorage extends Storage {
    */
   public String getTrashDirectoryForBlockFile(String bpid, File blockFile) {
     if (trashEnabledBpids.contains(bpid)) {
-      return ((BlockPoolSliceStorage) getBPStorage(bpid)).getTrashDirectory(blockFile);
+      return getBPStorage(bpid).getTrashDirectory(blockFile);
     }
     return null;
   }

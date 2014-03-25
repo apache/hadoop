@@ -2396,7 +2396,7 @@ public class FSDirectory implements Closeable {
    */
   public final void addToInodeMap(INode inode) {
     if (inode instanceof INodeWithAdditionalFields) {
-      inodeMap.put((INodeWithAdditionalFields)inode);
+      inodeMap.put(inode);
     }
   }
 

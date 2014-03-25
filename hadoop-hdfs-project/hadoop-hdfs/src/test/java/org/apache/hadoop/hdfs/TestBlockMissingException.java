@@ -54,7 +54,7 @@ public class TestBlockMissingException {
     try {
       dfs = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATANODES).build();
       dfs.waitActive();
-      fileSys = (DistributedFileSystem)dfs.getFileSystem();
+      fileSys = dfs.getFileSystem();
       Path file1 = new Path("/user/dhruba/raidtest/file1");
       createOldFile(fileSys, file1, 1, numBlocks, blockSize);
 

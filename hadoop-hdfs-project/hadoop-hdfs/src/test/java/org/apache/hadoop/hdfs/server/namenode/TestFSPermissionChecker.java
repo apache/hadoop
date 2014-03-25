@@ -372,7 +372,7 @@ public class TestFSPermissionChecker {
 
   private void addAcl(INodeWithAdditionalFields inode, AclEntry... acl)
       throws IOException {
-    AclStorage.updateINodeAcl((INodeWithAdditionalFields)inode,
+    AclStorage.updateINodeAcl(inode,
       Arrays.asList(acl), Snapshot.CURRENT_STATE_ID);
   }
 

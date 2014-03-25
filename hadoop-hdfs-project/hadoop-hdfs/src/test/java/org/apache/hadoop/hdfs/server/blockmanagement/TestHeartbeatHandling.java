@@ -184,9 +184,9 @@ public class TestHeartbeatHandling {
           DatanodeInfo[] recoveringNodes = recoveryCommand.getRecoveringBlocks()
               .toArray(new BlockRecoveryCommand.RecoveringBlock[0])[0].getLocations();
           assertEquals(3, recoveringNodes.length);
-          assertEquals(recoveringNodes[0], (DatanodeInfo)dd1);
-          assertEquals(recoveringNodes[1], (DatanodeInfo)dd2);
-          assertEquals(recoveringNodes[2], (DatanodeInfo)dd3);
+          assertEquals(recoveringNodes[0], dd1);
+          assertEquals(recoveringNodes[1], dd2);
+          assertEquals(recoveringNodes[2], dd3);
 
           // Test with one stale node.
           dd1.setLastUpdate(System.currentTimeMillis());
@@ -206,8 +206,8 @@ public class TestHeartbeatHandling {
               .toArray(new BlockRecoveryCommand.RecoveringBlock[0])[0].getLocations();
           assertEquals(2, recoveringNodes.length);
           // dd2 is skipped.
-          assertEquals(recoveringNodes[0], (DatanodeInfo)dd1);
-          assertEquals(recoveringNodes[1], (DatanodeInfo)dd3);
+          assertEquals(recoveringNodes[0], dd1);
+          assertEquals(recoveringNodes[1], dd3);
 
           // Test with all stale node.
           dd1.setLastUpdate(System.currentTimeMillis() - 60 * 1000);
@@ -228,9 +228,9 @@ public class TestHeartbeatHandling {
           // Only dd1 is included since it heart beated and hence its not stale
           // when the list of recovery blocks is constructed.
           assertEquals(3, recoveringNodes.length);
-          assertEquals(recoveringNodes[0], (DatanodeInfo)dd1);
-          assertEquals(recoveringNodes[1], (DatanodeInfo)dd2);
-          assertEquals(recoveringNodes[2], (DatanodeInfo)dd3);
+          assertEquals(recoveringNodes[0], dd1);
+          assertEquals(recoveringNodes[1], dd2);
+          assertEquals(recoveringNodes[2], dd3);
         }
       } finally {
         namesystem.writeUnlock();

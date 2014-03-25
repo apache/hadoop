@@ -109,7 +109,7 @@ public class TestMiniDFSCluster {
     conf.set(MiniDFSCluster.HDFS_MINIDFS_BASEDIR, c4Path);
     MiniDFSCluster cluster4 = new MiniDFSCluster.Builder(conf).build();
     try {
-      DistributedFileSystem dfs = (DistributedFileSystem) cluster4.getFileSystem();
+      DistributedFileSystem dfs = cluster4.getFileSystem();
       dfs.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_ENTER);
       cluster4.shutdown();
     } finally {

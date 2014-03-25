@@ -103,7 +103,7 @@ public class TestDataNodeMetrics {
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     try {
       cluster.waitActive();
-      DistributedFileSystem fs = (DistributedFileSystem) cluster.getFileSystem();
+      DistributedFileSystem fs = cluster.getFileSystem();
 
       Path testFile = new Path("/testFlushNanosMetric.txt");
       FSDataOutputStream fout = fs.create(testFile);

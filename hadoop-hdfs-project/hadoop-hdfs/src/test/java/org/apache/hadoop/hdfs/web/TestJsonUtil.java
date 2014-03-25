@@ -124,8 +124,8 @@ public class TestJsonUtil {
 
     // The encoded result should contain name, ipAddr and xferPort.
     Map<String, Object> r = JsonUtil.toJsonMap(di);
-    Assert.assertEquals(name, (String)r.get("name"));
-    Assert.assertEquals("127.0.0.1", (String)r.get("ipAddr"));
+    Assert.assertEquals(name, r.get("name"));
+    Assert.assertEquals("127.0.0.1", r.get("ipAddr"));
     // In this test, it is Integer instead of Long since json was not actually
     // involved in constructing the map.
     Assert.assertEquals(1004, (int)(Integer)r.get("xferPort"));

@@ -308,7 +308,7 @@ class ClusterJspHelper {
         // Inner map of attribute name to value
         Map<String, Object> innerMap = entry.getValue();
         if (innerMap != null) {
-          if (((String) innerMap.get("adminState"))
+          if (innerMap.get("adminState")
               .equals(AdminStates.DECOMMISSIONED.toString())) {
             nn.liveDecomCount++;
           }

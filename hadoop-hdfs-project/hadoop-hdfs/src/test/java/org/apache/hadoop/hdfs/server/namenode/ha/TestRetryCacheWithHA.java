@@ -954,7 +954,7 @@ public class TestRetryCacheWithHA {
     boolean checkNamenodeBeforeReturn() throws Exception {
       for (int i = 0; i < CHECKTIMES; i++) {
         RemoteIterator<CachePoolEntry> iter = dfs.listCachePools();
-        if (iter.hasNext() && (long)iter.next().getInfo().getLimit() == 99) {
+        if (iter.hasNext() && iter.next().getInfo().getLimit() == 99) {
           return true;
         }
         Thread.sleep(1000);

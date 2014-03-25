@@ -102,7 +102,7 @@ public class TestClientProtocolWithDelegationToken {
       public Object run() throws Exception {
         ClientProtocol proxy = null;
         try {
-          proxy = (ClientProtocol) RPC.getProxy(ClientProtocol.class,
+          proxy = RPC.getProxy(ClientProtocol.class,
               ClientProtocol.versionID, addr, conf);
           proxy.getServerDefaults();
         } finally {

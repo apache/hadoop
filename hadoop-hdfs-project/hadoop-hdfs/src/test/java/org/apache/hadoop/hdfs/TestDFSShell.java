@@ -657,8 +657,7 @@ public class TestDFSShell {
 
       // Test a simple codec. Extension based detection. We use
       // Bzip2 cause its non-native.
-      CompressionCodec codec = (CompressionCodec)
-          ReflectionUtils.newInstance(BZip2Codec.class, conf);
+      CompressionCodec codec = ReflectionUtils.newInstance(BZip2Codec.class, conf);
       String extension = codec.getDefaultExtension();
       Path p = new Path(root, "file." + extension);
       OutputStream fout = new DataOutputStream(codec.createOutputStream(
@@ -785,7 +784,7 @@ public class TestDFSShell {
   public void testCount() throws Exception {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
-    DistributedFileSystem dfs = (DistributedFileSystem)cluster.getFileSystem();
+    DistributedFileSystem dfs = cluster.getFileSystem();
     FsShell shell = new FsShell();
     shell.setConf(conf);
 
@@ -1488,7 +1487,7 @@ public class TestDFSShell {
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).format(true)
         .build();
-      dfs = (DistributedFileSystem)cluster.getFileSystem();
+      dfs = cluster.getFileSystem();
 
       mkdir(dfs, root);
       dfs.copyFromLocalFile(false, false, new Path(localf.getPath()), remotef);
@@ -1517,7 +1516,7 @@ public class TestDFSShell {
       // Start the cluster again, but do not reformat, so prior files remain.
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).format(false)
         .build();
-      dfs = (DistributedFileSystem)cluster.getFileSystem();
+      dfs = cluster.getFileSystem();
 
       assertEquals(null, runner.run(1));
       String corruptedcontent = runner.run(0, "-ignoreCrc");
@@ -1541,7 +1540,7 @@ public class TestDFSShell {
   public void testLsr() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
-    DistributedFileSystem dfs = (DistributedFileSystem)cluster.getFileSystem();
+    DistributedFileSystem dfs = cluster.getFileSystem();
 
     try {
       final String root = createTree(dfs, "lsr");

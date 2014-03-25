@@ -56,7 +56,7 @@ public class FileDataServlet extends DfsServlet {
     final DatanodeID host = pickSrcDatanode(blks, status, conf);
     final String hostname;
     if (host instanceof DatanodeInfo) {
-      hostname = ((DatanodeInfo)host).getHostName();
+      hostname = host.getHostName();
     } else {
       hostname = host.getIpAddr();
     }

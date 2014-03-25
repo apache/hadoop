@@ -490,7 +490,7 @@ public class TestSnapshot {
       // ...
       //
       Modification create = new FileCreation(
-          node.fileList.get(node.nullFileIndex), hdfs, (int) BLOCKSIZE);
+          node.fileList.get(node.nullFileIndex), hdfs, BLOCKSIZE);
       Modification delete = new FileDeletion(
           node.fileList.get((node.nullFileIndex + 1) % node.fileList.size()),
           hdfs);

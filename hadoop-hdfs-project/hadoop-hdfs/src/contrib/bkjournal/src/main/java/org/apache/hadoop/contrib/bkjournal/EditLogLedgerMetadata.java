@@ -203,7 +203,7 @@ public class EditLogLedgerMetadata {
     hash = hash * 31 + (int) ledgerId;
     hash = hash * 31 + (int) firstTxId;
     hash = hash * 31 + (int) lastTxId;
-    hash = hash * 31 + (int) dataLayoutVersion;
+    hash = hash * 31 + dataLayoutVersion;
     return hash;
   }
     
