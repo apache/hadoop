@@ -21,30 +21,7 @@
   // The chunk size of tailing the files, i.e., how many bytes will be shown
   // in the preview.
   var TAIL_CHUNK_SIZE = 32768;
-  var helpers = {
-    'helper_to_permission': function(chunk, ctx, bodies, params) {
-      var p = ctx.current().permission;
-      var dir = ctx.current().type == 'DIRECTORY' ? 'd' : '-';
-      var symbols = [ '---', '--x', '-w-', '-wx', 'r--', 'r-x', 'rw-', 'rwx' ];
-      var sticky = p > 1000;
 
-      var res = "";
-      for (var i = 0; i < 3; ++i) {
-	res = symbols[(p % 10)] + res;
-	p = Math.floor(p / 10);
-      }
-
-      if (sticky) {
-        var otherExec = ((ctx.current().permission % 10) & 1) == 1;
-        res = res.substr(0, res.length - 1) + (otherExec ? 't' : 'T');
-      }
-
-      chunk.write(dir + res);
-      return chunk;
-    }
-  };
-
-  var base = dust.makeBase(helpers);
   var current_directory = "";
 
   function show_err_msg(msg) {
@@ -171,7 +148,7 @@
       current_directory = dir;
       $('#directory').val(dir);
       window.location.hash = dir;
-      dust.render('explorer', base.push(d), function(err, out) {
+      dust.render('explorer', d, function(err, out) {
         $('#panel').html(out);
 
         $('.explorer-browse-links').click(function() {

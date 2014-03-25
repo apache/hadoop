@@ -13,6 +13,9 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6125. Cleanup unnecessary cast in HDFS code base. (suresh)
 
+    HDFS-5196. Provide more snapshot information in WebUI.
+    (Shinichi Yamashita via wheat9)
+
   OPTIMIZATIONS
 
   BUG FIXES 

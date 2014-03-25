@@ -960,6 +960,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     
     registerMXBean();
     DefaultMetricsSystem.instance().register(this);
+    snapshotManager.registerMXBean();
   }
   
   /** 
@@ -5631,6 +5632,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * shutdown FSNamesystem
    */
   void shutdown() {
+    if (snapshotManager != null) {
+      snapshotManager.shutdown();
+    }
     if (mbeanName != null) {
       MBeans.unregister(mbeanName);
       mbeanName = null;

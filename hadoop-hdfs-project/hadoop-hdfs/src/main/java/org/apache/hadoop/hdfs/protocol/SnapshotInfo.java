@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.protocol;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.FsPermissionProto;
+import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 
 /**
  * SnapshotInfo maintains information for a snapshot
@@ -78,5 +79,29 @@ public class SnapshotInfo {
         + "; owner=" + owner
         + "; group=" + group
         + "}";
+  }
+
+  public static class Bean {
+    private final String snapshotID;
+    private final String snapshotDirectory;
+    private final long modificationTime;
+
+    public Bean(Snapshot s) {
+      this.snapshotID = s.getRoot().getLocalName();
+      this.snapshotDirectory = s.getRoot().getFullPathName();
+      this.modificationTime = s.getRoot().getModificationTime();
+    }
+
+    public String getSnapshotID() {
+      return snapshotID;
+    }
+
+    public String getSnapshotDirectory() {
+      return snapshotDirectory;
+    }
+
+    public long getModificationTime() {
+      return modificationTime;
+    }
   }
 }

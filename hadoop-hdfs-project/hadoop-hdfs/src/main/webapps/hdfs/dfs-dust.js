@@ -55,6 +55,32 @@
       }
 
       return res;
+    },
+
+    'date_tostring' : function (v) {
+      return new Date(Number(v)).toLocaleString();
+    },
+
+    'helper_to_permission': function (v) {
+      var symbols = [ '---', '--x', '-w-', '-wx', 'r--', 'r-x', 'rw-', 'rwx' ];
+      var sticky = v > 1000;
+
+      var res = "";
+      for (var i = 0; i < 3; ++i) {
+        res = symbols[(v % 10)] + res;
+        v = Math.floor(v / 10);
+      }
+
+      if (sticky) {
+        var otherExec = ((v % 10) & 1) == 1;
+        res = res.substr(0, res.length - 1) + (otherExec ? 't' : 'T');
+      }
+
+      return res;
+    },
+
+    'helper_to_directory' : function (v) {
+      return v === 'DIRECTORY' ? 'd' : '-';
     }
   };
   $.extend(dust.filters, filters);
