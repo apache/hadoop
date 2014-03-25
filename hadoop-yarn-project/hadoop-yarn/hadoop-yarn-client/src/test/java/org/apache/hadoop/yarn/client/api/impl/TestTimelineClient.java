@@ -49,19 +49,19 @@ public class TestTimelineClient {
 
   @Before
   public void setup() {
-    client = spy((TimelineClientImpl) TimelineClient.createTimelineClient());
-    client.init(new YarnConfiguration());
-    client.start();
+    client = createTimelineClient(new YarnConfiguration());
   }
 
   @After
   public void tearDown() {
-    client.stop();
+    if (client != null) {
+      client.stop();
+    }
   }
 
   @Test
   public void testPostEntities() throws Exception {
-    mockClientResponse(ClientResponse.Status.OK, false, false);
+    mockClientResponse(client, ClientResponse.Status.OK, false, false);
     try {
       TimelinePutResponse response = client.putEntities(generateEntity());
       Assert.assertEquals(0, response.getErrors().size());
@@ -72,7 +72,7 @@ public class TestTimelineClient {
 
   @Test
   public void testPostEntitiesWithError() throws Exception {
-    mockClientResponse(ClientResponse.Status.OK, true, false);
+    mockClientResponse(client, ClientResponse.Status.OK, true, false);
     try {
       TimelinePutResponse response = client.putEntities(generateEntity());
       Assert.assertEquals(1, response.getErrors().size());
@@ -90,7 +90,7 @@ public class TestTimelineClient {
   @Test
   public void testPostEntitiesNoResponse() throws Exception {
     mockClientResponse(
-        ClientResponse.Status.INTERNAL_SERVER_ERROR, false, false);
+        client, ClientResponse.Status.INTERNAL_SERVER_ERROR, false, false);
     try {
       client.putEntities(generateEntity());
       Assert.fail("Exception is expected");
@@ -102,7 +102,7 @@ public class TestTimelineClient {
 
   @Test
   public void testPostEntitiesConnectionRefused() throws Exception {
-    mockClientResponse(null, false, true);
+    mockClientResponse(client, null, false, true);
     try {
       client.putEntities(generateEntity());
       Assert.fail("RuntimeException is expected");
@@ -111,8 +111,24 @@ public class TestTimelineClient {
     }
   }
 
-  private ClientResponse mockClientResponse(ClientResponse.Status status,
-      boolean hasError, boolean hasRuntimeError) {
+  @Test
+  public void testPostEntitiesTimelineServiceNotEnabled() throws Exception {
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, false);
+    TimelineClientImpl client = createTimelineClient(conf);
+    mockClientResponse(
+        client, ClientResponse.Status.INTERNAL_SERVER_ERROR, false, false);
+    try {
+      TimelinePutResponse response = client.putEntities(generateEntity());
+      Assert.assertEquals(0, response.getErrors().size());
+    } catch (YarnException e) {
+      Assert.fail(
+          "putEntities should already return before throwing the exception");
+    }
+  }
+
+  private static ClientResponse mockClientResponse(TimelineClientImpl client,
+      ClientResponse.Status status, boolean hasError, boolean hasRuntimeError) {
     ClientResponse response = mock(ClientResponse.class);
     if (hasRuntimeError) {
       doThrow(new ClientHandlerException(new ConnectException())).when(client)
@@ -155,6 +171,15 @@ public class TestTimelineClient {
     entity.addOtherInfo("okey1", "oval1");
     entity.addOtherInfo("okey2", "oval2");
     return entity;
+  }
+
+  private static TimelineClientImpl createTimelineClient(
+      YarnConfiguration conf) {
+    TimelineClientImpl client =
+        spy((TimelineClientImpl) TimelineClient.createTimelineClient());
+    client.init(conf);
+    client.start();
+    return client;
   }
 
 }

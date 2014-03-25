@@ -308,6 +308,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1536. Cleanup: Get rid of ResourceManager#get*SecretManager() methods 
     and use the RMContext methods instead. (Anubhav Dhoot via kasha)
 
+    YARN-1850. Introduced the ability to optionally disable sending out timeline-
+    events in the TimelineClient. (Zhijie Shen via vinodkv)
+
   OPTIMIZATIONS
 
     YARN-1771. Reduce the number of NameNode operations during localization of

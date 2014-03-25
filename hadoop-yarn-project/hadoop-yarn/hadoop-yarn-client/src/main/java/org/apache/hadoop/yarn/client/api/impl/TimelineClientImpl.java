@@ -55,6 +55,7 @@ public class TimelineClientImpl extends TimelineClient {
 
   private Client client;
   private URI resURI;
+  private boolean isEnabled;
 
   public TimelineClientImpl() {
     super(TimelineClientImpl.class.getName());
@@ -64,24 +65,38 @@ public class TimelineClientImpl extends TimelineClient {
   }
 
   protected void serviceInit(Configuration conf) throws Exception {
-    if (YarnConfiguration.useHttps(conf)) {
-      resURI = URI
-          .create(JOINER.join("https://", conf.get(
-              YarnConfiguration.TIMELINE_SERVICE_WEBAPP_HTTPS_ADDRESS,
-              YarnConfiguration.DEFAULT_TIMELINE_SERVICE_WEBAPP_HTTPS_ADDRESS),
-              RESOURCE_URI_STR));
+    isEnabled = conf.getBoolean(
+        YarnConfiguration.TIMELINE_SERVICE_ENABLED,
+        YarnConfiguration.DEFAULT_TIMELINE_SERVICE_ENABLED);
+    if (!isEnabled) {
+      LOG.info("Timeline service is not enabled");
     } else {
-      resURI = URI.create(JOINER.join("http://", conf.get(
-          YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS,
-          YarnConfiguration.DEFAULT_TIMELINE_SERVICE_WEBAPP_ADDRESS), RESOURCE_URI_STR));
+      if (YarnConfiguration.useHttps(conf)) {
+        resURI = URI
+            .create(JOINER.join("https://", conf.get(
+                YarnConfiguration.TIMELINE_SERVICE_WEBAPP_HTTPS_ADDRESS,
+                YarnConfiguration.DEFAULT_TIMELINE_SERVICE_WEBAPP_HTTPS_ADDRESS),
+                RESOURCE_URI_STR));
+      } else {
+        resURI = URI.create(JOINER.join("http://", conf.get(
+            YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS,
+            YarnConfiguration.DEFAULT_TIMELINE_SERVICE_WEBAPP_ADDRESS),
+            RESOURCE_URI_STR));
+      }
+      LOG.info("Timeline service address: " + resURI);
     }
-    LOG.info("Timeline service address: " + resURI);
     super.serviceInit(conf);
   }
 
   @Override
   public TimelinePutResponse putEntities(
       TimelineEntity... entities) throws IOException, YarnException {
+    if (!isEnabled) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Nothing will be put because timeline service is not enabled");
+      }
+      return new TimelinePutResponse();
+    }
     TimelineEntities entitiesContainer = new TimelineEntities();
     entitiesContainer.addEntities(Arrays.asList(entities));
     ClientResponse resp;

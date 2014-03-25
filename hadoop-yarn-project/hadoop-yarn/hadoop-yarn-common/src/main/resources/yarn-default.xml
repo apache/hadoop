@@ -1088,6 +1088,14 @@
   <!-- Timeline Service's Configuration-->
 
   <property>
+    <description>Indicate to clients whether timeline service is enabled or not.
+    If enabled, clients will put entities and events to the timeline server.
+    </description>
+    <name>yarn.timeline-service.enabled</name>
+    <value>true</value>
+  </property>
+
+  <property>
     <description>The hostname of the timeline service web application.</description>
     <name>yarn.timeline-service.hostname</name>
     <value>0.0.0.0</value>
