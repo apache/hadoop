@@ -18,12 +18,12 @@
 package org.apache.hadoop.fs.shell;
 
 import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.InputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.LinkedList;
 import java.util.zip.GZIPInputStream;
 
+import org.apache.avro.Schema;
 import org.apache.avro.file.DataFileReader;
 import org.apache.avro.file.FileReader;
 import org.apache.avro.generic.GenericDatumReader;
@@ -31,7 +31,6 @@ import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.avro.io.DatumWriter;
 import org.apache.avro.io.EncoderFactory;
 import org.apache.avro.io.JsonEncoder;
-import org.apache.avro.Schema;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -253,7 +252,7 @@ class Display extends FsCommand {
     private int pos;
     private byte[] buffer;
     private ByteArrayOutputStream output;
-    private FileReader fileReader;
+    private FileReader<?> fileReader;
     private DatumWriter<Object> writer;
     private JsonEncoder encoder;
 

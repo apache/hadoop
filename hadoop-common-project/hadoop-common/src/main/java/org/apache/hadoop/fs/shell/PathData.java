@@ -570,7 +570,7 @@ public class PathData implements Comparable<PathData> {
 
   @Override
   public int compareTo(PathData o) {
-    return path.compareTo(((PathData)o).path);
+    return path.compareTo(o.path);
   }
   
   @Override

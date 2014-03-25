@@ -434,7 +434,7 @@ public final class HttpServer2 implements FilterContainer {
    * provided. This wrapper and all subclasses must create at least one
    * listener.
    */
-  public Connector createBaseListener(Configuration conf) throws IOException {
+  public Connector createBaseListener(Configuration conf) {
     return HttpServer2.createDefaultChannelConnector();
   }
 
@@ -527,8 +527,7 @@ public final class HttpServer2 implements FilterContainer {
     addServlet("conf", "/conf", ConfServlet.class);
   }
 
-  public void addContext(Context ctxt, boolean isFiltered)
-      throws IOException {
+  public void addContext(Context ctxt, boolean isFiltered) {
     webServer.addHandler(ctxt);
     addNoCacheFilter(webAppContext);
     defaultContexts.put(ctxt, isFiltered);

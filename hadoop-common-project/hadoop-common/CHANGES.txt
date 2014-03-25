@@ -321,6 +321,10 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10418. SaslRpcClient should not assume that remote principals are in
     the default_realm. (atm)
 
+    HADOOP-10426. Declare CreateOpts.getOpt(..) with generic type argument,
+    removes unused FileContext.getFileStatus(..) and fixes various javac
+    warnings.  (szetszwo)
+
 Release 2.4.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

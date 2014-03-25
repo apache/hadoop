@@ -82,7 +82,7 @@ public class MapWritable extends AbstractMapWritable
     }
 
     if (obj instanceof MapWritable) {
-      Map map = (Map) obj;
+      MapWritable map = (MapWritable) obj;
       if (size() != map.size()) {
         return false;
       }
@@ -114,7 +114,6 @@ public class MapWritable extends AbstractMapWritable
   }
 
   @Override
-  @SuppressWarnings("unchecked")
   public Writable put(Writable key, Writable value) {
     addToMap(key.getClass());
     addToMap(value.getClass());
@@ -163,7 +162,6 @@ public class MapWritable extends AbstractMapWritable
     }
   }
 
-  @SuppressWarnings("unchecked")
   @Override
   public void readFields(DataInput in) throws IOException {
     super.readFields(in);

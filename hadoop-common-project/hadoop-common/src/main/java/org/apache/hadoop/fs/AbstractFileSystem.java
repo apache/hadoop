@@ -750,13 +750,12 @@ public abstract class AbstractFileSystem {
    * Partially resolves the path. This is used during symlink resolution in
    * {@link FSLinkResolver}, and differs from the similarly named method
    * {@link FileContext#getLinkTarget(Path)}.
+   * @throws IOException subclass implementations may throw IOException 
    */
   public Path getLinkTarget(final Path f) throws IOException {
-    /* We should never get here. Any file system that threw an
-     * UnresolvedLinkException, causing this function to be called,
-     * needs to override this method.
-     */
-    throw new AssertionError();
+    throw new AssertionError("Implementation Error: " + getClass()
+        + " that threw an UnresolvedLinkException, causing this method to be"
+        + " called, needs to override this method.");
   }
     
   /**

@@ -53,8 +53,7 @@ public abstract class FilterFs extends AbstractFileSystem {
     return myFs;
   }
   
-  protected FilterFs(AbstractFileSystem fs) throws IOException,
-      URISyntaxException {
+  protected FilterFs(AbstractFileSystem fs) throws URISyntaxException {
     super(fs.getUri(), fs.getUri().getScheme(),
         fs.getUri().getAuthority() != null, fs.getUriDefaultPort());
     myFs = fs;

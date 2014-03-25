@@ -652,8 +652,7 @@ public final class FileContext {
     // If not, add a default Perms and apply umask;
     // AbstractFileSystem#create
 
-    CreateOpts.Perms permOpt = 
-      (CreateOpts.Perms) CreateOpts.getOpt(CreateOpts.Perms.class, opts);
+    CreateOpts.Perms permOpt = CreateOpts.getOpt(CreateOpts.Perms.class, opts);
     FsPermission permission = (permOpt != null) ? permOpt.getValue() :
                                       FILE_DEFAULT_PERM;
     permission = permission.applyUMask(umask);
@@ -1519,40 +1518,6 @@ public final class FileContext {
         return false;
       }
     }
-    
-    /**
-     * Return a list of file status objects that corresponds to supplied paths
-     * excluding those non-existent paths.
-     * 
-     * @param paths list of paths we want information from
-     *
-     * @return a list of FileStatus objects
-     *
-     * @throws AccessControlException If access is denied
-     * @throws IOException If an I/O error occurred
-     * 
-     * Exceptions applicable to file systems accessed over RPC:
-     * @throws RpcClientException If an exception occurred in the RPC client
-     * @throws RpcServerException If an exception occurred in the RPC server
-     * @throws UnexpectedServerException If server implementation throws 
-     *           undeclared exception to RPC server
-     */
-    private FileStatus[] getFileStatus(Path[] paths)
-        throws AccessControlException, IOException {
-      if (paths == null) {
-        return null;
-      }
-      ArrayList<FileStatus> results = new ArrayList<FileStatus>(paths.length);
-      for (int i = 0; i < paths.length; i++) {
-        try {
-          results.add(FileContext.this.getFileStatus(paths[i]));
-        } catch (FileNotFoundException fnfe) {
-          // ignoring 
-        }
-      }
-      return results.toArray(new FileStatus[results.size()]);
-    }
-    
     
     /**
      * Return the {@link ContentSummary} of path f.

@@ -1091,12 +1091,7 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
   }
 
   private static boolean shouldRetry(Code code) {
-    switch (code) {
-    case CONNECTIONLOSS:
-    case OPERATIONTIMEOUT:
-      return true;
-    }
-    return false;
+    return code == Code.CONNECTIONLOSS || code == Code.OPERATIONTIMEOUT;
   }
   
   @Override
