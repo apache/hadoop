@@ -21,7 +21,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
-
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.times;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -44,6 +45,10 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.TypeConverter;
+import org.apache.hadoop.mapreduce.jobhistory.HistoryEvent;
+import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEvent;
+import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEventHandler;
+import org.apache.hadoop.mapreduce.jobhistory.JobUnsuccessfulCompletionEvent;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.app.client.ClientService;
 import org.apache.hadoop.mapreduce.v2.app.commit.CommitterEvent;
@@ -70,6 +75,8 @@ import org.apache.log4j.Logger;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
 
 public class TestMRAppMaster {
   private static final Log LOG = LogFactory.getLog(TestMRAppMaster.class);
@@ -120,7 +127,7 @@ public class TestMRAppMaster {
     assertEquals(userStagingPath.toString(),
       appMaster.stagingDirPath.toString());
   }
-  
+
   @Test
   public void testMRAppMasterMidLock() throws IOException,
       InterruptedException {
@@ -154,6 +161,9 @@ public class TestMRAppMaster {
     assertTrue(appMaster.errorHappenedShutDown);
     assertEquals(JobStateInternal.ERROR, appMaster.forcedState);
     appMaster.stop();
+
+    // verify the final status is FAILED
+    verifyFailedStatus((MRAppMasterTest)appMaster, "FAILED");
   }
   
   @Test
@@ -190,6 +200,9 @@ public class TestMRAppMaster {
     assertTrue(appMaster.errorHappenedShutDown);
     assertEquals(JobStateInternal.SUCCEEDED, appMaster.forcedState);
     appMaster.stop();
+
+    // verify the final status is SUCCEEDED
+    verifyFailedStatus((MRAppMasterTest)appMaster, "SUCCEEDED");
   }
   
   @Test
@@ -226,6 +239,9 @@ public class TestMRAppMaster {
     assertTrue(appMaster.errorHappenedShutDown);
     assertEquals(JobStateInternal.FAILED, appMaster.forcedState);
     appMaster.stop();
+
+    // verify the final status is FAILED
+    verifyFailedStatus((MRAppMasterTest)appMaster, "FAILED");
   }
   
   @Test
@@ -423,8 +439,20 @@ public class TestMRAppMaster {
 
 
   }
-}
 
+  private void verifyFailedStatus(MRAppMasterTest appMaster,
+      String expectedJobState) {
+    ArgumentCaptor<JobHistoryEvent> captor = ArgumentCaptor
+        .forClass(JobHistoryEvent.class);
+    // handle two events: AMStartedEvent and JobUnsuccessfulCompletionEvent
+    verify(appMaster.spyHistoryService, times(2))
+        .handleEvent(captor.capture());
+    HistoryEvent event = captor.getValue().getHistoryEvent();
+    assertTrue(event instanceof JobUnsuccessfulCompletionEvent);
+    assertEquals(((JobUnsuccessfulCompletionEvent) event).getStatus()
+        , expectedJobState);
+  }
+}
 class MRAppMasterTest extends MRAppMaster {
 
   Path stagingDirPath;
@@ -434,6 +462,7 @@ class MRAppMasterTest extends MRAppMaster {
   ContainerAllocator mockContainerAllocator;
   CommitterEventHandler mockCommitterEventHandler;
   RMHeartbeatHandler mockRMHeartbeatHandler;
+  JobHistoryEventHandler spyHistoryService;
 
   public MRAppMasterTest(ApplicationAttemptId applicationAttemptId,
       ContainerId containerId, String host, int port, int httpPort,
@@ -501,5 +530,15 @@ class MRAppMasterTest extends MRAppMaster {
   
   public UserGroupInformation getUgi() {
     return currentUser;
+  }
+
+  @Override
+  protected EventHandler<JobHistoryEvent> createJobHistoryHandler(
+      AppContext context) {
+    spyHistoryService =
+        Mockito.spy((JobHistoryEventHandler) super
+            .createJobHistoryHandler(context));
+    spyHistoryService.setForcejobCompletion(this.isLastAMRetry);
+    return spyHistoryService;
   }
 }

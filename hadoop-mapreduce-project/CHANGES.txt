@@ -121,6 +121,9 @@ Release 2.4.0 - UNRELEASED
     FadviseFileRegion::transferTo does not read disks efficiently.
     (Nikola Vujic via cnauroth)
 
+    MAPREDUCE-5795. Fixed MRAppMaster to record the correct job-state after it
+    recovers from a commit during a previous attempt. (Xuan Gong via vinodkv)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

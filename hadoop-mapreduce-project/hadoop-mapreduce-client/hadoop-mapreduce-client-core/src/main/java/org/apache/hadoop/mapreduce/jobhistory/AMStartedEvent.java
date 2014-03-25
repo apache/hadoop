@@ -34,6 +34,7 @@ import org.apache.avro.util.Utf8;
 @InterfaceStability.Unstable
 public class AMStartedEvent implements HistoryEvent {
   private AMStarted datum = new AMStarted();
+  private String forcedJobStateOnShutDown;
 
   /**
    * Create an event to record the start of an MR AppMaster
@@ -54,12 +55,38 @@ public class AMStartedEvent implements HistoryEvent {
   public AMStartedEvent(ApplicationAttemptId appAttemptId, long startTime,
       ContainerId containerId, String nodeManagerHost, int nodeManagerPort,
       int nodeManagerHttpPort) {
+    this(appAttemptId, startTime, containerId, nodeManagerHost,
+        nodeManagerPort, nodeManagerHttpPort, null);
+  }
+
+  /**
+   * Create an event to record the start of an MR AppMaster
+   *
+   * @param appAttemptId
+   *          the application attempt id.
+   * @param startTime
+   *          the start time of the AM.
+   * @param containerId
+   *          the containerId of the AM.
+   * @param nodeManagerHost
+   *          the node on which the AM is running.
+   * @param nodeManagerPort
+   *          the port on which the AM is running.
+   * @param nodeManagerHttpPort
+   *          the httpPort for the node running the AM.
+   * @param forcedJobStateOnShutDown
+   *          the state to force the job into
+   */
+  public AMStartedEvent(ApplicationAttemptId appAttemptId, long startTime,
+      ContainerId containerId, String nodeManagerHost, int nodeManagerPort,
+      int nodeManagerHttpPort, String forcedJobStateOnShutDown) {
     datum.applicationAttemptId = new Utf8(appAttemptId.toString());
     datum.startTime = startTime;
     datum.containerId = new Utf8(containerId.toString());
     datum.nodeManagerHost = new Utf8(nodeManagerHost);
     datum.nodeManagerPort = nodeManagerPort;
     datum.nodeManagerHttpPort = nodeManagerHttpPort;
+    this.forcedJobStateOnShutDown = forcedJobStateOnShutDown;
   }
 
   AMStartedEvent() {
@@ -114,6 +141,13 @@ public class AMStartedEvent implements HistoryEvent {
    */
   public int getNodeManagerHttpPort() {
     return datum.nodeManagerHttpPort;
+  }
+
+  /**
+   * @return the state to force the job into
+   */
+  public String getForcedJobStateOnShutDown() {
+    return this.forcedJobStateOnShutDown;
   }
 
   /** Get the attempt id */
