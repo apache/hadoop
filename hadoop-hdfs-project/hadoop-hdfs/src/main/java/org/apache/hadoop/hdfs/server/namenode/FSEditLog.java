@@ -44,9 +44,9 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
-import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.FormatConfirmable;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
+import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.AddBlockOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.AddCacheDirectiveInfoOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.AddCachePoolOp;
@@ -1411,7 +1411,7 @@ public class FSEditLog implements LogsPurgeable {
     }
   }
   
-  public synchronized boolean canRollBackSharedLog(Storage prevStorage,
+  public synchronized boolean canRollBackSharedLog(StorageInfo prevStorage,
       int targetLayoutVersion) throws IOException {
     for (JournalAndStream jas : journalSet.getAllJournalStreams()) {
       if (jas.isShared()) {

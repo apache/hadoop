@@ -65,15 +65,15 @@ class JNStorage extends Storage {
    * @param errorReporter a callback to report errors
    * @throws IOException 
    */
-  protected JNStorage(Configuration conf, File logDir,
+  protected JNStorage(Configuration conf, File logDir, StartupOption startOpt,
       StorageErrorReporter errorReporter) throws IOException {
     super(NodeType.JOURNAL_NODE);
     
     sd = new StorageDirectory(logDir);
     this.addStorageDir(sd);
     this.fjm = new FileJournalManager(conf, sd, errorReporter);
-    
-    analyzeStorage();
+
+    analyzeAndRecoverStorage(startOpt);
   }
   
   FileJournalManager getJournalManager() {
@@ -214,6 +214,18 @@ class JNStorage extends Storage {
     // edits, it can handle edits with future version in most of the cases.
     // Thus currently we may skip the layoutVersion check here.
     layoutVersion = lv;
+  }
+
+  void analyzeAndRecoverStorage(StartupOption startOpt) throws IOException {
+    this.state = sd.analyzeStorage(startOpt, this);
+    final boolean needRecover = state != StorageState.NORMAL
+        && state != StorageState.NON_EXISTENT
+        && state != StorageState.NOT_FORMATTED;
+    if (state == StorageState.NORMAL && startOpt != StartupOption.ROLLBACK) {
+      readProperties(sd);
+    } else if (needRecover) {
+      sd.doRecover(state);
+    }
   }
 
   void checkConsistentNamespace(NamespaceInfo nsInfo)

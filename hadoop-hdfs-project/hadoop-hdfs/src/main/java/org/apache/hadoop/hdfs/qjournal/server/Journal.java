@@ -43,6 +43,7 @@ import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.Persisted
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.PrepareRecoveryResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.SegmentStateProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.RequestInfo;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.StorageErrorReporter;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.namenode.EditLogOutputStream;
@@ -138,8 +139,9 @@ public class Journal implements Closeable {
   private static final int WARN_SYNC_MILLIS_THRESHOLD = 1000;
 
   Journal(Configuration conf, File logDir, String journalId,
-      StorageErrorReporter errorReporter) throws IOException {
-    storage = new JNStorage(conf, logDir, errorReporter);
+      StartupOption startOpt, StorageErrorReporter errorReporter)
+      throws IOException {
+    storage = new JNStorage(conf, logDir, startOpt, errorReporter);
     this.journalId = journalId;
 
     refreshCachedData();

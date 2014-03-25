@@ -1680,23 +1680,19 @@ public class DFSUtil {
    * 
    * @param objects the collection of objects to check for equality.
    */
-  public static void assertAllResultsEqual(Collection<?> objects) {
-    Object[] resultsArray = objects.toArray();
-    
-    if (resultsArray.length == 0)
+  public static void assertAllResultsEqual(Collection<?> objects)
+      throws AssertionError {
+    if (objects.size() == 0 || objects.size() == 1)
       return;
     
-    for (int i = 0; i < resultsArray.length; i++) {
-      if (i == 0)
-        continue;
-      else {
-        Object currElement = resultsArray[i];
-        Object lastElement = resultsArray[i - 1];
-        if ((currElement == null && currElement != lastElement) ||
-            (currElement != null && !currElement.equals(lastElement))) {
-          throw new AssertionError("Not all elements match in results: " +
-            Arrays.toString(resultsArray));
-        }
+    Object[] resultsArray = objects.toArray();
+    for (int i = 1; i < resultsArray.length; i++) {
+      Object currElement = resultsArray[i];
+      Object lastElement = resultsArray[i - 1];
+      if ((currElement == null && currElement != lastElement) ||
+          (currElement != null && !currElement.equals(lastElement))) {
+        throw new AssertionError("Not all elements match in results: " +
+          Arrays.toString(resultsArray));
       }
     }
   }

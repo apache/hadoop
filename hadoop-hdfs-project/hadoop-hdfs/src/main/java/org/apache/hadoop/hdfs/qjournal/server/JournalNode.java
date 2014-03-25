@@ -34,6 +34,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.qjournal.client.QuorumJournalManager;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.StorageErrorReporter;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.io.IOUtils;
@@ -77,18 +78,23 @@ public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
    */
   private int resultCode = 0;
 
-  synchronized Journal getOrCreateJournal(String jid) throws IOException {
+  synchronized Journal getOrCreateJournal(String jid, StartupOption startOpt)
+      throws IOException {
     QuorumJournalManager.checkJournalId(jid);
     
     Journal journal = journalsById.get(jid);
     if (journal == null) {
       File logDir = getLogDir(jid);
       LOG.info("Initializing journal in directory " + logDir);      
-      journal = new Journal(conf, logDir, jid, new ErrorReporter());
+      journal = new Journal(conf, logDir, jid, startOpt, new ErrorReporter());
       journalsById.put(jid, journal);
     }
     
     return journal;
+  }
+  
+  Journal getOrCreateJournal(String jid) throws IOException {
+    return getOrCreateJournal(jid, StartupOption.REGULAR);
   }
 
   @Override
@@ -301,12 +307,12 @@ public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
 
   public Boolean canRollBack(String journalId, StorageInfo storage,
       StorageInfo prevStorage, int targetLayoutVersion) throws IOException {
-    return getOrCreateJournal(journalId).canRollBack(storage, prevStorage,
-        targetLayoutVersion);
+    return getOrCreateJournal(journalId, StartupOption.ROLLBACK).canRollBack(
+        storage, prevStorage, targetLayoutVersion);
   }
 
   public void doRollback(String journalId) throws IOException {
-    getOrCreateJournal(journalId).doRollback();
+    getOrCreateJournal(journalId, StartupOption.ROLLBACK).doRollback();
   }
 
   public void discardSegments(String journalId, long startTxId)

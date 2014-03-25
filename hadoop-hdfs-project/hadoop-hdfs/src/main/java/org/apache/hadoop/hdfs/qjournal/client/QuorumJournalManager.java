@@ -571,7 +571,11 @@ public class QuorumJournalManager implements JournalManager {
       
       // Either they all return the same thing or this call fails, so we can
       // just return the first result.
-      DFSUtil.assertAllResultsEqual(call.getResults().values());
+      try {
+        DFSUtil.assertAllResultsEqual(call.getResults().values());
+      } catch (AssertionError ae) {
+        throw new IOException("Results differed for canRollBack", ae);
+      }
       for (Boolean result : call.getResults().values()) {
         return result;
       }
@@ -636,7 +640,11 @@ public class QuorumJournalManager implements JournalManager {
       
       // Either they all return the same thing or this call fails, so we can
       // just return the first result.
-      DFSUtil.assertAllResultsEqual(call.getResults().values());
+      try {
+        DFSUtil.assertAllResultsEqual(call.getResults().values());
+      } catch (AssertionError ae) {
+        throw new IOException("Results differed for getJournalCTime", ae);
+      }
       for (Long result : call.getResults().values()) {
         return result;
       }
