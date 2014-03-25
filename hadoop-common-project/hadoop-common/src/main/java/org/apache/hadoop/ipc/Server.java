@@ -496,7 +496,7 @@ public abstract class Server {
   }
 
   /** A call queued for handling. */
-  public static class Call {
+  public static class Call implements Schedulable {
     private final int callId;             // the client's call id
     private final int retryCount;        // the retry count of the call
     private final Writable rpcRequest;    // Serialized Rpc request from client
@@ -534,6 +534,12 @@ public abstract class Server {
     public void setResponse(ByteBuffer response) {
       this.rpcResponse = response;
     }
+
+    // For Schedulable
+    @Override
+    public UserGroupInformation getUserGroupInformation() {
+      return connection.user;
+    }    
   }
 
   /** Listens on the socket. Creates jobs for the handler threads*/
