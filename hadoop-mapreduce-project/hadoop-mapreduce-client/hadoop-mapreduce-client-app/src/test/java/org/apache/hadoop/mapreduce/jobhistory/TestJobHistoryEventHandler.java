@@ -497,7 +497,7 @@ class JHEventHandlerForSigtermTest extends JobHistoryEventHandler {
   JobHistoryEvent lastEventHandled;
   int eventsHandled = 0;
   @Override
-  protected void handleEvent(JobHistoryEvent event) {
+  public void handleEvent(JobHistoryEvent event) {
     this.lastEventHandled = event;
     this.eventsHandled++;
   }
