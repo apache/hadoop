@@ -33,7 +33,7 @@ import org.apache.hadoop.util.IdentityHashStore;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class FSDataInputStream extends DataInputStream
-    implements Seekable, PositionedReadable, Closeable, 
+    implements Seekable, PositionedReadable, 
       ByteBufferReadable, HasFileDescriptor, CanSetDropBehind, CanSetReadahead,
       HasEnhancedByteBufferAccess {
   /**
@@ -44,8 +44,7 @@ public class FSDataInputStream extends DataInputStream
     extendedReadBuffers
       = new IdentityHashStore<ByteBuffer, ByteBufferPool>(0);
 
-  public FSDataInputStream(InputStream in)
-    throws IOException {
+  public FSDataInputStream(InputStream in) {
     super(in);
     if( !(in instanceof Seekable) || !(in instanceof PositionedReadable) ) {
       throw new IllegalArgumentException(

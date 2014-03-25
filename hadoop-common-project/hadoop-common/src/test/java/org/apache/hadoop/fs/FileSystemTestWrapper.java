@@ -63,8 +63,7 @@ public final class FileSystemTestWrapper extends FSTestWrapper {
    */
   public long createFile(Path path, int numBlocks, CreateOpts... options)
       throws IOException {
-    BlockSize blockSizeOpt =
-      (BlockSize) CreateOpts.getOpt(CreateOpts.BlockSize.class, options);
+    BlockSize blockSizeOpt = CreateOpts.getOpt(CreateOpts.BlockSize.class, options);
     long blockSize = blockSizeOpt != null ? blockSizeOpt.getValue()
         : DEFAULT_BLOCK_SIZE;
     FSDataOutputStream out =
@@ -101,8 +100,7 @@ public final class FileSystemTestWrapper extends FSTestWrapper {
 
   public void appendToFile(Path path, int numBlocks, CreateOpts... options)
       throws IOException {
-    BlockSize blockSizeOpt =
-      (BlockSize) CreateOpts.getOpt(CreateOpts.BlockSize.class, options);
+    BlockSize blockSizeOpt = CreateOpts.getOpt(CreateOpts.BlockSize.class, options);
     long blockSize = blockSizeOpt != null ? blockSizeOpt.getValue()
         : DEFAULT_BLOCK_SIZE;
     FSDataOutputStream out;
@@ -261,7 +259,7 @@ public final class FileSystemTestWrapper extends FSTestWrapper {
     // Need to translate the FileContext-style options into FileSystem-style
 
     // Permissions with umask
-    CreateOpts.Perms permOpt = (CreateOpts.Perms) CreateOpts.getOpt(
+    CreateOpts.Perms permOpt = CreateOpts.getOpt(
         CreateOpts.Perms.class, opts);
     FsPermission umask = FsPermission.getUMask(fs.getConf());
     FsPermission permission = (permOpt != null) ? permOpt.getValue()
@@ -273,23 +271,22 @@ public final class FileSystemTestWrapper extends FSTestWrapper {
     int bufferSize = fs.getConf().getInt(
         CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY,
         CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT);
-    CreateOpts.BufferSize bufOpt = (CreateOpts.BufferSize) CreateOpts.getOpt(
+    CreateOpts.BufferSize bufOpt = CreateOpts.getOpt(
         CreateOpts.BufferSize.class, opts);
     bufferSize = (bufOpt != null) ? bufOpt.getValue() : bufferSize;
     // replication
     short replication = fs.getDefaultReplication(f);
     CreateOpts.ReplicationFactor repOpt =
-        (CreateOpts.ReplicationFactor) CreateOpts.getOpt(
-            CreateOpts.ReplicationFactor.class, opts);
+        CreateOpts.getOpt(CreateOpts.ReplicationFactor.class, opts);
     replication = (repOpt != null) ? repOpt.getValue() : replication;
     // blockSize
     long blockSize = fs.getDefaultBlockSize(f);
-    CreateOpts.BlockSize blockOpt = (CreateOpts.BlockSize) CreateOpts.getOpt(
+    CreateOpts.BlockSize blockOpt = CreateOpts.getOpt(
         CreateOpts.BlockSize.class, opts);
     blockSize = (blockOpt != null) ? blockOpt.getValue() : blockSize;
     // Progressable
     Progressable progress = null;
-    CreateOpts.Progress progressOpt = (CreateOpts.Progress) CreateOpts.getOpt(
+    CreateOpts.Progress progressOpt = CreateOpts.getOpt(
         CreateOpts.Progress.class, opts);
     progress = (progressOpt != null) ? progressOpt.getValue() : progress;
     return fs.create(f, permission, overwrite, bufferSize, replication,

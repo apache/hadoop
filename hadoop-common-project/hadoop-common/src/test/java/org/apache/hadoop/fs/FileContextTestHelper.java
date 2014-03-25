@@ -77,8 +77,7 @@ public final class FileContextTestHelper {
   // the getAbsolutexxx method is needed because the root test dir
   // can be messed up by changing the working dir.
 
-  public String getAbsoluteTestRootDir(FileContext fc)
-      throws IOException {
+  public String getAbsoluteTestRootDir(FileContext fc) {
     if (absTestRootDir == null) {
       if (new Path(testRootDir).isAbsolute()) {
         absTestRootDir = testRootDir;
@@ -90,12 +89,11 @@ public final class FileContextTestHelper {
     return absTestRootDir;
   }
   
-  public Path getAbsoluteTestRootPath(FileContext fc) throws IOException {
+  public Path getAbsoluteTestRootPath(FileContext fc) {
     return fc.makeQualified(new Path(getAbsoluteTestRootDir(fc)));
   }
 
-  public Path getDefaultWorkingDirectory(FileContext fc)
-      throws IOException {
+  public Path getDefaultWorkingDirectory(FileContext fc) {
     return getTestRootPath(fc, "/user/" + System.getProperty("user.name"))
         .makeQualified(fc.getDefaultFileSystem().getUri(),
             fc.getWorkingDirectory());
@@ -106,8 +104,7 @@ public final class FileContextTestHelper {
    */
   public static long createFile(FileContext fc, Path path, int numBlocks,
       CreateOpts... options) throws IOException {
-    BlockSize blockSizeOpt = 
-      (BlockSize) CreateOpts.getOpt(CreateOpts.BlockSize.class, options);
+    BlockSize blockSizeOpt = CreateOpts.getOpt(CreateOpts.BlockSize.class, options);
     long blockSize = blockSizeOpt != null ? blockSizeOpt.getValue()
         : DEFAULT_BLOCK_SIZE;
     FSDataOutputStream out = 
@@ -146,8 +143,7 @@ public final class FileContextTestHelper {
 
   public static void appendToFile(FileContext fc, Path path, int numBlocks,
       CreateOpts... options) throws IOException {
-    BlockSize blockSizeOpt =
-      (BlockSize) CreateOpts.getOpt(CreateOpts.BlockSize.class, options);
+    BlockSize blockSizeOpt = CreateOpts.getOpt(CreateOpts.BlockSize.class, options);
     long blockSize = blockSizeOpt != null ? blockSizeOpt.getValue()
         : DEFAULT_BLOCK_SIZE;
     FSDataOutputStream out;
@@ -203,14 +199,11 @@ public final class FileContextTestHelper {
   }
 
   public FileStatus containsPath(FileContext fc, Path path,
-      FileStatus[] dirList)
-    throws IOException {
+      FileStatus[] dirList) {
     return containsPath(getTestRootPath(fc, path.toString()), dirList);
   }
   
-  public static FileStatus containsPath(Path path,
-      FileStatus[] dirList)
-    throws IOException {
+  public static FileStatus containsPath(Path path, FileStatus[] dirList) {
     for(int i = 0; i < dirList.length; i ++) { 
       if (path.equals(dirList[i].getPath()))
         return dirList[i];
@@ -219,8 +212,7 @@ public final class FileContextTestHelper {
   }
   
   public FileStatus containsPath(FileContext fc, String path,
-      FileStatus[] dirList)
-     throws IOException {
+      FileStatus[] dirList) {
     return containsPath(fc, new Path(path), dirList);
   }
   

@@ -62,8 +62,7 @@ public final class FileContextTestWrapper extends FSTestWrapper {
    */
   public long createFile(Path path, int numBlocks, CreateOpts... options)
       throws IOException {
-    BlockSize blockSizeOpt =
-      (BlockSize) CreateOpts.getOpt(CreateOpts.BlockSize.class, options);
+    BlockSize blockSizeOpt = CreateOpts.getOpt(CreateOpts.BlockSize.class, options);
     long blockSize = blockSizeOpt != null ? blockSizeOpt.getValue()
         : DEFAULT_BLOCK_SIZE;
     FSDataOutputStream out =
@@ -100,8 +99,7 @@ public final class FileContextTestWrapper extends FSTestWrapper {
 
   public void appendToFile(Path path, int numBlocks, CreateOpts... options)
       throws IOException {
-    BlockSize blockSizeOpt =
-      (BlockSize) CreateOpts.getOpt(CreateOpts.BlockSize.class, options);
+    BlockSize blockSizeOpt = CreateOpts.getOpt(CreateOpts.BlockSize.class, options);
     long blockSize = blockSizeOpt != null ? blockSizeOpt.getValue()
         : DEFAULT_BLOCK_SIZE;
     FSDataOutputStream out;

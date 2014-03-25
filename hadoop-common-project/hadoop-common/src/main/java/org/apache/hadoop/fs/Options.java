@@ -150,21 +150,25 @@ public final class Options {
     
     /**
      * Get an option of desired type
-     * @param theClass is the desired class of the opt
+     * @param clazz is the desired class of the opt
      * @param opts - not null - at least one opt must be passed
      * @return an opt from one of the opts of type theClass.
      *   returns null if there isn't any
      */
-    protected static CreateOpts getOpt(Class<? extends CreateOpts> theClass,  CreateOpts ...opts) {
+    static <T extends CreateOpts> T getOpt(Class<T> clazz, CreateOpts... opts) {
       if (opts == null) {
         throw new IllegalArgumentException("Null opt");
       }
-      CreateOpts result = null;
+      T result = null;
       for (int i = 0; i < opts.length; ++i) {
-        if (opts[i].getClass() == theClass) {
-          if (result != null) 
-            throw new IllegalArgumentException("multiple blocksize varargs");
-          result = opts[i];
+        if (opts[i].getClass() == clazz) {
+          if (result != null) {
+            throw new IllegalArgumentException("multiple opts varargs: " + clazz);
+          }
+
+          @SuppressWarnings("unchecked")
+          T t = (T)opts[i];
+          result = t;
         }
       }
       return result;
@@ -175,14 +179,16 @@ public final class Options {
      * @param opts  - the option is set into this array of opts
      * @return updated CreateOpts[] == opts + newValue
      */
-    protected static <T extends CreateOpts> CreateOpts[] setOpt(T newValue,
-        CreateOpts ...opts) {
+    static <T extends CreateOpts> CreateOpts[] setOpt(final T newValue,
+        final CreateOpts... opts) {
+      final Class<?> clazz = newValue.getClass();
       boolean alreadyInOpts = false;
       if (opts != null) {
         for (int i = 0; i < opts.length; ++i) {
-          if (opts[i].getClass() == newValue.getClass()) {
-            if (alreadyInOpts) 
-              throw new IllegalArgumentException("multiple opts varargs");
+          if (opts[i].getClass() == clazz) {
+            if (alreadyInOpts) {
+              throw new IllegalArgumentException("multiple opts varargs: " + clazz);
+            }
             alreadyInOpts = true;
             opts[i] = newValue;
           }
@@ -190,9 +196,12 @@ public final class Options {
       }
       CreateOpts[] resultOpt = opts;
       if (!alreadyInOpts) { // no newValue in opt
-        CreateOpts[] newOpts = new CreateOpts[opts.length + 1];
-        System.arraycopy(opts, 0, newOpts, 0, opts.length);
-        newOpts[opts.length] = newValue;
+        final int oldLength = opts == null? 0: opts.length;
+        CreateOpts[] newOpts = new CreateOpts[oldLength + 1];
+        if (oldLength > 0) {
+          System.arraycopy(opts, 0, newOpts, 0, oldLength);
+        }
+        newOpts[oldLength] = newValue;
         resultOpt = newOpts;
       }
       return resultOpt;
@@ -273,50 +282,29 @@ public final class Options {
      */
     public static ChecksumOpt processChecksumOpt(ChecksumOpt defaultOpt, 
         ChecksumOpt userOpt, int userBytesPerChecksum) {
-      // The following is done to avoid unnecessary creation of new objects.
-      // tri-state variable: 0 default, 1 userBytesPerChecksum, 2 userOpt
-      short whichSize;
-      // true default, false userOpt
-      boolean useDefaultType;
-      
+      final boolean useDefaultType;
+      final DataChecksum.Type type;
+      if (userOpt != null 
+          && userOpt.getChecksumType() != DataChecksum.Type.DEFAULT) {
+        useDefaultType = false;
+        type = userOpt.getChecksumType();
+      } else {
+        useDefaultType = true;
+        type = defaultOpt.getChecksumType();
+      }
+
       //  bytesPerChecksum - order of preference
       //    user specified value in bytesPerChecksum
       //    user specified value in checksumOpt
       //    default.
       if (userBytesPerChecksum > 0) {
-        whichSize = 1; // userBytesPerChecksum
-      } else if (userOpt != null && userOpt.getBytesPerChecksum() > 0) {
-        whichSize = 2; // userOpt
-      } else {
-        whichSize = 0; // default
-      }
-
-      // checksum type - order of preference
-      //   user specified value in checksumOpt
-      //   default.
-      if (userOpt != null &&
-            userOpt.getChecksumType() != DataChecksum.Type.DEFAULT) {
-        useDefaultType = false;
-      } else {
-        useDefaultType = true;
-      }
-
-      // Short out the common and easy cases
-      if (whichSize == 0 && useDefaultType) {
-        return defaultOpt;
-      } else if (whichSize == 2 && !useDefaultType) {
-        return userOpt;
-      }
-
-      // Take care of the rest of combinations
-      DataChecksum.Type type = useDefaultType ? defaultOpt.getChecksumType() :
-          userOpt.getChecksumType();
-      if (whichSize == 0) {
-        return new ChecksumOpt(type, defaultOpt.getBytesPerChecksum());
-      } else if (whichSize == 1) {
         return new ChecksumOpt(type, userBytesPerChecksum);
+      } else if (userOpt != null && userOpt.getBytesPerChecksum() > 0) {
+        return !useDefaultType? userOpt
+            : new ChecksumOpt(type, userOpt.getBytesPerChecksum());
       } else {
-        return new ChecksumOpt(type, userOpt.getBytesPerChecksum());
+        return useDefaultType? defaultOpt
+            : new ChecksumOpt(type, defaultOpt.getBytesPerChecksum());
       }
     }
 
