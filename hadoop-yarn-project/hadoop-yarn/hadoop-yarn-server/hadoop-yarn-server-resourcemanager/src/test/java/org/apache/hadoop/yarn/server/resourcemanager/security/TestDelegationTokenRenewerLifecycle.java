@@ -19,7 +19,12 @@
 package org.apache.hadoop.yarn.server.resourcemanager.security;
 
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.server.resourcemanager.ClientRMService;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.junit.Test;
 
 /**
@@ -32,9 +37,13 @@ public class TestDelegationTokenRenewerLifecycle {
   @Test
   public void testStartupFailure() throws Exception {
     Configuration conf = new Configuration();
-    DelegationTokenRenewer delegationTokenRenewer = new DelegationTokenRenewer();
+    DelegationTokenRenewer delegationTokenRenewer =
+        new DelegationTokenRenewer();
+    RMContext mockContext = mock(RMContext.class);
+    ClientRMService mockClientRMService = mock(ClientRMService.class);
+    when(mockContext.getClientRMService()).thenReturn(mockClientRMService);
+    delegationTokenRenewer.setRMContext(mockContext);
     delegationTokenRenewer.init(conf);
     delegationTokenRenewer.stop();
   }
-
 }
