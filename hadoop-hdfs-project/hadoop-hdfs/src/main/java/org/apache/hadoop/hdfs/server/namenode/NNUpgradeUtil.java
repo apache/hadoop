@@ -26,6 +26,8 @@ import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 
+import com.google.common.base.Preconditions;
+
 abstract class NNUpgradeUtil {
   
   private static final Log LOG = LogFactory.getLog(NNUpgradeUtil.class);
@@ -82,7 +84,8 @@ abstract class NNUpgradeUtil {
       return;
     }
     LOG.info("Finalizing upgrade of storage directory " + sd.getRoot());
-    assert sd.getCurrentDir().exists() : "Current directory must exist.";
+    Preconditions.checkState(sd.getCurrentDir().exists(),
+        "Current directory must exist.");
     final File tmpDir = sd.getFinalizedTmp();
     // rename previous to tmp and remove
     NNStorage.rename(prevDir, tmpDir);
@@ -105,9 +108,14 @@ abstract class NNUpgradeUtil {
     File curDir = sd.getCurrentDir();
     File prevDir = sd.getPreviousDir();
     File tmpDir = sd.getPreviousTmp();
-    assert curDir.exists() : "Current directory must exist.";
-    assert !prevDir.exists() : "previous directory must not exist.";
-    assert !tmpDir.exists() : "previous.tmp directory must not exist.";
+
+    Preconditions.checkState(curDir.exists(),
+        "Current directory must exist for preupgrade.");
+    Preconditions.checkState(!prevDir.exists(),
+        "Previous directory must not exist for preupgrade.");
+    Preconditions.checkState(!tmpDir.exists(),
+        "Previous.tmp directory must not exist for preupgrade."
+            + "Consider restarting for recovery.");
 
     // rename current to tmp
     NNStorage.rename(curDir, tmpDir);
@@ -136,6 +144,11 @@ abstract class NNUpgradeUtil {
       
       File prevDir = sd.getPreviousDir();
       File tmpDir = sd.getPreviousTmp();
+      Preconditions.checkState(!prevDir.exists(),
+          "previous directory must not exist for upgrade.");
+      Preconditions.checkState(tmpDir.exists(),
+          "previous.tmp directory must exist for upgrade.");
+
       // rename tmp to previous
       NNStorage.rename(tmpDir, prevDir);
     } catch (IOException ioe) {
@@ -154,14 +167,19 @@ abstract class NNUpgradeUtil {
   static void doRollBack(StorageDirectory sd)
       throws IOException {
     File prevDir = sd.getPreviousDir();
-    if (!prevDir.exists())
+    if (!prevDir.exists()) {
       return;
+    }
 
     File tmpDir = sd.getRemovedTmp();
-    assert !tmpDir.exists() : "removed.tmp directory must not exist.";
+    Preconditions.checkState(!tmpDir.exists(),
+        "removed.tmp directory must not exist for rollback."
+            + "Consider restarting for recovery.");
     // rename current to tmp
     File curDir = sd.getCurrentDir();
-    assert curDir.exists() : "Current directory must exist.";
+    Preconditions.checkState(curDir.exists(),
+        "Current directory must exist for rollback.");
+
     NNStorage.rename(curDir, tmpDir);
     // rename previous to current
     NNStorage.rename(prevDir, curDir);

@@ -34,6 +34,7 @@ import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.NewEpochR
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.NewEpochResponseProtoOrBuilder;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.SegmentStateProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.RequestInfo;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.common.StorageErrorReporter;
@@ -70,7 +71,7 @@ public class TestJournal {
   public void setup() throws Exception {
     FileUtil.fullyDelete(TEST_LOG_DIR);
     conf = new Configuration();
-    journal = new Journal(conf, TEST_LOG_DIR, JID,
+    journal = new Journal(conf, TEST_LOG_DIR, JID, StartupOption.REGULAR,
       mockErrorReporter);
     journal.format(FAKE_NSINFO);
   }
@@ -179,7 +180,8 @@ public class TestJournal {
     journal.close(); // close to unlock the storage dir
     
     // Now re-instantiate, make sure history is still there
-    journal = new Journal(conf, TEST_LOG_DIR, JID, mockErrorReporter);
+    journal = new Journal(conf, TEST_LOG_DIR, JID, StartupOption.REGULAR,
+        mockErrorReporter);
     
     // The storage info should be read, even if no writer has taken over.
     assertEquals(storageString,
@@ -239,7 +241,8 @@ public class TestJournal {
 
     journal.newEpoch(FAKE_NSINFO,  1);
     try {
-      new Journal(conf, TEST_LOG_DIR, JID, mockErrorReporter);
+      new Journal(conf, TEST_LOG_DIR, JID, StartupOption.REGULAR,
+          mockErrorReporter);
       fail("Did not fail to create another journal in same dir");
     } catch (IOException ioe) {
       GenericTestUtils.assertExceptionContains(
@@ -250,7 +253,8 @@ public class TestJournal {
     
     // Journal should no longer be locked after the close() call.
     // Hence, should be able to create a new Journal in the same dir.
-    Journal journal2 = new Journal(conf, TEST_LOG_DIR, JID, mockErrorReporter);
+    Journal journal2 = new Journal(conf, TEST_LOG_DIR, JID,
+        StartupOption.REGULAR, mockErrorReporter);
     journal2.newEpoch(FAKE_NSINFO, 2);
     journal2.close();
   }
@@ -279,7 +283,8 @@ public class TestJournal {
     // Check that, even if we re-construct the journal by scanning the
     // disk, we don't allow finalizing incorrectly.
     journal.close();
-    journal = new Journal(conf, TEST_LOG_DIR, JID, mockErrorReporter);
+    journal = new Journal(conf, TEST_LOG_DIR, JID, StartupOption.REGULAR,
+        mockErrorReporter);
     
     try {
       journal.finalizeLogSegment(makeRI(4), 1, 6);
