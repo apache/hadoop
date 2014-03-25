@@ -375,11 +375,6 @@ public class FilterFileSystem extends FileSystem {
 
   // path variants delegate to underlying filesystem 
   @Override
-  public ContentSummary getContentSummary(Path f) throws IOException {
-    return fs.getContentSummary(f);
-  }
-
-  @Override
   public long getDefaultBlockSize(Path f) {
     return fs.getDefaultBlockSize(f);
   }
