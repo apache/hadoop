@@ -1095,6 +1095,11 @@ public class YarnConfiguration extends Configuration {
   public static final String DEFAULT_FS_APPLICATION_HISTORY_STORE_COMPRESSION_TYPE =
       "none";
 
+  /** The setting that controls whether timeline service is enabled or not. */
+  public static final String TIMELINE_SERVICE_ENABLED =
+      TIMELINE_SERVICE_PREFIX + "enabled";
+  public static final boolean DEFAULT_TIMELINE_SERVICE_ENABLED = true;
+
   /** host:port address for timeline service RPC APIs. */
   public static final String TIMELINE_SERVICE_ADDRESS =
       TIMELINE_SERVICE_PREFIX + "address";
