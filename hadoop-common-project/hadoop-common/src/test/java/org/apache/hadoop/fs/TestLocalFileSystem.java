@@ -34,6 +34,7 @@ import static org.junit.Assert.*;
 import static org.junit.Assume.assumeTrue;
 
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -204,12 +205,22 @@ public class TestLocalFileSystem {
   }
   
   @Test(timeout = 1000)
-  public void testMkdirs() throws IOException {
+  public void testCreateFileAndMkdirs() throws IOException {
     Path test_dir = new Path(TEST_ROOT_DIR, "test_dir");
-    Path test_file = new Path(TEST_ROOT_DIR, "file1");
+    Path test_file = new Path(test_dir, "file1");
     assertTrue(fileSys.mkdirs(test_dir));
    
-    writeFile(fileSys, test_file, 1);
+    final int fileSize = new Random().nextInt(1 << 20) + 1;
+    writeFile(fileSys, test_file, fileSize);
+
+    {
+      //check FileStatus and ContentSummary 
+      final FileStatus status = fileSys.getFileStatus(test_file);
+      Assert.assertEquals(fileSize, status.getLen());
+      final ContentSummary summary = fileSys.getContentSummary(test_dir);
+      Assert.assertEquals(fileSize, summary.getLength());
+    }
+    
     // creating dir over a file
     Path bad_dir = new Path(test_file, "another_dir");
     

@@ -320,7 +320,7 @@ class ChRootedFileSystem extends FilterFileSystem {
 
   @Override
   public ContentSummary getContentSummary(Path f) throws IOException {
-    return super.getContentSummary(fullPath(f));
+    return fs.getContentSummary(fullPath(f));
   }
   
 
