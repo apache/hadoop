@@ -18,6 +18,18 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import java.io.IOException;
+import java.net.InetSocketAddress;
+
+import javax.ws.rs.core.MediaType;
+
+import junit.framework.Assert;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -25,10 +37,11 @@ import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.HAServiceProtocol.StateChangeRequestInfo;
 import org.apache.hadoop.ha.HealthCheckFailedException;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.service.AbstractService;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.conf.HAUtil;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -36,17 +49,15 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
+import org.codehaus.jettison.json.JSONException;
+import org.codehaus.jettison.json.JSONObject;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.IOException;
-
-import org.junit.Assert;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import com.sun.jersey.api.client.Client;
+import com.sun.jersey.api.client.ClientResponse;
+import com.sun.jersey.api.client.WebResource;
+import com.sun.jersey.api.client.config.DefaultClientConfig;
 
 public class TestRMHA {
   private Log LOG = LogFactory.getLog(TestRMHA.class);
@@ -77,6 +88,10 @@ public class TestRMHA {
       configuration.set(HAUtil.addSuffix(confKey, RM2_NODE_ID), RM2_ADDRESS);
       configuration.set(HAUtil.addSuffix(confKey, RM3_NODE_ID), RM3_ADDRESS);
     }
+
+    // Enable webapp to test web-services also
+    configuration.setBoolean(MockRM.ENABLE_WEBAPP, true);
+    configuration.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);
   }
 
   private void checkMonitorHealth() throws IOException {
@@ -97,7 +112,7 @@ public class TestRMHA {
         rm.adminService.getServiceStatus().isReadyToBecomeActive());
   }
 
-  private void checkActiveRMFunctionality() throws IOException {
+  private void checkActiveRMFunctionality() throws Exception {
     assertEquals(STATE_ERR, HAServiceState.ACTIVE,
         rm.adminService.getServiceStatus().getState());
     assertTrue("Active RM services aren't started",
@@ -115,6 +130,33 @@ public class TestRMHA {
       fail("Unable to perform Active RM functions");
       LOG.error("ActiveRM check failed", e);
     }
+
+    checkActiveRMWebServices();
+  }
+
+  // Do some sanity testing of the web-services after fail-over.
+  private void checkActiveRMWebServices() throws JSONException {
+
+    // Validate web-service
+    Client webServiceClient = Client.create(new DefaultClientConfig());
+    InetSocketAddress rmWebappAddr =
+        NetUtils.getConnectAddress(rm.getWebapp().getListenerAddress());
+    String webappURL =
+        "http://" + rmWebappAddr.getHostName() + ":" + rmWebappAddr.getPort();
+    WebResource webResource = webServiceClient.resource(webappURL);
+    String path = app.getApplicationId().toString();
+
+    ClientResponse response =
+        webResource.path("ws").path("v1").path("cluster").path("apps")
+          .path(path).accept(MediaType.APPLICATION_JSON)
+          .get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    JSONObject json = response.getEntity(JSONObject.class);
+
+    assertEquals("incorrect number of elements", 1, json.length());
+    JSONObject appJson = json.getJSONObject("app");
+    assertEquals("ACCEPTED", appJson.getString("state"));
+    // Other stuff is verified in the regular web-services related tests
   }
 
   /**
@@ -129,9 +171,10 @@ public class TestRMHA {
    * become Active
    */
   @Test (timeout = 30000)
-  public void testStartAndTransitions() throws Exception {
+  public void testFailoverAndTransitions() throws Exception {
     configuration.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
     Configuration conf = new YarnConfiguration(configuration);
+
     rm = new MockRM(conf);
     rm.init(conf);
     StateChangeRequestInfo requestInfo = new StateChangeRequestInfo(
@@ -191,7 +234,7 @@ public class TestRMHA {
   }
 
   @Test
-  public void testTransitionsWhenAutomaticFailoverEnabled() throws IOException {
+  public void testTransitionsWhenAutomaticFailoverEnabled() throws Exception {
     final String ERR_UNFORCED_REQUEST = "User request succeeded even when " +
         "automatic failover is enabled";
 

@@ -101,19 +101,12 @@ public class RMWebServices {
   private final ResourceManager rm;
   private static RecordFactory recordFactory = RecordFactoryProvider
       .getRecordFactory(null);
-  private final ApplicationACLsManager aclsManager;
-  private final QueueACLsManager queueACLsManager;
   private final Configuration conf;
   private @Context HttpServletResponse response;
 
   @Inject
-  public RMWebServices(final ResourceManager rm,
-      final ApplicationACLsManager aclsManager,
-      final QueueACLsManager queueACLsManager,
-      Configuration conf) {
+  public RMWebServices(final ResourceManager rm, Configuration conf) {
     this.rm = rm;
-    this.aclsManager = aclsManager;
-    this.queueACLsManager = queueACLsManager;
     this.conf = conf;
   }
 
@@ -125,10 +118,11 @@ public class RMWebServices {
       callerUGI = UserGroupInformation.createRemoteUser(remoteUser);
     }
     if (callerUGI != null
-        && !(this.aclsManager.checkAccess(callerUGI,
-            ApplicationAccessType.VIEW_APP, app.getUser(),
-            app.getApplicationId()) || this.queueACLsManager.checkAccess(
-            callerUGI, QueueACL.ADMINISTER_QUEUE, app.getQueue()))) {
+        && !(this.rm.getApplicationACLsManager().checkAccess(callerUGI,
+              ApplicationAccessType.VIEW_APP, app.getUser(),
+              app.getApplicationId()) ||
+            this.rm.getQueueACLsManager().checkAccess(callerUGI,
+              QueueACL.ADMINISTER_QUEUE, app.getQueue()))) {
       return false;
     }
     return true;

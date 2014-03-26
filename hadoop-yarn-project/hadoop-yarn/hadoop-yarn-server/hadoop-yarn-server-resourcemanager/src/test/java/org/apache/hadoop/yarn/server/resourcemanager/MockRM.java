@@ -80,6 +80,8 @@ import org.apache.log4j.Logger;
 @SuppressWarnings("unchecked")
 public class MockRM extends ResourceManager {
 
+  static final String ENABLE_WEBAPP = "mockrm.webapp.enabled";
+
   public MockRM() {
     this(new YarnConfiguration());
   }
@@ -494,7 +496,12 @@ public class MockRM extends ResourceManager {
 
   @Override
   protected void startWepApp() {
-    // override to disable webapp
+    if (getConfig().getBoolean(ENABLE_WEBAPP, false)) {
+      super.startWepApp();
+      return;
+    }
+
+    // Disable webapp
   }
 
   public static void finishAMAndVerifyAppState(RMApp rmApp, MockRM rm, MockNM nm,
