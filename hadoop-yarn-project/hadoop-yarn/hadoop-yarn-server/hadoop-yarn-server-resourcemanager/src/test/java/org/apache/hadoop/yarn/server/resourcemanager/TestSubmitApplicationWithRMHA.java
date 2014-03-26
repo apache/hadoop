@@ -219,4 +219,89 @@ public class TestSubmitApplicationWithRMHA extends RMHATestBase{
     Assert.assertEquals(appReport3.getYarnApplicationState(),
         appReport4.getYarnApplicationState());
   }
+
+  // There are two scenarios when RM failover happens
+  // during SubmitApplication Call:
+  // 1) RMStateStore already saved the ApplicationState when failover happens
+  // 2) RMStateStore did not save the ApplicationState when failover happens
+  @Test (timeout = 5000)
+  public void
+      testHandleRMHADuringSubmitApplicationCallWithSavedApplicationState()
+          throws Exception {
+    // Test scenario 1 when RM failover happens
+    // druing SubmitApplication Call:
+    // RMStateStore already saved the ApplicationState when failover happens
+    startRMs();
+
+    // Submit Application
+    // After submission, the applicationState will be saved in RMStateStore.
+    RMApp app0 = rm1.submitApp(200);
+
+    // Do the failover
+    explicitFailover();
+
+    // Since the applicationState has already been saved in RMStateStore
+    // before failover happens, the current active rm can load the previous
+    // applicationState.
+    // This RMApp should exist in the RMContext of current active RM
+    Assert.assertTrue(rm2.getRMContext().getRMApps()
+        .containsKey(app0.getApplicationId()));
+
+    // When we re-submit the application with same applicationId, it will
+    // check whether this application has been exist. If yes, just simply
+    // return submitApplicationResponse.
+    RMApp app1 =
+        rm2.submitApp(200, "", UserGroupInformation
+            .getCurrentUser().getShortUserName(), null, false, null,
+            configuration.getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
+                YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS), null, null,
+            false, false, true, app0.getApplicationId());
+
+    Assert.assertEquals(app1.getApplicationId(), app0.getApplicationId());
+  }
+
+  @Test (timeout = 5000)
+  public void
+      testHandleRMHADuringSubmitApplicationCallWithoutSavedApplicationState()
+          throws Exception {
+    // Test scenario 2 when RM failover happens
+    // during SubmitApplication Call:
+    // RMStateStore did not save the ApplicationState when failover happens.
+    // Using customized RMAppManager.
+    startRMsWithCustomizedRMAppManager();
+
+    // Submit Application
+    // After submission, the applicationState will
+    // not be saved in RMStateStore
+    RMApp app0 =
+        rm1.submitApp(200, "", UserGroupInformation
+            .getCurrentUser().getShortUserName(), null, false, null,
+            configuration.getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
+                YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS), null, null,
+            false, false);
+
+    // Do the failover
+    explicitFailover();
+
+    // When failover happens, the RMStateStore has not saved applicationState.
+    // The applicationState of this RMApp is lost.
+    // We should not find the RMApp in the RMContext of current active rm.
+    Assert.assertFalse(rm2.getRMContext().getRMApps()
+        .containsKey(app0.getApplicationId()));
+
+    // Submit the application with previous ApplicationId to current active RM
+    // This will mimic the similar behavior of ApplicationClientProtocol#
+    // submitApplication() when failover happens during the submission process
+    // because the submitApplication api is marked as idempotent
+    RMApp app1 =
+        rm2.submitApp(200, "", UserGroupInformation
+            .getCurrentUser().getShortUserName(), null, false, null,
+            configuration.getInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
+                YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS), null, null,
+            false, false, true, app0.getApplicationId());
+
+    verifySubmitApp(rm2, app1, app0.getApplicationId());
+    Assert.assertTrue(rm2.getRMContext().getRMApps()
+        .containsKey(app0.getApplicationId()));
+  }
 }

@@ -24,6 +24,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.io.retry.Idempotent;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.tools.GetUserMappingsProtocol;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -50,16 +51,19 @@ public interface ResourceManagerAdministrationProtocol extends GetUserMappingsPr
 
   @Public
   @Stable
+  @Idempotent
   public RefreshQueuesResponse refreshQueues(RefreshQueuesRequest request) 
   throws StandbyException, YarnException, IOException;
 
   @Public
   @Stable
+  @Idempotent
   public RefreshNodesResponse refreshNodes(RefreshNodesRequest request)
   throws StandbyException, YarnException, IOException;
 
   @Public
   @Stable
+  @Idempotent
   public RefreshSuperUserGroupsConfigurationResponse 
   refreshSuperUserGroupsConfiguration(
       RefreshSuperUserGroupsConfigurationRequest request)
@@ -67,18 +71,21 @@ public interface ResourceManagerAdministrationProtocol extends GetUserMappingsPr
 
   @Public
   @Stable
+  @Idempotent
   public RefreshUserToGroupsMappingsResponse refreshUserToGroupsMappings(
       RefreshUserToGroupsMappingsRequest request)
   throws StandbyException, YarnException, IOException;
 
   @Public
   @Stable
+  @Idempotent
   public RefreshAdminAclsResponse refreshAdminAcls(
       RefreshAdminAclsRequest request)
   throws YarnException, IOException;
 
   @Public
   @Stable
+  @Idempotent
   public RefreshServiceAclsResponse refreshServiceAcls(
       RefreshServiceAclsRequest request)
   throws YarnException, IOException;
@@ -99,6 +106,7 @@ public interface ResourceManagerAdministrationProtocol extends GetUserMappingsPr
    */
   @Public
   @Evolving
+  @Idempotent
   public UpdateNodeResourceResponse updateNodeResource(
       UpdateNodeResourceRequest request) 
   throws YarnException, IOException;

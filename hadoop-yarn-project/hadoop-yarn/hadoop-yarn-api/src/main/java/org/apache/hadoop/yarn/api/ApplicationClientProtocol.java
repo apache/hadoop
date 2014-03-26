@@ -104,6 +104,7 @@ public interface ApplicationClientProtocol {
    */
   @Public
   @Stable
+  @Idempotent
   public GetNewApplicationResponse getNewApplication(
       GetNewApplicationRequest request)
   throws YarnException, IOException;
@@ -133,6 +134,10 @@ public interface ApplicationClientProtocol {
    * it encounters the {@link ApplicationNotFoundException} on the
    * {@link #getApplicationReport(GetApplicationReportRequest)} call.</p>
    * 
+   * <p>During the submission process, it checks whether the application
+   * already exists. If the application exists, it will simply return
+   * SubmitApplicationResponse</p>
+   *
    * <p> In secure mode,the <code>ResourceManager</code> verifies access to
    * queues etc. before accepting the application submission.</p>
    * 
@@ -147,6 +152,7 @@ public interface ApplicationClientProtocol {
    */
   @Public
   @Stable
+  @Idempotent
   public SubmitApplicationResponse submitApplication(
       SubmitApplicationRequest request) 
   throws YarnException, IOException;
@@ -173,6 +179,7 @@ public interface ApplicationClientProtocol {
    */
   @Public
   @Stable
+  @Idempotent
   public KillApplicationResponse forceKillApplication(
       KillApplicationRequest request) 
   throws YarnException, IOException;
@@ -231,6 +238,7 @@ public interface ApplicationClientProtocol {
    */
   @Public
   @Stable
+  @Idempotent
   public GetClusterMetricsResponse getClusterMetrics(
       GetClusterMetricsRequest request) 
   throws YarnException, IOException;
@@ -258,6 +266,7 @@ public interface ApplicationClientProtocol {
    */
   @Public
   @Stable
+  @Idempotent
   public GetApplicationsResponse getApplications(
       GetApplicationsRequest request)
   throws YarnException, IOException;
@@ -277,6 +286,7 @@ public interface ApplicationClientProtocol {
    */
   @Public
   @Stable
+  @Idempotent
   public GetClusterNodesResponse getClusterNodes(
       GetClusterNodesRequest request) 
   throws YarnException, IOException;
@@ -298,6 +308,7 @@ public interface ApplicationClientProtocol {
    */
   @Public
   @Stable
+  @Idempotent
   public GetQueueInfoResponse getQueueInfo(
       GetQueueInfoRequest request) 
   throws YarnException, IOException;
@@ -317,6 +328,7 @@ public interface ApplicationClientProtocol {
    */
   @Public
   @Stable
+ @Idempotent
   public GetQueueUserAclsInfoResponse getQueueUserAcls(
       GetQueueUserAclsInfoRequest request) 
   throws YarnException, IOException;
@@ -335,6 +347,7 @@ public interface ApplicationClientProtocol {
    */
   @Public
   @Stable
+  @Idempotent
   public GetDelegationTokenResponse getDelegationToken(
       GetDelegationTokenRequest request) 
   throws YarnException, IOException;
@@ -349,6 +362,7 @@ public interface ApplicationClientProtocol {
    */
   @Private
   @Unstable
+  @Idempotent
   public RenewDelegationTokenResponse renewDelegationToken(
       RenewDelegationTokenRequest request) throws YarnException,
       IOException;
@@ -363,6 +377,7 @@ public interface ApplicationClientProtocol {
    */
   @Private
   @Unstable
+  @Idempotent
   public CancelDelegationTokenResponse cancelDelegationToken(
       CancelDelegationTokenRequest request) throws YarnException,
       IOException;
@@ -377,6 +392,7 @@ public interface ApplicationClientProtocol {
    */
   @Public
   @Unstable
+  @Idempotent
   public MoveApplicationAcrossQueuesResponse moveApplicationAcrossQueues(
       MoveApplicationAcrossQueuesRequest request) throws YarnException, IOException;
 
@@ -422,6 +438,7 @@ public interface ApplicationClientProtocol {
    */
   @Public
   @Unstable
+  @Idempotent
   public GetApplicationAttemptReportResponse getApplicationAttemptReport(
       GetApplicationAttemptReportRequest request) throws YarnException,
       IOException;
@@ -453,6 +470,7 @@ public interface ApplicationClientProtocol {
    */
   @Public
   @Unstable
+  @Idempotent
   public GetApplicationAttemptsResponse getApplicationAttempts(
       GetApplicationAttemptsRequest request) throws YarnException, IOException;
 
@@ -486,6 +504,7 @@ public interface ApplicationClientProtocol {
    */
   @Public
   @Unstable
+  @Idempotent
   public GetContainerReportResponse getContainerReport(
       GetContainerReportRequest request) throws YarnException, IOException;
 
@@ -520,6 +539,7 @@ public interface ApplicationClientProtocol {
    */
   @Public
   @Unstable
+  @Idempotent
   public GetContainersResponse getContainers(GetContainersRequest request)
       throws YarnException, IOException;
 

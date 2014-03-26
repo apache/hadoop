@@ -25,7 +25,6 @@ import java.net.UnknownHostException;
 import java.util.Collection;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -243,12 +242,7 @@ public class MiniYARNCluster extends CompositeService {
     }
 
     for (int i = 0; i < resourceManagers.length; i++) {
-      resourceManagers[i] = new ResourceManager() {
-        @Override
-        protected void doSecureLogin() throws IOException {
-          // Don't try to login using keytab in the testcases.
-        }
-      };
+      resourceManagers[i] = createResourceManager();
       if (!useFixedPorts) {
         if (HAUtil.isHAEnabled(conf)) {
           setHARMConfiguration(i, conf);
@@ -676,7 +670,7 @@ public class MiniYARNCluster extends CompositeService {
     }
     return false;
   }
-  
+
   private class ApplicationHistoryServerWrapper extends AbstractService {
     public ApplicationHistoryServerWrapper() {
       super(ApplicationHistoryServerWrapper.class.getName());
@@ -735,5 +729,14 @@ public class MiniYARNCluster extends CompositeService {
 
   public ApplicationHistoryServer getApplicationHistoryServer() {
     return this.appHistoryServer;
+  }
+
+  protected ResourceManager createResourceManager() {
+    return new ResourceManager(){
+      @Override
+      protected void doSecureLogin() throws IOException {
+        // Don't try to login using keytab in the testcases.
+      }
+    };
   }
 }

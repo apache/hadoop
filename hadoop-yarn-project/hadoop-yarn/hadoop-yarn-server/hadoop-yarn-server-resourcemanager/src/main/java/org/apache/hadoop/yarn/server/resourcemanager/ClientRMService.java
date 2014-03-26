@@ -504,16 +504,11 @@ public class ClientRMService extends AbstractService implements
       throw RPCUtil.getRemoteException(ie);
     }
 
-    // Though duplication will checked again when app is put into rmContext,
-    // but it is good to fail the invalid submission as early as possible.
+    // Check whether app has already been put into rmContext,
+    // If it is, simply return the response
     if (rmContext.getRMApps().get(applicationId) != null) {
-      String message = "Application with id " + applicationId +
-          " is already present! Cannot add a duplicate!";
-      LOG.warn(message);
-      RMAuditLogger.logFailure(user, AuditConstants.SUBMIT_APP_REQUEST,
-          message, "ClientRMService", "Exception in submitting application",
-          applicationId);
-      throw RPCUtil.getRemoteException(message);
+      LOG.info("This is an earlier submitted application: " + applicationId);
+      return SubmitApplicationResponse.newInstance();
     }
 
     if (submissionContext.getQueue() == null) {
