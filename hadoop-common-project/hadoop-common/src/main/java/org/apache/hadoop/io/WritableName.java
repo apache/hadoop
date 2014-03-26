@@ -47,18 +47,18 @@ public class WritableName {
 
   /** Set the name that a class should be known as to something other than the
    * class name. */
-  public static synchronized void setName(Class writableClass, String name) {
+  public static synchronized void setName(Class<?> writableClass, String name) {
     CLASS_TO_NAME.put(writableClass, name);
     NAME_TO_CLASS.put(name, writableClass);
   }
 
   /** Add an alternate name for a class. */
-  public static synchronized void addName(Class writableClass, String name) {
+  public static synchronized void addName(Class<?> writableClass, String name) {
     NAME_TO_CLASS.put(name, writableClass);
   }
 
   /** Return the name for a class.  Default is {@link Class#getName()}. */
-  public static synchronized String getName(Class writableClass) {
+  public static synchronized String getName(Class<?> writableClass) {
     String name = CLASS_TO_NAME.get(writableClass);
     if (name != null)
       return name;

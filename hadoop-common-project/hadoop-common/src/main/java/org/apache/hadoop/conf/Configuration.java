@@ -2259,13 +2259,13 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
         root = (Element)resource;
       }
 
-      if (doc == null && root == null) {
-        if (quiet)
-          return null;
-        throw new RuntimeException(resource + " not found");
-      }
-
       if (root == null) {
+        if (doc == null) {
+          if (quiet) {
+            return null;
+          }
+          throw new RuntimeException(resource + " not found");
+        }
         root = doc.getDocumentElement();
       }
       Properties toAddTo = properties;

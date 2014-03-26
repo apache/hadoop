@@ -64,7 +64,7 @@ public class Progress {
   public synchronized Progress addPhase() {
     Progress phase = addNewPhase();
     // set equal weightage for all phases
-    progressPerPhase = 1.0f / (float)phases.size();
+    progressPerPhase = 1.0f / phases.size();
     fixedWeightageForAllPhases = true;
     return phase;
   }
@@ -110,7 +110,7 @@ public class Progress {
       addNewPhase();
     }
     // set equal weightage for all phases
-    progressPerPhase = 1.0f / (float)phases.size();
+    progressPerPhase = 1.0f / phases.size();
     fixedWeightageForAllPhases = true;
   }
 
