@@ -464,6 +464,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-6130. NPE when upgrading namenode from fsimages older than -32.
     (wheat9)
 
+    HDFS-6115. Call flush() for every append on block scan verification log.
+    (Vinayakumar B via szetszwo)
+
   BREAKDOWN OF HDFS-5698 SUBTASKS AND RELATED JIRAS
 
     HDFS-5717. Save FSImage header in protobuf. (Haohui Mai via jing9)
