@@ -53,6 +53,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.InvalidPathException;
@@ -246,11 +247,11 @@ public class TestFileCreation {
         fs.create(dir1, true); // Create path, overwrite=true
         fs.close();
         assertTrue("Did not prevent directory from being overwritten.", false);
-      } catch (IOException ie) {
-        if (!ie.getMessage().contains("already exists as a directory."))
-          throw ie;
+      } catch (FileAlreadyExistsException e) {
+        // expected
       }
-      
+
+      //
       // create a new file in home directory. Do not close it.
       //
       Path file1 = new Path("filestatus.dat");
