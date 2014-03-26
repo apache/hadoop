@@ -155,6 +155,7 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferEncryptor;
 import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Op;
 import org.apache.hadoop.hdfs.protocol.datatransfer.ReplaceDatanodeOnFailure;
+import org.apache.hadoop.hdfs.protocol.datatransfer.TrustedChannelResolver;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpBlockChecksumResponseProto;
@@ -230,6 +231,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
   private final Random r = new Random();
   private SocketAddress[] localInterfaceAddrs;
   private DataEncryptionKey encryptionKey;
+  final TrustedChannelResolver trustedChannelResolver;
   private final CachingStrategy defaultReadCachingStrategy;
   private final CachingStrategy defaultWriteCachingStrategy;
   private final ClientContext clientContext;
@@ -611,6 +613,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
     if (numThreads > 0) {
       this.initThreadsNumForHedgedReads(numThreads);
     }
+    this.trustedChannelResolver = TrustedChannelResolver.getInstance(getConfiguration());
   }
   
   /**
@@ -1831,7 +1834,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
   @InterfaceAudience.Private
   public DataEncryptionKey getDataEncryptionKey()
       throws IOException {
-    if (shouldEncryptData()) {
+    if (shouldEncryptData() && 
+        !this.trustedChannelResolver.isTrusted()) {
       synchronized (this) {
         if (encryptionKey == null ||
             encryptionKey.expiryDate < Time.now()) {

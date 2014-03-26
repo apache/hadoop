@@ -204,6 +204,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-6124. Add final modifier to class members. (Suresh Srinivas via
     Arpit Agarwal)
 
+    HDFS-5910. Enhance DataTransferProtocol to allow per-connection choice
+    of encryption/plain-text. (Benoy Antony via Arpit Agarwal)
+
   OPTIMIZATIONS
 
     HDFS-5790. LeaseManager.findPath is very slow when many leases need recovery

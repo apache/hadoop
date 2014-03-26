@@ -1616,7 +1616,8 @@ public class DataNode extends Configured
                             HdfsServerConstants.WRITE_TIMEOUT_EXTENSION * (targets.length-1);
         OutputStream unbufOut = NetUtils.getOutputStream(sock, writeTimeout);
         InputStream unbufIn = NetUtils.getInputStream(sock);
-        if (dnConf.encryptDataTransfer) {
+        if (dnConf.encryptDataTransfer && 
+            !dnConf.trustedChannelResolver.isTrusted(sock.getInetAddress())) {
           IOStreamPair encryptedStreams =
               DataTransferEncryptor.getEncryptedStreams(
                   unbufOut, unbufIn,
