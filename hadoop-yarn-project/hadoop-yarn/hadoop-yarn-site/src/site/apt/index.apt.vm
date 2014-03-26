@@ -43,13 +43,15 @@ MapReduce NextGen aka YARN aka MRv2
 
   * {{{./YARN.html}NextGen MapReduce}}
   
-  * {{{./WritingYarnApplications.html}Writing Yarn Applications}}
+  * {{{./WritingYarnApplications.html}Writing YARN Applications}}
 
   * {{{./CapacityScheduler.html}Capacity Scheduler}}
 
   * {{{./FairScheduler.html}Fair Scheduler}}
 
   * {{{./WebApplicationProxy.html}Web Application Proxy}}
+
+  * {{{./TimelineServer.html}YARN Timeline Server}}
 
   * {{{../../hadoop-project-dist/hadoop-common/CLIMiniCluster.html}CLI MiniCluster}}
 
