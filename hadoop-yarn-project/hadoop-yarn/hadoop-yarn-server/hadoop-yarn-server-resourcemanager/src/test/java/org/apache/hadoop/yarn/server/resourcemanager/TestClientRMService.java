@@ -589,10 +589,8 @@ public class TestClientRMService {
     // duplicate appId
     try {
       rmService.submitApplication(submitRequest2);
-      Assert.fail("Exception is expected.");
     } catch (YarnException e) {
-      Assert.assertTrue("The thrown exception is not expected.",
-          e.getMessage().contains("Cannot add a duplicate!"));
+      Assert.fail("Exception is not expected.");
     }
 
     GetApplicationsRequest getAllAppsRequest =

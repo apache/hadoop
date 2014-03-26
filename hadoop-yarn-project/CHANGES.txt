@@ -526,6 +526,11 @@ Release 2.4.0 - UNRELEASED
     YARN-1866. Fixed an issue with renewal of RM-delegation tokens on restart or
     fail-over. (Jian He via vinodkv)
 
+    YARN-1521. Mark Idempotent/AtMostOnce annotations to the APIs in
+    ApplicationClientProtcol, ResourceManagerAdministrationProtocol and
+    ResourceTrackerProtocol so that they work in HA scenario. (Xuan Gong
+    via jianhe)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
