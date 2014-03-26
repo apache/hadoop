@@ -523,6 +523,8 @@ public class FSImageFormat {
         updateRootAttr(newNode.asDirectory());
         continue;
       }
+
+      namesystem.dir.addToInodeMap(newNode);
       // check if the new inode belongs to the same parent
       if(!isParent(pathComponents, parentPath)) {
         parentINode = getParentINodeDirectory(pathComponents);
