@@ -36,13 +36,13 @@ public class ClassUtil {
    * @return a jar file that contains the class, or null.
    * @throws IOException
    */
-  public static String findContainingJar(Class clazz) {
+  public static String findContainingJar(Class<?> clazz) {
     ClassLoader loader = clazz.getClassLoader();
     String classFile = clazz.getName().replaceAll("\\.", "/") + ".class";
     try {
-      for (Enumeration itr = loader.getResources(classFile);
+      for(final Enumeration<URL> itr = loader.getResources(classFile);
           itr.hasMoreElements();) {
-        URL url = (URL) itr.nextElement();
+        final URL url = itr.nextElement();
         if ("jar".equals(url.getProtocol())) {
           String toReturn = url.getPath();
           if (toReturn.startsWith("file:")) {

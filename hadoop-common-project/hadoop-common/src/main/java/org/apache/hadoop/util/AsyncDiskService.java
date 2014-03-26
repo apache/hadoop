@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.util;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -26,6 +25,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -68,7 +68,7 @@ public class AsyncDiskService {
    * 
    * @param volumes The roots of the file system volumes.
    */
-  public AsyncDiskService(String[] volumes) throws IOException {
+  public AsyncDiskService(String[] volumes) {
     
     threadFactory = new ThreadFactory() {
       @Override

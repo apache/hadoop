@@ -27,7 +27,6 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.util.Shell;
 
 /**
  * Class that provides utility functions for checking disk problem
@@ -35,9 +34,6 @@ import org.apache.hadoop.util.Shell;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class DiskChecker {
-
-  private static final long SHELL_TIMEOUT = 10 * 1000;
-
   public static class DiskErrorException extends IOException {
     public DiskErrorException(String msg) {
       super(msg);

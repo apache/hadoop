@@ -169,9 +169,8 @@ public class HostsFileReader {
     this.excludesFile = excludesFile;
   }
 
-  public synchronized void updateFileNames(String includesFile, 
-                                           String excludesFile) 
-                                           throws IOException {
+  public synchronized void updateFileNames(String includesFile,
+      String excludesFile) {
     setIncludesFile(includesFile);
     setExcludesFile(excludesFile);
   }
