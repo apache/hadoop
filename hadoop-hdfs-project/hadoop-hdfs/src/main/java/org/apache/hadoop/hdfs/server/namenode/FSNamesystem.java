@@ -602,12 +602,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
     if (namespaceDirs.size() == 1) {
       LOG.warn("Only one image storage directory ("
-          + DFS_NAMENODE_NAME_DIR_KEY + ") configured. Beware of dataloss"
+          + DFS_NAMENODE_NAME_DIR_KEY + ") configured. Beware of data loss"
           + " due to lack of redundant storage directories!");
     }
     if (editsDirs.size() == 1) {
       LOG.warn("Only one namespace edits storage directory ("
-          + DFS_NAMENODE_EDITS_DIR_KEY + ") configured. Beware of dataloss"
+          + DFS_NAMENODE_EDITS_DIR_KEY + ") configured. Beware of data loss"
           + " due to lack of redundant storage directories!");
     }
   }
@@ -937,8 +937,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   
   /** 
    * Start services common to both active and standby states
-   * @param haContext 
-   * @throws IOException
    */
   void startCommonServices(Configuration conf, HAContext haContext) throws IOException {
     this.registerMBean(); // register the MBean for the FSNamesystemState
@@ -965,7 +963,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   
   /** 
    * Stop services common to both active and standby states
-   * @throws IOException
    */
   void stopCommonServices() {
     writeLock();
@@ -1078,7 +1075,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   /** 
    * Stop services required in active state
-   * @throws InterruptedException
    */
   void stopActiveServices() {
     LOG.info("Stopping services started for active state");
@@ -1326,7 +1322,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   
   /**
    * Returns edit directories that are shared between primary and secondary.
-   * @param conf
+   * @param conf configuration
    * @return Collection of edit directories.
    */
   public static List<URI> getSharedEditsDirs(Configuration conf) {
@@ -1757,13 +1753,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   /**
-   * Moves all the blocks from srcs and appends them to trg
-   * To avoid rollbacks we will verify validitity of ALL of the args
+   * Moves all the blocks from {@code srcs} and appends them to {@code target}
+   * To avoid rollbacks we will verify validity of ALL of the args
    * before we start actual move.
    * 
    * This does not support ".inodes" relative path
-   * @param target
-   * @param srcs
+   * @param target target file path to concatenate into
+   * @param srcs files that are concatenated
    * @throws IOException
    */
   void concat(String target, String [] srcs) 
@@ -1773,7 +1769,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       return; // Return previous response
     }
     
-    // Either there is no previous request in progres or it has failed
+    // Either there is no previous request in progress or it has failed
     if(FSNamesystem.LOG.isDebugEnabled()) {
       FSNamesystem.LOG.debug("concat " + Arrays.toString(srcs) +
           " to " + target);
@@ -1898,7 +1894,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
       // check replication and blocks size
       if(repl != srcInode.getBlockReplication()) {
-        throw new HadoopIllegalArgumentException("concat: the soruce file "
+        throw new HadoopIllegalArgumentException("concat: the source file "
             + src + " and the target file " + target
             + " should have the same replication: source replication is "
             + srcInode.getBlockReplication()
@@ -1913,7 +1909,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       if(endSrc)
         idx = srcBlocks.length-2; // end block of endSrc is OK not to be full
       if(idx >= 0 && srcBlocks[idx].getNumBytes() != blockSize) {
-        throw new HadoopIllegalArgumentException("concat: the soruce file "
+        throw new HadoopIllegalArgumentException("concat: the source file "
             + src + " and the target file " + target
             + " should have the same blocks sizes: target block size is "
             + blockSize + " but the size of source block " + idx + " is "
@@ -1940,7 +1936,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   
   /**
    * stores the modification and access time for this inode. 
-   * The access time is precise upto an hour. The transaction, if needed, is
+   * The access time is precise up to an hour. The transaction, if needed, is
    * written to the edits log but is not flushed.
    */
   void setTimes(String src, long mtime, long atime) 
@@ -2155,12 +2151,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * Create a new file entry in the namespace.
    * 
    * For description of parameters and exceptions thrown see
-   * {@link ClientProtocol#create()}, except it returns valid file status upon
+   * {@link ClientProtocol#create}, except it returns valid file status upon
    * success
-   * 
-   * For retryCache handling details see -
-   * {@link #getFileStatus(boolean, CacheEntryWithPayload)}
-   * 
    */
   HdfsFileStatus startFile(String src, PermissionStatus permissions,
       String holder, String clientMachine, EnumSet<CreateFlag> flag,
@@ -2245,10 +2237,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * Create a new file or overwrite an existing file<br>
    * 
    * Once the file is create the client then allocates a new block with the next
-   * call using {@link NameNode#addBlock()}.
+   * call using {@link ClientProtocol#addBlock}.
    * <p>
    * For description of parameters and exceptions thrown see
-   * {@link ClientProtocol#create()}
+   * {@link ClientProtocol#create}
    */
   private void startFileInternal(FSPermissionChecker pc, String src,
       PermissionStatus permissions, String holder, String clientMachine,
@@ -2333,7 +2325,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * which can still be used for writing more data. The client uses the returned
    * block locations to form the data pipeline for this block.<br>
    * The method returns null if the last block is full. The client then
-   * allocates a new block with the next call using {@link NameNode#addBlock()}.
+   * allocates a new block with the next call using
+   * {@link ClientProtocol#addBlock}.
    * <p>
    * 
    * For description of parameters and exceptions thrown see
@@ -2836,7 +2829,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     return lBlk;
   }
 
-  /** @see NameNode#getAdditionalDatanode(String, ExtendedBlock, DatanodeInfo[], DatanodeInfo[], int, String) */
+  /** @see ClientProtocol#getAdditionalDatanode */
   LocatedBlock getAdditionalDatanode(String src, final ExtendedBlock blk,
       final DatanodeInfo[] existings, final String[] storageIDs,
       final Set<Node> excludes,
@@ -3041,8 +3034,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * Save allocated block at the given pending filename
    * 
    * @param src path to the file
-   * @param inodesInPath representing each of the components of src. 
-   *                     The last INode is the INode for the file.
+   * @param inodesInPath representing each of the components of src.
+   *                     The last INode is the INode for {@code src} file.
+   * @param newBlock newly allocated block to be save
+   * @param targets target datanodes where replicas of the new block is placed
    * @throws QuotaExceededException If addition of block exceeds space quota
    */
   BlockInfo saveAllocatedBlock(String src, INodesInPath inodes,
@@ -5471,7 +5466,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   /**
    * Check whether current user have permissions to access the path. For more
    * details of the parameters, see
-   * {@link FSPermissionChecker#checkPermission()}.
+   * {@link FSPermissionChecker#checkPermission}.
    */
   private void checkPermission(FSPermissionChecker pc,
       String path, boolean doCheckOwner, FsAction ancestorAccess,
@@ -5484,7 +5479,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   /**
    * Check whether current user have permissions to access the path. For more
    * details of the parameters, see
-   * {@link FSPermissionChecker#checkPermission()}.
+   * {@link FSPermissionChecker#checkPermission}.
    */
   private void checkPermission(FSPermissionChecker pc,
       String path, boolean doCheckOwner, FsAction ancestorAccess,
@@ -5981,7 +5976,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     LOG.info("updatePipeline(" + oldBlock + ") successfully to " + newBlock);
   }
 
-  /** @see #updatePipeline(String, ExtendedBlock, ExtendedBlock, DatanodeID[]) */
+  /**
+   * @see #updatePipeline(String,  ExtendedBlock, ExtendedBlock, DatanodeID[], String[])
+   */
   private void updatePipelineInternal(String clientName, ExtendedBlock oldBlock, 
       ExtendedBlock newBlock, DatanodeID[] newNodes, String[] newStorageIDs,
       boolean logRetryCache)
@@ -6102,10 +6099,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
   /**
    * @param path Restrict corrupt files to this portion of namespace.
-   * @param startBlockAfter Support for continuation; the set of files we return
-   *  back is ordered by blockid; startBlockAfter tells where to start from
+   * @param cookieTab Support for continuation; cookieTab  tells where
+   *                  to start from
    * @return a list in which each entry describes a corrupt file/block
-   * @throws AccessControlException
    * @throws IOException
    */
   Collection<CorruptFileBlockInfo> listCorruptFileBlocks(String path,
@@ -6200,7 +6196,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   /**
-   * @param renewer
+   * @param renewer Renewer information
    * @return Token<DelegationTokenIdentifier>
    * @throws IOException
    */
@@ -6243,7 +6239,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   /**
    * 
-   * @param token
+   * @param token delegation token
    * @return New expiryTime of the token
    * @throws InvalidToken
    * @throws IOException
@@ -6277,7 +6273,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   /**
    * 
-   * @param token
+   * @param token delegation token that needs to be canceled
    * @throws IOException
    */
   void cancelDelegationToken(Token<DelegationTokenIdentifier> token)
@@ -6571,7 +6567,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   /**
    * Returned information is a JSON representation of map with host name as the
-   * key and value is a map of decomisioning node attribute keys to its values
+   * key and value is a map of decommissioning node attribute keys to its
+   * values
    */
   @Override // NameNodeMXBean
   public String getDecomNodes() {
@@ -6855,7 +6852,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     return snapshotManager;
   }
   
-  /** Allow snapshot on a directroy. */
+  /** Allow snapshot on a directory. */
   void allowSnapshot(String path) throws SafeModeException, IOException {
     checkOperation(OperationCategory.WRITE);
     writeLock();
@@ -7188,7 +7185,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   /**
    * Update internal state to indicate that a rolling upgrade is in progress.
-   * @param startTime
+   * @param startTime start time of the rolling upgrade
    */
   void startRollingUpgradeInternal(long startTime)
       throws IOException {
@@ -7211,7 +7208,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
     checkRollingUpgrade("start rolling upgrade");
     getFSImage().checkUpgrade(this);
-    // in non-HA setup, we do an extra ckpt to generate a rollback image
+    // in non-HA setup, we do an extra checkpoint to generate a rollback image
     getFSImage().saveNamespace(this, NameNodeFile.IMAGE_ROLLBACK, null);
     LOG.info("Successfully saved namespace for preparing rolling upgrade.");
 
