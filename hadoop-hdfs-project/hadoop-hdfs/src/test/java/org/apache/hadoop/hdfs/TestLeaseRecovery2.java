@@ -198,33 +198,22 @@ public class TestLeaseRecovery2 {
   private void recoverLeaseUsingCreate(Path filepath)
   throws IOException, InterruptedException {
     FileSystem dfs2 = getFSAsAnotherUser(conf);
-
-    boolean done = false;
-    for(int i = 0; i < 10 && !done; i++) {
+    for(int i = 0; i < 10; i++) {
       AppendTestUtil.LOG.info("i=" + i);
       try {
         dfs2.create(filepath, false, BUF_SIZE, (short)1, BLOCK_SIZE);
         fail("Creation of an existing file should never succeed.");
-      } catch (IOException ioe) {
-        final String message = ioe.getMessage();
-        if (message.contains("file exists")) {
-          AppendTestUtil.LOG.info("done", ioe);
-          done = true;
-        }
-        else if (message.contains(AlreadyBeingCreatedException.class.getSimpleName())) {
-          AppendTestUtil.LOG.info("GOOD! got " + message);
-        }
-        else {
-          AppendTestUtil.LOG.warn("UNEXPECTED IOException", ioe);
-        }
-      }
-
-      if (!done) {
+      } catch(FileAlreadyExistsException e) {
+        return; // expected
+      } catch(AlreadyBeingCreatedException e) {
+        return; // expected
+      } catch(IOException ioe) {
+        AppendTestUtil.LOG.warn("UNEXPECTED ", ioe);
         AppendTestUtil.LOG.info("sleep " + 5000 + "ms");
         try {Thread.sleep(5000);} catch (InterruptedException e) {}
       }
     }
-    assertTrue(done);
+    fail("recoverLeaseUsingCreate failed");
   }
 
   private void verifyFile(FileSystem dfs, Path filepath, byte[] actual,
