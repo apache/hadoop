@@ -16,6 +16,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-5196. Provide more snapshot information in WebUI.
     (Shinichi Yamashita via wheat9)
 
+    HDFS-6155. Fix Boxing/unboxing to parse a primitive findbugs warnings.
+    (suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES 

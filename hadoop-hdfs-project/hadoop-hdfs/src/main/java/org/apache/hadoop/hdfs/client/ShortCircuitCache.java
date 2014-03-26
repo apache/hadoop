@@ -618,9 +618,8 @@ public class ShortCircuitCache implements Closeable {
       evictionTimeNs++;
     }
     Preconditions.checkState(null == replica.getEvictableTimeNs());
-    Long time = Long.valueOf(evictionTimeNs);
-    replica.setEvictableTimeNs(time);
-    map.put(time, replica);
+    replica.setEvictableTimeNs(evictionTimeNs);
+    map.put(evictionTimeNs, replica);
   }
 
   /**

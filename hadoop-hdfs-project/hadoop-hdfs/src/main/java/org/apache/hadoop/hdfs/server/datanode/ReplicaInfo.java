@@ -187,7 +187,7 @@ abstract public class ReplicaInfo extends Block implements Replica {
       if (!internedBaseDirs.containsKey(replicaDirInfo.baseDirPath)) {
         // Create a new String path of this file and make a brand new File object
         // to guarantee we drop the reference to the underlying char[] storage.
-        File baseDir = new File(new String(replicaDirInfo.baseDirPath));
+        File baseDir = new File(replicaDirInfo.baseDirPath);
         internedBaseDirs.put(replicaDirInfo.baseDirPath, baseDir);
       }
       this.baseDir = internedBaseDirs.get(replicaDirInfo.baseDirPath);

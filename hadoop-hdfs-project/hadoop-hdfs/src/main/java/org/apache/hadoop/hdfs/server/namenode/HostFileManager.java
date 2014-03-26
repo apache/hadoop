@@ -105,7 +105,7 @@ public class HostFileManager {
         prefix = entry.substring(0, idx);
         String portStr = entry.substring(idx + 1);
         try {
-          port = Integer.valueOf(portStr);
+          port = Integer.parseInt(portStr);
         } catch (NumberFormatException e) {
           throw new IOException("unable to parse port number for " +
               "'" + entry + "'", e);

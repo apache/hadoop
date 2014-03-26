@@ -135,7 +135,7 @@ class LsImageVisitor extends TextWriterImageVisitor {
         perms = value;
         break;
       case REPLICATION:
-        replication = Integer.valueOf(value);
+        replication = Integer.parseInt(value);
         break;
       case USER_NAME:
         username = value;
@@ -144,7 +144,7 @@ class LsImageVisitor extends TextWriterImageVisitor {
         group = value;
         break;
       case NUM_BYTES:
-        filesize += Long.valueOf(value);
+        filesize += Long.parseLong(value);
         break;
       case MODIFICATION_TIME:
         modTime = value;
@@ -173,6 +173,6 @@ class LsImageVisitor extends TextWriterImageVisitor {
     if(element == ImageElement.INODE)
       newLine();
     else if (element == ImageElement.BLOCKS)
-      numBlocks = Integer.valueOf(value);
+      numBlocks = Integer.parseInt(value);
   }
 }

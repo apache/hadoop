@@ -107,7 +107,7 @@ public class TestFetchImage {
       for (File imageFile : new File(new File(nameDir), "current").listFiles()) {
         Matcher imageMatch = IMAGE_REGEX.matcher(imageFile.getName());
         if (imageMatch.matches()) {
-          long imageTxId = Long.valueOf(imageMatch.group(1));
+          long imageTxId = Long.parseLong(imageMatch.group(1));
           if (imageTxId > highestImageTxId) {
             highestImageTxId = imageTxId;
             highestImageOnNn = imageFile;

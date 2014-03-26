@@ -316,7 +316,7 @@ public class TestNameNodeJspHelper {
       String digitLine = output.substring(matcher.start(), matcher.end())
           .trim();
       assertTrue("assertCounts error. actual != expected",
-          Integer.valueOf(digitLine) == expectedCount);
+          Integer.parseInt(digitLine) == expectedCount);
     } else {
       fail("assertCount matcher error");
     }

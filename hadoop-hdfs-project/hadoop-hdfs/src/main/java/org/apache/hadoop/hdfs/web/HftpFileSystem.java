@@ -134,7 +134,6 @@ public class HftpFileSystem extends FileSystem
    *  3. DFS_NAMENODE_HTTP_PORT_DEFAULT i.e. 50070.
    *
    * @param uri
-   * @return
    */
   protected InetSocketAddress getNamenodeAddr(URI uri) {
     // use authority so user supplied uri can override port
@@ -435,9 +434,9 @@ public class HftpFileSystem extends FileSystem
       } catch (ParseException e) { throw new SAXException(e); }
       FileStatus fs = "file".equals(qname)
         ? new FileStatus(
-              Long.valueOf(attrs.getValue("size")).longValue(), false,
+              Long.parseLong(attrs.getValue("size")), false,
               Short.valueOf(attrs.getValue("replication")).shortValue(),
-              Long.valueOf(attrs.getValue("blocksize")).longValue(),
+              Long.parseLong(attrs.getValue("blocksize")),
               modif, atime, FsPermission.valueOf(attrs.getValue("permission")),
               attrs.getValue("owner"), attrs.getValue("group"),
               HftpFileSystem.this.makeQualified(
