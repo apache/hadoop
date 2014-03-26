@@ -1,0 +1,225 @@
+~~ Licensed under the Apache License, Version 2.0 (the "License");
+~~ you may not use this file except in compliance with the License.
+~~ You may obtain a copy of the License at
+~~
+~~   http://www.apache.org/licenses/LICENSE-2.0
+~~
+~~ Unless required by applicable law or agreed to in writing, software
+~~ distributed under the License is distributed on an "AS IS" BASIS,
+~~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+~~ See the License for the specific language governing permissions and
+~~ limitations under the License. See accompanying LICENSE file.
+
+  ---
+  YARN Timeline Server
+  ---
+  ---
+  ${maven.build.timestamp}
+
+YARN Timeline Server
+
+  \[ {{{./index.html}Go Back}} \]
+
+%{toc|section=1|fromDepth=0|toDepth=3}
+
+* Overview
+
+  Storage and retrieval of applications' current as well as historic
+  information in a generic fashion is solved in YARN through the Timeline
+  Server (previously also called Generic Application History Server). This
+  serves two responsibilities:
+
+  ** Generic information about completed applications
+  
+    Generic information includes application level data like queue-name, user
+    information etc in the ApplicationSubmissionContext, list of
+    application-attempts that ran for an application, information about each
+    application-attempt, list of containers run under each application-attempt,
+    and information about each container. Generic data is stored by
+    ResourceManager to a history-store (default implementation on a file-system)
+    and used by the web-UI to display information about completed applications.
+
+  ** Per-framework information of running and completed applications
+
+    Per-framework information is completely specific to an application or
+    framework. For example, Hadoop MapReduce framework can include pieces of
+    information like number of map tasks, reduce tasks, counters etc.
+    Application developers can publish the specific information to the Timeline
+    server via TimelineClient from within a client, the ApplicationMaster
+    and/or the application's containers. This information is then queryable via
+    REST APIs for rendering by application/framework specific UIs. 
+
+* Current Status
+
+  Timeline sever is a work in progress. The basic storage and retrieval of
+  information, both generic and framework specific, are in place. Timeline
+  server doesn't work in secure mode yet. The generic information and the
+  per-framework information are today collected and presented separately and
+  thus are not integrated well together. Finally, the per-framework information
+  is only available via RESTful APIs, using JSON type content - ability to
+  install framework specific UIs in YARN isn't supported yet.
+
+* Basic Configuration
+
+  Users need to configure the Timeline server before starting it. The simplest
+  configuration you should add in <<<yarn-site.xml>>> is to set the hostname of
+  the Timeline server:
+
++---+
+<property>
+  <description>The hostname of the Timeline service web application.</description>
+  <name>yarn.timeline-service.hostname</name>
+  <value>0.0.0.0</value>
+</property>
++---+
+
+* Advanced Configuration
+
+  In addition to the hostname, admins can also configure whether the service is
+  enabled or not, the ports of the RPC and the web interfaces, and the number
+  of RPC handler threads.
+
++---+
+
+<property>
+  <description>Address for the Timeline server to start the RPC server.</description>
+  <name>yarn.timeline-service.address</name>
+  <value>${yarn.timeline-service.hostname}:10200</value>
+</property>
+
+<property>
+  <description>The http address of the Timeline service web application.</description>
+  <name>yarn.timeline-service.webapp.address</name>
+  <value>${yarn.timeline-service.hostname}:8188</value>
+</property>
+
+<property>
+  <description>The https address of the Timeline service web application.</description>
+  <name>yarn.timeline-service.webapp.https.address</name>
+  <value>${yarn.timeline-service.hostname}:8190</value>
+</property>
+
+<property>
+  <description>Handler thread count to serve the client RPC requests.</description>
+  <name>yarn.timeline-service.handler-thread-count</name>
+  <value>10</value>
+</property>
++---+
+
+* Generic-data related Configuration
+
+  Users can specify whether the generic data collection is enabled or not, and
+  also choose the storage-implementation class for the generic data. There are
+  more configurations related to generic data collection, and users can refer
+  to <<<yarn-default.xml>>> for all of them.
+
++---+
+<property>
+  <description>Indicate to ResourceManager as well as clients whether
+  history-service is enabled or not. If enabled, ResourceManager starts
+  recording historical data that Timelien service can consume. Similarly,
+  clients can redirect to the history service when applications
+  finish if this is enabled.</description>
+  <name>yarn.timeline-service.generic-application-history.enabled</name>
+  <value>false</value>
+</property>
+
+<property>
+  <description>Store class name for history store, defaulting to file system
+  store</description>
+  <name>yarn.timeline-service.generic-application-history.store-class</name>
+  <value>org.apache.hadoop.yarn.server.applicationhistoryservice.FileSystemApplicationHistoryStore</value>
+</property>
++---+
+
+* Per-framework-date related Configuration
+
+  Users can specify whether per-framework data service is enabled or not,
+  choose the store implementation for the per-framework data, and tune the
+  retention of the per-framework data. There are more configurations related to
+  per-framework data service, and users can refer to <<<yarn-default.xml>>> for
+  all of them.
+
++---+
+<property>
+  <description>Indicate to clients whether Timeline service is enabled or not.
+  If enabled, the TimelineClient library used by end-users will post entities
+  and events to the Timeline server.</description>
+  <name>yarn.timeline-service.enabled</name>
+  <value>true</value>
+</property>
+
+<property>
+  <description>Store class name for timeline store.</description>
+  <name>yarn.timeline-service.store-class</name>
+  <value>org.apache.hadoop.yarn.server.applicationhistoryservice.timeline.LeveldbTimelineStore</value>
+</property>
+
+<property>
+  <description>Enable age off of timeline store data.</description>
+  <name>yarn.timeline-service.ttl-enable</name>
+  <value>true</value>
+</property>
+
+<property>
+  <description>Time to live for timeline store data in milliseconds.</description>
+  <name>yarn.timeline-service.ttl-ms</name>
+  <value>604800000</value>
+</property>
++---+
+
+* Running Timeline server
+
+  Assuming all the aforementioned configurations are set properly, admins can
+  start the Timeline server/history service with the following command:
+
++---+
+  $ yarn historyserver
++---+
+
+  Or users can start the Timeline server / history service as a daemon:
+
++---+
+  $ yarn-daemon.sh start historyserver
++---+
+
+* Accessing generic-data via command-line
+
+  Users can access applications' generic historic data via the command line as
+  below. Note that the same commands are usable to obtain the corresponding
+  information about running applications.
+
++---+
+  $ yarn application -status <Application ID>
+  $ yarn applicationattempt -list <Application ID>
+  $ yarn applicationattempt -status <Application Attempt ID>
+  $ yarn container -list <Application Attempt ID>
+  $ yarn container -status <Container ID>
++---+
+
+* Publishing of per-framework data by applications
+
+  Developers can define what information they want to record for their
+  applications by composing <<<TimelineEntity>>> and <<<TimelineEvent>>>
+  objects, and put the entities and events to the Timeline server via
+  <<<TimelineClient>>>. Below is an example:
+
++---+
+  // Create and start the Timeline client
+  TimelineClient client = TimelineClient.createTimelineClient();
+  client.init(conf);
+  client.start();
+
+  TimelineEntity entity = null;
+  // Compose the entity
+  try {
+    TimelinePutResponse response = client.putEntities(entity);
+  } catch (IOException e) {
+    // Handle the exception
+  } catch (YarnException e) {
+    // Handle the exception
+  }
+
+  // Stop the Timeline client
+  client.stop();
++---+
