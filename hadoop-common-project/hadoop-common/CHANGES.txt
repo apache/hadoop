@@ -159,6 +159,9 @@ Release 2.4.0 - UNRELEASED
     HADOOP-10437. Fix the javac warnings in the conf and the util package.
     (szetszwo)
 
+    HADOOP-10441. Namenode metric "rpc.RetryCache/NameNodeRetryCache.CacheHit"
+    can't be correctly processed by Ganglia. (jing9)
+
   BREAKDOWN OF HADOOP-10184 SUBTASKS AND RELATED JIRAS
 
     HADOOP-10185. FileSystem API for ACLs. (cnauroth)
