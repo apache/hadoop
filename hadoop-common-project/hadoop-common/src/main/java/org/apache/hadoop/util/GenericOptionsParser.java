@@ -25,7 +25,6 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import org.apache.commons.cli.CommandLine;
@@ -397,7 +396,8 @@ public class GenericOptionsParser {
         if (!localFs.exists(path)) {
           throw new FileNotFoundException("File " + tmp + " does not exist.");
         }
-        finalPath = path.makeQualified(localFs).toString();
+        finalPath = path.makeQualified(localFs.getUri(),
+            localFs.getWorkingDirectory()).toString();
       }
       else {
         // check if the file exists in this file system
@@ -408,7 +408,8 @@ public class GenericOptionsParser {
         if (!fs.exists(path)) {
           throw new FileNotFoundException("File " + tmp + " does not exist.");
         }
-        finalPath = path.makeQualified(fs).toString();
+        finalPath = path.makeQualified(fs.getUri(),
+            fs.getWorkingDirectory()).toString();
       }
       finalArr[i] = finalPath;
     }

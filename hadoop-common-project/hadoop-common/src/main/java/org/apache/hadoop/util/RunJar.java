@@ -78,7 +78,7 @@ public class RunJar {
     try {
       Enumeration<JarEntry> entries = jar.entries();
       while (entries.hasMoreElements()) {
-        JarEntry entry = (JarEntry)entries.nextElement();
+        final JarEntry entry = entries.nextElement();
         if (!entry.isDirectory() &&
             unpackRegex.matcher(entry.getName()).matches()) {
           InputStream in = jar.getInputStream(entry);

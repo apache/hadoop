@@ -431,7 +431,7 @@ public class StringUtils {
     ArrayList<String> strList = new ArrayList<String>();
     int startIndex = 0;
     int nextIndex = 0;
-    while ((nextIndex = str.indexOf((int)separator, startIndex)) != -1) {
+    while ((nextIndex = str.indexOf(separator, startIndex)) != -1) {
       strList.add(str.substring(startIndex, nextIndex));
       startIndex = nextIndex + 1;
     }

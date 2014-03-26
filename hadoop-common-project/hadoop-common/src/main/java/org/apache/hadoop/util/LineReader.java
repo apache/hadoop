@@ -245,7 +245,7 @@ public class LineReader implements Closeable {
       }
     } while (newlineLength == 0 && bytesConsumed < maxBytesToConsume);
 
-    if (bytesConsumed > (long)Integer.MAX_VALUE) {
+    if (bytesConsumed > Integer.MAX_VALUE) {
       throw new IOException("Too many bytes before newline: " + bytesConsumed);
     }
     return (int)bytesConsumed;
@@ -343,7 +343,7 @@ public class LineReader implements Closeable {
       }
     } while (delPosn < recordDelimiterBytes.length 
         && bytesConsumed < maxBytesToConsume);
-    if (bytesConsumed > (long) Integer.MAX_VALUE) {
+    if (bytesConsumed > Integer.MAX_VALUE) {
       throw new IOException("Too many bytes before delimiter: " + bytesConsumed);
     }
     return (int) bytesConsumed; 

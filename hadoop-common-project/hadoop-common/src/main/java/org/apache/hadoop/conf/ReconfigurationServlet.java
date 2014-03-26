@@ -131,15 +131,14 @@ public class ReconfigurationServlet extends HttpServlet {
 
   @SuppressWarnings("unchecked")
   private Enumeration<String> getParams(HttpServletRequest req) {
-    return (Enumeration<String>) req.getParameterNames();
+    return req.getParameterNames();
   }
 
   /**
    * Apply configuratio changes after admin has approved them.
    */
   private void applyChanges(PrintWriter out, Reconfigurable reconf,
-                            HttpServletRequest req) 
-    throws IOException, ReconfigurationException {
+      HttpServletRequest req) throws ReconfigurationException {
     Configuration oldConf = reconf.getConf();
     Configuration newConf = new Configuration();
 

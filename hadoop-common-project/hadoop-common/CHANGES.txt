@@ -156,6 +156,9 @@ Release 2.4.0 - UNRELEASED
     HADOOP-10440. HarFsInputStream.read(byte[]) updates position incorrectly.
     (guodongdong via szetszwo)
 
+    HADOOP-10437. Fix the javac warnings in the conf and the util package.
+    (szetszwo)
+
   BREAKDOWN OF HADOOP-10184 SUBTASKS AND RELATED JIRAS
 
     HADOOP-10185. FileSystem API for ACLs. (cnauroth)
