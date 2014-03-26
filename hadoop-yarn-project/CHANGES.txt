@@ -585,6 +585,9 @@ Release 2.4.0 - UNRELEASED
     ResourceTrackerProtocol so that they work in HA scenario. (Xuan Gong
     via jianhe)
 
+    YARN-1873. Fixed TestDistributedShell failure when the test cases are out of
+    order. (Mit Desai via zjshen)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
