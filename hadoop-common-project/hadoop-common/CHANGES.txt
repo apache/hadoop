@@ -22,6 +22,8 @@ Release 2.5.0 - UNRELEASED
     removes unused FileContext.getFileStatus(..) and fixes various javac
     warnings.  (szetszwo)
 
+    HADOOP-10439. Fix compilation error in branch-2 after HADOOP-10426. (wheat9)
+
 Release 2.4.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
