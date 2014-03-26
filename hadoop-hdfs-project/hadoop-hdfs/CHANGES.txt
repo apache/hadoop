@@ -264,6 +264,8 @@ Release 2.5.0 - UNRELEASED
     HDFS-6155. Fix Boxing/unboxing to parse a primitive findbugs warnings.
     (suresh)
 
+    HDFS-6119. FSNamesystem code cleanup. (suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES 
