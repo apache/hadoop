@@ -141,19 +141,14 @@ public class ResourceManager extends CompositeService implements Recoverable {
   protected ResourceScheduler scheduler;
   private ClientRMService clientRM;
   protected ApplicationMasterService masterService;
-  private ApplicationMasterLauncher applicationMasterLauncher;
-  private ContainerAllocationExpirer containerAllocationExpirer;
   protected NMLivelinessMonitor nmLivelinessMonitor;
   protected NodesListManager nodesListManager;
-  private EventHandler<SchedulerEvent> schedulerDispatcher;
   protected RMAppManager rmAppManager;
   protected ApplicationACLsManager applicationACLsManager;
   protected QueueACLsManager queueACLsManager;
-  private DelegationTokenRenewer delegationTokenRenewer;
   private WebApp webApp;
   private AppReportFetcher fetcher = null;
   protected ResourceTrackerService resourceTracker;
-  private boolean recoveryEnabled;
 
   private String webAppAddress;
   private ConfigurationProvider configurationProvider = null;
@@ -333,6 +328,14 @@ public class ResourceManager extends CompositeService implements Recoverable {
    */
   @Private
   class RMActiveServices extends CompositeService {
+
+    private DelegationTokenRenewer delegationTokenRenewer;
+    private EventHandler<SchedulerEvent> schedulerDispatcher;
+    private ApplicationMasterLauncher applicationMasterLauncher;
+    private ContainerAllocationExpirer containerAllocationExpirer;
+
+    private boolean recoveryEnabled;
+
     RMActiveServices() {
       super("RMActiveServices");
     }
@@ -1009,6 +1012,11 @@ public class ResourceManager extends CompositeService implements Recoverable {
     return this.queueACLsManager;
   }
 
+  @Private
+  WebApp getWebapp() {
+    return this.webApp;
+  }
+
   @Override
   public void recover(RMState state) throws Exception {
     // recover RMdelegationTokenSecretManager
@@ -1055,16 +1063,14 @@ public class ResourceManager extends CompositeService implements Recoverable {
     rmContext.setDispatcher(rmDispatcher);
   }
 
-
   /**
    * Retrieve RM bind address from configuration
-   *
+   * 
    * @param conf
    * @return InetSocketAddress
    */
-public static InetSocketAddress getBindAddress(Configuration conf) {
+  public static InetSocketAddress getBindAddress(Configuration conf) {
     return conf.getSocketAddr(YarnConfiguration.RM_ADDRESS,
-      YarnConfiguration.DEFAULT_RM_ADDRESS,
-      YarnConfiguration.DEFAULT_RM_PORT);
+      YarnConfiguration.DEFAULT_RM_ADDRESS, YarnConfiguration.DEFAULT_RM_PORT);
   }
 }

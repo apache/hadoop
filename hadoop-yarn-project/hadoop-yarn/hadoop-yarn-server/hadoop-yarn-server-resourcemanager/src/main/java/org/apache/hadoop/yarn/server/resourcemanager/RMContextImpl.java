@@ -81,6 +81,7 @@ public class RMContextImpl implements RMContext {
   private ApplicationMasterService applicationMasterService;
   private RMApplicationHistoryWriter rmApplicationHistoryWriter;
   private ConfigurationProvider configurationProvider;
+
   /**
    * Default constructor. To be used in conjunction with setter methods for
    * individual fields.
