@@ -467,6 +467,8 @@ Release 2.4.0 - UNRELEASED
     HDFS-6115. Call flush() for every append on block scan verification log.
     (Vinayakumar B via szetszwo)
 
+    HDFS-5672. TestHASafeMode#testSafeBlockTracking fails in trunk. (jing9)
+
   BREAKDOWN OF HDFS-5698 SUBTASKS AND RELATED JIRAS
 
     HDFS-5717. Save FSImage header in protobuf. (Haohui Mai via jing9)
