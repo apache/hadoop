@@ -51,7 +51,7 @@ public class TestRetryCacheMetrics {
   }
 
   private void checkMetrics(long hit, long cleared, long updated) {
-    MetricsRecordBuilder rb = getMetrics("RetryCache/" + cacheName);
+    MetricsRecordBuilder rb = getMetrics("RetryCache." + cacheName);
     assertCounter("CacheHit", hit, rb);
     assertCounter("CacheCleared", cleared, rb);
     assertCounter("CacheUpdated", updated, rb);
