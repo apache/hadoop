@@ -51,8 +51,8 @@ import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 public class TestDistributedShell {
@@ -60,13 +60,14 @@ public class TestDistributedShell {
   private static final Log LOG =
       LogFactory.getLog(TestDistributedShell.class);
 
-  protected static MiniYARNCluster yarnCluster = null;
-  protected static Configuration conf = new YarnConfiguration();
+  protected MiniYARNCluster yarnCluster = null;
+  protected Configuration conf = new YarnConfiguration();
 
-  protected static String APPMASTER_JAR = JarFinder.getJar(ApplicationMaster.class);
+  protected final static String APPMASTER_JAR =
+      JarFinder.getJar(ApplicationMaster.class);
 
-  @BeforeClass
-  public static void setup() throws Exception {
+  @Before
+  public void setup() throws Exception {
     LOG.info("Starting up YARN cluster");
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, 128);
     conf.setClass(YarnConfiguration.RM_SCHEDULER, 
@@ -106,11 +107,11 @@ public class TestDistributedShell {
       Thread.sleep(2000);
     } catch (InterruptedException e) {
       LOG.info("setup thread sleep interrupted. message=" + e.getMessage());
-    }	
+    }
   }
 
-  @AfterClass
-  public static void tearDown() throws IOException {
+  @After
+  public void tearDown() throws IOException {
     if (yarnCluster != null) {
       try {
         yarnCluster.stop();
