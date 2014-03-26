@@ -2274,8 +2274,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     final INodesInPath iip = dir.getINodesInPath4Write(src);
     final INode inode = iip.getLastINode();
     if (inode != null && inode.isDirectory()) {
-      throw new FileAlreadyExistsException("Cannot create file " + src
-          + "; already exists as a directory.");
+      throw new FileAlreadyExistsException(src +
+          " already exists as a directory");
     }
     final INodeFile myFile = INodeFile.valueOf(inode, src, true);
     if (isPermissionEnabled) {
@@ -2293,8 +2293,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     try {
       if (myFile == null) {
         if (!create) {
-          throw new FileNotFoundException("failed to overwrite non-existent file "
-            + src + " on client " + clientMachine);
+          throw new FileNotFoundException("Can't overwrite non-existent " +
+              src + " for client " + clientMachine);
         }
       } else {
         if (overwrite) {
@@ -2307,8 +2307,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         } else {
           // If lease soft limit time is expired, recover the lease
           recoverLeaseInternal(myFile, src, holder, clientMachine, false);
-          throw new FileAlreadyExistsException("failed to create file " + src
-              + " on client " + clientMachine + " because the file exists");
+          throw new FileAlreadyExistsException(src + " for client " +
+              clientMachine + " already exists");
         }
       }
 
@@ -2319,8 +2319,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       INodeFile newNode = dir.addFile(src, permissions, replication, blockSize,
           holder, clientMachine, clientNode);
       if (newNode == null) {
-        throw new IOException("DIR* NameSystem.startFile: " +
-                              "Unable to add file to namespace.");
+        throw new IOException("Unable to add " + src +  " to namespace");
       }
       leaseManager.addLease(newNode.getFileUnderConstructionFeature()
           .getClientName(), src);
@@ -2328,12 +2327,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       // record file record in log, record new generation stamp
       getEditLog().logOpenFile(src, newNode, logRetryEntry);
       if (NameNode.stateChangeLog.isDebugEnabled()) {
-        NameNode.stateChangeLog.debug("DIR* NameSystem.startFile: "
-                                   +"add "+src+" to namespace for "+holder);
+        NameNode.stateChangeLog.debug("DIR* NameSystem.startFile: added " +
+            src + " inode " + newNode.getId() + " " + holder);
       }
     } catch (IOException ie) {
-      NameNode.stateChangeLog.warn("DIR* NameSystem.startFile: "
-                                   +ie.getMessage());
+      NameNode.stateChangeLog.warn("DIR* NameSystem.startFile: " + src + " " +
+          ie.getMessage());
       throw ie;
     }
   }
@@ -2373,7 +2372,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     try {
       if (inode == null) {
         throw new FileNotFoundException("failed to append to non-existent file "
-          + src + " on client " + clientMachine);
+          + src + " for client " + clientMachine);
       }
       INodeFile myFile = INodeFile.valueOf(inode, src, true);
       // Opening an existing file for write - may need to recover lease.
@@ -2497,7 +2496,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
             lease.getHolder().equals(holder)) { 
           throw new AlreadyBeingCreatedException(
             "failed to create file " + src + " for " + holder +
-            " on client " + clientMachine + 
+            " for client " + clientMachine +
             " because current leaseholder is trying to recreate file.");
         }
       }
@@ -2510,7 +2509,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       if (lease == null) {
         throw new AlreadyBeingCreatedException(
           "failed to create file " + src + " for " + holder +
-          " on client " + clientMachine + 
+          " for client " + clientMachine +
           " because pendingCreates is non-null but no leases found.");
       }
       if (force) {
@@ -2543,7 +2542,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                 + src + "], " + "lease owner [" + lease.getHolder() + "]");
           } else {
             throw new AlreadyBeingCreatedException("Failed to create file ["
-                + src + "] for [" + holder + "] on client [" + clientMachine
+                + src + "] for [" + holder + "] for client [" + clientMachine
                 + "], because this file is already being created by ["
                 + clientName + "] on ["
                 + uc.getClientMachine() + "]");
@@ -2661,9 +2660,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     DatanodeDescriptor clientNode = null;
 
     if(NameNode.stateChangeLog.isDebugEnabled()) {
-      NameNode.stateChangeLog.debug(
-          "BLOCK* NameSystem.getAdditionalBlock: file "
-          +src+" for "+clientName);
+      NameNode.stateChangeLog.debug("BLOCK* NameSystem.getAdditionalBlock: "
+          + src + " inodeId " +  fileId  + " for " + clientName);
     }
 
     // Part I. Analyze the state of the file with respect to the input data.

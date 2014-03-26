@@ -449,6 +449,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-5910. Enhance DataTransferProtocol to allow per-connection choice
     of encryption/plain-text. (Benoy Antony via Arpit Agarwal)
 
+    HDFS-6150. Add inode id information in the logs to make debugging easier.
+    (suresh)
+
   OPTIMIZATIONS
 
     HDFS-5790. LeaseManager.findPath is very slow when many leases need recovery
