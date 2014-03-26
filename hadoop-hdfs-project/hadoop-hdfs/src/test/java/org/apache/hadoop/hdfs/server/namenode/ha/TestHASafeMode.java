@@ -592,7 +592,16 @@ public class TestHASafeMode {
     // below 0.    
     assertSafeMode(nn1, 0, 0, 3, 0);
   }
-  
+
+  @Test
+  public void testSafeBlockTracking() throws Exception {
+    testSafeBlockTracking(false);
+  }
+
+  @Test
+  public void testSafeBlockTracking2() throws Exception {
+    testSafeBlockTracking(true);
+  }
 
   /**
    * Test that the number of safe blocks is accounted correctly even when
@@ -600,9 +609,15 @@ public class TestHASafeMode {
    * If a FINALIZED report arrives at the SBN before the block is marked
    * COMPLETE, then when we get the OP_CLOSE we need to count it as "safe"
    * at that point. This is a regression test for HDFS-2742.
+   * 
+   * @param noFirstBlockReport If this is set to true, we shutdown NN1 before
+   * closing the writing streams. In this way, when NN1 restarts, all DNs will
+   * first send it incremental block report before the first full block report.
+   * And NN1 will not treat the full block report as the first block report
+   * in BlockManager#processReport. 
    */
-  @Test
-  public void testSafeBlockTracking() throws Exception {
+  private void testSafeBlockTracking(boolean noFirstBlockReport)
+      throws Exception {
     banner("Starting with NN0 active and NN1 standby, creating some " +
     		"UC blocks plus some other blocks to force safemode");
     DFSTestUtil.createFile(fs, new Path("/other-blocks"), 10*BLOCK_SIZE, (short) 3, 1L);
@@ -619,6 +634,9 @@ public class TestHASafeMode {
       // the namespace during startup and enter safemode.
       nn0.getRpcServer().rollEditLog();
     } finally {
+      if (noFirstBlockReport) {
+        cluster.shutdownNameNode(1);
+      }
       for (FSDataOutputStream stm : stms) {
         IOUtils.closeStream(stm);
       }
