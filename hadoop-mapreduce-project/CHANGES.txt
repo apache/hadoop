@@ -266,6 +266,9 @@ Release 2.4.0 - UNRELEASED
     MAPREDUCE-5795. Fixed MRAppMaster to record the correct job-state after it
     recovers from a commit during a previous attempt. (Xuan Gong via vinodkv)
 
+    MAPREDUCE-5805. Fixed MapReduce JobHistory encoding of queue-name to escape
+    hyphens and thus avoid parsing errors. (Akira AJISAKA via vinodkv)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

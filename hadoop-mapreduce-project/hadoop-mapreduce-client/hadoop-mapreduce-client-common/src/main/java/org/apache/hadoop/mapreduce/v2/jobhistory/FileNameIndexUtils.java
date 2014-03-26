@@ -94,7 +94,7 @@ public class FileNameIndexUtils {
     sb.append(DELIMITER);
     
     //QueueName
-    sb.append(indexInfo.getQueueName());
+    sb.append(escapeDelimiters(indexInfo.getQueueName()));
     sb.append(DELIMITER);
 
     //JobStartTime
