@@ -40,7 +40,7 @@ public class RetryCacheMetrics {
   final String name;
 
   RetryCacheMetrics(RetryCache retryCache) {
-    name = "RetryCache/"+ retryCache.getCacheName();
+    name = "RetryCache."+ retryCache.getCacheName();
     registry = new MetricsRegistry(name);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Initialized "+ registry);
