@@ -786,7 +786,6 @@ public class NNStorage extends Storage implements Closeable,
    * Marks a list of directories as having experienced an error.
    *
    * @param sds A list of storage directories to mark as errored.
-   * @throws IOException
    */
   void reportErrorsOnDirectories(List<StorageDirectory> sds) {
     for (StorageDirectory sd : sds) {
@@ -800,7 +799,6 @@ public class NNStorage extends Storage implements Closeable,
    * available.
    *
    * @param sd A storage directory to mark as errored.
-   * @throws IOException
    */
   private void reportErrorsOnDirectory(StorageDirectory sd) {
     LOG.error("Error reported on storage directory " + sd);

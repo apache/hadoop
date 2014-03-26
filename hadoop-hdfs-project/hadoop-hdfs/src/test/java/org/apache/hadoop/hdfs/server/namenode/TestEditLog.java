@@ -1059,11 +1059,11 @@ public class TestEditLog {
         assertTrue("bad spec: " + logSpec, m.matches());
         if (m.group(2) == null) {
           files.add(NNStorage.getInProgressEditsFileName(
-              Long.valueOf(m.group(1))));
+              Long.parseLong(m.group(1))));
         } else {
           files.add(NNStorage.getFinalizedEditsFileName(
-              Long.valueOf(m.group(1)),
-              Long.valueOf(m.group(2))));
+              Long.parseLong(m.group(1)),
+              Long.parseLong(m.group(2))));
         }
       }
       StorageDirectory sd = FSImageTestUtil.mockStorageDirectory(

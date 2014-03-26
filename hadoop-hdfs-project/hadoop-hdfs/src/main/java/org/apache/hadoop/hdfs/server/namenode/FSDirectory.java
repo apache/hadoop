@@ -2943,7 +2943,7 @@ public class FSDirectory implements Closeable {
     final String inodeId = DFSUtil.bytes2String(pathComponents[3]);
     long id = 0;
     try {
-      id = Long.valueOf(inodeId);
+      id = Long.parseLong(inodeId);
     } catch (NumberFormatException e) {
       throw new FileNotFoundException("Invalid inode path: " + src);
     }

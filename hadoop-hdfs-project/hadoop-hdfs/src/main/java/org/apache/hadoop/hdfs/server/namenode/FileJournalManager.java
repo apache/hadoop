@@ -247,8 +247,8 @@ public class FileJournalManager implements JournalManager {
       Matcher editsMatch = EDITS_REGEX.matcher(name);
       if (editsMatch.matches()) {
         try {
-          long startTxId = Long.valueOf(editsMatch.group(1));
-          long endTxId = Long.valueOf(editsMatch.group(2));
+          long startTxId = Long.parseLong(editsMatch.group(1));
+          long endTxId = Long.parseLong(editsMatch.group(2));
           ret.add(new EditLogFile(f, startTxId, endTxId));
         } catch (NumberFormatException nfe) {
           LOG.error("Edits file " + f + " has improperly formatted " +
@@ -261,7 +261,7 @@ public class FileJournalManager implements JournalManager {
       Matcher inProgressEditsMatch = EDITS_INPROGRESS_REGEX.matcher(name);
       if (inProgressEditsMatch.matches()) {
         try {
-          long startTxId = Long.valueOf(inProgressEditsMatch.group(1));
+          long startTxId = Long.parseLong(inProgressEditsMatch.group(1));
           ret.add(
               new EditLogFile(f, startTxId, HdfsConstants.INVALID_TXID, true));
         } catch (NumberFormatException nfe) {

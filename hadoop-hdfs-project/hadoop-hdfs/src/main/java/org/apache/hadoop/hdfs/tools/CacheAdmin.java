@@ -301,7 +301,7 @@ public class CacheAdmin extends Configured implements Tool {
       }
       long id;
       try {
-        id = Long.valueOf(idString);
+        id = Long.parseLong(idString);
       } catch (NumberFormatException e) {
         System.err.println("Invalid directive ID " + idString + ": expected " +
             "a numeric value.");

@@ -144,7 +144,7 @@ class DelimitedImageVisitor extends TextWriterImageVisitor {
     
     // Special case of file size, which is sum of the num bytes in each block
     if(element == ImageElement.NUM_BYTES)
-      fileSize += Long.valueOf(value);
+      fileSize += Long.parseLong(value);
     
     if(elements.containsKey(element) && element != ImageElement.NUM_BYTES)
       elements.put(element, value);

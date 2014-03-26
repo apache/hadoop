@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.util;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 
@@ -96,7 +95,7 @@ public class PersistentLongFile {
           new BufferedReader(new InputStreamReader(new FileInputStream(
               file), Charsets.UTF_8));
       try {
-        val = Long.valueOf(br.readLine());
+        val = Long.parseLong(br.readLine());
         br.close();
         br = null;
       } finally {

@@ -165,7 +165,7 @@ class JNStorage extends Storage {
         if (matcher.matches()) {
           // This parsing will always succeed since the group(1) is
           // /\d+/ in the regex itself.
-          long txid = Long.valueOf(matcher.group(1));
+          long txid = Long.parseLong(matcher.group(1));
           if (txid < minTxIdToKeep) {
             LOG.info("Purging no-longer needed file " + txid);
             if (!f.delete()) {

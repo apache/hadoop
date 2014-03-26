@@ -518,7 +518,7 @@ public class TestShortCircuitLocalRead {
     }
     boolean shortcircuit = Boolean.valueOf(args[0]);
     boolean checksum = Boolean.valueOf(args[1]);
-    int threadCount = Integer.valueOf(args[2]);
+    int threadCount = Integer.parseInt(args[2]);
 
     // Setup create a file
     final Configuration conf = new Configuration();

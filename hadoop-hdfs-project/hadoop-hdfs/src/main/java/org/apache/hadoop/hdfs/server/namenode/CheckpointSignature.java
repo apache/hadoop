@@ -22,7 +22,6 @@ import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
-import org.apache.hadoop.hdfs.server.namenode.FSImage;
 
 import com.google.common.collect.ComparisonChain;
 
@@ -53,13 +52,13 @@ public class CheckpointSignature extends StorageInfo
     assert fields.length == NUM_FIELDS :
       "Must be " + NUM_FIELDS + " fields in CheckpointSignature";
     int i = 0;
-    layoutVersion = Integer.valueOf(fields[i++]);
-    namespaceID = Integer.valueOf(fields[i++]);
-    cTime = Long.valueOf(fields[i++]);
-    mostRecentCheckpointTxId  = Long.valueOf(fields[i++]);
-    curSegmentTxId  = Long.valueOf(fields[i++]);
+    layoutVersion = Integer.parseInt(fields[i++]);
+    namespaceID = Integer.parseInt(fields[i++]);
+    cTime = Long.parseLong(fields[i++]);
+    mostRecentCheckpointTxId  = Long.parseLong(fields[i++]);
+    curSegmentTxId  = Long.parseLong(fields[i++]);
     clusterID = fields[i++];
-    blockpoolID = fields[i++];
+    blockpoolID = fields[i];
   }
 
   public CheckpointSignature(StorageInfo info, String blockpoolID,

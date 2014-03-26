@@ -154,7 +154,7 @@ class ReplicaMap {
   /**
    * Remove the replica's meta information from the map if present
    * @param bpid block pool id
-   * @param the block id of the replica to be removed
+   * @param blockId block id of the replica to be removed
    * @return the removed replica's meta information
    */
   ReplicaInfo remove(String bpid, long blockId) {

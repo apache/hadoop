@@ -38,7 +38,7 @@ public class CacheDirectiveIterator
 
   public CacheDirectiveIterator(ClientProtocol namenode,
       CacheDirectiveInfo filter) {
-    super(Long.valueOf(0));
+    super(0L);
     this.namenode = namenode;
     this.filter = filter;
   }

@@ -108,7 +108,7 @@ class FSImageTransactionalStorageInspector extends FSImageStorageInspector {
       if (imageMatch != null) {
         if (sd.getStorageDirType().isOfType(NameNodeDirType.IMAGE)) {
           try {
-            long txid = Long.valueOf(imageMatch.group(1));
+            long txid = Long.parseLong(imageMatch.group(1));
             foundImages.add(new FSImageFile(sd, f, txid));
           } catch (NumberFormatException nfe) {
             LOG.error("Image file " + f + " has improperly formatted " +

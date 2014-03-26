@@ -52,7 +52,7 @@ public class PipelineAck {
     String[] ele = conf.get(DFS_DATANODE_OOB_TIMEOUT_KEY,
         DFS_DATANODE_OOB_TIMEOUT_DEFAULT).split(",");
     for (int i = 0; i < NUM_OOB_TYPES; i++) {
-      OOB_TIMEOUT[i] = (i < ele.length) ? Long.valueOf(ele[i]) : 0;
+      OOB_TIMEOUT[i] = (i < ele.length) ? Long.parseLong(ele[i]) : 0;
     }
   }
 
