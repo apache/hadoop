@@ -1874,8 +1874,9 @@ public class BlockManager {
     int headIndex = 0; //currently the delimiter is in the head of the list
     int curIndex;
 
-    if (newReport == null)
+    if (newReport == null) {
       newReport = new BlockListAsLongs();
+    }
     // scan the report and process newly reported blocks
     BlockReportIterator itBR = newReport.getBlockReportIterator();
     while(itBR.hasNext()) {
@@ -1968,9 +1969,11 @@ public class BlockManager {
 
     // Ignore replicas already scheduled to be removed from the DN
     if(invalidateBlocks.contains(dn.getDatanodeUuid(), block)) {
-/*  TODO: following assertion is incorrect, see HDFS-2668
-assert storedBlock.findDatanode(dn) < 0 : "Block " + block
-        + " in recentInvalidatesSet should not appear in DN " + dn; */
+      /*
+       * TODO: following assertion is incorrect, see HDFS-2668 assert
+       * storedBlock.findDatanode(dn) < 0 : "Block " + block +
+       * " in recentInvalidatesSet should not appear in DN " + dn;
+       */
       return storedBlock;
     }
 
@@ -1990,8 +1993,8 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
     }
 
     if (isBlockUnderConstruction(storedBlock, ucState, reportedState)) {
-      toUC.add(new StatefulBlockInfo(
-          (BlockInfoUnderConstruction)storedBlock, block, reportedState));
+      toUC.add(new StatefulBlockInfo((BlockInfoUnderConstruction) storedBlock,
+          new Block(block), reportedState));
       return storedBlock;
     }
 
@@ -2875,7 +2878,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
       // about new storages from heartbeats but during NN restart we may
       // receive a block report or incremental report before the heartbeat.
       // We must handle this for protocol compatibility. This issue was
-      // uncovered by HDFS-6904.
+      // uncovered by HDFS-6094.
       node.updateStorage(srdb.getStorage());
     }
 
