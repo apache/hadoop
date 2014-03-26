@@ -1105,7 +1105,7 @@
     <description>This is default address for the timeline server to start the
     RPC server.</description>
     <name>yarn.timeline-service.address</name>
-    <value>0.0.0.0:10200</value>
+    <value>${yarn.timeline-service.hostname}:10200</value>
   </property>
 
   <property>
