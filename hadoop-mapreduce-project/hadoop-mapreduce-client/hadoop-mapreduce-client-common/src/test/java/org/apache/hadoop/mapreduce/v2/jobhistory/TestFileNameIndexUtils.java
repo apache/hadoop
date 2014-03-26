@@ -68,6 +68,10 @@ public class TestFileNameIndexUtils {
   private static final String NUM_REDUCES = "1";
   private static final String JOB_STATUS = "SUCCEEDED";
   private static final String QUEUE_NAME = "default";
+  private static final String QUEUE_NAME_WITH_DELIMITER = "test"
+      + FileNameIndexUtils.DELIMITER + "queue";
+  private static final String QUEUE_NAME_WITH_DELIMITER_ESCAPE = "test"
+      + FileNameIndexUtils.DELIMITER_ESCAPE + "queue";
   private static final String JOB_START_TIME = "1317928742060";
 
   @Test
@@ -189,6 +193,46 @@ public class TestFileNameIndexUtils {
     JobIndexInfo info = FileNameIndexUtils.getIndexInfo(jobHistoryFile);
     Assert.assertEquals("Job name doesn't match",
         JOB_NAME_WITH_DELIMITER, info.getJobName());
+  }
+
+  @Test
+  public void testQueueNamePercentEncoding() throws IOException {
+    JobIndexInfo info = new JobIndexInfo();
+    JobID oldJobId = JobID.forName(JOB_ID);
+    JobId jobId = TypeConverter.toYarn(oldJobId);
+    info.setJobId(jobId);
+    info.setSubmitTime(Long.parseLong(SUBMIT_TIME));
+    info.setUser(USER_NAME);
+    info.setJobName(JOB_NAME);
+    info.setFinishTime(Long.parseLong(FINISH_TIME));
+    info.setNumMaps(Integer.parseInt(NUM_MAPS));
+    info.setNumReduces(Integer.parseInt(NUM_REDUCES));
+    info.setJobStatus(JOB_STATUS);
+    info.setQueueName(QUEUE_NAME_WITH_DELIMITER);
+    info.setJobStartTime(Long.parseLong(JOB_START_TIME));
+
+    String jobHistoryFile = FileNameIndexUtils.getDoneFileName(info);
+    Assert.assertTrue("Queue name not encoded correctly into job history file",
+        jobHistoryFile.contains(QUEUE_NAME_WITH_DELIMITER_ESCAPE));
+  }
+
+  @Test
+  public void testQueueNamePercentDecoding() throws IOException {
+    String jobHistoryFile = String.format(JOB_HISTORY_FILE_FORMATTER,
+        JOB_ID,
+        SUBMIT_TIME,
+        USER_NAME,
+        JOB_NAME,
+        FINISH_TIME,
+        NUM_MAPS,
+        NUM_REDUCES,
+        JOB_STATUS,
+        QUEUE_NAME_WITH_DELIMITER_ESCAPE,
+        JOB_START_TIME );
+
+    JobIndexInfo info = FileNameIndexUtils.getIndexInfo(jobHistoryFile);
+    Assert.assertEquals("Queue name doesn't match",
+        QUEUE_NAME_WITH_DELIMITER, info.getQueueName());
   }
 
   @Test
