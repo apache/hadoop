@@ -153,6 +153,9 @@ Release 2.4.0 - UNRELEASED
     HADOOP-10425. LocalFileSystem.getContentSummary should not count crc files.
     (szetszwo)
 
+    HADOOP-10440. HarFsInputStream.read(byte[]) updates position incorrectly.
+    (guodongdong via szetszwo)
+
   BREAKDOWN OF HADOOP-10184 SUBTASKS AND RELATED JIRAS
 
     HADOOP-10185. FileSystem API for ACLs. (cnauroth)
