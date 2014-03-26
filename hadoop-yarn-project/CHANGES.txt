@@ -580,6 +580,11 @@ Release 2.4.0 - UNRELEASED
     YARN-1867. Fixed a bug in ResourceManager that was causing invalid ACL checks
     in the web-services after fail-over. (Vinod Kumar Vavilapalli)
 
+    YARN-1521. Mark Idempotent/AtMostOnce annotations to the APIs in
+    ApplicationClientProtcol, ResourceManagerAdministrationProtocol and
+    ResourceTrackerProtocol so that they work in HA scenario. (Xuan Gong
+    via jianhe)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

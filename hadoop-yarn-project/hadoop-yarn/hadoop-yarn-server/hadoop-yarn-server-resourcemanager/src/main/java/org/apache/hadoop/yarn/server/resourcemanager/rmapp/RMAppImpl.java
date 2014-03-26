@@ -718,7 +718,7 @@ public class RMAppImpl implements RMApp, Recoverable {
       }
       
       // TODO: Write out change to state store (YARN-1558)
-      
+      // Also take care of RM failover
       moveEvent.getResult().set(null);
     }
   }
