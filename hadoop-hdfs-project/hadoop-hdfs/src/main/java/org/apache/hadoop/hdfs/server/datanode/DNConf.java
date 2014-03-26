@@ -51,6 +51,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_RESTART_REPLICA_
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.protocol.datatransfer.TrustedChannelResolver;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 
 /**
@@ -82,6 +83,7 @@ public class DNConf {
   
   final String minimumNameNodeVersion;
   final String encryptionAlgorithm;
+  final TrustedChannelResolver trustedChannelResolver;
   
   final long xceiverStopTimeout;
   final long restartReplicaExpiry;
@@ -152,6 +154,7 @@ public class DNConf {
     this.encryptDataTransfer = conf.getBoolean(DFS_ENCRYPT_DATA_TRANSFER_KEY,
         DFS_ENCRYPT_DATA_TRANSFER_DEFAULT);
     this.encryptionAlgorithm = conf.get(DFS_DATA_ENCRYPTION_ALGORITHM_KEY);
+    this.trustedChannelResolver = TrustedChannelResolver.getInstance(conf);
     
     this.xceiverStopTimeout = conf.getLong(
         DFS_DATANODE_XCEIVER_STOP_TIMEOUT_MILLIS_KEY,

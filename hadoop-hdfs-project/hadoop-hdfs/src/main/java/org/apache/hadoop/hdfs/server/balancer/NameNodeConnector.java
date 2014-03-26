@@ -35,6 +35,7 @@ import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
+import org.apache.hadoop.hdfs.protocol.datatransfer.TrustedChannelResolver;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
@@ -71,6 +72,7 @@ class NameNodeConnector {
   private BlockTokenSecretManager blockTokenSecretManager;
   private Daemon keyupdaterthread; // AccessKeyUpdater thread
   private DataEncryptionKey encryptionKey;
+  private final TrustedChannelResolver trustedChannelResolver;
 
   NameNodeConnector(URI nameNodeUri,
       Configuration conf) throws IOException {
@@ -120,6 +122,7 @@ class NameNodeConnector {
     if (out == null) {
       throw new IOException("Another balancer is running");
     }
+    this.trustedChannelResolver = TrustedChannelResolver.getInstance(conf);
   }
 
   boolean shouldContinue(long dispatchBlockMoveBytes) {
@@ -154,7 +157,7 @@ class NameNodeConnector {
   
   DataEncryptionKey getDataEncryptionKey()
       throws IOException {
-    if (encryptDataTransfer) {
+    if (encryptDataTransfer && !this.trustedChannelResolver.isTrusted()) {
       synchronized (this) {
         if (encryptionKey == null) {
           encryptionKey = blockTokenSecretManager.generateDataEncryptionKey();
