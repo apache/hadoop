@@ -21,6 +21,8 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6119. FSNamesystem code cleanup. (suresh)
 
+    HDFS-6158. Clean up dead code for OfflineImageViewer (wheat9)
+
   OPTIMIZATIONS
 
   BUG FIXES 

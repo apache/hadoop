@@ -243,7 +243,7 @@ public class TestSnapshot {
   }
   
   /**
-   * Test if the OfflineImageViewer can correctly parse a fsimage containing
+   * Test if the OfflineImageViewerPB can correctly parse a fsimage containing
    * snapshots
    */
   @Test
