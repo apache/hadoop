@@ -36,8 +36,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IOUtils;
 
 /**
- * OfflineImageViewer to dump the contents of an Hadoop image file to XML or the
- * console. Main entry point into utility, either via the command line or
+ * OfflineImageViewerPB to dump the contents of an Hadoop image file to XML or
+ * the console. Main entry point into utility, either via the command line or
  * programatically.
  */
 @InterfaceAudience.Private
