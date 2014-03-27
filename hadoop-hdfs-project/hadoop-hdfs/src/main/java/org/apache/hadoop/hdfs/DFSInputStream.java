@@ -801,7 +801,7 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
             // got a EOS from reader though we expect more data on it.
             throw new IOException("Unexpected EOS from the reader");
           }
-          if (dfsClient.stats != null && result != -1) {
+          if (dfsClient.stats != null) {
             dfsClient.stats.incrementBytesRead(result);
           }
           return result;

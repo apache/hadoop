@@ -159,7 +159,7 @@ final class LsrPBImage {
       INodeFile f = inode.getFile();
       PermissionStatus p = FSImageFormatPBINode.Loader.loadPermission(
           f.getPermission(), stringTable);
-      out.print(String.format("-%s %2s %8s %10s %10s %10d %s%s\n", p
+      out.print(String.format("-%s %2s %8s %10s %10s %10d %s%s%n", p
           .getPermission().toString(), f.getReplication(), p.getUserName(), p
           .getGroupName(), f.getModificationTime(), getFileSize(f), parent,
           inode.getName().toStringUtf8()));
@@ -169,7 +169,7 @@ final class LsrPBImage {
       INodeDirectory d = inode.getDirectory();
       PermissionStatus p = FSImageFormatPBINode.Loader.loadPermission(
           d.getPermission(), stringTable);
-      out.print(String.format("d%s  - %8s %10s %10s %10d %s%s\n", p
+      out.print(String.format("d%s  - %8s %10s %10s %10d %s%s%n", p
           .getPermission().toString(), p.getUserName(), p.getGroupName(), d
           .getModificationTime(), 0, parent, inode.getName().toStringUtf8()));
     }
@@ -178,7 +178,7 @@ final class LsrPBImage {
       INodeSymlink d = inode.getSymlink();
       PermissionStatus p = FSImageFormatPBINode.Loader.loadPermission(
           d.getPermission(), stringTable);
-      out.print(String.format("-%s  - %8s %10s %10s %10d %s%s -> %s\n", p
+      out.print(String.format("-%s  - %8s %10s %10s %10d %s%s -> %s%n", p
           .getPermission().toString(), p.getUserName(), p.getGroupName(), d
           .getModificationTime(), 0, parent, inode.getName().toStringUtf8(),
           d.getTarget().toStringUtf8()));
