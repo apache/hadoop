@@ -481,6 +481,9 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-6157. Fix the entry point of OfflineImageViewer for hdfs.cmd. (wheat9)
 
+    HDFS-6163. Fix a minor bug in the HA upgrade document. (Fengdong Yu via
+    jing9)
+
   BREAKDOWN OF HDFS-5698 SUBTASKS AND RELATED JIRAS
 
     HDFS-5717. Save FSImage header in protobuf. (Haohui Mai via jing9)
