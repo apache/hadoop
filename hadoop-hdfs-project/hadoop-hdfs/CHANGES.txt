@@ -26,6 +26,8 @@ Release 2.5.0 - UNRELEASED
     HDFS-5978. Create a tool to take fsimage and expose read-only WebHDFS API.
     (Akira Ajisaka via wheat9)
 
+    HDFS-6164. Remove lsr in OfflineImageViewer. (wheat9)
+
   OPTIMIZATIONS
 
   BUG FIXES 

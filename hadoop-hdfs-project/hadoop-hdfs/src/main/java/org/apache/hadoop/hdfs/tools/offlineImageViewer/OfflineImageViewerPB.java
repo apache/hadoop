@@ -57,11 +57,6 @@ public class OfflineImageViewerPB {
       + "order to process an image file.\n"
       + "\n"
       + "The following image processors are available:\n"
-      + "  * Ls: The default image processor generates an lsr-style listing\n"
-      + "    of the files in the namespace, with the same fields in the same\n"
-      + "    order.  Note that in order to correctly determine file sizes,\n"
-      + "    this formatter cannot skip blocks and will override the\n"
-      + "    -skipBlocks option.\n"
       + "  * XML: This processor creates an XML document with all elements of\n"
       + "    the fsimage enumerated, suitable for further analysis by XML\n"
       + "    tools.\n"
@@ -169,8 +164,6 @@ public class OfflineImageViewerPB {
         String addr = cmd.getOptionValue("addr", "localhost:5978");
         new WebImageViewer(NetUtils.createSocketAddr(addr))
             .initServerAndWait(inputFile);
-      } else {
-        new LsrPBImage(conf, out).visit(new RandomAccessFile(inputFile, "r"));
       }
       return 0;
     } catch (EOFException e) {
