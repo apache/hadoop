@@ -500,6 +500,9 @@ Release 2.4.0 - UNRELEASED
 
     HADOOP-10399. FileContext API for ACLs. (Vinayakumar B via cnauroth)
 
+    HADOOP-10442. Group look-up can cause segmentation fault when certain
+    JNI-based mapping module is used. (Kihwal Lee via jeagles)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
