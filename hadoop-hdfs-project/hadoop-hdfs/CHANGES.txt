@@ -266,7 +266,10 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6119. FSNamesystem code cleanup. (suresh)
 
-    HDFS-6158. Clean up dead code for OfflineImageViewer (wheat9)
+    HDFS-6158. Clean up dead code for OfflineImageViewer. (wheat9)
+
+    HDFS-5978. Create a tool to take fsimage and expose read-only WebHDFS API.
+    (Akira Ajisaka via wheat9)
 
   OPTIMIZATIONS
 

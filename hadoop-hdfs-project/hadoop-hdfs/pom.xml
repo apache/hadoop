@@ -179,7 +179,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <dependency>
       <groupId>io.netty</groupId>
       <artifactId>netty</artifactId>
-      <scope>test</scope>
+      <scope>compile</scope>
     </dependency>
   </dependencies>
 
