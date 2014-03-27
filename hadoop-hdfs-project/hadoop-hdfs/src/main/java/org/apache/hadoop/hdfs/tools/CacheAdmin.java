@@ -583,7 +583,7 @@ public class CacheAdmin extends Configured implements Tool {
           tableListing.addRow(row.toArray(new String[0]));
           numEntries++;
         }
-        System.out.print(String.format("Found %d entr%s\n",
+        System.out.print(String.format("Found %d entr%s%n",
             numEntries, numEntries == 1 ? "y" : "ies"));
         if (numEntries > 0) {
           System.out.print(tableListing);
@@ -968,7 +968,7 @@ public class CacheAdmin extends Configured implements Tool {
         System.err.println(prettifyException(e));
         return 2;
       }
-      System.out.print(String.format("Found %d result%s.\n", numResults,
+      System.out.print(String.format("Found %d result%s.%n", numResults,
           (numResults == 1 ? "" : "s")));
       if (numResults > 0) { 
         System.out.print(listing);

@@ -4997,7 +4997,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       if (blockSafe < blockThreshold) {
         msg += String.format(
           "The reported blocks %d needs additional %d"
-          + " blocks to reach the threshold %.4f of total blocks %d.\n",
+          + " blocks to reach the threshold %.4f of total blocks %d.%n",
           blockSafe, (blockThreshold - blockSafe) + 1, threshold, blockTotal);
         thresholdsMet = false;
       } else {
@@ -5007,7 +5007,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       if (numLive < datanodeThreshold) {
         msg += String.format(
           "The number of live datanodes %d needs an additional %d live "
-          + "datanodes to reach the minimum number %d.\n",
+          + "datanodes to reach the minimum number %d.%n",
           numLive, (datanodeThreshold - numLive), datanodeThreshold);
         thresholdsMet = false;
       } else {
