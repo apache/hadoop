@@ -178,6 +178,11 @@ int hadoop_user_info_getgroups(struct hadoop_user_info *uinfo)
       return ret;
     }
     return 0;
+  } else if (ret != -1) {
+    // Any return code that is not -1 is considered as error.
+    // Since the user lookup was successful, there should be at least one
+    // group for this user.
+    return EIO;
   }
   ngids = realloc(uinfo->gids, sizeof(uinfo->gids[0]) * ngroups);
   if (!ngids) {
