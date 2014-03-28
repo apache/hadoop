@@ -164,6 +164,9 @@ Release 2.4.0 - UNRELEASED
 
     HADOOP-10449. Fix the javac warnings in the security package.  (szetszwo)
 
+    HADOOP-10450. Build zlib native code bindings in hadoop.dll for Windows.
+    (cnauroth)
+
   BREAKDOWN OF HADOOP-10184 SUBTASKS AND RELATED JIRAS
 
     HADOOP-10185. FileSystem API for ACLs. (cnauroth)
