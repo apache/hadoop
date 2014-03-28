@@ -124,12 +124,6 @@ public class DistributedFileSystem extends FileSystem {
     return HdfsConstants.HDFS_URI_SCHEME;
   }
 
-  @Deprecated
-  public DistributedFileSystem(InetSocketAddress namenode,
-    Configuration conf) throws IOException {
-    initialize(NameNode.getUri(namenode), conf);
-  }
-
   @Override
   public URI getUri() { return uri; }
 
@@ -1017,55 +1011,6 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   /**
-   * We need to find the blocks that didn't match.  Likely only one 
-   * is corrupt but we will report both to the namenode.  In the future,
-   * we can consider figuring out exactly which block is corrupt.
-   */
-  // We do not see a need for user to report block checksum errors and do not  
-  // want to rely on user to report block corruptions.
-  @Deprecated
-  public boolean reportChecksumFailure(Path f, 
-    FSDataInputStream in, long inPos, 
-    FSDataInputStream sums, long sumsPos) {
-    
-    if(!(in instanceof HdfsDataInputStream && sums instanceof HdfsDataInputStream))
-      throw new IllegalArgumentException(
-          "Input streams must be types of HdfsDataInputStream");
-    
-    LocatedBlock lblocks[] = new LocatedBlock[2];
-
-    // Find block in data stream.
-    HdfsDataInputStream dfsIn = (HdfsDataInputStream) in;
-    ExtendedBlock dataBlock = dfsIn.getCurrentBlock();
-    if (dataBlock == null) {
-      LOG.error("Error: Current block in data stream is null! ");
-      return false;
-    }
-    DatanodeInfo[] dataNode = {dfsIn.getCurrentDatanode()}; 
-    lblocks[0] = new LocatedBlock(dataBlock, dataNode);
-    LOG.info("Found checksum error in data stream at "
-        + dataBlock + " on datanode="
-        + dataNode[0]);
-
-    // Find block in checksum stream
-    HdfsDataInputStream dfsSums = (HdfsDataInputStream) sums;
-    ExtendedBlock sumsBlock = dfsSums.getCurrentBlock();
-    if (sumsBlock == null) {
-      LOG.error("Error: Current block in checksum stream is null! ");
-      return false;
-    }
-    DatanodeInfo[] sumsNode = {dfsSums.getCurrentDatanode()}; 
-    lblocks[1] = new LocatedBlock(sumsBlock, sumsNode);
-    LOG.info("Found checksum error in checksum stream at "
-        + sumsBlock + " on datanode=" + sumsNode[0]);
-
-    // Ask client to delete blocks.
-    dfs.reportChecksumFailure(f.toString(), lblocks);
-
-    return true;
-  }
-
-  /**
    * Returns the stat information about the file.
    * @throws FileNotFoundException if the file does not exist.
    */
@@ -1282,64 +1227,11 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   @Override
-  public 
-  Token<DelegationTokenIdentifier> getDelegationToken(String renewer
-  ) throws IOException {
+  public Token<DelegationTokenIdentifier> getDelegationToken(String renewer)
+      throws IOException {
     Token<DelegationTokenIdentifier> result =
       dfs.getDelegationToken(renewer == null ? null : new Text(renewer));
     return result;
-  }
-
-  /*
-   * Delegation Token Operations
-   * These are DFS only operations.
-   */
-  
-  /**
-   * Get a valid Delegation Token.
-   * 
-   * @param renewer Name of the designated renewer for the token
-   * @return Token<DelegationTokenIdentifier>
-   * @throws IOException
-   * @deprecated use {@link #getDelegationToken(String)}
-   */
-  @Deprecated
-  public Token<DelegationTokenIdentifier> getDelegationToken(Text renewer)
-      throws IOException {
-    return getDelegationToken(renewer.toString());
-  }
-  
-  /**
-   * Renew an existing delegation token.
-   * 
-   * @param token delegation token obtained earlier
-   * @return the new expiration time
-   * @throws IOException
-   * @deprecated Use Token.renew instead.
-   */
-  public long renewDelegationToken(Token<DelegationTokenIdentifier> token)
-      throws InvalidToken, IOException {
-    try {
-      return token.renew(getConf());
-    } catch (InterruptedException ie) {
-      throw new RuntimeException("Caught interrupted", ie);
-    }
-  }
-
-  /**
-   * Cancel an existing delegation token.
-   * 
-   * @param token delegation token
-   * @throws IOException
-   * @deprecated Use Token.cancel instead.
-   */
-  public void cancelDelegationToken(Token<DelegationTokenIdentifier> token)
-      throws IOException {
-    try {
-      token.cancel(getConf());
-    } catch (InterruptedException ie) {
-      throw new RuntimeException("Caught interrupted", ie);
-    }
   }
 
   /**
