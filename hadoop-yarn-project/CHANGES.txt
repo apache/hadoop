@@ -320,6 +320,8 @@ Release 2.4.0 - UNRELEASED
     YARN-1891. Added documentation for NodeManager health-monitoring. (Varun
     Vasudev via vinodkv)
 
+    YARN-1017. Added documentation for ResourceManager Restart.(jianhe)
+
   OPTIMIZATIONS
 
     YARN-1771. Reduce the number of NameNode operations during localization of
