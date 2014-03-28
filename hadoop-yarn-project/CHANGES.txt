@@ -332,6 +332,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1452. Added documentation about the configuration and usage of generic
     application history and the timeline data service. (Zhijie Shen via vinodkv)
 
+    YARN-1891. Added documentation for NodeManager health-monitoring. (Varun
+    Vasudev via vinodkv)
+
   OPTIMIZATIONS
 
     YARN-1771. Reduce the number of NameNode operations during localization of
