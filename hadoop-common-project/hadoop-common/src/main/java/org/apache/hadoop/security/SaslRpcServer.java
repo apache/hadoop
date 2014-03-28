@@ -57,7 +57,6 @@ import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.hadoop.util.StringUtils;
 
 /**
  * A utility class for dealing with SASL on RPC server
@@ -70,7 +69,6 @@ public class SaslRpcServer {
   public static final Map<String, String> SASL_PROPS = 
       new TreeMap<String, String>();
   private static SaslServerFactory saslFactory;
-  private static SaslPropertiesResolver resolver;
 
   public static enum QualityOfProtection {
     AUTHENTICATION("auth"),
