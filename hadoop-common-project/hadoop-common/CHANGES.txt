@@ -121,7 +121,11 @@ Trunk (Unreleased)
     HADOOP-10342. Add a new method to UGI to use a Kerberos login subject to
     build a new UGI. (Larry McCay via omalley)
 
-    HADOOP-9968. Makes ProxyUsers to work with NetGroups (Benoy Antony via ddas)
+    HADOOP-9968. Makes ProxyUsers to work with NetGroups (Benoy Antony via 
+    ddas)
+
+    HADOOP-10237. JavaKeyStoreProvider needs to set keystore permissions 
+    correctly. (Larry McCay via omalley)
 
   BUG FIXES
 
