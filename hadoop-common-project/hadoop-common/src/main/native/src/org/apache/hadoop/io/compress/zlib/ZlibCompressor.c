@@ -47,6 +47,7 @@ static int (*dlsym_deflateEnd)(z_streamp);
 #endif
 
 #ifdef WINDOWS
+#include "winutils.h"
 #include <Strsafe.h>
 typedef int (__cdecl *__dlsym_deflateInit2_) (z_streamp, int, int, int, int, int, const char *, int);
 typedef int (__cdecl *__dlsym_deflate) (z_streamp, int);
@@ -379,7 +380,16 @@ Java_org_apache_hadoop_io_compress_zlib_ZlibCompressor_getLibraryName(JNIEnv *en
     }
   }
 #endif
-  return (*env)->NewStringUTF(env, HADOOP_ZLIB_LIBRARY);
+
+#ifdef WINDOWS
+  LPWSTR filename = NULL;
+  GetLibraryName(dlsym_deflateInit2_, &filename);
+  if (filename != NULL) {
+    return (*env)->NewString(env, filename, (jsize) wcslen(filename));
+  } else {
+    return (*env)->NewStringUTF(env, "Unavailable");
+  }
+#endif
 }
 
 /**
