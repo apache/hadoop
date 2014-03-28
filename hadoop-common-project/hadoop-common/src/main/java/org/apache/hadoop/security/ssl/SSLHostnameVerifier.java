@@ -31,9 +31,6 @@
 
 package org.apache.hadoop.security.ssl;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.cert.Certificate;
@@ -44,6 +41,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.TreeSet;
 
@@ -51,6 +49,9 @@ import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSocket;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  ************************************************************************
@@ -224,7 +225,6 @@ public interface SSLHostnameVerifier extends javax.net.ssl.HostnameVerifier {
             public final String toString() { return "ALLOW_ALL"; }
         };
 
-    @SuppressWarnings("unchecked")
     abstract class AbstractVerifier implements SSLHostnameVerifier {
 
         /**
@@ -378,7 +378,7 @@ public interface SSLHostnameVerifier extends javax.net.ssl.HostnameVerifier {
             // STRICT implementations of the HostnameVerifier only use the
             // first CN provided.  All other CNs are ignored.
             // (Firefox, wget, curl, Sun Java 1.4, 5, 6 all work this way).
-            TreeSet names = new TreeSet();
+            final Set<String> names = new TreeSet<String>();
             if (cns != null && cns.length > 0 && cns[0] != null) {
                 names.add(cns[0]);
                 if (ie6) {
@@ -404,10 +404,9 @@ public interface SSLHostnameVerifier extends javax.net.ssl.HostnameVerifier {
 
             boolean match = false;
             out:
-            for (Iterator it = names.iterator(); it.hasNext();) {
+            for (Iterator<String> it = names.iterator(); it.hasNext();) {
                 // Don't trim the CN, though!
-                String cn = (String) it.next();
-                cn = cn.toLowerCase();
+                final String cn = it.next().toLowerCase();
                 // Store CN in StringBuffer in case we need to report an error.
                 buf.append(" <");
                 buf.append(cn);
@@ -508,10 +507,9 @@ public interface SSLHostnameVerifier extends javax.net.ssl.HostnameVerifier {
         }
     }
 
-    @SuppressWarnings("unchecked")
     static class Certificates {
       public static String[] getCNs(X509Certificate cert) {
-        LinkedList cnList = new LinkedList();
+        final List<String> cnList = new LinkedList<String>();
         /*
           Sebastian Hauer's original StrictSSLProtocolSocketFactory used
           getName() and had the following comment:
@@ -568,8 +566,8 @@ public interface SSLHostnameVerifier extends javax.net.ssl.HostnameVerifier {
        * @return Array of SubjectALT DNS names stored in the certificate.
        */
       public static String[] getDNSSubjectAlts(X509Certificate cert) {
-          LinkedList subjectAltList = new LinkedList();
-          Collection c = null;
+          final List<String> subjectAltList = new LinkedList<String>();
+          Collection<List<?>> c = null;
           try {
               c = cert.getSubjectAlternativeNames();
           }
@@ -578,9 +576,9 @@ public interface SSLHostnameVerifier extends javax.net.ssl.HostnameVerifier {
               cpe.printStackTrace();
           }
           if (c != null) {
-              Iterator it = c.iterator();
+              Iterator<List<?>> it = c.iterator();
               while (it.hasNext()) {
-                  List list = (List) it.next();
+                  List<?> list = it.next();
                   int type = ((Integer) list.get(0)).intValue();
                   // If type is 2, then we've got a dNSName
                   if (type == 2) {
