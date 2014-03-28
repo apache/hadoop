@@ -269,6 +269,9 @@ Release 2.4.0 - UNRELEASED
     MAPREDUCE-5805. Fixed MapReduce JobHistory encoding of queue-name to escape
     hyphens and thus avoid parsing errors. (Akira AJISAKA via vinodkv)
 
+    MAPREDUCE-5810. Removed the faulty and failing streaming test
+    TestStreamingTaskLog. (Akira Ajisaka via vinodkv)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
