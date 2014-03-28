@@ -41,6 +41,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6162. Format strings should use platform independent line separator.
     (suresh)
 
+    HDFS-6156. Simplify the JMX API that provides snapshot information.
+    (wheat9)
+
 Release 2.4.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES

@@ -176,16 +176,15 @@ public class SnapshottableDirectoryStatus {
     private final String owner;
     private final String group;
 
-    public Bean(SnapshottableDirectoryStatus s) {
-      this.path = s.getFullPath().toString();
-      this.snapshotNumber = s.getSnapshotNumber();
-      this.snapshotQuota = s.getSnapshotQuota();
-      this.modificationTime = s.getDirStatus().getModificationTime();
-      this.permission =
-          Short.valueOf(Integer.toOctalString(
-              s.getDirStatus().getPermission().toShort()));
-      this.owner = s.getDirStatus().getOwner();
-      this.group = s.getDirStatus().getGroup();
+    public Bean(String path, int snapshotNumber, int snapshotQuota,
+        long modificationTime, short permission, String owner, String group) {
+      this.path = path;
+      this.snapshotNumber = snapshotNumber;
+      this.snapshotQuota = snapshotQuota;
+      this.modificationTime = modificationTime;
+      this.permission = permission;
+      this.owner = owner;
+      this.group = group;
     }
 
     public String getPath() {

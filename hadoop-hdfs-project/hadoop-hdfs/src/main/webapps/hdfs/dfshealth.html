@@ -189,7 +189,7 @@
 
 <script type="text/x-dust-template" id="tmpl-snapshot">
 <div class="page-header"><h1>Snapshot Summary</h1></div>
-<div class="page-header"><h1><small>Snapshottable directories: {@size key=SnapshotStats.directory}{/size}</small></div>
+<div class="page-header"><h1><small>Snapshottable directories: {@size key=SnapshottableDirectories}{/size}</small></div>
 <small>
 <table class="table">
   <thead>
@@ -203,7 +203,7 @@
       <th>Group</th>
     </tr>
   </thead>
-  {#SnapshotStats.directory}
+  {#SnapshottableDirectories}
   <tr>
     <td>{path}</td>
     <td>{snapshotNumber}</td>
@@ -213,11 +213,11 @@
     <td>{owner}</td>
     <td>{group}</td>
   </tr>
-  {/SnapshotStats.directory}
+  {/SnapshottableDirectories}
 </table>
 </small>
 
-<div class="page-header"><h1><small>Snapshotted directories: {@size key=SnapshotStats.snapshots}{/size}</small></div>
+<div class="page-header"><h1><small>Snapshotted directories: {@size key=Snapshots}{/size}</small></div>
 
 <small>
 <table class="table">
@@ -228,13 +228,13 @@
       <th>Modification Time</th>
     </tr>
   </thead>
-  {#SnapshotStats.snapshots}
+  {#Snapshots}
   <tr>
     <td>{snapshotID}</td>
     <td>{snapshotDirectory}</td>
     <td>{modificationTime|date_tostring}</td>
   </tr>
-  {/SnapshotStats.snapshots}
+  {/Snapshots}
 </table>
 </small>
 </script>
