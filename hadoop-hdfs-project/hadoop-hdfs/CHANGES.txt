@@ -4,6 +4,10 @@ Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
+    HDFS-6168. Remove a deprecated constructor and the deprecated methods reportChecksumFailure,
+    getDelegationToken(Text), renewDelegationToken and cancelDelegationToken from
+    DistributedFileSystem.  (szetszwo)
+
   NEW FEATURES
 
   IMPROVEMENTS
