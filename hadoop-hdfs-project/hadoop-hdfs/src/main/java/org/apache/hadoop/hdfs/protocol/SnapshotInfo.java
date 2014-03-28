@@ -86,10 +86,11 @@ public class SnapshotInfo {
     private final String snapshotDirectory;
     private final long modificationTime;
 
-    public Bean(Snapshot s) {
-      this.snapshotID = s.getRoot().getLocalName();
-      this.snapshotDirectory = s.getRoot().getFullPathName();
-      this.modificationTime = s.getRoot().getModificationTime();
+    public Bean(String snapshotID, String snapshotDirectory,
+        long modificationTime) {
+      this.snapshotID = snapshotID;
+      this.snapshotDirectory = snapshotDirectory;
+      this.modificationTime = modificationTime;
     }
 
     public String getSnapshotID() {

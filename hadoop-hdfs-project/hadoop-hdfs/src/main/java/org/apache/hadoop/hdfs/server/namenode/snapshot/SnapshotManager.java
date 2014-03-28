@@ -387,44 +387,43 @@ public class SnapshotManager implements SnapshotStatsMXBean {
   }
 
   @Override // SnapshotStatsMXBean
-  public SnapshotDirectoryMXBean getSnapshotStats() {
-    SnapshottableDirectoryStatus[] stats = getSnapshottableDirListing(null);
-    if (stats == null) {
-      return null;
+  public SnapshottableDirectoryStatus.Bean[]
+    getSnapshottableDirectories() {
+    List<SnapshottableDirectoryStatus.Bean> beans =
+        new ArrayList<SnapshottableDirectoryStatus.Bean>();
+    for (INodeDirectorySnapshottable d : getSnapshottableDirs()) {
+      beans.add(toBean(d));
     }
-    return new SnapshotDirectoryMXBean(stats);
+    return beans.toArray(new SnapshottableDirectoryStatus.Bean[beans.size()]);
   }
 
-  public class SnapshotDirectoryMXBean {
-    private List<SnapshottableDirectoryStatus.Bean> directory =
-        new ArrayList<SnapshottableDirectoryStatus.Bean>();
-    private List<SnapshotInfo.Bean> snapshots =
-        new ArrayList<SnapshotInfo.Bean>();
-
-    public SnapshotDirectoryMXBean(SnapshottableDirectoryStatus[] stats) {
-      set(stats);
-    }
-
-    public void set(SnapshottableDirectoryStatus[] stats) {
-      for (SnapshottableDirectoryStatus s : stats) {
-        directory.add(new SnapshottableDirectoryStatus.Bean(s));
-        try {
-          for (Snapshot shot : getSnapshottableRoot(
-              s.getFullPath().toString()).getSnapshotList()) {
-            snapshots.add(new SnapshotInfo.Bean(shot));
-          }
-        } catch (IOException e) {
-          continue;
-        }
+  @Override // SnapshotStatsMXBean
+  public SnapshotInfo.Bean[] getSnapshots() {
+    List<SnapshotInfo.Bean> beans = new ArrayList<SnapshotInfo.Bean>();
+    for (INodeDirectorySnapshottable d : getSnapshottableDirs()) {
+      for (Snapshot s : d.getSnapshotList()) {
+        beans.add(toBean(s));
       }
     }
+    return beans.toArray(new SnapshotInfo.Bean[beans.size()]);
+  }
 
-    public List<SnapshottableDirectoryStatus.Bean> getDirectory() {
-      return directory;
-    }
+  public static SnapshottableDirectoryStatus.Bean toBean(
+      INodeDirectorySnapshottable d) {
+    return new SnapshottableDirectoryStatus.Bean(
+        d.getFullPathName(),
+        d.getNumSnapshots(),
+        d.getSnapshotQuota(),
+        d.getModificationTime(),
+        Short.valueOf(Integer.toOctalString(
+            d.getFsPermissionShort())),
+        d.getUserName(),
+        d.getGroupName());
+  }
 
-    public List<SnapshotInfo.Bean> getSnapshots() {
-      return snapshots;
-    }
+  public static SnapshotInfo.Bean toBean(Snapshot s) {
+    return new SnapshotInfo.Bean(
+        s.getRoot().getLocalName(), s.getRoot().getFullPathName(),
+        s.getRoot().getModificationTime());
   }
 }
