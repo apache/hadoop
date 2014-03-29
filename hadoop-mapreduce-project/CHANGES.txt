@@ -130,6 +130,10 @@ Release 2.4.0 - UNRELEASED
     MAPREDUCE-5810. Removed the faulty and failing streaming test
     TestStreamingTaskLog. (Akira Ajisaka via vinodkv)
 
+    MAPREDUCE-5813. Fix YarnChild to explicitly load job.xml from the
+    local-filesystem, rather than rely on the classpath. (Gera Shegalov via
+    acmurthy) 
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

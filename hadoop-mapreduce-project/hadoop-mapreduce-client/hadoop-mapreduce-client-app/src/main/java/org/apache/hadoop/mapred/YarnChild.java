@@ -76,10 +76,9 @@ class YarnChild {
     Thread.setDefaultUncaughtExceptionHandler(new YarnUncaughtExceptionHandler());
     LOG.debug("Child starting");
 
-    final JobConf job = new JobConf();
+    final JobConf job = new JobConf(MRJobConfig.JOB_CONF_FILE);
     // Initing with our JobConf allows us to avoid loading confs twice
     Limits.init(job);
-    job.addResource(MRJobConfig.JOB_CONF_FILE);
     UserGroupInformation.setConfiguration(job);
 
     String host = args[0];
