@@ -273,6 +273,85 @@ public class TestWinUtils {
     assertTrue(aExe.delete());
   }
 
+  /** Validate behavior of chmod commands on directories on Windows. */
+  @Test (timeout = 30000)
+  public void testBasicChmodOnDir() throws IOException {
+    // Validate that listing a directory with no read permission fails
+    File a = new File(TEST_DIR, "a");
+    File b = new File(a, "b");
+    a.mkdirs();
+    assertTrue(b.createNewFile());
+
+    // Remove read permissions on directory a
+    chmod("300", a);
+    String[] files = a.list();
+    assertTrue("Listing a directory without read permission should fail",
+        null == files);
+
+    // restore permissions
+    chmod("700", a);
+    // validate that the directory can be listed now
+    files = a.list();
+    assertEquals("b", files[0]);
+
+    // Remove write permissions on the directory and validate the
+    // behavior for adding, deleting and renaming files
+    chmod("500", a);
+    File c = new File(a, "c");
+ 
+    try {
+      // Adding a new file will fail as expected because the
+      // FILE_WRITE_DATA/FILE_ADD_FILE privilege is denied on
+      // the dir.
+      c.createNewFile();
+      assertFalse("writeFile should have failed!", true);
+    } catch (IOException ex) {
+      LOG.info("Expected: Failed to create a file when directory "
+          + "permissions are 577");
+    }
+
+    // Deleting a file will succeed even if write permissions are not present
+    // on the parent dir. Check the following link for additional details:
+    // http://support.microsoft.com/kb/238018
+    assertTrue("Special behavior: deleting a file will succeed on Windows "
+        + "even if a user does not have write permissions on the parent dir",
+        b.delete());
+
+    assertFalse("Renaming a file should fail on the dir where a user does "
+        + "not have write permissions", b.renameTo(new File(a, "d")));
+
+    // restore permissions
+    chmod("700", a);
+
+    // Make sure adding new files and rename succeeds now
+    assertTrue(c.createNewFile());
+    File d = new File(a, "d");
+    assertTrue(c.renameTo(d));
+    // at this point in the test, d is the only remaining file in directory a
+
+    // Removing execute permissions does not have the same behavior on
+    // Windows as on Linux. Adding, renaming, deleting and listing files
+    // will still succeed. Windows default behavior is to bypass directory
+    // traverse checking (BYPASS_TRAVERSE_CHECKING privilege) for all users.
+    // See the following link for additional details:
+    // http://msdn.microsoft.com/en-us/library/windows/desktop/aa364399(v=vs.85).aspx
+    chmod("600", a);
+
+    // validate directory listing
+    files = a.list();
+    assertEquals("d", files[0]);
+    // validate delete
+    assertTrue(d.delete());
+    // validate add
+    File e = new File(a, "e");
+    assertTrue(e.createNewFile());
+    // validate rename
+    assertTrue(e.renameTo(new File(a, "f")));
+
+    // restore permissions
+    chmod("700", a);
+  }
+
   @Test (timeout = 30000)
   public void testChmod() throws IOException {
     testChmodInternal("7", "-------rwx");
