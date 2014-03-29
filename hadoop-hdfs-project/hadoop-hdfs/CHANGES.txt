@@ -496,6 +496,9 @@ Release 2.4.0 - UNRELEASED
     HDFS-6163. Fix a minor bug in the HA upgrade document. (Fengdong Yu via
     jing9)
 
+    HDFS-6166. Change Balancer socket read timeout to 20 minutes and add
+    10 seconds delay after error.  (Nathan Roberts via szetszwo)
+
   BREAKDOWN OF HDFS-5698 SUBTASKS AND RELATED JIRAS
 
     HDFS-5717. Save FSImage header in protobuf. (Haohui Mai via jing9)
