@@ -33,6 +33,8 @@ import junit.framework.Assert;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.ClientBaseWithFixes;
 import org.apache.hadoop.ha.HAServiceProtocol;
+import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.CancelDelegationTokenResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportRequest;
@@ -67,14 +69,18 @@ import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationResponse;
+import org.apache.hadoop.yarn.api.records.AMCommand;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptReport;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.ContainerState;
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
@@ -82,6 +88,7 @@ import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.api.records.YarnApplicationAttemptState;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
@@ -96,6 +103,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.AdminService;
+import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
 import org.apache.hadoop.yarn.server.resourcemanager.ClientRMService;
 import org.apache.hadoop.yarn.server.resourcemanager.NMLivelinessMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.NodesListManager;
@@ -257,11 +265,13 @@ public abstract class ProtocolHATestBase extends ClientBaseWithFixes{
   }
 
   protected void startHACluster(int numOfNMs, boolean overrideClientRMService,
-      boolean overrideRTS) throws Exception {
+      boolean overrideRTS, boolean overrideApplicationMasterService)
+      throws Exception {
     conf.setBoolean(YarnConfiguration.AUTO_FAILOVER_ENABLED, false);
     cluster =
         new MiniYARNClusterForHATesting(TestRMFailover.class.getName(), 2,
-            numOfNMs, 1, 1, false, overrideClientRMService, overrideRTS);
+            numOfNMs, 1, 1, false, overrideClientRMService, overrideRTS,
+            overrideApplicationMasterService);
     cluster.resetStartFailoverFlag(false);
     cluster.init(conf);
     cluster.start();
@@ -285,17 +295,19 @@ public abstract class ProtocolHATestBase extends ClientBaseWithFixes{
 
     private boolean overrideClientRMService;
     private boolean overrideRTS;
+    private boolean overrideApplicationMasterService;
     private final AtomicBoolean startFailover = new AtomicBoolean(false);
     private final AtomicBoolean failoverTriggered = new AtomicBoolean(false);
 
     public MiniYARNClusterForHATesting(String testName,
         int numResourceManagers, int numNodeManagers, int numLocalDirs,
         int numLogDirs, boolean enableAHS, boolean overrideClientRMService,
-        boolean overrideRTS) {
+        boolean overrideRTS, boolean overrideApplicationMasterService) {
       super(testName, numResourceManagers, numNodeManagers, numLocalDirs,
           numLogDirs, enableAHS);
       this.overrideClientRMService = overrideClientRMService;
       this.overrideRTS = overrideRTS;
+      this.overrideApplicationMasterService = overrideApplicationMasterService;
     }
 
     public boolean getStartFailoverFlag() {
@@ -323,6 +335,11 @@ public abstract class ProtocolHATestBase extends ClientBaseWithFixes{
       }
       if (count >= maximumWaittingTime) {
         return false;
+      }
+      try {
+        Thread.sleep(100);
+      } catch (InterruptedException e) {
+        // DO NOTHING
       }
       return true;
     }
@@ -353,6 +370,14 @@ public abstract class ProtocolHATestBase extends ClientBaseWithFixes{
                 this.rmContext.getNMTokenSecretManager());
           }
           return super.createResourceTrackerService();
+        }
+        @Override
+        protected ApplicationMasterService createApplicationMasterService() {
+          if (overrideApplicationMasterService) {
+            return new CustomedApplicationMasterService(this.rmContext,
+                this.scheduler);
+          }
+          return super.createApplicationMasterService();
         }
       };
     }
@@ -716,6 +741,32 @@ public abstract class ProtocolHATestBase extends ClientBaseWithFixes{
         Assert.assertTrue(waittingForFailOver());
         return super.nodeHeartbeat(request);
       }
+    }
+
+    private class CustomedApplicationMasterService extends
+        ApplicationMasterService {
+      public CustomedApplicationMasterService(RMContext rmContext,
+          YarnScheduler scheduler) {
+        super(rmContext, scheduler);
+      }
+
+      @Override
+      public AllocateResponse allocate(AllocateRequest request)
+          throws YarnException, IOException {
+        resetStartFailoverFlag(true);
+        // make sure failover has been triggered
+        Assert.assertTrue(waittingForFailOver());
+        return createFakeAllocateResponse();
+      }
+
+    }
+
+    public AllocateResponse createFakeAllocateResponse() {
+      return AllocateResponse.newInstance(-1,
+          new ArrayList<ContainerStatus>(),
+          new ArrayList<Container>(), new ArrayList<NodeReport>(),
+          Resource.newInstance(1024, 2), AMCommand.AM_RESYNC, 1,
+          null, new ArrayList<NMToken>());
     }
   }
 }

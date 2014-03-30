@@ -22,6 +22,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.io.retry.AtMostOnce;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
@@ -162,6 +163,7 @@ public interface ApplicationMasterProtocol {
    */
   @Public
   @Stable
+  @AtMostOnce
   public AllocateResponse allocate(AllocateRequest request) 
   throws YarnException, IOException;
 }
