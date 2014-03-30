@@ -596,6 +596,9 @@ Release 2.4.0 - UNRELEASED
     YARN-1873. Fixed TestDistributedShell failure when the test cases are out of
     order. (Mit Desai via zjshen)
 
+    YARN-1893. Mark AtMostOnce annotation to ApplicationMasterProtocol#allocate.
+    (Xuan Gong via jianhe)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

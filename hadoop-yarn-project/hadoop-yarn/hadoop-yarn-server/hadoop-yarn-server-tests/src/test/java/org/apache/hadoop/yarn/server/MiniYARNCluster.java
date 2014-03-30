@@ -739,4 +739,8 @@ public class MiniYARNCluster extends CompositeService {
       }
     };
   }
+
+  public int getNumOfResourceManager() {
+    return this.resourceManagers.length;
+  }
 }
