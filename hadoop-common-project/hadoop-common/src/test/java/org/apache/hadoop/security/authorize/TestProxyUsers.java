@@ -19,6 +19,7 @@ package org.apache.hadoop.security.authorize;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collection;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -222,6 +223,41 @@ public class TestProxyUsers {
     assertNotAuthorized(proxyUserUgi, "1.2.3.4");
     assertNotAuthorized(proxyUserUgi, "1.2.3.5");
   }
+
+  @Test
+  public void testWithDuplicateProxyGroups() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set(
+      ProxyUsers.getProxySuperuserGroupConfKey(REAL_USER_NAME),
+      StringUtils.join(",", Arrays.asList(GROUP_NAMES,GROUP_NAMES)));
+    conf.set(
+      ProxyUsers.getProxySuperuserIpConfKey(REAL_USER_NAME),
+      PROXY_IP);
+    ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
+    
+    Collection<String> groupsToBeProxied = ProxyUsers.getProxyGroups().get(
+        ProxyUsers.getProxySuperuserGroupConfKey(REAL_USER_NAME));
+    
+    assertEquals (1,groupsToBeProxied.size());
+  }
+  
+  @Test
+  public void testWithDuplicateProxyHosts() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set(
+      ProxyUsers.getProxySuperuserGroupConfKey(REAL_USER_NAME),
+      StringUtils.join(",", Arrays.asList(GROUP_NAMES)));
+    conf.set(
+      ProxyUsers.getProxySuperuserIpConfKey(REAL_USER_NAME),
+      StringUtils.join(",", Arrays.asList(PROXY_IP,PROXY_IP)));
+    ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
+    
+    Collection<String> hosts = ProxyUsers.getProxyHosts().get(
+        ProxyUsers.getProxySuperuserIpConfKey(REAL_USER_NAME));
+    
+    assertEquals (1,hosts.size());
+  }
+
 
   private void assertNotAuthorized(UserGroupInformation proxyUgi, String host) {
     try {

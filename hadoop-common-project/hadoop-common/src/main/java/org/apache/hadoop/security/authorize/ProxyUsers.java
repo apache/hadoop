@@ -70,7 +70,7 @@ public class ProxyUsers {
     String regex = CONF_HADOOP_PROXYUSER_RE+"[^.]*\\"+CONF_GROUPS;
     Map<String,String> allMatchKeys = conf.getValByRegex(regex);
     for(Entry<String, String> entry : allMatchKeys.entrySet()) {
-      Collection<String> groups = StringUtils.getStringCollection(entry.getValue());
+      Collection<String> groups = StringUtils.getTrimmedStringCollection(entry.getValue());
       proxyGroups.put(entry.getKey(), groups );
       //cache the groups. This is needed for NetGroups
       Groups.getUserToGroupsMappingService(conf).cacheGroupsAdd(
@@ -82,7 +82,7 @@ public class ProxyUsers {
     allMatchKeys = conf.getValByRegex(regex);
     for(Entry<String, String> entry : allMatchKeys.entrySet()) {
       proxyHosts.put(entry.getKey(),
-          StringUtils.getStringCollection(entry.getValue()));
+          StringUtils.getTrimmedStringCollection(entry.getValue()));
     }
     
     init = true;

@@ -28,9 +28,11 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -351,12 +353,15 @@ public class StringUtils {
 
   /**
    * Splits a comma separated value <code>String</code>, trimming leading and trailing whitespace on each value.
+   * Duplicate and empty values are removed.
    * @param str a comma separated <String> with values
    * @return a <code>Collection</code> of <code>String</code> values
    */
   public static Collection<String> getTrimmedStringCollection(String str){
-    return new ArrayList<String>(
+    Set<String> set = new LinkedHashSet<String>(
       Arrays.asList(getTrimmedStrings(str)));
+    set.remove("");
+    return set;
   }
   
   /**
