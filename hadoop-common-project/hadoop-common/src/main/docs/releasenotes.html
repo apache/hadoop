@@ -1,4 +1,2367 @@
 <META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Hadoop  2.4.0 Release Notes</title>
+<STYLE type="text/css">
+	H1 {font-family: sans-serif}
+	H2 {font-family: sans-serif; margin-left: 7mm}
+	TABLE {margin-left: 7mm}
+</STYLE>
+</head>
+<body>
+<h1>Hadoop  2.4.0 Release Notes</h1>
+These release notes include new developer and user-facing incompatibilities, features, and major improvements. 
+<a name="changes"/>
+<h2>Changes since Hadoop 2.3.0</h2>
+<ul>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1893">YARN-1893</a>.
+     Blocker sub-task reported by Xuan Gong and fixed by Xuan Gong (resourcemanager)<br>
+     <b>Make ApplicationMasterProtocol#allocate AtMostOnce</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1891">YARN-1891</a>.
+     Minor task reported by Varun Vasudev and fixed by Varun Vasudev <br>
+     <b>Document NodeManager health-monitoring</b><br>
+     <blockquote>Start documenting node manager starting with the health monitoring.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1873">YARN-1873</a>.
+     Major bug reported by Mit Desai and fixed by Mit Desai <br>
+     <b>TestDistributedShell#testDSShell fails when the test cases are out of order</b><br>
+     <blockquote>testDSShell fails when the tests are run in random order. I see a cleanup issue here.
+
+{noformat}
+Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 72.222 sec &lt;&lt;&lt; FAILURE! - in org.apache.hadoop.yarn.applications.distributedshell.TestDistributedShell
+testOrder(org.apache.hadoop.yarn.applications.distributedshell.TestDistributedShell)  Time elapsed: 44.127 sec  &lt;&lt;&lt; FAILURE!
+java.lang.AssertionError: expected:&lt;1&gt; but was:&lt;6&gt;
+	at org.junit.Assert.fail(Assert.java:93)
+	at org.junit.Assert.failNotEquals(Assert.java:647)
+	at org.junit.Assert.assertEquals(Assert.java:128)
+	at org.junit.Assert.assertEquals(Assert.java:472)
+	at org.junit.Assert.assertEquals(Assert.java:456)
+	at org.apache.hadoop.yarn.applications.distributedshell.TestDistributedShell.testDSShell(TestDistributedShell.java:204)
+	at org.apache.hadoop.yarn.applications.distributedshell.TestDistributedShell.testOrder(TestDistributedShell.java:134)
+
+
+Results :
+
+Failed tests: 
+  TestDistributedShell.testOrder:134-&gt;testDSShell:204 expected:&lt;1&gt; but was:&lt;6&gt;
+{noformat}
+
+The Line numbers will be little deviated because I was trying to reproduce the error by running the tests in specific order. But the Line that causes the assert fail is {{Assert.assertEquals(1, entitiesAttempts.getEntities().size());}}</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1867">YARN-1867</a>.
+     Blocker bug reported by Karthik Kambatla and fixed by Vinod Kumar Vavilapalli (resourcemanager)<br>
+     <b>NPE while fetching apps via the REST API</b><br>
+     <blockquote>We ran into the following NPE when fetching applications using the REST API:
+
+{noformat}
+INTERNAL_SERVER_ERROR
+java.lang.NullPointerException
+at org.apache.hadoop.yarn.server.security.ApplicationACLsManager.checkAccess(ApplicationACLsManager.java:104)
+at org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebServices.hasAccess(RMWebServices.java:123)
+at org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebServices.getApps(RMWebServices.java:418)
+{noformat}</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1866">YARN-1866</a>.
+     Blocker bug reported by Arpit Gupta and fixed by Jian He <br>
+     <b>YARN RM fails to load state store with delegation token parsing error</b><br>
+     <blockquote>In our secure Nightlies we saw exceptions in the RM log where it failed to parse the deletegation token.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1863">YARN-1863</a>.
+     Blocker test reported by Ted Yu and fixed by Xuan Gong <br>
+     <b>TestRMFailover fails with 'AssertionError: null' </b><br>
+     <blockquote>This happened in Hadoop-Yarn-trunk - Build # 516 and can be reproduced:
+{code}
+testWebAppProxyInStandAloneMode(org.apache.hadoop.yarn.client.TestRMFailover)  Time elapsed: 5.834 sec  &lt;&lt;&lt; FAILURE!
+java.lang.AssertionError: null
+	at org.junit.Assert.fail(Assert.java:92)
+	at org.junit.Assert.assertTrue(Assert.java:43)
+	at org.junit.Assert.assertTrue(Assert.java:54)
+	at org.apache.hadoop.yarn.client.TestRMFailover.verifyExpectedException(TestRMFailover.java:250)
+	at org.apache.hadoop.yarn.client.TestRMFailover.testWebAppProxyInStandAloneMode(TestRMFailover.java:216)
+
+testEmbeddedWebAppProxy(org.apache.hadoop.yarn.client.TestRMFailover)  Time elapsed: 5.341 sec  &lt;&lt;&lt; FAILURE!
+java.lang.AssertionError: null
+	at org.junit.Assert.fail(Assert.java:92)
+	at org.junit.Assert.assertTrue(Assert.java:43)
+	at org.junit.Assert.assertTrue(Assert.java:54)
+	at org.apache.hadoop.yarn.client.TestRMFailover.verifyExpectedException(TestRMFailover.java:250)
+	at org.apache.hadoop.yarn.client.TestRMFailover.testEmbeddedWebAppProxy(TestRMFailover.java:241)
+{code}</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1859">YARN-1859</a>.
+     Major bug reported by Zhijie Shen and fixed by Zhijie Shen <br>
+     <b>WebAppProxyServlet will throw ApplicationNotFoundException if the app is no longer cached in RM</b><br>
+     <blockquote>WebAppProxyServlet checks null to determine whether the application is not found or not.
+{code}
+ ApplicationReport applicationReport = getApplicationReport(id);
+      if(applicationReport == null) {
+        LOG.warn(req.getRemoteUser()+" Attempting to access "+id+
+            " that was not found");
+{code}
+However, WebAppProxyServlet calls AppReportFetcher, which consequently calls ClientRMService. When application is not found, ClientRMService throws ApplicationNotFoundException. Therefore, in WebAppProxyServlet, the following logic to create the tracking url for a non-cached app will no longer be in use.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1855">YARN-1855</a>.
+     Critical test reported by Ted Yu and fixed by Zhijie Shen <br>
+     <b>TestRMFailover#testRMWebAppRedirect fails in trunk</b><br>
+     <blockquote>From https://builds.apache.org/job/Hadoop-Yarn-trunk/514/console :
+{code}
+testRMWebAppRedirect(org.apache.hadoop.yarn.client.TestRMFailover)  Time elapsed: 5.39 sec  &lt;&lt;&lt; ERROR!
+java.lang.NullPointerException: null
+	at org.apache.hadoop.yarn.client.TestRMFailover.testRMWebAppRedirect(TestRMFailover.java:269)
+{code}</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1854">YARN-1854</a>.
+     Blocker test reported by Mit Desai and fixed by Rohith <br>
+     <b>Race condition in TestRMHA#testStartAndTransitions</b><br>
+     <blockquote>There is race in test.
+TestRMHA#testStartAndTransitions calls verifyClusterMetrics() immediately after application is submitted, but QueueMetrics are updated after app attempt is sheduled. Calling verifyClusterMetrics() without verifying app attempt is in Scheduled state cause random test failures.
+ MockRM.submitApp() return when application is in ACCEPTED, but QueueMetrics updated at APP_ATTEMPT_ADDED event. There is high chance of getting queue metrics before app attempt is Scheduled.
+
+
+
+
+{noformat}
+testStartAndTransitions(org.apache.hadoop.yarn.server.resourcemanager.TestRMHA)  Time elapsed: 5.883 sec  &lt;&lt;&lt; FAILURE!
+java.lang.AssertionError: Incorrect value for metric availableMB expected:&lt;2048&gt; but was:&lt;4096&gt;
+	at org.junit.Assert.fail(Assert.java:93)
+	at org.junit.Assert.failNotEquals(Assert.java:647)
+	at org.junit.Assert.assertEquals(Assert.java:128)
+	at org.junit.Assert.assertEquals(Assert.java:472)
+	at org.apache.hadoop.yarn.server.resourcemanager.TestRMHA.assertMetric(TestRMHA.java:396)
+	at org.apache.hadoop.yarn.server.resourcemanager.TestRMHA.verifyClusterMetrics(TestRMHA.java:387)
+	at org.apache.hadoop.yarn.server.resourcemanager.TestRMHA.testStartAndTransitions(TestRMHA.java:160)
+
+
+Results :
+
+Failed tests: 
+  TestRMHA.testStartAndTransitions:160-&gt;verifyClusterMetrics:387-&gt;assertMetric:396 Incorrect value for metric availableMB expected:&lt;2048&gt; but was:&lt;4096&gt;
+{noformat}</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1852">YARN-1852</a>.
+     Major bug reported by Rohith and fixed by Rohith (resourcemanager)<br>
+     <b>Application recovery throws InvalidStateTransitonException for FAILED and KILLED jobs</b><br>
+     <blockquote>Recovering for failed/killed application throw InvalidStateTransitonException.
+
+These are logged during recovery of applications.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1850">YARN-1850</a>.
+     Major sub-task reported by Zhijie Shen and fixed by Zhijie Shen <br>
+     <b>Make enabling timeline service configurable </b><br>
+     <blockquote>Like generic history service, we'd better to make enabling timeline service configurable, in case the timeline server is not up</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1849">YARN-1849</a>.
+     Blocker bug reported by Karthik Kambatla and fixed by Karthik Kambatla (resourcemanager)<br>
+     <b>NPE in ResourceTrackerService#registerNodeManager for UAM</b><br>
+     <blockquote>While running an UnmanagedAM on secure cluster, ran into an NPE on failover/restart. This is similar to YARN-1821. </blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1846">YARN-1846</a>.
+     Major bug reported by Robert Kanter and fixed by Robert Kanter <br>
+     <b>TestRM#testNMTokenSentForNormalContainer assumes CapacityScheduler</b><br>
+     <blockquote>TestRM.testNMTokenSentForNormalContainer assumes the CapacityScheduler is being used and tries to do:
+{code:java}
+CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+{code}
+
+This throws a {{ClassCastException}} if you're not using the CapacityScheduler.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1839">YARN-1839</a>.
+     Critical bug reported by Tassapol Athiapinya and fixed by Jian He (applications , capacityscheduler)<br>
+     <b>Capacity scheduler preempts an AM out. AM attempt 2 fails to launch task container with SecretManager$InvalidToken: No NMToken sent</b><br>
+     <blockquote>Use single-node cluster. Turn on capacity scheduler preemption. Run MR sleep job as app 1. Take entire cluster. Run MR sleep job as app 2. Preempt app1 out. Wait till app 2 finishes. App 1 AM attempt 2 will start. It won't be able to launch a task container with this error stack trace in AM logs:
+
+{code}
+2014-03-13 20:13:50,254 INFO [AsyncDispatcher event handler] org.apache.hadoop.mapreduce.v2.app.job.impl.TaskAttemptImpl: Diagnostics report from attempt_1394741557066_0001_m_000000_1009: Container launch failed for container_1394741557066_0001_02_000021 : org.apache.hadoop.security.token.SecretManager$InvalidToken: No NMToken sent for &lt;host&gt;:45454
+	at org.apache.hadoop.yarn.client.api.impl.ContainerManagementProtocolProxy$ContainerManagementProtocolProxyData.newProxy(ContainerManagementProtocolProxy.java:206)
+	at org.apache.hadoop.yarn.client.api.impl.ContainerManagementProtocolProxy$ContainerManagementProtocolProxyData.&lt;init&gt;(ContainerManagementProtocolProxy.java:196)
+	at org.apache.hadoop.yarn.client.api.impl.ContainerManagementProtocolProxy.getProxy(ContainerManagementProtocolProxy.java:117)
+	at org.apache.hadoop.mapreduce.v2.app.launcher.ContainerLauncherImpl.getCMProxy(ContainerLauncherImpl.java:403)
+	at org.apache.hadoop.mapreduce.v2.app.launcher.ContainerLauncherImpl$Container.launch(ContainerLauncherImpl.java:138)
+	at org.apache.hadoop.mapreduce.v2.app.launcher.ContainerLauncherImpl$EventProcessor.run(ContainerLauncherImpl.java:369)
+	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1145)
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:615)
+	at java.lang.Thread.run(Thread.java:722)
+{code}
+
+</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1838">YARN-1838</a>.
+     Major sub-task reported by Srimanth Gunturi and fixed by Billie Rinaldi <br>
+     <b>Timeline service getEntities API should provide ability to get entities from given id</b><br>
+     <blockquote>To support pagination, we need ability to get entities from a certain ID by providing a new param called {{fromid}}.
+
+For example on a page of 10 jobs, our first call will be like
+[http://server:8188/ws/v1/timeline/HIVE_QUERY_ID?fields=events,primaryfilters,otherinfo&amp;limit=11]
+When user hits next, we would like to call
+[http://server:8188/ws/v1/timeline/HIVE_QUERY_ID?fields=events,primaryfilters,otherinfo&amp;fromid=JID11&amp;limit=11]
+and continue on for further _Next_ clicks
+
+On hitting back, we will make similar calls for previous items
+[http://server:8188/ws/v1/timeline/HIVE_QUERY_ID?fields=events,primaryfilters,otherinfo&amp;fromid=JID1&amp;limit=11]
+
+{{fromid}} should be inclusive of the id given.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1833">YARN-1833</a>.
+     Major bug reported by Mit Desai and fixed by Mit Desai <br>
+     <b>TestRMAdminService Fails in trunk and branch-2 : Assert Fails due to different count of UserGroups for currentUser()</b><br>
+     <blockquote>In the test testRefreshUserToGroupsMappingsWithFileSystemBasedConfigurationProvider, the following assert is not needed.
+
+{code}
+Assert.assertTrue(groupWithInit.size() != groupBefore.size());
+{code}
+
+As the assert takes the default groups for groupWithInit (which in my case are users, sshusers and wheel), it fails as the size of both groupWithInit and groupBefore are same.
+
+I do not think we need to have this assert here. Moreover we are also checking that the groupInit does not have the userGroups that are in the groupBefore so removing the assert may not be harmful.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1830">YARN-1830</a>.
+     Major bug reported by Karthik Kambatla and fixed by Zhijie Shen (resourcemanager)<br>
+     <b>TestRMRestart.testQueueMetricsOnRMRestart failure</b><br>
+     <blockquote>TestRMRestart.testQueueMetricsOnRMRestart fails intermittently as follows (reported on YARN-1815):
+
+{noformat}
+java.lang.AssertionError: expected:&lt;37&gt; but was:&lt;38&gt;
+...
+	at org.apache.hadoop.yarn.server.resourcemanager.TestRMRestart.assertQueueMetrics(TestRMRestart.java:1728)
+	at org.apache.hadoop.yarn.server.resourcemanager.TestRMRestart.testQueueMetricsOnRMRestart(TestRMRestart.java:1682)
+{noformat}</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1824">YARN-1824</a>.
+     Major bug reported by Jian He and fixed by Jian He <br>
+     <b>Make Windows client work with Linux/Unix cluster</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1821">YARN-1821</a>.
+     Blocker sub-task reported by Karthik Kambatla and fixed by Karthik Kambatla (resourcemanager)<br>
+     <b>NPE on registerNodeManager if the request has containers for UnmanagedAMs</b><br>
+     <blockquote>On RM restart (or failover), NM re-registers with the RM. If it was running containers for Unmanaged AMs, it runs into the following NPE:
+
+{noformat}
+Caused by: org.apache.hadoop.ipc.RemoteException(java.lang.NullPointerException): java.lang.NullPointerException
+        at org.apache.hadoop.yarn.server.resourcemanager.ResourceTrackerService.registerNodeManager(ResourceTrackerService.java:213)
+        at org.apache.hadoop.yarn.server.api.impl.pb.service.ResourceTrackerPBServiceImpl.registerNodeManager(ResourceTrackerPBServiceImpl.java:54)
+{noformat}</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1816">YARN-1816</a>.
+     Major sub-task reported by Arpit Gupta and fixed by Jian He <br>
+     <b>Succeeded application remains in accepted after RM restart</b><br>
+     <blockquote>{code}
+2014-03-10 18:07:31,944|beaver.machine|INFO|Application-Id	    Application-Name	    Application-Type	      User	     Queue	             State	       Final-State	       Progress	                       Tracking-URL
+2014-03-10 18:07:31,945|beaver.machine|INFO|application_1394449508064_0008	test_mapred_ha_multiple_job_nn-rm-1-min-5-jobs_1394449960-4	           MAPREDUCE	    hrt_qa	   default	          ACCEPTED	         SUCCEEDED	           100%	http://hostname:19888/jobhistory/job/job_1394449508064_0008
+2014-03-10 18:08:02,125|beaver.machine|INFO|RUNNING: /usr/bin/yarn application -list -appStates NEW,NEW_SAVING,SUBMITTED,ACCEPTED,RUNNING
+2014-03-10 18:08:03,198|beaver.machine|INFO|14/03/10 18:08:03 INFO client.ConfiguredRMFailoverProxyProvider: Failing over to rm2
+2014-03-10 18:08:03,238|beaver.machine|INFO|Total number of applications (application-types: [] and states: [NEW, NEW_SAVING, SUBMITTED, ACCEPTED, RUNNING]):1
+2014-03-10 18:08:03,239|beaver.machine|INFO|Application-Id	    Application-Name	    Application-Type	      User	     Queue	             State	       Final-State	       Progress	                       Tracking-URL
+2014-03-10 18:08:03,239|beaver.machine|INFO|application_1394449508064_0008	test_mapred_ha_multiple_job_nn-rm-1-min-5-jobs_1394449960-4	           MAPREDUCE	    hrt_qa	   default	          ACCEPTED	         SUCCEEDED	           100%	http://hostname:19888/jobhistory/job/job_1394449508064_0008
+2014-03-10 18:08:33,390|beaver.machine|INFO|RUNNING: /usr/bin/yarn application -list -appStates NEW,NEW_SAVING,SUBMITTED,ACCEPTED,RUNNING
+2014-03-10 18:08:34,437|beaver.machine|INFO|14/03/10 18:08:34 INFO client.ConfiguredRMFailoverProxyProvider: Failing over to rm2
+2014-03-10 18:08:34,477|beaver.machine|INFO|Total number of applications (application-types: [] and states: [NEW, NEW_SAVING, SUBMITTED, ACCEPTED, RUNNING]):1
+2014-03-10 18:08:34,477|beaver.machine|INFO|Application-Id	    Application-Name	    Application-Type	      User	     Queue	             State	       Final-State	       Progress	                       Tracking-URL
+2014-03-10 18:08:34,478|beaver.machine|INFO|application_1394449508064_0008	test_mapred_ha_multiple_job_nn-rm-1-min-5-jobs_1394449960-4	           MAPREDUCE	    hrt_qa	   default	          ACCEPTED	         SUCCEEDED	           100%	http://hostname:19888/jobhistory/job/job_1394449508064_0008
+2014-03-10 18:09:04,628|beaver.machine|INFO|RUNNING: /usr/bin/yarn application -list -appStates NEW,NEW_SAVING,SUBMITTED,ACCEPTED,RUNNING
+2014-03-10 18:09:05,688|beaver.machine|INFO|14/03/10 18:09:05 INFO client.ConfiguredRMFailoverProxyProvider: Failing over to rm2
+2014-03-10 18:09:05,728|beaver.machine|INFO|Total number of applications (application-types: [] and states: [NEW, NEW_SAVING, SUBMITTED, ACCEPTED, RUNNING]):1
+2014-03-10 18:09:05,728|beaver.machine|INFO|Application-Id	    Application-Name	    Application-Type	      User	     Queue	             State	       Final-State	       Progress	                       Tracking-URL
+2014-03-10 18:09:05,729|beaver.machine|INFO|application_1394449508064_0008	test_mapred_ha_multiple_job_nn-rm-1-min-5-jobs_1394449960-4	           MAPREDUCE	    hrt_qa	   default	          ACCEPTED	         SUCCEEDED	           100%	http://hostname:19888/jobhistory/job/job_1394449508064_0008
+2014-03-10 18:09:35,879|beaver.machine|INFO|RUNNING: /usr/bin/yarn application -list -appStates NEW,NEW_SAVING,SUBMITTED,ACCEPTED,RUNNING
+2014-03-10 18:09:36,951|beaver.machine|INFO|14/03/10 18:09:36 INFO client.ConfiguredRMFailoverProxyProvider: Failing over to rm2
+2014-03-10 18:09:36,992|beaver.machine|INFO|Total number of applications (application-types: [] and states: [NEW, NEW_SAVING, SUBMITTED, ACCEPTED, RUNNING]):1
+2014-03-10 18:09:36,993|beaver.machine|INFO|Application-Id	    Application-Name	    Application-Type	      User	     Queue	             State	       Final-State	       Progress	                       Tracking-URL
+2014-03-10 18:09:36,993|beaver.machine|INFO|application_1394449508064_0008	test_mapred_ha_multiple_job_nn-rm-1-min-5-jobs_1394449960-4	           MAPREDUCE	    hrt_qa	   default	          ACCEPTED	         SUCCEEDED	           100%	http://hostname:19888/jobhistory/job/job_1394449508064_0008
+2014-03-10 18:10:07,142|beaver.machine|INFO|RUNNING: /usr/bin/yarn application -list -appStates NEW,NEW_SAVING,SUBMITTED,ACCEPTED,RUNNING
+2014-03-10 18:10:08,201|beaver.machine|INFO|14/03/10 18:10:08 INFO client.ConfiguredRMFailoverProxyProvider: Failing over to rm2
+2014-03-10 18:10:08,242|beaver.machine|INFO|Total number of applications (application-types: [] and states: [NEW, NEW_SAVING, SUBMITTED, ACCEPTED, RUNNING]):1
+2014-03-10 18:10:08,242|beaver.machine|INFO|Application-Id	    Application-Name	    Application-Type	      User	     Queue	             State	       Final-State	       Progress	                       Tracking-URL
+2014-03-10 18:10:08,242|beaver.machine|INFO|application_1394449508064_0008	test_mapred_ha_multiple_job_nn-rm-1-min-5-jobs_1394449960-4	           MAPREDUCE	    hrt_qa	   default	          ACCEPTED	         SUCCEEDED	           100%	http://hostname:19888/jobhistory/job/job_1394449508064_0008
+2014-03-10 18:10:38,392|beaver.machine|INFO|RUNNING: /usr/bin/yarn application -list -appStates NEW,NEW_SAVING,SUBMITTED,ACCEPTED,RUNNING
+2014-03-10 18:10:39,443|beaver.machine|INFO|14/03/10 18:10:39 INFO client.ConfiguredRMFailoverProxyProvider: Failing over to rm2
+2014-03-10 18:10:39,484|beaver.machine|INFO|Total number of applications (application-types: [] and states: [NEW, NEW_SAVING, SUBMITTED, ACCEPTED, RUNNING]):1
+2014-03-10 18:10:39,484|beaver.machine|INFO|Application-Id	    Application-Name	    Application-Type	      User	     Queue	             State	       Final-State	       Progress	                       Tracking-URL
+2014-03-10 18:10:39,485|beaver.machine|INFO|application_1394449508064_0008	test_mapred_ha_multiple_job_nn-rm-1-min-5-jobs_1394449960-4	           MAPREDUCE	    hrt_qa	   default	          ACCEPTED	         SUCCEEDED	           100%	http://hostname:19888/jobhistory/job/job_1394449508064_0008
+{code}</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1812">YARN-1812</a>.
+     Major sub-task reported by Yesha Vora and fixed by Jian He <br>
+     <b>Job stays in PREP state for long time after RM Restarts</b><br>
+     <blockquote>Steps followed:
+
+1) start a sort job with 80 maps and 5 reducers
+2) restart Resource manager when 60 maps and 0 reducers are finished
+3) Wait for job to come out of PREP state.
+
+The job does not come out of PREP state after 7-8 mins.
+After waiting for 7-8 mins, test kills the job.
+
+However, Sort job should not take this long time to come out of PREP state</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1811">YARN-1811</a>.
+     Major sub-task reported by Robert Kanter and fixed by Robert Kanter (resourcemanager)<br>
+     <b>RM HA: AM link broken if the AM is on nodes other than RM</b><br>
+     <blockquote>When using RM HA, if you click on the "Application Master" link in the RM web UI while the job is running, you get an Error 500:
+</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1800">YARN-1800</a>.
+     Critical sub-task reported by Paul Isaychuk and fixed by Varun Vasudev (nodemanager)<br>
+     <b>YARN NodeManager with java.util.concurrent.RejectedExecutionException</b><br>
+     <blockquote>Noticed this on tests running on Apache Hadoop 2.2 cluster
+
+{code}
+2014-01-23 01:30:28,575 INFO  localizer.LocalizedResource (LocalizedResource.java:handle(196)) - Resource hdfs://colo-2:8020/user/fertrist/oozie-oozi/0000605-140114233013619-oozie-oozi-W/aggregator--map-reduce/map-reduce-launcher.jar transitioned from INIT to DOWNLOADING
+2014-01-23 01:30:28,575 INFO  localizer.LocalizedResource (LocalizedResource.java:handle(196)) - Resource hdfs://colo-2:8020/user/fertrist/.staging/job_1389742077466_0396/job.splitmetainfo transitioned from INIT to DOWNLOADING
+2014-01-23 01:30:28,575 INFO  localizer.LocalizedResource (LocalizedResource.java:handle(196)) - Resource hdfs://colo-2:8020/user/fertrist/.staging/job_1389742077466_0396/job.split transitioned from INIT to DOWNLOADING
+2014-01-23 01:30:28,575 INFO  localizer.LocalizedResource (LocalizedResource.java:handle(196)) - Resource hdfs://colo-2:8020/user/fertrist/.staging/job_1389742077466_0396/job.xml transitioned from INIT to DOWNLOADING
+2014-01-23 01:30:28,576 INFO  localizer.ResourceLocalizationService (ResourceLocalizationService.java:addResource(651)) - Downloading public rsrc:{ hdfs://colo-2:8020/user/fertrist/oozie-oozi/0000605-140114233013619-oozie-oozi-W/aggregator--map-reduce/map-reduce-launcher.jar, 1390440627435, FILE, null }
+2014-01-23 01:30:28,576 FATAL event.AsyncDispatcher (AsyncDispatcher.java:dispatch(141)) - Error in dispatcher thread
+java.util.concurrent.RejectedExecutionException
+        at java.util.concurrent.ThreadPoolExecutor$AbortPolicy.rejectedExecution(ThreadPoolExecutor.java:1768)
+        at java.util.concurrent.ThreadPoolExecutor.reject(ThreadPoolExecutor.java:767)
+        at java.util.concurrent.ThreadPoolExecutor.execute(ThreadPoolExecutor.java:658)
+        at java.util.concurrent.ExecutorCompletionService.submit(ExecutorCompletionService.java:152)
+        at org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService$PublicLocalizer.addResource(ResourceLocalizationService.java:678)
+        at org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService$LocalizerTracker.handle(ResourceLocalizationService.java:583)
+        at org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ResourceLocalizationService$LocalizerTracker.handle(ResourceLocalizationService.java:525)
+        at org.apache.hadoop.yarn.event.AsyncDispatcher.dispatch(AsyncDispatcher.java:134)
+        at org.apache.hadoop.yarn.event.AsyncDispatcher$1.run(AsyncDispatcher.java:81)
+        at java.lang.Thread.run(Thread.java:662)
+2014-01-23 01:30:28,577 INFO  event.AsyncDispatcher (AsyncDispatcher.java:dispatch(144)) - Exiting, bbye..
+2014-01-23 01:30:28,596 INFO  mortbay.log (Slf4jLog.java:info(67)) - Stopped SelectChannelConnector@0.0.0.0:50060
+2014-01-23 01:30:28,597 INFO  containermanager.ContainerManagerImpl (ContainerManagerImpl.java:cleanUpApplicationsOnNMShutDown(328)) - Applications still running : [application_1389742077466_0396]
+2014-01-23 01:30:28,597 INFO  containermanager.ContainerManagerImpl (ContainerManagerImpl.java:cleanUpApplicationsOnNMShutDown(336)) - Wa
+{code}</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1793">YARN-1793</a>.
+     Critical bug reported by Karthik Kambatla and fixed by Karthik Kambatla (resourcemanager)<br>
+     <b>yarn application -kill doesn't kill UnmanagedAMs</b><br>
+     <blockquote>Trying to kill an Unmanaged AM though CLI (yarn application -kill &lt;id&gt;) logs a success, but doesn't actually kill the AM or reclaim the containers allocated to it.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1789">YARN-1789</a>.
+     Minor improvement reported by Akira AJISAKA and fixed by Tsuyoshi OZAWA (resourcemanager)<br>
+     <b>ApplicationSummary does not escape newlines in the app name</b><br>
+     <blockquote>YARN-side of MAPREDUCE-5778.
+ApplicationSummary is not escaping newlines in the app name. This can result in an application summary log entry that spans multiple lines when users are expecting one-app-per-line output.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1788">YARN-1788</a>.
+     Critical bug reported by Tassapol Athiapinya and fixed by Varun Vasudev (resourcemanager)<br>
+     <b>AppsCompleted/AppsKilled metric is incorrect when MR job is killed with yarn application -kill</b><br>
+     <blockquote>Run MR sleep job. Kill the application in RUNNING state. Observe RM metrics.
+Expecting AppsCompleted = 0/AppsKilled = 1
+Actual is AppsCompleted = 1/AppsKilled = 0</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1787">YARN-1787</a>.
+     Major sub-task reported by Zhijie Shen and fixed by Zhijie Shen <br>
+     <b>yarn applicationattempt/container print wrong usage information</b><br>
+     <blockquote>yarn applicationattempt prints:
+{code}
+Invalid Command Usage : 
+usage: application
+ -appStates &lt;States&gt;             Works with -list to filter applications
+                                 based on input comma-separated list of
+                                 application states. The valid application
+                                 state can be one of the following:
+                                 ALL,NEW,NEW_SAVING,SUBMITTED,ACCEPTED,RUN
+                                 NING,FINISHED,FAILED,KILLED
+ -appTypes &lt;Types&gt;               Works with -list to filter applications
+                                 based on input comma-separated list of
+                                 application types.
+ -help                           Displays help for all commands.
+ -kill &lt;Application ID&gt;          Kills the application.
+ -list &lt;arg&gt;                     List application attempts for aplication
+                                 from AHS.
+ -movetoqueue &lt;Application ID&gt;   Moves the application to a different
+                                 queue.
+ -queue &lt;Queue Name&gt;             Works with the movetoqueue command to
+                                 specify which queue to move an
+                                 application to.
+ -status &lt;Application ID&gt;        Prints the status of the application.
+{code}
+
+yarn container prints:
+{code}
+Invalid Command Usage : 
+usage: application
+ -appStates &lt;States&gt;             Works with -list to filter applications
+                                 based on input comma-separated list of
+                                 application states. The valid application
+                                 state can be one of the following:
+                                 ALL,NEW,NEW_SAVING,SUBMITTED,ACCEPTED,RUN
+                                 NING,FINISHED,FAILED,KILLED
+ -appTypes &lt;Types&gt;               Works with -list to filter applications
+                                 based on input comma-separated list of
+                                 application types.
+ -help                           Displays help for all commands.
+ -kill &lt;Application ID&gt;          Kills the application.
+ -list &lt;arg&gt;                     List application attempts for aplication
+                                 from AHS.
+ -movetoqueue &lt;Application ID&gt;   Moves the application to a different
+                                 queue.
+ -queue &lt;Queue Name&gt;             Works with the movetoqueue command to
+                                 specify which queue to move an
+                                 application to.
+ -status &lt;Application ID&gt;        Prints the status of the application.
+{code}
+
+Both commands print irrelevant yarn application usage information.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1785">YARN-1785</a>.
+     Major bug reported by bc Wong and fixed by bc Wong <br>
+     <b>FairScheduler treats app lookup failures as ERRORs</b><br>
+     <blockquote>When invoking the /ws/v1/cluster/apps endpoint, RM will eventually get to RMAppImpl#createAndGetApplicationReport, which calls RMAppAttemptImpl#getApplicationResourceUsageReport, which looks up the app in the scheduler, which may or may not exist. So FairScheduler shouldn't log an error for every lookup failure:
+
+{noformat}
+2014-02-17 08:23:21,240 ERROR org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler: Request for appInfo of unknown attemptappattempt_1392419715319_0135_000001
+
+{noformat}</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1783">YARN-1783</a>.
+     Critical bug reported by Arpit Gupta and fixed by Jian He <br>
+     <b>yarn application does not make any progress even when no other application is running when RM is being restarted in the background</b><br>
+     <blockquote>Noticed that during HA tests some tests took over 3 hours to run when the test failed.
+Looking at the logs i see the application made no progress for a very long time. However if i look at application log from yarn it actually ran in 5 mins
+I am seeing same behavior when RM was being restarted in the background and when both RM and AM were being restarted. This does not happen for all applications but a few will hit this in the nightly run.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1781">YARN-1781</a>.
+     Major sub-task reported by Varun Vasudev and fixed by Varun Vasudev (nodemanager)<br>
+     <b>NM should allow users to specify max disk utilization for local disks</b><br>
+     <blockquote>This is related to YARN-257(it's probably a sub task?). Currently, the NM does not detect full disks and allows full disks to be used by containers leading to repeated failures. YARN-257 deals with graceful handling of full disks. This ticket is only about detection of full disks by the disk health checkers.
+
+The NM should allow users to set a maximum disk utilization for local disks and mark disks as bad once they exceed that utilization. At the very least, the NM should at least detect full disks.
+
+</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1780">YARN-1780</a>.
+     Major sub-task reported by Zhijie Shen and fixed by Zhijie Shen <br>
+     <b>Improve logging in timeline service</b><br>
+     <blockquote>It's difficult to trace whether the client has successfully posted the entity to the timeline service or not.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1776">YARN-1776</a>.
+     Major sub-task reported by Zhijie Shen and fixed by Zhijie Shen <br>
+     <b>renewDelegationToken should survive RM failover</b><br>
+     <blockquote>When a delegation token is renewed, two RMStateStore operations: 1) removing the old DT, and 2) storing the new DT will happen. If RM fails in between. There would be problem.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1775">YARN-1775</a>.
+     Major sub-task reported by Rajesh Balamohan and fixed by Rajesh Balamohan (nodemanager)<br>
+     <b>Create SMAPBasedProcessTree to get PSS information</b><br>
+     <blockquote>Create SMAPBasedProcessTree (by extending ProcfsBasedProcessTree), which will make use of PSS for computing the memory usage. </blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1774">YARN-1774</a>.
+     Blocker bug reported by Anubhav Dhoot and fixed by Anubhav Dhoot (resourcemanager)<br>
+     <b>FS: Submitting to non-leaf queue throws NPE</b><br>
+     <blockquote>If you create a hierarchy of queues and assign a job to parent queue, FairScheduler quits with a NPE.
+
+
+
+</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1771">YARN-1771</a>.
+     Critical improvement reported by Sangjin Lee and fixed by Sangjin Lee (nodemanager)<br>
+     <b>many getFileStatus calls made from node manager for localizing a public distributed cache resource</b><br>
+     <blockquote>We're observing that the getFileStatus calls are putting a fair amount of load on the name node as part of checking the public-ness for localizing a resource that belong in the public cache.
+
+We see 7 getFileStatus calls made for each of these resource. We should look into reducing the number of calls to the name node. One example:
+
+{noformat}
+2014-02-27 18:07:27,351 INFO audit: ... cmd=getfileinfo	src=/tmp/temp-887708724/tmp883330348/foo-0.0.44.jar ...
+2014-02-27 18:07:27,352 INFO audit: ... cmd=getfileinfo	src=/tmp/temp-887708724/tmp883330348/foo-0.0.44.jar ...
+2014-02-27 18:07:27,352 INFO audit: ... cmd=getfileinfo	src=/tmp/temp-887708724/tmp883330348 ...
+2014-02-27 18:07:27,353 INFO audit: ... cmd=getfileinfo	src=/tmp/temp-887708724 ...
+2014-02-27 18:07:27,353 INFO audit: ... cmd=getfileinfo	src=/tmp ...
+2014-02-27 18:07:27,354 INFO audit: ... cmd=getfileinfo	src=/	 ...
+2014-02-27 18:07:27,354 INFO audit: ... cmd=getfileinfo	src=/tmp/temp-887708724/tmp883330348/foo-0.0.44.jar ...
+2014-02-27 18:07:27,355 INFO audit: ... cmd=open	src=/tmp/temp-887708724/tmp883330348/foo-0.0.44.jar ...
+{noformat}</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1768">YARN-1768</a>.
+     Minor bug reported by Hitesh Shah and fixed by Tsuyoshi OZAWA (client)<br>
+     <b>yarn kill non-existent application is too verbose</b><br>
+     <blockquote>Instead of catching ApplicationNotFound and logging a simple app not found message, the whole stack trace is logged.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1766">YARN-1766</a>.
+     Major sub-task reported by Xuan Gong and fixed by Xuan Gong <br>
+     <b>When RM does the initiation, it should use loaded Configuration instead of bootstrap configuration.</b><br>
+     <blockquote>Right now, we have FileSystemBasedConfigurationProvider to let Users upload the configurations into remote File System, and let different RMs share the same configurations.  During the initiation, RM will load the configurations from Remote File System. So when RM initiates the services, it should use the loaded Configurations instead of using the bootstrap configurations.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1765">YARN-1765</a>.
+     Major sub-task reported by Xuan Gong and fixed by Xuan Gong <br>
+     <b>Write test cases to verify that killApplication API works in RM HA</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1764">YARN-1764</a>.
+     Major sub-task reported by Xuan Gong and fixed by Xuan Gong <br>
+     <b>Handle RM fail overs after the submitApplication call.</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1761">YARN-1761</a>.
+     Major sub-task reported by Xuan Gong and fixed by Xuan Gong <br>
+     <b>RMAdminCLI should check whether HA is enabled before executes transitionToActive/transitionToStandby</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1760">YARN-1760</a>.
+     Trivial bug reported by Karthik Kambatla and fixed by Karthik Kambatla <br>
+     <b>TestRMAdminService assumes CapacityScheduler</b><br>
+     <blockquote>YARN-1611 adds TestRMAdminService which assumes the use of CapacityScheduler. 
+
+{noformat}
+java.lang.ClassCastException: org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler cannot be cast to org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler
+	at org.apache.hadoop.yarn.server.resourcemanager.TestRMAdminService.testAdminRefreshQueuesWithFileSystemBasedConfigurationProvider(TestRMAdminService.java:115)
+{noformat}</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1758">YARN-1758</a>.
+     Blocker bug reported by Hitesh Shah and fixed by Xuan Gong <br>
+     <b>MiniYARNCluster broken post YARN-1666</b><br>
+     <blockquote>NPE seen when trying to use MiniYARNCluster</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1752">YARN-1752</a>.
+     Major bug reported by Jian He and fixed by Rohith <br>
+     <b>Unexpected Unregistered event at Attempt Launched state</b><br>
+     <blockquote>{code}
+2014-02-21 14:56:03,453 ERROR org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl: Can't handle this event at current state
+org.apache.hadoop.yarn.state.InvalidStateTransitonException: Invalid event: UNREGISTERED at LAUNCHED
+  at org.apache.hadoop.yarn.state.StateMachineFactory.doTransition(StateMachineFactory.java:305)
+  at org.apache.hadoop.yarn.state.StateMachineFactory.access$300(StateMachineFactory.java:46)
+  at org.apache.hadoop.yarn.state.StateMachineFactory$InternalStateMachine.doTransition(StateMachineFactory.java:448)
+  at org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl.handle(RMAppAttemptImpl.java:647)
+  at org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl.handle(RMAppAttemptImpl.java:103)
+  at org.apache.hadoop.yarn.server.resourcemanager.ResourceManager$ApplicationAttemptEventDispatcher.handle(ResourceManager.java:733)
+  at org.apache.hadoop.yarn.server.resourcemanager.ResourceManager$ApplicationAttemptEventDispatcher.handle(ResourceManager.java:714)
+  at org.apache.hadoop.yarn.event.AsyncDispatcher.dispatch(AsyncDispatcher.java:173)
+  at org.apache.hadoop.yarn.event.AsyncDispatcher$1.run(AsyncDispatcher.java:106)
+  at java.lang.Thread.run(Thread.java:695)
+{code}
+
+</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1749">YARN-1749</a>.
+     Major sub-task reported by Zhijie Shen and fixed by Zhijie Shen <br>
+     <b>Review AHS configs and sync them up with the timeline-service configs</b><br>
+     <blockquote>We need to:
+1. Review the configuration names and default values
+2. Combine the two store class configurations
+
+Some other thoughts:
+1. Maybe we don't need null implementation of ApplicationHistoryStore any more
+2. Maybe if yarn.ahs.enabled = false, we should stop AHS web server returning historic information</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1748">YARN-1748</a>.
+     Blocker bug reported by Sravya Tirukkovalur and fixed by Sravya Tirukkovalur <br>
+     <b>hadoop-yarn-server-tests packages core-site.xml breaking downstream tests</b><br>
+     <blockquote>Jars should not package config files, as this might come into the classpaths of clients causing the clients to break.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1742">YARN-1742</a>.
+     Trivial bug reported by Akira AJISAKA and fixed by Akira AJISAKA (documentation)<br>
+     <b>Fix javadoc of parameter DEFAULT_NM_MIN_HEALTHY_DISKS_FRACTION</b><br>
+     <blockquote>In YarnConfiguration.java, 
+{code}
+  /**
+   * By default, at least 5% of disks are to be healthy to say that the node
+   * is healthy in terms of disks.
+   */
+  public static final float DEFAULT_NM_MIN_HEALTHY_DISKS_FRACTION
+    = 0.25F;
+{code}
+25% is the correct.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1734">YARN-1734</a>.
+     Critical sub-task reported by Xuan Gong and fixed by Xuan Gong <br>
+     <b>RM should get the updated Configurations when it transits from Standby to Active</b><br>
+     <blockquote>Currently, we have ConfigurationProvider which can support LocalConfiguration, and FileSystemBasedConfiguration. When HA is enabled, and FileSystemBasedConfiguration is enabled, RM can not get the updated Configurations when it transits from Standby to Active</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1732">YARN-1732</a>.
+     Major sub-task reported by Billie Rinaldi and fixed by Billie Rinaldi <br>
+     <b>Change types of related entities and primary filters in ATSEntity</b><br>
+     <blockquote>The current types Map&lt;String, List&lt;String&gt;&gt; relatedEntities and Map&lt;String, Object&gt; primaryFilters have issues.  The List&lt;String&gt; value of the related entities map could have multiple identical strings in it, which doesn't make sense. A more major issue is that we cannot allow primary filter values to be overwritten, because otherwise we will be unable to find those primary filter entries when we want to delete an entity (without doing a nearly full scan).
+
+I propose changing related entities to Map&lt;String, Set&lt;String&gt;&gt; and primary filters to Map&lt;String, Set&lt;Object&gt;&gt;.  The basic methods to add primary filters and related entities are of the form add(key, value) and will not need to change.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1730">YARN-1730</a>.
+     Major sub-task reported by Billie Rinaldi and fixed by Billie Rinaldi <br>
+     <b>Leveldb timeline store needs simple write locking</b><br>
+     <blockquote>Although the leveldb writes are performed atomically in a batch, a start time for the entity needs to identified before each write.  Thus a per-entity write lock should be acquired.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1729">YARN-1729</a>.
+     Major sub-task reported by Billie Rinaldi and fixed by Billie Rinaldi <br>
+     <b>TimelineWebServices always passes primary and secondary filters as strings</b><br>
+     <blockquote>Primary filters and secondary filter values can be arbitrary json-compatible Object.  The web services should determine if the filters specified as query parameters are objects or strings before passing them to the store.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1724">YARN-1724</a>.
+     Critical bug reported by Sandy Ryza and fixed by Sandy Ryza (scheduler)<br>
+     <b>Race condition in Fair Scheduler when continuous scheduling is turned on </b><br>
+     <blockquote>If nodes resource allocations change during
+        Collections.sort(nodeIdList, nodeAvailableResourceComparator);
+we'll hit:
+java.lang.IllegalArgumentException: Comparison method violates its general contract!</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1721">YARN-1721</a>.
+     Critical bug reported by Sandy Ryza and fixed by Sandy Ryza (scheduler)<br>
+     <b>When moving app between queues in Fair Scheduler, grab lock on FSSchedulerApp</b><br>
+     <blockquote>FairScheduler.moveApplication should grab lock on FSSchedulerApp, so that allocate() can't be modifying it at the same time.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1719">YARN-1719</a>.
+     Major sub-task reported by Billie Rinaldi and fixed by Billie Rinaldi <br>
+     <b>ATSWebServices produces jersey warnings</b><br>
+     <blockquote>These don't appear to affect how the web services work, but the following warnings are logged:
+{noformat}
+WARNING: The following warnings have been detected with resource and/or provider
+ classes:
+  WARNING: A sub-resource method, public org.apache.hadoop.yarn.server.applicati
+onhistoryservice.webapp.ATSWebServices$AboutInfo org.apache.hadoop.yarn.server.a
+pplicationhistoryservice.webapp.ATSWebServices.about(javax.servlet.http.HttpServ
+letRequest,javax.servlet.http.HttpServletResponse), with URI template, "/", is t
+reated as a resource method
+  WARNING: A sub-resource method, public org.apache.hadoop.yarn.api.records.appt
+imeline.ATSPutErrors org.apache.hadoop.yarn.server.applicationhistoryservice.web
+app.ATSWebServices.postEntities(javax.servlet.http.HttpServletRequest,javax.serv
+let.http.HttpServletResponse,org.apache.hadoop.yarn.api.records.apptimeline.ATSE
+ntities), with URI template, "/", is treated as a resource method
+{noformat}</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1717">YARN-1717</a>.
+     Major sub-task reported by Billie Rinaldi and fixed by Billie Rinaldi <br>
+     <b>Enable offline deletion of entries in leveldb timeline store</b><br>
+     <blockquote>The leveldb timeline store implementation needs the following:
+* better documentation of its internal structures
+* internal changes to enable deleting entities
+** never overwrite existing primary filter entries
+** add hidden reverse pointers to related entities</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1706">YARN-1706</a>.
+     Major sub-task reported by Zhijie Shen and fixed by Zhijie Shen <br>
+     <b>Create an utility function to dump timeline records to json </b><br>
+     <blockquote>For verification and log purpose</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1704">YARN-1704</a>.
+     Blocker sub-task reported by Billie Rinaldi and fixed by Billie Rinaldi <br>
+     <b>Review LICENSE and NOTICE to reflect new levelDB releated libraries being used</b><br>
+     <blockquote>Make any changes necessary in LICENSE and NOTICE related to dependencies introduced by the application timeline store.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1698">YARN-1698</a>.
+     Major sub-task reported by Zhijie Shen and fixed by Zhijie Shen <br>
+     <b>Replace MemoryApplicationTimelineStore with LeveldbApplicationTimelineStore as default</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1697">YARN-1697</a>.
+     Major bug reported by Sandy Ryza and fixed by Sandy Ryza (nodemanager)<br>
+     <b>NodeManager reports negative running containers</b><br>
+     <blockquote>We're seeing the NodeManager metrics report a negative number of running containers.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1692">YARN-1692</a>.
+     Major bug reported by Sangjin Lee and fixed by Sangjin Lee (scheduler)<br>
+     <b>ConcurrentModificationException in fair scheduler AppSchedulable</b><br>
+     <blockquote>We saw a ConcurrentModificationException thrown in the fair scheduler:
+
+{noformat}
+2014-02-07 01:40:01,978 ERROR org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler: Exception in fair scheduler UpdateThread
+java.util.ConcurrentModificationException
+        at java.util.HashMap$HashIterator.nextEntry(HashMap.java:926)
+        at java.util.HashMap$ValueIterator.next(HashMap.java:954)
+        at org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.AppSchedulable.updateDemand(AppSchedulable.java:85)
+        at org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSLeafQueue.updateDemand(FSLeafQueue.java:125)
+        at org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSParentQueue.updateDemand(FSParentQueue.java:82)
+        at org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler.update(FairScheduler.java:217)
+        at org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler$UpdateThread.run(FairScheduler.java:195)
+        at java.lang.Thread.run(Thread.java:724)
+{noformat}
+
+The map that  gets returned by FSSchedulerApp.getResourceRequests() are iterated on without proper synchronization.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1690">YARN-1690</a>.
+     Major sub-task reported by Mayank Bansal and fixed by Mayank Bansal <br>
+     <b>Sending timeline entities+events from Distributed shell </b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1689">YARN-1689</a>.
+     Critical bug reported by Deepesh Khandelwal and fixed by Vinod Kumar Vavilapalli (resourcemanager)<br>
+     <b>RMAppAttempt is not killed when RMApp is at ACCEPTED</b><br>
+     <blockquote>When running some Hive on Tez jobs, the RM after a while gets into an unusable state where no jobs run. In the RM log I see the following exception:
+{code}
+2014-02-04 20:28:08,553 WARN  ipc.Server (Server.java:run(1978)) - IPC Server handler 0 on 8030, call org.apache.hadoop.yarn.api.ApplicationMasterProtocolPB.registerApplicationMaster from 172.18.145.156:40474 Call#0 Retry#0: error: java.lang.NullPointerException
+java.lang.NullPointerException
+        at org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler.getTransferredContainers(AbstractYarnScheduler.java:48)
+        at org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService.registerApplicationMaster(ApplicationMasterService.java:278)
+        at org.apache.hadoop.yarn.api.impl.pb.service.ApplicationMasterProtocolPBServiceImpl.registerApplicationMaster(ApplicationMasterProtocolPBServiceImpl.java:90)
+        at org.apache.hadoop.yarn.proto.ApplicationMasterProtocol$ApplicationMasterProtocolService$2.callBlockingMethod(ApplicationMasterProtocol.java:95)
+        at org.apache.hadoop.ipc.ProtobufRpcEngine$Server$ProtoBufRpcInvoker.call(ProtobufRpcEngine.java:585)
+        at org.apache.hadoop.ipc.RPC$Server.call(RPC.java:928)
+        at org.apache.hadoop.ipc.Server$Handler$1.run(Server.java:1962)
+        at org.apache.hadoop.ipc.Server$Handler$1.run(Server.java:1958)
+        at java.security.AccessController.doPrivileged(Native Method)
+        at javax.security.auth.Subject.doAs(Subject.java:396)
+        at org.apache.hadoop.security.UserGroupInformation.doAs(UserGroupInformation.java:1548)
+        at org.apache.hadoop.ipc.Server$Handler.run(Server.java:1956)
+......
+2014-02-04 20:28:08,544 ERROR rmapp.RMAppImpl (RMAppImpl.java:handle(626)) - Can't handle this event at current state
+org.apache.hadoop.yarn.state.InvalidStateTransitonException: Invalid event: ATTEMPT_REGISTERED at KILLED
+        at org.apache.hadoop.yarn.state.StateMachineFactory.doTransition(StateMachineFactory.java:305)
+        at org.apache.hadoop.yarn.state.StateMachineFactory.access$300(StateMachineFactory.java:46)
+        at org.apache.hadoop.yarn.state.StateMachineFactory$InternalStateMachine.doTransition(StateMachineFactory.java:448)
+        at org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl.handle(RMAppImpl.java:624)
+        at org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl.handle(RMAppImpl.java:81)
+        at org.apache.hadoop.yarn.server.resourcemanager.ResourceManager$ApplicationEventDispatcher.handle(ResourceManager.java:656)
+        at org.apache.hadoop.yarn.server.resourcemanager.ResourceManager$ApplicationEventDispatcher.handle(ResourceManager.java:640)
+        at org.apache.hadoop.yarn.event.AsyncDispatcher.dispatch(AsyncDispatcher.java:173)
+        at org.apache.hadoop.yarn.event.AsyncDispatcher$1.run(AsyncDispatcher.java:106)
+        at java.lang.Thread.run(Thread.java:662)
+2014-02-04 20:28:08,549 INFO  resourcemanager.RMAuditLogger (RMAuditLogger.java:logSuccess(140)) - USER=hrt_qa  IP=172.18.145.156       OPERATION=Kill Application Request      TARGET=ClientRMService  RESULT=SUCCESS  APPID=application_1391543307203_0001
+2014-02-04 20:28:08,553 WARN  ipc.Server (Server.java:run(1978)) - IPC Server handler 0 on 8030, call org.apache.hadoop.yarn.api.ApplicationMasterProtocolPB.registerApplicationMaster from 172.18.145.156:40474 Call#0 Retry#0: error: java.lang.NullPointerException
+java.lang.NullPointerException
+        at org.apache.hadoop.yarn.server.resourcemanager.scheduler.AbstractYarnScheduler.getTransferredContainers(AbstractYarnScheduler.java:48)
+        at org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService.registerApplicationMaster(ApplicationMasterService.java:278)
+        at org.apache.hadoop.yarn.api.impl.pb.service.ApplicationMasterProtocolPBServiceImpl.registerApplicationMaster(ApplicationMasterProtocolPBServiceImpl.java:90)
+        at org.apache.hadoop.yarn.proto.ApplicationMasterProtocol$ApplicationMasterProtocolService$2.callBlockingMethod(ApplicationMasterProtocol.java:95)
+        at org.apache.hadoop.ipc.ProtobufRpcEngine$Server$ProtoBufRpcInvoker.call(ProtobufRpcEngine.java:585)
+        at org.apache.hadoop.ipc.RPC$Server.call(RPC.java:928)
+        at org.apache.hadoop.ipc.Server$Handler$1.run(Server.java:1962)
+        at org.apache.hadoop.ipc.Server$Handler$1.run(Server.java:1958)
+        at java.security.AccessController.doPrivileged(Native Method)
+        at javax.security.auth.Subject.doAs(Subject.java:396)
+        at org.apache.hadoop.security.UserGroupInformation.doAs(UserGroupInformation.java:1548)
+        at org.apache.hadoop.ipc.Server$Handler.run(Server.java:1956)
+{code}</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1687">YARN-1687</a>.
+     Major sub-task reported by Zhijie Shen and fixed by Zhijie Shen <br>
+     <b>Refactoring timeline classes to remove "app" related words</b><br>
+     <blockquote>Remove ATS prefix, change package name, fix javadoc and so on</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1686">YARN-1686</a>.
+     Major bug reported by Rohith and fixed by Rohith (nodemanager)<br>
+     <b>NodeManager.resyncWithRM() does not handle exception which cause NodeManger to Hang.</b><br>
+     <blockquote>During start of NodeManager,if registration with resourcemanager throw exception then nodemager shutdown happens. 
+
+Consider case where NM-1 is registered with RM. RM issued Resync to NM. If any exception thrown in "resyncWithRM" (starts new thread which does not handle exception) during RESYNC evet, then this thread is lost. NodeManger enters hanged state. </blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1685">YARN-1685</a>.
+     Major sub-task reported by Mayank Bansal and fixed by Zhijie Shen <br>
+     <b>Bugs around log URL</b><br>
+     <blockquote>1. Log URL should be different when the container is running and finished
+
+2. Null case needs to be handled
+
+3. The way of constructing log URL should be corrected</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1684">YARN-1684</a>.
+     Major sub-task reported by Billie Rinaldi and fixed by Billie Rinaldi <br>
+     <b>Fix history server heap size in yarn script</b><br>
+     <blockquote>The yarn script currently has the following:
+{noformat}
+  if [ "$YARN_RESOURCEMANAGER_HEAPSIZE" != "" ]; then
+    JAVA_HEAP_MAX="-Xmx""$YARN_HISTORYSERVER_HEAPSIZE""m"
+  fi
+{noformat}</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1676">YARN-1676</a>.
+     Major sub-task reported by Xuan Gong and fixed by Xuan Gong <br>
+     <b>Make admin refreshUserToGroupsMappings of configuration work across RM failover</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1673">YARN-1673</a>.
+     Blocker bug reported by Tassapol Athiapinya and fixed by Mayank Bansal (client)<br>
+     <b>Valid yarn kill application prints out help message.</b><br>
+     <blockquote>yarn application -kill &lt;application ID&gt; 
+used to work previously. In 2.4.0 it prints out help message and does not kill the application.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1672">YARN-1672</a>.
+     Trivial bug reported by Karthik Kambatla and fixed by Naren Koneru (nodemanager)<br>
+     <b>YarnConfiguration is missing a default for yarn.nodemanager.log.retain-seconds</b><br>
+     <blockquote>YarnConfiguration is missing a default for yarn.nodemanager.log.retain-seconds</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1670">YARN-1670</a>.
+     Critical bug reported by Thomas Graves and fixed by Mit Desai <br>
+     <b>aggregated log writer can write more log data then it says is the log length</b><br>
+     <blockquote>We have seen exceptions when using 'yarn logs' to read log files. 
+at java.lang.NumberFormatException.forInputString(NumberFormatException.java:65)
+       at java.lang.Long.parseLong(Long.java:441)
+       at java.lang.Long.parseLong(Long.java:483)
+       at org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat$LogReader.readAContainerLogsForALogType(AggregatedLogFormat.java:518)
+       at org.apache.hadoop.yarn.logaggregation.LogDumper.dumpAContainerLogs(LogDumper.java:178)
+       at org.apache.hadoop.yarn.logaggregation.LogDumper.run(LogDumper.java:130)
+       at org.apache.hadoop.yarn.logaggregation.LogDumper.main(LogDumper.java:246)
+
+
+We traced it down to the reader trying to read the file type of the next file but where it reads is still log data from the previous file.  What happened was the Log Length was written as a certain size but the log data was actually longer then that.  
+
+Inside of the write() routine in LogValue it first writes what the logfile length is, but then when it goes to write the log itself it just goes to the end of the file.  There is a race condition here where if someone is still writing to the file when it goes to be aggregated the length written could be to small.
+
+We should have the write() routine stop when it writes whatever it said was the length.  It would be nice if we could somehow tell the user it might be truncated but I'm not sure of a good way to do this.
+
+We also noticed that a bug in readAContainerLogsForALogType where it is using an int for curRead whereas it should be using a long. 
+
+      while (len != -1 &amp;&amp; curRead &lt; fileLength) {
+
+This isn't actually a problem right now as it looks like the underlying decoder is doing the right thing and the len condition exits.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1669">YARN-1669</a>.
+     Major sub-task reported by Xuan Gong and fixed by Xuan Gong <br>
+     <b>Make admin refreshServiceAcls work across RM failover</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1668">YARN-1668</a>.
+     Major sub-task reported by Xuan Gong and fixed by Xuan Gong <br>
+     <b>Make admin refreshAdminAcls work across RM failover</b><br>
+     <blockquote>Change the handling of admin-acls to be available across RM failover by making using of a remote configuration-provider
+</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1667">YARN-1667</a>.
+     Major sub-task reported by Xuan Gong and fixed by Xuan Gong <br>
+     <b>Make admin refreshSuperUserGroupsConfiguration work across RM failover</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1666">YARN-1666</a>.
+     Major sub-task reported by Xuan Gong and fixed by Xuan Gong <br>
+     <b>Make admin refreshNodes work across RM failover</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1665">YARN-1665</a>.
+     Major sub-task reported by Arpit Gupta and fixed by Xuan Gong (resourcemanager)<br>
+     <b>Set better defaults for HA configs for automatic failover</b><br>
+     <blockquote>In order to enable HA (automatic failover) i had to set the following configs
+
+
+{code}
+&lt;property&gt;
+    &lt;name&gt;yarn.resourcemanager.ha.enabled&lt;/name&gt;
+    &lt;value&gt;true&lt;/value&gt;
+  &lt;/property&gt;
+  
+  &lt;property&gt;
+    &lt;name&gt;yarn.resourcemanager.ha.automatic-failover.enabled&lt;/name&gt;
+    &lt;value&gt;true&lt;/value&gt;
+  &lt;/property&gt;
+
+  &lt;property&gt;
+    &lt;name&gt;yarn.resourcemanager.ha.automatic-failover.embedded&lt;/name&gt;
+    &lt;value&gt;true&lt;/value&gt;
+  &lt;/property&gt;
+
+{code}
+
+
+I believe the user should just have to set yarn.resourcemanager.ha.enabled=true and the rest should be set as defaults. Basically automatic failover should be the default.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1661">YARN-1661</a>.
+     Major bug reported by Tassapol Athiapinya and fixed by Vinod Kumar Vavilapalli (applications/distributed-shell)<br>
+     <b>AppMaster logs says failing even if an application does succeed.</b><br>
+     <blockquote>Run:
+/usr/bin/yarn  org.apache.hadoop.yarn.applications.distributedshell.Client -jar &lt;distributed shell jar&gt; -shell_command ls
+
+Open AM logs. Last line would indicate AM failure even though container logs print good ls result.
+
+{code}
+2014-01-24 21:45:29,592 INFO  [main] distributedshell.ApplicationMaster (ApplicationMaster.java:finish(599)) - Application completed. Signalling finish to RM
+2014-01-24 21:45:29,612 INFO  [main] impl.AMRMClientImpl (AMRMClientImpl.java:unregisterApplicationMaster(315)) - Waiting for application to be successfully unregistered.
+2014-01-24 21:45:29,816 INFO  [main] distributedshell.ApplicationMaster (ApplicationMaster.java:main(267)) - Application Master failed. exiting
+{code}</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1660">YARN-1660</a>.
+     Major sub-task reported by Arpit Gupta and fixed by Xuan Gong (resourcemanager)<br>
+     <b>add the ability to set yarn.resourcemanager.hostname.rm-id instead of setting all the various host:port properties for RM</b><br>
+     <blockquote>Currently the user has to specify all the various host:port properties for RM. We should follow the pattern that we do for non HA setup where we can specify yarn.resourcemanager.hostname.rm-id and the defaults are used for all other affected properties.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1659">YARN-1659</a>.
+     Major sub-task reported by Billie Rinaldi and fixed by Billie Rinaldi <br>
+     <b>Define the ApplicationTimelineStore store as an abstraction for implementing different storage impls for storing timeline information</b><br>
+     <blockquote>These will be used by ApplicationTimelineStore interface.  The web services will convert the store-facing obects to the user-facing objects.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1658">YARN-1658</a>.
+     Major sub-task reported by Cindy Li and fixed by Cindy Li <br>
+     <b>Webservice should redirect to active RM when HA is enabled.</b><br>
+     <blockquote>When HA is enabled, web service to standby RM should be redirected to the active RM. This is a related Jira to YARN-1525.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1641">YARN-1641</a>.
+     Major sub-task reported by Karthik Kambatla and fixed by Karthik Kambatla (resourcemanager)<br>
+     <b>ZK store should attempt a write periodically to ensure it is still Active</b><br>
+     <blockquote>Fencing in ZK store kicks in when the RM tries to write something to the store. If the RM doesn't write anything to the store, it doesn't get fenced and can continue to assume being the Active. 
+
+By periodically writing a file (say, every RM_ZK_TIMEOUT_MS seconds), we can ensure it gets fenced.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1640">YARN-1640</a>.
+     Blocker sub-task reported by Xuan Gong and fixed by Xuan Gong <br>
+     <b>Manual Failover does not work in secure clusters</b><br>
+     <blockquote>NodeManager gets rejected after manually making one RM as active.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1639">YARN-1639</a>.
+     Major sub-task reported by Arpit Gupta and fixed by Xuan Gong (resourcemanager)<br>
+     <b>YARM RM HA requires different configs on different RM hosts</b><br>
+     <blockquote>We need to set yarn.resourcemanager.ha.id to rm1 or rm2 based on which rm you want to first or second.
+This means we have different configs on different RM nodes. This is unlike HDFS HA where the same configs are pushed to both NN's and it would be better to have the same setup for RM as this would make installation and managing easier.
+</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1637">YARN-1637</a>.
+     Major sub-task reported by Vinod Kumar Vavilapalli and fixed by Zhijie Shen <br>
+     <b>Implement a client library for java users to post entities+events</b><br>
+     <blockquote>This is a wrapper around the web-service to facilitate easy posting of entity+event data to the time-line server.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1636">YARN-1636</a>.
+     Major sub-task reported by Vinod Kumar Vavilapalli and fixed by Zhijie Shen <br>
+     <b>Implement timeline related web-services inside AHS for storing and retrieving entities+events</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1635">YARN-1635</a>.
+     Major sub-task reported by Vinod Kumar Vavilapalli and fixed by Billie Rinaldi <br>
+     <b>Implement a Leveldb based ApplicationTimelineStore</b><br>
+     <blockquote>As per the design doc, we need a levelDB + local-filesystem based implementation to start with and for small deployments.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1634">YARN-1634</a>.
+     Major sub-task reported by Vinod Kumar Vavilapalli and fixed by Zhijie Shen <br>
+     <b>Define an in-memory implementation of ApplicationTimelineStore</b><br>
+     <blockquote>As per the design doc, the store needs to pluggable. We need a base interface, and an in-memory implementation for testing.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1633">YARN-1633</a>.
+     Major sub-task reported by Vinod Kumar Vavilapalli and fixed by Zhijie Shen <br>
+     <b>Define user-faced entity, entity-info and event objects</b><br>
+     <blockquote>Define the core objects of the application-timeline effort.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1632">YARN-1632</a>.
+     Minor bug reported by Chen He and fixed by Chen He <br>
+     <b>TestApplicationMasterServices should be under org.apache.hadoop.yarn.server.resourcemanager package</b><br>
+     <blockquote>ApplicationMasterService is under org.apache.hadoop.yarn.server.resourcemanager package. However, its unit test file TestApplicationMasterService is placed under org.apache.hadoop.yarn.server.resourcemanager.applicationmasterservice package which only contains one file (TestApplicationMasterService). </blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1625">YARN-1625</a>.
+     Trivial sub-task reported by Shinichi Yamashita and fixed by Shinichi Yamashita <br>
+     <b>mvn apache-rat:check outputs warning message in YARN-321 branch</b><br>
+     <blockquote>When I ran dev-support/test-patch.sh, following message output.
+
+{code}
+mvn apache-rat:check -DHadoopPatchProcess &gt; /tmp/patchReleaseAuditOutput.txt 2&gt;&amp;1
+There appear to be 1 release audit warnings after applying the patch.
+{code}
+
+{code}
+ !????? /home/sinchii/git/YARN-321-test/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-common/src/main/resources/webapps/applicationhistory/.keep
+Lines that start with ????? in the release audit report indicate files that do not have an Apache license header.
+{code}
+
+To avoid release audit warning, it should fix pom.xml.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1617">YARN-1617</a>.
+     Major bug reported by Sandy Ryza and fixed by Sandy Ryza (scheduler)<br>
+     <b>Remove ancient comment and surround LOG.debug in AppSchedulingInfo.allocate</b><br>
+     <blockquote>{code}
+  synchronized private void allocate(Container container) {
+    // Update consumption and track allocations
+    //TODO: fixme sharad
+    /* try {
+        store.storeContainer(container);
+      } catch (IOException ie) {
+        // TODO fix this. we shouldnt ignore
+      }*/
+    
+    LOG.debug("allocate: applicationId=" + applicationId + " container="
+        + container.getId() + " host="
+        + container.getNodeId().toString());
+  }
+{code}
+</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1613">YARN-1613</a>.
+     Major sub-task reported by Zhijie Shen and fixed by Akira AJISAKA <br>
+     <b>Fix config name YARN_HISTORY_SERVICE_ENABLED</b><br>
+     <blockquote>YARN_HISTORY_SERVICE_ENABLED property name is "yarn.ahs..enabled", which is wrong.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1611">YARN-1611</a>.
+     Major sub-task reported by Xuan Gong and fixed by Xuan Gong <br>
+     <b>Make admin refresh of capacity scheduler configuration work across RM failover</b><br>
+     <blockquote>Currently, If we do refresh* for a standby RM, it will failover to the current active RM, and do the refresh* based on the local configuration file of the active RM. </blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1605">YARN-1605</a>.
+     Major sub-task reported by Vinod Kumar Vavilapalli and fixed by Vinod Kumar Vavilapalli <br>
+     <b>Fix formatting issues with new module in YARN-321 branch</b><br>
+     <blockquote>There are a bunch of formatting issues. I'm restricting myself for a sweep of all the files in the new module.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1597">YARN-1597</a>.
+     Major sub-task reported by Vinod Kumar Vavilapalli and fixed by Vinod Kumar Vavilapalli <br>
+     <b>FindBugs warnings on YARN-321 branch</b><br>
+     <blockquote>There are a bunch of findBugs warnings on YARN-321 branch.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1596">YARN-1596</a>.
+     Major sub-task reported by Vinod Kumar Vavilapalli and fixed by Vinod Kumar Vavilapalli <br>
+     <b>Javadoc failures on YARN-321 branch</b><br>
+     <blockquote>There are some javadoc issues on YARN-321 branch.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1595">YARN-1595</a>.
+     Major sub-task reported by Vinod Kumar Vavilapalli and fixed by Vinod Kumar Vavilapalli <br>
+     <b>Test failures on YARN-321 branch</b><br>
+     <blockquote>mvn test doesn't pass on YARN-321 branch anymore.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1594">YARN-1594</a>.
+     Major sub-task reported by Vinod Kumar Vavilapalli and fixed by Vinod Kumar Vavilapalli <br>
+     <b>YARN-321 branch needs to be updated after YARN-888 pom changes</b><br>
+     <blockquote>YARN-888 changed the pom structure. And so latest merge to trunk breaks YARN-321 branch.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1591">YARN-1591</a>.
+     Major bug reported by Vinod Kumar Vavilapalli and fixed by Tsuyoshi OZAWA <br>
+     <b>TestResourceTrackerService fails randomly on trunk</b><br>
+     <blockquote>As evidenced by Jenkins at https://issues.apache.org/jira/browse/YARN-1041?focusedCommentId=13868621&amp;page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel#comment-13868621.
+
+It's failing randomly on trunk on my local box too </blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1590">YARN-1590</a>.
+     Major bug reported by Mohammad Kamrul Islam and fixed by Mohammad Kamrul Islam (resourcemanager)<br>
+     <b>_HOST doesn't expand properly for RM, NM, ProxyServer and JHS</b><br>
+     <blockquote>_HOST is not properly substituted when we use VIP address. Currently it always used the host name of the machine and disregard the VIP address. It is true mainly for RM, NM, WebProxy, and JHS rpc service. Looks like it is working fine for webservice authentication.
+
+On the other hand, the same thing is working fine for NN and SNN in RPC as well as webservice.
+ </blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1588">YARN-1588</a>.
+     Major sub-task reported by Jian He and fixed by Jian He <br>
+     <b>Rebind NM tokens for previous attempt's running containers to the new attempt</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1587">YARN-1587</a>.
+     Major sub-task reported by Mayank Bansal and fixed by Vinod Kumar Vavilapalli <br>
+     <b>[YARN-321] Merge Patch for YARN-321</b><br>
+     <blockquote>Merge Patch</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1578">YARN-1578</a>.
+     Major sub-task reported by Shinichi Yamashita and fixed by Shinichi Yamashita <br>
+     <b>Fix how to read history file in FileSystemApplicationHistoryStore</b><br>
+     <blockquote>I carried out PiEstimator job at Hadoop cluster which applied YARN-321.
+After the job end and when I accessed Web UI of HistoryServer, it displayed "500". And HistoryServer daemon log was output as follows.
+
+{code}
+2014-01-09 13:31:12,227 ERROR org.apache.hadoop.yarn.webapp.Dispatcher: error handling URI: /applicationhistory/appattempt/appattempt_1389146249925_0008_000001
+java.lang.reflect.InvocationTargetException
+        at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+        at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:39)
+        at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:25)
+        at java.lang.reflect.Method.invoke(Method.java:597)
+        at org.apache.hadoop.yarn.webapp.Dispatcher.service(Dispatcher.java:153)
+        at javax.servlet.http.HttpServlet.service(HttpServlet.java:820)
+(snip...)
+Caused by: java.lang.NullPointerException
+        at org.apache.hadoop.yarn.server.applicationhistoryservice.FileSystemApplicationHistoryStore.mergeContainerHistoryData(FileSystemApplicationHistoryStore.java:696)
+        at org.apache.hadoop.yarn.server.applicationhistoryservice.FileSystemApplicationHistoryStore.getContainers(FileSystemApplicationHistoryStore.java:429)
+        at org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryManagerImpl.getContainers(ApplicationHistoryManagerImpl.java:201)
+        at org.apache.hadoop.yarn.server.webapp.AppAttemptBlock.render(AppAttemptBlock.java:110)
+(snip...)
+{code}
+
+I confirmed that there was container which was not finished from ApplicationHistory file.
+In ResourceManager daemon log, ResourceManager reserved this container, but did not allocate it.
+
+When FileSystemApplicationHistoryStore reads container information without finish data in history file, this problem occurs.
+In consideration of the case which there is not finish data, we should fix how to read history file in FileSystemApplicationHistoryStore.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1577">YARN-1577</a>.
+     Blocker sub-task reported by Jian He and fixed by Jian He <br>
+     <b>Unmanaged AM is broken because of YARN-1493</b><br>
+     <blockquote>Today unmanaged AM client is waiting for app state to be Accepted to launch the AM. This is broken since we changed in YARN-1493 to start the attempt after the application is Accepted. We may need to introduce an attempt state report that client can rely on to query the attempt state and choose to launch the unmanaged AM.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1570">YARN-1570</a>.
+     Minor improvement reported by Akira AJISAKA and fixed by Akira AJISAKA (documentation)<br>
+     <b>Formatting the lines within 80 chars in YarnCommands.apt.vm</b><br>
+     <blockquote>In YarnCommands.apt.vm, there are some lines longer than 80 characters.
+For example:
+{code}
+  Yarn commands are invoked by the bin/yarn script. Running the yarn script without any arguments prints the description for all commands.
+{code}</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1566">YARN-1566</a>.
+     Major sub-task reported by Jian He and fixed by Jian He <br>
+     <b>Change distributed-shell to retain containers from previous AppAttempt</b><br>
+     <blockquote>Change distributed-shell to reuse previous AM's running containers when AM is restarting.  It can also be made configurable whether to enable this feature or not.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1555">YARN-1555</a>.
+     Major sub-task reported by Vinod Kumar Vavilapalli and fixed by Vinod Kumar Vavilapalli <br>
+     <b>[YARN-321] Failing tests in org.apache.hadoop.yarn.server.applicationhistoryservice.*</b><br>
+     <blockquote>Several tests are failing on the latest YARN-321 branch.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1553">YARN-1553</a>.
+     Major bug reported by Haohui Mai and fixed by Haohui Mai <br>
+     <b>Do not use HttpConfig.isSecure() in YARN</b><br>
+     <blockquote>HDFS-5305 and related jira decide that each individual project will have their own configuration on http policy. {{HttpConfig.isSecure}} is a global static method which does not fit the design anymore. The same functionality should be moved into the YARN code base.
+</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1536">YARN-1536</a>.
+     Minor improvement reported by Karthik Kambatla and fixed by Anubhav Dhoot (resourcemanager)<br>
+     <b>Cleanup: Get rid of ResourceManager#get*SecretManager() methods and use the RMContext methods instead</b><br>
+     <blockquote>Both ResourceManager and RMContext have methods to access the secret managers, and it should be safe (cleaner) to get rid of the ResourceManager methods.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1534">YARN-1534</a>.
+     Major sub-task reported by Shinichi Yamashita and fixed by Shinichi Yamashita <br>
+     <b>TestAHSWebApp failed in YARN-321 branch</b><br>
+     <blockquote>I ran the following commands. And I confirmed failure of TestAHSWebApp.
+
+{code}
+[sinchii@hdX YARN-321-test]$ mvn clean test -Dtest=org.apache.hadoop.yarn.server.applicationhistoryservice.webapp.*
+{code}
+
+{code}
+Running org.apache.hadoop.yarn.server.applicationhistoryservice.webapp.TestAHSWebServices
+Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 7.492 sec - in org.apache.hadoop.yarn.server.applicationhistoryservice.webapp.TestAHSWebServices
+Running org.apache.hadoop.yarn.server.applicationhistoryservice.webapp.TestAHSWebApp
+Tests run: 1, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 0.193 sec &lt;&lt;&lt; FAILURE! - in org.apache.hadoop.yarn.server.applicationhistoryservice.webapp.TestAHSWebApp
+initializationError(org.apache.hadoop.yarn.server.applicationhistoryservice.webapp.TestAHSWebApp)  Time elapsed: 0.016 sec  &lt;&lt;&lt; ERROR!
+java.lang.Exception: Test class should have exactly one public zero-argument constructor
+        at org.junit.runners.BlockJUnit4ClassRunner.validateZeroArgConstructor(BlockJUnit4ClassRunner.java:144)
+        at org.junit.runners.BlockJUnit4ClassRunner.validateConstructor(BlockJUnit4ClassRunner.java:121)
+        at org.junit.runners.BlockJUnit4ClassRunner.collectInitializationErrors(BlockJUnit4ClassRunner.java:101)
+        at org.junit.runners.ParentRunner.validate(ParentRunner.java:344)
+(*snip*)
+{code}</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1531">YARN-1531</a>.
+     Major bug reported by Akira AJISAKA and fixed by Akira AJISAKA (documentation)<br>
+     <b>True up yarn command documentation</b><br>
+     <blockquote>There are some options which are not written to Yarn Command document.
+For example, "yarn rmadmin" command options are as follows:
+{code}
+ Usage: yarn rmadmin
+   -refreshQueues 
+   -refreshNodes 
+   -refreshSuperUserGroupsConfiguration 
+   -refreshUserToGroupsMappings 
+   -refreshAdminAcls 
+   -refreshServiceAcl 
+   -getGroups [username]
+   -help [cmd]
+   -transitionToActive &lt;serviceId&gt;
+   -transitionToStandby &lt;serviceId&gt;
+   -failover [--forcefence] [--forceactive] &lt;serviceId&gt; &lt;serviceId&gt;
+   -getServiceState &lt;serviceId&gt;
+   -checkHealth &lt;serviceId&gt;
+{code}
+But some of the new options such as "-getGroups", "-transitionToActive", and "-transitionToStandby" are not documented.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1528">YARN-1528</a>.
+     Blocker bug reported by Karthik Kambatla and fixed by Karthik Kambatla (resourcemanager)<br>
+     <b>Allow setting auth for ZK connections</b><br>
+     <blockquote>ZK store and embedded election allow setting ZK-acls but not auth information</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1525">YARN-1525</a>.
+     Major sub-task reported by Xuan Gong and fixed by Cindy Li <br>
+     <b>Web UI should redirect to active RM when HA is enabled.</b><br>
+     <blockquote>When failover happens, web UI should redirect to the current active rm.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1521">YARN-1521</a>.
+     Blocker sub-task reported by Xuan Gong and fixed by Xuan Gong <br>
+     <b>Mark appropriate protocol methods with the idempotent annotation or AtMostOnce annotation</b><br>
+     <blockquote>After YARN-1028, we add the automatically failover into RMProxy. This JIRA is to identify whether we need to add idempotent annotation and which methods can be marked as idempotent.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1512">YARN-1512</a>.
+     Major improvement reported by Arun C Murthy and fixed by Arun C Murthy <br>
+     <b>Enhance CS to decouple scheduling from node heartbeats</b><br>
+     <blockquote>Enhance CS to decouple scheduling from node heartbeats; a prototype has improved latency significantly.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1493">YARN-1493</a>.
+     Major sub-task reported by Jian He and fixed by Jian He <br>
+     <b>Schedulers don't recognize apps separately from app-attempts</b><br>
+     <blockquote>Today, scheduler is tied to attempt only.
+
+We need to separate app-level handling logic in scheduler. We can add new app-level events to the scheduler and separate the app-level logic out. This is good for work-preserving AM restart, RM restart, and also needed for differentiating app-level metrics and attempt-level metrics.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1490">YARN-1490</a>.
+     Major sub-task reported by Vinod Kumar Vavilapalli and fixed by Jian He <br>
+     <b>RM should optionally not kill all containers when an ApplicationMaster exits</b><br>
+     <blockquote>This is needed to enable work-preserving AM restart. Some apps can chose to reconnect with old running containers, some may not want to. This should be an option.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1470">YARN-1470</a>.
+     Major bug reported by Sandy Ryza and fixed by Anubhav Dhoot <br>
+     <b>Add audience annotation to MiniYARNCluster</b><br>
+     <blockquote>We should make it clear whether this is a public interface.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1461">YARN-1461</a>.
+     Major sub-task reported by Karthik Kambatla and fixed by Karthik Kambatla (resourcemanager)<br>
+     <b>RM API and RM changes to handle tags for running jobs</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1459">YARN-1459</a>.
+     Major sub-task reported by Karthik Kambatla and fixed by Xuan Gong (resourcemanager)<br>
+     <b>RM services should depend on ConfigurationProvider during startup too</b><br>
+     <blockquote>YARN-1667, YARN-1668, YARN-1669 already changed RM to depend on a configuration provider so as to be able to refresh many configuration files across RM fail-over. The dependency on the configuration-provider by the RM should happen at its boot up time too.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1452">YARN-1452</a>.
+     Major task reported by Zhijie Shen and fixed by Zhijie Shen <br>
+     <b>Document the usage of the generic application history and the timeline data service</b><br>
+     <blockquote>We need to write a bunch of documents to guide users. such as command line tools, configurations and REST APIs</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1444">YARN-1444</a>.
+     Blocker bug reported by Robert Grandl and fixed by Wangda Tan (client , resourcemanager)<br>
+     <b>RM crashes when node resource request sent without corresponding off-switch request</b><br>
+     <blockquote>I have tried to force reducers to execute on certain nodes. What I did is I changed for reduce tasks, the RMContainerRequestor#addResourceRequest(req.priority, ResourceRequest.ANY, req.capability) to RMContainerRequestor#addResourceRequest(req.priority, HOST_NAME, req.capability). 
+
+However, this change lead to RM crashes when reducers needs to be assigned with the following exception:
+FATAL org.apache.hadoop.yarn.server.resourcemanager.ResourceManager: Error in handling event type NODE_UPDATE to the scheduler
+java.lang.NullPointerException
+    at org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue.assignContainers(LeafQueue.java:841)
+    at org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQueue.assignContainersToChildQueues(ParentQueue.java:640)
+    at org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQueue.assignContainers(ParentQueue.java:554)
+    at org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler.nodeUpdate(CapacityScheduler.java:695)
+    at org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler.handle(CapacityScheduler.java:739)
+    at org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler.handle(CapacityScheduler.java:86)
+    at org.apache.hadoop.yarn.server.resourcemanager.ResourceManager$SchedulerEventDispatcher$EventProcessor.run(ResourceManager.java:549)
+    at java.lang.Thread.run(Thread.java:722)
+
+</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1428">YARN-1428</a>.
+     Major sub-task reported by Zhijie Shen and fixed by Zhijie Shen <br>
+     <b>RM cannot write the final state of RMApp/RMAppAttempt to the application history store in the transition to the final state</b><br>
+     <blockquote>ApplicationFinishData and ApplicationAttemptFinishData are written in the final transitions of RMApp/RMAppAttempt respectively. However, in the transitions, getState() is not getting the state that RMApp/RMAppAttempt is going to enter, but prior one.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1417">YARN-1417</a>.
+     Blocker bug reported by Omkar Vinit Joshi and fixed by Jian He <br>
+     <b>RM may issue expired container tokens to AM while issuing new containers.</b><br>
+     <blockquote>Today we create new container token when we create container in RM as a part of schedule cycle. However that container may get reserved or assigned. If the container gets reserved and remains like that (in reserved state) for more than container token expiry interval then RM will end up issuing container with expired token.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1410">YARN-1410</a>.
+     Major sub-task reported by Bikas Saha and fixed by Xuan Gong <br>
+     <b>Handle RM fails over after getApplicationID() and before submitApplication().</b><br>
+     <blockquote>App submission involves
+1) creating appId
+2) using that appId to submit an ApplicationSubmissionContext to the user.
+The client may have obtained an appId from an RM, the RM may have failed over, and the client may submit the app to the new RM.
+Since the new RM has a different notion of cluster timestamp (used to create app id) the new RM may reject the app submission resulting in unexpected failure on the client side.
+
+The same may happen for other 2 step client API operations.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1398">YARN-1398</a>.
+     Blocker bug reported by Sunil G and fixed by Vinod Kumar Vavilapalli (resourcemanager)<br>
+     <b>Deadlock in capacity scheduler leaf queue and parent queue for getQueueInfo and completedContainer call</b><br>
+     <blockquote>getQueueInfo in parentQueue will call  child.getQueueInfo().
+This will try acquire the leaf queue lock over parent queue lock.
+
+Now at same time if a completedContainer call comes and acquired LeafQueue lock and it will wait for ParentQueue's completedConatiner call.
+
+This lock usage is not in synchronous and can lead to deadlock.
+
+With JCarder, this is showing as a potential deadlock scenario.
+
+</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1389">YARN-1389</a>.
+     Major sub-task reported by Mayank Bansal and fixed by Mayank Bansal <br>
+     <b>ApplicationClientProtocol and ApplicationHistoryProtocol should expose analogous APIs</b><br>
+     <blockquote>As we plan to have the APIs in ApplicationHistoryProtocol to expose the reports of *finished* application attempts and containers, we should do the same for ApplicationClientProtocol, which will return the reports of *running* attempts and containers.
+
+Later on, we can improve YarnClient to direct the query of running instance to ApplicationClientProtocol, while that of finished instance to ApplicationHistoryProtocol, making it transparent to the users.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1379">YARN-1379</a>.
+     Major sub-task reported by Vinod Kumar Vavilapalli and fixed by Vinod Kumar Vavilapalli <br>
+     <b>[YARN-321] AHS protocols need to be in yarn proto package name after YARN-1170</b><br>
+     <blockquote>Found this while merging YARN-321 to the latest branch-2. Without this, compilation fails.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1345">YARN-1345</a>.
+     Major sub-task reported by Zhijie Shen and fixed by Zhijie Shen <br>
+     <b>Removing FINAL_SAVING from YarnApplicationAttemptState</b><br>
+     <blockquote>Whenever YARN-891 is done, we need to add the mapping of RMAppAttemptState.FINAL_SAVING -&gt; YarnApplicationAttemptState.FINAL_SAVING in RMServerUtils#createApplicationAttemptState</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1301">YARN-1301</a>.
+     Minor bug reported by Zhijie Shen and fixed by Tsuyoshi OZAWA <br>
+     <b>Need to log the blacklist additions/removals when YarnSchedule#allocate</b><br>
+     <blockquote>Now without the log, it's hard to debug whether blacklist is updated on the scheduler side or not</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1285">YARN-1285</a>.
+     Major bug reported by Zhijie Shen and fixed by Kenji Kikushima <br>
+     <b>Inconsistency of default "yarn.acl.enable" value</b><br>
+     <blockquote>In yarn-default.xml, "yarn.acl.enable" is true while in YarnConfiguration, DEFAULT_YARN_ACL_ENABLE is false.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1266">YARN-1266</a>.
+     Major sub-task reported by Mayank Bansal and fixed by Mayank Bansal <br>
+     <b>Implement PB service and client wrappers for ApplicationHistoryProtocol</b><br>
+     <blockquote>Adding ApplicationHistoryProtocolPBService to make web apps to work and changing yarn to run AHS as a seprate process</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1242">YARN-1242</a>.
+     Major sub-task reported by Zhijie Shen and fixed by Mayank Bansal <br>
+     <b>Script changes to start AHS as an individual process</b><br>
+     <blockquote>Add the command in yarn and yarn.cmd to start and stop AHS</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1206">YARN-1206</a>.
+     Blocker bug reported by Jian He and fixed by Rohith <br>
+     <b>AM container log link broken on NM web page even though local container logs are available</b><br>
+     <blockquote>With log aggregation disabled, when container is running, its logs link works properly, but after the application is finished, the link shows 'Container does not exist.'</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1191">YARN-1191</a>.
+     Major sub-task reported by Mayank Bansal and fixed by Mayank Bansal <br>
+     <b>[YARN-321] Update artifact versions for application history service</b><br>
+     <blockquote>Compilation is failing for YARN-321 branch
+</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1171">YARN-1171</a>.
+     Major improvement reported by Sandy Ryza and fixed by Naren Koneru (documentation , scheduler)<br>
+     <b>Add default queue properties to Fair Scheduler documentation </b><br>
+     <blockquote>The Fair Scheduler doc is missing the following properties.
+- defaultMinSharePreemptionTimeout
+- queueMaxAppsDefault</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1166">YARN-1166</a>.
+     Blocker bug reported by Srimanth Gunturi and fixed by Zhijie Shen (resourcemanager)<br>
+     <b>YARN 'appsFailed' metric should be of type 'counter'</b><br>
+     <blockquote>Currently in YARN's queue metrics, the cumulative metric 'appsFailed' is of type 'guage' - which means the exact value will be reported. 
+
+All other cumulative queue metrics (AppsSubmitted, AppsCompleted, AppsKilled) are all of type 'counter' - meaning Ganglia will use slope to provide deltas between time-points.
+
+To be consistent, AppsFailed metric should also be of type 'counter'. </blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1123">YARN-1123</a>.
+     Major sub-task reported by Zhijie Shen and fixed by Mayank Bansal <br>
+     <b>[YARN-321] Adding ContainerReport and Protobuf implementation</b><br>
+     <blockquote>Like YARN-978, we need some client-oriented class to expose the container history info. Neither Container nor RMContainer is the right one.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1071">YARN-1071</a>.
+     Major bug reported by Srimanth Gunturi and fixed by Jian He (resourcemanager)<br>
+     <b>ResourceManager's decommissioned and lost node count is 0 after restart</b><br>
+     <blockquote>I had 6 nodes in a cluster with 2 NMs stopped. Then I put a host into YARN's {{yarn.resourcemanager.nodes.exclude-path}}. After running {{yarn rmadmin -refreshNodes}}, RM's JMX correctly showed decommissioned node count:
+{noformat}
+"NumActiveNMs" : 3,
+"NumDecommissionedNMs" : 1,
+"NumLostNMs" : 2,
+"NumUnhealthyNMs" : 0,
+"NumRebootedNMs" : 0
+{noformat}
+
+After restarting RM, the counts were shown as below in JMX.
+{noformat}
+"NumActiveNMs" : 3,
+"NumDecommissionedNMs" : 0,
+"NumLostNMs" : 0,
+"NumUnhealthyNMs" : 0,
+"NumRebootedNMs" : 0
+{noformat}
+
+Notice that the lost and decommissioned NM counts are both 0.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1041">YARN-1041</a>.
+     Major sub-task reported by Steve Loughran and fixed by Jian He (resourcemanager)<br>
+     <b>Protocol changes for RM to bind and notify a restarted AM of existing containers</b><br>
+     <blockquote>For long lived containers we don't want the AM to be a SPOF.
+
+When the RM restarts a (failed) AM, it should be given the list of containers it had already been allocated. the AM should then be able to contact the NMs to get details on them. NMs would also need to do any binding of the containers needed to handle a moved/restarted AM.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1023">YARN-1023</a>.
+     Major sub-task reported by Devaraj K and fixed by Zhijie Shen <br>
+     <b>[YARN-321] Webservices REST API's support for Application History</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1017">YARN-1017</a>.
+     Blocker sub-task reported by Jian He and fixed by Jian He (resourcemanager)<br>
+     <b>Document RM Restart feature</b><br>
+     <blockquote>This should give users a general idea about how RM Restart works and how to use RM Restart</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-1007">YARN-1007</a>.
+     Major sub-task reported by Devaraj K and fixed by Mayank Bansal <br>
+     <b>[YARN-321] Enhance History Reader interface for Containers</b><br>
+     <blockquote>If we want to show the containers used by application/app attempt, We need to have two more API's which returns collection of ContainerHistoryData for application id and applcation attempt id something like below. 
+
+{code:xml}
+  Collection&lt;ContainerHistoryData&gt; getContainers(
+      ApplicationAttemptId appAttemptId);
+
+  Collection&lt;ContainerHistoryData&gt; getContainers(ApplicationId appId);
+{code}
+
+
+{code:xml}
+  /**
+   * This method returns {@link Container} for specified {@link ContainerId}.
+   * 
+   * @param {@link ContainerId}
+   * @return {@link Container} for ContainerId
+   */
+  ContainerHistoryData getAMContainer(ContainerId containerId);
+{code}
+In the above API, we need to change the argument to application attempt id or we can remove this API because every attempt history data has master container id field, using master container id, history data can get using this below API if it takes argument as container id.
+
+
+{code:xml}
+  /**
+   * This method returns {@link ContainerHistoryData} for specified
+   * {@link ApplicationAttemptId}.
+   * 
+   * @param {@link ApplicationAttemptId}
+   * @return {@link ContainerHistoryData} for ApplicationAttemptId
+   */
+  ContainerHistoryData getContainer(ApplicationAttemptId appAttemptId);
+{code}
+Here application attempt can use numbers of containers but we cannot choose which container history data to return. This API argument also need to be changed to take container id instead of app attempt id. 
+</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-987">YARN-987</a>.
+     Major sub-task reported by Mayank Bansal and fixed by Mayank Bansal <br>
+     <b>Adding ApplicationHistoryManager responsible for exposing reports to all clients</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-986">YARN-986</a>.
+     Blocker sub-task reported by Vinod Kumar Vavilapalli and fixed by Karthik Kambatla <br>
+     <b>RM DT token service should have service addresses of both RMs</b><br>
+     <blockquote>Previously: YARN should use cluster-id as token service address
+
+This needs to be done to support non-ip based fail over of RM. Once the server sets the token service address to be this generic ClusterId/ServiceId, clients can translate it to appropriate final IP and then be able to select tokens via TokenSelectors.
+
+Some workarounds for other related issues were put in place at YARN-945.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-984">YARN-984</a>.
+     Major sub-task reported by Devaraj K and fixed by Devaraj K <br>
+     <b>[YARN-321] Move classes from applicationhistoryservice.records.pb.impl package to applicationhistoryservice.records.impl.pb</b><br>
+     <blockquote>While creating instance for applicationhistoryservice.records.* pb records, It is throwing the ClassNotFoundException. 
+
+{code:xml}
+Caused by: java.lang.ClassNotFoundException: Class org.apache.hadoop.yarn.server.applicationhistoryservice.records.impl.pb.ApplicationHistoryDataPBImpl not found
+	at org.apache.hadoop.conf.Configuration.getClassByName(Configuration.java:1619)
+	at org.apache.hadoop.yarn.factories.impl.pb.RecordFactoryPBImpl.newRecordInstance(RecordFactoryPBImpl.java:56)
+	... 49 more
+{code}</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-979">YARN-979</a>.
+     Major sub-task reported by Mayank Bansal and fixed by Mayank Bansal <br>
+     <b>[YARN-321] Add more APIs related to ApplicationAttempt and Container in ApplicationHistoryProtocol</b><br>
+     <blockquote>ApplicationHistoryProtocol should have the following APIs as well:
+
+* getApplicationAttemptReport
+* getApplicationAttempts
+* getContainerReport
+* getContainers
+
+The corresponding request and response classes need to be added as well.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-978">YARN-978</a>.
+     Major sub-task reported by Mayank Bansal and fixed by Mayank Bansal <br>
+     <b>[YARN-321] Adding ApplicationAttemptReport and Protobuf implementation</b><br>
+     <blockquote>We dont have ApplicationAttemptReport and Protobuf implementation.
+
+Adding that.
+
+Thanks,
+Mayank</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-975">YARN-975</a>.
+     Major sub-task reported by Zhijie Shen and fixed by Zhijie Shen <br>
+     <b>Add a file-system implementation for history-storage</b><br>
+     <blockquote>HDFS implementation should be a standard persistence strategy of history storage</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-974">YARN-974</a>.
+     Major sub-task reported by Zhijie Shen and fixed by Zhijie Shen <br>
+     <b>RMContainer should collect more useful information to be recorded in Application-History</b><br>
+     <blockquote>To record the history of a container, users may be also interested in the following information:
+
+1. Start Time
+2. Stop Time
+3. Diagnostic Information
+4. URL to the Log File
+5. Actually Allocated Resource
+6. Actually Assigned Node
+
+These should be remembered during the RMContainer's life cycle.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-967">YARN-967</a>.
+     Major sub-task reported by Devaraj K and fixed by Mayank Bansal <br>
+     <b>[YARN-321] Command Line Interface(CLI) for Reading Application History Storage Data</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-962">YARN-962</a>.
+     Major sub-task reported by Zhijie Shen and fixed by Zhijie Shen <br>
+     <b>Update application_history_service.proto</b><br>
+     <blockquote>1. Change it's name to application_history_client.proto
+2. Fix the incorrect proto reference.
+3. Correct the dir in pom.xml</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-956">YARN-956</a>.
+     Major sub-task reported by Vinod Kumar Vavilapalli and fixed by Zhijie Shen <br>
+     <b>[YARN-321] Add a testable in-memory HistoryStorage </b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-955">YARN-955</a>.
+     Major sub-task reported by Vinod Kumar Vavilapalli and fixed by Mayank Bansal <br>
+     <b>[YARN-321] Implementation of ApplicationHistoryProtocol</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-954">YARN-954</a>.
+     Major sub-task reported by Vinod Kumar Vavilapalli and fixed by Zhijie Shen <br>
+     <b>[YARN-321] History Service should create the webUI and wire it to HistoryStorage</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-953">YARN-953</a>.
+     Major sub-task reported by Vinod Kumar Vavilapalli and fixed by Zhijie Shen <br>
+     <b>[YARN-321] Enable ResourceManager to write history data</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-947">YARN-947</a>.
+     Major sub-task reported by Zhijie Shen and fixed by Zhijie Shen <br>
+     <b>Defining the history data classes for the implementation of the reading/writing interface</b><br>
+     <blockquote>We need to define the history data classes have the exact fields to be stored. Therefore, all the implementations don't need to have the duplicate logic to exact the required information from RMApp, RMAppAttempt and RMContainer.
+
+We use protobuf to define these classes, such that they can be ser/des to/from bytes, which are easier for persistence.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-935">YARN-935</a>.
+     Major sub-task reported by Zhijie Shen and fixed by Zhijie Shen <br>
+     <b>YARN-321 branch is broken due to applicationhistoryserver module's pom.xml</b><br>
+     <blockquote>The branch was created from branch-2, hadoop-yarn-server-applicationhistoryserver/pom.xml should use 2.2.0-SNAPSHOT, not 3.0.0-SNAPSHOT. Otherwise, the sub-project cannot be built correctly because of wrong dependency.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-934">YARN-934</a>.
+     Major sub-task reported by Zhijie Shen and fixed by Zhijie Shen <br>
+     <b>HistoryStorage writer interface for Application History Server</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-930">YARN-930</a>.
+     Major sub-task reported by Vinod Kumar Vavilapalli and fixed by Vinod Kumar Vavilapalli <br>
+     <b>Bootstrap ApplicationHistoryService module</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/YARN-713">YARN-713</a>.
+     Critical bug reported by Jason Lowe and fixed by Jian He (resourcemanager)<br>
+     <b>ResourceManager can exit unexpectedly if DNS is unavailable</b><br>
+     <blockquote>As discussed in MAPREDUCE-5261, there's a possibility that a DNS outage could lead to an unhandled exception in the ResourceManager's AsyncDispatcher, and that ultimately would cause the RM to exit.  The RM should not exit during DNS hiccups.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5813">MAPREDUCE-5813</a>.
+     Blocker bug reported by Gera Shegalov and fixed by Gera Shegalov (mrv2 , task)<br>
+     <b>YarnChild does not load job.xml with mapreduce.job.classloader=true </b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5810">MAPREDUCE-5810</a>.
+     Major bug reported by Mit Desai and fixed by Akira AJISAKA (contrib/streaming)<br>
+     <b>TestStreamingTaskLog#testStreamingTaskLogWithHadoopCmd is failing</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5806">MAPREDUCE-5806</a>.
+     Major bug reported by Eugene Koifman and fixed by Varun Vasudev <br>
+     <b>Log4j settings in container-log4j.properties cannot be overridden </b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5805">MAPREDUCE-5805</a>.
+     Major bug reported by Fengdong Yu and fixed by Akira AJISAKA (jobhistoryserver)<br>
+     <b>Unable to parse launch time from job history file</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5795">MAPREDUCE-5795</a>.
+     Major bug reported by Yesha Vora and fixed by Xuan Gong <br>
+     <b>Job should be marked as Failed if it is recovered from commit.</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5794">MAPREDUCE-5794</a>.
+     Minor bug reported by Tsz Wo Nicholas Sze and fixed by Tsz Wo Nicholas Sze (test)<br>
+     <b>SliveMapper always uses default FileSystem.</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5791">MAPREDUCE-5791</a>.
+     Major bug reported by Nikola Vujic and fixed by Nikola Vujic (client)<br>
+     <b>Shuffle phase is slow in Windows - FadviseFileRegion::transferTo does not read disks efficiently</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5789">MAPREDUCE-5789</a>.
+     Major bug reported by Rushabh S Shah and fixed by Rushabh S Shah (jobhistoryserver , webapps)<br>
+     <b>Average Reduce time is incorrect on Job Overview page</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5787">MAPREDUCE-5787</a>.
+     Critical sub-task reported by Rajesh Balamohan and fixed by Rajesh Balamohan (nodemanager)<br>
+     <b>Modify ShuffleHandler to support Keep-Alive</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5780">MAPREDUCE-5780</a>.
+     Minor bug reported by Tsz Wo Nicholas Sze and fixed by Tsz Wo Nicholas Sze (test)<br>
+     <b>SliveTest always uses default FileSystem</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5778">MAPREDUCE-5778</a>.
+     Major bug reported by Jason Lowe and fixed by Akira AJISAKA (jobhistoryserver)<br>
+     <b>JobSummary does not escape newlines in the job name</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5773">MAPREDUCE-5773</a>.
+     Blocker improvement reported by Gera Shegalov and fixed by Gera Shegalov (mr-am)<br>
+     <b>Provide dedicated MRAppMaster syslog length limit</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5770">MAPREDUCE-5770</a>.
+     Major bug reported by Yesha Vora and fixed by Jian He <br>
+     <b>Redirection from AM-URL is broken with HTTPS_ONLY policy</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5769">MAPREDUCE-5769</a>.
+     Major bug reported by Rohith and fixed by Rohith <br>
+     <b>Unregistration to RM should not be called if AM is crashed before registering with RM</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5768">MAPREDUCE-5768</a>.
+     Major bug reported by Zhijie Shen and fixed by Gera Shegalov <br>
+     <b>TestMRJobs.testContainerRollingLog fails on trunk</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5766">MAPREDUCE-5766</a>.
+     Minor bug reported by Ramya Sunil and fixed by Jian He (applicationmaster)<br>
+     <b>Ping messages from attempts should be moved to DEBUG</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5761">MAPREDUCE-5761</a>.
+     Trivial improvement reported by Yesha Vora and fixed by Jian He <br>
+     <b>Add a log message like "encrypted shuffle is ON" in nodemanager logs</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5757">MAPREDUCE-5757</a>.
+     Major bug reported by Jason Lowe and fixed by Jason Lowe (client)<br>
+     <b>ConcurrentModificationException in JobControl.toList</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5754">MAPREDUCE-5754</a>.
+     Major improvement reported by Gera Shegalov and fixed by Gera Shegalov (jobhistoryserver , mr-am)<br>
+     <b>Preserve Job diagnostics in history</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5751">MAPREDUCE-5751</a>.
+     Major bug reported by Sangjin Lee and fixed by Sangjin Lee <br>
+     <b>MR app master fails to start in some cases if mapreduce.job.classloader is true</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5746">MAPREDUCE-5746</a>.
+     Major bug reported by Jason Lowe and fixed by Jason Lowe (jobhistoryserver)<br>
+     <b>Job diagnostics can implicate wrong task for a failed job</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5732">MAPREDUCE-5732</a>.
+     Major improvement reported by Sandy Ryza and fixed by Sandy Ryza <br>
+     <b>Report proper queue when job has been automatically placed</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5699">MAPREDUCE-5699</a>.
+     Major bug reported by Karthik Kambatla and fixed by Karthik Kambatla (applicationmaster)<br>
+     <b>Allow setting tags on MR jobs</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5688">MAPREDUCE-5688</a>.
+     Major bug reported by Mit Desai and fixed by Mit Desai <br>
+     <b>TestStagingCleanup fails intermittently with JDK7</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5670">MAPREDUCE-5670</a>.
+     Minor bug reported by Jason Lowe and fixed by Chen He (mrv2)<br>
+     <b>CombineFileRecordReader should report progress when moving to the next file</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5570">MAPREDUCE-5570</a>.
+     Major bug reported by Jason Lowe and fixed by Rushabh S Shah (mr-am , mrv2)<br>
+     <b>Map task attempt with fetch failure has incorrect attempt finish time</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5553">MAPREDUCE-5553</a>.
+     Minor improvement reported by Paul Han and fixed by Paul Han (applicationmaster)<br>
+     <b>Add task state filters on Application/MRJob page for MR Application master </b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-5028">MAPREDUCE-5028</a>.
+     Critical bug reported by Karthik Kambatla and fixed by Karthik Kambatla <br>
+     <b>Maps fail when io.sort.mb is set to high value</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-4052">MAPREDUCE-4052</a>.
+     Major bug reported by xieguiming and fixed by Jian He (job submission)<br>
+     <b>Windows eclipse cannot submit job from Windows client to Linux/Unix Hadoop cluster.</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2349">MAPREDUCE-2349</a>.
+     Major improvement reported by Joydeep Sen Sarma and fixed by Siddharth Seth (task)<br>
+     <b>speed up list[located]status calls from input formats</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6166">HDFS-6166</a>.
+     Blocker bug reported by Nathan Roberts and fixed by Nathan Roberts (balancer)<br>
+     <b>revisit balancer so_timeout </b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6163">HDFS-6163</a>.
+     Minor bug reported by Fengdong Yu and fixed by Fengdong Yu (documentation)<br>
+     <b>Fix a minor bug in the HA upgrade document</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6157">HDFS-6157</a>.
+     Major bug reported by Haohui Mai and fixed by Haohui Mai <br>
+     <b>Fix the entry point of OfflineImageViewer for hdfs.cmd</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6150">HDFS-6150</a>.
+     Minor improvement reported by Suresh Srinivas and fixed by Suresh Srinivas (namenode)<br>
+     <b>Add inode id information in the logs to make debugging easier</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6140">HDFS-6140</a>.
+     Major bug reported by Chris Nauroth and fixed by Chris Nauroth (webhdfs)<br>
+     <b>WebHDFS cannot create a file with spaces in the name after HA failover changes.</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6138">HDFS-6138</a>.
+     Minor improvement reported by Sanjay Radia and fixed by Sanjay Radia (documentation)<br>
+     <b>User Guide for how to use viewfs with federation</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6135">HDFS-6135</a>.
+     Blocker bug reported by Jing Zhao and fixed by Jing Zhao (journal-node)<br>
+     <b>In HDFS upgrade with HA setup, JournalNode cannot handle layout version bump when rolling back</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6131">HDFS-6131</a>.
+     Major bug reported by Jing Zhao and fixed by Jing Zhao (documentation)<br>
+     <b>Move HDFSHighAvailabilityWithNFS.apt.vm and HDFSHighAvailabilityWithQJM.apt.vm from Yarn to HDFS</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6130">HDFS-6130</a>.
+     Blocker bug reported by Fengdong Yu and fixed by Haohui Mai (namenode)<br>
+     <b>NPE when upgrading namenode from fsimages older than -32</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6129">HDFS-6129</a>.
+     Minor bug reported by Tsz Wo Nicholas Sze and fixed by Tsz Wo Nicholas Sze (datanode)<br>
+     <b>When a replica is not found for deletion, do not throw exception.</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6127">HDFS-6127</a>.
+     Major bug reported by Arpit Gupta and fixed by Haohui Mai (ha)<br>
+     <b>WebHDFS tokens cannot be renewed in HA setup</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6124">HDFS-6124</a>.
+     Major sub-task reported by Suresh Srinivas and fixed by Suresh Srinivas <br>
+     <b>Add final modifier to class members</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6123">HDFS-6123</a>.
+     Minor improvement reported by Tsz Wo Nicholas Sze and fixed by Tsz Wo Nicholas Sze (datanode)<br>
+     <b>Improve datanode error messages</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6120">HDFS-6120</a>.
+     Major improvement reported by Arpit Agarwal and fixed by Arpit Agarwal (namenode)<br>
+     <b>Fix and improve safe mode log messages</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6117">HDFS-6117</a>.
+     Minor bug reported by Suresh Srinivas and fixed by Suresh Srinivas (namenode)<br>
+     <b>Print file path information in FileNotFoundException</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6115">HDFS-6115</a>.
+     Minor bug reported by Vinayakumar B and fixed by Vinayakumar B (datanode)<br>
+     <b>flush() should be called for every append on block scan verification log</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6107">HDFS-6107</a>.
+     Major bug reported by Colin Patrick McCabe and fixed by Colin Patrick McCabe (datanode)<br>
+     <b>When a block can't be cached due to limited space on the DataNode, that block becomes uncacheable</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6106">HDFS-6106</a>.
+     Major bug reported by Colin Patrick McCabe and fixed by Colin Patrick McCabe <br>
+     <b>Reduce default for dfs.namenode.path.based.cache.refresh.interval.ms</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6105">HDFS-6105</a>.
+     Major bug reported by Kihwal Lee and fixed by Haohui Mai <br>
+     <b>NN web UI for DN list loads the same jmx page multiple times.</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6102">HDFS-6102</a>.
+     Blocker bug reported by Andrew Wang and fixed by Andrew Wang (namenode)<br>
+     <b>Lower the default maximum items per directory to fix PB fsimage loading</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6100">HDFS-6100</a>.
+     Major bug reported by Arpit Gupta and fixed by Haohui Mai (ha)<br>
+     <b>DataNodeWebHdfsMethods does not failover in HA mode</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6099">HDFS-6099</a>.
+     Major bug reported by Chris Nauroth and fixed by Chris Nauroth (namenode)<br>
+     <b>HDFS file system limits not enforced on renames.</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6097">HDFS-6097</a>.
+     Major bug reported by Colin Patrick McCabe and fixed by Colin Patrick McCabe (hdfs-client)<br>
+     <b>zero-copy reads are incorrectly disabled on file offsets above 2GB</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6096">HDFS-6096</a>.
+     Minor bug reported by Tsz Wo Nicholas Sze and fixed by Tsz Wo Nicholas Sze (test)<br>
+     <b>TestWebHdfsTokens may timeout</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6094">HDFS-6094</a>.
+     Major bug reported by Arpit Agarwal and fixed by Arpit Agarwal (namenode)<br>
+     <b>The same block can be counted twice towards safe mode threshold</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6090">HDFS-6090</a>.
+     Minor improvement reported by Akira AJISAKA and fixed by Akira AJISAKA (test)<br>
+     <b>Use MiniDFSCluster.Builder instead of deprecated constructors</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6089">HDFS-6089</a>.
+     Major bug reported by Arpit Gupta and fixed by Jing Zhao (ha)<br>
+     <b>Standby NN while transitioning to active throws a connection refused error when the prior active NN process is suspended</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6086">HDFS-6086</a>.
+     Major sub-task reported by Colin Patrick McCabe and fixed by Colin Patrick McCabe (datanode)<br>
+     <b>Fix a case where zero-copy or no-checksum reads were not allowed even when the block was cached</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6085">HDFS-6085</a>.
+     Major improvement reported by Colin Patrick McCabe and fixed by Colin Patrick McCabe (namenode)<br>
+     <b>Improve CacheReplicationMonitor log messages a bit</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6084">HDFS-6084</a>.
+     Minor improvement reported by Travis Thompson and fixed by Travis Thompson (namenode)<br>
+     <b>Namenode UI - "Hadoop" logo link shouldn't go to hadoop homepage</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6080">HDFS-6080</a>.
+     Major improvement reported by Abin Shahab and fixed by Abin Shahab (nfs , performance)<br>
+     <b>Improve NFS gateway performance by making rtmax and wtmax configurable</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6079">HDFS-6079</a>.
+     Major bug reported by Andrew Wang and fixed by Andrew Wang (hdfs-client)<br>
+     <b>Timeout for getFileBlockStorageLocations does not work</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6078">HDFS-6078</a>.
+     Minor bug reported by Arpit Agarwal and fixed by Arpit Agarwal (test)<br>
+     <b>TestIncrementalBlockReports is flaky</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6077">HDFS-6077</a>.
+     Major bug reported by Arpit Gupta and fixed by Jing Zhao <br>
+     <b>running slive with webhdfs on secure HA cluster fails with unkown host exception</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6076">HDFS-6076</a>.
+     Minor sub-task reported by Tsz Wo Nicholas Sze and fixed by Tsz Wo Nicholas Sze (datanode , test)<br>
+     <b>SimulatedDataSet should not create DatanodeRegistration with namenode layout version and type</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6072">HDFS-6072</a>.
+     Major improvement reported by Haohui Mai and fixed by Haohui Mai <br>
+     <b>Clean up dead code of FSImage</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6071">HDFS-6071</a>.
+     Major bug reported by Colin Patrick McCabe and fixed by Colin Patrick McCabe <br>
+     <b>BlockReaderLocal doesn't return -1 on EOF when doing a zero-length read on a short file</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6070">HDFS-6070</a>.
+     Trivial improvement reported by Andrew Wang and fixed by Andrew Wang <br>
+     <b>Cleanup use of ReadStatistics in DFSInputStream</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6069">HDFS-6069</a>.
+     Trivial improvement reported by Andrew Wang and fixed by Chris Nauroth (namenode)<br>
+     <b>Quash stack traces when ACLs are disabled</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6068">HDFS-6068</a>.
+     Major bug reported by Andrew Wang and fixed by sathish (snapshots)<br>
+     <b>Disallow snapshot names that are also invalid directory names</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6067">HDFS-6067</a>.
+     Major bug reported by Colin Patrick McCabe and fixed by Colin Patrick McCabe (hdfs-client)<br>
+     <b>TestPread.testMaxOutHedgedReadPool is flaky</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6065">HDFS-6065</a>.
+     Major bug reported by Colin Patrick McCabe and fixed by Colin Patrick McCabe (hdfs-client)<br>
+     <b>HDFS zero-copy reads should return null on EOF when doing ZCR</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6064">HDFS-6064</a>.
+     Minor bug reported by Vinayakumar B and fixed by Vinayakumar B (datanode)<br>
+     <b>DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_DEFAULT is not updated with latest block report interval of 6 hrs</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6063">HDFS-6063</a>.
+     Minor bug reported by Colin Patrick McCabe and fixed by Chris Nauroth (test , tools)<br>
+     <b>TestAclCLI fails intermittently when running test 24: copyFromLocal</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6062">HDFS-6062</a>.
+     Minor bug reported by Jing Zhao and fixed by Jing Zhao <br>
+     <b>TestRetryCacheWithHA#testConcat is flaky</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6061">HDFS-6061</a>.
+     Major sub-task reported by Colin Patrick McCabe and fixed by Colin Patrick McCabe (datanode)<br>
+     <b>Allow dfs.datanode.shared.file.descriptor.path to contain multiple entries and fall back when needed</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6060">HDFS-6060</a>.
+     Major sub-task reported by Brandon Li and fixed by Brandon Li (namenode)<br>
+     <b>NameNode should not check DataNode layout version</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6059">HDFS-6059</a>.
+     Major bug reported by Akira AJISAKA and fixed by Akira AJISAKA <br>
+     <b>TestBlockReaderLocal fails if native library is not available</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6058">HDFS-6058</a>.
+     Major bug reported by Vinayakumar B and fixed by Haohui Mai <br>
+     <b>Fix TestHDFSCLI failures after HADOOP-8691 change</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6057">HDFS-6057</a>.
+     Blocker bug reported by Eric Sirianni and fixed by Colin Patrick McCabe (hdfs-client)<br>
+     <b>DomainSocketWatcher.watcherThread should be marked as daemon thread</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6055">HDFS-6055</a>.
+     Major improvement reported by Suresh Srinivas and fixed by Chris Nauroth (namenode)<br>
+     <b>Change default configuration to limit file name length in HDFS</b><br>
+     <blockquote>The default configuration of HDFS now sets dfs.namenode.fs-limits.max-component-length to 255 for improved interoperability with other file system implementations.  This limits each component of a file system path to a maximum of 255 bytes in UTF-8 encoding.  Attempts to create new files that violate this rule will fail with an error.  Existing files that violate the rule are not effected.  Previously, dfs.namenode.fs-limits.max-component-length was set to 0 (ignored).  If necessary, it is possible to set the value back to 0 in the cluster's configuration to restore the old behavior.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6053">HDFS-6053</a>.
+     Major bug reported by Jing Zhao and fixed by Jing Zhao (namenode)<br>
+     <b>Fix TestDecommissioningStatus and TestDecommission in branch-2</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6051">HDFS-6051</a>.
+     Blocker bug reported by Chris Nauroth and fixed by Colin Patrick McCabe (hdfs-client)<br>
+     <b>HDFS cannot run on Windows since short-circuit shared memory segment changes.</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6047">HDFS-6047</a>.
+     Major bug reported by stack and fixed by stack <br>
+     <b>TestPread NPE inside in DFSInputStream hedgedFetchBlockByteRange</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6046">HDFS-6046</a>.
+     Major sub-task reported by Colin Patrick McCabe and fixed by Colin Patrick McCabe (hdfs-client)<br>
+     <b>add dfs.client.mmap.enabled</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6044">HDFS-6044</a>.
+     Minor improvement reported by Brandon Li and fixed by Brandon Li (nfs)<br>
+     <b>Add property for setting the NFS look up time for users</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6043">HDFS-6043</a>.
+     Major improvement reported by Brandon Li and fixed by Brandon Li (nfs)<br>
+     <b>Give HDFS daemons NFS3 and Portmap their own OPTS</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6040">HDFS-6040</a>.
+     Blocker sub-task reported by Colin Patrick McCabe and fixed by Colin Patrick McCabe (hdfs-client)<br>
+     <b>fix DFSClient issue without libhadoop.so and some other ShortCircuitShm cleanups</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6039">HDFS-6039</a>.
+     Major bug reported by Yesha Vora and fixed by Chris Nauroth (namenode)<br>
+     <b>Uploading a File under a Dir with default acls throws "Duplicated ACLFeature"</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6038">HDFS-6038</a>.
+     Major sub-task reported by Haohui Mai and fixed by Jing Zhao (journal-node , namenode)<br>
+     <b>Allow JournalNode to handle editlog produced by new release with future layoutversion</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6033">HDFS-6033</a>.
+     Major bug reported by Aaron T. Myers and fixed by Aaron T. Myers (caching)<br>
+     <b>PBImageXmlWriter incorrectly handles processing cache directives</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6030">HDFS-6030</a>.
+     Trivial task reported by Yongjun Zhang and fixed by Yongjun Zhang <br>
+     <b>Remove an unused constructor in INode.java</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6028">HDFS-6028</a>.
+     Trivial bug reported by Chris Nauroth and fixed by Chris Nauroth (namenode)<br>
+     <b>Print clearer error message when user attempts to delete required mask entry from ACL.</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6025">HDFS-6025</a>.
+     Minor task reported by Tsz Wo Nicholas Sze and fixed by Tsz Wo Nicholas Sze (build)<br>
+     <b>Update findbugsExcludeFile.xml</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6018">HDFS-6018</a>.
+     Trivial improvement reported by Jing Zhao and fixed by Jing Zhao <br>
+     <b>Exception recorded in LOG when IPCLoggerChannel#close is called</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6008">HDFS-6008</a>.
+     Minor bug reported by Benoy Antony and fixed by Benoy Antony (namenode)<br>
+     <b>Namenode dead node link is giving HTTP error 500</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-6006">HDFS-6006</a>.
+     Trivial improvement reported by Akira AJISAKA and fixed by Akira AJISAKA (namenode)<br>
+     <b>Remove duplicate code in FSNameSystem#getFileInfo</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5988">HDFS-5988</a>.
+     Blocker bug reported by Andrew Wang and fixed by Andrew Wang (namenode)<br>
+     <b>Bad fsimage always generated after upgrade</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5986">HDFS-5986</a>.
+     Major improvement reported by Suresh Srinivas and fixed by Chris Nauroth (namenode)<br>
+     <b>Capture the number of blocks pending deletion on namenode webUI</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5982">HDFS-5982</a>.
+     Critical bug reported by Tassapol Athiapinya and fixed by Jing Zhao (namenode)<br>
+     <b>Need to update snapshot manager when applying editlog for deleting a snapshottable directory</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5981">HDFS-5981</a>.
+     Minor bug reported by Haohui Mai and fixed by Haohui Mai (tools)<br>
+     <b>PBImageXmlWriter generates malformed XML</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5979">HDFS-5979</a>.
+     Minor improvement reported by Andrew Wang and fixed by Andrew Wang <br>
+     <b>Typo and logger fix for fsimage PB code</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5973">HDFS-5973</a>.
+     Major sub-task reported by Colin Patrick McCabe and fixed by Colin Patrick McCabe (hdfs-client)<br>
+     <b>add DomainSocket#shutdown method</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5962">HDFS-5962</a>.
+     Critical bug reported by Kihwal Lee and fixed by Akira AJISAKA <br>
+     <b>Mtime and atime are not persisted for symbolic links</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5961">HDFS-5961</a>.
+     Critical bug reported by Kihwal Lee and fixed by Kihwal Lee <br>
+     <b>OIV cannot load fsimages containing a symbolic link</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5959">HDFS-5959</a>.
+     Minor bug reported by Akira AJISAKA and fixed by Akira AJISAKA <br>
+     <b>Fix typo at section name in FSImageFormatProtobuf.java</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5956">HDFS-5956</a>.
+     Major sub-task reported by Akira AJISAKA and fixed by Akira AJISAKA (tools)<br>
+     <b>A file size is multiplied by the replication factor in 'hdfs oiv -p FileDistribution' option</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5953">HDFS-5953</a>.
+     Major test reported by Ted Yu and fixed by Akira AJISAKA <br>
+     <b>TestBlockReaderFactory fails if libhadoop.so has not been built</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5950">HDFS-5950</a>.
+     Major sub-task reported by Colin Patrick McCabe and fixed by Colin Patrick McCabe (datanode , hdfs-client)<br>
+     <b>The DFSClient and DataNode should use shared memory segments to communicate short-circuit information</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5949">HDFS-5949</a>.
+     Minor bug reported by Travis Thompson and fixed by Travis Thompson (namenode)<br>
+     <b>New Namenode UI when trying to download a file, the browser doesn't know the file name</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5948">HDFS-5948</a>.
+     Major bug reported by Andrew Wang and fixed by Haohui Mai <br>
+     <b>TestBackupNode flakes with port in use error</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5944">HDFS-5944</a>.
+     Major bug reported by zhaoyunjiong and fixed by zhaoyunjiong (namenode)<br>
+     <b>LeaseManager:findLeaseWithPrefixPath can't handle path like /a/b/ right and cause SecondaryNameNode failed do checkpoint</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5943">HDFS-5943</a>.
+     Major bug reported by Yesha Vora and fixed by Suresh Srinivas <br>
+     <b>'dfs.namenode.https-address.ns1' property is not used in federation setup</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5942">HDFS-5942</a>.
+     Minor sub-task reported by Akira AJISAKA and fixed by Akira AJISAKA (documentation , tools)<br>
+     <b>Fix javadoc in OfflineImageViewer</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5941">HDFS-5941</a>.
+     Major bug reported by Haohui Mai and fixed by Haohui Mai (documentation , namenode)<br>
+     <b>add dfs.namenode.secondary.https-address and dfs.namenode.secondary.https-address in hdfs-default.xml</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5940">HDFS-5940</a>.
+     Major sub-task reported by Colin Patrick McCabe and fixed by Colin Patrick McCabe (hdfs-client)<br>
+     <b>Minor cleanups to ShortCircuitReplica, FsDatasetCache, and DomainSocketWatcher</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5939">HDFS-5939</a>.
+     Major improvement reported by Yongjun Zhang and fixed by Yongjun Zhang (hdfs-client)<br>
+     <b>WebHdfs returns misleading error code and logs nothing if trying to create a file with no DNs in cluster</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5938">HDFS-5938</a>.
+     Trivial sub-task reported by Colin Patrick McCabe and fixed by Colin Patrick McCabe (hdfs-client)<br>
+     <b>Make BlockReaderFactory#BlockReaderPeer a static class</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5936">HDFS-5936</a>.
+     Major test reported by Andrew Wang and fixed by Binglin Chang (namenode , test)<br>
+     <b>MiniDFSCluster does not clean data left behind by SecondaryNameNode.</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5935">HDFS-5935</a>.
+     Minor improvement reported by Travis Thompson and fixed by Travis Thompson (namenode)<br>
+     <b>New Namenode UI FS browser should throw smarter error messages</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5934">HDFS-5934</a>.
+     Minor bug reported by Travis Thompson and fixed by Travis Thompson (namenode)<br>
+     <b>New Namenode UI back button doesn't work as expected</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5929">HDFS-5929</a>.
+     Major improvement reported by Siqi Li and fixed by Siqi Li (federation)<br>
+     <b>Add Block pool % usage to HDFS federated nn page</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5922">HDFS-5922</a>.
+     Major bug reported by Aaron T. Myers and fixed by Arpit Agarwal (datanode)<br>
+     <b>DN heartbeat thread can get stuck in tight loop</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5915">HDFS-5915</a>.
+     Major bug reported by Haohui Mai and fixed by Haohui Mai (namenode)<br>
+     <b>Refactor FSImageFormatProtobuf to simplify cross section reads</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5913">HDFS-5913</a>.
+     Minor bug reported by Ted Yu and fixed by Brandon Li (nfs)<br>
+     <b>Nfs3Utils#getWccAttr() should check attr parameter against null</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5910">HDFS-5910</a>.
+     Major improvement reported by Benoy Antony and fixed by Benoy Antony (security)<br>
+     <b>Enhance DataTransferProtocol to allow per-connection choice of encryption/plain-text</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5904">HDFS-5904</a>.
+     Major bug reported by Mit Desai and fixed by Mit Desai <br>
+     <b>TestFileStatus fails intermittently on trunk and branch2</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5901">HDFS-5901</a>.
+     Major bug reported by Vinayakumar B and fixed by Vinayakumar B (namenode)<br>
+     <b>NameNode new UI doesn't support IE8 and IE9 on windows 7</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5900">HDFS-5900</a>.
+     Major bug reported by Tassapol Athiapinya and fixed by Andrew Wang (caching)<br>
+     <b>Cannot set cache pool limit of "unlimited" via CacheAdmin</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5898">HDFS-5898</a>.
+     Major sub-task reported by Jing Zhao and fixed by Abin Shahab (nfs)<br>
+     <b>Allow NFS gateway to login/relogin from its kerberos keytab</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5895">HDFS-5895</a>.
+     Major bug reported by Tassapol Athiapinya and fixed by Tassapol Athiapinya (tools)<br>
+     <b>HDFS cacheadmin -listPools has exit_code of 1 when the command returns 0 result.</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5893">HDFS-5893</a>.
+     Major bug reported by Yesha Vora and fixed by Haohui Mai <br>
+     <b>HftpFileSystem.RangeHeaderUrlOpener uses the default URLConnectionFactory which does not import SSL certificates</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5892">HDFS-5892</a>.
+     Minor test reported by Ted Yu and fixed by  <br>
+     <b>TestDeleteBlockPool fails in branch-2</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5891">HDFS-5891</a>.
+     Major bug reported by Haohui Mai and fixed by Haohui Mai (namenode , webhdfs)<br>
+     <b>webhdfs should not try connecting the DN during redirection</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5886">HDFS-5886</a>.
+     Major bug reported by Ted Yu and fixed by Brandon Li (nfs)<br>
+     <b>Potential null pointer deference in RpcProgramNfs3#readlink()</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5882">HDFS-5882</a>.
+     Minor test reported by Jimmy Xiang and fixed by Jimmy Xiang <br>
+     <b>TestAuditLogs is flaky</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5881">HDFS-5881</a>.
+     Critical bug reported by Kihwal Lee and fixed by Kihwal Lee <br>
+     <b>Fix skip() of the short-circuit local reader (legacy).</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5879">HDFS-5879</a>.
+     Major bug reported by Gera Shegalov and fixed by Gera Shegalov (test)<br>
+     <b>Some TestHftpFileSystem tests do not close streams</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5868">HDFS-5868</a>.
+     Major sub-task reported by Taylor, Buddy and fixed by  (datanode)<br>
+     <b>Make hsync implementation pluggable</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5866">HDFS-5866</a>.
+     Major sub-task reported by Akira AJISAKA and fixed by Akira AJISAKA (tools)<br>
+     <b>'-maxSize' and '-step' option fail in OfflineImageViewer</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5859">HDFS-5859</a>.
+     Major bug reported by Colin Patrick McCabe and fixed by Colin Patrick McCabe (datanode)<br>
+     <b>DataNode#checkBlockToken should check block tokens even if security is not enabled</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5857">HDFS-5857</a>.
+     Major bug reported by Mit Desai and fixed by Mit Desai <br>
+     <b>TestWebHDFS#testNamenodeRestart fails intermittently with NPE</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5856">HDFS-5856</a>.
+     Minor bug reported by Josh Elser and fixed by Josh Elser (datanode)<br>
+     <b>DataNode.checkDiskError might throw NPE</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5847">HDFS-5847</a>.
+     Major sub-task reported by Haohui Mai and fixed by Jing Zhao <br>
+     <b>Consolidate INodeReference into a separate section</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5846">HDFS-5846</a>.
+     Major bug reported by Nikola Vujic and fixed by Nikola Vujic (namenode)<br>
+     <b>Assigning DEFAULT_RACK in resolveNetworkLocation method can break data resiliency</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5843">HDFS-5843</a>.
+     Major bug reported by Laurent Goujon and fixed by Laurent Goujon (datanode)<br>
+     <b>DFSClient.getFileChecksum() throws IOException if checksum is disabled</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5840">HDFS-5840</a>.
+     Blocker bug reported by Aaron T. Myers and fixed by Jing Zhao (ha , journal-node , namenode)<br>
+     <b>Follow-up to HDFS-5138 to improve error handling during partial upgrade failures</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5828">HDFS-5828</a>.
+     Major bug reported by Taylor, Buddy and fixed by Taylor, Buddy (namenode)<br>
+     <b>BlockPlacementPolicyWithNodeGroup can place multiple replicas on the same node group when dfs.namenode.avoid.write.stale.datanode is true</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5821">HDFS-5821</a>.
+     Major bug reported by Gera Shegalov and fixed by Gera Shegalov (test)<br>
+     <b>TestHDFSCLI fails for user names with the dash character</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5810">HDFS-5810</a>.
+     Major sub-task reported by Colin Patrick McCabe and fixed by Colin Patrick McCabe (hdfs-client)<br>
+     <b>Unify mmap cache and short-circuit file descriptor cache</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5807">HDFS-5807</a>.
+     Major bug reported by Mit Desai and fixed by Chen He (test)<br>
+     <b>TestBalancerWithNodeGroup.testBalancerWithNodeGroup fails intermittently on Branch-2</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5804">HDFS-5804</a>.
+     Major sub-task reported by Abin Shahab and fixed by Abin Shahab (nfs)<br>
+     <b>HDFS NFS Gateway fails to mount and proxy when using Kerberos</b><br>
+     <blockquote>Fixes NFS on Kerberized cluster.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5803">HDFS-5803</a>.
+     Major bug reported by Mit Desai and fixed by Chen He <br>
+     <b>TestBalancer.testBalancer0 fails</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5791">HDFS-5791</a>.
+     Major bug reported by Brandon Li and fixed by Haohui Mai (test)<br>
+     <b>TestHttpsFileSystem should use a random port to avoid binding error during testing</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5790">HDFS-5790</a>.
+     Major bug reported by Todd Lipcon and fixed by Todd Lipcon (namenode , performance)<br>
+     <b>LeaseManager.findPath is very slow when many leases need recovery</b><br>
+     <blockquote>Committed to branch-2 and trunk.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5781">HDFS-5781</a>.
+     Minor improvement reported by Jing Zhao and fixed by Jing Zhao (namenode)<br>
+     <b>Use an array to record the mapping between FSEditLogOpCode and the corresponding byte value</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5780">HDFS-5780</a>.
+     Major bug reported by Mit Desai and fixed by Mit Desai <br>
+     <b>TestRBWBlockInvalidation times out intemittently on branch-2</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5776">HDFS-5776</a>.
+     Major improvement reported by Liang Xie and fixed by Liang Xie (hdfs-client)<br>
+     <b>Support 'hedged' reads in DFSClient</b><br>
+     <blockquote>If a read from a block is slow, start up another parallel, 'hedged' read against a different block replica.  We then take the result of which ever read returns first (the outstanding read is cancelled).  This 'hedged' read feature will help rein in the outliers, the odd read that takes a long time because it hit a bad patch on the disc, etc.
+
+This feature is off by default.  To enable this feature, set &lt;code&gt;dfs.client.hedged.read.threadpool.size&lt;/code&gt; to a positive number.  The threadpool size is how many threads to dedicate to the running of these 'hedged', concurrent reads in your client.
+
+Then set &lt;code&gt;dfs.client.hedged.read.threshold.millis&lt;/code&gt; to the number of milliseconds to wait before starting up a 'hedged' read.  For example, if you set this property to 10, then if a read has not returned within 10 milliseconds, we will start up a new read against a different block replica.
+
+This feature emits new metrics:
+
++ hedgedReadOps
++ hedgeReadOpsWin -- how many times the hedged read 'beat' the original read
++ hedgedReadOpsInCurThread -- how many times we went to do a hedged read but we had to run it in the current thread because dfs.client.hedged.read.threadpool.size was at a maximum.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5775">HDFS-5775</a>.
+     Major improvement reported by Haohui Mai and fixed by Haohui Mai (namenode)<br>
+     <b>Consolidate the code for serialization in CacheManager</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5768">HDFS-5768</a>.
+     Major improvement reported by Haohui Mai and fixed by Haohui Mai (namenode)<br>
+     <b>Consolidate the serialization code in DelegationTokenSecretManager</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5767">HDFS-5767</a>.
+     Blocker bug reported by Yongjun Zhang and fixed by Yongjun Zhang (nfs)<br>
+     <b>NFS implementation assumes userName userId mapping to be unique, which is not true sometimes</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5759">HDFS-5759</a>.
+     Major bug reported by Haohui Mai and fixed by Haohui Mai <br>
+     <b>Web UI does not show up during the period of loading FSImage</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5746">HDFS-5746</a>.
+     Major sub-task reported by Colin Patrick McCabe and fixed by Colin Patrick McCabe (datanode , hdfs-client)<br>
+     <b>add ShortCircuitSharedMemorySegment</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5742">HDFS-5742</a>.
+     Minor bug reported by Arpit Agarwal and fixed by Arpit Agarwal (test)<br>
+     <b>DatanodeCluster (mini cluster of DNs) fails to start</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5726">HDFS-5726</a>.
+     Minor sub-task reported by Jing Zhao and fixed by Jing Zhao (namenode)<br>
+     <b>Fix compilation error in AbstractINodeDiff for JDK7</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5716">HDFS-5716</a>.
+     Major bug reported by Haohui Mai and fixed by Haohui Mai (webhdfs)<br>
+     <b>Allow WebHDFS to use pluggable authentication filter</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5715">HDFS-5715</a>.
+     Major sub-task reported by Jing Zhao and fixed by Jing Zhao (namenode)<br>
+     <b>Use Snapshot ID to indicate the corresponding Snapshot for a FileDiff/DirectoryDiff</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5709">HDFS-5709</a>.
+     Major improvement reported by Andrew Wang and fixed by Andrew Wang (namenode)<br>
+     <b>Improve NameNode upgrade with existing reserved paths and path components</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5705">HDFS-5705</a>.
+     Major bug reported by Ted Yu and fixed by Ted Yu (datanode)<br>
+     <b>TestSecondaryNameNodeUpgrade#testChangeNsIDFails may fail due to ConcurrentModificationException</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5698">HDFS-5698</a>.
+     Major improvement reported by Haohui Mai and fixed by Haohui Mai (namenode)<br>
+     <b>Use protobuf to serialize / deserialize FSImage</b><br>
+     <blockquote>Use protobuf to serialize/deserialize the FSImage.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5672">HDFS-5672</a>.
+     Major test reported by Ted Yu and fixed by Jing Zhao (namenode)<br>
+     <b>TestHASafeMode#testSafeBlockTracking fails in trunk</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5647">HDFS-5647</a>.
+     Major sub-task reported by Haohui Mai and fixed by Haohui Mai (namenode)<br>
+     <b>Merge INodeDirectory.Feature and INodeFile.Feature</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5638">HDFS-5638</a>.
+     Major sub-task reported by Chris Nauroth and fixed by Vinayakumar B (hdfs-client)<br>
+     <b>HDFS implementation of FileContext API for ACLs.</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5632">HDFS-5632</a>.
+     Major sub-task reported by Jing Zhao and fixed by Jing Zhao (namenode)<br>
+     <b>Add Snapshot feature to INodeDirectory</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5626">HDFS-5626</a>.
+     Major bug reported by Stephen Chu and fixed by Colin Patrick McCabe (caching)<br>
+     <b>dfsadmin -report shows incorrect cache values</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5554">HDFS-5554</a>.
+     Major sub-task reported by Jing Zhao and fixed by Jing Zhao (namenode)<br>
+     <b>Add Snapshot Feature to INodeFile</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5537">HDFS-5537</a>.
+     Major sub-task reported by Jing Zhao and fixed by Jing Zhao (namenode , snapshots)<br>
+     <b>Remove FileWithSnapshot interface</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5535">HDFS-5535</a>.
+     Major new feature reported by Nathan Roberts and fixed by Tsz Wo Nicholas Sze (datanode , ha , hdfs-client , namenode)<br>
+     <b>Umbrella jira for improved HDFS rolling upgrades</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5531">HDFS-5531</a>.
+     Minor sub-task reported by Tsz Wo Nicholas Sze and fixed by Tsz Wo Nicholas Sze (namenode)<br>
+     <b>Combine the getNsQuota() and getDsQuota() methods in INode</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5516">HDFS-5516</a>.
+     Major bug reported by Chris Nauroth and fixed by Miodrag Radulovic (webhdfs)<br>
+     <b>WebHDFS does not require user name when anonymous http requests are disallowed.</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5492">HDFS-5492</a>.
+     Minor bug reported by Akira AJISAKA and fixed by Akira AJISAKA (documentation)<br>
+     <b>Port HDFS-2069 (Incorrect default trash interval in the docs) to trunk</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5483">HDFS-5483</a>.
+     Major sub-task reported by Arpit Agarwal and fixed by Arpit Agarwal (namenode)<br>
+     <b>NN should gracefully handle multiple block replicas on same DN</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5339">HDFS-5339</a>.
+     Major bug reported by Stephen Chu and fixed by Haohui Mai (webhdfs)<br>
+     <b>WebHDFS URI does not accept logical nameservices when security is enabled</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5321">HDFS-5321</a>.
+     Major sub-task reported by Haohui Mai and fixed by Haohui Mai <br>
+     <b>Clean up the HTTP-related configuration in HDFS</b><br>
+     <blockquote>dfs.http.port and dfs.https.port are removed. Filesystem clients, such as WebHdfsFileSystem, now have fixed instead of configurable default ports (i.e., 50070 for http and 50470 for https).
+
+Users can explicitly specify the port in the URI to access the file system which runs on non-default ports.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5318">HDFS-5318</a>.
+     Major improvement reported by Eric Sirianni and fixed by  (namenode)<br>
+     <b>Support read-only and read-write paths to shared replicas</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5286">HDFS-5286</a>.
+     Major sub-task reported by Tsz Wo Nicholas Sze and fixed by Tsz Wo Nicholas Sze (namenode)<br>
+     <b>Flatten INodeDirectory hierarchy: add DirectoryWithQuotaFeature</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5285">HDFS-5285</a>.
+     Major sub-task reported by Tsz Wo Nicholas Sze and fixed by Jing Zhao (namenode)<br>
+     <b>Flatten INodeFile hierarchy: Add UnderContruction Feature</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5244">HDFS-5244</a>.
+     Major bug reported by Jinghui Wang and fixed by Jinghui Wang (test)<br>
+     <b>TestNNStorageRetentionManager#testPurgeMultipleDirs fails</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5167">HDFS-5167</a>.
+     Minor sub-task reported by Jing Zhao and fixed by Tsuyoshi OZAWA (ha , namenode)<br>
+     <b>Add metrics about the NameNode retry cache</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5153">HDFS-5153</a>.
+     Major improvement reported by Arpit Agarwal and fixed by Arpit Agarwal (datanode)<br>
+     <b>Datanode should send block reports for each storage in a separate message</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5138">HDFS-5138</a>.
+     Blocker bug reported by Kihwal Lee and fixed by Aaron T. Myers <br>
+     <b>Support HDFS upgrade in HA</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-5064">HDFS-5064</a>.
+     Major bug reported by Aaron T. Myers and fixed by Aaron T. Myers (ha , namenode)<br>
+     <b>Standby checkpoints should not block concurrent readers</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4911">HDFS-4911</a>.
+     Minor improvement reported by Colin Patrick McCabe and fixed by Colin Patrick McCabe <br>
+     <b>Reduce PeerCache timeout to be commensurate with dfs.datanode.socket.reuse.keepalive</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4858">HDFS-4858</a>.
+     Minor bug reported by Jagane Sundar and fixed by Henry Wang (datanode)<br>
+     <b>HDFS DataNode to NameNode RPC should timeout</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4685">HDFS-4685</a>.
+     Major new feature reported by Sachin Jose and fixed by Chris Nauroth (hdfs-client , namenode , security)<br>
+     <b>Implementation of ACLs in HDFS</b><br>
+     <blockquote>HDFS now supports ACLs (Access Control Lists).  ACLs can specify fine-grained file permissions for specific named users or named groups.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4564">HDFS-4564</a>.
+     Blocker sub-task reported by Daryn Sharp and fixed by Daryn Sharp (webhdfs)<br>
+     <b>Webhdfs returns incorrect http response codes for denied operations</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4370">HDFS-4370</a>.
+     Major improvement reported by Konstantin Shvachko and fixed by Chu Tong (datanode)<br>
+     <b>Fix typo Blanacer in DataNode</b><br>
+     <blockquote>I just committed this. Thank you Chu.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-4200">HDFS-4200</a>.
+     Major improvement reported by Suresh Srinivas and fixed by Andrew Wang (datanode)<br>
+     <b>Reduce the size of synchronized sections in PacketResponder </b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-3969">HDFS-3969</a>.
+     Major bug reported by Todd Lipcon and fixed by Todd Lipcon (hdfs-client)<br>
+     <b>Small bug fixes and improvements for disk locations API</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-3405">HDFS-3405</a>.
+     Major improvement reported by Aaron T. Myers and fixed by Vinayakumar B <br>
+     <b>Checkpointing should use HTTP POST or PUT instead of GET-GET to send merged fsimages</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-3128">HDFS-3128</a>.
+     Minor bug reported by Eli Collins and fixed by Andrew Wang (test)<br>
+     <b>Unit tests should not use a test root in /tmp</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-10450">HADOOP-10450</a>.
+     Major bug reported by Chris Nauroth and fixed by Chris Nauroth (io , native)<br>
+     <b>Build zlib native code bindings in hadoop.dll for Windows.</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-10449">HADOOP-10449</a>.
+     Minor sub-task reported by Tsz Wo Nicholas Sze and fixed by Tsz Wo Nicholas Sze (security)<br>
+     <b>Fix the javac warnings in the security packages.</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-10442">HADOOP-10442</a>.
+     Blocker bug reported by Kihwal Lee and fixed by Kihwal Lee <br>
+     <b>Group look-up can cause segmentation fault when certain JNI-based mapping module is used.</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-10441">HADOOP-10441</a>.
+     Blocker bug reported by Jing Zhao and fixed by Jing Zhao (metrics)<br>
+     <b>Namenode metric "rpc.RetryCache/NameNodeRetryCache.CacheHit" can't be correctly processed by Ganglia</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-10440">HADOOP-10440</a>.
+     Major bug reported by guodongdong and fixed by guodongdong (fs)<br>
+     <b>HarFsInputStream of HarFileSystem, when reading data, computing the position has bug</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-10437">HADOOP-10437</a>.
+     Minor sub-task reported by Tsz Wo Nicholas Sze and fixed by Tsz Wo Nicholas Sze (conf , util)<br>
+     <b>Fix the javac warnings in the conf and the util package</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-10425">HADOOP-10425</a>.
+     Critical bug reported by Brandon Li and fixed by Tsz Wo Nicholas Sze (fs)<br>
+     <b>Incompatible behavior of LocalFileSystem:getContentSummary</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-10423">HADOOP-10423</a>.
+     Minor improvement reported by Chris Nauroth and fixed by Chris Nauroth (documentation)<br>
+     <b>Clarify compatibility policy document for combination of new client and old server.</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-10422">HADOOP-10422</a>.
+     Minor bug reported by Chris Nauroth and fixed by Chris Nauroth (ipc)<br>
+     <b>Remove redundant logging of RPC retry attempts.</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-10407">HADOOP-10407</a>.
+     Minor sub-task reported by Tsz Wo Nicholas Sze and fixed by Tsz Wo Nicholas Sze (ipc)<br>
+     <b>Fix the javac warnings in the ipc package.</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-10399">HADOOP-10399</a>.
+     Major sub-task reported by Chris Nauroth and fixed by Vinayakumar B (fs)<br>
+     <b>FileContext API for ACLs.</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-10395">HADOOP-10395</a>.
+     Minor bug reported by Arpit Agarwal and fixed by Arpit Agarwal (test)<br>
+     <b>TestCallQueueManager is flaky</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-10394">HADOOP-10394</a>.
+     Major bug reported by Arpit Agarwal and fixed by Arpit Agarwal (test)<br>
+     <b>TestAuthenticationFilter is flaky</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-10393">HADOOP-10393</a>.
+     Minor sub-task reported by Tsz Wo Nicholas Sze and fixed by Tsz Wo Nicholas Sze (security)<br>
+     <b>Fix hadoop-auth javac warnings</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-10386">HADOOP-10386</a>.
+     Minor improvement reported by Arpit Gupta and fixed by Haohui Mai (ha)<br>
+     <b>Log proxy hostname in various exceptions being thrown in a HA setup</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-10383">HADOOP-10383</a>.
+     Major improvement reported by Enis Soztutar and fixed by Enis Soztutar <br>
+     <b>InterfaceStability annotations should have RetentionPolicy.RUNTIME</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-10379">HADOOP-10379</a>.
+     Major improvement reported by Haohui Mai and fixed by Haohui Mai <br>
+     <b>Protect authentication cookies with the HttpOnly and Secure flags</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-10374">HADOOP-10374</a>.
+     Major improvement reported by Enis Soztutar and fixed by Enis Soztutar <br>
+     <b>InterfaceAudience annotations should have RetentionPolicy.RUNTIME</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-10368">HADOOP-10368</a>.
+     Minor bug reported by Ted Yu and fixed by Tsuyoshi OZAWA (util)<br>
+     <b>InputStream is not closed in VersionInfo ctor</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-10355">HADOOP-10355</a>.
+     Major bug reported by Akira AJISAKA and fixed by Haohui Mai <br>
+     <b>TestLoadGenerator#testLoadGenerator fails</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-10353">HADOOP-10353</a>.
+     Major bug reported by Tudor Scurtu and fixed by Tudor Scurtu (fs)<br>
+     <b>FsUrlStreamHandlerFactory is not thread safe</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-10348">HADOOP-10348</a>.
+     Major improvement reported by Haohui Mai and fixed by Haohui Mai <br>
+     <b>Deprecate hadoop.ssl.configuration in branch-2, and remove it in trunk</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-10346">HADOOP-10346</a>.
+     Blocker bug reported by Jason Lowe and fixed by Jason Lowe (security)<br>
+     <b>Deadlock while logging tokens</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-10343">HADOOP-10343</a>.
+     Minor improvement reported by Arpit Gupta and fixed by Arpit Gupta <br>
+     <b>Change info to debug log in LossyRetryInvocationHandler</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-10338">HADOOP-10338</a>.
+     Major bug reported by Andrew Wang and fixed by Colin Patrick McCabe <br>
+     <b>Cannot get the FileStatus of the root inode from the new Globber</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-10337">HADOOP-10337</a>.
+     Major bug reported by Liang Xie and fixed by Liang Xie (metrics)<br>
+     <b>ConcurrentModificationException from MetricsDynamicMBeanBase.createMBeanInfo()</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-10333">HADOOP-10333</a>.
+     Trivial improvement reported by Ren&#233; Nyffenegger and fixed by Ren&#233; Nyffenegger <br>
+     <b>Fix grammatical error in overview.html document</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-10330">HADOOP-10330</a>.
+     Major bug reported by Arpit Agarwal and fixed by Arpit Agarwal (test)<br>
+     <b>TestFrameDecoder fails if it cannot bind port 12345</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-10328">HADOOP-10328</a>.
+     Major bug reported by Arpit Gupta and fixed by Haohui Mai (tools)<br>
+     <b>loadGenerator exit code is not reliable</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-10327">HADOOP-10327</a>.
+     Blocker bug reported by Vinayakumar B and fixed by Vinayakumar B (native)<br>
+     <b>Trunk windows build broken after HDFS-5746</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-10326">HADOOP-10326</a>.
+     Major bug reported by Manuel DE FERRAN and fixed by bc Wong (security)<br>
+     <b>M/R jobs can not access S3 if Kerberos is enabled</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-10320">HADOOP-10320</a>.
+     Trivial bug reported by Ren&#233; Nyffenegger and fixed by Ren&#233; Nyffenegger (documentation)<br>
+     <b>Javadoc in InterfaceStability.java lacks final &lt;/ul&gt;</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-10314">HADOOP-10314</a>.
+     Major bug reported by Kihwal Lee and fixed by Rushabh S Shah <br>
+     <b>The ls command help still shows outdated 0.16 format.</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-10301">HADOOP-10301</a>.
+     Blocker bug reported by Daryn Sharp and fixed by Daryn Sharp (security)<br>
+     <b>AuthenticationFilter should return Forbidden for failed authentication</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-10295">HADOOP-10295</a>.
+     Major improvement reported by Jing Zhao and fixed by Jing Zhao (tools/distcp)<br>
+     <b>Allow distcp to automatically identify the checksum type of source files and use it for the target</b><br>
+     <blockquote>Add option for distcp to preserve the checksum type of the source files. Users can use "-pc" as distcp command option to preserve the checksum type.</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-10285">HADOOP-10285</a>.
+     Major sub-task reported by Chris Li and fixed by  <br>
+     <b>Admin interface to swap callqueue at runtime</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-10280">HADOOP-10280</a>.
+     Major sub-task reported by Chris Li and fixed by Chris Li <br>
+     <b>Make Schedulables return a configurable identity of user or group</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-10278">HADOOP-10278</a>.
+     Major sub-task reported by Chris Li and fixed by Chris Li (ipc)<br>
+     <b>Refactor to make CallQueue pluggable</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-10249">HADOOP-10249</a>.
+     Major bug reported by Dilli Arumugam and fixed by Dilli Arumugam <br>
+     <b>LdapGroupsMapping should trim ldap password read from file</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-10221">HADOOP-10221</a>.
+     Major improvement reported by Benoy Antony and fixed by Benoy Antony (security)<br>
+     <b>Add a plugin to specify SaslProperties for RPC protocol based on connection properties</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-10211">HADOOP-10211</a>.
+     Major improvement reported by Benoy Antony and fixed by Benoy Antony (security)<br>
+     <b>Enable RPC protocol to negotiate SASL-QOP values between clients and servers</b><br>
+     <blockquote>The hadoop.rpc.protection configuration property previously supported specifying a single value: one of authentication, integrity or privacy.  An unrecognized value was silently assumed to mean authentication.  This configuration property now accepts a comma-separated list of any of the 3 values, and unrecognized values are rejected with an error. Existing configurations containing an invalid value must be corrected. If the property is empty or not specified, authentication is assumed. </blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-10191">HADOOP-10191</a>.
+     Blocker bug reported by Gera Shegalov and fixed by Gera Shegalov (viewfs)<br>
+     <b>Missing executable permission on viewfs internal dirs</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-10184">HADOOP-10184</a>.
+     Major new feature reported by Chris Nauroth and fixed by Chris Nauroth (fs , security)<br>
+     <b>Hadoop Common changes required to support HDFS ACLs.</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-10139">HADOOP-10139</a>.
+     Major improvement reported by Akira AJISAKA and fixed by Akira AJISAKA (documentation)<br>
+     <b>Update and improve the Single Cluster Setup document</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-10085">HADOOP-10085</a>.
+     Blocker bug reported by Karthik Kambatla and fixed by Steve Loughran <br>
+     <b>CompositeService should allow adding services while being inited</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-10070">HADOOP-10070</a>.
+     Major bug reported by Aaron T. Myers and fixed by Aaron T. Myers (security)<br>
+     <b>RPC client doesn't use per-connection conf to determine server's expected Kerberos principal name</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-10015">HADOOP-10015</a>.
+     Minor bug reported by Haohui Mai and fixed by Nicolas Liochon (security)<br>
+     <b>UserGroupInformation prints out excessive ERROR warnings</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9525">HADOOP-9525</a>.
+     Major test reported by Ivan Mitic and fixed by Ivan Mitic (test , util)<br>
+     <b>Add tests that validate winutils chmod behavior on folders</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-9454">HADOOP-9454</a>.
+     Major improvement reported by Jordan Mendelson and fixed by Akira AJISAKA (fs/s3)<br>
+     <b>Support multipart uploads for s3native</b><br>
+     <blockquote></blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-8691">HADOOP-8691</a>.
+     Minor improvement reported by Jason Lowe and fixed by Daryn Sharp (fs)<br>
+     <b>FsShell can print "Found xxx items" unnecessarily often</b><br>
+     <blockquote>The `ls` command only prints "Found foo items" once when listing the directories recursively.</blockquote></li>
+</ul>
+</body></html>
+<META http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <title>Hadoop  2.3.0 Release Notes</title>
 <STYLE type="text/css">
 	H1 {font-family: sans-serif}
