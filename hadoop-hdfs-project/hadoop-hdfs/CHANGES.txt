@@ -20,6 +20,8 @@ Release 0.23.11 - UNRELEASED
     HDFS-5806. balancer should set SoTimeout to avoid indefinite hangs (Nathan
     Roberts via jlowe)
 
+    HDFS-6166. Revisit balancer so_timeout. (Nathan Roberts via kihwal)
+
 Release 0.23.10 - 2013-12-09
 
   INCOMPATIBLE CHANGES
