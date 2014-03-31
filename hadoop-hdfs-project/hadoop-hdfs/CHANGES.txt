@@ -814,6 +814,9 @@ HDFS-5535 subtasks:
     HDFS-6038. Allow JournalNode to handle editlog produced by new release with
     future layoutversion. (jing9)
 
+    HDFS-4564. Ensure webhdfs returns correct HTTP response codes for denied
+    operations. (daryn via acmurthy)
+
 Release 2.3.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

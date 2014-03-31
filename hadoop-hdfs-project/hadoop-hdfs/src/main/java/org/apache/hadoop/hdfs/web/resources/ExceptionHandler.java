@@ -77,9 +77,9 @@ public class ExceptionHandler implements ExceptionMapper<Exception> {
     //Map response status
     final Response.Status s;
     if (e instanceof SecurityException) {
-      s = Response.Status.UNAUTHORIZED;
+      s = Response.Status.FORBIDDEN;
     } else if (e instanceof AuthorizationException) {
-      s = Response.Status.UNAUTHORIZED;
+      s = Response.Status.FORBIDDEN;
     } else if (e instanceof FileNotFoundException) {
       s = Response.Status.NOT_FOUND;
     } else if (e instanceof IOException) {
