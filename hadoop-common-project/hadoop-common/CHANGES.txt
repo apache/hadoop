@@ -8,6 +8,9 @@ Release 2.5.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    HADOOP-10451. Remove unused field and imports from SaslRpcServer.
+    (Benoy Antony via jing9)
+
   OPTIMIZATIONS
 
   BUG FIXES 

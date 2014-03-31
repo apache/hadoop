@@ -30,7 +30,6 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.CallbackHandler;
@@ -66,8 +65,6 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 public class SaslRpcServer {
   public static final Log LOG = LogFactory.getLog(SaslRpcServer.class);
   public static final String SASL_DEFAULT_REALM = "default";
-  public static final Map<String, String> SASL_PROPS = 
-      new TreeMap<String, String>();
   private static SaslServerFactory saslFactory;
 
   public static enum QualityOfProtection {
