@@ -304,6 +304,11 @@ public class WebHdfsFileSystem extends FileSystem
   private static Map<?, ?> validateResponse(final HttpOpParam.Op op,
       final HttpURLConnection conn, boolean unwrapException) throws IOException {
     final int code = conn.getResponseCode();
+    // server is demanding an authentication we don't support
+    if (code == HttpURLConnection.HTTP_UNAUTHORIZED) {
+      throw new IOException(
+          new AuthenticationException(conn.getResponseMessage()));
+    }
     if (code != op.getExpectedHttpResponseCode()) {
       final Map<?, ?> m;
       try {
@@ -450,52 +455,33 @@ public class WebHdfsFileSystem extends FileSystem
       this.redirected = redirected;
     }
 
-    private HttpURLConnection getHttpUrlConnection(final URL url)
-        throws IOException, AuthenticationException {
+    AbstractRunner run() throws IOException {
       UserGroupInformation connectUgi = ugi.getRealUser();
       if (connectUgi == null) {
         connectUgi = ugi;
       }
+      if (op.getRequireAuth()) {
+        connectUgi.checkTGTAndReloginFromKeytab();
+      }
       try {
+        // the entire lifecycle of the connection must be run inside the
+        // doAs to ensure authentication is performed correctly
         return connectUgi.doAs(
-            new PrivilegedExceptionAction<HttpURLConnection>() {
+            new PrivilegedExceptionAction<AbstractRunner>() {
               @Override
-              public HttpURLConnection run() throws IOException {
-                return openHttpUrlConnection(url);
+              public AbstractRunner run() throws IOException {
+                return runWithRetry();
               }
             });
-      } catch (IOException ioe) {
-        Throwable cause = ioe.getCause();
-        if (cause != null && cause instanceof AuthenticationException) {
-          throw (AuthenticationException)cause;
-        }
-        throw ioe;
       } catch (InterruptedException e) {
         throw new IOException(e);
       }
     }
     
-    private HttpURLConnection openHttpUrlConnection(final URL url)
-        throws IOException {
-      final HttpURLConnection conn;
-      try {
-        conn = (HttpURLConnection) connectionFactory.openConnection(url,
-            op.getRequireAuth());
-      } catch (AuthenticationException e) {
-        throw new IOException(e);
-      }
-      return conn;
-    }
-  
     private void init() throws IOException {
       checkRetry = !redirected;
       URL url = getUrl();
-      try {
-        conn = getHttpUrlConnection(url);
-      } catch(AuthenticationException ae) {
-        checkRetry = false;
-        throw new IOException("Authentication failed, url=" + url, ae);
-      }
+      conn = (HttpURLConnection) connectionFactory.openConnection(url);
     }
     
     private void connect() throws IOException {
@@ -516,7 +502,7 @@ public class WebHdfsFileSystem extends FileSystem
       }
     }
 
-    AbstractRunner run() throws IOException {
+    private AbstractRunner runWithRetry() throws IOException {
       /**
        * Do the real work.
        *
@@ -543,6 +529,10 @@ public class WebHdfsFileSystem extends FileSystem
           }
           return this;
         } catch(IOException ioe) {
+          Throwable cause = ioe.getCause();
+          if (cause != null && cause instanceof AuthenticationException) {
+            throw ioe; // no retries for auth failures
+          }
           shouldRetry(ioe, retry);
         }
       }
