@@ -70,13 +70,14 @@ public class OfflineImageViewerPB {
       + "\n"
       + "Required command line arguments:\n"
       + "-i,--inputFile <arg>   FSImage file to process.\n"
-      + "-o,--outputFile <arg>  Name of output file. If the specified\n"
-      + "                       file exists, it will be overwritten.\n"
       + "\n"
       + "Optional command line arguments:\n"
+      + "-o,--outputFile <arg>  Name of output file. If the specified\n"
+      + "                       file exists, it will be overwritten.\n"
+      + "                       (output to stdout by default)\n"
       + "-p,--processor <arg>   Select which type of processor to apply\n"
-      + "                       against image file."
-      + " (Ls|XML|FileDistribution).\n"
+      + "                       against image file. (XML|FileDistribution|Web)\n"
+      + "                       (Web by default)\n"
       + "-h,--help              Display usage information and exit\n";
 
   /**
@@ -89,14 +90,10 @@ public class OfflineImageViewerPB {
     // addOption method that can specify this
     OptionBuilder.isRequired();
     OptionBuilder.hasArgs();
-    OptionBuilder.withLongOpt("outputFile");
-    options.addOption(OptionBuilder.create("o"));
-
-    OptionBuilder.isRequired();
-    OptionBuilder.hasArgs();
     OptionBuilder.withLongOpt("inputFile");
     options.addOption(OptionBuilder.create("i"));
 
+    options.addOption("o", "outputFile", true, "");
     options.addOption("p", "processor", true, "");
     options.addOption("h", "help", false, "");
     options.addOption("maxSize", true, "");
@@ -144,11 +141,11 @@ public class OfflineImageViewerPB {
     }
 
     String inputFile = cmd.getOptionValue("i");
-    String processor = cmd.getOptionValue("p", "Ls");
-    String outputFile = cmd.getOptionValue("o");
+    String processor = cmd.getOptionValue("p", "Web");
+    String outputFile = cmd.getOptionValue("o", "-");
 
-    PrintWriter out = (outputFile == null || outputFile.equals("-")) ? new PrintWriter(
-        System.out) : new PrintWriter(new File(outputFile));
+    PrintWriter out = outputFile.equals("-") ?
+        new PrintWriter(System.out) : new PrintWriter(new File(outputFile));
 
     Configuration conf = new Configuration();
     try {
