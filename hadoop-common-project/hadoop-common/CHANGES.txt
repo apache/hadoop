@@ -11,6 +11,9 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10451. Remove unused field and imports from SaslRpcServer.
     (Benoy Antony via jing9)
 
+    HADOOP-10345. Sanitize the the inputs (groups and hosts) for the proxyuser
+    configuration. (Benoy Antony via jing9)
+
   OPTIMIZATIONS
 
   BUG FIXES 

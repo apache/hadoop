@@ -69,7 +69,7 @@ public class ProxyUsers {
     Map<String,String> allMatchKeys = conf.getValByRegex(regex);
     for(Entry<String, String> entry : allMatchKeys.entrySet()) {
       proxyGroups.put(entry.getKey(), 
-          StringUtils.getStringCollection(entry.getValue()));
+          StringUtils.getTrimmedStringCollection(entry.getValue()));
     }
 
     // now hosts
@@ -77,7 +77,7 @@ public class ProxyUsers {
     allMatchKeys = conf.getValByRegex(regex);
     for(Entry<String, String> entry : allMatchKeys.entrySet()) {
       proxyHosts.put(entry.getKey(),
-          StringUtils.getStringCollection(entry.getValue()));
+          StringUtils.getTrimmedStringCollection(entry.getValue()));
     }
     
     init = true;
