@@ -60,7 +60,19 @@ Release 2.5.0 - UNRELEASED
 
     YARN-1790. Fair Scheduler UI not showing apps table (bc Wong via Sandy Ryza)
 
-Release 2.4.0 - UNRELEASED
+Release 2.4.1 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES 
+
+Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES
 
