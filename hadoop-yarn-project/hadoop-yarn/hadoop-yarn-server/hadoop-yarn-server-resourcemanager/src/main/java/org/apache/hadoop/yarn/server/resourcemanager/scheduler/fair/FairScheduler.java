@@ -535,7 +535,9 @@ public class FairScheduler extends AbstractYarnScheduler {
       // Run weight through the user-supplied weightAdjuster
       weight = weightAdjuster.adjustWeight(app, weight);
     }
-    return new ResourceWeights((float)weight);
+    ResourceWeights resourceWeights = app.getResourceWeights();
+    resourceWeights.setWeight((float)weight);
+    return resourceWeights;
   }
 
   @Override

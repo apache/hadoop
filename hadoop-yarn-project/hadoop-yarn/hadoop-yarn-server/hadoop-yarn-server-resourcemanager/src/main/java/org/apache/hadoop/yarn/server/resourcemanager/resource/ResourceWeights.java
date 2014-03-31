@@ -34,12 +34,16 @@ public class ResourceWeights {
   }
 
   public ResourceWeights(float weight) {
+    setWeight(weight);
+  }
+
+  public ResourceWeights() { }
+
+  public void setWeight(float weight) {
     for (int i = 0; i < weights.length; i++) {
       weights[i] = weight;
     }
   }
-  
-  public ResourceWeights() { }
 
   public void setWeight(ResourceType resourceType, float weight) {
     weights[resourceType.ordinal()] = weight;
