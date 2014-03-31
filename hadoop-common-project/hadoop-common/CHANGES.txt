@@ -24,7 +24,19 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-10439. Fix compilation error in branch-2 after HADOOP-10426. (wheat9)
 
-Release 2.4.0 - UNRELEASED
+Release 2.4.1 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES 
+
+Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES
 
