@@ -349,7 +349,7 @@ public class TestHttpFSServer extends HFSTestCase {
     url = new URL(TestJettyHelper.getJettyURL(),
                   "/webhdfs/v1/?op=GETHOMEDIRECTORY&delegation=" + tokenStr);
     conn = (HttpURLConnection) url.openConnection();
-    Assert.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED,
+    Assert.assertEquals(HttpURLConnection.HTTP_FORBIDDEN,
                         conn.getResponseCode());
   }
 
