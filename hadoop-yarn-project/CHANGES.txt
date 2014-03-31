@@ -36,6 +36,9 @@ Release 2.5.0 - UNRELEASED
     YARN-1883. TestRMAdminService fails due to inconsistent entries in
     UserGroups (Mit Desai via jeagles)
 
+    YARN-1889. In Fair Scheduler, avoid creating objects on each call to
+    AppSchedulable comparator (Hong Zhiguo via Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES 
