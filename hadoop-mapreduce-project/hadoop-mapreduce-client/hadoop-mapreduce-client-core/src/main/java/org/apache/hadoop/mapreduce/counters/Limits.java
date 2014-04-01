@@ -27,8 +27,6 @@ import static org.apache.hadoop.mapreduce.MRJobConfig.*;
 @InterfaceAudience.Private
 public class Limits {
 
-  static final Configuration conf = new JobConf();
-
   private int totalCounters;
   private LimitExceededException firstViolation;
 
