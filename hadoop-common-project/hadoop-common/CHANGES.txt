@@ -30,6 +30,9 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-10439. Fix compilation error in branch-2 after HADOOP-10426. (wheat9)
 
+    HADOOP-10414. Incorrect property name for RefreshUserMappingProtocol in
+    hadoop-policy.xml. (Joey Echeverria via atm)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

@@ -85,7 +85,7 @@
   </property>
 
   <property>
-    <name>security.refresh.usertogroups.mappings.protocol.acl</name>
+    <name>security.refresh.user.mappings.protocol.acl</name>
     <value>*</value>
     <description>ACL for RefreshUserMappingsProtocol. Used to refresh
     users mappings. The ACL is a comma-separated list of user and
