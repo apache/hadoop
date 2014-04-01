@@ -167,6 +167,8 @@ Release 2.5.0 - UNRELEASED
 
   BUG FIXES 
 
+    MAPREDUCE-5759. Remove unnecessary conf load in Limits (Sandy Ryza)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
