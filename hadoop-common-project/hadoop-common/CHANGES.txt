@@ -335,6 +335,9 @@ Release 2.5.0 - UNRELEASED
     removes unused FileContext.getFileStatus(..) and fixes various javac
     warnings.  (szetszwo)
 
+    HADOOP-10414. Incorrect property name for RefreshUserMappingProtocol in
+    hadoop-policy.xml. (Joey Echeverria via atm)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
