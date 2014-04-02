@@ -173,7 +173,6 @@ class PeerCache {
 
   /**
    * Give an unused socket to the cache.
-   * @param sock socket not used by anyone.
    */
   public synchronized void put(DatanodeID dnId, Peer peer) {
     Preconditions.checkNotNull(dnId);

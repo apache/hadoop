@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.client;
+package org.apache.hadoop.hdfs.shortcircuit;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -25,15 +25,15 @@ import java.util.Iterator;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.io.nativeio.SharedFileDescriptorFactory;
 import org.apache.hadoop.hdfs.ExtendedBlockId;
-import org.apache.hadoop.hdfs.ShortCircuitShm;
-import org.apache.hadoop.hdfs.ShortCircuitShm.ShmId;
-import org.apache.hadoop.hdfs.ShortCircuitShm.Slot;
+import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitShm;
+import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitShm.ShmId;
+import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitShm.Slot;
+import org.apache.hadoop.io.nativeio.SharedFileDescriptorFactory;
+import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.Assert;
 
 public class TestShortCircuitShm {
   public static final Log LOG = LogFactory.getLog(TestShortCircuitShm.class);
