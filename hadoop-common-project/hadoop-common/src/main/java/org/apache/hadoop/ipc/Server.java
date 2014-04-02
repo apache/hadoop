@@ -2107,16 +2107,15 @@ public abstract class Server {
             if (e instanceof UndeclaredThrowableException) {
               e = e.getCause();
             }
-            String logMsg = Thread.currentThread().getName() + ", call " + call + ": error: " + e;
-            if (e instanceof RuntimeException || e instanceof Error) {
+            String logMsg = Thread.currentThread().getName() + ", call " + call;
+            if (exceptionsHandler.isTerse(e.getClass())) {
+              // Don't log the whole stack trace. Way too noisy!
+              LOG.info(logMsg + ": " + e);
+            } else if (e instanceof RuntimeException || e instanceof Error) {
               // These exception types indicate something is probably wrong
               // on the server side, as opposed to just a normal exceptional
               // result.
               LOG.warn(logMsg, e);
-            } else if (exceptionsHandler.isTerse(e.getClass())) {
-             // Don't log the whole stack trace of these exceptions.
-              // Way too noisy!
-              LOG.info(logMsg);
             } else {
               LOG.info(logMsg, e);
             }
