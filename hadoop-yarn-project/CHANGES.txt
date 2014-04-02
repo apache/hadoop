@@ -58,7 +58,10 @@ Release 2.4.1 - UNRELEASED
 
   OPTIMIZATIONS
 
-  BUG FIXES 
+  BUG FIXES
+
+    YARN-1898. Made Standby RM links conf, stacks, logLevel, metrics, jmx, logs
+    and static not be redirected to Active RM. (Xuan Gong via zjshen)
 
 Release 2.4.0 - 2014-04-07 
 
