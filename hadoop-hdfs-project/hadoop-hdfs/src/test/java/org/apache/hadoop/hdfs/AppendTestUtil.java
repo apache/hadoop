@@ -72,7 +72,7 @@ public class AppendTestUtil {
   static int nextInt(int n) {return RANDOM.get().nextInt(n);}
   static int nextLong() {return RANDOM.get().nextInt();}
 
-  static byte[] randomBytes(long seed, int size) {
+  public static byte[] randomBytes(long seed, int size) {
     LOG.info("seed=" + seed + ", size=" + size);
     final byte[] b = new byte[size];
     final Random rand = new Random(seed);

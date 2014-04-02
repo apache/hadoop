@@ -15,15 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.client;
+package org.apache.hadoop.hdfs.shortcircuit;
 
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Iterator;
 
-import org.apache.hadoop.hdfs.ShortCircuitShm;
-import org.apache.hadoop.hdfs.client.DfsClientShmManager.EndpointShmManager;
 import org.apache.hadoop.hdfs.net.DomainPeer;
+import org.apache.hadoop.hdfs.shortcircuit.DfsClientShmManager.EndpointShmManager;
 import org.apache.hadoop.net.unix.DomainSocket;
 import org.apache.hadoop.net.unix.DomainSocketWatcher;
 

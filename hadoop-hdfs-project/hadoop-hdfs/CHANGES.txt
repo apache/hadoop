@@ -277,6 +277,9 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6164. Remove lsr in OfflineImageViewer. (wheat9)
 
+    HDFS-6167. Relocate the non-public API classes in the hdfs.client package.
+    (szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES 

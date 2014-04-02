@@ -1189,7 +1189,7 @@ public class DFSUtil {
   }
   
   /** Create {@link ClientDatanodeProtocol} proxy using kerberos ticket */
-  static ClientDatanodeProtocol createClientDatanodeProtocolProxy(
+  public static ClientDatanodeProtocol createClientDatanodeProtocolProxy(
       DatanodeID datanodeid, Configuration conf, int socketTimeout,
       boolean connectToDnViaHostname) throws IOException {
     return new ClientDatanodeProtocolTranslatorPB(
