@@ -45,6 +45,9 @@ Release 2.4.1 - UNRELEASED
 
   BUG FIXES 
 
+    HADOOP-10455. When there is an exception, ipc.Server should first check
+    whether it is an terse exception.  (szetszwo)
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES
