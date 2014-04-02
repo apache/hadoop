@@ -299,6 +299,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6173. Move the default processor from Ls to Web in OfflineImageViewer.
     (Akira Ajisaka via wheat9)
 
+    HDFS-5591. Checkpointing should use monotonic time when calculating period.
+    (Charles Lamb via wang)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

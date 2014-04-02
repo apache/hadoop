@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
-import static org.apache.hadoop.util.Time.now;
+import static org.apache.hadoop.util.Time.monotonicNow;
 
 import java.io.IOException;
 import java.net.URI;
@@ -277,14 +277,14 @@ public class StandbyCheckpointer {
      * prevented
      */
     private void preventCheckpointsFor(long delayMs) {
-      preventCheckpointsUntil = now() + delayMs;
+      preventCheckpointsUntil = monotonicNow() + delayMs;
     }
 
     private void doWork() {
       final long checkPeriod = 1000 * checkpointConf.getCheckPeriod();
       // Reset checkpoint time so that we don't always checkpoint
       // on startup.
-      lastCheckpointTime = now();
+      lastCheckpointTime = monotonicNow();
       while (shouldRun) {
         boolean needRollbackCheckpoint = namesystem.isNeedRollbackFsImage();
         if (!needRollbackCheckpoint) {
@@ -302,9 +302,9 @@ public class StandbyCheckpointer {
             UserGroupInformation.getCurrentUser().checkTGTAndReloginFromKeytab();
           }
           
-          long now = now();
-          long uncheckpointed = countUncheckpointedTxns();
-          long secsSinceLast = (now - lastCheckpointTime)/1000;
+          final long now = monotonicNow();
+          final long uncheckpointed = countUncheckpointedTxns();
+          final long secsSinceLast = (now - lastCheckpointTime) / 1000;
           
           boolean needCheckpoint = needRollbackCheckpoint;
           if (needCheckpoint) {
