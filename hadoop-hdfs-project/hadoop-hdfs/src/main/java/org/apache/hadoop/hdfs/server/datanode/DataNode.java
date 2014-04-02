@@ -58,8 +58,6 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetrics;
 import org.apache.hadoop.hdfs.server.datanode.web.resources.DatanodeWebHdfsMethods;
-import org.apache.hadoop.hdfs.server.namenode.FileChecksumServlets;
-import org.apache.hadoop.hdfs.server.namenode.StreamFile;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
 import org.apache.hadoop.hdfs.server.protocol.*;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
@@ -361,10 +359,6 @@ public class DataNode extends Configured
 
     this.infoServer = builder.build();
 
-    this.infoServer.addInternalServlet(null, "/streamFile/*", StreamFile.class);
-    this.infoServer.addInternalServlet(null, "/getFileChecksum/*",
-        FileChecksumServlets.GetServlet.class);
-    
     this.infoServer.setAttribute("datanode", this);
     this.infoServer.setAttribute(JspHelper.CURRENT_CONF, conf);
     this.infoServer.addServlet(null, "/blockScannerReport", 

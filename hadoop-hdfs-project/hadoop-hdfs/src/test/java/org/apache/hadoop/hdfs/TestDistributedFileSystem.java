@@ -63,7 +63,6 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
-import org.apache.hadoop.hdfs.web.HftpFileSystem;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -495,8 +494,6 @@ public class TestDistributedFileSystem {
 
   @Test
   public void testFileChecksum() throws Exception {
-    ((Log4JLogger)HftpFileSystem.LOG).getLogger().setLevel(Level.ALL);
-
     final long seed = RAN.nextLong();
     System.out.println("seed=" + seed);
     RAN.setSeed(seed);
@@ -530,17 +527,6 @@ public class TestDistributedFileSystem {
       assertTrue("Not throwing the intended exception message", e.getMessage()
           .contains("Path is not a file: /test/TestExistingDir"));
     }
-    
-    //hftp
-    final String hftpuri = "hftp://" + nnAddr;
-    System.out.println("hftpuri=" + hftpuri);
-    final FileSystem hftp = ugi.doAs(
-        new PrivilegedExceptionAction<FileSystem>() {
-      @Override
-      public FileSystem run() throws Exception {
-        return new Path(hftpuri).getFileSystem(conf);
-      }
-    });
 
     //webhdfs
     final String webhdfsuri = WebHdfsFileSystem.SCHEME  + "://" + nnAddr;
@@ -577,14 +563,6 @@ public class TestDistributedFileSystem {
       //compute checksum
       final FileChecksum hdfsfoocs = hdfs.getFileChecksum(foo);
       System.out.println("hdfsfoocs=" + hdfsfoocs);
-
-      //hftp
-      final FileChecksum hftpfoocs = hftp.getFileChecksum(foo);
-      System.out.println("hftpfoocs=" + hftpfoocs);
-
-      final Path qualified = new Path(hftpuri + dir, "foo" + n);
-      final FileChecksum qfoocs = hftp.getFileChecksum(qualified);
-      System.out.println("qfoocs=" + qfoocs);
 
       //webhdfs
       final FileChecksum webhdfsfoocs = webhdfs.getFileChecksum(foo);
@@ -624,13 +602,6 @@ public class TestDistributedFileSystem {
         assertEquals(hdfsfoocs.hashCode(), barhashcode);
         assertEquals(hdfsfoocs, barcs);
 
-        //hftp
-        assertEquals(hftpfoocs.hashCode(), barhashcode);
-        assertEquals(hftpfoocs, barcs);
-
-        assertEquals(qfoocs.hashCode(), barhashcode);
-        assertEquals(qfoocs, barcs);
-
         //webhdfs
         assertEquals(webhdfsfoocs.hashCode(), barhashcode);
         assertEquals(webhdfsfoocs, barcs);
@@ -640,14 +611,6 @@ public class TestDistributedFileSystem {
       }
 
       hdfs.setPermission(dir, new FsPermission((short)0));
-      { //test permission error on hftp 
-        try {
-          hftp.getFileChecksum(qualified);
-          fail();
-        } catch(IOException ioe) {
-          FileSystem.LOG.info("GOOD: getting an exception", ioe);
-        }
-      }
 
       { //test permission error on webhdfs 
         try {

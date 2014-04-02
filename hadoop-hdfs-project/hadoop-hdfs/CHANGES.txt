@@ -9,6 +9,9 @@ Trunk (Unreleased)
     HDFS-5079. Cleaning up NNHAStatusHeartbeat.State from
     DatanodeProtocolProtos. (Tao Luo via shv)
 
+    HDFS-5570. Deprecate hftp / hsftp and replace them with webhdfs / swebhdfs.
+    (wheat9)
+
   NEW FEATURES
 
     HDFS-3125. Add JournalService to enable Journal Daemon. (suresh)

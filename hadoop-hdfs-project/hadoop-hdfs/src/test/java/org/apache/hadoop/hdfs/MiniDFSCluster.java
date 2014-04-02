@@ -93,7 +93,6 @@ import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
-import org.apache.hadoop.hdfs.web.HftpFileSystem;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.apache.hadoop.net.NetUtils;
@@ -1888,36 +1887,6 @@ public class MiniDFSCluster {
     return "http://"
         + nameNodes[nnIndex].conf
             .get(DFS_NAMENODE_HTTP_ADDRESS_KEY);
-  }
-  
-  /**
-   * @return a {@link HftpFileSystem} object.
-   */
-  public HftpFileSystem getHftpFileSystem(int nnIndex) throws IOException {
-    String uri = "hftp://"
-        + nameNodes[nnIndex].conf
-            .get(DFS_NAMENODE_HTTP_ADDRESS_KEY);
-    try {
-      return (HftpFileSystem)FileSystem.get(new URI(uri), conf);
-    } catch (URISyntaxException e) {
-      throw new IOException(e);
-    }
-  }
-
-  /**
-   *  @return a {@link HftpFileSystem} object as specified user. 
-   */
-  public HftpFileSystem getHftpFileSystemAs(final String username,
-      final Configuration conf, final int nnIndex, final String... groups)
-      throws IOException, InterruptedException {
-    final UserGroupInformation ugi = UserGroupInformation.createUserForTesting(
-        username, groups);
-    return ugi.doAs(new PrivilegedExceptionAction<HftpFileSystem>() {
-      @Override
-      public HftpFileSystem run() throws Exception {
-        return getHftpFileSystem(nnIndex);
-      }
-    });
   }
 
   /**
