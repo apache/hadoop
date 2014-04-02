@@ -129,7 +129,9 @@ public class SecondaryNameNode implements Runnable {
     return getClass().getSimpleName() + " Status" 
       + "\nName Node Address    : " + nameNodeAddr   
       + "\nStart Time           : " + new Date(starttime)
-      + "\nLast Checkpoint Time : " + (lastCheckpointTime == 0? "--": new Date(lastCheckpointTime))
+      + "\nLast Checkpoint      : " + (lastCheckpointTime == 0? "--":
+				       ((Time.monotonicNow() - lastCheckpointTime) / 1000))
+	                            + " seconds ago"
       + "\nCheckpoint Period    : " + checkpointConf.getPeriod() + " seconds"
       + "\nCheckpoint Size      : " + StringUtils.byteDesc(checkpointConf.getTxnCount())
                                     + " (= " + checkpointConf.getTxnCount() + " bytes)" 
@@ -376,7 +378,7 @@ public class SecondaryNameNode implements Runnable {
         if(UserGroupInformation.isSecurityEnabled())
           UserGroupInformation.getCurrentUser().checkTGTAndReloginFromKeytab();
         
-        long now = Time.now();
+        final long now = Time.monotonicNow();
 
         if (shouldCheckpointBasedOnCount() ||
             now >= lastCheckpointTime + 1000 * checkpointConf.getPeriod()) {
