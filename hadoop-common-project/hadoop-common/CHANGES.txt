@@ -12,6 +12,9 @@ Release 0.23.11 - UNRELEASED
 
     HADOOP-10164. Allow UGI to login with a known Subject (bobby)
 
+    HADOOP-10454. Provide FileContext version of har file system. (kihwal
+    via jeagles)
+
   OPTIMIZATIONS
     
   BUG FIXES
