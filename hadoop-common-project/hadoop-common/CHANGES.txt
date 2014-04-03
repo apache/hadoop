@@ -321,6 +321,9 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10345. Sanitize the the inputs (groups and hosts) for the proxyuser
     configuration. (Benoy Antony via jing9)
 
+    HADOOP-10454. Provide FileContext version of har file system. (Kihwal Lee
+    via jeagles)
+
   OPTIMIZATIONS
 
   BUG FIXES 
@@ -348,9 +351,6 @@ Release 2.4.1 - UNRELEASED
   NEW FEATURES
 
   IMPROVEMENTS
-
-    HADOOP-10454. Provide FileContext version of har file system. (Kihwal Lee
-    via jeagles)
 
   OPTIMIZATIONS
 
