@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.Cluster;
 import org.apache.hadoop.mapreduce.JobSubmissionFiles;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.tools.util.TestDistCpUtils;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -34,6 +35,7 @@ import org.junit.Test;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class TestIntegration {
@@ -68,7 +70,7 @@ public class TestIntegration {
     }
   }
 
-  @Test
+  @Test(timeout=100000)
   public void testSingleFileMissingTarget() {
     caseSingleFileMissingTarget(false);
     caseSingleFileMissingTarget(true);
@@ -91,7 +93,7 @@ public class TestIntegration {
     }
   }
 
-  @Test
+  @Test(timeout=100000)
   public void testSingleFileTargetFile() {
     caseSingleFileTargetFile(false);
     caseSingleFileTargetFile(true);
@@ -114,7 +116,7 @@ public class TestIntegration {
     }
   }
 
-  @Test
+  @Test(timeout=100000)
   public void testSingleFileTargetDir() {
     caseSingleFileTargetDir(false);
     caseSingleFileTargetDir(true);
@@ -138,7 +140,7 @@ public class TestIntegration {
     }
   }
 
-  @Test
+  @Test(timeout=100000)
   public void testSingleDirTargetMissing() {
     caseSingleDirTargetMissing(false);
     caseSingleDirTargetMissing(true);
@@ -161,7 +163,7 @@ public class TestIntegration {
     }
   }
 
-  @Test
+  @Test(timeout=100000)
   public void testSingleDirTargetPresent() {
 
     try {
@@ -180,7 +182,7 @@ public class TestIntegration {
     }
   }
 
-  @Test
+  @Test(timeout=100000)
   public void testUpdateSingleDirTargetPresent() {
 
     try {
@@ -199,7 +201,7 @@ public class TestIntegration {
     }
   }
 
-  @Test
+  @Test(timeout=100000)
   public void testMultiFileTargetPresent() {
     caseMultiFileTargetPresent(false);
     caseMultiFileTargetPresent(true);
@@ -223,7 +225,56 @@ public class TestIntegration {
     }
   }
 
-  @Test
+  @Test(timeout=100000)
+  public void testCustomCopyListing() {
+
+    try {
+      addEntries(listFile, "multifile1/file3", "multifile1/file4", "multifile1/file5");
+      createFiles("multifile1/file3", "multifile1/file4", "multifile1/file5");
+      mkdirs(target.toString());
+
+      Configuration conf = getConf();
+      try {
+        conf.setClass(DistCpConstants.CONF_LABEL_COPY_LISTING_CLASS,
+            CustomCopyListing.class, CopyListing.class);
+        DistCpOptions options = new DistCpOptions(Arrays.
+            asList(new Path(root + "/" + "multifile1")), target);
+        options.setSyncFolder(true);
+        options.setDeleteMissing(false);
+        options.setOverwrite(false);
+        try {
+          new DistCp(conf, options).execute();
+        } catch (Exception e) {
+          LOG.error("Exception encountered ", e);
+          throw new IOException(e);
+        }
+      } finally {
+        conf.unset(DistCpConstants.CONF_LABEL_COPY_LISTING_CLASS);
+      }
+
+      checkResult(target, 2, "file4", "file5");
+    } catch (IOException e) {
+      LOG.error("Exception encountered while testing distcp", e);
+      Assert.fail("distcp failure");
+    } finally {
+      TestDistCpUtils.delete(fs, root);
+    }
+  }
+
+  private static class CustomCopyListing extends SimpleCopyListing {
+
+    public CustomCopyListing(Configuration configuration,
+                             Credentials credentials) {
+      super(configuration, credentials);
+    }
+
+    @Override
+    protected boolean shouldCopy(Path path, DistCpOptions options) {
+      return !path.getName().equals("file3");
+    }
+  }
+
+  @Test(timeout=100000)
   public void testMultiFileTargetMissing() {
     caseMultiFileTargetMissing(false);
     caseMultiFileTargetMissing(true);
@@ -246,7 +297,7 @@ public class TestIntegration {
     }
   }
 
-  @Test
+  @Test(timeout=100000)
   public void testMultiDirTargetPresent() {
 
     try {
@@ -265,7 +316,7 @@ public class TestIntegration {
     }
   }
 
-  @Test
+  @Test(timeout=100000)
   public void testUpdateMultiDirTargetPresent() {
 
     try {
@@ -284,7 +335,7 @@ public class TestIntegration {
     }
   }
 
-  @Test
+  @Test(timeout=100000)
   public void testMultiDirTargetMissing() {
 
     try {
@@ -304,7 +355,7 @@ public class TestIntegration {
     }
   }
 
-  @Test
+  @Test(timeout=100000)
   public void testUpdateMultiDirTargetMissing() {
 
     try {
@@ -323,7 +374,7 @@ public class TestIntegration {
     }
   }
   
-  @Test
+  @Test(timeout=100000)
   public void testDeleteMissingInDestination() {
     
     try {
@@ -343,7 +394,7 @@ public class TestIntegration {
     }
   }
   
-  @Test
+  @Test(timeout=100000)
   public void testOverwrite() {
     byte[] contents1 = "contents1".getBytes();
     byte[] contents2 = "contents2".getBytes();
@@ -375,7 +426,7 @@ public class TestIntegration {
     }
   }
 
-  @Test
+  @Test(timeout=100000)
   public void testGlobTargetMissingSingleLevel() {
 
     try {
@@ -398,7 +449,7 @@ public class TestIntegration {
     }
   }
 
-  @Test
+  @Test(timeout=100000)
   public void testUpdateGlobTargetMissingSingleLevel() {
 
     try {
@@ -420,7 +471,7 @@ public class TestIntegration {
     }
   }
 
-  @Test
+  @Test(timeout=100000)
   public void testGlobTargetMissingMultiLevel() {
 
     try {
@@ -444,7 +495,7 @@ public class TestIntegration {
     }
   }
 
-  @Test
+  @Test(timeout=100000)
   public void testUpdateGlobTargetMissingMultiLevel() {
 
     try {
@@ -468,7 +519,7 @@ public class TestIntegration {
     }
   }
   
-  @Test
+  @Test(timeout=100000)
   public void testCleanup() {
     try {
       Path sourcePath = new Path("noscheme:///file");

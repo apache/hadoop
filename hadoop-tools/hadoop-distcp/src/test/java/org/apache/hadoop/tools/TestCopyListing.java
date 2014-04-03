@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter;
 import org.apache.hadoop.tools.util.TestDistCpUtils;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.security.Credentials;
@@ -82,7 +83,39 @@ public class TestCopyListing extends SimpleCopyListing {
     return 0;
   }
 
-  @Test
+  @Test(timeout=10000)
+  public void testSkipCopy() throws Exception {
+    SimpleCopyListing listing = new SimpleCopyListing(getConf(), CREDENTIALS) {
+      @Override
+      protected boolean shouldCopy(Path path, DistCpOptions options) {
+        return !path.getName().equals(FileOutputCommitter.SUCCEEDED_FILE_NAME);
+      }
+    };
+    FileSystem fs = FileSystem.get(getConf());
+    List<Path> srcPaths = new ArrayList<Path>();
+    srcPaths.add(new Path("/tmp/in4/1"));
+    srcPaths.add(new Path("/tmp/in4/2"));
+    Path target = new Path("/tmp/out4/1");
+    TestDistCpUtils.createFile(fs, "/tmp/in4/1/_SUCCESS");
+    TestDistCpUtils.createFile(fs, "/tmp/in4/1/file");
+    TestDistCpUtils.createFile(fs, "/tmp/in4/2");
+    fs.mkdirs(target);
+    DistCpOptions options = new DistCpOptions(srcPaths, target);
+    Path listingFile = new Path("/tmp/list4");
+    listing.buildListing(listingFile, options);
+    Assert.assertEquals(listing.getNumberOfPaths(), 2);
+    SequenceFile.Reader reader = new SequenceFile.Reader(getConf(),
+        SequenceFile.Reader.file(listingFile));
+    FileStatus fileStatus = new FileStatus();
+    Text relativePath = new Text();
+    Assert.assertTrue(reader.next(relativePath, fileStatus));
+    Assert.assertEquals(relativePath.toString(), "/1/file");
+    Assert.assertTrue(reader.next(relativePath, fileStatus));
+    Assert.assertEquals(relativePath.toString(), "/2");
+    Assert.assertFalse(reader.next(relativePath, fileStatus));
+  }
+
+  @Test(timeout=10000)
   public void testMultipleSrcToFile() {
     FileSystem fs = null;
     try {
@@ -127,7 +160,7 @@ public class TestCopyListing extends SimpleCopyListing {
     }
   }
 
-  @Test
+  @Test(timeout=10000)
   public void testDuplicates() {
     FileSystem fs = null;
     try {
@@ -153,7 +186,7 @@ public class TestCopyListing extends SimpleCopyListing {
     }
   }
 
-  @Test
+  @Test(timeout=10000)
   public void testBuildListing() {
     FileSystem fs = null;
     try {
@@ -209,7 +242,7 @@ public class TestCopyListing extends SimpleCopyListing {
     }
   }
 
-  @Test
+  @Test(timeout=10000)
   public void testBuildListingForSingleFile() {
     FileSystem fs = null;
     String testRootString = "/singleFileListing";

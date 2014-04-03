@@ -30,6 +30,9 @@ Release 2.5.0 - UNRELEASED
 
     MAPREDUCE-5759. Remove unnecessary conf load in Limits (Sandy Ryza)
 
+    MAPREDUCE-5014. Extend Distcp to accept a custom CopyListing. 
+    (Srikanth Sundarrajan via amareshwari)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

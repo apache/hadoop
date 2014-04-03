@@ -30,6 +30,7 @@ import org.apache.hadoop.tools.util.DistCpUtils;
 import org.apache.hadoop.security.Credentials;
 
 import java.io.IOException;
+import java.lang.reflect.Constructor;
 
 /**
  * The CopyListing abstraction is responsible for how the list of
@@ -193,14 +194,34 @@ public abstract class CopyListing extends Configured {
    * @param credentials Credentials object on which the FS delegation tokens are cached
    * @param options The input Options, to help choose the appropriate CopyListing Implementation.
    * @return An instance of the appropriate CopyListing implementation.
+   * @throws java.io.IOException - Exception if any
    */
   public static CopyListing getCopyListing(Configuration configuration,
                                            Credentials credentials,
-                                           DistCpOptions options) {
-    if (options.getSourceFileListing() == null) {
-      return new GlobbedCopyListing(configuration, credentials);
-    } else {
-      return new FileBasedCopyListing(configuration, credentials);
+                                           DistCpOptions options)
+      throws IOException {
+
+    String copyListingClassName = configuration.get(DistCpConstants.
+        CONF_LABEL_COPY_LISTING_CLASS, "");
+    Class<? extends CopyListing> copyListingClass;
+    try {
+      if (! copyListingClassName.isEmpty()) {
+        copyListingClass = configuration.getClass(DistCpConstants.
+            CONF_LABEL_COPY_LISTING_CLASS, GlobbedCopyListing.class,
+            CopyListing.class);
+      } else {
+        if (options.getSourceFileListing() == null) {
+            copyListingClass = GlobbedCopyListing.class;
+        } else {
+            copyListingClass = FileBasedCopyListing.class;
+        }
+      }
+      copyListingClassName = copyListingClass.getName();
+      Constructor<? extends CopyListing> constructor = copyListingClass.
+          getDeclaredConstructor(Configuration.class, Credentials.class);
+      return constructor.newInstance(configuration, credentials);
+    } catch (Exception e) {
+      throw new IOException("Unable to instantiate " + copyListingClassName, e);
     }
   }
 
