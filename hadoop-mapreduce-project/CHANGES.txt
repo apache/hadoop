@@ -68,9 +68,6 @@ Trunk (Unreleased)
     MAPREDUCE-4735. Make arguments in TestDFSIO case insensitive.
     (Brandon Li via suresh)
 
-    MAPREDUCE-5014. Extend Distcp to accept a custom CopyListing.
-    (Srikanth Sundarrajan via amareshwari)
-
     MAPREDUCE-5197. Add a service for checkpointing task state.
     (Carlo Curino via cdouglas)
 
@@ -168,6 +165,9 @@ Release 2.5.0 - UNRELEASED
   BUG FIXES 
 
     MAPREDUCE-5759. Remove unnecessary conf load in Limits (Sandy Ryza)
+
+    MAPREDUCE-5014. Extend Distcp to accept a custom CopyListing.
+    (Srikanth Sundarrajan via amareshwari)
 
 Release 2.4.1 - UNRELEASED
 
