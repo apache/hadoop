@@ -44,6 +44,9 @@ Release 2.4.1 - UNRELEASED
 
   IMPROVEMENTS
 
+    HADOOP-10454. Provide FileContext version of har file system. (Kihwal Lee
+    via jeagles)
+
   OPTIMIZATIONS
 
   BUG FIXES 
