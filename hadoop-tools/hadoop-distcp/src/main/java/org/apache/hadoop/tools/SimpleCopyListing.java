@@ -111,7 +111,24 @@ public class SimpleCopyListing extends CopyListing {
   public void doBuildListing(Path pathToListingFile, DistCpOptions options) throws IOException {
     doBuildListing(getWriter(pathToListingFile), options);
   }
-  
+  /**
+   * Collect the list of 
+   *   <sourceRelativePath, sourceFileStatus>
+   * to be copied and write to the sequence file. In essence, any file or
+   * directory that need to be copied or sync-ed is written as an entry to the
+   * sequence file, with the possible exception of the source root:
+   *     when either -update (sync) or -overwrite switch is specified, and if
+   *     the the source root is a directory, then the source root entry is not 
+   *     written to the sequence file, because only the contents of the source
+   *     directory need to be copied in this case.
+   * See {@link org.apache.hadoop.tools.util.DistCpUtils.getRelativePath} for
+   *     how relative path is computed.
+   * See computeSourceRootPath method for how the root path of the source is
+   *     computed.
+   * @param fileListWriter
+   * @param options
+   * @throws IOException
+   */
   @VisibleForTesting
   public void doBuildListing(SequenceFile.Writer fileListWriter,
       DistCpOptions options) throws IOException {
@@ -125,7 +142,12 @@ public class SimpleCopyListing extends CopyListing {
         boolean localFile = (rootStatus.getClass() != FileStatus.class);
 
         FileStatus[] sourceFiles = sourceFS.listStatus(path);
-        if (sourceFiles != null && sourceFiles.length > 0) {
+        boolean explore = (sourceFiles != null && sourceFiles.length > 0);
+        if (!explore || rootStatus.isDirectory()) {
+          writeToFileListingRoot(fileListWriter, rootStatus, sourcePathRoot,
+              localFile, options);
+        }
+        if (explore) {
           for (FileStatus sourceStatus: sourceFiles) {
             if (LOG.isDebugEnabled()) {
               LOG.debug("Recording source-path: " + sourceStatus.getPath() + " for copy.");
@@ -141,9 +163,6 @@ public class SimpleCopyListing extends CopyListing {
                   localFile, options);
             }
           }
-        } else {
-          writeToFileListing(fileListWriter, rootStatus, sourcePathRoot,
-              localFile, options);
         }
       }
       fileListWriter.close();
@@ -158,18 +177,19 @@ public class SimpleCopyListing extends CopyListing {
 
     Path target = options.getTargetPath();
     FileSystem targetFS = target.getFileSystem(getConf());
+    final boolean targetPathExists = options.getTargetPathExists();
 
     boolean solitaryFile = options.getSourcePaths().size() == 1
                                                 && !sourceStatus.isDirectory();
 
     if (solitaryFile) {
-      if (targetFS.isFile(target) || !targetFS.exists(target)) {
+      if (targetFS.isFile(target) || !targetPathExists) {
         return sourceStatus.getPath();
       } else {
         return sourceStatus.getPath().getParent();
       }
     } else {
-      boolean specialHandling = (options.getSourcePaths().size() == 1 && !targetFS.exists(target)) ||
+      boolean specialHandling = (options.getSourcePaths().size() == 1 && !targetPathExists) ||
           options.shouldSyncFolder() || options.shouldOverwrite();
 
       return specialHandling && sourceStatus.isDirectory() ? sourceStatus.getPath() :
@@ -253,15 +273,30 @@ public class SimpleCopyListing extends CopyListing {
       }
     }
   }
+  
+  private void writeToFileListingRoot(SequenceFile.Writer fileListWriter,
+      FileStatus fileStatus, Path sourcePathRoot,
+      boolean localFile,
+      DistCpOptions options) throws IOException {
+    boolean syncOrOverwrite = options.shouldSyncFolder() ||
+        options.shouldOverwrite();
+    if (fileStatus.getPath().equals(sourcePathRoot) && 
+        fileStatus.isDirectory() && syncOrOverwrite) {
+      // Skip the root-paths when syncOrOverwrite
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Skip " + fileStatus.getPath());
+      }      
+      return;
+    }
+    writeToFileListing(fileListWriter, fileStatus, sourcePathRoot, localFile,
+        options);
+  }
 
   private void writeToFileListing(SequenceFile.Writer fileListWriter,
                                   FileStatus fileStatus,
                                   Path sourcePathRoot,
                                   boolean localFile,
                                   DistCpOptions options) throws IOException {
-    if (fileStatus.getPath().equals(sourcePathRoot) && fileStatus.isDirectory())
-      return; // Skip the root-paths.
-
     if (LOG.isDebugEnabled()) {
       LOG.debug("REL PATH: " + DistCpUtils.getRelativePath(sourcePathRoot,
         fileStatus.getPath()) + ", FULL PATH: " + fileStatus.getPath());
