@@ -305,6 +305,8 @@ Release 2.5.0 - UNRELEASED
     HDFS-5591. Checkpointing should use monotonic time when calculating period.
     (Charles Lamb via wang)
 
+    HDFS-6190. Minor textual fixes in DFSClient. (Charles Lamb via wheat9)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
