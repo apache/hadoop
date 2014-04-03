@@ -40,6 +40,8 @@ import org.apache.hadoop.util.ToolRunner;
 import java.io.IOException;
 import java.util.Random;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * DistCp is the main driver-class for DistCpV2.
  * For command-line use, DistCp::main() orchestrates the parsing of command-line
@@ -87,7 +89,8 @@ public class DistCp extends Configured implements Tool {
   /**
    * To be used with the ToolRunner. Not for public consumption.
    */
-  private DistCp() {}
+  @VisibleForTesting
+  public DistCp() {}
 
   /**
    * Implementation of Tool::run(). Orchestrates the copy of source file(s)
@@ -105,7 +108,7 @@ public class DistCp extends Configured implements Tool {
     
     try {
       inputOptions = (OptionsParser.parse(argv));
-
+      setTargetPathExists();
       LOG.info("Input Options: " + inputOptions);
     } catch (Throwable e) {
       LOG.error("Invalid arguments: ", e);
@@ -169,6 +172,18 @@ public class DistCp extends Configured implements Tool {
     return job;
   }
 
+  /**
+   * Set targetPathExists in both inputOptions and job config,
+   * for the benefit of CopyCommitter
+   */
+  private void setTargetPathExists() throws IOException {
+    Path target = inputOptions.getTargetPath();
+    FileSystem targetFS = target.getFileSystem(getConf());
+    boolean targetExists = targetFS.exists(target);
+    inputOptions.setTargetPathExists(targetExists);
+    getConf().setBoolean(DistCpConstants.CONF_LABEL_TARGET_PATH_EXISTS, 
+        targetExists);
+  }
   /**
    * Create Job object for submitting it, with all the configuration
    *

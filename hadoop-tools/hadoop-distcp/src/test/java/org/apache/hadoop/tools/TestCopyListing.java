@@ -103,11 +103,13 @@ public class TestCopyListing extends SimpleCopyListing {
     DistCpOptions options = new DistCpOptions(srcPaths, target);
     Path listingFile = new Path("/tmp/list4");
     listing.buildListing(listingFile, options);
-    Assert.assertEquals(listing.getNumberOfPaths(), 2);
+    Assert.assertEquals(listing.getNumberOfPaths(), 3);
     SequenceFile.Reader reader = new SequenceFile.Reader(getConf(),
         SequenceFile.Reader.file(listingFile));
     FileStatus fileStatus = new FileStatus();
     Text relativePath = new Text();
+    Assert.assertTrue(reader.next(relativePath, fileStatus));
+    Assert.assertEquals(relativePath.toString(), "/1");
     Assert.assertTrue(reader.next(relativePath, fileStatus));
     Assert.assertEquals(relativePath.toString(), "/1/file");
     Assert.assertTrue(reader.next(relativePath, fileStatus));
@@ -270,7 +272,8 @@ public class TestCopyListing extends SimpleCopyListing {
       final Path listFile = new Path(testRoot, "/tmp/fileList.seq");
       listing.buildListing(listFile, options);
 
-      reader = new SequenceFile.Reader(fs, listFile, getConf());
+      reader = new SequenceFile.Reader(getConf(), SequenceFile.Reader.file(listFile));
+
       FileStatus fileStatus = new FileStatus();
       Text relativePath = new Text();
       Assert.assertTrue(reader.next(relativePath, fileStatus));

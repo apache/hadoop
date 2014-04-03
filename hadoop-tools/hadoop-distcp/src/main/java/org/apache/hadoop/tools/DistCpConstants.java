@@ -74,6 +74,9 @@ public class DistCpConstants {
    */
   public static final String CONF_LABEL_TARGET_FINAL_PATH = "distcp.target.final.path";
 
+  /* Boolean to indicate whether the target of distcp exists. */
+  public static final String CONF_LABEL_TARGET_PATH_EXISTS = "distcp.target.path.exists";
+  
   /**
    * DistCp job id for consumers of the Disctp 
    */

@@ -146,7 +146,8 @@ public class TestCopyCommitter {
           new Path("/out"));
       options.preserve(FileAttribute.PERMISSION);
       options.appendToConf(conf);
-
+      options.setTargetPathExists(false);
+      
       CopyListing listing = new GlobbedCopyListing(conf, CREDENTIALS);
       Path listingFile = new Path("/tmp1/" + String.valueOf(rand.nextLong()));
       listing.buildListing(listingFile, options);

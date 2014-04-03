@@ -54,7 +54,10 @@ public class CopyCommitter extends FileOutputCommitter {
   private static final Log LOG = LogFactory.getLog(CopyCommitter.class);
 
   private final TaskAttemptContext taskAttemptContext;
-
+  private boolean syncFolder = false;
+  private boolean overwrite = false;
+  private boolean targetPathExists = true;
+  
   /**
    * Create a output committer
    *
@@ -71,6 +74,10 @@ public class CopyCommitter extends FileOutputCommitter {
   @Override
   public void commitJob(JobContext jobContext) throws IOException {
     Configuration conf = jobContext.getConfiguration();
+    syncFolder = conf.getBoolean(DistCpConstants.CONF_LABEL_SYNC_FOLDERS, false);
+    overwrite = conf.getBoolean(DistCpConstants.CONF_LABEL_OVERWRITE, false);
+    targetPathExists = conf.getBoolean(DistCpConstants.CONF_LABEL_TARGET_PATH_EXISTS, true);
+    
     super.commitJob(jobContext);
 
     cleanupTempFiles(jobContext);
@@ -155,6 +162,8 @@ public class CopyCommitter extends FileOutputCommitter {
   // user/group permissions, etc.) based on the corresponding source directories.
   private void preserveFileAttributesForDirectories(Configuration conf) throws IOException {
     String attrSymbols = conf.get(DistCpConstants.CONF_LABEL_PRESERVE_STATUS);
+    final boolean syncOrOverwrite = syncFolder || overwrite;
+
     LOG.info("About to preserve attributes: " + attrSymbols);
 
     EnumSet<FileAttribute> attributes = DistCpUtils.unpackAttributes(attrSymbols);
@@ -179,12 +188,10 @@ public class CopyCommitter extends FileOutputCommitter {
         if (! srcFileStatus.isDirectory()) continue;
 
         Path targetFile = new Path(targetRoot.toString() + "/" + srcRelPath);
-
-        // Skip the root folder.
-        // Status can't be preserved on root-folder. (E.g. multiple paths may
-        // be copied to a single target folder. Which source-attributes to use
-        // on the target is undefined.)
-        if (targetRoot.equals(targetFile)) continue;
+        //
+        // Skip the root folder when syncOrOverwrite is true.
+        //
+        if (targetRoot.equals(targetFile) && syncOrOverwrite) continue;
 
         FileSystem targetFS = targetFile.getFileSystem(conf);
         DistCpUtils.preserve(targetFS, targetFile, srcFileStatus,  attributes);
@@ -218,7 +225,14 @@ public class CopyCommitter extends FileOutputCommitter {
     Path targetFinalPath = new Path(conf.get(DistCpConstants.CONF_LABEL_TARGET_FINAL_PATH));
     targets.add(targetFinalPath);
     DistCpOptions options = new DistCpOptions(targets, new Path("/NONE"));
-
+    //
+    // Set up options to be the same from the CopyListing.buildListing's perspective,
+    // so to collect similar listings as when doing the copy
+    //
+    options.setOverwrite(overwrite);
+    options.setSyncFolder(syncFolder);
+    options.setTargetPathExists(targetPathExists);
+    
     target.buildListing(targetListing, options);
     Path sortedTargetListing = DistCpUtils.sortListing(clusterFS, conf, targetListing);
     long totalLen = clusterFS.getFileStatus(sortedTargetListing).getLen();
