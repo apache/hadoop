@@ -43,7 +43,9 @@ Release 2.4.1 - UNRELEASED
 
   OPTIMIZATIONS
 
-  BUG FIXES 
+  BUG FIXES
+
+    MAPREDUCE-5818. Added "hsadmin" command into mapred.cmd. (Jian He via zjshen)
 
 Release 2.4.0 - 2014-04-07 
 
