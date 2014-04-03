@@ -236,7 +236,7 @@ public class DFSAdmin extends FsShell {
       "\t\ton the total size of all the files under the directory tree.\n" +
       "\t\tThe extra space required for replication is also counted. E.g.\n" +
       "\t\ta 1GB file with replication of 3 consumes 3GB of the quota.\n\n" +
-      "\t\tQuota can also be speciefied with a binary prefix for terabytes,\n" +
+      "\t\tQuota can also be specified with a binary prefix for terabytes,\n" +
       "\t\tpetabytes etc (e.g. 50t is 50TB, 5m is 5MB, 3p is 3PB).\n" + 
       "\t\tFor each directory, attempt to set the quota. An error will be reported if\n" +
       "\t\t1. N is not a positive integer, or\n" +
@@ -637,7 +637,7 @@ public class DFSAdmin extends FsShell {
   }
 
   private void printHelp(String cmd) {
-    String summary = "hadoop dfsadmin is the command to execute DFS administrative commands.\n" +
+    String summary = "hadoop dfsadmin performs DFS administrative commands.\n" +
       "The full syntax is: \n\n" +
       "hadoop dfsadmin [-report] [-safemode <enter | leave | get | wait>]\n" +
       "\t[-saveNamespace]\n" +
