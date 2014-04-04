@@ -666,9 +666,9 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
      }
 
      this.updatingResource = new HashMap<String, String[]>(other.updatingResource);
+     this.finalParameters = new HashSet<String>(other.finalParameters);
    }
    
-    this.finalParameters = new HashSet<String>(other.finalParameters);
     synchronized(Configuration.class) {
       REGISTRY.put(this, null);
     }

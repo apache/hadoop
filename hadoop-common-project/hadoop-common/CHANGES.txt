@@ -15,6 +15,9 @@ Release 2.4.1 - UNRELEASED
     HADOOP-10455. When there is an exception, ipc.Server should first check
     whether it is an terse exception.  (szetszwo)
 
+    HADOOP-10456. Bug in Configuration.java exposed by Spark
+    (ConcurrentModificationException).  (Nishkam Ravi via cnauroth)
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES
