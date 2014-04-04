@@ -59,6 +59,9 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6190. Minor textual fixes in DFSClient. (Charles Lamb via wheat9)
 
+    HDFS-6159. TestBalancerWithNodeGroup.testBalancerWithNodeGroup fails if 
+    there is block missing after balancer success (Chen He via kihwal)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
