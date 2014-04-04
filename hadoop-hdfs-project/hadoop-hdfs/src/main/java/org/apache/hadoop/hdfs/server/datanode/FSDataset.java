@@ -433,7 +433,7 @@ class FSDataset implements FSDatasetInterface {
               blockFile.length(), genStamp, volume, blockFile.getParentFile());
         } else {
           newReplica = new ReplicaWaitingToBeRecovered(blockId,
-              validateIntegrity(blockFile, genStamp), 
+              validateIntegrityAndSetLength(blockFile, genStamp), 
               genStamp, volume, blockFile.getParentFile());
         }
 
@@ -457,7 +457,7 @@ class FSDataset implements FSDatasetInterface {
      * @param genStamp generation stamp of the block
      * @return the number of valid bytes
      */
-    private long validateIntegrity(File blockFile, long genStamp) {
+    private long validateIntegrityAndSetLength(File blockFile, long genStamp) {
       DataInputStream checksumIn = null;
       InputStream blockIn = null;
       try {
@@ -500,11 +500,25 @@ class FSDataset implements FSDatasetInterface {
         IOUtils.readFully(blockIn, buf, 0, lastChunkSize);
 
         checksum.update(buf, 0, lastChunkSize);
+        long validFileLength;
         if (checksum.compare(buf, lastChunkSize)) { // last chunk matches crc
-          return lastChunkStartPos + lastChunkSize;
+          validFileLength = lastChunkStartPos + lastChunkSize;
         } else { // last chunck is corrupt
-          return lastChunkStartPos;
+          validFileLength = lastChunkStartPos;
         }
+
+        // truncate if extra bytes are present without CRC
+        if (blockFile.length() > validFileLength) {
+          RandomAccessFile blockRAF = new RandomAccessFile(blockFile, "rw");
+          try {
+            // truncate blockFile
+            blockRAF.setLength(validFileLength);
+          } finally {
+            blockRAF.close();
+          }
+        }
+
+        return validFileLength;
       } catch (IOException e) {
         DataNode.LOG.warn(e);
         return 0;

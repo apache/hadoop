@@ -22,6 +22,9 @@ Release 0.23.11 - UNRELEASED
 
     HDFS-6166. Revisit balancer so_timeout. (Nathan Roberts via kihwal)
 
+    HDFS-5728. Block recovery will fail if the metafile does not have crc 
+    for all chunks of the block. (Vinayakumar B via kihwal)
+
 Release 0.23.10 - 2013-12-09
 
   INCOMPATIBLE CHANGES
