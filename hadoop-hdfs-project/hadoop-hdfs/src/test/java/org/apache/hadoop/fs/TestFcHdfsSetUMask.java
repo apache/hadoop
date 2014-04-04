@@ -43,7 +43,7 @@ import org.junit.Test;
 public class TestFcHdfsSetUMask {
   
   private static final FileContextTestHelper fileContextTestHelper =
-      new FileContextTestHelper();
+      new FileContextTestHelper("/tmp/TestFcHdfsSetUMask");
   private static MiniDFSCluster cluster;
   private static Path defaultWorkingDirectory;
   private static FileContext fc;
