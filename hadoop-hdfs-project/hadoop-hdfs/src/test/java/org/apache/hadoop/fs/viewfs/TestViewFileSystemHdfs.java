@@ -52,7 +52,7 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
   
   @Override
   protected FileSystemTestHelper createFileSystemHelper() {
-    return new FileSystemTestHelper();
+    return new FileSystemTestHelper("/tmp/TestViewFileSystemHdfs");
   }
 
   @BeforeClass

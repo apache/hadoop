@@ -49,7 +49,7 @@ public class TestHDFSFileContextMainOperations extends
   
   @Override
   protected FileContextTestHelper createFileContextHelper() {
-    return new FileContextTestHelper();
+    return new FileContextTestHelper("/tmp/TestHDFSFileContextMainOperations");
   }
 
   @BeforeClass

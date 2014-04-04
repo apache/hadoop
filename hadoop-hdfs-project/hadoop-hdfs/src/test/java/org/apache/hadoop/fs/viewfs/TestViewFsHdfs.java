@@ -42,7 +42,7 @@ public class TestViewFsHdfs extends ViewFsBaseTest {
   
   @Override
   protected FileContextTestHelper createFileContextHelper() {
-    return new FileContextTestHelper();
+    return new FileContextTestHelper("/tmp/TestViewFsHdfs");
   }
 
 
