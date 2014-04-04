@@ -344,6 +344,9 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10459. distcp V2 doesn't preserve root dir's attributes when -p is
     specified. (Yongjun Zhang via atm)
 
+    HADOOP-10462. DF#getFilesystem is not parsing the command output. 
+    (Akira AJISAKA via umamahesh)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
