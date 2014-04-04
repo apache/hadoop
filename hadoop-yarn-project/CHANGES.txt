@@ -63,6 +63,9 @@ Release 2.4.1 - UNRELEASED
     YARN-1898. Made Standby RM links conf, stacks, logLevel, metrics, jmx, logs
     and static not be redirected to Active RM. (Xuan Gong via zjshen)
 
+    YARN-1837. Fixed TestMoveApplication#testMoveRejectedByScheduler failure.
+    (Hong Zhiguo via jianhe)
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES
