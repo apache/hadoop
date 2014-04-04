@@ -319,6 +319,9 @@ Release 2.4.1 - UNRELEASED
 
   BUG FIXES 
 
+    HDFS-6189. Multiple HDFS tests fail on Windows attempting to use a test
+    root path containing a colon.  (cnauroth via szetszwo) 
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES
