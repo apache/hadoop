@@ -46,7 +46,7 @@ public class RMWebAppFilter extends GuiceContainer {
 
   // define a set of URIs which do not need to do redirection
   private static final Set<String> NON_REDIRECTED_URIS = Sets.newHashSet(
-      "/conf", "/stacks", "/logLevel", "/metrics", "/jmx", "/logs");
+      "/conf", "/stacks", "/logLevel", "/logs");
 
   @Inject
   public RMWebAppFilter(Injector injector) {
