@@ -812,6 +812,7 @@ public class SecondaryNameNode implements Runnable {
                       Collection<URI> editsDirs) throws IOException {
       super(conf, (FSNamesystem)null, imageDirs, editsDirs);
       setFSNamesystem(new FSNamesystem(this, conf));
+      getFSNamesystem().dir.disableQuotaChecks();
       
       // the 2NN never writes edits -- it only downloads them. So
       // we shouldn't have any editLog instance. Setting to null

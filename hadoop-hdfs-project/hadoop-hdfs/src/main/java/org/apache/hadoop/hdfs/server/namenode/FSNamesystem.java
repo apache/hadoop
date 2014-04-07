@@ -370,6 +370,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     } else {
       this.dir = new FSDirectory(fsImage, this, conf);
     }
+    dir.enableQuotaChecks();
     this.safeMode = new SafeModeInfo(conf);
   }
 

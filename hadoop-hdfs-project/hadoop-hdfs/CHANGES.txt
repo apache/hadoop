@@ -11,6 +11,8 @@ Release 0.23.11 - UNRELEASED
     HDFS-4461. DirectoryScanner: volume path prefix takes up memory for every
     block that is scanned (Colin Patrick McCabe)
 
+    HDFS-6191. Disable quota checks when replaying edit log. (kihwal)
+
   OPTIMIZATIONS
     
   BUG FIXES

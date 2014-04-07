@@ -77,6 +77,7 @@ public class FSDirectory implements Closeable {
   INodeDirectoryWithQuota rootDir;
   FSImage fsImage;  
   private volatile boolean ready = false;
+  private volatile boolean skipQuotaCheck = false; // disable while consuming edits
   private static final long UNKNOWN_DISK_SPACE = -1;
   private final int maxComponentLength;
   private final int maxDirItems;
@@ -265,6 +266,16 @@ public class FSDirectory implements Closeable {
         writeUnlock();
       }
     }
+  }
+
+  /** Enable quota verification */
+  void enableQuotaChecks() {
+    skipQuotaCheck = false;
+  }
+
+  /** Disable quota verification */
+  void disableQuotaChecks() {
+    skipQuotaCheck = true;
   }
 
   /**
@@ -1753,7 +1764,7 @@ public class FSDirectory implements Closeable {
    */
   private void verifyQuota(INode[] inodes, int pos, long nsDelta, long dsDelta,
       INode commonAncestor) throws QuotaExceededException {
-    if (!ready) {
+    if (!ready || skipQuotaCheck) {
       // Do not check quota if edits log is still being processed
       return;
     }
@@ -1794,7 +1805,7 @@ public class FSDirectory implements Closeable {
    */
   private void verifyQuotaForRename(INode[] srcInodes, INode[]dstInodes)
       throws QuotaExceededException {
-    if (!ready) {
+    if (!ready || skipQuotaCheck) {
       // Do not check quota if edits log is still being processed
       return;
     }
