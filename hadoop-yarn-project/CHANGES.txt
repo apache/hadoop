@@ -81,6 +81,8 @@ Release 2.4.1 - UNRELEASED
     YARN-1837. Fixed TestMoveApplication#testMoveRejectedByScheduler failure.
     (Hong Zhiguo via jianhe)
 
+    YARN-1905. TestProcfsBasedProcessTree must only run on Linux. (cnauroth)
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES
