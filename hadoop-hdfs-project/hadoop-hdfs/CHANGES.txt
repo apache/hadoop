@@ -35,6 +35,8 @@ Release 2.5.0 - UNRELEASED
     HDFS-6167. Relocate the non-public API classes in the hdfs.client package.
     (szetszwo)
 
+    HDFS-6191. Disable quota checks when replaying edit log. (kihwal)
+
   OPTIMIZATIONS
 
   BUG FIXES 
