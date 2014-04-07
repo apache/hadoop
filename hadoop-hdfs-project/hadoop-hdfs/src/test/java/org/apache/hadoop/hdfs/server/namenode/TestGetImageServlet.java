@@ -51,13 +51,13 @@ public class TestGetImageServlet {
     // Set up NN1 HA configs.
     conf.set(DFSUtil.addKeySuffixes(DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY,
         "ns1", "nn1"), "host1:1234");
-    conf.set(DFSUtil.addKeySuffixes(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY,
+    conf.set(DFSUtil.addKeySuffixes(DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY,
         "ns1", "nn1"), "hdfs/_HOST@TEST-REALM.COM");
     
     // Set up NN2 HA configs.
     conf.set(DFSUtil.addKeySuffixes(DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY,
         "ns1", "nn2"), "host2:1234");
-    conf.set(DFSUtil.addKeySuffixes(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY,
+    conf.set(DFSUtil.addKeySuffixes(DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY,
         "ns1", "nn2"), "hdfs/_HOST@TEST-REALM.COM");
     
     // Initialize this conf object as though we're running on NN1.

@@ -34,7 +34,7 @@ import org.apache.hadoop.security.token.TokenInfo;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 @KerberosInfo(
-    serverPrincipal = DFSConfigKeys.DFS_DATANODE_USER_NAME_KEY)
+    serverPrincipal = DFSConfigKeys.DFS_DATANODE_KERBEROS_PRINCIPAL_KEY)
 @TokenInfo(BlockTokenSelector.class)
 public interface ClientDatanodeProtocol {
   /**

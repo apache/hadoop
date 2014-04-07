@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.nfs.mount;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NFS_KEYTAB_FILE_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NFS_USER_NAME_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NFS_KERBEROS_PRINCIPAL_KEY;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -89,7 +89,7 @@ public class RpcProgramMountd extends RpcProgram implements MountInterface {
     this.mounts = Collections.synchronizedList(new ArrayList<MountEntry>());
     UserGroupInformation.setConfiguration(config);
     SecurityUtil.login(config, DFS_NFS_KEYTAB_FILE_KEY,
-            DFS_NFS_USER_NAME_KEY);
+            DFS_NFS_KERBEROS_PRINCIPAL_KEY);
     this.dfsClient = new DFSClient(NameNode.getAddress(config), config);
   }
   
