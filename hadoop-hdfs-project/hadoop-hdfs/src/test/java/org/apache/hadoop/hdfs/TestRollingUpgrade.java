@@ -195,6 +195,7 @@ public class TestRollingUpgrade {
         Assert.assertEquals(info1, dfs.rollingUpgrade(RollingUpgradeAction.QUERY));
   
         dfs.mkdirs(bar);
+        cluster.shutdown();
       }
 
       // cluster2 takes over QJM
