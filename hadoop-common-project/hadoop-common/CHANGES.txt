@@ -355,6 +355,9 @@ Release 2.4.1 - UNRELEASED
 
   IMPROVEMENTS
 
+    HADOOP-10466. Lower the log level in UserGroupInformation.  (Nicolas
+    Liochon via szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES 
