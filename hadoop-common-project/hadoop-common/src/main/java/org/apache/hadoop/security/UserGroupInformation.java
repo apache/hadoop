@@ -949,7 +949,9 @@ public class UserGroupInformation {
     // register most recent relogin attempt
     user.setLastLogin(now);
     try {
-      LOG.info("Initiating logout for " + getUserName());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Initiating logout for " + getUserName());
+      }
       synchronized (UserGroupInformation.class) {
         // clear up the kerberos state. But the tokens are not cleared! As per
         // the Java kerberos login module code, only the kerberos credentials
@@ -960,7 +962,9 @@ public class UserGroupInformation {
         login = newLoginContext(
             HadoopConfiguration.KEYTAB_KERBEROS_CONFIG_NAME, getSubject(),
             new HadoopConfiguration());
-        LOG.info("Initiating re-login for " + keytabPrincipal);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Initiating re-login for " + keytabPrincipal);
+        }
         start = Time.now();
         login.login();
         metrics.loginSuccess.add(Time.now() - start);
@@ -1001,7 +1005,9 @@ public class UserGroupInformation {
     // register most recent relogin attempt
     user.setLastLogin(now);
     try {
-      LOG.info("Initiating logout for " + getUserName());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Initiating logout for " + getUserName());
+      }
       //clear up the kerberos state. But the tokens are not cleared! As per 
       //the Java kerberos login module code, only the kerberos credentials
       //are cleared
@@ -1011,7 +1017,9 @@ public class UserGroupInformation {
       login = 
         newLoginContext(HadoopConfiguration.USER_KERBEROS_CONFIG_NAME, 
             getSubject(), new HadoopConfiguration());
-      LOG.info("Initiating re-login for " + getUserName());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Initiating re-login for " + getUserName());
+      }
       login.login();
       setLogin(login);
     } catch (LoginException le) {
