@@ -134,6 +134,7 @@ public class BackupNode extends NameNode {
                                 BN_SAFEMODE_EXTENSION_DEFAULT);
     BackupImage bnImage = new BackupImage(conf);
     this.namesystem = new FSNamesystem(conf, bnImage);
+    namesystem.dir.disableQuotaChecks();
     bnImage.setNamesystem(namesystem);
     bnImage.recoverCreateRead();
   }

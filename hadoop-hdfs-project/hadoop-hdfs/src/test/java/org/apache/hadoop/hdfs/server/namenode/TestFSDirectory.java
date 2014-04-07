@@ -20,12 +20,15 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.StringReader;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -55,6 +58,7 @@ public class TestFSDirectory {
   private final Path file5 = new Path(sub1, "z_file5");
 
   private final Path sub2 = new Path(dir, "sub2");
+  private final Path file6 = new Path(sub2, "file6");
 
   private Configuration conf;
   private MiniDFSCluster cluster;
@@ -123,6 +127,41 @@ public class TestFSDirectory {
     Assert.assertTrue(root.getChildrenList(Snapshot.CURRENT_STATE_ID).isEmpty());
     fsdir.imageLoadComplete();
     Assert.assertTrue(fsdir.isReady());
+  }
+
+  @Test
+  public void testSkipQuotaCheck() throws Exception {
+    try {
+      // set quota. nsQuota of 1 means no files can be created
+      //  under this directory.
+      hdfs.setQuota(sub2, 1, Long.MAX_VALUE);
+
+      // create a file
+      try {
+        // this should fail
+        DFSTestUtil.createFile(hdfs, file6, 1024, REPLICATION, seed);
+        throw new IOException("The create should have failed.");
+      } catch (NSQuotaExceededException qe) {
+        // ignored
+      }
+      // disable the quota check and retry. this should succeed.
+      fsdir.disableQuotaChecks();
+      DFSTestUtil.createFile(hdfs, file6, 1024, REPLICATION, seed);
+
+      // trying again after re-enabling the check.
+      hdfs.delete(file6, false); // cleanup
+      fsdir.enableQuotaChecks();
+      try {
+        // this should fail
+        DFSTestUtil.createFile(hdfs, file6, 1024, REPLICATION, seed);
+        throw new IOException("The create should have failed.");
+      } catch (NSQuotaExceededException qe) {
+        // ignored
+      }
+    } finally {
+      hdfs.delete(file6, false); // cleanup, in case the test failed in the middle.
+      hdfs.setQuota(sub2, Long.MAX_VALUE, Long.MAX_VALUE);
+    }
   }
   
   static void checkClassName(String line) {

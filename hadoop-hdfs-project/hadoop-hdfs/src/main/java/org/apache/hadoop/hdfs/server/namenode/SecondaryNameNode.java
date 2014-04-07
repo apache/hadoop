@@ -248,6 +248,9 @@ public class SecondaryNameNode implements Runnable {
     
     namesystem = new FSNamesystem(conf, checkpointImage, true);
 
+    // Disable quota checks
+    namesystem.dir.disableQuotaChecks();
+
     // Initialize other scheduling parameters from the configuration
     checkpointConf = new CheckpointConf(conf);
 
@@ -850,7 +853,7 @@ public class SecondaryNameNode implements Runnable {
                       Collection<URI> imageDirs,
                       List<URI> editsDirs) throws IOException {
       super(conf, imageDirs, editsDirs);
-      
+
       // the 2NN never writes edits -- it only downloads them. So
       // we shouldn't have any editLog instance. Setting to null
       // makes sure we don't accidentally depend on it.
