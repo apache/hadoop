@@ -66,6 +66,9 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6181. Fix the wrong property names in NFS user guide (brandonli)
 
+    HDFS-6180. dead node count / listing is very broken in JMX and old GUI.
+    (wheat9)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

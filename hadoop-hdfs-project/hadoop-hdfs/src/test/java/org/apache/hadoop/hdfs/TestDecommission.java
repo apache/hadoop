@@ -25,9 +25,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.Random;
 
 import org.apache.commons.logging.Log;
@@ -45,7 +43,6 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
-import org.apache.hadoop.hdfs.server.namenode.HostFileManager;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.test.PathUtils;
@@ -637,149 +634,6 @@ public class TestDecommission {
       DatanodeID id = cluster.getDataNodes().get(0).getDatanodeId();
       assertEquals(id.getHostName(), info[0].getHostName());
       assertEquals(bogusIp, info[1].getHostName());
-    }
-  }
-
-  @Test(timeout=360000)
-  public void testDuplicateHostsEntries() throws IOException,
-      InterruptedException {
-    Configuration hdfsConf = new Configuration(conf);
-    cluster = new MiniDFSCluster.Builder(hdfsConf)
-        .numDataNodes(1).setupHostsFile(true).build();
-    cluster.waitActive();
-    int dnPort = cluster.getDataNodes().get(0).getXferPort();
-
-    // pick some random ports that don't overlap with our DN's port
-    // or with each other.
-    Random random = new Random(System.currentTimeMillis());
-    int port1 = dnPort;
-    while (port1 == dnPort) {
-      port1 = random.nextInt(6000) + 1000;
-    }
-    int port2 = dnPort;
-    while ((port2 == dnPort) || (port2 == port1)) {
-      port2 = random.nextInt(6000) + 1000;
-    }
-
-    // Now empty hosts file and ensure the datanode is disallowed
-    // from talking to namenode, resulting in it's shutdown.
-    ArrayList<String> nodes = new ArrayList<String>();
-
-    // These entries will be de-duped by the NameNode, since they refer
-    // to the same IP address + port combo.
-    nodes.add("127.0.0.1:" + port1);
-    nodes.add("localhost:" + port1);
-    nodes.add("127.0.0.1:" + port1);
-
-    // The following entries should not be de-duped.
-    nodes.add("127.0.0.1:" + port2);
-    nodes.add("127.0.30.1:" + port1);
-    writeConfigFile(hostsFile,  nodes);
-
-    refreshNodes(cluster.getNamesystem(0), hdfsConf);
-
-    DFSClient client = getDfsClient(cluster.getNameNode(0), hdfsConf);
-    DatanodeInfo[] info = client.datanodeReport(DatanodeReportType.LIVE);
-    for (int i = 0 ; i < 5 && info.length != 0; i++) {
-      LOG.info("Waiting for datanode to be marked dead");
-      Thread.sleep(HEARTBEAT_INTERVAL * 1000);
-      info = client.datanodeReport(DatanodeReportType.LIVE);
-    }
-    assertEquals("Number of live nodes should be 0", 0, info.length);
-
-    // Test that non-live and bogus hostnames are considered "dead".
-    // The dead report should have an entry for (1) the DN  that is
-    // now considered dead because it is no longer allowed to connect
-    // and (2) the bogus entries in the hosts file.
-    DatanodeInfo deadDns[] = client.datanodeReport(DatanodeReportType.DEAD);
-    HashMap<String, DatanodeInfo> deadByXferAddr =
-        new HashMap<String, DatanodeInfo>();
-    for (DatanodeInfo dn : deadDns) {
-      LOG.info("DEAD DatanodeInfo: xferAddr = " + dn.getXferAddr() +
-          ", ipAddr = " + dn.getIpAddr() +
-          ", hostname = " + dn.getHostName());
-      deadByXferAddr.put(dn.getXferAddr(), dn);
-    }
-    // The real DataNode should be included in the list.
-    String realDnIpPort = cluster.getDataNodes().get(0).
-        getXferAddress().getAddress().getHostAddress() + ":" +
-        cluster.getDataNodes().get(0).getXferPort();
-    Assert.assertNotNull("failed to find real datanode IP " + realDnIpPort,
-        deadByXferAddr.remove(realDnIpPort));
-    // The fake datanode with address 127.0.30.1 should be included in this list.
-    Assert.assertNotNull(deadByXferAddr.remove(
-        "127.0.30.1:" + port1));
-    // Now look for the two copies of 127.0.0.1 with port1 and port2.
-    Iterator<Map.Entry<String, DatanodeInfo>> iter =
-            deadByXferAddr.entrySet().iterator();
-    boolean foundPort1 = false, foundPort2 = false;
-    while (iter.hasNext()) {
-      Map.Entry<String, DatanodeInfo> entry = iter.next();
-      DatanodeInfo dn = entry.getValue();
-      if (dn.getXferPort() == port1) {
-        foundPort1 = true;
-        iter.remove();
-      } else if (dn.getXferPort() == port2) {
-        foundPort2 = true;
-        iter.remove();
-      }
-    }
-    Assert.assertTrue("did not find a dead entry with port " + port1,
-        foundPort1);
-    Assert.assertTrue("did not find a dead entry with port " + port2,
-        foundPort2);
-    Assert.assertTrue(deadByXferAddr.isEmpty());
-  }
-
-  @Test(timeout=360000)
-  public void testIncludeByRegistrationName() throws IOException,
-      InterruptedException {
-    Configuration hdfsConf = new Configuration(conf);
-    final String registrationName = "--registration-name--";
-    final String nonExistentDn = "127.0.0.40";
-    hdfsConf.set(DFSConfigKeys.DFS_DATANODE_HOST_NAME_KEY, registrationName);
-    cluster = new MiniDFSCluster.Builder(hdfsConf)
-        .numDataNodes(1).checkDataNodeHostConfig(true)
-        .setupHostsFile(true).build();
-    cluster.waitActive();
-
-    // Set up an includes file that doesn't have our datanode.
-    ArrayList<String> nodes = new ArrayList<String>();
-    nodes.add(nonExistentDn);
-    writeConfigFile(hostsFile,  nodes);
-    refreshNodes(cluster.getNamesystem(0), hdfsConf);
-
-    // Wait for the DN to be marked dead.
-    DFSClient client = getDfsClient(cluster.getNameNode(0), hdfsConf);
-    while (true) {
-      DatanodeInfo info[] = client.datanodeReport(DatanodeReportType.DEAD);
-      if (info.length == 1) {
-        break;
-      }
-      LOG.info("Waiting for datanode to be marked dead");
-      Thread.sleep(HEARTBEAT_INTERVAL * 1000);
-    }
-
-    // Use a non-empty include file with our registration name.
-    // It should work.
-    int dnPort = cluster.getDataNodes().get(0).getXferPort();
-    nodes = new ArrayList<String>();
-    nodes.add(registrationName + ":" + dnPort);
-    writeConfigFile(hostsFile,  nodes);
-    refreshNodes(cluster.getNamesystem(0), hdfsConf);
-    cluster.restartDataNode(0);
-
-    // Wait for the DN to come back.
-    while (true) {
-      DatanodeInfo info[] = client.datanodeReport(DatanodeReportType.LIVE);
-      if (info.length == 1) {
-        Assert.assertFalse(info[0].isDecommissioned());
-        Assert.assertFalse(info[0].isDecommissionInProgress());
-        assertEquals(registrationName, info[0].getHostName());
-        break;
-      }
-      LOG.info("Waiting for datanode to come back");
-      Thread.sleep(HEARTBEAT_INTERVAL * 1000);
     }
   }
   
