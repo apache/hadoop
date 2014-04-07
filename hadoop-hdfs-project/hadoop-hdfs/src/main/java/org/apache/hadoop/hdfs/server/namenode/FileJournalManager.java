@@ -512,10 +512,12 @@ public class FileJournalManager implements JournalManager {
     private void renameSelf(String newSuffix) throws IOException {
       File src = file;
       File dst = new File(src.getParent(), src.getName() + newSuffix);
-      boolean success = src.renameTo(dst);
-      if (!success) {
-        throw new IOException(
-          "Couldn't rename log " + src + " to " + dst);
+      // renameTo fails on Windows if the destination file already exists.
+      if (!src.renameTo(dst)) {
+        if (!dst.delete() || !src.renameTo(dst)) {
+          throw new IOException(
+            "Couldn't rename log " + src + " to " + dst);
+        }
       }
       file = dst;
     }

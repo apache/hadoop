@@ -15,6 +15,9 @@ Release 2.4.1 - UNRELEASED
     HDFS-6189. Multiple HDFS tests fail on Windows attempting to use a test
     root path containing a colon.  (cnauroth via szetszwo) 
 
+    HDFS-6197. Rolling upgrade rollback on Windows can fail attempting to rename
+    edit log segment files to a destination that already exists. (cnauroth)
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES
