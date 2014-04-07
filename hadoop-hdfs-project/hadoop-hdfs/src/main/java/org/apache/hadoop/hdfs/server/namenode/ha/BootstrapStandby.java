@@ -18,7 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -97,7 +97,7 @@ public class BootstrapStandby implements Tool, Configurable {
 
     InetSocketAddress myAddr = NameNode.getAddress(conf);
     SecurityUtil.login(conf, DFS_NAMENODE_KEYTAB_FILE_KEY,
-        DFS_NAMENODE_USER_NAME_KEY, myAddr.getHostName());
+        DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY, myAddr.getHostName());
 
     return SecurityUtil.doAsLoginUserOrFatal(new PrivilegedAction<Integer>() {
       @Override

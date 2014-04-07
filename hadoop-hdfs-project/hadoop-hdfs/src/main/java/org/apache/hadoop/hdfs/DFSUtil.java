@@ -681,7 +681,7 @@ public class DFSUtil {
           Configuration confForNn = new Configuration(conf);
           NameNode.initializeGenericKeys(confForNn, nsId, nnId);
           String principal = SecurityUtil.getServerPrincipal(confForNn
-              .get(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY),
+              .get(DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY),
               NameNode.getAddress(confForNn).getHostName());
           principals.add(principal);
         }
@@ -689,7 +689,7 @@ public class DFSUtil {
         Configuration confForNn = new Configuration(conf);
         NameNode.initializeGenericKeys(confForNn, nsId, null);
         String principal = SecurityUtil.getServerPrincipal(confForNn
-            .get(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY),
+            .get(DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY),
             NameNode.getAddress(confForNn).getHostName());
         principals.add(principal);
       }

@@ -1768,7 +1768,7 @@ public class DataNode extends Configured
     Collection<StorageLocation> dataLocations = getStorageLocations(conf);
     UserGroupInformation.setConfiguration(conf);
     SecurityUtil.login(conf, DFS_DATANODE_KEYTAB_FILE_KEY,
-        DFS_DATANODE_USER_NAME_KEY);
+        DFS_DATANODE_KERBEROS_PRINCIPAL_KEY);
     return makeInstance(dataLocations, conf, resources);
   }
 

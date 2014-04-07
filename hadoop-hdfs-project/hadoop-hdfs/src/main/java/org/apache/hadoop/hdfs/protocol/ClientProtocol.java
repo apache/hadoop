@@ -64,7 +64,7 @@ import org.apache.hadoop.security.token.TokenInfo;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 @KerberosInfo(
-    serverPrincipal = DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY)
+    serverPrincipal = DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY)
 @TokenInfo(DelegationTokenSelector.class)
 public interface ClientProtocol {
 

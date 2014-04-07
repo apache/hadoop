@@ -78,14 +78,14 @@ HDFS NFS Gateway
 
 ----
   <property>
-    <name>dfs.nfsgateway.keytab.file</name>
+    <name>dfs.nfs.keytab.file</name>
     <value>/etc/hadoop/conf/nfsserver.keytab</value> <!-- path to the nfs gateway keytab -->
   </property>
 ----
 
 ----
   <property>
-    <name>dfs.nfsgateway.kerberos.principal</name>
+    <name>dfs.nfs.kerberos.principal</name>
     <value>nfsserver/_HOST@YOUR-REALM.COM</value>
   </property>
 ----

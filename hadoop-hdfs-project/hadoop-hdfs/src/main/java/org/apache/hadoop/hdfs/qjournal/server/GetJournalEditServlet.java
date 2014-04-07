@@ -93,7 +93,7 @@ public class GetJournalEditServlet extends HttpServlet {
     validRequestors.addAll(DFSUtil.getAllNnPrincipals(conf));
     validRequestors.add(
         SecurityUtil.getServerPrincipal(conf
-            .get(DFSConfigKeys.DFS_SECONDARY_NAMENODE_USER_NAME_KEY),
+            .get(DFSConfigKeys.DFS_SECONDARY_NAMENODE_KERBEROS_PRINCIPAL_KEY),
             SecondaryNameNode.getHttpAddress(conf).getHostName()));
 
     // Check the full principal name of all the configured valid requestors.

@@ -64,6 +64,8 @@ Release 2.5.0 - UNRELEASED
     HDFS-6159. TestBalancerWithNodeGroup.testBalancerWithNodeGroup fails if 
     there is block missing after balancer success (Chen He via kihwal)
 
+    HDFS-6181. Fix the wrong property names in NFS user guide (brandonli)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

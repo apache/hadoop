@@ -30,8 +30,8 @@ import org.apache.hadoop.security.KerberosInfo;
  * add annotations required for security.
  */
 @KerberosInfo(
-    serverPrincipal = DFSConfigKeys.DFS_JOURNALNODE_USER_NAME_KEY,
-    clientPrincipal = DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY)
+    serverPrincipal = DFSConfigKeys.DFS_JOURNALNODE_KERBEROS_PRINCIPAL_KEY,
+    clientPrincipal = DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY)
 @ProtocolInfo(protocolName = 
     "org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocol",
     protocolVersion = 1)

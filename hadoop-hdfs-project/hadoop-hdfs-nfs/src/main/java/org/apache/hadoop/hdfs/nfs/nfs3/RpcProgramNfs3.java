@@ -131,7 +131,7 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import com.google.common.annotations.VisibleForTesting;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NFS_KEYTAB_FILE_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NFS_USER_NAME_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NFS_KERBEROS_PRINCIPAL_KEY;
 
 /**
  * RPC program corresponding to nfs daemon. See {@link Nfs3}.
@@ -191,7 +191,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
         Nfs3Constant.ENABLE_FILE_DUMP_DEFAULT);
     UserGroupInformation.setConfiguration(config);
     SecurityUtil.login(config, DFS_NFS_KEYTAB_FILE_KEY,
-            DFS_NFS_USER_NAME_KEY);
+            DFS_NFS_KERBEROS_PRINCIPAL_KEY);
 
     if (!enableDump) {
       writeDumpDir = null;

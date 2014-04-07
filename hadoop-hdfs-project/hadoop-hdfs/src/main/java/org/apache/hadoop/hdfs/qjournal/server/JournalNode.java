@@ -140,7 +140,7 @@ public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
 
     InetSocketAddress socAddr = JournalNodeRpcServer.getAddress(conf);
     SecurityUtil.login(conf, DFSConfigKeys.DFS_JOURNALNODE_KEYTAB_FILE_KEY,
-        DFSConfigKeys.DFS_JOURNALNODE_USER_NAME_KEY, socAddr.getHostName());
+        DFSConfigKeys.DFS_JOURNALNODE_KERBEROS_PRINCIPAL_KEY, socAddr.getHostName());
     
     registerJNMXBean();
     

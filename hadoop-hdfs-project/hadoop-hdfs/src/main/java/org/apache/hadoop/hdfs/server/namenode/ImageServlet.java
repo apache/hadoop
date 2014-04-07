@@ -235,16 +235,16 @@ public class ImageServlet extends HttpServlet {
     Set<String> validRequestors = new HashSet<String>();
 
     validRequestors.add(SecurityUtil.getServerPrincipal(conf
-        .get(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY),
+        .get(DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY),
         NameNode.getAddress(conf).getHostName()));
     validRequestors.add(SecurityUtil.getServerPrincipal(
-        conf.get(DFSConfigKeys.DFS_SECONDARY_NAMENODE_USER_NAME_KEY),
+        conf.get(DFSConfigKeys.DFS_SECONDARY_NAMENODE_KERBEROS_PRINCIPAL_KEY),
         SecondaryNameNode.getHttpAddress(conf).getHostName()));
 
     if (HAUtil.isHAEnabled(conf, DFSUtil.getNamenodeNameServiceId(conf))) {
       Configuration otherNnConf = HAUtil.getConfForOtherNode(conf);
       validRequestors.add(SecurityUtil.getServerPrincipal(otherNnConf
-          .get(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY),
+          .get(DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY),
           NameNode.getAddress(otherNnConf).getHostName()));
     }
 
