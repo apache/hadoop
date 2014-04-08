@@ -21,6 +21,8 @@ Release 2.5.0 - UNRELEASED
 
   NEW FEATURES
 
+    YARN-1757. NM Recovery. Auxiliary service support. (Jason Lowe via kasha)
+
   IMPROVEMENTS
 
     YARN-1479. Invalid NaN values in Hadoop REST API JSON response (Chen He via
