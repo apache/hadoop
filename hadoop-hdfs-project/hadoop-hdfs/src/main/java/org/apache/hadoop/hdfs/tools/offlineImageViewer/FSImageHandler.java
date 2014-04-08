@@ -17,7 +17,10 @@
  */
 package org.apache.hadoop.hdfs.tools.offlineImageViewer;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -48,48 +51,81 @@ public class FSImageHandler extends SimpleChannelUpstreamHandler {
   @Override
   public void messageReceived(
       ChannelHandlerContext ctx, MessageEvent e) throws Exception {
+    String op = getOp(e);
+    try {
+      String path = getPath(e);
+      handleOperation(op, path, e);
+    } catch (Exception ex) {
+      notFoundResponse(e);
+      LOG.warn(ex.getMessage());
+    } finally {
+      e.getFuture().addListener(ChannelFutureListener.CLOSE);
+    }
+  }
+
+  /** return the op parameter in upper case */
+  private String getOp(MessageEvent e) {
+    Map<String, List<String>> parameters = getDecoder(e).getParameters();
+    if (parameters.containsKey("op")) {
+      return parameters.get("op").get(0).toUpperCase();
+    } else {
+      // return "" to avoid NPE
+      return "";
+    }
+  }
+
+  private String getPath(MessageEvent e) throws FileNotFoundException {
+    String path = getDecoder(e).getPath();
+    // trim "/webhdfs/v1" to keep compatibility with WebHDFS API
+    if (path.startsWith("/webhdfs/v1/")) {
+      return path.replaceFirst("/webhdfs/v1", "");
+    } else {
+      throw new FileNotFoundException("Path: " + path + " should " +
+          "start with \"/webhdfs/v1/\"");
+    }
+  }
+
+  private QueryStringDecoder getDecoder(MessageEvent e) {
     HttpRequest request = (HttpRequest) e.getMessage();
+    return new QueryStringDecoder(request.getUri());
+  }
+
+  private void handleOperation(String op, String path, MessageEvent e)
+      throws IOException {
+    HttpRequest request = (HttpRequest) e.getMessage();
+    HttpResponse response = new DefaultHttpResponse(
+        HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+    response.setHeader(HttpHeaders.Names.CONTENT_TYPE,
+        "application/json");
+    String content = null;
+
     if (request.getMethod() == HttpMethod.GET){
-      String uri = request.getUri();
-      QueryStringDecoder decoder = new QueryStringDecoder(uri);
-
-      String op = "null";
-      if (decoder.getParameters().containsKey("op")) {
-        op = decoder.getParameters().get("op").get(0).toUpperCase();
-      }
-      HttpResponse response = new DefaultHttpResponse(
-          HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
-      String json = null;
-
       if (op.equals("LISTSTATUS")) {
-        try {
-          json = loader.listStatus(decoder.getPath());
-          response.setStatus(HttpResponseStatus.OK);
-          response.setHeader(HttpHeaders.Names.CONTENT_TYPE,
-              "application/json");
-          HttpHeaders.setContentLength(response, json.length());
-        } catch (Exception ex) {
-          LOG.warn(ex.getMessage());
-          response.setStatus(HttpResponseStatus.NOT_FOUND);
-        }
+        content = loader.listStatus(path);
       } else {
         response.setStatus(HttpResponseStatus.BAD_REQUEST);
       }
-
-      e.getChannel().write(response);
-      if (json != null) {
-        e.getChannel().write(json);
-      }
-      LOG.info(response.getStatus().getCode() + " method=GET op=" + op
-          + " target=" + decoder.getPath());
     } else {
       // only HTTP GET is allowed since fsimage is read-only.
-      HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1,
-          HttpResponseStatus.METHOD_NOT_ALLOWED);
-      e.getChannel().write(response);
-      LOG.info(response.getStatus().getCode() + " method="
-          + request.getMethod().getName());
+      response.setStatus(HttpResponseStatus.METHOD_NOT_ALLOWED);
     }
-    e.getFuture().addListener(ChannelFutureListener.CLOSE);
+
+    if (content != null) {
+      HttpHeaders.setContentLength(response, content.length());
+    }
+    e.getChannel().write(response);
+
+    if (content != null) {
+      e.getChannel().write(content);
+    }
+
+    LOG.info(response.getStatus().getCode() + " method="
+        + request.getMethod().getName() + " op=" + op + " target=" + path);
+  }
+
+  private void notFoundResponse(MessageEvent e) {
+    HttpResponse response = new DefaultHttpResponse(
+        HttpVersion.HTTP_1_1, HttpResponseStatus.NOT_FOUND);
+    e.getChannel().write(response);
   }
 }

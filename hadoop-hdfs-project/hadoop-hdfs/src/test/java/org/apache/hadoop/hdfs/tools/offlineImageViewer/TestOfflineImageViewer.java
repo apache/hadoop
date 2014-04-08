@@ -29,12 +29,12 @@ import java.io.RandomAccessFile;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.net.HttpURLConnection;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -55,13 +55,11 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
+import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.token.Token;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.type.TypeReference;
 import org.junit.AfterClass;
-import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
@@ -246,56 +244,68 @@ public class TestOfflineImageViewer {
   }
 
   @Test
-  public void testWebImageViewer() throws IOException, InterruptedException {
+  public void testWebImageViewer() throws IOException, InterruptedException,
+      URISyntaxException {
     WebImageViewer viewer = new WebImageViewer(
         NetUtils.createSocketAddr("localhost:0"));
     try {
       viewer.initServer(originalFsimage.getAbsolutePath());
       int port = viewer.getPort();
 
-      // 1. LISTSTATUS operation to a valid path
-      URL url = new URL("http://localhost:" + port + "/?op=LISTSTATUS");
+      // create a WebHdfsFileSystem instance
+      URI uri = new URI("webhdfs://localhost:" + String.valueOf(port));
+      Configuration conf = new Configuration();
+      WebHdfsFileSystem webhdfs = (WebHdfsFileSystem)FileSystem.get(uri, conf);
+
+      // verify the number of directories
+      FileStatus[] statuses = webhdfs.listStatus(new Path("/"));
+      assertEquals(NUM_DIRS, statuses.length);
+
+      // verify the number of files in the directory
+      statuses = webhdfs.listStatus(new Path("/dir0"));
+      assertEquals(FILES_PER_DIR, statuses.length);
+
+      // compare a file
+      FileStatus status = webhdfs.listStatus(new Path("/dir0/file0"))[0];
+      FileStatus expected = writtenFiles.get("/dir0/file0");
+      assertEquals(expected.getAccessTime(), status.getAccessTime());
+      assertEquals(expected.getBlockSize(), status.getBlockSize());
+      assertEquals(expected.getGroup(), status.getGroup());
+      assertEquals(expected.getLen(), status.getLen());
+      assertEquals(expected.getModificationTime(),
+                   status.getModificationTime());
+      assertEquals(expected.getOwner(), status.getOwner());
+      assertEquals(expected.getPermission(), status.getPermission());
+      assertEquals(expected.getReplication(), status.getReplication());
+      assertEquals(expected.isDirectory(), status.isDirectory());
+
+      // LISTSTATUS operation to a invalid path
+      URL url = new URL("http://localhost:" + port +
+                    "/webhdfs/v1/invalid/?op=LISTSTATUS");
       HttpURLConnection connection = (HttpURLConnection) url.openConnection();
       connection.setRequestMethod("GET");
       connection.connect();
-      assertEquals(HttpURLConnection.HTTP_OK, connection.getResponseCode());
-      assertEquals("application/json", connection.getContentType());
+      assertEquals(HttpURLConnection.HTTP_NOT_FOUND,
+                   connection.getResponseCode());
 
-      String content = org.apache.commons.io.IOUtils.toString(
-          connection.getInputStream());
-      LOG.info("content: " + content);
-
-      // verify the number of directories listed
-      ObjectMapper mapper = new ObjectMapper();
-      Map<String, Map<String, List<Map<String, Object>>>> fileStatuses =
-          mapper.readValue(content, new TypeReference
-          <Map<String, Map<String, List<Map<String, Object>>>>>(){});
-      List<Map<String, Object>> fileStatusList = fileStatuses
-          .get("FileStatuses").get("FileStatus");
-      assertEquals(NUM_DIRS, fileStatusList.size());
-
-      // verify the number of files in a directory
-      Map<String, Object> fileStatusMap = fileStatusList.get(0);
-      assertEquals(FILES_PER_DIR, fileStatusMap.get("childrenNum"));
-
-      // 2. LISTSTATUS operation to a invalid path
-      url = new URL("http://localhost:" + port + "/invalid/?op=LISTSTATUS");
+      // LISTSTATUS operation to a invalid prefix
+      url = new URL("http://localhost:" + port + "/webhdfs/v1?op=LISTSTATUS");
       connection = (HttpURLConnection) url.openConnection();
       connection.setRequestMethod("GET");
       connection.connect();
       assertEquals(HttpURLConnection.HTTP_NOT_FOUND,
                    connection.getResponseCode());
 
-      // 3. invalid operation
-      url = new URL("http://localhost:" + port + "/?op=INVALID");
+      // invalid operation
+      url = new URL("http://localhost:" + port + "/webhdfs/v1/?op=INVALID");
       connection = (HttpURLConnection) url.openConnection();
       connection.setRequestMethod("GET");
       connection.connect();
       assertEquals(HttpURLConnection.HTTP_BAD_REQUEST,
           connection.getResponseCode());
 
-      // 4. invalid method
-      url = new URL("http://localhost:" + port + "/?op=LISTSTATUS");
+      // invalid method
+      url = new URL("http://localhost:" + port + "/webhdfs/v1/?op=LISTSTATUS");
       connection = (HttpURLConnection) url.openConnection();
       connection.setRequestMethod("POST");
       connection.connect();

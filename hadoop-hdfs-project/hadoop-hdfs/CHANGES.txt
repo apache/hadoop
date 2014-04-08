@@ -72,6 +72,8 @@ Release 2.5.0 - UNRELEASED
     HDFS-6143. WebHdfsFileSystem open should throw FileNotFoundException for
     non-existing paths. (Gera Shegalov via wheat9)
 
+    HDFS-6169. Move the address in WebImageViewer. (Akira Ajisaka via wheat9)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
