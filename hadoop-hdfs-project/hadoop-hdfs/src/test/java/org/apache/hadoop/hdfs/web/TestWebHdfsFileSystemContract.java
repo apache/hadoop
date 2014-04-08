@@ -182,9 +182,8 @@ public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
     final Path p = new Path("/test/testOpenNonExistFile");
     //open it as a file, should get FileNotFoundException 
     try {
-      final FSDataInputStream in = fs.open(p);
-      in.read();
-      fail();
+      fs.open(p);
+      fail("Expected FileNotFoundException was not thrown");
     } catch(FileNotFoundException fnfe) {
       WebHdfsFileSystem.LOG.info("This is expected.", fnfe);
     }

@@ -377,11 +377,13 @@ public class HftpFileSystem extends FileSystem
   }
 
   static class RangeHeaderInputStream extends ByteRangeInputStream {
-    RangeHeaderInputStream(RangeHeaderUrlOpener o, RangeHeaderUrlOpener r) {
+    RangeHeaderInputStream(RangeHeaderUrlOpener o, RangeHeaderUrlOpener r)
+    throws IOException {
       super(o, r);
     }
 
-    RangeHeaderInputStream(URLConnectionFactory connFactory, final URL url) {
+    RangeHeaderInputStream(URLConnectionFactory connFactory, final URL url)
+    throws IOException {
       this(new RangeHeaderUrlOpener(connFactory, url),
           new RangeHeaderUrlOpener(connFactory, null));
     }

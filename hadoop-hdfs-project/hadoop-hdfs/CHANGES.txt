@@ -69,6 +69,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6180. dead node count / listing is very broken in JMX and old GUI.
     (wheat9)
 
+    HDFS-6143. WebHdfsFileSystem open should throw FileNotFoundException for
+    non-existing paths. (Gera Shegalov via wheat9)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

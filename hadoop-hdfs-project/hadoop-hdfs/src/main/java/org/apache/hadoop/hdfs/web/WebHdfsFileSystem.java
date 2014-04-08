@@ -962,7 +962,8 @@ public class WebHdfsFileSystem extends FileSystem
   }
 
   static class OffsetUrlInputStream extends ByteRangeInputStream {
-    OffsetUrlInputStream(OffsetUrlOpener o, OffsetUrlOpener r) {
+    OffsetUrlInputStream(OffsetUrlOpener o, OffsetUrlOpener r)
+        throws IOException {
       super(o, r);
     }
 
