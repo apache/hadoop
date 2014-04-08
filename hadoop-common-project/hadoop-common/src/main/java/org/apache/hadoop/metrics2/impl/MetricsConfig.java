@@ -85,7 +85,7 @@ class MetricsConfig extends SubsetConfiguration {
   private ClassLoader pluginLoader;
 
   MetricsConfig(Configuration c, String prefix) {
-    super(c, prefix.toLowerCase(Locale.US), ".");
+    super(c, prefix, ".");
   }
 
   static MetricsConfig create(String prefix) {

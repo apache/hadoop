@@ -42,6 +42,9 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10462. DF#getFilesystem is not parsing the command output. 
     (Akira AJISAKA via umamahesh)
 
+    HADOOP-10468. TestMetricsSystemImpl.testMultiThreadedPublish fails
+    intermediately. (wheat9)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
