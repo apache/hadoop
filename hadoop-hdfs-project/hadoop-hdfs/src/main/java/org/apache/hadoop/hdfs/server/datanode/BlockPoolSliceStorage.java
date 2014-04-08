@@ -61,7 +61,9 @@ public class BlockPoolSliceStorage extends Storage {
   static final String TRASH_ROOT_DIR = "trash";
 
   private static final String BLOCK_POOL_ID_PATTERN_BASE =
-      "/BP-\\d+-\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}-\\d+/";
+      Pattern.quote(File.separator) +
+      "BP-\\d+-\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}-\\d+" +
+      Pattern.quote(File.separator);
 
   private static final Pattern BLOCK_POOL_PATH_PATTERN = Pattern.compile(
       "^(.*)(" + BLOCK_POOL_ID_PATTERN_BASE + ")(.*)$");
