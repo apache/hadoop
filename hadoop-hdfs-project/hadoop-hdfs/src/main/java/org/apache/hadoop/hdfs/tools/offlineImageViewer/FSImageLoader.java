@@ -271,7 +271,7 @@ public class FSImageLoader {
     long id = INodeId.ROOT_INODE_ID;
     for (int i = 1; i < nameList.length; i++) {
       long[] children = dirmap.get(id);
-      Preconditions.checkNotNull(children, "The specified path: " +
+      Preconditions.checkNotNull(children, "File: " +
           strPath + " is not found in the fsimage.");
       String cName = nameList[i];
       boolean findChildren = false;
@@ -282,7 +282,7 @@ public class FSImageLoader {
           break;
         }
       }
-      Preconditions.checkArgument(findChildren, "The specified path: " +
+      Preconditions.checkArgument(findChildren, "File: " +
           strPath + " is not found in the fsimage.");
     }
     return id;
