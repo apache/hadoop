@@ -18,6 +18,9 @@ Release 2.4.1 - UNRELEASED
     HDFS-6197. Rolling upgrade rollback on Windows can fail attempting to rename
     edit log segment files to a destination that already exists. (cnauroth)
 
+    HDFS-6198. DataNode rolling upgrade does not correctly identify current
+    block pool directory and replace with trash on Windows. (cnauroth)
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES
