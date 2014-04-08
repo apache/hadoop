@@ -28,6 +28,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.service.CompositeService;
@@ -126,6 +129,20 @@ public class NodeManager extends CompositeService
   protected void serviceInit(Configuration conf) throws Exception {
 
     conf.setBoolean(Dispatcher.DISPATCHER_EXIT_ON_ERROR_KEY, true);
+
+    boolean recoveryEnabled = conf.getBoolean(
+        YarnConfiguration.NM_RECOVERY_ENABLED,
+        YarnConfiguration.DEFAULT_NM_RECOVERY_ENABLED);
+    if (recoveryEnabled) {
+      FileSystem recoveryFs = FileSystem.getLocal(conf);
+      String recoveryDirName = conf.get(YarnConfiguration.NM_RECOVERY_DIR);
+      if (recoveryDirName == null) {
+        throw new IllegalArgumentException("Recovery is enabled but " +
+            YarnConfiguration.NM_RECOVERY_DIR + " is not set.");
+      }
+      Path recoveryRoot = new Path(recoveryDirName);
+      recoveryFs.mkdirs(recoveryRoot, new FsPermission((short)0700));
+    }
 
     NMContainerTokenSecretManager containerTokenSecretManager =
         new NMContainerTokenSecretManager(conf);
