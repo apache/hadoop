@@ -43,8 +43,7 @@ public class TimelineUtils {
     mapper = new ObjectMapper();
     AnnotationIntrospector introspector = new JaxbAnnotationIntrospector();
     mapper.setAnnotationIntrospector(introspector);
-    mapper.getSerializationConfig()
-        .setSerializationInclusion(Inclusion.NON_NULL);
+    mapper.setSerializationInclusion(Inclusion.NON_NULL);
   }
 
   /**
@@ -77,7 +76,7 @@ public class TimelineUtils {
   public static String dumpTimelineRecordtoJSON(Object o, boolean pretty)
       throws JsonGenerationException, JsonMappingException, IOException {
     if (pretty) {
-      return mapper.defaultPrettyPrintingWriter().writeValueAsString(o);
+      return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(o);
     } else {
       return mapper.writeValueAsString(o);
     }

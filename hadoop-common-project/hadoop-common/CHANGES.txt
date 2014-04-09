@@ -19,6 +19,8 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10454. Provide FileContext version of har file system. (Kihwal Lee
     via jeagles)
 
+    HADOOP-10104. Update jackson to 1.9.13 (Akira Ajisaka via stevel)
+
   OPTIMIZATIONS
 
   BUG FIXES 
