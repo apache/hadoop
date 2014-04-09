@@ -73,6 +73,9 @@ Release 2.4.1 - UNRELEASED
     HADOOP-10456. Bug in Configuration.java exposed by Spark
     (ConcurrentModificationException).  (Nishkam Ravi via cnauroth)
 
+    HADOOP-10473. TestCallQueueManager should interrupt before counting calls.
+    (szetszwo)
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES

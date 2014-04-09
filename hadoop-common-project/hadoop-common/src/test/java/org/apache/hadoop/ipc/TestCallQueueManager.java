@@ -19,7 +19,6 @@
 package org.apache.hadoop.ipc;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -49,7 +48,7 @@ public class TestCallQueueManager {
     public volatile int callsAdded = 0; // How many calls we added, accurate unless interrupted
     private final int maxCalls;
 
-    private boolean isRunning = true;
+    private volatile boolean isRunning = true;
 
     public Putter(CallQueueManager<FakeCall> aCq, int maxCalls, int tag) {
       this.maxCalls = maxCalls;
@@ -201,15 +200,21 @@ public class TestCallQueueManager {
 
     // Ensure no calls were dropped
     long totalCallsCreated = 0;
-    long totalCallsConsumed = 0;
-
     for (Putter p : producers) {
-      totalCallsCreated += p.callsAdded;
       threads.get(p).interrupt();
     }
+    for (Putter p : producers) {
+      threads.get(p).join();
+      totalCallsCreated += p.callsAdded;
+    }
+    
+    long totalCallsConsumed = 0;
     for (Taker t : consumers) {
-      totalCallsConsumed += t.callsTaken;
       threads.get(t).interrupt();
+    }
+    for (Taker t : consumers) {
+      threads.get(t).join();
+      totalCallsConsumed += t.callsTaken;
     }
 
     assertEquals(totalCallsConsumed, totalCallsCreated);
