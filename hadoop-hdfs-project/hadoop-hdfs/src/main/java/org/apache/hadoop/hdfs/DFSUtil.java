@@ -37,6 +37,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMESERVICE_ID;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -1101,7 +1102,8 @@ public class DFSUtil {
     InetSocketAddress sockAddr = NetUtils.createSocketAddr(configuredAddress);
     InetSocketAddress defaultSockAddr = NetUtils.createSocketAddr(defaultHost
         + ":0");
-    if (sockAddr.getAddress().isAnyLocalAddress()) {
+    final InetAddress addr = sockAddr.getAddress();
+    if (addr != null && addr.isAnyLocalAddress()) {
       if (UserGroupInformation.isSecurityEnabled() &&
           defaultSockAddr.getAddress().isAnyLocalAddress()) {
         throw new IOException("Cannot use a wildcard address with security. " +
