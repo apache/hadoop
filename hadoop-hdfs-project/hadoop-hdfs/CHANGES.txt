@@ -285,6 +285,9 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6191. Disable quota checks when replaying edit log. (kihwal)
 
+    HDFS-6170. Support GETFILESTATUS operation in WebImageViewer.
+    (Akira Ajisaka via wheat9)
+
   OPTIMIZATIONS
 
   BUG FIXES 

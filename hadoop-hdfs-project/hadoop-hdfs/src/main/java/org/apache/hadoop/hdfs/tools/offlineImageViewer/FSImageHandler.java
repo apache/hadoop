@@ -100,7 +100,9 @@ public class FSImageHandler extends SimpleChannelUpstreamHandler {
     String content = null;
 
     if (request.getMethod() == HttpMethod.GET){
-      if (op.equals("LISTSTATUS")) {
+      if (op.equals("GETFILESTATUS")) {
+        content = loader.getFileStatus(path);
+      } else if (op.equals("LISTSTATUS")) {
         content = loader.listStatus(path);
       } else {
         response.setStatus(HttpResponseStatus.BAD_REQUEST);

@@ -268,45 +268,33 @@ public class TestOfflineImageViewer {
       // compare a file
       FileStatus status = webhdfs.listStatus(new Path("/dir0/file0"))[0];
       FileStatus expected = writtenFiles.get("/dir0/file0");
-      assertEquals(expected.getAccessTime(), status.getAccessTime());
-      assertEquals(expected.getBlockSize(), status.getBlockSize());
-      assertEquals(expected.getGroup(), status.getGroup());
-      assertEquals(expected.getLen(), status.getLen());
-      assertEquals(expected.getModificationTime(),
-                   status.getModificationTime());
-      assertEquals(expected.getOwner(), status.getOwner());
-      assertEquals(expected.getPermission(), status.getPermission());
-      assertEquals(expected.getReplication(), status.getReplication());
-      assertEquals(expected.isDirectory(), status.isDirectory());
+      compareFile(expected, status);
 
       // LISTSTATUS operation to a invalid path
       URL url = new URL("http://localhost:" + port +
                     "/webhdfs/v1/invalid/?op=LISTSTATUS");
-      HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-      connection.setRequestMethod("GET");
-      connection.connect();
-      assertEquals(HttpURLConnection.HTTP_NOT_FOUND,
-                   connection.getResponseCode());
+      verifyHttpResponseCode(HttpURLConnection.HTTP_NOT_FOUND, url);
 
       // LISTSTATUS operation to a invalid prefix
       url = new URL("http://localhost:" + port + "/webhdfs/v1?op=LISTSTATUS");
-      connection = (HttpURLConnection) url.openConnection();
-      connection.setRequestMethod("GET");
-      connection.connect();
-      assertEquals(HttpURLConnection.HTTP_NOT_FOUND,
-                   connection.getResponseCode());
+      verifyHttpResponseCode(HttpURLConnection.HTTP_NOT_FOUND, url);
+
+      // GETFILESTATUS operation
+      status = webhdfs.getFileStatus(new Path("/dir0/file0"));
+      compareFile(expected, status);
+
+      // GETFILESTATUS operation to a invalid path
+      url = new URL("http://localhost:" + port +
+                    "/webhdfs/v1/invalid/?op=GETFILESTATUS");
+      verifyHttpResponseCode(HttpURLConnection.HTTP_NOT_FOUND, url);
 
       // invalid operation
       url = new URL("http://localhost:" + port + "/webhdfs/v1/?op=INVALID");
-      connection = (HttpURLConnection) url.openConnection();
-      connection.setRequestMethod("GET");
-      connection.connect();
-      assertEquals(HttpURLConnection.HTTP_BAD_REQUEST,
-          connection.getResponseCode());
+      verifyHttpResponseCode(HttpURLConnection.HTTP_BAD_REQUEST, url);
 
       // invalid method
       url = new URL("http://localhost:" + port + "/webhdfs/v1/?op=LISTSTATUS");
-      connection = (HttpURLConnection) url.openConnection();
+      HttpURLConnection connection = (HttpURLConnection) url.openConnection();
       connection.setRequestMethod("POST");
       connection.connect();
       assertEquals(HttpURLConnection.HTTP_BAD_METHOD,
@@ -315,5 +303,26 @@ public class TestOfflineImageViewer {
       // shutdown the viewer
       viewer.shutdown();
     }
+  }
+
+  private static void compareFile(FileStatus expected, FileStatus status) {
+    assertEquals(expected.getAccessTime(), status.getAccessTime());
+    assertEquals(expected.getBlockSize(), status.getBlockSize());
+    assertEquals(expected.getGroup(), status.getGroup());
+    assertEquals(expected.getLen(), status.getLen());
+    assertEquals(expected.getModificationTime(),
+        status.getModificationTime());
+    assertEquals(expected.getOwner(), status.getOwner());
+    assertEquals(expected.getPermission(), status.getPermission());
+    assertEquals(expected.getReplication(), status.getReplication());
+    assertEquals(expected.isDirectory(), status.isDirectory());
+  }
+
+  private void verifyHttpResponseCode(int expectedCode, URL url)
+      throws IOException {
+    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+    connection.setRequestMethod("GET");
+    connection.connect();
+    assertEquals(expectedCode, connection.getResponseCode());
   }
 }
