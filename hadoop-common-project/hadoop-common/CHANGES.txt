@@ -352,6 +352,9 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10468. TestMetricsSystemImpl.testMultiThreadedPublish fails
     intermediately. (wheat9)
 
+    HADOOP-10475. ConcurrentModificationException in
+    AbstractDelegationTokenSelector.selectToken(). (jing9)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
