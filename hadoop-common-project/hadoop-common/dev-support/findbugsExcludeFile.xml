@@ -16,9 +16,6 @@
 -->
 <FindBugsFilter>
      <Match>
-       <Package name="org.apache.hadoop.record.compiler.generated" />
-     </Match>
-     <Match>
        <Package name="org.apache.hadoop.security.proto" />
      </Match>
      <Match>
@@ -194,21 +191,6 @@
      <Match>
        <Class name="org.apache.hadoop.security.AccessControlException" />
        <Bug pattern="NM_SAME_SIMPLE_NAME_AS_SUPERCLASS" />
-     </Match>
-
-     <Match>
-       <Class name="org.apache.hadoop.record.meta.Utils" />
-       <Method name="skip" />
-       <Bug pattern="BC_UNCONFIRMED_CAST" />
-     </Match>
-
-     <!--
-        The compareTo method is actually a dummy method that just
-        throws excpetions. So, no need to override equals. Ignore
-     -->
-     <Match>
-       <Class name="org.apache.hadoop.record.meta.RecordTypeInfo" />
-       <Bug pattern="EQ_COMPARETO_USE_OBJECT_EQUALS" />
      </Match>
 
      <Match>
