@@ -17,12 +17,10 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
 import java.io.File;
 import java.io.IOException;
 import java.net.BindException;
+import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -55,16 +53,26 @@ public class TestValidateConfigurationSettings {
   public void testThatMatchingRPCandHttpPortsThrowException() 
       throws IOException {
 
-    Configuration conf = new HdfsConfiguration();
-    File nameDir = new File(MiniDFSCluster.getBaseDirectory(), "name");
-    conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
-        nameDir.getAbsolutePath());
+    NameNode nameNode = null;
+    try {
+      Configuration conf = new HdfsConfiguration();
+      File nameDir = new File(MiniDFSCluster.getBaseDirectory(), "name");
+      conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
+          nameDir.getAbsolutePath());
 
-    // set both of these to port 9000, should fail
-    FileSystem.setDefaultUri(conf, "hdfs://localhost:9000"); 
-    conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "127.0.0.1:9000");
-    DFSTestUtil.formatNameNode(conf);
-    new NameNode(conf);
+      Random rand = new Random();
+      final int port = 30000 + rand.nextInt(30000);
+
+      // set both of these to the same port. It should fail.
+      FileSystem.setDefaultUri(conf, "hdfs://localhost:" + port);
+      conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "127.0.0.1:" + port);
+      DFSTestUtil.formatNameNode(conf);
+      nameNode = new NameNode(conf);
+    } finally {
+      if (nameNode != null) {
+        nameNode.stop();
+      }
+    }
   }
 
   /**
@@ -80,11 +88,29 @@ public class TestValidateConfigurationSettings {
     conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
         nameDir.getAbsolutePath());
 
-    FileSystem.setDefaultUri(conf, "hdfs://localhost:8000");
-    conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "127.0.0.1:9000");
-    DFSTestUtil.formatNameNode(conf);
-    NameNode nameNode = new NameNode(conf); // should be OK!
-    nameNode.stop();
+    Random rand = new Random();
+
+    // A few retries in case the ports we choose are in use.
+    for (int i = 0; i < 5; ++i) {
+      final int port1 = 30000 + rand.nextInt(10000);
+      final int port2 = port1 + 1 + rand.nextInt(10000);
+
+      FileSystem.setDefaultUri(conf, "hdfs://localhost:" + port1);
+      conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "127.0.0.1:" + port2);
+      DFSTestUtil.formatNameNode(conf);
+      NameNode nameNode = null;
+
+      try {
+        nameNode = new NameNode(conf); // should be OK!
+        break;
+      } catch(BindException be) {
+        continue;     // Port in use? Try another.
+      } finally {
+        if (nameNode != null) {
+          nameNode.stop();
+        }
+      }
+    }
   }
 
   /**
