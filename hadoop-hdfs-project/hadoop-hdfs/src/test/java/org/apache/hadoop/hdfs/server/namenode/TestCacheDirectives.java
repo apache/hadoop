@@ -147,6 +147,12 @@ public class TestCacheDirectives {
 
   @After
   public void teardown() throws Exception {
+    // Remove cache directives left behind by tests so that we release mmaps.
+    RemoteIterator<CacheDirectiveEntry> iter = dfs.listCacheDirectives(null);
+    while (iter.hasNext()) {
+      dfs.removeCacheDirective(iter.next().getInfo().getId());
+    }
+    waitForCachedBlocks(namenode, 0, 0, "teardown");
     if (cluster != null) {
       cluster.shutdown();
     }
