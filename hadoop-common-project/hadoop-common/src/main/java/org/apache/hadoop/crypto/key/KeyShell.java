@@ -185,16 +185,6 @@ public class KeyShell extends Configured implements Tool {
       return provider;
     }
 
-    protected byte[] generateKey(int size, String algorithm)
-        throws NoSuchAlgorithmException {
-      out.println("Generating key using size: " + size + " and algorithm: "
-          + algorithm);
-      KeyGenerator keyGenerator = KeyGenerator.getInstance(algorithm);
-      keyGenerator.init(size);
-      byte[] key = keyGenerator.generateKey().getEncoded();
-      return key;
-    }
-
     protected void printProviderWritten() {
         out.println(provider.getClass().getName() + " has been updated.");
     }
@@ -289,9 +279,7 @@ public class KeyShell extends Configured implements Tool {
         out.println("Rolling key version from KeyProvider: "
             + provider.toString() + " for key name: " + keyName);
         try {
-          byte[] material = null;
-          material = generateKey(md.getBitLength(), md.getAlgorithm());
-          provider.rollNewVersion(keyName, material);
+          provider.rollNewVersion(keyName);
           out.println(keyName + " has been successfully rolled.");
           provider.flush();
           printProviderWritten();
@@ -423,9 +411,7 @@ public class KeyShell extends Configured implements Tool {
       warnIfTransientProvider();
       try {
         Options options = KeyProvider.options(getConf());
-        String alg = getAlgorithm(options.getCipher());
-        byte[] material = generateKey(options.getBitLength(), alg);
-        provider.createKey(keyName, material, options);
+        provider.createKey(keyName, options);
         out.println(keyName + " has been successfully created.");
         provider.flush();
         printProviderWritten();
@@ -438,19 +424,6 @@ public class KeyShell extends Configured implements Tool {
       } catch (NoSuchAlgorithmException e) {
         out.println(keyName + " has NOT been created. " + e.getMessage());
         throw e;
-      }
-    }
-
-    /**
-     * Get the algorithm from the cipher.
-     * @return the algorithm name
-     */
-    public String getAlgorithm(String cipher) {
-      int slash = cipher.indexOf('/');
-      if (slash == - 1) {
-        return cipher;
-      } else {
-        return cipher.substring(0, slash);
       }
     }
 

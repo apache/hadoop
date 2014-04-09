@@ -132,6 +132,9 @@ Trunk (Unreleased)
 
     HADOOP-10427. KeyProvider implementations should be thread safe. (tucu)
 
+    HADOOP-10429. KeyStores should have methods to generate the materials 
+    themselves, KeyShell should use them. (tucu)
+
   BUG FIXES
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.
