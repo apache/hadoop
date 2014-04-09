@@ -328,6 +328,8 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-10104. Update jackson to 1.9.13 (Akira Ajisaka via stevel)
 
+    HADOOP-10485. Remove dead classes in hadoop-streaming. (wheat9)
+
   OPTIMIZATIONS
 
   BUG FIXES 

@@ -20,7 +20,6 @@
   <Match>
     <Or>
       <Package name="org.apache.hadoop.streaming" />
-      <Class name="org.apache.hadoop.record.compiler.JFile" />
     </Or>
     <Bug pattern="NP_ALWAYS_NULL"/>
   </Match>
@@ -42,30 +41,11 @@
   </Match>
 
   <Match>
-    <Package name="org.apache.hadoop.record.compiler.generated" />
-  </Match>
-
-  <Match>
     <Package name="org.apache.hadoop.record" />
     <Or>
       <Bug pattern="EI_EXPOSE_REP" />
       <Bug pattern="EI_EXPOSE_REP2" />
       <Bug pattern="MS_PKGPROTECT" />
     </Or>
-  </Match>
-
-  <Match>
-    <Class name="org.apache.hadoop.record.meta.Utils" />
-    <Method name="skip" />
-    <Bug pattern="BC_UNCONFIRMED_CAST" />
-  </Match>
-
-  <!--
-     The compareTo method is actually a dummy method that just
-     throws excpetions. So, no need to override equals. Ignore
-  -->
-  <Match>
-    <Class name="org.apache.hadoop.record.meta.RecordTypeInfo" />
-    <Bug pattern="EQ_COMPARETO_USE_OBJECT_EQUALS" />
   </Match>
 </FindBugsFilter>
