@@ -105,6 +105,9 @@ Release 2.4.1 - UNRELEASED
     HDFS-6204. Fix TestRBWBlockInvalidation: change the last sleep to a loop.
     (szetszwo) 
 
+    HDFS-6209. TestValidateConfigurationSettings should use random ports.
+    (Arpit Agarwal via szetszwo) 
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES
