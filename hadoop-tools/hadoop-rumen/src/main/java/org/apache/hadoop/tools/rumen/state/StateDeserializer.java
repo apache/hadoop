@@ -24,7 +24,7 @@ import org.codehaus.jackson.JsonParser;
 import org.codehaus.jackson.JsonProcessingException;
 import org.codehaus.jackson.map.DeserializationContext;
 import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.map.deser.StdDeserializer;
+import org.codehaus.jackson.map.deser.std.StdDeserializer;
 import org.codehaus.jackson.node.ObjectNode;
 
 /**
