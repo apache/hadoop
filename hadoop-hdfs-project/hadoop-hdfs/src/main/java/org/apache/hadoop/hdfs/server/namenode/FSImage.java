@@ -229,7 +229,8 @@ public class FSImage implements Closeable {
           + RollingUpgradeStartupOption.STARTED.getOptionString()
           + "\" option if a rolling upgraded is already started;"
           + " or restart NameNode with the \""
-          + StartupOption.UPGRADE + "\" to start a new upgrade.");
+          + StartupOption.UPGRADE.getName() + "\" option to start"
+          + " a new upgrade.");
     }
     
     storage.processStartupOptionsForUpgrade(startOpt, layoutVersion);
