@@ -23,6 +23,9 @@ Release 2.4.1 - UNRELEASED
     HDFS-6198. DataNode rolling upgrade does not correctly identify current
     block pool directory and replace with trash on Windows. (cnauroth)
 
+    HDFS-6206. Fix NullPointerException in DFSUtil.substituteForWildcardAddress.
+    (szetszwo) 
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES
