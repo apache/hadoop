@@ -130,6 +130,8 @@ Trunk (Unreleased)
     HADOOP-10432. Refactor SSLFactory to expose static method to determine
     HostnameVerifier. (tucu)
 
+    HADOOP-10427. KeyProvider implementations should be thread safe. (tucu)
+
   BUG FIXES
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.
