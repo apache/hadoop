@@ -332,6 +332,8 @@ Release 2.4.1 - UNRELEASED
 
   IMPROVEMENTS
 
+    HDFS-6215. Wrong error message for upgrade. (Kihwal Lee via jeagles)
+
   OPTIMIZATIONS
 
   BUG FIXES 
