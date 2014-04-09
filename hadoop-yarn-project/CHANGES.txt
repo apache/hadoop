@@ -50,6 +50,9 @@ Release 2.5.0 - UNRELEASED
 
     YARN-1790. Fair Scheduler UI not showing apps table (bc Wong via Sandy Ryza)
 
+    YARN-1784. TestContainerAllocation assumes CapacityScheduler.
+    (Robert Kanter via kasha)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
