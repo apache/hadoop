@@ -74,6 +74,8 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6169. Move the address in WebImageViewer. (Akira Ajisaka via wheat9)
 
+    HDFS-6160. TestSafeMode occasionally fails. (Arpit Agarwal)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
