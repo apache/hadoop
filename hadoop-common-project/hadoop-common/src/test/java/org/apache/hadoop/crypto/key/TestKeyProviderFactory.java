@@ -21,6 +21,8 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.util.List;
+import java.util.UUID;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProvider.KeyVersion;
 import org.apache.hadoop.fs.FileStatus;
@@ -31,6 +33,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 import static org.junit.Assert.assertArrayEquals;
@@ -39,8 +42,14 @@ import static org.junit.Assert.assertTrue;
 
 public class TestKeyProviderFactory {
 
-  private static final File tmpDir =
-      new File(System.getProperty("test.build.data", "/tmp"), "key");
+  private static File tmpDir;
+
+  @Before
+  public void setup() {
+    tmpDir = new File(System.getProperty("test.build.data", "target"),
+        UUID.randomUUID().toString());
+    tmpDir.mkdirs();
+  }
 
   @Test
   public void testFactory() throws Exception {
