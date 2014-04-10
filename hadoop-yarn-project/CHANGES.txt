@@ -23,6 +23,9 @@ Release 2.4.1 - UNRELEASED
     YARN-1908. Fixed DistributedShell to not fail in secure clusters. (Vinod
     Kumar Vavilapalli and Jian He via vinodkv)
 
+    YARN-1910. Fixed a race condition in TestAMRMTokens that causes the test to
+    fail more often on Windows. (Xuan Gong via vinodkv)
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES
