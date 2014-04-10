@@ -82,6 +82,9 @@ Release 2.4.1 - UNRELEASED
     YARN-1910. Fixed a race condition in TestAMRMTokens that causes the test to
     fail more often on Windows. (Xuan Gong via vinodkv)
 
+    YARN-1920. Fixed TestFileSystemApplicationHistoryStore failure on windows.
+    (Vinod Kumar Vavilapalli via zjshen)
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES
