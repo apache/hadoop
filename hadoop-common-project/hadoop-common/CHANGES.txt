@@ -135,6 +135,9 @@ Trunk (Unreleased)
     HADOOP-10429. KeyStores should have methods to generate the materials 
     themselves, KeyShell should use them. (tucu)
 
+    HADOOP-10428. JavaKeyStoreProvider should accept keystore password via 
+    configuration falling back to ENV VAR. (tucu)
+
   BUG FIXES
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.
