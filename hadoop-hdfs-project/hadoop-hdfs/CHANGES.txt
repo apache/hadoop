@@ -82,6 +82,9 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6160. TestSafeMode occasionally fails. (Arpit Agarwal)
 
+    HDFS-5669. Storage#tryLock() should check for null before logging successfull message
+    (Vinayakumar B via umamahesh)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
