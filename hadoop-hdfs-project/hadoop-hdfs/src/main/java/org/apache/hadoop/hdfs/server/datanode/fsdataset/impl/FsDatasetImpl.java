@@ -564,7 +564,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
    * @param bpid block pool Id
    * @param replicaInfo a finalized replica
    * @param newGS new generation stamp
-   * @param estimateBlockLen estimate generation stamp
+   * @param estimateBlockLen estimate block length
    * @return a RBW replica
    * @throws IOException if moving the replica from finalized directory 
    *         to rbw directory fails

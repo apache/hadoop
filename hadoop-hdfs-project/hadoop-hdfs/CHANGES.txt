@@ -123,6 +123,8 @@ Trunk (Unreleased)
     HDFS-5721. sharedEditsImage in Namenode#initializeSharedEdits() should be 
     closed before method returns. (Ted Yu via junping_du)
 
+    HDFS-6228. comments typo fix for FsDatasetImpl.java (zhaoyunjiong via umamahesh)
+
   OPTIMIZATIONS
 
   BUG FIXES
