@@ -9,6 +9,8 @@ Requirements:
 * Findbugs 1.3.9 (if running findbugs)
 * ProtocolBuffer 2.5.0
 * CMake 2.6 or newer (if compiling native code)
+* Zlib devel (if compiling native code)
+* openssl devel ( if compiling native hadoop-pipes )
 * Internet connection for first build (to fetch all Maven and Hadoop dependencies)
 
 ----------------------------------------------------------------------------------
