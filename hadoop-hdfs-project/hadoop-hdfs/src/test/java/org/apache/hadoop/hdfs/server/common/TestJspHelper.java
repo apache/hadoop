@@ -616,33 +616,6 @@ public class TestJspHelper {
     }
   }
 
-  @Test
-  public void testUpgradeStatusReport() {
-    short status = 6;
-    int version = 15;
-    String EXPECTED__NOTF_PATTERN = "Upgrade for version {0} has been completed.\nUpgrade is not finalized.";
-    String EXPECTED_PATTERN = "Upgrade for version {0} is in progress. Status = {1}%";
-
-    UpgradeStatusReport upgradeStatusReport = new UpgradeStatusReport(version,
-        status, true);
-    assertTrue(upgradeStatusReport.getVersion() == version);
-    assertTrue(upgradeStatusReport.getUpgradeStatus() == status);
-    assertTrue(upgradeStatusReport.isFinalized());
-
-    assertEquals(MessageFormat.format(EXPECTED_PATTERN, version, status),
-        upgradeStatusReport.getStatusText(true));
-
-    status += 100;
-    upgradeStatusReport = new UpgradeStatusReport(version, status, false);
-    assertFalse(upgradeStatusReport.isFinalized());
-    assertTrue(upgradeStatusReport.toString().equals(
-        MessageFormat.format(EXPECTED__NOTF_PATTERN, version)));
-    assertTrue(upgradeStatusReport.getStatusText(false).equals(
-        MessageFormat.format(EXPECTED__NOTF_PATTERN, version)));
-    assertTrue(upgradeStatusReport.getStatusText(true).equals(
-        MessageFormat.format(EXPECTED__NOTF_PATTERN, version)));
-  }  
-  
   @Test 
   public void testAuthority(){
     DatanodeID dnWithIp = new DatanodeID("127.0.0.1", "hostName", null,

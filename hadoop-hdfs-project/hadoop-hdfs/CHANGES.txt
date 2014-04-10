@@ -288,6 +288,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6170. Support GETFILESTATUS operation in WebImageViewer.
     (Akira Ajisaka via wheat9)
 
+    HDFS-6225. Remove the o.a.h.hdfs.server.common.UpgradeStatusReport.
+    (wheat9)
+
   OPTIMIZATIONS
 
   BUG FIXES 
