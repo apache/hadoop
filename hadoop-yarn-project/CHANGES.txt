@@ -85,6 +85,10 @@ Release 2.4.1 - UNRELEASED
     YARN-1920. Fixed TestFileSystemApplicationHistoryStore failure on windows.
     (Vinod Kumar Vavilapalli via zjshen)
 
+    YARN-1914. Fixed resource-download on NodeManagers to skip permission
+    verification of public cache files in Windows+local file-system environment.
+    (Varun Vasudev via vinodkv)
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES
