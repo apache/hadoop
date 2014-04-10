@@ -160,6 +160,9 @@ Release 2.5.0 - UNRELEASED
     MAPREDUCE-5804. TestMRJobsWithProfiler#testProfiler timesout (Mit Desai
     via kihwal)
 
+    MAPREDUCE-5825. Provide diagnostics for reducers killed during ramp down
+    (Gera Shegalov via jlowe)
+
   OPTIMIZATIONS
 
   BUG FIXES 
