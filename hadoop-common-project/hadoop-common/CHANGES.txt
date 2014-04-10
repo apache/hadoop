@@ -372,6 +372,9 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10475. ConcurrentModificationException in
     AbstractDelegationTokenSelector.selectToken(). (jing9)
 
+    HADOOP-10350. BUILDING.txt should mention openssl dependency required
+    for hadoop-pipes (Vinayakumar B)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
