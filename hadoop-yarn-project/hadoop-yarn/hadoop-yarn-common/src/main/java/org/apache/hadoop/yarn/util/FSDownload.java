@@ -36,12 +36,14 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.RunJar;
+import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 
@@ -138,6 +140,16 @@ public class FSDownload implements Callable<Path> {
     //the leaf level file should be readable by others
     if (!checkPublicPermsForAll(fs, sStat, FsAction.READ_EXECUTE, FsAction.READ)) {
       return false;
+    }
+
+    if (Shell.WINDOWS && fs instanceof LocalFileSystem) {
+      // Relax the requirement for public cache on LFS on Windows since default
+      // permissions are "700" all the way up to the drive letter. In this
+      // model, the only requirement for a user is to give EVERYONE group
+      // permission on the file and the file will be considered public.
+      // This code path is only hit when fs.default.name is file:/// (mainly
+      // in tests).
+      return true;
     }
     return ancestorsHaveExecutePermissions(fs, current.getParent(), statCache);
   }
