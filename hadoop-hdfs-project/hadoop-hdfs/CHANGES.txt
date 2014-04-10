@@ -292,6 +292,9 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6225. Remove the o.a.h.hdfs.server.common.UpgradeStatusReport.
     (wheat9)
+    
+    HDFS-6224. Add a unit test to TestAuditLogger for file permissions
+    passed to logAuditEvent. (Charles Lamb via wang)
 
   OPTIMIZATIONS
 
