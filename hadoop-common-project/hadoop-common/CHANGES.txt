@@ -317,6 +317,8 @@ Trunk (Unreleased)
 
     HADOOP-10488. TestKeyProviderFactory fails randomly. (tucu)
 
+    HADOOP-10431. Change visibility of KeyStore.Options getter methods to public. (tucu)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
