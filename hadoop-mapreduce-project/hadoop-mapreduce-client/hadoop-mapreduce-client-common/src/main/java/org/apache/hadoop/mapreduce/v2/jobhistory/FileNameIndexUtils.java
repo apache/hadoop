@@ -94,7 +94,7 @@ public class FileNameIndexUtils {
     sb.append(DELIMITER);
     
     //QueueName
-    sb.append(escapeDelimiters(indexInfo.getQueueName()));
+    sb.append(escapeDelimiters(getQueueName(indexInfo)));
     sb.append(DELIMITER);
 
     //JobStartTime
@@ -260,6 +260,10 @@ public class FileNameIndexUtils {
   
   private static String getJobName(JobIndexInfo indexInfo) {
     return getNonEmptyString(indexInfo.getJobName());
+  }
+
+  private static String getQueueName(JobIndexInfo indexInfo) {
+    return getNonEmptyString(indexInfo.getQueueName());
   }
 
   //TODO Maybe handle default values for longs and integers here?
