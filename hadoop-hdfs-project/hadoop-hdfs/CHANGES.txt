@@ -384,6 +384,9 @@ Release 2.4.1 - UNRELEASED
     HDFS-6229. Race condition in failover can cause RetryCache fail to work.
     (jing9)
 
+    HDFS-6232. OfflineEditsViewer throws a NPE on edits containing ACL
+    modifications (ajisakaa via cmccabe)
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES
