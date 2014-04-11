@@ -205,6 +205,9 @@ Release 1.3.0 - unreleased
     MAPREDUCE-5808. Port output replication factor configurable for terasort to
     Hadoop 1.x. (Chuan Liu via cnauroth)
 
+    MAPREDUCE-5822. FairScheduler does not preempt due to fairshare-starvation
+    when fairshare is 1. (Anubhav Dhoot via kasha)
+
 Release 1.2.2 - unreleased
 
   INCOMPATIBLE CHANGES

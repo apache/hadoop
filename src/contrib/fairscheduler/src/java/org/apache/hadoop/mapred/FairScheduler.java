@@ -859,11 +859,13 @@ public class FairScheduler extends TaskScheduler {
   /**
    * Is a pool being starved for fair share for the given task type?
    * This is defined as being below half its fair share.
+   * Dividing by 2 and then truncating to an integer may cause
+   * calculations to fail if half of fair share truncates to zero.
+   * Instead multiply the rest of the terms by 2.
    */
   boolean isStarvedForFairShare(PoolSchedulable sched) {
-    int desiredFairShare = (int) Math.floor(Math.min(
-        sched.getFairShare() / 2, sched.getDemand()));
-    return (sched.getRunningTasks() < desiredFairShare);
+    return (sched.getRunningTasks() * 2 < Math.min(sched.getFairShare(),
+        sched.getDemand() * 2));
   }
 
   /**
