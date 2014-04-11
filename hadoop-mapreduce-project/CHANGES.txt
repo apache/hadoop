@@ -17,6 +17,9 @@ Release 2.4.1 - UNRELEASED
     MAPREDUCE-5824. Fixed test-failure of TestPipesNonJavaInputFormat in
     Windows. (Xuan Gong via vinodkv)
 
+    MAPREDUCE-5815. Fixed test-failure of TestMRAppMaster by making MRAppMaster
+    gracefully handle empty-queue names. (Akira Ajisaka via vinodkv)
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES
