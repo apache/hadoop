@@ -468,12 +468,12 @@ public class Client {
     // Copy the application master jar to the filesystem 
     // Create a local resource to point to the destination jar path 
     FileSystem fs = FileSystem.get(conf);
-    addToLocalResources(fs, appMasterJar, appMasterJarPath, appId.getId(),
+    addToLocalResources(fs, appMasterJar, appMasterJarPath, appId.toString(),
         localResources, null);
 
     // Set the log4j properties if needed 
     if (!log4jPropFile.isEmpty()) {
-      addToLocalResources(fs, log4jPropFile, log4jPath, appId.getId(),
+      addToLocalResources(fs, log4jPropFile, log4jPath, appId.toString(),
           localResources, null);
     }			
 
@@ -489,7 +489,7 @@ public class Client {
     if (!shellScriptPath.isEmpty()) {
       Path shellSrc = new Path(shellScriptPath);
       String shellPathSuffix =
-          appName + "/" + appId.getId() + "/" + SCRIPT_PATH;
+          appName + "/" + appId.toString() + "/" + SCRIPT_PATH;
       Path shellDst =
           new Path(fs.getHomeDirectory(), shellPathSuffix);
       fs.copyFromLocalFile(false, true, shellSrc, shellDst);
@@ -500,12 +500,12 @@ public class Client {
     }
 
     if (!shellCommand.isEmpty()) {
-      addToLocalResources(fs, null, shellCommandPath, appId.getId(),
+      addToLocalResources(fs, null, shellCommandPath, appId.toString(),
           localResources, shellCommand);
     }
 
     if (shellArgs.length > 0) {
-      addToLocalResources(fs, null, shellArgsPath, appId.getId(),
+      addToLocalResources(fs, null, shellArgsPath, appId.toString(),
           localResources, StringUtils.join(shellArgs, " "));
     }
     // Set local resource info into app master container launch context
@@ -737,7 +737,7 @@ public class Client {
   }
 
   private void addToLocalResources(FileSystem fs, String fileSrcPath,
-      String fileDstPath, int appId, Map<String, LocalResource> localResources,
+      String fileDstPath, String appId, Map<String, LocalResource> localResources,
       String resources) throws IOException {
     String suffix =
         appName + "/" + appId + "/" + fileDstPath;

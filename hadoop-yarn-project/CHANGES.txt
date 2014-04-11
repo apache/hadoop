@@ -111,6 +111,10 @@ Release 2.4.1 - UNRELEASED
     when Application(Attempt) state hasn't been stored before. (Jian He via
     zjshen)
 
+    YARN-1926. Changed DistributedShell to use appIDs as unique identifiers for
+    HDFS paths and thus avoid test failures on Windows. (Varun Vasudev via
+    vinodkv)
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES
