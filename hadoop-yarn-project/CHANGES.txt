@@ -38,9 +38,6 @@ Release 2.5.0 - UNRELEASED
     YARN-1429. *nix: Allow a way for users to augment classpath of YARN daemons.
     (Jarek Jarcec Cecho via kasha)
 
-    YARN-1833. TestRMAdminService Fails in trunk and branch-2 (Mit Desais via
-    jeagles)
-
     YARN-1520. update capacity scheduler docs to include necessary parameters
     (Chen He via jeagles)
 
@@ -111,6 +108,9 @@ Release 2.4.1 - UNRELEASED
     YARN-1926. Changed DistributedShell to use appIDs as unique identifiers for
     HDFS paths and thus avoid test failures on Windows. (Varun Vasudev via
     vinodkv)
+
+    YARN-1833. TestRMAdminService Fails in trunk and branch-2 (Mit Desai via
+    jeagles)
 
     YARN-1907. TestRMApplicationHistoryWriter#testRMWritingMassiveHistory 
     intermittently fails. (Mit Desai via kihwal)
