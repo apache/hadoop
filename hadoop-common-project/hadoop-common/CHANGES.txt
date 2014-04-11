@@ -399,6 +399,9 @@ Release 2.4.1 - UNRELEASED
     HADOOP-10473. TestCallQueueManager should interrupt before counting calls.
     (szetszwo)
 
+    HADOOP-10490. TestMapFile and TestBloomMapFile leak file descriptors.
+    (cnauroth)
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES
