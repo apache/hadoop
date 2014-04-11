@@ -140,7 +140,7 @@ public class TestFileJournalManager {
    */
   @Test
   public void testInprogressRecovery() throws IOException {
-    File f = new File(TestEditLog.TEST_DIR + "/filejournaltest0");
+    File f = new File(TestEditLog.TEST_DIR + "/inprogressrecovery");
     // abort after the 5th roll 
     NNStorage storage = setupEdits(Collections.<URI>singletonList(f.toURI()),
                                    5, new AbortSpec(5, 0));
@@ -256,7 +256,7 @@ public class TestFileJournalManager {
    */
   @Test 
   public void testReadFromStream() throws IOException {
-    File f = new File(TestEditLog.TEST_DIR + "/filejournaltest1");
+    File f = new File(TestEditLog.TEST_DIR + "/readfromstream");
     // abort after 10th roll
     NNStorage storage = setupEdits(Collections.<URI>singletonList(f.toURI()),
                                    10, new AbortSpec(10, 0));
@@ -283,7 +283,7 @@ public class TestFileJournalManager {
    */
   @Test
   public void testAskForTransactionsMidfile() throws IOException {
-    File f = new File(TestEditLog.TEST_DIR + "/filejournaltest2");
+    File f = new File(TestEditLog.TEST_DIR + "/askfortransactionsmidfile");
     NNStorage storage = setupEdits(Collections.<URI>singletonList(f.toURI()), 
                                    10);
     StorageDirectory sd = storage.dirIterator(NameNodeDirType.EDITS).next();
@@ -308,7 +308,7 @@ public class TestFileJournalManager {
    */
   @Test
   public void testManyLogsWithGaps() throws IOException {
-    File f = new File(TestEditLog.TEST_DIR + "/filejournaltest3");
+    File f = new File(TestEditLog.TEST_DIR + "/manylogswithgaps");
     NNStorage storage = setupEdits(Collections.<URI>singletonList(f.toURI()), 10);
     StorageDirectory sd = storage.dirIterator(NameNodeDirType.EDITS).next();
 
@@ -342,7 +342,7 @@ public class TestFileJournalManager {
    */
   @Test
   public void testManyLogsWithCorruptInprogress() throws IOException {
-    File f = new File(TestEditLog.TEST_DIR + "/filejournaltest5");
+    File f = new File(TestEditLog.TEST_DIR + "/manylogswithcorruptinprogress");
     NNStorage storage = setupEdits(Collections.<URI>singletonList(f.toURI()), 10, new AbortSpec(10, 0));
     StorageDirectory sd = storage.dirIterator(NameNodeDirType.EDITS).next();
 
@@ -427,7 +427,7 @@ public class TestFileJournalManager {
   @Test
   public void testReadFromMiddleOfEditLog() throws CorruptionException,
       IOException {
-    File f = new File(TestEditLog.TEST_DIR + "/filejournaltest2");
+    File f = new File(TestEditLog.TEST_DIR + "/readfrommiddleofeditlog");
     NNStorage storage = setupEdits(Collections.<URI>singletonList(f.toURI()), 
                                    10);
     StorageDirectory sd = storage.dirIterator(NameNodeDirType.EDITS).next();
@@ -450,7 +450,7 @@ public class TestFileJournalManager {
   @Test
   public void testExcludeInProgressStreams() throws CorruptionException,
       IOException {
-    File f = new File(TestEditLog.TEST_DIR + "/filejournaltest2");
+    File f = new File(TestEditLog.TEST_DIR + "/excludeinprogressstreams");
     
     // Don't close the edit log once the files have been set up.
     NNStorage storage = setupEdits(Collections.<URI>singletonList(f.toURI()), 
