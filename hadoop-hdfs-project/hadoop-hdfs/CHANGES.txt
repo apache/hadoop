@@ -34,6 +34,9 @@ Release 2.4.1 - UNRELEASED
 
     HDFS-6208. DataNode caching can leak file descriptors. (cnauroth)
 
+    HDFS-6231. DFSClient hangs infinitely if using hedged reads and all eligible
+    datanodes die. (cnauroth)
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES
