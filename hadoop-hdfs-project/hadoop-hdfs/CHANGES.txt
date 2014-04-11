@@ -375,6 +375,9 @@ Release 2.4.1 - UNRELEASED
     HDFS-6231. DFSClient hangs infinitely if using hedged reads and all eligible
     datanodes die. (cnauroth)
 
+    HDFS-6234. TestDatanodeConfig#testMemlockLimit fails on Windows due to
+    invalid file path. (cnauroth)
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES
