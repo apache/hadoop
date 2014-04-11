@@ -45,6 +45,9 @@ Release 0.23.10 - 2013-12-09
 
     HADOOP-8704. add request logging to jetty/httpserver (jeagles)
 
+    HADOOP-8826. Docs still refer to 0.20.205 as stable line (Mit Desai via
+    jeagles)
+
   OPTIMIZATIONS
 
     HADOOP-9748. Reduce blocking on UGI.ensureInitialized (daryn)
