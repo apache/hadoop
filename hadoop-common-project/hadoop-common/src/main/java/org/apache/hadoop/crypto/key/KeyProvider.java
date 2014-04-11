@@ -25,8 +25,11 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.URI;
 import java.security.NoSuchAlgorithmException;
+import java.text.MessageFormat;
 import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
@@ -104,19 +107,32 @@ public abstract class KeyProvider {
     private final static String CIPHER_FIELD = "cipher";
     private final static String BIT_LENGTH_FIELD = "bitLength";
     private final static String CREATED_FIELD = "created";
+    private final static String DESCRIPTION_FIELD = "description";
     private final static String VERSIONS_FIELD = "versions";
 
     private final String cipher;
     private final int bitLength;
+    private final String description;
     private final Date created;
     private int versions;
 
     protected Metadata(String cipher, int bitLength,
-                       Date created, int versions) {
+                       String description, Date created, int versions) {
       this.cipher = cipher;
       this.bitLength = bitLength;
+      this.description = description;
       this.created = created;
       this.versions = versions;
+    }
+
+    public String toString() {
+      return MessageFormat.format(
+          "cipher: {0}, length: {1} description: {2} created: {3} version: {4}",
+          cipher, bitLength, description, created, versions);
+    }
+
+    public String getDescription() {
+      return description;
     }
 
     public Date getCreated() {
@@ -170,6 +186,9 @@ public abstract class KeyProvider {
       if (created != null) {
         writer.name(CREATED_FIELD).value(created.getTime());
       }
+      if (description != null) {
+        writer.name(DESCRIPTION_FIELD).value(description);
+      }
       writer.name(VERSIONS_FIELD).value(versions);
       writer.endObject();
       writer.flush();
@@ -186,6 +205,7 @@ public abstract class KeyProvider {
       int bitLength = 0;
       Date created = null;
       int versions = 0;
+      String description = null;
       JsonReader reader = new JsonReader(new InputStreamReader
           (new ByteArrayInputStream(bytes)));
       reader.beginObject();
@@ -199,12 +219,15 @@ public abstract class KeyProvider {
           created = new Date(reader.nextLong());
         } else if (VERSIONS_FIELD.equals(field)) {
           versions = reader.nextInt();
+        } else if (DESCRIPTION_FIELD.equals(field)) {
+          description = reader.nextString();
         }
       }
       reader.endObject();
       this.cipher = cipher;
       this.bitLength = bitLength;
       this.created = created;
+      this.description = description;
       this.versions = versions;
     }
   }
@@ -215,6 +238,7 @@ public abstract class KeyProvider {
   public static class Options {
     private String cipher;
     private int bitLength;
+    private String description;
 
     public Options(Configuration conf) {
       cipher = conf.get(DEFAULT_CIPHER_NAME, DEFAULT_CIPHER);
@@ -231,12 +255,21 @@ public abstract class KeyProvider {
       return this;
     }
 
+    public Options setDescription(String description) {
+      this.description = description;
+      return this;
+    }
+
     protected String getCipher() {
       return cipher;
     }
 
     protected int getBitLength() {
       return bitLength;
+    }
+
+    protected String getDescription() {
+      return description;
     }
   }
 
@@ -276,6 +309,24 @@ public abstract class KeyProvider {
    * @throws IOException
    */
   public abstract List<String> getKeys() throws IOException;
+
+
+  /**
+   * Get the key metadata for all keys.
+   *
+   * @return a Map with all the keys and their metadata
+   * @throws IOException
+   */
+  public Map<String, Metadata> getKeysMetadata() throws IOException {
+    Map<String, Metadata> keysMetadata = new LinkedHashMap<String, Metadata>();
+    for (String key : getKeys()) {
+      Metadata meta = getMetadata(key);
+      if (meta != null) {
+        keysMetadata.put(key, meta);
+      }
+    }
+    return keysMetadata;
+  }
 
   /**
    * Get the key material for all versions of a specific key name.

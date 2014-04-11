@@ -138,6 +138,9 @@ Trunk (Unreleased)
     HADOOP-10428. JavaKeyStoreProvider should accept keystore password via 
     configuration falling back to ENV VAR. (tucu)
 
+    HADOOP-10430. KeyProvider Metadata should have an optional description, 
+    there should be a method to retrieve the metadata from all keys. (tucu)
+
   BUG FIXES
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.
