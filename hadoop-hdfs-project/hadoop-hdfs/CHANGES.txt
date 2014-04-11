@@ -381,6 +381,9 @@ Release 2.4.1 - UNRELEASED
     HDFS-6235. TestFileJournalManager can fail on Windows due to file locking if
     tests run out of order. (cnauroth)
 
+    HDFS-6229. Race condition in failover can cause RetryCache fail to work.
+    (jing9)
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES
