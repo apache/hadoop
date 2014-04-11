@@ -439,7 +439,7 @@ public class TestRMApplicationHistoryWriter {
     int cleanedSize = cleaned.size();
     waitCount = 0;
     while (cleanedSize < allocatedSize && waitCount++ < 200) {
-      Thread.sleep(100);
+      Thread.sleep(300);
       resp = nm.nodeHeartbeat(true);
       cleaned = resp.getContainersToCleanup();
       cleanedSize += cleaned.size();

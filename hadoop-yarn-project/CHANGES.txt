@@ -47,6 +47,9 @@ Release 2.4.1 - UNRELEASED
     HDFS paths and thus avoid test failures on Windows. (Varun Vasudev via
     vinodkv)
 
+    YARN-1907. TestRMApplicationHistoryWriter#testRMWritingMassiveHistory 
+    intermittently fails. (Mit Desai via kihwal)
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES
