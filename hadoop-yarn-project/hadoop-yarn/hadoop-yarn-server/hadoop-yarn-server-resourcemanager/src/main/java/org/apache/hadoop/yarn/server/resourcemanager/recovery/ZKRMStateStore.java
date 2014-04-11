@@ -566,7 +566,15 @@ public class ZKRMStateStore extends RMStateStore {
           + nodeUpdatePath);
     }
     byte[] appStateData = appStateDataPB.getProto().toByteArray();
-    setDataWithRetries(nodeUpdatePath, appStateData, 0);
+
+    if (zkClient.exists(nodeUpdatePath, true) != null) {
+      setDataWithRetries(nodeUpdatePath, appStateData, -1);
+    } else {
+      createWithRetries(nodeUpdatePath, appStateData, zkAcl,
+        CreateMode.PERSISTENT);
+      LOG.info(appId + " znode didn't exist. Created a new znode to"
+          + " update the application state.");
+    }
   }
 
   @Override
@@ -601,7 +609,15 @@ public class ZKRMStateStore extends RMStateStore {
           + " at: " + nodeUpdatePath);
     }
     byte[] attemptStateData = attemptStateDataPB.getProto().toByteArray();
-    setDataWithRetries(nodeUpdatePath, attemptStateData, 0);
+
+    if (zkClient.exists(nodeUpdatePath, true) != null) {
+      setDataWithRetries(nodeUpdatePath, attemptStateData, -1);
+    } else {
+      createWithRetries(nodeUpdatePath, attemptStateData, zkAcl,
+        CreateMode.PERSISTENT);
+      LOG.info(appAttemptId + " znode didn't exist. Created a new znode to"
+          + " update the application attempt state.");
+    }
   }
 
   @Override
@@ -961,6 +977,7 @@ public class ZKRMStateStore extends RMStateStore {
             Thread.sleep(zkRetryInterval);
             continue;
           }
+          LOG.error("Error while doing ZK operation.", ke);
           throw ke;
         }
       }
