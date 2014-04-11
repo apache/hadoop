@@ -20,6 +20,10 @@ Release 2.4.1 - UNRELEASED
     MAPREDUCE-5815. Fixed test-failure of TestMRAppMaster by making MRAppMaster
     gracefully handle empty-queue names. (Akira Ajisaka via vinodkv)
 
+    MAPREDUCE-5826. Fixed HistoryServerFileSystemStore to use right permissions
+    on Windows for temporary files and thus also fix the test-issue with
+    TestHistoryServerFileSystemStateStoreService. (Varun Vasudev via vinodkv)
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES
