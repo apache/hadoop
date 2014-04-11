@@ -219,7 +219,7 @@ public class TestDistributedShell {
         "--num_containers",
         "1",
         "--shell_command",
-        Shell.WINDOWS ? "timeout 8" : "sleep 8",
+        "sleep 8",
         "--master_memory",
         "512",
         "--container_memory",
