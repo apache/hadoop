@@ -35,9 +35,6 @@ Release 2.5.0 - UNRELEASED
     YARN-1136. Replace junit.framework.Assert with org.junit.Assert (Chen He
     via jeagles)
 
-    YARN-1883. TestRMAdminService fails due to inconsistent entries in
-    UserGroups (Mit Desai via jeagles)
-
     YARN-1889. In Fair Scheduler, avoid creating objects on each call to
     AppSchedulable comparator (Hong Zhiguo via Sandy Ryza)
 
@@ -75,6 +72,9 @@ Release 2.4.1 - UNRELEASED
     (Hong Zhiguo via jianhe)
 
     YARN-1905. TestProcfsBasedProcessTree must only run on Linux. (cnauroth)
+
+    YARN-1883. TestRMAdminService fails due to inconsistent entries in
+    UserGroups (Mit Desai via jeagles)
 
     YARN-1908. Fixed DistributedShell to not fail in secure clusters. (Vinod
     Kumar Vavilapalli and Jian He via vinodkv)
