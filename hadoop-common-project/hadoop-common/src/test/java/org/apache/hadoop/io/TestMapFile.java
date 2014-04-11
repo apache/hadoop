@@ -26,6 +26,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionInputStream;
@@ -68,13 +69,13 @@ public class TestMapFile {
     @Override
     public CompressionOutputStream createOutputStream(OutputStream out)
         throws IOException {
-      return null;
+      return mock(CompressionOutputStream.class);
     }
 
     @Override
     public CompressionOutputStream createOutputStream(OutputStream out,
         Compressor compressor) throws IOException {
-      return null;
+      return mock(CompressionOutputStream.class);
     }
 
     @Override
@@ -138,46 +139,52 @@ public class TestMapFile {
   @Test
   public void testGetClosestOnCurrentApi() throws Exception {
     final String TEST_PREFIX = "testGetClosestOnCurrentApi.mapfile";
-    MapFile.Writer writer = createWriter(TEST_PREFIX, Text.class, Text.class);
-    int FIRST_KEY = 1;
-    // Test keys: 11,21,31,...,91
-    for (int i = FIRST_KEY; i < 100; i += 10) {      
-      Text t = new Text(Integer.toString(i));
-      writer.append(t, t);
+    MapFile.Writer writer = null;
+    MapFile.Reader reader = null;
+    try {
+      writer = createWriter(TEST_PREFIX, Text.class, Text.class);
+      int FIRST_KEY = 1;
+      // Test keys: 11,21,31,...,91
+      for (int i = FIRST_KEY; i < 100; i += 10) {      
+        Text t = new Text(Integer.toString(i));
+        writer.append(t, t);
+      }
+      writer.close();
+
+      reader = createReader(TEST_PREFIX, Text.class);
+      Text key = new Text("55");
+      Text value = new Text();
+
+      // Test get closest with step forward
+      Text closest = (Text) reader.getClosest(key, value);
+      assertEquals(new Text("61"), closest);
+
+      // Test get closest with step back
+      closest = (Text) reader.getClosest(key, value, true);
+      assertEquals(new Text("51"), closest);
+
+      // Test get closest when we pass explicit key
+      final Text explicitKey = new Text("21");
+      closest = (Text) reader.getClosest(explicitKey, value);
+      assertEquals(new Text("21"), explicitKey);
+
+      // Test what happens at boundaries. Assert if searching a key that is
+      // less than first key in the mapfile, that the first key is returned.
+      key = new Text("00");
+      closest = (Text) reader.getClosest(key, value);
+      assertEquals(FIRST_KEY, Integer.parseInt(closest.toString()));
+
+      // Assert that null is returned if key is > last entry in mapfile.
+      key = new Text("92");
+      closest = (Text) reader.getClosest(key, value);
+      assertNull("Not null key in testGetClosestWithNewCode", closest);
+
+      // If we were looking for the key before, we should get the last key
+      closest = (Text) reader.getClosest(key, value, true);
+      assertEquals(new Text("91"), closest);
+    } finally {
+      IOUtils.cleanup(null, writer, reader);
     }
-    writer.close();
-
-    MapFile.Reader reader = createReader(TEST_PREFIX, Text.class);
-    Text key = new Text("55");
-    Text value = new Text();
-
-    // Test get closest with step forward
-    Text closest = (Text) reader.getClosest(key, value);
-    assertEquals(new Text("61"), closest);
-
-    // Test get closest with step back
-    closest = (Text) reader.getClosest(key, value, true);
-    assertEquals(new Text("51"), closest);
-
-    // Test get closest when we pass explicit key
-    final Text explicitKey = new Text("21");
-    closest = (Text) reader.getClosest(explicitKey, value);
-    assertEquals(new Text("21"), explicitKey);
-
-    // Test what happens at boundaries. Assert if searching a key that is
-    // less than first key in the mapfile, that the first key is returned.
-    key = new Text("00");
-    closest = (Text) reader.getClosest(key, value);
-    assertEquals(FIRST_KEY, Integer.parseInt(closest.toString()));
-
-    // Assert that null is returned if key is > last entry in mapfile.
-    key = new Text("92");
-    closest = (Text) reader.getClosest(key, value);
-    assertNull("Not null key in testGetClosestWithNewCode", closest);
-
-    // If we were looking for the key before, we should get the last key
-    closest = (Text) reader.getClosest(key, value, true);
-    assertEquals(new Text("91"), closest);
   }
   
   /**
@@ -187,16 +194,21 @@ public class TestMapFile {
   public void testMidKeyOnCurrentApi() throws Exception {
     // Write a mapfile of simple data: keys are
     final String TEST_PREFIX = "testMidKeyOnCurrentApi.mapfile";
-    MapFile.Writer writer = createWriter(TEST_PREFIX, IntWritable.class,
-        IntWritable.class);
-    // 0,1,....9
-    int SIZE = 10;
-    for (int i = 0; i < SIZE; i++)
-      writer.append(new IntWritable(i), new IntWritable(i));
-    writer.close();
+    MapFile.Writer writer = null;
+    MapFile.Reader reader = null;
+    try {
+      writer = createWriter(TEST_PREFIX, IntWritable.class, IntWritable.class);
+      // 0,1,....9
+      int SIZE = 10;
+      for (int i = 0; i < SIZE; i++)
+        writer.append(new IntWritable(i), new IntWritable(i));
+      writer.close();
 
-    MapFile.Reader reader = createReader(TEST_PREFIX, IntWritable.class);
-    assertEquals(new IntWritable((SIZE - 1) / 2), reader.midKey());
+      reader = createReader(TEST_PREFIX, IntWritable.class);
+      assertEquals(new IntWritable((SIZE - 1) / 2), reader.midKey());
+    } finally {
+      IOUtils.cleanup(null, writer, reader);
+    }
   }
   
   /**
@@ -206,16 +218,18 @@ public class TestMapFile {
   public void testRename() {
     final String NEW_FILE_NAME = "test-new.mapfile";
     final String OLD_FILE_NAME = "test-old.mapfile";
+    MapFile.Writer writer = null;
     try {
       FileSystem fs = FileSystem.getLocal(conf);
-      MapFile.Writer writer = createWriter(OLD_FILE_NAME, IntWritable.class,
-          IntWritable.class);
+      writer = createWriter(OLD_FILE_NAME, IntWritable.class, IntWritable.class);
       writer.close();
       MapFile.rename(fs, new Path(TEST_DIR, OLD_FILE_NAME).toString(), 
           new Path(TEST_DIR, NEW_FILE_NAME).toString());
       MapFile.delete(fs, new Path(TEST_DIR, NEW_FILE_NAME).toString());
     } catch (IOException ex) {
       fail("testRename error " + ex);
+    } finally {
+      IOUtils.cleanup(null, writer);
     }
   }
   
@@ -228,12 +242,12 @@ public class TestMapFile {
     final String ERROR_MESSAGE = "Can't rename file";
     final String NEW_FILE_NAME = "test-new.mapfile";
     final String OLD_FILE_NAME = "test-old.mapfile";
+    MapFile.Writer writer = null;
     try {
       FileSystem fs = FileSystem.getLocal(conf);
       FileSystem spyFs = spy(fs);
 
-      MapFile.Writer writer = createWriter(OLD_FILE_NAME, IntWritable.class,
-          IntWritable.class);
+      writer = createWriter(OLD_FILE_NAME, IntWritable.class, IntWritable.class);
       writer.close();
 
       Path oldDir = new Path(TEST_DIR, OLD_FILE_NAME);
@@ -246,6 +260,8 @@ public class TestMapFile {
     } catch (IOException ex) {
       assertEquals("testRenameWithException invalid IOExceptionMessage !!!",
           ex.getMessage(), ERROR_MESSAGE);
+    } finally {
+      IOUtils.cleanup(null, writer);
     }
   }
 
@@ -254,12 +270,12 @@ public class TestMapFile {
     final String ERROR_MESSAGE = "Could not rename";
     final String NEW_FILE_NAME = "test-new.mapfile";
     final String OLD_FILE_NAME = "test-old.mapfile";
+    MapFile.Writer writer = null;
     try {
       FileSystem fs = FileSystem.getLocal(conf);
       FileSystem spyFs = spy(fs);
 
-      MapFile.Writer writer = createWriter(OLD_FILE_NAME, IntWritable.class,
-          IntWritable.class);
+      writer = createWriter(OLD_FILE_NAME, IntWritable.class, IntWritable.class);
       writer.close();
 
       Path oldDir = new Path(TEST_DIR, OLD_FILE_NAME);
@@ -271,6 +287,8 @@ public class TestMapFile {
     } catch (IOException ex) {
       assertTrue("testRenameWithFalse invalid IOExceptionMessage error !!!", ex
           .getMessage().startsWith(ERROR_MESSAGE));
+    } finally {
+      IOUtils.cleanup(null, writer);
     }
   }
   
@@ -297,11 +315,7 @@ public class TestMapFile {
       assertTrue("testWriteWithFailDirCreation ex error !!!", ex.getMessage()
           .startsWith(ERROR_MESSAGE));
     } finally {
-      if (writer != null)
-        try {
-          writer.close();
-        } catch (IOException e) {
-        }
+      IOUtils.cleanup(null, writer);
     }
   }
 
@@ -312,20 +326,24 @@ public class TestMapFile {
   public void testOnFinalKey() {
     final String TEST_METHOD_KEY = "testOnFinalKey.mapfile";
     int SIZE = 10;
+    MapFile.Writer writer = null;
+    MapFile.Reader reader = null;
     try {
-      MapFile.Writer writer = createWriter(TEST_METHOD_KEY, IntWritable.class,
-          IntWritable.class);
+      writer = createWriter(TEST_METHOD_KEY, IntWritable.class,
+        IntWritable.class);
       for (int i = 0; i < SIZE; i++)
         writer.append(new IntWritable(i), new IntWritable(i));
       writer.close();
 
-      MapFile.Reader reader = createReader(TEST_METHOD_KEY, IntWritable.class);
+      reader = createReader(TEST_METHOD_KEY, IntWritable.class);
       IntWritable expectedKey = new IntWritable(0);
       reader.finalKey(expectedKey);
       assertEquals("testOnFinalKey not same !!!", expectedKey, new IntWritable(
           9));
     } catch (IOException ex) {
       fail("testOnFinalKey error !!!");
+    } finally {
+      IOUtils.cleanup(null, writer, reader);
     }
   }
   
@@ -338,7 +356,8 @@ public class TestMapFile {
     Class<? extends WritableComparable<?>> keyClass = IntWritable.class;
     Class<?> valueClass = Text.class;
     try {
-      createWriter("testKeyValueClasses.mapfile", IntWritable.class, Text.class);
+      createWriter("testKeyValueClasses.mapfile", IntWritable.class, Text.class)
+        .close();
       assertNotNull("writer key class null error !!!",
           MapFile.Writer.keyClass(keyClass));
       assertNotNull("writer value class null error !!!",
@@ -354,19 +373,22 @@ public class TestMapFile {
   @Test
   public void testReaderGetClosest() throws Exception {
     final String TEST_METHOD_KEY = "testReaderWithWrongKeyClass.mapfile";
+    MapFile.Writer writer = null;
+    MapFile.Reader reader = null;
     try {
-      MapFile.Writer writer = createWriter(TEST_METHOD_KEY, IntWritable.class,
-          Text.class);
+      writer = createWriter(TEST_METHOD_KEY, IntWritable.class, Text.class);
 
       for (int i = 0; i < 10; i++)
         writer.append(new IntWritable(i), new Text("value" + i));
       writer.close();
 
-      MapFile.Reader reader = createReader(TEST_METHOD_KEY, Text.class);
+      reader = createReader(TEST_METHOD_KEY, Text.class);
       reader.getClosest(new Text("2"), new Text(""));
       fail("no excepted exception in testReaderWithWrongKeyClass !!!");
     } catch (IOException ex) {
       /* Should be thrown to pass the test */
+    } finally {
+      IOUtils.cleanup(null, writer, reader);
     }
   }
   
@@ -376,13 +398,15 @@ public class TestMapFile {
   @Test
   public void testReaderWithWrongValueClass() {
     final String TEST_METHOD_KEY = "testReaderWithWrongValueClass.mapfile";
+    MapFile.Writer writer = null;
     try {
-      MapFile.Writer writer = createWriter(TEST_METHOD_KEY, IntWritable.class,
-          Text.class);
+      writer = createWriter(TEST_METHOD_KEY, IntWritable.class, Text.class);
       writer.append(new IntWritable(0), new IntWritable(0));
       fail("no excepted exception in testReaderWithWrongKeyClass !!!");
     } catch (IOException ex) {
       /* Should be thrown to pass the test */
+    } finally {
+      IOUtils.cleanup(null, writer);
     }
   }
   
@@ -394,15 +418,16 @@ public class TestMapFile {
     final String TEST_METHOD_KEY = "testReaderKeyIteration.mapfile";
     int SIZE = 10;
     int ITERATIONS = 5;
+    MapFile.Writer writer = null;
+    MapFile.Reader reader = null;
     try {
-      MapFile.Writer writer = createWriter(TEST_METHOD_KEY, IntWritable.class,
-          Text.class);
+      writer = createWriter(TEST_METHOD_KEY, IntWritable.class, Text.class);
       int start = 0;
       for (int i = 0; i < SIZE; i++)
         writer.append(new IntWritable(i), new Text("Value:" + i));
       writer.close();
 
-      MapFile.Reader reader = createReader(TEST_METHOD_KEY, IntWritable.class);
+      reader = createReader(TEST_METHOD_KEY, IntWritable.class);
       // test iteration
       Writable startValue = new Text("Value:" + start);
       int i = 0;
@@ -421,6 +446,8 @@ public class TestMapFile {
           reader.seek(new IntWritable(SIZE * 2)));
     } catch (IOException ex) {
       fail("reader seek error !!!");
+    } finally {
+      IOUtils.cleanup(null, writer, reader);
     }
   }
 
@@ -431,11 +458,11 @@ public class TestMapFile {
   public void testFix() {
     final String INDEX_LESS_MAP_FILE = "testFix.mapfile";
     int PAIR_SIZE = 20;
+    MapFile.Writer writer = null;
     try {
       FileSystem fs = FileSystem.getLocal(conf);
       Path dir = new Path(TEST_DIR, INDEX_LESS_MAP_FILE);
-      MapFile.Writer writer = createWriter(INDEX_LESS_MAP_FILE,
-          IntWritable.class, Text.class);
+      writer = createWriter(INDEX_LESS_MAP_FILE, IntWritable.class, Text.class);
       for (int i = 0; i < PAIR_SIZE; i++)
         writer.append(new IntWritable(0), new Text("value"));
       writer.close();
@@ -450,6 +477,8 @@ public class TestMapFile {
             MapFile.fix(fs, dir, IntWritable.class, Text.class, true, conf) == PAIR_SIZE);
     } catch (Exception ex) {
       fail("testFix error !!!");
+    } finally {
+      IOUtils.cleanup(null, writer);
     }
   }
   /**
@@ -459,38 +488,46 @@ public class TestMapFile {
   @SuppressWarnings("deprecation")
   public void testDeprecatedConstructors() {
     String path = new Path(TEST_DIR, "writes.mapfile").toString();
+    MapFile.Writer writer = null;
+    MapFile.Reader reader = null;
     try {
       FileSystem fs = FileSystem.getLocal(conf);
-      MapFile.Writer writer = new MapFile.Writer(conf, fs, path,
+      writer = new MapFile.Writer(conf, fs, path,
           IntWritable.class, Text.class, CompressionType.RECORD);
       assertNotNull(writer);
+      writer.close();
       writer = new MapFile.Writer(conf, fs, path, IntWritable.class,
           Text.class, CompressionType.RECORD, defaultProgressable);
       assertNotNull(writer);
+      writer.close();
       writer = new MapFile.Writer(conf, fs, path, IntWritable.class,
           Text.class, CompressionType.RECORD, defaultCodec, defaultProgressable);
       assertNotNull(writer);
+      writer.close();
       writer = new MapFile.Writer(conf, fs, path,
           WritableComparator.get(Text.class), Text.class);
       assertNotNull(writer);
+      writer.close();
       writer = new MapFile.Writer(conf, fs, path,
           WritableComparator.get(Text.class), Text.class,
           SequenceFile.CompressionType.RECORD);
       assertNotNull(writer);
+      writer.close();
       writer = new MapFile.Writer(conf, fs, path,
           WritableComparator.get(Text.class), Text.class,
           CompressionType.RECORD, defaultProgressable);
       assertNotNull(writer);
       writer.close();
 
-      MapFile.Reader reader = new MapFile.Reader(fs, path,
+      reader = new MapFile.Reader(fs, path,
           WritableComparator.get(IntWritable.class), conf);
       assertNotNull(reader);
       assertNotNull("reader key is null !!!", reader.getKeyClass());
       assertNotNull("reader value in null", reader.getValueClass());
-
     } catch (IOException e) {
       fail(e.getMessage());
+    } finally {
+      IOUtils.cleanup(null, writer, reader);
     }
   }
   
@@ -509,11 +546,7 @@ public class TestMapFile {
     } catch (Exception e) {
       fail("fail in testKeyLessWriterCreation. Other ex !!!");
     } finally {
-      if (writer != null)
-        try {
-          writer.close();
-        } catch (IOException e) {
-        }
+      IOUtils.cleanup(null, writer);
     }
   }
   /**
@@ -542,11 +575,7 @@ public class TestMapFile {
     } catch (Exception e) {
       fail("fail in testPathExplosionWriterCreation. Other ex !!!");
     } finally {
-      if (writer != null)
-        try {
-          writer.close();
-        } catch (IOException e) {
-        }
+      IOUtils.cleanup(null, writer);
     }
   }
 
@@ -555,9 +584,9 @@ public class TestMapFile {
    */
   @Test
   public void testDescOrderWithThrowExceptionWriterAppend() {
+    MapFile.Writer writer = null;
     try {
-      MapFile.Writer writer = createWriter(".mapfile", IntWritable.class,
-          Text.class);
+      writer = createWriter(".mapfile", IntWritable.class, Text.class);
       writer.append(new IntWritable(2), new Text("value: " + 1));
       writer.append(new IntWritable(2), new Text("value: " + 2));
       writer.append(new IntWritable(2), new Text("value: " + 4));
@@ -566,6 +595,8 @@ public class TestMapFile {
     } catch (IOException ex) {
     } catch (Exception e) {
       fail("testDescOrderWithThrowExceptionWriterAppend other ex throw !!!");
+    } finally {
+      IOUtils.cleanup(null, writer);
     }
   }
 
@@ -575,15 +606,17 @@ public class TestMapFile {
     String inFile = "mainMethodMapFile.mapfile";
     String outFile = "mainMethodMapFile.mapfile";
     String[] args = { path, outFile };
+    MapFile.Writer writer = null;
     try {
-      MapFile.Writer writer = createWriter(inFile, IntWritable.class,
-          Text.class);
+      writer = createWriter(inFile, IntWritable.class, Text.class);
       writer.append(new IntWritable(1), new Text("test_text1"));
       writer.append(new IntWritable(2), new Text("test_text2"));
       writer.close();
       MapFile.main(args);
     } catch (Exception ex) {
       fail("testMainMethodMapFile error !!!");
+    } finally {
+      IOUtils.cleanup(null, writer);
     }
   }
 
@@ -601,56 +634,58 @@ public class TestMapFile {
     Path qualifiedDirName = fs.makeQualified(dirName);
     // Make an index entry for every third insertion.
     MapFile.Writer.setIndexInterval(conf, 3);
-    MapFile.Writer writer = new MapFile.Writer(conf, fs,
-        qualifiedDirName.toString(), Text.class, Text.class);
-    // Assert that the index interval is 1
-    assertEquals(3, writer.getIndexInterval());
-    // Add entries up to 100 in intervals of ten.
-    final int FIRST_KEY = 10;
-    for (int i = FIRST_KEY; i < 100; i += 10) {
-      String iStr = Integer.toString(i);
-      Text t = new Text("00".substring(iStr.length()) + iStr);
-      writer.append(t, t);
-    }
-    writer.close();
-    // Now do getClosest on created mapfile.
-    MapFile.Reader reader = new MapFile.Reader(qualifiedDirName, conf);
+    MapFile.Writer writer = null;
+    MapFile.Reader reader = null;
     try {
-    Text key = new Text("55");
-    Text value = new Text();
-    Text closest = (Text) reader.getClosest(key, value);
-    // Assert that closest after 55 is 60
-    assertEquals(new Text("60"), closest);
-    // Get closest that falls before the passed key: 50
-    closest = (Text) reader.getClosest(key, value, true);
-    assertEquals(new Text("50"), closest);
-    // Test get closest when we pass explicit key
-    final Text TWENTY = new Text("20");
-    closest = (Text) reader.getClosest(TWENTY, value);
-    assertEquals(TWENTY, closest);
-    closest = (Text) reader.getClosest(TWENTY, value, true);
-    assertEquals(TWENTY, closest);
-    // Test what happens at boundaries. Assert if searching a key that is
-    // less than first key in the mapfile, that the first key is returned.
-    key = new Text("00");
-    closest = (Text) reader.getClosest(key, value);
-    assertEquals(FIRST_KEY, Integer.parseInt(closest.toString()));
+      writer = new MapFile.Writer(conf, fs, qualifiedDirName.toString(),
+        Text.class, Text.class);
+      // Assert that the index interval is 1
+      assertEquals(3, writer.getIndexInterval());
+      // Add entries up to 100 in intervals of ten.
+      final int FIRST_KEY = 10;
+      for (int i = FIRST_KEY; i < 100; i += 10) {
+        String iStr = Integer.toString(i);
+        Text t = new Text("00".substring(iStr.length()) + iStr);
+        writer.append(t, t);
+      }
+      writer.close();
+      // Now do getClosest on created mapfile.
+      reader = new MapFile.Reader(qualifiedDirName, conf);
+      Text key = new Text("55");
+      Text value = new Text();
+      Text closest = (Text) reader.getClosest(key, value);
+      // Assert that closest after 55 is 60
+      assertEquals(new Text("60"), closest);
+      // Get closest that falls before the passed key: 50
+      closest = (Text) reader.getClosest(key, value, true);
+      assertEquals(new Text("50"), closest);
+      // Test get closest when we pass explicit key
+      final Text TWENTY = new Text("20");
+      closest = (Text) reader.getClosest(TWENTY, value);
+      assertEquals(TWENTY, closest);
+      closest = (Text) reader.getClosest(TWENTY, value, true);
+      assertEquals(TWENTY, closest);
+      // Test what happens at boundaries. Assert if searching a key that is
+      // less than first key in the mapfile, that the first key is returned.
+      key = new Text("00");
+      closest = (Text) reader.getClosest(key, value);
+      assertEquals(FIRST_KEY, Integer.parseInt(closest.toString()));
 
-    // If we're looking for the first key before, and we pass in a key before
-    // the first key in the file, we should get null
-    closest = (Text) reader.getClosest(key, value, true);
-    assertNull(closest);
+      // If we're looking for the first key before, and we pass in a key before
+      // the first key in the file, we should get null
+      closest = (Text) reader.getClosest(key, value, true);
+      assertNull(closest);
 
-    // Assert that null is returned if key is > last entry in mapfile.
-    key = new Text("99");
-    closest = (Text) reader.getClosest(key, value);
-    assertNull(closest);
+      // Assert that null is returned if key is > last entry in mapfile.
+      key = new Text("99");
+      closest = (Text) reader.getClosest(key, value);
+      assertNull(closest);
 
-    // If we were looking for the key before, we should get the last key
-    closest = (Text) reader.getClosest(key, value, true);
-    assertEquals(new Text("90"), closest);
+      // If we were looking for the key before, we should get the last key
+      closest = (Text) reader.getClosest(key, value, true);
+      assertEquals(new Text("90"), closest);
     } finally {
-      reader.close();
+      IOUtils.cleanup(null, writer, reader);
     }
   }
 
@@ -662,16 +697,18 @@ public class TestMapFile {
     FileSystem fs = FileSystem.getLocal(conf);
     Path qualifiedDirName = fs.makeQualified(dirName);
 
-    MapFile.Writer writer = new MapFile.Writer(conf, fs,
-        qualifiedDirName.toString(), IntWritable.class, IntWritable.class);
-    writer.append(new IntWritable(1), new IntWritable(1));
-    writer.close();
-    // Now do getClosest on created mapfile.
-    MapFile.Reader reader = new MapFile.Reader(qualifiedDirName, conf);
+    MapFile.Writer writer = null;
+    MapFile.Reader reader = null;
     try {
+      writer = new MapFile.Writer(conf, fs, qualifiedDirName.toString(),
+        IntWritable.class, IntWritable.class);
+      writer.append(new IntWritable(1), new IntWritable(1));
+      writer.close();
+      // Now do getClosest on created mapfile.
+      reader = new MapFile.Reader(qualifiedDirName, conf);
       assertEquals(new IntWritable(1), reader.midKey());
     } finally {
-      reader.close();
+      IOUtils.cleanup(null, writer, reader);
     }
   }
 

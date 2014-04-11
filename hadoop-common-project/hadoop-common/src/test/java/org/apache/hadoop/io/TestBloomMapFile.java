@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.io;
 
+import static org.mockito.Mockito.*;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -31,6 +33,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionInputStream;
@@ -63,39 +66,44 @@ public class TestBloomMapFile extends TestCase {
     FileSystem fs = FileSystem.getLocal(conf);
     Path qualifiedDirName = fs.makeQualified(TEST_DIR);
     conf.setInt("io.mapfile.bloom.size", 2048);
-    BloomMapFile.Writer writer = new BloomMapFile.Writer(conf, fs,
-        qualifiedDirName.toString(), IntWritable.class, Text.class);
-    IntWritable key = new IntWritable();
-    Text value = new Text();
-    for (int i = 0; i < 2000; i += 2) {
-      key.set(i);
-      value.set("00" + i);
-      writer.append(key, value);
-    }
-    writer.close();
-
-    BloomMapFile.Reader reader = new BloomMapFile.Reader(fs,
-        qualifiedDirName.toString(), conf);
-    // check false positives rate
-    int falsePos = 0;
-    int falseNeg = 0;
-    for (int i = 0; i < 2000; i++) {
-      key.set(i);
-      boolean exists = reader.probablyHasKey(key);
-      if (i % 2 == 0) {
-        if (!exists)
-          falseNeg++;
-      } else {
-        if (exists)
-          falsePos++;
+    BloomMapFile.Writer writer = null;
+    BloomMapFile.Reader reader = null;
+    try {
+      writer = new BloomMapFile.Writer(conf, fs, qualifiedDirName.toString(),
+        IntWritable.class, Text.class);
+      IntWritable key = new IntWritable();
+      Text value = new Text();
+      for (int i = 0; i < 2000; i += 2) {
+        key.set(i);
+        value.set("00" + i);
+        writer.append(key, value);
       }
+      writer.close();
+
+      reader = new BloomMapFile.Reader(fs, qualifiedDirName.toString(), conf);
+      // check false positives rate
+      int falsePos = 0;
+      int falseNeg = 0;
+      for (int i = 0; i < 2000; i++) {
+        key.set(i);
+        boolean exists = reader.probablyHasKey(key);
+        if (i % 2 == 0) {
+          if (!exists)
+            falseNeg++;
+        } else {
+          if (exists)
+            falsePos++;
+        }
+      }
+      reader.close();
+      fs.delete(qualifiedDirName, true);
+      System.out.println("False negatives: " + falseNeg);
+      assertEquals(0, falseNeg);
+      System.out.println("False positives: " + falsePos);
+      assertTrue(falsePos < 2);
+    } finally {
+      IOUtils.cleanup(null, writer, reader);
     }
-    reader.close();
-    fs.delete(qualifiedDirName, true);
-    System.out.println("False negatives: " + falseNeg);
-    assertEquals(0, falseNeg);
-    System.out.println("False positives: " + falsePos);
-    assertTrue(falsePos < 2);
   }
 
   @SuppressWarnings("deprecation")
@@ -103,23 +111,28 @@ public class TestBloomMapFile extends TestCase {
       throws Exception {
     FileSystem fs = FileSystem.getLocal(conf);
     Path qualifiedDirName = fs.makeQualified(TEST_DIR);
-    BloomMapFile.Writer writer = new BloomMapFile.Writer(conf, fs,
-        qualifiedDirName.toString(), Text.class, NullWritable.class);
-    for (Text key : keys) {
-      writer.append(key, NullWritable.get());
-    }
-    writer.close();
+    BloomMapFile.Writer writer = null;
+    BloomMapFile.Reader reader = null;
+    try {
+      writer = new BloomMapFile.Writer(conf, fs, qualifiedDirName.toString(),
+        Text.class, NullWritable.class);
+      for (Text key : keys) {
+        writer.append(key, NullWritable.get());
+      }
+      writer.close();
 
-    // will check for membership in the opposite order of how keys were inserted
-    BloomMapFile.Reader reader = new BloomMapFile.Reader(fs,
-        qualifiedDirName.toString(), conf);
-    Collections.reverse(keys);
-    for (Text key : keys) {
-      assertTrue("False negative for existing key " + key,
+      // will check for membership in opposite order of how keys were inserted
+      reader = new BloomMapFile.Reader(fs, qualifiedDirName.toString(), conf);
+      Collections.reverse(keys);
+      for (Text key : keys) {
+        assertTrue("False negative for existing key " + key,
           reader.probablyHasKey(key));
+      }
+      reader.close();
+      fs.delete(qualifiedDirName, true);
+    } finally {
+      IOUtils.cleanup(null, writer, reader);
     }
-    reader.close();
-    fs.delete(qualifiedDirName, true);
   }
 
   public void testMembershipVaryingSizedKeysTest1() throws Exception {
@@ -140,15 +153,19 @@ public class TestBloomMapFile extends TestCase {
    * test {@code BloomMapFile.delete()} method
    */
   public void testDeleteFile() {
+    BloomMapFile.Writer writer = null;
     try {
       FileSystem fs = FileSystem.getLocal(conf);
-      BloomMapFile.Writer writer = new BloomMapFile.Writer(conf, TEST_FILE,
+      writer = new BloomMapFile.Writer(conf, TEST_FILE,
           MapFile.Writer.keyClass(IntWritable.class),
           MapFile.Writer.valueClass(Text.class));
       assertNotNull("testDeleteFile error !!!", writer);
-      BloomMapFile.delete(fs, "." + TEST_FILE);
+      writer.close();
+      BloomMapFile.delete(fs, TEST_FILE.toString());
     } catch (Exception ex) {
       fail("unexpect ex in testDeleteFile !!!");
+    } finally {
+      IOUtils.cleanup(null, writer);
     }
   }
   
@@ -157,24 +174,26 @@ public class TestBloomMapFile extends TestCase {
    * IOException
    */
   public void testIOExceptionInWriterConstructor() {
-    Path dirNameSpy = org.mockito.Mockito.spy(TEST_FILE);
+    Path dirNameSpy = spy(TEST_FILE);
+    BloomMapFile.Reader reader = null;
+    BloomMapFile.Writer writer = null;
     try {
-      BloomMapFile.Writer writer = new BloomMapFile.Writer(conf, TEST_FILE,
+      writer = new BloomMapFile.Writer(conf, TEST_FILE,
           MapFile.Writer.keyClass(IntWritable.class),
           MapFile.Writer.valueClass(Text.class));
       writer.append(new IntWritable(1), new Text("123124142"));
       writer.close();
 
-      org.mockito.Mockito.when(dirNameSpy.getFileSystem(conf)).thenThrow(
-          new IOException());
-      BloomMapFile.Reader reader = new BloomMapFile.Reader(dirNameSpy, conf,
+      when(dirNameSpy.getFileSystem(conf)).thenThrow(new IOException());
+      reader = new BloomMapFile.Reader(dirNameSpy, conf,
           MapFile.Reader.comparator(new WritableComparator(IntWritable.class)));
 
       assertNull("testIOExceptionInWriterConstructor error !!!",
           reader.getBloomFilter());
-      reader.close();
     } catch (Exception ex) {
       fail("unexpect ex in testIOExceptionInWriterConstructor !!!");
+    } finally {
+      IOUtils.cleanup(null, writer, reader);
     }
   }
 
@@ -183,8 +202,10 @@ public class TestBloomMapFile extends TestCase {
    */
   public void testGetBloomMapFile() {
     int SIZE = 10;
+    BloomMapFile.Reader reader = null;
+    BloomMapFile.Writer writer = null;
     try {
-      BloomMapFile.Writer writer = new BloomMapFile.Writer(conf, TEST_FILE,
+      writer = new BloomMapFile.Writer(conf, TEST_FILE,
           MapFile.Writer.keyClass(IntWritable.class),
           MapFile.Writer.valueClass(Text.class));
 
@@ -193,7 +214,7 @@ public class TestBloomMapFile extends TestCase {
       }
       writer.close();
 
-      BloomMapFile.Reader reader = new BloomMapFile.Reader(TEST_FILE, conf,
+      reader = new BloomMapFile.Reader(TEST_FILE, conf,
           MapFile.Reader.comparator(new WritableComparator(IntWritable.class)));
 
       for (int i = 0; i < SIZE; i++) {
@@ -203,9 +224,10 @@ public class TestBloomMapFile extends TestCase {
             
       assertNull("testGetBloomMapFile error !!!",
           reader.get(new IntWritable(SIZE + 5), new Text()));
-      reader.close();
     } catch (Exception ex) {
       fail("unexpect ex in testGetBloomMapFile !!!");
+    } finally {
+      IOUtils.cleanup(null, writer, reader);
     }
   }
 
@@ -214,36 +236,46 @@ public class TestBloomMapFile extends TestCase {
    */
   @SuppressWarnings("deprecation")
   public void testBloomMapFileConstructors() {
+    BloomMapFile.Writer writer = null;
     try {
       FileSystem ts = FileSystem.get(conf);
       String testFileName = TEST_FILE.toString();
-      BloomMapFile.Writer writer1 = new BloomMapFile.Writer(conf, ts,
+      writer = new BloomMapFile.Writer(conf, ts,
           testFileName, IntWritable.class, Text.class, CompressionType.BLOCK,
           defaultCodec, defaultProgress);
-      assertNotNull("testBloomMapFileConstructors error !!!", writer1);
-      BloomMapFile.Writer writer2 = new BloomMapFile.Writer(conf, ts,
+      assertNotNull("testBloomMapFileConstructors error !!!", writer);
+      writer.close();
+      writer = new BloomMapFile.Writer(conf, ts,
           testFileName, IntWritable.class, Text.class, CompressionType.BLOCK,
           defaultProgress);
-      assertNotNull("testBloomMapFileConstructors error !!!", writer2);
-      BloomMapFile.Writer writer3 = new BloomMapFile.Writer(conf, ts,
+      assertNotNull("testBloomMapFileConstructors error !!!", writer);
+      writer.close();
+      writer = new BloomMapFile.Writer(conf, ts,
           testFileName, IntWritable.class, Text.class, CompressionType.BLOCK);
-      assertNotNull("testBloomMapFileConstructors error !!!", writer3);
-      BloomMapFile.Writer writer4 = new BloomMapFile.Writer(conf, ts,
+      assertNotNull("testBloomMapFileConstructors error !!!", writer);
+      writer.close();
+      writer = new BloomMapFile.Writer(conf, ts,
           testFileName, IntWritable.class, Text.class, CompressionType.RECORD,
           defaultCodec, defaultProgress);
-      assertNotNull("testBloomMapFileConstructors error !!!", writer4);
-      BloomMapFile.Writer writer5 = new BloomMapFile.Writer(conf, ts,
+      assertNotNull("testBloomMapFileConstructors error !!!", writer);
+      writer.close();
+      writer = new BloomMapFile.Writer(conf, ts,
           testFileName, IntWritable.class, Text.class, CompressionType.RECORD,
           defaultProgress);
-      assertNotNull("testBloomMapFileConstructors error !!!", writer5);
-      BloomMapFile.Writer writer6 = new BloomMapFile.Writer(conf, ts,
+      assertNotNull("testBloomMapFileConstructors error !!!", writer);
+      writer.close();
+      writer = new BloomMapFile.Writer(conf, ts,
           testFileName, IntWritable.class, Text.class, CompressionType.RECORD);
-      assertNotNull("testBloomMapFileConstructors error !!!", writer6);
-      BloomMapFile.Writer writer7 = new BloomMapFile.Writer(conf, ts,
+      assertNotNull("testBloomMapFileConstructors error !!!", writer);
+      writer.close();
+      writer = new BloomMapFile.Writer(conf, ts,
           testFileName, WritableComparator.get(Text.class), Text.class);
-      assertNotNull("testBloomMapFileConstructors error !!!", writer7);
+      assertNotNull("testBloomMapFileConstructors error !!!", writer);
+      writer.close();
     } catch (Exception ex) {
       fail("testBloomMapFileConstructors error !!!");
+    } finally {
+      IOUtils.cleanup(null, writer);
     }
   }
 
@@ -272,13 +304,13 @@ public class TestBloomMapFile extends TestCase {
     @Override
     public CompressionOutputStream createOutputStream(OutputStream out,
         Compressor compressor) throws IOException {
-      return null;
+      return mock(CompressionOutputStream.class);
     }
 
     @Override
     public CompressionOutputStream createOutputStream(OutputStream out)
         throws IOException {
-      return null;
+      return mock(CompressionOutputStream.class);
     }
 
     @Override
