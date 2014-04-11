@@ -628,7 +628,7 @@ public abstract class RMStateStore extends AbstractService {
           notifyDoneUpdatingApplication(appId, storedException);
         }
       } catch (Exception e) {
-        LOG.error("Error storing app: " + appId, e);
+        LOG.error("Error storing/updating app: " + appId, e);
         notifyStoreOperationFailed(e);
       }
     } else if (event.getType().equals(RMStateStoreEventType.STORE_APP_ATTEMPT)
@@ -679,7 +679,7 @@ public abstract class RMStateStore extends AbstractService {
         }
       } catch (Exception e) {
         LOG.error(
-            "Error storing appAttempt: " + attemptState.getAttemptId(), e);
+            "Error storing/updating appAttempt: " + attemptState.getAttemptId(), e);
         notifyStoreOperationFailed(e);
       }
     } else if (event.getType().equals(RMStateStoreEventType.REMOVE_APP)) {
