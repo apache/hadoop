@@ -33,6 +33,9 @@ Release 2.4.1 - UNRELEASED
     verification of public cache files in Windows+local file-system environment.
     (Varun Vasudev via vinodkv)
 
+    YARN-1903. Set exit code and diagnostics when container is killed at
+    NEW/LOCALIZING state. (Zhijie Shen via jianhe)
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES

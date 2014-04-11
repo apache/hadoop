@@ -47,6 +47,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
+import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.ExitCode;
 import org.apache.hadoop.yarn.server.nodemanager.NMAuditLogger;
 import org.apache.hadoop.yarn.server.nodemanager.NMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.AuxServicesEvent;
@@ -141,7 +142,7 @@ public class ContainerImpl implements Container {
         ContainerEventType.UPDATE_DIAGNOSTICS_MSG,
         UPDATE_DIAGNOSTICS_TRANSITION)
     .addTransition(ContainerState.NEW, ContainerState.DONE,
-        ContainerEventType.KILL_CONTAINER, CONTAINER_DONE_TRANSITION)
+        ContainerEventType.KILL_CONTAINER, new KillOnNewTransition())
 
     // From LOCALIZING State
     .addTransition(ContainerState.LOCALIZING,
@@ -760,7 +761,9 @@ public class ContainerImpl implements Container {
       container.cleanup();
       container.metrics.endInitingContainer();
       ContainerKillEvent killEvent = (ContainerKillEvent) event;
+      container.exitCode = ExitCode.TERMINATED.getExitCode();
       container.diagnostics.append(killEvent.getDiagnostic()).append("\n");
+      container.diagnostics.append("Container is killed before being launched.\n");
     }
   }
 
@@ -828,7 +831,6 @@ public class ContainerImpl implements Container {
 
   /**
    * Handle the following transitions:
-   * - NEW -> DONE upon KILL_CONTAINER
    * - {LOCALIZATION_FAILED, EXITED_WITH_SUCCESS, EXITED_WITH_FAILURE,
    *    KILLING, CONTAINER_CLEANEDUP_AFTER_KILL}
    *   -> DONE upon CONTAINER_RESOURCES_CLEANEDUP
@@ -846,6 +848,21 @@ public class ContainerImpl implements Container {
         container.dispatcher.getEventHandler().handle(new AuxServicesEvent
             (AuxServicesEventType.CONTAINER_STOP, container));
       }
+    }
+  }
+
+  /**
+   * Handle the following transition:
+   * - NEW -> DONE upon KILL_CONTAINER
+   */
+  static class KillOnNewTransition extends ContainerDoneTransition {
+    @Override
+    public void transition(ContainerImpl container, ContainerEvent event) {
+      ContainerKillEvent killEvent = (ContainerKillEvent) event;
+      container.exitCode = ExitCode.TERMINATED.getExitCode();
+      container.diagnostics.append(killEvent.getDiagnostic()).append("\n");
+      container.diagnostics.append("Container is killed before being launched.\n");
+      super.transition(container, event);
     }
   }
 

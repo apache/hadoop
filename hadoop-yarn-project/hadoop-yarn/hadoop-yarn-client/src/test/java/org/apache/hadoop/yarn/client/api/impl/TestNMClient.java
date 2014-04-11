@@ -343,9 +343,10 @@ public class TestNMClient {
         // getContainerStatus can be called after stopContainer
         try {
           // O is possible if CLEANUP_CONTAINER is executed too late
+          // 137 is possible if the container is not terminated but killed
           testGetContainerStatus(container, i, ContainerState.COMPLETE,
               "Container killed by the ApplicationMaster.", Arrays.asList(
-                  new Integer[] {143, 0}));
+                  new Integer[] {137, 143, 0}));
         } catch (YarnException e) {
           // The exception is possible because, after the container is stopped,
           // it may be removed from NM's context.

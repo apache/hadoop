@@ -310,6 +310,45 @@ public class TestContainer {
       }
     }
   }
+
+  @Test
+  public void testKillOnNew() throws Exception {
+    WrappedContainer wc = null;
+    try {
+      wc = new WrappedContainer(13, 314159265358979L, 4344, "yak");
+      assertEquals(ContainerState.NEW, wc.c.getContainerState());
+      wc.killContainer();
+      assertEquals(ContainerState.DONE, wc.c.getContainerState());
+      assertEquals(ExitCode.TERMINATED.getExitCode(),
+          wc.c.cloneAndGetContainerStatus().getExitStatus());
+      assertTrue(wc.c.cloneAndGetContainerStatus().getDiagnostics()
+          .contains("KillRequest"));
+    } finally {
+      if (wc != null) {
+        wc.finished();
+      }
+    }
+  }
+
+  @Test
+  public void testKillOnLocalizing() throws Exception {
+    WrappedContainer wc = null;
+    try {
+      wc = new WrappedContainer(14, 314159265358979L, 4344, "yak");
+      wc.initContainer();
+      assertEquals(ContainerState.LOCALIZING, wc.c.getContainerState());
+      wc.killContainer();
+      assertEquals(ContainerState.KILLING, wc.c.getContainerState());
+      assertEquals(ExitCode.TERMINATED.getExitCode(),
+          wc.c.cloneAndGetContainerStatus().getExitStatus());
+      assertTrue(wc.c.cloneAndGetContainerStatus().getDiagnostics()
+          .contains("KillRequest"));
+    } finally {
+      if (wc != null) {
+        wc.finished();
+      }
+    }
+  }
   
   @Test
   public void testKillOnLocalizationFailed() throws Exception {
