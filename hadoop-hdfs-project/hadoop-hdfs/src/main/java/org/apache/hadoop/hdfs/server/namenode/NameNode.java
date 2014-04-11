@@ -1569,10 +1569,12 @@ public class NameNode implements NameNodeStatusMXBean {
     @Override
     public void writeLock() {
       namesystem.writeLock();
+      namesystem.lockRetryCache();
     }
     
     @Override
     public void writeUnlock() {
+      namesystem.unlockRetryCache();
       namesystem.writeUnlock();
     }
     

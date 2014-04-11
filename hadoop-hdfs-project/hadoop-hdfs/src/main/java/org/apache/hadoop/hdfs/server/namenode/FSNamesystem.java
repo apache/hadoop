@@ -791,7 +791,19 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   public RetryCache getRetryCache() {
     return retryCache;
   }
-  
+
+  void lockRetryCache() {
+    if (retryCache != null) {
+      retryCache.lock();
+    }
+  }
+
+  void unlockRetryCache() {
+    if (retryCache != null) {
+      retryCache.unlock();
+    }
+  }
+
   /** Whether or not retry cache is enabled */
   boolean hasRetryCache() {
     return retryCache != null;
@@ -6917,8 +6929,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     if (cacheEntry != null && cacheEntry.isSuccess()) {
       return (String) cacheEntry.getPayload();
     }
-    writeLock();
     String snapshotPath = null;
+    writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot create snapshot for " + snapshotRoot);
