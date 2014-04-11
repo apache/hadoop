@@ -35,6 +35,9 @@ Release 2.5.0 - UNRELEASED
     YARN-1889. In Fair Scheduler, avoid creating objects on each call to
     AppSchedulable comparator (Hong Zhiguo via Sandy Ryza)
 
+    YARN-1923. Make Fair Scheduler resource ratio calculations terminate faster
+    (Anubhav Dhoot via Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES 
