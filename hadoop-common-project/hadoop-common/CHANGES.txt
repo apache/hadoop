@@ -2528,6 +2528,9 @@ Release 0.23.11 - UNRELEASED
 
     HADOOP-10332. HttpServer's jetty audit log always logs 200 OK (jeagles)
 
+    HADOOP-8826. Docs still refer to 0.20.205 as stable line (Mit Desai via
+    jeagles)
+
 Release 0.23.10 - UNRELEASED
 
   INCOMPATIBLE CHANGES
