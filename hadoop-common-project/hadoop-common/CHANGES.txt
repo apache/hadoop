@@ -2466,6 +2466,9 @@ Release 0.23.11 - UNRELEASED
 
     HADOOP-10129. Distcp may succeed when it fails (daryn)
 
+    HADOOP-8826. Docs still refer to 0.20.205 as stable line (Mit Desai via
+    jeagles)
+
 Release 0.23.10 - UNRELEASED
 
   INCOMPATIBLE CHANGES
