@@ -7336,7 +7336,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       cacheManager.waitForRescanIfNeeded();
     }
     writeLock();
-    String effectiveDirectiveStr = null;
     Long result = null;
     try {
       checkOperation(OperationCategory.WRITE);
@@ -7348,12 +7347,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         throw new IOException("addDirective: you cannot specify an ID " +
             "for this operation.");
       }
-      CacheDirectiveInfo effectiveDirective =
+      CacheDirectiveInfo effectiveDirective = 
           cacheManager.addDirective(directive, pc, flags);
       getEditLog().logAddCacheDirectiveInfo(effectiveDirective,
           cacheEntry != null);
       result = effectiveDirective.getId();
-      effectiveDirectiveStr = effectiveDirective.toString();
       success = true;
     } finally {
       writeUnlock();
@@ -7361,7 +7359,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         getEditLog().logSync();
       }
       if (isAuditEnabled() && isExternalInvocation()) {
-        logAuditEvent(success, "addCacheDirective", effectiveDirectiveStr, null, null);
+        logAuditEvent(success, "addCacheDirective", null, null, null);
       }
       RetryCache.setState(cacheEntry, success, result);
     }
@@ -7398,8 +7396,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         getEditLog().logSync();
       }
       if (isAuditEnabled() && isExternalInvocation()) {
-        String idStr = "{id: " + directive.getId().toString() + "}";
-        logAuditEvent(success, "modifyCacheDirective", idStr, directive.toString(), null);
+        logAuditEvent(success, "modifyCacheDirective", null, null, null);
       }
       RetryCache.setState(cacheEntry, success);
     }
@@ -7427,8 +7424,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     } finally {
       writeUnlock();
       if (isAuditEnabled() && isExternalInvocation()) {
-        String idStr = "{id: " + id.toString() + "}";
-        logAuditEvent(success, "removeCacheDirective", idStr, null,
+        logAuditEvent(success, "removeCacheDirective", null, null,
             null);
       }
       RetryCache.setState(cacheEntry, success);
@@ -7453,7 +7449,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     } finally {
       readUnlock();
       if (isAuditEnabled() && isExternalInvocation()) {
-        logAuditEvent(success, "listCacheDirectives", filter.toString(), null,
+        logAuditEvent(success, "listCacheDirectives", null, null,
             null);
       }
     }
@@ -7470,7 +7466,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
     writeLock();
     boolean success = false;
-    String poolInfoStr = null;
     try {
       checkOperation(OperationCategory.WRITE);
       if (isInSafeMode()) {
@@ -7481,13 +7476,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         pc.checkSuperuserPrivilege();
       }
       CachePoolInfo info = cacheManager.addCachePool(req);
-      poolInfoStr = info.toString();
       getEditLog().logAddCachePool(info, cacheEntry != null);
       success = true;
     } finally {
       writeUnlock();
       if (isAuditEnabled() && isExternalInvocation()) {
-        logAuditEvent(success, "addCachePool", poolInfoStr, null, null);
+        logAuditEvent(success, "addCachePool", req.getPoolName(), null, null);
       }
       RetryCache.setState(cacheEntry, success);
     }
@@ -7520,8 +7514,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     } finally {
       writeUnlock();
       if (isAuditEnabled() && isExternalInvocation()) {
-        String poolNameStr = "{poolName: " + req.getPoolName() + "}";
-        logAuditEvent(success, "modifyCachePool", poolNameStr, req.toString(), null);
+        logAuditEvent(success, "modifyCachePool", req.getPoolName(), null, null);
       }
       RetryCache.setState(cacheEntry, success);
     }
@@ -7554,8 +7547,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     } finally {
       writeUnlock();
       if (isAuditEnabled() && isExternalInvocation()) {
-        String poolNameStr = "{poolName: " + cachePoolName + "}";
-        logAuditEvent(success, "removeCachePool", poolNameStr, null, null);
+        logAuditEvent(success, "removeCachePool", cachePoolName, null, null);
       }
       RetryCache.setState(cacheEntry, success);
     }
