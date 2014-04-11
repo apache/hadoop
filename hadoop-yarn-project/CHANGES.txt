@@ -36,6 +36,10 @@ Release 2.4.1 - UNRELEASED
     YARN-1903. Set exit code and diagnostics when container is killed at
     NEW/LOCALIZING state. (Zhijie Shen via jianhe)
 
+    YARN-1924. Made ZKRMStateStore updateApplication(Attempt)StateInternal work
+    when Application(Attempt) state hasn't been stored before. (Jian He via
+    zjshen)
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES
