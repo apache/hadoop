@@ -41,6 +41,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.mapreduce.v2.api.MRDelegationTokenIdentifier;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
+import org.apache.hadoop.util.Shell;
 
 @Private
 @Unstable
@@ -65,8 +66,8 @@ public class HistoryServerFileSystemStateStoreService
   private static final String TMP_FILE_PREFIX = "tmp-";
   private static final FsPermission DIR_PERMISSIONS =
       new FsPermission((short)0700);
-  private static final FsPermission FILE_PERMISSIONS =
-      new FsPermission((short)0400);
+  private static final FsPermission FILE_PERMISSIONS = Shell.WINDOWS
+      ? new FsPermission((short) 0700) : new FsPermission((short) 0400);
   private static final int NUM_TOKEN_BUCKETS = 1000;
 
   private FileSystem fs;
