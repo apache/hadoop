@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.apache.hadoop.util.Time.now;
+import static org.apache.hadoop.util.Time.monotonicNow;
 
 import java.net.HttpURLConnection;
 import java.security.PrivilegedExceptionAction;
@@ -116,11 +116,11 @@ public class ImageServlet extends HttpServlet {
               throw new IOException(errorMessage);
             }
             CheckpointFaultInjector.getInstance().beforeGetImageSetsHeaders();
-            long start = now();
+            long start = monotonicNow();
             serveFile(imageFile);
 
             if (metrics != null) { // Metrics non-null only when used inside name node
-              long elapsed = now() - start;
+              long elapsed = monotonicNow() - start;
               metrics.addGetImage(elapsed);
             }
           } else if (parsedParams.isGetEdit()) {
@@ -129,11 +129,11 @@ public class ImageServlet extends HttpServlet {
             
             File editFile = nnImage.getStorage()
                 .findFinalizedEditsFile(startTxId, endTxId);
-            long start = now();
+            long start = monotonicNow();
             serveFile(editFile);
 
             if (metrics != null) { // Metrics non-null only when used inside name node
-              long elapsed = now() - start;
+              long elapsed = monotonicNow() - start;
               metrics.addGetEdit(elapsed);
             }
           }
@@ -469,7 +469,7 @@ public class ImageServlet extends HttpServlet {
 
                 InputStream stream = request.getInputStream();
                 try {
-                  long start = now();
+                  long start = monotonicNow();
                   MD5Hash downloadImageDigest = TransferFsImage
                       .handleUploadImageRequest(request, txid,
                           nnImage.getStorage(), stream,
@@ -478,7 +478,7 @@ public class ImageServlet extends HttpServlet {
                       downloadImageDigest);
                   // Metrics non-null only when used inside name node
                   if (metrics != null) {
-                    long elapsed = now() - start;
+                    long elapsed = monotonicNow() - start;
                     metrics.addPutImage(elapsed);
                   }
                   // Now that we have a new checkpoint, we might be able to
