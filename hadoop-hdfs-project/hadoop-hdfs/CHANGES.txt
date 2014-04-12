@@ -137,6 +137,9 @@ Release 2.4.1 - UNRELEASED
     HDFS-6232. OfflineEditsViewer throws a NPE on edits containing ACL
     modifications (ajisakaa via cmccabe)
 
+    HDFS-6236. ImageServlet should use Time#monotonicNow to measure latency.
+    (cnauroth)
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES
