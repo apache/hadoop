@@ -106,6 +106,9 @@ Release 2.4.1 - UNRELEASED
     YARN-1933. Fixed test issues with TestAMRestart and TestNodeHealthService.
     (Jian He via vinodkv)
 
+    YARN-1928. Fixed a race condition in TestAMRMRPCNodeUpdates which caused it
+    to fail occassionally. (Zhijie Shen via vinodkv)
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES
