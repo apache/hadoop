@@ -24,6 +24,8 @@ import java.util.List;
 
 import junit.framework.Assert;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -37,6 +39,9 @@ import org.junit.Test;
  *  
  */
 public class TestMapReduceJobControl extends HadoopTestCase {
+
+  public static final Log LOG = 
+      LogFactory.getLog(TestMapReduceJobControl.class.getName());
 
   static Path rootDataDir = new Path(
     System.getProperty("test.build.data", "."), "TestData");
@@ -117,6 +122,7 @@ public class TestMapReduceJobControl extends HadoopTestCase {
   }
   
   public void testJobControlWithFailJob() throws Exception {
+    LOG.info("Starting testJobControlWithFailJob");
     Configuration conf = createJobConf();
 
     cleanupData(conf);
@@ -139,6 +145,8 @@ public class TestMapReduceJobControl extends HadoopTestCase {
   }
 
   public void testJobControlWithKillJob() throws Exception {
+    LOG.info("Starting testJobControlWithKillJob");
+
     Configuration conf = createJobConf();
     cleanupData(conf);
     Job job1 = MapReduceTestUtil.createKillJob(conf, outdir_1, indir);
@@ -175,6 +183,8 @@ public class TestMapReduceJobControl extends HadoopTestCase {
   }
 
   public void testJobControl() throws Exception {
+    LOG.info("Starting testJobControl");
+
     Configuration conf = createJobConf();
 
     cleanupData(conf);
@@ -193,10 +203,12 @@ public class TestMapReduceJobControl extends HadoopTestCase {
   
   @Test(timeout = 30000)
   public void testControlledJob() throws Exception {
+    LOG.info("Starting testControlledJob");
+
     Configuration conf = createJobConf();
     cleanupData(conf);
     Job job1 = MapReduceTestUtil.createCopyJob(conf, outdir_1, indir);
-    createDependencies(conf, job1);
+    JobControl theControl = createDependencies(conf, job1);
     while (cjob1.getJobState() != ControlledJob.State.RUNNING) {
       try {
         Thread.sleep(100);
@@ -205,5 +217,10 @@ public class TestMapReduceJobControl extends HadoopTestCase {
       }
     }
     Assert.assertNotNull(cjob1.getMapredJobId());
+
+    // wait till all the jobs complete
+    waitTillAllFinished(theControl);
+    assertEquals("Some jobs failed", 0, theControl.getFailedJobList().size());
+    theControl.stop();
   }
 }

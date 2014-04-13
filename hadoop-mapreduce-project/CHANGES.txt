@@ -60,6 +60,9 @@ Release 2.4.1 - UNRELEASED
     on Windows for temporary files and thus also fix the test-issue with
     TestHistoryServerFileSystemStateStoreService. (Varun Vasudev via vinodkv)
 
+    MAPREDUCE-5828. Fixed a test issue with TestMapReduceJobControl that was
+    causing it to fail on Windows. (vinodkv)
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES
