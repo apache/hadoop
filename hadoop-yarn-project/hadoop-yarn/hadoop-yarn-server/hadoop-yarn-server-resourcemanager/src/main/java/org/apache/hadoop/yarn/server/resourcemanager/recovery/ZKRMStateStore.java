@@ -977,7 +977,7 @@ public class ZKRMStateStore extends RMStateStore {
             Thread.sleep(zkRetryInterval);
             continue;
           }
-          LOG.error("Error while doing ZK operation.", ke);
+          LOG.debug("Error while doing ZK operation.", ke);
           throw ke;
         }
       }

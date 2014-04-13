@@ -50,6 +50,9 @@ Release 2.4.1 - UNRELEASED
     YARN-1907. TestRMApplicationHistoryWriter#testRMWritingMassiveHistory 
     intermittently fails. (Mit Desai via kihwal)
 
+    YARN-1933. Fixed test issues with TestAMRestart and TestNodeHealthService.
+    (Jian He via vinodkv)
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES
