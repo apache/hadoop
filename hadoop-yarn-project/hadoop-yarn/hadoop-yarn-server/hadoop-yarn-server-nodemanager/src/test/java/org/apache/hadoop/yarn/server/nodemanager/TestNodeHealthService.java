@@ -78,11 +78,17 @@ public class TestNodeHealthService {
   }
 
   private void writeNodeHealthScriptFile(String scriptStr, boolean setExecutable)
-      throws IOException {
-    PrintWriter pw = new PrintWriter(new FileOutputStream(nodeHealthscriptFile));
-    pw.println(scriptStr);
-    pw.flush();
-    pw.close();
+          throws IOException {
+    PrintWriter pw = null;
+    try {
+      FileUtil.setWritable(nodeHealthscriptFile, true);
+      FileUtil.setReadable(nodeHealthscriptFile, true);
+      pw = new PrintWriter(new FileOutputStream(nodeHealthscriptFile));
+      pw.println(scriptStr);
+      pw.flush();
+    } finally {
+      pw.close();
+    }
     FileUtil.setExecutable(nodeHealthscriptFile, setExecutable);
   }
 
