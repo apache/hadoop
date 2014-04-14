@@ -1477,7 +1477,8 @@ public class TestDFSShell {
     	private final FsShell shell = new FsShell(conf);
 
     	public String run(int exitcode, String... options) throws IOException {
-    	  String dst = TEST_ROOT_DIR + "/" + fname+ ++count;
+    	  String dst = new File(TEST_ROOT_DIR, fname + ++count)
+            .getAbsolutePath();
     	  String[] args = new String[options.length + 3];
     	  args[0] = "-get"; 
     	  args[args.length - 2] = remotef.toString();
