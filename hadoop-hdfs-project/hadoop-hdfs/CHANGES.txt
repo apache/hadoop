@@ -88,6 +88,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-5669. Storage#tryLock() should check for null before logging successfull message
     (Vinayakumar B via umamahesh)
 
+    HDFS-6237. TestDFSShell#testGet fails on Windows due to invalid file system
+    path. (cnauroth)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
