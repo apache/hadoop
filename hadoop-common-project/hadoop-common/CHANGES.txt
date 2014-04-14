@@ -380,6 +380,9 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10350. BUILDING.txt should mention openssl dependency required
     for hadoop-pipes (Vinayakumar B)
 
+    HADOOP-10495. TestFileUtil fails on Windows due to bad permission
+    assertions. (cnauroth)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
