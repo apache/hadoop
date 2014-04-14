@@ -74,8 +74,9 @@ public class TestDoAsEffectiveUser {
   }
 
   @Before
-  public void setMasterConf() {
+  public void setMasterConf() throws IOException {
     UserGroupInformation.setConfiguration(masterConf);
+    refreshConf(masterConf);
   }
 
   private void configureSuperUserIPAddresses(Configuration conf,
@@ -297,6 +298,8 @@ public class TestDoAsEffectiveUser {
         .setInstance(new TestImpl()).setBindAddress(ADDRESS).setPort(0)
         .setNumHandlers(2).setVerbose(false).build();
 
+    refreshConf(conf);
+
     try {
       server.start();
 
@@ -379,6 +382,8 @@ public class TestDoAsEffectiveUser {
         .setInstance(new TestImpl()).setBindAddress(ADDRESS).setPort(0)
         .setNumHandlers(2).setVerbose(false).build();
     
+    refreshConf(conf);
+
     try {
       server.start();
 

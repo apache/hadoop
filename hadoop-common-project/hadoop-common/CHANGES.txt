@@ -385,6 +385,9 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-10496. Metrics system FileSink can leak file descriptor. (cnauroth)
 
+    HADOOP-10500. TestDoAsEffectiveUser fails on JDK7 due to failure to reset
+    proxy user configuration. (cnauroth)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
