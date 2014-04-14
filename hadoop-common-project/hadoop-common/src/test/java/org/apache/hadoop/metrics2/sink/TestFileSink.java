@@ -105,11 +105,18 @@ public class TestFileSink {
     ms.publishMetricsNow(); // publish the metrics
     ms.stop();
     ms.shutdown();
-    
-    InputStream is = new FileInputStream(outFile);
-    ByteArrayOutputStream baos = new ByteArrayOutputStream((int)outFile.length());
-    IOUtils.copyBytes(is, baos, 1024, true);
-    String outFileContent = new String(baos.toByteArray(), "UTF-8");
+
+    InputStream is = null;
+    ByteArrayOutputStream baos = null;
+    String outFileContent = null;
+    try {
+      is = new FileInputStream(outFile);
+      baos = new ByteArrayOutputStream((int)outFile.length());
+      IOUtils.copyBytes(is, baos, 1024, true);
+      outFileContent = new String(baos.toByteArray(), "UTF-8");
+    } finally {
+      IOUtils.cleanup(null, baos, is);
+    }
 
     // Check the out file content. Should be something like the following:
     //1360244820087 test1.testRecord1: Context=test1, testTag1=testTagValue1, testTag2=testTagValue2, Hostname=myhost, testMetric1=1, testMetric2=2
