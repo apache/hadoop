@@ -91,6 +91,8 @@ Release 2.5.0 - UNRELEASED
     HDFS-6237. TestDFSShell#testGet fails on Windows due to invalid file system
     path. (cnauroth)
 
+    HDFS-6238. TestDirectoryScanner leaks file descriptors. (cnauroth)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
