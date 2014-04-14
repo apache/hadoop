@@ -383,6 +383,8 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10495. TestFileUtil fails on Windows due to bad permission
     assertions. (cnauroth)
 
+    HADOOP-10496. Metrics system FileSink can leak file descriptor. (cnauroth)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
