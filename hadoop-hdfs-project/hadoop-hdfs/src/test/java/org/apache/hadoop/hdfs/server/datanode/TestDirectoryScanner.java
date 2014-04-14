@@ -46,6 +46,7 @@ import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetTestUtil;
+import org.apache.hadoop.io.IOUtils;
 import org.junit.Test;
 
 /**
@@ -85,11 +86,17 @@ public class TestDirectoryScanner {
         File mf = b.getMetaFile();
         // Truncate a block file that has a corresponding metadata file
         if (f.exists() && f.length() != 0 && mf.exists()) {
-          FileOutputStream s = new FileOutputStream(f);
-          FileChannel channel = s.getChannel();
-          channel.truncate(0);
-          LOG.info("Truncated block file " + f.getAbsolutePath());
-          return b.getBlockId();
+          FileOutputStream s = null;
+          FileChannel channel = null;
+          try {
+            s = new FileOutputStream(f);
+            channel = s.getChannel();
+            channel.truncate(0);
+            LOG.info("Truncated block file " + f.getAbsolutePath());
+            return b.getBlockId();
+          } finally {
+            IOUtils.cleanup(LOG, channel, s);
+          }
         }
       }
     }
