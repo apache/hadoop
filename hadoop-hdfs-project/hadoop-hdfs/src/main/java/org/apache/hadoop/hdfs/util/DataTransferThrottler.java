@@ -81,6 +81,19 @@ public class DataTransferThrottler {
    *     number of bytes sent/received since last time throttle was called
    */
   public synchronized void throttle(long numOfBytes) {
+    throttle(numOfBytes, null);
+  }
+
+  /** Given the numOfBytes sent/received since last time throttle was called,
+   * make the current thread sleep if I/O rate is too fast
+   * compared to the given bandwidth.  Allows for optional external cancelation.
+   *
+   * @param numOfBytes
+   *     number of bytes sent/received since last time throttle was called
+   * @param canceler
+   *     optional canceler to check for abort of throttle
+   */
+  public synchronized void throttle(long numOfBytes, Canceler canceler) {
     if ( numOfBytes <= 0 ) {
       return;
     }
@@ -89,6 +102,9 @@ public class DataTransferThrottler {
     bytesAlreadyUsed += numOfBytes;
 
     while (curReserve <= 0) {
+      if (canceler != null && canceler.isCancelled()) {
+        return;
+      }
       long now = monotonicNow();
       long curPeriodEnd = curPeriodStart + period;
 

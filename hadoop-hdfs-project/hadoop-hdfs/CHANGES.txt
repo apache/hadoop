@@ -93,6 +93,9 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6238. TestDirectoryScanner leaks file descriptors. (cnauroth)
 
+    HDFS-6243. HA NameNode transition to active or shutdown may leave lingering
+    image transfer thread. (cnauroth)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

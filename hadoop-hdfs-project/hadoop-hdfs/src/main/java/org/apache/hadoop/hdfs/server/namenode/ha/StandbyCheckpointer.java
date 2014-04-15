@@ -196,13 +196,18 @@ public class StandbyCheckpointer {
       @Override
       public Void call() throws IOException {
         TransferFsImage.uploadImageFromStorage(activeNNAddress, conf,
-            namesystem.getFSImage().getStorage(), imageType, txid);
+            namesystem.getFSImage().getStorage(), imageType, txid, canceler);
         return null;
       }
     });
     executor.shutdown();
     try {
       upload.get();
+    } catch (InterruptedException e) {
+      // The background thread may be blocked waiting in the throttler, so
+      // interrupt it.
+      upload.cancel(true);
+      throw e;
     } catch (ExecutionException e) {
       throw new IOException("Exception during image upload: " + e.getMessage(),
           e.getCause());
