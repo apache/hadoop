@@ -333,6 +333,8 @@ Release 2.5.0 - UNRELEASED
 
   NEW FEATURES
 
+    HADOOP-10498. Add support for proxy server. (daryn)
+
   IMPROVEMENTS
 
     HADOOP-10451. Remove unused field and imports from SaslRpcServer.

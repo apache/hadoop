@@ -258,6 +258,16 @@ public class TestProxyUsers {
     assertEquals (1,hosts.size());
   }
 
+  @Test
+  public void testProxyServer() {
+    Configuration conf = new Configuration();
+    assertFalse(ProxyUsers.isProxyServer("1.1.1.1"));
+    conf.set(ProxyUsers.CONF_HADOOP_PROXYSERVERS, "2.2.2.2, 3.3.3.3");
+    ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
+    assertFalse(ProxyUsers.isProxyServer("1.1.1.1"));
+    assertTrue(ProxyUsers.isProxyServer("2.2.2.2"));
+    assertTrue(ProxyUsers.isProxyServer("3.3.3.3"));
+  }
 
   private void assertNotAuthorized(UserGroupInformation proxyUgi, String host) {
     try {
