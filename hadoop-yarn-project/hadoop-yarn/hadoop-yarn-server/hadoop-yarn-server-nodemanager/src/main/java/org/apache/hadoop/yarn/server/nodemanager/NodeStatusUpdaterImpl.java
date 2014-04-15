@@ -343,10 +343,6 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
           + ", " + nodeHealthStatus.getHealthReport());
     }
     List<ContainerStatus> containersStatuses = getContainerStatuses();
-    if (LOG.isDebugEnabled()) {
-      LOG.debug(this.nodeId + " sending out status for "
-          + containersStatuses.size() + " containers");
-    }
     NodeStatus nodeStatus =
         NodeStatus.newInstance(nodeId, responseId, containersStatuses,
           createKeepAliveApplicationList(), nodeHealthStatus);
@@ -373,7 +369,8 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
       }
     }
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Sending out container statuses: " + containerStatuses);
+      LOG.debug("Sending out " + containerStatuses.size()
+          + " container statuses: " + containerStatuses);
     }
     return containerStatuses;
   }
