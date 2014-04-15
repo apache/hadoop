@@ -231,12 +231,19 @@ public class FiCaSchedulerNode extends SchedulerNode {
             " on node " + this);
       }
 
-      LOG.info("Updated reserved container " + 
-          reservedContainer.getContainer().getId() + " on node " + 
-          this + " for application " + application);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Updated reserved container "
+            + reservedContainer.getContainer().getId() + " on node " + this
+            + " for application attempt "
+            + application.getApplicationAttemptId());
+      }
     } else {
-      LOG.info("Reserved container " + reservedContainer.getContainer().getId() + 
-          " on node " + this + " for application " + application);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Reserved container "
+            + reservedContainer.getContainer().getId() + " on node " + this
+            + " for application attempt "
+            + application.getApplicationAttemptId());
+      }
     }
     this.reservedContainer = reservedContainer;
   }

@@ -73,6 +73,8 @@ Release 2.4.1 - UNRELEASED
 
   IMPROVEMENTS
 
+    YARN-1892. Improved some logs in the scheduler. (Jian He via zjshen)
+
   OPTIMIZATIONS
 
   BUG FIXES
