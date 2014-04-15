@@ -46,6 +46,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6224. Add a unit test to TestAuditLogger for file permissions
     passed to logAuditEvent. (Charles Lamb via wang)
 
+    HDFS-6194. Create new tests for ByteRangeInputStream.
+    (Akira Ajisaka via wheat9)
+
   OPTIMIZATIONS
 
   BUG FIXES 
