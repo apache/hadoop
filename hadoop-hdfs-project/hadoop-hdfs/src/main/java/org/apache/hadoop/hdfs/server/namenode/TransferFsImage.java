@@ -51,6 +51,7 @@ import org.apache.hadoop.hdfs.server.common.StorageErrorReporter;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
+import org.apache.hadoop.hdfs.util.Canceler;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.hdfs.web.URLConnectionFactory;
 import org.apache.hadoop.io.IOUtils;
@@ -193,14 +194,32 @@ public class TransferFsImage {
    * @param storage the storage directory to transfer the image from
    * @param nnf the NameNodeFile type of the image
    * @param txid the transaction ID of the image to be uploaded
+   * @throws IOException if there is an I/O error
    */
   public static void uploadImageFromStorage(URL fsName, Configuration conf,
       NNStorage storage, NameNodeFile nnf, long txid) throws IOException {
-    
+    uploadImageFromStorage(fsName, conf, storage, nnf, txid, null);
+  }
+
+  /**
+   * Requests that the NameNode download an image from this node.  Allows for
+   * optional external cancelation.
+   *
+   * @param fsName the http address for the remote NN
+   * @param conf Configuration
+   * @param storage the storage directory to transfer the image from
+   * @param nnf the NameNodeFile type of the image
+   * @param txid the transaction ID of the image to be uploaded
+   * @param canceler optional canceler to check for abort of upload
+   * @throws IOException if there is an I/O error or cancellation
+   */
+  public static void uploadImageFromStorage(URL fsName, Configuration conf,
+      NNStorage storage, NameNodeFile nnf, long txid, Canceler canceler)
+      throws IOException {
     URL url = new URL(fsName, ImageServlet.PATH_SPEC);
     long startTime = Time.monotonicNow();
     try {
-      uploadImage(url, conf, storage, nnf, txid);
+      uploadImage(url, conf, storage, nnf, txid, canceler);
     } catch (HttpPutFailedException e) {
       if (e.getResponseCode() == HttpServletResponse.SC_CONFLICT) {
         // this is OK - this means that a previous attempt to upload
@@ -223,7 +242,8 @@ public class TransferFsImage {
    * Uploads the imagefile using HTTP PUT method
    */
   private static void uploadImage(URL url, Configuration conf,
-      NNStorage storage, NameNodeFile nnf, long txId) throws IOException {
+      NNStorage storage, NameNodeFile nnf, long txId, Canceler canceler)
+      throws IOException {
 
     File imageFile = storage.findImageFile(nnf, txId);
     if (imageFile == null) {
@@ -267,7 +287,7 @@ public class TransferFsImage {
       ImageServlet.setVerificationHeadersForPut(connection, imageFile);
 
       // Write the file to output stream.
-      writeFileToPutRequest(conf, connection, imageFile);
+      writeFileToPutRequest(conf, connection, imageFile, canceler);
 
       int responseCode = connection.getResponseCode();
       if (responseCode != HttpURLConnection.HTTP_OK) {
@@ -286,7 +306,7 @@ public class TransferFsImage {
   }
 
   private static void writeFileToPutRequest(Configuration conf,
-      HttpURLConnection connection, File imageFile)
+      HttpURLConnection connection, File imageFile, Canceler canceler)
       throws FileNotFoundException, IOException {
     connection.setRequestProperty(CONTENT_TYPE, "application/octet-stream");
     connection.setRequestProperty(CONTENT_TRANSFER_ENCODING, "binary");
@@ -294,7 +314,7 @@ public class TransferFsImage {
     FileInputStream input = new FileInputStream(imageFile);
     try {
       copyFileToStream(output, imageFile, input,
-          ImageServlet.getThrottler(conf));
+          ImageServlet.getThrottler(conf), canceler);
     } finally {
       IOUtils.closeStream(input);
       IOUtils.closeStream(output);
@@ -308,6 +328,12 @@ public class TransferFsImage {
   public static void copyFileToStream(OutputStream out, File localfile,
       FileInputStream infile, DataTransferThrottler throttler)
     throws IOException {
+    copyFileToStream(out, localfile, infile, throttler, null);
+  }
+
+  private static void copyFileToStream(OutputStream out, File localfile,
+      FileInputStream infile, DataTransferThrottler throttler,
+      Canceler canceler) throws IOException {
     byte buf[] = new byte[HdfsConstants.IO_FILE_BUFFER_SIZE];
     try {
       CheckpointFaultInjector.getInstance()
@@ -324,6 +350,10 @@ public class TransferFsImage {
       }
       int num = 1;
       while (num > 0) {
+        if (canceler != null && canceler.isCancelled()) {
+          throw new SaveNamespaceCancelledException(
+            canceler.getCancellationReason());
+        }
         num = infile.read(buf);
         if (num <= 0) {
           break;
@@ -337,7 +367,7 @@ public class TransferFsImage {
         
         out.write(buf, 0, num);
         if (throttler != null) {
-          throttler.throttle(num);
+          throttler.throttle(num, canceler);
         }
       }
     } finally {
