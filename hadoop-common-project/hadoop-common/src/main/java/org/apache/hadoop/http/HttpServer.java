@@ -658,6 +658,14 @@ public class HttpServer implements FilterContainer {
         LOG.info("HttpServer.start() threw a MultiException", ex);
         throw ex;
       }
+      // Make sure there is no handler failures.
+      Handler[] handlers = webServer.getHandlers();
+      for (int i = 0; i < handlers.length; i++) {
+        if (handlers[i].isFailed()) {
+          throw new IOException(
+              "Problem in starting http server. Server handlers failed");
+        }
+      }
     } catch (IOException e) {
       throw e;
     } catch (Exception e) {

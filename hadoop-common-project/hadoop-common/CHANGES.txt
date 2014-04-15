@@ -15,6 +15,9 @@ Release 0.23.11 - UNRELEASED
     HADOOP-10454. Provide FileContext version of har file system. (kihwal
     via jeagles)
 
+    HADOOP-7688. When a servlet filter throws an exception in init(..), 
+    the Jetty server failed silently. (Uma Maheswara Rao G via kihwal)
+
   OPTIMIZATIONS
     
   BUG FIXES
