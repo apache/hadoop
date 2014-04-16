@@ -430,10 +430,18 @@ public class DatanodeWebHdfsMethods {
         Math.min(length.getValue(), in.getVisibleLength() - offset.getValue()) :
         in.getVisibleLength() - offset.getValue();
 
+      // jetty 6 reserves 12 bytes in the out buffer for chunked responses
+      // (file length > 2GB) which causes extremely poor performance when
+      // 12 bytes of the output spill into another buffer which results
+      // in a big and little write
+      int outBufferSize = response.getBufferSize();
+      if (n > Integer.MAX_VALUE) {
+        outBufferSize -= 12;
+      }
       /**
        * Allow the Web UI to perform an AJAX request to get the data.
        */
-      return Response.ok(new OpenEntity(in, n, dfsclient))
+      return Response.ok(new OpenEntity(in, n, outBufferSize, dfsclient))
           .type(MediaType.APPLICATION_OCTET_STREAM)
           .header("Access-Control-Allow-Methods", "GET")
           .header("Access-Control-Allow-Origin", "*")
