@@ -1606,6 +1606,9 @@ Release 0.23.10 - UNRELEASED
     MAPREDUCE-5640. Rename TestLineRecordReader in jobclient module (Jason Lowe
     via jeagles)
 
+    MAPREDUCE-3191. docs for map output compression incorrectly reference
+    SequenceFile (Chen He via jeagles)
+
   OPTIMIZATIONS
 
     MAPREDUCE-1981. Improve getSplits performance by using listLocatedStatus
