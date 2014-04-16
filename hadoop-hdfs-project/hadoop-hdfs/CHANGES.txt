@@ -301,6 +301,8 @@ Release 2.5.0 - UNRELEASED
 
   OPTIMIZATIONS
 
+    HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)
+
   BUG FIXES 
 
     HDFS-6112. NFS Gateway docs are incorrect for allowed hosts configuration.
