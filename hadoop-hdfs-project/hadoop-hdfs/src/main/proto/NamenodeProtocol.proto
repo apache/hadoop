@@ -29,7 +29,7 @@ option java_package = "org.apache.hadoop.hdfs.protocol.proto";
 option java_outer_classname = "NamenodeProtocolProtos";
 option java_generic_services = true;
 option java_generate_equals_and_hash = true;
-package hadoop.hdfs;
+package hadoop.hdfs.namenode;
 
 import "hdfs.proto";
 

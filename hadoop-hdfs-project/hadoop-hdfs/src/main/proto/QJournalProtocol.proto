@@ -26,7 +26,7 @@ option java_package = "org.apache.hadoop.hdfs.qjournal.protocol";
 option java_outer_classname = "QJournalProtocolProtos";
 option java_generic_services = true;
 option java_generate_equals_and_hash = true;
-package hadoop.hdfs;
+package hadoop.hdfs.qjournal;
 
 import "hdfs.proto";
 
