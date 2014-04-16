@@ -667,7 +667,6 @@ public class JobConf extends Configuration {
 
   /**
    * Should the map outputs be compressed before transfer?
-   * Uses the SequenceFile compression.
    * 
    * @param compress should the map outputs be compressed?
    */

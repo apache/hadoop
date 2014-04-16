@@ -8,6 +8,9 @@ Release 0.23.11 - UNRELEASED
     
   IMPROVEMENTS
 
+    MAPREDUCE-3191. docs for map output compression incorrectly reference
+    SequenceFile (Chen He via jeagles)
+
   OPTIMIZATIONS
     
   BUG FIXES
