@@ -125,6 +125,9 @@ Trunk (Unreleased)
 
     HDFS-6228. comments typo fix for FsDatasetImpl.java (zhaoyunjiong via umamahesh)
 
+    HDFS-6219. Proxy superuser configuration should use true client IP for
+    address checks. (daryn via kihwal)
+
   OPTIMIZATIONS
 
   BUG FIXES
