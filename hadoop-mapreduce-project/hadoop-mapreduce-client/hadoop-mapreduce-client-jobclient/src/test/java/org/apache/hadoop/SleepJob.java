@@ -219,7 +219,6 @@ public class SleepJob extends Configured implements Tool {
     Job job = Job.getInstance(conf, "sleep");
     job.setNumReduceTasks(numReducer);
     job.setJarByClass(SleepJob.class);
-    job.setNumReduceTasks(numReducer);
     job.setMapperClass(SleepMapper.class);
     job.setMapOutputKeyClass(IntWritable.class);
     job.setMapOutputValueClass(NullWritable.class);
