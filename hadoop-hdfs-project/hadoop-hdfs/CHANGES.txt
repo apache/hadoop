@@ -99,6 +99,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6243. HA NameNode transition to active or shutdown may leave lingering
     image transfer thread. (cnauroth)
 
+    HDFS-5409. TestOfflineEditsViewer#testStored fails on Windows due to CRLF
+    line endings in editsStored.xml from git checkout. (cnauroth)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
