@@ -125,9 +125,6 @@ Trunk (Unreleased)
 
     HDFS-6228. comments typo fix for FsDatasetImpl.java (zhaoyunjiong via umamahesh)
 
-    HDFS-6219. Proxy superuser configuration should use true client IP for
-    address checks. (daryn via kihwal)
-
   OPTIMIZATIONS
 
   BUG FIXES
@@ -301,6 +298,9 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6194. Create new tests for ByteRangeInputStream.
     (Akira Ajisaka via wheat9)
+
+    HDFS-6219. Proxy superuser configuration should use true client IP for
+    address checks. (daryn via kihwal)
 
   OPTIMIZATIONS
 
