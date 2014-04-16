@@ -126,6 +126,9 @@ Release 2.4.1 - UNRELEASED
     YARN-1928. Fixed a race condition in TestAMRMRPCNodeUpdates which caused it
     to fail occassionally. (Zhijie Shen via vinodkv)
 
+    YARN-1934. Fixed a potential NPE in ZKRMStateStore caused by handling
+    Disconnected event from ZK. (Karthik Kambatla via jianhe)
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES
