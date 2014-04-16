@@ -1897,7 +1897,7 @@ public abstract class Server {
         // authentication
         if (user != null && user.getRealUser() != null
             && (authMethod != AuthMethod.TOKEN)) {
-          ProxyUsers.authorize(user, this.getHostAddress(), conf);
+          ProxyUsers.authorize(user, this.getHostAddress());
         }
         authorize(user, protocolName, getHostInetAddress());
         if (LOG.isDebugEnabled()) {

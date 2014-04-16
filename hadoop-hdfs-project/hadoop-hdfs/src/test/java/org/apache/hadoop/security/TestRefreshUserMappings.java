@@ -179,14 +179,14 @@ public class TestRefreshUserMappings {
     
     // check before
     try {
-      ProxyUsers.authorize(ugi1, "127.0.0.1", config);
+      ProxyUsers.authorize(ugi1, "127.0.0.1");
       fail("first auth for " + ugi1.getShortUserName() + " should've failed ");
     } catch (AuthorizationException e) {
       // expected
       System.err.println("auth for " + ugi1.getUserName() + " failed");
     }
     try {
-      ProxyUsers.authorize(ugi2, "127.0.0.1", config);
+      ProxyUsers.authorize(ugi2, "127.0.0.1");
       System.err.println("auth for " + ugi2.getUserName() + " succeeded");
       // expected
     } catch (AuthorizationException e) {
@@ -204,14 +204,14 @@ public class TestRefreshUserMappings {
     admin.run(args);
     
     try {
-      ProxyUsers.authorize(ugi2, "127.0.0.1", config);
+      ProxyUsers.authorize(ugi2, "127.0.0.1");
       fail("second auth for " + ugi2.getShortUserName() + " should've failed ");
     } catch (AuthorizationException e) {
       // expected
       System.err.println("auth for " + ugi2.getUserName() + " failed");
     }
     try {
-      ProxyUsers.authorize(ugi1, "127.0.0.1", config);
+      ProxyUsers.authorize(ugi1, "127.0.0.1");
       System.err.println("auth for " + ugi1.getUserName() + " succeeded");
       // expected
     } catch (AuthorizationException e) {

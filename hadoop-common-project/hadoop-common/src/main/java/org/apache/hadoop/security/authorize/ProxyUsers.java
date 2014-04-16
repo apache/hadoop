@@ -129,11 +129,10 @@ public class ProxyUsers {
    * 
    * @param user ugi of the effective or proxy user which contains a real user
    * @param remoteAddress the ip address of client
-   * @param newConf configuration
    * @throws AuthorizationException
    */
   public static synchronized void authorize(UserGroupInformation user, 
-      String remoteAddress, Configuration newConf) throws AuthorizationException {
+      String remoteAddress) throws AuthorizationException {
 
     if(!init) {
       refreshSuperUserGroupsConfiguration(); 
