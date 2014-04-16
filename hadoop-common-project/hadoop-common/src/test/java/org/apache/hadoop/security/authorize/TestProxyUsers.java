@@ -271,7 +271,7 @@ public class TestProxyUsers {
 
   private void assertNotAuthorized(UserGroupInformation proxyUgi, String host) {
     try {
-      ProxyUsers.authorize(proxyUgi, host, null);
+      ProxyUsers.authorize(proxyUgi, host);
       fail("Allowed authorization of " + proxyUgi + " from " + host);
     } catch (AuthorizationException e) {
       // Expected
@@ -280,7 +280,7 @@ public class TestProxyUsers {
   
   private void assertAuthorized(UserGroupInformation proxyUgi, String host) {
     try {
-      ProxyUsers.authorize(proxyUgi, host, null);
+      ProxyUsers.authorize(proxyUgi, host);
     } catch (AuthorizationException e) {
       fail("Did not allowed authorization of " + proxyUgi + " from " + host);
     }

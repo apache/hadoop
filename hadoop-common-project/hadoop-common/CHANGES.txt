@@ -390,6 +390,9 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10500. TestDoAsEffectiveUser fails on JDK7 due to failure to reset
     proxy user configuration. (cnauroth)
 
+    HADOOP-10499. Remove unused parameter from ProxyUsers.authorize().
+    (Benoy Antony via cnauroth)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
