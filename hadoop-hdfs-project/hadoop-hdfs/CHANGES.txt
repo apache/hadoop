@@ -49,6 +49,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6194. Create new tests for ByteRangeInputStream.
     (Akira Ajisaka via wheat9)
 
+    HDFS-6219. Proxy superuser configuration should use true client IP for
+    address checks. (daryn via kihwal)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)
