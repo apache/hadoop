@@ -126,6 +126,9 @@ Release 2.4.1 - UNRELEASED
     YARN-1947. TestRMDelegationTokens#testRMDTMasterKeyStateOnRollingMasterKey 
     is failing intermittently. (Jian He via junping_du)
 
+    YARN-1281. Fixed TestZKRMStateStoreZKClientConnections to not fail
+    intermittently due to ZK-client timeouts. (Tsuyoshi Ozawa via vinodkv) 
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES
