@@ -190,6 +190,9 @@ public class MemoryRMStateStore extends RMStateStore {
     }
     rmDTState.put(rmDTIdentifier, renewDate);
     state.rmSecretManagerState.dtSequenceNumber = latestSequenceNumber;
+    LOG.info("Store RMDT with sequence number "
+        + rmDTIdentifier.getSequenceNumber()
+        + ". And the latest sequence number is " + latestSequenceNumber);
   }
 
   @Override
@@ -198,6 +201,8 @@ public class MemoryRMStateStore extends RMStateStore {
     Map<RMDelegationTokenIdentifier, Long> rmDTState =
         state.rmSecretManagerState.getTokenState();
     rmDTState.remove(rmDTIdentifier);
+    LOG.info("Remove RMDT with sequence number "
+        + rmDTIdentifier.getSequenceNumber());
   }
 
   @Override
@@ -207,6 +212,8 @@ public class MemoryRMStateStore extends RMStateStore {
     removeRMDelegationTokenState(rmDTIdentifier);
     storeRMDelegationTokenAndSequenceNumberState(
         rmDTIdentifier, renewDate, latestSequenceNumber);
+    LOG.info("Update RMDT with sequence number "
+        + rmDTIdentifier.getSequenceNumber());
   }
 
   @Override
@@ -223,12 +230,14 @@ public class MemoryRMStateStore extends RMStateStore {
       throw e;
     }
     state.getRMDTSecretManagerState().getMasterKeyState().add(delegationKey);
-    LOG.info("rmDTMasterKeyState SIZE: " + rmDTMasterKeyState.size());
+    LOG.info("Store RMDT master key with key id: " + delegationKey.getKeyId()
+        + ". Currently rmDTMasterKeyState size: " + rmDTMasterKeyState.size());
   }
 
   @Override
   public synchronized void removeRMDTMasterKeyState(DelegationKey delegationKey)
       throws Exception {
+    LOG.info("Remove RMDT master key with key id: " + delegationKey.getKeyId());
     Set<DelegationKey> rmDTMasterKeyState =
         state.rmSecretManagerState.getMasterKeyState();
     rmDTMasterKeyState.remove(delegationKey);

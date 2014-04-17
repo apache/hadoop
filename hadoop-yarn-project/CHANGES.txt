@@ -67,6 +67,9 @@ Release 2.4.1 - UNRELEASED
     YARN-1750. TestNodeStatusUpdater#testNMRegistration is incorrect in test 
     case. (Wangda Tan via junping_du)
 
+    YARN-1947. TestRMDelegationTokens#testRMDTMasterKeyStateOnRollingMasterKey 
+    is failing intermittently. (Jian He via junping_du)
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES
