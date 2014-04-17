@@ -109,6 +109,9 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-4909. Avoid protocol buffer RPC namespace clashes. (cmccabe)
 
+    HDFS-6153. Document "fileId" and "childrenNum" fields in the FileStatus Json schema
+    (Akira Ajisaka via vinayakumarb)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
