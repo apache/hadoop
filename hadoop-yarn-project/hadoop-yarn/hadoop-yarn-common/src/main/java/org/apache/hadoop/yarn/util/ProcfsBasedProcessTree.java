@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.util;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
@@ -736,7 +735,7 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
       fReader = new FileReader(file);
       in = new BufferedReader(fReader);
       ProcessSmapMemoryInfo memoryMappingInfo = null;
-      List<String> lines = IOUtils.readLines(new FileInputStream(file));
+      List<String> lines = IOUtils.readLines(in);
       for (String line : lines) {
         line = line.trim();
         try {
