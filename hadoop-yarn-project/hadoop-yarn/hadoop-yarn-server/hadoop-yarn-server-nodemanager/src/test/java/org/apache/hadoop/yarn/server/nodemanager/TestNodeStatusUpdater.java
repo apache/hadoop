@@ -261,10 +261,12 @@ public class TestNodeStatusUpdater {
         this.context.getContainers().put(secondContainerID, container);
       } else if (heartBeatID == 3) {
         // Checks on the RM end
-        Assert.assertEquals("Number of applications should only be one!", 1,
+        Assert.assertEquals("Number of applications should have two!", 2,
             appToContainers.size());
-        Assert.assertEquals("Number of container for the app should be two!",
-            2, appToContainers.get(appId2).size());
+        Assert.assertEquals("Number of container for the app-1 should be only one!",
+            1, appToContainers.get(appId1).size());
+        Assert.assertEquals("Number of container for the app-2 should be only one!",
+            1, appToContainers.get(appId2).size());
 
         // Checks on the NM end
         ConcurrentMap<ContainerId, Container> activeContainers =
