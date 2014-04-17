@@ -53,6 +53,9 @@ Release 2.5.0 - UNRELEASED
     YARN-1923. Make Fair Scheduler resource ratio calculations terminate faster
     (Anubhav Dhoot via Sandy Ryza)
 
+    YARN-1870. FileInputStream is not closed in ProcfsBasedProcessTree#constructProcessSMAPInfo. 
+    (Fengdong Yu via junping_du)
+
   OPTIMIZATIONS
 
   BUG FIXES 
