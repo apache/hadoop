@@ -129,6 +129,9 @@ Release 2.4.1 - UNRELEASED
     YARN-1934. Fixed a potential NPE in ZKRMStateStore caused by handling
     Disconnected event from ZK. (Karthik Kambatla via jianhe)
 
+    YARN-1931. Private API change in YARN-1824 in 2.4 broke compatibility 
+    with previous releases (Sandy Ryza via tgraves)
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES
