@@ -85,7 +85,7 @@ public class TestDistCpViewFs {
       addEntries(listFile, "singlefile1/file1");
       createFiles("singlefile1/file1");
 
-      runTest(listFile, target, sync);
+      runTest(listFile, target, false, sync);
 
       checkResult(target, 1);
     } catch (IOException e) {
@@ -108,7 +108,7 @@ public class TestDistCpViewFs {
       addEntries(listFile, "singlefile1/file1");
       createFiles("singlefile1/file1", target.toString());
 
-      runTest(listFile, target, sync);
+      runTest(listFile, target, false, sync);
 
       checkResult(target, 1);
     } catch (IOException e) {
@@ -132,7 +132,7 @@ public class TestDistCpViewFs {
       createFiles("singlefile2/file2");
       mkdirs(target.toString());
 
-      runTest(listFile, target, sync);
+      runTest(listFile, target, true, sync);
 
       checkResult(target, 1, "file2");
     } catch (IOException e) {
@@ -155,7 +155,7 @@ public class TestDistCpViewFs {
       addEntries(listFile, "singledir");
       mkdirs(root + "/singledir/dir1");
 
-      runTest(listFile, target, sync);
+      runTest(listFile, target, false, sync);
 
       checkResult(target, 1, "dir1");
     } catch (IOException e) {
@@ -174,7 +174,7 @@ public class TestDistCpViewFs {
       mkdirs(root + "/singledir/dir1");
       mkdirs(target.toString());
 
-      runTest(listFile, target, false);
+      runTest(listFile, target, true, false);
 
       checkResult(target, 1, "singledir/dir1");
     } catch (IOException e) {
@@ -193,7 +193,7 @@ public class TestDistCpViewFs {
       mkdirs(root + "/Usingledir/Udir1");
       mkdirs(target.toString());
 
-      runTest(listFile, target, true);
+      runTest(listFile, target, true, true);
 
       checkResult(target, 1, "Udir1");
     } catch (IOException e) {
@@ -217,7 +217,7 @@ public class TestDistCpViewFs {
       createFiles("multifile/file3", "multifile/file4", "multifile/file5");
       mkdirs(target.toString());
 
-      runTest(listFile, target, sync);
+      runTest(listFile, target, true, sync);
 
       checkResult(target, 3, "file3", "file4", "file5");
     } catch (IOException e) {
@@ -240,7 +240,7 @@ public class TestDistCpViewFs {
       addEntries(listFile, "multifile/file3", "multifile/file4", "multifile/file5");
       createFiles("multifile/file3", "multifile/file4", "multifile/file5");
 
-      runTest(listFile, target, sync);
+      runTest(listFile, target, false, sync);
 
       checkResult(target, 3, "file3", "file4", "file5");
     } catch (IOException e) {
@@ -259,7 +259,7 @@ public class TestDistCpViewFs {
       createFiles("multifile/file3", "multifile/file4", "multifile/file5");
       mkdirs(target.toString(), root + "/singledir/dir1");
 
-      runTest(listFile, target, false);
+      runTest(listFile, target, true, false);
 
       checkResult(target, 2, "multifile/file3", "multifile/file4", "multifile/file5", "singledir/dir1");
     } catch (IOException e) {
@@ -278,7 +278,7 @@ public class TestDistCpViewFs {
       createFiles("Umultifile/Ufile3", "Umultifile/Ufile4", "Umultifile/Ufile5");
       mkdirs(target.toString(), root + "/Usingledir/Udir1");
 
-      runTest(listFile, target, true);
+      runTest(listFile, target, true, true);
 
       checkResult(target, 4, "Ufile3", "Ufile4", "Ufile5", "Udir1");
     } catch (IOException e) {
@@ -297,7 +297,7 @@ public class TestDistCpViewFs {
       createFiles("multifile/file3", "multifile/file4", "multifile/file5");
       mkdirs(root + "/singledir/dir1");
 
-      runTest(listFile, target, false);
+      runTest(listFile, target, false, false);
 
       checkResult(target, 2, "multifile/file3", "multifile/file4",
           "multifile/file5", "singledir/dir1");
@@ -317,7 +317,7 @@ public class TestDistCpViewFs {
       createFiles("multifile/file3", "multifile/file4", "multifile/file5");
       mkdirs(root + "/singledir/dir1");
 
-      runTest(listFile, target, true);
+      runTest(listFile, target, false, true);
 
       checkResult(target, 4, "file3", "file4", "file5", "dir1");
     } catch (IOException e) {
@@ -338,7 +338,7 @@ public class TestDistCpViewFs {
       createFiles("multifile/file3", "multifile/file4", "multifile/file5");
       createFiles("singledir/dir2/file6");
 
-      runTest(listFile, target, false);
+      runTest(listFile, target, false, false);
 
       checkResult(target, 2, "multifile/file3", "multifile/file4", "multifile/file5",
           "singledir/dir2/file6");
@@ -361,7 +361,7 @@ public class TestDistCpViewFs {
       createFiles("multifile/file3", "multifile/file4", "multifile/file5");
       createFiles("singledir/dir2/file6");
 
-      runTest(listFile, target, true);
+      runTest(listFile, target, false, true);
 
       checkResult(target, 4, "file3", "file4", "file5", "dir2/file6");
     } catch (IOException e) {
@@ -384,7 +384,7 @@ public class TestDistCpViewFs {
       createFiles("singledir1/dir3/file7", "singledir1/dir3/file8",
           "singledir1/dir3/file9");
 
-      runTest(listFile, target, false);
+      runTest(listFile, target, false, false);
 
       checkResult(target, 4, "file3", "file4", "file5",
           "dir3/file7", "dir3/file8", "dir3/file9");
@@ -408,7 +408,7 @@ public class TestDistCpViewFs {
       createFiles("singledir1/dir3/file7", "singledir1/dir3/file8",
           "singledir1/dir3/file9");
 
-      runTest(listFile, target, true);
+      runTest(listFile, target, false, true);
 
       checkResult(target, 6, "file3", "file4", "file5",
           "file7", "file8", "file9");
@@ -460,9 +460,11 @@ public class TestDistCpViewFs {
     }
   }
 
-  private void runTest(Path listFile, Path target, boolean sync) throws IOException {
+  private void runTest(Path listFile, Path target, boolean targetExists, 
+      boolean sync) throws IOException {
     DistCpOptions options = new DistCpOptions(listFile, target);
     options.setSyncFolder(sync);
+    options.setTargetPathExists(targetExists);
     try {
       new DistCp(getConf(), options).execute();
     } catch (Exception e) {

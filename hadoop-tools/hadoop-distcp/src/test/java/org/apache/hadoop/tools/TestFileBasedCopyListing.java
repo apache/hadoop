@@ -112,7 +112,7 @@ public class TestFileBasedCopyListing {
       addEntries(listFile, "/tmp/singlefile1/file1");
       createFiles("/tmp/singlefile1/file1");
 
-      runTest(listFile, target, sync);
+      runTest(listFile, target, false, sync);
 
       checkResult(listFile, 0);
     } catch (IOException e) {
@@ -138,7 +138,7 @@ public class TestFileBasedCopyListing {
       addEntries(listFile, "/tmp/singlefile1/file1");
       createFiles("/tmp/singlefile1/file1", target.toString());
 
-      runTest(listFile, target, sync);
+      runTest(listFile, target, false, sync);
 
       checkResult(listFile, 0);
     } catch (IOException e) {
@@ -165,7 +165,7 @@ public class TestFileBasedCopyListing {
       createFiles("/tmp/singlefile2/file2");
       mkdirs(target.toString());
 
-      runTest(listFile, target, sync);
+      runTest(listFile, target, true, sync);
 
       checkResult(listFile, 1);
     } catch (IOException e) {
@@ -191,7 +191,7 @@ public class TestFileBasedCopyListing {
       addEntries(listFile, "/tmp/singledir");
       mkdirs("/tmp/singledir/dir1");
 
-      runTest(listFile, target, sync);
+      runTest(listFile, target, false, sync);
 
       checkResult(listFile, 1);
     } catch (IOException e) {
@@ -213,7 +213,7 @@ public class TestFileBasedCopyListing {
       mkdirs("/tmp/singledir/dir1");
       mkdirs(target.toString());
 
-      runTest(listFile, target);
+      runTest(listFile, target, true);
 
       checkResult(listFile, 1);
     } catch (IOException e) {
@@ -235,7 +235,7 @@ public class TestFileBasedCopyListing {
       mkdirs("/tmp/Usingledir/Udir1");
       mkdirs(target.toString());
 
-      runTest(listFile, target, true);
+      runTest(listFile, target, true, true);
 
       checkResult(listFile, 1);
     } catch (IOException e) {
@@ -262,7 +262,7 @@ public class TestFileBasedCopyListing {
       createFiles("/tmp/multifile/file3", "/tmp/multifile/file4", "/tmp/multifile/file5");
       mkdirs(target.toString());
 
-      runTest(listFile, target, sync);
+      runTest(listFile, target, true, sync);
 
       checkResult(listFile, 3);
     } catch (IOException e) {
@@ -288,7 +288,7 @@ public class TestFileBasedCopyListing {
       addEntries(listFile, "/tmp/multifile/file3", "/tmp/multifile/file4", "/tmp/multifile/file5");
       createFiles("/tmp/multifile/file3", "/tmp/multifile/file4", "/tmp/multifile/file5");
 
-      runTest(listFile, target, sync);
+      runTest(listFile, target, false, sync);
 
       checkResult(listFile, 3);
     } catch (IOException e) {
@@ -310,7 +310,7 @@ public class TestFileBasedCopyListing {
       createFiles("/tmp/multifile/file3", "/tmp/multifile/file4", "/tmp/multifile/file5");
       mkdirs(target.toString(), "/tmp/singledir/dir1");
 
-      runTest(listFile, target);
+      runTest(listFile, target, true);
 
       checkResult(listFile, 4);
     } catch (IOException e) {
@@ -440,7 +440,7 @@ public class TestFileBasedCopyListing {
           "/tmp/singledir1/dir3/file9");
       mkdirs(target.toString());
 
-      runTest(listFile, target);
+      runTest(listFile, target, true);
 
       checkResult(listFile, 6);
     } catch (IOException e) {
@@ -507,14 +507,17 @@ public class TestFileBasedCopyListing {
     }
   }
 
-  private void runTest(Path listFile, Path target) throws IOException {
-    runTest(listFile, target, true);
+  private void runTest(Path listFile, Path target,
+      boolean targetExists) throws IOException {
+    runTest(listFile, target, targetExists, true);
   }
 
-  private void runTest(Path listFile, Path target, boolean sync) throws IOException {
+  private void runTest(Path listFile, Path target, boolean targetExists,
+      boolean sync) throws IOException {
     CopyListing listing = new FileBasedCopyListing(config, CREDENTIALS);
     DistCpOptions options = new DistCpOptions(listFile, target);
     options.setSyncFolder(sync);
+    options.setTargetPathExists(targetExists);
     listing.buildListing(listFile, options);
   }
 
@@ -530,6 +533,11 @@ public class TestFileBasedCopyListing {
       Text relPath = new Text();
       FileStatus fileStatus = new FileStatus();
       while (reader.next(relPath, fileStatus)) {
+        if (fileStatus.isDirectory() && relPath.toString().equals("")) {
+          // ignore root with empty relPath, which is an entry to be 
+          // used for preserving root attributes etc.
+          continue;
+        }
         Assert.assertEquals(fileStatus.getPath().toUri().getPath(), map.get(relPath.toString()));
         recCount++;
       }

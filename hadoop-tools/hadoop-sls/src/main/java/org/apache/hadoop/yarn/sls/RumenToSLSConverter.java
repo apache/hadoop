@@ -120,7 +120,7 @@ public class RumenToSLSConverter {
       Writer output = new FileWriter(outputFile);
       try {
         ObjectMapper mapper = new ObjectMapper();
-        ObjectWriter writer = mapper.defaultPrettyPrintingWriter();
+        ObjectWriter writer = mapper.writerWithDefaultPrettyPrinter();
         Iterator<Map> i = mapper.readValues(
                 new JsonFactory().createJsonParser(input), Map.class);
         while (i.hasNext()) {
@@ -141,7 +141,7 @@ public class RumenToSLSConverter {
     Writer output = new FileWriter(outputFile);
     try {
       ObjectMapper mapper = new ObjectMapper();
-      ObjectWriter writer = mapper.defaultPrettyPrintingWriter();
+      ObjectWriter writer = mapper.writerWithDefaultPrettyPrinter();
       for (Map.Entry<String, Set<String>> entry : rackNodeMap.entrySet()) {
         Map rack = new LinkedHashMap();
         rack.put("rack", entry.getKey());

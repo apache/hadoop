@@ -24,8 +24,12 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.URI;
+import java.security.NoSuchAlgorithmException;
+import java.text.MessageFormat;
 import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
@@ -34,11 +38,15 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 
+import javax.crypto.KeyGenerator;
+
 /**
  * A provider of secret key material for Hadoop applications. Provides an
  * abstraction to separate key storage from users of encryption. It
  * is intended to support getting or storing keys in a variety of ways,
  * including third party bindings.
+ * <P/>
+ * <code>KeyProvider</code> implementations must be thread safe.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
@@ -99,19 +107,32 @@ public abstract class KeyProvider {
     private final static String CIPHER_FIELD = "cipher";
     private final static String BIT_LENGTH_FIELD = "bitLength";
     private final static String CREATED_FIELD = "created";
+    private final static String DESCRIPTION_FIELD = "description";
     private final static String VERSIONS_FIELD = "versions";
 
     private final String cipher;
     private final int bitLength;
+    private final String description;
     private final Date created;
     private int versions;
 
     protected Metadata(String cipher, int bitLength,
-                       Date created, int versions) {
+                       String description, Date created, int versions) {
       this.cipher = cipher;
       this.bitLength = bitLength;
+      this.description = description;
       this.created = created;
       this.versions = versions;
+    }
+
+    public String toString() {
+      return MessageFormat.format(
+          "cipher: {0}, length: {1} description: {2} created: {3} version: {4}",
+          cipher, bitLength, description, created, versions);
+    }
+
+    public String getDescription() {
+      return description;
     }
 
     public Date getCreated() {
@@ -165,6 +186,9 @@ public abstract class KeyProvider {
       if (created != null) {
         writer.name(CREATED_FIELD).value(created.getTime());
       }
+      if (description != null) {
+        writer.name(DESCRIPTION_FIELD).value(description);
+      }
       writer.name(VERSIONS_FIELD).value(versions);
       writer.endObject();
       writer.flush();
@@ -181,6 +205,7 @@ public abstract class KeyProvider {
       int bitLength = 0;
       Date created = null;
       int versions = 0;
+      String description = null;
       JsonReader reader = new JsonReader(new InputStreamReader
           (new ByteArrayInputStream(bytes)));
       reader.beginObject();
@@ -194,12 +219,15 @@ public abstract class KeyProvider {
           created = new Date(reader.nextLong());
         } else if (VERSIONS_FIELD.equals(field)) {
           versions = reader.nextInt();
+        } else if (DESCRIPTION_FIELD.equals(field)) {
+          description = reader.nextString();
         }
       }
       reader.endObject();
       this.cipher = cipher;
       this.bitLength = bitLength;
       this.created = created;
+      this.description = description;
       this.versions = versions;
     }
   }
@@ -210,6 +238,7 @@ public abstract class KeyProvider {
   public static class Options {
     private String cipher;
     private int bitLength;
+    private String description;
 
     public Options(Configuration conf) {
       cipher = conf.get(DEFAULT_CIPHER_NAME, DEFAULT_CIPHER);
@@ -226,12 +255,21 @@ public abstract class KeyProvider {
       return this;
     }
 
-    protected String getCipher() {
+    public Options setDescription(String description) {
+      this.description = description;
+      return this;
+    }
+
+    public String getCipher() {
       return cipher;
     }
 
-    protected int getBitLength() {
+    public int getBitLength() {
       return bitLength;
+    }
+
+    public String getDescription() {
+      return description;
     }
   }
 
@@ -271,6 +309,24 @@ public abstract class KeyProvider {
    * @throws IOException
    */
   public abstract List<String> getKeys() throws IOException;
+
+
+  /**
+   * Get the key metadata for all keys.
+   *
+   * @return a Map with all the keys and their metadata
+   * @throws IOException
+   */
+  public Map<String, Metadata> getKeysMetadata() throws IOException {
+    Map<String, Metadata> keysMetadata = new LinkedHashMap<String, Metadata>();
+    for (String key : getKeys()) {
+      Metadata meta = getMetadata(key);
+      if (meta != null) {
+        keysMetadata.put(key, meta);
+      }
+    }
+    return keysMetadata;
+  }
 
   /**
    * Get the key material for all versions of a specific key name.
@@ -315,6 +371,56 @@ public abstract class KeyProvider {
                                        Options options) throws IOException;
 
   /**
+   * Get the algorithm from the cipher.
+   *
+   * @return the algorithm name
+   */
+  private String getAlgorithm(String cipher) {
+    int slash = cipher.indexOf('/');
+    if (slash == -1) {
+      return cipher;
+    } else {
+      return cipher.substring(0, slash);
+    }
+  }
+
+  /**
+   * Generates a key material.
+   *
+   * @param size length of the key.
+   * @param algorithm algorithm to use for generating the key.
+   * @return the generated key.
+   * @throws NoSuchAlgorithmException
+   */
+  protected byte[] generateKey(int size, String algorithm)
+      throws NoSuchAlgorithmException {
+    algorithm = getAlgorithm(algorithm);
+    KeyGenerator keyGenerator = KeyGenerator.getInstance(algorithm);
+    keyGenerator.init(size);
+    byte[] key = keyGenerator.generateKey().getEncoded();
+    return key;
+  }
+
+  /**
+   * Create a new key generating the material for it.
+   * The given key must not already exist.
+   * <p/>
+   * This implementation generates the key material and calls the
+   * {@link #createKey(String, byte[], Options)} method.
+   *
+   * @param name the base name of the key
+   * @param options the options for the new key.
+   * @return the version name of the first version of the key.
+   * @throws IOException
+   * @throws NoSuchAlgorithmException
+   */
+  public KeyVersion createKey(String name, Options options)
+      throws NoSuchAlgorithmException, IOException {
+    byte[] material = generateKey(options.getBitLength(), options.getCipher());
+    return createKey(name, material, options);
+  }
+
+  /**
    * Delete the given key.
    * @param name the name of the key to delete
    * @throws IOException
@@ -331,6 +437,23 @@ public abstract class KeyProvider {
   public abstract KeyVersion rollNewVersion(String name,
                                              byte[] material
                                             ) throws IOException;
+
+  /**
+   * Roll a new version of the given key generating the material for it.
+   * <p/>
+   * This implementation generates the key material and calls the
+   * {@link #rollNewVersion(String, byte[])} method.
+   *
+   * @param name the basename of the key
+   * @return the name of the new version of the key
+   * @throws IOException
+   */
+  public KeyVersion rollNewVersion(String name) throws NoSuchAlgorithmException,
+                                                       IOException {
+    Metadata meta = getMetadata(name);
+    byte[] material = generateKey(meta.getBitLength(), meta.getCipher());
+    return rollNewVersion(name, material);
+  }
 
   /**
    * Ensures that any changes to the keys are written to persistent store.

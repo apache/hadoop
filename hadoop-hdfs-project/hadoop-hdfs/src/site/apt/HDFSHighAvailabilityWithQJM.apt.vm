@@ -802,7 +802,7 @@ digest:hdfs-zkfcs:vlUvLnd8MlacsE80rDuu6ONESbM=:rwcda
   or rolling back the upgrade, you should start the NNs as normal, i.e. without
   any special startup flag.
 
-  <<To finalize an HA upgrade>>, the operator will use the <<<`hdfsadmin
+  <<To finalize an HA upgrade>>, the operator will use the <<<`hdfs
   dfsadmin -finalizeUpgrade'>>> command while the NNs are running and one of them
   is active. The active NN at the time this happens will perform the finalization
   of the shared log, and the NN whose local storage directories contain the

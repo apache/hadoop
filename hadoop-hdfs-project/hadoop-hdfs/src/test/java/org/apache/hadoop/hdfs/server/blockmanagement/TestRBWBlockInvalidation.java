@@ -126,16 +126,15 @@ public class TestRBWBlockInvalidation {
         }
         Thread.sleep(100);
       }
-      assertEquals("There should be two live replicas", 2,
-          liveReplicas);
+      assertEquals("There should be two live replicas", 2, liveReplicas);
 
-      // sleep for 2 seconds, so that by this time datanode reports the corrupt
-      // block after a live replica of block got replicated.
-      Thread.sleep(2000);
-
-      // Check that there is no corrupt block in the corruptReplicasMap.
-      assertEquals("There should not be any replica in the corruptReplicasMap",
-          0, countReplicas(namesystem, blk).corruptReplicas());
+      while (true) {
+        Thread.sleep(100);
+        if (countReplicas(namesystem, blk).corruptReplicas() == 0) {
+          LOG.info("Corrupt Replicas becomes 0");
+          break;
+        }
+      }
     } finally {
       if (out != null) {
         out.close();

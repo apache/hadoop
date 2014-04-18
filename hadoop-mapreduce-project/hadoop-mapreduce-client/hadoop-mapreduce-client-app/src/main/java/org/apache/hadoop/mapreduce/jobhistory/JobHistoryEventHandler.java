@@ -40,6 +40,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.JobCounter;
@@ -442,8 +443,13 @@ public class JobHistoryEventHandler extends AbstractService
       }
     }
 
+    String queueName = JobConf.DEFAULT_QUEUE_NAME;
+    if (conf != null) {
+      queueName = conf.get(MRJobConfig.QUEUE_NAME, JobConf.DEFAULT_QUEUE_NAME);
+    }
+
     MetaInfo fi = new MetaInfo(historyFile, logDirConfPath, writer,
-        user, jobName, jobId, forcedJobStateOnShutDown);
+        user, jobName, jobId, forcedJobStateOnShutDown, queueName);
     fi.getJobSummary().setJobId(jobId);
     fileMap.put(jobId, fi);
   }
@@ -816,12 +822,14 @@ public class JobHistoryEventHandler extends AbstractService
     private String forcedJobStateOnShutDown;
 
     MetaInfo(Path historyFile, Path conf, EventWriter writer, String user,
-        String jobName, JobId jobId, String forcedJobStateOnShutDown) {
+        String jobName, JobId jobId, String forcedJobStateOnShutDown,
+        String queueName) {
       this.historyFile = historyFile;
       this.confFile = conf;
       this.writer = writer;
       this.jobIndexInfo =
-          new JobIndexInfo(-1, -1, user, jobName, jobId, -1, -1, null);
+          new JobIndexInfo(-1, -1, user, jobName, jobId, -1, -1, null,
+                           queueName);
       this.jobSummary = new JobSummary();
       this.flushTimer = new Timer("FlushTimer", true);
       this.forcedJobStateOnShutDown = forcedJobStateOnShutDown;

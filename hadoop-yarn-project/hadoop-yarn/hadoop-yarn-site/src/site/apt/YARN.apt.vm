@@ -72,6 +72,6 @@ Apache Hadoop NextGen MapReduce (YARN)
   monitoring for progress.
 
   MRV2 maintains <<API compatibility>> with previous stable release 
-  (hadoop-0.20.205).  This means that all Map-Reduce jobs should still run 
+  (hadoop-1.x).  This means that all Map-Reduce jobs should still run 
   unchanged on top of MRv2 with just a recompile.
 

@@ -891,64 +891,6 @@ public class TestCopyFiles extends TestCase {
     return home;
   }
 
-  public void testHftpAccessControl() throws Exception {
-    MiniDFSCluster cluster = null;
-    try {
-      final UserGroupInformation DFS_UGI = createUGI("dfs", true); 
-      final UserGroupInformation USER_UGI = createUGI("user", false); 
-
-      //start cluster by DFS_UGI
-      final Configuration dfsConf = new Configuration();
-      cluster = new MiniDFSCluster.Builder(dfsConf).numDataNodes(2).build();
-      cluster.waitActive();
-
-      final String httpAdd = dfsConf.get("dfs.http.address");
-      final URI nnURI = FileSystem.getDefaultUri(dfsConf);
-      final String nnUri = nnURI.toString();
-      FileSystem fs1 = DFS_UGI.doAs(new PrivilegedExceptionAction<FileSystem>() {
-        public FileSystem run() throws IOException {
-          return FileSystem.get(nnURI, dfsConf);
-        }
-      });
-      final Path home = 
-        createHomeDirectory(fs1, USER_UGI);
-      
-      //now, login as USER_UGI
-      final Configuration userConf = new Configuration();
-      final FileSystem fs = 
-        USER_UGI.doAs(new PrivilegedExceptionAction<FileSystem>() {
-        public FileSystem run() throws IOException {
-          return FileSystem.get(nnURI, userConf);
-        }
-      });
-      
-      final Path srcrootpath = new Path(home, "src_root"); 
-      final String srcrootdir =  srcrootpath.toString();
-      final Path dstrootpath = new Path(home, "dst_root"); 
-      final String dstrootdir =  dstrootpath.toString();
-      final DistCpV1 distcp = USER_UGI.doAs(new PrivilegedExceptionAction<DistCpV1>() {
-        public DistCpV1 run() {
-          return new DistCpV1(userConf);
-        }
-      });
-
-      FileSystem.mkdirs(fs, srcrootpath, new FsPermission((short)0700));
-      final String[] args = {"hftp://"+httpAdd+srcrootdir, nnUri+dstrootdir};
-
-      { //copy with permission 000, should fail
-        fs.setPermission(srcrootpath, new FsPermission((short)0));
-        USER_UGI.doAs(new PrivilegedExceptionAction<Void>() {
-          public Void run() throws Exception {
-            assertEquals(-3, ToolRunner.run(distcp, args));
-            return null;
-          }
-        });
-      }
-    } finally {
-      if (cluster != null) { cluster.shutdown(); }
-    }
-  }
-
   /** test -delete */
   public void testDelete() throws Exception {
     final Configuration conf = new Configuration();

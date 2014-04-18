@@ -28,6 +28,7 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.RecordReader;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.pipes.TestPipeApplication.FakeSplit;
+import org.apache.hadoop.util.StringUtils;
 import org.junit.Assert;
 import org.junit.Test;
 import static org.junit.Assert.*;
@@ -69,7 +70,8 @@ public class TestPipesNonJavaInputFormat {
     }
     // set data for splits
     conf.set(org.apache.hadoop.mapreduce.lib.input.FileInputFormat.INPUT_DIR,
-        input1.getAbsolutePath() + "," + input2.getAbsolutePath());
+        StringUtils.escapeString(input1.getAbsolutePath()) + ","
+            + StringUtils.escapeString(input2.getAbsolutePath()));
     InputSplit[] splits = inputFormat.getSplits(conf, 2);
     assertEquals(2, splits.length);
 

@@ -1022,6 +1022,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
     for(StorageBlockReport r : reports) {
       final BlockListAsLongs blocks = new BlockListAsLongs(r.getBlocks());
       hasStaleStorages = bm.processReport(nodeReg, r.getStorage(), poolId, blocks);
+      metrics.incrStorageBlockReportOps();
     }
 
     if (nn.getFSImage().isUpgradeFinalized() &&

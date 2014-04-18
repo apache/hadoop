@@ -83,16 +83,6 @@ public class TestHttpsFileSystem {
   }
 
   @Test
-  public void testHsftpFileSystem() throws Exception {
-    FileSystem fs = FileSystem.get(new URI("hsftp://" + nnAddr), conf);
-    Assert.assertTrue(fs.exists(new Path("/test")));
-    InputStream is = fs.open(new Path("/test"));
-    Assert.assertEquals(23, is.read());
-    is.close();
-    fs.close();
-  }
-
-  @Test
   public void testSWebHdfsFileSystem() throws Exception {
     FileSystem fs = WebHdfsTestUtil.getWebHdfsFileSystem(conf, "swebhdfs");
     final Path f = new Path("/testswebhdfs");

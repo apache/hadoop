@@ -116,7 +116,7 @@ public class TestRMNMInfo {
       Assert.assertNotNull(n.get("HostName"));
       Assert.assertNotNull(n.get("Rack"));
       Assert.assertTrue("Node " + n.get("NodeId") + " should be RUNNING",
-              n.get("State").getValueAsText().contains("RUNNING"));
+              n.get("State").asText().contains("RUNNING"));
       Assert.assertNotNull(n.get("NodeHTTPAddress"));
       Assert.assertNotNull(n.get("LastHealthUpdate"));
       Assert.assertNotNull(n.get("HealthReport"));
@@ -124,10 +124,10 @@ public class TestRMNMInfo {
       Assert.assertNotNull(n.get("NumContainers"));
       Assert.assertEquals(
               n.get("NodeId") + ": Unexpected number of used containers",
-              0, n.get("NumContainers").getValueAsInt());
+              0, n.get("NumContainers").asInt());
       Assert.assertEquals(
               n.get("NodeId") + ": Unexpected amount of used memory",
-              0, n.get("UsedMemoryMB").getValueAsInt());
+              0, n.get("UsedMemoryMB").asInt());
       Assert.assertNotNull(n.get("AvailableMemoryMB"));
     }
   }
@@ -153,7 +153,7 @@ public class TestRMNMInfo {
       Assert.assertNotNull(n.get("HostName"));
       Assert.assertNotNull(n.get("Rack"));
       Assert.assertTrue("Node " + n.get("NodeId") + " should be RUNNING",
-              n.get("State").getValueAsText().contains("RUNNING"));
+              n.get("State").asText().contains("RUNNING"));
       Assert.assertNotNull(n.get("NodeHTTPAddress"));
       Assert.assertNotNull(n.get("LastHealthUpdate"));
       Assert.assertNotNull(n.get("HealthReport"));

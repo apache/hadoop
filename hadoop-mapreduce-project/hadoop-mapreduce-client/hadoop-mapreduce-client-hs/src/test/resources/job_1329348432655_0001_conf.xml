@@ -182,7 +182,6 @@
 <property><!--Loaded from job.xml--><name>file.stream-buffer-size</name><value>4096</value></property>
 <property><!--Loaded from job.xml--><name>dfs.namenode.fs-limits.max-directory-items</name><value>0</value></property>
 <property><!--Loaded from job.xml--><name>io.mapfile.bloom.size</name><value>1048576</value></property>
-<property><!--Loaded from job.xml--><name>fs.hsftp.impl</name><value>org.apache.hadoop.hdfs.HsftpFileSystem</value></property>
 <property><!--Loaded from job.xml--><name>yarn.nodemanager.container-executor.class</name><value>org.apache.hadoop.yarn.server.nodemanager.DefaultContainerExecutor</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.map.maxattempts</name><value>4</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.jobtracker.jobhistory.block.size</name><value>3145728</value></property>
@@ -224,7 +223,6 @@
 <property><!--Loaded from job.xml--><name>hadoop.http.authentication.simple.anonymous.allowed</name><value>true</value></property>
 <property><!--Loaded from job.xml--><name>hadoop.rpc.socket.factory.class.default</name><value>org.apache.hadoop.net.StandardSocketFactory</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.job.submithostname</name><value>localhost</value></property>
-<property><!--Loaded from job.xml--><name>fs.hftp.impl</name><value>org.apache.hadoop.hdfs.HftpFileSystem</value></property>
 <property><!--Loaded from job.xml--><name>dfs.namenode.handler.count</name><value>10</value></property>
 <property><!--Loaded from job.xml--><name>fs.automatic.close</name><value>true</value></property>
 <property><!--Loaded from job.xml--><name>fs.kfs.impl</name><value>org.apache.hadoop.fs.kfs.KosmosFileSystem</value></property>
@@ -392,6 +390,7 @@
 <property><!--Loaded from job.xml--><name>mapreduce.job.counters.limit</name><value>120</value></property>
 <property><!--Loaded from job.xml--><name>dfs.datanode.ipc.address</name><value>0.0.0.0:50020</value></property>
 <property><!--Loaded from job.xml--><name>fs.webhdfs.impl</name><value>org.apache.hadoop.hdfs.web.WebHdfsFileSystem</value></property>
+<property><!--Loaded from job.xml--><name>fs.swebhdfs.impl</name><value>org.apache.hadoop.hdfs.web.SWebHdfsFileSystem</value></property>
 <property><!--Loaded from job.xml--><name>yarn.nodemanager.delete.debug-delay-sec</name><value>0</value></property>
 <property><!--Loaded from job.xml--><name>dfs.datanode.max.transfer.threads</name><value>4096</value></property>
 </configuration>

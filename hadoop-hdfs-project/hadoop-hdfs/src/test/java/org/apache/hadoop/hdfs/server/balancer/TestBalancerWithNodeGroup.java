@@ -53,7 +53,7 @@ public class TestBalancerWithNodeGroup {
   private static final Log LOG = LogFactory.getLog(
   "org.apache.hadoop.hdfs.TestBalancerWithNodeGroup");
   
-  final private static long CAPACITY = 500L;
+  final private static long CAPACITY = 6000L;
   final private static String RACK0 = "/rack0";
   final private static String RACK1 = "/rack1";
   final private static String NODEGROUP0 = "/nodegroup0";
@@ -68,7 +68,7 @@ public class TestBalancerWithNodeGroup {
   static final long TIMEOUT = 40000L; //msec
   static final double CAPACITY_ALLOWED_VARIANCE = 0.005;  // 0.5%
   static final double BALANCE_ALLOWED_VARIANCE = 0.11;    // 10%+delta
-  static final int DEFAULT_BLOCK_SIZE = 10;
+  static final int DEFAULT_BLOCK_SIZE = 100;
 
   static {
     Balancer.setBlockMoveWaitTime(1000L) ;

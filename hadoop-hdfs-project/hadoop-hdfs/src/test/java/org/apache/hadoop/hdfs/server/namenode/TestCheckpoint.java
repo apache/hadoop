@@ -1897,7 +1897,12 @@ public class TestCheckpoint {
           .format(true).build();
       int origPort = cluster.getNameNodePort();
       int origHttpPort = cluster.getNameNode().getHttpAddress().getPort();
-      secondary = startSecondaryNameNode(conf);
+      Configuration snnConf = new Configuration(conf);
+      File checkpointDir = new File(MiniDFSCluster.getBaseDirectory(),
+        "namesecondary");
+      snnConf.set(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_DIR_KEY,
+        checkpointDir.getAbsolutePath());
+      secondary = startSecondaryNameNode(snnConf);
 
       // secondary checkpoints once
       secondary.doCheckpoint();

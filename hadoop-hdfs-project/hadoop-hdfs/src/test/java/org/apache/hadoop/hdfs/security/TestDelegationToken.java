@@ -195,7 +195,6 @@ public class TestDelegationToken {
     }
   }
 
-  @SuppressWarnings("deprecation")
   @Test
   public void testDelegationTokenWithDoAs() throws Exception {
     final DistributedFileSystem dfs = cluster.getFileSystem();
@@ -212,11 +211,9 @@ public class TestDelegationToken {
     longUgi.doAs(new PrivilegedExceptionAction<Object>() {
       @Override
       public Object run() throws IOException {
-        final DistributedFileSystem dfs = cluster.getFileSystem();
         try {
-          //try renew with long name
-          dfs.renewDelegationToken(token);
-        } catch (IOException e) {
+          token.renew(config);
+        } catch (Exception e) {
           Assert.fail("Could not renew delegation token for user "+longUgi);
         }
         return null;
@@ -224,20 +221,17 @@ public class TestDelegationToken {
     });
     shortUgi.doAs(new PrivilegedExceptionAction<Object>() {
       @Override
-      public Object run() throws IOException {
-        final DistributedFileSystem dfs = cluster.getFileSystem();
-        dfs.renewDelegationToken(token);
+      public Object run() throws Exception {
+        token.renew(config);
         return null;
       }
     });
     longUgi.doAs(new PrivilegedExceptionAction<Object>() {
       @Override
       public Object run() throws IOException {
-        final DistributedFileSystem dfs = cluster.getFileSystem();
         try {
-          //try cancel with long name
-          dfs.cancelDelegationToken(token);
-        } catch (IOException e) {
+          token.cancel(config);
+        } catch (Exception e) {
           Assert.fail("Could not cancel delegation token for user "+longUgi);
         }
         return null;

@@ -313,7 +313,7 @@ public class TestCopyMapper {
               = stubContext.getContext();
 
       Configuration configuration = context.getConfiguration();
-      String workPath = new Path("hftp://localhost:1234/*/*/*/?/")
+      String workPath = new Path("webhdfs://localhost:1234/*/*/*/?/")
               .makeQualified(fs.getUri(), fs.getWorkingDirectory()).toString();
       configuration.set(DistCpConstants.CONF_LABEL_TARGET_WORK_PATH,
               workPath);

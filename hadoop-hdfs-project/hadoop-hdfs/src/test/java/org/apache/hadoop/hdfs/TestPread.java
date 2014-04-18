@@ -237,7 +237,7 @@ public class TestPread {
   public void testHedgedPreadDFSBasic() throws IOException {
     Configuration conf = new Configuration();
     conf.setInt(DFSConfigKeys.DFS_DFSCLIENT_HEDGED_READ_THREADPOOL_SIZE, 5);
-    conf.setLong(DFSConfigKeys.DFS_DFSCLIENT_HEDGED_READ_THRESHOLD_MILLIS, 100);
+    conf.setLong(DFSConfigKeys.DFS_DFSCLIENT_HEDGED_READ_THRESHOLD_MILLIS, 1);
     dfsPreadTest(conf, false, true); // normal pread
     dfsPreadTest(conf, true, true); // trigger read code path without
                                     // transferTo.
@@ -273,6 +273,10 @@ public class TestPread {
     DistributedFileSystem fileSys = cluster.getFileSystem();
     DFSClient dfsClient = fileSys.getClient();
     DFSHedgedReadMetrics metrics = dfsClient.getHedgedReadMetrics();
+    // Metrics instance is static, so we need to reset counts from prior tests.
+    metrics.hedgedReadOps.set(0);
+    metrics.hedgedReadOpsWin.set(0);
+    metrics.hedgedReadOpsInCurThread.set(0);
 
     try {
       Path file1 = new Path("hedgedReadMaxOut.dat");

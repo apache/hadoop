@@ -58,6 +58,7 @@
     <SnappyInclude Condition="Exists('$(CustomSnappyInclude)') And '$(SnappyInclude)' == ''">$(CustomSnappyInclude)</SnappyInclude>
     <SnappyEnabled Condition="'$(SnappyLib)' != '' And '$(SnappyInclude)' != ''">true</SnappyEnabled>
     <IncludePath Condition="'$(SnappyEnabled)' == 'true'">$(SnappyInclude);$(IncludePath)</IncludePath>
+    <IncludePath Condition="Exists('$(ZLIB_HOME)')">$(ZLIB_HOME);$(IncludePath)</IncludePath>
   </PropertyGroup>
   <Target Name="CheckRequireSnappy">
     <Error
@@ -92,6 +93,8 @@
     <ClCompile Include="src\org\apache\hadoop\io\compress\snappy\SnappyDecompressor.c" Condition="'$(SnappyEnabled)' == 'true'">
       <AdditionalOptions>/D HADOOP_SNAPPY_LIBRARY=L\"snappy.dll\"</AdditionalOptions>
     </ClCompile>
+    <ClCompile Include="src\org\apache\hadoop\io\compress\zlib\ZlibCompressor.c" Condition="Exists('$(ZLIB_HOME)')" />
+    <ClCompile Include="src\org\apache\hadoop\io\compress\zlib\ZlibDecompressor.c" Condition="Exists('$(ZLIB_HOME)')" />
     <ClCompile Include="src\org\apache\hadoop\io\compress\lz4\lz4.c" />
     <ClCompile Include="src\org\apache\hadoop\io\compress\lz4\lz4hc.c" />
     <ClCompile Include="src\org\apache\hadoop\io\compress\lz4\Lz4Compressor.c" />
@@ -109,6 +112,9 @@
     <ClInclude Include="..\src\org\apache\hadoop\util\crc32c_tables.h" />
     <ClInclude Include="..\src\org\apache\hadoop\util\crc32_zlib_polynomial_tables.h" />
     <ClInclude Include="src\org\apache\hadoop\io\compress\snappy\org_apache_hadoop_io_compress_snappy.h" />
+    <ClInclude Include="src\org\apache\hadoop\io\compress\zlib\org_apache_hadoop_io_compress_zlib_ZlibCompressor.h" />
+    <ClInclude Include="src\org\apache\hadoop\io\compress\zlib\org_apache_hadoop_io_compress_zlib_ZlibDecompressor.h" />
+    <ClInclude Include="src\org\apache\hadoop\io\compress\zlib\org_apache_hadoop_io_compress_zlib.h" />
     <ClInclude Include="src\org\apache\hadoop\io\nativeio\file_descriptor.h" />
     <ClInclude Include="src\org\apache\hadoop\util\bulk_crc32.h" />
     <ClInclude Include="src\org\apache\hadoop\util\crc32c_tables.h" />

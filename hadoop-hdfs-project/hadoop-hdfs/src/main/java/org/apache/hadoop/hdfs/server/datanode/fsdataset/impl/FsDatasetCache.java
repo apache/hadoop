@@ -395,6 +395,8 @@ public class FsDatasetCache {
         dataset.datanode.getMetrics().incrBlocksCached(1);
         success = true;
       } finally {
+        IOUtils.closeQuietly(blockIn);
+        IOUtils.closeQuietly(metaIn);
         if (!success) {
           if (reservedBytes) {
             newUsedBytes = usedBytesCount.release(length);
@@ -403,8 +405,6 @@ public class FsDatasetCache {
             LOG.debug("Caching of " + key + " was aborted.  We are now " +
                 "caching only " + newUsedBytes + " + bytes in total.");
           }
-          IOUtils.closeQuietly(blockIn);
-          IOUtils.closeQuietly(metaIn);
           if (mappableBlock != null) {
             mappableBlock.close();
           }

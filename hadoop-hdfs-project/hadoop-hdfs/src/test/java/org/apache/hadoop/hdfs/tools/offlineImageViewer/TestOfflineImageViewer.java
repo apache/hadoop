@@ -28,6 +28,10 @@ import java.io.PrintWriter;
 import java.io.RandomAccessFile;
 import java.io.StringReader;
 import java.io.StringWriter;
+import java.net.HttpURLConnection;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -51,7 +55,9 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
+import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.token.Token;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -64,30 +70,12 @@ import org.xml.sax.helpers.DefaultHandler;
 
 import com.google.common.collect.Maps;
 
-/**
- * Test function of OfflineImageViewer by: * confirming it can correctly process
- * a valid fsimage file and that the processing generates a correct
- * representation of the namespace * confirming it correctly fails to process an
- * fsimage file with a layout version it shouldn't be able to handle * confirm
- * it correctly bails on malformed image files, in particular, a file that ends
- * suddenly.
- */
 public class TestOfflineImageViewer {
-  private static final Log LOG = LogFactory.getLog(OfflineImageViewer.class);
+  private static final Log LOG = LogFactory.getLog(OfflineImageViewerPB.class);
   private static final int NUM_DIRS = 3;
   private static final int FILES_PER_DIR = 4;
   private static final String TEST_RENEWER = "JobTracker";
   private static File originalFsimage = null;
-
-  // Elements of lines of ls-file output to be compared to FileStatus instance
-  private static final class LsElements {
-    private String perms;
-    private int replication;
-    private String username;
-    private String groupname;
-    private long filesize;
-    private boolean isDir;
-  }
 
   // namespace as written to dfs, to be compared with viewer's output
   final static HashMap<String, FileStatus> writtenFiles = Maps.newHashMap();
@@ -176,37 +164,6 @@ public class TestOfflineImageViewer {
     return hdfs.getFileStatus(new Path(file));
   }
 
-  // Verify that we can correctly generate an ls-style output for a valid
-  // fsimage
-  @Test
-  public void outputOfLSVisitor() throws IOException {
-    StringWriter output = new StringWriter();
-    PrintWriter out = new PrintWriter(output);
-    LsrPBImage v = new LsrPBImage(new Configuration(), out);
-    v.visit(new RandomAccessFile(originalFsimage, "r"));
-    out.close();
-    Pattern pattern = Pattern
-        .compile("([d\\-])([rwx\\-]{9})\\s*(-|\\d+)\\s*(\\w+)\\s*(\\w+)\\s*(\\d+)\\s*(\\d+)\\s*([\b/]+)");
-    int count = 0;
-    for (String s : output.toString().split("\n")) {
-      Matcher m = pattern.matcher(s);
-      assertTrue(m.find());
-      LsElements e = new LsElements();
-      e.isDir = m.group(1).equals("d");
-      e.perms = m.group(2);
-      e.replication = m.group(3).equals("-") ? 0 : Integer.parseInt(m.group(3));
-      e.username = m.group(4);
-      e.groupname = m.group(5);
-      e.filesize = Long.parseLong(m.group(7));
-      String path = m.group(8);
-      if (!path.equals("/")) {
-        compareFiles(writtenFiles.get(path), e);
-      }
-      ++count;
-    }
-    assertEquals(writtenFiles.size() + 1, count);
-  }
-
   @Test(expected = IOException.class)
   public void testTruncatedFSImage() throws IOException {
     File truncatedFile = folder.newFile();
@@ -214,18 +171,6 @@ public class TestOfflineImageViewer {
     copyPartOfFile(originalFsimage, truncatedFile);
     new FileDistributionCalculator(new Configuration(), 0, 0, new PrintWriter(
         output)).visit(new RandomAccessFile(truncatedFile, "r"));
-  }
-
-  // Compare two files as listed in the original namespace FileStatus and
-  // the output of the ls file from the image processor
-  private void compareFiles(FileStatus fs, LsElements elements) {
-    assertEquals("directory listed as such", fs.isDirectory(), elements.isDir);
-    assertEquals("perms string equal", fs.getPermission().toString(),
-        elements.perms);
-    assertEquals("replication equal", fs.getReplication(), elements.replication);
-    assertEquals("owner equal", fs.getOwner(), elements.username);
-    assertEquals("group equal", fs.getGroup(), elements.groupname);
-    assertEquals("lengths equal", fs.getLen(), elements.filesize);
   }
 
   private void copyPartOfFile(File src, File dest) throws IOException {
@@ -296,5 +241,88 @@ public class TestOfflineImageViewer {
     SAXParser parser = spf.newSAXParser();
     final String xml = output.getBuffer().toString();
     parser.parse(new InputSource(new StringReader(xml)), new DefaultHandler());
+  }
+
+  @Test
+  public void testWebImageViewer() throws IOException, InterruptedException,
+      URISyntaxException {
+    WebImageViewer viewer = new WebImageViewer(
+        NetUtils.createSocketAddr("localhost:0"));
+    try {
+      viewer.initServer(originalFsimage.getAbsolutePath());
+      int port = viewer.getPort();
+
+      // create a WebHdfsFileSystem instance
+      URI uri = new URI("webhdfs://localhost:" + String.valueOf(port));
+      Configuration conf = new Configuration();
+      WebHdfsFileSystem webhdfs = (WebHdfsFileSystem)FileSystem.get(uri, conf);
+
+      // verify the number of directories
+      FileStatus[] statuses = webhdfs.listStatus(new Path("/"));
+      assertEquals(NUM_DIRS, statuses.length);
+
+      // verify the number of files in the directory
+      statuses = webhdfs.listStatus(new Path("/dir0"));
+      assertEquals(FILES_PER_DIR, statuses.length);
+
+      // compare a file
+      FileStatus status = webhdfs.listStatus(new Path("/dir0/file0"))[0];
+      FileStatus expected = writtenFiles.get("/dir0/file0");
+      compareFile(expected, status);
+
+      // LISTSTATUS operation to a invalid path
+      URL url = new URL("http://localhost:" + port +
+                    "/webhdfs/v1/invalid/?op=LISTSTATUS");
+      verifyHttpResponseCode(HttpURLConnection.HTTP_NOT_FOUND, url);
+
+      // LISTSTATUS operation to a invalid prefix
+      url = new URL("http://localhost:" + port + "/webhdfs/v1?op=LISTSTATUS");
+      verifyHttpResponseCode(HttpURLConnection.HTTP_NOT_FOUND, url);
+
+      // GETFILESTATUS operation
+      status = webhdfs.getFileStatus(new Path("/dir0/file0"));
+      compareFile(expected, status);
+
+      // GETFILESTATUS operation to a invalid path
+      url = new URL("http://localhost:" + port +
+                    "/webhdfs/v1/invalid/?op=GETFILESTATUS");
+      verifyHttpResponseCode(HttpURLConnection.HTTP_NOT_FOUND, url);
+
+      // invalid operation
+      url = new URL("http://localhost:" + port + "/webhdfs/v1/?op=INVALID");
+      verifyHttpResponseCode(HttpURLConnection.HTTP_BAD_REQUEST, url);
+
+      // invalid method
+      url = new URL("http://localhost:" + port + "/webhdfs/v1/?op=LISTSTATUS");
+      HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+      connection.setRequestMethod("POST");
+      connection.connect();
+      assertEquals(HttpURLConnection.HTTP_BAD_METHOD,
+          connection.getResponseCode());
+    } finally {
+      // shutdown the viewer
+      viewer.shutdown();
+    }
+  }
+
+  private static void compareFile(FileStatus expected, FileStatus status) {
+    assertEquals(expected.getAccessTime(), status.getAccessTime());
+    assertEquals(expected.getBlockSize(), status.getBlockSize());
+    assertEquals(expected.getGroup(), status.getGroup());
+    assertEquals(expected.getLen(), status.getLen());
+    assertEquals(expected.getModificationTime(),
+        status.getModificationTime());
+    assertEquals(expected.getOwner(), status.getOwner());
+    assertEquals(expected.getPermission(), status.getPermission());
+    assertEquals(expected.getReplication(), status.getReplication());
+    assertEquals(expected.isDirectory(), status.isDirectory());
+  }
+
+  private void verifyHttpResponseCode(int expectedCode, URL url)
+      throws IOException {
+    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+    connection.setRequestMethod("GET");
+    connection.connect();
+    assertEquals(expectedCode, connection.getResponseCode());
   }
 }

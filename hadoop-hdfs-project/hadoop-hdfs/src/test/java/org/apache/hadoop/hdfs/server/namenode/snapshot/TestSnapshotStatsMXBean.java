@@ -59,17 +59,20 @@ public class TestSnapshotStatsMXBean {
       ObjectName mxbeanName = new ObjectName(
           "Hadoop:service=NameNode,name=SnapshotInfo");
 
-      CompositeData statsbean =
-          (CompositeData) mbs.getAttribute(mxbeanName, "SnapshotStats");
-      int numDirectories = Array.getLength(statsbean.get("directory"));
+      CompositeData[] directories =
+          (CompositeData[]) mbs.getAttribute(
+              mxbeanName, "SnapshottableDirectories");
+      int numDirectories = Array.getLength(directories);
       assertEquals(sm.getNumSnapshottableDirs(), numDirectories);
-      int numSnapshots = Array.getLength(statsbean.get("snapshots"));
+      CompositeData[] snapshots =
+          (CompositeData[]) mbs.getAttribute(mxbeanName, "Snapshots");
+      int numSnapshots = Array.getLength(snapshots);
       assertEquals(sm.getNumSnapshots(), numSnapshots);
 
-      CompositeData directory = (CompositeData) Array.get(statsbean.get("directory"), 0);
-      CompositeData snapshots = (CompositeData) Array.get(statsbean.get("snapshots"), 0);
-      assertTrue(((String) directory.get("path")).contains(pathName));
-      assertTrue(((String) snapshots.get("snapshotDirectory")).contains(pathName));
+      CompositeData d = (CompositeData) Array.get(directories, 0);
+      CompositeData s = (CompositeData) Array.get(snapshots, 0);
+      assertTrue(((String) d.get("path")).contains(pathName));
+      assertTrue(((String) s.get("snapshotDirectory")).contains(pathName));
     } finally {
       if (cluster != null) {
         cluster.shutdown();

@@ -452,6 +452,11 @@
   <description>The AbstractFileSystem for file: uris.</description>
 </property>
 
+<property>
+  <name>fs.AbstractFileSystem.har.impl</name>
+  <value>org.apache.hadoop.fs.HarFs</value>
+  <description>The AbstractFileSystem for har: uris.</description>
+</property> 
 
 <property>
   <name>fs.AbstractFileSystem.hdfs.impl</name>

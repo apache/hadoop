@@ -9,6 +9,9 @@ Trunk (Unreleased)
     HDFS-5079. Cleaning up NNHAStatusHeartbeat.State from
     DatanodeProtocolProtos. (Tao Luo via shv)
 
+    HDFS-5570. Deprecate hftp / hsftp and replace them with webhdfs / swebhdfs.
+    (wheat9)
+
   NEW FEATURES
 
     HDFS-3125. Add JournalService to enable Journal Daemon. (suresh)
@@ -119,6 +122,8 @@ Trunk (Unreleased)
 
     HDFS-5721. sharedEditsImage in Namenode#initializeSharedEdits() should be 
     closed before method returns. (Ted Yu via junping_du)
+
+    HDFS-6228. comments typo fix for FsDatasetImpl.java (zhaoyunjiong via umamahesh)
 
   OPTIMIZATIONS
 
@@ -249,6 +254,10 @@ Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
+    HDFS-6168. Remove a deprecated constructor and the deprecated methods reportChecksumFailure,
+    getDelegationToken(Text), renewDelegationToken and cancelDelegationToken from
+    DistributedFileSystem.  (szetszwo)
+
   NEW FEATURES
 
   IMPROVEMENTS
@@ -266,7 +275,36 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6119. FSNamesystem code cleanup. (suresh)
 
+    HDFS-6158. Clean up dead code for OfflineImageViewer. (wheat9)
+
+    HDFS-5978. Create a tool to take fsimage and expose read-only WebHDFS API.
+    (Akira Ajisaka via wheat9)
+
+    HDFS-6164. Remove lsr in OfflineImageViewer. (wheat9)
+
+    HDFS-6167. Relocate the non-public API classes in the hdfs.client package.
+    (szetszwo)
+
+    HDFS-6191. Disable quota checks when replaying edit log. (kihwal)
+
+    HDFS-6170. Support GETFILESTATUS operation in WebImageViewer.
+    (Akira Ajisaka via wheat9)
+
+    HDFS-6225. Remove the o.a.h.hdfs.server.common.UpgradeStatusReport.
+    (wheat9)
+    
+    HDFS-6224. Add a unit test to TestAuditLogger for file permissions
+    passed to logAuditEvent. (Charles Lamb via wang)
+
+    HDFS-6194. Create new tests for ByteRangeInputStream.
+    (Akira Ajisaka via wheat9)
+
+    HDFS-6219. Proxy superuser configuration should use true client IP for
+    address checks. (daryn via kihwal)
+
   OPTIMIZATIONS
+
+    HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)
 
   BUG FIXES 
 
@@ -276,7 +314,107 @@ Release 2.5.0 - UNRELEASED
     HDFS-3087. Decomissioning on NN restart can complete without blocks being
     replicated. (Rushabh S Shah via kihwal)
 
-Release 2.4.0 - UNRELEASED
+    HDFS-6162. Format strings should use platform independent line separator.
+    (suresh)
+
+    HDFS-6156. Simplify the JMX API that provides snapshot information.
+    (wheat9)
+
+    HDFS-6173. Move the default processor from Ls to Web in OfflineImageViewer.
+    (Akira Ajisaka via wheat9)
+
+    HDFS-5591. Checkpointing should use monotonic time when calculating period.
+    (Charles Lamb via wang)
+
+    HDFS-6190. Minor textual fixes in DFSClient. (Charles Lamb via wheat9)
+
+    HDFS-6159. TestBalancerWithNodeGroup.testBalancerWithNodeGroup fails if 
+    there is block missing after balancer success (Chen He via kihwal)
+
+    HDFS-6181. Fix the wrong property names in NFS user guide (brandonli)
+
+    HDFS-6180. dead node count / listing is very broken in JMX and old GUI.
+    (wheat9)
+
+    HDFS-6143. WebHdfsFileSystem open should throw FileNotFoundException for
+    non-existing paths. (Gera Shegalov via wheat9)
+
+    HDFS-6169. Move the address in WebImageViewer. (Akira Ajisaka via wheat9)
+
+    HDFS-6160. TestSafeMode occasionally fails. (Arpit Agarwal)
+
+    HDFS-5669. Storage#tryLock() should check for null before logging successfull message
+    (Vinayakumar B via umamahesh)
+
+    HDFS-6237. TestDFSShell#testGet fails on Windows due to invalid file system
+    path. (cnauroth)
+
+    HDFS-6238. TestDirectoryScanner leaks file descriptors. (cnauroth)
+
+    HDFS-6243. HA NameNode transition to active or shutdown may leave lingering
+    image transfer thread. (cnauroth)
+
+    HDFS-5409. TestOfflineEditsViewer#testStored fails on Windows due to CRLF
+    line endings in editsStored.xml from git checkout. (cnauroth)
+
+    HDFS-4909. Avoid protocol buffer RPC namespace clashes. (cmccabe)
+
+    HDFS-6153. Document "fileId" and "childrenNum" fields in the FileStatus Json schema
+    (Akira Ajisaka via vinayakumarb)
+
+Release 2.4.1 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+    HDFS-6215. Wrong error message for upgrade. (Kihwal Lee via jeagles)
+
+  OPTIMIZATIONS
+
+  BUG FIXES 
+
+    HDFS-6189. Multiple HDFS tests fail on Windows attempting to use a test
+    root path containing a colon.  (cnauroth via szetszwo) 
+
+    HDFS-6197. Rolling upgrade rollback on Windows can fail attempting to rename
+    edit log segment files to a destination that already exists. (cnauroth)
+
+    HDFS-6198. DataNode rolling upgrade does not correctly identify current
+    block pool directory and replace with trash on Windows. (cnauroth)
+
+    HDFS-6206. Fix NullPointerException in DFSUtil.substituteForWildcardAddress.
+    (szetszwo) 
+
+    HDFS-6204. Fix TestRBWBlockInvalidation: change the last sleep to a loop.
+    (szetszwo) 
+
+    HDFS-6209. TestValidateConfigurationSettings should use random ports.
+    (Arpit Agarwal via szetszwo) 
+
+    HDFS-6208. DataNode caching can leak file descriptors. (cnauroth)
+
+    HDFS-6231. DFSClient hangs infinitely if using hedged reads and all eligible
+    datanodes die. (cnauroth)
+
+    HDFS-6234. TestDatanodeConfig#testMemlockLimit fails on Windows due to
+    invalid file path. (cnauroth)
+
+    HDFS-6235. TestFileJournalManager can fail on Windows due to file locking if
+    tests run out of order. (cnauroth)
+
+    HDFS-6229. Race condition in failover can cause RetryCache fail to work.
+    (jing9)
+
+    HDFS-6232. OfflineEditsViewer throws a NPE on edits containing ACL
+    modifications (ajisakaa via cmccabe)
+
+    HDFS-6236. ImageServlet should use Time#monotonicNow to measure latency.
+    (cnauroth)
+
+Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES
 
@@ -715,6 +853,12 @@ Release 2.4.0 - UNRELEASED
 
     HDFS-6157. Fix the entry point of OfflineImageViewer for hdfs.cmd. (wheat9)
 
+    HDFS-6163. Fix a minor bug in the HA upgrade document. (Fengdong Yu via
+    jing9)
+
+    HDFS-6166. Change Balancer socket read timeout to 20 minutes and add
+    10 seconds delay after error.  (Nathan Roberts via szetszwo)
+
   BREAKDOWN OF HDFS-5698 SUBTASKS AND RELATED JIRAS
 
     HDFS-5717. Save FSImage header in protobuf. (Haohui Mai via jing9)
@@ -1026,6 +1170,9 @@ BREAKDOWN OF HDFS-5535 ROLLING UPGRADE SUBTASKS AND RELATED JIRAS
 
     HDFS-6038. Allow JournalNode to handle editlog produced by new release with
     future layoutversion. (jing9)
+
+    HDFS-4564. Ensure webhdfs returns correct HTTP response codes for denied
+    operations. (daryn via acmurthy)
 
 Release 2.3.1 - UNRELEASED
 

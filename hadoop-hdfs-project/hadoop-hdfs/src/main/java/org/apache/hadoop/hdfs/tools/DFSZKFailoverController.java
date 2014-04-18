@@ -18,7 +18,7 @@
 package org.apache.hadoop.hdfs.tools;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -152,7 +152,7 @@ public class DFSZKFailoverController extends ZKFailoverController {
   public void loginAsFCUser() throws IOException {
     InetSocketAddress socAddr = NameNode.getAddress(conf);
     SecurityUtil.login(conf, DFS_NAMENODE_KEYTAB_FILE_KEY,
-        DFS_NAMENODE_USER_NAME_KEY, socAddr.getHostName());
+        DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY, socAddr.getHostName());
   }
   
   @Override

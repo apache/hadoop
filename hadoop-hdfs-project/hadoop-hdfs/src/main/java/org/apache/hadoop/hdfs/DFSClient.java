@@ -430,6 +430,22 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
           DFS_CLIENT_DATANODE_RESTART_TIMEOUT_DEFAULT) * 1000;
     }
 
+    public boolean isUseLegacyBlockReaderLocal() {
+      return useLegacyBlockReaderLocal;
+    }
+
+    public String getDomainSocketPath() {
+      return domainSocketPath;
+    }
+
+    public boolean isShortCircuitLocalReads() {
+      return shortCircuitLocalReads;
+    }
+
+    public boolean isDomainSocketDataTraffic() {
+      return domainSocketDataTraffic;
+    }
+
     private DataChecksum.Type getChecksumType(Configuration conf) {
       final String checksum = conf.get(
           DFSConfigKeys.DFS_CHECKSUM_TYPE_KEY,
@@ -968,7 +984,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
   private static final Map<String, Boolean> localAddrMap = Collections
       .synchronizedMap(new HashMap<String, Boolean>());
   
-  static boolean isLocalAddress(InetSocketAddress targetAddr) {
+  public static boolean isLocalAddress(InetSocketAddress targetAddr) {
     InetAddress addr = targetAddr.getAddress();
     Boolean cached = localAddrMap.get(addr.getHostAddress());
     if (cached != null) {

@@ -251,7 +251,6 @@ public class LdapGroupsMapping
     return groups;
   }
 
-  @SuppressWarnings("deprecation")
   DirContext getDirContext() throws NamingException {
     if (ctx == null) {
       // Set up the initial environment for LDAP connectivity

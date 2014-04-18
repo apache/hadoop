@@ -42,7 +42,6 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.web.HftpFileSystem;
 import org.apache.hadoop.hdfs.web.WebHdfsTestUtil;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.security.AccessControlException;
@@ -219,30 +218,6 @@ public class TestAuditLogs {
 
     verifyAuditLogs(true);
     assertTrue("failed to stat file", st != null && st.isFile());
-  }
-
-  /** test that access via Hftp puts proper entry in audit log */
-  @Test
-  public void testAuditHftp() throws Exception {
-    final Path file = new Path(fnames[0]);
-
-    final String hftpUri =
-      "hftp://" + conf.get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY);
-
-    HftpFileSystem hftpFs = null;
-
-    setupAuditLogs();
-    try {
-      hftpFs = (HftpFileSystem) new Path(hftpUri).getFileSystem(conf);
-      InputStream istream = hftpFs.open(file);
-      @SuppressWarnings("unused")
-      int val = istream.read();
-      istream.close();
-
-      verifyAuditLogs(true);
-    } finally {
-      if (hftpFs != null) hftpFs.close();
-    }
   }
 
   /** test that denied access via webhdfs puts proper entry in audit log */

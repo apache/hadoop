@@ -22,23 +22,42 @@ import static org.junit.Assert.*;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.PrintStream;
+import java.util.UUID;
 
 import org.apache.hadoop.conf.Configuration;
+import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 public class TestKeyShell {
   private final ByteArrayOutputStream outContent = new ByteArrayOutputStream();
   private final ByteArrayOutputStream errContent = new ByteArrayOutputStream();
-  private static final File tmpDir =
-      new File(System.getProperty("test.build.data", "/tmp"), "key");
-  
+
+  private static File tmpDir;
+
+  private PrintStream initialStdOut;
+  private PrintStream initialStdErr;
+
   @Before
   public void setup() throws Exception {
+    outContent.reset();
+    errContent.reset();
+    tmpDir = new File(System.getProperty("test.build.data", "target"),
+        UUID.randomUUID().toString());
+    tmpDir.mkdirs();
+    initialStdOut = System.out;
+    initialStdErr = System.err;
     System.setOut(new PrintStream(outContent));
     System.setErr(new PrintStream(errContent));
   }
-  
+
+  @After
+  public void cleanUp() throws Exception {
+    System.setOut(initialStdOut);
+    System.setErr(initialStdErr);
+  }
+
   @Test
   public void testKeySuccessfulKeyLifecycle() throws Exception {
     outContent.reset();
@@ -53,11 +72,20 @@ public class TestKeyShell {
     		"created."));
 
     outContent.reset();
-    String[] args2 = {"list", "--provider", 
+    String[] args2 = {"list", "--provider",
         "jceks://file" + tmpDir + "/keystore.jceks"};
     rc = ks.run(args2);
     assertEquals(0, rc);
     assertTrue(outContent.toString().contains("key1"));
+
+    outContent.reset();
+    String[] args2a = {"list", "--metadata", "--provider",
+                      "jceks://file" + tmpDir + "/keystore.jceks"};
+    rc = ks.run(args2a);
+    assertEquals(0, rc);
+    assertTrue(outContent.toString().contains("key1"));
+    assertTrue(outContent.toString().contains("description"));
+    assertTrue(outContent.toString().contains("created"));
 
     outContent.reset();
     String[] args3 = {"roll", "key1", "--provider", 

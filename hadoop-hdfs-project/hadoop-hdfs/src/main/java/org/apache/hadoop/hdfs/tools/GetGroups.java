@@ -70,7 +70,7 @@ public class GetGroups extends GetGroupsBase {
   public void setConf(Configuration conf) {
     conf = new HdfsConfiguration(conf);
     String nameNodePrincipal = conf.get(
-        DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY, "");
+        DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY, "");
     
     if (LOG.isDebugEnabled()) {
       LOG.debug("Using NN principal: " + nameNodePrincipal);

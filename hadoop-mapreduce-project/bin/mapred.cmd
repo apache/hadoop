@@ -135,6 +135,10 @@ goto :eof
   set CLASSPATH=%CLASSPATH%;%TOO_PATH%
   set HADOOP_OPTS=%HADOOP_OPTS% %HADOOP_CLIENT_OPTS%
 
+:hsadmin
+  set CLASS=org.apache.hadoop.mapreduce.v2.hs.client.HSAdmin
+  set HADOOP_OPTS=%HADOOP_OPTS% %HADOOP_CLIENT_OPTS%
+
 :pipes
   goto not_supported
 
@@ -189,6 +193,7 @@ goto :eof
   @echo   historyserver        run job history servers as a standalone daemon
   @echo   distcp ^<srcurl^> ^<desturl^> copy file or directories recursively
   @echo   archive -archiveName NAME -p ^<parent path^> ^<src^>* ^<dest^> create a hadoop archive
+  @echo   hsadmin              job history server admin interface
   @echo 
   @echo Most commands print help when invoked w/o parameters.
 

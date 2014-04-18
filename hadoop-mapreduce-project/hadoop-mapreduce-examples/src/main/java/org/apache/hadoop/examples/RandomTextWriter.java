@@ -250,7 +250,7 @@ public class RandomTextWriter extends Configured implements Tool {
   }
 
   /**
-   * A random list of 100 words from /usr/share/dict/words
+   * A random list of 1000 words from /usr/share/dict/words
    */
   private static String[] words = {
                                    "diurnalness", "Homoiousian",

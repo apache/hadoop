@@ -121,7 +121,25 @@ Trunk (Unreleased)
     HADOOP-10342. Add a new method to UGI to use a Kerberos login subject to
     build a new UGI. (Larry McCay via omalley)
 
-    HADOOP-9968. Makes ProxyUsers to work with NetGroups (Benoy Antony via ddas)
+    HADOOP-9968. Makes ProxyUsers to work with NetGroups (Benoy Antony via 
+    ddas)
+
+    HADOOP-10237. JavaKeyStoreProvider needs to set keystore permissions 
+    correctly. (Larry McCay via omalley)
+
+    HADOOP-10432. Refactor SSLFactory to expose static method to determine
+    HostnameVerifier. (tucu)
+
+    HADOOP-10427. KeyProvider implementations should be thread safe. (tucu)
+
+    HADOOP-10429. KeyStores should have methods to generate the materials 
+    themselves, KeyShell should use them. (tucu)
+
+    HADOOP-10428. JavaKeyStoreProvider should accept keystore password via 
+    configuration falling back to ENV VAR. (tucu)
+
+    HADOOP-10430. KeyProvider Metadata should have an optional description, 
+    there should be a method to retrieve the metadata from all keys. (tucu)
 
   BUG FIXES
 
@@ -297,6 +315,10 @@ Trunk (Unreleased)
 
     HADOOP-10044 Improve the javadoc of rpc code (sanjay Radia)
 
+    HADOOP-10488. TestKeyProviderFactory fails randomly. (tucu)
+
+    HADOOP-10431. Change visibility of KeyStore.Options getter methods to public. (tucu)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
@@ -307,9 +329,26 @@ Release 2.5.0 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
+    HADOOP-10474 Move o.a.h.record to hadoop-streaming. (wheat9)
+
   NEW FEATURES
 
+    HADOOP-10498. Add support for proxy server. (daryn)
+
   IMPROVEMENTS
+
+    HADOOP-10451. Remove unused field and imports from SaslRpcServer.
+    (Benoy Antony via jing9)
+
+    HADOOP-10345. Sanitize the the inputs (groups and hosts) for the proxyuser
+    configuration. (Benoy Antony via jing9)
+
+    HADOOP-10454. Provide FileContext version of har file system. (Kihwal Lee
+    via jeagles)
+
+    HADOOP-10104. Update jackson to 1.9.13 (Akira Ajisaka via stevel)
+
+    HADOOP-10485. Remove dead classes in hadoop-streaming. (wheat9)
 
   OPTIMIZATIONS
 
@@ -325,7 +364,63 @@ Release 2.5.0 - UNRELEASED
     removes unused FileContext.getFileStatus(..) and fixes various javac
     warnings.  (szetszwo)
 
-Release 2.4.0 - UNRELEASED
+    HADOOP-10414. Incorrect property name for RefreshUserMappingProtocol in
+    hadoop-policy.xml. (Joey Echeverria via atm)
+
+    HADOOP-10459. distcp V2 doesn't preserve root dir's attributes when -p is
+    specified. (Yongjun Zhang via atm)
+
+    HADOOP-10462. DF#getFilesystem is not parsing the command output. 
+    (Akira AJISAKA via umamahesh)
+
+    HADOOP-10468. TestMetricsSystemImpl.testMultiThreadedPublish fails
+    intermediately. (wheat9)
+
+    HADOOP-10475. ConcurrentModificationException in
+    AbstractDelegationTokenSelector.selectToken(). (jing9)
+
+    HADOOP-10350. BUILDING.txt should mention openssl dependency required
+    for hadoop-pipes (Vinayakumar B)
+
+    HADOOP-10495. TestFileUtil fails on Windows due to bad permission
+    assertions. (cnauroth)
+
+    HADOOP-10496. Metrics system FileSink can leak file descriptor. (cnauroth)
+
+    HADOOP-10500. TestDoAsEffectiveUser fails on JDK7 due to failure to reset
+    proxy user configuration. (cnauroth)
+
+    HADOOP-10499. Remove unused parameter from ProxyUsers.authorize().
+    (Benoy Antony via cnauroth)
+
+Release 2.4.1 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+    HADOOP-10466. Lower the log level in UserGroupInformation.  (Nicolas
+    Liochon via szetszwo)
+
+  OPTIMIZATIONS
+
+  BUG FIXES 
+
+    HADOOP-10455. When there is an exception, ipc.Server should first check
+    whether it is an terse exception.  (szetszwo)
+
+    HADOOP-10456. Bug in Configuration.java exposed by Spark
+    (ConcurrentModificationException).  (Nishkam Ravi via cnauroth)
+
+    HADOOP-10473. TestCallQueueManager should interrupt before counting calls.
+    (szetszwo)
+
+    HADOOP-10490. TestMapFile and TestBloomMapFile leak file descriptors.
+    (cnauroth)
+
+Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES
 
@@ -463,6 +558,17 @@ Release 2.4.0 - UNRELEASED
     HADOOP-10441. Namenode metric "rpc.RetryCache/NameNodeRetryCache.CacheHit"
     can't be correctly processed by Ganglia. (jing9)
 
+    HADOOP-10449. Fix the javac warnings in the security package.  (szetszwo)
+
+    HADOOP-10450. Build zlib native code bindings in hadoop.dll for Windows.
+    (cnauroth)
+
+    HADOOP-10301. AuthenticationFilter should return Forbidden for failed
+    authentication. (Daryn Sharp via jing9)
+
+    HADOOP-9525. Add tests that validate winutils chmod behavior on folders
+    (ivanmi)
+
   BREAKDOWN OF HADOOP-10184 SUBTASKS AND RELATED JIRAS
 
     HADOOP-10185. FileSystem API for ACLs. (cnauroth)
@@ -499,6 +605,9 @@ Release 2.4.0 - UNRELEASED
     HADOOP-10361. Correct alignment in CLI output for ACLs. (cnauroth)
 
     HADOOP-10399. FileContext API for ACLs. (Vinayakumar B via cnauroth)
+
+    HADOOP-10442. Group look-up can cause segmentation fault when certain
+    JNI-based mapping module is used. (Kihwal Lee via jeagles)
 
 Release 2.3.1 - UNRELEASED
 
@@ -2719,6 +2828,9 @@ Release 0.23.11 - UNRELEASED
     HADOOP-10129. Distcp may succeed when it fails (daryn)
 
     HADOOP-10332. HttpServer's jetty audit log always logs 200 OK (jeagles)
+
+    HADOOP-8826. Docs still refer to 0.20.205 as stable line (Mit Desai via
+    jeagles)
 
 Release 0.23.10 - UNRELEASED
 

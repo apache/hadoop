@@ -29,15 +29,18 @@ import java.util.regex.Pattern;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.service.ServiceStateChangeListener;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.server.api.ApplicationInitializationContext;
 import org.apache.hadoop.yarn.server.api.ApplicationTerminationContext;
 import org.apache.hadoop.yarn.server.api.AuxiliaryService;
-import org.apache.hadoop.yarn.server.api.ApplicationInitializationContext;
 import org.apache.hadoop.yarn.server.api.ContainerInitializationContext;
 import org.apache.hadoop.yarn.server.api.ContainerTerminationContext;
 
@@ -45,6 +48,8 @@ import com.google.common.base.Preconditions;
 
 public class AuxServices extends AbstractService
     implements ServiceStateChangeListener, EventHandler<AuxServicesEvent> {
+
+  static final String STATE_STORE_ROOT_NAME = "nm-aux-services";
 
   private static final Log LOG = LogFactory.getLog(AuxServices.class);
 
@@ -91,6 +96,17 @@ public class AuxServices extends AbstractService
 
   @Override
   public void serviceInit(Configuration conf) throws Exception {
+    final FsPermission storeDirPerms = new FsPermission((short)0700);
+    Path stateStoreRoot = null;
+    FileSystem stateStoreFs = null;
+    boolean recoveryEnabled = conf.getBoolean(
+        YarnConfiguration.NM_RECOVERY_ENABLED,
+        YarnConfiguration.DEFAULT_NM_RECOVERY_ENABLED);
+    if (recoveryEnabled) {
+      stateStoreRoot = new Path(conf.get(YarnConfiguration.NM_RECOVERY_DIR),
+          STATE_STORE_ROOT_NAME);
+      stateStoreFs = FileSystem.getLocal(conf);
+    }
     Collection<String> auxNames = conf.getStringCollection(
         YarnConfiguration.NM_AUX_SERVICES);
     for (final String sName : auxNames) {
@@ -119,6 +135,11 @@ public class AuxServices extends AbstractService
                   +"the name in the config.");
         }
         addService(sName, s);
+        if (recoveryEnabled) {
+          Path storePath = new Path(stateStoreRoot, sName);
+          stateStoreFs.mkdirs(storePath, storeDirPerms);
+          s.setRecoveryPath(storePath);
+        }
         s.init(conf);
       } catch (RuntimeException e) {
         LOG.fatal("Failed to initialize " + sName, e);

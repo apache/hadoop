@@ -80,8 +80,8 @@ public class TestSecureNameNodeWithExternalKdc {
       Configuration conf = new HdfsConfiguration();
       conf.set(CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION,
           "kerberos");
-      conf.set(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY, nnPrincipal);
-      conf.set(DFSConfigKeys.DFS_NAMENODE_INTERNAL_SPNEGO_USER_NAME_KEY,
+      conf.set(DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY, nnPrincipal);
+      conf.set(DFSConfigKeys.DFS_NAMENODE_KERBEROS_INTERNAL_SPNEGO_PRINCIPAL_KEY,
           nnSpnegoPrincipal);
       conf.set(DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY, nnKeyTab);
 

@@ -22,9 +22,12 @@ import static org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix.long2St
 import static org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix.string2long;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -399,6 +402,14 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
       pattern, replacements));
     assertEquals("begin zoo__zaz end", StringUtils.replaceTokens(
       "begin %foo%_%bar%_%baz% end", pattern, replacements));
+  }
+
+  @Test 
+  public void testGetUniqueNonEmptyTrimmedStrings (){
+    final String TO_SPLIT = ",foo, bar,baz,,blah,blah,bar,";
+    Collection<String> col = StringUtils.getTrimmedStringCollection(TO_SPLIT);
+    assertEquals(4, col.size());
+    assertTrue(col.containsAll(Arrays.asList(new String[]{"foo","bar","baz","blah"})));
   }
 
   // Benchmark for StringUtils split

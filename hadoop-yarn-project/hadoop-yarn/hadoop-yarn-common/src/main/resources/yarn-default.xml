@@ -1019,6 +1019,19 @@
   	<value>500</value>
   </property>
   
+  <property>
+    <description>Enable the node manager to recover after starting</description>
+    <name>yarn.nodemanager.recovery.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>The local filesystem directory in which the node manager will
+    store state when recovery is enabled.</description>
+    <name>yarn.nodemanager.recovery.dir</name>
+    <value>${hadoop.tmp.dir}/yarn-nm-recovery</value>
+  </property>
+
   <!--Map Reduce configuration-->
   <property>
     <name>yarn.nodemanager.aux-services.mapreduce_shuffle.class</name>

@@ -29,6 +29,7 @@ import java.net.InetAddress;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -41,6 +42,8 @@ import org.junit.Test;
  * Tests for the {@link AuditLogger} custom audit logging interface.
  */
 public class TestAuditLogger {
+
+  private static final short TEST_PERMISSION = (short) 0654;
 
   /**
    * Tests that AuditLogger works as expected.
@@ -55,11 +58,42 @@ public class TestAuditLogger {
     try {
       cluster.waitClusterUp();
       assertTrue(DummyAuditLogger.initialized);
+      DummyAuditLogger.resetLogCount();
 
       FileSystem fs = cluster.getFileSystem();
       long time = System.currentTimeMillis();
       fs.setTimes(new Path("/"), time, time);
       assertEquals(1, DummyAuditLogger.logCount);
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  /**
+   * Minor test related to HADOOP-9155. Verify that during a
+   * FileSystem.setPermission() operation, the stat passed in during the
+   * logAuditEvent() call returns the new permission rather than the old
+   * permission.
+   */
+  @Test
+  public void testAuditLoggerWithSetPermission() throws IOException {
+    Configuration conf = new HdfsConfiguration();
+    conf.set(DFS_NAMENODE_AUDIT_LOGGERS_KEY,
+        DummyAuditLogger.class.getName());
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+
+    try {
+      cluster.waitClusterUp();
+      assertTrue(DummyAuditLogger.initialized);
+      DummyAuditLogger.resetLogCount();
+
+      FileSystem fs = cluster.getFileSystem();
+      long time = System.currentTimeMillis();
+      final Path p = new Path("/");
+      fs.setTimes(p, time, time);
+      fs.setPermission(p, new FsPermission(TEST_PERMISSION));
+      assertEquals(TEST_PERMISSION, DummyAuditLogger.foundPermission);
+      assertEquals(2, DummyAuditLogger.logCount);
     } finally {
       cluster.shutdown();
     }
@@ -93,15 +127,23 @@ public class TestAuditLogger {
 
     static boolean initialized;
     static int logCount;
+    static short foundPermission;
 
     public void initialize(Configuration conf) {
       initialized = true;
+    }
+
+    public static void resetLogCount() {
+      logCount = 0;
     }
 
     public void logAuditEvent(boolean succeeded, String userName,
         InetAddress addr, String cmd, String src, String dst,
         FileStatus stat) {
       logCount++;
+      if (stat != null) {
+        foundPermission = stat.getPermission().toShort();
+      }
     }
 
   }

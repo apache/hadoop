@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.metrics2.impl;
 
+import java.io.Closeable;
 import java.util.Random;
 import java.util.concurrent.*;
 
@@ -25,6 +26,7 @@ import static com.google.common.base.Preconditions.*;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.metrics2.lib.MutableGaugeInt;
 import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MutableCounterInt;
@@ -197,6 +199,9 @@ class MetricsSinkAdapter implements SinkQueue.Consumer<MetricsBuffer> {
       sinkThread.join();
     } catch (InterruptedException e) {
       LOG.warn("Stop interrupted", e);
+    }
+    if (sink instanceof Closeable) {
+      IOUtils.cleanup(LOG, (Closeable)sink);
     }
   }
 

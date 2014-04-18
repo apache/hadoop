@@ -25,7 +25,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.StringReader;
-import java.util.EnumSet;
 import java.util.Random;
 
 import org.apache.hadoop.test.GenericTestUtils;
@@ -48,16 +47,19 @@ public class TestDFVariations {
   }
 
   @Test(timeout=5000)
-  public void testMountAndFileSystem() throws Exception {
+  public void testMount() throws Exception {
     XXDF df = new XXDF();
     String expectedMount =
         Shell.WINDOWS ? df.getDirPath().substring(0, 2) : "/foo/bar";
-    String expectedFileSystem =
-        Shell.WINDOWS ? df.getDirPath().substring(0, 2) : "/dev/sda3";
-
     assertEquals("Invalid mount point",
         expectedMount, df.getMount());
+  }
 
+  @Test(timeout=5000)
+  public void testFileSystem() throws Exception {
+    XXDF df = new XXDF();
+    String expectedFileSystem =
+        Shell.WINDOWS ? df.getDirPath().substring(0, 2) : "/dev/sda3";
     assertEquals("Invalid filesystem",
         expectedFileSystem, df.getFilesystem());
   }

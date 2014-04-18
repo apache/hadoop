@@ -73,6 +73,8 @@ public class NameNodeMetrics {
   MutableCounterLong snapshotDiffReportOps;
   @Metric("Number of blockReceivedAndDeleted calls")
   MutableCounterLong blockReceivedAndDeletedOps;
+  @Metric("Number of blockReports from individual storages")
+  MutableCounterLong storageBlockReportOps;
 
   @Metric("Journal transactions") MutableRate transactions;
   @Metric("Journal syncs") MutableRate syncs;
@@ -220,6 +222,10 @@ public class NameNodeMetrics {
   
   public void incrBlockReceivedAndDeletedOps() {
     blockReceivedAndDeletedOps.incr();
+  }
+  
+  public void incrStorageBlockReportOps() {
+    storageBlockReportOps.incr();
   }
 
   public void addTransaction(long latency) {

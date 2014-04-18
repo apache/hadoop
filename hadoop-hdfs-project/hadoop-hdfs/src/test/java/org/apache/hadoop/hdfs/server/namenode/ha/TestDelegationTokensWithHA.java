@@ -99,6 +99,9 @@ public class TestDelegationTokensWithHA {
       .build();
     cluster.waitActive();
     
+    String logicalName = HATestUtil.getLogicalHostname(cluster);
+    HATestUtil.setFailoverConfigurations(cluster, conf, logicalName, 0);
+
     nn0 = cluster.getNameNode(0);
     nn1 = cluster.getNameNode(1);
     fs = HATestUtil.configureFailoverFs(cluster, conf);
@@ -246,8 +249,7 @@ public class TestDelegationTokensWithHA {
     doRenewOrCancel(token, clientConf, TokenTestAction.RENEW);
     doRenewOrCancel(token, clientConf, TokenTestAction.CANCEL);
   }
-  
-  @SuppressWarnings("deprecation")
+
   @Test
   public void testDelegationTokenWithDoAs() throws Exception {
     final Token<DelegationTokenIdentifier> token =
@@ -259,29 +261,22 @@ public class TestDelegationTokensWithHA {
     longUgi.doAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
-        DistributedFileSystem dfs = (DistributedFileSystem)
-            HATestUtil.configureFailoverFs(cluster, conf);
         // try renew with long name
-        dfs.renewDelegationToken(token);
+        token.renew(conf);
         return null;
       }
     });
     shortUgi.doAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
-        DistributedFileSystem dfs = (DistributedFileSystem)
-            HATestUtil.configureFailoverFs(cluster, conf);
-        dfs.renewDelegationToken(token);
+        token.renew(conf);
         return null;
       }
     });
     longUgi.doAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
-        DistributedFileSystem dfs = (DistributedFileSystem)
-            HATestUtil.configureFailoverFs(cluster, conf);
-        // try cancel with long name
-        dfs.cancelDelegationToken(token);
+        token.cancel(conf);;
         return null;
       }
     });

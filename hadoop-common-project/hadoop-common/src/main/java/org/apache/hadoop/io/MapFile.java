@@ -30,6 +30,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.util.Options;
@@ -836,21 +837,24 @@ public class MapFile {
 
     Configuration conf = new Configuration();
     FileSystem fs = FileSystem.getLocal(conf);
-    MapFile.Reader reader = new MapFile.Reader(fs, in, conf);
-    MapFile.Writer writer =
-      new MapFile.Writer(conf, fs, out,
-          reader.getKeyClass().asSubclass(WritableComparable.class),
-          reader.getValueClass());
+    MapFile.Reader reader = null;
+    MapFile.Writer writer = null;
+    try {
+      reader = new MapFile.Reader(fs, in, conf);
+      writer =
+        new MapFile.Writer(conf, fs, out,
+            reader.getKeyClass().asSubclass(WritableComparable.class),
+            reader.getValueClass());
 
-    WritableComparable key =
-      ReflectionUtils.newInstance(reader.getKeyClass().asSubclass(WritableComparable.class), conf);
-    Writable value =
-      ReflectionUtils.newInstance(reader.getValueClass().asSubclass(Writable.class), conf);
+      WritableComparable key = ReflectionUtils.newInstance(reader.getKeyClass()
+        .asSubclass(WritableComparable.class), conf);
+      Writable value = ReflectionUtils.newInstance(reader.getValueClass()
+        .asSubclass(Writable.class), conf);
 
-    while (reader.next(key, value))               // copy all entries
-      writer.append(key, value);
-
-    writer.close();
+      while (reader.next(key, value))               // copy all entries
+        writer.append(key, value);
+    } finally {
+      IOUtils.cleanup(LOG, writer, reader);
+    }
   }
-
 }

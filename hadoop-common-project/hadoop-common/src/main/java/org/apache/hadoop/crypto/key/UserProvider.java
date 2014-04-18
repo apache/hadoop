@@ -55,7 +55,7 @@ public class UserProvider extends KeyProvider {
   }
 
   @Override
-  public KeyVersion getKeyVersion(String versionName) {
+  public synchronized KeyVersion getKeyVersion(String versionName) {
     byte[] bytes = credentials.getSecretKey(new Text(versionName));
     if (bytes == null) {
       return null;
@@ -64,7 +64,7 @@ public class UserProvider extends KeyProvider {
   }
 
   @Override
-  public Metadata getMetadata(String name) throws IOException {
+  public synchronized Metadata getMetadata(String name) throws IOException {
     if (cache.containsKey(name)) {
       return cache.get(name);
     }
@@ -78,7 +78,7 @@ public class UserProvider extends KeyProvider {
   }
 
   @Override
-  public KeyVersion createKey(String name, byte[] material,
+  public synchronized KeyVersion createKey(String name, byte[] material,
                                Options options) throws IOException {
     Text nameT = new Text(name);
     if (credentials.getSecretKey(nameT) != null) {
@@ -89,7 +89,7 @@ public class UserProvider extends KeyProvider {
           options.getBitLength() + ", but got " + (8 * material.length));
     }
     Metadata meta = new Metadata(options.getCipher(), options.getBitLength(),
-        new Date(), 1);
+        options.getDescription(), new Date(), 1);
     cache.put(name, meta);
     String versionName = buildVersionName(name, 0);
     credentials.addSecretKey(nameT, meta.serialize());
@@ -98,7 +98,7 @@ public class UserProvider extends KeyProvider {
   }
 
   @Override
-  public void deleteKey(String name) throws IOException {
+  public synchronized void deleteKey(String name) throws IOException {
     Metadata meta = getMetadata(name);
     if (meta == null) {
       throw new IOException("Key " + name + " does not exist in " + this);
@@ -111,7 +111,7 @@ public class UserProvider extends KeyProvider {
   }
 
   @Override
-  public KeyVersion rollNewVersion(String name,
+  public synchronized KeyVersion rollNewVersion(String name,
                                     byte[] material) throws IOException {
     Metadata meta = getMetadata(name);
     if (meta == null) {
@@ -134,7 +134,7 @@ public class UserProvider extends KeyProvider {
   }
 
   @Override
-  public void flush() {
+  public synchronized void flush() {
     user.addCredentials(credentials);
   }
 
@@ -151,7 +151,7 @@ public class UserProvider extends KeyProvider {
   }
 
   @Override
-  public List<String> getKeys() throws IOException {
+  public synchronized List<String> getKeys() throws IOException {
     List<String> list = new ArrayList<String>();
     List<Text> keys = credentials.getAllSecretKeys();
     for (Text key : keys) {
@@ -163,7 +163,7 @@ public class UserProvider extends KeyProvider {
   }
 
   @Override
-  public List<KeyVersion> getKeyVersions(String name) throws IOException {
+  public synchronized List<KeyVersion> getKeyVersions(String name) throws IOException {
       List<KeyVersion> list = new ArrayList<KeyVersion>();
       Metadata km = getMetadata(name);
       if (km != null) {

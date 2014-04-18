@@ -22,7 +22,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.EnumSet;
 import java.util.NoSuchElementException;
 import java.util.StringTokenizer;
 
@@ -75,6 +74,8 @@ public class DF extends Shell {
       return this.filesystem;
     } else {
       run();
+      verifyExitCode();
+      parseOutput();
       return filesystem;
     }
   }
@@ -114,14 +115,7 @@ public class DF extends Shell {
       this.mount = dirFile.getCanonicalPath().substring(0, 2);
     } else {
       run();
-      // Skip parsing if df was not successful
-      if (getExitCode() != 0) {
-        StringBuffer sb = new StringBuffer("df could not be run successfully: ");
-        for (String line: output) {
-          sb.append(line);
-        }
-        throw new IOException(sb.toString());
-      }
+      verifyExitCode();
       parseOutput();
     }
 
@@ -201,6 +195,17 @@ public class DF extends Shell {
       throw new IOException("Could not parse line: " + line);
     } catch (NumberFormatException e) {
       throw new IOException("Could not parse line: " + line);
+    }
+  }
+
+  private void verifyExitCode() throws IOException {
+    if (getExitCode() != 0) {
+      StringBuilder sb =
+          new StringBuilder("df could not be run successfully: ");
+      for (String line : output) {
+        sb.append(line);
+      }
+      throw new IOException(sb.toString());
     }
   }
 

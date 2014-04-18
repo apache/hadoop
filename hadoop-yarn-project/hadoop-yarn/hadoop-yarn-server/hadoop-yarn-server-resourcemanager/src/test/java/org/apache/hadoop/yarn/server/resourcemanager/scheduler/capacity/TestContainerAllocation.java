@@ -48,6 +48,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
+import org.junit.Before;
 import org.junit.Test;
 
 
@@ -57,9 +58,17 @@ public class TestContainerAllocation {
 
   private final int GB = 1024;
 
+  private YarnConfiguration conf;
+
+  @Before
+  public void setUp() throws Exception {
+    conf = new YarnConfiguration();
+    conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+      ResourceScheduler.class);
+  }
+
   @Test(timeout = 3000000)
   public void testExcessReservationThanNodeManagerCapacity() throws Exception {
-    YarnConfiguration conf = new YarnConfiguration();
     MockRM rm = new MockRM(conf);
     rm.start();
 
@@ -129,9 +138,6 @@ public class TestContainerAllocation {
   // acquired by the AM, not when the containers are allocated
   @Test
   public void testContainerTokenGeneratedOnPullRequest() throws Exception {
-    YarnConfiguration conf = new YarnConfiguration();
-    conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
-      ResourceScheduler.class);
     MockRM rm1 = new MockRM(conf);
     rm1.start();
     MockNM nm1 = rm1.registerNode("127.0.0.1:1234", 8000);
@@ -161,7 +167,6 @@ public class TestContainerAllocation {
 
   @Test
   public void testNormalContainerAllocationWhenDNSUnavailable() throws Exception{
-    YarnConfiguration conf = new YarnConfiguration();
     MockRM rm1 = new MockRM(conf);
     rm1.start();
     MockNM nm1 = rm1.registerNode("unknownhost:1234", 8000);
@@ -218,7 +223,6 @@ public class TestContainerAllocation {
   // creation failure.
   @Test(timeout = 20000)
   public void testAMContainerAllocationWhenDNSUnavailable() throws Exception {
-    final YarnConfiguration conf = new YarnConfiguration();
     MockRM rm1 = new MockRM(conf) {
       @Override
       protected RMSecretManagerService createRMSecretManagerService() {

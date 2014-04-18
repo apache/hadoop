@@ -32,6 +32,9 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.permission.AclEntry;
+import org.apache.hadoop.fs.permission.AclEntryScope;
+import org.apache.hadoop.fs.permission.AclEntryType;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.MiniDFSCluster.NameNodeInfo;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
@@ -57,7 +60,6 @@ import org.apache.hadoop.hdfs.server.namenode.ha
         .ConfiguredFailoverProxyProvider;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
-import org.apache.hadoop.hdfs.web.TestWebHDFSForHA;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.net.NetUtils;
@@ -1104,7 +1106,33 @@ public class DFSTestUtil {
     // OP_REMOVE_CACHE_POOL
     filesystem.removeCachePool("pool1");
     // OP_SET_ACL
-    filesystem.setAcl(pathConcatTarget, Lists.<AclEntry> newArrayList());
+    List<AclEntry> aclEntryList = Lists.newArrayList();
+    aclEntryList.add(
+        new AclEntry.Builder()
+            .setPermission(FsAction.READ_WRITE)
+            .setScope(AclEntryScope.ACCESS)
+            .setType(AclEntryType.USER)
+            .build());
+    aclEntryList.add(
+        new AclEntry.Builder()
+            .setName("user")
+            .setPermission(FsAction.READ_WRITE)
+            .setScope(AclEntryScope.ACCESS)
+            .setType(AclEntryType.USER)
+            .build());
+    aclEntryList.add(
+        new AclEntry.Builder()
+            .setPermission(FsAction.WRITE)
+            .setScope(AclEntryScope.ACCESS)
+            .setType(AclEntryType.GROUP)
+            .build());
+    aclEntryList.add(
+        new AclEntry.Builder()
+            .setPermission(FsAction.NONE)
+            .setScope(AclEntryScope.ACCESS)
+            .setType(AclEntryType.OTHER)
+            .build());
+    filesystem.setAcl(pathConcatTarget, aclEntryList);
   }
 
   public static void abortStream(DFSOutputStream out) throws IOException {

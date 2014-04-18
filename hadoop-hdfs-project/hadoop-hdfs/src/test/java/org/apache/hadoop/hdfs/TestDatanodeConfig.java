@@ -86,9 +86,11 @@ public class TestDatanodeConfig {
       fail();
     } catch(Exception e) {
       // expecting exception here
+    } finally {
+      if (dn != null) {
+        dn.shutdown();
+      }
     }
-    if(dn != null)
-      dn.shutdown();
     assertNull("Data-node startup should have failed.", dn);
 
     // 2. Test "file:" schema and no schema (path-only). Both should work.
@@ -121,17 +123,21 @@ public class TestDatanodeConfig {
     // Can't increase the memlock limit past the maximum.
     assumeTrue(memlockLimit != Long.MAX_VALUE);
 
+    File dataDir = new File(BASE_DIR, "data").getCanonicalFile();
     Configuration conf = cluster.getConfiguration(0);
+    conf.set(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY,
+      makeURI("file", null, fileAsURI(dataDir).getPath()));
     long prevLimit = conf.
         getLong(DFSConfigKeys.DFS_DATANODE_MAX_LOCKED_MEMORY_KEY,
             DFSConfigKeys.DFS_DATANODE_MAX_LOCKED_MEMORY_DEFAULT);
+    DataNode dn = null;
     try {
       // Try starting the DN with limit configured to the ulimit
       conf.setLong(DFSConfigKeys.DFS_DATANODE_MAX_LOCKED_MEMORY_KEY,
           memlockLimit);
-      DataNode dn = null;
       dn = DataNode.createDataNode(new String[]{},  conf);
       dn.shutdown();
+      dn = null;
       // Try starting the DN with a limit > ulimit
       conf.setLong(DFSConfigKeys.DFS_DATANODE_MAX_LOCKED_MEMORY_KEY,
           memlockLimit+1);
@@ -142,6 +148,9 @@ public class TestDatanodeConfig {
             "more than the datanode's available RLIMIT_MEMLOCK", e);
       }
     } finally {
+      if (dn != null) {
+        dn.shutdown();
+      }
       conf.setLong(DFSConfigKeys.DFS_DATANODE_MAX_LOCKED_MEMORY_KEY,
           prevLimit);
     }

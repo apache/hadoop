@@ -25,6 +25,9 @@ import static org.junit.Assert.fail;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadInfo;
+import java.lang.management.ThreadMXBean;
 import java.net.URI;
 import java.net.URL;
 import java.util.List;
@@ -59,6 +62,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
@@ -270,6 +274,29 @@ public class TestStandbyCheckpoints {
     HATestUtil.waitForCheckpoint(cluster, 1, ImmutableList.of(104));
     cluster.transitionToStandby(0);
     cluster.transitionToActive(1);
+
+    // Wait to make sure background TransferFsImageUpload thread was cancelled.
+    // This needs to be done before the next test in the suite starts, so that a
+    // file descriptor is not held open during the next cluster init.
+    cluster.shutdown();
+    cluster = null;
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        ThreadMXBean threadBean = ManagementFactory.getThreadMXBean();
+        ThreadInfo[] threads = threadBean.getThreadInfo(
+          threadBean.getAllThreadIds(), 1);
+        for (ThreadInfo thread: threads) {
+          if (thread.getThreadName().startsWith("TransferFsImageUpload")) {
+            return false;
+          }
+        }
+        return true;
+      }
+    }, 1000, 30000);
+
+    // Assert that former active did not accept the canceled checkpoint file.
+    assertEquals(0, nn0.getFSImage().getMostRecentCheckpointTxId());
   }
   
   /**

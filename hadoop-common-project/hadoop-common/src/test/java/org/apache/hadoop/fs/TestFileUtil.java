@@ -589,7 +589,7 @@ public class TestFileUtil {
         // should never happen since that method never throws InterruptedException.      
         assertNull(ie);  
       }
-      assertFalse(notADirectory.canRead());
+      assertFalse(FileUtil.canRead(notADirectory));
       final long du3 = FileUtil.getDU(partitioned);
       assertEquals(expected, du3);
 
@@ -600,7 +600,7 @@ public class TestFileUtil {
         // should never happen since that method never throws InterruptedException.      
         assertNull(ie);  
       }
-      assertFalse(partitioned.canRead());
+      assertFalse(FileUtil.canRead(partitioned));
       final long du4 = FileUtil.getDU(partitioned);
       assertEquals(0, du4);
     } finally {

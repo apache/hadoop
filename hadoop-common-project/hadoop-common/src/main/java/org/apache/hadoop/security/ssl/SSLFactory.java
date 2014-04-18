@@ -127,10 +127,14 @@ public class SSLFactory implements ConnectionConfigurator {
   }
 
   private HostnameVerifier getHostnameVerifier(Configuration conf)
+      throws GeneralSecurityException, IOException {
+    return getHostnameVerifier(conf.get(SSL_HOSTNAME_VERIFIER_KEY, "DEFAULT").
+        trim().toUpperCase());
+  }
+
+  public static HostnameVerifier getHostnameVerifier(String verifier)
     throws GeneralSecurityException, IOException {
     HostnameVerifier hostnameVerifier;
-    String verifier =
-      conf.get(SSL_HOSTNAME_VERIFIER_KEY, "DEFAULT").trim().toUpperCase();
     if (verifier.equals("DEFAULT")) {
       hostnameVerifier = SSLHostnameVerifier.DEFAULT;
     } else if (verifier.equals("DEFAULT_AND_LOCALHOST")) {

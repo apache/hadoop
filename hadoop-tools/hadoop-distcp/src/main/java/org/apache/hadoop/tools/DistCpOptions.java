@@ -60,6 +60,10 @@ public class DistCpOptions {
 
   private Path targetPath;
 
+  // targetPathExist is a derived field, it's initialized in the 
+  // beginning of distcp.
+  private boolean targetPathExists = true;
+  
   public static enum FileAttribute{
     REPLICATION, BLOCKSIZE, USER, GROUP, PERMISSION, CHECKSUMTYPE;
 
@@ -123,6 +127,7 @@ public class DistCpOptions {
       this.sourceFileListing = that.getSourceFileListing();
       this.sourcePaths = that.getSourcePaths();
       this.targetPath = that.getTargetPath();
+      this.targetPathExists = that.getTargetPathExists();
     }
   }
 
@@ -439,6 +444,22 @@ public class DistCpOptions {
     return targetPath;
   }
 
+  /**
+   * Getter for the targetPathExists.
+   * @return The target-path.
+   */
+  public boolean getTargetPathExists() {
+    return targetPathExists;
+  }
+  
+  /**
+   * Set targetPathExists.
+   * @param targetPathExists Whether the target path of distcp exists.
+   */
+  public boolean setTargetPathExists(boolean targetPathExists) {
+    return this.targetPathExists = targetPathExists;
+  }
+
   public void validate(DistCpOptionSwitch option, boolean value) {
 
     boolean syncFolder = (option == DistCpOptionSwitch.SYNC_FOLDERS ?
@@ -515,6 +536,7 @@ public class DistCpOptions {
         ", sourceFileListing=" + sourceFileListing +
         ", sourcePaths=" + sourcePaths +
         ", targetPath=" + targetPath +
+        ", targetPathExists=" + targetPathExists +
         '}';
   }
 

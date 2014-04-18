@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
-import static org.apache.hadoop.util.Time.now;
+import static org.apache.hadoop.util.Time.monotonicNow;
 
 import java.io.IOException;
 import java.net.URI;
@@ -196,13 +196,18 @@ public class StandbyCheckpointer {
       @Override
       public Void call() throws IOException {
         TransferFsImage.uploadImageFromStorage(activeNNAddress, conf,
-            namesystem.getFSImage().getStorage(), imageType, txid);
+            namesystem.getFSImage().getStorage(), imageType, txid, canceler);
         return null;
       }
     });
     executor.shutdown();
     try {
       upload.get();
+    } catch (InterruptedException e) {
+      // The background thread may be blocked waiting in the throttler, so
+      // interrupt it.
+      upload.cancel(true);
+      throw e;
     } catch (ExecutionException e) {
       throw new IOException("Exception during image upload: " + e.getMessage(),
           e.getCause());
@@ -277,14 +282,14 @@ public class StandbyCheckpointer {
      * prevented
      */
     private void preventCheckpointsFor(long delayMs) {
-      preventCheckpointsUntil = now() + delayMs;
+      preventCheckpointsUntil = monotonicNow() + delayMs;
     }
 
     private void doWork() {
       final long checkPeriod = 1000 * checkpointConf.getCheckPeriod();
       // Reset checkpoint time so that we don't always checkpoint
       // on startup.
-      lastCheckpointTime = now();
+      lastCheckpointTime = monotonicNow();
       while (shouldRun) {
         boolean needRollbackCheckpoint = namesystem.isNeedRollbackFsImage();
         if (!needRollbackCheckpoint) {
@@ -302,9 +307,9 @@ public class StandbyCheckpointer {
             UserGroupInformation.getCurrentUser().checkTGTAndReloginFromKeytab();
           }
           
-          long now = now();
-          long uncheckpointed = countUncheckpointedTxns();
-          long secsSinceLast = (now - lastCheckpointTime)/1000;
+          final long now = monotonicNow();
+          final long uncheckpointed = countUncheckpointedTxns();
+          final long secsSinceLast = (now - lastCheckpointTime) / 1000;
           
           boolean needCheckpoint = needRollbackCheckpoint;
           if (needCheckpoint) {

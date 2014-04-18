@@ -686,6 +686,7 @@ public abstract class Storage extends StorageInfo {
      * <code>null</code> if storage is already locked.
      * @throws IOException if locking fails.
      */
+    @SuppressWarnings("resource")
     FileLock tryLock() throws IOException {
       boolean deletionHookAdded = false;
       File lockF = new File(root, STORAGE_FILE_LOCK);
@@ -698,6 +699,9 @@ public abstract class Storage extends StorageInfo {
       FileLock res = null;
       try {
         res = file.getChannel().tryLock();
+        if (null == res) {
+          throw new OverlappingFileLockException();
+        }
         file.write(jvmName.getBytes(Charsets.UTF_8));
         LOG.info("Lock on " + lockF + " acquired by nodename " + jvmName);
       } catch(OverlappingFileLockException oe) {

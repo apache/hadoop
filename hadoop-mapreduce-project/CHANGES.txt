@@ -68,9 +68,6 @@ Trunk (Unreleased)
     MAPREDUCE-4735. Make arguments in TestDFSIO case insensitive.
     (Brandon Li via suresh)
 
-    MAPREDUCE-5014. Extend Distcp to accept a custom CopyListing.
-    (Srikanth Sundarrajan via amareshwari)
-
     MAPREDUCE-5197. Add a service for checkpointing task state.
     (Carlo Curino via cdouglas)
 
@@ -163,11 +160,51 @@ Release 2.5.0 - UNRELEASED
     MAPREDUCE-5804. TestMRJobsWithProfiler#testProfiler timesout (Mit Desai
     via kihwal)
 
+    MAPREDUCE-5825. Provide diagnostics for reducers killed during ramp down
+    (Gera Shegalov via jlowe)
+
+    MAPREDUCE-5836. Fix typo in RandomTextWriter (Akira AJISAKA via jeagles)
+
   OPTIMIZATIONS
 
   BUG FIXES 
 
-Release 2.4.0 - UNRELEASED
+    MAPREDUCE-5759. Remove unnecessary conf load in Limits (Sandy Ryza)
+
+    MAPREDUCE-5014. Extend Distcp to accept a custom CopyListing.
+    (Srikanth Sundarrajan via amareshwari)
+
+    MAPREDUCE-5775. Remove unnecessary job.setNumReduceTasks in SleepJob.createJob 
+    (jhanver chand sharma via devaraj)
+
+Release 2.4.1 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    MAPREDUCE-5818. Added "hsadmin" command into mapred.cmd. (Jian He via zjshen)
+
+    MAPREDUCE-5824. Fixed test-failure of TestPipesNonJavaInputFormat in
+    Windows. (Xuan Gong via vinodkv)
+
+    MAPREDUCE-5815. Fixed test-failure of TestMRAppMaster by making MRAppMaster
+    gracefully handle empty-queue names. (Akira Ajisaka via vinodkv)
+
+    MAPREDUCE-5826. Fixed HistoryServerFileSystemStore to use right permissions
+    on Windows for temporary files and thus also fix the test-issue with
+    TestHistoryServerFileSystemStateStoreService. (Varun Vasudev via vinodkv)
+
+    MAPREDUCE-5828. Fixed a test issue with TestMapReduceJobControl that was
+    causing it to fail on Windows. (vinodkv)
+
+Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES
 
@@ -268,6 +305,13 @@ Release 2.4.0 - UNRELEASED
 
     MAPREDUCE-5805. Fixed MapReduce JobHistory encoding of queue-name to escape
     hyphens and thus avoid parsing errors. (Akira AJISAKA via vinodkv)
+
+    MAPREDUCE-5810. Removed the faulty and failing streaming test
+    TestStreamingTaskLog. (Akira Ajisaka via vinodkv)
+
+    MAPREDUCE-5813. Fix YarnChild to explicitly load job.xml from the
+    local-filesystem, rather than rely on the classpath. (Gera Shegalov via
+    acmurthy) 
 
 Release 2.3.1 - UNRELEASED
 
@@ -1739,6 +1783,9 @@ Release 0.23.10 - UNRELEASED
 
     MAPREDUCE-5640. Rename TestLineRecordReader in jobclient module (Jason Lowe
     via jeagles)
+
+    MAPREDUCE-3191. docs for map output compression incorrectly reference
+    SequenceFile (Chen He via jeagles)
 
   OPTIMIZATIONS
 

@@ -50,7 +50,6 @@ import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.HasEnhancedByteBufferAccess;
 import org.apache.hadoop.fs.ReadOption;
 import org.apache.hadoop.fs.UnresolvedLinkException;
-import org.apache.hadoop.hdfs.client.ClientMmap;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -61,6 +60,7 @@ import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
 import org.apache.hadoop.hdfs.server.datanode.CachingStrategy;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaNotFoundException;
+import org.apache.hadoop.hdfs.shortcircuit.ClientMmap;
 import org.apache.hadoop.io.ByteBufferPool;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
@@ -80,7 +80,7 @@ public class DFSInputStream extends FSInputStream
 implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
     HasEnhancedByteBufferAccess {
   @VisibleForTesting
-  static boolean tcpReadsDisabledForTesting = false;
+  public static boolean tcpReadsDisabledForTesting = false;
   private final DFSClient dfsClient;
   private boolean closed = false;
   private final String src;
@@ -801,7 +801,7 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
             // got a EOS from reader though we expect more data on it.
             throw new IOException("Unexpected EOS from the reader");
           }
-          if (dfsClient.stats != null && result != -1) {
+          if (dfsClient.stats != null) {
             dfsClient.stats.incrementBytesRead(result);
           }
           return result;
@@ -983,12 +983,15 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
     return new Callable<ByteBuffer>() {
       @Override
       public ByteBuffer call() throws Exception {
-        byte[] buf = bb.array();
-        int offset = bb.position();
-        actualGetFromOneDataNode(datanode, block, start, end, buf, offset,
-            corruptedBlockMap);
-        latch.countDown();
-        return bb;
+        try {
+          byte[] buf = bb.array();
+          int offset = bb.position();
+          actualGetFromOneDataNode(datanode, block, start, end, buf, offset,
+              corruptedBlockMap);
+          return bb;
+        } finally {
+          latch.countDown();
+        }
       }
     };
   }
@@ -1101,7 +1104,7 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
       long end, byte[] buf, int offset,
       Map<ExtendedBlock, Set<DatanodeInfo>> corruptedBlockMap)
       throws IOException {
-    ArrayList<Future<ByteBuffer>> futures = null;
+    ArrayList<Future<ByteBuffer>> futures = new ArrayList<Future<ByteBuffer>>();
     ArrayList<DatanodeInfo> ignored = new ArrayList<DatanodeInfo>();
     ByteBuffer bb = null;
     int len = (int) (end - start + 1);
@@ -1112,7 +1115,7 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
       DNAddrPair chosenNode = null;
       Future<ByteBuffer> future = null;
       // futures is null if there is no request already executing.
-      if (futures == null) {
+      if (futures.isEmpty()) {
         // chooseDataNode is a commitment.  If no node, we go to
         // the NN to reget block locations.  Only go here on first read.
         chosenNode = chooseDataNode(block, ignored);
@@ -1130,7 +1133,6 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
           // Ignore this node on next go around.
           ignored.add(chosenNode.info);
           dfsClient.getHedgedReadMetrics().incHedgedReadOps();
-          futures = new ArrayList<Future<ByteBuffer>>();
           futures.add(future);
           continue; // no need to refresh block locations
         } catch (InterruptedException e) {

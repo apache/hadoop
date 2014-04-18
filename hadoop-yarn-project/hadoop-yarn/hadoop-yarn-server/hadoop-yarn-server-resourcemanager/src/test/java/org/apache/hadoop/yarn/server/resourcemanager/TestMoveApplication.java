@@ -72,6 +72,13 @@ public class TestMoveApplication {
     Application application = new Application("user1", resourceManager);
     application.submit();
 
+    // Wait for app to be accepted
+    RMApp app = resourceManager.rmContext.getRMApps()
+            .get(application.getApplicationId());
+    while (app.getState() != RMAppState.ACCEPTED) {
+      Thread.sleep(100);
+    }
+
     ClientRMService clientRMService = resourceManager.getClientRMService();
     try {
       // FIFO scheduler does not support moves

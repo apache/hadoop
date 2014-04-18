@@ -19,12 +19,21 @@ package org.apache.hadoop.crypto.key;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 import java.util.List;
+import java.util.UUID;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProvider.KeyVersion;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 import static org.junit.Assert.assertArrayEquals;
@@ -33,8 +42,14 @@ import static org.junit.Assert.assertTrue;
 
 public class TestKeyProviderFactory {
 
-  private static final File tmpDir =
-      new File(System.getProperty("test.build.data", "/tmp"), "key");
+  private static File tmpDir;
+
+  @Before
+  public void setup() {
+    tmpDir = new File(System.getProperty("test.build.data", "target"),
+        UUID.randomUUID().toString());
+    tmpDir.mkdirs();
+  }
 
   @Test
   public void testFactory() throws Exception {
@@ -193,10 +208,87 @@ public class TestKeyProviderFactory {
     Configuration conf = new Configuration();
     final String ourUrl =
         JavaKeyStoreProvider.SCHEME_NAME + "://file" + tmpDir + "/test.jks";
+
     File file = new File(tmpDir, "test.jks");
     file.delete();
     conf.set(KeyProviderFactory.KEY_PROVIDER_PATH, ourUrl);
     checkSpecificProvider(conf, ourUrl);
+    Path path = KeyProvider.unnestUri(new URI(ourUrl));
+    FileSystem fs = path.getFileSystem(conf);
+    FileStatus s = fs.getFileStatus(path);
+    assertTrue(s.getPermission().toString().equals("rwx------"));
     assertTrue(file + " should exist", file.isFile());
+
+    // check permission retention after explicit change
+    fs.setPermission(path, new FsPermission("777"));
+    checkPermissionRetention(conf, ourUrl, path);
   }
+
+  public void checkPermissionRetention(Configuration conf, String ourUrl, Path path) throws Exception {
+    KeyProvider provider = KeyProviderFactory.getProviders(conf).get(0);
+    // let's add a new key and flush and check that permissions are still set to 777
+    byte[] key = new byte[32];
+    for(int i =0; i < key.length; ++i) {
+      key[i] = (byte) i;
+    }
+    // create a new key
+    try {
+      provider.createKey("key5", key, KeyProvider.options(conf));
+    } catch (Exception e) {
+      e.printStackTrace();
+      throw e;
+    }
+    provider.flush();
+    // get a new instance of the provider to ensure it was saved correctly
+    provider = KeyProviderFactory.getProviders(conf).get(0);
+    assertArrayEquals(key, provider.getCurrentKey("key5").getMaterial());
+
+    FileSystem fs = path.getFileSystem(conf);
+    FileStatus s = fs.getFileStatus(path);
+    assertTrue("Permissions should have been retained from the preexisting keystore.", s.getPermission().toString().equals("rwxrwxrwx"));
+  }
+
+  @Test
+  public void testJksProviderPasswordViaConfig() throws Exception {
+    Configuration conf = new Configuration();
+    final String ourUrl =
+        JavaKeyStoreProvider.SCHEME_NAME + "://file" + tmpDir + "/test.jks";
+    File file = new File(tmpDir, "test.jks");
+    file.delete();
+    try {
+      conf.set(KeyProviderFactory.KEY_PROVIDER_PATH, ourUrl);
+      conf.set(JavaKeyStoreProvider.KEYSTORE_PASSWORD_FILE_KEY,
+          "javakeystoreprovider.password");
+      KeyProvider provider = KeyProviderFactory.getProviders(conf).get(0);
+      provider.createKey("key3", new byte[32], KeyProvider.options(conf));
+      provider.flush();
+    } catch (Exception ex) {
+      Assert.fail("could not create keystore with password file");
+    }
+    KeyProvider provider = KeyProviderFactory.getProviders(conf).get(0);
+    Assert.assertNotNull(provider.getCurrentKey("key3"));
+
+    try {
+      conf.set(JavaKeyStoreProvider.KEYSTORE_PASSWORD_FILE_KEY, "bar");
+      KeyProviderFactory.getProviders(conf).get(0);
+      Assert.fail("using non existing password file, it should fail");
+    } catch (IOException ex) {
+      //NOP
+    }
+    try {
+      conf.set(JavaKeyStoreProvider.KEYSTORE_PASSWORD_FILE_KEY, "core-site.xml");
+      KeyProviderFactory.getProviders(conf).get(0);
+      Assert.fail("using different password file, it should fail");
+    } catch (IOException ex) {
+      //NOP
+    }
+    try {
+      conf.unset(JavaKeyStoreProvider.KEYSTORE_PASSWORD_FILE_KEY);
+      KeyProviderFactory.getProviders(conf).get(0);
+      Assert.fail("No password file property, env not set, it should fail");
+    } catch (IOException ex) {
+      //NOP
+    }
+  }
+
 }

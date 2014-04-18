@@ -58,7 +58,7 @@ public class TestSecureNameNode {
       Configuration conf = new HdfsConfiguration();
       conf.set(CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION,
           "kerberos");
-      conf.set(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY,
+      conf.set(DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY,
           "nn1/localhost@EXAMPLE.COM");
       conf.set(DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY, nn1KeytabPath);
 

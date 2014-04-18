@@ -39,9 +39,6 @@ import org.apache.commons.logging.LogFactory;
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Unstable
 public class NetgroupCache {
-
-  private static final Log LOG = LogFactory.getLog(NetgroupCache.class);
-
   private static boolean netgroupToUsersMapUpdated = true;
   private static Map<String, Set<String>> netgroupToUsersMap =
     new ConcurrentHashMap<String, Set<String>>();

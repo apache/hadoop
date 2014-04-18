@@ -62,7 +62,8 @@ public class TestSecondaryWebUi {
   public void testSecondaryWebUi() throws IOException {
     String pageContents = DFSTestUtil.urlGet(new URL("http://localhost:" +
         SecondaryNameNode.getHttpAddress(conf).getPort() + "/status.jsp"));
-    assertTrue(pageContents.contains("Last Checkpoint Time"));
+    assertTrue("Didn't find \"Last Checkpoint\"",
+        pageContents.contains("Last Checkpoint"));
   }
   
   @Test

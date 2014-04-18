@@ -27,6 +27,7 @@ import java.io.StringReader;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -91,7 +92,6 @@ import org.apache.hadoop.yarn.client.api.async.NMClientAsync;
 import org.apache.hadoop.yarn.client.api.async.impl.NMClientAsyncImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
@@ -185,6 +185,9 @@ public class ApplicationMaster {
   @SuppressWarnings("rawtypes")
   private AMRMClientAsync amRMClient;
 
+  // In both secure and non-secure modes, this points to the job-submitter.
+  private UserGroupInformation appSubmitterUgi;
+
   // Handle to communicate with the Node Manager
   private NMClientAsync nmClientAsync;
   // Listen to process the response from the Node Manager
@@ -236,7 +239,7 @@ public class ApplicationMaster {
 
   // Location of shell script ( obtained from info set in env )
   // Shell script path in fs
-  private String shellScriptPath = "";
+  private String scriptPath = "";
   // Timestamp needed for creating a local resource
   private long shellScriptPathTimestamp = 0;
   // File length needed for local resource
@@ -451,7 +454,7 @@ public class ApplicationMaster {
     }
 
     if (envs.containsKey(DSConstants.DISTRIBUTEDSHELLSCRIPTLOCATION)) {
-      shellScriptPath = envs.get(DSConstants.DISTRIBUTEDSHELLSCRIPTLOCATION);
+      scriptPath = envs.get(DSConstants.DISTRIBUTEDSHELLSCRIPTLOCATION);
 
       if (envs.containsKey(DSConstants.DISTRIBUTEDSHELLSCRIPTTIMESTAMP)) {
         shellScriptPathTimestamp = Long.valueOf(envs
@@ -462,10 +465,10 @@ public class ApplicationMaster {
             .get(DSConstants.DISTRIBUTEDSHELLSCRIPTLEN));
       }
 
-      if (!shellScriptPath.isEmpty()
+      if (!scriptPath.isEmpty()
           && (shellScriptPathTimestamp <= 0 || shellScriptPathLen <= 0)) {
         LOG.error("Illegal values in env for shell script path" + ", path="
-            + shellScriptPath + ", len=" + shellScriptPathLen + ", timestamp="
+            + scriptPath + ", len=" + shellScriptPathLen + ", timestamp="
             + shellScriptPathTimestamp);
         throw new IllegalArgumentException(
             "Illegal values in env for shell script path");
@@ -525,13 +528,22 @@ public class ApplicationMaster {
     credentials.writeTokenStorageToStream(dob);
     // Now remove the AM->RM token so that containers cannot access it.
     Iterator<Token<?>> iter = credentials.getAllTokens().iterator();
+    LOG.info("Executing with tokens:");
     while (iter.hasNext()) {
       Token<?> token = iter.next();
+      LOG.info(token);
       if (token.getKind().equals(AMRMTokenIdentifier.KIND_NAME)) {
         iter.remove();
       }
     }
     allTokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
+
+    // Create appSubmitterUgi and add original tokens to it
+    String appSubmitterUserName =
+        System.getenv(ApplicationConstants.Environment.USER.name());
+    appSubmitterUgi =
+        UserGroupInformation.createRemoteUser(appSubmitterUserName);
+    appSubmitterUgi.addCredentials(credentials);
 
     AMRMClientAsync.CallbackHandler allocListener = new RMCallbackHandler();
     amRMClient = AMRMClientAsync.createAMRMClientAsync(1000, allocListener);
@@ -901,19 +913,26 @@ public class ApplicationMaster {
       // resources too.
       // In this scenario, if a shell script is specified, we need to have it
       // copied and made available to the container.
-      if (!shellScriptPath.isEmpty()) {
-        Path renamedSchellScriptPath = null;
+      if (!scriptPath.isEmpty()) {
+        Path renamedScriptPath = null;
         if (Shell.WINDOWS) {
-          renamedSchellScriptPath = new Path(shellScriptPath + ".bat");
+          renamedScriptPath = new Path(scriptPath + ".bat");
         } else {
-          renamedSchellScriptPath = new Path(shellScriptPath + ".sh");
+          renamedScriptPath = new Path(scriptPath + ".sh");
         }
+
         try {
-          FileSystem fs = renamedSchellScriptPath.getFileSystem(conf);
-          fs.rename(new Path(shellScriptPath), renamedSchellScriptPath);
-        } catch (IOException e) {
-          LOG.warn("Not able to add suffix (.bat/.sh) to the shell script filename");
-          throw new YarnRuntimeException(e);
+          // rename the script file based on the underlying OS syntax.
+          renameScriptFile(renamedScriptPath);
+        } catch (Exception e) {
+          LOG.error(
+              "Not able to add suffix (.bat/.sh) to the shell script filename",
+              e);
+          // We know we cannot continue launching the container
+          // so we should release it.
+          numCompletedContainers.incrementAndGet();
+          numFailedContainers.incrementAndGet();
+          return;
         }
 
         LocalResource shellRsrc = Records.newRecord(LocalResource.class);
@@ -921,11 +940,10 @@ public class ApplicationMaster {
         shellRsrc.setVisibility(LocalResourceVisibility.APPLICATION);
         try {
           shellRsrc.setResource(ConverterUtils.getYarnUrlFromURI(new URI(
-            renamedSchellScriptPath.toString())));
+            renamedScriptPath.toString())));
         } catch (URISyntaxException e) {
           LOG.error("Error when trying to use shell script path specified"
-              + " in env, path=" + renamedSchellScriptPath);
-          e.printStackTrace();
+              + " in env, path=" + renamedScriptPath, e);
 
           // A failure scenario on bad input such as invalid shell script path
           // We know we cannot continue launching the container
@@ -949,7 +967,7 @@ public class ApplicationMaster {
       // Set executable command
       vargs.add(shellCommand);
       // Set shell script path
-      if (!shellScriptPath.isEmpty()) {
+      if (!scriptPath.isEmpty()) {
         vargs.add(Shell.WINDOWS ? ExecBatScripStringtPath
             : ExecShellStringPath);
       }
@@ -981,6 +999,20 @@ public class ApplicationMaster {
       containerListener.addContainer(container.getId(), container);
       nmClientAsync.startContainerAsync(container, ctx);
     }
+  }
+
+  private void renameScriptFile(final Path renamedScriptPath)
+      throws IOException, InterruptedException {
+    appSubmitterUgi.doAs(new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws IOException {
+        FileSystem fs = renamedScriptPath.getFileSystem(conf);
+        fs.rename(new Path(scriptPath), renamedScriptPath);
+        return null;
+      }
+    });
+    LOG.info("User " + appSubmitterUgi.getUserName()
+        + " added suffix(.sh/.bat) to script file as " + renamedScriptPath);
   }
 
   /**

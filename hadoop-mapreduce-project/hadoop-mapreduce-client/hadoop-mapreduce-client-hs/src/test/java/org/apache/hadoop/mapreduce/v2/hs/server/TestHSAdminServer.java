@@ -173,7 +173,7 @@ public class TestHSAdminServer {
 
     Throwable th = null;
     try {
-      ProxyUsers.authorize(ugi, "127.0.0.1", conf);
+      ProxyUsers.authorize(ugi, "127.0.0.1");
     } catch (Exception e) {
       th = e;
     }
@@ -189,7 +189,7 @@ public class TestHSAdminServer {
     // resetting th
     th = null;
     try {
-      ProxyUsers.authorize(ugi, "127.0.0.1", conf);
+      ProxyUsers.authorize(ugi, "127.0.0.1");
     } catch (Exception e) {
       th = e;
     }
@@ -202,7 +202,7 @@ public class TestHSAdminServer {
     th = null;
 
     try {
-      ProxyUsers.authorize(ugi, "127.0.0.1", conf);
+      ProxyUsers.authorize(ugi, "127.0.0.1");
     } catch (Exception e) {
       th = e;
     }

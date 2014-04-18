@@ -4082,7 +4082,9 @@ public abstract class FSEditLogOp {
       contentHandler.startElement("", "", "ENTRY", new AttributesImpl());
       XMLUtils.addSaxString(contentHandler, "SCOPE", e.getScope().name());
       XMLUtils.addSaxString(contentHandler, "TYPE", e.getType().name());
-      XMLUtils.addSaxString(contentHandler, "NAME", e.getName());
+      if (e.getName() != null) {
+        XMLUtils.addSaxString(contentHandler, "NAME", e.getName());
+      }
       fsActionToXml(contentHandler, e.getPermission());
       contentHandler.endElement("", "", "ENTRY");
     }
@@ -4098,7 +4100,7 @@ public abstract class FSEditLogOp {
       AclEntry e = new AclEntry.Builder()
         .setScope(AclEntryScope.valueOf(s.getValue("SCOPE")))
         .setType(AclEntryType.valueOf(s.getValue("TYPE")))
-        .setName(s.getValue("NAME"))
+        .setName(s.getValueOrNull("NAME"))
         .setPermission(fsActionFromXml(s)).build();
       aclEntries.add(e);
     }

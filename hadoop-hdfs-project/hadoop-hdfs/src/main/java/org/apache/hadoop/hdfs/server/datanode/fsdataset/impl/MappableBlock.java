@@ -28,6 +28,7 @@ import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileChannel.MapMode;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.ChecksumException;
@@ -76,8 +77,9 @@ public class MappableBlock implements Closeable {
       String blockFileName) throws IOException {
     MappableBlock mappableBlock = null;
     MappedByteBuffer mmap = null;
+    FileChannel blockChannel = null;
     try {
-      FileChannel blockChannel = blockIn.getChannel();
+      blockChannel = blockIn.getChannel();
       if (blockChannel == null) {
         throw new IOException("Block InputStream has no FileChannel.");
       }
@@ -86,6 +88,7 @@ public class MappableBlock implements Closeable {
       verifyChecksum(length, metaIn, blockChannel, blockFileName);
       mappableBlock = new MappableBlock(mmap, length);
     } finally {
+      IOUtils.closeQuietly(blockChannel);
       if (mappableBlock == null) {
         if (mmap != null) {
           NativeIO.POSIX.munmap(mmap); // unmapping also unlocks
@@ -108,38 +111,43 @@ public class MappableBlock implements Closeable {
         BlockMetadataHeader.readHeader(new DataInputStream(
             new BufferedInputStream(metaIn, BlockMetadataHeader
                 .getHeaderSize())));
-    FileChannel metaChannel = metaIn.getChannel();
-    if (metaChannel == null) {
-      throw new IOException("Block InputStream meta file has no FileChannel.");
-    }
-    DataChecksum checksum = header.getChecksum();
-    final int bytesPerChecksum = checksum.getBytesPerChecksum();
-    final int checksumSize = checksum.getChecksumSize();
-    final int numChunks = (8*1024*1024) / bytesPerChecksum;
-    ByteBuffer blockBuf = ByteBuffer.allocate(numChunks*bytesPerChecksum);
-    ByteBuffer checksumBuf = ByteBuffer.allocate(numChunks*checksumSize);
-    // Verify the checksum
-    int bytesVerified = 0;
-    while (bytesVerified < length) {
-      Preconditions.checkState(bytesVerified % bytesPerChecksum == 0,
-          "Unexpected partial chunk before EOF");
-      assert bytesVerified % bytesPerChecksum == 0;
-      int bytesRead = fillBuffer(blockChannel, blockBuf);
-      if (bytesRead == -1) {
-        throw new IOException("checksum verification failed: premature EOF");
+    FileChannel metaChannel = null;
+    try {
+      metaChannel = metaIn.getChannel();
+      if (metaChannel == null) {
+        throw new IOException("Block InputStream meta file has no FileChannel.");
       }
-      blockBuf.flip();
-      // Number of read chunks, including partial chunk at end
-      int chunks = (bytesRead+bytesPerChecksum-1) / bytesPerChecksum;
-      checksumBuf.limit(chunks*checksumSize);
-      fillBuffer(metaChannel, checksumBuf);
-      checksumBuf.flip();
-      checksum.verifyChunkedSums(blockBuf, checksumBuf, blockFileName,
-          bytesVerified);
-      // Success
-      bytesVerified += bytesRead;
-      blockBuf.clear();
-      checksumBuf.clear();
+      DataChecksum checksum = header.getChecksum();
+      final int bytesPerChecksum = checksum.getBytesPerChecksum();
+      final int checksumSize = checksum.getChecksumSize();
+      final int numChunks = (8*1024*1024) / bytesPerChecksum;
+      ByteBuffer blockBuf = ByteBuffer.allocate(numChunks*bytesPerChecksum);
+      ByteBuffer checksumBuf = ByteBuffer.allocate(numChunks*checksumSize);
+      // Verify the checksum
+      int bytesVerified = 0;
+      while (bytesVerified < length) {
+        Preconditions.checkState(bytesVerified % bytesPerChecksum == 0,
+            "Unexpected partial chunk before EOF");
+        assert bytesVerified % bytesPerChecksum == 0;
+        int bytesRead = fillBuffer(blockChannel, blockBuf);
+        if (bytesRead == -1) {
+          throw new IOException("checksum verification failed: premature EOF");
+        }
+        blockBuf.flip();
+        // Number of read chunks, including partial chunk at end
+        int chunks = (bytesRead+bytesPerChecksum-1) / bytesPerChecksum;
+        checksumBuf.limit(chunks*checksumSize);
+        fillBuffer(metaChannel, checksumBuf);
+        checksumBuf.flip();
+        checksum.verifyChunkedSums(blockBuf, checksumBuf, blockFileName,
+            bytesVerified);
+        // Success
+        bytesVerified += bytesRead;
+        blockBuf.clear();
+        checksumBuf.clear();
+      }
+    } finally {
+      IOUtils.closeQuietly(metaChannel);
     }
   }
 

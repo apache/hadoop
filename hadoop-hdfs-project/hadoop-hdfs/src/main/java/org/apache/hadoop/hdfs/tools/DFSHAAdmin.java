@@ -66,7 +66,7 @@ public class DFSHAAdmin extends HAAdmin {
     // force loading of hdfs-site.xml.
     conf = new HdfsConfiguration(conf);
     String nameNodePrincipal = conf.get(
-        DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY, "");
+        DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY, "");
     if (LOG.isDebugEnabled()) {
       LOG.debug("Using NN principal: " + nameNodePrincipal);
     }

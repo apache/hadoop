@@ -9,6 +9,8 @@ Requirements:
 * Findbugs 1.3.9 (if running findbugs)
 * ProtocolBuffer 2.5.0
 * CMake 2.6 or newer (if compiling native code)
+* Zlib devel (if compiling native code)
+* openssl devel ( if compiling native hadoop-pipes )
 * Internet connection for first build (to fetch all Maven and Hadoop dependencies)
 
 ----------------------------------------------------------------------------------
@@ -189,6 +191,7 @@ Requirements:
 * ProtocolBuffer 2.5.0
 * Windows SDK or Visual Studio 2010 Professional
 * Unix command-line tools from GnuWin32 or Cygwin: sh, mkdir, rm, cp, tar, gzip
+* zlib headers (if building native code bindings for zlib)
 * Internet connection for first build (to fetch all Maven and Hadoop dependencies)
 
 If using Visual Studio, it must be Visual Studio 2010 Professional (not 2012).
@@ -227,6 +230,18 @@ All Maven goals are the same as described above with the exception that
 native code is built by enabling the 'native-win' Maven profile. -Pnative-win 
 is enabled by default when building on Windows since the native components 
 are required (not optional) on Windows.
+
+If native code bindings for zlib are required, then the zlib headers must be
+deployed on the build machine.  Set the ZLIB_HOME environment variable to the
+directory containing the headers.
+
+set ZLIB_HOME=C:\zlib-1.2.7
+
+At runtime, zlib1.dll must be accessible on the PATH.  Hadoop has been tested
+with zlib 1.2.7, built using Visual Studio 2010 out of contrib\vstudio\vc10 in
+the zlib 1.2.7 source tree.
+
+http://www.zlib.net/
 
 ----------------------------------------------------------------------------------
 Building distributions:

@@ -31,8 +31,8 @@ import org.apache.hadoop.security.KerberosInfo;
 /** An inter-datanode protocol for updating generation stamp
  */
 @KerberosInfo(
-    serverPrincipal = DFSConfigKeys.DFS_DATANODE_USER_NAME_KEY,
-    clientPrincipal = DFSConfigKeys.DFS_DATANODE_USER_NAME_KEY)
+    serverPrincipal = DFSConfigKeys.DFS_DATANODE_KERBEROS_PRINCIPAL_KEY,
+    clientPrincipal = DFSConfigKeys.DFS_DATANODE_KERBEROS_PRINCIPAL_KEY)
 @InterfaceAudience.Private
 public interface InterDatanodeProtocol {
   public static final Log LOG = LogFactory.getLog(InterDatanodeProtocol.class);
