@@ -208,6 +208,9 @@ Release 1.3.0 - unreleased
     MAPREDUCE-5822. FairScheduler does not preempt due to fairshare-starvation
     when fairshare is 1. (Anubhav Dhoot via kasha)
 
+    HDFS-6141. WebHdfsFileSystem#toUrl does not perform character escaping.
+    (cnauroth)
+
 Release 1.2.2 - unreleased
 
   INCOMPATIBLE CHANGES

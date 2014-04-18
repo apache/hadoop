@@ -383,7 +383,7 @@ public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
 
     {//test create with path containing spaces
       HttpOpParam.Op op = PutOpParam.Op.CREATE;
-      Path path = new Path("/test/path%20with%20spaces");
+      Path path = new Path("/test/path with spaces");
       URL url = webhdfs.toUrl(op, path);
       HttpURLConnection conn = (HttpURLConnection)url.openConnection();
       conn.setRequestMethod(op.getType().toString());
