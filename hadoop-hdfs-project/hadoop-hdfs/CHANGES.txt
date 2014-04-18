@@ -302,6 +302,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6219. Proxy superuser configuration should use true client IP for
     address checks. (daryn via kihwal)
 
+    HDFS-6256. Clean up ImageVisitor and SpotCheckImageVisitor.
+    (Akira Ajisaka via wheat9)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)
