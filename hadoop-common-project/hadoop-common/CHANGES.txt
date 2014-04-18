@@ -35,6 +35,9 @@ Release 0.23.11 - UNRELEASED
 
     HADOOP-10332. HttpServer's jetty audit log always logs 200 OK (jeagles)
 
+    HADOOP-9230. TestUniformSizeInputFormat fails intermittently. 
+    (kkambatl via jlowe)
+
 Release 0.23.10 - 2013-12-09
 
   INCOMPATIBLE CHANGES
