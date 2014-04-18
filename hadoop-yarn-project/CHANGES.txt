@@ -33,6 +33,9 @@ Release 0.23.11 - UNRELEASED
     YARN-1670. aggregated log writer can write more log data then it says is
     the log length (Mit Desai via jeagles)
 
+    YARN-1932. Javascript injection on the job status page (Mit Desai via
+    jlowe)
+
 Release 0.23.10 - 2013-12-09
 
   INCOMPATIBLE CHANGES
