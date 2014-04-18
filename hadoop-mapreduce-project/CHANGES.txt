@@ -41,6 +41,9 @@ Release 2.5.0 - UNRELEASED
     MAPREDUCE-5775. Remove unnecessary job.setNumReduceTasks in SleepJob.createJob 
     (jhanver chand sharma via devaraj)
 
+    MAPREDUCE-4937. MR AM handles an oversized split metainfo file poorly
+    (Eric Payne via jlowe)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

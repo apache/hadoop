@@ -81,6 +81,7 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.event.InlineDispatcher;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
 import org.apache.hadoop.yarn.util.ConverterUtils;
@@ -726,6 +727,35 @@ public class TestJobImpl {
 
     dispatcher.stop();
     commitHandler.stop();
+  }
+
+  static final String EXCEPTIONMSG = "Splits max exceeded";
+  @Test
+  public void testMetaInfoSizeOverMax() throws Exception {
+    Configuration conf = new Configuration();
+    JobID jobID = JobID.forName("job_1234567890000_0001");
+    JobId jobId = TypeConverter.toYarn(jobID);
+    MRAppMetrics mrAppMetrics = MRAppMetrics.create();
+    JobImpl job =
+        new JobImpl(jobId, ApplicationAttemptId.newInstance(
+          ApplicationId.newInstance(0, 0), 0), conf, mock(EventHandler.class),
+          null, new JobTokenSecretManager(), new Credentials(), null, null,
+          mrAppMetrics, null, true, null, 0, null, null, null, null);
+    InitTransition initTransition = new InitTransition() {
+        @Override
+        protected TaskSplitMetaInfo[] createSplits(JobImpl job, JobId jobId) {
+          throw new YarnRuntimeException(EXCEPTIONMSG);
+        }
+      };
+    JobEvent mockJobEvent = mock(JobEvent.class);
+
+    JobStateInternal jobSI = initTransition.transition(job, mockJobEvent);
+    Assert.assertTrue("When init fails, return value from InitTransition.transition should equal NEW.",
+                      jobSI.equals(JobStateInternal.NEW));
+    Assert.assertTrue("Job diagnostics should contain YarnRuntimeException",
+                      job.getDiagnostics().toString().contains("YarnRuntimeException"));
+    Assert.assertTrue("Job diagnostics should contain " + EXCEPTIONMSG,
+                      job.getDiagnostics().toString().contains(EXCEPTIONMSG));
   }
 
   private static CommitterEventHandler createCommitterEventHandler(
