@@ -53,6 +53,9 @@ Release 2.5.0 - UNRELEASED
     YARN-1784. TestContainerAllocation assumes CapacityScheduler.
     (Robert Kanter via kasha)
 
+    YARN-1940. deleteAsUser() terminates early without deleting more files on
+    error (Rushabh S Shah via jlowe)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
