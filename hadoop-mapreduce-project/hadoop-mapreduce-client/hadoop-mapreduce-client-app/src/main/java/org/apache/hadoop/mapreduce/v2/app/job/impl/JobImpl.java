@@ -250,9 +250,12 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
               JobEventType.JOB_COUNTER_UPDATE, COUNTER_UPDATE_TRANSITION)
           .addTransition
               (JobStateInternal.NEW,
-              EnumSet.of(JobStateInternal.INITED, JobStateInternal.FAILED),
+              EnumSet.of(JobStateInternal.INITED, JobStateInternal.NEW),
               JobEventType.JOB_INIT,
               new InitTransition())
+          .addTransition(JobStateInternal.NEW, JobStateInternal.FAIL_ABORT,
+              JobEventType.JOB_INIT_FAILED,
+              new InitFailedTransition())
           .addTransition(JobStateInternal.NEW, JobStateInternal.KILLED,
               JobEventType.JOB_KILL,
               new KillNewJobTransition())
@@ -265,7 +268,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
           // Ignore-able events
           .addTransition(JobStateInternal.NEW, JobStateInternal.NEW,
               JobEventType.JOB_UPDATED_NODES)
-              
+
           // Transitions from INITED state
           .addTransition(JobStateInternal.INITED, JobStateInternal.INITED,
               JobEventType.JOB_DIAGNOSTIC_UPDATE,
@@ -1374,6 +1377,15 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     public JobStateInternal transition(JobImpl job, JobEvent event) {
       job.metrics.submittedJob(job);
       job.metrics.preparingJob(job);
+
+      if (job.newApiCommitter) {
+        job.jobContext = new JobContextImpl(job.conf,
+            job.oldJobId);
+      } else {
+        job.jobContext = new org.apache.hadoop.mapred.JobContextImpl(
+            job.conf, job.oldJobId);
+      }
+      
       try {
         setup(job);
         job.fs = job.getFileSystem(job.conf);
@@ -1409,14 +1421,6 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
 
         checkTaskLimits();
 
-        if (job.newApiCommitter) {
-          job.jobContext = new JobContextImpl(job.conf,
-              job.oldJobId);
-        } else {
-          job.jobContext = new org.apache.hadoop.mapred.JobContextImpl(
-              job.conf, job.oldJobId);
-        }
-        
         long inputLength = 0;
         for (int i = 0; i < job.numMapTasks; ++i) {
           inputLength += taskSplitMetaInfo[i].getInputDataLength();
@@ -1443,15 +1447,14 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
 
         job.metrics.endPreparingJob(job);
         return JobStateInternal.INITED;
-      } catch (IOException e) {
+      } catch (Exception e) {
         LOG.warn("Job init failed", e);
         job.metrics.endPreparingJob(job);
         job.addDiagnostic("Job init failed : "
             + StringUtils.stringifyException(e));
-        job.eventHandler.handle(new CommitterJobAbortEvent(job.jobId,
-            job.jobContext,
-            org.apache.hadoop.mapreduce.JobStatus.State.FAILED));
-        return JobStateInternal.FAILED;
+        // Leave job in the NEW state. The MR AM will detect that the state is
+        // not INITED and send a JOB_INIT_FAILED event.
+        return JobStateInternal.NEW;
       }
     }
 
@@ -1551,6 +1554,16 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       // no code, for now
     }
   } // end of InitTransition
+
+  private static class InitFailedTransition
+      implements SingleArcTransition<JobImpl, JobEvent> {
+    @Override
+    public void transition(JobImpl job, JobEvent event) {
+        job.eventHandler.handle(new CommitterJobAbortEvent(job.jobId,
+                job.jobContext,
+                org.apache.hadoop.mapreduce.JobStatus.State.FAILED));
+    }
+  }
 
   private static class SetupCompletedTransition
       implements SingleArcTransition<JobImpl, JobEvent> {

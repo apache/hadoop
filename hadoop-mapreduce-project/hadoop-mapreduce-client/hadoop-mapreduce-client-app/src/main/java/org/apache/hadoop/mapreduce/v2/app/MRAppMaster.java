@@ -1054,6 +1054,7 @@ public class MRAppMaster extends CompositeService {
     // It's more test friendly to put it here.
     DefaultMetricsSystem.initialize("MRAppMaster");
 
+    boolean initFailed = false;
     if (!errorHappenedShutDown) {
       // create a job event for job intialization
       JobEvent initJobEvent = new JobEvent(job.getID(), JobEventType.JOB_INIT);
@@ -1062,6 +1063,10 @@ public class MRAppMaster extends CompositeService {
       // job-init to be done completely here.
       jobEventDispatcher.handle(initJobEvent);
 
+      // If job is still not initialized, an error happened during
+      // initialization. Must complete starting all of the services so failure
+      // events can be processed.
+      initFailed = (((JobImpl)job).getInternalState() != JobStateInternal.INITED);
 
       // JobImpl's InitTransition is done (call above is synchronous), so the
       // "uber-decision" (MR-1220) has been made.  Query job and switch to
@@ -1090,8 +1095,14 @@ public class MRAppMaster extends CompositeService {
 
     // set job classloader if configured
     MRApps.setJobClassLoader(getConfig());
-    // All components have started, start the job.
-    startJobs();
+
+    if (initFailed) {
+      JobEvent initFailedEvent = new JobEvent(job.getID(), JobEventType.JOB_INIT_FAILED);
+      jobEventDispatcher.handle(initFailedEvent);
+    } else {
+      // All components have started, start the job.
+      startJobs();
+    }
   }
   
   @Override
