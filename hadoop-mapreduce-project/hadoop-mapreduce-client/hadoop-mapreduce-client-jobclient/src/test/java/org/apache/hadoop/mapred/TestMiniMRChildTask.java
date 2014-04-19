@@ -254,6 +254,19 @@ public class TestMiniMRChildTask {
       checkEnv("NEW_PATH", File.pathSeparator + "/tmp", "noappend");
       // check if X=$(tt's X var):/tmp for an old env variable inherited from 
       // the tt
+      if (Shell.WINDOWS) {
+        // On Windows, PATH is replaced one more time as part of default config
+        // of "mapreduce.admin.user.env", i.e. on Windows,
+        // "mapreduce.admin.user.env" is set to
+        // "PATH=%PATH%;%HADOOP_COMMON_HOME%\\bin"
+        String hadoopHome = System.getenv("HADOOP_COMMON_HOME");
+        if (hadoopHome == null) {
+          hadoopHome = "";
+        }
+        String hadoopLibLocation = hadoopHome + "\\bin";
+        path += File.pathSeparator + hadoopLibLocation;
+        path += File.pathSeparator + path;
+      }
       checkEnv("PATH",  path + File.pathSeparator + "/tmp", "noappend");
 
       String jobLocalDir = job.get(MRJobConfig.JOB_LOCAL_DIR);
@@ -308,6 +321,19 @@ public class TestMiniMRChildTask {
       checkEnv("NEW_PATH", File.pathSeparator + "/tmp", "noappend");
       // check if X=$(tt's X var):/tmp for an old env variable inherited from 
       // the tt
+      if (Shell.WINDOWS) {
+        // On Windows, PATH is replaced one more time as part of default config
+        // of "mapreduce.admin.user.env", i.e. on Windows,
+        // "mapreduce.admin.user.env"
+        // is set to "PATH=%PATH%;%HADOOP_COMMON_HOME%\\bin"
+        String hadoopHome = System.getenv("HADOOP_COMMON_HOME");
+        if (hadoopHome == null) {
+          hadoopHome = "";
+        }
+        String hadoopLibLocation = hadoopHome + "\\bin";
+        path += File.pathSeparator + hadoopLibLocation;
+        path += File.pathSeparator + path;
+      }
       checkEnv("PATH",  path + File.pathSeparator + "/tmp", "noappend");
 
     }
