@@ -53,6 +53,34 @@ abstract public class Shell {
     return IS_JAVA7_OR_ABOVE;
   }
 
+  /**
+   * Maximum command line length in Windows
+   * KB830473 documents this as 8191
+   */
+  public static final int WINDOWS_MAX_SHELL_LENGHT = 8191;
+
+  /**
+   * Checks if a given command (String[]) fits in the Windows maximum command line length
+   * Note that the input is expected to already include space delimiters, no extra count
+   * will be added for delimiters.
+   *
+   * @param commands command parts, including any space delimiters
+   */
+  public static void checkWindowsCommandLineLength(String...commands)
+      throws IOException {
+    int len = 0;
+    for (String s: commands) {
+      len += s.length();
+    }
+    if (len > WINDOWS_MAX_SHELL_LENGHT) {
+      throw new IOException(String.format(
+          "The command line has a length of %d exceeds maximum allowed length of %d. " +
+          "Command starts with: %s",
+          len, WINDOWS_MAX_SHELL_LENGHT,
+          StringUtils.join("", commands).substring(0, 100)));
+    }
+  }
+
   /** a Unix command to get the current user's name */
   public final static String USER_NAME_COMMAND = "whoami";
 
