@@ -44,6 +44,9 @@ Release 2.5.0 - UNRELEASED
     MAPREDUCE-4937. MR AM handles an oversized split metainfo file poorly
     (Eric Payne via jlowe)
 
+    MAPREDUCE-5642. TestMiniMRChildTask fails on Windows.
+    (Chuan Liu via cnauroth)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
