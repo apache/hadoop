@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.sls.web;
 
-import junit.framework.Assert;
+import org.junit.Assert;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.yarn.sls.SLSRunner;
 import org.junit.Test;

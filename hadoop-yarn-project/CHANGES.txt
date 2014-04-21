@@ -41,6 +41,8 @@ Release 2.5.0 - UNRELEASED
     YARN-1870. FileInputStream is not closed in ProcfsBasedProcessTree#constructProcessSMAPInfo. 
     (Fengdong Yu via junping_du)
 
+    YARN-1970. Prepare YARN codebase for JUnit 4.11. (cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES 
