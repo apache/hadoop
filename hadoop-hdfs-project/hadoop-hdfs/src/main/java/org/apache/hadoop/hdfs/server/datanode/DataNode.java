@@ -1783,8 +1783,15 @@ public class DataNode extends Configured
       try {
         location = StorageLocation.parse(locationString);
       } catch (IOException ioe) {
-        throw new IllegalArgumentException("Failed to parse conf property "
-            + DFS_DATANODE_DATA_DIR_KEY + ": " + locationString, ioe);
+        LOG.error("Failed to initialize storage directory " + locationString
+            + ". Exception details: " + ioe);
+        // Ignore the exception.
+        continue;
+      } catch (SecurityException se) {
+        LOG.error("Failed to initialize storage directory " + locationString
+                     + ". Exception details: " + se);
+        // Ignore the exception.
+        continue;
       }
 
       locations.add(location);
