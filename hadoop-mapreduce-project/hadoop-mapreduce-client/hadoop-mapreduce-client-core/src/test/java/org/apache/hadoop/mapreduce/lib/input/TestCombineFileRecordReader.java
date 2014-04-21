@@ -22,7 +22,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.File;
 
-import junit.framework.Assert;
+import org.junit.Assert;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;

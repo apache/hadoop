@@ -24,7 +24,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.EnumSet;
 
-import junit.framework.Assert;
+import org.junit.Assert;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
