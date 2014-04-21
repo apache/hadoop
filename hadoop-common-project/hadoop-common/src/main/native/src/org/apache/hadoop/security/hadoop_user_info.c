@@ -28,6 +28,7 @@
 #include <unistd.h>
 
 #define INITIAL_GIDS_SIZE 32
+#define MAX_USER_LOOKUP_TRIES 5
 
 struct hadoop_user_info *hadoop_user_info_alloc(void)
 {
@@ -95,31 +96,48 @@ int hadoop_user_info_fetch(struct hadoop_user_info *uinfo,
                            const char *username)
 {
   struct passwd *pwd;
-  int err;
+  int ret, i;
   size_t buf_sz;
   char *nbuf;
 
   hadoop_user_info_clear(uinfo);
-  for (;;) {
-    do {
-      pwd = NULL;
-      err = getpwnam_r(username, &uinfo->pwd, uinfo->buf,
+  for (i = 0, ret = 0; i < MAX_USER_LOOKUP_TRIES; i++) {
+    // If the previous call returned ERANGE, increase the buffer size
+    if (ret == ERANGE) {
+      buf_sz = uinfo->buf_sz * 2;
+      nbuf = realloc(uinfo->buf, buf_sz);
+      if (!nbuf) {
+        return ENOMEM;
+      }
+      uinfo->buf = nbuf;
+      uinfo->buf_sz = buf_sz;
+    }
+
+    // The following call returns errno. Reading the global errno wihtout
+    // locking is not thread-safe.
+    pwd = NULL;
+    ret = getpwnam_r(username, &uinfo->pwd, uinfo->buf,
                          uinfo->buf_sz, &pwd);
-    } while ((!pwd) && (errno == EINTR));
-    if (pwd) {
-      return 0;
+    switch(ret) {
+      case 0:
+        if (!pwd) {
+          // The underlying library likely has a bug.
+          return EIO;
+        }
+        return 0;
+      case EINTR:
+      case ERANGE:
+        // Retry on these errors.
+        // EINTR: a signal was handled and this thread was allowed to continue.
+        // ERANGE: the buffer was not big enough.
+        break;
+      default:
+        // Lookup failed.
+        return getpwnam_error_translate(ret);
     }
-    if (err != ERANGE) {
-      return getpwnam_error_translate(errno);
-    }
-    buf_sz = uinfo->buf_sz * 2;
-    nbuf = realloc(uinfo->buf, buf_sz);
-    if (!nbuf) {
-      return ENOMEM;
-    }
-    uinfo->buf = nbuf;
-    uinfo->buf_sz = buf_sz;
   }
+  // Did not succeed after the retries. Return the last error.
+  return getpwnam_error_translate(ret);
 }
 
 static int put_primary_gid_first(struct hadoop_user_info *uinfo)

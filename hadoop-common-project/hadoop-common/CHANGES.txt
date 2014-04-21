@@ -423,6 +423,8 @@ Release 2.4.1 - UNRELEASED
     HADOOP-10490. TestMapFile and TestBloomMapFile leak file descriptors.
     (cnauroth)
 
+    HADOOP-10522. JniBasedUnixGroupMapping mishandles errors. (kihwal)
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES
