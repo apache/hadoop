@@ -73,6 +73,9 @@ Release 2.5.0 - UNRELEASED
     HADOOP-9919. Update hadoop-metrics2.properties examples to Yarn.
     (Akira AJISAKA via suresh)
 
+    HADOOP-10526. Chance for Stream leakage in CompressorStream. (Rushabh 
+    Shah via kihwal)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
