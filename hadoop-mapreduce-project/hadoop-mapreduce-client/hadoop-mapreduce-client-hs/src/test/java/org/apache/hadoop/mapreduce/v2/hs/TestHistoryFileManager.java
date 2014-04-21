@@ -19,7 +19,7 @@
 package org.apache.hadoop.mapreduce.v2.hs;
 
 
-import junit.framework.Assert;
+import org.junit.Assert;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;

@@ -30,7 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import junit.framework.Assert;
+import org.junit.Assert;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -193,7 +193,7 @@ public class TestMerger {
     RawKeyValueIterator mergeQueue = Merger.merge(conf, fs, keyClass,
         valueClass, segments, 2, tmpDir, comparator, getReporter(),
         readsCounter, writesCounter, mergePhase);
-    Assert.assertEquals(1.0f, mergeQueue.getProgress().get());
+    Assert.assertEquals(1.0f, mergeQueue.getProgress().get(), 0.0f);
   }
 
   private Progressable getReporter() {

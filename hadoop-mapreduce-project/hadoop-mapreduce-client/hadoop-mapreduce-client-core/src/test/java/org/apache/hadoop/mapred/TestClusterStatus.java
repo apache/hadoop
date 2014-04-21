@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.mapred;
 
-import junit.framework.Assert;
+import org.junit.Assert;
 
 import org.junit.Test;
 

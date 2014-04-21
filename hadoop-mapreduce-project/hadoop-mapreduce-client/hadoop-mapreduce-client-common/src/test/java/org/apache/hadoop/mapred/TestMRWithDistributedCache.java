@@ -27,7 +27,7 @@ import java.util.Arrays;
 import java.util.jar.JarOutputStream;
 import java.util.zip.ZipEntry;
 
-import junit.framework.Assert;
+import org.junit.Assert;
 import junit.framework.TestCase;
 
 import org.apache.commons.logging.Log;

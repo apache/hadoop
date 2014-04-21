@@ -23,7 +23,7 @@ import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.IOException;
 
-import junit.framework.Assert;
+import org.junit.Assert;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;

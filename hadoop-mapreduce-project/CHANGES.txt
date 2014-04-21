@@ -165,6 +165,8 @@ Release 2.5.0 - UNRELEASED
 
     MAPREDUCE-5836. Fix typo in RandomTextWriter (Akira AJISAKA via jeagles)
 
+    MAPREDUCE-5852. Prepare MapReduce codebase for JUnit 4.11. (cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES 

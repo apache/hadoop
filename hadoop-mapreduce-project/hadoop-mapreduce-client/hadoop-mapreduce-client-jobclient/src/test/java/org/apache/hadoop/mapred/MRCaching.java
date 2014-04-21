@@ -39,7 +39,7 @@ import org.apache.hadoop.mapreduce.MRJobConfig;
 
 import java.net.URI;
 
-import junit.framework.Assert;
+import org.junit.Assert;
 
 public class MRCaching {
   static String testStr = "This is a test file " + "used for testing caching "
