@@ -52,6 +52,9 @@ Release 2.4.1 - UNRELEASED
     HDFS-6236. ImageServlet should use Time#monotonicNow to measure latency.
     (cnauroth)
 
+    HDFS-6245. datanode fails to start with a bad disk even when failed
+    volumes is set. (Arpit Agarwal)
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES
