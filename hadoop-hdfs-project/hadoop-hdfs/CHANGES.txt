@@ -55,6 +55,8 @@ Release 2.5.0 - UNRELEASED
     HDFS-6256. Clean up ImageVisitor and SpotCheckImageVisitor.
     (Akira Ajisaka via wheat9)
 
+    HDFS-6265. Prepare HDFS codebase for JUnit 4.11. (cnauroth)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)
