@@ -21,7 +21,7 @@ package org.apache.hadoop.yarn.client;
 import java.io.IOException;
 import java.util.ArrayList;
 
-import junit.framework.Assert;
+import org.junit.Assert;
 
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RPC;
