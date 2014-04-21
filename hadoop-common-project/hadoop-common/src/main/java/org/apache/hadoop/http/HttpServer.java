@@ -62,6 +62,7 @@ import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.util.StringUtils;
 import org.mortbay.io.Buffer;
 import org.mortbay.jetty.Connector;
 import org.mortbay.jetty.Handler;
@@ -670,11 +671,16 @@ public class HttpServer implements FilterContainer {
   protected void initSpnego(Configuration conf,
       String usernameConfKey, String keytabConfKey) throws IOException {
     Map<String, String> params = new HashMap<String, String>();
-    String principalInConf = conf.get(usernameConfKey);
-    if (principalInConf != null && !principalInConf.isEmpty()) {
+    String[] principalsInConf = conf.getStrings(usernameConfKey);
+    if (principalsInConf != null && principalsInConf.length != 0) {
+      for (int i=0; i < principalsInConf.length; i++) {
+        principalsInConf[i] =
+            SecurityUtil.getServerPrincipal(principalsInConf[i], listener.getHost());
+      }
       params.put("kerberos.principal",
-                 SecurityUtil.getServerPrincipal(principalInConf, listener.getHost()));
+          StringUtils.join(",", principalsInConf));
     }
+
     String httpKeytab = conf.get(keytabConfKey);
     if (httpKeytab != null && !httpKeytab.isEmpty()) {
       params.put("kerberos.keytab", httpKeytab);

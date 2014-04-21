@@ -27,6 +27,8 @@
 #include <string.h>
 #include <unistd.h>
 
+#define MAX_GROUP_LOOKUP_TRIES 5
+
 struct hadoop_group_info *hadoop_group_info_alloc(void)
 {
   struct hadoop_group_info *ginfo;
@@ -84,31 +86,48 @@ static int getgrgid_error_translate(int err)
 int hadoop_group_info_fetch(struct hadoop_group_info *ginfo, gid_t gid)
 {
   struct group *group;
-  int err;
+  int ret, i; 
   size_t buf_sz;
   char *nbuf;
 
   hadoop_group_info_clear(ginfo);
-  for (;;) {
-    do {
-      group = NULL;
-      err = getgrgid_r(gid, &ginfo->group, ginfo->buf,
-                         ginfo->buf_sz, &group);
-    } while ((!group) && (err == EINTR));
-    if (group) {
-      return 0;
+  for (i = 0, ret = 0; i < MAX_GROUP_LOOKUP_TRIES; i++) {
+    // If the previous call returned ERANGE, increase the buffer size
+    if (ret == ERANGE) {
+      buf_sz = ginfo->buf_sz * 2;
+      nbuf = realloc(ginfo->buf, buf_sz);
+      if (!nbuf) {
+        return ENOMEM;
+      }
+      ginfo->buf = nbuf;
+      ginfo->buf_sz = buf_sz;
     }
-    if (err != ERANGE) {
-      return getgrgid_error_translate(errno);
+
+    // The following call returns errno. Reading the global errno wihtout
+    // locking is not thread-safe.
+    group = NULL;
+    ret = getgrgid_r(gid, &ginfo->group, ginfo->buf,
+                       ginfo->buf_sz, &group);
+    switch(ret) {
+      case 0:
+        if (!group) {
+          // The underlying library likely has a bug.
+          return EIO;
+        }
+        return 0;
+      case EINTR:
+      case ERANGE:
+        // Retry on these errors.
+        // EINTR: a signal was handled and this thread was allowed to continue.
+        // ERANGE: the buffer was not big enough.
+        break;
+      default:
+        // Lookup failed.
+        return getgrgid_error_translate(ret);
     }
-    buf_sz = ginfo->buf_sz * 2;
-    nbuf = realloc(ginfo->buf, buf_sz);
-    if (!nbuf) {
-      return ENOMEM;
-    }
-    ginfo->buf = nbuf;
-    ginfo->buf_sz = buf_sz;
   }
+  // Did not succeed after the retries. Return the last error.
+  return getgrgid_error_translate(ret);
 }
 
 #ifdef GROUP_TESTING
