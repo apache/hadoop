@@ -78,7 +78,8 @@ public class StorageLocation {
    * @return A StorageLocation object if successfully parsed, null otherwise.
    *         Does not throw any exceptions.
    */
-  static StorageLocation parse(String rawLocation) throws IOException {
+  static StorageLocation parse(String rawLocation)
+      throws IOException, SecurityException {
     Matcher matcher = regex.matcher(rawLocation);
     StorageType storageType = StorageType.DEFAULT;
     String location = rawLocation;
