@@ -102,9 +102,13 @@ public class CompressorStream extends CompressionOutputStream {
   @Override
   public void close() throws IOException {
     if (!closed) {
-      finish();
-      out.close();
-      closed = true;
+      try {
+        finish();
+      }
+      finally {
+        out.close();
+        closed = true;
+      }
     }
   }
 
