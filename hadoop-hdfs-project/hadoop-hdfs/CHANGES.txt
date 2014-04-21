@@ -367,6 +367,8 @@ Release 2.5.0 - UNRELEASED
     HDFS-6153. Document "fileId" and "childrenNum" fields in the FileStatus Json schema
     (Akira Ajisaka via vinayakumarb)
 
+    HDFS-6178. Decommission on standby NN couldn't finish. (Ming Ma via jing9)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
