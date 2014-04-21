@@ -70,6 +70,9 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10499. Remove unused parameter from ProxyUsers.authorize().
     (Benoy Antony via cnauroth)
 
+    HADOOP-9919. Update hadoop-metrics2.properties examples to Yarn.
+    (Akira AJISAKA via suresh)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
