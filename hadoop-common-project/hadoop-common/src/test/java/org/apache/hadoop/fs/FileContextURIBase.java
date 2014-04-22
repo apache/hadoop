@@ -21,7 +21,7 @@ package org.apache.hadoop.fs;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.regex.Pattern;
-import junit.framework.Assert;
+import org.junit.Assert;
 
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Shell;
