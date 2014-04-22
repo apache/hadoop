@@ -79,6 +79,9 @@ Release 2.4.1 - UNRELEASED
     MAPREDUCE-5827. TestSpeculativeExecutionWithMRApp fails.
     (Zhijie Shen via cnauroth)
 
+    MAPREDUCE-5833. TestRMContainerAllocator fails ocassionally.
+    (Zhijie Shen via cnauroth)
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES
