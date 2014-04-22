@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.nfs.nfs3;
 
-import junit.framework.Assert;
+import org.junit.Assert;
 
 import org.apache.hadoop.nfs.nfs3.FileHandle;
 import org.apache.hadoop.oncrpc.XDR;

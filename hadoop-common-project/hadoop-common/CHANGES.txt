@@ -350,6 +350,8 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-10485. Remove dead classes in hadoop-streaming. (wheat9)
 
+    HADOOP-10503. Move junit up to v 4.11. (cnauroth)
+
   OPTIMIZATIONS
 
   BUG FIXES 

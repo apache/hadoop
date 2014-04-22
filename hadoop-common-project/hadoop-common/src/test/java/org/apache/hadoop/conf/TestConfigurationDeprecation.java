@@ -38,7 +38,7 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import junit.framework.Assert;
+import org.junit.Assert;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.conf.Configuration.DeprecationDelta;

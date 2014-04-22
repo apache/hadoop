@@ -22,7 +22,7 @@ import java.util.Set;
 
 import javax.security.auth.kerberos.KerberosPrincipal;
 
-import junit.framework.Assert;
+import org.junit.Assert;
 import static org.junit.Assert.*;
 
 

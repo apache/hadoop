@@ -24,7 +24,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.util.LineReader;
 import org.junit.Test;
 
-import junit.framework.Assert;
+import org.junit.Assert;
 
 public class TestLineReader {
   private LineReader lineReader;
