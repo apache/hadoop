@@ -147,7 +147,8 @@ public class RMContainerAllocator extends RMContainerRequestor
   private long retryInterval;
   private long retrystartTime;
 
-  BlockingQueue<ContainerAllocatorEvent> eventQueue
+  @VisibleForTesting
+  protected BlockingQueue<ContainerAllocatorEvent> eventQueue
     = new LinkedBlockingQueue<ContainerAllocatorEvent>();
 
   private ScheduleStats scheduleStats = new ScheduleStats();
