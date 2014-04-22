@@ -185,6 +185,9 @@ Release 2.5.0 - UNRELEASED
     MAPREDUCE-5642. TestMiniMRChildTask fails on Windows.
     (Chuan Liu via cnauroth)
 
+    MAPREDUCE-5827. TestSpeculativeExecutionWithMRApp fails.
+    (Zhijie Shen via cnauroth)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
