@@ -1,8 +1,5 @@
 Hadoop MapReduce Change Log
 
-    MAPREDUCE-5827. TestSpeculativeExecutionWithMRApp fails.
-    (Zhijie Shen via cnauroth)
-
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -29,6 +26,9 @@ Release 2.4.1 - UNRELEASED
 
     MAPREDUCE-5828. Fixed a test issue with TestMapReduceJobControl that was
     causing it to fail on Windows. (vinodkv)
+
+    MAPREDUCE-5827. TestSpeculativeExecutionWithMRApp fails.
+    (Zhijie Shen via cnauroth)
 
 Release 2.4.0 - 2014-04-07 
 
