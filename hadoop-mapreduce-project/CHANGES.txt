@@ -33,6 +33,9 @@ Release 2.4.1 - UNRELEASED
     MAPREDUCE-5833. TestRMContainerAllocator fails ocassionally.
     (Zhijie Shen via cnauroth)
 
+    MAPREDUCE-5832. Fixed TestJobClient to not fail on JDK7 or on Windows. (Jian
+    He and Vinod Kumar Vavilapalli via vinodkv)
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES
