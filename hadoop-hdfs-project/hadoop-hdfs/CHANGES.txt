@@ -369,6 +369,9 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6178. Decommission on standby NN couldn't finish. (Ming Ma via jing9)
 
+    HDFS-6213. TestDataNodeConfig failing on Jenkins runs due to DN web port
+    in use. (wang)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
