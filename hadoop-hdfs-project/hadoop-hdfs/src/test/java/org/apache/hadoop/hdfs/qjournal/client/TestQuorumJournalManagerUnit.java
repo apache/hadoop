@@ -208,7 +208,7 @@ public class TestQuorumJournalManagerUnit {
         anyLong(), eq(1L), eq(1), Mockito.<byte[]>any());
     
     // And the third log not respond
-    SettableFuture<Void> slowLog = SettableFuture.<Void>create();
+    SettableFuture<Void> slowLog = SettableFuture.create();
     Mockito.doReturn(slowLog).when(spyLoggers.get(2)).sendEdits(
         anyLong(), eq(1L), eq(1), Mockito.<byte[]>any());
     stm.flush();

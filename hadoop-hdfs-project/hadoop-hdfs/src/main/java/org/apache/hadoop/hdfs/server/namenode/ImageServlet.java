@@ -82,7 +82,7 @@ public class ImageServlet extends HttpServlet {
   private static final String IMAGE_FILE_TYPE = "imageFile";
 
   private static final Set<Long> currentlyDownloadingCheckpoints =
-    Collections.<Long>synchronizedSet(new HashSet<Long>());
+    Collections.synchronizedSet(new HashSet<Long>());
   
   @Override
   public void doGet(final HttpServletRequest request,

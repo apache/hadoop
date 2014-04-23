@@ -56,8 +56,7 @@ public class TestOfflineEditsViewer {
 
   @SuppressWarnings("deprecation")
   private static ImmutableSet<FSEditLogOpCodes> skippedOps() {
-    ImmutableSet.Builder<FSEditLogOpCodes> b = ImmutableSet
-        .<FSEditLogOpCodes> builder();
+    ImmutableSet.Builder<FSEditLogOpCodes> b = ImmutableSet.builder();
 
     // Deprecated opcodes
     b.add(FSEditLogOpCodes.OP_DATANODE_ADD)

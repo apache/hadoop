@@ -65,7 +65,7 @@ public class TestTransferFsImage {
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
       .numDataNodes(0).build();
     NNStorage mockStorage = Mockito.mock(NNStorage.class);
-    List<File> localPath = Collections.<File>singletonList(
+    List<File> localPath = Collections.singletonList(
         new File("/xxxxx-does-not-exist/blah"));
        
     try {
