@@ -414,6 +414,6 @@ public class TestDFSHAAdmin {
   }
   
   private StateChangeRequestInfo anyReqInfo() {
-    return Mockito.<StateChangeRequestInfo>any();
+    return Mockito.any();
   }
 }

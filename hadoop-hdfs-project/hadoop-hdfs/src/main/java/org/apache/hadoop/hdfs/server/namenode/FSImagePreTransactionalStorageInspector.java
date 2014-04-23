@@ -263,7 +263,7 @@ class FSImagePreTransactionalStorageInspector extends FSImageStorageInspector {
       // the image is already current, discard edits
       LOG.debug(
           "Name checkpoint time is newer than edits, not loading edits.");
-      return Collections.<File>emptyList();
+      return Collections.emptyList();
     }
     
     return getEditsInStorageDir(latestEditsSD);

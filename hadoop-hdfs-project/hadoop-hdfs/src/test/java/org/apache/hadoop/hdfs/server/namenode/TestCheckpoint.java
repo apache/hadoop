@@ -622,11 +622,11 @@ public class TestCheckpoint {
   }
 
   private File filePathContaining(final String substring) {
-    return Mockito.<File>argThat(
+    return Mockito.argThat(
         new ArgumentMatcher<File>() {
           @Override
           public boolean matches(Object argument) {
-            String path = ((File)argument).getAbsolutePath();
+            String path = ((File) argument).getAbsolutePath();
             return path.contains(substring);
           }
         });

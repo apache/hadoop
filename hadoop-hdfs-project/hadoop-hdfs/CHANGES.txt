@@ -374,6 +374,9 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6274. Cleanup javadoc warnings in HDFS code. (suresh)
 
+    HDFS-6275. Fix warnings - type arguments can be inferred and redudant
+    local variable. (suresh)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
