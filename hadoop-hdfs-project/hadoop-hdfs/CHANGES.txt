@@ -127,6 +127,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6275. Fix warnings - type arguments can be inferred and redudant
     local variable. (suresh)
 
+    HDFS-6217. Webhdfs PUT operations may not work via a http proxy.
+    (Daryn Sharp via kihwal)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
