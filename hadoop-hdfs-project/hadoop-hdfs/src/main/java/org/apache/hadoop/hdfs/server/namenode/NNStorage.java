@@ -425,8 +425,7 @@ public class NNStorage extends Storage implements Closeable,
   
   /**
    * Write last checkpoint time into a separate file.
-   *
-   * @param sd
+   * @param sd storage directory
    * @throws IOException
    */
   void writeTransactionIdFile(StorageDirectory sd, long txid) throws IOException {

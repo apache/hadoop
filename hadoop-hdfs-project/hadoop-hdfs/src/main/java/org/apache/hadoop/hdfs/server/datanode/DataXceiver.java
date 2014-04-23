@@ -1077,7 +1077,7 @@ class DataXceiver extends Receiver implements Runnable {
   /**
    * Utility function for sending a response.
    * 
-   * @param opStatus status message to write
+   * @param status status message to write
    * @param message message to send to the client or other DN
    */
   private void sendResponse(Status status,

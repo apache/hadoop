@@ -217,7 +217,7 @@ public class JMXGet {
   }
 
   /**
-   * @param msg
+   * @param msg error message
    */
   private static void err(String msg) {
     System.err.println(msg);
@@ -274,13 +274,7 @@ public class JMXGet {
     return commandLine;
   }
 
-  /**
-   * main
-   * 
-   * @param args
-   */
   public static void main(String[] args) {
-
     int res = -1;
 
     // parse arguments

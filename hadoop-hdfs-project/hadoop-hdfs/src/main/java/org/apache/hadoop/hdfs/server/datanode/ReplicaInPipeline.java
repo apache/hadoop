@@ -89,7 +89,7 @@ public class ReplicaInPipeline extends ReplicaInfo
 
   /**
    * Copy constructor.
-   * @param from
+   * @param from where to copy from
    */
   public ReplicaInPipeline(ReplicaInPipeline from) {
     super(from);

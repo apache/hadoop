@@ -956,9 +956,9 @@ class BlockReceiver implements Closeable {
     
     /**
      * enqueue the seqno that is still be to acked by the downstream datanode.
-     * @param seqno
-     * @param lastPacketInBlock
-     * @param offsetInBlock
+     * @param seqno sequence number of the packet
+     * @param lastPacketInBlock if true, this is the last packet in block
+     * @param offsetInBlock offset of this packet in block
      */
     void enqueue(final long seqno, final boolean lastPacketInBlock,
         final long offsetInBlock, final Status ackStatus) {

@@ -524,7 +524,7 @@ public class FSDirectory implements Closeable {
   /**
    * @throws SnapshotAccessControlException 
    * @see #unprotectedRenameTo(String, String, long)
-   * @deprecated Use {@link #renameTo(String, String, Rename...)} instead.
+   * @deprecated Use {@link #renameTo(String, String, boolean, Rename...)}
    */
   @Deprecated
   boolean renameTo(String src, String dst, boolean logRetryCache) 
@@ -581,7 +581,7 @@ public class FSDirectory implements Closeable {
    * @throws QuotaExceededException if the operation violates any quota limit
    * @throws FileAlreadyExistsException if the src is a symlink that points to dst
    * @throws SnapshotAccessControlException if path is in RO snapshot
-   * @deprecated See {@link #renameTo(String, String)}
+   * @deprecated See {@link #renameTo(String, String, boolean, Rename...)}
    */
   @Deprecated
   boolean unprotectedRenameTo(String src, String dst, long timestamp)
@@ -1844,7 +1844,7 @@ public class FSDirectory implements Closeable {
   
   /** 
    * update quota of each inode and check to see if quota is exceeded. 
-   * See {@link #updateCount(INode[], int, long, long, boolean)}
+   * See {@link #updateCount(INodesInPath, long, long, boolean)}
    */ 
   private void updateCountNoQuotaCheck(INodesInPath inodesInPath,
       int numOfINodes, long nsDelta, long dsDelta) {
@@ -1928,14 +1928,13 @@ public class FSDirectory implements Closeable {
 
    * @param src string representation of the path to the directory
    * @param permissions the permission of the directory
-   * @param isAutocreate if the permission of the directory should inherit
+   * @param inheritPermission if the permission of the directory should inherit
    *                          from its parent or not. u+wx is implicitly added to
    *                          the automatically created directories, and to the
    *                          given directory if inheritPermission is true
    * @param now creation time
    * @return true if the operation succeeds false otherwise
-   * @throws FileNotFoundException if an ancestor or itself is a file
-   * @throws QuotaExceededException if directory creation violates 
+   * @throws QuotaExceededException if directory creation violates
    *                                any quota limit
    * @throws UnresolvedLinkException if a symlink is encountered in src.                      
    * @throws SnapshotAccessControlException if path is in RO snapshot
@@ -2064,7 +2063,7 @@ public class FSDirectory implements Closeable {
   /**
    * Add the given child to the namespace.
    * @param src The full path name of the child node.
-   * @throw QuotaExceededException is thrown if it violates quota limit
+   * @throws QuotaExceededException is thrown if it violates quota limit
    */
   private boolean addINode(String src, INode child
       ) throws QuotaExceededException, UnresolvedLinkException {
@@ -2260,7 +2259,7 @@ public class FSDirectory implements Closeable {
    * Its ancestors are stored at [0, pos-1].
    * @return false if the child with this name already exists; 
    *         otherwise return true;
-   * @throw QuotaExceededException is thrown if it violates quota limit
+   * @throws QuotaExceededException is thrown if it violates quota limit
    */
   private boolean addChild(INodesInPath iip, int pos,
       INode child, boolean checkQuota) throws QuotaExceededException {
@@ -2446,7 +2445,7 @@ public class FSDirectory implements Closeable {
   /**
    * See {@link ClientProtocol#setQuota(String, long, long)} for the contract.
    * Sets quota for for a directory.
-   * @returns INodeDirectory if any of the quotas have changed. null other wise.
+   * @return INodeDirectory if any of the quotas have changed. null other wise.
    * @throws FileNotFoundException if the path does not exist.
    * @throws PathIsNotDirectoryException if the path is not a directory.
    * @throws QuotaExceededException if the directory tree size is 

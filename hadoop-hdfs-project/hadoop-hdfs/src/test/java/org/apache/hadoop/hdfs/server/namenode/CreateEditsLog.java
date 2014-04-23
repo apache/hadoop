@@ -131,14 +131,10 @@ public class CreateEditsLog {
     printUsageExit();
   }
   /**
-   * @param args
+   * @param args arguments
    * @throws IOException 
    */
-  public static void main(String[] args) 
-      throws IOException {
-
-
-
+  public static void main(String[] args)  throws IOException {
     long startingBlockId = 1;
     int numFiles = 0;
     short replication = 1;

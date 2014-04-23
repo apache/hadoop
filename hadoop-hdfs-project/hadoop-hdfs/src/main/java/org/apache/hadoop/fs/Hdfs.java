@@ -67,9 +67,8 @@ public class Hdfs extends AbstractFileSystem {
    * This constructor has the signature needed by
    * {@link AbstractFileSystem#createFileSystem(URI, Configuration)}
    * 
-   * @param theUri
-   *          which must be that of Hdfs
-   * @param conf
+   * @param theUri which must be that of Hdfs
+   * @param conf configuration
    * @throws IOException
    */
   Hdfs(final URI theUri, final Configuration conf) throws IOException, URISyntaxException {

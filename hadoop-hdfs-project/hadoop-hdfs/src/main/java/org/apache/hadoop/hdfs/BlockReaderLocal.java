@@ -182,7 +182,7 @@ class BlockReaderLocal implements BlockReader {
 
   /**
    * Maximum amount of readahead we'll do.  This will always be at least the,
-   * size of a single chunk, even if {@link zeroReadaheadRequested} is true.
+   * size of a single chunk, even if {@link #zeroReadaheadRequested} is true.
    * The reason is because we need to do a certain amount of buffering in order
    * to do checksumming.
    * 

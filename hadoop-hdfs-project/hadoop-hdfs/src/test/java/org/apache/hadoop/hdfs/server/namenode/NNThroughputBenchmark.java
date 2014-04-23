@@ -202,7 +202,7 @@ public class NNThroughputBenchmark implements Tool {
      * {@link #executeOp(int, int, String)}, which can have different meanings
      * depending on the operation performed.
      * 
-     * @param daemonId
+     * @param daemonId id of the daemon calling this method
      * @return the argument
      */
     abstract String getExecutionArgument(int daemonId);
@@ -322,11 +322,10 @@ public class NNThroughputBenchmark implements Tool {
     /**
      * Parse first 2 arguments, corresponding to the "-op" option.
      * 
-     * @param args
+     * @param args argument list
      * @return true if operation is all, which means that options not related
      * to this operation should be ignored, or false otherwise, meaning
      * that usage should be printed when an unrelated option is encountered.
-     * @throws IOException
      */
     protected boolean verifyOpArgument(List<String> args) {
       if(args.size() < 2 || ! args.get(0).startsWith("-op"))

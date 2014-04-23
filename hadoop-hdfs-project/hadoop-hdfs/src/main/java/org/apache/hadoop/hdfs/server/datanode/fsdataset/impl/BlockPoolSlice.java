@@ -74,7 +74,7 @@ class BlockPoolSlice {
    * @param bpid Block pool Id
    * @param volume {@link FsVolumeImpl} to which this BlockPool belongs to
    * @param bpDir directory corresponding to the BlockPool
-   * @param conf
+   * @param conf configuration
    * @throws IOException
    */
   BlockPoolSlice(String bpid, FsVolumeImpl volume, File bpDir,

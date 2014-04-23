@@ -60,10 +60,7 @@ public class AclPermissionParam extends StringParam {
   }
 
   /**
-   * Parse the list of AclEntry and returns aclspec.
-   * 
-   * @param List <AclEntry>
-   * @return String
+   * @return parse {@code aclEntry} and return aclspec
    */
   private static String parseAclSpec(List<AclEntry> aclEntry) {
     return StringUtils.join(aclEntry, ",");

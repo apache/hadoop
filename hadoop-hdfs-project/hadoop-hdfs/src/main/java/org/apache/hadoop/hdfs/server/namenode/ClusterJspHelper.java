@@ -388,7 +388,6 @@ class ClusterJspHelper {
      *          is an inner map whose key is namenode, value is datanode status.
      *          reported by each namenode.
      * @param namenodeHost host name of the namenode
-     * @param decomnode update DecommissionNode with alive node status
      * @param json JSON string contains datanode status
      * @throws IOException
      */
@@ -426,7 +425,6 @@ class ClusterJspHelper {
      * @param statusMap map with key being datanode, value being an
      *          inner map (key:namenode, value:decommisionning state).
      * @param host datanode hostname
-     * @param decomnode DecommissionNode
      * @param json String
      * @throws IOException
      */
@@ -468,7 +466,6 @@ class ClusterJspHelper {
      * @param dataNodeStatusMap map with key being datanode, value being an
      *          inner map (key:namenode, value:decommisionning state).
      * @param host datanode
-     * @param decomnode DecommissionNode
      * @param json String
      */
     private static void getDecommissionNodeStatus(

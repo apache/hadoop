@@ -1606,7 +1606,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
   /**
    * Set replication for an existing file.
    * @param src file name
-   * @param replication
+   * @param replication replication to set the file to
    * 
    * @see ClientProtocol#setReplication(String, short)
    */
@@ -2116,7 +2116,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
   /**
    * Set permissions to a file or directory.
    * @param src path name.
-   * @param permission
+   * @param permission permission to set to
    * 
    * @see ClientProtocol#setPermission(String, FsPermission)
    */
