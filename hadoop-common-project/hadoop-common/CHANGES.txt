@@ -404,6 +404,9 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10251. Both NameNodes could be in STANDBY State if SNN network is unstable
     (Vinayakumar B via umamahesh)
 
+    HADOOP-10531. hadoop-config.sh - bug in --hosts argument.
+    (Sebastien Barrier via wang)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

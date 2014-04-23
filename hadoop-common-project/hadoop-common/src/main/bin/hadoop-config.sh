@@ -97,7 +97,7 @@ then
     if [ "--hosts" = "$1" ]
     then
         shift
-        export HADOOP_SLAVES="${HADOOP_CONF_DIR}/$$1"
+        export HADOOP_SLAVES="${HADOOP_CONF_DIR}/$1"
         shift
     elif [ "--hostnames" = "$1" ]
     then
