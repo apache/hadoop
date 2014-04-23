@@ -122,6 +122,8 @@ Release 2.5.0 - UNRELEASED
     HDFS-6213. TestDataNodeConfig failing on Jenkins runs due to DN web port
     in use. (wang)
 
+    HDFS-6274. Cleanup javadoc warnings in HDFS code. (suresh)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

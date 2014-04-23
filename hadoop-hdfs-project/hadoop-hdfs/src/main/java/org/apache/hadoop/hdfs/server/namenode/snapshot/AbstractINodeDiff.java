@@ -86,7 +86,6 @@ abstract class AbstractINodeDiff<N extends INode,
     return posteriorDiff;
   }
 
-  /** @return the posterior diff. */
   final void setPosterior(D posterior) {
     posteriorDiff = posterior;
   }

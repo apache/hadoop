@@ -435,9 +435,9 @@ public class DatanodeManager {
   }
 
   /**
-   * Get data node by storage ID.
+   * Get data node by datanode ID.
    * 
-   * @param nodeID
+   * @param nodeID datanode ID
    * @return DatanodeDescriptor or null if the node is not found.
    * @throws UnregisteredNodeException
    */

@@ -125,7 +125,7 @@ public final class CachedBlock implements Element,
    * @param type      If null, this parameter is ignored.
    *                  If it is non-null, we match only datanodes which
    *                  have it on this list.
-   *                  See {@link DatanodeDescriptor#CachedBlocksList#Type}
+   *                  See {@link DatanodeDescriptor.CachedBlocksList.Type}
    *                  for a description of all the lists.
    *                  
    * @return          The list of datanodes.  Modifying this list does not

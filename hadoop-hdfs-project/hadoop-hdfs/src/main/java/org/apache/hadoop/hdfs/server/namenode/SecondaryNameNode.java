@@ -209,7 +209,6 @@ public class SecondaryNameNode implements Runnable {
   
   /**
    * Initialize SecondaryNameNode.
-   * @param commandLineOpts
    */
   private void initialize(final Configuration conf,
       CommandLineOpts commandLineOpts) throws IOException {

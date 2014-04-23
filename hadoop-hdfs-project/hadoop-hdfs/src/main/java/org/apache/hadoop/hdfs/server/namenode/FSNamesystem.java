@@ -1339,7 +1339,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   /**
    * Returns edit directories that are shared between primary and secondary.
    * @param conf configuration
-   * @return Collection of edit directories.
+   * @return collection of edit directories from {@code conf}
    */
   public static List<URI> getSharedEditsDirs(Configuration conf) {
     // don't use getStorageDirs here, because we want an empty default
@@ -1774,9 +1774,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * before we start actual move.
    * 
    * This does not support ".inodes" relative path
-   * @param target target file path to concatenate into
-   * @param srcs files that are concatenated
-   * @throws IOException
+   * @param target target to concat into
+   * @param srcs file that will be concatenated
+   * @throws IOException on error
    */
   void concat(String target, String [] srcs) 
       throws IOException, UnresolvedLinkException {
@@ -4075,11 +4075,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   /**
-   *
-   * @param pendingFile
-   * @param storedBlock
+   * @param pendingFile open file that needs to be closed
+   * @param storedBlock last block
    * @return Path of the file that was closed.
-   * @throws IOException
+   * @throws IOException on error
    */
   @VisibleForTesting
   String closeFileCommitBlocks(INodeFile pendingFile, BlockInfo storedBlock)
@@ -4287,7 +4286,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   /**
    * Perform resource checks and cache the results.
-   * @throws IOException
    */
   void checkAvailableResources() {
     Preconditions.checkState(nnResourceChecker != null,
@@ -5338,7 +5336,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   /**
    * Leave safe mode.
-   * @throws IOException
    */
   void leaveSafeMode() {
     writeLock();
@@ -5755,7 +5752,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   /**
    * Sets the generation stamp that delineates random and sequentially
    * allocated block IDs.
-   * @param stamp
+   * @param stamp set generation stamp limit to this value
    */
   void setGenerationStampV1Limit(long stamp) {
     Preconditions.checkState(generationStampV1Limit ==
@@ -5840,7 +5837,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * Determine whether the block ID was randomly generated (legacy) or
    * sequentially generated. The generation stamp value is used to
    * make the distinction.
-   * @param block
    * @return true if the block ID was randomly generated, false otherwise.
    */
   boolean isLegacyBlock(Block block) {
@@ -6077,7 +6073,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * Release (unregister) backup node.
    * <p>
    * Find and remove the backup stream corresponding to the node.
-   * @param registration
    * @throws IOException
    */
   void releaseBackupNode(NamenodeRegistration registration)
@@ -6213,8 +6208,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   /**
    * @param renewer Renewer information
-   * @return Token<DelegationTokenIdentifier>
-   * @throws IOException
+   * @return delegation toek
+   * @throws IOException on error
    */
   Token<DelegationTokenIdentifier> getDelegationToken(Text renewer)
       throws IOException {
@@ -6255,10 +6250,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   /**
    * 
-   * @param token delegation token
-   * @return New expiryTime of the token
-   * @throws InvalidToken
-   * @throws IOException
+   * @param token token to renew
+   * @return new expiryTime of the token
+   * @throws InvalidToken if {@code token} is invalid
+   * @throws IOException on other errors
    */
   long renewDelegationToken(Token<DelegationTokenIdentifier> token)
       throws InvalidToken, IOException {
@@ -6289,8 +6284,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   /**
    * 
-   * @param token delegation token that needs to be canceled
-   * @throws IOException
+   * @param token token to cancel
+   * @throws IOException on error
    */
   void cancelDelegationToken(Token<DelegationTokenIdentifier> token)
       throws IOException {
@@ -7201,7 +7196,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   /**
    * Update internal state to indicate that a rolling upgrade is in progress.
-   * @param startTime start time of the rolling upgrade
+   * @param startTime rolling upgrade start time
    */
   void startRollingUpgradeInternal(long startTime)
       throws IOException {

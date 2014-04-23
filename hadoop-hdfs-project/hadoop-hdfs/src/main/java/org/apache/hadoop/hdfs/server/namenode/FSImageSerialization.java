@@ -206,7 +206,7 @@ public class FSImageSerialization {
   /**
    * Reading the path from the image and converting it to byte[][] directly
    * this saves us an array copy and conversions to and from String
-   * @param in
+   * @param in input to read from
    * @return the array each element of which is a byte[] representation 
    *            of a path component
    * @throws IOException

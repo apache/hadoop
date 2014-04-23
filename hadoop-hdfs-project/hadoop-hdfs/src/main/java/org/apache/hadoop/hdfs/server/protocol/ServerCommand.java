@@ -39,7 +39,7 @@ public abstract class ServerCommand {
    * 
    * @see DatanodeProtocol
    * @see NamenodeProtocol
-   * @param action
+   * @param action protocol specific action
    */
   public ServerCommand(int action) {
     this.action = action;

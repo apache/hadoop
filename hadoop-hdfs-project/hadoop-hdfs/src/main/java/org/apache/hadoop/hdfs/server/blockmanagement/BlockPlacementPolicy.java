@@ -61,7 +61,7 @@ public abstract class BlockPlacementPolicy {
    * @param srcPath the file to which this chooseTargets is being invoked.
    * @param numOfReplicas additional number of replicas wanted.
    * @param writer the writer's machine, null if not in the cluster.
-   * @param chosenNodes datanodes that have been chosen as targets.
+   * @param chosen datanodes that have been chosen as targets.
    * @param returnChosenNodes decide if the chosenNodes are returned.
    * @param excludedNodes datanodes that should not be considered as targets.
    * @param blocksize size of the data to be written.
@@ -78,8 +78,8 @@ public abstract class BlockPlacementPolicy {
                                              StorageType storageType);
   
   /**
-   * Same as {@link #chooseTarget(String, int, Node, List, boolean, 
-   * Set, long)} with added parameter {@code favoredDatanodes}
+   * Same as {@link #chooseTarget(String, int, Node, Set, long, List, StorageType)}
+   * with added parameter {@code favoredDatanodes}
    * @param favoredNodes datanodes that should be favored as targets. This
    *          is only a hint and due to cluster state, namenode may not be 
    *          able to place the blocks on these datanodes.
@@ -143,7 +143,8 @@ public abstract class BlockPlacementPolicy {
     
   /**
    * Get an instance of the configured Block Placement Policy based on the
-   * the configuration property {@link DFS_BLOCK_REPLICATOR_CLASSNAME_KEY}.
+   * the configuration property
+   * {@link  DFSConfigKeys#DFS_BLOCK_REPLICATOR_CLASSNAME_KEY}.
    * 
    * @param conf the configuration to be used
    * @param stats an object that is used to retrieve the load on the cluster
@@ -195,7 +196,6 @@ public abstract class BlockPlacementPolicy {
 
   /**
    * Get rack string from a data node
-   * @param datanode
    * @return rack of data node
    */
   protected String getRack(final DatanodeInfo datanode) {
@@ -206,7 +206,7 @@ public abstract class BlockPlacementPolicy {
    * Split data nodes into two sets, one set includes nodes on rack with
    * more than one  replica, the other set contains the remaining nodes.
    * 
-   * @param dataNodes
+   * @param dataNodes datanodes to be split into two sets
    * @param rackMap a map from rack to datanodes
    * @param moreThanOne contains nodes on rack with more than one replica
    * @param exactlyOne remains contains the remaining nodes

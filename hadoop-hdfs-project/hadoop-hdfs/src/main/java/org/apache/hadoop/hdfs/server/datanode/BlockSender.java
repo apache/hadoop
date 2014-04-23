@@ -168,7 +168,7 @@ class BlockSender implements java.io.Closeable {
    * @param block Block that is being read
    * @param startOffset starting offset to read from
    * @param length length of data to read
-   * @param corruptChecksumOk
+   * @param corruptChecksumOk if true, corrupt checksum is okay
    * @param verifyChecksum verify checksum while reading the data
    * @param sendChecksum send checksum to client.
    * @param datanode datanode from which the block is being read

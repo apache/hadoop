@@ -299,7 +299,7 @@ public class DelegationTokenSecretManager
    * Update the token cache with renewal record in edit logs.
    * 
    * @param identifier DelegationTokenIdentifier of the renewed token
-   * @param expiryTime
+   * @param expiryTime expirty time in milliseconds
    * @throws IOException
    */
   public synchronized void updatePersistedTokenRenewal(
@@ -429,8 +429,7 @@ public class DelegationTokenSecretManager
 
     /**
      * Private helper method to load delegation keys from fsimage.
-     * @param in
-     * @throws IOException
+     * @throws IOException on error
      */
     private synchronized void loadAllKeys(DataInput in) throws IOException {
       StartupProgress prog = NameNode.getStartupProgress();

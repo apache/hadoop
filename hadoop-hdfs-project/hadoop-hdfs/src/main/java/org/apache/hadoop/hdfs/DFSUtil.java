@@ -289,9 +289,7 @@ public class DFSUtil {
    * <p>
    * Note that some components are only reserved under certain directories, e.g.
    * "/.reserved" is reserved, while "/hadoop/.reserved" is not.
-   * 
-   * @param component
-   * @return if the component is reserved
+   * @return true, if the component is reserved
    */
   public static boolean isReservedPathComponent(String component) {
     for (String reserved : HdfsConstants.RESERVED_PATH_COMPONENTS) {
@@ -1016,8 +1014,8 @@ public class DFSUtil {
   /**
    * return server http or https address from the configuration for a
    * given namenode rpc address.
-   * @param conf
    * @param namenodeAddr - namenode RPC address
+   * @param conf configuration
    * @param scheme - the scheme (http / https)
    * @return server http or https address
    * @throws IOException 
@@ -1328,7 +1326,7 @@ public class DFSUtil {
   /**
    * For given set of {@code keys} adds nameservice Id and or namenode Id
    * and returns {nameserviceId, namenodeId} when address match is found.
-   * @see #getSuffixIDs(Configuration, String, AddressMatcher)
+   * @see #getSuffixIDs(Configuration, String, String, String, AddressMatcher)
    */
   static String[] getSuffixIDs(final Configuration conf,
       final InetSocketAddress address, final String... keys) {
@@ -1500,9 +1498,8 @@ public class DFSUtil {
   /**
    * Get SPNEGO keytab Key from configuration
    * 
-   * @param conf
-   *          Configuration
-   * @param defaultKey
+   * @param conf Configuration
+   * @param defaultKey default key to be used for config lookup
    * @return DFS_WEB_AUTHENTICATION_KERBEROS_KEYTAB_KEY if the key is not empty
    *         else return defaultKey
    */

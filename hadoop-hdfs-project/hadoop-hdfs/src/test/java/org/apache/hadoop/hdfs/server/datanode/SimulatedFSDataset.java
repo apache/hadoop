@@ -833,8 +833,8 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
     
     /**
      * An input stream of size l with repeated bytes
-     * @param l
-     * @param iRepeatedData
+     * @param l size of the stream
+     * @param iRepeatedData byte that is repeated in the stream
      */
     SimulatedInputStream(long l, byte iRepeatedData) {
       length = l;
@@ -843,17 +843,14 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
     
     /**
      * An input stream of of the supplied data
-     * 
-     * @param iData
+     * @param iData data to construct the stream
      */
     SimulatedInputStream(byte[] iData) {
       data = iData;
       length = data.length;
-      
     }
     
     /**
-     * 
      * @return the lenght of the input stream
      */
     long getLength() {

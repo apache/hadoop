@@ -668,8 +668,8 @@ public abstract class FSEditLogOp {
   }
 
   /**
-   * {@literal @AtMostOnce} for {@link ClientProtocol#startFile} and
-   * {@link ClientProtocol#appendFile}
+   * {@literal @AtMostOnce} for {@link ClientProtocol#create} and
+   * {@link ClientProtocol#append}
    */
   static class AddOp extends AddCloseOp {
     private AddOp() {

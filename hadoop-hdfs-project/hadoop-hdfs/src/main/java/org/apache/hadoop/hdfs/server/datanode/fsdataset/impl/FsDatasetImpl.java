@@ -120,10 +120,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
 
 
   /**
-   * Returns a clone of a replica stored in data-node memory.
-   * Should be primarily used for testing.
-   * @param blockId
-   * @return
+   * This should be primarily used for testing.
+   * @return clone of replica store in datanode memory
    */
   ReplicaInfo fetchReplicaInfo(String bpid, long blockId) {
     ReplicaInfo r = volumeMap.get(bpid, blockId);
@@ -1581,7 +1579,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         datanode.getDnConf().getXceiverStopTimeout());
   }
 
-  /** static version of {@link #initReplicaRecovery(Block, long)}. */
+  /** static version of {@link #initReplicaRecovery(RecoveringBlock)}. */
   static ReplicaRecoveryInfo initReplicaRecovery(String bpid, ReplicaMap map,
       Block block, long recoveryId, long xceiverStopTimeout) throws IOException {
     final ReplicaInfo replica = map.get(bpid, block.getBlockId());

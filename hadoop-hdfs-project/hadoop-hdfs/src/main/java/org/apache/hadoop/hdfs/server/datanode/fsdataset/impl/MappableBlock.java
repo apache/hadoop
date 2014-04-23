@@ -100,7 +100,6 @@ public class MappableBlock implements Closeable {
 
   /**
    * Verifies the block's checksum. This is an I/O intensive operation.
-   * @return if the block was successfully checksummed.
    */
   private static void verifyChecksum(long length,
       FileInputStream metaIn, FileChannel blockChannel, String blockFileName)

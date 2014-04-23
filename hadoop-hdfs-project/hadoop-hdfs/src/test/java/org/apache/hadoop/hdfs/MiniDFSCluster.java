@@ -1386,8 +1386,8 @@ public class MiniDFSCluster {
   /**
    * Finalize cluster for the namenode at the given index 
    * @see MiniDFSCluster#finalizeCluster(Configuration)
-   * @param nnIndex
-   * @param conf
+   * @param nnIndex index of the namenode
+   * @param conf configuration
    * @throws Exception
    */
   public void finalizeCluster(int nnIndex, Configuration conf) throws Exception {
@@ -2248,7 +2248,7 @@ public class MiniDFSCluster {
    * to determine the location of the storage of a DN instance in the mini cluster
    * @param dnIndex datanode index
    * @param dirIndex directory index.
-   * @return
+   * @return storage directory path
    */
   private static String getStorageDirPath(int dnIndex, int dirIndex) {
     return "data/data" + (2 * dnIndex + 1 + dirIndex);
@@ -2274,8 +2274,8 @@ public class MiniDFSCluster {
   }
   /**
    * Get directory relative to block pool directory in the datanode
-   * @param storageDir
-   * @return current directory
+   * @param storageDir storage directory
+   * @return current directory in the given storage directory
    */
   public static String getBPDir(File storageDir, String bpid, String dirName) {
     return getBPDir(storageDir, bpid) + dirName + "/";

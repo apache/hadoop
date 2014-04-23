@@ -389,7 +389,7 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
    * Get block at the specified position.
    * Fetch it from the namenode if not cached.
    * 
-   * @param offset
+   * @param offset block corresponding to this offset in file is returned
    * @param updatePosition whether to update current position
    * @return located block
    * @throws IOException
@@ -453,14 +453,13 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
    * Get blocks in the specified range.
    * Fetch them from the namenode if not cached. This function
    * will not get a read request beyond the EOF.
-   * @param offset
-   * @param length
+   * @param offset starting offset in file
+   * @param length length of data
    * @return consequent segment of located blocks
    * @throws IOException
    */
-  private synchronized List<LocatedBlock> getBlockRange(long offset, 
-                                                        long length) 
-                                                      throws IOException {
+  private synchronized List<LocatedBlock> getBlockRange(long offset,
+      long length)  throws IOException {
     // getFileLength(): returns total file length
     // locatedBlocks.getFileLength(): returns length of completed blocks
     if (offset >= getFileLength()) {
@@ -847,7 +846,6 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
 
   /**
    * Add corrupted block replica into map.
-   * @param corruptedBlockMap 
    */
   private void addIntoCorruptedBlockMap(ExtendedBlock blk, DatanodeInfo node, 
       Map<ExtendedBlock, Set<DatanodeInfo>> corruptedBlockMap) {
@@ -1091,14 +1089,6 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
    * int, Map)} except we start up a second, parallel, 'hedged' read
    * if the first read is taking longer than configured amount of
    * time.  We then wait on which ever read returns first.
-   * 
-   * @param block
-   * @param start
-   * @param end
-   * @param buf
-   * @param offset
-   * @param corruptedBlockMap
-   * @throws IOException
    */
   private void hedgedFetchBlockByteRange(LocatedBlock block, long start,
       long end, byte[] buf, int offset,

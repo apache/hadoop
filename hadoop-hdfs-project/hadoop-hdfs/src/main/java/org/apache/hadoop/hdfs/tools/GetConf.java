@@ -167,8 +167,7 @@ public class GetConf extends Configured implements Tool {
     }
 
     
-    /** Method to be overridden by sub classes for specific behavior 
-     * @param args */
+    /** Method to be overridden by sub classes for specific behavior */
     int doWorkInternal(GetConf tool, String[] args) throws Exception {
 
       String value = tool.getConf().getTrimmed(key);

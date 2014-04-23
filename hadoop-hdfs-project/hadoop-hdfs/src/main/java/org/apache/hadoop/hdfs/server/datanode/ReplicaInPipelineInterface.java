@@ -40,7 +40,7 @@ public interface ReplicaInPipelineInterface extends Replica {
   
   /**
    * Set the number bytes that have acked
-   * @param bytesAcked
+   * @param bytesAcked number bytes acked
    */
   void setBytesAcked(long bytesAcked);
   

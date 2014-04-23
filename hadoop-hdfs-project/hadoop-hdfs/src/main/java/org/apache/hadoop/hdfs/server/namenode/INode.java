@@ -652,9 +652,8 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
 
 
   /**
-   * Breaks file path into components.
-   * @param path
-   * @return array of byte arrays each of which represents 
+   * Breaks {@code path} into components.
+   * @return array of byte arrays each of which represents
    * a single path component.
    */
   static byte[][] getPathComponents(String path) {
@@ -673,8 +672,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
   }
 
   /**
-   * Splits an absolute path into an array of path components.
-   * @param path
+   * Splits an absolute {@code path} into an array of path components.
    * @throws AssertionError if the given path is invalid.
    * @return array of path components.
    */

@@ -549,7 +549,6 @@ public class BlockManager {
   }
 
   /**
-   * @param block
    * @return true if the block has minimum replicas
    */
   public boolean checkMinReplication(Block block) {
@@ -3369,7 +3368,6 @@ public class BlockManager {
    * heartbeat.
    * 
    * @return number of blocks scheduled for replication or removal.
-   * @throws IOException
    */
   int computeDatanodeWork() {
     // Blocks should not be replicated or removed if in safe mode.

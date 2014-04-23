@@ -168,7 +168,7 @@ public class FileJournalManager implements JournalManager {
 
   /**
    * Find all editlog segments starting at or above the given txid.
-   * @param fromTxId the txnid which to start looking
+   * @param firstTxId the txnid which to start looking
    * @param inProgressOk whether or not to include the in-progress edit log 
    *        segment       
    * @return a list of remote edit logs

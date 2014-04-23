@@ -355,8 +355,6 @@ public class NameNode implements NameNodeStatusMXBean {
 
 
   /**
-   * TODO:FEDERATION
-   * @param filesystemURI
    * @return address of file system
    */
   public static InetSocketAddress getAddress(URI filesystemURI) {
@@ -799,8 +797,8 @@ public class NameNode implements NameNodeStatusMXBean {
    * Interactively confirm that formatting is desired 
    * for each existing directory and format them.
    * 
-   * @param conf
-   * @param force
+   * @param conf configuration to use
+   * @param force if true, format regardless of whether dirs exist
    * @return true if formatting was aborted, false otherwise
    * @throws IOException
    */

@@ -485,7 +485,7 @@ public class FSImageFormat {
    /**
     * Load all children of a directory
     * 
-    * @param in
+    * @param in input to load from
     * @param counter Counter to increment for namenode startup progress
     * @return number of child inodes read
     * @throws IOException

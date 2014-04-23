@@ -242,7 +242,6 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
 
   /**
    * Find specified DatanodeDescriptor.
-   * @param dn
    * @return index or -1 if not found.
    */
   int findDatanode(DatanodeDescriptor dn) {
@@ -258,7 +257,6 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
   }
   /**
    * Find specified DatanodeStorageInfo.
-   * @param dn
    * @return index or -1 if not found.
    */
   int findStorageInfo(DatanodeInfo dn) {
@@ -275,7 +273,6 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
   
   /**
    * Find specified DatanodeStorageInfo.
-   * @param storageInfo
    * @return index or -1 if not found.
    */
   int findStorageInfo(DatanodeStorageInfo storageInfo) {
