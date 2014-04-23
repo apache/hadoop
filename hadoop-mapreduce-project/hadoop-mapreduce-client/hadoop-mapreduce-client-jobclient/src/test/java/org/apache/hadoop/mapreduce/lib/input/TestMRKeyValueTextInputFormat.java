@@ -321,6 +321,7 @@ public class TestMRKeyValueTextInputFormat {
     while (reader.nextKeyValue()) {
       result.add(new Text(reader.getCurrentValue()));
     }
+    reader.close();
     return result;
   }
   

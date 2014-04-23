@@ -39,6 +39,9 @@ Release 2.4.1 - UNRELEASED
     MAPREDUCE-5841. uber job doesn't terminate on getting mapred job kill
     (Sangjin Lee via jlowe)
 
+    MAPREDUCE-5843. Fixed TestMRKeyValueTextInputFormat to not leak files and
+    thus avoid failing on Windows. (Varun Vasudev via vinodkv)
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES
