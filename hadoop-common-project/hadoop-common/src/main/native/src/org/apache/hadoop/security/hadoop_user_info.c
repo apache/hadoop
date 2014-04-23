@@ -28,7 +28,10 @@
 #include <unistd.h>
 
 #define INITIAL_GIDS_SIZE 32
-#define MAX_USER_LOOKUP_TRIES 5
+// 1KB buffer should be large enough to store a passwd record in most
+// cases, but it can get bigger if each field is maximally used. The
+// max is defined to avoid buggy libraries making us run out of memory.
+#define MAX_USER_BUFFER_SIZE (32*1024)
 
 struct hadoop_user_info *hadoop_user_info_alloc(void)
 {
@@ -96,48 +99,49 @@ int hadoop_user_info_fetch(struct hadoop_user_info *uinfo,
                            const char *username)
 {
   struct passwd *pwd;
-  int ret, i;
+  int ret;
   size_t buf_sz;
   char *nbuf;
 
   hadoop_user_info_clear(uinfo);
-  for (i = 0, ret = 0; i < MAX_USER_LOOKUP_TRIES; i++) {
-    // If the previous call returned ERANGE, increase the buffer size
-    if (ret == ERANGE) {
-      buf_sz = uinfo->buf_sz * 2;
-      nbuf = realloc(uinfo->buf, buf_sz);
-      if (!nbuf) {
-        return ENOMEM;
-      }
-      uinfo->buf = nbuf;
-      uinfo->buf_sz = buf_sz;
-    }
-
-    // The following call returns errno. Reading the global errno wihtout
-    // locking is not thread-safe.
+  for (;;) {
+    // On success, the following call returns 0 and pwd is set to non-NULL.
     pwd = NULL;
     ret = getpwnam_r(username, &uinfo->pwd, uinfo->buf,
                          uinfo->buf_sz, &pwd);
     switch(ret) {
       case 0:
         if (!pwd) {
-          // The underlying library likely has a bug.
-          return EIO;
+          // Not found.
+          return ENOENT;
         }
+        // Found.
         return 0;
       case EINTR:
-      case ERANGE:
-        // Retry on these errors.
         // EINTR: a signal was handled and this thread was allowed to continue.
+        break;
+      case ERANGE:
         // ERANGE: the buffer was not big enough.
+        if (uinfo->buf_sz == MAX_USER_BUFFER_SIZE) {
+          // Already tried with the max size.
+          return ENOMEM;
+        }
+        buf_sz = uinfo->buf_sz * 2;
+        if (buf_sz > MAX_USER_BUFFER_SIZE) {
+          buf_sz = MAX_USER_BUFFER_SIZE;
+        }
+        nbuf = realloc(uinfo->buf, buf_sz);
+        if (!nbuf) {
+          return ENOMEM;
+        }
+        uinfo->buf = nbuf;
+        uinfo->buf_sz = buf_sz;
         break;
       default:
         // Lookup failed.
         return getpwnam_error_translate(ret);
     }
   }
-  // Did not succeed after the retries. Return the last error.
-  return getpwnam_error_translate(ret);
 }
 
 static int put_primary_gid_first(struct hadoop_user_info *uinfo)
