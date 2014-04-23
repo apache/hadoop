@@ -74,6 +74,9 @@ public class HealthMonitor {
   private List<Callback> callbacks = Collections.synchronizedList(
       new LinkedList<Callback>());
 
+  private List<ServiceStateCallback> serviceStateCallbacks = Collections
+      .synchronizedList(new LinkedList<ServiceStateCallback>());
+
   private HAServiceStatus lastServiceState = new HAServiceStatus(
       HAServiceState.INITIALIZING);
   
@@ -134,7 +137,15 @@ public class HealthMonitor {
   public void removeCallback(Callback cb) {
     callbacks.remove(cb);
   }
-  
+
+  public synchronized void addServiceStateCallback(ServiceStateCallback cb) {
+    this.serviceStateCallbacks.add(cb);
+  }
+
+  public synchronized void removeServiceStateCallback(ServiceStateCallback cb) {
+    serviceStateCallbacks.remove(cb);
+  }
+
   public void shutdown() {
     LOG.info("Stopping HealthMonitor thread");
     shouldRun = false;
@@ -217,6 +228,9 @@ public class HealthMonitor {
   
   private synchronized void setLastServiceStatus(HAServiceStatus status) {
     this.lastServiceState = status;
+    for (ServiceStateCallback cb : serviceStateCallbacks) {
+      cb.reportServiceStatus(lastServiceState);
+    }
   }
 
   private synchronized void enterState(State newState) {
@@ -292,5 +306,12 @@ public class HealthMonitor {
    */
   static interface Callback {
     void enteredState(State newState);
+  }
+
+  /**
+   * Callback interface for service states.
+   */
+  static interface ServiceStateCallback {
+    void reportServiceStatus(HAServiceStatus status);
   }
 }
