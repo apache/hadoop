@@ -107,6 +107,9 @@ Release 2.4.1 - UNRELEASED
 
     HADOOP-10522. JniBasedUnixGroupMapping mishandles errors. (kihwal)
 
+    HADOOP-10527. Fix incorrect return code and allow more retries on EINTR.
+    (kihwal)
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES

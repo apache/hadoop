@@ -124,10 +124,8 @@ Java_org_apache_hadoop_security_JniBasedUnixGroupsMapping_getGroupsForUser
     if (ret == ENOENT) {
       jgroups = (*env)->NewObjectArray(env, 0, g_string_clazz, NULL);
     } else { // handle other errors
-      char buf[128];
-      snprintf(buf, sizeof(buf), "getgrouplist: error looking up user. %d (%s)",
-               ret, terror(ret));
-      THROW(env, "java/lang/RuntimeException", buf);
+      (*env)->Throw(env, newRuntimeException(env,
+          "getgrouplist: error looking up user. %d (%s)", ret, terror(ret)));
     }
     goto done;
   }
@@ -142,10 +140,8 @@ Java_org_apache_hadoop_security_JniBasedUnixGroupsMapping_getGroupsForUser
     if (ret == ENOMEM) {
       THROW(env, "java/lang/OutOfMemoryError", NULL);
     } else {
-      char buf[128];
-      snprintf(buf, sizeof(buf), "getgrouplist: error looking up groups. %d (%s)",
-               ret, terror(ret));
-      THROW(env, "java/lang/RuntimeException", buf);
+      (*env)->Throw(env, newRuntimeException(env,
+          "getgrouplist: error looking up group. %d (%s)", ret, terror(ret)));
     }
     goto done;
   }
