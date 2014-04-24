@@ -355,6 +355,9 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-10503. Move junit up to v 4.11. (cnauroth)
 
+    HADOOP-10535. Make the retry numbers in ActiveStandbyElector configurable.
+    (jing9)
+
   OPTIMIZATIONS
 
   BUG FIXES 

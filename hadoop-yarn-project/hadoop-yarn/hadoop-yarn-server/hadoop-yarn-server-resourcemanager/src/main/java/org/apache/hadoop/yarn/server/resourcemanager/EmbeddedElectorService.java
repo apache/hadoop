@@ -23,6 +23,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ha.ActiveStandbyElector;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.ServiceFailedException;
@@ -85,8 +86,11 @@ public class EmbeddedElectorService extends AbstractService
     List<ACL> zkAcls = RMZKUtils.getZKAcls(conf);
     List<ZKUtil.ZKAuthInfo> zkAuths = RMZKUtils.getZKAuths(conf);
 
+    int maxRetryNum = conf.getInt(
+        CommonConfigurationKeys.HA_FC_ELECTOR_ZK_OP_RETRIES_KEY,
+        CommonConfigurationKeys.HA_FC_ELECTOR_ZK_OP_RETRIES_DEFAULT);
     elector = new ActiveStandbyElector(zkQuorum, (int) zkSessionTimeout,
-        electionZNode, zkAcls, zkAuths, this);
+        electionZNode, zkAcls, zkAuths, this, maxRetryNum);
 
     elector.ensureParentZNode();
     if (!isParentZnodeSafe(clusterId)) {

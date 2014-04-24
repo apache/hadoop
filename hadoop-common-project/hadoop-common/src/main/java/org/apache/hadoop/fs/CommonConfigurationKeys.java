@@ -199,6 +199,11 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
       "ha.failover-controller.graceful-fence.connection.retries";
   public static final int HA_FC_GRACEFUL_FENCE_CONNECTION_RETRIES_DEFAULT = 1;
 
+  /** number of zookeeper operation retry times in ActiveStandbyElector */
+  public static final String HA_FC_ELECTOR_ZK_OP_RETRIES_KEY =
+      "ha.failover-controller.active-standby-elector.zk.op.retries";
+  public static final int HA_FC_ELECTOR_ZK_OP_RETRIES_DEFAULT = 3;
+
   /* Timeout that the CLI (manual) FC waits for monitorHealth, getServiceState */
   public static final String HA_FC_CLI_CHECK_TIMEOUT_KEY =
     "ha.failover-controller.cli-check.rpc-timeout.ms";
