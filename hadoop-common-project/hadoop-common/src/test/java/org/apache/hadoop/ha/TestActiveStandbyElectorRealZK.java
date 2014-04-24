@@ -26,6 +26,7 @@ import java.util.Collections;
 import java.util.UUID;
 
 import org.apache.commons.logging.impl.Log4JLogger;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ha.ActiveStandbyElector.ActiveStandbyElectorCallback;
 import org.apache.hadoop.ha.ActiveStandbyElector.State;
 import org.apache.hadoop.util.ZKUtil.ZKAuthInfo;
@@ -70,9 +71,9 @@ public class TestActiveStandbyElectorRealZK extends ClientBaseWithFixes {
     for (int i = 0; i < NUM_ELECTORS; i++) {
       cbs[i] =  Mockito.mock(ActiveStandbyElectorCallback.class);
       appDatas[i] = Ints.toByteArray(i);
-      electors[i] = new ActiveStandbyElector(
-          hostPort, 5000, PARENT_DIR, Ids.OPEN_ACL_UNSAFE,
-          Collections.<ZKAuthInfo>emptyList(), cbs[i]);
+      electors[i] = new ActiveStandbyElector(hostPort, 5000, PARENT_DIR,
+          Ids.OPEN_ACL_UNSAFE, Collections.<ZKAuthInfo> emptyList(), cbs[i],
+          CommonConfigurationKeys.HA_FC_ELECTOR_ZK_OP_RETRIES_DEFAULT);
     }
   }
   

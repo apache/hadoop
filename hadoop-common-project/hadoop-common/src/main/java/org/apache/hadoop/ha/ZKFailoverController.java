@@ -32,6 +32,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ha.ActiveStandbyElector.ActiveNotFoundException;
 import org.apache.hadoop.ha.ActiveStandbyElector.ActiveStandbyElectorCallback;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
@@ -341,10 +342,12 @@ public abstract class ZKFailoverController {
     Preconditions.checkArgument(zkTimeout > 0,
         "Invalid ZK session timeout %s", zkTimeout);
     
-
+    int maxRetryNum = conf.getInt(
+        CommonConfigurationKeys.HA_FC_ELECTOR_ZK_OP_RETRIES_KEY,
+        CommonConfigurationKeys.HA_FC_ELECTOR_ZK_OP_RETRIES_DEFAULT);
     elector = new ActiveStandbyElector(zkQuorum,
         zkTimeout, getParentZnode(), zkAcls, zkAuths,
-        new ElectorCallbacks());
+        new ElectorCallbacks(), maxRetryNum);
   }
   
   private String getParentZnode() {
