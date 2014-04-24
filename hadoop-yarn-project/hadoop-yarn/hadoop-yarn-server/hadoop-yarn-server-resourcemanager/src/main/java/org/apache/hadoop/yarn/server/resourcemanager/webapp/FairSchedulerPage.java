@@ -22,7 +22,6 @@ import static org.apache.hadoop.yarn.util.StringHelper.join;
 
 import java.util.Collection;
 
-import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.FairSchedulerInfo;
@@ -65,20 +64,16 @@ public class FairSchedulerPage extends RmView {
     @Override
     protected void render(Block html) {
       ResponseInfo ri = info("\'" + qinfo.getQueueName() + "\' Queue Status").
-          _("Used Resources:", StringEscapeUtils.escapeHtml(
-              qinfo.getUsedResources().toString())).
+          _("Used Resources:", qinfo.getUsedResources().toString()).
           _("Num Active Applications:", qinfo.getNumActiveApplications()).
           _("Num Pending Applications:", qinfo.getNumPendingApplications()).
-          _("Min Resources:", StringEscapeUtils.escapeHtml(
-              qinfo.getMinResources().toString())).
-          _("Max Resources:", StringEscapeUtils.escapeHtml(
-              qinfo.getMaxResources().toString()));
+          _("Min Resources:", qinfo.getMinResources().toString()).
+          _("Max Resources:", qinfo.getMaxResources().toString());
       int maxApps = qinfo.getMaxApplications();
       if (maxApps < Integer.MAX_VALUE) {
           ri._("Max Running Applications:", qinfo.getMaxApplications());
       }
-      ri._("Fair Share:", StringEscapeUtils.escapeHtml(
-        qinfo.getFairShare().toString()));
+      ri._("Fair Share:", qinfo.getFairShare().toString());
 
       html._(InfoBlock.class);
 
