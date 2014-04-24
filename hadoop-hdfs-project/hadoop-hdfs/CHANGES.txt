@@ -309,6 +309,8 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6278. Create HTML5-based UI for SNN. (wheat9)
 
+    HDFS-6279. Create new index page for JN / DN. (wheat9)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)
