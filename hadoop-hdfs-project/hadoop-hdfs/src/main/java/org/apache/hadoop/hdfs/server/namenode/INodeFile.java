@@ -435,17 +435,19 @@ public class INodeFile extends INodeWithAdditionalFields
           removedINodes, countDiffChange);
     }
     Quota.Counts counts = Quota.Counts.newInstance();
-    if (snapshot == CURRENT_STATE_ID && priorSnapshotId == NO_SNAPSHOT_ID) {
-      // this only happens when deleting the current file and the file is not
-      // in any snapshot
-      computeQuotaUsage(counts, false);
-      destroyAndCollectBlocks(collectedBlocks, removedINodes);
-    } else if (snapshot == CURRENT_STATE_ID && priorSnapshotId != NO_SNAPSHOT_ID) {
-      // when deleting the current file and the file is in snapshot, we should
-      // clean the 0-sized block if the file is UC
-      FileUnderConstructionFeature uc = getFileUnderConstructionFeature();
-      if (uc != null) {
-        uc.cleanZeroSizeBlock(this, collectedBlocks);
+    if (snapshot == CURRENT_STATE_ID) {
+      if (priorSnapshotId == NO_SNAPSHOT_ID) {
+        // this only happens when deleting the current file and the file is not
+        // in any snapshot
+        computeQuotaUsage(counts, false);
+        destroyAndCollectBlocks(collectedBlocks, removedINodes);
+      } else {
+        // when deleting the current file and the file is in snapshot, we should
+        // clean the 0-sized block if the file is UC
+        FileUnderConstructionFeature uc = getFileUnderConstructionFeature();
+        if (uc != null) {
+          uc.cleanZeroSizeBlock(this, collectedBlocks);
+        }
       }
     }
     return counts;
