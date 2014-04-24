@@ -34,7 +34,7 @@ import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.annotations.VisibleForTesting;
 
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce", "HBase", "Hive"})
 public class ProxyUsers {
 
   private static final String CONF_HOSTS = ".hosts";
@@ -187,6 +187,20 @@ public class ProxyUsers {
       throw new AuthorizationException("Unauthorized connection for super-user: "
           + superUser.getUserName() + " from IP " + remoteAddress);
     }
+  }
+  
+  /**
+   * This function is kept to provide backward compatibility.
+   * @param user
+   * @param remoteAddress
+   * @param conf
+   * @throws AuthorizationException
+   * @deprecated use {@link #authorize(UserGroupInformation, String) instead. 
+   */
+  @Deprecated
+  public static synchronized void authorize(UserGroupInformation user, 
+      String remoteAddress, Configuration conf) throws AuthorizationException {
+    authorize(user,remoteAddress);
   }
 
   /**

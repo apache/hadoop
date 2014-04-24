@@ -84,6 +84,9 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10531. hadoop-config.sh - bug in --hosts argument.
     (Sebastien Barrier via wang)
 
+    HADOOP-10539. Provide backward compatibility for ProxyUsers.authorize()
+    call. (Benoy Antony via cnauroth)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
