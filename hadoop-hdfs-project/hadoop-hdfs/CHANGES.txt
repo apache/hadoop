@@ -64,6 +64,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-5693. Few NN metrics data points were collected via JMX when NN
     is under heavy load. (Ming Ma via jing9)
 
+    HDFS-6273. Config options to allow wildcard endpoints for namenode HTTP
+    and HTTPS servers. (Arpit Agarwal)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)
