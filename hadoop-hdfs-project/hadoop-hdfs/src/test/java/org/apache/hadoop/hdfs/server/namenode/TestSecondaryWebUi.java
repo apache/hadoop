@@ -17,19 +17,17 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.junit.Assert.assertTrue;
-
-import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import javax.management.*;
+import java.io.IOException;
+import java.lang.management.ManagementFactory;
 
 public class TestSecondaryWebUi {
   
@@ -59,18 +57,20 @@ public class TestSecondaryWebUi {
   }
 
   @Test
-  public void testSecondaryWebUi() throws IOException {
-    String pageContents = DFSTestUtil.urlGet(new URL("http://localhost:" +
-        SecondaryNameNode.getHttpAddress(conf).getPort() + "/status.jsp"));
-    assertTrue("Didn't find \"Last Checkpoint\"",
-        pageContents.contains("Last Checkpoint"));
-  }
-  
-  @Test
-  public void testSecondaryWebJmx() throws MalformedURLException, IOException {
-    String pageContents = DFSTestUtil.urlGet(new URL("http://localhost:" +
-        SecondaryNameNode.getHttpAddress(conf).getPort() + "/jmx"));
-    assertTrue(pageContents.contains(
-        "Hadoop:service=SecondaryNameNode,name=JvmMetrics"));
+  public void testSecondaryWebUi()
+          throws IOException, MalformedObjectNameException,
+                 AttributeNotFoundException, MBeanException,
+                 ReflectionException, InstanceNotFoundException {
+    MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+    ObjectName mxbeanName = new ObjectName(
+            "Hadoop:service=SecondaryNameNode,name=SecondaryNameNodeInfo");
+
+    String[] checkpointDir = (String[]) mbs.getAttribute(mxbeanName,
+            "CheckpointDirectories");
+    Assert.assertArrayEquals(checkpointDir, snn.getCheckpointDirectories());
+    String[] checkpointEditlogDir = (String[]) mbs.getAttribute(mxbeanName,
+            "CheckpointEditlogDirectories");
+    Assert.assertArrayEquals(checkpointEditlogDir,
+            snn.getCheckpointEditlogDirectories());
   }
 }
