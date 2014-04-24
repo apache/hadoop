@@ -155,6 +155,9 @@ Release 2.4.1 - UNRELEASED
     YARN-1932. Javascript injection on the job status page (Mit Desai via
     jlowe)
 
+    YARN-1975. Used resources shows escaped html in CapacityScheduler and
+    FairScheduler page (Mit Desai via jlowe)
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES

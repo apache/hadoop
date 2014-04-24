@@ -23,7 +23,6 @@ import static org.apache.hadoop.yarn.util.StringHelper.join;
 import java.util.ArrayList;
 
 import org.apache.hadoop.util.StringUtils;
-import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
@@ -109,7 +108,7 @@ class CapacitySchedulerPage extends RmView {
           _("Absolute Used Capacity:", percent(lqinfo.getAbsoluteUsedCapacity() / 100)).
           _("Absolute Capacity:", percent(lqinfo.getAbsoluteCapacity() / 100)).
           _("Absolute Max Capacity:", percent(lqinfo.getAbsoluteMaxCapacity() / 100)).
-          _("Used Resources:", StringEscapeUtils.escapeHtml(lqinfo.getResourcesUsed().toString())).
+          _("Used Resources:", lqinfo.getResourcesUsed().toString()).
           _("Num Schedulable Applications:", Integer.toString(lqinfo.getNumActiveApplications())).
           _("Num Non-Schedulable Applications:", Integer.toString(lqinfo.getNumPendingApplications())).
           _("Num Containers:", Integer.toString(lqinfo.getNumContainers())).
