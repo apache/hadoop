@@ -2444,8 +2444,8 @@ public class TestCheckpoint {
   
   private static List<File> getCheckpointCurrentDirs(SecondaryNameNode secondary) {
     List<File> ret = Lists.newArrayList();
-    for (URI u : secondary.getCheckpointDirs()) {
-      File checkpointDir = new File(u.getPath());
+    for (String u : secondary.getCheckpointDirectories()) {
+      File checkpointDir = new File(URI.create(u).getPath());
       ret.add(new File(checkpointDir, "current"));
     }
     return ret;

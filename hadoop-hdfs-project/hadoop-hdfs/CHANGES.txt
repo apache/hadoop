@@ -57,6 +57,8 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6265. Prepare HDFS codebase for JUnit 4.11. (cnauroth)
 
+    HDFS-6278. Create HTML5-based UI for SNN. (wheat9)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)

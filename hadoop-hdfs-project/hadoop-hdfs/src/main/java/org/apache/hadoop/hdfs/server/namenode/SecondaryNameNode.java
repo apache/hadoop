@@ -27,11 +27,9 @@ import java.net.URI;
 import java.net.URL;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
-import java.util.Collection;
-import java.util.Date;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 
+import com.google.common.collect.Lists;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.HelpFormatter;
@@ -70,6 +68,7 @@ import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
+import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -80,6 +79,9 @@ import org.apache.hadoop.util.Time;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import org.apache.hadoop.util.VersionInfo;
+
+import javax.management.ObjectName;
 
 /**********************************************************
  * The Secondary NameNode is a helper to the primary NameNode.
@@ -95,7 +97,8 @@ import com.google.common.collect.ImmutableList;
  *
  **********************************************************/
 @InterfaceAudience.Private
-public class SecondaryNameNode implements Runnable {
+public class SecondaryNameNode implements Runnable,
+        SecondaryNameNodeInfoMXBean {
     
   static{
     HdfsConfiguration.init();
@@ -122,7 +125,7 @@ public class SecondaryNameNode implements Runnable {
   private FSNamesystem namesystem;
 
   private Thread checkpointThread;
-
+  private ObjectName nameNodeStatusBeanName;
 
   @Override
   public String toString() {
@@ -169,11 +172,6 @@ public class SecondaryNameNode implements Runnable {
     this.namenode = namenode;
   }
 
-  @VisibleForTesting
-  List<URI> getCheckpointDirs() {
-    return ImmutableList.copyOf(checkpointDirs);
-  }
-  
   /**
    * Create a connection to the primary namenode.
    */
@@ -265,6 +263,9 @@ public class SecondaryNameNode implements Runnable {
         DFSConfigKeys.DFS_SECONDARY_NAMENODE_KERBEROS_INTERNAL_SPNEGO_PRINCIPAL_KEY,
         DFSConfigKeys.DFS_SECONDARY_NAMENODE_KEYTAB_FILE_KEY);
 
+    nameNodeStatusBeanName = MBeans.register("SecondaryNameNode",
+            "SecondaryNameNodeInfo", this);
+
     infoServer = builder.build();
 
     infoServer.setAttribute("secondary.name.node", this);
@@ -329,6 +330,10 @@ public class SecondaryNameNode implements Runnable {
       }
     } catch (Exception e) {
       LOG.warn("Exception shutting down SecondaryNameNode", e);
+    }
+    if (nameNodeStatusBeanName != null) {
+      MBeans.unregister(nameNodeStatusBeanName);
+      nameNodeStatusBeanName = null;
     }
     try {
       if (checkpointImage != null) {
@@ -677,6 +682,50 @@ public class SecondaryNameNode implements Runnable {
     
     checkpointThread = new Daemon(this);
     checkpointThread.start();
+  }
+
+  @Override // SecondaryNameNodeInfoMXXBean
+  public String getHostAndPort() {
+    return NetUtils.getHostPortString(nameNodeAddr);
+  }
+
+  @Override // SecondaryNameNodeInfoMXXBean
+  public long getStartTime() {
+    return starttime;
+  }
+
+  @Override // SecondaryNameNodeInfoMXXBean
+  public long getLastCheckpointTime() {
+    return lastCheckpointTime;
+  }
+
+  @Override // SecondaryNameNodeInfoMXXBean
+  public String[] getCheckpointDirectories() {
+    ArrayList<String> r = Lists.newArrayListWithCapacity(checkpointDirs.size());
+    for (URI d : checkpointDirs) {
+      r.add(d.toString());
+    }
+    return r.toArray(new String[r.size()]);
+  }
+
+  @Override // SecondaryNameNodeInfoMXXBean
+  public String[] getCheckpointEditlogDirectories() {
+    ArrayList<String> r = Lists.newArrayListWithCapacity(checkpointEditsDirs.size());
+    for (URI d : checkpointEditsDirs) {
+      r.add(d.toString());
+    }
+    return r.toArray(new String[r.size()]);
+  }
+
+  @Override // VersionInfoMXBean
+  public String getCompileInfo() {
+    return VersionInfo.getDate() + " by " + VersionInfo.getUser() +
+            " from " + VersionInfo.getBranch();
+  }
+
+  @Override // VersionInfoMXBean
+  public String getSoftwareVersion() {
+    return VersionInfo.getVersion();
   }
 
 
