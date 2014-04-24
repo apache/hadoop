@@ -51,6 +51,8 @@ Release 2.5.0 - UNRELEASED
 
     MAPREDUCE-5846. Rumen doesn't understand JobQueueChangedEvent (Nathan Roberts via raviprak)
 
+    MAPREDUCE-5837. MRAppMaster fails when checking on uber mode. (wheat9)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
