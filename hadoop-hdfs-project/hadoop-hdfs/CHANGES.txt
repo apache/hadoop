@@ -61,6 +61,9 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6279. Create new index page for JN / DN. (wheat9)
 
+    HDFS-5693. Few NN metrics data points were collected via JMX when NN
+    is under heavy load. (Ming Ma via jing9)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)

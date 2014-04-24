@@ -4640,8 +4640,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     private final double threshold;
     /** Safe mode minimum number of datanodes alive */
     private final int datanodeThreshold;
-    /** Safe mode extension after the threshold. */
-    private int extension;
+    /**
+     * Safe mode extension after the threshold.
+     * Make it volatile so that getSafeModeTip can read the latest value
+     * without taking a lock.
+     */
+    private volatile int extension;
     /** Min replication required by safe mode. */
     private final int safeReplication;
     /** threshold for populating needed replication queues */
@@ -4663,8 +4667,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     private int blockReplQueueThreshold;
     /** time of the last status printout */
     private long lastStatusReport = 0;
-    /** Was safemode entered automatically because available resources were low. */
-    private boolean resourcesLow = false;
+    /**
+     * Was safemode entered automatically because available resources were low.
+     * Make it volatile so that getSafeModeTip can read the latest value
+     * without taking a lock.
+     */
+    private volatile boolean resourcesLow = false;
     /** Should safemode adjust its block totals as blocks come in */
     private boolean shouldIncrementallyTrackBlocks = false;
     /** counter for tracking startup progress of reported blocks */
@@ -5339,14 +5347,21 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
     
   String getSafeModeTip() {
-    readLock();
-    try {
-      if (!isInSafeMode()) {
-        return "";
-      }
+    // There is no need to take readLock.
+    // Don't use isInSafeMode as this.safeMode might be set to null.
+    // after isInSafeMode returns.
+    boolean inSafeMode;
+    SafeModeInfo safeMode = this.safeMode;
+    if (safeMode == null) {
+      inSafeMode = false;
+    } else {
+      inSafeMode = safeMode.isOn();
+    }
+
+    if (!inSafeMode) {
+      return "";
+    } else {
       return safeMode.getTurnOffTip();
-    } finally {
-      readUnlock();
     }
   }
 
@@ -5522,12 +5537,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   @Override // FSNamesystemMBean
   @Metric
   public long getFilesTotal() {
-    readLock();
-    try {
-      return this.dir.totalInodes();
-    } finally {
-      readUnlock();
-    }
+    // There is no need to take fSNamesystem's lock as
+    // FSDirectory has its own lock.
+    return this.dir.totalInodes();
   }
 
   @Override // FSNamesystemMBean
@@ -6107,6 +6119,23 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   String[] cookieTab) throws IOException {
     checkSuperuserPrivilege();
     checkOperation(OperationCategory.READ);
+
+    int count = 0;
+    ArrayList<CorruptFileBlockInfo> corruptFiles =
+        new ArrayList<CorruptFileBlockInfo>();
+    if (cookieTab == null) {
+      cookieTab = new String[] { null };
+    }
+
+    // Do a quick check if there are any corrupt files without taking the lock
+    if (blockManager.getMissingBlocksCount() == 0) {
+      if (cookieTab[0] == null) {
+        cookieTab[0] = String.valueOf(getIntCookie(cookieTab[0]));
+      }
+      LOG.info("there are no corrupt file blocks.");
+      return corruptFiles;
+    }
+
     readLock();
     try {
       checkOperation(OperationCategory.READ);
@@ -6115,14 +6144,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                               "replication queues have not been initialized.");
       }
       // print a limited # of corrupt files per call
-      int count = 0;
-      ArrayList<CorruptFileBlockInfo> corruptFiles = new ArrayList<CorruptFileBlockInfo>();
 
       final Iterator<Block> blkIterator = blockManager.getCorruptReplicaBlockIterator();
 
-      if (cookieTab == null) {
-        cookieTab = new String[] { null };
-      }
       int skip = getIntCookie(cookieTab[0]);
       for (int i = 0; i < skip && blkIterator.hasNext(); i++) {
         blkIterator.next();
