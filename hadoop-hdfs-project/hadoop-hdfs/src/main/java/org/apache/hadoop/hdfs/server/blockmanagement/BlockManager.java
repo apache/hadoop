@@ -3289,12 +3289,7 @@ public class BlockManager {
   }
 
   public int getCapacity() {
-    namesystem.readLock();
-    try {
-      return blocksMap.getCapacity();
-    } finally {
-      namesystem.readUnlock();
-    }
+    return blocksMap.getCapacity();
   }
   
   /**
