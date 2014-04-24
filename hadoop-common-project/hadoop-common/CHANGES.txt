@@ -23,8 +23,8 @@ Trunk (Unreleased)
     if the override value is same as the final parameter value.
     (Ravi Prakash via suresh)
 
-    HADOOP-8078. Add capability to turn on security in unit tests. (Jaimin Jetly
-    via jitendra)
+    HADOOP-8078. Add capability to turn on security in unit tests. (Jaimin 
+    Jetly via jitendra)
 
     HADOOP-7757. Test file reference count is at least 3x actual value (Jon
     Eagles via bobby)
@@ -140,6 +140,9 @@ Trunk (Unreleased)
 
     HADOOP-10430. KeyProvider Metadata should have an optional description, 
     there should be a method to retrieve the metadata from all keys. (tucu)
+
+    HADOOP-10534. KeyProvider getKeysMetadata should take a list of names 
+    rather than returning all keys. (omalley)
 
   BUG FIXES
 
