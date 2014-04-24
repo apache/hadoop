@@ -185,6 +185,8 @@ Release 2.5.0 - UNRELEASED
     MAPREDUCE-5642. TestMiniMRChildTask fails on Windows.
     (Chuan Liu via cnauroth)
 
+    MAPREDUCE-5846. Rumen doesn't understand JobQueueChangedEvent (Nathan Roberts via raviprak)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

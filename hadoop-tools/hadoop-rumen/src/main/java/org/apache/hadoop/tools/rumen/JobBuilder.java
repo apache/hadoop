@@ -38,6 +38,7 @@ import org.apache.hadoop.mapreduce.jobhistory.JobInitedEvent;
 import org.apache.hadoop.mapreduce.jobhistory.JobPriorityChangeEvent;
 import org.apache.hadoop.mapreduce.jobhistory.JobStatusChangedEvent;
 import org.apache.hadoop.mapreduce.jobhistory.JobSubmittedEvent;
+import org.apache.hadoop.mapreduce.jobhistory.JobQueueChangeEvent;
 import org.apache.hadoop.mapreduce.jobhistory.JobUnsuccessfulCompletionEvent;
 import org.apache.hadoop.mapreduce.jobhistory.MapAttemptFinished;
 import org.apache.hadoop.mapreduce.jobhistory.MapAttemptFinishedEvent;
@@ -144,6 +145,8 @@ public class JobBuilder {
       processJobInitedEvent((JobInitedEvent) event);
     } else if (event instanceof JobPriorityChangeEvent) {
       processJobPriorityChangeEvent((JobPriorityChangeEvent) event);
+    } else if (event instanceof JobQueueChangeEvent) {
+      processJobQueueChangeEvent((JobQueueChangeEvent) event);
     } else if (event instanceof JobStatusChangedEvent) {
       processJobStatusChangedEvent((JobStatusChangedEvent) event);
     } else if (event instanceof JobSubmittedEvent) {
@@ -604,6 +607,14 @@ public class JobBuilder {
     result.putJobConfPath(event.getJobConfPath());
     result.putJobAcls(event.getJobAcls());
 
+    // set the queue name if existing
+    String queue = event.getJobQueueName();
+    if (queue != null) {
+      result.setQueue(queue);
+    }
+  }
+
+  private void processJobQueueChangeEvent(JobQueueChangeEvent event) {
     // set the queue name if existing
     String queue = event.getJobQueueName();
     if (queue != null) {
