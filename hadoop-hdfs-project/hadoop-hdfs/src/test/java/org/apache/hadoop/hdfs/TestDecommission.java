@@ -884,4 +884,76 @@ public class TestDecommission {
     startCluster(numNamenodes, numDatanodes, conf);
     cluster.shutdown();
   }
+
+  /**
+   * Test using a "registration name" in a host include file.
+   *
+   * Registration names are DataNode names specified in the configuration by
+   * dfs.datanode.hostname.  The DataNode will send this name to the NameNode
+   * as part of its registration.  Registration names are helpful when you
+   * want to override the normal first result of DNS resolution on the
+   * NameNode.  For example, a given datanode IP may map to two hostnames,
+   * and you may want to choose which hostname is used internally in the
+   * cluster.
+   *
+   * It is not recommended to use a registration name which is not also a
+   * valid DNS hostname for the DataNode.  See HDFS-5237 for background.
+   */
+  @Test(timeout=360000)
+  public void testIncludeByRegistrationName() throws IOException,
+      InterruptedException {
+    Configuration hdfsConf = new Configuration(conf);
+    // Any IPv4 address starting with 127 functions as a "loopback" address
+    // which is connected to the current host.  So by choosing 127.0.0.100
+    // as our registration name, we have chosen a name which is also a valid
+    // way of reaching the local DataNode we're going to start.
+    // Typically, a registration name would be a hostname, but we don't want
+    // to deal with DNS in this test.
+    final String registrationName = "127.0.0.100";
+    final String nonExistentDn = "127.0.0.10";
+    hdfsConf.set(DFSConfigKeys.DFS_DATANODE_HOST_NAME_KEY, registrationName);
+    cluster = new MiniDFSCluster.Builder(hdfsConf)
+        .numDataNodes(1).checkDataNodeHostConfig(true)
+        .setupHostsFile(true).build();
+    cluster.waitActive();
+
+    // Set up an includes file that doesn't have our datanode.
+    ArrayList<String> nodes = new ArrayList<String>();
+    nodes.add(nonExistentDn);
+    writeConfigFile(hostsFile,  nodes);
+    refreshNodes(cluster.getNamesystem(0), hdfsConf);
+
+    // Wait for the DN to be marked dead.
+    DFSClient client = getDfsClient(cluster.getNameNode(0), hdfsConf);
+    while (true) {
+      DatanodeInfo info[] = client.datanodeReport(DatanodeReportType.DEAD);
+      if (info.length == 1) {
+        break;
+      }
+      LOG.info("Waiting for datanode to be marked dead");
+      Thread.sleep(HEARTBEAT_INTERVAL * 1000);
+    }
+
+    // Use a non-empty include file with our registration name.
+    // It should work.
+    int dnPort = cluster.getDataNodes().get(0).getXferPort();
+    nodes = new ArrayList<String>();
+    nodes.add(registrationName + ":" + dnPort);
+    writeConfigFile(hostsFile,  nodes);
+    refreshNodes(cluster.getNamesystem(0), hdfsConf);
+    cluster.restartDataNode(0);
+
+    // Wait for the DN to come back.
+    while (true) {
+      DatanodeInfo info[] = client.datanodeReport(DatanodeReportType.LIVE);
+      if (info.length == 1) {
+        Assert.assertFalse(info[0].isDecommissioned());
+        Assert.assertFalse(info[0].isDecommissionInProgress());
+        assertEquals(registrationName, info[0].getHostName());
+        break;
+      }
+      LOG.info("Waiting for datanode to come back");
+      Thread.sleep(HEARTBEAT_INTERVAL * 1000);
+    }
+  }
 }
