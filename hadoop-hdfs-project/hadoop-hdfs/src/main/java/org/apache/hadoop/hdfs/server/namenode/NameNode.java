@@ -175,6 +175,8 @@ public class NameNode implements NameNodeStatusMXBean {
     DFS_NAMENODE_SERVICE_RPC_BIND_HOST_KEY,
     DFS_NAMENODE_HTTP_ADDRESS_KEY,
     DFS_NAMENODE_HTTPS_ADDRESS_KEY,
+    DFS_NAMENODE_HTTP_BIND_HOST_KEY,
+    DFS_NAMENODE_HTTPS_BIND_HOST_KEY,
     DFS_NAMENODE_KEYTAB_FILE_KEY,
     DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY,
     DFS_NAMENODE_SECONDARY_HTTPS_ADDRESS_KEY,
@@ -444,6 +446,29 @@ public class NameNode implements NameNodeStatusMXBean {
     return getHttpAddress(conf);
   }
 
+  /**
+   * HTTP server address for binding the endpoint. This method is
+   * for use by the NameNode and its derivatives. It may return
+   * a different address than the one that should be used by clients to
+   * connect to the NameNode. See
+   * {@link DFSConfigKeys#DFS_NAMENODE_HTTP_BIND_HOST_KEY}
+   *
+   * @param conf
+   * @return
+   */
+  protected InetSocketAddress getHttpServerBindAddress(Configuration conf) {
+    InetSocketAddress bindAddress = getHttpServerAddress(conf);
+
+    // If DFS_NAMENODE_HTTP_BIND_HOST_KEY exists then it overrides the
+    // host name portion of DFS_NAMENODE_HTTP_ADDRESS_KEY.
+    final String bindHost = conf.getTrimmed(DFS_NAMENODE_HTTP_BIND_HOST_KEY);
+    if (bindHost != null && !bindHost.isEmpty()) {
+      bindAddress = new InetSocketAddress(bindHost, bindAddress.getPort());
+    }
+
+    return bindAddress;
+  }
+
   /** @return the NameNode HTTP address. */
   public static InetSocketAddress getHttpAddress(Configuration conf) {
     return  NetUtils.createSocketAddr(
@@ -608,7 +633,7 @@ public class NameNode implements NameNodeStatusMXBean {
   }
   
   private void startHttpServer(final Configuration conf) throws IOException {
-    httpServer = new NameNodeHttpServer(conf, this, getHttpServerAddress(conf));
+    httpServer = new NameNodeHttpServer(conf, this, getHttpServerBindAddress(conf));
     httpServer.start();
     httpServer.setStartupProgress(startupProgress);
   }

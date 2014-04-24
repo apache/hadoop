@@ -370,6 +370,12 @@ class NameNodeRpcServer implements NamenodeProtocols {
     return clientRpcServer;
   }
   
+  /** Allow access to the service RPC server for testing */
+  @VisibleForTesting
+  RPC.Server getServiceRpcServer() {
+    return serviceRpcServer;
+  }
+  
   /**
    * Start client and service RPC servers.
    */
