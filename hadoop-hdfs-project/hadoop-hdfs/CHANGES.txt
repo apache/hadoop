@@ -380,6 +380,8 @@ Release 2.5.0 - UNRELEASED
     HDFS-6217. Webhdfs PUT operations may not work via a http proxy.
     (Daryn Sharp via kihwal)
 
+    HDFS-6276. Remove unnecessary conditions and null check. (suresh)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
