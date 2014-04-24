@@ -67,6 +67,8 @@ Release 2.5.0 - UNRELEASED
     HDFS-6273. Config options to allow wildcard endpoints for namenode HTTP
     and HTTPS servers. (Arpit Agarwal)
 
+    HDFS-6282. Re-add testIncludeByRegistrationName. (cmccabe)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)
