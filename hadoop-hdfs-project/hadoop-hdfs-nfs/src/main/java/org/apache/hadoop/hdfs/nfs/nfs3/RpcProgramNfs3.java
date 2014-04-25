@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.nfs.nfs3;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -165,10 +166,11 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
   
   private final RpcCallCache rpcCallCache;
 
-  public RpcProgramNfs3(Configuration config) throws IOException {
+  public RpcProgramNfs3(Configuration config, DatagramSocket registrationSocket)
+      throws IOException {
     super("NFS3", "localhost", config.getInt(Nfs3Constant.NFS3_SERVER_PORT,
         Nfs3Constant.NFS3_SERVER_PORT_DEFAULT), Nfs3Constant.PROGRAM,
-        Nfs3Constant.VERSION, Nfs3Constant.VERSION);
+        Nfs3Constant.VERSION, Nfs3Constant.VERSION, registrationSocket);
    
     config.set(FsPermission.UMASK_LABEL, "000");
     iug = new IdUserGroup();

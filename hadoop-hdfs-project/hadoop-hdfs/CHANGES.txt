@@ -260,6 +260,9 @@ Release 2.5.0 - UNRELEASED
 
   NEW FEATURES
 
+    HDFS-6281. Provide option to use the NFS Gateway without having to use the
+    Hadoop portmapper. (atm)
+
   IMPROVEMENTS
 
     HDFS-6007. Update documentation about short-circuit local reads (iwasakims
