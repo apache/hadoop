@@ -122,6 +122,9 @@ public class TestRMContainerAllocator {
   public void setup() {
     MyContainerAllocator.getJobUpdatedNodeEvents().clear();
     MyContainerAllocator.getTaskAttemptKillEvents().clear();
+
+    // make each test create a fresh user to avoid leaking tokens between tests
+    UserGroupInformation.setLoginUser(null);
   }
 
   @After
@@ -1519,17 +1522,15 @@ public class TestRMContainerAllocator {
     @Override
     protected void register() {
       ApplicationAttemptId attemptId = getContext().getApplicationAttemptId();
-      UserGroupInformation ugi =
-          UserGroupInformation.createRemoteUser(attemptId.toString());
       Token<AMRMTokenIdentifier> token =
           rm.getRMContext().getRMApps().get(attemptId.getApplicationId())
             .getRMAppAttempt(attemptId).getAMRMToken();
       try {
+        UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
         ugi.addTokenIdentifier(token.decodeIdentifier());
       } catch (IOException e) {
         throw new YarnRuntimeException(e);
       }
-      UserGroupInformation.setLoginUser(ugi);
       super.register();
     }
 
