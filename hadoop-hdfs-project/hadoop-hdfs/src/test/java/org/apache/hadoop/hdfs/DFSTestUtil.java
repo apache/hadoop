@@ -82,6 +82,7 @@ import java.util.concurrent.TimeoutException;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /** Utilities for HDFS tests */
 public class DFSTestUtil {
@@ -1192,7 +1193,20 @@ public class DFSTestUtil {
     long c = (val + factor - 1) / factor;
     return c * factor;
   }
-  
+
+  public static void checkComponentsEquals(byte[][] expected, byte[][] actual) {
+    assertEquals("expected: " + DFSUtil.byteArray2PathString(expected)
+        + ", actual: " + DFSUtil.byteArray2PathString(actual), expected.length,
+        actual.length);
+    int i = 0;
+    for (byte[] e : expected) {
+      byte[] actualComponent = actual[i++];
+      assertTrue("expected: " + DFSUtil.bytes2String(e) + ", actual: "
+          + DFSUtil.bytes2String(actualComponent),
+          Arrays.equals(e, actualComponent));
+    }
+  }
+
   /**
    * A short-circuit test context which makes it easier to get a short-circuit
    * configuration and set everything up.

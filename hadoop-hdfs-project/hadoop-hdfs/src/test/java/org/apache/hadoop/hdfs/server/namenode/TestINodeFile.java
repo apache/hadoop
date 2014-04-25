@@ -27,7 +27,6 @@ import static org.junit.Assert.fail;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import org.junit.Assert;
@@ -789,14 +788,6 @@ public class TestINodeFile {
     return dir; // Last Inode in the chain
   }
   
-  private static void checkEquals(byte[][] expected, byte[][] actual) {
-    assertEquals(expected.length, actual.length);
-    int i = 0;
-    for (byte[] e : expected) {
-      assertTrue(Arrays.equals(e, actual[i++]));
-    }
-  }
-  
   /**
    * Test for {@link FSDirectory#getPathComponents(INode)}
    */
@@ -806,7 +797,7 @@ public class TestINodeFile {
     INode inode = createTreeOfInodes(path);
     byte[][] expected = INode.getPathComponents(path);
     byte[][] actual = FSDirectory.getPathComponents(inode);
-    checkEquals(expected, actual);
+    DFSTestUtil.checkComponentsEquals(expected, actual);
   }
   
   /**

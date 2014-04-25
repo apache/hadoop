@@ -1829,7 +1829,7 @@ public class TestRenameWithSnapshots {
   }
   
   /**
-   * move a directory to its prior descedant
+   * move a directory to its prior descendant
    */
   @Test
   public void testRename2PreDescendant_2() throws Exception {
