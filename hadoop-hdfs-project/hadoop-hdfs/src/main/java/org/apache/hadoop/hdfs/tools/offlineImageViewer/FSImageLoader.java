@@ -31,6 +31,7 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
@@ -268,6 +269,81 @@ class FSImageLoader {
       list.add(getFileStatus(inode, false));
     }
     return list;
+  }
+
+  /**
+   * Return the JSON formatted ACL status of the specified file.
+   * @param path a path specifies a file
+   * @return JSON formatted AclStatus
+   * @throws IOException if failed to serialize fileStatus to JSON.
+   */
+  String getAclStatus(String path) throws IOException {
+    StringBuilder sb = new StringBuilder();
+    List<AclEntry> aclEntryList = getAclEntryList(path);
+    PermissionStatus p = getPermissionStatus(path);
+    sb.append("{\"AclStatus\":{\"entries\":[");
+    int i = 0;
+    for (AclEntry aclEntry : aclEntryList) {
+      if (i++ != 0) {
+        sb.append(',');
+      }
+      sb.append('"');
+      sb.append(aclEntry.toString());
+      sb.append('"');
+    }
+    sb.append("],\"group\": \"");
+    sb.append(p.getGroupName());
+    sb.append("\",\"owner\": \"");
+    sb.append(p.getUserName());
+    sb.append("\",\"stickyBit\": ");
+    sb.append(p.getPermission().getStickyBit());
+    sb.append("}}\n");
+    return sb.toString();
+  }
+
+  private List<AclEntry> getAclEntryList(String path) {
+    long id = getINodeId(path);
+    FsImageProto.INodeSection.INode inode = inodes.get(id);
+    switch (inode.getType()) {
+      case FILE: {
+        FsImageProto.INodeSection.INodeFile f = inode.getFile();
+        return FSImageFormatPBINode.Loader.loadAclEntries(
+            f.getAcl(), stringTable);
+      }
+      case DIRECTORY: {
+        FsImageProto.INodeSection.INodeDirectory d = inode.getDirectory();
+        return FSImageFormatPBINode.Loader.loadAclEntries(
+            d.getAcl(), stringTable);
+      }
+      default: {
+        return new ArrayList<AclEntry>();
+      }
+    }
+  }
+
+  private PermissionStatus getPermissionStatus(String path) {
+    long id = getINodeId(path);
+    FsImageProto.INodeSection.INode inode = inodes.get(id);
+    switch (inode.getType()) {
+      case FILE: {
+        FsImageProto.INodeSection.INodeFile f = inode.getFile();
+        return FSImageFormatPBINode.Loader.loadPermission(
+            f.getPermission(), stringTable);
+      }
+      case DIRECTORY: {
+        FsImageProto.INodeSection.INodeDirectory d = inode.getDirectory();
+        return FSImageFormatPBINode.Loader.loadPermission(
+            d.getPermission(), stringTable);
+      }
+      case SYMLINK: {
+        FsImageProto.INodeSection.INodeSymlink s = inode.getSymlink();
+        return FSImageFormatPBINode.Loader.loadPermission(
+            s.getPermission(), stringTable);
+      }
+      default: {
+        return null;
+      }
+    }
   }
 
   /**
