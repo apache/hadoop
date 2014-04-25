@@ -125,6 +125,8 @@ Trunk (Unreleased)
 
     HDFS-6228. comments typo fix for FsDatasetImpl.java (zhaoyunjiong via umamahesh)
 
+    HDFS-6246. Remove 'dfs.support.append' flag from trunk code. (umamahesh)
+
   OPTIMIZATIONS
 
   BUG FIXES

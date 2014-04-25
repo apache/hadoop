@@ -95,12 +95,6 @@ class BlockPoolSlice {
       FileUtil.fullyDelete(tmpDir);
     }
     this.rbwDir = new File(currentDir, DataStorage.STORAGE_DIR_RBW);
-    final boolean supportAppends = conf.getBoolean(
-        DFSConfigKeys.DFS_SUPPORT_APPEND_KEY,
-        DFSConfigKeys.DFS_SUPPORT_APPEND_DEFAULT);
-    if (rbwDir.exists() && !supportAppends) {
-      FileUtil.fullyDelete(rbwDir);
-    }
     final int maxBlocksPerDir = conf.getInt(
         DFSConfigKeys.DFS_DATANODE_NUMBLOCKS_KEY,
         DFSConfigKeys.DFS_DATANODE_NUMBLOCKS_DEFAULT);

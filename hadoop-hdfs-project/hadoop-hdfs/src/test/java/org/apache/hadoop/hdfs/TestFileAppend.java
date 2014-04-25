@@ -345,7 +345,6 @@ public class TestFileAppend{
       throws IOException, InterruptedException {
     Configuration conf = new HdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, 1);
-    conf.setBoolean(DFSConfigKeys.DFS_SUPPORT_APPEND_KEY, true);
     //Set small soft-limit for lease
     final long softLimit = 1L;
     final long hardLimit = 9999999L;
