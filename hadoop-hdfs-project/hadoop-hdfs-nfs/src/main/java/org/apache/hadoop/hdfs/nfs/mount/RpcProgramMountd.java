@@ -20,6 +20,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NFS_KEYTAB_FILE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NFS_KERBEROS_PRINCIPAL_KEY;
 
 import java.io.IOException;
+import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
@@ -78,10 +79,11 @@ public class RpcProgramMountd extends RpcProgram implements MountInterface {
   
   private final NfsExports hostsMatcher;
 
-  public RpcProgramMountd(Configuration config) throws IOException {
+  public RpcProgramMountd(Configuration config,
+      DatagramSocket registrationSocket) throws IOException {
     // Note that RPC cache is not enabled
     super("mountd", "localhost", config.getInt("nfs3.mountd.port", PORT),
-        PROGRAM, VERSION_1, VERSION_3);
+        PROGRAM, VERSION_1, VERSION_3, registrationSocket);
     exports = new ArrayList<String>();
     exports.add(config.get(Nfs3Constant.EXPORT_POINT,
         Nfs3Constant.EXPORT_POINT_DEFAULT));

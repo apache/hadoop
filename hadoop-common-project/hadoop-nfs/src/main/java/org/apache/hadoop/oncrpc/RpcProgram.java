@@ -18,6 +18,7 @@
 package org.apache.hadoop.oncrpc;
 
 import java.io.IOException;
+import java.net.DatagramSocket;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -46,6 +47,12 @@ public abstract class RpcProgram extends SimpleChannelUpstreamHandler {
   private final int highProgVersion;
   
   /**
+   * If not null, this will be used as the socket to use to connect to the
+   * system portmap daemon when registering this RPC server program.
+   */
+  private final DatagramSocket registrationSocket;
+  
+  /**
    * Constructor
    * 
    * @param program program name
@@ -56,13 +63,15 @@ public abstract class RpcProgram extends SimpleChannelUpstreamHandler {
    * @param highProgVersion highest version of the specification supported
    */
   protected RpcProgram(String program, String host, int port, int progNumber,
-      int lowProgVersion, int highProgVersion) {
+      int lowProgVersion, int highProgVersion,
+      DatagramSocket registrationSocket) {
     this.program = program;
     this.host = host;
     this.port = port;
     this.progNumber = progNumber;
     this.lowProgVersion = lowProgVersion;
     this.highProgVersion = highProgVersion;
+    this.registrationSocket = registrationSocket;
   }
 
   /**
@@ -105,14 +114,14 @@ public abstract class RpcProgram extends SimpleChannelUpstreamHandler {
   protected void register(PortmapMapping mapEntry, boolean set) {
     XDR mappingRequest = PortmapRequest.create(mapEntry, set);
     SimpleUdpClient registrationClient = new SimpleUdpClient(host, RPCB_PORT,
-        mappingRequest);
+        mappingRequest, registrationSocket);
     try {
       registrationClient.run();
     } catch (IOException e) {
       String request = set ? "Registration" : "Unregistration";
       LOG.error(request + " failure with " + host + ":" + port
-          + ", portmap entry: " + mapEntry);
-      throw new RuntimeException(request + " failure");
+          + ", portmap entry: " + mapEntry, e);
+      throw new RuntimeException(request + " failure", e);
     }
   }
 
