@@ -404,6 +404,8 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6276. Remove unnecessary conditions and null check. (suresh)
 
+    HDFS-5865. Update OfflineImageViewer document. (Akira Ajisaka via wheat9)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
