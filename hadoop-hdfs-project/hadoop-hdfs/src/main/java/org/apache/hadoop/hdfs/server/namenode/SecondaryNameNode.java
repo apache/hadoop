@@ -78,7 +78,6 @@ import org.apache.hadoop.util.Time;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
 import org.apache.hadoop.util.VersionInfo;
 
 import javax.management.ObjectName;
@@ -130,16 +129,15 @@ public class SecondaryNameNode implements Runnable,
   @Override
   public String toString() {
     return getClass().getSimpleName() + " Status" 
-      + "\nName Node Address    : " + nameNodeAddr   
-      + "\nStart Time           : " + new Date(starttime)
-      + "\nLast Checkpoint      : " + (lastCheckpointTime == 0? "--":
+      + "\nName Node Address      : " + nameNodeAddr
+      + "\nStart Time             : " + new Date(starttime)
+      + "\nLast Checkpoint        : " + (lastCheckpointTime == 0? "--":
 				       ((Time.monotonicNow() - lastCheckpointTime) / 1000))
 	                            + " seconds ago"
-      + "\nCheckpoint Period    : " + checkpointConf.getPeriod() + " seconds"
-      + "\nCheckpoint Size      : " + StringUtils.byteDesc(checkpointConf.getTxnCount())
-                                    + " (= " + checkpointConf.getTxnCount() + " bytes)" 
-      + "\nCheckpoint Dirs      : " + checkpointDirs
-      + "\nCheckpoint Edits Dirs: " + checkpointEditsDirs;
+      + "\nCheckpoint Period      : " + checkpointConf.getPeriod() + " seconds"
+      + "\nCheckpoint Transactions: " + checkpointConf.getTxnCount()
+      + "\nCheckpoint Dirs        : " + checkpointDirs
+      + "\nCheckpoint Edits Dirs  : " + checkpointEditsDirs;
   }
 
   @VisibleForTesting
