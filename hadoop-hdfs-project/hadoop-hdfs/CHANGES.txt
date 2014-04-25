@@ -74,6 +74,9 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6266. Identify full path for a given INode. (jing9)
 
+    HDFS-6210. Support GETACLSTATUS operation in WebImageViewer.
+    (Akira Ajisaka via wheat9)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)
