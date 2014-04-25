@@ -53,6 +53,9 @@ Release 2.5.0 - UNRELEASED
 
     MAPREDUCE-5837. MRAppMaster fails when checking on uber mode. (wheat9)
 
+    MAPREDUCE-5749. TestRMContainerAllocator#testReportedAppProgress Failed
+    (jlowe)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
