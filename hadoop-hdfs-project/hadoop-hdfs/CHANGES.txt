@@ -406,6 +406,9 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-5865. Update OfflineImageViewer document. (Akira Ajisaka via wheat9)
 
+    HDFS-6270. Secondary namenode status page shows transaction count in bytes.
+    (Benoy Antony via wheat9)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
