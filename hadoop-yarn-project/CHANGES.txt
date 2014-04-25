@@ -58,6 +58,9 @@ Release 2.5.0 - UNRELEASED
 
     YARN-1970. Prepare YARN codebase for JUnit 4.11. (cnauroth)
 
+    YARN-483. Improve documentation on log aggregation in yarn-default.xml
+    (Akira Ajisaka via Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES 

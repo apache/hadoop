@@ -733,7 +733,14 @@
   </property>
 
   <property>
-    <description>Whether to enable log aggregation</description>
+    <description>Whether to enable log aggregation. Log aggregation collects
+      each container's logs and moves these logs onto a file-system, for e.g.
+      HDFS, after the application completes. Users can configure the
+      "yarn.nodemanager.remote-app-log-dir" and
+      "yarn.nodemanager.remote-app-log-dir-suffix" properties to determine
+      where these logs are moved to. Users can access the logs via the
+      Application Timeline Server.
+    </description>
     <name>yarn.log-aggregation-enable</name>
     <value>false</value>
   </property>
