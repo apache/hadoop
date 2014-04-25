@@ -236,6 +236,9 @@ Release 2.4.1 - UNRELEASED
     MAPREDUCE-5843. Fixed TestMRKeyValueTextInputFormat to not leak files and
     thus avoid failing on Windows. (Varun Vasudev via vinodkv)
 
+    MAPREDUCE-5835. Killing Task might cause the job to go to ERROR state
+    (Ming Ma via jlowe)
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES
