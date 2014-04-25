@@ -90,6 +90,9 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10539. Provide backward compatibility for ProxyUsers.authorize()
     call. (Benoy Antony via cnauroth)
 
+    HADOOP-10540. Datanode upgrade in Windows fails with hardlink error.
+    (Chris Nauroth and Arpit Agarwal)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

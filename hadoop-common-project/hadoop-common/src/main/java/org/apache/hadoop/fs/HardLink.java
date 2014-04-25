@@ -22,10 +22,13 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.StringReader;
 import java.util.Arrays;
 
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.util.Shell.ExitCodeException;
+import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 
 /**
  * Class for creating hardlinks.
@@ -89,7 +92,6 @@ public class HardLink {
      *            to the source directory
      * @param linkDir - target directory where the hardlinks will be put
      * @return - an array of Strings suitable for use as a single shell command
-     *            with {@link Runtime.exec()}
      * @throws IOException - if any of the file or path names misbehave
      */
     abstract String[] linkMult(String[] fileBaseNames, File linkDir) 
@@ -230,17 +232,17 @@ public class HardLink {
     //package-private ("default") access instead of "private" to assist 
     //unit testing (sort of) on non-Win servers
 
+    static String CMD_EXE = "cmd.exe";
     static String[] hardLinkCommand = {
                         Shell.WINUTILS,"hardlink","create", null, null};
     static String[] hardLinkMultPrefix = {
-                        "cmd","/q","/c","for", "%f", "in", "("};
+        CMD_EXE, "/q", "/c", "for", "%f", "in", "("};
     static String   hardLinkMultDir = "\\%f";
     static String[] hardLinkMultSuffix = {
-                        ")", "do", Shell.WINUTILS, "hardlink", "create", null,
-                        "%f", "1>NUL"};
+        ")", "do", Shell.WINUTILS, "hardlink", "create", null,
+        "%f"};
     static String[] getLinkCountCommand = {
-                        Shell.WINUTILS, "hardlink",
-                        "stat", null};
+        Shell.WINUTILS, "hardlink", "stat", null};
     //Windows guarantees only 8K - 1 bytes cmd length.
     //Subtract another 64b to allow for Java 'exec' overhead
     static final int maxAllowedCmdArgLength = 8*1024 - 65;
@@ -278,7 +280,7 @@ public class HardLink {
       System.arraycopy(hardLinkMultSuffix, 0, buf, mark, 
                        hardLinkMultSuffix.length);
       mark += hardLinkMultSuffix.length;
-      buf[mark - 3] = td;
+      buf[mark - 2] = td;
       return buf;
     }
     
@@ -310,8 +312,8 @@ public class HardLink {
                linkDir.getCanonicalPath().length();
       //add the fixed overhead of the hardLinkMult command 
       //(prefix, suffix, and Dir suffix)
-      sum += ("cmd.exe /q /c for %f in ( ) do "
-              + Shell.WINUTILS + " hardlink create \\%f %f 1>NUL ").length();
+      sum += (CMD_EXE + " /q /c for %f in ( ) do "
+              + Shell.WINUTILS + " hardlink create \\%f %f").length();
       return sum;
     }
     
@@ -379,21 +381,14 @@ public class HardLink {
     }
 	  // construct and execute shell command
     String[] hardLinkCommand = getHardLinkCommand.linkOne(file, linkName);
-    Process process = Runtime.getRuntime().exec(hardLinkCommand);
+    ShellCommandExecutor shexec = new ShellCommandExecutor(hardLinkCommand);
     try {
-      if (process.waitFor() != 0) {
-        String errMsg = new BufferedReader(new InputStreamReader(
-            process.getInputStream())).readLine();
-        if (errMsg == null)  errMsg = "";
-        String inpMsg = new BufferedReader(new InputStreamReader(
-            process.getErrorStream())).readLine();
-        if (inpMsg == null)  inpMsg = "";
-        throw new IOException(errMsg + inpMsg);
-      }
-    } catch (InterruptedException e) {
-      throw new IOException(e);
-    } finally {
-      process.destroy();
+      shexec.execute();
+    } catch (ExitCodeException e) {
+      throw new IOException("Failed to execute command " +
+          Arrays.toString(hardLinkCommand) +
+          "; command output: \"" + shexec.getOutput() + "\"" +
+          "; WrappedException: \"" + e.getMessage() + "\"");
     }
   }
 
@@ -466,22 +461,12 @@ public class HardLink {
     // construct and execute shell command
     String[] hardLinkCommand = getHardLinkCommand.linkMult(fileBaseNames, 
         linkDir);
-    Process process = Runtime.getRuntime().exec(hardLinkCommand, null, 
-        parentDir);
+    ShellCommandExecutor shexec = new ShellCommandExecutor(hardLinkCommand,
+      parentDir, null, 0L);
     try {
-      if (process.waitFor() != 0) {
-        String errMsg = new BufferedReader(new InputStreamReader(
-            process.getInputStream())).readLine();
-        if (errMsg == null)  errMsg = "";
-        String inpMsg = new BufferedReader(new InputStreamReader(
-            process.getErrorStream())).readLine();
-        if (inpMsg == null)  inpMsg = "";
-        throw new IOException(errMsg + inpMsg);
-      }
-    } catch (InterruptedException e) {
-      throw new IOException(e);
-    } finally {
-      process.destroy();
+      shexec.execute();
+    } catch (ExitCodeException e) {
+      throw new IOException(shexec.getOutput() + e.getMessage());
     }
     return callCount;
   }
@@ -504,17 +489,13 @@ public class HardLink {
     String errMsg = null;
     int exitValue = -1;
     BufferedReader in = null;
-    BufferedReader err = null;
 
-    Process process = Runtime.getRuntime().exec(cmd);
+    ShellCommandExecutor shexec = new ShellCommandExecutor(cmd);
     try {
-      exitValue = process.waitFor();
-      in = new BufferedReader(new InputStreamReader(
-                                  process.getInputStream()));
+      shexec.execute();
+      in = new BufferedReader(new StringReader(shexec.getOutput()));
       inpMsg = in.readLine();
-      err = new BufferedReader(new InputStreamReader(
-                                   process.getErrorStream()));
-      errMsg = err.readLine();
+      exitValue = shexec.getExitCode();
       if (inpMsg == null || exitValue != 0) {
         throw createIOException(fileName, inpMsg, errMsg, exitValue, null);
       }
@@ -524,14 +505,15 @@ public class HardLink {
       } else {
         return Integer.parseInt(inpMsg);
       }
+    } catch (ExitCodeException e) {
+      inpMsg = shexec.getOutput();
+      errMsg = e.getMessage();
+      exitValue = e.getExitCode();
+      throw createIOException(fileName, inpMsg, errMsg, exitValue, e);
     } catch (NumberFormatException e) {
       throw createIOException(fileName, inpMsg, errMsg, exitValue, e);
-    } catch (InterruptedException e) {
-      throw createIOException(fileName, inpMsg, errMsg, exitValue, e);
     } finally {
-      process.destroy();
-      if (in != null) in.close();
-      if (err != null) err.close();
+      IOUtils.closeStream(in);
     }
   }
   
