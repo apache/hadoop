@@ -206,7 +206,7 @@ public class INodeDirectorySnapshottable extends INodeDirectory {
     return i < 0? null: snapshotsByNames.get(i);
   }
   
-  Snapshot getSnapshotById(int sid) {
+  public Snapshot getSnapshotById(int sid) {
     for (Snapshot s : snapshotsByNames) {
       if (s.getId() == sid) {
         return s;

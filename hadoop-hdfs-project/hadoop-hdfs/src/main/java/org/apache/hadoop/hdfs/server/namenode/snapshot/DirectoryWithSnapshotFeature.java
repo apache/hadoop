@@ -364,6 +364,25 @@ public class DirectoryWithSnapshotFeature implements INode.Feature {
       }
       return false;
     }
+
+    /**
+     * Find the corresponding snapshot whose deleted list contains the given
+     * inode.
+     * @return the id of the snapshot. {@link Snapshot#NO_SNAPSHOT_ID} if the
+     * given inode is not in any of the snapshot.
+     */
+    public int findSnapshotDeleted(final INode child) {
+      final List<DirectoryDiff> diffList = asList();
+      for(int i = diffList.size() - 1; i >= 0; i--) {
+        final ChildrenDiff diff = diffList.get(i).diff;
+        final int d = diff.searchIndex(ListType.DELETED,
+            child.getLocalNameBytes());
+        if (d >= 0 && diff.getList(ListType.DELETED).get(d) == child) {
+          return diffList.get(i).getSnapshotId();
+        }
+      }
+      return Snapshot.NO_SNAPSHOT_ID;
+    }
   }
   
   private static Map<INode, INode> cloneDiffList(List<INode> diffList) {

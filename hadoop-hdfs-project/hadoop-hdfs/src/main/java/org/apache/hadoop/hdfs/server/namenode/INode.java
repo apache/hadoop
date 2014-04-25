@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -656,7 +655,8 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
    * @return array of byte arrays each of which represents
    * a single path component.
    */
-  static byte[][] getPathComponents(String path) {
+  @VisibleForTesting
+  public static byte[][] getPathComponents(String path) {
     return getPathComponents(getPathNames(path));
   }
 
