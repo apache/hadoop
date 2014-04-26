@@ -70,6 +70,9 @@ Release 2.4.1 - UNRELEASED
 
   BUG FIXES
 
+    MAPREDUCE-5714. Removed forceful JVM exit in shutDownJob.  
+                     (Jinghui Wang via Eric Yang)
+
     MAPREDUCE-5818. Added "hsadmin" command into mapred.cmd. (Jian He via zjshen)
 
     MAPREDUCE-5824. Fixed test-failure of TestPipesNonJavaInputFormat in
