@@ -79,6 +79,9 @@ Trunk (Unreleased)
 
   BUG FIXES
 
+    MAPREDUCE-5714. Removed forceful JVM exit in shutDownJob.  
+                     (Jinghui Wang via Eric Yang)
+
     MAPREDUCE-3194. "mapred mradmin" command is broken in mrv2
                      (Jason Lowe via bobby)
 
