@@ -172,6 +172,9 @@ Release 2.5.0 - UNRELEASED
 
     MAPREDUCE-5639. Port DistCp2 document to trunk (Akira AJISAKA via jeagles)
 
+    MAPREDUCE-5812. Make job context available to
+    OutputCommitter.isRecoverySupported() (Mohammad Kamrul Islam via jlowe)
+
   OPTIMIZATIONS
 
   BUG FIXES 

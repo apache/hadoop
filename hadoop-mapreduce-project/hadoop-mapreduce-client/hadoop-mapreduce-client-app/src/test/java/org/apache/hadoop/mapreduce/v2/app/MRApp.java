@@ -627,10 +627,18 @@ public class MRApp extends MRAppMaster {
           throws IOException {
         committer.abortJob(jobContext, state);
       }
+
+      @Override
+      public boolean isRecoverySupported(JobContext jobContext) throws IOException{
+        return committer.isRecoverySupported(jobContext);
+      }
+
+      @SuppressWarnings("deprecation")
       @Override
       public boolean isRecoverySupported() {
         return committer.isRecoverySupported();
       }
+
       @Override
       public void setupTask(TaskAttemptContext taskContext)
           throws IOException {

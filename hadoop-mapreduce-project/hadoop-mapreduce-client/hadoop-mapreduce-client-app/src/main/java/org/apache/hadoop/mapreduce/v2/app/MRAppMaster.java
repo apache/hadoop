@@ -48,6 +48,7 @@ import org.apache.hadoop.mapred.LocalContainerLauncher;
 import org.apache.hadoop.mapred.TaskAttemptListenerImpl;
 import org.apache.hadoop.mapred.TaskLog;
 import org.apache.hadoop.mapred.TaskUmbilicalProtocol;
+import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.OutputFormat;
@@ -67,6 +68,7 @@ import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.TaskAttemptInfo;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.TaskInfo;
 import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
+import org.apache.hadoop.mapreduce.task.JobContextImpl;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
@@ -1107,7 +1109,24 @@ public class MRAppMaster extends CompositeService {
     TaskLog.syncLogsShutdown(logSyncer);
   }
 
-  private void processRecovery() {
+  private boolean isRecoverySupported(OutputCommitter committer2)
+      throws IOException {
+    boolean isSupported = false;
+    JobContext _jobContext;
+    if (committer != null) {
+      if (newApiCommitter) {
+         _jobContext = new JobContextImpl(
+            getConfig(), TypeConverter.fromYarn(getJobId()));
+      } else {
+          _jobContext = new org.apache.hadoop.mapred.JobContextImpl(
+                new JobConf(getConfig()), TypeConverter.fromYarn(getJobId()));
+      }
+      isSupported = committer.isRecoverySupported(_jobContext);
+    }
+    return isSupported;
+  }
+
+  private void processRecovery() throws IOException{
     if (appAttemptID.getAttemptId() == 1) {
       return;  // no need to recover on the first attempt
     }
@@ -1115,8 +1134,8 @@ public class MRAppMaster extends CompositeService {
     boolean recoveryEnabled = getConfig().getBoolean(
         MRJobConfig.MR_AM_JOB_RECOVERY_ENABLE,
         MRJobConfig.MR_AM_JOB_RECOVERY_ENABLE_DEFAULT);
-    boolean recoverySupportedByCommitter =
-        committer != null && committer.isRecoverySupported();
+
+    boolean recoverySupportedByCommitter = isRecoverySupported(committer);
 
     // If a shuffle secret was not provided by the job client then this app
     // attempt will generate one.  However that disables recovery if there
