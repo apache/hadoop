@@ -8,6 +8,9 @@ HDFS-2006 (Unreleased)
 
   IMPROVEMENTS
 
+  HADOOP-10520. Extended attributes definition and FileSystem APIs for
+  extended attributes. (Yi Liu via wang)
+
   OPTIMIZATIONS
 
   BUG FIXES

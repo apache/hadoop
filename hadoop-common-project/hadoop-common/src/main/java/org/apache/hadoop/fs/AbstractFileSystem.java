@@ -1039,6 +1039,154 @@ public abstract class AbstractFileSystem {
         + " doesn't support getAclStatus");
   }
 
+  /**
+   * Set the xattr of a file or directory.
+   * Name must be prefixed with user/trusted/security/system which
+   * followed by ".", For example "user.attr".
+   * <p/>
+   * A regular user only can set xattr of "user" namespace.
+   * A super user can set xattr of "user" and "trusted" namespace.
+   * XAttr of "security" and "system" namespace is only used/exposed
+   * internally to the FS impl.
+   * <p/>
+   * For xattr of "user" namespace, its access permissions are
+   * defined by the file or directory permission bits.
+   * XAttr will be set only when login user has correct permissions.
+   * If the xattr exists, it will be replaced.
+   * <p/>
+   * @see <a href="http://en.wikipedia.org/wiki/Extended_file_attributes">
+   * http://en.wikipedia.org/wiki/Extended_file_attributes</a>
+   *
+   * @param path Path to modify
+   * @param name xattr name.
+   * @param value xattr value.
+   * @throws IOException
+   */
+  public void setXAttr(Path path, String name, byte[] value)
+      throws IOException {
+    setXAttr(path, name, value, EnumSet.of(XAttrSetFlag.CREATE,
+        XAttrSetFlag.REPLACE));
+  }
+
+  /**
+   * Set the xattr of a file or directory.
+   * Name must be prefixed with user/trusted/security/system which
+   * followed by ".", For example "user.attr".
+   * <p/>
+   * A regular user only can set xattr of "user" namespace.
+   * A super user can set xattr of "user" and "trusted" namespace.
+   * XAttr of "security" and "system" namespace is only used/exposed
+   * internally to the FS impl.
+   * <p/>
+   * For xattr of "user" namespace, its access permissions are
+   * defined by the file or directory permission bits.
+   * XAttr will be set only when login user has correct permissions.
+   * <p/>
+   * @see <a href="http://en.wikipedia.org/wiki/Extended_file_attributes">
+   * http://en.wikipedia.org/wiki/Extended_file_attributes</a>
+   *
+   * @param path Path to modify
+   * @param name xattr name.
+   * @param value xattr value.
+   * @param flag xattr set flag
+   * @throws IOException
+   */
+  public void setXAttr(Path path, String name, byte[] value,
+      EnumSet<XAttrSetFlag> flag) throws IOException {
+    throw new UnsupportedOperationException(getClass().getSimpleName()
+        + " doesn't support setXAttr");
+  }
+
+  /**
+   * Get xattr of a file or directory.
+   * Name must be prefixed with user/trusted/security/system.
+   * <p/>
+   * A regular user only can get xattr of "user" namespace.
+   * A super user can get xattr of "user" and "trusted" namespace.
+   * XAttr of "security" and "system" namespace is only used/exposed
+   * internally to the FS impl.
+   * <p/>
+   * XAttr will be returned only when login user has correct permissions.
+   * <p/>
+   * @see <a href="http://en.wikipedia.org/wiki/Extended_file_attributes">
+   * http://en.wikipedia.org/wiki/Extended_file_attributes</a>
+   *
+   * @param path Path to get extended attribute
+   * @param name xattr name.
+   * @return byte[] xattr value.
+   * @throws IOException
+   */
+  public byte[] getXAttr(Path path, String name) throws IOException {
+    throw new UnsupportedOperationException(getClass().getSimpleName()
+        + " doesn't support getXAttr");
+  }
+
+  /**
+   * Get all xattrs of a file or directory.
+   * Only xattrs which login user has correct permissions will be returned.
+   * <p/>
+   * A regular user only can get xattr of "user" namespace.
+   * A super user can get xattr of "user" and "trusted" namespace.
+   * XAttr of "security" and "system" namespace is only used/exposed
+   * internally to the FS impl.
+   * <p/>
+   * @see <a href="http://en.wikipedia.org/wiki/Extended_file_attributes">
+   * http://en.wikipedia.org/wiki/Extended_file_attributes</a>
+   *
+   * @param path Path to get extended attributes
+   * @return Map<String, byte[]> describing the XAttrs of the file or directory
+   * @throws IOException
+   */
+  public Map<String, byte[]> getXAttrs(Path path) throws IOException {
+    throw new UnsupportedOperationException(getClass().getSimpleName()
+        + " doesn't support getXAttrs");
+  }
+
+  /**
+   * Get the xattrs of a file or directory.
+   * Name must be prefixed with user/trusted/security/system.
+   * Only xattrs which login user has correct permissions will be returned.
+   * <p/>
+   * A regular user only can get xattr of "user" namespace.
+   * A super user can get xattr of "user" and "trusted" namespace.
+   * XAttr of "security" and "system" namespace is only used/exposed
+   * internally to the FS impl.
+   * <p/>
+   * @see <a href="http://en.wikipedia.org/wiki/Extended_file_attributes">
+   * http://en.wikipedia.org/wiki/Extended_file_attributes</a>
+   *
+   * @param path Path to get extended attributes
+   * @param names XAttr names.
+   * @return Map<String, byte[]> describing the XAttrs of the file or directory
+   * @throws IOException
+   */
+  public Map<String, byte[]> getXAttrs(Path path, List<String> names)
+      throws IOException {
+    throw new UnsupportedOperationException(getClass().getSimpleName()
+        + " doesn't support getXAttrs");
+  }
+
+  /**
+   * Remove xattr of a file or directory.
+   * Name must be prefixed with user/trusted/security/system.
+   * <p/>
+   * A regular user only can remove xattr of "user" namespace.
+   * A super user can remove xattr of "user" and "trusted" namespace.
+   * XAttr of "security" and "system" namespace is only used/exposed
+   * internally to the FS impl.
+   * <p/>
+   * @see <a href="http://en.wikipedia.org/wiki/Extended_file_attributes">
+   * http://en.wikipedia.org/wiki/Extended_file_attributes</a>
+   *
+   * @param path Path to remove extended attribute
+   * @param name xattr name
+   * @throws IOException
+   */
+  public void removeXAttr(Path path, String name) throws IOException {
+    throw new UnsupportedOperationException(getClass().getSimpleName()
+        + " doesn't support removeXAttr");
+  }
+
   @Override //Object
   public int hashCode() {
     return myUri.hashCode();
