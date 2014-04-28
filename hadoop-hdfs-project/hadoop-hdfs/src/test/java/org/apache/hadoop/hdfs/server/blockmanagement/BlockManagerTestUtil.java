@@ -101,7 +101,6 @@ public class BlockManagerTestUtil {
   }
 
   /**
-   * @param blockManager
    * @return replication monitor thread instance from block manager.
    */
   public static Daemon getReplicationThread(final BlockManager blockManager)
@@ -111,7 +110,6 @@ public class BlockManagerTestUtil {
   
   /**
    * Stop the replication monitor thread
-   * @param blockManager
    */
   public static void stopReplicationThread(final BlockManager blockManager) 
       throws IOException {
@@ -126,7 +124,6 @@ public class BlockManagerTestUtil {
   }
 
   /**
-   * @param blockManager
    * @return corruptReplicas from block manager
    */
   public static  CorruptReplicasMap getCorruptReplicas(final BlockManager blockManager){
@@ -135,7 +132,6 @@ public class BlockManagerTestUtil {
   }
 
   /**
-   * @param blockManager
    * @return computed block replication and block invalidation work that can be
    *         scheduled on data-nodes.
    * @throws IOException
@@ -158,7 +154,7 @@ public class BlockManagerTestUtil {
    * regardless of invalidation/replication limit configurations.
    * 
    * NB: you may want to set
-   * {@link DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY} to
+   * {@link DFSConfigKeys#DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY} to
    * a high value to ensure that all work is calculated.
    */
   public static int computeAllPendingWork(BlockManager bm) {
@@ -200,7 +196,7 @@ public class BlockManagerTestUtil {
   /**
    * Change whether the block placement policy will prefer the writer's
    * local Datanode or not.
-   * @param prefer
+   * @param prefer if true, prefer local node
    */
   public static void setWritingPrefersLocalNode(
       BlockManager bm, boolean prefer) {

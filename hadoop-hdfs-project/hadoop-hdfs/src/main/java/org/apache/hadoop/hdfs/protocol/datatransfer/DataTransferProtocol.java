@@ -136,7 +136,7 @@ public interface DataTransferProtocol {
   /**
    * Request a short circuit shared memory area from a DataNode.
    * 
-   * @pram clientName       The name of the client.
+   * @param clientName       The name of the client.
    */
   public void requestShortCircuitShm(String clientName) throws IOException;
   

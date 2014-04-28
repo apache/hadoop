@@ -83,8 +83,6 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PERMISSIONS_SUPERUSERGROU
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_PERMISSIONS_SUPERUSERGROUP_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SUPPORT_APPEND_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SUPPORT_APPEND_KEY;
 import static org.apache.hadoop.util.Time.now;
 
 import java.io.BufferedWriter;
@@ -446,7 +444,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   NameNodeResourceChecker nnResourceChecker;
 
   private final FsServerDefaults serverDefaults;
-  private final boolean supportAppends;
   private final ReplaceDatanodeOnFailure dtpReplaceDatanodeOnFailure;
 
   private volatile SafeModeInfo safeMode;  // safe mode information
@@ -754,8 +751,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           DFSConfigKeys.DFS_NAMENODE_MAX_BLOCKS_PER_FILE_DEFAULT);
       this.accessTimePrecision = conf.getLong(DFS_NAMENODE_ACCESSTIME_PRECISION_KEY,
           DFS_NAMENODE_ACCESSTIME_PRECISION_DEFAULT);
-      this.supportAppends = conf.getBoolean(DFS_SUPPORT_APPEND_KEY, DFS_SUPPORT_APPEND_DEFAULT);
-      LOG.info("Append Enabled: " + supportAppends);
 
       this.dtpReplaceDatanodeOnFailure = ReplaceDatanodeOnFailure.get(conf);
       
@@ -1109,9 +1104,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     writeLock();
     try {
       stopSecretManager();
-      if (leaseManager != null) {
-        leaseManager.stopMonitor();
-      }
+      leaseManager.stopMonitor();
       if (nnrmthread != null) {
         ((NameNodeResourceMonitor) nnrmthread.getRunnable()).stopMonitor();
         nnrmthread.interrupt();
@@ -1353,7 +1346,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   /**
    * Returns edit directories that are shared between primary and secondary.
    * @param conf configuration
-   * @return Collection of edit directories.
+   * @return collection of edit directories from {@code conf}
    */
   public static List<URI> getSharedEditsDirs(Configuration conf) {
     // don't use getStorageDirs here, because we want an empty default
@@ -1789,9 +1782,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * before we start actual move.
    * 
    * This does not support ".inodes" relative path
-   * @param target target file path to concatenate into
-   * @param srcs files that are concatenated
-   * @throws IOException
+   * @param target target to concat into
+   * @param srcs file that will be concatenated
+   * @throws IOException on error
    */
   void concat(String target, String [] srcs) 
       throws IOException, UnresolvedLinkException {
@@ -2599,12 +2592,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           + ", clientMachine=" + clientMachine);
     }
     boolean skipSync = false;
-    if (!supportAppends) {
-      throw new UnsupportedOperationException(
-          "Append is not enabled on this NameNode. Use the " +
-          DFS_SUPPORT_APPEND_KEY + " configuration option to enable it.");
-    }
-
     LocatedBlock lb = null;
     FSPermissionChecker pc = getPermissionChecker();
     checkOperation(OperationCategory.WRITE);
@@ -3787,20 +3774,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     final BlockInfo lastBlock = pendingFile.getLastBlock();
     BlockUCState lastBlockState = lastBlock.getBlockUCState();
     BlockInfo penultimateBlock = pendingFile.getPenultimateBlock();
-    boolean penultimateBlockMinReplication;
-    BlockUCState penultimateBlockState;
-    if (penultimateBlock == null) {
-      penultimateBlockState = BlockUCState.COMPLETE;
-      // If penultimate block doesn't exist then its minReplication is met
-      penultimateBlockMinReplication = true;
-    } else {
-      penultimateBlockState = BlockUCState.COMMITTED;
-      penultimateBlockMinReplication = 
+
+    // If penultimate block doesn't exist then its minReplication is met
+    boolean penultimateBlockMinReplication = penultimateBlock == null ? true :
         blockManager.checkMinReplication(penultimateBlock);
-    }
-    assert penultimateBlockState == BlockUCState.COMPLETE ||
-           penultimateBlockState == BlockUCState.COMMITTED :
-           "Unexpected state of penultimate block in " + src;
 
     switch(lastBlockState) {
     case COMPLETE:
@@ -4087,11 +4064,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   /**
-   *
-   * @param pendingFile
-   * @param storedBlock
+   * @param pendingFile open file that needs to be closed
+   * @param storedBlock last block
    * @return Path of the file that was closed.
-   * @throws IOException
+   * @throws IOException on error
    */
   @VisibleForTesting
   String closeFileCommitBlocks(INodeFile pendingFile, BlockInfo storedBlock)
@@ -4299,7 +4275,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   /**
    * Perform resource checks and cache the results.
-   * @throws IOException
    */
   void checkAvailableResources() {
     Preconditions.checkState(nnResourceChecker != null,
@@ -4666,8 +4641,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     private final double threshold;
     /** Safe mode minimum number of datanodes alive */
     private final int datanodeThreshold;
-    /** Safe mode extension after the threshold. */
-    private int extension;
+    /**
+     * Safe mode extension after the threshold.
+     * Make it volatile so that getSafeModeTip can read the latest value
+     * without taking a lock.
+     */
+    private volatile int extension;
     /** Min replication required by safe mode. */
     private final int safeReplication;
     /** threshold for populating needed replication queues */
@@ -4689,8 +4668,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     private int blockReplQueueThreshold;
     /** time of the last status printout */
     private long lastStatusReport = 0;
-    /** Was safemode entered automatically because available resources were low. */
-    private boolean resourcesLow = false;
+    /**
+     * Was safemode entered automatically because available resources were low.
+     * Make it volatile so that getSafeModeTip can read the latest value
+     * without taking a lock.
+     */
+    private volatile boolean resourcesLow = false;
     /** Should safemode adjust its block totals as blocks come in */
     private boolean shouldIncrementallyTrackBlocks = false;
     /** counter for tracking startup progress of reported blocks */
@@ -5350,7 +5333,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   /**
    * Leave safe mode.
-   * @throws IOException
    */
   void leaveSafeMode() {
     writeLock();
@@ -5366,14 +5348,21 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
     
   String getSafeModeTip() {
-    readLock();
-    try {
-      if (!isInSafeMode()) {
-        return "";
-      }
+    // There is no need to take readLock.
+    // Don't use isInSafeMode as this.safeMode might be set to null.
+    // after isInSafeMode returns.
+    boolean inSafeMode;
+    SafeModeInfo safeMode = this.safeMode;
+    if (safeMode == null) {
+      inSafeMode = false;
+    } else {
+      inSafeMode = safeMode.isOn();
+    }
+
+    if (!inSafeMode) {
+      return "";
+    } else {
       return safeMode.getTurnOffTip();
-    } finally {
-      readUnlock();
     }
   }
 
@@ -5549,12 +5538,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   @Override // FSNamesystemMBean
   @Metric
   public long getFilesTotal() {
-    readLock();
-    try {
-      return this.dir.totalInodes();
-    } finally {
-      readUnlock();
-    }
+    // There is no need to take fSNamesystem's lock as
+    // FSDirectory has its own lock.
+    return this.dir.totalInodes();
   }
 
   @Override // FSNamesystemMBean
@@ -5767,7 +5753,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   /**
    * Sets the generation stamp that delineates random and sequentially
    * allocated block IDs.
-   * @param stamp
+   * @param stamp set generation stamp limit to this value
    */
   void setGenerationStampV1Limit(long stamp) {
     Preconditions.checkState(generationStampV1Limit ==
@@ -5852,7 +5838,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * Determine whether the block ID was randomly generated (legacy) or
    * sequentially generated. The generation stamp value is used to
    * make the distinction.
-   * @param block
    * @return true if the block ID was randomly generated, false otherwise.
    */
   boolean isLegacyBlock(Block block) {
@@ -6089,7 +6074,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * Release (unregister) backup node.
    * <p>
    * Find and remove the backup stream corresponding to the node.
-   * @param registration
    * @throws IOException
    */
   void releaseBackupNode(NamenodeRegistration registration)
@@ -6136,6 +6120,23 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   String[] cookieTab) throws IOException {
     checkSuperuserPrivilege();
     checkOperation(OperationCategory.READ);
+
+    int count = 0;
+    ArrayList<CorruptFileBlockInfo> corruptFiles =
+        new ArrayList<CorruptFileBlockInfo>();
+    if (cookieTab == null) {
+      cookieTab = new String[] { null };
+    }
+
+    // Do a quick check if there are any corrupt files without taking the lock
+    if (blockManager.getMissingBlocksCount() == 0) {
+      if (cookieTab[0] == null) {
+        cookieTab[0] = String.valueOf(getIntCookie(cookieTab[0]));
+      }
+      LOG.info("there are no corrupt file blocks.");
+      return corruptFiles;
+    }
+
     readLock();
     try {
       checkOperation(OperationCategory.READ);
@@ -6144,14 +6145,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                               "replication queues have not been initialized.");
       }
       // print a limited # of corrupt files per call
-      int count = 0;
-      ArrayList<CorruptFileBlockInfo> corruptFiles = new ArrayList<CorruptFileBlockInfo>();
 
       final Iterator<Block> blkIterator = blockManager.getCorruptReplicaBlockIterator();
 
-      if (cookieTab == null) {
-        cookieTab = new String[] { null };
-      }
       int skip = getIntCookie(cookieTab[0]);
       for (int i = 0; i < skip && blkIterator.hasNext(); i++) {
         blkIterator.next();
@@ -6225,8 +6221,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   /**
    * @param renewer Renewer information
-   * @return Token<DelegationTokenIdentifier>
-   * @throws IOException
+   * @return delegation toek
+   * @throws IOException on error
    */
   Token<DelegationTokenIdentifier> getDelegationToken(Text renewer)
       throws IOException {
@@ -6267,10 +6263,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   /**
    * 
-   * @param token delegation token
-   * @return New expiryTime of the token
-   * @throws InvalidToken
-   * @throws IOException
+   * @param token token to renew
+   * @return new expiryTime of the token
+   * @throws InvalidToken if {@code token} is invalid
+   * @throws IOException on other errors
    */
   long renewDelegationToken(Token<DelegationTokenIdentifier> token)
       throws InvalidToken, IOException {
@@ -6301,8 +6297,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   /**
    * 
-   * @param token delegation token that needs to be canceled
-   * @throws IOException
+   * @param token token to cancel
+   * @throws IOException on error
    */
   void cancelDelegationToken(Token<DelegationTokenIdentifier> token)
       throws IOException {
@@ -7213,7 +7209,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   /**
    * Update internal state to indicate that a rolling upgrade is in progress.
-   * @param startTime start time of the rolling upgrade
+   * @param startTime rolling upgrade start time
    */
   void startRollingUpgradeInternal(long startTime)
       throws IOException {

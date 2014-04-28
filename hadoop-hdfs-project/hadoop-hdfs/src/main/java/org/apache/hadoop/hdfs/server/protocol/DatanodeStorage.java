@@ -48,8 +48,6 @@ public class DatanodeStorage {
 
   /**
    * Create a storage with {@link State#NORMAL} and {@link StorageType#DEFAULT}.
-   *
-   * @param storageID
    */
   public DatanodeStorage(String storageID) {
     this(storageID, State.NORMAL, StorageType.DEFAULT);

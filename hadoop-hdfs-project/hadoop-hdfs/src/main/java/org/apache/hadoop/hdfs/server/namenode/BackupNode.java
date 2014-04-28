@@ -355,7 +355,7 @@ public class BackupNode extends NameNode {
 
   /**
    * Register this backup node with the active name-node.
-   * @param nsInfo
+   * @param nsInfo namespace information
    * @throws IOException
    */
   private void registerWith(NamespaceInfo nsInfo) throws IOException {

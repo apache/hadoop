@@ -435,9 +435,9 @@ public class DatanodeManager {
   }
 
   /**
-   * Get data node by storage ID.
+   * Get data node by datanode ID.
    * 
-   * @param nodeID
+   * @param nodeID datanode ID
    * @return DatanodeDescriptor or null if the node is not found.
    * @throws UnregisteredNodeException
    */
@@ -1014,21 +1014,18 @@ public class DatanodeManager {
 
   /** @return list of datanodes where decommissioning is in progress. */
   public List<DatanodeDescriptor> getDecommissioningNodes() {
-    namesystem.readLock();
-    try {
-      final List<DatanodeDescriptor> decommissioningNodes
-          = new ArrayList<DatanodeDescriptor>();
-      final List<DatanodeDescriptor> results = getDatanodeListForReport(
-          DatanodeReportType.LIVE);
-      for(DatanodeDescriptor node : results) {
-        if (node.isDecommissionInProgress()) {
-          decommissioningNodes.add(node);
-        }
+    // There is no need to take namesystem reader lock as
+    // getDatanodeListForReport will synchronize on datanodeMap
+    final List<DatanodeDescriptor> decommissioningNodes
+        = new ArrayList<DatanodeDescriptor>();
+    final List<DatanodeDescriptor> results = getDatanodeListForReport(
+        DatanodeReportType.LIVE);
+    for(DatanodeDescriptor node : results) {
+      if (node.isDecommissionInProgress()) {
+        decommissioningNodes.add(node);
       }
-      return decommissioningNodes;
-    } finally {
-      namesystem.readUnlock();
     }
+    return decommissioningNodes;
   }
   
   /* Getter and Setter for stale DataNodes related attributes */
@@ -1081,23 +1078,20 @@ public class DatanodeManager {
       throw new HadoopIllegalArgumentException("Both live and dead lists are null");
     }
 
-    namesystem.readLock();
-    try {
-      final List<DatanodeDescriptor> results =
-          getDatanodeListForReport(DatanodeReportType.ALL);    
-      for(DatanodeDescriptor node : results) {
-        if (isDatanodeDead(node)) {
-          if (dead != null) {
-            dead.add(node);
-          }
-        } else {
-          if (live != null) {
-            live.add(node);
-          }
+    // There is no need to take namesystem reader lock as
+    // getDatanodeListForReport will synchronize on datanodeMap
+    final List<DatanodeDescriptor> results =
+        getDatanodeListForReport(DatanodeReportType.ALL);
+    for(DatanodeDescriptor node : results) {
+      if (isDatanodeDead(node)) {
+        if (dead != null) {
+          dead.add(node);
+        }
+      } else {
+        if (live != null) {
+          live.add(node);
         }
       }
-    } finally {
-      namesystem.readUnlock();
     }
     
     if (removeDecommissionNode) {

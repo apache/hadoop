@@ -418,6 +418,23 @@ public abstract class INodeReference extends INode {
         return withNameList.get(-i - 2);
       }
     }
+
+    public INodeReference getParentRef(int snapshotId) {
+      // when the given snapshotId is CURRENT_STATE_ID, it is possible that we
+      // do not know where the corresponding inode belongs, thus we simply
+      // return the last reference node
+      if (snapshotId == Snapshot.CURRENT_STATE_ID) {
+        return this.getParentReference() != null ? this.getParentReference()
+            : this.getLastWithName();
+      }
+      // otherwise we search the withNameList
+      for (int i = 0; i < withNameList.size(); i++) {
+        if (snapshotId <= withNameList.get(i).lastSnapshotId) {
+          return withNameList.get(i);
+        }
+      }
+      return this.getParentReference();
+    }
   }
   
   /** A reference with a fixed name. */

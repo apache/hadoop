@@ -243,6 +243,19 @@ HDFS NFS Gateway
       hadoop-daemon.sh stop portmap
 -------------------------
 
+  Optionally, you can forgo running the Hadoop-provided portmap daemon and
+  instead use the system portmap daemon on all operating systems if you start the
+  NFS Gateway as root. This will allow the HDFS NFS Gateway to work around the
+  aforementioned bug and still register using the system portmap daemon. To do
+  so, just start the NFS gateway daemon as you normally would, but make sure to
+  do so as the "root" user, and also set the "HADOOP_PRIVILEGED_NFS_USER"
+  environment variable to an unprivileged user. In this mode the NFS Gateway will
+  start as root to perform its initial registration with the system portmap, and
+  then will drop privileges back to the user specified by the
+  HADOOP_PRIVILEGED_NFS_USER afterward and for the rest of the duration of the
+  lifetime of the NFS Gateway process. Note that if you choose this route, you
+  should skip steps 1 and 2 above.
+
 
 * {Verify validity of NFS related services}
 

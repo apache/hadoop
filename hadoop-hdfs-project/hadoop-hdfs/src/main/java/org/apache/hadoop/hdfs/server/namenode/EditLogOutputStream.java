@@ -127,14 +127,14 @@ public abstract class EditLogOutputStream implements Closeable {
   }
   
   /**
-   * Return total time spent in {@link #flushAndSync()}
+   * Return total time spent in {@link #flushAndSync(boolean)}
    */
   long getTotalSyncTime() {
     return totalTimeSync;
   }
 
   /**
-   * Return number of calls to {@link #flushAndSync()}
+   * Return number of calls to {@link #flushAndSync(boolean)}
    */
   protected long getNumSync() {
     return numSync;

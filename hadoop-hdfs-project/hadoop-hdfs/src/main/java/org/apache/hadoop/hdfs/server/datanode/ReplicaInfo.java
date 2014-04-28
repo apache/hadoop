@@ -100,7 +100,7 @@ abstract public class ReplicaInfo extends Block implements Replica {
 
   /**
    * Copy constructor.
-   * @param from
+   * @param from where to copy from
    */
   ReplicaInfo(ReplicaInfo from) {
     this(from, from.getVolume(), from.getDir());

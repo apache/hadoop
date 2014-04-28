@@ -484,7 +484,7 @@ public class FSImageFormat {
    /**
     * Load all children of a directory
     * 
-    * @param in
+    * @param in input to load from
     * @param counter Counter to increment for namenode startup progress
     * @return number of child inodes read
     * @throws IOException
@@ -653,7 +653,7 @@ public class FSImageFormat {
             clientName = FSImageSerialization.readString(in);
             clientMachine = FSImageSerialization.readString(in);
             // convert the last block to BlockUC
-            if (blocks != null && blocks.length > 0) {
+            if (blocks.length > 0) {
               BlockInfo lastBlk = blocks[blocks.length - 1]; 
               blocks[blocks.length - 1] = new BlockInfoUnderConstruction(
                   lastBlk, replication);
@@ -1018,7 +1018,6 @@ public class FSImageFormat {
     if (!NameNodeLayoutVersion.supports(Feature.SNAPSHOT, layoutVersion)) {
       if (Arrays.equals(component, HdfsConstants.DOT_SNAPSHOT_DIR_BYTES)) {
         Preconditions.checkArgument(
-            renameReservedMap != null &&
             renameReservedMap.containsKey(HdfsConstants.DOT_SNAPSHOT_DIR),
             RESERVED_ERROR_MSG);
         component =
@@ -1039,7 +1038,6 @@ public class FSImageFormat {
     if (!NameNodeLayoutVersion.supports(Feature.ADD_INODE_ID, layoutVersion)) {
       if (Arrays.equals(component, FSDirectory.DOT_RESERVED)) {
         Preconditions.checkArgument(
-            renameReservedMap != null &&
             renameReservedMap.containsKey(FSDirectory.DOT_RESERVED_STRING),
             RESERVED_ERROR_MSG);
         final String renameString = renameReservedMap

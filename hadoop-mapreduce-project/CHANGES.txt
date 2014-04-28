@@ -79,6 +79,9 @@ Trunk (Unreleased)
 
   BUG FIXES
 
+    MAPREDUCE-5714. Removed forceful JVM exit in shutDownJob.  
+                     (Jinghui Wang via Eric Yang)
+
     MAPREDUCE-3194. "mapred mradmin" command is broken in mrv2
                      (Jason Lowe via bobby)
 
@@ -165,6 +168,13 @@ Release 2.5.0 - UNRELEASED
 
     MAPREDUCE-5836. Fix typo in RandomTextWriter (Akira AJISAKA via jeagles)
 
+    MAPREDUCE-5852. Prepare MapReduce codebase for JUnit 4.11. (cnauroth)
+
+    MAPREDUCE-5639. Port DistCp2 document to trunk (Akira AJISAKA via jeagles)
+
+    MAPREDUCE-5812. Make job context available to
+    OutputCommitter.isRecoverySupported() (Mohammad Kamrul Islam via jlowe)
+
   OPTIMIZATIONS
 
   BUG FIXES 
@@ -182,6 +192,13 @@ Release 2.5.0 - UNRELEASED
 
     MAPREDUCE-5642. TestMiniMRChildTask fails on Windows.
     (Chuan Liu via cnauroth)
+
+    MAPREDUCE-5846. Rumen doesn't understand JobQueueChangedEvent (Nathan Roberts via raviprak)
+
+    MAPREDUCE-5837. MRAppMaster fails when checking on uber mode. (wheat9)
+
+    MAPREDUCE-5749. TestRMContainerAllocator#testReportedAppProgress Failed
+    (jlowe)
 
 Release 2.4.1 - UNRELEASED
 
@@ -209,6 +226,24 @@ Release 2.4.1 - UNRELEASED
 
     MAPREDUCE-5828. Fixed a test issue with TestMapReduceJobControl that was
     causing it to fail on Windows. (vinodkv)
+
+    MAPREDUCE-5827. TestSpeculativeExecutionWithMRApp fails.
+    (Zhijie Shen via cnauroth)
+
+    MAPREDUCE-5833. TestRMContainerAllocator fails ocassionally.
+    (Zhijie Shen via cnauroth)
+
+    MAPREDUCE-5832. Fixed TestJobClient to not fail on JDK7 or on Windows. (Jian
+    He and Vinod Kumar Vavilapalli via vinodkv)
+
+    MAPREDUCE-5841. uber job doesn't terminate on getting mapred job kill
+    (Sangjin Lee via jlowe)
+
+    MAPREDUCE-5843. Fixed TestMRKeyValueTextInputFormat to not leak files and
+    thus avoid failing on Windows. (Varun Vasudev via vinodkv)
+
+    MAPREDUCE-5835. Killing Task might cause the job to go to ERROR state
+    (Ming Ma via jlowe)
 
 Release 2.4.0 - 2014-04-07 
 

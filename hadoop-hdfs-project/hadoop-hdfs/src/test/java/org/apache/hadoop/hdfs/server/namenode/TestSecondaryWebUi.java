@@ -17,19 +17,21 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.junit.Assert.assertTrue;
-
-import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_KEY;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import javax.management.*;
+import java.io.IOException;
+import java.lang.management.ManagementFactory;
+import java.net.URL;
 
 public class TestSecondaryWebUi {
   
@@ -41,6 +43,7 @@ public class TestSecondaryWebUi {
   public static void setUpCluster() throws IOException {
     conf.set(DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY,
         "0.0.0.0:0");
+    conf.setLong(DFS_NAMENODE_CHECKPOINT_TXNS_KEY, 500);
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
         .build();
     cluster.waitActive();
@@ -59,18 +62,34 @@ public class TestSecondaryWebUi {
   }
 
   @Test
-  public void testSecondaryWebUi() throws IOException {
+  public void testSecondaryWebUi()
+          throws IOException, MalformedObjectNameException,
+                 AttributeNotFoundException, MBeanException,
+                 ReflectionException, InstanceNotFoundException {
+    MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+    ObjectName mxbeanName = new ObjectName(
+            "Hadoop:service=SecondaryNameNode,name=SecondaryNameNodeInfo");
+
+    String[] checkpointDir = (String[]) mbs.getAttribute(mxbeanName,
+            "CheckpointDirectories");
+    Assert.assertArrayEquals(checkpointDir, snn.getCheckpointDirectories());
+    String[] checkpointEditlogDir = (String[]) mbs.getAttribute(mxbeanName,
+            "CheckpointEditlogDirectories");
+    Assert.assertArrayEquals(checkpointEditlogDir,
+            snn.getCheckpointEditlogDirectories());
+  }
+
+  @Test
+  public void testSecondaryWebUiJsp()
+          throws IOException, MalformedObjectNameException,
+                 AttributeNotFoundException, MBeanException,
+                 ReflectionException, InstanceNotFoundException {
     String pageContents = DFSTestUtil.urlGet(new URL("http://localhost:" +
         SecondaryNameNode.getHttpAddress(conf).getPort() + "/status.jsp"));
-    assertTrue("Didn't find \"Last Checkpoint\"",
+    Assert.assertTrue("Didn't find \"Last Checkpoint\"",
         pageContents.contains("Last Checkpoint"));
-  }
-  
-  @Test
-  public void testSecondaryWebJmx() throws MalformedURLException, IOException {
-    String pageContents = DFSTestUtil.urlGet(new URL("http://localhost:" +
-        SecondaryNameNode.getHttpAddress(conf).getPort() + "/jmx"));
-    assertTrue(pageContents.contains(
-        "Hadoop:service=SecondaryNameNode,name=JvmMetrics"));
+    Assert.assertTrue("Didn't find Checkpoint Transactions: 500",
+        pageContents.contains("Checkpoint Transactions: 500"));
+
   }
 }

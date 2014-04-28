@@ -424,7 +424,6 @@ public class FSEditLog implements LogsPurgeable {
 
   /**
    * Wait if an automatic sync is scheduled
-   * @throws InterruptedException
    */
   synchronized void waitIfAutoSyncScheduled() {
     try {
@@ -802,7 +801,8 @@ public class FSEditLog implements LogsPurgeable {
   /** Add set namespace quota record to edit log
    * 
    * @param src the string representation of the path to a directory
-   * @param quota the directory size limit
+   * @param nsQuota namespace quota
+   * @param dsQuota diskspace quota
    */
   void logSetQuota(String src, long nsQuota, long dsQuota) {
     SetQuotaOp op = SetQuotaOp.getInstance(cache.get())
@@ -1452,8 +1452,9 @@ public class FSEditLog implements LogsPurgeable {
    * Select a list of input streams.
    * 
    * @param fromTxId first transaction in the selected streams
-   * @param toAtLeast the selected streams must contain this transaction
-   * @param inProgessOk set to true if in-progress streams are OK
+   * @param toAtLeastTxId the selected streams must contain this transaction
+   * @param recovery recovery context
+   * @param inProgressOk set to true if in-progress streams are OK
    */
   public synchronized Collection<EditLogInputStream> selectInputStreams(
       long fromTxId, long toAtLeastTxId, MetaRecoveryContext recovery,

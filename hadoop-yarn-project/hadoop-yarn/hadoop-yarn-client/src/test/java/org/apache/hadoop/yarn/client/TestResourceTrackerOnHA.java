@@ -20,7 +20,7 @@ package org.apache.hadoop.yarn.client;
 
 import java.io.IOException;
 
-import junit.framework.Assert;
+import org.junit.Assert;
 
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.yarn.api.records.NodeId;

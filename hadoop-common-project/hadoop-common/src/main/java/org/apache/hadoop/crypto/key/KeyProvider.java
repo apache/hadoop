@@ -312,20 +312,16 @@ public abstract class KeyProvider {
 
 
   /**
-   * Get the key metadata for all keys.
-   *
-   * @return a Map with all the keys and their metadata
+   * Get key metadata in bulk.
+   * @param names the names of the keys to get
    * @throws IOException
    */
-  public Map<String, Metadata> getKeysMetadata() throws IOException {
-    Map<String, Metadata> keysMetadata = new LinkedHashMap<String, Metadata>();
-    for (String key : getKeys()) {
-      Metadata meta = getMetadata(key);
-      if (meta != null) {
-        keysMetadata.put(key, meta);
-      }
+  public Metadata[] getKeysMetadata(String... names) throws IOException {
+    Metadata[] result = new Metadata[names.length];
+    for (int i=0; i < names.length; ++i) {
+      result[i] = getMetadata(names[i]);
     }
-    return keysMetadata;
+    return result;
   }
 
   /**

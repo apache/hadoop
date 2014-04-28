@@ -60,7 +60,7 @@ public class ReplicaWaitingToBeRecovered extends ReplicaInfo {
   
   /**
    * Copy constructor.
-   * @param from
+   * @param from where to copy from
    */
   public ReplicaWaitingToBeRecovered(ReplicaWaitingToBeRecovered from) {
     super(from);

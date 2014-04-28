@@ -131,8 +131,7 @@ public class DataBlockScanner implements Runnable {
   private BlockPoolSliceScanner getNextBPScanner(String currentBpId) {
     
     String nextBpId = null;
-    while ((nextBpId == null) && datanode.shouldRun
-        && !blockScannerThread.isInterrupted()) {
+    while (datanode.shouldRun && !blockScannerThread.isInterrupted()) {
       waitForInit();
       synchronized (this) {
         if (getBlockPoolSetSize() > 0) {          

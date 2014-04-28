@@ -356,6 +356,29 @@ public class INodeDirectory extends INodeWithAdditionalFields
     
     return sf.getChild(this, name, snapshotId);
   }
+
+  /**
+   * Search for the given INode in the children list and the deleted lists of
+   * snapshots.
+   * @return {@link Snapshot#CURRENT_STATE_ID} if the inode is in the children
+   * list; {@link Snapshot#NO_SNAPSHOT_ID} if the inode is neither in the
+   * children list nor in any snapshot; otherwise the snapshot id of the
+   * corresponding snapshot diff list.
+   */
+  int searchChild(INode inode) {
+    INode child = getChild(inode.getLocalNameBytes(), Snapshot.CURRENT_STATE_ID);
+    if (child != inode) {
+      // inode is not in parent's children list, thus inode must be in
+      // snapshot. identify the snapshot id and later add it into the path
+      DirectoryDiffList diffs = getDiffs();
+      if (diffs == null) {
+        return Snapshot.NO_SNAPSHOT_ID;
+      }
+      return diffs.findSnapshotDeleted(inode);
+    } else {
+      return Snapshot.CURRENT_STATE_ID;
+    }
+  }
   
   /**
    * @param snapshotId

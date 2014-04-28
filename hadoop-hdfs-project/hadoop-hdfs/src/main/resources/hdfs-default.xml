@@ -55,11 +55,11 @@
   <name>dfs.namenode.rpc-bind-host</name>
   <value></value>
   <description>
-    The actual address the server will bind to. If this optional address is
-    set, the RPC server will bind to this address and the port specified in
-    dfs.namenode.rpc-address for the RPC server. It can also be specified
-    per name node or name service for HA/Federation. This is most useful for
-    making name node listen to all interfaces by setting to 0.0.0.0.
+    The actual address the RPC server will bind to. If this optional address is
+    set, it overrides only the hostname portion of dfs.namenode.rpc-address.
+    It can also be specified per name node or name service for HA/Federation.
+    This is useful for making the name node listen on all interfaces by
+    setting it to 0.0.0.0.
   </description>
 </property>
 
@@ -80,11 +80,11 @@
   <name>dfs.namenode.servicerpc-bind-host</name>
   <value></value>
   <description>
-    The actual address the server will bind to. If this optional address is
-    set, the service RPC server will bind to this address and the port 
-    specified in dfs.namenode.servicerpc-address. It can also be specified
-    per name node or name service for HA/Federation. This is most useful for
-    making name node listen to all interfaces by setting to 0.0.0.0.
+    The actual address the service RPC server will bind to. If this optional address is
+    set, it overrides only the hostname portion of dfs.namenode.servicerpc-address.
+    It can also be specified per name node or name service for HA/Federation.
+    This is useful for making the name node listen on all interfaces by
+    setting it to 0.0.0.0.
   </description>
 </property>
 
@@ -139,6 +139,18 @@
   <value>0.0.0.0:50070</value>
   <description>
     The address and the base port where the dfs namenode web ui will listen on.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.http-bind-host</name>
+  <value></value>
+  <description>
+    The actual adress the HTTP server will bind to. If this optional address
+    is set, it overrides only the hostname portion of dfs.namenode.http-address.
+    It can also be specified per name node or name service for HA/Federation.
+    This is useful for making the name node HTTP server listen on all
+    interfaces by setting it to 0.0.0.0.
   </description>
 </property>
 
@@ -205,6 +217,18 @@
   <name>dfs.namenode.https-address</name>
   <value>0.0.0.0:50470</value>
   <description>The namenode secure http server address and port.</description>
+</property>
+
+<property>
+  <name>dfs.namenode.https-bind-host</name>
+  <value></value>
+  <description>
+    The actual adress the HTTPS server will bind to. If this optional address
+    is set, it overrides only the hostname portion of dfs.namenode.https-address.
+    It can also be specified per name node or name service for HA/Federation.
+    This is useful for making the name node HTTPS server listen on all
+    interfaces by setting it to 0.0.0.0.
+  </description>
 </property>
 
  <property>

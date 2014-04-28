@@ -101,6 +101,27 @@ if [ "$COMMAND" == "datanode" ] && [ "$EUID" -eq 0 ] && [ -n "$HADOOP_SECURE_DN_
   fi
 fi
 
+# Determine if we're starting a privileged NFS daemon, and if so, redefine appropriate variables
+if [ "$COMMAND" == "nfs3" ] && [ "$EUID" -eq 0 ] && [ -n "$HADOOP_PRIVILEGED_NFS_USER" ]; then
+  if [ -n "$JSVC_HOME" ]; then
+    if [ -n "$HADOOP_PRIVILEGED_NFS_PID_DIR" ]; then
+      HADOOP_PID_DIR=$HADOOP_PRIVILEGED_NFS_PID_DIR
+    fi
+  
+    if [ -n "$HADOOP_PRIVILEGED_NFS_LOG_DIR" ]; then
+      HADOOP_LOG_DIR=$HADOOP_PRIVILEGED_NFS_LOG_DIR
+      HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.log.dir=$HADOOP_LOG_DIR"
+    fi
+   
+    HADOOP_IDENT_STRING=$HADOOP_PRIVILEGED_NFS_USER
+    HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.id.str=$HADOOP_IDENT_STRING"
+    starting_privileged_nfs="true"
+  else
+    echo "It looks like you're trying to start a privileged NFS server, but"\
+      "\$JSVC_HOME isn't set. Falling back to starting unprivileged NFS server."
+  fi
+fi
+
 if [ "$COMMAND" = "namenode" ] ; then
   CLASS='org.apache.hadoop.hdfs.server.namenode.NameNode'
   HADOOP_OPTS="$HADOOP_OPTS $HADOOP_NAMENODE_OPTS"
@@ -178,7 +199,7 @@ if [ "$starting_secure_dn" = "true" ]; then
 
   JSVC=$JSVC_HOME/jsvc
   if [ ! -f $JSVC ]; then
-    echo "JSVC_HOME is not set correctly so jsvc cannot be found. Jsvc is required to run secure datanodes. "
+    echo "JSVC_HOME is not set correctly so jsvc cannot be found. jsvc is required to run secure datanodes. "
     echo "Please download and install jsvc from http://archive.apache.org/dist/commons/daemon/binaries/ "\
       "and set JSVC_HOME to the directory containing the jsvc binary."
     exit
@@ -201,6 +222,38 @@ if [ "$starting_secure_dn" = "true" ]; then
             -cp "$CLASSPATH" \
            $JAVA_HEAP_MAX $HADOOP_OPTS \
            org.apache.hadoop.hdfs.server.datanode.SecureDataNodeStarter "$@"
+elif [ "$starting_privileged_nfs" = "true" ] ; then
+  if [ "$HADOOP_PID_DIR" = "" ]; then
+    HADOOP_PRIVILEGED_NFS_PID="/tmp/hadoop_privileged_nfs3.pid"
+  else
+    HADOOP_PRIVILEGED_NFS_PID="$HADOOP_PID_DIR/hadoop_privileged_nfs3.pid"
+  fi
+
+  JSVC=$JSVC_HOME/jsvc
+  if [ ! -f $JSVC ]; then
+    echo "JSVC_HOME is not set correctly so jsvc cannot be found. jsvc is required to run privileged NFS gateways. "
+    echo "Please download and install jsvc from http://archive.apache.org/dist/commons/daemon/binaries/ "\
+      "and set JSVC_HOME to the directory containing the jsvc binary."
+    exit
+  fi
+
+  if [[ ! $JSVC_OUTFILE ]]; then
+    JSVC_OUTFILE="$HADOOP_LOG_DIR/nfs3_jsvc.out"
+  fi
+
+  if [[ ! $JSVC_ERRFILE ]]; then
+    JSVC_ERRFILE="$HADOOP_LOG_DIR/nfs3_jsvc.err"
+  fi
+
+  exec "$JSVC" \
+           -Dproc_$COMMAND -outfile "$JSVC_OUTFILE" \
+           -errfile "$JSVC_ERRFILE" \
+           -pidfile "$HADOOP_PRIVILEGED_NFS_PID" \
+           -nodetach \
+           -user "$HADOOP_PRIVILEGED_NFS_USER" \
+           -cp "$CLASSPATH" \
+           $JAVA_HEAP_MAX $HADOOP_OPTS \
+           org.apache.hadoop.hdfs.nfs.nfs3.PrivilegedNfsGatewayStarter "$@"
 else
   # run it
   exec "$JAVA" -Dproc_$COMMAND $JAVA_HEAP_MAX $HADOOP_OPTS $CLASS "$@"

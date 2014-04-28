@@ -23,8 +23,8 @@ Trunk (Unreleased)
     if the override value is same as the final parameter value.
     (Ravi Prakash via suresh)
 
-    HADOOP-8078. Add capability to turn on security in unit tests. (Jaimin Jetly
-    via jitendra)
+    HADOOP-8078. Add capability to turn on security in unit tests. (Jaimin 
+    Jetly via jitendra)
 
     HADOOP-7757. Test file reference count is at least 3x actual value (Jon
     Eagles via bobby)
@@ -140,6 +140,9 @@ Trunk (Unreleased)
 
     HADOOP-10430. KeyProvider Metadata should have an optional description, 
     there should be a method to retrieve the metadata from all keys. (tucu)
+
+    HADOOP-10534. KeyProvider getKeysMetadata should take a list of names 
+    rather than returning all keys. (omalley)
 
   BUG FIXES
 
@@ -350,6 +353,14 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-10485. Remove dead classes in hadoop-streaming. (wheat9)
 
+    HADOOP-10503. Move junit up to v 4.11. (cnauroth)
+
+    HADOOP-10535. Make the retry numbers in ActiveStandbyElector configurable.
+    (jing9)
+
+    HADOOP-10322. Add ability to read principal names from a keytab.
+    (Benoy Antony and Daryn Sharp via kihwal)
+
   OPTIMIZATIONS
 
   BUG FIXES 
@@ -399,6 +410,18 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10526. Chance for Stream leakage in CompressorStream. (Rushabh 
     Shah via kihwal)
 
+    HADOOP-10251. Both NameNodes could be in STANDBY State if SNN network is unstable
+    (Vinayakumar B via umamahesh)
+
+    HADOOP-10531. hadoop-config.sh - bug in --hosts argument.
+    (Sebastien Barrier via wang)
+
+    HADOOP-10539. Provide backward compatibility for ProxyUsers.authorize()
+    call. (Benoy Antony via cnauroth)
+
+    HADOOP-10540. Datanode upgrade in Windows fails with hardlink error.
+    (Chris Nauroth and Arpit Agarwal)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -427,6 +450,9 @@ Release 2.4.1 - UNRELEASED
     (cnauroth)
 
     HADOOP-10522. JniBasedUnixGroupMapping mishandles errors. (kihwal)
+
+    HADOOP-10527. Fix incorrect return code and allow more retries on EINTR.
+    (kihwal)
 
 Release 2.4.0 - 2014-04-07 
 

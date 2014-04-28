@@ -110,8 +110,9 @@ public interface ClientDatanodeProtocol {
   
   /**
    * Retrieves volume location information about a list of blocks on a datanode.
-   * This is in the form of an opaque {@link VolumeId} for each configured
-   * data directory, which is not guaranteed to be the same across DN restarts.
+   * This is in the form of an opaque {@link org.apache.hadoop.fs.VolumeId}
+   * for each configured data directory, which is not guaranteed to be
+   * the same across DN restarts.
    * 
    * @param blockPoolId the pool to query
    * @param blockIds

@@ -28,7 +28,7 @@ import java.net.InetSocketAddress;
 
 import javax.ws.rs.core.MediaType;
 
-import junit.framework.Assert;
+import org.junit.Assert;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -37,6 +37,8 @@ import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.HAServiceProtocol.StateChangeRequestInfo;
 import org.apache.hadoop.ha.HealthCheckFailedException;
+import org.apache.hadoop.metrics2.MetricsSystem;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.service.AbstractService;
@@ -92,6 +94,12 @@ public class TestRMHA {
     // Enable webapp to test web-services also
     configuration.setBoolean(MockRM.ENABLE_WEBAPP, true);
     configuration.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);
+    ClusterMetrics.destroy();
+    QueueMetrics.clearQueueMetrics();
+    MetricsSystem ms = DefaultMetricsSystem.instance();
+    if (ms.getSource("ClusterMetrics") != null) {
+      DefaultMetricsSystem.shutdown();
+    }
   }
 
   private void checkMonitorHealth() throws IOException {

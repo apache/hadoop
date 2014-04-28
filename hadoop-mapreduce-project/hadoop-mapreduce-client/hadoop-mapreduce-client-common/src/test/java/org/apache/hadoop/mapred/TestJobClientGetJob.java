@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.mapred;
 
-import static junit.framework.Assert.assertNotNull;
+import static org.junit.Assert.assertNotNull;
 
 import java.io.IOException;
 

@@ -370,6 +370,12 @@ class NameNodeRpcServer implements NamenodeProtocols {
     return clientRpcServer;
   }
   
+  /** Allow access to the service RPC server for testing */
+  @VisibleForTesting
+  RPC.Server getServiceRpcServer() {
+    return serviceRpcServer;
+  }
+  
   /**
    * Start client and service RPC servers.
    */
@@ -1180,9 +1186,8 @@ class NameNodeRpcServer implements NamenodeProtocols {
 
   /**
    * Verify version.
-   * 
-   * @param version
-   * @throws IOException
+   * @param version layout version
+   * @throws IOException on layout version mismatch
    */
   void verifyLayoutVersion(int version) throws IOException {
     if (version != HdfsConstants.NAMENODE_LAYOUT_VERSION)

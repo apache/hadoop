@@ -86,8 +86,7 @@ class BlockReceiver implements Closeable {
   private int bytesPerChecksum;
   private int checksumSize;
   
-  private final PacketReceiver packetReceiver =
-      new PacketReceiver(false);
+  private final PacketReceiver packetReceiver = new PacketReceiver(false);
   
   protected final String inAddr;
   protected final String myAddr;
@@ -268,10 +267,8 @@ class BlockReceiver implements Closeable {
    */
   @Override
   public void close() throws IOException {
-    if (packetReceiver != null) {
-      packetReceiver.close();
-    }
-    
+    packetReceiver.close();
+
     IOException ioe = null;
     if (syncOnClose && (out != null || checksumOut != null)) {
       datanode.metrics.incrFsyncCount();      
@@ -956,9 +953,9 @@ class BlockReceiver implements Closeable {
     
     /**
      * enqueue the seqno that is still be to acked by the downstream datanode.
-     * @param seqno
-     * @param lastPacketInBlock
-     * @param offsetInBlock
+     * @param seqno sequence number of the packet
+     * @param lastPacketInBlock if true, this is the last packet in block
+     * @param offsetInBlock offset of this packet in block
      */
     void enqueue(final long seqno, final boolean lastPacketInBlock,
         final long offsetInBlock, final Status ackStatus) {

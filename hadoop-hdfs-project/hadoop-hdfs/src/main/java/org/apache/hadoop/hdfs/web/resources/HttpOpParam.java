@@ -71,8 +71,8 @@ public abstract class HttpOpParam<E extends Enum<E> & HttpOpParam.Op>
         GetOpParam.Op.GETFILECHECKSUM);
     
     static final List<TemporaryRedirectOp> values
-        = Collections.unmodifiableList(Arrays.asList(
-            new TemporaryRedirectOp[]{CREATE, APPEND, OPEN, GETFILECHECKSUM}));
+        = Collections.unmodifiableList(Arrays.asList(CREATE, APPEND, OPEN,
+                                       GETFILECHECKSUM));
 
     /** Get an object for the given op. */
     public static TemporaryRedirectOp valueOf(final Op op) {

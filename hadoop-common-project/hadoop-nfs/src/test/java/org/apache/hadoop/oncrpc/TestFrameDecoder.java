@@ -51,7 +51,8 @@ public class TestFrameDecoder {
 
     protected TestRpcProgram(String program, String host, int port,
         int progNumber, int lowProgVersion, int highProgVersion) {
-      super(program, host, port, progNumber, lowProgVersion, highProgVersion);
+      super(program, host, port, progNumber, lowProgVersion, highProgVersion,
+          null);
     }
 
     @Override

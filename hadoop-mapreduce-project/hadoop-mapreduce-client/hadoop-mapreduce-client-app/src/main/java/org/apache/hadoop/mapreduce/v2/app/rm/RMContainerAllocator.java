@@ -155,7 +155,8 @@ public class RMContainerAllocator extends RMContainerRequestor
 
   private final AMPreemptionPolicy preemptionPolicy;
 
-  BlockingQueue<ContainerAllocatorEvent> eventQueue
+  @VisibleForTesting
+  protected BlockingQueue<ContainerAllocatorEvent> eventQueue
     = new LinkedBlockingQueue<ContainerAllocatorEvent>();
 
   private ScheduleStats scheduleStats = new ScheduleStats();

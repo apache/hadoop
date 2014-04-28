@@ -125,6 +125,8 @@ Trunk (Unreleased)
 
     HDFS-6228. comments typo fix for FsDatasetImpl.java (zhaoyunjiong via umamahesh)
 
+    HDFS-6246. Remove 'dfs.support.append' flag from trunk code. (umamahesh)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -260,6 +262,9 @@ Release 2.5.0 - UNRELEASED
 
   NEW FEATURES
 
+    HDFS-6281. Provide option to use the NFS Gateway without having to use the
+    Hadoop portmapper. (atm)
+
   IMPROVEMENTS
 
     HDFS-6007. Update documentation about short-circuit local reads (iwasakims
@@ -303,6 +308,25 @@ Release 2.5.0 - UNRELEASED
     address checks. (daryn via kihwal)
 
     HDFS-6256. Clean up ImageVisitor and SpotCheckImageVisitor.
+    (Akira Ajisaka via wheat9)
+
+    HDFS-6265. Prepare HDFS codebase for JUnit 4.11. (cnauroth)
+
+    HDFS-6278. Create HTML5-based UI for SNN. (wheat9)
+
+    HDFS-6279. Create new index page for JN / DN. (wheat9)
+
+    HDFS-5693. Few NN metrics data points were collected via JMX when NN
+    is under heavy load. (Ming Ma via jing9)
+
+    HDFS-6273. Config options to allow wildcard endpoints for namenode HTTP
+    and HTTPS servers. (Arpit Agarwal)
+
+    HDFS-6282. Re-add testIncludeByRegistrationName. (cmccabe)
+
+    HDFS-6266. Identify full path for a given INode. (jing9)
+
+    HDFS-6210. Support GETACLSTATUS operation in WebImageViewer.
     (Akira Ajisaka via wheat9)
 
   OPTIMIZATIONS
@@ -364,6 +388,29 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6153. Document "fileId" and "childrenNum" fields in the FileStatus Json schema
     (Akira Ajisaka via vinayakumarb)
+
+    HDFS-6178. Decommission on standby NN couldn't finish. (Ming Ma via jing9)
+
+    HDFS-6213. TestDataNodeConfig failing on Jenkins runs due to DN web port
+    in use. (wang)
+
+    HDFS-6274. Cleanup javadoc warnings in HDFS code. (suresh)
+
+    HDFS-6275. Fix warnings - type arguments can be inferred and redudant
+    local variable. (suresh)
+
+    HDFS-6217. Webhdfs PUT operations may not work via a http proxy.
+    (Daryn Sharp via kihwal)
+
+    HDFS-6276. Remove unnecessary conditions and null check. (suresh)
+
+    HDFS-5865. Update OfflineImageViewer document. (Akira Ajisaka via wheat9)
+
+    HDFS-6270. Secondary namenode status page shows transaction count in bytes.
+    (Benoy Antony via wheat9)
+
+    HDFS-6218. Audit log should use true client IP for proxied webhdfs
+    operations. (daryn via kihwal)
 
 Release 2.4.1 - UNRELEASED
 

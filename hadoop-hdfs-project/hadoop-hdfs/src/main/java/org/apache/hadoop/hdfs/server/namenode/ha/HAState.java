@@ -130,8 +130,8 @@ abstract public class HAState {
    * Check if an operation is supported in a given state.
    * @param context HA context
    * @param op Type of the operation.
-   * @throws UnsupportedActionException if a given type of operation is not
-   *           supported in this state.
+   * @throws StandbyException if a given type of operation is not
+   *           supported in standby state
    */
   public abstract void checkOperation(final HAContext context, final OperationCategory op)
       throws StandbyException;

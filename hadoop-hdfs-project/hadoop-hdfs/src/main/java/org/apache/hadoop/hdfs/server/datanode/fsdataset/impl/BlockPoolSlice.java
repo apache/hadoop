@@ -74,7 +74,7 @@ class BlockPoolSlice {
    * @param bpid Block pool Id
    * @param volume {@link FsVolumeImpl} to which this BlockPool belongs to
    * @param bpDir directory corresponding to the BlockPool
-   * @param conf
+   * @param conf configuration
    * @throws IOException
    */
   BlockPoolSlice(String bpid, FsVolumeImpl volume, File bpDir,
@@ -95,12 +95,6 @@ class BlockPoolSlice {
       FileUtil.fullyDelete(tmpDir);
     }
     this.rbwDir = new File(currentDir, DataStorage.STORAGE_DIR_RBW);
-    final boolean supportAppends = conf.getBoolean(
-        DFSConfigKeys.DFS_SUPPORT_APPEND_KEY,
-        DFSConfigKeys.DFS_SUPPORT_APPEND_DEFAULT);
-    if (rbwDir.exists() && !supportAppends) {
-      FileUtil.fullyDelete(rbwDir);
-    }
     final int maxBlocksPerDir = conf.getInt(
         DFSConfigKeys.DFS_DATANODE_NUMBLOCKS_KEY,
         DFSConfigKeys.DFS_DATANODE_NUMBLOCKS_DEFAULT);

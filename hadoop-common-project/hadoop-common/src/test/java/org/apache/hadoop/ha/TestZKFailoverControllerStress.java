@@ -23,6 +23,7 @@ import java.util.Random;
 
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Time;
 import org.junit.After;
@@ -126,8 +127,7 @@ public class TestZKFailoverControllerStress extends ClientBaseWithFixes {
         .when(cluster.getService(0).proxy).monitorHealth();
     Mockito.doAnswer(new RandomlyThrow(1))
         .when(cluster.getService(1).proxy).monitorHealth();
-    ActiveStandbyElector.NUM_RETRIES = 100;
-    
+    conf.setInt(CommonConfigurationKeys.HA_FC_ELECTOR_ZK_OP_RETRIES_KEY, 100);
     // Don't start until after the above mocking. Otherwise we can get
     // Mockito errors if the HM calls the proxy in the middle of
     // setting up the mock.

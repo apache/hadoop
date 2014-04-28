@@ -50,7 +50,7 @@ public class ReplicaUnderRecovery extends ReplicaInfo {
 
   /**
    * Copy constructor.
-   * @param from
+   * @param from where to copy from
    */
   public ReplicaUnderRecovery(ReplicaUnderRecovery from) {
     super(from);

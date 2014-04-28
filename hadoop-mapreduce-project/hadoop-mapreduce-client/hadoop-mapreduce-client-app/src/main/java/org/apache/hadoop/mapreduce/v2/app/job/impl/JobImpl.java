@@ -1288,6 +1288,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       }
     } catch (ClassNotFoundException cnfe) {
       // don't care; assume it's not derived from ChainMapper
+    } catch (NoClassDefFoundError ignored) {
     }
     try {
       String reduceClassName = conf.get(MRJobConfig.REDUCE_CLASS_ATTR);
@@ -1298,6 +1299,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       }
     } catch (ClassNotFoundException cnfe) {
       // don't care; assume it's not derived from ChainReducer
+    } catch (NoClassDefFoundError ignored) {
     }
     return isChainJob;
   }

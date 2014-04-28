@@ -400,7 +400,7 @@ public class TestMRApps {
     URI file = new URI("mockfs://mock/tmp/something.zip#something");
     Path filePath = new Path(file);
     URI file2 = new URI("mockfs://mock/tmp/something.txt#something");
-    Path file2Path = new Path(file);
+    Path file2Path = new Path(file2);
     
     when(mockFs.resolvePath(filePath)).thenReturn(filePath);
     when(mockFs.resolvePath(file2Path)).thenReturn(file2Path);

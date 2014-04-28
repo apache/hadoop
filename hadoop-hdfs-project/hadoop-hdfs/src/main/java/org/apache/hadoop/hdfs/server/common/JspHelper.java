@@ -690,7 +690,7 @@ public class JspHelper {
   // honor the X-Forwarded-For header set by a configured set of trusted
   // proxy servers.  allows audit logging and proxy user checks to work
   // via an http proxy
-  static String getRemoteAddr(HttpServletRequest request) {
+  public static String getRemoteAddr(HttpServletRequest request) {
     String remoteAddr = request.getRemoteAddr();
     String proxyHeader = request.getHeader("X-Forwarded-For");
     if (proxyHeader != null && ProxyUsers.isProxyServer(remoteAddr)) {

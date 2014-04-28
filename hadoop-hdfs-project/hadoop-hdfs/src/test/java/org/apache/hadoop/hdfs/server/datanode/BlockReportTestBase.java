@@ -171,9 +171,6 @@ public abstract class BlockReportTestBase {
    * Utility routine to send block reports to the NN, either in a single call
    * or reporting one storage per call.
    *
-   * @param dnR
-   * @param poolId
-   * @param reports
    * @throws IOException
    */
   protected abstract void sendBlockReports(DatanodeRegistration dnR, String poolId,

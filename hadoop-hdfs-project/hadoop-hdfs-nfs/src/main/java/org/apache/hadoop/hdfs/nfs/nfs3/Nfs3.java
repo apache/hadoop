@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.nfs.nfs3;
 
 import java.io.IOException;
+import java.net.DatagramSocket;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.nfs.mount.Mountd;
@@ -40,8 +41,12 @@ public class Nfs3 extends Nfs3Base {
   }
   
   public Nfs3(Configuration conf) throws IOException {
-    super(new RpcProgramNfs3(conf), conf);
-    mountd = new Mountd(conf);
+    this(conf, null);
+  }
+  
+  public Nfs3(Configuration conf, DatagramSocket registrationSocket) throws IOException {
+    super(new RpcProgramNfs3(conf, registrationSocket), conf);
+    mountd = new Mountd(conf, registrationSocket);
   }
 
   public Mountd getMountd() {
@@ -54,9 +59,14 @@ public class Nfs3 extends Nfs3Base {
     start(register);
   }
   
-  public static void main(String[] args) throws IOException {
+  static void startService(String[] args,
+      DatagramSocket registrationSocket) throws IOException {
     StringUtils.startupShutdownMessage(Nfs3.class, args, LOG);    
-    final Nfs3 nfsServer = new Nfs3(new Configuration());
+    final Nfs3 nfsServer = new Nfs3(new Configuration(), registrationSocket);
     nfsServer.startServiceInternal(true);
+  }
+  
+  public static void main(String[] args) throws IOException {
+    startService(args, null);
   }
 }

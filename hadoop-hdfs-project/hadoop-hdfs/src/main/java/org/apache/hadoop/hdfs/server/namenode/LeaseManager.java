@@ -402,7 +402,6 @@ public class LeaseManager {
   /**
    * Get the list of inodes corresponding to valid leases.
    * @return list of inodes
-   * @throws UnresolvedLinkException
    */
   Map<String, INodeFile> getINodesUnderConstruction() {
     Map<String, INodeFile> inodes = new TreeMap<String, INodeFile>();

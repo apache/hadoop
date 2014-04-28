@@ -1429,7 +1429,7 @@ public class DistributedFileSystem extends FileSystem {
    * Get the difference between two snapshots, or between a snapshot and the
    * current tree of a directory.
    * 
-   * @see DFSClient#getSnapshotDiffReport(Path, String, String)
+   * @see DFSClient#getSnapshotDiffReport(String, String, String)
    */
   public SnapshotDiffReport getSnapshotDiffReport(final Path snapshotDir,
       final String fromSnapshot, final String toSnapshot) throws IOException {

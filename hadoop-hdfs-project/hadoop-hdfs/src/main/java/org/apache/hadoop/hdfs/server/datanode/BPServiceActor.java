@@ -314,9 +314,7 @@ class BPServiceActor implements Runnable {
   }
 
   /**
-   * Retrieve the incremental BR state for a given storage UUID
-   * @param storageUuid
-   * @return
+   * @return pending incremental block report for given {@code storage}
    */
   private PerStoragePendingIncrementalBR getIncrementalBRMapForStorage(
       DatanodeStorage storage) {
@@ -339,8 +337,6 @@ class BPServiceActor implements Runnable {
    * exists for the same block it is removed.
    *
    * Caller must synchronize access using pendingIncrementalBRperStorage.
-   * @param bInfo
-   * @param storageUuid
    */
   void addPendingReplicationBlockInfo(ReceivedDeletedBlockInfo bInfo,
       DatanodeStorage storage) {

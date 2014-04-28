@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.mapred.lib;
 
-import junit.framework.Assert;
+import org.junit.Assert;
 
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Reducer;

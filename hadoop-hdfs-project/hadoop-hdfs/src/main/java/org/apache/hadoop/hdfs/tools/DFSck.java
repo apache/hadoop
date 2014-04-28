@@ -130,9 +130,6 @@ public class DFSck extends Configured implements Tool {
     out.println(USAGE + "\n");
     ToolRunner.printGenericCommandUsage(out);
   }
-  /**
-   * @param args
-   */
   @Override
   public int run(final String[] args) throws IOException {
     if (args.length == 0) {

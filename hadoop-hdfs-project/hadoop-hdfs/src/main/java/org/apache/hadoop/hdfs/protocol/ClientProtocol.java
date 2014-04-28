@@ -268,7 +268,7 @@ public interface ClientProtocol {
   /**
    * Set Owner of a path (i.e. a file or a directory).
    * The parameters username and groupname cannot both be null.
-   * @param src
+   * @param src file path
    * @param username If it is null, the original username remains unchanged.
    * @param groupname If it is null, the original groupname remains unchanged.
    *
@@ -1126,7 +1126,6 @@ public interface ClientProtocol {
   /**
    * Modify a CacheDirective in the CacheManager.
    * 
-   * @return directive The directive to modify. Must contain a directive ID.
    * @param flags {@link CacheFlag}s to use for this operation.
    * @throws IOException if the directive could not be modified
    */
