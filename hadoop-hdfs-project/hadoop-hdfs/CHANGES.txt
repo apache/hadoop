@@ -157,6 +157,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6270. Secondary namenode status page shows transaction count in bytes.
     (Benoy Antony via wheat9)
 
+    HDFS-6218. Audit log should use true client IP for proxied webhdfs
+    operations. (daryn via kihwal)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

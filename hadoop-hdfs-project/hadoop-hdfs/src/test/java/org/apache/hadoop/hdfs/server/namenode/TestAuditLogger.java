@@ -24,7 +24,10 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.net.HttpURLConnection;
 import java.net.InetAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -33,9 +36,11 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.web.resources.GetOpParam;
 import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.authorize.ProxyUsers;
+import org.junit.Before;
 import org.junit.Test;
 
 /**
@@ -44,6 +49,16 @@ import org.junit.Test;
 public class TestAuditLogger {
 
   private static final short TEST_PERMISSION = (short) 0654;
+
+  @Before
+  public void setup() {
+    DummyAuditLogger.initialized = false;
+    DummyAuditLogger.logCount = 0;
+    DummyAuditLogger.remoteAddr = null;
+
+    Configuration conf = new HdfsConfiguration();
+    ProxyUsers.refreshSuperUserGroupsConfiguration(conf);    
+  }
 
   /**
    * Tests that AuditLogger works as expected.
@@ -64,6 +79,57 @@ public class TestAuditLogger {
       long time = System.currentTimeMillis();
       fs.setTimes(new Path("/"), time, time);
       assertEquals(1, DummyAuditLogger.logCount);
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  @Test
+  public void testWebHdfsAuditLogger() throws IOException, URISyntaxException {
+    Configuration conf = new HdfsConfiguration();
+    conf.set(DFS_NAMENODE_AUDIT_LOGGERS_KEY,
+        DummyAuditLogger.class.getName());
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    
+    GetOpParam.Op op = GetOpParam.Op.GETFILESTATUS;
+    try {
+      cluster.waitClusterUp();
+      assertTrue(DummyAuditLogger.initialized);      
+      URI uri = new URI(
+          "http",
+          NetUtils.getHostPortString(cluster.getNameNode().getHttpAddress()),
+          "/webhdfs/v1/", op.toQueryString(), null);
+      
+      // non-proxy request
+      HttpURLConnection conn = (HttpURLConnection) uri.toURL().openConnection();
+      conn.setRequestMethod(op.getType().toString());
+      conn.connect();
+      assertEquals(200, conn.getResponseCode());
+      conn.disconnect();
+      assertEquals(1, DummyAuditLogger.logCount);
+      assertEquals("127.0.0.1", DummyAuditLogger.remoteAddr);
+      
+      // non-trusted proxied request
+      conn = (HttpURLConnection) uri.toURL().openConnection();
+      conn.setRequestMethod(op.getType().toString());
+      conn.setRequestProperty("X-Forwarded-For", "1.1.1.1");
+      conn.connect();
+      assertEquals(200, conn.getResponseCode());
+      conn.disconnect();
+      assertEquals(2, DummyAuditLogger.logCount);
+      assertEquals("127.0.0.1", DummyAuditLogger.remoteAddr);
+      
+      // trusted proxied request
+      conf.set(ProxyUsers.CONF_HADOOP_PROXYSERVERS, "127.0.0.1");
+      ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
+      conn = (HttpURLConnection) uri.toURL().openConnection();
+      conn.setRequestMethod(op.getType().toString());
+      conn.setRequestProperty("X-Forwarded-For", "1.1.1.1");
+      conn.connect();
+      assertEquals(200, conn.getResponseCode());
+      conn.disconnect();
+      assertEquals(3, DummyAuditLogger.logCount);
+      assertEquals("1.1.1.1", DummyAuditLogger.remoteAddr);
     } finally {
       cluster.shutdown();
     }
@@ -128,7 +194,8 @@ public class TestAuditLogger {
     static boolean initialized;
     static int logCount;
     static short foundPermission;
-
+    static String remoteAddr;
+    
     public void initialize(Configuration conf) {
       initialized = true;
     }
@@ -140,6 +207,7 @@ public class TestAuditLogger {
     public void logAuditEvent(boolean succeeded, String userName,
         InetAddress addr, String cmd, String src, String dst,
         FileStatus stat) {
+      remoteAddr = addr.getHostAddress();
       logCount++;
       if (stat != null) {
         foundPermission = stat.getPermission().toShort();
