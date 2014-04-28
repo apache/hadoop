@@ -20,7 +20,7 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher;
 
 import static org.apache.hadoop.fs.CreateFlag.CREATE;
 import static org.apache.hadoop.fs.CreateFlag.OVERWRITE;
-
+import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -30,6 +30,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -256,6 +257,31 @@ public class ContainerLaunch implements Callable<Integer> {
           lfs.create(nmPrivateContainerScriptPath,
               EnumSet.of(CREATE, OVERWRITE));
 
+        // Set the HADOOP_* prefix environment variables
+        // from the host to the container.
+        Map<String, String> orderedEnv = new LinkedHashMap<String, String>();
+        Map<String, String> allNMEnv = System.getenv();
+        for(Environment env: ApplicationConstants.Environment.values()) {
+          if (env == Environment.CLASSPATH){
+            // Skip CLASSPATH so that it's at the end
+            continue;
+          }
+          putEnvIfNotNull(orderedEnv,
+            env.key(),
+            allNMEnv.get(env.key()));
+        }
+        for(Map.Entry<String, String> entry: allNMEnv.entrySet()){
+          if (entry.getKey().matches("^HADOOP_\\w+")){
+            putEnvIfNotNull(orderedEnv,
+                    entry.getKey(),
+                    entry.getValue()
+            );
+          }
+        }
+        if (LOG.isDebugEnabled()){
+          LOG.debug("Environment: " + orderedEnv + " and "+ environment);
+        }
+
         // Set the token location too.
         environment.put(
             ApplicationConstants.CONTAINER_TOKEN_FILE_ENV_NAME, 
@@ -264,11 +290,11 @@ public class ContainerLaunch implements Callable<Integer> {
         // Sanitize the container's environment
         sanitizeEnv(environment, containerWorkDir, appDirs, containerLogDirs,
           localResources);
-        
+        orderedEnv.putAll(environment);
         // Write out the environment
-        writeLaunchEnv(containerScriptOutStream, environment, localResources,
+        writeLaunchEnv(containerScriptOutStream, orderedEnv, localResources,
             launchContext.getCommands());
-        
+
         // /////////// End of writing out container-script
 
         // /////////// Write out the container-tokens in the nmPrivate space.
@@ -798,12 +824,23 @@ public class ContainerLaunch implements Callable<Integer> {
     sb.command(command);
 
     PrintStream pout = null;
+    ByteArrayOutputStream baos = null;
     try {
       pout = new PrintStream(out);
       sb.write(pout);
+      if(LOG.isDebugEnabled()) {
+        baos = new ByteArrayOutputStream();
+        PrintStream ps = new PrintStream(baos);
+        sb.write(ps);
+        LOG.debug("container script: " + baos.toString());
+
+      }
     } finally {
       if (out != null) {
         out.close();
+      }
+      if (baos != null){
+        baos.close();
       }
     }
   }
