@@ -412,6 +412,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6218. Audit log should use true client IP for proxied webhdfs
     operations. (daryn via kihwal)
 
+    HDFS-6288. DFSInputStream Pread doesn't update ReadStatistics.
+    (Juan Yu via wang)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
