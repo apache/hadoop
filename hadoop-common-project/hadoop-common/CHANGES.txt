@@ -30,6 +30,9 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10535. Make the retry numbers in ActiveStandbyElector configurable.
     (jing9)
 
+    HADOOP-10322. Add ability to read principal names from a keytab.
+    (Benoy Antony and Daryn Sharp via kihwal)
+
   OPTIMIZATIONS
 
   BUG FIXES 
