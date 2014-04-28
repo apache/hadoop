@@ -17,17 +17,26 @@
  */
 package org.apache.hadoop.security.authentication.util;
 
+import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
+
+import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Locale;
+import java.util.Set;
+import java.util.regex.Pattern;
 
+import org.apache.directory.server.kerberos.shared.keytab.Keytab;
+import org.apache.directory.server.kerberos.shared.keytab.KeytabEntry;
 import org.ietf.jgss.GSSException;
 import org.ietf.jgss.Oid;
-
-import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
 
 public class KerberosUtil {
 
@@ -102,5 +111,49 @@ public class KerberosUtil {
     // convert hostname to lowercase as kerberos does not work with hostnames
     // with uppercase characters.
     return service + "/" + fqdn.toLowerCase(Locale.US);
+  }
+
+  /**
+   * Get all the unique principals present in the keytabfile.
+   * 
+   * @param keytabFileName 
+   *          Name of the keytab file to be read.
+   * @return list of unique principals in the keytab.
+   * @throws IOException 
+   *          If keytab entries cannot be read from the file.
+   */
+  static final String[] getPrincipalNames(String keytabFileName) throws IOException {
+      Keytab keytab = Keytab.read(new File(keytabFileName));
+      Set<String> principals = new HashSet<String>();
+      List<KeytabEntry> entries = keytab.getEntries();
+      for (KeytabEntry entry: entries){
+        principals.add(entry.getPrincipalName().replace("\\", "/"));
+      }
+      return principals.toArray(new String[0]);
+    }
+
+  /**
+   * Get all the unique principals from keytabfile which matches a pattern.
+   * 
+   * @param keytab 
+   *          Name of the keytab file to be read.
+   * @param pattern 
+   *         pattern to be matched.
+   * @return list of unique principals which matches the pattern.
+   * @throws IOException 
+   */
+  public static final String[] getPrincipalNames(String keytab,
+      Pattern pattern) throws IOException {
+    String[] principals = getPrincipalNames(keytab);
+    if (principals.length != 0) {
+      List<String> matchingPrincipals = new ArrayList<String>();
+      for (String principal : principals) {
+        if (pattern.matcher(principal).matches()) {
+          matchingPrincipals.add(principal);
+        }
+      }
+      principals = matchingPrincipals.toArray(new String[0]);
+    }
+    return principals;
   }
 }
