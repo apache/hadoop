@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.fs;
 
-
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
@@ -1040,18 +1039,18 @@ public abstract class AbstractFileSystem {
   }
 
   /**
-   * Set the xattr of a file or directory.
-   * Name must be prefixed with user/trusted/security/system which
-   * followed by ".", For example "user.attr".
+   * Set an xattr of a file or directory.
+   * The name must be prefixed with user/trusted/security/system and
+   * followed by ".". For example, "user.attr".
    * <p/>
-   * A regular user only can set xattr of "user" namespace.
-   * A super user can set xattr of "user" and "trusted" namespace.
-   * XAttr of "security" and "system" namespace is only used/exposed
-   * internally to the FS impl.
+   * A regular user can only set an xattr for the "user" namespace.
+   * The super user can set an xattr of either the "user" or "trusted" namespaces.
+   * The xattrs of the "security" and "system" namespaces are only used/exposed 
+   * internally by/to the FS impl.
    * <p/>
-   * For xattr of "user" namespace, its access permissions are
-   * defined by the file or directory permission bits.
-   * XAttr will be set only when login user has correct permissions.
+   * The access permissions of an xattr in the "user" namespace are
+   * defined by the file and directory permission bits.
+   * An xattr can only be set when the logged-in user has the correct permissions.
    * If the xattr exists, it will be replaced.
    * <p/>
    * @see <a href="http://en.wikipedia.org/wiki/Extended_file_attributes">
@@ -1069,18 +1068,19 @@ public abstract class AbstractFileSystem {
   }
 
   /**
-   * Set the xattr of a file or directory.
-   * Name must be prefixed with user/trusted/security/system which
-   * followed by ".", For example "user.attr".
+   * Set an xattr of a file or directory.
+   * The name must be prefixed with user/trusted/security/system and
+   * followed by ".". For example, "user.attr".
    * <p/>
-   * A regular user only can set xattr of "user" namespace.
-   * A super user can set xattr of "user" and "trusted" namespace.
-   * XAttr of "security" and "system" namespace is only used/exposed
-   * internally to the FS impl.
+   * A regular user can only set an xattr for the "user" namespace.
+   * The super user can set an xattr of either the "user" or "trusted" namespaces.
+   * The xattrs of the "security" and "system" namespaces are only used/exposed 
+   * internally by/to the FS impl.
    * <p/>
-   * For xattr of "user" namespace, its access permissions are
-   * defined by the file or directory permission bits.
-   * XAttr will be set only when login user has correct permissions.
+   * The access permissions of an xattr in the "user" namespace are
+   * defined by the file and directory permission bits.
+   * An xattr can only be set when the logged-in user has the correct permissions.
+   * If the xattr exists, it will be replaced.
    * <p/>
    * @see <a href="http://en.wikipedia.org/wiki/Extended_file_attributes">
    * http://en.wikipedia.org/wiki/Extended_file_attributes</a>
@@ -1098,15 +1098,16 @@ public abstract class AbstractFileSystem {
   }
 
   /**
-   * Get xattr of a file or directory.
-   * Name must be prefixed with user/trusted/security/system.
+   * Get an xattr for a file or directory.
+   * The name must be prefixed with user/trusted/security/system and
+   * followed by ".". For example, "user.attr".
    * <p/>
-   * A regular user only can get xattr of "user" namespace.
-   * A super user can get xattr of "user" and "trusted" namespace.
-   * XAttr of "security" and "system" namespace is only used/exposed
-   * internally to the FS impl.
+   * A regular user can only get an xattr for the "user" namespace.
+   * The super user can get an xattr of either the "user" or "trusted" namespaces.
+   * The xattrs of the "security" and "system" namespaces are only used/exposed 
+   * internally by/to the FS impl.
    * <p/>
-   * XAttr will be returned only when login user has correct permissions.
+   * An xattr will only be returned when the logged-in user has the correct permissions.
    * <p/>
    * @see <a href="http://en.wikipedia.org/wiki/Extended_file_attributes">
    * http://en.wikipedia.org/wiki/Extended_file_attributes</a>
@@ -1122,13 +1123,14 @@ public abstract class AbstractFileSystem {
   }
 
   /**
-   * Get all xattrs of a file or directory.
-   * Only xattrs which login user has correct permissions will be returned.
+   * Get all of the xattrs for a file or directory.
+   * Only those xattrs for which the logged-in user has permissions to view
+   * are returned.
    * <p/>
-   * A regular user only can get xattr of "user" namespace.
-   * A super user can get xattr of "user" and "trusted" namespace.
-   * XAttr of "security" and "system" namespace is only used/exposed
-   * internally to the FS impl.
+   * A regular user can only get xattrs for the "user" namespace.
+   * The super user can only get xattrs for "user" and "trusted" namespaces.
+   * The xattr of "security" and "system" namespaces are only used/exposed 
+   * internally by/to the FS impl.
    * <p/>
    * @see <a href="http://en.wikipedia.org/wiki/Extended_file_attributes">
    * http://en.wikipedia.org/wiki/Extended_file_attributes</a>
@@ -1143,14 +1145,14 @@ public abstract class AbstractFileSystem {
   }
 
   /**
-   * Get the xattrs of a file or directory.
-   * Name must be prefixed with user/trusted/security/system.
-   * Only xattrs which login user has correct permissions will be returned.
+   * Get all of the xattrs for a file or directory.
+   * Only those xattrs for which the logged-in user has permissions to view
+   * are returned.
    * <p/>
-   * A regular user only can get xattr of "user" namespace.
-   * A super user can get xattr of "user" and "trusted" namespace.
-   * XAttr of "security" and "system" namespace is only used/exposed
-   * internally to the FS impl.
+   * A regular user can only get xattrs for the "user" namespace.
+   * The super user can only get xattrs for "user" and "trusted" namespaces.
+   * The xattr of "security" and "system" namespaces are only used/exposed 
+   * internally by/to the FS impl.
    * <p/>
    * @see <a href="http://en.wikipedia.org/wiki/Extended_file_attributes">
    * http://en.wikipedia.org/wiki/Extended_file_attributes</a>
@@ -1167,13 +1169,19 @@ public abstract class AbstractFileSystem {
   }
 
   /**
-   * Remove xattr of a file or directory.
-   * Name must be prefixed with user/trusted/security/system.
+   * Remove an xattr of a file or directory.
+   * The name must be prefixed with user/trusted/security/system and
+   * followed by ".". For example, "user.attr".
    * <p/>
-   * A regular user only can remove xattr of "user" namespace.
-   * A super user can remove xattr of "user" and "trusted" namespace.
-   * XAttr of "security" and "system" namespace is only used/exposed
-   * internally to the FS impl.
+   * A regular user can only remove an xattr for the "user" namespace.
+   * The super user can remove an xattr of either the "user" or "trusted" namespaces.
+   * The xattrs of the "security" and "system" namespaces are only used/exposed 
+   * internally by/to the FS impl.
+   * <p/>
+   * The access permissions of an xattr in the "user" namespace are
+   * defined by the file and directory permission bits.
+   * An xattr can only be set when the logged-in user has the correct permissions.
+   * If the xattr exists, it will be replaced.
    * <p/>
    * @see <a href="http://en.wikipedia.org/wiki/Extended_file_attributes">
    * http://en.wikipedia.org/wiki/Extended_file_attributes</a>

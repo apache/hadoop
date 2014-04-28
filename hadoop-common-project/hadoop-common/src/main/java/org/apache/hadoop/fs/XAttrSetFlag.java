@@ -53,18 +53,18 @@ public enum XAttrSetFlag {
   public static void validate(String xAttrName, boolean xAttrExists,
       EnumSet<XAttrSetFlag> flag) throws IOException {
     if (flag == null || flag.isEmpty()) {
-      throw new HadoopIllegalArgumentException("Should specify set flag");
+      throw new HadoopIllegalArgumentException("A flag must be specified.");
     }
 
     if (xAttrExists) {
       if (!flag.contains(REPLACE)) {
         throw new IOException("XAttr: " + xAttrName +
-            " already exists. REPLACE flag must be specified.");
+            " already exists. The REPLACE flag must be specified.");
       }
     } else {
       if (!flag.contains(CREATE)) {
         throw new IOException("XAttr: " + xAttrName +
-            " does not exist. CREATE flag must be specified.");
+            " does not exist. The CREATE flag must be specified.");
       }
     }
   }

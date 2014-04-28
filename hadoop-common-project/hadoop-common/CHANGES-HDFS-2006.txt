@@ -11,6 +11,9 @@ HDFS-2006 (Unreleased)
   HADOOP-10520. Extended attributes definition and FileSystem APIs for
   extended attributes. (Yi Liu via wang)
 
+  HADOOP-10546. Javadoc and other small fixes for extended attributes in
+  hadoop-common. (Charles Lamb via wang)
+
   OPTIMIZATIONS
 
   BUG FIXES
