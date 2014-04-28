@@ -1,0 +1,13 @@
+Hadoop Common Change Log for HDFS-2006
+
+HDFS-2006 (Unreleased)
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
