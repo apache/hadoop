@@ -495,6 +495,7 @@ public class FileOutputCommitter extends OutputCommitter {
   }
 
   @Override
+  @Deprecated
   public boolean isRecoverySupported() {
     return true;
   }

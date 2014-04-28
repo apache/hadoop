@@ -158,6 +158,7 @@
        <Or>
        <Method name="commitJob" />
        <Method name="recoverTask" />
+       <Method name="isRecoverySupported" />
        </Or>
        <Bug pattern="NM_WRONG_PACKAGE" />
      </Match>
@@ -168,6 +169,7 @@
        <Method name="commitJob" />
        <Method name="cleanupJob" />
        <Method name="recoverTask" />
+       <Method name="isRecoverySupported" />
        </Or>
        <Bug pattern="NM_WRONG_PACKAGE_INTENTIONAL" />
      </Match>
