@@ -90,8 +90,13 @@ class BPServiceActor implements Runnable {
   Thread bpThread;
   DatanodeProtocolClientSideTranslatorPB bpNamenode;
   private volatile long lastHeartbeat = 0;
-  private volatile boolean initialized = false;
-  
+
+  static enum RunningState {
+    CONNECTING, INIT_FAILED, RUNNING, EXITED, FAILED;
+  }
+
+  private volatile RunningState runningState = RunningState.CONNECTING;
+
   /**
    * Between block reports (which happen on the order of once an hour) the
    * DN reports smaller incremental changes to its block list. This map,
@@ -118,17 +123,12 @@ class BPServiceActor implements Runnable {
     this.dnConf = dn.getDnConf();
   }
 
-  /**
-   * returns true if BP thread has completed initialization of storage
-   * and has registered with the corresponding namenode
-   * @return true if initialized
-   */
-  boolean isInitialized() {
-    return initialized;
-  }
-  
   boolean isAlive() {
-    return shouldServiceRun && bpThread.isAlive();
+    if (!shouldServiceRun || !bpThread.isAlive()) {
+      return false;
+    }
+    return runningState == BPServiceActor.RunningState.RUNNING
+        || runningState == BPServiceActor.RunningState.CONNECTING;
   }
 
   @Override
@@ -805,19 +805,30 @@ class BPServiceActor implements Runnable {
     LOG.info(this + " starting to offer service");
 
     try {
-      // init stuff
-      try {
-        // setup storage
-        connectToNNAndHandshake();
-      } catch (IOException ioe) {
-        // Initial handshake, storage recovery or registration failed
-        // End BPOfferService thread
-        LOG.fatal("Initialization failed for block pool " + this, ioe);
-        return;
+      while (true) {
+        // init stuff
+        try {
+          // setup storage
+          connectToNNAndHandshake();
+          break;
+        } catch (IOException ioe) {
+          // Initial handshake, storage recovery or registration failed
+          runningState = RunningState.INIT_FAILED;
+          if (shouldRetryInit()) {
+            // Retry until all namenode's of BPOS failed initialization
+            LOG.error("Initialization failed for " + this + " "
+                + ioe.getLocalizedMessage());
+            sleepAndLogInterrupts(5000, "initializing");
+          } else {
+            runningState = RunningState.FAILED;
+            LOG.fatal("Initialization failed for " + this + ". Exiting. ", ioe);
+            return;
+          }
+        }
       }
 
-      initialized = true; // bp is initialized;
-      
+      runningState = RunningState.RUNNING;
+
       while (shouldRun()) {
         try {
           offerService();
@@ -826,12 +837,18 @@ class BPServiceActor implements Runnable {
           sleepAndLogInterrupts(5000, "offering service");
         }
       }
+      runningState = RunningState.EXITED;
     } catch (Throwable ex) {
       LOG.warn("Unexpected exception in block pool " + this, ex);
+      runningState = RunningState.FAILED;
     } finally {
       LOG.warn("Ending block pool service for: " + this);
       cleanUp();
     }
+  }
+
+  private boolean shouldRetryInit() {
+    return shouldRun() && bpos.shouldRetryInit();
   }
 
   private boolean shouldRun() {

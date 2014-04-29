@@ -221,11 +221,16 @@ public class DataStorage extends Storage {
     // Each storage directory is treated individually.
     // During startup some of them can upgrade or rollback 
     // while others could be uptodate for the regular startup.
-    for(int idx = 0; idx < getNumStorageDirs(); idx++) {
-      doTransition(datanode, getStorageDir(idx), nsInfo, startOpt);
-      createStorageID(getStorageDir(idx));
+    try {
+      for (int idx = 0; idx < getNumStorageDirs(); idx++) {
+        doTransition(datanode, getStorageDir(idx), nsInfo, startOpt);
+        createStorageID(getStorageDir(idx));
+      }
+    } catch (IOException e) {
+      unlockAll();
+      throw e;
     }
-    
+
     // 3. Update all storages. Some of them might have just been formatted.
     this.writeAll();
     
