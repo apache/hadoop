@@ -96,6 +96,9 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10540. Datanode upgrade in Windows fails with hardlink error.
     (Chris Nauroth and Arpit Agarwal)
 
+    HADOOP-10508. RefreshCallQueue fails when authorization is enabled.
+    (Chris Li via wheat9)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
