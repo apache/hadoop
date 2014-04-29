@@ -175,6 +175,9 @@ Release 2.5.0 - UNRELEASED
     MAPREDUCE-5812. Make job context available to
     OutputCommitter.isRecoverySupported() (Mohammad Kamrul Islam via jlowe)
 
+    MAPREDUCE-5638. Port Hadoop Archives document to trunk (Akira AJISAKA via
+    jeagles)
+
   OPTIMIZATIONS
 
   BUG FIXES 
