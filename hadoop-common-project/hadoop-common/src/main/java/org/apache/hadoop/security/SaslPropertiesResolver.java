@@ -80,7 +80,7 @@ public class SaslPropertiesResolver implements Configurable{
    * The default Sasl Properties read from the configuration
    * @return sasl Properties
    */
-  protected Map<String,String> getDefaultProperties() {
+  public Map<String,String> getDefaultProperties() {
     return properties;
   }
 
