@@ -79,6 +79,9 @@ Release 2.5.0 - UNRELEASED
     YARN-1865. ShellScriptBuilder does not check for some error conditions.
     (Remus Rusanu via ivanmi)
 
+    YARN-738. TestClientRMTokens is failing irregularly while running all yarn
+    tests (Ming Ma via jlowe)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
