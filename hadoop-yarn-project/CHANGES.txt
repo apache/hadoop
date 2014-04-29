@@ -149,6 +149,9 @@ Release 2.4.1 - UNRELEASED
     YARN-1975. Used resources shows escaped html in CapacityScheduler and
     FairScheduler page (Mit Desai via jlowe)
 
+    YARN-1929. Fixed a deadlock in ResourceManager that occurs when failover
+    happens right at the time of shutdown. (Karthik Kambatla via vinodkv)
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES
