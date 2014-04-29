@@ -163,6 +163,8 @@ Release 2.5.0 - UNRELEASED
     HDFS-6288. DFSInputStream Pread doesn't update ReadStatistics.
     (Juan Yu via wang)
 
+    HDFS-5892. TestDeleteBlockPool fails in branch-2. (Ted Yu via wheat9)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -597,8 +599,6 @@ Release 2.4.0 - 2014-04-07
 
     HDFS-6071. BlockReaderLocal doesn't return -1 on EOF when doing a
     zero-length read on a short file (cmccabe)
-
-    HDFS-5892. TestDeleteBlockPool fails in branch-2. (Ted Yu via wheat9)
 
     HDFS-6077. Running slive with webhdfs on secure HA cluster fails with unkown
     host exception. (jing9)
