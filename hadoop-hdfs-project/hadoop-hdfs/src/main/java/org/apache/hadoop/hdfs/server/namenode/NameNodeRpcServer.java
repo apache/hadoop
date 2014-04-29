@@ -49,6 +49,8 @@ import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnresolvedLinkException;
+import org.apache.hadoop.fs.XAttr;
+import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -1377,6 +1379,24 @@ class NameNodeRpcServer implements NamenodeProtocols {
   @Override
   public AclStatus getAclStatus(String src) throws IOException {
     return namesystem.getAclStatus(src);
+  }
+  
+  @Override
+  public void setXAttr(String src, XAttr xAttr, EnumSet<XAttrSetFlag> flag)
+      throws IOException {
+    //TODO: will be implemented as part of HDFS-6258
+  }
+  
+  @Override
+  public List<XAttr> getXAttrs(String src, List<XAttr> xAttrs) 
+      throws IOException {
+    //TODO: will be implemented as part of HDFS-6258
+    return null;
+  }
+  
+  @Override
+  public void removeXAttr(String src, XAttr xAttr) throws IOException {
+    //TODO: will be implemented as part of HDFS-6258
   }
 }
 

@@ -8,6 +8,8 @@ HDFS-2006 (Unreleased)
 
   IMPROVEMENTS
 
+   HDFS-6299. Protobuf for XAttr and client-side implementation. (Yi Liu via umamahesh)
+
   OPTIMIZATIONS
 
   BUG FIXES

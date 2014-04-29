@@ -31,6 +31,7 @@ package hadoop.hdfs;
 import "Security.proto";
 import "hdfs.proto";
 import "acl.proto";
+import "xattr.proto";
 
 /**
  * The ClientNamenodeProtocol Service defines the interface between a client 
@@ -755,4 +756,10 @@ service ClientNamenodeProtocol {
       returns(SetAclResponseProto);
   rpc getAclStatus(GetAclStatusRequestProto)
       returns(GetAclStatusResponseProto);
+  rpc setXAttr(SetXAttrRequestProto)
+      returns(SetXAttrResponseProto);
+  rpc getXAttrs(GetXAttrsRequestProto)
+      returns(GetXAttrsResponseProto);
+  rpc removeXAttr(RemoveXAttrRequestProto)
+      returns(RemoveXAttrResponseProto);
 }

@@ -174,6 +174,12 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.Update
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.LocatedBlockProto;
+import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos.GetXAttrsRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos.GetXAttrsResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos.RemoveXAttrRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos.RemoveXAttrResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos.SetXAttrRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos.SetXAttrResponseProto;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.namenode.INodeId;
@@ -302,6 +308,12 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
 
   private static final RemoveAclResponseProto
     VOID_REMOVEACL_RESPONSE = RemoveAclResponseProto.getDefaultInstance();
+  
+  private static final SetXAttrResponseProto
+    VOID_SETXATTR_RESPONSE = SetXAttrResponseProto.getDefaultInstance();
+  
+  private static final RemoveXAttrResponseProto
+    VOID_REMOVEXATTR_RESPONSE = RemoveXAttrResponseProto.getDefaultInstance();
 
   /**
    * Constructor
@@ -1260,5 +1272,39 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
     } catch (IOException e) {
       throw new ServiceException(e);
     }
+  }
+  
+  @Override
+  public SetXAttrResponseProto setXAttr(RpcController controller,
+      SetXAttrRequestProto req) throws ServiceException {
+    try {
+      server.setXAttr(req.getSrc(), PBHelper.convertXAttr(req.getXAttr()), 
+          PBHelper.convert(req.getFlag()));
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return VOID_SETXATTR_RESPONSE;
+  }
+
+  @Override
+  public GetXAttrsResponseProto getXAttrs(RpcController controller,
+      GetXAttrsRequestProto req) throws ServiceException {
+    try {
+      return PBHelper.convertXAttrsResponse(server.getXAttrs(req.getSrc(), 
+          PBHelper.convertXAttrs(req.getXAttrsList())));
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+  
+  @Override
+  public RemoveXAttrResponseProto removeXAttr(RpcController controller,
+      RemoveXAttrRequestProto req) throws ServiceException {
+    try {
+      server.removeXAttr(req.getSrc(), PBHelper.convertXAttr(req.getXAttr()));
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return VOID_REMOVEXATTR_RESPONSE;
   }
 }
