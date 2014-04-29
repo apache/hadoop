@@ -329,6 +329,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6210. Support GETACLSTATUS operation in WebImageViewer.
     (Akira Ajisaka via wheat9)
 
+    HDFS-6269. NameNode Audit Log should differentiate between webHDFS open and
+    HDFS open. (Eric Payne via jeagles)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)

@@ -91,6 +91,9 @@ public class TestAuditLogs {
       "perm=.*?");
   static final Pattern successPattern = Pattern.compile(
       ".*allowed=true.*");
+  static final Pattern webOpenPattern = Pattern.compile(
+      ".*cmd=open.*proto=webhdfs.*");
+
   static final String username = "bob";
   static final String[] groups = { "group1" };
   static final String fileName = "/srcdat";
@@ -240,6 +243,22 @@ public class TestAuditLogs {
     verifyAuditLogsRepeat(false, 2);
   }
 
+  /** test that open via webhdfs puts proper entry in audit log */
+  @Test
+  public void testAuditWebHdfsOpen() throws Exception {
+    final Path file = new Path(fnames[0]);
+
+    fs.setPermission(file, new FsPermission((short)0644));
+    fs.setOwner(file, "root", null);
+
+    setupAuditLogs();
+
+    WebHdfsFileSystem webfs = WebHdfsTestUtil.getWebHdfsFileSystemAs(userGroupInfo, conf, WebHdfsFileSystem.SCHEME);
+    webfs.open(file);
+
+    verifyAuditLogsCheckPattern(true, 3, webOpenPattern);
+  }
+
   /** Sets up log4j logger for auditlogs */
   private void setupAuditLogs() throws IOException {
     Logger logger = ((Log4JLogger) FSNamesystem.auditLog).getLogger();
@@ -302,5 +321,39 @@ public class TestAuditLogs {
     } finally {
       reader.close();
     }
+  }
+
+  // Ensure audit log has exactly N entries
+  private void verifyAuditLogsCheckPattern(boolean expectSuccess, int ndupe, Pattern pattern)
+      throws IOException {
+    // Turn off the logs
+    Logger logger = ((Log4JLogger) FSNamesystem.auditLog).getLogger();
+    logger.setLevel(Level.OFF);
+
+    // Close the appenders and force all logs to be flushed
+    Enumeration<?> appenders = logger.getAllAppenders();
+    while (appenders.hasMoreElements()) {
+      Appender appender = (Appender)appenders.nextElement();
+      appender.close();
+    }
+
+    BufferedReader reader = new BufferedReader(new FileReader(auditLogFile));
+    String line = null;
+    boolean ret = true;
+    boolean patternMatches = false;
+
+    try {
+        for (int i = 0; i < ndupe; i++) {
+          line = reader.readLine();
+          assertNotNull(line);
+          patternMatches |= pattern.matcher(line).matches();
+          ret &= successPattern.matcher(line).matches();
+        }
+        assertNull("Unexpected event in audit log", reader.readLine());
+        assertTrue("Expected audit event not found in audit log", patternMatches);
+        assertTrue("Expected success=" + expectSuccess, ret == expectSuccess);
+      } finally {
+        reader.close();
+      }
   }
 }
