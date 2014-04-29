@@ -61,7 +61,7 @@ public class EmbeddedElectorService extends AbstractService
   }
 
   @Override
-  protected synchronized void serviceInit(Configuration conf)
+  protected void serviceInit(Configuration conf)
       throws Exception {
     conf = conf instanceof YarnConfiguration ? conf : new YarnConfiguration(conf);
 
@@ -102,20 +102,20 @@ public class EmbeddedElectorService extends AbstractService
   }
 
   @Override
-  protected synchronized void serviceStart() throws Exception {
+  protected void serviceStart() throws Exception {
     elector.joinElection(localActiveNodeInfo);
     super.serviceStart();
   }
 
   @Override
-  protected synchronized void serviceStop() throws Exception {
+  protected void serviceStop() throws Exception {
     elector.quitElection(false);
     elector.terminateConnection();
     super.serviceStop();
   }
 
   @Override
-  public synchronized void becomeActive() throws ServiceFailedException {
+  public void becomeActive() throws ServiceFailedException {
     try {
       rmContext.getRMAdminService().transitionToActive(req);
     } catch (Exception e) {
@@ -124,7 +124,7 @@ public class EmbeddedElectorService extends AbstractService
   }
 
   @Override
-  public synchronized void becomeStandby() {
+  public void becomeStandby() {
     try {
       rmContext.getRMAdminService().transitionToStandby(req);
     } catch (Exception e) {
@@ -143,13 +143,13 @@ public class EmbeddedElectorService extends AbstractService
 
   @SuppressWarnings(value = "unchecked")
   @Override
-  public synchronized void notifyFatalError(String errorMessage) {
+  public void notifyFatalError(String errorMessage) {
     rmContext.getDispatcher().getEventHandler().handle(
         new RMFatalEvent(RMFatalEventType.EMBEDDED_ELECTOR_FAILED, errorMessage));
   }
 
   @Override
-  public synchronized void fenceOldActive(byte[] oldActiveData) {
+  public void fenceOldActive(byte[] oldActiveData) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Request to fence old active being ignored, " +
           "as embedded leader election doesn't support fencing");
@@ -166,7 +166,7 @@ public class EmbeddedElectorService extends AbstractService
         .toByteArray();
   }
 
-  private synchronized boolean isParentZnodeSafe(String clusterId)
+  private boolean isParentZnodeSafe(String clusterId)
       throws InterruptedException, IOException, KeeperException {
     byte[] data;
     try {
