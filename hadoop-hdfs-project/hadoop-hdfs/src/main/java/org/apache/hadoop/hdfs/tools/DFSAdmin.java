@@ -1056,7 +1056,7 @@ public class DFSAdmin extends FsShell {
       NameNodeProxies.createProxy(conf, FileSystem.getDefaultUri(conf),
           RefreshCallQueueProtocol.class).getProxy();
 
-    // Refresh the user-to-groups mappings
+    // Refresh the call queue
     refreshProtocol.refreshCallQueue();
     
     return 0;

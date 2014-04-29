@@ -32,6 +32,7 @@ import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
 import org.apache.hadoop.security.authorize.Service;
 import org.apache.hadoop.tools.GetUserMappingsProtocol;
+import org.apache.hadoop.ipc.RefreshCallQueueProtocol;
 
 /**
  * {@link PolicyProvider} for HDFS protocols.
@@ -64,7 +65,10 @@ public class HDFSPolicyProvider extends PolicyProvider {
         RefreshUserMappingsProtocol.class),
     new Service(
         CommonConfigurationKeys.HADOOP_SECURITY_SERVICE_AUTHORIZATION_GET_USER_MAPPINGS,
-        GetUserMappingsProtocol.class)
+        GetUserMappingsProtocol.class),
+    new Service(
+        CommonConfigurationKeys.HADOOP_SECURITY_SERVICE_AUTHORIZATION_REFRESH_CALLQUEUE,
+        RefreshCallQueueProtocol.class)
   };
   
   @Override
