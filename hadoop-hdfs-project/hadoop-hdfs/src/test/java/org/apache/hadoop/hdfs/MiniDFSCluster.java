@@ -842,6 +842,13 @@ public class MiniDFSCluster {
         
         nnCounterForFormat++;
         if (formatThisOne) {
+          // Allow overriding clusterID for specific NNs to test
+          // misconfiguration.
+          if (nn.getClusterId() == null) {
+            StartupOption.FORMAT.setClusterId(clusterId);
+          } else {
+            StartupOption.FORMAT.setClusterId(nn.getClusterId());
+          }
           DFSTestUtil.formatNameNode(conf);
         }
         prevNNDirs = namespaceDirs;
@@ -903,7 +910,7 @@ public class MiniDFSCluster {
     }
   }
 
-  private void copyNameDirs(Collection<URI> srcDirs, Collection<URI> dstDirs,
+  public static void copyNameDirs(Collection<URI> srcDirs, Collection<URI> dstDirs,
       Configuration dstConf) throws IOException {
     URI srcDir = Lists.newArrayList(srcDirs).get(0);
     FileSystem dstFS = FileSystem.getLocal(dstConf).getRaw();

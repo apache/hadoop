@@ -470,6 +470,9 @@ Release 2.4.1 - UNRELEASED
     HDFS-6245. datanode fails to start with a bad disk even when failed
     volumes is set. (Arpit Agarwal)
 
+    HDFS-2882. DN continues to start up, even if block pool fails to initialize
+    (vinayakumarb)
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES
