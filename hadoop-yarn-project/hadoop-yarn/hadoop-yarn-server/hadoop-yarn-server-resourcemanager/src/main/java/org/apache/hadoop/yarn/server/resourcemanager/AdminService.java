@@ -101,7 +101,7 @@ public class AdminService extends CompositeService implements
   }
 
   @Override
-  public synchronized void serviceInit(Configuration conf) throws Exception {
+  public void serviceInit(Configuration conf) throws Exception {
     if (rmContext.isHAEnabled()) {
       autoFailoverEnabled = HAUtil.isAutomaticFailoverEnabled(conf);
       if (autoFailoverEnabled) {
@@ -123,13 +123,13 @@ public class AdminService extends CompositeService implements
   }
 
   @Override
-  protected synchronized void serviceStart() throws Exception {
+  protected void serviceStart() throws Exception {
     startServer();
     super.serviceStart();
   }
 
   @Override
-  protected synchronized void serviceStop() throws Exception {
+  protected void serviceStop() throws Exception {
     stopServer();
     super.serviceStop();
   }
