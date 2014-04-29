@@ -99,6 +99,9 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10508. RefreshCallQueue fails when authorization is enabled.
     (Chris Li via wheat9)
 
+    HADOOP-10547. Give SaslPropertiesResolver.getDefaultProperties() public
+    scope. (Benoy Antony via Arpit Agarwal)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
