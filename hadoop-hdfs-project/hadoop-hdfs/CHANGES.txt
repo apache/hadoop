@@ -415,6 +415,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6288. DFSInputStream Pread doesn't update ReadStatistics.
     (Juan Yu via wang)
 
+    HADOOP-10547. Give SaslPropertiesResolver.getDefaultProperties() public
+    scope. (Benoy Antony via Arpit Agarwal)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
