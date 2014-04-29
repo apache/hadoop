@@ -7759,6 +7759,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           }
           sb.append(trackingId);
         }
+        sb.append("\t").append("proto=");
+        sb.append(NamenodeWebHdfsMethods.isWebHdfsInvocation() ? "webhdfs" : "rpc");
         logAuditMessage(sb.toString());
       }
     }
