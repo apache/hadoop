@@ -77,6 +77,9 @@ Release 2.4.1 - UNRELEASED
 
     YARN-1892. Improved some logs in the scheduler. (Jian He via zjshen)
 
+    YARN-1696. Added documentation for ResourceManager fail-over. (Karthik
+    Kambatla, Masatake Iwasaki, Tsuyoshi OZAWA via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
