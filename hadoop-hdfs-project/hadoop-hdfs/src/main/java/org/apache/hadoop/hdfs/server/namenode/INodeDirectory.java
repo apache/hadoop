@@ -403,53 +403,6 @@ public class INodeDirectory extends INodeWithAdditionalFields
         : ReadOnlyList.Util.asReadOnlyList(children);
   }
 
-  /** @return the {@link INodesInPath} containing only the last inode. */
-  INodesInPath getLastINodeInPath(String path, boolean resolveLink
-      ) throws UnresolvedLinkException {
-    return INodesInPath.resolve(this, getPathComponents(path), 1, resolveLink);
-  }
-
-  /** @return the {@link INodesInPath} containing all inodes in the path. */
-  INodesInPath getINodesInPath(String path, boolean resolveLink
-      ) throws UnresolvedLinkException {
-    final byte[][] components = getPathComponents(path);
-    return INodesInPath.resolve(this, components, components.length, resolveLink);
-  }
-
-  /** @return the last inode in the path. */
-  INode getNode(String path, boolean resolveLink) 
-    throws UnresolvedLinkException {
-    return getLastINodeInPath(path, resolveLink).getINode(0);
-  }
-
-  /**
-   * @return the INode of the last component in src, or null if the last
-   * component does not exist.
-   * @throws UnresolvedLinkException if symlink can't be resolved
-   * @throws SnapshotAccessControlException if path is in RO snapshot
-   */
-  INode getINode4Write(String src, boolean resolveLink)
-      throws UnresolvedLinkException, SnapshotAccessControlException {
-    return getINodesInPath4Write(src, resolveLink).getLastINode();
-  }
-
-  /**
-   * @return the INodesInPath of the components in src
-   * @throws UnresolvedLinkException if symlink can't be resolved
-   * @throws SnapshotAccessControlException if path is in RO snapshot
-   */
-  INodesInPath getINodesInPath4Write(String src, boolean resolveLink)
-      throws UnresolvedLinkException, SnapshotAccessControlException {
-    final byte[][] components = INode.getPathComponents(src);
-    INodesInPath inodesInPath = INodesInPath.resolve(this, components,
-        components.length, resolveLink);
-    if (inodesInPath.isSnapshot()) {
-      throw new SnapshotAccessControlException(
-          "Modification on a read-only snapshot is disallowed");
-    }
-    return inodesInPath;
-  }
-
   /**
    * Given a child's name, return the index of the next child
    *

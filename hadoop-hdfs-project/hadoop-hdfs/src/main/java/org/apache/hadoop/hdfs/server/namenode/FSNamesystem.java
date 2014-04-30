@@ -5507,7 +5507,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       dir.waitForReady();
       readLock();
       try {
-        pc.checkPermission(path, dir.rootDir, doCheckOwner, ancestorAccess,
+        pc.checkPermission(path, dir, doCheckOwner, ancestorAccess,
             parentAccess, access, subAccess, resolveLink);
       } finally {
         readUnlock();

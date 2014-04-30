@@ -1306,7 +1306,7 @@ public abstract class FSAclBaseTest {
    */
   private static void assertAclFeature(Path pathToCheck,
       boolean expectAclFeature) throws IOException {
-    INode inode = cluster.getNamesystem().getFSDirectory().getRoot()
+    INode inode = cluster.getNamesystem().getFSDirectory()
       .getNode(pathToCheck.toUri().getPath(), false);
     assertNotNull(inode);
     AclFeature aclFeature = inode.getAclFeature();
