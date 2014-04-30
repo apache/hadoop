@@ -1007,6 +1007,8 @@ public class BlockManager {
     while(it.hasNext()) {
       removeStoredBlock(it.next(), node);
     }
+    // Remove all pending DN messages referencing this DN.
+    pendingDNMessages.removeAllMessagesForDatanode(node);
 
     node.resetBlocks();
     invalidateBlocks.remove(node.getDatanodeUuid());
@@ -1081,7 +1083,8 @@ public class BlockManager {
     DatanodeDescriptor node = getDatanodeManager().getDatanode(dn);
     if (node == null) {
       throw new IOException("Cannot mark " + b
-          + " as corrupt because datanode " + dn + " does not exist");
+          + " as corrupt because datanode " + dn + " (" + dn.getDatanodeUuid()
+          + ") does not exist");
     }
 
     BlockCollection bc = b.corrupted.getBlockCollection();
@@ -1984,6 +1987,9 @@ public class BlockManager {
         // If the block is an out-of-date generation stamp or state,
         // but we're the standby, we shouldn't treat it as corrupt,
         // but instead just queue it for later processing.
+        // TODO: Pretty confident this should be s/storedBlock/block below,
+        // since we should be postponing the info of the reported block, not
+        // the stored block. See HDFS-6289 for more context.
         queueReportedBlock(dn, storageID, storedBlock, reportedState,
             QUEUE_REASON_CORRUPT_STATE);
       } else {

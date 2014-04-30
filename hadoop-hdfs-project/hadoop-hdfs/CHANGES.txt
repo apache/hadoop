@@ -171,6 +171,9 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-5892. TestDeleteBlockPool fails in branch-2. (Ted Yu via wheat9)
 
+    HDFS-6289. HA failover can fail if there are pending DN messages for DNs
+    which no longer exist. (atm)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
