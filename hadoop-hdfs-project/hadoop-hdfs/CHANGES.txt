@@ -80,6 +80,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6269. NameNode Audit Log should differentiate between webHDFS open and
     HDFS open. (Eric Payne via jeagles)
 
+    HDFS-6304. Consolidate the logic of path resolution in FSDirectory.
+    (wheat9)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)
