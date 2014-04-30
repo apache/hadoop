@@ -16,6 +16,8 @@ HDFS-2006 (Unreleased)
 
   HADOOP-10521. FsShell commands for extended attributes. (Yi Liu via wang)
 
+  HADOOP-10548. Improve FsShell xattr error handling and other fixes. (Charles Lamb via umamahesh)
+
   OPTIMIZATIONS
 
   BUG FIXES

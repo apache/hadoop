@@ -23,6 +23,10 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import com.google.common.base.Enums;
+import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
+
 import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.codec.binary.Base64;
@@ -37,8 +41,8 @@ import org.apache.hadoop.util.StringUtils;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 class XAttrCommands extends FsCommand {
-  private static String GET_FATTR = "getfattr";
-  private static String SET_FATTR = "setfattr";
+  private static final String GET_FATTR = "getfattr";
+  private static final String SET_FATTR = "setfattr";
 
   public static void registerCommands(CommandFactory factory) {
     factory.addClass(GetfattrCommand.class, "-" + GET_FATTR);
@@ -56,7 +60,7 @@ class XAttrCommands extends FsCommand {
 
   private static String convert(String name, byte[] value, ENCODE encode)
       throws IOException {
-    StringBuilder buffer = new StringBuilder();
+    final StringBuilder buffer = new StringBuilder();
     buffer.append(name);
     if (value != null && value.length != 0) {
       buffer.append("=");
@@ -71,11 +75,12 @@ class XAttrCommands extends FsCommand {
     return buffer.toString();
   }
 
-  private static byte[] convert(String value) throws IOException {
+  private static byte[] convert(String valueArg) throws IOException {
+    String value = valueArg;
     byte[] result = null;
     if (value != null) {
       if (value.length() >= 2) {
-        String en = value.substring(0,2);
+        final String en = value.substring(0, 2);
         if (value.startsWith("\"") && value.endsWith("\"")) {
           value = value.substring(1, value.length()-1);
           result = value.getBytes("utf-8");
@@ -99,38 +104,43 @@ class XAttrCommands extends FsCommand {
   }
 
   /**
-   * Implementing the '-getfattr' command for the the FsShell.
+   * Implements the '-getfattr' command for the FsShell.
    */
   public static class GetfattrCommand extends FsCommand {
-    public static String NAME = GET_FATTR;
-    public static String USAGE = "[-R] {-n name | -d} [-e en] <path>";
-    public static String DESCRIPTION =
-        "Displays the file name, and the set of extended attribute names " +
-        "(and optionally values) which are associated with that file or " +
-        "directory.\n" +
-        "-R: List the attributes of all files and directories recursively.\n" +
-        "-n name: Dump the value of the named extended attribute.\n" +
-        "-d: Dump the values of all extended attributes associated with " +
-        "pathname.\n" +
-        "-e en: Encode values after retrieving them. Valid values of en " +
-        "are \"text\", \"hex\", and \"base64\". Values encoded as text " +
-        "strings are enclosed in double quotes (\"), while strings encoded" +
-        " as hexadecimal and base64 are prefixed with 0x and 0s, respectively.\n" +
-        "<path>: File or directory to list.\n";
+    public static final String NAME = GET_FATTR;
+    public static final String USAGE = "[-R] {-n name | -d} [-e en] <path>";
+    public static final String DESCRIPTION =
+      "Displays the extended attribute names and values (if any) for a " +
+      "file or directory.\n" +
+      "-R: Recurisively list the attributes for all files and directories.\n" +
+      "-n name: Dump the named extended attribute value.\n" + 
+      "-d: Dump all extended attribute values associated with " +
+      "pathname.\n" +
+      "-e <encoding>: Encode values after retrieving them. Valid encodings " +
+      "are \"text\", \"hex\", and \"base64\". Values encoded as text " +
+      "strings are enclosed in double quotes (\"), and values encoded" +
+      " as hexadecimal and base64 are prefixed with 0x and 0s, respectively.\n" +
+      "<path>: The file or directory.\n";
     private static final String NAME_OPT = "-n";
     private static final String ENCODE_OPT = "-e";
-    CommandFormat cf = new CommandFormat(0, Integer.MAX_VALUE, "d", "R");
+    final CommandFormat cf = new CommandFormat(0, Integer.MAX_VALUE, "d", "R");
 
     private String name = null;
     private boolean dump = false;
     private ENCODE encode = ENCODE.TEXT;
+
+    private final static Function<String, ENCODE> encodeValueOfFunc =
+      Enums.valueOfFunction(ENCODE.class);
+
     @Override
     protected void processOptions(LinkedList<String> args) throws IOException {
       name = StringUtils.popOptionWithArgument(NAME_OPT, args);
       String en = StringUtils.popOptionWithArgument(ENCODE_OPT, args);
       if (en != null) {
-        encode = ENCODE.valueOf(en.toUpperCase());
+        encode = encodeValueOfFunc.apply(en.toUpperCase());
       }
+      Preconditions.checkArgument(encode != null,
+        "Invalid/unsupported encoding option specified: " + en);
 
       cf.parse(args);
       setRecursive(cf.getOpt("R"));
@@ -142,10 +152,10 @@ class XAttrCommands extends FsCommand {
       }
 
       if (args.isEmpty()) {
-        throw new HadoopIllegalArgumentException("<path> is missing");
+        throw new HadoopIllegalArgumentException("<path> is missing.");
       }
       if (args.size() > 1) {
-        throw new HadoopIllegalArgumentException("Too many arguments");
+        throw new HadoopIllegalArgumentException("Too many arguments.");
       }
     }
 
@@ -171,23 +181,22 @@ class XAttrCommands extends FsCommand {
   }
 
   /**
-   * Implementing the '-setfattr' command for the the FsShell.
+   * Implements the '-setfattr' command for the FsShell.
    */
   public static class SetfattrCommand extends FsCommand {
-    public static String NAME = SET_FATTR;
-    public static String USAGE = "{-n name [-v value] | -x name} <path>";
-    public static String DESCRIPTION =
-        "Associates a new value with an extended attribute name for file or " +
-        "directory.\n" +
-        "-n name: Specifies the name of the extended attribute to set.\n" +
-        "-v value: Specifies the new value of the extended attribute. There " +
-        "are three methods available for encoding the value. If the given " +
-        "string is enclosed in double quotes, the inner string is treated " +
-        "as text. If the given string begins with 0x or 0X, it expresses " +
-        "a hexadecimal number. If the given string begins with 0s or 0S, " +
-        "base64 encoding is expected.\n" +
-        "-x name: Remove the named extended attribute entirely.\n" +
-        "<path>: File or directory to list.\n";
+    public static final String NAME = SET_FATTR;
+    public static final String USAGE = "{-n name [-v value] | -x name} <path>";
+    public static final String DESCRIPTION =
+      "Sets an extended attribute name and value for a file or directory.\n" +
+      "-n name: The extended attribute name.\n" +
+      "-v value: The extended attribute value. There are three different\n" +
+      "encoding methods for the value. If the argument is enclosed in double\n" +
+      "quotes, then the value is the string inside the quotes. If the\n" +
+      "argument is prefixed with 0x or 0X, then it is taken as a hexadecimal\n" +
+      "number. If the argument begins with 0s or 0S, then it is taken as a\n" +
+      "base64 encoding.\n" +
+      "-x name: Remove the extended attribute.\n" +
+      "<path>: The file or directory.\n";
     private static final String NAME_OPT = "-n";
     private static final String VALUE_OPT = "-v";
     private static final String REMOVE_OPT = "-x";
@@ -215,10 +224,10 @@ class XAttrCommands extends FsCommand {
       }
 
       if (args.isEmpty()) {
-        throw new HadoopIllegalArgumentException("<path> is missing");
+        throw new HadoopIllegalArgumentException("<path> is missing.");
       }
       if (args.size() > 1) {
-        throw new HadoopIllegalArgumentException("Too many arguments");
+        throw new HadoopIllegalArgumentException("Too many arguments.");
       }
     }
 

@@ -18,8 +18,11 @@
 package org.apache.hadoop.fs.shell;
 
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FsShell;
@@ -47,10 +50,27 @@ public class TestXAttrCommands {
   }
 
   @Test
+  public void testGetfattrWithInvalidEncoding() throws Exception {
+    final PrintStream backup = System.err;
+    final ByteArrayOutputStream out = new ByteArrayOutputStream();
+    System.setErr(new PrintStream(out));
+    try {
+      runCommand(new String[] { "-getfattr", "-e", "invalid", "-n",
+                                "xattrname", "/file1" });
+      assertTrue("getfattr should fail with \"-getfattr: Invalid/unsupported "
+        + "econding option specified: invalid\". But the output is: "
+        + out.toString(), out.toString().contains("-getfattr: "
+          + "Invalid/unsupported encoding option specified: invalid"));
+    } finally {
+      System.setErr(backup);
+    }
+  }
+
+  @Test
   public void testSetfattrValidations() throws Exception {
     assertFalse("setfattr should fail without path",
         0 == runCommand(new String[] { "-setfattr" }));
-    assertFalse("setfacl should fail with extra arguments",
+    assertFalse("setfattr should fail with extra arguments",
         0 == runCommand(new String[] { "-setfattr", "extra", "/test"}));
     assertFalse("setfattr should fail without \"-n name\" or \"-x name\"",
         0 == runCommand(new String[] { "-setfattr", "/test"}));
@@ -59,5 +79,4 @@ public class TestXAttrCommands {
   private int runCommand(String[] commands) throws Exception {
     return ToolRunner.run(conf, new FsShell(), commands);
   }
-
 }
