@@ -10,6 +10,8 @@ HDFS-2006 (Unreleased)
 
    HDFS-6299. Protobuf for XAttr and client-side implementation. (Yi Liu via umamahesh)
 
+   HDFS-6302. Implement XAttr as a INode feature. (Yi Liu via umamahesh)
+
   OPTIMIZATIONS
 
   BUG FIXES

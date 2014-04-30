@@ -219,7 +219,7 @@ public class FSImageFormatPBSnapshot {
           copy = new INodeFileAttributes.SnapshotCopy(pbf.getName()
               .toByteArray(), permission, acl, fileInPb.getModificationTime(),
               fileInPb.getAccessTime(), (short) fileInPb.getReplication(),
-              fileInPb.getPreferredBlockSize());
+              fileInPb.getPreferredBlockSize(), null);
         }
 
         FileDiff diff = new FileDiff(pbf.getSnapshotId(), copy, null,
@@ -316,10 +316,10 @@ public class FSImageFormatPBSnapshot {
               && dirCopyInPb.getDsQuota() == -1;
 
           copy = noQuota ? new INodeDirectoryAttributes.SnapshotCopy(name,
-              permission, acl, modTime)
+              permission, acl, modTime, null)
               : new INodeDirectoryAttributes.CopyWithQuota(name, permission,
                   acl, modTime, dirCopyInPb.getNsQuota(),
-                  dirCopyInPb.getDsQuota());
+                  dirCopyInPb.getDsQuota(), null);
         }
         // load created list
         List<INode> clist = loadCreatedList(in, dir,
