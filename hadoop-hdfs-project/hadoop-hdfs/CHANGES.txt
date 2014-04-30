@@ -421,6 +421,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6288. DFSInputStream Pread doesn't update ReadStatistics.
     (Juan Yu via wang)
 
+    HDFS-6289. HA failover can fail if there are pending DN messages for DNs
+    which no longer exist. (atm)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
