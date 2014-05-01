@@ -2771,7 +2771,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
     int prefixIndex = name.indexOf(".");
     if (prefixIndex == -1) {
       throw new HadoopIllegalArgumentException("XAttr name must be prefixed with" +
-          " user/trusted/security/system which followed by '.'");
+          " user/trusted/security/system and followed by '.'");
     } else if (prefixIndex == name.length() -1) {
       throw new HadoopIllegalArgumentException("XAttr name can not be empty.");
     }
@@ -2788,7 +2788,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
       ns = XAttr.NameSpace.SYSTEM;
     } else {
       throw new HadoopIllegalArgumentException("XAttr name must be prefixed with" +
-          " user/trusted/security/system which followed by '.'");
+          " user/trusted/security/system and followed by '.'");
     }
     XAttr xAttr = (new XAttr.Builder()).setNameSpace(ns).setName(name.
         substring(prefixIndex + 1)).setValue(value).build();
@@ -2815,12 +2815,12 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
   public byte[] getXAttr(String src, String name) throws IOException {
     checkOpen();
     try {
-      XAttr xAttr = buildXAttr(name, null);
-      List<XAttr> xAttrs = Lists.newArrayListWithCapacity(1);
+      final XAttr xAttr = buildXAttr(name, null);
+      final List<XAttr> xAttrs = Lists.newArrayListWithCapacity(1);
       xAttrs.add(xAttr);
-      List<XAttr> result = namenode.getXAttrs(src, xAttrs);
+      final List<XAttr> result = namenode.getXAttrs(src, xAttrs);
       byte[] value = null;
-      if (result != null && result.size() > 0) {
+      if (result != null && !result.isEmpty()) {
         XAttr a = result.get(0);
         value = a.getValue();
         if (value == null) {

@@ -20,23 +20,25 @@ package org.apache.hadoop.fs;
 import java.util.Arrays;
 
 /**
- * XAttr is POSIX Extended Attribute model, similar to the one in traditional 
- * Operating Systems. Extended Attribute consists of a name and associated 
- * data, and 4 namespaces are defined: user, trusted, security and system.
+ * XAttr is the POSIX Extended Attribute model similar to that found in
+ * traditional Operating Systems.  Extended Attributes consist of one
+ * or more name/value pairs associated with a file or directory. Four
+ * namespaces are defined: user, trusted, security and system.
+ *   1) USER namespace attributes may be used by any user to store
+ *   arbitrary information. Access permissions in this namespace are
+ *   defined by a file directory's permission bits.
  * <br>
- *   1). USER namespace extended attribute may be assigned for storing 
- *   arbitrary additional information, and its access permissions are 
- *   defined by file/directory permission bits.
- *   <br>
- *   2). TRUSTED namespace extended attribute are visible and accessible 
- *   only to privilege user (file/directory owner or fs admin), and it is 
- *   available from both user space (filesystem API) and fs kernel.
- *   <br>
- *   3). SYSTEM namespace extended attribute is used by fs kernel to store 
- *   system objects, and only available in fs kernel. It's not visible to users.
- *   <br>
- *   4). SECURITY namespace extended attribute is used by fs kernel for 
- *   security features, and it's not visible to users.
+ *   2) TRUSTED namespace attributes are only visible and accessible to
+ *   privileged users (a file or directory's owner or the fs
+ *   admin). This namespace is available from both user space
+ *   (filesystem API) and fs kernel.
+ * <br>
+ *   3) SYSTEM namespace attributes are used by the fs kernel to store
+ *   system objects.  This namespace is only available in the fs
+ *   kernel. It is not visible to users.
+ * <br>
+ *   4) SECURITY namespace attributes are used by the fs kernel for
+ *   security features. It is not visible to users.
  * <p/>
  * @see <a href="http://en.wikipedia.org/wiki/Extended_file_attributes">
  * http://en.wikipedia.org/wiki/Extended_file_attributes</a>

@@ -12,6 +12,8 @@ HDFS-2006 (Unreleased)
 
    HDFS-6302. Implement XAttr as a INode feature. (Yi Liu via umamahesh)
 
+   HDFS-6309. Javadocs for Xattrs apis in DFSClient and other minor fixups. (Charles Lamb via umamahesh)
+
   OPTIMIZATIONS
 
   BUG FIXES
