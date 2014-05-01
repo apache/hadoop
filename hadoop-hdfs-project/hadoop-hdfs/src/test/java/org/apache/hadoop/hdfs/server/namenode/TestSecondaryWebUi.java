@@ -78,18 +78,4 @@ public class TestSecondaryWebUi {
     Assert.assertArrayEquals(checkpointEditlogDir,
             snn.getCheckpointEditlogDirectories());
   }
-
-  @Test
-  public void testSecondaryWebUiJsp()
-          throws IOException, MalformedObjectNameException,
-                 AttributeNotFoundException, MBeanException,
-                 ReflectionException, InstanceNotFoundException {
-    String pageContents = DFSTestUtil.urlGet(new URL("http://localhost:" +
-        SecondaryNameNode.getHttpAddress(conf).getPort() + "/status.jsp"));
-    Assert.assertTrue("Didn't find \"Last Checkpoint\"",
-        pageContents.contains("Last Checkpoint"));
-    Assert.assertTrue("Didn't find Checkpoint Transactions: 500",
-        pageContents.contains("Checkpoint Transactions: 500"));
-
-  }
 }

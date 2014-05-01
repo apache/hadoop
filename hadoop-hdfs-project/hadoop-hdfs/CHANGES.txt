@@ -127,6 +127,8 @@ Trunk (Unreleased)
 
     HDFS-6246. Remove 'dfs.support.append' flag from trunk code. (umamahesh)
 
+    HDFS-6252. Phase out the old web UI in HDFS. (wheat9)
+
   OPTIMIZATIONS
 
   BUG FIXES
