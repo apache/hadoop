@@ -560,7 +560,8 @@ extends AbstractDelegationTokenIdentifier>
           }
         }
       } catch (Throwable t) {
-        LOG.error("ExpiredTokenRemover thread received unexpected exception", t);
+        LOG.error("ExpiredTokenRemover thread received unexpected exception. "
+            + t);
         Runtime.getRuntime().exit(-1);
       }
     }
