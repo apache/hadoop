@@ -1384,19 +1384,18 @@ class NameNodeRpcServer implements NamenodeProtocols {
   @Override
   public void setXAttr(String src, XAttr xAttr, EnumSet<XAttrSetFlag> flag)
       throws IOException {
-    //TODO: will be implemented as part of HDFS-6258
+    namesystem.setXAttr(src, xAttr, flag);
   }
   
   @Override
   public List<XAttr> getXAttrs(String src, List<XAttr> xAttrs) 
       throws IOException {
-    //TODO: will be implemented as part of HDFS-6258
-    return null;
+    return namesystem.getXAttrs(src, xAttrs);
   }
   
   @Override
   public void removeXAttr(String src, XAttr xAttr) throws IOException {
-    //TODO: will be implemented as part of HDFS-6258
+    namesystem.removeXAttr(src, xAttr);
   }
 }
 

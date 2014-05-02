@@ -350,7 +350,7 @@ public class FSEditLogLoader {
         inodeId = getAndUpdateLastInodeId(addCloseOp.inodeId, logVersion,
             lastInodeId);
         newFile = fsDir.unprotectedAddFile(inodeId,
-            path, addCloseOp.permissions, addCloseOp.aclEntries,
+            path, addCloseOp.permissions, addCloseOp.aclEntries, null,
             replication, addCloseOp.mtime, addCloseOp.atime,
             addCloseOp.blockSize, true, addCloseOp.clientName,
             addCloseOp.clientMachine);
