@@ -16,6 +16,8 @@ HDFS-2006 (Unreleased)
 
    HDFS-6258. Namenode server-side storage for XAttrs. (Yi Liu via umamahesh)
 
+   HDFS-6303. HDFS implementation of FileContext API for XAttrs. (Yi Liu and Charles Lamb via umamahesh)
+
   OPTIMIZATIONS
 
   BUG FIXES
