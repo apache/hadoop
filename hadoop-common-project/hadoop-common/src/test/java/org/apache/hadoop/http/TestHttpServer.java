@@ -259,13 +259,6 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     conn.connect();
     assertEquals(200, conn.getResponseCode());
     assertEquals("text/html; charset=utf-8", conn.getContentType());
-
-    // JSPs should default to text/html with utf8
-    servletUrl = new URL(baseUrl, "/testjsp.jsp");
-    conn = (HttpURLConnection)servletUrl.openConnection();
-    conn.connect();
-    assertEquals(200, conn.getResponseCode());
-    assertEquals("text/html; charset=utf-8", conn.getContentType());
   }
 
   /**

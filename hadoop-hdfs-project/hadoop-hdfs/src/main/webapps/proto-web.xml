@@ -13,5 +13,4 @@
   limitations under the License. See accompanying LICENSE file.
 -->
 <web-app version="2.4" xmlns="http://java.sun.com/xml/ns/j2ee">
-@hdfs.servlet.definitions@
 </web-app>
