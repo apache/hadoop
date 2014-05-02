@@ -122,11 +122,6 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>javax.servlet.jsp</groupId>
-      <artifactId>jsp-api</artifactId>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
       <groupId>log4j</groupId>
       <artifactId>log4j</artifactId>
       <scope>compile</scope>
@@ -167,11 +162,6 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>tomcat</groupId>
-      <artifactId>jasper-runtime</artifactId>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
       <groupId>xmlenc</groupId>
       <artifactId>xmlenc</artifactId>
       <scope>compile</scope>
@@ -202,141 +192,12 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
         </configuration>
       </plugin>
       <plugin>
-        <groupId>org.codehaus.mojo.jspc</groupId>
-        <artifactId>jspc-maven-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>hdfs</id>
-            <phase>generate-sources</phase>
-            <goals>
-              <goal>compile</goal>
-            </goals>
-            <configuration>
-              <compile>false</compile>
-              <workingDirectory>${project.build.directory}/generated-sources/java</workingDirectory>
-              <webFragmentFile>${project.build.directory}/hdfs-jsp-servlet-definitions.xml</webFragmentFile>
-              <packageName>org.apache.hadoop.hdfs.server.namenode</packageName>
-              <sources>
-                <directory>${basedir}/src/main/webapps/hdfs</directory>
-                <includes>
-                  <include>*.jsp</include>
-                </includes>
-              </sources>
-            </configuration>
-          </execution>
-          <execution>
-            <id>secondary</id>
-            <phase>generate-sources</phase>
-            <goals>
-              <goal>compile</goal>
-            </goals>
-            <configuration>
-              <compile>false</compile>
-              <workingDirectory>${project.build.directory}/generated-sources/java</workingDirectory>
-              <webFragmentFile>${project.build.directory}/secondary-jsp-servlet-definitions.xml</webFragmentFile>
-              <packageName>org.apache.hadoop.hdfs.server.namenode</packageName>
-              <sources>
-                <directory>${basedir}/src/main/webapps/secondary</directory>
-                <includes>
-                  <include>*.jsp</include>
-                </includes>
-              </sources>
-            </configuration>
-          </execution>
-          <execution>
-            <id>journal</id>
-            <phase>generate-sources</phase>
-            <goals>
-              <goal>compile</goal>
-            </goals>
-            <configuration>
-              <compile>false</compile>
-              <workingDirectory>${project.build.directory}/generated-sources/java</workingDirectory>
-              <webFragmentFile>${project.build.directory}/journal-jsp-servlet-definitions.xml</webFragmentFile>
-              <packageName>org.apache.hadoop.hdfs.server.journalservice</packageName>
-              <sources>
-                <directory>${basedir}/src/main/webapps/journal</directory>
-                <includes>
-                  <include>*.jsp</include>
-                </includes>
-              </sources>
-            </configuration>
-          </execution>
-          <execution>
-            <id>datanode</id>
-            <phase>generate-sources</phase>
-            <goals>
-              <goal>compile</goal>
-            </goals>
-            <configuration>
-              <compile>false</compile>
-              <workingDirectory>${project.build.directory}/generated-sources/java</workingDirectory>
-              <webFragmentFile>${project.build.directory}/datanode-jsp-servlet-definitions.xml</webFragmentFile>
-              <packageName>org.apache.hadoop.hdfs.server.datanode</packageName>
-              <sources>
-                <directory>${basedir}/src/main/webapps/datanode</directory>
-                <includes>
-                  <include>*.jsp</include>
-                </includes>
-              </sources>
-            </configuration>
-          </execution>
-        </executions>
-        <dependencies>
-          <dependency>
-            <groupId>org.codehaus.mojo.jspc</groupId>
-            <artifactId>jspc-compiler-tomcat5</artifactId>
-            <version>2.0-alpha-3</version>
-          </dependency>
-          <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-log4j12</artifactId>
-            <version>1.4.1</version>
-          </dependency>
-          <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>jcl104-over-slf4j</artifactId>
-            <version>1.4.1</version>
-          </dependency>
-        </dependencies>
-      </plugin>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>build-helper-maven-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>add-jsp-generated-sources-directory</id>
-            <phase>generate-sources</phase>
-            <goals>
-              <goal>add-source</goal>
-            </goals>
-            <configuration>
-              <sources>
-                <source>${project.build.directory}/generated-sources/java</source>
-              </sources>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-antrun-plugin</artifactId>
         <configuration>
           <skipTests>false</skipTests>
         </configuration>
         <executions>
-          <execution>
-            <id>create-jsp-generated-sources-directory</id>
-            <phase>initialize</phase>
-            <goals>
-              <goal>run</goal>
-            </goals>
-            <configuration>
-              <target>
-                <mkdir dir="${project.build.directory}/generated-sources/java" />
-              </target>
-            </configuration>
-          </execution>
           <execution>
             <id>create-web-xmls</id>
             <phase>compile</phase>
@@ -345,32 +206,21 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
             </goals>
             <configuration>
               <target>
-                <loadfile property="hdfs.servlet.definitions" srcFile="${project.build.directory}/hdfs-jsp-servlet-definitions.xml"/>
-                <loadfile property="secondary.servlet.definitions" srcFile="${project.build.directory}/secondary-jsp-servlet-definitions.xml"/>
-                <loadfile property="datanode.servlet.definitions" srcFile="${project.build.directory}/datanode-jsp-servlet-definitions.xml"/>
-                <loadfile property="journal.servlet.definitions" srcFile="${project.build.directory}/journal-jsp-servlet-definitions.xml"/>               
-                <echoproperties destfile="${project.build.directory}/webxml.properties">
-                  <propertyset>
-                    <propertyref regex=".*.servlet.definitions"/>
-                  </propertyset>
-                </echoproperties>
-                <filter filtersfile="${project.build.directory}/webxml.properties"/>
-                <copy file="${basedir}/src/main/webapps/proto-hdfs-web.xml"
+                <copy file="${basedir}/src/main/webapps/proto-web.xml"
                       tofile="${project.build.directory}/webapps/hdfs/WEB-INF/web.xml"
                       filtering="true"/>
-                <copy file="${basedir}/src/main/webapps/proto-secondary-web.xml"
+                <copy file="${basedir}/src/main/webapps/proto-web.xml"
                       tofile="${project.build.directory}/webapps/secondary/WEB-INF/web.xml"
                       filtering="true"/>
-                <copy file="${basedir}/src/main/webapps/proto-datanode-web.xml"
+                <copy file="${basedir}/src/main/webapps/proto-web.xml"
                       tofile="${project.build.directory}/webapps/datanode/WEB-INF/web.xml"
                       filtering="true"/>
-                <copy file="${basedir}/src/main/webapps/proto-journal-web.xml"
+                <copy file="${basedir}/src/main/webapps/proto-web.xml"
                       tofile="${project.build.directory}/webapps/journal/WEB-INF/web.xml"
                       filtering="true"/>
                 <copy toDir="${project.build.directory}/webapps">
                   <fileset dir="${basedir}/src/main/webapps">
-                    <exclude name="**/*.jsp"/>
-                    <exclude name="**/proto-*-web.xml"/>
+                    <exclude name="**/proto-web.xml"/>
                   </fileset>
                 </copy>
               </target>
@@ -391,6 +241,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                 <copy todir="${project.build.directory}/test-classes/webapps">
                   <fileset dir="${project.build.directory}/webapps">
                     <exclude name="proto-*-web.xml"/>
+                    <exclude name="**/proto-web.xml"/>
                   </fileset>
                 </copy>
               </target>

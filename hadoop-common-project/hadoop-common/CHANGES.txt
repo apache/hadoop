@@ -144,6 +144,8 @@ Trunk (Unreleased)
     HADOOP-10534. KeyProvider getKeysMetadata should take a list of names 
     rather than returning all keys. (omalley)
 
+    HADOOP-10563. Remove the dependency of jsp in trunk. (wheat9)
+
   BUG FIXES
 
     HADOOP-9451. Fault single-layer config if node group topology is enabled.
