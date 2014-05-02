@@ -797,14 +797,16 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     reloadConfiguration();
   }
   
-  private static Pattern varPat = Pattern.compile("\\$\\{[^\\}\\$\u0020]+\\}");
-  private static int MAX_SUBST = 20;
+  private static final Pattern VAR_PATTERN =
+      Pattern.compile("\\$\\{[^\\}\\$\u0020]+\\}");
+
+  private static final int MAX_SUBST = 20;
 
   private String substituteVars(String expr) {
     if (expr == null) {
       return null;
     }
-    Matcher match = varPat.matcher("");
+    Matcher match = VAR_PATTERN.matcher("");
     String eval = expr;
     for(int s=0; s<MAX_SUBST; s++) {
       match.reset(eval);
