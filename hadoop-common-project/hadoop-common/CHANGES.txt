@@ -431,6 +431,9 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10543. RemoteException's unwrapRemoteException method failed for
     PathIOException. (Yongjun Zhang via atm)
 
+    HADOOP-10562. Namenode exits on exception without printing stack trace
+    in AbstractDelegationTokenSecretManager. (Arpit Agarwal)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
