@@ -91,7 +91,6 @@ import javax.net.SocketFactory;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
@@ -194,8 +193,6 @@ import org.apache.hadoop.util.Time;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.net.InetAddresses;
 
 /********************************************************
@@ -2763,44 +2760,11 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
     }
   }
   
-  XAttr buildXAttr(String name, byte[] value) {
-    if (name == null) {
-      throw new NullPointerException("XAttr name can not be null.");
-    }
-    
-    int prefixIndex = name.indexOf(".");
-    if (prefixIndex == -1) {
-      throw new HadoopIllegalArgumentException("XAttr name must be prefixed with" +
-          " user/trusted/security/system and followed by '.'");
-    } else if (prefixIndex == name.length() -1) {
-      throw new HadoopIllegalArgumentException("XAttr name can not be empty.");
-    }
-    
-    XAttr.NameSpace ns;
-    String prefix = name.substring(0, prefixIndex).toUpperCase();
-    if (prefix.equals(XAttr.NameSpace.USER.toString())) {
-      ns = XAttr.NameSpace.USER;
-    } else if (prefix.equals(XAttr.NameSpace.TRUSTED.toString())) {
-      ns = XAttr.NameSpace.TRUSTED;
-    } else if (prefix.equals(XAttr.NameSpace.SECURITY.toString())) {
-      ns = XAttr.NameSpace.SECURITY;
-    } else if (prefix.equals(XAttr.NameSpace.SYSTEM.toString())) {
-      ns = XAttr.NameSpace.SYSTEM;
-    } else {
-      throw new HadoopIllegalArgumentException("XAttr name must be prefixed with" +
-          " user/trusted/security/system and followed by '.'");
-    }
-    XAttr xAttr = (new XAttr.Builder()).setNameSpace(ns).setName(name.
-        substring(prefixIndex + 1)).setValue(value).build();
-    
-    return xAttr;
-  }
-  
   public void setXAttr(String src, String name, byte[] value, 
       EnumSet<XAttrSetFlag> flag) throws IOException {
     checkOpen();
     try {
-      namenode.setXAttr(src, buildXAttr(name, value), flag);
+      namenode.setXAttr(src, XAttrHelper.buildXAttr(name, value), flag);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
                                      AclException.class,
@@ -2815,74 +2779,35 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
   public byte[] getXAttr(String src, String name) throws IOException {
     checkOpen();
     try {
-      final XAttr xAttr = buildXAttr(name, null);
-      final List<XAttr> xAttrs = Lists.newArrayListWithCapacity(1);
-      xAttrs.add(xAttr);
+      final List<XAttr> xAttrs = XAttrHelper.buildXAttrAsList(name);
       final List<XAttr> result = namenode.getXAttrs(src, xAttrs);
-      byte[] value = null;
-      if (result != null && !result.isEmpty()) {
-        XAttr a = result.get(0);
-        value = a.getValue();
-        if (value == null) {
-          value = new byte[0]; //xattr exists, but no value.
-        }
-      }
-      return value;
+      return XAttrHelper.getFirstXAttrValue(result);
     } catch(RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
                                      AclException.class,
                                      FileNotFoundException.class,
                                      UnresolvedPathException.class);
     }
-  }
-  
-  Map<String, byte[]> buildXAttrMap(List<XAttr> xAttrs) {
-    if (xAttrs == null) {
-      return null;
-    }
-    Map<String, byte[]> xAttrMap = Maps.newHashMap();
-    for (XAttr xAttr : xAttrs) {
-      String namespace = xAttr.getNameSpace().toString();
-      String name = namespace.toLowerCase() + "." + xAttr.getName();
-      byte[] value = xAttr.getValue();
-      if (value == null) {
-        value = new byte[0];
-      }
-      xAttrMap.put(name, value);
-    }
-    
-    return xAttrMap;
   }
   
   public Map<String, byte[]> getXAttrs(String src) throws IOException {
     checkOpen();
     try {
-      return buildXAttrMap(namenode.getXAttrs(src, null));
+      return XAttrHelper.buildXAttrMap(namenode.getXAttrs(src, null));
     } catch(RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
                                      AclException.class,
                                      FileNotFoundException.class,
                                      UnresolvedPathException.class);
     }
-  }
-  
-  List<XAttr> buildXAttrs(List<String> names) {
-    if (names == null || names.isEmpty()) {
-      throw new HadoopIllegalArgumentException("XAttr names can not be null or empty.");
-    }
-    
-    List<XAttr> xAttrs = Lists.newArrayListWithCapacity(names.size());
-    for (String name : names) {
-      xAttrs.add(buildXAttr(name, null));
-    }
-    return xAttrs;
   }
   
   public Map<String, byte[]> getXAttrs(String src, List<String> names) 
       throws IOException {
     checkOpen();
     try {
-      return buildXAttrMap(namenode.getXAttrs(src, buildXAttrs(names)));
+      return XAttrHelper.buildXAttrMap(namenode.getXAttrs(
+          src, XAttrHelper.buildXAttrs(names)));
     } catch(RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
                                      AclException.class,
@@ -2894,7 +2819,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory {
   public void removeXAttr(String src, String name) throws IOException {
     checkOpen();
     try {
-      namenode.removeXAttr(src, buildXAttr(name, null));
+      namenode.removeXAttr(src, XAttrHelper.buildXAttr(name));
     } catch(RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,
                                      AclException.class,

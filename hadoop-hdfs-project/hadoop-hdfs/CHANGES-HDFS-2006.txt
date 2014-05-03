@@ -18,6 +18,8 @@ HDFS-2006 (Unreleased)
 
    HDFS-6303. HDFS implementation of FileContext API for XAttrs. (Yi Liu and Charles Lamb via umamahesh)
 
+   HDFS-6324. Shift XAttr helper code out for reuse. (Yi Liu via umamahesh)
+
   OPTIMIZATIONS
 
   BUG FIXES

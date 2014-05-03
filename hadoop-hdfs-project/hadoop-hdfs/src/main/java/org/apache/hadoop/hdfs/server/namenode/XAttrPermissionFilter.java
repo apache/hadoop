@@ -22,6 +22,7 @@ import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.XAttr;
+import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.security.AccessControlException;
 
 import com.google.common.collect.Lists;
@@ -56,7 +57,7 @@ public class XAttrPermissionFilter {
       return;
     }
     throw new AccessControlException("User doesn't have permission for xattr: "
-        + xAttr.getNameSpace().toString().toLowerCase() + "." + xAttr.getName());
+        + XAttrHelper.getPrefixName(xAttr));
   }
   
   static List<XAttr> filterXAttrsForApi(FSPermissionChecker pc, 
