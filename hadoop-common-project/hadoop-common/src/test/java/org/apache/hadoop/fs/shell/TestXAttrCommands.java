@@ -31,49 +31,55 @@ import org.junit.Before;
 import org.junit.Test;
 
 public class TestXAttrCommands {
-
+  private final ByteArrayOutputStream errContent = 
+      new ByteArrayOutputStream();
   private Configuration conf = null;
 
   @Before
   public void setup() throws IOException {
+    System.setErr(new PrintStream(errContent));
     conf = new Configuration();
   }
 
   @Test
   public void testGetfattrValidations() throws Exception {
+    errContent.reset();
     assertFalse("getfattr should fail without path",
-        0 == runCommand(new String[] { "-getfattr" }));
+        0 == runCommand(new String[] { "-getfattr", "-d"}));
+    assertTrue(errContent.toString().contains("<path> is missing"));
+
+    errContent.reset();
     assertFalse("getfattr should fail with extra argument",
-        0 == runCommand(new String[] { "-getfattr", "extra", "/test"}));
+        0 == runCommand(new String[] { "-getfattr", "extra", "-d", "/test"}));
+    assertTrue(errContent.toString().contains("Too many arguments"));
+    
+    errContent.reset();
     assertFalse("getfattr should fail without \"-n name\" or \"-d\"",
         0 == runCommand(new String[] { "-getfattr", "/test"}));
-  }
-
-  @Test
-  public void testGetfattrWithInvalidEncoding() throws Exception {
-    final PrintStream backup = System.err;
-    final ByteArrayOutputStream out = new ByteArrayOutputStream();
-    System.setErr(new PrintStream(out));
-    try {
-      runCommand(new String[] { "-getfattr", "-e", "invalid", "-n",
-                                "xattrname", "/file1" });
-      assertTrue("getfattr should fail with \"-getfattr: Invalid/unsupported "
-        + "econding option specified: invalid\". But the output is: "
-        + out.toString(), out.toString().contains("-getfattr: "
-          + "Invalid/unsupported encoding option specified: invalid"));
-    } finally {
-      System.setErr(backup);
-    }
+    assertTrue(errContent.toString().contains("Must specify '-n name' or '-d' option"));
+    
+    errContent.reset();
+    assertFalse("getfattr should fail with invalid encoding",
+        0 == runCommand(new String[] { "-getfattr", "-d", "-e", "aaa", "/test"}));
+    assertTrue(errContent.toString().contains("Invalid/unsupported encoding option specified: aaa"));
   }
 
   @Test
   public void testSetfattrValidations() throws Exception {
+    errContent.reset();
     assertFalse("setfattr should fail without path",
-        0 == runCommand(new String[] { "-setfattr" }));
+        0 == runCommand(new String[] { "-setfattr", "-n", "user.a1" }));
+    assertTrue(errContent.toString().contains("<path> is missing"));
+    
+    errContent.reset();
     assertFalse("setfattr should fail with extra arguments",
-        0 == runCommand(new String[] { "-setfattr", "extra", "/test"}));
+        0 == runCommand(new String[] { "-setfattr", "extra", "-n", "user.a1", "/test"}));
+    assertTrue(errContent.toString().contains("Too many arguments"));
+    
+    errContent.reset();
     assertFalse("setfattr should fail without \"-n name\" or \"-x name\"",
         0 == runCommand(new String[] { "-setfattr", "/test"}));
+    assertTrue(errContent.toString().contains("Must specify '-n name' or '-x name' option"));
   }
 
   private int runCommand(String[] commands) throws Exception {
