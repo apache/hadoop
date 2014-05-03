@@ -139,7 +139,8 @@ public abstract class BlockPlacementPolicy {
    * @param clusterMap cluster topology
    */
   abstract protected void initialize(Configuration conf,  FSClusterStats stats, 
-                                     NetworkTopology clusterMap);
+                                     NetworkTopology clusterMap, 
+                                     Host2NodesMap host2datanodeMap);
     
   /**
    * Get an instance of the configured Block Placement Policy based on the
@@ -153,14 +154,15 @@ public abstract class BlockPlacementPolicy {
    */
   public static BlockPlacementPolicy getInstance(Configuration conf, 
                                                  FSClusterStats stats,
-                                                 NetworkTopology clusterMap) {
+                                                 NetworkTopology clusterMap,
+                                                 Host2NodesMap host2datanodeMap) {
     final Class<? extends BlockPlacementPolicy> replicatorClass = conf.getClass(
         DFSConfigKeys.DFS_BLOCK_REPLICATOR_CLASSNAME_KEY,
         DFSConfigKeys.DFS_BLOCK_REPLICATOR_CLASSNAME_DEFAULT,
         BlockPlacementPolicy.class);
     final BlockPlacementPolicy replicator = ReflectionUtils.newInstance(
         replicatorClass, conf);
-    replicator.initialize(conf, stats, clusterMap);
+    replicator.initialize(conf, stats, clusterMap, host2datanodeMap);
     return replicator;
   }
   

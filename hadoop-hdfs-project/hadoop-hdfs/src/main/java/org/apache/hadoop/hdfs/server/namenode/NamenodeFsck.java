@@ -172,8 +172,10 @@ public class NamenodeFsck {
     this.minReplication = minReplication;
     this.remoteAddress = remoteAddress;
     this.bpPolicy = BlockPlacementPolicy.getInstance(conf, null,
-        networktopology);
-
+        networktopology,
+        namenode.getNamesystem().getBlockManager().getDatanodeManager()
+        .getHost2DatanodeMap());
+    
     for (Iterator<String> it = pmap.keySet().iterator(); it.hasNext();) {
       String key = it.next();
       if (key.equals("path")) { this.path = pmap.get("path")[0]; }

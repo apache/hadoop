@@ -267,6 +267,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6281. Provide option to use the NFS Gateway without having to use the
     Hadoop portmapper. (atm)
 
+    HDFS-5168. Add cross node dependency support to BlockPlacementPolicy.
+    (Nikola Vujic via szetszwo)
+
   IMPROVEMENTS
 
     HDFS-6007. Update documentation about short-circuit local reads (iwasakims
