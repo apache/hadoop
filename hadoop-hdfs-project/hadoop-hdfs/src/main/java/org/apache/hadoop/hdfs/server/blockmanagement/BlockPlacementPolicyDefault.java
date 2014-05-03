@@ -70,6 +70,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
   protected boolean considerLoad; 
   private boolean preferLocalNode = true;
   protected NetworkTopology clusterMap;
+  protected Host2NodesMap host2datanodeMap;
   private FSClusterStats stats;
   protected long heartbeatInterval;   // interval for DataNode heartbeats
   private long staleInterval;   // interval used to identify stale DataNodes
@@ -80,8 +81,9 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
   protected int tolerateHeartbeatMultiplier;
 
   protected BlockPlacementPolicyDefault(Configuration conf, FSClusterStats stats,
-                           NetworkTopology clusterMap) {
-    initialize(conf, stats, clusterMap);
+                           NetworkTopology clusterMap, 
+                           Host2NodesMap host2datanodeMap) {
+    initialize(conf, stats, clusterMap, host2datanodeMap);
   }
 
   protected BlockPlacementPolicyDefault() {
@@ -89,11 +91,13 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     
   @Override
   public void initialize(Configuration conf,  FSClusterStats stats,
-                         NetworkTopology clusterMap) {
+                         NetworkTopology clusterMap, 
+                         Host2NodesMap host2datanodeMap) {
     this.considerLoad = conf.getBoolean(
         DFSConfigKeys.DFS_NAMENODE_REPLICATION_CONSIDERLOAD_KEY, true);
     this.stats = stats;
     this.clusterMap = clusterMap;
+    this.host2datanodeMap = host2datanodeMap;
     this.heartbeatInterval = conf.getLong(
         DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY,
         DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT) * 1000;

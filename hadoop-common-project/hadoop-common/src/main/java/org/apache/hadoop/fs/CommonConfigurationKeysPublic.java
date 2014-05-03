@@ -78,6 +78,8 @@ public class CommonConfigurationKeysPublic {
   /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
   public static final String  NET_TOPOLOGY_TABLE_MAPPING_FILE_KEY =
     "net.topology.table.file.name";
+  public static final String NET_DEPENDENCY_SCRIPT_FILE_NAME_KEY = 
+    "net.topology.dependency.script.file.name";
 
   /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
   public static final String  FS_TRASH_CHECKPOINT_INTERVAL_KEY =
