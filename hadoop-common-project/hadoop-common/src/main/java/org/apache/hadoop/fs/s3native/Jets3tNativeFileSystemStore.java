@@ -63,6 +63,8 @@ class Jets3tNativeFileSystemStore implements NativeFileSystemStore {
   private boolean multipartEnabled;
   private long multipartCopyBlockSize;
   static final long MAX_PART_SIZE = (long)5 * 1024 * 1024 * 1024;
+
+  private String serverSideEncryptionAlgorithm;
   
   public static final Log LOG =
       LogFactory.getLog(Jets3tNativeFileSystemStore.class);
@@ -87,6 +89,7 @@ class Jets3tNativeFileSystemStore implements NativeFileSystemStore {
     multipartCopyBlockSize = Math.min(
         conf.getLong("fs.s3n.multipart.copy.block.size", MAX_PART_SIZE),
         MAX_PART_SIZE);
+    serverSideEncryptionAlgorithm = conf.get("fs.s3n.server-side-encryption-algorithm");
 
     bucket = new S3Bucket(uri.getHost());
   }
@@ -107,6 +110,7 @@ class Jets3tNativeFileSystemStore implements NativeFileSystemStore {
       object.setDataInputStream(in);
       object.setContentType("binary/octet-stream");
       object.setContentLength(file.length());
+      object.setServerSideEncryptionAlgorithm(serverSideEncryptionAlgorithm);
       if (md5Hash != null) {
         object.setMd5Hash(md5Hash);
       }
@@ -130,6 +134,7 @@ class Jets3tNativeFileSystemStore implements NativeFileSystemStore {
     object.setDataInputFile(file);
     object.setContentType("binary/octet-stream");
     object.setContentLength(file.length());
+    object.setServerSideEncryptionAlgorithm(serverSideEncryptionAlgorithm);
     if (md5Hash != null) {
       object.setMd5Hash(md5Hash);
     }
@@ -156,6 +161,7 @@ class Jets3tNativeFileSystemStore implements NativeFileSystemStore {
       object.setDataInputStream(new ByteArrayInputStream(new byte[0]));
       object.setContentType("binary/octet-stream");
       object.setContentLength(0);
+      object.setServerSideEncryptionAlgorithm(serverSideEncryptionAlgorithm);
       s3Service.putObject(bucket, object);
     } catch (S3ServiceException e) {
       handleS3ServiceException(e);
@@ -317,8 +323,11 @@ class Jets3tNativeFileSystemStore implements NativeFileSystemStore {
           return;
         }
       }
+
+      S3Object dstObject = new S3Object(dstKey);
+      dstObject.setServerSideEncryptionAlgorithm(serverSideEncryptionAlgorithm);
       s3Service.copyObject(bucket.getName(), srcKey, bucket.getName(),
-          new S3Object(dstKey), false);
+          dstObject, false);
     } catch (ServiceException e) {
       handleServiceException(srcKey, e);
     }
