@@ -21,12 +21,15 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 
+import org.apache.commons.io.output.ByteArrayOutputStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -34,12 +37,15 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
+import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -179,7 +185,51 @@ public class TestDecommissioningStatus {
     assertEquals(decommNode.decommissioningStatus
         .getUnderReplicatedInOpenFiles(), expectedUnderRepInOpenFiles);
   }
-  
+
+  private void checkDFSAdminDecommissionStatus(
+      List<DatanodeDescriptor> expectedDecomm, DistributedFileSystem dfs,
+      DFSAdmin admin) throws IOException {
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    PrintStream ps = new PrintStream(baos);
+    PrintStream oldOut = System.out;
+    System.setOut(ps);
+    try {
+      // Parse DFSAdmin just to check the count
+      admin.report(new String[] {"-decommissioning"}, 0);
+      String[] lines = baos.toString().split("\n");
+      Integer num = null;
+      int count = 0;
+      for (String line: lines) {
+        if (line.startsWith("Decommissioning datanodes")) {
+          // Pull out the "(num)" and parse it into an int
+          String temp = line.split(" ")[2];
+          num =
+              Integer.parseInt((String) temp.subSequence(1, temp.length() - 2));
+        }
+        if (line.contains("Decommission in progress")) {
+          count++;
+        }
+      }
+      assertTrue("No decommissioning output", num != null);
+      assertEquals("Unexpected number of decomming DNs", expectedDecomm.size(),
+          num.intValue());
+      assertEquals("Unexpected number of decomming DNs", expectedDecomm.size(),
+          count);
+
+      // Check Java API for correct contents
+      List<DatanodeInfo> decomming =
+          new ArrayList<DatanodeInfo>(Arrays.asList(dfs
+              .getDataNodeStats(DatanodeReportType.DECOMMISSIONING)));
+      assertEquals("Unexpected number of decomming DNs", expectedDecomm.size(),
+          decomming.size());
+      for (DatanodeID id : expectedDecomm) {
+        assertTrue("Did not find expected decomming DN " + id,
+            decomming.contains(id));
+      }
+    } finally {
+      System.setOut(oldOut);
+    }
+  }
   /**
    * Tests Decommissioning Status in DFS.
    */
@@ -191,7 +241,8 @@ public class TestDecommissioningStatus {
     DFSClient client = new DFSClient(addr, conf);
     DatanodeInfo[] info = client.datanodeReport(DatanodeReportType.LIVE);
     assertEquals("Number of Datanodes ", 2, info.length);
-    FileSystem fileSys = cluster.getFileSystem();
+    DistributedFileSystem fileSys = cluster.getFileSystem();
+    DFSAdmin admin = new DFSAdmin(cluster.getConfiguration(0));
 
     short replicas = 2;
     //
@@ -216,12 +267,16 @@ public class TestDecommissioningStatus {
         assertEquals(decommissioningNodes.size(), 1);
         DatanodeDescriptor decommNode = decommissioningNodes.get(0);
         checkDecommissionStatus(decommNode, 4, 0, 2);
+        checkDFSAdminDecommissionStatus(decommissioningNodes.subList(0, 1),
+            fileSys, admin);
       } else {
         assertEquals(decommissioningNodes.size(), 2);
         DatanodeDescriptor decommNode1 = decommissioningNodes.get(0);
         DatanodeDescriptor decommNode2 = decommissioningNodes.get(1);
         checkDecommissionStatus(decommNode1, 4, 4, 2);
         checkDecommissionStatus(decommNode2, 4, 4, 2);
+        checkDFSAdminDecommissionStatus(decommissioningNodes.subList(0, 2),
+            fileSys, admin);
       }
     }
     // Call refreshNodes on FSNamesystem with empty exclude file.

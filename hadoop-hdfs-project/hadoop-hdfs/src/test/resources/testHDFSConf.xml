@@ -15220,7 +15220,11 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-report:( |\t)*Reports basic filesystem information and statistics.( )*</expected-output>
+          <expected-output>^-report \[-live\] \[-dead\] \[-decommissioning\]:(.)*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^[ \t]*Reports basic filesystem information and statistics.( )*</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -15900,9 +15904,9 @@
           <type>RegexpComparator</type>
           <expected-output>DFS Used\%: [0-9\.]+%</expected-output>
         </comparator>
-	<comparator>
+        <comparator>
           <type>RegexpComparator</type>
-          <expected-output>Datanodes available: [0-9]+ \([0-9]+ total, [0-9]+ dead\)</expected-output>
+          <expected-output>Live datanodes \([0-9]+\):</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
@@ -15930,7 +15934,7 @@
         </comparator>
         <comparator>
           <type>TokenComparator</type>
-          <expected-output>Live datanodes:</expected-output>
+          <expected-output>Live datanodes</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -16020,10 +16024,6 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>Datanodes available: [0-9]+ \([0-9]+ total, [0-9]+ dead\)</expected-output>
-        </comparator>
-        <comparator>
-          <type>RegexpComparator</type>
           <expected-output>Name: [0-9\.:]+ \([-.a-zA-z0-9\.]+\)</expected-output>
         </comparator>
         <comparator>
@@ -16048,7 +16048,7 @@
         </comparator>
 	<comparator>
           <type>TokenComparator</type>
-          <expected-output>Live datanodes:</expected-output>
+          <expected-output>Live datanodes</expected-output>
         </comparator>
       </comparators>
     </test>
