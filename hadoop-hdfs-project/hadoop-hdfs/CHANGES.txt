@@ -180,6 +180,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6289. HA failover can fail if there are pending DN messages for DNs
     which no longer exist. (atm)
 
+    HDFS-6337. Setfacl testcase is failing due to dash character in username
+    in TestAclCLI (umamahesh)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
