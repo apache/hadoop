@@ -356,7 +356,6 @@ public class FSDirectory implements Closeable {
                             String path, 
                             PermissionStatus permissions,
                             List<AclEntry> aclEntries,
-                            List<XAttr> xAttrs,
                             short replication,
                             long modificationTime,
                             long atime,
@@ -382,10 +381,6 @@ public class FSDirectory implements Closeable {
         if (aclEntries != null) {
           AclStorage.updateINodeAcl(newNode, aclEntries,
             Snapshot.CURRENT_STATE_ID);
-        }
-        if (xAttrs != null) {
-          XAttrStorage.updateINodeXAttrs(newNode, 
-              xAttrs, Snapshot.CURRENT_STATE_ID);
         }
         return newNode;
       }
@@ -2894,9 +2889,8 @@ public class FSDirectory implements Closeable {
   void removeXAttr(String src, XAttr xAttr) throws IOException {
     writeLock();
     try {
-      unprotectedRemoveXAttr(src, xAttr);
-      //TODO: Recording XAttrs modifications to edit log will be 
-      //implemented as part of HDFS-6301
+      List<XAttr> newXAttrs = unprotectedRemoveXAttr(src, xAttr);
+      fsImage.getEditLog().logSetXAttrs(src, newXAttrs);
     } finally {
       writeUnlock();
     }
@@ -2936,9 +2930,8 @@ public class FSDirectory implements Closeable {
       throws IOException {
     writeLock();
     try {
-      unprotectedSetXAttr(src, xAttr, flag);
-      //TODO: Recording XAttrs modifications to edit log will be 
-      //implemented as part of HDFS-6301
+      List<XAttr> newXAttrs = unprotectedSetXAttr(src, xAttr, flag);
+      fsImage.getEditLog().logSetXAttrs(src, newXAttrs);
     } finally {
       writeUnlock();
     }

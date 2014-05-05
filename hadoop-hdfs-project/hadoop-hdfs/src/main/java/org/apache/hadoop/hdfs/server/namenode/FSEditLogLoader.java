@@ -76,6 +76,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetOwnerOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetPermissionsOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetQuotaOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetReplicationOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetXAttrsOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SymlinkOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.TimesOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.UpdateBlocksOp;
@@ -350,7 +351,7 @@ public class FSEditLogLoader {
         inodeId = getAndUpdateLastInodeId(addCloseOp.inodeId, logVersion,
             lastInodeId);
         newFile = fsDir.unprotectedAddFile(inodeId,
-            path, addCloseOp.permissions, addCloseOp.aclEntries, null,
+            path, addCloseOp.permissions, addCloseOp.aclEntries,
             replication, addCloseOp.mtime, addCloseOp.atime,
             addCloseOp.blockSize, true, addCloseOp.clientName,
             addCloseOp.clientMachine);
@@ -796,6 +797,11 @@ public class FSEditLogLoader {
     case OP_SET_ACL: {
       SetAclOp setAclOp = (SetAclOp) op;
       fsDir.unprotectedSetAcl(setAclOp.src, setAclOp.aclEntries);
+      break;
+    }
+    case OP_SET_XATTRS: {
+      SetXAttrsOp setXAttrsOp = (SetXAttrsOp) op;
+      fsDir.unprotectedUpdateXAttrs(setXAttrsOp.src, setXAttrsOp.xAttrs);
       break;
     }
     default:

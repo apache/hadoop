@@ -65,6 +65,7 @@ import org.apache.hadoop.hdfs.server.namenode.SaveNamespaceContext;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature.DirectoryDiff;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature.DirectoryDiffList;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot.Root;
+import org.apache.hadoop.hdfs.server.namenode.XAttrFeature;
 import org.apache.hadoop.hdfs.util.Diff.ListType;
 
 import com.google.common.base.Preconditions;
@@ -215,11 +216,16 @@ public class FSImageFormatPBSnapshot {
             acl = new AclFeature(FSImageFormatPBINode.Loader.loadAclEntries(
                 fileInPb.getAcl(), state.getStringTable()));
           }
+          XAttrFeature xAttrs = null;
+          if (fileInPb.hasXAttrs()) {
+            xAttrs = new XAttrFeature(FSImageFormatPBINode.Loader.loadXAttrs(
+                fileInPb.getXAttrs(), state.getStringTable()));
+          }
 
           copy = new INodeFileAttributes.SnapshotCopy(pbf.getName()
               .toByteArray(), permission, acl, fileInPb.getModificationTime(),
               fileInPb.getAccessTime(), (short) fileInPb.getReplication(),
-              fileInPb.getPreferredBlockSize(), null);
+              fileInPb.getPreferredBlockSize(), xAttrs);
         }
 
         FileDiff diff = new FileDiff(pbf.getSnapshotId(), copy, null,
@@ -310,16 +316,21 @@ public class FSImageFormatPBSnapshot {
             acl = new AclFeature(FSImageFormatPBINode.Loader.loadAclEntries(
                 dirCopyInPb.getAcl(), state.getStringTable()));
           }
+          XAttrFeature xAttrs = null;
+          if (dirCopyInPb.hasXAttrs()) {
+            xAttrs = new XAttrFeature(FSImageFormatPBINode.Loader.loadXAttrs(
+                dirCopyInPb.getXAttrs(), state.getStringTable()));
+          }
 
           long modTime = dirCopyInPb.getModificationTime();
           boolean noQuota = dirCopyInPb.getNsQuota() == -1
               && dirCopyInPb.getDsQuota() == -1;
 
           copy = noQuota ? new INodeDirectoryAttributes.SnapshotCopy(name,
-              permission, acl, modTime, null)
+              permission, acl, modTime, xAttrs)
               : new INodeDirectoryAttributes.CopyWithQuota(name, permission,
                   acl, modTime, dirCopyInPb.getNsQuota(),
-                  dirCopyInPb.getDsQuota(), null);
+                  dirCopyInPb.getDsQuota(), xAttrs);
         }
         // load created list
         List<INode> clist = loadCreatedList(in, dir,
