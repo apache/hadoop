@@ -27,6 +27,7 @@ import java.io.PrintStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.util.ToolRunner;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -34,11 +35,20 @@ public class TestXAttrCommands {
   private final ByteArrayOutputStream errContent = 
       new ByteArrayOutputStream();
   private Configuration conf = null;
+  private PrintStream initialStdErr;
 
   @Before
   public void setup() throws IOException {
+    errContent.reset();
+    initialStdErr = System.err;
     System.setErr(new PrintStream(errContent));
     conf = new Configuration();
+  }
+  
+  @After
+  public void cleanUp() throws Exception {
+    errContent.reset();
+    System.setErr(initialStdErr);
   }
 
   @Test

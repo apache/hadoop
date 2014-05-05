@@ -118,10 +118,12 @@ class XAttrCommands extends FsCommand {
     }
     
     private void printXAttr(String name, byte[] value) throws IOException{
-      if (value != null && value.length != 0) {
-        out.println(name + "=" + XAttrCodec.encodeValue(value, encoding));
-      } else {
-        out.println(name);
+      if (value != null) {
+        if (value.length != 0) {
+          out.println(name + "=" + XAttrCodec.encodeValue(value, encoding));
+        } else {
+          out.println(name);
+        }
       }
     }
   }
