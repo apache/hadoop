@@ -29,3 +29,5 @@ HDFS-2006 (Unreleased)
 
     HDFS-6331. ClientProtocol#setXattr should not be annotated idempotent.
     (umamahesh via wang)
+
+    HDFS-6335. TestOfflineEditsViewer for XAttr. (Yi Liu via umamahesh)
