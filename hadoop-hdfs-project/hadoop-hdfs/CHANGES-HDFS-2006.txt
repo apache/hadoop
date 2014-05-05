@@ -8,18 +8,21 @@ HDFS-2006 (Unreleased)
 
   IMPROVEMENTS
 
-   HDFS-6299. Protobuf for XAttr and client-side implementation. (Yi Liu via umamahesh)
+    HDFS-6299. Protobuf for XAttr and client-side implementation. (Yi Liu via umamahesh)
 
-   HDFS-6302. Implement XAttr as a INode feature. (Yi Liu via umamahesh)
+    HDFS-6302. Implement XAttr as a INode feature. (Yi Liu via umamahesh)
 
-   HDFS-6309. Javadocs for Xattrs apis in DFSClient and other minor fixups. (Charles Lamb via umamahesh)
+    HDFS-6309. Javadocs for Xattrs apis in DFSClient and other minor fixups. (Charles Lamb via umamahesh)
 
-   HDFS-6258. Namenode server-side storage for XAttrs. (Yi Liu via umamahesh)
+    HDFS-6258. Namenode server-side storage for XAttrs. (Yi Liu via umamahesh)
 
-   HDFS-6303. HDFS implementation of FileContext API for XAttrs. (Yi Liu and Charles Lamb via umamahesh)
+    HDFS-6303. HDFS implementation of FileContext API for XAttrs. (Yi Liu and Charles Lamb via umamahesh)
 
-   HDFS-6324. Shift XAttr helper code out for reuse. (Yi Liu via umamahesh)
+    HDFS-6324. Shift XAttr helper code out for reuse. (Yi Liu via umamahesh)
 
   OPTIMIZATIONS
 
   BUG FIXES
+
+    HDFS-6331. ClientProtocol#setXattr should not be annotated idempotent.
+    (umamahesh via wang)
