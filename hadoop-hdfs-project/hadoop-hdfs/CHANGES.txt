@@ -340,6 +340,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6304. Consolidate the logic of path resolution in FSDirectory.
     (wheat9)
 
+    HDFS-6295. Add "decommissioning" state and node state filtering to
+    dfsadmin. (wang)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)

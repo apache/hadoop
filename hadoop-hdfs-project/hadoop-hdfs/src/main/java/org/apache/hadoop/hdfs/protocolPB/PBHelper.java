@@ -1414,6 +1414,7 @@ public class PBHelper {
     case ALL: return DatanodeReportTypeProto.ALL;
     case LIVE: return DatanodeReportTypeProto.LIVE;
     case DEAD: return DatanodeReportTypeProto.DEAD;
+    case DECOMMISSIONING: return DatanodeReportTypeProto.DECOMMISSIONING;
     default: 
       throw new IllegalArgumentException("Unexpected data type report:" + t);
     }
@@ -1425,6 +1426,7 @@ public class PBHelper {
     case ALL: return DatanodeReportType.ALL;
     case LIVE: return DatanodeReportType.LIVE;
     case DEAD: return DatanodeReportType.DEAD;
+    case DECOMMISSIONING: return DatanodeReportType.DECOMMISSIONING;
     default: 
       throw new IllegalArgumentException("Unexpected data type report:" + t);
     }

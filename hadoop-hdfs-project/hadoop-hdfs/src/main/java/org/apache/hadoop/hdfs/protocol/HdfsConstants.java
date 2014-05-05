@@ -104,7 +104,7 @@ public class HdfsConstants {
 
   // type of the datanode report
   public static enum DatanodeReportType {
-    ALL, LIVE, DEAD
+    ALL, LIVE, DEAD, DECOMMISSIONING
   }
 
   // An invalid transaction ID that will never be seen in a real namesystem.

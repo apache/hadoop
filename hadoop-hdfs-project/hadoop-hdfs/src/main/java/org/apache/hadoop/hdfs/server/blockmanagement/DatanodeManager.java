@@ -1239,10 +1239,15 @@ public class DatanodeManager {
   /** For generating datanode reports */
   public List<DatanodeDescriptor> getDatanodeListForReport(
       final DatanodeReportType type) {
-    boolean listLiveNodes = type == DatanodeReportType.ALL ||
-                            type == DatanodeReportType.LIVE;
-    boolean listDeadNodes = type == DatanodeReportType.ALL ||
-                            type == DatanodeReportType.DEAD;
+    final boolean listLiveNodes =
+        type == DatanodeReportType.ALL ||
+        type == DatanodeReportType.LIVE;
+    final boolean listDeadNodes =
+        type == DatanodeReportType.ALL ||
+        type == DatanodeReportType.DEAD;
+    final boolean listDecommissioningNodes =
+        type == DatanodeReportType.ALL ||
+        type == DatanodeReportType.DECOMMISSIONING;
 
     ArrayList<DatanodeDescriptor> nodes;
     final HostFileManager.HostSet foundNodes = new HostFileManager.HostSet();
@@ -1253,7 +1258,10 @@ public class DatanodeManager {
       nodes = new ArrayList<DatanodeDescriptor>(datanodeMap.size());
       for (DatanodeDescriptor dn : datanodeMap.values()) {
         final boolean isDead = isDatanodeDead(dn);
-        if ((listLiveNodes && !isDead) || (listDeadNodes && isDead)) {
+        final boolean isDecommissioning = dn.isDecommissionInProgress();
+        if ((listLiveNodes && !isDead) ||
+            (listDeadNodes && isDead) ||
+            (listDecommissioningNodes && isDecommissioning)) {
             nodes.add(dn);
         }
         foundNodes.add(HostFileManager.resolvedAddressFromDatanodeID(dn));
