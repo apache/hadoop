@@ -8,6 +8,8 @@ Trunk (Unreleased)
     FSDataOutputStream.sync() and Syncable.sync().  (szetszwo)
 
   NEW FEATURES
+
+    HADOOP-10433. Key Management Server based on KeyProvider API. (tucu)
     
   IMPROVEMENTS
 
