@@ -185,6 +185,9 @@ Release 2.5.0 - UNRELEASED
     MAPREDUCE-5637. Convert Hadoop Streaming document to APT (Akira AJISAKA via
     jeagles)
 
+    MAPREDUCE-5636. Convert MapReduce Tutorial document to APT (Akira AJISAKA
+    via jeagles)
+
   OPTIMIZATIONS
 
   BUG FIXES 
