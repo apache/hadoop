@@ -23,6 +23,8 @@ HDFS-2006 (Unreleased)
     HDFS-6301. NameNode: persist XAttrs in fsimage and record XAttrs modifications to edit log.
     (Yi Liu via umamahesh)
 
+    HDFS-6298. XML based End-to-End test for getfattr and setfattr commands. (Yi Liu via umamahesh)
+
   OPTIMIZATIONS
 
   BUG FIXES
