@@ -43,6 +43,9 @@ Release 2.5.0 - UNRELEASED
     MAX_CHUNKS_IDEAL, MIN_RECORDS_PER_CHUNK and SPLIT_RATIO to be configurable.
     (Tsuyoshi OZAWA via szetszwo)
 
+    MAPREDUCE-5637. Convert Hadoop Streaming document to APT (Akira AJISAKA via
+    jeagles)
+
   OPTIMIZATIONS
 
   BUG FIXES 
