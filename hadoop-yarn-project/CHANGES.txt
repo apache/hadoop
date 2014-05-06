@@ -67,6 +67,9 @@ Release 2.5.0 - UNRELEASED
     YARN-738. TestClientRMTokens is failing irregularly while running all yarn
     tests (Ming Ma via jlowe)
 
+    YARN-2018. TestClientRMService.testTokenRenewalWrongUser fails after
+    HADOOP-10562 (Ming Ma via Arpit Agarwal)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
