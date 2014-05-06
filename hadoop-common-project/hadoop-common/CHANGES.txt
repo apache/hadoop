@@ -443,6 +443,9 @@ Release 2.5.0 - UNRELEASED
 
     HADOOP-10568. Add s3 server-side encryption. (David S. Wang via atm)
 
+    HADOOP-10541. InputStream in MiniKdc#initKDCServer for minikdc.ldiff is not
+    closed. (Swarnim Kulkarni via cnauroth)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
