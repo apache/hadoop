@@ -38,9 +38,9 @@ import com.google.common.annotations.VisibleForTesting;
 public class ProxyUsers {
 
   private static final String CONF_HOSTS = ".hosts";
-  public static final String CONF_GROUPS = ".groups";
-  public static final String CONF_HADOOP_PROXYUSER = "hadoop.proxyuser.";
-  public static final String CONF_HADOOP_PROXYUSER_RE = "hadoop\\.proxyuser\\.";
+  private static final String CONF_GROUPS = ".groups";
+  private static final String CONF_HADOOP_PROXYUSER = "hadoop.proxyuser.";
+  private static final String CONF_HADOOP_PROXYUSER_RE = "hadoop\\.proxyuser\\.";
   public static final String CONF_HADOOP_PROXYSERVERS = "hadoop.proxyservers";
   
   private static boolean init = false;

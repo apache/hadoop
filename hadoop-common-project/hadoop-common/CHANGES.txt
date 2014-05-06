@@ -36,6 +36,9 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10549. MAX_SUBST and varPat should be final in Configuration.java.
     (Gera Shegalov via cnauroth)
 
+    HADOOP-10471. Reduce the visibility of constants in ProxyUsers.
+    (Benoy Antony via wheat9)
+
   OPTIMIZATIONS
 
   BUG FIXES 
