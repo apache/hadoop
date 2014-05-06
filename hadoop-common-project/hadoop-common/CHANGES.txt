@@ -446,6 +446,9 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10541. InputStream in MiniKdc#initKDCServer for minikdc.ldiff is not
     closed. (Swarnim Kulkarni via cnauroth)
 
+    HADOOP-10517. InputStream is not closed in two methods of JarFinder.
+    (Ted Yu via cnauroth)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
