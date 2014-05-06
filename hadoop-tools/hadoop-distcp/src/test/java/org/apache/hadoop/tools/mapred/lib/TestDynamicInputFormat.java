@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.tools.mapred.lib;
 
+import org.apache.hadoop.tools.DistCpConstants;
 import org.junit.Assert;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -160,5 +161,25 @@ public class TestDynamicInputFormat {
     Assert.assertEquals(2, DynamicInputFormat.getSplitRatio(11000000, 10));
     Assert.assertEquals(4, DynamicInputFormat.getSplitRatio(30, 700));
     Assert.assertEquals(2, DynamicInputFormat.getSplitRatio(30, 200));
+
+    // Tests with negative value configuration
+    Configuration conf = new Configuration();
+    conf.setInt(DistCpConstants.CONF_LABEL_MAX_CHUNKS_TOLERABLE, -1);
+    conf.setInt(DistCpConstants.CONF_LABEL_MAX_CHUNKS_IDEAL, -1);
+    conf.setInt(DistCpConstants.CONF_LABEL_MIN_RECORDS_PER_CHUNK, -1);
+    conf.setInt(DistCpConstants.CONF_LABEL_SPLIT_RATIO, -1);
+    Assert.assertEquals(1,
+        DynamicInputFormat.getSplitRatio(1, 1000000000, conf));
+    Assert.assertEquals(2,
+        DynamicInputFormat.getSplitRatio(11000000, 10, conf));
+    Assert.assertEquals(4, DynamicInputFormat.getSplitRatio(30, 700, conf));
+    Assert.assertEquals(2, DynamicInputFormat.getSplitRatio(30, 200, conf));
+
+    // Tests with valid configuration
+    conf.setInt(DistCpConstants.CONF_LABEL_MAX_CHUNKS_TOLERABLE, 100);
+    conf.setInt(DistCpConstants.CONF_LABEL_MAX_CHUNKS_IDEAL, 30);
+    conf.setInt(DistCpConstants.CONF_LABEL_MIN_RECORDS_PER_CHUNK, 10);
+    conf.setInt(DistCpConstants.CONF_LABEL_SPLIT_RATIO, 53);
+    Assert.assertEquals(53, DynamicInputFormat.getSplitRatio(3, 200, conf));
   }
 }
