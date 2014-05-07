@@ -91,6 +91,22 @@ public class TestKerberosName {
     checkBadTranslation("root/joe@FOO.COM");
   }
 
+  @Test
+  public void testToLowerCase() throws Exception {
+    String rules =
+        "RULE:[1:$1]/L\n" +
+        "RULE:[2:$1]/L\n" +
+        "RULE:[2:$1;$2](^.*;admin$)s/;admin$///L\n" +
+        "RULE:[2:$1;$2](^.*;guest$)s/;guest$//g/L\n" +
+        "DEFAULT";
+    KerberosName.setRules(rules);
+    KerberosName.printRules();
+    checkTranslation("Joe@FOO.COM", "joe");
+    checkTranslation("Joe/root@FOO.COM", "joe");
+    checkTranslation("Joe/admin@FOO.COM", "joe");
+    checkTranslation("Joe/guestguest@FOO.COM", "joe");
+  }
+
   @After
   public void clear() {
     System.clearProperty("java.security.krb5.realm");
