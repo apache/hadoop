@@ -39,6 +39,9 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10471. Reduce the visibility of constants in ProxyUsers.
     (Benoy Antony via wheat9)
 
+    HADOOP-10566. Add toLowerCase support to auth_to_local rules 
+    for service name. (tucu)
+
   OPTIMIZATIONS
 
   BUG FIXES 

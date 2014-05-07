@@ -176,9 +176,11 @@ KVNO Timestamp         Principal
   the rule specified by <<<hadoop.security.auth_to_local>>>
   which works in the same way as the <<<auth_to_local>>> in
   {{{http://web.mit.edu/Kerberos/krb5-latest/doc/admin/conf_files/krb5_conf.html}Kerberos configuration file (krb5.conf)}}.
+  In addition, Hadoop <<<auth_to_local>>> mapping supports the <</L>> flag that
+  lowercases the returned name.
 
   By default, it picks the first component of principal name as a user name
-  if the realms matches to the <<<defalut_realm>>> (usually defined in /etc/krb5.conf).
+  if the realms matches to the <<<default_realm>>> (usually defined in /etc/krb5.conf).
   For example, <<<host/full.qualified.domain.name@REALM.TLD>>> is mapped to <<<host>>>
   by default rule.
 
