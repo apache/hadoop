@@ -33,3 +33,5 @@ HDFS-2006 (Unreleased)
     (umamahesh via wang)
 
     HDFS-6335. TestOfflineEditsViewer for XAttr. (Yi Liu via umamahesh)
+
+    HDFS-6343. fix TestNamenodeRetryCache and TestRetryCacheWithHA failures. (umamahesh)
