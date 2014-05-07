@@ -2249,6 +2249,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     long now = System.currentTimeMillis();
     for (TaskInProgress tip: runningTasks.values()) {
       if (tip.getRunState() == TaskStatus.State.RUNNING ||
+          tip.getRunState() == TaskStatus.State.UNASSIGNED ||
           tip.getRunState() == TaskStatus.State.COMMIT_PENDING ||
           tip.isCleaningup()) {
         // Check the per-job timeout interval for tasks;

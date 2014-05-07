@@ -4420,12 +4420,10 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     for (TaskStatus report : status.getTaskReports()) {
       report.setTaskTracker(trackerName);
       TaskAttemptID taskId = report.getTaskID();
-      
-      // don't expire the task if it is not unassigned
-      if (report.getRunState() != TaskStatus.State.UNASSIGNED) {
-        expireLaunchingTasks.removeTask(taskId);
-      }
-      
+
+      // Remove task from the list of tasks to be expired.
+      expireLaunchingTasks.removeTask(taskId);
+
       JobInProgress job = getJob(taskId.getJobID());
       if (job == null) {
         // if job is not there in the cleanup list ... add it
