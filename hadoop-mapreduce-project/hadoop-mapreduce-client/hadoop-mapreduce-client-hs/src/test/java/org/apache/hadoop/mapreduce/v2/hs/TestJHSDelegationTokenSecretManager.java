@@ -30,6 +30,8 @@ import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.v2.api.MRDelegationTokenIdentifier;
+import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.junit.Test;
@@ -87,6 +89,24 @@ public class TestJHSDelegationTokenSecretManager {
     assertEquals("sequence number restore", tokenId2.getSequenceNumber() + 1,
         tokenId3.getSequenceNumber());
     mgr.cancelToken(token1, "tokenOwner");
+
+    // Testing with full principal name
+    MRDelegationTokenIdentifier tokenIdFull = new MRDelegationTokenIdentifier(
+        new Text("tokenOwner/localhost@LOCALHOST"), new Text("tokenRenewer"),
+        new Text("tokenUser"));
+    KerberosName.setRules("RULE:[1:$1]\nRULE:[2:$1]");
+    Token<MRDelegationTokenIdentifier> tokenFull = new Token<MRDelegationTokenIdentifier>(
+        tokenIdFull, mgr);
+    // Negative test
+    try {
+      mgr.cancelToken(tokenFull, "tokenOwner");
+    } catch (AccessControlException ace) {
+      assertTrue(ace.getMessage().contains(
+          "is not authorized to cancel the token"));
+    }
+    // Succeed to cancel with full principal
+    mgr.cancelToken(tokenFull, tokenIdFull.getOwner().toString());
+
     long tokenRenewDate3 = mgr.getAllTokens().get(tokenId3).getRenewDate();
     mgr.stopThreads();
 

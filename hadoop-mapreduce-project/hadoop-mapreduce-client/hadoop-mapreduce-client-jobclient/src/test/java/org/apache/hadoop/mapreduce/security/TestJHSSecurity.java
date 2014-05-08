@@ -198,6 +198,11 @@ public class TestJHSSecurity {
         fail("Unexpected exception" + e);
       }
       cancelDelegationToken(loggedInUser, hsService, token);
+
+      // Testing the token with different renewer to cancel the token
+      Token tokenWithDifferentRenewer = getDelegationToken(loggedInUser,
+          hsService, "yarn");
+      cancelDelegationToken(loggedInUser, hsService, tokenWithDifferentRenewer);
       if (clientUsingDT != null) {
 //        RPC.stopProxy(clientUsingDT);
         clientUsingDT = null;

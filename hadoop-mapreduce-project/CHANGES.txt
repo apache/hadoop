@@ -74,6 +74,9 @@ Release 2.5.0 - UNRELEASED
     MAPREDUCE-5749. TestRMContainerAllocator#testReportedAppProgress Failed
     (jlowe)
 
+    MAPREDUCE-5884. History server uses short user name when canceling tokens
+    (Mohammad Kamrul Islam via jlowe)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
