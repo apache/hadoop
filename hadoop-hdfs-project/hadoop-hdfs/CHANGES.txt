@@ -435,6 +435,10 @@ Release 2.5.0 - UNRELEASED
     HDFS-6337. Setfacl testcase is failing due to dash character in username
     in TestAclCLI (umamahesh)
 
+    HDFS-5381. ExtendedBlock#hashCode should use both blockId and block pool ID    
+    (Benoy Antony via Colin Patrick McCabe)
+
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
