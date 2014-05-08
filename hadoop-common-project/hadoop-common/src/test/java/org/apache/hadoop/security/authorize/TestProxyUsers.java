@@ -39,6 +39,7 @@ public class TestProxyUsers {
     LogFactory.getLog(TestProxyUsers.class);
   private static final String REAL_USER_NAME = "proxier";
   private static final String PROXY_USER_NAME = "proxied_user";
+  private static final String AUTHORIZED_PROXY_USER_NAME = "authorized_proxied_user";
   private static final String[] GROUP_NAMES =
     new String[] { "foo_group" };
   private static final String[] NETGROUP_NAMES =
@@ -158,7 +159,41 @@ public class TestProxyUsers {
     // From bad IP
     assertNotAuthorized(proxyUserUgi, "1.2.3.5");
   }
+  
+  @Test
+  public void testProxyUsersWithUserConf() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set(
+      ProxyUsers.getProxySuperuserUserConfKey(REAL_USER_NAME),
+      StringUtils.join(",", Arrays.asList(AUTHORIZED_PROXY_USER_NAME)));
+    conf.set(
+      ProxyUsers.getProxySuperuserIpConfKey(REAL_USER_NAME),
+      PROXY_IP);
+    ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
 
+
+    // First try proxying a user that's allowed
+    UserGroupInformation realUserUgi = UserGroupInformation
+        .createRemoteUser(REAL_USER_NAME);
+    UserGroupInformation proxyUserUgi = UserGroupInformation.createProxyUserForTesting(
+        AUTHORIZED_PROXY_USER_NAME, realUserUgi, GROUP_NAMES);
+
+    // From good IP
+    assertAuthorized(proxyUserUgi, "1.2.3.4");
+    // From bad IP
+    assertNotAuthorized(proxyUserUgi, "1.2.3.5");
+
+    // Now try proxying a user that's not allowed
+    realUserUgi = UserGroupInformation.createRemoteUser(REAL_USER_NAME);
+    proxyUserUgi = UserGroupInformation.createProxyUserForTesting(
+        PROXY_USER_NAME, realUserUgi, GROUP_NAMES);
+    
+    // From good IP
+    assertNotAuthorized(proxyUserUgi, "1.2.3.4");
+    // From bad IP
+    assertNotAuthorized(proxyUserUgi, "1.2.3.5");
+  }
+  
   @Test
   public void testWildcardGroup() {
     Configuration conf = new Configuration();
@@ -182,6 +217,40 @@ public class TestProxyUsers {
     assertNotAuthorized(proxyUserUgi, "1.2.3.5");
 
     // Now try proxying a different group (just to make sure we aren't getting spill over
+    // from the other test case!)
+    realUserUgi = UserGroupInformation.createRemoteUser(REAL_USER_NAME);
+    proxyUserUgi = UserGroupInformation.createProxyUserForTesting(
+        PROXY_USER_NAME, realUserUgi, OTHER_GROUP_NAMES);
+    
+    // From good IP
+    assertAuthorized(proxyUserUgi, "1.2.3.4");
+    // From bad IP
+    assertNotAuthorized(proxyUserUgi, "1.2.3.5");
+  }
+  
+  @Test
+  public void testWildcardUser() {
+    Configuration conf = new Configuration();
+    conf.set(
+      ProxyUsers.getProxySuperuserUserConfKey(REAL_USER_NAME),
+      "*");
+    conf.set(
+      ProxyUsers.getProxySuperuserIpConfKey(REAL_USER_NAME),
+      PROXY_IP);
+    ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
+
+    // First try proxying a user that's allowed
+    UserGroupInformation realUserUgi = UserGroupInformation
+        .createRemoteUser(REAL_USER_NAME);
+    UserGroupInformation proxyUserUgi = UserGroupInformation.createProxyUserForTesting(
+        AUTHORIZED_PROXY_USER_NAME, realUserUgi, GROUP_NAMES);
+
+    // From good IP
+    assertAuthorized(proxyUserUgi, "1.2.3.4");
+    // From bad IP
+    assertNotAuthorized(proxyUserUgi, "1.2.3.5");
+
+    // Now try proxying a different user (just to make sure we aren't getting spill over
     // from the other test case!)
     realUserUgi = UserGroupInformation.createRemoteUser(REAL_USER_NAME);
     proxyUserUgi = UserGroupInformation.createProxyUserForTesting(
@@ -282,7 +351,7 @@ public class TestProxyUsers {
     try {
       ProxyUsers.authorize(proxyUgi, host);
     } catch (AuthorizationException e) {
-      fail("Did not allowed authorization of " + proxyUgi + " from " + host);
+      fail("Did not allow authorization of " + proxyUgi + " from " + host);
     }
   }
 }

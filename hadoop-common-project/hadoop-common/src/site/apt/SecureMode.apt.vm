@@ -203,7 +203,9 @@ KVNO Timestamp         Principal
   Some products such as Apache Oozie which access the services of Hadoop
   on behalf of end users need to be able to impersonate end users.
   You can configure proxy user using properties
-  <<<hadoop.proxyuser.${superuser}.hosts>>> and <<<hadoop.proxyuser.${superuser}.groups>>>.
+  <<<hadoop.proxyuser.${superuser}.hosts>>> along with either or both of 
+  <<<hadoop.proxyuser.${superuser}.groups>>>
+  and <<<hadoop.proxyuser.${superuser}.users>>>.
 
   For example, by specifying as below in core-site.xml,
   user named <<<oozie>>> accessing from any host
@@ -217,6 +219,20 @@ KVNO Timestamp         Principal
   <property>
     <name>hadoop.proxyuser.oozie.groups</name>
     <value>*</value>
+  </property>
+----
+
+  User named <<<oozie>>> accessing from any host
+  can impersonate user1 and user2 by specifying as below in core-site.xml.
+
+----
+  <property>
+    <name>hadoop.proxyuser.oozie.hosts</name>
+    <value>*</value>
+  </property>
+  <property>
+    <name>hadoop.proxyuser.oozie.users</name>
+    <value>user1,user2</value>
   </property>
 ----
 

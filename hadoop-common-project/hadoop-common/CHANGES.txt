@@ -374,6 +374,9 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10556. Add toLowerCase support to auth_to_local rules 
     for service name. (tucu)
 
+    HADOOP-10467. Enable proxyuser specification to support list of users in
+    addition to list of groups (Benoy Antony via Arpit Agarwal)
+
   OPTIMIZATIONS
 
   BUG FIXES 
