@@ -396,7 +396,7 @@ public class HistoryClientService extends AbstractService {
                     .array(), new Text(protoToken.getKind()), new Text(
                     protoToken.getService()));
 
-        String user = UserGroupInformation.getCurrentUser().getShortUserName();
+        String user = UserGroupInformation.getCurrentUser().getUserName();
         jhsDTSecretManager.cancelToken(token, user);
         return Records.newRecord(CancelDelegationTokenResponse.class);
     }
