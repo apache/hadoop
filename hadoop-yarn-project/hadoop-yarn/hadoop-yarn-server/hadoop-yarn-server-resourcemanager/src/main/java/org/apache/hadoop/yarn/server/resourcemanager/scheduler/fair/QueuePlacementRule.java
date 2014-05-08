@@ -18,16 +18,19 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
 import java.io.IOException;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.w3c.dom.Element;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+
+import com.google.common.annotations.VisibleForTesting;
 
 public abstract class QueuePlacementRule {
   protected boolean create;
@@ -58,16 +61,20 @@ public abstract class QueuePlacementRule {
    *    continue to the next rule, and null indicates that the app should be rejected.
    */
   public String assignAppToQueue(String requestedQueue, String user,
-      Groups groups, Collection<String> configuredQueues) throws IOException {
-    String queue = getQueueForApp(requestedQueue, user, groups, configuredQueues);
-    if (create || configuredQueues.contains(queue)) {
+      Groups groups, Map<FSQueueType, Set<String>> configuredQueues)
+      throws IOException {
+   String queue = getQueueForApp(requestedQueue, user, groups,
+        configuredQueues);
+    if (create || configuredQueues.get(FSQueueType.LEAF).contains(queue)
+        || configuredQueues.get(FSQueueType.PARENT).contains(queue)) {
       return queue;
     } else {
       return "";
     }
   }
   
-  public void initializeFromXml(Element el) {
+  public void initializeFromXml(Element el)
+      throws AllocationConfigurationException {
     boolean create = true;
     NamedNodeMap attributes = el.getAttributes();
     Map<String, String> args = new HashMap<String, String>();
@@ -104,15 +111,16 @@ public abstract class QueuePlacementRule {
    *    continue to the next rule.
    */
   protected abstract String getQueueForApp(String requestedQueue, String user,
-      Groups groups, Collection<String> configuredQueues) throws IOException;
+      Groups groups, Map<FSQueueType, Set<String>> configuredQueues)
+      throws IOException;
 
   /**
    * Places apps in queues by username of the submitter
    */
   public static class User extends QueuePlacementRule {
     @Override
-    protected String getQueueForApp(String requestedQueue,
-        String user, Groups groups, Collection<String> configuredQueues) {
+    protected String getQueueForApp(String requestedQueue, String user,
+        Groups groups, Map<FSQueueType, Set<String>> configuredQueues) {
       return "root." + user;
     }
     
@@ -127,9 +135,9 @@ public abstract class QueuePlacementRule {
    */
   public static class PrimaryGroup extends QueuePlacementRule {
     @Override
-    protected String getQueueForApp(String requestedQueue,
-        String user, Groups groups, 
-        Collection<String> configuredQueues) throws IOException {
+    protected String getQueueForApp(String requestedQueue, String user,
+        Groups groups, Map<FSQueueType, Set<String>> configuredQueues)
+        throws IOException {
       return "root." + groups.getGroups(user).get(0);
     }
     
@@ -147,12 +155,15 @@ public abstract class QueuePlacementRule {
    */
   public static class SecondaryGroupExistingQueue extends QueuePlacementRule {
     @Override
-    protected String getQueueForApp(String requestedQueue,
-        String user, Groups groups, 
-        Collection<String> configuredQueues) throws IOException {
+    protected String getQueueForApp(String requestedQueue, String user,
+        Groups groups, Map<FSQueueType, Set<String>> configuredQueues)
+        throws IOException {
       List<String> groupNames = groups.getGroups(user);
       for (int i = 1; i < groupNames.size(); i++) {
-        if (configuredQueues.contains("root." + groupNames.get(i))) {
+        String group = groupNames.get(i);
+        if (configuredQueues.get(FSQueueType.LEAF).contains("root." + group)
+            || configuredQueues.get(FSQueueType.PARENT).contains(
+                "root." + group)) {
           return "root." + groupNames.get(i);
         }
       }
@@ -167,12 +178,83 @@ public abstract class QueuePlacementRule {
   }
 
   /**
+   * Places apps in queues with name of the submitter under the queue
+   * returned by the nested rule.
+   */
+  public static class NestedUserQueue extends QueuePlacementRule {
+    @VisibleForTesting
+    QueuePlacementRule nestedRule;
+
+    /**
+     * Parse xml and instantiate the nested rule 
+     */
+    @Override
+    public void initializeFromXml(Element el)
+        throws AllocationConfigurationException {
+      NodeList elements = el.getChildNodes();
+
+      for (int i = 0; i < elements.getLength(); i++) {
+        Node node = elements.item(i);
+        if (node instanceof Element) {
+          Element element = (Element) node;
+          if ("rule".equals(element.getTagName())) {
+            QueuePlacementRule rule = QueuePlacementPolicy
+                .createAndInitializeRule(node);
+            if (rule == null) {
+              throw new AllocationConfigurationException(
+                  "Unable to create nested rule in nestedUserQueue rule");
+            }
+            this.nestedRule = rule;
+            break;
+          } else {
+            continue;
+          }
+        }
+      }
+
+      if (this.nestedRule == null) {
+        throw new AllocationConfigurationException(
+            "No nested rule specified in <nestedUserQueue> rule");
+      }
+      super.initializeFromXml(el);
+    }
+    
+    @Override
+    protected String getQueueForApp(String requestedQueue, String user,
+        Groups groups, Map<FSQueueType, Set<String>> configuredQueues)
+        throws IOException {
+      // Apply the nested rule
+      String queueName = nestedRule.assignAppToQueue(requestedQueue, user,
+          groups, configuredQueues);
+      
+      if (queueName != null && queueName != "") {
+        if (!queueName.startsWith("root.")) {
+          queueName = "root." + queueName;
+        }
+        
+        // Verify if the queue returned by the nested rule is an configured leaf queue,
+        // if yes then skip to next rule in the queue placement policy
+        if (configuredQueues.get(FSQueueType.LEAF).contains(queueName)) {
+          return "";
+        }
+        return queueName + "." + user;
+      }
+      return queueName;
+    }
+
+    @Override
+    public boolean isTerminal() {
+      return false;
+    }
+  }
+  
+  /**
    * Places apps in queues by requested queue of the submitter
    */
   public static class Specified extends QueuePlacementRule {
     @Override
-    protected String getQueueForApp(String requestedQueue,
-        String user, Groups groups, Collection<String> configuredQueues) {
+    protected String getQueueForApp(String requestedQueue, String user,
+        Groups groups, Map<FSQueueType, Set<String>> configuredQueues) {
       if (requestedQueue.equals(YarnConfiguration.DEFAULT_QUEUE_NAME)) {
         return "";
       } else {
@@ -195,7 +277,7 @@ public abstract class QueuePlacementRule {
   public static class Default extends QueuePlacementRule {
     @Override
     protected String getQueueForApp(String requestedQueue, String user,
-        Groups groups, Collection<String> configuredQueues) {
+        Groups groups, Map<FSQueueType, Set<String>> configuredQueues) {
       return "root." + YarnConfiguration.DEFAULT_QUEUE_NAME;
     }
     
@@ -211,13 +293,13 @@ public abstract class QueuePlacementRule {
   public static class Reject extends QueuePlacementRule {
     @Override
     public String assignAppToQueue(String requestedQueue, String user,
-        Groups groups, Collection<String> configuredQueues) {
+        Groups groups, Map<FSQueueType, Set<String>> configuredQueues) {
       return null;
     }
     
     @Override
     protected String getQueueForApp(String requestedQueue, String user,
-        Groups groups, Collection<String> configuredQueues) {
+        Groups groups, Map<FSQueueType, Set<String>> configuredQueues) {
       throw new UnsupportedOperationException();
     }
     

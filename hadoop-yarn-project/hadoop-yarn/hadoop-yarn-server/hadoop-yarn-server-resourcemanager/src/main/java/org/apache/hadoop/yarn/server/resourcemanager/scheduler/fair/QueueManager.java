@@ -74,7 +74,7 @@ public class QueueManager {
   }
   
   /**
-   * Get a queue by name, creating it if the create param is true and is necessary.
+   * Get a leaf queue by name, creating it if the create param is true and is necessary.
    * If the queue is not or can not be a leaf queue, i.e. it already exists as a
    * parent queue, or one of the parents in its name is already a leaf queue,
    * null is returned.
@@ -85,31 +85,53 @@ public class QueueManager {
    * could be referred to as just "parent1.queue2".
    */
   public FSLeafQueue getLeafQueue(String name, boolean create) {
+    FSQueue queue = getQueue(name, create, FSQueueType.LEAF);
+    if (queue instanceof FSParentQueue) {
+      return null;
+    }
+    return (FSLeafQueue) queue;
+  }
+  
+  /**
+   * Get a parent queue by name, creating it if the create param is true and is necessary.
+   * If the queue is not or can not be a parent queue, i.e. it already exists as a
+   * leaf queue, or one of the parents in its name is already a leaf queue,
+   * null is returned.
+   * 
+   * The root part of the name is optional, so a queue underneath the root 
+   * named "queue1" could be referred to  as just "queue1", and a queue named
+   * "queue2" underneath a parent named "parent1" that is underneath the root 
+   * could be referred to as just "parent1.queue2".
+   */
+  public FSParentQueue getParentQueue(String name, boolean create) {
+    FSQueue queue = getQueue(name, create, FSQueueType.PARENT);
+    if (queue instanceof FSLeafQueue) {
+      return null;
+    }
+    return (FSParentQueue) queue;
+  }
+  
+  private FSQueue getQueue(String name, boolean create, FSQueueType queueType) {
     name = ensureRootPrefix(name);
     synchronized (queues) {
       FSQueue queue = queues.get(name);
       if (queue == null && create) {
-        FSLeafQueue leafQueue = createLeafQueue(name);
-        if (leafQueue == null) {
-          return null;
-        }
-        queue = leafQueue;
-      } else if (queue instanceof FSParentQueue) {
-        return null;
+        // if the queue doesn't exist,create it and return
+        queue = createQueue(name, queueType);
       }
-      return (FSLeafQueue)queue;
+      return queue;
     }
   }
   
   /**
-   * Creates a leaf queue and places it in the tree. Creates any
-   * parents that don't already exist.
+   * Creates a leaf or parent queue based on what is specified in 'queueType' 
+   * and places it in the tree. Creates any parents that don't already exist.
    * 
    * @return
    *    the created queue, if successful. null if not allowed (one of the parent
    *    queues in the queue name is already a leaf queue)
    */
-  private FSLeafQueue createLeafQueue(String name) {
+  private FSQueue createQueue(String name, FSQueueType queueType) {
     List<String> newQueueNames = new ArrayList<String>();
     newQueueNames.add(name);
     int sepIndex = name.length();
@@ -143,8 +165,7 @@ public class QueueManager {
     FSLeafQueue leafQueue = null;
     for (int i = newQueueNames.size()-1; i >= 0; i--) {
       String queueName = newQueueNames.get(i);
-      if (i == 0) {
-        // First name added was the leaf queue
+      if (i == 0 && queueType != FSQueueType.PARENT) {
         leafQueue = new FSLeafQueue(name, scheduler, parent);
         try {
           leafQueue.setPolicy(queueConf.getDefaultSchedulingPolicy());
@@ -155,6 +176,7 @@ public class QueueManager {
         parent.addChildQueue(leafQueue);
         queues.put(leafQueue.getName(), leafQueue);
         leafQueues.add(leafQueue);
+        return leafQueue;
       } else {
         FSParentQueue newParent = new FSParentQueue(queueName, scheduler, parent);
         try {
@@ -169,53 +191,64 @@ public class QueueManager {
       }
     }
     
-    return leafQueue;
+    return parent;
   }
 
   /**
-   * Make way for the given leaf queue if possible, by removing incompatible
+   * Make way for the given queue if possible, by removing incompatible
    * queues with no apps in them. Incompatibility could be due to
-   * (1) leafToCreate being currently being a parent, or (2) an existing leaf queue in
-   * the ancestry of leafToCreate.
+   * (1) queueToCreate being currently a parent but needs to change to leaf
+   * (2) queueToCreate being currently a leaf but needs to change to parent
+   * (3) an existing leaf queue in the ancestry of queueToCreate.
    * 
    * We will never remove the root queue or the default queue in this way.
    *
-   * @return true if we can create leafToCreate or it already exists.
+   * @return true if we can create queueToCreate or it already exists.
    */
-  private boolean removeEmptyIncompatibleQueues(String leafToCreate) {
-    leafToCreate = ensureRootPrefix(leafToCreate);
+  private boolean removeEmptyIncompatibleQueues(String queueToCreate,
+      FSQueueType queueType) {
+    queueToCreate = ensureRootPrefix(queueToCreate);
 
-    // Ensure leafToCreate is not root and doesn't have the default queue in its
+    // Ensure queueToCreate is not root and doesn't have the default queue in its
     // ancestry.
-    if (leafToCreate.equals(ROOT_QUEUE) ||
-        leafToCreate.startsWith(
+    if (queueToCreate.equals(ROOT_QUEUE) ||
+        queueToCreate.startsWith(
             ROOT_QUEUE + "." + YarnConfiguration.DEFAULT_QUEUE_NAME + ".")) {
       return false;
     }
 
-    FSQueue queue = queues.get(leafToCreate);
+    FSQueue queue = queues.get(queueToCreate);
     // Queue exists already.
     if (queue != null) {
       if (queue instanceof FSLeafQueue) {
-        // If it's an already existing leaf, we're ok.
-        return true;
+        if (queueType == FSQueueType.LEAF) {
+          // if queue is already a leaf then return true
+          return true;
+        }
+        // remove incompatibility since queue is a leaf currently
+        // needs to change to a parent.
+        return removeQueueIfEmpty(queue);
       } else {
-        // If it's an existing parent queue, remove it if it's empty.
+        if (queueType == FSQueueType.PARENT) {
+          return true;
+        }
+        // If it's an existing parent queue and needs to change to leaf, 
+        // remove it if it's empty.
         return removeQueueIfEmpty(queue);
       }
     }
 
     // Queue doesn't exist already. Check if the new queue would be created
     // under an existing leaf queue. If so, try removing that leaf queue.
-    int sepIndex = leafToCreate.length();
-    sepIndex = leafToCreate.lastIndexOf('.', sepIndex-1);
+    int sepIndex = queueToCreate.length();
+    sepIndex = queueToCreate.lastIndexOf('.', sepIndex-1);
     while (sepIndex != -1) {
-      String prefixString = leafToCreate.substring(0, sepIndex);
+      String prefixString = queueToCreate.substring(0, sepIndex);
       FSQueue prefixQueue = queues.get(prefixString);
       if (prefixQueue != null && prefixQueue instanceof FSLeafQueue) {
         return removeQueueIfEmpty(prefixQueue);
       }
-      sepIndex = leafToCreate.lastIndexOf('.', sepIndex-1);
+      sepIndex = queueToCreate.lastIndexOf('.', sepIndex-1);
     }
     return true;
   }
@@ -312,10 +345,19 @@ public class QueueManager {
   }
   
   public void updateAllocationConfiguration(AllocationConfiguration queueConf) {
-    // Make sure all queues exist
-    for (String name : queueConf.getQueueNames()) {
-      if (removeEmptyIncompatibleQueues(name)) {
+    // Create leaf queues and the parent queues in a leaf's ancestry if they do not exist
+    for (String name : queueConf.getConfiguredQueues().get(FSQueueType.LEAF)) {
+      if (removeEmptyIncompatibleQueues(name, FSQueueType.LEAF)) {
         getLeafQueue(name, true);
+      }
+    }
+
+    // At this point all leaves and 'parents with at least one child' would have been created.
+    // Now create parents with no configured leaf.
+    for (String name : queueConf.getConfiguredQueues().get(
+        FSQueueType.PARENT)) {
+      if (removeEmptyIncompatibleQueues(name, FSQueueType.PARENT)) {
+        getParentQueue(name, true);
       }
     }
     

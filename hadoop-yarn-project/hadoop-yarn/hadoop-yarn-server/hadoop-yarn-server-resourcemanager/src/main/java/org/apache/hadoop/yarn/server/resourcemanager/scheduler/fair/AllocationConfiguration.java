@@ -77,19 +77,22 @@ public class AllocationConfiguration {
   @VisibleForTesting
   QueuePlacementPolicy placementPolicy;
   
+  //Configured queues in the alloc xml
   @VisibleForTesting
-  Set<String> queueNames;
+  Map<FSQueueType, Set<String>> configuredQueues;
   
-  public AllocationConfiguration(Map<String, Resource> minQueueResources, 
-      Map<String, Resource> maxQueueResources, 
+  public AllocationConfiguration(Map<String, Resource> minQueueResources,
+      Map<String, Resource> maxQueueResources,
       Map<String, Integer> queueMaxApps, Map<String, Integer> userMaxApps,
       Map<String, ResourceWeights> queueWeights, int userMaxAppsDefault,
-      int queueMaxAppsDefault, Map<String, SchedulingPolicy> schedulingPolicies,
+      int queueMaxAppsDefault,
+      Map<String, SchedulingPolicy> schedulingPolicies,
       SchedulingPolicy defaultSchedulingPolicy,
-      Map<String, Long> minSharePreemptionTimeouts, 
+      Map<String, Long> minSharePreemptionTimeouts,
       Map<String, Map<QueueACL, AccessControlList>> queueAcls,
       long fairSharePreemptionTimeout, long defaultMinSharePreemptionTimeout,
-      QueuePlacementPolicy placementPolicy, Set<String> queueNames) {
+      QueuePlacementPolicy placementPolicy,
+      Map<FSQueueType, Set<String>> configuredQueues) {
     this.minQueueResources = minQueueResources;
     this.maxQueueResources = maxQueueResources;
     this.queueMaxApps = queueMaxApps;
@@ -104,7 +107,7 @@ public class AllocationConfiguration {
     this.fairSharePreemptionTimeout = fairSharePreemptionTimeout;
     this.defaultMinSharePreemptionTimeout = defaultMinSharePreemptionTimeout;
     this.placementPolicy = placementPolicy;
-    this.queueNames = queueNames;
+    this.configuredQueues = configuredQueues;
   }
   
   public AllocationConfiguration(Configuration conf) {
@@ -121,9 +124,12 @@ public class AllocationConfiguration {
     fairSharePreemptionTimeout = Long.MAX_VALUE;
     schedulingPolicies = new HashMap<String, SchedulingPolicy>();
     defaultSchedulingPolicy = SchedulingPolicy.DEFAULT_POLICY;
+    configuredQueues = new HashMap<FSQueueType, Set<String>>();
+    for (FSQueueType queueType : FSQueueType.values()) {
+      configuredQueues.put(queueType, new HashSet<String>());
+    }
     placementPolicy = QueuePlacementPolicy.fromConfiguration(conf,
-        new HashSet<String>());
-    queueNames = new HashSet<String>();
+        configuredQueues);
   }
   
   /**
@@ -221,8 +227,8 @@ public class AllocationConfiguration {
     return defaultSchedulingPolicy;
   }
   
-  public Set<String> getQueueNames() {
-    return queueNames;
+  public Map<FSQueueType, Set<String>> getConfiguredQueues() {
+    return configuredQueues;
   }
   
   public QueuePlacementPolicy getPlacementPolicy() {
