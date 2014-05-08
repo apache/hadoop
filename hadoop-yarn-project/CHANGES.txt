@@ -8,6 +8,9 @@ Release 2.5.0 - UNRELEASED
 
     YARN-1757. NM Recovery. Auxiliary service support. (Jason Lowe via kasha)
 
+    YARN-1864. Fair Scheduler Dynamic Hierarchical User Queues (Ashwin Shankar
+    via Sandy Ryza)
+
   IMPROVEMENTS
 
     YARN-1479. Invalid NaN values in Hadoop REST API JSON response (Chen He via
