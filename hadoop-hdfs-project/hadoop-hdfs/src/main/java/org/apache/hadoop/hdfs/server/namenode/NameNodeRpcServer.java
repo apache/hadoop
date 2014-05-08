@@ -1013,15 +1013,15 @@ class NameNodeRpcServer implements NamenodeProtocols {
            + "from " + nodeReg + ", reports.length=" + reports.length);
     }
     final BlockManager bm = namesystem.getBlockManager(); 
-    boolean hasStaleStorages = true;
+    boolean noStaleStorages = false;
     for(StorageBlockReport r : reports) {
       final BlockListAsLongs blocks = new BlockListAsLongs(r.getBlocks());
-      hasStaleStorages = bm.processReport(nodeReg, r.getStorage(), poolId, blocks);
+      noStaleStorages = bm.processReport(nodeReg, r.getStorage(), poolId, blocks);
     }
 
     if (nn.getFSImage().isUpgradeFinalized() &&
         !nn.isStandbyState() &&
-        !hasStaleStorages) {
+        noStaleStorages) {
       return new FinalizeCommand(poolId);
     }
 
