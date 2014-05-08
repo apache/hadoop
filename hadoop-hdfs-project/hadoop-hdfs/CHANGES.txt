@@ -497,6 +497,8 @@ Release 2.4.1 - UNRELEASED
     HDFS-2882. DN continues to start up, even if block pool fails to initialize
     (vinayakumarb)
 
+    HDFS-6340. DN can't finalize upgrade. (Rahul Singhal via Arpit Agarwal)
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES
