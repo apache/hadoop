@@ -63,13 +63,13 @@ static void add_word(char ***words, size_t *num_words, const char *word)
     new_num_words = *num_words + 1;
     nword = strdup(word);
     if (!nword) {
-        fprintf(stderr, "failed to allocate memory for %Zd words\n",
+        fprintf(stderr, "failed to allocate memory for %zu words\n",
                 new_num_words);
         exit(1);
     }
     nwords = realloc(*words, sizeof(char **) * new_num_words);
     if (!nwords) {
-        fprintf(stderr, "failed to allocate memory for %Zd words\n",
+        fprintf(stderr, "failed to allocate memory for %zu words\n",
                 new_num_words);
         free(nword);
         exit(1);

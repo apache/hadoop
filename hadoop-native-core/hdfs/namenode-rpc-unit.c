@@ -68,13 +68,12 @@ void set_replication_cb(SetReplicationResponseProto *resp,
     if (err) {
         fprintf(stderr, "set_replication_cb: got an error.  %s\n",
                 hadoop_err_msg(err));
-        goto done;
+    } else {
+        fprintf(stderr, "set_replication_cb: resp->result = %d\n",
+                !!resp->result);
     }
-    fprintf(stderr, "set_replication_cb: resp->result = %d\n",
-            !!resp->result);
 
-done:
-    sem_post(sem);
+    uv_sem_post(sem);
     if (err) {
         hadoop_err_free(err);
     }
@@ -82,6 +81,8 @@ done:
         set_replication_response_proto__free_unpacked(resp, NULL);
     }
 }
+
+
 
 int main(void)
 {
@@ -110,7 +111,7 @@ int main(void)
         req.replication = 2;
         cnn_async_set_replication(proxy, &req, set_replication_cb, &sem);
     }
-    sem_wait(&sem);
+    uv_sem_wait(&sem);
 
     hrpc_proxy_free(proxy);
     hrpc_messenger_shutdown(msgr);

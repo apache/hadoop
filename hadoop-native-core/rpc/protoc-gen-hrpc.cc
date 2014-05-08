@@ -23,7 +23,13 @@
 #include <google/protobuf/io/printer.h>
 #include <google/protobuf/io/zero_copy_stream.h>
 #include <google/protobuf/stubs/common.h>
+
+#include <cstddef>
+#ifdef _LIBCPP_VERSION
+#include <memory>
+#else
 #include <tr1/memory>
+#endif
 
 #include <iostream>
 #include <map>
@@ -58,8 +64,11 @@ using google::protobuf::compiler::GeneratorContext;
 using google::protobuf::io::Printer;
 using std::map;
 using std::string;
+#ifdef _LIBCPP_VERSION
+using std::shared_ptr;
+#else
 using std::tr1::shared_ptr;
-
+#endif
 typedef map<string, string> string_map_t;
 
 static string camel_case_to_uscore(const string &in)

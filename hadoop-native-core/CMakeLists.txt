@@ -31,9 +31,9 @@ if (NOT (PROTOBUFC_LIB AND PROTOBUFC_EXE))
 endif()
 
 # Find protobuf
-find_library(PROTOC_LIB NAMES libprotoc.so
+find_library(PROTOC_LIB NAMES protoc
     HINTS /usr/lib /usr/lib64)
-find_library(PROTOBUF_LIB NAMES libprotobuf.so
+find_library(PROTOBUF_LIB NAMES protobuf
     HINTS /usr/lib /usr/lib64)
 find_program(PROTOC_EXE NAMES protoc)
 find_path(PROTOC_HEADER_PATH NAMES 
