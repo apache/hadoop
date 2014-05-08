@@ -17,6 +17,7 @@
 package org.apache.hadoop.security;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
@@ -33,8 +34,9 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.security.PrivilegedExceptionAction;
-import java.util.ArrayList;
 import java.util.Collection;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_USER_GROUP_METRICS_PERCENTILES_INTERVALS;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTH_TO_LOCAL;
@@ -204,7 +206,7 @@ public class TestUserGroupInformation {
 
     System.out.println(userName + ":" + line);
    
-    ArrayList<String> groups = new ArrayList<String> ();    
+    Set<String> groups = new LinkedHashSet<String> ();    
     String[] tokens = line.split(Shell.TOKEN_SEPARATOR_REGEX);
     for(String s: tokens) {
       groups.add(s);
