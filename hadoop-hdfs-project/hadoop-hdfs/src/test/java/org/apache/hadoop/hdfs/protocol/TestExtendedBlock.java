@@ -49,6 +49,26 @@ public class TestExtendedBlock {
         new ExtendedBlock(POOL_A, BLOCK_1_GS1),
         new ExtendedBlock(POOL_A, BLOCK_1_GS2));
   }
+  
+  @Test
+  public void testHashcode() {
+    
+    // Different pools, same block id -> different hashcode
+    assertNotEquals(
+        new ExtendedBlock(POOL_A, BLOCK_1_GS1).hashCode(),
+        new ExtendedBlock(POOL_B, BLOCK_1_GS1).hashCode());
+    
+    // Same pool, different block id -> different hashcode
+    assertNotEquals(
+        new ExtendedBlock(POOL_A, BLOCK_1_GS1).hashCode(),
+        new ExtendedBlock(POOL_A, BLOCK_2_GS1).hashCode());
+    
+    // Same block -> same hashcode
+    assertEquals(
+        new ExtendedBlock(POOL_A, BLOCK_1_GS1).hashCode(),
+        new ExtendedBlock(POOL_A, BLOCK_1_GS1).hashCode());
+
+  }
 
   private static void assertNotEquals(Object a, Object b) {
     assertFalse("expected not equal: '" + a + "' and '" + b + "'",
