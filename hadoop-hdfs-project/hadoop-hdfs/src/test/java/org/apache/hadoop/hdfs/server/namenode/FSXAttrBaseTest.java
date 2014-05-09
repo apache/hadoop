@@ -40,6 +40,7 @@ import com.google.common.collect.Lists;
 
 /**
  * Tests NameNode interaction for all XAttr APIs.
+ * This test suite covers restarting the NN, saving a new checkpoint. 
  */
 public class FSXAttrBaseTest {
   
@@ -48,7 +49,7 @@ public class FSXAttrBaseTest {
   private static int pathCount = 0;
   private static Path path;
   
-  //xattrs
+  // XAttrs
   protected static final String name1 = "user.a1";
   protected static final byte[] value1 = {0x31, 0x32, 0x33};
   protected static final byte[] newValue1 = {0x31, 0x31, 0x31};
@@ -81,9 +82,10 @@ public class FSXAttrBaseTest {
   
   /**
    * Tests for creating xattr
-   * 1. create xattr using XAttrSetFlag.CREATE flag.
-   * 2. Assert exception of creating xattr which already exists.
-   * 3. Create multiple xattrs
+   * 1. Create an xattr using XAttrSetFlag.CREATE.
+   * 2. Create an xattr which already exists and expect an exception.
+   * 3. Create multiple xattrs.
+   * 4. Restart NN and save checkpoint scenarios.
    */
   @Test
   public void testCreateXAttr() throws Exception {
@@ -99,7 +101,7 @@ public class FSXAttrBaseTest {
     xattrs = fs.getXAttrs(path);
     Assert.assertEquals(xattrs.size(), 0);
     
-    //create xattr which already exists.
+    // Create xattr which already exists.
     fs.setXAttr(path, name1, value1, EnumSet.of(XAttrSetFlag.CREATE));
     try {
       fs.setXAttr(path, name1, value1, EnumSet.of(XAttrSetFlag.CREATE));
@@ -108,9 +110,23 @@ public class FSXAttrBaseTest {
     }
     fs.removeXAttr(path, name1);
     
-    //create two xattrs
+    // Create two xattrs
     fs.setXAttr(path, name1, value1, EnumSet.of(XAttrSetFlag.CREATE));
     fs.setXAttr(path, name2, null, EnumSet.of(XAttrSetFlag.CREATE));
+    xattrs = fs.getXAttrs(path);
+    Assert.assertEquals(xattrs.size(), 2);
+    Assert.assertArrayEquals(value1, xattrs.get(name1));
+    Assert.assertArrayEquals(new byte[0], xattrs.get(name2));
+    
+    restart(false);
+    initFileSystem();
+    xattrs = fs.getXAttrs(path);
+    Assert.assertEquals(xattrs.size(), 2);
+    Assert.assertArrayEquals(value1, xattrs.get(name1));
+    Assert.assertArrayEquals(new byte[0], xattrs.get(name2));
+    
+    restart(true);
+    initFileSystem();
     xattrs = fs.getXAttrs(path);
     Assert.assertEquals(xattrs.size(), 2);
     Assert.assertArrayEquals(value1, xattrs.get(name1));
@@ -122,9 +138,10 @@ public class FSXAttrBaseTest {
   
   /**
    * Tests for replacing xattr
-   * 1. Replace xattr using XAttrSetFlag.REPLACE flag.
-   * 2. Assert exception of replacing xattr which does not exist.
-   * 3. Create multiple xattrs, and replace some.
+   * 1. Replace an xattr using XAttrSetFlag.REPLACE.
+   * 2. Replace an xattr which doesn't exist and expect an exception.
+   * 3. Create multiple xattrs and replace some.
+   * 4. Restart NN and save checkpoint scenarios.
    */
   @Test
   public void testReplaceXAttr() throws Exception {
@@ -138,17 +155,31 @@ public class FSXAttrBaseTest {
     
     fs.removeXAttr(path, name1);
     
-    //replace xattr which does not exist.
+    // Replace xattr which does not exist.
     try {
       fs.setXAttr(path, name1, value1, EnumSet.of(XAttrSetFlag.REPLACE));
       Assert.fail("Replacing xattr which does not exist should fail.");
     } catch (IOException e) {
     }
     
-    //create two xattrs, then replace one
+    // Create two xattrs, then replace one
     fs.setXAttr(path, name1, value1, EnumSet.of(XAttrSetFlag.CREATE));
     fs.setXAttr(path, name2, value2, EnumSet.of(XAttrSetFlag.CREATE));
     fs.setXAttr(path, name2, null, EnumSet.of(XAttrSetFlag.REPLACE));
+    xattrs = fs.getXAttrs(path);
+    Assert.assertEquals(xattrs.size(), 2);
+    Assert.assertArrayEquals(value1, xattrs.get(name1));
+    Assert.assertArrayEquals(new byte[0], xattrs.get(name2));
+    
+    restart(false);
+    initFileSystem();
+    xattrs = fs.getXAttrs(path);
+    Assert.assertEquals(xattrs.size(), 2);
+    Assert.assertArrayEquals(value1, xattrs.get(name1));
+    Assert.assertArrayEquals(new byte[0], xattrs.get(name2));
+    
+    restart(true);
+    initFileSystem();
     xattrs = fs.getXAttrs(path);
     Assert.assertEquals(xattrs.size(), 2);
     Assert.assertArrayEquals(value1, xattrs.get(name1));
@@ -161,9 +192,9 @@ public class FSXAttrBaseTest {
   /**
    * Tests for setting xattr
    * 1. Set xattr with XAttrSetFlag.CREATE|XAttrSetFlag.REPLACE flag.
-   * 2. Set xattr with illegal name
+   * 2. Set xattr with illegal name.
    * 3. Set xattr without XAttrSetFlag.
-   * 4. Set xattr and total number exceeds max limit
+   * 4. Set xattr and total number exceeds max limit.
    */
   @Test
   public void testSetXAttr() throws Exception {
@@ -176,7 +207,7 @@ public class FSXAttrBaseTest {
     Assert.assertArrayEquals(value1, xattrs.get(name1));
     fs.removeXAttr(path, name1);
     
-    //set xattr with null name
+    // Set xattr with null name
     try {
       fs.setXAttr(path, null, value1, EnumSet.of(XAttrSetFlag.CREATE, 
           XAttrSetFlag.REPLACE));
@@ -184,7 +215,7 @@ public class FSXAttrBaseTest {
     } catch (NullPointerException e) {
     }
     
-    //set xattr with empty name: "user."
+    // Set xattr with empty name: "user."
     try {
       fs.setXAttr(path, "user.", value1, EnumSet.of(XAttrSetFlag.CREATE, 
           XAttrSetFlag.REPLACE));
@@ -192,7 +223,7 @@ public class FSXAttrBaseTest {
     } catch (HadoopIllegalArgumentException e) {
     }
     
-    //set xattr with invalid name: "a1"
+    // Set xattr with invalid name: "a1"
     try {
       fs.setXAttr(path, "a1", value1, EnumSet.of(XAttrSetFlag.CREATE, 
           XAttrSetFlag.REPLACE));
@@ -201,14 +232,14 @@ public class FSXAttrBaseTest {
     } catch (HadoopIllegalArgumentException e) {
     }
     
-    //set xattr without XAttrSetFlag
+    // Set xattr without XAttrSetFlag
     fs.setXAttr(path, name1, value1);
     xattrs = fs.getXAttrs(path);
     Assert.assertEquals(xattrs.size(), 1);
     Assert.assertArrayEquals(value1, xattrs.get(name1));
     fs.removeXAttr(path, name1);
     
-    //xattr exists, and replace it using CREATE|REPLACE flag.
+    // XAttr exists, and replace it using CREATE|REPLACE flag.
     fs.setXAttr(path, name1, value1, EnumSet.of(XAttrSetFlag.CREATE));
     fs.setXAttr(path, name1, newValue1, EnumSet.of(XAttrSetFlag.CREATE, 
         XAttrSetFlag.REPLACE));
@@ -219,7 +250,7 @@ public class FSXAttrBaseTest {
     
     fs.removeXAttr(path, name1);
     
-    //Total number exceeds max limit
+    // Total number exceeds max limit
     fs.setXAttr(path, name1, value1);
     fs.setXAttr(path, name2, value2);
     fs.setXAttr(path, name3, null);
@@ -245,7 +276,7 @@ public class FSXAttrBaseTest {
     fs.setXAttr(path, name1, value1, EnumSet.of(XAttrSetFlag.CREATE));
     fs.setXAttr(path, name2, value2, EnumSet.of(XAttrSetFlag.CREATE));
     
-    //xattr does not exist.
+    // XAttr does not exist.
     byte[] value = fs.getXAttr(path, name3);
     Assert.assertEquals(value, null);
     
@@ -264,7 +295,8 @@ public class FSXAttrBaseTest {
   
   /**
    * Tests for removing xattr
-   * 1. Remove xattr
+   * 1. Remove xattr.
+   * 2. Restart NN and save checkpoint scenarios.
    */
   @Test
   public void testRemoveXAttr() throws Exception {
@@ -280,7 +312,62 @@ public class FSXAttrBaseTest {
     Assert.assertEquals(xattrs.size(), 1);
     Assert.assertArrayEquals(new byte[0], xattrs.get(name3));
     
+    restart(false);
+    initFileSystem();
+    xattrs = fs.getXAttrs(path);
+    Assert.assertEquals(xattrs.size(), 1);
+    Assert.assertArrayEquals(new byte[0], xattrs.get(name3));
+    
+    restart(true);
+    initFileSystem();
+    xattrs = fs.getXAttrs(path);
+    Assert.assertEquals(xattrs.size(), 1);
+    Assert.assertArrayEquals(new byte[0], xattrs.get(name3));
+    
     fs.removeXAttr(path, name3);
+  }
+  
+  /**
+   * Steps:
+   * 1) Set xattrs on a file.
+   * 2) Remove xattrs from that file.
+   * 3) Save a checkpoint and restart NN.
+   * 4) Set xattrs again on the same file.
+   * 5) Remove xattrs from that file.
+   * 6) Restart NN without saving a checkpoint.
+   * 7) Set xattrs again on the same file.
+   */
+  @Test
+  public void testCleanupXAttrs() throws Exception {
+    FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short)0750));
+    fs.setXAttr(path, name1, value1, EnumSet.of(XAttrSetFlag.CREATE));
+    fs.setXAttr(path, name2, value2, EnumSet.of(XAttrSetFlag.CREATE));
+    fs.removeXAttr(path, name1);
+    fs.removeXAttr(path, name2);
+    
+    restart(true);
+    initFileSystem();
+    
+    fs.setXAttr(path, name1, value1, EnumSet.of(XAttrSetFlag.CREATE));
+    fs.setXAttr(path, name2, value2, EnumSet.of(XAttrSetFlag.CREATE));
+    fs.removeXAttr(path, name1);
+    fs.removeXAttr(path, name2);
+    
+    restart(false);
+    initFileSystem();
+    
+    fs.setXAttr(path, name1, value1, EnumSet.of(XAttrSetFlag.CREATE));
+    fs.setXAttr(path, name2, value2, EnumSet.of(XAttrSetFlag.CREATE));
+    fs.removeXAttr(path, name1);
+    fs.removeXAttr(path, name2);
+    
+    fs.setXAttr(path, name1, value1, EnumSet.of(XAttrSetFlag.CREATE));
+    fs.setXAttr(path, name2, value2, EnumSet.of(XAttrSetFlag.CREATE));
+    
+    Map<String, byte[]> xattrs = fs.getXAttrs(path);
+    Assert.assertEquals(xattrs.size(), 2);
+    Assert.assertArrayEquals(value1, xattrs.get(name1));
+    Assert.assertArrayEquals(value2, xattrs.get(name2));
   }
   
   /**
@@ -313,5 +400,21 @@ public class FSXAttrBaseTest {
     dfsCluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).format(format)
       .build();
     dfsCluster.waitActive();
+  }
+  
+  /**
+   * Restart the cluster, optionally saving a new checkpoint.
+   *
+   * @param checkpoint boolean true to save a new checkpoint
+   * @throws Exception if restart fails
+   */
+  protected static void restart(boolean checkpoint) throws Exception {
+    NameNode nameNode = dfsCluster.getNameNode();
+    if (checkpoint) {
+      NameNodeAdapter.enterSafeMode(nameNode, false);
+      NameNodeAdapter.saveNamespace(nameNode);
+    }
+    shutdown();
+    initCluster(false);
   }
 }

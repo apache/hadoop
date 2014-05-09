@@ -1874,6 +1874,81 @@ public class TestDFSShell {
       cluster.shutdown();
     }
   }
+  
+  @Test (timeout = 30000)
+  public void testSetXAttrPermission() throws Exception {
+    UserGroupInformation user = UserGroupInformation.
+        createUserForTesting("user", new String[] {"mygroup"});
+    MiniDFSCluster cluster = null;
+    PrintStream bak = null;
+    try {
+      final Configuration conf = new HdfsConfiguration();
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+      cluster.waitActive();
+      
+      FileSystem fs = cluster.getFileSystem();
+      Path p = new Path("/foo");
+      fs.mkdirs(p);
+      bak = System.err;
+      
+      final FsShell fshell = new FsShell(conf);
+      final ByteArrayOutputStream out = new ByteArrayOutputStream();
+      System.setErr(new PrintStream(out));
+      
+      // No permission to write xattr
+      fs.setPermission(p, new FsPermission((short) 0700));
+      user.doAs(new PrivilegedExceptionAction<Object>() {
+        @Override
+        public Object run() throws Exception {
+          int ret = ToolRunner.run(fshell, new String[]{
+              "-setfattr", "-n", "user.a1", "-v", "1234", "/foo"});
+          assertEquals("Returned should be 1", 1, ret);
+          String str = out.toString();
+          assertTrue("Permission denied printed", 
+              str.indexOf("Permission denied") != -1);
+          out.reset();
+          return null;
+        }
+      });
+      
+      int ret = ToolRunner.run(fshell, new String[]{
+          "-setfattr", "-n", "user.a1", "-v", "1234", "/foo"});
+      assertEquals("Returned should be 0", 0, ret);
+      out.reset();
+      
+      // No permission to read and remove
+      fs.setPermission(p, new FsPermission((short) 0750));
+      user.doAs(new PrivilegedExceptionAction<Object>() {
+        @Override
+        public Object run() throws Exception {
+          // Read
+          int ret = ToolRunner.run(fshell, new String[]{
+              "-getfattr", "-n", "user.a1", "/foo"});
+          assertEquals("Returned should be 1", 1, ret);
+          String str = out.toString();
+          assertTrue("Permission denied printed",
+              str.indexOf("Permission denied") != -1);
+          out.reset();           
+          // Remove
+          ret = ToolRunner.run(fshell, new String[]{
+              "-setfattr", "-x", "user.a1", "/foo"});
+          assertEquals("Returned should be 1", 1, ret);
+          str = out.toString();
+          assertTrue("Permission denied printed",
+              str.indexOf("Permission denied") != -1);
+          out.reset();  
+          return null;
+        }
+      });
+    } finally {
+      if (bak != null) {
+        System.setErr(bak);
+      }
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
 
   /**
    * Test that the server trash configuration is respected when

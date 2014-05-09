@@ -25,6 +25,8 @@ HDFS-2006 (Unreleased)
 
     HDFS-6298. XML based End-to-End test for getfattr and setfattr commands. (Yi Liu via umamahesh)
 
+    HDFS-6314. Test cases for XAttrs. (Yi Liu via umamahesh)
+
   OPTIMIZATIONS
 
   BUG FIXES
