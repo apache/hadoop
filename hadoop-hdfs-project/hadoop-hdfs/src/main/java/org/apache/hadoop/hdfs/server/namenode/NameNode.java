@@ -270,10 +270,11 @@ public class NameNode implements NameNodeStatusMXBean {
   private JvmPauseMonitor pauseMonitor;
   private ObjectName nameNodeStatusBeanName;
   /**
-   * The service name of the delegation token issued by the namenode. It is
-   * the name service id in HA mode, or the rpc address in non-HA mode.
+   * The namenode address that clients will use to access this namenode
+   * or the name service. For HA configurations using logical URI, it
+   * will be the logical address.
    */
-  private String tokenServiceName;
+  private String clientNamenodeAddress;
   
   /** Format a new filesystem.  Destroys any filesystem that may already
    * exist at this location.  **/
@@ -316,7 +317,54 @@ public class NameNode implements NameNodeStatusMXBean {
    *
    * @return The name service id in HA-mode, or the rpc address in non-HA mode
    */
-  public String getTokenServiceName() { return tokenServiceName; }
+  public String getTokenServiceName() {
+    return getClientNamenodeAddress();
+  }
+
+  /**
+   * Set the namenode address that will be used by clients to access this
+   * namenode or name service. This needs to be called before the config
+   * is overriden.
+   */
+  public void setClientNamenodeAddress(Configuration conf) {
+    String nnAddr = conf.get(FS_DEFAULT_NAME_KEY);
+    if (nnAddr == null) {
+      // default fs is not set.
+      clientNamenodeAddress = null;
+      return;
+    }
+
+    LOG.info(FS_DEFAULT_NAME_KEY + " is " + nnAddr);
+    URI nnUri = URI.create(nnAddr);
+
+    String nnHost = nnUri.getHost();
+    if (nnHost == null) {
+      clientNamenodeAddress = null;
+      return;
+    }
+
+    if (DFSUtil.getNameServiceIds(conf).contains(nnHost)) {
+      // host name is logical
+      clientNamenodeAddress = nnHost;
+    } else if (nnUri.getPort() > 0) {
+      // physical address with a valid port
+      clientNamenodeAddress = nnUri.getAuthority();
+    } else {
+      // the port is missing or 0. Figure out real bind address later.
+      clientNamenodeAddress = null;
+      return;
+    }
+    LOG.info("Clients are to use " + clientNamenodeAddress + " to access"
+        + " this namenode/service.");
+  }
+
+  /**
+   * Get the namenode address to be used by clients.
+   * @return nn address
+   */
+  public String getClientNamenodeAddress() {
+    return clientNamenodeAddress;
+  }
 
   public static InetSocketAddress getAddress(String address) {
     return NetUtils.createSocketAddr(address, DEFAULT_PORT);
@@ -511,9 +559,14 @@ public class NameNode implements NameNodeStatusMXBean {
     loadNamesystem(conf);
 
     rpcServer = createRpcServer(conf);
-    final String nsId = getNameServiceId(conf);
-    tokenServiceName = HAUtil.isHAEnabled(conf, nsId) ? nsId : NetUtils
-            .getHostPortString(rpcServer.getRpcAddress());
+    if (clientNamenodeAddress == null) {
+      // This is expected for MiniDFSCluster. Set it now using 
+      // the RPC server's bind address.
+      clientNamenodeAddress = 
+          NetUtils.getHostPortString(rpcServer.getRpcAddress());
+      LOG.info("Clients are to use " + clientNamenodeAddress + " to access"
+          + " this namenode/service.");
+    }
     if (NamenodeRole.NAMENODE == role) {
       httpServer.setNameNodeAddress(getNameNodeAddress());
       httpServer.setFSImage(getFSImage());
@@ -659,6 +712,7 @@ public class NameNode implements NameNodeStatusMXBean {
       throws IOException { 
     this.conf = conf;
     this.role = role;
+    setClientNamenodeAddress(conf);
     String nsId = getNameServiceId(conf);
     String namenodeId = HAUtil.getNameNodeId(conf, nsId);
     this.haEnabled = HAUtil.isHAEnabled(conf, nsId);

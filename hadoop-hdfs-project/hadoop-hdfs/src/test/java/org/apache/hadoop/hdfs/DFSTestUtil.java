@@ -138,8 +138,8 @@ public class DFSTestUtil {
     String clusterId = StartupOption.FORMAT.getClusterId();
     if(clusterId == null || clusterId.isEmpty())
       StartupOption.FORMAT.setClusterId("testClusterID");
-
-    NameNode.format(conf);
+    // Use a copy of conf as it can be altered by namenode during format.
+    NameNode.format(new Configuration(conf));
   }
 
   /**
