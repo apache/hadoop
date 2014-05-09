@@ -762,8 +762,11 @@ public class MiniDFSCluster {
 
     if (!federation && nnTopology.countNameNodes() == 1) {
       NNConf onlyNN = nnTopology.getOnlyNameNode();
-      // we only had one NN, set DEFAULT_NAME for it
-      conf.set(FS_DEFAULT_NAME_KEY, "127.0.0.1:" + onlyNN.getIpcPort());
+      // we only had one NN, set DEFAULT_NAME for it. If not explicitly
+      // specified initially, the port will be 0 to make NN bind to any
+      // available port. It will be set to the right address after
+      // NN is started.
+      conf.set(FS_DEFAULT_NAME_KEY, "hdfs://127.0.0.1:" + onlyNN.getIpcPort());
     }
     
     List<String> allNsIds = Lists.newArrayList();
@@ -779,6 +782,7 @@ public class MiniDFSCluster {
     int nnCounter = 0;
     for (MiniDFSNNTopology.NSConf nameservice : nnTopology.getNameservices()) {
       String nsId = nameservice.getId();
+      String lastDefaultFileSystem = null;
       
       Preconditions.checkArgument(
           !federation || nsId != null,
@@ -862,10 +866,19 @@ public class MiniDFSCluster {
       for (NNConf nn : nameservice.getNNs()) {
         initNameNodeConf(conf, nsId, nn.getNnId(), manageNameDfsDirs,
             enableManagedDfsDirsRedundancy, nnCounter);
-        createNameNode(nnCounter++, conf, numDataNodes, false, operation,
+        createNameNode(nnCounter, conf, numDataNodes, false, operation,
             clusterId, nsId, nn.getNnId());
+        // Record the last namenode uri
+        if (nameNodes[nnCounter] != null && nameNodes[nnCounter].conf != null) {
+          lastDefaultFileSystem =
+              nameNodes[nnCounter].conf.get(FS_DEFAULT_NAME_KEY);
+        }
+        nnCounter++;
       }
-      
+      if (!federation && lastDefaultFileSystem != null) {
+        // Set the default file system to the actual bind address of NN.
+        conf.set(FS_DEFAULT_NAME_KEY, lastDefaultFileSystem);
+      }
     }
 
   }
@@ -979,7 +992,8 @@ public class MiniDFSCluster {
       operation.setClusterId(clusterId);
     }
     
-    // Start the NameNode
+    // Start the NameNode after saving the default file system.
+    String originalDefaultFs = conf.get(FS_DEFAULT_NAME_KEY);
     String[] args = createArgs(operation);
     NameNode nn =  NameNode.createNameNode(args, conf);
     if (operation == StartupOption.RECOVER) {
@@ -1003,6 +1017,12 @@ public class MiniDFSCluster {
         DFS_NAMENODE_HTTP_ADDRESS_KEY);
     nameNodes[nnIndex] = new NameNodeInfo(nn, nameserviceId, nnId,
         operation, new Configuration(conf));
+    // Restore the default fs name
+    if (originalDefaultFs == null) {
+      conf.set(FS_DEFAULT_NAME_KEY, "");
+    } else {
+      conf.set(FS_DEFAULT_NAME_KEY, originalDefaultFs);
+    }
   }
 
   /**
