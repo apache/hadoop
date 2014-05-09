@@ -156,4 +156,30 @@ public class TestWebHDFSForHA {
       }
     }
   }
+
+  @Test
+  public void testMultipleNamespacesConfigured() throws Exception {
+    Configuration conf = DFSTestUtil.newHAConfiguration(LOGICAL_NAME);
+    MiniDFSCluster cluster = null;
+    WebHdfsFileSystem fs = null;
+
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).nnTopology(topo)
+              .numDataNodes(1).build();
+
+      HATestUtil.setFailoverConfigurations(cluster, conf, LOGICAL_NAME);
+
+      cluster.waitActive();
+      DFSTestUtil.addHAConfiguration(conf, LOGICAL_NAME + "remote");
+      DFSTestUtil.setFakeHttpAddresses(conf, LOGICAL_NAME + "remote");
+
+      fs = (WebHdfsFileSystem)FileSystem.get(WEBHDFS_URI, conf);
+      Assert.assertEquals(2, fs.getResolvedNNAddr().length);
+    } finally {
+      IOUtils.cleanup(null, fs);
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
 }

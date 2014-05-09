@@ -147,15 +147,39 @@ public class DFSTestUtil {
    */
   public static Configuration newHAConfiguration(final String logicalName) {
     Configuration conf = new Configuration();
-    conf.set(DFSConfigKeys.DFS_NAMESERVICES, logicalName);
+    addHAConfiguration(conf, logicalName);
+    return conf;
+  }
+
+  /**
+   * Add a new HA configuration.
+   */
+  public static void addHAConfiguration(Configuration conf,
+      final String logicalName) {
+    String nsIds = conf.get(DFSConfigKeys.DFS_NAMESERVICES);
+    if (nsIds == null) {
+      conf.set(DFSConfigKeys.DFS_NAMESERVICES, logicalName);
+    } else { // append the nsid
+      conf.set(DFSConfigKeys.DFS_NAMESERVICES, nsIds + "," + logicalName);
+    }
     conf.set(DFSUtil.addKeySuffixes(DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX,
             logicalName), "nn1,nn2");
     conf.set(DFSConfigKeys.DFS_CLIENT_FAILOVER_PROXY_PROVIDER_KEY_PREFIX + "" +
             "." + logicalName,
             ConfiguredFailoverProxyProvider.class.getName());
     conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, 1);
-    return conf;
   }
+
+  public static void setFakeHttpAddresses(Configuration conf,
+      final String logicalName) {
+    conf.set(DFSUtil.addKeySuffixes(
+        DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY,
+        logicalName, "nn1"), "127.0.0.1:12345");
+    conf.set(DFSUtil.addKeySuffixes(
+        DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY,
+        logicalName, "nn2"), "127.0.0.1:12346");
+  }
+
 
   /** class MyFile contains enough information to recreate the contents of
    * a single file.
