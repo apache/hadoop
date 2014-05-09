@@ -22,7 +22,7 @@ import java.io.IOException;
 import org.junit.Test;
 
 public class TestSetrepDecreasing {
-  @Test
+  @Test(timeout=120000)
   public void testSetrepDecreasing() throws IOException {
     TestSetrepIncreasing.setrep(5, 3, false);
   }

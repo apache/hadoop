@@ -36,6 +36,7 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -92,8 +93,9 @@ public class TestMetaSave {
     try {
       reader = new BufferedReader(new InputStreamReader(in));
       String line = reader.readLine();
-      assertTrue(line.equals(
-          "3 files and directories, 2 blocks = 5 total filesystem objects"));
+      Assert.assertEquals(
+          "3 files and directories, 2 blocks = 5 total filesystem objects",
+          line);
       line = reader.readLine();
       assertTrue(line.equals("Live Datanodes: 1"));
       line = reader.readLine();
