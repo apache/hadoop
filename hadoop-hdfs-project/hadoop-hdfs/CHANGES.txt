@@ -438,9 +438,6 @@ Release 2.5.0 - UNRELEASED
     HDFS-5381. ExtendedBlock#hashCode should use both blockId and block pool ID    
     (Benoy Antony via Colin Patrick McCabe)
 
-    HDFS-6329. WebHdfs does not work if HA is enabled on NN but logical URI is
-    not configured. (kihwal)
-
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -500,6 +497,9 @@ Release 2.4.1 - UNRELEASED
     (vinayakumarb)
 
     HDFS-6340. DN can't finalize upgrade. (Rahul Singhal via Arpit Agarwal)
+
+    HDFS-6329. WebHdfs does not work if HA is enabled on NN but logical URI is
+    not configured. (kihwal)
 
 Release 2.4.0 - 2014-04-07 
 
