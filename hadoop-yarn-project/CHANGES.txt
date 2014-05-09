@@ -86,6 +86,9 @@ Release 2.4.1 - UNRELEASED
     YARN-1696. Added documentation for ResourceManager fail-over. (Karthik
     Kambatla, Masatake Iwasaki, Tsuyoshi OZAWA via vinodkv)
 
+    YARN-1701. Improved default paths of the timeline store and the generic
+    history store. (Tsuyoshi Ozawa via zjshen)
+
   OPTIMIZATIONS
 
   BUG FIXES
