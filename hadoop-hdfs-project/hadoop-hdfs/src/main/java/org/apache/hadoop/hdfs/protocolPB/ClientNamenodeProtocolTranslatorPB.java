@@ -329,11 +329,12 @@ public class ClientNamenodeProtocolTranslatorPB implements
   }
 
   @Override
-  public void abandonBlock(ExtendedBlock b, String src, String holder)
-      throws AccessControlException, FileNotFoundException,
-      UnresolvedLinkException, IOException {
+  public void abandonBlock(ExtendedBlock b, long fileId, String src,
+      String holder) throws AccessControlException, FileNotFoundException,
+        UnresolvedLinkException, IOException {
     AbandonBlockRequestProto req = AbandonBlockRequestProto.newBuilder()
-        .setB(PBHelper.convert(b)).setSrc(src).setHolder(holder).build();
+        .setB(PBHelper.convert(b)).setSrc(src).setHolder(holder)
+            .setFileId(fileId).build();
     try {
       rpcProxy.abandonBlock(null, req);
     } catch (ServiceException e) {
@@ -365,8 +366,8 @@ public class ClientNamenodeProtocolTranslatorPB implements
   }
 
   @Override
-  public LocatedBlock getAdditionalDatanode(String src, ExtendedBlock blk,
-      DatanodeInfo[] existings, String[] existingStorageIDs,
+  public LocatedBlock getAdditionalDatanode(String src, long fileId,
+      ExtendedBlock blk, DatanodeInfo[] existings, String[] existingStorageIDs,
       DatanodeInfo[] excludes,
       int numAdditionalNodes, String clientName) throws AccessControlException,
       FileNotFoundException, SafeModeException, UnresolvedLinkException,
@@ -374,6 +375,7 @@ public class ClientNamenodeProtocolTranslatorPB implements
     GetAdditionalDatanodeRequestProto req = GetAdditionalDatanodeRequestProto
         .newBuilder()
         .setSrc(src)
+        .setFileId(fileId)
         .setBlk(PBHelper.convert(blk))
         .addAllExistings(PBHelper.convert(existings))
         .addAllExistingStorageUuids(Arrays.asList(existingStorageIDs))
@@ -750,11 +752,13 @@ public class ClientNamenodeProtocolTranslatorPB implements
   }
 
   @Override
-  public void fsync(String src, String client, long lastBlockLength)
+  public void fsync(String src, long fileId, String client,
+                    long lastBlockLength)
       throws AccessControlException, FileNotFoundException,
       UnresolvedLinkException, IOException {
     FsyncRequestProto req = FsyncRequestProto.newBuilder().setSrc(src)
-        .setClient(client).setLastBlockLength(lastBlockLength).build();
+        .setClient(client).setLastBlockLength(lastBlockLength)
+            .setFileId(fileId).build();
     try {
       rpcProxy.fsync(null, req);
     } catch (ServiceException e) {

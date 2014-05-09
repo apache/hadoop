@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.spy;
 
 import java.io.IOException;
 
@@ -26,11 +28,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLog;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.log4j.Level;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 public class TestRenameWhileOpen {
   {
@@ -57,6 +61,7 @@ public class TestRenameWhileOpen {
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 1000);
     conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_THRESHOLD_PCT_KEY, 1);
+    conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, TestFileCreation.blockSize);
 
     // create cluster
     System.out.println("Test 1*****************************");
@@ -65,6 +70,15 @@ public class TestRenameWhileOpen {
     try {
       cluster.waitActive();
       fs = cluster.getFileSystem();
+
+      // Normally, the in-progress edit log would be finalized by
+      // FSEditLog#endCurrentLogSegment.  For testing purposes, we
+      // disable that here.
+      FSEditLog spyLog =
+          spy(cluster.getNameNode().getFSImage().getEditLog());
+      doNothing().when(spyLog).endCurrentLogSegment(Mockito.anyBoolean());
+      cluster.getNameNode().getFSImage().setEditLogForTesting(spyLog);
+
       final int nnport = cluster.getNameNodePort();
 
       // create file1.
@@ -92,18 +106,21 @@ public class TestRenameWhileOpen {
 
       // create file3
       Path file3 = new Path(dir3, "file3");
-      FSDataOutputStream stm3 = TestFileCreation.createFile(fs, file3, 1);
-      TestFileCreation.writeFile(stm3);
-      // rename file3 to some bad name
-      try {
-        fs.rename(file3, new Path(dir3, "$ "));
-      } catch(Exception e) {
-        e.printStackTrace();
-      }
-      
-      // restart cluster with the same namenode port as before.
-      // This ensures that leases are persisted in fsimage.
+      FSDataOutputStream stm3 = fs.create(file3);
+      fs.rename(file3, new Path(dir3, "bozo"));
+      // Get a new block for the file.
+      TestFileCreation.writeFile(stm3, TestFileCreation.blockSize + 1);
+      stm3.hflush();
+
+      // Stop the NameNode before closing the files.
+      // This will ensure that the write leases are still active and present
+      // in the edit log.  Simiarly, there should be a pending ADD_BLOCK_OP
+      // for file3, since we just added a block to that file.
+      cluster.getNameNode().stop();
+
+      // Restart cluster with the same namenode port as before.
       cluster.shutdown();
+
       try {Thread.sleep(2*MAX_IDLE_TIME);} catch (InterruptedException e) {}
       cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport)
                                                 .format(false)
@@ -111,7 +128,7 @@ public class TestRenameWhileOpen {
       cluster.waitActive();
 
       // restart cluster yet again. This triggers the code to read in
-      // persistent leases from fsimage.
+      // persistent leases from the edit log.
       cluster.shutdown();
       try {Thread.sleep(5000);} catch (InterruptedException e) {}
       cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport)

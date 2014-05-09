@@ -422,8 +422,8 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   public AbandonBlockResponseProto abandonBlock(RpcController controller,
       AbandonBlockRequestProto req) throws ServiceException {
     try {
-      server.abandonBlock(PBHelper.convert(req.getB()), req.getSrc(),
-          req.getHolder());
+      server.abandonBlock(PBHelper.convert(req.getB()), req.getFileId(),
+          req.getSrc(), req.getHolder());
     } catch (IOException e) {
       throw new ServiceException(e);
     }
@@ -461,7 +461,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       List<String> existingStorageIDsList = req.getExistingStorageUuidsList();
       List<DatanodeInfoProto> excludesList = req.getExcludesList();
       LocatedBlock result = server.getAdditionalDatanode(req.getSrc(),
-          PBHelper.convert(req.getBlk()),
+          req.getFileId(), PBHelper.convert(req.getBlk()),
           PBHelper.convert(existingList.toArray(
               new DatanodeInfoProto[existingList.size()])),
           existingStorageIDsList.toArray(
@@ -819,7 +819,8 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
   public FsyncResponseProto fsync(RpcController controller,
       FsyncRequestProto req) throws ServiceException {
     try {
-      server.fsync(req.getSrc(), req.getClient(), req.getLastBlockLength());
+      server.fsync(req.getSrc(), req.getFileId(),
+          req.getClient(), req.getLastBlockLength());
       return VOID_FSYNC_RESPONSE;
     } catch (IOException e) {
       throw new ServiceException(e);

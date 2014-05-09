@@ -89,6 +89,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6295. Add "decommissioning" state and node state filtering to
     dfsadmin. (wang)
 
+    HDFS-6294. Use INode IDs to avoid conflicts when a file open for write is
+    renamed. (cmccabe)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)

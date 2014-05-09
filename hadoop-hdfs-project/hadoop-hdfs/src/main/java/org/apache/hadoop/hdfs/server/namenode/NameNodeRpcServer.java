@@ -595,13 +595,15 @@ class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override // ClientProtocol
-  public LocatedBlock getAdditionalDatanode(final String src, final ExtendedBlock blk,
+  public LocatedBlock getAdditionalDatanode(final String src,
+      final long fileId, final ExtendedBlock blk,
       final DatanodeInfo[] existings, final String[] existingStorageIDs,
       final DatanodeInfo[] excludes,
       final int numAdditionalNodes, final String clientName
       ) throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("getAdditionalDatanode: src=" + src
+          + ", fileId=" + fileId
           + ", blk=" + blk
           + ", existings=" + Arrays.asList(existings)
           + ", excludes=" + Arrays.asList(excludes)
@@ -618,20 +620,20 @@ class NameNodeRpcServer implements NamenodeProtocols {
         excludeSet.add(node);
       }
     }
-    return namesystem.getAdditionalDatanode(src, blk, existings,
+    return namesystem.getAdditionalDatanode(src, fileId, blk, existings,
         existingStorageIDs, excludeSet, numAdditionalNodes, clientName);
   }
   /**
    * The client needs to give up on the block.
    */
   @Override // ClientProtocol
-  public void abandonBlock(ExtendedBlock b, String src, String holder)
-      throws IOException {
+  public void abandonBlock(ExtendedBlock b, long fileId, String src,
+        String holder) throws IOException {
     if(stateChangeLog.isDebugEnabled()) {
       stateChangeLog.debug("*BLOCK* NameNode.abandonBlock: "
           +b+" of file "+src);
     }
-    if (!namesystem.abandonBlock(b, src, holder)) {
+    if (!namesystem.abandonBlock(b, fileId, src, holder)) {
       throw new IOException("Cannot abandon block during write to " + src);
     }
   }
@@ -939,9 +941,10 @@ class NameNodeRpcServer implements NamenodeProtocols {
   }
   
   @Override // ClientProtocol
-  public void fsync(String src, String clientName, long lastBlockLength)
+  public void fsync(String src, long fileId, String clientName,
+                    long lastBlockLength)
       throws IOException {
-    namesystem.fsync(src, clientName, lastBlockLength);
+    namesystem.fsync(src, fileId, clientName, lastBlockLength);
   }
 
   @Override // ClientProtocol

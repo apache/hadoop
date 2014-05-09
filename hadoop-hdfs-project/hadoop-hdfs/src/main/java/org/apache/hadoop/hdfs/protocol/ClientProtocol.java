@@ -290,13 +290,20 @@ public interface ClientProtocol {
    * file.
    * Any partial writes to the block will be discarded.
    * 
+   * @param b         Block to abandon
+   * @param fileId    The id of the file where the block resides.  Older clients
+   *                    will pass GRANDFATHER_INODE_ID here.
+   * @param src       The path of the file where the block resides.
+   * @param holder    Lease holder.
+   *
    * @throws AccessControlException If access is denied
    * @throws FileNotFoundException file <code>src</code> is not found
    * @throws UnresolvedLinkException If <code>src</code> contains a symlink
    * @throws IOException If an I/O error occurred
    */
   @Idempotent
-  public void abandonBlock(ExtendedBlock b, String src, String holder)
+  public void abandonBlock(ExtendedBlock b, long fileId,
+      String src, String holder)
       throws AccessControlException, FileNotFoundException,
       UnresolvedLinkException, IOException;
 
@@ -344,6 +351,7 @@ public interface ClientProtocol {
    * Get a datanode for an existing pipeline.
    * 
    * @param src the file being written
+   * @param fileId the ID of the file being written
    * @param blk the block being written
    * @param existings the existing nodes in the pipeline
    * @param excludes the excluded nodes
@@ -359,8 +367,10 @@ public interface ClientProtocol {
    * @throws IOException If an I/O error occurred
    */
   @Idempotent
-  public LocatedBlock getAdditionalDatanode(final String src, final ExtendedBlock blk,
-      final DatanodeInfo[] existings, final String[] existingStorageIDs,
+  public LocatedBlock getAdditionalDatanode(final String src,
+      final long fileId, final ExtendedBlock blk,
+      final DatanodeInfo[] existings,
+      final String[] existingStorageIDs,
       final DatanodeInfo[] excludes,
       final int numAdditionalNodes, final String clientName
       ) throws AccessControlException, FileNotFoundException,
@@ -896,6 +906,8 @@ public interface ClientProtocol {
    * Write all metadata for this file into persistent storage.
    * The file must be currently open for writing.
    * @param src The string representation of the path
+   * @param inodeId The inode ID, or GRANDFATHER_INODE_ID if the client is
+   *                too old to support fsync with inode IDs.
    * @param client The string representation of the client
    * @param lastBlockLength The length of the last block (under construction) 
    *                        to be reported to NameNode 
@@ -905,7 +917,8 @@ public interface ClientProtocol {
    * @throws IOException If an I/O error occurred
    */
   @Idempotent
-  public void fsync(String src, String client, long lastBlockLength) 
+  public void fsync(String src, long inodeId, String client,
+                    long lastBlockLength)
       throws AccessControlException, FileNotFoundException, 
       UnresolvedLinkException, IOException;
 
