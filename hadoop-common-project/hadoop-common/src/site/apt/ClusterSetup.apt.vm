@@ -226,24 +226,34 @@ Hadoop MapReduce Next Generation - Cluster Setup
 *-------------------------+-------------------------+------------------------+
 | <<<yarn.resourcemanager.address>>> | | |
 | | <<<ResourceManager>>> host:port for clients to submit jobs. | |
-| | | <host:port> |
+| | | <host:port>\ |
+| | | If set, overrides the hostname set in <<<yarn.resourcemanager.hostname>>>. |
 *-------------------------+-------------------------+------------------------+
 | <<<yarn.resourcemanager.scheduler.address>>> | | |
 | | <<<ResourceManager>>> host:port for ApplicationMasters to talk to | |
 | | Scheduler to obtain resources. | |
-| | | <host:port> |
+| | | <host:port>\ |
+| | | If set, overrides the hostname set in <<<yarn.resourcemanager.hostname>>>. |
 *-------------------------+-------------------------+------------------------+
 | <<<yarn.resourcemanager.resource-tracker.address>>> | | |
 | | <<<ResourceManager>>> host:port for NodeManagers. | |
-| | | <host:port> |
+| | | <host:port>\ |
+| | | If set, overrides the hostname set in <<<yarn.resourcemanager.hostname>>>. |
 *-------------------------+-------------------------+------------------------+
 | <<<yarn.resourcemanager.admin.address>>> | | |
 | | <<<ResourceManager>>> host:port for administrative commands. | |
-| | | <host:port> |
+| | | <host:port>\ |
+| | | If set, overrides the hostname set in <<<yarn.resourcemanager.hostname>>>. |
 *-------------------------+-------------------------+------------------------+
 | <<<yarn.resourcemanager.webapp.address>>> | | |
 | | <<<ResourceManager>>> web-ui host:port. | |
-| | | <host:port> |
+| | | <host:port>\ |
+| | | If set, overrides the hostname set in <<<yarn.resourcemanager.hostname>>>. |
+*-------------------------+-------------------------+------------------------+
+| <<<yarn.resourcemanager.hostname>>> | | |
+| | <<<ResourceManager>>> host. | |
+| | | <host>\ |
+| | | Single hostname that can be set in place of setting all <<<yarn.resourcemanager*address>>> resources.  Results in default ports for ResourceManager components. |
 *-------------------------+-------------------------+------------------------+
 | <<<yarn.resourcemanager.scheduler.class>>> | | |
 | | <<<ResourceManager>>> Scheduler class. | |
