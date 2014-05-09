@@ -120,6 +120,11 @@ public class TestOfflineImageViewer {
         }
       }
 
+      // Create an empty directory
+      Path emptydir = new Path("/emptydir");
+      hdfs.mkdirs(emptydir);
+      writtenFiles.put(emptydir.toString(), hdfs.getFileStatus(emptydir));
+
       // Get delegation tokens so we log the delegation token op
       Token<?>[] delegationTokens = hdfs
           .addDelegationTokens(TEST_RENEWER, null);
@@ -205,8 +210,8 @@ public class TestOfflineImageViewer {
     matcher = p.matcher(output.getBuffer());
     assertTrue(matcher.find() && matcher.groupCount() == 1);
     int totalDirs = Integer.parseInt(matcher.group(1));
-    // totalDirs includes root directory
-    assertEquals(NUM_DIRS + 1, totalDirs);
+    // totalDirs includes root directory and empty directory
+    assertEquals(NUM_DIRS + 2, totalDirs);
 
     FileStatus maxFile = Collections.max(writtenFiles.values(),
         new Comparator<FileStatus>() {
@@ -259,7 +264,7 @@ public class TestOfflineImageViewer {
 
       // verify the number of directories
       FileStatus[] statuses = webhdfs.listStatus(new Path("/"));
-      assertEquals(NUM_DIRS, statuses.length);
+      assertEquals(NUM_DIRS + 1, statuses.length); // contains empty directory
 
       // verify the number of files in the directory
       statuses = webhdfs.listStatus(new Path("/dir0"));
@@ -269,6 +274,10 @@ public class TestOfflineImageViewer {
       FileStatus status = webhdfs.listStatus(new Path("/dir0/file0"))[0];
       FileStatus expected = writtenFiles.get("/dir0/file0");
       compareFile(expected, status);
+
+      // LISTSTATUS operation to an empty directory
+      statuses = webhdfs.listStatus(new Path("/emptydir"));
+      assertEquals(0, statuses.length);
 
       // LISTSTATUS operation to a invalid path
       URL url = new URL("http://localhost:" + port +

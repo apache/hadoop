@@ -261,6 +261,10 @@ class FSImageLoader {
     long id = getINodeId(path);
     FsImageProto.INodeSection.INode inode = inodes.get(id);
     if (inode.getType() == FsImageProto.INodeSection.INode.Type.DIRECTORY) {
+      if (!dirmap.containsKey(id)) {
+        // if the directory is empty, return empty list
+        return list;
+      }
       long[] children = dirmap.get(id);
       for (long cid : children) {
         list.add(getFileStatus(inodes.get(cid), true));
@@ -416,7 +420,8 @@ class FSImageLoader {
         map.put("replication", 0);
         map.put("type", inode.getType());
         map.put("fileId", inode.getId());
-        map.put("childrenNum", dirmap.get(inode.getId()).length);
+        map.put("childrenNum", dirmap.containsKey(inode.getId()) ?
+            dirmap.get(inode.getId()).length : 0);
         return map;
       }
       case SYMLINK: {
