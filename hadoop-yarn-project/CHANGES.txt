@@ -64,6 +64,9 @@ Release 2.5.0 - UNRELEASED
     YARN-483. Improve documentation on log aggregation in yarn-default.xml
     (Akira Ajisaka via Sandy Ryza)
 
+    YARN-2036. Document yarn.resourcemanager.hostname in ClusterSetup (Ray
+    Chiang via Sandy Ryza)
+
   OPTIMIZATIONS
 
   BUG FIXES 
