@@ -101,6 +101,7 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.Progressable;
 import org.mortbay.util.ajax.JSON;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
 import com.google.common.collect.Lists;
 
@@ -1112,10 +1113,10 @@ public class WebHdfsFileSystem extends FileSystem
       Map<String, Map<String, InetSocketAddress>> addresses = DFSUtil
           .getHaNnWebHdfsAddresses(conf, scheme);
 
-      for (Map<String, InetSocketAddress> addrs : addresses.values()) {
-        for (InetSocketAddress addr : addrs.values()) {
-          ret.add(addr);
-        }
+      // Extract the entry corresponding to the logical name.
+      Map<String, InetSocketAddress> addrs = addresses.get(uri.getHost());
+      for (InetSocketAddress addr : addrs.values()) {
+        ret.add(addr);
       }
     }
 
@@ -1127,5 +1128,10 @@ public class WebHdfsFileSystem extends FileSystem
   public String getCanonicalServiceName() {
     return tokenServiceName == null ? super.getCanonicalServiceName()
         : tokenServiceName.toString();
+  }
+
+  @VisibleForTesting
+  InetSocketAddress[] getResolvedNNAddr() {
+    return nnAddrs;
   }
 }
