@@ -29,6 +29,9 @@ HDFS-2006 (Unreleased)
 
   OPTIMIZATIONS
 
+    HDFS-6346. Optimize OP_SET_XATTRS by persisting single Xattr entry per setXattr/removeXattr api call
+    (Yi Liu via umamahesh)
+
   BUG FIXES
 
     HDFS-6331. ClientProtocol#setXattr should not be annotated idempotent.

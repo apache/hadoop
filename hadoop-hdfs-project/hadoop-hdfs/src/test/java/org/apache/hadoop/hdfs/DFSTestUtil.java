@@ -1134,11 +1134,13 @@ public class DFSTestUtil {
             .setType(AclEntryType.OTHER)
             .build());
     filesystem.setAcl(pathConcatTarget, aclEntryList);
-    // OP_SET_XATTRS
+    // OP_SET_XATTR
     filesystem.setXAttr(pathConcatTarget, "user.a1", 
         new byte[]{0x31, 0x32, 0x33});
     filesystem.setXAttr(pathConcatTarget, "user.a2", 
         new byte[]{0x37, 0x38, 0x39});
+    // OP_REMOVE_XATTR
+    filesystem.removeXAttr(pathConcatTarget, "user.a2");
   }
 
   public static void abortStream(DFSOutputStream out) throws IOException {

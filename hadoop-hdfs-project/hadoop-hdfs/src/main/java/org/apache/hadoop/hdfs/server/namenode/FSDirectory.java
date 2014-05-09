@@ -50,6 +50,7 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.AclException;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
@@ -2889,14 +2890,20 @@ public class FSDirectory implements Closeable {
   void removeXAttr(String src, XAttr xAttr) throws IOException {
     writeLock();
     try {
-      List<XAttr> newXAttrs = unprotectedRemoveXAttr(src, xAttr);
-      fsImage.getEditLog().logSetXAttrs(src, newXAttrs);
+      XAttr removedXAttr = unprotectedRemoveXAttr(src, xAttr);
+      if (removedXAttr != null) {
+        fsImage.getEditLog().logRemoveXAttr(src, removedXAttr);
+      } else {
+        NameNode.stateChangeLog.info("DIR* FSDirectory.removeXAttr: XAttr " +
+        		XAttrHelper.getPrefixName(xAttr) + 
+        		" does not exist on the path " + src);
+      }
     } finally {
       writeUnlock();
     }
   }
   
-  private List<XAttr> unprotectedRemoveXAttr(String src,
+  XAttr unprotectedRemoveXAttr(String src,
       XAttr xAttr) throws IOException {
     assert hasWriteLock();
     INodesInPath iip = rootDir.getINodesInPath4Write(normalizePath(src), true);
@@ -2904,9 +2911,11 @@ public class FSDirectory implements Closeable {
     int snapshotId = iip.getLatestSnapshotId();
     List<XAttr> existingXAttrs = XAttrStorage.readINodeXAttrs(inode);
     List<XAttr> newXAttrs = filterINodeXAttr(existingXAttrs, xAttr);
-    XAttrStorage.updateINodeXAttrs(inode, newXAttrs, snapshotId);
-    
-    return newXAttrs;
+    if (existingXAttrs.size() != newXAttrs.size()) {
+      XAttrStorage.updateINodeXAttrs(inode, newXAttrs, snapshotId);
+      return xAttr;
+    }
+    return null;
   }
   
   List<XAttr> filterINodeXAttr(List<XAttr> existingXAttrs, 
@@ -2930,14 +2939,14 @@ public class FSDirectory implements Closeable {
       throws IOException {
     writeLock();
     try {
-      List<XAttr> newXAttrs = unprotectedSetXAttr(src, xAttr, flag);
-      fsImage.getEditLog().logSetXAttrs(src, newXAttrs);
+      unprotectedSetXAttr(src, xAttr, flag);
+      fsImage.getEditLog().logSetXAttr(src, xAttr);
     } finally {
       writeUnlock();
     }
   }
   
-  List<XAttr> unprotectedSetXAttr(String src, XAttr xAttr, 
+  void unprotectedSetXAttr(String src, XAttr xAttr, 
       EnumSet<XAttrSetFlag> flag) throws IOException {
     assert hasWriteLock();
     INodesInPath iip = rootDir.getINodesInPath4Write(normalizePath(src), true);
@@ -2946,8 +2955,6 @@ public class FSDirectory implements Closeable {
     List<XAttr> existingXAttrs = XAttrStorage.readINodeXAttrs(inode);
     List<XAttr> newXAttrs = setINodeXAttr(existingXAttrs, xAttr, flag);
     XAttrStorage.updateINodeXAttrs(inode, newXAttrs, snapshotId);
-    
-    return newXAttrs;
   }
   
   List<XAttr> setINodeXAttr(List<XAttr> existingXAttrs, XAttr xAttr, 
@@ -2975,16 +2982,6 @@ public class FSDirectory implements Closeable {
     }
     
     return xAttrs;
-  }
-  
-  void unprotectedUpdateXAttrs(String src, List<XAttr> xAttrs) 
-      throws IOException {
-    assert hasWriteLock();
-    INodesInPath iip = rootDir.getINodesInPath4Write(normalizePath(src), true);
-    INode inode = resolveLastINode(src, iip);
-    int snapshotId = iip.getLatestSnapshotId();
-    
-    XAttrStorage.updateINodeXAttrs(inode, xAttrs, snapshotId);
   }
   
   List<XAttr> getXAttrs(String src) throws IOException {

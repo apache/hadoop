@@ -70,6 +70,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.OpInstanceCache;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.ReassignLeaseOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RemoveCacheDirectiveInfoOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RemoveCachePoolOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RemoveXAttrOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenameOldOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenameOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.RenameSnapshotOp;
@@ -81,7 +82,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetOwnerOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetPermissionsOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetQuotaOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetReplicationOp;
-import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetXAttrsOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetXAttrOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SymlinkOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.TimesOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.UpdateBlocksOp;
@@ -1053,10 +1054,17 @@ public class FSEditLog implements LogsPurgeable {
     logEdit(op);
   }
   
-  void logSetXAttrs(String src, List<XAttr> xAttrs) {
-    final SetXAttrsOp op = SetXAttrsOp.getInstance();
+  void logSetXAttr(String src, XAttr xAttr) {
+    final SetXAttrOp op = SetXAttrOp.getInstance();
     op.src = src;
-    op.xAttrs = xAttrs;
+    op.xAttr = xAttr;
+    logEdit(op);
+  }
+  
+  void logRemoveXAttr(String src, XAttr xAttr) {
+    final RemoveXAttrOp op = RemoveXAttrOp.getInstance();
+    op.src = src;
+    op.xAttr = xAttr;
     logEdit(op);
   }
 
