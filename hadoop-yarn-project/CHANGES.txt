@@ -67,6 +67,9 @@ Release 2.5.0 - UNRELEASED
     YARN-2036. Document yarn.resourcemanager.hostname in ClusterSetup (Ray
     Chiang via Sandy Ryza)
 
+    YARN-766. TestNodeManagerShutdown in branch-2 should use Shell to form the output path and a format 
+    issue in trunk. (Contributed by Siddharth Seth)
+
   OPTIMIZATIONS
 
   BUG FIXES 

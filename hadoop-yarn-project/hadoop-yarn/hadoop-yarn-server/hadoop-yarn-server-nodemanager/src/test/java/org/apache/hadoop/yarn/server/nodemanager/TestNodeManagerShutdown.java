@@ -157,7 +157,7 @@ public class TestNodeManagerShutdown {
 
   public static void startContainer(NodeManager nm, ContainerId cId,
       FileContext localFS, File scriptFileDir, File processStartFile)
-      throws IOException, YarnException {
+          throws IOException, YarnException {
     File scriptFile =
         createUnhaltingScriptFile(cId, scriptFileDir, processStartFile);
     
