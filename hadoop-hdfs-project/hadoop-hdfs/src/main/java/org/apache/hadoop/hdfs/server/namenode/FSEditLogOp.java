@@ -3557,6 +3557,7 @@ public abstract class FSEditLogOp {
       XAttrEditLogProto p = XAttrEditLogProto.parseDelimitedFrom(in);
       src = p.getSrc();
       xAttr = PBHelper.convertXAttr(p.getXAttr());
+      readRpcIds(in, logVersion);
     }
 
     @Override
@@ -3567,6 +3568,8 @@ public abstract class FSEditLogOp {
       }
       b.setXAttr(PBHelper.convertXAttrProto(xAttr));
       b.build().writeDelimitedTo(out);
+      // clientId and callId
+      writeRpcIds(rpcClientId, rpcCallId, out);
     }
 
     @Override

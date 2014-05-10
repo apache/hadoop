@@ -7731,7 +7731,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
     boolean success = false;
     try {
-      setXAttrInt(src, xAttr, flag);
+      setXAttrInt(src, xAttr, flag, cacheEntry != null);
       success = true;
     } catch (AccessControlException e) {
       logAuditEvent(false, "setXAttr", src);
@@ -7741,8 +7741,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
   }
   
-  private void setXAttrInt(String src, XAttr xAttr, EnumSet<XAttrSetFlag> flag) 
-      throws IOException {
+  private void setXAttrInt(String src, XAttr xAttr, EnumSet<XAttrSetFlag> flag,
+      boolean logRetryCache) throws IOException {
     nnConf.checkXAttrsConfigFlag();
     HdfsFileStatus resultingStat = null;
     FSPermissionChecker pc = getPermissionChecker();
@@ -7757,7 +7757,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       if (isPermissionEnabled) {
         checkPathAccess(pc, src, FsAction.WRITE);
       }
-      dir.setXAttr(src, xAttr, flag);
+      dir.setXAttr(src, xAttr, flag, logRetryCache);
       resultingStat = getAuditFileInfo(src, false);
     } finally {
       writeUnlock();

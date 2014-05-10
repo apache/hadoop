@@ -42,3 +42,6 @@ HDFS-2006 (Unreleased)
     HDFS-6343. fix TestNamenodeRetryCache and TestRetryCacheWithHA failures. (umamahesh)
 
     HDFS-6366. FsImage loading failed with RemoveXattr op (umamahesh)
+
+    HDFS-6357. SetXattr should persist rpcIDs for handling retrycache with Namenode restart and HA
+    (umamahesh)

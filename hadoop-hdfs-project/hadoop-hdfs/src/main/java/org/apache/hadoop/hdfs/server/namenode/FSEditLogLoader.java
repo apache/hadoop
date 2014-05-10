@@ -806,6 +806,9 @@ public class FSEditLogLoader {
       SetXAttrOp setXAttrOp = (SetXAttrOp) op;
       fsDir.unprotectedSetXAttr(setXAttrOp.src, setXAttrOp.xAttr, 
           EnumSet.of(XAttrSetFlag.CREATE, XAttrSetFlag.REPLACE));
+      if (toAddRetryCache) {
+        fsNamesys.addCacheEntry(setXAttrOp.rpcClientId, setXAttrOp.rpcCallId);
+      }
       break;
     }
     case OP_REMOVE_XATTR: {

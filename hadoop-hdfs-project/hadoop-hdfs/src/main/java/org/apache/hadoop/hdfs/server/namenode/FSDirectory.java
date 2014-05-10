@@ -2935,12 +2935,12 @@ public class FSDirectory implements Closeable {
     return xAttrs;
   }
   
-  void setXAttr(String src, XAttr xAttr, EnumSet<XAttrSetFlag> flag) 
-      throws IOException {
+  void setXAttr(String src, XAttr xAttr, EnumSet<XAttrSetFlag> flag,
+      boolean logRetryCache) throws IOException {
     writeLock();
     try {
       unprotectedSetXAttr(src, xAttr, flag);
-      fsImage.getEditLog().logSetXAttr(src, xAttr);
+      fsImage.getEditLog().logSetXAttr(src, xAttr, logRetryCache);
     } finally {
       writeUnlock();
     }
