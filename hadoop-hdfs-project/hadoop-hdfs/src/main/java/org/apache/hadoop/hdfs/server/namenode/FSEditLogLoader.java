@@ -811,6 +811,7 @@ public class FSEditLogLoader {
     case OP_REMOVE_XATTR: {
       RemoveXAttrOp removeXAttrOp = (RemoveXAttrOp) op;
       fsDir.unprotectedRemoveXAttr(removeXAttrOp.src, removeXAttrOp.xAttr);
+      break;
     }
     default:
       throw new IOException("Invalid operation read " + op.opCode);

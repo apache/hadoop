@@ -40,3 +40,5 @@ HDFS-2006 (Unreleased)
     HDFS-6335. TestOfflineEditsViewer for XAttr. (Yi Liu via umamahesh)
 
     HDFS-6343. fix TestNamenodeRetryCache and TestRetryCacheWithHA failures. (umamahesh)
+
+    HDFS-6366. FsImage loading failed with RemoveXattr op (umamahesh)
