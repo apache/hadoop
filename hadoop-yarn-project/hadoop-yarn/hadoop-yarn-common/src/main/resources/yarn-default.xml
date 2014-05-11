@@ -1112,7 +1112,7 @@
     If enabled, clients will put entities and events to the timeline server.
     </description>
     <name>yarn.timeline-service.enabled</name>
-    <value>true</value>
+    <value>false</value>
   </property>
 
   <property>
