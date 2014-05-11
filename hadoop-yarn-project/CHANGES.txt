@@ -113,6 +113,10 @@ Release 2.4.1 - UNRELEASED
     YARN-1701. Improved default paths of the timeline store and the generic
     history store. (Tsuyoshi Ozawa via zjshen)
 
+    YARN-1962. Changed Timeline Service client configuration to be off by default
+    given the non-readiness of the feature yet. (Mohammad Kamrul Islam via
+    vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
