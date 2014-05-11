@@ -55,6 +55,9 @@ Release 2.5.0 - UNRELEASED
     YARN-766. TestNodeManagerShutdown in branch-2 should use Shell to form the output path and a format 
     issue in trunk. (Contributed by Siddharth Seth)
 
+    YARN-1982. Renamed the daemon name to be TimelineServer instead of History
+    Server and deprecated the old usage. (Zhijie Shen via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES 
