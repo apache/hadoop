@@ -58,6 +58,9 @@ Release 2.5.0 - UNRELEASED
     YARN-1982. Renamed the daemon name to be TimelineServer instead of History
     Server and deprecated the old usage. (Zhijie Shen via vinodkv)
 
+    YARN-1987. Wrapper for leveldb DBIterator to aid in handling database exceptions.
+    (Jason Lowe via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES 
