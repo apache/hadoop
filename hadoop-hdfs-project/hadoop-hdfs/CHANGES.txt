@@ -92,6 +92,8 @@ Release 2.5.0 - UNRELEASED
     HDFS-6294. Use INode IDs to avoid conflicts when a file open for write is
     renamed. (cmccabe)
 
+    HDFS-6328. Clean up dead code in FSDirectory. (wheat9)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)
