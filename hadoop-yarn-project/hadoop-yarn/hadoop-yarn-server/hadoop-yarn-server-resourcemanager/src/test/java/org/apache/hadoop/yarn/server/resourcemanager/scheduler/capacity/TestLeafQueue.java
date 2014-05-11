@@ -350,8 +350,7 @@ public class TestLeafQueue {
     // Submit applications
     final ApplicationAttemptId appAttemptId_0 = TestUtils
         .getMockApplicationAttemptId(0, 1);
-    FiCaSchedulerApp app_0 = new FiCaSchedulerApp(appAttemptId_0, user_0, a, null,
-        rmContext);
+
     AppAddedSchedulerEvent addAppEvent =
         new AppAddedSchedulerEvent(appAttemptId_0.getApplicationId(),
           a.getQueueName(), user_0);
@@ -687,7 +686,7 @@ public class TestLeafQueue {
     assertEquals(2*GB, app_0.getCurrentConsumption().getMemory());
     assertEquals(0*GB, app_1.getCurrentConsumption().getMemory());
     assertEquals(0*GB, app_0.getHeadroom().getMemory()); // User limit = 2G
-    assertEquals(0*GB, app_0.getHeadroom().getMemory()); // User limit = 2G
+    assertEquals(0*GB, app_1.getHeadroom().getMemory()); // User limit = 2G
 
     // Again one to user_0 since he hasn't exceeded user limit yet
     a.assignContainers(clusterResource, node_0);
@@ -695,7 +694,7 @@ public class TestLeafQueue {
     assertEquals(2*GB, app_0.getCurrentConsumption().getMemory());
     assertEquals(1*GB, app_1.getCurrentConsumption().getMemory());
     assertEquals(0*GB, app_0.getHeadroom().getMemory()); // 3G - 2G
-    assertEquals(0*GB, app_0.getHeadroom().getMemory()); // 3G - 2G
+    assertEquals(0*GB, app_1.getHeadroom().getMemory()); // 3G - 2G
     
     // Submit requests for app_1 and set max-cap
     a.setMaxCapacity(.1f);

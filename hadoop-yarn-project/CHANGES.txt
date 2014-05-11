@@ -100,6 +100,8 @@ Release 2.5.0 - UNRELEASED
     YARN-2018. TestClientRMService.testTokenRenewalWrongUser fails after
     HADOOP-10562 (Ming Ma via Arpit Agarwal)
 
+    YARN-2011. Fix typo and warning in TestLeafQueue (Chen He via junping_du)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
