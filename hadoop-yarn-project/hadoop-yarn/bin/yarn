@@ -63,7 +63,7 @@ function print_usage(){
   echo "where COMMAND is one of:"
   echo "  resourcemanager      run the ResourceManager" 
   echo "  nodemanager          run a nodemanager on each slave" 
-  echo "  historyserver        run the application history server" 
+  echo "  timelineserver       run the timeline server"
   echo "  rmadmin              admin tools" 
   echo "  version              print the version"
   echo "  jar <jar>            run a jar file"
@@ -153,7 +153,6 @@ if [ -d "$HADOOP_YARN_HOME/yarn-server/yarn-server-common/target/classes" ]; the
 fi
 if [ -d "$HADOOP_YARN_HOME/yarn-server/yarn-server-resourcemanager/target/classes" ]; then
   CLASSPATH=${CLASSPATH}:$HADOOP_YARN_HOME/yarn-server/yarn-server-resourcemanager/target/classes
-  CLASSPATH=${CLASSPATH}:$HADOOP_YARN_HOME/yarn-server/yarn-server-applicationhistoryservice/target/classes
 fi
 if [ -d "$HADOOP_YARN_HOME/yarn-server/yarn-server-applicationhistoryservice/target/classes" ]; then
   CLASSPATH=${CLASSPATH}:$HADOOP_YARN_HOME/yarn-server/yarn-server-applicationhistoryservice/target/classes
@@ -217,12 +216,21 @@ elif [ "$COMMAND" = "resourcemanager" ] ; then
     JAVA_HEAP_MAX="-Xmx""$YARN_RESOURCEMANAGER_HEAPSIZE""m"
   fi
 elif [ "$COMMAND" = "historyserver" ] ; then
+  echo "DEPRECATED: Use of this command to start the timeline server is deprecated." 1>&2
+  echo "Instead use the timelineserver command for it." 1>&2
   CLASSPATH=${CLASSPATH}:$YARN_CONF_DIR/ahs-config/log4j.properties
   CLASS='org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryServer'
   YARN_OPTS="$YARN_OPTS $YARN_HISTORYSERVER_OPTS"
   if [ "$YARN_HISTORYSERVER_HEAPSIZE" != "" ]; then
     JAVA_HEAP_MAX="-Xmx""$YARN_HISTORYSERVER_HEAPSIZE""m"
-  fi  
+  fi
+elif [ "$COMMAND" = "timelineserver" ] ; then
+  CLASSPATH=${CLASSPATH}:$YARN_CONF_DIR/timelineserver-config/log4j.properties
+  CLASS='org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryServer'
+  YARN_OPTS="$YARN_OPTS $YARN_TIMELINESERVER_OPTS"
+  if [ "$YARN_TIMELINESERVER_HEAPSIZE" != "" ]; then
+    JAVA_HEAP_MAX="-Xmx""$YARN_TIMELINESERVER_HEAPSIZE""m"
+  fi
 elif [ "$COMMAND" = "nodemanager" ] ; then
   CLASSPATH=${CLASSPATH}:$YARN_CONF_DIR/nm-config/log4j.properties
   CLASS='org.apache.hadoop.yarn.server.nodemanager.NodeManager'

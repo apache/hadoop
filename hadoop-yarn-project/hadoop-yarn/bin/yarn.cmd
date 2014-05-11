@@ -120,11 +120,12 @@ if "%1" == "--config" (
 
   if exist %HADOOP_YARN_HOME%\yarn-server\yarn-server-resourcemanager\target\classes (
     set CLASSPATH=%CLASSPATH%;%HADOOP_YARN_HOME%\yarn-server\yarn-server-resourcemanager\target\classes
-    set CLASSPATH=%CLASSPATH%;%HADOOP_YARN_HOME%\yarn-server\yarn-server-applicationhistoryservice\target\classes
   )
+
   if exist %HADOOP_YARN_HOME%\yarn-server\yarn-server-applicationhistoryservice\target\classes (
     set CLASSPATH=%CLASSPATH%;%HADOOP_YARN_HOME%\yarn-server\yarn-server-applicationhistoryservice\target\classes
   )
+
   if exist %HADOOP_YARN_HOME%\build\test\classes (
     set CLASSPATH=%CLASSPATH%;%HADOOP_YARN_HOME%\build\test\classes
   )
@@ -142,7 +143,8 @@ if "%1" == "--config" (
   )
 
   set yarncommands=resourcemanager nodemanager proxyserver rmadmin version jar ^
-     application applicationattempt container node logs daemonlog historyserver
+     application applicationattempt container node logs daemonlog historyserver ^
+     timelineserver
   for %%i in ( %yarncommands% ) do (
     if %yarn-command% == %%i set yarncommand=true
   )
@@ -204,11 +206,22 @@ goto :eof
   goto :eof
 
 :historyserver
+  @echo DEPRECATED: Use of this command to start the timeline server is deprecated. 1>&2
+  @echo Instead use the timelineserver command for it. 1>&2
   set CLASSPATH=%CLASSPATH%;%YARN_CONF_DIR%\ahs-config\log4j.properties
   set CLASS=org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryServer
   set YARN_OPTS=%YARN_OPTS% %HADOOP_HISTORYSERVER_OPTS%
   if defined YARN_HISTORYSERVER_HEAPSIZE (
     set JAVA_HEAP_MAX=-Xmx%YARN_HISTORYSERVER_HEAPSIZE%m
+  )
+  goto :eof
+
+:timelineserver
+  set CLASSPATH=%CLASSPATH%;%YARN_CONF_DIR%\timelineserver-config\log4j.properties
+  set CLASS=org.apache.hadoop.yarn.server.applicationhistoryservice.ApplicationHistoryServer
+  set YARN_OPTS=%YARN_OPTS% %HADOOP_TIMELINESERVER_OPTS%
+  if defined YARN_TIMELINESERVER_HEAPSIZE (
+    set JAVA_HEAP_MAX=-Xmx%YARN_TIMELINESERVER_HEAPSIZE%m
   )
   goto :eof
 
@@ -277,7 +290,7 @@ goto :eof
   @echo        where COMMAND is one of:
   @echo   resourcemanager      run the ResourceManager
   @echo   nodemanager          run a nodemanager on each slave
-  @echo   historyserver        run the application history server  
+  @echo   timelineserver       run the timeline server
   @echo   rmadmin              admin tools
   @echo   version              print the version
   @echo   jar ^<jar^>          run a jar file
