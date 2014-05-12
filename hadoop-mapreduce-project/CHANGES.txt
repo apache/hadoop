@@ -188,6 +188,9 @@ Release 2.5.0 - UNRELEASED
     MAPREDUCE-5636. Convert MapReduce Tutorial document to APT (Akira AJISAKA
     via jeagles)
 
+    MAPREDUCE-5774. Job overview in History UI should list reducer phases in
+    chronological order. (Gera Shegalov via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES 
