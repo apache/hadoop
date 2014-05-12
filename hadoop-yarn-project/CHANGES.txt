@@ -1,5 +1,8 @@
 Hadoop YARN Change Log
 
+    YARN-1975. Fix yarn application CLI to print the scheme of the tracking url
+    of failed/killed applications. (Junping Du via jianhe)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
