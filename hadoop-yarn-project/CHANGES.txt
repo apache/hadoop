@@ -87,6 +87,9 @@ Release 2.5.0 - UNRELEASED
 
     YARN-2011. Fix typo and warning in TestLeafQueue (Chen He via junping_du)
 
+    YARN-1975. Fix yarn application CLI to print the scheme of the tracking url
+    of failed/killed applications. (Junping Du via jianhe)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
