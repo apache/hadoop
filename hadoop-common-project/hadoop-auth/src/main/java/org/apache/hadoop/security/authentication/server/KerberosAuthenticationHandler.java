@@ -26,6 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.security.auth.Subject;
+import javax.security.auth.kerberos.KerberosPrincipal;
 import javax.security.auth.login.AppConfigurationEntry;
 import javax.security.auth.login.Configuration;
 import javax.security.auth.login.LoginContext;
@@ -35,9 +36,11 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.IOException;
+import java.security.Principal;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
@@ -140,7 +143,7 @@ public class KerberosAuthenticationHandler implements AuthenticationHandler {
   private String principal;
   private String keytab;
   private GSSManager gssManager;
-  private Subject serverSubject = new Subject();
+  private LoginContext loginContext;
 
   /**
    * Initializes the authentication handler instance.
@@ -173,20 +176,17 @@ public class KerberosAuthenticationHandler implements AuthenticationHandler {
         KerberosName.setRules(nameRules);
       }
       
+      Set<Principal> principals = new HashSet<Principal>();
+      principals.add(new KerberosPrincipal(principal));
+      Subject subject = new Subject(false, principals, new HashSet<Object>(), new HashSet<Object>());
+
+      KerberosConfiguration kerberosConfiguration = new KerberosConfiguration(keytab, principal);
+
       LOG.info("Login using keytab "+keytab+", for principal "+principal);
-      for (String servicePrincipal : principal.split(",")) {
-        final KerberosConfiguration kerberosConfiguration =
-            new KerberosConfiguration(keytab, servicePrincipal);
-        final LoginContext loginContext =
-            new LoginContext("", serverSubject, null, kerberosConfiguration);
-        try {
-          loginContext.login();
-        } catch (LoginException le) {
-          LOG.warn("Failed to login as [{}]", servicePrincipal, le);
-          throw new AuthenticationException(le);          
-        }
-        serverSubject.getPrivateCredentials().add(loginContext);
-      }
+      loginContext = new LoginContext("", subject, null, kerberosConfiguration);
+      loginContext.login();
+
+      Subject serverSubject = loginContext.getSubject();
       try {
         gssManager = Subject.doAs(serverSubject, new PrivilegedExceptionAction<GSSManager>() {
 
@@ -211,17 +211,13 @@ public class KerberosAuthenticationHandler implements AuthenticationHandler {
    */
   @Override
   public void destroy() {
-    if (serverSubject != null) {
-      final Set<LoginContext> logins =
-          serverSubject.getPrivateCredentials(LoginContext.class);
-      for (LoginContext login : logins) {
-        try {
-          login.logout();
-        } catch (LoginException ex) {
-          LOG.warn(ex.getMessage(), ex);
-        }
+    try {
+      if (loginContext != null) {
+        loginContext.logout();
+        loginContext = null;
       }
-      serverSubject = null;
+    } catch (LoginException ex) {
+      LOG.warn(ex.getMessage(), ex);
     }
   }
 
@@ -308,7 +304,7 @@ public class KerberosAuthenticationHandler implements AuthenticationHandler {
       authorization = authorization.substring(KerberosAuthenticator.NEGOTIATE.length()).trim();
       final Base64 base64 = new Base64(0);
       final byte[] clientToken = base64.decode(authorization);
-      final String serverName = request.getServerName();
+      Subject serverSubject = loginContext.getSubject();
       try {
         token = Subject.doAs(serverSubject, new PrivilegedExceptionAction<AuthenticationToken>() {
 
@@ -318,15 +314,15 @@ public class KerberosAuthenticationHandler implements AuthenticationHandler {
             GSSContext gssContext = null;
             GSSCredential gssCreds = null;
             try {
-              gssCreds = gssManager.createCredential(
-                  gssManager.createName(
-                      KerberosUtil.getServicePrincipal("HTTP", serverName),
-                      KerberosUtil.getOidInstance("NT_GSS_KRB5_PRINCIPAL")),
-                  GSSCredential.INDEFINITE_LIFETIME,
-                  new Oid[]{
-                    KerberosUtil.getOidInstance("GSS_SPNEGO_MECH_OID"),
-                    KerberosUtil.getOidInstance("GSS_KRB5_MECH_OID")},
-                  GSSCredential.ACCEPT_ONLY);
+              if (IBM_JAVA) {
+                // IBM JDK needs non-null credentials to be passed to createContext here, with
+                // SPNEGO mechanism specified, otherwise JGSS will use its default mechanism
+                // only, which is Kerberos V5.
+                gssCreds = gssManager.createCredential(null, GSSCredential.INDEFINITE_LIFETIME,
+                    new Oid[]{KerberosUtil.getOidInstance("GSS_SPNEGO_MECH_OID"),
+                        KerberosUtil.getOidInstance("GSS_KRB5_MECH_OID")},
+                    GSSCredential.ACCEPT_ONLY);
+              }
               gssContext = gssManager.createContext(gssCreds);
               byte[] serverToken = gssContext.acceptSecContext(clientToken, 0, clientToken.length);
               if (serverToken != null && serverToken.length > 0) {
