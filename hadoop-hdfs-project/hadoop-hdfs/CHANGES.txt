@@ -94,6 +94,9 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6328. Clean up dead code in FSDirectory. (wheat9)
 
+    HDFS-6230. Expose upgrade status through NameNode web UI.
+    (Mit Desai via wheat9)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)

@@ -72,7 +72,7 @@
 <script type="text/x-dust-template" id="tmpl-dfshealth">
 
 {#nn}
-{@if cond="{DistinctVersionCount} > 1 || '{RollingUpgradeStatus}'.length"}
+{@if cond="{DistinctVersionCount} > 1 || '{RollingUpgradeStatus}'.length || !'{UpgradeFinalized}'"}
 <div class="alert alert-dismissable alert-info">
   <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
 
@@ -92,6 +92,10 @@
     {key} ({value}) {@sep},{/sep}
     {/DistinctVersions}
   {/if}
+
+  {^UpgradeFinalized}
+     <p>Upgrade in progress. Not yet finalized.</p>
+  {/UpgradeFinalized}
 </div>
 {/if}
 
