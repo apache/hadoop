@@ -452,6 +452,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6351. Command hdfs dfs -rm -r can't remove empty directory.
     (Yongjun Zhang via wang)
 
+    HDFS-5522. Datanode disk error check may be incorrectly skipped.
+    (Rushabh S Shah via kihwal)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
