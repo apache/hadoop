@@ -209,8 +209,7 @@ extends AbstractDelegationTokenIdentifier>
       currentTokens.put(identifier, new DelegationTokenInformation(renewDate,
           password, getTrackingIdIfEnabled(identifier)));
     } else {
-      throw new IOException(
-          "Same delegation token being added twice.");
+      throw new IOException("Same delegation token being added twice.");
     }
   }
 
@@ -355,27 +354,24 @@ extends AbstractDelegationTokenIdentifier>
    */
   public synchronized long renewToken(Token<TokenIdent> token,
                          String renewer) throws InvalidToken, IOException {
-    long now = Time.now();
     ByteArrayInputStream buf = new ByteArrayInputStream(token.getIdentifier());
     DataInputStream in = new DataInputStream(buf);
     TokenIdent id = createIdentifier();
     id.readFields(in);
-    LOG.info("Token renewal requested for identifier: "+id);
-    
+    LOG.info("Token renewal for identifier: " + id + "; total currentTokens "
+        +  currentTokens.size());
+
+    long now = Time.now();
     if (id.getMaxDate() < now) {
-      throw new InvalidToken("User " + renewer + 
-                             " tried to renew an expired token");
+      throw new InvalidToken(renewer + " tried to renew an expired token");
     }
     if ((id.getRenewer() == null) || (id.getRenewer().toString().isEmpty())) {
-      throw new AccessControlException("User " + renewer + 
-                                       " tried to renew a token without " +
-                                       "a renewer");
+      throw new AccessControlException(renewer +
+          " tried to renew a token without a renewer");
     }
     if (!id.getRenewer().toString().equals(renewer)) {
-      throw new AccessControlException("Client " + renewer + 
-                                       " tries to renew a token with " +
-                                       "renewer specified as " + 
-                                       id.getRenewer());
+      throw new AccessControlException(renewer +
+          " tries to renew a token with renewer " + id.getRenewer());
     }
     DelegationKey key = allKeys.get(id.getMasterKeyId());
     if (key == null) {
@@ -386,8 +382,8 @@ extends AbstractDelegationTokenIdentifier>
     }
     byte[] password = createPassword(token.getIdentifier(), key.getKey());
     if (!Arrays.equals(password, token.getPassword())) {
-      throw new AccessControlException("Client " + renewer
-          + " is trying to renew a token with " + "wrong password");
+      throw new AccessControlException(renewer +
+          " is trying to renew a token with wrong password");
     }
     long renewTime = Math.min(id.getMaxDate(), now + tokenRenewInterval);
     String trackingId = getTrackingIdIfEnabled(id);
@@ -429,8 +425,7 @@ extends AbstractDelegationTokenIdentifier>
       throw new AccessControlException(canceller
           + " is not authorized to cancel the token");
     }
-    DelegationTokenInformation info = null;
-    info = currentTokens.remove(id);
+    DelegationTokenInformation info = currentTokens.remove(id);
     if (info == null) {
       throw new InvalidToken("Token not found");
     }
@@ -554,14 +549,11 @@ extends AbstractDelegationTokenIdentifier>
           try {
             Thread.sleep(Math.min(5000, keyUpdateInterval)); // 5 seconds
           } catch (InterruptedException ie) {
-            LOG
-            .error("InterruptedExcpetion recieved for ExpiredTokenRemover thread "
-                + ie);
+            LOG.error("ExpiredTokenRemover received " + ie);
           }
         }
       } catch (Throwable t) {
-        LOG.error("ExpiredTokenRemover thread received unexpected exception. "
-            + t);
+        LOG.error("ExpiredTokenRemover thread received unexpected exception", t);
         Runtime.getRuntime().exit(-1);
       }
     }

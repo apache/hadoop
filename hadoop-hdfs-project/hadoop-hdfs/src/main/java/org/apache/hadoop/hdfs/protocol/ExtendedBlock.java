@@ -112,7 +112,8 @@ public class ExtendedBlock {
   
   @Override // Object
   public int hashCode() {
-    return block.hashCode();
+    int result = 31 + poolId.hashCode();
+    return (31 * result + block.hashCode());
   }
   
   @Override // Object

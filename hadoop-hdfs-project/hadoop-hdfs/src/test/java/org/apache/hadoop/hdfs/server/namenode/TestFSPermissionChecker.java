@@ -26,6 +26,7 @@ import static org.junit.Assert.*;
 import java.io.IOException;
 import java.util.Arrays;
 
+import org.apache.hadoop.conf.Configuration;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -38,7 +39,10 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
+import static org.mockito.Mockito.*;
 /**
  * Unit tests covering FSPermissionChecker.  All tests in this suite have been
  * cross-validated against Linux setfacl/getfacl to check for consistency of the
@@ -56,14 +60,24 @@ public class TestFSPermissionChecker {
   private static final UserGroupInformation CLARK =
     UserGroupInformation.createUserForTesting("clark", new String[] { "execs" });
 
+  private FSDirectory dir;
   private INodeDirectory inodeRoot;
 
   @Before
   public void setUp() {
-    PermissionStatus permStatus = PermissionStatus.createImmutable(SUPERUSER,
-      SUPERGROUP, FsPermission.createImmutable((short)0755));
-    inodeRoot = new INodeDirectory(INodeId.ROOT_INODE_ID,
-      INodeDirectory.ROOT_NAME, permStatus, 0L);
+    Configuration conf = new Configuration();
+    FSNamesystem fsn = mock(FSNamesystem.class);
+    doAnswer(new Answer() {
+      @Override
+      public Object answer(InvocationOnMock invocation) throws Throwable {
+        Object[] args = invocation.getArguments();
+        FsPermission perm = (FsPermission) args[0];
+        return new PermissionStatus(SUPERUSER, SUPERGROUP, perm);
+      }
+    }).when(fsn).createFsOwnerPermissions(any(FsPermission.class));
+    FSImage image = mock(FSImage.class);
+    dir = new FSDirectory(image, fsn, conf);
+    inodeRoot = dir.getRoot();
   }
 
   @Test
@@ -379,14 +393,14 @@ public class TestFSPermissionChecker {
   private void assertPermissionGranted(UserGroupInformation user, String path,
       FsAction access) throws IOException {
     new FSPermissionChecker(SUPERUSER, SUPERGROUP, user).checkPermission(path,
-      inodeRoot, false, null, null, access, null, true);
+      dir, false, null, null, access, null, true);
   }
 
   private void assertPermissionDenied(UserGroupInformation user, String path,
       FsAction access) throws IOException {
     try {
       new FSPermissionChecker(SUPERUSER, SUPERGROUP, user).checkPermission(path,
-        inodeRoot, false, null, null, access, null, true);
+        dir, false, null, null, access, null, true);
       fail("expected AccessControlException for user + " + user + ", path = " +
         path + ", access = " + access);
     } catch (AccessControlException e) {

@@ -28,6 +28,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.token.Token;
@@ -37,6 +38,7 @@ import org.junit.Test;
 import java.io.IOException;
 import java.net.URI;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 
@@ -119,6 +121,8 @@ public class TestWebHDFSForHA {
   @Test
   public void testFailoverAfterOpen() throws IOException {
     Configuration conf = DFSTestUtil.newHAConfiguration(LOGICAL_NAME);
+    conf.set(FS_DEFAULT_NAME_KEY, HdfsConstants.HDFS_URI_SCHEME +
+        "://" + LOGICAL_NAME);
     MiniDFSCluster cluster = null;
     FileSystem fs = null;
     final Path p = new Path("/test");
@@ -145,6 +149,32 @@ public class TestWebHDFSForHA {
       byte[] buf = new byte[data.length];
       IOUtils.readFully(in, buf, 0, buf.length);
       Assert.assertArrayEquals(data, buf);
+    } finally {
+      IOUtils.cleanup(null, fs);
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  @Test
+  public void testMultipleNamespacesConfigured() throws Exception {
+    Configuration conf = DFSTestUtil.newHAConfiguration(LOGICAL_NAME);
+    MiniDFSCluster cluster = null;
+    WebHdfsFileSystem fs = null;
+
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).nnTopology(topo)
+              .numDataNodes(1).build();
+
+      HATestUtil.setFailoverConfigurations(cluster, conf, LOGICAL_NAME);
+
+      cluster.waitActive();
+      DFSTestUtil.addHAConfiguration(conf, LOGICAL_NAME + "remote");
+      DFSTestUtil.setFakeHttpAddresses(conf, LOGICAL_NAME + "remote");
+
+      fs = (WebHdfsFileSystem)FileSystem.get(WEBHDFS_URI, conf);
+      Assert.assertEquals(2, fs.getResolvedNNAddr().length);
     } finally {
       IOUtils.cleanup(null, fs);
       if (cluster != null) {

@@ -37,6 +37,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -1464,7 +1465,8 @@ public class UserGroupInformation {
   public synchronized String[] getGroupNames() {
     ensureInitialized();
     try {
-      List<String> result = groups.getGroups(getShortUserName());
+      Set<String> result = new LinkedHashSet<String>
+        (groups.getGroups(getShortUserName()));
       return result.toArray(new String[result.size()]);
     } catch (IOException ie) {
       LOG.warn("No groups available for user " + getShortUserName());

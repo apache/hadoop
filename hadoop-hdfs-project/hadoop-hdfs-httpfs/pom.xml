@@ -108,24 +108,8 @@
           <artifactId>commons-httpclient</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>tomcat</groupId>
-          <artifactId>jasper-compiler</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>tomcat</groupId>
-          <artifactId>jasper-runtime</artifactId>
-        </exclusion>
-        <exclusion>
           <groupId>javax.servlet</groupId>
           <artifactId>servlet-api</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>javax.servlet</groupId>
-          <artifactId>jsp-api</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>javax.servlet.jsp</groupId>
-          <artifactId>jsp-api</artifactId>
         </exclusion>
         <exclusion>
           <groupId>org.mortbay.jetty</groupId>
@@ -134,10 +118,6 @@
         <exclusion>
           <groupId>org.mortbay.jetty</groupId>
           <artifactId>jetty-util</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.mortbay.jetty</groupId>
-          <artifactId>jsp-api-2.1</artifactId>
         </exclusion>
         <exclusion>
           <groupId>org.mortbay.jetty</groupId>
@@ -150,10 +130,6 @@
         <exclusion>
           <groupId>org.eclipse.jdt</groupId>
           <artifactId>core</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>commons-el</groupId>
-          <artifactId>commons-el</artifactId>
         </exclusion>
       </exclusions>
     </dependency>
@@ -171,24 +147,8 @@
           <artifactId>commons-httpclient</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>tomcat</groupId>
-          <artifactId>jasper-compiler</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>tomcat</groupId>
-          <artifactId>jasper-runtime</artifactId>
-        </exclusion>
-        <exclusion>
           <groupId>javax.servlet</groupId>
           <artifactId>servlet-api</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>javax.servlet</groupId>
-          <artifactId>jsp-api</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>javax.servlet.jsp</groupId>
-          <artifactId>jsp-api</artifactId>
         </exclusion>
         <exclusion>
           <groupId>org.mortbay.jetty</groupId>
@@ -197,10 +157,6 @@
         <exclusion>
           <groupId>org.mortbay.jetty</groupId>
           <artifactId>jetty-util</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.mortbay.jetty</groupId>
-          <artifactId>jsp-api-2.1</artifactId>
         </exclusion>
         <exclusion>
           <groupId>org.mortbay.jetty</groupId>
@@ -213,10 +169,6 @@
         <exclusion>
           <groupId>org.eclipse.jdt</groupId>
           <artifactId>core</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>commons-el</groupId>
-          <artifactId>commons-el</artifactId>
         </exclusion>
       </exclusions>
     </dependency>

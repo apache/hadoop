@@ -576,6 +576,14 @@
 </property>
 
 <property>
+  <name>fs.s3n.server-side-encryption-algorithm</name>
+  <value></value>
+  <description>Specify a server-side encryption algorithm for S3.
+  The default is NULL, and the only other currently allowable value is AES256.
+  </description>
+</property>
+
+<property>
   <name>io.seqfile.compress.blocksize</name>
   <value>1000000</value>
   <description>The minimum block size for compression in block compressed 

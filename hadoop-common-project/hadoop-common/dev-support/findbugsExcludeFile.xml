@@ -357,4 +357,10 @@
        <Bug code="NP" />
      </Match>
 
+  <Match>
+    <Class name="org.apache.hadoop.crypto.key.kms.KMSClientProvider"/>
+    <Method name="validateResponse"/>
+    <Bug pattern="REC_CATCH_EXCEPTION"/>
+  </Match>
+
 </FindBugsFilter>

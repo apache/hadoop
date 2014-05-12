@@ -281,7 +281,7 @@ class LeaseRenewer {
         && Time.now() - emptyTime > gracePeriod;
   }
 
-  synchronized void put(final String src, final DFSOutputStream out,
+  synchronized void put(final long inodeId, final DFSOutputStream out,
       final DFSClient dfsc) {
     if (dfsc.isClientRunning()) {
       if (!isRunning() || isRenewerExpired()) {
@@ -319,7 +319,7 @@ class LeaseRenewer {
         });
         daemon.start();
       }
-      dfsc.putFileBeingWritten(src, out);
+      dfsc.putFileBeingWritten(inodeId, out);
       emptyTime = Long.MAX_VALUE;
     }
   }
@@ -330,8 +330,8 @@ class LeaseRenewer {
   }
 
   /** Close a file. */
-  void closeFile(final String src, final DFSClient dfsc) {
-    dfsc.removeFileBeingWritten(src);
+  void closeFile(final long inodeId, final DFSClient dfsc) {
+    dfsc.removeFileBeingWritten(inodeId);
 
     synchronized(this) {
       if (dfsc.isFilesBeingWrittenEmpty()) {

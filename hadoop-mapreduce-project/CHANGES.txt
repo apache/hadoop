@@ -175,6 +175,22 @@ Release 2.5.0 - UNRELEASED
     MAPREDUCE-5812. Make job context available to
     OutputCommitter.isRecoverySupported() (Mohammad Kamrul Islam via jlowe)
 
+    MAPREDUCE-5638. Port Hadoop Archives document to trunk (Akira AJISAKA via
+    jeagles)
+
+    MAPREDUCE-5402. In DynamicInputFormat, change MAX_CHUNKS_TOLERABLE,
+    MAX_CHUNKS_IDEAL, MIN_RECORDS_PER_CHUNK and SPLIT_RATIO to be configurable.
+    (Tsuyoshi OZAWA via szetszwo)
+
+    MAPREDUCE-5637. Convert Hadoop Streaming document to APT (Akira AJISAKA via
+    jeagles)
+
+    MAPREDUCE-5636. Convert MapReduce Tutorial document to APT (Akira AJISAKA
+    via jeagles)
+
+    MAPREDUCE-5774. Job overview in History UI should list reducer phases in
+    chronological order. (Gera Shegalov via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES 
@@ -199,6 +215,9 @@ Release 2.5.0 - UNRELEASED
 
     MAPREDUCE-5749. TestRMContainerAllocator#testReportedAppProgress Failed
     (jlowe)
+
+    MAPREDUCE-5884. History server uses short user name when canceling tokens
+    (Mohammad Kamrul Islam via jlowe)
 
 Release 2.4.1 - UNRELEASED
 

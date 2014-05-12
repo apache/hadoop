@@ -47,8 +47,8 @@ import org.apache.hadoop.net.NodeBase;
 public class BlockPlacementPolicyWithNodeGroup extends BlockPlacementPolicyDefault {
 
   protected BlockPlacementPolicyWithNodeGroup(Configuration conf,  FSClusterStats stats,
-      NetworkTopology clusterMap) {
-    initialize(conf, stats, clusterMap);
+      NetworkTopology clusterMap, DatanodeManager datanodeManager) {
+    initialize(conf, stats, clusterMap, host2datanodeMap);
   }
 
   protected BlockPlacementPolicyWithNodeGroup() {
@@ -56,8 +56,9 @@ public class BlockPlacementPolicyWithNodeGroup extends BlockPlacementPolicyDefau
 
   @Override
   public void initialize(Configuration conf,  FSClusterStats stats,
-          NetworkTopology clusterMap) {
-    super.initialize(conf, stats, clusterMap);
+          NetworkTopology clusterMap, 
+          Host2NodesMap host2datanodeMap) {
+    super.initialize(conf, stats, clusterMap, host2datanodeMap);
   }
 
   /** choose local node of localMachine as the target.
@@ -241,6 +242,36 @@ public class BlockPlacementPolicyWithNodeGroup extends BlockPlacementPolicyDefau
         countOfExcludedNodes++;
       }
     }
+    
+    countOfExcludedNodes += addDependentNodesToExcludedNodes(
+        chosenNode, excludedNodes);
+    return countOfExcludedNodes;
+  }
+  
+  /**
+   * Add all nodes from a dependent nodes list to excludedNodes.
+   * @return number of new excluded nodes
+   */
+  private int addDependentNodesToExcludedNodes(DatanodeDescriptor chosenNode,
+      Set<Node> excludedNodes) {
+    if (this.host2datanodeMap == null) {
+      return 0;
+    }
+    int countOfExcludedNodes = 0;
+    for(String hostname : chosenNode.getDependentHostNames()) {
+      DatanodeDescriptor node =
+          this.host2datanodeMap.getDataNodeByHostName(hostname);
+      if(node!=null) {
+        if (excludedNodes.add(node)) {
+          countOfExcludedNodes++;
+        }
+      } else {
+        LOG.warn("Not able to find datanode " + hostname
+            + " which has dependency with datanode "
+            + chosenNode.getHostName());
+      }
+    }
+    
     return countOfExcludedNodes;
   }
 

@@ -88,10 +88,24 @@ public class TestPread {
   private void doPread(FSDataInputStream stm, long position, byte[] buffer,
                        int offset, int length) throws IOException {
     int nread = 0;
+    long totalRead = 0;
+    DFSInputStream dfstm = null;
+
+    if (stm.getWrappedStream() instanceof DFSInputStream) {
+      dfstm = (DFSInputStream) (stm.getWrappedStream());
+      totalRead = dfstm.getReadStatistics().getTotalBytesRead();
+    }
+
     while (nread < length) {
-      int nbytes = stm.read(position+nread, buffer, offset+nread, length-nread);
+      int nbytes =
+          stm.read(position + nread, buffer, offset + nread, length - nread);
       assertTrue("Error in pread", nbytes > 0);
       nread += nbytes;
+    }
+
+    if (dfstm != null) {
+      assertEquals("Expected read statistic to be incremented", length, dfstm
+          .getReadStatistics().getTotalBytesRead() - totalRead);
     }
   }
   

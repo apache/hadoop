@@ -127,6 +127,8 @@ Trunk (Unreleased)
 
     HDFS-6246. Remove 'dfs.support.append' flag from trunk code. (umamahesh)
 
+    HDFS-6252. Phase out the old web UI in HDFS. (wheat9)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -265,6 +267,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6281. Provide option to use the NFS Gateway without having to use the
     Hadoop portmapper. (atm)
 
+    HDFS-5168. Add cross node dependency support to BlockPlacementPolicy.
+    (Nikola Vujic via szetszwo)
+
   IMPROVEMENTS
 
     HDFS-6007. Update documentation about short-circuit local reads (iwasakims
@@ -328,6 +333,20 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6210. Support GETACLSTATUS operation in WebImageViewer.
     (Akira Ajisaka via wheat9)
+
+    HDFS-6269. NameNode Audit Log should differentiate between webHDFS open and
+    HDFS open. (Eric Payne via jeagles)
+
+    HDFS-6304. Consolidate the logic of path resolution in FSDirectory.
+    (wheat9)
+
+    HDFS-6295. Add "decommissioning" state and node state filtering to
+    dfsadmin. (wang)
+
+    HDFS-6294. Use INode IDs to avoid conflicts when a file open for write is
+    renamed. (cmccabe)
+
+    HDFS-6328. Clean up dead code in FSDirectory. (wheat9)
 
   OPTIMIZATIONS
 
@@ -412,6 +431,21 @@ Release 2.5.0 - UNRELEASED
     HDFS-6218. Audit log should use true client IP for proxied webhdfs
     operations. (daryn via kihwal)
 
+    HDFS-6288. DFSInputStream Pread doesn't update ReadStatistics.
+    (Juan Yu via wang)
+
+    HDFS-6289. HA failover can fail if there are pending DN messages for DNs
+    which no longer exist. (atm)
+
+    HDFS-6337. Setfacl testcase is failing due to dash character in username
+    in TestAclCLI (umamahesh)
+
+    HDFS-5381. ExtendedBlock#hashCode should use both blockId and block pool ID    
+    (Benoy Antony via Colin Patrick McCabe)
+
+    HDFS-6240. WebImageViewer returns 404 if LISTSTATUS to an empty directory.
+    (Akira Ajisaka via wheat9)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -466,6 +500,17 @@ Release 2.4.1 - UNRELEASED
 
     HDFS-6245. datanode fails to start with a bad disk even when failed
     volumes is set. (Arpit Agarwal)
+
+    HDFS-2882. DN continues to start up, even if block pool fails to initialize
+    (vinayakumarb)
+
+    HDFS-6340. DN can't finalize upgrade. (Rahul Singhal via Arpit Agarwal)
+
+    HDFS-6329. WebHdfs does not work if HA is enabled on NN but logical URI is
+    not configured. (kihwal)
+
+    HDFS-6313. WebHdfs may use the wrong NN when configured for multiple HA NNs
+    (kihwal)
 
 Release 2.4.0 - 2014-04-07 
 

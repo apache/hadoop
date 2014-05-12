@@ -107,9 +107,9 @@ public class HsJobBlock extends HtmlBlock {
       infoBlock._("Average Map Time", StringUtils.formatTime(job.getAvgMapTime()));
     }
     if(job.getNumReduces() > 0) {
-      infoBlock._("Average Reduce Time", StringUtils.formatTime(job.getAvgReduceTime()));
       infoBlock._("Average Shuffle Time", StringUtils.formatTime(job.getAvgShuffleTime()));
       infoBlock._("Average Merge Time", StringUtils.formatTime(job.getAvgMergeTime()));
+      infoBlock._("Average Reduce Time", StringUtils.formatTime(job.getAvgReduceTime()));
     }
 
     for (ConfEntryInfo entry : job.getAcls()) {

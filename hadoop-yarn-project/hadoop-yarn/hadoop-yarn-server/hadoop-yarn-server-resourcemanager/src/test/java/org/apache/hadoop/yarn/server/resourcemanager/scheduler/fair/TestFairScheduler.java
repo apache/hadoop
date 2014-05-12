@@ -34,6 +34,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -43,7 +44,6 @@ import java.util.Set;
 import javax.xml.parsers.ParserConfigurationException;
 
 import org.junit.Assert;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
@@ -70,6 +70,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.ApplicationMasterService;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.MockRMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
@@ -737,8 +738,11 @@ public class TestFairScheduler {
     rules.add(new QueuePlacementRule.Default().initialize(true, null));
     Set<String> queues = Sets.newHashSet("root.user1", "root.user3group",
         "root.user4subgroup1", "root.user4subgroup2" , "root.user5subgroup2");
+    Map<FSQueueType, Set<String>> configuredQueues = new HashMap<FSQueueType, Set<String>>();
+    configuredQueues.put(FSQueueType.LEAF, queues);
+    configuredQueues.put(FSQueueType.PARENT, new HashSet<String>());
     scheduler.getAllocationConfiguration().placementPolicy =
-        new QueuePlacementPolicy(rules, queues, conf);
+        new QueuePlacementPolicy(rules, configuredQueues, conf);
     appId = createSchedulingRequest(1024, "somequeue", "user1");
     assertEquals("root.somequeue", scheduler.getSchedulerApp(appId).getQueueName());
     appId = createSchedulingRequest(1024, "default", "user1");
@@ -758,7 +762,7 @@ public class TestFairScheduler {
     rules.add(new QueuePlacementRule.Specified().initialize(true, null));
     rules.add(new QueuePlacementRule.Default().initialize(true, null));
     scheduler.getAllocationConfiguration().placementPolicy =
-        new QueuePlacementPolicy(rules, queues, conf);
+        new QueuePlacementPolicy(rules, configuredQueues, conf);
     appId = createSchedulingRequest(1024, "somequeue", "user1");
     assertEquals("root.user1", scheduler.getSchedulerApp(appId).getQueueName());
     appId = createSchedulingRequest(1024, "somequeue", "otheruser");
@@ -809,7 +813,89 @@ public class TestFairScheduler {
       }
     }
   }
+  
+  @Test
+  public void testNestedUserQueue() throws IOException {
+    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+    conf.setClass(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
+        SimpleGroupsMapping.class, GroupMappingServiceProvider.class);
+    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("<queue name=\"user1group\" type=\"parent\">");
+    out.println("<minResources>1024mb,0vcores</minResources>");
+    out.println("</queue>");
+    out.println("<queuePlacementPolicy>");
+    out.println("<rule name=\"specified\" create=\"false\" />");
+    out.println("<rule name=\"nestedUserQueue\">");
+    out.println("     <rule name=\"primaryGroup\" create=\"false\" />");
+    out.println("</rule>");
+    out.println("<rule name=\"default\" />");
+    out.println("</queuePlacementPolicy>");
+    out.println("</allocations>");
+    out.close();
 
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+    RMApp rmApp1 = new MockRMApp(0, 0, RMAppState.NEW);
+
+    FSLeafQueue user1Leaf = scheduler.assignToQueue(rmApp1, "root.default",
+        "user1");
+
+    assertEquals("root.user1group.user1", user1Leaf.getName());
+  }
+
+  @Test
+  public void testFairShareAndWeightsInNestedUserQueueRule() throws Exception {
+    conf.set(FairSchedulerConfiguration.ALLOCATION_FILE, ALLOC_FILE);
+
+    PrintWriter out = new PrintWriter(new FileWriter(ALLOC_FILE));
+
+    out.println("<?xml version=\"1.0\"?>");
+    out.println("<allocations>");
+    out.println("<queue name=\"parentq\" type=\"parent\">");
+    out.println("<minResources>1024mb,0vcores</minResources>");
+    out.println("</queue>");
+    out.println("<queuePlacementPolicy>");
+    out.println("<rule name=\"nestedUserQueue\">");
+    out.println("     <rule name=\"specified\" create=\"false\" />");
+    out.println("</rule>");
+    out.println("<rule name=\"default\" />");
+    out.println("</queuePlacementPolicy>");
+    out.println("</allocations>");
+    out.close();
+
+    RMApp rmApp1 = new MockRMApp(0, 0, RMAppState.NEW);
+    RMApp rmApp2 = new MockRMApp(1, 1, RMAppState.NEW);
+
+    scheduler.reinitialize(conf, resourceManager.getRMContext());
+
+    int capacity = 16 * 1024;
+    // create node with 16 G
+    RMNode node1 = MockNodes.newNodeInfo(1, Resources.createResource(capacity),
+        1, "127.0.0.1");
+    NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
+    scheduler.handle(nodeEvent1);
+
+    // user1,user2 submit their apps to parentq and create user queues
+    scheduler.assignToQueue(rmApp1, "root.parentq", "user1");
+    scheduler.assignToQueue(rmApp2, "root.parentq", "user2");
+
+    scheduler.update();
+
+    Collection<FSLeafQueue> leafQueues = scheduler.getQueueManager()
+        .getLeafQueues();
+
+    for (FSLeafQueue leaf : leafQueues) {
+      if (leaf.getName().equals("root.parentq.user1")
+          || leaf.getName().equals("root.parentq.user2")) {
+        // assert that the fair share is 1/4th node1's capacity
+        assertEquals(capacity / 4, leaf.getFairShare().getMemory());
+        // assert weights are equal for both the user queues
+        assertEquals(1.0, leaf.getWeights().getWeight(ResourceType.MEMORY), 0);
+      }
+    }
+  }
+  
   /**
    * Make allocation requests and ensure they are reflected in queue demand.
    */

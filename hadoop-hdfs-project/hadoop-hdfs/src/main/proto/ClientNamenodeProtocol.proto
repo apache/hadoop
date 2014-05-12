@@ -118,6 +118,7 @@ message AbandonBlockRequestProto {
   required ExtendedBlockProto b = 1;
   required string src = 2;
   required string holder = 3;
+  optional uint64 fileId = 4 [default = 0];  // default to GRANDFATHER_INODE_ID
 }
 
 message AbandonBlockResponseProto { // void response
@@ -144,6 +145,7 @@ message GetAdditionalDatanodeRequestProto {
   required uint32 numAdditionalNodes = 5;
   required string clientName = 6;
   repeated string existingStorageUuids = 7;
+  optional uint64 fileId = 8 [default = 0];  // default to GRANDFATHER_INODE_ID
 }
 
 message GetAdditionalDatanodeResponseProto {
@@ -268,6 +270,7 @@ enum DatanodeReportTypeProto {  // type of the datanode report
   ALL = 1;
   LIVE = 2;
   DEAD = 3;
+  DECOMMISSIONING = 4;
 }
 
 message GetDatanodeReportRequestProto {
@@ -532,6 +535,7 @@ message FsyncRequestProto {
   required string src = 1;
   required string client = 2;
   optional sint64 lastBlockLength = 3 [default = -1];
+  optional uint64 fileId = 4 [default = 0];  // default to GRANDFATHER_INODE_ID
 }
 
 message FsyncResponseProto { // void response

@@ -74,6 +74,7 @@ import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INodeId;
+import org.apache.hadoop.hdfs.server.namenode.LeaseExpiredException;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.io.EnumSetWritable;
@@ -384,7 +385,6 @@ public class TestFileCreation {
       Path p = new Path("/testfile");
       FSDataOutputStream stm1 = fs.create(p);
       stm1.write(1);
-      stm1.hflush();
 
       // Create file again without overwrite
       try {
@@ -403,7 +403,8 @@ public class TestFileCreation {
         stm1.close();
         fail("Should have exception closing stm1 since it was deleted");
       } catch (IOException ioe) {
-        GenericTestUtils.assertExceptionContains("File is not open for writing", ioe);
+        GenericTestUtils.assertExceptionContains("No lease on /testfile", ioe);
+        GenericTestUtils.assertExceptionContains("File does not exist.", ioe);
       }
       
     } finally {
@@ -1189,8 +1190,8 @@ public class TestFileCreation {
         cluster.getNameNodeRpc()
             .complete(f.toString(), client.clientName, null, someOtherFileId);
         fail();
-      } catch(FileNotFoundException fnf) {
-        FileSystem.LOG.info("Caught Expected FileNotFoundException: ", fnf);
+      } catch(LeaseExpiredException e) {
+        FileSystem.LOG.info("Caught Expected LeaseExpiredException: ", e);
       }
     } finally {
       IOUtils.closeStream(dfs);

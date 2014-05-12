@@ -206,8 +206,10 @@ Allocation file format
   The allocation file must be in XML format. The format contains five types of
   elements:
 
- * <<Queue elements>>, which represent queues. Each may contain the following
-     properties:
+ * <<Queue elements>>, which represent queues. Queue elements can take an optional
+   attribute ’type’,which when set to ‘parent’ makes it a parent queue. This is useful
+   when we want to create a parent queue without configuring any leaf queues.
+   Each queue element may contain the following properties:
 
    * minResources: minimum resources the queue is entitled to, in the form
      "X mb, Y vcores". For the single-resource fairness policy, the vcores
@@ -299,6 +301,15 @@ Allocation file format
        that matches a secondary group of the user who submitted it. The first
        secondary group that matches a configured queue will be selected.
 
+     * nestedUserQueue : the app is placed into a queue with the name of the user
+       under the queue suggested by the nested rule. This is similar to ‘user’
+       rule,the difference being in ‘nestedUserQueue’ rule,user queues can be created 
+       under any parent queue, while ‘user’ rule creates user queues only under root queue.
+       Note that nestedUserQueue rule would be applied only if the nested rule returns a 
+       parent queue.One can configure a parent queue either by setting ‘type’ attribute of queue
+       to ‘parent’ or by configuring at least one leaf under that queue which makes it a parent.
+       See example allocation for a sample use case. 
+
      * default: the app is placed into the queue named "default".
 
      * reject: the app is rejected.
@@ -319,6 +330,12 @@ Allocation file format
       <minResources>5000 mb,0vcores</minResources>
     </queue>
   </queue>
+
+  <!—- Queue ‘secondary_group_queue’ is a parent queue and may have
+       user queues under it -—>
+  <queue name=“secondary_group_queue” type=“parent”>
+  <weight>3.0</weight>
+  </queue>
   
   <user name="sample_user">
     <maxRunningApps>30</maxRunningApps>
@@ -328,6 +345,9 @@ Allocation file format
   <queuePlacementPolicy>
     <rule name="specified" />
     <rule name="primaryGroup" create="false" />
+    <rule name=“nestedUserQueue”>
+        <rule name=“secondaryGroupExistingQueue” create=“false” />
+    </rule>
     <rule name="default" />
   </queuePlacementPolicy>
 </allocations>

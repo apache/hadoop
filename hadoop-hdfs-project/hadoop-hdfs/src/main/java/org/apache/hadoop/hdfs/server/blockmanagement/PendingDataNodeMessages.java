@@ -76,6 +76,27 @@ class PendingDataNodeMessages {
     }
   }
   
+  /**
+   * Remove all pending DN messages which reference the given DN.
+   * @param dn the datanode whose messages we should remove.
+   */
+  void removeAllMessagesForDatanode(DatanodeDescriptor dn) {
+    for (Map.Entry<Block, Queue<ReportedBlockInfo>> entry :
+        queueByBlockId.entrySet()) {
+      Queue<ReportedBlockInfo> newQueue = Lists.newLinkedList();
+      Queue<ReportedBlockInfo> oldQueue = entry.getValue();
+      while (!oldQueue.isEmpty()) {
+        ReportedBlockInfo rbi = oldQueue.remove();
+        if (!rbi.getNode().equals(dn)) {
+          newQueue.add(rbi);
+        } else {
+          count--;
+        }
+      }
+      queueByBlockId.put(entry.getKey(), newQueue);
+    }
+  }
+  
   void enqueueReportedBlock(DatanodeDescriptor dn, String storageID, Block block,
       ReplicaState reportedState) {
     block = new Block(block);

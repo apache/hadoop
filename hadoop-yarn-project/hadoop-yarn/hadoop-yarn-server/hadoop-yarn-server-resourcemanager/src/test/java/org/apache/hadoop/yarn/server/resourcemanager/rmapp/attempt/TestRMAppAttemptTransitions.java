@@ -113,7 +113,7 @@ public class TestRMAppAttemptTransitions {
   
   private static final String EMPTY_DIAGNOSTICS = "";
   private static final String RM_WEBAPP_ADDR =
-      WebAppUtils.getResolvedRMWebAppURLWithoutScheme(new Configuration());
+      WebAppUtils.getResolvedRMWebAppURLWithScheme(new Configuration());
   
   private boolean isSecurityEnabled;
   private RMContext rmContext;

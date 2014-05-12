@@ -494,7 +494,7 @@ public class FSImageFormat {
      // Rename .snapshot paths if we're doing an upgrade
      parentPath = renameReservedPathsOnUpgrade(parentPath, getLayoutVersion());
      final INodeDirectory parent = INodeDirectory.valueOf(
-         namesystem.dir.rootDir.getNode(parentPath, true), parentPath);
+         namesystem.dir.getNode(parentPath, true), parentPath);
      return loadChildren(parent, in, counter);
    }
 

@@ -17,8 +17,11 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 import javax.xml.parsers.DocumentBuilder;
@@ -28,16 +31,15 @@ import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.security.GroupMappingServiceProvider;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
-import com.google.common.collect.Sets;
-
 public class TestQueuePlacementPolicy {
   private final static Configuration conf = new Configuration();
-  private final static Set<String> configuredQueues = Sets.newHashSet("root.someuser");
+  private Map<FSQueueType, Set<String>> configuredQueues;
   
   @BeforeClass
   public static void setup() {
@@ -45,6 +47,14 @@ public class TestQueuePlacementPolicy {
         SimpleGroupsMapping.class, GroupMappingServiceProvider.class);
   }
   
+  @Before
+  public void initTest() {
+    configuredQueues = new HashMap<FSQueueType, Set<String>>();
+    for (FSQueueType type : FSQueueType.values()) {
+      configuredQueues.put(type, new HashSet<String>());
+    }
+  }
+
   @Test
   public void testSpecifiedUserPolicy() throws Exception {
     StringBuffer sb = new StringBuffer();
@@ -53,9 +63,12 @@ public class TestQueuePlacementPolicy {
     sb.append("  <rule name='user' />");
     sb.append("</queuePlacementPolicy>");
     QueuePlacementPolicy policy = parse(sb.toString());
-    assertEquals("root.specifiedq",policy.assignAppToQueue("specifiedq", "someuser"));
-    assertEquals("root.someuser", policy.assignAppToQueue("default", "someuser"));
-    assertEquals("root.otheruser", policy.assignAppToQueue("default", "otheruser"));
+    assertEquals("root.specifiedq",
+        policy.assignAppToQueue("specifiedq", "someuser"));
+    assertEquals("root.someuser",
+        policy.assignAppToQueue("default", "someuser"));
+    assertEquals("root.otheruser",
+        policy.assignAppToQueue("default", "otheruser"));
   }
   
   @Test
@@ -66,6 +79,8 @@ public class TestQueuePlacementPolicy {
     sb.append("  <rule name='user' create=\"false\" />");
     sb.append("  <rule name='default' />");
     sb.append("</queuePlacementPolicy>");
+    
+    configuredQueues.get(FSQueueType.LEAF).add("root.someuser");
     QueuePlacementPolicy policy = parse(sb.toString());
     assertEquals("root.specifiedq", policy.assignAppToQueue("specifiedq", "someuser"));
     assertEquals("root.someuser", policy.assignAppToQueue("default", "someuser"));
@@ -81,7 +96,8 @@ public class TestQueuePlacementPolicy {
     sb.append("  <rule name='reject' />");
     sb.append("</queuePlacementPolicy>");
     QueuePlacementPolicy policy = parse(sb.toString());
-    assertEquals("root.specifiedq", policy.assignAppToQueue("specifiedq", "someuser"));
+    assertEquals("root.specifiedq",
+        policy.assignAppToQueue("specifiedq", "someuser"));
     assertEquals(null, policy.assignAppToQueue("default", "someuser"));
   }
   
@@ -117,10 +133,188 @@ public class TestQueuePlacementPolicy {
     parse(sb.toString());
   }
   
+  @Test
+  public void testNestedUserQueueParsingErrors() {
+    // No nested rule specified in hierarchical user queue
+    StringBuffer sb = new StringBuffer();
+    sb.append("<queuePlacementPolicy>");
+    sb.append("  <rule name='specified' />");
+    sb.append("  <rule name='nestedUserQueue'/>");
+    sb.append("  <rule name='default' />");
+    sb.append("</queuePlacementPolicy>");
+
+    assertIfExceptionThrown(sb);
+
+    // Specified nested rule is not a QueuePlacementRule
+    sb = new StringBuffer();
+    sb.append("<queuePlacementPolicy>");
+    sb.append("  <rule name='specified' />");
+    sb.append("  <rule name='nestedUserQueue'>");
+    sb.append("       <rule name='unknownRule'/>");
+    sb.append("  </rule>");
+    sb.append("  <rule name='default' />");
+    sb.append("</queuePlacementPolicy>");
+
+    assertIfExceptionThrown(sb);
+  }
+
+  private void assertIfExceptionThrown(StringBuffer sb) {
+    Throwable th = null;
+    try {
+      parse(sb.toString());
+    } catch (Exception e) {
+      th = e;
+    }
+
+    assertTrue(th instanceof AllocationConfigurationException);
+  }
+
+  @Test
+  public void testNestedUserQueueParsing() throws Exception {
+    StringBuffer sb = new StringBuffer();
+    sb.append("<queuePlacementPolicy>");
+    sb.append("  <rule name='specified' />");
+    sb.append("  <rule name='nestedUserQueue'>");
+    sb.append("       <rule name='primaryGroup'/>");
+    sb.append("  </rule>");
+    sb.append("  <rule name='default' />");
+    sb.append("</queuePlacementPolicy>");
+
+    Throwable th = null;
+    try {
+      parse(sb.toString());
+    } catch (Exception e) {
+      th = e;
+    }
+
+    assertNull(th);
+  }
+
+  @Test
+  public void testNestedUserQueuePrimaryGroup() throws Exception {
+    StringBuffer sb = new StringBuffer();
+    sb.append("<queuePlacementPolicy>");
+    sb.append("  <rule name='specified' create='false' />");
+    sb.append("  <rule name='nestedUserQueue'>");
+    sb.append("       <rule name='primaryGroup'/>");
+    sb.append("  </rule>");
+    sb.append("  <rule name='default' />");
+    sb.append("</queuePlacementPolicy>");
+
+    // User queue would be created under primary group queue
+    QueuePlacementPolicy policy = parse(sb.toString());
+    assertEquals("root.user1group.user1",
+        policy.assignAppToQueue("root.default", "user1"));
+    // Other rules above and below hierarchical user queue rule should work as
+    // usual
+    configuredQueues.get(FSQueueType.LEAF).add("root.specifiedq");
+    // test if specified rule(above nestedUserQueue rule) works ok
+    assertEquals("root.specifiedq",
+        policy.assignAppToQueue("root.specifiedq", "user2"));
+
+    // test if default rule(below nestedUserQueue rule) works
+    configuredQueues.get(FSQueueType.LEAF).add("root.user3group");
+    assertEquals("root.default",
+        policy.assignAppToQueue("root.default", "user3"));
+  }
+
+  @Test
+  public void testNestedUserQueuePrimaryGroupNoCreate() throws Exception {
+    // Primary group rule has create='false'
+    StringBuffer sb = new StringBuffer();
+    sb.append("<queuePlacementPolicy>");
+    sb.append("  <rule name='nestedUserQueue'>");
+    sb.append("       <rule name='primaryGroup' create='false'/>");
+    sb.append("  </rule>");
+    sb.append("  <rule name='default' />");
+    sb.append("</queuePlacementPolicy>");
+
+    QueuePlacementPolicy policy = parse(sb.toString());
+
+    // Should return root.default since primary group 'root.user1group' is not
+    // configured
+    assertEquals("root.default",
+        policy.assignAppToQueue("root.default", "user1"));
+
+    // Let's configure primary group and check if user queue is created
+    configuredQueues.get(FSQueueType.PARENT).add("root.user1group");
+    policy = parse(sb.toString());
+    assertEquals("root.user1group.user1",
+        policy.assignAppToQueue("root.default", "user1"));
+
+    // Both Primary group and nestedUserQueue rule has create='false'
+    sb = new StringBuffer();
+    sb.append("<queuePlacementPolicy>");
+    sb.append("  <rule name='nestedUserQueue' create='false'>");
+    sb.append("       <rule name='primaryGroup' create='false'/>");
+    sb.append("  </rule>");
+    sb.append("  <rule name='default' />");
+    sb.append("</queuePlacementPolicy>");
+
+    // Should return root.default since primary group and user queue for user 2
+    // are not configured.
+    assertEquals("root.default",
+        policy.assignAppToQueue("root.default", "user2"));
+
+    // Now configure both primary group and the user queue for user2
+    configuredQueues.get(FSQueueType.PARENT).add("root.user2group");
+    configuredQueues.get(FSQueueType.LEAF).add("root.user2group.user2");
+    policy = parse(sb.toString());
+
+    assertEquals("root.user2group.user2",
+        policy.assignAppToQueue("root.default", "user2"));
+  }
+
+  @Test
+  public void testNestedUserQueueSecondaryGroup() throws Exception {
+    StringBuffer sb = new StringBuffer();
+    sb.append("<queuePlacementPolicy>");
+    sb.append("  <rule name='nestedUserQueue'>");
+    sb.append("       <rule name='secondaryGroupExistingQueue'/>");
+    sb.append("  </rule>");
+    sb.append("  <rule name='default' />");
+    sb.append("</queuePlacementPolicy>");
+
+    QueuePlacementPolicy policy = parse(sb.toString());
+    // Should return root.default since secondary groups are not configured
+    assertEquals("root.default",
+        policy.assignAppToQueue("root.default", "user1"));
+
+    // configure secondary group for user1
+    configuredQueues.get(FSQueueType.PARENT).add("root.user1subgroup1");
+    policy = parse(sb.toString());
+    // user queue created should be created under secondary group
+    assertEquals("root.user1subgroup1.user1",
+        policy.assignAppToQueue("root.default", "user1"));
+  }
+
+  @Test
+  public void testNestedUserQueueSpecificRule() throws Exception {
+    // This test covers the use case where users can specify different parent
+    // queues and want user queues under those.
+    StringBuffer sb = new StringBuffer();
+    sb.append("<queuePlacementPolicy>");
+    sb.append("  <rule name='nestedUserQueue'>");
+    sb.append("       <rule name='specified' create='false'/>");
+    sb.append("  </rule>");
+    sb.append("  <rule name='default' />");
+    sb.append("</queuePlacementPolicy>");
+
+    // Let's create couple of parent queues
+    configuredQueues.get(FSQueueType.PARENT).add("root.parent1");
+    configuredQueues.get(FSQueueType.PARENT).add("root.parent2");
+
+    QueuePlacementPolicy policy = parse(sb.toString());
+    assertEquals("root.parent1.user1",
+        policy.assignAppToQueue("root.parent1", "user1"));
+    assertEquals("root.parent2.user2",
+        policy.assignAppToQueue("root.parent2", "user2"));
+  }
+  
   private QueuePlacementPolicy parse(String str) throws Exception {
     // Read and parse the allocations file.
-    DocumentBuilderFactory docBuilderFactory =
-      DocumentBuilderFactory.newInstance();
+    DocumentBuilderFactory docBuilderFactory = DocumentBuilderFactory
+        .newInstance();
     docBuilderFactory.setIgnoringComments(true);
     DocumentBuilder builder = docBuilderFactory.newDocumentBuilder();
     Document doc = builder.parse(IOUtils.toInputStream(str));

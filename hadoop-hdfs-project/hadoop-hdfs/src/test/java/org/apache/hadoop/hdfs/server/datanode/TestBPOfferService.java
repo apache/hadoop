@@ -329,7 +329,9 @@ public class TestBPOfferService {
     try {
       waitForInitialization(bpos);
       List<BPServiceActor> actors = bpos.getBPServiceActors();
-      assertEquals(1, actors.size());
+      // even if one of the actor initialization fails also other will be
+      // running until both failed.
+      assertEquals(2, actors.size());
       BPServiceActor actor = actors.get(0);
       waitForBlockReport(actor.getNameNodeProxy());
     } finally {
@@ -342,7 +344,14 @@ public class TestBPOfferService {
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
       @Override
       public Boolean get() {
-        return bpos.countNameNodes() == 1;
+        List<BPServiceActor> actors = bpos.getBPServiceActors();
+        int failedcount = 0;
+        for (BPServiceActor actor : actors) {
+          if (!actor.isAlive()) {
+            failedcount++;
+          }
+        }
+        return failedcount == 1;
       }
     }, 100, 10000);
   }

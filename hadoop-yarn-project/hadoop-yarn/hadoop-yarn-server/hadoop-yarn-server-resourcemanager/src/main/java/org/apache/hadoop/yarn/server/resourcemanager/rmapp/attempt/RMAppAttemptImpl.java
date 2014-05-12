@@ -526,7 +526,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
 
   private void setTrackingUrlToRMAppPage() {
     originalTrackingUrl = pjoin(
-        WebAppUtils.getResolvedRMWebAppURLWithoutScheme(conf),
+        WebAppUtils.getResolvedRMWebAppURLWithScheme(conf),
         "cluster", "app", getAppAttemptId().getApplicationId());
     proxiedTrackingUrl = originalTrackingUrl;
   }

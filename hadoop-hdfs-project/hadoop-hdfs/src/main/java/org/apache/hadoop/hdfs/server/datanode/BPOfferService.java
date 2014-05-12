@@ -145,7 +145,11 @@ class BPOfferService {
       return null;
     }
   }
-  
+
+  boolean hasBlockPoolId() {
+    return getNamespaceInfo() != null;
+  }
+
   synchronized NamespaceInfo getNamespaceInfo() {
     return bpNSInfo;
   }
@@ -677,6 +681,19 @@ class BPOfferService {
       LOG.warn("Unknown DatanodeCommand action: " + cmd.getAction());
     }
     return true;
+  }
+
+  /*
+   * Let the actor retry for initialization until all namenodes of cluster have
+   * failed.
+   */
+  boolean shouldRetryInit() {
+    if (hasBlockPoolId()) {
+      // One of the namenode registered successfully. lets continue retry for
+      // other.
+      return true;
+    }
+    return isAlive();
   }
 
 }

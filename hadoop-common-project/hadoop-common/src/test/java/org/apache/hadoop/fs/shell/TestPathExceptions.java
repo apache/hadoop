@@ -19,11 +19,13 @@
 package org.apache.hadoop.fs.shell;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
+import org.apache.hadoop.ipc.RemoteException;
 import org.junit.Test;
 
 public class TestPathExceptions {
@@ -52,5 +54,25 @@ public class TestPathExceptions {
     assertEquals(new Path(path), pe.getPath());
     assertEquals("`" + path + "': " + error, pe.getMessage());
   }
-  
+
+  @Test
+  public void testRemoteExceptionUnwrap() throws Exception {
+    PathIOException pe;
+    RemoteException re;
+    IOException ie;
+    
+    pe = new PathIOException(path);
+    re = new RemoteException(PathIOException.class.getName(), "test constructor1");
+    ie = re.unwrapRemoteException();
+    assertTrue(ie instanceof PathIOException);
+    ie = re.unwrapRemoteException(PathIOException.class);
+    assertTrue(ie instanceof PathIOException);
+
+    pe = new PathIOException(path, "constructor2");
+    re = new RemoteException(PathIOException.class.getName(), "test constructor2");
+    ie = re.unwrapRemoteException();
+    assertTrue(ie instanceof PathIOException);
+    ie = re.unwrapRemoteException(PathIOException.class);
+    assertTrue(ie instanceof PathIOException);    
+  }
 }

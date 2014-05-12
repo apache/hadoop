@@ -46,6 +46,28 @@ public class INodesInPath {
         : Arrays.equals(HdfsConstants.DOT_SNAPSHOT_DIR_BYTES, pathComponent);
   }
 
+  static INodesInPath fromINode(INode inode) {
+    int depth = 0, index;
+    INode tmp = inode;
+    while (tmp != null) {
+      depth++;
+      tmp = tmp.getParent();
+    }
+    final byte[][] path = new byte[depth][];
+    final INode[] inodes = new INode[depth];
+    final INodesInPath iip = new INodesInPath(path, depth);
+    tmp = inode;
+    index = depth;
+    while (tmp != null) {
+      index--;
+      path[index] = tmp.getKey();
+      inodes[index] = tmp;
+      tmp = tmp.getParent();
+    }
+    iip.setINodes(inodes);
+    return iip;
+  }
+
   /**
    * Given some components, create a path name.
    * @param components The path components
@@ -340,6 +362,11 @@ public class INodesInPath {
    */
   private void addNode(INode node) {
     inodes[numNonNull++] = node;
+  }
+
+  private void setINodes(INode inodes[]) {
+    this.inodes = inodes;
+    this.numNonNull = this.inodes.length;
   }
   
   void setINode(int i, INode inode) {

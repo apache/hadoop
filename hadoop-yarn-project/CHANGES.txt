@@ -23,6 +23,9 @@ Release 2.5.0 - UNRELEASED
 
     YARN-1757. NM Recovery. Auxiliary service support. (Jason Lowe via kasha)
 
+    YARN-1864. Fair Scheduler Dynamic Hierarchical User Queues (Ashwin Shankar
+    via Sandy Ryza)
+
   IMPROVEMENTS
 
     YARN-1479. Invalid NaN values in Hadoop REST API JSON response (Chen He via
@@ -61,6 +64,18 @@ Release 2.5.0 - UNRELEASED
     YARN-483. Improve documentation on log aggregation in yarn-default.xml
     (Akira Ajisaka via Sandy Ryza)
 
+    YARN-2036. Document yarn.resourcemanager.hostname in ClusterSetup (Ray
+    Chiang via Sandy Ryza)
+
+    YARN-766. TestNodeManagerShutdown in branch-2 should use Shell to form the output path and a format 
+    issue in trunk. (Contributed by Siddharth Seth)
+
+    YARN-1982. Renamed the daemon name to be TimelineServer instead of History
+    Server and deprecated the old usage. (Zhijie Shen via vinodkv)
+
+    YARN-1987. Wrapper for leveldb DBIterator to aid in handling database exceptions.
+    (Jason Lowe via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES 
@@ -79,6 +94,17 @@ Release 2.5.0 - UNRELEASED
     YARN-1865. ShellScriptBuilder does not check for some error conditions.
     (Remus Rusanu via ivanmi)
 
+    YARN-738. TestClientRMTokens is failing irregularly while running all yarn
+    tests (Ming Ma via jlowe)
+
+    YARN-2018. TestClientRMService.testTokenRenewalWrongUser fails after
+    HADOOP-10562 (Ming Ma via Arpit Agarwal)
+
+    YARN-2011. Fix typo and warning in TestLeafQueue (Chen He via junping_du)
+
+    YARN-1975. Fix yarn application CLI to print the scheme of the tracking url
+    of failed/killed applications. (Junping Du via jianhe)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -88,6 +114,16 @@ Release 2.4.1 - UNRELEASED
   IMPROVEMENTS
 
     YARN-1892. Improved some logs in the scheduler. (Jian He via zjshen)
+
+    YARN-1696. Added documentation for ResourceManager fail-over. (Karthik
+    Kambatla, Masatake Iwasaki, Tsuyoshi OZAWA via vinodkv)
+
+    YARN-1701. Improved default paths of the timeline store and the generic
+    history store. (Tsuyoshi Ozawa via zjshen)
+
+    YARN-1962. Changed Timeline Service client configuration to be off by default
+    given the non-readiness of the feature yet. (Mohammad Kamrul Islam via
+    vinodkv)
 
   OPTIMIZATIONS
 
@@ -160,6 +196,12 @@ Release 2.4.1 - UNRELEASED
 
     YARN-1975. Used resources shows escaped html in CapacityScheduler and
     FairScheduler page (Mit Desai via jlowe)
+
+    YARN-1929. Fixed a deadlock in ResourceManager that occurs when failover
+    happens right at the time of shutdown. (Karthik Kambatla via vinodkv)
+
+    YARN-1201. TestAMAuthorization fails with local hostname cannot be resolved. 
+    (Wangda Tan via junping_du)
 
 Release 2.4.0 - 2014-04-07 
 

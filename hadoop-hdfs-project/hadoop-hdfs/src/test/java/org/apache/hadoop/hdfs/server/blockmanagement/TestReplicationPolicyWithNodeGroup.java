@@ -47,11 +47,13 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+
 public class TestReplicationPolicyWithNodeGroup {
   private static final int BLOCK_SIZE = 1024;
   private static final int NUM_OF_DATANODES = 8;
   private static final int NUM_OF_DATANODES_BOUNDARY = 6;
   private static final int NUM_OF_DATANODES_MORE_TARGETS = 12;
+  private static final int NUM_OF_DATANODES_FOR_DEPENDENCIES = 6;
   private final Configuration CONF = new HdfsConfiguration();
   private NetworkTopology cluster;
   private NameNode namenode;
@@ -113,7 +115,33 @@ public class TestReplicationPolicyWithNodeGroup {
 
   private final static DatanodeDescriptor NODE = 
       new DatanodeDescriptor(DFSTestUtil.getDatanodeDescriptor("9.9.9.9", "/d2/r4/n7"));
-
+  
+  private static final DatanodeStorageInfo[] storagesForDependencies;
+  private static final DatanodeDescriptor[]  dataNodesForDependencies;
+  static {
+    final String[] racksForDependencies = {
+        "/d1/r1/n1",
+        "/d1/r1/n1",
+        "/d1/r1/n2",
+        "/d1/r1/n2",
+        "/d1/r1/n3",
+        "/d1/r1/n4"
+    };
+    final String[] hostNamesForDependencies = {
+        "h1",
+        "h2",
+        "h3",
+        "h4",
+        "h5",
+        "h6"
+    };
+    
+    storagesForDependencies = DFSTestUtil.createDatanodeStorageInfos(
+        racksForDependencies, hostNamesForDependencies);
+    dataNodesForDependencies = DFSTestUtil.toDatanodeDescriptor(storagesForDependencies);
+    
+  };
+  
   @Before
   public void setUp() throws Exception {
     FileSystem.setDefaultUri(CONF, "hdfs://localhost:0");
@@ -720,5 +748,63 @@ public class TestReplicationPolicyWithNodeGroup {
     assertEquals(targets.length, 6);
   }
 
-
+  @Test
+  public void testChooseTargetWithDependencies() throws Exception {
+    for(int i=0; i<NUM_OF_DATANODES; i++) {
+      cluster.remove(dataNodes[i]);
+    }
+    
+    for(int i=0; i<NUM_OF_DATANODES_MORE_TARGETS; i++) {
+      DatanodeDescriptor node = dataNodesInMoreTargetsCase[i];
+      if (cluster.contains(node)) {
+        cluster.remove(node);
+      }
+    }
+    
+    Host2NodesMap host2DatanodeMap = namenode.getNamesystem()
+        .getBlockManager()
+        .getDatanodeManager().getHost2DatanodeMap();
+    for(int i=0; i<NUM_OF_DATANODES_FOR_DEPENDENCIES; i++) {
+      cluster.add(dataNodesForDependencies[i]);
+      host2DatanodeMap.add(dataNodesForDependencies[i]);
+    }
+    
+    //add dependencies (node1 <-> node2, and node3<->node4)
+    dataNodesForDependencies[1].addDependentHostName(
+        dataNodesForDependencies[2].getHostName());
+    dataNodesForDependencies[2].addDependentHostName(
+        dataNodesForDependencies[1].getHostName());
+    dataNodesForDependencies[3].addDependentHostName(
+        dataNodesForDependencies[4].getHostName());
+    dataNodesForDependencies[4].addDependentHostName(
+        dataNodesForDependencies[3].getHostName());
+    
+    //Update heartbeat
+    for(int i=0; i<NUM_OF_DATANODES_FOR_DEPENDENCIES; i++) {
+      updateHeartbeatWithUsage(dataNodesForDependencies[i],
+          2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
+          2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0L, 0L, 0, 0);
+    }
+    
+    List<DatanodeStorageInfo> chosenNodes = new ArrayList<DatanodeStorageInfo>();
+    
+    DatanodeStorageInfo[] targets;
+    Set<Node> excludedNodes = new HashSet<Node>();
+    excludedNodes.add(dataNodesForDependencies[5]);
+    
+    //try to select three targets as there are three node groups
+    targets = chooseTarget(3, dataNodesForDependencies[1], chosenNodes, excludedNodes);
+    
+    //Even there are three node groups, verify that 
+    //only two targets are selected due to dependencies
+    assertEquals(targets.length, 2);
+    assertEquals(targets[0], storagesForDependencies[1]);
+    assertTrue(targets[1].equals(storagesForDependencies[3]) || targets[1].equals(storagesForDependencies[4]));
+    
+    //verify that all data nodes are in the excluded list
+    assertEquals(excludedNodes.size(), NUM_OF_DATANODES_FOR_DEPENDENCIES);
+    for(int i=0; i<NUM_OF_DATANODES_FOR_DEPENDENCIES; i++) {
+      assertTrue(excludedNodes.contains(dataNodesForDependencies[i]));
+    }
+  }
 }

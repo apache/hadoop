@@ -62,6 +62,7 @@
       <item name="Secure Mode" href="hadoop-project-dist/hadoop-common/SecureMode.html"/>
       <item name="Service Level Authorization" href="hadoop-project-dist/hadoop-common/ServiceLevelAuth.html"/>
       <item name="HTTP Authentication" href="hadoop-project-dist/hadoop-common/HttpAuthentication.html"/>
+      <item name="Hadoop KMS" href="hadoop-kms/index.html"/>
     </menu>
     
     <menu name="HDFS" inherit="top">
@@ -88,10 +89,13 @@
     </menu>
 
     <menu name="MapReduce" inherit="top">
+      <item name="MapReduce Tutorial" href="hadoop-mapreduce-client/hadoop-mapreduce-client-core/MapReduceTutorial.html"/>
       <item name="Compatibilty between Hadoop 1.x and Hadoop 2.x" href="hadoop-mapreduce-client/hadoop-mapreduce-client-core/MapReduce_Compatibility_Hadoop1_Hadoop2.html"/>
       <item name="Encrypted Shuffle" href="hadoop-mapreduce-client/hadoop-mapreduce-client-core/EncryptedShuffle.html"/>
       <item name="Pluggable Shuffle/Sort" href="hadoop-mapreduce-client/hadoop-mapreduce-client-core/PluggableShuffleAndPluggableSort.html"/>
       <item name="Distributed Cache Deploy" href="hadoop-mapreduce-client/hadoop-mapreduce-client-core/DistributedCacheDeploy.html"/>
+      <item name="Hadoop Streaming" href="hadoop-mapreduce-client/hadoop-mapreduce-client-core/HadoopStreaming.html"/>
+      <item name="Hadoop Archives" href="hadoop-mapreduce-client/hadoop-mapreduce-client-core/HadoopArchives.html"/>
       <item name="DistCp" href="hadoop-mapreduce-client/hadoop-mapreduce-client-core/DistCp.html"/>
     </menu>
 
@@ -100,6 +104,7 @@
       <item name="Capacity Scheduler" href="hadoop-yarn/hadoop-yarn-site/CapacityScheduler.html"/>
       <item name="Fair Scheduler" href="hadoop-yarn/hadoop-yarn-site/FairScheduler.html"/>
       <item name="ResourceManager Restart" href="hadoop-yarn/hadoop-yarn-site/ResourceManagerRestart.html"/>
+      <item name="ResourceManager HA" href="hadoop-yarn/hadoop-yarn-site/ResourceManagerHA.html"/>
       <item name="Web Application Proxy" href="hadoop-yarn/hadoop-yarn-site/WebApplicationProxy.html"/>
       <item name="YARN Timeline Server" href="hadoop-yarn/hadoop-yarn-site/TimelineServer.html"/>
       <item name="Writing YARN Applications" href="hadoop-yarn/hadoop-yarn-site/WritingYarnApplications.html"/>

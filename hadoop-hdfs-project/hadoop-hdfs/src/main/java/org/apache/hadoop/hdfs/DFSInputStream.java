@@ -1038,6 +1038,8 @@ implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
             setConfiguration(dfsClient.getConfiguration()).
             build();
         int nread = reader.readAll(buf, offset, len);
+        updateReadStatistics(readStatistics, nread, reader);
+
         if (nread != len) {
           throw new IOException("truncated return from reader.read(): " +
                                 "excpected " + len + ", got " + nread);

@@ -68,6 +68,8 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.namenode.NamenodeFsck.Result;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.tools.DFSck;
@@ -99,13 +101,13 @@ public class TestFsck {
       "ugi=.*?\\s" + 
       "ip=/\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\s" + 
       "cmd=fsck\\ssrc=\\/\\sdst=null\\s" + 
-      "perm=null");
+      "perm=null\\s" + "proto=.*");
   static final Pattern getfileinfoPattern = Pattern.compile(
       "allowed=.*?\\s" +
       "ugi=.*?\\s" + 
       "ip=/\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\s" + 
       "cmd=getfileinfo\\ssrc=\\/\\sdst=null\\s" + 
-      "perm=null");
+      "perm=null\\s" + "proto=.*");
   
   static final Pattern numCorruptBlocksPattern = Pattern.compile(
       ".*Corrupt blocks:\t\t([0123456789]*).*");
@@ -699,7 +701,7 @@ public class TestFsck {
       DFSTestUtil.waitReplication(fs, filePath, (short)1);
       
       // intentionally corrupt NN data structure
-      INodeFile node = (INodeFile)cluster.getNamesystem().dir.rootDir.getNode(
+      INodeFile node = (INodeFile)cluster.getNamesystem().dir.getNode(
           fileName, true);
       final BlockInfo[] blocks = node.getBlocks(); 
       assertEquals(blocks.length, 1);
@@ -981,10 +983,15 @@ public class TestFsck {
     PrintWriter out = new PrintWriter(result, true);
     InetAddress remoteAddress = InetAddress.getLocalHost();
     FSNamesystem fsName = mock(FSNamesystem.class);
+    BlockManager blockManager = mock(BlockManager.class);
+    DatanodeManager dnManager = mock(DatanodeManager.class);
+    
     when(namenode.getNamesystem()).thenReturn(fsName);
     when(fsName.getBlockLocations(anyString(), anyLong(), anyLong(),
         anyBoolean(), anyBoolean(), anyBoolean())).
         thenThrow(new FileNotFoundException()) ;
+    when(fsName.getBlockManager()).thenReturn(blockManager);
+    when(blockManager.getDatanodeManager()).thenReturn(dnManager);
 
     NamenodeFsck fsck = new NamenodeFsck(conf, namenode, nettop, pmap, out,
         NUM_REPLICAS, (short)1, remoteAddress);

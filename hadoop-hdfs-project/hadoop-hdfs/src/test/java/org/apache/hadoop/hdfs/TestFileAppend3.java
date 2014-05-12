@@ -253,18 +253,9 @@ public class TestFileAppend3  {
     assertTrue(fs.rename(p, pnew));
 
     //d. Close file handle that was opened in (b). 
-    try {
-      out.close();
-      fail("close() should throw an exception");
-    } catch(Exception e) {
-      AppendTestUtil.LOG.info("GOOD!", e);
-    }
+    out.close();
 
-    //wait for the lease recovery 
-    cluster.setLeasePeriod(1000, 1000);
-    AppendTestUtil.sleep(5000);
-
-    //check block sizes 
+    //check block sizes
     final long len = fs.getFileStatus(pnew).getLen();
     final LocatedBlocks locatedblocks = fs.dfs.getNamenode().getBlockLocations(pnew.toString(), 0L, len);
     final int numblock = locatedblocks.locatedBlockCount();
