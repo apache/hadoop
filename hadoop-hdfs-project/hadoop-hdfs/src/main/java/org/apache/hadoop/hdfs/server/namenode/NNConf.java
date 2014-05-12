@@ -41,6 +41,9 @@ final class NNConf {
    * XAttr-related operations.
    */
   private final boolean xattrsEnabled;
+  
+  final int xattrNameMaxLength;
+  final int xattrValueMaxLength;
 
   /**
    * Creates a new NNConf from configuration.
@@ -51,9 +54,16 @@ final class NNConf {
     aclsEnabled = conf.getBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY,
       DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_DEFAULT);
     LogFactory.getLog(NNConf.class).info("ACLs enabled? " + aclsEnabled);
-    xattrsEnabled = conf.getBoolean(DFSConfigKeys.DFS_NAMENODE_XATTRS_ENABLED_KEY, 
-      DFSConfigKeys.DFS_NAMENODE_XATTRS_ENABLED_DEFAULT);
+    xattrsEnabled = conf.getBoolean(
+        DFSConfigKeys.DFS_NAMENODE_XATTRS_ENABLED_KEY,
+        DFSConfigKeys.DFS_NAMENODE_XATTRS_ENABLED_DEFAULT);
     LogFactory.getLog(NNConf.class).info("XAttrs enabled? " + xattrsEnabled);
+    xattrNameMaxLength = conf.getInt(
+        DFSConfigKeys.DFS_NAMENODE_XATTR_NAME_MAX_LENGTH_KEY, 
+        DFSConfigKeys.DFS_NAMENODE_XATTR_NAME_MAX_LENGTH_DEFAULT);
+    xattrValueMaxLength = conf.getInt(
+        DFSConfigKeys.DFS_NAMENODE_XATTR_VALUE_MAX_LENGTH_KEY, 
+        DFSConfigKeys.DFS_NAMENODE_XATTR_VALUE_MAX_LENGTH_DEFAULT);
   }
 
   /**

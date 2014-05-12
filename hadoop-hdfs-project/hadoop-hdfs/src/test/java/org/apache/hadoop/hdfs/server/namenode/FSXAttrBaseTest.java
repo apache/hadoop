@@ -195,6 +195,8 @@ public class FSXAttrBaseTest {
    * 2. Set xattr with illegal name.
    * 3. Set xattr without XAttrSetFlag.
    * 4. Set xattr and total number exceeds max limit.
+   * 5. Set xattr and name is too long.
+   * 6. Set xattr and value is too long.
    */
   @Test
   public void testSetXAttr() throws Exception {
@@ -263,6 +265,21 @@ public class FSXAttrBaseTest {
     fs.removeXAttr(path, name1);
     fs.removeXAttr(path, name2);
     fs.removeXAttr(path, name3);
+    
+    // Name length exceeds max limit
+    String longName = "user.abcdefg123456789000";
+    try {
+      fs.setXAttr(path, longName, value1);
+      Assert.fail("Setting xattr should fail if name is too long.");
+    } catch (IOException e) {
+    }
+    // Value length exceeds max limit
+    byte[] longValue = new byte[40];
+    try {
+      fs.setXAttr(path, name1, longValue);
+      Assert.fail("Setting xattr should fail if value is too long.");
+    } catch (IOException e) {
+    }
   }
   
   /**
