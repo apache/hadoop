@@ -188,11 +188,14 @@ Release 2.5.0 - UNRELEASED
     HDFS-6337. Setfacl testcase is failing due to dash character in username
     in TestAclCLI (umamahesh)
 
-    HDFS-5381. ExtendedBlock#hashCode should use both blockId and block pool ID    
+    HDFS-5381. ExtendedBlock#hashCode should use both blockId and block pool ID
     (Benoy Antony via Colin Patrick McCabe)
 
     HDFS-6240. WebImageViewer returns 404 if LISTSTATUS to an empty directory.
     (Akira Ajisaka via wheat9)
+
+    HDFS-6351. Command hdfs dfs -rm -r can't remove empty directory.
+    (Yongjun Zhang via wang)
 
 Release 2.4.1 - UNRELEASED
 
