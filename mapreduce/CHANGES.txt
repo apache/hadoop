@@ -98,6 +98,9 @@ Release 0.22.1 - Unreleased
     MAPREDUCE-4360. Capacity Scheduler Hierarchical leaf queue does not honor
     the max capacity of container queue. (Mayank Bansal via shv)
 
+    MAPREDUCE-5706. toBeDeleted parent directories aren't being cleaned up.
+    (Robert Kanter via kasha)
+
 Release 0.22.0 - 2011-11-29
 
   INCOMPATIBLE CHANGES

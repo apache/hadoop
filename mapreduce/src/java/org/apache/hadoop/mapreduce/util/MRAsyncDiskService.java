@@ -315,7 +315,7 @@ public class MRAsyncDiskService {
     FileStatus status = localFileSystem.getFileStatus(target);
     
     if (shouldBeSecure) {
-      deletePathsInSecureCluster(newPathName, status);     
+      deletePathsInSecureCluster(target.toUri().getPath(), status);
     }else {
       DeleteTask task = new DeleteTask(volume, pathName, newPathName, 
           status.getOwner());
@@ -324,7 +324,7 @@ public class MRAsyncDiskService {
     return true;
   }
 
-  private void deletePathsInSecureCluster(String newPathName,
+  private void deletePathsInSecureCluster(String absPathName,
       FileStatus status) throws FileNotFoundException, IOException {
     // In a secure tasktracker, the subdirectories belong
     // to different user
@@ -338,15 +338,14 @@ public class MRAsyncDiskService {
         //add it to the cleanup queue
 
         item = new TaskController.DeletionContext(
-            taskController, false, owner, newPathName + Path.SEPARATOR_CHAR + path,
+            taskController, false, owner, absPathName + Path.SEPARATOR_CHAR + path,
             null);
         cleanupQueue.addToQueue(item);
       }
     } 
     //queue the parent directory  for cleanup
-    item = new TaskController.DeletionContext(
-        taskController, false, status.getOwner(), newPathName,
-        null);
+    item = new PathDeletionContext(
+        new Path(absPathName), null, null, null, localFileSystem);
     cleanupQueue.addToQueue(item);
   }
 
