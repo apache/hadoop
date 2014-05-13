@@ -455,6 +455,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-5522. Datanode disk error check may be incorrectly skipped.
     (Rushabh S Shah via kihwal)
 
+    HDFS-6367. EnumSetParam$Domain#parse fails for parameter containing more than one enum.
+    (Yi Liu via umamahesh)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
