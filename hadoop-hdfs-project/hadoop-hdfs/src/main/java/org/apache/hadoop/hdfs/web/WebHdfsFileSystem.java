@@ -176,10 +176,13 @@ public class WebHdfsFileSystem extends FileSystem
     this.uri = URI.create(uri.getScheme() + "://" + uri.getAuthority());
     this.nnAddrs = resolveNNAddr();
 
-    boolean isHA = HAUtil.isLogicalUri(conf, this.uri);
-    // In non-HA case, the code needs to call getCanonicalUri() in order to
-    // handle the case where no port is specified in the URI
-    this.tokenServiceName = isHA ? HAUtil.buildTokenServiceForLogicalUri(uri)
+    boolean isHA = HAUtil.isClientFailoverConfigured(conf, this.uri);
+    boolean isLogicalUri = isHA && HAUtil.isLogicalUri(conf, this.uri);
+    // In non-HA or non-logical URI case, the code needs to call
+    // getCanonicalUri() in order to handle the case where no port is
+    // specified in the URI
+    this.tokenServiceName = isLogicalUri ?
+        HAUtil.buildTokenServiceForLogicalUri(uri)
         : SecurityUtil.buildTokenService(getCanonicalUri());
     initializeTokenAspect();
 
@@ -1095,8 +1098,8 @@ public class WebHdfsFileSystem extends FileSystem
   /**
    * Resolve an HDFS URL into real INetSocketAddress. It works like a DNS
    * resolver when the URL points to an non-HA cluster. When the URL points to
-   * an HA cluster, the resolver further resolves the logical name (i.e., the
-   * authority in the URL) into real namenode addresses.
+   * an HA cluster with its logical name, the resolver further resolves the
+   * logical name(i.e., the authority in the URL) into real namenode addresses.
    */
   private InetSocketAddress[] resolveNNAddr() throws IOException {
     Configuration conf = getConf();

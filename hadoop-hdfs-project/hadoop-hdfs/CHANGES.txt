@@ -16,6 +16,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-5168. Add cross node dependency support to BlockPlacementPolicy.
     (Nikola Vujic via szetszwo)
 
+    HDFS-6334. Client failover proxy provider for IP failover based NN HA.
+    (kihwal)
+
   IMPROVEMENTS
 
     HDFS-6007. Update documentation about short-circuit local reads (iwasakims

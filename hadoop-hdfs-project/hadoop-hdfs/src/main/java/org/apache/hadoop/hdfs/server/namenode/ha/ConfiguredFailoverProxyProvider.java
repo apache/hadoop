@@ -34,8 +34,8 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.NameNodeProxies;
+import org.apache.hadoop.hdfs.server.namenode.ha.AbstractNNFailoverProxyProvider;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
-import org.apache.hadoop.io.retry.FailoverProxyProvider;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.security.UserGroupInformation;
 
@@ -46,8 +46,8 @@ import com.google.common.base.Preconditions;
  * to connect to during fail-over. The first configured address is tried first,
  * and on a fail-over event the other address is tried.
  */
-public class ConfiguredFailoverProxyProvider<T> implements
-    FailoverProxyProvider<T> {
+public class ConfiguredFailoverProxyProvider<T> extends
+    AbstractNNFailoverProxyProvider<T> {
   
   private static final Log LOG =
       LogFactory.getLog(ConfiguredFailoverProxyProvider.class);
@@ -164,5 +164,13 @@ public class ConfiguredFailoverProxyProvider<T> implements
         }
       }
     }
+  }
+
+  /**
+   * Logical URI is required for this failover proxy provider.
+   */
+  @Override
+  public boolean useLogicalURI() {
+    return true;
   }
 }

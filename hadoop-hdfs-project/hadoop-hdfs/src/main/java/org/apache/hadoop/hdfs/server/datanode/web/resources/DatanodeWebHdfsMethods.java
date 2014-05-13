@@ -127,8 +127,8 @@ public class DatanodeWebHdfsMethods {
     token.decodeFromUrlString(delegation);
     URI nnUri = URI.create(HdfsConstants.HDFS_URI_SCHEME +
             "://" + nnId);
-    boolean isHA = HAUtil.isLogicalUri(conf, nnUri);
-    if (isHA) {
+    boolean isLogical = HAUtil.isLogicalUri(conf, nnUri);
+    if (isLogical) {
       token.setService(HAUtil.buildTokenServiceForLogicalUri(nnUri));
     } else {
       token.setService(SecurityUtil.buildTokenService(nnUri));
