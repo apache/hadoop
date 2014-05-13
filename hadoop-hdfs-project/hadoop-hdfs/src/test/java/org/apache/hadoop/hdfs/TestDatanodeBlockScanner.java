@@ -87,15 +87,15 @@ public class TestDatanodeBlockScanner {
   throws IOException, TimeoutException {
     URL url = new URL("http://localhost:" + infoPort +
                       "/blockScannerReport?listblocks");
-    long lastWarnTime = Time.now();
+    long lastWarnTime = Time.monotonicNow();
     if (newTime <= 0) newTime = 1L;
     long verificationTime = 0;
     
     String block = DFSTestUtil.getFirstBlock(fs, file).getBlockName();
     long failtime = (timeout <= 0) ? Long.MAX_VALUE 
-        : Time.now() + timeout;
+        : Time.monotonicNow() + timeout;
     while (verificationTime < newTime) {
-      if (failtime < Time.now()) {
+      if (failtime < Time.monotonicNow()) {
         throw new TimeoutException("failed to achieve block verification after "
             + timeout + " msec.  Current verification timestamp = "
             + verificationTime + ", requested verification time > " 
@@ -118,7 +118,7 @@ public class TestDatanodeBlockScanner {
       }
       
       if (verificationTime < newTime) {
-        long now = Time.now();
+        long now = Time.monotonicNow();
         if ((now - lastWarnTime) >= 5*1000) {
           LOG.info("Waiting for verification of " + block);
           lastWarnTime = now; 
@@ -134,7 +134,7 @@ public class TestDatanodeBlockScanner {
 
   @Test
   public void testDatanodeBlockScanner() throws IOException, TimeoutException {
-    long startTime = Time.now();
+    long startTime = Time.monotonicNow();
     
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
@@ -344,7 +344,7 @@ public class TestDatanodeBlockScanner {
     conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 3L);
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REPLICATION_CONSIDERLOAD_KEY, false);
 
-    long startTime = Time.now();
+    long startTime = Time.monotonicNow();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
                                                .numDataNodes(REPLICATION_FACTOR)
                                                .build();
@@ -428,10 +428,10 @@ public class TestDatanodeBlockScanner {
   private static void waitForBlockDeleted(ExtendedBlock blk, int dnIndex,
       long timeout) throws TimeoutException, InterruptedException {
     File blockFile = MiniDFSCluster.getBlockFile(dnIndex, blk);
-    long failtime = Time.now() 
+    long failtime = Time.monotonicNow()
                     + ((timeout > 0) ? timeout : Long.MAX_VALUE);
     while (blockFile != null && blockFile.exists()) {
-      if (failtime < Time.now()) {
+      if (failtime < Time.monotonicNow()) {
         throw new TimeoutException("waited too long for blocks to be deleted: "
             + blockFile.getPath() + (blockFile.exists() ? " still exists; " : " is absent; "));
       }
@@ -462,7 +462,7 @@ public class TestDatanodeBlockScanner {
 
   @Test
   public void testDuplicateScans() throws Exception {
-    long startTime = Time.now();
+    long startTime = Time.monotonicNow();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(new Configuration())
         .numDataNodes(1).build();
     FileSystem fs = null;
