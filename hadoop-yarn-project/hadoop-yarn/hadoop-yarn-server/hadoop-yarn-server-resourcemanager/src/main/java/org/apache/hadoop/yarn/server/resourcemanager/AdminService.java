@@ -26,6 +26,7 @@ import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.ha.HAServiceProtocol;
@@ -86,6 +87,7 @@ public class AdminService extends CompositeService implements
   private String rmId;
 
   private boolean autoFailoverEnabled;
+  private EmbeddedElectorService embeddedElector;
 
   private Server server;
   private InetSocketAddress masterServiceAddress;
@@ -106,7 +108,8 @@ public class AdminService extends CompositeService implements
       autoFailoverEnabled = HAUtil.isAutomaticFailoverEnabled(conf);
       if (autoFailoverEnabled) {
         if (HAUtil.isAutomaticFailoverEmbedded(conf)) {
-          addIfService(createEmbeddedElectorService());
+          embeddedElector = createEmbeddedElectorService();
+          addIfService(embeddedElector);
         }
       }
     }
@@ -179,6 +182,13 @@ public class AdminService extends CompositeService implements
 
   protected EmbeddedElectorService createEmbeddedElectorService() {
     return new EmbeddedElectorService(rmContext);
+  }
+
+  @InterfaceAudience.Private
+  void resetLeaderElection() {
+    if (embeddedElector != null) {
+      embeddedElector.resetLeaderElection();
+    }
   }
 
   private UserGroupInformation checkAccess(String method) throws IOException {

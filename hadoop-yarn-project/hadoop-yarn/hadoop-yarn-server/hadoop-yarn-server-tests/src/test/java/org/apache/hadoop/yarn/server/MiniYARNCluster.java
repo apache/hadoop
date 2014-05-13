@@ -658,12 +658,14 @@ public class MiniYARNCluster extends CompositeService {
    */
   public boolean waitForNodeManagersToConnect(long timeout)
       throws YarnException, InterruptedException {
-    ResourceManager rm = getResourceManager();
     GetClusterMetricsRequest req = GetClusterMetricsRequest.newInstance();
-
     for (int i = 0; i < timeout / 100; i++) {
-      if (nodeManagers.length == rm.getClientRMService().getClusterMetrics(req)
-          .getClusterMetrics().getNumNodeManagers()) {
+      ResourceManager rm = getResourceManager();
+      if (rm == null) {
+        throw new YarnException("Can not find the active RM.");
+      }
+      else if (nodeManagers.length == rm.getClientRMService()
+            .getClusterMetrics(req).getClusterMetrics().getNumNodeManagers()) {
         return true;
       }
       Thread.sleep(100);
