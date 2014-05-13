@@ -383,6 +383,9 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10566. Refactor proxyservers out of ProxyUsers.
     (Benoy Antony via suresh)
 
+    HADOOP-10572. Example NFS mount command must pass noacl as it isn't
+    supported by the server yet. (Harsh J via brandonli)
+
   OPTIMIZATIONS
 
   BUG FIXES 
