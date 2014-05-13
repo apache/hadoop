@@ -1,6 +1,6 @@
 Hadoop YARN Change Log
 
-    YARN-1975. Fix yarn application CLI to print the scheme of the tracking url
+    YARN-1976. Fix yarn application CLI to print the scheme of the tracking url
     of failed/killed applications. (Junping Du via jianhe)
 
     YARN-2016. Fix a bug in GetApplicationsRequestPBImpl to add the missed fields
