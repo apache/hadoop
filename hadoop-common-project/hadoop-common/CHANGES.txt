@@ -48,6 +48,9 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10158. SPNEGO should work with multiple interfaces/SPNs.
     (daryn via kihwal)
 
+    HADOOP-10572. Example NFS mount command must pass noacl as it isn't
+    supported by the server yet. (Harsh J via brandonli)
+
   OPTIMIZATIONS
 
   BUG FIXES 

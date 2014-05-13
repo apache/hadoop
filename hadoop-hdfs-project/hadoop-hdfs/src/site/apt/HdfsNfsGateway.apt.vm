@@ -318,7 +318,7 @@ HDFS NFS Gateway
   The users can mount the HDFS namespace as shown below:
 
 -------------------------------------------------------------------  
-       mount -t nfs -o vers=3,proto=tcp,nolock $server:/  $mount_point
+       mount -t nfs -o vers=3,proto=tcp,nolock,noacl $server:/  $mount_point
 -------------------------------------------------------------------
 
   Then the users can access HDFS as part of the local file system except that, 
