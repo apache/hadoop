@@ -102,7 +102,7 @@ public abstract class HttpOpParam<E extends Enum<E> & HttpOpParam.Op>
 
     @Override
     public boolean getDoOutput() {
-      return op.getDoOutput();
+      return false;
     }
 
     @Override
