@@ -3576,12 +3576,14 @@ public abstract class FSEditLogOp {
     protected void toXml(ContentHandler contentHandler) throws SAXException {
       XMLUtils.addSaxString(contentHandler, "SRC", src);
       appendXAttrToXml(contentHandler, xAttr);
+      appendRpcIdsToXml(contentHandler, rpcClientId, rpcCallId);
     }
 
     @Override
     void fromXml(Stanza st) throws InvalidXmlException {
       src = st.getValue("SRC");
       xAttr = readXAttrFromXml(st);
+      readRpcIdsFromXml(st);
     }
   }
 

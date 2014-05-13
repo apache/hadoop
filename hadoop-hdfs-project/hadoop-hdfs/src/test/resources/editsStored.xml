@@ -947,6 +947,8 @@
         <NAME>a1</NAME>
         <VALUE>0x313233</VALUE>
       </XATTR>
+      <RPC_CLIENTID>9b85a845-bbfa-42f6-8a16-c433614b8eb9</RPC_CLIENTID>
+      <RPC_CALLID>80</RPC_CALLID>
     </DATA>
   </RECORD>
   <RECORD>

@@ -47,3 +47,5 @@ HDFS-2006 (Unreleased)
 
     HDFS-6357. SetXattr should persist rpcIDs for handling retrycache with Namenode restart and HA
     (umamahesh)
+
+    HDFS-6372. Handle setXattr rpcIDs for OfflineEditsViewer. (umamahesh)
