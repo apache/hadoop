@@ -455,11 +455,15 @@ public class TestRMNodeTransitions {
   }
 
   private RMNodeImpl getRunningNode() {
+    return getRunningNode(null);
+  }
+
+  private RMNodeImpl getRunningNode(String nmVersion) {
     NodeId nodeId = BuilderUtils.newNodeId("localhost", 0);
     Resource capability = Resource.newInstance(4096, 4);
     RMNodeImpl node = new RMNodeImpl(nodeId, rmContext,null, 0, 0,
         null, ResourceOption.newInstance(capability,
-            RMNode.OVER_COMMIT_TIMEOUT_MILLIS_DEFAULT), null);
+            RMNode.OVER_COMMIT_TIMEOUT_MILLIS_DEFAULT), nmVersion);
     node.handle(new RMNodeEvent(node.getNodeID(), RMNodeEventType.STARTED));
     Assert.assertEquals(NodeState.RUNNING, node.getState());
     return node;
@@ -530,4 +534,14 @@ public class TestRMNodeTransitions {
         nodesListManagerEvent.getType());
   }
 
+  @Test
+  public void testReconnnectUpdate() {
+    final String nmVersion1 = "nm version 1";
+    final String nmVersion2 = "nm version 2";
+    RMNodeImpl node = getRunningNode(nmVersion1);
+    Assert.assertEquals(nmVersion1, node.getNodeManagerVersion());
+    RMNodeImpl reconnectingNode = getRunningNode(nmVersion2);
+    node.handle(new RMNodeReconnectEvent(node.getNodeID(), reconnectingNode));
+    Assert.assertEquals(nmVersion2, node.getNodeManagerVersion());
+  }
 }

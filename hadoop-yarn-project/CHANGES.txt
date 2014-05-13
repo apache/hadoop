@@ -79,6 +79,9 @@ Release 2.5.0 - UNRELEASED
     YARN-1751. Improve MiniYarnCluster for log aggregation testing (Ming Ma
     via jlowe)
 
+    YARN-1981. Nodemanager version is not updated when a node reconnects (Jason
+    Lowe via jeagles)
+
   OPTIMIZATIONS
 
   BUG FIXES 
