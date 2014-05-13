@@ -261,7 +261,11 @@ public class BlockManager {
     this.namesystem = namesystem;
     datanodeManager = new DatanodeManager(this, namesystem, conf);
     heartbeatManager = datanodeManager.getHeartbeatManager();
-    invalidateBlocks = new InvalidateBlocks(datanodeManager);
+
+    final long pendingPeriod = conf.getLong(
+        DFSConfigKeys.DFS_NAMENODE_STARTUP_DELAY_BLOCK_DELETION_MS_KEY,
+        DFSConfigKeys.DFS_NAMENODE_STARTUP_DELAY_BLOCK_DELETION_MS_DEFAULT);
+    invalidateBlocks = new InvalidateBlocks(datanodeManager, pendingPeriod);
 
     // Compute the map capacity by allocating 2% of total memory
     blocksMap = new BlocksMap(
