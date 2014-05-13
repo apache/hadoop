@@ -61,6 +61,9 @@ Release 2.5.0 - UNRELEASED
     YARN-1987. Wrapper for leveldb DBIterator to aid in handling database exceptions.
     (Jason Lowe via kasha)
 
+    YARN-1751. Improve MiniYarnCluster for log aggregation testing (Ming Ma
+    via jlowe)
+
   OPTIMIZATIONS
 
   BUG FIXES 
