@@ -461,6 +461,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6367. EnumSetParam$Domain#parse fails for parameter containing more than one enum.
     (Yi Liu via umamahesh)
 
+    HDFS-6305. WebHdfs response decoding may throw RuntimeExceptions (Daryn
+    Sharp via jeagles)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
