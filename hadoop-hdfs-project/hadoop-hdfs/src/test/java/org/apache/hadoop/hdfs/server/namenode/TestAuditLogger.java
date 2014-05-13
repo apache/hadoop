@@ -32,14 +32,15 @@ import java.net.URISyntaxException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.web.resources.GetOpParam;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.authorize.ProxyUsers;
+import org.apache.hadoop.security.authorize.ProxyServers;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -120,7 +121,7 @@ public class TestAuditLogger {
       assertEquals("127.0.0.1", DummyAuditLogger.remoteAddr);
       
       // trusted proxied request
-      conf.set(ProxyUsers.CONF_HADOOP_PROXYSERVERS, "127.0.0.1");
+      conf.set(ProxyServers.CONF_HADOOP_PROXYSERVERS, "127.0.0.1");
       ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
       conn = (HttpURLConnection) uri.toURL().openConnection();
       conn.setRequestMethod(op.getType().toString());

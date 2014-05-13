@@ -30,6 +30,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.authorize.AuthorizationException;
+import org.apache.hadoop.security.authorize.ProxyServers;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -51,7 +52,6 @@ import static org.mockito.Mockito.when;
 public class TestJspHelper {
 
   private final Configuration conf = new HdfsConfiguration();
-  private String jspWriterOutput = "";
 
   // allow user with TGT to run tests
   @BeforeClass
@@ -450,7 +450,7 @@ public class TestJspHelper {
       when(req.getRemoteAddr()).thenReturn(proxyAddr);
       when(req.getHeader("X-Forwarded-For")).thenReturn(clientAddr);
       if (trusted) {
-        conf.set(ProxyUsers.CONF_HADOOP_PROXYSERVERS, proxyAddr);
+        conf.set(ProxyServers.CONF_HADOOP_PROXYSERVERS, proxyAddr);
       }
     }
     ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
