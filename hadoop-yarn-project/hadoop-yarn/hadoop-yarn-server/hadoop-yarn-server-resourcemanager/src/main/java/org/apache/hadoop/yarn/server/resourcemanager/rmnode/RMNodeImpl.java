@@ -491,6 +491,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
           new NodeRemovedSchedulerEvent(rmNode));
 
       RMNode newNode = ((RMNodeReconnectEvent)event).getReconnectedNode();
+      rmNode.nodeManagerVersion = newNode.getNodeManagerVersion();
       if (rmNode.getTotalCapability().equals(newNode.getTotalCapability())
           && rmNode.getHttpPort() == newNode.getHttpPort()) {
         // Reset heartbeat ID since node just restarted.
