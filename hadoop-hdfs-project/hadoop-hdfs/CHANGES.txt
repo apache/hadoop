@@ -469,6 +469,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6355. Fix divide-by-zero, improper use of wall-clock time in
     BlockPoolSliceScanner (cmccabe)
 
+    HDFS-6370. Web UI fails to display in intranet under IE.
+    (Haohui Mai via cnauroth)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
