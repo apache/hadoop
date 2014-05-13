@@ -219,6 +219,9 @@ Release 2.5.0 - UNRELEASED
     MAPREDUCE-5884. History server uses short user name when canceling tokens
     (Mohammad Kamrul Islam via jlowe)
 
+    MAPREDUCE-5888. Failed job leaves hung AM after it unregisters (Jason Lowe
+    via jeagles)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
