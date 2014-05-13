@@ -27,9 +27,7 @@ import java.net.URI;
 import java.security.NoSuchAlgorithmException;
 import java.text.MessageFormat;
 import java.util.Date;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
@@ -176,22 +174,26 @@ public abstract class KeyProvider {
     protected byte[] serialize() throws IOException {
       ByteArrayOutputStream buffer = new ByteArrayOutputStream();
       JsonWriter writer = new JsonWriter(new OutputStreamWriter(buffer));
-      writer.beginObject();
-      if (cipher != null) {
-        writer.name(CIPHER_FIELD).value(cipher);
+      try {
+        writer.beginObject();
+        if (cipher != null) {
+          writer.name(CIPHER_FIELD).value(cipher);
+        }
+        if (bitLength != 0) {
+          writer.name(BIT_LENGTH_FIELD).value(bitLength);
+        }
+        if (created != null) {
+          writer.name(CREATED_FIELD).value(created.getTime());
+        }
+        if (description != null) {
+          writer.name(DESCRIPTION_FIELD).value(description);
+        }
+        writer.name(VERSIONS_FIELD).value(versions);
+        writer.endObject();
+        writer.flush();
+      } finally {
+        writer.close();
       }
-      if (bitLength != 0) {
-        writer.name(BIT_LENGTH_FIELD).value(bitLength);
-      }
-      if (created != null) {
-        writer.name(CREATED_FIELD).value(created.getTime());
-      }
-      if (description != null) {
-        writer.name(DESCRIPTION_FIELD).value(description);
-      }
-      writer.name(VERSIONS_FIELD).value(versions);
-      writer.endObject();
-      writer.flush();
       return buffer.toByteArray();
     }
 
@@ -207,23 +209,27 @@ public abstract class KeyProvider {
       int versions = 0;
       String description = null;
       JsonReader reader = new JsonReader(new InputStreamReader
-          (new ByteArrayInputStream(bytes)));
-      reader.beginObject();
-      while (reader.hasNext()) {
-        String field = reader.nextName();
-        if (CIPHER_FIELD.equals(field)) {
-          cipher = reader.nextString();
-        } else if (BIT_LENGTH_FIELD.equals(field)) {
-          bitLength = reader.nextInt();
-        } else if (CREATED_FIELD.equals(field)) {
-          created = new Date(reader.nextLong());
-        } else if (VERSIONS_FIELD.equals(field)) {
-          versions = reader.nextInt();
-        } else if (DESCRIPTION_FIELD.equals(field)) {
-          description = reader.nextString();
+        (new ByteArrayInputStream(bytes)));
+      try {
+        reader.beginObject();
+        while (reader.hasNext()) {
+          String field = reader.nextName();
+          if (CIPHER_FIELD.equals(field)) {
+            cipher = reader.nextString();
+          } else if (BIT_LENGTH_FIELD.equals(field)) {
+            bitLength = reader.nextInt();
+          } else if (CREATED_FIELD.equals(field)) {
+            created = new Date(reader.nextLong());
+          } else if (VERSIONS_FIELD.equals(field)) {
+            versions = reader.nextInt();
+          } else if (DESCRIPTION_FIELD.equals(field)) {
+            description = reader.nextString();
+          }
         }
+        reader.endObject();
+      } finally {
+        reader.close();
       }
-      reader.endObject();
       this.cipher = cipher;
       this.bitLength = bitLength;
       this.created = created;
@@ -309,7 +315,6 @@ public abstract class KeyProvider {
    * @throws IOException
    */
   public abstract List<String> getKeys() throws IOException;
-
 
   /**
    * Get key metadata in bulk.

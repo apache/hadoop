@@ -326,6 +326,8 @@ Trunk (Unreleased)
 
     HADOOP-10431. Change visibility of KeyStore.Options getter methods to public. (tucu)
 
+    HADOOP-10583. bin/hadoop key throws NPE with no args and assorted other fixups. (clamb via tucu)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
