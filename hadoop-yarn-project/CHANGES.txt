@@ -194,6 +194,10 @@ Release 2.4.1 - UNRELEASED
     YARN-1201. TestAMAuthorization fails with local hostname cannot be resolved. 
     (Wangda Tan via junping_du)
 
+    YARN-1861. Fixed a bug in RM to reset leader-election on fencing that was
+    causing both RMs to be stuck in standby mode when automatic failover is
+    enabled. (Karthik Kambatla and Xuan Gong via vinodkv)
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES

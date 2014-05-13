@@ -664,6 +664,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
             // Transition to standby and reinit active services
             LOG.info("Transitioning RM to Standby mode");
             rm.transitionToStandby(true);
+            rm.adminService.resetLeaderElection();
             return;
           } catch (Exception e) {
             LOG.fatal("Failed to transition RM to Standby mode.");
