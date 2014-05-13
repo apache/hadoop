@@ -446,6 +446,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6240. WebImageViewer returns 404 if LISTSTATUS to an empty directory.
     (Akira Ajisaka via wheat9)
 
+    HDFS-6367. EnumSetParam$Domain#parse fails for parameter containing more than one enum.
+    (Yi Liu via umamahesh)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
