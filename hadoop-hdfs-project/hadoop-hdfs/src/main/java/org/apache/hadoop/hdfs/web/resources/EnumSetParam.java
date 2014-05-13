@@ -79,8 +79,8 @@ abstract class EnumSetParam<E extends Enum<E>> extends Param<EnumSet<E>, EnumSet
       final EnumSet<E> set = EnumSet.noneOf(enumClass);
       if (!str.isEmpty()) {
         for(int i, j = 0; j >= 0; ) {
-          i = j;
-          j = str.indexOf(',', i+1);
+          i = j > 0 ? j + 1 : 0;
+          j = str.indexOf(',', i);
           final String sub = j >= 0? str.substring(i, j): str.substring(i);
           set.add(Enum.valueOf(enumClass, sub.trim().toUpperCase()));
         }
