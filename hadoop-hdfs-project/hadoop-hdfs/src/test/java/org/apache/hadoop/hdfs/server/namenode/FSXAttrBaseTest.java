@@ -28,12 +28,16 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.google.common.collect.Lists;
@@ -43,7 +47,9 @@ import com.google.common.collect.Lists;
  * This test suite covers restarting the NN, saving a new checkpoint. 
  */
 public class FSXAttrBaseTest {
-  
+
+  private static final int MAX_SIZE = 16;
+
   protected static MiniDFSCluster dfsCluster;
   protected static Configuration conf;
   private static int pathCount = 0;
@@ -59,6 +65,15 @@ public class FSXAttrBaseTest {
   protected static final String name4 = "user.a4";
 
   protected FileSystem fs;
+
+  @BeforeClass
+  public static void init() throws Exception {
+    conf = new HdfsConfiguration();
+    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_XATTRS_ENABLED_KEY, true);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_MAX_XATTRS_PER_INODE_KEY, 3);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_MAX_XATTR_SIZE_KEY, MAX_SIZE);
+    initCluster(true);
+  }
 
   @AfterClass
   public static void shutdown() {
@@ -87,7 +102,7 @@ public class FSXAttrBaseTest {
    * 3. Create multiple xattrs.
    * 4. Restart NN and save checkpoint scenarios.
    */
-  @Test
+  @Test(timeout = 120000)
   public void testCreateXAttr() throws Exception {
     FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short)0750));
     fs.setXAttr(path, name1, value1, EnumSet.of(XAttrSetFlag.CREATE));
@@ -143,7 +158,7 @@ public class FSXAttrBaseTest {
    * 3. Create multiple xattrs and replace some.
    * 4. Restart NN and save checkpoint scenarios.
    */
-  @Test
+  @Test(timeout = 120000)
   public void testReplaceXAttr() throws Exception {
     FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short)0750));
     fs.setXAttr(path, name1, value1, EnumSet.of(XAttrSetFlag.CREATE));
@@ -198,7 +213,7 @@ public class FSXAttrBaseTest {
    * 5. Set xattr and name is too long.
    * 6. Set xattr and value is too long.
    */
-  @Test
+  @Test(timeout = 120000)
   public void testSetXAttr() throws Exception {
     FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short)0750));
     fs.setXAttr(path, name1, value1, EnumSet.of(XAttrSetFlag.CREATE, 
@@ -215,6 +230,7 @@ public class FSXAttrBaseTest {
           XAttrSetFlag.REPLACE));
       Assert.fail("Setting xattr with null name should fail.");
     } catch (NullPointerException e) {
+      GenericTestUtils.assertExceptionContains("XAttr name cannot be null", e);
     }
     
     // Set xattr with empty name: "user."
@@ -223,6 +239,7 @@ public class FSXAttrBaseTest {
           XAttrSetFlag.REPLACE));
       Assert.fail("Setting xattr with empty name should fail.");
     } catch (HadoopIllegalArgumentException e) {
+      GenericTestUtils.assertExceptionContains("XAttr name cannot be empty", e);
     }
     
     // Set xattr with invalid name: "a1"
@@ -232,6 +249,7 @@ public class FSXAttrBaseTest {
       Assert.fail("Setting xattr with invalid name prefix or without " +
           "name prefix should fail.");
     } catch (HadoopIllegalArgumentException e) {
+      GenericTestUtils.assertExceptionContains("XAttr name must be prefixed", e);
     }
     
     // Set xattr without XAttrSetFlag
@@ -261,25 +279,36 @@ public class FSXAttrBaseTest {
       Assert.fail("Setting xattr should fail if total number of xattrs " +
           "for inode exceeds max limit.");
     } catch (IOException e) {
+      GenericTestUtils.assertExceptionContains("Cannot add additional XAttr", e);
     }
     fs.removeXAttr(path, name1);
     fs.removeXAttr(path, name2);
     fs.removeXAttr(path, name3);
     
     // Name length exceeds max limit
-    String longName = "user.abcdefg123456789000";
+    String longName = "user.0123456789abcdefX";
     try {
-      fs.setXAttr(path, longName, value1);
+      fs.setXAttr(path, longName, null);
       Assert.fail("Setting xattr should fail if name is too long.");
     } catch (IOException e) {
+      GenericTestUtils.assertExceptionContains("XAttr is too big", e);
+      GenericTestUtils.assertExceptionContains("total size is 17", e);
     }
+
     // Value length exceeds max limit
-    byte[] longValue = new byte[40];
+    byte[] longValue = new byte[MAX_SIZE];
     try {
-      fs.setXAttr(path, name1, longValue);
+      fs.setXAttr(path, "user.a", longValue);
       Assert.fail("Setting xattr should fail if value is too long.");
     } catch (IOException e) {
+      GenericTestUtils.assertExceptionContains("XAttr is too big", e);
+      GenericTestUtils.assertExceptionContains("total size is 17", e);
     }
+
+    // Name + value exactly equal the limit
+    String name = "user.111";
+    byte[] value = new byte[MAX_SIZE-3];
+    fs.setXAttr(path, name, value);
   }
   
   /**
@@ -287,7 +316,7 @@ public class FSXAttrBaseTest {
    * 1. To get xattr which does not exist.
    * 2. To get multiple xattrs.
    */
-  @Test
+  @Test(timeout = 120000)
   public void testGetXAttrs() throws Exception {
     FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short)0750));
     fs.setXAttr(path, name1, value1, EnumSet.of(XAttrSetFlag.CREATE));
@@ -315,7 +344,7 @@ public class FSXAttrBaseTest {
    * 1. Remove xattr.
    * 2. Restart NN and save checkpoint scenarios.
    */
-  @Test
+  @Test(timeout = 120000)
   public void testRemoveXAttr() throws Exception {
     FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short)0750));
     fs.setXAttr(path, name1, value1, EnumSet.of(XAttrSetFlag.CREATE));
@@ -354,7 +383,7 @@ public class FSXAttrBaseTest {
    * 6) Restart NN without saving a checkpoint.
    * 7) Set xattrs again on the same file.
    */
-  @Test
+  @Test(timeout = 120000)
   public void testCleanupXAttrs() throws Exception {
     FileSystem.mkdirs(fs, path, FsPermission.createImmutable((short)0750));
     fs.setXAttr(path, name1, value1, EnumSet.of(XAttrSetFlag.CREATE));

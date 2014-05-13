@@ -29,6 +29,8 @@ HDFS-2006 (Unreleased)
 
     HDFS-6344. Maximum limit on the size of an xattr. (Yi Liu via umamahesh)
 
+    HDFS-6377. Unify xattr name and value limits into a single limit. (wang)
+
   OPTIMIZATIONS
 
     HDFS-6346. Optimize OP_SET_XATTRS by persisting single Xattr entry per setXattr/removeXattr api call

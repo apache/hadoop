@@ -194,12 +194,6 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final boolean DFS_NAMENODE_ACLS_ENABLED_DEFAULT = false;
   public static final String  DFS_NAMENODE_XATTRS_ENABLED_KEY = "dfs.namenode.xattrs.enabled";
   public static final boolean DFS_NAMENODE_XATTRS_ENABLED_DEFAULT = true;
-  public static final String  DFS_NAMENODE_INODE_XATTRS_MAX_LIMIT_KEY = "dfs.namenode.inode.xattrs.max-limit";
-  public static final int     DFS_NAMENODE_INODE_XATTRS_MAX_LIMIT_DEFAULT = 32;
-  public static final String  DFS_NAMENODE_XATTR_NAME_MAX_LENGTH_KEY = "dfs.namenode.xattr.name.max-length";
-  public static final int     DFS_NAMENODE_XATTR_NAME_MAX_LENGTH_DEFAULT = 64;
-  public static final String  DFS_NAMENODE_XATTR_VALUE_MAX_LENGTH_KEY = "dfs.namenode.xattr.value.max-length";
-  public static final int     DFS_NAMENODE_XATTR_VALUE_MAX_LENGTH_DEFAULT = 16384;
   public static final String  DFS_ADMIN = "dfs.cluster.administrators";
   public static final String  DFS_SERVER_HTTPS_KEYSTORE_RESOURCE_KEY = "dfs.https.server.keystore.resource";
   public static final String  DFS_SERVER_HTTPS_KEYSTORE_RESOURCE_DEFAULT = "ssl-server.xml";
@@ -299,6 +293,11 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final long    DFS_NAMENODE_MIN_BLOCK_SIZE_DEFAULT = 1024*1024;
   public static final String  DFS_NAMENODE_MAX_BLOCKS_PER_FILE_KEY = "dfs.namenode.fs-limits.max-blocks-per-file";
   public static final long    DFS_NAMENODE_MAX_BLOCKS_PER_FILE_DEFAULT = 1024*1024;
+  public static final String  DFS_NAMENODE_MAX_XATTRS_PER_INODE_KEY = "dfs.namenode.fs-limits.max-xattrs-per-inode";
+  public static final int     DFS_NAMENODE_MAX_XATTRS_PER_INODE_DEFAULT = 32;
+  public static final String  DFS_NAMENODE_MAX_XATTR_SIZE_KEY = "dfs.namenode.fs-limits.max-xattr-size";
+  public static final int     DFS_NAMENODE_MAX_XATTR_SIZE_DEFAULT = 16384;
+
 
   //Following keys have no defaults
   public static final String  DFS_DATANODE_DATA_DIR_KEY = "dfs.datanode.data.dir";

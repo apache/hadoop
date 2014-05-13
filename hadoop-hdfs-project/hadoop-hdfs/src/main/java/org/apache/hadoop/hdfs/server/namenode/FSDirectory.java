@@ -196,8 +196,11 @@ public class FSDirectory implements Closeable {
         DFSConfigKeys.DFS_NAMENODE_MAX_DIRECTORY_ITEMS_KEY,
         DFSConfigKeys.DFS_NAMENODE_MAX_DIRECTORY_ITEMS_DEFAULT);
     this.inodeXAttrsLimit = conf.getInt(
-        DFSConfigKeys.DFS_NAMENODE_INODE_XATTRS_MAX_LIMIT_KEY,
-        DFSConfigKeys.DFS_NAMENODE_INODE_XATTRS_MAX_LIMIT_DEFAULT);
+        DFSConfigKeys.DFS_NAMENODE_MAX_XATTRS_PER_INODE_KEY,
+        DFSConfigKeys.DFS_NAMENODE_MAX_XATTRS_PER_INODE_DEFAULT);
+    Preconditions.checkArgument(this.inodeXAttrsLimit >= 0,
+        "Cannot set a negative limit on the number of xattrs per inode (%s).",
+        DFSConfigKeys.DFS_NAMENODE_MAX_XATTRS_PER_INODE_KEY);
     // We need a maximum maximum because by default, PB limits message sizes
     // to 64MB. This means we can only store approximately 6.7 million entries
     // per directory, but let's use 6.4 million for some safety.
@@ -2938,8 +2941,8 @@ public class FSDirectory implements Closeable {
     xAttrs.add(xAttr);
     
     if (xAttrs.size() > inodeXAttrsLimit) {
-      throw new IOException("Operation fails, XAttrs of " +
-          "inode exceeds maximum limit of " + inodeXAttrsLimit);
+      throw new IOException("Cannot add additional XAttr to inode, "
+          + "would exceed limit of " + inodeXAttrsLimit);
     }
     
     return xAttrs;

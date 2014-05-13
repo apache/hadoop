@@ -19,12 +19,9 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.util.Map;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 /**
@@ -39,17 +36,7 @@ public class TestNameNodeXAttr extends FSXAttrBaseTest {
   private static final Path link = new Path(linkParent, "link");
   private static final Path target = new Path(targetParent, "target");
 
-  @BeforeClass
-  public static void init() throws Exception {
-    conf = new Configuration();
-    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_XATTRS_ENABLED_KEY, true);
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_INODE_XATTRS_MAX_LIMIT_KEY, 3);
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_XATTR_NAME_MAX_LENGTH_KEY, 16);
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_XATTR_VALUE_MAX_LENGTH_KEY, 32);
-    initCluster(true);
-  }
-
-  @Test
+  @Test(timeout = 120000)
   public void testXAttrSymlinks() throws Exception {
     fs.mkdirs(linkParent);
     fs.mkdirs(targetParent);

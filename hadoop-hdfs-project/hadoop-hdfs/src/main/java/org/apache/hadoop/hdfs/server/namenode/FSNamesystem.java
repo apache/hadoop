@@ -96,6 +96,7 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.io.UnsupportedEncodingException;
 import java.lang.management.ManagementFactory;
 import java.net.InetAddress;
 import java.net.URI;
@@ -1123,8 +1124,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         // so that the tailer starts from the right spot.
         dir.fsImage.updateLastAppliedTxIdFromWritten();
       }
-      cacheManager.stopMonitorThread();
-      cacheManager.clearDirectiveStats();
+      if (cacheManager != null) {
+        cacheManager.stopMonitorThread();
+        cacheManager.clearDirectiveStats();
+      }
       blockManager.getDatanodeManager().clearPendingCachingCommands();
       blockManager.getDatanodeManager().setShouldSendCachingCommands(false);
       // Don't want to keep replication queues when not in Active.
@@ -7820,20 +7823,24 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     getEditLog().logSync();
     logAuditEvent(true, "setXAttr", src, null, resultingStat);
   }
-  
+
+  /**
+   * Verifies that the combined size of the name and value of an xattr is within
+   * the configured limit. Setting a limit of zero disables this check.
+   */
   private void checkXAttrSize(XAttr xAttr) {
-    if (xAttr.getName().length() > nnConf.xattrNameMaxLength) {
-      throw new HadoopIllegalArgumentException(
-          "XAttr name is too long, maximum length = "
-              + nnConf.xattrNameMaxLength + ", but now the length = "
-              + xAttr.getName().length());
+    if (nnConf.xattrMaxSize == 0) {
+      return;
     }
-    if (xAttr.getValue() != null
-        && xAttr.getValue().length > nnConf.xattrValueMaxLength) {
+    int size = xAttr.getName().getBytes(Charsets.UTF_8).length;
+    if (xAttr.getValue() != null) {
+      size += xAttr.getValue().length;
+    }
+    if (size > nnConf.xattrMaxSize) {
       throw new HadoopIllegalArgumentException(
-          "XAttr value is too long, maximum length = "
-              + nnConf.xattrValueMaxLength + ", but now the length = "
-              + xAttr.getValue().length);
+          "The XAttr is too big. The maximum combined size of the"
+          + " name and value is " + nnConf.xattrMaxSize
+          + ", but the total size is " + size);
     }
   }
   

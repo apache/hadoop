@@ -24,6 +24,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.AclException;
 
+import com.google.common.base.Preconditions;
+
 /**
  * This class is a common place for NN configuration.
  */
@@ -42,8 +44,10 @@ final class NNConf {
    */
   private final boolean xattrsEnabled;
   
-  final int xattrNameMaxLength;
-  final int xattrValueMaxLength;
+  /**
+   * Maximum size of a single name-value extended attribute.
+   */
+  final int xattrMaxSize;
 
   /**
    * Creates a new NNConf from configuration.
@@ -58,12 +62,15 @@ final class NNConf {
         DFSConfigKeys.DFS_NAMENODE_XATTRS_ENABLED_KEY,
         DFSConfigKeys.DFS_NAMENODE_XATTRS_ENABLED_DEFAULT);
     LogFactory.getLog(NNConf.class).info("XAttrs enabled? " + xattrsEnabled);
-    xattrNameMaxLength = conf.getInt(
-        DFSConfigKeys.DFS_NAMENODE_XATTR_NAME_MAX_LENGTH_KEY, 
-        DFSConfigKeys.DFS_NAMENODE_XATTR_NAME_MAX_LENGTH_DEFAULT);
-    xattrValueMaxLength = conf.getInt(
-        DFSConfigKeys.DFS_NAMENODE_XATTR_VALUE_MAX_LENGTH_KEY, 
-        DFSConfigKeys.DFS_NAMENODE_XATTR_VALUE_MAX_LENGTH_DEFAULT);
+    xattrMaxSize = conf.getInt(
+        DFSConfigKeys.DFS_NAMENODE_MAX_XATTR_SIZE_KEY,
+        DFSConfigKeys.DFS_NAMENODE_MAX_XATTR_SIZE_DEFAULT);
+    Preconditions.checkArgument(xattrMaxSize >= 0,
+        "Cannot set a negative value for the maximum size of an xattr (%s).",
+        DFSConfigKeys.DFS_NAMENODE_MAX_XATTR_SIZE_KEY);
+    final String unlimited = xattrMaxSize == 0 ? " (unlimited)" : "";
+    LogFactory.getLog(NNConf.class).info(
+        "Maximum size of an xattr: " + xattrMaxSize + unlimited);
   }
 
   /**

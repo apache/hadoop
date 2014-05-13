@@ -37,15 +37,6 @@ import org.junit.BeforeClass;
  * Tests of XAttr operations using FileContext APIs.
  */
 public class TestFileContextXAttr extends FSXAttrBaseTest  {
-  @BeforeClass
-  public static void init() throws Exception {
-    conf = new Configuration();
-    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_XATTRS_ENABLED_KEY, true);
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_INODE_XATTRS_MAX_LIMIT_KEY, 3);
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_XATTR_NAME_MAX_LENGTH_KEY, 16);
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_XATTR_VALUE_MAX_LENGTH_KEY, 32);
-    initCluster(true);
-  }
 
   @Override
   protected FileSystem createFileSystem() throws Exception {

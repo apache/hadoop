@@ -44,14 +44,14 @@ public class XAttrHelper {
    * Both name and namespace are case sensitive.
    */
   public static XAttr buildXAttr(String name, byte[] value) {
-    Preconditions.checkNotNull(name, "XAttr name can not be null.");
+    Preconditions.checkNotNull(name, "XAttr name cannot be null.");
     
     final int prefixIndex = name.indexOf(".");
     if (prefixIndex < 4) {// Prefix length is at least 4.
       throw new HadoopIllegalArgumentException("An XAttr name must be " +
           "prefixed with user/trusted/security/system, followed by a '.'");
     } else if (prefixIndex == name.length() - 1) {
-      throw new HadoopIllegalArgumentException("XAttr name can not be empty.");
+      throw new HadoopIllegalArgumentException("XAttr name cannot be empty.");
     }
     
     NameSpace ns;
