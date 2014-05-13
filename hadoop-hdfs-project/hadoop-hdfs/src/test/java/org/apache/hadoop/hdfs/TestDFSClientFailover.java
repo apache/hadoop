@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_FAILOVER_PROXY_PROVIDER_KEY_PREFIX;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -41,12 +42,17 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider;
+import org.apache.hadoop.hdfs.server.namenode.ha.IPFailoverProxyProvider;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.retry.DefaultFailoverProxyProvider;
+import org.apache.hadoop.io.retry.FailoverProxyProvider;
 import org.apache.hadoop.net.ConnectTimeoutException;
 import org.apache.hadoop.net.StandardSocketFactory;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.hamcrest.BaseMatcher;
@@ -172,12 +178,12 @@ public class TestDFSClientFailover {
    */
   @Test
   public void testLogicalUriShouldNotHavePorts() {
-    Configuration conf = new HdfsConfiguration();
-    conf.set(DFS_CLIENT_FAILOVER_PROXY_PROVIDER_KEY_PREFIX + ".foo",
-        ConfiguredFailoverProxyProvider.class.getName());
-    Path p = new Path("hdfs://foo:12345/");
+    Configuration config = new HdfsConfiguration(conf);
+    String logicalName = HATestUtil.getLogicalHostname(cluster);
+    HATestUtil.setFailoverConfigurations(cluster, config, logicalName);
+    Path p = new Path("hdfs://" + logicalName + ":12345/");
     try {
-      p.getFileSystem(conf).exists(p);
+      p.getFileSystem(config).exists(p);
       fail("Did not fail with fake FS");
     } catch (IOException ioe) {
       GenericTestUtils.assertExceptionContains(
@@ -278,4 +284,72 @@ public class TestDFSClientFailover {
     // Ensure that the logical hostname was never resolved.
     Mockito.verify(spyNS, Mockito.never()).lookupAllHostAddr(Mockito.eq(logicalHost));
   }
+
+  /** Dummy implementation of plain FailoverProxyProvider */
+  public static class DummyLegacyFailoverProxyProvider<T>
+      implements FailoverProxyProvider<T> {
+    private Class<T> xface;
+    private T proxy;
+    public DummyLegacyFailoverProxyProvider(Configuration conf, URI uri,
+        Class<T> xface) {
+      try {
+        this.proxy = NameNodeProxies.createNonHAProxy(conf,
+            NameNode.getAddress(uri), xface,
+            UserGroupInformation.getCurrentUser(), false).getProxy();
+        this.xface = xface;
+      } catch (IOException ioe) {
+      }
+    }
+
+    @Override
+    public Class<T> getInterface() {
+      return xface;
+    }
+
+    @Override
+    public ProxyInfo<T> getProxy() {
+      return new ProxyInfo<T>(proxy, "dummy");
+    }
+
+    @Override
+    public void performFailover(T currentProxy) {
+    }
+
+    @Override
+    public void close() throws IOException {
+    }
+  }
+
+  /**
+   * Test to verify legacy proxy providers are correctly wrapped.
+   */
+  public void testWrappedFailoverProxyProvider() throws Exception {
+    // setup the config with the dummy provider class
+    Configuration config = new HdfsConfiguration(conf);
+    String logicalName = HATestUtil.getLogicalHostname(cluster);
+    HATestUtil.setFailoverConfigurations(cluster, config, logicalName);
+    config.set(DFS_CLIENT_FAILOVER_PROXY_PROVIDER_KEY_PREFIX + "." + logicalName,
+        DummyLegacyFailoverProxyProvider.class.getName());
+    Path p = new Path("hdfs://" + logicalName + "/");
+
+    // Logical URI should be used.
+    assertTrue("Legacy proxy providers should use logical URI.",
+        HAUtil.useLogicalUri(config, p.toUri()));
+  }
+
+  /**
+   * Test to verify IPFailoverProxyProvider is not requiring logical URI.
+   */
+  public void testIPFailoverProxyProviderLogicalUri() throws Exception {
+    // setup the config with the IP failover proxy provider class
+    Configuration config = new HdfsConfiguration(conf);
+    URI nnUri = cluster.getURI(0);
+    config.set(DFS_CLIENT_FAILOVER_PROXY_PROVIDER_KEY_PREFIX + "." +
+        nnUri.getHost(),
+        IPFailoverProxyProvider.class.getName());
+
+    assertFalse("IPFailoverProxyProvider should not use logical URI.",
+        HAUtil.useLogicalUri(config, nnUri));
+  }
+
 }

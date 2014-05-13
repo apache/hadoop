@@ -38,10 +38,12 @@ import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSelector;
+import org.apache.hadoop.hdfs.server.namenode.ha.AbstractNNFailoverProxyProvider;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RPC;
@@ -205,15 +207,52 @@ public class HAUtil {
  
   /**
    * @return true if the given nameNodeUri appears to be a logical URI.
-   * This is the case if there is a failover proxy provider configured
-   * for it in the given configuration.
    */
   public static boolean isLogicalUri(
+      Configuration conf, URI nameNodeUri) {
+    String host = nameNodeUri.getHost();
+    // A logical name must be one of the service IDs.
+    return DFSUtil.getNameServiceIds(conf).contains(host);
+  }
+
+  /**
+   * Check whether the client has a failover proxy provider configured
+   * for the namenode/nameservice.
+   *
+   * @param conf Configuration
+   * @param nameNodeUri The URI of namenode
+   * @return true if failover is configured.
+   */
+  public static boolean isClientFailoverConfigured(
       Configuration conf, URI nameNodeUri) {
     String host = nameNodeUri.getHost();
     String configKey = DFS_CLIENT_FAILOVER_PROXY_PROVIDER_KEY_PREFIX + "."
         + host;
     return conf.get(configKey) != null;
+  }
+
+  /**
+   * Check whether logical URI is needed for the namenode and
+   * the corresponding failover proxy provider in the config.
+   *
+   * @param conf Configuration
+   * @param nameNodeUri The URI of namenode
+   * @return true if logical URI is needed. false, if not needed.
+   * @throws IOException most likely due to misconfiguration.
+   */
+  public static boolean useLogicalUri(Configuration conf, URI nameNodeUri) 
+      throws IOException {
+    // Create the proxy provider. Actual proxy is not created.
+    AbstractNNFailoverProxyProvider<ClientProtocol> provider = NameNodeProxies
+        .createFailoverProxyProvider(conf, nameNodeUri, ClientProtocol.class,
+        false);
+
+    // No need to use logical URI since failover is not configured.
+    if (provider == null) {
+      return false;
+    }
+    // Check whether the failover proxy provider uses logical URI.
+    return provider.useLogicalURI();
   }
 
   /**

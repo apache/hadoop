@@ -188,12 +188,9 @@ public class TestRetryCacheWithHA {
   
   private DFSClient genClientWithDummyHandler() throws IOException {
     URI nnUri = dfs.getUri();
-    Class<FailoverProxyProvider<ClientProtocol>> failoverProxyProviderClass = 
-        NameNodeProxies.getFailoverProxyProviderClass(conf, nnUri, 
-            ClientProtocol.class);
     FailoverProxyProvider<ClientProtocol> failoverProxyProvider = 
         NameNodeProxies.createFailoverProxyProvider(conf, 
-            failoverProxyProviderClass, ClientProtocol.class, nnUri);
+            nnUri, ClientProtocol.class, true);
     InvocationHandler dummyHandler = new DummyRetryInvocationHandler(
         failoverProxyProvider, RetryPolicies
         .failoverOnNetworkException(RetryPolicies.TRY_ONCE_THEN_FAIL,
