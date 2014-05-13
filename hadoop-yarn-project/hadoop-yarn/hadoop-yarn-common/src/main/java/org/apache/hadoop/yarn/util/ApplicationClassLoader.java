@@ -173,7 +173,7 @@ public class ApplicationClassLoader extends URLClassLoader {
   }
 
   @VisibleForTesting
-  static boolean isSystemClass(String name, List<String> systemClasses) {
+  public static boolean isSystemClass(String name, List<String> systemClasses) {
     if (systemClasses != null) {
       String canonicalName = name.replace('/', '.');
       while (canonicalName.startsWith(".")) {

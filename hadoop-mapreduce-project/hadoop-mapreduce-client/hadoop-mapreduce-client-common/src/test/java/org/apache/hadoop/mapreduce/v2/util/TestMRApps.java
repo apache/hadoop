@@ -33,6 +33,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
@@ -57,6 +58,7 @@ import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.util.ApplicationClassLoader;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -491,5 +493,37 @@ public class TestMRApps {
     assertTrue(MRApps.TaskStateUI.COMPLETED.correspondsTo(TaskState.FAILED));
     assertTrue(MRApps.TaskStateUI.COMPLETED.correspondsTo(TaskState.KILLED));
     assertTrue(MRApps.TaskStateUI.RUNNING.correspondsTo(TaskState.RUNNING));
+  }
+
+
+  private static final String[] SYS_CLASSES = new String[] {
+      "/java/fake/Klass",
+      "/javax/fake/Klass",
+      "/org/apache/commons/logging/fake/Klass",
+      "/org/apache/log4j/fake/Klass",
+      "/org/apache/hadoop/fake/Klass"
+  };
+
+  private static final String[] DEFAULT_XMLS = new String[] {
+        "core-default.xml",
+      "mapred-default.xml",
+        "hdfs-default.xml",
+        "yarn-default.xml"
+  };
+
+  @Test
+  public void testSystemClasses() {
+    final List<String> systemClasses =
+        Arrays.asList(MRApps.getSystemClasses(new Configuration()));
+    for (String defaultXml : DEFAULT_XMLS) {
+      assertTrue(defaultXml + " must be system resource",
+          ApplicationClassLoader.isSystemClass(defaultXml, systemClasses));
+    }
+    for (String klass : SYS_CLASSES) {
+      assertTrue(klass + " must be system class",
+          ApplicationClassLoader.isSystemClass(klass, systemClasses));
+    }
+    assertFalse("/fake/Klass must not be a system class",
+        ApplicationClassLoader.isSystemClass("/fake/Klass", systemClasses));
   }
 }
