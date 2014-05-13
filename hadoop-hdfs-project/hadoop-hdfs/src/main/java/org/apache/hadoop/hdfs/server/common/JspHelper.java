@@ -76,6 +76,7 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.authentication.util.KerberosName;
+import org.apache.hadoop.security.authorize.ProxyServers;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.VersionInfo;
@@ -672,7 +673,7 @@ public class JspHelper {
   public static String getRemoteAddr(HttpServletRequest request) {
     String remoteAddr = request.getRemoteAddr();
     String proxyHeader = request.getHeader("X-Forwarded-For");
-    if (proxyHeader != null && ProxyUsers.isProxyServer(remoteAddr)) {
+    if (proxyHeader != null && ProxyServers.isProxyServer(remoteAddr)) {
       final String clientAddr = proxyHeader.split(",")[0].trim();
       if (!clientAddr.isEmpty()) {
         remoteAddr = clientAddr;
