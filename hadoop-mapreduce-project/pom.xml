@@ -144,6 +144,10 @@
       <artifactId>hsqldb</artifactId>
       <scope>compile</scope>
     </dependency>
+    <dependency>
+      <groupId>org.fusesource.leveldbjni</groupId>
+      <artifactId>leveldbjni-all</artifactId>
+    </dependency>
 
   </dependencies>
 

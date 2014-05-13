@@ -191,6 +191,9 @@ Release 2.5.0 - UNRELEASED
     MAPREDUCE-5774. Job overview in History UI should list reducer phases in
     chronological order. (Gera Shegalov via kasha)
 
+    MAPREDUCE-5652. NM Recovery. ShuffleHandler should handle NM restarts.
+    (Jason Lowe via kasha)
+
   OPTIMIZATIONS
 
   BUG FIXES 
