@@ -97,7 +97,7 @@ class BlockPoolSliceScanner {
   private long totalTransientErrors = 0;
   private final AtomicInteger totalBlocksScannedInLastRun = new AtomicInteger(); // Used for test only
   
-  private long currentPeriodStart = Time.now();
+  private long currentPeriodStart = Time.monotonicNow();
   private long bytesLeft = 0; // Bytes to scan in this period
   private long totalBytesToScan = 0;
   private boolean isNewPeriod = true;
@@ -260,7 +260,7 @@ class BlockPoolSliceScanner {
     long period = Math.min(scanPeriod, 
                            Math.max(blockMap.size(),1) * 600 * 1000L);
     int periodInt = Math.abs((int)period);
-    return Time.now() - scanPeriod + 
+    return Time.monotonicNow() - scanPeriod +
         DFSUtil.getRandom().nextInt(periodInt);
   }
 
@@ -322,7 +322,7 @@ class BlockPoolSliceScanner {
       info = new BlockScanInfo(block);
     }
     
-    long now = Time.now();
+    long now = Time.monotonicNow();
     info.lastScanType = type;
     info.lastScanTime = now;
     info.lastScanOk = scanOk;
@@ -399,8 +399,9 @@ class BlockPoolSliceScanner {
   }
   
   private synchronized void adjustThrottler() {
-    long timeLeft = currentPeriodStart+scanPeriod - Time.now();
-    long bw = Math.max(bytesLeft*1000/timeLeft, MIN_SCAN_RATE);
+    long timeLeft = Math.max(1L,
+        currentPeriodStart + scanPeriod - Time.monotonicNow());
+    long bw = Math.max((bytesLeft * 1000) / timeLeft, MIN_SCAN_RATE);
     throttler.setBandwidth(Math.min(bw, MAX_SCAN_RATE));
   }
   
@@ -523,7 +524,7 @@ class BlockPoolSliceScanner {
   private boolean assignInitialVerificationTimes() {
     //First updates the last verification times from the log file.
     if (verificationLog != null) {
-      long now = Time.now();
+      long now = Time.monotonicNow();
       RollingLogs.LineIterator logIterator = null;
       try {
         logIterator = verificationLog.logs.iterator(false);
@@ -574,7 +575,7 @@ class BlockPoolSliceScanner {
       // Initially spread the block reads over half of scan period
       // so that we don't keep scanning the blocks too quickly when restarted.
       long verifyInterval = Math.min(scanPeriod/(2L * numBlocks), 10*60*1000L);
-      long lastScanTime = Time.now() - scanPeriod;
+      long lastScanTime = Time.monotonicNow() - scanPeriod;
 
       if (!blockInfoSet.isEmpty()) {
         BlockScanInfo info;
@@ -601,16 +602,16 @@ class BlockPoolSliceScanner {
 
     // reset the byte counts :
     bytesLeft = totalBytesToScan;
-    currentPeriodStart = Time.now();
+    currentPeriodStart = Time.monotonicNow();
     isNewPeriod = true;
   }
   
   private synchronized boolean workRemainingInCurrentPeriod() {
-    if (bytesLeft <= 0 && Time.now() < currentPeriodStart + scanPeriod) {
+    if (bytesLeft <= 0 && Time.monotonicNow() < currentPeriodStart + scanPeriod) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Skipping scan since bytesLeft=" + bytesLeft + ", Start=" +
                   currentPeriodStart + ", period=" + scanPeriod + ", now=" +
-                  Time.now() + " " + blockPoolId);
+                  Time.monotonicNow() + " " + blockPoolId);
       }
       return false;
     } else {
@@ -633,7 +634,7 @@ class BlockPoolSliceScanner {
       scan();
     } finally {
       totalBlocksScannedInLastRun.set(processedBlocks.size());
-      lastScanTime.set(Time.now());
+      lastScanTime.set(Time.monotonicNow());
     }
   }
 
@@ -656,7 +657,7 @@ class BlockPoolSliceScanner {
       while (datanode.shouldRun
           && !datanode.blockScanner.blockScannerThread.isInterrupted()
           && datanode.isBPServiceAlive(blockPoolId)) {
-        long now = Time.now();
+        long now = Time.monotonicNow();
         synchronized (this) {
           if ( now >= (currentPeriodStart + scanPeriod)) {
             startNewPeriod();
@@ -714,7 +715,7 @@ class BlockPoolSliceScanner {
     
     int total = blockInfoSet.size();
     
-    long now = Time.now();
+    long now = Time.monotonicNow();
     
     Date date = new Date();
     

@@ -214,6 +214,9 @@ Release 2.5.0 - UNRELEASED
     HDFS-6305. WebHdfs response decoding may throw RuntimeExceptions (Daryn
     Sharp via jeagles)
 
+    HDFS-6355. Fix divide-by-zero, improper use of wall-clock time in
+    BlockPoolSliceScanner (cmccabe)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
