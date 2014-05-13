@@ -33,6 +33,7 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -344,8 +345,7 @@ public class MRApps extends Apps {
         if (LOG.isDebugEnabled()) {
           LOG.debug("APP_CLASSPATH=" + appClasspath);
         }
-        String[] systemClasses = conf.getStrings(
-            MRJobConfig.MAPREDUCE_JOB_CLASSLOADER_SYSTEM_CLASSES);
+        String[] systemClasses = getSystemClasses(conf);
         ClassLoader jobClassLoader = createJobClassLoader(appClasspath,
             systemClasses);
         if (jobClassLoader != null) {
@@ -354,6 +354,12 @@ public class MRApps extends Apps {
         }
       }
     }
+  }
+
+  @VisibleForTesting
+  static String[] getSystemClasses(Configuration conf) {
+    return conf.getTrimmedStrings(
+        MRJobConfig.MAPREDUCE_JOB_CLASSLOADER_SYSTEM_CLASSES);
   }
 
   private static ClassLoader createJobClassLoader(final String appClasspath,
