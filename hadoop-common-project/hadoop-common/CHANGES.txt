@@ -465,6 +465,9 @@ Release 2.5.0 - UNRELEASED
     because groups stored in Set and ArrayList are compared. 
     (Mit Desai via kihwal)
 
+    HADOOP-10585. Retry polices ignore interrupted exceptions (Daryn Sharp via
+    jeagles)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES

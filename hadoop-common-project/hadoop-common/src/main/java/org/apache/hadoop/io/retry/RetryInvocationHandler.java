@@ -150,7 +150,7 @@ public class RetryInvocationHandler<T> implements RpcInvocationHandler {
           }
           
           if (action.delayMillis > 0) {
-            ThreadUtil.sleepAtLeastIgnoreInterrupts(action.delayMillis);
+            Thread.sleep(action.delayMillis);
           }
           
           if (action.action == RetryAction.RetryDecision.FAILOVER_AND_RETRY) {
