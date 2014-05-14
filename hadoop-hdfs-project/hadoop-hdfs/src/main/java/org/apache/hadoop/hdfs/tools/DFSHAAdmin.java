@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.tools;
 
 import java.io.PrintStream;
 import java.util.Arrays;
+import java.util.Collection;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -27,6 +28,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ha.HAAdmin;
 import org.apache.hadoop.ha.HAServiceTarget;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -117,7 +119,15 @@ public class DFSHAAdmin extends HAAdmin {
     
     return super.runCmd(argv);
   }
-
+  
+  /**
+   * returns the list of all namenode ids for the given configuration 
+   */
+  @Override
+  protected Collection<String> getTargetIds(String namenodeToActivate) {
+    return DFSUtil.getNameNodeIds(getConf(), (nameserviceId != null)? nameserviceId : DFSUtil.getNamenodeNameServiceId(getConf()));
+  }
+  
   public static void main(String[] argv) throws Exception {
     int res = ToolRunner.run(new DFSHAAdmin(), argv);
     System.exit(res);

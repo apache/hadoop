@@ -358,6 +358,9 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6293. Issues with OIV processing PB-based fsimages. (kihwal)
 
+    HDFS-2949. Add check to active state transition to prevent operator-induced
+    split brain. (Rushabh S Shah via kihwal)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)
