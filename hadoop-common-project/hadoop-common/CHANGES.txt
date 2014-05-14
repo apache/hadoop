@@ -141,6 +141,9 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10585. Retry polices ignore interrupted exceptions (Daryn Sharp via
     jeagles)
 
+    HADOOP-10401. ShellBasedUnixGroupsMapping#getGroups does not always return
+    primary group first (Akira AJISAKA via Colin Patrick McCabe)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
