@@ -66,4 +66,8 @@ public interface Context {
   LocalDirsHandlerService getLocalDirsHandler();
 
   ApplicationACLsManager getApplicationACLsManager();
+
+  boolean getDecommissioned();
+
+  void setDecommissioned(boolean isDecommissioned);
 }

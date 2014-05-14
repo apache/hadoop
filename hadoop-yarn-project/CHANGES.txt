@@ -26,6 +26,9 @@ Release 2.5.0 - UNRELEASED
     YARN-1864. Fair Scheduler Dynamic Hierarchical User Queues (Ashwin Shankar
     via Sandy Ryza)
 
+    YARN-1362. Distinguish between nodemanager shutdown for decommission vs shutdown 
+    for restart. (Jason Lowe via junping_du)
+
   IMPROVEMENTS
 
     YARN-1479. Invalid NaN values in Hadoop REST API JSON response (Chen He via
