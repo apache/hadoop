@@ -44,6 +44,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Random;
 
+import com.google.common.io.Files;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -2404,6 +2405,46 @@ public class TestCheckpoint {
       fail("Should have failed for bad checkpoint arg");
     } catch (ParseException e) {
       LOG.warn("Encountered ", e);
+    }
+  }
+
+  @Test
+  public void testLegacyOivImage() throws Exception {
+    MiniDFSCluster cluster = null;
+    SecondaryNameNode secondary = null;
+    File tmpDir = Files.createTempDir();
+    Configuration conf = new HdfsConfiguration();
+    conf.set(DFSConfigKeys.DFS_NAMENODE_LEGACY_OIV_IMAGE_DIR_KEY,
+        tmpDir.getAbsolutePath());
+    conf.set(DFSConfigKeys.DFS_NAMENODE_NUM_CHECKPOINTS_RETAINED_KEY,
+        "2");
+
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
+              .format(true).build();
+
+      secondary = startSecondaryNameNode(conf);
+
+      // Checkpoint once
+      secondary.doCheckpoint();
+      String files1[] = tmpDir.list();
+      assertEquals("Only one file is expected", 1, files1.length);
+
+      // Perform more checkpointngs and check whether retention management
+      // is working.
+      secondary.doCheckpoint();
+      secondary.doCheckpoint();
+      String files2[] = tmpDir.list();
+      assertEquals("Two files are expected", 2, files2.length);
+
+      // Verify that the first file is deleted.
+      for (String fName : files2) {
+        assertFalse(fName.equals(files1[0]));
+      }
+    } finally {
+      cleanup(secondary);
+      cleanup(cluster);
+      tmpDir.delete();
     }
   }
 

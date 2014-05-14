@@ -62,6 +62,7 @@ import org.apache.hadoop.hdfs.server.namenode.NNStorageRetentionManager.StorageP
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
+import org.apache.hadoop.hdfs.util.Canceler;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.io.MD5Hash;
@@ -125,6 +126,7 @@ public class SecondaryNameNode implements Runnable,
 
   private Thread checkpointThread;
   private ObjectName nameNodeStatusBeanName;
+  private String legacyOivImageDir;
 
   @Override
   public String toString() {
@@ -288,6 +290,9 @@ public class SecondaryNameNode implements Runnable,
       conf.set(DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTPS_ADDRESS_KEY,
           NetUtils.getHostPortString(httpsAddress));
     }
+
+    legacyOivImageDir = conf.get(
+        DFSConfigKeys.DFS_NAMENODE_LEGACY_OIV_IMAGE_DIR_KEY);
 
     LOG.info("Checkpoint Period   :" + checkpointConf.getPeriod() + " secs "
         + "(" + checkpointConf.getPeriod() / 60 + " min)");
@@ -497,6 +502,7 @@ public class SecondaryNameNode implements Runnable,
    * @return if the image is fetched from primary or not
    */
   @VisibleForTesting
+  @SuppressWarnings("deprecated")
   public boolean doCheckpoint() throws IOException {
     checkpointImage.ensureCurrentDirExists();
     NNStorage dstStorage = checkpointImage.getStorage();
@@ -559,11 +565,18 @@ public class SecondaryNameNode implements Runnable,
 
     LOG.warn("Checkpoint done. New Image Size: " 
              + dstStorage.getFsImageName(txid).length());
-    
+
+    if (legacyOivImageDir != null && !legacyOivImageDir.isEmpty()) {
+      try {
+        checkpointImage.saveLegacyOIVImage(namesystem, legacyOivImageDir,
+            new Canceler());
+      } catch (IOException e) {
+        LOG.warn("Failed to write legacy OIV image: ", e);
+      }
+    }
     return loadImage;
   }
-  
-  
+
   /**
    * @param opts The parameters passed to this program.
    * @exception Exception if the filesystem does not exist.

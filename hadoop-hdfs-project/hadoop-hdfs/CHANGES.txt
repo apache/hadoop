@@ -102,6 +102,8 @@ Release 2.5.0 - UNRELEASED
 
     HDFS-6186. Pause deletion of blocks when the namenode starts up. (jing9)
 
+    HDFS-6293. Issues with OIV processing PB-based fsimages. (kihwal)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)

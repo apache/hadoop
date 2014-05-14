@@ -935,6 +935,25 @@ public class FSImage implements Closeable {
   }
 
   /**
+   * Save FSimage in the legacy format. This is not for NN consumption,
+   * but for tools like OIV.
+   */
+  public void saveLegacyOIVImage(FSNamesystem source, String targetDir,
+      Canceler canceler) throws IOException {
+    FSImageCompression compression =
+        FSImageCompression.createCompression(conf);
+    long txid = getLastAppliedOrWrittenTxId();
+    SaveNamespaceContext ctx = new SaveNamespaceContext(source, txid,
+        canceler);
+    FSImageFormat.Saver saver = new FSImageFormat.Saver(ctx);
+    String imageFileName = NNStorage.getLegacyOIVImageFileName(txid);
+    File imageFile = new File(targetDir, imageFileName);
+    saver.save(imageFile, compression);
+    archivalManager.purgeOldLegacyOIVImages(targetDir, txid);
+  }
+
+
+  /**
    * FSImageSaver is being run in a separate thread when saving
    * FSImage. There is one thread per each copy of the image.
    *
