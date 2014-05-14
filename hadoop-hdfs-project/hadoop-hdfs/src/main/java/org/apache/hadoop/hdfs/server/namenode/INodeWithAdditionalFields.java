@@ -343,7 +343,7 @@ public abstract class INodeWithAdditionalFields extends INode
   }
   
   @Override
-  final XAttrFeature getXAttrFeature(int snapshotId) {
+  XAttrFeature getXAttrFeature(int snapshotId) {
     if (snapshotId != Snapshot.CURRENT_STATE_ID) {
       return getSnapshotINode(snapshotId).getXAttrFeature();
     }

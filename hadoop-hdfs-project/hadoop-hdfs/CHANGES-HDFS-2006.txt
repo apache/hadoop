@@ -31,6 +31,8 @@ HDFS-2006 (Unreleased)
 
     HDFS-6377. Unify xattr name and value limits into a single limit. (wang)
 
+    HDFS-6373. Remove support for extended attributes on symlinks (Charles Lamb via wang)
+
   OPTIMIZATIONS
 
     HDFS-6346. Optimize OP_SET_XATTRS by persisting single Xattr entry per setXattr/removeXattr api call
