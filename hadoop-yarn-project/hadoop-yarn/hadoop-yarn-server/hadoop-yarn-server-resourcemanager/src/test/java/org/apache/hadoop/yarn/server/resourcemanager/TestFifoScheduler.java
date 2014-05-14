@@ -52,6 +52,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateS
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
@@ -66,7 +67,7 @@ public class TestFifoScheduler {
   
   private final int GB = 1024;
   private static YarnConfiguration conf;
-  
+
   @BeforeClass
   public static void setup() {
     conf = new YarnConfiguration();
@@ -209,6 +210,32 @@ public class TestFifoScheduler {
     Assert.assertEquals(1, am1.schedule().getCompletedContainersStatuses().size());
     report_nm1 = rm.getResourceScheduler().getNodeReport(nm1.getNodeId());
     Assert.assertEquals(5 * GB, report_nm1.getUsedResource().getMemory());
+
+    rm.stop();
+  }
+
+  @Test
+  public void testNodeUpdateBeforeAppAttemptInit() throws Exception {
+    FifoScheduler scheduler = new FifoScheduler();
+    MockRM rm = new MockRM(conf);
+    scheduler.reinitialize(conf, rm.getRMContext());
+
+    RMNode node = MockNodes.newNodeInfo(1,
+            Resources.createResource(1024, 4), 1, "127.0.0.1");
+    scheduler.handle(new NodeAddedSchedulerEvent(node));
+
+    ApplicationId appId = ApplicationId.newInstance(0, 1);
+    scheduler.addApplication(appId, "queue1", "user1");
+
+    NodeUpdateSchedulerEvent updateEvent = new NodeUpdateSchedulerEvent(node);
+    try {
+      scheduler.handle(updateEvent);
+    } catch (NullPointerException e) {
+        Assert.fail();
+    }
+
+    ApplicationAttemptId attId = ApplicationAttemptId.newInstance(appId, 1);
+    scheduler.addApplicationAttempt(attId, false);
 
     rm.stop();
   }

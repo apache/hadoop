@@ -108,6 +108,9 @@ Release 2.4.1 - UNRELEASED
     YARN-1957. Consider the max capacity of the queue when computing the ideal
     capacity for preemption. (Carlo Curino via cdouglas)
 
+    YARN-1986. In Fifo Scheduler, node heartbeat in between creating app and
+    attempt causes NPE (Hong Zhiguo via Sandy Ryza)
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES
