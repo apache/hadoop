@@ -474,6 +474,8 @@ Release 2.5.0 - UNRELEASED
     HDFS-6370. Web UI fails to display in intranet under IE.
     (Haohui Mai via cnauroth)
 
+    HDFS-6381. Fix a typo in INodeReference.java. (Binglin Chang via jing9)
+
 Release 2.4.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
