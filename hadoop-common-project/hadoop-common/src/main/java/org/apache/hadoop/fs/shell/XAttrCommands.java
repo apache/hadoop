@@ -56,14 +56,14 @@ class XAttrCommands extends FsCommand {
     public static final String DESCRIPTION =
       "Displays the extended attribute names and values (if any) for a " +
       "file or directory.\n" +
-      "-R: Recurisively list the attributes for all files and directories.\n" +
-      "-n name: Dump the named extended attribute value.\n" + 
-      "-d: Dump all extended attribute values associated with " +
-      "pathname.\n" +
-      "-e <encoding>: Encode values after retrieving them. Valid encodings " +
-      "are \"text\", \"hex\", and \"base64\". Values encoded as text " +
-      "strings are enclosed in double quotes (\"), and values encoded" +
-      " as hexadecimal and base64 are prefixed with 0x and 0s, respectively.\n" +
+      "-R: Recursively list the attributes for all files and directories.\n" +
+      "-n name: Dump the named extended attribute value.\n" +
+      "-d: Dump all extended attribute values associated with pathname.\n" +
+      "-e <encoding>: Encode values after retrieving them.\n" +
+      "Valid encodings are \"text\", \"hex\", and \"base64\".\n" +
+      "Values encoded as text strings are enclosed in double quotes (\"),\n" +
+      " and values encoded as hexadecimal and base64 are prefixed with\n" +
+      "0x and 0s, respectively.\n" +
       "<path>: The file or directory.\n";
     private final static Function<String, XAttrCodec> enValueOfFunc =
         Enums.valueOfFunction(XAttrCodec.class);

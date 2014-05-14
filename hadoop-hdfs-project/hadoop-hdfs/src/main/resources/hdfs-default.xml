@@ -1895,4 +1895,28 @@
   </description>
 </property>
 
+<property>
+  <name>dfs.namenode.xattrs.enabled</name>
+  <value>true</value>
+  <description>
+    Whether support for extended attributes is enabled on the NameNode.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.fs-limits.max-xattrs-per-inode</name>
+  <value>32</value>
+  <description>
+    Maximum number of extended attributes per inode.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.fs-limits.max-xattr-size</name>
+  <value>16384</value>
+  <description>
+    The maximum combined size of the name and value of an extended attribute in bytes.
+  </description>
+</property>
+
 </configuration>
