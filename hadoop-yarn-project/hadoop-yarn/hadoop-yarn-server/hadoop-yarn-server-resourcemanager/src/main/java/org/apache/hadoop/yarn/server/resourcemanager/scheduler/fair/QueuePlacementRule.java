@@ -227,7 +227,7 @@ public abstract class QueuePlacementRule {
       String queueName = nestedRule.assignAppToQueue(requestedQueue, user,
           groups, configuredQueues);
       
-      if (queueName != null && queueName != "") {
+      if (queueName != null && queueName.length() != 0) {
         if (!queueName.startsWith("root.")) {
           queueName = "root." + queueName;
         }
