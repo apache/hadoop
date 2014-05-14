@@ -75,29 +75,21 @@ class AclCommands extends FsCommand {
 
     @Override
     protected void processPath(PathData item) throws IOException {
-      AclStatus aclStatus = item.fs.getAclStatus(item.path);
       out.println("# file: " + item);
-      out.println("# owner: " + aclStatus.getOwner());
-      out.println("# group: " + aclStatus.getGroup());
-      List<AclEntry> entries = aclStatus.getEntries();
-      if (aclStatus.isStickyBit()) {
-        String stickyFlag = "T";
-        for (AclEntry aclEntry : entries) {
-          if (aclEntry.getType() == AclEntryType.OTHER
-              && aclEntry.getScope() == AclEntryScope.ACCESS
-              && aclEntry.getPermission().implies(FsAction.EXECUTE)) {
-            stickyFlag = "t";
-            break;
-          }
-        }
-        out.println("# flags: --" + stickyFlag);
+      out.println("# owner: " + item.stat.getOwner());
+      out.println("# group: " + item.stat.getGroup());
+      FsPermission perm = item.stat.getPermission();
+      if (perm.getStickyBit()) {
+        out.println("# flags: --" +
+          (perm.getOtherAction().implies(FsAction.EXECUTE) ? "t" : "T"));
       }
 
-      FsPermission perm = item.stat.getPermission();
-      if (entries.isEmpty()) {
-        printMinimalAcl(perm);
-      } else {
+      if (perm.getAclBit()) {
+        AclStatus aclStatus = item.fs.getAclStatus(item.path);
+        List<AclEntry> entries = aclStatus.getEntries();
         printExtendedAcl(perm, entries);
+      } else {
+        printMinimalAcl(perm);
       }
 
       out.println();

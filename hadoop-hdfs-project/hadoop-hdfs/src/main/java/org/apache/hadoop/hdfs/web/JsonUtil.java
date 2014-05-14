@@ -176,8 +176,9 @@ public class JsonUtil {
   }
 
   /** Convert a string to a FsPermission object. */
-  private static FsPermission toFsPermission(final String s) {
-    return new FsPermission(Short.parseShort(s, 8));
+  private static FsPermission toFsPermission(final String s, Boolean aclBit) {
+    FsPermission perm = new FsPermission(Short.parseShort(s, 8));
+    return (aclBit != null && aclBit) ? new FsAclPermission(perm) : perm;
   }
 
   static enum PathType {
@@ -204,7 +205,11 @@ public class JsonUtil {
     m.put("length", status.getLen());
     m.put("owner", status.getOwner());
     m.put("group", status.getGroup());
-    m.put("permission", toString(status.getPermission()));
+    FsPermission perm = status.getPermission();
+    m.put("permission", toString(perm));
+    if (perm.getAclBit()) {
+      m.put("aclBit", true);
+    }
     m.put("accessTime", status.getAccessTime());
     m.put("modificationTime", status.getModificationTime());
     m.put("blockSize", status.getBlockSize());
@@ -230,7 +235,8 @@ public class JsonUtil {
     final long len = (Long) m.get("length");
     final String owner = (String) m.get("owner");
     final String group = (String) m.get("group");
-    final FsPermission permission = toFsPermission((String) m.get("permission"));
+    final FsPermission permission = toFsPermission((String) m.get("permission"),
+      (Boolean)m.get("aclBit"));
     final long aTime = (Long) m.get("accessTime");
     final long mTime = (Long) m.get("modificationTime");
     final long blockSize = (Long) m.get("blockSize");
