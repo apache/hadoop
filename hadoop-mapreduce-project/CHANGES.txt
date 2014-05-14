@@ -48,6 +48,9 @@ Release 2.4.1 - UNRELEASED
     MAPREDUCE-5835. Killing Task might cause the job to go to ERROR state
     (Ming Ma via jlowe)
 
+    MAPREDUCE-5821. Avoid unintentional reallocation of byte arrays in segments
+    during merge. (Todd Lipcon via cdouglas)
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES
