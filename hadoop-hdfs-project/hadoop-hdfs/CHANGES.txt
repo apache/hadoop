@@ -545,6 +545,8 @@ Release 2.4.1 - UNRELEASED
     HDFS-6313. WebHdfs may use the wrong NN when configured for multiple HA NNs
     (kihwal)
 
+    HDFS-6326. WebHdfs ACL compatibility is broken. (cnauroth)
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES

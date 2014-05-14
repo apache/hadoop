@@ -63,7 +63,8 @@
 
     'helper_to_permission': function (v) {
       var symbols = [ '---', '--x', '-w-', '-wx', 'r--', 'r-x', 'rw-', 'rwx' ];
-      var sticky = v > 1000;
+      var vInt = parseInt(v, 8);
+      var sticky = (vInt & (1 << 9)) != 0;
 
       var res = "";
       for (var i = 0; i < 3; ++i) {
@@ -72,7 +73,7 @@
       }
 
       if (sticky) {
-        var otherExec = ((v % 10) & 1) == 1;
+        var otherExec = (vInt & 1) == 1;
         res = res.substr(0, res.length - 1) + (otherExec ? 't' : 'T');
       }
 
@@ -81,6 +82,10 @@
 
     'helper_to_directory' : function (v) {
       return v === 'DIRECTORY' ? 'd' : '-';
+    },
+
+    'helper_to_acl_bit': function (v) {
+      return v ? '+' : "";
     }
   };
   $.extend(dust.filters, filters);

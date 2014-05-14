@@ -91,7 +91,7 @@
         <tbody>
           {#FileStatus}
           <tr>
-            <td>{type|helper_to_directory}{permission|helper_to_permission}</td>
+            <td>{type|helper_to_directory}{permission|helper_to_permission}{aclBit|helper_to_acl_bit}</td>
             <td>{owner}</td>
             <td>{group}</td>
             <td>{length|fmt_bytes}</td>
