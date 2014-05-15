@@ -361,6 +361,8 @@ Release 2.5.0 - UNRELEASED
     HDFS-2949. Add check to active state transition to prevent operator-induced
     split brain. (Rushabh S Shah via kihwal)
 
+    HDFS-6287. Add vecsum test of libhdfs read access times (cmccabe)
+
   OPTIMIZATIONS
 
     HDFS-6214. Webhdfs has poor throughput for files >2GB (daryn)
