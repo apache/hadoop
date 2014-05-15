@@ -438,9 +438,41 @@ public final class HttpServer2 implements FilterContainer {
     return HttpServer2.createDefaultChannelConnector();
   }
 
+  private static class SelectChannelConnectorWithSafeStartup
+      extends SelectChannelConnector {
+    public SelectChannelConnectorWithSafeStartup() {
+      super();
+    }
+
+    /* Override the broken isRunning() method (JETTY-1316). This bug is present
+     * in 6.1.26. For the versions wihout this bug, it adds insignificant
+     * overhead.
+     */
+    @Override
+    public boolean isRunning() {
+      if (super.isRunning()) {
+        return true;
+      }
+      // We might be hitting JETTY-1316. If the internal state changed from
+      // STARTING to STARTED in the middle of the check, the above call may
+      // return false.  Check it one more time.
+      LOG.warn("HttpServer Acceptor: isRunning is false. Rechecking.");
+      try {
+        Thread.sleep(10);
+      } catch (InterruptedException ie) {
+        // Mark this thread as interrupted. Someone up in the call chain
+        // might care.
+        Thread.currentThread().interrupt();
+      }
+      boolean runState = super.isRunning();
+      LOG.warn("HttpServer Acceptor: isRunning is " + runState);
+      return runState;
+    }
+  }
+
   @InterfaceAudience.Private
   public static Connector createDefaultChannelConnector() {
-    SelectChannelConnector ret = new SelectChannelConnector();
+    SelectChannelConnector ret = new SelectChannelConnectorWithSafeStartup();
     ret.setLowResourceMaxIdleTime(10000);
     ret.setAcceptQueueSize(128);
     ret.setResolveNames(false);

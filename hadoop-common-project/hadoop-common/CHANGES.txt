@@ -51,6 +51,8 @@ Release 2.5.0 - UNRELEASED
     HADOOP-10572. Example NFS mount command must pass noacl as it isn't
     supported by the server yet. (Harsh J via brandonli)
 
+    HADOOP-10588. Workaround for jetty6 acceptor startup issue. (kihwal)
+
   OPTIMIZATIONS
 
   BUG FIXES 
