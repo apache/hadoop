@@ -308,6 +308,9 @@ Release 2.4.1 - UNRELEASED
     HDFS-4052. BlockManager#invalidateWork should print log outside the lock.
     (Jing Zhao via suresh)
 
+    HDFS-6362. InvalidateBlocks is inconsistent in usage of DatanodeUuid and
+    StorageID. (Arpit Agarwal)
+
 Release 2.4.0 - 2014-04-07 
 
   INCOMPATIBLE CHANGES
